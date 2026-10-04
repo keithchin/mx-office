@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import { SlowFrames } from '../framerate';
+import { graphics } from '../graphics';
 import { EYE_HEIGHT } from '../player';
 import { renderCaffeine } from '../features/coffee/meter';
 import type { Ctx } from './context';
@@ -186,10 +187,14 @@ export function installLoop(ctx: Ctx, core: CoreState, parts: Pick<Parts, 'stage
     ctx.view.draw(f, drawScene);
   }
 
+  /** Through the toon outline, unless the graphics are turned down (it draws everything twice). */
+  const outlined = graphics().outline;
+
   /** The scene, then your hands on top of it. */
   function drawScene() {
     const { player, hands, sky, camera, renderer } = ctx;
-    const { effect, scene } = parts.stage;
+    const effect = outlined ? parts.stage.effect : renderer;
+    const { scene } = parts.stage;
     const firstPerson = player.view === 'first';
     const unhide = firstBody?.hideExtras();
     effect.render(scene, camera);

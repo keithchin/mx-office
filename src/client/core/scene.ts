@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import { OutlineEffect } from 'three/examples/jsm/effects/OutlineEffect.js';
+import { graphics } from '../graphics';
 import { store } from '../state';
 import { Holiday } from '../world/holiday';
 import { buildOffice } from '../world/office';
@@ -37,7 +38,7 @@ export interface Stage {
 
 export function makeRenderer(canvas: HTMLCanvasElement): THREE.WebGLRenderer | null {
   try {
-    return new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    return new THREE.WebGLRenderer({ canvas, antialias: graphics().antialias, powerPreference: 'high-performance' });
   } catch (err) {
     console.error(err);
     return null;
@@ -52,8 +53,11 @@ export function noWebGL(): Promise<never> {
 
 /** Sets up the renderer on `canvas`, and builds the scene: its lights, the camera, the office, the sky. */
 export function createScene(canvas: HTMLCanvasElement, renderer: THREE.WebGLRenderer): Stage {
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
+  // How much it draws: less on computers the full office is too much for (see graphics.ts).
+  const gfx = graphics();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, gfx.maxPixelRatio));
+  if (gfx.pixelated) canvas.style.imageRendering = 'pixelated';
+  renderer.shadowMap.enabled = gfx.shadowMapSize > 0;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const effect = new OutlineEffect(renderer, { defaultThickness: 0.0032, defaultColor: [0.17, 0.18, 0.26] });
@@ -71,7 +75,7 @@ export function createScene(canvas: HTMLCanvasElement, renderer: THREE.WebGLRend
   const sun = new THREE.DirectionalLight('#fff1d6', 2.2);
   sun.position.set(-8, 18, 10);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.setScalar(gfx.shadowMapSize || 2048);
   // Wide enough for the office, the garage under it and the balcony and lot out front, from wherever the sun is.
   Object.assign(sun.shadow.camera, { left: -32, right: 32, top: 30, bottom: -30, near: 1, far: 100 });
   sun.shadow.bias = -0.0008;
