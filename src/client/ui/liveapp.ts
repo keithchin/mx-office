@@ -64,6 +64,8 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     const up = s.status === 'starting' || s.status === 'updating' || s.status === 'running';
     const busy = s.status === 'stopping';
     const send = (t: 'liveapp.start' | 'liveapp.restart' | 'liveapp.stop') => () => net.send({ t });
+    // Only admins run it (it starts processes on the office's machine); everyone else watches.
+    const admin = store.me.admin;
     const url = s.status === 'running' ? appUrl(s) : '';
     const commit = s.sha
       ? h('span.la-commit', { title: s.subject ?? '' }, '📦 ', h('code', {}, short(s.sha)), ' ', h('span.la-subject', {}, s.subject ?? ''), s.branch ? h('small', {}, ` on ${s.branch}`) : null)
@@ -72,9 +74,10 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
       'div.la-bar',
       {},
       h('span', { class: `pill la-pill ${s.status}` }, WORD[s.status]),
-      up || busy ? null : h('button.btn.primary', { type: 'button', disabled: !s.available, onclick: send('liveapp.start'), title: 'Build main and run it on the office' }, '▶ Start'),
-      up ? h('button.btn', { type: 'button', onclick: send('liveapp.restart'), title: 'Stop it and start it again on the newest main' }, '⟳ Restart') : null,
-      up ? h('button.btn', { type: 'button', onclick: send('liveapp.stop'), title: 'Stop the app and free its ports' }, '■ Stop') : null,
+      !admin || up || busy ? null : h('button.btn.primary', { type: 'button', disabled: !s.available, onclick: send('liveapp.start'), title: 'Build main and run it on the office' }, '▶ Start'),
+      admin && up ? h('button.btn', { type: 'button', onclick: send('liveapp.restart'), title: 'Stop it and start it again on the newest main' }, '⟳ Restart') : null,
+      admin && up ? h('button.btn', { type: 'button', onclick: send('liveapp.stop'), title: 'Stop the app and free its ports' }, '■ Stop') : null,
+      admin ? null : h('small.la-note', {}, 'Only admins start or stop the live app'),
       commit,
       url ? h('a.btn.la-open', { href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Open in new tab ↗') : null,
     );
