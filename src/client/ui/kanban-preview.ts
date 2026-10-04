@@ -7,7 +7,7 @@ import type { Net } from '../net';
 import type { ServerMsg } from '../../shared/protocol';
 import { h } from './dom';
 import { openTerminalFor } from './terminal';
-import { TERM_THEME } from './termtheme';
+import { termTheme } from './termtheme';
 import './kanban-preview.css';
 
 export interface Preview {
@@ -139,7 +139,7 @@ function clipText(s: string) {
 }
 
 function watchTerminal(workerId: string, host: HTMLElement) {
-  const term = new Terminal({ disableStdin: true, cursorBlink: false, fontSize: 11, scrollback: 0, theme: TERM_THEME, allowProposedApi: false });
+  const term = new Terminal({ disableStdin: true, cursorBlink: false, fontSize: 11, scrollback: 0, theme: termTheme(), allowProposedApi: false });
   term.open(host);
   live = { workerId, term, host, attached: false };
   if (!net) return;

@@ -7,6 +7,8 @@
     <title>Agent Office</title>
     <link rel="icon" href="/favicon.svg" />
     <link rel="stylesheet" href="./lite.css" />
+    <!-- The color theme picked on this browser (ui/colortheme.ts), set before the page is drawn so it never flashes the wrong one. -->
+    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(t!=="default"&&t!=="dark"&&t!=="terminal")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"default";document.documentElement.dataset.theme=t}catch(e){}</script>
   </head>
   <body class="lite">
     <!-- The 1D view (lite.ts): the office without the 3D, for a phone or a computer the 3D is too much for. -->
@@ -24,6 +26,7 @@
         <a id="to-3d" class="btn" href="/?3d=1&amp;view=3d" title="The 3D office, where you walk around"><span class="ico">🏢</span> 3D</a>
         <a id="to-retro" class="btn" href="/?3d=1&amp;view=retro" title="The office in chunky 16-bit pixels, where you walk around"><span class="ico">👾</span> Retro</a>
       </nav>
+      <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
     </header>
     <!-- Every floor of the building, to go into, and adding one (shared/floors.ts). -->
     <section id="home" class="home hidden" aria-label="Floors"></section>

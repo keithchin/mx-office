@@ -1,0 +1,129 @@
+/* The 1D view's Terminal theme: what it changes beyond the colors (styles/themes.css has those). One
+   monospace font, square corners and thin box-drawing lines instead of chunky rounded cards, buttons as
+   [ Button ] that light up in reverse video, column headers like == BACKLOG (3) ==, a blinking cursor
+   in the top bar, and the faint scanlines and glow of an old green screen. Everything is under
+   html[data-theme='terminal'], which only the 1D view sets (ui/colortheme.ts). It's a theme to work in,
+   so the glow stays faint and nothing flickers for anyone who asks for less motion. */
+
+html[data-theme='terminal'] body.lite {
+  font-family: var(--font);
+  font-variant-emoji: text;
+  text-shadow: 0 0 5px rgba(51, 255, 102, .35);
+  -webkit-font-smoothing: auto;
+}
+/* Every part, the windows included, in the one font at one weight: a terminal has no 900. */
+html[data-theme='terminal'] body.lite :is(*, button, input, textarea, select) { font-family: var(--font); font-weight: 400; }
+html[data-theme='terminal'] body.lite :is(h1, h2, h3, h4, b, strong, .kb-title, .lite-name, .sm-name h2, .kb-col-h, .home-floor-name, .an-model, .an-run-model, .lite-floor select) { font-weight: 700; }
+/* Square corners and one-pixel lines everywhere. */
+html[data-theme='terminal'] body.lite :is(*, *::before, *::after) { border-radius: 0 !important; }
+html[data-theme='terminal'] body.lite * { border-width: 1px !important; }
+/* The big frames are boxed with a double line, like ╔══╗ round a panel. */
+html[data-theme='terminal'] body.lite :is(.modal, .sm, .kb-col, .an-card, .kbp, .home-floor) { border-style: double !important; border-width: 3px !important; }
+html[data-theme='terminal'] ::selection { background: var(--ink); color: #000; text-shadow: none; }
+html[data-theme='terminal'] body.lite a { color: var(--link); }
+html[data-theme='terminal'] body.lite :focus-visible { outline: 1px dashed var(--ink); outline-offset: 2px; }
+
+/* ---- The scanlines and the glass ------------------------------------------------------------------ */
+/* Over everything, windows included, but never in the way of a click. */
+html[data-theme='terminal'] body.lite::after {
+  content: ''; position: fixed; inset: 0; z-index: 1000; pointer-events: none;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, .16) 2px 3px),
+    radial-gradient(ellipse at center, transparent 62%, rgba(0, 0, 0, .38) 100%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-theme='terminal'] body.lite::after { animation: crt-flicker 7s infinite; }
+}
+@keyframes crt-flicker { 0%, 100% { opacity: 1; } 48% { opacity: 1; } 50% { opacity: .82; } 52% { opacity: 1; } }
+
+/* ---- The top bar: a prompt with a blinking block cursor ------------------------------------------- */
+html[data-theme='terminal'] .lite-bar { border-bottom: 1px solid var(--line); }
+html[data-theme='terminal'] .lite-floor-label { text-transform: none; letter-spacing: 0; }
+html[data-theme='terminal'] .lite-floor-label::before { content: '~$ '; color: var(--ink); }
+html[data-theme='terminal'] .lite-floor-label::after { content: '█'; margin-left: 3px; color: var(--ink); animation: term-blink 1.06s steps(1) infinite; }
+@keyframes term-blink { 50% { opacity: 0; } }
+html[data-theme='terminal'] .lite-floor select { font: 700 18px/1.2 var(--font); }
+
+/* ---- Buttons: [ Label ], reverse video when lit, pressed or hovered ------------------------------- */
+html[data-theme='terminal'] body.lite .btn { background: transparent; border-color: transparent; box-shadow: none; color: var(--ink); gap: 4px; padding-left: 6px; padding-right: 6px; transition: none; }
+html[data-theme='terminal'] body.lite .btn::before { content: '['; color: var(--muted); }
+html[data-theme='terminal'] body.lite .btn::after { content: ']'; color: var(--muted); }
+html[data-theme='terminal'] body.lite .btn:is(:hover, :active, .on, .primary),
+html[data-theme='terminal'] body.lite .lite-views .btn.on { background: var(--ink); color: #000; text-shadow: none; transform: none; }
+html[data-theme='terminal'] body.lite .btn.danger { background: transparent; color: var(--bad); }
+html[data-theme='terminal'] body.lite .btn.danger:hover { background: var(--bad); color: #000; }
+html[data-theme='terminal'] body.lite .btn:is(:hover, :active, .on, .primary)::before,
+html[data-theme='terminal'] body.lite .btn:is(:hover, :active, .on, .primary)::after { color: inherit; }
+html[data-theme='terminal'] body.lite .btn:disabled { background: transparent; color: var(--faint); }
+/* Small square keys keep a box rather than brackets: there's no room for them. */
+html[data-theme='terminal'] body.lite :is(.close, .lite-say, .term-keys .btn, .lite-bar > .btn, .lite-nav .btn) { border-color: var(--line); padding-left: 0; padding-right: 0; }
+html[data-theme='terminal'] body.lite :is(.close, .lite-say, .term-keys .btn, .lite-bar > .btn, .lite-nav .btn)::before,
+html[data-theme='terminal'] body.lite :is(.close, .lite-say, .term-keys .btn, .lite-bar > .btn, .lite-nav .btn)::after { content: none; }
+html[data-theme='terminal'] body.lite .lite-bar > .btn { width: 44px; justify-content: center; }
+/* A phone has no room for the brackets in its top bar: the views get a box too, and the 🎨 a small one. */
+@media (max-width: 640px) {
+  html[data-theme='terminal'] body.lite .lite-bar > .lite-theme { width: 30px; }
+  html[data-theme='terminal'] body.lite .lite-views .btn { border-color: var(--line); padding: 0 6px; }
+  html[data-theme='terminal'] body.lite .lite-views .btn::before, html[data-theme='terminal'] body.lite .lite-views .btn::after { content: none; }
+}
+
+/* ---- Status: [WORKING] in its color, the ones that want you in reverse video ---------------------- */
+html[data-theme='terminal'] body.lite .pill { background: transparent; color: var(--muted); border-color: currentColor; text-transform: uppercase; text-shadow: none; }
+html[data-theme='terminal'] body.lite .pill.working { color: var(--warn); }
+html[data-theme='terminal'] body.lite .pill.needs_input { background: var(--bad); border-color: var(--bad); color: #000; animation: none; }
+html[data-theme='terminal'] body.lite .pill.done { background: var(--good); border-color: var(--good); color: #000; }
+html[data-theme='terminal'] body.lite .pill:is(.exited, .offline) { color: var(--faint); }
+html[data-theme='terminal'] body.lite .pill.lost { color: var(--warn); }
+html[data-theme='terminal'] body.lite .pill.merged { background: transparent; color: var(--purple); }
+@media (prefers-reduced-motion: no-preference) {
+  html[data-theme='terminal'] body.lite .pill.needs_input { animation: term-blink 1.2s steps(1) infinite; }
+}
+
+/* ---- The board: == BACKLOG (3) == over each column ------------------------------------------------ */
+html[data-theme='terminal'] .kb-col { background: var(--paper); }
+html[data-theme='terminal'] .kb-col.human { box-shadow: inset 0 2px 0 var(--bad); }
+html[data-theme='terminal'] .kb-col-h { justify-content: flex-start; gap: 0; letter-spacing: .02em; }
+html[data-theme='terminal'] .kb-col-h > span:first-child::before { content: '== '; color: var(--muted); }
+html[data-theme='terminal'] .kb-n { min-width: 0; padding: 0; background: none; color: var(--ink); font-size: inherit; line-height: inherit; }
+html[data-theme='terminal'] .kb-n::before { content: '\00a0('; }
+html[data-theme='terminal'] .kb-n::after { content: ') =='; color: var(--muted); }
+html[data-theme='terminal'] .kb-card { background: var(--card); }
+html[data-theme='terminal'] .kb-card:hover { background: var(--accent-soft); }
+html[data-theme='terminal'] .kb-title::before { content: '> '; color: var(--muted); }
+/* Counters elsewhere read (3), the same way. */
+html[data-theme='terminal'] .lite-nav .n { background: none; color: inherit; padding: 0; min-width: 0; }
+html[data-theme='terminal'] .lite-nav .n::before { content: '('; }
+html[data-theme='terminal'] .lite-nav .n::after { content: ')'; }
+html[data-theme='terminal'] .lite-nav, html[data-theme='terminal'] .lite-bar { background: var(--paper-2); }
+html[data-theme='terminal'] .lite-h::before, html[data-theme='terminal'] .an-h h3::before { content: '## '; color: var(--muted); }
+
+/* ---- The project summary: its story printed like a command's output ------------------------------- */
+html[data-theme='terminal'] .sm-story { background: var(--sunken); }
+html[data-theme='terminal'] .sm-story p::before { content: '$ cat whats-happening.txt'; display: block; margin-bottom: 4px; color: var(--muted); }
+html[data-theme='terminal'] .sm-story p.typing > span:first-child::after { content: '█'; margin-left: 2px; animation: term-blink 1.06s steps(1) infinite; }
+html[data-theme='terminal'] .sm-stage { background: transparent; color: var(--faint); }
+html[data-theme='terminal'] .sm-stage:is(.pass, .fail, .manual, .waived) { color: #000; text-shadow: none; }
+html[data-theme='terminal'] .sm-stage.pass { background: var(--good); }
+html[data-theme='terminal'] .sm-stage.fail { background: var(--bad); }
+html[data-theme='terminal'] .sm-stage.manual { background: var(--warn); }
+html[data-theme='terminal'] .sm-stage.waived { background: var(--info); }
+html[data-theme='terminal'] .sm-activity li::before { content: none; }
+
+/* ---- Floors, boards and windows ------------------------------------------------------------------- */
+/* The floor's color, as a bar down the card's left side (its border is thin here). */
+html[data-theme='terminal'] .home-floor { box-shadow: inset 4px 0 0 var(--floor, var(--line)); padding-left: 16px; }
+html[data-theme='terminal'] .home-floor-no { background: var(--ink); color: #000; text-shadow: none; }
+/* The corkboard's sticky notes lie flat, without their pins. */
+html[data-theme='terminal'] .card { transform: none; border-color: var(--line); background: var(--card) !important; }
+html[data-theme='terminal'] .card:hover { transform: none; background: var(--accent-soft); }
+html[data-theme='terminal'] .card::before { content: none; }
+html[data-theme='terminal'] .modal header h2::before { content: '┤ '; color: var(--muted); }
+html[data-theme='terminal'] .modal header h2::after { content: ' ├'; color: var(--muted); }
+html[data-theme='terminal'] .modal.term { border-color: var(--line); }
+html[data-theme='terminal'] .modal.term header, html[data-theme='terminal'] .term-keypad, html[data-theme='terminal'] .term-tabbar { background: var(--paper-2); }
+/* xterm draws its own text: no glow behind it, or the canvas looks blurred. */
+html[data-theme='terminal'] .xterm { text-shadow: none; }
+html[data-theme='terminal'] body.lite .an-seg .btn { margin-left: 0; }
+html[data-theme='terminal'] body.lite .an-table thead th { background: var(--paper-2); }
+html[data-theme='terminal'] body.lite .toast, html[data-theme='terminal'] body.lite .conn { box-shadow: none; }
+html[data-theme='terminal'] body.lite .la-frame { background: #fff; }
