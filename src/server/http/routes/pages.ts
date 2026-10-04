@@ -24,8 +24,10 @@ export const pageRoutes = {
   join: { path: ['/join', '/join.html'], auth: 'public', handle: page('join.html') },
   favicon: { path: '/favicon.svg', auth: 'public', handle: page('favicon.svg') },
   office: { path: ['/', '/index.html'], auth: 'session', handle: page('index.html') },
-  // The 2D view: the workers, their terminals and the boards, without the 3D office (lite.ts).
+  // The 1D view: the workers, their terminals and the boards, without the 3D office (lite.ts).
   lite: { path: ['/lite', '/lite.html'], auth: 'session', handle: page('lite.html') },
+  // The 2D view: the floor from above in pixel art, every worker at its desk (pixel.ts).
+  pixel: { path: ['/pixel', '/pixel.html'], auth: 'session', handle: page('pixel.html') },
   /** Anything else in the bundle; last, since it answers every path. */
   bundle: {
     prefix: '/',

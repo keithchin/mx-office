@@ -63,16 +63,20 @@ test('no part of the office imports main.ts: it only puts them together', () => 
   }
 });
 
-test('the 2D view loads no three.js, and none of the 3D office: what it shares with it is three.js-free', () => {
-  const lite = graph(path.join(client, 'lite.ts'));
-  for (const f of lite) {
-    const rel = path.relative(client, f);
-    assert.doesNotMatch(read(f), /from 'three(?:\/[^']*)?'/, `${rel} (loaded by lite.ts) imports three.js`);
-    assert.ok(!/^(core|features|input|world|player)\//.test(rel), `lite.ts loads ${rel}, part of the 3D office`);
-  }
-  // What the 2D view and the 3D office share.
-  for (const shared of ['shared/title.ts', 'shared/hiring.ts']) {
-    assert.ok(lite.has(path.join(client, shared)), `lite.ts uses ${shared}`);
-    assert.ok(graph(path.join(client, 'main.ts')).has(path.join(client, shared)), `the 3D office uses ${shared}`);
-  }
-});
+// The 1D view (lite.ts, the board at /lite) and the 2D view (pixel.ts, the pixel office at /pixel).
+for (const entry of ['lite.ts', 'pixel.ts']) {
+  test(`${entry} loads no three.js, and none of the 3D office: what it shares with it is three.js-free`, () => {
+    const page = graph(path.join(client, entry));
+    for (const f of page) {
+      // With forward slashes, so the folder check below holds on Windows too.
+      const rel = path.relative(client, f).split(path.sep).join('/');
+      assert.doesNotMatch(read(f), /from 'three(?:\/[^']*)?'/, `${rel} (loaded by ${entry}) imports three.js`);
+      assert.ok(!/^(core|features|input|world|player)\//.test(rel), `${entry} loads ${rel}, part of the 3D office`);
+    }
+    // What the flat views and the 3D office share.
+    for (const shared of ['shared/title.ts', 'shared/hiring.ts']) {
+      assert.ok(page.has(path.join(client, shared)), `${entry} uses ${shared}`);
+      assert.ok(graph(path.join(client, 'main.ts')).has(path.join(client, shared)), `the 3D office uses ${shared}`);
+    }
+  });
+}

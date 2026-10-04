@@ -38,5 +38,6 @@ export const routes: readonly Route[] = [
   githubRoutes.github,
   pageRoutes.office,
   pageRoutes.lite,
+  pageRoutes.pixel,
   pageRoutes.bundle,
 ];
