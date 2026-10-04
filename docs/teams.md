@@ -23,6 +23,10 @@ The roles are adapted from the mxcli-project-toolkit's agents (`skills/agent-rol
 
 The meeting room's window has **📋 Standup** too, for the latest page.
 
+## The PM console on the board
+
+The 1D view's **🗂 Board** tab has the project summary in three equal columns: the project's details, the **project manager console**, and the recent activity (stacked on a phone, the console second). The console shows the PM's name, where it stands, its model and cost, and its terminal live and read-only (scaled to the column; **⤢ Open** for the full terminal, **⏰ Wake** when it's asleep). Under it, **Ask the project manager…** sends it a prompt (Enter sends, Shift+Enter is a new line, ↑/↓ recalls what you sent this visit); while it's busy the prompt waits in its input box. The chips ask for a status update, what's blocking, or the next steps, and **📋 Run standup** runs the standup. When the PM is asking something, answer it in ⤢ Open: a typed prompt isn't an answer to a choice. With no PM, the console offers **🤝 Hire Project Manager** (admins); with a benched one, its handoff note and **Hire again**. The console watches the PM's terminal only while the Board tab is in front, since a viewer counts as someone at its terminal and keeps it from being benched.
+
 ## In the project
 
 Hiring a role writes these into the folder it works in (its worktree), to land with its first pull request:

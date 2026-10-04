@@ -19,6 +19,7 @@ import { renderSummary } from './ui/summary';
 import { teamTab } from './ui/roster';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { liveAppView } from './ui/liveapp';
+import { pmConsole } from './ui/pm/console';
 import { openPull } from './ui/pull';
 import { openQueue } from './ui/queue';
 import { openMeeting, type MeetingPreset } from './ui/meeting';
@@ -47,6 +48,7 @@ colorThemes($('theme'), $('summary'));
 const session = flatSession('/lite', (id) => openWorker(id), (m) => {
   routePreviewMessage(m);
   live.route(m);
+  pm.route(m);
 });
 const { net } = session;
 const workers = workerActions(net);
@@ -54,6 +56,9 @@ const openWorker = workers.open;
 const sendToWorker = workers.send;
 // The floor's app, running from main (the 🌐 Live app tab, ui/liveapp.ts).
 const live = liveAppView(net, () => showTab('live'), () => tab === 'live' && !home.shown);
+// The project manager console in the middle of the project summary (ui/pm/console.ts): its live
+// terminal only while the board is on screen.
+const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'board' && !home.shown });
 
 // ---- The floor you're on, and the floors page --------------------------------------------------
 floorPicker(net);
@@ -62,6 +67,7 @@ const home = floorsHome(net, '1d', (shown) => {
   $('lite-nav').classList.toggle('hidden', shown);
   // Back from the floors page: the board catches up with the floor picked there.
   if (!shown) renderKanban();
+  pm.sync();
 });
 
 // ---- Workers ------------------------------------------------------------------------------------
@@ -210,12 +216,14 @@ function showTab(t: Tab) {
   renderKanban();
   renderAnalysisTab();
   team.render(store.floor ?? undefined);
+  // Off the Board tab, the PM console lets go of its terminal.
+  pm.sync();
 }
 /** The board and the project summary over it, unless the floors page is over them (they're drawn when that goes). */
 function renderKanban() {
   if (tab !== 'board' || home.shown) return;
   renderBoard($('board'), kanban);
-  void renderSummary($('summary'), store.floor ?? undefined).then(() => live.mountChip($('summary')));
+  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el }).then(() => live.mountChip($('summary')));
   void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) });
 }
 /** Which model does well on what (ui/analysis.ts), for this floor or every floor. */
