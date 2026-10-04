@@ -2,7 +2,8 @@
 // per frame (the quality), for computers the full office is too much for.
 
 export type GraphicsQuality = 'low' | 'medium' | 'high';
-export type View = '3d' | 'retro';
+/** How the office is shown: the 2D view (/lite, the default), or walking around it in 3D or retro. */
+export type View = '2d' | '3d' | 'retro';
 
 export interface Graphics {
   view: View;
@@ -31,7 +32,7 @@ const RETRO_PIXEL_SCALE = 1 / 3;
 
 const VIEW_KEY = 'agent-office.view';
 const QUALITY_KEY = 'agent-office.graphics';
-const isView = (v: unknown): v is View => v === '3d' || v === 'retro';
+const isView = (v: unknown): v is View => v === '2d' || v === '3d' || v === 'retro';
 const isQuality = (q: unknown): q is GraphicsQuality => typeof q === 'string' && q in QUALITY;
 
 /** `?<param>=` picks it (and remembers it), otherwise the last one picked, otherwise `fallback`. */
@@ -49,7 +50,7 @@ function pick<T extends string>(param: string, key: string, valid: (v: unknown) 
 
 // Read as this module loads, before main.ts tidies the address bar (see chose3d there).
 const chosen: Graphics = (() => {
-  const view = pick('view', VIEW_KEY, isView, '3d');
+  const view = pick('view', VIEW_KEY, isView, '2d');
   const q = QUALITY[pick('gfx', QUALITY_KEY, isQuality, 'high')];
   return { ...q, view, pixelScale: view === 'retro' ? RETRO_PIXEL_SCALE : 1 };
 })();
@@ -58,4 +59,11 @@ const chosen: Graphics = (() => {
 export const graphics = (): Graphics => chosen;
 
 /** Into the office in `view`, remembered for next time. */
-export const switchView = (view: View) => location.assign(`/?3d=1&view=${view}`);
+export function switchView(view: View) {
+  try {
+    localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // No storage: just this once, then.
+  }
+  location.assign(view === '2d' ? '/lite' : `/?3d=1&view=${view}`);
+}

@@ -13,6 +13,7 @@ import { elevatorPanelOpen } from './ui/elevator';
 import { onModelsProgress, preloadModels } from './world/models';
 import { loadingScreen } from './ui/loading';
 import { offerLite, touchOnly } from './ui/litesuggest';
+import { graphics } from './graphics';
 import { createCtx } from './core/ctx';
 import type { Parts } from './core/parts';
 import { createScene, fitWindow, installSky, makeRenderer, noWebGL } from './core/scene';
@@ -65,6 +66,11 @@ import { installWhiteboard } from './features/whiteboard';
 import { installWorkerActions } from './features/workers/actions';
 import { installWorkerViews } from './features/workers/views';
 
+// The 2D view is where the office opens, unless this browser picked walking around it (see graphics.ts).
+if (graphics().view === '2d') {
+  location.replace('/lite');
+  await new Promise(() => {});
+}
 // The loading screen stays up until there's an office to see (see boot and whoami at the end).
 const loading = loadingScreen(onModelsProgress);
 // Came here from the 2D view's 🏢 3D button: it isn't offered straight back.
