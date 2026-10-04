@@ -34,6 +34,7 @@
         <button id="tab-board" class="btn" type="button" role="tab">🗂 Board</button>
         <button id="tab-workers" class="btn" type="button" role="tab">🤖 Workers</button>
         <button id="tab-analysis" class="btn" type="button" role="tab">📊 Analysis</button>
+        <button id="tab-team" class="btn" type="button" role="tab">👥 Team <span class="ro-tab-n"></span></button>
       </div>
       <!-- What's happening on the floor, in a few sentences and numbers (ui/summary.ts). -->
       <div id="summary"></div>
@@ -41,6 +42,8 @@
       <div id="board" class="kb"></div>
       <!-- Which model does well on what, here or on every floor (ui/analysis.ts). -->
       <div id="analysis-view" class="hidden"></div>
+      <!-- The project team: org chart, standup, approvals and settings (ui/roster/). -->
+      <div id="team-view" class="hidden"></div>
       <div id="workers-view">
         <h2 class="lite-h">Workers <span id="waiting-now" class="lite-waiting"></span></h2>
         <ul id="workers" class="lite-workers"></ul>

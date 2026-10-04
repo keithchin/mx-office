@@ -9,6 +9,7 @@ import { providerPicker } from './provider';
 import { officePrompt } from './prompts';
 import { issueVars } from './github/prompts';
 import { dictateField } from './dictate';
+import { openStandupWindow } from './roster';
 
 /** What a meeting called from an issue, a PR or a task starts out with. */
 export interface MeetingPreset {
@@ -42,7 +43,9 @@ export function openMeeting(net: Net, actions: MeetingActions, preset?: MeetingP
   const title = h('h2', {}, '🤝 Meeting room');
   const body = h('div.body.meeting');
   const foot = h('footer');
-  const el = h('div.modal.meeting-window', { role: 'dialog', 'aria-label': 'Meeting room' }, h('header', {}, title, close), body, foot);
+  // The project team's latest standup page (ui/roster/) is read here too.
+  const standup = h('button.btn.small', { type: 'button', title: "The project team's latest standup", onclick: () => store.floor && void openStandupWindow(store.floor) }, '📋 Standup');
+  const el = h('div.modal.meeting-window', { role: 'dialog', 'aria-label': 'Meeting room' }, h('header', {}, title, standup, close), body, foot);
   let view: 'status' | 'form' = preset || !store.meeting.current ? 'form' : 'status';
   let form: ReturnType<typeof meetingForm> | null = null;
   const render = () => {
