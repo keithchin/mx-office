@@ -21,8 +21,16 @@
     <main class="lite-main">
       <p id="floor-meta" class="lite-meta"></p>
       <div id="elsewhere" class="lite-elsewhere hidden"></div>
-      <h2 class="lite-h">Workers <span id="waiting-now" class="lite-waiting"></span></h2>
-      <ul id="workers" class="lite-workers"></ul>
+      <div class="lite-tabs" role="tablist">
+        <button id="tab-board" class="btn" type="button" role="tab">🗂 Board</button>
+        <button id="tab-workers" class="btn" type="button" role="tab">🤖 Workers</button>
+      </div>
+      <!-- The pipeline from issue to merged PR, agents in between (ui/kanban.ts). -->
+      <div id="board" class="kb"></div>
+      <div id="workers-view">
+        <h2 class="lite-h">Workers <span id="waiting-now" class="lite-waiting"></span></h2>
+        <ul id="workers" class="lite-workers"></ul>
+      </div>
     </main>
     <nav class="lite-nav" aria-label="Office">
       <button id="btn-issues" class="btn" type="button">📌 Issues <span class="n"></span></button>

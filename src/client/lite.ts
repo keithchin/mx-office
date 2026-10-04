@@ -17,7 +17,9 @@ import { openTerminal, openTerminalFor, routeTerminalMessage } from './ui/termin
 import { openChanges, openChangesFor, routeChangesMessage } from './ui/changes';
 import { lostWorktreeDialog, openPrompt, routeWorktreeMessage, sendHomeDialog } from './ui/prompt';
 import { openBoard } from './ui/boards';
-import type { BoardActions } from './ui/github/prompts';
+import { issuePrompt, type BoardActions } from './ui/github/prompts';
+import { openIssue } from './ui/github/issue-window';
+import { renderBoard, type KanbanActions } from './ui/kanban';
 import { openPull, routePullMessage } from './ui/pull';
 import { openQueue } from './ui/queue';
 import { openAsk } from './ui/ask';
@@ -317,6 +319,46 @@ function showMeeting(preset?: MeetingPreset) {
   );
 }
 
+// ---- The board: the floor's pipeline from issue to merged PR (ui/kanban.ts), or the list of workers ----
+const kanban: KanbanActions = {
+  openWorker,
+  openIssue: (it) => openIssue(it, net, boardActions()),
+  openPull: (it) => openPull(it, net, boardActions()),
+  start: (it) => sendToWorker(`🤖 #${it.number} ${it.title}`, { initial: issuePrompt(it) }, it.number),
+  queue: (it) => {
+    net.send({ t: 'queue.add', prompt: issuePrompt(it), title: it.title, issue: it.number });
+    toast(`📋 #${it.number} queued: the next free agent takes it`);
+  },
+};
+const TAB_KEY = 'agent-office.lite-tab';
+let tab: 'board' | 'workers' = 'board';
+try {
+  if (localStorage.getItem(TAB_KEY) === 'workers') tab = 'workers';
+} catch {
+  // No storage: the board, as usual.
+}
+function showTab(t: typeof tab) {
+  tab = t;
+  try {
+    localStorage.setItem(TAB_KEY, t);
+  } catch {
+    // Just for this visit, then.
+  }
+  $('tab-board').classList.toggle('on', t === 'board');
+  $('tab-workers').classList.toggle('on', t === 'workers');
+  $('board').classList.toggle('hidden', t !== 'board');
+  $('workers-view').classList.toggle('hidden', t !== 'workers');
+  document.querySelector('.lite-main')!.classList.toggle('board', t === 'board');
+  renderKanban();
+}
+function renderKanban() {
+  if (tab === 'board') renderBoard($('board'), kanban);
+}
+$('tab-board').addEventListener('click', () => showTab('board'));
+$('tab-workers').addEventListener('click', () => showTab('workers'));
+for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanban);
+setInterval(renderKanban, 30_000);
+
 $('btn-issues').addEventListener('click', () => openBoard('issues', net, boardActions()));
 $('btn-pulls').addEventListener('click', () => openBoard('pulls', net, boardActions()));
 $('btn-queue').addEventListener('click', () => openQueue(net, { openTerminal: openWorker }));
@@ -404,6 +446,7 @@ void (async () => {
 renderFloors();
 renderWorkers();
 renderNav();
+showTab(tab);
 
 // Debug handle for quick checks from the console / headless screenshots.
 (window as any).__lite = { store, net };
