@@ -73,3 +73,11 @@
 .an-how summary { padding: 10px 12px; font-size: 13px; font-weight: 900; cursor: pointer; }
 .an-how ul { margin: 0; padding: 0 16px 12px 32px; background: var(--paper-2); font-size: 13px; line-height: 1.5; }
 .an-how li + li { margin-top: 4px; }
+.an-unranked > summary { padding: 4px 12px 10px; font-size: 12px; font-weight: 800; color: var(--muted); cursor: pointer; }
+.an-unranked .an-runs { padding-top: 0; }
+/* On a phone the task's title gets a line of its own rather than a narrow column beside the model. */
+@media (max-width: 560px) {
+  .an-run-top { flex-wrap: wrap; }
+  .an-run-title { order: 3; flex-basis: 100%; }
+  .an-badge { margin-left: auto; }
+}

@@ -216,7 +216,15 @@ function runsView(r: AnalysisReport): HTMLElement {
       x.note ? h('p.an-note', {}, x.note) : null,
     );
   };
-  return section('🕑 Recent runs', `Latest ${runs.length}${r.runs.length > runs.length ? ` of ${r.runs.length}` : ''} · * quality the agent reported itself`, runs.length ? h('ol.an-runs', {}, ...runs.map(item)) : h('p.an-empty', {}, 'No runs recorded yet.'));
+  // The runs that count first; the ones still going and the false starts tucked away below, so they don't crowd them out.
+  const ranked = runs.filter((x) => !x.excluded);
+  const unranked = runs.filter((x) => x.excluded);
+  return section(
+    '🕑 Recent runs',
+    `Latest ${runs.length}${r.runs.length > runs.length ? ` of ${r.runs.length}` : ''} · * quality the agent reported itself`,
+    ranked.length ? h('ol.an-runs', {}, ...ranked.map(item)) : h('p.an-empty', {}, 'No ranked runs yet.'),
+    unranked.length ? h('details.an-unranked', {}, h('summary', {}, `${unranked.length} not ranked (still running, or no PR and under 10 API calls)`), h('ol.an-runs', {}, ...unranked.map(item))) : null,
+  );
 }
 
 function howScored(r: AnalysisReport): HTMLElement {

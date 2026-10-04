@@ -10,6 +10,7 @@ import { modelLabel, type RunRecord } from '../../shared/analysis.js';
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { analysisOf } from '../analysis/index.js';
+import { gh } from '../github.js';
 import type { Haiku } from '../analysis/llm.js';
 import { Narrator } from './narrate.js';
 import { projectFacts } from './project.js';
@@ -31,6 +32,7 @@ export class Summaries {
   /** What the office saw happen that nothing else keeps: agents stopping on a question. By floor, latest last. */
   private log = new Map<string, ActivityItem[]>();
   private seen = new Map<string, Seen>();
+  private descriptions = new Map<string, string>();
   private narrator: Narrator;
 
   constructor(
@@ -106,7 +108,12 @@ export class Summaries {
     for (const p of openPrs) if (p.checks === 'fail') risks.push({ level: 'bad', text: `PR #${p.number} has failing checks: ${clip(p.title, 70)}` });
     for (const a of agents) if (a.quietMs !== undefined && a.quietMs > STALL_RISK_MS) risks.push({ level: 'warn', text: `${a.name} has shown no progress for ${mins(a.quietMs)}` });
     if (this.ledger.overBudget) risks.push({ level: 'bad', text: "Today's budget is spent" });
-    const facts = projectFacts(floor.dir);
+    const facts = { ...projectFacts(floor.dir) };
+    // No README or intake to say what it's for: the GitHub repository's own description, once gh has said it.
+    if (!facts.goal) {
+      const about = this.about(floor.dir);
+      if (about) Object.assign(facts, { goal: about, goalFrom: 'the GitHub repository description' });
+    }
     const failing = facts.phase?.stages.filter((s) => s.status === 'FAIL') ?? [];
     if (failing.length) risks.push({ level: 'warn', text: `${failing.length} toolkit gate${failing.length === 1 ? '' : 's'} failing: ${failing.slice(0, 3).map((s) => s.title).join(', ')}` });
 
@@ -136,7 +143,7 @@ export class Summaries {
     for (const r of runs) {
       if (r.outcome === 'running' || r.excluded) continue;
       finished.add(r.workerId);
-      out.push({ at: r.endedAt, kind: 'finished', text: `${r.worker} (${r.modelLabel}) finished ${clip(r.title, 60)}${r.pr ? ` → PR #${r.pr.number}` : ''}` });
+      out.push({ at: r.endedAt, kind: 'finished', text: `${r.worker} (${r.modelLabel}) finished ${clip(r.title, 60)}${r.pr ? ` → PR #${r.pr.number}` : ' (no PR)'}` });
     }
     for (const t of floor.queue.state().tasks) {
       if (t.finishedAt && t.workerId && !finished.has(t.workerId)) out.push({ at: t.finishedAt, kind: 'finished', text: `${t.workerName ?? 'An agent'} finished ${clip(t.title, 60)}` });
@@ -152,6 +159,17 @@ export class Summaries {
       if (i.state !== 'OPEN') out.push({ at: ts(i.updatedAt), kind: 'issue-closed', text: `Issue #${i.number} closed` });
     }
     return out.filter((a) => a.at > 0).sort((a, b) => b.at - a.at);
+  }
+
+  /** The repository's description: asked of gh once per floor, in the background, and '' until it answers. */
+  private about(dir: string): string {
+    if (!this.descriptions.has(dir)) {
+      this.descriptions.set(dir, '');
+      void gh(['repo', 'view', '--json', 'description', '--jq', '.description'], dir, 20_000)
+        .then((out) => this.descriptions.set(dir, out.trim().slice(0, 400)))
+        .catch(() => {});
+    }
+    return this.descriptions.get(dir)!;
   }
 
   private observe(w: WorkerInfo) {
