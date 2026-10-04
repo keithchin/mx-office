@@ -36,7 +36,7 @@ export function needyFirst(workers: Iterable<WorkerInfo>): WorkerInfo[] {
 }
 
 /**
- * Every worker, as the 2D view lists them: the ones waiting on someone first (see waitingInOrder), then
+ * Every worker, as the 1D view lists them: the ones waiting on someone first (see waitingInOrder), then
  * the ones at work, then the rest (ready, or done and seen to), asleep last; hired first within each.
  */
 export function byUrgency(workers: Iterable<WorkerInfo>): WorkerInfo[] {

@@ -13,8 +13,8 @@ import { store } from '../state';
  */
 export function whereabouts(p: PeerInfo, car?: { car: number; seat: CarSeat }, plan: MapPlan = store.plan()): string | undefined {
   if (p.doing) return p.doing;
-  // Not standing anywhere: in on the 2D view, from a phone, say.
-  if (p.lite) return '📱 on the 2D view';
+  // Not standing anywhere: in on the 1D or 2D view, from a phone, say.
+  if (p.lite) return '📱 on the 1D or 2D view';
   // In one of the garage's cars (see Store.carOf).
   const def = car && CARS[car.car];
   if (def) return `🏎️ ${car.seat === 'driver' ? 'driving' : 'riding in'} the ${def.name}`;

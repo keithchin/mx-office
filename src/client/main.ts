@@ -13,7 +13,7 @@ import { elevatorPanelOpen } from './ui/elevator';
 import { onModelsProgress, preloadModels } from './world/models';
 import { loadingScreen } from './ui/loading';
 import { offerLite, touchOnly } from './ui/litesuggest';
-import { graphics } from './graphics';
+import { graphics, viewUrl } from './graphics';
 import { createCtx } from './core/ctx';
 import type { Parts } from './core/parts';
 import { createScene, fitWindow, installSky, makeRenderer, noWebGL } from './core/scene';
@@ -66,19 +66,21 @@ import { installWhiteboard } from './features/whiteboard';
 import { installWorkerActions } from './features/workers/actions';
 import { installWorkerViews } from './features/workers/views';
 
-// The 2D view is where the office opens, unless this browser picked walking around it (see graphics.ts).
-if (graphics().view === '2d') {
-  location.replace('/lite');
+// The 1D view is where the office opens, unless this browser picked the 2D view or walking around it
+// (see graphics.ts). The 1D and 2D views each have a page of their own.
+const view = graphics().view;
+if (view === '1d' || view === '2d') {
+  location.replace(viewUrl(view));
   await new Promise(() => {});
 }
 // The loading screen stays up until there's an office to see (see boot and whoami at the end).
 const loading = loadingScreen(onModelsProgress);
-// Came here from the 2D view's 🏢 3D button: it isn't offered straight back.
+// Came here from the 1D or 2D view's 🏢 3D button: it isn't offered straight back.
 const chose3d = new URLSearchParams(location.search).has('3d');
 if (chose3d) history.replaceState(null, '', location.pathname);
-/** Offers the 2D view (/lite) where the 3D is hard going. */
+/** Offers the 1D view (/lite) where the 3D is hard going. */
 const offer2d = (why: 'touch' | 'slow') => chose3d || offerLite(why);
-// A phone can't walk around the office: the 2D view is made for it.
+// A phone can't walk around the office: the 1D view is made for it.
 if (touchOnly()) offer2d('touch');
 // The models made in Blender, loaded before the world they're in is built (see world/models.ts).
 await preloadModels();

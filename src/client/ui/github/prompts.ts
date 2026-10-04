@@ -15,7 +15,7 @@ export interface BoardActions {
   goToDesk(deskId: string): void;
   /** Put an issue on the 📋 task queue; a worker is seated for it when there's room. */
   queue(prompt: string, title: string, issue: number, provider?: AgentProvider, model?: string, effort?: AgentEffort): void;
-  /** Take the issue's card off the board, to carry to a desk or the queue (not on the 2D view, where there's nobody to carry it). */
+  /** Take the issue's card off the board, to carry to a desk or the queue (not on the 1D view, where there's nobody to carry it). */
   pickUp?(issue: GhIssue): void;
   /** Call a meeting about it: the meeting room's form, filled in. */
   meeting(preset: MeetingPreset): void;

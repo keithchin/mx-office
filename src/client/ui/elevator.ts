@@ -24,6 +24,11 @@ export interface ElevatorOptions {
   ride(floorId: string): void;
   /** You're down in the garage (or out on the street), under the floor you're on. */
   downstairs(): boolean;
+  /**
+   * Just adding a project, without the floors to ride to: the 1D and 2D views' floors page lists
+   * them itself (shared/floors.ts), and there's no roof or garage to go to from there.
+   */
+  addOnly?: boolean;
 }
 
 /** How many repositories the list shows at once; typing narrows it down. */
@@ -61,7 +66,7 @@ export function openElevator(opts: ElevatorOptions): void {
   if (current) return;
   // Nowhere to go yet: the panel greets you. It closes like any other; the elevator (or the floor
   // name in the corner) opens it again.
-  const setup = !store.floor;
+  const setup = !store.floor && !opts.addOnly;
   const { net } = opts;
   let filter = '';
   let selected: string | null = null;
@@ -70,7 +75,7 @@ export function openElevator(opts: ElevatorOptions): void {
   let seen = false;
   let startTimer: number | undefined;
   let error = '';
-  let showAdd = setup || !store.floors.length;
+  let showAdd = setup || !store.floors.length || !!opts.addOnly;
   /** The search box and list are in place (rebuilding them would lose the focus mid-typing). */
   let built = false;
 
@@ -215,6 +220,7 @@ export function openElevator(opts: ElevatorOptions): void {
   };
 
   const renderFloors = () => {
+    if (opts.addOnly) return;
     const floors = store.floors;
     const built = floors.some((f) => !f.cloning);
     // Top floor first, the way an elevator's buttons stack, with the roof over them, floor 1 and then the garage at the bottom.
@@ -300,7 +306,8 @@ export function openElevator(opts: ElevatorOptions): void {
     if (!built) {
       built = true;
       addEl.replaceChildren(
-        h('h3', {}, setup && !store.floors.length ? 'Pick your first project' : '➕ Add a project'),
+        // Just adding one, the window's own title says so already.
+        ...(opts.addOnly ? [] : [h('h3', {}, setup && !store.floors.length ? 'Pick your first project' : '➕ Add a project')]),
         h('div.repo-search', {}, input, refreshBtn),
         listEl,
         statusEl,
@@ -396,9 +403,9 @@ export function openElevator(opts: ElevatorOptions): void {
   const el = h(
     'div.modal.elevator',
     { role: 'dialog', 'aria-label': 'Elevator' },
-    h('header', {}, h('h2', {}, setup ? '🏢 Welcome to Agent Office' : '🛗 Elevator'), close),
+    h('header', {}, h('h2', {}, setup ? '🏢 Welcome to Agent Office' : opts.addOnly ? '➕ Add a project' : '🛗 Elevator'), close),
     h('div.body', {}, intro, floorsEl, addEl),
-    h('footer', {}, h('span.grow', {}, setup ? 'Your office, one floor per project · Esc to look around first' : 'Pick a floor · Esc to stay here'), addBtn),
+    h('footer', {}, h('span.grow', {}, setup ? 'Your office, one floor per project · Esc to look around first' : opts.addOnly ? 'A new floor for one of your repositories · Esc to close' : 'Pick a floor · Esc to stay here'), addBtn),
   );
   const unsubs = [store.on('floors', () => (checkAdding(), renderFloors(), renderAdd())), store.on('repos', renderAdd), store.on('projectsDir', () => (editDir(false), renderAdd())), store.on('floor', renderFloors), store.on('peers', renderFloors), store.on('me', () => (renderFloors(), renderAdd()))];
   const modal = openModal(el, {

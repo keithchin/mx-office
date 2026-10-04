@@ -1,4 +1,4 @@
-/** The tab's title, the same in the 3D office and the 2D view (/lite). No three.js here: the 2D view imports it. */
+/** The tab's title, the same in the 3D office and the 1D view (/lite). No three.js here: the 1D view imports it. */
 import { waitingOnSomeone } from '../notify';
 import { store } from '../state';
 

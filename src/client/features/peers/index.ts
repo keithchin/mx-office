@@ -51,7 +51,7 @@ export function installPeers(ctx: Ctx, core: CoreState, parts: Pick<Parts, 'puff
 
   function syncPeers() {
     for (const [id, peer] of store.peers) {
-      // Only who's on your floor is in the room with you, and not someone on the 2D view: they're not standing anywhere.
+      // Only who's on your floor is in the room with you, and not someone on the 1D or 2D view: they're not standing anywhere.
       if (id === store.you || !store.onMyFloor(peer) || peer.lite) continue;
       let r = remotes.get(id);
       if (!r) {

@@ -49,7 +49,7 @@ export interface PeerInfo {
   doing?: string;
   /** Reading something off the bookshelf: an open book in their hands, its pages turning. */
   reading?: boolean;
-  /** On the 2D view (/lite: a phone, say, or a slow computer): in the office, but not standing anywhere in it. */
+  /** On the 1D or 2D view (/lite or /pixel: a phone, say, or a slow computer): in the office, but not standing anywhere in it. */
   lite?: boolean;
 }
 

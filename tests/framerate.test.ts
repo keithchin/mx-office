@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SlowFrames } from '../src/client/framerate.js';
 
-// When the 3D office offers the 2D view for being slow (framerate.ts): frames averaging 50 ms or more
+// When the 3D office offers the 1D view for being slow (framerate.ts): frames averaging 50 ms or more
 // through ten seconds, once it has warmed up, and only once.
 
 /** Draws frames `dt` ms apart from `from` for `ms`; whether any of them said slow, and when it ended. */

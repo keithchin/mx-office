@@ -67,7 +67,7 @@ async function uploadDrop(workerId: string, f: File): Promise<string> {
 export interface TerminalOptions {
   /**
    * The keys a phone's keyboard hasn't got (1 2 3 for a menu, arrows, Enter, Tab, Esc, Ctrl+C) and a
-   * box to send a prompt from, under the terminal, for the 2D view (lite.ts). The terminal doesn't
+   * box to send a prompt from, under the terminal, for the 1D view (lite.ts). The terminal doesn't
    * take the focus as it opens either, so a phone's keyboard stays down until you tap into it.
    */
   keypad?: boolean;

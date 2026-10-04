@@ -1,6 +1,6 @@
 @import './styles/base.css';
 
-/* The 2D view (lite.html): a page that scrolls, made for a phone, rather than a HUD over the 3D office. */
+/* The 1D view (lite.html): a page that scrolls, made for a phone, rather than a HUD over the 3D office. */
 html, body { height: auto; min-height: 100%; overflow: auto; }
 body.lite { min-height: 100dvh; background: var(--paper); -webkit-tap-highlight-color: transparent; }
 
@@ -14,6 +14,11 @@ body.lite { min-height: 100dvh; background: var(--paper); -webkit-tap-highlight-
   background: no-repeat right 2px center / 12px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232b2d42' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 .lite-floor select:disabled { background-image: none; opacity: 1; cursor: default; }
+/* The four views, the one you're on lit up (the 2D view's top bar has them too). */
+.lite-views { flex: none; display: flex; gap: 4px; }
+.lite-bar .lite-views .btn { padding: 0 10px; }
+.lite-views .btn.on { background: var(--ink); color: #fff; box-shadow: none; transform: translateY(2px); cursor: default; }
+@media (max-width: 640px) { .lite-views .ico { display: none; } .lite-bar .lite-views .btn { padding: 0 8px; } }
 
 .lite-main { width: 100%; max-width: 760px; margin: 0 auto; padding: 12px 12px calc(96px + env(safe-area-inset-bottom)); }
 .lite-meta { margin: 0 0 10px; font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

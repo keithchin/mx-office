@@ -1,4 +1,4 @@
-/* The base every page of the office builds on, the 3D office and the 2D view alike: colors and the font,
+/* The base every page of the office builds on, the 3D office and the 1D view alike: colors and the font,
    the reset, panels and buttons, the small pieces many windows share, and the window (modal) frame.
    The office adds its HUD and loading screen (style.css); each window's own look sits next to its
    module in ui/ and comes in with it. */
@@ -47,7 +47,7 @@ button { font-family: inherit; }
 .btn:disabled { opacity: .5; cursor: default; }
 
 /* Status dots and pills, empty lists, key caps, toasts and the reconnecting banner: the office's HUD
-   and windows show them, and so does the 2D view. */
+   and windows show them, and so does the 1D view. */
 .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); flex: none; }
 .pill { font-size: 11px; font-weight: 900; padding: 2px 7px; border-radius: 999px; border: 2px solid var(--ink); white-space: nowrap; }
 .pill.starting, .pill.idle { background: #e0f2fe; }

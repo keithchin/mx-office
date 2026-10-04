@@ -26,7 +26,7 @@ export function installWalking(ctx: Ctx, core: CoreState, parts: Pick<Parts, 'wo
   function walkTo(id: string) {
     const p = store.peers.get(id);
     if (!p || id === store.you) return;
-    if (p.lite) return void toast(`📱 ${p.name} is on the 2D view, not anywhere in the office itself`);
+    if (p.lite) return void toast(`📱 ${p.name} is on the 1D or 2D view, not anywhere in the office itself`);
     if (!store.onMyFloor(p) && !p.floor) return;
     if (!parts.cars.getOut()) return;
     if (player.seat) parts.seating.standUp();

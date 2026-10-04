@@ -20,7 +20,7 @@ import { FirstPersonBody } from '../world/character/person-first';
 const QUIET_FEET = 1.2;
 
 export interface LoopDeps {
-  /** Offers the 2D view (/lite), where the 3D is hard going (see main.ts). */
+  /** Offers the 1D view (/lite), where the 3D is hard going (see main.ts). */
   offer2d(why: 'slow'): void;
 }
 
@@ -47,10 +47,10 @@ export function installLoop(ctx: Ctx, core: CoreState, parts: Pick<Parts, 'stage
   let fallV = 0;
   const lookDir = new THREE.Vector3();
   const headPos = new THREE.Vector3();
-  /** Frames coming too slowly for the 3D to be any fun: the 2D view is offered. */
+  /** Frames coming too slowly for the 3D to be any fun: the 1D view is offered. */
   const slowFrames = new SlowFrames();
 
-  /** Frames coming too slowly for the 3D to be any fun: the 2D view is offered. */
+  /** Frames coming too slowly for the 3D to be any fun: the 1D view is offered. */
   function watchFrameRate({ now, delta }: Frame) {
     if (slowFrames.frame(now, delta * 1000)) deps.offer2d('slow');
   }

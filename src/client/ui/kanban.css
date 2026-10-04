@@ -1,4 +1,4 @@
-/* The board on the 2D view (ui/kanban.ts): six columns side by side, scrolling sideways on a phone. */
+/* The board on the 1D view (ui/kanban.ts): six columns side by side, scrolling sideways on a phone. */
 .kb-summary { margin: 0 0 10px; font-size: 13px; font-weight: 800; color: var(--muted); }
 .kb-columns { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
 .kb-col { display: flex; flex-direction: column; min-height: 160px; background: var(--paper-2); border: 3px solid var(--ink); border-radius: var(--radius); scroll-snap-align: start; }

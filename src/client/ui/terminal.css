@@ -24,7 +24,7 @@
   .modal.term header h2 { flex-basis: calc(100% - 80px); }
   .modal.term header > :not(.dot, h2, .close) { order: 1; }
 }
-/* Under a terminal on the 2D view (TerminalOptions.keypad): the keys a phone's keyboard hasn't got, and a prompt box. */
+/* Under a terminal on the 1D view (TerminalOptions.keypad): the keys a phone's keyboard hasn't got, and a prompt box. */
 .term-keypad { display: flex; flex-direction: column; gap: 8px; padding: 8px 10px; padding-bottom: max(8px, env(safe-area-inset-bottom)); background: var(--paper); border-top: 3px solid var(--ink); }
 .term-keys { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 3px; }
 .term-keys .btn { flex: 1 1 0; min-width: 34px; height: 42px; padding: 0 4px; justify-content: center; border-radius: 10px; font-variant-numeric: tabular-nums; }

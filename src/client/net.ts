@@ -3,9 +3,9 @@ import { lastFloor, store, type Profile, type Spot } from './state';
 
 type Handler = (msg: ServerMsg) => void;
 
-/** The sign-in page, coming back to the 2D view afterwards if that's where you are (see login.ts). */
+/** The sign-in page, coming back to the 1D or 2D view afterwards if that's where you are (see login.ts). */
 export function loginUrl(): string {
-  return location.pathname === '/lite' ? '/login?next=/lite' : '/login';
+  return location.pathname === '/lite' || location.pathname === '/pixel' ? `/login?next=${location.pathname}` : '/login';
 }
 
 export class Net {
@@ -22,7 +22,7 @@ export class Net {
     private profile: () => Profile,
     /** Where you are (or were, before this page), to be put back in the same spot. */
     private where: () => Spot | null,
-    /** On the 2D view: in the office without standing anywhere in it (see PeerInfo.lite). */
+    /** On the 1D or 2D view: in the office without standing anywhere in it (see PeerInfo.lite). */
     private lite = false,
   ) {}
 

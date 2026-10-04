@@ -1,4 +1,4 @@
-// Telling when the 3D office is too much for this computer, to offer the 2D view (/lite) instead.
+// Telling when the 3D office is too much for this computer, to offer the 1D view (/lite) instead.
 
 export interface SlowFramesOptions {
   /** A frame this long or longer on average (ms) is slow: 50 is under 20 frames a second. */

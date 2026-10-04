@@ -9,15 +9,24 @@
     <link rel="stylesheet" href="./lite.css" />
   </head>
   <body class="lite">
-    <!-- The 2D view (lite.ts): the office without the 3D, for a phone or a computer the 3D is too much for. -->
+    <!-- The 1D view (lite.ts): the office without the 3D, for a phone or a computer the 3D is too much for. -->
     <header class="lite-bar">
+      <button id="to-home" class="btn" type="button" title="Every floor of the building, and adding a project" aria-label="Floors">🏠</button>
       <label class="lite-floor" title="The floor you're on: pick another to see its workers">
         <span class="lite-floor-label">Floor</span>
         <select id="floor" aria-label="Floor"></select>
       </label>
-      <a id="to-3d" class="btn" href="/?3d=1&amp;view=3d" title="The 3D office, where you walk around">🏢 3D</a>
-      <a id="to-retro" class="btn" href="/?3d=1&amp;view=retro" title="The office in chunky 16-bit pixels, where you walk around">👾 Retro</a>
+      <nav class="lite-views" aria-label="View">
+        <button class="btn on" type="button" aria-current="page" title="The 1D view: the floor's board and its workers">
+          <span class="ico">🗂️</span> 1D
+        </button>
+        <button id="to-2d" class="btn" type="button" title="The 2D view: the floor from above in pixel art"><span class="ico">🗺️</span> 2D</button>
+        <a id="to-3d" class="btn" href="/?3d=1&amp;view=3d" title="The 3D office, where you walk around"><span class="ico">🏢</span> 3D</a>
+        <a id="to-retro" class="btn" href="/?3d=1&amp;view=retro" title="The office in chunky 16-bit pixels, where you walk around"><span class="ico">👾</span> Retro</a>
+      </nav>
     </header>
+    <!-- Every floor of the building, to go into, and adding one (shared/floors.ts). -->
+    <section id="home" class="home hidden" aria-label="Floors"></section>
     <main class="lite-main">
       <p id="floor-meta" class="lite-meta"></p>
       <div id="elsewhere" class="lite-elsewhere hidden"></div>
@@ -32,7 +41,7 @@
         <ul id="workers" class="lite-workers"></ul>
       </div>
     </main>
-    <nav class="lite-nav" aria-label="Office">
+    <nav id="lite-nav" class="lite-nav" aria-label="Office">
       <button id="btn-issues" class="btn" type="button">📌 Issues <span class="n"></span></button>
       <button id="btn-pulls" class="btn" type="button">🔀 PRs <span class="n"></span></button>
       <button id="btn-queue" class="btn" type="button">📋 Queue <span class="n"></span></button>

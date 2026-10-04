@@ -57,7 +57,7 @@ test('the Workers panel counts who needs input and who is done', () => {
   assert.equal(waitingLabel([]), '');
 });
 
-test('the 2D view lists the workers waiting on someone first, then the busy ones, then the rest, asleep last', () => {
+test('the 1D view lists the workers waiting on someone first, then the busy ones, then the rest, asleep last', () => {
   const workers = [
     worker('asleep', 'offline', undefined, false, 1),
     worker('seen', 'done', 50, true, 2),

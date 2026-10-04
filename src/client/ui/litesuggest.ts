@@ -1,10 +1,10 @@
 import './litesuggest.css';
-// Offering the 2D view (/lite) where the 3D office is hard going: on a phone, with no keys to walk
+// Offering the 1D view (/lite) where the 3D office is hard going: on a phone, with no keys to walk
 // with, or on a computer where frames come slowly (see framerate.ts).
 
 import { h } from './dom';
 
-/** Said to stay in 3D: this browser isn't offered the 2D view again (it's in the ☰ menu). */
+/** Said to stay in 3D: this browser isn't offered the 1D view again (it's in the ☰ menu). */
 const DECLINED_KEY = 'agent-office.lite-declined';
 
 /** A touch screen and no mouse: a phone or a tablet, which can't walk around the office anyway. */
@@ -22,20 +22,20 @@ function declined(): boolean {
 
 let offered = false;
 
-/** Offers the 2D view, at most once a page, unless this browser said to stay in 3D before. */
+/** Offers the 1D view, at most once a page, unless this browser said to stay in 3D before. */
 export function offerLite(why: 'touch' | 'slow') {
   if (offered || declined()) return;
   offered = true;
   const say =
     why === 'touch'
-      ? '📱 On a phone? The 2D view is made for it: every worker and how it’s doing, its terminal, and the boards.'
-      : '🐢 The 3D office is running slowly on this computer. The 2D view has the workers, their terminals and the boards, without the 3D.';
+      ? '📱 On a phone? The 1D view is made for it: every worker and how it’s doing, its terminal, and the boards.'
+      : '🐢 The 3D office is running slowly on this computer. The 1D view has the workers, their terminals and the boards, without the 3D.';
   const stay = h('button.btn', { type: 'button' }, 'Stay in 3D');
   const el = h(
     'div.lite-offer.panel',
-    { role: 'dialog', 'aria-label': 'Try the 2D view' },
+    { role: 'dialog', 'aria-label': 'Try the 1D view' },
     h('p', {}, say),
-    h('div.lite-offer-btns', {}, h('a.btn.primary', { href: '/lite' }, 'Open the 2D view'), stay),
+    h('div.lite-offer-btns', {}, h('a.btn.primary', { href: '/lite' }, 'Open the 1D view'), stay),
   );
   stay.addEventListener('click', () => {
     try {
