@@ -1,7 +1,7 @@
-import './ui.css';
-import { isDocPath, resolveDocLink, type DocFile, type DocList, type DocText } from '../../../shared/docs';
-import { clip, h, openModal, setDoing, timeAgo, toast } from '../../ui/dom';
-import { markdownFile } from '../../ui/markdown';
+import './bookshelf.css';
+import { isDocPath, resolveDocLink, type DocFile, type DocList, type DocText } from '../../shared/docs';
+import { clip, h, openModal, setDoing, timeAgo, toast } from './dom';
+import { markdownFile } from './markdown';
 
 // The bookshelf: every Markdown file in the floor's project, to read without leaving the office.
 // The filter box over the list picks docs out as you type (the letters in order, not necessarily

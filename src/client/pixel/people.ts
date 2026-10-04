@@ -7,11 +7,14 @@ import { DESKS, DESK_SIZE, KIOSK, MEETING_SEATS, MEETING_TABLE, STATIONS, BEANBA
 import { isAsleep } from '../../shared/status';
 import type { PeerInfo, WorkerInfo } from '../../shared/protocol';
 import { C, bubble, check, lookFor, seated, standing, zed, type Pose } from './sprites';
-import { LIFT, PPM, ax, az, beanbag, box, rect, type Frame } from './office';
+import { LIFT, PPM, ax, az, beanbag, box, oval, rect, type Frame } from './office';
+import { dogAt, drawDog, drawSign, type DeskSign } from './props';
+import { waitingOnSomeone } from '../notify';
+import type { DogState } from '../../shared/dog';
 
 /** Something under the pointer: a worker, someone walking about, or a free desk to hire someone at. */
 export interface Spot {
-  kind: 'worker' | 'peer' | 'desk';
+  kind: 'worker' | 'peer' | 'desk' | 'dog';
   id: string;
   x: number;
   y: number;
@@ -44,6 +47,10 @@ export interface Cast {
   peers: Iterable<PeerInfo>;
   level: number;
   hover: string | null;
+  /** The floor's dog, and when (performance.now()) the leg it's on began. */
+  dog: { state: DogState; start: number } | null;
+  /** The signs over the desks (see props.ts). */
+  signs: DeskSign[];
 }
 
 /** When each worker last changed how it's doing, for the tick that flashes as one finishes. */
@@ -127,6 +134,16 @@ export function drawPeople(g: CanvasRenderingContext2D, f: Frame, cast: Cast, no
     out.labels.push({ id: p.id, text: p.name, x, y: y + 2, above: false, human: true });
   }
 
+  // The signs stand on their desks' far edges, drawn with the desk they're on.
+  for (const s of cast.signs) queue.push({ y: s.y + Math.round(DESK_SIZE.height * LIFT) + Math.round((DESK_SIZE.depth * PPM) / 2) + 1, draw: () => drawSign(g, s) });
+  // The dog, trotting about between the desks, napping under one, barking at whoever needs you.
+  if (cast.dog) {
+    const d = cast.dog.state, at = dogAt(d, now - cast.dog.start);
+    const x = ax(f, at.x), y = az(f, at.z);
+    queue.push({ y, draw: () => drawDog(g, x, y, d, at, now) });
+    out.spots.push({ kind: 'dog', id: 'dog', x: x - 6, y: y - 8, w: 12, h: 10 });
+  }
+
   queue.sort((a, b) => a.y - b.y);
   for (const q of queue) q.draw();
   return out;
@@ -153,6 +170,7 @@ export function drawPeople(g: CanvasRenderingContext2D, f: Frame, cast: Cast, no
       y: sortY,
       draw: () => {
         const look = lookFor(w.id, w.color);
+        if (waitingOnSomeone(w)) pulse(x, y, w.status === 'needs_input' ? C.amber : C.green);
         if (stands) g.drawImage(standing(look, 'front', false, 0), x - 5, top);
         else g.drawImage(seated(look, pose, how, beat), x - 5, top);
         // Its chair's back, over someone with their back to you.
@@ -230,6 +248,15 @@ export function drawPeople(g: CanvasRenderingContext2D, f: Frame, cast: Cast, no
   function chairBack(x: number, y: number) {
     rect(g, x - 5, y - 4, 11, 5, C.chair);
     rect(g, x - 5, y - 4, 11, 1, C.chairTop);
+  }
+
+  /** A ring on the floor that swells and fades, under someone waiting on you. */
+  function pulse(x: number, y: number, color: string) {
+    const t = (now % 1200) / 1200;
+    g.globalAlpha = 0.55 * (1 - t);
+    const rx = Math.round(6 + t * 6), ry = Math.round(2 + t * 2);
+    oval(g, x, y + 2, rx, ry, color);
+    g.globalAlpha = 1;
   }
 
   /** A teal ring on the floor under what the pointer's on. */

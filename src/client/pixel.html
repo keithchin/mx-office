@@ -16,7 +16,10 @@
         <span class="lite-floor-label">Floor</span>
         <select id="floor" aria-label="Floor"></select>
       </label>
-      <p id="floor-meta" class="px-meta"></p>
+      <div class="px-meta-box">
+        <p id="px-summary" class="px-summary"></p>
+        <p id="floor-meta" class="px-meta"></p>
+      </div>
       <nav class="lite-views" aria-label="View">
         <button id="to-1d" class="btn" type="button" title="The 1D view: the floor's board and its workers"><span class="ico">🗂️</span> 1D</button>
         <button class="btn on" type="button" aria-current="page" title="The 2D view: the floor from above in pixel art">
@@ -32,10 +35,19 @@
       <canvas id="office" aria-label="The office from above: click someone for their terminal, or a free desk to give someone new work there"></canvas>
       <div id="px-tip" class="px-tip hidden" role="tooltip"></div>
       <div id="elsewhere" class="px-elsewhere hidden"></div>
+      <!-- Zooming in whole steps, and back to all of it showing (pixel/camera.ts). -->
+      <div class="px-panel px-zoom" role="group" aria-label="Zoom">
+        <button id="px-zoom-out" class="px-btn" type="button" title="Zoom out (−)" aria-label="Zoom out">−</button>
+        <button id="px-zoom-fit" class="px-btn px-zoom-level" type="button" title="Fit the whole floor (0)" aria-label="Fit the whole floor"><span id="px-zoom-level">Fit</span></button>
+        <button id="px-zoom-in" class="px-btn" type="button" title="Zoom in (+)" aria-label="Zoom in">+</button>
+      </div>
     </main>
     <!-- Who's doing what on this floor, and what the colors mean. -->
     <footer id="px-foot" class="px-foot">
       <span id="px-count" class="px-count"></span>
+      <button id="px-next" class="px-btn px-next" type="button" title="Whoever has waited longest on you: their terminal (N)">🙋 Next waiting <kbd>N</kbd></button>
+      <!-- The keys, as the 3D office's hint bar shows them. -->
+      <span class="px-keys" aria-label="Keys"><span><kbd>Click</kbd> open</span><span><kbd>Right-click</kbd> menu</span><span><kbd>T</kbd> chat</span><span><kbd>+</kbd><kbd>−</kbd><kbd>0</kbd> zoom</span><span><kbd>←</kbd><kbd>→</kbd> pan</span></span>
       <span class="px-legend" aria-hidden="true">
         <span><i style="background: #5fd9cb"></i>working</span><span><i style="background: #f2b33d"></i>needs you</span><span><i style="background: #2fbf8a"></i>done</span><span><i style="background: #8fa3bf"></i>asleep</span>
       </span>

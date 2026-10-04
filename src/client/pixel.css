@@ -15,8 +15,12 @@ body.pixel .lite-floor select {
 body.pixel .lite-floor select:disabled { background-image: none; }
 body.pixel .lite-floor select option { color: var(--ink); }
 body.pixel .lite-views .btn.on { background: #17b3a3; border-color: #17b3a3; color: #0d1828; }
-.px-meta { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 12px; font-weight: 700; color: #8fa3bf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 900px) { .px-meta { display: none; } }
+/* What the floor's up to, in a line (ui/summary.ts), over its branch and repository. */
+.px-meta-box { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.px-summary { margin: 0; font-size: 13px; font-weight: 800; color: #e6eef8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.px-summary:empty { display: none; }
+.px-meta { min-width: 0; margin: 0; font-size: 12px; font-weight: 700; color: #8fa3bf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 900px) { .px-meta-box { display: none; } }
 
 /* The floors page scrolls over the office, on the office's navy. */
 body.pixel .home { flex: 1; max-width: none; overflow: auto; padding-left: max(12px, calc(50% - 490px)); padding-right: max(12px, calc(50% - 490px)); background: #0d1828; color: #fff; }
@@ -40,8 +44,9 @@ body.pixel .home-intro { color: #8fa3bf; }
 
 .px-elsewhere { position: absolute; top: 10px; right: 10px; z-index: 4; display: flex; flex-direction: column; gap: 6px; max-width: 280px; }
 .px-elsewhere .lite-go { min-height: 36px; font-size: 13px; }
-.px-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; padding: 6px 14px; padding-bottom: max(6px, env(safe-area-inset-bottom)); background: #13213a; border-top: 2px solid #2b4066; color: #c9d4e3; font-size: 12px; font-weight: 700; }
+.px-foot { flex: none; display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; padding: 6px 14px; padding-bottom: max(6px, env(safe-area-inset-bottom)); background: #13213a; border-top: 2px solid #2b4066; color: #c9d4e3; font-size: 12px; font-weight: 700; }
 .px-count { color: #fff; }
 .px-count .warn { color: #f2b33d; }
-.px-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.px-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-left: auto; }
+@media (max-width: 640px) { .px-legend { display: none; } }
 .px-legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; }
