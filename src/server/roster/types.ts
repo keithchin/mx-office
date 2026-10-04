@@ -3,6 +3,7 @@
 // cost money). adapter.ts makes one from a real Floor.
 
 import type { WorkerInfo } from '../../shared/protocol.js';
+import type { TeamId } from '../../shared/roster/roles.js';
 import type { IssueMaker } from './issues.js';
 
 export interface HireAsk {
@@ -12,6 +13,8 @@ export interface HireAsk {
   /** The account the worker runs as, when the person hiring has one. */
   owner?: string;
   by: string;
+  /** The role's team: it sits at a free desk in that team's patch of the floor first (shared/zones.ts). */
+  team?: TeamId;
 }
 
 export interface TeamFloor {
