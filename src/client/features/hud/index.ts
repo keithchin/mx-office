@@ -23,7 +23,7 @@ import { openSettings, type SettingsPane } from '../../ui/settings';
 import { needsSigningIn, openSignIns } from '../../ui/signins';
 import { openTeam } from '../../ui/team';
 import { openUpgrade } from '../../ui/upgrade';
-import { openWhiteboard } from '../whiteboard/ui';
+import { openWhiteboard } from '../../ui/whiteboard';
 import { describeSky } from '../../world/sky';
 
 export type HudParts = Pick<Parts, 'worlds' | 'place' | 'travel' | 'you' | 'actions' | 'waiting' | 'meeting' | 'bookshelf' | 'hanging' | 'talk' | 'notifier'>;
