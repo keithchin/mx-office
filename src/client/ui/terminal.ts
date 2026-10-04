@@ -15,6 +15,7 @@ import { engineLabel, providerUsageNote, providerUsageState, providerWaitingLabe
 import { naturalKey } from './termkeys';
 import { termTabs } from './termtabs';
 import { dictateField, dictation } from './dictate';
+import { terminalHeld } from './term-holds';
 
 /** A line to scroll to once the terminal has loaded: a search hit (see search.ts). */
 export interface TerminalFind {
@@ -345,7 +346,8 @@ export function openTerminal(net: Net, workerId: string, onChanges?: () => void,
       clearInterval(typingTimer);
       ro.disconnect();
       mic.drop();
-      net.send({ t: 'worker.detach', workerId });
+      // The board's project manager console may still be showing this terminal (ui/term-holds.ts).
+      if (!terminalHeld(workerId)) net.send({ t: 'worker.detach', workerId });
       term.dispose();
       if (current?.modal === modal) current = null;
     },

@@ -8,6 +8,7 @@ import type { ServerMsg } from '../../shared/protocol';
 import { h } from './dom';
 import { openTerminalFor } from './terminal';
 import { termTheme } from './termtheme';
+import { terminalHeld } from './term-holds';
 import './kanban-preview.css';
 
 export interface Preview {
@@ -162,7 +163,8 @@ function fit() {
 
 function dropTerminal() {
   if (!live) return;
-  if (live.attached && net && openTerminalFor() !== live.workerId) net.send({ t: 'worker.detach', workerId: live.workerId });
+  // Left attached while the full window or the project manager console (ui/term-holds.ts) shows it.
+  if (live.attached && net && openTerminalFor() !== live.workerId && !terminalHeld(live.workerId)) net.send({ t: 'worker.detach', workerId: live.workerId });
   live.term.dispose();
   live = null;
 }

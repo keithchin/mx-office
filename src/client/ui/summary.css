@@ -1,8 +1,13 @@
 /* The project summary above the board (ui/summary.ts): one card, the story and numbers on the left,
-   recent activity on the right; stacked on a phone. */
+   recent activity on the right; stacked on a phone. On the 1D view the project manager console
+   (ui/pm/console.ts) sits between them, and the three share the width equally (4/4/4 of 12). */
 .sm { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); gap: 0; margin: 0 0 12px; background: var(--paper-2); border: 3px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .sm:empty { display: none; }
-@media (max-width: 820px) { .sm { grid-template-columns: 1fr; } }
+/* With the console in the middle: three equal columns, then two (the activity under both) on a
+   laptop-narrow window, then one on a phone, the console second. */
+.sm:has(> .pmc) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1180px) { .sm:has(> .pmc) { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sm:has(> .pmc) > .sm-activity { grid-column: 1 / -1; border-left: 0; border-top: 3px solid var(--line); } }
+@media (max-width: 820px) { .sm, .sm:has(> .pmc) { grid-template-columns: 1fr; } }
 .sm-error { grid-column: 1 / -1; margin: 0; padding: 10px 12px; font-size: 13px; font-weight: 700; color: var(--bad-ink); }
 .sm-main { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; min-width: 0; }
 .sm-sub { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
