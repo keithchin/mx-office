@@ -10,6 +10,21 @@ import { analysisOf } from '../analysis/index.js';
 import { summaryOf } from '../summary/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 
+/**
+ * Tells the project team about a worker, unless the floor is still being built. A floor restores its
+ * saved workers while it's constructed, before it has a worker manager to ask, and a team that throws
+ * then would take the whole floor down with it (the office came up with no floors at all). So a floor
+ * not finished yet is skipped, its team catches up on the next change, and any error stays the team's.
+ */
+function team(ctx: Ctx, floor: Floor, tell: (t: ReturnType<typeof teamFloor>) => void) {
+  if (!floor.workers) return;
+  try {
+    tell(teamFloor(ctx, floor));
+  } catch (err) {
+    console.error(`  project team on ${floor.id}: ${(err as Error).message}`);
+  }
+}
+
 /** Finding floors, the elevator's list of them, and taking one off the building. */
 export function floorHelpers(ctx: Ctx): FloorHelpers {
   const floorOf = (c: Client): Floor | undefined => (c.peer.floor ? ctx.floors.get(c.peer.floor) : undefined);
@@ -102,7 +117,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
     workerChanged: (floor, w) => {
       if (typeof w === 'string') {
         ctx.webhook.onWorkerGone(w);
-        rosterOf(ctx).onWorkerGone(teamFloor(ctx, floor), w);
+        team(ctx, floor, (t) => rosterOf(ctx).onWorkerGone(t, w));
         ctx.pumpQueues(floor);
       } else {
         ctx.webhook.onWorker(w);
@@ -110,7 +125,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
         analysisOf(ctx).onWorker(floor, w);
         summaryOf(ctx).onWorker(floor, w);
         // The project team: who's idle (to bench), the standup's answers, the floor's spend against its cap.
-        rosterOf(ctx).onWorker(teamFloor(ctx, floor), w);
+        team(ctx, floor, (t) => rosterOf(ctx).onWorker(t, w));
       }
       ctx.machine.workersChanged();
       ctx.floorsChanged();
