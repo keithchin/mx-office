@@ -11,7 +11,7 @@ import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 
-const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model']);
+const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench']);
 const DECISIONS = new Set<Decision>(['approve', 'reject', 'change']);
 
 export const rosterRoutes = {

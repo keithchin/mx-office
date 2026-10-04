@@ -59,7 +59,7 @@ export const ROLES: readonly RoleDef[] = [
     mission: 'Do all of the programming. You are the one writer of the Mendix app: only you run `mxcli exec` against the .mpr.',
     rights: ['Apply MDL to the app (the only role that may run `mxcli exec`)', 'Open pull requests for the work'],
     subagents: [{ id: 'developer', title: 'Developer', does: 'Drafts MDL scripts and validates them with `mxcli check`. Never runs `mxcli exec` and never writes the .mpr: the Lead Developer applies what it drafts.', tools: 'Read, Grep, Glob, Bash', model: 'sonnet' }],
-    model: 'opus',
+    model: 'sonnet',
   },
   {
     id: 'lead-tester',

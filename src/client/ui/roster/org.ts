@@ -63,7 +63,7 @@ function card(v: RosterView, m: MemberView, deps: OrgDeps): HTMLElement {
     h(
       'div.ro-actions',
       {},
-      canHire
+      canHire && v.admin
         ? h('button.btn.small.primary', {
             type: 'button',
             title: m.status === 'asleep' ? `Wake ${m.name}: its session carries on` : `Hire ${m.name}: a fresh session from its Playbook${m.handoffAt ? ' and handoff note' : ''}`,
@@ -74,7 +74,7 @@ function card(v: RosterView, m: MemberView, deps: OrgDeps): HTMLElement {
           }, m.status === 'asleep' ? '⏰ Wake' : '🤝 Hire')
         : null,
       hired ? h('button.btn.small', { type: 'button', title: `Open ${m.name}'s terminal`, onclick: () => deps.openWorker(m.workerId!) }, '🖥️ Terminal') : null,
-      canBench ? h('button.btn.small', { type: 'button', title: `Ask ${m.name} for a handoff note and lessons, then stop it and clear its session`, onclick: () => run('bench') }, '🪑 Bench') : null,
+      canBench && v.admin ? h('button.btn.small', { type: 'button', title: `Ask ${m.name} for a handoff note and lessons, then stop it and clear its session`, onclick: () => run('bench') }, '🪑 Bench') : null,
       v.admin ? h('button.btn.small', { type: 'button', title: 'Rename this role', onclick: () => askText({ title: `Rename the ${m.title}`, label: 'Name', value: m.name, ok: 'Rename' }, (name) => run('rename', { name })) }, '✏️') : null,
       v.admin ? h('button.btn.small', { type: 'button', title: 'Change the model (from its next hire)', onclick: () => askText({ title: `${m.name}'s model`, label: 'From its next hire (a running session keeps its model)', value: m.model, ok: 'Save', choices: MODELS }, (model) => run('model', { model })) }, '🧠') : null,
     ),
