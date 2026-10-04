@@ -55,9 +55,7 @@ export function noWebGL(): Promise<never> {
 export function createScene(canvas: HTMLCanvasElement, renderer: THREE.WebGLRenderer): Stage {
   // How much it draws: less on computers the full office is too much for (see graphics.ts).
   const gfx = graphics();
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, gfx.maxPixelRatio));
-  if (gfx.pixelated) canvas.style.imageRendering = 'pixelated';
-  renderer.shadowMap.enabled = gfx.shadowMapSize > 0;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, gfx.maxPixelRatio));  renderer.shadowMap.enabled = gfx.shadowMapSize > 0;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const effect = new OutlineEffect(renderer, { defaultThickness: 0.0032, defaultColor: [0.17, 0.18, 0.26] });

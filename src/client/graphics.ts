@@ -14,11 +14,11 @@ export interface Graphics {
   shadowMapSize: number;
   /** The toon outline, which draws every outlined mesh a second time. */
   outline: boolean;
-  /** Scaled up blocky rather than smoothed: chunky pixels, for a 16-bit look at a fraction of the pixels. */
-  pixelated: boolean;
+  /** The world's pixels to the window's CSS pixels: under 1, it's drawn small and scaled up blocky (retro, see core/retro.ts). */
+  pixelScale: number;
 }
 
-type Quality = Omit<Graphics, 'view' | 'pixelated'>;
+type Quality = Omit<Graphics, 'view' | 'pixelScale'>;
 
 export const QUALITY: Record<GraphicsQuality, Quality> = {
   low: { quality: 'low', maxPixelRatio: 1, antialias: false, shadowMapSize: 0, outline: false },
@@ -26,8 +26,8 @@ export const QUALITY: Record<GraphicsQuality, Quality> = {
   high: { quality: 'high', maxPixelRatio: 2, antialias: true, shadowMapSize: 2048, outline: true },
 };
 
-/** Retro draws about a third of the pixels across and scales them up blocky; the rest is the quality's. */
-const RETRO_PIXEL_RATIO = 0.34;
+/** Retro draws the world a third of the pixels across and scales it up blocky; what you read stays sharp. */
+const RETRO_PIXEL_SCALE = 1 / 3;
 
 const VIEW_KEY = 'agent-office.view';
 const QUALITY_KEY = 'agent-office.graphics';
@@ -51,7 +51,7 @@ function pick<T extends string>(param: string, key: string, valid: (v: unknown) 
 const chosen: Graphics = (() => {
   const view = pick('view', VIEW_KEY, isView, '3d');
   const q = QUALITY[pick('gfx', QUALITY_KEY, isQuality, 'high')];
-  return view === 'retro' ? { ...q, view, maxPixelRatio: RETRO_PIXEL_RATIO, antialias: false, pixelated: true } : { ...q, view, pixelated: false };
+  return { ...q, view, pixelScale: view === 'retro' ? RETRO_PIXEL_SCALE : 1 };
 })();
 
 /** This browser's view and quality (see pick). Changing either takes a reload: see switchView. */

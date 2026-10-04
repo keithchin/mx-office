@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { SlowFrames } from '../framerate';
 import { graphics } from '../graphics';
+import { RetroPass } from './retro';
 import { EYE_HEIGHT } from '../player';
 import { renderCaffeine } from '../features/coffee/meter';
 import type { Ctx } from './context';
@@ -187,17 +188,20 @@ export function installLoop(ctx: Ctx, core: CoreState, parts: Pick<Parts, 'stage
     ctx.view.draw(f, drawScene);
   }
 
-  /** Through the toon outline, unless the graphics are turned down (it draws everything twice). */
-  const outlined = graphics().outline;
+  /** How it's drawn: through the toon outline unless that's turned down (it draws everything twice), and the view. */
+  const gfx = graphics();
+  /** The retro view's blocky world with sharp screens (see core/retro.ts), or null for the usual. */
+  const retro = gfx.pixelScale < 1 ? new RetroPass(ctx.renderer, gfx.pixelScale) : null;
 
   /** The scene, then your hands on top of it. */
   function drawScene() {
     const { player, hands, sky, camera, renderer } = ctx;
-    const effect = outlined ? parts.stage.effect : renderer;
+    const effect = gfx.outline ? parts.stage.effect : renderer;
     const { scene } = parts.stage;
     const firstPerson = player.view === 'first';
     const unhide = firstBody?.hideExtras();
-    effect.render(scene, camera);
+    if (retro) retro.render(scene, camera, performance.now(), (s, c) => effect.render(s, c));
+    else effect.render(scene, camera);
     unhide?.();
     // Not while something has the screen to itself (the telescope, the boss's monitor or the arcade up close), where they'd cover it.
     if (firstPerson && !ctx.view.covered() && !ctx.activities.any('hidesHands')) {
