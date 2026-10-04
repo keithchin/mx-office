@@ -8,6 +8,7 @@ import type { Ctx, FloorHelpers, FloorsOpen } from './context.js';
 import { SLOW_CLIENT_BYTES, type Client } from './client.js';
 import { analysisOf } from '../analysis/index.js';
 import { summaryOf } from '../summary/index.js';
+import { rosterOf, teamFloor } from '../roster/adapter.js';
 
 /** Finding floors, the elevator's list of them, and taking one off the building. */
 export function floorHelpers(ctx: Ctx): FloorHelpers {
@@ -101,12 +102,15 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
     workerChanged: (floor, w) => {
       if (typeof w === 'string') {
         ctx.webhook.onWorkerGone(w);
+        rosterOf(ctx).onWorkerGone(teamFloor(ctx, floor), w);
         ctx.pumpQueues(floor);
       } else {
         ctx.webhook.onWorker(w);
         // The Analysis tab records a run when a turn ends; the project summary notes what changed.
         analysisOf(ctx).onWorker(floor, w);
         summaryOf(ctx).onWorker(floor, w);
+        // The project team: who's idle (to bench), the standup's answers, the floor's spend against its cap.
+        rosterOf(ctx).onWorker(teamFloor(ctx, floor), w);
       }
       ctx.machine.workersChanged();
       ctx.floorsChanged();
@@ -160,5 +164,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
   });
   // Workers still running from the last office are back at their desks before anyone walks in.
   await Promise.all([...floors.values()].map((f) => f.ready));
+  // The project teams' minute clock (benching, the scheduled standup) runs from the start, not from the first worker update.
+  rosterOf(ctx);
   return { openFloor };
 }

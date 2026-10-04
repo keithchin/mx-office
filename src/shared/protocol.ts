@@ -13,6 +13,7 @@ import type { MeetingClientMsg, MeetingServerMsg } from './protocol/meetings.js'
 import type { PresenceClientMsg, PresenceServerMsg } from './protocol/presence.js';
 import type { QueueClientMsg, QueueServerMsg } from './protocol/queue.js';
 import type { RooftopClientMsg, RooftopServerMsg } from './protocol/rooftop.js';
+import type { RosterServerMsg } from './protocol/roster.js';
 import type { SettingsClientMsg, SettingsServerMsg } from './protocol/settings.js';
 import type { BallClientMsg, CabinetClientMsg, CarClientMsg, DecorClientMsg, DogClientMsg, JukeboxClientMsg, ToysServerMsg, WhiteboardClientMsg } from './protocol/toys.js';
 import type { UsageClientMsg, UsageServerMsg } from './protocol/usage.js';
@@ -28,6 +29,7 @@ export * from './protocol/meetings.js';
 export * from './protocol/presence.js';
 export * from './protocol/queue.js';
 export * from './protocol/rooftop.js';
+export * from './protocol/roster.js';
 export * from './protocol/settings.js';
 export * from './protocol/toys.js';
 export * from './protocol/usage.js';
@@ -70,4 +72,5 @@ export type ServerMsg =
   | SettingsServerMsg
   | UsageServerMsg
   | ToysServerMsg
-  | LiveAppServerMsg;
+  | LiveAppServerMsg
+  | RosterServerMsg;

@@ -201,10 +201,7 @@ export class WorkerManager {
     }));
   }
 
-  /**
-   * Fetches the branch the project is on, so a worktree made next starts from what's on GitHub now
-   * (see Worktrees.fetch). Undefined when there's nothing to wait for.
-   */
+  /** Fetches the project's branch, so a worktree made next starts from what's on GitHub now (see Worktrees.fetch); undefined when there's nothing to wait for. */
   fetchBase(): Promise<void> | undefined {
     return this.trees.fetch();
   }
@@ -217,7 +214,7 @@ export class WorkerManager {
   /**
    * Hires a worker at a desk. `meeting` seats one at the meeting room's table instead, for that meeting
    * (see meetings.ts), in the meeting's own worktree, which everyone at the table shares. `repos` are
-   * other floors' repositories a worker in its own worktree works in too (see makeWorkspace).
+   * other floors' repositories a worker in its own worktree works in too (see WorkerTrees.makeWorkspace).
    */
   spawn(deskId: string, by: string, prompt?: string, worktree = false, kind: WorkerKind = 'agent', provider?: AgentProvider, model?: string, effort?: AgentEffort, meeting?: { id: string; worktree?: WorkerInfo['worktree'] }, owner?: string, repos: RepoSource[] = [], via?: 'herald'): WorkerInfo | string {
     // Nobody picked (a board agent, say): the office's default worker, model and effort included.
@@ -255,7 +252,7 @@ export class WorkerManager {
     let others: WorkerRepo[] | undefined;
     if (worktree) {
       const slug = `${name.toLowerCase()}-${id.slice(0, 4)}`;
-      const made = repos.length ? this.makeWorkspace(slug, repos) : this.trees.create(slug);
+      const made = repos.length ? this.worktrees.makeWorkspace(slug, repos) : this.trees.create(slug);
       if (typeof made === 'string') return made;
       if ('repos' in made) {
         ({ worktree: wt, repos: others } = made);
@@ -300,9 +297,10 @@ export class WorkerManager {
     return info;
   }
 
-  /** The workspace of a worker across repositories (see WorkerTrees.makeWorkspace). */
-  private makeWorkspace(slug: string, repos: RepoSource[]): { worktree: NonNullable<WorkerInfo['worktree']>; repos: WorkerRepo[]; notes: string[] } | string {
-    return this.worktrees.makeWorkspace(slug, repos);
+  /** Gives a worker another name (a project team role's fixed name, see server/roster/). */
+  rename(id: string, name: string) {
+    const w = this.workers.get(id);
+    if (w && (w.info.name = name)) this.emitUpdate(w), this.persist();
   }
 
   /** Starts a worker that isn't running again, carrying on its session, with `prompt` as its next message. */

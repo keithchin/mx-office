@@ -1,0 +1,83 @@
+/* The Team tab (ui/roster/): the org chart, the standup, the approvals queue and the settings, in the
+   board's chunky cards. */
+.ro-dim { margin: 0; padding: 10px 2px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.ro-sub { margin: 2px 0 0; font-size: 12px; font-weight: 700; color: var(--muted); }
+.btn.small { padding: 4px 9px; font-size: 12px; box-shadow: 0 2px 0 var(--ink); }
+.ro-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.ro-panes { display: flex; flex-wrap: wrap; gap: 6px; }
+.ro-panes .btn.on { background: var(--ink); color: var(--paper); }
+.ro-badge, .lite-tabs .ro-tab-n:not(:empty) { display: inline-block; min-width: 18px; margin-left: 5px; padding: 0 5px; border-radius: 999px; background: var(--bad); color: var(--accent-ink); font-size: 11px; font-weight: 900; line-height: 18px; text-align: center; }
+/* A fourth tab (👥 Team) on the 1D view: the tab row wraps on a phone instead of scrolling the page sideways. */
+body.lite .lite-tabs { flex-wrap: wrap; }
+.ro-level-chip { background: color-mix(in srgb, var(--info) 25%, var(--paper)); }
+.ro-paused { margin: 0 0 12px; padding: 8px 12px; border: 3px solid var(--ink); border-radius: 12px; background: color-mix(in srgb, var(--bad) 15%, var(--paper)); font-size: 13px; font-weight: 800; }
+
+/* The org chart: the PM on top, a line down, the Leads in a row. */
+.ro-org { display: flex; flex-direction: column; align-items: stretch; }
+.ro-top { display: flex; justify-content: center; }
+.ro-top .ro-card { width: min(420px, 100%); }
+.ro-line { width: 3px; height: 18px; margin: 0 auto; background: var(--ink); }
+.ro-leads { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; padding-top: 12px; border-top: 3px solid var(--ink); }
+.ro-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--paper); border: 3px solid var(--ink); border-radius: var(--radius); box-shadow: var(--shadow); }
+.ro-card.ro-not-hired, .ro-card.ro-benched { background: var(--paper-2); }
+.ro-card.ro-needs-you { background: color-mix(in srgb, var(--bad) 15%, var(--paper)); }
+.ro-card-h { display: flex; align-items: center; gap: 8px; }
+.ro-icon { font-size: 24px; }
+.ro-who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.ro-name { font-size: 17px; font-weight: 900; }
+.ro-title { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.ro-pill { font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 999px; border: 2px solid var(--ink); white-space: nowrap; background: var(--paper-2); }
+.ro-pill-working { background: var(--warn); }
+.ro-pill-needs-you { background: var(--bad); color: var(--accent-ink); }
+.ro-pill-idle { background: color-mix(in srgb, var(--info) 25%, var(--paper)); }
+.ro-pill-benching { background: color-mix(in srgb, var(--accent) 35%, var(--paper)); }
+.ro-pill-benched { background: color-mix(in srgb, var(--muted) 20%, var(--paper)); }
+.ro-activity, .ro-facts, .ro-subs { margin: 0; font-size: 12px; font-weight: 700; }
+.ro-activity { color: var(--ink); }
+.ro-facts, .ro-subs { color: var(--muted); }
+.ro-journal { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border-radius: 10px; background: var(--paper); font-size: 12px; }
+.ro-journal-h { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.ro-journal-e { line-height: 1.35; }
+.ro-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; }
+
+/* The standup, approvals and settings. */
+.ro-bar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.ro-bar h3 { margin: 0; font-size: 20px; font-weight: 900; }
+.ro-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.ro-tabs .btn.on { background: var(--ink); color: var(--paper); }
+.ro-page { display: flex; flex-direction: column; gap: 12px; }
+.ro-md { padding: 12px 16px; background: var(--paper); border: 3px solid var(--ink); border-radius: var(--radius); }
+.ro-props { display: flex; flex-direction: column; gap: 8px; }
+.ro-props h4 { margin: 0; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.ro-prop { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; }
+.ro-prop-pending { background: color-mix(in srgb, var(--warn) 22%, var(--paper)); }
+.ro-prop-rejected { opacity: .75; }
+.ro-prop-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ro-kind { font-size: 10px; font-weight: 900; text-transform: uppercase; padding: 1px 7px; border: 2px solid var(--ink); border-radius: 999px; background: color-mix(in srgb, var(--info) 25%, var(--paper)); }
+.ro-prop-title { font-size: 15px; flex: 1; min-width: 160px; }
+.ro-prop-state { font-size: 12px; font-weight: 800; color: var(--muted); }
+.ro-prop-detail, .ro-prop-meta { margin: 0; font-size: 12px; }
+.ro-prop-meta { font-weight: 700; color: var(--muted); }
+.btn.ro-approve { background: var(--good); color: var(--accent-ink); }
+.ro-settings h4 { margin: 16px 0 6px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.ro-levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.ro-level { display: flex; gap: 8px; align-items: flex-start; padding: 10px; background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; cursor: pointer; }
+.ro-level.on { background: color-mix(in srgb, var(--good) 22%, var(--paper)); box-shadow: var(--shadow); }
+.ro-level input { margin-top: 4px; }
+.ro-level-n { font-size: 22px; font-weight: 900; line-height: 1; }
+.ro-level-t { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+.ro-level-t b { font-size: 14px; }
+.ro-level-t small { color: var(--muted); font-weight: 700; }
+.ro-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0; font-size: 13px; font-weight: 700; }
+.ro-num { width: 80px; }
+.ro-num, .ro-text, .modal .ro-ask-input { padding: 5px 8px; border: 2px solid var(--ink); border-radius: 10px; font: inherit; font-size: 13px; color: var(--ink); background: var(--paper); }
+.ro-days { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0; }
+.ro-check { font-size: 13px; font-weight: 700; }
+.ro-cap-l { margin-left: 8px; }
+
+/* The one-line ask window, and the standup window from the meeting room. */
+.ro-ask { width: min(480px, 94vw); }
+.ro-ask .body { display: flex; flex-direction: column; gap: 8px; }
+.ro-ask-label { font-size: 13px; font-weight: 700; }
+.ro-choices { display: flex; gap: 6px; }
+.ro-window { width: min(760px, 96vw); }

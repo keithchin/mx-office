@@ -15,6 +15,7 @@ import { openIssue } from './ui/github/issue-window';
 import { renderBoard, type KanbanActions } from './ui/kanban';
 import { renderAnalysis } from './ui/analysis';
 import { renderSummary } from './ui/summary';
+import { teamTab } from './ui/roster';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { liveAppView } from './ui/liveapp';
 import { openPull } from './ui/pull';
@@ -166,10 +167,10 @@ const kanban: KanbanActions = {
 };
 usePreviewNet(net);
 const TAB_KEY = 'agent-office.lite-tab';
-let tab: 'board' | 'workers' | 'analysis' | 'live' = 'board';
+let tab: 'board' | 'workers' | 'analysis' | 'live' | 'team' = 'board';
 try {
   const saved = localStorage.getItem(TAB_KEY);
-  if (saved === 'workers' || saved === 'analysis' || saved === 'live') tab = saved;
+  if (saved === 'workers' || saved === 'analysis' || saved === 'live' || saved === 'team') tab = saved;
 } catch {
   // No storage: the board, as usual.
 }
@@ -186,14 +187,17 @@ function showTab(t: typeof tab) {
   $('tab-live').classList.toggle('on', t === 'live');
   $('liveapp-view').classList.toggle('hidden', t !== 'live');
   if (t === 'live') live.render($('liveapp-view'));
+  $('tab-team').classList.toggle('on', t === 'team');
   $('board').classList.toggle('hidden', t !== 'board');
   $('summary').classList.toggle('hidden', t !== 'board');
   $('workers-view').classList.toggle('hidden', t !== 'workers');
   $('analysis-view').classList.toggle('hidden', t !== 'analysis');
+  $('team-view').classList.toggle('hidden', t !== 'team');
   // The board and the analysis tables want the whole width; the list of workers keeps its column.
   document.querySelector('.lite-main')!.classList.toggle('board', t !== 'workers');
   renderKanban();
   renderAnalysisTab();
+  team.render(store.floor ?? undefined);
 }
 /** The board and the project summary over it, unless the floors page is over them (they're drawn when that goes). */
 function renderKanban() {
@@ -209,7 +213,12 @@ $('tab-board').addEventListener('click', () => showTab('board'));
 $('tab-workers').addEventListener('click', () => showTab('workers'));
 $('tab-analysis').addEventListener('click', () => showTab('analysis'));
 $('tab-live').addEventListener('click', () => showTab('live'));
+$('tab-team').addEventListener('click', () => showTab('team'));
 store.on('floor', renderAnalysisTab);
+// The project team (ui/roster/): its approvals badge stays current whichever tab is showing.
+const team = teamTab($('team-view'), $('tab-team').querySelector('.ro-tab-n')!, () => tab === 'team' && !home.shown, openWorker);
+net.onMessage((msg) => team.onMessage(msg));
+store.on('floor', () => team.render(store.floor ?? undefined));
 for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanban);
 setInterval(renderKanban, 30_000);
 

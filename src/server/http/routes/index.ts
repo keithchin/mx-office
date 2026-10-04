@@ -9,6 +9,7 @@ import { fileRoutes } from './files.js';
 import { githubRoutes } from './github.js';
 import { pageRoutes } from './pages.js';
 import { prShotRoutes } from './prshots.js';
+import { rosterRoutes } from './roster.js';
 import { searchRoutes } from './search.js';
 import { serviceRoutes } from './services.js';
 
@@ -43,6 +44,9 @@ export const routes: readonly Route[] = [
   analysisRoutes.summary,
   prShotRoutes.checks,
   prShotRoutes.file,
+  rosterRoutes.view,
+  rosterRoutes.standup,
+  rosterRoutes.action,
   pageRoutes.office,
   pageRoutes.lite,
   pageRoutes.pixel,

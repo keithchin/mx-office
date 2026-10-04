@@ -1,0 +1,140 @@
+// What the office keeps of a floor's project team, in its own data dir (roster/<floor>.json): the
+// settings, each role's member (its fixed name, its model, the worker it is now, its last handoff),
+// the standups and their proposals, and the floor's spend today for the cost cap. Saved a moment
+// after each change, so a burst of worker updates writes once.
+
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { DEFAULT_AUTONOMY, isAutonomyLevel, type AutonomyLevel } from '../../shared/roster/autonomy.js';
+import { cleanName, isRoleId, pickNames, ROLES, type RoleId } from '../../shared/roster/roles.js';
+import { cleanSchedule, DEFAULT_SCHEDULE } from '../../shared/roster/schedule.js';
+import type { Proposal, RosterSettings, Standup } from '../../shared/roster/types.js';
+
+/** Where a member is in its life: never hired, a worker now, writing its handoff, or benched. */
+export type Phase = 'none' | 'active' | 'benching' | 'benched';
+
+export interface MemberRecord {
+  name: string;
+  model: string;
+  phase: Phase;
+  workerId?: string;
+  /** While benching: when it was asked for its handoff, and whether it has started on it since. */
+  benchAskedAt?: number;
+  benchSawBusy?: boolean;
+  benchedAt?: number;
+  /** Its latest handoff note, what a fresh hire is primed with. */
+  handoff?: { at: number; text: string };
+}
+
+export interface RosterData {
+  settings: RosterSettings;
+  members: Record<RoleId, MemberRecord>;
+  standups: Standup[];
+  proposals: Proposal[];
+  /** The last time anyone on the floor got to work: a standup only runs when there was some since the last. */
+  lastActivityAt?: number;
+  lastStandupAt?: number;
+  /** Each Lead's journal entry last turned into proposals (date|heading), so a quiet Lead's old proposals aren't asked again. */
+  harvested: Partial<Record<RoleId, string>>;
+  /** Spend today (in the schedule's time zone), and each worker's session cost when last seen. */
+  spend: { day: string; usd: number; seen: Record<string, number> };
+}
+
+export const DEFAULT_IDLE_MINUTES = 30;
+const STANDUPS_KEPT = 30;
+const PROPOSALS_KEPT = 300;
+
+export function defaultSettings(): RosterSettings {
+  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false };
+}
+
+/** Settings from what was saved or sent, anything malformed left as it was in `base`. */
+export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings()): RosterSettings {
+  const s = (v && typeof v === 'object' ? v : {}) as Partial<RosterSettings>;
+  const caps: Partial<Record<AutonomyLevel, number>> = {};
+  const rawCaps = s.costCaps && typeof s.costCaps === 'object' ? s.costCaps : base.costCaps;
+  for (const [k, n] of Object.entries(rawCaps ?? {})) {
+    const level = Number(k);
+    if (isAutonomyLevel(level) && typeof n === 'number' && Number.isFinite(n) && n > 0) caps[level] = Math.min(Math.round(n * 100) / 100, 100_000);
+  }
+  const idle = typeof s.idleMinutes === 'number' && Number.isFinite(s.idleMinutes) ? Math.max(0, Math.min(Math.round(s.idleMinutes), 24 * 60)) : base.idleMinutes;
+  return {
+    autonomy: isAutonomyLevel(s.autonomy) ? s.autonomy : base.autonomy,
+    idleMinutes: idle,
+    schedule: s.schedule === undefined ? base.schedule : cleanSchedule(s.schedule),
+    costCaps: caps,
+    dryRunIssues: typeof s.dryRunIssues === 'boolean' ? s.dryRunIssues : base.dryRunIssues,
+  };
+}
+
+/** A fresh roster: every role named from the pool, nobody hired. */
+export function freshRoster(rng: () => number = Math.random): RosterData {
+  const names = pickNames(rng);
+  const members = {} as Record<RoleId, MemberRecord>;
+  for (const r of ROLES) members[r.id] = { name: names[r.id], model: r.model, phase: 'none' };
+  return { settings: defaultSettings(), members, standups: [], proposals: [], harvested: {}, spend: { day: '', usd: 0, seen: {} } };
+}
+
+/** A saved roster, made whole: a role added since it was saved gets a name, a bad field its default. */
+export function reviveRoster(raw: unknown, rng: () => number = Math.random): RosterData {
+  const fresh = freshRoster(rng);
+  if (!raw || typeof raw !== 'object') return fresh;
+  const r = raw as Partial<RosterData>;
+  const members = { ...fresh.members };
+  for (const [id, m] of Object.entries(r.members ?? {})) {
+    if (!isRoleId(id) || !m || typeof m !== 'object') continue;
+    const phase: Phase = ['none', 'active', 'benching', 'benched'].includes(m.phase) ? m.phase : 'none';
+    members[id] = { ...m, name: cleanName(m.name) ?? fresh.members[id].name, model: typeof m.model === 'string' && m.model ? m.model : fresh.members[id].model, phase };
+  }
+  return {
+    settings: cleanSettings(r.settings),
+    members,
+    standups: Array.isArray(r.standups) ? r.standups.slice(-STANDUPS_KEPT) : [],
+    proposals: Array.isArray(r.proposals) ? r.proposals.slice(-PROPOSALS_KEPT) : [],
+    lastActivityAt: typeof r.lastActivityAt === 'number' ? r.lastActivityAt : undefined,
+    lastStandupAt: typeof r.lastStandupAt === 'number' ? r.lastStandupAt : undefined,
+    harvested: r.harvested && typeof r.harvested === 'object' ? { ...r.harvested } : {},
+    spend: r.spend && typeof r.spend === 'object' && typeof r.spend.usd === 'number' ? { day: String(r.spend.day ?? ''), usd: r.spend.usd, seen: { ...(r.spend.seen ?? {}) } } : fresh.spend,
+  };
+}
+
+export class RosterFile {
+  readonly data: RosterData;
+  private file: string;
+  private timer?: NodeJS.Timeout;
+
+  constructor(dir: string, floorId: string) {
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    this.file = path.join(dir, `${floorId.replace(/[^A-Za-z0-9._-]/g, '_')}.json`);
+    let raw: unknown;
+    try {
+      raw = existsSync(this.file) ? JSON.parse(readFileSync(this.file, 'utf8')) : undefined;
+    } catch (err) {
+      console.error(`agent-office: couldn't read ${this.file}, starting the team over`, err);
+    }
+    this.data = reviveRoster(raw);
+    if (raw === undefined) this.save();
+  }
+
+  /** Saves shortly, once for a burst of changes. */
+  save() {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.flush(), 500);
+    this.timer.unref?.();
+  }
+
+  flush() {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    const d = this.data;
+    d.standups = d.standups.slice(-STANDUPS_KEPT);
+    d.proposals = d.proposals.slice(-PROPOSALS_KEPT);
+    try {
+      const tmp = `${this.file}.tmp`;
+      writeFileSync(tmp, JSON.stringify(d, null, 2), { mode: 0o600 });
+      renameSync(tmp, this.file);
+    } catch (err) {
+      console.error(`agent-office: couldn't save ${this.file}`, err);
+    }
+  }
+}

@@ -27,6 +27,7 @@ import { landedWork, landedWorkers, type Landed } from './leave-on-merge.js';
 import type { Ledger } from './usage.js';
 import type { Capacity } from './machine.js';
 import { officePrompt, type PromptSource } from './prompts.js';
+import { floorLedger } from './roster/pause.js';
 
 type ToastLevel = 'info' | 'warn' | 'error';
 
@@ -157,6 +158,8 @@ export class Floor {
     // Before the workers and the dog: the back office's desks are only there once it's built.
     this.plan = new FloorPlanStore(dataDir);
     this.jail = new Jail(dataDir);
+    // The office's budget, and this floor's team cost cap on top (see roster/pause.ts): every way of hiring here stops at either.
+    const ledger = floorLedger(ctx.ledger, def.id);
 
     // Before the workers, so it hears about the ones who wake up needing input.
     this.dog = new Dog(def.id, dataDir, {
@@ -199,7 +202,7 @@ export class Floor {
         screen: (workerId, frame) => ctx.emit(this, { t: 'screen', workerId, ...frame }, true),
         toast: (text, level) => ctx.toast(this, text, level),
       },
-      ctx.ledger,
+      ledger,
       ctx.capacity,
       ctx.prompts,
       ctx.runAs,
@@ -237,7 +240,7 @@ export class Floor {
         return typeof as === 'string' ? Promise.resolve(as) : this.github.claim(issue, as);
       },
       refreshGitHub: () => void this.github.refresh(),
-      hiringPaused: () => ctx.ledger.hiringPaused,
+      hiringPaused: () => ledger.hiringPaused,
       room: () => ctx.capacity.room(),
       emptied: () => {
         ctx.toast(this, '📋 The queue is empty: every task is done 🎉');
@@ -266,7 +269,7 @@ export class Floor {
       {
         update: (state) => ctx.emit(this, { t: 'meeting', state }),
         toast: (text, level) => ctx.toast(this, text, level),
-        hiringPaused: () => ctx.ledger.hiringPaused,
+        hiringPaused: () => ledger.hiringPaused,
         postReview: (pr, file, owner) => {
           const as = ctx.ghAs(owner);
           return typeof as === 'string' ? Promise.reject(new Error(as)) : this.github.review(pr, file, as);
