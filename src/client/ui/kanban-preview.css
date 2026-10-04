@@ -1,0 +1,17 @@
+/* A card's preview on the board (ui/kanban-preview.ts): a medium panel beside the card. */
+.kbp { position: fixed; z-index: 60; width: min(480px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; background: #fff; border: 3px solid var(--ink); border-radius: var(--radius); box-shadow: 0 6px 0 var(--ink), 0 18px 40px rgba(0, 0, 0, .18); animation: kbp-in .12s ease-out; }
+.kbp.from-right { animation-name: kbp-in-r; }
+@keyframes kbp-in { from { opacity: 0; transform: translateX(-6px); } }
+@keyframes kbp-in-r { from { opacity: 0; transform: translateX(6px); } }
+.kbp-h { display: flex; align-items: flex-start; gap: 8px; }
+.kbp-h h3 { flex: 1; margin: 0; font-size: 15px; font-weight: 900; overflow-wrap: anywhere; }
+.kbp-status { flex: none; }
+.kbp-open { flex: none; min-height: 32px; padding: 4px 10px; font-size: 13px; }
+.kbp-fields { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; margin: 0; font-size: 12px; }
+.kbp-fields dt { font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-size: 11px; padding-top: 1px; }
+.kbp-fields dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.kbp-label { margin-bottom: 4px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.kbp-term { position: relative; overflow: hidden; height: 120px; border-radius: 8px; background: #1b1d2a; }
+/* xterm's own element, scaled down to the preview's width from its foot (see fit), so the newest lines show. */
+.kbp-term > .terminal { position: absolute; left: 0; bottom: 0; transform-origin: bottom left; pointer-events: none; }
+.kbp-desc { max-height: 180px; overflow-y: auto; white-space: pre-wrap; font-size: 12px; line-height: 1.45; padding: 8px 10px; background: var(--paper-2); border-radius: 8px; overflow-wrap: anywhere; }

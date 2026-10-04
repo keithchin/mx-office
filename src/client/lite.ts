@@ -20,6 +20,7 @@ import { openBoard } from './ui/boards';
 import { issuePrompt, type BoardActions } from './ui/github/prompts';
 import { openIssue } from './ui/github/issue-window';
 import { renderBoard, type KanbanActions } from './ui/kanban';
+import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { openPull, routePullMessage } from './ui/pull';
 import { openQueue } from './ui/queue';
 import { openAsk } from './ui/ask';
@@ -56,6 +57,7 @@ net.onMessage((msg) => {
   routeChangesMessage(msg);
   routePullMessage(msg);
   routeWorktreeMessage(msg);
+  routePreviewMessage(msg);
   switch (msg.t) {
     case 'welcome': {
       // Back from a restart on another version: this page's code is stale, so load the new one.
@@ -330,6 +332,7 @@ const kanban: KanbanActions = {
     toast(`📋 #${it.number} queued: the next free agent takes it`);
   },
 };
+usePreviewNet(net);
 const TAB_KEY = 'agent-office.lite-tab';
 let tab: 'board' | 'workers' = 'board';
 try {
