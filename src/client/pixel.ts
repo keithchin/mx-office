@@ -1,5 +1,7 @@
 // The 2D view (/pixel): the floor you're on from above, in pixel art, without the 3D. Every worker
-// sits at its desk acting out how it's doing, and the people walking about the 3D office are where
+// sits at its desk acting out how it's doing, each project team in its own patch of the floor (the
+// dev bay, the design studio, the QA lab, the analyst corner, the PM's office; see pixel/zones.ts)
+// with its Leads dressed for their roles, and the people walking about the 3D office are where
 // they are. Hover over anything for what it is; click a worker for its terminal (right-click for its
 // menu), a free desk to give someone new work there, or what's on the walls and about the room for
 // its window: the boards, the whiteboard, the meeting room, the elevator, the TV, the bookshelf. It
@@ -34,13 +36,21 @@ import { deskSigns, drawMoving, type DeskSign } from './pixel/props';
 import { hotspots, type Hotspot } from './pixel/hotspots';
 import { Camera, driveCamera } from './pixel/camera';
 import { closeMenu, mountChat, officeKeys, openWorkerMenu } from './pixel/hud';
-import { badge, drawLabels, outline, signText } from './pixel/overlay';
+import { badge, drawLabels, outline, signText, zoneBanner } from './pixel/overlay';
+import { zoneBoxes } from './pixel/zones';
+import { dressFor, leadOf, memberOf, onRoster, refreshRoster, setRoster, tagFor, zoneOf } from './pixel/teams';
+import { ZONE_BY_TEAM, ZONES } from '../shared/zones';
+import type { MemberView } from '../shared/roster/types';
 import './pixel/game.css';
 
 // Here, the office opens on the 2D view next time too (see graphics.ts).
 rememberView('2d');
 
-const session = flatSession('/pixel', (id) => workers.open(id), (msg) => routeWhiteboardMessage(msg, net));
+const session = flatSession('/pixel', (id) => workers.open(id), (msg) => {
+  routeWhiteboardMessage(msg, net);
+  // The floor's team changed (hired, benched, renamed): its Leads' outfits, tags and signposts with it.
+  if (msg.t === 'roster.changed' && msg.floor === store.floor) void refreshRoster(store.floor);
+});
 const { net } = session;
 const workers = workerActions(net);
 
@@ -84,6 +94,23 @@ const githubUrl = (remote?: string) => {
   return m ? `https://github.com/${m[1]}` : undefined;
 };
 let pageSound = false;
+
+/** How a Lead stands, in a few words, for its zone's signpost. */
+const MEMBER_STATUS: Record<MemberView['status'], string> = { 'not-hired': 'not hired', working: 'working', 'needs-you': 'needs you', idle: 'idle', asleep: 'asleep', benching: 'writing handoff', benched: 'benched' };
+/** Its signpost's second line: who leads the zone and how they are (nothing until the team's fetched). */
+function leadLine(m: MemberView | undefined): string | undefined {
+  if (!m) return undefined;
+  return `${m.role === 'pm' ? 'PM' : 'Lead'}: ${m.name} · ${MEMBER_STATUS[m.status]}`;
+}
+/** A zone's hover card: its Lead, their model, and how to hire them when they aren't. */
+function zoneLine(team: MemberView['team']): () => string {
+  return () => {
+    const m = leadOf(team);
+    if (!m) return "This floor has no project team yet: it's in the 1D view's 👥 Team tab";
+    const hire = m.status === 'not-hired' || m.status === 'benched' ? ' · hire them from the 1D view’s 👥 Team tab' : '';
+    return `${m.title}: ${m.name} · ${MEMBER_STATUS[m.status]} · 🧠 ${m.model}${hire}`;
+  };
+}
 const spots = (f: Frame) =>
   hotspots(f, {
     board: (kind) => openBoard(kind, net, boardActions()),
@@ -104,6 +131,7 @@ const spots = (f: Frame) =>
       queue: store.queue.tasks.filter((t) => t.status !== 'done').length,
       services: store.services.items.length,
     }),
+    zones: () => ZONES.map((z) => ({ team: z.team, title: `${z.icon} ${z.name}`, sub: zoneLine(z.team) })),
     say: {
       jukebox: () => (store.jukebox.on ? `♪ ${trackTitle(store.jukebox)} · it plays in the 3D office` : 'Off · put something on in the 3D office'),
       arcade: () => (store.cabinet.player ? `${store.cabinet.player.name} is playing` : store.cabinet.scores[0] ? `High score: ${store.cabinet.scores[0].name}` : 'Play it in the 3D office'),
@@ -164,15 +192,18 @@ function draw(now: number) {
   drawMoving(ag, frame, { now, theme: store.theme.active, music: store.jukebox.on, sharing: [...store.peers.values()].some((p) => p.sharing && store.onMyFloor(p)) });
   const peers = [...store.peers.values()].filter((p) => p.id !== store.you && !p.lite && store.onMyFloor(p));
   const hoverId = hover && 'kind' in hover && hover.kind !== 'desk' ? hover.id : null;
-  people = drawPeople(ag, frame, { workers: store.workers.values(), peers, level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs }, now);
+  people = drawPeople(ag, frame, { workers: store.workers.values(), peers, level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs, dress: dressFor, tag: tagFor }, now);
 
   g.imageSmoothingEnabled = false;
   g.fillStyle = '#0d1828';
   g.fillRect(0, 0, canvas.width, canvas.height);
   const s = cam.scale * dpr;
-  const k = Math.max(1, Math.floor(s + 1e-6));
+  // Between whole steps (fitted to the window), it's blown up a whole number of times past the size
+  // wanted with no smoothing, then smoothed down the last little way: every pixel stays square and the
+  // same size, its edges a hair soft, rather than some pixels a screen pixel wider than others.
+  const k = Math.max(1, Math.ceil(s - 1e-6));
   const dx = Math.round(cam.x * dpr), dy = Math.round(cam.y * dpr), dw = Math.round(frame.width * s), dh = Math.round(frame.height * s);
-  if (Math.abs(s - k) < 1e-6) g.drawImage(art, dx, dy, dw, dh);
+  if (Math.abs(s - Math.round(s)) < 1e-6) g.drawImage(art, dx, dy, dw, dh);
   else {
     if (buffer.width !== frame.width * k || buffer.height !== frame.height * k) {
       buffer.width = frame.width * k;
@@ -180,13 +211,18 @@ function draw(now: number) {
     }
     bg.imageSmoothingEnabled = false;
     bg.drawImage(art, 0, 0, buffer.width, buffer.height);
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
     g.drawImage(buffer, dx, dy, dw, dh);
+    g.imageSmoothingEnabled = false;
   }
   const view = { scale: s, x: cam.x * dpr, y: cam.y * dpr, dpr };
+  const banners: ReturnType<typeof zoneBanner>[] = [];
+  for (const b of zoneBoxes(frame)) banners.push(zoneBanner(g, view, b, leadLine(leadOf(b.zone.team)), banners));
   for (const t of things) if (t.badge) badge(g, view, t, t.badge());
   if (s >= 2) for (const sign of signs) signText(g, view, sign);
   if (hover && (!('kind' in hover) || hover.kind === 'desk')) outline(g, view, hover, 'kind' in hover);
-  drawLabels(g, view, people.labels, hoverId);
+  drawLabels(g, view, people.labels, hoverId, banners);
 }
 
 // The animation moves on a beat at a time, so drawing ten times a second is plenty; nothing while hidden.
@@ -203,6 +239,11 @@ new ResizeObserver(() => resize()).observe(stage);
 store.on('floorPlan', rebuild);
 store.on('theme', rebuild);
 store.on('workers', () => (things = spots(frame)));
+store.on('floor', () => void refreshRoster(store.floor));
+onRoster(() => draw(performance.now()));
+// A Lead's status on its signpost comes from the roster, which the office only says has changed when
+// someone acts on it: a look now and then keeps it fresh.
+setInterval(() => void refreshRoster(store.floor), 60_000);
 const camera = driveCamera(canvas, cam, () => draw(performance.now()));
 
 // ---- The zoom buttons --------------------------------------------------------------------------------------
@@ -259,12 +300,17 @@ function tipFor(s: Spot | Hotspot): HTMLElement[] | null {
   }
   const w = store.workers.get(s.id);
   if (!w) return null;
+  const member = memberOf(w), zone = zoneOf(w);
+  const team = member ? ZONE_BY_TEAM.get(member.team) : undefined;
+  // Its role and team for a Lead; for anyone else, whose patch it's borrowing a desk in, if anyone's.
+  const role = member ? `${member.icon} ${member.title} · ${team?.name ?? member.team}` : zone ? `Not on the team · at a desk in the ${zone.name}` : 'Not on the team · open floor';
   const task = w.task?.name ?? w.title ?? (w.prompt ? clip(w.prompt, 90) : undefined);
   const now = w.status === 'needs_input' ? `🙋 ${w.activity ?? 'Waiting on an answer'}` : w.status === 'done' ? w.task?.summary && `✅ ${clip(w.task.summary, 120)}` : (w.task?.summary ?? w.activity);
   const model = w.kind === 'agent' ? modelBadge(w.provider, w.model, w.effort, w.usage?.model) : undefined;
-  const runs = w.kind === 'agent' ? `⚙️ ${providerLabel(w.provider, store.project)}${model ? ` · ${model}` : ''}` : '🐚 shell';
+  const runs = w.kind === 'agent' ? `⚙️ ${providerLabel(w.provider, store.project)}${model ? ` · ${model}` : member ? ` · 🧠 ${member.model}` : ''}` : '🐚 shell';
   return [
     h('b', {}, w.name, h('span.pill', { class: w.status }, STATUS_LABEL[w.status] ?? w.status)),
+    h('div.px-role', { style: team ? `--team: ${team.color}` : '' }, role),
     task ? h('div.px-task', {}, task) : null,
     now ? h('div', {}, clip(now, 140)) : null,
     h('div.px-dim', {}, [runs, DESK_BY_ID.get(w.deskId)?.label, w.pr && `🔀 PR #${w.pr.number}`].filter(Boolean).join(' · ')),
@@ -367,5 +413,5 @@ session.start();
 rebuild();
 renderCount();
 
-// Debug handle for quick checks from the console / headless screenshots.
-(window as any).__pixel = { store, net, home, cam, draw: () => draw(performance.now()), spots: () => people.spots, things: () => things, view: () => ({ scale: cam.scale * dpr, x: cam.x * dpr, y: cam.y * dpr, dpr }) };
+// Debug handle for quick checks from the console / headless screenshots (setRoster puts in a team without hiring anyone).
+(window as any).__pixel = { store, net, home, cam, setRoster, zones: () => zoneBoxes(frame), draw: () => draw(performance.now()), spots: () => people.spots, things: () => things, view: () => ({ scale: cam.scale * dpr, x: cam.x * dpr, y: cam.y * dpr, dpr }) };

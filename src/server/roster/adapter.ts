@@ -1,10 +1,11 @@
 // The roster's seam (TeamFloor, RosterDeps) made from the real office: a floor's worker manager,
 // GitHub lists and toasts, and the analyzer's numbers. Hiring here is what office-workers' hire does
-// (next free desk, a worktree fresh from GitHub when the project has a branch), as Claude Code with
+// (a free desk in its team's patch, else the next free one, a worktree fresh from GitHub when the project has a branch), as Claude Code with
 // the role's model, then the role's fixed name.
 
 import path from 'node:path';
 import { nextFreeSeat } from '../../shared/layout.js';
+import { zoneSeat } from '../../shared/zones.js';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import { analysisOf } from '../analysis/index.js';
 import type { Floor } from '../floor.js';
@@ -44,7 +45,10 @@ export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
 
 async function hire(ctx: Ctx, floor: Floor, ask: HireAsk): Promise<WorkerInfo | string> {
   if (!floor.project.agentProviders.includes('claude')) return 'The team runs on Claude Code, which this office has no agent for';
-  const desk = nextFreeSeat((id) => floor.workers.deskOccupied(id), floor.plan.wing)?.id;
+  // In its team's patch of the floor when a desk is free there (the 2D view paints each team's
+  // patch), else wherever anyone new would sit.
+  const taken = (id: string) => floor.workers.deskOccupied(id);
+  const desk = (ask.team && zoneSeat(ask.team, taken, floor.plan.wing)) || nextFreeSeat(taken, floor.plan.wing)?.id;
   if (!desk) return 'Every desk and bean bag is taken: send someone home first';
   const worktree = !!floor.project.branch;
   if (worktree) await floor.workers.fetchBase();

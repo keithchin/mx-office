@@ -41,6 +41,8 @@ body.pixel .home-intro { color: #8fa3bf; }
 .px-tip .px-task { color: #fff; font-weight: 800; }
 .px-tip .px-dim { color: #8fa3bf; }
 .px-tip .px-hint { margin-top: 4px; color: #5fd9cb; }
+/* A worker's role and team, edged in the team's colour (pixel/teams.ts). */
+.px-tip .px-role { margin: 2px 0 3px; padding-left: 7px; border-left: 3px solid var(--team, #2b4066); color: #e6eef8; font-weight: 800; }
 
 .px-elsewhere { position: absolute; top: 10px; right: 10px; z-index: 4; display: flex; flex-direction: column; gap: 6px; max-width: 280px; }
 .px-elsewhere .lite-go { min-height: 36px; font-size: 13px; }

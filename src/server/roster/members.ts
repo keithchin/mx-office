@@ -51,7 +51,7 @@ export class Members {
     }
     const paused = this.roster.pauseOf(d);
     if (paused) return paused;
-    const r = await floor.hire({ name: m.name, model: m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task), owner, by });
+    const r = await floor.hire({ name: m.name, model: m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task), owner, by, team: def.team });
     if (typeof r === 'string') return r;
     m.workerId = r.id;
     m.phase = 'active';

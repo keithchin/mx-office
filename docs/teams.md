@@ -57,6 +57,20 @@ The level is in every Playbook and every hire's first message; the CTO always ha
 
 Nothing on its own: the office makes no model calls for the team. Tokens are spent only by the Leads you hire, by a standup's question to the Leads at work (and only with activity since the last), by a handoff before benching, and by one message to the PM per batch of decisions. Benching frees the context of anyone idle.
 
+## On the 2D view
+
+Each team works in its own patch of the floor (`src/shared/zones.ts`), painted in its own style on the 2D view, with a signpost naming its Lead. Hiring a role from the Team tab sits it at a free desk in its team's patch first (the first desk listed, facing the room, is the Lead's), and anywhere free when they're all taken. Other hires sit where they always have.
+
+| Patch | Team | Desks |
+| --- | --- | --- |
+| 🛠️ Dev bay (north-west pod) | Developers | 1, 2, 3, 4 |
+| 🎨 Design studio (north-east pod) | UI/UX Designers | 5, 6, 7, 8 |
+| 🧪 QA lab (south-west pod) | Testers | 9, 10, 11, 12 |
+| 📈 Analyst corner (south-east pod, west half) | Business & Data Analysts | 13, 15 |
+| 🧭 PM office (south-east pod, east half, glass-walled) | Project Manager | 14, 16 |
+
+The back office's desks, the bean bags and the board agents' kiosks are open floor.
+
 ## Where it's kept
 
 The roster (names, models, handoff notes, standups, proposals, the day's spend) is in the office's data dir, `.agent-office/roster/<floor>.json`. The code is in `src/server/roster/`, `src/shared/roster/` and `src/client/ui/roster/`; the routes are `GET /api/roster`, `GET /api/roster/standup` and `POST /api/roster/action`.
