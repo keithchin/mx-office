@@ -2,9 +2,9 @@
 .la { display: flex; flex-direction: column; gap: 10px; }
 .la-top { display: flex; flex-direction: column; gap: 8px; }
 .la-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.la-pill.running { background: var(--good); color: #fff; }
-.la-pill.failed { background: var(--bad); color: #fff; }
-.la-pill.starting, .la-pill.updating, .la-pill.stopping { background: #ffd166; }
+.la-pill.running { background: var(--good); color: var(--on-fill); }
+.la-pill.failed { background: var(--bad); color: var(--on-fill); }
+.la-pill.starting, .la-pill.updating, .la-pill.stopping { background: var(--warn); color: var(--on-warn); }
 .la-commit { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; font-size: 13px; font-weight: 700; }
 .la-commit code { font-weight: 900; }
 .la-subject { max-width: 42ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
@@ -12,12 +12,12 @@
 .la-note { margin: 0; font-size: 13px; font-weight: 700; color: var(--muted); }
 .la-note.bad { color: var(--bad); }
 .la-empty { margin: 8px 0; font-size: 14px; color: var(--muted); }
-.la-log { margin: 0; max-height: 260px; overflow: auto; padding: 8px 10px; background: #1b1d2a; color: #e6e6e6; border-radius: 8px; font-size: 11px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.la-log { margin: 0; max-height: 260px; overflow: auto; padding: 8px 10px; background: var(--code-bg); color: var(--code-ink); border-radius: 8px; font-size: 11px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
 .la-framebox[hidden] { display: none; }
-.la-frame { display: block; width: 100%; height: max(480px, calc(100vh - 230px)); border: 3px solid var(--ink); border-radius: 12px; background: #fff; }
+.la-frame { display: block; width: 100%; height: max(480px, calc(100vh - 230px)); border: 3px solid var(--line); border-radius: 12px; background: var(--card); }
 /* The chip in the project summary's heading. */
-.la-chip { margin-left: 8px; padding: 2px 10px; border: 2px solid var(--ink); border-radius: 999px; background: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
-.la-chip.running { background: var(--good); color: #fff; }
-.la-chip.failed { background: var(--bad); color: #fff; }
-.la-chip.starting, .la-chip.updating, .la-chip.stopping { background: #ffd166; }
+.la-chip { margin-left: 8px; padding: 2px 10px; border: 2px solid var(--line); border-radius: 999px; background: var(--card); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.la-chip.running { background: var(--good); color: var(--on-fill); }
+.la-chip.failed { background: var(--bad); color: var(--on-fill); }
+.la-chip.starting, .la-chip.updating, .la-chip.stopping { background: var(--warn); color: var(--on-warn); }
 .la-chip:hover { filter: brightness(.95); }

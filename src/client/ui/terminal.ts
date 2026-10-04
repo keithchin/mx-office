@@ -4,7 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import type { Net } from '../net';
 import { store } from '../state';
-import { TERM_THEME } from './termtheme';
+import { TERM_THEME, termTheme } from './termtheme';
 import { h, openModal, STATUS_LABEL, timeAgo, toast, type Modal } from './dom';
 import { usageLabel, usageTitle } from './usage';
 import type { ServerMsg, WorkerInfo } from '../../shared/protocol';
@@ -155,7 +155,7 @@ export function openTerminal(net: Net, workerId: string, onChanges?: () => void,
     // A few more columns on a phone's narrow screen.
     fontSize: opts.keypad ? 12 : 14,
     lineHeight: 1.1,
-    theme: TERM_THEME,
+    theme: termTheme(),
     cursorBlink: true,
     scrollback: 5000,
     allowProposedApi: true,

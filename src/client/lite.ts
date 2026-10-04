@@ -29,6 +29,7 @@ import { renderTitle } from './shared/title';
 import { flatSession } from './shared/session';
 import { workerActions } from './shared/workers';
 import { floorPicker, floorsHome } from './shared/floors';
+import { colorThemes } from './ui/colortheme';
 
 // Sent here because this browser can't draw the 3D office (see noWebGL in core/scene.ts).
 if (new URLSearchParams(location.search).get('why') === 'webgl') {
@@ -37,6 +38,8 @@ if (new URLSearchParams(location.search).get('why') === 'webgl') {
 }
 // Here, the office opens on the 1D view next time too (see graphics.ts).
 rememberView('1d');
+// The 🎨 in the top bar: the Default, Dark or Terminal look (ui/colortheme.ts).
+colorThemes($('theme'), $('summary'));
 
 const session = flatSession('/lite', (id) => openWorker(id), (m) => {
   routePreviewMessage(m);

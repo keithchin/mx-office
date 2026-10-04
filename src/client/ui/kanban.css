@@ -1,16 +1,16 @@
 /* The board on the 1D view (ui/kanban.ts): six columns side by side, scrolling sideways on a phone. */
 .kb-summary { margin: 0 0 10px; font-size: 13px; font-weight: 800; color: var(--muted); }
 .kb-columns { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
-.kb-col { display: flex; flex-direction: column; min-height: 360px; background: var(--paper-2); border: 3px solid var(--ink); border-radius: var(--radius); scroll-snap-align: start; }
+.kb-col { display: flex; flex-direction: column; min-height: 360px; background: var(--paper-2); border: 3px solid var(--line); border-radius: var(--radius); scroll-snap-align: start; }
 .kb-col.human { box-shadow: inset 0 4px 0 var(--bad); }
 .kb-col.kb-over { outline: 3px dashed var(--accent); outline-offset: -8px; }
-.kb-col-h { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 8px 10px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; border-bottom: 3px solid var(--ink); }
-.kb-n { min-width: 22px; padding: 0 6px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 12px; line-height: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+.kb-col-h { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 8px 10px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; border-bottom: 3px solid var(--line); }
+.kb-n { min-width: 22px; padding: 0 6px; border-radius: 999px; background: var(--ink); color: var(--on-ink); font-size: 12px; line-height: 22px; text-align: center; font-variant-numeric: tabular-nums; }
 /* A column scrolls rather than squeezing its cards: at least 300px tall, at most what the window has room for. */
 .kb-cards { list-style: none; margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 300px; max-height: max(300px, calc(100vh - 300px)); overscroll-behavior: contain; }
 .kb-empty { padding: 14px 6px; text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); }
 /* flex: none: a full column scrolls, it never shrinks its cards to fit. */
-.kb-card { flex: none; background: #fff; border: 2px solid var(--ink); border-radius: calc(var(--radius) - 4px); box-shadow: inset 5px 0 0 var(--stripe, transparent), 0 2px 0 var(--ink); overflow: hidden; }
+.kb-card { flex: none; background: var(--card); border: 2px solid var(--line); border-radius: calc(var(--radius) - 4px); box-shadow: inset 5px 0 0 var(--stripe, transparent), 0 2px 0 var(--edge); overflow: hidden; }
 .kb-card[draggable='true'] { cursor: grab; }
 .kb-open { display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 8px 10px 8px 13px; border: 0; background: none; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
 .kb-open:focus-visible { outline: none; box-shadow: inset 0 0 0 3px var(--accent); }
@@ -22,6 +22,6 @@
 /* The tabs above it: the board or the list of workers. */
 .lite-tabs { display: flex; gap: 8px; margin: 0 0 12px; }
 .lite-tabs .btn { flex: none; }
-.lite-tabs .btn.on { background: var(--ink); color: #fff; }
+.lite-tabs .btn.on { background: var(--ink); color: var(--on-ink); }
 /* The board wants the whole width; the list of workers keeps its narrow column. */
 .lite-main.board { max-width: none; }

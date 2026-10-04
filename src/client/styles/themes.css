@@ -1,0 +1,167 @@
+/* The 1D view's color themes (ui/colortheme.ts picks one and sets <html data-theme="…">): Default, Dark
+   and Terminal. The tokens and what each is for are in styles/base.css, where their values are the
+   Default look; the other two only set different values here, so every sheet that names its colors with
+   the tokens follows along. Only lite.html sets the attribute, so the 3D office and the 2D view (which
+   loads this sheet with lite.css) keep their own look whatever this browser picked. Terminal's own
+   shapes (square corners, brackets round buttons, the scanlines) are in styles/theme-terminal.css. */
+
+/* ---- Dark: the Default look, chunky borders and all, at night ------------------------------------- */
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #191b27;
+  --paper-2: #222536;
+  --card: #2b2e43;
+  --card-dim: #232536;
+  --sunken: #141621;
+  --glass: rgba(25, 27, 39, .6);
+  --ink: #eeedf7;
+  --ink-2: #cfcde3;
+  --muted: #a9a6c2;
+  --faint: #8b88a6;
+  /* Borders darker than the cards, so the cartoon outline still reads on a dark page. */
+  --line: #07080d;
+  --edge: #07080d;
+  --rule: rgba(255, 255, 255, .1);
+  --rule-strong: rgba(255, 255, 255, .22);
+  --rule-soft: #34374f;
+  --accent: #ff8f63;
+  --good: #19d3a2;
+  --warn: #ffd166;
+  --bad: #ff6286;
+  --info: #62c4ee;
+  --purple: #b98cf2;
+  /* The fills stay bright, so the text on them goes dark (white on them is too faint). */
+  --on-fill: #12131c;
+  --on-warn: #12131c;
+  --on-ink: #191b27;
+  --good-ink: #4fe0a0;
+  --bad-ink: #ff86a2;
+  --warn-ink: #ffc85a;
+  --link: #82bcff;
+  --good-soft: #183b30;
+  --bad-soft: #4a2231;
+  --bad-soft-2: #5a2638;
+  --warn-soft: #43391c;
+  --info-soft: #1c3448;
+  --info-line: #2f5d7c;
+  --accent-soft: #4a2c20;
+  --purple-soft: #352650;
+  --neutral-soft: #3a3d52;
+  /* The same as the terminals' own background (ui/termtheme.ts), so a terminal window has no seam. */
+  --code-bg: #1e1f2e;
+  --code-ink: #e9ecef;
+  --gutter: #23263a;
+  --diff-add: #173326;
+  --diff-add-n: #1e4632;
+  --diff-del: #3c1d26;
+  --diff-del-n: #552633;
+  --del-ink: #ff7b88;
+  --diff-hunk: #1b2a42;
+  --diff-hunk-n: #233754;
+  --hunk-ink: #8fb8f2;
+  --flash: #5a4a14;
+  --cork: #4a3a28;
+  --sticky: #4a4424;
+  --sticky-edge: rgba(0, 0, 0, .6);
+  --backdrop: rgba(4, 5, 10, .66);
+  --hover: rgba(255, 255, 255, .08);
+  --hover-light: rgba(255, 255, 255, .06);
+  --pop-glow: rgba(0, 0, 0, .5);
+}
+
+/* ---- Terminal: a green phosphor screen ------------------------------------------------------------ */
+html[data-theme='terminal'] {
+  color-scheme: dark;
+  --paper: #030603;
+  --paper-2: #071009;
+  --card: #050b06;
+  --card-dim: #040804;
+  --sunken: #020402;
+  --glass: rgba(3, 8, 4, .7);
+  --ink: #33ff66;
+  --ink-2: #2ee65c;
+  --muted: #22c04f;
+  --faint: #178a3a;
+  --line: #1c9c42;
+  --edge: transparent;
+  --rule: rgba(51, 255, 102, .18);
+  --rule-strong: rgba(51, 255, 102, .35);
+  --rule-soft: #0f3a1b;
+  --accent: #66ff99;
+  --good: #33ff66;
+  --warn: #ffb000;
+  --bad: #ff5555;
+  --info: #39d5ff;
+  --purple: #c792ff;
+  /* Reverse video: black text on a lit green (or amber, or red) block. */
+  --on-fill: #000;
+  --on-warn: #000;
+  --on-ink: #000;
+  --good-ink: #33ff66;
+  --bad-ink: #ff6b6b;
+  --warn-ink: #ffb000;
+  --link: #7dffa6;
+  --good-soft: #06240e;
+  --bad-soft: #2c0909;
+  --bad-soft-2: #3d0c0c;
+  --warn-soft: #2a1d00;
+  --info-soft: #031f26;
+  --info-line: #0f5a6b;
+  --accent-soft: #0b2a14;
+  --purple-soft: #1e0f2c;
+  --neutral-soft: #0a1a0e;
+  --code-bg: #000;
+  --code-ink: #33ff66;
+  --gutter: #040a05;
+  --diff-add: #062010;
+  --diff-add-n: #0a3016;
+  --diff-del: #250808;
+  --diff-del-n: #360b0b;
+  --del-ink: #ff6b6b;
+  --diff-hunk: #031c22;
+  --diff-hunk-n: #052a33;
+  --hunk-ink: #39d5ff;
+  --flash: #2a3a00;
+  --cork: #020402;
+  --sticky: #061008;
+  --sticky-edge: transparent;
+  --backdrop: rgba(0, 0, 0, .78);
+  --hover: rgba(51, 255, 102, .1);
+  --hover-light: rgba(51, 255, 102, .08);
+  --pop-glow: rgba(51, 255, 102, .14);
+  --radius: 0px;
+  --focus: #33ff66;
+  --font: 'Cascadia Mono', 'Cascadia Code', ui-monospace, 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', 'Liberation Mono', 'Segoe UI Symbol', 'Noto Sans Symbols 2', monospace;
+  --font-mono: var(--font);
+}
+
+/* ---- What both dark themes need beyond the tokens ------------------------------------------------- */
+html[data-theme='dark'], html[data-theme='terminal'] { background: var(--paper); }
+/* Text boxes and pickers take the browser's colors unless told otherwise. */
+html[data-theme='dark'] :is(input, textarea, select), html[data-theme='terminal'] :is(input, textarea, select) { color: var(--ink); caret-color: var(--accent); }
+html[data-theme='dark'] select option, html[data-theme='terminal'] select option { background: var(--card); color: var(--ink); }
+html[data-theme='dark'] ::placeholder { color: var(--faint); }
+html[data-theme='terminal'] ::placeholder { color: var(--faint); opacity: 1; }
+html[data-theme='dark'] *, html[data-theme='terminal'] * { scrollbar-color: var(--rule-strong) transparent; }
+/* The floor picker's ▾ is drawn in the Default ink; these draw it in the theme's. */
+html[data-theme='dark'] .lite-floor select:not(:disabled) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23eeedf7' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+html[data-theme='terminal'] .lite-floor select:not(:disabled) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2333ff66' stroke-width='2' stroke-linecap='square'/%3E%3C/svg%3E");
+}
+/* The issue and PR boards' sticky notes keep their paper colors (ui/boards.ts gives each one), so their writing stays dark. */
+html[data-theme='dark'] .card { color: #2b2d42; }
+html[data-theme='dark'] .card :is(.num, .meta) { color: #6b6158; }
+html[data-theme='dark'] .card .desk-link { background: #fff; color: #2b2d42; }
+/* The key caps' little shadow, and pictures that were drawn for a light page. */
+html[data-theme='dark'] .key { box-shadow: 0 2px 0 var(--line); }
+html[data-theme='dark'] .md img { background: #fff; }
+/* The 🎨 control in the top bar (ui/colortheme.ts). */
+.lite-bar .lite-theme { padding: 0 10px; font-size: 18px; }
+html:is([data-theme='dark'], [data-theme='terminal']) .provider-current { border-color: var(--rule-strong); }
+/* A phone's top bar is already full: the 🎨 goes small there, so the floor's name keeps what room it had. */
+@media (max-width: 640px) {
+  .lite-bar .lite-theme { width: 30px; padding: 0; justify-content: center; font-size: 15px; border-width: 2px; box-shadow: 0 2px 0 var(--edge); }
+  .lite-bar:has(.lite-theme) { gap: 6px; }
+}
