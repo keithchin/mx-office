@@ -6,6 +6,7 @@
 // into every Playbook, and they're written again when it changes.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { autonomyBrief, type AutonomyLevel } from '../../shared/roster/autonomy.js';
 import { journalPath, playbookMirror, playbookPath, ROLE_BY_ID, ROLES, standupPath, type RoleDef, type RoleId, type SubagentDef, type TeamId } from '../../shared/roster/roles.js';
@@ -24,6 +25,25 @@ export interface PlaybookContext {
   lessons: string;
   /** Every role's name, so a Playbook can say who's who. */
   names: Record<RoleId, string>;
+}
+
+/** Where the mxcli-project-toolkit clone is (the same setting the new-project wizard uses). */
+const toolkitDir = () => (process.env.AGENT_OFFICE_TOOLKIT_DIR || path.join(os.homedir(), 'agent-spike', 'mxcli-project-toolkit')).replace(/\\/g, '/');
+
+/**
+ * The toolkit skills and role files this role works from, pointed at in the toolkit clone rather than copied,
+ * so the team reads the toolkit's current version (see RoleDef.toolkitSkills).
+ */
+function toolkitSection(role: RoleDef): string[] {
+  if (!role.toolkitSkills.length && !role.toolkitAgents.length) return [];
+  const dir = toolkitDir();
+  return [
+    '## Your toolkit skills (mxcli-project-toolkit)',
+    `Before a piece of work, read the skills below that apply to it, from the toolkit clone at \`${dir}\`. They are the team's hard-won practice: where one disagrees with this Playbook on how to do something, follow the skill; on who decides, follow this Playbook.`,
+    ...role.toolkitSkills.map((s) => `- \`${dir}/skills/${s}.md\``),
+    ...(role.toolkitAgents.length ? ['', 'Your lane and your subagents build on the toolkit role files:', ...role.toolkitAgents.map((a) => `- \`${dir}/agents/${a}.md\``)] : []),
+    '',
+  ];
 }
 
 const ONE_WRITER = 'One writer per Mendix app: only the Lead Developer runs `mxcli exec` (or any MCP write) against the .mpr. Everyone else — every other Lead and every subagent — drafts, checks (`mxcli check`, `mxcli -c "SHOW …"`) and reviews, and hands the change to the Lead Developer to apply.';
@@ -85,6 +105,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     team,
     'Dispatch them with the Agent tool for drafting, checking and research; keep every decision, every question to the CTO and every write to the app in your own session. A subagent returns the file it wrote, not a summary of it.',
     '',
+    ...toolkitSection(role),
     '## The one-writer rule',
     ONE_WRITER,
     '',

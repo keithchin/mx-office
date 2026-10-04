@@ -28,6 +28,13 @@ export interface RoleDef {
   subagents: SubagentDef[];
   /** The model a fresh hire of it runs on, until the CTO picks another. */
   model: string;
+  /**
+   * The mxcli-project-toolkit skills (`skills/<name>.md`) this role works from, and the toolkit role files
+   * (`agents/<name>.md`) its lane builds on. Its Playbook points at them in the toolkit clone rather than copying
+   * them, so an update to the toolkit reaches every project's team.
+   */
+  toolkitSkills: string[];
+  toolkitAgents: string[];
 }
 
 export const ROLES: readonly RoleDef[] = [
@@ -40,6 +47,8 @@ export const ROLES: readonly RoleDef[] = [
     rights: ['Keep the plan and the board tidy (issues, labels, milestones)', 'Ask Leads for status through their team journals', 'Compile the standup page and relay the CTO\'s decisions'],
     subagents: [],
     model: 'sonnet',
+    toolkitSkills: ['conversion-runbook', 'agent-roles', 'iterative-build-loop', 'module-completion-loop', 'close-the-loop', 'improvement-register', 'coverage-ledger', 'measured-claims', 'field-run'],
+    toolkitAgents: [],
   },
   {
     id: 'lead-designer',
@@ -50,6 +59,8 @@ export const ROLES: readonly RoleDef[] = [
     rights: ['Approve design changes inside the agreed design system', 'Produce design artifacts (design system notes, wireframes, page layouts, branding)'],
     subagents: [{ id: 'ui-ux-designer', title: 'UI/UX Designer', does: 'Atlas design system, wireframes, page layouts and branding: the toolkit\'s Stage 3 design artifacts. Writes design files via Bash only; never touches the .mpr.', tools: 'Read, Grep, Glob, Bash', model: 'sonnet' }],
     model: 'sonnet',
+    toolkitSkills: ['design-artifacts', 'design-spacing', 'journey-map', 'ui-preflight-pages', 'ui-loop', 'ui-review-loop', 'oneshot-page-structure-patterns', 'learned-page-patterns', 'learned-css-that-never-applied', 'learned-stylegallery', 'mendix-agent-ui'],
+    toolkitAgents: ['review-agent'],
   },
   {
     id: 'lead-developer',
@@ -60,6 +71,8 @@ export const ROLES: readonly RoleDef[] = [
     rights: ['Apply MDL to the app (the only role that may run `mxcli exec`)', 'Open pull requests for the work'],
     subagents: [{ id: 'developer', title: 'Developer', does: 'Drafts MDL scripts and validates them with `mxcli check`. Never runs `mxcli exec` and never writes the .mpr: the Lead Developer applies what it drafts.', tools: 'Read, Grep, Glob, Bash', model: 'sonnet' }],
     model: 'sonnet',
+    toolkitSkills: ['architecture-blueprint', 'modularize-domain', 'brd-to-build-plan', 'module-brief', 'walking-skeleton', 'security-is-not-a-later-script', 'mdl-cookbook-microflows', 'microflow-preflight', 'learned-microflow-patterns', 'learned-mdl-preflight', 'learned-mdl-cannot-express', 'rest-integration-first-time-right', 'layering-review', 'mpr-corruption-and-sp-load-errors', 'mendix-agents', 'mendix-agent-setup'],
+    toolkitAgents: ['architect-agent', 'mdl-agent'],
   },
   {
     id: 'lead-tester',
@@ -70,6 +83,8 @@ export const ROLES: readonly RoleDef[] = [
     rights: ['Approve test plans and test results', 'Change the test framework (tests/, tests/e2e, the qa-tests playbook, the PR pipeline)'],
     subagents: [{ id: 'tester', title: 'Tester', does: 'Writes and runs unit tests (tests/*.test.mdl), Playwright e2e tests (tests/e2e) and follows the repo\'s .ai-context/skills/qa-tests playbook. May write under tests/ only; never edits MDL or runs `mxcli exec`.', tools: 'Read, Grep, Glob, Bash, Write, Edit', model: 'sonnet' }],
     model: 'sonnet',
+    toolkitSkills: ['testing-shape', 'e2e-harness-base', 'journey-proof', 'fixture-seeding', 'learned-db-assertions', 'monkey-test', 'qa-loop-goal-pattern', 'test-result-audit', 'tool-output-is-not-ground-truth', 'e2e-evidence-report', 'lint-that-actually-runs'],
+    toolkitAgents: ['gate-agent', 'test-agent'],
   },
   {
     id: 'chief-analyst',
@@ -83,6 +98,8 @@ export const ROLES: readonly RoleDef[] = [
       { id: 'data-analyst', title: 'Data Analyst', does: 'Reads the office\'s analysis data and the repo history (PRs, CI, run costs) and turns them into numbers and charts for the insight memo. Read-only apart from its notes.', tools: 'Read, Grep, Glob, Bash', model: 'haiku' },
     ],
     model: 'sonnet',
+    toolkitSkills: ['interview-protocol', 'grill-mode', 'document-discovery', 'brd-generation', 'brd-validation', 'kb-generation', 'app-analysis', 'source-triage', 'small-project-tier', 'company-brain', 'mendix-agents'],
+    toolkitAgents: ['ba-agent'],
   },
 ];
 
