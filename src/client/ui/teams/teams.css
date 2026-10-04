@@ -1,0 +1,81 @@
+/* Sub-boards (ui/teams/): team tags on the board's cards, the team filter bar, the per-team counts under
+   each column, the Team picker, and a team's own page. Colors are theme tokens only, so the Default,
+   Dark and Terminal looks all apply: each team takes one strong token and its soft partner. */
+.tm-management { --tm: var(--accent); --tm-soft: var(--accent-soft); }
+.tm-design { --tm: var(--purple); --tm-soft: var(--purple-soft); }
+.tm-development { --tm: var(--info); --tm-soft: var(--info-soft); }
+.tm-testing { --tm: var(--good); --tm-soft: var(--good-soft); }
+.tm-analysis { --tm: var(--warn); --tm-soft: var(--warn-soft); }
+.tm-unassigned { --tm: var(--faint); --tm-soft: var(--neutral-soft); }
+
+/* The tag on a card: icon and short name, a stripe of the team's color down its left. */
+.tm-tag { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 1px 5px; border-radius: 999px; border-left: 4px solid var(--tm); background: var(--tm-soft); color: var(--ink); font-size: 11px; font-weight: 800; line-height: 18px; white-space: nowrap; }
+.tm-ico { font-size: 12px; line-height: 1; }
+.tm-tag.tm-unassigned { color: var(--muted); }
+
+/* The filter bar over the main board's columns: All, then a chip per team, several at once. */
+.tm-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; }
+.tm-filter-h { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-right: 2px; }
+.btn.tm-chip { gap: 5px; border-left: 5px solid var(--tm, var(--line)); }
+.btn.tm-chip[aria-pressed='true'] { background: var(--tm-soft, var(--ink)); color: var(--ink); box-shadow: inset 0 0 0 2px var(--tm, var(--line)), 0 2px 0 var(--edge); }
+.btn.tm-chip.tm-all[aria-pressed='true'] { background: var(--ink); color: var(--on-ink); box-shadow: 0 2px 0 var(--edge); }
+.tm-chip-n { min-width: 18px; padding: 0 5px; border-radius: 999px; background: var(--paper-2); color: var(--ink); font-size: 11px; font-weight: 900; line-height: 17px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Under a column's header: how many of its cards are each team's. */
+.tm-colnote { display: flex; flex-wrap: wrap; gap: 4px; padding: 5px 8px; border-bottom: 1px solid var(--rule); cursor: default; }
+.tm-count { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; border-radius: 999px; background: var(--tm-soft); box-shadow: inset 3px 0 0 var(--tm); font-size: 11px; font-weight: 900; line-height: 18px; font-variant-numeric: tabular-nums; }
+
+/* "Team: [▼]" in a card's preview and in the issue or PR window. */
+.kb-pv-extra { display: flex; flex-direction: column; gap: 10px; }
+.tm-pick { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; }
+.tm-pick-h { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.tm-select { padding: 3px 6px; border: 2px solid var(--line); border-left: 5px solid var(--tm, var(--line)); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-weight: 800; }
+.tm-select:disabled { opacity: .6; }
+
+/* ---- A team's page ------------------------------------------------------------------------------- */
+.tm-switch { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.btn.tm-switch-b { gap: 6px; border-bottom: 4px solid var(--tm); }
+.btn.tm-switch-b.on { background: var(--tm-soft); box-shadow: inset 0 0 0 2px var(--tm), 0 2px 0 var(--edge); }
+.tm-head { display: grid; grid-template-columns: 1fr minmax(260px, 380px); gap: 14px; align-items: start; margin: 0 0 14px; padding: 12px 14px; background: var(--card); border: 3px solid var(--line); border-left: 10px solid var(--tm); border-radius: var(--radius); box-shadow: 0 3px 0 var(--edge); }
+.tm-title { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 22px; font-weight: 900; }
+.tm-title-ico { font-size: 28px; }
+.tm-mission { margin: 0 0 8px; font-size: 14px; font-weight: 700; color: var(--ink-2); line-height: 1.4; }
+.tm-subs { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); overflow-wrap: anywhere; }
+.tm-lead .ro-card { box-shadow: 0 2px 0 var(--edge); }
+.tm-sec { margin: 4px 0 8px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.tm-board { margin-bottom: 14px; }
+.tm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tm-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.tm-panel { padding: 10px 12px; background: var(--card); border: 3px solid var(--line); border-radius: var(--radius); box-shadow: 0 3px 0 var(--edge); min-width: 0; }
+.tm-panel-h { margin: 0 0 8px; font-size: 14px; font-weight: 900; }
+.tm-dim { margin: 0; font-size: 13px; font-weight: 700; color: var(--muted); }
+.tm-big { font-size: 22px; }
+.tm-link { padding: 0; border: 0; background: none; color: var(--link); font: inherit; font-weight: 800; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.tm-link:hover { text-decoration: underline; }
+.tm-prs, .tm-files, .tm-rank, .tm-entries { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.tm-rank { list-style: decimal; padding-left: 20px; font-weight: 700; }
+.tm-pr { display: flex; flex-direction: column; gap: 3px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.tm-pr:last-child { border-bottom: 0; padding-bottom: 0; }
+.tm-pr-meta { font-size: 12px; font-weight: 700; color: var(--muted); }
+.tm-pr-meta.tm-checks-fail { color: var(--bad-ink); }
+.tm-pr-meta.tm-checks-pass { color: var(--good-ink); }
+.tm-entry { padding: 8px 10px; background: var(--paper-2); border-radius: 8px; border-left: 4px solid var(--tm, var(--line)); }
+.tm-journal { border-left-width: 3px; }
+.tm-entry-h { margin-bottom: 4px; font-size: 13px; font-weight: 900; }
+.tm-entry .md { font-size: 13px; max-height: 260px; overflow-y: auto; }
+.tm-live .la-chip { margin: 0; }
+.tm-doc-win { width: min(820px, calc(100vw - 24px)); }
+.tm-doc { max-height: 70vh; overflow-y: auto; }
+
+/* A phone: the header and the panels in one column. */
+@media (max-width: 720px) {
+  .tm-head, .tm-grid { grid-template-columns: 1fr; }
+  .tm-title { font-size: 19px; }
+}
+
+/* A team's board is a lane of the main one: its columns only as tall as their cards need. */
+.tm-board .kb-col { min-height: 0; }
+.tm-board .kb-cards { min-height: 64px; }
+.btn.tm-switch-b.on { color: var(--ink); }
+.tm-entry .md :is(h1, h2, h3, h4) { margin: 8px 0 2px; font-size: 13px; }
+.tm-entry .md :is(ul, ol) { margin: 2px 0; }

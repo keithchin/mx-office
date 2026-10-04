@@ -27,7 +27,8 @@ export interface OrgDeps {
   redraw(view: RosterView): void;
 }
 
-function card(v: RosterView, m: MemberView, deps: OrgDeps): HTMLElement {
+/** One member's card (a team page shows its Lead with it too, ui/teams/page.ts). */
+export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLElement {
   const role = ROLE_BY_ID.get(m.role)!;
   const run = (action: string, extra: Record<string, unknown> = {}) => void act(v.floor, action, { role: m.role, ...extra }).then((r) => r && deps.redraw(r));
   const hired = !!m.workerId;
@@ -84,5 +85,5 @@ function card(v: RosterView, m: MemberView, deps: OrgDeps): HTMLElement {
 export function orgChart(v: RosterView, deps: OrgDeps): HTMLElement {
   const pm = v.members.find((m) => m.role === 'pm')!;
   const leads = v.members.filter((m) => m.role !== 'pm');
-  return h('section.ro-org', { 'aria-label': 'Org chart' }, h('div.ro-top', {}, card(v, pm, deps)), h('div.ro-line', { 'aria-hidden': 'true' }), h('div.ro-leads', {}, ...leads.map((m) => card(v, m, deps))));
+  return h('section.ro-org', { 'aria-label': 'Org chart' }, h('div.ro-top', {}, memberCard(v, pm, deps)), h('div.ro-line', { 'aria-hidden': 'true' }), h('div.ro-leads', {}, ...leads.map((m) => memberCard(v, m, deps))));
 }

@@ -38,8 +38,12 @@ const COLUMNS: { id: Column; title: string; hint: string }[] = [
 /** How many of the latest finished cards Done shows. */
 const DONE_SHOWN = 12;
 
-interface Card {
+/** What a card is of: the team tag and the team filter work it out from this (ui/teams/). */
+export type CardOf = { kind: 'issue'; it: GhIssue } | { kind: 'task'; t: QueueTask } | { kind: 'worker'; w: WorkerInfo } | { kind: 'pull'; p: GhPull; w?: WorkerInfo };
+
+export interface Card {
   key: string;
+  of: CardOf;
   column: Column;
   title: string;
   /** A thin stripe down the card's edge: the worker's color, or the PR's checks. */
@@ -91,6 +95,7 @@ function issueCard(it: GhIssue, column: Column, a: KanbanActions): Card {
   const open = () => a.openIssue(it);
   return {
     key: `i${it.number}`,
+    of: { kind: 'issue', it },
     column,
     title: `#${it.number} ${it.title}`,
     open,
@@ -115,6 +120,7 @@ function taskCard(t: QueueTask, a: KanbanActions): Card {
   const open = () => (issue ? a.openIssue(issue) : undefined);
   return {
     key: `t${t.id}`,
+    of: { kind: 'task', t },
     column: 'queued',
     title: t.issue ? `#${t.issue} ${t.title}` : t.title,
     open,
@@ -137,6 +143,7 @@ function workerCard(w: WorkerInfo, a: KanbanActions): Card {
   const open = () => a.openWorker(w.id);
   return {
     key: `w${w.id}`,
+    of: { kind: 'worker', w },
     column: human ? 'human' : 'progress',
     title: `${w.name}: ${w.task?.name ?? w.title ?? (w.prompt ? clip(w.prompt, 70) : 'no task yet')}`,
     stripe: w.color,
@@ -167,6 +174,7 @@ function pullCard(p: GhPull, w: WorkerInfo | undefined, a: KanbanActions, column
   const open = () => a.openPull(p);
   return {
     key: `p${p.number}`,
+    of: { kind: 'pull', p, w },
     column,
     title: `PR #${p.number} ${p.title}`,
     stripe: column === 'review' ? CHECK_COLOR[p.checks] : undefined,
@@ -193,10 +201,28 @@ function pullCard(p: GhPull, w: WorkerInfo | undefined, a: KanbanActions, column
   };
 }
 
+/**
+ * What a board shows beyond the cards themselves: the main board's team tags, filter bar and per-team
+ * counts, or a team page's own board (ui/teams/). The board without it is every card, as before.
+ */
+export interface BoardView {
+  /** Only the cards this keeps (a team's board, or the filter bar's pick). */
+  keep?(c: Card): boolean;
+  /** Something more on each card, under its title (its team tag). */
+  badge?(c: Card): HTMLElement | null;
+  /** A slim row under a column's header, from all its cards before `keep` (the per-team counts). */
+  note?(all: Card[]): HTMLElement | null;
+  /** Something more at the top of a card's preview (the Team control). */
+  previewTop?(c: Card): HTMLElement | null;
+  /** Before the columns (the filter bar). */
+  top?: HTMLElement | null;
+}
+
 /** The board, drawn into `root` (again on every change: it's small). */
-export function renderBoard(root: HTMLElement, a: KanbanActions) {
-  const all = cards(a);
-  // A card that's gone (taken, merged) takes its preview with it.
+export function renderBoard(root: HTMLElement, a: KanbanActions, view: BoardView = {}) {
+  const every = cards(a);
+  const all = view.keep ? every.filter((c) => view.keep!(c)) : every;
+  // A card that's gone (taken, merged, filtered out) takes its preview with it.
   const k = previewKey();
   if (k && !all.some((c) => c.key === k)) hidePreview();
   const spent = [...store.workers.values()].reduce((n, w) => n + (w.usage?.cost ?? 0), 0);
@@ -205,16 +231,18 @@ export function renderBoard(root: HTMLElement, a: KanbanActions) {
     {},
     [`🤖 ${all.filter((c) => c.column === 'progress').length} working`, `🙋 ${all.filter((c) => c.column === 'human').length} need a human`, `🔀 ${all.filter((c) => c.column === 'review').length} in review`, spent ? `💰 ${usd(spent)} on this floor's agents` : ''].filter(Boolean).join(' · '),
   );
-  root.replaceChildren(summary, h('div.kb-columns', {}, ...COLUMNS.map((col) => column(col, all.filter((c) => c.column === col.id), a))));
+  const cols = COLUMNS.map((col) => column(col, all.filter((c) => c.column === col.id), a, view, every.filter((c) => c.column === col.id)));
+  root.replaceChildren(...(view.top ? [view.top] : []), summary, h('div.kb-columns', {}, ...cols));
 }
 
-function column(col: (typeof COLUMNS)[number], list: Card[], a: KanbanActions): HTMLElement {
+function column(col: (typeof COLUMNS)[number], list: Card[], a: KanbanActions, view: BoardView, unfiltered: Card[]): HTMLElement {
   const drop = col.id === 'queued' ? a.queue : col.id === 'progress' ? a.start : undefined;
   const el = h(
     'section.kb-col',
     { class: col.id, 'data-col': col.id, 'aria-label': col.title },
     h('header.kb-col-h', { title: col.hint }, h('span', {}, col.title), h('span.kb-n', {}, String(list.length))),
-    h('ol.kb-cards', {}, ...(list.length ? list.map((c) => card(c, a)) : [h('li.kb-empty', {}, col.hint)])),
+    view.note?.(unfiltered) ?? null,
+    h('ol.kb-cards', {}, ...(list.length ? list.map((c) => card(c, a, view)) : [h('li.kb-empty', {}, col.hint)])),
   );
   if (drop) {
     el.addEventListener('dragover', (e) => {
@@ -237,12 +265,12 @@ function column(col: (typeof COLUMNS)[number], list: Card[], a: KanbanActions): 
 
 const DRAG_TYPE = 'application/x-agent-office-issue';
 
-function card(c: Card, a: KanbanActions): HTMLElement {
+function card(c: Card, a: KanbanActions, view: BoardView): HTMLElement {
   const it = c.issue;
   const li = h(
     'li.kb-card',
     { style: c.stripe ? `--stripe:${c.stripe}` : undefined, draggable: it ? 'true' : undefined },
-    h('button.kb-open', { type: 'button', onclick: c.open }, h('span.kb-title', {}, c.title)),
+    h('button.kb-open', { type: 'button', onclick: c.open }, h('span.kb-title', {}, c.title), view.badge?.(c) ?? null),
     it
       ? h(
           'div.kb-acts',
@@ -253,6 +281,13 @@ function card(c: Card, a: KanbanActions): HTMLElement {
       : null,
   );
   if (it) li.addEventListener('dragstart', (e) => e.dataTransfer?.setData(DRAG_TYPE, String(it.number)));
-  previewOnHover(li, c.key, c.preview);
+  previewOnHover(li, c.key, () => withTop(c.preview(), view.previewTop?.(c) ?? null));
   return li;
+}
+
+/** The preview with `top` over whatever else it had under its fields (a PR's checks). */
+function withTop(p: Preview, top: HTMLElement | null): Preview {
+  if (!top) return p;
+  const extra = p.extra;
+  return { ...p, extra: (relayout) => h('div.kb-pv-extra', {}, top, extra?.(relayout) ?? null) };
 }

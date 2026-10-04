@@ -9,6 +9,7 @@ import { getJson } from './api';
 import { openClose } from './close';
 import { commentBox } from './comment-box';
 import { labelButton, labelChip } from './labels';
+import { windowTeamPicker } from '../teams/retag';
 import { avatar, commentCard, errorBox, nodes, spinnerRow } from './pieces';
 import { issueContext, issuePrompt, type BoardActions } from './prompts';
 
@@ -71,6 +72,7 @@ export function openIssue(first: GhIssue, net: Net, actions: BoardActions) {
         it.assignees.length ? h('span', {}, `· 👤 ${it.assignees.join(', ')}`) : it.taken ? h('span', {}, '· 🤖 handed to a worker') : null,
         ...it.labels.map(labelChip),
         labelButton('issue', () => it, net, (labels) => ((it = { ...it, labels }), renderFrame())),
+        windowTeamPicker('issue', it, net, (labels) => ((it = { ...it, labels }), renderFrame())),
       ),
     );
     pill.className = `pill ${isOpen ? 'done' : 'offline'}`;

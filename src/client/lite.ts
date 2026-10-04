@@ -17,6 +17,7 @@ import { renderAnalysis } from './ui/analysis';
 import { renderSetup } from './ui/setup-panel';
 import { renderSummary } from './ui/summary';
 import { teamTab } from './ui/roster';
+import { subBoards } from './ui/teams';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { liveAppView } from './ui/liveapp';
 import { openPull } from './ui/pull';
@@ -171,9 +172,16 @@ const kanban: KanbanActions = {
   },
 };
 usePreviewNet(net);
+// Sub-boards (ui/teams/): team tags and a team filter on the board, and a page per team on 🧩 Teams.
+const teams = subBoards(
+  net,
+  { kanban, openWorker, openPull: kanban.openPull, liveChip: (el) => live.mountChip(el), openApprovals: () => (team.showPane('approvals'), showTab('team')) },
+  () => renderKanban(),
+);
+net.onMessage((msg) => teams.route(msg));
 const TAB_KEY = 'agent-office.lite-tab';
-type Tab = 'board' | 'workers' | 'analysis' | 'live' | 'team';
-const isTab = (t: unknown): t is Tab => t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'team';
+type Tab = 'board' | 'workers' | 'analysis' | 'live' | 'team' | 'teams';
+const isTab = (t: unknown): t is Tab => t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'team' || t === 'teams';
 let tab: Tab = 'board';
 try {
   const saved = localStorage.getItem(TAB_KEY);
@@ -192,6 +200,9 @@ function showTab(t: Tab) {
     // Just for this visit, then.
   }
   setAddress({ tab: t });
+  teams.address(t);
+  $('tab-teams').classList.toggle('on', t === 'teams');
+  $('teams-view').classList.toggle('hidden', t !== 'teams');
   $('tab-board').classList.toggle('on', t === 'board');
   $('tab-workers').classList.toggle('on', t === 'workers');
   $('tab-analysis').classList.toggle('on', t === 'analysis');
@@ -211,10 +222,11 @@ function showTab(t: Tab) {
   renderAnalysisTab();
   team.render(store.floor ?? undefined);
 }
-/** The board and the project summary over it, unless the floors page is over them (they're drawn when that goes). */
+/** The board and the project summary over it, unless the floors page is over them (they're drawn when that goes); or a team's page. */
 function renderKanban() {
+  if (tab === 'teams' && !home.shown) return teams.renderPage($('teams-view'));
   if (tab !== 'board' || home.shown) return;
-  renderBoard($('board'), kanban);
+  renderBoard($('board'), kanban, teams.boardView(renderKanban));
   void renderSummary($('summary'), store.floor ?? undefined).then(() => live.mountChip($('summary')));
   void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) });
 }
@@ -227,6 +239,7 @@ $('tab-workers').addEventListener('click', () => showTab('workers'));
 $('tab-analysis').addEventListener('click', () => showTab('analysis'));
 $('tab-live').addEventListener('click', () => showTab('live'));
 $('tab-team').addEventListener('click', () => showTab('team'));
+$('tab-teams').addEventListener('click', () => showTab('teams'));
 store.on('floor', renderAnalysisTab);
 // The project team (ui/roster/): its approvals badge stays current whichever tab is showing.
 const team = teamTab($('team-view'), $('tab-team').querySelector('.ro-tab-n')!, () => tab === 'team' && !home.shown, openWorker);

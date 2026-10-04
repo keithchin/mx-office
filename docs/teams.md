@@ -23,6 +23,32 @@ The roles are adapted from the mxcli-project-toolkit's agents (`skills/agent-rol
 
 The meeting room's window has **📋 Standup** too, for the latest page.
 
+## Sub-boards
+
+The project has one main board and a sub-board per team. Every card on the 1D view's **🗂 Board** (an issue, a queued task, an agent, a PR) belongs to a team, and wears its tag (🧭 PM, 🎨 Design, 🛠️ Dev, 🧪 Test, 📈 Analysis, or ◌ None):
+
+1. a `team:<team>` label on the issue or PR (`team:design`, `team:development`, `team:testing`, `team:analysis`, `team:management`) — what the CTO sets, and what an approved standup proposal gets;
+2. else, for an agent: the team of its roster role, when it's one of the Leads or the PM;
+3. else, for a PR: its author worker's roster team, else the team of an issue it closes;
+4. else, for a queued task: its issue's team; for another agent: its task's issue, else its PR's label;
+5. else **Unassigned**.
+
+**The main board** is the PM's view from above: every team's cards, a **Teams** bar of chips over the columns (All, each team with its count, Unassigned; pick several to see them together, remembered on that browser and kept in the address as `&teams=design,testing`), and under each column's header how many of its cards are each team's.
+
+**Re-tagging.** A card's hover preview, and the issue and PR windows, have **Team [▼]**: for the CTO (an admin) a picker that swaps the card's `team:` label on GitHub as the office's gh account (the card moves at once, and back if GitHub refuses); for everyone else the tag, read-only. A Lead's own card is its role's team and stays read-only. Before the first tag on a floor the office makes whichever of the five labels the repo is missing, in their team's color. In dry-run mode (the team setting, or `AGENT_OFFICE_TEAMS_DRY_RUN=1`) nothing is written to GitHub: the card moves on that page only, until the next look at GitHub.
+
+**🧩 Teams** (`?tab=teams&team=testing`) has a page per team: a switcher of the five teams with their card counts; the team's header (its mission, its Lead's card from the org chart with ⏰ Wake and 🤝 Hire for the CTO, its subagents); the team's own board (the same columns, only its cards); its journal's newest entries, read from the floor's main checkout; and panels of its own:
+
+| Team | Panels |
+| --- | --- |
+| 🧭 Management | The latest standup (and its page in the repo), the approvals waiting on the CTO |
+| 🎨 Design | Design approvals, the files under `design/` and `docs/design/` |
+| 🛠️ Development | The 🌐 Live app chip, the open PRs with their checks |
+| 🧪 Testing | Open PRs whose checks fail, and each open PR's CI scorecard (the pr-checks run) |
+| 📈 Analysis | The BRD and insight memos (`docs/insights/`, `docs/requirements/`, `*brd*.md`), the analyzer's model ranking for the floor |
+
+None of it asks a model or polls: it's the board's own data, the roster, the PR checks and the analyzer, plus `GET /api/teams/page` (the journal and file lists, kept 20 seconds) and `POST /api/teams/labels` (admins).
+
 ## In the project
 
 Hiring a role writes these into the folder it works in (its worktree), to land with its first pull request:

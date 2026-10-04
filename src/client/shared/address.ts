@@ -11,6 +11,9 @@ const params = () => new URLSearchParams(location.search);
 export const askedFloor: string | null = params().get('floor');
 /** The tab the address asked for when the page opened (the 1D view's Board, Workers, …). */
 export const askedTab: string | null = params().get('tab');
+/** The board's team filter (`&teams=design,testing`) and the team page (`&team=testing`) the address asked for (ui/teams/). */
+export const askedTeams: string | null = params().get('teams');
+export const askedTeam: string | null = params().get('team');
 
 // The connection takes the floor you were last on (see net.ts), so the asked one becomes that.
 if (askedFloor) rememberFloor(askedFloor);
@@ -22,7 +25,8 @@ export function setAddress(changes: Record<string, string | null>) {
     if (v) q.set(k, v);
     else q.delete(k);
   }
-  const s = q.toString();
+  // Commas stay commas (&teams=design,testing reads better than %2C), which URLSearchParams reads back the same.
+  const s = q.toString().replace(/%2C/gi, ',');
   const url = `${location.pathname}${s ? `?${s}` : ''}${location.hash}`;
   if (url !== `${location.pathname}${location.search}${location.hash}`) history.replaceState(history.state, '', url);
 }
