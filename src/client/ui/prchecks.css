@@ -1,0 +1,24 @@
+/* A PR's checks (ui/prchecks.ts): the scorecard's rows and a strip of screenshots, in a card's preview or the PR window. */
+.prc { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; background: var(--paper-2); border-radius: 8px; font-size: 12px; }
+.prc[hidden] { display: none; }
+.prc-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.prc-label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.prc-headline { flex: 1; font-weight: 800; }
+.prc-run { font-weight: 800; color: var(--ink); }
+.prc-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 12px; margin: 0; padding: 0; list-style: none; }
+.prc-rows li { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+.prc-ico { flex: none; }
+.prc-check { flex: none; font-weight: 900; }
+.prc-result { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-weight: 700; }
+.prc-shots { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.prc-thumb { flex: none; width: 96px; height: 64px; padding: 0; border: 2px solid var(--ink); border-radius: 6px; background: #fff; overflow: hidden; cursor: zoom-in; }
+.prc-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.prc-thumb:hover { outline: 3px solid var(--good); }
+/* The screenshot big, over everything (the preview included). */
+.prc-light { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 24px; background: rgba(20, 22, 34, .82); }
+.prc-light figure { margin: 0; max-width: min(1200px, 100%); max-height: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.prc-big { max-width: 100%; max-height: calc(100vh - 110px); border: 3px solid var(--ink); border-radius: 8px; background: #fff; }
+.prc-cap { margin: 0; color: #fff; font-weight: 800; font-size: 13px; }
+.prc-light .prc-x { position: absolute; top: 14px; right: 14px; }
+.prc-prev, .prc-next { flex: none; font-size: 22px; }
+.gh-col > .prc { margin-bottom: 10px; }

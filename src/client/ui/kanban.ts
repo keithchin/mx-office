@@ -11,6 +11,7 @@ import { modelBadge } from './provider';
 import { usageLabel } from './usage';
 import { clip, h, STATUS_LABEL, timeAgo } from './dom';
 import { hidePreview, previewKey, previewOnHover, type Preview } from './kanban-preview';
+import { prChecksPanel } from './prchecks';
 import './kanban.css';
 
 export type Column = 'backlog' | 'queued' | 'progress' | 'human' | 'review' | 'done';
@@ -185,6 +186,7 @@ function pullCard(p: GhPull, w: WorkerInfo | undefined, a: KanbanActions, column
         ['Closes', p.closes.length ? p.closes.map((n) => `#${n}`).join(', ') : undefined],
       ],
       description: p.body || undefined,
+      extra: (relayout) => prChecksPanel(p.number, relayout),
       workerId: w?.id,
       open,
     }),
