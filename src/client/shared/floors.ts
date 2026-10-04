@@ -11,6 +11,7 @@ import { cloneLabel, floorPalette } from '../../shared/floors';
 import type { FloorInfo } from '../../shared/protocol';
 import { $, h } from '../ui/dom';
 import { openElevator } from '../ui/elevator';
+import { summaryLine } from '../ui/summary';
 import { switchView } from '../graphics';
 import { renderTitle } from './title';
 
@@ -107,6 +108,13 @@ export function floorsHome(net: Net, view: FlatView, onShow: (shown: boolean) =>
     switchView(into);
   };
 
+  /** The floor's project summary in a line (its stage, who's working, who needs you), filled in once it's fetched. */
+  const summaryOf = (floor: string) => {
+    const line = h('p.home-floor-summary', {});
+    void summaryLine(floor).then((t) => (line.textContent = t));
+    return line;
+  };
+
   const card = (f: FloorInfo, i: number) => {
     const here = f.id === store.floor;
     const stats: string[] = f.cloning
@@ -121,6 +129,7 @@ export function floorsHome(net: Net, view: FlatView, onShow: (shown: boolean) =>
       h('p.home-floor-sub', {}, [f.repo ?? f.dir, f.branch && `⎇ ${f.branch}`].filter(Boolean).join(' · ')),
       f.cloning && f.clone?.percent !== undefined ? h('span.home-bar', {}, h('span', { style: `width:${f.clone.percent}%` })) : null,
       h('p.home-floor-stats', {}, stats.join(' · ')),
+      f.cloning ? null : summaryOf(f.id),
       h('div.home-floor-go', {}, button('1d', '🗂️ Board', `${f.name}'s board: its pipeline from issue to merged PR, and its workers`), button('2d', '🗺️ Office', `${f.name} from above: every worker at its desk`)),
     );
   };

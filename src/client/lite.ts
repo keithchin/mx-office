@@ -13,6 +13,8 @@ import { openBoard } from './ui/boards';
 import { issuePrompt, type BoardActions } from './ui/github/prompts';
 import { openIssue } from './ui/github/issue-window';
 import { renderBoard, type KanbanActions } from './ui/kanban';
+import { renderAnalysis } from './ui/analysis';
+import { renderSummary } from './ui/summary';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { openPull } from './ui/pull';
 import { openQueue } from './ui/queue';
@@ -158,9 +160,10 @@ const kanban: KanbanActions = {
 };
 usePreviewNet(net);
 const TAB_KEY = 'agent-office.lite-tab';
-let tab: 'board' | 'workers' = 'board';
+let tab: 'board' | 'workers' | 'analysis' = 'board';
 try {
-  if (localStorage.getItem(TAB_KEY) === 'workers') tab = 'workers';
+  const saved = localStorage.getItem(TAB_KEY);
+  if (saved === 'workers' || saved === 'analysis') tab = saved;
 } catch {
   // No storage: the board, as usual.
 }
@@ -173,17 +176,30 @@ function showTab(t: typeof tab) {
   }
   $('tab-board').classList.toggle('on', t === 'board');
   $('tab-workers').classList.toggle('on', t === 'workers');
+  $('tab-analysis').classList.toggle('on', t === 'analysis');
   $('board').classList.toggle('hidden', t !== 'board');
+  $('summary').classList.toggle('hidden', t !== 'board');
   $('workers-view').classList.toggle('hidden', t !== 'workers');
-  document.querySelector('.lite-main')!.classList.toggle('board', t === 'board');
+  $('analysis-view').classList.toggle('hidden', t !== 'analysis');
+  // The board and the analysis tables want the whole width; the list of workers keeps its column.
+  document.querySelector('.lite-main')!.classList.toggle('board', t !== 'workers');
   renderKanban();
+  renderAnalysisTab();
 }
-/** The board, unless the floors page is over it (it's drawn when that goes). */
+/** The board and the project summary over it, unless the floors page is over them (they're drawn when that goes). */
 function renderKanban() {
-  if (tab === 'board' && !home.shown) renderBoard($('board'), kanban);
+  if (tab !== 'board' || home.shown) return;
+  renderBoard($('board'), kanban);
+  void renderSummary($('summary'), store.floor ?? undefined);
+}
+/** Which model does well on what (ui/analysis.ts), for this floor or every floor. */
+function renderAnalysisTab() {
+  if (tab === 'analysis' && !home.shown) void renderAnalysis($('analysis-view'), store.floor ?? undefined);
 }
 $('tab-board').addEventListener('click', () => showTab('board'));
 $('tab-workers').addEventListener('click', () => showTab('workers'));
+$('tab-analysis').addEventListener('click', () => showTab('analysis'));
+store.on('floor', renderAnalysisTab);
 for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanban);
 setInterval(renderKanban, 30_000);
 

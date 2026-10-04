@@ -12,6 +12,8 @@
 .home-here { flex: none; margin-left: auto; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .home-floor-sub, .home-floor-stats { margin: 0; font-size: 13px; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .home-floor.waiting .home-floor-stats { color: #c9184a; }
+/* The project in a line (ui/summary.ts): its stage, who's working, who needs you. */
+.home-floor-summary { margin: 0; font-size: 12px; font-weight: 700; color: var(--ink); min-height: 1.2em; }
 .home-bar { display: block; height: 7px; border: 2px solid var(--ink); border-radius: 6px; background: var(--paper-2); overflow: hidden; }
 .home-bar > span { display: block; height: 100%; background: var(--good); transition: width .6s ease; }
 .home-floor-go { display: flex; gap: 8px; margin-top: 4px; }

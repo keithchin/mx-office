@@ -33,9 +33,14 @@
       <div class="lite-tabs" role="tablist">
         <button id="tab-board" class="btn" type="button" role="tab">🗂 Board</button>
         <button id="tab-workers" class="btn" type="button" role="tab">🤖 Workers</button>
+        <button id="tab-analysis" class="btn" type="button" role="tab">📊 Analysis</button>
       </div>
+      <!-- What's happening on the floor, in a few sentences and numbers (ui/summary.ts). -->
+      <div id="summary"></div>
       <!-- The pipeline from issue to merged PR, agents in between (ui/kanban.ts). -->
       <div id="board" class="kb"></div>
+      <!-- Which model does well on what, here or on every floor (ui/analysis.ts). -->
+      <div id="analysis-view" class="hidden"></div>
       <div id="workers-view">
         <h2 class="lite-h">Workers <span id="waiting-now" class="lite-waiting"></span></h2>
         <ul id="workers" class="lite-workers"></ul>
