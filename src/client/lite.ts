@@ -14,6 +14,7 @@ import { issuePrompt, type BoardActions } from './ui/github/prompts';
 import { openIssue } from './ui/github/issue-window';
 import { renderBoard, type KanbanActions } from './ui/kanban';
 import { renderAnalysis } from './ui/analysis';
+import { renderSetup } from './ui/setup-panel';
 import { renderSummary } from './ui/summary';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { openPull } from './ui/pull';
@@ -179,6 +180,7 @@ function showTab(t: typeof tab) {
   $('tab-analysis').classList.toggle('on', t === 'analysis');
   $('board').classList.toggle('hidden', t !== 'board');
   $('summary').classList.toggle('hidden', t !== 'board');
+  $('setup').classList.toggle('hidden', t !== 'board');
   $('workers-view').classList.toggle('hidden', t !== 'workers');
   $('analysis-view').classList.toggle('hidden', t !== 'analysis');
   // The board and the analysis tables want the whole width; the list of workers keeps its column.
@@ -191,6 +193,7 @@ function renderKanban() {
   if (tab !== 'board' || home.shown) return;
   renderBoard($('board'), kanban);
   void renderSummary($('summary'), store.floor ?? undefined);
+  void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) });
 }
 /** Which model does well on what (ui/analysis.ts), for this floor or every floor. */
 function renderAnalysisTab() {

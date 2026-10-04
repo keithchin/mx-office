@@ -6,6 +6,7 @@ import type { Net } from '../net';
 import { store } from '../state';
 import { h, openModal, timeAgo, toast, type Modal } from './dom';
 import { confirmDialog } from './prompt';
+import { openWizard } from './wizard';
 
 // The elevator's panel: a button for every floor (every project), and "add a project", which clones
 // one of the repositories the office's gh login can see and makes it a new floor. The first time
@@ -405,7 +406,7 @@ export function openElevator(opts: ElevatorOptions): void {
     { role: 'dialog', 'aria-label': 'Elevator' },
     h('header', {}, h('h2', {}, setup ? '🏢 Welcome to Agent Office' : opts.addOnly ? '➕ Add a project' : '🛗 Elevator'), close),
     h('div.body', {}, intro, floorsEl, addEl),
-    h('footer', {}, h('span.grow', {}, setup ? 'Your office, one floor per project · Esc to look around first' : opts.addOnly ? 'A new floor for one of your repositories · Esc to close' : 'Pick a floor · Esc to stay here'), addBtn),
+    h('footer', {}, h('span.grow', {}, setup ? 'Your office, one floor per project · Esc to look around first' : opts.addOnly ? 'A new floor for one of your repositories · Esc to close' : 'Pick a floor · Esc to stay here'), h('button.btn', { type: 'button', title: 'Create a new project repository and set it up with the mxcli project toolkit', onclick: () => (modal.close(), void openWizard({ net: opts.net, go: opts.ride })) }, '✨ New project'), addBtn),
   );
   const unsubs = [store.on('floors', () => (checkAdding(), renderFloors(), renderAdd())), store.on('repos', renderAdd), store.on('projectsDir', () => (editDir(false), renderAdd())), store.on('floor', renderFloors), store.on('peers', renderFloors), store.on('me', () => (renderFloors(), renderAdd()))];
   const modal = openModal(el, {
