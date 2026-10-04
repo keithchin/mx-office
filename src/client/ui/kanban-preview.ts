@@ -20,6 +20,8 @@ export interface Preview {
   description?: string;
   /** An agent's terminal, shown live. */
   workerId?: string;
+  /** More to show under the fields (a PR's checks); `relayout` finds it room again once it has filled in. */
+  extra?: (relayout: () => void) => HTMLElement | null;
   open(): void;
 }
 
@@ -101,11 +103,13 @@ function show(anchor: HTMLElement, key: string, p: Preview) {
   });
   const rows = p.fields.filter(([, v]) => v);
   const host = p.workerId ? h('div.kbp-term', { 'aria-label': 'Terminal (live, read-only)' }) : null;
+  const extra = p.extra?.(() => panel && openKey === key && place(panel, anchor)) ?? null;
   panel = h(
     'aside.kbp',
     { role: 'dialog', 'aria-label': p.title },
     h('header.kbp-h', {}, h('h3', {}, p.title), p.status ? h('span.pill.kbp-status', {}, p.status) : null, openBtn),
     rows.length ? h('dl.kbp-fields', {}, ...rows.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v!)])) : null,
+    extra,
     host ? h('div.kbp-sec', {}, h('div.kbp-label', {}, '💻 Terminal · live'), host) : null,
     p.description ? h('div.kbp-sec', {}, h('div.kbp-label', {}, '📝 Description'), h('div.kbp-desc', {}, clipText(p.description))) : null,
   );

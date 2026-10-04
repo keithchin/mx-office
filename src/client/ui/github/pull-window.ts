@@ -10,6 +10,7 @@ import { commentBox } from './comment-box';
 import { labelButton, labelChip } from './labels';
 import { checksList, conflicted, mergeStatus, openMerge } from './merge';
 import { avatar, commentCard, errorBox, nodes, REVIEW_BADGE, spinnerRow, stateOf } from './pieces';
+import { prChecksPanel } from '../prchecks';
 import { FILES_KEY, mergePref, pref, savePref, TAB_KEY } from './prefs';
 import { fixAndMergePrompt, fixConflictsPrompt, pullContext, pullVars, reviewPrompt, type BoardActions } from './prompts';
 import { buildTree, looksGenerated, parseDiff, renderFileDiff, renderThread, repliesOf, Reviewed, STATUS_WORD, treeOrder, type DiffFile, type TreeDir } from './pulldiff';
@@ -53,7 +54,7 @@ export function openPull(first: GhPull, net: Net, actions: BoardActions) {
     renderConv();
     renderFrame();
   });
-  conv.append(h('div.gh-col', {}, thread, comment.el));
+  conv.append(h('div.gh-col', {}, prChecksPanel(it.number), thread, comment.el));
   const filesPane = h('div.pd');
   const footBtns = h('span.gh-foot');
   const el = h(

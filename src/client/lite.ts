@@ -16,6 +16,7 @@ import { renderBoard, type KanbanActions } from './ui/kanban';
 import { renderAnalysis } from './ui/analysis';
 import { renderSummary } from './ui/summary';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
+import { liveAppView } from './ui/liveapp';
 import { openPull } from './ui/pull';
 import { openQueue } from './ui/queue';
 import { openMeeting, type MeetingPreset } from './ui/meeting';
@@ -37,11 +38,16 @@ if (new URLSearchParams(location.search).get('why') === 'webgl') {
 // Here, the office opens on the 1D view next time too (see graphics.ts).
 rememberView('1d');
 
-const session = flatSession('/lite', (id) => openWorker(id), routePreviewMessage);
+const session = flatSession('/lite', (id) => openWorker(id), (m) => {
+  routePreviewMessage(m);
+  live.route(m);
+});
 const { net } = session;
 const workers = workerActions(net);
 const openWorker = workers.open;
 const sendToWorker = workers.send;
+// The floor's app, running from main (the 🌐 Live app tab, ui/liveapp.ts).
+const live = liveAppView(net, () => showTab('live'), () => tab === 'live' && !home.shown);
 
 // ---- The floor you're on, and the floors page --------------------------------------------------
 floorPicker(net);
@@ -160,10 +166,10 @@ const kanban: KanbanActions = {
 };
 usePreviewNet(net);
 const TAB_KEY = 'agent-office.lite-tab';
-let tab: 'board' | 'workers' | 'analysis' = 'board';
+let tab: 'board' | 'workers' | 'analysis' | 'live' = 'board';
 try {
   const saved = localStorage.getItem(TAB_KEY);
-  if (saved === 'workers' || saved === 'analysis') tab = saved;
+  if (saved === 'workers' || saved === 'analysis' || saved === 'live') tab = saved;
 } catch {
   // No storage: the board, as usual.
 }
@@ -177,6 +183,9 @@ function showTab(t: typeof tab) {
   $('tab-board').classList.toggle('on', t === 'board');
   $('tab-workers').classList.toggle('on', t === 'workers');
   $('tab-analysis').classList.toggle('on', t === 'analysis');
+  $('tab-live').classList.toggle('on', t === 'live');
+  $('liveapp-view').classList.toggle('hidden', t !== 'live');
+  if (t === 'live') live.render($('liveapp-view'));
   $('board').classList.toggle('hidden', t !== 'board');
   $('summary').classList.toggle('hidden', t !== 'board');
   $('workers-view').classList.toggle('hidden', t !== 'workers');
@@ -190,7 +199,7 @@ function showTab(t: typeof tab) {
 function renderKanban() {
   if (tab !== 'board' || home.shown) return;
   renderBoard($('board'), kanban);
-  void renderSummary($('summary'), store.floor ?? undefined);
+  void renderSummary($('summary'), store.floor ?? undefined).then(() => live.mountChip($('summary')));
 }
 /** Which model does well on what (ui/analysis.ts), for this floor or every floor. */
 function renderAnalysisTab() {
@@ -199,6 +208,7 @@ function renderAnalysisTab() {
 $('tab-board').addEventListener('click', () => showTab('board'));
 $('tab-workers').addEventListener('click', () => showTab('workers'));
 $('tab-analysis').addEventListener('click', () => showTab('analysis'));
+$('tab-live').addEventListener('click', () => showTab('live'));
 store.on('floor', renderAnalysisTab);
 for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanban);
 setInterval(renderKanban, 30_000);

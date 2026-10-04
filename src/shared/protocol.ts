@@ -8,6 +8,7 @@ import type { AccountsClientMsg, AccountsServerMsg, SignInsClientMsg, TeamClient
 import type { ChangesClientMsg, ChangesServerMsg } from './protocol/changes.js';
 import type { FloorClientMsg, FloorServerMsg, PlanClientMsg } from './protocol/floors.js';
 import type { GitHubClientMsg, GitHubServerMsg } from './protocol/github.js';
+import type { LiveAppClientMsg, LiveAppServerMsg } from './protocol/liveapp.js';
 import type { MeetingClientMsg, MeetingServerMsg } from './protocol/meetings.js';
 import type { PresenceClientMsg, PresenceServerMsg } from './protocol/presence.js';
 import type { QueueClientMsg, QueueServerMsg } from './protocol/queue.js';
@@ -22,6 +23,7 @@ export * from './protocol/agents.js';
 export * from './protocol/changes.js';
 export * from './protocol/floors.js';
 export * from './protocol/github.js';
+export * from './protocol/liveapp.js';
 export * from './protocol/meetings.js';
 export * from './protocol/presence.js';
 export * from './protocol/queue.js';
@@ -52,7 +54,8 @@ export type ClientMsg =
   | WhiteboardClientMsg
   | BallClientMsg
   | CarClientMsg
-  | DogClientMsg;
+  | DogClientMsg
+  | LiveAppClientMsg;
 
 export type ServerMsg =
   | PresenceServerMsg
@@ -66,4 +69,5 @@ export type ServerMsg =
   | AccountsServerMsg
   | SettingsServerMsg
   | UsageServerMsg
-  | ToysServerMsg;
+  | ToysServerMsg
+  | LiveAppServerMsg;

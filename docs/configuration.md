@@ -62,3 +62,22 @@ agent-office tunnel [office@address | url] [--port <n>] [--office-port <n>] [--n
   the worker stops it. Given an SSH address it opens the tunnel to the office too.
   See docs/tunnel.md.
 ```
+
+## The live app
+
+The 1D view's **🌐 Live app** tab (see [Features](features.md)) runs each floor's Mendix app with `mxcli run --local`. It needs mxcli, a JDK for the project's Mendix version and a PostgreSQL the office can reach. Set any of these in the environment, or in `<data dir>/live-app.json` (the environment wins):
+
+| Environment | `live-app.json` | Default | What |
+| --- | --- | --- | --- |
+| `AGENT_OFFICE_LIVE_MXCLI` | `mxcli` | `mxcli` on PATH | The mxcli to run |
+| `AGENT_OFFICE_LIVE_PORTS` | `ports` | `8110-8199` | Ports to hand out; each app takes three (app, admin API, mxbuild) |
+| `AGENT_OFFICE_LIVE_DB_HOST` | `dbHost` | `127.0.0.1:5432` | PostgreSQL host and port |
+| `AGENT_OFFICE_LIVE_DB_USER` | `dbUser` | `postgres` | PostgreSQL user (it creates `<floor>_live` when that's missing) |
+| `AGENT_OFFICE_LIVE_DB_PASSWORD` | `dbPassword` | `postgres` | Its password |
+| `AGENT_OFFICE_LIVE_POLL_SECONDS` | `pollSeconds` | `60` | How often a running app asks GitHub whether main moved (`0`: never) |
+| `AGENT_OFFICE_LIVE_READY_SECONDS` | `readySeconds` | `480` | How long a start may take before it counts as failed |
+| `AGENT_OFFICE_LIVE_PG_BIN` | | found | The folder with `psql`, when it isn't on PATH (on Windows the newest `Program FilesPostgreSQL<v>in` is used) |
+
+The data dir is `.agent-office` in the project the office was started in, or `~/agent-office/.agent-office`. On Windows, if mxcli stops with *A required privilege is not held by the client* while linking a Mendix runtime, make the link it names as a directory junction (`cmd /c mklink /J <link> <target>`), which needs no admin.
+
+The PR checks on the board look for runs of `AGENT_OFFICE_PR_CHECKS_WORKFLOW` (default `pr-checks.yml`) and take screenshots from the first artifact named in `AGENT_OFFICE_PR_SHOTS_ARTIFACTS` (default `screenshots,test-results`), with the office's own `gh` sign-in.

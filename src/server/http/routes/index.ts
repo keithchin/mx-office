@@ -8,6 +8,7 @@ import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
 import { githubRoutes } from './github.js';
 import { pageRoutes } from './pages.js';
+import { prShotRoutes } from './prshots.js';
 import { searchRoutes } from './search.js';
 import { serviceRoutes } from './services.js';
 
@@ -40,6 +41,8 @@ export const routes: readonly Route[] = [
   analysisRoutes.report,
   analysisRoutes.backfill,
   analysisRoutes.summary,
+  prShotRoutes.checks,
+  prShotRoutes.file,
   pageRoutes.office,
   pageRoutes.lite,
   pageRoutes.pixel,
