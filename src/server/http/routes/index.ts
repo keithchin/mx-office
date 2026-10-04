@@ -3,6 +3,7 @@
 // then the rest; the last one answers every path left with the client bundle, or a 404.
 import type { Route } from '../router.js';
 import { agentRoutes } from './agents.js';
+import { analysisRoutes } from './analysis.js';
 import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
 import { githubRoutes } from './github.js';
@@ -36,6 +37,9 @@ export const routes: readonly Route[] = [
   searchRoutes.search,
   serviceRoutes.forwards,
   githubRoutes.github,
+  analysisRoutes.report,
+  analysisRoutes.backfill,
+  analysisRoutes.summary,
   pageRoutes.office,
   pageRoutes.lite,
   pageRoutes.pixel,
