@@ -8,6 +8,7 @@ import { getJson, getText } from './api';
 import { openClose } from './close';
 import { commentBox } from './comment-box';
 import { labelButton, labelChip } from './labels';
+import { windowTeamPicker } from '../teams/retag';
 import { checksList, conflicted, mergeStatus, openMerge } from './merge';
 import { avatar, commentCard, errorBox, nodes, REVIEW_BADGE, spinnerRow, stateOf } from './pieces';
 import { prChecksPanel } from '../prchecks';
@@ -91,6 +92,7 @@ export function openPull(first: GhPull, net: Net, actions: BoardActions) {
       h('span.gh-pm', {}, h('span.add', {}, `+${it.additions}`), ' ', h('span.del', {}, `−${it.deletions}`)),
       ...it.labels.map(labelChip),
       labelButton('pull', () => it, net, (labels) => ((it = { ...it, labels }), renderFrame())),
+      windowTeamPicker('pull', it, net, (labels) => ((it = { ...it, labels }), renderFrame())),
       it.reviewDecision ? h('span.gh-badge', { class: REVIEW_BADGE[it.reviewDecision]?.[1] ?? '' }, it.reviewDecision === 'REVIEW_REQUIRED' ? 'review required' : (REVIEW_BADGE[it.reviewDecision]?.[0] ?? it.reviewDecision.toLowerCase())) : null,
       ),
     );

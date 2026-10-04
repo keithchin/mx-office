@@ -16,7 +16,7 @@ import './roster.css';
 
 export { openStandupWindow } from './standup';
 
-type Pane = 'org' | 'standup' | 'approvals' | 'settings';
+export type Pane = 'org' | 'standup' | 'approvals' | 'settings';
 const PANE_KEY = 'agent-office.team-pane';
 
 let pane: Pane = 'org';
@@ -32,6 +32,8 @@ export interface TeamTab {
   render(floor: string | undefined): void;
   /** Hands it every server message: it redraws on 'roster.changed' for its floor. */
   onMessage(msg: ServerMsg): void;
+  /** Opens on `p` from now on (a team page's "Open the approvals"). */
+  showPane(p: Pane): void;
 }
 
 /**
@@ -81,6 +83,7 @@ export function teamTab(root: HTMLElement, badge: HTMLElement, shown: () => bool
     );
   };
   return {
+    showPane: (p) => pick(p),
     render(f) {
       if (f !== floor) last = undefined;
       floor = f;

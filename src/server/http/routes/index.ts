@@ -11,6 +11,7 @@ import { pageRoutes } from './pages.js';
 import { prShotRoutes } from './prshots.js';
 import { rosterRoutes } from './roster.js';
 import { searchRoutes } from './search.js';
+import { teamRoutes } from './teams.js';
 import { serviceRoutes } from './services.js';
 import { wizardRoutes } from './wizard.js';
 
@@ -48,6 +49,8 @@ export const routes: readonly Route[] = [
   rosterRoutes.view,
   rosterRoutes.standup,
   rosterRoutes.action,
+  teamRoutes.page,
+  teamRoutes.labels,
   wizardRoutes.wizard,
   pageRoutes.office,
   pageRoutes.lite,
