@@ -7,6 +7,7 @@ import { ROOF } from '../../../shared/rooftop';
 import type { Ctx } from '../../core/context';
 import type { CoreState } from '../../core/ctx';
 import { builtFloors } from '../../core/floors';
+import { graphics, switchView } from '../../graphics';
 import type { Parts } from '../../core/parts';
 import { waitingInOrder, waitingLabel } from '../../nextup';
 import { saveSettings, store } from '../../state';
@@ -46,6 +47,7 @@ export function installHud(ctx: Ctx, core: CoreState, parts: HudParts) {
 
   // ---- The HUD: a few buttons on the top bar, everything else in the ☰ menu ----------------------------
   const waitingNow = () => waitingInOrder(store.workers.values());
+  const retro = graphics().view === 'retro';
   const noMedia = () => (window.isSecureContext ? undefined : 'Voice and screen sharing need HTTPS or localhost — use a TLS proxy, --self-signed, or an SSH tunnel');
   const hud = mountHud(
     [
@@ -94,6 +96,10 @@ export function installHud(ctx: Ctx, core: CoreState, parts: HudParts) {
       { id: 'settings', icon: '⚙️', label: 'Settings', section: 'Office', run: showSettings },
       { id: 'help', icon: '❓', label: 'Controls', section: 'Office', key: 'H', run: openHelp },
       { id: 'lite', icon: '📱', label: '2D view', section: 'Office', title: () => 'The workers, their terminals and the boards without the 3D: for a phone or a slow computer', run: () => location.assign('/lite') },
+      // The other way of drawing the office from the one you're in: retro's chunky pixels, or back to 3D.
+      retro
+        ? { id: 'view', icon: '🏢', label: '3D view', section: 'Office', title: () => 'The office drawn smooth again', run: () => switchView('3d') }
+        : { id: 'view', icon: '👾', label: 'Retro view', section: 'Office', title: () => 'The office in chunky 16-bit pixels: lighter on a slow computer, too', run: () => switchView('retro') },
       {
         id: 'upgrade',
         icon: '⬆️',
