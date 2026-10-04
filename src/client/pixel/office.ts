@@ -21,18 +21,21 @@ import {
   WHITEBOARD,
   WINDOWS,
   WING,
+  PLANTS,
   plantsAt,
   wingMinZ,
   type Opening,
 } from '../../shared/layout';
+import type { Theme } from '../../shared/protocol';
 import { C } from './sprites';
+import { drawPlant, drawProps, plantSpecies } from './props';
 
 /** Art pixels to a meter across the floor. */
 export const PPM = 14;
 /** Art pixels to a meter of height: what stands up is drawn this much higher (the three-quarter view). */
 export const LIFT = 9;
 /** How tall the north wall's face is drawn, in art pixels: the boards hang on it. */
-const FACE = 26;
+export const FACE = 26;
 /** The outside walls' thickness from above, in art pixels. */
 const WALL = 5;
 
@@ -89,7 +92,7 @@ export function box(g: CanvasRenderingContext2D, x: number, y: number, w: number
 }
 
 /** The whole still office, into a canvas of its own. */
-export function drawOffice(f: Frame): HTMLCanvasElement {
+export function drawOffice(f: Frame, theme: Theme | null = null): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = f.width;
   c.height = f.height;
@@ -101,7 +104,9 @@ export function drawOffice(f: Frame): HTMLCanvasElement {
   walls(g, f);
   fixtures(g, f);
   meetingRoom(g, f);
-  for (const [x, z, scale] of plantsAt(f.level)) plant(g, ax(f, x), az(f, z), scale);
+  drawProps(g, f, theme);
+  // The plants take turns, as the 3D office's do (see floorPlant there), by where each is in the full list.
+  for (const [x, z, scale] of plantsAt(f.level)) drawPlant(g, ax(f, x), az(f, z), scale, plantSpecies(PLANTS.findIndex((p) => p[0] === x && p[1] === z)));
   return c;
 }
 
@@ -122,14 +127,28 @@ function floor(g: CanvasRenderingContext2D, f: Frame) {
   }
 }
 
+/** The 3D office's rugs under the four pods (see rugs in world/office/room.ts), each its own color, toned down to the palette. */
+const RUGS: readonly [number, number][] = [
+  [-10.5, -4],
+  [-1.5, -4],
+  [-10.5, 4],
+  [-1.5, 4],
+];
+const RUG_COLORS: readonly [string, string][] = [
+  ['#b6c6dc', '#cbd8e8'],
+  ['#c9c0b2', '#ddd5c9'],
+  ['#b3cdc6', '#c9ddd8'],
+  ['#c4bdd6', '#d7d1e5'],
+];
+
 /** A rug under the lounge, and under each pod of desks (see pods in people.ts for the desks themselves). */
 function rugs(g: CanvasRenderingContext2D, f: Frame) {
-  const rug = (x0: number, z0: number, x1: number, z1: number) => {
-    rect(g, ax(f, x0), az(f, z0), ax(f, x1) - ax(f, x0), az(f, z1) - az(f, z0), C.rugEdge);
-    rect(g, ax(f, x0) + 2, az(f, z0) + 2, ax(f, x1) - ax(f, x0) - 4, az(f, z1) - az(f, z0) - 4, C.rug);
+  const rug = (x0: number, z0: number, x1: number, z1: number, [edge, fill]: readonly [string, string] = [C.rugEdge, C.rug]) => {
+    rect(g, ax(f, x0), az(f, z0), ax(f, x1) - ax(f, x0), az(f, z1) - az(f, z0), edge);
+    rect(g, ax(f, x0) + 2, az(f, z0) + 2, ax(f, x1) - ax(f, x0) - 4, az(f, z1) - az(f, z0) - 4, fill);
   };
   // The desks' two clusters of two pods each, and the lounge round the couch and the TV.
-  for (const cx of [-10.5, -1.5]) for (const z of [-4, 4]) rug(cx - 3, z - 2.6, cx + 3, z + 2.6);
+  RUGS.forEach(([cx, z], i) => rug(cx - 3.1, z - 2.6, cx + 3.1, z + 2.6, RUG_COLORS[i]));
   const couch = SEATING_BY_ID.get('couch');
   if (couch) rug(couch.x - 1, -3.4, FLOOR.maxX - 0.6, 3.4);
 }
@@ -270,21 +289,4 @@ export function beanbag(g: CanvasRenderingContext2D, x: number, y: number, color
   oval(g, x, y + 2, 8, 3, 'rgba(20,34,58,0.16)');
   oval(g, x, y - 1, 8, 5, color);
   rect(g, x - 4, y - 5, 5, 2, 'rgba(255,255,255,0.25)');
-}
-
-/** A potted plant standing at (x, y), `scale` times the usual size. */
-function plant(g: CanvasRenderingContext2D, x: number, y: number, scale: number) {
-  const s = Math.max(0.8, scale);
-  const pw = Math.round(7 * s), ph = Math.round(6 * s);
-  oval(g, x, y + 1, pw * 0.7, 2, 'rgba(20,34,58,0.16)');
-  rect(g, x - (pw >> 1), y - ph, pw, ph, C.pot);
-  rect(g, x - (pw >> 1), y - ph, pw, 2, C.potDark);
-  const leaves: [number, number, number, string][] = [
-    [0, -ph - 7 * s, 6 * s, C.leafDark],
-    [-4 * s, -ph - 4 * s, 4.5 * s, C.leaf],
-    [4 * s, -ph - 5 * s, 4.5 * s, C.leaf],
-    [0, -ph - 10 * s, 4 * s, C.leafLight],
-    [-2 * s, -ph - 6 * s, 2.5 * s, C.leafLight],
-  ];
-  for (const [dx, dy, r, color] of leaves) oval(g, x + dx, y + dy, r, r, color);
 }

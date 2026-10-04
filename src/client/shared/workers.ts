@@ -5,15 +5,17 @@
  */
 import type { Net } from '../net';
 import { store } from '../state';
-import { DESK_BY_ID, nextFreeSeat } from '../../shared/layout';
+import { DESK_BY_ID, STATION_AGENT, nextFreeSeat, type StationKind } from '../../shared/layout';
 import { isAsleep } from '../../shared/status';
 import type { WorkerInfo } from '../../shared/protocol';
 import { toast } from '../ui/dom';
 import { openTerminal } from '../ui/terminal';
 import { openChanges } from '../ui/changes';
-import { lostWorktreeDialog, openPrompt, sendHomeDialog } from '../ui/prompt';
+import { confirmDialog, lostWorktreeDialog, openPrompt, sendHomeDialog } from '../ui/prompt';
 import { openAsk } from '../ui/ask';
+import { providerLabel } from '../ui/provider';
 import { repoChoices } from './hiring';
+import { STATION_INFO } from './stations';
 
 export interface WorkerActions {
   /** Its terminal, with the keypad, waking it up first if it's asleep. */
@@ -25,6 +27,12 @@ export interface WorkerActions {
    * With `issue`, the worker the prompt goes to takes that GitHub issue.
    */
   send(title: string, text?: { context?: string; initial?: string }, issue?: number, deskId?: string): void;
+  /** What it's changed in its worktree. */
+  changes(id: string): void;
+  /** Sends it home: what becomes of its worktree if it has one, else just a yes. */
+  home(id: string): void;
+  /** A request for the board agent at `deskId`: asking hires it when nobody's there yet. */
+  askStation(kind: StationKind, deskId: string): void;
 }
 
 export function workerActions(net: Net): WorkerActions {
@@ -103,5 +111,43 @@ export function workerActions(net: Net): WorkerActions {
     });
   }
 
-  return { open, prompt, send };
+  function home(id: string) {
+    const w = store.workers.get(id);
+    if (!w) return;
+    const where = DESK_BY_ID.get(w.deskId)?.label ?? 'the desk';
+    const session = w.kind === 'shell' ? 'shared shell' : `${providerLabel(w.provider, store.project)} session`;
+    if (w.worktree) {
+      const worktree = w.worktree;
+      return sendHomeDialog({
+        workerId: id,
+        name: w.name,
+        where,
+        worktree,
+        repos: w.repos?.length ? [worktree.path.split(/[\\/]/).pop() ?? 'its own', ...w.repos.map((r) => r.name)] : undefined,
+        ask: () => net.send({ t: 'worker.worktree', workerId: id }),
+        onConfirm: (cleanup) => net.send({ t: 'worker.kill', workerId: id, cleanup }),
+      });
+    }
+    confirmDialog(`Send ${w.name} home?`, `This stops the ${session} at ${where} for everyone and frees the desk.`, 'Send home', () => net.send({ t: 'worker.kill', workerId: id }));
+  }
+
+  function askStation(kind: StationKind, deskId: string) {
+    const w = store.workerAtDesk(deskId);
+    const name = STATION_AGENT[kind].name;
+    const info = STATION_INFO[kind];
+    // A prompt typed into a question it's asking would answer it.
+    if (w?.status === 'needs_input') {
+      toast(`The ${name} is waiting on an answer — here's its terminal`, 'warn');
+      return open(w.id);
+    }
+    openPrompt({
+      title: `${info.icon} Ask the ${name}`,
+      subtitle: w ? undefined : `${info.does}, in a terminal of my own.`,
+      placeholder: `e.g. ${info.example}`,
+      submitLabel: 'Send ✨',
+      onSubmit: (text) => net.send({ t: 'station.prompt', deskId, prompt: text }),
+    });
+  }
+
+  return { open, prompt, send, changes: (id) => openChanges(net, id, () => open(id)), home, askStation };
 }
