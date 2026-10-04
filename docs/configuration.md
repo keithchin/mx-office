@@ -8,6 +8,29 @@ The office keeps its data in `~/agent-office` (`--home` or `AGENT_OFFICE_HOME` t
 
 Already have a checkout? Pick its repository anyway: a checkout of it that's already where the workspace folder would clone it is used as it is. You can still start the office in a project, `agent-office ~/code/my-project`: that project becomes a floor, and the office keeps its data in `~/code/my-project/.agent-office` as it did before there were floors. An office that already ran in a project carries on in it when you start `agent-office` there again. An admin can take that project off the building in the elevator like any other floor.
 
+## The new-project wizard
+
+**✨ New project** (on the floors page and in the elevator) creates a project repository and sets it up with the mxcli project toolkit instead of only cloning one. Only admins can run it. It needs these on the office's machine, each found where it usually is unless an environment variable says otherwise:
+
+| What | Variable | Default |
+| --- | --- | --- |
+| The toolkit clone | `AGENT_OFFICE_TOOLKIT_DIR` | `~/agent-spike/mxcli-project-toolkit` |
+| Git Bash, which runs the toolkit's scripts | `AGENT_OFFICE_BASH` | `C:\Program Files\Git\bin\bash.exe` |
+| mxcli (put first on the scripts' PATH) | `AGENT_OFFICE_MXCLI` | `~/agent-spike/bin/mxcli.exe` |
+| The folder jq is in | `AGENT_OFFICE_JQ_DIR` | winget's `jqlang.jq` package folder |
+| Python, written into `.claude/toolkit.env` | `AGENT_OFFICE_PYTHON` | the newest `%LOCALAPPDATA%\Python\pythoncore-*` |
+| Where Studio Pro versions are installed | `AGENT_OFFICE_MENDIX_DIR` | `C:\Program Files\Mendix` |
+| The organization new repositories go in | `AGENT_OFFICE_PROJECT_ORG` | `AI-Taskforce-Labs` |
+| The admin token's file | `AGENT_OFFICE_ADMIN_GH_TOKEN_FILE` | `~/.agent-office-admin-gh-token` |
+
+**The admin token.** The agents' GitHub token can't create repositories, on purpose. Repository creation uses a second token, read from its file only when `gh repo create` runs and passed to that one command as `GH_TOKEN`: never to a worker, never into a log or a browser. Make it a fine-grained token with the organization as resource owner, access to all its repositories, and **Administration: Read and write** plus **Contents: Read and write**, and save it as the file's only line. Without one, the wizard explains this and offers **I created the repository myself on GitHub**: it then clones the repository you made and carries on.
+
+**What it does**, a step at a time, each step checking first what's already done so a failed one can be retried: create the repository, clone it as a floor, write `.claude/toolkit.env` (git-ignored), run the toolkit's `init-project.sh` (a few minutes on Windows), install its pre-commit hook, write the intake answers and the kickoff decisions (entry mode, size tier, Mendix version, interview mode) into `intake.md` and `PROJECT.md`, save the client, operators and roles in the floor's `.agent-office/project.json`, refresh the gate dashboard, commit and push, and optionally open a "Discovery" issue for the Chief Analyst and queue it. Every command runs with stdin closed and a time limit. Setups are kept in the office's `.agent-office/wizard/`, so one the office stopped in the middle of carries on with **Retry**. **Changes to an existing app** skips the repository and runs the toolkit's existing-app path on a repository that's already there.
+
+Until a toolkit project's build plan (Stage 4) is confirmed, its board on the 1D view has a **🧰 Project setup** panel: the stages from kickoff to build plan with gate-check's verdicts, what's next, the open questions, and buttons back into the wizard to change the answers. **🔄 Re-check gates** runs gate-check over the project for fresh verdicts.
+
+`AGENT_OFFICE_WIZARD_OFFLINE=<folder>` is for a test office: repositories are local bare git repositories in that folder, issues are files there, and nothing is queued, so the whole setup runs for real without touching GitHub.
+
 ## Command line
 
 ```

@@ -329,6 +329,18 @@ export class Building {
     return def;
   }
 
+  /** Makes a checkout of `repo` already at `dir` a floor without asking GitHub (the new-project wizard's offline test mode). */
+  adopt(input: string, dir: string, by: string): FloorDef | string {
+    const repo = normalizeRepo(input);
+    const known = repo && this.defs.find((d) => sameRepo(d.repo, repo));
+    if (!repo || known) return known || 'Not a repository name';
+    if (checkoutAt(dir, repo, true) !== 'ok') return `${dir} isn't a checkout of ${repo}`;
+    const def = this.newDef(repo.split('/')[1], repo, dir, by);
+    this.defs.push(def);
+    this.save();
+    return def;
+  }
+
   /** Clones a floor on its way, or checks that what's already there is its repository. Resolves to an error, if any. */
   private async clone(p: Pending): Promise<string | undefined> {
     const { dir: dest } = p.def;

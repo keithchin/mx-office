@@ -11,6 +11,7 @@ import { cloneLabel, floorPalette } from '../../shared/floors';
 import type { FloorInfo } from '../../shared/protocol';
 import { $, h } from '../ui/dom';
 import { openElevator } from '../ui/elevator';
+import { openWizard } from '../ui/wizard';
 import { summaryLine } from '../ui/summary';
 import { askedFloor, setAddress } from './address';
 import { switchView } from '../graphics';
@@ -142,7 +143,7 @@ export function floorsHome(net: Net, view: FlatView, onShow: (shown: boolean) =>
     const add = h('button.btn.home-add', { type: 'button', title: "Clone one of the repositories this office's gh login can see, as a new floor" }, '➕ Add project');
     add.addEventListener('click', () => openElevator({ net, addOnly: true, downstairs: () => false, ride: (id) => (go(net, id), home.hide()) }));
     el.replaceChildren(
-      h('div.home-head', {}, h('h2', {}, '🏢 Floors'), add),
+      h('div.home-head', {}, h('h2', {}, '🏢 Floors'), h('span.seg', {}, h('button.btn.primary.home-add', { type: 'button', title: 'Create a new project repository and set it up with the mxcli project toolkit, a step at a time', onclick: () => void openWizard({ net, go: (id) => (go(net, id), home.hide()) }) }, '✨ New project'), add)),
       h('p.home-intro', {}, store.floors.length ? 'Every project is a floor of this building. Pick one to go into, on the board or in the office.' : "This building has no floors yet. ➕ Add project clones one of your repositories, and it becomes the first floor."),
       h('ul.home-floors', {}, ...store.floors.map(card)),
     );

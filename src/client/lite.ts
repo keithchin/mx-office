@@ -14,6 +14,7 @@ import { issuePrompt, type BoardActions } from './ui/github/prompts';
 import { openIssue } from './ui/github/issue-window';
 import { renderBoard, type KanbanActions } from './ui/kanban';
 import { renderAnalysis } from './ui/analysis';
+import { renderSetup } from './ui/setup-panel';
 import { renderSummary } from './ui/summary';
 import { teamTab } from './ui/roster';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
@@ -200,6 +201,7 @@ function showTab(t: Tab) {
   $('tab-team').classList.toggle('on', t === 'team');
   $('board').classList.toggle('hidden', t !== 'board');
   $('summary').classList.toggle('hidden', t !== 'board');
+  $('setup').classList.toggle('hidden', t !== 'board');
   $('workers-view').classList.toggle('hidden', t !== 'workers');
   $('analysis-view').classList.toggle('hidden', t !== 'analysis');
   $('team-view').classList.toggle('hidden', t !== 'team');
@@ -214,6 +216,7 @@ function renderKanban() {
   if (tab !== 'board' || home.shown) return;
   renderBoard($('board'), kanban);
   void renderSummary($('summary'), store.floor ?? undefined).then(() => live.mountChip($('summary')));
+  void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) });
 }
 /** Which model does well on what (ui/analysis.ts), for this floor or every floor. */
 function renderAnalysisTab() {
