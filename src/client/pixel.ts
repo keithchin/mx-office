@@ -26,6 +26,7 @@ import { waitingInOrder } from './nextup';
 import { flatSession } from './shared/session';
 import { workerActions } from './shared/workers';
 import { floorPicker, floorsHome } from './shared/floors';
+import { followFloor } from './shared/address';
 import { renderTitle } from './shared/title';
 import { drawOffice, frameFor, type Frame } from './pixel/office';
 import { drawPeople, type People, type Spot } from './pixel/people';
@@ -44,6 +45,8 @@ const { net } = session;
 const workers = workerActions(net);
 
 floorPicker(net);
+// The address follows the floor (?floor=), for bookmarks and links that open it straight away.
+followFloor();
 const stage = $('stage');
 const home = floorsHome(net, '2d', (shown) => {
   stage.classList.toggle('hidden', shown);

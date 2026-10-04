@@ -12,6 +12,7 @@ import type { FloorInfo } from '../../shared/protocol';
 import { $, h } from '../ui/dom';
 import { openElevator } from '../ui/elevator';
 import { summaryLine } from '../ui/summary';
+import { askedFloor, setAddress } from './address';
 import { switchView } from '../graphics';
 import { renderTitle } from './title';
 
@@ -23,6 +24,8 @@ const floorLabel = (f: FloorInfo) => `${f.name}${f.cloning ? ` (${cloneLabel(f.c
 /** This tab has picked a floor (on the floors page or the picker), so a reload stays on it rather than going back to the floors page. */
 const PICKED_KEY = 'agent-office.floor-picked';
 function picked(): boolean {
+  // A link that names the floor (?floor=) is as good as having picked it.
+  if (askedFloor) return true;
   try {
     return sessionStorage.getItem(PICKED_KEY) === '1';
   } catch {
@@ -93,7 +96,7 @@ export interface FloorsHome {
 export function floorsHome(net: Net, view: FlatView, onShow: (shown: boolean) => void): FloorsHome {
   const el = $('home');
   const asked = new URLSearchParams(location.search).has('home');
-  if (asked) history.replaceState(null, '', location.pathname);
+  if (asked) setAddress({ home: null });
   let shown = false;
   let decided = false;
 

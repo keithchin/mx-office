@@ -87,7 +87,15 @@ export const graphics = (): Graphics => chosen;
 
 /** The page that shows the office in `view`: the 1D and 2D views each have a page of their own. */
 export function viewUrl(view: View): string {
-  return view === '1d' ? '/lite' : view === '2d' ? '/pixel' : `/?3d=1&view=${view}`;
+  // The flat views say their floor in the address (see shared/address.ts), so switching keeps it.
+  let floor: string | null = null;
+  try {
+    floor = localStorage.getItem('agent-office.floor');
+  } catch {
+    // No storage: the other view picks the floor itself.
+  }
+  const on = floor ? `?floor=${encodeURIComponent(floor)}` : '';
+  return view === '1d' ? `/lite${on}` : view === '2d' ? `/pixel${on}` : `/?3d=1&view=${view}`;
 }
 
 /** Remembers `view` for next time without going anywhere: for the page that already is it. */

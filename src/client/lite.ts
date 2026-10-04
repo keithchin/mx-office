@@ -30,6 +30,7 @@ import { renderTitle } from './shared/title';
 import { flatSession } from './shared/session';
 import { workerActions } from './shared/workers';
 import { floorPicker, floorsHome } from './shared/floors';
+import { askedTab, followFloor, setAddress } from './shared/address';
 
 // Sent here because this browser can't draw the 3D office (see noWebGL in core/scene.ts).
 if (new URLSearchParams(location.search).get('why') === 'webgl') {
@@ -167,20 +168,26 @@ const kanban: KanbanActions = {
 };
 usePreviewNet(net);
 const TAB_KEY = 'agent-office.lite-tab';
-let tab: 'board' | 'workers' | 'analysis' | 'live' | 'team' = 'board';
+type Tab = 'board' | 'workers' | 'analysis' | 'live' | 'team';
+const isTab = (t: unknown): t is Tab => t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'team';
+let tab: Tab = 'board';
 try {
   const saved = localStorage.getItem(TAB_KEY);
-  if (saved === 'workers' || saved === 'analysis' || saved === 'live' || saved === 'team') tab = saved;
+  if (isTab(saved)) tab = saved;
 } catch {
   // No storage: the board, as usual.
 }
-function showTab(t: typeof tab) {
+// A link that names the tab (?tab=team) opens on it, whatever this browser had last.
+if (isTab(askedTab)) tab = askedTab;
+followFloor();
+function showTab(t: Tab) {
   tab = t;
   try {
     localStorage.setItem(TAB_KEY, t);
   } catch {
     // Just for this visit, then.
   }
+  setAddress({ tab: t });
   $('tab-board').classList.toggle('on', t === 'board');
   $('tab-workers').classList.toggle('on', t === 'workers');
   $('tab-analysis').classList.toggle('on', t === 'analysis');
