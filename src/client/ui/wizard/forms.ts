@@ -113,7 +113,7 @@ function adminTokenBox(c: PageCtx): HTMLElement {
       h('li', {}, 'Permissions: Administration: Read and write, and Contents: Read and write. Nothing else.'),
       h('li', {}, `Save it as the only line of ${c.info.adminToken.file} on the office’s machine (or point AGENT_OFFICE_ADMIN_GH_TOKEN_FILE at another file), then open the wizard again.`),
     ),
-    h('label.wz-check', {}, box, ` I created the repository myself on GitHub (${d.owner}/${d.name || '…'}, with a README): just clone it and carry on`),
+    h('label.wz-check', {}, box, ` I created this repository myself on GitHub (in ${d.owner || c.info.org}, with a README): just clone it and carry on`),
   );
 }
 
