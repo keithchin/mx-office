@@ -17,9 +17,6 @@ import { act } from '../roster/api';
 import { store } from '../../state';
 import { ZONE_BY_TEAM } from '../../../shared/zones';
 import { lookFor, standing, type Outfit } from '../../pixel/chars';
-import { store } from '../../state';
-import { ZONE_BY_TEAM } from '../../../shared/zones';
-import { lookFor, standing, type Outfit } from '../../pixel/chars';
 import './escalations.css';
 
 const VERDICT_DONE: Record<EscalationVerdict, string> = { reply: '💬 Replied', approve: '✅ Approved', reject: '❌ Rejected', dismiss: '✓ Noted' };
