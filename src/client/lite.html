@@ -18,15 +18,10 @@
         <span class="lite-floor-label">Floor</span>
         <select id="floor" aria-label="Floor"></select>
       </label>
-      <nav class="lite-views" aria-label="View">
-        <button class="btn on" type="button" aria-current="page" title="The 1D view: the floor's board and its workers">
-          <span class="ico">🗂️</span> 1D
-        </button>
-        <button id="to-2d" class="btn" type="button" title="The 2D view: the floor from above in pixel art"><span class="ico">🗺️</span> 2D</button>
-        <a id="to-3d" class="btn" href="/?3d=1&amp;view=3d" title="The 3D office, where you walk around"><span class="ico">🏢</span> 3D</a>
-        <a id="to-retro" class="btn" href="/?3d=1&amp;view=retro" title="The office in chunky 16-bit pixels, where you walk around"><span class="ico">👾</span> Retro</a>
-      </nav>
+      <!-- The view dropdown (ui/viewpick.ts). -->
+      <div id="view-pick"></div>
       <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
+      <button id="menu" class="btn lite-menu" type="button" title="Menu: everything the 3D office's ☰ has" aria-label="Menu">☰</button>
     </header>
     <main class="lite-main">
       <p id="floor-meta" class="lite-meta"></p>

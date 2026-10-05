@@ -16,6 +16,9 @@ import { routeWorktreeMessage } from '../ui/prompt';
 import { routePullMessage } from '../ui/pull';
 import { routeElevatorMessage } from '../ui/elevator';
 import { openSignIns } from '../ui/signins';
+import { routeWhiteboardMessage } from '../ui/whiteboard';
+import { routeTeamMessage } from '../ui/team';
+import { routeAccountsMessage } from '../ui/accounts';
 import { askNotifyPermission, DesktopNotifier, notifyPermission, waitingOnSomeone } from '../notify';
 
 export interface FlatSession {
@@ -58,6 +61,10 @@ export function flatSession(page: '/home' | '/lite' | '/pixel', openWorker: (id:
     routePullMessage(msg);
     routeWorktreeMessage(msg);
     routeElevatorMessage(msg);
+    // The windows the ☰ menu opens (shared/flatmenu.ts).
+    routeWhiteboardMessage(msg, net);
+    routeTeamMessage(msg);
+    routeAccountsMessage(msg);
     switch (msg.t) {
       case 'welcome': {
         // Back from a restart on another version: this page's code is stale, so load the new one.

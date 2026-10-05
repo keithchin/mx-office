@@ -1,19 +1,34 @@
 /* The 2D view's game feel (pixel.ts): chunky pixel-framed panels and buttons with a hard shadow that
-   press down when you push them, a teal focus ring, and greyed-out disabled ones. It covers the top
+   press down when you push them, a focus ring, and greyed-out disabled ones. It covers the top
    bar, the footer and the HUD over the office. The corners are cut a step in with
-   box-shadows rather than rounded, the way a pixel-art game's frames are. */
+   box-shadows rather than rounded, the way a pixel-art game's frames are. Its colors are the 1D view's
+   theme tokens (styles/base.css, styles/themes.css), so the 2D view follows the theme picked there. */
 
 body.pixel {
-  --px-ink: #05090f;
-  --px-face: #f4f7fb;
-  --px-face-hi: #ffffff;
-  --px-face-lo: #c9d4e3;
-  --px-teal: #17b3a3;
-  --px-teal-hi: #5fd9cb;
-  --px-panel: #13213a;
-  --px-panel-hi: #2b4066;
+  /* The frames, the buttons' face (lit top edge, shaded bottom edge) and the words on it. */
+  --px-ink: var(--line);
+  --px-face: var(--card);
+  --px-face-hi: var(--paper);
+  --px-face-lo: var(--rule-soft);
+  --px-face-text: var(--ink);
+  /* The primary and lit ones, in the theme's accent. */
+  --px-teal: var(--accent);
+  --px-teal-hi: color-mix(in srgb, var(--accent) 55%, #fff);
+  --px-teal-lo: color-mix(in srgb, var(--accent) 65%, #000);
+  --px-on-teal: var(--on-fill);
+  /* The bars and panels over the office, and what's written on them. */
+  --px-panel: var(--paper-2);
+  --px-panel-hi: var(--rule-soft);
+  --px-text: var(--ink);
+  --px-dim: var(--muted);
+  --px-key: var(--sunken);
+  --px-shade: color-mix(in srgb, var(--edge) 55%, transparent);
+  /* Round the office on the canvas (pixel.ts reads it). */
+  --px-void: #2b2d42;
   --px-step: 3px;
 }
+html[data-theme='dark'] body.pixel { --px-void: #0b0c13; --px-face-lo: #3a3d55; }
+html[data-theme='terminal'] body.pixel { --px-void: #000; --px-face-hi: #0a1a0e; --px-face-lo: #0f3a1b; --px-teal-hi: #a6ffbf; --px-teal-lo: #1c9c42; --px-shade: rgba(51, 255, 102, .18); }
 
 /* ---- Buttons: a raised block on a hard shadow; pushing it presses it flat ---- */
 body.pixel .btn,
@@ -22,7 +37,7 @@ body.pixel .px-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 36px; padding: 0 12px;
   border: 0; border-radius: 0;
-  background: var(--px-face); color: #13213a;
+  background: var(--px-face); color: var(--px-face-text);
   font: 800 13px/1 var(--font); letter-spacing: .01em; text-decoration: none;
   cursor: pointer; user-select: none;
   /* The frame (cut corners), a lit top edge and a shaded bottom edge inside it, and the shadow under it. */
@@ -33,7 +48,7 @@ body.pixel .px-btn {
     var(--px-step) 0 0 0 var(--px-ink),
     inset 0 3px 0 0 var(--px-face-hi),
     inset 0 -4px 0 0 var(--px-face-lo),
-    0 calc(var(--px-step) + 4px) 0 0 rgba(5, 9, 15, .55);
+    0 calc(var(--px-step) + 4px) 0 0 var(--px-shade);
   margin: var(--px-step) var(--px-step) calc(var(--px-step) + 4px);
   transform: translateY(0);
   transition: transform .06s ease, box-shadow .06s ease, filter .12s ease;
@@ -51,46 +66,44 @@ body.pixel .px-btn.pressed {
     var(--px-step) 0 0 0 var(--px-ink),
     inset 0 3px 0 0 var(--px-face-lo),
     inset 0 -1px 0 0 var(--px-face-lo),
-    0 var(--px-step) 0 0 rgba(5, 9, 15, .55);
+    0 var(--px-step) 0 0 var(--px-shade);
 }
 body.pixel .btn:focus-visible,
 body.pixel .px-btn:focus-visible { outline: 3px solid var(--px-teal-hi); outline-offset: 5px; }
 body.pixel .btn:disabled,
 body.pixel .px-btn:disabled { cursor: not-allowed; filter: grayscale(1) opacity(.55); transform: translateY(4px); }
 
-/* The primary ones, and the one you're on, are teal. */
+/* The primary ones, and the one that's on, are in the accent. */
 body.pixel .btn.primary,
-body.pixel .lite-views .btn.on,
 body.pixel .px-btn.on {
-  background: var(--px-teal); color: #05121c;
+  background: var(--px-teal); color: var(--px-on-teal);
   box-shadow:
     0 calc(-1 * var(--px-step)) 0 0 var(--px-ink),
     0 var(--px-step) 0 0 var(--px-ink),
     calc(-1 * var(--px-step)) 0 0 0 var(--px-ink),
     var(--px-step) 0 0 0 var(--px-ink),
     inset 0 3px 0 0 var(--px-teal-hi),
-    inset 0 -4px 0 0 #0e7c71,
-    0 calc(var(--px-step) + 4px) 0 0 rgba(5, 9, 15, .55);
+    inset 0 -4px 0 0 var(--px-teal-lo),
+    0 calc(var(--px-step) + 4px) 0 0 var(--px-shade);
 }
-body.pixel .btn.primary:hover:not(:disabled) { background: #1fc4b3; }
-/* The view you're on sits pressed in: there's nowhere to go by pushing it again. */
-body.pixel .lite-views .btn.on { transform: translateY(4px); cursor: default; box-shadow: 0 calc(-1 * var(--px-step)) 0 0 var(--px-ink), 0 var(--px-step) 0 0 var(--px-ink), calc(-1 * var(--px-step)) 0 0 0 var(--px-ink), var(--px-step) 0 0 0 var(--px-ink), inset 0 3px 0 0 #0e7c71; }
+body.pixel .btn.primary:hover:not(:disabled) { background: var(--px-teal); filter: brightness(1.08); }
+/* A dropdown that's open sits pressed in. */
+body.pixel .lite-bar .btn[aria-expanded=true] { transform: translateY(4px); background: var(--px-face-lo); }
 body.pixel .lite-bar .btn { height: 36px; }
-body.pixel .lite-views { gap: 8px; }
 
 /* Keys drawn as little keycaps. */
 body.pixel kbd {
   display: inline-block; min-width: 18px; padding: 1px 5px; margin: 0 1px;
-  background: #22355a; color: #e6eef8; border-radius: 0;
-  box-shadow: 0 -2px 0 0 var(--px-ink), 0 2px 0 0 var(--px-ink), -2px 0 0 0 var(--px-ink), 2px 0 0 0 var(--px-ink), inset 0 -2px 0 0 #13213a;
+  background: var(--px-key); color: var(--px-text); border-radius: 0;
+  box-shadow: 0 -2px 0 0 var(--px-ink), 0 2px 0 0 var(--px-ink), -2px 0 0 0 var(--px-ink), 2px 0 0 0 var(--px-ink), inset 0 -2px 0 0 var(--px-panel-hi);
   font: 800 10px/1.4 ui-monospace, 'Cascadia Mono', Consolas, monospace; text-align: center;
 }
-body.pixel .px-btn kbd { background: var(--px-face-lo); color: #13213a; box-shadow: inset 0 -2px 0 0 #9aa6b6; }
+body.pixel .px-btn kbd { background: var(--px-face-lo); color: var(--px-face-text); box-shadow: inset 0 -2px 0 0 color-mix(in srgb, var(--px-face-lo) 70%, #000); }
 
 /* ---- Panels: the hover card, a worker's menu, the chat, the zoom ---- */
 .px-panel,
 body.pixel .px-tip {
-  background: var(--px-panel); color: #fff;
+  background: var(--px-panel); color: var(--px-text);
   border: 0; border-radius: 0;
   box-shadow:
     0 calc(-1 * var(--px-step)) 0 0 var(--px-ink),
@@ -98,10 +111,10 @@ body.pixel .px-tip {
     calc(-1 * var(--px-step)) 0 0 0 var(--px-ink),
     var(--px-step) 0 0 0 var(--px-ink),
     inset 0 0 0 2px var(--px-panel-hi),
-    0 calc(var(--px-step) + 5px) 0 0 rgba(5, 9, 15, .5);
+    0 calc(var(--px-step) + 5px) 0 0 var(--px-shade);
 }
 body.pixel .px-tip { padding: 9px 12px; max-width: 320px; animation: px-pop .12s ease-out; }
-body.pixel .px-tip b { color: #fff; }
+body.pixel .px-tip b { color: var(--px-text); }
 @keyframes px-pop { from { transform: translateY(4px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
 
 .px-menu { position: absolute; z-index: 8; display: flex; flex-direction: column; gap: 4px; min-width: 170px; padding: 8px 10px 12px; animation: px-pop .1s ease-out; }
@@ -113,17 +126,17 @@ body.pixel .px-zoom .px-btn { min-width: 36px; padding: 0 8px; font-size: 18px; 
 body.pixel .px-zoom .px-zoom-level { min-width: 56px; font-size: 12px; }
 
 body.pixel .px-chat-toggle { position: absolute; left: 16px; bottom: 16px; z-index: 6; margin: 0; }
-body.pixel .px-chat-toggle.news::after { content: ''; position: absolute; top: -6px; right: -6px; width: 10px; height: 10px; background: #f2b33d; box-shadow: 0 0 0 2px var(--px-ink); animation: px-blink 1s steps(2) infinite; }
+body.pixel .px-chat-toggle.news::after { content: ''; position: absolute; top: -6px; right: -6px; width: 10px; height: 10px; background: var(--warn); box-shadow: 0 0 0 2px var(--px-ink); animation: px-blink 1s steps(2) infinite; }
 .px-chat { position: absolute; left: 16px; bottom: 74px; z-index: 6; width: min(360px, calc(100% - 32px)); padding: 10px; }
 .px-chat-log { list-style: none; margin: 0 0 8px; padding: 0; max-height: 180px; overflow: auto; font-size: 13px; font-weight: 600; line-height: 1.4; }
-.px-chat-log:empty::before { content: 'No one has said anything yet.'; color: #8fa3bf; }
-.px-chat-input { width: 100%; padding: 8px 10px; border: 0; border-radius: 0; background: #0d1828; color: #fff; font: 600 14px var(--font); box-shadow: inset 0 0 0 2px var(--px-panel-hi); }
+.px-chat-log:empty::before { content: 'No one has said anything yet.'; color: var(--px-dim); }
+.px-chat-input { width: 100%; padding: 8px 10px; border: 0; border-radius: 0; background: var(--card); color: var(--ink); font: 600 14px var(--font); box-shadow: inset 0 0 0 2px var(--px-panel-hi); }
 .px-chat-input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--px-teal); }
 
 /* ---- The footer: who's doing what, the next one waiting, and the keys ---- */
 body.pixel .px-next { min-height: 30px; font-size: 12px; }
-body.pixel .px-next:not(:disabled) { background: #f2b33d; animation: px-nudge 2.4s ease-in-out infinite; }
-.px-keys { display: flex; flex-wrap: wrap; gap: 4px 14px; color: #8fa3bf; font-size: 11px; font-weight: 700; }
+body.pixel .px-next:not(:disabled) { background: var(--warn); color: var(--on-warn); animation: px-nudge 2.4s ease-in-out infinite; }
+.px-keys { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--px-dim); font-size: 11px; font-weight: 700; }
 .px-keys > span { white-space: nowrap; }
 @keyframes px-blink { to { visibility: hidden; } }
 @keyframes px-nudge { 0%, 88%, 100% { transform: translateY(0); } 92% { transform: translateY(-3px); } 96% { transform: translateY(1px); } }
@@ -138,11 +151,9 @@ body.pixel .px-next:not(:disabled) { background: #f2b33d; animation: px-nudge 2.
 }
 @media (max-width: 640px) {
   .px-keys { display: none; }
-  /* A phone's top bar: smaller keys, and retro (no walking about on a phone anyway) left to the 1D page. */
+  /* A phone's top bar: smaller keys. */
   body.pixel .lite-bar { gap: 2px; padding: 6px 8px; }
   body.pixel .lite-bar .btn { height: 32px; min-height: 32px; padding: 0 9px; font-size: 12px; margin: 3px 3px 7px; }
-  body.pixel #to-retro { display: none; }
-  body.pixel .lite-views { gap: 4px; }
   .px-zoom { right: 8px; bottom: 8px; }
   /* The footer keeps the same 8px edge as the bar and the panels over the office. */
   .px-foot { padding-left: 8px; padding-right: 8px; }

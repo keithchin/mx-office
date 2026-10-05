@@ -1,0 +1,10 @@
+/* The red count on a tab or button (ui/badge.ts): the same look as the Approvals tab's (roster.css),
+   wherever it is, a "!" for something broken and a dot for something new. */
+.ro-tab-n:not(:empty), .ro-tab-n.dot {
+  display: inline-block; flex: none; min-width: 18px; margin-left: 5px; padding: 0 5px; border-radius: 999px;
+  background: var(--bad); color: var(--accent-ink, #fff); font-size: 11px; font-weight: 900; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums;
+}
+.ro-tab-n.dot { width: 10px; min-width: 0; height: 10px; padding: 0; vertical-align: 2px; }
+.ro-tab-n:empty:not(.dot) { display: none; }
+/* Reverse video in the Terminal theme, like its other counters. */
+html[data-theme='terminal'] .ro-tab-n:not(:empty), html[data-theme='terminal'] .ro-tab-n.dot { color: #000; text-shadow: none; }
