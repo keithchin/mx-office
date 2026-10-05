@@ -144,7 +144,7 @@ test('hiring a role uses its fixed name, model and Playbook, and writes the team
 
 test('an idle Lead is benched after the idle minutes: handoff note first, then stopped, then re-hired fresh from it', async () => {
   const { clock, floor, roster, data } = setup();
-  roster.members.settings(floor, { schedule: { enabled: false } });
+  roster.members.settings(floor, { idleMinutes: 30, schedule: { enabled: false } });
   await roster.members.hire(floor, 'lead-developer', 'Keith');
   const w = floor.workers()[0];
   floor.set(w.id, 'working');
