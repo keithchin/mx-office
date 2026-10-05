@@ -25,7 +25,7 @@ On the 1D and 2D views, left to right: **🏠** (home), the **floor** picker, th
 
 | Tab | Use it to… |
 |---|---|
-| 🎛️ **Command Center** | See what needs you and the project summary, and talk to the Project Coordinator. The default tab. |
+| 🎛️ **Command Center** | See what needs you, the project summary and the team chatter, and talk to the Project Coordinator. The default tab. |
 | 🗂 **Board** | Move work along the Kanban, from issue to merged PR. |
 | 🧩 **Team boards** | One board per team, with its Lead, journal and team panels. |
 | 🤖 **Workers** | See every agent, ranked A–F. |

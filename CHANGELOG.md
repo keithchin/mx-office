@@ -9,6 +9,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 Merged into staging, live after the next restart.
 
 ### New
+- **📚 Documentation at `/docs`**: the whole office explained, in the office's themes: a sidebar of
+  sections (Get Started, Concepts, Using the Office, Teams & Agents, Automation, Integrations,
+  Administration, Reference, Troubleshooting, FAQ), search as you type, "On this page", deep links,
+  and these release notes. ☰ → 📖 Documentation, or 📚 Docs on Home. Same sign-in as the office. The
+  pages are Markdown in `docs/site/`; this file is the Release notes page, so there is one copy.
 - **🏛️ The Firm** (`/firm`): independent Reviewer Agents on Fable 5.1. An Engagement Partner plus a
   reviewer attached to each project team (Design, Code & Architecture, QA & Test, Requirements &
   Delivery; Security and Cost & Performance optional). Call an audit from a project's Command Center

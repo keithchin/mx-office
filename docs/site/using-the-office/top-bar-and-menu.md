@@ -32,7 +32,7 @@ Click **🎨** to step through:
 The pick is kept in this browser (`agent-office.color-theme` in local storage). It applies to the 1D view, the 2D view (the office is tinted to match), `/home` and these docs, and follows along in your other open tabs. Without a pick, it follows your system's dark mode.
 
 > [!NOTE]
-> **Clean light** and **Clean dark** themes, and a **team chatter** feed of what the agents say to each other, are being built and will be in the [release notes](../release-notes.md) when they land.
+> **Clean light** and **Clean dark** themes are being built and will be in the [release notes](../release-notes.md) when they land.
 
 ![The Dark theme](../images/theme-dark.png)
 

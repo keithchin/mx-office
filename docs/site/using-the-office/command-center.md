@@ -1,11 +1,11 @@
 ---
 title: Command Center
-description: The default tab of a project - The Firm strip, the Needs you strip, the project setup panel, the project summary, and the Project Coordinator console with escalations.
+description: The default tab of a project - The Firm strip, the Needs you strip, the project setup panel, the project summary, the Project Coordinator console with escalations, and Team chatter.
 weight: 3
 aliases: [/docs/command-center]
 ---
 
-The **🎛️ Command Center** is the first tab of every project and the place to keep open. From top to bottom: **The Firm** strip, **Needs you**, the **Project setup** panel (toolkit projects being set up), and the **project summary** with the **Project Coordinator console** in its middle.
+The **🎛️ Command Center** is the first tab of every project and the place to keep open. From top to bottom: **The Firm** strip, **Needs you**, the **Project setup** panel (toolkit projects being set up), and the **project summary** with the **Project Coordinator console** in its middle and **Team chatter** beside it.
 
 ![The Command Center](../images/command-center.png)
 
@@ -53,7 +53,19 @@ See [The toolkit](../integrations/toolkit.md).
 - **What's happening**: a short story of the floor, written by Claude Haiku (*AI*) or put together by the office (*auto*).
 - **Risks**: agents waiting on a human (and for how long), blocked or failing things.
 - Progress bars for **issues**, **pull requests** and the **queue**, and **💰 $x today · $y all told on this floor**.
-- **Agents (N)**, and **Recent activity** on the right.
+- **Agents (N)**, and **Recent activity** and **💬 Team chatter** on the right.
+
+## 💬 Team chatter
+
+Beside Recent activity: what the agents say to each other, as a chat thread, newest on top. Each message shows the speaker's portrait, who it was said to (recipient chips) and a speech bubble; click it to open what it's about (the worker, the escalation, the pull request, the standup or the journal entry).
+
+What shows up: escalations and your answers, the office's and Jeff's relays to the Project Coordinator, standups and proposal decisions, review nudges, subagent tasks and the Leads' verdicts, handoff notes and rehires, agents telling or hiring each other, PRs handed over, team journal entries (a line naming a teammate counts as said to them), and The Firm's interview questions and answers. Nothing is made up: only what was really said or written, with tokens redacted and long text clipped.
+
+- Filters: **All**, **Between agents**, **With me** (you, the Project Manager), or **Only one person**.
+- New messages slide in on top without moving your scroll; scrolled down, an **N new** pill takes you back up. **Load older** pages back.
+- Each team's page on [Team boards](team-boards.md) has a short version with that team's messages.
+
+Kept in `<office data>/chatter/<floor>.jsonl`, the newest 1000 per floor.
 
 ## The Project Coordinator console
 

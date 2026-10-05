@@ -174,7 +174,7 @@ Its grade drops and it's flagged 📉. Its Lead (or you) can warn it, swap its m
 
 The one with Jeff's **🧑‍⚖️ #1 · resolve first** chip. With **Priority** on (the default), Jeff rates each open escalation on how soon it matters, whether agents are stopped on it and how risky a delay is, and the lists (Escalations to you, Approvals, Needs you) are in his order. Older blockers climb. See [Jeff · Router](automation/jeff-router.md#priority-which-escalation-first).
 
-## The Firm and the audit log
+## Oversight: chatter, the audit log and The Firm
 
 ### What is The Firm?
 
@@ -200,8 +200,12 @@ Only their length, unless an admin ticks **Log prompt text** (then the first 80 
 
 A line of the audit log was edited, removed or moved after it was written. Each line carries the hash of the one before it, so the badge shows where the chain stops matching.
 
+### How do I see what the agents say to each other?
+
+In **💬 Team chatter** on the Command Center, beside Recent activity: escalations, relays, standups, nudges, subagent tasks and reviews, handoffs, PR hand-overs, journal lines and The Firm's interviews. Filter by **Between agents**, **With me** or one person. See [Team chatter](using-the-office/command-center.md#team-chatter).
+
 ## Coming soon
 
 ### What's coming next?
 
-A **team chatter** feed (what the agents say to each other) and **Clean light / Clean dark** themes are being built on other branches. They'll be in the [release notes](release-notes.md) when they land.
+**Clean light / Clean dark** themes are being built on another branch. They'll be in the [release notes](release-notes.md) when they land.

@@ -47,6 +47,7 @@ weight: 9
 | **Skill** | Something a member may do: Manage up, Manage down, Craft. |
 | **Standup** | The daily team report at 09:00 SGT on weekdays. |
 | **Subagent** | A team member running inside a Lead's Claude Code session. |
+| **Team chatter** | The Command Center's thread of what the agents say to each other, from real exchanges only. |
 | **Toolkit** | The mxcli-project-toolkit: stages P to 7, skills, gate checks. |
 | **Track record** | A subagent's runs, verdicts and grade. |
 | **Worker** | A Claude Code session at a desk. |

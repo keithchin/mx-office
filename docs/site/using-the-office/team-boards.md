@@ -13,7 +13,8 @@ Each team page has:
 - the team's name, **mission**, subagents and journal path (`docs/team/<team>.md`);
 - the **Lead's card** from the org chart;
 - **🗂 &lt;Team&gt;'s board**: only that team's cards;
-- **👥 Subagents** with their grades, and **📓 Journal** with the latest entries.
+- **👥 Subagents** with their grades, and **📓 Journal** with the latest entries;
+- **💬 Team chatter**: a short version of the Command Center's [thread](command-center.md#team-chatter), with what this team said and was told.
 
 And panels for what each team cares about:
 
