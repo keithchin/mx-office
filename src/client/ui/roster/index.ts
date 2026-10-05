@@ -36,11 +36,16 @@ export interface TeamTab {
   showPane(p: Pane): void;
 }
 
+export interface TeamTabOptions {
+  /** Flat: the page's own tabs pick the pane, so the tab draws no sub-tabs of its own, and this switches the page to `p`. */
+  select?: (p: Pane) => void;
+}
+
 /**
  * The tab. `root` is where it draws, `badge` the count on its tab button, `shown` whether the tab is
  * the one showing (the badge stays up to date either way), `openWorker` a worker's terminal.
  */
-export function teamTab(root: HTMLElement, badge: HTMLElement, shown: () => boolean, openWorker: (id: string) => void): TeamTab {
+export function teamTab(root: HTMLElement, badge: HTMLElement, shown: () => boolean, openWorker: (id: string) => void, opts: TeamTabOptions = {}): TeamTab {
   let floor: string | undefined;
   let last: RosterView | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -57,8 +62,9 @@ export function teamTab(root: HTMLElement, badge: HTMLElement, shown: () => bool
       h(
         'div.ro-head',
         {},
-        h('div.ro-panes', { role: 'tablist', 'aria-label': 'Team' }, tab('org', '🏢 Org chart'), tab('standup', '📋 Standup'), tab('approvals', '✅ Approvals', v.approvals.length), tab('settings', '⚙️ Settings')),
-        h('button.btn.small.ro-level-chip', { type: 'button', title: a.summary, onclick: () => pick('settings') }, `Autonomy ${a.level} · ${a.name}`),
+        // Flat, the page's own tabs pick the pane (the 1D view has Org chart, Standup, Approvals and Settings with its other tabs).
+        opts.select ? null : h('div.ro-panes', { role: 'tablist', 'aria-label': 'Team' }, tab('org', '🏢 Org chart'), tab('standup', '📋 Standup'), tab('approvals', '✅ Approvals', v.approvals.length), tab('settings', '⚙️ Settings')),
+        h('button.btn.small.ro-level-chip', { type: 'button', title: a.summary, onclick: () => (opts.select ? opts.select('settings') : pick('settings')) }, `Autonomy ${a.level} · ${a.name}`),
       ),
       v.paused ? h('p.ro-paused', {}, `💸 ${v.paused}`) : '',
       body,

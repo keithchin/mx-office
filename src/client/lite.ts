@@ -16,7 +16,7 @@ import { renderBoard, type KanbanActions } from './ui/kanban';
 import { renderAnalysis } from './ui/analysis';
 import { renderSetup } from './ui/setup-panel';
 import { renderSummary } from './ui/summary';
-import { teamTab } from './ui/roster';
+import { teamTab, type Pane } from './ui/roster';
 import { subBoards } from './ui/teams';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { liveAppView } from './ui/liveapp';
@@ -176,23 +176,27 @@ usePreviewNet(net);
 // Sub-boards (ui/teams/): team tags and a team filter on the board, and a page per team on 🧩 Team boards.
 const teams = subBoards(
   net,
-  { kanban, openWorker, openPull: kanban.openPull, liveChip: (el) => live.mountChip(el), openApprovals: () => (team.showPane('approvals'), showTab('team')) },
+  { kanban, openWorker, openPull: kanban.openPull, liveChip: (el) => live.mountChip(el), openApprovals: () => showTab('approvals') },
   () => renderKanban(),
 );
 net.onMessage((msg) => teams.route(msg));
 // A new key since the Command Center became the first tab, so everyone starts there once rather than on the board they last had.
 const TAB_KEY = 'agent-office.lite-tab2';
-type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'team' | 'teams';
-const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'team' || t === 'teams';
+type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | Pane | 'teams';
+// The team's four panes are tabs of their own (flattened from one Team tab); an old "team" means its org chart.
+const TEAM_PANES: readonly Pane[] = ['org', 'standup', 'approvals', 'settings'];
+const isPane = (t: unknown): t is Pane => TEAM_PANES.includes(t as Pane);
+const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || isPane(t) || t === 'teams';
+const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : isTab(t) ? t : undefined);
 let tab: Tab = 'command';
 try {
   const saved = localStorage.getItem(TAB_KEY);
-  if (isTab(saved)) tab = saved;
+  tab = asTab(saved) ?? tab;
 } catch {
   // No storage: the Command Center, as usual.
 }
 // A link that names the tab (?tab=team) opens on it, whatever this browser had last.
-if (isTab(askedTab)) tab = askedTab;
+tab = asTab(askedTab) ?? tab;
 followFloor();
 function showTab(t: Tab) {
   tab = t;
@@ -212,13 +216,14 @@ function showTab(t: Tab) {
   $('tab-live').classList.toggle('on', t === 'live');
   $('liveapp-view').classList.toggle('hidden', t !== 'live');
   if (t === 'live') live.render($('liveapp-view'));
-  $('tab-team').classList.toggle('on', t === 'team');
+  for (const p of TEAM_PANES) $(`tab-${p}`).classList.toggle('on', t === p);
   $('board').classList.toggle('hidden', t !== 'board');
   $('summary').classList.toggle('hidden', t !== 'command');
   $('setup').classList.toggle('hidden', t !== 'command');
   $('workers-view').classList.toggle('hidden', t !== 'workers');
   $('analysis-view').classList.toggle('hidden', t !== 'analysis');
-  $('team-view').classList.toggle('hidden', t !== 'team');
+  $('team-view').classList.toggle('hidden', !isPane(t));
+  if (isPane(t)) team.showPane(t);
   // The board and the analysis tables want the whole width; the list of workers keeps its column.
   document.querySelector('.lite-main')!.classList.toggle('board', t !== 'workers');
   renderKanban();
@@ -244,11 +249,11 @@ $('tab-board').addEventListener('click', () => showTab('board'));
 $('tab-workers').addEventListener('click', () => showTab('workers'));
 $('tab-analysis').addEventListener('click', () => showTab('analysis'));
 $('tab-live').addEventListener('click', () => showTab('live'));
-$('tab-team').addEventListener('click', () => showTab('team'));
+for (const p of TEAM_PANES) $(`tab-${p}`).addEventListener('click', () => showTab(p));
 $('tab-teams').addEventListener('click', () => showTab('teams'));
 store.on('floor', renderAnalysisTab);
 // The project team (ui/roster/): its approvals badge stays current whichever tab is showing.
-const team = teamTab($('team-view'), $('tab-team').querySelector('.ro-tab-n')!, () => tab === 'team', openWorker);
+const team = teamTab($('team-view'), $('tab-approvals').querySelector('.ro-tab-n')!, () => isPane(tab), openWorker, { select: (p) => showTab(p) });
 net.onMessage((msg) => team.onMessage(msg));
 store.on('floor', () => team.render(store.floor ?? undefined));
 for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanban);
