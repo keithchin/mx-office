@@ -60,3 +60,30 @@ export function benchStep(status: WorkerStatus | undefined, sawBusy: boolean, as
 /** Busy for the bench machine's purposes (the caller notes sawBusy when this is true). */
 export const isBusyStatus = (s: WorkerStatus) => BUSY.has(s);
 export const isAsleepStatus = (s: WorkerStatus) => ASLEEP.has(s);
+
+/** The bits of an escalation the bench looks at. */
+export interface EscalationLook {
+  role?: string;
+  status: 'open' | 'resolved';
+  fyi: boolean;
+}
+
+/**
+ * The open escalation (not an FYI) `role` is waiting on the Project Manager for, if any. A Lead waiting
+ * on the human is never benched for being idle: its turn is over because the next move is theirs.
+ */
+export function awaitingAnswer<E extends EscalationLook>(escalations: readonly E[], role: string): E | undefined {
+  return escalations.find((e) => e.status === 'open' && !e.fyi && e.role === role);
+}
+
+/**
+ * The `AWAITING-PM: <one line>` a handoff note ends with when its writer is waiting on the Project
+ * Manager (or the client); undefined when it has none or says none.
+ */
+export function awaitingPmLine(note: string): string | undefined {
+  let found: string | undefined;
+  for (const m of note.matchAll(/^[\s>*_-]*AWAITING[- ]PM[*_]*\s*:[*_]*\s*(.*)$/gim)) found = m[1];
+  const line = found?.replace(/[*_`]+$/g, '').replace(/\s+/g, ' ').trim();
+  if (!line || /^(none|nothing|n\/?a|no|-+)\.?$/i.test(line)) return undefined;
+  return line;
+}

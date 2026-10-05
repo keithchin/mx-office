@@ -12,6 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { autonomyBrief, HUMAN_FULL, reviewBrief, type AutonomyLevel } from '../../shared/roster/autonomy.js';
 import { teamLabel } from '../../shared/roster/card-team.js';
+import { ASK_THE_PM } from './prompts.js';
 import { journalPath, playbookMirror, playbookPath, ROLE_BY_ID, ROLES, standupPath, type RoleDef, type RoleId, type SubagentDef, type TeamId } from '../../shared/roster/roles.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
@@ -60,7 +61,7 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         `- Read every team journal (\`docs/team/*.md\`) at the start of a session and before a standup; summarise, don't relay chatter.`,
         `- The office runs the standup: it asks each active Lead, reads the journals of the benched ones, and drafts \`${standupPath('YYYY-MM-DD')}\`. When it hands you the draft, add a short **Summary** at the top (≤ 5 lines: progress, risks, what needs the Project Manager, open escalations), then commit and push it.`,
         '- When the office tells you about new escalations, note them in `docs/team/management.md` and put them in the next standup summary; never answer one yourself: the Project Manager answers on the project console and the office sends the answer to whoever raised it.',
-        '- Escalate yourself (`office-workers escalate`) only what affects the whole project: a cross-team conflict, a slipping milestone, the budget.',
+        '- Escalate yourself (`office-workers escalate`) only what affects the whole project: a cross-team conflict, a slipping milestone, the budget — and any question of your own for the Project Manager (never ask it in your chat).',
         '- When the office tells you the Project Manager\'s decisions on proposals, note them in `docs/team/management.md` and tell the Lead concerned through its journal (or `office-workers tell` if it is hired and the decision is urgent).',
         '- Hiring: Leads are hired from the office\'s Team tab with their fixed names. Do not hire extra workers for a Lead\'s job; a Lead may hire one only for real parallel work (e.g. two test suites).',
       ];
@@ -107,6 +108,8 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     '## What needs the Project Manager',
     autonomyBrief(ctx.level),
     '',
+    ASK_THE_PM,
+    '',
     '## Your team (Claude Code subagents in your session)',
     team,
     'Dispatch them with the Agent tool for drafting, checking and research; keep every decision, every question to the Project Manager and every write to the app in your own session. A subagent returns the file it wrote, not a summary of it.',
@@ -119,7 +122,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     '## Journal etiquette',
     `- Your team's journal is \`${journalPath(role.team)}\`. Append dated entries at the bottom, headed \`## YYYY-MM-DD HH:MM — <what>\` (e.g. \`— Standup\`, \`— Handoff\`, \`— Decision\`). Never rewrite old entries.`,
     '- Keep entries short and factual: decisions and why, what changed, what is blocked, links to PRs/issues. No chatter: the other Leads read it instead of messaging you.',
-    '- Anything that needs the Project Manager goes under `### Proposals` as `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget.',
+    '- Anything that needs the Project Manager goes under `### Proposals` as `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget. A question or sign-off you are waiting on is an escalation, not a proposal.',
     '- Commit journal updates with your work, so the team sees them once your branch lands.',
     `- Open pull requests with your team's label: \`gh pr create --label ${teamLabel(role.team)} …\`, so the PR lands on your team's board.`,
     '',

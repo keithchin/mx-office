@@ -4,7 +4,7 @@
 // Manager" wording in everything the office writes for the agents.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { RosterAlert, WorkerInfo, WorkerStatus } from '../src/shared/protocol.js';
@@ -12,6 +12,7 @@ import { AUTONOMY, CRITICAL_TRIGGERS, ESCALATION_TRIGGERS, REVIEW_POLICY, autono
 import { escalationOrder, isAlarming, makeEscalation, readEscalationAsk, type Escalation } from '../src/shared/roster/escalation.js';
 import { ROLES, ROLE_BY_ID } from '../src/shared/roster/roles.js';
 import { Roster } from '../src/server/roster/index.js';
+import { awaitingAnswer, awaitingPmLine } from '../src/server/roster/bench.js';
 import { NUDGE_GAP_MS, NUDGE_GRACE_MS, nudgeDue, type NudgeLook } from '../src/server/roster/nudge.js';
 import { playbook, subagentFile } from '../src/server/roster/playbooks.js';
 import * as prompts from '../src/server/roster/prompts.js';
@@ -210,7 +211,12 @@ test('below the threshold it is filed as FYI: no toast, no alert, and "Noted" se
   assert.equal(t.floor.alerts.length, 1);
 });
 
-test('an asleep raiser wakes with the answer; one that went home gets it in its next hire', async () => {
+/** Lets fire-and-forget hires finish. */
+const settle = async () => {
+  for (let i = 0; i < 3; i++) await new Promise((r) => setImmediate(r));
+};
+
+test('an asleep raiser wakes with the answer; one that went home is hired back with it', async () => {
   const t = setup(2);
   const dev = await hireAt(t, 'lead-developer');
   const e1 = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'important', trigger: 'scope', title: 'Add CSV export?', details: '', options: [] });
@@ -220,10 +226,13 @@ test('an asleep raiser wakes with the answer; one that went home gets it in its 
   assert.match(t.floor.wakes.at(-1)!.text!, /APPROVED[\s\S]*Yes, CSV only\./);
   await t.floor.stop(dev);
   assert.equal(t.roster.escalations.resolve(t.floor, e2.id, 'reject', 'Not this release.', 'Keith'), undefined);
-  assert.equal(t.data().escalations.find((x) => x.id === e2.id)?.resolution?.delivered, false);
-  await t.roster.members.hire(t.floor, 'lead-developer', 'Probe');
-  assert.match(t.floor.hires.at(-1)!.prompt, /While you were away, the Project Manager answered your escalations:\n- “Add PDF export\?”: REJECTED — Not this release\./);
+  assert.equal(t.data().escalations.find((x) => x.id === e2.id)?.resolution?.delivered, false, 'not until the hire went through');
+  await settle();
+  assert.equal(t.floor.hires.length, 2, 'the office hired it back by itself');
+  assert.equal(t.floor.hires[1].by, 'The office');
+  assert.match(t.floor.hires[1].prompt, /While you were away, the Project Manager answered your escalations:\n- “Add PDF export\?”: REJECTED — Not this release\./);
   assert.equal(t.data().escalations.find((x) => x.id === e2.id)?.resolution?.delivered, true);
+  assert.equal(t.data().members['lead-developer'].phase, 'active');
 });
 
 test('the Project Coordinator is told about new escalations (not FYIs, not its own), batched', async () => {
@@ -406,4 +415,186 @@ test('office-workers escalate and the escalate MCP tool post to /office/workers/
   assert.match(sent[0].url, /\/office\/workers\/escalate\?worker=w1$/);
   assert.deepEqual(sent[0].body, { title: 'T', urgency: 'urgent' });
   assert.match(res?.result.content[0].text, /Escalation e1 raised \(urgent\): T\nRaised\./);
+});
+
+// ---- Waiting on the Project Manager: never benched, brought back by the answer -------------------------
+
+/**
+ * Benches the hired Lead Developer (by hand) with `note` as its handoff; `during` runs while it writes
+ * it (an escalation raised per the bench prompt's first step).
+ */
+async function benchWithNote(t: ReturnType<typeof setup>, dev: string, note: string, during?: (w: WorkerInfo) => void) {
+  const w = t.floor.worker(dev)!;
+  assert.equal(t.roster.members.bench(t.floor, 'lead-developer', 'Keith'), undefined);
+  t.floor.set(dev, 'working');
+  during?.(w);
+  const file = path.join(t.floor.cwdOf(w), 'docs', 'team', 'development.md');
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, `# Development\n\n## 2026-10-05 09:20 — Handoff\n${note}\n`);
+  t.floor.set(dev, 'done');
+  await settle();
+  assert.equal(t.data().members['lead-developer'].phase, 'benched');
+}
+
+test('a Lead waiting on the Project Manager in an open escalation is never benched for being idle; an FYI one is', async () => {
+  const t = setup(2);
+  t.roster.members.settings(t.floor, { idleMinutes: 30, schedule: { enabled: false } });
+  const dev = await hireAt(t, 'lead-developer');
+  const e = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'important', trigger: 'scope', title: 'Sign off CAC-1 B1–B7', details: '', options: [] });
+  assert.equal(e.fyi, false);
+  for (let i = 0; i < 10; i++) {
+    t.clock.now += 60 * 60_000;
+    t.roster.tick();
+  }
+  assert.equal(t.data().members['lead-developer'].phase, 'active', '10 hours idle, still waiting on the answer');
+  assert.equal(t.floor.prompts.length, 0);
+  // Benching it by hand is refused too, with the reason.
+  assert.match(String(t.roster.members.bench(t.floor, 'lead-developer', 'Keith')), /waiting on a person: answer its escalation “Sign off CAC-1 B1–B7” first/);
+  // Answered: it carries on, and once idle long enough it's benched as usual.
+  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'approve', '', 'Keith'), undefined);
+  t.floor.set(dev, 'working');
+  t.floor.set(dev, 'done');
+  t.clock.now += 30 * 60_000;
+  t.roster.tick();
+  assert.equal(t.data().members['lead-developer'].phase, 'benching');
+
+  // An FYI doesn't hold the bench back.
+  const u = setup(4);
+  u.roster.members.settings(u.floor, { idleMinutes: 30, schedule: { enabled: false } });
+  const tester = await hireAt(u, 'lead-tester');
+  const fyi = u.roster.escalations.raise(u.floor, u.floor.worker(tester)!, { urgency: 'info', title: 'Suite is slow', details: '', options: [] });
+  assert.equal(fyi.fyi, true);
+  u.clock.now += 30 * 60_000;
+  u.roster.tick();
+  assert.equal(u.data().members['lead-tester'].phase, 'benching');
+});
+
+test("answering a benched Lead's escalation hires it back with the answer; not while hiring is paused", async () => {
+  const t = setup(2);
+  const dev = await hireAt(t, 'lead-developer');
+  let e!: Escalation;
+  let e2!: Escalation;
+  // It escalates while writing its handoff (the bench prompt's first step), then is benched.
+  await benchWithNote(t, dev, '**Next steps** Wait for the matrix.', (w) => {
+    e = t.roster.escalations.raise(t.floor, w, { urgency: 'urgent', trigger: 'blocked', title: 'Which approval matrix?', details: '', options: ['A', 'B'] });
+    e2 = t.roster.escalations.raise(t.floor, w, { urgency: 'urgent', trigger: 'blocked', title: 'Who signs off?', details: '', options: [] });
+  });
+  assert.equal(t.data().escalations.length, 2, 'no extra one from the office: it escalated itself');
+  const hires = t.floor.hires.length;
+  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'reply', 'Use matrix B.', 'Keith'), undefined);
+  // A second answer right after, while the hire is under way: one hire, and it's told once its first turn is over.
+  assert.equal(t.roster.escalations.resolve(t.floor, e2.id, 'reply', 'Barbara.', 'Keith'), undefined);
+  await settle();
+  assert.equal(t.floor.hires.length, hires + 1, 'one hire');
+  const ask = t.floor.hires.at(-1)!;
+  assert.equal(ask.by, 'The office');
+  assert.match(ask.prompt, /fresh session/);
+  assert.match(ask.prompt, /Wait for the matrix/);
+  assert.match(ask.prompt, /“Which approval matrix\?”: REPLIED — Use matrix B\. \(Keith\)/);
+  assert.equal(t.data().escalations.find((x) => x.id === e.id)!.resolution!.delivered, true);
+  assert.equal(t.data().members['lead-developer'].phase, 'active');
+  assert.match(t.floor.toasts.join('\n'), /The office hired/);
+  const neu = t.data().members['lead-developer'].workerId!;
+  assert.equal(t.data().escalations.find((x) => x.id === e2.id)!.resolution!.delivered, false);
+  t.floor.set(neu, 'working');
+  t.floor.set(neu, 'done');
+  assert.match(t.floor.prompts.filter((p) => p.id === neu).at(-1)!.text, /not been told yet:\n- “Who signs off\?”: REPLIED — Barbara\./);
+  assert.equal(t.data().escalations.find((x) => x.id === e2.id)!.resolution!.delivered, true);
+
+  // The cost cap pauses hiring: the answer stays owed, and the Project Manager is told why.
+  const p = setup(2);
+  const pdev = await hireAt(p, 'lead-developer');
+  const pe = p.roster.escalations.raise(p.floor, p.floor.worker(pdev)!, { urgency: 'urgent', trigger: 'blocked', title: 'Go live?', details: '', options: [] });
+  await p.floor.stop(pdev);
+  p.roster.members.settings(p.floor, { costCaps: { 2: 1 } });
+  p.data().spend.usd = 5;
+  const before = p.floor.hires.length;
+  assert.equal(p.roster.escalations.resolve(p.floor, pe.id, 'approve', '', 'Keith'), undefined);
+  await settle();
+  assert.equal(p.floor.hires.length, before);
+  assert.equal(p.data().escalations.find((x) => x.id === pe.id)!.resolution!.delivered, false);
+  assert.match(p.floor.toasts.at(-1)!, /wasn't brought back to act on your answer: .*daily team cap.*kept for its next hire/);
+
+  // Dismissing an FYI never hires anyone.
+  const f = setup(4);
+  const fdev = await hireAt(f, 'lead-developer');
+  const fe = f.roster.escalations.raise(f.floor, f.floor.worker(fdev)!, { urgency: 'info', title: 'FYI', details: '', options: [] });
+  await f.floor.stop(fdev);
+  const fh = f.floor.hires.length;
+  assert.equal(f.roster.escalations.resolve(f.floor, fe.id, 'dismiss', '', 'Keith'), undefined);
+  await settle();
+  assert.equal(f.floor.hires.length, fh);
+});
+
+test('an answer that arrives while a Lead writes its handoff brings it straight back once benched', async () => {
+  const t = setup(2);
+  const dev = await hireAt(t, 'lead-developer');
+  assert.equal(t.roster.members.bench(t.floor, 'lead-developer', 'Keith'), undefined);
+  t.floor.set(dev, 'working');
+  const e = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'urgent', trigger: 'blocked', title: 'Matrix?', details: '', options: [] });
+  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'reply', 'B.', 'Keith'), undefined);
+  assert.equal(t.floor.prompts.filter((x) => /answered your escalation/.test(x.text)).length, 0, 'not typed into the session about to be cleared');
+  t.floor.set(dev, 'done');
+  await settle();
+  assert.equal(t.data().members['lead-developer'].phase, 'active');
+  assert.equal(t.floor.hires.at(-1)!.by, 'The office');
+  assert.match(t.floor.hires.at(-1)!.prompt, /“Matrix\?”: REPLIED — B\./);
+});
+
+test('a handoff that ends AWAITING-PM raises an escalation on its behalf, unless one is open already', async () => {
+  const t = setup(3);
+  const dev = await hireAt(t, 'lead-developer');
+  await benchWithNote(t, dev, '**Open threads** CAC-1 batch put to the PM in chat, UNANSWERED.\n\nAWAITING-PM: Sign-off on CAC-1 questions B1–B7');
+  assert.equal(t.data().escalations.length, 1, 'raised');
+  const e = t.data().escalations[0];
+  assert.equal(e.status, 'open');
+  assert.equal(e.role, 'lead-developer');
+  assert.equal(e.title, 'Sign-off on CAC-1 questions B1–B7');
+  assert.equal(e.urgency, 'important');
+  assert.equal(e.fyi, false, 'never FYI: nothing else brings it back');
+  assert.match(e.details, /docs\/team\/development\.md/);
+  assert.match(e.details, /UNANSWERED/);
+  assert.ok(t.roster.view(t.floor, true).approvals.some((a) => a.escalationId === e.id));
+  assert.match(t.floor.toasts.join('\n'), /is waiting on you: Sign-off on CAC-1/);
+  // Answering it brings the Lead back with the answer.
+  const hires = t.floor.hires.length;
+  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'reply', 'B1–B7 approved as proposed.', 'Keith'), undefined);
+  await settle();
+  assert.equal(t.floor.hires.length, hires + 1);
+  assert.match(t.floor.hires.at(-1)!.prompt, /“Sign-off on CAC-1 questions B1–B7”: REPLIED — B1–B7 approved as proposed\./);
+
+  // Already escalated (it followed the bench prompt's first step): nothing more.
+  const u = setup(2);
+  const udev = await hireAt(u, 'lead-developer');
+  await benchWithNote(u, udev, 'AWAITING-PM: CAC-1 B1–B7', (w) => void u.roster.escalations.raise(u.floor, w, { urgency: 'important', title: 'CAC-1 B1–B7', details: '', options: [] }));
+  assert.equal(u.data().escalations.length, 1);
+
+  // AWAITING-PM: none: nothing.
+  const v = setup(2);
+  await benchWithNote(v, await hireAt(v, 'lead-developer'), '**Next steps** Carry on.\nAWAITING-PM: none');
+  assert.equal(v.data().escalations.length, 0);
+});
+
+test('the AWAITING-PM line is read from a handoff note; only open non-FYI escalations hold the bench', () => {
+  assert.equal(awaitingPmLine('x\nAWAITING-PM: Sign-off on B1–B7'), 'Sign-off on B1–B7');
+  assert.equal(awaitingPmLine('x\n- **AWAITING-PM:** Which matrix?'), 'Which matrix?');
+  assert.equal(awaitingPmLine('AWAITING-PM: none'), undefined);
+  assert.equal(awaitingPmLine('AWAITING-PM: N/A.'), undefined);
+  assert.equal(awaitingPmLine('nothing to see'), undefined);
+  assert.equal(awaitingAnswer([{ role: 'lead-developer', status: 'open', fyi: true }], 'lead-developer'), undefined);
+  assert.ok(awaitingAnswer([{ role: 'lead-developer', status: 'open', fyi: false }], 'lead-developer'));
+  assert.equal(awaitingAnswer([{ role: 'lead-developer', status: 'resolved', fyi: false }], 'lead-developer'), undefined);
+  assert.equal(awaitingAnswer([{ role: 'lead-tester', status: 'open', fyi: false }], 'lead-developer'), undefined);
+});
+
+test('the Leads and the Coordinator are told to ask the Project Manager through escalate, never the chat', () => {
+  const names = Object.fromEntries(ROLES.map((r) => [r.id, r.title])) as Parameters<typeof playbook>[1]['names'];
+  for (const r of ROLES) {
+    const pb = playbook(r.id, { project: 'p', name: 'N', level: 2, lessons: 'l.md', names });
+    assert.match(pb, /Questions for the Project Manager go through `escalate`, never the chat/, r.id);
+    assert.match(prompts.primePrompt(r.id, 'N', 2), /Never end a turn on a question that is not in an open escalation/, r.id);
+  }
+  const bench = prompts.benchPrompt('chief-analyst', 'l.md', '2026-10-05 09:00');
+  assert.match(bench, /1\. First, if you are waiting on an answer[\s\S]*office-workers escalate/);
+  assert.match(bench, /AWAITING-PM: <what you are waiting on, in one line>/);
 });
