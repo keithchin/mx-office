@@ -95,6 +95,7 @@ export function installHud(ctx: Ctx, core: CoreState, parts: HudParts) {
       { id: 'signins', icon: '🔐', label: 'Your sign-ins', section: 'Together', shown: () => !!store.me.account, tone: () => (needsSigningIn() ? 'danger' : undefined), status: needsSigningIn, chip: () => 'Sign in to Claude', title: () => 'The Claude plan and GitHub account your workers run on: your own', run: () => openSignIns(net) },
       { id: 'settings', icon: '⚙️', label: 'Settings', section: 'Office', run: showSettings },
       { id: 'help', icon: '❓', label: 'Controls', section: 'Office', key: 'H', run: openHelp },
+      { id: 'home', icon: '🏠', label: 'Home', section: 'Office', title: () => 'Every project in the building, and the office in numbers (its own page, /home)', run: () => location.assign('/home') },
       { id: 'lite', icon: '📱', label: '1D view', section: 'Office', title: () => 'The board, the workers and their terminals without the 3D: for a phone or a slow computer', run: () => switchView('1d') },
       { id: 'pixel', icon: '🗺️', label: '2D view', section: 'Office', title: () => 'The floor from above in pixel art: every worker at its desk, without the 3D', run: () => switchView('2d') },
       // The other way of drawing the office from the one you're in: retro's chunky pixels, or back to 3D.

@@ -1,11 +1,12 @@
 import type { ClientMsg, ServerMsg } from '../shared/protocol';
 import { lastFloor, store, type Profile, type Spot } from './state';
+import { isReturnPage } from '../shared/home';
 
 type Handler = (msg: ServerMsg) => void;
 
-/** The sign-in page, coming back to the 1D or 2D view afterwards if that's where you are (see login.ts). */
+/** The sign-in page, coming back to the home page, the 1D or 2D view afterwards if that's where you are (see login.ts). */
 export function loginUrl(): string {
-  return location.pathname === '/lite' || location.pathname === '/pixel' ? `/login?next=${location.pathname}` : '/login';
+  return isReturnPage(location.pathname) ? `/login?next=${location.pathname}` : '/login';
 }
 
 export class Net {

@@ -26,8 +26,8 @@ export interface ElevatorOptions {
   /** You're down in the garage (or out on the street), under the floor you're on. */
   downstairs(): boolean;
   /**
-   * Just adding a project, without the floors to ride to: the 1D and 2D views' floors page lists
-   * them itself (shared/floors.ts), and there's no roof or garage to go to from there.
+   * Just adding a project, without the floors to ride to: the home page (/home) lists
+   * them itself (home/projects.ts), and there's no roof or garage to go to from there.
    */
   addOnly?: boolean;
 }

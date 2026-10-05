@@ -13,7 +13,7 @@
   <body class="lite">
     <!-- The 1D view (lite.ts): the office without the 3D, for a phone or a computer the 3D is too much for. -->
     <header class="lite-bar">
-      <button id="to-home" class="btn" type="button" title="Every floor of the building, and adding a project" aria-label="Floors">🏠</button>
+      <a id="to-home" class="btn" href="/home" title="Home: every project, and the office's statistics" aria-label="Home">🏠</a>
       <label class="lite-floor" title="The floor you're on: pick another to see its workers">
         <span class="lite-floor-label">Floor</span>
         <select id="floor" aria-label="Floor"></select>
@@ -28,8 +28,6 @@
       </nav>
       <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
     </header>
-    <!-- Every floor of the building, to go into, and adding one (shared/floors.ts). -->
-    <section id="home" class="home hidden" aria-label="Floors"></section>
     <main class="lite-main">
       <p id="floor-meta" class="lite-meta"></p>
       <div id="elsewhere" class="lite-elsewhere hidden"></div>

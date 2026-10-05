@@ -85,7 +85,10 @@ const chosen: Graphics = (() => {
 /** This browser's view and quality (see pick). Changing either takes a reload: see switchView. */
 export const graphics = (): Graphics => chosen;
 
-/** The page that shows the office in `view`: the 1D and 2D views each have a page of their own. */
+/**
+ * The page that shows the office in `view`: the 1D and 2D views each have a page of their own. A
+ * browser that has never been on a floor gets the home page instead, to pick a project first.
+ */
 export function viewUrl(view: View): string {
   // The flat views say their floor in the address (see shared/address.ts), so switching keeps it.
   let floor: string | null = null;
@@ -94,6 +97,7 @@ export function viewUrl(view: View): string {
   } catch {
     // No storage: the other view picks the floor itself.
   }
+  if ((view === '1d' || view === '2d') && !floor) return '/home';
   const on = floor ? `?floor=${encodeURIComponent(floor)}` : '';
   return view === '1d' ? `/lite${on}` : view === '2d' ? `/pixel${on}` : `/?3d=1&view=${view}`;
 }

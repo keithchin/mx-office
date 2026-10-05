@@ -1,0 +1,29 @@
+/* The home page (home.html, home.ts): the 1D view's bar and page (lite.css) round its two tabs. Colors
+   are the theme tokens (styles/base.css), so it wears the Default, Dark and Terminal looks alike. */
+
+/* Its column: wider than the list of workers, and the top bar lines up with it (see --lite-col in lite.css). */
+body.home-page { --lite-col: 1240px; }
+.home-main { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+
+/* The top bar: 🏠 lit up as the page you're on, the office's name, and back to the floor you were last on. */
+.lite-bar #to-home.on { background: var(--ink); color: var(--on-ink); box-shadow: none; transform: translateY(2px); cursor: default; }
+.home-title { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.home-title h1 { margin: 0; font: 900 19px/1.2 var(--font); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.home-back { max-width: 40%; gap: 6px; }
+.home-back-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+@media (max-width: 640px) { .home-back { max-width: 46%; padding: 0 10px; font-size: 13px; } }
+/* A narrow phone: just the view's icon and the arrow, so the office's name keeps its room (the name is in its tooltip). */
+@media (max-width: 480px) { .home-back-name { display: none; } }
+html[data-theme='terminal'] body.lite .lite-bar > .home-back { width: auto; padding: 0 8px; }
+
+/* The two tabs, as the 1D view's are. */
+.home-tabs { display: flex; gap: 8px; margin: 0 0 14px; }
+.home-tabs .btn { flex: none; }
+.home-tabs .btn.on { background: var(--ink); color: var(--on-ink); }
+
+/* A phone: the projects' heading over its two buttons, side by side. */
+@media (max-width: 640px) {
+  .home-head { flex-wrap: wrap; margin-bottom: 10px; }
+  .home-head .seg { display: flex; gap: 8px; width: 100%; }
+  .home-head .seg .btn { flex: 1; justify-content: center; }
+}

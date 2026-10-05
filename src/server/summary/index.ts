@@ -51,6 +51,12 @@ export class Summaries {
   }
 
   summary(floor: Floor): ProjectSummary {
+    const s = this.facts(floor);
+    return { ...s, ...this.narrator.narrative(floor.id, s) };
+  }
+
+  /** The summary's facts without its narrative, so a page that only counts (the home page's statistics) never asks the small model. */
+  facts(floor: Floor): Omit<ProjectSummary, 'narrative' | 'narrativeBy'> {
     const now = Date.now();
     const workers = floor.workers.list().filter((w) => w.kind === 'agent');
     for (const w of workers) if (!this.seen.has(w.id)) this.observe(w);
@@ -118,7 +124,7 @@ export class Summaries {
     if (failing.length) risks.push({ level: 'warn', text: `${failing.length} toolkit gate${failing.length === 1 ? '' : 's'} failing: ${failing.slice(0, 3).map((s) => s.title).join(', ')}` });
 
     const activity = this.activity(floor, workers, runs).slice(0, ACTIVITY_SHOWN);
-    const s: Omit<ProjectSummary, 'narrative' | 'narrativeBy'> = {
+    return {
       floor: floor.id,
       name: floor.def.name,
       repo: floor.def.repo,
@@ -131,7 +137,6 @@ export class Summaries {
       risks,
       generatedAt: now,
     };
-    return { ...s, ...this.narrator.narrative(floor.id, s) };
   }
 
   /** The latest things that happened on the floor, latest first, from everything the office keeps. */

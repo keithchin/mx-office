@@ -14,6 +14,8 @@ body.pixel .lite-floor select {
 }
 body.pixel .lite-floor select:disabled { background-image: none; }
 body.pixel .lite-floor select option { color: var(--ink); }
+/* The views stay at the bar's right end, over the stage's edge, even on a phone where the summary is hidden. */
+body.pixel .lite-views { margin-left: auto; }
 body.pixel .lite-views .btn.on { background: #17b3a3; border-color: #17b3a3; color: #0d1828; }
 /* What the floor's up to, in a line (ui/summary.ts), over its branch and repository. */
 .px-meta-box { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -21,10 +23,6 @@ body.pixel .lite-views .btn.on { background: #17b3a3; border-color: #17b3a3; col
 .px-summary:empty { display: none; }
 .px-meta { min-width: 0; margin: 0; font-size: 12px; font-weight: 700; color: #8fa3bf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 900px) { .px-meta-box { display: none; } }
-
-/* The floors page scrolls over the office, on the office's navy. */
-body.pixel .home { flex: 1; max-width: none; overflow: auto; padding-left: max(12px, calc(50% - 490px)); padding-right: max(12px, calc(50% - 490px)); background: #0d1828; color: #fff; }
-body.pixel .home-intro { color: #8fa3bf; }
 
 .px-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .px-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; cursor: default; }

@@ -3,7 +3,8 @@
 // along as you change floor or tab. No three.js here: the 1D and 2D views import it.
 
 import { store } from '../state';
-import { rememberFloor } from '../state/persist';
+import { lastFloor, rememberFloor } from '../state/persist';
+import { flatViewGoesHome } from '../../shared/home';
 
 const params = () => new URLSearchParams(location.search);
 
@@ -36,4 +37,15 @@ export function followFloor() {
   const sync = () => store.floor && setAddress({ floor: store.floor });
   store.on('floor', sync);
   sync();
+}
+
+/**
+ * Hands over to the home page when this flat view has no floor to open (none asked for, none
+ * remembered) or an old `?home` link asked for the floors page (an overlay here once): true when it's on its way there,
+ * so the page stops setting itself up.
+ */
+export function leaveForHome(): boolean {
+  if (!flatViewGoesHome(location.search, lastFloor())) return false;
+  location.replace('/home');
+  return true;
 }

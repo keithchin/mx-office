@@ -20,7 +20,8 @@ body.lite { min-height: 100dvh; background: var(--paper); -webkit-tap-highlight-
 .lite-views .btn.on { background: var(--ink); color: var(--on-ink); box-shadow: none; transform: translateY(2px); cursor: default; }
 @media (max-width: 640px) { .lite-views .ico { display: none; } .lite-bar .lite-views .btn { padding: 0 8px; } }
 
-.lite-main { width: 100%; max-width: 760px; margin: 0 auto; padding: 12px 12px calc(96px + env(safe-area-inset-bottom)); }
+:root { --lite-col: 760px; }
+.lite-main { width: 100%; max-width: var(--lite-col); margin: 0 auto; padding: 12px 12px calc(96px + env(safe-area-inset-bottom)); }
 .lite-meta { margin: 0 0 10px; font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lite-meta:empty { display: none; }
 .lite-elsewhere { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
@@ -55,8 +56,12 @@ body.lite { min-height: 100dvh; background: var(--paper); -webkit-tap-highlight-
 .lite-nav .n:empty { display: none; }
 .lite-nav .n { min-width: 20px; padding: 0 5px; border-radius: 999px; background: var(--ink); color: var(--on-ink); font-size: 12px; line-height: 20px; font-variant-numeric: tabular-nums; }
 .lite-nav .btn.primary .n { background: var(--card); color: var(--ink); }
-/* A wide window: the bars line up with the list. */
-@media (min-width: 761px) { .lite-bar, .lite-nav { padding-left: calc(50% - 368px); padding-right: calc(50% - 368px); } }
+/* The bars line up with the page's main column, whatever its width. --lite-col is that column's width,
+   its 12px padding included: the list of workers keeps a 760px column, the board and the other tabs
+   (.lite-main.board, see ui/kanban.css) take the whole width, and the home page sets its own. The bars
+   pad in by the same amount, so their buttons start and end where the content does. */
+.lite-bar, .lite-nav { padding-left: max(12px, calc((100% - var(--lite-col)) / 2 + 12px)); padding-right: max(12px, calc((100% - var(--lite-col)) / 2 + 12px)); }
+body:has(.lite-main.board) { --lite-col: 100%; }
 
 /* The page scrolls here, so what floats over it stays put on the screen. */
 #toasts { position: fixed; top: 84px; z-index: 60; width: calc(100% - 24px); }

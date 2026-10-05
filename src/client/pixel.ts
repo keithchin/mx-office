@@ -5,7 +5,7 @@
 // they are. Hover over anything for what it is; click a worker for its terminal (right-click for its
 // menu), a free desk to give someone new work there, or what's on the walls and about the room for
 // its window: the boards, the whiteboard, the meeting room, the elevator, the TV, the bookshelf. It
-// fills the window and zooms in whole steps (see pixel/camera.ts). The floors page (🏠) has every
+// fills the window and zooms in whole steps (see pixel/camera.ts). The home page (🏠, /home) has every
 // floor of the building. Like the 1D view, you're in the office without standing anywhere in it
 // (PeerInfo.lite), and it loads no three.js.
 
@@ -27,8 +27,8 @@ import { rememberView, switchView } from './graphics';
 import { waitingInOrder } from './nextup';
 import { flatSession } from './shared/session';
 import { workerActions } from './shared/workers';
-import { floorPicker, floorsHome } from './shared/floors';
-import { followFloor } from './shared/address';
+import { floorPicker } from './shared/floors';
+import { followFloor, leaveForHome } from './shared/address';
 import { renderTitle } from './shared/title';
 import { drawOffice, frameFor, type Frame } from './pixel/office';
 import { drawPeople, type People, type Spot } from './pixel/people';
@@ -43,6 +43,8 @@ import { ZONE_BY_TEAM, ZONES } from '../shared/zones';
 import type { MemberView } from '../shared/roster/types';
 import './pixel/game.css';
 
+// No floor to open (or an old ?home link): the home page, where you pick one.
+if (leaveForHome()) await new Promise(() => {});
 // Here, the office opens on the 2D view next time too (see graphics.ts).
 rememberView('2d');
 
@@ -58,11 +60,6 @@ floorPicker(net);
 // The address follows the floor (?floor=), for bookmarks and links that open it straight away.
 followFloor();
 const stage = $('stage');
-const home = floorsHome(net, '2d', (shown) => {
-  stage.classList.toggle('hidden', shown);
-  $('px-foot').classList.toggle('hidden', shown);
-  if (!shown) requestAnimationFrame(resize);
-});
 $('to-1d').addEventListener('click', () => switchView('1d'));
 
 // ---- What the office's things open ---------------------------------------------------------------------
@@ -117,7 +114,7 @@ const spots = (f: Frame) =>
     queue: () => openQueue(net, { openTerminal: workers.open }),
     whiteboard: () => openWhiteboard(net),
     meeting: showMeeting,
-    floors: () => home.show(),
+    floors: () => location.assign('/home'),
     services: () => openServices(),
     docs: () => {
       if (!store.floor) return;
@@ -228,7 +225,7 @@ function draw(now: number) {
 // The animation moves on a beat at a time, so drawing ten times a second is plenty; nothing while hidden.
 let last = 0;
 function tick(now: number) {
-  if (now - last >= 100 && !document.hidden && !home.shown) {
+  if (now - last >= 100 && !document.hidden) {
     last = now;
     draw(now);
   }
@@ -385,7 +382,7 @@ function nextWaiting() {
 }
 $('px-next').addEventListener('click', nextWaiting);
 addEventListener('keydown', (e) => {
-  if (home.shown || !officeKeys(e) || e.ctrlKey) return;
+  if (!officeKeys(e) || e.ctrlKey) return;
   const pan = 64;
   const keys: Record<string, () => void> = {
     n: nextWaiting,
@@ -414,4 +411,4 @@ rebuild();
 renderCount();
 
 // Debug handle for quick checks from the console / headless screenshots (setRoster puts in a team without hiring anyone).
-(window as any).__pixel = { store, net, home, cam, setRoster, zones: () => zoneBoxes(frame), draw: () => draw(performance.now()), spots: () => people.spots, things: () => things, view: () => ({ scale: cam.scale * dpr, x: cam.x * dpr, y: cam.y * dpr, dpr }) };
+(window as any).__pixel = { store, net, cam, setRoster, zones: () => zoneBoxes(frame), draw: () => draw(performance.now()), spots: () => people.spots, things: () => things, view: () => ({ scale: cam.scale * dpr, x: cam.x * dpr, y: cam.y * dpr, dpr }) };

@@ -10,7 +10,7 @@ Already have a checkout? Pick its repository anyway: a checkout of it that's alr
 
 ## The new-project wizard
 
-**✨ New project** (on the floors page and in the elevator) creates a project repository and sets it up with the mxcli project toolkit instead of only cloning one. Only admins can run it. It needs these on the office's machine, each found where it usually is unless an environment variable says otherwise:
+**✨ New project** (on the home page and in the elevator) creates a project repository and sets it up with the mxcli project toolkit instead of only cloning one. Only admins can run it. It needs these on the office's machine, each found where it usually is unless an environment variable says otherwise:
 
 | What | Variable | Default |
 | --- | --- | --- |
