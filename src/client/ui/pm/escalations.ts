@@ -17,6 +17,9 @@ import { act } from '../roster/api';
 import { store } from '../../state';
 import { ZONE_BY_TEAM } from '../../../shared/zones';
 import { lookFor, standing, type Outfit } from '../../pixel/chars';
+import { store } from '../../state';
+import { ZONE_BY_TEAM } from '../../../shared/zones';
+import { lookFor, standing, type Outfit } from '../../pixel/chars';
 import './escalations.css';
 
 const VERDICT_DONE: Record<EscalationVerdict, string> = { reply: '💬 Replied', approve: '✅ Approved', reject: '❌ Rejected', dismiss: '✓ Noted' };
@@ -87,7 +90,24 @@ export function escalationCard(floor: string, e: Escalation, admin: boolean, don
           )
         : h('p.esc-meta', {}, 'Only the Project Manager (an admin) can answer it.'),
   );
+  // Who raised it, big enough to tell at a glance: the same character as in the 2D office.
+  const body = h('div.esc-body');
+  body.append(...card.childNodes);
+  card.append(raisedBy(e), body);
   return card;
+}
+
+const OUTFIT: Record<string, Outfit> = { pm: 'pm', 'lead-designer': 'designer', 'lead-developer': 'dev', 'lead-tester': 'qa', 'chief-analyst': 'analyst' };
+
+/** The agent that raised `e` from the waist up, with its name and role under it. */
+function raisedBy(e: Escalation): HTMLElement {
+  const role = e.role ? ROLE_BY_ID.get(e.role) : undefined;
+  const w = store.workers.get(e.workerId);
+  const color = (role && ZONE_BY_TEAM.get(role.team)?.color) ?? w?.color ?? '#00a6a6';
+  const src = standing(lookFor(e.workerId, color, (e.role && OUTFIT[e.role]) || 'plain'), 'front', false, 0);
+  const c = h('canvas.esc-face', { width: 24, height: 24, role: 'img', 'aria-label': `${e.by}${role ? `, ${role.title}` : ''}` }) as HTMLCanvasElement;
+  c.getContext('2d')!.drawImage(src, 0, 0, 24, 24, 0, 0, 24, 24);
+  return h('figure.esc-who', { title: `Raised by ${e.by}${role ? ` (${role.title})` : ''}` }, c, h('figcaption', {}, e.by), role ? h('small', {}, role.title) : null);
 }
 
 /** The console's list of escalations: the open ones as cards, the answered ones folded away. */
