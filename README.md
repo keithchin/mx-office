@@ -155,6 +155,7 @@ New projects show a **Project setup** panel (toolkit stages P–4 with pass/pend
 | **✅ Approvals** | Everything waiting for the Project Manager: proposals and escalations (badge shows the count). |
 | **⚙️ Settings** | Autonomy level, idle-to-bench minutes, standup schedule, review-loop nudge, cost caps. |
 | **🧩 Team boards** | A page per team: its own board, its Lead, journal and team panels (Testing: CI scorecards; Development: PRs and live app; Analysis: BRD, insight memos, model ranking; …). |
+| **🧾 Audit log** | Who did what, when: hires, prompts (never their text by default), escalations and answers, approvals, PRs and issues, settings changes with before/after, sign-ins, Jeff's verdicts. Filter by time, actor and kind; a timeline; 🔒 hash-chain check; CSV/JSONL export (admin). Home has one for every floor. |
 
 ![Board](docs/readme/board.png)
 
