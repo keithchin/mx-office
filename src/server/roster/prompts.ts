@@ -15,6 +15,19 @@ const HANDOFF_CHARS = 4000;
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}\n…(the rest is in the journal)` : s);
 
+/**
+ * The rule every Lead and the Project Coordinator works by (their Playbook and first message carry
+ * it): a question for the human goes through `escalate`, never into the chat. Nobody watches an
+ * agent's terminal; one that asks there and ends its turn sits idle until the office benches it, and
+ * the question is lost with its session.
+ */
+export const ASK_THE_PM = [
+  '**Questions for the Project Manager go through `escalate`, never the chat.** The Project Manager does not watch your terminal: a question you write in your chat and then end your turn on is never seen, and an idle session may be benched. Whenever you need the Project Manager (or the client, through them) to answer, decide or sign something off:',
+  '- raise it with `office-workers escalate` (or the `escalate` MCP tool). Batch related questions into one escalation: number them in the details, and give options and your recommendation where sensible;',
+  '- then end your turn, or carry on with whatever it does not block. Never end a turn on a question that is not in an open escalation.',
+  'It shows in the Project Manager\'s approvals, and their answer comes back to you as a prompt. While it is open (unless the office files it as FYI) you are not benched for being idle; if you are benched meanwhile, the office hires you back with the answer.',
+].join('\n');
+
 /** The first message of a fresh hire of a role: who it is, its Playbook, and where it left off. */
 export function primePrompt(roleId: RoleId, name: string, level: AutonomyLevel, handoff?: { at: number; text: string }, task?: string, answers: string[] = []): string {
   const role = ROLE_BY_ID.get(roleId)!;
@@ -25,6 +38,8 @@ export function primePrompt(roleId: RoleId, name: string, level: AutonomyLevel, 
     `Start by reading your Playbook, \`${playbookPath(roleId)}\` (also loaded as the \`team-${roleId}\` skill), the project's CLAUDE.md and your team journal \`${journalPath(role.team)}\`. The office just wrote the Playbook and any missing team files into your folder: commit them with your first change.`,
     '',
     autonomyBrief(level),
+    '',
+    ASK_THE_PM,
     '',
     handoff
       ? `This is a fresh session: your previous session was benched on ${new Date(handoff.at).toISOString().slice(0, 16).replace('T', ' ')} UTC after writing this handoff note. Pick up from it:\n\n${clip(handoff.text, HANDOFF_CHARS)}`
@@ -41,9 +56,10 @@ export function benchPrompt(roleId: RoleId, lessons: string, stamp: string): str
   return [
     `The office is benching you to free resources: your session will be stopped and cleared once you've finished this turn, and your next hire starts fresh from your Playbook and the note you write now. Do only this:`,
     '',
-    `1. Append a handoff entry to \`${journalPath(role.team)}\`, headed \`## ${stamp} — Handoff\`, with: **What I know** (state of the work, where things are), **Decisions** (and why), **Open threads**, **Next steps**. Make it enough for a fresh session to carry on without asking.`,
-    `2. Append any durable lessons (gotchas, working recipes, mistakes not to repeat) to \`${lessons}\`, one dated bullet each. If \`mxcli brain capture\` is available, capture them there too.`,
-    '3. Commit both files (with any finished work) and push your branch. Leave unfinished work committed on the branch, never lost.',
+    "1. First, if you are waiting on an answer, decision or sign-off from the Project Manager (or the client) that is not already in an open escalation — for instance a question you asked in your chat — raise it now with `office-workers escalate` (or the `escalate` MCP tool), all of them batched in one escalation with options where sensible. That puts it in the Project Manager's approvals, and their answer brings you back.",
+    `2. Append a handoff entry to \`${journalPath(role.team)}\`, headed \`## ${stamp} — Handoff\`, with: **What I know** (state of the work, where things are), **Decisions** (and why), **Open threads**, **Next steps**. Make it enough for a fresh session to carry on without asking. End it with one line \`AWAITING-PM: <what you are waiting on, in one line>\` if you are waiting on the Project Manager or the client, or \`AWAITING-PM: none\`.`,
+    `3. Append any durable lessons (gotchas, working recipes, mistakes not to repeat) to \`${lessons}\`, one dated bullet each. If \`mxcli brain capture\` is available, capture them there too.`,
+    '4. Commit both files (with any finished work) and push your branch. Leave unfinished work committed on the branch, never lost.',
     '',
     "Don't start anything new. When it's written, reply `handoff written` and stop.",
   ].join('\n');
@@ -114,6 +130,11 @@ export function escalationAnswerPrompt(e: Escalation, verdict: EscalationVerdict
       ? "Don't go ahead with it. Record the answer in your team journal, adjust the plan, and carry on with the rest of your work."
       : 'Record the answer in your team journal and act on it now: dispatch or continue the work it unblocks, per your review protocol.',
   ].join('\n');
+}
+
+/** To a member at work, answers to its escalations that its hire didn't carry (answered while it was being hired). */
+export function owedAnswersPrompt(lines: string[]): string {
+  return ['The Project Manager answered escalations of yours that you have not been told yet:', ...lines, '', 'Record them in your team journal and act on them now: continue the work they unblock, per your review protocol.'].join('\n');
 }
 
 /** To the Project Coordinator: escalations raised since it was last told, so it can relay and summarise them. */

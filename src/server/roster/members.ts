@@ -3,9 +3,9 @@
 // hiring a benched one starts a fresh session primed with its latest handoff note, never a resume.
 
 import { latestEntry } from '../../shared/roster/journal.js';
-import { cleanName, ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
+import { cleanName, journalPath, ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { dayIn } from '../../shared/roster/schedule.js';
-import { isAsleepStatus, mayBench } from './bench.js';
+import { awaitingAnswer, awaitingPmLine, isAsleepStatus, mayBench } from './bench.js';
 import type { Roster } from './index.js';
 import { readJournal } from './journal-io.js';
 import { lessonsPathIn, writeRoleFiles, type PlaybookContext } from './playbooks.js';
@@ -84,6 +84,8 @@ export class Members {
     if (!w) return `${m.name} isn't hired`;
     const ok = mayBench({ status: w.status, viewers: w.viewers.length });
     if (ok !== true) return `Can't bench ${m.name}: ${ok}`;
+    const waiting = awaitingAnswer(d.escalations, role);
+    if (waiting) return `Can't bench ${m.name}: it's waiting on a person: answer its escalation “${waiting.title}” first`;
     const text = benchPrompt(role, lessonsPathIn(floor.dir), this.stamp(floor));
     const err = isAsleepStatus(w.status) ? floor.wake(w.id, text) : floor.prompt(w.id, text);
     if (err) return err;
@@ -105,6 +107,7 @@ export class Members {
     const now = this.roster.deps.now();
     const fresh = note && m.benchAskedAt !== undefined && note.date >= dayIn(m.benchAskedAt - 86_400_000, d.settings.schedule.timeZone);
     if (note && fresh) m.handoff = { at: now, text: `${note.heading}\n\n${note.body}` };
+    const workerId = m.workerId ?? w?.id ?? `benched-${role}`;
     m.phase = 'benched';
     m.benchedAt = now;
     m.workerId = undefined;
@@ -112,7 +115,34 @@ export class Members {
     m.benchSawBusy = undefined;
     this.roster.touch(floor);
     floor.toast(fresh ? `🪑 ${m.name} is benched: handoff note kept, session cleared` : `🪑 ${m.name} is benched, but wrote no handoff note: the next hire starts from the Playbook and journal only`, fresh ? 'info' : 'warn');
+    if (note && fresh) this.escalateAwaiting(floor, role, workerId, note.heading, note.body);
     if (w) await floor.stop(w.id);
+    // Answers that came in while it wrote its handoff bring it straight back.
+    this.roster.escalations.afterBench(floor, role);
+  }
+
+  /**
+   * The safety net for a question that never became an escalation: a handoff note that ends
+   * `AWAITING-PM: …` while the role has no open escalation gets one raised on its behalf, so the
+   * Project Manager sees it in their approvals and answering it brings the role back.
+   */
+  private escalateAwaiting(floor: TeamFloor, role: RoleId, workerId: string, heading: string, body: string) {
+    const waiting = awaitingPmLine(body);
+    if (!waiting) return;
+    const d = this.roster.data(floor.id);
+    if (d.escalations.some((e) => e.status === 'open' && e.role === role)) return;
+    const m = d.members[role];
+    const journal = journalPath(ROLE_BY_ID.get(role)!.team);
+    const details = [
+      `${m.name} was benched while waiting on the Project Manager, without having escalated it. The office raised this on its behalf from its handoff note (\`${journal}\`, “${heading.replace(/^#+\s*/, '')}”).`,
+      '',
+      `Waiting on: ${waiting}`,
+      '',
+      `Answer here (reply / approve / reject) and the office hires ${m.name} back with your answer. The handoff note:`,
+      '',
+      body.length > 3000 ? `${body.slice(0, 3000)}\n…(the rest is in the journal)` : body,
+    ].join('\n');
+    this.roster.escalations.raiseFor(floor, { workerId, by: m.name, role }, { urgency: 'important', trigger: 'blocked', title: waiting.slice(0, 160), details, options: [] });
   }
 
   rename(floor: TeamFloor, role: RoleId, raw: unknown): string | undefined {

@@ -13,7 +13,7 @@ import { teamFromLabels } from '../../shared/roster/card-team.js';
 import { LEADS, ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { dayIn, nextSlot } from '../../shared/roster/schedule.js';
 import type { ApprovalItem, MemberStatus, MemberView, RosterView } from '../../shared/roster/types.js';
-import { benchStep, dueForBench, isAsleepStatus, isBusyStatus } from './bench.js';
+import { awaitingAnswer, benchStep, dueForBench, isAsleepStatus, isBusyStatus } from './bench.js';
 import { forgetSubagents } from '../workers/subagents.js';
 import { Escalations } from './escalations.js';
 import { excerpt, readJournal } from './journal-io.js';
@@ -108,6 +108,7 @@ export class Roster {
     }
     this.standups.onWorker(floor, role, w);
     this.nudges.onWorker(floor, role, w);
+    this.escalations.onMember(floor, role, w);
     if (role === 'pm') this.escalations.onCoordinator(floor, w);
     else this.labelLeadPr(floor, role, w);
     this.touch(floor, prev?.status === w.status && !capChanged);
@@ -148,7 +149,7 @@ export class Roster {
     }
   }
 
-  /** The once-a-minute look: bench who's been idle too long, finish handoffs, run a due standup. */
+  /** The once-a-minute look: bench who's been idle too long (never one waiting on the Project Manager's answer), finish handoffs, run a due standup. */
   tick(now = this.deps.now()) {
     for (const floor of this.deps.floors()) {
       const d = this.data(floor.id);
@@ -156,7 +157,8 @@ export class Roster {
       for (const r of ROLES) {
         const m = d.members[r.id];
         const w = this.workerOf(floor, m);
-        if (m.phase === 'active' && w && dueForBench({ status: w.status, viewers: w.viewers.length }, this.idleSince(w.id), now, d.settings.idleMinutes)) {
+        // One waiting on the Project Manager's answer to its escalation stays: its turn is over because the next move is theirs.
+        if (m.phase === 'active' && w && dueForBench({ status: w.status, viewers: w.viewers.length }, this.idleSince(w.id), now, d.settings.idleMinutes) && !awaitingAnswer(d.escalations, r.id)) {
           this.members.bench(floor, r.id, 'idle');
         } else if (m.phase === 'benching' && benchStep(w?.status, !!m.benchSawBusy, m.benchAskedAt ?? now, now) === 'finish') {
           void this.members.finishBench(floor, r.id);
