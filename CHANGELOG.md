@@ -26,6 +26,14 @@ Merged into staging, live after the next restart.
   (older blockers rise) and listed in that order in Escalations to you, Approvals and Needs you, with
   "#1 · resolve first" chips. A critical or urgent one he hasn't rated yet stays on top. Setting:
   Settings → Jeff · Router → Priority.
+- **💬 Team chatter**: a chat thread on each project's Command Center, beside Recent activity, showing
+  what the agents say to each other as it happens: escalations and your answers, the office's relays
+  to the Project Coordinator, standups, review nudges, subagent tasks and their reviews, handoff
+  notes, PRs handed over, team journal entries (a line naming a teammate is shown as said to them)
+  and The Firm's interview questions and answers. Each message shows who said it, to whom, and opens
+  what it's about. Filter by All, Between agents, With me, or one person; new messages slide in on
+  top without moving your scroll. Each team's page has a short version. Nothing is made up: only
+  what was really said or written.
 
 ### Improved
 - **New project wizard**: client, operator and role settings are committed with the project

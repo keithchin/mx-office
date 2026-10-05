@@ -19,6 +19,7 @@ import { openStandupWindow } from '../roster';
 import { subagentList } from '../roster/subagents';
 import { LEADS } from '../../../shared/roster/roles';
 import { teamWorld } from './world';
+import { teamChatter } from '../chatter/compact';
 
 export interface PanelDeps {
   openPull(p: GhPull): void;
@@ -121,7 +122,7 @@ function subagentsPanel(team: TeamId, v: RosterView | undefined): HTMLElement | 
 /** The team's own panels, under its header. */
 export function teamPanels(team: TeamId, v: RosterView | undefined, data: TeamPageData | undefined, deps: PanelDeps): HTMLElement[] {
   const subs = subagentsPanel(team, v);
-  return subs ? [...lanePanels(team, v, data, deps), subs] : lanePanels(team, v, data, deps);
+  return [...lanePanels(team, v, data, deps), ...(subs ? [subs] : []), teamChatter(team)];
 }
 
 function lanePanels(team: TeamId, v: RosterView | undefined, data: TeamPageData | undefined, deps: PanelDeps): HTMLElement[] {

@@ -52,27 +52,31 @@ const ICON: Record<ActivityItem['kind'], string> = {
  * Draws the panel for `floor` into `root`; call it again to refresh (it reuses a summary fetched moments ago). Never throws.
  * `middle` is a column of the caller's to keep between the details and the recent activity (the 1D view's
  * project manager console, ui/pm/console.ts): it's moved, never redrawn, so what's typed in it survives.
+ * `after` is kept the same way, last (the 💬 Team chatter, ui/chatter/), so its scroll stays put.
  */
-export async function renderSummary(root: HTMLElement, floor: string | undefined, opts: { fresh?: boolean; middle?: HTMLElement } = {}): Promise<void> {
+export async function renderSummary(root: HTMLElement, floor: string | undefined, opts: { fresh?: boolean; middle?: HTMLElement; after?: HTMLElement } = {}): Promise<void> {
   root.classList.add('sm');
   if (!floor) return void root.replaceChildren();
   let s: ProjectSummary;
   try {
     s = await fetchSummary(floor, opts.fresh);
   } catch (err) {
-    columns(root, opts.middle, [h('p.sm-error', {}, `Couldn't load the project summary: ${(err as Error).message}`)], []);
+    columns(root, opts.middle, [h('p.sm-error', {}, `Couldn't load the project summary: ${(err as Error).message}`)], [], opts.after);
     return;
   }
-  columns(root, opts.middle, [h('div.sm-main', {}, head(s), narrative(s), callouts(s), progress(s), agents(s.agents))], [activity(s.activity)]);
+  columns(root, opts.middle, [h('div.sm-main', {}, head(s), narrative(s), callouts(s), progress(s), agents(s.agents))], [activity(s.activity)], opts.after);
 }
 
-/** Puts `before`, `middle` and `after` in `root`, replacing what was either side of `middle` without taking it out of the page (that would drop its focus). */
-function columns(root: HTMLElement, middle: HTMLElement | undefined, before: HTMLElement[], after: HTMLElement[]) {
-  if (!middle) return root.replaceChildren(...before, ...after);
-  for (const c of [...root.children]) if (c !== middle) c.remove();
-  if (middle.parentElement !== root) root.append(middle);
-  middle.before(...before);
-  middle.after(...after);
+/** Puts `before`, `middle`, `after` and `last` in `root`, replacing what was round `middle` and `last` without taking them out of the page (that would drop focus and scroll). */
+function columns(root: HTMLElement, middle: HTMLElement | undefined, before: HTMLElement[], after: HTMLElement[], last?: HTMLElement) {
+  if (!middle && !last) return root.replaceChildren(...before, ...after);
+  for (const c of [...root.children]) if (c !== middle && c !== last) c.remove();
+  if (middle && middle.parentElement !== root) (last?.parentElement === root ? last.before(middle) : root.append(middle));
+  if (last && last.parentElement !== root) root.append(last);
+  if (middle) {
+    middle.before(...before);
+    middle.after(...after);
+  } else last!.before(...before, ...after);
 }
 
 function head(s: ProjectSummary): HTMLElement {

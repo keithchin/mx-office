@@ -1,0 +1,91 @@
+/* 💬 Team chatter (ui/chatter/): a chat thread under the recent activity in the project summary's right
+   column, and a compact one on each team's page. Theme tokens only (styles/base.css), so Default, Dark
+   and Terminal all follow; Terminal squares the corners itself (styles/theme-terminal.css). */
+
+/* In the summary: the story and the console take two rows, the activity and the chatter share the
+   last column; on a laptop-narrow window both go full width under them, and on a phone everything stacks. */
+.sm:has(> .tc) { grid-template-rows: auto 1fr; }
+.sm:has(> .tc) > .sm-main, .sm:has(> .tc) > .pmc { grid-row: span 2; }
+.sm > .tc { grid-column: -2 / -1; border-left: 3px solid var(--line); border-top: 3px solid var(--line); }
+@media (max-width: 1180px) {
+  .sm:has(> .pmc):has(> .tc) { grid-template-rows: none; }
+  .sm:has(> .pmc) > .sm-main, .sm:has(> .pmc) > .pmc { grid-row: auto; }
+  .sm:has(> .pmc) > .tc { grid-column: 1 / -1; border-left: 0; }
+}
+@media (max-width: 820px) {
+  .sm:has(> .tc) { grid-template-rows: none; }
+  .sm:has(> .tc) > .sm-main, .sm:has(> .tc) > .pmc { grid-row: auto; }
+  .sm > .tc { grid-column: 1 / -1; border-left: 0; }
+}
+
+.tc { display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 0; padding: 10px 12px 12px; background: var(--paper); }
+.tc-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.tc-title { margin: 0; }
+.tc-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.tc-f { padding: 1px 8px; border: 2px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink-2); font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.tc-f[aria-pressed='true'] { background: var(--ink); color: var(--on-ink); }
+.tc-f:focus-visible, .tc-person:focus-visible, .tc-bubble:focus-visible, .tc-pill:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.tc-person { max-width: 150px; padding: 1px 4px; border: 2px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-size: 11px; font-weight: 700; }
+
+.tc-scroll { position: relative; max-height: 520px; overflow-y: auto; overflow-anchor: none; padding-right: 2px; }
+.tc-pillbar { position: sticky; top: 0; z-index: 1; height: 0; display: flex; justify-content: center; }
+.tc-pill { position: relative; top: 2px; height: max-content; padding: 2px 10px; border: 2px solid var(--line); border-radius: 999px; background: var(--accent); color: var(--on-fill); font: inherit; font-size: 11px; font-weight: 900; cursor: pointer; box-shadow: 0 2px 0 var(--edge); }
+.tc-pill[hidden], .tc-more[hidden], .tc-empty[hidden] { display: none; }
+.tc-more { display: block; margin: 6px auto 0; }
+.tc-dim { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); }
+
+.tc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tc-msg { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px; align-items: start; font-size: 12px; }
+.tc-who { margin: 0; }
+.tc-face { display: inline-grid; place-items: center; overflow: hidden; border: 2px solid var(--line); border-radius: 10px; background: var(--card); line-height: 1; }
+.tc-face canvas { display: block; image-rendering: pixelated; }
+.tc-human { font-size: 18px; background: var(--warn-soft); border-color: var(--warn); box-shadow: 0 0 0 2px var(--warn-soft); }
+.tc-office { font-size: 16px; background: var(--neutral-soft); }
+.tc-jeff { background: var(--purple-soft); }
+.tc-reviewer { align-items: start; background: #2a1d16; }
+.tc-reviewer canvas { flex: none; }
+
+.tc-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tc-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; min-width: 0; }
+.tc-name { font-size: 12px; font-weight: 900; }
+.tc-role { font-size: 10px; font-weight: 800; color: var(--muted); }
+.tc-badge { padding: 0 5px; border: 1px solid var(--warn); border-radius: 999px; background: var(--warn-soft); color: var(--warn-ink); font-size: 9px; font-weight: 900; letter-spacing: .05em; }
+.tc-to { padding: 0 6px; border: 1px solid var(--rule-strong); border-radius: 999px; background: var(--card); color: var(--ink-2); font-size: 10px; font-weight: 800; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.tc-to-pm { border-color: var(--warn); background: var(--warn-soft); color: var(--warn-ink); }
+.tc-kind { font-size: 12px; cursor: help; }
+.tc-time { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+
+/* The speech bubble, with its tail towards the speaker. */
+.tc-bubble { position: relative; margin: 0; padding: 6px 9px; border: 2px solid var(--line); border-radius: 4px 12px 12px 12px; background: var(--card); color: var(--ink); font: inherit; font-size: 12px; font-weight: 600; line-height: 1.4; text-align: left; overflow-wrap: anywhere; box-shadow: 0 2px 0 var(--edge); }
+button.tc-bubble { cursor: pointer; width: 100%; }
+button.tc-bubble:hover { background: var(--paper-2); }
+.tc-text { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+.tc-by-human .tc-bubble { background: var(--warn-soft); }
+.tc-by-office .tc-bubble { background: var(--card-dim); color: var(--ink-2); font-style: italic; }
+.tc-by-jeff .tc-bubble { background: var(--purple-soft); }
+.tc-k-escalation .tc-bubble { border-left: 4px solid var(--bad); }
+.tc-k-answer .tc-bubble { border-left: 4px solid var(--good); }
+
+/* A message that just came in, on top: a short fade in, unless motion is turned down. */
+@media (prefers-reduced-motion: no-preference) {
+  .tc-fresh { animation: tc-in .35s ease-out; }
+  @keyframes tc-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .tc-pill { transition: transform .15s; }
+  .tc-pill:hover { transform: translateY(-1px); }
+}
+
+/* On a team's page: smaller faces, no role, a few lines. */
+.tc-compact { gap: 6px; }
+.tc-compact .tc-msg { font-size: 11px; }
+.tc-compact .tc-face { border-radius: 8px; }
+.tc-compact .tc-bubble { padding: 4px 7px; font-size: 11px; }
+.tc-compact .tc-text { -webkit-line-clamp: 3; }
+
+.tc-doc-win { width: min(720px, calc(100vw - 32px)); }
+.tc-doc { max-height: 70vh; overflow-y: auto; }
+
+@media (max-width: 480px) {
+  .tc { padding: 8px 10px 10px; }
+  .tc-scroll { max-height: 60vh; }
+  .tc-person { max-width: 120px; }
+}
