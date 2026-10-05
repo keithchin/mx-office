@@ -1,27 +1,19 @@
 @import './lite.css';
 
-/* The 2D view (pixel.html): the office from above, filling the window under a slim navy bar. It
-   borrows the 1D view's bar, windows and phone rules (lite.css), and doesn't scroll. */
+/* The 2D view (pixel.html): the office from above, filling the window under a slim bar. It borrows the
+   1D view's bar, windows, phone rules (lite.css) and color theme (ui/colortheme.ts), and doesn't scroll. */
 html, body { height: 100%; overflow: hidden; }
-body.pixel { display: flex; flex-direction: column; background: #0d1828; }
-body.pixel .lite-bar { position: relative; padding: 8px 14px; background: #13213a; border-bottom: 2px solid #2b4066; color: #fff; }
+body.pixel { display: flex; flex-direction: column; background: var(--px-void); }
+body.pixel .lite-bar { position: relative; padding: 8px 14px; background: var(--px-panel); border-bottom: 2px solid var(--line); color: var(--px-text); }
 body.pixel .lite-bar .btn { height: 40px; }
 body.pixel .lite-floor { flex: 0 1 auto; max-width: 320px; }
-body.pixel .lite-floor-label { color: #8fa3bf; }
-body.pixel .lite-floor select {
-  color: #fff;
-  background: no-repeat right 2px center / 12px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-body.pixel .lite-floor select:disabled { background-image: none; }
-body.pixel .lite-floor select option { color: var(--ink); }
-/* The views stay at the bar's right end, over the stage's edge, even on a phone where the summary is hidden. */
-body.pixel .lite-views { margin-left: auto; }
-body.pixel .lite-views .btn.on { background: #17b3a3; border-color: #17b3a3; color: #0d1828; }
+/* The view dropdown, the 🎨 and the ☰ stay at the bar's right end, even on a phone where the summary is hidden. */
+body.pixel .lite-bar > .vp { margin-left: auto; }
 /* What the floor's up to, in a line (ui/summary.ts), over its branch and repository. */
 .px-meta-box { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.px-summary { margin: 0; font-size: 13px; font-weight: 800; color: #e6eef8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.px-summary { margin: 0; font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .px-summary:empty { display: none; }
-.px-meta { min-width: 0; margin: 0; font-size: 12px; font-weight: 700; color: #8fa3bf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.px-meta { min-width: 0; margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 900px) { .px-meta-box { display: none; } }
 
 .px-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
@@ -31,22 +23,22 @@ body.pixel .lite-views .btn.on { background: #17b3a3; border-color: #17b3a3; col
 /* Who's under the pointer: name, how it's doing, what it's on and what it runs. */
 .px-tip {
   position: absolute; z-index: 5; max-width: 300px; padding: 8px 11px; pointer-events: none;
-  background: #13213a; color: #fff; border: 1px solid #2b4066; border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+  background: var(--px-panel); color: var(--px-text); border: 1px solid var(--px-panel-hi); border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
   font-size: 12px; font-weight: 600; line-height: 1.4;
 }
 .px-tip b { display: block; font-size: 14px; font-weight: 900; }
 .px-tip .pill { margin-left: 6px; vertical-align: 1px; font-size: 10px; }
-.px-tip .px-task { color: #fff; font-weight: 800; }
-.px-tip .px-dim { color: #8fa3bf; }
-.px-tip .px-hint { margin-top: 4px; color: #5fd9cb; }
+.px-tip .px-task { color: var(--px-text); font-weight: 800; }
+.px-tip .px-dim { color: var(--px-dim); }
+.px-tip .px-hint { margin-top: 4px; color: var(--link); }
 /* A worker's role and team, edged in the team's colour (pixel/teams.ts). */
-.px-tip .px-role { margin: 2px 0 3px; padding-left: 7px; border-left: 3px solid var(--team, #2b4066); color: #e6eef8; font-weight: 800; }
+.px-tip .px-role { margin: 2px 0 3px; padding-left: 7px; border-left: 3px solid var(--team, var(--px-panel-hi)); color: var(--px-text); font-weight: 800; }
 
 .px-elsewhere { position: absolute; top: 10px; right: 10px; z-index: 4; display: flex; flex-direction: column; gap: 6px; max-width: 280px; }
 .px-elsewhere .lite-go { min-height: 36px; font-size: 13px; }
-.px-foot { flex: none; display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; padding: 6px 14px; padding-bottom: max(6px, env(safe-area-inset-bottom)); background: #13213a; border-top: 2px solid #2b4066; color: #c9d4e3; font-size: 12px; font-weight: 700; }
-.px-count { color: #fff; }
-.px-count .warn { color: #f2b33d; }
+.px-foot { flex: none; display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; padding: 6px 14px; padding-bottom: max(6px, env(safe-area-inset-bottom)); background: var(--px-panel); border-top: 2px solid var(--line); color: var(--ink-2); font-size: 12px; font-weight: 700; }
+.px-count { color: var(--ink); }
+.px-count .warn { color: var(--warn-ink); }
 .px-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-left: auto; }
 @media (max-width: 640px) { .px-legend { display: none; } }
 .px-legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; }

@@ -1,8 +1,9 @@
-// The 1D view's color themes: Default (the office's own light look), Dark, and Terminal (a green
-// phosphor screen). The 🎨 in the top bar steps through them, and this browser remembers the pick.
+// The flat views' color themes: Default (the office's own light look), Dark, and Terminal (a green
+// phosphor screen). The 🎨 in the 1D and 2D top bars steps through them, and this browser remembers
+// the pick for both: a change in one tab reaches the other views open in other tabs too.
 // A theme is <html data-theme="…">: the colors are tokens in styles/base.css, the other themes' values
-// are in styles/themes.css, and Terminal's shapes in styles/theme-terminal.css. lite.html sets the
-// attribute in a line of script before anything is drawn, so a dark page never flashes white first;
+// are in styles/themes.css, and Terminal's shapes in styles/theme-terminal.css. lite.html and pixel.html set
+// the attribute in a line of script before anything is drawn, so a dark page never flashes white first;
 // this module keeps it, the 🎨 and the browser's bar color in step after that.
 
 import '../styles/themes.css';
@@ -12,7 +13,7 @@ import { toast } from './dom';
 export const COLOR_THEMES = ['default', 'dark', 'terminal'] as const;
 export type ColorTheme = (typeof COLOR_THEMES)[number];
 
-/** Where the pick is kept. lite.html's early script reads the same key. */
+/** Where the pick is kept. lite.html's and pixel.html's early scripts read the same key. */
 const KEY = 'agent-office.color-theme';
 const LABEL: Record<ColorTheme, string> = { default: 'Default', dark: 'Dark', terminal: 'Terminal' };
 /** The browser's own bar (on a phone) in each theme's top-bar color. */
@@ -49,9 +50,10 @@ export function applyTheme(t: ColorTheme, remember = false) {
 
 /**
  * Wires the 🎨 button to step through the themes, and starts the Terminal theme's typing of the
- * project summary's story in `summary` (the element ui/summary.ts draws into).
+ * project summary's story in `summary` (the element ui/summary.ts draws into), if the page has one.
+ * `onChange` hears every change, picked here or in another tab (the 2D view repaints its office).
  */
-export function colorThemes(button: HTMLElement, summary: HTMLElement) {
+export function colorThemes(button: HTMLElement, summary?: HTMLElement, onChange?: (t: ColorTheme) => void) {
   applyTheme(savedTheme());
   const label = () => {
     const t = currentTheme();
@@ -64,9 +66,19 @@ export function colorThemes(button: HTMLElement, summary: HTMLElement) {
     const t = COLOR_THEMES[(COLOR_THEMES.indexOf(currentTheme()) + 1) % COLOR_THEMES.length];
     applyTheme(t, true);
     label();
+    onChange?.(t);
     toast(`🎨 ${LABEL[t]} theme`);
   });
-  typeStories(summary);
+  // Picked in another tab (the other flat view, say): this one follows.
+  addEventListener('storage', (e) => {
+    if (e.key !== KEY && e.key !== null) return;
+    const t = savedTheme();
+    if (t === currentTheme()) return;
+    applyTheme(t);
+    label();
+    onChange?.(t);
+  });
+  if (summary) typeStories(summary);
 }
 
 /**

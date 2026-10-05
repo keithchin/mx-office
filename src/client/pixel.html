@@ -3,10 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0d1828" />
+    <meta name="theme-color" content="#fff1de" />
     <title>Agent Office</title>
     <link rel="icon" href="/favicon.svg" />
     <link rel="stylesheet" href="./pixel.css" />
+    <!-- The color theme picked on this browser, the 1D view's (ui/colortheme.ts), set before the page is drawn so it never flashes the wrong one. -->
+    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(t!=="default"&&t!=="dark"&&t!=="terminal")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"default";document.documentElement.dataset.theme=t}catch(e){}</script>
   </head>
   <body class="lite pixel">
     <!-- The 2D view (pixel.ts): the floor from above in pixel art, every worker at its desk. -->
@@ -20,14 +22,10 @@
         <p id="px-summary" class="px-summary"></p>
         <p id="floor-meta" class="px-meta"></p>
       </div>
-      <nav class="lite-views" aria-label="View">
-        <button id="to-1d" class="btn" type="button" title="The 1D view: the floor's board and its workers"><span class="ico">🗂️</span> 1D</button>
-        <button class="btn on" type="button" aria-current="page" title="The 2D view: the floor from above in pixel art">
-          <span class="ico">🗺️</span> 2D
-        </button>
-        <a id="to-3d" class="btn" href="/?3d=1&amp;view=3d" title="The 3D office, where you walk around"><span class="ico">🏢</span> 3D</a>
-        <a id="to-retro" class="btn" href="/?3d=1&amp;view=retro" title="The office in chunky 16-bit pixels, where you walk around"><span class="ico">👾</span> Retro</a>
-      </nav>
+      <!-- The view dropdown (ui/viewpick.ts), the 🎨 (the 1D view's theme, ui/colortheme.ts) and the ☰ (shared/flatmenu.ts). -->
+      <div id="view-pick"></div>
+      <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
+      <button id="menu" class="btn lite-menu" type="button" title="Menu: everything the 3D office's ☰ has" aria-label="Menu">☰</button>
     </header>
     <main id="stage" class="px-stage">
       <canvas id="office" aria-label="The office from above: click someone for their terminal, or a free desk to give someone new work there"></canvas>

@@ -4,8 +4,8 @@
    module in ui/ and comes in with it. */
 
 /* The color tokens. Every sheet the 1D view loads names its colors with these rather than a hex, so a
-   theme only has to change them here. These values are the Default look (the 3D office's HUD and the
-   2D view use them too, and never change them); the 1D view's Dark and Terminal themes set other values
+   theme only has to change them here. These values are the Default look (the 3D office's HUD uses them too
+   and never changes them); the flat views' (1D and 2D) Dark and Terminal themes set other values
    in styles/themes.css, under <html data-theme="…">. A new module picks the token whose meaning fits:
    a card is var(--card) on var(--paper), with var(--line) round it and var(--edge) under it. */
 :root {

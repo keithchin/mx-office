@@ -12,7 +12,7 @@ import { $, clip, closeAllModals, h, STATUS_LABEL, timeAgo, toast } from './ui/d
 import { openBoard } from './ui/boards';
 import { issuePrompt, type BoardActions } from './ui/github/prompts';
 import { openIssue } from './ui/github/issue-window';
-import { renderBoard, type KanbanActions } from './ui/kanban';
+import { cards, renderBoard, type KanbanActions } from './ui/kanban';
 import { renderAnalysis } from './ui/analysis';
 import { cachedSetup, renderSetup } from './ui/setup-panel';
 import { renderSummary } from './ui/summary';
@@ -27,7 +27,7 @@ import { openMeeting, type MeetingPreset } from './ui/meeting';
 import { modelBadge, providerLabel } from './ui/provider';
 import { byUrgency, waitingInOrder, waitingLabel } from './nextup';
 import { waitingOnSomeone } from './notify';
-import { rememberView, switchView } from './graphics';
+import { rememberView } from './graphics';
 // The tab title counts the workers waiting on someone, on every floor, as the 3D office's does.
 import { renderTitle } from './shared/title';
 import { flatSession } from './shared/session';
@@ -37,6 +37,11 @@ import { askedTab, followFloor, leaveForHome, setAddress } from './shared/addres
 import { colorThemes } from './ui/colortheme';
 import { needsYouStrip } from './ui/needsyou';
 import type { NeedTarget } from './ui/needsyou/logic';
+import { viewPicker } from './ui/viewpick';
+import { flatMenu } from './shared/flatmenu';
+import { tabBadges } from './ui/badge';
+import { newStandup, teamAttention } from './ui/chrome-logic';
+import { currentRoster, onRoster } from './ui/teams/world';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -49,6 +54,8 @@ if (new URLSearchParams(location.search).get('why') === 'webgl') {
 rememberView('1d');
 // The 🎨 in the top bar: the Default, Dark or Terminal look (ui/colortheme.ts).
 colorThemes($('theme'), $('summary'));
+// The view dropdown in the top bar (ui/viewpick.ts).
+$('view-pick').replaceWith(viewPicker('1d'));
 
 const session = flatSession('/lite', (id) => openWorker(id), (m) => {
   routePreviewMessage(m);
@@ -306,7 +313,18 @@ $('btn-issues').addEventListener('click', () => openBoard('issues', net, boardAc
 $('btn-pulls').addEventListener('click', () => openBoard('pulls', net, boardActions()));
 $('btn-queue').addEventListener('click', () => openQueue(net, { openTerminal: openWorker }));
 $('btn-new').addEventListener('click', () => sendToWorker('✨ New task'));
-$('to-2d').addEventListener('click', () => switchView('2d'));
+// The ☰: everything the 3D office's menu has (shared/flatmenu.ts).
+flatMenu($('menu'), {
+  net,
+  boardActions,
+  openWorker,
+  meeting: () => showMeeting(),
+  nextWaiting: () => {
+    const w = waitingInOrder(store.workers.values())[0];
+    if (w) openWorker(w.id);
+    else toast('Nobody is waiting on you ✨');
+  },
+});
 
 function renderNav() {
   const count = (id: string, n: number) => ($(id).querySelector('.n')!.textContent = n ? String(n) : '');
@@ -317,6 +335,40 @@ function renderNav() {
 store.on('issues', renderNav);
 store.on('pulls', renderNav);
 store.on('queue', renderNav);
+
+// ---- Badges on the tabs: what needs you on each, whichever tab is showing (ui/badge.ts) -----------
+// The Command Center's and Approvals' counts are their own (needsYouStrip, teamTab); a tab adds one with badges.add.
+const STANDUP_SEEN = 'agent-office.standup-seen';
+const latestStandup = () => currentRoster()?.standups[0]?.id;
+const seenStandup = () => {
+  try {
+    return localStorage.getItem(`${STANDUP_SEEN}.${store.floor}`);
+  } catch {
+    return null;
+  }
+};
+/** On the Standup tab, the newest standup is read. */
+function sawStandup() {
+  const id = latestStandup();
+  if (tab !== 'standup' || !id || id === seenStandup()) return;
+  try {
+    localStorage.setItem(`${STANDUP_SEEN}.${store.floor}`, id);
+  } catch {
+    // Not remembered: the dot comes back next visit.
+  }
+}
+const badges = tabBadges();
+badges.add($('tab-board'), () => cards(kanban).filter((c) => c.column === 'human').length, 'Cards that need a human');
+badges.add($('tab-workers'), () => waitingInOrder(store.workers.values()).length, 'Workers waiting on someone');
+badges.add($('tab-standup'), () => (sawStandup(), newStandup(latestStandup(), seenStandup()) && 'dot'), 'A new standup');
+badges.add($('tab-live'), () => live.current()?.status === 'failed' && '!', "The live app failed: it isn't running");
+badges.add($('tab-teams'), () => teamAttention(currentRoster()), 'Approvals and escalations from the teams');
+for (const k of ['workers', 'issues', 'pulls', 'queue', 'project', 'floor'] as const) store.on(k, () => badges.refresh());
+onRoster(() => badges.refresh());
+net.onMessage((msg) => {
+  if (msg.t === 'liveapp.state' || msg.t === 'welcome' || msg.t === 'floor.enter') badges.refresh();
+});
+for (const t of ['tab-standup', 'tab-live', 'tab-teams'] as const) $(t).addEventListener('click', () => badges.refresh());
 
 // ---- In ----------------------------------------------------------------------------------------
 session.bellBefore($('to-home'));

@@ -19,11 +19,10 @@ import { openQueue } from './ui/queue';
 import { openMeeting } from './ui/meeting';
 import { openPull } from './ui/pull';
 import { openServices } from './ui/services';
-import { openBookshelf } from './ui/bookshelf';
-import { openWhiteboard, routeWhiteboardMessage } from './ui/whiteboard';
+import { openWhiteboard } from './ui/whiteboard';
 import type { BoardActions } from './ui/github/prompts';
 import { summaryLine } from './ui/summary';
-import { rememberView, switchView } from './graphics';
+import { rememberView } from './graphics';
 import { waitingInOrder } from './nextup';
 import { flatSession } from './shared/session';
 import { workerActions } from './shared/workers';
@@ -41,15 +40,26 @@ import { zoneBoxes } from './pixel/zones';
 import { dressFor, leadOf, memberOf, onRoster, refreshRoster, setRoster, tagFor, zoneOf } from './pixel/teams';
 import { ZONE_BY_TEAM, ZONES } from '../shared/zones';
 import type { MemberView } from '../shared/roster/types';
+import { tintScene } from './pixel/tint';
+import { colorThemes, currentTheme } from './ui/colortheme';
+import { viewPicker } from './ui/viewpick';
+import { flatMenu, openDocs } from './shared/flatmenu';
+import { tabBadge } from './ui/badge';
 import './pixel/game.css';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
 // Here, the office opens on the 2D view next time too (see graphics.ts).
 rememberView('2d');
+// The 1D view's color theme here too (ui/colortheme.ts): the bars and windows in its colors, the office tinted to match.
+colorThemes($('theme'), undefined, () => {
+  voidColor = '';
+  draw(performance.now());
+});
+// The view dropdown in the top bar (ui/viewpick.ts).
+$('view-pick').replaceWith(viewPicker('2d'));
 
 const session = flatSession('/pixel', (id) => workers.open(id), (msg) => {
-  routeWhiteboardMessage(msg, net);
   // The floor's team changed (hired, benched, renamed): its Leads' outfits, tags and signposts with it.
   if (msg.t === 'roster.changed' && msg.floor === store.floor) void refreshRoster(store.floor);
 });
@@ -60,7 +70,6 @@ floorPicker(net);
 // The address follows the floor (?floor=), for bookmarks and links that open it straight away.
 followFloor();
 const stage = $('stage');
-$('to-1d').addEventListener('click', () => switchView('1d'));
 
 // ---- What the office's things open ---------------------------------------------------------------------
 function boardActions(): BoardActions {
@@ -86,11 +95,6 @@ function showMeeting() {
     },
   });
 }
-const githubUrl = (remote?: string) => {
-  const m = remote?.match(/github\.com[:/]([^/]+\/[^/.]+)/);
-  return m ? `https://github.com/${m[1]}` : undefined;
-};
-let pageSound = false;
 
 /** How a Lead stands, in a few words, for its zone's signpost. */
 const MEMBER_STATUS: Record<MemberView['status'], string> = { 'not-hired': 'not hired', working: 'working', 'needs-you': 'needs you', idle: 'idle', asleep: 'asleep', benching: 'writing handoff', benched: 'benched' };
@@ -116,10 +120,7 @@ const spots = (f: Frame) =>
     meeting: showMeeting,
     floors: () => location.assign('/home'),
     services: () => openServices(),
-    docs: () => {
-      if (!store.floor) return;
-      openBookshelf({ floor: store.floor, project: store.project?.name, repoUrl: githubUrl(store.project?.remote), onTurn: () => {}, pageSound, onPageSound: (on) => (pageSound = on) });
-    },
+    docs: openDocs,
     station: (kind, deskId) => workers.askStation(kind, deskId),
     hired: (deskId) => !!store.workerAtDesk(deskId),
     counts: () => ({
@@ -160,6 +161,8 @@ let signs: DeskSign[] = [];
 let people: People = { spots: [], labels: [] };
 let hover: Spot | Hotspot | null = null;
 let dpr = 1;
+/** Round the office, the theme's (--px-void in game.css), read again when the theme changes. */
+let voidColor = '';
 
 function rebuild() {
   frame = frameFor(store.floorPlan.wing);
@@ -190,9 +193,11 @@ function draw(now: number) {
   const peers = [...store.peers.values()].filter((p) => p.id !== store.you && !p.lite && store.onMyFloor(p));
   const hoverId = hover && 'kind' in hover && hover.kind !== 'desk' ? hover.id : null;
   people = drawPeople(ag, frame, { workers: store.workers.values(), peers, level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs, dress: dressFor, tag: tagFor }, now);
+  tintScene(ag, frame, currentTheme());
 
   g.imageSmoothingEnabled = false;
-  g.fillStyle = '#0d1828';
+  voidColor ||= getComputedStyle(document.body).getPropertyValue('--px-void').trim() || '#0d1828';
+  g.fillStyle = voidColor;
   g.fillRect(0, 0, canvas.width, canvas.height);
   const s = cam.scale * dpr;
   // Between whole steps (fitted to the window), it's blown up a whole number of times past the size
@@ -261,7 +266,10 @@ function renderCount() {
   const working = count('working', 'starting'), done = count('done'), asleep = count('exited', 'offline'), waiting = count('needs_input');
   const parts = [`${list.length} worker${list.length === 1 ? '' : 's'}`, working && `${working} working`, done && `${done} done`, asleep && `${asleep} asleep`].filter(Boolean);
   $('px-count').replaceChildren(parts.join(' · '), waiting ? h('span.warn', {}, ` · 🙋 ${waiting} need${waiting === 1 ? 's' : ''} you`) : '');
-  ($('px-next') as HTMLButtonElement).disabled = !waitingInOrder(list).length;
+  const next = waitingInOrder(list).length;
+  ($('px-next') as HTMLButtonElement).disabled = !next;
+  // The same red count as the 1D view's Workers tab (ui/badge.ts).
+  tabBadge($('px-next'), next, 'Workers waiting on someone');
   renderTitle();
 }
 store.on('workers', renderCount);
@@ -403,6 +411,9 @@ addEventListener('keydown', (e) => {
   run();
   draw(performance.now());
 });
+
+// The ☰: everything the 3D office's menu has (shared/flatmenu.ts).
+flatMenu($('menu'), { net, boardActions, openWorker: workers.open, meeting: showMeeting, nextWaiting, nKey: true });
 
 // ---- In ----------------------------------------------------------------------------------------
 session.bellBefore($('to-home'));

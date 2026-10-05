@@ -45,6 +45,105 @@ const PANEL_EL: Record<HudPanel, string> = { workers: 'workers-panel', people: '
 
 const PIN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2h1v5a3 3 0 0 1-3 3v2h5.97v7l1 1 1-1v-7H19v-2a3 3 0 0 1-3-3z"/></svg>';
 
+export const labelOf = (a: HudAction) => (typeof a.label === 'string' ? a.label : a.label());
+export const iconOf = (a: HudAction) => (typeof a.icon === 'string' ? a.icon : a.icon());
+export const keyOf = (a: HudAction) => (typeof a.key === 'function' ? a.key() : a.key);
+const classOf = (a: HudAction, blocked?: string) => [a.on?.() && 'on', a.tone?.(), blocked && 'dim'].filter(Boolean).join(' ');
+const svcCount = (n: number | undefined) => (n ? h('span.svc-count', {}, String(n)) : null);
+
+/**
+ * An action's row in a ☰ menu: its icon, its words, its count (`badge` draws it, the 3D menu's
+ * .svc-count unless told otherwise) and its key. Clicking it runs it after `close`.
+ */
+export function menuItem(a: HudAction, close: () => void, badge: (n: number | undefined) => Node | null = svcCount): HTMLButtonElement {
+  const blocked = a.blocked?.();
+  return h(
+    'button.menu-item',
+    {
+      type: 'button',
+      role: 'menuitem',
+      class: classOf(a, blocked),
+      title: blocked ?? a.title?.(),
+      onclick: () => {
+        close();
+        a.run();
+      },
+    },
+    h('span.mi-icon', {}, iconOf(a)),
+    h('span.mi-label', {}, labelOf(a)),
+    badge(a.count?.()),
+    keyOf(a) ? h('kbd.mi-key', {}, keyOf(a)!) : null,
+  );
+}
+
+/**
+ * Opens `el` (a .hud-menu) as a dropdown hanging under `anchor`: arrows walk its rows, → reaches a
+ * row's pin, and Tab or a click anywhere else closes it like Esc. `onClose` hears it closing.
+ */
+export function openDropdown(anchor: HTMLElement, el: HTMLElement, onClose: () => void): Modal {
+  // On the window, so the keys work wherever focus is while the menu is up.
+  const onKey = (e: KeyboardEvent) => menuKey(el, e, () => modal.close());
+  const modal = openModal(el, {
+    // A dropdown under its button, which closes it again, like a click anywhere else.
+    closeButton: false,
+    onClose: () => {
+      anchor.setAttribute('aria-expanded', 'false');
+      window.removeEventListener('keydown', onKey, true);
+      onClose();
+    },
+  });
+  window.addEventListener('keydown', onKey, true);
+  modal.backdrop.classList.add('menu-backdrop');
+  anchor.setAttribute('aria-expanded', 'true');
+  // Hangs under the button.
+  const r = anchor.getBoundingClientRect();
+  el.style.top = `${r.bottom + 8}px`;
+  el.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+  el.style.maxHeight = `${window.innerHeight - r.bottom - 20}px`;
+  el.querySelector<HTMLElement>('.menu-item')?.focus();
+  return modal;
+}
+
+/** Arrows walk the menu, → reaches a row's pin, and Tab closes it like Esc. */
+function menuKey(el: HTMLElement, e: KeyboardEvent, close: () => void) {
+  const items = [...el.querySelectorAll<HTMLElement>('.menu-item')];
+  const at = document.activeElement as HTMLElement | null;
+  const onPin = !!at?.classList.contains('menu-pin');
+  const i = items.indexOf((onPin ? at!.previousElementSibling : at) as HTMLElement);
+  let next: Element | null | undefined;
+  switch (e.key) {
+    case 'ArrowDown':
+      next = items[(i + 1) % items.length];
+      break;
+    case 'ArrowUp':
+      next = items[(i < 0 ? items.length : i) - 1] ?? items[items.length - 1];
+      break;
+    case 'Home':
+      next = items[0];
+      break;
+    case 'End':
+      next = items[items.length - 1];
+      break;
+    case 'ArrowRight':
+      next = onPin ? null : at?.nextElementSibling;
+      break;
+    case 'ArrowLeft':
+      next = onPin ? at?.previousElementSibling : null;
+      break;
+    case 'Tab':
+      // Not on to the office's own Tab, which would open it again, or past the menu to what's behind it.
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+      return;
+    default:
+      return;
+  }
+  e.preventDefault();
+  e.stopPropagation();
+  if (next instanceof HTMLElement) next.focus();
+}
+
 /** The ✕ in a panel's heading, which hides it until you turn it back on from the ☰ menu. */
 export function panelHide(id: HudPanel): HTMLElement {
   return h('button.panel-x', { type: 'button', 'data-hud': id, 'aria-label': 'Hide', title: 'Hide (☰ brings it back)' }, '✕');
@@ -62,10 +161,6 @@ export interface Hud {
  */
 export function mountHud(actions: HudAction[], settings: Settings, save: () => void): Hud {
   const dock = $('dock');
-  const labelOf = (a: HudAction) => (typeof a.label === 'string' ? a.label : a.label());
-  const iconOf = (a: HudAction) => (typeof a.icon === 'string' ? a.icon : a.icon());
-  const keyOf = (a: HudAction) => (typeof a.key === 'function' ? a.key() : a.key);
-  const classOf = (a: HudAction, blocked?: string) => [a.on?.() && 'on', a.tone?.(), blocked && 'dim'].filter(Boolean).join(' ');
   const offered = (a: HudAction) => a.shown?.() ?? true;
   const pinned = (a: HudAction) => settings.pins.includes(a.id);
   let menu: Modal | null = null;
@@ -90,8 +185,6 @@ export function mountHud(actions: HudAction[], settings: Settings, save: () => v
     render();
   }
 
-  const badge = (n: number | undefined) => (n ? h('span.svc-count', {}, String(n)) : null);
-
   /** An action up on the top bar. */
   function dockButton(a: HudAction): HTMLElement {
     const chip = pinned(a) ? '' : a.chip?.();
@@ -108,7 +201,7 @@ export function mountHud(actions: HudAction[], settings: Settings, save: () => v
       },
       iconOf(a),
       chip ? h('span.lbl', {}, chip) : null,
-      badge(a.count?.()),
+      svcCount(a.count?.()),
     );
   }
 
@@ -148,24 +241,7 @@ export function mountHud(actions: HudAction[], settings: Settings, save: () => v
 
   function openMenu() {
     const row = (a: HudAction) => {
-      const blocked = a.blocked?.();
-      const item = h(
-        'button.menu-item',
-        {
-          type: 'button',
-          role: 'menuitem',
-          class: classOf(a, blocked),
-          title: blocked ?? a.title?.(),
-          onclick: () => {
-            menu?.close();
-            a.run();
-          },
-        },
-        h('span.mi-icon', {}, iconOf(a)),
-        h('span.mi-label', {}, labelOf(a)),
-        badge(a.count?.()),
-        keyOf(a) ? h('kbd.mi-key', {}, keyOf(a)!) : null,
-      );
+      const item = menuItem(a, () => menu?.close());
       const pin = h('button.menu-pin', { type: 'button' });
       pin.innerHTML = PIN_SVG;
       const paintPin = () => {
@@ -205,66 +281,7 @@ export function mountHud(actions: HudAction[], settings: Settings, save: () => v
       h('div.menu-col', {}, ...section('Show on screen', PANELS.map(toggle)), ...section('Office', rows('Office'))),
       h('p.menu-foot', {}, 'Pin what you use most to keep it on the top bar. ', h('kbd', {}, 'Tab'), ' opens and closes this menu.'),
     );
-    // On the window, so the keys work wherever focus is while the menu is up.
-    const onKey = (e: KeyboardEvent) => menuKey(el, e);
-    menu = openModal(el, {
-      // A dropdown under ☰, which closes it again, like a click anywhere else.
-      closeButton: false,
-      onClose: () => {
-        menu = null;
-        menuBtn.setAttribute('aria-expanded', 'false');
-        window.removeEventListener('keydown', onKey, true);
-      },
-    });
-    window.addEventListener('keydown', onKey, true);
-    menu.backdrop.classList.add('menu-backdrop');
-    menuBtn.setAttribute('aria-expanded', 'true');
-    // Hangs under the ☰ button.
-    const r = menuBtn.getBoundingClientRect();
-    el.style.top = `${r.bottom + 8}px`;
-    el.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
-    el.style.maxHeight = `${window.innerHeight - r.bottom - 20}px`;
-    el.querySelector<HTMLElement>('.menu-item')?.focus();
-  }
-
-  /** Arrows walk the menu, → reaches a row's pin, and Tab closes it like Esc. */
-  function menuKey(el: HTMLElement, e: KeyboardEvent) {
-    const items = [...el.querySelectorAll<HTMLElement>('.menu-item')];
-    const at = document.activeElement as HTMLElement | null;
-    const onPin = !!at?.classList.contains('menu-pin');
-    const i = items.indexOf((onPin ? at!.previousElementSibling : at) as HTMLElement);
-    let next: Element | null | undefined;
-    switch (e.key) {
-      case 'ArrowDown':
-        next = items[(i + 1) % items.length];
-        break;
-      case 'ArrowUp':
-        next = items[(i < 0 ? items.length : i) - 1] ?? items[items.length - 1];
-        break;
-      case 'Home':
-        next = items[0];
-        break;
-      case 'End':
-        next = items[items.length - 1];
-        break;
-      case 'ArrowRight':
-        next = onPin ? null : at?.nextElementSibling;
-        break;
-      case 'ArrowLeft':
-        next = onPin ? at?.previousElementSibling : null;
-        break;
-      case 'Tab':
-        // Not on to the office's own Tab, which would open it again, or past the menu to what's behind it.
-        e.preventDefault();
-        e.stopPropagation();
-        menu?.close();
-        return;
-      default:
-        return;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-    if (next instanceof HTMLElement) next.focus();
+    menu = openDropdown(menuBtn, el, () => (menu = null));
   }
 
   // A panel's ✕, before the panel's own click (the limits panel reads them again on a click).
