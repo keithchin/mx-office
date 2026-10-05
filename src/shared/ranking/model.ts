@@ -93,6 +93,8 @@ export interface TeamFacts {
   /** The decision register (PROJECT.md ## Decisions) and the toolkit's gate verdicts. */
   decisions?: { confirmed: number; assumed: number; other: number };
   gates?: { pass: number; total: number };
+  /** Its Lead's reviews of its subagents' runs (roster/subagent-store.ts): minutes from a run ending to its review, and the verdicts. */
+  reviews?: { turnaroundMin: number[]; accepted: number; reworked: number; failed: number; unreviewed: number };
 }
 
 export const clamp100 = (n: number) => Math.max(0, Math.min(100, n));

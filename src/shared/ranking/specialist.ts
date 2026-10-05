@@ -82,10 +82,31 @@ function floorKind(f: WorkerFacts, kind: RunRecord['types'][number], what: strin
 
 const NOT_TRACKED = (what: string) => `The office doesn't record ${what} yet`;
 
+/** How soon its subagents' finished runs were reviewed (office-workers subagent review): the median, within 15 min is best. */
+function reviewTurnaround(f: WorkerFacts): Measure | undefined {
+  const t = f.team?.reviews?.turnaroundMin ?? [];
+  if (!t.length) return undefined;
+  const m = median(t) ?? 0;
+  return { score: promptness(m, 15), evidence: [`Median ${Math.round(m)} min from a subagent finishing to its review, over ${plural(t.length, 'review')}`], n: t.length };
+}
+
+/** Every finished subagent run reviewed, and rework sent back before it reached a PR. */
+function reviewQuality(f: WorkerFacts): Measure | undefined {
+  const r = f.team?.reviews;
+  const reviewed = r ? r.accepted + r.reworked : 0;
+  if (!r || !(reviewed + r.unreviewed)) return undefined;
+  const coverage = reviewed / (reviewed + r.unreviewed);
+  return {
+    score: coverage * 100,
+    evidence: [`Reviewed ${reviewed} of ${plural(reviewed + r.unreviewed, 'finished subagent run')}`, `${plural(r.reworked, 'rework', 'reworks')} caught in review${r.failed ? `, ${plural(r.failed, 'failed run')}` : ''}`],
+    n: reviewed + r.unreviewed,
+  };
+}
+
 /** Every Lead's common criteria, then its role's own. */
 const LEAD_COMMON: SpecialistDef[] = [
-  { key: 'review-turnaround', label: 'Review turnaround', weight: 0.15, measure: () => NOT_TRACKED('how long a Lead takes to review its subagents’ work') },
-  { key: 'review-quality', label: 'Review quality', weight: 0.15, measure: () => NOT_TRACKED('rework caught in review before a PR') },
+  { key: 'review-turnaround', label: 'Review turnaround', weight: 0.15, measure: (f) => reviewTurnaround(f) ?? NOT_TRACKED('a review of its subagents’ work') },
+  { key: 'review-quality', label: 'Review quality', weight: 0.15, measure: (f) => reviewQuality(f) ?? NOT_TRACKED('a review of its subagents’ work') },
   { key: 'escalation-precision', label: 'Escalation precision', weight: 0.2, measure: escalationPrecision },
   { key: 'throughput', label: 'Team throughput', weight: 0.2, measure: teamThroughput },
   { key: 'journal', label: 'Journal & handoffs', weight: 0.15, measure: journalQuality },

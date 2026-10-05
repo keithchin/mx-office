@@ -13,6 +13,7 @@ import { ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import type { RankRole, TeamFacts, WorkerFacts } from '../../shared/ranking/model.js';
 import type { JournalEntry } from '../../shared/roster/journal.js';
 import type { RosterData } from '../roster/store.js';
+import { subagentReviews } from '../roster/subagent-store.js';
 import type { ProjectFacts } from '../summary/project.js';
 
 /** A floor as the ranking needs it: open ones have everything, ones known only from old runs just a name. */
@@ -182,6 +183,7 @@ export function gatherFacts(floors: FloorInput[], runs: RunRecord[]): WorkerFact
         journal: floor.journal ? journalFacts(floor.journal(role, live.get(f.workerIds[f.workerIds.length - 1]))) : undefined,
         teamPrs: teamPrs(floor.pulls, role),
         floorRuns,
+        ...(roster?.subagents ? { reviews: reviewFacts(roster, floor.id, role) } : {}),
         ...registerFacts(floor.project),
       };
     }
@@ -195,4 +197,17 @@ export function gatherFacts(floors: FloorInput[], runs: RunRecord[]): WorkerFact
     if (full) f.modelLabel = full;
   }
   return [...out.values()];
+}
+
+/** Its Lead's reviews of its subagents' runs, as the ranking reads them (TeamFacts.reviews). */
+function reviewFacts(roster: RosterData, floor: string, role: RoleId): NonNullable<TeamFacts['reviews']> {
+  const rows = subagentReviews(roster, floor, role);
+  return {
+    turnaroundMin: rows.filter((r) => r.turnaroundMs !== undefined).map((r) => r.turnaroundMs! / 60_000),
+    accepted: rows.filter((r) => r.verdict === 'accept').length,
+    reworked: rows.filter((r) => r.verdict === 'rework').length,
+    failed: rows.filter((r) => r.verdict === 'failed').length,
+    // Finished runs still waiting for a verdict (the reader leaves them out).
+    unreviewed: Object.values(roster.subagents).filter((rec) => rec.lead === role).reduce((n, rec) => n + rec.runs.filter((r) => r.outcome === 'pending' && r.endedAt !== undefined).length, 0),
+  };
 }
