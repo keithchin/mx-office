@@ -59,7 +59,7 @@ const sendToWorker = workers.send;
 const live = liveAppView(net, () => showTab('live'), () => tab === 'live' && !home.shown);
 // The project manager console in the middle of the project summary (ui/pm/console.ts): its live
 // terminal only while the board is on screen.
-const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'board' && !home.shown });
+const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'command' && !home.shown });
 
 // ---- The floor you're on, and the floors page --------------------------------------------------
 floorPicker(net);
@@ -185,15 +185,16 @@ const teams = subBoards(
   () => renderKanban(),
 );
 net.onMessage((msg) => teams.route(msg));
-const TAB_KEY = 'agent-office.lite-tab';
-type Tab = 'board' | 'workers' | 'analysis' | 'live' | 'team' | 'teams';
-const isTab = (t: unknown): t is Tab => t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'team' || t === 'teams';
-let tab: Tab = 'board';
+// A new key since the Command Center became the first tab, so everyone starts there once rather than on the board they last had.
+const TAB_KEY = 'agent-office.lite-tab2';
+type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'team' | 'teams';
+const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'team' || t === 'teams';
+let tab: Tab = 'command';
 try {
   const saved = localStorage.getItem(TAB_KEY);
   if (isTab(saved)) tab = saved;
 } catch {
-  // No storage: the board, as usual.
+  // No storage: the Command Center, as usual.
 }
 // A link that names the tab (?tab=team) opens on it, whatever this browser had last.
 if (isTab(askedTab)) tab = askedTab;
@@ -209,6 +210,7 @@ function showTab(t: Tab) {
   teams.address(t);
   $('tab-teams').classList.toggle('on', t === 'teams');
   $('teams-view').classList.toggle('hidden', t !== 'teams');
+  $('tab-command').classList.toggle('on', t === 'command');
   $('tab-board').classList.toggle('on', t === 'board');
   $('tab-workers').classList.toggle('on', t === 'workers');
   $('tab-analysis').classList.toggle('on', t === 'analysis');
@@ -217,8 +219,8 @@ function showTab(t: Tab) {
   if (t === 'live') live.render($('liveapp-view'));
   $('tab-team').classList.toggle('on', t === 'team');
   $('board').classList.toggle('hidden', t !== 'board');
-  $('summary').classList.toggle('hidden', t !== 'board');
-  $('setup').classList.toggle('hidden', t !== 'board');
+  $('summary').classList.toggle('hidden', t !== 'command');
+  $('setup').classList.toggle('hidden', t !== 'command');
   $('workers-view').classList.toggle('hidden', t !== 'workers');
   $('analysis-view').classList.toggle('hidden', t !== 'analysis');
   $('team-view').classList.toggle('hidden', t !== 'team');
@@ -227,14 +229,19 @@ function showTab(t: Tab) {
   renderKanban();
   renderAnalysisTab();
   team.render(store.floor ?? undefined);
-  // Off the Board tab, the PM console lets go of its terminal.
+  // Off the Command Center, the PM console lets go of its terminal.
   pm.sync();
 }
-/** The board and the project summary over it, unless the floors page is over them (they're drawn when that goes); or a team's page. */
+/**
+ * Whatever the tab shows that follows the floor's work: the Command Center (the setup panel and the
+ * project summary with the PM console in it), the board (just the kanban), or a team's page. Not while the
+ * floors page is over them: they're drawn when it goes.
+ */
 function renderKanban() {
-  if (tab === 'teams' && !home.shown) return teams.renderPage($('teams-view'));
-  if (tab !== 'board' || home.shown) return;
-  renderBoard($('board'), kanban, teams.boardView(renderKanban));
+  if (home.shown) return;
+  if (tab === 'teams') return teams.renderPage($('teams-view'));
+  if (tab === 'board') return renderBoard($('board'), kanban, teams.boardView(renderKanban));
+  if (tab !== 'command') return;
   void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el }).then(() => live.mountChip($('summary')));
   void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) });
 }
@@ -242,6 +249,7 @@ function renderKanban() {
 function renderAnalysisTab() {
   if (tab === 'analysis' && !home.shown) void renderAnalysis($('analysis-view'), store.floor ?? undefined);
 }
+$('tab-command').addEventListener('click', () => showTab('command'));
 $('tab-board').addEventListener('click', () => showTab('board'));
 $('tab-workers').addEventListener('click', () => showTab('workers'));
 $('tab-analysis').addEventListener('click', () => showTab('analysis'));
