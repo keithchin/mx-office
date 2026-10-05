@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Office: App Factory Guide</title>
+<meta name="description" content="A visual guide to the AI Taskforce Labs Agent Office: what it is, floors, roles, how work flows and how to use it.">
+<style>
+  :root {
+    --bg: #f6f7fb; --paper: #ffffff; --ink: #0b1630; --ink-2: #33415c; --muted: #6b7690;
+    --line: #dde2ee; --navy: #000028; --teal: #00a3a3; --teal-soft: #e0f5f4; --accent: #ff7a45;
+    --good: #2bb673; --warn: #f2a516; --bad: #e5484d; --code: #eef1f7; --shadow: 0 1px 2px rgba(11,22,48,.06), 0 8px 24px rgba(11,22,48,.06);
+    --d1: #2f6fde; --d2: #8a5cf6; --d3: #00a3a3; --d4: #f2a516; --d5: #e5484d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1020; --paper: #121a2e; --ink: #e8ecf6; --ink-2: #c3cbe0; --muted: #8d97b3; --line: #26314d;
+      --teal-soft: #0f2e33; --code: #1a2440; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1020; --paper: #121a2e; --ink: #e8ecf6; --ink-2: #c3cbe0; --muted: #8d97b3; --line: #26314d;
+    --teal-soft: #0f2e33; --code: #1a2440; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  a { color: var(--teal); text-decoration: none; } a:hover { text-decoration: underline; }
+  code { background: var(--code); padding: 1px 6px; border-radius: 6px; font: 0.88em/1.4 "Cascadia Mono", Consolas, monospace; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+  /* top nav */
+  header.nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  header.nav .wrap { display: flex; align-items: center; gap: 18px; height: 56px; overflow-x: auto; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; white-space: nowrap; color: var(--ink); }
+  .brand .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--navy); display: grid; place-items: center; }
+  header.nav nav { display: flex; gap: 14px; font-size: 14px; white-space: nowrap; }
+  header.nav nav a { color: var(--ink-2); font-weight: 600; }
+  .theme-btn { margin-left: auto; border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 8px; padding: 4px 10px; cursor: pointer; font: inherit; font-size: 13px; }
+
+  /* hero */
+  .hero { background: radial-gradient(1200px 400px at 80% -20%, rgba(0,163,163,.35), transparent), linear-gradient(160deg, #000028 0%, #06204a 60%, #00374a 100%); color: #fff; padding: 64px 0 56px; }
+  .hero h1 { font-size: clamp(30px, 5vw, 48px); line-height: 1.1; margin: 0 0 14px; letter-spacing: -0.02em; }
+  .hero p.lead { font-size: clamp(16px, 2.2vw, 20px); color: #cfe7ef; max-width: 760px; margin: 0 0 24px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #e8f6f8; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+  .hero .shot { margin-top: 36px; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.15); }
+  .hero .shot img { display: block; width: 100%; height: auto; }
+
+  section { padding: 56px 0 8px; }
+  h2 { font-size: clamp(24px, 3.4vw, 32px); margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 .num { color: var(--teal); margin-right: 8px; }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 760px; }
+  h3 { font-size: 19px; margin: 28px 0 10px; }
+
+  .grid { display: grid; gap: 16px; }
+  .g2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 16px; box-shadow: var(--shadow); }
+  .card h4 { margin: 0 0 6px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .card p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+  .ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 18px; background: var(--teal-soft); flex: none; }
+
+  .diagram { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 12px; box-shadow: var(--shadow); overflow-x: auto; }
+  .diagram svg { display: block; width: 100%; height: auto; min-width: 680px; }
+  .diagram svg text { font-family: "Segoe UI", system-ui, sans-serif; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--code); font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); }
+  tr:last-child td { border-bottom: 0; }
+  .tablewrap { overflow-x: auto; }
+
+  .level { display: inline-block; min-width: 26px; text-align: center; border-radius: 6px; color: #fff; font-weight: 800; font-size: 13px; padding: 1px 6px; margin-right: 6px; }
+  .l1 { background: var(--d5); } .l2 { background: var(--d1); } .l3 { background: var(--d2); } .l4 { background: var(--teal); }
+
+  .steps { counter-reset: s; display: grid; gap: 12px; }
+  .step { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
+  .step::before { counter-increment: s; content: counter(s); width: 32px; height: 32px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; font-weight: 800; }
+  .step b { display: block; margin-bottom: 2px; }
+  .step span { color: var(--ink-2); font-size: 14.5px; }
+
+  figure { margin: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+  figure img { display: block; width: 100%; height: auto; cursor: zoom-in; }
+  figcaption { padding: 10px 14px; font-size: 14px; color: var(--ink-2); border-top: 1px solid var(--line); }
+  figcaption b { color: var(--ink); }
+
+  .callout { border-left: 4px solid var(--teal); background: var(--teal-soft); padding: 12px 16px; border-radius: 0 10px 10px 0; color: var(--ink); margin: 16px 0; font-size: 15px; }
+  .callout.warn { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--paper)); }
+
+  footer { margin-top: 64px; padding: 28px 0 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+
+  /* lightbox */
+  #lb { position: fixed; inset: 0; background: rgba(0,0,20,.85); display: none; place-items: center; z-index: 50; padding: 24px; cursor: zoom-out; }
+  #lb.open { display: grid; }
+  #lb img { max-width: 100%; max-height: 100%; border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+
+  @media (max-width: 640px) {
+    section { padding-top: 40px; }
+    .hero { padding: 40px 0; }
+    th, td { padding: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="logo"><svg width="18" height="18" viewBox="0 0 16 16"><rect x="3" y="4" width="10" height="9" rx="3" fill="#00c1b6"/><rect x="4.5" y="6" width="7" height="4" rx="1.2" fill="#0c0e2e"/><rect x="6" y="7" width="1.4" height="1.4" fill="#fff"/><rect x="8.6" y="7" width="1.4" height="1.4" fill="#fff"/><rect x="7.6" y="1.5" width="0.8" height="2.5" fill="#00ffb9"/></svg></span>Agent Office</a>
+    <nav>
+      <a href="#what">What it is</a><a href="#concepts">Floors</a><a href="#roles">Roles</a><a href="#flow">Workflow</a><a href="#use">Using it</a><a href="#mendix">Mendix</a><a href="#run">Running</a><a href="#help">Help</a>
+    </nav>
+    <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle light or dark">◐ Theme</button>
+  </div>
+</header>
+
+<div class="hero" id="top">
+  <div class="wrap">
+    <h1>Agent Office<br><span style="color:#5ee0d4">the AI Taskforce Labs App Factory</span></h1>
+    <p class="lead">A shared office where <b>teams of AI agents build Mendix apps</b>, and you run them as their <b>Project Manager</b>. You see every project from above, approve what matters, and watch the app being built, live.</p>
+    <div class="chips">
+      <span class="chip">🏢 Projects = floors</span><span class="chip">🧭 A team per project</span><span class="chip">🛠️ Mendix via mxcli</span>
+      <span class="chip">✅ CI on every PR</span><span class="chip">🌐 Live app</span><span class="chip">🎛️ Command Center</span>
+    </div>
+    <div class="shot"><img src="docs/readme/command-center.png" alt="The Command Center of a project: project details, the Project Coordinator console with escalation cards, and recent activity"></div>
+  </div>
+</div>
+
+<main class="wrap">
+
+<section id="what">
+  <h2><span class="num">1</span>What it is</h2>
+  <p class="sub">A web app (a server on this laptop, your browser as the screen) where Claude Code agents sit at desks and work on GitHub repositories. The DI SW SEA AI Taskforce built on the open-source <a href="https://github.com/AgentSystemLabs/agent-office">Agent Office</a> (MIT) to make it an App Factory for Mendix: a <b>digital twin of a hybrid software team</b>.</p>
+  <div class="grid g3">
+    <div class="card"><h4><span class="ico">🏢</span>Every project is a floor</h4><p>One GitHub repo per Mendix app in the AI-Taskforce-Labs org, each with its own board, team, queue and live app.</p></div>
+    <div class="card"><h4><span class="ico">🧭</span>A team per project</h4><p>A Project Coordinator plus four Leads (Design, Development, Testing, Analysis), each running its own subagents.</p></div>
+    <div class="card"><h4><span class="ico">🛠️</span>Real Mendix apps</h4><p>Agents change the model with Mendix Labs' <b>mxcli</b> and follow the <b>mxcli-project-toolkit</b> from discovery to cutover.</p></div>
+    <div class="card"><h4><span class="ico">👤</span>You are the Project Manager</h4><p>Approve proposals, merges and milestones; answer escalations. The autonomy level decides how often agents need you.</p></div>
+    <div class="card"><h4><span class="ico">✅</span>Quality gates built in</h4><p>Every PR gets Studio Pro's consistency check, lint, a best-practice score, unit and Playwright UI tests, plus screenshots.</p></div>
+    <div class="card"><h4><span class="ico">🌐</span>See it live</h4><p>The project's app runs from <code>main</code> on the laptop and restarts itself whenever a PR merges.</p></div>
+  </div>
+
+  <h3>How the pieces fit</h3>
+  <div class="diagram" role="img" aria-label="Architecture: you in the browser talk to the Agent Office server on this laptop; it runs a team of agents per floor; agents work on GitHub repos with mxcli; CI checks pull requests; the live app runs from main.">
+    <svg viewBox="0 0 1000 420">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <g style="color: var(--muted)" stroke="currentColor" stroke-width="2" fill="none" marker-end="url(#ar)">
+        <path d="M170 210 H250"/><path d="M590 120 H690"/><path d="M590 210 H690"/><path d="M590 300 H690"/><path d="M800 150 V180"/><path d="M800 240 V270"/>
+      </g>
+      <!-- you -->
+      <rect x="20" y="150" width="150" height="120" rx="14" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+      <text x="95" y="190" text-anchor="middle" font-size="30">👤</text>
+      <text x="95" y="222" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">You</text>
+      <text x="95" y="242" text-anchor="middle" font-size="12.5" fill="var(--muted)">Project Manager</text>
+      <text x="95" y="258" text-anchor="middle" font-size="12.5" fill="var(--muted)">in the browser</text>
+      <!-- office -->
+      <rect x="250" y="30" width="340" height="360" rx="18" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="2"/>
+      <text x="420" y="62" text-anchor="middle" font-size="16" font-weight="800" fill="var(--ink)">Agent Office server · :4600</text>
+      <g font-size="13">
+        <rect x="275" y="80" width="290" height="88" rx="12" fill="var(--paper)" stroke="var(--line)"/>
+        <text x="290" y="104" font-weight="700" fill="var(--ink)">🏢 Floor: travel-approval</text>
+        <text x="290" y="126" fill="var(--ink-2)">🧭 Coordinator · 🎨 🛠️ 🧪 📈 Leads</text>
+        <text x="290" y="148" fill="var(--muted)">board · queue · live app · settings</text>
+        <rect x="275" y="180" width="290" height="88" rx="12" fill="var(--paper)" stroke="var(--line)"/>
+        <text x="290" y="204" font-weight="700" fill="var(--ink)">🏢 Floor: mx-spike (SEA AI Hub)</text>
+        <text x="290" y="226" fill="var(--ink-2)">🧭 Coordinator · 🎨 🛠️ 🧪 📈 Leads</text>
+        <text x="290" y="248" fill="var(--muted)">board · queue · live app · settings</text>
+        <rect x="275" y="280" width="290" height="88" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-dasharray="6 5"/>
+        <text x="290" y="306" font-weight="700" fill="var(--ink)">✨ New project</text>
+        <text x="290" y="328" fill="var(--ink-2)">wizard → repo → toolkit setup</text>
+        <text x="290" y="350" fill="var(--muted)">→ a new floor</text>
+      </g>
+      <!-- right side -->
+      <g font-size="13">
+        <rect x="690" y="90" width="220" height="60" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+        <text x="800" y="116" text-anchor="middle" font-weight="700" fill="var(--ink)">GitHub · AI-Taskforce-Labs</text>
+        <text x="800" y="136" text-anchor="middle" fill="var(--muted)">repos · issues · PRs</text>
+        <rect x="690" y="180" width="220" height="60" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+        <text x="800" y="206" text-anchor="middle" font-weight="700" fill="var(--ink)">CI on every PR</text>
+        <text x="800" y="226" text-anchor="middle" fill="var(--muted)">mx check · lint · tests · scorecard</text>
+        <rect x="690" y="270" width="220" height="60" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+        <text x="800" y="296" text-anchor="middle" font-weight="700" fill="var(--ink)">🌐 Live app</text>
+        <text x="800" y="316" text-anchor="middle" fill="var(--muted)">mxcli run · ports 8110–8199</text>
+      </g>
+      <text x="640" y="112" font-size="11.5" fill="var(--muted)" text-anchor="middle">push / PR</text>
+      <text x="640" y="202" font-size="11.5" fill="var(--muted)" text-anchor="middle">scorecard</text>
+      <text x="640" y="292" font-size="11.5" fill="var(--muted)" text-anchor="middle">runs main</text>
+      <text x="210" y="200" font-size="11.5" fill="var(--muted)" text-anchor="middle">1D/2D/3D</text>
+    </svg>
+  </div>
+</section>
+
+<section id="concepts">
+  <h2><span class="num">2</span>Floors, agents and views</h2>
+  <p class="sub">The building is the whole office; each floor is a project; each agent sits at a desk on a floor.</p>
+  <div class="tablewrap"><table>
+    <tr><th style="width:180px">Idea</th><th>What it means</th></tr>
+    <tr><td><b>Building / office</b></td><td>One server at <code>http://127.0.0.1:4600</code>, one password, all projects.</td></tr>
+    <tr><td><b>Floor = project</b></td><td>One GitHub repo in AI-Taskforce-Labs, cloned here. Today: <code>mx-spike</code> (the SEA AI Hub) and <code>travel-approval</code>.</td></tr>
+    <tr><td><b>Worker / agent</b></td><td>A Claude Code session at a desk, usually in its own git <b>worktree</b> (its own copy and branch). Name, model (Haiku 4.5 · Sonnet 5.5 · Opus 5.5 · Fable 5.1), status and cost.</td></tr>
+    <tr><td><b>Board</b></td><td>The project's Kanban: Backlog → Queued → In progress → Needs a human → In review → Done, every card tagged with its team.</td></tr>
+    <tr><td><b>Views</b></td><td><b>1D</b> (boards and tabs, the default), <b>2D</b> (pixel-art office with team zones), <b>3D</b> (walk around), <b>Retro</b> (chunky-pixel 3D).</td></tr>
+    <tr><td><b>Home</b></td><td><code>/home</code>: every project as a card, ✨ New project, ➕ Add project, and 📊 Statistics across all projects.</td></tr>
+  </table></div>
+  <div class="grid g2" style="margin-top:20px">
+    <figure><img src="docs/readme/home-projects.png" alt="Home page with project cards"><figcaption><b>Home · Projects</b>: one card per floor; go to its board or its office.</figcaption></figure>
+    <figure><img src="docs/readme/home-stats.png" alt="Home page statistics"><figcaption><b>Home · Statistics</b>: totals, projects side by side, model ranking.</figcaption></figure>
+  </div>
+</section>
+
+<section id="roles">
+  <h2><span class="num">3</span>The team and its roles</h2>
+  <p class="sub">Every project has the same structure. Leads are visible agents with fixed (renameable) names; their team members are Claude Code subagents inside the Lead's session.</p>
+  <div class="diagram" role="img" aria-label="Org chart: the Project Manager (you) over the Project Coordinator, over four Leads with their subagent teams.">
+    <svg viewBox="0 0 1000 360">
+      <g stroke="var(--line)" stroke-width="2" fill="none">
+        <path d="M500 86 V112"/><path d="M500 162 V190 M125 190 H875 M125 190 V214 M375 190 V214 M625 190 V214 M875 190 V214"/>
+      </g>
+      <rect x="380" y="20" width="240" height="66" rx="14" fill="var(--navy)"/>
+      <text x="500" y="48" text-anchor="middle" font-size="16" font-weight="800" fill="#fff">👤 Project Manager (you)</text>
+      <text x="500" y="70" text-anchor="middle" font-size="12.5" fill="#bfe9ec">approves · answers escalations · sets autonomy</text>
+      <rect x="380" y="112" width="240" height="50" rx="12" fill="var(--paper)" stroke="var(--teal)" stroke-width="2"/>
+      <text x="500" y="135" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">🧭 Project Coordinator</text>
+      <text x="500" y="153" text-anchor="middle" font-size="12" fill="var(--muted)">plan · standup · relays to you</text>
+      <g font-size="14">
+        <rect x="20" y="214" width="210" height="120" rx="12" fill="var(--paper)" stroke="var(--d2)" stroke-width="2"/>
+        <text x="125" y="240" text-anchor="middle" font-weight="700" fill="var(--ink)">🎨 Lead Designer</text>
+        <text x="125" y="262" text-anchor="middle" font-size="12" fill="var(--ink-2)">approves design changes</text>
+        <text x="125" y="300" text-anchor="middle" font-size="12" fill="var(--muted)">subagents:</text>
+        <text x="125" y="318" text-anchor="middle" font-size="12.5" fill="var(--ink)">UI/UX Designers</text>
+        <rect x="270" y="214" width="210" height="120" rx="12" fill="var(--paper)" stroke="var(--d1)" stroke-width="2"/>
+        <text x="375" y="240" text-anchor="middle" font-weight="700" fill="var(--ink)">🛠️ Lead Developer</text>
+        <text x="375" y="262" text-anchor="middle" font-size="12" fill="var(--ink-2)">all programming · only writer</text>
+        <text x="375" y="280" text-anchor="middle" font-size="12" fill="var(--ink-2)">of the Mendix model</text>
+        <text x="375" y="300" text-anchor="middle" font-size="12" fill="var(--muted)">subagents:</text>
+        <text x="375" y="318" text-anchor="middle" font-size="12.5" fill="var(--ink)">Developers</text>
+        <rect x="520" y="214" width="210" height="120" rx="12" fill="var(--paper)" stroke="var(--d3)" stroke-width="2"/>
+        <text x="625" y="240" text-anchor="middle" font-weight="700" fill="var(--ink)">🧪 Lead Tester</text>
+        <text x="625" y="262" text-anchor="middle" font-size="12" fill="var(--ink-2)">approves testing · minimal bugs</text>
+        <text x="625" y="300" text-anchor="middle" font-size="12" fill="var(--muted)">subagents:</text>
+        <text x="625" y="318" text-anchor="middle" font-size="12.5" fill="var(--ink)">Testers</text>
+        <rect x="770" y="214" width="210" height="120" rx="12" fill="var(--paper)" stroke="var(--d4)" stroke-width="2"/>
+        <text x="875" y="240" text-anchor="middle" font-weight="700" fill="var(--ink)">📈 Chief Analyst</text>
+        <text x="875" y="262" text-anchor="middle" font-size="12" fill="var(--ink-2)">requirements · analysis · R&amp;D</text>
+        <text x="875" y="300" text-anchor="middle" font-size="12" fill="var(--muted)">subagents:</text>
+        <text x="875" y="318" text-anchor="middle" font-size="12.5" fill="var(--ink)">Business &amp; Data Analysts</text>
+      </g>
+    </svg>
+  </div>
+
+  <h3>The rules every role follows</h3>
+  <div class="grid g2">
+    <div class="card"><h4><span class="ico">✍️</span>One writer per Mendix app</h4><p>Only the Lead Developer applies changes to the <code>.mpr</code>. Everyone else drafts, checks (<code>mxcli check</code>) and reviews.</p></div>
+    <div class="card"><h4><span class="ico">🔁</span>The review loop</h4><p>When a subagent finishes, its Lead reviews the result, logs a <i>Review</i> in the team journal, then continues, sends it back, or escalates. The office nudges any Lead that stops right after.</p></div>
+    <div class="card"><h4><span class="ico">📓</span>Team journals</h4><p>Dated entries in <code>docs/team/&lt;team&gt;.md</code>: kickoffs, reviews, handoffs, proposals. The standup is built from them.</p></div>
+    <div class="card"><h4><span class="ico">🪑</span>Benching</h4><p>After 30 idle minutes an agent writes a handoff note and its lessons, then its session is cleared. Re-hiring starts fresh from the Playbook plus that note.</p></div>
+  </div>
+
+  <h3>Autonomy: how often agents need you</h3>
+  <div class="tablewrap"><table>
+    <tr><th style="width:190px">Level</th><th>Leads escalate to you…</th></tr>
+    <tr><td><span class="level l1">1</span><b>Directive</b></td><td>every outcome that changes scope, design or plan, and before every next step</td></tr>
+    <tr><td><span class="level l2">2</span><b>Guided</b> <small style="color:var(--muted)">(default)</small></td><td>design, architecture or scope changes; work failing review twice; anything blocking</td></tr>
+    <tr><td><span class="level l3">3</span><b>Delegated</b></td><td>milestone issues, repeated failures, budget risk</td></tr>
+    <tr><td><span class="level l4">4</span><b>Autonomous</b></td><td>only critical: security, data loss, client-facing milestones, budget overrun, blocked with no way forward</td></tr>
+  </table></div>
+  <div class="callout">Whatever the level, <b>you have the final say</b>, and critical issues always reach you. An optional daily cost cap pauses hiring on a floor once it's spent.</div>
+  <div class="grid g3" style="margin-top:8px">
+    <figure><img src="docs/readme/org-chart.png" alt="Org chart tab"><figcaption><b>🏢 Org chart</b>: hire (with model dropdown), wake, bench, rename.</figcaption></figure>
+    <figure><img src="docs/readme/standup.png" alt="Standup tab"><figcaption><b>📋 Standup</b>: Leads report; approve, reject or change each proposal.</figcaption></figure>
+    <figure><img src="docs/readme/approvals.png" alt="Approvals tab"><figcaption><b>✅ Approvals</b>: proposals and escalations waiting for you.</figcaption></figure>
+  </div>
+</section>
+
+<section id="flow">
+  <h2><span class="num">4</span>How work flows</h2>
+  <p class="sub">From a GitHub issue to a merged change running in the live app.</p>
+  <div class="diagram" role="img" aria-label="Workflow: issue to backlog, to queued or in progress, agent works in its worktree with mxcli, opens a pull request, CI posts a scorecard, merge, live app restarts. Needs-a-human branch for questions and escalations.">
+    <svg viewBox="0 0 1000 250">
+      <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--teal)"/></marker></defs>
+      <g stroke="var(--teal)" stroke-width="2.5" fill="none" marker-end="url(#ar2)">
+        <path d="M130 70 H162"/><path d="M290 70 H322"/><path d="M450 70 H482"/><path d="M610 70 H642"/><path d="M770 70 H802"/>
+        <path d="M546 104 V150"/>
+      </g>
+      <g font-size="13.5" text-anchor="middle">
+        <rect x="10" y="36" width="120" height="68" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><text x="70" y="64" font-weight="700" fill="var(--ink)">📌 Issue</text><text x="70" y="84" font-size="12" fill="var(--muted)">team-tagged</text>
+        <rect x="165" y="36" width="125" height="68" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><text x="227" y="64" font-weight="700" fill="var(--ink)">📋 Queued /</text><text x="227" y="84" font-size="12" fill="var(--muted)">🤖 In progress</text>
+        <rect x="325" y="36" width="125" height="68" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><text x="387" y="64" font-weight="700" fill="var(--ink)">Agent works</text><text x="387" y="84" font-size="12" fill="var(--muted)">worktree · mxcli</text>
+        <rect x="485" y="36" width="125" height="68" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><text x="547" y="64" font-weight="700" fill="var(--ink)">🔀 Pull request</text><text x="547" y="84" font-size="12" fill="var(--muted)">CI scorecard</text>
+        <rect x="645" y="36" width="125" height="68" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><text x="707" y="64" font-weight="700" fill="var(--ink)">✅ Merge</text><text x="707" y="84" font-size="12" fill="var(--muted)">you or the Lead</text>
+        <rect x="805" y="36" width="180" height="68" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="2"/><text x="895" y="64" font-weight="700" fill="var(--ink)">🌐 Live app</text><text x="895" y="84" font-size="12" fill="var(--muted)">restarts on new main</text>
+        <rect x="380" y="150" width="335" height="74" rx="12" fill="var(--paper)" stroke="var(--bad)" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="547" y="178" font-weight="700" fill="var(--ink)">🙋 Needs a human</text>
+        <text x="547" y="200" font-size="12" fill="var(--muted)">questions · permissions · escalations → Command Center</text>
+      </g>
+    </svg>
+  </div>
+  <div class="steps" style="margin-top:18px">
+    <div class="step"><div><b>Work is a GitHub issue</b><span>It lands in Backlog with a team tag (<code>team:design</code>, <code>team:development</code>, …).</span></div></div>
+    <div class="step"><div><b>Start it</b><span>Drag it to In progress (the hire window opens: pick the model) or to Queued (the next free agent takes it). Leads also pick up their team's work.</span></div></div>
+    <div class="step"><div><b>The agent builds it</b><span>In its own worktree: MDL through mxcli, checks, tests, then a pull request.</span></div></div>
+    <div class="step"><div><b>CI checks it</b><span>A scorecard on the PR: consistency check, lint, score, unit tests, UI tests and screenshots, visible when you hover the PR card.</span></div></div>
+    <div class="step"><div><b>Merge, then see it live</b><span>The 🌐 Live app updates to the new <code>main</code> within about a minute.</span></div></div>
+  </div>
+</section>
+
+<section id="use">
+  <h2><span class="num">5</span>Using it day to day</h2>
+  <h3>Start a project</h3>
+  <p><b>🏠 Home → ✨ New project</b>: project details → entry mode (Greenfield, Requirements-driven, Change an existing app, Migration, Assurance) → the toolkit's intake questions → client and team → <b>Review &amp; create</b>, which creates the repo, adds the floor, runs the toolkit setup and can open a Discovery issue. New projects show a <b>Project setup</b> panel (stages P–4) until the build plan is approved.</p>
+  <div class="grid g2">
+    <figure><img src="docs/readme/wizard.png" alt="New project wizard, entry mode step"><figcaption><b>New project wizard</b>: entry modes explained in plain language.</figcaption></figure>
+    <figure><img src="docs/readme/setup-panel.png" alt="Project setup panel"><figcaption><b>Project setup panel</b>: toolkit stages with pass / fail / pending.</figcaption></figure>
+  </div>
+
+  <h3>Inside a project</h3>
+  <div class="tablewrap"><table>
+    <tr><th style="width:190px">Tab</th><th>What it's for</th></tr>
+    <tr><td><b>🎛️ Command Center</b> <small style="color:var(--muted)">default</small></td><td>Project details and "What's happening" · the <b>Project Coordinator console</b> (live terminal, prompt box, quick chips, <b>escalation cards</b> with Reply / Approve / Reject) · recent activity.</td></tr>
+    <tr><td><b>🗂 Board</b></td><td>Just the Kanban, with team filter chips and hover previews (live terminals for agents, scorecard and screenshots for PRs).</td></tr>
+    <tr><td><b>🤖 Workers</b></td><td>Every agent on the floor, the ones waiting on you first.</td></tr>
+    <tr><td><b>📊 Analysis</b></td><td>Which model does well on which kind of task, with cost, time and quality.</td></tr>
+    <tr><td><b>🌐 Live app</b></td><td>The Mendix app running from <code>main</code>, embedded; Start / Restart / Stop (admin).</td></tr>
+    <tr><td><b>🏢 Org chart · 📋 Standup · ✅ Approvals · ⚙️ Settings</b></td><td>The team, its standup, what needs you, and its settings (autonomy, benching, standup time, review nudge, cost cap).</td></tr>
+    <tr><td><b>🧩 Team boards</b></td><td>A page per team: its own board, Lead, journal and team panels (Testing: CI scorecards; Development: PRs and live app; Analysis: BRD, insight memos, model ranking).</td></tr>
+  </table></div>
+  <div class="grid g2" style="margin-top:20px">
+    <figure><img src="docs/readme/board.png" alt="Board with team tags and filters"><figcaption><b>🗂 Board</b>: team tags, filter chips, counts per team under each column.</figcaption></figure>
+    <figure><img src="docs/readme/team-board-terminal.png" alt="Testing team board in the Terminal theme"><figcaption><b>🧩 Team board</b> (Testing) in the <b>Terminal</b> theme.</figcaption></figure>
+    <figure><img src="docs/readme/live-app.png" alt="Live app tab with the running Mendix app"><figcaption><b>🌐 Live app</b>: the real Mendix app the agents built, running from <code>main</code>.</figcaption></figure>
+    <figure><img src="docs/readme/pr-checks.png" alt="PR preview with CI scorecard and screenshots"><figcaption><b>PR preview</b>: CI scorecard and Playwright screenshots on hover.</figcaption></figure>
+  </div>
+
+  <h3>The 2D office and themes</h3>
+  <div class="grid g2">
+    <figure><img src="docs/readme/office-2d.png" alt="2D pixel-art office with team zones"><figcaption><b>2D view</b>: team zones (Dev bay, Design studio, QA lab, Analyst corner, Coordinator office). Click an agent for its terminal, right-click for its menu, <b>N</b> = next waiting, <b>T</b> = chat.</figcaption></figure>
+    <figure><img src="docs/readme/office-2d-zone.png" alt="Zoomed Dev bay"><figcaption><b>Zoomed in</b>: role outfits, shadows, lamp light.</figcaption></figure>
+    <figure><img src="docs/readme/theme-dark.png" alt="Dark theme"><figcaption><b>🎨 Dark</b> theme.</figcaption></figure>
+    <figure><img src="docs/readme/theme-terminal.png" alt="Terminal theme"><figcaption><b>🎨 Terminal</b> theme: black and phosphor green.</figcaption></figure>
+  </div>
+  <div class="callout"><b>Tip:</b> the address says where you are, e.g. <code>/lite?floor=travel-approval&amp;tab=standup</code> or <code>&amp;tab=teams&amp;team=testing</code>. Bookmark it, or send it to a teammate.</div>
+</section>
+
+<section id="mendix">
+  <h2><span class="num">6</span>Building Mendix apps</h2>
+  <p class="sub">The App Factory's stack: mxcli to change the model, the toolkit for the process, Playbooks for lessons, CI for quality.</p>
+  <div class="diagram" role="img" aria-label="Toolkit stages P to 7, with hard gates at 0, 3, 4 and 7.">
+    <svg viewBox="0 0 1000 150">
+      <g font-size="13" text-anchor="middle">
+        <g>
+          <rect x="10" y="40" width="108" height="64" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><text x="64" y="66" font-weight="800" fill="var(--teal)">P</text><text x="64" y="86" fill="var(--ink)">Kickoff</text>
+          <rect x="132" y="40" width="108" height="64" rx="12" fill="var(--paper)" stroke="var(--accent)" stroke-width="2.5"/><text x="186" y="66" font-weight="800" fill="var(--teal)">0 ✋</text><text x="186" y="86" fill="var(--ink)">Triage &amp; scope</text>
+          <rect x="254" y="40" width="108" height="64" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><text x="308" y="66" font-weight="800" fill="var(--teal)">1</text><text x="308" y="86" fill="var(--ink)">Analysis</text>
+          <rect x="376" y="40" width="108" height="64" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><text x="430" y="66" font-weight="800" fill="var(--teal)">2</text><text x="430" y="86" fill="var(--ink)">Requirements</text>
+          <rect x="498" y="40" width="108" height="64" rx="12" fill="var(--paper)" stroke="var(--accent)" stroke-width="2.5"/><text x="552" y="66" font-weight="800" fill="var(--teal)">3 ✋</text><text x="552" y="86" fill="var(--ink)">Architecture</text>
+          <rect x="620" y="40" width="108" height="64" rx="12" fill="var(--paper)" stroke="var(--accent)" stroke-width="2.5"/><text x="674" y="66" font-weight="800" fill="var(--teal)">4 ✋</text><text x="674" y="86" fill="var(--ink)">Build plan</text>
+          <rect x="742" y="40" width="72" height="64" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="2"/><text x="778" y="66" font-weight="800" fill="var(--teal)">5</text><text x="778" y="86" fill="var(--ink)">Build</text>
+          <rect x="826" y="40" width="72" height="64" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="2"/><text x="862" y="66" font-weight="800" fill="var(--teal)">6</text><text x="862" y="86" fill="var(--ink)">Test</text>
+          <rect x="910" y="40" width="80" height="64" rx="12" fill="var(--paper)" stroke="var(--accent)" stroke-width="2.5"/><text x="950" y="66" font-weight="800" fill="var(--teal)">7 ✋</text><text x="950" y="86" fill="var(--ink)">Cutover</text>
+        </g>
+        <text x="500" y="134" font-size="12.5" fill="var(--muted)">✋ = a gate that needs an explicit CONFIRMED decision in PROJECT.md (the client's or yours)</text>
+      </g>
+    </svg>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h4><span class="ico">⌨️</span>mxcli (Mendix Labs)</h4><p>Agents read and change the model through <b>MDL</b> scripts; <code>check</code>, <code>lint</code>, <code>report</code>, <code>test</code>, <code>run --local</code>. Validated on Mendix 11.6.x; our projects use 11.6.4.</p></div>
+    <div class="card"><h4><span class="ico">🧰</span>mxcli-project-toolkit</h4><p>By Maurits (MendixMau); our private copy in AI-Taskforce-Labs. The process above plus 120+ skills each role reads, with a Windows fix for commits that hung.</p></div>
+    <div class="card"><h4><span class="ico">📘</span>Playbooks</h4><p><code>mxcli-field-lessons</code> (hard-won lessons), <code>qa-tests</code> (how to test), and one Playbook per team role, generated per project.</p></div>
+    <div class="card"><h4><span class="ico">🧪</span>CI pipeline</h4><p>On every PR: <code>mx check</code>, lint, score, unit tests, Playwright UI tests against the running app, one sticky scorecard, screenshots. About 5 Actions minutes per run.</p></div>
+  </div>
+</section>
+
+<section id="run">
+  <h2><span class="num">7</span>Running it</h2>
+  <div class="grid g2">
+    <div class="card"><h4><span class="ico">▶️</span>Start</h4><p>The <b>Agent Office</b> desktop/taskbar icon opens it (and starts it if needed), or ask Claude Code <i>"Run Agent Office"</i>. It runs in a window titled <b>Agent Office</b>; closing that window stops it.</p></div>
+    <div class="card"><h4><span class="ico">🔐</span>Sign in</h4><p><code>http://127.0.0.1:4600</code> → <code>/home</code>. The shared office password makes you admin (the Project Manager): hiring, approvals, settings and the live app are admin-only.</p></div>
+    <div class="card"><h4><span class="ico">🔑</span>Tokens (never share)</h4><p><code>~/.agent-office-gh-token</code>: the agents' token (AI-Taskforce-Labs, Contents/Issues/PRs only). <code>~/.agent-office-admin-gh-token</code>: only for creating repos from the wizard. <code>~/.agent-office-password</code>: the office password.</p></div>
+    <div class="card"><h4><span class="ico">🔄</span>Restarts</h4><p>On Windows a restart stops running agents. Their sessions are saved: open an asleep (💤) agent to wake it with its memory.</p></div>
+  </div>
+  <div class="callout warn"><b>Models and cost.</b> Pick per role or task. In our runs, <b>Sonnet 5.5</b> gave the best value, <b>Opus 5.5</b> the highest quality, and <b>Haiku 4.5</b> struggled with Mendix work. Home → Statistics and the Analysis tab keep score.</div>
+</section>
+
+<section id="help">
+  <h2><span class="num">8</span>Troubleshooting</h2>
+  <div class="tablewrap"><table>
+    <tr><th style="width:340px">Symptom</th><th>Fix</th></tr>
+    <tr><td>Agent stuck "waiting on a setup prompt (trust / login)"</td><td>Open its terminal and accept Claude Code's <i>trust this folder</i> once.</td></tr>
+    <tr><td>3D view laggy</td><td>Use 1D or 2D for daily work; in 3D try <code>?gfx=low</code> or the Retro view.</td></tr>
+    <tr><td>Live app: "initial build failed: Object reference not set…"</td><td>Stale build output; the office clears it and retries once automatically.</td></tr>
+    <tr><td>mxcli: "A required privilege is not held by the client"</td><td>Create the directory junction mxcli names (<code>cmd /c mklink /J &lt;link&gt; &lt;target&gt;</code>) or enable Windows Developer Mode.</td></tr>
+    <tr><td>Commits hang in a toolkit project</td><td>Use our toolkit copy (fixed); in scripts run git with stdin closed.</td></tr>
+    <tr><td>GitHub emails about failed runs</td><td>The fork's CI runs the full test suite on every push to <code>main</code>; an email means something broke. It never publishes releases.</td></tr>
+  </table></div>
+
+  <h3>Where things are</h3>
+  <div class="tablewrap"><table>
+    <tr><th style="width:240px">What</th><th>Where</th></tr>
+    <tr><td>This app (our fork)</td><td><code>agent-spike\agent-office-src</code> · github.com/keithchin/agent-office</td></tr>
+    <tr><td>Launcher and shortcut</td><td><code>agent-spike\start-office.ps1</code>, <code>open-agent-office.ps1</code>, <code>agent-office.ico</code></td></tr>
+    <tr><td>Office data</td><td><code>agent-spike\mx-spike\.agent-office\</code></td></tr>
+    <tr><td>Projects</td><td><code>agent-spike\mx-spike</code> · <code>agent-office\AI-Taskforce-Labs\travel-approval</code></td></tr>
+    <tr><td>Toolkit (our copy)</td><td><code>agent-spike\mxcli-project-toolkit</code> · AI-Taskforce-Labs/mxcli-project-toolkit</td></tr>
+    <tr><td>Deeper docs</td><td><a href="docs/teams.md">docs/teams.md</a> · <a href="docs/features.md">docs/features.md</a> · <a href="docs/configuration.md">docs/configuration.md</a> · <a href="docs/upstream-README.md">upstream README</a></td></tr>
+  </table></div>
+
+  <h3>What's next</h3>
+  <div class="grid g3">
+    <div class="card"><h4><span class="ico">🧩</span>Plan → issues</h4><p>Turn the toolkit's approved build plan into GitHub issues for the team automatically.</p></div>
+    <div class="card"><h4><span class="ico">🤝</span>Client portal</h4><p>A restricted Client role: progress, test link and approvals at the toolkit's gates.</p></div>
+    <div class="card"><h4><span class="ico">☁️</span>Taskforce Lab on AWS</h4><p>The office on a shared Linux server for the Taskforce, with a GitHub App and a live-app proxy.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">Agent Office is MIT-licensed by AgentSystemLabs. This fork adds the App Factory, the team model and the Mendix pipeline for the DI SW SEA AI Taskforce. · <a href="README.md">README.md</a></div>
+</footer>
+
+<div id="lb" aria-hidden="true"><img alt=""></div>
+<script>
+  // Theme toggle: light / dark, remembered per browser (falls back silently without storage).
+  (function () {
+    var root = document.documentElement, KEY = 'agent-office-readme-theme';
+    try { var saved = localStorage.getItem(KEY); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+    document.getElementById('themeBtn').addEventListener('click', function () {
+      var dark = root.getAttribute('data-theme') ? root.getAttribute('data-theme') === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      var next = dark ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem(KEY, next); } catch (e) {}
+    });
+    // Click a screenshot to see it full size.
+    var lb = document.getElementById('lb'), big = lb.querySelector('img');
+    document.querySelectorAll('figure img, .hero .shot img').forEach(function (img) {
+      img.addEventListener('click', function () { big.src = img.src; big.alt = img.alt; lb.classList.add('open'); });
+    });
+    lb.addEventListener('click', function () { lb.classList.remove('open'); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') lb.classList.remove('open'); });
+  })();
+</script>
+</body>
+</html>
