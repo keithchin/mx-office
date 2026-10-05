@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff1de" />
+    <title>Home · Agent Office</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="./lite.css" />
+    <!-- The color theme picked on this browser (ui/colortheme.ts), set before the page is drawn so it never flashes the wrong one. -->
+    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(t!=="default"&&t!=="dark"&&t!=="terminal")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"default";document.documentElement.dataset.theme=t}catch(e){}</script>
+  </head>
+  <body class="lite home-page">
+    <!-- The home page (home.ts): every project in the building, and the office in numbers. Its address never carries parameters. -->
+    <header class="lite-bar">
+      <a id="to-home" class="btn on" href="/home" aria-current="page" title="Home: you're here" aria-label="Home">🏠</a>
+      <div class="home-title">
+        <span class="lite-floor-label">Home</span>
+        <h1>Agent Office</h1>
+      </div>
+      <a id="to-floor" class="btn home-back hidden" href="/lite" title="Back to the floor you were last on"></a>
+      <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
+    </header>
+    <main class="lite-main home-main">
+      <div class="home-tabs" role="tablist" aria-label="Home">
+        <button id="tab-projects" class="btn" type="button" role="tab">🏢 Projects</button>
+        <button id="tab-stats" class="btn" type="button" role="tab">📊 Statistics</button>
+      </div>
+      <!-- A card for every floor, to go into on the board or in the office, and adding one (home/projects.ts). -->
+      <section id="projects-view" role="tabpanel" aria-labelledby="tab-projects"></section>
+      <!-- The office's totals, every project side by side, and the model ranking (home/stats.ts). -->
+      <section id="stats-view" class="hidden" role="tabpanel" aria-labelledby="tab-stats"></section>
+    </main>
+    <div id="toasts"></div>
+    <div id="conn" class="conn hidden">Reconnecting…</div>
+    <div id="modal-root"></div>
+    <script type="module" src="./home.ts"></script>
+  </body>
+</html>

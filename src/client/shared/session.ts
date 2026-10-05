@@ -1,6 +1,6 @@
 /**
  * Being in the office from one of its flat views, the 1D board (/lite) or the 2D pixel office
- * (/pixel): the connection, the windows that hear from it, what you have open for the others to
+ * (/pixel), and the home page (/home): the connection, the windows that hear from it, what you have open for the others to
  * see, notifications, and coming in (signing in, and your name the first time). No three.js here:
  * both flat views import it.
  */
@@ -28,10 +28,10 @@ export interface FlatSession {
 }
 
 /**
- * The connection for a flat view at `page`. `openWorker` opens a worker's terminal (a notification
+ * The connection for a flat view (or the home page) at `page`. `openWorker` opens a worker's terminal (a notification
  * clicked); `onMessage` hears every message after the store and the shared windows have.
  */
-export function flatSession(page: '/lite' | '/pixel', openWorker: (id: string) => void, onMessage?: (msg: ServerMsg) => void): FlatSession {
+export function flatSession(page: '/home' | '/lite' | '/pixel', openWorker: (id: string) => void, onMessage?: (msg: ServerMsg) => void): FlatSession {
   // Your name and color from the 3D office, if this browser has been in it. Nobody sees a character
   // of yours from here, so a look is only made up to connect with.
   const saved = loadProfile();

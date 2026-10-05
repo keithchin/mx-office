@@ -7,6 +7,7 @@ import { analysisRoutes } from './analysis.js';
 import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
 import { githubRoutes } from './github.js';
+import { homeRoutes } from './home.js';
 import { pageRoutes } from './pages.js';
 import { prShotRoutes } from './prshots.js';
 import { rosterRoutes } from './roster.js';
@@ -44,6 +45,7 @@ export const routes: readonly Route[] = [
   analysisRoutes.report,
   analysisRoutes.backfill,
   analysisRoutes.summary,
+  homeRoutes.stats,
   prShotRoutes.checks,
   prShotRoutes.file,
   rosterRoutes.view,
@@ -53,6 +55,7 @@ export const routes: readonly Route[] = [
   teamRoutes.labels,
   wizardRoutes.wizard,
   pageRoutes.office,
+  pageRoutes.home,
   pageRoutes.lite,
   pageRoutes.pixel,
   pageRoutes.bundle,

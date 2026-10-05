@@ -154,3 +154,12 @@ export function saveSettings(s: Settings) {
     // storage blocked
   }
 }
+
+/** Forgets the floor you were last on: the home page's connection lands on one without anyone picking it. */
+export function forgetFloor() {
+  try {
+    localStorage.removeItem(FLOOR_KEY);
+  } catch {
+    // storage blocked
+  }
+}

@@ -1,6 +1,6 @@
 import './wizard.css';
 /**
- * The new-project wizard (✨ New project on the floors page): a project's setup with the mxcli
+ * The new-project wizard (✨ New project on the home page): a project's setup with the mxcli
  * project toolkit, a page at a time, instead of only cloning a repository that's already there.
  * It collects a plan (the repository, the entry mode, the intake answers, the client and team), hands
  * it to the office to run, and shows the setup's progress. Opened again on a setup, it edits its

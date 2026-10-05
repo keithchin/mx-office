@@ -1,4 +1,4 @@
-export {}; // a module, so its names don't clash with the other pages' scripts
+import { isReturnPage } from '../shared/home';
 
 const form = document.getElementById('form') as HTMLFormElement;
 const nameRow = document.getElementById('name-row') as HTMLLabelElement;
@@ -10,9 +10,9 @@ const error = document.getElementById('error') as HTMLParagraphElement;
 const submit = document.getElementById('submit') as HTMLButtonElement;
 
 const NAME_KEY = 'agent-office.login-name';
-/** Where to go once in: the 1D or 2D view if that's where you were headed (see loginUrl in net.ts), else the office. */
+/** Where to go once in: the home page, the 1D or 2D view if that's where you were headed (see loginUrl in net.ts), else the office. */
 const ASKED = new URLSearchParams(location.search).get('next');
-const NEXT = ASKED === '/lite' || ASKED === '/pixel' ? ASKED : '/';
+const NEXT = isReturnPage(ASKED) ? ASKED : '/';
 
 // A sign-in link from the office's terminal (/login#key=…): it works once, so take it out of the
 // address bar and trade it for a session. The key is after the #, so it never reaches a server log.

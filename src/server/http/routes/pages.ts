@@ -24,6 +24,8 @@ export const pageRoutes = {
   join: { path: ['/join', '/join.html'], auth: 'public', handle: page('join.html') },
   favicon: { path: '/favicon.svg', auth: 'public', handle: page('favicon.svg') },
   office: { path: ['/', '/index.html'], auth: 'session', handle: page('index.html') },
+  // The home page: every project's card, and the office's statistics (home.ts).
+  home: { path: ['/home', '/home.html'], auth: 'session', handle: page('home.html') },
   // The 1D view: the workers, their terminals and the boards, without the 3D office (lite.ts).
   lite: { path: ['/lite', '/lite.html'], auth: 'session', handle: page('lite.html') },
   // The 2D view: the floor from above in pixel art, every worker at its desk (pixel.ts).

@@ -1,6 +1,6 @@
 /* The 2D view's game feel (pixel.ts): chunky pixel-framed panels and buttons with a hard shadow that
    press down when you push them, a teal focus ring, and greyed-out disabled ones. It covers the top
-   bar, the floors page, the footer and the HUD over the office. The corners are cut a step in with
+   bar, the footer and the HUD over the office. The corners are cut a step in with
    box-shadows rather than rounded, the way a pixel-art game's frames are. */
 
 body.pixel {
@@ -128,10 +128,6 @@ body.pixel .px-next:not(:disabled) { background: #f2b33d; animation: px-nudge 2.
 @keyframes px-blink { to { visibility: hidden; } }
 @keyframes px-nudge { 0%, 88%, 100% { transform: translateY(0); } 92% { transform: translateY(-3px); } 96% { transform: translateY(1px); } }
 
-/* ---- The floors page, shown over the office: its cards framed like the rest ---- */
-body.pixel .home-floor { border: 0; border-radius: 0; box-shadow: 0 -3px 0 0 var(--px-ink), 0 3px 0 0 var(--px-ink), -3px 0 0 0 var(--px-ink), 3px 0 0 0 var(--px-ink), inset 8px 0 0 0 var(--floor, #13213a), 0 8px 0 0 rgba(5, 9, 15, .5); padding-left: 20px; }
-body.pixel .home-floor-go .btn { flex: 1; }
-
 /* The stage: a grab hand while dragging the office about. */
 .px-stage canvas.grabbing { cursor: grabbing; }
 
@@ -148,5 +144,7 @@ body.pixel .home-floor-go .btn { flex: 1; }
   body.pixel #to-retro { display: none; }
   body.pixel .lite-views { gap: 4px; }
   .px-zoom { right: 8px; bottom: 8px; }
+  /* The footer keeps the same 8px edge as the bar and the panels over the office. */
+  .px-foot { padding-left: 8px; padding-right: 8px; }
   body.pixel .px-chat-toggle { left: 8px; bottom: 8px; }
 }

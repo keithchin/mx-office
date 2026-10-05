@@ -139,7 +139,7 @@ before(async () => {
     execFileSync('git', args, { cwd: project });
   }
   // A client bundle of its own, so the test needn't build one.
-  for (const page of ['index', 'login', 'claim', 'join', 'lite', 'pixel']) writeFileSync(path.join(publicDir, `${page}.html`), `<!doctype html><title>${page}</title>`);
+  for (const page of ['index', 'login', 'claim', 'join', 'home', 'lite', 'pixel']) writeFileSync(path.join(publicDir, `${page}.html`), `<!doctype html><title>${page}</title>`);
   writeFileSync(path.join(publicDir, 'favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
   writeFileSync(path.join(publicDir, 'assets', 'app.js'), 'export {};\n');
   // A stand-in for Claude Code, so reading the plan's limits never runs the real one.
@@ -182,6 +182,8 @@ test('answers the open routes before anyone signs in', async () => {
   const home = await get('/');
   assert.equal(home.status, 302);
   assert.equal(home.headers.get('location'), '/login');
+  assert.equal((await get('/home')).headers.get('location'), '/login?next=/home');
+  assert.equal((await get('/api/home/stats')).status, 401);
   assert.equal((await get('/lite')).headers.get('location'), '/login?next=/lite');
   assert.equal((await get('/pixel')).headers.get('location'), '/login?next=/pixel');
   const whoami = await get('/api/whoami');
@@ -218,7 +220,13 @@ test('answers the signed-in routes', async () => {
   const me = { cookie };
   assert.deepEqual(await (await get('/api/whoami', me)).json(), { ok: true, me: { admin: true } });
   assert.match(await (await get('/', me)).text(), /<title>index<\/title>/);
+  assert.match(await (await get('/home', me)).text(), /<title>home<\/title>/);
   assert.match(await (await get('/lite', me)).text(), /<title>lite<\/title>/);
+  // The home page's statistics: a row per floor, from what the office already keeps.
+  const stats = (await (await get('/api/home/stats', me)).json()) as { floors: { id: string }[]; totals: { agents: number }; spend: { total: number } };
+  assert.deepEqual(stats.floors.map((f) => f.id), office.floors().map((f) => f.id));
+  assert.equal(typeof stats.totals.agents, 'number');
+  assert.equal(typeof stats.spend.total, 'number');
   assert.match(await (await get('/pixel', me)).text(), /<title>pixel<\/title>/);
   const floor = office.floors()[0].id;
   assert.deepEqual(await (await get(`/api/search?q=zzzz&floor=${floor}`, me)).json(), { q: 'zzzz', chat: [], terminals: [], more: false });

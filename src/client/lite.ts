@@ -1,7 +1,7 @@
 // The 1D view (/lite): the office without the 3D, for a phone or a computer the 3D office is too
 // much for. The floor's board, every worker on the floor and how it's doing, the ones waiting on
 // someone first; its terminal, with the keys a phone's keyboard hasn't got and a box to send it a
-// prompt; and the boards and the task queue. The floors page (🏠 Floors) has every floor of the
+// prompt; and the boards and the task queue. The home page (🏠, /home) has every floor of the
 // building. You're in the office as someone on the 1D view (PeerInfo.lite), not standing anywhere in it.
 
 import { store } from './state';
@@ -32,10 +32,12 @@ import { rememberView, switchView } from './graphics';
 import { renderTitle } from './shared/title';
 import { flatSession } from './shared/session';
 import { workerActions } from './shared/workers';
-import { floorPicker, floorsHome } from './shared/floors';
-import { askedTab, followFloor, setAddress } from './shared/address';
+import { floorPicker } from './shared/floors';
+import { askedTab, followFloor, leaveForHome, setAddress } from './shared/address';
 import { colorThemes } from './ui/colortheme';
 
+// No floor to open (or an old ?home link): the home page, where you pick one.
+if (leaveForHome()) await new Promise(() => {});
 // Sent here because this browser can't draw the 3D office (see noWebGL in core/scene.ts).
 if (new URLSearchParams(location.search).get('why') === 'webgl') {
   history.replaceState(null, '', location.pathname);
@@ -56,20 +58,13 @@ const workers = workerActions(net);
 const openWorker = workers.open;
 const sendToWorker = workers.send;
 // The floor's app, running from main (the 🌐 Live app tab, ui/liveapp.ts).
-const live = liveAppView(net, () => showTab('live'), () => tab === 'live' && !home.shown);
+const live = liveAppView(net, () => showTab('live'), () => tab === 'live');
 // The project manager console in the middle of the project summary (ui/pm/console.ts): its live
 // terminal only while the board is on screen.
-const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'command' && !home.shown });
+const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'command' });
 
-// ---- The floor you're on, and the floors page --------------------------------------------------
+// ---- The floor you're on (every floor's card is on the home page, /home) -----------------------
 floorPicker(net);
-const home = floorsHome(net, '1d', (shown) => {
-  document.querySelector('.lite-main')!.classList.toggle('hidden', shown);
-  $('lite-nav').classList.toggle('hidden', shown);
-  // Back from the floors page: the board catches up with the floor picked there.
-  if (!shown) renderKanban();
-  pm.sync();
-});
 
 // ---- Workers ------------------------------------------------------------------------------------
 function renderWorkers() {
@@ -232,13 +227,8 @@ function showTab(t: Tab) {
   // Off the Command Center, the PM console lets go of its terminal.
   pm.sync();
 }
-/**
- * Whatever the tab shows that follows the floor's work: the Command Center (the setup panel and the
- * project summary with the PM console in it), the board (just the kanban), or a team's page. Not while the
- * floors page is over them: they're drawn when it goes.
- */
+/** Whatever the tab shows that follows the floor's work: the Command Center (the setup panel and the project summary with the PM console in it), the board (just the kanban), or a team's page. */
 function renderKanban() {
-  if (home.shown) return;
   if (tab === 'teams') return teams.renderPage($('teams-view'));
   if (tab === 'board') return renderBoard($('board'), kanban, teams.boardView(renderKanban));
   if (tab !== 'command') return;
@@ -247,7 +237,7 @@ function renderKanban() {
 }
 /** Which model does well on what (ui/analysis.ts), for this floor or every floor. */
 function renderAnalysisTab() {
-  if (tab === 'analysis' && !home.shown) void renderAnalysis($('analysis-view'), store.floor ?? undefined);
+  if (tab === 'analysis') void renderAnalysis($('analysis-view'), store.floor ?? undefined);
 }
 $('tab-command').addEventListener('click', () => showTab('command'));
 $('tab-board').addEventListener('click', () => showTab('board'));
@@ -258,7 +248,7 @@ $('tab-team').addEventListener('click', () => showTab('team'));
 $('tab-teams').addEventListener('click', () => showTab('teams'));
 store.on('floor', renderAnalysisTab);
 // The project team (ui/roster/): its approvals badge stays current whichever tab is showing.
-const team = teamTab($('team-view'), $('tab-team').querySelector('.ro-tab-n')!, () => tab === 'team' && !home.shown, openWorker);
+const team = teamTab($('team-view'), $('tab-team').querySelector('.ro-tab-n')!, () => tab === 'team', openWorker);
 net.onMessage((msg) => team.onMessage(msg));
 store.on('floor', () => team.render(store.floor ?? undefined));
 for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanban);
@@ -289,4 +279,4 @@ renderNav();
 showTab(tab);
 
 // Debug handle for quick checks from the console / headless screenshots.
-(window as any).__lite = { store, net, home };
+(window as any).__lite = { store, net };
