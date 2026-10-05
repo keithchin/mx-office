@@ -282,19 +282,31 @@ setInterval(renderKanban, 30_000);
 /** An escalation's card on the PM console, scrolled to with its answer box focused; the Approvals tab if it isn't there. */
 function toEscalation(id: string) {
   if (tab !== 'command') showTab('command');
-  const find = () => document.querySelector<HTMLElement>(`#summary .esc[data-id="${CSS.escape(id)}"]`);
+  const find = () => document.querySelector<HTMLElement>(`#summary:not(.hidden) .esc[data-id="${CSS.escape(id)}"]`);
+  // Only as far as needed, in one go: the escalations list to the card, then the page just enough to
+  // show it. A smooth scroll to the middle got thrown about by the summary redrawing around it.
   const focus = (card: HTMLElement) => {
-    card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const list = card.closest<HTMLElement>('.esc-list');
+    if (list) list.scrollTop += card.getBoundingClientRect().top - list.getBoundingClientRect().top - 40;
+    card.scrollIntoView({ block: 'nearest' });
     card.querySelector<HTMLTextAreaElement>('.esc-reply')?.focus({ preventScroll: true });
+    card.classList.remove('esc-flash');
+    void card.offsetWidth;
+    card.classList.add('esc-flash');
   };
-  const card = find();
-  if (card) return focus(card);
-  // The summary draws after a fetch: give it a moment.
-  setTimeout(() => {
-    const c = find();
-    if (c) focus(c);
+  // The summary draws after a fetch: wait for the card (and for it to stop moving), up to a second and a half.
+  const started = Date.now();
+  let lastTop: number | undefined;
+  const look = () => {
+    const card = find();
+    const top = card?.getBoundingClientRect().top;
+    if (card && top === lastTop) return focus(card);
+    lastTop = top;
+    if (Date.now() - started < 1500) return void setTimeout(look, 100);
+    if (card) focus(card);
     else showTab('approvals');
-  }, 400);
+  };
+  look();
 }
 function goToNeed(t: NeedTarget) {
   if (t.to === 'worker') return openWorker(t.id);

@@ -41,3 +41,7 @@
 
 html[data-theme='terminal'] .esc { border-radius: 0; }
 html[data-theme='terminal'] .esc-urgent .esc-tag, html[data-theme='terminal'] .esc-critical .esc-tag, html[data-theme='terminal'] .esc-loud { color: #000; text-shadow: none; }
+/* The card Needs you's "Answer →" brought you to: a short pulse, so you can see where you landed. */
+.esc.esc-flash { animation: esc-flash 1.2s ease-out 1; }
+@keyframes esc-flash { 0% { box-shadow: 0 0 0 4px var(--accent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .esc.esc-flash { animation: none; outline: 3px solid var(--accent); } }
