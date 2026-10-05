@@ -5,6 +5,7 @@ import type { AutonomyLevel, DecisionKind } from './autonomy.js';
 import type { Escalation } from './escalation.js';
 import type { RoleId, TeamId } from './roles.js';
 import type { StandupSchedule } from './schedule.js';
+import type { JeffSettings } from '../judge.js';
 
 export interface RosterSettings {
   autonomy: AutonomyLevel;
@@ -20,6 +21,8 @@ export interface RosterSettings {
    * review that result per its Playbook and continue or escalate (on by default; see roster/nudge.ts).
    */
   reviewNudge: boolean;
+  /** Jeff, the Router (shared/judge.ts): per judgement off, shadow (log next to the rule, never act) or on. */
+  jeff: JeffSettings;
 }
 
 /**

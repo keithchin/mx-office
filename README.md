@@ -94,6 +94,12 @@ It's a **digital twin of a hybrid software team**: what each agent is doing, wha
 
 Whatever the level, **you have the final say**, and anything critical always reaches you. An optional **daily cost cap** pauses hiring on a floor once it's spent.
 
+### Jeff, the quick judge
+
+**Jeff · Router** is staff, not an agent: the office's quick judge, powered by **Jev** (TypeSafe AI's fast "System One" model that answers typed questions about a piece of text). He routes two things: when an agent ends its turn, *is it waiting on you?*; when a new issue appears, *which team is it for?* Each is Off, **Shadow** (the default: he is watching, not acting, and logs his verdict next to the office's own rule) or **On** (he raises the escalation the agent forgot, or labels the unlabelled issue he's sure of), in **⚙️ Settings → Jeff · Router**. The Analysis tab's **Jeff · Router** section shows where he agrees with the office; switch to On where he agrees with you. He sits beside the Project Coordinator on the org chart and in his own glass room on the 2D view.
+
+His key: the launcher reads `~/.agent-office-jev-key` and passes its path as `AGENT_OFFICE_JEV_KEY_FILE` (or set `TYPESAFE_API_KEY`); workers never get it. With a key, agents' last messages and issue text (redacted of tokens, clipped to 4000 characters) go to TypeSafe; without one, or while Jev is failing, he runs on Claude Haiku ("Jeff (on Haiku)"). Details: [docs/teams.md](docs/teams.md#jeff-the-router).
+
 ![Org chart](docs/readme/org-chart.png)
 
 ---

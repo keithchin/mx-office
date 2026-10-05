@@ -3,6 +3,7 @@
 import type { GroupBy } from '../../../shared/analysis.js';
 import { analysisOf } from '../../analysis/index.js';
 import { summaryOf } from '../../summary/index.js';
+import { judgeOf, rosterOf } from '../../roster/adapter.js';
 import { send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
@@ -32,6 +33,21 @@ export const analysisRoutes = {
       if (a.busy) return send(res, 202, { started: false, busy: true });
       void a.backfill([...ctx.floors.values()]).catch((err) => console.error('agent-office: analysis backfill failed', err));
       return send(res, 202, { started: true, busy: true });
+    },
+  },
+  /**
+   * GET /api/judge?floor=<id>: Jeff (the Router)'s judgements on a floor next to the office's own rules:
+   * where he answers from now, per judgement its mode, agreement, Jev vs Haiku and latency, the last 50
+   * (disagreements first).
+   */
+  judge: {
+    method: 'GET',
+    path: '/api/judge',
+    auth: 'session',
+    handle(ctx, { res, url }) {
+      const floor = floorParam(ctx, url);
+      if (!floor) return send(res, 404, { error: 'No such floor' });
+      return send(res, 200, rosterOf(ctx).jeff.summary(floor.id, judgeOf(ctx).status()));
     },
   },
   /** GET /api/summary?floor=<id>: what's happening on a floor, for the panel above its board. */

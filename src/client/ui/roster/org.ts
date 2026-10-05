@@ -6,6 +6,7 @@ import { CLAUDE_MODEL_NAMES, claudeModelName } from '../../../shared/providers';
 import { ROLE_BY_ID } from '../../../shared/roster/roles';
 import type { MemberStatus, MemberView, RosterView } from '../../../shared/roster/types';
 import { h, timeAgo } from '../dom';
+import { jeffCard } from '../jeff';
 import { act } from './api';
 import { askText } from './ask';
 
@@ -93,5 +94,5 @@ export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLEle
 export function orgChart(v: RosterView, deps: OrgDeps): HTMLElement {
   const pm = v.members.find((m) => m.role === 'pm')!;
   const leads = v.members.filter((m) => m.role !== 'pm');
-  return h('section.ro-org', { 'aria-label': 'Org chart' }, h('div.ro-top', {}, memberCard(v, pm, deps)), h('div.ro-line', { 'aria-hidden': 'true' }), h('div.ro-leads', {}, ...leads.map((m) => memberCard(v, m, deps))));
+  return h('section.ro-org', { 'aria-label': 'Org chart' }, h('div.ro-top', {}, memberCard(v, pm, deps), jeffCard(v.floor)), h('div.ro-line', { 'aria-hidden': 'true' }), h('div.ro-leads', {}, ...leads.map((m) => memberCard(v, m, deps))));
 }

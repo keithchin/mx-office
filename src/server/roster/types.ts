@@ -5,6 +5,8 @@
 import type { RosterAlert, WorkerInfo } from '../../shared/protocol.js';
 import type { TeamId } from '../../shared/roster/roles.js';
 import type { IssueMaker } from './issues.js';
+import type { JudgeMade } from '../../shared/judge.js';
+import type { AskOpts, Questions, Verdict } from '../judge/index.js';
 
 export interface HireAsk {
   name: string;
@@ -45,6 +47,12 @@ export interface TeamFloor {
    * Only the real office has it: the tests' fake floors never touch GitHub.
    */
   labelPr?(number: number, team: TeamId): Promise<string | undefined>;
+  /** The same for an issue (Jeff's triage, roster/jeff.ts). */
+  labelIssue?(number: number, team: TeamId): Promise<string | undefined>;
+  /** What an agent said last, once its turn ended: the Stop hook's message, else its transcript's end. */
+  lastWords?(w: WorkerInfo): string | undefined;
+  /** Tells the floor's browsers Jeff just judged something (his room in the 2D view reacts). */
+  judged?(made: JudgeMade): void;
 }
 
 export interface RosterDeps {
@@ -55,4 +63,6 @@ export interface RosterDeps {
   /** A few lines of the analyzer's numbers for a floor, for the Chief Analyst's standup. */
   analysis(floorId: string): string;
   now(): number;
+  /** Jeff's answers (server/judge/): undefined when he has none, and with no judge at all he's never asked. */
+  judge?: (text: string, questions: Questions, opts?: AskOpts) => Promise<Verdict | undefined>;
 }

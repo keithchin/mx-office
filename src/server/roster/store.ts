@@ -9,6 +9,7 @@ import { DEFAULT_AUTONOMY, isAutonomyLevel, type AutonomyLevel } from '../../sha
 import { cleanName, isRoleId, pickNames, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { cleanSchedule, DEFAULT_SCHEDULE } from '../../shared/roster/schedule.js';
 import type { Escalation } from '../../shared/roster/escalation.js';
+import { DEFAULT_JEFF, isJeffMode } from '../../shared/judge.js';
 import type { Proposal, RosterSettings, Standup } from '../../shared/roster/types.js';
 
 /** Where a member is in its life: never hired, a worker now, writing its handoff, or benched. */
@@ -50,7 +51,7 @@ const PROPOSALS_KEPT = 300;
 const ESCALATIONS_KEPT = 200;
 
 export function defaultSettings(): RosterSettings {
-  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true };
+  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true, jeff: { ...DEFAULT_JEFF } };
 }
 
 /** Settings from what was saved or sent, anything malformed left as it was in `base`. */
@@ -71,6 +72,11 @@ export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings
     dryRunIssues: typeof s.dryRunIssues === 'boolean' ? s.dryRunIssues : base.dryRunIssues,
     // A roster saved before the review nudge existed has it on, like a fresh one.
     reviewNudge: typeof s.reviewNudge === 'boolean' ? s.reviewNudge : (base.reviewNudge ?? true),
+    // A roster saved before Jeff has him in shadow mode on both.
+    jeff: {
+      waiting: isJeffMode(s.jeff?.waiting) ? s.jeff.waiting : (base.jeff?.waiting ?? DEFAULT_JEFF.waiting),
+      triage: isJeffMode(s.jeff?.triage) ? s.jeff.triage : (base.jeff?.triage ?? DEFAULT_JEFF.triage),
+    },
   };
 }
 

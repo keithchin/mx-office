@@ -141,6 +141,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
     pullsChanged: (floor) => {
       for (const f of floors.values()) if (f !== floor && worksIn(f, floor)) f.sendLandedHome();
     },
+    issuesChanged: (floor) => team(ctx, floor, (t) => rosterOf(ctx).onIssues(t, floor.github.issues.items)),
     lent: (floor) => [...floors.values()].some((f) => f !== floor && worksIn(f, floor)),
     locksUp: () => !!ctx.maps.plan().sendHome?.keeps,
     runAs: ctx.signins,

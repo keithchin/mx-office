@@ -15,8 +15,10 @@ import { dayIn, nextSlot } from '../../shared/roster/schedule.js';
 import type { ApprovalItem, MemberStatus, MemberView, RosterView } from '../../shared/roster/types.js';
 import { awaitingAnswer, benchStep, dueForBench, isAsleepStatus, isBusyStatus } from './bench.js';
 import { forgetSubagents } from '../workers/subagents.js';
+import { forgetLastWords } from '../judge/turns.js';
 import { Escalations } from './escalations.js';
 import { excerpt, readJournal } from './journal-io.js';
+import { Jeff } from './jeff.js';
 import { Members } from './members.js';
 import { Nudges } from './nudge.js';
 import { setFloorPause } from './pause.js';
@@ -35,6 +37,7 @@ export class Roster {
   readonly standups: StandupRunner;
   readonly escalations: Escalations;
   readonly nudges: Nudges;
+  readonly jeff: Jeff;
   /** Lead pull requests the office already labelled with their team (floor:number), so it asks GitHub once. */
   private labelled = new Set<string>();
   private files = new Map<string, RosterFile>();
@@ -46,6 +49,7 @@ export class Roster {
     this.standups = new StandupRunner(this);
     this.escalations = new Escalations(this);
     this.nudges = new Nudges(this, tickMs > 0);
+    this.jeff = new Jeff(this);
     if (tickMs > 0) {
       this.timer = setInterval(() => this.tick(), tickMs);
       this.timer.unref?.();
@@ -99,6 +103,8 @@ export class Roster {
     const idle = (w.status === 'idle' || w.status === 'done') && w.viewers.length === 0;
     this.seen.set(w.id, { status: w.status, idleSince: idle ? (prev?.idleSince ?? now) : undefined });
     const capChanged = this.noteSpend(floor, d, w, now);
+    // A turn just ended: Jeff judges whether it's waiting on the Project Manager (any agent, not just the team's).
+    if (prev?.status === 'working' && (w.status === 'done' || w.status === 'idle')) void this.jeff.onTurnEnd(floor, w).catch((err: unknown) => console.error(`agent-office: Jeff on ${floor.id}: ${(err as Error)?.message ?? err}`));
     const role = this.roleOf(floor, w.id);
     if (!role) return this.touch(floor, !capChanged);
     const m = d.members[role];
@@ -114,10 +120,16 @@ export class Roster {
     this.touch(floor, prev?.status === w.status && !capChanged);
   }
 
+  /** The floor's issues came back from GitHub: Jeff triages the new ones. */
+  onIssues(floor: TeamFloor, issues: Parameters<Jeff['onIssues']>[1]) {
+    void this.jeff.onIssues(floor, issues).catch((err: unknown) => console.error(`agent-office: Jeff's triage on ${floor.id}: ${(err as Error)?.message ?? err}`));
+  }
+
   /** A worker left the floor: a member sent home by hand is no longer hired (its name and handoff stay). */
   onWorkerGone(floor: TeamFloor, workerId: string) {
     this.seen.delete(workerId);
     forgetSubagents(workerId);
+    forgetLastWords(workerId);
     const role = this.roleOf(floor, workerId);
     if (!role) return;
     const m = this.data(floor.id).members[role];
