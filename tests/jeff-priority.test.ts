@@ -59,7 +59,8 @@ test('without ranks (or with the sort off) the lists keep their own order; ranke
   assert.deepEqual(jeffOrder(plain, true, byUrgency).map((e) => e.id), ['crit', 'urg', 'old']);
   assert.equal(sortedByJeff(plain, 'on'), false);
   const some = [esc('old', { at: 1, jeffRank: rated({ rank: 1 }) }), esc('crit', { urgency: 'critical', at: 9 }), esc('urg', { urgency: 'urgent', at: 3, jeffRank: rated({ rank: 2 }) }), esc('crit2', { urgency: 'critical', at: 2 })];
-  assert.deepEqual(jeffOrder(some, true, byUrgency).map((e) => e.id), ['old', 'urg', 'crit2', 'crit']);
+  // Unrated critical/urgent ones stay on top of Jeff's list; other unrated ones follow it.
+  assert.deepEqual(jeffOrder(some, true, byUrgency).map((e) => e.id), ['crit2', 'crit', 'old', 'urg']);
   assert.deepEqual(jeffOrder(some, false, byUrgency).map((e) => e.id), ['crit2', 'crit', 'urg', 'old']);
   assert.equal(sortedByJeff(some, 'on'), true);
   assert.equal(sortedByJeff(some, 'off'), false);
@@ -293,11 +294,12 @@ test('the Needs-you strip lists escalations in Jeff order with his chip, and fal
     }) as unknown as RosterView;
   const needs = (r: RosterView) => collectNeeds({ floor: 'f1', workers: [], pulls: [], floors: [], roster: r });
   const on = needs(view('on', true));
-  assert.deepEqual(on.map((n) => n.key), ['esc-old', 'esc-crit', 'esc-urg']);
-  assert.equal(on[0].rank?.chip, '🧑‍⚖️ #1 · resolve first');
-  assert.match(on[0].rank!.tip, /^Jeff \(Jev\) ranks this #1: blocking 92%, risk 40%/);
-  assert.equal(on[1].rank?.n, 2);
-  assert.equal(on[2].rank, undefined);
+  // The unrated urgent one stays on top; Jeff's #1 and #2 follow.
+  assert.deepEqual(on.map((n) => n.key), ['esc-urg', 'esc-old', 'esc-crit']);
+  assert.equal(on[1].rank?.chip, '🧑‍⚖️ #1 · resolve first');
+  assert.match(on[1].rank!.tip, /^Jeff \(Jev\) ranks this #1: blocking 92%, risk 40%/);
+  assert.equal(on[2].rank?.n, 2);
+  assert.equal(on[0].rank, undefined);
   for (const r of [view('off', true), view('on', false)]) {
     const items = needs(r);
     assert.deepEqual(items.map((n) => n.key), ['esc-crit', 'esc-urg', 'esc-old']);

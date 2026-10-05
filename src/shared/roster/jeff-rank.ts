@@ -105,7 +105,11 @@ export function jeffOrder<T extends Escalation>(list: readonly T[], on: boolean,
   const rest = [...list].sort(fallback);
   if (!on) return rest;
   const ranked = rest.filter((e) => rankOf(e) !== undefined).sort((a, b) => rankOf(a)! - rankOf(b)!);
-  return ranked.length ? [...ranked, ...rest.filter((e) => rankOf(e) === undefined)] : rest;
+  if (!ranked.length) return rest;
+  // One Jeff hasn't rated yet (just raised, or he's down) that's critical or urgent doesn't sink below his list.
+  const loud = (e: T) => e.urgency === 'critical' || e.urgency === 'urgent';
+  const unranked = rest.filter((e) => rankOf(e) === undefined);
+  return [...unranked.filter(loud), ...ranked, ...unranked.filter((e) => !loud(e))];
 }
 
 /** Whether a floor's views sort by Jeff: his priority setting isn't off and he has ranked something open. */
