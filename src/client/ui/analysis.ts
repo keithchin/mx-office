@@ -5,6 +5,8 @@
 
 import type { AnalysisReport, GroupBy, LeaderRow, RunRecord, TaskType } from '../../shared/analysis';
 import { TASK_TYPE_LABEL } from '../../shared/analysis';
+import type { Grade } from '../../shared/ranking/model';
+import type { RankingReport } from '../../shared/ranking/report';
 import { h, timeAgo, toast } from './dom';
 import { jeffSection } from './jeff';
 import './analysis.css';
@@ -48,6 +50,8 @@ export async function renderAnalysis(root: HTMLElement, floor: string | undefine
   const q = new URLSearchParams(scope === 'floor' && floor ? { floor } : { scope: 'global' });
   if (by === 'effort') q.set('by', 'effort');
   let report: AnalysisReport;
+  // Each worker's grade, from the Workers tab's ranking (built on these run scores), for the runs list.
+  const grades = workerGrades();
   try {
     const res = await fetch(`/api/analysis?${q}`, { credentials: 'same-origin' });
     if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `HTTP ${res.status}`);
@@ -63,7 +67,7 @@ export async function renderAnalysis(root: HTMLElement, floor: string | undefine
     jeffSection(floor),
     leaderboard(report),
     matrixView(report) ?? '',
-    runsView(report),
+    runsView(report, await grades),
     howScored(report),
   );
 }
@@ -144,6 +148,12 @@ function leaderboard(r: AnalysisReport): HTMLElement {
   return section(
     '🏆 Leaderboard',
     r.scope === 'floor' ? 'This project only' : 'Across every project',
+    h(
+      'p.an-towork',
+      {},
+      'Models, by their tasks’ scores. Each worker’s A–F grade, built on these scores, is on ',
+      h('button.btn', { type: 'button', onclick: () => document.getElementById('tab-workers')?.click() }, '👷 Workers'),
+    ),
     h('div.an-scroll', {}, h('table.an-table', {}, h('thead', {}, h('tr', {}, ...head.map((t) => h('th', { scope: 'col' }, t)))), h('tbody', {}, ...r.leaderboard.flatMap((x, i) => [row(x, i), sub(x)])))),
   );
 }
@@ -184,7 +194,20 @@ const OUTCOME: Record<RunRecord['outcome'], [string, string]> = {
   running: ['running', '⏳ Running'],
 };
 
-function runsView(r: AnalysisReport): HTMLElement {
+/** `<floor>:<worker id>` → its grade, from GET /api/ranking; empty when that's unavailable. */
+async function workerGrades(): Promise<Map<string, Grade>> {
+  const out = new Map<string, Grade>();
+  try {
+    const res = await fetch('/api/ranking?floor=all', { credentials: 'same-origin' });
+    if (!res.ok) return out;
+    for (const w of ((await res.json()) as RankingReport).workers) if (w.grade) for (const id of w.workerIds) out.set(`${w.floor}:${id}`, w.grade);
+  } catch {
+    // the runs list just goes without grades
+  }
+  return out;
+}
+
+function runsView(r: AnalysisReport, grades: Map<string, Grade>): HTMLElement {
   const runs = r.runs.slice(0, RUNS_SHOWN);
   const floorName = (id: string) => r.floors.find((f) => f.id === id)?.name ?? id;
   const item = (x: RunRecord & { score?: number }) => {
@@ -206,7 +229,7 @@ function runsView(r: AnalysisReport): HTMLElement {
         'div.an-run-facts',
         {},
         h(`span.an-outcome.${cls}`, {}, outcome),
-        h('span', {}, `👷 ${x.worker}`),
+        h('span', {}, `👷 ${x.worker}`, grades.has(x.id) ? h(`b.an-grade.g-${grades.get(x.id)}`, { title: 'The worker’s grade on the 👷 Workers tab' }, grades.get(x.id)!) : null),
         r.scope === 'global' ? h('span', {}, `🏢 ${floorName(x.floor)}`) : null,
         h('span', { title: 'Wall clock / time actually working' }, `⏱ ${mins(x.durationMs)} (${mins(x.activeMs)} working)`),
         h('span', {}, `💰 ${usd(x.cost)}`),
