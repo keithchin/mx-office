@@ -1,0 +1,36 @@
+/* The "Needs you" strip on the 1D view's Command Center (ui/needsyou/): a row per thing blocked on you,
+   a left stripe saying how badly, and one button to the fix. One quiet line when there's nothing. */
+#needs-you { margin-bottom: 14px; }
+#needs-you.ny-calm { margin-bottom: 10px; }
+.ny-empty { margin: 0; padding: 6px 12px; border: 2px dashed var(--rule-strong); border-radius: 12px; font-size: 13px; font-weight: 800; color: var(--muted); }
+
+.ny { border: 3px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: 0 3px 0 var(--edge); overflow: hidden; }
+.ny-h { display: flex; align-items: center; gap: 8px; padding: 7px 12px; background: var(--bad-soft); border-bottom: 3px solid var(--line); font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+
+.ny-list { list-style: none; margin: 0; padding: 0; }
+.ny-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 12px; border-left: 6px solid var(--warn); }
+.ny-item + .ny-item { border-top: 2px solid var(--rule); }
+/* Blocking: something is stopped until you act. */
+.ny-item.ny-block { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad-soft) 55%, var(--card)); }
+.ny-ico { flex: none; font-size: 18px; line-height: 1; }
+.ny-text { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.ny-since { font-weight: 700; color: var(--muted); white-space: nowrap; }
+.ny-tag { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 999px; background: var(--warn); color: var(--on-warn); font-size: 11px; font-weight: 900; letter-spacing: .03em; vertical-align: 1px; }
+.ny-block .ny-tag { background: var(--bad); color: var(--on-fill); }
+.ny-go { flex: none; min-height: 36px; padding: 4px 10px; font-size: 13px; background: var(--bad-soft); }
+.ny-go:hover { background: var(--bad-soft-2); }
+.ny-item:not(.ny-block) .ny-go { background: var(--card); }
+.ny-item:not(.ny-block) .ny-go:hover { background: var(--paper-2); }
+
+.ny-more { display: block; width: 100%; padding: 7px 12px; border: 0; border-top: 2px solid var(--rule); background: var(--paper-2); color: var(--ink); font: inherit; font-size: 13px; font-weight: 800; text-align: left; cursor: pointer; }
+.ny-more:hover { background: var(--bad-soft); }
+
+/* A phone: tighter, the sentence wraps beside its button. */
+@media (max-width: 520px) {
+  .ny-item { gap: 8px; padding: 7px 8px 7px 9px; }
+  .ny-text { font-size: 13px; }
+  .ny-go { padding: 4px 8px; font-size: 12px; }
+}
+
+/* The Command Center already lists the other floors where someone's waiting, so the line above the tabs steps aside there. */
+.lite-main.on-command #elsewhere { display: none; }

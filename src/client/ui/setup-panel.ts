@@ -20,6 +20,9 @@ const ICON: Record<string, string> = { PASS: '✅', PENDING: '⏳', FAIL: '⚠�
 let last: { floor: string; at: number; view: SetupView } | undefined;
 let timer: ReturnType<typeof setTimeout> | undefined;
 
+/** What the panel last fetched for `floor`, if anything (the Command Center's "Needs you" reads its ✋ gates). */
+export const cachedSetup = (floor: string | undefined): SetupView | undefined => (floor && last?.floor === floor ? last.view : undefined);
+
 export interface SetupPanelDeps {
   net: Net;
   go(floor: string): void;

@@ -14,7 +14,7 @@ import { issuePrompt, type BoardActions } from './ui/github/prompts';
 import { openIssue } from './ui/github/issue-window';
 import { renderBoard, type KanbanActions } from './ui/kanban';
 import { renderAnalysis } from './ui/analysis';
-import { renderSetup } from './ui/setup-panel';
+import { cachedSetup, renderSetup } from './ui/setup-panel';
 import { renderSummary } from './ui/summary';
 import { teamTab, type Pane } from './ui/roster';
 import { subBoards } from './ui/teams';
@@ -35,6 +35,8 @@ import { workerActions } from './shared/workers';
 import { floorPicker } from './shared/floors';
 import { askedTab, followFloor, leaveForHome, setAddress } from './shared/address';
 import { colorThemes } from './ui/colortheme';
+import { needsYouStrip } from './ui/needsyou';
+import type { NeedTarget } from './ui/needsyou/logic';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -220,6 +222,8 @@ function showTab(t: Tab) {
   $('board').classList.toggle('hidden', t !== 'board');
   $('summary').classList.toggle('hidden', t !== 'command');
   $('setup').classList.toggle('hidden', t !== 'command');
+  $('needs-you').classList.toggle('hidden', t !== 'command');
+  document.querySelector('.lite-main')!.classList.toggle('on-command', t === 'command');
   $('workers-view').classList.toggle('hidden', t !== 'workers');
   $('analysis-view').classList.toggle('hidden', t !== 'analysis');
   $('team-view').classList.toggle('hidden', !isPane(t));
@@ -238,7 +242,7 @@ function renderKanban() {
   if (tab === 'board') return renderBoard($('board'), kanban, teams.boardView(renderKanban));
   if (tab !== 'command') return;
   void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el }).then(() => live.mountChip($('summary')));
-  void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) });
+  void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) }).then(() => needs.refresh());
 }
 /** Which model does well on what (ui/analysis.ts), for this floor or every floor. */
 function renderAnalysisTab() {
@@ -258,6 +262,45 @@ net.onMessage((msg) => team.onMessage(msg));
 store.on('floor', () => team.render(store.floor ?? undefined));
 for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanban);
 setInterval(renderKanban, 30_000);
+
+// ---- Needs you: what's blocked on you, at the top of the Command Center, counted on its tab ---------
+/** An escalation's card on the PM console, scrolled to with its answer box focused; the Approvals tab if it isn't there. */
+function toEscalation(id: string) {
+  if (tab !== 'command') showTab('command');
+  const find = () => document.querySelector<HTMLElement>(`#summary .esc[data-id="${CSS.escape(id)}"]`);
+  const focus = (card: HTMLElement) => {
+    card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    card.querySelector<HTMLTextAreaElement>('.esc-reply')?.focus({ preventScroll: true });
+  };
+  const card = find();
+  if (card) return focus(card);
+  // The summary draws after a fetch: give it a moment.
+  setTimeout(() => {
+    const c = find();
+    if (c) focus(c);
+    else showTab('approvals');
+  }, 400);
+}
+function goToNeed(t: NeedTarget) {
+  if (t.to === 'worker') return openWorker(t.id);
+  if (t.to === 'escalation') return toEscalation(t.id);
+  if (t.to === 'approvals' || t.to === 'settings' || t.to === 'live') return showTab(t.to);
+  if (t.to === 'setup') {
+    if (tab !== 'command') showTab('command');
+    return $('setup').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+  if (t.to === 'floor') {
+    if (t.floor !== store.floor) net.send({ t: 'floor.go', floor: t.floor });
+    return;
+  }
+  const it = store.pulls.items.find((p) => p.number === t.number);
+  if (it) openPull(it, net, boardActions());
+}
+const needs = needsYouStrip($('needs-you'), $('tab-command').querySelector('.ny-tab-n')!, { go: goToNeed, setup: () => cachedSetup(store.floor ?? undefined), live: () => live.current() });
+net.onMessage((msg) => {
+  needs.onMessage(msg);
+  if (msg.t === 'liveapp.state' || msg.t === 'floor.enter' || msg.t === 'welcome') needs.refresh();
+});
 
 $('btn-issues').addEventListener('click', () => openBoard('issues', net, boardActions()));
 $('btn-pulls').addEventListener('click', () => openBoard('pulls', net, boardActions()));
@@ -282,6 +325,7 @@ session.start();
 renderWorkers();
 renderNav();
 showTab(tab);
+needs.refresh();
 
 // Debug handle for quick checks from the console / headless screenshots.
 (window as any).__lite = { store, net };
