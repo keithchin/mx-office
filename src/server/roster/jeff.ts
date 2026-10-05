@@ -1,5 +1,6 @@
 // Jeff, the Router: the office's quick judge (server/judge/) put to work on a floor. Two judgements,
-// each off, shadow or on in the team settings (shadow by default):
+// each off, shadow or on in the team settings (shadow by default), and a third, priority (which
+// escalation to resolve first; only a sort order, so just on or off: jeff-priority.ts):
 //   - waiting: an agent's turn just ended. Is it waiting on the Project Manager? The office's rule says
 //     so when it has an open escalation that isn't an FYI (or it's asking at its terminal). On: when
 //     Jeff is sure and the rule isn't, he raises the escalation for it, once per turn.
@@ -16,6 +17,7 @@ import type { TeamId } from '../../shared/roster/roles.js';
 import { JudgeLog } from '../judge/log.js';
 import { clipState, type Questions, type Verdict } from '../judge/pure.js';
 import type { Roster } from './index.js';
+import { JeffPriority } from './jeff-priority.js';
 import type { TeamFloor } from './types.js';
 
 /** Jeff's noul at or above this, with a kind that needs an answer, is "waiting on you". */
@@ -69,15 +71,18 @@ const pct = (n: number) => n.toFixed(2);
 
 export class Jeff {
   readonly log: JudgeLog;
+  /** Which escalation to resolve first (jeff-priority.ts). */
+  readonly priority: JeffPriority;
   /** Open issue numbers seen per floor; the first look is the baseline, judged never. */
   private seen = new Map<string, Set<number>>();
   private asking = new Set<string>();
 
   constructor(private roster: Roster) {
     this.log = new JudgeLog(path.join(roster.deps.dataDir, 'judge'));
+    this.priority = new JeffPriority(roster, this);
   }
 
-  private mode(floor: TeamFloor, kind: JudgeKind): JeffMode {
+  private mode(floor: TeamFloor, kind: Exclude<JudgeKind, 'priority'>): JeffMode {
     return this.roster.data(floor.id).settings.jeff[kind];
   }
 
@@ -177,7 +182,8 @@ export class Jeff {
     });
   }
 
-  private record(floor: TeamFloor, v: Verdict, r: Omit<JudgeRow, 'at' | 'by' | 'model' | 'ms'> & { verdict: string }) {
+  /** Logs a judgement and tells the floor's browsers (his room in the 2D view reacts). */
+  record(floor: TeamFloor, v: Verdict, r: Omit<JudgeRow, 'at' | 'by' | 'model' | 'ms'> & { verdict: string }) {
     const { verdict, ...rest } = r;
     const at = this.roster.deps.now();
     this.log.append(floor.id, { at, by: v.by, model: v.model, ms: v.ms, ...rest });

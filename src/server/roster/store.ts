@@ -9,7 +9,7 @@ import { DEFAULT_AUTONOMY, isAutonomyLevel, type AutonomyLevel } from '../../sha
 import { cleanName, isRoleId, pickNames, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { cleanSchedule, DEFAULT_SCHEDULE } from '../../shared/roster/schedule.js';
 import type { Escalation } from '../../shared/roster/escalation.js';
-import { DEFAULT_JEFF, isJeffMode } from '../../shared/judge.js';
+import { DEFAULT_JEFF, isJeffMode, isJeffPriorityMode } from '../../shared/judge.js';
 import type { Proposal, RosterSettings, Standup } from '../../shared/roster/types.js';
 import { cleanOverrides, type SkillOverrides } from '../../shared/roster/skills.js';
 import { reviveSubagents, SUBAGENT_ACTIONS_KEPT } from './subagent-store.js';
@@ -87,6 +87,8 @@ export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings
     jeff: {
       waiting: isJeffMode(s.jeff?.waiting) ? s.jeff.waiting : (base.jeff?.waiting ?? DEFAULT_JEFF.waiting),
       triage: isJeffMode(s.jeff?.triage) ? s.jeff.triage : (base.jeff?.triage ?? DEFAULT_JEFF.triage),
+      // His priority sort only orders lists: on unless it was turned off.
+      priority: isJeffPriorityMode(s.jeff?.priority) ? s.jeff.priority : (base.jeff?.priority ?? DEFAULT_JEFF.priority),
     },
     subagentCooldownHours: typeof s.subagentCooldownHours === 'number' && Number.isFinite(s.subagentCooldownHours) ? Math.max(0, Math.min(Math.round(s.subagentCooldownHours * 10) / 10, 24 * 30)) : (base.subagentCooldownHours ?? DEFAULT_COOLDOWN_HOURS),
   };

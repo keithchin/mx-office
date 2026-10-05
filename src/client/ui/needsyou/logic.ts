@@ -4,6 +4,7 @@
 
 import type { FloorInfo, GhPull, LiveAppState, WorkerInfo } from '../../../shared/protocol';
 import type { Escalation } from '../../../shared/roster/escalation';
+import { jeffOrder, rankChip, rankOf, rankTip, sortedByJeff } from '../../../shared/roster/jeff-rank';
 import type { RosterView } from '../../../shared/roster/types';
 import type { SetupView } from '../../../shared/wizard';
 import { needingYou, waitingInOrder } from '../../nextup';
@@ -30,6 +31,8 @@ export interface NeedItem {
   text: string;
   /** A tag before it (an escalation's urgency), when there's one. */
   tag?: string;
+  /** Jeff's rank of an escalation (1 = resolve first) with his chip's words and tooltip, when he sorted them. */
+  rank?: { n: number; chip: string; tip: string };
   /** Since when it has waited (ms), when known. */
   since?: number;
   /** block: something is stopped until you act; warn: worth a look. */
@@ -76,11 +79,13 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     out.push({ key: `lost-${w.id}`, kind: 'lost', icon: '🌿', text: `${w.name}'s worktree was deleted outside agent-office`, level: 'block', action: 'Fix', target: { to: 'worker', id: w.id } });
   }
   if (r) {
-    // 3. Open escalations that aren't FYI, loudest then oldest first.
-    const open = r.escalations.filter((e) => e.status === 'open' && !e.fyi).sort((a, b) => URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency] || a.at - b.at);
+    // 3. Open escalations that aren't FYI: in Jeff's order when he ranked them, else loudest then oldest first.
+    const byJeff = sortedByJeff(r.escalations, r.settings?.jeff?.priority);
+    const open = jeffOrder(r.escalations.filter((e) => e.status === 'open' && !e.fyi), byJeff, (a, b) => URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency] || a.at - b.at);
     for (const e of open) {
+      const n = byJeff ? rankOf(e) : undefined;
       const loud = e.urgency === 'urgent' || e.urgency === 'critical';
-      out.push({ key: `esc-${e.id}`, kind: 'escalation', icon: '🚩', tag: e.urgency.toUpperCase(), text: `${e.by} escalated: ${e.title}`, since: e.at, level: loud ? 'block' : 'warn', action: admin ? 'Answer' : 'View', target: { to: 'escalation', id: e.id } });
+      out.push({ key: `esc-${e.id}`, kind: 'escalation', icon: '🚩', tag: e.urgency.toUpperCase(), text: `${e.by} escalated: ${e.title}`, since: e.at, level: loud ? 'block' : 'warn', action: admin ? 'Answer' : 'View', target: { to: 'escalation', id: e.id }, ...(n !== undefined && e.jeffRank ? { rank: { n, chip: rankChip(n), tip: rankTip(e.jeffRank, n) } } : {}) });
     }
     // 4. Proposals and merges waiting on you (escalations are above; the cap is the paused line below).
     for (const a of r.approvals) {

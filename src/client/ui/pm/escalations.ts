@@ -9,7 +9,8 @@
 // what you're typing in it survives the redraws.
 
 import { TRIGGER_LABEL } from '../../../shared/roster/autonomy';
-import { URGENCY_ICON, type Escalation, type EscalationVerdict } from '../../../shared/roster/escalation';
+import { URGENCY_ICON, escalationOrder, type Escalation, type EscalationVerdict } from '../../../shared/roster/escalation';
+import { jeffOrder, rankOf, sortedByJeff } from '../../../shared/roster/jeff-rank';
 import { ROLE_BY_ID } from '../../../shared/roster/roles';
 import type { RosterView } from '../../../shared/roster/types';
 import { h, timeAgo, toast } from '../dom';
@@ -17,6 +18,7 @@ import { act } from '../roster/api';
 import { store } from '../../state';
 import { ZONE_BY_TEAM } from '../../../shared/zones';
 import { lookFor, standing, type Outfit } from '../../pixel/chars';
+import { rankChipEl, sortedNote } from './jeff-rank';
 import './escalations.css';
 
 const VERDICT_DONE: Record<EscalationVerdict, string> = { reply: '💬 Replied', approve: '✅ Approved', reject: '❌ Rejected', dismiss: '✓ Noted' };
@@ -153,7 +155,10 @@ function raisedBy(e: Escalation): HTMLElement {
   return h('figure.esc-who', { title: `Raised by ${e.by}${role ? ` (${role.title})` : ''}` }, c, h('figcaption', {}, e.by), role ? h('small', {}, role.title) : null);
 }
 
-/** The console's list of escalations: the open ones as cards, the answered ones folded away. */
+/**
+ * The console's list of escalations: the open ones as cards, the answered ones folded away. When Jeff
+ * ranked them (his priority sort is on), the open ones are in his order, each with its chip beside the card.
+ */
 export class EscalationList {
   readonly el = h('section.esc-list', { 'aria-label': 'Escalations to you, the Project Manager' });
   private cards = new Map<string, { sig: string; el: HTMLElement }>();
@@ -166,10 +171,11 @@ export class EscalationList {
 
   render(v: RosterView | undefined) {
     const list = v?.escalations ?? [];
-    const open = list.filter((e) => e.status === 'open');
+    const byJeff = sortedByJeff(list, v?.settings?.jeff?.priority);
+    const open = jeffOrder(list.filter((e) => e.status === 'open'), byJeff, escalationOrder);
     const answered = list.filter((e) => e.status === 'resolved').slice(0, 3);
     this.el.hidden = !list.length;
-    const sig = `${v?.floor}|${v?.admin}|${list.map((e) => `${e.id}:${e.status}`).join(',')}`;
+    const sig = `${v?.floor}|${v?.admin}|${byJeff}|${list.map((e) => `${e.id}:${e.status}:${byJeff ? `${rankOf(e) ?? ''}@${e.jeffRank?.at ?? ''}` : ''}`).join(',')}`;
     if (sig === this.drawn) return;
     this.drawn = sig;
     if (!v || !list.length) return void this.el.replaceChildren();
@@ -184,7 +190,9 @@ export class EscalationList {
     };
     const head = h('header.esc-list-h', {}, h('b', {}, `🚩 Escalations to you${open.length ? ` (${open.length} open)` : ''}`), loud ? h('span.esc-loud', {}, `${loud} need${loud === 1 ? 's' : ''} you now`) : null);
     this.folded.replaceChildren(h('summary', {}, `Answered (${answered.length})`), ...answered.map(cardFor));
-    this.el.replaceChildren(head, ...open.map(cardFor), ...(answered.length ? [this.folded] : []));
+    // Jeff's chip goes beside the card, not in it: the card keeps its element (and what you typed).
+    const opened = open.flatMap((e) => [byJeff ? rankChipEl(e) : null, cardFor(e)].filter((x): x is HTMLElement => !!x));
+    this.el.replaceChildren(head, ...(byJeff ? [sortedNote()] : []), ...opened, ...(answered.length ? [this.folded] : []));
     this.cards = keep;
   }
 }
