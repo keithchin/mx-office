@@ -189,7 +189,7 @@ export class Jeff {
     const at = this.roster.deps.now();
     this.log.append(floor.id, { at, by: v.by, model: v.model, ms: v.ms, ...rest });
     floor.judged?.({ kind: r.kind, by: v.by, verdict, agree: r.agree, acted: r.acted, at });
-    audit.record({ floor: floor.id, actor: jeff(), action: r.acted ? 'judge.act' : 'judge.verdict', target: { kind: r.kind === 'waiting' ? 'worker' : 'issue', label: r.subject }, summary: `${r.acted ? 'Acted on' : 'Judged'} ${r.subject}: ${verdict}${r.agree === false ? " (the office's rule disagreed)" : ''}`, details: { kind: r.kind, mode: this.mode(floor, r.kind), jeff: r.jeff, rule: r.rule, agree: r.agree, by: v.by, model: v.model, ms: v.ms }, severity: r.acted ? 'notice' : 'info' });
+    audit.record({ floor: floor.id, actor: jeff(), action: r.acted ? 'judge.act' : 'judge.verdict', target: { kind: r.kind === 'waiting' ? 'worker' : 'issue', label: r.subject }, summary: `${r.acted ? 'Acted on' : 'Judged'} ${r.subject}: ${verdict}${r.agree === false ? " (the office's rule disagreed)" : ''}`, details: { kind: r.kind, mode: this.roster.data(floor.id).settings.jeff[r.kind], jeff: r.jeff, rule: r.rule, agree: r.agree, by: v.by, model: v.model, ms: v.ms }, severity: r.acted ? 'notice' : 'info' });
   }
 
   summary(floorId: string, status: JeffStatus): JudgeSummary {

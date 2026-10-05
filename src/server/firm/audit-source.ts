@@ -1,11 +1,8 @@
 // The office audit log, for the Firm: what reviewers read as evidence (`readAudit`) and where the
 // Firm records its own steps (`record`).
 //
-// INTEGRATION POINT: the audit log (src/server/audit/, exporting `readAudit(...)` and `record(...)`,
-// with GET /api/audit) is being built alongside the Firm and isn't on this branch yet. Until it is,
-// this adapter looks for it at run time and, when it isn't there, reads as empty and records nothing.
-// Once it's merged, replace the dynamic import below with a plain
-// `import { readAudit, record } from '../audit/index.js'` and adjust `AuditEntry` to its type.
+// The audit log is src/server/audit/: its newest events (as evidence), and the Firm's steps recorded
+// in it with the reviewer actor kind.
 
 export interface AuditEntry {
   at?: number;
@@ -20,12 +17,14 @@ export interface AuditSource {
   record(entry: { floor?: string; kind: string; text: string; data?: unknown }): void;
 }
 
+import { audit, readAudit } from '../audit/index.js';
+
 const NONE: AuditSource = { read: async () => [], record: () => {} };
 
 type AuditModule = { readAudit?: (...a: unknown[]) => unknown; record?: (...a: unknown[]) => unknown };
 
 /** The audit log when the office has one, else one that's always empty. `load` is for the tests. */
-export async function auditSource(load: () => Promise<AuditModule> = () => import(/* @vite-ignore */ AUDIT_MODULE) as Promise<AuditModule>): Promise<AuditSource> {
+export async function auditSource(load: () => Promise<AuditModule> = async () => OFFICE_AUDIT): Promise<AuditSource> {
   let mod: AuditModule;
   try {
     mod = await load();
@@ -38,8 +37,9 @@ export async function auditSource(load: () => Promise<AuditModule> = () => impor
   return {
     async read(opts) {
       try {
-        const rows = await readAudit(opts);
-        return Array.isArray(rows) ? (rows as AuditEntry[]).slice(-(opts.limit ?? 500)) : [];
+        const got = (await readAudit(opts)) as AuditEntry[] | { events?: AuditEntry[] };
+        const rows = Array.isArray(got) ? got : (got?.events ?? []);
+        return rows.slice(-(opts.limit ?? 500));
       } catch {
         return [];
       }
@@ -54,5 +54,11 @@ export async function auditSource(load: () => Promise<AuditModule> = () => impor
   };
 }
 
-/** A variable, so the typecheck doesn't need the module to be there yet. */
-const AUDIT_MODULE = '../audit/index.js';
+/** The office's own log, in the shape this adapter reads: the Firm's steps are a reviewer's. */
+const OFFICE_AUDIT: AuditModule = {
+  readAudit: (opts) => readAudit(opts as { floor?: string; limit?: number }),
+  record: (raw) => {
+    const e = raw as { floor?: string; kind: string; text: string; data?: unknown };
+    audit.record({ floor: e.floor, actor: { kind: 'reviewer', name: 'The Firm' }, action: e.kind, target: { kind: 'engagement', label: 'Audit' }, summary: e.text, details: (e.data ?? undefined) as Record<string, unknown> | undefined, severity: 'notice' });
+  },
+};
