@@ -11,11 +11,13 @@ import './jeff.css';
 
 export const JEFF_MODE_LABEL: Record<JeffMode, string> = { off: 'Off', shadow: 'Shadow: watch, don’t act', on: 'On: act' };
 const MODE_CHIP: Record<JeffMode, string> = { off: 'Off', shadow: 'Shadow', on: 'On' };
-export const KIND_LABEL: Record<JudgeKind, string> = { waiting: '🙋 Waiting on you', triage: '🏷️ Issue triage' };
+export const KIND_LABEL: Record<JudgeKind, string> = { waiting: '🙋 Waiting on you', triage: '🏷️ Issue triage', priority: '🔢 Escalation priority' };
 const KIND_WHAT: Record<JudgeKind, string> = {
   waiting: 'When an agent ends its turn: is it waiting on you? The office’s rule: it has an open escalation that isn’t an FYI.',
   triage: 'When a new issue appears: which team is it for? The office’s rule: its team: label, if it has one.',
+  priority: 'When an escalation is raised: how soon should you resolve it? The lists show his order. The office’s rule: loudest, then newest.',
 };
+const KIND_WORD: Record<JudgeKind, string> = { waiting: 'waiting', triage: 'triage', priority: 'priority' };
 export const STATUS_WORDS: Record<JeffStatus['state'], string> = { jev: 'Jev live', haiku: 'on Haiku', unavailable: 'unavailable' };
 
 /** What he's called right now: Jeff (Jev), or Jeff (on Haiku) on the fallback. */
@@ -153,7 +155,7 @@ export function jeffCard(floor: string): HTMLElement {
     .then((s) => {
       pill.replaceWith(statusPill(s.status));
       card.querySelector('.ro-name')!.textContent = `Jeff · Router (${s.status.state === 'haiku' ? 'on Haiku' : 'Jev'})`;
-      facts.textContent = `${todayLine(s)} · ${s.kinds.map((k) => `${k.kind === 'waiting' ? 'waiting' : 'triage'}: ${MODE_CHIP[k.mode]}`).join(' · ')}`;
+      facts.textContent = `${todayLine(s)} · ${s.kinds.map((k) => `${KIND_WORD[k.kind]}: ${MODE_CHIP[k.mode]}`).join(' · ')}`;
     })
     .catch(() => (facts.textContent = 'Couldn’t reach Jeff'));
   return card;

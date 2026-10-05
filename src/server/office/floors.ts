@@ -9,6 +9,7 @@ import { SLOW_CLIENT_BYTES, type Client } from './client.js';
 import { analysisOf } from '../analysis/index.js';
 import { summaryOf } from '../summary/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { auditGitHub } from '../audit/office.js';
 
 /**
  * Tells the project team about a worker, unless the floor is still being built. A floor restores its
@@ -139,9 +140,13 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
     leaveOnMerge: () => ctx.leaveOnMerge.on,
     floor: (id) => floors.get(id),
     pullsChanged: (floor) => {
+      auditGitHub(floor, 'pulls');
       for (const f of floors.values()) if (f !== floor && worksIn(f, floor)) f.sendLandedHome();
     },
-    issuesChanged: (floor) => team(ctx, floor, (t) => rosterOf(ctx).onIssues(t, floor.github.issues.items)),
+    issuesChanged: (floor) => {
+      auditGitHub(floor, 'issues');
+      team(ctx, floor, (t) => rosterOf(ctx).onIssues(t, floor.github.issues.items));
+    },
     lent: (floor) => [...floors.values()].some((f) => f !== floor && worksIn(f, floor)),
     locksUp: () => !!ctx.maps.plan().sendHome?.keeps,
     runAs: ctx.signins,

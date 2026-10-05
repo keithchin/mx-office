@@ -4,6 +4,7 @@ import type { Ctx } from '../../office/context.js';
 import type { Client } from '../../office/client.js';
 import { str } from '../../office/input.js';
 import type { HandlerMap } from './types.js';
+import { audit, human } from '../../audit/index.js';
 
 /** Whether `c` may manage accounts; if not, they're told so. */
 const admin = (ctx: Ctx, c: Client): boolean => {
@@ -23,6 +24,7 @@ export const accountsHandlers = {
     const r = ctx.accounts.invite(who, msg.role === 'admin' ? 'admin' : 'member', typeof msg.name === 'string' ? msg.name : undefined);
     if (typeof r === 'string') return ctx.sendTo(c, { t: 'accounts.invited', error: r });
     ctx.sendTo(c, { t: 'accounts.invited', invite: r });
+    audit.record({ actor: human(who, c.accountId), action: 'account.invite', target: { kind: 'account', label: r.name ?? 'someone' }, summary: `Invited ${r.name ?? 'someone'} as ${r.role === 'admin' ? 'an admin' : 'a member'}`, details: { role: r.role }, severity: 'notice' });
     ctx.accountsChanged();
   },
   'accounts.cancel'(ctx, c, msg) {
@@ -38,6 +40,7 @@ export const accountsHandlers = {
     if (!a) return;
     console.log(`  ${who} revoked ${a.name}'s account`);
     ctx.toastAll(`${who} revoked ${a.name}'s account`);
+    audit.record({ actor: human(who, c.accountId), action: 'account.revoke', target: { kind: 'account', id: a.id, label: a.name }, summary: `Revoked ${a.name}'s account`, severity: 'warning' });
     ctx.accountsChanged(); // signs them out everywhere
     ctx.signins.forget(a.id); // and their Claude and GitHub sign-ins go with the account
     ctx.accountLimits.get(a.id)?.reader.close();
@@ -50,6 +53,7 @@ export const accountsHandlers = {
     if (id === c.accountId) return ctx.warn(c, "You can't change your own role");
     const a = ctx.accounts.setRole(id, msg.role === 'admin' ? 'admin' : 'member');
     if (!a) return;
+    audit.record({ actor: human(who, c.accountId), action: 'account.role', target: { kind: 'account', id: a.id, label: a.name }, summary: a.role === 'admin' ? `Made ${a.name} an admin` : `Made ${a.name} a member`, details: { after: { role: a.role } }, severity: 'notice' });
     ctx.toastAll(a.role === 'admin' ? `${who} made ${a.name} an admin` : `${a.name} is no longer an admin`);
     ctx.accountsChanged();
     // Only admins may use the office's own sign-ins: a demoted one is back on their own.
@@ -62,6 +66,7 @@ export const accountsHandlers = {
     // Only someone who can still get in without it may switch it off.
     if (!msg.on && !c.accountId) return ctx.warn(c, 'Sign in with an admin account of your own first, or nobody could get back in');
     ctx.accounts.setSharedPassword(!!msg.on);
+    audit.record({ actor: human(who, c.accountId), action: 'settings.change', target: { kind: 'setting', id: 'sharedPassword', label: 'Shared office password' }, summary: msg.on ? 'Switched the shared office password on' : 'Switched the shared office password off', details: { before: { on: !msg.on }, after: { on: !!msg.on } }, severity: 'warning' });
     console.log(`  ${who} switched the shared office password ${msg.on ? 'on' : 'off'}`);
     ctx.toastAll(msg.on ? `${who} switched the shared office password back on` : `🔑 ${who} switched off the shared office password — everyone signs in with their own account now`);
     ctx.accountsChanged(); // signs out whoever came in with it

@@ -13,11 +13,17 @@ export interface JeffSettings {
   waiting: JeffMode;
   /** Which team does a new issue belong to? */
   triage: JeffMode;
+  /** Which escalation should the Project Manager resolve first? Advisory (a sort order), so no shadow. */
+  priority: JeffPriorityMode;
 }
-export const DEFAULT_JEFF: JeffSettings = { waiting: 'shadow', triage: 'shadow' };
+/** Jeff's priority sort is on or off: it only orders lists, so there's nothing to watch first. */
+export type JeffPriorityMode = 'off' | 'on';
+export const isJeffPriorityMode = (v: unknown): v is JeffPriorityMode => v === 'off' || v === 'on';
+export const DEFAULT_JEFF: JeffSettings = { waiting: 'shadow', triage: 'shadow', priority: 'on' };
 
-export type JudgeKind = 'waiting' | 'triage';
-export const JUDGE_KINDS: readonly JudgeKind[] = ['waiting', 'triage'];
+export type JudgeKind = 'waiting' | 'triage' | 'priority';
+export const JUDGE_KINDS: readonly JudgeKind[] = ['waiting', 'triage', 'priority'];
+export const isJudgeKind = (v: unknown): v is JudgeKind => typeof v === 'string' && (JUDGE_KINDS as readonly string[]).includes(v);
 export type JudgeBy = 'jev' | 'haiku';
 
 /** One judgement, as logged (judge/<floor>.jsonl in the office's data dir). Text is redacted and clipped. */

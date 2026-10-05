@@ -9,7 +9,8 @@
 // what you're typing in it survives the redraws.
 
 import { TRIGGER_LABEL } from '../../../shared/roster/autonomy';
-import { URGENCY_ICON, type Escalation, type EscalationVerdict } from '../../../shared/roster/escalation';
+import { URGENCY_ICON, escalationOrder, type Escalation, type EscalationVerdict } from '../../../shared/roster/escalation';
+import { jeffOrder, rankOf, sortedByJeff } from '../../../shared/roster/jeff-rank';
 import { ROLE_BY_ID } from '../../../shared/roster/roles';
 import type { RosterView } from '../../../shared/roster/types';
 import { h, timeAgo, toast } from '../dom';
@@ -17,6 +18,7 @@ import { act } from '../roster/api';
 import { store } from '../../state';
 import { ZONE_BY_TEAM } from '../../../shared/zones';
 import { lookFor, standing, type Outfit } from '../../pixel/chars';
+import { rankChipEl, sortedNote } from './jeff-rank';
 import './escalations.css';
 
 const VERDICT_DONE: Record<EscalationVerdict, string> = { reply: '💬 Replied', approve: '✅ Approved', reject: '❌ Rejected', dismiss: '✓ Noted' };
@@ -87,11 +89,57 @@ export function escalationCard(floor: string, e: Escalation, admin: boolean, don
           )
         : h('p.esc-meta', {}, 'Only the Project Manager (an admin) can answer it.'),
   );
-  // Who raised it, big enough to tell at a glance: the same character as in the 2D office.
+  // Who raised it, big enough to tell at a glance (the same character as in the 2D office), saying
+  // what it needs in a speech bubble; the card's details sit under them.
   const body = h('div.esc-body');
   body.append(...card.childNodes);
-  card.append(raisedBy(e), body);
+  card.append(h('div.esc-top', {}, raisedBy(e), h('p.esc-bubble', {}, saying(e))), body);
   return card;
+}
+
+/** The first sentence of `s`, or its first ~120 characters, without a trailing full stop. */
+function gist(s: string): string {
+  const one = s.replace(/\s+/g, ' ').trim();
+  const cut = one.match(/^.{20,140}?[.!?](\s|$)/)?.[0] ?? (one.length > 130 ? `${one.slice(0, 120).replace(/\s+\S*$/, '')}…` : one);
+  return cut.trim().replace(/\.$/, '');
+}
+
+/** What it's after, the way a teammate would say it at your desk. */
+function saying(e: Escalation): string {
+  // Ends in a full stop unless it already asks or exclaims.
+  const what = ((t) => (/[?!…]$/.test(t) ? t : `${t}.`))(gist(e.title));
+  if (e.status === 'resolved' && e.resolution) {
+    const r = e.resolution;
+    if (r.verdict === 'approve') return `Thanks for the go-ahead! I'm on it 👍`;
+    if (r.verdict === 'reject') return `Got it, not doing that. I'll rethink it 🤔`;
+    if (r.verdict === 'dismiss') return `Cool, noted. Back to work ✌️`;
+    return `Thanks, that answers it. On it now 🙌`;
+  }
+  if (e.fyi) return `Just so you know: ${what} Nothing needed from you 🙂`;
+  const pick = e.options.length ? (e.recommendation ? ` I'd go with “${gist(e.recommendation)}”, but your call.` : ' Which one should I go with?') : '';
+  switch (e.trigger) {
+    case 'blocked':
+      return `I'm stuck 😅 ${what}${pick || ' Can you help me get unblocked?'}`;
+    case 'security':
+      return `Uh-oh, spotted something security-ish 🔒 ${what}${pick || ' Can you take a look?'}`;
+    case 'data-loss':
+      return `Careful, this could lose data ⚠️ ${what}${pick || ' Okay to go ahead?'}`;
+    case 'budget-risk':
+      return `Heads-up, we're burning budget 💸 ${what}${pick || ' Should I keep going?'}`;
+    case 'client-milestone':
+      return `Big one: a client milestone 🎯 ${what}${pick || ' Can you sign it off?'}`;
+    case 'scope':
+    case 'plan':
+      return `This might change the plan 🗺️ ${what}${pick || ' Are you okay with that?'}`;
+    case 'design':
+    case 'architecture':
+      return `Quick design call needed ✏️ ${what}${pick || ' What do you think?'}`;
+    case 'revisions-exhausted':
+    case 'repeated-failure':
+      return `This keeps failing and I'm out of ideas 😓 ${what}${pick || ' How do you want to handle it?'}`;
+  }
+  if (e.urgency === 'critical' || e.urgency === 'urgent') return `Need you on this one, it's kinda urgent ⏰ ${what}${pick || ' Can you look now?'}`;
+  return `Hey! Quick one: ${what}${pick || ' What do you think?'}`;
 }
 
 const OUTFIT: Record<string, Outfit> = { pm: 'pm', 'lead-designer': 'designer', 'lead-developer': 'dev', 'lead-tester': 'qa', 'chief-analyst': 'analyst' };
@@ -107,7 +155,10 @@ function raisedBy(e: Escalation): HTMLElement {
   return h('figure.esc-who', { title: `Raised by ${e.by}${role ? ` (${role.title})` : ''}` }, c, h('figcaption', {}, e.by), role ? h('small', {}, role.title) : null);
 }
 
-/** The console's list of escalations: the open ones as cards, the answered ones folded away. */
+/**
+ * The console's list of escalations: the open ones as cards, the answered ones folded away. When Jeff
+ * ranked them (his priority sort is on), the open ones are in his order, each with its chip beside the card.
+ */
 export class EscalationList {
   readonly el = h('section.esc-list', { 'aria-label': 'Escalations to you, the Project Manager' });
   private cards = new Map<string, { sig: string; el: HTMLElement }>();
@@ -120,10 +171,11 @@ export class EscalationList {
 
   render(v: RosterView | undefined) {
     const list = v?.escalations ?? [];
-    const open = list.filter((e) => e.status === 'open');
+    const byJeff = sortedByJeff(list, v?.settings?.jeff?.priority);
+    const open = jeffOrder(list.filter((e) => e.status === 'open'), byJeff, escalationOrder);
     const answered = list.filter((e) => e.status === 'resolved').slice(0, 3);
     this.el.hidden = !list.length;
-    const sig = `${v?.floor}|${v?.admin}|${list.map((e) => `${e.id}:${e.status}`).join(',')}`;
+    const sig = `${v?.floor}|${v?.admin}|${byJeff}|${list.map((e) => `${e.id}:${e.status}:${byJeff ? `${rankOf(e) ?? ''}@${e.jeffRank?.at ?? ''}` : ''}`).join(',')}`;
     if (sig === this.drawn) return;
     this.drawn = sig;
     if (!v || !list.length) return void this.el.replaceChildren();
@@ -138,7 +190,9 @@ export class EscalationList {
     };
     const head = h('header.esc-list-h', {}, h('b', {}, `🚩 Escalations to you${open.length ? ` (${open.length} open)` : ''}`), loud ? h('span.esc-loud', {}, `${loud} need${loud === 1 ? 's' : ''} you now`) : null);
     this.folded.replaceChildren(h('summary', {}, `Answered (${answered.length})`), ...answered.map(cardFor));
-    this.el.replaceChildren(head, ...open.map(cardFor), ...(answered.length ? [this.folded] : []));
+    // Jeff's chip goes beside the card, not in it: the card keeps its element (and what you typed).
+    const opened = open.flatMap((e) => [byJeff ? rankChipEl(e) : null, cardFor(e)].filter((x): x is HTMLElement => !!x));
+    this.el.replaceChildren(head, ...(byJeff ? [sortedNote()] : []), ...opened, ...(answered.length ? [this.folded] : []));
     this.cards = keep;
   }
 }

@@ -3,6 +3,7 @@ import { DESK_BY_ID } from '../../shared/layout.js';
 import type { Ctx } from '../office/context.js';
 import { str } from '../office/input.js';
 import { readBody, send } from '../http/util.js';
+import { agent as agentActor, audit } from '../audit/index.js';
 
 /**
  * The task queue, for the board agents (see stations.ts, which tells them how): GET lists it, POST
@@ -39,6 +40,7 @@ export async function officeQueue(ctx: Ctx, req: http.IncomingMessage, res: http
   const err = floor.queue.add(str(body?.prompt, 20000), agent.name, str(body?.title, 200) || undefined, issue, undefined, undefined, undefined, floor.workers.ownerOf(agent.id));
   if (err) return send(res, 400, { error: err });
   const task = floor.queue.state().tasks.at(-1)!;
+  audit.record({ floor: floor.id, actor: agentActor(agent.name, agent.id), action: 'queue.add', target: issue !== undefined ? { kind: 'issue', id: `#${issue}` } : { kind: 'task', id: task.id, label: task.title }, summary: `Queued ${issue !== undefined ? `issue #${issue}` : `“${task.title}”`}` });
   ctx.toastFloor(floor, `📋 The ${agent.name} queued ${issue !== undefined ? `issue #${issue}` : `“${task.title}”`}`);
   send(res, 200, { ok: true, task: { id: task.id, title: task.title, status: task.status } });
 }

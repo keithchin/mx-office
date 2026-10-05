@@ -45,11 +45,17 @@ html[data-theme='terminal'] .esc-urgent .esc-tag, html[data-theme='terminal'] .e
 .esc.esc-flash { animation: esc-flash 1.2s ease-out 1; }
 @keyframes esc-flash { 0% { box-shadow: 0 0 0 4px var(--accent); } 100% { box-shadow: 0 0 0 0 transparent; } }
 @media (prefers-reduced-motion: reduce) { .esc.esc-flash { animation: none; outline: 3px solid var(--accent); } }
-/* Who raised it: the agent's 2D character, big, beside the card's text. */
-.esc { flex-direction: row; align-items: flex-start; gap: 10px; }
-.esc-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+/* Who raised it: the agent's 2D character, big, saying what it needs in a speech bubble; the card's details under them. */
+.esc-top { display: flex; align-items: flex-start; gap: 12px; }
+.esc-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .esc-who { flex: none; width: 72px; margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
 .esc-face { width: 64px; height: 64px; image-rendering: pixelated; background: var(--paper-2); border: 2px solid var(--line); border-radius: 10px; }
 .esc-who figcaption { max-width: 100%; font-size: 12px; font-weight: 900; color: var(--ink); overflow-wrap: anywhere; }
 .esc-who small { max-width: 100%; font-size: 10px; font-weight: 700; line-height: 1.2; color: var(--muted); }
-@media (max-width: 520px) { .esc-who { width: 56px; } .esc-face { width: 48px; height: 48px; } }
+.esc-bubble { position: relative; flex: 1; min-width: 0; margin: 6px 0 0; padding: 9px 12px; font-size: 13px; font-weight: 700; line-height: 1.4; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 14px; box-shadow: 0 2px 0 var(--edge); overflow-wrap: anywhere; }
+/* The tail, pointing at the speaker: a border triangle with a filled one on top. */
+.esc-bubble::before, .esc-bubble::after { content: ''; position: absolute; top: 18px; border-style: solid; border-color: transparent; }
+.esc-bubble::before { left: -12px; border-width: 7px 12px 7px 0; border-right-color: var(--line); }
+.esc-bubble::after { left: -8px; top: 20px; border-width: 5px 9px 5px 0; border-right-color: var(--card); }
+.esc-resolved .esc-bubble { color: var(--ink-2); }
+@media (max-width: 520px) { .esc-who { width: 56px; } .esc-face { width: 48px; height: 48px; } .esc-bubble { font-size: 12px; } }

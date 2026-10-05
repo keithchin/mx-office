@@ -1,11 +1,11 @@
 // The team settings: the autonomy level (what needs the Project Manager), how long a Lead may sit idle before
 // it's benched, the review nudge, the standup's schedule, a daily cost cap per autonomy level, and a dry
-// run for issues, and Jeff the Router's two modes.
+// run for issues, and Jeff the Router's two modes and his escalation priority sort.
 // Only the Project Manager (an admin) can save them; everyone else sees them read-only.
 
 import { AUTONOMY, DECISION_LABEL, REVIEW_POLICY, type AutonomyLevel } from '../../../shared/roster/autonomy';
 import type { RosterSettings, RosterView } from '../../../shared/roster/types';
-import { DEFAULT_JEFF, JEFF_MODES, type JeffMode, type JudgeKind } from '../../../shared/judge';
+import { DEFAULT_JEFF, JEFF_MODES, type JeffMode, type JeffPriorityMode } from '../../../shared/judge';
 import { h } from '../dom';
 import { JEFF_MODE_LABEL, jeffPortrait } from '../jeff';
 import { act } from './api';
@@ -49,11 +49,15 @@ export function settingsView(v: RosterView, redraw: (v: RosterView) => void): HT
     return h('label.ro-check', {}, i, ' ', label);
   };
   s.jeff ??= { ...DEFAULT_JEFF };
-  const mode = (label: string, kind: JudgeKind) => {
+  const mode = (label: string, kind: 'waiting' | 'triage') => {
     const sel = h('select.ro-select', { disabled: off, 'aria-label': `Jeff: ${label}` }, ...JEFF_MODES.map((m) => h('option', { value: m, selected: s.jeff[kind] === m }, JEFF_MODE_LABEL[m])));
     sel.addEventListener('change', () => (s.jeff[kind] = sel.value as JeffMode));
     return h('label.ro-jeff-mode', {}, h('b', {}, label), sel);
   };
+  // Priority only sorts the lists, so it's on or off: there's nothing to watch in shadow first.
+  s.jeff.priority ??= DEFAULT_JEFF.priority;
+  const sortSel = h('select.ro-select', { disabled: off, 'aria-label': 'Jeff: Priority' }, ...(['off', 'on'] as const).map((m) => h('option', { value: m, selected: s.jeff.priority === m }, m === 'on' ? 'On: sort' : 'Off')));
+  sortSel.addEventListener('change', () => (s.jeff.priority = sortSel.value as JeffPriorityMode));
   const days = h('div.ro-days', {}, ...DAYS.map((d, i) => check(s.schedule.days.includes(i), (b) => (s.schedule.days = b ? [...s.schedule.days, i].sort() : s.schedule.days.filter((x) => x !== i)), d)));
   const save = h('button.btn.primary', { type: 'button', disabled: off, id: 'ro-save-settings', onclick: () => void act(v.floor, 'settings', { settings: s }).then((r) => r && redraw(r)) }, '💾 Save settings');
   return h(
@@ -81,5 +85,6 @@ export function settingsView(v: RosterView, redraw: (v: RosterView) => void): HT
     h('p.ro-sub', {}, 'Jeff is the office’s quick judge. In Shadow he is watching, not acting: he logs his verdict next to the office’s own rule, and the Analysis tab shows where you agree. Switch to On where he agrees with you.'),
     h('p.ro-row', {}, mode('Waiting on you', 'waiting'), ' When an agent ends its turn: is it waiting on you? On: he escalates it to you if it didn’t.'),
     h('p.ro-row', {}, mode('Triage', 'triage'), ' When a new issue appears: which team is it for? On: he labels unlabelled issues he’s sure about.'),
+    h('p.ro-row', {}, h('label.ro-jeff-mode', {}, h('b', {}, 'Priority'), sortSel), ' When an escalation is raised: how soon should you resolve it? On: your escalations are listed in his order, #1 first.'),
   );
 }

@@ -16,6 +16,7 @@ import { graphics, viewUrl } from './graphics';
 import { projectsView } from './home/projects';
 import { statsView } from './home/stats';
 import { overviewView } from './home/overview';
+import { homeAudit } from './home/audit';
 import './home/home.css';
 
 /** The tab a link asked for (?tab= or a bare #), read before the address is tidied. */
@@ -33,6 +34,7 @@ const session = flatSession(
   // A notification clicked: the worker's terminal is on the 1D view.
   () => location.assign(viewUrl('1d')),
   (msg) => {
+    audit.onMessage(msg);
     // Coming in puts this page on a floor nobody picked: a browser that had never been on one still
     // hasn't, so / and the flat views keep sending it here (see flatViewGoesHome).
     if (!last && !leaving && (msg.t === 'welcome' || msg.t === 'floor.enter')) forgetFloor();
@@ -58,7 +60,7 @@ store.on('floors', renderBack);
 
 // ---- The tabs ---------------------------------------------------------------------------------
 const TAB_KEY = 'agent-office.home-tab';
-const TABS = ['projects', 'stats', 'overview'] as const;
+const TABS = ['projects', 'stats', 'overview', 'audit'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (t: unknown): t is Tab => TABS.includes(t as Tab);
 let tab: Tab = 'projects';
@@ -73,6 +75,7 @@ if (isTab(asked)) tab = asked;
 const projects = projectsView($('projects-view'), net, last, () => (leaving = true));
 const stats = statsView($('stats-view'), () => (leaving = true));
 const overview = overviewView($('overview-view'), () => (leaving = true));
+const audit = homeAudit($('audit-view'));
 
 function showTab(t: Tab) {
   tab = t;
@@ -89,6 +92,8 @@ function showTab(t: Tab) {
   }
   if (t === 'overview') overview.show();
   else overview.hide();
+  if (t === 'audit') audit.show();
+  else audit.hide();
   if (t === 'projects') projects.render();
   else if (t === 'stats') void stats.render();
 }

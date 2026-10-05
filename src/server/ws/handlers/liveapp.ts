@@ -7,6 +7,7 @@ import { throttle } from '../../office/client.js';
 import type { Ctx } from '../../office/context.js';
 import { liveAppsOf } from '../../liveapp/index.js';
 import { here } from './common.js';
+import { audit, human } from '../../audit/index.js';
 import type { HandlerMap } from './types.js';
 
 /** Whether `c` may run the live app; if not, they're told so. */
@@ -25,16 +26,19 @@ export const liveAppHandlers = {
     const floor = here(ctx, c);
     if (!floor || !admin(ctx, c) || !throttle(c, 'liveapp', 1500)) return;
     void liveAppsOf(ctx).of(floor).start(c.peer.name);
+    audit.record({ floor: floor.id, actor: human(c.peer.name, c.accountId), action: 'liveapp.start', target: { kind: 'liveapp', id: floor.id, label: 'Live app' }, summary: 'Started the live app' });
   },
   'liveapp.restart'(ctx, c) {
     const floor = here(ctx, c);
     if (!floor || !admin(ctx, c) || !throttle(c, 'liveapp', 1500)) return;
     void liveAppsOf(ctx).of(floor).restart(c.peer.name);
+    audit.record({ floor: floor.id, actor: human(c.peer.name, c.accountId), action: 'liveapp.restart', target: { kind: 'liveapp', id: floor.id, label: 'Live app' }, summary: 'Restarted the live app' });
     ctx.toastFloor(floor, `🌐 ${c.peer.name} is restarting the live app`);
   },
   'liveapp.stop'(ctx, c) {
     const floor = here(ctx, c);
     if (!floor || !admin(ctx, c) || !throttle(c, 'liveapp', 1500)) return;
     void liveAppsOf(ctx).of(floor).stop(c.peer.name);
+    audit.record({ floor: floor.id, actor: human(c.peer.name, c.accountId), action: 'liveapp.stop', target: { kind: 'liveapp', id: floor.id, label: 'Live app' }, summary: 'Stopped the live app' });
   },
 } satisfies HandlerMap<LiveAppClientMsg>;

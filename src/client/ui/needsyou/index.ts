@@ -3,6 +3,7 @@
 // on the Command Center's tab button whichever tab is showing. One calm line when nothing is. It
 // fetches the floor's team itself, again when the office says it changed. No three.js here.
 
+import type { FirmFloorStatus } from '../../../shared/firm/engagement';
 import type { LiveAppState, ServerMsg } from '../../../shared/protocol';
 import type { RosterView } from '../../../shared/roster/types';
 import type { SetupView } from '../../../shared/wizard';
@@ -10,6 +11,7 @@ import { store } from '../../state';
 import { h, timeAgo } from '../dom';
 import { fetchRoster } from '../roster/api';
 import { collectNeeds, hereCount, type NeedItem, type NeedTarget } from './logic';
+import '../pm/jeff-rank.css';
 import './needsyou.css';
 
 /** Rows shown before "Show N more". */
@@ -21,6 +23,8 @@ export interface NeedsYouDeps {
   /** The setup panel's view of this floor, when it has one. */
   setup(): SetupView | undefined;
   live(): LiveAppState | null;
+  /** The Firm's audit of this floor (ui/firm/banner.ts fetches it). */
+  firm?(): FirmFloorStatus | undefined;
 }
 
 export interface NeedsYou {
@@ -59,12 +63,12 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
       'li.ny-item',
       { class: `ny-${n.level} ny-${n.kind}` },
       h('span.ny-ico', { 'aria-hidden': 'true' }, n.icon),
-      h('span.ny-text', {}, n.tag ? h('span.ny-tag', {}, n.tag) : null, n.text, n.since ? h('small.ny-since', {}, ` · ${timeAgo(n.since)}`) : null),
+      h('span.ny-text', {}, n.rank ? h('span.jrank-chip', { class: `jrank-${n.rank.n}`, title: n.rank.tip, 'aria-label': n.rank.tip }, n.rank.chip) : null, n.tag ? h('span.ny-tag', {}, n.tag) : null, n.text, n.since ? h('small.ny-since', {}, ` · ${timeAgo(n.since)}`) : null),
       h('button.btn.small.ny-go', { type: 'button', onclick: () => deps.go(n.target), 'aria-label': `${n.action}: ${n.text}` }, n.action, h('span', { 'aria-hidden': 'true' }, ' →')),
     );
 
   function draw() {
-    const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live() });
+    const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live(), firm: deps.firm?.() });
     const n = hereCount(items);
     badge.textContent = n ? String(n) : '';
     badge.title = n ? `${n} thing${n === 1 ? '' : 's'} on this floor need${n === 1 ? 's' : ''} you` : '';

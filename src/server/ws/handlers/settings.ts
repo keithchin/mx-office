@@ -10,6 +10,12 @@ import type { SettingsClientMsg } from '../../../shared/protocol.js';
 import type { Ctx } from '../../office/context.js';
 import { str } from '../../office/input.js';
 import type { HandlerMap, ViewPieces } from './types.js';
+import type { Client } from '../../office/client.js';
+import { audit, human } from '../../audit/index.js';
+
+/** An office setting changed: who, which, and what it was and is now. */
+const changed = (c: Client, id: string, label: string, before: unknown, after: unknown, summary: string) =>
+  audit.record({ actor: human(c.peer.name, c.accountId), action: 'settings.change', target: { kind: 'setting', id, label }, summary, details: { before, after }, severity: 'notice' });
 
 /** The floor's Services board: its own workers' web servers. */
 export const servicesView: ViewPieces['services'] = (ctx, floor) => ctx.servicesState(floor);
@@ -37,6 +43,8 @@ export const settingsHandlers = {
     const url = str(msg.url, 4096).trim();
     const err = ctx.webhook.set(url, who);
     ctx.warn(c, err);
+    // The webhook's address is a secret of its own: only whether there is one.
+    if (!err) changed(c, 'notify.webhook', 'Team notifications', undefined, { on: !!url }, url ? 'Set up team notifications' : 'Turned off team notifications');
     if (!err) ctx.toastAll(url ? `📣 ${who} set up team notifications` : `${who} turned off team notifications`);
   },
   'notify.test'(ctx, c) {
@@ -48,9 +56,11 @@ export const settingsHandlers = {
     if (!ctx.meOf(c.accountId).admin) return ctx.warn(c, 'Only admins can change the worker limit');
     const limit = msg.limit === null ? undefined : parseWorkerLimit(msg.limit);
     if (msg.limit !== null && limit === undefined) return ctx.warn(c, `The worker limit is a whole number from 1 to ${MAX_WORKER_LIMIT}`);
+    const was = ctx.machine.limit;
     const err = ctx.machine.setLimit(limit, who);
     if (err) return ctx.warn(c, err);
     const now = ctx.machine.limit;
+    changed(c, 'machine.limit', 'Worker limit', { limit: was ?? null }, { limit: now ?? null }, `Set the worker limit to ${now ?? 'none'}`);
     ctx.toastAll(limit !== undefined ? `⚙️ ${who} set the worker limit to ${now}` : now === undefined ? `⚙️ ${who} took the worker limit off` : `⚙️ ${who} put the worker limit back to ${now} (--max-workers)`);
     ctx.pumpQueues();
   },
@@ -68,6 +78,7 @@ export const settingsHandlers = {
     const who = c.peer.name;
     if (!isThemePick(msg.pick)) return;
     if (msg.pick === ctx.themes.state().pick) return;
+    changed(c, 'theme', 'Holiday decorations', { pick: ctx.themes.state().pick }, { pick: msg.pick }, `Set the holiday decorations to ${msg.pick}`);
     ctx.themes.set(msg.pick, who);
     const now = ctx.themes.state().active;
     ctx.toastAll(
@@ -97,12 +108,14 @@ export const settingsHandlers = {
       return;
     }
     mapNews(ctx, was, who);
+    changed(c, 'map', "The building's map", { map: was }, { map: ctx.maps.pick() }, `Changed the building's map to ${ctx.maps.pick()}`);
   },
   'leaveOnMerge.set'(ctx, c, msg) {
     const who = c.peer.name;
     const on = msg.on === true;
     if (on === ctx.leaveOnMerge.on) return;
     ctx.leaveOnMerge.set(on, who);
+    changed(c, 'leaveOnMerge', 'Go home once merged', { on: !on }, { on }, on ? 'Set workers to go home once their pull request merges' : 'Set merged workers to stay until sent home');
     ctx.toastAll(on ? `🏠 ${who} set workers to go home by themselves once their pull request merges` : `🪑 ${who} set workers whose pull request merged to stay until they're sent home`);
     // The ones already merged go now.
     if (on) for (const f of ctx.floors.values()) f.sendLandedHome();
@@ -116,6 +129,7 @@ export const settingsHandlers = {
     if (err) return ctx.warn(c, err);
     const now = !!ctx.prompts.state().custom[msg.id];
     const { label } = PROMPTS[msg.id];
+    changed(c, `prompts.${msg.id}`, `Prompt: ${label}`, { custom }, { custom: now, length: msg.text?.length ?? 0 }, now ? `Rewrote the “${label}” prompt` : `Put the default “${label}” prompt back`);
     if (now) ctx.toastAll(`📝 ${who} rewrote the “${label}” prompt`);
     else if (custom) ctx.toastAll(`📝 ${who} put the default “${label}” prompt back`);
   },
@@ -129,8 +143,10 @@ export const settingsHandlers = {
       model: ch.model === undefined || ch.model === '' ? undefined : str(ch.model, OPEN_CODE_MODEL_MAX + 1),
       effort: ch.effort === undefined ? undefined : ch.effort,
     };
+    const before = ctx.prompts.state().agent ?? null;
     const err = ctx.prompts.setAgent(choice, who);
     if (err) return ctx.warn(c, err);
+    changed(c, 'prompts.agent', 'Default worker', before, choice ?? null, choice ? "Set the office's default worker" : "Put the office's default worker back");
     ctx.toastAll(choice ? `🤖 ${who} set the office’s default worker` : `🤖 ${who} put the office’s default worker back to ${path.basename(ctx.cfg.agentCmd)}`);
   },
 } satisfies HandlerMap<SettingsClientMsg>;

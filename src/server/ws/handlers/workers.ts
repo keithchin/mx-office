@@ -5,6 +5,7 @@ import { OPEN_CODE_MODEL_MAX } from '../../../shared/providers.js';
 import { isAgentEffort, isAgentProvider, type WorkerClientMsg } from '../../../shared/protocol.js';
 import { issueNumber, num, str } from '../../office/input.js';
 import { here, workerOf } from './common.js';
+import { audit, human, promptDetails } from '../../audit/index.js';
 import type { FeatureHooks, HandlerMap, ViewPieces } from './types.js';
 
 const CLEANUPS = new Set(['keep', 'worktree', 'all']);
@@ -42,6 +43,7 @@ export const workerHandlers = {
       if (typeof r === 'string') ctx.warn(c, r);
       else ctx.toastFloor(floor, kind === 'shell' ? `${who} opened a shell at a desk` : `${who} hired ${r.name}${issue ? ` for issue #${issue}` : r.prompt ? ' with a task' : ''}${across}`);
       if (typeof r !== 'string' && issue) ctx.takeIssue(c, floor, issue);
+      if (typeof r !== 'string') audit.record({ floor: floor.id, actor: human(who, c.accountId), action: 'worker.hire', target: { kind: 'worker', id: r.id, label: r.name }, summary: kind === 'shell' ? 'Opened a shell at a desk' : `Hired ${r.name}${issue ? ` for issue #${issue}` : ''}${across}`, details: { kind, provider: r.provider, model: r.model, effort: r.effort, desk: r.deskId, worktree: !!r.worktree, issue, ...(r.prompt ? { prompt: promptDetails(r.prompt) } : {}) } });
     };
     // Every project it gets a worktree of starts from what's on GitHub.
     const fresh = [floor, ...repos.map((x) => ctx.floors.get(x.floor)!)];
@@ -59,6 +61,7 @@ export const workerHandlers = {
     // The worker leaves right away; its worktree is dealt with after that, and the outcome follows.
     const done = floor.sendHome(info.id, CLEANUPS.has(String(msg.cleanup)) ? msg.cleanup : undefined);
     ctx.toastFloor(floor, `${who} sent ${info.name} home`);
+    audit.record({ floor: floor.id, actor: human(who, c.accountId), action: 'worker.sendHome', target: { kind: 'worker', id: info.id, label: info.name }, summary: `Sent ${info.name} home`, details: { cleanup: msg.cleanup, branch: info.worktree?.branch } });
     void done.then(({ note, error }) => {
       if (note) ctx.toastFloor(floor, note);
       if (error) ctx.toastFloor(floor, error, 'warn');
@@ -116,8 +119,11 @@ export const workerHandlers = {
   'worker.prompt'(ctx, c, msg) {
     const who = c.peer.name;
     const w = workerOf(ctx, msg.workerId);
-    const err = w ? w.floor.workers.prompt(w.wid, str(msg.prompt, 20000), who) : 'No such worker';
+    const text = str(msg.prompt, 20000);
+    const err = w ? w.floor.workers.prompt(w.wid, text, who) : 'No such worker';
     ctx.warn(c, err);
+    // That someone prompted it, never what they said (its start only when an admin turned that on).
+    if (w && !err) audit.record({ floor: w.floor.id, actor: human(who, c.accountId), action: 'worker.prompt', target: { kind: 'worker', id: w.wid, label: w.info.name }, summary: `Prompted ${w.info.name}`, details: promptDetails(text) });
     const issue = w?.info.kind === 'agent' ? issueNumber(msg.issue) : undefined;
     if (w && !err && issue) {
       ctx.toastFloor(w.floor, `${who} handed issue #${issue} to ${w.info.name}`);
@@ -135,6 +141,7 @@ export const workerHandlers = {
       const r = floor.workers.station(deskId, who, str(msg.prompt, 20000), c.accountId);
       if (typeof r === 'string') ctx.warn(c, r);
       else if (r.hired) ctx.toastFloor(floor, `${who} asked the ${r.info.name} something`);
+      if (typeof r !== 'string') audit.record({ floor: floor.id, actor: human(who, c.accountId), action: r.hired ? 'worker.hire' : 'worker.prompt', target: { kind: 'worker', id: r.info.id, label: r.info.name }, summary: r.hired ? `Hired the ${r.info.name} with a question` : `Prompted the ${r.info.name}`, details: { station: deskId, prompt: promptDetails(str(msg.prompt, 20000)) } });
     });
   },
   'worker.pr'(ctx, c, msg) {
@@ -156,6 +163,7 @@ export const workerHandlers = {
       const dirty = r.prs.filter((p) => p.dirty);
       if (dirty.length) ctx.warn(c, `${name} still has uncommitted changes in ${dirty.some((p) => p.repo) ? `its worktree${dirty.length > 1 ? 's' : ''} of ${dirty.map((p) => p.repo).join(', ')}` : 'its worktree'} — they are not in the PR`);
       for (const f of r.failed) ctx.warn(c, f);
+      for (const p of r.prs.filter((x) => !x.existed)) audit.record({ floor: floor.id, actor: human(who, c.accountId), action: 'pr.open', target: { kind: 'pr', id: `#${p.number}`, label: `PR #${p.number}${p.repo ? ` (${p.repo})` : ''}` }, summary: `Opened PR #${p.number} for ${name}`, details: { worker: wid, repo: p.repo, dirty: p.dirty } });
       // Put it on the board now rather than at the next poll. A refresh already in flight
       // returns at once and can miss it, so look again shortly after.
       const own = r.prs.find((p) => !p.repo || p.repo === info?.worktree?.path.split(/[\\/]/).pop());

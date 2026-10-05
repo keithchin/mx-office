@@ -103,6 +103,10 @@ His key: the launcher reads `~/.agent-office-jev-key` and passes its path as `AG
 
 ![Org chart](docs/readme/org-chart.png)
 
+### The Firm: independent audits
+
+**The Firm** (`/firm`, linked from Home) is an office-level consultancy of **Reviewer Agents**, separate from every project team: an Engagement Partner plus Design, Code & Architecture, QA & Test, Requirements & Delivery, and optional Security and Cost & Performance reviewers, all on **Fable 5.1** by default. **📑 Call an audit** (on `/firm` or a floor's 1D view) picks the teams, tests, artifacts, depth, models, budget cap and time, shows an *estimated* cost, and starts an engagement once you confirm. Each reviewer works in its own read-only, remote-less checkout of the project pinned to one commit, with none of the project's agent instructions and no GitHub credentials; it interviews its Lead with `office-workers firm ask`, the Lead answers with `office-workers firm answer`, and the Partner delivers one report (findings, root causes, re-forecast timeline, expectations vs reality, worker performance, recommendations). Spend is held to the cap: warned at 80%, wrapped up at 100%. Details: [docs/firm.md](docs/firm.md).
+
 ---
 
 ## 4. How work flows
@@ -151,6 +155,7 @@ New projects show a **Project setup** panel (toolkit stages P–4 with pass/pend
 | **✅ Approvals** | Everything waiting for the Project Manager: proposals and escalations (badge shows the count). |
 | **⚙️ Settings** | Autonomy level, idle-to-bench minutes, standup schedule, review-loop nudge, cost caps. |
 | **🧩 Team boards** | A page per team: its own board, its Lead, journal and team panels (Testing: CI scorecards; Development: PRs and live app; Analysis: BRD, insight memos, model ranking; …). |
+| **🧾 Audit log** | Who did what, when: hires, prompts (never their text by default), escalations and answers, approvals, PRs and issues, settings changes with before/after, sign-ins, Jeff's verdicts. Filter by time, actor and kind; a timeline; 🔒 hash-chain check; CSV/JSONL export (admin). Home has one for every floor. |
 
 ![Board](docs/readme/board.png)
 

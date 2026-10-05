@@ -15,7 +15,7 @@ body.home-page { --lite-col: 1240px; }
 /* A narrow phone: just the view's icon and the arrow, so the office's name keeps its room (the name is in its tooltip). */
 @media (max-width: 480px) { .home-back-name { display: none; } }
 .home-docs { gap: 4px; }
-@media (max-width: 560px) { .home-docs-label { display: none; } }
+@media (max-width: 560px) { .home-docs-label, .home-firm-label { display: none; } }
 html[data-theme='terminal'] body.lite .lite-bar > .home-back { width: auto; padding: 0 8px; }
 
 /* The two tabs, as the 1D view's are. */

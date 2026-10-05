@@ -4,7 +4,8 @@
 // sent as a desktop alert when it's urgent or critical and above the floor's threshold, and the
 // Project Coordinator hears about it (batched, a minute after the last) so it can summarise it at the
 // standup. The human's Reply / Approve / Reject goes back to the raising agent as a prompt and
-// resolves it. The office never blocks on one, and never asks a model anything.
+// resolves it. The office never blocks on one; the only model it asks is Jeff, how soon to resolve it
+// (jeff-priority.ts: a sort order, re-ranked as one is raised or answered).
 
 import { randomBytes } from 'node:crypto';
 import type { WorkerInfo } from '../../shared/protocol.js';
@@ -14,6 +15,7 @@ import { isAsleepStatus } from './bench.js';
 import type { Roster } from './index.js';
 import { escalationAnswerPrompt, escalationsToCoordinatorPrompt, owedAnswersPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
+import { audit, agent, byWhom, jeff, office } from '../audit/index.js';
 
 /** The Project Coordinator hears about new escalations this long after the last one, all in one message. */
 export const COORDINATOR_DEBOUNCE_MS = 60_000;
@@ -53,6 +55,7 @@ export class Escalations {
     if (byOffice) e.fyi = false;
     if (fyi) e.fyi = true;
     d.escalations.push(e);
+    audit.record({ floor: floor.id, actor: byOffice ? (source?.includes('Jeff') ? jeff() : office()) : agent(who.by, who.workerId), action: 'escalation.raise', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `${byOffice ? `Escalated for ${who.by}` : 'Escalated to the Project Manager'} (${e.fyi ? 'FYI' : e.urgency}): ${e.title}`, details: { urgency: e.urgency, fyi: e.fyi, trigger: ask.trigger, role, worker: who.workerId }, severity: isAlarming(e) ? 'warning' : 'notice' });
     const loud = isAlarming(e);
     const tag = e.fyi ? 'FYI' : e.urgency;
     floor.activity?.(`${URGENCY_ICON[e.urgency]} ${byOffice ? (source ?? `The office escalated to the Project Manager for ${who.by}, from its handoff note`) : `${who.by} escalated to the Project Manager`} (${tag}): ${e.title}`);
@@ -62,6 +65,7 @@ export class Escalations {
     if (role !== 'pm' && !e.fyi) this.tellCoordinator(floor, e);
     this.roster.touch(floor);
     if (loud) floor.changed({ id: e.id, urgency: e.urgency as 'urgent' | 'critical', title: `${URGENCY_ICON[e.urgency]} ${who.by} needs the Project Manager`, body: e.title });
+    this.roster.jeff.priority.kick(floor);
     return e;
   }
 
@@ -100,10 +104,12 @@ export class Escalations {
     }
     e.status = 'resolved';
     e.resolution = { verdict, text, by, at: this.roster.deps.now(), delivered };
+    audit.record({ floor: floor.id, actor: byWhom(by), action: 'escalation.answer', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `Answered ${e.by}'s escalation (${verdict}): ${e.title}`, details: { verdict, delivered, rehire, reply: text ? { length: text.length } : undefined } });
     floor.activity?.(`✅ ${by} answered ${e.by}'s escalation (${verdict}): ${e.title}`);
     // A Lead's `ask` to warn, bench, swap or reinstate a subagent: approving it does it.
     this.roster.subagents.onEscalationResolved(floor, e.id, verdict, by);
     this.roster.touch(floor);
+    this.roster.jeff.priority.kick(floor);
     if (rehire && e.role) this.rehire(floor, e.role);
     return undefined;
   }

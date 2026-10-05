@@ -4,6 +4,7 @@ import type { GitHubClientMsg } from '../../../shared/protocol.js';
 import { GH_COMMENT_MAX, GH_LABEL_MAX } from '../../../shared/protocol.js';
 import { num, str } from '../../office/input.js';
 import { here } from './common.js';
+import { audit, human } from '../../audit/index.js';
 import type { HandlerMap, ViewPieces } from './types.js';
 
 export const issuesView: ViewPieces['issues'] = (_ctx, floor) => floor?.github.issues ?? { items: [], fetchedAt: 0, loading: false };
@@ -28,6 +29,7 @@ export const githubHandlers = {
           ctx.toastFloor(floor, msg.auto ? `${who} set PR #${n} to merge once its checks pass` : `🎉 ${who} merged PR #${n}`);
           // An auto-merge rings once GitHub gets round to it and the boards see it merged.
           if (!msg.auto) floor.merged(n, who);
+          audit.record({ floor: floor.id, actor: human(who, c.accountId), action: msg.auto ? 'pr.autoMerge' : 'pr.merge', target: { kind: 'pr', id: `#${n}`, label: `PR #${n}` }, summary: msg.auto ? `Set PR #${n} to merge once its checks pass` : `Merged PR #${n}`, details: { method, deleteBranch: msg.deleteBranch === true }, severity: 'notice' });
         }),
       (error) => ctx.sendTo(c, { t: 'gh.merged', number: n, error }),
     );
@@ -68,6 +70,7 @@ export const githubHandlers = {
         void floor.github.close(kind, n, { comment: str(msg.comment, 20000).trim() || undefined, reason, deleteBranch: msg.deleteBranch === true }, as).then((error) => {
           ctx.sendTo(c, { t: 'gh.closed', kind, number: n, error });
           if (error) return;
+          audit.record({ floor: floor.id, actor: human(who, c.accountId), action: kind === 'pull' ? 'pr.close' : 'issue.close', target: { kind: kind === 'pull' ? 'pr' : 'issue', id: `#${n}` }, summary: kind === 'pull' ? `Closed PR #${n} without merging` : `Closed issue #${n}${reason === 'not planned' ? ' as not planned' : ''}`, details: { reason, deleteBranch: msg.deleteBranch === true, commented: !!str(msg.comment, 20000).trim() } });
           if (kind === 'pull') return ctx.toastFloor(floor, `${who} closed PR #${n} without merging`);
           // Nobody should be seated for an issue that's closed.
           const dropped = floor.queue.dropIssue(n);
@@ -94,6 +97,7 @@ export const githubHandlers = {
       (as) =>
         void floor.github.setLabels(kind, n, add, remove, as).then((r) => {
           ctx.sendTo(c, { t: 'gh.labeled', kind, number: n, ...r });
+          if (r.labels) audit.record({ floor: floor.id, actor: human(who, c.accountId), action: kind === 'pull' ? 'pr.label' : 'issue.label', target: { kind: kind === 'pull' ? 'pr' : 'issue', id: `#${n}` }, summary: `Labeled ${kind === 'pull' ? 'PR' : 'issue'} #${n}: ${[...add.map((l) => `+${l}`), ...remove.map((l) => `−${l}`)].join(' ')}`, details: { add, remove } });
           if (r.labels) ctx.toastFloor(floor, `🏷️ ${who} labeled ${kind === 'pull' ? 'PR' : 'issue'} #${n}: ${[...add.map((l) => `+${l}`), ...remove.map((l) => `−${l}`)].join(' ')}`);
         }),
       (error) => ctx.sendTo(c, { t: 'gh.labeled', kind, number: n, error }),
