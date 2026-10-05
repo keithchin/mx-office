@@ -236,11 +236,11 @@ export function teamPage(c: PageCtx): HTMLElement {
   return h(
     'div.wz-page',
     {},
-    field('Client name(s)', clients, 'Comma-separated. Kept in the project’s settings for the client portal; it isn’t committed to the repository.'),
+    field('Client name(s)', clients, 'Comma-separated. Kept in the project’s settings file (agent-office.project.json, committed with the project) for the client portal.'),
     field('Operator(s)', ops, 'The people who speak for the client in the office and answer the Chief Analyst.'),
     h('h3.wz-h', {}, 'Roles to staff'),
     roles,
-    h('p.setting-note', {}, 'Saved in the project’s settings file (.agent-office/project.json on its floor) for the team model to pick up.'),
+    h('p.setting-note', {}, 'Saved in the project’s settings file (agent-office.project.json, committed at the repository’s root) for the team model to pick up.'),
     h('h3.wz-h', {}, 'Discovery'),
     h('label.wz-check', {}, issue, ' Open a “Discovery” issue for the Chief Analyst (Stages P → 4, stopping at every ✋ gate)'),
     h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, queue, ' Queue it now for an agent'), model),

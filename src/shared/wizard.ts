@@ -197,6 +197,8 @@ export interface SetupView {
   job?: string;
   checking: boolean;
   checkedAt?: number;
+  /** Whoever's looking is an admin: only admins re-check the gates or save edited answers. */
+  admin?: boolean;
 }
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
