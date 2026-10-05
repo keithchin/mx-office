@@ -15,8 +15,10 @@ export interface AskOptions {
   optional?: boolean;
   /** Choices offered under the box, as buttons that fill it in. */
   choices?: string[];
-  /** A second, picked answer under the box (the hire's model): its options as buttons, one lit. */
-  pick?: { label: string; options: string[]; value: string };
+  /** A second, picked answer under the box (the hire's model), as a dropdown: each option's value and what it's called. */
+  pick?: { label: string; options: { value: string; label: string }[]; value: string };
+  /** Only the dropdown, no text box (changing a role's model). */
+  pickOnly?: boolean;
 }
 
 export function askText(o: AskOptions, done: (text: string, picked?: string) => void) {
@@ -26,18 +28,17 @@ export function askText(o: AskOptions, done: (text: string, picked?: string) => 
   box.value = o.value ?? '';
   let picked = o.pick?.value;
   const pickRow = o.pick
-    ? h('div.ro-pick', { role: 'radiogroup', 'aria-label': o.pick.label }, h('span.ro-ask-label', {}, o.pick.label), ...o.pick.options.map((opt) => {
-        const b = h('button.btn.small', { type: 'button', role: 'radio', 'aria-checked': String(opt === picked), class: opt === picked ? 'on' : '' }, opt);
-        b.addEventListener('click', () => {
-          picked = opt;
-          for (const x of pickRow!.querySelectorAll('button')) { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', String(x === b)); }
-        });
-        return b;
-      }))
+    ? (() => {
+        const sel = h('select.ro-pick-select', { 'aria-label': o.pick.label }, ...o.pick.options.map((opt) => h('option', { value: opt.value, selected: opt.value === picked }, opt.label))) as HTMLSelectElement;
+        // A model saved as an id the list doesn't have (set by hand) still shows as itself.
+        if (picked && !o.pick.options.some((opt) => opt.value === picked)) sel.prepend(h('option', { value: picked, selected: true }, picked));
+        sel.addEventListener('change', () => (picked = sel.value));
+        return h('label.ro-pick', {}, h('span.ro-ask-label', {}, o.pick.label), sel);
+      })()
     : null;
   const send = () => {
     const v = box.value.trim();
-    if (!v && !o.optional) return box.focus();
+    if (!v && !o.optional && !o.pickOnly) return box.focus();
     modal.close();
     done(v, picked);
   };
@@ -55,8 +56,8 @@ export function askText(o: AskOptions, done: (text: string, picked?: string) => 
     h(
       'div.body',
       {},
-      h('label.ro-ask-label', {}, o.label),
-      box,
+      o.pickOnly ? h('p.ro-ask-label', {}, o.label) : h('label.ro-ask-label', {}, o.label),
+      o.pickOnly ? null : box,
       pickRow,
       o.choices?.length ? h('div.ro-choices', {}, ...o.choices.map((c) => h('button.btn.small', { type: 'button', onclick: () => ((box.value = c), box.focus()) }, c))) : null,
     ),

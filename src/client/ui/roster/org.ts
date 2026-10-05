@@ -2,6 +2,7 @@
 // where it stands (working, idle, benched…), its model and cost, its team's subagents and the newest
 // entry in its team journal; and what the CTO can do to it (hire or wake, bench, rename, change model).
 
+import { CLAUDE_MODEL_NAMES, claudeModelName } from '../../../shared/providers';
 import { ROLE_BY_ID } from '../../../shared/roster/roles';
 import type { MemberStatus, MemberView, RosterView } from '../../../shared/roster/types';
 import { h, timeAgo } from '../dom';
@@ -18,7 +19,10 @@ export const STATUS_TEXT: Record<MemberStatus, string> = {
   benched: 'Benched',
 };
 
-const MODELS = ['haiku', 'sonnet', 'opus', 'fable'];
+// The models a role can run on, by what they're called today ("Sonnet 5.5"): Claude Code's aliases, newest family first.
+const MODELS = (['fable', 'opus', 'sonnet', 'haiku'] as const).map((value) => ({ value, label: CLAUDE_MODEL_NAMES[value] }));
+/** "Sonnet 5.5" for a role's model alias, or the id as it is. */
+const modelName = (m: string) => (CLAUDE_MODEL_NAMES as Record<string, string>)[m] ?? claudeModelName(m) ?? m;
 
 export interface OrgDeps {
   /** Opens a worker's terminal (the 1D view's). */
@@ -81,7 +85,7 @@ export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLEle
       hired ? h('button.btn.small', { type: 'button', title: `Open ${m.name}'s terminal`, onclick: () => deps.openWorker(m.workerId!) }, '🖥️ Terminal') : null,
       canBench && v.admin ? h('button.btn.small', { type: 'button', title: `Ask ${m.name} for a handoff note and lessons, then stop it and clear its session`, onclick: () => run('bench') }, '🪑 Bench') : null,
       v.admin ? h('button.btn.small', { type: 'button', title: 'Rename this role', onclick: () => askText({ title: `Rename the ${m.title}`, label: 'Name', value: m.name, ok: 'Rename' }, (name) => run('rename', { name })) }, '✏️') : null,
-      v.admin ? h('button.btn.small', { type: 'button', title: 'Change the model (from its next hire)', onclick: () => askText({ title: `${m.name}'s model`, label: 'From its next hire (a running session keeps its model)', value: m.model, ok: 'Save', choices: MODELS }, (model) => run('model', { model })) }, `🧠 ${m.model}`) : null,
+      v.admin ? h('button.btn.small', { type: 'button', title: 'Change the model (from its next hire)', onclick: () => askText({ title: `${m.name}'s model`, label: 'From its next hire (a running session keeps its model)', ok: 'Save', pickOnly: true, pick: { label: 'Model', options: MODELS, value: m.model } }, (_, model) => model && model !== m.model && run('model', { model })) }, `🧠 ${modelName(m.model)}`) : null,
     ),
   );
 }

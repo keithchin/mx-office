@@ -80,7 +80,7 @@ body.lite .lite-tabs { flex-wrap: wrap; }
 .ro-ask .body { display: flex; flex-direction: column; gap: 8px; }
 .ro-ask-label { font-size: 13px; font-weight: 700; }
 .ro-choices { display: flex; gap: 6px; }
-/* The hire window's model: options as buttons, the picked one lit (ask.ts pick). */
-.ro-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
-.ro-pick .btn.on { background: var(--ink); color: var(--on-ink); }
+/* The model dropdown in the hire and model windows (ask.ts pick). */
+.ro-pick { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.ro-pick-select { min-width: 180px; padding: 6px 8px; font: inherit; font-weight: 700; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 8px; }
 .ro-window { width: min(760px, 96vw); }
