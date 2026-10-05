@@ -9,7 +9,7 @@ import { C } from './sprites';
 import { darken, lighten } from './paint';
 
 /** Who a character is dressed as: a role on the project team, or anyone else. */
-export type Outfit = 'pm' | 'designer' | 'dev' | 'qa' | 'analyst' | 'plain';
+export type Outfit = 'pm' | 'designer' | 'dev' | 'qa' | 'analyst' | 'router' | 'plain';
 export type Pose = 'front' | 'back';
 export type How = 'still' | 'typing' | 'asleep';
 
@@ -39,6 +39,9 @@ function hash(id: string): number {
   for (let i = 0; i < id.length; i++) n = Math.imul(n ^ id.charCodeAt(i), 16777619);
   return n >>> 0;
 }
+
+/** Jeff, the Router (the office's quick judge, not a worker): a charcoal suit, a tie in `shirt`, glasses and a moustache. */
+export const JEFF_LOOK: Look = { hair: '#4a3a2e', skin: '#ecbf98', style: 0, shirt: '#8c2f39', outfit: 'router' };
 
 /** Someone's look: hair, cut and skin from their id, dressed for their role in `shirt`. */
 export function lookFor(id: string, shirt: string, outfit: Outfit = 'plain'): Look {
@@ -96,7 +99,7 @@ function draw(g: CanvasRenderingContext2D, L: Look, pose: Pose, how: How, beat: 
 
   // ---- Legs and shoes, standing: one foot forward, then the other, while walking ----
   if (stands) {
-    const pants = L.outfit === 'qa' ? '#3a4a66' : L.outfit === 'pm' ? '#1f2c46' : '#2c3a52';
+    const pants = L.outfit === 'qa' ? '#3a4a66' : L.outfit === 'pm' ? '#1f2c46' : L.outfit === 'router' ? '#2a2e38' : '#2c3a52';
     const stepA = walking && beat === 0 ? 1 : 0, stepB = walking && beat === 1 ? 1 : 0;
     p(7, 26, 5, 6 - stepA, pants);
     p(12, 26, 5, 6 - stepB, pants);
@@ -164,7 +167,7 @@ interface Cloth {
 }
 
 function clothes(L: Look): Cloth {
-  const main = L.outfit === 'pm' ? '#26395e' : L.outfit === 'qa' ? '#f3f6fa' : L.outfit === 'dev' ? darken(L.shirt, 0.15) : L.shirt;
+  const main = L.outfit === 'pm' ? '#26395e' : L.outfit === 'router' ? '#3a3f4b' : L.outfit === 'qa' ? '#f3f6fa' : L.outfit === 'dev' ? darken(L.shirt, 0.15) : L.shirt;
   return { main, light: lighten(main, 0.18), dark: darken(main, L.outfit === 'qa' ? 0.12 : 0.22) };
 }
 
@@ -183,6 +186,17 @@ function details(p: Px, L: Look, cl: Cloth, back: boolean) {
       p(11, 17, 2, 6, accent);
       p(11, 17, 2, 1, darken(accent, 0.25));
       p(13, 23, 1, 1, '#c5cedb');
+      return;
+    case 'router':
+      // A charcoal suit: lapels over a white shirt, a tie in `shirt`, a white pocket square.
+      if (back) return p(7, 17, 10, 1, cl.dark);
+      p(9, 16, 6, 6, '#f4f6fa');
+      p(8, 16, 2, 7, cl.light);
+      p(14, 16, 2, 7, cl.dark);
+      p(11, 16, 2, 1, darken(accent, 0.25));
+      p(11, 17, 2, 6, accent);
+      p(11, 22, 2, 1, darken(accent, 0.25));
+      p(15, 18, 2, 1, '#f4f6fa');
       return;
     case 'qa':
       // A white lab coat, open at the front over a shirt in the team's teal; a pen in the pocket.
@@ -323,15 +337,23 @@ function face(p: Px, L: Look, how: How, hy: number, skin: string, hair: string) 
   p(7, 11 + y, 2, 1, 'rgba(232, 112, 112, 0.45)');
   p(15, 11 + y, 2, 1, 'rgba(232, 112, 112, 0.45)');
   p(11, 12 + y, 2, 1, darken(skin, 0.3));
-  if (L.outfit === 'analyst') {
-    // Glasses: two frames and the bridge.
+  if (L.outfit === 'router') {
+    // A neat moustache over the mouth, its ends turned down a little.
+    p(9, 12 + y, 6, 1, darken(hair, 0.05));
+    p(9, 13 + y, 1, 1, darken(hair, 0.05));
+    p(14, 13 + y, 1, 1, darken(hair, 0.05));
+    p(11, 13 + y, 2, 1, darken(skin, 0.3));
+  }
+  if (L.outfit === 'analyst' || L.outfit === 'router') {
+    // Glasses: two frames and the bridge (Jeff's in thin gold, so his eyes show through).
+    const rim = L.outfit === 'router' ? '#b08d3c' : C.ink;
     for (const x of [8, 12]) {
-      p(x, 8 + y, 4, 1, C.ink);
-      p(x, 11 + y, 4, 1, C.ink);
-      p(x, 8 + y, 1, 4, C.ink);
-      p(x + 3, 8 + y, 1, 4, C.ink);
+      p(x, 8 + y, 4, 1, rim);
+      p(x, 11 + y, 4, 1, rim);
+      p(x, 8 + y, 1, 4, rim);
+      p(x + 3, 8 + y, 1, 4, rim);
     }
-    p(11, 9 + y, 1, 1, C.ink);
+    p(11, 9 + y, 1, 1, rim);
   }
 }
 

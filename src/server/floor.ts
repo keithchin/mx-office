@@ -67,6 +67,8 @@ export interface FloorContext {
   floor(id: string): Floor | undefined;
   /** This floor's pull requests came back: a worker on another floor with a repository here may have landed. */
   pullsChanged(floor: Floor): void;
+  /** This floor's issues came back from GitHub (Jeff triages new ones, roster/jeff.ts). */
+  issuesChanged?(floor: Floor): void;
   /** Whether a worker on another floor works in this floor's project too. */
   lent(floor: Floor): boolean;
   /** Whether the building's map locks up workers sent home (see MapPlan.sendHome), instead of letting them go. */
@@ -212,7 +214,10 @@ export class Floor {
 
     this.github = new GitHub(
       def.dir,
-      (state) => ctx.emit(this, { t: 'gh.issues', state }),
+      (state) => {
+        ctx.emit(this, { t: 'gh.issues', state });
+        if (!state.loading && !state.error && state.fetchedAt) ctx.issuesChanged?.(this);
+      },
       (state) => {
         ctx.emit(this, { t: 'gh.pulls', state });
         this.queue?.onPulls(state.items);

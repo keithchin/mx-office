@@ -6,6 +6,7 @@
 import type { AnalysisReport, GroupBy, LeaderRow, RunRecord, TaskType } from '../../shared/analysis';
 import { TASK_TYPE_LABEL } from '../../shared/analysis';
 import { h, timeAgo, toast } from './dom';
+import { jeffSection } from './jeff';
 import './analysis.css';
 
 type Scope = 'floor' | 'global';
@@ -58,6 +59,8 @@ export async function renderAnalysis(root: HTMLElement, floor: string | undefine
   const again = () => void renderAnalysis(root, floor);
   root.replaceChildren(
     toolbar(report, scope, by, floor, again),
+    // Jeff, the Router: his judgements next to the office's rules, for this project (ui/jeff.ts).
+    jeffSection(floor),
     leaderboard(report),
     matrixView(report) ?? '',
     runsView(report),

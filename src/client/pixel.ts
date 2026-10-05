@@ -45,6 +45,7 @@ import { colorThemes, currentTheme } from './ui/colortheme';
 import { viewPicker } from './ui/viewpick';
 import { flatMenu, openDocs } from './shared/flatmenu';
 import { tabBadge } from './ui/badge';
+import { drawRouter, routerMessage, routerOverlay, routerSpot, startRouter } from './pixel/router-room';
 import './pixel/game.css';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
@@ -62,6 +63,8 @@ $('view-pick').replaceWith(viewPicker('2d'));
 const session = flatSession('/pixel', (id) => workers.open(id), (msg) => {
   // The floor's team changed (hired, benched, renamed): its Leads' outfits, tags and signposts with it.
   if (msg.t === 'roster.changed' && msg.floor === store.floor) void refreshRoster(store.floor);
+  // Jeff, the Router, judged something: his room reacts (pixel/router-room.ts).
+  routerMessage(msg);
 });
 const { net } = session;
 const workers = workerActions(net);
@@ -112,8 +115,9 @@ function zoneLine(team: MemberView['team']): () => string {
     return `${m.title}: ${m.name} · ${MEMBER_STATUS[m.status]} · 🧠 ${m.model}${hire}`;
   };
 }
-const spots = (f: Frame) =>
-  hotspots(f, {
+const spots = (f: Frame) => [
+  routerSpot(f, stage),
+  ...hotspots(f, {
     board: (kind) => openBoard(kind, net, boardActions()),
     queue: () => openQueue(net, { openTerminal: workers.open }),
     whiteboard: () => openWhiteboard(net),
@@ -140,7 +144,8 @@ const spots = (f: Frame) =>
         return m?.status === 'running' ? `In a meeting: ${clip(m.title, 60)}` : 'Workers work through a question or a task together';
       },
     },
-  });
+  }),
+];
 
 // ---- Drawing --------------------------------------------------------------------------------------
 // The office is drawn small, in art pixels, then blown up with no smoothing so every pixel stays a
@@ -193,6 +198,8 @@ function draw(now: number) {
   const peers = [...store.peers.values()].filter((p) => p.id !== store.you && !p.lite && store.onMyFloor(p));
   const hoverId = hover && 'kind' in hover && hover.kind !== 'desk' ? hover.id : null;
   people = drawPeople(ag, frame, { workers: store.workers.values(), peers, level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs, dress: dressFor, tag: tagFor }, now);
+  // Jeff's room first, so the theme tints it with the rest of the scene.
+  drawRouter(ag, frame, now);
   tintScene(ag, frame, currentTheme());
 
   g.imageSmoothingEnabled = false;
@@ -221,6 +228,7 @@ function draw(now: number) {
   const view = { scale: s, x: cam.x * dpr, y: cam.y * dpr, dpr };
   const banners: ReturnType<typeof zoneBanner>[] = [];
   for (const b of zoneBoxes(frame)) banners.push(zoneBanner(g, view, b, leadLine(leadOf(b.zone.team)), banners));
+  routerOverlay(g, view, frame, banners, now);
   for (const t of things) if (t.badge) badge(g, view, t, t.badge());
   if (s >= 2) for (const sign of signs) signText(g, view, sign);
   if (hover && (!('kind' in hover) || hover.kind === 'desk')) outline(g, view, hover, 'kind' in hover);
@@ -418,6 +426,7 @@ flatMenu($('menu'), { net, boardActions, openWorker: workers.open, meeting: show
 // ---- In ----------------------------------------------------------------------------------------
 session.bellBefore($('to-home'));
 session.start();
+startRouter(() => store.floor);
 rebuild();
 renderCount();
 

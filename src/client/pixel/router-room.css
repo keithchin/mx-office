@@ -1,0 +1,18 @@
+/* Jeff's card in the 2D view (pixel/router-room.ts): the 1D themes' tokens, so it follows Default, Dark and Terminal. */
+.jr-card {
+  position: absolute; z-index: 6; top: 12px; left: 50%; transform: translateX(-50%); width: min(340px, calc(100% - 24px));
+  display: flex; flex-direction: column; gap: 8px; padding: 12px 14px;
+  background: var(--paper, #fff8ef); color: var(--ink, #2b2d42); border: 3px solid var(--line, #2b2d42); border-radius: var(--radius, 14px);
+  box-shadow: 0 6px 0 var(--edge, #2b2d42), 0 12px 28px rgba(0, 0, 0, .35); font-size: 13px; font-weight: 700;
+}
+.jr-head { display: flex; align-items: center; gap: 10px; padding-right: 22px; }
+.jr-head b { display: block; font-size: 16px; font-weight: 900; }
+.jr-head > div { flex: 1; min-width: 0; }
+.jr-dim { color: var(--muted, #6b6f86); font-weight: 700; font-size: 12px; }
+.jr-today { margin: 0; }
+.jr-kinds { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.jr-kinds li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; padding: 5px 8px; background: var(--paper-2, #fff1de); border: 2px solid var(--line, #2b2d42); border-radius: 10px; }
+.jr-mode { padding: 0 6px; border: 2px solid var(--line, #2b2d42); border-radius: 999px; font-size: 10px; font-weight: 900; text-transform: uppercase; background: var(--info-soft, #e3f0ff); }
+.jr-link { color: var(--link, #3a5bd9); font-weight: 900; }
+.jr-x { position: absolute; top: 8px; right: 8px; border: 0; background: none; color: var(--muted, #6b6f86); font-size: 16px; cursor: pointer; }
+.jr-card canvas.jeff-portrait { position: static; inset: auto; flex: none; }

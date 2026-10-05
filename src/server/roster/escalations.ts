@@ -35,11 +35,12 @@ export class Escalations {
    * stopped waiting on the Project Manager without having escalated. Never filed as FYI: the member is
    * benched and nothing else brings it back, so the Project Manager must see it in their approvals.
    */
-  raiseFor(floor: TeamFloor, who: { workerId: string; by: string; role: RoleId }, ask: EscalationAsk): Escalation {
-    return this.add(floor, who, ask, true);
+  raiseFor(floor: TeamFloor, who: { workerId: string; by: string; role?: RoleId }, ask: EscalationAsk, source?: string): Escalation {
+    return this.add(floor, who, ask, true, source);
   }
 
-  private add(floor: TeamFloor, who: { workerId: string; by: string; role?: RoleId }, ask: EscalationAsk, byOffice = false): Escalation {
+  /** `source`: the activity line for one the office raised, when it isn't from a handoff note (Jeff's). */
+  private add(floor: TeamFloor, who: { workerId: string; by: string; role?: RoleId }, ask: EscalationAsk, byOffice = false, source?: string): Escalation {
     const d = this.roster.data(floor.id);
     const { role } = who;
     const team = role ? ROLE_BY_ID.get(role)!.team : undefined;
@@ -48,7 +49,7 @@ export class Escalations {
     d.escalations.push(e);
     const loud = isAlarming(e);
     const tag = e.fyi ? 'FYI' : e.urgency;
-    floor.activity?.(`${URGENCY_ICON[e.urgency]} ${byOffice ? `The office escalated to the Project Manager for ${who.by}, from its handoff note` : `${who.by} escalated to the Project Manager`} (${tag}): ${e.title}`);
+    floor.activity?.(`${URGENCY_ICON[e.urgency]} ${byOffice ? (source ?? `The office escalated to the Project Manager for ${who.by}, from its handoff note`) : `${who.by} escalated to the Project Manager`} (${tag}): ${e.title}`);
     if (byOffice) floor.toast(`${URGENCY_ICON[e.urgency]} ${who.by} is waiting on you: ${e.title} — answer it in the approvals and the office brings ${who.by} back with your answer`, 'warn');
     if (loud) floor.toast(`${URGENCY_ICON[e.urgency]} ${e.urgency === 'critical' ? 'Critical' : 'Urgent'} escalation from ${who.by}: ${e.title} — answer it on the project console (🎛️ Command Center)`, 'warn');
     // The Coordinator relays and summarises: it isn't told about its own, or about FYIs (they're on the standup page).

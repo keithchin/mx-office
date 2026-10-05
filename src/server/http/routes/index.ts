@@ -47,6 +47,7 @@ export const routes: readonly Route[] = [
   analysisRoutes.report,
   analysisRoutes.backfill,
   analysisRoutes.summary,
+  analysisRoutes.judge,
   homeRoutes.stats,
   prShotRoutes.checks,
   prShotRoutes.file,

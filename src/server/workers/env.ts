@@ -7,6 +7,8 @@ import { PROVIDERS } from '../providers/index.js';
 const SCRUB_ENV = new Set([
   ...Object.values(PROVIDERS).flatMap((p) => p.scrubEnv ?? []),
   'NO_COLOR', 'FORCE_COLOR', 'VSCODE_INJECTION', 'TERM_PROGRAM', 'TERM_PROGRAM_VERSION',
+  // Jeff's Jev key is the office's, never a worker's (AGENT_OFFICE_JEV_KEY_FILE goes with the prefix below).
+  'TYPESAFE_API_KEY',
 ]);
 const SCRUB_PREFIXES = [...Object.values(PROVIDERS).flatMap((p) => p.scrubPrefixes ?? []), 'NEBULA_', 'AGENT_OFFICE_'];
 const scrubbed = (k: string) => SCRUB_ENV.has(k) || SCRUB_PREFIXES.some((p) => k.startsWith(p));

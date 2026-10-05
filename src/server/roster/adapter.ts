@@ -10,6 +10,9 @@ import type { WorkerInfo } from '../../shared/protocol.js';
 import { analysisOf } from '../analysis/index.js';
 import { teamLabel } from '../../shared/roster/card-team.js';
 import { gh } from '../github.js';
+import { findTranscript } from '../analysis/transcript.js';
+import { judgeFor } from '../judge/index.js';
+import { lastAssistantTextOf, lastWordsOf } from '../judge/turns.js';
 import { summaryOf } from '../summary/index.js';
 import { ensureTeamLabels } from '../teams/labels.js';
 import { envDryRun } from './issues.js';
@@ -56,6 +59,19 @@ export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
         return (err as Error).message;
       }
     },
+    labelIssue: async (n, team) => {
+      if (envDryRun() || rosterOf(ctx).data(floor.id).settings.dryRunIssues) return 'skipped';
+      const made = await ensureTeamLabels(floor, false);
+      if (made.error) return made.error;
+      return (await floor.github.setLabels('issue', n, [teamLabel(team)], [])).error;
+    },
+    lastWords: (w) => {
+      const said = lastWordsOf(w.id);
+      if (said) return said;
+      const file = findTranscript(w.sessionId, w.worktree ? path.resolve(floor.dir, w.worktree.path) : floor.dir);
+      return file ? lastAssistantTextOf(file) : undefined;
+    },
+    judged: (made) => ctx.toFloor(floor, { t: 'judge.made', floor: floor.id, ...made }),
   };
   adapters.set(floor, t);
   return t;
@@ -92,6 +108,9 @@ function analysisLines(ctx: Ctx, floorId: string): string {
   }
 }
 
+/** The office's Jeff (server/judge/): made on first use. */
+export const judgeOf = (ctx: Ctx) => judgeFor(ctx.cfg);
+
 /** The office's roster: made on first use, with the real floors, GitHub and the analyzer behind it. */
 export function rosterOf(ctx: Ctx): Roster {
   return rosterFor(ctx.cfg, () =>
@@ -101,6 +120,7 @@ export function rosterOf(ctx: Ctx): Roster {
       makeIssue: ghIssueMaker,
       analysis: (id) => analysisLines(ctx, id),
       now: () => Date.now(),
+      judge: (text, questions, opts) => judgeOf(ctx).ask(text, questions, opts),
     }),
   );
 }

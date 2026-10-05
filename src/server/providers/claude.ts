@@ -3,6 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { FAILS_TO_DESPAIR, outputFailed, toolAction } from '../../shared/actions.js';
+import { noteLastWords } from '../judge/turns.js';
 import { MCP_ALLOWED, writeClaudeMcpConfig } from '../office-workers.js';
 import { QUEUE_AGENT_DISALLOWED_TOOLS } from '../stations.js';
 import { answered, notified, wantsPermission } from '../workers/lifecycle.js';
@@ -177,6 +178,8 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
       notified(h, payload?.notification_type, now);
       break;
     case 'Stop':
+      // Its last words, for Jeff's "is it waiting on you?" (roster/jeff.ts).
+      noteLastWords(info.id, payload?.last_assistant_message);
       h.setStatus('done');
       break;
   }
