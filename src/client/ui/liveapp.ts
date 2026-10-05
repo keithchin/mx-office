@@ -25,6 +25,8 @@ export interface LiveAppView {
   render(root: HTMLElement): void;
   /** Puts the chip into the project summary's heading in `summary`, after it was drawn. */
   mountChip(summary: HTMLElement): void;
+  /** How the floor's app is, once the office said (null before). */
+  current(): LiveAppState | null;
 }
 
 const short = (sha?: string) => sha?.slice(0, 7) ?? '';
@@ -122,6 +124,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
       if (!state) ask();
       draw();
     },
+    current: () => state,
     mountChip(summary) {
       drawChip();
       const at = summary.querySelector('.sm-name');
