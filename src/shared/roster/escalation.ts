@@ -6,6 +6,7 @@
 // agree on what's accepted. Pure: the browser imports the types.
 
 import { isEscalationTrigger, isFyi, isUrgency, type AutonomyLevel, type EscalationTrigger, type Urgency } from './autonomy.js';
+import type { JeffRank } from './jeff-rank.js';
 import type { RoleId, TeamId } from './roles.js';
 
 /** How the Project Manager answered: free text, a yes, a no (with why), or "noted" for an FYI. */
@@ -42,6 +43,8 @@ export interface Escalation {
     /** Whether the answer reached the agent that raised it (it may have gone home meanwhile). */
     delivered: boolean;
   };
+  /** Jeff's rating of how soon to resolve it, and its rank among the floor's open ones (jeff-rank.ts). */
+  jeffRank?: JeffRank;
 }
 
 /** What an agent sends to raise one, before the office stamps it. */

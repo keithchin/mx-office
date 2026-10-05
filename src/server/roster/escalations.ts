@@ -4,7 +4,8 @@
 // sent as a desktop alert when it's urgent or critical and above the floor's threshold, and the
 // Project Coordinator hears about it (batched, a minute after the last) so it can summarise it at the
 // standup. The human's Reply / Approve / Reject goes back to the raising agent as a prompt and
-// resolves it. The office never blocks on one, and never asks a model anything.
+// resolves it. The office never blocks on one; the only model it asks is Jeff, how soon to resolve it
+// (jeff-priority.ts: a sort order, re-ranked as one is raised or answered).
 
 import { randomBytes } from 'node:crypto';
 import type { WorkerInfo } from '../../shared/protocol.js';
@@ -62,6 +63,7 @@ export class Escalations {
     if (role !== 'pm' && !e.fyi) this.tellCoordinator(floor, e);
     this.roster.touch(floor);
     if (loud) floor.changed({ id: e.id, urgency: e.urgency as 'urgent' | 'critical', title: `${URGENCY_ICON[e.urgency]} ${who.by} needs the Project Manager`, body: e.title });
+    this.roster.jeff.priority.kick(floor);
     return e;
   }
 
@@ -104,6 +106,7 @@ export class Escalations {
     // A Lead's `ask` to warn, bench, swap or reinstate a subagent: approving it does it.
     this.roster.subagents.onEscalationResolved(floor, e.id, verdict, by);
     this.roster.touch(floor);
+    this.roster.jeff.priority.kick(floor);
     if (rehire && e.role) this.rehire(floor, e.role);
     return undefined;
   }

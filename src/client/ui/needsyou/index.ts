@@ -10,6 +10,7 @@ import { store } from '../../state';
 import { h, timeAgo } from '../dom';
 import { fetchRoster } from '../roster/api';
 import { collectNeeds, hereCount, type NeedItem, type NeedTarget } from './logic';
+import '../pm/jeff-rank.css';
 import './needsyou.css';
 
 /** Rows shown before "Show N more". */
@@ -59,7 +60,7 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
       'li.ny-item',
       { class: `ny-${n.level} ny-${n.kind}` },
       h('span.ny-ico', { 'aria-hidden': 'true' }, n.icon),
-      h('span.ny-text', {}, n.tag ? h('span.ny-tag', {}, n.tag) : null, n.text, n.since ? h('small.ny-since', {}, ` · ${timeAgo(n.since)}`) : null),
+      h('span.ny-text', {}, n.rank ? h('span.jrank-chip', { class: `jrank-${n.rank.n}`, title: n.rank.tip, 'aria-label': n.rank.tip }, n.rank.chip) : null, n.tag ? h('span.ny-tag', {}, n.tag) : null, n.text, n.since ? h('small.ny-since', {}, ` · ${timeAgo(n.since)}`) : null),
       h('button.btn.small.ny-go', { type: 'button', onclick: () => deps.go(n.target), 'aria-label': `${n.action}: ${n.text}` }, n.action, h('span', { 'aria-hidden': 'true' }, ' →')),
     );
 

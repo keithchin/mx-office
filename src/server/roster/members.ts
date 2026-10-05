@@ -188,8 +188,11 @@ export class Members {
   settings(floor: TeamFloor, raw: unknown): string | undefined {
     const d = this.roster.data(floor.id);
     const before = d.settings.autonomy;
+    const sorted = d.settings.jeff.priority;
     d.settings = cleanSettings(raw, d.settings);
     this.roster.recheckPause(floor);
+    // Jeff's priority sort switched back on: the open escalations are ranked again.
+    if (sorted === 'off' && d.settings.jeff.priority === 'on') this.roster.jeff.priority.kick(floor);
     if (d.settings.autonomy !== before) {
       for (const r of ROLES) {
         const m = d.members[r.id];

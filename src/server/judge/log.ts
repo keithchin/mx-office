@@ -4,7 +4,7 @@
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { JudgeRow } from '../../shared/judge.js';
+import { isJudgeKind, type JudgeRow } from '../../shared/judge.js';
 
 export const MAX_LINES = 5000;
 const KEEP_LINES = 4000;
@@ -53,7 +53,7 @@ export class JudgeLog {
       if (!line.trim()) continue;
       try {
         const r = JSON.parse(line);
-        if (r && typeof r.at === 'number' && (r.kind === 'waiting' || r.kind === 'triage')) out.push(r);
+        if (r && typeof r.at === 'number' && isJudgeKind(r.kind)) out.push(r);
       } catch {
         // half-written line
       }

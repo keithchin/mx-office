@@ -243,6 +243,8 @@ export class Roster {
   view(floor: TeamFloor, admin: boolean): RosterView {
     const d = this.data(floor.id);
     const now = this.deps.now();
+    // The first look since the office started: Jeff ranks the open escalations already there.
+    this.jeff.priority.firstLook(floor);
     const members: MemberView[] = ROLES.map((r) => {
       const m = d.members[r.id];
       const w = this.workerOf(floor, m);
