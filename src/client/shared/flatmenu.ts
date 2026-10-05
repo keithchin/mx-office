@@ -89,6 +89,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
     { ...MENU.signins, run: () => openSignIns(net) },
     in3d('settings', 'Your settings, the building and the workers'),
     { ...MENU.home, shown: () => !d.home, run: () => location.assign('/home') },
+    { ...MENU.guide, run: () => location.assign('/docs') },
     { ...MENU.upgrade, run: () => openUpgrade(net) },
   ];
   const actions = d.home ? all.filter((a) => !FLOOR_ONLY.has(a.id)) : all;

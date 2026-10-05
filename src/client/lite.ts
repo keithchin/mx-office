@@ -37,6 +37,8 @@ import { floorPicker } from './shared/floors';
 import { askedTab, followFloor, leaveForHome, setAddress } from './shared/address';
 import { colorThemes } from './ui/colortheme';
 import { needsYouStrip } from './ui/needsyou';
+import { firmBanner } from './ui/firm/banner';
+import type { FirmFloorStatus } from '../shared/firm/engagement';
 import { gitView } from './ui/git';
 import type { NeedTarget } from './ui/needsyou/logic';
 import { viewPicker } from './ui/viewpick';
@@ -44,6 +46,10 @@ import { flatMenu } from './shared/flatmenu';
 import { tabBadges } from './ui/badge';
 import { newStandup, teamAttention } from './ui/chrome-logic';
 import { currentRoster, onRoster } from './ui/teams/world';
+import { auditView } from './ui/audit';
+import { chatterPanel } from './ui/chatter/panel';
+import { routeChatter } from './ui/chatter/feed';
+import { useChatterActions } from './ui/chatter/compact';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -63,6 +69,7 @@ const session = flatSession('/lite', (id) => openWorker(id), (m) => {
   routePreviewMessage(m);
   live.route(m);
   pm.route(m);
+  routeChatter(m);
 });
 const { net } = session;
 const workers = workerActions(net);
@@ -73,6 +80,10 @@ const live = liveAppView(net, () => showTab('live'), () => tab === 'live');
 // The project manager console in the middle of the project summary (ui/pm/console.ts): its live
 // terminal only while the board is on screen.
 const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'command' });
+// 💬 Team chatter under the recent activity (ui/chatter/): its bubbles open the escalation, the PR or the terminal.
+const chatterDeps = { openWorker: (id: string) => openWorker(id), openEscalation: (id: string) => toEscalation(id), openPull: (n: number) => openPr(n) };
+const chatter = chatterPanel(chatterDeps);
+useChatterActions(chatterDeps);
 
 // ---- The floor you're on (every floor's card is on the home page, /home) -----------------------
 floorPicker(net, { onGo: () => showTab('command') });
@@ -204,11 +215,15 @@ net.onMessage((msg) => teams.route(msg));
 const TAB_KEY = 'agent-office.lite-tab2';
 // The floor's branches as a metro map (🌳 Git, ui/git/).
 const git = gitView($('git-view'), { openWorker, openPull: kanban.openPull });
-type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | Pane | 'teams';
+// Who did what, when (🧾 Audit log, ui/audit/): this floor, the office's own or every floor.
+const audit = auditView($('audit-view'), { floor: () => store.floor ?? undefined, floors: () => store.floors, admin: () => store.me.admin, storeKey: 'agent-office.audit-lite' });
+net.onMessage((msg) => audit.onMessage(msg));
+store.on('floor', () => audit.floorChanged());
+type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | Pane | 'teams' | 'audit';
 // The team's four panes are tabs of their own (flattened from one Team tab); an old "team" means its org chart.
 const TEAM_PANES: readonly Pane[] = ['org', 'standup', 'approvals', 'settings'];
 const isPane = (t: unknown): t is Pane => TEAM_PANES.includes(t as Pane);
-const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || isPane(t) || t === 'teams';
+const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || isPane(t) || t === 'teams' || t === 'audit';
 const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : isTab(t) ? t : undefined);
 let tab: Tab = 'command';
 try {
@@ -242,6 +257,10 @@ function showTab(t: Tab) {
   $('git-view').classList.toggle('hidden', t !== 'git');
   if (t === 'git') git.show();
   else git.hide();
+  $('tab-audit').classList.toggle('on', t === 'audit');
+  $('audit-view').classList.toggle('hidden', t !== 'audit');
+  if (t === 'audit') audit.show();
+  else audit.hide();
   for (const p of TEAM_PANES) $(`tab-${p}`).classList.toggle('on', t === p);
   $('board').classList.toggle('hidden', t !== 'board');
   $('summary').classList.toggle('hidden', t !== 'command');
@@ -266,7 +285,8 @@ function renderKanban() {
   if (tab === 'teams') return teams.renderPage($('teams-view'));
   if (tab === 'board') return renderBoard($('board'), kanban, teams.boardView(renderKanban));
   if (tab !== 'command') return;
-  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el }).then(() => live.mountChip($('summary')));
+  chatter.show(store.floor ?? undefined);
+  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el, after: chatter.el }).then(() => live.mountChip($('summary')));
   void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) }).then(() => needs.refresh());
 }
 /** Which model does well on what (ui/analysis.ts), for this floor or every floor. */
@@ -281,6 +301,7 @@ $('tab-live').addEventListener('click', () => showTab('live'));
 $('tab-git').addEventListener('click', () => showTab('git'));
 for (const p of TEAM_PANES) $(`tab-${p}`).addEventListener('click', () => showTab(p));
 $('tab-teams').addEventListener('click', () => showTab('teams'));
+$('tab-audit').addEventListener('click', () => showTab('audit'));
 store.on('floor', renderAnalysisTab);
 // The project team (ui/roster/): its approvals badge stays current whichever tab is showing.
 const team = teamTab($('team-view'), $('tab-approvals').querySelector('.ro-tab-n')!, () => isPane(tab), openWorker, { select: (p) => showTab(p) });
@@ -319,8 +340,14 @@ function toEscalation(id: string) {
   };
   look();
 }
+/** A PR's window by number, if the floor has it. */
+function openPr(n: number) {
+  const it = store.pulls.items.find((p) => p.number === n);
+  if (it) kanban.openPull(it);
+}
 function goToNeed(t: NeedTarget) {
   if (t.to === 'worker') return openWorker(t.id);
+  if (t.to === 'firm') return location.assign(t.url);
   if (t.to === 'escalation') return toEscalation(t.id);
   if (t.to === 'approvals' || t.to === 'settings' || t.to === 'live') return showTab(t.to);
   if (t.to === 'setup') {
@@ -336,7 +363,12 @@ function goToNeed(t: NeedTarget) {
   const it = store.pulls.items.find((p) => p.number === t.number);
   if (it) openPull(it, net, boardActions());
 }
-const needs = needsYouStrip($('needs-you'), $('tab-command').querySelector('.ny-tab-n')!, { go: goToNeed, setup: () => cachedSetup(store.floor ?? undefined), live: () => live.current() });
+// The Firm (ui/firm/banner.ts): its audit of this floor, its report, or the button to call one.
+let firmStatus: FirmFloorStatus | undefined;
+const needs = needsYouStrip($('needs-you'), $('tab-command').querySelector('.ny-tab-n')!, { go: goToNeed, setup: () => cachedSetup(store.floor ?? undefined), live: () => live.current(), firm: () => firmStatus });
+const firm = firmBanner($('firm-banner'), (s) => ((firmStatus = s), needs.refresh()));
+store.on('floor', () => firm.refresh(store.floor ?? undefined));
+net.onMessage((msg) => firm.onMessage(msg));
 net.onMessage((msg) => {
   needs.onMessage(msg);
   if (msg.t === 'liveapp.state' || msg.t === 'floor.enter' || msg.t === 'welcome') needs.refresh();
@@ -411,6 +443,7 @@ renderWorkers();
 renderNav();
 showTab(tab);
 needs.refresh();
+firm.refresh(store.floor ?? undefined);
 
 // Debug handle for quick checks from the console / headless screenshots.
 (window as any).__lite = { store, net };

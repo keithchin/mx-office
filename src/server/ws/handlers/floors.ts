@@ -4,6 +4,7 @@ import type { FloorClientMsg } from '../../../shared/protocol.js';
 import { ROOF } from '../../../shared/rooftop.js';
 import { arrivalSpot, str } from '../../office/input.js';
 import type { HandlerMap, ViewPieces } from './types.js';
+import { audit, human } from '../../audit/index.js';
 
 export const projectView: ViewPieces['project'] = (_ctx, floor) => floor?.project ?? null;
 
@@ -44,6 +45,7 @@ export const floorHandlers = {
         if (!floor) return ctx.sendTo(c, { t: 'floor.added', repo, error: `Cloned ${r.repo}, but couldn't open its floor — see the office's log` });
         console.log(`  ${who} added a floor for ${r.repo} (${r.dir})`);
         ctx.toastAll(`🛗 New floor: ${r.name}, added by ${who}`);
+        audit.record({ actor: human(who, c.accountId), action: 'floor.add', target: { kind: 'floor', id: floor.id, label: r.name }, summary: `Added a floor for ${r.repo ?? r.name}`, details: { repo: r.repo, dir: r.dir }, severity: 'notice' });
         ctx.sendTo(c, { t: 'floor.added', repo, floor: floor.id });
       });
   },
@@ -64,6 +66,7 @@ export const floorHandlers = {
     const r = ctx.building.remove(id, who);
     if (typeof r === 'string') return ctx.warn(c, r);
     console.log(`  ${who} took the ${r.name} floor off the building (${r.dir} stays where it is)`);
+    audit.record({ actor: human(who, c.accountId), action: 'floor.remove', target: { kind: 'floor', id, label: r.name }, summary: `Took the ${r.name} floor off the building`, details: { repo: r.repo, dir: r.dir }, severity: 'warning' });
     const floor = ctx.floors.get(id);
     if (floor) ctx.closeFloor(floor, who);
     else ctx.floorsChanged();
@@ -75,6 +78,7 @@ export const floorHandlers = {
     ctx.warn(c, err);
     if (err) return;
     const state = ctx.building.projectsDirState();
+    audit.record({ actor: human(who, c.accountId), action: 'settings.change', target: { kind: 'setting', id: 'projectsDir', label: 'Workspace folder' }, summary: `Moved the workspace folder to ${state.dir}`, details: { after: { dir: state.dir, custom: state.custom } }, severity: 'notice' });
     ctx.broadcast({ t: 'projectsDir', state });
     ctx.toastAll(state.custom ? `📁 ${who} moved the workspace folder to ${state.dir}` : `📁 ${who} put the workspace folder back to ${state.dir}`);
   },

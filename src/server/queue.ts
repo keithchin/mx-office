@@ -36,6 +36,8 @@ export interface QueueEvents {
   room?(): number;
   /** The last task on the queue just finished, done: nothing is left queued or running. */
   emptied(): void;
+  /** A task got a worker and started (for the audit log). */
+  started?(task: QueueTask, worker: WorkerInfo): void;
   /** What's added after a task that runs in its own worktree ('queue.worktree' in shared/prompts.ts); empty for nothing. */
   worktreeNote?(): string;
 }
@@ -351,6 +353,7 @@ export class TaskQueue {
       t.startedAt = Date.now();
       t.error = undefined;
       this.lastStatus.set(r.id, r.status);
+      this.events.started?.(t, r);
       this.events.toast(`📋 ${r.name} sat down at ${DESK_BY_ID.get(desk)?.label ?? 'a desk'} to work on ${label(t)}`, 'info');
       if (t.issue !== undefined) {
         const issue = t.issue;

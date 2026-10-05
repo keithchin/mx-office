@@ -19,6 +19,8 @@ import { readJournal } from './journal-io.js';
 import { outcomesPrompt, standupCompiledPrompt, standupPrompt } from './prompts.js';
 import { compilePage, reportFrom, standupId, toProposals } from './standup.js';
 import type { TeamFloor } from './types.js';
+import { audit, byWhom } from '../audit/index.js';
+import { decisionsRelayed } from '../chatter/hooks.js';
 
 /** How long the Leads asked live get to answer before the page is compiled without them. */
 export const COLLECT_MS = 20 * 60_000;
@@ -67,6 +69,7 @@ export class StandupRunner {
       }
       this.fromJournal(floor, s, role.id, w);
     }
+    audit.record({ floor: floor.id, actor: byWhom(by), action: 'standup.run', target: { kind: 'standup', id: s.id, label: `Standup ${s.date}` }, summary: by === 'schedule' ? 'The daily standup started' : 'Called a standup', details: { asked: s.waiting } });
     floor.toast(`📋 ${by === 'schedule' ? 'The daily standup' : `${by} called a standup`}: ${s.waiting.length ? `asking ${s.waiting.map((r) => d.members[r].name).join(', ')}` : 'from the journals'}`);
     if (!s.waiting.length) void this.compile(floor, s);
     this.roster.touch(floor);
@@ -185,6 +188,7 @@ export class StandupRunner {
     const s = d.standups.find((x) => x.id === p.standup);
     if (s?.page) s.page = compilePage(s, d.proposals, d.settings.autonomy, floor.name);
     this.tellPm(floor, p);
+    audit.record({ floor: floor.id, actor: byWhom(by), action: 'proposal.decide', target: { kind: 'proposal', id: p.id, label: p.title }, summary: `${decision === 'approve' ? 'Approved' : decision === 'reject' ? 'Rejected' : 'Asked for changes to'} the proposal “${p.title}”${p.issue?.number ? ` (issue #${p.issue.number})` : ''}`, details: { decision, reason: why ? { length: why.length } : undefined, issue: p.issue?.number }, severity: 'notice' });
     this.roster.touch(floor);
     return undefined;
   }
@@ -216,6 +220,8 @@ export class StandupRunner {
     }
     if (isAsleepStatus(w.status) || w.status === 'needs_input') return false;
     this.outbox.delete(floor.id);
-    return !floor.prompt(w.id, outcomesPrompt(box.list));
+    const sent = !floor.prompt(w.id, outcomesPrompt(box.list));
+    if (sent) decisionsRelayed(floor.id, w, box.list);
+    return sent;
   }
 }

@@ -1,0 +1,18 @@
+/* The Firm's banner on the 1D view (ui/firm/banner.ts): navy and brass while an audit runs, green when
+   its report is ready, one small button otherwise. Office tokens, so the three themes hold. */
+
+#firm-banner:empty { display: none; }
+#firm-banner { margin-bottom: 10px; }
+.firm-strip { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 3px solid var(--line); border-radius: 14px; box-shadow: 0 3px 0 var(--edge); text-decoration: none; color: var(--ink); font-size: 13px; }
+.firm-strip.active { background: #1d2a44; color: #f4ecd6; border-color: #c9a14a; box-shadow: 0 3px 0 var(--edge), inset 0 0 0 1px #c9a14a; }
+.firm-strip.active.warn { border-color: var(--warn); }
+.firm-strip.active.cap { border-color: var(--bad); }
+html[data-theme='terminal'] .firm-strip.active { background: var(--card); color: var(--ink); border-color: var(--accent); }
+.firm-strip.ready { background: var(--good-soft); }
+.firm-strip.idle { box-shadow: none; border: 0; padding: 0; justify-content: flex-end; }
+.firm-strip-ico { font-size: 18px; }
+.firm-strip-text { flex: 1; min-width: 0; line-height: 1.35; }
+.firm-strip-go { flex: none; font-weight: 900; }
+.firm-strip-link { font-size: 12px; font-weight: 800; color: var(--link); }
+.btn.firm-call { background: #c9a14a; color: #1b1b2a; }
+html[data-theme='terminal'] .btn.firm-call { background: var(--accent); color: var(--on-fill); }

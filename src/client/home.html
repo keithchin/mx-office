@@ -19,6 +19,8 @@
         <h1>Agent Office</h1>
       </div>
       <a id="to-floor" class="btn home-back hidden" href="/lite" title="Back to the floor you were last on"></a>
+      <a id="to-firm" class="btn" href="/firm" title="The Firm: independent Reviewer Agents that audit a project" aria-label="The Firm">📑<span class="home-firm-label"> The Firm</span></a>
+      <a id="to-docs" class="btn home-docs" href="/docs" title="The documentation: guides, reference and FAQ" aria-label="Documentation">📚<span class="home-docs-label"> Docs</span></a>
       <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
       <!-- The ☰ (shared/flatmenu.ts), last on the bar as on every page: what needs a floor is left out here. -->
       <button id="menu" class="btn lite-menu" type="button" title="Menu: everything the 3D office’s ☰ has that doesn’t need a floor" aria-label="Menu">☰</button>
@@ -28,6 +30,7 @@
         <button id="tab-projects" class="btn" type="button" role="tab">🏢 Projects</button>
         <button id="tab-stats" class="btn" type="button" role="tab">📊 Statistics</button>
         <button id="tab-overview" class="btn" type="button" role="tab">🗺️ 2D Overview</button>
+        <button id="tab-audit" class="btn" type="button" role="tab">🧾 Audit log</button>
       </div>
       <!-- A card for every floor, to go into on the board or in the office, and adding one (home/projects.ts). -->
       <section id="projects-view" role="tabpanel" aria-labelledby="tab-projects"></section>
@@ -35,6 +38,8 @@
       <section id="stats-view" class="hidden" role="tabpanel" aria-labelledby="tab-stats"></section>
       <!-- Every floor from above in pixel art, side by side, to look at (home/overview.ts). -->
       <section id="overview-view" class="hidden" role="tabpanel" aria-labelledby="tab-overview"></section>
+      <!-- Who did what, when, on every floor and the office's own (home/audit.ts). -->
+      <section id="audit-view" class="hidden" role="tabpanel" aria-labelledby="tab-audit"></section>
     </main>
     <div id="toasts"></div>
     <div id="conn" class="conn hidden">Reconnecting…</div>

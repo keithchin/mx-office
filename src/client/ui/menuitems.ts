@@ -39,7 +39,7 @@ export const MENU = {
     title: () => 'Call a meeting: workers work through a question or a task together',
   },
   search: { id: 'search', icon: '🔎', label: 'Search', section: 'Open', key: '/', title: () => 'Search the chat and every terminal' },
-  docs: { id: 'docs', icon: '📚', label: 'Docs', section: 'Open', title: () => 'Read the project’s docs' },
+  docs: { id: 'docs', icon: '📚', label: 'Project docs', section: 'Open', title: () => 'Read the project’s own Markdown: its README, team journals, standups' },
   elevator: { id: 'elevator', icon: '🛗', label: 'Floors', section: 'Open', count: COUNTS.floors, title: () => 'Go to another project, or add one' },
   roof: { id: 'roof', icon: '🍸', label: 'Rooftop bar', section: 'Open', title: () => 'Ride the elevator up to the roof: a DJ, drinks and the city' },
   voice: { id: 'voice', icon: '🎙️', label: 'Join voice', section: 'Together', key: 'V' },
@@ -60,6 +60,8 @@ export const MENU = {
   },
   settings: { id: 'settings', icon: '⚙️', label: 'Settings', section: 'Office' },
   help: { id: 'help', icon: '❓', label: 'Controls', section: 'Office', key: 'H' },
+  // The office’s own manual, its own page (/docs): how everything here works.
+  guide: { id: 'guide', icon: '📖', label: 'Documentation', section: 'Office', title: () => 'How the office works: guides, reference and FAQ (its own page, /docs)' },
   home: { id: 'home', icon: '🏠', label: 'Home', section: 'Office', title: () => 'Every project in the building, and the office in numbers (its own page, /home)' },
   upgrade: {
     id: 'upgrade',

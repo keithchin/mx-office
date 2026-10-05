@@ -1,0 +1,211 @@
+@import '../styles/base.css';
+@import '../styles/themes.css';
+@import '../styles/theme-terminal.css';
+
+/* The documentation site (docs.ts): a quiet reading page in the office's colors, laid out like
+   docs.mendix.com: a top bar with the search, the sections on the left, the page in the middle
+   (about 70 characters a line), "On this page" on the right. Under 1200px the right list goes; under
+   900px the sections become a drawer behind ☰. Wide code and tables scroll in their own boxes. */
+
+html, body { height: auto; min-height: 100%; overflow: visible; }
+body.docs-page { background: var(--paper); color: var(--ink); --dx-bar: 60px; --dx-side: 280px; --dx-toc: 230px; --dx-read: 74ch; }
+.docs-page a { color: var(--link); }
+.dx-skip { position: absolute; left: -999px; top: 8px; z-index: 50; padding: 8px 12px; background: var(--card); border: 2px solid var(--line); border-radius: 8px; }
+.dx-skip:focus { left: 8px; }
+
+/* ---- The top bar ----------------------------------------------------------------------------------- */
+.dx-bar {
+  position: sticky; top: 0; z-index: 30; height: var(--dx-bar); display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; background: var(--paper-2); border-bottom: 3px solid var(--line);
+}
+.dx-brand { display: flex; align-items: center; gap: 8px; color: var(--ink) !important; text-decoration: none; font-size: 18px; font-weight: 800; white-space: nowrap; }
+.dx-brand b { color: var(--accent); font-weight: 900; }
+.dx-logo { font-size: 22px; }
+.dx-iconbtn {
+  display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: none;
+  font-size: 18px; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 10px;
+  cursor: pointer; text-decoration: none;
+}
+.dx-iconbtn:hover { background: var(--paper); }
+.dx-links { display: flex; gap: 8px; margin-left: auto; }
+.dx-search { position: relative; flex: 1; max-width: 520px; margin-left: 24px; }
+.dx-search input {
+  width: 100%; height: 40px; padding: 0 36px 0 14px; font: 600 15px var(--font); color: var(--ink);
+  background: var(--card); border: 2px solid var(--line); border-radius: 10px; outline: none;
+}
+.dx-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dx-kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); padding: 0 6px; font: 700 12px var(--font-mono); color: var(--muted); border: 1px solid var(--rule-strong); border-radius: 5px; pointer-events: none; }
+.dx-search input:focus + .dx-kbd { display: none; }
+.dx-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; max-height: min(70vh, 560px); overflow: auto;
+  background: var(--card); border: 2px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px var(--pop-glow); padding: 6px;
+}
+.dx-none { margin: 10px; color: var(--muted); }
+.dx-all { display: block; padding: 8px 10px; font-weight: 800; text-decoration: none; border-top: 1px solid var(--rule); margin-top: 4px; }
+.dx-all.on, .dx-all:hover { background: var(--hover); }
+
+/* ---- The three columns ----------------------------------------------------------------------------- */
+.dx-layout { display: grid; grid-template-columns: var(--dx-side) minmax(0, 1fr) var(--dx-toc); max-width: 1480px; margin: 0 auto; }
+.dx-side, .dx-toc { position: sticky; top: var(--dx-bar); align-self: start; max-height: calc(100vh - var(--dx-bar)); overflow: auto; }
+.dx-side { padding: 16px 8px 40px 16px; border-right: 1px solid var(--rule); }
+.dx-main { min-width: 0; padding: 24px 40px 64px; outline: none; }
+.dx-toc { padding: 28px 16px 40px 8px; }
+
+/* The sidebar's tree. */
+.dx-side ul { list-style: none; margin: 0; padding: 0; }
+.dx-nav-home { display: block; padding: 6px 10px; margin-bottom: 8px; font-weight: 800; color: var(--ink) !important; text-decoration: none; border-radius: 8px; }
+.dx-nav-list.depth-0 > li { margin-top: 2px; }
+.dx-nav-list.depth-0 > li > .dx-nav-row > .dx-nav-link, .dx-nav-list.depth-0 > li > .dx-nav-link { font-weight: 800; }
+.dx-nav-list .dx-nav-list { padding-left: 12px; margin-left: 10px; border-left: 1px solid var(--rule); display: none; }
+.dx-nav-sec.open > .dx-nav-list { display: block; }
+.dx-nav-row { display: flex; align-items: center; }
+.dx-nav-link { flex: 1; min-width: 0; display: block; padding: 5px 10px; font-size: 14.5px; line-height: 1.35; color: var(--ink-2) !important; text-decoration: none; border-radius: 8px; border-left: 3px solid transparent; }
+.dx-nav-link:hover, .dx-nav-home:hover { background: var(--hover); color: var(--ink) !important; }
+.dx-nav-link[aria-current='page'], .dx-nav-home.on { color: var(--ink) !important; background: var(--accent-soft); border-left-color: var(--accent); font-weight: 800; border-radius: 0 8px 8px 0; }
+.dx-nav-toggle { flex: none; width: 28px; height: 28px; font-size: 18px; line-height: 1; color: var(--muted); background: none; border: 0; border-radius: 6px; cursor: pointer; transition: transform .15s; }
+.dx-nav-toggle:hover { background: var(--hover); color: var(--ink); }
+.dx-nav-sec.open > .dx-nav-row > .dx-nav-toggle { transform: rotate(90deg); }
+.dx-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; font-size: 10.5px; font-weight: 900; letter-spacing: .03em; text-transform: uppercase; vertical-align: 2px; color: var(--on-warn); background: var(--warn); border-radius: 999px; }
+.dx-badge.big { font-size: 12px; vertical-align: 6px; margin-left: 10px; }
+
+/* "On this page". */
+.dx-toc-h { margin: 0 0 8px; font-size: 12px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.dx-toc ul { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--rule); }
+.dx-toc li.d3 { padding-left: 12px; }
+.dx-toc a { display: block; padding: 4px 10px; margin-left: -2px; font-size: 13.5px; line-height: 1.35; color: var(--ink-2) !important; text-decoration: none; border-left: 2px solid transparent; }
+.dx-toc a:hover { color: var(--ink) !important; }
+.dx-toc a.on { color: var(--accent) !important; border-left-color: var(--accent); font-weight: 800; }
+
+/* ---- The page -------------------------------------------------------------------------------------- */
+.dx-article { max-width: var(--dx-read); margin: 0 auto; font-size: 16.5px; line-height: 1.65; }
+.dx-loading { color: var(--muted); }
+.dx-crumbs { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 0 0 12px; padding: 0; font-size: 13.5px; color: var(--muted); }
+.dx-crumbs li + li::before { content: '›'; margin-right: 4px; color: var(--faint); }
+.dx-crumbs a { color: var(--muted) !important; text-decoration: none; }
+.dx-crumbs a:hover { color: var(--link) !important; text-decoration: underline; }
+.dx-title { margin: 0 0 8px; font-size: 34px; line-height: 1.2; font-weight: 900; }
+.dx-lead { margin: 0 0 6px; font-size: 18.5px; line-height: 1.5; color: var(--ink-2); }
+.dx-updated { margin: 0 0 24px; padding-bottom: 16px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--rule); }
+.dx-body h2 { margin: 2em 0 .6em; padding-bottom: 6px; font-size: 25px; line-height: 1.25; border-bottom: 1px solid var(--rule); }
+.dx-body h3 { margin: 1.6em 0 .5em; font-size: 19.5px; line-height: 1.3; }
+.dx-body h4 { margin: 1.4em 0 .4em; font-size: 16.5px; }
+.dx-body :is(h2, h3, h4) { scroll-margin-top: calc(var(--dx-bar) + 16px); position: relative; }
+.dh-anchor { margin-left: 8px; font-weight: 400; color: var(--faint) !important; text-decoration: none; opacity: 0; transition: opacity .1s; }
+.dx-body :is(h2, h3):hover .dh-anchor, .dh-anchor:focus { opacity: 1; }
+.dx-body p, .dx-body ul, .dx-body ol { margin: 0 0 1em; }
+.dx-body li { margin: .25em 0; }
+.dx-body li > p { margin: 0 0 .4em; }
+.dx-body img { max-width: 100%; height: auto; }
+.dx-body hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+.dx-body blockquote { margin: 0 0 1em; padding: 4px 16px; color: var(--ink-2); border-left: 4px solid var(--rule-strong); }
+.dx-body kbd, .dx-kbd-inline { padding: 1px 6px; font: 700 .85em var(--font-mono); background: var(--card); border: 1px solid var(--rule-strong); border-bottom-width: 2px; border-radius: 5px; }
+.dx-body :not(pre) > code { padding: .1em .35em; font: .88em var(--font-mono); background: var(--sunken); border-radius: 5px; overflow-wrap: anywhere; }
+.dh-ext { margin-left: 2px; font-size: .8em; }
+.dh-figure { margin: 1.2em 0; }
+.dh-figure img { display: block; border: 2px solid var(--line); border-radius: 10px; cursor: zoom-in; background: var(--card); }
+.dh-figure figcaption { margin-top: 6px; font-size: 13.5px; color: var(--muted); text-align: center; }
+
+/* Code, with its language and a Copy button. */
+.dh-code { position: relative; margin: 0 0 1.2em; }
+.dh-code pre { margin: 0; padding: 14px 16px; overflow: auto; font: 13.5px/1.55 var(--font-mono); color: var(--code-ink); background: var(--code-bg); border-radius: 10px; }
+.dh-lang { position: absolute; left: 12px; top: -9px; padding: 0 6px; font: 800 10.5px var(--font); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--paper); border-radius: 4px; }
+.dh-copy { position: absolute; right: 8px; top: 8px; padding: 3px 9px; font: 800 12px var(--font); color: var(--code-ink); background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .25); border-radius: 6px; cursor: pointer; opacity: .75; }
+.dh-copy:hover, .dh-copy:focus { opacity: 1; background: rgba(255, 255, 255, .2); }
+
+/* Tables, scrolling on their own when wide. */
+.dh-table { margin: 0 0 1.2em; overflow-x: auto; border: 1px solid var(--rule-strong); border-radius: 10px; }
+.dh-table table { width: 100%; border-collapse: collapse; font-size: 14.5px; line-height: 1.45; }
+.dh-table th, .dh-table td { padding: 8px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); }
+.dh-table th { font-weight: 900; background: var(--paper-2); white-space: nowrap; }
+.dh-table tr:last-child td { border-bottom: 0; }
+.dh-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--paper-2) 35%, transparent); }
+
+/* Callouts: Note, Tip, Important, Warning, Caution, like docs.mendix.com's alerts. */
+.dh-alert, .dx-alert { margin: 0 0 1.2em; padding: 12px 16px 2px; border: 1px solid; border-left-width: 5px; border-radius: 8px; }
+.dh-alert-title { margin: 0 0 4px !important; font-weight: 900; font-size: 14px; letter-spacing: .02em; }
+.dh-alert-title::before { margin-right: 6px; }
+.dh-alert-note { background: var(--info-soft); border-color: var(--info); }
+.dh-alert-note .dh-alert-title::before { content: 'ℹ️'; }
+.dh-alert-tip { background: var(--good-soft); border-color: var(--good-ink); }
+.dh-alert-tip .dh-alert-title::before { content: '💡'; }
+.dh-alert-important { background: var(--purple-soft); border-color: var(--purple); }
+.dh-alert-important .dh-alert-title::before { content: '❗'; }
+.dh-alert-warning { background: var(--warn-soft); border-color: var(--warn-ink); }
+.dh-alert-warning .dh-alert-title::before { content: '⚠️'; }
+.dh-alert-caution { background: var(--bad-soft); border-color: var(--bad-ink); }
+.dh-alert-caution .dh-alert-title::before { content: '🛑'; }
+
+/* A section's pages, as cards. */
+.dx-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin: 1.5em 0; }
+.dx-card { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; color: var(--ink) !important; text-decoration: none; background: var(--card); border: 2px solid var(--line); border-radius: 12px; box-shadow: 0 3px 0 var(--edge); }
+.dx-card:hover { background: var(--paper-2); }
+.dx-card-title { font-weight: 900; }
+.dx-card-desc { font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+
+/* Previous / next, and the source line. */
+.dx-prevnext { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 3em 0 1em; }
+.dx-pn { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; text-decoration: none; border: 2px solid var(--rule-strong); border-radius: 12px; }
+.dx-pn:hover { border-color: var(--accent); }
+.dx-pn-next { text-align: right; }
+.dx-pn-dir { font-size: 12.5px; font-weight: 800; color: var(--muted); }
+.dx-pn-title { font-weight: 900; color: var(--link); }
+.dx-foot { padding-top: 12px; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rule); }
+
+/* Search results. */
+.dx-hits { display: flex; flex-direction: column; gap: 4px; }
+.dx-hit { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; color: var(--ink) !important; text-decoration: none; border-radius: 10px; }
+.dx-hits .dx-hit { border: 1px solid var(--rule); }
+.dx-hit:hover, .dx-hit.on { background: var(--hover); }
+.dx-hit-place { font-size: 12px; font-weight: 700; color: var(--muted); }
+.dx-hit-title { font-weight: 900; color: var(--link); }
+.dx-hit-head { font-weight: 700; color: var(--ink-2); }
+.dx-hit-snip { font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+.dx-hit-mini .dx-hit-snip { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.dx-hit mark { color: inherit; background: var(--flash); border-radius: 3px; }
+
+/* A picture, bigger. */
+.dx-lightbox { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; background: rgba(10, 12, 20, .82); cursor: zoom-out; }
+.dx-lightbox img { max-width: 100%; max-height: calc(100vh - 100px); border-radius: 8px; background: #fff; }
+.dx-lightbox p { margin: 0; color: #fff; font-weight: 700; text-align: center; }
+.dx-lb-close { position: absolute; top: 14px; right: 14px; width: 40px; height: 40px; font-size: 18px; color: #fff; background: rgba(255, 255, 255, .15); border: 1px solid rgba(255, 255, 255, .4); border-radius: 10px; cursor: pointer; }
+
+.dx-scrim { position: fixed; inset: var(--dx-bar) 0 0 0; z-index: 24; background: var(--backdrop); }
+.dx-only-narrow { display: none; }
+
+/* ---- Narrower screens ------------------------------------------------------------------------------ */
+@media (max-width: 1200px) {
+  .dx-layout { grid-template-columns: var(--dx-side) minmax(0, 1fr); }
+  .dx-toc { display: none; }
+}
+@media (max-width: 900px) {
+  .dx-layout { display: block; }
+  .dx-only-narrow { display: inline-flex; }
+  .dx-side {
+    position: fixed; top: var(--dx-bar); left: 0; bottom: 0; z-index: 25; width: min(320px, 86vw); max-height: none;
+    background: var(--paper); border-right: 3px solid var(--line); transform: translateX(-105%); transition: transform .2s ease; visibility: hidden;
+  }
+  body.dx-drawer .dx-side { transform: none; visibility: visible; }
+  .dx-main { padding: 20px 16px 56px; }
+  .dx-search { margin-left: 0; }
+  .dx-brand-name { display: none; }
+}
+@media (max-width: 560px) {
+  .dx-bar { gap: 8px; padding: 0 10px; }
+  .dx-hide-narrow, .dx-kbd { display: none; }
+  .dx-iconbtn { width: 38px; height: 38px; }
+  .dx-title { font-size: 27px; }
+  .dx-lead { font-size: 17px; }
+  .dx-article { font-size: 16px; }
+  .dx-prevnext { grid-template-columns: 1fr; }
+  .dx-pn-next { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dx-side, .dx-nav-toggle { transition: none; }
+}
+
+/* ---- The Terminal theme: its one font and green lines (styles/theme-terminal.css does the rest) ---- */
+html[data-theme='terminal'] .dx-badge { color: #000; background: var(--ink); }
+html[data-theme='terminal'] .dh-code pre { background: #000; border: 1px solid var(--rule-strong); }
+html[data-theme='terminal'] .dx-nav-link[aria-current='page'], html[data-theme='terminal'] .dx-nav-home.on { background: var(--ink); color: #000 !important; text-shadow: none; }
+html[data-theme='terminal'] .dx-hit mark { background: var(--ink); color: #000; }
+html[data-theme='terminal'] .dh-alert { background: transparent; }

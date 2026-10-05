@@ -2,6 +2,7 @@
 import path from 'node:path';
 import { publicFile, serveFile } from '../static.js';
 import { send } from '../util.js';
+import { slugFromPath } from '../../../shared/docsite.js';
 import type { Route, RouteRequest } from '../router.js';
 import type { Ctx } from '../../office/context.js';
 
@@ -26,10 +27,28 @@ export const pageRoutes = {
   office: { path: ['/', '/index.html'], auth: 'session', handle: page('index.html') },
   // The home page: every project's card, and the office's statistics (home.ts).
   home: { path: ['/home', '/home.html'], auth: 'session', handle: page('home.html') },
+  // The Firm: the office's Reviewer Agents, their engagements and reports (firm.ts).
+  firm: { path: ['/firm', '/firm.html'], auth: 'session', handle: page('firm.html') },
   // The 1D view: the workers, their terminals and the boards, without the 3D office (lite.ts).
   lite: { path: ['/lite', '/lite.html'], auth: 'session', handle: page('lite.html') },
   // The 2D view: the floor from above in pixel art, every worker at its desk (pixel.ts).
   pixel: { path: ['/pixel', '/pixel.html'], auth: 'session', handle: page('pixel.html') },
+  // The documentation site (docs.ts): its bundle and pictures from the build (docs/site.json, docs/images/),
+  // and every other address under /docs (a page, a section, one that is not there) to its page, which
+  // draws it. Behind the sign-in like the rest of the office, since it names tokens, paths and ports.
+  docs: {
+    prefix: '/docs',
+    auth: 'session',
+    handle(ctx, { res, path: p }) {
+      const notFound = () => res.writeHead(404, { 'content-type': 'text/plain' }).end('Not found');
+      if (slugFromPath(p) === undefined && p !== '/docs.html') return notFound();
+      if (p.startsWith('/docs/images/') || p === '/docs/site.json') {
+        const file = publicFile(ctx.publicDir, p);
+        return file ? serveFile(res, file, false) : notFound();
+      }
+      return serveFile(res, path.join(ctx.publicDir, 'docs.html'), false);
+    },
+  },
   /** Anything else in the bundle; last, since it answers every path. */
   bundle: {
     prefix: '/',

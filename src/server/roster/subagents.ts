@@ -21,6 +21,7 @@ import { subagentDecisionPrompt, subagentNewsPrompt, underperformingPrompt } fro
 import { cleanSubName, subagentReviews, subKey, type SubagentReview } from './subagent-store.js';
 import { definitionOf } from './subagent-files.js';
 import type { TeamFloor } from './types.js';
+import { struggleNudged, toldCoordinator } from '../chatter/hooks.js';
 
 /** Models a subagent can be swapped to: Claude Code's aliases, inherit, or a model id. */
 const MODEL = /^[A-Za-z0-9][A-Za-z0-9._\-[\]]{0,63}$/;
@@ -201,6 +202,7 @@ export class Subagents {
       return { ok: true, outcome: 'done', message: `${done} The Project Manager got an FYI.` };
     }
     this.queueNews(floor, `${m.name} ${OP_VERB[op]} subagent ${name}${op === 'swap-model' ? ` (now ${args.model})` : ''}${args.reason ? `: ${args.reason}` : ''}`);
+    toldCoordinator(floor.id, w, d.members.pm, `I ${OP_VERB[op]} my subagent ${name}${op === 'swap-model' ? ` (now ${args.model})` : ''}${args.reason ? `: ${args.reason}` : ''}`, name);
     return { ok: true, outcome: 'done', message: `${done} The Project Coordinator is told.` };
   }
 
@@ -322,6 +324,7 @@ export class Subagents {
     const skills = effectiveSkills(lead, d.settings.autonomy, m.skills).filter((k) => k.enabled && (k.key === 'warn' || k.key === 'bench' || k.key === 'swap-model')).map((k) => `${k.title} — ${GATE_WORDS[k.gate!]} (\`${k.how}\`)`);
     if (floor.prompt(w.id, underperformingPrompt(flagged.name, modelWord(s.model), s.why ?? 'poor reviews', skills))) return false;
     flagged.nudgedAt = now;
+    struggleNudged(floor.id, w, flagged.name, s.why ?? 'poor reviews');
     floor.activity?.(`🔁 Nudged ${m.name} about ${flagged.name}'s track record (${s.why})`);
     this.roster.touch(floor, true);
     return true;

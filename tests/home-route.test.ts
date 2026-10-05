@@ -16,9 +16,10 @@ test('a flat view hands over to /home only when it has no floor to open, or an o
   assert.equal(flatViewGoesHome('?floor=mx-spike&home=1', 'mx-spike'), true);
 });
 
-test('signing in returns to /home, /lite or /pixel, and nowhere else', () => {
-  for (const p of ['/home', '/lite', '/pixel']) assert.equal(isReturnPage(p), true, p);
-  for (const p of ['/', '/home/', '//evil.example', 'https://evil.example/home', null, undefined]) assert.equal(isReturnPage(p), false, String(p));
+test('signing in returns to /home, /lite, /pixel or a docs page, and nowhere else', () => {
+  for (const p of ['/home', '/lite', '/pixel', '/docs', '/docs/faq', '/docs/get-started/quick-start']) assert.equal(isReturnPage(p), true, p);
+  for (const p of ['/', '/home/', '//evil.example', 'https://evil.example/home', '/docs/', '/docs//evil.example', '/docs/../home', '/docs/a?b', '/docsx', null, undefined])
+    assert.equal(isReturnPage(p), false, String(p));
 });
 
 test("a toolkit project's stage is cut down to its first words", () => {

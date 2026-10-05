@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent Office: App Factory Guide</title>
-<meta name="description" content="A visual guide to the AI Taskforce Labs Agent Office: what it is, floors, roles, how work flows and how to use it.">
+<meta name="description" content="A visual guide to the AI Taskforce Labs Agent Office: what it is, floors, roles, Jeff, The Firm, how work flows and how to use it. The full documentation is at /docs in the office.">
 <style>
   :root {
     --bg: #f6f7fb; --paper: #ffffff; --ink: #0b1630; --ink-2: #33415c; --muted: #6b7690;
@@ -46,6 +46,14 @@
   .chip { border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #e8f6f8; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
   .hero .shot { margin-top: 36px; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.15); }
   .hero .shot img { display: block; width: 100%; height: auto; }
+
+  .hero-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .hero-links a { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 10px; font-weight: 700; font-size: 15px; color: #000028; background: #5ee0d4; }
+  .hero-links a.ghost { color: #e8f6f8; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.3); }
+  .hero-links a:hover { text-decoration: none; filter: brightness(1.08); }
+  .gallery { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .gallery figure img { aspect-ratio: 16 / 10; object-fit: cover; object-position: top left; }
+  .tag { display: inline-block; font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--teal); }
 
   section { padding: 56px 0 8px; }
   h2 { font-size: clamp(24px, 3.4vw, 32px); margin: 0 0 6px; letter-spacing: -0.01em; }
@@ -108,7 +116,7 @@
   <div class="wrap">
     <a class="brand" href="#top"><span class="logo"><svg width="18" height="18" viewBox="0 0 16 16"><rect x="3" y="4" width="10" height="9" rx="3" fill="#00c1b6"/><rect x="4.5" y="6" width="7" height="4" rx="1.2" fill="#0c0e2e"/><rect x="6" y="7" width="1.4" height="1.4" fill="#fff"/><rect x="8.6" y="7" width="1.4" height="1.4" fill="#fff"/><rect x="7.6" y="1.5" width="0.8" height="2.5" fill="#00ffb9"/></svg></span>Agent Office</a>
     <nav>
-      <a href="#what">What it is</a><a href="#concepts">Floors</a><a href="#roles">Roles</a><a href="#flow">Workflow</a><a href="#use">Using it</a><a href="#mendix">Mendix</a><a href="#run">Running</a><a href="#help">Help</a>
+      <a href="#what">What it is</a><a href="#concepts">Floors</a><a href="#roles">Roles</a><a href="#jeff-firm">Jeff &amp; The Firm</a><a href="#flow">Workflow</a><a href="#use">Using it</a><a href="#gallery">Gallery</a><a href="#mendix">Mendix</a><a href="#run">Running</a><a href="#help">Help</a>
     </nav>
     <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle light or dark">◐ Theme</button>
   </div>
@@ -121,8 +129,14 @@
     <div class="chips">
       <span class="chip">🏢 Projects = floors</span><span class="chip">🧭 A team per project</span><span class="chip">🛠️ Mendix via mxcli</span>
       <span class="chip">✅ CI on every PR</span><span class="chip">🌐 Live app</span><span class="chip">🎛️ Command Center</span>
+      <span class="chip">🧑‍⚖️ Jeff · Router</span><span class="chip">🏛️ The Firm</span><span class="chip">🧾 Audit log</span><span class="chip">💬 Team chatter</span>
     </div>
-    <div class="shot"><img src="docs/readme/command-center.png" alt="The Command Center of a project: project details, the Project Coordinator console with escalation cards, and recent activity"></div>
+    <div class="hero-links">
+      <a href="http://127.0.0.1:4600/docs">📚 Full documentation at /docs</a>
+      <a class="ghost" href="CHANGELOG.md">📝 Release notes (CHANGELOG.md)</a>
+      <a class="ghost" href="README.md">README.md</a>
+    </div>
+    <div class="shot"><img src="docs/site/images/command-center.png" alt="The Command Center of a project: Needs you, the project summary and the Project Coordinator console with escalation cards"></div>
   </div>
 </div>
 
@@ -202,11 +216,11 @@
     <tr><td><b>Worker / agent</b></td><td>A Claude Code session at a desk, usually in its own git <b>worktree</b> (its own copy and branch). Name, model (Haiku 4.5 · Sonnet 5.5 · Opus 5.5 · Fable 5.1), status and cost.</td></tr>
     <tr><td><b>Board</b></td><td>The project's Kanban: Backlog → Queued → In progress → Needs a human → In review → Done, every card tagged with its team.</td></tr>
     <tr><td><b>Views</b></td><td><b>1D</b> (boards and tabs, the default), <b>2D</b> (pixel-art office with team zones), <b>3D</b> (walk around), <b>Retro</b> (chunky-pixel 3D).</td></tr>
-    <tr><td><b>Home</b></td><td><code>/home</code>: every project as a card, ✨ New project, ➕ Add project, and 📊 Statistics across all projects.</td></tr>
+    <tr><td><b>Home</b></td><td><code>/home</code>: 🏢 Projects (a card per floor, ✨ New project, ➕ Add project), 📊 Statistics, 🗺️ 2D Overview of every floor, the 🧾 Audit log of the whole office, and links to 📑 The Firm and 📚 Docs.</td></tr>
   </table></div>
   <div class="grid g2" style="margin-top:20px">
-    <figure><img src="docs/readme/home-projects.png" alt="Home page with project cards"><figcaption><b>Home · Projects</b>: one card per floor; go to its board or its office.</figcaption></figure>
-    <figure><img src="docs/readme/home-stats.png" alt="Home page statistics"><figcaption><b>Home · Statistics</b>: totals, projects side by side, model ranking.</figcaption></figure>
+    <figure><img src="docs/site/images/home-projects.png" alt="Home page with project cards"><figcaption><b>Home · Projects</b>: one card per floor; go to its board or its office.</figcaption></figure>
+    <figure><img src="docs/site/images/home-overview.png" alt="Home page 2D overview of every floor"><figcaption><b>Home · 2D Overview</b>: every floor at once, live; click a banner to open it.</figcaption></figure>
   </div>
 </section>
 
@@ -255,7 +269,7 @@
     <div class="card"><h4><span class="ico">✍️</span>One writer per Mendix app</h4><p>Only the Lead Developer applies changes to the <code>.mpr</code>. Everyone else drafts, checks (<code>mxcli check</code>) and reviews.</p></div>
     <div class="card"><h4><span class="ico">🔁</span>The review loop</h4><p>When a subagent finishes, its Lead reviews the result, logs a <i>Review</i> in the team journal, then continues, sends it back, or escalates. The office nudges any Lead that stops right after.</p></div>
     <div class="card"><h4><span class="ico">📓</span>Team journals</h4><p>Dated entries in <code>docs/team/&lt;team&gt;.md</code>: kickoffs, reviews, handoffs, proposals. The standup is built from them.</p></div>
-    <div class="card"><h4><span class="ico">🪑</span>Benching</h4><p>After 30 idle minutes an agent writes a handoff note and its lessons, then its session is cleared. Re-hiring starts fresh from the Playbook plus that note.</p></div>
+    <div class="card"><h4><span class="ico">🪑</span>Benching</h4><p>Only when you say so (idle benching is off by default; a Lead waiting on you is never benched). The Lead writes a handoff note and its lessons, then its session is cleared; re-hiring starts fresh from the Playbook plus that note.</p></div>
   </div>
 
   <h3>Autonomy: how often agents need you</h3>
@@ -268,9 +282,95 @@
   </table></div>
   <div class="callout">Whatever the level, <b>you have the final say</b>, and critical issues always reach you. An optional daily cost cap pauses hiring on a floor once it's spent.</div>
   <div class="grid g3" style="margin-top:8px">
-    <figure><img src="docs/readme/org-chart.png" alt="Org chart tab"><figcaption><b>🏢 Org chart</b>: hire (with model dropdown), wake, bench, rename.</figcaption></figure>
-    <figure><img src="docs/readme/standup.png" alt="Standup tab"><figcaption><b>📋 Standup</b>: Leads report; approve, reject or change each proposal.</figcaption></figure>
-    <figure><img src="docs/readme/approvals.png" alt="Approvals tab"><figcaption><b>✅ Approvals</b>: proposals and escalations waiting for you.</figcaption></figure>
+    <figure><img src="docs/site/images/org-chart.png" alt="Org chart tab"><figcaption><b>🏢 Org chart</b>: hire (with model dropdown), wake, bench, rename; 🧰 Skills and subagents per card.</figcaption></figure>
+    <figure><img src="docs/site/images/standup.png" alt="Standup tab"><figcaption><b>📋 Standup</b>: Leads report; approve, reject or change each proposal.</figcaption></figure>
+    <figure><img src="docs/site/images/approvals.png" alt="Approvals tab"><figcaption><b>✅ Approvals</b>: proposals and escalations waiting for you, in Jeff's order.</figcaption></figure>
+  </div>
+</section>
+
+<section id="jeff-firm">
+  <h2><span class="num">3b</span>Jeff and The Firm</h2>
+  <p class="sub">Two kinds of help that are not project agents: Jeff judges small things quickly inside every floor, and The Firm audits a project from outside its team.</p>
+
+  <h3>🧑‍⚖️ Jeff · Router, the quick judge</h3>
+  <div class="diagram" role="img" aria-label="Jeff: agents' turn ends, new issues and open escalations go to Jeff, who asks Jev or falls back to Claude Haiku. In shadow mode he only logs next to the office's rule; when on, he raises the escalation an agent forgot, labels an issue with its team, and sorts your escalations with a resolve-first chip.">
+    <svg viewBox="0 0 1000 300">
+      <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
+      <g stroke="var(--muted)" stroke-width="2" fill="none" marker-end="url(#ar3)">
+        <path d="M230 70 L372 118"/><path d="M230 150 H372"/><path d="M230 230 L372 182"/>
+        <path d="M628 150 H700"/><path d="M500 210 V246"/>
+      </g>
+      <g font-size="13.5">
+        <rect x="20" y="40" width="210" height="60" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+        <text x="125" y="66" text-anchor="middle" font-weight="700" fill="var(--ink)">🙋 An agent's turn ends</text>
+        <text x="125" y="86" text-anchor="middle" font-size="12" fill="var(--muted)">waiting on you?</text>
+        <rect x="20" y="120" width="210" height="60" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+        <text x="125" y="146" text-anchor="middle" font-weight="700" fill="var(--ink)">🏷️ A new issue</text>
+        <text x="125" y="166" text-anchor="middle" font-size="12" fill="var(--muted)">which team is it for?</text>
+        <rect x="20" y="200" width="210" height="60" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+        <text x="125" y="226" text-anchor="middle" font-weight="700" fill="var(--ink)">🚩 An open escalation</text>
+        <text x="125" y="246" text-anchor="middle" font-size="12" fill="var(--muted)">how soon to resolve it?</text>
+        <rect x="372" y="90" width="256" height="120" rx="16" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="2"/>
+        <text x="500" y="122" text-anchor="middle" font-size="16" font-weight="800" fill="var(--ink)">🧑‍⚖️ Jeff · Router</text>
+        <text x="500" y="146" text-anchor="middle" font-size="12.5" fill="var(--ink-2)">Jev (TypeSafe AI), 3 s timeout</text>
+        <text x="500" y="166" text-anchor="middle" font-size="12.5" fill="var(--ink-2)">fallback: Claude Haiku</text>
+        <text x="500" y="190" text-anchor="middle" font-size="12" fill="var(--muted)">tokens redacted · 4000 chars max</text>
+        <rect x="372" y="246" width="256" height="44" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-dasharray="6 4" stroke-width="2"/>
+        <text x="500" y="273" text-anchor="middle" font-size="12.5" fill="var(--ink-2)">Shadow: logs his verdict beside the rule</text>
+        <rect x="700" y="40" width="280" height="220" rx="14" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+        <text x="840" y="68" text-anchor="middle" font-weight="800" fill="var(--ink)">When On</text>
+        <text x="718" y="102" fill="var(--ink-2)">🙋 raises the escalation</text>
+        <text x="738" y="122" font-size="12" fill="var(--muted)">an agent forgot (sure ≥ 0.7)</text>
+        <text x="718" y="156" fill="var(--ink-2)">🏷️ labels the issue's team</text>
+        <text x="738" y="176" font-size="12" fill="var(--muted)">when sure (≥ 0.75)</text>
+        <text x="718" y="210" fill="var(--ink-2)">🧑‍⚖️ sorts your escalations</text>
+        <text x="738" y="230" font-size="12" fill="var(--muted)">"#1 · resolve first" (on by default)</text>
+      </g>
+    </svg>
+  </div>
+  <p>Each judgement is Off, <b>Shadow</b> (the default for Waiting on you and Triage) or On, in <b>⚙️ Settings → Jeff · Router</b>; <b>Priority</b> is On by default and only orders the lists. His key file is <code>~/.agent-office-jev-key</code>, passed to the office by path as <code>AGENT_OFFICE_JEV_KEY_FILE</code>; workers never get it.</p>
+
+  <h3>🏛️ The Firm, outside the project</h3>
+  <div class="diagram" role="img" aria-label="The Firm sits outside the project team. The Project Manager calls an audit with a budget cap. The Engagement Partner and reviewers work in an isolated clone at a pinned commit, interview the Project Coordinator and Leads, and deliver one audit report to the Project Manager.">
+    <svg viewBox="0 0 1000 340">
+      <defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
+      <rect x="370" y="14" width="260" height="62" rx="14" fill="var(--navy)"/>
+      <text x="500" y="42" text-anchor="middle" font-size="16" font-weight="800" fill="#fff">👤 Project Manager (you)</text>
+      <text x="500" y="62" text-anchor="middle" font-size="12.5" fill="#bfe9ec">calls an audit · sets the budget cap</text>
+      <g stroke="var(--muted)" stroke-width="2" fill="none" marker-end="url(#ar4)">
+        <path d="M420 76 L270 128"/><path d="M220 128 L380 80" stroke-dasharray="5 4"/>
+        <path d="M580 76 L740 128" marker-start="url(#ar4)"/>
+        <path d="M400 230 H560" marker-start="url(#ar4)"/>
+      </g>
+      <text x="262" y="96" font-size="11.5" fill="var(--muted)">📑 report</text>
+      <text x="690" y="96" font-size="11.5" fill="var(--muted)">escalations · answers, approvals</text>
+      <text x="480" y="220" text-anchor="middle" font-size="11.5" fill="var(--muted)">interviews (firm ask / answer)</text>
+      <rect x="20" y="128" width="380" height="196" rx="16" fill="var(--paper)" stroke="var(--accent)" stroke-width="2.5"/>
+      <text x="210" y="156" text-anchor="middle" font-size="15.5" font-weight="800" fill="var(--ink)">🏛️ The Firm · outside every project</text>
+      <g font-size="12.5" fill="var(--ink-2)">
+        <text x="40" y="184">🎩 Engagement Partner (always)</text>
+        <text x="40" y="204">🖋️ Design · 🏛️ Code &amp; Architecture</text>
+        <text x="40" y="224">🔬 QA &amp; Test · 📐 Requirements &amp; Delivery</text>
+        <text x="40" y="244">🛡️ Security · ⚖️ Cost &amp; Performance (optional)</text>
+      </g>
+      <rect x="36" y="260" width="348" height="50" rx="10" fill="var(--code)" stroke="var(--line)"/>
+      <text x="210" y="281" text-anchor="middle" font-size="12" fill="var(--ink)">Fable 5.1 · isolated clone at a pinned commit</text>
+      <text x="210" y="299" text-anchor="middle" font-size="12" fill="var(--muted)">no remote · no tokens · no team instructions</text>
+      <rect x="560" y="128" width="420" height="196" rx="16" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="2"/>
+      <text x="770" y="156" text-anchor="middle" font-size="15.5" font-weight="800" fill="var(--ink)">🏢 A floor: the project team</text>
+      <g font-size="13" fill="var(--ink-2)" text-anchor="middle">
+        <text x="770" y="190">🧭 Project Coordinator</text>
+        <text x="770" y="216">🎨 Lead Designer · 🛠️ Lead Developer</text>
+        <text x="770" y="240">🧪 Lead Tester · 📈 Chief Analyst</text>
+        <text x="770" y="270" font-size="12" fill="var(--muted)">each with its subagents · the repo, board and journals</text>
+        <text x="770" y="296" font-size="12" fill="var(--muted)">evidence: audit log, rankings, CI, spend</text>
+      </g>
+    </svg>
+  </div>
+  <p><b>📑 Call an audit</b> on <code>/firm</code> or a project's Command Center: teams, reviewers and models, tests, artifacts, depth (Quick / Standard / Deep), budget cap and max time, with an estimated cost. Budget: warned at 80 %, wrapped up at 100 %. The report: executive summary, app statistics, findings register, pros and cons, root causes, re-forecast timeline, expectations vs reality, worker performance, risks and recommendations.</p>
+  <div class="grid g2">
+    <figure><img src="docs/site/images/firm.png" alt="The Firm page with its seven reviewers"><figcaption><b>🏛️ The Firm</b> at <code>/firm</code>: engagements under way, Our people, past reports.</figcaption></figure>
+    <figure><img src="docs/site/images/firm-report.png" alt="An audit report"><figcaption><b>📑 Audit report</b>: verdict, summary, statistics, findings and more.</figcaption></figure>
   </div>
 </section>
 
@@ -311,36 +411,54 @@
   <h3>Start a project</h3>
   <p><b>🏠 Home → ✨ New project</b>: project details → entry mode (Greenfield, Requirements-driven, Change an existing app, Migration, Assurance) → the toolkit's intake questions → client and team → <b>Review &amp; create</b>, which creates the repo, adds the floor, runs the toolkit setup and can open a Discovery issue. New projects show a <b>Project setup</b> panel (stages P–4) until the build plan is approved.</p>
   <div class="grid g2">
-    <figure><img src="docs/readme/wizard.png" alt="New project wizard, entry mode step"><figcaption><b>New project wizard</b>: entry modes explained in plain language.</figcaption></figure>
-    <figure><img src="docs/readme/setup-panel.png" alt="Project setup panel"><figcaption><b>Project setup panel</b>: toolkit stages with pass / fail / pending.</figcaption></figure>
+    <figure><img src="docs/site/images/wizard.png" alt="New project wizard, entry mode step"><figcaption><b>New project wizard</b>: entry modes explained in plain language.</figcaption></figure>
+    <figure><img src="docs/site/images/setup-panel.png" alt="Project setup panel"><figcaption><b>Project setup panel</b>: toolkit stages with pass / fail / pending.</figcaption></figure>
   </div>
 
   <h3>Inside a project</h3>
   <div class="tablewrap"><table>
     <tr><th style="width:190px">Tab</th><th>What it's for</th></tr>
-    <tr><td><b>🎛️ Command Center</b> <small style="color:var(--muted)">default</small></td><td>Project details and "What's happening" · the <b>Project Coordinator console</b> (live terminal, prompt box, quick chips, <b>escalation cards</b> with Reply / Approve / Reject) · recent activity.</td></tr>
+    <tr><td><b>🎛️ Command Center</b> <small style="color:var(--muted)">default</small></td><td><b>🚨 Needs you</b> (everything blocked on you, one button each) · the 🧰 Project setup panel (stages P–4, ✋ gates) · project summary and "What's happening" · the <b>Project Coordinator console</b> (live terminal, prompt box, quick chips) · <b>🚩 Escalations to you</b>: the agent's portrait and speech bubble, Jeff's <i>#1 · resolve first</i> chip, Reply / Approve / Reject · <b>💬 Team chatter</b>: what the agents say to each other, live, filterable (All, Between agents, With me, one person) · The Firm strip.</td></tr>
     <tr><td><b>🗂 Board</b></td><td>Just the Kanban, with team filter chips and hover previews (live terminals for agents, scorecard and screenshots for PRs).</td></tr>
-    <tr><td><b>🤖 Workers</b></td><td>Every agent on the floor, the ones waiting on you first.</td></tr>
-    <tr><td><b>📊 Analysis</b></td><td>Which model does well on which kind of task, with cost, time and quality.</td></tr>
+    <tr><td><b>🤖 Workers</b></td><td>Every agent on the floor, the ones waiting on you first, each <b>ranked A–F</b> (model benchmark, delivery, autonomy, token efficiency, plus specialist duties for team roles).</td></tr>
+    <tr><td><b>📊 Analysis</b></td><td>Which model does well on which kind of task, with cost, time and quality; Jeff · Router's verdicts against the office's rules.</td></tr>
     <tr><td><b>🌐 Live app</b></td><td>The Mendix app running from <code>main</code>, embedded; Start / Restart / Stop (admin).</td></tr>
-    <tr><td><b>🏢 Org chart · 📋 Standup · ✅ Approvals · ⚙️ Settings</b></td><td>The team, its standup, what needs you, and its settings (autonomy, benching, standup time, review nudge, cost cap).</td></tr>
+    <tr><td><b>🌳 Git</b></td><td>The branches as a railway map: agents at their branch tips, PR pills by CI result, ahead/behind, stale branches.</td></tr>
+    <tr><td><b>🏢 Org chart · 📋 Standup · ✅ Approvals · ⚙️ Settings</b></td><td>The team (with 🧰 Skills and subagents), its standup, what needs you (in Jeff's order), and its settings (autonomy, benching, review loop, subagent cool-down, standup, cost caps, Jeff).</td></tr>
+    <tr><td><b>🧾 Audit log</b></td><td>Who did what and when, filtered by time, who and kind; histogram, before/after details, a hash chain that shows any edit; CSV / JSONL export for admins.</td></tr>
     <tr><td><b>🧩 Team boards</b></td><td>A page per team: its own board, Lead, journal and team panels (Testing: CI scorecards; Development: PRs and live app; Analysis: BRD, insight memos, model ranking).</td></tr>
   </table></div>
   <div class="grid g2" style="margin-top:20px">
-    <figure><img src="docs/readme/board.png" alt="Board with team tags and filters"><figcaption><b>🗂 Board</b>: team tags, filter chips, counts per team under each column.</figcaption></figure>
-    <figure><img src="docs/readme/team-board-terminal.png" alt="Testing team board in the Terminal theme"><figcaption><b>🧩 Team board</b> (Testing) in the <b>Terminal</b> theme.</figcaption></figure>
-    <figure><img src="docs/readme/live-app.png" alt="Live app tab with the running Mendix app"><figcaption><b>🌐 Live app</b>: the real Mendix app the agents built, running from <code>main</code>.</figcaption></figure>
-    <figure><img src="docs/readme/pr-checks.png" alt="PR preview with CI scorecard and screenshots"><figcaption><b>PR preview</b>: CI scorecard and Playwright screenshots on hover.</figcaption></figure>
+    <figure><img src="docs/site/images/board.png" alt="Board with team tags and filters"><figcaption><b>🗂 Board</b>: team tags, filter chips, counts per team under each column.</figcaption></figure>
+    <figure><img src="docs/site/images/team-board-terminal.png" alt="Testing team board in the Terminal theme"><figcaption><b>🧩 Team board</b> (Testing) in the <b>Terminal</b> theme.</figcaption></figure>
+    <figure><img src="docs/site/images/live-app.png" alt="Live app tab with the running Mendix app"><figcaption><b>🌐 Live app</b>: the real Mendix app the agents built, running from <code>main</code>.</figcaption></figure>
+    <figure><img src="docs/site/images/pr-checks.png" alt="PR preview with CI scorecard and screenshots"><figcaption><b>PR preview</b>: CI scorecard and Playwright screenshots on hover.</figcaption></figure>
   </div>
 
   <h3>The 2D office and themes</h3>
   <div class="grid g2">
-    <figure><img src="docs/readme/office-2d.png" alt="2D pixel-art office with team zones"><figcaption><b>2D view</b>: team zones (Dev bay, Design studio, QA lab, Analyst corner, Coordinator office). Click an agent for its terminal, right-click for its menu, <b>N</b> = next waiting, <b>T</b> = chat.</figcaption></figure>
-    <figure><img src="docs/readme/office-2d-zone.png" alt="Zoomed Dev bay"><figcaption><b>Zoomed in</b>: role outfits, shadows, lamp light.</figcaption></figure>
-    <figure><img src="docs/readme/theme-dark.png" alt="Dark theme"><figcaption><b>🎨 Dark</b> theme.</figcaption></figure>
-    <figure><img src="docs/readme/theme-terminal.png" alt="Terminal theme"><figcaption><b>🎨 Terminal</b> theme: black and phosphor green.</figcaption></figure>
+    <figure><img src="docs/site/images/office-2d.png" alt="2D pixel-art office with team zones"><figcaption><b>2D view</b>: team zones (Dev bay, Design studio, QA lab, Analyst corner, Coordinator office). Click an agent for its terminal, right-click for its menu, <b>N</b> = next waiting, <b>T</b> = chat.</figcaption></figure>
+    <figure><img src="docs/site/images/office-2d-zone.png" alt="Zoomed Dev bay"><figcaption><b>Zoomed in</b>: role outfits, shadows, lamp light.</figcaption></figure>
+    <figure><img src="docs/site/images/theme-dark.png" alt="Dark theme"><figcaption><b>🎨 Dark</b> theme.</figcaption></figure>
+    <figure><img src="docs/site/images/theme-terminal.png" alt="Terminal theme"><figcaption><b>🎨 Terminal</b> theme: black and phosphor green.</figcaption></figure>
   </div>
   <div class="callout"><b>Tip:</b> the address says where you are, e.g. <code>/lite?floor=travel-approval&amp;tab=standup</code> or <code>&amp;tab=teams&amp;team=testing</code>. Bookmark it, or send it to a teammate.</div>
+</section>
+
+<section id="gallery">
+  <h2><span class="num">★</span>Gallery</h2>
+  <p class="sub">From a throwaway test office. Click a picture to see it full size; every screen is explained in <code>/docs</code>.</p>
+  <div class="gallery">
+    <figure><img src="docs/site/images/escalations.png" alt="Escalation cards with the agent's portrait and a speech bubble"><figcaption><span class="tag">Command Center</span><br><b>🚩 Escalations to you</b>: who's asking, in a speech bubble, in Jeff's order (#1 · resolve first).</figcaption></figure>
+    <figure><img src="docs/site/images/workers-ranking.png" alt="Workers tab with A to F grades"><figcaption><span class="tag">Workers</span><br><b>🏅 Rankings</b>: every agent graded A–F, with evidence.</figcaption></figure>
+    <figure><img src="docs/site/images/git-map.png" alt="Git tab branch railway map"><figcaption><span class="tag">Git</span><br><b>🌳 Branch map</b>: branches, PRs and who's on them.</figcaption></figure>
+    <figure><img src="docs/site/images/skills.png" alt="Skills panel of a Lead"><figcaption><span class="tag">Org chart</span><br><b>🧰 Skills</b>: Manage up, Manage down, Craft, each with its gate.</figcaption></figure>
+    <figure><img src="docs/site/images/model-analysis.png" alt="Analysis tab"><figcaption><span class="tag">Analysis</span><br><b>📊 Models</b>: score, cost and time per kind of task.</figcaption></figure>
+    <figure><img src="docs/site/images/audit-log.png" alt="Audit log tab"><figcaption><span class="tag">Audit log</span><br><b>🧾 Who did what</b>: filters, histogram, 🔒 Chain verified.</figcaption></figure>
+    <figure><img src="docs/site/images/firm-wizard.png" alt="Call an audit wizard"><figcaption><span class="tag">The Firm</span><br><b>📑 Call an audit</b>: scope, models, depth, budget and an estimate.</figcaption></figure>
+    <figure><img src="docs/site/images/home-stats.png" alt="Home statistics"><figcaption><span class="tag">Home</span><br><b>📊 Statistics</b>: totals, projects side by side, model ranking.</figcaption></figure>
+    <figure><img src="docs/site/images/settings.png" alt="Settings tab"><figcaption><span class="tag">Settings</span><br><b>⚙️ Team settings</b>: autonomy, benching, standup, caps, Jeff.</figcaption></figure>
+  </div>
 </section>
 
 <section id="mendix">
@@ -377,8 +495,8 @@
   <div class="grid g2">
     <div class="card"><h4><span class="ico">▶️</span>Start</h4><p>The <b>Agent Office</b> desktop/taskbar icon opens it (and starts it if needed), or ask Claude Code <i>"Run Agent Office"</i>. It runs in a window titled <b>Agent Office</b>; closing that window stops it.</p></div>
     <div class="card"><h4><span class="ico">🔐</span>Sign in</h4><p><code>http://127.0.0.1:4600</code> → <code>/home</code>. The shared office password makes you admin (the Project Manager): hiring, approvals, settings and the live app are admin-only.</p></div>
-    <div class="card"><h4><span class="ico">🔑</span>Tokens (never share)</h4><p><code>~/.agent-office-gh-token</code>: the agents' token (AI-Taskforce-Labs, Contents/Issues/PRs only). <code>~/.agent-office-admin-gh-token</code>: only for creating repos from the wizard. <code>~/.agent-office-password</code>: the office password.</p></div>
-    <div class="card"><h4><span class="ico">🔄</span>Restarts</h4><p>On Windows a restart stops running agents. Their sessions are saved: open an asleep (💤) agent to wake it with its memory.</p></div>
+    <div class="card"><h4><span class="ico">🔑</span>Tokens (never share)</h4><p><code>~/.agent-office-gh-token</code>: the agents' token (AI-Taskforce-Labs, Contents/Issues/PRs only). <code>~/.agent-office-admin-gh-token</code>: only for creating repos from the wizard. <code>~/.agent-office-password</code>: the office password. <code>~/.agent-office-jev-key</code>: Jeff's key, passed by path (<code>AGENT_OFFICE_JEV_KEY_FILE</code>).</p></div>
+    <div class="card"><h4><span class="ico">🔄</span>Restarts</h4><p>On Windows a restart stops running agents. Their sessions are saved: open an asleep (💤) agent to wake it with its memory. Try changes on a throwaway <b>test office</b> (port 47xx, its own data folder), never the real floors.</p></div>
   </div>
   <div class="callout warn"><b>Models and cost.</b> Pick per role or task. In our runs, <b>Sonnet 5.5</b> gave the best value, <b>Opus 5.5</b> the highest quality, and <b>Haiku 4.5</b> struggled with Mendix work. Home → Statistics and the Analysis tab keep score.</div>
 </section>
@@ -403,7 +521,7 @@
     <tr><td>Office data</td><td><code>agent-spike\mx-spike\.agent-office\</code></td></tr>
     <tr><td>Projects</td><td><code>agent-spike\mx-spike</code> · <code>agent-office\AI-Taskforce-Labs\travel-approval</code></td></tr>
     <tr><td>Toolkit (our copy)</td><td><code>agent-spike\mxcli-project-toolkit</code> · AI-Taskforce-Labs/mxcli-project-toolkit</td></tr>
-    <tr><td>Deeper docs</td><td><a href="docs/teams.md">docs/teams.md</a> · <a href="docs/features.md">docs/features.md</a> · <a href="docs/configuration.md">docs/configuration.md</a> · <a href="docs/upstream-README.md">upstream README</a></td></tr>
+    <tr><td>Documentation</td><td><b><code>/docs</code></b> in the office (<a href="http://127.0.0.1:4600/docs">127.0.0.1:4600/docs</a>), from the Markdown in <a href="docs/site/_index.md">docs/site/</a> · release notes: <a href="CHANGELOG.md">CHANGELOG.md</a> · <a href="docs/upstream-README.md">upstream README</a></td></tr>
   </table></div>
 
   <h3>What's next</h3>
@@ -411,13 +529,14 @@
     <div class="card"><h4><span class="ico">🧩</span>Plan → issues</h4><p>Turn the toolkit's approved build plan into GitHub issues for the team automatically.</p></div>
     <div class="card"><h4><span class="ico">🤝</span>Client portal</h4><p>A restricted Client role: progress, test link and approvals at the toolkit's gates.</p></div>
     <div class="card"><h4><span class="ico">☁️</span>Taskforce Lab on AWS</h4><p>The office on a shared Linux server for the Taskforce, with a GitHub App and a live-app proxy.</p></div>
+    <div class="card"><h4><span class="ico">🎨</span>Clean themes</h4><p>Clean light and Clean dark, next to Default, Dark and Terminal. Being built.</p></div>
   </div>
 </section>
 
 </main>
 
 <footer>
-  <div class="wrap">Agent Office is MIT-licensed by AgentSystemLabs. This fork adds the App Factory, the team model and the Mendix pipeline for the DI SW SEA AI Taskforce. · <a href="README.md">README.md</a></div>
+  <div class="wrap">Agent Office is MIT-licensed by AgentSystemLabs. This fork adds the App Factory, the team model, Jeff, The Firm and the Mendix pipeline for the DI SW SEA AI Taskforce. · <a href="README.md">README.md</a> · <a href="CHANGELOG.md">CHANGELOG.md</a> · full docs at <code>/docs</code></div>
 </footer>
 
 <div id="lb" aria-hidden="true"><img alt=""></div>

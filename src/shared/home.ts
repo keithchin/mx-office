@@ -6,9 +6,12 @@
  * The pages that sign-in sends you back to (`/login?next=`), so signing in from one of them lands
  * on it again rather than on the 3D office. Anything else goes to `/`, which is never an open redirect.
  */
-export const RETURN_PAGES = ['/home', '/lite', '/pixel'] as const;
-export type ReturnPage = (typeof RETURN_PAGES)[number];
-export const isReturnPage = (p: unknown): p is ReturnPage => (RETURN_PAGES as readonly unknown[]).includes(p);
+export const RETURN_PAGES = ['/home', '/lite', '/pixel', '/docs'] as const;
+export type ReturnPage = (typeof RETURN_PAGES)[number] | `/docs/${string}`;
+/** A page of the docs (/docs/get-started/quick-start): lower-case words, dashes and slashes only. */
+const DOC_PAGE = /^\/docs(\/[a-z0-9][a-z0-9-]*)+$/;
+export const isReturnPage = (p: unknown): p is ReturnPage =>
+  (RETURN_PAGES as readonly unknown[]).includes(p) || (typeof p === 'string' && DOC_PAGE.test(p));
 
 /**
  * Whether a flat view (/lite, /pixel) should hand over to the home page instead of opening: an old

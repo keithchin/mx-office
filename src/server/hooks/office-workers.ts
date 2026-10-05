@@ -10,6 +10,8 @@ import { str } from '../office/input.js';
 import { readBody, send } from '../http/util.js';
 import { officeEscalate } from './office-escalate.js';
 import { officeSubagent } from './office-subagent.js';
+import { agent, audit } from '../audit/index.js';
+import { agentHired, agentTold, prHanded } from '../chatter/hooks.js';
 
 /**
  * Pull request `n` on a floor, for a worker to have as its own: one that's open, or merged and still
@@ -111,6 +113,7 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
         continue;
       }
       ctx.toastFloor(floor, why ? `🏠 ${who} sent ${w.name} home: ${why}` : `${who} sent ${w.name} home`);
+      audit.record({ floor: floor.id, actor: agent(who, me.id), action: 'worker.sendHome', target: { kind: 'worker', id: w.id, label: w.name }, summary: `Sent ${w.name} home${why ? `: ${why}` : ''}`, details: { cleanup: ask.cleanup } });
       const { note, error } = await floor.sendHome(w.id, ask.cleanup);
       if (note) ctx.toastFloor(floor, note);
       if (error) ctx.toastFloor(floor, error, 'warn');
@@ -132,6 +135,7 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
     // Stopped or asleep: it wakes up with this as its next message.
     if (err === 'Worker is not running') err = floor.workers.resume(w.id, text);
     if (err) return send(res, 400, { error: err });
+    agentTold(floor.id, me, w, text);
     return send(res, 200, { ok: true, worker: row(w.id) });
   }
 
@@ -146,6 +150,7 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
     const err = floor.workers.linkPr(w.id, pr);
     if (err) return send(res, 404, { error: err });
     const whose = w.id === me.id ? 'its own' : `${w.name}'s`;
+    if (pr && w.id !== me.id) prHanded(floor.id, me, w, pr.number);
     ctx.toastFloor(floor, pr ? `${who} said PR #${pr.number} is ${whose}` : `${who} said ${w.id === me.id ? 'it has' : `${w.name} has`} no pull request`);
     return send(res, 200, { ok: true, worker: row(w.id) });
   }
@@ -165,6 +170,8 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
   const r = floor.workers.spawn(desk, who, ask.prompt, worktree, 'agent', provider, ask.model, ask.effort, undefined, owner);
   if (typeof r === 'string') return send(res, 400, { error: r });
   ctx.toastFloor(floor, `${who} hired ${r.name}${ask.issue ? ` for issue #${ask.issue}` : ' with a task'}`);
+  audit.record({ floor: floor.id, actor: agent(who, me.id), action: 'worker.hire', target: { kind: 'worker', id: r.id, label: r.name }, summary: `Hired ${r.name}${ask.issue ? ` for issue #${ask.issue}` : ' with a task'}`, details: { provider: r.provider, model: r.model, desk, issue: ask.issue, prompt: { length: ask.prompt.length } } });
+  agentHired(floor.id, me, r, ask.prompt || (ask.issue ? `Issue #${ask.issue}` : ''));
   if (ask.issue) {
     const n = ask.issue;
     floor.queue.dropIssue(n);

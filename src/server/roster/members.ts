@@ -12,6 +12,7 @@ import { lessonsPathIn, writeRoleFiles, type PlaybookContext } from './playbooks
 import { autonomyPrompt, benchPrompt, primePrompt } from './prompts.js';
 import { cleanSettings } from './store.js';
 import type { TeamFloor } from './types.js';
+import { audit, byWhom } from '../audit/index.js';
 
 /** Models a role can be set to: Claude Code's aliases, or a full model id. */
 const MODEL = /^[A-Za-z0-9][A-Za-z0-9._\-[\]]{0,63}$/;
@@ -85,6 +86,7 @@ export class Members {
       floor.toast(`Couldn't write ${m.name}'s Playbook: ${(err as Error).message}`, 'warn');
     }
     floor.toast(`${by} hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`);
+    audit.record({ floor: floor.id, actor: byWhom(by, owner), action: 'worker.hire', target: { kind: 'worker', id: r.id, label: m.name }, summary: `Hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`, details: { role, model: m.model, task: task ? { length: task.length } : undefined } });
     this.roster.touch(floor);
     return undefined;
   }
@@ -110,6 +112,7 @@ export class Members {
     m.phase = 'benching';
     m.benchAskedAt = this.roster.deps.now();
     m.benchSawBusy = false;
+    audit.record({ floor: floor.id, actor: byWhom(by), action: 'worker.bench', target: { kind: 'worker', id: w.id, label: m.name }, summary: by === 'idle' ? `Benching ${m.name} after ${d.settings.idleMinutes} idle minutes` : `Started benching ${m.name}: handoff note first`, details: { role } });
     floor.toast(by === 'idle' ? `🪑 ${m.name} has been idle ${d.settings.idleMinutes} min: writing a handoff note, then benched` : `🪑 ${by} is benching ${m.name}: handoff note first`);
     this.roster.touch(floor);
     return undefined;
@@ -177,19 +180,23 @@ export class Members {
   }
 
   /** A new model for a role: from its next hire (a running session keeps the one it started on). */
-  setModel(floor: TeamFloor, role: RoleId, raw: unknown): string | undefined {
+  setModel(floor: TeamFloor, role: RoleId, raw: unknown, by = 'The Project Manager'): string | undefined {
     if (typeof raw !== 'string' || !MODEL.test(raw.trim())) return 'Pick a model (an alias like sonnet, or a model id)';
+    const before = this.roster.data(floor.id).members[role].model;
     this.roster.data(floor.id).members[role].model = raw.trim();
+    audit.record({ floor: floor.id, actor: byWhom(by), action: 'worker.model', target: { kind: 'role', id: role, label: this.roster.data(floor.id).members[role].name }, summary: `Set ${this.roster.data(floor.id).members[role].name}'s model to ${raw.trim()}`, details: { before: { model: before }, after: { model: raw.trim() } } });
     this.roster.touch(floor);
     return undefined;
   }
 
   /** New team settings. A new autonomy level is written into every hired Lead's Playbook and told to the ones at work. */
-  settings(floor: TeamFloor, raw: unknown): string | undefined {
+  settings(floor: TeamFloor, raw: unknown, by = 'The Project Manager', owner?: string): string | undefined {
     const d = this.roster.data(floor.id);
     const before = d.settings.autonomy;
     const sorted = d.settings.jeff.priority;
+    const was = d.settings;
     d.settings = cleanSettings(raw, d.settings);
+    audit.settingsDiff(floor.id, byWhom(by, owner), was, d.settings);
     this.roster.recheckPause(floor);
     // Jeff's priority sort switched back on: the open escalations are ranked again.
     if (sorted === 'off' && d.settings.jeff.priority === 'on') this.roster.jeff.priority.kick(floor);

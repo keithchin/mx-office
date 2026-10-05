@@ -1,0 +1,95 @@
+/* 🧾 The Audit log tab (ui/audit/): the filter bar, the timeline and the dense table. Colors are the
+   theme's tokens, so the Dark and Terminal looks follow; at phone width the rows stack. */
+
+.au { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.au-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.au-head .lite-h { margin: 0; }
+.au-badge { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--rule-strong); background: var(--card); }
+.au-badge.ok { background: var(--good-soft); color: var(--good-ink); border-color: var(--good-ink); }
+.au-badge.bad { background: var(--bad-soft); color: var(--bad-ink); border-color: var(--bad-ink); }
+.au-total { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.au-exports { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.au-export { font-size: 13px; padding: 4px 10px; text-decoration: none; color: inherit; }
+.au-prompt { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+
+.au-filters { display: flex; flex-direction: column; gap: 8px; background: var(--card); border: 1.5px solid var(--rule-strong); border-radius: 12px; padding: 8px 10px; }
+.au-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.au-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.au-chip { font-size: 12.5px; padding: 3px 9px; border-radius: 999px; }
+.au-chip[aria-pressed='true'] { background: var(--ink); color: var(--on-ink); }
+.au-chip .au-n { margin-left: 4px; font-size: 11px; opacity: .75; font-variant-numeric: tabular-nums; }
+.au-chip .au-n:empty { display: none; }
+.au-scope, .au-group, .au-q, .au-custom input { font: inherit; font-size: 13px; padding: 4px 8px; border-radius: 8px; border: 1.5px solid var(--rule-strong); background: var(--paper); color: var(--ink); }
+.au-q { flex: 1 1 200px; min-width: 0; }
+.au-custom { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12.5px; color: var(--muted); }
+
+/* The timeline: a bar per bucket, as tall as its share of the busiest one. */
+.au-timeline:empty { display: none; }
+.au-bars { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); align-items: end; gap: 2px; height: 64px; padding: 4px 6px 0; background: var(--card); border: 1.5px solid var(--rule-strong); border-bottom: 0; border-radius: 12px 12px 0 0; }
+.au-bar { height: 100%; display: flex; align-items: flex-end; padding: 0; border: 0; background: transparent; cursor: zoom-in; min-width: 0; }
+.au-bar span { display: block; width: 100%; height: var(--h); min-height: 0; background: var(--info); border-radius: 3px 3px 0 0; transition: background .15s; }
+.au-bar:hover span, .au-bar:focus-visible span { background: var(--accent); }
+.au-bar:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
+.au-axis { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); padding: 3px 8px; background: var(--card); border: 1.5px solid var(--rule-strong); border-top: 1px solid var(--rule); border-radius: 0 0 12px 12px; font-variant-numeric: tabular-nums; }
+
+.au-new { position: sticky; top: 8px; z-index: 3; align-self: center; font-size: 13px; padding: 4px 14px; border-radius: 999px; background: var(--info); color: var(--on-warn); box-shadow: 0 2px 8px var(--pop-glow); }
+.au-new.hidden { display: none; }
+
+/* The table: a grid per row, so it can stack on a phone. */
+.au-table { display: flex; flex-direction: column; background: var(--card); border: 1.5px solid var(--rule-strong); border-radius: 12px; overflow: hidden; }
+.au-row { display: grid; grid-template-columns: 124px minmax(110px, 160px) minmax(120px, 170px) minmax(90px, 1fr) minmax(0, 2.4fr); gap: 0 10px; align-items: center; padding: 5px 10px 5px 12px; font-size: 13px; line-height: 1.35; border-top: 1px solid var(--rule); border-left: 4px solid transparent; cursor: pointer; }
+.au-table.with-floor .au-row { grid-template-columns: 124px 100px minmax(110px, 150px) minmax(120px, 170px) minmax(90px, 1fr) minmax(0, 2.2fr); }
+.au-row:hover { background: var(--hover); }
+.au-row:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
+.au-row[data-sev='notice'] { border-left-color: var(--info); }
+.au-row[data-sev='warning'] { border-left-color: var(--bad); }
+.au-th { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); border-top: 0; cursor: default; background: var(--sunken); }
+.au-th:hover { background: var(--sunken); }
+.au-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.au-time { font-variant-numeric: tabular-nums; color: var(--ink-2); font-family: var(--font-mono); font-size: 12px; }
+.au-floor { color: var(--muted); }
+.au-actor { display: flex; align-items: center; gap: 6px; }
+.au-av { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; background: color-mix(in srgb, var(--av) 30%, transparent); box-shadow: inset 0 0 0 1.5px var(--av); }
+.au-name { overflow: hidden; text-overflow: ellipsis; }
+.au-pill { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; font-family: var(--font-mono); font-size: 11.5px; padding: 1px 7px; border-radius: 999px; background: var(--neutral-soft); color: var(--ink); }
+.au-g-team { background: var(--purple-soft); }
+.au-g-workers { background: var(--info-soft); }
+.au-g-escalations { background: var(--warn-soft); color: var(--warn-ink); }
+.au-g-github { background: var(--good-soft); color: var(--good-ink); }
+.au-g-settings { background: var(--accent-soft); }
+.au-g-access { background: var(--bad-soft); color: var(--bad-ink); }
+.au-g-jeff { background: var(--sticky); }
+.au-target { color: var(--ink-2); }
+.au-item.open > .au-row { background: var(--sunken); }
+
+.au-detail { padding: 8px 12px 12px 16px; border-top: 1px dashed var(--rule-strong); background: var(--paper); display: flex; flex-direction: column; gap: 8px; }
+.au-json { margin: 0; padding: 8px 10px; background: var(--code-bg); color: var(--code-ink); border-radius: 8px; font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto; }
+.au-diff { border-collapse: collapse; font-size: 12.5px; width: 100%; max-width: 720px; }
+.au-diff th, .au-diff td { text-align: left; padding: 4px 8px; border: 1px solid var(--rule); font-family: var(--font-mono); word-break: break-word; }
+.au-diff thead th { font-family: inherit; background: var(--sunken); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; }
+.au-before { background: var(--diff-del); color: var(--del-ink); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--del-ink) 45%, transparent); }
+.au-after { background: var(--diff-add); color: var(--good-ink); }
+.au-chainline { margin: 0; font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); word-break: break-all; }
+.au-empty { margin: 0; padding: 18px; text-align: center; color: var(--muted); }
+.au-more { display: flex; justify-content: center; padding: 6px 0 14px; min-height: 8px; }
+.au-end { font-size: 12px; color: var(--faint); }
+
+/* Phone width: each row stacks into a little card. */
+@media (max-width: 640px) {
+  .au-exports { margin-left: 0; }
+  .au-th { display: none; }
+  .au-row, .au-table.with-floor .au-row { grid-template-columns: auto 1fr; grid-template-areas: 'time act' 'actor actor' 'sum sum' 'target target' 'floor floor'; gap: 2px 8px; padding: 8px 10px 8px 10px; }
+  .au-time { grid-area: time; }
+  .au-act { grid-area: act; justify-self: end; }
+  .au-actor { grid-area: actor; }
+  .au-sum { grid-area: sum; white-space: normal !important; }
+  .au-target { grid-area: target; font-size: 12px; }
+  .au-target:empty { display: none; }
+  .au-floor { grid-area: floor; font-size: 12px; }
+  .au-detail { padding: 8px 10px 10px; }
+  .au-bars { height: 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .au-bar span { transition: none; }
+}

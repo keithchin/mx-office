@@ -211,7 +211,7 @@ test('offline setup: a local bare repository, cloned, scaffold answers written, 
     assert.equal(registerField(register, 'Entry mode'), 'greenfield');
     assert.equal(registerField(register, 'Mendix version'), '11.6.4');
     assert.match(register, /\| P \| Size tier: small \| CONFIRMED \d{4}-\d\d-\d\d \|/);
-    const settings = JSON.parse(readFileSync(path.join(repoDir, '.agent-office', 'project.json'), 'utf8'));
+    const settings = JSON.parse(readFileSync(path.join(repoDir, 'agent-office.project.json'), 'utf8'));
     assert.deepEqual(settings.roles, ['pm', 'chief-analyst']);
     assert.deepEqual(settings.clients, ['Acme']);
     // Pushed to the bare repository, without the machine-local files.
@@ -219,7 +219,8 @@ test('offline setup: a local bare repository, cloned, scaffold answers written, 
     const pushed = execFileSync('git', ['--git-dir', bare, 'ls-tree', '-r', '--name-only', 'main'], { encoding: 'utf8' });
     assert.match(pushed, /^PROJECT\.md$/m);
     assert.match(pushed, /^intake\.md$/m);
-    assert.doesNotMatch(pushed, /toolkit\.env|project\.json/);
+    assert.doesNotMatch(pushed, /toolkit\.env/);
+    assert.match(pushed, /^agent-office\.project\.json$/m, 'the client and team settings are committed with the project');
     assert.match(execFileSync('git', ['--git-dir', bare, 'log', '-1', '--format=%s', 'main'], { encoding: 'utf8' }), /Toolkit scaffold/);
     assert.equal(job.issue, 1);
     assert.ok(existsSync(path.join(cfg.offlineDir!, 'Test-Org', 'demo-app.issues', '1.md')));

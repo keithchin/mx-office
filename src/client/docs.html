@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff1de" />
+    <title>Docs · Agent Office</title>
+    <link rel="icon" href="/favicon.svg" />
+    <!-- The color theme picked on this browser (ui/colortheme.ts), set before the page is drawn so it never flashes the wrong one. -->
+    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(t!=="default"&&t!=="dark"&&t!=="terminal")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"default";document.documentElement.dataset.theme=t}catch(e){}</script>
+  </head>
+  <body class="lite docs-page">
+    <!-- The documentation site (docs.ts): docs/site/*.md, built into docs/site.json. Laid out like docs.mendix.com:
+         a top bar with the search, the sections on the left, the page in the middle, "On this page" on the right. -->
+    <a class="dx-skip" href="#dx-main">Skip to the page</a>
+    <header class="dx-bar">
+      <button id="dx-nav-toggle" class="dx-iconbtn dx-only-narrow" type="button" aria-label="Open the navigation" aria-controls="dx-side" aria-expanded="false">☰</button>
+      <a class="dx-brand" href="/docs" aria-label="App Factory docs: home">
+        <span class="dx-logo" aria-hidden="true">📚</span>
+        <span class="dx-brand-name">App Factory <b>Docs</b></span>
+      </a>
+      <div class="dx-search" role="search">
+        <input id="dx-q" type="search" placeholder="Search the docs" aria-label="Search the docs" autocomplete="off" spellcheck="false" />
+        <kbd class="dx-kbd" aria-hidden="true">/</kbd>
+        <div id="dx-results" class="dx-results hidden" role="listbox" aria-label="Search results"></div>
+      </div>
+      <nav class="dx-links" aria-label="The office">
+        <a class="dx-iconbtn" href="/home" title="Home: every project" aria-label="Home">🏠</a>
+        <a class="dx-iconbtn dx-hide-narrow" href="/lite" title="Back to the office (1D view)" aria-label="The office">🗂️</a>
+        <button id="dx-theme" class="dx-iconbtn" type="button" title="Color theme" aria-label="Color theme">🎨</button>
+      </nav>
+    </header>
+    <div class="dx-layout">
+      <aside id="dx-side" class="dx-side" aria-label="Documentation"></aside>
+      <div id="dx-scrim" class="dx-scrim hidden"></div>
+      <main id="dx-main" class="dx-main" tabindex="-1"></main>
+      <aside id="dx-toc" class="dx-toc" aria-label="On this page"></aside>
+    </div>
+    <div id="toasts"></div>
+    <div id="modal-root"></div>
+    <script type="module" src="./docs.ts"></script>
+  </body>
+</html>
