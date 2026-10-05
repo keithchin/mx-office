@@ -170,7 +170,7 @@ export function reviewBrief(level: AutonomyLevel, journal: string): string {
   return [
     'After **every** subagent result, before anything else:',
     '1. **Review** it against the task you gave and its acceptance criteria. Run the cheap checks that apply (`mxcli check` on drafted MDL, the tests, the linter) rather than trusting its summary.',
-    `2. **Record** a review entry in \`${journal}\`: \`## YYYY-MM-DD HH:MM — Review: <subagent> · <task>\`, then \`Verdict: accept | revise | escalate\` and one or two lines of why (and what the checks said).`,
+    `2. **Record** a review entry in \`${journal}\`: \`## YYYY-MM-DD HH:MM — Review: <subagent> · <task>\`, then \`Verdict: accept | revise | escalate\` and one or two lines of why (and what the checks said). Then give the office the verdict for the subagent's track record: \`office-workers subagent review <subagent> --verdict accept|rework --note "…"\` (revise = rework).`,
     '3. **Act on the verdict** straight away:',
     `   - **accept** → ${p.askBeforeNextStep ? `ask ${HUMAN} before dispatching the subagent's next step (an \`important\` escalation with the step as your recommendation), then dispatch it once they agree` : "dispatch that subagent's next step immediately"}. Never leave a subagent's lane idle while its queue has work.`,
     `   - **revise** → send it back with specific revision notes (what is wrong, where, what "done" looks like). After ${p.maxRevisions} revision rounds on the same task, a still-failing review is \`revisions-exhausted\`.`,

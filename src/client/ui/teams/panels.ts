@@ -16,6 +16,8 @@ import { h, openModal, timeAgo } from '../dom';
 import { markdownFile } from '../markdown';
 import { prChecksPanel } from '../prchecks';
 import { openStandupWindow } from '../roster';
+import { subagentList } from '../roster/subagents';
+import { LEADS } from '../../../shared/roster/roles';
 import { teamWorld } from './world';
 
 export interface PanelDeps {
@@ -109,8 +111,20 @@ async function ranking(root: HTMLElement) {
   }
 }
 
+/** The team's subagents with their track record, compact (the org chart has the buttons). */
+function subagentsPanel(team: TeamId, v: RosterView | undefined): HTMLElement | null {
+  const lead = LEADS.find((r) => r.team === team);
+  if (!lead || !v) return null;
+  return panel('👥 Subagents', subagentList(v, lead.id, () => undefined, true) ?? empty('No subagent runs yet.'));
+}
+
 /** The team's own panels, under its header. */
 export function teamPanels(team: TeamId, v: RosterView | undefined, data: TeamPageData | undefined, deps: PanelDeps): HTMLElement[] {
+  const subs = subagentsPanel(team, v);
+  return subs ? [...lanePanels(team, v, data, deps), subs] : lanePanels(team, v, data, deps);
+}
+
+function lanePanels(team: TeamId, v: RosterView | undefined, data: TeamPageData | undefined, deps: PanelDeps): HTMLElement[] {
   const prs = openPulls();
   if (team === 'testing') {
     const failing = prs.filter((p) => p.checks === 'fail');

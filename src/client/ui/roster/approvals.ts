@@ -7,6 +7,7 @@ import type { RosterView } from '../../../shared/roster/types';
 import { h } from '../dom';
 import { escalationCard } from '../pm/escalations';
 import { proposalCard } from './proposals';
+import { subagentActionCard } from './subagents';
 
 export function approvalsView(v: RosterView, redraw: (v: RosterView) => void): HTMLElement {
   const a = AUTONOMY[v.settings.autonomy];
@@ -14,6 +15,10 @@ export function approvalsView(v: RosterView, redraw: (v: RosterView) => void): H
     if (it.kind === 'proposal') {
       const p = v.proposals.find((x) => x.id === it.proposalId);
       if (p) return proposalCard(v, p, redraw);
+    }
+    if (it.kind === 'subagent') {
+      const a = v.subagentActions.find((x) => x.id === it.actionId);
+      if (a) return subagentActionCard(v, a, redraw);
     }
     if (it.kind === 'escalation') {
       const e = v.escalations.find((x) => x.id === it.escalationId);

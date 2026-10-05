@@ -39,13 +39,19 @@ export class Escalations {
     return this.add(floor, who, ask, true, source);
   }
 
+  /** Raises one from worker `w` that's FYI whatever the level: a Lead's subagent decision whose gate is fyi (roster/subagents.ts). */
+  raiseFyi(floor: TeamFloor, w: WorkerInfo, ask: EscalationAsk): Escalation {
+    return this.add(floor, { workerId: w.id, by: w.name, role: this.roster.roleOf(floor, w.id) }, ask, false, undefined, true);
+  }
+
   /** `source`: the activity line for one the office raised, when it isn't from a handoff note (Jeff's). */
-  private add(floor: TeamFloor, who: { workerId: string; by: string; role?: RoleId }, ask: EscalationAsk, byOffice = false, source?: string): Escalation {
+  private add(floor: TeamFloor, who: { workerId: string; by: string; role?: RoleId }, ask: EscalationAsk, byOffice = false, source?: string, fyi = false): Escalation {
     const d = this.roster.data(floor.id);
     const { role } = who;
     const team = role ? ROLE_BY_ID.get(role)!.team : undefined;
     const e = makeEscalation(ask, { workerId: who.workerId, by: who.by, ...(role ? { role } : {}), ...(team ? { team } : {}) }, d.settings.autonomy, randomBytes(5).toString('hex'), this.roster.deps.now());
     if (byOffice) e.fyi = false;
+    if (fyi) e.fyi = true;
     d.escalations.push(e);
     const loud = isAlarming(e);
     const tag = e.fyi ? 'FYI' : e.urgency;
@@ -95,6 +101,8 @@ export class Escalations {
     e.status = 'resolved';
     e.resolution = { verdict, text, by, at: this.roster.deps.now(), delivered };
     floor.activity?.(`✅ ${by} answered ${e.by}'s escalation (${verdict}): ${e.title}`);
+    // A Lead's `ask` to warn, bench, swap or reinstate a subagent: approving it does it.
+    this.roster.subagents.onEscalationResolved(floor, e.id, verdict, by);
     this.roster.touch(floor);
     if (rehire && e.role) this.rehire(floor, e.role);
     return undefined;

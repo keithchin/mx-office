@@ -9,6 +9,7 @@ import type { Ctx } from '../office/context.js';
 import { str } from '../office/input.js';
 import { readBody, send } from '../http/util.js';
 import { officeEscalate } from './office-escalate.js';
+import { officeSubagent } from './office-subagent.js';
 
 /**
  * Pull request `n` on a floor, for a worker to have as its own: one that's open, or merged and still
@@ -67,7 +68,7 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
       workers: list.map((w) => workerRow(w, view, me.id)),
     });
   }
-  if (req.method !== 'POST' || !['', '/home', '/tell', '/pr', '/escalate'].includes(action)) return send(res, 405, { error: 'GET /office/workers, or POST to /office/workers, /office/workers/home, /office/workers/tell, /office/workers/pr or /office/workers/escalate' });
+  if (req.method !== 'POST' || !['', '/home', '/tell', '/pr', '/escalate', '/subagent'].includes(action)) return send(res, 405, { error: 'GET /office/workers, or POST to /office/workers, /office/workers/home, /office/workers/tell, /office/workers/pr, /office/workers/escalate or /office/workers/subagent' });
   let body: unknown;
   try {
     body = JSON.parse((await readBody(req)) || '{}');
@@ -77,6 +78,8 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
 
   // Raising something to the Project Manager (the human): hooks/office-escalate.ts.
   if (action === '/escalate') return officeEscalate(ctx, floor, me, body, res);
+  // A Lead managing its subagents: hooks/office-subagent.ts.
+  if (action === '/subagent') return officeSubagent(ctx, floor, me, body, res);
 
   if (action === '/home') {
     const ask = readHomeRequest(body);

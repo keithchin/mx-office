@@ -7,11 +7,14 @@ import { isEscalationVerdict } from '../../../shared/roster/escalation.js';
 import { isRoleId } from '../../../shared/roster/roles.js';
 import { rosterOf, teamFloor } from '../../roster/adapter.js';
 import type { Decision } from '../../roster/standup-run.js';
+import { changeSkill } from '../../roster/skills.js';
+import { cleanSubName } from '../../roster/subagent-store.js';
+import { isSubagentOp } from '../../../shared/roster/skills.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 
-const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation']);
+const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation', 'skill', 'subagent', 'subagent-decide']);
 const DECISIONS = new Set<Decision>(['approve', 'reject', 'change']);
 
 export const rosterRoutes = {
@@ -64,7 +67,7 @@ export const rosterRoutes = {
       const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The Project Manager');
       const owner = session.account?.id;
       const role = isRoleId(body.role) ? body.role : undefined;
-      const needRole = ['hire', 'bench', 'rename', 'model'].includes(action);
+      const needRole = ['hire', 'bench', 'rename', 'model', 'skill', 'subagent'].includes(action);
       if (needRole && !role) return send(res, 400, { error: 'Which role?' });
       let error: string | undefined;
       switch (action) {
@@ -102,6 +105,21 @@ export const rosterRoutes = {
           error = roster.escalations.resolve(team, String(body.escalation ?? ''), body.verdict, body.text, by);
           break;
         }
+        case 'skill':
+          // One member's skill: on/off, its gate, or back to the project's default (🧰 Skills).
+          error = changeSkill(roster, team, role!, { skill: body.skill, enabled: body.enabled, gate: body.gate, reset: body.reset });
+          break;
+        case 'subagent': {
+          // The Project Manager warns, benches, swaps or reinstates a Lead's subagent: no gate, it's theirs.
+          const name = cleanSubName(body.name);
+          if (!isSubagentOp(body.op) || !name || role === 'pm') return send(res, 400, { error: 'Which subagent, and warn, bench, swap-model or reinstate?' });
+          error = roster.subagents.run(team, role!, body.op, name, { reason: typeof body.reason === 'string' ? body.reason : undefined, model: typeof body.model === 'string' ? body.model.trim() : undefined }, by, 'pm');
+          break;
+        }
+        case 'subagent-decide':
+          if (body.decision !== 'approve' && body.decision !== 'reject') return send(res, 400, { error: 'approve or reject' });
+          error = roster.subagents.decide(team, String(body.id ?? ''), body.decision === 'approve', by, typeof body.reason === 'string' ? body.reason : undefined);
+          break;
         default:
           return send(res, 400, { error: 'Unknown action' });
       }

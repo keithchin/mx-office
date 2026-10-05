@@ -85,8 +85,8 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     // 4. Proposals and merges waiting on you (escalations are above; the cap is the paused line below).
     for (const a of r.approvals) {
       if (a.kind === 'escalation' || (a.kind === 'cap' && r.paused)) continue;
-      const icon = a.kind === 'merge' ? '🔀' : a.kind === 'cap' ? '💸' : '📝';
-      const text = a.kind === 'proposal' ? `Proposal to approve: ${a.title}` : a.title;
+      const icon = a.kind === 'merge' ? '🔀' : a.kind === 'cap' ? '💸' : a.kind === 'subagent' ? '🧰' : '📝';
+      const text = a.kind === 'proposal' ? `Proposal to approve: ${a.title}` : a.kind === 'subagent' ? `To approve: ${a.title}` : a.title;
       out.push({ key: `appr-${a.id}`, kind: 'approval', icon, text, level: 'warn', action: admin ? 'Review' : 'View', target: { to: 'approvals' } });
     }
     // 5. Hiring paused on the cost cap.

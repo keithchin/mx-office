@@ -84,3 +84,47 @@ body.lite .lite-tabs { flex-wrap: wrap; }
 .ro-pick { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .ro-pick-select { min-width: 180px; padding: 6px 8px; font: inherit; font-weight: 700; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 8px; }
 .ro-window { width: min(760px, 96vw); }
+
+/* A Lead's subagents (ui/roster/subagents.ts): grade badge, model, track record, state pill. */
+.sa-box { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-radius: 10px; background: var(--paper-2); }
+.sa-list { display: flex; flex-direction: column; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.sa-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; font-weight: 700; }
+.sa-grade { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border: 2px solid var(--ink); border-radius: 7px; font-size: 13px; font-weight: 900; background: var(--paper); }
+.sa-g-A { background: var(--good); color: var(--accent-ink); }
+.sa-g-B { background: color-mix(in srgb, var(--good) 45%, var(--paper)); }
+.sa-g-C { background: color-mix(in srgb, var(--info) 35%, var(--paper)); }
+.sa-g-D { background: var(--warn); }
+.sa-g-F { background: var(--bad); color: var(--accent-ink); }
+.sa-g-none { color: var(--muted); }
+.sa-who { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; }
+.sa-model { font-size: 11px; color: var(--muted); }
+.sa-stats { color: var(--muted); }
+.sa-pill { font-size: 10px; font-weight: 900; padding: 1px 7px; border: 2px solid var(--ink); border-radius: 999px; white-space: nowrap; background: var(--paper); }
+.sa-pill.sa-warning { background: color-mix(in srgb, var(--warn) 55%, var(--paper)); }
+.sa-pill.sa-benched { background: color-mix(in srgb, var(--muted) 25%, var(--paper)); }
+.sa-row.sa-benched .sa-who { opacity: .7; }
+.sa-pill.sa-active { color: var(--muted); }
+.sa-actions { display: flex; flex-wrap: wrap; gap: 4px; flex-basis: 100%; }
+.sa-compact .sa-row { gap: 4px 6px; }
+
+/* The 🧰 Skills window (ui/roster/skills.ts). */
+.sk-win { width: min(720px, 96vw); }
+.sk-body { display: flex; flex-direction: column; gap: 10px; max-height: 75vh; overflow: auto; }
+.sk-group h4 { margin: 4px 0 6px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.sk-group h4 small { text-transform: none; letter-spacing: 0; font-weight: 700; color: var(--muted); }
+.sk-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.sk-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; align-items: center; padding: 7px 10px; border: 2px solid var(--ink); border-radius: 12px; background: var(--paper); }
+.sk-row.sk-off { background: var(--paper-2); opacity: .8; }
+.sk-name { font-size: 13px; }
+.sk-gatebox { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.sk-gate { padding: 3px 6px; font: inherit; font-size: 12px; font-weight: 700; color: var(--ink); background: var(--paper); border: 2px solid var(--ink); border-radius: 8px; }
+.sk-src { font-size: 11px; font-weight: 800; color: var(--muted); }
+.sk-src.sk-override { color: var(--ink); background: color-mix(in srgb, var(--warn) 45%, var(--paper)); padding: 0 6px; border-radius: 999px; }
+.sk-does { grid-column: 1 / -1; font-size: 12px; font-weight: 600; color: var(--muted); }
+.sk-does code { display: block; margin-top: 2px; font-size: 11px; color: var(--ink); overflow-wrap: anywhere; }
+.sk-craft { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.sk-craft .sk-row { grid-template-columns: 1fr; padding: 4px 8px; }
+@media (max-width: 520px) {
+  .sk-row { grid-template-columns: 1fr; }
+  .sk-gatebox { justify-content: flex-start; }
+}

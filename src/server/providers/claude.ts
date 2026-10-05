@@ -8,7 +8,7 @@ import { MCP_ALLOWED, writeClaudeMcpConfig } from '../office-workers.js';
 import { QUEUE_AGENT_DISALLOWED_TOOLS } from '../stations.js';
 import { answered, notified, wantsPermission } from '../workers/lifecycle.js';
 import { shq } from '../workers/process.js';
-import { noteSubagentHook } from '../workers/subagents.js';
+import { noteSubagentHook, noteSubagentLifecycle } from '../workers/subagents.js';
 import type { WorkerHandle } from '../workers/types.js';
 import { truncate } from '../workers/util.js';
 import type { ProviderAdapter } from './types.js';
@@ -42,6 +42,9 @@ function writeHookSettings(dataDir: string): string {
     ['PreToolUse', undefined],
     ['PostToolUse', undefined],
     ['PostToolUseFailure', undefined],
+    // A subagent's run beginning and ending: its Lead's team track record (roster/subagents.ts).
+    ['SubagentStart', undefined],
+    ['SubagentStop', undefined],
   ];
   // Minimal VPS images sometimes lack curl; the office's own node binary is always there.
   const nodeHook = path.join(dataDir, 'hook.cjs');
@@ -173,6 +176,10 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
       break;
     case 'PermissionRequest':
       wantsPermission(h, describeTool(payload));
+      break;
+    case 'SubagentStart':
+    case 'SubagentStop':
+      noteSubagentLifecycle(info.id, event, payload, now);
       break;
     case 'Notification':
       notified(h, payload?.notification_type, now);

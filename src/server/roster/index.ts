@@ -23,6 +23,9 @@ import { Members } from './members.js';
 import { Nudges } from './nudge.js';
 import { setFloorPause } from './pause.js';
 import { StandupRunner } from './standup-run.js';
+import { Subagents } from './subagents.js';
+import { effectiveSkills } from '../../shared/roster/skills.js';
+import { OP_ASK, modelWord } from '../../shared/roster/subagents.js';
 import { RosterFile, type MemberRecord, type RosterData } from './store.js';
 import type { RosterDeps, TeamFloor } from './types.js';
 
@@ -38,6 +41,7 @@ export class Roster {
   readonly escalations: Escalations;
   readonly nudges: Nudges;
   readonly jeff: Jeff;
+  readonly subagents: Subagents;
   /** Lead pull requests the office already labelled with their team (floor:number), so it asks GitHub once. */
   private labelled = new Set<string>();
   private files = new Map<string, RosterFile>();
@@ -50,6 +54,7 @@ export class Roster {
     this.escalations = new Escalations(this);
     this.nudges = new Nudges(this, tickMs > 0);
     this.jeff = new Jeff(this);
+    this.subagents = new Subagents(this);
     if (tickMs > 0) {
       this.timer = setInterval(() => this.tick(), tickMs);
       this.timer.unref?.();
@@ -115,6 +120,7 @@ export class Roster {
     this.standups.onWorker(floor, role, w);
     this.nudges.onWorker(floor, role, w);
     this.escalations.onMember(floor, role, w);
+    this.subagents.onMember(floor, role, now);
     if (role === 'pm') this.escalations.onCoordinator(floor, w);
     else this.labelLeadPr(floor, role, w);
     this.touch(floor, prev?.status === w.status && !capChanged);
@@ -178,6 +184,7 @@ export class Roster {
       }
       this.standups.tick(floor, now);
       this.nudges.tick(floor, LEADS.map((r) => r.id), now);
+      this.subagents.tick(floor, now);
     }
   }
 
@@ -271,6 +278,9 @@ export class Roster {
       proposals: d.proposals.slice(-100),
       approvals: this.approvals(floor, d, paused),
       escalations: this.escalations.view(floor),
+      skills: Object.fromEntries(ROLES.map((r) => [r.id, effectiveSkills(r.id, d.settings.autonomy, d.members[r.id].skills)])),
+      subagents: this.subagents.views(floor),
+      subagentActions: this.subagents.actionsView(floor),
       spentToday: d.spend.usd,
       cap,
       paused,
@@ -294,6 +304,11 @@ export class Roster {
     out.push(...d.proposals
       .filter((p) => p.status === 'pending')
       .map((p) => ({ id: `p-${p.id}`, kind: 'proposal', title: p.title, detail: `${p.by} (${ROLE_BY_ID.get(p.role)?.title}) · ${p.kind} · standup ${p.standup}${p.detail ? ` — ${p.detail}` : ''}`, team: p.team, proposalId: p.id }) as ApprovalItem));
+    // Subagent actions a Lead proposed (its gate was propose); an ask is an escalation above.
+    for (const a of d.subagentActions.filter((x) => x.status === 'pending' && x.gate === 'propose')) {
+      const m = d.members[a.lead];
+      out.push({ id: `s-${a.id}`, kind: 'subagent', title: `${m.name} proposes to ${OP_ASK[a.op]} subagent ${a.name}${a.op === 'swap-model' && a.model ? ` to ${modelWord(a.model)}` : ''}`, detail: `${m.name} (${ROLE_BY_ID.get(a.lead)?.title})${a.reason ? ` — ${a.reason}` : ''}`, team: ROLE_BY_ID.get(a.lead)?.team, actionId: a.id });
+    }
     if (needsApproval(level, 'merge')) {
       const pulls = floor.openPulls();
       for (const r of ROLES) {
