@@ -9,6 +9,7 @@ import { QUEUE_AGENT_DISALLOWED_TOOLS } from '../stations.js';
 import { answered, notified, wantsPermission } from '../workers/lifecycle.js';
 import { shq } from '../workers/process.js';
 import { noteSubagentHook, noteSubagentLifecycle } from '../workers/subagents.js';
+import { noteDispatch } from '../chatter/bus.js';
 import type { WorkerHandle } from '../workers/types.js';
 import { truncate } from '../workers/util.js';
 import type { ProviderAdapter } from './types.js';
@@ -160,6 +161,8 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
       else {
         info.activity = describeTool(payload);
         info.action = toolAction(payload?.tool_name, payload?.tool_input);
+        // A subagent dispatched: the team chatter has who asked it what (chatter/bus.ts).
+        noteDispatch(info.id, payload, now);
         h.noteTool(info.activity);
         if (info.status !== 'working') h.setStatus('working');
         else h.emit();

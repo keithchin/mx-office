@@ -47,6 +47,9 @@ import { tabBadges } from './ui/badge';
 import { newStandup, teamAttention } from './ui/chrome-logic';
 import { currentRoster, onRoster } from './ui/teams/world';
 import { auditView } from './ui/audit';
+import { chatterPanel } from './ui/chatter/panel';
+import { routeChatter } from './ui/chatter/feed';
+import { useChatterActions } from './ui/chatter/compact';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -66,6 +69,7 @@ const session = flatSession('/lite', (id) => openWorker(id), (m) => {
   routePreviewMessage(m);
   live.route(m);
   pm.route(m);
+  routeChatter(m);
 });
 const { net } = session;
 const workers = workerActions(net);
@@ -76,6 +80,10 @@ const live = liveAppView(net, () => showTab('live'), () => tab === 'live');
 // The project manager console in the middle of the project summary (ui/pm/console.ts): its live
 // terminal only while the board is on screen.
 const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'command' });
+// 💬 Team chatter under the recent activity (ui/chatter/): its bubbles open the escalation, the PR or the terminal.
+const chatterDeps = { openWorker: (id: string) => openWorker(id), openEscalation: (id: string) => toEscalation(id), openPull: (n: number) => openPr(n) };
+const chatter = chatterPanel(chatterDeps);
+useChatterActions(chatterDeps);
 
 // ---- The floor you're on (every floor's card is on the home page, /home) -----------------------
 floorPicker(net, { onGo: () => showTab('command') });
@@ -277,7 +285,8 @@ function renderKanban() {
   if (tab === 'teams') return teams.renderPage($('teams-view'));
   if (tab === 'board') return renderBoard($('board'), kanban, teams.boardView(renderKanban));
   if (tab !== 'command') return;
-  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el }).then(() => live.mountChip($('summary')));
+  chatter.show(store.floor ?? undefined);
+  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el, after: chatter.el }).then(() => live.mountChip($('summary')));
   void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) }).then(() => needs.refresh());
 }
 /** Which model does well on what (ui/analysis.ts), for this floor or every floor. */
@@ -330,6 +339,11 @@ function toEscalation(id: string) {
     else showTab('approvals');
   };
   look();
+}
+/** A PR's window by number, if the floor has it. */
+function openPr(n: number) {
+  const it = store.pulls.items.find((p) => p.number === n);
+  if (it) kanban.openPull(it);
 }
 function goToNeed(t: NeedTarget) {
   if (t.to === 'worker') return openWorker(t.id);

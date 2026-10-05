@@ -15,6 +15,7 @@ import type { Roster } from './index.js';
 import { reviewNudgePrompt } from './prompts.js';
 import type { Phase } from './store.js';
 import type { TeamFloor } from './types.js';
+import { reviewNudged } from '../chatter/hooks.js';
 
 /** How long after a turn ends the office waits, so a person's own prompt (or a queued one) goes first. */
 export const NUDGE_GRACE_MS = 15_000;
@@ -131,6 +132,7 @@ export class Nudges {
     if (floor.prompt(w.id, reviewNudgePrompt(role, result, d.settings.autonomy))) return false;
     t.nudgedAt = now;
     t.nudgedIdleAt = t.idleAt;
+    reviewNudged(floor.id, w, result?.agent);
     floor.activity?.(`🔁 Nudged ${m.name} to review ${result?.agent ? `its ${result.agent}'s` : "its subagent's"} result and continue or escalate`);
     return true;
   }

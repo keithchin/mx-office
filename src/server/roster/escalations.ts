@@ -16,6 +16,7 @@ import type { Roster } from './index.js';
 import { escalationAnswerPrompt, escalationsToCoordinatorPrompt, owedAnswersPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
 import { audit, agent, byWhom, jeff, office } from '../audit/index.js';
+import { relayedToCoordinator } from '../chatter/hooks.js';
 
 /** The Project Coordinator hears about new escalations this long after the last one, all in one message. */
 export const COORDINATOR_DEBOUNCE_MS = 60_000;
@@ -218,6 +219,8 @@ export class Escalations {
     if (isAsleepStatus(w.status) || w.status === 'needs_input') return false;
     const open = box.list.filter((e) => e.status === 'open');
     this.outbox.delete(floor.id);
-    return open.length > 0 && !floor.prompt(w.id, escalationsToCoordinatorPrompt(open));
+    const sent = open.length > 0 && !floor.prompt(w.id, escalationsToCoordinatorPrompt(open));
+    if (sent) relayedToCoordinator(floor.id, w, open);
+    return sent;
   }
 }

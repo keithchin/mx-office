@@ -6,6 +6,7 @@ import { agentRoutes } from './agents.js';
 import { analysisRoutes } from './analysis.js';
 import { firmRoutes } from './firm.js';
 import { auditRoutes } from './audit.js';
+import { chatterRoutes } from './chatter.js';
 import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
 import { gitRoutes } from './git.js';
@@ -69,6 +70,7 @@ export const routes: readonly Route[] = [
   rosterRoutes.view,
   rosterRoutes.standup,
   rosterRoutes.action,
+  chatterRoutes.page,
   teamRoutes.page,
   teamRoutes.labels,
   wizardRoutes.wizard,

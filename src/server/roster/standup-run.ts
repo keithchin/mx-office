@@ -20,6 +20,7 @@ import { outcomesPrompt, standupCompiledPrompt, standupPrompt } from './prompts.
 import { compilePage, reportFrom, standupId, toProposals } from './standup.js';
 import type { TeamFloor } from './types.js';
 import { audit, byWhom } from '../audit/index.js';
+import { decisionsRelayed } from '../chatter/hooks.js';
 
 /** How long the Leads asked live get to answer before the page is compiled without them. */
 export const COLLECT_MS = 20 * 60_000;
@@ -219,6 +220,8 @@ export class StandupRunner {
     }
     if (isAsleepStatus(w.status) || w.status === 'needs_input') return false;
     this.outbox.delete(floor.id);
-    return !floor.prompt(w.id, outcomesPrompt(box.list));
+    const sent = !floor.prompt(w.id, outcomesPrompt(box.list));
+    if (sent) decisionsRelayed(floor.id, w, box.list);
+    return sent;
   }
 }
