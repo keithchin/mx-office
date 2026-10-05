@@ -25,11 +25,14 @@
       <div class="home-tabs" role="tablist" aria-label="Home">
         <button id="tab-projects" class="btn" type="button" role="tab">🏢 Projects</button>
         <button id="tab-stats" class="btn" type="button" role="tab">📊 Statistics</button>
+        <button id="tab-audit" class="btn" type="button" role="tab">🧾 Audit log</button>
       </div>
       <!-- A card for every floor, to go into on the board or in the office, and adding one (home/projects.ts). -->
       <section id="projects-view" role="tabpanel" aria-labelledby="tab-projects"></section>
       <!-- The office's totals, every project side by side, and the model ranking (home/stats.ts). -->
       <section id="stats-view" class="hidden" role="tabpanel" aria-labelledby="tab-stats"></section>
+      <!-- Who did what, when, on every floor and the office's own (home/audit.ts). -->
+      <section id="audit-view" class="hidden" role="tabpanel" aria-labelledby="tab-audit"></section>
     </main>
     <div id="toasts"></div>
     <div id="conn" class="conn hidden">Reconnecting…</div>

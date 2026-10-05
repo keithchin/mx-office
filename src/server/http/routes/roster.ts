@@ -10,6 +10,7 @@ import type { Decision } from '../../roster/standup-run.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
+import { audit, human } from '../../audit/index.js';
 
 const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation']);
 const DECISIONS = new Set<Decision>(['approve', 'reject', 'change']);
@@ -74,14 +75,18 @@ export const rosterRoutes = {
         case 'bench':
           error = roster.members.bench(team, role!, by);
           break;
-        case 'rename':
+        case 'rename': {
+          const was = roster.data(floor.id).members[role!].name;
           error = roster.members.rename(team, role!, body.name);
+          const now = roster.data(floor.id).members[role!].name;
+          if (!error) audit.record({ floor: floor.id, actor: human(by, owner), action: 'roster.rename', target: { kind: 'role', id: role, label: now }, summary: `Renamed ${was} to ${now}`, details: { role, before: { name: was }, after: { name: now } } });
           break;
+        }
         case 'model':
-          error = roster.members.setModel(team, role!, body.model);
+          error = roster.members.setModel(team, role!, body.model, by);
           break;
         case 'settings':
-          error = roster.members.settings(team, body.settings);
+          error = roster.members.settings(team, body.settings, by, owner);
           break;
         case 'standup': {
           const s = roster.standups.run(team, by);

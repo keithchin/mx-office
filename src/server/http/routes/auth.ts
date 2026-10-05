@@ -5,6 +5,11 @@ import type { Ctx } from '../../office/context.js';
 import { str } from '../../office/input.js';
 import { clientIp, isSecure, readBody, send } from '../util.js';
 import type { Route } from '../router.js';
+import { audit, human } from '../../audit/index.js';
+
+/** A sign-in, good or bad, in the audit log: the name tried (never the password) and where from. */
+const signIn = (ok: boolean, name: string, ip: string, how: string) =>
+  audit.record({ actor: human(name || 'Shared password'), action: ok ? 'login.ok' : 'login.fail', target: { kind: 'office', label: how }, summary: ok ? `Signed in with ${how}` : `A sign-in with ${how} failed`, details: { ip }, severity: ok ? 'info' : 'warning' });
 
 const TOO_MANY_ATTEMPTS = 'Too many attempts. Try again in a few minutes.';
 
@@ -35,12 +40,15 @@ export async function login(ctx: Ctx, req: http.IncomingMessage, res: http.Serve
   const password = str(guess.body.password, 512);
   if (name) {
     const account = await accounts.check(name, password);
+    signIn(!!account, account?.name ?? name, guess.ip, 'their own password');
     if (!account) return send(res, 401, { error: 'Wrong name or password' });
     auth.recordSuccess(guess.ip);
     return send(res, 200, { ok: true }, signedIn(ctx, req, account.id));
   }
   if (!accounts.sharedPassword) return send(res, 401, { error: 'Sign in with your name and your own password' });
-  if (!(await auth.checkPassword(password))) {
+  const ok = await auth.checkPassword(password);
+  signIn(ok, '', guess.ip, 'the shared office password');
+  if (!ok) {
     return send(res, 401, { error: accounts.any ? 'Wrong password. With an account of your own, type your name too.' : 'Wrong password' });
   }
   auth.recordSuccess(guess.ip);

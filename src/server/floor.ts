@@ -28,6 +28,7 @@ import type { Ledger } from './usage.js';
 import type { Capacity } from './machine.js';
 import { officePrompt, type PromptSource } from './prompts.js';
 import { floorLedger } from './roster/pause.js';
+import { audit } from './audit/index.js';
 
 type ToastLevel = 'info' | 'warn' | 'error';
 
@@ -252,6 +253,7 @@ export class Floor {
         ctx.emit(this, { t: 'gong', why: 'queue' });
       },
       worktreeNote: () => officePrompt(ctx.prompts, 'queue.worktree'),
+      started: (t, w) => audit.record({ floor: this.id, actor: { kind: 'office', name: 'The queue' }, action: 'queue.start', target: { kind: 'worker', id: w.id, label: w.name }, summary: `${w.name} started on ${t.issue !== undefined ? `issue #${t.issue}` : `“${t.title}”`} from the queue`, details: { task: t.id, queuedBy: t.addedBy, issue: t.issue } }),
     });
 
     // Meetings seat their own workers round the meeting room's table and run them round by round.

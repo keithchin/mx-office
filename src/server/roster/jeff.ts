@@ -17,6 +17,7 @@ import { JudgeLog } from '../judge/log.js';
 import { clipState, type Questions, type Verdict } from '../judge/pure.js';
 import type { Roster } from './index.js';
 import type { TeamFloor } from './types.js';
+import { audit, jeff } from '../audit/index.js';
 
 /** Jeff's noul at or above this, with a kind that needs an answer, is "waiting on you". */
 export const WAITING_AT = 0.7;
@@ -182,6 +183,7 @@ export class Jeff {
     const at = this.roster.deps.now();
     this.log.append(floor.id, { at, by: v.by, model: v.model, ms: v.ms, ...rest });
     floor.judged?.({ kind: r.kind, by: v.by, verdict, agree: r.agree, acted: r.acted, at });
+    audit.record({ floor: floor.id, actor: jeff(), action: r.acted ? 'judge.act' : 'judge.verdict', target: { kind: r.kind === 'waiting' ? 'worker' : 'issue', label: r.subject }, summary: `${r.acted ? 'Acted on' : 'Judged'} ${r.subject}: ${verdict}${r.agree === false ? " (the office's rule disagreed)" : ''}`, details: { kind: r.kind, mode: this.mode(floor, r.kind), jeff: r.jeff, rule: r.rule, agree: r.agree, by: v.by, model: v.model, ms: v.ms }, severity: r.acted ? 'notice' : 'info' });
   }
 
   summary(floorId: string, status: JeffStatus): JudgeSummary {

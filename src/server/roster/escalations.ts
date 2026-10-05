@@ -14,6 +14,7 @@ import { isAsleepStatus } from './bench.js';
 import type { Roster } from './index.js';
 import { escalationAnswerPrompt, escalationsToCoordinatorPrompt, owedAnswersPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
+import { audit, agent, byWhom, jeff, office } from '../audit/index.js';
 
 /** The Project Coordinator hears about new escalations this long after the last one, all in one message. */
 export const COORDINATOR_DEBOUNCE_MS = 60_000;
@@ -47,6 +48,7 @@ export class Escalations {
     const e = makeEscalation(ask, { workerId: who.workerId, by: who.by, ...(role ? { role } : {}), ...(team ? { team } : {}) }, d.settings.autonomy, randomBytes(5).toString('hex'), this.roster.deps.now());
     if (byOffice) e.fyi = false;
     d.escalations.push(e);
+    audit.record({ floor: floor.id, actor: byOffice ? (source?.includes('Jeff') ? jeff() : office()) : agent(who.by, who.workerId), action: 'escalation.raise', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `${byOffice ? `Escalated for ${who.by}` : 'Escalated to the Project Manager'} (${e.fyi ? 'FYI' : e.urgency}): ${e.title}`, details: { urgency: e.urgency, fyi: e.fyi, trigger: ask.trigger, role, worker: who.workerId }, severity: isAlarming(e) ? 'warning' : 'notice' });
     const loud = isAlarming(e);
     const tag = e.fyi ? 'FYI' : e.urgency;
     floor.activity?.(`${URGENCY_ICON[e.urgency]} ${byOffice ? (source ?? `The office escalated to the Project Manager for ${who.by}, from its handoff note`) : `${who.by} escalated to the Project Manager`} (${tag}): ${e.title}`);
@@ -94,6 +96,7 @@ export class Escalations {
     }
     e.status = 'resolved';
     e.resolution = { verdict, text, by, at: this.roster.deps.now(), delivered };
+    audit.record({ floor: floor.id, actor: byWhom(by), action: 'escalation.answer', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `Answered ${e.by}'s escalation (${verdict}): ${e.title}`, details: { verdict, delivered, rehire, reply: text ? { length: text.length } : undefined } });
     floor.activity?.(`✅ ${by} answered ${e.by}'s escalation (${verdict}): ${e.title}`);
     this.roster.touch(floor);
     if (rehire && e.role) this.rehire(floor, e.role);

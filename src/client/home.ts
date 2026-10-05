@@ -13,6 +13,7 @@ import { flatSession } from './shared/session';
 import { graphics, viewUrl } from './graphics';
 import { projectsView } from './home/projects';
 import { statsView } from './home/stats';
+import { homeAudit } from './home/audit';
 import './home/home.css';
 
 // One address, with nothing after it: an old link with ?floor= or the like still lands here, tidied.
@@ -28,6 +29,7 @@ const session = flatSession(
   // A notification clicked: the worker's terminal is on the 1D view.
   () => location.assign(viewUrl('1d')),
   (msg) => {
+    audit.onMessage(msg);
     // Coming in puts this page on a floor nobody picked: a browser that had never been on one still
     // hasn't, so / and the flat views keep sending it here (see flatViewGoesHome).
     if (!last && !leaving && (msg.t === 'welcome' || msg.t === 'floor.enter')) forgetFloor();
@@ -53,16 +55,18 @@ store.on('floors', renderBack);
 
 // ---- The tabs ---------------------------------------------------------------------------------
 const TAB_KEY = 'agent-office.home-tab';
-type Tab = 'projects' | 'stats';
+type Tab = 'projects' | 'stats' | 'audit';
 let tab: Tab = 'projects';
 try {
-  if (localStorage.getItem(TAB_KEY) === 'stats') tab = 'stats';
+  const saved = localStorage.getItem(TAB_KEY);
+  if (saved === 'stats' || saved === 'audit') tab = saved;
 } catch {
   // No storage: the projects, as usual.
 }
 
 const projects = projectsView($('projects-view'), net, last, () => (leaving = true));
 const stats = statsView($('stats-view'), () => (leaving = true));
+const audit = homeAudit($('audit-view'));
 
 function showTab(t: Tab) {
   tab = t;
@@ -71,16 +75,19 @@ function showTab(t: Tab) {
   } catch {
     // Just for this visit, then.
   }
-  for (const [id, on] of [['projects', t === 'projects'], ['stats', t === 'stats']] as const) {
+  for (const [id, on] of [['projects', t === 'projects'], ['stats', t === 'stats'], ['audit', t === 'audit']] as const) {
     $(`tab-${id}`).classList.toggle('on', on);
     $(`tab-${id}`).setAttribute('aria-selected', String(on));
     $(`${id}-view`).classList.toggle('hidden', !on);
   }
+  if (t === 'audit') audit.show();
+  else audit.hide();
   if (t === 'projects') projects.render();
-  else void stats.render();
+  else if (t === 'stats') void stats.render();
 }
 $('tab-projects').addEventListener('click', () => showTab('projects'));
 $('tab-stats').addEventListener('click', () => showTab('stats'));
+$('tab-audit').addEventListener('click', () => showTab('audit'));
 // 🏠 here is the page you're on: back to the top of the projects rather than a reload.
 $('to-home').addEventListener('click', (e) => {
   e.preventDefault();
