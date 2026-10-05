@@ -43,7 +43,8 @@ export interface RosterData {
   spend: { day: string; usd: number; seen: Record<string, number> };
 }
 
-export const DEFAULT_IDLE_MINUTES = 30;
+// Leads are benched only when the Project Manager says so; a floor can turn idle benching on in its settings.
+export const DEFAULT_IDLE_MINUTES = 0;
 const STANDUPS_KEPT = 30;
 const PROPOSALS_KEPT = 300;
 const ESCALATIONS_KEPT = 200;

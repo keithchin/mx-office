@@ -40,7 +40,7 @@ test("a Project Manager's rename is cleaned to one short line, and empty doesn't
 test('a saved roster is made whole: a missing role gets a name, a bad phase and bad settings get defaults', () => {
   const fresh = freshRoster(seq(0.2));
   assert.equal(fresh.settings.autonomy, 2);
-  assert.equal(fresh.settings.idleMinutes, 30);
+  assert.equal(fresh.settings.idleMinutes, 0);
   assert.deepEqual(fresh.settings.schedule, DEFAULT_SCHEDULE);
   assert.ok(ROLES.every((r) => fresh.members[r.id].phase === 'none' && fresh.members[r.id].name));
   const revived = reviveRoster({ members: { pm: { name: 'Quinn', model: 'opus', phase: 'bogus' } }, settings: { autonomy: 7, idleMinutes: -5, costCaps: { 2: 12.5, 9: 3, 3: -1 } } }, seq(0.4));

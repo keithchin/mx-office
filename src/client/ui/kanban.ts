@@ -232,7 +232,29 @@ export function renderBoard(root: HTMLElement, a: KanbanActions, view: BoardView
     [`🤖 ${all.filter((c) => c.column === 'progress').length} working`, `🙋 ${all.filter((c) => c.column === 'human').length} need a human`, `🔀 ${all.filter((c) => c.column === 'review').length} in review`, spent ? `💰 ${usd(spent)} on this floor's agents` : ''].filter(Boolean).join(' · '),
   );
   const cols = COLUMNS.map((col) => column(col, all.filter((c) => c.column === col.id), a, view, every.filter((c) => c.column === col.id)));
+  // Drawn again on every change (a preview opening attaches a terminal, which changes the workers), so
+  // each column keeps where it was scrolled to, and so does the row of columns.
+  const scrolled = keptScroll(root);
   root.replaceChildren(...(view.top ? [view.top] : []), summary, h('div.kb-columns', {}, ...cols));
+  scrolled();
+}
+
+/** Notes how far the board's columns are scrolled; the function it returns puts them back after a redraw. */
+function keptScroll(root: HTMLElement): () => void {
+  const left = root.querySelector<HTMLElement>('.kb-columns')?.scrollLeft ?? 0;
+  const tops = new Map<string, number>();
+  for (const col of root.querySelectorAll<HTMLElement>('.kb-col')) {
+    const list = col.querySelector<HTMLElement>('.kb-cards');
+    if (col.dataset.col && list?.scrollTop) tops.set(col.dataset.col, list.scrollTop);
+  }
+  return () => {
+    const row = root.querySelector<HTMLElement>('.kb-columns');
+    if (row && left) row.scrollLeft = left;
+    for (const [id, top] of tops) {
+      const list = root.querySelector<HTMLElement>(`.kb-col[data-col="${id}"] .kb-cards`);
+      if (list) list.scrollTop = top;
+    }
+  };
 }
 
 function column(col: (typeof COLUMNS)[number], list: Card[], a: KanbanActions, view: BoardView, unfiltered: Card[]): HTMLElement {
