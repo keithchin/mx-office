@@ -1,6 +1,6 @@
 // The escalation channel to the Project Manager (the human): an agent raises one with
 // `office-workers escalate` or the `escalate` MCP tool (hooks/office-escalate.ts); it's kept on the
-// floor's roster, shown on the board's project console and in the Team tab's approvals, toasted and
+// floor's roster, shown on the project console (🎛️ Command Center) and in the Team tab's approvals, toasted and
 // sent as a desktop alert when it's urgent or critical and above the floor's threshold, and the
 // Project Coordinator hears about it (batched, a minute after the last) so it can summarise it at the
 // standup. The human's Reply / Approve / Reject goes back to the raising agent as a prompt and
@@ -35,7 +35,7 @@ export class Escalations {
     const loud = isAlarming(e);
     const tag = e.fyi ? 'FYI' : e.urgency;
     floor.activity?.(`${URGENCY_ICON[e.urgency]} ${w.name} escalated to the Project Manager (${tag}): ${e.title}`);
-    if (loud) floor.toast(`${URGENCY_ICON[e.urgency]} ${e.urgency === 'critical' ? 'Critical' : 'Urgent'} escalation from ${w.name}: ${e.title} — answer it on the board's project console`, 'warn');
+    if (loud) floor.toast(`${URGENCY_ICON[e.urgency]} ${e.urgency === 'critical' ? 'Critical' : 'Urgent'} escalation from ${w.name}: ${e.title} — answer it on the project console (🎛️ Command Center)`, 'warn');
     // The Coordinator relays and summarises: it isn't told about its own, or about FYIs (they're on the standup page).
     if (role !== 'pm' && !e.fyi) this.tellCoordinator(floor, e);
     this.roster.touch(floor);

@@ -65,7 +65,7 @@ export class DesktopNotifier {
 
   /**
    * An urgent or critical escalation was raised to the Project Manager. It stays up until clicked: it
-   * blocks a Lead's work. `open` shows it (the board's project console).
+   * blocks a Lead's work. `open` shows it (the project console).
    */
   escalation(a: RosterAlert, open: () => void) {
     if (!this.enabled() || notifyPermission() !== 'granted') return;

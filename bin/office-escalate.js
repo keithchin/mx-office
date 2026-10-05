@@ -1,7 +1,7 @@
 // office-workers escalate: raising something to the Project Manager (the human who owns the project)
 // from inside Agent Office, as a Lead does when reviewing a subagent's work turns up what it shouldn't
 // decide alone (its Playbook's review protocol says when, by autonomy level). The office keeps it on
-// the floor, shows it on the board's project console with Reply / Approve / Reject, and sends the
+// the floor, shows it on the project console (🎛️ Command Center) with Reply / Approve / Reject, and sends the
 // answer back to this worker as a prompt. Kept apart from office-workers.js, which imports it: the
 // command's arguments, the MCP tool and the answer in words. Plain Node, no dependencies.
 
@@ -60,7 +60,7 @@ export const ESCALATE_TOOL = {
     'Raises something to the Project Manager: the human who owns the project (not the Project Coordinator agent). Use it when reviewing a subagent\'s work (or anything else) turns up ' +
     "what your Playbook's review protocol says to escalate at the floor's autonomy level: Directive escalates every change to scope, design or plan; Guided design, architecture and scope changes, " +
     'a review failing after 2 revision rounds, anything blocking; Delegated milestone-level issues, repeated failures, budget risk; Autonomous only critical issues (security, data loss, ' +
-    'a client-facing milestone, a budget overrun, blocked with no path). It shows on the board\'s project console with Reply / Approve / Reject; urgent and critical ones alert the human. ' +
+    'a client-facing milestone, a budget overrun, blocked with no path). It shows on the project console (the Command Center tab) with Reply / Approve / Reject; urgent and critical ones alert the human. ' +
     "Below the floor's threshold it is filed as FYI. The answer comes back to you as your next prompt: don't wait for it, carry on with whatever it doesn't block. Subagents never escalate: their Lead does.",
   inputSchema: {
     type: 'object',

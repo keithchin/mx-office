@@ -1,4 +1,4 @@
-// Escalations on the board's project console (ui/pm/console.ts) and in the Team tab's approvals
+// Escalations on the project console (🎛️ Command Center) (ui/pm/console.ts) and in the Team tab's approvals
 // (ui/roster/approvals.ts): what an agent raised to the Project Manager — you, the human — with
 // Reply / Approve / Reject. The answer goes back to the agent that raised it as its next prompt and the
 // card is resolved (server/roster/escalations.ts). Urgent and critical ones are highlighted; FYIs (below

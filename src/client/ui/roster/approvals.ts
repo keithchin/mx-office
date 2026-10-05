@@ -1,5 +1,5 @@
 // The approvals queue: everything waiting on the Project Manager (you) at the floor's autonomy level —
-// escalations the team raised (the same cards as on the board's project console), proposals from the
+// escalations the team raised (the same cards as on the project console), proposals from the
 // standups, the team's pull requests when merges need the Project Manager, and a cost cap reached.
 
 import { AUTONOMY } from '../../../shared/roster/autonomy';

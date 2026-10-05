@@ -1,4 +1,4 @@
-// The project console: the middle column of the project summary above the 1D view's board (ui/summary.ts
+// The project console: the middle column of the project summary on the 1D view's Command Center (ui/summary.ts
 // draws the columns either side of it), where you, the Project Manager, run the project. The floor's
 // Project Coordinator (the agent, role id `pm`; docs/teams.md) at a glance, its terminal live and
 // read-only, the escalations the team raised to you (ui/pm/escalations.ts, above the prompt box), and a
@@ -25,7 +25,7 @@ export interface PmConsoleDeps {
   net: Net;
   /** The worker's full terminal window, the way the rest of the page opens it (waking it if asleep). */
   openWorker(id: string): void;
-  /** Whether the console is on screen now: the Board tab, with the floors page not over it. */
+  /** Whether the console is on screen now: the Command Center tab, with the floors page not over it. */
   visible(): boolean;
 }
 

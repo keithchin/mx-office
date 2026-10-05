@@ -1,7 +1,7 @@
 // An escalation: something a Lead (or the Project Coordinator, or any agent on the floor) raises to
 // the Project Manager — the human — when a review turned up what it shouldn't decide alone (see
-// REVIEW_POLICY in autonomy.ts). The office keeps it on the floor's roster, shows it on the board's
-// project console and in the Team tab's approvals, and sends the human's answer back to whoever raised
+// REVIEW_POLICY in autonomy.ts). The office keeps it on the floor's roster, shows it on the project
+// console (the 1D view's Command Center) and in the Team tab's approvals, and sends the human's answer back to whoever raised
 // it as a prompt. What arrives from an agent is read here, so the CLI, the MCP tool and the tests
 // agree on what's accepted. Pure: the browser imports the types.
 
