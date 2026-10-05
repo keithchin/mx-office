@@ -102,6 +102,10 @@ His key: the launcher reads `~/.agent-office-jev-key` and passes its path as `AG
 
 ![Org chart](docs/readme/org-chart.png)
 
+### The Firm: independent audits
+
+**The Firm** (`/firm`, linked from Home) is an office-level consultancy of **Reviewer Agents**, separate from every project team: an Engagement Partner plus Design, Code & Architecture, QA & Test, Requirements & Delivery, and optional Security and Cost & Performance reviewers, all on **Fable 5.1** by default. **📑 Call an audit** (on `/firm` or a floor's 1D view) picks the teams, tests, artifacts, depth, models, budget cap and time, shows an *estimated* cost, and starts an engagement once you confirm. Each reviewer works in its own read-only, remote-less checkout of the project pinned to one commit, with none of the project's agent instructions and no GitHub credentials; it interviews its Lead with `office-workers firm ask`, the Lead answers with `office-workers firm answer`, and the Partner delivers one report (findings, root causes, re-forecast timeline, expectations vs reality, worker performance, recommendations). Spend is held to the cap: warned at 80%, wrapped up at 100%. Details: [docs/firm.md](docs/firm.md).
+
 ---
 
 ## 4. How work flows

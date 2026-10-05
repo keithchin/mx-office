@@ -3,6 +3,7 @@
 // fix it. Pure: the tests import it.
 
 import type { FloorInfo, GhPull, LiveAppState, WorkerInfo } from '../../../shared/protocol';
+import type { FirmFloorStatus } from '../../../shared/firm/engagement';
 import type { Escalation } from '../../../shared/roster/escalation';
 import type { RosterView } from '../../../shared/roster/types';
 import type { SetupView } from '../../../shared/wizard';
@@ -17,9 +18,10 @@ export type NeedTarget =
   | { to: 'pr'; number: number }
   | { to: 'setup' }
   | { to: 'live' }
-  | { to: 'floor'; floor: string };
+  | { to: 'floor'; floor: string }
+  | { to: 'firm'; url: string };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'paused' | 'pr' | 'setup' | 'live' | 'floor';
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit';
 
 export interface NeedItem {
   /** Stable across redraws. */
@@ -49,6 +51,8 @@ export interface NeedsInput {
   /** The setup panel's view of a toolkit project, when it has one for this floor. */
   setup?: SetupView;
   live?: LiveAppState | null;
+  /** The Firm's audit of this floor (ui/firm/banner.ts), when there's something to say. */
+  firm?: FirmFloorStatus;
 }
 
 const URGENCY_RANK: Record<Escalation['urgency'], number> = { critical: 0, urgent: 1, important: 2, info: 3 };
@@ -105,6 +109,12 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
   // The floor's live app failed to start.
   if (i.live && i.live.floor === i.floor && i.live.status === 'failed') {
     out.push({ key: 'live', kind: 'live', icon: '🌐', text: `The live app failed${i.live.message ? `: ${i.live.message}` : ''}`, since: i.live.since, level: 'warn', action: 'Live app', target: { to: 'live' } });
+  }
+  // The Firm: its report on this floor is in, or its audit is past 80% of the budget.
+  if (i.firm && i.firm.floor === i.floor) {
+    const f = i.firm;
+    if (f.reportReady) out.push({ key: `audit-${f.reportReady.report}`, kind: 'audit', icon: '📑', text: 'Audit report ready from The Firm', since: f.reportReady.at, level: 'warn', action: 'Read', target: { to: 'firm', url: `/firm?report=${encodeURIComponent(f.reportReady.report)}` } });
+    if (f.budgetWarn) out.push({ key: `audit-budget-${f.budgetWarn.engagement}`, kind: 'audit', icon: '📑', text: `Audit budget at ${Math.min(100, Math.round((f.budgetWarn.spent / f.budgetWarn.budget) * 100))}%: $${f.budgetWarn.spent.toFixed(2)} of $${f.budgetWarn.budget.toFixed(2)}`, level: 'warn', action: 'View', target: { to: 'firm', url: '/firm' } });
   }
   // 7. Other floors where someone is waiting.
   for (const f of i.floors) {

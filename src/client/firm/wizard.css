@@ -1,0 +1,40 @@
+/* Call an audit (firm/wizard.ts): the form beside a sticky estimate, then the confirmation. Office tokens,
+   with the Firm's brass where they're defined (on /firm) and the accent where they aren't (the 1D view). */
+
+.modal.firm-wizard { width: min(980px, 100%); }
+.modal.firm-wizard > header { background: var(--firm-navy, var(--paper-2)); color: var(--firm-on-navy, var(--ink)); }
+.firm-wizard header h2 { margin: 0; font-size: 18px; }
+.firm-wiz-sub { font-size: 12px; font-weight: 700; opacity: .8; flex: 1; }
+.firm-wiz { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 14px; padding: 14px 16px; overflow: auto; }
+@media (max-width: 760px) { .firm-wiz { grid-template-columns: 1fr; } }
+.firm-wiz-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.firm-field { margin: 0; padding: 8px 10px 10px; border: 2px solid var(--rule-strong); border-radius: 12px; min-width: 0; }
+.firm-field legend { padding: 0 6px; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.firm-checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.firm-check { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border: 2px solid var(--line); border-radius: 999px; font-size: 12.5px; font-weight: 800; cursor: pointer; background: var(--card); }
+.firm-check.on { background: var(--good-soft); }
+.firm-check input { margin: 0; }
+.firm-check:has(input:disabled) { opacity: .75; cursor: default; }
+.firm-wiz-revs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.firm-wiz-revs li { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.firm-input { height: 34px; border: 2px solid var(--line); border-radius: 10px; padding: 0 8px; background: var(--card); color: var(--ink); font: 700 13px var(--font); }
+.firm-input.small { height: 30px; font-size: 12px; }
+.firm-input.num { width: 90px; }
+.firm-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; font-size: 13px; font-weight: 800; }
+.firm-seg { display: flex; gap: 6px; }
+.firm-seg .btn.on { background: var(--ink); color: var(--on-ink); }
+.firm-estimate { position: sticky; top: 0; align-self: start; padding: 12px; border: 3px solid var(--line); border-radius: 14px; background: var(--card); box-shadow: 0 3px 0 var(--edge); border-top: 6px solid var(--firm-brass, var(--accent)); }
+.firm-estimate.over { border-top-color: var(--bad); }
+.firm-est-total { display: flex; flex-direction: column; }
+.firm-est-total b { font: 900 30px/1.1 var(--font); }
+.firm-est-total small { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.firm-estimate ul { list-style: none; margin: 10px 0; padding: 0; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+.firm-estimate li { display: flex; justify-content: space-between; gap: 6px; font-weight: 800; }
+.firm-estimate li span { color: var(--muted); font-weight: 700; }
+.firm-est-note { font-size: 11.5px; color: var(--muted); margin: 0; line-height: 1.4; }
+.firm-est-warn { font-size: 12px; color: var(--bad-ink); font-weight: 800; margin: 8px 0 0; }
+.firm-wiz-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 16px; border-top: 3px solid var(--line); background: var(--paper-2); }
+.firm-wiz-foot .btn.firm-brass { background: var(--firm-brass, var(--accent)); color: #1b1b2a; }
+.firm-confirm { padding: 14px 18px; overflow: auto; font-size: 14px; line-height: 1.5; }
+.firm-confirm-list { margin: 6px 0 10px; padding-left: 18px; }
+.firm-confirm-money { font-weight: 900; padding: 8px 10px; border-radius: 10px; background: var(--warn-soft); border: 2px solid var(--line); }
