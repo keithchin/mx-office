@@ -25,6 +25,7 @@ Around the teams:
 - **🏛️ The Firm** (`/firm`): independent Reviewer Agents that audit a project from outside its team and deliver one report to you.
 - **🧾 Audit log**: who did what and when, per floor and office-wide, hash-chained.
 - **💬 Team chatter**: what the agents say to each other, as a live thread on each Command Center.
+- **🎨 Five color themes**: Default, Dark, Terminal, and Clean (Light) / Clean (Dark), which look like VS Code and show no emoji.
 
 ## Quick start
 

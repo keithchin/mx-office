@@ -9,6 +9,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 Merged into staging, live after the next restart.
 
 ### New
+- **🎨 Clean (Light) and Clean (Dark)** themes: plain and quiet like VS Code's classic light and dark
+  themes. Neutral greys, a blue accent, a sans-serif font with a strict type scale and no heavy weights,
+  small corners and 1px borders, flat buttons and tabs, and no emoji anywhere (line icons on buttons
+  that were only an emoji). The 🎨 button now opens a list of all five themes.
 - **📚 Documentation at `/docs`**: the whole office explained, in the office's themes: a sidebar of
   sections (Get Started, Concepts, Using the Office, Teams & Agents, Automation, Integrations,
   Administration, Reference, Troubleshooting, FAQ), search as you type, "On this page", deep links,

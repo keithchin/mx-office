@@ -36,4 +36,4 @@ The **2D view** (`/pixel?floor=<id>`) draws the floor from above in pixel art, w
 
 Drag to pan, Ctrl+wheel or pinch to zoom. The footer shows worker counts, **🙋 Next waiting**, the keys and a legend.
 
-The 2D view follows the **🎨** theme: Default as drawn, Dark as a blue dusk with warm lamp pools, Terminal in green phosphor.
+The 2D view follows the **🎨** theme: Default as drawn, Dark as a blue dusk with warm lamp pools, Terminal in green phosphor, Clean (Light) almost untinted, Clean (Dark) a neutral grey night.

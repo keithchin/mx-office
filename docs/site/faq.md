@@ -204,8 +204,6 @@ A line of the audit log was edited, removed or moved after it was written. Each 
 
 In **💬 Team chatter** on the Command Center, beside Recent activity: escalations, relays, standups, nudges, subagent tasks and reviews, handoffs, PR hand-overs, journal lines and The Firm's interviews. Filter by **Between agents**, **With me** or one person. See [Team chatter](using-the-office/command-center.md#team-chatter).
 
-## Coming soon
+### Can the office look plainer, without emoji?
 
-### What's coming next?
-
-**Clean light / Clean dark** themes are being built on another branch. They'll be in the [release notes](release-notes.md) when they land.
+Yes: click **🎨** and pick **Clean (Light)** or **Clean (Dark)**. They look like VS Code's classic themes, hide every emoji and show line icons on buttons that only had one. See [Color themes](using-the-office/top-bar-and-menu.md#color-themes).

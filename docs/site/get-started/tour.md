@@ -19,7 +19,7 @@ This page shows where everything is. Each screen has its own page under [Using t
 
 ## The top bar
 
-On the 1D and 2D views, left to right: **🏠** (home), the **floor** picker, the **view** dropdown (1D, 2D, 3D, Retro), **🎨** (color theme: Default, Dark, Terminal) and **☰** (the menu). See [Top bar & menu](../using-the-office/top-bar-and-menu.md).
+On the 1D and 2D views, left to right: **🏠** (home), the **floor** picker, the **view** dropdown (1D, 2D, 3D, Retro), **🎨** (color theme: Default, Dark, Terminal, Clean (Light), Clean (Dark)) and **☰** (the menu). See [Top bar & menu](../using-the-office/top-bar-and-menu.md).
 
 ## The tabs of a project (1D view)
 

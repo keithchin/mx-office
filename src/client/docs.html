@@ -7,7 +7,7 @@
     <title>Docs · Agent Office</title>
     <link rel="icon" href="/favicon.svg" />
     <!-- The color theme picked on this browser (ui/colortheme.ts), set before the page is drawn so it never flashes the wrong one. -->
-    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(t!=="default"&&t!=="dark"&&t!=="terminal")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"default";document.documentElement.dataset.theme=t}catch(e){}</script>
+    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(["default","dark","terminal","clean-light","clean-dark"].indexOf(t)<0)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"default";document.documentElement.dataset.theme=t}catch(e){}</script>
   </head>
   <body class="lite docs-page">
     <!-- The documentation site (docs.ts): docs/site/*.md, built into docs/site.json. Laid out like docs.mendix.com:
