@@ -36,6 +36,8 @@ export interface SetupDeps {
 }
 
 const MIN = 60_000;
+/** The project's client and team settings, committed at the repository's root. */
+export const PROJECT_FILE = 'agent-office.project.json';
 /** Today on the office's clock (the register's dates are the people's dates, not UTC's). */
 const today = () => {
   const d = new Date();
@@ -183,7 +185,8 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     },
 
     async settings(job) {
-      const f = file(job, '.agent-office/project.json');
+      // Committed with the project (agent-office.project.json at its root), so the client portal and the team model on any office see the same client and team.
+      const f = file(job, PROJECT_FILE);
       let saved: Record<string, unknown> = {};
       try {
         saved = JSON.parse(readFileSync(f, 'utf8')) as Record<string, unknown>;
