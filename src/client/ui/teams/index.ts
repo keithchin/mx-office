@@ -18,7 +18,7 @@ export { teamPicker } from './retag';
 export interface SubBoards {
   /** The main board's tags, filter bar and per-team counts; `redraw` draws the board again (a chip clicked). */
   boardView(redraw: () => void): BoardView;
-  /** Draws the 🧩 Teams tab into `root`. */
+  /** Draws the 🧩 Team boards tab into `root`. */
   renderPage(root: HTMLElement): void;
   /** Every server message (the roster changed). */
   route(msg: ServerMsg): void;

@@ -1,7 +1,8 @@
 // Getting your attention when the office isn't the tab you're looking at: desktop notifications
-// for workers that need input or finish (the tab title counts them too, see main.ts).
+// for workers that need input or finish (the tab title counts them too, see main.ts), and for urgent
+// or critical escalations to the Project Manager (server/roster/escalations.ts).
 
-import type { WorkerInfo } from '../shared/protocol';
+import type { RosterAlert, WorkerInfo } from '../shared/protocol';
 import { alertDetail } from '../shared/status';
 
 export type NotifyPermission = NotificationPermission | 'unsupported';
@@ -60,6 +61,22 @@ export class DesktopNotifier {
       if (this.shown.get(w.id) === n) this.shown.delete(w.id);
     };
     this.shown.set(w.id, n);
+  }
+
+  /**
+   * An urgent or critical escalation was raised to the Project Manager. It stays up until clicked: it
+   * blocks a Lead's work. `open` shows it (the board's project console).
+   */
+  escalation(a: RosterAlert, open: () => void) {
+    if (!this.enabled() || notifyPermission() !== 'granted') return;
+    if (!document.hidden && document.hasFocus()) return;
+    const n = this.show(a.title, { body: a.body, tag: `escalation-${a.id}`, requireInteraction: a.urgency === 'critical' });
+    if (!n) return;
+    n.onclick = () => {
+      window.focus();
+      n.close();
+      open();
+    };
   }
 
   /** Takes down notifications for workers nobody needs to get to any more (someone else did). */

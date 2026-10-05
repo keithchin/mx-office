@@ -1,6 +1,6 @@
-// The Team tab's org chart: the Project Manager over the four Leads, each card with its fixed name,
+// The Team tab's org chart: the Project Coordinator over the four Leads, each card with its fixed name,
 // where it stands (working, idle, benched…), its model and cost, its team's subagents and the newest
-// entry in its team journal; and what the CTO can do to it (hire or wake, bench, rename, change model).
+// entry in its team journal; and what the Project Manager can do to it (hire or wake, bench, rename, change model).
 
 import { CLAUDE_MODEL_NAMES, claudeModelName } from '../../../shared/providers';
 import { ROLE_BY_ID } from '../../../shared/roster/roles';

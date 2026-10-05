@@ -178,7 +178,7 @@ const kanban: KanbanActions = {
   },
 };
 usePreviewNet(net);
-// Sub-boards (ui/teams/): team tags and a team filter on the board, and a page per team on 🧩 Teams.
+// Sub-boards (ui/teams/): team tags and a team filter on the board, and a page per team on 🧩 Team boards.
 const teams = subBoards(
   net,
   { kanban, openWorker, openPull: kanban.openPull, liveChip: (el) => live.mountChip(el), openApprovals: () => (team.showPane('approvals'), showTab('team')) },

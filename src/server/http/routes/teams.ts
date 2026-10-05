@@ -1,6 +1,6 @@
 // The sub-boards' routes (docs/teams.md, "Sub-boards"): GET what a team's page reads from the project
 // (its journal, memos, design artifacts, the newest standup), and POST to make the `team:` labels the
-// CTO is about to tag with. Reading is for anyone signed in; making labels is the CTO's (an admin).
+// Project Manager is about to tag with. Reading is for anyone signed in; making labels is the Project Manager's (an admin).
 
 import { isCardTeam } from '../../../shared/roster/card-team.js';
 import { envDryRun } from '../../roster/issues.js';
@@ -34,7 +34,7 @@ export const teamRoutes = {
       if (!sameOrigin(req, ctx.cfg)) return send(res, 403, { error: 'Forbidden' });
       const floor = floorParam(ctx, url);
       if (!floor) return send(res, 404, { error: 'No such floor' });
-      if (!ctx.meOf(session.account?.id).admin) return send(res, 403, { error: 'Only the CTO (an admin) can tag cards with a team' });
+      if (!ctx.meOf(session.account?.id).admin) return send(res, 403, { error: 'Only the Project Manager (an admin) can tag cards with a team' });
       const dryRun = envDryRun() || rosterOf(ctx).data(floor.id).settings.dryRunIssues;
       const r = await ensureTeamLabels(floor, dryRun);
       return r.error ? send(res, 502, r) : send(res, 200, r);

@@ -1,11 +1,13 @@
 // The panels a team's page has for its own lane (ui/teams/page.ts), each made of data the office already
-// has: Testing sees the open PRs' CI scorecards and what's failing (ui/prchecks.ts), Development the
-// open PRs with their checks and the live app, Analysis its memos and the analyzer's ranking for the
+// has: Testing sees the open PRs' CI scorecards and what's failing (ui/prchecks.ts), Development its
+// own open PRs (the Development team's, by the same rule as the board's tags) with their checks and the
+// live app, Analysis its memos and the analyzer's ranking for the
 // floor (GET /api/analysis), Design its artifacts and the design approvals, Management the newest
 // standup and the approvals queue (the roster). Nothing here polls or asks a model.
 
 import type { AnalysisReport } from '../../../shared/analysis';
 import type { GhPull } from '../../../shared/protocol';
+import { pullTeam } from '../../../shared/roster/card-team';
 import type { TeamId } from '../../../shared/roster/roles';
 import type { TeamPageData } from '../../../shared/roster/team-page';
 import type { RosterView } from '../../../shared/roster/types';
@@ -14,6 +16,7 @@ import { h, openModal, timeAgo } from '../dom';
 import { markdownFile } from '../markdown';
 import { prChecksPanel } from '../prchecks';
 import { openStandupWindow } from '../roster';
+import { teamWorld } from './world';
 
 export interface PanelDeps {
   openPull(p: GhPull): void;
@@ -120,7 +123,10 @@ export function teamPanels(team: TeamId, v: RosterView | undefined, data: TeamPa
     // The chip goes into an .sm-name, where it sits in the project summary too.
     const chip = h('div.tm-live', {}, h('span.sm-name.tm-live-at'));
     deps.liveChip(chip);
-    return [panel('🌐 Live app', chip), panel('🔀 Open PRs', prs.length ? h('ul.tm-prs', {}, ...prs.slice(0, PRS_SHOWN * 2).map((p) => prRow(p, deps, false))) : empty('No open pull requests.'))];
+    // Only Development's: a `team:development` label, else a Lead Developer author, else the issue it closes.
+    const world = teamWorld();
+    const dev = prs.filter((p) => pullTeam(p, world) === 'development');
+    return [panel('🌐 Live app', chip), panel('🔀 Development PRs', dev.length ? h('ul.tm-prs', {}, ...dev.slice(0, PRS_SHOWN * 2).map((p) => prRow(p, deps, false))) : empty(prs.length ? `No open Development pull requests (${prs.length} open in other teams' lanes).` : 'No open pull requests.'))];
   }
   if (team === 'analysis') {
     const rank = h('div', {}, empty('Loading the ranking…'));
@@ -130,11 +136,11 @@ export function teamPanels(team: TeamId, v: RosterView | undefined, data: TeamPa
   if (team === 'design') {
     const approvals = (v?.approvals ?? []).filter((a) => a.team === 'design');
     return [
-      panel('✅ Design approvals', approvals.length ? h('ul.tm-files', {}, ...approvals.map((a) => h('li', {}, h('b', {}, a.title), a.detail ? ` — ${a.detail}` : ''))) : empty('Nothing of Design waiting on the CTO.')),
+      panel('✅ Design approvals', approvals.length ? h('ul.tm-files', {}, ...approvals.map((a) => h('li', {}, h('b', {}, a.title), a.detail ? ` — ${a.detail}` : ''))) : empty('Nothing of Design waiting on the Project Manager.')),
       panel('🖼️ Design artifacts', data ? fileList(data.design, 'No design/ folder in the project yet.') : empty('Loading…')),
     ];
   }
-  // Management: the standup and what waits on the CTO.
+  // Management: the standup and what waits on the Project Manager.
   const last = v?.standups[0];
   return [
     panel(
@@ -144,6 +150,6 @@ export function teamPanels(team: TeamId, v: RosterView | undefined, data: TeamPa
         : empty('No standup yet: ▶️ Run standup on the 👥 Team tab.'),
       data?.standup ? h('p.tm-dim', {}, 'In the repo: ', h('button.tm-link', { type: 'button', onclick: () => void openDoc(data.standup!) }, data.standup)) : null,
     ),
-    panel('✅ Approvals', h('p', {}, h('b.tm-big', {}, String(v?.approvals.length ?? 0)), ' waiting on the CTO '), h('button.btn.small', { type: 'button', onclick: deps.openApprovals }, 'Open the approvals →')),
+    panel('✅ Approvals', h('p', {}, h('b.tm-big', {}, String(v?.approvals.length ?? 0)), ' waiting on the Project Manager '), h('button.btn.small', { type: 'button', onclick: deps.openApprovals }, 'Open the approvals →')),
   ];
 }

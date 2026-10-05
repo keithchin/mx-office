@@ -24,7 +24,7 @@ export interface SummaryAgent {
   quietMs?: number;
 }
 
-export type ActivityKind = 'started' | 'finished' | 'needs' | 'pr-opened' | 'pr-merged' | 'pr-closed' | 'approved' | 'issue-opened' | 'issue-closed';
+export type ActivityKind = 'started' | 'finished' | 'needs' | 'pr-opened' | 'pr-merged' | 'pr-closed' | 'approved' | 'issue-opened' | 'issue-closed' | 'team';
 
 export interface ActivityItem {
   at: number;

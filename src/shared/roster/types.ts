@@ -2,6 +2,7 @@
 // role's member, the standups and the proposals the Leads made in them.
 
 import type { AutonomyLevel, DecisionKind } from './autonomy.js';
+import type { Escalation } from './escalation.js';
 import type { RoleId, TeamId } from './roles.js';
 import type { StandupSchedule } from './schedule.js';
 
@@ -14,6 +15,11 @@ export interface RosterSettings {
   costCaps: Partial<Record<AutonomyLevel, number>>;
   /** Approved proposals are recorded but no GitHub issue is made: for trying the office out. */
   dryRunIssues: boolean;
+  /**
+   * When a Lead's turn ends right after one of its subagents finished, the office prompts it once to
+   * review that result per its Playbook and continue or escalate (on by default; see roster/nudge.ts).
+   */
+  reviewNudge: boolean;
 }
 
 /**
@@ -57,7 +63,7 @@ export interface Proposal {
   title: string;
   detail: string;
   status: ProposalStatus;
-  /** Why it was rejected, or what the CTO wants changed. */
+  /** Why it was rejected, or what the Project Manager wants changed. */
   reason?: string;
   issue?: { number?: number; url?: string; dryRun?: boolean; error?: string };
   decidedBy?: string;
@@ -90,17 +96,18 @@ export interface Standup {
   proposalIds: string[];
   /** The compiled page, markdown: what docs/standups/<date>.md holds. */
   page?: string;
-  /** Where the page went in the repo: the PM's worktree, when the PM was there to commit it. */
+  /** Where the page went in the repo: the Project Coordinator's worktree, when it was there to commit it. */
   savedTo?: string;
 }
 
 export interface ApprovalItem {
   id: string;
-  kind: 'proposal' | 'merge' | 'cap';
+  kind: 'proposal' | 'merge' | 'cap' | 'escalation';
   title: string;
   detail: string;
   team?: TeamId;
   proposalId?: string;
+  escalationId?: string;
   url?: string;
 }
 
@@ -112,6 +119,8 @@ export interface RosterView {
   standups: Omit<Standup, 'page'>[];
   proposals: Proposal[];
   approvals: ApprovalItem[];
+  /** The open escalations (loudest first) and the latest resolved ones: the project console's cards. */
+  escalations: Escalation[];
   /** What the floor's agents spent today, in dollars, and the cap that applies at its level. */
   spentToday: number;
   cap?: number;
@@ -121,6 +130,6 @@ export interface RosterView {
   nextStandupAt?: number;
   lastStandupAt?: number;
   activitySinceStandup: boolean;
-  /** May change the settings and decide on proposals. */
+  /** May change the settings, decide on proposals and answer escalations: the Project Manager. */
   admin: boolean;
 }

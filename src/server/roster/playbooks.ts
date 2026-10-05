@@ -3,12 +3,15 @@
 // a subagent file per team member (.claude/agents/<id>.md, adapted from the mxcli-project-toolkit's
 // agent stubs), the team journals and a lessons Playbook. Written into the folder the Lead works in
 // when it's hired, so they land in the repo with its first pull request. The autonomy level is baked
-// into every Playbook, and they're written again when it changes.
+// into every Playbook (with the Lead review protocol and its escalation thresholds), and they're
+// written again when it changes. The human is always "the Project Manager"; the coordinating agent
+// (role id `pm`) is "the Project Coordinator".
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { autonomyBrief, type AutonomyLevel } from '../../shared/roster/autonomy.js';
+import { autonomyBrief, HUMAN_FULL, reviewBrief, type AutonomyLevel } from '../../shared/roster/autonomy.js';
+import { teamLabel } from '../../shared/roster/card-team.js';
 import { journalPath, playbookMirror, playbookPath, ROLE_BY_ID, ROLES, standupPath, type RoleDef, type RoleId, type SubagentDef, type TeamId } from '../../shared/roster/roles.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
@@ -52,10 +55,13 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
   switch (role.id) {
     case 'pm':
       return [
-        '## Running the team',
+        '## Coordinating the team',
+        `- You are the Project Coordinator, an agent. The Project Manager is the human who owns the project: you relay to them and summarise for them, you never decide for them.`,
         `- Read every team journal (\`docs/team/*.md\`) at the start of a session and before a standup; summarise, don't relay chatter.`,
-        `- The office runs the standup: it asks each active Lead, reads the journals of the benched ones, and drafts \`${standupPath('YYYY-MM-DD')}\`. When it hands you the draft, add a short **Summary** at the top (≤ 5 lines: progress, risks, what needs the CTO), then commit and push it.`,
-        '- When the office tells you the CTO\'s decisions on proposals, note them in `docs/team/management.md` and tell the Lead concerned through its journal (or `office-workers tell` if it is hired and the decision is urgent).',
+        `- The office runs the standup: it asks each active Lead, reads the journals of the benched ones, and drafts \`${standupPath('YYYY-MM-DD')}\`. When it hands you the draft, add a short **Summary** at the top (≤ 5 lines: progress, risks, what needs the Project Manager, open escalations), then commit and push it.`,
+        '- When the office tells you about new escalations, note them in `docs/team/management.md` and put them in the next standup summary; never answer one yourself: the Project Manager answers on the project console and the office sends the answer to whoever raised it.',
+        '- Escalate yourself (`office-workers escalate`) only what affects the whole project: a cross-team conflict, a slipping milestone, the budget.',
+        '- When the office tells you the Project Manager\'s decisions on proposals, note them in `docs/team/management.md` and tell the Lead concerned through its journal (or `office-workers tell` if it is hired and the decision is urgent).',
         '- Hiring: Leads are hired from the office\'s Team tab with their fixed names. Do not hire extra workers for a Lead\'s job; a Lead may hire one only for real parallel work (e.g. two test suites).',
       ];
     case 'lead-designer':
@@ -84,27 +90,28 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
   return [
     '---',
     `name: team-${role.id}`,
-    `description: "The ${role.title}'s Playbook for ${ctx.project}: mission, rights, what needs the CTO at the current autonomy level, journal etiquette and the one-writer rule. Read at the start of every session as ${ctx.name}."`,
+    `description: "The ${role.title}'s Playbook for ${ctx.project}: mission, rights, what needs the Project Manager at the current autonomy level, the review protocol, journal etiquette and the one-writer rule. Read at the start of every session as ${ctx.name}."`,
     '---',
     '',
     `# ${role.icon} ${role.title} — ${ctx.name}`,
     '',
-    `<!-- Written by Agent Office from its team templates. Re-written when the CTO changes the autonomy level; edit the office's templates, not this copy. -->`,
+    `<!-- Written by Agent Office from its team templates. Re-written when the Project Manager changes the autonomy level; edit the office's templates, not this copy. -->`,
     '',
     `**Mission.** ${role.mission}`,
     '',
-    `**The team.** ${who}. The CTO is the human who owns the project.`,
+    `**The team.** ${who}. You all work for ${HUMAN_FULL}; the Project Coordinator is an agent that coordinates the Leads and relays escalations to them.`,
     '',
     '## Your rights',
     ...role.rights.map((r) => `- ${r}`),
     '',
-    '## What needs the CTO',
+    '## What needs the Project Manager',
     autonomyBrief(ctx.level),
     '',
     '## Your team (Claude Code subagents in your session)',
     team,
-    'Dispatch them with the Agent tool for drafting, checking and research; keep every decision, every question to the CTO and every write to the app in your own session. A subagent returns the file it wrote, not a summary of it.',
+    'Dispatch them with the Agent tool for drafting, checking and research; keep every decision, every question to the Project Manager and every write to the app in your own session. A subagent returns the file it wrote, not a summary of it.',
     '',
+    ...(role.subagents.length ? ['## The review protocol (after every subagent result)', reviewBrief(ctx.level, journalPath(role.team)), ''] : []),
     ...toolkitSection(role),
     '## The one-writer rule',
     ONE_WRITER,
@@ -112,8 +119,9 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     '## Journal etiquette',
     `- Your team's journal is \`${journalPath(role.team)}\`. Append dated entries at the bottom, headed \`## YYYY-MM-DD HH:MM — <what>\` (e.g. \`— Standup\`, \`— Handoff\`, \`— Decision\`). Never rewrite old entries.`,
     '- Keep entries short and factual: decisions and why, what changed, what is blocked, links to PRs/issues. No chatter: the other Leads read it instead of messaging you.',
-    '- Anything that needs the CTO goes under `### Proposals` as `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget.',
+    '- Anything that needs the Project Manager goes under `### Proposals` as `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget.',
     '- Commit journal updates with your work, so the team sees them once your branch lands.',
+    `- Open pull requests with your team's label: \`gh pr create --label ${teamLabel(role.team)} …\`, so the PR lands on your team's board.`,
     '',
     '## Lessons',
     `Durable lessons (a gotcha, a working recipe, a mistake not to repeat) go in \`${ctx.lessons}\` — append, one dated bullet each. If \`mxcli brain capture\` is available, capture them there too.`,
@@ -137,7 +145,8 @@ export function subagentFile(sub: SubagentDef, lead: RoleDef, project: string): 
     '',
     `- Read the project's CLAUDE.md, the ${lead.title}'s Playbook (\`${playbookPath(lead.id)}\`) and the team journal (\`${journalPath(lead.team)}\`) before you start.`,
     '- You never run `mxcli exec` and never write the `.mpr`: only the Lead Developer applies changes to the app.',
-    '- Never ask the CTO anything yourself: report open questions to the Lead who dispatched you.',
+    `- Never ask the Project Manager (the human) anything yourself, and never escalate: report open questions, blockers and anything that changes scope or design to the ${lead.title} who dispatched you. The ${lead.title} reviews every result you return and decides whether to accept it, send it back or escalate it.`,
+    '- End every result with: **Done** (what you did, against the acceptance criteria), **Checks** (what you ran and what it said), **Open** (questions, assumptions, anything blocked), **Next** (the step you would take next).',
     '- Return the file(s) you wrote and anything you had to assume, not a summary of them.',
     '',
   ].join('\n');

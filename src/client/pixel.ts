@@ -100,7 +100,7 @@ const MEMBER_STATUS: Record<MemberView['status'], string> = { 'not-hired': 'not 
 /** Its signpost's second line: who leads the zone and how they are (nothing until the team's fetched). */
 function leadLine(m: MemberView | undefined): string | undefined {
   if (!m) return undefined;
-  return `${m.role === 'pm' ? 'PM' : 'Lead'}: ${m.name} · ${MEMBER_STATUS[m.status]}`;
+  return `${m.role === 'pm' ? 'Coordinator' : 'Lead'}: ${m.name} · ${MEMBER_STATUS[m.status]}`;
 }
 /** A zone's hover card: its Lead, their model, and how to hire them when they aren't. */
 function zoneLine(team: MemberView['team']): () => string {

@@ -1,6 +1,6 @@
 // What the office keeps of a floor's project team, in its own data dir (roster/<floor>.json): the
 // settings, each role's member (its fixed name, its model, the worker it is now, its last handoff),
-// the standups and their proposals, and the floor's spend today for the cost cap. Saved a moment
+// the standups and their proposals, the escalations raised to the Project Manager, and the floor's spend today for the cost cap. Saved a moment
 // after each change, so a burst of worker updates writes once.
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
@@ -8,6 +8,7 @@ import path from 'node:path';
 import { DEFAULT_AUTONOMY, isAutonomyLevel, type AutonomyLevel } from '../../shared/roster/autonomy.js';
 import { cleanName, isRoleId, pickNames, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { cleanSchedule, DEFAULT_SCHEDULE } from '../../shared/roster/schedule.js';
+import type { Escalation } from '../../shared/roster/escalation.js';
 import type { Proposal, RosterSettings, Standup } from '../../shared/roster/types.js';
 
 /** Where a member is in its life: never hired, a worker now, writing its handoff, or benched. */
@@ -31,6 +32,8 @@ export interface RosterData {
   members: Record<RoleId, MemberRecord>;
   standups: Standup[];
   proposals: Proposal[];
+  /** What agents raised to the Project Manager (roster/escalations.ts), open and answered. */
+  escalations: Escalation[];
   /** The last time anyone on the floor got to work: a standup only runs when there was some since the last. */
   lastActivityAt?: number;
   lastStandupAt?: number;
@@ -43,9 +46,10 @@ export interface RosterData {
 export const DEFAULT_IDLE_MINUTES = 30;
 const STANDUPS_KEPT = 30;
 const PROPOSALS_KEPT = 300;
+const ESCALATIONS_KEPT = 200;
 
 export function defaultSettings(): RosterSettings {
-  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false };
+  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true };
 }
 
 /** Settings from what was saved or sent, anything malformed left as it was in `base`. */
@@ -64,6 +68,8 @@ export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings
     schedule: s.schedule === undefined ? base.schedule : cleanSchedule(s.schedule),
     costCaps: caps,
     dryRunIssues: typeof s.dryRunIssues === 'boolean' ? s.dryRunIssues : base.dryRunIssues,
+    // A roster saved before the review nudge existed has it on, like a fresh one.
+    reviewNudge: typeof s.reviewNudge === 'boolean' ? s.reviewNudge : (base.reviewNudge ?? true),
   };
 }
 
@@ -72,7 +78,7 @@ export function freshRoster(rng: () => number = Math.random): RosterData {
   const names = pickNames(rng);
   const members = {} as Record<RoleId, MemberRecord>;
   for (const r of ROLES) members[r.id] = { name: names[r.id], model: r.model, phase: 'none' };
-  return { settings: defaultSettings(), members, standups: [], proposals: [], harvested: {}, spend: { day: '', usd: 0, seen: {} } };
+  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} } };
 }
 
 /** A saved roster, made whole: a role added since it was saved gets a name, a bad field its default. */
@@ -91,6 +97,7 @@ export function reviveRoster(raw: unknown, rng: () => number = Math.random): Ros
     members,
     standups: Array.isArray(r.standups) ? r.standups.slice(-STANDUPS_KEPT) : [],
     proposals: Array.isArray(r.proposals) ? r.proposals.slice(-PROPOSALS_KEPT) : [],
+    escalations: Array.isArray(r.escalations) ? r.escalations.filter((e) => e && typeof e === 'object' && typeof e.id === 'string').slice(-ESCALATIONS_KEPT) : [],
     lastActivityAt: typeof r.lastActivityAt === 'number' ? r.lastActivityAt : undefined,
     lastStandupAt: typeof r.lastStandupAt === 'number' ? r.lastStandupAt : undefined,
     harvested: r.harvested && typeof r.harvested === 'object' ? { ...r.harvested } : {},
@@ -129,6 +136,7 @@ export class RosterFile {
     const d = this.data;
     d.standups = d.standups.slice(-STANDUPS_KEPT);
     d.proposals = d.proposals.slice(-PROPOSALS_KEPT);
+    d.escalations = d.escalations.slice(-ESCALATIONS_KEPT);
     try {
       const tmp = `${this.file}.tmp`;
       writeFileSync(tmp, JSON.stringify(d, null, 2), { mode: 0o600 });

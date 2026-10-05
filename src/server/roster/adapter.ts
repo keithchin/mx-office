@@ -8,6 +8,11 @@ import { nextFreeSeat } from '../../shared/layout.js';
 import { zoneSeat } from '../../shared/zones.js';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import { analysisOf } from '../analysis/index.js';
+import { teamLabel } from '../../shared/roster/card-team.js';
+import { gh } from '../github.js';
+import { summaryOf } from '../summary/index.js';
+import { ensureTeamLabels } from '../teams/labels.js';
+import { envDryRun } from './issues.js';
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { Roster, rosterFor } from './index.js';
@@ -37,7 +42,20 @@ export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
     cwdOf: (w: WorkerInfo) => (w.worktree ? path.resolve(floor.dir, w.worktree.path) : floor.dir),
     openPulls: () => floor.github.pulls.items.filter((p) => p.state === 'OPEN'),
     toast: (text, level) => ctx.toastFloor(floor, text, level),
-    changed: () => ctx.toFloor(floor, { t: 'roster.changed', floor: floor.id }),
+    changed: (alert) => ctx.toFloor(floor, { t: 'roster.changed', floor: floor.id, ...(alert ? { alert } : {}) }),
+    activity: (text) => summaryOf(ctx).noteTeam(floor.id, text),
+    labelPr: async (n, team) => {
+      // Dry run (the team setting, or the whole office): GitHub is left alone.
+      if (envDryRun() || rosterOf(ctx).data(floor.id).settings.dryRunIssues) return 'skipped';
+      const made = await ensureTeamLabels(floor, false);
+      if (made.error) return made.error;
+      try {
+        await gh(['pr', 'edit', String(n), '--add-label', teamLabel(team)], floor.dir);
+        return undefined;
+      } catch (err) {
+        return (err as Error).message;
+      }
+    },
   };
   adapters.set(floor, t);
   return t;

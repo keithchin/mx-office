@@ -1,6 +1,6 @@
 // The project team end to end against a fake floor: fake workers instead of Claude sessions (they cost
 // money), a stub instead of GitHub. Hiring with fixed names and Playbooks, benching idle Leads with a
-// handoff note and re-hiring them fresh, the standup with live and journal reports, the CTO's
+// handoff note and re-hiring them fresh, the standup with live and journal reports, the Project Manager's
 // decisions, the autonomy level and the cost cap.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -122,7 +122,7 @@ test('hiring a role uses its fixed name, model and Playbook, and writes the team
   assert.match(ask.prompt, /\.ai-context\/skills\/team-lead-tester\/SKILL\.md/);
   assert.match(ask.prompt, /Autonomy level 2 \(Guided\)/);
   assert.match(ask.prompt, /first session/);
-  assert.match(ask.prompt, /Your task from the CTO: Set up e2e/);
+  assert.match(ask.prompt, /Your task from the Project Manager: Set up e2e/);
   const w = floor.workers()[0];
   const cwd = floor.cwdOf(w);
   const pb = readFileSync(path.join(cwd, '.ai-context/skills/team-lead-tester/SKILL.md'), 'utf8');
@@ -246,7 +246,7 @@ test('a standup asks the Leads at work, reads the rest from their journals, and 
   assert.equal(s.savedTo, 'docs/standups/2026-10-05.md');
   assert.ok(existsSync(path.join(floor.cwdOf(pm), 'docs/standups/2026-10-05.md')));
   assert.ok(floor.prompts.some((p) => p.id === pm.id && /Summary/.test(p.text)));
-  // At level 2: the architecture change and the merge wait for the CTO; the task is the team's (an issue already).
+  // At level 2: the architecture change and the merge wait for the Project Manager; the task is the team's (an issue already).
   const props = data().proposals;
   assert.deepEqual(props.map((p) => [p.title, p.status]).sort(), [
     ['Merge PR #12', 'pending'],
@@ -255,7 +255,7 @@ test('a standup asks the Leads at work, reads the rest from their journals, and 
   ]);
   assert.deepEqual(issues.map((i) => [i.title, i.labels]), [['Track lead time per PR', ['team:analysis']]]);
   assert.equal(roster.view(floor, true).approvals.filter((a) => a.kind === 'proposal').length, 2);
-  // The CTO decides.
+  // The Project Manager decides.
   const split = props.find((p) => p.title.startsWith('Split'))!;
   const merge = props.find((p) => p.title.startsWith('Merge'))!;
   assert.match(String(await roster.standups.decide(floor, merge.id, 'reject', 'Keith')), /Say why/);
@@ -274,7 +274,7 @@ test('a standup asks the Leads at work, reads the rest from their journals, and 
   assert.equal(roster.standups.flushPm(floor), true);
   assert.equal(floor.prompts.length, before + 1);
   assert.match(floor.prompts.at(-1)!.text, /APPROVED → issue #102[\s\S]*REJECTED: Wait for the design review/);
-  // The next standup doesn't ask the CTO about the analyst's same old proposals again.
+  // The next standup doesn't ask the Project Manager about the analyst's same old proposals again.
   clock.now += 60 * MIN;
   const again = roster.standups.run(floor, 'Keith');
   if (typeof again === 'string') return assert.fail(again);
@@ -290,7 +290,7 @@ test('a dry run records an approval without asking GitHub', async () => {
   if (typeof s === 'string') return assert.fail(s);
   await new Promise((r) => setImmediate(r));
   const p = data().proposals[0];
-  assert.equal(p.status, 'pending', 'level 1: every task needs the CTO');
+  assert.equal(p.status, 'pending', 'level 1: every task needs the Project Manager');
   await roster.standups.decide(floor, p.id, 'approve', 'Keith');
   assert.deepEqual(p.issue, { dryRun: true });
   assert.equal(issues.length, 0);

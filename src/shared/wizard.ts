@@ -72,7 +72,7 @@ export const SMALL_TIER_LIMITS = '1 module, 8 screens, 25 use cases';
 
 /** The roles a project can be staffed with. The team model picks the selection up from the project's settings file. */
 export const PROJECT_ROLES = [
-  { id: 'pm', label: 'Project Manager', icon: '📋' },
+  { id: 'pm', label: 'Project Coordinator', icon: '📋' },
   { id: 'lead-designer', label: 'Lead Designer', icon: '🎨' },
   { id: 'lead-developer', label: 'Lead Developer', icon: '🧑‍💻' },
   { id: 'lead-tester', label: 'Lead Tester', icon: '🧪' },

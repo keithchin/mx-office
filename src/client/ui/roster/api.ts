@@ -1,5 +1,5 @@
 // The Team tab's calls to the office (server/http/routes/roster.ts): what the floor's team looks like,
-// one standup in full, and what the CTO does. Every action answers with the team as it is after it.
+// one standup in full, and what the Project Manager does. Every action answers with the team as it is after it.
 
 import type { RosterView, Standup } from '../../../shared/roster/types';
 import { toast } from '../dom';

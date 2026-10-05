@@ -1,10 +1,14 @@
 // What the office says to the team's agents: the first message of a hire (its Playbook, its handoff
-// note), the request for a handoff before it's benched, the standup question, and the CTO's
-// decisions. Plain functions of their inputs, so the tests can read exactly what an agent is told.
+// note), the request for a handoff before it's benched, the standup question, the Project Manager's
+// decisions and answers to escalations, and the review nudge. Plain functions of their inputs, so the
+// tests can read exactly what an agent is told. "The Project Manager" is always the human who owns the
+// project; the coordinating agent is "the Project Coordinator" (role id `pm`).
 
-import { autonomyBrief, DECISION_LABEL, type AutonomyLevel } from '../../shared/roster/autonomy.js';
+import { autonomyBrief, DECISION_LABEL, HUMAN_FULL, REVIEW_POLICY, TRIGGER_LABEL, type AutonomyLevel } from '../../shared/roster/autonomy.js';
+import { VERDICT_WORD, type Escalation, type EscalationVerdict } from '../../shared/roster/escalation.js';
 import { journalPath, playbookPath, ROLE_BY_ID, standupPath, type RoleId } from '../../shared/roster/roles.js';
 import type { Proposal } from '../../shared/roster/types.js';
+import type { SubagentResult } from '../workers/subagents.js';
 
 /** How much of a handoff note goes into a hire's first message: the rest is in the journal. */
 const HANDOFF_CHARS = 4000;
@@ -12,10 +16,11 @@ const HANDOFF_CHARS = 4000;
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}\n…(the rest is in the journal)` : s);
 
 /** The first message of a fresh hire of a role: who it is, its Playbook, and where it left off. */
-export function primePrompt(roleId: RoleId, name: string, level: AutonomyLevel, handoff?: { at: number; text: string }, task?: string): string {
+export function primePrompt(roleId: RoleId, name: string, level: AutonomyLevel, handoff?: { at: number; text: string }, task?: string, answers: string[] = []): string {
   const role = ROLE_BY_ID.get(roleId)!;
   return [
     `You are ${name}, the ${role.title} of this project's team in Agent Office. ${role.mission}`,
+    `You work for ${HUMAN_FULL}.${roleId === 'pm' ? '' : ' The Project Coordinator is the agent that coordinates the Leads and relays escalations; it is not the Project Manager.'}`,
     '',
     `Start by reading your Playbook, \`${playbookPath(roleId)}\` (also loaded as the \`team-${roleId}\` skill), the project's CLAUDE.md and your team journal \`${journalPath(role.team)}\`. The office just wrote the Playbook and any missing team files into your folder: commit them with your first change.`,
     '',
@@ -24,8 +29,9 @@ export function primePrompt(roleId: RoleId, name: string, level: AutonomyLevel, 
     handoff
       ? `This is a fresh session: your previous session was benched on ${new Date(handoff.at).toISOString().slice(0, 16).replace('T', ' ')} UTC after writing this handoff note. Pick up from it:\n\n${clip(handoff.text, HANDOFF_CHARS)}`
       : 'This is your first session on the project: get your bearings, then write a short `— Kickoff` entry in your journal (what you found, what you plan).',
+    ...(answers.length ? ['', 'While you were away, the Project Manager answered your escalations:', ...answers] : []),
     '',
-    task ? `Your task from the CTO: ${task}` : 'No task yet: once you have your bearings, say in one line what you will do next and wait for the CTO or the Project Manager.',
+    task ? `Your task from the Project Manager: ${task}` : 'No task yet: once you have your bearings, say in one line what you will do next and wait for the Project Manager or the Project Coordinator.',
   ].join('\n');
 }
 
@@ -49,30 +55,73 @@ export function standupPrompt(roleId: RoleId, date: string, stamp: string, extra
   return [
     `Standup ${date}. Append a standup entry to \`${journalPath(role.team)}\` headed \`## ${stamp} — Standup\` with these sections, short bullets each (write "- none" for an empty one):`,
     '### Done', '### Next', '### Blockers', '### Proposals',
-    'Proposals are what needs the CTO (or what you suggest the project does): one per line, `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget. Each becomes an Approve / Reject / Change card for the CTO; approved ones become GitHub issues for your team.',
+    'Proposals are what needs the Project Manager (or what you suggest the project does): one per line, `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget. Each becomes an Approve / Reject / Change card for the Project Manager; approved ones become GitHub issues for your team.',
     extra,
     "Then reply `standup posted`. Don't start new work in this turn; carry on with what you were doing afterwards.",
   ].filter(Boolean).join('\n');
 }
 
-/** To the PM, when the office has drafted the standup page in its folder. */
-export function standupCompiledPrompt(date: string, pending: number): string {
+/** To the Project Coordinator, when the office has drafted the standup page in its folder. */
+export function standupCompiledPrompt(date: string, pending: number, escalations: Escalation[] = []): string {
+  const open = escalations.filter((e) => e.status === 'open');
   return [
     `The office compiled today's standup into \`${standupPath(date)}\` in your folder, from the Leads' answers and the journals of those not at their desks.`,
-    `Add a **Summary** at the top (≤ 5 lines: progress, risks, what needs the CTO${pending ? ` — ${pending} proposal${pending === 1 ? '' : 's'} await the CTO's decision` : ''}), then commit and push it. Reply \`standup summarised\`.`,
+    `Add a **Summary** at the top (≤ 5 lines: progress, risks, what needs the Project Manager${pending ? ` — ${pending} proposal${pending === 1 ? '' : 's'} await their decision` : ''}${open.length ? ` — ${open.length} open escalation${open.length === 1 ? '' : 's'}` : ''}), then commit and push it. Reply \`standup summarised\`.`,
+    ...(open.length ? ['', 'Open escalations to the Project Manager (summarise them under **Escalations**; the Project Manager answers them on the project console, not you):', ...open.map(escalationLine)] : []),
   ].join('\n');
 }
 
-/** To the PM, the CTO's decisions on proposals since it was last told, in one message. */
+/** To the Project Coordinator, the Project Manager's decisions on proposals since it was last told, in one message. */
 export function outcomesPrompt(decided: Proposal[]): string {
   const line = (p: Proposal) => {
     const what = p.status === 'approved' ? `APPROVED${p.issue?.number ? ` → issue #${p.issue.number}` : p.issue?.dryRun ? ' (dry run: no issue made)' : ''}` : p.status === 'rejected' ? `REJECTED: ${p.reason ?? 'no reason given'}` : `CHANGE REQUESTED: ${p.reason ?? ''}`;
     return `- ${p.by} (${p.team}), ${DECISION_LABEL[p.kind]}: "${p.title}" — ${what}`;
   };
-  return [`The CTO decided on standup proposals:`, ...decided.map(line), '', 'Record them in `docs/team/management.md` and pass each on to the Lead concerned through its team journal. Reply `noted`.'].join('\n');
+  return [`The Project Manager decided on standup proposals:`, ...decided.map(line), '', 'Record them in `docs/team/management.md` and pass each on to the Lead concerned through its team journal. Reply `noted`.'].join('\n');
 }
 
-/** To a Lead at work when the CTO changes the floor's autonomy level. */
+/** To a Lead at work when the Project Manager changes the floor's autonomy level. */
 export function autonomyPrompt(level: AutonomyLevel): string {
-  return [`The CTO changed this floor's autonomy level. Your Playbook has been rewritten with it; from now on:`, '', autonomyBrief(level), '', 'Carry on. Reply `ok`.'].join('\n');
+  return [`The Project Manager changed this floor's autonomy level. Your Playbook has been rewritten with it (autonomy and review protocol); from now on:`, '', autonomyBrief(level), '', `Escalate a review outcome when: ${REVIEW_POLICY[level].rule}`, '', 'Carry on. Reply `ok`.'].join('\n');
+}
+
+// ---- The review loop -----------------------------------------------------------------------------
+
+/** The office's nudge to a Lead whose turn ended right after a subagent came back. */
+export function reviewNudgePrompt(roleId: RoleId, result: SubagentResult | undefined, level: AutonomyLevel): string {
+  const role = ROLE_BY_ID.get(roleId)!;
+  const who = result?.agent ? `\`${result.agent}\`` : 'your subagent';
+  const what = result?.task ? ` (“${result.task}”)` : '';
+  return [
+    `Review ${who}'s last result${what} per your Playbook's review protocol, then continue or escalate.`,
+    `Record \`— Review: <subagent> · <task>\` with accept / revise / escalate in \`${journalPath(role.team)}\`; on accept dispatch its next step now (level ${level}: ${REVIEW_POLICY[level].askBeforeNextStep ? 'ask the Project Manager first' : "don't leave its lane idle"}); escalate only what your level escalates.`,
+    '(Automatic nudge from Agent Office, sent once per idle period. If there is genuinely nothing left to do, say so in one line and stop.)',
+  ].join('\n');
+}
+
+/** One escalation in a line, for the Coordinator and the standup. */
+export function escalationLine(e: Escalation): string {
+  return `- [${e.fyi ? 'FYI' : e.urgency}] ${e.by}${e.team ? ` (${e.team})` : ''}: “${e.title}”${e.trigger ? ` — ${TRIGGER_LABEL[e.trigger]}` : ''}${e.recommendation ? ` · recommends: ${e.recommendation}` : ''}`;
+}
+
+/** The Project Manager's answer to an escalation, as a prompt to the agent that raised it. */
+export function escalationAnswerPrompt(e: Escalation, verdict: EscalationVerdict, text: string, by: string): string {
+  return [
+    `The Project Manager (${by}) answered your escalation “${e.title}”: ${VERDICT_WORD[verdict]}.`,
+    ...(text ? ['', text] : []),
+    '',
+    verdict === 'reject'
+      ? "Don't go ahead with it. Record the answer in your team journal, adjust the plan, and carry on with the rest of your work."
+      : 'Record the answer in your team journal and act on it now: dispatch or continue the work it unblocks, per your review protocol.',
+  ].join('\n');
+}
+
+/** To the Project Coordinator: escalations raised since it was last told, so it can relay and summarise them. */
+export function escalationsToCoordinatorPrompt(list: Escalation[]): string {
+  return [
+    `New escalation${list.length === 1 ? '' : 's'} to the Project Manager (the human) on the project console:`,
+    ...list.map(escalationLine),
+    '',
+    "Note them in `docs/team/management.md` and include them in the next standup summary. Don't answer them yourself: the Project Manager decides, and the office sends their answer to whoever raised it. If one blocks another team, tell that Lead through its journal. Reply `noted`.",
+  ].join('\n');
 }

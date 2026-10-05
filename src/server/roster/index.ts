@@ -1,19 +1,24 @@
 // The project team, as the office runs it (see docs/teams.md): per floor, each role's fixed name and
 // the worker it is now; who's idle and for how long, benching Leads that sat idle too long; the
-// floor's spend against its daily cap; and the daily standup (standup-run.ts). Everything here is
-// bookkeeping on worker updates plus a once-a-minute look: no model calls of its own, so a quiet
-// floor costs nothing. One per office, made on first use (rosterOf), like the analyzer.
+// floor's spend against its daily cap; the daily standup (standup-run.ts); the escalations raised to
+// the Project Manager (escalations.ts); and the review nudge to a Lead whose subagent just came back
+// (nudge.ts). Everything here is bookkeeping on worker updates plus a once-a-minute look: no model
+// calls of its own, so a quiet floor costs nothing. One per office, made on first use (rosterOf), like the analyzer.
 
 import path from 'node:path';
 import type { WorkerInfo, WorkerStatus } from '../../shared/protocol.js';
-import { AUTONOMY, capAt, needsCto } from '../../shared/roster/autonomy.js';
+import { AUTONOMY, capAt, needsApproval } from '../../shared/roster/autonomy.js';
 import { latestEntry } from '../../shared/roster/journal.js';
-import { ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
+import { teamFromLabels } from '../../shared/roster/card-team.js';
+import { LEADS, ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { dayIn, nextSlot } from '../../shared/roster/schedule.js';
 import type { ApprovalItem, MemberStatus, MemberView, RosterView } from '../../shared/roster/types.js';
 import { benchStep, dueForBench, isAsleepStatus, isBusyStatus } from './bench.js';
+import { forgetSubagents } from '../workers/subagents.js';
+import { Escalations } from './escalations.js';
 import { excerpt, readJournal } from './journal-io.js';
 import { Members } from './members.js';
+import { Nudges } from './nudge.js';
 import { setFloorPause } from './pause.js';
 import { StandupRunner } from './standup-run.js';
 import { RosterFile, type MemberRecord, type RosterData } from './store.js';
@@ -28,6 +33,10 @@ interface Seen {
 export class Roster {
   readonly members: Members;
   readonly standups: StandupRunner;
+  readonly escalations: Escalations;
+  readonly nudges: Nudges;
+  /** Lead pull requests the office already labelled with their team (floor:number), so it asks GitHub once. */
+  private labelled = new Set<string>();
   private files = new Map<string, RosterFile>();
   private seen = new Map<string, Seen>();
   private timer?: NodeJS.Timeout;
@@ -35,6 +44,8 @@ export class Roster {
   constructor(readonly deps: RosterDeps, tickMs = 60_000) {
     this.members = new Members(this);
     this.standups = new StandupRunner(this);
+    this.escalations = new Escalations(this);
+    this.nudges = new Nudges(this, tickMs > 0);
     if (tickMs > 0) {
       this.timer = setInterval(() => this.tick(), tickMs);
       this.timer.unref?.();
@@ -96,12 +107,16 @@ export class Roster {
       else if (benchStep(w.status, !!m.benchSawBusy, m.benchAskedAt ?? now, now) === 'finish') void this.members.finishBench(floor, role);
     }
     this.standups.onWorker(floor, role, w);
+    this.nudges.onWorker(floor, role, w);
+    if (role === 'pm') this.escalations.onCoordinator(floor, w);
+    else this.labelLeadPr(floor, role, w);
     this.touch(floor, prev?.status === w.status && !capChanged);
   }
 
   /** A worker left the floor: a member sent home by hand is no longer hired (its name and handoff stay). */
   onWorkerGone(floor: TeamFloor, workerId: string) {
     this.seen.delete(workerId);
+    forgetSubagents(workerId);
     const role = this.roleOf(floor, workerId);
     if (!role) return;
     const m = this.data(floor.id).members[role];
@@ -109,6 +124,28 @@ export class Roster {
     m.workerId = undefined;
     m.phase = m.handoff ? 'benched' : 'none';
     this.touch(floor);
+  }
+
+  /**
+   * A Lead's pull request without a `team:` label gets its team's, so it lands on that team's board
+   * (its Playbook asks for `gh pr create --label team:<team>`; this covers the ones that forgot). Only
+   * on a real floor (labelPr), once per PR, and only for a PR the office can tie to the Lead: its own,
+   * or the one open from its worktree's branch.
+   */
+  private labelLeadPr(floor: TeamFloor, role: RoleId, w: WorkerInfo) {
+    if (!floor.labelPr) return;
+    const team = ROLE_BY_ID.get(role)!.team;
+    for (const p of floor.openPulls()) {
+      if (p.number !== w.pr?.number && !(w.worktree && p.headRefName === w.worktree.branch)) continue;
+      const key = `${floor.id}:${p.number}`;
+      if (this.labelled.has(key) || teamFromLabels(p.labels)) continue;
+      this.labelled.add(key);
+      void floor.labelPr(p.number, team).then((err) => {
+        if (err === 'skipped') return;
+        if (err) floor.toast(`Couldn't label PR #${p.number} team:${team}: ${err}`, 'warn');
+        else floor.activity?.(`🏷️ Labelled ${w.name}'s PR #${p.number} team:${team}`);
+      });
+    }
   }
 
   /** The once-a-minute look: bench who's been idle too long, finish handoffs, run a due standup. */
@@ -126,6 +163,7 @@ export class Roster {
         }
       }
       this.standups.tick(floor, now);
+      this.nudges.tick(floor, LEADS.map((r) => r.id), now);
     }
   }
 
@@ -218,6 +256,7 @@ export class Roster {
       standups: d.standups.slice(-14).reverse().map(({ page: _page, ...s }) => s),
       proposals: d.proposals.slice(-100),
       approvals: this.approvals(floor, d, paused),
+      escalations: this.escalations.view(floor),
       spentToday: d.spend.usd,
       cap,
       paused,
@@ -228,19 +267,26 @@ export class Roster {
     };
   }
 
-  /** What needs the CTO at the floor's level: proposals waiting, the team's PRs to merge, a cap reached. */
+  /**
+   * What needs the Project Manager at the floor's level: open escalations (loudest first), proposals
+   * waiting, the team's PRs to merge, a cap reached.
+   */
   approvals(floor: TeamFloor, d: RosterData, paused: string | undefined): ApprovalItem[] {
     const level = d.settings.autonomy;
-    const out: ApprovalItem[] = d.proposals
+    const out: ApprovalItem[] = this.escalations
+      .view(floor)
+      .filter((e) => e.status === 'open')
+      .map((e) => ({ id: `e-${e.id}`, kind: 'escalation', title: e.title, detail: `${e.by}${e.role ? ` (${ROLE_BY_ID.get(e.role)?.title})` : ''} · ${e.fyi ? 'FYI' : e.urgency}${e.trigger ? ` · ${e.trigger}` : ''}`, team: e.team, escalationId: e.id }));
+    out.push(...d.proposals
       .filter((p) => p.status === 'pending')
-      .map((p) => ({ id: `p-${p.id}`, kind: 'proposal', title: p.title, detail: `${p.by} (${ROLE_BY_ID.get(p.role)?.title}) · ${p.kind} · standup ${p.standup}${p.detail ? ` — ${p.detail}` : ''}`, team: p.team, proposalId: p.id }));
-    if (needsCto(level, 'merge')) {
+      .map((p) => ({ id: `p-${p.id}`, kind: 'proposal', title: p.title, detail: `${p.by} (${ROLE_BY_ID.get(p.role)?.title}) · ${p.kind} · standup ${p.standup}${p.detail ? ` — ${p.detail}` : ''}`, team: p.team, proposalId: p.id }) as ApprovalItem));
+    if (needsApproval(level, 'merge')) {
       const pulls = floor.openPulls();
       for (const r of ROLES) {
         const w = this.workerOf(floor, d.members[r.id]);
         if (!w) continue;
         for (const p of pulls.filter((x) => x.number === w.pr?.number || (w.worktree && x.headRefName === w.worktree.branch))) {
-          out.push({ id: `m-${p.number}`, kind: 'merge', title: `Merge PR #${p.number}: ${p.title}`, detail: `${d.members[r.id].name} (${r.title}) · merges need the CTO at level ${level} (${AUTONOMY[level].name})`, team: r.team, url: p.url });
+          out.push({ id: `m-${p.number}`, kind: 'merge', title: `Merge PR #${p.number}: ${p.title}`, detail: `${d.members[r.id].name} (${r.title}) · merges need the Project Manager at level ${level} (${AUTONOMY[level].name})`, team: r.team, url: p.url });
         }
       }
     }

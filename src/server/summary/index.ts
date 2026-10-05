@@ -179,6 +179,11 @@ export class Summaries {
     this.seen.set(w.id, { sig, status: w.status, changedAt: Date.now() });
   }
 
+  /** Something the project team did that nothing else keeps (a review nudge, an escalation, a PR labelled). */
+  noteTeam(floor: string, text: string) {
+    this.note(floor, { at: Date.now(), kind: 'team', text });
+  }
+
   private note(floor: string, item: ActivityItem) {
     const list = this.log.get(floor) ?? [];
     list.push(item);

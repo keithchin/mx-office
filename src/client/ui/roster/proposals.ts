@@ -1,4 +1,4 @@
-// A Lead's proposal as a card for the CTO: what it is, who proposed it at which standup, and
+// A Lead's proposal as a card for the Project Manager: what it is, who proposed it at which standup, and
 // Approve (it becomes a GitHub issue labelled with the team), Reject (with the reason) or Change
 // (what to change). Decided ones say what was decided, by whom, and link the issue.
 

@@ -1,8 +1,9 @@
 // Running a standup: each Lead at work is asked for done / next / blockers / proposals (written to
 // its team journal); a benched, asleep or never-hired Lead is summarised from its journal without
 // being woken. Once everyone asked has answered (or 20 minutes have gone by), the office compiles the
-// page, hands the draft to the Project Manager to summarise and commit, and lists each proposal for
-// the CTO. The CTO's decisions go back to the PM in one message, a minute after the last one.
+// page, hands the draft to the Project Coordinator to summarise and commit (with the open escalations),
+// and lists each proposal for the Project Manager (the human). Their decisions go back to the
+// Coordinator in one message, a minute after the last one.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -21,7 +22,7 @@ import type { TeamFloor } from './types.js';
 
 /** How long the Leads asked live get to answer before the page is compiled without them. */
 export const COLLECT_MS = 20 * 60_000;
-/** The PM hears the CTO's decisions this long after the last one, all in one message. */
+/** The Project Coordinator hears the Project Manager's decisions this long after the last one, all in one message. */
 export const OUTCOME_DEBOUNCE_MS = 60_000;
 
 export type Decision = 'approve' | 'reject' | 'change';
@@ -32,6 +33,11 @@ export class StandupRunner {
   private outbox = new Map<string, { list: Proposal[]; timer?: NodeJS.Timeout }>();
 
   constructor(private roster: Roster) {}
+
+  /** Whether a Lead has been asked for its standup and hasn't answered yet (the review nudge leaves it be). */
+  isAsked(floor: TeamFloor, role: RoleId): boolean {
+    return this.asks.has(`${floor.id}:${role}`);
+  }
 
   private collecting(floor: TeamFloor): Standup | undefined {
     return this.roster.data(floor.id).standups.find((s) => s.status === 'collecting');
@@ -94,7 +100,7 @@ export class StandupRunner {
 
   /** A Lead asked live finished its turn: read its standup entry. */
   onWorker(floor: TeamFloor, role: RoleId, w: WorkerInfo) {
-    // The PM back at work with decisions it hasn't heard yet.
+    // The Project Coordinator back at work with decisions it hasn't heard yet.
     if (role === 'pm' && (w.status === 'idle' || w.status === 'done') && this.outbox.get(floor.id)?.list.length && !this.outbox.get(floor.id)?.timer) this.flushPm(floor);
     const s = this.collecting(floor);
     const key = `${floor.id}:${role}`;
@@ -124,7 +130,7 @@ export class StandupRunner {
     if (!s && standupDue(now, d.settings.schedule, d.lastStandupAt, d.lastActivityAt) === 'run') this.run(floor, 'schedule');
   }
 
-  /** Everyone's in: the page, the auto-approved proposals' issues, and the PM's draft. */
+  /** Everyone's in: the page, the auto-approved proposals' issues, and the Project Coordinator's draft. */
   async compile(floor: TeamFloor, s: Standup) {
     const d = this.roster.data(floor.id);
     s.status = 'compiled';
@@ -140,7 +146,7 @@ export class StandupRunner {
         mkdirSync(path.dirname(file), { recursive: true });
         writeFileSync(file, s.page);
         s.savedTo = standupPath(s.id);
-        floor.prompt(w.id, standupCompiledPrompt(s.id, pending));
+        floor.prompt(w.id, standupCompiledPrompt(s.id, pending, d.escalations.filter((e) => e.status === 'open' || e.at >= (d.standups[d.standups.length - 2]?.startedAt ?? 0))));
       } catch (err) {
         floor.toast(`Couldn't hand the standup page to ${pm.name}: ${(err as Error).message}`, 'warn');
       }
@@ -156,8 +162,9 @@ export class StandupRunner {
   }
 
   /**
-   * The CTO's decision on a proposal: approve (it becomes an issue labelled with its team), reject
-   * (with the reason) or change (what to change; the Lead can propose it again). The PM is told.
+   * The Project Manager's decision on a proposal: approve (it becomes an issue labelled with its team),
+   * reject (with the reason) or change (what to change; the Lead can propose it again). The Project
+   * Coordinator is told.
    */
   async decide(floor: TeamFloor, id: string, decision: Decision, by: string, reason?: string, env?: Record<string, string>): Promise<string | undefined> {
     const d = this.roster.data(floor.id);
@@ -182,7 +189,7 @@ export class StandupRunner {
     return undefined;
   }
 
-  /** Queues a decision for the PM, sent with the others a minute after the last. */
+  /** Queues a decision for the Project Coordinator, sent with the others a minute after the last. */
   private tellPm(floor: TeamFloor, p: Proposal) {
     const box = this.outbox.get(floor.id) ?? { list: [] };
     box.list = [...box.list.filter((x) => x.id !== p.id), p];
@@ -193,8 +200,9 @@ export class StandupRunner {
   }
 
   /**
-   * Sends the PM the queued decisions if it's at work. An asleep PM isn't woken for them (that costs a
-   * session): they wait until it's back at its desk. A benched or unhired PM finds them on the standup pages.
+   * Sends the Project Coordinator the queued decisions if it's at work. An asleep one isn't woken for
+   * them (that costs a session): they wait until it's back at its desk. A benched or unhired one finds
+   * them on the standup pages.
    */
   flushPm(floor: TeamFloor): boolean {
     const box = this.outbox.get(floor.id);

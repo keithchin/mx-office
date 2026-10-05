@@ -2,7 +2,7 @@
 // can drive hiring, benching and standups with fake workers instead of real Claude sessions (which
 // cost money). adapter.ts makes one from a real Floor.
 
-import type { WorkerInfo } from '../../shared/protocol.js';
+import type { RosterAlert, WorkerInfo } from '../../shared/protocol.js';
 import type { TeamId } from '../../shared/roster/roles.js';
 import type { IssueMaker } from './issues.js';
 
@@ -34,10 +34,17 @@ export interface TeamFloor {
   rename(id: string, name: string): void;
   /** The folder a worker works in (its worktree, or the checkout). */
   cwdOf(w: WorkerInfo): string;
-  openPulls(): { number: number; title: string; url: string; headRefName: string }[];
+  openPulls(): { number: number; title: string; url: string; headRefName: string; labels?: { name: string }[] }[];
   toast(text: string, level?: 'info' | 'warn'): void;
-  /** Tells the floor's browsers to fetch the Team tab again. */
-  changed(): void;
+  /** Tells the floor's browsers to fetch the Team tab again; with `alert`, an urgent escalation to notify about. */
+  changed(alert?: RosterAlert): void;
+  /** A line in the project summary's recent activity (the review nudge, escalations). */
+  activity?(text: string): void;
+  /**
+   * Adds a team's `team:<team>` label to an open pull request, on GitHub, as the office's gh account.
+   * Only the real office has it: the tests' fake floors never touch GitHub.
+   */
+  labelPr?(number: number, team: TeamId): Promise<string | undefined>;
 }
 
 export interface RosterDeps {

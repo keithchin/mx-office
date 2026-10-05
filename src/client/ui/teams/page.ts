@@ -1,6 +1,6 @@
-// A team's own page on the 1D view (🧩 Teams, `?tab=teams&team=testing`): a switcher of the five teams,
+// A team's own page on the 1D view (🧩 Team boards, `?tab=teams&team=testing`): a switcher of the five teams,
 // then the team's header (its mission, its Lead's card from the org chart with hire and wake for the
-// CTO, its subagents), the team's own board (the board's kanban with only its cards), its own panels
+// Project Manager, its subagents), the team's own board (the board's kanban with only its cards), its own panels
 // (ui/teams/panels.ts) and its journal feed (GET /api/teams/page, from the floor's main checkout).
 
 import { TEAM_IDS, TEAM_META, leadOf, type CardTeam } from '../../../shared/roster/card-team';

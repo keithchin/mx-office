@@ -115,7 +115,7 @@ export function proposalIssue(p: { title: string; detail: string; kind: Decision
       p.detail || '_No detail given._',
       '',
       `Proposed by ${p.by} (${p.team} team) at the ${p.standup} standup, as ${p.kind === 'task' ? 'a task' : `a ${p.kind} change`}.`,
-      `Approved by ${approvedBy} in Agent Office at autonomy level ${level}.${note ? `\n\nCTO's note: ${note}` : ''}`,
+      `Approved by ${approvedBy} in Agent Office at autonomy level ${level}.${note ? `\n\nProject Manager's note: ${note}` : ''}`,
     ].join('\n'),
     labels: [`team:${p.team}`],
   };

@@ -78,6 +78,11 @@ export function flatSession(page: '/lite' | '/pixel', openWorker: (id: string) =
       case 'toast':
         toast(msg.text, msg.level);
         break;
+      case 'roster.changed':
+        // An urgent escalation to the Project Manager: the server toasts it; this reaches you in another
+        // tab. Clicking it brings this one forward, where the project console has the card.
+        if (msg.alert) notifier.escalation(msg.alert, () => undefined);
+        break;
       case 'signins.needed':
         openSignIns(net, msg.why);
         break;

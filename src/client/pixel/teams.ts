@@ -13,7 +13,7 @@ import type { Outfit } from './chars';
 
 const OUTFIT: Record<RoleId, Outfit> = { pm: 'pm', 'lead-designer': 'designer', 'lead-developer': 'dev', 'lead-tester': 'qa', 'chief-analyst': 'analyst' };
 /** Each role's title cut short, for name tags when the office is zoomed out and the desks are close. */
-const SHORT: Record<RoleId, string> = { pm: 'PM', 'lead-designer': 'Design lead', 'lead-developer': 'Dev lead', 'lead-tester': 'QA lead', 'chief-analyst': 'Chief analyst' };
+const SHORT: Record<RoleId, string> = { pm: 'Coordinator', 'lead-designer': 'Design lead', 'lead-developer': 'Dev lead', 'lead-tester': 'QA lead', 'chief-analyst': 'Chief analyst' };
 
 let roster: RosterView | null = null;
 let byWorker = new Map<string, MemberView>();
