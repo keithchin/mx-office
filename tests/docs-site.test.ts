@@ -1,6 +1,6 @@
 // The documentation site (/docs): the rules it's built by (shared/docsite.ts, server/docsite.ts), and
 // the real pages in docs/site/ held to them: every link and picture there, the reference pages in step
-// with the code, and the pages promised for features still being built.
+// with the code, the Audit log and The Firm, and the release notes taken from CHANGELOG.md.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -177,9 +177,9 @@ test('docs/site: every link goes to a page and heading that are there, every pic
 test('docs/site: the sections the docs promise, in order, each with pages', () => {
   assert.deepEqual(
     bundle.nav.map((n) => n.title),
-    ['Get Started', 'Concepts', 'Using the Office', 'Teams & Agents', 'Automation', 'Integrations', 'Administration', 'Reference', 'Coming soon', 'Troubleshooting', 'FAQ', 'Release notes'],
+    ['Get Started', 'Concepts', 'Using the Office', 'Teams & Agents', 'Automation', 'Integrations', 'Administration', 'Reference', 'Troubleshooting', 'FAQ', 'Release notes'],
   );
-  for (const n of bundle.nav.slice(0, 10)) assert.ok(n.children.length >= 2, `${n.title} has pages`);
+  for (const n of bundle.nav.slice(0, 9)) assert.ok(n.children.length >= 2, `${n.title} has pages`);
   assert.ok(bundle.pages.length >= 60, `${bundle.pages.length} pages`);
 });
 
@@ -243,10 +243,54 @@ test('docs/site: the reference pages are in step with the code', () => {
   for (const f of [...fields, 'enabled', 'time', 'timeZone', 'days', 'waiting', 'triage']) assert.ok(settings.includes(`\`${f}\``), `the settings page has ${f}`);
 });
 
-test('docs/site: the features still being built have their pages, marked as coming soon', () => {
-  for (const slug of ['preview/audit-log', 'preview/the-firm']) {
-    const page = bundle.pages.find((p) => p.slug === slug)!;
-    assert.equal(page.badge, 'Preview', slug);
-    assert.match(page.html, /Coming soon, in preview/, slug);
+test('docs/site: the Audit log and The Firm have their pages under Using the Office, with their old addresses', () => {
+  for (const [slug, alias] of [['using-the-office/audit-log', 'audit'], ['using-the-office/the-firm', 'firm']]) {
+    const page = bundle.pages.find((p) => p.slug === slug);
+    assert.ok(page, slug);
+    assert.equal(page.badge, undefined, `${slug} isn't marked as a preview`);
+    assert.equal(findPage(bundle, alias)?.slug, slug);
+    assert.equal(findPage(bundle, `preview/${slug.split('/')[1]}`)?.slug, slug);
+  }
+  const using = bundle.nav.find((n) => n.title === 'Using the Office')!;
+  assert.ok(using.children.some((c) => c.title === 'Audit log') && using.children.some((c) => c.title === 'The Firm'));
+  assert.ok(!bundle.pages.some((p) => p.slug.startsWith('preview/')), 'no Coming soon section is left');
+});
+
+test('docs/site: the release notes page is CHANGELOG.md itself', () => {
+  const notes = bundle.pages.find((p) => p.slug === 'release-notes');
+  assert.ok(notes, 'there is a release notes page');
+  assert.equal(bundle.nav.at(-1)?.title, 'Release notes');
+  const changelog = readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
+  // Every release heading of CHANGELOG.md is a heading of the page, in the same order, and its top heading isn't repeated.
+  const releases = [...changelog.matchAll(/^## (.+)$/gm)].map((m) => m[1].trim());
+  assert.ok(releases.length >= 3, `${releases.length} releases`);
+  const h2 = notes.headings.filter((h) => h.depth === 2).map((h) => h.text);
+  assert.deepEqual(h2, releases.map((r) => plainText(renderDoc('x.md', r).html).trim()));
+  assert.ok(!notes.headings.some((h) => h.depth === 1), "CHANGELOG.md's own # heading is left off");
+  // Its entries are there, as written.
+  const entry = /^- \*\*(.+?)\*\*/m.exec(changelog)?.[1] ?? '';
+  assert.ok(entry && notes.text.includes(plainText(renderDoc('x.md', entry).html).trim()), entry);
+  // The page file only points at it: one copy of the notes.
+  const own = parseFrontMatter(readFileSync(path.join(site, 'release-notes.md'), 'utf8'));
+  assert.equal(own.data.source, '../../CHANGELOG.md');
+  assert.doesNotMatch(own.body, /^## /m, 'release-notes.md keeps no release of its own');
+});
+
+test('a page with source: takes its text from that file, and a missing one is reported', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'docsite-src-'));
+  try {
+    mkdirSync(path.join(dir, 'site'));
+    writeFileSync(path.join(dir, 'NOTES.md'), '# Notes\n\n## One\n\nHello there.\n');
+    writeFileSync(path.join(dir, 'site', 'notes.md'), '---\ntitle: Notes\ndescription: d\nsource: ../NOTES.md\n---\n\nIgnored.\n');
+    writeFileSync(path.join(dir, 'site', 'gone.md'), '---\ntitle: Gone\ndescription: d\nsource: ../NOPE.md\n---\n\nStill here.\n');
+    const { bundle: b, problems } = buildDocSite(path.join(dir, 'site'), fixed);
+    const notes = b.pages.find((p) => p.slug === 'notes')!;
+    assert.deepEqual(notes.headings.map((h) => h.text), ['One']);
+    assert.match(notes.text, /Hello there/);
+    assert.doesNotMatch(notes.text, /Ignored/);
+    assert.match(b.pages.find((p) => p.slug === 'gone')!.text, /Still here/);
+    assert.deepEqual(problems.map((p) => p.file), ['gone.md']);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });

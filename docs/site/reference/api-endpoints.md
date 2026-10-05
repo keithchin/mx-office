@@ -50,6 +50,16 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/teams/page` | A team's page |
 | POST | `/api/teams/labels` | Create missing `team:` labels (admin) |
 | GET / POST | `/api/wizard/*` | The new-project wizard: GET `info`, `job`, `setup`, `answers`; POST `recheck`, `start`, `retry`, `edit` (admin) |
+| GET | `/api/audit` | The audit log: `?floor=<id>\|all\|_office&since=&until=&actor=human,agent&action=worker.hire,github&q=&limit=&cursor=`, with counts, the chain check and a histogram |
+| GET | `/api/audit/export` | Every matching event as a download, `&format=csv\|jsonl` (admin) |
+| POST | `/api/audit/settings` | `{ promptText }`: log the first 80 characters of prompts, or not (admin) |
+| GET | `/api/firm` | The Firm's people, its engagements (newest first) and the floors an audit can be called on |
+| GET | `/api/firm/engagement` | `?id=`: one engagement with its whole transcript |
+| GET | `/api/firm/status` | `?floor=`: the floor's running audit and alerts, for its 1D view |
+| GET | `/api/firm/defaults` | `?floor=`: the audit wizard's starting configuration and its estimate |
+| POST | `/api/firm/estimate` | `{ config }`: what a configuration would cost, as an estimate |
+| GET | `/api/firm/report` | `?id=`: a delivered report; `&format=md\|json` downloads it (admin) |
+| POST | `/api/firm/action` | `{ action: start \| cancel \| models, … }`: call or cancel an audit, set reviewers' models (admin, the Project Manager) |
 
 ### /api/roster/action
 
@@ -63,6 +73,7 @@ Actions: `hire`, `bench`, `rename`, `model`, `settings`, `standup`, `decide`, `e
 | `/home` | Home |
 | `/lite` | The 1D view |
 | `/pixel` | The 2D view |
+| `/firm` | The Firm (`?report=<id>` opens a report) |
 | `/docs`, `/docs/*` | These docs; `/docs/site.json` is their bundle, `/docs/images/*` their pictures |
 | `/*` | Anything else in the client bundle, or 404 |
 

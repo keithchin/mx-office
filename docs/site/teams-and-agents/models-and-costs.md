@@ -26,6 +26,7 @@ The [Analysis](../using-the-office/model-analysis.md) tab and **Home → 📊 St
 - Every worker card: **💵 cost** and tokens.
 - The board's summary line, and the Command Center: **💰 $x today · $y all told on this floor**.
 - **Home → 📊 Statistics**: spent today and all-time, per project.
+- **The Firm**: an audit's estimate before you call it, its spend against the budget cap while it runs, and its cost in the report. Reviewers default to Fable 5.1 ($10 / $50 per million input / output tokens). See [The Firm](../using-the-office/the-firm.md#budget-and-time).
 
 ## The daily cost cap
 

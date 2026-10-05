@@ -14,7 +14,7 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 | `costCaps` | `{ 1?: number, 2?: number, 3?: number, 4?: number }` | `{}` | A daily dollar cap per autonomy level; the one for the current level applies; missing = off. Each above 0, in cents, at most 100000. |
 | `dryRunIssues` | boolean | `false` | Approved proposals are recorded but no GitHub issue is made. `AGENT_OFFICE_TEAMS_DRY_RUN=1` forces it on. |
 | `reviewNudge` | boolean | `true` | Prompt a Lead once to review a subagent's result. See [The review loop](../teams-and-agents/review-loop.md). |
-| `jeff` | `JeffSettings` | `{ waiting: 'shadow', triage: 'shadow' }` | Per judgement: `'off'`, `'shadow'` or `'on'`. See [Jeff · Router](../automation/jeff-router.md). |
+| `jeff` | `JeffSettings` | `{ waiting: 'shadow', triage: 'shadow', priority: 'on' }` | Per judgement: `'off'`, `'shadow'` or `'on'` (`priority`: `'off'` or `'on'`). See [Jeff · Router](../automation/jeff-router.md). |
 | `subagentCooldownHours` | number | `24` | Hours a benched subagent sits out before it's reinstated; 0 = only by hand. 0 to 720, in tenths. |
 
 ## StandupSchedule
@@ -32,6 +32,14 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 |---|---|---|
 | `waiting` | `off`, `shadow`, `on` | Is an agent that just ended its turn waiting on the Project Manager? |
 | `triage` | `off`, `shadow`, `on` | Which team does a new issue belong to? |
+| `priority` | `off`, `on` (default `on`) | How soon should the Project Manager resolve each open escalation? On: the escalation lists are in Jeff's order with a *#1 · resolve first* chip. It only orders lists, so it has no shadow mode. |
+
+## Office-wide settings outside the team settings
+
+| Setting | Where | Default | Meaning |
+|---|---|---|---|
+| Audit: log prompt text | [Audit log](../using-the-office/audit-log.md) tab → **Log prompt text** (admins); `POST /api/audit/settings` | off | Keep the first 80 characters of every prompt a person sends a worker. Off: only its length is logged. |
+| The Firm: each reviewer's model | `/firm` → the model picker on each reviewer's card (admins); `<office data>/firm/firm.json` | Fable 5.1 | The model a Reviewer Agent runs on unless the audit wizard picks another. See [The Firm](../using-the-office/the-firm.md). |
 
 ## The types, as in the code
 

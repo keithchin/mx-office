@@ -32,6 +32,7 @@ The office stamps who raised it (name, role, team) and the autonomy level at the
 
 - Every open, non-FYI escalation is in **🚨 Needs you**, **🚩 Escalations to you** on the Command Center, and **✅ Approvals**.
 - An **urgent** or **critical** one also makes a toast and a desktop notification.
+- Jeff rates each open one and, with his **Priority** on (the default), the lists show them in his order with a **🧑‍⚖️ #1 · resolve first** chip. See [Jeff · Router](../automation/jeff-router.md#priority-which-escalation-first).
 - The Project Coordinator is told about the team's escalations (batched a minute after the last one), so it can summarise them for you.
 
 ## Answering

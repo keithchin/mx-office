@@ -10,10 +10,11 @@ This page shows where everything is. Each screen has its own page under [Using t
 
 | Address | What it is |
 |---|---|
-| `/home` | Every project as a card, office-wide **📊 Statistics**, and a **🗺️ 2D Overview** of all floors. See [Home](../using-the-office/home.md). |
+| `/home` | Every project as a card, office-wide **📊 Statistics**, a **🗺️ 2D Overview** of all floors, and the **🧾 Audit log** of the whole office. See [Home](../using-the-office/home.md). |
 | `/lite?floor=<id>` | The **1D view** of one project, with a tab for everything. The default and most useful view. |
 | `/pixel?floor=<id>` | The **2D view**: the floor from above in pixel art. See [2D view](../using-the-office/2d-view.md). |
 | `/?3d=1&view=3d` | The **3D office**, where you walk around. `view=retro` draws it in chunky pixels. See [3D and Retro](../using-the-office/3d-view.md). |
+| `/firm` | **🏛️ The Firm**: independent Reviewer Agents that audit a project and report to you. See [The Firm](../using-the-office/the-firm.md). |
 | `/docs` | These docs. |
 
 ## The top bar
@@ -35,6 +36,7 @@ On the 1D and 2D views, left to right: **🏠** (home), the **floor** picker, th
 | 📋 **Standup** | The daily standup and its proposals. |
 | ✅ **Approvals** | Everything waiting for the Project Manager. |
 | ⚙️ **Settings** | Autonomy, benching, review loop, standup time, cost caps, Jeff. |
+| 🧾 **Audit log** | Who did what, when: hires, prompts, escalations, approvals, GitHub, settings and sign-ins. See [Audit log](../using-the-office/audit-log.md). |
 
 > [!TIP]
 > The address says where you are: `/lite?floor=travel-approval&tab=standup`, or `&tab=teams&team=testing`. Bookmark or share it. See [URL parameters](../reference/url-parameters.md).

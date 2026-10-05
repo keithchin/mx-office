@@ -28,13 +28,14 @@ Agent Office is a web app that runs on your laptop. **Claude Code agents** work 
 
 - **Get Started**: the quick start, the new-project wizard, and a tour.
 - **Concepts**: the building, floors, workers, worktrees, the four views, and how work flows from an issue to a merged PR.
-- **Using the Office**: one page for every screen, from `/home` and the Command Center to the Git tab and Settings.
+- **Using the Office**: one page for every screen, from `/home` and the Command Center to the Git tab, Settings, the [Audit log](using-the-office/audit-log.md) and [The Firm](using-the-office/the-firm.md).
 - **Teams & Agents**: the team model, autonomy levels, escalations, the review loop, benching, Playbooks, models and costs.
 - **Automation**: Jeff · Router, skills and gates, and the subagent track record.
 - **Integrations**: GitHub, mxcli, the toolkit, and the CI pipeline on every pull request.
 - **Administration**: running and restarting the office, tokens and security, where data lives, test offices.
 - **Reference**: the `office-workers` CLI, MCP tools, API endpoints, settings, environment variables, keyboard shortcuts, URL parameters and the glossary.
-- **Coming soon**: the [Audit Log](preview/audit-log.md) and [The Firm](preview/the-firm.md), still being built.
+- **Troubleshooting** and the **FAQ**: what to do when something goes wrong, and answers to the questions people ask.
+- **Release notes**: what changed, release by release, from `CHANGELOG.md`.
 
 > [!NOTE]
 > These docs sit behind the office's sign-in, like the rest of the office, because they name token files, folders and ports. They are Markdown files in the repository under `docs/site/`. Change one, run `npm run build`, and the page here changes too. See [Writing these docs](administration/writing-docs.md).

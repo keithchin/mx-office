@@ -18,6 +18,8 @@ The **✅ Approvals** tab collects everything waiting for the Project Manager on
 | 🔀 **Merges** | Team pull requests ready to merge, when your level asks you to approve merges (levels 1 to 3) | Review on GitHub |
 | 💸 **Daily cost cap reached** | The floor's cap for its level is spent | Raise it in Settings |
 
+Open escalations are in Jeff's order when his **Priority** is on, with the **🧑‍⚖️ #1 · resolve first** chip beside the top one. See [Jeff · Router](../automation/jeff-router.md#priority-which-escalation-first).
+
 The top of the tab says which autonomy level is set, and: *You, the Project Manager, always have the final say.* When there's nothing: *Nothing needs you right now.*
 
 See [Autonomy levels](../teams-and-agents/autonomy.md) and [Escalations](../teams-and-agents/escalations.md).

@@ -1,12 +1,12 @@
 ---
 title: Home
-description: The /home page - every project as a card, the office's statistics, and a 2D overview of every floor.
+description: The /home page - every project as a card, the office's statistics, a 2D overview of every floor, and the audit log of the whole office.
 weight: 2
 ---
 
-`/home` is where the office opens. It has three tabs. The last one you used is remembered, and a link can open one with `?tab=projects`, `?tab=stats` or `?tab=overview`.
+`/home` is where the office opens. It has four tabs. The last one you used is remembered, and a link can open one with `?tab=projects`, `?tab=stats`, `?tab=overview` or `?tab=audit`.
 
-The top bar has **🏠**, a **back link** to the floor you were last on (in the view you last used), **📚 Docs**, **🎨** and **☰**.
+The top bar has **🏠**, a **back link** to the floor you were last on (in the view you last used), **📑 The Firm** (opens [/firm](the-firm.md)), **📚 Docs**, **🎨** and **☰**.
 
 ## 🏢 Projects
 
@@ -42,3 +42,7 @@ Every floor drawn in pixel art on one canvas, each under a banner with its name 
 - Hover a worker, or a benched Lead on a break, for details.
 - Click a banner (or double-click a floor) to open it in the 2D view.
 - Zoom with the wheel or pinch, drag to pan, **+ − 0** and the arrows work too.
+
+## 🧾 Audit log
+
+The office's [audit log](audit-log.md) across **Every floor**, with a floor column and a floor picker (or **Office-wide** for sign-ins, settings and floors added and removed). Same filters, histogram, chain badge and, for admins, CSV / JSONL export as a project's tab.

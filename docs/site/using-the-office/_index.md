@@ -1,6 +1,6 @@
 ---
 title: Using the Office
-description: One page for every screen - the top bar and menu, /home, and each tab of a project's 1D view, plus the 2D and 3D views.
+description: One page for every screen - the top bar and menu, /home, and each tab of a project's 1D view, plus the 2D and 3D views, the Audit log and The Firm.
 weight: 30
 ---
 

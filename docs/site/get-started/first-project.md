@@ -58,7 +58,7 @@ Check the summary and click **✨ Create project**. A progress list runs each st
 5. Install the pre-commit hook.
 6. Write the intake answers to `intake.md`.
 7. Record decisions in `PROJECT.md`: entry mode, size tier, Mendix version and interview mode, each `CONFIRMED` with today's date.
-8. Save client and team settings (`.agent-office/project.json`).
+8. Save the client, operator and role settings in `agent-office.project.json` at the project's root. It is committed with the project, so every office that opens it sees the same client and team.
 9. Refresh the gate dashboard (`gate-check.sh`).
 10. Commit and push.
 11. Open the Discovery issue: *"Discovery: kickoff with the client (Stages P → 4)"*.

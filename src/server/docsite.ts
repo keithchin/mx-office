@@ -158,20 +158,26 @@ export interface DocProblem {
 export function buildDocSite(dir: string, opts: { updated?: (file: string) => string } = {}): { bundle: DocBundle; problems: DocProblem[]; images: string[] } {
   const files = markdownFiles(dir);
   const pages: DocPage[] = [];
+  const problems: DocProblem[] = [];
   const refsOf = new Map<string, DocRefs>();
   for (const file of files) {
     const abs = path.join(dir, file);
-    const { data, body } = parseFrontMatter(readFileSync(abs, 'utf8'));
+    const own = parseFrontMatter(readFileSync(abs, 'utf8'));
+    const { data } = own;
     const slug = fileToSlug(file);
     const fallback = slug.split('/').pop() || 'Documentation';
     const meta = docMeta(data, fallback);
+    // `source:` takes the page's text from another file of the repo (the release notes are
+    // CHANGELOG.md itself), keeping one copy: its own front matter and top heading are left off.
+    const source = typeof data.source === 'string' ? path.resolve(path.dirname(abs), data.source) : undefined;
+    if (source && !existsSync(source)) problems.push({ file, problem: `takes its text from ${data.source}, which isn't there` });
+    const body = source && existsSync(source) ? parseFrontMatter(readFileSync(source, 'utf8')).body.replace(/^\s*# .*\r?\n/, '') : own.body;
     const { html, headings, refs } = renderDoc(file, body);
     refsOf.set(slug, refs);
-    const updated = typeof data.updated === 'string' ? data.updated : (opts.updated ?? lastChanged)(abs);
+    const updated = typeof data.updated === 'string' ? data.updated : (opts.updated ?? lastChanged)(source && existsSync(source) ? source : abs);
     pages.push({ ...meta, slug, file, html, headings, text: plainText(html), updated });
   }
   const nav = buildNav(pages);
-  const problems: DocProblem[] = [];
   const bySlug = new Map(pages.map((p) => [p.slug, p]));
   for (const p of pages) {
     const refs = refsOf.get(p.slug)!;

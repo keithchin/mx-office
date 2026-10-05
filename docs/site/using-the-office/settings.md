@@ -1,6 +1,6 @@
 ---
 title: Settings
-description: A floor's team settings - autonomy level, idle benching, review loop, subagent cool-down, standup schedule, cost caps, dry run and Jeff.
+description: A floor's team settings - autonomy level, idle benching, review loop, subagent cool-down, standup schedule, cost caps, dry run and Jeff (including his priority sort).
 weight: 13
 ---
 
@@ -17,7 +17,7 @@ The **⚙️ Settings** tab holds the floor's team settings. Only admins can cha
 | **Daily standup** | Scheduled · time · time zone · days | **On, 09:00, Asia/Singapore, Mon–Fri** |
 | **Daily cost cap** | A dollar cap for each autonomy level | **Blank** (no cap) |
 | **Issues** | Dry run: record approvals without making GitHub issues | **Off** |
-| **Jeff · Router** | *Waiting on you* and *Triage*: Off · Shadow · On | **Shadow, Shadow** |
+| **Jeff · Router** | *Waiting on you* and *Triage*: Off · Shadow · On; *Priority*: Off · On | **Shadow, Shadow, On** |
 
 ## What each one does
 
@@ -28,6 +28,6 @@ The **⚙️ Settings** tab holds the floor's team settings. Only admins can cha
 - **Daily standup**: see [Standup](standup.md).
 - **Daily cost cap**: one cap per autonomy level, for this floor. Only the cap for the current level counts. When it's spent, hiring stops on this floor until midnight (in the standup's time zone). See [Models and costs](../teams-and-agents/models-and-costs.md).
 - **Dry run**: approved proposals are recorded, but no GitHub issue is made. Good for trying the office out. `AGENT_OFFICE_TEAMS_DRY_RUN=1` turns it on for the whole office.
-- **Jeff · Router**: see [Jeff · Router](../automation/jeff-router.md).
+- **Jeff · Router**: *Waiting on you* (when an agent ends its turn: is it waiting on you? On: he escalates it if it didn't), *Triage* (which team is a new issue for? On: he labels unlabelled issues he's sure about), and *Priority* (how soon should you resolve each escalation? On: your escalations are listed in his order, #1 first). See [Jeff · Router](../automation/jeff-router.md).
 
 All fields with their exact names and limits: [Settings reference](../reference/settings-reference.md).

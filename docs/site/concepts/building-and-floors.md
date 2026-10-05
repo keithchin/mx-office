@@ -8,6 +8,8 @@ weight: 1
 
 The **building** (or *office*) is one Agent Office server. On the Taskforce laptop it runs at `http://127.0.0.1:4600` behind one password. Everything in it, every project and every agent, is one building.
 
+Two things belong to the building rather than to a floor: **🏛️ The Firm** at `/firm`, whose Reviewer Agents audit a floor from outside its team (see [The Firm](../using-the-office/the-firm.md)), and the office-wide side of the **🧾 Audit log** (sign-ins, settings, floors added and removed).
+
 ## A floor is a project
 
 Each **floor** is one GitHub repository, cloned on this machine. For us, that is one Mendix app in the **AI-Taskforce-Labs** organization, such as `mx-spike` (the SEA AI Hub) or `travel-approval`.

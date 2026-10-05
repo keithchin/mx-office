@@ -38,6 +38,14 @@ People can also have their own accounts (**☰ → 🔑 Accounts**, admin only),
 
 The office removes from every worker's environment: the Jev key variables (`TYPESAFE_API_KEY` and all `AGENT_OFFICE_*` settings), and, for workers that run as a signed-in person, the office's own GitHub token.
 
+## The Firm's reviewers can't write
+
+The Firm's Reviewer Agents get no GitHub tokens, SSH agent or credential manager, work in a clone with no remote, and have deny rules for `git push`, GitHub writes, `gh api`, and reading `~/.agent-office*` and `~/.ssh`. See [The Firm → Isolation](../using-the-office/the-firm.md#isolation-no-shared-context-no-bias).
+
+## The audit log
+
+The [audit log](../using-the-office/audit-log.md) records sign-ins, settings changes, hires, escalations, approvals, GitHub actions and The Firm's steps, hash-chained so an edit shows. It never records token values; prompt text only when an admin turns it on. Exporting it is admin-only and is itself logged.
+
 ## The docs are behind the sign-in
 
 `/docs` uses the same sign-in as the rest of the office, because these pages name token files, folders and ports. The original upstream docs in the repository (`docs/*.md`) stay readable on GitHub.

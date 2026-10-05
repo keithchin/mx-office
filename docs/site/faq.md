@@ -170,8 +170,38 @@ Each team member's skills say what it may do (Manage up, Manage down, Craft), an
 
 Its grade drops and it's flagged 📉. Its Lead (or you) can warn it, swap its model, or bench it for the cool-down. See [Subagents](automation/subagents.md).
 
+### Which escalation should I answer first?
+
+The one with Jeff's **🧑‍⚖️ #1 · resolve first** chip. With **Priority** on (the default), Jeff rates each open escalation on how soon it matters, whether agents are stopped on it and how risky a delay is, and the lists (Escalations to you, Approvals, Needs you) are in his order. Older blockers climb. See [Jeff · Router](automation/jeff-router.md#priority-which-escalation-first).
+
+## The Firm and the audit log
+
+### What is The Firm?
+
+Independent **Reviewer Agents** at `/firm` that audit a project from outside its team: an Engagement Partner plus a reviewer per team, in an isolated clone, interviewing the Leads, ending in one report to you. See [The Firm](using-the-office/the-firm.md).
+
+### What does an audit cost?
+
+What you allow: the wizard shows an **estimate**, and the **budget cap** is enforced (warning at 80 %, wrap-up at 100 %, a partial report if it runs out). Reviewers default to Fable 5.1, $10 / $50 per million input / output tokens. Start with Quick depth, two reviewers and a $10 cap.
+
+### Can a reviewer change the project or push?
+
+No. It works in a local clone with no remote and no credentials, without the team's instructions, and deny rules block pushes and GitHub writes. See [Isolation](using-the-office/the-firm.md#isolation-no-shared-context-no-bias).
+
+### Who can see what happened, and when?
+
+Everyone signed in, on the **🧾 Audit log** tab of a project or /home. Admins can export it as CSV or JSONL. See [Audit log](using-the-office/audit-log.md).
+
+### Does the audit log keep my prompts?
+
+Only their length, unless an admin ticks **Log prompt text** (then the first 80 characters). Token values are never logged.
+
+### What does "Chain broken" mean?
+
+A line of the audit log was edited, removed or moved after it was written. Each line carries the hash of the one before it, so the badge shows where the chain stops matching.
+
 ## Coming soon
 
-### What are the Audit Log and The Firm?
+### What's coming next?
 
-Two features still being built: an append-only, hash-chained audit trail, and independent Reviewer Agents that audit each team. See [Coming soon](preview/_index.md).
+A **team chatter** feed (what the agents say to each other) and **Clean light / Clean dark** themes are being built on other branches. They'll be in the [release notes](release-notes.md) when they land.

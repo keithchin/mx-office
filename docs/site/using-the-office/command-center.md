@@ -1,17 +1,21 @@
 ---
 title: Command Center
-description: The default tab of a project - the Needs you strip, the project setup panel, the project summary, and the Project Coordinator console with escalations.
+description: The default tab of a project - The Firm strip, the Needs you strip, the project setup panel, the project summary, and the Project Coordinator console with escalations.
 weight: 3
 aliases: [/docs/command-center]
 ---
 
-The **🎛️ Command Center** is the first tab of every project and the place to keep open. From top to bottom: **Needs you**, the **Project setup** panel (toolkit projects being set up), and the **project summary** with the **Project Coordinator console** in its middle.
+The **🎛️ Command Center** is the first tab of every project and the place to keep open. From top to bottom: **The Firm** strip, **Needs you**, the **Project setup** panel (toolkit projects being set up), and the **project summary** with the **Project Coordinator console** in its middle.
 
 ![The Command Center](../images/command-center.png)
 
+## 📑 The Firm strip
+
+A slim strip at the top: **📑 Call an audit** and **The Firm →** when no audit is running (calling one is for admins); *The Firm is auditing this project: N reviewers · $spent of $cap · phase* with **View →** while one runs (amber at 80 % of the budget); **📑 Audit report ready from The Firm → Read** when it's delivered. See [The Firm](the-firm.md).
+
 ## 🚨 Needs you
 
-Everything waiting for a human on this floor, most urgent first. It folds after five items (**Show N more ▾**). When it's empty it says *✅ Nothing needs you right now.*
+Everything waiting for a human on this floor, most urgent first; escalations in Jeff's order when his [priority sort](../automation/jeff-router.md#priority-which-escalation-first) is on. It folds after five items (**Show N more ▾**). When it's empty it says *✅ Nothing needs you right now.*
 
 | Icon | Item | Button |
 |---|---|---|
@@ -25,6 +29,7 @@ Everything waiting for a human on this floor, most urgent first. It folds after 
 | 🌐 | *The live app failed* | **Live app** |
 | 🌿 | A worktree was deleted outside the office | **Fix** |
 | 🙋 | *N waiting on &lt;other floor&gt;* | **Go** |
+| 📑 | *Audit report ready from The Firm* (and The Firm's budget warnings) | **Read** |
 
 **Finished, not looked at yet.** An agent that ended its turn and that nobody has opened since counts as waiting on you. Its worker card says *👀 Finished, not looked at yet: … open it to see*. Opening its terminal clears it.
 
@@ -35,7 +40,7 @@ Everything waiting for a human on this floor, most urgent first. It folds after 
 Shown for toolkit projects until the build plan is confirmed.
 
 - Chips for the entry mode (🧭) and the size tier (📏).
-- Buttons **🧭 Entry mode**, **📝 Intake** and **👥 Team** reopen the wizard at that page. **🔄 Re-check gates** runs the toolkit's gate check again.
+- Buttons **🧭 Entry mode**, **📝 Intake** and **👥 Team** reopen the wizard at that page. **🔄 Re-check gates** (admins only) runs the toolkit's `gate-check.sh` over this floor's checkout, about a minute, so the verdicts are fresh. It rewrites the gate dashboard (`index.html`) and the *Current stage* line in `PROJECT.md`, left uncommitted for the next commit. It doesn't change answers or decisions, start agents or push anything. **ℹ️ What does Re-check gates do?** under the panel says the same.
 - The stages **P** Kickoff, **0** Triage & scope, **1** Analysis, **2** Requirements, **3** Architecture & design, **4** Build plan, each ✅ PASS, ⏳ PENDING, ⚠️ FAIL, ↷ WAIVED or ✋ MANUAL.
 - *Next: …* and **❓ N open questions**.
 
@@ -65,6 +70,8 @@ In the middle of the summary:
 Above the ask box: **Escalations to you (N open)**, with *N need you now* when any are urgent or critical.
 
 ![An escalation card](../images/escalations.png)
+
+When Jeff's **Priority** is on (the default) and he has rated them, the open cards are in his order under *Sorted by Jeff · Router — resolve from the top*, each with a chip beside it: **🧑‍⚖️ #1 · resolve first**, **#2**, **#3**… (hover for why). A critical or urgent one he hasn't rated yet stays on top. See [Jeff · Router](../automation/jeff-router.md#priority-which-escalation-first).
 
 Each card shows:
 

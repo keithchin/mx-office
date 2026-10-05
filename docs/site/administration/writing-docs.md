@@ -31,6 +31,7 @@ aliases: [/docs/old-address]
 | `aliases` | Old addresses that land on this page. |
 | `badge` | A word next to the title in the sidebar, such as *Preview*. |
 | `updated` | Overrides the last-updated day (otherwise git's date for the file). |
+| `source` | Take the page's text from another Markdown file of the repository, relative to this one (its front matter and top `#` heading are left off). The [Release notes](../release-notes.md) page is `source: ../../CHANGELOG.md`, so the notes have one copy. |
 
 ## Sections
 
