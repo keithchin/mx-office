@@ -34,6 +34,7 @@ import { drawPlant, drawProps, plantSpecies } from './props';
 import { drawZoneDecor, drawZoneFloors } from './zones';
 import { drawAmbient, drawLamps, drawWindowLight } from './light';
 import { FACE, LIFT, PPM, WALL, ax, az, type Frame } from './frame';
+import { drawBalcony } from './balcony';
 
 export { FACE, LIFT, PPM, WALL, ax, az, frameFor, type Frame } from './frame';
 export { box, oval, rect } from './paint';
@@ -50,6 +51,7 @@ export function drawOffice(f: Frame, theme: Theme | null = null): HTMLCanvasElem
   drawZoneFloors(g, f);
   lounge(g, f);
   drawWindowLight(g, f);
+  drawBalcony(g, f);
   walls(g, f);
   drawAmbient(g, f);
   fixtures(g, f);

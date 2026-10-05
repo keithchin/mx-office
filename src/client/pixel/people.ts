@@ -17,10 +17,11 @@ import { DESK_H, drawChair, drawChairBack, drawDesk } from './desks';
 import { dogAt, drawDog, drawSign, type DeskSign } from './props';
 import { waitingOnSomeone } from '../notify';
 import type { DogState } from '../../shared/dog';
+import { breakAt, breakSpot, drawBreak, type BreakLead } from './breaks';
 
 /** Something under the pointer: a worker, someone walking about, or a free desk to hire someone at. */
 export interface Spot {
-  kind: 'worker' | 'peer' | 'desk' | 'dog';
+  kind: 'worker' | 'peer' | 'desk' | 'dog' | 'lead';
   id: string;
   x: number;
   y: number;
@@ -62,6 +63,8 @@ export interface Cast {
   /** What a worker wears (its role's outfit in its team's colour, or its own colour), and its name tag's second line. */
   dress: (w: WorkerInfo) => { outfit: Outfit; color: string };
   tag: (w: WorkerInfo) => Label['tag'];
+  /** The team's benched Leads, on a break about the office (breaks.ts): at wall-clock `clock`, and not walking when `still`. */
+  breaks?: { leads: BreakLead[]; clock: number; still: boolean };
 }
 
 /** When each worker last changed how it's doing, for the tick that flashes as one finishes. */
@@ -153,6 +156,16 @@ export function drawPeople(g: CanvasRenderingContext2D, f: Frame, cast: Cast, no
     out.spots.push({ kind: 'peer', id: p.id, x: x - 10, y: y - STAND - 1, w: 20, h: STAND + 2 });
     out.labels.push({ id: p.id, text: p.name, x, y: y + 3, above: false, human: true });
   }
+
+  // Benched Leads, on a break: the TV, a smoke on the balcony, a coffee (breaks.ts).
+  cast.breaks?.leads.forEach((l, i) => {
+    const s = breakAt(l.name, i, cast.breaks!.clock, cast.breaks!.still);
+    const { x, y, top } = breakSpot(f, s);
+    queue.push({ y: y + 1, draw: () => drawBreak(g, f, l, s, now, cast.hover === l.id) });
+    out.spots.push({ kind: 'lead', id: l.id, x: x - 11, y: top - 2, w: 22, h: y - top + 4 });
+    // The name over their head, clear of the counter, the ashtray or the couch in front of them.
+    out.labels.push({ id: l.id, text: l.name, x, y: top - 3, above: true, human: false, tag: { text: '🪑 benched', color: '#9aa7bd' } });
+  });
 
   // The signs stand on their desks' far edges, drawn with the desk they're on.
   for (const s of cast.signs) queue.push({ y: s.y + DESK_H + Math.round((DESK_SIZE.depth * PPM) / 2) + 1, draw: () => drawSign(g, s) });

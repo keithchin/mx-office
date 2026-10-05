@@ -46,7 +46,7 @@ It's a **digital twin of a hybrid software team**: what each agent is doing, wha
 | **Worker / agent** | A Claude Code session at a desk, usually in its own **git worktree** (its own copy and branch of the repo), so agents don't trip over each other. Every agent has a name, a model (Haiku 4.5 / Sonnet 5.5 / Opus 5.5 / Fable 5.1), a status and a cost. |
 | **Board** | The project's Kanban: GitHub issues → queue → agents working → needs a human → PRs in review → done. Every card carries a **team tag**. |
 | **Views** | The same office shown four ways: **1D** (boards and tabs, the default and most useful), **2D** (a pixel-art office from above with team zones), **3D** (walk around), **Retro** (3D in chunky pixels). |
-| **Home** | `/home`: every project as a card, ✨ New project, and **📊 Statistics** across all projects. |
+| **Home** | `/home`: every project as a card, ✨ New project, **📊 Statistics** across all projects, and a **🗺️ 2D Overview** of every floor at once. |
 
 ![Home: projects](docs/readme/home-projects.png)
 

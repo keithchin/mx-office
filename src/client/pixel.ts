@@ -1,8 +1,8 @@
 // The 2D view (/pixel): the floor you're on from above, in pixel art, without the 3D. Every worker
 // sits at its desk acting out how it's doing, each project team in its own patch of the floor (the
 // dev bay, the design studio, the QA lab, the analyst corner, the PM's office; see pixel/zones.ts)
-// with its Leads dressed for their roles, and the people walking about the 3D office are where
-// they are. Hover over anything for what it is; click a worker for its terminal (right-click for its
+// with its Leads dressed for their roles (a benched one off on a break about the office, see
+// pixel/breaks.ts), and the people walking about the 3D office are where they are. Hover over anything for what it is; click a worker for its terminal (right-click for its
 // menu), a free desk to give someone new work there, or what's on the walls and about the room for
 // its window: the boards, the whiteboard, the meeting room, the elevator, the TV, the bookshelf. It
 // fills the window and zooms in whole steps (see pixel/camera.ts). The home page (🏠, /home) has every
@@ -30,22 +30,24 @@ import { floorPicker } from './shared/floors';
 import { followFloor, leaveForHome } from './shared/address';
 import { renderTitle } from './shared/title';
 import { drawOffice, frameFor, type Frame } from './pixel/office';
-import { drawPeople, type People, type Spot } from './pixel/people';
-import { deskSigns, drawMoving, type DeskSign } from './pixel/props';
+import type { People, Spot } from './pixel/people';
+import { deskSigns, type DeskSign } from './pixel/props';
 import { hotspots, type Hotspot } from './pixel/hotspots';
 import { Camera, driveCamera } from './pixel/camera';
 import { closeMenu, mountChat, officeKeys, openWorkerMenu } from './pixel/hud';
 import { badge, drawLabels, outline, signText, zoneBanner } from './pixel/overlay';
 import { zoneBoxes } from './pixel/zones';
-import { dressFor, leadOf, memberOf, onRoster, refreshRoster, setRoster, tagFor, zoneOf } from './pixel/teams';
+import { benched, dressFor, leadOf, memberOf, onRoster, refreshRoster, setRoster, tagFor, zoneOf } from './pixel/teams';
+import { BREAK_WORDS, breakAt } from './pixel/breaks';
 import { ZONE_BY_TEAM, ZONES } from '../shared/zones';
 import type { MemberView } from '../shared/roster/types';
-import { tintScene } from './pixel/tint';
+import { paintScene } from './pixel/scene';
+import { blitCrisp } from './pixel/blit';
 import { colorThemes, currentTheme } from './ui/colortheme';
 import { viewPicker } from './ui/viewpick';
 import { flatMenu, openDocs } from './shared/flatmenu';
 import { tabBadge } from './ui/badge';
-import { drawRouter, routerMessage, routerOverlay, routerSpot, startRouter } from './pixel/router-room';
+import { routerMessage, routerOverlay, routerSpot, startRouter } from './pixel/router-room';
 import './pixel/game.css';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
@@ -157,7 +159,6 @@ const g = canvas.getContext('2d')!;
 const art = document.createElement('canvas');
 const ag = art.getContext('2d')!;
 const buffer = document.createElement('canvas');
-const bg = buffer.getContext('2d')!;
 const cam = new Camera();
 let frame: Frame = frameFor(0);
 let still = drawOffice(frame);
@@ -168,6 +169,8 @@ let hover: Spot | Hotspot | null = null;
 let dpr = 1;
 /** Round the office, the theme's (--px-void in game.css), read again when the theme changes. */
 let voidColor = '';
+/** Less motion asked for: benched Leads stay at their break rather than walking about. */
+const calm = matchMedia('(prefers-reduced-motion: reduce)');
 
 function rebuild() {
   frame = frameFor(store.floorPlan.wing);
@@ -192,39 +195,18 @@ function resize() {
 }
 
 function draw(now: number) {
-  ag.imageSmoothingEnabled = false;
-  ag.drawImage(still, 0, 0);
-  drawMoving(ag, frame, { now, theme: store.theme.active, music: store.jukebox.on, sharing: [...store.peers.values()].some((p) => p.sharing && store.onMyFloor(p)) });
   const peers = [...store.peers.values()].filter((p) => p.id !== store.you && !p.lite && store.onMyFloor(p));
   const hoverId = hover && 'kind' in hover && hover.kind !== 'desk' ? hover.id : null;
-  people = drawPeople(ag, frame, { workers: store.workers.values(), peers, level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs, dress: dressFor, tag: tagFor }, now);
-  // Jeff's room first, so the theme tints it with the rest of the scene.
-  drawRouter(ag, frame, now);
-  tintScene(ag, frame, currentTheme());
+  const scene = { theme: store.theme.active, music: store.jukebox.on, sharing: [...store.peers.values()].some((p) => p.sharing && store.onMyFloor(p)), colorTheme: currentTheme() };
+  people = paintScene(ag, frame, still, scene, { workers: store.workers.values(), peers, level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs, dress: dressFor, tag: tagFor, breaks: { leads: benched(store.floor), clock: Date.now(), still: calm.matches } }, now);
 
   g.imageSmoothingEnabled = false;
   voidColor ||= getComputedStyle(document.body).getPropertyValue('--px-void').trim() || '#0d1828';
   g.fillStyle = voidColor;
   g.fillRect(0, 0, canvas.width, canvas.height);
   const s = cam.scale * dpr;
-  // Between whole steps (fitted to the window), it's blown up a whole number of times past the size
-  // wanted with no smoothing, then smoothed down the last little way: every pixel stays square and the
-  // same size, its edges a hair soft, rather than some pixels a screen pixel wider than others.
-  const k = Math.max(1, Math.ceil(s - 1e-6));
-  const dx = Math.round(cam.x * dpr), dy = Math.round(cam.y * dpr), dw = Math.round(frame.width * s), dh = Math.round(frame.height * s);
-  if (Math.abs(s - Math.round(s)) < 1e-6) g.drawImage(art, dx, dy, dw, dh);
-  else {
-    if (buffer.width !== frame.width * k || buffer.height !== frame.height * k) {
-      buffer.width = frame.width * k;
-      buffer.height = frame.height * k;
-    }
-    bg.imageSmoothingEnabled = false;
-    bg.drawImage(art, 0, 0, buffer.width, buffer.height);
-    g.imageSmoothingEnabled = true;
-    g.imageSmoothingQuality = 'high';
-    g.drawImage(buffer, dx, dy, dw, dh);
-    g.imageSmoothingEnabled = false;
-  }
+  // Every pixel square at any zoom (pixel/blit.ts).
+  blitCrisp(g, art, buffer, cam.x * dpr, cam.y * dpr, s);
   const view = { scale: s, x: cam.x * dpr, y: cam.y * dpr, dpr };
   const banners: ReturnType<typeof zoneBanner>[] = [];
   for (const b of zoneBoxes(frame)) banners.push(zoneBanner(g, view, b, leadLine(leadOf(b.zone.team)), banners));
@@ -306,6 +288,13 @@ function hitAt(clientX: number, clientY: number): Spot | Hotspot | null {
 function tipFor(s: Spot | Hotspot): HTMLElement[] | null {
   if (!('kind' in s)) return [h('b', {}, s.title), h('div.px-dim', {}, s.sub()), s.action ? h('div.px-hint', {}, `🖱️ ${s.action}`) : null].filter((x): x is HTMLElement => !!x);
   if (s.kind === 'desk') return [h('b', {}, `${DESK_BY_ID.get(s.id)?.label ?? 'Desk'} · free`), h('div.px-hint', {}, '✨ Click to give someone new work here')];
+  if (s.kind === 'lead') {
+    const leads = benched(store.floor);
+    const i = leads.findIndex((l) => l.id === s.id);
+    if (i < 0) return null;
+    const b = breakAt(leads[i].name, i, Date.now(), calm.matches);
+    return [h('b', {}, `${leads[i].name} · ${leads[i].title}`), h('div', {}, `🪑 Benched (${b.walking ? `on the way, ${BREAK_WORDS[b.act]}` : BREAK_WORDS[b.act]})`), h('div.px-hint', {}, '🖱️ Hire them again from the 1D view’s Org chart')];
+  }
   if (s.kind === 'dog') return store.dog ? [h('b', {}, `🐕 ${store.dog.name}`), h('div.px-dim', {}, `The office dog · ${store.dog.act}`)] : null;
   if (s.kind === 'peer') {
     const p = store.peers.get(s.id);
@@ -336,7 +325,7 @@ canvas.addEventListener('pointermove', (e) => {
   const s = hitAt(e.clientX, e.clientY);
   if (s?.id !== hover?.id || kindOf(s) !== kindOf(hover)) {
     hover = s;
-    canvas.classList.toggle('point', !!s && (!('kind' in s) ? !!s.run : s.kind === 'worker' || s.kind === 'desk'));
+    canvas.classList.toggle('point', !!s && (!('kind' in s) ? !!s.run : s.kind === 'worker' || s.kind === 'desk' || s.kind === 'lead'));
     draw(performance.now());
   }
   const body = s && tipFor(s);
@@ -360,6 +349,7 @@ function use(s: Spot | Hotspot) {
   if (!('kind' in s)) return s.run ? s.run() : toast(`${s.title}: ${s.sub()}`);
   if (s.kind === 'worker') workers.open(s.id);
   else if (s.kind === 'desk') workers.send('✨ New task', {}, undefined, s.id);
+  else if (s.kind === 'lead' && store.floor) location.assign(`/lite?tab=org&floor=${encodeURIComponent(store.floor)}`);
   else if (s.kind === 'peer') toast(`🚶 ${store.peers.get(s.id)?.name ?? 'They'} is walking about the 3D office`);
 }
 canvas.addEventListener('click', (e) => {
