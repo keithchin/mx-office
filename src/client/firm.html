@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1d2a44" />
+    <title>The Firm · Agent Office</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="./lite.css" />
+    <!-- The color theme picked on this browser (ui/colortheme.ts), set before the page is drawn so it never flashes the wrong one. -->
+    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(t!=="default"&&t!=="dark"&&t!=="terminal")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"default";document.documentElement.dataset.theme=t}catch(e){}</script>
+  </head>
+  <body class="lite firm-page">
+    <!-- The Firm (firm.ts): the office's Reviewer Agents, their engagements and their reports. ?report=<id> opens a report. -->
+    <header class="lite-bar firm-bar">
+      <a id="to-home" class="btn" href="/home" title="Home: every project, and the office's statistics" aria-label="Home">🏠</a>
+      <div class="home-title firm-title">
+        <span class="lite-floor-label">Independent review</span>
+        <h1>The Firm</h1>
+      </div>
+      <button id="call-audit" class="btn firm-brass" type="button" title="Call an audit of a project">📑 Call an audit</button>
+      <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
+    </header>
+    <main class="lite-main firm-main">
+      <section id="firm-hero" class="firm-hero"></section>
+      <section id="firm-active" aria-label="Engagements under way"></section>
+      <section id="firm-people" aria-label="The Firm's people"></section>
+      <section id="firm-reports" aria-label="Past engagements and reports"></section>
+      <section id="firm-report" class="hidden" aria-label="Audit report"></section>
+    </main>
+    <div id="toasts"></div>
+    <div id="modal-root"></div>
+    <script type="module" src="./firm.ts"></script>
+  </body>
+</html>

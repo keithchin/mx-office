@@ -12,6 +12,7 @@ import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { ESCALATE_TOOL, ESCALATE_USAGE, formatEscalated, parseEscalate } from './office-escalate.js';
 import { SUBAGENT_TOOL, SUBAGENT_USAGE, formatSubagent, parseSubagent } from './office-subagent.js';
+import { FIRM_USAGE, firmMain } from './office-firm.js';
 
 const USAGE = `Usage:
   office-workers list [--json]                  everyone at a desk on this floor: status, task,
@@ -35,6 +36,7 @@ const USAGE = `Usage:
   office-workers pr --none [--worker <name|id>] take that pull request off the worker again
 ${ESCALATE_USAGE}
 ${SUBAGENT_USAGE}
+${FIRM_USAGE}
   office-workers mcp                            serve these as MCP tools on stdio`;
 
 /** A mistake in how the command was called: the usage is shown with it. */
@@ -488,6 +490,8 @@ export async function main(argv, io = {}) {
   const out = io.out ?? ((s) => process.stdout.write(s + '\n'));
   const err = io.err ?? ((s) => process.stderr.write(s + '\n'));
   const ctx = { env, fetch: fetchImpl };
+  // The Firm's commands (bin/office-firm.js): a reviewer's, and a worker answering one of its questions.
+  if (argv[0] === 'firm') return firmMain(argv.slice(1), { env, stdin, fetch: fetchImpl, out, err });
   try {
     const cmd = parseArgs(argv);
     if (cmd.cmd === 'help') {

@@ -37,6 +37,8 @@ import { floorPicker } from './shared/floors';
 import { askedTab, followFloor, leaveForHome, setAddress } from './shared/address';
 import { colorThemes } from './ui/colortheme';
 import { needsYouStrip } from './ui/needsyou';
+import { firmBanner } from './ui/firm/banner';
+import type { FirmFloorStatus } from '../shared/firm/engagement';
 import { gitView } from './ui/git';
 import type { NeedTarget } from './ui/needsyou/logic';
 import { viewPicker } from './ui/viewpick';
@@ -321,6 +323,7 @@ function toEscalation(id: string) {
 }
 function goToNeed(t: NeedTarget) {
   if (t.to === 'worker') return openWorker(t.id);
+  if (t.to === 'firm') return location.assign(t.url);
   if (t.to === 'escalation') return toEscalation(t.id);
   if (t.to === 'approvals' || t.to === 'settings' || t.to === 'live') return showTab(t.to);
   if (t.to === 'setup') {
@@ -336,7 +339,12 @@ function goToNeed(t: NeedTarget) {
   const it = store.pulls.items.find((p) => p.number === t.number);
   if (it) openPull(it, net, boardActions());
 }
-const needs = needsYouStrip($('needs-you'), $('tab-command').querySelector('.ny-tab-n')!, { go: goToNeed, setup: () => cachedSetup(store.floor ?? undefined), live: () => live.current() });
+// The Firm (ui/firm/banner.ts): its audit of this floor, its report, or the button to call one.
+let firmStatus: FirmFloorStatus | undefined;
+const needs = needsYouStrip($('needs-you'), $('tab-command').querySelector('.ny-tab-n')!, { go: goToNeed, setup: () => cachedSetup(store.floor ?? undefined), live: () => live.current(), firm: () => firmStatus });
+const firm = firmBanner($('firm-banner'), (s) => ((firmStatus = s), needs.refresh()));
+store.on('floor', () => firm.refresh(store.floor ?? undefined));
+net.onMessage((msg) => firm.onMessage(msg));
 net.onMessage((msg) => {
   needs.onMessage(msg);
   if (msg.t === 'liveapp.state' || msg.t === 'floor.enter' || msg.t === 'welcome') needs.refresh();
@@ -411,6 +419,7 @@ renderWorkers();
 renderNav();
 showTab(tab);
 needs.refresh();
+firm.refresh(store.floor ?? undefined);
 
 // Debug handle for quick checks from the console / headless screenshots.
 (window as any).__lite = { store, net };

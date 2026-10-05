@@ -4,6 +4,7 @@
 import type { Route } from '../router.js';
 import { agentRoutes } from './agents.js';
 import { analysisRoutes } from './analysis.js';
+import { firmRoutes } from './firm.js';
 import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
 import { gitRoutes } from './git.js';
@@ -52,6 +53,13 @@ export const routes: readonly Route[] = [
   rankingRoutes.report,
   homeRoutes.stats,
   homeRoutes.overview,
+  firmRoutes.view,
+  firmRoutes.engagement,
+  firmRoutes.status,
+  firmRoutes.defaults,
+  firmRoutes.estimate,
+  firmRoutes.report,
+  firmRoutes.action,
   prShotRoutes.checks,
   prShotRoutes.file,
   rosterRoutes.view,
@@ -62,6 +70,7 @@ export const routes: readonly Route[] = [
   wizardRoutes.wizard,
   pageRoutes.office,
   pageRoutes.home,
+  pageRoutes.firm,
   pageRoutes.lite,
   pageRoutes.pixel,
   pageRoutes.bundle,

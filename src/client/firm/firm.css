@@ -1,0 +1,113 @@
+/* The Firm (firm.html, firm.ts): a consultancy's rooms inside the office — navy, dark wood and brass —
+   in the 1D view's chunky style. Its own colors are tokens below, set again for the Dark and Terminal
+   themes; everything else uses the office's tokens (styles/base.css), so all three looks hold. */
+
+body.firm-page {
+  --lite-col: 1240px;
+  --firm-navy: #1d2a44;
+  --firm-navy-2: #2a3a5c;
+  --firm-wood: #5a3d29;
+  --firm-brass: #c9a14a;
+  --firm-brass-ink: #6e5420;
+  --firm-ivory: #fbf6ea;
+  --firm-on-navy: #f4ecd6;
+}
+html[data-theme='dark'] body.firm-page {
+  --firm-navy: #10182a;
+  --firm-navy-2: #1d2942;
+  --firm-wood: #3a281b;
+  --firm-brass: #d8b25a;
+  --firm-brass-ink: #e8c878;
+  --firm-ivory: #232536;
+  --firm-on-navy: #f4ecd6;
+}
+html[data-theme='terminal'] body.firm-page {
+  --firm-navy: var(--card);
+  --firm-navy-2: var(--paper-2);
+  --firm-wood: var(--sunken);
+  --firm-brass: var(--accent);
+  --firm-brass-ink: var(--accent);
+  --firm-ivory: var(--card);
+  --firm-on-navy: var(--ink);
+}
+
+body.firm-page .lite-bar.firm-bar { background: var(--firm-navy); border-bottom-color: var(--firm-brass); }
+body.firm-page .firm-bar .lite-floor-label { color: var(--firm-brass); }
+body.firm-page .firm-bar .home-title h1 { color: var(--firm-on-navy); font-family: Georgia, 'Times New Roman', serif; letter-spacing: .02em; }
+html[data-theme='terminal'] .firm-bar .home-title h1 { font-family: inherit; }
+.btn.firm-brass { background: var(--firm-brass); color: #1b1b2a; }
+html[data-theme='terminal'] .btn.firm-brass { color: var(--on-fill); }
+.btn.firm-brass:hover { filter: brightness(1.08); }
+@media (max-width: 520px) { #call-audit { font-size: 0; padding: 0 12px; } #call-audit::before { content: '📑'; font-size: 18px; } }
+
+.firm-main { padding-bottom: 48px; }
+.firm-h { margin-top: 22px; }
+.firm-sub { font-size: 12px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--muted); }
+.firm-empty { color: var(--muted); font-weight: 700; padding: 14px; border: 3px dashed var(--rule-strong); border-radius: var(--radius); }
+
+/* The hero: the pitch beside the office picture. */
+.firm-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 16px; align-items: center; padding: 16px; background: var(--firm-navy); color: var(--firm-on-navy); border: 3px solid var(--line); border-radius: var(--radius); box-shadow: 0 4px 0 var(--edge), inset 0 0 0 2px var(--firm-brass); }
+.firm-hero h2 { margin: 2px 0 8px; font: 900 22px/1.2 Georgia, serif; color: var(--firm-on-navy); }
+html[data-theme='terminal'] .firm-hero h2 { font-family: inherit; }
+.firm-hero p { margin: 0 0 8px; line-height: 1.45; font-size: 14px; }
+.firm-kicker { font-size: 11px !important; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--firm-brass); }
+.firm-hero-stats { display: flex; flex-wrap: wrap; gap: 6px; }
+.firm-hero-stats span { padding: 3px 9px; border: 2px solid var(--firm-brass); border-radius: 999px; font-size: 12px; font-weight: 800; }
+.firm-office { width: 100%; height: auto; image-rendering: pixelated; border: 3px solid var(--firm-brass); border-radius: 10px; background: #1d2a44; }
+@media (max-width: 760px) { .firm-hero { grid-template-columns: 1fr; } }
+
+/* The people. */
+.firm-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.firm-person { background: var(--card); border: 3px solid var(--line); border-radius: var(--radius); box-shadow: 0 3px 0 var(--edge); padding: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 6px solid var(--firm-brass); }
+.firm-person.away { border-top-color: var(--info); }
+.firm-person-top { display: flex; gap: 12px; align-items: flex-start; }
+.firm-portrait { image-rendering: pixelated; flex: none; border-radius: 6px; }
+.firm-person-id { min-width: 0; display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.firm-person-id h3 { margin: 0; font: 900 17px/1.2 Georgia, serif; }
+html[data-theme='terminal'] .firm-person-id h3 { font-family: inherit; }
+.firm-role { margin: 0; font-weight: 900; color: var(--firm-brass-ink); font-size: 13px; }
+.firm-attached { margin: 0; font-size: 12px; color: var(--muted); font-weight: 700; }
+.firm-badge, .firm-model { font-size: 12px; font-weight: 900; padding: 2px 8px; border: 2px solid var(--line); border-radius: 999px; background: var(--firm-navy); color: var(--firm-on-navy); }
+.firm-model { width: auto; height: 28px; padding: 0 6px; }
+.firm-away, .firm-in { font-size: 11px; font-weight: 800; color: var(--muted); }
+.firm-away { color: var(--link); }
+.firm-mission { margin: 0; font-size: 13px; line-height: 1.4; }
+.firm-skills { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.45; }
+.firm-produces { margin: 0; font-size: 12px; color: var(--ink-2); }
+.firm-produces small { font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+
+/* Engagements. */
+.firm-engs { display: flex; flex-direction: column; gap: 12px; }
+.firm-eng { background: var(--card); border: 3px solid var(--line); border-radius: var(--radius); box-shadow: 0 3px 0 var(--edge); padding: 12px; display: flex; flex-direction: column; gap: 10px; border-left: 8px solid var(--firm-brass); }
+.firm-eng-h { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.firm-eng-h h3 { margin: 0; font-size: 17px; }
+.firm-eng-meta, .firm-eng-q { margin: 2px 0 0; font-size: 12px; color: var(--muted); font-weight: 700; }
+.firm-budget { position: relative; height: 26px; border: 3px solid var(--line); border-radius: 999px; background: var(--sunken); overflow: hidden; }
+.firm-budget-fill { position: absolute; inset: 0 auto 0 0; background: var(--good); transition: width .4s; }
+.firm-budget.warn .firm-budget-fill { background: var(--warn); }
+.firm-budget.cap .firm-budget-fill { background: var(--bad); }
+.firm-budget-est { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed var(--ink); opacity: .55; }
+.firm-budget-text { position: relative; display: block; text-align: center; font: 900 12px/20px var(--font); color: var(--ink); }
+.firm-runs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.firm-run { display: grid; grid-template-columns: minmax(150px, 1.4fr) auto auto auto; gap: 4px 10px; align-items: center; padding: 6px 8px; border: 2px solid var(--rule-strong); border-radius: 10px; background: var(--paper); }
+.firm-run-who { display: flex; flex-direction: column; font-weight: 900; font-size: 13px; }
+.firm-run-who small { font-weight: 700; color: var(--muted); font-size: 11px; }
+.firm-run-model { font-size: 11px; font-weight: 800; color: var(--firm-brass-ink); }
+.firm-run-cost { font: 800 12px var(--font); }
+.firm-run-act { grid-column: 1 / -1; font-size: 11.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, monospace; }
+.pill.firm-run-st.reviewing, .pill.firm-run-st.writing { background: var(--warn); color: var(--on-warn); }
+.pill.firm-run-st.interviewing { background: var(--info); color: var(--on-fill); }
+.pill.firm-run-st.waiting, .pill.firm-run-st.queued, .pill.firm-run-st.staffing { background: var(--info-soft); }
+.pill.firm-run-st.done { background: var(--good); color: var(--on-fill); }
+.pill.firm-run-st.stopped, .pill.firm-run-st.failed { background: var(--bad-soft); }
+@media (max-width: 560px) { .firm-run { grid-template-columns: 1fr auto; } .firm-run-model { display: none; } }
+.firm-transcript summary { cursor: pointer; font-weight: 900; font-size: 13px; }
+.firm-transcript ol { margin: 6px 0 0; padding-left: 20px; font-size: 12px; line-height: 1.45; max-height: 240px; overflow: auto; }
+.firm-transcript small { color: var(--muted); }
+.firm-pasts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.firm-past { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--card); border: 3px solid var(--line); border-radius: 14px; box-shadow: 0 3px 0 var(--edge); }
+.firm-past-name { display: flex; flex-direction: column; min-width: 0; }
+.firm-past-name small { color: var(--muted); font-weight: 700; font-size: 12px; }
+.firm-past-none { font-size: 12px; color: var(--muted); font-weight: 700; text-align: right; }
+.firm-past .btn { flex: none; text-decoration: none; }
+html[data-theme='terminal'] body.lite .lite-bar > #call-audit { width: auto; padding: 0 8px; }

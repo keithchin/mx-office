@@ -3,6 +3,7 @@
 // on the Command Center's tab button whichever tab is showing. One calm line when nothing is. It
 // fetches the floor's team itself, again when the office says it changed. No three.js here.
 
+import type { FirmFloorStatus } from '../../../shared/firm/engagement';
 import type { LiveAppState, ServerMsg } from '../../../shared/protocol';
 import type { RosterView } from '../../../shared/roster/types';
 import type { SetupView } from '../../../shared/wizard';
@@ -22,6 +23,8 @@ export interface NeedsYouDeps {
   /** The setup panel's view of this floor, when it has one. */
   setup(): SetupView | undefined;
   live(): LiveAppState | null;
+  /** The Firm's audit of this floor (ui/firm/banner.ts fetches it). */
+  firm?(): FirmFloorStatus | undefined;
 }
 
 export interface NeedsYou {
@@ -65,7 +68,7 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
     );
 
   function draw() {
-    const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live() });
+    const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live(), firm: deps.firm?.() });
     const n = hereCount(items);
     badge.textContent = n ? String(n) : '';
     badge.title = n ? `${n} thing${n === 1 ? '' : 's'} on this floor need${n === 1 ? 's' : ''} you` : '';
