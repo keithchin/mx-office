@@ -87,11 +87,57 @@ export function escalationCard(floor: string, e: Escalation, admin: boolean, don
           )
         : h('p.esc-meta', {}, 'Only the Project Manager (an admin) can answer it.'),
   );
-  // Who raised it, big enough to tell at a glance: the same character as in the 2D office.
+  // Who raised it, big enough to tell at a glance (the same character as in the 2D office), saying
+  // what it needs in a speech bubble; the card's details sit under them.
   const body = h('div.esc-body');
   body.append(...card.childNodes);
-  card.append(raisedBy(e), body);
+  card.append(h('div.esc-top', {}, raisedBy(e), h('p.esc-bubble', {}, saying(e))), body);
   return card;
+}
+
+/** The first sentence of `s`, or its first ~120 characters, without a trailing full stop. */
+function gist(s: string): string {
+  const one = s.replace(/\s+/g, ' ').trim();
+  const cut = one.match(/^.{20,140}?[.!?](\s|$)/)?.[0] ?? (one.length > 130 ? `${one.slice(0, 120).replace(/\s+\S*$/, '')}…` : one);
+  return cut.trim().replace(/\.$/, '');
+}
+
+/** What it's after, the way a teammate would say it at your desk. */
+function saying(e: Escalation): string {
+  // Ends in a full stop unless it already asks or exclaims.
+  const what = ((t) => (/[?!…]$/.test(t) ? t : `${t}.`))(gist(e.title));
+  if (e.status === 'resolved' && e.resolution) {
+    const r = e.resolution;
+    if (r.verdict === 'approve') return `Thanks for the go-ahead! I'm on it 👍`;
+    if (r.verdict === 'reject') return `Got it, not doing that. I'll rethink it 🤔`;
+    if (r.verdict === 'dismiss') return `Cool, noted. Back to work ✌️`;
+    return `Thanks, that answers it. On it now 🙌`;
+  }
+  if (e.fyi) return `Just so you know: ${what} Nothing needed from you 🙂`;
+  const pick = e.options.length ? (e.recommendation ? ` I'd go with “${gist(e.recommendation)}”, but your call.` : ' Which one should I go with?') : '';
+  switch (e.trigger) {
+    case 'blocked':
+      return `I'm stuck 😅 ${what}${pick || ' Can you help me get unblocked?'}`;
+    case 'security':
+      return `Uh-oh, spotted something security-ish 🔒 ${what}${pick || ' Can you take a look?'}`;
+    case 'data-loss':
+      return `Careful, this could lose data ⚠️ ${what}${pick || ' Okay to go ahead?'}`;
+    case 'budget-risk':
+      return `Heads-up, we're burning budget 💸 ${what}${pick || ' Should I keep going?'}`;
+    case 'client-milestone':
+      return `Big one: a client milestone 🎯 ${what}${pick || ' Can you sign it off?'}`;
+    case 'scope':
+    case 'plan':
+      return `This might change the plan 🗺️ ${what}${pick || ' Are you okay with that?'}`;
+    case 'design':
+    case 'architecture':
+      return `Quick design call needed ✏️ ${what}${pick || ' What do you think?'}`;
+    case 'revisions-exhausted':
+    case 'repeated-failure':
+      return `This keeps failing and I'm out of ideas 😓 ${what}${pick || ' How do you want to handle it?'}`;
+  }
+  if (e.urgency === 'critical' || e.urgency === 'urgent') return `Need you on this one, it's kinda urgent ⏰ ${what}${pick || ' Can you look now?'}`;
+  return `Hey! Quick one: ${what}${pick || ' What do you think?'}`;
 }
 
 const OUTFIT: Record<string, Outfit> = { pm: 'pm', 'lead-designer': 'designer', 'lead-developer': 'dev', 'lead-tester': 'qa', 'chief-analyst': 'analyst' };
