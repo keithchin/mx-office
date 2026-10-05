@@ -117,6 +117,9 @@ function robot(b: GitBranch, at: Pick<Lane, 'tipX' | 'y'>): SVGElement {
   bot.append(bob);
   const fx = st === 'working' ? '✨' : st === 'needs_input' ? '🙋' : st === 'done' ? '🎉' : st === 'offline' || st === 'exited' ? '💤' : '';
   if (fx) bot.append(s('text', { class: 'gp-fx', x: w - 2, y: 4 }, fx));
+  // The Clean themes show no emoji: a plain mark instead (styles/theme-clean-parts.css shows one or the other).
+  const mark = st === 'working' ? '•' : st === 'needs_input' ? '?' : st === 'done' ? '✓' : fx ? 'z' : '';
+  if (mark) bot.append(s('text', { class: `gp-fx-clean st-${st}`, x: w + 1, y: 4 }, mark));
   return bot;
 }
 

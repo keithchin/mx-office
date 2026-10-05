@@ -1,0 +1,181 @@
+// The Clean themes' icons: thin line icons on a 16×16 grid, drawn here as plain SVG (in the manner of an
+// editor's toolbar icons), standing in for an emoji wherever an emoji was a button's or a label's whole
+// content (🔔 🏠 🎨 ☰ …). ui/clean/index.ts marks such an element with data-ao-icon="<name>" and the
+// sheet made by iconSheet() draws the icon there, in the text's color, only while a Clean theme is on.
+
+/** Each icon's shapes, stroked in currentColor 1.25 wide (a `fill` class fills one instead). */
+export const ICONS: Readonly<Record<string, string>> = {
+  bell: '<path d="M4 11V7a4 4 0 0 1 8 0v4l1.5 1.5h-11z"/><path d="M6.5 14a1.5 1.5 0 0 0 3 0"/>',
+  home: '<path d="M2 7.5 8 2.5l6 5"/><path d="M3.5 6.5v7h3.5v-4h2v4h3.5v-7"/>',
+  palette: '<path d="M8 2a6 6 0 1 0 0 12c1 0 1.5-.6 1.5-1.3 0-1.2-1-1.4-1-2.2 0-.6.5-1 1.2-1H11a3 3 0 0 0 3-3C14 4.3 11.3 2 8 2z"/><circle class="fill" cx="5" cy="7" r=".9"/><circle class="fill" cx="7.5" cy="4.8" r=".9"/><circle class="fill" cx="10.5" cy="5.5" r=".9"/>',
+  menu: '<path d="M2.5 4h11M2.5 8h11M2.5 12h11"/>',
+  close: '<path d="m4 4 8 8M12 4l-8 8"/>',
+  send: '<path d="M2 2.5 14 8 2 13.5l1.8-5.5z"/><path d="M3.8 8H9"/>',
+  refresh: '<path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M12 1.8v3h-3"/>',
+  gear: '<circle cx="8" cy="8" r="2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/>',
+  search: '<circle cx="7" cy="7" r="4.5"/><path d="m10.3 10.3 3.7 3.7"/>',
+  chat: '<path d="M2 3h12v8H7l-3 2.5V11H2z"/>',
+  edit: '<path d="M10.5 2.5l3 3L6 13H3v-3z"/><path d="m9 4 3 3"/>',
+  trash: '<path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4"/>',
+  check: '<path d="m2.5 8.5 3.5 3.5 7.5-8"/>',
+  warning: '<path d="M8 2 14.5 13.5h-13z"/><path d="M8 6.5v3.5"/><circle class="fill" cx="8" cy="11.8" r=".8"/>',
+  info: '<circle cx="8" cy="8" r="6"/><path d="M8 7v4.5"/><circle class="fill" cx="8" cy="4.8" r=".8"/>',
+  error: '<circle cx="8" cy="8" r="6"/><path d="m5.8 5.8 4.4 4.4M10.2 5.8l-4.4 4.4"/>',
+  stop: '<circle cx="8" cy="8" r="6"/><path d="M3.8 12.2l8.4-8.4"/>',
+  plus: '<path d="M8 2.5v11M2.5 8h11"/>',
+  play: '<path d="M4.5 2.5v11l9-5.5z"/>',
+  pause: '<path d="M5.5 3v10M10.5 3v10"/>',
+  folder: '<path d="M1.5 3.5h4.5l1.5 1.5h7v8h-13z"/>',
+  file: '<path d="M3.5 1.5h6l3 3v10h-9z"/><path d="M9.5 1.5v3h3"/>',
+  clipboard: '<path d="M5.5 2.5h-2v12h9v-12h-2"/><path d="M5.5 1.5h5v2h-5z"/><path d="M5.5 7.5h5M5.5 10.5h3.5"/>',
+  board: '<path d="M1.5 2.5h13v11h-13z"/><path d="M6 2.5v11M10.5 2.5v11"/>',
+  robot: '<path d="M3 5.5h10v7.5H3z"/><path d="M8 5.5V3"/><circle class="fill" cx="8" cy="2.5" r=".9"/><circle class="fill" cx="6" cy="8.7" r=".9"/><circle class="fill" cx="10" cy="8.7" r=".9"/><path d="M6 11h4M1.5 8v2.5M14.5 8v2.5"/>',
+  person: '<circle cx="8" cy="5" r="2.8"/><path d="M2.5 14.5c.4-3 2.6-4.8 5.5-4.8s5.1 1.8 5.5 4.8"/>',
+  people: '<circle cx="5.5" cy="5.5" r="2.3"/><path d="M1.5 13.5c.3-2.4 1.8-3.8 4-3.8s3.7 1.4 4 3.8"/><circle cx="11" cy="4.5" r="2"/><path d="M10.5 8.6c2.2 0 3.6 1.3 4 3.6"/>',
+  branch: '<circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="5" r="1.5"/><path d="M4.5 5v6M11.5 6.5c0 3-7 2-7 4.5"/>',
+  merge: '<circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="12.5" r="1.5"/><path d="M4.5 5v6M4.5 5c0 4 7 3 7 6"/>',
+  chart: '<path d="M2 14h12"/><path d="M4 11.5V8M7 11.5V4M10 11.5V6.5M13 11.5V9.5"/>',
+  globe: '<circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c-2.2 2.5-2.2 9.5 0 12M8 2c2.2 2.5 2.2 9.5 0 12"/>',
+  building: '<path d="M3 14.5V2.5h7v12M10 6.5h3v8"/><path d="M5 5h1.5M5 8h1.5M5 11h1.5M7.5 5H8M7.5 8H8M1.5 14.5h13"/>',
+  bolt: '<path d="M9 1.5 3.5 9H8l-1 5.5L12.5 7H8z"/>',
+  star: '<path d="m8 1.8 1.9 4 4.3.5-3.2 3 .9 4.3L8 11.5l-3.9 2.1.9-4.3-3.2-3 4.3-.5z"/>',
+  sparkle: '<path d="M8 1.5c.4 3.4 1.6 4.6 5 5-3.4.4-4.6 1.6-5 5-.4-3.4-1.6-4.6-5-5 3.4-.4 4.6-1.6 5-5z"/><path d="M12.5 11v3M11 12.5h3"/>',
+  pin: '<path d="M6 2h4l-.5 4 2.5 2.5H4L6.5 6z"/><path d="M8 8.5v6"/>',
+  lock: '<path d="M3.5 7h9v7h-9z"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>',
+  key: '<circle cx="5" cy="10.5" r="3"/><path d="m7.2 8.3 6.3-6.3M11 4.5l2 2M9.5 6l1.5 1.5"/>',
+  mic: '<path d="M6 2.5h4v6.5a2 2 0 0 1-4 0z"/><path d="M3.5 8.5a4.5 4.5 0 0 0 9 0M8 13v2"/>',
+  music: '<path d="M6 12.5V3l7.5-1.5V11"/><circle cx="4.3" cy="12.5" r="1.7"/><circle cx="11.8" cy="11" r="1.7"/>',
+  eye: '<path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/>',
+  link: '<path d="M7 9a2.8 2.8 0 0 0 4 0l2.2-2.2a2.8 2.8 0 0 0-4-4L8.5 3.5"/><path d="M9 7a2.8 2.8 0 0 0-4 0L2.8 9.2a2.8 2.8 0 0 0 4 4l.7-.7"/>',
+  clock: '<circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/>',
+  hourglass: '<path d="M4 1.5h8M4 14.5h8M4.5 1.5c0 4 7 4 7 6.5s-7 2.5-7 6.5M11.5 1.5c0 4-7 4-7 6.5s7 2.5 7 6.5"/>',
+  bug: '<path d="M5 6.5h6v4a3 3 0 0 1-6 0z"/><path d="M6 6.5a2 2 0 0 1 4 0M8 7.5v6M2.5 8.5H5M11 8.5h2.5M3 5l2 1.5M13 5l-2 1.5M3 13l2-1.5M13 13l-2-1.5"/>',
+  flag: '<path d="M3.5 14.5v-12"/><path d="M3.5 2.5h9l-2 3 2 3h-9"/>',
+  rocket: '<path d="M8 1.5c2.5 1.5 3.5 4 3 7.5L9.5 11h-3L5 9c-.5-3.5.5-6 3-7.5z"/><circle cx="8" cy="5.8" r="1.2"/><path d="M5 9l-2 2v2.5l3-1.5M11 9l2 2v2.5l-3-1.5"/>',
+  inbox: '<path d="M1.5 9.5 3.5 3h9l2 6.5v4h-13z"/><path d="M1.5 9.5H5l1 2h4l1-2h3.5"/>',
+  mail: '<path d="M1.5 3.5h13v9h-13z"/><path d="m1.5 3.5 6.5 5.5 6.5-5.5"/>',
+  download: '<path d="M8 2v8.5M4.5 7 8 10.5 11.5 7M2.5 13.5h11"/>',
+  upload: '<path d="M8 11V2.5M4.5 6 8 2.5 11.5 6M2.5 13.5h11"/>',
+  terminal: '<path d="M1.5 2.5h13v11h-13z"/><path d="m4 6 2.5 2L4 10M8 10.5h4"/>',
+  tools: '<path d="M10 2a3.5 3.5 0 0 0-3.2 4.7L2 11.5 4.5 14l4.8-4.8A3.5 3.5 0 0 0 14 6l-2 1.5L10 7 9 5l1.5-2z"/>',
+  question: '<circle cx="8" cy="8" r="6"/><path d="M6.2 6.3a1.9 1.9 0 1 1 2.6 1.8c-.6.3-.8.7-.8 1.4v.5"/><circle class="fill" cx="8" cy="11.8" r=".8"/>',
+  hand: '<path d="M5 8.5V3.5a1 1 0 0 1 2 0V7M7 7V2.5a1 1 0 0 1 2 0V7M9 7V3.5a1 1 0 0 1 2 0V8M11 8V5.5a1 1 0 0 1 2 0V10a4.5 4.5 0 0 1-4.5 4.5H8A4.5 4.5 0 0 1 4 12l-1.5-3a1 1 0 0 1 1.7-1L5 9"/>',
+  coffee: '<path d="M2.5 6h9v4a3.5 3.5 0 0 1-3.5 3.5h-2A3.5 3.5 0 0 1 2.5 10z"/><path d="M11.5 7h1a1.8 1.8 0 0 1 0 3.6h-1.2M5 1.5v2.5M8 1.5v2.5"/>',
+  moon: '<path d="M13 10A5.5 5.5 0 0 1 6 3a5.5 5.5 0 1 0 7 7z"/>',
+  sun: '<circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6 13 13M3 13l1.4-1.4M11.6 4.4 13 3"/>',
+  target: '<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle class="fill" cx="8" cy="8" r="1"/>',
+  dollar: '<path d="M11 4.5C10.5 3.5 9.4 3 8 3 6.3 3 5 3.8 5 5.2c0 3 6 1.6 6 4.8 0 1.4-1.3 2.2-3 2.2-1.5 0-2.6-.6-3.1-1.7M8 1.5v13"/>',
+  box: '<path d="M2 5 8 2l6 3v6.5L8 14.5 2 11.5z"/><path d="M2 5l6 3 6-3M8 8v6.5"/>',
+  book: '<path d="M2 3c2-.8 4-.8 6 .5 2-1.3 4-1.3 6-.5v10c-2-.8-4-.8-6 .5-2-1.3-4-1.3-6-.5z"/><path d="M8 3.5v10"/>',
+  camera: '<path d="M1.5 5h3l1.5-2h4L11.5 5h3v8h-13z"/><circle cx="8" cy="9" r="2.5"/>',
+  screen: '<path d="M1.5 2.5h13v8.5h-13z"/><path d="M5.5 14h5M8 11v3"/>',
+  door: '<path d="M3.5 14.5V1.5h8v13M1.5 14.5h13"/><circle class="fill" cx="9.3" cy="8" r=".8"/>',
+  sleep: '<path d="M3 5h4L3 10h4M9 2.5h3.5L9 7h3.5"/>',
+  party: '<path d="M2 14 5.5 4.5l6 6z"/><path d="M9 2.5v1.5M12.5 3.5l-1 1M13.5 7H12M10 6l1.5-1.5"/>',
+  heart: '<path d="M8 13.5S2 10 2 6a3 3 0 0 1 6-1 3 3 0 0 1 6 1c0 4-6 7.5-6 7.5z"/>',
+  scale: '<path d="M8 2v12M4.5 14h7M2.5 4.5h11"/><path d="M4 4.5 2 9a2 2 0 0 0 4 0zM12 4.5 10 9a2 2 0 0 0 4 0z"/>',
+  map: '<path d="M1.5 3.5 5.5 2l5 1.5 4-1.5v10.5l-4 1.5-5-1.5-4 1.5z"/><path d="M5.5 2v10.5M10.5 3.5V14"/>',
+  game: '<path d="M4 4.5h8a3 3 0 0 1 3 3.5l-.5 2.5a1.8 1.8 0 0 1-3.2.7L10 9.5H6l-1.3 1.7a1.8 1.8 0 0 1-3.2-.7L1 8a3 3 0 0 1 3-3.5z"/><path d="M4.5 6.5v2M3.5 7.5h2"/><circle class="fill" cx="11" cy="7.5" r=".8"/>',
+  puzzle: '<path d="M2.5 5.5h3a1.5 1.5 0 1 1 3 0h3v3a1.5 1.5 0 1 1 0 3v2.5h-9v-3a1.5 1.5 0 1 0 0-3z"/>',
+  glass: '<path d="M2.5 2.5h11L8 8.5z"/><path d="M8 8.5v5M5 13.5h6"/>',
+  dot: '<circle class="fill" cx="8" cy="8" r="2.5"/>',
+};
+
+/** The emoji a Clean icon stands in for (without the selector after some of them). One missing from here leaves its spot blank. */
+const BY_EMOJI: Readonly<Record<string, readonly string[]>> = {
+  bell: ['🔔', '🔕'],
+  home: ['🏠', '🏡'],
+  palette: ['🎨'],
+  menu: ['☰'],
+  close: ['❌', '✖', '✕', '✗', '❎'],
+  send: ['📤', '📨', '🚀'],
+  refresh: ['🔄', '🔃', '🔁', '♻'],
+  gear: ['⚙', '🛠'],
+  search: ['🔍', '🔎'],
+  chat: ['💬', '🗨', '🗯', '💭'],
+  edit: ['✏', '✎', '✍', '📝', '🖊', '🖋'],
+  trash: ['🗑'],
+  check: ['✅', '☑', '✔'],
+  warning: ['⚠', '🚧'],
+  info: ['ℹ', '💡'],
+  error: ['⛔', '🚫', '🛑'],
+  plus: ['➕', '🆕'],
+  play: ['▶', '⏩', '⏭', '🎬'],
+  pause: ['⏸'],
+  stop: ['⏹', '🚷'],
+  folder: ['📁', '📂', '🗂', '🗃'],
+  file: ['📄', '📃', '📑'],
+  clipboard: ['📋'],
+  board: ['📌', '🧾'],
+  robot: ['🤖', '👾'],
+  person: ['👤', '🙂', '😀', '🧑', '👷', '🧑‍💻', '👩‍💻', '👨‍💻', '🕵', '🧐'],
+  people: ['👥', '👪', '🤝'],
+  branch: ['🌳', '🌿', '🌱', '🌲'],
+  merge: ['🔀'],
+  chart: ['📊', '📈', '📉'],
+  globe: ['🌐', '🌍', '🌎', '🌏'],
+  building: ['🏢', '🏬', '🏛', '🏗', '🛗'],
+  bolt: ['⚡'],
+  star: ['⭐', '🌟', '🏆', '🥇'],
+  sparkle: ['✨', '💫'],
+  pin: ['📍'],
+  lock: ['🔒', '🔐', '🔓'],
+  key: ['🔑', '🗝'],
+  mic: ['🎤', '🎙'],
+  music: ['🎵', '🎶', '🎧', '📻', '♪', '♫'],
+  eye: ['👀', '👁'],
+  link: ['🔗'],
+  clock: ['⏰', '⏱', '🕐', '📅', '📆', '🗓'],
+  hourglass: ['⏳', '⌛'],
+  bug: ['🐛', '🐞'],
+  flag: ['🚩', '🏁'],
+  inbox: ['📥', '📬', '📭'],
+  mail: ['✉', '📧', '📩'],
+  download: ['⬇', '🔽'],
+  upload: ['⬆', '🔼', '⏫'],
+  terminal: ['💻', '🖥', '⌨'],
+  tools: ['🔧', '🔨', '🧰', '⚒'],
+  question: ['❓', '❔', '🤔'],
+  hand: ['🙋', '✋', '🖐', '👋', '🤚'],
+  coffee: ['☕'],
+  glass: ['🍸', '🍹', '🍺', '🍻', '🥂', '🍷'],
+  moon: ['🌙', '🌛', '🌜'],
+  sun: ['☀', '🌞', '🌤'],
+  target: ['🎯'],
+  dollar: ['💸', '💰', '💵', '🪙'],
+  box: ['📦'],
+  book: ['📚', '📖', '📓', '📒', '📕', '📘'],
+  camera: ['📷', '📸', '🎥'],
+  screen: ['📺', '🖼'],
+  door: ['🚪'],
+  sleep: ['💤', '😴'],
+  party: ['🎉', '🎊'],
+  heart: ['❤', '💖', '💚', '💙'],
+  scale: ['⚖'],
+  map: ['🗺'],
+  game: ['🎮', '🕹'],
+  puzzle: ['🧩'],
+};
+
+const EMOJI_ICON = new Map<string, string>(Object.entries(BY_EMOJI).flatMap(([name, list]) => list.map((e) => [e, name] as [string, string])));
+
+/** The icon for `text`, the whole of an element's own words, if it's one emoji Clean has an icon for. */
+export function iconFor(text: string): string | undefined {
+  // The selector and skin tones aside, so ⚙️ and ⚙ (or 👋🏽 and 👋) are the same one.
+  const key = text.trim().replace(/[︎️]|\uD83C[\uDFFB-\uDFFF]/g, '');
+  return EMOJI_ICON.get(key);
+}
+
+/** An icon as an SVG data URL, for a CSS mask. */
+export function iconUrl(name: string): string {
+  const body = ICONS[name] ?? ICONS.dot;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><style>.fill{fill:#000;stroke:none}</style>${body}</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+/** The sheet that draws each icon, under a Clean theme only. */
+export function iconSheet(): string {
+  const at = "html[data-theme^='clean']";
+  const rules = Object.keys(ICONS).map((n) => `${at} [data-ao-icon='${n}']::before { -webkit-mask-image: ${iconUrl(n)}; mask-image: ${iconUrl(n)}; }`);
+  return rules.join('\n');
+}

@@ -13,6 +13,7 @@ import type { ServerMsg } from '../../shared/protocol';
 import { TEAM_IDS, TEAM_META } from '../../shared/roster/card-team';
 import type { TeamZone } from '../../shared/zones';
 import { h } from '../ui/dom';
+import { canvasText, isClean, uiFont } from '../ui/clean';
 import { fetchJudge, jeffName, jeffPortrait, KIND_LABEL, rateOf, statusPill, STATUS_WORDS, todayLine } from '../ui/jeff';
 import { drawChair } from './desks';
 import { ax, az, LIFT, type Frame } from './frame';
@@ -247,11 +248,13 @@ function bubble(g: CanvasRenderingContext2D, v: View, ax0: number, ay0: number, 
   const size = Math.round(Math.max(11, Math.min(15, 4.5 * (v.scale / v.dpr))) * v.dpr);
   g.save();
   g.globalAlpha = alpha;
-  g.font = `900 ${size}px system-ui, -apple-system, 'Segoe UI', sans-serif`;
+  g.font = `900 ${size}px ${uiFont("system-ui, -apple-system, 'Segoe UI', sans-serif")}`;
+  text = canvasText(text);
   g.textBaseline = 'middle';
   const pad = Math.round(size * 0.6), w = Math.ceil(g.measureText(text).width) + pad * 2, hgt = Math.round(size * 1.8);
   const x = Math.round(v.x + ax0 * v.scale), y = Math.round(v.y + ay0 * v.scale) - hgt;
-  const p = Math.max(1, Math.round(v.dpr * 2));
+  // A one-pixel frame in a Clean theme, like its callouts.
+  const p = Math.max(1, Math.round(v.dpr * (isClean() ? 1 : 2)));
   g.fillStyle = '#0d1828';
   g.fillRect(x - p, y - p, w + p * 2, hgt + p * 2);
   g.fillRect(x + p * 3, y + hgt, p * 4, p * 3);

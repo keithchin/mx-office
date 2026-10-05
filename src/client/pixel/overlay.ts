@@ -7,6 +7,7 @@ import type { Label } from './people';
 import type { DeskSign } from './props';
 import type { ZoneBox } from './zones';
 import { signAnchor } from './zones';
+import { canvasText, uiFont } from '../ui/clean';
 
 /** Where the art is on the screen: device pixels to an art pixel, and its top-left corner in device pixels. */
 export interface View {
@@ -17,7 +18,9 @@ export interface View {
 }
 
 const STATUS_DOT: Record<string, string> = { working: '#5fd9cb', starting: '#5fd9cb', idle: '#c9d4e3', needs_input: '#f2b33d', done: '#2fbf8a', exited: '#8fa3bf', offline: '#8fa3bf' };
-const FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+const SANS = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+/** The words' font: the system's, or the clean one in a Clean theme (ui/clean/). */
+const font = () => uiFont(SANS);
 
 /** A box on the screen, in device pixels: a label placed so far, or a signpost labels keep clear of. */
 export interface Box {
@@ -45,7 +48,7 @@ export function drawLabels(g: CanvasRenderingContext2D, v: View, labels: Label[]
   const placed: Box[] = [...avoid];
   for (const l of labels) {
     if (!all && hover !== l.id) continue;
-    g.font = `700 ${size}px ${FONT}`;
+    g.font = `700 ${size}px ${font()}`;
     const text = l.text.length > 14 ? `${l.text.slice(0, 13)}…` : l.text;
     const dot = l.status ? Math.round(8 * v.dpr) : 0;
     const w = Math.ceil(g.measureText(text).width) + pad * 2 + dot, hgt = Math.round(size * 1.5);
@@ -53,7 +56,7 @@ export function drawLabels(g: CanvasRenderingContext2D, v: View, labels: Label[]
     const tag = l.tag && (l.tag.color || zoom >= 2.5 || hover === l.id) ? l.tag : undefined;
     let tt = '', tw = 0, th = 0;
     if (tag) {
-      g.font = `800 ${small}px ${FONT}`;
+      g.font = `800 ${small}px ${font()}`;
       const full = zoom < 2.2 && tag.short ? tag.short : tag.text;
       tt = full.length > 22 ? `${full.slice(0, 21)}…` : full;
       tw = Math.ceil(g.measureText(tt).width) + pad * 2;
@@ -78,13 +81,13 @@ export function drawLabels(g: CanvasRenderingContext2D, v: View, labels: Label[]
     if (tag) {
       const ty = l.above ? box.y + Math.round(v.dpr) : box.y + hgt - Math.round(v.dpr);
       const tx = mid - (tw >> 1);
-      g.font = `800 ${small}px ${FONT}`;
+      g.font = `800 ${small}px ${font()}`;
       pill(g, tx, ty, tw, th, v.dpr, tag.color ?? '#2b4066', '#05090f', false);
       g.fillStyle = tag.color ? '#0d1828' : '#dfe8f3';
       g.fillText(tt, tx + pad, ty + th / 2 + v.dpr * 0.5);
     }
     const x = mid - (w >> 1);
-    g.font = `700 ${size}px ${FONT}`;
+    g.font = `700 ${size}px ${font()}`;
     pill(g, x, ny, w, hgt, v.dpr, l.human ? '#ffffff' : '#13213a', l.human ? '#9aa6b6' : '#05090f', hover === l.id);
     if (l.status) {
       g.fillStyle = STATUS_DOT[l.status] ?? '#8fa3bf';
@@ -113,7 +116,7 @@ function pill(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
 export function badge(g: CanvasRenderingContext2D, v: View, at: { x: number; y: number; w: number }, n: number) {
   if (!n) return;
   const size = Math.round(Math.max(10, Math.min(14, 5 * v.scale / v.dpr)) * v.dpr);
-  g.font = `900 ${size}px ${FONT}`;
+  g.font = `900 ${size}px ${font()}`;
   g.textBaseline = 'middle';
   const text = n > 99 ? '99+' : String(n);
   const w = Math.max(size * 1.4, g.measureText(text).width + size * 0.8), h = Math.round(size * 1.45);
@@ -129,7 +132,7 @@ export function badge(g: CanvasRenderingContext2D, v: View, at: { x: number; y: 
 export function signText(g: CanvasRenderingContext2D, v: View, s: DeskSign) {
   const size = Math.round(Math.min(11, 2.4 * v.scale / v.dpr) * v.dpr);
   if (size < 7 * v.dpr) return;
-  g.font = `800 ${size}px ${FONT}`;
+  g.font = `800 ${size}px ${font()}`;
   g.textBaseline = 'middle';
   const text = s.text.length > 14 ? `${s.text.slice(0, 13)}…` : s.text;
   const w = g.measureText(text).width + 6 * v.dpr, h = size * 1.35;
@@ -168,12 +171,12 @@ export function zoneBanner(g: CanvasRenderingContext2D, v: View, b: ZoneBox, lea
   const zoom = v.scale / v.dpr;
   const a = signAnchor(b);
   const size = Math.round((zoom >= 3 ? 14 : zoom >= 2 ? 13 : 11) * v.dpr), small = Math.round(size * 0.8);
-  const title = `${b.zone.icon} ${b.zone.name}`;
+  const title = canvasText(`${b.zone.icon} ${b.zone.name}`);
   g.textBaseline = 'middle';
-  g.font = `900 ${size}px ${FONT}`;
+  g.font = `900 ${size}px ${font()}`;
   const pad = Math.round(7 * v.dpr);
   let w = g.measureText(title).width + pad * 2;
-  g.font = `800 ${small}px ${FONT}`;
+  g.font = `800 ${small}px ${font()}`;
   const sub = lead ?? '';
   if (sub) w = Math.max(w, g.measureText(sub).width + pad * 2);
   w = Math.ceil(w);
@@ -191,11 +194,11 @@ export function zoneBanner(g: CanvasRenderingContext2D, v: View, b: ZoneBox, lea
   }
   g.fillStyle = 'rgba(255,255,255,0.35)';
   g.fillRect(x + Math.round(2 * v.dpr), y + Math.round(v.dpr), w - Math.round(4 * v.dpr), Math.max(1, Math.round(v.dpr)));
-  g.font = `900 ${size}px ${FONT}`;
+  g.font = `900 ${size}px ${font()}`;
   g.fillStyle = '#0d1828';
   g.fillText(title, x + pad, y + h1 / 2 + v.dpr);
   if (sub) {
-    g.font = `800 ${small}px ${FONT}`;
+    g.font = `800 ${small}px ${font()}`;
     g.fillStyle = '#ffffff';
     g.fillText(sub, x + pad, y + h1 + h2 / 2 + v.dpr * 0.5);
   }

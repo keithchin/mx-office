@@ -75,12 +75,35 @@
   --hover: rgba(0, 0, 0, .08);
   --hover-light: rgba(255, 255, 255, .7);
   --pop-glow: rgba(0, 0, 0, .18);
-  /* Shape and type. --focus rings what has the keyboard. */
+  /* Shape and type. --focus rings what has the keyboard. A theme with another shape (the Clean pair,
+     styles/theme-clean.css) changes these rather than each part: --radius for cards and panels,
+     --radius-sm for buttons, boxes and toasts, --radius-lg for windows and menus, --radius-pill for
+     pills and counts; --bw for the borders, --bw-thin for the small parts'; the hard shadows under a
+     card, a button (and a pressed one), and a window; how far a button moves when it's pressed. */
   --shadow: 0 4px 0 var(--edge);
+  --shadow-btn: 0 3px 0 var(--edge);
+  --shadow-press: 0 1px 0 var(--edge);
+  --shadow-pop: 0 6px 0 var(--edge);
+  --press: translateY(2px);
   --radius: 16px;
+  --radius-sm: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --bw: 3px;
+  --bw-thin: 2px;
   --focus: var(--accent);
+  --focus-ring: 3px solid var(--accent);
   --font: 'Nunito', ui-rounded, 'SF Pro Rounded', system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  /* The type scale: a window's title, a button's and a label's words, a note, a pill's; and the weights
+     of a title, a button or label, and a note. */
+  --fs-title: 18px;
+  --fs-btn: 14px;
+  --fs-note: 13px;
+  --fs-pill: 11px;
+  --fw-title: 900;
+  --fw-btn: 800;
+  --fw-note: 600;
 }
 
 * { box-sizing: border-box; }
@@ -91,20 +114,20 @@ button { font-family: inherit; }
 
 .panel {
   background: var(--paper);
-  border: 3px solid var(--line);
+  border: var(--bw) solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
 
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 12px; font-size: 14px; font-weight: 800; color: var(--ink);
-  background: var(--card); border: 3px solid var(--line); border-radius: 12px; cursor: pointer;
-  box-shadow: 0 3px 0 var(--edge); transition: transform .05s;
+  padding: 7px 12px; font-size: var(--fs-btn); font-weight: var(--fw-btn); color: var(--ink);
+  background: var(--card); border: var(--bw) solid var(--line); border-radius: var(--radius-sm); cursor: pointer;
+  box-shadow: var(--shadow-btn); transition: transform .05s;
   white-space: nowrap;
 }
 .btn:hover { background: var(--paper-2); }
-.btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--edge); }
+.btn:active { transform: var(--press); box-shadow: var(--shadow-press); }
 .btn.on { background: var(--good); color: var(--on-fill); }
 .btn.danger { background: var(--bad); color: var(--on-fill); }
 .btn.primary { background: var(--accent); color: var(--on-fill); }
@@ -112,39 +135,39 @@ button { font-family: inherit; }
 
 /* Status dots and pills, empty lists, key caps, toasts and the reconnecting banner: the office's HUD
    and windows show them, and so does the 1D view. */
-.dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); flex: none; }
-.pill { font-size: 11px; font-weight: 900; padding: 2px 7px; border-radius: 999px; border: 2px solid var(--line); white-space: nowrap; }
+.dot { width: 12px; height: 12px; border-radius: 50%; border: var(--bw-thin) solid var(--line); flex: none; }
+.pill { font-size: var(--fs-pill); font-weight: var(--fw-title); padding: 2px 7px; border-radius: var(--radius-pill); border: var(--bw-thin) solid var(--line); white-space: nowrap; }
 .pill.starting, .pill.idle { background: var(--info-soft); }
 .pill.working { background: var(--warn); color: var(--on-warn); }
 .pill.needs_input { background: var(--bad); color: var(--on-fill); animation: pulse 1s infinite; }
 .pill.done { background: var(--good); color: var(--on-fill); }
 .pill.exited, .pill.offline { background: var(--neutral-soft); }
 .pill.lost { background: #ffb703; color: var(--on-warn); }
-.empty { color: var(--muted); font-size: 13px; font-weight: 600; }
+.empty { color: var(--muted); font-size: var(--fs-note); font-weight: var(--fw-note); }
 @keyframes pulse { 50% { transform: scale(1.08); } }
 .key { display: inline-block; min-width: 26px; padding: 1px 7px; margin-right: 5px; border-radius: 7px; background: var(--paper); color: var(--ink); text-align: center; font-weight: 900; box-shadow: 0 2px 0 #999; }
 
 #toasts { position: absolute; top: 72px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none !important; }
-.toast { background: var(--paper); border: 3px solid var(--line); border-radius: 12px; padding: 8px 14px; font-weight: 800; font-size: 14px; box-shadow: var(--shadow); animation: toast-in .25s ease-out; }
+.toast { background: var(--paper); border: var(--bw) solid var(--line); border-radius: var(--radius-sm); padding: 8px 14px; font-weight: var(--fw-btn); font-size: var(--fs-btn); box-shadow: var(--shadow); animation: toast-in .25s ease-out; }
 .toast.warn { background: var(--warn-soft); }
 .toast.error { background: var(--bad-soft); }
 @keyframes toast-in { from { transform: translateY(-10px); opacity: 0; } }
 
-.conn { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: var(--bad); color: var(--on-fill); font-weight: 900; padding: 6px 14px; border-radius: 12px; border: 3px solid var(--line); }
+.conn { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: var(--bad); color: var(--on-fill); font-weight: 900; padding: 6px 14px; border-radius: var(--radius-sm); border: var(--bw) solid var(--line); }
 
 /* ---------- Modals ---------- */
 .backdrop { position: fixed; inset: 0; background: var(--backdrop); display: grid; place-items: center; padding: 16px; z-index: 50; animation: fade .15s; }
 @keyframes fade { from { opacity: 0; } }
-.modal { background: var(--paper); border: 3px solid var(--line); border-radius: 20px; box-shadow: 0 6px 0 var(--edge); width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; overflow: hidden; animation: pop .18s ease-out; }
+.modal { background: var(--paper); border: var(--bw) solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-pop); width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; overflow: hidden; animation: pop .18s ease-out; }
 @keyframes pop { from { transform: scale(.96); opacity: .5; } }
-.modal header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 3px solid var(--line); background: var(--paper-2); }
-.modal header h2 { margin: 0; font-size: 18px; font-weight: 900; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: var(--bw) solid var(--line); background: var(--paper-2); }
+.modal header h2 { margin: 0; font-size: var(--fs-title); font-weight: var(--fw-title); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .modal .body { padding: 16px; overflow: auto; }
-.modal footer { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 16px; border-top: 3px solid var(--line); background: var(--paper-2); align-items: center; }
+.modal footer { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 16px; border-top: var(--bw) solid var(--line); background: var(--paper-2); align-items: center; }
 .modal footer .grow { flex: 1; font-size: 12px; color: var(--muted); font-weight: 700; }
-.modal textarea, .modal input[type=text], .modal input[type=password] { width: 100%; font: inherit; font-size: 15px; border: 3px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card); outline: none; resize: vertical; }
+.modal textarea, .modal input[type=text], .modal input[type=password] { width: 100%; font: inherit; font-size: 15px; border: var(--bw) solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--card); outline: none; resize: vertical; }
 .modal textarea:focus, .modal input[type=text]:focus, .modal input[type=password]:focus { border-color: var(--accent); }
-.modal label { font-weight: 800; font-size: 14px; display: block; margin-bottom: 6px; }
+.modal label { font-weight: var(--fw-btn); font-size: var(--fs-btn); display: block; margin-bottom: 6px; }
 .close { width: 34px; height: 34px; padding: 0; justify-content: center; }
 /* The ✕ openModal gives a window without a header of its own. */
 .close.corner { position: absolute; top: 10px; right: 10px; z-index: 1; }
@@ -152,7 +175,7 @@ button { font-family: inherit; }
 /* Pieces several windows share: button rows, the notes under a setting, an input with its buttons,
    color swatches, a list of things to click (services, the jukebox, the bar), a spinner and a when. */
 .seg { display: flex; gap: 8px; flex-wrap: wrap; }
-.setting-note { margin: 10px 0 0; font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.4; }
+.setting-note { margin: 10px 0 0; font-size: var(--fs-note); font-weight: var(--fw-note); color: var(--muted); line-height: 1.4; }
 .setting-note.bad { color: var(--bad); }
 .webhook { display: flex; gap: 8px; }
 .webhook input[type=text] { flex: 1; min-width: 0; }
@@ -162,10 +185,10 @@ button { font-family: inherit; }
 .swatch.sel { outline: 3px solid var(--accent); outline-offset: 2px; }
 
 .svc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.svc-list li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 3px solid var(--line); border-radius: 14px; background: var(--card); cursor: pointer; box-shadow: 0 3px 0 var(--edge); }
+.svc-list li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: var(--bw) solid var(--line); border-radius: calc(var(--radius) - 2px); background: var(--card); cursor: pointer; box-shadow: var(--shadow-btn); }
 .svc-list li:hover { background: var(--paper-2); }
 .svc-list li.on { background: var(--paper-2); border-color: var(--accent); }
-.svc-list li:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.svc-list li:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
 .svc-list .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); flex: none; }
 .svc-main { flex: 1; min-width: 0; }
 .svc-title { font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

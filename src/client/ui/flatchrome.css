@@ -13,7 +13,7 @@
 
 .vp-list {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 70; min-width: 264px; margin: 0; padding: 6px; list-style: none;
-  background: var(--paper); color: var(--ink); border: 3px solid var(--line); border-radius: 14px; box-shadow: 0 5px 0 var(--edge);
+  background: var(--paper); color: var(--ink); border: var(--bw) solid var(--line); border-radius: calc(var(--radius) - 2px); box-shadow: 0 5px 0 var(--edge);
   animation: vp-in .12s ease-out; transform-origin: top right; outline: none;
 }
 .vp-list[hidden] { display: none; }

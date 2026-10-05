@@ -12,6 +12,7 @@ import { overviewColumns, overviewGrid, overviewHit, overviewStats, type Overvie
 import { floorPalette } from '../../shared/floors';
 import { h, STATUS_LABEL } from '../ui/dom';
 import { currentTheme } from '../ui/colortheme';
+import { uiFont } from '../ui/clean';
 import { Camera, driveCamera } from '../pixel/camera';
 import { blitCrisp } from '../pixel/blit';
 import { FloorArt } from '../pixel/snapshot';
@@ -22,7 +23,7 @@ import '../pixel/game.css';
 import './overview.css';
 
 const REFRESH_MS = 10_000;
-const FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+const SANS = "system-ui, -apple-system, 'Segoe UI', sans-serif";
 /** The biggest in-between buffer a floor gets (pixel/blit.ts), in pixels. */
 const MAX_BUFFER = 16_000_000;
 
@@ -154,20 +155,20 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
     const big = Math.round(Math.min(32 * dpr, Math.max(10 * dpr, bh * (two ? 0.4 : 0.55))));
     const small = Math.round(Math.max(9 * dpr, big * 0.5));
     g.textBaseline = 'middle';
-    g.font = `900 ${big}px ${FONT}`;
+    g.font = `900 ${big}px ${uiFont(SANS)}`;
     g.fillStyle = c.ink;
     const name = fitText(f.name, room);
     g.fillText(name, left, y + (two ? bh * 0.38 : bh / 2));
-    g.font = `800 ${small}px ${FONT}`;
+    g.font = `800 ${small}px ${uiFont(SANS)}`;
     const stats = overviewStats(f);
     if (two) {
       g.fillStyle = f.waiting ? c.warn : c.muted;
       g.fillText(fitText(stats, room), left, y + bh * 0.74);
     } else {
       // One line: the numbers after the name, as far as they go.
-      g.font = `900 ${big}px ${FONT}`;
+      g.font = `900 ${big}px ${uiFont(SANS)}`;
       const after = left + g.measureText(name).width + small;
-      g.font = `800 ${small}px ${FONT}`;
+      g.font = `800 ${small}px ${uiFont(SANS)}`;
       if (room - (after - left) > small * 6) {
         g.fillStyle = f.waiting ? c.warn : c.muted;
         g.fillText(fitText(stats, room - (after - left)), after, y + bh / 2);

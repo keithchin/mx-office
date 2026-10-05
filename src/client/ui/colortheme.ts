@@ -1,25 +1,40 @@
-// The flat views' color themes: Default (the office's own light look), Dark, and Terminal (a green
-// phosphor screen). The 🎨 in the 1D and 2D top bars steps through them, and this browser remembers
-// the pick for both: a change in one tab reaches the other views open in other tabs too.
+// The flat views' color themes: Default (the office's own light look), Dark, Terminal (a green
+// phosphor screen), and Clean (Light) and Clean (Dark), flat and quiet like a code editor's light and
+// dark themes, with no emoji. The 🎨 in the 1D and 2D top bars opens a list of them, and this browser
+// remembers the pick for both: a change in one tab reaches the other views open in other tabs too.
 // A theme is <html data-theme="…">: the colors are tokens in styles/base.css, the other themes' values
-// are in styles/themes.css, and Terminal's shapes in styles/theme-terminal.css. lite.html and pixel.html set
-// the attribute in a line of script before anything is drawn, so a dark page never flashes white first;
-// this module keeps it, the 🎨 and the browser's bar color in step after that.
+// are in styles/themes.css, Terminal's shapes in styles/theme-terminal.css, and the Clean pair's in
+// styles/theme-clean.css and theme-clean-parts.css (ui/clean/ hides their emoji). lite.html, pixel.html
+// and home.html set the attribute in a line of script before anything is drawn, so a dark page never
+// flashes white first; this module keeps it, the 🎨 and the browser's bar color in step after that.
 
 import '../styles/themes.css';
 import '../styles/theme-terminal.css';
-import { toast } from './dom';
+import '../styles/theme-clean.css';
+import '../styles/theme-clean-parts.css';
+import './flatchrome.css';
+import { h, toast } from './dom';
+import { stepIndex } from './chrome-logic';
+import { startClean } from './clean';
 
-export const COLOR_THEMES = ['default', 'dark', 'terminal'] as const;
+/** Every theme, in the 🎨 list's order. The pages' early scripts (lite.html, pixel.html, home.html) list the same names. */
+export const COLOR_THEMES = ['default', 'dark', 'terminal', 'clean-light', 'clean-dark'] as const;
 export type ColorTheme = (typeof COLOR_THEMES)[number];
 
-/** Where the pick is kept. lite.html's and pixel.html's early scripts read the same key. */
+/** Where the pick is kept. The pages' early scripts read the same key. */
 const KEY = 'agent-office.color-theme';
-const LABEL: Record<ColorTheme, string> = { default: 'Default', dark: 'Dark', terminal: 'Terminal' };
+export const THEME_LABEL: Record<ColorTheme, string> = { default: 'Default', dark: 'Dark', terminal: 'Terminal', 'clean-light': 'Clean (Light)', 'clean-dark': 'Clean (Dark)' };
+const WHAT: Record<ColorTheme, string> = {
+  default: 'The office’s own bright, chunky look',
+  dark: 'The same chunky look, at night',
+  terminal: 'A green phosphor screen',
+  'clean-light': 'Flat and quiet, like an editor’s light theme',
+  'clean-dark': 'Flat and quiet, like an editor’s dark theme',
+};
 /** The browser's own bar (on a phone) in each theme's top-bar color. */
-const BAR: Record<ColorTheme, string> = { default: '#fff1de', dark: '#222536', terminal: '#071009' };
+const BAR: Record<ColorTheme, string> = { default: '#fff1de', dark: '#222536', terminal: '#071009', 'clean-light': '#f3f3f3', 'clean-dark': '#181818' };
 
-const isTheme = (t: unknown): t is ColorTheme => COLOR_THEMES.includes(t as ColorTheme);
+export const isTheme = (t: unknown): t is ColorTheme => COLOR_THEMES.includes(t as ColorTheme);
 
 /** The theme to show: the one picked here before, or Dark for someone whose system is dark and hasn't picked. */
 export function savedTheme(): ColorTheme {
@@ -40,6 +55,7 @@ export function currentTheme(): ColorTheme {
 export function applyTheme(t: ColorTheme, remember = false) {
   document.documentElement.dataset.theme = t;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', BAR[t]);
+  if (t.startsWith('clean')) startClean();
   if (!remember) return;
   try {
     localStorage.setItem(KEY, t);
@@ -49,26 +65,26 @@ export function applyTheme(t: ColorTheme, remember = false) {
 }
 
 /**
- * Wires the 🎨 button to step through the themes, and starts the Terminal theme's typing of the
+ * Wires the 🎨 button to open the list of themes, and starts the Terminal theme's typing of the
  * project summary's story in `summary` (the element ui/summary.ts draws into), if the page has one.
  * `onChange` hears every change, picked here or in another tab (the 2D view repaints its office).
  */
 export function colorThemes(button: HTMLElement, summary?: HTMLElement, onChange?: (t: ColorTheme) => void) {
   applyTheme(savedTheme());
-  const label = () => {
-    const t = currentTheme();
-    const next = COLOR_THEMES[(COLOR_THEMES.indexOf(t) + 1) % COLOR_THEMES.length];
-    button.title = `Theme: ${LABEL[t]}. Click for ${LABEL[next]}`;
-    button.setAttribute('aria-label', `Color theme: ${LABEL[t]}`);
-  };
-  label();
-  button.addEventListener('click', () => {
-    const t = COLOR_THEMES[(COLOR_THEMES.indexOf(currentTheme()) + 1) % COLOR_THEMES.length];
+  const list = themeList(button, (t) => {
+    if (t === currentTheme()) return;
     applyTheme(t, true);
     label();
     onChange?.(t);
-    toast(`🎨 ${LABEL[t]} theme`);
+    toast(`🎨 ${THEME_LABEL[t]} theme`);
   });
+  const label = () => {
+    const t = currentTheme();
+    button.title = `Theme: ${THEME_LABEL[t]}. Click to pick another`;
+    button.setAttribute('aria-label', `Color theme: ${THEME_LABEL[t]}`);
+    list.refresh();
+  };
+  label();
   // Picked in another tab (the other flat view, say): this one follows.
   addEventListener('storage', (e) => {
     if (e.key !== KEY && e.key !== null) return;
@@ -79,6 +95,102 @@ export function colorThemes(button: HTMLElement, summary?: HTMLElement, onChange
     onChange?.(t);
   });
   if (summary) typeStories(summary);
+}
+
+/**
+ * The 🎨's list, a listbox under it in the view dropdown's look (ui/flatchrome.css): ↑ ↓ Home End move,
+ * Enter or Space picks, Esc or Tab or a click elsewhere closes it. It hangs in the button's bar, lined
+ * up with the button's right edge, so the bar's layout stays as it was.
+ */
+function themeList(button: HTMLElement, pick: (t: ColorTheme) => void) {
+  const id = 'theme-list';
+  const options = COLOR_THEMES.map((t, i) =>
+    h(
+      'li.vp-opt',
+      { id: `${id}-${t}`, role: 'option', 'aria-selected': 'false', 'data-i': i, title: WHAT[t] },
+      h('span.vp-text', {}, h('b', {}, THEME_LABEL[t]), h('small', {}, WHAT[t])),
+      h('span.vp-tick', { 'aria-hidden': 'true' }, '✓'),
+    ),
+  );
+  const list = h('ul.vp-list.theme-list', { id, role: 'listbox', tabindex: '-1', 'aria-label': 'Color theme', hidden: true }, ...options);
+  button.setAttribute('aria-haspopup', 'listbox');
+  button.setAttribute('aria-expanded', 'false');
+  button.setAttribute('aria-controls', id);
+  (button.parentElement ?? document.body).append(list);
+  let at = 0;
+
+  const mark = (i: number) => {
+    at = i;
+    options.forEach((o, j) => o.classList.toggle('active', j === i));
+    list.setAttribute('aria-activedescendant', options[i].id);
+  };
+  const isOpen = () => !list.hidden;
+  function open() {
+    if (isOpen()) return;
+    // Under the button, its right edge on the button's, in whatever the bar is positioned by.
+    const host = (list.offsetParent ?? list.parentElement ?? document.body) as HTMLElement;
+    list.hidden = false;
+    const hb = (list.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? host.getBoundingClientRect();
+    const b = button.getBoundingClientRect();
+    list.style.top = `${Math.round(b.bottom - hb.top + 8)}px`;
+    list.style.right = `${Math.max(8, Math.round(hb.right - b.right))}px`;
+    button.setAttribute('aria-expanded', 'true');
+    mark(Math.max(0, COLOR_THEMES.indexOf(currentTheme())));
+    list.focus({ preventScroll: true });
+    document.addEventListener('pointerdown', outside, true);
+  }
+  function close(refocus = true) {
+    if (!isOpen()) return;
+    list.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('pointerdown', outside, true);
+    if (refocus) button.focus({ preventScroll: true });
+  }
+  const choose = (i: number) => {
+    close();
+    pick(COLOR_THEMES[i]);
+  };
+  const outside = (e: Event) => {
+    if (!list.contains(e.target as Node) && !button.contains(e.target as Node)) close(false);
+  };
+  button.addEventListener('click', () => (isOpen() ? close() : open()));
+  button.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    open();
+  });
+  list.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    const next = stepIndex(at, e.key, COLOR_THEMES.length);
+    if (next !== undefined) {
+      e.preventDefault();
+      return mark(next);
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      return choose(at);
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      return close();
+    }
+    if (e.key === 'Tab') close(false);
+  });
+  list.addEventListener('pointermove', (e) => {
+    const o = (e.target as HTMLElement).closest<HTMLElement>('.vp-opt');
+    if (o) mark(Number(o.dataset.i));
+  });
+  list.addEventListener('click', (e) => {
+    const o = (e.target as HTMLElement).closest<HTMLElement>('.vp-opt');
+    if (o) choose(Number(o.dataset.i));
+  });
+  return {
+    /** The ✓ and aria-selected on the theme that's on now. */
+    refresh() {
+      const now = currentTheme();
+      COLOR_THEMES.forEach((t, i) => options[i].setAttribute('aria-selected', String(t === now)));
+    },
+  };
 }
 
 /**

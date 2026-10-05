@@ -48,7 +48,56 @@ export const TERM_THEME_GREEN = {
   brightWhite: '#eafff0',
 };
 
-/** The colors for a terminal opened now: green while the 1D view wears its Terminal theme (ui/colortheme.ts), the usual ones otherwise. */
+/** An editor's light terminal, for the Clean (Light) theme (styles/theme-clean.css): on its --code-bg. */
+export const TERM_THEME_CLEAN_LIGHT = {
+  background: '#f8f8f8',
+  foreground: '#3b3b3b',
+  cursor: '#005fb8',
+  selectionBackground: '#add6ff',
+  black: '#000000',
+  red: '#cd3131',
+  green: '#107c10',
+  yellow: '#949800',
+  blue: '#0451a5',
+  magenta: '#bc05bc',
+  cyan: '#0598bc',
+  white: '#555555',
+  brightBlack: '#666666',
+  brightRed: '#cd3131',
+  brightGreen: '#14ce14',
+  brightYellow: '#b5ba00',
+  brightBlue: '#0451a5',
+  brightMagenta: '#bc05bc',
+  brightCyan: '#0598bc',
+  brightWhite: '#a5a5a5',
+};
+
+/** An editor's dark terminal, for the Clean (Dark) theme: on its --code-bg. */
+export const TERM_THEME_CLEAN_DARK = {
+  background: '#181818',
+  foreground: '#cccccc',
+  cursor: '#cccccc',
+  selectionBackground: '#264f78',
+  black: '#000000',
+  red: '#cd3131',
+  green: '#0dbc79',
+  yellow: '#e5e510',
+  blue: '#2472c8',
+  magenta: '#bc3fbc',
+  cyan: '#11a8cd',
+  white: '#e5e5e5',
+  brightBlack: '#666666',
+  brightRed: '#f14c4c',
+  brightGreen: '#23d18b',
+  brightYellow: '#f5f543',
+  brightBlue: '#3b8eea',
+  brightMagenta: '#d670d6',
+  brightCyan: '#29b8db',
+  brightWhite: '#e5e5e5',
+};
+
+/** The colors for a terminal opened now: green while the 1D view wears its Terminal theme (ui/colortheme.ts), an editor's in a Clean theme, the usual ones otherwise. */
 export function termTheme() {
-  return document.documentElement.dataset.theme === 'terminal' ? TERM_THEME_GREEN : TERM_THEME;
+  const t = document.documentElement.dataset.theme;
+  return t === 'terminal' ? TERM_THEME_GREEN : t === 'clean-light' ? TERM_THEME_CLEAN_LIGHT : t === 'clean-dark' ? TERM_THEME_CLEAN_DARK : TERM_THEME;
 }
