@@ -11,6 +11,7 @@ import { githubRoutes } from './github.js';
 import { homeRoutes } from './home.js';
 import { pageRoutes } from './pages.js';
 import { prShotRoutes } from './prshots.js';
+import { rankingRoutes } from './ranking.js';
 import { rosterRoutes } from './roster.js';
 import { searchRoutes } from './search.js';
 import { teamRoutes } from './teams.js';
@@ -48,6 +49,7 @@ export const routes: readonly Route[] = [
   analysisRoutes.backfill,
   analysisRoutes.summary,
   analysisRoutes.judge,
+  rankingRoutes.report,
   homeRoutes.stats,
   prShotRoutes.checks,
   prShotRoutes.file,

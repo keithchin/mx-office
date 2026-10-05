@@ -81,3 +81,12 @@
   .an-run-title { order: 3; flex-basis: 100%; }
   .an-badge { margin-left: auto; }
 }
+/* Where each worker's grade lives (ui/ranking/), and the grade beside a run's worker. */
+.an-towork { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 8px 12px; border-bottom: 2px dashed var(--rule-strong); font-size: 12px; font-weight: 700; color: var(--muted); }
+.an-towork .btn { min-height: 28px; padding: 0 8px; font-size: 12px; }
+.an-grade { display: inline-block; margin-left: 4px; padding: 0 5px; border: 2px solid var(--line); border-radius: 6px; background: var(--g, var(--neutral-soft)); color: var(--g-ink, var(--ink)); font-size: 11px; }
+.an-grade.g-A { --g: var(--good); --g-ink: var(--on-fill); }
+.an-grade.g-B { --g: var(--info); --g-ink: var(--on-warn); }
+.an-grade.g-C { --g: var(--warn); --g-ink: var(--on-warn); }
+.an-grade.g-D { --g: var(--accent); --g-ink: var(--on-fill); }
+.an-grade.g-F { --g: var(--bad); --g-ink: var(--on-fill); }

@@ -14,6 +14,7 @@ import { issuePrompt, type BoardActions } from './ui/github/prompts';
 import { openIssue } from './ui/github/issue-window';
 import { cards, renderBoard, type KanbanActions } from './ui/kanban';
 import { renderAnalysis } from './ui/analysis';
+import { workersRanking } from './ui/ranking';
 import { cachedSetup, renderSetup } from './ui/setup-panel';
 import { renderSummary } from './ui/summary';
 import { teamTab, type Pane } from './ui/roster';
@@ -77,11 +78,18 @@ const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => t
 floorPicker(net, { onGo: () => showTab('command') });
 
 // ---- Workers ------------------------------------------------------------------------------------
+// Each worker's card with its grade, the podium and the full ranking (ui/ranking/).
+const ranking = workersRanking({
+  root: $('workers-view'),
+  list: $('workers'),
+  floor: () => store.floor ?? undefined,
+  card: workerCard,
+  visible: () => tab === 'workers',
+  emptyText: () => (store.project ? 'Nobody is working on this floor. ✨ New task hires someone.' : 'No workers here.'),
+});
 function renderWorkers() {
   const list = byUrgency(store.workers.values());
-  const ul = $('workers');
-  ul.replaceChildren(...list.map(workerCard));
-  if (!list.length) ul.append(h('li.lite-empty', {}, store.project ? 'Nobody is working on this floor. ✨ New task hires someone.' : 'No workers here.'));
+  ranking.render(list);
   $('waiting-now').textContent = waitingLabel(waitingInOrder(list));
   renderTitle();
 }
@@ -244,8 +252,9 @@ function showTab(t: Tab) {
   $('analysis-view').classList.toggle('hidden', t !== 'analysis');
   $('team-view').classList.toggle('hidden', !isPane(t));
   if (isPane(t)) team.showPane(t);
-  // The board and the analysis tables want the whole width; the list of workers keeps its column.
-  document.querySelector('.lite-main')!.classList.toggle('board', t !== 'workers');
+  // Every tab takes the whole width, the workers' grid of cards too.
+  document.querySelector('.lite-main')!.classList.add('board');
+  if (t === 'workers') renderWorkers();
   renderKanban();
   renderAnalysisTab();
   team.render(store.floor ?? undefined);
