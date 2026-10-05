@@ -15,7 +15,7 @@ const floorInfo = (id: string, o: Partial<FloorInfo> = {}): FloorInfo => ({ id, 
 const input = (o: Partial<NeedsInput> = {}): NeedsInput => ({ floor: 'f1', workers: [], pulls: [], floors: [], ...o });
 
 test('nothing blocked: no items, and no count on the tab', () => {
-  const items = collectNeeds(input({ workers: [worker('a'), worker('b', { status: 'done' })], roster: roster(), pulls: [pull(1)], floors: [floorInfo('f1', { waiting: 2 })] }));
+  const items = collectNeeds(input({ workers: [worker('a'), worker('b', { status: 'done', acked: true })], roster: roster(), pulls: [pull(1)], floors: [floorInfo('f1', { waiting: 2 })] }));
   assert.deepEqual(items, []);
   assert.equal(hereCount(items), 0);
 });
@@ -86,7 +86,7 @@ test('other floors: only the ones with someone waiting, not being cloned, not th
 });
 
 test("a team fetched for another floor, a shell, and a finished worker don't count", () => {
-  const items = collectNeeds(input({ workers: [worker('sh', { kind: 'shell', status: 'needs_input' }), worker('d', { status: 'done' })], roster: roster({ floor: 'f9', paused: 'cap' }) }));
+  const items = collectNeeds(input({ workers: [worker('sh', { kind: 'shell', status: 'needs_input' }), worker('d', { status: 'done', acked: true })], roster: roster({ floor: 'f9', paused: 'cap' }) }));
   assert.deepEqual(items, []);
 });
 
@@ -99,4 +99,13 @@ test('a ✋ stage of a toolkit project being set up, and a live app that failed'
   assert.equal(items[1].text, 'The live app failed: Build failed');
   // Once Stage 4 is signed off the panel is gone, and so is the item; a running app is fine.
   assert.deepEqual(collectNeeds(input({ setup: { ...setup, show: false }, live: { ...live, status: 'running' } })), []);
+});
+
+test('an agent that finished a turn nobody looked at is listed, to review, after the ones asking', () => {
+  const items = collectNeeds(input({ workers: [worker('d', { status: 'done', task: { summary: 'PR #7 opened' } } as Partial<WorkerInfo>), worker('q', { status: 'needs_input', activity: 'May I?' })] }));
+  assert.deepEqual(items.map((n) => n.key), ['ask-q', 'done-d']);
+  assert.equal(items[1].kind, 'finished');
+  assert.equal(items[1].action, 'Review');
+  assert.match(items[1].text, /PR #7 opened/);
+  assert.equal(hereCount(items), 2);
 });

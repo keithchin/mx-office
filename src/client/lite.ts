@@ -74,7 +74,7 @@ const live = liveAppView(net, () => showTab('live'), () => tab === 'live');
 const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'command' });
 
 // ---- The floor you're on (every floor's card is on the home page, /home) -----------------------
-floorPicker(net);
+floorPicker(net, { onGo: () => showTab('command') });
 
 // ---- Workers ------------------------------------------------------------------------------------
 function renderWorkers() {
@@ -100,7 +100,9 @@ function workerCard(w: WorkerInfo): HTMLElement {
       : asleep
         ? '💤 Asleep: open it to wake it up'
         : w.status === 'done'
-          ? w.task?.summary && `✅ ${w.task.summary}`
+          ? waiting
+          ? `👀 Finished, not looked at yet${w.task?.summary ? `: ${w.task.summary}` : ''}: open it to see`
+          : w.task?.summary && `✅ ${w.task.summary}`
           : (w.task?.summary ?? w.activity);
   const sub = [
     w.kind === 'agent' ? `⚙️ ${providerLabel(w.provider, store.project)}${badge ? ` · ${badge}` : ''}` : '🐚 shell',
@@ -317,6 +319,8 @@ function goToNeed(t: NeedTarget) {
     return $('setup').scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
   if (t.to === 'floor') {
+    // Lands on that floor's Command Center, where its Needs you says who is waiting and why.
+    showTab('command');
     if (t.floor !== store.floor) net.send({ t: 'floor.go', floor: t.floor });
     return;
   }

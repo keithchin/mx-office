@@ -6,7 +6,7 @@ import type { FloorInfo, GhPull, LiveAppState, WorkerInfo } from '../../../share
 import type { Escalation } from '../../../shared/roster/escalation';
 import type { RosterView } from '../../../shared/roster/types';
 import type { SetupView } from '../../../shared/wizard';
-import { needingYou } from '../../nextup';
+import { needingYou, waitingInOrder } from '../../nextup';
 
 /** Where an item's button takes you. */
 export type NeedTarget =
@@ -19,7 +19,7 @@ export type NeedTarget =
   | { to: 'live' }
   | { to: 'floor'; floor: string };
 
-export type NeedKind = 'asking' | 'lost' | 'escalation' | 'approval' | 'paused' | 'pr' | 'setup' | 'live' | 'floor';
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'paused' | 'pr' | 'setup' | 'live' | 'floor';
 
 export interface NeedItem {
   /** Stable across redraws. */
@@ -64,6 +64,12 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
   for (const w of needingYou(workers)) {
     if (w.kind !== 'agent' || w.lost) continue;
     out.push({ key: `ask-${w.id}`, kind: 'asking', icon: '🙋', text: `${w.name} is asking: ${w.activity ?? 'waiting on an answer'}`, since: w.waitingSince, level: 'block', action: 'Answer', target: { to: 'worker', id: w.id } });
+  }
+  // Agents that finished a turn nobody has looked at yet: the floor counts them as waiting too.
+  for (const w of waitingInOrder(workers)) {
+    if (w.status !== 'done' || w.kind !== 'agent' || w.lost) continue;
+    const what = w.task?.summary ?? w.task?.name ?? w.title;
+    out.push({ key: `done-${w.id}`, kind: 'finished', icon: '✅', text: `${w.name} finished${what ? `: ${what}` : ' its turn'} — not looked at yet`, since: w.waitingSince, level: 'warn', action: 'Review', target: { to: 'worker', id: w.id } });
   }
   // 2. Workers whose worktree was deleted outside agent-office.
   for (const w of workers.filter((x) => x.lost).sort((a, b) => a.createdAt - b.createdAt)) {

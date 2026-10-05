@@ -21,7 +21,7 @@ function go(net: Net, floor: string) {
  * The floor picker on the top bar (#floor), what the floor is (#floor-meta), and a button straight
  * to any other floor where someone's waiting (#elsewhere, when the page has one).
  */
-export function floorPicker(net: Net) {
+export function floorPicker(net: Net, opts: { onGo?: () => void } = {}) {
   const select = $('floor') as HTMLSelectElement;
   const render = () => {
     const options = store.floors.map((f) => h('option', { value: f.id, disabled: !!f.cloning }, floorLabel(f)));
@@ -37,7 +37,7 @@ export function floorPicker(net: Net) {
       const elsewhere = store.floors.filter((o) => o.id !== store.floor && o.waiting > 0 && !o.cloning);
       box.classList.toggle('hidden', !elsewhere.length);
       box.replaceChildren(
-        ...elsewhere.map((o) => h('button.btn.lite-go', { type: 'button', onclick: () => go(net, o.id) }, `🙋 ${o.waiting} waiting on ${o.name}`, h('span', { 'aria-hidden': 'true' }, '→'))),
+        ...elsewhere.map((o) => h('button.btn.lite-go', { type: 'button', onclick: () => (opts.onGo?.(), go(net, o.id)) }, `🙋 ${o.waiting} waiting on ${o.name}`, h('span', { 'aria-hidden': 'true' }, '→'))),
       );
     }
     renderTitle();
