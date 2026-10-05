@@ -98,7 +98,8 @@ jobs:
           kill -INT "$office"
 
       - name: Publish
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        # Only the original repository publishes releases; a fork (ours, keithchin/agent-office) builds and tests and stops here.
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'AgentSystemLabs/agent-office'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: v${{ steps.pack.outputs.version }}

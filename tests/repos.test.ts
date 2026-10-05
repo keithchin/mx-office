@@ -196,7 +196,7 @@ test('hiring across repositories needs its own worktree and different repositori
   // api can't have the branch (one of that name is there already): web's new worktree and branch are taken out again.
   const before = git(f.a, 'branch', '--list', 'office/*');
   git(f.b, 'branch', 'office/sprocket-0000');
-  const failed = (workers as any).makeWorkspace('sprocket-0000', [source('floor-api', f.b)]);
+  const failed = (workers as any).worktrees.makeWorkspace('sprocket-0000', [source('floor-api', f.b)]);
   assert.match(String(failed), /^api: Could not create a git worktree/);
   await waitFor(() => git(f.a, 'branch', '--list', 'office/sprocket-0000'), (out) => out === '');
   assert.equal(git(f.a, 'branch', '--list', 'office/*'), before);
