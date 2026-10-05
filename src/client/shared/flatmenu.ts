@@ -4,7 +4,9 @@
  * the 3D office has (voice, sharing your screen, hanging a picture, the rooftop bar, Settings, whose
  * window draws the sky and your character in 3D) is marked 3D and opens the 3D office at it. The
  * camera keys (Controls), the mute button (only while in voice), the 3D panels and the view items
- * (the view dropdown has those) aren't offered. No three.js here: both flat views import it.
+ * (the view dropdown has those) aren't offered. The home page has it too, without what needs a floor
+ * (home: true): its issues, PRs, queue, services, whiteboard, meeting, search, docs and who's waiting.
+ * No three.js here: both flat views and the home page import it.
  */
 import type { Net } from '../net';
 import { store } from '../state';
@@ -27,8 +29,11 @@ import { switchView } from '../graphics';
 import '../ui/menu.css';
 import '../ui/flatchrome.css';
 
-export interface FlatMenuDeps {
+export type FlatMenuDeps = FloorMenuDeps | { net: Net; home: true };
+
+interface FloorMenuDeps {
   net: Net;
+  home?: false;
   boardActions: () => BoardActions;
   openWorker: (id: string) => void;
   meeting: () => void;
@@ -37,6 +42,9 @@ export interface FlatMenuDeps {
   /** The page has the 3D office's N for it (the 2D view does). */
   nKey?: boolean;
 }
+
+/** What only makes sense on a floor, left out of the home page's ☰. */
+const FLOOR_ONLY = new Set(['waiting', 'issues', 'pulls', 'queue', 'services', 'whiteboard', 'meeting', 'search', 'docs']);
 
 const githubUrl = (remote?: string) => {
   const m = remote?.match(/github\.com[:/]([^/]+\/[^/.]+)/);
@@ -58,18 +66,20 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
   const { net } = d;
   /** One only the 3D office has: it opens there and runs it. */
   const in3d = (id: MenuId, title: string): HudAction => ({ ...MENU[id], key: undefined, title: () => `${title} · opens the 3D office`, run: () => (runIn3d(id), switchView('3d')) });
-  const actions: HudAction[] = [
-    { ...MENU.waiting, key: d.nKey ? 'N' : undefined, run: d.nextWaiting },
-    { ...MENU.issues, run: () => openBoard('issues', net, d.boardActions()) },
-    { ...MENU.pulls, run: () => openBoard('pulls', net, d.boardActions()) },
-    { ...MENU.queue, run: () => openQueue(net, { openTerminal: d.openWorker }) },
+  // On the home page none of the floor's items are offered, so these never run there.
+  const f: FloorMenuDeps = d.home ? { net, boardActions: () => ({}) as BoardActions, openWorker: () => {}, meeting: () => {}, nextWaiting: () => {} } : d;
+  const all: HudAction[] = [
+    { ...MENU.waiting, key: f.nKey ? 'N' : undefined, run: f.nextWaiting },
+    { ...MENU.issues, run: () => openBoard('issues', net, f.boardActions()) },
+    { ...MENU.pulls, run: () => openBoard('pulls', net, f.boardActions()) },
+    { ...MENU.queue, run: () => openQueue(net, { openTerminal: f.openWorker }) },
     { ...MENU.services, run: () => openServices() },
     { ...MENU.whiteboard, run: () => openWhiteboard(net) },
-    { ...MENU.meeting, run: d.meeting },
-    { ...MENU.search, key: undefined, run: () => openSearch((id) => d.openWorker(id)) },
+    { ...MENU.meeting, run: f.meeting },
+    { ...MENU.search, key: undefined, run: () => openSearch((id) => f.openWorker(id)) },
     { ...MENU.docs, shown: () => !!store.floor, run: openDocs },
-    // Every floor's card, with how many wait on someone, is the home page.
-    { ...MENU.elevator, run: () => location.assign('/home') },
+    // Every floor's card, with how many wait on someone, is the home page (its Projects tab, from there).
+    { ...MENU.elevator, run: () => (d.home ? (document.getElementById('tab-projects')?.click(), scrollTo({ top: 0 })) : location.assign('/home')) },
     in3d('roof', 'Up to the roof: a DJ, drinks and the city'),
     in3d('voice', 'Talk with the others in the office'),
     in3d('share', 'Share your screen with the others in the office'),
@@ -78,9 +88,10 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
     { ...MENU.accounts, run: () => openAccounts(net) },
     { ...MENU.signins, run: () => openSignIns(net) },
     in3d('settings', 'Your settings, the building and the workers'),
-    { ...MENU.home, run: () => location.assign('/home') },
+    { ...MENU.home, shown: () => !d.home, run: () => location.assign('/home') },
     { ...MENU.upgrade, run: () => openUpgrade(net) },
   ];
+  const actions = d.home ? all.filter((a) => !FLOOR_ONLY.has(a.id)) : all;
   const elsewhere = new Set<string>(['roof', 'voice', 'share', 'decor', 'settings']);
   let menu: Modal | null = null;
 
@@ -98,7 +109,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
       { role: 'menu', 'aria-label': 'Menu' },
       h('div.menu-col', {}, ...section('Open', rows('Open'))),
       h('div.menu-col', {}, ...section('Together', rows('Together')), ...section('Office', rows('Office'))),
-      h('p.menu-foot', {}, 'The ones marked 3D ↗ open the 3D office there. The view is in the dropdown by the ☰.'),
+      h('p.menu-foot', {}, d.home ? 'The ones marked 3D ↗ open the 3D office there. What works on one floor (its issues, PRs, queue, whiteboard, meeting…) is in each project.' : 'The ones marked 3D ↗ open the 3D office there. The view is in the dropdown by the ☰.'),
     );
     menu = openDropdown(button, el, () => (menu = null));
   }

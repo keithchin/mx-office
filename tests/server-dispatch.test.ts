@@ -184,6 +184,7 @@ test('answers the open routes before anyone signs in', async () => {
   assert.equal(home.headers.get('location'), '/login');
   assert.equal((await get('/home')).headers.get('location'), '/login?next=/home');
   assert.equal((await get('/api/home/stats')).status, 401);
+  assert.equal((await get('/api/home/overview')).status, 401);
   assert.equal((await get('/lite')).headers.get('location'), '/login?next=/lite');
   assert.equal((await get('/pixel')).headers.get('location'), '/login?next=/pixel');
   const whoami = await get('/api/whoami');
@@ -227,6 +228,14 @@ test('answers the signed-in routes', async () => {
   assert.deepEqual(stats.floors.map((f) => f.id), office.floors().map((f) => f.id));
   assert.equal(typeof stats.totals.agents, 'number');
   assert.equal(typeof stats.spend.total, 'number');
+  // The home page's 2D overview: every floor, with its plan, workers and team to draw.
+  const ov = (await (await get('/api/home/overview', me)).json()) as { floors: { id: string; plan: { wing: number }; workers: unknown[]; members: unknown[]; prsOpen: number }[] };
+  assert.deepEqual(ov.floors.map((f) => f.id), office.floors().map((f) => f.id));
+  for (const f of ov.floors) {
+    assert.equal(typeof f.plan.wing, 'number');
+    assert.ok(Array.isArray(f.workers) && Array.isArray(f.members));
+    assert.equal(typeof f.prsOpen, 'number');
+  }
   assert.match(await (await get('/pixel', me)).text(), /<title>pixel<\/title>/);
   const floor = office.floors()[0].id;
   assert.deepEqual(await (await get(`/api/search?q=zzzz&floor=${floor}`, me)).json(), { q: 'zzzz', chat: [], terminals: [], more: false });

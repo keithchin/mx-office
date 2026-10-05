@@ -2,9 +2,11 @@
    press down when you push them, a focus ring, and greyed-out disabled ones. It covers the top
    bar, the footer and the HUD over the office. The corners are cut a step in with
    box-shadows rather than rounded, the way a pixel-art game's frames are. Its colors are the 1D view's
-   theme tokens (styles/base.css, styles/themes.css), so the 2D view follows the theme picked there. */
+   theme tokens (styles/base.css, styles/themes.css), so the 2D view follows the theme picked there.
+   Anything inside .px-game (the home page's overview) gets the same panels and buttons. */
 
-body.pixel {
+body.pixel,
+.px-game {
   /* The frames, the buttons' face (lit top edge, shaded bottom edge) and the words on it. */
   --px-ink: var(--line);
   --px-face: var(--card);
@@ -27,12 +29,12 @@ body.pixel {
   --px-void: #2b2d42;
   --px-step: 3px;
 }
-html[data-theme='dark'] body.pixel { --px-void: #0b0c13; --px-face-lo: #3a3d55; }
-html[data-theme='terminal'] body.pixel { --px-void: #000; --px-face-hi: #0a1a0e; --px-face-lo: #0f3a1b; --px-teal-hi: #a6ffbf; --px-teal-lo: #1c9c42; --px-shade: rgba(51, 255, 102, .18); }
+html[data-theme='dark'] body.pixel, html[data-theme='dark'] .px-game { --px-void: #0b0c13; --px-face-lo: #3a3d55; }
+html[data-theme='terminal'] body.pixel, html[data-theme='terminal'] .px-game { --px-void: #000; --px-face-hi: #0a1a0e; --px-face-lo: #0f3a1b; --px-teal-hi: #a6ffbf; --px-teal-lo: #1c9c42; --px-shade: rgba(51, 255, 102, .18); }
 
 /* ---- Buttons: a raised block on a hard shadow; pushing it presses it flat ---- */
 body.pixel .btn,
-body.pixel .px-btn {
+:is(body.pixel, .px-game) .px-btn {
   position: relative;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 36px; padding: 0 12px;
@@ -54,10 +56,10 @@ body.pixel .px-btn {
   transition: transform .06s ease, box-shadow .06s ease, filter .12s ease;
 }
 body.pixel .btn:hover:not(:disabled),
-body.pixel .px-btn:hover:not(:disabled) { filter: brightness(1.06); background: var(--px-face-hi); }
+:is(body.pixel, .px-game) .px-btn:hover:not(:disabled) { filter: brightness(1.06); background: var(--px-face-hi); }
 body.pixel .btn:active:not(:disabled),
-body.pixel .px-btn:active:not(:disabled),
-body.pixel .px-btn.pressed {
+:is(body.pixel, .px-game) .px-btn:active:not(:disabled),
+:is(body.pixel, .px-game) .px-btn.pressed {
   transform: translateY(4px);
   box-shadow:
     0 calc(-1 * var(--px-step)) 0 0 var(--px-ink),
@@ -69,13 +71,13 @@ body.pixel .px-btn.pressed {
     0 var(--px-step) 0 0 var(--px-shade);
 }
 body.pixel .btn:focus-visible,
-body.pixel .px-btn:focus-visible { outline: 3px solid var(--px-teal-hi); outline-offset: 5px; }
+:is(body.pixel, .px-game) .px-btn:focus-visible { outline: 3px solid var(--px-teal-hi); outline-offset: 5px; }
 body.pixel .btn:disabled,
-body.pixel .px-btn:disabled { cursor: not-allowed; filter: grayscale(1) opacity(.55); transform: translateY(4px); }
+:is(body.pixel, .px-game) .px-btn:disabled { cursor: not-allowed; filter: grayscale(1) opacity(.55); transform: translateY(4px); }
 
 /* The primary ones, and the one that's on, are in the accent. */
 body.pixel .btn.primary,
-body.pixel .px-btn.on {
+:is(body.pixel, .px-game) .px-btn.on {
   background: var(--px-teal); color: var(--px-on-teal);
   box-shadow:
     0 calc(-1 * var(--px-step)) 0 0 var(--px-ink),
@@ -98,7 +100,7 @@ body.pixel kbd {
   box-shadow: 0 -2px 0 0 var(--px-ink), 0 2px 0 0 var(--px-ink), -2px 0 0 0 var(--px-ink), 2px 0 0 0 var(--px-ink), inset 0 -2px 0 0 var(--px-panel-hi);
   font: 800 10px/1.4 ui-monospace, 'Cascadia Mono', Consolas, monospace; text-align: center;
 }
-body.pixel .px-btn kbd { background: var(--px-face-lo); color: var(--px-face-text); box-shadow: inset 0 -2px 0 0 color-mix(in srgb, var(--px-face-lo) 70%, #000); }
+:is(body.pixel, .px-game) .px-btn kbd { background: var(--px-face-lo); color: var(--px-face-text); box-shadow: inset 0 -2px 0 0 color-mix(in srgb, var(--px-face-lo) 70%, #000); }
 
 /* ---- Panels: the hover card, a worker's menu, the chat, the zoom ---- */
 .px-panel,
@@ -122,8 +124,8 @@ body.pixel .px-tip b { color: var(--px-text); }
 body.pixel .px-menu-item { justify-content: space-between; width: calc(100% - 6px); min-height: 32px; margin-bottom: 8px; }
 
 .px-zoom { position: absolute; right: 16px; bottom: 16px; z-index: 6; display: flex; align-items: center; gap: 2px; padding: 6px 6px 2px; }
-body.pixel .px-zoom .px-btn { min-width: 36px; padding: 0 8px; font-size: 18px; }
-body.pixel .px-zoom .px-zoom-level { min-width: 56px; font-size: 12px; }
+:is(body.pixel, .px-game) .px-zoom .px-btn { min-width: 36px; padding: 0 8px; font-size: 18px; }
+:is(body.pixel, .px-game) .px-zoom .px-zoom-level { min-width: 56px; font-size: 12px; }
 
 body.pixel .px-chat-toggle { position: absolute; left: 16px; bottom: 16px; z-index: 6; margin: 0; }
 body.pixel .px-chat-toggle.news::after { content: ''; position: absolute; top: -6px; right: -6px; width: 10px; height: 10px; background: var(--warn); box-shadow: 0 0 0 2px var(--px-ink); animation: px-blink 1s steps(2) infinite; }
@@ -145,7 +147,7 @@ body.pixel .px-next:not(:disabled) { background: var(--warn); color: var(--on-wa
 .px-stage canvas.grabbing { cursor: grabbing; }
 
 @media (prefers-reduced-motion: reduce) {
-  body.pixel .btn, body.pixel .px-btn { transition: none; }
+  body.pixel .btn, :is(body.pixel, .px-game) .px-btn { transition: none; }
   body.pixel .px-tip, .px-menu { animation: none; }
   body.pixel .px-next:not(:disabled), body.pixel .px-chat-toggle.news::after { animation: none; }
 }

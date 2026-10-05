@@ -2,6 +2,7 @@
 // It opens fitted to the window, as big as it goes with all of it showing; zooming in goes up in
 // whole steps (every art pixel the same number of screen pixels), and then the office can be dragged,
 // panned with the arrow keys or the wheel, and pinched on a touch screen. The zoom is remembered.
+// The home page's overview has one too, with its own steps and where it keeps its zoom (CameraOptions).
 
 const ZOOM_KEY = 'agent-office.pixel-zoom';
 /** The whole steps zooming in and out goes through, in screen (CSS) pixels to an art pixel. */
@@ -9,10 +10,17 @@ const STEPS = [1, 2, 3, 4, 5, 6, 8];
 
 export type Zoom = 'fit' | number;
 
-function savedZoom(): Zoom {
+/** Where a camera keeps its zoom, the steps it zooms through, and whether a phone held upright fills the height (the 2D view's does). */
+export interface CameraOptions {
+  key?: string;
+  steps?: number[];
+  fillHeight?: boolean;
+}
+
+function savedZoom(key: string, steps: number[]): Zoom {
   try {
-    const z = Number(localStorage.getItem(ZOOM_KEY));
-    if (STEPS.includes(z)) return z;
+    const z = Number(localStorage.getItem(key));
+    if (steps.includes(z)) return z;
   } catch {
     // No storage: fitted, as usual.
   }
@@ -20,7 +28,7 @@ function savedZoom(): Zoom {
 }
 
 export class Camera {
-  zoom: Zoom = savedZoom();
+  zoom: Zoom;
   /** CSS pixels to an art pixel, as drawn now. */
   scale = 1;
   /** Where the art's top-left corner is in the stage, in CSS pixels. */
@@ -30,12 +38,22 @@ export class Camera {
   private stageH = 1;
   private artW = 1;
   private artH = 1;
+  private readonly key: string;
+  private readonly steps: number[];
+  private readonly fillHeight: boolean;
+
+  constructor(o: CameraOptions = {}) {
+    this.key = o.key ?? ZOOM_KEY;
+    this.steps = o.steps ?? STEPS;
+    this.fillHeight = o.fillHeight ?? true;
+    this.zoom = savedZoom(this.key, this.steps);
+  }
 
   /** What fitting the whole office in the stage would scale it by. */
   get fit(): number {
     const contain = Math.min(this.stageW / this.artW, this.stageH / this.artH);
     // A phone held upright would get a postage stamp: it fills the height instead, and pans sideways.
-    return contain >= 1 ? contain : Math.max(contain, Math.min(this.stageH / this.artH, 2));
+    return contain >= 1 || !this.fillHeight ? contain : Math.max(contain, Math.min(this.stageH / this.artH, 2));
   }
 
   /** Whether the office is bigger than the stage, so there's something to pan to. */
@@ -82,19 +100,19 @@ export class Camera {
   /** A step in (+1) or out (-1), keeping stage point (sx, sy) (the middle, unless given) where it is. */
   step(dir: 1 | -1, sx = this.stageW / 2, sy = this.stageH / 2) {
     if (dir > 0) {
-      const next = STEPS.find((s) => s > this.scale + 0.01);
+      const next = this.steps.find((s) => s > this.scale + 0.01);
       if (next !== undefined) this.setZoom(next, sx, sy);
       return;
     }
     // Out no further than all of it showing: smaller than that is only more empty screen.
-    const next = [...STEPS].reverse().find((s) => s < this.scale - 0.01);
+    const next = [...this.steps].reverse().find((s) => s < this.scale - 0.01);
     this.setZoom(next === undefined || next < this.fit ? 'fit' : next, sx, sy);
   }
 
   /** Pinching: scale by `factor` about stage point (sx, sy), snapping to the nearest whole step when it's let go (see settle). */
   pinch(factor: number, sx: number, sy: number) {
     const ax = (sx - this.x) / this.scale, ay = (sy - this.y) / this.scale;
-    this.scale = Math.max(Math.min(this.fit, 1), Math.min(STEPS[STEPS.length - 1], this.scale * factor));
+    this.scale = Math.max(Math.min(this.fit, 1), Math.min(this.steps[this.steps.length - 1], this.scale * factor));
     this.x = sx - ax * this.scale;
     this.y = sy - ay * this.scale;
     this.clamp();
@@ -103,7 +121,7 @@ export class Camera {
   /** The pinch is over: to the nearest whole step (or fitted, if that's nearer). */
   settle(sx: number, sy: number) {
     const fit = this.fit;
-    const nearest = STEPS.reduce((a, b) => (Math.abs(b - this.scale) < Math.abs(a - this.scale) ? b : a));
+    const nearest = this.steps.reduce((a, b) => (Math.abs(b - this.scale) < Math.abs(a - this.scale) ? b : a));
     this.setZoom(Math.abs(fit - this.scale) < Math.abs(nearest - this.scale) ? 'fit' : nearest, sx, sy);
   }
 
@@ -118,7 +136,7 @@ export class Camera {
       this.clamp();
     }
     try {
-      localStorage.setItem(ZOOM_KEY, String(to));
+      localStorage.setItem(this.key, String(to));
     } catch {
       // Just for this visit, then.
     }
@@ -131,7 +149,7 @@ export class Camera {
 
   /** The zoom as a person reads it. */
   label(): string {
-    return this.zoom === 'fit' ? 'Fit' : `${this.zoom}×`;
+    return this.zoom === 'fit' ? 'Fit' : this.zoom < 1 ? `${Math.round(this.zoom * 100)}%` : `${this.zoom}×`;
   }
 }
 
@@ -140,9 +158,12 @@ export class Camera {
  * pinching zoom, the plain wheel pans once zoomed in, and the arrows, + − and 0 when nothing else has
  * the keyboard. `changed` redraws; `dragging` says whether a press turned into a drag.
  */
-export function driveCamera(el: HTMLElement, cam: Camera, changed: () => void): { dragged(): boolean } {
+export function driveCamera(el: HTMLElement, cam: Camera, changed: () => void, o: { wheelZooms?: boolean } = {}): { dragged(): boolean } {
   const down = new Map<number, { x: number; y: number }>();
   let moved = 0;
+  // With `wheelZooms` (the home page's overview), the plain wheel zooms too, a step per notch's worth.
+  let wheelSum = 0;
+  let wheelAt = 0;
   let pinchFrom = 0;
   const local = (e: { clientX: number; clientY: number }) => {
     const r = el.getBoundingClientRect();
@@ -194,6 +215,19 @@ export function driveCamera(el: HTMLElement, cam: Camera, changed: () => void): 
     'wheel',
     (e) => {
       const p = local(e);
+      if (o.wheelZooms && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        // Out past all of it showing: the page scrolls on instead.
+        if (e.deltaY > 0 && cam.zoom === 'fit') return;
+        e.preventDefault();
+        const now = performance.now();
+        if (now - wheelAt > 300) wheelSum = 0;
+        wheelAt = now;
+        wheelSum += e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY;
+        if (Math.abs(wheelSum) < 50) return;
+        cam.step(wheelSum < 0 ? 1 : -1, p.x, p.y);
+        wheelSum = 0;
+        return changed();
+      }
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         cam.step(e.deltaY < 0 ? 1 : -1, p.x, p.y);

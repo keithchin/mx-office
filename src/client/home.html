@@ -11,7 +11,7 @@
     <script>try{var t=localStorage.getItem("agent-office.color-theme");if(t!=="default"&&t!=="dark"&&t!=="terminal")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"default";document.documentElement.dataset.theme=t}catch(e){}</script>
   </head>
   <body class="lite home-page">
-    <!-- The home page (home.ts): every project in the building, and the office in numbers. Its address never carries parameters. -->
+    <!-- The home page (home.ts): every project in the building, the office in numbers, and every floor from above. Its address never carries parameters. -->
     <header class="lite-bar">
       <a id="to-home" class="btn on" href="/home" aria-current="page" title="Home: you're here" aria-label="Home">🏠</a>
       <div class="home-title">
@@ -20,16 +20,21 @@
       </div>
       <a id="to-floor" class="btn home-back hidden" href="/lite" title="Back to the floor you were last on"></a>
       <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
+      <!-- The ☰ (shared/flatmenu.ts), last on the bar as on every page: what needs a floor is left out here. -->
+      <button id="menu" class="btn lite-menu" type="button" title="Menu: everything the 3D office’s ☰ has that doesn’t need a floor" aria-label="Menu">☰</button>
     </header>
     <main class="lite-main home-main">
       <div class="home-tabs" role="tablist" aria-label="Home">
         <button id="tab-projects" class="btn" type="button" role="tab">🏢 Projects</button>
         <button id="tab-stats" class="btn" type="button" role="tab">📊 Statistics</button>
+        <button id="tab-overview" class="btn" type="button" role="tab">🗺️ 2D Overview</button>
       </div>
       <!-- A card for every floor, to go into on the board or in the office, and adding one (home/projects.ts). -->
       <section id="projects-view" role="tabpanel" aria-labelledby="tab-projects"></section>
       <!-- The office's totals, every project side by side, and the model ranking (home/stats.ts). -->
       <section id="stats-view" class="hidden" role="tabpanel" aria-labelledby="tab-stats"></section>
+      <!-- Every floor from above in pixel art, side by side, to look at (home/overview.ts). -->
+      <section id="overview-view" class="hidden" role="tabpanel" aria-labelledby="tab-overview"></section>
     </main>
     <div id="toasts"></div>
     <div id="conn" class="conn hidden">Reconnecting…</div>

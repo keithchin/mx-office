@@ -2,7 +2,7 @@
 // the scale across the floor and up, and where the picture's corner is. Its own module so everything
 // that draws (office.ts, zones.ts, light.ts, people.ts…) can share it without importing each other.
 
-import { FLOOR, wingMinZ } from '../../shared/layout';
+import { BALCONY, FLOOR, wingMinZ } from '../../shared/layout';
 
 /** Art pixels to a meter across the floor: big enough for characters 24 pixels across at a desk 44 wide. */
 export const PPM = 20;
@@ -29,7 +29,8 @@ export function frameFor(level: number): Frame {
   const minX = FLOOR.minX - 0.6;
   const minZ = wingMinZ(level) - 0.4;
   const maxX = FLOOR.maxX + 0.6;
-  const maxZ = FLOOR.maxZ + 0.6;
+  // Down past the south wall to take in the smoking balcony (balcony.ts).
+  const maxZ = Math.max(FLOOR.maxZ + 0.6, BALCONY.maxZ + 0.3);
   const top = FACE + 6;
   return { minX, minZ, top, width: Math.round((maxX - minX) * PPM), height: top + Math.round((maxZ - minZ) * PPM), level };
 }

@@ -1,20 +1,25 @@
 // The home page (/home): every project in the building, to go into on the board or in the 2D office
-// (🏢 Projects), and the whole office in numbers, project by project (📊 Statistics). It has a page
-// of its own, so 🏠 on the flat views always comes here and 🏠 here stays here. Its address never
-// carries parameters: which tab you were on is kept in this browser instead. Like the flat views it
-// is in the office over the socket (the floors' cards follow it live, and adding a project needs
-// it), and it loads no three.js.
+// (🏢 Projects), the whole office in numbers, project by project (📊 Statistics), and every floor from
+// above in pixel art (🗺️ 2D Overview). It has a page of its own, so 🏠 on the flat views always comes
+// here and 🏠 here stays here. Its address never keeps parameters: which tab you were on is kept in
+// this browser instead (a link can still open one, ?tab=overview or #overview, before it's tidied).
+// Like the flat views it is in the office over the socket (the floors' cards follow it live, and
+// adding a project needs it), and it loads no three.js.
 
 import { store } from './state';
 import { forgetFloor, lastFloor } from './state/persist';
 import { $ } from './ui/dom';
 import { colorThemes } from './ui/colortheme';
 import { flatSession } from './shared/session';
+import { flatMenu } from './shared/flatmenu';
 import { graphics, viewUrl } from './graphics';
 import { projectsView } from './home/projects';
 import { statsView } from './home/stats';
+import { overviewView } from './home/overview';
 import './home/home.css';
 
+/** The tab a link asked for (?tab= or a bare #), read before the address is tidied. */
+const asked = new URLSearchParams(location.search).get('tab') ?? location.hash.slice(1);
 // One address, with nothing after it: an old link with ?floor= or the like still lands here, tidied.
 if (location.pathname !== '/home' || location.search || location.hash) history.replaceState(null, '', '/home');
 
@@ -35,8 +40,8 @@ const session = flatSession(
 );
 const { net } = session;
 
-// The 🎨 in the top bar: the Default, Dark or Terminal look (ui/colortheme.ts).
-colorThemes($('theme'), $('stats-view'));
+// The 🎨 in the top bar: the Default, Dark or Terminal look (ui/colortheme.ts). The overview's floors are tinted to match.
+colorThemes($('theme'), $('stats-view'), () => overview.themed());
 
 // ---- Back to the floor you were last on, in the view you were last in -----------------------------
 function renderBack() {
@@ -53,16 +58,21 @@ store.on('floors', renderBack);
 
 // ---- The tabs ---------------------------------------------------------------------------------
 const TAB_KEY = 'agent-office.home-tab';
-type Tab = 'projects' | 'stats';
+const TABS = ['projects', 'stats', 'overview'] as const;
+type Tab = (typeof TABS)[number];
+const isTab = (t: unknown): t is Tab => TABS.includes(t as Tab);
 let tab: Tab = 'projects';
 try {
-  if (localStorage.getItem(TAB_KEY) === 'stats') tab = 'stats';
+  const kept = localStorage.getItem(TAB_KEY);
+  if (isTab(kept)) tab = kept;
 } catch {
   // No storage: the projects, as usual.
 }
+if (isTab(asked)) tab = asked;
 
 const projects = projectsView($('projects-view'), net, last, () => (leaving = true));
 const stats = statsView($('stats-view'), () => (leaving = true));
+const overview = overviewView($('overview-view'), () => (leaving = true));
 
 function showTab(t: Tab) {
   tab = t;
@@ -71,16 +81,18 @@ function showTab(t: Tab) {
   } catch {
     // Just for this visit, then.
   }
-  for (const [id, on] of [['projects', t === 'projects'], ['stats', t === 'stats']] as const) {
+  for (const id of TABS) {
+    const on = id === t;
     $(`tab-${id}`).classList.toggle('on', on);
     $(`tab-${id}`).setAttribute('aria-selected', String(on));
     $(`${id}-view`).classList.toggle('hidden', !on);
   }
+  if (t === 'overview') overview.show();
+  else overview.hide();
   if (t === 'projects') projects.render();
-  else void stats.render();
+  else if (t === 'stats') void stats.render();
 }
-$('tab-projects').addEventListener('click', () => showTab('projects'));
-$('tab-stats').addEventListener('click', () => showTab('stats'));
+for (const id of TABS) $(`tab-${id}`).addEventListener('click', () => showTab(id));
 // 🏠 here is the page you're on: back to the top of the projects rather than a reload.
 $('to-home').addEventListener('click', (e) => {
   e.preventDefault();
@@ -91,6 +103,9 @@ $('to-home').addEventListener('click', (e) => {
 for (const t of ['floors', 'peers'] as const) store.on(t, () => tab === 'projects' && projects.render());
 // The numbers move on by themselves while they're on screen.
 setInterval(() => tab === 'stats' && !document.hidden && void stats.render(), 30_000);
+
+// The ☰, last on the bar as on every page: here, only what doesn't need a floor (shared/flatmenu.ts).
+flatMenu($('menu'), { net, home: true });
 
 session.bellBefore($('theme'));
 session.start();
