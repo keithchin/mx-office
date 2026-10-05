@@ -1,0 +1,166 @@
+/* The 🌳 Git tab (ui/git/): the floor's branches as a metro map. Colors are the theme's tokens only;
+   a worker's line is its own color (--lane, set on the line), the others take the palette in turn. */
+
+.gp { position: relative; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+/* ---- The strip over the map: what it counts, and a refresh ---------------------------------------- */
+.gp-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.gp-stat { display: inline-flex; align-items: baseline; gap: 4px; padding: 5px 11px; background: var(--card); border: 3px solid var(--line); border-radius: 999px; box-shadow: 0 3px 0 var(--edge); font-size: 13px; font-weight: 800; color: var(--ink-2); white-space: nowrap; }
+.gp-stat b { font-size: 16px; font-weight: 900; color: var(--ink); font-variant-numeric: tabular-nums; }
+.gp-stat.warn { background: var(--warn-soft); }
+.gp-stat.main code { font: 800 13px var(--font-mono); color: var(--ink); }
+.gp-refresh { margin-left: auto; width: 40px; height: 40px; padding: 0; justify-content: center; font-size: 17px; }
+.gp-refresh.busy { animation: gp-spin 1s linear infinite; }
+@keyframes gp-spin { to { transform: rotate(360deg); } }
+
+/* ---- The map: a scroll box of its own, so a wide graph never widens the page ---------------------- */
+.gp-scroll {
+  position: relative; overflow: auto; max-height: 70vh; min-width: 0;
+  background: var(--paper-2); border: 3px solid var(--line); border-radius: var(--radius); box-shadow: 0 4px 0 var(--edge);
+  /* Graph paper behind the tracks. */
+  background-image: linear-gradient(var(--rule-soft) 1px, transparent 1px), linear-gradient(90deg, var(--rule-soft) 1px, transparent 1px);
+  background-size: 22px 22px;
+  overscroll-behavior-x: contain;
+}
+.gp-scroll:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.gp-canvas { position: relative; }
+.gp-svg { position: absolute; inset: 0; display: block; overflow: visible; }
+/* Emoji drawn as text (the Terminal theme asks for that) take the ink. */
+.gp-svg text { fill: var(--ink); }
+
+/* The trunk: a railway, its bed, its rail and the sleepers across it. */
+.gp-bed { stroke: var(--line); stroke-width: 16; stroke-linecap: round; }
+.gp-rail { stroke: var(--ink-2); stroke-width: 10; stroke-linecap: round; }
+.gp-sleepers { stroke: var(--paper-2); stroke-width: 10; stroke-dasharray: 2 10; opacity: .55; }
+.gp-older { font: 900 22px var(--font); fill: var(--faint); }
+.gp-st circle { fill: var(--card); stroke: var(--line); stroke-width: 3; }
+.gp-st.merge circle { fill: var(--accent); }
+.gp-st.merge .gp-st-in { fill: var(--card); stroke-width: 2; }
+.gp-st { cursor: help; }
+.gp-st:hover circle:first-child { stroke-width: 4; }
+.gp-train { font-size: 26px; }
+
+/* A branch's line. --lane is its color; --lane-c what it's drawn in (the Terminal theme keeps it green). */
+.gp-lane { --lane-c: var(--lane, var(--info)); }
+.gp-lane.c0, .gp-label.c0 { --lane: var(--accent); }
+.gp-lane.c1, .gp-label.c1 { --lane: var(--info); }
+.gp-lane.c2, .gp-label.c2 { --lane: var(--purple); }
+.gp-lane.c3, .gp-label.c3 { --lane: var(--good); }
+.gp-lane.c4, .gp-label.c4 { --lane: var(--warn); }
+.gp-lane.c5, .gp-label.c5 { --lane: var(--bad); }
+.gp-line-bed { fill: none; stroke: var(--line); stroke-width: 11; stroke-linecap: round; stroke-linejoin: round; }
+.gp-line { fill: none; stroke: var(--lane-c); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.gp-hit { fill: none; stroke: transparent; stroke-width: 26; pointer-events: stroke; }
+.gp-dot { fill: var(--card); stroke: var(--line); stroke-width: 3; }
+.gp-dot.tip { fill: var(--lane-c); }
+.gp-fork.older { fill: var(--faint); }
+.gp-more { font: 900 11px var(--font); fill: var(--muted); }
+.gp-badge { font-size: 16px; }
+.gp-lane.merged .gp-line { opacity: .55; }
+.gp-lane.squashed .gp-line { stroke-dasharray: 2 9; opacity: .7; }
+.gp-lane.stale .gp-line { stroke-dasharray: 14 6; }
+.gp-lane.opens { cursor: pointer; }
+.gp-lane:hover .gp-line { stroke-width: 8; }
+.gp-lane:hover .gp-line-bed { stroke-width: 13; }
+
+/* The robot at the tip, drawn pixel-sharp. */
+.gp-bot image { image-rendering: pixelated; image-rendering: crisp-edges; }
+.gp-bot .gp-bob { transform-box: fill-box; transform-origin: 50% 100%; }
+.gp-fx { font-size: 15px; }
+
+/* ---- The label by each line's end: its name, how far off it is, its PR and worker ----------------- */
+.gp-label {
+  position: absolute; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; max-width: 240px;
+  padding: 3px 8px 4px; background: var(--card); color: var(--ink); font: inherit; text-align: left;
+  border: 3px solid var(--line); border-left: 7px solid var(--lane, var(--line)); border-radius: 10px; box-shadow: 0 3px 0 var(--edge); cursor: default;
+}
+.gp-label.opens { cursor: pointer; }
+.gp-label.opens:hover { background: var(--paper-2); }
+.gp-label.opens:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--edge); }
+.gp-label:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.gp-name { font: 900 13px/1.2 var(--font-mono); white-space: nowrap; }
+.gp-chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.gp-chip, .gp-pr, .gp-who { font-size: 11px; font-weight: 900; line-height: 16px; padding: 0 6px; border-radius: 999px; border: 2px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gp-chip { background: var(--sunken); }
+.gp-chip.good { background: var(--good-soft); color: var(--good-ink); }
+.gp-chip.stale { background: var(--warn-soft); color: var(--warn-ink); }
+.gp-chip.dim { color: var(--muted); }
+.gp-who { background: var(--paper-2); color: var(--ink-2); }
+.gp-pr { display: inline-block; min-width: 16px; min-height: 16px; background: var(--neutral-soft); color: var(--ink); }
+.gp-pr.pass { background: var(--good); color: var(--on-fill); }
+.gp-pr.fail { background: var(--bad); color: var(--on-fill); }
+.gp-pr.pending { background: var(--warn); color: var(--on-warn); }
+.gp-pr.draft, .gp-pr.closed { background: var(--neutral-soft); color: var(--muted); }
+.gp-pr.merged { background: var(--purple); color: var(--on-fill); }
+.gp-pr.none { background: var(--info-soft); color: var(--ink); }
+
+/* The station sign over the trunk's newest commit. */
+.gp-sign {
+  position: absolute; display: flex; align-items: center; gap: 5px; padding: 2px 10px;
+  background: var(--ink); color: var(--on-ink); border: 3px solid var(--line); border-radius: 8px; box-shadow: 0 3px 0 var(--edge);
+  font: 900 13px var(--font-mono); white-space: nowrap; pointer-events: none;
+}
+
+/* ---- The tooltip card ------------------------------------------------------------------------------ */
+.gp-tip { position: absolute; z-index: 5; pointer-events: none; }
+.gp-card { padding: 9px 12px; background: var(--card); border: 3px solid var(--line); border-radius: 12px; box-shadow: 0 4px 0 var(--edge), 0 8px 22px var(--pop-glow); }
+.gp-card p { margin: 4px 0 0; font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
+.gp-card-name { display: block; font: 900 13px var(--font-mono); overflow-wrap: anywhere; }
+.gp-card-sub { color: var(--ink-2); font-style: italic; }
+.gp-card-meta, .gp-card-hint { color: var(--muted); }
+.gp-card-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+
+/* ---- The legend, the notes under the map, and the empty and error states -------------------------- */
+.gp-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; font-weight: 800; color: var(--muted); }
+.gp-key { display: inline-flex; align-items: center; gap: 5px; }
+.gp-key i { display: inline-block; flex: none; }
+.gp-k-trunk { width: 22px; height: 8px; border-radius: 4px; background: var(--ink-2); border: 2px solid var(--line); }
+.gp-k-st, .gp-k-merge { width: 12px; height: 12px; border-radius: 50%; background: var(--card); border: 3px solid var(--line); }
+.gp-k-merge { background: var(--accent); }
+.gp-k-lane { width: 22px; height: 6px; border-radius: 3px; background: var(--info); border: 2px solid var(--line); }
+.gp-key .gp-pr { width: 16px; padding: 0; }
+.gp-foot { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); }
+.gp-foot:empty { display: none; }
+.gp-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 16px; text-align: center; background: var(--card); border: 3px dashed var(--rule-strong); border-radius: var(--radius); }
+.gp-empty-ico { font-size: 40px; }
+.gp-empty b { font-size: 17px; font-weight: 900; }
+.gp-empty p { margin: 0 0 6px; font-weight: 700; color: var(--muted); max-width: 420px; }
+
+/* ---- Making it move: the robots bob, type, ask and cheer; the train chugs ------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .gp-bot .gp-bob { animation: gp-bob 2.4s ease-in-out infinite; }
+  .gp-bot.st-working .gp-bob { animation: gp-type .5s steps(2) infinite; }
+  .gp-bot.st-working .gp-fx { animation: gp-sparkle 1s ease-in-out infinite; }
+  .gp-bot.st-needs_input .gp-fx { animation: gp-wave 1s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+  .gp-bot.st-done .gp-bob { animation: gp-cheer 1.6s ease-out infinite; }
+  .gp-bot.st-offline .gp-bob, .gp-bot.st-exited .gp-bob { animation: none; }
+  .gp-train { animation: gp-chug 1.2s steps(2) infinite; }
+}
+@keyframes gp-bob { 50% { transform: translateY(-2px); } }
+@keyframes gp-type { 50% { transform: translateY(-1px) rotate(-2deg); } }
+@keyframes gp-sparkle { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+@keyframes gp-wave { 50% { transform: rotate(-14deg); } }
+@keyframes gp-cheer { 0%, 60%, 100% { transform: translateY(0); } 20% { transform: translateY(-8px) scaleY(1.05); } 35% { transform: translateY(0) scaleY(.92); } }
+@keyframes gp-chug { 50% { transform: translateY(-1px); } }
+
+/* ---- Terminal: green phosphor lines on black --------------------------------------------------------- */
+html[data-theme='terminal'] .gp-scroll { background-color: var(--paper); background-image: linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px); }
+html[data-theme='terminal'] .gp-lane { --lane-c: var(--ink); }
+html[data-theme='terminal'] .gp-lane.t1 { --lane-c: var(--accent); }
+html[data-theme='terminal'] .gp-line { filter: drop-shadow(0 0 3px var(--rule-strong)); }
+html[data-theme='terminal'] .gp-line-bed, html[data-theme='terminal'] .gp-bed { stroke: var(--paper); }
+html[data-theme='terminal'] .gp-rail { stroke: var(--ink); stroke-width: 6; }
+html[data-theme='terminal'] .gp-sleepers { stroke: var(--ink); stroke-width: 14; stroke-dasharray: 1 11; opacity: .5; }
+html[data-theme='terminal'] .gp-st circle, html[data-theme='terminal'] .gp-dot { fill: var(--paper); stroke: var(--ink); stroke-width: 2; }
+html[data-theme='terminal'] .gp-st.merge circle:first-child, html[data-theme='terminal'] .gp-dot.tip { fill: var(--ink); }
+html[data-theme='terminal'] .gp-bot image { filter: grayscale(1) sepia(1) hue-rotate(65deg) saturate(5) brightness(1.1); }
+html[data-theme='terminal'] .gp-label { border-left-color: var(--ink); }
+html[data-theme='terminal'] .gp-sign { background: var(--ink); color: #000; text-shadow: none; }
+html[data-theme='terminal'] .gp-pr.pass, html[data-theme='terminal'] .gp-pr.fail, html[data-theme='terminal'] .gp-pr.pending, html[data-theme='terminal'] .gp-pr.merged { text-shadow: none; }
+
+/* ---- A phone: the map scrolls inside its own box, the strip wraps --------------------------------- */
+@media (max-width: 640px) {
+  .gp-scroll { max-height: 64vh; }
+  .gp-stat { padding: 4px 9px; font-size: 12px; }
+  .gp-legend { gap: 4px 10px; font-size: 11px; }
+}

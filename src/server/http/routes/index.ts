@@ -6,6 +6,7 @@ import { agentRoutes } from './agents.js';
 import { analysisRoutes } from './analysis.js';
 import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
+import { gitRoutes } from './git.js';
 import { githubRoutes } from './github.js';
 import { homeRoutes } from './home.js';
 import { pageRoutes } from './pages.js';
@@ -42,6 +43,7 @@ export const routes: readonly Route[] = [
   searchRoutes.search,
   serviceRoutes.forwards,
   githubRoutes.github,
+  gitRoutes.graph,
   analysisRoutes.report,
   analysisRoutes.backfill,
   analysisRoutes.summary,

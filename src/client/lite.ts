@@ -36,6 +36,7 @@ import { floorPicker } from './shared/floors';
 import { askedTab, followFloor, leaveForHome, setAddress } from './shared/address';
 import { colorThemes } from './ui/colortheme';
 import { needsYouStrip } from './ui/needsyou';
+import { gitView } from './ui/git';
 import type { NeedTarget } from './ui/needsyou/logic';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
@@ -184,11 +185,13 @@ const teams = subBoards(
 net.onMessage((msg) => teams.route(msg));
 // A new key since the Command Center became the first tab, so everyone starts there once rather than on the board they last had.
 const TAB_KEY = 'agent-office.lite-tab2';
-type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | Pane | 'teams';
+// The floor's branches as a metro map (🌳 Git, ui/git/).
+const git = gitView($('git-view'), { openWorker, openPull: kanban.openPull });
+type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | Pane | 'teams';
 // The team's four panes are tabs of their own (flattened from one Team tab); an old "team" means its org chart.
 const TEAM_PANES: readonly Pane[] = ['org', 'standup', 'approvals', 'settings'];
 const isPane = (t: unknown): t is Pane => TEAM_PANES.includes(t as Pane);
-const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || isPane(t) || t === 'teams';
+const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || isPane(t) || t === 'teams';
 const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : isTab(t) ? t : undefined);
 let tab: Tab = 'command';
 try {
@@ -218,6 +221,10 @@ function showTab(t: Tab) {
   $('tab-live').classList.toggle('on', t === 'live');
   $('liveapp-view').classList.toggle('hidden', t !== 'live');
   if (t === 'live') live.render($('liveapp-view'));
+  $('tab-git').classList.toggle('on', t === 'git');
+  $('git-view').classList.toggle('hidden', t !== 'git');
+  if (t === 'git') git.show();
+  else git.hide();
   for (const p of TEAM_PANES) $(`tab-${p}`).classList.toggle('on', t === p);
   $('board').classList.toggle('hidden', t !== 'board');
   $('summary').classList.toggle('hidden', t !== 'command');
@@ -253,6 +260,7 @@ $('tab-board').addEventListener('click', () => showTab('board'));
 $('tab-workers').addEventListener('click', () => showTab('workers'));
 $('tab-analysis').addEventListener('click', () => showTab('analysis'));
 $('tab-live').addEventListener('click', () => showTab('live'));
+$('tab-git').addEventListener('click', () => showTab('git'));
 for (const p of TEAM_PANES) $(`tab-${p}`).addEventListener('click', () => showTab(p));
 $('tab-teams').addEventListener('click', () => showTab('teams'));
 store.on('floor', renderAnalysisTab);
