@@ -9,6 +9,8 @@ import { h, timeAgo } from '../dom';
 import { jeffCard } from '../jeff';
 import { act } from './api';
 import { askText } from './ask';
+import { openSkills } from './skills';
+import { subagentList } from './subagents';
 
 export const STATUS_TEXT: Record<MemberStatus, string> = {
   'not-hired': 'Not hired',
@@ -59,7 +61,7 @@ export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLEle
     ),
     m.activity ? h('p.ro-activity', {}, m.activity) : null,
     h('p.ro-facts', {}, facts.join(' · ')),
-    role.subagents.length ? h('p.ro-subs', {}, '👥 ', role.subagents.map((s) => s.title + 's').join(', ')) : h('p.ro-subs', {}, '👥 Coordinates the Leads'),
+    role.subagents.length ? (subagentList(v, m.role, deps.redraw) ?? h('p.ro-subs', {}, '👥 ', role.subagents.map((s) => s.title + 's').join(', '))) : h('p.ro-subs', {}, '👥 Coordinates the Leads'),
     h(
       'div.ro-journal',
       {},
@@ -84,6 +86,7 @@ export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLEle
           }, m.status === 'asleep' ? '⏰ Wake' : '🤝 Hire')
         : null,
       hired ? h('button.btn.small', { type: 'button', title: `Open ${m.name}'s terminal`, onclick: () => deps.openWorker(m.workerId!) }, '🖥️ Terminal') : null,
+      h('button.btn.small.ro-skills', { type: 'button', title: `${m.name}'s skills and their gates${v.admin ? '' : ' (read-only)'}`, onclick: () => openSkills(v, m, deps.redraw) }, '🧰 Skills'),
       canBench && v.admin ? h('button.btn.small', { type: 'button', title: `Ask ${m.name} for a handoff note and lessons, then stop it and clear its session`, onclick: () => run('bench') }, '🪑 Bench') : null,
       v.admin ? h('button.btn.small', { type: 'button', title: 'Rename this role', onclick: () => askText({ title: `Rename the ${m.title}`, label: 'Name', value: m.name, ok: 'Rename' }, (name) => run('rename', { name })) }, '✏️') : null,
       v.admin ? h('button.btn.small', { type: 'button', title: 'Change the model (from its next hire)', onclick: () => askText({ title: `${m.name}'s model`, label: 'From its next hire (a running session keeps its model)', ok: 'Save', pickOnly: true, pick: { label: 'Model', options: MODELS, value: m.model } }, (_, model) => model && model !== m.model && run('model', { model })) }, `🧠 ${modelName(m.model)}`) : null,

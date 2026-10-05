@@ -202,7 +202,7 @@ export const MCP_READ_ONLY = [`mcp__${MCP_NAME}__list_workers`];
  * Project Manager, which only records a card for the human (asking the human for permission to ask
  * the human would defeat it).
  */
-export const MCP_ALLOWED = [...MCP_READ_ONLY, `mcp__${MCP_NAME}__escalate`];
+export const MCP_ALLOWED = [...MCP_READ_ONLY, `mcp__${MCP_NAME}__escalate`, `mcp__${MCP_NAME}__subagent`];
 
 /**
  * Writes Claude Code's --mcp-config file for the MCP server (bin/office-workers.js `mcp`, run by the

@@ -21,6 +21,7 @@ import type { Ctx } from '../office/context.js';
 import { Roster, rosterFor } from './index.js';
 import { ghIssueMaker } from './issues.js';
 import type { HireAsk, TeamFloor } from './types.js';
+import { onSubagentEvent } from '../workers/subagents.js';
 
 const adapters = new WeakMap<Floor, TeamFloor>();
 
@@ -113,14 +114,20 @@ export const judgeOf = (ctx: Ctx) => judgeFor(ctx.cfg);
 
 /** The office's roster: made on first use, with the real floors, GitHub and the analyzer behind it. */
 export function rosterOf(ctx: Ctx): Roster {
-  return rosterFor(ctx.cfg, () =>
-    new Roster({
+  return rosterFor(ctx.cfg, () => {
+    const roster = new Roster({
       dataDir: ctx.cfg.dataDir,
       floors: () => [...ctx.floors.values()].map((f) => teamFloor(ctx, f)),
       makeIssue: ghIssueMaker,
       analysis: (id) => analysisLines(ctx, id),
       now: () => Date.now(),
       judge: (text, questions, opts) => judgeOf(ctx).ask(text, questions, opts),
-    }),
-  );
+    });
+    // A Lead's subagent runs, from its hooks: the team's track record (roster/subagents.ts).
+    onSubagentEvent((workerId, ev) => {
+      const floor = ctx.workerFloor(workerId);
+      if (floor) roster.subagents.onEvent(teamFloor(ctx, floor), workerId, ev);
+    });
+    return roster;
+  });
 }

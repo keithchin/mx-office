@@ -11,6 +11,9 @@ import { cleanSchedule, DEFAULT_SCHEDULE } from '../../shared/roster/schedule.js
 import type { Escalation } from '../../shared/roster/escalation.js';
 import { DEFAULT_JEFF, isJeffMode } from '../../shared/judge.js';
 import type { Proposal, RosterSettings, Standup } from '../../shared/roster/types.js';
+import { cleanOverrides, type SkillOverrides } from '../../shared/roster/skills.js';
+import { reviveSubagents, SUBAGENT_ACTIONS_KEPT } from './subagent-store.js';
+import type { SubagentAction, SubagentRecord } from '../../shared/roster/subagents.js';
 
 /** Where a member is in its life: never hired, a worker now, writing its handoff, or benched. */
 export type Phase = 'none' | 'active' | 'benching' | 'benched';
@@ -26,6 +29,8 @@ export interface MemberRecord {
   benchedAt?: number;
   /** Its latest handoff note, what a fresh hire is primed with. */
   handoff?: { at: number; text: string };
+  /** What the Project Manager changed of its skills (shared/roster/skills.ts): on/off and gate per skill. */
+  skills?: SkillOverrides;
 }
 
 export interface RosterData {
@@ -42,16 +47,22 @@ export interface RosterData {
   harvested: Partial<Record<RoleId, string>>;
   /** Spend today (in the schedule's time zone), and each worker's session cost when last seen. */
   spend: { day: string; usd: number; seen: Record<string, number> };
+  /** The Leads' subagents, by `<lead role>/<name>`: runs, warnings, benched (roster/subagents.ts). */
+  subagents: Record<string, SubagentRecord>;
+  /** Subagent actions a Lead proposed to the Project Manager, or asked them about. */
+  subagentActions: SubagentAction[];
 }
 
 // Leads are benched only when the Project Manager says so; a floor can turn idle benching on in its settings.
 export const DEFAULT_IDLE_MINUTES = 0;
+/** A benched subagent sits out a day before the office reinstates it. */
+export const DEFAULT_COOLDOWN_HOURS = 24;
 const STANDUPS_KEPT = 30;
 const PROPOSALS_KEPT = 300;
 const ESCALATIONS_KEPT = 200;
 
 export function defaultSettings(): RosterSettings {
-  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true, jeff: { ...DEFAULT_JEFF } };
+  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true, jeff: { ...DEFAULT_JEFF }, subagentCooldownHours: DEFAULT_COOLDOWN_HOURS };
 }
 
 /** Settings from what was saved or sent, anything malformed left as it was in `base`. */
@@ -77,6 +88,7 @@ export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings
       waiting: isJeffMode(s.jeff?.waiting) ? s.jeff.waiting : (base.jeff?.waiting ?? DEFAULT_JEFF.waiting),
       triage: isJeffMode(s.jeff?.triage) ? s.jeff.triage : (base.jeff?.triage ?? DEFAULT_JEFF.triage),
     },
+    subagentCooldownHours: typeof s.subagentCooldownHours === 'number' && Number.isFinite(s.subagentCooldownHours) ? Math.max(0, Math.min(Math.round(s.subagentCooldownHours * 10) / 10, 24 * 30)) : (base.subagentCooldownHours ?? DEFAULT_COOLDOWN_HOURS),
   };
 }
 
@@ -85,7 +97,7 @@ export function freshRoster(rng: () => number = Math.random): RosterData {
   const names = pickNames(rng);
   const members = {} as Record<RoleId, MemberRecord>;
   for (const r of ROLES) members[r.id] = { name: names[r.id], model: r.model, phase: 'none' };
-  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} } };
+  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [] };
 }
 
 /** A saved roster, made whole: a role added since it was saved gets a name, a bad field its default. */
@@ -97,7 +109,8 @@ export function reviveRoster(raw: unknown, rng: () => number = Math.random): Ros
   for (const [id, m] of Object.entries(r.members ?? {})) {
     if (!isRoleId(id) || !m || typeof m !== 'object') continue;
     const phase: Phase = ['none', 'active', 'benching', 'benched'].includes(m.phase) ? m.phase : 'none';
-    members[id] = { ...m, name: cleanName(m.name) ?? fresh.members[id].name, model: typeof m.model === 'string' && m.model ? m.model : fresh.members[id].model, phase };
+    const skills = cleanOverrides(id, m.skills);
+    members[id] = { ...m, name: cleanName(m.name) ?? fresh.members[id].name, model: typeof m.model === 'string' && m.model ? m.model : fresh.members[id].model, phase, skills };
   }
   return {
     settings: cleanSettings(r.settings),
@@ -109,6 +122,8 @@ export function reviveRoster(raw: unknown, rng: () => number = Math.random): Ros
     lastStandupAt: typeof r.lastStandupAt === 'number' ? r.lastStandupAt : undefined,
     harvested: r.harvested && typeof r.harvested === 'object' ? { ...r.harvested } : {},
     spend: r.spend && typeof r.spend === 'object' && typeof r.spend.usd === 'number' ? { day: String(r.spend.day ?? ''), usd: r.spend.usd, seen: { ...(r.spend.seen ?? {}) } } : fresh.spend,
+    subagents: reviveSubagents(r.subagents),
+    subagentActions: Array.isArray(r.subagentActions) ? r.subagentActions.filter((a) => a && typeof a === 'object' && typeof a.id === 'string').slice(-SUBAGENT_ACTIONS_KEPT) : [],
   };
 }
 
@@ -144,6 +159,7 @@ export class RosterFile {
     d.standups = d.standups.slice(-STANDUPS_KEPT);
     d.proposals = d.proposals.slice(-PROPOSALS_KEPT);
     d.escalations = d.escalations.slice(-ESCALATIONS_KEPT);
+    d.subagentActions = d.subagentActions.slice(-SUBAGENT_ACTIONS_KEPT);
     try {
       const tmp = `${this.file}.tmp`;
       writeFileSync(tmp, JSON.stringify(d, null, 2), { mode: 0o600 });

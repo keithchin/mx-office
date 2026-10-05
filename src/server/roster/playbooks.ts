@@ -14,6 +14,9 @@ import { autonomyBrief, HUMAN_FULL, reviewBrief, type AutonomyLevel } from '../.
 import { teamLabel } from '../../shared/roster/card-team.js';
 import { ASK_THE_PM } from './prompts.js';
 import { journalPath, playbookMirror, playbookPath, ROLE_BY_ID, ROLES, standupPath, type RoleDef, type RoleId, type SubagentDef, type TeamId } from '../../shared/roster/roles.js';
+import { craftOn, skillsBrief, type SkillOverrides } from '../../shared/roster/skills.js';
+import type { SubagentRecord } from '../../shared/roster/subagents.js';
+import { applyStanding } from './subagent-files.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
 export const FIELD_LESSONS = '.ai-context/skills/mxcli-field-lessons/SKILL.md';
@@ -29,6 +32,9 @@ export interface PlaybookContext {
   lessons: string;
   /** Every role's name, so a Playbook can say who's who. */
   names: Record<RoleId, string>;
+  /** The member's skill overrides (shared/roster/skills.ts), and its subagents' standing. */
+  skills?: SkillOverrides;
+  subagents?: SubagentRecord[];
 }
 
 /** Where the mxcli-project-toolkit clone is (the same setting the new-project wizard uses). */
@@ -38,13 +44,14 @@ const toolkitDir = () => (process.env.AGENT_OFFICE_TOOLKIT_DIR || path.join(os.h
  * The toolkit skills and role files this role works from, pointed at in the toolkit clone rather than copied,
  * so the team reads the toolkit's current version (see RoleDef.toolkitSkills).
  */
-function toolkitSection(role: RoleDef): string[] {
-  if (!role.toolkitSkills.length && !role.toolkitAgents.length) return [];
+function toolkitSection(role: RoleDef, overrides?: SkillOverrides): string[] {
+  const skills = craftOn(role.id, overrides);
+  if (!skills.length && !role.toolkitAgents.length) return [];
   const dir = toolkitDir();
   return [
     '## Your toolkit skills (mxcli-project-toolkit)',
     `Before a piece of work, read the skills below that apply to it, from the toolkit clone at \`${dir}\`. They are the team's hard-won practice: where one disagrees with this Playbook on how to do something, follow the skill; on who decides, follow this Playbook.`,
-    ...role.toolkitSkills.map((s) => `- \`${dir}/skills/${s}.md\``),
+    ...skills.map((s) => `- \`${dir}/skills/${s}.md\``),
     ...(role.toolkitAgents.length ? ['', 'Your lane and your subagents build on the toolkit role files:', ...role.toolkitAgents.map((a) => `- \`${dir}/agents/${a}.md\``)] : []),
     '',
   ];
@@ -110,12 +117,14 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     '',
     ASK_THE_PM,
     '',
+    ...skillsBrief(roleId, ctx.level, ctx.skills),
     '## Your team (Claude Code subagents in your session)',
     team,
+    ...standingLines(ctx.subagents),
     'Dispatch them with the Agent tool for drafting, checking and research; keep every decision, every question to the Project Manager and every write to the app in your own session. A subagent returns the file it wrote, not a summary of it.',
     '',
     ...(role.subagents.length ? ['## The review protocol (after every subagent result)', reviewBrief(ctx.level, journalPath(role.team)), ''] : []),
-    ...toolkitSection(role),
+    ...toolkitSection(role, ctx.skills),
     '## The one-writer rule',
     ONE_WRITER,
     '',
@@ -132,6 +141,17 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     ...roleSpecific(role, ctx),
     '',
   ].join('\n');
+}
+
+/** What the Playbook says of subagents on warning or benched. */
+function standingLines(subs: SubagentRecord[] = []): string[] {
+  const out: string[] = [];
+  for (const s of subs) {
+    const until = s.benchedUntil ? ` until ${new Date(s.benchedUntil).toISOString().slice(0, 16).replace('T', ' ')} UTC` : '';
+    if (s.state === 'benched') out.push(`- 🪑 **${s.name} is benched**${until}${s.benchReason ? ` (${s.benchReason})` : ''}: don't dispatch ${s.name}; do the work yourself or use another subagent.`);
+    else if (s.state === 'warning') out.push(`- ⚠️ **${s.name} is on warning**: its definition ends with what went wrong; review its next results closely.`);
+  }
+  return out.length ? ['', ...out] : [];
 }
 
 /** A team member's subagent file, after the toolkit's stub shape (agent-roles.md): scoped tools, the one-writer line. */
@@ -176,7 +196,13 @@ export function writeRoleFiles(dir: string, roleId: RoleId, ctx: PlaybookContext
   const text = playbook(roleId, ctx);
   put(playbookPath(roleId), text);
   put(playbookMirror(roleId), text);
-  for (const sub of role.subagents) put(`.claude/agents/${sub.id}.md`, subagentFile(sub, role, ctx.project));
+  // Each subagent's definition with its standing: model swap, warnings, benched (subagent-files.ts).
+  const standing = new Map((ctx.subagents ?? []).map((s) => [s.name, s]));
+  for (const sub of role.subagents) {
+    const rec = standing.get(sub.id) ?? { name: sub.id, lead: roleId, state: 'active' as const, warnings: [], runs: [] };
+    wrote.push(...applyStanding(dir, rec, subagentFile(sub, role, ctx.project)));
+  }
+  for (const rec of standing.values()) if (!role.subagents.some((s) => s.id === rec.name)) wrote.push(...applyStanding(dir, rec));
   put(journalPath(role.team), journalSeed(role.team), true);
   put(ctx.lessons, lessonsSeed(ctx.project), true);
   return wrote;

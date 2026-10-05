@@ -19,10 +19,28 @@ const MODEL = /^[A-Za-z0-9][A-Za-z0-9._\-[\]]{0,63}$/;
 export class Members {
   constructor(private roster: Roster) {}
 
-  private ctxFor(floor: TeamFloor, name: string): PlaybookContext {
+  private ctxFor(floor: TeamFloor, role: RoleId): PlaybookContext {
     const d = this.roster.data(floor.id);
     const names = Object.fromEntries(ROLES.map((r) => [r.id, d.members[r.id].name])) as PlaybookContext['names'];
-    return { project: floor.name, name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names };
+    const m = d.members[role];
+    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role) };
+  }
+
+  /**
+   * Writes a hired member's Playbook and subagent definitions again, in the folder it works in, after
+   * its skills or a subagent's standing changed. False when it isn't hired (its next hire writes them).
+   */
+  rewrite(floor: TeamFloor, role: RoleId): boolean {
+    const m = this.roster.data(floor.id).members[role];
+    const w = this.roster.workerOf(floor, m);
+    if (!w || (m.phase !== 'active' && m.phase !== 'benching')) return false;
+    try {
+      writeRoleFiles(floor.cwdOf(w), role, this.ctxFor(floor, role));
+      return true;
+    } catch (err) {
+      floor.toast(`Couldn't rewrite ${m.name}'s Playbook: ${(err as Error).message}`, 'warn');
+      return false;
+    }
   }
 
   /** The stamp a journal heading gets: the date and time in the floor's standup time zone. */
@@ -62,7 +80,7 @@ export class Members {
     // Its Playbook, its team's subagents and the journals, in the folder it works in, before its
     // session has booted far enough to read them.
     try {
-      writeRoleFiles(floor.cwdOf(r), role, this.ctxFor(floor, m.name));
+      writeRoleFiles(floor.cwdOf(r), role, this.ctxFor(floor, role));
     } catch (err) {
       floor.toast(`Couldn't write ${m.name}'s Playbook: ${(err as Error).message}`, 'warn');
     }
@@ -178,7 +196,7 @@ export class Members {
         const w = this.roster.workerOf(floor, m);
         if (!w || m.phase !== 'active') continue;
         try {
-          writeRoleFiles(floor.cwdOf(w), r.id, this.ctxFor(floor, m.name));
+          writeRoleFiles(floor.cwdOf(w), r.id, this.ctxFor(floor, r.id));
         } catch {
           // its Playbook will be right at its next hire
         }

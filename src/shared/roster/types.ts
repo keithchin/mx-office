@@ -6,6 +6,8 @@ import type { Escalation } from './escalation.js';
 import type { RoleId, TeamId } from './roles.js';
 import type { StandupSchedule } from './schedule.js';
 import type { JeffSettings } from '../judge.js';
+import type { SkillView } from './skills.js';
+import type { SubagentAction, SubagentView } from './subagents.js';
 
 export interface RosterSettings {
   autonomy: AutonomyLevel;
@@ -23,6 +25,8 @@ export interface RosterSettings {
   reviewNudge: boolean;
   /** Jeff, the Router (shared/judge.ts): per judgement off, shadow (log next to the rule, never act) or on. */
   jeff: JeffSettings;
+  /** Hours a benched subagent sits out before the office reinstates it (0 = only by hand). */
+  subagentCooldownHours: number;
 }
 
 /**
@@ -105,12 +109,14 @@ export interface Standup {
 
 export interface ApprovalItem {
   id: string;
-  kind: 'proposal' | 'merge' | 'cap' | 'escalation';
+  kind: 'proposal' | 'merge' | 'cap' | 'escalation' | 'subagent';
   title: string;
   detail: string;
   team?: TeamId;
   proposalId?: string;
   escalationId?: string;
+  /** A Lead's proposed subagent action (warn, bench, swap model, reinstate). */
+  actionId?: string;
   url?: string;
 }
 
@@ -133,6 +139,12 @@ export interface RosterView {
   nextStandupAt?: number;
   lastStandupAt?: number;
   activitySinceStandup: boolean;
+  /** Each member's skills with their gates (shared/roster/skills.ts). */
+  skills: Partial<Record<RoleId, SkillView[]>>;
+  /** The Leads' subagents: track record and standing. */
+  subagents: SubagentView[];
+  /** Subagent actions proposed to the Project Manager, pending first, and the latest decided. */
+  subagentActions: SubagentAction[];
   /** May change the settings, decide on proposals and answer escalations: the Project Manager. */
   admin: boolean;
 }

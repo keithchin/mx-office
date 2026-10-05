@@ -108,6 +108,47 @@ The critical ones (security, data loss, a client-facing milestone, a budget over
 
 **The review nudge.** When a Lead's turn ends right after one of its subagents came back (the office sees the Agent tool's result in the Lead's hook events), the office sends it one short prompt: *Review your subagent's last result per your Playbook's review protocol, then continue or escalate.* Once per idle period, 15 seconds after the turn ends (so your own prompt goes first), at least 3 minutes apart, and never while the Lead needs you, is asleep, benched or being benched, or is answering a standup; only for a result that came back in the turn that just ended. It's a team setting (**⚙️ Settings → Review loop**, on by default), each one is noted in the recent activity, and the office asks no model for it.
 
+## Skills and gates
+
+Every member has a **🧰 Skills** list (its card on the org chart; `src/shared/roster/skills.ts`), in three groups:
+
+- **⬆️ Manage up** (everyone): report to the Coordinator (journal, standup), propose at standup, escalate to the Project Manager (always allowed), ask the client via the Project Manager.
+- **⬇️ Manage down**: a Lead's subagents — dispatch, review & request rework, put a subagent on warning, bench a subagent, swap a subagent's model, reinstate a subagent. The Project Coordinator's are over the Leads, listed only: nudge a Lead, reassign work between Leads (it never benches a Lead).
+- **🛠️ Craft**: the toolkit skills the role works from. Each can be turned off: then the Playbook doesn't mention it.
+
+A manage-up/down skill has a **gate**: **Ask** (the agent asks you first: an escalation, and the office does it only if you approve), **Propose** (it proposes, you approve or reject it in ✅ Approvals), **Tell** (it decides and the office tells the Project Coordinator) or **FYI** (it decides and you get an FYI). The default follows the floor's autonomy level:
+
+| Skill | 1 Directive | 2 Guided | 3 Delegated | 4 Autonomous |
+| --- | --- | --- | --- | --- |
+| Put a subagent on warning | Propose | Tell | Tell | FYI |
+| Bench a subagent | Ask | Propose | Tell | FYI |
+| Swap a subagent's model | Ask | Propose | Tell | FYI |
+| Reinstate a subagent | Tell | Tell | Tell | Tell |
+| Dispatch subagents, review & request rework | Tell | Tell | Tell | Tell |
+| Report to the Coordinator | Tell | Tell | Tell | Tell |
+| Propose at standup | Propose | Propose | Propose | Propose |
+| Ask the client via the Project Manager | Ask | Ask | Ask | Ask |
+| Escalate to the Project Manager | always allowed | | | |
+| Coordinator: nudge a Lead · reassign work | Tell · Ask | Tell · Propose | Tell · Tell | Tell · FYI |
+
+You (an admin) can turn any skill off or override its gate per member in the Skills window: each gate shows *(project default)* or *(override)* with **↺ Reset**; an override stays when the level changes. Everyone else sees it read-only. A change rewrites the member's Playbook (its **Your skills** section lists each enabled skill with its gate in plain words, e.g. *Bench a subagent — you propose it, the Project Manager approves (`office-workers subagent bench …`)*), and a member between turns is told in a short prompt. The office enforces the gates of the `office-workers subagent` commands; the others are the Playbook's word.
+
+## Subagent track record, warning, bench
+
+The office records every run of a Lead's subagents from Claude Code's hooks: **SubagentStart** and **SubagentStop** (`agent_id`, `agent_type`: start, end, duration) and the Agent tool's **PostToolUse** (`tool_input.subagent_type`, `description`, `model`; a failed call). The model is the Agent call's, else the subagent's `model:`, else its default. Runs are kept on the floor's roster (the last 50 per subagent), keyed by Lead and subagent name, with the model on each run.
+
+After reviewing a result the Lead records its verdict: `office-workers subagent review <name> --verdict accept|rework --note "…"` (the review protocol and the review nudge ask for it). The scorer grades a subagent on its current model over its last 5 reviewed runs, from 3: **A** ≥ 90% accepted, **B** ≥ 80, **C** ≥ 70, **D** ≥ 60, **F** below (an accepted run whose PR failed CI counts half). It's **underperforming** with a grade below C, or 2+ reworks in those runs: the activity says so and the office nudges its Lead once, when idle, to consider a warning or the bench per its skills. The Lead decides.
+
+A subagent is **active**, **⚠️ on warning** or **🪑 benched**:
+
+- `office-workers subagent warn <name> --reason "…"` appends a *⚠️ Warning (date): reason* section to its `.claude/agents/<name>.md` in the Lead's folder: lessons for its next runs.
+- `office-workers subagent bench <name> --reason "…"` moves the definition to `.claude/agents.benched/` (a new session doesn't load it), adds `Agent(<name>)` and `Task(<name>)` to `permissions.deny` in the folder's `.claude/settings.local.json` (so the running session can't dispatch it), and the Playbook says *don't dispatch <name>; do the work yourself or use another subagent*. A dispatch of a benched one anyway is noted in the activity.
+- `office-workers subagent swap-model <name> --model haiku|sonnet|opus` sets its `model:`.
+- `office-workers subagent reinstate <name>` puts it back and lifts the deny; the warning notes stay. The office reinstates a benched subagent by itself after a cool-down (**⚙️ Settings → Subagents**, 24 hours by default; 0 = only by hand).
+- `office-workers subagent list` shows each one's model, grade, runs, reworks, state and the Lead's gates. The same as the `subagent` MCP tool.
+
+Each goes through the Lead's gate for it (identified by its hook token): *ask* raises an escalation and the office does it when you approve; *propose* puts a card in ✅ Approvals (and the Needs-you strip) with Approve / Reject, and the Lead hears the decision; *tell* does it and tells the Coordinator; *fyi* does it and files an FYI. You can warn, bench, swap or reinstate directly from the org chart, where each Lead's card lists its **Subagents** (grade badge, model, runs, accept rate, reworks, state) with those buttons; each team board has the same list, compact. Activity lines read like *🪑 Hedy (Lead Developer) benched subagent tester (Haiku): 3 reworks in 5 runs*.
+
 ## Jeff, the Router
 
 **Jeff** is the office's quick judge (`src/server/judge/`, `src/server/roster/jeff.ts`): staff, not an agent, so nobody hires, benches or prompts him. He answers typed questions about a piece of text with **Jev**, TypeSafe AI's fast "System One" model, and when Jev is unavailable (no key, an error, a timeout over 3 seconds; after two failures he skips Jev for five minutes) with one Claude **Haiku** call through the `claude` CLI, capped per hour; the UI then calls him "Jeff (on Haiku)". He routes two things:
@@ -139,4 +180,4 @@ The back office's desks, the bean bags and the board agents' kiosks are open flo
 
 ## Where it's kept
 
-The roster (names, models, handoff notes, standups, proposals, escalations, the day's spend) is in the office's data dir, `.agent-office/roster/<floor>.json`. The code is in `src/server/roster/`, `src/shared/roster/` and `src/client/ui/roster/`; the routes are `GET /api/roster`, `GET /api/roster/standup` and `POST /api/roster/action` (`action: 'escalation'` answers one), and the agents' side is `POST /office/workers/escalate` on the hook port (`office-workers escalate`, the `escalate` MCP tool). The review nudge is `src/server/roster/nudge.ts`, the escalations `src/server/roster/escalations.ts`, the thresholds `REVIEW_POLICY` in `src/shared/roster/autonomy.ts`.
+The roster (names, models, handoff notes, standups, proposals, escalations, the day's spend) is in the office's data dir, `.agent-office/roster/<floor>.json`. The code is in `src/server/roster/`, `src/shared/roster/` and `src/client/ui/roster/`; the routes are `GET /api/roster`, `GET /api/roster/standup` and `POST /api/roster/action` (`action: 'escalation'` answers one), and the agents' side is `POST /office/workers/escalate` on the hook port (`office-workers escalate`, the `escalate` MCP tool). The review nudge is `src/server/roster/nudge.ts`, the escalations `src/server/roster/escalations.ts`, the thresholds `REVIEW_POLICY` in `src/shared/roster/autonomy.ts`. Skills and gates are `src/shared/roster/skills.ts` (`action: 'skill'`), the subagent track record and standing `src/server/roster/subagents.ts` with `subagent-files.ts` (`action: 'subagent'` and `'subagent-decide'`; `POST /office/workers/subagent` for the Leads), kept in the roster file's `subagents` and `subagentActions`.

@@ -111,8 +111,33 @@ export function reviewNudgePrompt(roleId: RoleId, result: SubagentResult | undef
   return [
     `Review ${who}'s last result${what} per your Playbook's review protocol, then continue or escalate.`,
     `Record \`— Review: <subagent> · <task>\` with accept / revise / escalate in \`${journalPath(role.team)}\`; on accept dispatch its next step now (level ${level}: ${REVIEW_POLICY[level].askBeforeNextStep ? 'ask the Project Manager first' : "don't leave its lane idle"}); escalate only what your level escalates.`,
+    `Then record the verdict for its track record: \`office-workers subagent review ${result?.agent ?? '<subagent>'} --verdict accept|rework --note "…"\`.`,
     '(Automatic nudge from Agent Office, sent once per idle period. If there is genuinely nothing left to do, say so in one line and stop.)',
   ].join('\n');
+}
+
+/** To a Lead whose subagent the scorer flagged: consider a warning or the bench, per its skills. */
+export function underperformingPrompt(name: string, model: string, why: string, skills: string[]): string {
+  return [
+    `Your subagent \`${name}\` (${model}) is underperforming: ${why}.`,
+    `Consider it per your skills: ${skills.length ? skills.join('; ') : 'escalate to the Project Manager if it needs action'}. \`office-workers subagent list\` shows its track record. Or carry on with it if you know why.`,
+    '(Automatic note from Agent Office, sent once per finding. Decide, act if you will, and carry on.)',
+  ].join('\n');
+}
+
+/** To the Project Coordinator: what the Leads decided about their subagents (their gate was tell). */
+export function subagentNewsPrompt(lines: string[]): string {
+  return ["The Leads' subagent decisions since you were last told:", ...lines, '', "Note them in `docs/team/management.md` and mention them at the next standup. Don't act on them: they were the Leads' to decide. Reply `noted`."].join('\n');
+}
+
+/** To a Lead at work when the Project Manager changed its skills. */
+export function skillsChangedPrompt(lines: string[]): string {
+  return ['The Project Manager changed your skills. Your Playbook has been rewritten (## Your skills); now:', ...lines, '', 'Carry on. Reply `ok`.'].join('\n');
+}
+
+/** To a Lead, what became of a subagent action it proposed or asked about. */
+export function subagentDecisionPrompt(what: string, approved: boolean, by: string, reason?: string): string {
+  return [`The Project Manager (${by}) ${approved ? 'approved' : 'rejected'} your request to ${what}.${approved ? ' The office has done it.' : ''}`, ...(reason ? [reason] : []), 'Note it in your team journal and carry on. Reply `ok`.'].join('\n');
 }
 
 /** One escalation in a line, for the Coordinator and the standup. */
