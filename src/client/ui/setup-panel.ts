@@ -48,7 +48,7 @@ export async function renderSetup(el: HTMLElement, floor: string | undefined, de
 }
 
 function panel(el: HTMLElement, floor: string, v: SetupView, deps: SetupPanelDeps): HTMLElement {
-  const recheck = h('button.btn', { type: 'button', disabled: v.checking, title: "Runs the toolkit's gate-check over the project (about a minute) so these verdicts are fresh" }, v.checking ? '⏳ Checking gates…' : '🔄 Re-check gates');
+  const recheck = h('button.btn', { type: 'button', disabled: v.checking, title: "Admins: runs the toolkit's gate-check.sh over this project (about a minute) so these verdicts are fresh" }, v.checking ? '⏳ Checking gates…' : '🔄 Re-check gates');
   recheck.addEventListener('click', async () => {
     recheck.disabled = true;
     recheck.textContent = '⏳ Checking gates…';
@@ -66,10 +66,11 @@ function panel(el: HTMLElement, floor: string, v: SetupView, deps: SetupPanelDep
       h('h3', {}, '🧰 Project setup'),
       ...chips.map((c) => h('span.setup-chip', {}, c)),
       h('span.setup-grow'),
+      ...(v.admin ? [] : [h('span.setup-chip', { title: 'Only admins (operators) can edit the setup answers or re-check the gates' }, '🔒 view only')]),
       h('button.btn', { type: 'button', onclick: editAt(1), title: 'Entry mode and size tier, in the new-project wizard' }, '🧭 Entry mode'),
       h('button.btn', { type: 'button', onclick: editAt(2), title: 'The intake answers, in the new-project wizard' }, '📝 Intake'),
       h('button.btn', { type: 'button', onclick: editAt(3), title: 'Client and team, in the new-project wizard' }, '👥 Team'),
-      recheck,
+      v.admin ? recheck : null,
     ),
     h(
       'ol.setup-stages',
@@ -82,6 +83,16 @@ function panel(el: HTMLElement, floor: string, v: SetupView, deps: SetupPanelDep
     v.questions.length
       ? h('details.setup-questions', {}, h('summary', {}, `❓ ${v.questions.length} open question${v.questions.length === 1 ? '' : 's'}`), h('ul', {}, ...v.questions.map((q) => h('li', {}, q))))
       : null,
+    h(
+      'details.setup-questions',
+      {},
+      h('summary', {}, 'ℹ️ What does Re-check gates do?'),
+      h(
+        'p.setup-help',
+        {},
+        "The stage verdicts above come from the project's gate dashboard (index.html), which the toolkit's gate-check.sh writes whenever an agent runs it. Re-check gates runs gate-check.sh now, on the office's machine, over this floor's checkout. It takes about a minute, rewrites index.html and the 'Current stage' line in PROJECT.md (left uncommitted, for the next commit), and the panel then shows the fresh verdicts. It doesn't change answers or decisions, start agents, or push anything. Admins only, because it runs a script and writes files in the project.",
+      ),
+    ),
     h('p.setup-foot', {}, `This panel goes away once Stage 4 (the build plan) is confirmed.${v.checkedAt ? ` Gates last checked ${new Date(v.checkedAt).toLocaleTimeString()}.` : ''}`),
   );
 }

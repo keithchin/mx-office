@@ -22,3 +22,4 @@
 @media (max-width: 720px) {
   .setup-stages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+.setup-help { margin: 6px 0 0; font-size: 13px; font-weight: 600; line-height: 1.5; color: var(--muted); }
