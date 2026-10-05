@@ -197,6 +197,12 @@ export const MCP_NAME = 'agent-office';
 const MCP_ENV = ['AGENT_OFFICE_HOOK_URL', 'AGENT_OFFICE_WORKER_ID', 'AGENT_OFFICE_HOOK_TOKEN'];
 /** Its tools that only look, which Claude Code workers may call without asking. */
 export const MCP_READ_ONLY = [`mcp__${MCP_NAME}__list_workers`];
+/**
+ * Its tools Claude Code workers may call without asking: the read-only ones, and escalating to the
+ * Project Manager, which only records a card for the human (asking the human for permission to ask
+ * the human would defeat it).
+ */
+export const MCP_ALLOWED = [...MCP_READ_ONLY, `mcp__${MCP_NAME}__escalate`];
 
 /**
  * Writes Claude Code's --mcp-config file for the MCP server (bin/office-workers.js `mcp`, run by the

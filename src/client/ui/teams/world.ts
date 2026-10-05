@@ -75,5 +75,5 @@ export function teamOfCard(c: Card, world: TeamWorld = teamWorld()): CardTeam {
   return pullTeam(o.p, world);
 }
 
-/** Whether you may change a card's team: the CTO, an admin (with the shared office password, everyone is). */
+/** Whether you may change a card's team: the Project Manager, an admin (with the shared office password, everyone is). */
 export const canRetag = () => store.me.admin || !!currentRoster()?.admin;

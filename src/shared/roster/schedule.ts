@@ -1,4 +1,4 @@
-// When the daily standup is due: weekdays at 09:00 Asia/Singapore unless the CTO sets another time,
+// When the daily standup is due: weekdays at 09:00 Asia/Singapore unless the Project Manager sets another time,
 // and only when the floor had activity since the last one, so a quiet project costs nothing. Pure
 // (Intl only, no Node), so the tests can drive it with any clock.
 

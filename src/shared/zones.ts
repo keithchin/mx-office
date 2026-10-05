@@ -25,13 +25,13 @@ export interface TeamZone {
 
 // The room's four pods of four desks (shared/layout.ts buildDesks): the west pair round x -10.5,
 // the east pair round x -1.5, the north pods round z -4 and the south ones round z 4. Each Lead's
-// team gets a pod, except that the PM and the analysts share the south-east one down the middle
-// (two desks each): a Project Manager rarely hires anyone, and neither team needs four.
+// team gets a pod, except that the Project Coordinator and the analysts share the south-east one down the middle
+// (two desks each): the Project Coordinator rarely hires anyone, and neither team needs four.
 const WEST = { minX: -14.6, maxX: -6.4 };
 const EAST = { minX: -5.6, maxX: 3.4 };
 const NORTH = { minZ: -7.7, maxZ: -0.7 };
 const SOUTH = { minZ: 0.7, maxZ: 7.7 };
-/** Where the south-east pod splits between the analysts (west) and the PM (east): between its desks. */
+/** Where the south-east pod splits between the analysts (west) and the Project Coordinator (east): between its desks. */
 const SPLIT_X = -1.5;
 
 export const ZONES: readonly TeamZone[] = [
@@ -39,7 +39,7 @@ export const ZONES: readonly TeamZone[] = [
   { team: 'design', name: 'Design studio', icon: '🎨', color: '#e07a5f', desks: ['desk-5', 'desk-6', 'desk-7', 'desk-8'], area: { minX: EAST.minX, maxX: 2.6, ...NORTH } },
   { team: 'testing', name: 'QA lab', icon: '🧪', color: '#17b3a3', desks: ['desk-9', 'desk-10', 'desk-11', 'desk-12'], area: { ...WEST, ...SOUTH } },
   { team: 'analysis', name: 'Analyst corner', icon: '📈', color: '#6d7ff2', desks: ['desk-13', 'desk-15'], area: { minX: EAST.minX, maxX: SPLIT_X, ...SOUTH } },
-  { team: 'management', name: 'PM office', icon: '🧭', color: '#f2b33d', desks: ['desk-14', 'desk-16'], area: { minX: SPLIT_X, maxX: EAST.maxX, ...SOUTH } },
+  { team: 'management', name: 'Coordinator office', icon: '🧭', color: '#f2b33d', desks: ['desk-14', 'desk-16'], area: { minX: SPLIT_X, maxX: EAST.maxX, ...SOUTH } },
 ];
 
 export const ZONE_BY_TEAM: ReadonlyMap<TeamId, TeamZone> = new Map(ZONES.map((z) => [z.team, z]));

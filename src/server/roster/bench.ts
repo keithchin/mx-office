@@ -1,5 +1,5 @@
 // Benching an idle Lead, as a state machine of its own so the tests can walk every path. A Lead that
-// has sat idle long enough (or that the CTO benches) is asked for a handoff note and its lessons;
+// has sat idle long enough (or that the Project Manager benches) is asked for a handoff note and its lessons;
 // once it has written them and its turn is over, the office stops it and clears its session, so it
 // costs nothing until it's hired again, fresh. The one promise: an agent mid-task, or one waiting on a
 // person, is never idle and never stopped — it is only ever benched from a finished turn.

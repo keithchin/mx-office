@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // office-workers: the office's workers, from inside Agent Office: who's at which desk and where their
 // pull requests stand, hiring one, sending some home (their worktrees and branches with them),
-// telling one something and saying which pull request is one's. The office puts it on every worker's PATH and gives each its own address and
+// telling one something, saying which pull request is one's and escalating to the Project Manager. The office puts it on every worker's PATH and gives each its own address and
 // token in AGENT_OFFICE_HOOK_URL, AGENT_OFFICE_WORKER_ID and AGENT_OFFICE_HOOK_TOKEN; this talks to
 // the /office/workers endpoint with them (src/server/office-workers.ts). `office-workers mcp` is the
 // same as an MCP server on stdio, which the office hands the agents that take one. Plain Node, no
@@ -10,6 +10,7 @@
 import { realpathSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import { ESCALATE_TOOL, ESCALATE_USAGE, formatEscalated, parseEscalate } from './office-escalate.js';
 
 const USAGE = `Usage:
   office-workers list [--json]                  everyone at a desk on this floor: status, task,
@@ -31,6 +32,7 @@ const USAGE = `Usage:
                                                 desk, from the worker's own branch, or by a Claude
                                                 Code worker running gh pr create
   office-workers pr --none [--worker <name|id>] take that pull request off the worker again
+${ESCALATE_USAGE}
   office-workers mcp                            serve these as MCP tools on stdio`;
 
 /** A mistake in how the command was called: the usage is shown with it. */
@@ -42,9 +44,9 @@ export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 /** How long the office may take to come back when it's restarting (a dev reload, an upgrade). */
 const RETRY_MS = 6000;
 /** Sending several workers home waits on git for each; hiring may fetch from GitHub first. */
-const TIMEOUT_MS = { list: 15_000, tell: 15_000, pr: 45_000, hire: 90_000, home: 300_000 };
+const TIMEOUT_MS = { list: 15_000, tell: 15_000, pr: 45_000, hire: 90_000, home: 300_000, escalate: 15_000 };
 /** Where each call goes, under /office/workers. */
-const PATHS = { list: '', hire: '', home: '/home', tell: '/tell', pr: '/pr' };
+const PATHS = { list: '', hire: '', home: '/home', tell: '/tell', pr: '/pr', escalate: '/escalate' };
 
 /**
  * Reads `--flag value` and `--flag=value` options, and the words that aren't options.
@@ -116,6 +118,7 @@ export function parseArgs(argv) {
     if (none ? words.length : words.length !== 1) throw new UsageError('pr takes one pull request, its number or URL, or --none to take it off (with --worker <name|id> when the worker isn\'t you)');
     return { cmd: 'pr', ...(none ? { unlink: true } : { pr: words[0] }), ...(opts['--worker'] !== undefined ? { worker: String(opts['--worker']).trim() } : {}), json: opts['--json'] === true };
   }
+  if (cmd === 'escalate') return parseEscalate(rest, UsageError);
   if (cmd === 'hire') {
     const { opts, words } = options(rest, ['--prompt', '--provider', '--model', '--effort', '--desk', '--issue'], ['--no-worktree', '--json']);
     if (words.length) throw new UsageError(`Unexpected argument: ${words[0]} (give the task on stdin or with --prompt)`);
@@ -157,7 +160,7 @@ export function officeEnv(env) {
 
 /**
  * The HTTP request for one of the office's worker calls.
- * @param {'list' | 'hire' | 'home' | 'tell' | 'pr'} what
+ * @param {'list' | 'hire' | 'home' | 'tell' | 'pr' | 'escalate'} what
  * @param {{ url: string, worker: string, token: string }} office
  * @param {Record<string, unknown>} [body]
  * @returns {{ method: string, url: string, headers: Record<string, string>, body?: string, timeout: number }}
@@ -206,7 +209,7 @@ async function send(req, fetchImpl) {
 
 /**
  * Makes one call to the office; resolves to what it answered, or throws with why it said no.
- * @param {'list' | 'hire' | 'home' | 'tell' | 'pr'} what
+ * @param {'list' | 'hire' | 'home' | 'tell' | 'pr' | 'escalate'} what
  * @param {Record<string, unknown> | undefined} body
  * @param {{ env: Record<string, string | undefined>, fetch: typeof fetch }} io
  */
@@ -358,6 +361,7 @@ export const TOOLS = [
     },
     annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
+  ESCALATE_TOOL,
 ];
 
 const INSTRUCTIONS =
@@ -365,7 +369,7 @@ const INSTRUCTIONS =
   'the other agents: whenever you are asked about the agents or workers (who is working on what, whose pull request merged, hiring one, sending them home), use them, ' +
   "rather than looking for the agents with git, ps or HTTP calls. list_workers says where each one's pull request stands (merged: true means it merged), hire_worker " +
   'puts a new agent to work, send_home sends agents home and deletes their worktrees and branches, tell_worker gives one a prompt, and link_pr says which pull request is a ' +
-  "worker's when list_workers does not show it. Everyone in the office sees who did what. " +
+  "worker's when list_workers does not show it, and escalate raises something to the Project Manager (the human who owns the project). Everyone in the office sees who did what. " +
   'The office-workers command on your PATH does the same from a shell.';
 
 /** Runs a tool; resolves to its text, and whether nothing it was asked came off, or throws with why it failed. */
@@ -387,6 +391,7 @@ async function runTool(name, args, io) {
     return { text: `Told ${answer.worker?.name ?? a.worker}.` };
   }
   if (name === 'link_pr') return { text: formatLinked(await call('pr', a, io)) };
+  if (name === 'escalate') return { text: formatEscalated(await call('escalate', a, io)) };
   throw new Error(`Unknown tool: ${name}`);
 }
 
@@ -510,6 +515,14 @@ export async function main(argv, io = {}) {
       if (!text) throw new UsageError('The prompt is empty');
       const answer = await call('tell', { worker: cmd.worker, prompt: text }, ctx);
       err(`Told ${answer.worker?.name ?? cmd.worker}.`);
+      return 0;
+    }
+    if (cmd.cmd === 'escalate') {
+      const { cmd: _e, json: asJson, ...ask } = cmd;
+      // The details from stdin when they weren't given and something is piped in.
+      if (ask.details === undefined && !stdin.isTTY) ask.details = (await readStdin(stdin)).trim();
+      const answer = await call('escalate', ask, ctx);
+      out(asJson ? JSON.stringify(answer, null, 2) : formatEscalated(answer));
       return 0;
     }
     if (cmd.cmd === 'pr') {

@@ -29,7 +29,7 @@ test('every role gets a different name from the pool, the same ones for the same
   assert.ok(!Object.values(c).includes('Ada') && !Object.values(c).includes('Grace'));
 });
 
-test("a CTO's rename is cleaned to one short line, and empty doesn't count", () => {
+test("a Project Manager's rename is cleaned to one short line, and empty doesn't count", () => {
   assert.equal(cleanName('  Rosalind \n'), 'Rosalind');
   assert.equal(cleanName('<b>Ada</b>'), 'bAda/b');
   assert.equal(cleanName('x'.repeat(40))?.length, 24);
@@ -53,7 +53,7 @@ test('a saved roster is made whole: a missing role gets a name, a bad phase and 
   assert.deepEqual(cleanSettings({ autonomy: 4, schedule: { time: '25:00', timeZone: 'Nowhere/City', days: [1, 1, 9] } }).schedule, { enabled: true, time: '09:00', timeZone: 'Asia/Singapore', days: [1] });
 });
 
-test('what needs the CTO at each autonomy level', () => {
+test('what needs the Project Manager at each autonomy level', () => {
   const table: Record<DecisionKind, [boolean, boolean, boolean, boolean]> = {
     task: [true, false, false, false],
     scope: [true, true, false, false],
@@ -199,7 +199,7 @@ test('a journal is read as dated entries; the standup sections and proposals com
   assert.equal(parseProposal('   '), undefined);
 });
 
-test('proposals wait for the CTO or are the team\'s to decide, by level; an approved one maps to a labelled issue', () => {
+test('proposals wait for the Project Manager or are the team\'s to decide, by level; an approved one maps to a labelled issue', () => {
   const parsed = parseStandup(parseJournal(JOURNAL)[1].body).proposals;
   const at2 = toProposals(parsed, '2026-10-05', 'lead-tester', 'Grace', 2);
   assert.deepEqual(at2.map((p) => p.status), ['pending', 'auto', 'auto']);
@@ -212,10 +212,10 @@ test('proposals wait for the CTO or are the team\'s to decide, by level; an appr
   assert.match(issue.body, /fails WCAG on mobile/);
   assert.match(issue.body, /Proposed by Grace \(testing team\) at the 2026-10-05 standup, as a design change/);
   assert.match(issue.body, /Approved by Keith in Agent Office at autonomy level 2/);
-  assert.match(issue.body, /CTO's note: Do mobile first/);
+  assert.match(issue.body, /Project Manager's note: Do mobile first/);
 });
 
-test('the standup page lists every Lead, says where a report came from, and what needs the CTO', () => {
+test('the standup page lists every Lead, says where a report came from, and what needs the Project Manager', () => {
   const props = toProposals([{ kind: 'design', title: 'Dark mode', detail: '' }], '2026-10-05', 'lead-designer', 'Hedy', 2);
   const page = compilePage(
     {
@@ -233,7 +233,7 @@ test('the standup page lists every Lead, says where a report came from, and what
   assert.match(page, /Lead Tester — Grace _\(not at their desk: from the team journal\)_/);
   assert.match(page, /Chief Analyst — Ken _\(no report and no journal entry\)_/);
   assert.match(page, /- CI down/);
-  assert.match(page, /\[design\] Dark mode · ⏳ awaiting the CTO/);
-  assert.match(page, /## Needs the CTO\n\n- Hedy: Dark mode \(a design change\)/);
+  assert.match(page, /\[design\] Dark mode · ⏳ awaiting the Project Manager/);
+  assert.match(page, /## Needs the Project Manager\n\n- Hedy: Dark mode \(a design change\)/);
   assert.equal(standupId('2026-10-05', ['2026-10-05', '2026-10-05-2']), '2026-10-05-3');
 });

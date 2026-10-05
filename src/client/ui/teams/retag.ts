@@ -1,5 +1,5 @@
 // "Team: [▼]": moving a card to another team's board, in its hover preview and in the issue or PR window.
-// The CTO (an admin) picks a team and the office's gh account swaps the card's `team:` label (gh.labels);
+// The Project Manager (an admin) picks a team and the office's gh account swaps the card's `team:` label (gh.labels);
 // everyone else sees the tag read-only. The board moves the card at once and puts it back if GitHub says
 // no. Before the first tag on a floor the office makes any `team:` labels the repo is missing, in their
 // colors (POST /api/teams/labels). In dry-run mode (the team setting, or AGENT_OFFICE_TEAMS_DRY_RUN=1)
@@ -114,7 +114,7 @@ export async function retag(t: Target, to: CardTeam, via: Net | null = net): Pro
 const sameLabels = (a: GhLabel[], b: GhLabel[]) => a.length === b.length && a.every((l, i) => l.name === b[i].name);
 
 /**
- * "Team: [▼]" for `target` now on team `team`: a picker for the CTO, the tag read-only for everyone
+ * "Team: [▼]" for `target` now on team `team`: a picker for the Project Manager, the tag read-only for everyone
  * else. `onSaved` hears the labels after a change (the issue or PR window keeps its own copy).
  */
 export function teamPicker(target: Target | undefined, team: CardTeam, onSaved?: (labels: GhLabel[]) => void, via?: Net): HTMLElement {

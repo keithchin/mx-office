@@ -1,4 +1,4 @@
-// What the board's project manager console (ui/pm/console.ts) shows, worked out from the team's view of
+// What the project console (ui/pm/console.ts) shows, worked out from the team's view of
 // the PM (GET /api/roster) and its worker as the page knows it right now. Pure: no DOM, so a test can
 // check every case. The roster is fetched now and then; the worker updates live, so where it's there
 // its status wins, and the roster's word covers the rest (not hired, benched, writing its handoff).
@@ -76,13 +76,13 @@ export function pmView(pm: MemberView | undefined, worker: WorkerInfo | undefine
   const canPrompt = live && (state === 'idle' || state === 'working' || state === 'starting');
   const hint =
     state === 'needs-you'
-      ? 'The PM is asking you something: answer it in ⤢ Open (a typed prompt is not an answer to a choice).'
+      ? 'The Project Coordinator is asking you something: answer it in ⤢ Open (a typed prompt is not an answer to a choice).'
       : state === 'asleep'
-        ? 'The PM is asleep: ⏰ Wake carries on its session, then ask away.'
+        ? 'The Project Coordinator is asleep: ⏰ Wake carries on its session, then ask away.'
         : state === 'benching'
-          ? 'The PM is writing its handoff note before being benched.'
+          ? 'The Project Coordinator is writing its handoff note before being benched.'
           : state === 'starting'
-            ? 'The PM is starting up: what you send waits until it is ready.'
+            ? 'The Project Coordinator is starting up: what you send waits until it is ready.'
             : undefined;
   return {
     state,

@@ -1,9 +1,9 @@
 // The Team tab (see server/roster/): GET what a floor's team looks like and one standup's page, and
-// POST what the CTO does: hire, bench, rename, change a model, run a standup, decide on a proposal,
-// change the team settings. Deciding and the settings are the CTO's, so they need an admin (anyone
-// with the shared office password is one); hiring and benching are open to everyone signed in, like
-// hiring any worker.
+// POST what the Project Manager (the human; an admin) does: hire, bench, rename, change a model, run a
+// standup, decide on a proposal, answer an escalation, change the team settings. Those that are the
+// Project Manager's need an admin (anyone with the shared office password is one).
 
+import { isEscalationVerdict } from '../../../shared/roster/escalation.js';
 import { isRoleId } from '../../../shared/roster/roles.js';
 import { rosterOf, teamFloor } from '../../roster/adapter.js';
 import type { Decision } from '../../roster/standup-run.js';
@@ -11,7 +11,7 @@ import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 
-const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench']);
+const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation']);
 const DECISIONS = new Set<Decision>(['approve', 'reject', 'change']);
 
 export const rosterRoutes = {
@@ -40,7 +40,7 @@ export const rosterRoutes = {
       return s ? send(res, 200, s) : send(res, 404, { error: 'No standup yet' });
     },
   },
-  /** POST /api/roster/action {floor, action, …}: what the CTO did on the Team tab. */
+  /** POST /api/roster/action {floor, action, …}: what the Project Manager did on the Team tab or the project console. */
   action: {
     method: 'POST',
     path: '/api/roster/action',
@@ -57,11 +57,11 @@ export const rosterRoutes = {
       if (!floor) return send(res, 404, { error: 'No such floor' });
       const action = String(body.action ?? '');
       const me = ctx.meOf(session.account?.id);
-      if (ADMIN_ONLY.has(action) && !me.admin) return send(res, 403, { error: 'Only the CTO (an admin) can do that' });
+      if (ADMIN_ONLY.has(action) && !me.admin) return send(res, 403, { error: 'Only the Project Manager (an admin) can do that' });
       const roster = rosterOf(ctx);
       const team = teamFloor(ctx, floor);
       // A person's name for toasts and the record: their account's, else what their browser calls them.
-      const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The CTO');
+      const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The Project Manager');
       const owner = session.account?.id;
       const role = isRoleId(body.role) ? body.role : undefined;
       const needRole = ['hire', 'bench', 'rename', 'model'].includes(action);
@@ -94,6 +94,12 @@ export const rosterRoutes = {
           const as = owner ? ctx.signins.ghAs(owner) : undefined;
           if (typeof as === 'string') return send(res, 400, { error: as });
           error = await roster.standups.decide(team, String(body.proposal ?? ''), decision, by, typeof body.reason === 'string' ? body.reason : undefined, as?.env);
+          break;
+        }
+        case 'escalation': {
+          // The Project Manager's answer to an escalation: back to the agent that raised it, and resolved.
+          if (!isEscalationVerdict(body.verdict)) return send(res, 400, { error: 'reply, approve, reject or dismiss' });
+          error = roster.escalations.resolve(team, String(body.escalation ?? ''), body.verdict, body.text, by);
           break;
         }
         default:

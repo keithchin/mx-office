@@ -1,4 +1,5 @@
-// The project team every floor can have: a Project Manager and four Leads, each a visible worker at
+// The project team every floor can have: a Project Coordinator (an agent; the role id stays `pm` so
+// saved rosters and Playbook paths keep working) and four Leads, each a visible worker at
 // a desk with a fixed name, and each Lead's own team as Claude Code subagents inside its session (see
 // docs/teams.md). The roles, their teams and the subagents are data here, so the office, the Playbook
 // templates and the Team tab all read the same table. Pure: the browser imports it too.
@@ -26,7 +27,7 @@ export interface RoleDef {
   /** What this role may do on its own, whatever the autonomy level allows on top. */
   rights: string[];
   subagents: SubagentDef[];
-  /** The model a fresh hire of it runs on, until the CTO picks another. */
+  /** The model a fresh hire of it runs on, until the Project Manager picks another. */
   model: string;
   /**
    * The mxcli-project-toolkit skills (`skills/<name>.md`) this role works from, and the toolkit role files
@@ -40,11 +41,11 @@ export interface RoleDef {
 export const ROLES: readonly RoleDef[] = [
   {
     id: 'pm',
-    title: 'Project Manager',
+    title: 'Project Coordinator',
     team: 'management',
     icon: '🧭',
-    mission: 'Run the project: keep the plan, coordinate the Leads, run the daily standup, and make sure the CTO always knows what needs a decision.',
-    rights: ['Keep the plan and the board tidy (issues, labels, milestones)', 'Ask Leads for status through their team journals', 'Compile the standup page and relay the CTO\'s decisions'],
+    mission: 'Coordinate the project for the Project Manager (the human who owns it): keep the plan, coordinate the Leads, run the daily standup, and relay and summarise every escalation so the Project Manager always knows what needs a decision.',
+    rights: ['Keep the plan and the board tidy (issues, labels, milestones)', 'Ask Leads for status through their team journals', 'Compile the standup page, summarise open escalations and relay the Project Manager\'s decisions'],
     subagents: [],
     model: 'sonnet',
     toolkitSkills: ['conversion-runbook', 'agent-roles', 'iterative-build-loop', 'module-completion-loop', 'close-the-loop', 'improvement-register', 'coverage-ledger', 'measured-claims', 'field-run'],
@@ -106,7 +107,7 @@ export const ROLES: readonly RoleDef[] = [
 export const ROLE_BY_ID: ReadonlyMap<RoleId, RoleDef> = new Map(ROLES.map((r) => [r.id, r]));
 export const isRoleId = (v: unknown): v is RoleId => typeof v === 'string' && ROLE_BY_ID.has(v as RoleId);
 
-/** The Leads: everyone but the PM, who runs the standup instead of reporting to it. */
+/** The Leads: everyone but the Project Coordinator, who runs the standup instead of reporting to it. */
 export const LEADS: readonly RoleDef[] = ROLES.filter((r) => r.id !== 'pm');
 
 /** Where a team keeps its journal in the repo: dated entries, newest at the bottom. */
@@ -117,7 +118,7 @@ export const playbookMirror = (role: RoleId) => `.claude/skills/team-${role}/SKI
 export const standupPath = (date: string) => `docs/standups/${date}.md`;
 
 /**
- * Display names for the roles, picked at random until the CTO renames them. People's names rather
+ * Display names for the roles, picked at random until the Project Manager renames them. People's names rather
  * than the workers' pool (Pixel, Byte…), so a Lead is told apart from a worker at a glance.
  */
 export const NAME_POOL = [
@@ -137,7 +138,7 @@ export function pickNames(rng: () => number = Math.random, taken: Iterable<strin
   return out;
 }
 
-/** A name the CTO typed: trimmed, one line, short, and not empty. Undefined when it won't do. */
+/** A name the Project Manager typed: trimmed, one line, short, and not empty. Undefined when it won't do. */
 export function cleanName(v: unknown): string | undefined {
   if (typeof v !== 'string') return undefined;
   const s = v.replace(/[\r\n\t]+/g, ' ').replace(/[<>`]/g, '').trim().slice(0, 24);

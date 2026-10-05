@@ -45,6 +45,7 @@ const ICON: Record<ActivityItem['kind'], string> = {
   approved: '👍',
   'issue-opened': '📌',
   'issue-closed': '☑️',
+  team: '👥',
 };
 
 /**

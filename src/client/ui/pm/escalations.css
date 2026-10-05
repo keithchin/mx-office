@@ -1,0 +1,43 @@
+/* Escalations to the Project Manager (ui/pm/escalations.ts): cards above the project console's prompt
+   box and in the Team tab's approvals. Urgent and critical ones are loud, FYIs quiet. Theme tokens only
+   (styles/base.css), so Default, Dark and Terminal all follow. */
+
+.esc-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; padding-right: 2px; }
+.esc-list[hidden] { display: none; }
+.esc-list-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; font-size: 12px; }
+.esc-loud { font-size: 11px; font-weight: 900; padding: 1px 8px; border-radius: 999px; background: var(--bad); color: var(--on-fill); animation: pulse 1.2s infinite; }
+
+.esc { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; background: var(--card); border: 2px solid var(--line); border-left-width: 6px; border-radius: 10px; font-size: 12px; }
+.esc-important { border-left-color: var(--warn); background: var(--warn-soft); }
+.esc-info { border-left-color: var(--info); }
+.esc-urgent { border-left-color: var(--bad); background: var(--bad-soft); box-shadow: 0 0 0 2px var(--bad-soft-2); }
+.esc-critical { border-color: var(--bad); border-left-color: var(--bad); background: var(--bad-soft); box-shadow: 0 0 0 3px var(--bad); }
+.esc-fyi { border-left-color: var(--rule-strong); background: var(--card-dim); color: var(--ink-2); }
+.esc-resolved { opacity: .8; box-shadow: none; }
+
+.esc-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.esc-tag { flex: none; font-size: 10px; font-weight: 900; letter-spacing: .04em; padding: 1px 7px; border: 2px solid var(--line); border-radius: 999px; background: var(--paper); white-space: nowrap; }
+.esc-urgent .esc-tag, .esc-critical .esc-tag { background: var(--bad); color: var(--on-fill); border-color: var(--bad); }
+.esc-title { flex: 1; min-width: 140px; font-size: 13px; overflow-wrap: anywhere; }
+.esc-meta { margin: 0; font-size: 11px; font-weight: 700; color: var(--muted); }
+.esc-details summary { cursor: pointer; font-size: 11px; font-weight: 800; color: var(--muted); }
+.esc-details p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 140px; overflow-y: auto; }
+.esc-options { display: flex; flex-wrap: wrap; gap: 4px; }
+.esc-opt.rec { background: var(--good-soft); }
+.esc-rec { margin: 0; font-size: 12px; }
+.esc-answer { margin: 0; font-size: 12px; color: var(--ink-2); overflow-wrap: anywhere; }
+
+.esc-act { display: flex; flex-direction: column; gap: 4px; }
+.esc-reply { width: 100%; box-sizing: border-box; min-height: 30px; max-height: 120px; resize: vertical; font: inherit; font-size: 12px; padding: 5px 8px; color: var(--ink); background: var(--paper); border: 2px solid var(--line); border-radius: 8px; outline: none; }
+.esc-reply:focus { border-color: var(--focus); }
+.esc-btns { display: flex; flex-wrap: wrap; gap: 4px; }
+.btn.esc-reject { background: var(--bad-soft); }
+
+.esc-answered summary { cursor: pointer; font-size: 11px; font-weight: 800; color: var(--muted); padding: 2px 0; }
+.esc-answered .esc { margin-top: 4px; }
+
+/* In the Team tab's approvals the cards sit with the proposals: the list's own cap doesn't apply. */
+.ro-props .esc { font-size: 13px; }
+
+html[data-theme='terminal'] .esc { border-radius: 0; }
+html[data-theme='terminal'] .esc-urgent .esc-tag, html[data-theme='terminal'] .esc-critical .esc-tag, html[data-theme='terminal'] .esc-loud { color: #000; text-shadow: none; }

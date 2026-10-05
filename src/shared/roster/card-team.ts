@@ -1,8 +1,8 @@
 // Which team a card on the board belongs to (docs/teams.md, "Sub-boards"). The main board shows every
-// card with its team's tag, and each team's page shows only its own, so the PM sees the whole project
+// card with its team's tag, and each team's page shows only its own, so the Project Manager sees the whole project
 // from above and each Lead's lane up close. A card's team comes from what GitHub and the office already
 // know, cheapest first, so no model is ever asked:
-//   1. a `team:<team>` label on the issue or PR (what the CTO, a Lead or an approved proposal set);
+//   1. a `team:<team>` label on the issue or PR (what the Project Manager, a Lead or an approved proposal set);
 //   2. a worker that is a roster member is on its role's team;
 //   3. a PR without a label: its author worker's team, else the team of an issue it closes;
 //   4. a queued task: its issue's team; a worker that isn't a member: its task's issue, else its PR;
@@ -35,7 +35,7 @@ export interface TeamMeta {
 
 /** The team's look and words. The icons are the Leads' own (shared/roster/roles.ts), so a tag and the org chart agree. */
 export const TEAM_META: Record<CardTeam, TeamMeta> = {
-  management: { name: 'Management', short: 'PM', icon: '🧭', labelColor: 'ff8a5b', labelDescription: "The Project Manager's lane: plan, coordination, standups" },
+  management: { name: 'Management', short: 'Coord', icon: '🧭', labelColor: 'ff8a5b', labelDescription: "The Project Coordinator's lane: plan, coordination, standups" },
   design: { name: 'Design', short: 'Design', icon: '🎨', labelColor: '9d4edd', labelDescription: "The Lead Designer's lane: Atlas, wireframes, layouts, branding" },
   development: { name: 'Development', short: 'Dev', icon: '🛠️', labelColor: '5bc0eb', labelDescription: "The Lead Developer's lane: the app's code and MDL" },
   testing: { name: 'Testing', short: 'Test', icon: '🧪', labelColor: '06d6a0', labelDescription: "The Lead Tester's lane: tests, quality, the test framework" },

@@ -1,6 +1,6 @@
 // The five `team:<team>` labels the sub-boards sort cards by (shared/roster/card-team.ts). GitHub would
 // make a missing label itself when one is first put on an issue, but grey and without a description, so
-// before the CTO first tags something the office makes any that are missing, in their team's color, as
+// before the Project Manager first tags something the office makes any that are missing, in their team's color, as
 // its own gh account. Once a floor has them all it doesn't look again until the office restarts.
 
 import { TEAM_IDS, TEAM_META, teamLabel } from '../../shared/roster/card-team.js';

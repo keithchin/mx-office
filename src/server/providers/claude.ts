@@ -3,10 +3,11 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { FAILS_TO_DESPAIR, outputFailed, toolAction } from '../../shared/actions.js';
-import { MCP_READ_ONLY, writeClaudeMcpConfig } from '../office-workers.js';
+import { MCP_ALLOWED, writeClaudeMcpConfig } from '../office-workers.js';
 import { QUEUE_AGENT_DISALLOWED_TOOLS } from '../stations.js';
 import { answered, notified, wantsPermission } from '../workers/lifecycle.js';
 import { shq } from '../workers/process.js';
+import { noteSubagentHook } from '../workers/subagents.js';
 import type { WorkerHandle } from '../workers/types.js';
 import { truncate } from '../workers/util.js';
 import type { ProviderAdapter } from './types.js';
@@ -78,7 +79,7 @@ process.stdin.on('end', () => {
     hooks[event] = [{ ...(matcher ? { matcher } : {}), hooks: [{ type: 'command', command }] }];
   }
   // Looking at the office's workers doesn't need anyone's say-so; hiring and sending home still asks.
-  const permissions = { allow: MCP_READ_ONLY };
+  const permissions = { allow: MCP_ALLOWED };
   writeFileSync(settingsPath, JSON.stringify({ hooks, permissions }, null, 2), { mode: 0o600 });
   return settingsPath;
 }
@@ -163,6 +164,8 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
     case 'PostToolUse':
     case 'PostToolUseFailure':
       noteOutcome(h, payload, event === 'PostToolUseFailure');
+      // A subagent came back: its Lead has a result to review (roster/nudge.ts).
+      noteSubagentHook(info.id, payload, event === 'PostToolUseFailure', now);
       // It opened a pull request itself (`gh pr create`): that one is its own.
       h.notePr(payload?.tool_input?.command, toolOutput(payload));
       answered(h, now);

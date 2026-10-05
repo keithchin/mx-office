@@ -91,8 +91,10 @@ export function teamTab(root: HTMLElement, badge: HTMLElement, shown: () => bool
     },
     onMessage(msg) {
       if (msg.t !== 'roster.changed' || msg.floor !== floor) return;
-      // Not while the CTO is typing in the settings: a redraw would throw the edit away.
-      if (shown() && pane === 'settings' && root.contains(document.activeElement)) return;
+      // Not while the Project Manager is typing in the settings, or an answer to an escalation in the
+      // approvals: a redraw would throw the edit away. The next change after that fetches it.
+      const typing = root.contains(document.activeElement) && (pane === 'settings' || document.activeElement?.matches('textarea, input'));
+      if (shown() && typing) return;
       // A burst of changes (a standup asking four Leads) fetches once.
       clearTimeout(timer);
       timer = setTimeout(load, 300);

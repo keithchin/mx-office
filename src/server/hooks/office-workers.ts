@@ -8,6 +8,7 @@ import type { WorkerInfo } from '../../shared/protocol.js';
 import type { Ctx } from '../office/context.js';
 import { str } from '../office/input.js';
 import { readBody, send } from '../http/util.js';
+import { officeEscalate } from './office-escalate.js';
 
 /**
  * Pull request `n` on a floor, for a worker to have as its own: one that's open, or merged and still
@@ -35,7 +36,8 @@ async function pullOf(floor: Floor, n: number, repo?: string): Promise<{ number:
  * The floor's workers, for any worker on it (see office-workers.ts, and bin/office-workers.js, the
  * command and MCP server that call it): GET lists them, POST hires one, POST /home sends some home
  * (its worktree and branch go too, unless they hold work), POST /tell types a prompt to one, POST /pr
- * says which pull request is one's (for one the office couldn't tell by itself). The
+ * says which pull request is one's (for one the office couldn't tell by itself), POST /escalate raises
+ * something to the Project Manager (office-escalate.ts). The
  * worker's own hook token says who's asking, and the floor hears who did what, as from anyone.
  */
 export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: http.ServerResponse, url: URL) {
@@ -65,13 +67,16 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
       workers: list.map((w) => workerRow(w, view, me.id)),
     });
   }
-  if (req.method !== 'POST' || !['', '/home', '/tell', '/pr'].includes(action)) return send(res, 405, { error: 'GET /office/workers, or POST to /office/workers, /office/workers/home, /office/workers/tell or /office/workers/pr' });
+  if (req.method !== 'POST' || !['', '/home', '/tell', '/pr', '/escalate'].includes(action)) return send(res, 405, { error: 'GET /office/workers, or POST to /office/workers, /office/workers/home, /office/workers/tell, /office/workers/pr or /office/workers/escalate' });
   let body: unknown;
   try {
     body = JSON.parse((await readBody(req)) || '{}');
   } catch {
     return send(res, 400, { error: 'Send JSON' });
   }
+
+  // Raising something to the Project Manager (the human): hooks/office-escalate.ts.
+  if (action === '/escalate') return officeEscalate(ctx, floor, me, body, res);
 
   if (action === '/home') {
     const ask = readHomeRequest(body);

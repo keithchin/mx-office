@@ -1,8 +1,10 @@
-// The project manager console: the middle column of the project summary above the 1D view's board
-// (ui/summary.ts draws the columns either side of it). The floor's PM (docs/teams.md) at a glance, its
-// terminal live and read-only, and a box to ask it things, so a question for the PM doesn't mean
-// opening its terminal. With no PM hired it says what the PM is for and offers to hire one; with a
-// benched one, its latest handoff note and "Hire again". No three.js here: the 1D view imports it.
+// The project console: the middle column of the project summary on the 1D view's Command Center (ui/summary.ts
+// draws the columns either side of it), where you, the Project Manager, run the project. The floor's
+// Project Coordinator (the agent, role id `pm`; docs/teams.md) at a glance, its terminal live and
+// read-only, the escalations the team raised to you (ui/pm/escalations.ts, above the prompt box), and a
+// box to ask the Coordinator things without opening its terminal. With no Coordinator hired it says what
+// it's for and offers to hire one; with a benched one, its latest handoff note and "Hire again". No
+// three.js here: the 1D view imports it.
 //
 // The element is made once and kept: the summary is drawn again every few seconds and only moves the
 // columns round it, so what you're typing (and the terminal) survives the redraws.
@@ -14,6 +16,7 @@ import { store } from '../../state';
 import { h, toast } from '../dom';
 import { act, fetchRoster } from '../roster/api';
 import { askText } from '../roster/ask';
+import { EscalationList } from './escalations';
 import { PM_STATE_TEXT, PromptHistory, pmView, type PmView } from './state';
 import { PmTerminal } from './term';
 import './console.css';
@@ -22,7 +25,7 @@ export interface PmConsoleDeps {
   net: Net;
   /** The worker's full terminal window, the way the rest of the page opens it (waking it if asleep). */
   openWorker(id: string): void;
-  /** Whether the console is on screen now: the Board tab, with the floors page not over it. */
+  /** Whether the console is on screen now: the Command Center tab, with the floors page not over it. */
   visible(): boolean;
 }
 
@@ -31,7 +34,7 @@ export interface PmConsole {
   readonly el: HTMLElement;
   /** Catches up with the floor and whether it's on screen (lite.ts calls it when the tab changes). */
   sync(): void;
-  /** Every server message: the team changing, the PM's terminal output, a reconnect. */
+  /** Every server message: the team changing, the Coordinator's terminal output, a reconnect. */
   route(msg: ServerMsg): void;
 }
 
@@ -59,17 +62,23 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
   let recalled: string | undefined;
 
   const head = h('header.pmc-h');
-  const termHost = h('div.pmc-term', { role: 'log', 'aria-label': "The project manager's terminal (live, read-only)" });
+  const termHost = h('div.pmc-term', { role: 'log', 'aria-label': "The Project Coordinator's terminal (live, read-only)" });
   const screenNote = h('p.pmc-screen-note');
   const screen = h('div.pmc-screen', {}, termHost, screenNote);
   const empty = h('div.pmc-empty');
   const hint = h('p.pmc-hint');
-  const box = h('textarea.pmc-box', { rows: 2, placeholder: 'Ask the project manager…', 'aria-label': 'Ask the project manager', enterkeyhint: 'send' });
-  const sendBtn = h('button.btn.primary.pmc-send', { type: 'button', title: 'Send (Enter); Shift+Enter for a new line', 'aria-label': 'Send to the project manager' }, '➤');
+  const box = h('textarea.pmc-box', { rows: 2, placeholder: 'Ask the Project Coordinator…', 'aria-label': 'Ask the Project Coordinator', enterkeyhint: 'send' });
+  const sendBtn = h('button.btn.primary.pmc-send', { type: 'button', title: 'Send (Enter); Shift+Enter for a new line', 'aria-label': 'Send to the Project Coordinator' }, '➤');
   const ack = h('span.pmc-ack', { role: 'status', 'aria-live': 'polite' });
   const chips = h('div.pmc-chips', { role: 'group', 'aria-label': 'Quick questions' });
   const foot = h('footer.pmc-foot', {}, hint, h('div.pmc-ask', {}, box, sendBtn), h('div.pmc-row', {}, chips, ack));
-  const el = h('section.pmc', { 'aria-label': 'Project manager console' }, head, screen, empty, foot);
+  // Escalations to you sit above the prompt box, and stay there when no Coordinator is hired.
+  const escalations = new EscalationList((r) => {
+    if (r.floor !== floor) return;
+    roster = r;
+    draw();
+  });
+  const el = h('section.pmc', { 'aria-label': 'Project console' }, head, screen, empty, escalations.el, foot);
   const term = new PmTerminal(net, termHost);
 
   const pmOf = (r: RosterView | undefined): MemberView | undefined => r?.members.find((m) => m.role === 'pm');
@@ -155,7 +164,7 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     box.setSelectionRange(step.length, step.length);
   });
   for (const c of CHIPS) {
-    const b = h('button.btn.small.pmc-chip', { type: 'button', 'data-standup': c.standup ? '1' : undefined, title: c.prompt ?? "Ask every Lead for its standup; the PM compiles the page" }, c.label);
+    const b = h('button.btn.small.pmc-chip', { type: 'button', 'data-standup': c.standup ? '1' : undefined, title: c.prompt ?? "Ask every Lead for its standup; the Project Coordinator compiles the page" }, c.label);
     b.addEventListener('click', () => {
       if (c.prompt) send(c.prompt);
       else void run('standup').then((r) => r && say('📋 Standup started'));
@@ -168,10 +177,10 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     const facts = [view.model ? `🧠 ${view.model}` : null, view.cost !== undefined ? `💵 $${view.cost.toFixed(2)}` : null].filter(Boolean).join(' · ');
     head.replaceChildren(
       h('span.pmc-icon', { 'aria-hidden': 'true' }, pm?.icon ?? '🧭'),
-      h('span.pmc-who', {}, h('span.pmc-name', {}, pm?.name ?? 'Project Manager'), h('span.pmc-role', {}, pm ? `${pm.title}${facts ? ` · ${facts}` : ''}` : 'Project Manager')),
+      h('span.pmc-who', {}, h('span.pmc-name', {}, pm?.name ?? 'Project Coordinator'), h('span.pmc-role', {}, pm ? `${pm.title}${facts ? ` · ${facts}` : ''}` : 'Project console')),
       roster ? h('span.pmc-pill', { class: `pmc-${view.state}` }, PM_STATE_TEXT[view.state]) : '',
       view.canWake && pm ? h('button.btn.small.pmc-wake', { type: 'button', title: `Wake ${pm.name}: its session carries on`, onclick: () => wake(pm) }, '⏰ Wake') : '',
-      w ? h('button.btn.small.pmc-open', { type: 'button', title: `Open ${pm?.name ?? 'the PM'}'s full terminal`, onclick: () => deps.openWorker(w.id) }, '⤢ Open') : '',
+      w ? h('button.btn.small.pmc-open', { type: 'button', title: `Open ${pm?.name ?? 'the Project Coordinator'}'s full terminal`, onclick: () => deps.openWorker(w.id) }, '⤢ Open') : '',
     );
   }
 
@@ -190,18 +199,18 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
         h('p.pmc-dim', {}, 'Its session was cleared to save money. Hiring it again starts fresh from its Playbook and this note.'),
         note ? h('blockquote.pmc-note', {}, h('span.pmc-note-h', {}, pm.handoffAt ? '📝 Latest handoff note' : '📓 Latest journal entry'), h('b', {}, note.heading), ' ', note.excerpt) : '',
         paused,
-        admin ? h('button.btn.primary', { type: 'button', onclick: () => hire(pm) }, '🤝 Hire again') : h('p.pmc-dim', {}, 'Ask an admin to hire the project manager again.'),
+        admin ? h('button.btn.primary', { type: 'button', onclick: () => hire(pm) }, '🤝 Hire again') : h('p.pmc-dim', {}, 'Ask the Project Manager (an admin) to hire the Project Coordinator again.'),
       );
       return;
     }
     empty.replaceChildren(
       h('div.pmc-empty-ico', { 'aria-hidden': 'true' }, '🧭'),
-      h('p.pmc-empty-h', {}, 'No project manager yet'),
-      h('p.pmc-dim', {}, 'The project manager keeps the plan, coordinates the four Leads and runs the standup. Hire one and ask it anything from here: a status update, what is blocking, what to do next.'),
+      h('p.pmc-empty-h', {}, 'No Project Coordinator yet'),
+      h('p.pmc-dim', {}, 'The Project Coordinator is the agent that keeps the plan, coordinates the four Leads, runs the standup and relays their escalations to you, the Project Manager. Hire one and ask it anything from here: a status update, what is blocking, what to do next.'),
       paused,
       admin
-        ? h('button.btn.primary.pmc-hire', { type: 'button', title: `Hire ${pm.name}: a fresh session from its Playbook`, onclick: () => hire(pm) }, '🤝 Hire Project Manager')
-        : h('p.pmc-dim', {}, 'Ask an admin to hire the project manager.'),
+        ? h('button.btn.primary.pmc-hire', { type: 'button', title: `Hire ${pm.name}: a fresh session from its Playbook`, onclick: () => hire(pm) }, '🤝 Hire Project Coordinator')
+        : h('p.pmc-dim', {}, 'Ask the Project Manager (an admin) to hire the Project Coordinator.'),
     );
   }
 
@@ -217,7 +226,8 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     screen.hidden = emptyShown;
     foot.hidden = emptyShown;
     if (emptyShown) emptyState(pm);
-    screenNote.textContent = view.live ? '' : view.state === 'asleep' ? `💤 ${pm?.name ?? 'The PM'} is asleep` : view.workerId ? '' : `${pm?.name ?? 'The PM'} isn't at a desk on this floor`;
+    escalations.render(roster);
+    screenNote.textContent = view.live ? '' : view.state === 'asleep' ? `💤 ${pm?.name ?? 'The Project Coordinator'} is asleep` : view.workerId ? '' : `${pm?.name ?? 'The Project Coordinator'} isn't at a desk on this floor`;
     screenNote.hidden = !screenNote.textContent;
     hint.textContent = view.hint ?? '';
     hint.hidden = !view.hint;

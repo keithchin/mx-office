@@ -1,8 +1,9 @@
-// The team settings: the autonomy level (what needs the CTO), how long a Lead may sit idle before
-// it's benched, the standup's schedule, a daily cost cap per autonomy level, and a dry run for issues.
-// Only the CTO (an admin) can save them; everyone else sees them read-only.
+// The team settings: the autonomy level (what needs the Project Manager), how long a Lead may sit idle before
+// it's benched, the review nudge, the standup's schedule, a daily cost cap per autonomy level, and a dry
+// run for issues.
+// Only the Project Manager (an admin) can save them; everyone else sees them read-only.
 
-import { AUTONOMY, DECISION_LABEL, type AutonomyLevel } from '../../../shared/roster/autonomy';
+import { AUTONOMY, DECISION_LABEL, REVIEW_POLICY, type AutonomyLevel } from '../../../shared/roster/autonomy';
 import type { RosterSettings, RosterView } from '../../../shared/roster/types';
 import { h } from '../dom';
 import { act } from './api';
@@ -24,7 +25,7 @@ export function settingsView(v: RosterView, redraw: (v: RosterView) => void): HT
         { class: s.autonomy === l ? 'on' : '' },
         input,
         h('span.ro-level-n', {}, String(l)),
-        h('span.ro-level-t', {}, h('b', {}, a.name), h('span', {}, a.summary), h('small', {}, `CTO approves: ${a.cto.map((k) => DECISION_LABEL[k]).join(', ')}`)),
+        h('span.ro-level-t', {}, h('b', {}, a.name), h('span', {}, a.summary), h('small', {}, `Project Manager approves: ${a.approves.map((k) => DECISION_LABEL[k]).join(', ')}`), h('small', {}, `Leads escalate reviews: ${REVIEW_POLICY[l].rule.replace(/^Escalate /, '')}`)),
       );
     }),
   );
@@ -50,11 +51,13 @@ export function settingsView(v: RosterView, redraw: (v: RosterView) => void): HT
   return h(
     'section.ro-settings',
     { 'aria-label': 'Team settings' },
-    h('div.ro-bar', {}, h('div', {}, h('h3', {}, '⚙️ Team settings'), h('p.ro-sub', {}, off ? 'Only the CTO (an admin) can change these.' : 'The autonomy level is written into every Lead\'s Playbook and told to the Leads at work.')), save),
+    h('div.ro-bar', {}, h('div', {}, h('h3', {}, '⚙️ Team settings'), h('p.ro-sub', {}, off ? 'Only the Project Manager (an admin) can change these.' : 'The autonomy level is written into every Lead\'s Playbook and told to the Leads at work.')), save),
     h('h4', {}, 'Autonomy'),
     levels,
     h('h4', {}, 'Benching'),
     h('p.ro-row', {}, 'Bench a Lead after ', num(s.idleMinutes, (n) => (s.idleMinutes = n ?? 0), { max: 1440, step: 1, 'aria-label': 'Idle minutes' }), ' idle minutes (0 = only by hand). A Lead mid-task or waiting on someone is never idle.'),
+    h('h4', {}, 'Review loop'),
+    check(s.reviewNudge, (b) => (s.reviewNudge = b), "Nudge a Lead to review its subagent's result when its turn ends right after one came back (once per idle period; never while it needs you, asleep or benched)"),
     h('h4', {}, 'Daily standup'),
     h('p.ro-row', {}, check(s.schedule.enabled, (b) => (s.schedule.enabled = b), 'Scheduled'), ' at ', text(s.schedule.time, (t) => (s.schedule.time = t), { 'aria-label': 'Time', size: '5' }), ' ', text(s.schedule.timeZone, (t) => (s.schedule.timeZone = t), { 'aria-label': 'Time zone', size: '18' })),
     days,

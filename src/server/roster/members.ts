@@ -1,4 +1,4 @@
-// What the CTO does to a role from the Team tab: hire (or wake) it, bench it, rename it, change its
+// What the Project Manager does to a role from the Team tab: hire (or wake) it, bench it, rename it, change its
 // model, and the floor's team settings. Hiring a role always uses its fixed name and its Playbook;
 // hiring a benched one starts a fresh session primed with its latest handoff note, never a resume.
 
@@ -51,8 +51,10 @@ export class Members {
     }
     const paused = this.roster.pauseOf(d);
     if (paused) return paused;
-    const r = await floor.hire({ name: m.name, model: m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task), owner, by, team: def.team });
+    const owed = this.roster.escalations.owed(floor, role);
+    const r = await floor.hire({ name: m.name, model: m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task, owed.lines), owner, by, team: def.team });
     if (typeof r === 'string') return r;
+    owed.mark();
     m.workerId = r.id;
     m.phase = 'active';
     m.benchAskedAt = undefined;

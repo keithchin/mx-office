@@ -6,7 +6,7 @@ import { PromptHistory, pmView } from '../src/client/ui/pm/state.js';
 import type { WorkerInfo } from '../src/shared/protocol.js';
 import type { MemberView } from '../src/shared/roster/types.js';
 
-const member = (o: Partial<MemberView> = {}): MemberView => ({ role: 'pm', title: 'Project Manager', team: 'management', icon: '🧭', name: 'Maya', model: 'sonnet', status: 'not-hired', ...o }) as MemberView;
+const member = (o: Partial<MemberView> = {}): MemberView => ({ role: 'pm', title: 'Project Coordinator', team: 'management', icon: '🧭', name: 'Maya', model: 'sonnet', status: 'not-hired', ...o }) as MemberView;
 const worker = (o: Partial<WorkerInfo> = {}): WorkerInfo => ({ id: 'w1', kind: 'agent', provider: 'claude', status: 'idle', name: 'Maya', cols: 80, rows: 24, viewers: [], ...o }) as WorkerInfo;
 
 test('no PM hired: the empty state with 🤝 Hire, no terminal and no box', () => {
