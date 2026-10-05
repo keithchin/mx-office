@@ -64,8 +64,9 @@ test('no part of the office imports main.ts: it only puts them together', () => 
 });
 
 // The 1D view (lite.ts, the board at /lite), the 2D view (pixel.ts, the pixel office at /pixel) and
-// the home page (home.ts, at /home: every project's card and the office's statistics).
-for (const entry of ['lite.ts', 'pixel.ts', 'home.ts']) {
+// the home page (home.ts, at /home: every project's card and the office's statistics) and the docs
+// (docs.ts, at /docs: the office's documentation site).
+for (const entry of ['lite.ts', 'pixel.ts', 'home.ts', 'docs.ts']) {
   test(`${entry} loads no three.js, and none of the 3D office: what it shares with it is three.js-free`, () => {
     const page = graph(path.join(client, entry));
     for (const f of page) {
@@ -75,7 +76,7 @@ for (const entry of ['lite.ts', 'pixel.ts', 'home.ts']) {
       assert.ok(!/^(core|features|input|world|player)\//.test(rel), `${entry} loads ${rel}, part of the 3D office`);
     }
     // What the flat views and the 3D office share (the home page has no title count or hiring).
-    if (entry === 'home.ts') return;
+    if (entry === 'home.ts' || entry === 'docs.ts') return;
     for (const shared of ['shared/title.ts', 'shared/hiring.ts']) {
       assert.ok(page.has(path.join(client, shared)), `${entry} uses ${shared}`);
       assert.ok(graph(path.join(client, 'main.ts')).has(path.join(client, shared)), `the 3D office uses ${shared}`);

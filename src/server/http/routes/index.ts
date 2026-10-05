@@ -64,5 +64,6 @@ export const routes: readonly Route[] = [
   pageRoutes.home,
   pageRoutes.lite,
   pageRoutes.pixel,
+  pageRoutes.docs,
   pageRoutes.bundle,
 ];

@@ -86,6 +86,7 @@ export function installHud(ctx: Ctx, core: CoreState, parts: HudParts) {
     { ...MENU.settings, run: showSettings },
     { ...MENU.help, run: openHelp },
     { ...MENU.home, run: () => location.assign('/home') },
+    { ...MENU.guide, run: () => location.assign('/docs') },
     { id: 'lite', icon: '📱', label: '1D view', section: 'Office', title: () => 'The board, the workers and their terminals without the 3D: for a phone or a slow computer', run: () => switchView('1d') },
     { id: 'pixel', icon: '🗺️', label: '2D view', section: 'Office', title: () => 'The floor from above in pixel art: every worker at its desk, without the 3D', run: () => switchView('2d') },
     // The other way of drawing the office from the one you're in: retro's chunky pixels, or back to 3D.

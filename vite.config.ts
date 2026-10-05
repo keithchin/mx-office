@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vite';
 import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
+import { buildDocSite } from './src/server/docsite.ts';
 
 // The whiteboard's fonts (Excalidraw's hand-drawn Virgil/Excalifont and friends), served by the
 // office itself rather than a CDN. Excalidraw looks for them under window.EXCALIDRAW_ASSET_PATH;
@@ -34,10 +35,44 @@ function excalidrawFonts(): Plugin {
   };
 }
 
+// The documentation site (/docs): docs/site/*.md rendered into one bundle (server/docsite.ts), written
+// to docs/site.json beside the pictures in docs/images/, for the docs page (docs.ts) to read. The dev
+// server builds it on each request and hands every other /docs address to docs.html.
+const docsDir = resolve(import.meta.dirname, 'docs/site');
+
+function docsSite(): Plugin {
+  const images = join(docsDir, 'images');
+  return {
+    name: 'docs-site',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const p = decodeURIComponent((req.url ?? '').split('?')[0]);
+        if (p === '/docs/site.json') {
+          res.setHeader('content-type', 'application/json');
+          return res.end(JSON.stringify(buildDocSite(docsDir).bundle));
+        }
+        if (p.startsWith('/docs/images/')) {
+          const file = join(images, p.slice('/docs/images/'.length));
+          if (!file.startsWith(images + sep) || !existsSync(file) || !statSync(file).isFile()) return next();
+          return createReadStream(file).pipe(res);
+        }
+        if (p === '/docs' || p.startsWith('/docs/')) req.url = '/docs.html';
+        next();
+      });
+    },
+    generateBundle() {
+      const { bundle, problems, images: pics } = buildDocSite(docsDir);
+      for (const p of problems) this.warn(`docs/site/${p.file} ${p.problem}`);
+      this.emitFile({ type: 'asset', fileName: 'docs/site.json', source: JSON.stringify(bundle) });
+      for (const f of pics) this.emitFile({ type: 'asset', fileName: `docs/images/${f}`, source: readFileSync(join(images, f)) });
+    },
+  };
+}
+
 export default defineConfig({
   root: resolve(import.meta.dirname, 'src/client'),
   publicDir: resolve(import.meta.dirname, 'src/client/public'),
-  plugins: [excalidrawFonts()],
+  plugins: [excalidrawFonts(), docsSite()],
   define: {
     __EXCALIDRAW_ASSETS__: JSON.stringify(EXCALIDRAW_ASSETS),
   },
@@ -59,6 +94,7 @@ export default defineConfig({
         login: resolve(import.meta.dirname, 'src/client/login.html'),
         claim: resolve(import.meta.dirname, 'src/client/claim.html'),
         join: resolve(import.meta.dirname, 'src/client/join.html'),
+        docs: resolve(import.meta.dirname, 'src/client/docs.html'),
       },
     },
   },

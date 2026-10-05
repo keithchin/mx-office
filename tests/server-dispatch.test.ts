@@ -139,9 +139,13 @@ before(async () => {
     execFileSync('git', args, { cwd: project });
   }
   // A client bundle of its own, so the test needn't build one.
-  for (const page of ['index', 'login', 'claim', 'join', 'home', 'lite', 'pixel']) writeFileSync(path.join(publicDir, `${page}.html`), `<!doctype html><title>${page}</title>`);
+  for (const page of ['index', 'login', 'claim', 'join', 'home', 'lite', 'pixel', 'docs']) writeFileSync(path.join(publicDir, `${page}.html`), `<!doctype html><title>${page}</title>`);
   writeFileSync(path.join(publicDir, 'favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
   writeFileSync(path.join(publicDir, 'assets', 'app.js'), 'export {};\n');
+  // The docs site's bundle and a picture, as the build writes them (vite.config.ts).
+  mkdirSync(path.join(publicDir, 'docs', 'images'), { recursive: true });
+  writeFileSync(path.join(publicDir, 'docs', 'site.json'), '{"pages":[],"nav":[]}');
+  writeFileSync(path.join(publicDir, 'docs', 'images', 'board.png'), 'png');
   // A stand-in for Claude Code, so reading the plan's limits never runs the real one.
   const claude = path.join(bin, 'claude');
   writeFileSync(claude, '#!/bin/sh\nexit 0\n');
@@ -187,6 +191,10 @@ test('answers the open routes before anyone signs in', async () => {
   assert.equal((await get('/api/home/overview')).status, 401);
   assert.equal((await get('/lite')).headers.get('location'), '/login?next=/lite');
   assert.equal((await get('/pixel')).headers.get('location'), '/login?next=/pixel');
+  // The docs are behind the sign-in too, and signing in comes back to the page asked for.
+  assert.equal((await get('/docs')).headers.get('location'), '/login?next=/docs');
+  assert.equal((await get('/docs/get-started/quick-start')).headers.get('location'), '/login?next=/docs/get-started/quick-start');
+  assert.equal((await get('/docs/site.json')).headers.get('location'), '/login');
   const whoami = await get('/api/whoami');
   assert.equal(whoami.status, 401);
   assert.deepEqual(await whoami.json(), { error: 'Not logged in' });
@@ -237,6 +245,14 @@ test('answers the signed-in routes', async () => {
     assert.equal(typeof f.prsOpen, 'number');
   }
   assert.match(await (await get('/pixel', me)).text(), /<title>pixel<\/title>/);
+  // Every address under /docs is the docs page, which draws it; its bundle and pictures are files.
+  for (const p of ['/docs', '/docs/', '/docs/get-started/quick-start', '/docs/no-such-page', '/docs.html']) assert.match(await (await get(p, me)).text(), /<title>docs<\/title>/, p);
+  const site = await get('/docs/site.json', me);
+  assert.equal(site.headers.get('content-type'), 'application/json');
+  assert.deepEqual(await site.json(), { pages: [], nav: [] });
+  assert.equal((await get('/docs/images/board.png', me)).headers.get('content-type'), 'image/png');
+  assert.equal((await get('/docs/images/missing.png', me)).status, 404);
+  assert.equal((await get('/docsx', me)).status, 404);
   const floor = office.floors()[0].id;
   assert.deepEqual(await (await get(`/api/search?q=zzzz&floor=${floor}`, me)).json(), { q: 'zzzz', chat: [], terminals: [], more: false });
   assert.deepEqual(await (await get('/api/search?q=z', me)).json(), { q: 'z', chat: [], terminals: [], more: false });
