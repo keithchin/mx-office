@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Merged into staging, live after the next restart.
+Nothing waiting yet.
+
+## 2026-10-05 · release 4 (`6639313`)
 
 ### New
 - **🎨 Clean (Light) and Clean (Dark)** themes: plain and quiet like VS Code's classic light and dark
