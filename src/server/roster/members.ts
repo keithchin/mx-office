@@ -14,6 +14,7 @@ import { stageLevel, stageOf } from './stage-autonomy.js';
 import { cleanSettings } from './store.js';
 import type { TeamFloor } from './types.js';
 import { audit, byWhom } from '../audit/index.js';
+import { hireHoldOf } from '../project-run/store.js';
 
 /** Models a role can be set to: Claude Code's aliases, or a full model id. */
 const MODEL = /^[A-Za-z0-9][A-Za-z0-9._\-[\]]{0,63}$/;
@@ -70,7 +71,7 @@ export class Members {
       if (!err) floor.toast(`${by} woke ${m.name}, the ${def.title}`);
       return err;
     }
-    const paused = this.roster.pauseOf(d);
+    const paused = this.roster.pauseOf(d) ?? hireHoldOf(floor.id);
     if (paused) return paused;
     const owed = this.roster.escalations.owed(floor, role);
     const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task, owed.lines), owner, by, team: def.team });

@@ -28,6 +28,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   The Teams cards' Open buttons follow its address.
 - **The Teams webhook URL moved into 🔌 Connections** (a 💬 Microsoft Teams webhook card, DPAPI
   encrypted): an office that had it in `notify-teams.json` moves it once at its next start.
+- **⏸ A paused project hires nobody new:** the task queue holds, the meeting room seats no meeting and
+  hands out no parts, a desk takes no new agent, and the Team tab, an answered escalation and The Firm
+  hire no member. Each says *Project paused: no new agents until it's resumed*. In the Team tab the
+  Project Manager can still **Hire anyway** after a confirm (one hire, logged as `roster.hire-override`).
+- **▶ Resume project** now counts a Lead's own team's open issues with nobody assigned as work waiting
+  (never another team's), and folds the Project Coordinator's queued relays into its resume brief, so it
+  gets one message instead of two.
 
 ### Improved
 - **🧩 Subagents: runs only the transcript saw finish count.** A background run that only the Lead's transcript
@@ -41,6 +48,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **🧩 Never-run subagents are hidden.** The Workers tab shows only subagents that have run (or are at work for
   the first time, or are benched or on warning) unless **☐ Include never-run** is ticked next to Show
   subagents. The 2D view shows only subagents that have run at least once.
+
+### To know
+- Resume, Pause and Restart safely are admin-only on every route, not just hidden for others; tests pin it.
 
 ## 2026-10-06 · release 12 (`18ff64d`)
 

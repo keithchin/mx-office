@@ -74,6 +74,9 @@ export function cleanPacing(v: unknown, base: Pacing = DEFAULT_PACING): Pacing {
   return { concurrent: one(p.concurrent, PACING_BOUNDS.concurrent, base.concurrent), gapSec: one(p.gapSec, PACING_BOUNDS.gapSec, base.gapSec) };
 }
 
+/** Why a paused floor hires nobody: the queue, meetings, the roster and the Firm all say this. */
+export const PAUSED_HIRES = 'Project paused: no new agents until it’s resumed';
+
 /** A floor paused with ⏸ Pause project: who and when, and whether a person or a safe restart did it. */
 export interface PauseInfo {
   by: string;

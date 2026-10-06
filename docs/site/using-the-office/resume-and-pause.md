@@ -21,7 +21,7 @@ Nothing is woken until you say so. Resume first opens a preview listing every ag
 | *N notes queued for it* | The office's outbox: relays for the Project Coordinator, the Project Manager's decisions for a Lead |
 | *Cut off mid-turn* | A restart or a crash stopped it mid-turn, and it hasn't carried on yet |
 | *Failing checks on PR #n* | Its open pull request is red on the floor's PR list |
-| *Open issue #n assigned* | For a Lead, an open issue with its team's label that someone is assigned to. For a worker, an open issue its task names |
+| *Open issue #n assigned*, *team issue #n with nobody assigned* | For a Lead, an open issue with its own team's label, whether someone is assigned to it or nobody is yet. Another team's issues never count. For a worker, an open issue its task names |
 | *Standup … page not handed over* | For the Project Coordinator, a compiled standup page it was asleep for |
 
 An agent with nothing to do stays asleep. Agents that are already awake are listed and left as they are.
@@ -60,7 +60,7 @@ A woken agent doesn't get the generic "carry on" prompt. It gets a short brief, 
 - what happened while it slept: merges on `origin/<default>` since its last turn, escalations that involve it (answered or raised), and a few lines of Team chatter about it. This part is cut to about 1,500 characters
 - its open escalations, with *don't raise these again*
 - the state of its branch (*N commits behind main: rebase first and re-run the checks*, or uncommitted changes)
-- the answers and notes it's owed, in the same message, and marked as told
+- the answers and notes it's owed, in the same message, and marked as told. For the Project Coordinator, that includes what the office's outbox held for it (new escalations, your decisions on proposals, the Leads' subagent news), so it gets one message, not two
 - at autonomy 1 or 2, *post a 2-line plan before acting*
 
 ### The run
@@ -71,7 +71,9 @@ Starting a resume lifts the floor's pause.
 
 ## ⏸ Pause project
 
-1. The floor is paused straight away. The office stops sending its own prompts to this floor's agents: no nudges, standups, relays, review nudges or Firm interviews. Messages a person sends still go through, and wake only the agent they're sent to.
+1. The floor is paused straight away. The office stops sending its own prompts to this floor's agents: no nudges, standups, relays, review nudges or Firm interviews. The meeting room hands out no parts either: a meeting waits until the project is resumed. Messages a person sends still go through, and wake only the agent they're sent to.
+
+   It also **hires nobody new** on the floor: the task queue holds its tasks, the meeting room won't seat a meeting, a desk won't take a new agent, and neither the Team tab, an answered escalation nor The Firm hires a team member. Each says *Project paused: no new agents until it's resumed*. A sleeping agent can still be woken, and in the Team tab the Project Manager can still hire a member after confirming **Hire anyway** (that one hire only, logged as `roster.hire-override`).
 2. Each agent then winds down:
    - one **mid-turn** finishes its turn. It's never interrupted.
    - one **asking something in its terminal** (a question or a permission prompt) is left alone, and nothing is typed into it. It's listed as *waiting on you in its terminal*.
@@ -86,8 +88,11 @@ The pause is kept in `<office data>/project-run.json`, so it survives a restart.
 
 For a release or a restart, use **⚙️ Settings › Workers › 🔁 Restart safely** (admins), or `POST /api/office/restart` from a script. It pauses every project, waits until no agent is mid-turn, and restarts the office. When the office is back, it resumes the projects it paused. See [Releasing and restarting safely](../administration/running-the-office.md#releasing-and-restarting-safely).
 
+## Who can use them
+
+Resume, Pause, Resume all, Pause all and Restart safely are for admins (the Project Manager) only. The office refuses anyone else on every route (`POST /api/project-run`, `POST /api/office/restart`), not just by hiding the buttons. Everyone can see a floor's pause, a run's progress and the preview.
+
 ## Limitations
 
-- Meeting-room nudges and the task queue don't go through the roster's delivery path, so a pause doesn't hold them.
 - The "while you slept" part only covers what the office can see: merges on the default branch, the floor's escalations and its Team chatter.
 - A worker that isn't on the team and whose worktree is gone isn't woken. Rebuild it from its card first.

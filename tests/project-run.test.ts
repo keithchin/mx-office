@@ -10,7 +10,9 @@ import os from 'node:os';
 import path from 'node:path';
 import type { GhIssue, GhPull, WorkerInfo, WorkerStatus } from '../src/shared/protocol.js';
 import type { Escalation } from '../src/shared/roster/escalation.js';
-import { chosen, cleanPacing, estimateLine, pauseLine } from '../src/shared/project-run.js';
+import { chosen, cleanPacing, estimateLine, PAUSED_HIRES, pauseLine } from '../src/shared/project-run.js';
+import { floorLedger } from '../src/server/roster/pause.js';
+import type { Ledger } from '../src/server/usage.js';
 import { Roster } from '../src/server/roster/index.js';
 import type { HireAsk, TeamFloor } from '../src/server/roster/types.js';
 import { FlowEngine } from '../src/server/flow/engine.js';
@@ -21,7 +23,7 @@ import { issueRefs, noFacts, workWaiting } from '../src/server/project-run/work.
 import { assess, okProbe, type Probe } from '../src/server/project-run/safety.js';
 import { waitBeforeNext, wakeOrder } from '../src/server/project-run/order.js';
 import { handoffPrompt, resumeBrief, SLEPT_MAX, sleptPart } from '../src/server/project-run/brief.js';
-import { projectPause, projectPauseOf, setProjectPause, useProjectRunFile } from '../src/server/project-run/store.js';
+import { hireHoldOf, overrideHold, projectPause, projectPauseOf, setProjectPause, useProjectRunFile } from '../src/server/project-run/store.js';
 import type { RunFloor } from '../src/server/project-run/types.js';
 
 const MON_0905 = Date.UTC(2026, 9, 5, 1, 5);
@@ -396,4 +398,58 @@ test('a resume cut off by a restart carries on from its checkpoint without wakin
   again.carryOn();
   await until(() => again.latest(w.floor.id)?.status === 'done', 'the carried-on run finishes');
   assert.deepEqual(w.floor.wakes.map((x) => x.id), [ids.pm, ids['lead-developer']]);
+});
+
+// ---- Follow-ups: a pause blocks hires, team issues with nobody assigned, the Coordinator's relays --
+
+test('a paused floor hires nobody (the queue, meetings, desks and the roster see it as hiringPaused), unless a person overrides one hire', async () => {
+  useProjectRunFile(undefined);
+  const w = world();
+  const ledger = floorLedger({ hiringPaused: undefined } as unknown as Ledger, w.floor.id);
+  assert.equal(ledger.hiringPaused, undefined);
+  setProjectPause(w.floor.id, { by: 'Keith', at: 0, why: 'person', waiting: [] });
+  assert.equal(ledger.hiringPaused, PAUSED_HIRES, 'the floor ledger the worker manager, queue and meetings read');
+  assert.equal(floorLedger({ hiringPaused: undefined } as unknown as Ledger, 'another-floor').hiringPaused, undefined, 'only this floor');
+  assert.equal(await w.roster.members.hire(w.floor, 'lead-developer', 'Keith'), PAUSED_HIRES, 'a roster hire (and so the Firm’s and an answer’s rehire)');
+  assert.equal(w.floor.workers().length, 0);
+  // The Team tab's "Hire anyway": this one hire goes ahead, and the hold is back afterwards.
+  assert.equal(await overrideHold(w.floor.id, () => w.roster.members.hire(w.floor, 'lead-developer', 'Keith')), undefined);
+  assert.equal(w.floor.workers().length, 1);
+  assert.equal(hireHoldOf(w.floor.id), PAUSED_HIRES);
+  assert.equal(ledger.hiringPaused, PAUSED_HIRES);
+  setProjectPause(w.floor.id, undefined);
+  assert.equal(ledger.hiringPaused, undefined);
+});
+
+test('a Lead’s work waiting counts its team’s open issues with nobody assigned too, and never another team’s', async () => {
+  useProjectRunFile(undefined);
+  const w = world();
+  const ids = await team(w, ['lead-developer', 'lead-tester']);
+  const issue = (number: number, team: string, assignees: string[] = []) => ({ number, title: `i${number}`, state: 'OPEN', labels: [{ name: `team:${team}`, color: '' }], assignees }) as unknown as GhIssue;
+  w.issues = [issue(1, 'development'), issue(2, 'development', ['ken']), issue(3, 'testing'), { ...issue(4, 'development'), state: 'CLOSED' }];
+  const p = await w.runs.preview(w.floor.id);
+  assert.ok(typeof p !== 'string');
+  const dev = p.agents.find((a) => a.workerId === ids['lead-developer'])!;
+  const tester = p.agents.find((a) => a.workerId === ids['lead-tester'])!;
+  assert.equal(dev.reasons.find((r) => r.kind === 'issue')?.text, 'Open issue #2 assigned; team issue #1 with nobody assigned');
+  assert.equal(tester.reasons.find((r) => r.kind === 'issue')?.text, 'Open team issue #3 with nobody assigned');
+  assert.deepEqual(workWaiting({ ...noFacts(), issues: [{ number: 9, title: 't' }] })[0].text, 'Open issue #9 assigned');
+});
+
+test('the Coordinator hears what the outbox held for it in its resume brief: one message, and the outbox is emptied', async () => {
+  useProjectRunFile(undefined);
+  const w = world();
+  const ids = await team(w, ['pm']);
+  const d = w.roster.data(w.floor.id);
+  d.escalations.push({ id: 'e9', title: 'CI secret', details: '', urgency: 'urgent', fyi: false, status: 'open', by: 'Ada', role: 'lead-tester', workerId: 'x', at: w.clock.now, options: [] } as unknown as Escalation);
+  d.outbox.escalations.push('e9');
+  d.outbox.news.push('- Ada benched subagent tester');
+  const r = await w.runs.resume(w.floor.id, { mode: 'work' }, 'Keith');
+  assert.ok(typeof r !== 'string');
+  await until(() => w.runs.latest(w.floor.id)?.status === 'done', 'the run finishes');
+  assert.equal(w.floor.wakes.length, 1);
+  assert.equal(w.floor.wakes[0].id, ids.pm);
+  assert.match(w.floor.wakes[0].text ?? '', /Relayed while you were asleep:[\s\S]*“CI secret”[\s\S]*Ada benched subagent tester/);
+  assert.deepEqual([d.outbox.escalations, d.outbox.news], [[], []]);
+  assert.equal(w.floor.prompts.length, 0, 'no second message');
 });

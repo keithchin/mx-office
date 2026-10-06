@@ -6,7 +6,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { cleanPacing, DEFAULT_PACING, type Pacing, type PauseInfo } from '../../shared/project-run.js';
+import { cleanPacing, DEFAULT_PACING, PAUSED_HIRES, type Pacing, type PauseInfo } from '../../shared/project-run.js';
 import { writeJsonAtomic } from '../flow/store.js';
 
 interface Saved {
@@ -59,6 +59,27 @@ export function projectPauseOf(floorId: string): string | undefined {
   const p = data.pauses[floorId];
   if (!p) return undefined;
   return `This floor is paused (⏸ Pause project${p.why === 'restart' ? ', for a safe restart' : ` by ${p.by}`}): the office sends its agents no prompts of its own until it's resumed`;
+}
+
+/** Floors a person is hiring on anyway, from the Team tab, after a confirm (overrideHold). */
+const overriding = new Map<string, number>();
+
+/**
+ * Why nobody new is hired on this floor now: it's paused. roster/pause.ts's floorLedger adds it to the
+ * floor's hiringPaused, so the worker manager, the queue, meetings, the roster and the Firm all stop.
+ */
+export const hireHoldOf = (floorId: string): string | undefined => (data.pauses[floorId] && !overriding.get(floorId) ? PAUSED_HIRES : undefined);
+
+/** Runs `fn` (a person's explicit hire) with the floor's hire hold lifted for it, then puts it back. */
+export async function overrideHold<T>(floorId: string, fn: () => Promise<T>): Promise<T> {
+  overriding.set(floorId, (overriding.get(floorId) ?? 0) + 1);
+  try {
+    return await fn();
+  } finally {
+    const n = (overriding.get(floorId) ?? 1) - 1;
+    if (n > 0) overriding.set(floorId, n);
+    else overriding.delete(floorId);
+  }
 }
 
 export function setProjectPause(floorId: string, p: PauseInfo | undefined) {

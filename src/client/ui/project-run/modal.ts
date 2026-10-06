@@ -1,7 +1,7 @@
 // ▶ Resume project's preview and ⏸ Pause project's confirm, each turning into the run's progress once
 // it starts (polled; hold and cancel mid-way). Every window has the ✕ and Esc of openModal.
 
-import { agentKey, chosen, estimateLine, type AgentPreview, type ResumeAction, type ResumeChoice, type ResumePreview, type RunAgent, type RunProgress } from '../../../shared/project-run';
+import { agentKey, chosen, estimateLine, PAUSED_HIRES, type AgentPreview, type ResumeAction, type ResumeChoice, type ResumePreview, type RunAgent, type RunProgress } from '../../../shared/project-run';
 import { h, openModal, toast } from '../dom';
 import { runAction, runPreview, runView, startPause, startResume } from './api';
 
@@ -189,4 +189,24 @@ export function openProgress(floor: string, title: string) {
   let stop: (() => void) | undefined;
   openModal(el, { onClose: () => stop?.() });
   stop = showProgress(floor, body, footer);
+}
+
+/** The Team tab's hire on a paused floor: hire anyway? True on yes; ✕, Esc or "Not now" is no. */
+export function confirmHireAnyway(): Promise<boolean> {
+  return new Promise((resolve) => {
+    let yes = false;
+    const go = h('button.btn.danger', { type: 'button' }, 'Hire anyway');
+    const no = h('button.btn', { type: 'button' }, 'Not now');
+    const el = h(
+      'div.modal.pr-modal',
+      { role: 'alertdialog', 'aria-label': 'Hire on a paused project' },
+      h('header', {}, h('h2', {}, `⏸ ${PAUSED_HIRES}`)),
+      h('div.body.pr-body', {}, h('p', {}, 'This project is paused: the queue, meetings and the office hire nobody new until it’s resumed. Hire this one anyway? Only this hire goes ahead; the floor stays paused.')),
+      h('footer', {}, no, go),
+    );
+    const modal = openModal(el, { onClose: () => resolve(yes) });
+    no.addEventListener('click', () => modal.close());
+    go.addEventListener('click', () => ((yes = true), modal.close()));
+    setTimeout(() => no.focus(), 30);
+  });
 }

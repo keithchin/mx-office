@@ -3,6 +3,8 @@
 
 import type { RosterView, Standup } from '../../../shared/roster/types';
 import { toast } from '../dom';
+import { PAUSED_HIRES } from '../../../shared/project-run';
+import { confirmHireAnyway } from '../project-run';
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `HTTP ${res.status}`);
@@ -34,6 +36,8 @@ export async function act(floor: string, action: string, extra: Record<string, u
     });
     return await json<RosterView>(res);
   } catch (err) {
+    // A paused floor hires nobody: the Project Manager may hire this one anyway, after a confirm.
+    if (action === 'hire' && !extra.override && (err as Error).message === PAUSED_HIRES) return (await confirmHireAnyway()) ? act(floor, action, { ...extra, override: true }) : undefined;
     toast((err as Error).message, 'warn');
     return undefined;
   }

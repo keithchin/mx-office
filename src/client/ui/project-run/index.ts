@@ -3,7 +3,7 @@
 // 14:05 · 2 waiting on you"), a progress chip while a run is going, and the two buttons (admins); and
 // "Resume all / Pause all projects" on Home. No three.js here: the flat views and Home load it.
 
-import { pauseLine, type ProjectRunView } from '../../../shared/project-run';
+import { PAUSED_HIRES, pauseLine, type ProjectRunView } from '../../../shared/project-run';
 import { store } from '../../state';
 import { h, toast } from '../dom';
 import { confirmDialog } from '../prompt';
@@ -12,6 +12,7 @@ import { openPause, openProgress, openResume } from './modal';
 import './project-run.css';
 
 export { pacingSection, restartSetting } from './settings';
+export { confirmHireAnyway } from './modal';
 
 let view: ProjectRunView | undefined;
 let viewFor: string | null = null;
@@ -34,7 +35,7 @@ function draw() {
     const resume = h('button.btn.small.pr-btn', { type: 'button', class: v.pause ? 'primary' : '', title: 'Wake the agents that have work waiting, a few at a time, each with a short brief', onclick: () => void openResume(floor, refresh) }, '▶ Resume project');
     const pause = h('button.btn.small.pr-btn', { type: 'button', title: 'Let every agent finish its turn, write a handoff note and sleep; hold the office’s prompts', onclick: () => openPause(floor, name, awake, refresh) }, '⏸ Pause project');
     bar.replaceChildren(
-      v.pause ? h('span.pr-paused', { title: v.pause.waiting.length ? `Waiting on you: ${v.pause.waiting.join(', ')}` : 'Office prompts to this floor are held' }, pauseLine(v.pause, time)) : '',
+      v.pause ? h('span.pr-paused', { title: `${PAUSED_HIRES}. Office prompts to this floor are held.${v.pause.waiting.length ? ` Waiting on you: ${v.pause.waiting.join(', ')}` : ''}` }, pauseLine(v.pause, time)) : '',
       going
         ? h('button.btn.small.pr-chip', { type: 'button', title: 'The run’s progress', onclick: () => openProgress(floor, going.kind === 'resume' ? '▶ Resuming' : '⏸ Pausing') }, progressText(going))
         : '',

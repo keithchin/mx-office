@@ -41,7 +41,8 @@ export function factsFor(deps: RunDeps, f: RunFloor, w: WorkerInfo | undefined, 
   const open = f.issues().filter((i) => i.state === 'OPEN');
   if (role && role !== 'pm') {
     const team = ROLE_BY_ID.get(role)!.team;
-    facts.issues = open.filter((i) => teamFromLabels(i.labels) === team && (i.assignees.length > 0 || i.taken)).map((i) => ({ number: i.number, title: i.title }));
+    // Its team's open issues: assigned to someone, or to nobody yet (its Lead's to pick up). Never another team's.
+    facts.issues = open.filter((i) => teamFromLabels(i.labels) === team).map((i) => ({ number: i.number, title: i.title, ...(i.assignees.length || i.taken ? {} : { unassigned: true }) }));
   } else if (!role && w) {
     const refs = issueRefs(w.title, w.prompt, w.task?.summary);
     facts.issues = open.filter((i) => refs.includes(i.number)).map((i) => ({ number: i.number, title: i.title }));

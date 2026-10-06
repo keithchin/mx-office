@@ -3,6 +3,7 @@
 // office's Ledger with hiringPaused widened to this floor's cap, so every way of hiring stops.
 
 import type { Ledger } from '../usage.js';
+import { hireHoldOf } from '../project-run/store.js';
 
 const paused = new Map<string, string>();
 
@@ -17,7 +18,8 @@ export const floorPause = (floorId: string): string | undefined => paused.get(fl
 export function floorLedger(ledger: Ledger, floorId: string): Ledger {
   return new Proxy(ledger, {
     get(target, prop) {
-      if (prop === 'hiringPaused') return target.hiringPaused ?? paused.get(floorId);
+      // The office's budget, this floor's cap, or the floor paused (⏸ Pause project: project-run/store.ts).
+      if (prop === 'hiringPaused') return target.hiringPaused ?? paused.get(floorId) ?? hireHoldOf(floorId);
       const v = Reflect.get(target, prop, target);
       return typeof v === 'function' ? v.bind(target) : v;
     },

@@ -70,8 +70,9 @@ export function restartSetting(frame: (body: Node[]) => HTMLElement): { section:
     go.toggleAttribute('disabled', !v.admin);
     latest.disabled = !v.newCommits || !v.admin;
     if (!v.newCommits) latest.checked = false;
+    // Only admins choose (the office refuses anyone else too).
     choices.replaceChildren(
-      ...(v.phase === 'timed-out' ? [btn('Keep waiting', 'wait'), btn(`Restart anyway (interrupts ${v.waitingOn.length})`, 'anyway', '.danger'), btn('Cancel', 'cancel')] : v.phase === 'waiting' || v.phase === 'failed' ? [btn('Cancel', 'cancel')] : []),
+      ...(!v.admin ? [] : v.phase === 'timed-out' ? [btn('Keep waiting', 'wait'), btn(`Restart anyway (interrupts ${v.waitingOn.length})`, 'anyway', '.danger'), btn('Cancel', 'cancel')] : v.phase === 'waiting' || v.phase === 'failed' ? [btn('Cancel', 'cancel')] : []),
     );
     log.textContent = v.log ?? '';
     log.classList.toggle('hidden', !v.log);
