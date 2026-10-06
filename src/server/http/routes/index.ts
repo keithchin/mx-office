@@ -5,6 +5,7 @@ import type { Route } from '../router.js';
 import { agentRoutes } from './agents.js';
 import { analysisRoutes } from './analysis.js';
 import { firmRoutes } from './firm.js';
+import { flowRoutes } from './flows.js';
 import { auditRoutes } from './audit.js';
 import { chatterRoutes } from './chatter.js';
 import { authRoutes } from './auth.js';
@@ -57,6 +58,7 @@ export const routes: readonly Route[] = [
   auditRoutes.page,
   auditRoutes.export,
   auditRoutes.settings,
+  flowRoutes.list,
   homeRoutes.stats,
   homeRoutes.overview,
   firmRoutes.view,

@@ -1,11 +1,14 @@
-// One project's setup as a list of steps that runs to the end or stops at the first failure, saved
-// to a file after every step so it can carry on where it stopped: after a Retry, or after the office
-// restarted halfway. Each step checks what's already done before doing anything, so running one
-// again is always safe; this file only decides which step runs next and keeps the record.
+// One project's setup as a workflow on the office's engine (server/flow/): its steps in order, run
+// to the end or stopped at the first failure, checkpointed after every step so it carries on where it
+// stopped: after a Retry, or after the office restarted halfway. Each step checks what's already done
+// before doing anything, so running one again is always safe; the network steps try again by
+// themselves when GitHub or the connection hiccups. This file keeps the wizard's record of the job
+// (the state the engine runs on) and the steps' log; the engine decides what runs next.
 
-import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import { interviewModeOf, SETUP_STEPS, type JobView, type ProjectPlan, type ProjectRole, type StepId, type StepStatus } from '../../shared/wizard.js';
+import { FileStore, FlowEngine, transientError, type RetryPolicy, type RunRecord, type RunStatus, type StepCtx } from '../flow/index.js';
 
 export interface JobState {
   id: string;
@@ -43,7 +46,17 @@ export interface StepIO {
 
 export type StepImpl = (job: JobState, io: StepIO) => Promise<StepResult>;
 
+/** The setup's workflow on the engine. */
+export const SETUP_FLOW = 'new-project';
+const SETUP_FLOW_VERSION = 1;
+
 const LOG_KEPT = 1500;
+
+/** The steps that talk to GitHub or download something: a dropped connection or a rate limit is tried again, twice. */
+const NETWORK: RetryPolicy = { maxAttempts: 3, baseMs: 3000, maxMs: 30_000, retryOn: transientError };
+const RETRIES: Partial<Record<StepId, RetryPolicy>> = { repo: NETWORK, clone: NETWORK, app: NETWORK, commit: NETWORK, issue: NETWORK };
+
+const RESTARTED = 'The office restarted in the middle of this step: Retry carries on from here';
 
 /** A job's id: its repository, so the same project can't be set up twice at once. */
 export const jobId = (owner: string, name: string) => `${owner}__${name}`.toLowerCase().replace(/[^a-z0-9_.-]/g, '-');
@@ -69,27 +82,76 @@ export function viewOf(job: JobState): JobView {
   };
 }
 
+const finished = (s: StepStatus) => s === 'done' || s === 'skipped';
+
+/** A job saved before the engine (a bare JobState in <wizard dir>/<id>.json) as a run checkpoint. */
+export function runOfLegacyJob(job: JobState): RunRecord<JobState> {
+  const status: RunStatus = job.status === 'running' ? 'interrupted' : job.status === 'idle' ? 'pending' : job.status;
+  const step = SETUP_STEPS.find((s) => !finished(job.steps[s.id]?.status ?? 'pending'))?.id;
+  return {
+    format: 1,
+    runId: job.id,
+    workflow: SETUP_FLOW,
+    version: SETUP_FLOW_VERSION,
+    status: status === 'done' && step ? 'pending' : status,
+    step: status === 'done' && !step ? undefined : (step ?? SETUP_STEPS[0].id),
+    state: job,
+    attempts: {},
+    loops: {},
+    usage: { cost: 0, ms: 0 },
+    floor: job.floor,
+    by: job.by,
+    seq: 0,
+    history: [],
+    createdAt: job.startedAt,
+    updatedAt: job.updatedAt,
+  };
+}
+
 /**
- * The jobs, kept in <dir>/<id>.json. `redact` runs over every log line before it's kept, so a
- * secret a command echoes never reaches the file or a browser.
+ * The jobs: runs of the setup workflow on `engine` (the office's, or one of its own under `dir` when
+ * none is given). Jobs saved before the engine, as <dir>/<id>.json, are taken in on load and their
+ * file renamed <id>.json.migrated. `redact` runs over every log line before it's kept, so a secret
+ * a command echoes never reaches the file or a browser.
  */
 export class JobBook {
-  private jobs = new Map<string, JobState>();
-  private running = new Set<string>();
+  readonly engine: FlowEngine;
+  /** The step implementations of each running job (given to run()). */
+  private impls = new Map<string, Record<StepId, StepImpl>>();
 
   constructor(
     private dir: string,
     private redact: (line: string) => string = (l) => l,
+    engine?: FlowEngine,
   ) {
-    this.load();
+    this.engine = engine ?? new FlowEngine({ store: new FileStore(dir) });
+    this.engine.register<JobState>({
+      id: SETUP_FLOW,
+      version: SETUP_FLOW_VERSION,
+      steps: SETUP_STEPS.map(({ id, label }) => ({
+        id,
+        label,
+        done: (job: JobState) => finished(job.steps[id].status),
+        retry: RETRIES[id],
+        run: (ctx: StepCtx<JobState>) => this.step(ctx, id, label),
+      })),
+      log: (job, line) => this.log(job, line),
+      floorOf: (job) => job.floor,
+    });
+    this.migrate();
+    for (const job of this.all()) this.tidy(job);
   }
 
   get(id: string): JobState | undefined {
-    return this.jobs.get(id);
+    const run = this.engine.get<JobState>(id);
+    return run?.workflow === SETUP_FLOW ? run.state : undefined;
   }
 
   all(): JobState[] {
-    return [...this.jobs.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+    return this.engine
+      .list({ workflow: SETUP_FLOW })
+      .map((r) => r.state as JobState)
+      .sort((a, b) => b.updatedAt - a.updatedAt);
   }
 
   byFloor(floor: string): JobState | undefined {
@@ -97,12 +159,17 @@ export class JobBook {
   }
 
   add(job: JobState) {
-    this.jobs.set(job.id, job);
+    const run = this.engine.get<JobState>(job.id);
+    if (!run) {
+      this.engine.create(SETUP_FLOW, job, { runId: job.id, floor: job.floor, by: job.by });
+      return;
+    }
+    run.state = job;
     this.save(job);
   }
 
   isRunning(id: string): boolean {
-    return this.running.has(id);
+    return this.engine.isActive(id);
   }
 
   log(job: JobState, line: string) {
@@ -136,64 +203,75 @@ export class JobBook {
    * fails. Resolves when it stops; a job already running isn't started twice.
    */
   async run(job: JobState, impls: Record<StepId, StepImpl>): Promise<void> {
-    if (this.running.has(job.id)) return;
-    this.running.add(job.id);
+    if (this.engine.isActive(job.id)) return;
+    if (this.get(job.id) !== job) this.add(job);
+    this.impls.set(job.id, impls);
     job.status = 'running';
-    this.save(job);
-    const io: StepIO = { log: (line) => this.log(job, line) };
     try {
-      for (const { id, label } of SETUP_STEPS) {
-        const st = job.steps[id];
-        if (st.status === 'done' || st.status === 'skipped') continue;
-        job.steps[id] = { status: 'running' };
-        this.log(job, `▶ ${label}`);
-        this.save(job);
-        let throttle = 0;
-        // Long steps save now and then, so a browser polling sees their output.
-        const ioStep: StepIO = {
-          log: (line) => {
-            io.log(line);
-            if (Date.now() - throttle > 1000) {
-              throttle = Date.now();
-              job.updatedAt = Date.now();
-            }
-          },
-        };
-        try {
-          const r = await impls[id](job, ioStep);
-          job.steps[id] = { status: r.status, detail: r.detail ? this.redact(r.detail) : undefined };
-          this.log(job, `${r.status === 'done' ? '✓' : '↷'} ${label}${r.detail ? ` — ${this.redact(r.detail)}` : ''}`);
-          this.save(job);
-        } catch (err) {
-          const why = this.redact((err as Error).message || String(err));
-          job.steps[id] = { status: 'failed', detail: why };
-          job.status = 'failed';
-          this.log(job, `✗ ${label}: ${why}`);
-          this.save(job);
-          return;
-        }
-      }
-      job.status = 'done';
-      this.save(job);
+      // From the top every time: the done steps are skipped, and an edit may have reset any of them.
+      const run = await this.engine.start(job.id, { from: SETUP_STEPS[0].id });
+      job.status = run.status === 'done' ? 'done' : 'failed';
+    } catch (err) {
+      job.status = 'failed';
+      this.log(job, `✗ ${this.redact((err as Error).message)}`);
     } finally {
-      this.running.delete(job.id);
+      this.impls.delete(job.id);
     }
+    this.save(job);
   }
 
   save(job: JobState) {
     job.updatedAt = Date.now();
+    this.engine.save(job.id);
+  }
+
+  /** One step of the setup, as the engine runs it: marked running, its implementation, then done, skipped or failed. */
+  private async step(ctx: StepCtx<JobState>, id: StepId, label: string): Promise<void> {
+    const job = ctx.state;
+    const impl = this.impls.get(job.id)?.[id];
+    if (!impl) throw new Error(RESTARTED);
+    job.steps[id] = { status: 'running' };
+    this.log(job, `▶ ${label}${ctx.attempt > 1 ? ` (try ${ctx.attempt} of ${ctx.maxAttempts})` : ''}`);
+    this.save(job);
+    let throttle = 0;
+    // Long steps note the time now and then, so a browser polling sees their output.
+    const io: StepIO = {
+      log: (line) => {
+        this.log(job, line);
+        if (Date.now() - throttle > 1000) {
+          throttle = Date.now();
+          job.updatedAt = Date.now();
+        }
+      },
+    };
+    let r: StepResult;
     try {
-      mkdirSync(this.dir, { recursive: true, mode: 0o700 });
-      const file = path.join(this.dir, `${job.id}.json`);
-      writeFileSync(`${file}.tmp`, JSON.stringify(job, null, 2), { mode: 0o600 });
-      renameSync(`${file}.tmp`, file);
+      r = await impl(job, io);
     } catch (err) {
-      console.error(`agent-office: couldn't save the setup of ${job.id}: ${(err as Error).message}`);
+      const why = this.redact((err as Error).message || String(err));
+      job.steps[id] = { status: 'failed', detail: why };
+      this.log(job, `✗ ${label}: ${why}`);
+      throw new Error(why);
+    }
+    const detail = r.detail ? this.redact(r.detail) : undefined;
+    job.steps[id] = { status: r.status, detail };
+    this.log(job, `${r.status === 'done' ? '✓' : '↷'} ${label}${detail ? ` — ${detail}` : ''}`);
+  }
+
+  /** What every loaded job gets: old answers in today's words, steps added since, and a step the office stopped in marked for a Retry. */
+  private tidy(job: JobState) {
+    // Saved before the toolkit's own words: attended/unattended read as steering/auto.
+    job.plan.interview = interviewModeOf(job.plan.interview);
+    for (const s of SETUP_STEPS) job.steps[s.id] ??= { status: 'pending' };
+    if (job.status === 'running' && !this.engine.isActive(job.id)) {
+      for (const s of SETUP_STEPS) if (job.steps[s.id].status === 'running') job.steps[s.id] = { status: 'failed', detail: RESTARTED };
+      job.status = 'failed';
+      this.engine.save(job.id);
     }
   }
 
-  /** The jobs saved before; one that was mid-step when the office stopped is marked failed, for a Retry to carry on. */
-  private load() {
+  /** Takes in the jobs saved before the engine, as runs. */
+  private migrate() {
     let files: string[] = [];
     try {
       files = readdirSync(this.dir).filter((f) => f.endsWith('.json'));
@@ -201,17 +279,12 @@ export class JobBook {
       return;
     }
     for (const f of files) {
+      const file = path.join(this.dir, f);
       try {
-        const job = JSON.parse(readFileSync(path.join(this.dir, f), 'utf8')) as JobState;
-        if (!job?.id || !job.plan || !job.steps) continue;
-        // Saved before the toolkit's own words: attended/unattended read as steering/auto.
-        job.plan.interview = interviewModeOf(job.plan.interview);
-        for (const s of SETUP_STEPS) job.steps[s.id] ??= { status: 'pending' };
-        if (job.status === 'running') {
-          for (const s of SETUP_STEPS) if (job.steps[s.id].status === 'running') job.steps[s.id] = { status: 'failed', detail: 'The office restarted in the middle of this step: Retry carries on from here' };
-          job.status = 'failed';
-        }
-        this.jobs.set(job.id, job);
+        const job = JSON.parse(readFileSync(file, 'utf8')) as JobState & { format?: unknown };
+        if (!job?.id || !job.plan || !job.steps || 'format' in job) continue;
+        if (!this.engine.get(job.id)) this.engine.adopt(runOfLegacyJob(job) as RunRecord);
+        renameSync(file, `${file}.migrated`);
       } catch {
         // not one of ours
       }

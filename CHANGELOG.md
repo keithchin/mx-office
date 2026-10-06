@@ -44,7 +44,18 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   the model picked in the wizard (Opus by default), now shown as "Chief Analyst's model for Discovery".
   Its role's model on the Team tab stays for later hires.
 
+- **New project wizard survives restarts and flaky steps**: the setup now runs on the office's new
+  workflow engine. It's saved after every step, so an office restart halfway loses nothing: the step
+  it was on shows as failed and 🔁 Retry carries on from there. Creating the repository, cloning,
+  creating the app, pushing and opening the Discovery issue try again by themselves (up to three tries,
+  waiting a few seconds longer each time) when the connection drops or GitHub is busy; the log says
+  *↻ … trying again in 3s*. Otherwise the wizard looks and works as before.
+
 ### To know
+- Workflows (Docs → Automation → Workflows): runs are kept in the office's data folder under
+  `flows/<workflow>/`, each run's start, finish, failure and pause is in the Audit log (`flow.*`, by
+  Workflows), and `GET /api/flows` lists them. Setups saved before this are taken in on first use; their
+  old file in `wizard/` is kept as `<id>.json.migrated`.
 - Setups saved with "attended"/"unattended" read as Steering/Auto. Creating the app takes about 15
   seconds with `mx`; `mxcli new` takes longer (it downloads MxBuild first).
 
