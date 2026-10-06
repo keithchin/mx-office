@@ -6,7 +6,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Improved
+- **Folders follow the new workspace layout**: with nothing picked in Settings → Connections → Folders and no
+  environment variable, the office looks for the toolkit at `agent-spike/mendix-toolkit` and mxcli at
+  `agent-spike/tools/mxcli`, then at their old places (`mxcli-project-toolkit`, `bin`), so it works before and
+  after the folders are reorganised.
 
 ## 2026-10-06 · release 8 (`17ebd7f`)
 
