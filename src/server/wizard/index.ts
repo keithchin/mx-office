@@ -12,6 +12,7 @@ import type { Ctx } from '../office/context.js';
 import { tildify } from '../building.js';
 import { findMpr } from '../liveapp/checkout.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { everHired } from '../roster/store.js';
 import { adminTokenConfigured, redactor } from './admin-token.js';
 import { configProblems, defaultMendix, mendixVersions, toolkitEnv, wizardConfig, type WizardConfig } from './config.js';
 import { existingAnswers, parseIntakeTemplate } from './intake.js';
@@ -19,6 +20,7 @@ import { JobBook, jobId, newJob, viewOf, type JobState } from './job.js';
 import { mprVersion } from './mendix-app.js';
 import { cleanPlan } from './plan.js';
 import { setupView } from './setup.js';
+import { withFloorToolkitEnv } from '../toolkit-env.js';
 import { bashPath, runCommand } from './run.js';
 import { setupSteps, type FloorRef, type SetupDeps } from './steps.js';
 
@@ -99,8 +101,8 @@ export class Wizard {
     const plan = cleanPlan({ ...(raw as object), owner: job.plan.owner, name: job.plan.name, kind: job.plan.kind }, mendixVersions(this.cfg.mendixDir), this.cfg.org);
     if (typeof plan === 'string') return plan;
     const moved = plan.mendix !== job.plan.mendix;
-    job.plan = { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId };
-    this.book.reset(job, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
+    // Roles ticked since the team step ran are hired too (JobBook.edit), and only those.
+    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
     this.go(job);
     return viewOf(job);
   }
@@ -120,7 +122,7 @@ export class Wizard {
     if (this.checking.has(floor.id)) return undefined;
     this.checking.add(floor.id);
     const dir = floor.dir;
-    void runCommand(this.cfg.bash, [bashPath(path.join(this.cfg.toolkitDir, 'bin', 'gate-check.sh')), bashPath(dir)], { cwd: dir, env: toolkitEnv(this.cfg), timeoutMs: 10 * 60_000, allowFail: true })
+    void runCommand(this.cfg.bash, [bashPath(path.join(this.cfg.toolkitDir, 'bin', 'gate-check.sh')), bashPath(dir)], { cwd: dir, env: withFloorToolkitEnv(dir, toolkitEnv(this.cfg)), timeoutMs: 10 * 60_000, allowFail: true })
       .catch((err: Error) => console.error(`agent-office: gate-check on ${floor.def.name} failed: ${err.message}`))
       .finally(() => {
         this.checking.delete(floor.id);
@@ -193,11 +195,15 @@ export class Wizard {
         const m = roster.data(floor.id).members[role];
         return (m.phase === 'active' || m.phase === 'benching') && !!roster.workerOf(teamFloor(ctx, floor), m);
       },
-      // The Team tab's own hire: the role's fixed name, its Playbook, and the model the roster has for it (the role's default on a new floor).
-      hire: async (floorId, role, by, account, task) => {
+      known: (floorId, role) => {
+        const floor = ctx.floors.get(floorId);
+        return !!floor && everHired(rosterOf(ctx).data(floor.id).members[role]);
+      },
+      // The Team tab's own hire: the role's fixed name, its Playbook, and the model the roster has for it (the role's default on a new floor), or `model` for this one hire.
+      hire: async (floorId, role, by, account, task, model) => {
         const floor = ctx.floors.get(floorId);
         if (!floor) return 'No such floor';
-        return rosterOf(ctx).members.hire(teamFloor(ctx, floor), role, by, account, task);
+        return rosterOf(ctx).members.hire(teamFloor(ctx, floor), role, by, account, task, model);
       },
     };
   }

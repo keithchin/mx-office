@@ -72,7 +72,8 @@ export const SMALL_TIER_LIMITS = '1 module, 8 screens, 25 use cases';
 
 /**
  * The roles a project can be staffed with: the ids are the roster's (shared/roster/roles.ts), and the
- * wizard's `team` step hires the ticked ones on the new floor, each on its role's own model.
+ * wizard's `team` step hires the ticked ones on the new floor, each on its role's own model (but a Chief
+ * Analyst handed the Discovery issue, on the Discovery model). Roles ticked in a later edit are hired then.
  */
 export const PROJECT_ROLES = [
   { id: 'pm', label: 'Project Coordinator', icon: '📋' },
@@ -141,7 +142,7 @@ export interface ProjectPlan {
   clients: string[];
   operators: string[];
   roles: ProjectRole[];
-  /** Open a "Discovery" issue for the Chief Analyst, and maybe queue it. */
+  /** Open a "Discovery" issue for the Chief Analyst, and maybe queue it (or hand it to the Chief Analyst): `model` is what it runs on either way. */
   discovery: { issue: boolean; queue: boolean; model: string };
   /** Nobody configured the admin token: the operator made the repository on GitHub by hand. */
   createdByHand: boolean;

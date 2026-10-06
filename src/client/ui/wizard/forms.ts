@@ -250,8 +250,10 @@ export function teamPage(c: PageCtx): HTMLElement {
   const issue = h('input', { type: 'checkbox', checked: d.discovery.issue }) as HTMLInputElement;
   issue.addEventListener('change', () => ((d.discovery.issue = issue.checked), issue.checked || (d.discovery.queue = false), c.redraw()));
   const queue = h('input', { type: 'checkbox', checked: d.discovery.queue, disabled: !d.discovery.issue }) as HTMLInputElement;
-  queue.addEventListener('change', () => (d.discovery.queue = queue.checked));
-  const model = h('select', { 'aria-label': 'Model', disabled: !d.discovery.issue }, ...['opus', 'sonnet', 'haiku'].map((m) => h('option', { value: m, selected: d.discovery.model === m }, m))) as HTMLSelectElement;
+  queue.addEventListener('change', () => ((d.discovery.queue = queue.checked), c.redraw()));
+  // Handed to the Chief Analyst, the issue's model is the one it's hired on for it (its role's own stays for later hires).
+  const handed = analyst && d.discovery.queue;
+  const model = h('select', { 'aria-label': handed ? 'Chief Analyst’s model for Discovery' : 'Model', disabled: !d.discovery.issue }, ...['opus', 'sonnet', 'haiku'].map((m) => h('option', { value: m, selected: d.discovery.model === m }, m))) as HTMLSelectElement;
   model.addEventListener('change', () => (d.discovery.model = model.value));
   return h(
     'div.wz-page',
@@ -264,7 +266,10 @@ export function teamPage(c: PageCtx): HTMLElement {
     h('h3.wz-h', {}, 'Discovery'),
     h('label.wz-check', {}, issue, ' Open a “Discovery” issue for the Chief Analyst (Stages P → 4, stopping at every ✋ gate)'),
     h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, queue, analyst ? ' Hand it to the Chief Analyst now, as its first task' : ' Queue it now for an agent'), analyst ? null : model),
-    analyst && d.discovery.issue ? h('p.setting-note.wz-indent', {}, 'The Chief Analyst is on the team, so it works the issue itself, on its role’s model.') : null,
+    handed ? h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, 'Chief Analyst’s model for Discovery ', model)) : null,
+    analyst && d.discovery.issue
+      ? h('p.setting-note.wz-indent', {}, handed ? 'The Chief Analyst is hired on this model to work the issue; its role’s own model (Team tab) is for its later hires.' : 'The Chief Analyst is on the team, so it works the issue itself, on its role’s model.')
+      : null,
     c.info.offline ? h('p.wz-note', {}, '🧪 Offline test office: the issue is written to a file, nobody is hired and nothing is queued.') : null,
   );
 }
@@ -282,7 +287,7 @@ export function reviewPage(c: PageCtx): HTMLElement {
     ['Client', d.clients.join(', ') || '—'],
     ['Operators', d.operators.join(', ') || '—'],
     ['Roles', PROJECT_ROLES.filter((r) => d.roles.includes(r.id)).map((r) => r.label).join(', ') || '—'],
-    ['Discovery', d.discovery.issue ? `issue for the Chief Analyst${d.discovery.queue ? (analyst ? ', handed to it when it’s hired' : `, queued on ${d.discovery.model}`) : ''}` : 'no issue'],
+    ['Discovery', d.discovery.issue ? `issue for the Chief Analyst${d.discovery.queue ? (analyst ? `, handed to it when it’s hired, on ${d.discovery.model}` : `, queued on ${d.discovery.model}`) : ''}` : 'no issue'],
   ];
   const skip = new Set<string>([
     ...(d.kind === 'change' ? ['repo', 'app'] : []),

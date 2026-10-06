@@ -54,9 +54,10 @@ export class Members {
 
   /**
    * Hires a role with its fixed name, or wakes it when it's asleep (its session carries on). A
-   * benched or never-hired role starts fresh from its Playbook and its latest handoff note.
+   * benched or never-hired role starts fresh from its Playbook and its latest handoff note. `model`, when
+   * given, is this one hire's (the wizard's Discovery model for the Chief Analyst): the role keeps its own.
    */
-  async hire(floor: TeamFloor, role: RoleId, by: string, owner?: string, task?: string): Promise<string | undefined> {
+  async hire(floor: TeamFloor, role: RoleId, by: string, owner?: string, task?: string, model?: string): Promise<string | undefined> {
     const d = this.roster.data(floor.id);
     const m = d.members[role];
     const def = ROLE_BY_ID.get(role)!;
@@ -71,11 +72,12 @@ export class Members {
     const paused = this.roster.pauseOf(d);
     if (paused) return paused;
     const owed = this.roster.escalations.owed(floor, role);
-    const r = await floor.hire({ name: m.name, model: m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task, owed.lines), owner, by, team: def.team });
+    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task, owed.lines), owner, by, team: def.team });
     if (typeof r === 'string') return r;
     owed.mark();
     m.workerId = r.id;
     m.phase = 'active';
+    m.hiredAt = this.roster.deps.now();
     m.benchAskedAt = undefined;
     m.benchSawBusy = undefined;
     // Its Playbook, its team's subagents and the journals, in the folder it works in, before its
@@ -86,7 +88,7 @@ export class Members {
       floor.toast(`Couldn't write ${m.name}'s Playbook: ${(err as Error).message}`, 'warn');
     }
     floor.toast(`${by} hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`);
-    audit.record({ floor: floor.id, actor: byWhom(by, owner), action: 'worker.hire', target: { kind: 'worker', id: r.id, label: m.name }, summary: `Hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`, details: { role, model: m.model, task: task ? { length: task.length } : undefined } });
+    audit.record({ floor: floor.id, actor: byWhom(by, owner), action: 'worker.hire', target: { kind: 'worker', id: r.id, label: m.name }, summary: `Hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`, details: { role, model: model || m.model, task: task ? { length: task.length } : undefined } });
     this.roster.touch(floor);
     return undefined;
   }

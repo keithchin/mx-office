@@ -27,11 +27,19 @@ export interface MemberRecord {
   benchAskedAt?: number;
   benchSawBusy?: boolean;
   benchedAt?: number;
+  /** When it was last hired: kept after it's benched or sent home, so the wizard never hires a role the floor has had again. */
+  hiredAt?: number;
   /** Its latest handoff note, what a fresh hire is primed with. */
   handoff?: { at: number; text: string };
   /** What the Project Manager changed of its skills (shared/roster/skills.ts): on/off and gate per skill. */
   skills?: SkillOverrides;
 }
+
+/**
+ * Whether the floor has had this member in any state: at work, writing its handoff, benched, or sent
+ * home (a member sent home without a handoff goes back to 'none', but keeps its hiredAt).
+ */
+export const everHired = (m: MemberRecord) => m.phase !== 'none' || m.hiredAt !== undefined || !!m.handoff || !!m.workerId;
 
 export interface RosterData {
   settings: RosterSettings;

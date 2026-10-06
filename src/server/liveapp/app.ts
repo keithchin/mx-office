@@ -12,6 +12,7 @@ import { databaseName, type LiveAppConfig } from './config.js';
 import { isUp, nextStatus, type LiveAppEvent } from './machine.js';
 import { pickPorts } from './ports.js';
 import { pgBinDir, startTree, stopTree } from './process.js';
+import { floorToolkitEnv } from '../toolkit-env.js';
 
 /** Lines of the log kept for the page. */
 const TAIL = 30;
@@ -163,7 +164,8 @@ export class LiveApp {
     const args = ['run', '--local', '-p', path.basename(mpr), '--app-port', String(app), '--admin-port', String(admin), '--serve-port', String(serve)];
     args.push('--db-host', `${cfg.db.host.includes(':') ? `[${cfg.db.host}]` : cfg.db.host}:${cfg.db.port}`, '--db-user', cfg.db.user, '--db-password', cfg.db.password, '--db-name', databaseName(this.d.floorId), '--ensure-db');
     this.note(`$ mxcli ${args.map((a, i) => (args[i - 1] === '--db-password' ? '***' : a)).join(' ')}`);
-    const child = startTree(this.d.mxcli!, args, path.dirname(mpr), { PGPASSWORD: cfg.db.password }, pgBinDir());
+    // The floor's toolkit.env (its MXBUILD_PATH) over the office's own, as for its workers.
+    const child = startTree(this.d.mxcli!, args, path.dirname(mpr), { ...floorToolkitEnv(this.d.floorDir), PGPASSWORD: cfg.db.password }, pgBinDir());
     this.child = child;
     this.set({ appPort: app });
     let partial = '';

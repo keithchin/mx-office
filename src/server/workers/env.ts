@@ -1,5 +1,6 @@
 // The environment the workers start with: the office's own, minus a parent agent session's.
 import { PROVIDERS } from '../providers/index.js';
+import { withFloorToolkitEnv } from '../toolkit-env.js';
 
 // Env vars from a parent agent session (e.g. starting the office from inside Claude Code) that
 // would make a worker think it is a child session — that silently turns off transcript saving,
@@ -13,9 +14,13 @@ const SCRUB_ENV = new Set([
 const SCRUB_PREFIXES = [...Object.values(PROVIDERS).flatMap((p) => p.scrubPrefixes ?? []), 'NEBULA_', 'AGENT_OFFICE_'];
 const scrubbed = (k: string) => SCRUB_ENV.has(k) || SCRUB_PREFIXES.some((p) => k.startsWith(p));
 
-/** The office's environment, minus anything that would make a child think it's a nested session. */
-export function childEnv(): Record<string, string> {
+/**
+ * The office's environment, minus anything that would make a child think it's a nested session. For
+ * something that runs for a floor (`floorDir`), with that floor's .claude/toolkit.env laid over it, so
+ * the toolkit's scripts build with the project's own mxbuild rather than one the office inherited.
+ */
+export function childEnv(floorDir?: string): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !scrubbed(k)) env[k] = v;
-  return env;
+  return floorDir ? withFloorToolkitEnv(floorDir, env) : env;
 }

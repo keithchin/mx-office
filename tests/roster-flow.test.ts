@@ -10,6 +10,7 @@ import path from 'node:path';
 import type { WorkerInfo, WorkerStatus } from '../src/shared/protocol.js';
 import type { IssueDraft } from '../src/shared/roster/journal.js';
 import { Roster } from '../src/server/roster/index.js';
+import { everHired } from '../src/server/roster/store.js';
 import { floorLedger, floorPause } from '../src/server/roster/pause.js';
 import type { HireAsk, TeamFloor } from '../src/server/roster/types.js';
 import type { Ledger } from '../src/server/usage.js';
@@ -140,6 +141,23 @@ test('hiring a role uses its fixed name, model and Playbook, and writes the team
   roster.members.rename(floor, 'lead-tester', 'Ros');
   assert.equal(w.name, 'Ros');
   assert.match(String(roster.members.rename(floor, 'pm', 'ros')), /already on the team/);
+});
+
+test("a hire can be on a model of its own (the wizard's Discovery model) while the role keeps its own; a member sent home is still one the floor has had", async () => {
+  const { floor, roster, data } = setup();
+  assert.equal(everHired(data().members['chief-analyst']), false, 'never hired');
+  const own = data().members['chief-analyst'].model;
+  assert.equal(await roster.members.hire(floor, 'chief-analyst', 'Keith', undefined, 'Work issue #7', 'haiku'), undefined);
+  assert.equal(floor.hires[0].model, 'haiku');
+  assert.equal(data().members['chief-analyst'].model, own, "the role's model is unchanged");
+  assert.ok(everHired(data().members['chief-analyst']));
+  // Sent home by hand with no handoff note: back to 'none', but the floor has had it.
+  await floor.stop(floor.workers()[0].id);
+  assert.equal(data().members['chief-analyst'].phase, 'none');
+  assert.ok(everHired(data().members['chief-analyst']), 'sent home on purpose still counts');
+  // Without a model, the role's own.
+  await roster.members.hire(floor, 'lead-tester', 'Keith');
+  assert.equal(floor.hires[1].model, data().members['lead-tester'].model);
 });
 
 test('an idle Lead is benched after the idle minutes: handoff note first, then stopped, then re-hired fresh from it', async () => {
