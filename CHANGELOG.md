@@ -6,7 +6,29 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **▶ Resume project** (Command Center heading and team pages; **▶ Resume all projects** on Home): a
+  preview first, listing every asleep or benched agent with the work waiting for it and why (answers owed,
+  held prompts, queued relays and notes, cut off mid-turn, failing PR checks, an assigned issue, an
+  unhanded standup page) plus safety checks (the spend cap blocks, Studio mode warns, a missing worktree or
+  lost session re-hires from the handoff note, a merged branch offers Send home, behind or uncommitted is
+  noted). Wakes those with work by default, the Coordinator first and then the most blocking Leads, 2 at a
+  time 45 s apart (team settings), each with a short brief as your turn. Runs as a checkpointed workflow
+  that carries on after a restart; audited as `resume.started` / `agent.woken` / `agent.skipped` /
+  `resume.finished`.
+- **⏸ Pause project** (and **⏸ Pause all projects**): agents finish their turn (never interrupted, nothing
+  typed into a question), write a handoff note and sleep with their session kept; the office's own prompts
+  to the floor (nudges, standups, relays, review nudges, Firm interviews) are held until it's resumed, while
+  what a person sends still goes through. Shown as *⏸ Paused by … at … · N waiting on you*.
+- **🔁 Restart safely** (**⚙️ Settings → Workers**, or `POST /api/office/restart`): pauses every project,
+  waits until no agent is mid-turn (timeout: keep waiting, restart anyway, or cancel), optionally builds new
+  commits first, then exits with code 75 for a looping launcher; the next start resumes exactly the floors
+  it paused.
+
+### To know
+- The launcher needs the restart loop (`AGENT_OFFICE_LAUNCHER_LOOP=1` and `do { … } while ($code -eq 75)`,
+  in Running the office → Releasing and restarting safely); without it, Restart safely only pauses, waits
+  and exits. The pauses live in `<office data>/project-run.json`, so they survive a restart.
 
 ## 2026-10-06 · release 10 (`3db2145`)
 

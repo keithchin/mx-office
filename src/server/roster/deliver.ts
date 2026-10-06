@@ -11,12 +11,14 @@
 // It also holds the floor's daily spend cap: once it's reached, prompts the office or another agent
 // would send (origin 'office' or 'agent') aren't sent, so no new turn starts on the office's say-so;
 // what a person sends ('person': their answers, the Team tab) still goes through, and a turn already
-// running is never stopped.
+// running is never stopped. A floor paused with ⏸ Pause project (project-run/store.ts) holds the
+// same way: nothing of the office's or another agent's goes in until it's resumed; a person's does.
 
 import type { WorkerInfo, WorkerStatus } from '../../shared/protocol.js';
 import { isAsleepStatus } from './bench.js';
 import type { Roster } from './index.js';
 import { owedAnswersPrompt } from './prompts.js';
+import { projectPauseOf } from '../project-run/store.js';
 import type { TeamFloor } from './types.js';
 
 /** Who a prompt is from: a person, the office itself, or another agent (`office-workers tell`). */
@@ -59,9 +61,9 @@ export class Delivery {
 
   constructor(private roster: Roster) {}
 
-  /** Why the office starts no turn on this floor now: its daily spend cap is reached. */
+  /** Why the office starts no turn on this floor now: its daily spend cap is reached, or it's paused (⏸ Pause project). */
   paused(floor: TeamFloor): string | undefined {
-    return this.roster.pauseOf(this.roster.data(floor.id));
+    return this.roster.pauseOf(this.roster.data(floor.id)) ?? projectPauseOf(floor.id);
   }
 
   /** Types `text` into agent `w`, or wakes it with it, holds it, or says why not. */
@@ -70,8 +72,10 @@ export class Delivery {
     // A person's prompt with no name is still theirs: the turn it starts flags when done (OFFICE_BY's wouldn't).
     if (o.origin === 'person' && !o.by) o = { ...o, by: 'The Project Manager' };
     if (o.origin !== 'person') {
-      const p = this.paused(floor);
-      if (p) return { status: 'refused', why: `Spend cap reached: ${p}` };
+      const cap = this.roster.pauseOf(this.roster.data(floor.id));
+      if (cap) return { status: 'refused', why: `Spend cap reached: ${cap}` };
+      const held = projectPauseOf(floor.id);
+      if (held) return { status: 'refused', why: held };
     }
     if (isAsleepStatus(w.status)) {
       if (!o.wake) return { status: 'refused', why: `${w.name} is asleep` };

@@ -53,9 +53,42 @@ Close the **Agent Office** PowerShell window (or press Ctrl+C in it). This stops
 ## Restarting
 
 > [!WARNING]
-> On Windows, workers are child processes of the office server. **Restarting the office stops all running agents**, even mid-task. Check the board first, and avoid restarting while agents are in the middle of something.
+> On Windows, workers are child processes of the office server. **Restarting the office stops all running agents**, even mid-task. Check the board first, or use [🔁 Restart safely](#releasing-and-restarting-safely), which waits for agents to finish their turn.
 
 Their sessions are saved in each floor's `workers.json`. When the office comes back, it resumes the agents that were **mid-turn** (working, or asking something) from their saved sessions, with a prompt to carry on that reminds them their escalations are still open. The rest stay asleep (💤), sessions kept, and wake when prompted (by you, or by the office with an answer, a relay or a standup) or when you press **R** at their desk: a restart no longer starts a session for every desk. If a resume fails, a fresh session starts and a toast says so. What the office still had to pass on to the Project Coordinator and the Leads is kept in the roster file, so it isn't lost either.
+
+## Releasing and restarting safely
+
+Before a release, a migration, or anything else that restarts the office, stop the work cleanly:
+
+- **One project:** **⏸ Pause project** in its Command Center heading. Every agent finishes its turn, writes a handoff note and sleeps, and the office's own prompts to that floor are held. Afterwards, **▶ Resume project** wakes the agents that have work waiting. See [Resume and pause](../using-the-office/resume-and-pause.md).
+- **The whole office:** **⚙️ Settings › 🤖 Workers › 🔁 Restart safely** (admins), or `POST /api/office/restart` from a script (a signed-in cookie, JSON body: `{ "action": "start", "build": true, "timeoutMin": 10 }`; `action` can also be `wait`, `anyway` or `cancel`).
+
+🔁 Restart safely does this:
+
+1. **Pauses every project** that isn't already paused, using ⏸ Pause project. It writes the floors it paused to `<office data>/restart-pending.json`. Floors a person had already paused aren't included.
+2. **Waits** until every agent on every floor is idle, asleep or asking something in its terminal. Settings shows who it's still waiting on, for example *Waiting on 2: Anita mid-turn, Hedy handing off*. After the timeout (10 minutes by default, 1 to 120) you choose: **Keep waiting**, **Restart anyway** (interrupts only the agents still working; the audit log names them), or **Cancel** (resumes the projects it paused).
+3. **Builds first, if asked.** When the office's own checkout has commits it isn't running yet, **Restart on the latest build** runs `npm run build`. If the build fails, the restart stops, the log is shown, and the office keeps running the version it has. **Cancel** then resumes the paused projects.
+4. **Restarts.** The office shuts down gracefully (workers' terminals are kept for the next office, as with a `SIGTERM`) and exits with code **75**. The launcher starts it again on that code.
+5. **On the next start**, the office runs ▶ Resume project for exactly the floors in `restart-pending.json`, with the preview's defaults (wake the agents with work, 2 at a time, about 45 seconds apart), then deletes the file. A floor a person paused stays paused.
+
+The audit log and Team chatter record `restart.requested`, `restart.waiting`, `restart.exiting` and `restart.resumed`, plus `restart.cancelled` or `restart.failed` when the restart doesn't go through.
+
+### The restart loop
+
+The office can't reliably respawn itself on Windows, so the launcher has to loop: it runs the office again whenever it exits with code 75. The launcher also sets `AGENT_OFFICE_LAUNCHER_LOOP=1`, so the office knows that exiting will bring it back. Without that variable, the button reads **⏸ Pause, wait, then exit**, and Settings says *start-office.ps1 needs the restart loop*. The office then pauses, waits, and exits with code 0, and you start it again by hand. The next start still resumes the floors it paused.
+
+In `start-office.ps1`, wrap the line that runs the office:
+
+```powershell
+$env:AGENT_OFFICE_LAUNCHER_LOOP = '1'
+do {
+  node "$PSScriptRoot\agent-office-src\bin\agent-office.js" @officeArgs
+  $code = $LASTEXITCODE
+} while ($code -eq 75)
+```
+
+Keep the rest of the launcher (the token, the password, `PATH`) above the loop, so a restart inherits it.
 
 ## Update
 
@@ -63,7 +96,7 @@ The office runs from our fork's source build in `agent-spike\agent-office-src`, 
 
 1. Pull the new `main` (feature branches are merged through `staging/integration` and tried on a [test office](test-offices.md) first).
 2. `npm run build`.
-3. Restart the office (see the warning above), then **Ctrl+F5** in the browser.
+3. Restart the office with **🔁 Restart safely** (see [Releasing and restarting safely](#releasing-and-restarting-safely)), or by hand after pausing the projects. Then press **Ctrl+F5** in the browser.
 
 ## Helper scripts
 

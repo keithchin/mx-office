@@ -10,6 +10,7 @@ import { h } from '../dom';
 import { JEFF_MODE_LABEL, jeffPortrait } from '../jeff';
 import { act } from './api';
 import { consoleViewSetting } from '../pm/chat/setting';
+import { pacingSection } from '../project-run';
 
 const LEVELS: AutonomyLevel[] = [1, 2, 3, 4];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -117,6 +118,7 @@ export function settingsView(v: RosterView, redraw: (v: RosterView) => void): HT
     h('p.ro-row', {}, h('label.ro-jeff-mode', {}, h('b', {}, 'When to escalate'), policySel), ' Only a real ask: he raises it only when the end of its message asks you something (a question, a request or approval, an AWAITING-PM line); a progress report he thinks is waiting is logged as a disagreement. His say-so: his verdict alone is enough. He never raises what the agent already raised.'),
     h('p.ro-row', {}, mode('Triage', 'triage'), ' When a new issue appears: which team is it for? On: he labels unlabelled issues he’s sure about.'),
     h('p.ro-row', {}, h('label.ro-jeff-mode', {}, h('b', {}, 'Priority'), sortSel), ' When an escalation is raised: how soon should you resolve it? On: your escalations are listed in his order, #1 first.'),
+    pacingSection(v.floor, v.admin),
     // Yours alone, kept in this browser and applied at once (no 💾 Save): see ui/pm/chat/pref.ts.
     h('h4', {}, 'Your view (just you)'),
     ...consoleViewSetting(),

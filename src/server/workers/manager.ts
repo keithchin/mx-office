@@ -169,9 +169,7 @@ export class WorkerManager {
     void this.syncBranches();
   }
 
-  get resolvedAgent(): string | null {
-    return this.agentPath;
-  }
+  get resolvedAgent(): string | null { return this.agentPath; } // prettier-ignore
 
   /** What an agent starts on when whoever starts it doesn't pick: the one set in ⚙️ Settings, or the office's --agent. */
   get officeDefault(): AgentChoice {
@@ -180,17 +178,21 @@ export class WorkerManager {
     return { provider: this.defaultProvider };
   }
 
-  list(): WorkerInfo[] {
-    return [...this.workers.values()].map((w) => w.info);
-  }
-
-  get(id: string): WorkerInfo | undefined {
-    return this.workers.get(id)?.info;
-  }
-
+  // prettier-ignore
+  list(): WorkerInfo[] { return [...this.workers.values()].map((w) => w.info); }
+  // prettier-ignore
+  get(id: string): WorkerInfo | undefined { return this.workers.get(id)?.info; }
   /** The account a worker runs as (see RunAs), if not the office. */
-  ownerOf(id: string): string | undefined {
-    return this.workers.get(id)?.owner;
+  ownerOf(id: string): string | undefined { return this.workers.get(id)?.owner; } // prettier-ignore
+  /** Whether it was cut off mid-turn and hasn't carried on yet (▶ Resume project's preview, project-run/). */
+  cutOff(id: string): boolean { return !!this.workers.get(id)?.interrupted; } // prettier-ignore
+
+  /** Puts an agent between turns to sleep, its session kept for a resume (⏸ Pause project): its exit marks it exited. */
+  sleep(id: string): string | undefined {
+    const w = this.workers.get(id);
+    if (!w?.pty || w.dsh) return w ? `${w.info.name} has no terminal to stop` : 'No such worker';
+    w.pty.kill();
+    return undefined;
   }
 
   /** Each worker's terminal process and directory, to tell whose servers are whose. */
@@ -403,14 +405,9 @@ export class WorkerManager {
   }
 
   /** What a worker's worktree holds, so whoever sends it home knows what deleting it would lose. */
-  inspectWorktree(id: string): Promise<WorktreeState | undefined> {
-    return this.worktrees.inspect(id);
-  }
-
+  inspectWorktree(id: string): Promise<WorktreeState | undefined> { return this.worktrees.inspect(id); } // prettier-ignore
   /** Every worker's worktree branch, looked at again (see WorkerTrees.syncBranch): for when new pull requests may have come in. */
-  syncBranches(): Promise<void> {
-    return this.worktrees.syncAll();
-  }
+  syncBranches(): Promise<void> { return this.worktrees.syncAll(); } // prettier-ignore
 
   /** Puts a lost worker's worktree back and starts it again (see WorkerTrees.rebuild). */
   rebuild(id: string): Promise<{ rebuilt?: boolean; note?: string; error?: string }> {

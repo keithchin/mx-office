@@ -54,6 +54,7 @@ See [The toolkit](../integrations/toolkit.md).
 ## The project summary
 
 - **📍 Name**, the repo, a **🌐 Live app** chip (it opens the Live app tab) and, for a Mendix project, **Open in Studio Pro** (see below).
+- **▶ Resume project** and **⏸ Pause project** (admins), the floor's pause when it has one (*⏸ Paused by Keith at 14:05 · 2 waiting on you*), and a progress chip while a resume or a pause is running. See [Resume and pause](resume-and-pause.md).
 - The goal, and **🧭 phase** with stage dots and how many decisions are recorded.
 - **What's happening**: a short story of the floor, written by Claude Haiku (*AI*) or put together by the office (*auto*).
 - **Risks**: agents waiting on a human (and for how long), blocked or failing things.

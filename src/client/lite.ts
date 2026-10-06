@@ -22,6 +22,7 @@ import { subBoards } from './ui/teams';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { liveAppView } from './ui/liveapp';
 import { mountStudio, studioState } from './ui/studio';
+import { mountProjectRun } from './ui/project-run';
 import { pmConsole } from './ui/pm/console';
 import { openPull } from './ui/pull';
 import { openQueue } from './ui/queue';
@@ -291,6 +292,8 @@ function renderKanban() {
     // Beside the project's name: the 🌐 Live app chip, and Open in Studio Pro for a Mendix project (ui/studio/).
     live.mountChip($('summary'));
     mountStudio($('summary'));
+    // ▶ Resume / ⏸ Pause project, and the floor's pause (ui/project-run/).
+    mountProjectRun($('summary').querySelector('.sm-name'));
   });
   void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) }).then(() => needs.refresh());
 }
