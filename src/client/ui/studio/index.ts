@@ -108,7 +108,9 @@ function draw() {
 
 const chips = new Set<HTMLElement>();
 
-/** Studio mode's chip: open (writes paused), a stale lock, or nothing at all while it's closed. */
+/** Studio mode's chip: shown only while Studio Pro is open (writes paused). A stale lock gets no chip:
+ *  Studio Pro leaves its .mpr.lock behind on every close, so most Mendix floors would wear one for good.
+ *  It's still in the audit log and the open confirm. */
 function drawChip(c: HTMLElement, s: StudioState | undefined) {
   const mcp = s?.open && s.mcp?.available ? s.mcp.url : undefined;
   if (s?.open) {
@@ -116,11 +118,6 @@ function drawChip(c: HTMLElement, s: StudioState | undefined) {
     c.className = 'st-mode st-mode-open';
     c.textContent = mcp ? 'Studio Pro open · mxcli paused · MCP' : 'Studio Pro open · mxcli paused';
     c.title = `Studio Pro has the project open (${sinceText(s.since)}${s.pid ? `, process ${s.pid}` : ''}). The office holds the agents' mxcli writes until it's closed${mcp ? `; they can route writes through Studio Pro's MCP server at ${mcp}` : ''}.`;
-  } else if (s?.staleLock) {
-    c.hidden = false;
-    c.className = 'st-mode st-mode-stale';
-    c.textContent = 'Stale lock';
-    c.title = `The project's .mpr.lock is there (${sinceText(s.staleLock.since)}) but the Studio Pro that wrote it isn't running: Studio Pro leaves it behind when it closes, or crashed. The office doesn't pause the agents' writes for it.`;
   } else {
     c.hidden = true;
     c.textContent = '';

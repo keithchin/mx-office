@@ -20,8 +20,8 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   Claude worker denies `mxcli exec`, `fix`, `layout`, `rename`, a writing `mxcli -c`, the toolkit's
   `bin/exec.sh` and the like, and tells the agent to route the write through Studio Pro's MCP server
   (`mxcli --mcp http://localhost:7782/mcp`, on 11.10 and up) or work on something else. Reads still
-  run. The Command Center shows **Studio Pro open · mxcli paused** (or **Stale lock** for a lock whose
-  Studio Pro is gone), and the button says **Studio Pro is open**. Opening and closing are in Team
+  run. The Command Center shows **Studio Pro open · mxcli paused** while it
+  is, and the button says **Studio Pro is open**. Opening and closing are in Team
   chatter and the Audit log (`studio.opened`, `studio.closed`, `studio.stale-lock`, and each held
   write as `studio.denied`). Closing it with model changes uncommitted puts *Commit your Studio Pro
   changes so the agents build on them* in Needs you. Workers already running get the hook when
