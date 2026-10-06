@@ -3,6 +3,7 @@
 
 import type { BudgetView, FirmForecast, OfficeBudgetView, OfficeFloorBudget } from '../../shared/budget/types.js';
 import { numbersOf, pauseWhy } from './control.js';
+import { insights } from '../../shared/budget/insights.js';
 import { toneOf } from '../../shared/budget/money.js';
 import { breakdowns, recentDays, totalOf, type LedgerData } from './ledger.js';
 import type { BudgetService, FloorRef } from './service.js';
@@ -43,15 +44,16 @@ export function floorView(b: BudgetService, floor: FloorRef, admin: boolean, fir
     stage: b.deps.stageOf(floor.dir),
     settings: f.settings,
     officeThreshold: o.threshold,
-    tone: toneOf(f.settings.total, spent, n.forecast.atCompletion),
+    tone: toneOf(f.settings.total, spent, n.forecast?.atCompletion),
     fx: b.fx(),
     plan: n.plan,
     curve: n.curve,
     variance: n.variance,
-    forecast: n.forecast,
+    ...(n.forecast ? { forecast: n.forecast } : {}),
     alerts: f.alerts.filter((a) => a.text),
     ...(f.pausedAt && f.settings.total ? { paused: pauseWhy(f.settings.total, spent) } : {}),
     ...(firm ? { firm } : {}),
+    insights: insights({ rows: d.rows, agents: d.agents, today, stage: b.deps.stageOf(floor.dir), team: b.deps.team?.(floor.id), efficiency: b.deps.efficiency?.(floor.id) }),
     admin,
   };
 }
@@ -60,14 +62,14 @@ export function floorView(b: BudgetService, floor: FloorRef, admin: boolean, fir
 export function floorLine(b: BudgetService, floor: FloorRef): OfficeFloorBudget {
   const f = b.file(floor);
   const spent = totalOf(f.ledger);
-  const forecast = numbersOf(b, floor).forecast.atCompletion;
+  const forecast = numbersOf(b, floor).forecast?.atCompletion;
   return {
     id: floor.id,
     name: floor.name,
     spent,
     today: f.ledger.days[b.today]?.cost ?? 0,
     ...(f.settings.total ? { budget: f.settings.total } : {}),
-    forecast,
+    ...(forecast !== undefined ? { forecast } : {}),
     tone: toneOf(f.settings.total, spent, forecast),
     ...(f.pausedAt ? { paused: true } : {}),
     spark: recentDays(f.ledger, b.today, SPARK_DAYS).map((x) => x.cost),

@@ -148,3 +148,25 @@ details.bud-card[open] > summary { margin-bottom: 8px; }
 .bud-level-local, .bud-level-time, .bud-level-th { color: var(--ink-2); }
 .bud-level-list { margin: 2px 0; padding-left: 16px; color: var(--ink); }
 .bud-manual { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 10px; }
+
+/* ---- Insights ---- */
+.bud-insights { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.bud-insight { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 8px; border-radius: 6px; background: var(--sunken); font-size: 13px; color: var(--ink); }
+.bud-insight .btn { flex: none; }
+
+/* ---- Home: every project ---- */
+.bud-home { margin-top: 4px; }
+.bud-scroll { overflow-x: auto; }
+.bud-projects td { white-space: nowrap; }
+.bud-projects .bud-hint { display: block; }
+.bud-meter-cell { width: 22%; min-width: 90px; }
+.bud-meter { display: block; height: 8px; border-radius: 4px; background: var(--rule); overflow: hidden; }
+.bud-meter-fill { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--good-ink); }
+.bud-meter[data-tone='warn'] .bud-meter-fill { background: var(--warn-ink); }
+.bud-meter[data-tone='bad'] .bud-meter-fill { background: var(--bad-ink); }
+.bud-status { display: inline-block; padding: 1px 8px; border: 1px solid var(--rule-strong); border-radius: 999px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.bud-status[data-tone='good'] { background: var(--good-soft); border-color: var(--good-ink); }
+.bud-status[data-tone='warn'] { background: var(--warn-soft); border-color: var(--warn-ink); }
+.bud-status[data-tone='bad'] { background: var(--bad-soft); border-color: var(--bad-ink); }
+.bud-spark { width: 120px; height: 28px; overflow: visible; }
+.bud-spark .bud-line { stroke-width: 2; }

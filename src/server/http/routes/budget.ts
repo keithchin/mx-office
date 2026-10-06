@@ -6,6 +6,7 @@ import { applyChoice, budgetOf, controlOf } from '../../budget/index.js';
 import { applyFirm, editPlan, numbersOf, regeneratePlan, resume, setSettings } from '../../budget/control.js';
 import { firmForecastOf, projectShape } from '../../budget/plan-source.js';
 import { firmIfMade } from '../../firm/adapter.js';
+import { spentOf } from '../../../shared/firm/engagement.js';
 import { cleanChoice, levelCards } from '../../../shared/budget/levels.js';
 import { generatePlan, planTotal } from '../../../shared/budget/plan.js';
 import { ENTRY_MODES, type EntryMode } from '../../../shared/wizard.js';
@@ -37,7 +38,15 @@ export const budgetRoutes = {
     path: '/api/budget/office',
     auth: 'session',
     handle(ctx, { res, session }) {
-      return send(res, 200, officeView(budgetOf(ctx), ctx.meOf(session.account?.id).admin));
+      const v = officeView(budgetOf(ctx), ctx.meOf(session.account?.id).admin);
+      // The Firm's audits, newest first, when this office has run any.
+      const firm = firmIfMade(ctx);
+      if (firm) {
+        const list = firm.list().filter((e) => !e.sample).sort((a, z) => z.requestedAt - a.requestedAt);
+        v.firm.audits = list.length;
+        v.firm.list = list.slice(0, 10).map((e) => ({ id: e.id, floor: e.floor, floorName: e.floorName, phase: e.phase, spent: Math.round(spentOf(e) * 100) / 100, budget: e.config.budget, at: e.requestedAt }));
+      }
+      return send(res, 200, v);
     },
   },
   /** POST /api/budget/fx {currency, mode: manual|daily, manualRate?, refresh?}. Admins only. */

@@ -11,9 +11,11 @@ import { budgetFeed, type BudgetFeed } from './feed';
 import { budgetTab, type BudgetSection } from './tab';
 import { planSection, varianceSection } from './plan';
 import { pausedSection, settingsSection } from './settings';
+import { insightsSection, onInsightGo } from './insights';
+import type { Insight } from '../../../shared/budget/types';
 
 /** The sections between the headline and the breakdowns, in order (the plan, variance, settings, insights plug in here). */
-export const SECTIONS: BudgetSection[] = [pausedSection, varianceSection, settingsSection, planSection];
+export const SECTIONS: BudgetSection[] = [pausedSection, insightsSection, varianceSection, settingsSection, planSection];
 
 export interface BudgetUi {
   feed: BudgetFeed;
@@ -26,8 +28,9 @@ export interface BudgetUi {
 }
 
 /** `root` is the tab's element on the 1D view (none on the 2D view); `open` shows the tab. */
-export function budgetUi(net: Net, opts: { root?: HTMLElement; visible?: () => boolean; open: () => void }): BudgetUi {
+export function budgetUi(net: Net, opts: { root?: HTMLElement; visible?: () => boolean; open: () => void; go?: (to: NonNullable<Insight['action']>['to']) => void }): BudgetUi {
   const feed = budgetFeed(net);
+  if (opts.go) onInsightGo(opts.go);
   budgetChips(feed, opts.open);
   const tab = opts.root ? budgetTab(opts.root, feed, opts.visible ?? (() => true), SECTIONS) : undefined;
   return {

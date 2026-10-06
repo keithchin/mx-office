@@ -24,7 +24,8 @@ export interface Numbers {
   spent: number;
   plan: BudgetPlan;
   variance: StageVariance[];
-  forecast: Forecast;
+  /** None for a project without the toolkit's pipeline whose plan nobody has set: there's nothing to forecast from. */
+  forecast?: Forecast;
   curve: CurvePoint[];
 }
 
@@ -76,8 +77,10 @@ export function numbersOf(b: BudgetService, floor: FloorRef): Numbers {
     byDay[day] = roll.cost;
     for (const [s, c] of Object.entries(roll.stage)) byStage[s] = (byStage[s] ?? 0) + c;
   }
-  const variance = varianceOf(plan, byStage, b.deps.stageOf(floor.dir));
-  return { spent, plan, variance, forecast: forecastOf(variance, spent, f.settings.total), curve: curveOf(plan, byDay, b.today) };
+  const stage = b.deps.stageOf(floor.dir);
+  const variance = varianceOf(plan, byStage, stage);
+  const forecast = stage !== '—' || plan.edited ? forecastOf(variance, spent, f.settings.total) : undefined;
+  return { spent, plan, variance, ...(forecast ? { forecast } : {}), curve: curveOf(plan, byDay, b.today) };
 }
 
 /** After spend: raises the alerts that are due, and pauses the project at 100 % when auto-pause is on. */
@@ -85,7 +88,7 @@ export function checkFloor(b: BudgetService, floor: FloorRef, deps: ControlDeps)
   const f = b.file(floor);
   if (!f.settings.total) return;
   const n = numbersOf(b, floor);
-  const { alerts, raised } = checkAlerts(f.settings, b.store.office().threshold, n.spent, n.forecast.atCompletion, f.alerts, b.deps.now());
+  const { alerts, raised } = checkAlerts(f.settings, b.store.office().threshold, n.spent, n.forecast?.atCompletion, f.alerts, b.deps.now());
   if (alerts.length === f.alerts.length) return;
   f.alerts = alerts;
   let paused = false;

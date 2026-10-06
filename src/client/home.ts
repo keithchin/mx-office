@@ -17,6 +17,7 @@ import { projectsView } from './home/projects';
 import { statsView } from './home/stats';
 import { overviewView } from './home/overview';
 import { homeAudit } from './home/audit';
+import { homeBudget } from './home/budget';
 import './home/home.css';
 
 /** The tab a link asked for (?tab= or a bare #), read before the address is tidied. */
@@ -60,7 +61,7 @@ store.on('floors', renderBack);
 
 // ---- The tabs ---------------------------------------------------------------------------------
 const TAB_KEY = 'agent-office.home-tab';
-const TABS = ['projects', 'stats', 'overview', 'audit'] as const;
+const TABS = ['projects', 'stats', 'overview', 'audit', 'budget'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (t: unknown): t is Tab => TABS.includes(t as Tab);
 let tab: Tab = 'projects';
@@ -76,6 +77,8 @@ const projects = projectsView($('projects-view'), net, last, () => (leaving = tr
 const stats = statsView($('stats-view'), () => (leaving = true));
 const overview = overviewView($('overview-view'), () => (leaving = true));
 const audit = homeAudit($('audit-view'));
+// 💰 Every project's spend against its budget (home/budget.ts).
+const budget = homeBudget($('budget-view'), () => (leaving = true));
 
 function showTab(t: Tab) {
   tab = t;
@@ -94,6 +97,8 @@ function showTab(t: Tab) {
   else overview.hide();
   if (t === 'audit') audit.show();
   else audit.hide();
+  if (t === 'budget') budget.show();
+  else budget.hide();
   if (t === 'projects') projects.render();
   else if (t === 'stats') void stats.render();
 }

@@ -39,6 +39,10 @@ export interface BudgetDeps {
   runs(): RunRecord[];
   /** Something changed on a floor's budget (its view should be fetched again). */
   changed?(floorId: string): void;
+  /** The team's settings the insights read (idle benching, Jeff's waiting mode, early drafts), when the floor has a team. */
+  team?(floorId: string): { idleMinutes: number; jeffWaiting: 'off' | 'shadow' | 'on'; earlyDrafts: boolean } | undefined;
+  /** Token efficiency (0-100) from the worker ranking, by worker id. */
+  efficiency?(floorId: string): Record<string, number>;
   fetch?: typeof fetch;
 }
 

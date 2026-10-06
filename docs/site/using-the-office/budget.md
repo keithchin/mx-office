@@ -45,6 +45,27 @@ When the office starts a project's ledger, it fills in what had already been spe
 - **The office's background calls** are booked on the floor they served, and added to the office total. These are Jeff's Haiku fallback, the analyzer, task naming, the project summary and the Firm's reviewers. A call that served no floor (the office's own) goes on the office view. Jeff's calls to Jev aren't priced, so they show as not metered. Gate-check makes no model calls.
 - **Providers other than Claude** count their calls but no cost.
 
+## Insights
+
+**Insights** covers the last 30 days. It has two parts.
+
+**What drives the spend:**
+
+- a model family the Leads run on that takes 40 % or more of spend (*Opus Leads are 71 % of spend*).
+- the Lead Tester's review loop (its own session plus its subagents) when it's 15 % or more of the week.
+- the Coordinator's relays, when there are 20 or more turns a day.
+- the office's own calls, when they're 5 % or more of spend.
+
+**Ways to spend less.** Each suggestion has a button to the action that already exists:
+
+- **Move a Lead from Opus to Sonnet** when its Opus work is a fifth or more of the week. The saving is half of that, from the price list. Goes to the Org chart.
+- **Delegate to its subagents** when a Lead does 80 % or more of its work itself on Opus. Goes to the Org chart.
+- **Turn on idle benching**, when it's off. Goes to the team settings.
+- **Switch on Jeff's real-ask mode** (Jeff's *waiting* judgement on), when it's off or in shadow. Goes to the team settings.
+- **Turn off early drafts**, while the pipeline is before Stage 3 and Design, Development and Testing have spent 10 % or more on drafts. Goes to the team settings.
+
+The model suggestions show the Lead's **token-efficiency score** from the [worker ranking](workers.md) where it has one.
+
 ## The expected plan
 
 Every project gets an expected plan, made automatically. It gives an expected cost per toolkit stage (and per build module once there is a build plan) and an expected end date. Expand **Expected plan** on the tab to see it. Admins can change any line's cost or working days; each edited line records who changed it.

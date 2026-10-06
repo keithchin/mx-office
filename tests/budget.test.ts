@@ -275,3 +275,13 @@ test('the top bar\'s chips: words, local currency on hover, colour from the fore
   assert.equal(officeChip(110, 100).tone, 'bad');
   assert.equal(usd(1250.4), '$1,250');
 });
+
+test('a project without the toolkit\'s pipeline gets no forecast until someone sets its plan', (t) => {
+  const f = fake(t);
+  f.stage.now = '—';
+  const v = floorView(f.b, { id: 'travel', name: 't', dir: f.dir }, false);
+  assert.equal(v.forecast, undefined);
+  assert.equal(v.tone, 'none');
+  f.stage.now = '2';
+  assert.ok(floorView(f.b, { id: 'travel', name: 't', dir: f.dir }, false).forecast);
+});

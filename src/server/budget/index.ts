@@ -14,6 +14,7 @@ import { checkFloor, restorePause, type ControlDeps } from './control.js';
 import { onBackgroundSpend } from './meter.js';
 import { BudgetService } from './service.js';
 import { currentStage } from './stage.js';
+import { rankingReport } from '../ranking/index.js';
 
 const offices = new WeakMap<object, BudgetService>();
 const controls = new WeakMap<BudgetService, ControlDeps>();
@@ -43,6 +44,15 @@ export function budgetOf(ctx: Ctx): BudgetService {
     taskIssue: (floorId, workerId) => ctx.floors.get(floorId)?.queue?.state().tasks.find((t) => t.workerId === workerId)?.issue,
     stageOf: currentStage,
     officeLedger: ctx.ledger,
+    team: (floorId) => {
+      try {
+        const s = rosterOf(ctx).data(floorId).settings;
+        return { idleMinutes: s.idleMinutes, jeffWaiting: s.jeff.waiting, earlyDrafts: s.earlyDrafts };
+      } catch {
+        return undefined;
+      }
+    },
+    efficiency: (floorId) => efficiencyOf(ctx, floorId),
     runs: () => {
       try {
         return analysisOf(ctx).store.all();
@@ -87,6 +97,27 @@ export function budgetOf(ctx: Ctx): BudgetService {
   onBackgroundSpend((s) => budget.onBackground(s));
   process.once('exit', () => budget.flush());
   return b;
+}
+
+const effCache = new Map<string, { at: number; v: Record<string, number> }>();
+/** How long a floor's token-efficiency scores are kept before the ranking is asked again. */
+const EFF_TTL_MS = 10 * 60_000;
+
+/** The worker ranking's token-efficiency score by worker id, for the insights (cached: the ranking is built from everything). */
+function efficiencyOf(ctx: Ctx, floorId: string): Record<string, number> {
+  const hit = effCache.get(floorId);
+  if (hit && Date.now() - hit.at < EFF_TTL_MS) return hit.v;
+  const v: Record<string, number> = {};
+  try {
+    for (const w of rankingReport(ctx, floorId).workers) {
+      const s = w.standard.find((c) => c.key === 'efficiency')?.score;
+      if (s !== undefined) for (const id of w.workerIds) v[id] = s;
+    }
+  } catch {
+    // no ranking yet: the insights go without it
+  }
+  effCache.set(floorId, { at: Date.now(), v });
+  return v;
 }
 
 /** The control's office hooks (audit log, toasts) for the routes. */

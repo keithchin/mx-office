@@ -260,7 +260,7 @@ export interface OfficeBudgetView {
   floors: OfficeFloorBudget[];
   /** The office's own model calls (Jeff, the analyzer, task naming, the summary), every floor's and none's. */
   background: { today: number; total: number; bySource: BreakdownRow[] };
-  firm: { total: number; audits: number };
+  firm: { total: number; audits: number; list?: { id: string; floor: string; floorName: string; phase: string; spent: number; budget: number; at: number }[] };
   fx: FxView;
   fxSettings: FxSettings;
   officeThreshold: number;

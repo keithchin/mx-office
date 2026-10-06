@@ -219,7 +219,7 @@ const TAB_KEY = 'agent-office.lite-tab2';
 const git = gitView($('git-view'), { openWorker, openPull: kanban.openPull });
 // Who did what, when (🧾 Audit log, ui/audit/): this floor, the office's own or every floor.
 // 💰 The budget: the top bar's chips and the Budget tab (ui/budget/).
-const budget = budgetUi(net, { root: $('budget-view'), visible: () => tab === 'budget', open: () => showTab('budget') });
+const budget = budgetUi(net, { root: $('budget-view'), visible: () => tab === 'budget', open: () => showTab('budget'), go: (to) => showTab(to === 'analysis' ? 'analysis' : to) });
 const audit = auditView($('audit-view'), { floor: () => store.floor ?? undefined, floors: () => store.floors, admin: () => store.me.admin, storeKey: 'agent-office.audit-lite' });
 net.onMessage((msg) => audit.onMessage(msg));
 store.on('floor', () => audit.floorChanged());

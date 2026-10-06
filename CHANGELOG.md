@@ -25,6 +25,12 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   plan estimate (travel-approval: $220 / $330 / $530), its time and what it changes (models, early
   drafts, autonomy by stage, parallelism), or Manual. The team is hired on the level's choices;
   **Change level** on the Budget tab does the same for a running project from the next hire.
+- **💰 Budget insights and an all-projects view.** The Budget tab names what drives the spend ("Opus
+  Leads are 71 % of spend", the Lead Tester's review loop this week, the Coordinator's relays a day)
+  and suggests savings, each linked to the action that does it: swap a Lead's model, delegate to its
+  subagents, idle benching, Jeff's real-ask mode, early drafts off, with the worker ranking's token
+  efficiency. A new 💰 Budget tab on the home page lists every project's spend against its budget,
+  forecast, status and a 14-day sparkline, with the office's background calls and the Firm's audits.
 
 ## 2026-10-06 · release 10 (`3db2145`)
 
