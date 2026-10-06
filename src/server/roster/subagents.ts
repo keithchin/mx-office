@@ -24,6 +24,7 @@ import { subagentDecisionPrompt, subagentNewsPrompt, underperformingPrompt } fro
 import { cleanSubName, subagentReviews, subKey, type SubagentReview } from './subagent-store.js';
 import { definitionOf } from './subagent-files.js';
 import { SubagentLive } from './subagent-live.js';
+import type { LiveRun } from '../../shared/roster/subagent-live.js';
 import type { TeamFloor } from './types.js';
 import { struggleNudged, toldCoordinator } from '../chatter/hooks.js';
 
@@ -60,7 +61,7 @@ export class Subagents {
   readonly live: SubagentLive;
 
   constructor(private roster: Roster) {
-    this.live = new SubagentLive(roster);
+    this.live = new SubagentLive(roster, (floor, run) => this.recordFinished(floor, run));
   }
 
   /** The subagent's record, made when it's first seen. */
@@ -128,6 +129,12 @@ export class Subagents {
       const rec = this.record(floor, lead, who);
       const at = began?.at ?? ev.at;
       const task = this.live.taskOf(floor, workerId, ev.agentId);
+      // The transcript said it was over first (recordFinished): that's this run.
+      const had = ev.agentId ? rec.runs.find((r) => r.id === ev.agentId && r.endedAt !== undefined && Math.abs(ev.at - r.endedAt) <= PAIR_MS) : undefined;
+      if (had) {
+        if (task) had.task ??= task;
+        return;
+      }
       this.addRun(rec, { id: ev.agentId ?? `run-${ev.at}`, at, endedAt: ev.at, durationMs: ev.at - at, model: this.modelOf(floor, lead, rec), ...(task ? { task } : {}), outcome: 'pending' });
       this.roster.touch(floor, true);
       return;
@@ -146,6 +153,21 @@ export class Subagents {
       const ms = ev.durationMs ?? 0;
       this.addRun(rec, { id: `run-${ev.at}`, at: ev.at - ms, endedAt: ev.at, ...(ev.durationMs !== undefined ? { durationMs: ms } : {}), model: this.modelOf(floor, lead, rec, ev.model), ...(ev.task ? { task: ev.task } : {}), outcome: ev.failed ? 'failed' : 'pending' });
     }
+    this.roster.touch(floor, true);
+  }
+
+/**
+   * A run only the transcript said was over (a background run's notification, which no hook reports):
+   * a run of its subagent's record, unreviewed until its Lead's verdict comes (review() attaches it to
+   * this run). Not when the hooks already recorded it.
+   */
+  recordFinished(floor: TeamFloor, live: LiveRun) {
+    const rec = this.record(floor, live.lead, live.name);
+    const id = live.agentId ?? live.toolUseId ?? live.id;
+    const ended = live.endedAt ?? this.roster.deps.now();
+    if (rec.runs.some((r) => r.id === id && r.endedAt !== undefined && Math.abs(r.endedAt - ended) <= PAIR_MS)) return;
+    const at = live.resumedAt ?? live.startedAt;
+    this.addRun(rec, { id, at, endedAt: ended, durationMs: Math.max(0, ended - at), model: this.modelOf(floor, live.lead, rec, live.model && !live.model.startsWith('claude-') ? live.model : undefined), ...(live.task ? { task: live.task } : {}), outcome: live.status === 'failed' ? 'failed' : 'pending' });
     this.roster.touch(floor, true);
   }
 
@@ -455,7 +477,7 @@ export class Subagents {
           warnings: rec?.warnings.length ?? 0,
           ...(rec?.warnings.length ? { lastWarning: rec.warnings.at(-1)!.reason } : {}),
           score: scoreSubagent(rec?.runs ?? [], model),
-          ...(rec?.runs.length ? { lastRunAt: rec.runs.at(-1)!.at, totalRuns: rec.runs.length, reviews: reviewsOf(rec) } : {}),
+          ...(rec?.runs.length ? { lastRunAt: rec.runs.at(-1)!.at, totalRuns: rec.runs.length, unreviewed: rec.runs.filter((r) => r.outcome === 'pending').length, reviews: reviewsOf(rec) } : {}),
         });
       }
     }

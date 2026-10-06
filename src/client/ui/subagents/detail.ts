@@ -20,7 +20,7 @@ export interface SubagentDetailDeps {
   onRoster?(v: RosterView): void;
 }
 
-const VERDICT: Record<string, string> = { accept: '✅ accepted', rework: '🔁 sent back', failed: '❌ failed', pending: '⏳ not reviewed yet' };
+const VERDICT: Record<string, string> = { accept: '✅ accepted', rework: '🔁 sent back', failed: '❌ failed', pending: '⏳ unreviewed' };
 const STATUS: Record<LiveRunView['status'], string> = { working: '🔨 working', done: '✔️ done', failed: '❌ failed', lost: '❔ lost track' };
 
 function runRow(r: LiveRunView, now: number): HTMLElement {
@@ -40,6 +40,7 @@ function body(c: SubagentCard, v: RosterView, deps: SubagentDetailDeps, redraw: 
   const chips = [
     `🧠 ${modelWord(c.model)}`,
     `${c.runs} run${c.runs === 1 ? '' : 's'}`,
+    c.unreviewed ? `${c.unreviewed} unreviewed` : '',
     c.grade ? `grade ${c.grade} (${c.score}%)` : 'not graded yet',
     c.state === 'warning' ? `⚠️ on warning (${c.warnings})` : c.state === 'benched' ? `🪑 benched${c.benchedUntil ? ` until ${new Date(c.benchedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}` : 'active',
     c.underperforming ? `📉 ${c.why ?? 'underperforming'}` : '',
@@ -65,7 +66,7 @@ function body(c: SubagentCard, v: RosterView, deps: SubagentDetailDeps, redraw: 
 
 /** Opens the detail of subagent `key` (`<lead>/<name>`) on the floor's team `v`. */
 export function openSubagentDetail(v: RosterView, key: string, deps: SubagentDetailDeps): Modal | undefined {
-  const find = (view: RosterView) => subagentCards(view).find((c) => c.key === key);
+  const find = (view: RosterView) => subagentCards(view, { includeNeverRun: true }).find((c) => c.key === key);
   const c = find(v);
   if (!c) return undefined;
   const head = h('header', {}, h('h2', {}, `🧩 ${c.name}`, h('small.sw-hired', {}, ` · hired by ${c.hiredBy}`)));

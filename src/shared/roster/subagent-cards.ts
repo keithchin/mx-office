@@ -39,6 +39,8 @@ export interface SubagentCard {
   lastTask?: string;
   lastStatus?: LiveStatus;
   runs: number;
+  /** Runs over that its Lead hasn't reviewed yet (its grade counts only reviewed ones). */
+  unreviewed: number;
   grade?: Grade;
   score?: number;
   underperforming: boolean;
@@ -60,12 +62,19 @@ export const RECENT_SHOWN = 10;
 
 type View = { members: readonly MemberView[]; subagents?: readonly SubagentView[]; subagentRuns?: readonly LiveRunView[] };
 
+export interface CardOptions {
+  /** Subagents that have never run (and aren't at work, benched or on warning) too: off unless asked for. */
+  includeNeverRun?: boolean;
+}
+
 /**
  * Every Lead's subagents as cards, in the team's order (each Lead's together, the ones at work first).
- * A Lead that isn't hired shows only subagents that have run; one the office has only seen at work (a
- * built-in like general-purpose, before its first record) gets a card too.
+ * Only those that have run, unless `includeNeverRun` (one at work for the first time has: its run is
+ * going); a benched one or one on warning shows all the same. A Lead that isn't hired shows only
+ * subagents that have run. One the office has only seen at work (a built-in like general-purpose,
+ * before its first record) gets a card too.
  */
-export function subagentCards(v: View): SubagentCard[] {
+export function subagentCards(v: View, opts: CardOptions = {}): SubagentCard[] {
   const runs = v.subagentRuns ?? [];
   const views = [...(v.subagents ?? [])];
   for (const r of runs) {
@@ -81,7 +90,7 @@ export function subagentCards(v: View): SubagentCard[] {
     const working = mine.filter((r) => r.status === 'working').sort((a, b) => a.startedAt - b.startedAt);
     const over = mine.filter((r) => r.status !== 'working').sort((a, b) => b.startedAt - a.startedAt)[0];
     const total = Math.max(s.totalRuns ?? s.score.runs, mine.length);
-    if (m.status === 'not-hired' && !total) continue;
+    if (!total && (m.status === 'not-hired' || (!opts.includeNeverRun && s.state === 'active'))) continue;
     const lastRunAt = Math.max(s.lastRunAt ?? 0, over?.startedAt ?? 0) || undefined;
     out.push({
       key: `${s.lead}/${s.name}`,
@@ -104,6 +113,7 @@ export function subagentCards(v: View): SubagentCard[] {
       ...(over?.task ? { lastTask: over.task } : {}),
       ...(over ? { lastStatus: over.status } : {}),
       runs: total,
+      unreviewed: s.unreviewed ?? 0,
       ...(s.score.grade ? { grade: s.score.grade, score: s.score.score } : {}),
       underperforming: s.score.underperforming,
       ...(s.score.why ? { why: s.score.why } : {}),
@@ -143,18 +153,34 @@ export function cardNow(c: SubagentCard, now: number): string {
   return `💤 Idle · last run ${shortSpan(now - c.lastRunAt)} ago${c.lastTask ? `: ${c.lastTask}` : ''}${how}`;
 }
 
-/** A subagent run at work, as the 2D views draw it beside its Lead's desk. */
-export interface WorkingHelper {
-  runId: string;
+/** A subagent as the 2D views draw it: each run at work on a stool behind its Lead, else one about the office. */
+export interface FloorHelper {
+  /** The run at work, for one at work. */
+  runId?: string;
   key: string;
-  leadWorkerId: string;
+  /** Its Lead's worker: where its stool is. */
+  leadWorkerId?: string;
   /** "tester (Hedy's)". */
   tag: string;
   task?: string;
   team: TeamId;
+  /** At work on its stool, idle about the office, or benched (on a break, like a benched Lead). */
+  state: 'working' | 'idle' | 'benched';
 }
 
-/** Every run at work of a Lead that's at a desk, oldest first per subagent. */
-export function workingHelpers(cards: readonly SubagentCard[]): WorkingHelper[] {
-  return cards.flatMap((c) => (c.leadWorkerId ? c.working.map((r) => ({ runId: r.id, key: c.key, leadWorkerId: c.leadWorkerId!, tag: c.tag, ...(r.task ? { task: r.task } : {}), team: c.team })) : []));
+/**
+ * The floor's subagents for the 2D views: only those that have run at least once (one at work for the
+ * first time has). Each run at work of a Lead at a desk is one on a stool; every other is one character
+ * about the office, idle or benched.
+ */
+export function floorHelpers(cards: readonly SubagentCard[]): FloorHelper[] {
+  const out: FloorHelper[] = [];
+  for (const c of cards) {
+    if (!c.runs) continue;
+    const base = { key: c.key, tag: c.tag, team: c.team, ...(c.leadWorkerId ? { leadWorkerId: c.leadWorkerId } : {}) };
+    const working = c.leadWorkerId ? c.working : [];
+    if (working.length) for (const r of working) out.push({ ...base, runId: r.id, ...(r.task ? { task: r.task } : {}), state: 'working' });
+    else out.push({ ...base, state: c.state === 'benched' ? 'benched' : 'idle' });
+  }
+  return out;
 }

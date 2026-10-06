@@ -38,7 +38,7 @@ import { closeMenu, mountChat, officeKeys, openWorkerMenu } from './pixel/hud';
 import { badge, drawLabels, outline, signText, zoneBanner } from './pixel/overlay';
 import { zoneBoxes } from './pixel/zones';
 import { benched, dressFor, leadOf, memberOf, onRoster, refreshRoster, rosterNow, setRoster, tagFor, zoneOf } from './pixel/teams';
-import { benchedSubagents, helpersOf, isSubagentId, openSubagentAt, subagentTip } from './pixel/subagents';
+import { helpersOf, isSubagentId, openSubagentAt, subagentTip } from './pixel/subagents';
 import { BREAK_WORDS, breakAt } from './pixel/breaks';
 import { ZONE_BY_TEAM, ZONES } from '../shared/zones';
 import type { MemberView } from '../shared/roster/types';
@@ -204,7 +204,7 @@ function draw(now: number) {
   const peers = [...store.peers.values()].filter((p) => p.id !== store.you && !p.lite && store.onMyFloor(p));
   const hoverId = hover && 'kind' in hover && hover.kind !== 'desk' ? hover.id : null;
   const scene = { theme: store.theme.active, music: store.jukebox.on, sharing: [...store.peers.values()].some((p) => p.sharing && store.onMyFloor(p)), colorTheme: currentTheme() };
-  people = paintScene(ag, frame, still, scene, { workers: store.workers.values(), peers, level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs, dress: dressFor, tag: tagFor, breaks: { leads: [...benched(store.floor), ...benchedSubagents(rosterNow(), store.floor)], clock: Date.now(), still: calm.matches }, helpers: helpersOf(rosterNow(), store.floor) }, now);
+  people = paintScene(ag, frame, still, scene, { workers: store.workers.values(), peers, level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs, dress: dressFor, tag: tagFor, breaks: { leads: benched(store.floor), clock: Date.now(), still: calm.matches }, helpers: helpersOf(rosterNow(), store.floor) }, now);
 
   g.imageSmoothingEnabled = false;
   voidColor ||= getComputedStyle(document.body).getPropertyValue('--px-void').trim() || '#0d1828';

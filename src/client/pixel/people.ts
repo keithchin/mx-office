@@ -18,7 +18,8 @@ import { dogAt, drawDog, drawSign, type DeskSign } from './props';
 import { waitingOnSomeone } from '../notify';
 import type { DogState } from '../../shared/dog';
 import { breakAt, breakSpot, drawBreak, type BreakLead } from './breaks';
-import { drawHelpers, type Helper } from './helpers';
+import { drawHelpers, floorWalks, type Helper } from './helpers';
+import type { Walks } from './helper-life';
 
 /** Something under the pointer: a worker, someone walking about, or a free desk to hire someone at. */
 export interface Spot {
@@ -68,8 +69,10 @@ export interface Cast {
   tag: (w: WorkerInfo) => Label['tag'];
   /** The team's benched Leads, on a break about the office (breaks.ts): at wall-clock `clock`, and not walking when `still`. */
   breaks?: { leads: BreakLead[]; clock: number; still: boolean };
-  /** The Leads' subagents at work, on stools beside their Leads' desks (helpers.ts). */
+  /** The Leads' subagents that have run: at work on stools behind their Leads' chairs, else about the office (helpers.ts). */
   helpers?: readonly Helper[];
+  /** Where each was drawn last, to walk it on from there (helper-life.ts): the 2D view's own floor's unless given. */
+  helperWalks?: Walks;
 }
 
 /** When each worker last changed how it's doing, for the tick that flashes as one finishes. */
@@ -172,12 +175,13 @@ export function drawPeople(g: CanvasRenderingContext2D, f: Frame, cast: Cast, no
     out.labels.push({ id: l.id, text: l.name, x, y: top - 3, above: true, human: false, tag: { text: '🪑 benched', color: '#9aa7bd' } });
   });
 
-  // The Leads' subagents at work, each on a stool beside its Lead's desk (helpers.ts).
+  // The Leads' subagents: at work on a stool behind their Lead's chair, else about the office (helpers.ts).
   if (cast.helpers?.length) {
-    drawHelpers(g, f, cast.helpers, byDesk.values(), now, cast.hover, {
+    const world = { leads: cast.breaks?.leads ?? [], clock: cast.breaks?.clock ?? Date.now(), still: cast.breaks?.still ?? false, walks: cast.helperWalks ?? floorWalks };
+    drawHelpers(g, f, cast.helpers, byDesk.values(), now, cast.hover, world, {
       queue: (y, draw) => queue.push({ y, draw }),
       spot: (s) => out.spots.push({ kind: 'subagent', ...s }),
-      label: (l) => out.labels.push({ ...l, above: true, human: false, status: 'working', long: true }),
+      label: (l) => out.labels.push({ ...l, above: true, human: false, long: true }),
     });
   }
 
