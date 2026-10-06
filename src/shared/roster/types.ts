@@ -27,7 +27,27 @@ export interface RosterSettings {
   jeff: JeffSettings;
   /** Hours a benched subagent sits out before the office reinstates it (0 = only by hand). */
   subagentCooldownHours: number;
+  /**
+   * The autonomy level by the toolkit pipeline's stage (off by default): when on, on a toolkit
+   * project, the office sets `autonomy` itself, `early` until the build plan's gate (Stage 4) has
+   * passed and `build` from then on, through the same change a level picked by hand goes through.
+   */
+  autonomyByStage: AutonomyByStage;
 }
+
+export interface AutonomyByStage {
+  enabled: boolean;
+  /** The level before the build plan (Stage 4) passes: analysis, requirements, design. */
+  early: AutonomyLevel;
+  /** The level once it has: building. */
+  build: AutonomyLevel;
+}
+
+/** Off, and Guided early, Delegated building, when it's turned on. */
+export const DEFAULT_BY_STAGE: AutonomyByStage = { enabled: false, early: 2, build: 3 };
+
+/** Where a toolkit project's pipeline stands for the autonomy level: before the build plan's gate passed, or after. */
+export type PipelineStage = 'early' | 'build';
 
 /**
  * Where a role stands: never hired, at work, asking someone, idle (its turn is over), asleep (its
@@ -147,4 +167,6 @@ export interface RosterView {
   subagentActions: SubagentAction[];
   /** May change the settings, decide on proposals and answer escalations: the Project Manager. */
   admin: boolean;
+  /** With autonomy by stage on, on a toolkit project: the stage the level follows now. */
+  byStage?: PipelineStage;
 }

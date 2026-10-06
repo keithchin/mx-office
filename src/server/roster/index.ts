@@ -23,6 +23,7 @@ import { Members } from './members.js';
 import { Nudges } from './nudge.js';
 import { setFloorPause } from './pause.js';
 import { Relays } from './relays.js';
+import { applyStageAutonomy, stageOf } from './stage-autonomy.js';
 import { StandupRunner } from './standup-run.js';
 import { Subagents } from './subagents.js';
 import { effectiveSkills } from '../../shared/roster/skills.js';
@@ -214,6 +215,7 @@ export class Roster {
       this.nudges.tick(floor, LEADS.map((r) => r.id), now);
       this.subagents.tick(floor, now);
       this.escalations.tick(floor);
+      applyStageAutonomy(this, floor);
       this.relays.tick(floor, now);
     }
   }
@@ -302,6 +304,7 @@ export class Roster {
     });
     const cap = capAt(d.settings.costCaps, d.settings.autonomy);
     const paused = this.pauseOf(d);
+    const byStage = stageOf(this, floor);
     return {
       floor: floor.id,
       settings: d.settings,
@@ -320,6 +323,7 @@ export class Roster {
       lastStandupAt: d.lastStandupAt,
       activitySinceStandup: d.lastActivityAt !== undefined && d.lastActivityAt > (d.lastStandupAt ?? 0),
       admin,
+      ...(byStage ? { byStage } : {}),
     };
   }
 

@@ -23,6 +23,8 @@ import { ghIssueMaker } from './issues.js';
 import type { HireAsk, TeamFloor } from './types.js';
 import { onSubagentEvent } from '../workers/subagents.js';
 import { OFFICE_BY } from '../workers/lifecycle.js';
+import { setupView } from '../wizard/setup.js';
+import type { PipelineStage } from '../../shared/roster/types.js';
 
 const adapters = new WeakMap<Floor, TeamFloor>();
 
@@ -111,6 +113,13 @@ function analysisLines(ctx: Ctx, floorId: string): string {
   }
 }
 
+/** Where a toolkit project's pipeline stands, as the setup panel reads it: building once its build plan (Stage 4) passed; undefined without one. */
+function pipelineStage(dir: string): PipelineStage | undefined {
+  const v = setupView(dir);
+  if (!v.stages.length) return undefined;
+  return v.show ? 'early' : 'build';
+}
+
 /** The office's Jeff (server/judge/): made on first use. */
 export const judgeOf = (ctx: Ctx) => judgeFor(ctx.cfg);
 
@@ -124,6 +133,7 @@ export function rosterOf(ctx: Ctx): Roster {
       analysis: (id) => analysisLines(ctx, id),
       now: () => Date.now(),
       judge: (text, questions, opts) => judgeOf(ctx).ask(text, questions, opts),
+      pipelineStage,
     });
     // A Lead's subagent runs, from its hooks: the team's track record (roster/subagents.ts).
     onSubagentEvent((workerId, ev) => {

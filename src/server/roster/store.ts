@@ -10,7 +10,7 @@ import { cleanName, isRoleId, pickNames, ROLES, type RoleId } from '../../shared
 import { cleanSchedule, DEFAULT_SCHEDULE } from '../../shared/roster/schedule.js';
 import type { Escalation } from '../../shared/roster/escalation.js';
 import { DEFAULT_JEFF, isJeffMode, isJeffPriorityMode, isJeffWaitingPolicy } from '../../shared/judge.js';
-import type { Proposal, RosterSettings, Standup } from '../../shared/roster/types.js';
+import { DEFAULT_BY_STAGE, type Proposal, type RosterSettings, type Standup } from '../../shared/roster/types.js';
 import { cleanOverrides, type SkillOverrides } from '../../shared/roster/skills.js';
 import { reviveSubagents, SUBAGENT_ACTIONS_KEPT } from './subagent-store.js';
 import type { SubagentAction, SubagentRecord } from '../../shared/roster/subagents.js';
@@ -73,7 +73,7 @@ const PROPOSALS_KEPT = 300;
 const ESCALATIONS_KEPT = 200;
 
 export function defaultSettings(): RosterSettings {
-  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true, jeff: { ...DEFAULT_JEFF }, subagentCooldownHours: DEFAULT_COOLDOWN_HOURS };
+  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true, jeff: { ...DEFAULT_JEFF }, subagentCooldownHours: DEFAULT_COOLDOWN_HOURS, autonomyByStage: { ...DEFAULT_BY_STAGE } };
 }
 
 /** Settings from what was saved or sent, anything malformed left as it was in `base`. */
@@ -104,6 +104,12 @@ export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings
       waitingPolicy: isJeffWaitingPolicy(s.jeff?.waitingPolicy) ? s.jeff.waitingPolicy : (base.jeff?.waitingPolicy ?? DEFAULT_JEFF.waitingPolicy),
     },
     subagentCooldownHours: typeof s.subagentCooldownHours === 'number' && Number.isFinite(s.subagentCooldownHours) ? Math.max(0, Math.min(Math.round(s.subagentCooldownHours * 10) / 10, 24 * 30)) : (base.subagentCooldownHours ?? DEFAULT_COOLDOWN_HOURS),
+    // A roster saved before it existed has it off.
+    autonomyByStage: {
+      enabled: typeof s.autonomyByStage?.enabled === 'boolean' ? s.autonomyByStage.enabled : (base.autonomyByStage?.enabled ?? DEFAULT_BY_STAGE.enabled),
+      early: isAutonomyLevel(s.autonomyByStage?.early) ? s.autonomyByStage.early : (base.autonomyByStage?.early ?? DEFAULT_BY_STAGE.early),
+      build: isAutonomyLevel(s.autonomyByStage?.build) ? s.autonomyByStage.build : (base.autonomyByStage?.build ?? DEFAULT_BY_STAGE.build),
+    },
   };
 }
 

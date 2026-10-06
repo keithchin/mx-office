@@ -6,6 +6,7 @@ import type { RosterAlert, WorkerInfo } from '../../shared/protocol.js';
 import type { TeamId } from '../../shared/roster/roles.js';
 import type { IssueMaker } from './issues.js';
 import type { JudgeMade } from '../../shared/judge.js';
+import type { PipelineStage } from '../../shared/roster/types.js';
 import type { AskOpts, Questions, Verdict } from '../judge/index.js';
 
 export interface HireAsk {
@@ -63,6 +64,11 @@ export interface RosterDeps {
   /** A few lines of the analyzer's numbers for a floor, for the Chief Analyst's standup. */
   analysis(floorId: string): string;
   now(): number;
+  /**
+   * Where a toolkit project's pipeline stands (wizard/setup.ts): before its build plan's gate (Stage 4)
+   * passed, or after; undefined when it has no pipeline. For autonomy by stage (stage-autonomy.ts).
+   */
+  pipelineStage?: (dir: string) => PipelineStage | undefined;
   /** Jeff's answers (server/judge/): undefined when he has none, and with no judge at all he's never asked. */
   judge?: (text: string, questions: Questions, opts?: AskOpts) => Promise<Verdict | undefined>;
 }
