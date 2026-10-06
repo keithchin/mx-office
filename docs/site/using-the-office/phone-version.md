@@ -14,16 +14,17 @@ Along the bottom:
 - **# Projects**: a channel per floor with its team chatter, threads and a composer (a message goes to the floor's Project Coordinator, `@Name` to one agent, `@team` to every Lead).
 - **💬 DMs**: the floor's agents, what each is doing, and a DM with each. **🖥️** shows its terminal.
 - **⚡ Activity**: every floor's chatter as one stream.
-- **📊 Status**: a card per project: who's working, asking or asleep, its open escalations, today's spend against its daily team cap, the toolkit stage or gate it's at, and **Raise cap**, **Hire** (on the floor you're on) and **Pause / Resume** (coming with the Pause project feature).
+- **📊 Status**: a card per project: who's working, asking or asleep, its open escalations, today's spend against its daily team cap, the toolkit stage or gate it's at, and **Raise cap**, **Hire** (on the floor you're on) and **⏸ Pause** / **▶ Resume…**. A paused project says so (*⏸ Paused by Pat at 14:05 · 2 waiting on you*), and a resume or pause in progress shows how far it is (*Waking 1 of 3 · Ada starting*). While a [🔁 safe restart](../administration/running-the-office.md) is going, a line on top says where it is (*Restarting safely: waiting on 2*); there's no restart button on the phone.
 
 The floor picker is at the top; **⚙** opens the phone's settings.
 
 ## What the phone can and can't do
 
-- **Risky actions are confirmed twice**: merging a PR, hiring, raising a cap and approving an escalation about the merge order (or a security, data-loss or budget-overrun one) show what will happen, need a second tap, and ask for your password again unless you signed in within the last 10 minutes. The office checks the same on its side.
+- **Risky actions are confirmed twice**: merging a PR, hiring, raising a cap, pausing or resuming a project, and approving an escalation about the merge order (or a security, data-loss or budget-overrun one) show what will happen, need a second tap, and ask for your password again unless you signed in within the last 10 minutes. The office checks the same on its side.
 - **Merging happens on GitHub**: after the confirmation, the PR opens on GitHub, signed in as you, where you merge it.
 - **Terminals are read-only.** An agent's terminal shows as its conversation (the Chat view: prompts, replies, tool calls, what it's asking). Nothing is typed into a terminal from the phone; to answer an agent, message it.
-- Pausing and resuming a project, the setup panel's sign-offs, the live app and Git are on a computer.
+- **⏸ Pause** lets every agent finish its turn, write a handoff note and go to sleep, and holds the office's own prompts to the floor. **▶ Resume…** shows a short version of the Resume preview: who has work waiting and why, who's already awake, what it costs (*Wakes 3 agents ≈ 3 turns*), and **Those with work** (the default) or **Everyone asleep**. Picking agents one by one, the pacing and a safe restart are on a computer.
+- The setup panel's sign-offs, the live app and Git are on a computer too.
 
 ## Install it on an iPhone
 

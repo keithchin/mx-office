@@ -1,5 +1,5 @@
 // What the phone version does (POST /api/m/act): answer an escalation, raise the floor's daily cap, hire a
-// role, open a PR to merge it on GitHub, and (once the office has them) pause or resume a project. Each
+// role, open a PR to merge it on GitHub, and pause or resume a project (server/project-run/). Each
 // goes through the same roster calls the Team tab makes; risky ones only with a fresh sign-in
 // (reauth.ts), checked here on the server whatever the page says; every one in the audit log as phone.*.
 
@@ -10,8 +10,11 @@ import { isRisky, type MobileAction } from '../../shared/mobile.js';
 import type { Ctx } from '../office/context.js';
 import { audit, human } from '../audit/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { projectRunsOf } from '../project-run/adapter.js';
+import type { ProjectRuns } from '../project-run/index.js';
+import type { ResumeAction, ResumeChoice, RunProgress } from '../../shared/project-run.js';
 
-export type ActResult = { ok: true; summary: string; url?: string } | { ok: false; status: number; error: string; reauth?: boolean };
+export type ActResult = { ok: true; summary: string; url?: string; run?: RunProgress } | { ok: false; status: number; error: string; reauth?: boolean };
 
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : Number.NaN);
 const txt = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : '');
@@ -35,11 +38,28 @@ export function actionOf(b: Record<string, unknown>): MobileAction | string {
       return Number.isInteger(n) && n > 0 ? { do: 'merge', floor, number: n } : 'Which PR?';
     }
     case 'pause':
+      return { do: 'pause', floor };
     case 'resume':
-      return { do: b.do, floor };
+      return { do: 'resume', floor, choice: choiceOf(b.choice) };
     default:
       return 'Unknown action';
   }
+}
+
+const RESUME_ACTIONS = new Set<ResumeAction>(['wake', 'rehire', 'send-home', 'skip']);
+
+/** A resume's choice as the page sent it: those with work unless it says everyone, or picks. */
+export function choiceOf(v: unknown): ResumeChoice {
+  const c = (v && typeof v === 'object' ? v : {}) as { mode?: unknown; picks?: unknown };
+  const mode = c.mode === 'all' || c.mode === 'pick' ? c.mode : 'work';
+  const picks: Record<string, ResumeAction> = {};
+  for (const [k, a] of Object.entries(c.picks && typeof c.picks === 'object' ? c.picks : {})) if (k.length < 80 && RESUME_ACTIONS.has(a as ResumeAction)) picks[k] = a as ResumeAction;
+  return mode === 'pick' ? { mode, picks } : { mode };
+}
+
+/** What runAction reaches for besides the floor (the tests hand in their own). */
+export interface ActDeps {
+  runs(): Pick<ProjectRuns, 'pause' | 'resume'>;
 }
 
 export interface Actor {
@@ -51,7 +71,7 @@ export interface Actor {
 }
 
 /** Runs one action; never throws. */
-export async function runAction(ctx: Ctx, a: MobileAction, who: Actor): Promise<ActResult> {
+export async function runAction(ctx: Ctx, a: MobileAction, who: Actor, deps: ActDeps = { runs: () => projectRunsOf(ctx) }): Promise<ActResult> {
   const floor = ctx.floors.get(a.floor);
   if (!floor) return { ok: false, status: 404, error: 'No such project' };
   if (!who.admin) return { ok: false, status: 403, error: 'Only the Project Manager (an admin) can do that' };
@@ -99,10 +119,22 @@ export async function runAction(ctx: Ctx, a: MobileAction, who: Actor): Promise<
         record(summary, { pr: pr.number });
         return { ok: true, summary, url: pr.url };
       }
-      case 'pause':
-      case 'resume':
-        // A slot: Pause / Resume project is coming as a feature of its own.
-        return { ok: false, status: 501, error: `${a.do === 'pause' ? 'Pausing' : 'Resuming'} a project isn't in this office yet` };
+      case 'pause': {
+        // Every agent finishes its turn, writes a handoff and sleeps; the office's own prompts hold (project-run/flows.ts).
+        const run = deps.runs().pause(floor.id, who.name, who.id);
+        if (typeof run === 'string') return { ok: false, status: 400, error: run };
+        const summary = `Pausing ${floor.def.name}: ${run.agents.length} agent${run.agents.length === 1 ? '' : 's'} finish their turn and go to sleep`;
+        record(summary, { runId: run.runId });
+        return { ok: true, summary, run };
+      }
+      case 'resume': {
+        const choice = a.choice ?? { mode: 'work' };
+        const run = await deps.runs().resume(floor.id, choice, who.name, who.id);
+        if (typeof run === 'string') return { ok: false, status: 400, error: run };
+        const summary = `Resuming ${floor.def.name}: ${run.agents.length ? `waking ${run.agents.length} agent${run.agents.length === 1 ? '' : 's'}` : 'nobody to wake'}`;
+        record(summary, { runId: run.runId, mode: choice.mode });
+        return { ok: true, summary, run };
+      }
     }
   } catch (err) {
     return { ok: false, status: 500, error: (err as Error).message };

@@ -5,7 +5,7 @@
 // (ui/needsyou/logic.ts). Risky actions are confirmed with a fresh sign-in (confirm.ts); an agent's
 // terminal is read-only here (chat.ts). No three.js.
 
-import { MOBILE_TABS, type MobileTab, type ProjectStatus } from '../../shared/mobile';
+import { MOBILE_TABS, type MobileTab, type ProjectStatus, type RestartLine } from '../../shared/mobile';
 import { dmChannel, dmMessages, floorChannel, unreadIn } from '../../shared/phone';
 import type { ServerMsg } from '../../shared/protocol';
 import type { Net } from '../net';
@@ -31,7 +31,8 @@ import { agentList, floorList, swap } from './lists';
 import { answerEscalation, approvalRows, hireSheet, onComputer, prSheet, raiseCap } from './needs';
 import { isIos, isStandalone, registerWorker } from './push';
 import { installSteps, openSettings } from './settings';
-import { statusList } from './status';
+import { running, statusList } from './status';
+import { pauseProject, resumeProject } from './resume';
 import '../ui/phone/phone.css';
 import './mobile.css';
 
@@ -62,6 +63,8 @@ export function installMobile(deps: MobileDeps): MobileApp {
   let me: MeView | undefined;
   let statuses: ProjectStatus[] | undefined;
   let statusError: string | undefined;
+  let restart: RestartLine | undefined;
+  let statusTimer: ReturnType<typeof setTimeout> | undefined;
   let flash: string | undefined;
 
   const back = h('button.m-hbtn', { type: 'button', 'aria-label': 'Back', hidden: true, onclick: () => goBack() }, '‹');
@@ -216,8 +219,9 @@ export function installMobile(deps: MobileDeps): MobileApp {
             const r = roster();
             if (r) hireSheet(store.floor ?? '', r);
           },
-          pause: (p) => void mobileApi.act({ do: p.projectPaused ? 'resume' : 'pause', floor: p.floor }).catch((x) => toast((x as Error).message, 'warn')),
-        }, statusError);
+          pause: (p) => void pauseProject(p).then((ok) => void (ok && loadStatus())),
+          resume: (p) => void resumeProject(p).then((ok) => void (ok && loadStatus())),
+        }, statusError, restart);
       }
     }
     swap(banner, banners());
@@ -275,8 +279,13 @@ export function installMobile(deps: MobileDeps): MobileApp {
 
   async function loadStatus() {
     try {
-      statuses = await mobileApi.status();
+      const v = await mobileApi.status();
+      statuses = v.projects;
+      restart = v.restart;
       statusError = undefined;
+      // While a resume, a pause or a restart is going, its progress is looked at every few seconds.
+      clearTimeout(statusTimer);
+      if (tab === 'status' && (restart || statuses.some(running))) statusTimer = setTimeout(() => !document.hidden && tab === 'status' && void loadStatus(), 3000);
     } catch (err) {
       statusError = (err as Error).message;
     }

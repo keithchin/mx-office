@@ -67,8 +67,8 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | any | `/m` | The [phone version](../using-the-office/phone-version.md) |
 | GET | `/api/m/me` | Admin or not, until when risky actions go through without the password (`reauthUntil`), the push key, this person's phones |
 | POST | `/api/m/reauth` | `{ password }`: the password typed again for risky actions (10 minutes; rate-limited like sign-in) |
-| POST | `/api/m/act` | `{ do, floor, … }`: an action from the phone: `escalation` (approve / reject / reply), `raise-cap`, `hire`, `merge` (answers the PR's URL), `pause` / `resume` (not yet). Risky ones answer 401 `{ reauth: true }` without a fresh sign-in; each is `phone.*` in the audit log |
-| GET | `/api/m/status` | Each project's status line (working, asleep, asking, stage, spend, escalations) |
+| POST | `/api/m/act` | `{ do, floor, … }`: an action from the phone: `escalation` (approve / reject / reply), `raise-cap`, `hire`, `merge` (answers the PR's URL), `pause`, `resume` (`choice`: `{ mode: 'work' | 'all' }`; both through [Pause / Resume project](../using-the-office/resume-and-pause.md), answering the run's progress). Risky ones answer 401 `{ reauth: true }` without a fresh sign-in; each is `phone.*` in the audit log |
+| GET | `/api/m/status` | Each project's status line (working, asleep, asking, stage, spend, escalations, its pause and latest resume or pause run), and a safe restart while one is going (`restart`) |
 | POST | `/api/m/push/key`, `/api/m/push/subscribe`, `/api/m/push/unsubscribe`, `/api/m/push/alerts`, `/api/m/push/test` | This phone's Web Push: the VAPID public key (made once), its subscription, its Do not disturb and digest, a test |
 | GET | `/api/m/push` | This person's phones (`?all=1`: everyone's, admins) |
 | GET / POST | `/api/phone-access` | [📱 Phone access](../administration/phone-access.md): the tunnel's state, address, sign-in prompt and checks; admins switch it on or off, pick the provider and the Cloudflare hostname |
