@@ -320,6 +320,8 @@ setInterval(renderKanban, 30_000);
 /** An escalation's card on the PM console, scrolled to with its answer box focused; the Approvals tab if it isn't there. */
 function toEscalation(id: string) {
   if (tab !== 'command') showTab('command');
+  // The fitted Command Center keeps the cards behind a bar: bring them up first.
+  pm.showEscalations();
   const find = () => document.querySelector<HTMLElement>(`#summary:not(.hidden) .esc[data-id="${CSS.escape(id)}"]`);
   // Only as far as needed, in one go: the escalations list to the card, then the page just enough to
   // show it. A smooth scroll to the middle got thrown about by the summary redrawing around it.

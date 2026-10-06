@@ -109,8 +109,8 @@ function narrative(s: ProjectSummary): HTMLElement {
 
 function callouts(s: ProjectSummary): HTMLElement | null {
   const items: HTMLElement[] = [];
-  if (s.needsHuman.count) items.push(h('li.sm-risk.bad', {}, `🙋 ${s.needsHuman.count} agent${s.needsHuman.count === 1 ? ' needs' : 's need'} a human — longest wait ${mins(s.needsHuman.longestMs)}`));
-  for (const r of s.risks) items.push(h(`li.sm-risk.${r.level}`, {}, `${r.level === 'bad' ? '⛔' : '⚠️'} ${r.text}`));
+  if (s.needsHuman.count) items.push(h('li.sm-risk.bad', { title: `${s.needsHuman.count} agent(s) need a human` }, `🙋 ${s.needsHuman.count} agent${s.needsHuman.count === 1 ? ' needs' : 's need'} a human — longest wait ${mins(s.needsHuman.longestMs)}`));
+  for (const r of s.risks) items.push(h(`li.sm-risk.${r.level}`, { title: r.text }, `${r.level === 'bad' ? '⛔' : '⚠️'} ${r.text}`));
   return items.length ? h('ul.sm-risks', { 'aria-label': 'Needs attention' }, ...items) : null;
 }
 
@@ -208,12 +208,23 @@ function foldState(): Record<string, boolean> {
   }
 }
 
-/** A section that folds: `key` is what's remembered (folded: true). Open unless folded before. */
+/**
+ * A section that folds: `key` is what's remembered (folded: true). Open unless folded before. Its
+ * heading is a button; its body is a frame of its own, which scrolls inside itself (subtly) when the
+ * Command Center gives it less room than it needs (ui/command-layout.css), never the column round it.
+ */
 function fold(key: string, head: HTMLElement, body: HTMLElement[], cls = ''): HTMLElement {
-  const d = h('details.sm-fold', { class: cls, 'data-fold': key, open: !foldState()[key] }, h('summary.sm-fold-h', {}, head), ...body) as HTMLDetailsElement;
-  d.addEventListener('toggle', () => {
+  const open = !foldState()[key];
+  const frame = h('div.sm-fold-body', { hidden: !open }, ...body);
+  const btn = h('button.sm-fold-h', { type: 'button', 'aria-expanded': String(open) }, head);
+  const el = h('section.sm-fold', { class: `${cls}${open ? '' : ' sm-folded'}`, 'data-fold': key }, btn, frame);
+  btn.addEventListener('click', () => {
+    const now = frame.hidden;
+    frame.hidden = !now;
+    btn.setAttribute('aria-expanded', String(now));
+    el.classList.toggle('sm-folded', !now);
     const st = foldState();
-    if (d.open) delete st[key];
+    if (now) delete st[key];
     else st[key] = true;
     try {
       localStorage.setItem(FOLD_KEY, JSON.stringify(st));
@@ -221,5 +232,5 @@ function fold(key: string, head: HTMLElement, body: HTMLElement[], cls = ''): HT
       // Only this visit.
     }
   });
-  return d;
+  return el;
 }
