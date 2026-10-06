@@ -104,7 +104,7 @@ export function restartWords(r: RestartLine): string {
     case 'exiting':
       return '🔁 Restarting now: back in a minute';
     case 'failed':
-      return '🔁 Restart safely failed: see Settings on a computer';
+      return '🔁 Restart safely failed: see ⚙️ Settings › 🤖 Workers on a computer (/lite?tab=settings&section=workers)';
     default:
       return `🔁 Restart safely: ${r.phase}`;
   }

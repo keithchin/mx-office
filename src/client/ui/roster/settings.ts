@@ -15,7 +15,32 @@ import { pacingSection } from '../project-run';
 const LEVELS: AutonomyLevel[] = [1, 2, 3, 4];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export function settingsView(v: RosterView, redraw: (v: RosterView) => void): HTMLElement {
+/** Which of the team settings to draw: all of them (the Team tab), or one group of the flat Settings page's (ui/settings/page.ts). */
+export type RosterSettingsPart = 'all' | 'team' | 'deliverables' | 'jeff';
+
+export function settingsView(v: RosterView, redraw: (v: RosterView) => void, part: RosterSettingsPart = 'all'): HTMLElement {
+  const el = allSettings(v, redraw);
+  return part === 'all' ? el : onlyPart(el, part);
+}
+
+/**
+ * Keeps the bar (with 💾 Save, which saves them all) and the headings of `part` with what follows each:
+ * Deliverables' early drafts, Jeff's modes, or the rest (the team's own). Your view is the You section's there.
+ */
+function onlyPart(el: HTMLElement, part: Exclude<RosterSettingsPart, 'all'>): HTMLElement {
+  let group: RosterSettingsPart | 'you' = 'team';
+  for (const child of [...el.children]) {
+    if (child.matches('.ro-bar')) continue;
+    if (child.tagName === 'H4') group = child.textContent === 'Deliverables' ? 'deliverables' : child.matches('.ro-jeff-h') ? 'jeff' : child.textContent?.startsWith('Your view') ? 'you' : 'team';
+    // Resume pacing comes after Jeff, and is the team's.
+    const mine = child.matches('.pr-pacing') ? part === 'team' : group === part;
+    if (!mine) child.remove();
+  }
+  el.dataset.part = part;
+  return el;
+}
+
+function allSettings(v: RosterView, redraw: (v: RosterView) => void): HTMLElement {
   const s: RosterSettings = structuredClone(v.settings);
   const off = !v.admin;
   const levels = h(

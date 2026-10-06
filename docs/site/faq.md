@@ -100,7 +100,7 @@ On every worker card (💵), the board's summary line, the Command Center (*$x t
 
 ### Can I cap spending?
 
-Yes. In **⚙️ Settings**, set a **daily cost cap** for each autonomy level. When the floor's day is spent, hiring pauses there until midnight (Singapore time).
+Yes. In **⚙️ Settings › 👥 Team** (`/lite?tab=settings&section=team`), set a **daily cost cap** for each autonomy level. When the floor's day is spent, hiring pauses there until midnight (Singapore time).
 
 ## Running the office
 

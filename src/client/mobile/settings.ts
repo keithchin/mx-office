@@ -30,7 +30,7 @@ export function installSteps(): HTMLElement {
 
 const STATE_TEXT: Record<PushState, string> = {
   unsupported: 'This browser can’t get push notifications.',
-  insecure: 'Push needs https: open the office through 📱 Phone access (Settings → Connections on the office’s computer).',
+  insecure: 'Push needs https: open the office through 📱 Phone access (⚙️ Settings › 🔌 Connections, on the office’s 1D view on a computer: /lite?tab=settings&section=connections).',
   'install-first': 'On an iPhone, push only works once the office is on your home screen:',
   denied: 'Notifications are blocked for the office: allow them in Settings → Notifications → Agent Office, then come back.',
   off: 'Off on this phone. Turn them on to hear about red items (an agent stopped on you, an escalation, failing checks) even with the app closed.',

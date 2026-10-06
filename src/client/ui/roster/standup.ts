@@ -18,7 +18,7 @@ export function standupView(v: RosterView, redraw: (v: RosterView) => void): HTM
   const sched = v.settings.schedule;
   const next = v.nextStandupAt
     ? `Next: ${when(v.nextStandupAt)} (${sched.time} ${sched.timeZone})${v.activitySinceStandup ? '' : ' · skipped unless the floor gets busy first'}`
-    : 'The daily standup is off: turn it on in ⚙️ Settings';
+    : 'The daily standup is off: turn it on in ⚙️ Settings › 👥 Team';
   const list = v.standups;
   if (!picked || !list.some((s) => s.id === picked)) picked = list[0]?.id;
   const page = h('div.ro-page', {}, list.length ? h('p.ro-dim', {}, 'Loading the standup…') : h('p.ro-dim', {}, 'No standup yet. Run one: each Lead at its desk posts done / next / blockers / proposals; the others are read from their journals.'));

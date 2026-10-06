@@ -44,7 +44,7 @@ The same menu as in the 3D office, with what each item does from here.
 |---|---|
 | **Open** | 🙋 Next worker that needs you (only when someone waits) · 📌 Issues · 🔀 Pull requests · 📋 Task queue · 🌐 Services · 📝 Whiteboard · 🤝 Meeting room · 🔎 Search · 📚 Project docs · 🧱 Open in Studio Pro (Mendix projects; admin) · 🛗 Floors · 🍸 Rooftop bar (3D ↗) |
 | **Together** | 🎙️ Join voice (3D ↗) · 🖥️ Share screen (3D ↗) · 🖼️ Hang a picture (3D ↗) · 👥 Invite teammates · 🔑 Accounts (admin) · 🔐 Your sign-ins |
-| **Office** | ⚙️ Settings (3D ↗) · 🏠 Home · 📖 Documentation · ⬆️ Upgrade the office (when an update is there) |
+| **Office** | ⚙️ Settings · 🏠 Home · 📖 Documentation · ⬆️ Upgrade the office (when an update is there) |
 
 - Items marked **3D ↗** open the 3D office and run there.
 - **📚 Project docs** opens the floor's own Markdown files (its README, `docs/team/*.md`, standups) on the bookshelf.
@@ -53,7 +53,7 @@ The same menu as in the 3D office, with what each item does from here.
 - On `/home`, the items that need a floor are left out.
 
 > [!NOTE]
-> **⚙️ Settings** in the ☰ menu is the 3D office's own settings window (you, sound, notifications, the building). A project's team settings are on the 1D view's **⚙️ Settings** tab. See [Settings](settings.md).
+> **⚙️ Settings** in the ☰ menu opens the full Settings page, the 1D view's **⚙️ Settings** tab (`/lite?tab=settings`), from the 1D view, the 2D view and `/home` alike: it never switches to the 3D office. The 3D office keeps its own ⚙️ window (camera, character, the building) for when you're in it. See [Settings](settings.md).
 
 ## Tab badges
 

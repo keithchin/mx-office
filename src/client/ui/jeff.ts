@@ -57,7 +57,7 @@ export function jeffSection(floor: string | undefined): HTMLElement {
 
 function jeffBody(s: JudgeSummary): Node[] {
   const modes = s.kinds.map((k) => k.mode);
-  const lead = modes.includes('shadow') ? 'Jeff is watching, not acting. Switch to On where he agrees with you.' : modes.every((m) => m === 'off') ? 'Jeff is off on this floor: turn him on in 👥 Team › ⚙️ Settings.' : 'Jeff is acting on his verdicts.';
+  const lead = modes.includes('shadow') ? 'Jeff is watching, not acting. Switch to On where he agrees with you.' : modes.every((m) => m === 'off') ? 'Jeff is off on this floor: turn him on in ⚙️ Settings › ⚖️ Jeff · Router.' : 'Jeff is acting on his verdicts.';
   const disagreements = s.rows.filter((r) => r.agree === false);
   return [
     h(

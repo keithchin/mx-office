@@ -27,7 +27,7 @@ Watch the **Jeff · Router** section of the [Analysis](../using-the-office/model
 
 ## When he escalates
 
-With **Waiting on you** On, **When to escalate** (Settings → Jeff · Router) says what it takes for him to raise an escalation the office's rule missed:
+With **Waiting on you** On, **When to escalate** (⚙️ Settings › ⚖️ Jeff · Router, `/lite?tab=settings&section=jeff`) says what it takes for him to raise an escalation the office's rule missed:
 
 - **Only a real ask** (the default, `agree`): he says it's waiting *and* the end of its last message (its last three paragraphs) asks you something: a question put to you, a request or approval (*should I…*, *can you…*, *waiting on you*, *until you decide*, *needs your approval*, *for you to merge*), or an `AWAITING-PM:` line. A progress report (*Still running: …*, *I also told Keith…*), a condition (*If you meant something else, tell me*) or the future (*Merging it will need your approval when I open its PR*) isn't one. When he says it's waiting but there's no real ask, nothing is raised: the row is logged as a disagreement, marked *held: no real ask* on the Analysis tab.
 - **His say-so** (`model`): his verdict alone is enough, as he worked before. Progress reports get escalated too.
@@ -45,7 +45,7 @@ This is what would have turned mx-spike's nine escalations about two CI secrets 
 
 ## Priority: which escalation first
 
-With **Priority** on (the default, Settings → Jeff · Router → **Priority**: Off or On), Jeff rates every open escalation that isn't FYI, once, and again at most once an hour or when its text changes. He picks a level, from *Can wait days* to *Blocking work right now, or a critical risk*, and says how true two things are: *agents are stopped until you answer* (blocking) and *delaying it risks security, data loss, budget overrun or a client milestone* (risk). The office turns that into a score:
+With **Priority** on (the default, ⚙️ Settings › ⚖️ Jeff · Router → **Priority**: Off or On), Jeff rates every open escalation that isn't FYI, once, and again at most once an hour or when its text changes. He picks a level, from *Can wait days* to *Blocking work right now, or a critical risk*, and says how true two things are: *agents are stopped until you answer* (blocking) and *delaying it risks security, data loss, budget overrun or a client milestone* (risk). The office turns that into a score:
 
 ```text
 score = 100 × (0.45 × level + 0.35 × blocking + 0.20 × risk)  +  20 × blocking × min(1, hours open / 24)

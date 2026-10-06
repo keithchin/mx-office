@@ -6,7 +6,22 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+- No settings link sends you to the 3D view any more. The ☰ menu's **⚙️ Settings** on the 1D view, the 2D view
+  and `/home` opened the 3D office's Settings window; it now opens the full Settings page on the 1D view
+  (`/lite?tab=settings`). So do Needs you's *Spend cap reached → Settings*, the team phone's *Raise cap*, a
+  Teams card's Open for it, the budget's *Team settings* suggestions and the team's Autonomy chip, each at its
+  section (`&section=team`), and the docs' "3D view → ☰ → ⚙️ Settings" steps.
+
+### Improved
+- **⚙️ Settings** is a full page on the 1D view: every setting, sections down the left (You, Workers, Team,
+  Jeff · Router, Notifications, Budget, Connections, Deliverables, Incidents, Studio, Appearance, Advanced),
+  each with its own address (`/lite?tab=settings&section=workers`) for links. It has everything the 3D window
+  had (default worker, worker limit, keep awake, restart safely, prompts, Slack / Discord and Teams, the map,
+  holiday theme, sky, dog and workspace folder) plus the team settings, Jeff, early drafts, the budget's
+  settings, the incident detection rules, Studio Pro and your color theme. Admin-only parts stay read-only or
+  hidden as before; it wears all five themes. The 3D office keeps its own ⚙️ window, built from the same parts,
+  with an *All settings ↗* link here. On a new office with no project yet, `/home` opens it in a window.
 
 ## 2026-10-06 · release 14 (`a208a15`)
 

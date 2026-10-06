@@ -1,8 +1,9 @@
 /**
  * The ☰ menu on the flat views' top bars (the 1D board and the 2D pixel office): the 3D office's menu
  * (ui/menuitems.ts has its items, ui/menu.ts draws them), with what each does from here. What only
- * the 3D office has (voice, sharing your screen, hanging a picture, the rooftop bar, Settings, whose
- * window draws the sky and your character in 3D) is marked 3D and opens the 3D office at it. The
+ * the 3D office has (voice, sharing your screen, hanging a picture, the rooftop bar) is marked 3D and
+ * opens the 3D office at it. ⚙️ Settings never does: it's the flat Settings page (ui/settings/page.ts),
+ * the 1D view's ⚙️ Settings tab, which `settings` opens (or goToSettings, ui/settings/flat.ts). The
  * camera keys (Controls), the mute button (only while in voice), the 3D panels and the view items
  * (the view dropdown has those) aren't offered. The home page has it too, without what needs a floor
  * (home: true): its issues, PRs, queue, services, whiteboard, meeting, search, docs and who's waiting.
@@ -27,11 +28,12 @@ import { openConnections } from '../ui/connections';
 import { openSignIns } from '../ui/signins';
 import { openUpgrade } from '../ui/upgrade';
 import { switchView } from '../graphics';
+import { settingsHref } from '../../shared/settings-sections';
 import { openStudio, watchStudio } from '../ui/studio';
 import '../ui/menu.css';
 import '../ui/flatchrome.css';
 
-export type FlatMenuDeps = FloorMenuDeps | { net: Net; home: true };
+export type FlatMenuDeps = FloorMenuDeps | { net: Net; home: true; settings?: () => void };
 
 interface FloorMenuDeps {
   net: Net;
@@ -43,6 +45,8 @@ interface FloorMenuDeps {
   nextWaiting: () => void;
   /** The page has the 3D office's N for it (the 2D view does). */
   nKey?: boolean;
+  /** ⚙️ Settings: the 1D view's own tab there, the 1D view's tab from elsewhere. */
+  settings?: () => void;
 }
 
 /** What only makes sense on a floor, left out of the home page's ☰. */
@@ -90,7 +94,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
     { ...MENU.team, run: () => openTeam(net) },
     { ...MENU.accounts, run: () => openAccounts(net) },
     { ...MENU.signins, run: () => openSignIns(net) },
-    in3d('settings', 'Your settings, the building and the workers'),
+    { ...MENU.settings, title: () => 'Every setting: you, the workers, the team, Jeff, notifications, the budget, connections and the rest', run: () => (d.settings ? d.settings() : location.assign(settingsHref(undefined, store.floor ?? undefined))) },
     { ...MENU.connections, run: () => openConnections() },
     { ...MENU.home, shown: () => !d.home, run: () => location.assign('/home') },
     { ...MENU.guide, run: () => location.assign('/docs') },
@@ -98,7 +102,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
   ];
   const actions = d.home ? all.filter((a) => !FLOOR_ONLY.has(a.id)) : all;
   if (!d.home) watchStudio();
-  const elsewhere = new Set<string>(['roof', 'voice', 'share', 'decor', 'settings']);
+  const elsewhere = new Set<string>(['roof', 'voice', 'share', 'decor']);
   let menu: Modal | null = null;
 
   function open() {

@@ -1,0 +1,38 @@
+/* The flat views' ⚙️ Settings page (page.ts): the 3D window's look (settings.css), laid out in the page
+   rather than a window, and in the color tokens so every theme (Default, Dark, Terminal, Clean) wears it. */
+.fs-page { display: flex; flex-direction: column; min-height: 0; }
+.fs-title { margin-bottom: 8px; }
+.fs-grid { display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: start; background: var(--paper); border: 3px solid var(--line); border-radius: 16px; box-shadow: 0 4px 0 var(--edge); overflow: hidden; }
+.fs-nav { position: sticky; top: 0; align-self: stretch; background: var(--paper-2); border-right-color: var(--line); }
+.fs-nav .settings-tab { color: var(--ink); }
+.fs-nav .settings-tab:hover { background: var(--card); }
+.fs-nav .settings-tab.on { background: var(--card); border-color: var(--line); box-shadow: 0 3px 0 var(--edge); }
+.fs-body { overflow: visible; padding: 18px 22px 28px; }
+.fs-body .settings-head p { color: var(--muted); }
+.fs-body .setting { background: var(--card); border-color: var(--rule-strong); color: var(--ink); }
+.fs-body .scope { border-color: var(--line); color: var(--ink); }
+.fs-body .scope.you { background: color-mix(in srgb, var(--info) 22%, var(--card)); }
+.fs-body .scope.floor { background: color-mix(in srgb, var(--good) 22%, var(--card)); }
+.fs-body .scope.office { background: color-mix(in srgb, var(--accent) 22%, var(--card)); }
+.fs-body .volume input[type=range]::-webkit-slider-runnable-track { border-color: var(--line); background: linear-gradient(to right, var(--accent) var(--fill), var(--card) var(--fill)); }
+.fs-body .volume input[type=range]::-webkit-slider-thumb { border-color: var(--line); background: var(--paper); }
+.fs-body a { color: var(--accent); font-weight: 800; }
+/* The team settings, the budget's and the connections inside a section: as on their own tabs, without a second frame. */
+.fs-roster .ro-settings, .fs-budget .bud-card { margin: 0; }
+.fs-budget .bud-card > summary { pointer-events: none; list-style: none; }
+.fs-budget .bud-card > summary::-webkit-details-marker { display: none; }
+.fs-rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.fs-rules li { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border: 2px solid var(--rule); border-radius: 10px; background: var(--paper); }
+.fs-rules li.off { opacity: .6; }
+.fs-rules li.bad { color: var(--bad-ink, var(--bad)); }
+.fs-rules small { color: var(--muted); font-weight: 600; }
+.fs-rules + .seg { margin-top: 10px; }
+@media (max-width: 720px) {
+  .fs-grid { grid-template-columns: minmax(0, 1fr); }
+  .fs-nav { position: static; flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 3px solid var(--line); }
+  .fs-nav .settings-tab { flex: none; width: auto; white-space: nowrap; }
+  .fs-body { padding: 14px; }
+}
+/* In a window (the home page before any project, ui/settings/flat.ts): the page fills it and scrolls. */
+.fs-window .fs-window-body { flex: 1; min-height: 0; overflow: auto; padding: 12px; }
+.fs-window .fs-title { display: none; }

@@ -86,7 +86,7 @@ The pause is kept in `<office data>/project-run.json`, so it survives a restart.
 
 ## 🔁 Restart safely
 
-For a release or a restart, use **⚙️ Settings › Workers › 🔁 Restart safely** (admins), or `POST /api/office/restart` from a script. It pauses every project, waits until no agent is mid-turn, and restarts the office. When the office is back, it resumes the projects it paused. See [Releasing and restarting safely](../administration/running-the-office.md#releasing-and-restarting-safely).
+For a release or a restart, use **⚙️ Settings › 🤖 Workers › 🔁 Restart safely** (admins, `/lite?tab=settings&section=workers`), or `POST /api/office/restart` from a script. It pauses every project, waits until no agent is mid-turn, and restarts the office. When the office is back, it resumes the projects it paused. See [Releasing and restarting safely](../administration/running-the-office.md#releasing-and-restarting-safely).
 
 ## Who can use them
 

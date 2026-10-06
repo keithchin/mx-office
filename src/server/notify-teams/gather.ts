@@ -17,6 +17,7 @@ import { studioStateOf } from '../studio/index.js';
 import { attentionBriefs } from '../incidents/index.js';
 import { officeLink, type RedItem } from './cards.js';
 import { budgetNeedOf } from '../budget/need.js';
+import { settingsHref } from '../../shared/settings-sections.js';
 
 export interface FloorNeeds {
   input: NeedsInput;
@@ -99,9 +100,10 @@ function summaryOf(n: NeedItem, who: string): string {
   return n.text;
 }
 
-/** Where an item's Open button goes: the floor's 1D view (its Command Center lists it), or the Firm's report. */
-function pathOf(n: NeedItem, floor: string): string {
+/** Where an item's Open button goes: the floor's 1D view (its Command Center lists it), its ⚙️ Settings section, or the Firm's report. */
+export function pathOf(n: Pick<NeedItem, 'target'>, floor: string): string {
   if (n.target.to === 'firm') return n.target.url.replace(/^\//, '');
+  if (n.target.to === 'settings') return settingsHref(n.target.section ?? 'team', floor).replace(/^\//, '');
   return `lite?floor=${encodeURIComponent(floor)}`;
 }
 

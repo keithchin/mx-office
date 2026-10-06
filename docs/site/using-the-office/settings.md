@@ -1,10 +1,33 @@
 ---
 title: Settings
-description: A floor's team settings - autonomy level, idle benching, review loop, early drafts, subagent cool-down, standup schedule, cost caps, dry run and Jeff (including his priority sort) - and the office's Teams notifications and keep-awake.
+description: The full Settings page on the 1D view - you, workers (default worker, keep awake, restart safely, prompts), the team (autonomy, benching, cost caps), Jeff, notifications, budget, connections, deliverables, incidents, Studio, appearance and advanced - with a link to each section.
 weight: 13
 ---
 
-The **⚙️ Settings** tab holds the floor's team settings. Only admins can change them. Click **💾 Save settings** when done.
+**⚙️ Settings** is a page of its own on the 1D view: its **⚙️ Settings** tab, `/lite?tab=settings`. The ☰ menu's **⚙️ Settings** opens it from the 1D view, the 2D view and `/home` alike, and so does every settings button and link in the office (Needs you's *Raise cap → Settings*, the team phone, Teams cards, the budget's suggestions, these docs): none of them switches to the 3D office. On a brand-new office with no project yet, `/home` opens it in a window instead.
+
+The sections are down the left; pick one and the address follows (`&section=workers`), so a link can open any of them. Settings marked *Just you* are kept in this browser; *This floor* and *Everyone* are the office's, and only admins change those (everyone else sees them read-only). 🔌 Connections is listed for admins only.
+
+| Section | Link | What's in it |
+|---|---|---|
+| 🧍 **You** | [section=you](/lite?tab=settings&section=you) | Command Center terminal (Chat or Terminal), how you're signed in, and your sounds and voice chat (heard in the 3D office) |
+| 🤖 **Workers** | [section=workers](/lite?tab=settings&section=workers) | Default worker, worker limit, keep awake while agents work, 🔁 restart safely, workers whose PR merged, the prompts |
+| 👥 **Team** | [section=team](/lite?tab=settings&section=team) | This project's team settings (the table below, without Jeff and early drafts), and ▶ Resume project pacing |
+| ⚖️ **Jeff · Router** | [section=jeff](/lite?tab=settings&section=jeff) | *Waiting on you*, *When to escalate*, *Triage*, *Priority* |
+| 🔔 **Notifications** | [section=notify](/lite?tab=settings&section=notify) | Desktop notifications, the alarm when a worker needs you, phone alerts, Slack / Discord, Microsoft Teams |
+| 💰 **Budget** | [section=budget](/lite?tab=settings&section=budget) | This project's budget, alert threshold, auto-pause and level; the office's default threshold and local currency (FX) |
+| 🔌 **Connections** | [section=connections](/lite?tab=settings&section=connections) | Tokens, password, git & gh, phone access, folders, worktree cleanup (admins; also ☰ → 🔌 Connections) |
+| 📦 **Deliverables** | [section=deliverables](/lite?tab=settings&section=deliverables) | Early drafts |
+| 🚨 **Incidents** | [section=incidents](/lite?tab=settings&section=incidents) | The detection rules and the dedupe window (admins edit them) |
+| 🧱 **Studio** | [section=studio](/lite?tab=settings&section=studio) | Studio mode now, and Open in Studio Pro (admins) |
+| 🎨 **Appearance** | [section=appearance](/lite?tab=settings&section=appearance) | Your color theme (Default, Dark, Terminal, Clean Light/Dark), the building's holiday theme and map |
+| 🛠️ **Advanced** | [section=advanced](/lite?tab=settings&section=advanced) | Workspace folder, the sky's clock, the office dog, where the settings files are |
+
+The 3D office keeps its own **☰ → ⚙️ Settings** window for when you're in it: the camera and your character, which only it has, plus the same Workers, Notifications, sound and building sections (they're built from the same parts), and an *All settings ↗* link to this page.
+
+## The team settings
+
+Under 👥 Team, ⚖️ Jeff · Router and 📦 Deliverables. Only admins can change them. Click **💾 Save settings** when done (it saves all three).
 
 ![Settings](../images/settings.png)
 
@@ -21,7 +44,7 @@ The **⚙️ Settings** tab holds the floor's team settings. Only admins can cha
 | **Issues** | Dry run: record approvals without making GitHub issues | **Off** |
 | **Jeff · Router** | *Waiting on you* and *Triage*: Off · Shadow · On; *Priority*: Off · On; *When to escalate*: Only a real ask · His say-so | **Shadow, Shadow, On, Only a real ask** |
 
-Below them, under **Your view (just you)**: **Command Center terminal**, *Chat (default)* or *Terminal*, the view the [Project Coordinator console](command-center.md#the-project-coordinator-console) opens in. Anyone can change it, it applies at once (no 💾 Save), and it's kept in this browser only.
+Under 🧍 **You**: **Command Center terminal**, *Chat (default)* or *Terminal*, the view the [Project Coordinator console](command-center.md#the-project-coordinator-console) opens in. Anyone can change it, it applies at once (no 💾 Save), and it's kept in this browser only.
 
 ## What each one does
 
@@ -38,10 +61,10 @@ Below them, under **Your view (just you)**: **Command Center terminal**, *Chat (
 
 All fields with their exact names and limits: [Settings reference](../reference/settings-reference.md).
 
-## The office's ⚙️ Settings: Teams and keep-awake
+## Teams, keep-awake and restarting safely
 
-Two settings for the whole office live in the 3D office's **☰ → ⚙️ Settings** window rather than on this tab. Admins change them; everyone sees them.
+Three settings for the whole office. Admins change them; everyone sees them.
 
-- **🔔 Notifications → Microsoft Teams**: the Teams Workflows webhook (masked once saved), **📨 Send a test card**, which floors post, *Needs you only* or *Needs you + daily digest*, quiet hours, a pause (1, 4 or 12 hours) and the public office address for each card's Open button. See [Teams notifications](../integrations/teams-notifications.md).
-- **🤖 Workers → 🔁 Restart safely** (admins): pauses every project, waits until no agent is mid-turn (with a timeout: keep waiting, restart anyway, or cancel), optionally runs `npm run build` when the office's checkout has new commits, then restarts through the launcher's loop. The floors it paused are resumed when the office is back. See [Releasing and restarting safely](../administration/running-the-office.md#releasing-and-restarting-safely).
+- **🔔 Notifications → Microsoft Teams** ([section=notify](/lite?tab=settings&section=notify)): the Teams Workflows webhook (masked once saved), **📨 Send a test card**, which floors post, *Needs you only* or *Needs you + daily digest*, quiet hours, a pause (1, 4 or 12 hours) and the public office address for each card's Open button. See [Teams notifications](../integrations/teams-notifications.md).
+- **🤖 Workers → 🔁 Restart safely** ([section=workers](/lite?tab=settings&section=workers), admins): pauses every project, waits until no agent is mid-turn (with a timeout: keep waiting, restart anyway, or cancel), optionally runs `npm run build` when the office's checkout has new commits, then restarts through the launcher's loop. The floors it paused are resumed when the office is back. See [Releasing and restarting safely](../administration/running-the-office.md#releasing-and-restarting-safely).
 - **🤖 Workers → Keep awake while agents work** (on by default): the computer doesn't sleep while any worker on any floor is working or a queued task, Firm audit or gate-check runs, and may again once everything has been idle for the set minutes (10). It says what it's doing (*Keeping this computer awake: 3 agents working*) and how to set *When I close the lid* to *Do nothing* so work carries on with the lid closed. See [Running the office](../administration/running-the-office.md#keep-it-awake-and-the-lid).
