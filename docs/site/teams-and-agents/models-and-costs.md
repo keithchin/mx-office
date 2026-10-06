@@ -40,10 +40,13 @@ In [Settings](../using-the-office/settings.md) you can set a **daily dollar cap 
 
 When the floor's spend for the day reaches it:
 
-- hiring stops on that floor, with *This floor's $X daily team cap (autonomy level N) is spent — no new hires here until tomorrow*;
-- **💸 Hiring is paused** shows in Needs you, and *Daily cost cap reached* in Approvals.
+- hiring stops on that floor, with *This floor's $X daily team cap (autonomy level N) is spent: no new hires, and the office sends no prompts of its own (nudges, standups, relays, wakes) until tomorrow*;
+- the office holds its own prompts to the floor's agents: review nudges, a scheduled standup (compiled from the journals instead), relays to the Project Coordinator, the autonomy and skill change notes, The Firm's interview questions and wakes, and one agent's `office-workers tell` to another (refused, with the reason). Relays wait and go out once the cap lifts;
+- **💸 Spend cap reached: office prompts paused; agents finish their current turn** shows in Needs you and in Approvals.
 
-The day resets at midnight in the standup's time zone (Asia/Singapore by default). Workers already running keep running.
+What you send still goes through: your answers to escalations, your typing in a terminal, a standup you call, a wake from the Team tab. A turn already running is never stopped.
+
+The day resets at midnight in the standup's time zone (Asia/Singapore by default).
 
 > [!NOTE]
 > There is also an office-wide daily budget, `--budget` / `AGENT_OFFICE_BUDGET`, from the original Agent Office. It's separate from the team caps. See [Server CLI](../reference/server-cli.md).

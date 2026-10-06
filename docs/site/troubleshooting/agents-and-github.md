@@ -34,7 +34,7 @@ It may have asked in its last message without raising an escalation. Open its te
 
 ## Hiring is refused
 
-- **💸 Hiring is paused**: the floor's daily cost cap is spent. Raise it in Settings, or wait for midnight (Singapore time). See [Models and costs](../teams-and-agents/models-and-costs.md).
+- **💸 Spend cap reached: office prompts paused**: the floor's daily cost cap is spent. No new hires, and no nudges, scheduled standups, relays or agent-to-agent tells until it lifts; your own answers and typing still go through. Raise it in Settings, or wait for midnight (Singapore time). See [Models and costs](../teams-and-agents/models-and-costs.md).
 - Only admins can hire team members.
 
 ## Commits hang in a toolkit project

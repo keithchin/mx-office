@@ -60,6 +60,9 @@ export function reviveSubagents(raw: unknown): Record<string, SubagentRecord> {
       runs: (Array.isArray(r.runs) ? r.runs : []).map(reviveRun).filter((x): x is SubagentRun => !!x).slice(-RUNS_KEPT),
       ...(num(r.flaggedAt) !== undefined ? { flaggedAt: r.flaggedAt } : {}),
       ...(num(r.nudgedAt) !== undefined ? { nudgedAt: r.nudgedAt } : {}),
+      ...(num(r.reworks) !== undefined ? { reworks: r.reworks } : {}),
+      ...(num(r.exhaustedAt) !== undefined ? { exhaustedAt: r.exhaustedAt } : {}),
+      ...(str(r.exhaustedEscalation, 40) ? { exhaustedEscalation: str(r.exhaustedEscalation, 40) } : {}),
     };
   }
   return out;

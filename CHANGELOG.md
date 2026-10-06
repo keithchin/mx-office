@@ -6,7 +6,45 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+- **Answers no longer typed into a permission dialog**: an answer to an escalation went into the
+  agent's terminal even while it had a permission prompt or a question open, where the Enter after it
+  picked one of the dialog's options: the answer was lost but shown as delivered. Now nothing the office
+  types (your answers, a +1's answer, a Lead told about your subagent decision, relays to the Project
+  Coordinator, The Firm's questions, one agent's `office-workers tell` to another) goes in while a
+  dialog may be up (*needs input*, or still starting). Your answer waits and goes in once that turn is
+  over, with any others it's owed, in one message, and counts as delivered only then. The Activity
+  says *… has a question open in its terminal: the answer goes in once that's answered*.
+- **The daily cost cap holds the office's own prompts, not only new hires**: once a floor's cap is
+  spent the office no longer sends review nudges, a scheduled standup's questions, relays to the
+  Coordinator, autonomy and skill change notes, The Firm's interview questions or wakes, and one agent
+  can't `tell` another. Needs you and Approvals say **💸 Spend cap reached: office prompts paused;
+  agents finish their current turn**. What you send (your answers, your typing, a standup you call, a
+  wake from the Team tab) still goes through, and no running turn is stopped.
+
+### Improved
+- **The review loop is bounded**: the office counts a subagent's revision rounds from its Lead's
+  `subagent review` verdicts. One rework past the autonomy level's allowance (2 rounds at levels 1–2,
+  3 at 3–4) raises one `revisions-exhausted` escalation for the Lead (an FYI at levels 3–4), tells the
+  Lead not to send it back again, and stops the review nudge for that subagent until you answer or the
+  work is accepted.
+- **The review nudge stops when it isn't heeded**: after 3 nudges in a row with no review verdict
+  from the Lead and no one else prompting it, the office stops nudging (one *Stopped nudging …* line in
+  the Activity) until the Lead records a verdict.
+- **`office-workers tell` can't ping-pong**: at most 5 tells from one agent to the same agent in 10
+  minutes; past that it's refused with a word to use the team journal or escalate instead. A tell to an
+  agent with a question open in its terminal is held and goes in when its turn is over.
+- **Reworded duplicate escalations join the open one**: when a new escalation's title matches no open
+  one, Jeff is asked whether it's the same ask in other words (mx-spike raised nine escalations about
+  two CI secrets, each worded differently). Only a pick he's at least 85% sure of joins it as a +1;
+  otherwise, or if he doesn't answer within 10 seconds, it's raised as its own.
+
+### To know
+- The same-ask check follows Jeff's **Waiting on you** setting: it runs in Shadow too (it only joins,
+  never raises), and not when that's Off. It's at most 30 questions an hour per floor.
+- `office-workers escalate` now waits up to 30 seconds for the office (was 15), for Jeff's answer.
+- Held prompts live in memory: a tell held for an agent is lost if the office restarts before its turn
+  ends. Escalation answers aren't: an undelivered one is still owed after a restart.
 
 ## 2026-10-06 · release 5 (`1cff8c8`)
 
