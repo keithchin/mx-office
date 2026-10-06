@@ -54,6 +54,7 @@ import type { NeedTarget } from './ui/needsyou/logic';
 import { testModeBadge } from './ui/testmode';
 import './pixel/game.css';
 import { budgetUi } from './ui/budget';
+import { goToSettings } from './ui/settings/flat';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -424,7 +425,7 @@ addEventListener('keydown', (e) => {
 });
 
 // The ☰: everything the 3D office's menu has (shared/flatmenu.ts).
-flatMenu($('menu'), { net, boardActions, openWorker: workers.open, meeting: showMeeting, nextWaiting, nKey: true });
+flatMenu($('menu'), { net, boardActions, openWorker: workers.open, meeting: showMeeting, nextWaiting, nKey: true, settings: () => goToSettings(session) });
 
 // ---- In ----------------------------------------------------------------------------------------
 session.bellBefore($('to-home'));
@@ -437,6 +438,8 @@ function goToNeed(t: NeedTarget) {
     const it = store.pulls.items.find((p) => p.number === t.number);
     return it ? openPull(it, net, boardActions()) : undefined;
   }
+  // Settings is the 1D view's tab, at the section the item is about (never the 3D office).
+  if (t.to === 'settings') return goToSettings(session, t.section ?? 'team');
   if (t.to === 'incident') return location.assign(`/lite?floor=${encodeURIComponent(store.floor ?? '')}&tab=audit&incident=${encodeURIComponent(t.id)}`);
   const tab = t.to === 'escalation' ? 'approvals' : t.to === 'setup' ? 'command' : t.to;
   location.assign(`/lite?floor=${encodeURIComponent(store.floor ?? '')}&tab=${tab}`);

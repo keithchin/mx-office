@@ -13,13 +13,15 @@ import type { SetupView } from './wizard.js';
 import { needingYou, waitingInOrder } from './waiting.js';
 import { SEVERITY_SHORT, incidentRef, needsAttention, type IncidentBrief } from './incidents.js';
 import type { BudgetAlert } from './budget/types.js';
+import type { SettingsSectionId } from './settings-sections.js';
 
 /** Where an item's button takes you. */
 export type NeedTarget =
   | { to: 'worker'; id: string }
   | { to: 'escalation'; id: string }
   | { to: 'approvals' }
-  | { to: 'settings' }
+  /** ⚙️ Settings at `section` (the flat page, /lite?tab=settings&section=…; the team's when none is said). */
+  | { to: 'settings'; section?: SettingsSectionId }
   | { to: 'pr'; number: number }
   | { to: 'setup' }
   | { to: 'live' }
@@ -130,7 +132,7 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
       out.push({ key: `appr-${a.id}`, kind: 'approval', icon, text, level: 'warn', action: admin ? 'Review' : 'View', target: { to: 'approvals' } });
     }
     // 5. The cost cap: no hiring, and the office sends no prompts of its own; people's still go through.
-    if (r.paused) out.push({ key: 'paused', kind: 'paused', icon: '💸', text: `Spend cap reached: office prompts paused; agents finish their current turn. ${r.paused}`, level: 'block', action: 'Settings', target: { to: 'settings' } });
+    if (r.paused) out.push({ key: 'paused', kind: 'paused', icon: '💸', text: `Spend cap reached: office prompts paused; agents finish their current turn. ${r.paused}`, level: 'block', action: 'Settings', target: { to: 'settings', section: 'team' } });
   }
   // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold).
   const b = i.budget && i.budget.floor === i.floor ? i.budget : undefined;

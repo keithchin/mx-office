@@ -62,7 +62,7 @@ Their sessions are saved in each floor's `workers.json`. When the office comes b
 Before a release, a migration, or anything else that restarts the office, stop the work cleanly:
 
 - **One project:** **⏸ Pause project** in its Command Center heading. Every agent finishes its turn, writes a handoff note and sleeps, and the office's own prompts to that floor are held. Afterwards, **▶ Resume project** wakes the agents that have work waiting. See [Resume and pause](../using-the-office/resume-and-pause.md).
-- **The whole office:** **⚙️ Settings › 🤖 Workers › 🔁 Restart safely** (admins), or `POST /api/office/restart` from a script (a signed-in cookie, JSON body: `{ "action": "start", "build": true, "timeoutMin": 10 }`; `action` can also be `wait`, `anyway` or `cancel`).
+- **The whole office:** **⚙️ Settings › 🤖 Workers › 🔁 Restart safely** (admins; the 1D view's Settings tab, `/lite?tab=settings&section=workers`), or `POST /api/office/restart` from a script (a signed-in cookie, JSON body: `{ "action": "start", "build": true, "timeoutMin": 10 }`; `action` can also be `wait`, `anyway` or `cancel`).
 
 🔁 Restart safely does this:
 

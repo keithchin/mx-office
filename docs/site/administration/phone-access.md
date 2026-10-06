@@ -33,7 +33,7 @@ Dev Tunnels is Microsoft's own tunnel service: the same one VS Code's port forwa
    ```
 
    Restart the office afterwards so it finds `devtunnel` (or set `AGENT_OFFICE_DEVTUNNEL` to its full path).
-2. In the office: **⚙️ Settings → 🔌 Connections → 📱 Phone access**, pick **Microsoft Dev Tunnels**, and press the switch (**⚪ Off → On**).
+2. In the office: **⚙️ Settings › 🔌 Connections → 📱 Phone access** (the 1D view's Settings tab, `/lite?tab=settings&section=connections`, or ☰ → 🔌 Connections), pick **Microsoft Dev Tunnels**, and press the switch (**⚪ Off → On**).
 3. The card says **🔑 Sign in with Microsoft** with a code. Press the button (it opens `microsoft.com/devicelogin`), type the code, and sign in with **your work account**. That's the only account the tunnel will let in.
 4. The office creates a persistent private tunnel with its port on it, hosts it, and the card turns **🟢 Up** with the address and a **QR code**. It checks the tunnel stops a visitor who isn't signed in (🔒 *Checked*).
 5. **Test from your phone**: scan the QR with the iPhone camera, sign in with your Microsoft work account, then the office password. Then [install the phone version](../using-the-office/phone-version.md#install-it-on-an-iphone).
@@ -62,7 +62,7 @@ For trying the phone version once, without any account: pick **Quick tunnel**, r
 
 ## Teams cards and the office address
 
-When the tunnel comes up, its address goes into **⚙️ Settings → Notifications → Microsoft Teams → Office address**, so each card's **Open** button works from your phone. An address you typed there yourself is left alone.
+When the tunnel comes up, its address goes into **⚙️ Settings › 🔔 Notifications → Microsoft Teams → Office address**, so each card's **Open** button works from your phone. An address you typed there yourself is left alone.
 
 ## When it doesn't work
 

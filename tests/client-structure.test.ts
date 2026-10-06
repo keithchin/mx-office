@@ -84,3 +84,17 @@ for (const entry of ['lite.ts', 'pixel.ts', 'home.ts', 'firm.ts', 'docs.ts', 'm.
     }
   });
 }
+
+// ⚙️ Settings (ui/settings/): the flat views' full page and the 3D office's window share the section
+// builders, which are three.js-free, so the 1D view (its Settings tab), the 2D view and the home page
+// (whose links go there) load them without the 3D office, and the 3D office still has its window.
+test('the flat Settings page loads on /lite, /pixel and /home without three.js; the 3D office keeps its window', () => {
+  const at = (f: string) => path.join(client, f);
+  const lite = graph(at('lite.ts'));
+  for (const f of ['ui/settings/page.ts', 'ui/settings/flat.ts', 'ui/settings/you.ts', 'ui/settings/notify.ts', 'ui/settings/workers.ts', 'ui/settings/building.ts', 'ui/settings/project.ts', 'ui/settings/office.ts']) assert.ok(lite.has(at(f)), `lite.ts loads ${f}`);
+  for (const entry of ['pixel.ts', 'home.ts']) assert.ok(graph(at(entry)).has(at('ui/settings/flat.ts')), `${entry} reaches Settings through ui/settings/flat.ts`);
+  const office = graph(at('main.ts'));
+  for (const f of ['ui/settings/index.ts', 'ui/settings/you.ts', 'ui/settings/notify.ts', 'ui/settings/workers.ts', 'ui/settings/building.ts']) assert.ok(office.has(at(f)), `the 3D office loads ${f}`);
+  // The sky's words came out of the 3D sky so the flat page can say them.
+  assert.ok(!lite.has(at('world/sky.ts')), "the flat page doesn't load the 3D sky");
+});

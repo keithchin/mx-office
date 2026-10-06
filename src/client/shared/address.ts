@@ -12,6 +12,8 @@ const params = () => new URLSearchParams(location.search);
 export const askedFloor: string | null = params().get('floor');
 /** The tab the address asked for when the page opened (the 1D view's Board, Workers, …). */
 export const askedTab: string | null = params().get('tab');
+/** The ⚙️ Settings section the address asked for (`&section=workers`, shared/settings-sections.ts). */
+export const askedSection: string | null = params().get('section');
 /** The board's team filter (`&teams=design,testing`) and the team page (`&team=testing`) the address asked for (ui/teams/). */
 export const askedTeams: string | null = params().get('teams');
 export const askedTeam: string | null = params().get('team');

@@ -19,6 +19,7 @@ import { overviewView } from './home/overview';
 import { homeAudit } from './home/audit';
 import { testModeBadge } from './ui/testmode';
 import { homeBudget } from './home/budget';
+import { goToSettings } from './ui/settings/flat';
 import './home/home.css';
 
 /** The tab a link asked for (?tab= or a bare #), read before the address is tidied. */
@@ -116,7 +117,7 @@ for (const t of ['floors', 'peers', 'me'] as const) store.on(t, () => tab === 'p
 setInterval(() => tab === 'stats' && !document.hidden && void stats.render(), 30_000);
 
 // The ☰, last on the bar as on every page: here, only what doesn't need a floor (shared/flatmenu.ts).
-flatMenu($('menu'), { net, home: true });
+flatMenu($('menu'), { net, home: true, settings: () => goToSettings(session) });
 
 session.bellBefore($('theme'));
 session.start();

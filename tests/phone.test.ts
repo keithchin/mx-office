@@ -343,7 +343,7 @@ test('notifications are the Needs-you items: the right voice, the buttons that a
   assert.equal(asking.voice, 'office');
   assert.equal(asking.text, 'Keith is asking in its terminal: Allow Bash?');
   assert.deepEqual(asking.actions, [{ do: 'go', target: { to: 'worker', id: 'k' }, label: 'Open terminal' }]);
-  assert.deepEqual(notes.find((n) => n.kind === 'paused')!.actions, [{ do: 'go', target: { to: 'settings' }, label: 'Raise cap' }]);
+  assert.deepEqual(notes.find((n) => n.kind === 'paused')!.actions, [{ do: 'go', target: { to: 'settings', section: 'team' }, label: 'Raise cap' }]);
   assert.deepEqual(notes.find((n) => n.kind === 'pr')!.actions.map((a) => a.label), ['Merge…', 'Review']);
   // Red: this floor's items, and everyone waiting elsewhere (2 on f2), not double-counting f1.
   assert.equal(redCount(items, floors, 'f1'), items.filter((n) => n.kind !== 'floor').length + 2);

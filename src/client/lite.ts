@@ -37,7 +37,9 @@ import { renderTitle } from './shared/title';
 import { flatSession } from './shared/session';
 import { workerActions } from './shared/workers';
 import { floorPicker } from './shared/floors';
-import { askedTab, followFloor, leaveForHome, setAddress } from './shared/address';
+import { askedSection, askedTab, followFloor, leaveForHome, setAddress } from './shared/address';
+import { flatSettings } from './ui/settings/flat';
+import { isSettingsSection, type SettingsSectionId } from '../shared/settings-sections';
 import { colorThemes } from './ui/colortheme';
 import { needsYouStrip } from './ui/needsyou';
 import { firmBanner } from './ui/firm/banner';
@@ -225,15 +227,23 @@ const TAB_KEY = 'agent-office.lite-tab2';
 const git = gitView($('git-view'), { openWorker, openPull: kanban.openPull });
 // Who did what, when (🧾 Audit log, ui/audit/): this floor, the office's own or every floor.
 // 💰 The budget: the top bar's chips and the Budget tab (ui/budget/).
-const budget = budgetUi(net, { root: $('budget-view'), visible: () => tab === 'budget', open: () => showTab('budget'), go: (to) => showTab(to === 'analysis' ? 'analysis' : to) });
+const budget = budgetUi(net, { root: $('budget-view'), visible: () => tab === 'budget', open: () => showTab('budget'), go: (to) => (to === 'settings' ? showSettings('team') : showTab(to)) });
+// ⚙️ Settings: every setting, a section at a time (ui/settings/page.ts), its section in the address (&section=workers).
+const settingsPage = flatSettings($('settings-view'), session, (section) => tab === 'settings' && setAddress({ section }));
+/** Settings, open at `section`: what every settings link on this page does (Needs you, the ☰, the team's Autonomy chip). */
+function showSettings(section?: SettingsSectionId) {
+  if (section) pendingSection = section;
+  showTab('settings');
+}
+let pendingSection: SettingsSectionId | undefined = isSettingsSection(askedSection) ? askedSection : undefined;
 const audit = auditView($('audit-view'), { floor: () => store.floor ?? undefined, floors: () => store.floors, admin: () => store.me.admin, storeKey: 'agent-office.audit-lite' });
 net.onMessage((msg) => audit.onMessage(msg));
 store.on('floor', () => audit.floorChanged());
-type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | Pane | 'teams' | 'audit' | 'budget';
-// The team's four panes are tabs of their own (flattened from one Team tab); an old "team" means its org chart.
-const TEAM_PANES: readonly Pane[] = ['org', 'standup', 'approvals', 'settings'];
+type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | Pane | 'teams' | 'audit' | 'budget' | 'settings';
+// The team's panes are tabs of their own (flattened from one Team tab); an old "team" means its org chart. Its settings are ⚙️ Settings › Team.
+const TEAM_PANES: readonly Pane[] = ['org', 'standup', 'approvals'];
 const isPane = (t: unknown): t is Pane => TEAM_PANES.includes(t as Pane);
-const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || isPane(t) || t === 'teams' || t === 'audit' || t === 'budget';
+const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || isPane(t) || t === 'teams' || t === 'audit' || t === 'budget' || t === 'settings';
 const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : isTab(t) ? t : undefined);
 let tab: Tab = 'command';
 try {
@@ -252,7 +262,10 @@ function showTab(t: Tab) {
   } catch {
     // Just for this visit, then.
   }
-  setAddress({ tab: t });
+  if (t === 'settings') settingsPage.show(pendingSection);
+  else settingsPage.hide();
+  pendingSection = undefined;
+  setAddress({ tab: t, section: t === 'settings' ? settingsPage.current() : null });
   teams.address(t);
   $('tab-teams').classList.toggle('on', t === 'teams');
   $('teams-view').classList.toggle('hidden', t !== 'teams');
@@ -272,6 +285,8 @@ function showTab(t: Tab) {
   if (t === 'audit') audit.show();
   else audit.hide();
   for (const p of TEAM_PANES) $(`tab-${p}`).classList.toggle('on', t === p);
+  $('tab-settings').classList.toggle('on', t === 'settings');
+  $('settings-view').classList.toggle('hidden', t !== 'settings');
   $('tab-budget').classList.toggle('on', t === 'budget');
   $('budget-view').classList.toggle('hidden', t !== 'budget');
   if (t === 'budget') budget.show();
@@ -320,10 +335,11 @@ $('tab-git').addEventListener('click', () => showTab('git'));
 for (const p of TEAM_PANES) $(`tab-${p}`).addEventListener('click', () => showTab(p));
 $('tab-teams').addEventListener('click', () => showTab('teams'));
 $('tab-audit').addEventListener('click', () => showTab('audit'));
+$('tab-settings').addEventListener('click', () => showTab('settings'));
 $('tab-budget').addEventListener('click', () => showTab('budget'));
 store.on('floor', renderAnalysisTab);
 // The project team (ui/roster/): its approvals badge stays current whichever tab is showing.
-const team = teamTab($('team-view'), $('tab-approvals').querySelector('.ro-tab-n')!, () => isPane(tab), openWorker, { select: (p) => showTab(p) });
+const team = teamTab($('team-view'), $('tab-approvals').querySelector('.ro-tab-n')!, () => isPane(tab), openWorker, { select: (p) => (p === 'settings' ? showSettings('team') : showTab(p)) });
 net.onMessage((msg) => team.onMessage(msg));
 store.on('floor', () => team.render(store.floor ?? undefined));
 for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanban);
@@ -371,7 +387,8 @@ function goToNeed(t: NeedTarget) {
   if (t.to === 'firm') return location.assign(t.url);
   if (t.to === 'escalation') return toEscalation(t.id);
   if (t.to === 'incident') return (showTab('audit'), audit.openIncident(t.id));
-  if (t.to === 'approvals' || t.to === 'settings' || t.to === 'live' || t.to === 'git') return showTab(t.to);
+  if (t.to === 'settings') return showSettings(t.section ?? 'team');
+  if (t.to === 'approvals' || t.to === 'live' || t.to === 'git') return showTab(t.to);
   if (t.to === 'setup') {
     if (tab !== 'command') showTab('command');
     return $('setup').scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -408,6 +425,7 @@ flatMenu($('menu'), {
   boardActions,
   openWorker,
   meeting: () => showMeeting(),
+  settings: () => showSettings(),
   nextWaiting: () => {
     const w = waitingInOrder(store.workers.values())[0];
     if (w) openWorker(w.id);

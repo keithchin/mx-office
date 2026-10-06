@@ -38,7 +38,7 @@
         <button id="tab-org" class="btn" type="button" role="tab" title="The project team: the Project Coordinator and the four Leads">🏢 Org chart</button>
         <button id="tab-standup" class="btn" type="button" role="tab" title="The latest standup, and running one">📋 Standup</button>
         <button id="tab-approvals" class="btn" type="button" role="tab" title="What needs the Project Manager: proposals and escalations">✅ Approvals <span class="ro-tab-n"></span></button>
-        <button id="tab-settings" class="btn" type="button" role="tab" title="The team's autonomy, benching, standup and review loop">⚙️ Settings</button>
+        <button id="tab-settings" class="btn" type="button" role="tab" title="Every setting: you, the workers, the team, Jeff, notifications, the budget, connections, incidents, Studio, the look and the rest">⚙️ Settings</button>
         <button id="tab-teams" class="btn" type="button" role="tab" title="A board per team: its own cards, Lead, panels and journal (the org chart is on 👥 Team)">🧩 Team boards</button>
         <button id="tab-budget" class="btn" type="button" role="tab" title="What the project has spent, against its budget: by stage, role, agent, model, day and issue">💰 Budget</button>
         <button id="tab-audit" class="btn" type="button" role="tab" title="Who did what, when: hires, prompts, escalations, approvals, GitHub, settings and sign-ins">🧾 Audit log</button>
@@ -57,12 +57,14 @@
       <div id="liveapp-view" class="hidden"></div>
       <!-- The branches as a metro map (ui/git/). -->
       <div id="git-view" class="hidden"></div>
-      <!-- The project team: org chart, standup, approvals and settings (ui/roster/). -->
+      <!-- The project team: org chart, standup and approvals (ui/roster/); its settings are ⚙️ Settings › Team. -->
       <div id="team-view" class="hidden"></div>
       <!-- A page per team: its board, its Lead, its panels and its journal (ui/teams/). -->
       <div id="teams-view" class="hidden"></div>
       <!-- Who did what, when (ui/audit/). -->
       <div id="audit-view" class="hidden"></div>
+      <!-- ⚙️ Settings: every setting, a section at a time (ui/settings/page.ts). -->
+      <div id="settings-view" class="hidden"></div>
       <!-- What the project has spent, against its budget (ui/budget/). -->
       <div id="budget-view" class="hidden"></div>
       <div id="workers-view">

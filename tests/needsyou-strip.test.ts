@@ -43,7 +43,7 @@ test('most urgent first: asking, lost, escalations, approvals, paused, failing P
   assert.deepEqual(items[1].target, { to: 'worker', id: 'gone' });
   // The cap approval is the paused line, not a second row.
   assert.equal(items.filter((n) => n.kind === 'approval').length, 1);
-  assert.deepEqual(items[4].target, { to: 'settings' });
+  assert.deepEqual(items[4].target, { to: 'settings', section: 'team' });
   assert.equal(items[6].text, '2 waiting on Other');
   assert.deepEqual(items[6].target, { to: 'floor', floor: 'f2' });
   // Other floors aren't counted on this floor's tab.

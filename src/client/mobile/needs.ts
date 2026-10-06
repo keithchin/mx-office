@@ -9,6 +9,7 @@ import type { ApprovalItem, RosterView } from '../../shared/roster/types';
 import { store } from '../state';
 import { h, openModal, toast } from '../ui/dom';
 import type { NeedTarget } from '../ui/needsyou/logic';
+import { settingsHref } from '../../shared/settings-sections';
 import { act } from './confirm';
 
 /** Approve or reject an escalation from the phone (a reason is asked for a rejection). */
@@ -124,8 +125,9 @@ export function approvalRows(floor: string, roster: RosterView | undefined, stat
   return rows;
 }
 
-/** Targets the phone can't open itself: they wait for a computer (the 1D view's tab for it). */
+/** Targets the phone can't open itself: they wait for a computer (the 1D view's tab for it, or its ⚙️ Settings section). */
 export function onComputer(t: NeedTarget, floor: string) {
+  if (t.to === 'settings') return void toast(`That one is on a computer: ${settingsHref(t.section ?? 'team', floor)}`);
   const tab = t.to === 'setup' ? 'command' : t.to === 'live' ? 'live' : t.to === 'git' ? 'git' : 'command';
   toast(`That one is on a computer: /lite?floor=${floor}&tab=${tab}`);
 }
