@@ -17,6 +17,7 @@ import type { RooftopClientMsg, RooftopServerMsg } from './protocol/rooftop.js';
 import type { AuditServerMsg } from './protocol/audit.js';
 import type { RosterServerMsg } from './protocol/roster.js';
 import type { SettingsClientMsg, SettingsServerMsg } from './protocol/settings.js';
+import type { StudioServerMsg } from './protocol/studio.js';
 import type { BallClientMsg, CabinetClientMsg, CarClientMsg, DecorClientMsg, DogClientMsg, JukeboxClientMsg, ToysServerMsg, WhiteboardClientMsg } from './protocol/toys.js';
 import type { UsageClientMsg, UsageServerMsg } from './protocol/usage.js';
 import type { WorkerClientMsg, WorkerServerMsg } from './protocol/workers.js';
@@ -35,6 +36,7 @@ export * from './protocol/queue.js';
 export * from './protocol/rooftop.js';
 export * from './protocol/roster.js';
 export * from './protocol/settings.js';
+export * from './protocol/studio.js';
 export * from './protocol/toys.js';
 export * from './protocol/usage.js';
 export * from './protocol/workers.js';
@@ -79,4 +81,5 @@ export type ServerMsg =
   | LiveAppServerMsg
   | RosterServerMsg
   | AuditServerMsg
-  | ChatterServerMsg;
+  | ChatterServerMsg
+  | StudioServerMsg;

@@ -12,3 +12,12 @@
 .st-busy ul { margin: 0 0 8px; padding-left: 20px; font-weight: 700; }
 .st-busy p { margin: 0 0 6px; }
 .st-calm, .st-note { color: var(--muted); font-size: 13px; }
+
+/* Studio mode's chip beside the button: Studio Pro open (the agents' mxcli writes paused), or a stale
+   lock. Text only, no emoji, so Clean and Terminal draw it as it is; colors are the theme's tokens. */
+.st-mode { display: inline-flex; align-items: center; gap: 6px; align-self: center; padding: 2px 10px; border: 2px solid var(--line); border-radius: var(--radius-pill, 999px); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.st-mode[hidden] { display: none; }
+.st-mode::before { content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.st-mode-open { background: var(--warn-soft); color: var(--warn-ink); }
+.st-mode-stale { background: var(--card); color: var(--muted); border-style: dashed; }
+.st-btn.st-open:disabled { opacity: 1; color: var(--muted); }

@@ -14,6 +14,18 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   the floor. Each open is in the Audit log (`studio.open`) and in Team chatter. It only works when the
   office runs on a Windows desktop with Studio Pro installed; otherwise the button is greyed out and
   says why.
+- **Studio mode**: the office now sees for itself when Studio Pro has a floor's project open (its
+  `studiopro.exe` naming the `.mpr`, or the `.mpr.lock`'s process still running), however it was
+  opened, and pauses that floor's agents' mxcli writes until it closes: a PreToolUse hook on every
+  Claude worker denies `mxcli exec`, `fix`, `layout`, `rename`, a writing `mxcli -c`, the toolkit's
+  `bin/exec.sh` and the like, and tells the agent to route the write through Studio Pro's MCP server
+  (`mxcli --mcp http://localhost:7782/mcp`, on 11.10 and up) or work on something else. Reads still
+  run. The Command Center shows **Studio Pro open · mxcli paused** (or **Stale lock** for a lock whose
+  Studio Pro is gone), and the button says **Studio Pro is open**. Opening and closing are in Team
+  chatter and the Audit log (`studio.opened`, `studio.closed`, `studio.stale-lock`, and each held
+  write as `studio.denied`). Closing it with model changes uncommitted puts *Commit your Studio Pro
+  changes so the agents build on them* in Needs you. Workers already running get the hook when
+  they're next started or resumed; agents other than Claude Code aren't held.
 
 ### Improved
 - **New project wizard creates the Mendix app**: a new project gets a blank app from Studio Pro's own

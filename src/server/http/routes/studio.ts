@@ -1,7 +1,8 @@
 // "Open in Studio Pro" on the floor page (server/studio/): GET what the button needs to know, POST to
 // open the floor's .mpr in Studio Pro on the office's machine. Opening it starts a program there and
 // Studio Pro locks the project the agents write with mxcli, so it's for admins only, and only from
-// the office's own pages. It's written in the audit log and said in the floor's Team chatter.
+// the office's own pages. It's written in the audit log and said in the floor's Team chatter. Studio
+// mode (studio/watch.ts) then sees it open and pauses the agents' mxcli writes by itself.
 
 import { audit, human } from '../../audit/index.js';
 import { noteChatter } from '../../chatter/bus.js';
@@ -64,9 +65,9 @@ export const studioRoutes = {
         kind: 'nudge',
         from: { name: by, kind: 'human', role: 'Project Manager' },
         to: { group: 'team' },
-        text: `I've opened the project in Studio Pro${v}. Studio Pro locks the .mpr: no mxcli exec until I've closed it.`,
+        text: `I've opened the project in Studio Pro${v}. Studio Pro locks the .mpr: the office pauses your mxcli writes until I've closed it.`,
       });
-      ctx.toastFloor(floor, `🧱 ${by} opened the project in Studio Pro${v}: no mxcli exec until it's closed`, 'warn');
+      ctx.toastFloor(floor, `🧱 ${by} opened the project in Studio Pro${v}: the agents' mxcli writes pause while it's open`, 'warn');
       console.log(`  ${by} opened ${r.mpr} in Studio Pro${v}`);
       return send(res, 200, { ok: true, mpr: r.mpr, ...(r.version ? { version: r.version } : {}) } satisfies StudioOpenResult);
     },

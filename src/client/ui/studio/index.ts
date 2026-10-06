@@ -2,9 +2,12 @@
 // Studio Pro on the office's machine (server/studio/). A button in the Command Center's heading,
 // next to the 🌐 Live app chip, and an item in the ☰ menu. Only admins open it, and only after a
 // confirm: Studio Pro locks the project the agents write with `mxcli exec` (the one-writer rule),
-// so it says so and names the agents on the floor mid-turn. No three.js here: the flat views load it.
+// so it says so and names the agents on the floor mid-turn. Beside the button, Studio mode's chip:
+// the office sees Studio Pro open on the project (server/studio/watch.ts), however it was opened,
+// and pauses the agents' mxcli writes meanwhile; the button says it's open and waits. No three.js
+// here: the flat views load it.
 
-import type { StudioInfo, StudioOpenResult } from '../../../shared/studio';
+import type { StudioInfo, StudioOpenResult, StudioState } from '../../../shared/studio';
 import { store } from '../../state';
 import { h, openModal, toast } from '../dom';
 import './studio.css';
@@ -37,6 +40,17 @@ async function fetchInfo(floor: string): Promise<StudioInfo | null> {
   }
 }
 
+/** Studio mode on the floor you're on: what the office last pushed, else what it answered when asked. */
+export function studioState(): StudioState | undefined {
+  const floor = store.floor;
+  if (!floor) return undefined;
+  if (store.studio?.floor === floor) return store.studio;
+  return infoFor === floor ? info?.state : undefined;
+}
+
+/** Since when, as the page says it ("since 14:05"). */
+const sinceText = (at: number) => `since ${new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
 /** Asks the office about the floor you're on, and redraws the buttons. */
 async function refresh() {
   const floor = store.floor;
@@ -48,6 +62,8 @@ async function refresh() {
   if (store.floor !== floor) return;
   info = got;
   draw();
+  // What the office answered is Studio mode too (the Needs you strip reads it through studioState).
+  if (got?.state && !store.studio) store.emit('studio');
 }
 
 /** Keeps what the office says about the floor's project current as you go between floors (once). */
@@ -56,6 +72,7 @@ export function watchStudio() {
   watching = true;
   store.on('floor', () => void refresh());
   store.on('me', draw);
+  store.on('studio', draw);
   if (store.floor) void refresh();
 }
 
@@ -64,6 +81,8 @@ export const studioShown = () => !!store.floor && (infoFor !== store.floor || !i
 
 /** Why it can't be opened from here, if it can't: it's greyed out and says so. */
 export function studioBlocked(): string | undefined {
+  const s = studioState();
+  if (s?.open) return `Studio Pro already has the project open (${sinceText(s.since)}): the agents' mxcli writes are paused until it's closed`;
   if (!store.me.admin) return 'Only admins can open the project in Studio Pro';
   if (info && infoFor === store.floor && !info.available) return info.error;
   return undefined;
@@ -75,11 +94,47 @@ export const studioTitle = () =>
 function draw() {
   const shown = studioShown();
   const blocked = studioBlocked();
+  const s = studioState();
   for (const b of buttons) {
     b.hidden = !shown;
     b.disabled = !!blocked;
     b.title = blocked ?? studioTitle();
+    b.classList.toggle('st-open', !!s?.open);
+    const label = b.querySelector('span');
+    if (label) label.textContent = s?.open ? 'Studio Pro is open' : 'Open in Studio Pro';
   }
+  for (const c of chips) drawChip(c, shown ? s : undefined);
+}
+
+const chips = new Set<HTMLElement>();
+
+/** Studio mode's chip: open (writes paused), a stale lock, or nothing at all while it's closed. */
+function drawChip(c: HTMLElement, s: StudioState | undefined) {
+  const mcp = s?.open && s.mcp?.available ? s.mcp.url : undefined;
+  if (s?.open) {
+    c.hidden = false;
+    c.className = 'st-mode st-mode-open';
+    c.textContent = mcp ? 'Studio Pro open · mxcli paused · MCP' : 'Studio Pro open · mxcli paused';
+    c.title = `Studio Pro has the project open (${sinceText(s.since)}${s.pid ? `, process ${s.pid}` : ''}). The office holds the agents' mxcli writes until it's closed${mcp ? `; they can route writes through Studio Pro's MCP server at ${mcp}` : ''}.`;
+  } else if (s?.staleLock) {
+    c.hidden = false;
+    c.className = 'st-mode st-mode-stale';
+    c.textContent = 'Stale lock';
+    c.title = `The project's .mpr.lock is there (${sinceText(s.staleLock.since)}) but the Studio Pro that wrote it isn't running: Studio Pro leaves it behind when it closes, or crashed. The office doesn't pause the agents' writes for it.`;
+  } else {
+    c.hidden = true;
+    c.textContent = '';
+  }
+}
+
+/** A new Studio mode chip, kept up to date. */
+export function studioChip(): HTMLElement {
+  const c = h('span.st-mode', { role: 'status' });
+  c.hidden = true;
+  chips.add(c);
+  watchStudio();
+  draw();
+  return c;
 }
 
 /** A new "Open in Studio Pro" button, kept up to date. */
@@ -94,11 +149,14 @@ export function studioButton(): HTMLButtonElement {
 }
 
 let chip: HTMLButtonElement | null = null;
-/** Puts the button into the project summary's heading in `summary`, after it was drawn (beside the Live app chip). */
+let mode: HTMLElement | null = null;
+/** Puts the button and Studio mode's chip into the project summary's heading in `summary`, after it was drawn (beside the Live app chip). */
 export function mountStudio(summary: HTMLElement) {
   chip ??= studioButton();
+  mode ??= studioChip();
   const at = summary.querySelector('.sm-name');
   if (at && chip.parentElement !== at) at.append(chip);
+  if (at && mode.parentElement !== at) at.append(mode);
 }
 
 /** Asks again (who's busy may have changed), confirms, and opens it. */
@@ -114,6 +172,7 @@ export async function openStudio() {
   }
   if (!now) return void toast("Couldn't ask the office about the project", 'warn');
   if (!now.hasMpr) return void toast(now.error ?? 'No Mendix project (.mpr) on this floor', 'warn');
+  if (now.state?.open) return void toast("Studio Pro already has the project open: the agents' mxcli writes are paused until it's closed", 'warn');
   if (!now.admin) return void toast('Only admins can open the project in Studio Pro', 'warn');
   if (!now.available) return void toast(now.error ?? "Studio Pro can't be opened from here", 'warn');
   confirmOpen(floor, now);
@@ -134,7 +193,9 @@ function confirmOpen(floor: string, s: StudioInfo) {
       'div.body',
       {},
       h('p', {}, h('code', {}, s.mpr ?? 'the project'), s.version ? ` opens in Studio Pro ${s.version}.` : ' opens in Studio Pro.'),
-      h('p.st-warn', { role: 'alert' }, "Studio Pro locks the project while it's open, and agents write it with mxcli. Until you close Studio Pro, no agent may run mxcli exec on this project: one writer at a time."),
+      h('p.st-warn', { role: 'alert' }, "Studio Pro locks the project while it's open, and agents write it with mxcli: one writer at a time. The office sees Studio Pro open and pauses the agents' mxcli writes automatically until you close it."),
+      h('p.st-note', {}, 'When you close Studio Pro, commit your changes so the agents build on them.'),
+      s.state?.staleLock ? h('p.st-note', {}, "The project's .mpr.lock is already there with no Studio Pro running: a stale lock, left by an earlier Studio Pro. Studio Pro takes it over when it opens.") : null,
       busy,
       s.last ? h('p.st-note', {}, `Last opened by ${s.last.by} at ${new Date(s.last.at).toLocaleTimeString()}.`) : null,
       remote ? h('p.st-note', {}, "It opens on the office's computer, not this one.") : null,
