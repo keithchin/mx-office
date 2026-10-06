@@ -28,7 +28,7 @@ Team members (the Project Coordinator and the Leads) are workers too. Their **su
 
 ## Worktrees: one copy of the repo per worker
 
-Most workers get their own **git worktree**: a separate checkout of the repository on its own branch, under `<floor>/.agent-office/worktrees/`. Agents don't trip over each other's files, and each one's work becomes a branch and a pull request.
+Most workers get their own **git worktree**: a separate checkout of the repository on its own branch, under `<floor>/.agent-office/worktrees/`. Agents don't trip over each other's files, and each one's work becomes a branch and a pull request. An agent that makes a worktree of its own has to put it there too: `git worktree add` anywhere else (a temp folder, next to the project) is refused with the path to use, and merged ones nobody has any more are cleaned up every hour. See [Connections](../administration/connections.md#worktrees-stay-in-the-project).
 
 The **🌳 Git** tab draws every branch as a railway line, with the worker standing at its tip. See [Git tab](../using-the-office/git.md).
 

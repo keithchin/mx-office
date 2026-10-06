@@ -13,6 +13,7 @@ import { openPromptEditor, rewrittenPrompts } from './prompts';
 import { outsideSetting } from './settings-sky';
 import { choiceRow } from './settings-rows';
 import { consoleViewSetting } from './pm/chat/setting';
+import { connectionsPanel } from './connections';
 
 const VIEWS: [ViewMode, string, string][] = [
   ['first', '👀 First person', 'See through your own eyes. Click the office to look around with the mouse and click things to use them. Esc frees the mouse.'],
@@ -24,14 +25,15 @@ const THEME_LABEL: Record<ThemePick, string> = { auto: '📅 By the calendar', h
 const WEBHOOK_NAME: Record<WebhookKind, string> = { slack: 'Slack', discord: 'Discord', other: 'a webhook' };
 
 /** The categories down the side of ⚙️ Settings. */
-export type SettingsPane = 'you' | 'sound' | 'notify' | 'building' | 'workers';
+export type SettingsPane = 'you' | 'sound' | 'notify' | 'building' | 'workers' | 'connections';
 
-const PANES: { id: SettingsPane; icon: string; label: string; blurb: string }[] = [
+const PANES: { id: SettingsPane; icon: string; label: string; blurb: string; admin?: true }[] = [
   { id: 'you', icon: '🧍', label: 'You', blurb: 'How you look, how you see the office, and how you’re signed in.' },
   { id: 'sound', icon: '🔊', label: 'Sound & voice', blurb: 'How loud the office is for you, and how voice chat works.' },
   { id: 'notify', icon: '🔔', label: 'Notifications', blurb: 'Hear about a worker that needs someone, or finished, while you’re somewhere else.' },
   { id: 'building', icon: '🏢', label: 'Building', blurb: 'The map, the decorations, the sky, the dog, and where new floors are cloned.' },
   { id: 'workers', icon: '🤖', label: 'Workers', blurb: 'What workers start on, how many run at once, when they go home and what the office tells them.' },
+  { id: 'connections', icon: '🔌', label: 'Connections', blurb: 'The tokens and password the office signs in with, git & gh, its folders and worktree cleanup. Admins only.', admin: true },
 ];
 
 /** Who a setting is for, shown by its name: some are yours alone, some the whole office's. */
@@ -474,6 +476,8 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
       setting('Workers whose pull request merged', 'office', leaveRow, leaveNote),
       setting('Prompts', 'office', promptsOpen, promptsNote),
     ],
+    // Admins only (ui/connections/): loaded when Settings opens, for an admin.
+    connections: store.me.admin ? [connectionsPanel().el] : [],
   };
 
   // The categories down the side, the one picked on the right.
@@ -481,6 +485,7 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
   const tabs = new Map<SettingsPane, HTMLButtonElement>();
   const bodies = new Map<SettingsPane, HTMLElement>();
   for (const p of PANES) {
+    if (p.admin && !store.me.admin) continue;
     const tab = h('button.settings-tab', { type: 'button', role: 'tab', onclick: () => show(p.id) }, h('span.icon', { 'aria-hidden': 'true' }, p.icon), h('span', {}, p.label)) as HTMLButtonElement;
     tabs.set(p.id, tab);
     nav.append(tab);
@@ -502,8 +507,9 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
     const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
     if (!step) return;
     e.preventDefault();
-    const i = PANES.findIndex((p) => p.id === lastPane);
-    const next = PANES[(i + step + PANES.length) % PANES.length].id;
+    const shown = PANES.filter((p) => tabs.has(p.id));
+    const i = shown.findIndex((p) => p.id === lastPane);
+    const next = shown[(i + step + shown.length) % shown.length].id;
     show(next);
     tabs.get(next)!.focus();
   });
@@ -532,7 +538,7 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
       offPrompts.forEach((off) => off());
     },
   });
-  show(first ?? lastPane);
+  show(tabs.has(first ?? lastPane) ? (first ?? lastPane) : 'you');
   close.addEventListener('click', () => modal.close());
   character.addEventListener('click', () => {
     modal.close();

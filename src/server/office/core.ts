@@ -13,9 +13,12 @@ import { scoreText } from '../../shared/cabinet.js';
 import { cabinetChanged } from '../ws/handlers/cabinet.js';
 import type { Core, Ctx } from './context.js';
 import type { Client } from './client.js';
+import { startConnections } from '../connections/index.js';
 
 /** The first of the office: accounts and sign-in, the people in it, chat, the arcade, and the building's floors. */
 export function createCore(ctx: Ctx, cfg: Config, publicDir: string): Core {
+  // 🔌 Connections' saved credentials, before any worker is started or resumed (connections/).
+  startConnections(cfg.dataDir);
   const accounts = new Accounts(cfg.dataDir);
   const auth = new Auth(cfg.verifier, cfg.salt, cfg.secret, accounts);
   const clients = new Map<string, Client>();

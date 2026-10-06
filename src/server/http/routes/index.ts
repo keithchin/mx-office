@@ -8,6 +8,7 @@ import { firmRoutes } from './firm.js';
 import { flowRoutes } from './flows.js';
 import { auditRoutes } from './audit.js';
 import { chatterRoutes } from './chatter.js';
+import { connectionsRoutes } from './connections.js';
 import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
 import { gitRoutes } from './git.js';
@@ -77,6 +78,7 @@ export const routes: readonly Route[] = [
   teamRoutes.page,
   teamRoutes.labels,
   wizardRoutes.wizard,
+  connectionsRoutes.connections,
   studioRoutes.info,
   studioRoutes.open,
   pageRoutes.office,

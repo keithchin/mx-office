@@ -372,7 +372,7 @@ export function loadConfig(argv: string[]): Config {
   if (project) excludeFromGit(dir);
 
   const cfgPath = path.join(dataDir, 'config.json');
-  let stored: { password?: string; verifier?: string; salt?: string; secret?: string; claimedAt?: number } = {};
+  let stored: { password?: string; verifier?: string; salt?: string; secret?: string; claimedAt?: number; verifierFrom?: string } = {};
   try {
     stored = JSON.parse(readFileSync(cfgPath, 'utf8'));
   } catch {
@@ -395,7 +395,11 @@ export function loadConfig(argv: string[]): Config {
 
   let verifier: Buffer;
   let passwordGenerated = false;
-  if (password) {
+  if (stored.verifierFrom === 'connections' && stored.verifier) {
+    // Changed in 🔌 Connections (connections/password.ts): that beats --password and AGENT_OFFICE_PASSWORD.
+    verifier = Buffer.from(stored.verifier, 'hex');
+    password = '';
+  } else if (password) {
     verifier = hash(password);
   } else {
     passwordGenerated = true;

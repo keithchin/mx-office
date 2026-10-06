@@ -202,7 +202,9 @@ export interface WizardInfo {
   admin: boolean;
   org: string;
   /** Where the admin token is read from, for the instructions; never its contents. */
-  adminToken: { configured: boolean; file: string };
+  adminToken: { configured: boolean; file: string; source?: 'connections' | 'file' };
+  /** A Mendix token is in 🔌 Connections (or the environment / ~/Mendix/.env): never its value. */
+  mendixToken?: boolean;
   /** Repositories are made as local bare repos instead of on GitHub (a test office). */
   offline: boolean;
   mendixVersions: string[];

@@ -51,6 +51,7 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | POST | `/api/studio/open` | `{ floor }`: opens the floor's .mpr in Studio Pro on the office's computer (admin) |
 | GET | `/api/teams/page` | A team's page |
 | POST | `/api/teams/labels` | Create missing `team:` labels (admin) |
+| GET / POST | `/api/connections` | [Connections](../administration/connections.md) (admin): GET `/api/connections` (statuses and masked tails, never a value) and `/api/connections/tools` (the git / gh check); POST `/api/connections/save`, `remove`, `test` (`{ id }`, plus `value` to save), `import`, `mendix-floor` (`{ floor, on }`), `paths` (`{ which, dir }`), `git-identity`, `sweep` (`{ on }`), `sweep/run` |
 | GET / POST | `/api/wizard/*` | The new-project wizard: GET `info`, `job`, `setup`, `answers`, `app-version` (`?repo=`: the Studio Pro an existing floor's `.mpr` was saved with); POST `recheck`, `start`, `retry`, `edit` (admin) |
 | GET | `/api/chatter` | Team chatter: `?floor=<id>&since=<ms>&limit=<n>&cursor=…&who=<name>` (with `as=<kind>` to tell a person from an agent of the same name) or `&with=agents\|me` |
 | GET | `/api/audit` | The audit log: `?floor=<id>\|all\|_office&since=&until=&actor=human,agent&action=worker.hire,github&q=&limit=&cursor=`, with counts, the chain check and a histogram |

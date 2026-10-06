@@ -1,6 +1,7 @@
 // The environment the workers start with: the office's own, minus a parent agent session's.
 import { PROVIDERS } from '../providers/index.js';
 import { withFloorToolkitEnv } from '../toolkit-env.js';
+import { withConnections } from '../connections/env.js';
 
 // Env vars from a parent agent session (e.g. starting the office from inside Claude Code) that
 // would make a worker think it is a child session — that silently turns off transcript saving,
@@ -22,5 +23,7 @@ const scrubbed = (k: string) => SCRUB_ENV.has(k) || SCRUB_PREFIXES.some((p) => k
 export function childEnv(floorDir?: string): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !scrubbed(k)) env[k] = v;
+  // 🔌 Connections: the agents' token, the Mendix token where it's switched on, the office's commit identity.
+  withConnections(env, floorDir);
   return floorDir ? withFloorToolkitEnv(floorDir, env) : env;
 }

@@ -7,9 +7,10 @@ import { existsSync, readdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { adminTokenFile } from './admin-token.js';
+import { toolkitDir } from '../connections/store.js';
 
 export interface WizardConfig {
-  /** The mxcli-project-toolkit clone (AGENT_OFFICE_TOOLKIT_DIR). */
+  /** The mxcli-project-toolkit clone (picked in 🔌 Connections › Paths, else AGENT_OFFICE_TOOLKIT_DIR). */
   toolkitDir: string;
   /** Git Bash, which runs the toolkit's scripts (AGENT_OFFICE_BASH). */
   bash: string;
@@ -52,7 +53,7 @@ export function wizardConfig(env: NodeJS.ProcessEnv = process.env): WizardConfig
   const ourMxcli = path.join(home, 'agent-spike', 'bin', isWin ? 'mxcli.exe' : 'mxcli');
   const pyDir = firstDir(path.join(local, 'Python'), /^pythoncore-/);
   return {
-    toolkitDir: env.AGENT_OFFICE_TOOLKIT_DIR || path.join(home, 'agent-spike', 'mxcli-project-toolkit'),
+    toolkitDir: toolkitDir(env),
     bash: env.AGENT_OFFICE_BASH || (isWin && existsSync(gitBash) ? gitBash : 'bash'),
     mxcli: env.AGENT_OFFICE_MXCLI || (existsSync(ourMxcli) ? ourMxcli : undefined),
     jqDir: env.AGENT_OFFICE_JQ_DIR || (isWin ? firstDir(path.join(local, 'Microsoft', 'WinGet', 'Packages'), /^jqlang\.jq/) : undefined),
@@ -104,7 +105,7 @@ export function mxPath(cfg: WizardConfig, version: string): string {
 /** What's missing for the toolkit to run, in words for the wizard's first page. */
 export function configProblems(cfg: WizardConfig, versions: string[]): string[] {
   const out: string[] = [];
-  if (!existsSync(path.join(cfg.toolkitDir, 'bin', 'init-project.sh'))) out.push(`The mxcli-project-toolkit isn't at ${cfg.toolkitDir} (set AGENT_OFFICE_TOOLKIT_DIR to its clone)`);
+  if (!existsSync(path.join(cfg.toolkitDir, 'bin', 'init-project.sh'))) out.push(`The mxcli-project-toolkit isn't at ${cfg.toolkitDir} (pick its clone in ☰ → 🔌 Connections › Paths, or set AGENT_OFFICE_TOOLKIT_DIR)`);
   if (isWin && !existsSync(cfg.bash)) out.push(`Git Bash isn't at ${cfg.bash} (set AGENT_OFFICE_BASH)`);
   if (!cfg.mxcli) out.push('No mxcli found (set AGENT_OFFICE_MXCLI to mxcli.exe)');
   if (isWin && !cfg.jqDir) out.push('No jq found (install it with winget install jqlang.jq, or set AGENT_OFFICE_JQ_DIR)');

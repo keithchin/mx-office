@@ -7,6 +7,30 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ## Unreleased
 
 ### New
+- **🔌 Connections**: the office's credentials in one admin page (☰ → 🔌 Connections, ⚙️ Settings,
+  the home page, or the wizard when the admin token is missing): the GitHub token for agents, the
+  GitHub admin token, the Mendix personal access token, the Jev key and the office password. Each has
+  a status (connected, missing, invalid, expiring), 🧪 Test (for GitHub: who it is, its expiry, the
+  repositories it sees and whether it reaches every project), replace and remove, and how to make one
+  with the exact permissions and a pre-filled GitHub link. Saved values are encrypted with Windows DPAPI
+  in `credentials.json` in the office's data folder and never shown again; the audit log records who
+  changed which, never a value. The office uses Connections first, then the environment variable, then
+  the old dot-file, so `start-office.ps1` keeps working; **📥 Import from files** moves the dot-files in
+  with one click. The wizard's admin-token box now saves straight into Connections.
+- **Mendix token, per project**: kept in Connections for the wizard (Mendix Projects API, coming next);
+  a project's agents get `MENDIX_TOKEN` / `MX_PAT` only when you tick it for that project, off by default.
+- **git & gh check** in Connections: git and gh installed, gh signing in with the agents' token (in a
+  throwaway config, your own gh login untouched), git's commit identity, and a one-click commit
+  identity for the workers when git has none.
+- **Folders in Connections**: the projects folder and the mxcli-project-toolkit folder (checked for
+  `bin/init-project.sh`), used by the wizard and the Playbooks without a restart.
+- **Worktrees stay in the project**: a hook on every Claude worker refuses `git worktree add` outside
+  the floor's `.agent-office/worktrees/` and gives the exact path to use, so no more worktrees in Temp
+  or next to the project.
+- **Worktree cleanup**: every hour, worktrees under `.agent-office/worktrees/` that no worker has,
+  whose branch is merged (squash merges too) and that hold no changes are removed with their branch,
+  each in the audit log; links inside them (node_modules junctions) are unlinked, never followed.
+  Worktrees elsewhere are only reported. On by default; switch it off in Connections.
 - **Chat view on the Command Center**: the Project Coordinator console in the middle of the Command
   Center has **Chat | Terminal** on its header. Chat (the default) shows the conversation as messages:
   your prompts, its replies in Markdown with its icon, each tool call as one line (*Ran mxcli check*,

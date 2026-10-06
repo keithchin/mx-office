@@ -5,7 +5,9 @@ import type { Net } from '../../net';
 import { store } from '../../state';
 import { ENTRY_MODE_INFO, ENTRY_MODES, INTERVIEW_MODE_INFO, INTERVIEW_MODES, PROJECT_ROLES, SETUP_STEPS, SMALL_TIER_LIMITS, slugify, slugProblem, ownerProblem, type AnswerKind, type EntryMode, type InterviewMode, type ProjectPlan, type WizardInfo } from '../../../shared/wizard';
 import { wizardApi } from './api';
-import { h } from '../dom';
+import { h, toast } from '../dom';
+import { connectionsApi } from '../connections/api';
+import { openConnections } from '../connections';
 
 export interface PageCtx {
   draft: ProjectPlan;
@@ -121,10 +123,31 @@ function adminTokenBox(c: PageCtx): HTMLElement {
       {},
       h('li', {}, `On GitHub: Settings → Developer settings → Fine-grained tokens → Generate. Resource owner: ${d.owner || c.info.org}. Repository access: All repositories.`),
       h('li', {}, 'Permissions: Administration: Read and write, and Contents: Read and write. Nothing else.'),
-      h('li', {}, `Save it as the only line of ${c.info.adminToken.file} on the office’s machine (or point AGENT_OFFICE_ADMIN_GH_TOKEN_FILE at another file), then open the wizard again.`),
+      h('li', {}, 'Paste it here: it’s saved in 🔌 Connections, encrypted, and only this wizard uses it.'),
     ),
+    adminTokenPaste(c),
     h('label.wz-check', {}, box, ` I created this repository myself on GitHub (in ${d.owner || c.info.org}, with a README): just clone it and carry on`),
   );
+}
+
+/** The admin token pasted straight into 🔌 Connections (ui/connections/), so the wizard can carry on. */
+function adminTokenPaste(c: PageCtx): HTMLElement {
+  const input = h('input', { type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'github_pat_…', 'aria-label': 'Admin token' }) as HTMLInputElement;
+  const save = h('button.btn.primary', { type: 'button' }, 'Save to Connections');
+  save.addEventListener('click', () => {
+    if (!input.value.trim()) return input.focus();
+    save.disabled = true;
+    connectionsApi
+      .save('github-admin', input.value)
+      .then(() => {
+        c.info.adminToken.configured = true;
+        c.info.adminToken.source = 'connections';
+        c.redraw();
+      })
+      .catch((err: Error) => toast(err.message, 'warn'))
+      .finally(() => ((save.disabled = false), (input.value = '')));
+  });
+  return h('div.wz-row', {}, input, save, h('button.btn', { type: 'button', onclick: () => openConnections('github-admin') }, '🔌 Connections'));
 }
 
 function repoPicker(c: PageCtx): HTMLElement {

@@ -12,6 +12,7 @@ import type { FloorInfo } from '../../shared/protocol';
 import { h } from '../ui/dom';
 import { openElevator } from '../ui/elevator';
 import { openWizard } from '../ui/wizard';
+import { openConnections } from '../ui/connections';
 import { summaryLine } from '../ui/summary';
 import { graphics, rememberView } from '../graphics';
 
@@ -75,8 +76,10 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
     const add = h('button.btn.home-add', { type: 'button', title: "Clone one of the repositories this office's gh login can see, as a new floor" }, '➕ Add project');
     add.addEventListener('click', () => openElevator({ net, addOnly: true, downstairs: () => false, ride: go }));
     const wizard = h('button.btn.primary.home-add', { type: 'button', title: 'Create a new project repository and set it up with the mxcli project toolkit, a step at a time', onclick: () => void openWizard({ net, go }) }, '✨ New project');
+    // The office's tokens and folders, for admins: what a new project needs before it starts (ui/connections/).
+    const connections = store.me.admin ? h('button.btn.home-add', { type: 'button', title: 'The GitHub and Mendix tokens, the password, git & gh and the folders the office uses', onclick: () => openConnections() }, '🔌 Connections') : null;
     root.replaceChildren(
-      h('div.home-head', {}, h('h2', {}, '🏢 Projects'), h('span.seg', {}, wizard, add)),
+      h('div.home-head', {}, h('h2', {}, '🏢 Projects'), h('span.seg', {}, wizard, add, connections)),
       h('p.home-intro', {}, store.floors.length ? 'Every project is a floor of this building. Open one on its board, or in the office from above.' : "This building has no floors yet. ➕ Add project clones one of your repositories, and it becomes the first floor."),
       h('ul.home-floors', {}, ...store.floors.map(card)),
     );
