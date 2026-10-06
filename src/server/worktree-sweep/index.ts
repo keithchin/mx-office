@@ -1,17 +1,37 @@
 // The office's worktree cleanup: every hour (and once ten minutes after start), each floor's
 // worktrees that no worker has any more and whose work is merged are removed (sweep.ts), each removal in
 // the audit log; what's kept, and worktrees agents made outside .agent-office/worktrees/, are reported
-// on 🔌 Connections. On unless an admin switches it off there (office-settings.json).
+// on 🔌 Connections. On unless an admin switches it off there (office-settings.json). The setup panel's
+// gate-check worktrees (ao-gates-* in the temp folder) left behind by an office that stopped mid-run
+// are taken away at start and with every sweep, whatever the setting: they're the office's own scratch.
 
 import path from 'node:path';
 import type { SweepItem, SweepView } from '../../shared/connections.js';
 import type { Ctx } from '../office/context.js';
 import { audit, human, office } from '../audit/index.js';
 import { officeSettings, updateOfficeSettings } from '../connections/store.js';
-import { samePath, sweepRepo, within } from './sweep.js';
+import { samePath, sweepGateLeftovers, sweepRepo, within } from './sweep.js';
 
 const HOUR = 60 * 60_000;
 const FIRST_MS = 10 * 60_000;
+/** The leftover gate-check worktrees go soon after start, once the floors are open. */
+const GATES_AT_START_MS = 20_000;
+const STARTED_AT = Date.now();
+
+/** Whether gate-check is running for a floor (wizard/gate-source.ts's lock), handed in by whoever runs it. */
+let gateBusy: (floorDir: string) => boolean = () => false;
+export function useGateLock(busy: (floorDir: string) => boolean) {
+  gateBusy = busy;
+}
+
+/** Leftover ao-gates-* worktrees on every floor, then `git worktree prune`. */
+export async function sweepGates(ctx: Ctx): Promise<SweepItem[]> {
+  const items: SweepItem[] = [];
+  for (const f of ctx.floors.values()) items.push(...(await sweepGateLeftovers(f.dir, { busy: () => gateBusy(f.dir), startedAt: STARTED_AT, floor: f.def.name }).catch(() => [])));
+  const n = items.filter((i) => i.action === 'removed').length;
+  if (n) console.log(`  🧹 Took away ${n} gate-check worktree${n === 1 ? '' : 's'} left behind by an earlier office`);
+  return items;
+}
 
 let running = false;
 let lastRun: SweepView['lastRun'];
@@ -43,7 +63,7 @@ export async function runSweep(ctx: Ctx, by?: { name: string; id?: string }): Pr
   try {
     const { trees, workspaces } = ownedPaths(ctx);
     const owned = (abs: string) => trees.some((t) => samePath(t, abs)) || workspaces.some((w) => samePath(w, abs) || within(w, abs));
-    const items: SweepItem[] = [];
+    const items: SweepItem[] = await sweepGates(ctx);
     const seen = new Set<string>();
     for (const f of ctx.floors.values()) {
       for (const it of await sweepRepo(f.dir, { owned, floor: f.def.name })) {
@@ -83,11 +103,12 @@ export function startWorktreeSweep(ctx: Ctx): () => void {
   const tick = () => {
     if (sweepOn()) void runSweep(ctx).catch((err: Error) => console.error(`agent-office: worktree cleanup failed: ${err.message}`));
   };
+  const gates = setTimeout(() => void sweepGates(ctx).catch(() => undefined), GATES_AT_START_MS);
   const first = setTimeout(tick, FIRST_MS);
-  const every = setInterval(tick, HOUR);
-  first.unref?.();
-  every.unref?.();
+  const every = setInterval(() => (sweepOn() ? tick() : void sweepGates(ctx).catch(() => undefined)), HOUR);
+  for (const t of [gates, first, every]) t.unref?.();
   return () => {
+    clearTimeout(gates);
     clearTimeout(first);
     clearInterval(every);
   };

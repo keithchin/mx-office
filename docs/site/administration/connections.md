@@ -75,3 +75,5 @@ Every hour (the first time ten minutes after the office starts), and on **▶ Ru
 - it has no uncommitted or untracked changes and isn't locked.
 
 Its branch goes too, and each removal is in the audit log (`worktree.removed`). Before git deletes the folder, every symlink and junction inside it is unlinked without being followed, so a `node_modules` junction's target is never touched. Everything else is kept, with the reason on the page; worktrees made outside `.agent-office/worktrees/` are only listed. **🟢 On / ⚪ Off** switches it (on by default).
+
+The setup panel's gate-check runs in temporary detached worktrees (`ao-gates-*` in the system's temp folder). An office stopped mid-run leaves them behind, so shortly after start, and with every sweep (whether the cleanup is on or off), the office removes the ones made before it started or longer ago than any gate-check runs, never while a gate-check of that floor is running, and then runs `git worktree prune`.

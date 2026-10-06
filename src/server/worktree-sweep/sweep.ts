@@ -2,13 +2,15 @@
 // worker of the office has any more (sent home, gone), whose branch is merged into the branch pull
 // requests go to (a merge, a rebase or a squash: the content is there), with no uncommitted or untracked
 // changes, are removed with their branch. Anything else is kept and said why; worktrees made outside
-// .agent-office/worktrees/ (a temp folder, next to the project) are only reported. Before git removes a
+// .agent-office/worktrees/ (a temp folder, next to the project) are only reported, except the setup
+// panel's own ao-gates-* gate-check worktrees left in the temp folder (sweepGateLeftovers). Before git removes a
 // folder, every symlink and junction in it is unlinked without being followed, so a node_modules
 // junction's target (another checkout's packages) is never touched.
 
 import { execFile } from 'node:child_process';
-import { lstat, readdir, rmdir, unlink } from 'node:fs/promises';
+import { lstat, readdir, rm, rmdir, unlink } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { SweepItem } from '../../shared/connections.js';
@@ -127,6 +129,60 @@ export async function unlinkLinks(dir: string): Promise<number> {
   return n;
 }
 
+/** The setup panel's gate-check runs in temporary detached worktrees named so (wizard/gate-source.ts). */
+export const GATE_PREFIX = 'ao-gates-';
+/** A gate-check gives up after 5 minutes; one this old can't be running any more. */
+export const GATE_STALE_MS = 15 * 60_000;
+
+export interface GateSweepOptions {
+  /** A gate-check is running for this floor now (gate-source.ts's lock), so none of its worktrees are touched. */
+  busy?: () => boolean;
+  /** When this office started: a gate worktree made before then belongs to no running gate-check. */
+  startedAt: number;
+  now?: number;
+  /** Where gate-check makes them (the system's temp folder). */
+  tmpRoot?: string;
+  floor?: string;
+}
+
+/**
+ * Gate-check worktrees left behind by an office that stopped mid-run: detached worktrees under the temp
+ * folder named ao-gates-*, made before this office started or longer ago than any gate-check runs, while
+ * no gate-check of this floor is running. Each is removed (links unlinked first, never followed; it's a
+ * throwaway checkout of a commit, so whatever gate-check wrote in it goes too), then `git worktree prune`.
+ */
+export async function sweepGateLeftovers(dir: string, opts: GateSweepOptions): Promise<SweepItem[]> {
+  const items: SweepItem[] = [];
+  if (opts.busy?.()) return items;
+  const tmpRoot = real(opts.tmpRoot ?? os.tmpdir());
+  const now = opts.now ?? Date.now();
+  let trees: ListedTree[];
+  try {
+    trees = await listWorktrees(dir);
+  } catch {
+    return items;
+  }
+  for (const wt of trees) {
+    if (wt.main || wt.branch || !path.basename(wt.path).startsWith(GATE_PREFIX) || !within(tmpRoot, real(wt.path))) continue;
+    if (wt.prunable) continue; // its folder is gone: the prune below forgets it
+    const st = await lstat(wt.path).catch(() => undefined);
+    if (!st || st.isSymbolicLink()) continue;
+    const made = Math.min(st.birthtimeMs || st.mtimeMs, st.mtimeMs);
+    if (made >= opts.startedAt && now - made < GATE_STALE_MS) continue;
+    if (opts.busy?.()) break;
+    try {
+      await unlinkLinks(wt.path);
+      await git(['worktree', 'remove', '--force', '--force', wt.path], dir).catch(() => undefined);
+      await rm(wt.path, { recursive: true, force: true });
+      items.push({ floor: opts.floor, path: wt.path, action: 'removed', why: 'a gate-check worktree left behind by an office that stopped mid-run' });
+    } catch (err) {
+      items.push({ floor: opts.floor, path: wt.path, action: 'failed', why: gitError(err) });
+    }
+  }
+  await git(['worktree', 'prune'], dir).catch(() => undefined);
+  return items;
+}
+
 export interface SweepOptions {
   /** Whether a worker of the office has the worktree at this path (or the workspace it's in). */
   owned(abs: string): boolean;
@@ -149,6 +205,7 @@ export async function sweepRepo(dir: string, opts: SweepOptions): Promise<SweepI
   let into: string[] | undefined;
   for (const wt of trees) {
     if (wt.main || wt.prunable || samePath(wt.path, root)) continue;
+    if (path.basename(wt.path).startsWith(GATE_PREFIX) && !wt.branch) continue; // the gate-check's own (sweepGateLeftovers)
     if (!within(home, wt.path)) {
       // Another floor's workspace (a worker across repositories) is that office's to look after.
       if (!/[\\/]\.agent-office[\\/]worktrees[\\/]/i.test(wt.path)) item(wt, 'outside', 'made outside the project’s .agent-office/worktrees/, so the office doesn’t remove it: delete it with git worktree remove once you’re sure');

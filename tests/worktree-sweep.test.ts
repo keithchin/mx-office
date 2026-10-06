@@ -5,10 +5,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { isMerged, sweepRepo, targetRefs, unlinkLinks } from '../src/server/worktree-sweep/sweep.js';
+import { isMerged, sweepGateLeftovers, sweepRepo, targetRefs, unlinkLinks } from '../src/server/worktree-sweep/sweep.js';
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const ENV = ['-c', 'user.name=T', '-c', 'user.email=t@x', '-c', 'commit.gpgsign=false'];
@@ -113,4 +113,36 @@ test('links inside a worktree are unlinked, never followed: a node_modules junct
   symlinkSync(packages, path.join(box, 'nm'), 'junction');
   assert.equal(await unlinkLinks(box), 1);
   assert.ok(!existsSync(path.join(box, 'nm')) && existsSync(path.join(packages, 'left-pad', 'index.js')));
+});
+
+test('gate-check worktrees left in the temp folder go (and git forgets them); a running gate-check’s, and fresh ones, stay', async () => {
+  const { root, dir } = project();
+  const tmpRoot = path.join(root, 'tmp');
+  mkdirSync(tmpRoot);
+  const head = git(dir, 'rev-parse', 'HEAD');
+  const gate = (name: string) => {
+    const p = path.join(tmpRoot, name);
+    git(dir, 'worktree', 'add', '-q', '--detach', '--force', p, head);
+    writeFileSync(path.join(p, 'index.html'), 'rendered by gate-check');
+    return p;
+  };
+  const old = gate('ao-gates-old1');
+  const other = gate('not-a-gate');
+  const gone = gate('ao-gates-gone');
+  rmSync(gone, { recursive: true, force: true });
+  // A running gate-check holds the lock: nothing is touched.
+  assert.deepEqual(await sweepGateLeftovers(dir, { busy: () => true, startedAt: Date.now() + 60_000, tmpRoot }), []);
+  assert.ok(existsSync(old));
+  // Made after this office started, a moment ago: it may be the running one's.
+  assert.deepEqual(await sweepGateLeftovers(dir, { startedAt: 0, now: Date.now(), tmpRoot }), []);
+  assert.ok(existsSync(old));
+  // Made before this office started: left behind.
+  const items = await sweepGateLeftovers(dir, { startedAt: Date.now() + 60_000, tmpRoot, floor: 'proj' });
+  assert.deepEqual(items.map((i) => [path.basename(i.path), i.action]), [['ao-gates-old1', 'removed']]);
+  assert.ok(!existsSync(old) && existsSync(other));
+  const listed = git(dir, 'worktree', 'list');
+  assert.ok(!listed.includes('ao-gates'), 'git forgets them, the one whose folder was already gone too');
+  assert.ok(listed.includes('not-a-gate'));
+  // The main sweep leaves gate-check worktrees to this, and doesn't report them as outside.
+  assert.equal((await sweepRepo(dir, { owned: () => false })).some((i) => i.path.includes('ao-gates')), false);
 });
