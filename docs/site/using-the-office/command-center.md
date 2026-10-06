@@ -23,7 +23,7 @@ Everything waiting for a human on this floor, most urgent first; escalations in 
 | ✅ | *&lt;name&gt; finished: &lt;summary&gt;, not looked at yet* (not for a [quiet turn](../concepts/workers-and-worktrees.md#quiet-turns): one the office started, or a team member's at autonomy 3 and up) | **Review**: opens its terminal |
 | 🚩 | An escalation, tagged CRITICAL, URGENT, IMPORTANT or INFO | **Answer** (admin) or **View**: jumps to the card |
 | 🔀 💸 🧰 📝 | An approval: a merge, a cost cap, a subagent action, a proposal | **Review**: opens Approvals |
-| 💸 | *Hiring is paused* (the daily cap is spent) | **Settings** |
+| 💸 | *Spend cap reached: office prompts paused; agents finish their current turn* (the daily cap is spent) | **Settings** |
 | ❌ | *PR #n has failing checks* | **Open PR #n** |
 | ✋ | *Stage X waits for your sign-off* | **Sign off**: scrolls to the setup panel |
 | 🌐 | *The live app failed* | **Live app** |

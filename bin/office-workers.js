@@ -48,7 +48,7 @@ export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 /** How long the office may take to come back when it's restarting (a dev reload, an upgrade). */
 const RETRY_MS = 6000;
 /** Sending several workers home waits on git for each; hiring may fetch from GitHub first. */
-const TIMEOUT_MS = { list: 15_000, tell: 15_000, pr: 45_000, hire: 90_000, home: 300_000, escalate: 15_000, subagent: 15_000 };
+const TIMEOUT_MS = { list: 15_000, tell: 15_000, pr: 45_000, hire: 90_000, home: 300_000, escalate: 30_000, subagent: 15_000 };
 /** Where each call goes, under /office/workers. */
 const PATHS = { list: '', hire: '', home: '/home', tell: '/tell', pr: '/pr', escalate: '/escalate', subagent: '/subagent' };
 
@@ -394,7 +394,7 @@ async function runTool(name, args, io) {
   }
   if (name === 'tell_worker') {
     const answer = await call('tell', a, io);
-    return { text: `Told ${answer.worker?.name ?? a.worker}.` };
+    return { text: answer.note ?? `Told ${answer.worker?.name ?? a.worker}.` };
   }
   if (name === 'link_pr') return { text: formatLinked(await call('pr', a, io)) };
   if (name === 'escalate') return { text: formatEscalated(await call('escalate', a, io)) };
@@ -523,7 +523,7 @@ export async function main(argv, io = {}) {
       const text = (await prompt()).trim();
       if (!text) throw new UsageError('The prompt is empty');
       const answer = await call('tell', { worker: cmd.worker, prompt: text }, ctx);
-      err(`Told ${answer.worker?.name ?? cmd.worker}.`);
+      err(answer.note ?? `Told ${answer.worker?.name ?? cmd.worker}.`);
       return 0;
     }
     if (cmd.cmd === 'escalate') {

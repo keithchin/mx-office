@@ -1,6 +1,5 @@
 import type http from 'node:http';
 import { notLeaving } from '../leave-on-merge.js';
-import { rosterOf } from '../roster/adapter.js';
 import { findWorker, readHireRequest, readHomeRequest, readPrRequest, workerRow, type PullsView } from '../office-workers.js';
 import { gh } from '../github.js';
 import type { Floor } from '../floor.js';
@@ -13,6 +12,8 @@ import { officeEscalate } from './office-escalate.js';
 import { officeSubagent } from './office-subagent.js';
 import { agent, audit } from '../audit/index.js';
 import { agentHired, agentTold, prHanded } from '../chatter/hooks.js';
+import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { tellLimitOf } from './tell-limit.js';
 
 /**
  * Pull request `n` on a floor, for a worker to have as its own: one that's open, or merged and still
@@ -132,12 +133,15 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
     if (w.kind !== 'agent') return send(res, 400, { error: `${w.name} is a shell, not an agent` });
     const text = str(b.prompt, 20000).replace(/\r\n?/g, '\n').trim();
     if (!text) return send(res, 400, { error: 'Say what to tell it: prompt' });
-    let err = floor.workers.prompt(w.id, text, who);
-    // Stopped or asleep: it wakes up with this as its next message.
-    if (err === 'Worker is not running') err = floor.workers.resume(w.id, text);
-    if (err) return send(res, 400, { error: err });
+    // A few tells per pair in ten minutes: two agents can't ping-pong for as long as there's money.
+    const limited = tellLimitOf(ctx.cfg).take(me, w);
+    if (limited) return send(res, 429, { error: limited });
+    // Never typed into a question open in its terminal (Enter would answer it): held until its turn is
+    // over. Stopped or asleep, it wakes up with this as its next message. Not past the floor's spend cap.
+    const sent = rosterOf(ctx).delivery.send(teamFloor(ctx, floor), w, text, { origin: 'agent', by: who, wake: true, hold: true });
+    if (sent.status === 'refused') return send(res, sent.why.startsWith('Spend cap') ? 409 : 400, { error: sent.why });
     agentTold(floor.id, me, w, text);
-    return send(res, 200, { ok: true, worker: row(w.id) });
+    return send(res, 200, { ok: true, worker: row(w.id), ...(sent.status === 'held' ? { held: true, note: `${w.name} has a question open in its terminal: your message goes in once its turn is over. Don't send it again.` } : {}) });
   }
 
   if (action === '/pr') {

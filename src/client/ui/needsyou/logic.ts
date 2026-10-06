@@ -102,8 +102,8 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
       const text = a.kind === 'proposal' ? `Proposal to approve: ${a.title}` : a.kind === 'subagent' ? `To approve: ${a.title}` : a.title;
       out.push({ key: `appr-${a.id}`, kind: 'approval', icon, text, level: 'warn', action: admin ? 'Review' : 'View', target: { to: 'approvals' } });
     }
-    // 5. Hiring paused on the cost cap.
-    if (r.paused) out.push({ key: 'paused', kind: 'paused', icon: '💸', text: `Hiring is paused: ${r.paused}`, level: 'block', action: 'Settings', target: { to: 'settings' } });
+    // 5. The cost cap: no hiring, and the office sends no prompts of its own; people's still go through.
+    if (r.paused) out.push({ key: 'paused', kind: 'paused', icon: '💸', text: `Spend cap reached: office prompts paused; agents finish their current turn. ${r.paused}`, level: 'block', action: 'Settings', target: { to: 'settings' } });
   }
   // 6. Open, ready PRs whose checks fail.
   for (const p of i.pulls) {

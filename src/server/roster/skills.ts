@@ -46,7 +46,7 @@ export function changeSkill(roster: Roster, floor: TeamFloor, role: RoleId, c: S
   const w = roster.workerOf(floor, m);
   const now = effectiveSkill(role, d.settings.autonomy, key, m.skills)!;
   if (wrote && w && (w.status === 'idle' || w.status === 'done') && def.group !== 'craft') {
-    floor.prompt(w.id, skillsChangedPrompt([`- **${now.title}**: ${now.enabled ? (now.gate ? GATE_WORDS[now.gate] : 'always allowed') : 'off — escalate instead'}${now.how && now.enabled ? ` (\`${now.how}\`)` : ''}`]));
+    roster.delivery.prompt(floor, w, skillsChangedPrompt([`- **${now.title}**: ${now.enabled ? (now.gate ? GATE_WORDS[now.gate] : 'always allowed') : 'off — escalate instead'}${now.how && now.enabled ? ` (\`${now.how}\`)` : ''}`]));
   }
   roster.touch(floor);
   return undefined;

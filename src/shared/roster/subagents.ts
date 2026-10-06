@@ -41,6 +41,10 @@ export interface SubagentRecord {
   /** When the scorer last flagged it, and when its Lead was nudged about that. */
   flaggedAt?: number;
   nudgedAt?: number;
+  /** Rework verdicts in a row on its current task (roster/review-rounds.ts), and when they ran past the level's revision rounds, with the escalation the office raised. */
+  reworks?: number;
+  exhaustedAt?: number;
+  exhaustedEscalation?: string;
 }
 
 /** Runs kept per subagent. */

@@ -110,8 +110,9 @@ export class Members {
     const waiting = awaitingAnswer(d.escalations, role);
     if (waiting) return `Can't bench ${m.name}: it's waiting on a person: answer its escalation “${waiting.title}” first`;
     const text = benchPrompt(role, lessonsPathIn(floor.dir), this.stamp(floor));
-    const err = isAsleepStatus(w.status) ? floor.wake(w.id, text) : floor.prompt(w.id, text);
-    if (err) return err;
+    // The idle bench is the office's doing (held past the spend cap: an idle one costs nothing); a person's goes through.
+    const sent = this.roster.delivery.send(floor, w, text, { origin: by === 'idle' ? 'office' : 'person', wake: true });
+    if (sent.status === 'refused') return sent.why;
     m.phase = 'benching';
     m.benchAskedAt = this.roster.deps.now();
     m.benchSawBusy = false;
@@ -215,8 +216,8 @@ export class Members {
         } catch {
           // its Playbook will be right at its next hire
         }
-        // Asleep ones read it when they wake; one asking a person isn't interrupted.
-        if (!isAsleepStatus(w.status) && w.status !== 'needs_input') floor.prompt(w.id, autonomyPrompt(d.settings.autonomy));
+        // Asleep ones read it when they wake; one asking a person isn't interrupted; past the spend cap it isn't sent.
+        this.roster.delivery.prompt(floor, w, autonomyPrompt(d.settings.autonomy));
       }
     }
     this.roster.touch(floor);

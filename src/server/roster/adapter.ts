@@ -43,9 +43,10 @@ export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
       if (note) ctx.toastFloor(floor, note);
       if (error) ctx.toastFloor(floor, error, 'warn');
     },
-    // The office's own prompts: the turns they start end without flagging anyone (workers/lifecycle.ts OFFICE_BY).
-    prompt: (id, text) => floor.workers.prompt(id, text, OFFICE_BY),
-    wake: (id, prompt) => floor.workers.resume(id, prompt, !!prompt),
+    // The office's own prompts (no `by`, or OFFICE_BY): the turns they start end without flagging anyone
+    // (workers/lifecycle.ts). One carrying a person's words (their answer) is theirs, and flags as usual.
+    prompt: (id, text, by) => floor.workers.prompt(id, text, by ?? OFFICE_BY),
+    wake: (id, prompt, by) => floor.workers.resume(id, prompt, !!prompt && (by ?? OFFICE_BY) === OFFICE_BY),
     rename: (id, name) => floor.workers.rename(id, name),
     cwdOf: (w: WorkerInfo) => (w.worktree ? path.resolve(floor.dir, w.worktree.path) : floor.dir),
     openPulls: () => floor.github.pulls.items.filter((p) => p.state === 'OPEN'),

@@ -14,6 +14,16 @@ An **escalation** is a structured question from an agent to you, with an urgency
 - **A handoff note** ends with `AWAITING-PM: <question>` and there's no open escalation for it. The office raises one for the Lead.
 - **Jeff · Router**, when *Waiting on you* is **On**: an agent ended its turn waiting on you but didn't say so. See [Jeff · Router](../automation/jeff-router.md).
 - **An *ask* gate**: a Lead wants to do something its skill says it must ask about first. See [Skills and gates](../automation/skills.md).
+- **A review loop out of rounds**: a Lead sent the same subagent's work back more times in a row than its autonomy level allows (2 rounds at levels 1 and 2, 3 at levels 3 and 4). The office raises one `revisions-exhausted` escalation for the Lead and stops nudging it about that subagent. See [The review loop](review-loop.md#bounded).
+
+## The same ask, raised again
+
+An agent's escalation that asks for what's already open on the floor isn't opened a second time: it joins the open one as a **+1 from** *name*, its details are added, and that agent hears your answer too.
+
+- **The same title, or nearly** (three quarters of the words shared): joined straight away.
+- **The same ask in other words** (*Set repo secret X*, *One command to set the e2e secret*, *Secret 404: set it in the web page instead*): when no title matches, [Jeff](../automation/jeff-router.md#the-same-ask-in-other-words) is asked whether it's the same ask as one of the open ones, and it's joined only when he's at least 85% sure. While his **Waiting on you** judgement is Off he isn't asked; when he doesn't answer within 10 seconds, or fails, it's raised as its own.
+
+The Activity line says *Jeff judged it the same ask* when he joined it, and so does the Audit log.
 
 ## What's in one
 
@@ -33,7 +43,7 @@ The office stamps who raised it (name, role, team) and the autonomy level at the
 - Every open, non-FYI escalation is in **🚨 Needs you**, **🚩 Escalations to you** on the Command Center, and **✅ Approvals**.
 - An **urgent** or **critical** one also makes a toast and a desktop notification.
 - Jeff rates each open one and, with his **Priority** on (the default), the lists show them in his order with a **🧑‍⚖️ #1 · resolve first** chip. See [Jeff · Router](../automation/jeff-router.md#priority-which-escalation-first).
-- The Project Coordinator is told about the team's escalations (batched a minute after the last one), so it can summarise them for you. The relay says it needs no reply. While the Coordinator is asleep, benched or asking someone they wait for it, kept in the roster file so a restart doesn't lose them; a floor with no Coordinator at all skips them (they're on the Command Center and the next standup page anyway).
+- The Project Coordinator is told about the team's escalations (batched a minute after the last one), so it can summarise them for you. The relay says it needs no reply. While the Coordinator is benched or asking someone, or the floor's daily cost cap is reached, they wait for it, kept in the roster file so a restart doesn't lose them. An asleep Coordinator is woken with all its relays in one message, at most once a minute. A floor with no Coordinator at all skips them (they're on the Command Center and the next standup page anyway).
 
 ## Answering
 
@@ -46,8 +56,11 @@ On the card, as admin:
 
 The answer goes to the agent as a prompt: *REPLIED*, *APPROVED*, *REJECTED* or *NOTED*.
 
+- If it's **asking something in its terminal** (a permission prompt or a question, or it's still starting up), the answer isn't typed there, where Enter would pick one of the dialog's options and the answer would be lost. It waits, and goes in once that turn is over, with any other answers it's owed, in one message. The Activity says *… has a question open in its terminal: the answer goes in once that's answered*, and the answer counts as not delivered until then.
 - If it's **asleep**, it's woken with your answer.
 - If it was **benched**, its role gets the answer: in its current session, or by re-hiring it with your answer in its first message (when hiring is open).
+
+Your answer goes through even when the floor's daily cost cap is reached: the cap holds the office's own prompts, not yours. See [Models and costs](models-and-costs.md#the-daily-cost-cap).
 
 > [!NOTE]
 > A Lead waiting on an open escalation of its own is never benched for idling. It is waiting on you, not idle.

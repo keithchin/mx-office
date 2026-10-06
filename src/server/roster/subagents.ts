@@ -18,6 +18,8 @@ import { isAsleepStatus } from './bench.js';
 import type { Roster } from './index.js';
 import { NUDGE_GRACE_MS } from './nudge.js';
 import { coordinatorIs, queueOnce } from './relays.js';
+import { countRound, resetRounds, roundsLine } from './review-rounds.js';
+import { REVIEW_POLICY } from '../../shared/roster/autonomy.js';
 import { subagentDecisionPrompt, subagentNewsPrompt, underperformingPrompt } from './prompts.js';
 import { cleanSubName, subagentReviews, subKey, type SubagentReview } from './subagent-store.js';
 import { definitionOf } from './subagent-files.js';
@@ -150,9 +152,49 @@ export class Subagents {
     run.reviewedAt = now;
     const said = line(note, 300);
     if (said) run.note = said;
+    // A verdict is the Lead following the protocol: the review nudge may go on.
+    this.roster.nudges.reviewed(floor, lead);
+    if (countRound(rec, verdict, REVIEW_POLICY[this.roster.data(floor.id).settings.autonomy].maxRevisions, now) === 'exhausted') this.outOfRounds(floor, rec, run);
     this.checkScore(floor, rec, now);
     this.roster.touch(floor);
     return run;
+  }
+
+  /** What the Lead is told with its verdict about the subagent's revision rounds (review-rounds.ts). */
+  roundsText(floor: TeamFloor, lead: RoleId, rawName: unknown): string {
+    const name = cleanSubName(rawName);
+    const rec = name && this.find(floor, lead, name);
+    const level = this.roster.data(floor.id).settings.autonomy;
+    return rec ? roundsLine(rec, REVIEW_POLICY[level].maxRevisions, level) : '';
+  }
+
+  /**
+   * A subagent's work still fails review after the level's revision rounds: the office raises one
+   * `revisions-exhausted` escalation for its Lead (FYI or not by the level, like the Lead's own), and the
+   * review nudge stops for it until the Project Manager answers or the Lead accepts its work.
+   */
+  private outOfRounds(floor: TeamFloor, rec: SubagentRecord, run: SubagentRun) {
+    const d = this.roster.data(floor.id);
+    const m = d.members[rec.lead];
+    const level = d.settings.autonomy;
+    const max = REVIEW_POLICY[level].maxRevisions;
+    const w = this.leadWorker(floor, rec.lead);
+    const task = run.task ?? [...rec.runs].reverse().find((r) => r.task)?.task;
+    const details = [
+      `${m.name} sent ${rec.name}'s work back ${rec.reworks} times in a row${task ? ` on “${task}”` : ''}: past the ${max} revision rounds a subagent gets on a task at autonomy level ${level}. The office has stopped nudging ${m.name} to review ${rec.name} again.`,
+      run.note ? `The last review: ${run.note}` : '',
+      this.trackLine(floor, rec.lead, rec.name),
+      `Answer here and it goes to ${m.name} as its next prompt.`,
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+    const e = this.roster.escalations.raiseNoticed(
+      floor,
+      { workerId: w?.id ?? m.workerId ?? `lead-${rec.lead}`, by: m.name, role: rec.lead },
+      { urgency: 'important', trigger: 'revisions-exhausted', title: `${rec.name} still fails ${m.name}'s review after ${max} revision rounds${task ? `: ${task}` : ''}`.slice(0, 160), details, options: [`Give ${rec.name} one more round`, `${m.name} takes it over`, 'Rescope or drop the task'] },
+      `🔁 The office escalated for ${m.name}: ${rec.name} is out of revision rounds (${max} at level ${level})`,
+    );
+    rec.exhaustedEscalation = e.id;
   }
 
   /** After a verdict: a subagent that's underperforming is flagged once, and its Lead nudged when idle. */
@@ -252,9 +294,11 @@ export class Subagents {
     floor.activity?.(`${OP_ICON[op]} ${who} ${OP_VERB[op]} ${whose} ${name} (${before})${why}`);
     const w = this.leadWorker(floor, lead);
     const wrote = this.roster.members.rewrite(floor, lead);
-    // The Lead hears what it didn't do itself, between turns (never interrupting one, or a question to a person).
-    if (as !== 'lead' && w && wrote && (w.status === 'idle' || w.status === 'done')) {
-      floor.prompt(w.id, `${as === 'pm' ? `The Project Manager (${by})` : 'The office'} ${OP_VERB[op]} your subagent ${name}${why}. Your Playbook and its definition have been rewritten${op === 'bench' ? `: don't dispatch ${name}; do the work yourself or use another subagent` : ''}. Note it in your team journal and carry on. Reply \`ok\`.`);
+    // The Lead hears what it didn't do itself, between turns (never interrupting one, or a question to a
+    // person): the Project Manager's doing is held until then; the office's is only said when it's free.
+    const between = !!w && (w.status === 'idle' || w.status === 'done');
+    if (as !== 'lead' && w && wrote && (between || (as === 'pm' && !isAsleepStatus(w.status)))) {
+      this.roster.delivery.send(floor, w, `${as === 'pm' ? `The Project Manager (${by})` : 'The office'} ${OP_VERB[op]} your subagent ${name}${why}. Your Playbook and its definition have been rewritten${op === 'bench' ? `: don't dispatch ${name}; do the work yourself or use another subagent` : ''}. Note it in your team journal and carry on. Reply \`ok\`.`, { origin: as === 'pm' ? 'person' : 'office', hold: true, between: true });
     }
     this.roster.touch(floor);
     return undefined;
@@ -279,8 +323,10 @@ export class Subagents {
     if (a.escalationId) this.roster.escalations.resolve(floor, a.escalationId, approve ? 'approve' : 'reject', reason || (approve ? 'Approved: the office has done it.' : 'Rejected.'), by);
     else {
       const w = this.leadWorker(floor, a.lead);
-      const told = !!w && !isAsleepStatus(w.status) && w.status !== 'needs_input' && !floor.prompt(w.id, subagentDecisionPrompt(`${OP_ASK[a.op]} ${a.name}`, approve, by, reason));
-      if (!told) this.roster.relays.noteLead(floor, a.lead, `The Project Manager (${by}) ${approve ? 'approved' : 'rejected'} your request to ${OP_ASK[a.op]} ${a.name}.${approve ? ' The office has done it.' : ''}${reason ? ` ${line(reason, 300)}` : ''}`);
+      // The Project Manager's decision: held while the Lead is busy or a dialog is up, and told once its
+      // turn is over. A Lead that's asleep or away gets it as a note kept in the roster file (relays.ts).
+      const sent = !!w && !isAsleepStatus(w.status) && this.roster.delivery.send(floor, w, subagentDecisionPrompt(`${OP_ASK[a.op]} ${a.name}`, approve, by, reason), { origin: 'person', by, hold: true, between: true }).status !== 'refused';
+      if (!sent) this.roster.relays.noteLead(floor, a.lead, `The Project Manager (${by}) ${approve ? 'approved' : 'rejected'} your request to ${OP_ASK[a.op]} ${a.name}.${approve ? ' The office has done it.' : ''}${reason ? ` ${line(reason, 300)}` : ''}`);
     }
     this.roster.touch(floor);
     return undefined;
@@ -288,6 +334,8 @@ export class Subagents {
 
   /** An escalation was answered: when it was a Lead's `ask`, approving it does the action. */
   onEscalationResolved(floor: TeamFloor, escalationId: string, verdict: string, by: string) {
+    // Out of revision rounds, and answered: the subagent's count starts again.
+    for (const rec of Object.values(this.roster.data(floor.id).subagents)) if (rec.exhaustedEscalation === escalationId) resetRounds(rec);
     const a = this.roster.data(floor.id).subagentActions.find((x) => x.escalationId === escalationId && x.status === 'pending');
     if (!a) return;
     const err = verdict === 'approve' ? this.run(floor, a.lead, a.op, a.name, { reason: a.reason, model: a.model }, a.by, 'lead') : 'not approved';
@@ -324,7 +372,7 @@ export class Subagents {
     if (idle === undefined || now - idle < NUDGE_GRACE_MS) return false;
     const s = scoreSubagent(flagged.runs, currentModel(flagged, 'inherit'));
     const skills = effectiveSkills(lead, d.settings.autonomy, m.skills).filter((k) => k.enabled && (k.key === 'warn' || k.key === 'bench' || k.key === 'swap-model')).map((k) => `${k.title} — ${GATE_WORDS[k.gate!]} (\`${k.how}\`)`);
-    if (floor.prompt(w.id, underperformingPrompt(flagged.name, modelWord(s.model), s.why ?? 'poor reviews', skills))) return false;
+    if (this.roster.delivery.prompt(floor, w, underperformingPrompt(flagged.name, modelWord(s.model), s.why ?? 'poor reviews', skills))) return false;
     flagged.nudgedAt = now;
     struggleNudged(floor.id, w, flagged.name, s.why ?? 'poor reviews');
     floor.activity?.(`🔁 Nudged ${m.name} about ${flagged.name}'s track record (${s.why})`);
@@ -353,9 +401,10 @@ export class Subagents {
       this.roster.touch(floor, true);
       return false;
     }
+    if (where === 'asleep') return this.roster.relays.wakeCoordinator(floor);
     const w = this.roster.workerOf(floor, this.roster.data(floor.id).members.pm);
     if (where === 'away' || !w || (w.status !== 'idle' && w.status !== 'done')) return false;
-    if (floor.prompt(w.id, subagentNewsPrompt(o.news))) return false;
+    if (this.roster.delivery.prompt(floor, w, subagentNewsPrompt(o.news))) return false;
     o.news = [];
     this.roster.touch(floor, true);
     return true;

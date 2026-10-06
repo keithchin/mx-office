@@ -19,7 +19,7 @@ class FakeFloor implements TeamFloor {
   name = 'mx-spike';
   dir = mkdtempSync(path.join(os.tmpdir(), 'relays-'));
   map = new Map<string, WorkerInfo>();
-  prompts: { id: string; text: string }[] = [];
+  prompts: { id: string; text: string; by?: string }[] = [];
   roster!: Roster;
   private n = 0;
   workers = () => [...this.map.values()];
@@ -35,13 +35,16 @@ class FakeFloor implements TeamFloor {
     this.map.delete(id);
     this.roster.onWorkerGone(this, id);
   }
-  prompt(id: string, text: string) {
+  prompt(id: string, text: string, by?: string) {
     const w = this.map.get(id);
     if (!w || w.status === 'exited' || w.status === 'offline') return 'Worker is not running';
-    this.prompts.push({ id, text });
+    this.prompts.push({ id, text, by });
     return undefined;
   }
-  wake() {
+  wakes: { id: string; text?: string; by?: string }[] = [];
+  wake(id: string, text?: string, by?: string) {
+    this.wakes.push({ id, text, by });
+    Object.assign(this.map.get(id)!, { status: 'starting' });
     return undefined;
   }
   rename() {}
@@ -92,9 +95,9 @@ test('escalations the Coordinator hasn’t heard survive a restart and reach it 
   const t = setup();
   const pm = await hireAt(t, 'pm');
   const dev = await hireAt(t, 'lead-developer');
-  t.floor.set(pm, 'exited');
+  t.floor.set(pm, 'needs_input');
   const e = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'urgent', trigger: 'blocked', title: 'No test DB', details: '', options: [] });
-  assert.equal(t.roster.escalations.flushCoordinator(t.floor), false, 'asleep: not woken for it');
+  assert.equal(t.roster.escalations.flushCoordinator(t.floor), false, 'asking someone: never typed into its dialog');
   assert.deepEqual(t.data().outbox.escalations, [e.id], 'kept, not dropped');
   t.restart();
   assert.deepEqual(t.data().outbox.escalations, [e.id], 'read back from the roster file');
@@ -111,7 +114,7 @@ test('a decision on a proposal reaches the Lead that proposed it as a batched no
   const t = setup();
   const pm = await hireAt(t, 'pm');
   const dev = await hireAt(t, 'lead-developer');
-  t.floor.set(pm, 'exited');
+  t.floor.set(pm, 'needs_input');
   const a = proposal(t, 'Split Orders');
   const b = proposal(t, 'Add audit trail module');
   assert.equal(await t.roster.standups.decide(t.floor, a.id, 'approve', 'Keith'), undefined);
@@ -129,13 +132,76 @@ test('a decision on a proposal reaches the Lead that proposed it as a batched no
   assert.match(notes[0].text, /“Add audit trail module”.*REJECTED: Not this release/);
   assert.match(notes[0].text, /no reply needed/);
   assert.equal(t.roster.relays.owed(t.floor.id, 'lead-developer').length, 0);
-  // The Coordinator was asleep: its outcomes waited in the file, and go out once it's back.
+  // The Coordinator was asking someone: its outcomes waited in the file, and go out once its turn is over.
   assert.equal(t.data().outbox.decisions.length, 2);
   t.floor.set(pm, 'done');
   const outcomes = t.floor.prompts.filter((p) => p.id === pm);
   assert.equal(outcomes.length, 1);
   assert.match(outcomes[0].text, /APPROVED[\s\S]*REJECTED: Not this release/);
   assert.doesNotMatch(outcomes[0].text, /Reply `noted`/);
+});
+
+test('an asleep Coordinator is woken once with everything it’s owed, in one message, at most once a window', async () => {
+  const t = setup();
+  const pm = await hireAt(t, 'pm');
+  const dev = await hireAt(t, 'lead-developer');
+  t.floor.set(pm, 'offline');
+  t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'urgent', trigger: 'blocked', title: 'No test DB', details: '', options: [] });
+  assert.equal(await t.roster.standups.decide(t.floor, proposal(t, 'Split Orders').id, 'approve', 'Keith'), undefined);
+  assert.equal(t.roster.escalations.flushCoordinator(t.floor), true, 'woken');
+  assert.equal(t.floor.wakes.length, 1);
+  assert.match(t.floor.wakes[0].text!, /“No test DB”[\s\S]*APPROVED/);
+  assert.equal(t.floor.wakes[0].by, undefined, "the office's own: its turn ends quietly");
+  assert.deepEqual([t.data().outbox.escalations, t.data().outbox.decisions], [[], []]);
+  assert.equal(t.roster.standups.flushPm(t.floor), false, 'nothing left to wake it for');
+  // Asleep again with something new inside the window: it waits for the next one.
+  t.floor.set(pm, 'offline');
+  t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'urgent', trigger: 'blocked', title: 'CI is red', details: '', options: [] });
+  assert.equal(t.roster.escalations.flushCoordinator(t.floor), false);
+  assert.equal(t.floor.wakes.length, 1);
+  t.clock.now += 60_000;
+  t.roster.tick(t.clock.now);
+  assert.equal(t.floor.wakes.length, 2);
+  assert.match(t.floor.wakes[1].text!, /“CI is red”/);
+});
+
+test('the spend cap holds the outbox: nothing goes while it is reached, all of it once it lifts', async () => {
+  const t = setup();
+  const pm = await hireAt(t, 'pm');
+  const dev = await hireAt(t, 'lead-developer');
+  const d = t.data();
+  d.settings.costCaps = { [d.settings.autonomy]: 1 };
+  d.spend.usd = 5;
+  t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'urgent', trigger: 'blocked', title: 'No test DB', details: '', options: [] });
+  assert.equal(await t.roster.standups.decide(t.floor, proposal(t, 'Split Orders').id, 'approve', 'Keith'), undefined);
+  t.floor.set(pm, 'offline');
+  assert.equal(t.roster.escalations.flushCoordinator(t.floor), false);
+  assert.equal(t.roster.standups.flushPm(t.floor), false);
+  t.clock.now += LEAD_NOTES_DEBOUNCE_MS;
+  t.roster.tick(t.clock.now);
+  assert.equal(t.floor.prompts.length + t.floor.wakes.length, 0, 'held by the cap: no prompt, no wake');
+  assert.equal(d.outbox.escalations.length, 1);
+  assert.equal(d.outbox.decisions.length, 1);
+  assert.equal(t.roster.relays.owed(t.floor.id, 'lead-developer').length, 1);
+  // The cap lifts (a new day, or a higher cap): the next look sends it all.
+  d.spend.usd = 0;
+  t.roster.tick(t.clock.now);
+  assert.equal(t.floor.wakes.length, 1, 'the Coordinator woken once');
+  assert.equal(t.floor.prompts.filter((p) => p.id === dev).length, 1, 'the Lead’s note');
+  assert.equal(d.outbox.escalations.length + d.outbox.decisions.length, 0);
+});
+
+test('the answer to an escalation is typed as the person’s, so the turn acting on it isn’t taken for the office’s', async () => {
+  const t = setup();
+  const dev = await hireAt(t, 'lead-developer');
+  const e = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'urgent', trigger: 'blocked', title: 'No test DB', details: '', options: [] });
+  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'reply', 'Use the staging DB', 'Keith'), undefined);
+  assert.equal(t.floor.prompts.at(-1)!.by, 'Keith');
+  // Asleep: woken with it, as Keith's.
+  const e2 = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'urgent', trigger: 'blocked', title: 'Which SSO?', details: '', options: [] });
+  t.floor.set(dev, 'offline');
+  assert.equal(t.roster.escalations.resolve(t.floor, e2.id, 'reply', 'Entra ID', 'Keith'), undefined);
+  assert.equal(t.floor.wakes.at(-1)!.by, 'Keith');
 });
 
 test('a Lead busy asking someone gets its notes once its turn is over, never mid-turn', async () => {

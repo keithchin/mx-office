@@ -14,6 +14,7 @@ import { LEADS, ROLE_BY_ID, standupPath, type RoleId } from '../../shared/roster
 import { dayIn, isoWeek, standupDue } from '../../shared/roster/schedule.js';
 import type { Proposal, Standup } from '../../shared/roster/types.js';
 import { HANDOFF_START_MS, isAsleepStatus, isBusyStatus } from './bench.js';
+
 import type { Roster } from './index.js';
 import { dryRunMaker, envDryRun } from './issues.js';
 import { readJournal } from './journal-io.js';
@@ -62,8 +63,9 @@ export class StandupRunner {
       const m = d.members[role.id];
       const w = this.roster.workerOf(floor, m);
       // Only one at its desk and not asking someone is asked; the rest come from their journals.
+      // A scheduled one is the office's: past the spend cap, everyone's comes from their journal.
       if (w && m.phase === 'active' && !isAsleepStatus(w.status) && w.status !== 'needs_input') {
-        const err = floor.prompt(w.id, standupPrompt(role.id, date, stamp, this.extraFor(floor, role.id, now)));
+        const err = this.roster.delivery.prompt(floor, w, standupPrompt(role.id, date, stamp, this.extraFor(floor, role.id, now)), by === 'schedule' ? 'office' : 'person');
         if (!err) {
           s.waiting.push(role.id);
           this.asks.set(`${floor.id}:${role.id}`, { at: now, sawBusy: false });
@@ -154,7 +156,7 @@ export class StandupRunner {
         mkdirSync(path.dirname(file), { recursive: true });
         writeFileSync(file, s.page);
         s.savedTo = standupPath(s.id);
-        floor.prompt(w.id, standupCompiledPrompt(s.id, pending, d.escalations.filter((e) => e.status === 'open' || e.at >= (d.standups[d.standups.length - 2]?.startedAt ?? 0))));
+        this.roster.delivery.prompt(floor, w, standupCompiledPrompt(s.id, pending, d.escalations.filter((e) => e.status === 'open' || e.at >= (d.standups[d.standups.length - 2]?.startedAt ?? 0))), s.by === 'schedule' ? 'office' : 'person');
       } catch (err) {
         floor.toast(`Couldn't hand the standup page to ${pm.name}: ${(err as Error).message}`, 'warn');
       }
@@ -219,16 +221,23 @@ export class StandupRunner {
     if (!d.outbox.decisions.length) return false;
     clearTimeout(this.timers.get(floor.id));
     this.timers.delete(floor.id);
+    // Busy asking someone, booting, or the spend cap reached: they wait in the outbox.
     const where = coordinatorIs(this.roster, floor);
     if (where === 'away') return false;
+    // Asleep: woken once with everything it's owed (relays.ts wakeCoordinator), at most once a window.
+    if (where === 'asleep') return this.roster.relays.wakeCoordinator(floor);
     const list = d.outbox.decisions.map((id) => d.proposals.find((p) => p.id === id)).filter((p): p is Proposal => !!p);
+    if (where === 'none' || !list.length) {
+      d.outbox.decisions = [];
+      this.roster.touch(floor, true);
+      return false;
+    }
+    const w = this.roster.workerOf(floor, d.members.pm)!;
+    if (this.roster.delivery.prompt(floor, w, outcomesPrompt(list))) return false;
     d.outbox.decisions = [];
     this.roster.touch(floor, true);
-    if (where === 'none' || !list.length) return false;
-    const w = this.roster.workerOf(floor, d.members.pm)!;
-    const sent = !floor.prompt(w.id, outcomesPrompt(list));
-    if (sent) decisionsRelayed(floor.id, w, list);
-    return sent;
+    decisionsRelayed(floor.id, w, list);
+    return true;
   }
 }
 

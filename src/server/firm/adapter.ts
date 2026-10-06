@@ -118,8 +118,15 @@ function firmFloor(ctx: Ctx, floor: Floor): FirmFloor {
     repo: floor.def.repo,
     branch: floor.project.branch,
     lead: (role) => leadOf(ctx, floor, role),
-    deliver: (id, text, asleep) => (asleep ? floor.workers.resume(id, text) : floor.workers.prompt(id, text, 'The Firm')),
-    rehire: (role, task) => rosterOf(ctx).members.hire(teamFloor(ctx, floor), role, 'The Firm', undefined, task),
+    // Through the roster's delivery: never typed into a question open in the Lead's terminal, and not past
+    // the floor's spend cap (an interview is the office's prompt): refused, the question stays pending.
+    deliver: (id, text, asleep) => {
+      const w = floor.workers.get(id);
+      if (!w) return 'No such worker';
+      const r = rosterOf(ctx).delivery.send(teamFloor(ctx, floor), w, text, { origin: 'office', by: 'The Firm', wake: asleep });
+      return r.status === 'refused' ? r.why : undefined;
+    },
+    rehire: async (role, task) => rosterOf(ctx).delivery.paused(teamFloor(ctx, floor)) ?? rosterOf(ctx).members.hire(teamFloor(ctx, floor), role, 'The Firm', undefined, task),
     stats: () => stats(ctx, floor),
     grades: () => grades(ctx, floor),
     evidence: () => evidence(ctx, floor),
