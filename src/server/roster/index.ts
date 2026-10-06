@@ -102,6 +102,28 @@ export class Roster {
     return this.seen.get(workerId)?.idleSince;
   }
 
+  /** Whether a worker is one of the floor's team (going home on a merge is left to its bench). */
+  isMember(floorId: string, workerId: string): boolean {
+    const d = this.data(floorId);
+    return ROLES.some((r) => d.members[r.id].workerId === workerId);
+  }
+
+  /**
+   * Whether a team member's finished turn is routine, so it raises no flag (no ✅ Review in Needs you,
+   * no ding, no desktop notification; its card still shows it done): at autonomy 3 and up the team
+   * works on its own, and what needs the Project Manager reaches them as an escalation.
+   */
+  routineTurn(floorId: string, workerId: string): boolean {
+    return this.data(floorId).settings.autonomy >= 3 && this.isMember(floorId, workerId);
+  }
+
+  /** The titles of the escalations a worker has open (raised, joined, or raised by the role it's now), for the prompt that carries on a cut-off turn. */
+  openAsks(floorId: string, workerId: string): string[] {
+    const d = this.data(floorId);
+    const role = ROLES.find((r) => d.members[r.id].workerId === workerId)?.id;
+    return d.escalations.filter((e) => e.status === 'open' && (e.workerId === workerId || e.also?.some((a) => a.workerId === workerId) || (role && e.role === role))).map((e) => e.title);
+  }
+
   /** Every worker update on the floor: activity for the standup, idleness for the bench, spend for the cap. */
   onWorker(floor: TeamFloor, w: WorkerInfo) {
     const d = this.data(floor.id);

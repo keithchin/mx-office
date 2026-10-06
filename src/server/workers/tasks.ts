@@ -15,9 +15,17 @@ const TASK_REFRESH_MS = 90_000;
 /**
  * What a worker whose terminal didn't make it through a restart (the machine rebooted, the terminal
  * host was replaced or died) is resumed with when it was in the middle of something, so it carries on
- * by itself instead of waiting at every desk for someone to type "continue".
+ * by itself instead of waiting at every desk for someone to type "continue". It's told its escalations
+ * are still open, so it doesn't raise them again (the office used to say "ask again", and each restart
+ * brought a fresh round of the same escalations).
  */
-export const CARRY_ON_PROMPT = 'continue — the office restarted and interrupted you. Pick up where you left off; if you were waiting on an answer or a permission, ask again.';
+export const CARRY_ON_PROMPT = 'continue — the office restarted and interrupted you. Pick up where you left off. Anything you escalated to the Project Manager is still open and their answer will come to you as a prompt: don\'t raise it again. Only a permission prompt that was showing in your terminal needs asking again.';
+
+/** CARRY_ON_PROMPT, naming the escalations it has open (their titles), when it has any. */
+export function carryOnPrompt(open: string[] = []): string {
+  if (!open.length) return CARRY_ON_PROMPT;
+  return `${CARRY_ON_PROMPT}\nYour open escalations: ${open.slice(0, 8).map((t) => `“${t}”`).join('; ')}${open.length > 8 ? ` and ${open.length - 8} more` : ''}.`;
+}
 
 export class WorkerTasks {
   private namer: TaskNamer;
@@ -42,7 +50,7 @@ export class WorkerTasks {
     if (w.info.kind !== 'agent') return;
     const clean = prompt.replace(/\s+/g, ' ').trim();
     // Bare slash commands (/model, /compact), repeats and the office's own carry-on aren't new work.
-    if (!clean || /^\/\S+$/.test(clean) || w.prompts.at(-1) === clean || clean === CARRY_ON_PROMPT) return;
+    if (!clean || /^\/\S+$/.test(clean) || w.prompts.at(-1) === clean || clean.startsWith(CARRY_ON_PROMPT)) return;
     w.prompts = [...w.prompts, clean].slice(-TASK_PROMPTS);
     const hadTask = !!w.info.task;
     if (!hadTask) w.info.task = fallbackTask(clean);

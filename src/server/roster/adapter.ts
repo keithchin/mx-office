@@ -22,6 +22,7 @@ import { Roster, rosterFor } from './index.js';
 import { ghIssueMaker } from './issues.js';
 import type { HireAsk, TeamFloor } from './types.js';
 import { onSubagentEvent } from '../workers/subagents.js';
+import { OFFICE_BY } from '../workers/lifecycle.js';
 
 const adapters = new WeakMap<Floor, TeamFloor>();
 
@@ -40,8 +41,9 @@ export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
       if (note) ctx.toastFloor(floor, note);
       if (error) ctx.toastFloor(floor, error, 'warn');
     },
-    prompt: (id, text) => floor.workers.prompt(id, text, 'Agent Office'),
-    wake: (id, prompt) => floor.workers.resume(id, prompt),
+    // The office's own prompts: the turns they start end without flagging anyone (workers/lifecycle.ts OFFICE_BY).
+    prompt: (id, text) => floor.workers.prompt(id, text, OFFICE_BY),
+    wake: (id, prompt) => floor.workers.resume(id, prompt, !!prompt),
     rename: (id, name) => floor.workers.rename(id, name),
     cwdOf: (w: WorkerInfo) => (w.worktree ? path.resolve(floor.dir, w.worktree.path) : floor.dir),
     openPulls: () => floor.github.pulls.items.filter((p) => p.state === 'OPEN'),

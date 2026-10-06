@@ -139,6 +139,11 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
     },
     peers: (floor) => [...clients.values()].filter((c) => c.peer.floor === floor.id).map((c) => c.peer),
     leaveOnMerge: () => ctx.leaveOnMerge.on,
+    team: {
+      member: (floor, id) => rosterOf(ctx).isMember(floor.id, id),
+      quietDone: (floor, info) => rosterOf(ctx).routineTurn(floor.id, info.id),
+      openAsks: (floor, id) => rosterOf(ctx).openAsks(floor.id, id),
+    },
     floor: (id) => floors.get(id),
     pullsChanged: (floor) => {
       auditGitHub(floor, 'pulls');

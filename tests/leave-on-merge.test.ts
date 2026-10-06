@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { LeaveOnMerge, landedWorkers } from '../src/server/leave-on-merge.js';
+import { LeaveOnMerge, landedWorkers, notLeaving } from '../src/server/leave-on-merge.js';
 import { Worktrees } from '../src/server/worktrees.js';
 import type { GhPull, QueueTask, WorkerInfo, WorkerStatus } from '../src/shared/protocol.js';
 
@@ -51,6 +51,14 @@ test('shells, board agents and the meeting table never go by pull request', () =
   assert.deepEqual(ids([worker('a', 'done', { kind: 'shell' })], merged), []);
   assert.deepEqual(ids([worker('a', 'done', { deskId: 'station-pulls' })], merged), []);
   assert.deepEqual(ids([worker('a', 'done', { meeting: 'm1' })], merged), []);
+});
+
+test('the project team never goes by pull request: a Lead is benched with a handoff note instead', () => {
+  const merged = [pull(1, 'MERGED', 'office/lead'), pull(2, 'MERGED', 'office/other')];
+  const team = (w: WorkerInfo) => w.id === 'lead';
+  assert.deepEqual(landedWorkers([worker('lead'), worker('other')], merged, [], undefined, team).map((l) => l.worker.id), ['other']);
+  assert.match(String(notLeaving(worker('lead'), true)), /project team/);
+  assert.equal(notLeaving(worker('lead')), undefined, 'without a team, as before');
 });
 
 test("a queue task's merged PR counts after it drops off GitHub's list", () => {

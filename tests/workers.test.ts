@@ -208,6 +208,11 @@ async function waitFor<T>(read: () => T, predicate: (value: T) => boolean, timeo
   return value;
 }
 
+/** A restarted office leaves workers that were at rest asleep (dozesOnStart): these tests wake them as a prompt would, to see how each provider resumes. */
+function wakeRestored(m: WorkerManager) {
+  for (const w of m.list()) if (w.status === 'offline') m.resume(w.id);
+}
+
 function hasPrompt(invocation: Invocation, prompt: string): boolean {
   return invocation.args.includes(prompt) || invocation.stdin?.includes(prompt) === true;
 }
@@ -348,6 +353,7 @@ test('OpenCode workers use OpenCode-only hooks/config, never invoke Claude namin
   t.after(() => restored.shutdown());
   // Wakes the workers from before the restart (see WorkerManager.start).
   await restored.start();
+  wakeRestored(restored);
   assert.equal(restored.get(worker.id)?.provider, 'opencode');
   assert.equal(restored.get(worker.id)?.prompt, 'initial OpenCode prompt');
   assert.equal(restored.get(worker.id)?.sessionId, 'oc-child');
@@ -500,6 +506,7 @@ test('an explicit Claude model/effort overrides --agent-args and persists across
   const restored = manager(f, f.claude, restoredUpdates, ['--model', 'opus']);
   t.after(() => restored.shutdown());
   await restored.start();
+  wakeRestored(restored);
   assert.equal(restored.get(worker.id)?.model, 'haiku');
   assert.equal(restored.get(worker.id)?.effort, 'high');
 });
@@ -528,6 +535,7 @@ test('a worker hired on Fable launches with --model fable and keeps it across a 
   const restored = manager(f, f.claude, [], ['--model', 'opus']);
   t.after(() => restored.shutdown());
   await restored.start();
+  wakeRestored(restored);
   assert.equal(restored.get(worker.id)?.model, 'fable');
 });
 
@@ -608,6 +616,7 @@ test('OpenCode usage snapshots replace totals, persist across restart, and never
   t.after(() => restored.shutdown());
   // Wakes the workers from before the restart (see WorkerManager.start).
   await restored.start();
+  wakeRestored(restored);
   assert.deepEqual(restored.get(worker.id)?.usage, usage);
   const calls = await waitFor(f.read, x => x.filter(r => r.kind === 'opencode' && !r.stdin).length >= 2);
   const nextToken = calls.filter(r => r.kind === 'opencode' && !r.stdin).at(-1)!.env.hookToken!;
@@ -667,6 +676,7 @@ test('Codex workers preserve native approvals, follow authenticated root hooks, 
   t.after(() => restored.shutdown());
   // Wakes the workers from before the restart (see WorkerManager.start).
   await restored.start();
+  wakeRestored(restored);
   const nextCalls = await waitFor(f.read, x => x.filter(r => r.kind === 'codex' && !r.stdin).length >= 2);
   const next = nextCalls.filter(r => r.kind === 'codex' && !r.stdin).at(-1)!;
   assert.deepEqual(next.args.slice(-2), ['resume', 'codex-root']);
@@ -729,6 +739,7 @@ test('Grok workers isolate GROK_HOME, follow authenticated hooks, and resume the
   const restored = manager(f, f.claude, [], []);
   t.after(() => restored.shutdown());
   await restored.start();
+  wakeRestored(restored);
   const nextCalls = await waitFor(f.read, x => x.filter(r => r.kind === 'grok' && !r.stdin).length >= 2);
   const next = nextCalls.filter(r => r.kind === 'grok' && !r.stdin).at(-1)!;
   assert.ok(next.args.includes('--resume'));
@@ -806,6 +817,7 @@ test('Muse workers isolate XDG, follow authenticated hooks, resume by uuid, and 
   const restored = manager(f, f.claude, [], []);
   t.after(() => restored.shutdown());
   await restored.start();
+  wakeRestored(restored);
   const nextCalls = await waitFor(f.read, x => x.filter(r => r.kind === 'muse' && !r.stdin).length >= 2);
   const next = nextCalls.filter(r => r.kind === 'muse' && !r.stdin).at(-1)!;
   assert.ok(next.args.includes('--trust-workspace'));
@@ -901,6 +913,7 @@ test('Cursor workers keep their hooks in their folder, follow them, and resume t
   const restored = manager(f, f.claude, [], []);
   t.after(() => restored.shutdown());
   await restored.start();
+  wakeRestored(restored);
   const nextCalls = await waitFor(f.read, x => x.filter(r => r.kind === 'cursor-agent' && !r.stdin).length >= 2);
   const next = nextCalls.filter(r => r.kind === 'cursor-agent' && !r.stdin).at(-1)!;
   assert.deepEqual(next.args, ['--trust', '--resume=second-chat']);
@@ -966,6 +979,7 @@ test('Codex token snapshots survive restart, preserve permissions, and stay outs
   t.after(() => restored.shutdown());
   // Wakes the workers from before the restart (see WorkerManager.start).
   await restored.start();
+  wakeRestored(restored);
   assert.deepEqual(restored.get(worker.id)?.usage, worker.usage);
   const nextCalls = await waitFor(f.read, x => x.filter(r => r.kind === 'codex' && !r.stdin).length >= 2);
   const next = nextCalls.filter(r => r.kind === 'codex' && !r.stdin).at(-1)!;
@@ -1355,27 +1369,35 @@ async function hireInState(f: Fixture, workers: WorkerManager, deskId: string, s
   return worker;
 }
 
-test('a restart that takes a mid-turn worker down resumes it with continue; a finished one just wakes up', async (t) => {
+test('a restart that takes a mid-turn worker down resumes it with continue; a finished one stays asleep until prompted', async (t) => {
   const f = carryOnFixture(t);
   const before = manager(f, f.claude, []);
   // Never started, so its terminals run in-process and go down with it.
   await hireInState(f, before, 'desk-1', 'mid-turn', 'working');
   await hireInState(f, before, 'desk-2', 'asking', 'needs_input');
-  await hireInState(f, before, 'desk-3', 'finished', 'done');
+  const finished = await hireInState(f, before, 'desk-3', 'finished', 'done');
   before.shutdown(true);
   await new Promise((resolve) => setTimeout(resolve, 200));
 
   const after = manager(f, f.claude, []);
   t.after(() => after.shutdown());
   await after.start();
-  const resumed = (await waitFor(() => launches(f), (x) => x.length >= 6)).slice(3);
-  const of = (session: string) => resumed.find((r) => r.args.includes(session))!;
+  const resumed = (await waitFor(() => launches(f), (x) => x.length >= 5)).slice(3);
+  const of = (session: string) => resumed.find((r) => r.args.includes(session));
   for (const session of ['mid-turn', 'asking']) {
-    assert.ok(of(session).args.includes('--resume'));
-    assert.equal(promptOf(of(session)), CARRY_ON_PROMPT);
+    assert.ok(of(session)!.args.includes('--resume'));
+    assert.equal(promptOf(of(session)!), CARRY_ON_PROMPT);
   }
-  assert.ok(of('finished').args.includes('--resume'));
-  assert.equal(promptOf(of('finished')), undefined);
+  // At rest when the office went down: left asleep, walking onto the floor doesn't wake it either.
+  after.wakeAll();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.equal(of('finished'), undefined);
+  assert.equal(after.get(finished.id)?.status, 'offline');
+  // A prompt (the office's own, here) wakes it, carrying on its session.
+  assert.equal(after.resume(finished.id, 'next step', true), undefined);
+  const woke = (await waitFor(() => launches(f), (x) => x.length >= 6)).at(-1)!;
+  assert.ok(woke.args.includes('finished') && woke.args.includes('--resume'));
+  assert.equal(promptOf(woke), 'next step');
 });
 
 test('a worker whose terminal outlives the office is picked back up mid-turn, not relaunched or told to continue', async (t) => {
@@ -1410,9 +1432,11 @@ test('a worker whose terminal was in the host when an older office went down car
   const workers = manager(f, f.claude, []);
   t.after(() => workers.shutdown());
   await workers.start();
-  const resumed = await waitFor(() => launches(f), (x) => x.length >= 2);
+  const resumed = await waitFor(() => launches(f), (x) => x.length >= 1);
   assert.equal(promptOf(resumed.find((r) => r.args.includes('was-working'))!), CARRY_ON_PROMPT);
-  assert.equal(promptOf(resumed.find((r) => r.args.includes('was-done'))!), undefined);
+  // The one at rest stays asleep (see dozesOnStart).
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.equal(launches(f).some((r) => r.args.includes('was-done')), false);
 });
 
 test('stopping the office on purpose (Ctrl+C) leaves nothing to carry on', async (t) => {
@@ -1427,9 +1451,10 @@ test('stopping the office on purpose (Ctrl+C) leaves nothing to carry on', async
   const after = manager(f, f.claude, []);
   t.after(() => after.shutdown());
   await after.start();
-  const resumed = (await waitFor(() => launches(f), (x) => x.length >= 2))[1];
-  assert.ok(resumed.args.includes('stopped'));
-  assert.equal(promptOf(resumed), undefined);
+  // Nothing was mid-turn, so nobody is started again until someone prompts them.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.equal(launches(f).length, 1);
+  assert.ok(after.list().every((w) => w.status === 'offline'));
 });
 
 test('a worktree worker that makes its own branch is followed there: O finds the PR it opened, and sending it home tidies both branches', async (t) => {
