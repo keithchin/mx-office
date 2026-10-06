@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import { LEADS, ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
 import { effectiveSkill, effectiveSkills, GATE_WORDS, type SubagentOp } from '../../shared/roster/skills.js';
-import { currentModel, modelWord, OP_ASK, OP_ICON, OP_VERB, RUNS_KEPT, SCORE_MIN_RUNS, scoreSubagent, type SubagentAction, type SubagentRecord, type SubagentRun, type SubagentView } from '../../shared/roster/subagents.js';
+import { currentModel, modelWord, OP_ASK, OP_ICON, OP_VERB, REVIEWS_SHOWN, RUNS_KEPT, SCORE_MIN_RUNS, scoreSubagent, type SubagentAction, type SubagentRecord, type SubagentReviewBrief, type SubagentRun, type SubagentView } from '../../shared/roster/subagents.js';
 import type { SubagentEvent } from '../workers/subagents.js';
 import { isAsleepStatus } from './bench.js';
 import type { Roster } from './index.js';
@@ -23,6 +23,7 @@ import { REVIEW_POLICY } from '../../shared/roster/autonomy.js';
 import { subagentDecisionPrompt, subagentNewsPrompt, underperformingPrompt } from './prompts.js';
 import { cleanSubName, subagentReviews, subKey, type SubagentReview } from './subagent-store.js';
 import { definitionOf } from './subagent-files.js';
+import { SubagentLive } from './subagent-live.js';
 import type { TeamFloor } from './types.js';
 import { struggleNudged, toldCoordinator } from '../chatter/hooks.js';
 
@@ -46,13 +47,21 @@ export interface OpAnswer {
   actionId?: string;
 }
 
+/** A subagent's last reviewed runs, newest first, for its card's detail. */
+const reviewsOf = (rec: SubagentRecord): SubagentReviewBrief[] =>
+  rec.runs.filter((r) => r.outcome !== 'pending').slice(-REVIEWS_SHOWN).reverse().map((r) => ({ at: r.at, model: r.model, outcome: r.outcome, ...(r.task ? { task: r.task } : {}), ...(r.note ? { note: r.note } : {}), ...(r.reviewedAt ? { reviewedAt: r.reviewedAt } : {}) }));
+
 const line = (v: unknown, n: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, n) : '');
 
 export class Subagents {
   /** Runs under way (worker:agent_id), from SubagentStart until SubagentStop. */
   private open = new Map<string, { at: number; agent?: string }>();
+  /** Who's at work now and the floor's last runs, for the Workers tab and the 2D view (subagent-live.ts). */
+  readonly live: SubagentLive;
 
-  constructor(private roster: Roster) {}
+  constructor(private roster: Roster) {
+    this.live = new SubagentLive(roster);
+  }
 
   /** The subagent's record, made when it's first seen. */
   record(floor: TeamFloor, lead: RoleId, name: string): SubagentRecord {
@@ -98,6 +107,8 @@ export class Subagents {
   onEvent(floor: TeamFloor, workerId: string, ev: SubagentEvent) {
     const lead = this.roster.roleOf(floor, workerId);
     if (!lead || lead === 'pm') return;
+    this.live.onEvent(floor, lead, workerId, ev);
+    if (ev.kind === 'dispatch') return;
     const name = cleanSubName(ev.agent) ?? (ev.kind === 'result' ? 'general-purpose' : undefined);
     if (ev.kind === 'start') {
       if (ev.agentId) this.open.set(`${workerId}:${ev.agentId}`, { at: ev.at, agent: name });
@@ -116,14 +127,17 @@ export class Subagents {
       if (!who) return;
       const rec = this.record(floor, lead, who);
       const at = began?.at ?? ev.at;
-      this.addRun(rec, { id: ev.agentId ?? `run-${ev.at}`, at, endedAt: ev.at, durationMs: ev.at - at, model: this.modelOf(floor, lead, rec), outcome: 'pending' });
+      const task = this.live.taskOf(floor, workerId, ev.agentId);
+      this.addRun(rec, { id: ev.agentId ?? `run-${ev.at}`, at, endedAt: ev.at, durationMs: ev.at - at, model: this.modelOf(floor, lead, rec), ...(task ? { task } : {}), outcome: 'pending' });
       this.roster.touch(floor, true);
       return;
     }
-    // The Agent tool's result: the task, the model it was called with, and whether the call failed.
-    if (ev.background || !name) return;
+    // The Agent tool's result: the task, the model it was called with, and whether the call failed. A
+    // background launch's comes back as it starts: its run is recorded at its SubagentStop, task and all.
+    if (ev.background || ev.async || !name) return;
     const rec = this.record(floor, lead, name);
-    const run = [...rec.runs].reverse().find((r) => !r.task && r.endedAt !== undefined && ev.at - r.endedAt <= PAIR_MS);
+    // Its SubagentStop's run: by agent id, else the latest just ended with no task (or this one: the live runs gave it).
+    const run = [...rec.runs].reverse().find((r) => (ev.agentId && r.id === ev.agentId) || ((!r.task || r.task === ev.task) && r.endedAt !== undefined && ev.at - r.endedAt <= PAIR_MS));
     if (run) {
       if (ev.task) run.task = ev.task;
       if (ev.model) run.model = ev.model;
@@ -352,6 +366,7 @@ export class Subagents {
     }
     this.flushNews(floor, now);
     for (const r of LEADS) this.nudgeLead(floor, r.id, now);
+    this.live.tick(floor, now);
   }
 
   /** A member's worker changed: the Coordinator back between turns hears the news; a Lead may be nudged. */
@@ -440,7 +455,7 @@ export class Subagents {
           warnings: rec?.warnings.length ?? 0,
           ...(rec?.warnings.length ? { lastWarning: rec.warnings.at(-1)!.reason } : {}),
           score: scoreSubagent(rec?.runs ?? [], model),
-          ...(rec?.runs.length ? { lastRunAt: rec.runs.at(-1)!.at } : {}),
+          ...(rec?.runs.length ? { lastRunAt: rec.runs.at(-1)!.at, totalRuns: rec.runs.length, reviews: reviewsOf(rec) } : {}),
         });
       }
     }

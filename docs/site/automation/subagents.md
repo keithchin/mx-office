@@ -13,7 +13,15 @@ A Lead's team members are **Claude Code subagents**, running inside the Lead's s
 - The **grade** is over the last 5 reviewed runs on its current model (at least 3 needed): accepts divided by reviewed runs, with half credit when the PR's CI failed. **A** ≥ 90, **B** ≥ 80, **C** ≥ 70, **D** ≥ 60, else **F**.
 - It is **underperforming** (📉) below 70, or with 2 or more reworks or failures in that window. Its Lead is told once, when idle.
 
-See them on the [Org chart](../using-the-office/org-chart.md), the [Team boards](../using-the-office/team-boards.md), or with `office-workers subagent list`.
+See them on the [Org chart](../using-the-office/org-chart.md), the [Team boards](../using-the-office/team-boards.md), as workers of their own on the [Workers tab](../using-the-office/workers.md#subagents) and in the [2D view](../using-the-office/2d-view.md), or with `office-workers subagent list`.
+
+## At work now
+
+The office also follows each run live, from the moment the Lead's Agent call goes out until it ends:
+
+- **From the hooks**: the Agent tool's PreToolUse (the subagent, its task, its model) and PostToolUse (its answer, or, for a background run, its launch with Claude Code's agent id), and SubagentStart / SubagentStop. Several runs of the same subagent at once are each their own.
+- **From the Lead's transcript**, read every 10 seconds, for what no hook says: a background run finishing (its `<task-notification>`), or anything that happened while the office was down. The same run from both is counted once.
+- A floor keeps its **last 50 runs** in its roster file, each linked to the run record its Lead reviews, so a card shows the verdict. A run with no word of it for 6 hours is marked lost.
 
 ## Actions
 

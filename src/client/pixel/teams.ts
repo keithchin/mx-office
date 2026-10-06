@@ -102,6 +102,9 @@ export const leadOf = (t: TeamId): MemberView | undefined => team.leadOf(t);
 /** The floor's benched Leads, as last fetched. */
 export const benched = (floor: string | null): BreakLead[] => (floor ? benchedLeads(roster?.members ?? [], floor) : []);
 
+/** The floor's team as last fetched (the subagents at work on it: subagents.ts). */
+export const rosterNow = (): RosterView | null => roster;
+
 /** Whether the floor's team has been fetched (there's a roster to name the Leads from). */
 export function hasRoster(): boolean {
   return !!roster;

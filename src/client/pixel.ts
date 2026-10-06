@@ -37,7 +37,8 @@ import { Camera, driveCamera } from './pixel/camera';
 import { closeMenu, mountChat, officeKeys, openWorkerMenu } from './pixel/hud';
 import { badge, drawLabels, outline, signText, zoneBanner } from './pixel/overlay';
 import { zoneBoxes } from './pixel/zones';
-import { benched, dressFor, leadOf, memberOf, onRoster, refreshRoster, setRoster, tagFor, zoneOf } from './pixel/teams';
+import { benched, dressFor, leadOf, memberOf, onRoster, refreshRoster, rosterNow, setRoster, tagFor, zoneOf } from './pixel/teams';
+import { benchedSubagents, helpersOf, isSubagentId, openSubagentAt, subagentTip } from './pixel/subagents';
 import { BREAK_WORDS, breakAt } from './pixel/breaks';
 import { ZONE_BY_TEAM, ZONES } from '../shared/zones';
 import type { MemberView } from '../shared/roster/types';
@@ -198,7 +199,7 @@ function draw(now: number) {
   const peers = [...store.peers.values()].filter((p) => p.id !== store.you && !p.lite && store.onMyFloor(p));
   const hoverId = hover && 'kind' in hover && hover.kind !== 'desk' ? hover.id : null;
   const scene = { theme: store.theme.active, music: store.jukebox.on, sharing: [...store.peers.values()].some((p) => p.sharing && store.onMyFloor(p)), colorTheme: currentTheme() };
-  people = paintScene(ag, frame, still, scene, { workers: store.workers.values(), peers, level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs, dress: dressFor, tag: tagFor, breaks: { leads: benched(store.floor), clock: Date.now(), still: calm.matches } }, now);
+  people = paintScene(ag, frame, still, scene, { workers: store.workers.values(), peers, level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs, dress: dressFor, tag: tagFor, breaks: { leads: [...benched(store.floor), ...benchedSubagents(rosterNow(), store.floor)], clock: Date.now(), still: calm.matches }, helpers: helpersOf(rosterNow(), store.floor) }, now);
 
   g.imageSmoothingEnabled = false;
   voidColor ||= getComputedStyle(document.body).getPropertyValue('--px-void').trim() || '#0d1828';
@@ -288,6 +289,8 @@ function hitAt(clientX: number, clientY: number): Spot | Hotspot | null {
 function tipFor(s: Spot | Hotspot): HTMLElement[] | null {
   if (!('kind' in s)) return [h('b', {}, s.title), h('div.px-dim', {}, s.sub()), s.action ? h('div.px-hint', {}, `🖱️ ${s.action}`) : null].filter((x): x is HTMLElement => !!x);
   if (s.kind === 'desk') return [h('b', {}, `${DESK_BY_ID.get(s.id)?.label ?? 'Desk'} · free`), h('div.px-hint', {}, '✨ Click to give someone new work here')];
+  // A Lead's subagent at work beside its desk, or benched on a break (pixel/subagents.ts).
+  if (s.kind === 'subagent' || isSubagentId(s.id)) return subagentTip(rosterNow(), s.id);
   if (s.kind === 'lead') {
     const leads = benched(store.floor);
     const i = leads.findIndex((l) => l.id === s.id);
@@ -325,7 +328,7 @@ canvas.addEventListener('pointermove', (e) => {
   const s = hitAt(e.clientX, e.clientY);
   if (s?.id !== hover?.id || kindOf(s) !== kindOf(hover)) {
     hover = s;
-    canvas.classList.toggle('point', !!s && (!('kind' in s) ? !!s.run : s.kind === 'worker' || s.kind === 'desk' || s.kind === 'lead'));
+    canvas.classList.toggle('point', !!s && (!('kind' in s) ? !!s.run : s.kind === 'worker' || s.kind === 'desk' || s.kind === 'lead' || s.kind === 'subagent'));
     draw(performance.now());
   }
   const body = s && tipFor(s);
@@ -348,6 +351,7 @@ function use(s: Spot | Hotspot) {
   tip.classList.add('hidden');
   if (!('kind' in s)) return s.run ? s.run() : toast(`${s.title}: ${s.sub()}`);
   if (s.kind === 'worker') workers.open(s.id);
+  else if ((s.kind === 'subagent' || s.kind === 'lead') && openSubagentAt(rosterNow(), s.id, workers.open, setRoster)) return;
   else if (s.kind === 'desk') workers.send('✨ New task', {}, undefined, s.id);
   else if (s.kind === 'lead' && store.floor) location.assign(`/lite?tab=org&floor=${encodeURIComponent(store.floor)}`);
   else if (s.kind === 'peer') toast(`🚶 ${store.peers.get(s.id)?.name ?? 'They'} is walking about the 3D office`);

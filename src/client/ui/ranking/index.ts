@@ -12,6 +12,8 @@ import { waitingOnSomeone } from '../../notify';
 import { h } from '../dom';
 import { groupCards, howGraded, podium, table } from './board';
 import { gradeBadge, rankFooter, recordCard } from './view';
+import type { SubagentCard } from '../../../shared/roster/subagent-cards';
+import { nestSubagents } from '../subagents/card';
 import './ranking.css';
 
 type Scope = 'floor' | 'all';
@@ -27,14 +29,16 @@ interface Prefs {
   group: Group;
   sort?: Sort;
   showGone: boolean;
+  /** The Leads' subagents' cards, after their Leads' (ui/subagents/card.ts). */
+  showSubs: boolean;
 }
 
 function load(): Prefs {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-    return { scope: v.scope === 'all' ? 'all' : 'floor', group: ['model', 'role'].includes(v.group) ? v.group : 'none', sort: ['urgent', 'rank', 'name', 'recent'].includes(v.sort) ? v.sort : undefined, showGone: v.showGone !== false };
+    return { scope: v.scope === 'all' ? 'all' : 'floor', group: ['model', 'role'].includes(v.group) ? v.group : 'none', sort: ['urgent', 'rank', 'name', 'recent'].includes(v.sort) ? v.sort : undefined, showGone: v.showGone !== false, showSubs: v.showSubs !== false };
   } catch {
-    return { scope: 'floor', group: 'none', showGone: true };
+    return { scope: 'floor', group: 'none', showGone: true, showSubs: true };
   }
 }
 
@@ -47,6 +51,8 @@ export interface RankingDeps {
   card: (w: WorkerInfo) => HTMLElement;
   visible: () => boolean;
   emptyText: () => string;
+  /** The floor's Leads' subagents as cards, and what clicking one does (ui/subagents/). */
+  subagents?: { cards(): SubagentCard[]; open(c: SubagentCard): void };
 }
 
 /** One card: a live worker, a worker known from its records, or both. */
@@ -142,6 +148,7 @@ export function workersRanking(d: RankingDeps) {
     if (i.w) {
       const li = d.card(i.w);
       li.classList.add('rk-item');
+      li.dataset.worker = i.w.id;
       if (i.w.kind === 'agent') li.prepend(gradeBadge(x?.grade, x?.score));
       if (x) li.append(...rankFooter(x, scope, share, open.has(x.key), toggle));
       if (x) li.dataset.key = x.key;
@@ -184,6 +191,7 @@ export function workersRanking(d: RankingDeps) {
       seg('Group by', prefs.group, [['none', 'No groups'], ['model', 'By model'], ['role', 'By role']], (v) => (prefs.group = v)),
       h('label.rk-label', {}, 'Sort ', select),
       h('label.rk-label.rk-check', {}, gone, ' Gone home'),
+      d.subagents ? h('label.rk-label.rk-check.sw-toggle', { title: "The Leads' subagents, each after its Lead" }, h('input', { type: 'checkbox', checked: prefs.showSubs, onchange: (e: Event) => ((prefs.showSubs = (e.target as HTMLInputElement).checked), save(), draw()) }), ' Show subagents') : null,
       c?.error ? h('span.rk-err', { title: c.error }, '⚠️ ranking unavailable') : !r ? h('span.rk-err', {}, 'Grading…') : null,
     );
   }
@@ -215,6 +223,7 @@ export function workersRanking(d: RankingDeps) {
       d.list.replaceChildren(...keys.flatMap((k) => [h('li.rk-group-h', {}, h('span', {}, k), stats.get(k)?.avgGrade ? gradeBadge(stats.get(k)!.avgGrade, stats.get(k)!.avgScore, false) : null, h('small', {}, `${groups.get(k)!.length}`)), ...groups.get(k)!.map((i) => cardOf(i, r))]));
     }
     if (r) d.list.append(h('li.rk-how-li', {}, howGraded(r)));
+    if (prefs.showSubs && d.subagents) nestSubagents(d.list, d.subagents.cards(), Date.now(), d.subagents.open);
   }
 
   // Every minute while it's showing: grades move as tasks finish.

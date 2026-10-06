@@ -8,6 +8,8 @@ import type { WorkerInfo } from '../shared/protocol.js';
 import type { Floor } from './floor.js';
 import type { Ctx } from './office/context.js';
 import { rosterOf, teamFloor } from './roster/adapter.js';
+import { subagentCards, workingHelpers, type WorkingHelper } from '../shared/roster/subagent-cards.js';
+import type { RosterView } from '../shared/roster/types.js';
 
 /** How long one answer is reused. */
 const FRESH_MS = 3_000;
@@ -45,26 +47,32 @@ export function overviewWorker(w: WorkerInfo): OverviewWorker {
 
 function floorOf(ctx: Ctx, floor: Floor): OverviewFloor {
   const info = floor.info();
+  const team = teamOf(ctx, floor);
+  const helpers: WorkingHelper[] = team ? workingHelpers(subagentCards(team)) : [];
   return {
     id: floor.id,
     name: floor.def.name,
     palette: floor.def.palette,
     plan: floor.plan.state(),
     workers: floor.workers.list().map(overviewWorker),
-    members: membersOf(ctx, floor),
+    members: membersOf(team),
+    ...(helpers.length ? { helpers } : {}),
     working: info.busy,
     waiting: info.waiting,
     prsOpen: floor.github.pulls.items.filter((p) => p.state === 'OPEN').length,
   };
 }
 
-/** The project team, what the drawing needs of it; none if the team view can't be had. */
-function membersOf(ctx: Ctx, floor: Floor): OverviewMember[] {
+/** The floor's team as the Team tab has it, if it can be had. */
+function teamOf(ctx: Ctx, floor: Floor): RosterView | undefined {
   try {
-    return rosterOf(ctx)
-      .view(teamFloor(ctx, floor), false)
-      .members.map((m) => ({ role: m.role, team: m.team, title: m.title, name: m.name, icon: m.icon, status: m.status, ...(m.workerId ? { workerId: m.workerId } : {}) }));
+    return rosterOf(ctx).view(teamFloor(ctx, floor), false);
   } catch {
-    return [];
+    return undefined;
   }
+}
+
+/** The project team, what the drawing needs of it; none if the team view can't be had. */
+function membersOf(team: RosterView | undefined): OverviewMember[] {
+  return (team?.members ?? []).map((m) => ({ role: m.role, team: m.team, title: m.title, name: m.name, icon: m.icon, status: m.status, ...(m.workerId ? { workerId: m.workerId } : {}) }));
 }

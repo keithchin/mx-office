@@ -8,6 +8,7 @@ import type { StandupSchedule } from './schedule.js';
 import type { JeffSettings } from '../judge.js';
 import type { SkillView } from './skills.js';
 import type { SubagentAction, SubagentView } from './subagents.js';
+import type { LiveRunView } from './subagent-live.js';
 
 export interface RosterSettings {
   autonomy: AutonomyLevel;
@@ -171,6 +172,8 @@ export interface RosterView {
   subagents: SubagentView[];
   /** Subagent actions proposed to the Project Manager, pending first, and the latest decided. */
   subagentActions: SubagentAction[];
+  /** The Leads' subagents at work now and the floor's last runs, newest first (shared/roster/subagent-live.ts). */
+  subagentRuns?: LiveRunView[];
   /** May change the settings, decide on proposals and answer escalations: the Project Manager. */
   admin: boolean;
   /** With autonomy by stage on, on a toolkit project: the stage the level follows now. */
