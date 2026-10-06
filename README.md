@@ -24,6 +24,7 @@ Around the teams:
 - **🧑‍⚖️ Jeff · Router**, the office's quick judge (Jev, with Claude Haiku as fallback): is an agent waiting on you, which team is a new issue for, and which escalation to resolve first.
 - **🏛️ The Firm** (`/firm`): independent Reviewer Agents that audit a project from outside its team and deliver one report to you.
 - **🧾 Audit log**: who did what and when, per floor and office-wide, hash-chained.
+- **💰 Budget**: what each project spent, in dollars and a local currency, by stage, role, agent, model, day and issue, with budget chips in the top bar.
 - **💬 Team chatter**: what the agents say to each other, as a live thread on each Command Center.
 - **🎨 Five color themes**: Default, Dark, Terminal, and Clean (Light) / Clean (Dark), which look like VS Code and show no emoji.
 

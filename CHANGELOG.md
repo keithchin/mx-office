@@ -6,7 +6,14 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **💰 Budget: what each project spent.** A new 💰 Budget tab on the 1D view shows a project's spend
+  by stage, role, agent (subagents nested under the Lead that hired them), model, day and issue/PR,
+  in dollars and a local currency (SGD by default, ECB rate fetched daily or set by hand). The top bar
+  shows `$42 today · $252 / $600 · 42 %` next to the branch and `Office $110 today` at the far right.
+  The office's own model calls (Jeff, the analyzer, task naming, the summary, the Firm) are now
+  metered and booked on the floor they served. History from before the ledger started is filled in
+  from the workers and `analysis/runs.jsonl`, marked as estimated.
 
 ## 2026-10-06 · release 10 (`3db2145`)
 

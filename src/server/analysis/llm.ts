@@ -5,6 +5,7 @@
 
 import { spawn } from 'node:child_process';
 import os from 'node:os';
+import { meterCliResult } from '../budget/meter.js';
 
 const TIMEOUT_MS = 60_000;
 const FAILS_BEFORE_BACKOFF = 3;
@@ -42,6 +43,8 @@ export class Haiku {
     if (this.recent.length >= MAX_PER_HOUR) return null;
     this.recent.push(now);
     const out = await run(this.claude!, this.env, system, input, JSON.stringify(schema));
+    // Priced and booked on the floor it served (budget/meter.ts): the analyzer's, Jeff's or the summary's.
+    meterCliResult(out, 'analyzer');
     const v = out === null ? null : parse(out);
     if (v) this.fails = 0;
     else if (++this.fails >= FAILS_BEFORE_BACKOFF) {

@@ -56,7 +56,7 @@ export interface FirmDeps {
   /** The Firm's state changed: browsers on /firm and the floor's banner fetch again. */
   changed(floorId: string): void;
   /** Spend for the office's ledger, so the Firm shows in the office's totals. */
-  spend?(usd: number): void;
+  spend?(usd: number, floor?: string, model?: string): void;
   /** The office audit log (server/audit, when it's there). */
   record?(entry: { floor?: string; kind: string; text: string; data?: unknown }): void;
 }

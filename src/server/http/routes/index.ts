@@ -26,6 +26,7 @@ import { studioRoutes } from './studio.js';
 import { wizardRoutes } from './wizard.js';
 import { notifyTeamsRoutes } from './notify-teams.js';
 import { keepAwakeRoutes } from './keep-awake.js';
+import { budgetRoutes } from './budget.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -69,6 +70,9 @@ export const routes: readonly Route[] = [
   notifyTeamsRoutes.test,
   keepAwakeRoutes.view,
   keepAwakeRoutes.save,
+  budgetRoutes.view,
+  budgetRoutes.office,
+  budgetRoutes.fx,
   homeRoutes.overview,
   firmRoutes.view,
   firmRoutes.engagement,

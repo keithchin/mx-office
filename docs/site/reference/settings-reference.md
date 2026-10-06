@@ -106,3 +106,18 @@ What was posted is in `notify-teams-state.json` (posted item ids, items held bac
 | `on` | boolean | `true` | Keep the computer from sleeping while agents work. |
 | `idleMinutes` | number | `10` | Minutes of everything idle before it may sleep again. Whole minutes, 1 to 240. |
 | `by`, `at` | string, ms | | Who changed it last, and when. |
+
+## Office settings: budget
+
+The [Budget](../using-the-office/budget.md)'s office-wide settings live in `budget/office.json` in the office's data folder. Admins change them on the Budget tab.
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `fx.currency` | string | `'SGD'` | The local currency shown beside dollars (ISO 4217, three letters). `'USD'` shows dollars only. |
+| `fx.mode` | `'daily' | 'manual'` | `'daily'` | Fetch the ECB reference rate once a day (frankfurter, no key), or use the rate typed in. |
+| `fx.manualRate` | number | none | Units of the currency per US dollar, used in manual mode. |
+| `fxLast` | object | none | The last rate fetched: `currency`, `rate`, `asOf` (the rate's day), `fetchedDay`, `error` if the last fetch failed. A failed fetch keeps the last good rate. |
+| `threshold` | number | `80` | The office default alert threshold, %, for projects that don't set their own. |
+| `ledger` | object | | Background calls that served no floor (the office's own). |
+
+Each project's `budget/<floor>.json` holds its ledger: daily rollups kept forever, 30 days of detailed rows, the stage timeline, and what each worker had spent when it was last booked.

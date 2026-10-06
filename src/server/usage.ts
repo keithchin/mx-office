@@ -81,6 +81,8 @@ interface FileCursor {
   /** A message with several content blocks is logged once per block, with the same id and usage. */
   lastId?: string;
   lastUsage?: Usage;
+  /** A subagent transcript's type, from the meta file beside it (`agent-<id>.meta.json`). */
+  agent?: string;
 }
 
 export interface UsageTracker {
@@ -95,15 +97,28 @@ export interface UsageTracker {
   at?: number;
   /** The model the session's own latest message ran on (not a subagent's). */
   model?: string;
+  /** Estimated spend by `<subagent type>|<model>` (see Usage.parts). */
+  parts?: Record<string, { cost: number; calls: number }>;
 }
 
 export const newTracker = (): UsageTracker => ({ files: {}, since: zeroUsage() });
 
 export function trackerUsage(t: UsageTracker): Usage {
-  const model = t.model ? { model: t.model } : {};
+  const model = { ...(t.model ? { model: t.model } : {}), ...(t.parts ? { parts: structuredClone(t.parts) } : {}) };
   if (!t.base) return { ...t.since, ...model };
   const { at: _at, ...base } = t.base;
   return { ...addUsage(base, t.since), ...model };
+}
+
+/** The subagent type Claude Code wrote beside a subagent's transcript, or "subagent" when it isn't there. */
+function agentTypeOf(file: string): string {
+  try {
+    const meta = JSON.parse(readFileSync(file.replace(/\.jsonl$/, '.meta.json'), 'utf8'));
+    if (typeof meta?.agentType === 'string' && /^[\w.:-]{1,80}$/.test(meta.agentType)) return meta.agentType;
+  } catch {
+    // no meta file (an older Claude Code): just "a subagent"
+  }
+  return 'subagent';
 }
 
 const asUsage = (v: any): Usage | undefined =>
@@ -117,7 +132,7 @@ export function restoreTracker(saved: any): UsageTracker {
   if (saved.files && typeof saved.files === 'object') {
     for (const [file, c] of Object.entries<any>(saved.files)) {
       if (!c || typeof c !== 'object') continue;
-      t.files[file] = { offset: num(c.offset), lastId: typeof c.lastId === 'string' ? c.lastId : undefined, lastUsage: asUsage(c.lastUsage) };
+      t.files[file] = { offset: num(c.offset), lastId: typeof c.lastId === 'string' ? c.lastId : undefined, lastUsage: asUsage(c.lastUsage), ...(typeof c.agent === 'string' ? { agent: c.agent } : {}) };
     }
   }
   const base = asUsage(saved.base);
@@ -125,6 +140,10 @@ export function restoreTracker(saved: any): UsageTracker {
   t.since = asUsage(saved.since) ?? zeroUsage();
   if (num(saved.at)) t.at = saved.at;
   if (isModelId(saved.model)) t.model = saved.model;
+  if (saved.parts && typeof saved.parts === 'object') {
+    t.parts = {};
+    for (const [k, v] of Object.entries<any>(saved.parts)) if (k.length < 200 && v && typeof v === 'object') t.parts[k] = { cost: num(v.cost), calls: num(v.calls) };
+  }
   return t;
 }
 
@@ -147,6 +166,7 @@ export function scanTracker(t: UsageTracker): boolean {
   let changed = false;
   for (const file of [t.transcript, ...subagentFiles(t.transcript)]) {
     const cur = (t.files[file] ??= { offset: 0 });
+    if (file !== t.transcript && cur.agent === undefined) cur.agent = agentTypeOf(file);
     for (const line of readNewLines(file, cur)) {
       let obj: any;
       try {
@@ -180,6 +200,10 @@ function applyLine(t: UsageTracker, cur: FileCursor, line: any, main: boolean): 
     cur.lastUsage = u;
     if (isZero(delta)) return false;
     t.since = addUsage(t.since, delta);
+    const key = `${main ? '' : (cur.agent ?? 'subagent')}|${isModelId(msg.model) ? msg.model : ''}`;
+    const part = ((t.parts ??= {})[key] ??= { cost: 0, calls: 0 });
+    part.cost += delta.cost;
+    part.calls += delta.calls;
     return true;
   }
   if (line.type === 'cost-state' && typeof line.totalCostUSD === 'number' && line.modelUsage && typeof line.modelUsage === 'object' && !line.hasUnknownModelCost) {

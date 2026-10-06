@@ -22,6 +22,7 @@ import { Firm } from './index.js';
 import { pinCommit, prepareReviewer } from './isolation.js';
 import { ClaudeHeadlessRunner } from './runner.js';
 import type { FirmFloor, LeadState } from './types.js';
+import { emitSpend } from '../budget/meter.js';
 
 const firms = new WeakMap<object, Firm>();
 let audit: AuditSource | undefined;
@@ -170,7 +171,11 @@ export function firmOf(ctx: Ctx): Firm {
       // The 1D view's banner and Needs-you strip refetch on the team's change message.
       if (fl) ctx.toFloor(fl, { t: 'roster.changed', floor: id });
     },
-    spend: (usd) => ctx.ledger.add({ input: 0, output: 0, cacheWrite: 0, cacheRead: 0, cost: usd, calls: 0 }),
+    spend: (usd, floor, model) => {
+      ctx.ledger.add({ input: 0, output: 0, cacheWrite: 0, cacheRead: 0, cost: usd, calls: 0 });
+      // On the audited project's Budget too, as a background cost (already in the office's Ledger above).
+      emitSpend({ floor, source: 'firm', model: model ?? 'opus', usage: { input: 0, output: 0, cacheWrite: 0, cacheRead: 0, cost: usd, calls: 0 }, inLedger: true });
+    },
     record: (entry) => audit?.record(entry),
   });
   firms.set(ctx.cfg, f);

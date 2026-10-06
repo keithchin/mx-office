@@ -11,6 +11,7 @@ import { summaryOf } from '../summary/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { auditGitHub } from '../audit/office.js';
 import { chatterOf } from '../chatter/office.js';
+import { budgetOf } from '../budget/index.js';
 
 /**
  * Tells the project team about a worker, unless the floor is still being built. A floor restores its
@@ -126,6 +127,8 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
         // The Analysis tab records a run when a turn ends; the project summary notes what changed.
         analysisOf(ctx).onWorker(floor, w);
         summaryOf(ctx).onWorker(floor, w);
+        // The project's Budget ledger books the same usage delta the office's Ledger just did (budget/).
+        budgetOf(ctx).onWorker(floor.id, w);
         // The project team: who's idle (to bench), the standup's answers, the floor's spend against its cap.
         team(ctx, floor, (t) => rosterOf(ctx).onWorker(t, w));
       }

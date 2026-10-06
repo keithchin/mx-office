@@ -51,6 +51,7 @@ import { auditView } from './ui/audit';
 import { chatterPanel } from './ui/chatter/panel';
 import { routeChatter } from './ui/chatter/feed';
 import { useChatterActions } from './ui/chatter/compact';
+import { budgetUi } from './ui/budget';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -217,14 +218,16 @@ const TAB_KEY = 'agent-office.lite-tab2';
 // The floor's branches as a metro map (🌳 Git, ui/git/).
 const git = gitView($('git-view'), { openWorker, openPull: kanban.openPull });
 // Who did what, when (🧾 Audit log, ui/audit/): this floor, the office's own or every floor.
+// 💰 The budget: the top bar's chips and the Budget tab (ui/budget/).
+const budget = budgetUi(net, { root: $('budget-view'), visible: () => tab === 'budget', open: () => showTab('budget') });
 const audit = auditView($('audit-view'), { floor: () => store.floor ?? undefined, floors: () => store.floors, admin: () => store.me.admin, storeKey: 'agent-office.audit-lite' });
 net.onMessage((msg) => audit.onMessage(msg));
 store.on('floor', () => audit.floorChanged());
-type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | Pane | 'teams' | 'audit';
+type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | Pane | 'teams' | 'audit' | 'budget';
 // The team's four panes are tabs of their own (flattened from one Team tab); an old "team" means its org chart.
 const TEAM_PANES: readonly Pane[] = ['org', 'standup', 'approvals', 'settings'];
 const isPane = (t: unknown): t is Pane => TEAM_PANES.includes(t as Pane);
-const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || isPane(t) || t === 'teams' || t === 'audit';
+const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || isPane(t) || t === 'teams' || t === 'audit' || t === 'budget';
 const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : isTab(t) ? t : undefined);
 let tab: Tab = 'command';
 try {
@@ -263,6 +266,9 @@ function showTab(t: Tab) {
   if (t === 'audit') audit.show();
   else audit.hide();
   for (const p of TEAM_PANES) $(`tab-${p}`).classList.toggle('on', t === p);
+  $('tab-budget').classList.toggle('on', t === 'budget');
+  $('budget-view').classList.toggle('hidden', t !== 'budget');
+  if (t === 'budget') budget.show();
   $('board').classList.toggle('hidden', t !== 'board');
   $('summary').classList.toggle('hidden', t !== 'command');
   $('setup').classList.toggle('hidden', t !== 'command');
@@ -307,6 +313,7 @@ $('tab-git').addEventListener('click', () => showTab('git'));
 for (const p of TEAM_PANES) $(`tab-${p}`).addEventListener('click', () => showTab(p));
 $('tab-teams').addEventListener('click', () => showTab('teams'));
 $('tab-audit').addEventListener('click', () => showTab('audit'));
+$('tab-budget').addEventListener('click', () => showTab('budget'));
 store.on('floor', renderAnalysisTab);
 // The project team (ui/roster/): its approvals badge stays current whichever tab is showing.
 const team = teamTab($('team-view'), $('tab-approvals').querySelector('.ro-tab-n')!, () => isPane(tab), openWorker, { select: (p) => showTab(p) });
