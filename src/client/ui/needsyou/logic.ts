@@ -7,6 +7,7 @@ import type { FirmFloorStatus } from '../../../shared/firm/engagement';
 import type { Escalation } from '../../../shared/roster/escalation';
 import { jeffOrder, rankChip, rankOf, rankTip, sortedByJeff } from '../../../shared/roster/jeff-rank';
 import type { RosterView } from '../../../shared/roster/types';
+import type { StudioState } from '../../../shared/studio';
 import type { SetupView } from '../../../shared/wizard';
 import { needingYou, waitingInOrder } from '../../nextup';
 
@@ -19,10 +20,11 @@ export type NeedTarget =
   | { to: 'pr'; number: number }
   | { to: 'setup' }
   | { to: 'live' }
+  | { to: 'git' }
   | { to: 'floor'; floor: string }
   | { to: 'firm'; url: string };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit';
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio';
 
 export interface NeedItem {
   /** Stable across redraws. */
@@ -56,6 +58,8 @@ export interface NeedsInput {
   live?: LiveAppState | null;
   /** The Firm's audit of this floor (ui/firm/banner.ts), when there's something to say. */
   firm?: FirmFloorStatus;
+  /** Studio mode on this floor (ui/studio/): Studio Pro closed with model changes nobody committed. */
+  studio?: StudioState;
 }
 
 const URGENCY_RANK: Record<Escalation['urgency'], number> = { critical: 0, urgent: 1, important: 2, info: 3 };
@@ -114,6 +118,11 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
   // The floor's live app failed to start.
   if (i.live && i.live.floor === i.floor && i.live.status === 'failed') {
     out.push({ key: 'live', kind: 'live', icon: '🌐', text: `The live app failed${i.live.message ? `: ${i.live.message}` : ''}`, since: i.live.since, level: 'warn', action: 'Live app', target: { to: 'live' } });
+  }
+  // Studio Pro closed with model changes in the checkout: the agents build on main, so they need committing.
+  if (i.studio && i.studio.floor === i.floor && !i.studio.open && i.studio.uncommitted) {
+    const n = i.studio.uncommitted.files;
+    out.push({ key: 'studio-commit', kind: 'studio', icon: '🧱', text: `Commit your Studio Pro changes so the agents build on them (${n} model file${n === 1 ? '' : 's'} changed)`, since: i.studio.uncommitted.since, level: 'warn', action: 'Git', target: { to: 'git' } });
   }
   // The Firm: its report on this floor is in, or its audit is past 80% of the budget.
   if (i.firm && i.firm.floor === i.floor) {

@@ -21,7 +21,7 @@ import { teamTab, type Pane } from './ui/roster';
 import { subBoards } from './ui/teams';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { liveAppView } from './ui/liveapp';
-import { mountStudio } from './ui/studio';
+import { mountStudio, studioState } from './ui/studio';
 import { pmConsole } from './ui/pm/console';
 import { openPull } from './ui/pull';
 import { openQueue } from './ui/queue';
@@ -354,7 +354,7 @@ function goToNeed(t: NeedTarget) {
   if (t.to === 'worker') return openWorker(t.id);
   if (t.to === 'firm') return location.assign(t.url);
   if (t.to === 'escalation') return toEscalation(t.id);
-  if (t.to === 'approvals' || t.to === 'settings' || t.to === 'live') return showTab(t.to);
+  if (t.to === 'approvals' || t.to === 'settings' || t.to === 'live' || t.to === 'git') return showTab(t.to);
   if (t.to === 'setup') {
     if (tab !== 'command') showTab('command');
     return $('setup').scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -370,7 +370,7 @@ function goToNeed(t: NeedTarget) {
 }
 // The Firm (ui/firm/banner.ts): its audit of this floor, its report, or the button to call one.
 let firmStatus: FirmFloorStatus | undefined;
-const needs = needsYouStrip($('needs-you'), $('tab-command').querySelector('.ny-tab-n')!, { go: goToNeed, setup: () => cachedSetup(store.floor ?? undefined), live: () => live.current(), firm: () => firmStatus });
+const needs = needsYouStrip($('needs-you'), $('tab-command').querySelector('.ny-tab-n')!, { go: goToNeed, setup: () => cachedSetup(store.floor ?? undefined), live: () => live.current(), firm: () => firmStatus, studio: studioState });
 const firm = firmBanner($('firm-banner'), (s) => ((firmStatus = s), needs.refresh()));
 store.on('floor', () => firm.refresh(store.floor ?? undefined));
 net.onMessage((msg) => firm.onMessage(msg));

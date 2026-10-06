@@ -10,6 +10,7 @@ import { answered, notified, wantsPermission } from '../workers/lifecycle.js';
 import { shq } from '../workers/process.js';
 import { noteSubagentHook, noteSubagentLifecycle } from '../workers/subagents.js';
 import { noteDispatch } from '../chatter/bus.js';
+import { studioGuardHook } from '../studio/guard.js';
 import type { WorkerHandle } from '../workers/types.js';
 import { truncate } from '../workers/util.js';
 import type { ProviderAdapter } from './types.js';
@@ -83,6 +84,9 @@ process.stdin.on('end', () => {
       `else ${shq(process.execPath)} ${shq(nodeHook)} ${event} >/dev/null 2>&1; fi; true`;
     hooks[event] = [{ ...(matcher ? { matcher } : {}), hooks: [{ type: 'command', command }] }];
   }
+  // Studio mode: while Studio Pro has the floor's project open, its mxcli writes are held (studio/guard.ts).
+  const guard = studioGuardHook(dataDir);
+  if (guard) hooks.PreToolUse.push(guard);
   // Looking at the office's workers doesn't need anyone's say-so; hiring and sending home still asks.
   const permissions = { allow: MCP_ALLOWED };
   writeFileSync(settingsPath, JSON.stringify({ hooks, permissions }, null, 2), { mode: 0o600 });

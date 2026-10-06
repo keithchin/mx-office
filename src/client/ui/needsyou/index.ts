@@ -6,6 +6,7 @@
 import type { FirmFloorStatus } from '../../../shared/firm/engagement';
 import type { LiveAppState, ServerMsg } from '../../../shared/protocol';
 import type { RosterView } from '../../../shared/roster/types';
+import type { StudioState } from '../../../shared/studio';
 import type { SetupView } from '../../../shared/wizard';
 import { store } from '../../state';
 import { h, timeAgo } from '../dom';
@@ -25,6 +26,8 @@ export interface NeedsYouDeps {
   live(): LiveAppState | null;
   /** The Firm's audit of this floor (ui/firm/banner.ts fetches it). */
   firm?(): FirmFloorStatus | undefined;
+  /** Studio mode on this floor (ui/studio/). */
+  studio?(): StudioState | undefined;
 }
 
 export interface NeedsYou {
@@ -68,7 +71,7 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
     );
 
   function draw() {
-    const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live(), firm: deps.firm?.() });
+    const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live(), firm: deps.firm?.(), studio: deps.studio?.() });
     const n = hereCount(items);
     badge.textContent = n ? String(n) : '';
     badge.title = n ? `${n} thing${n === 1 ? '' : 's'} on this floor need${n === 1 ? 's' : ''} you` : '';
@@ -99,7 +102,7 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
     draw();
   }
 
-  for (const k of ['workers', 'pulls', 'floors', 'floor'] as const) store.on(k, refresh);
+  for (const k of ['workers', 'pulls', 'floors', 'floor', 'studio'] as const) store.on(k, refresh);
   // "3m ago" moves on by itself.
   setInterval(draw, 30_000);
 

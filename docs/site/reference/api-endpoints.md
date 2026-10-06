@@ -47,7 +47,7 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/roster` | The floor's team |
 | GET | `/api/roster/standup` | One standup with its page |
 | POST | `/api/roster/action` | Team actions (see below) |
-| GET | `/api/studio` | `?floor=`: whether the floor has a Mendix project (`hasMpr`, `mpr`, `version`), whether Studio Pro can be opened from here, and the agents mid-turn |
+| GET | `/api/studio` | `?floor=`: whether the floor has a Mendix project (`hasMpr`, `mpr`, `version`), whether Studio Pro can be opened from here, the agents mid-turn, and Studio mode (`state`: `open`, `since`, `pid`, `staleLock`, `mcp`, `uncommitted`); changes come over the WebSocket as `studio.state` |
 | POST | `/api/studio/open` | `{ floor }`: opens the floor's .mpr in Studio Pro on the office's computer (admin) |
 | GET | `/api/teams/page` | A team's page |
 | POST | `/api/teams/labels` | Create missing `team:` labels (admin) |
@@ -82,4 +82,4 @@ Actions: `hire`, `bench`, `rename`, `model`, `settings`, `standup`, `decide`, `e
 
 ## The hook server (workers only)
 
-A separate loopback server, whose port is in `<office data>/hook-port`, answers the workers: `/office/workers` (and `/home`, `/tell`, `/pr`, `/escalate`, `/subagent`), `/office/queue` and Claude Code's `/hooks/*`. Each worker has its own token.
+A separate loopback server, whose port is in `<office data>/hook-port`, answers the workers: `/office/workers` (and `/home`, `/tell`, `/pr`, `/escalate`, `/subagent`), `/office/queue`, `/office/studio` (the Studio mode hook saying it held an mxcli write, for the audit log) and Claude Code's `/hooks/*`. Each worker has its own token.

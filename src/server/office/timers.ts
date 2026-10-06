@@ -1,7 +1,8 @@
 import type { Ctx } from './context.js';
 import { SLOW_CLIENT_BYTES } from './client.js';
+import { startStudioMode } from '../studio/index.js';
 
-/** The office's own clocks: terminals re-sent to viewers who fell behind, and the heartbeat. Returns what stops them. */
+/** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, and Studio mode's look at the Mendix floors. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
   const { clients } = ctx;
   const resync = setInterval(() => {
@@ -31,7 +32,11 @@ export function startTimers(ctx: Ctx): () => void {
     if (accountsMoved) ctx.accountsChanged();
   }, 20_000);
 
+  // Studio Pro open on a floor's project pauses that floor's agents' mxcli writes (studio/watch.ts).
+  const stopStudio = startStudioMode(ctx);
+
   return () => {
+    stopStudio();
     clearInterval(heartbeat);
     clearInterval(resync);
   };
