@@ -1,9 +1,10 @@
 // The phone version's Status tab: a compact card per project (GET /api/m/status): who's working, asking
 // or asleep, the toolkit gate or stage it's at, open escalations, the team's spend against its cap (the
-// Budget feature's chip goes in that slot), and its buttons: go there, Raise cap, Hire, and Pause /
-// Resume (a slot until the office has them).
+// Budget feature's chip goes in that slot), a ⏸ pause and the progress of a resume or pause, and its
+// buttons: go there, Raise cap, Hire, ⏸ Pause / ▶ Resume. A 🔁 safe restart shows on top, read-only.
 
-import { statusWords, type ProjectStatus } from '../../shared/mobile';
+import { restartWords, runWords, statusWords, type ProjectStatus, type RestartLine } from '../../shared/mobile';
+import { pauseLine } from '../../shared/project-run';
 import type { RosterView } from '../../shared/roster/types';
 import { h } from '../ui/dom';
 
@@ -12,6 +13,7 @@ export interface StatusActions {
   raiseCap(p: ProjectStatus): void;
   hire(p: ProjectStatus): void;
   pause(p: ProjectStatus): void;
+  resume(p: ProjectStatus): void;
 }
 
 const money = (n: number) => `$${n.toFixed(n >= 100 ? 0 : 2)}`;
@@ -46,8 +48,9 @@ export function statusCard(p: ProjectStatus, here: boolean, roster: RosterView |
       {},
       p.escalations ? h('span.m-chip.m-chip-bad', {}, `🚩 ${p.escalations} escalation${p.escalations === 1 ? '' : 's'}`) : null,
       spendChip(p),
-      p.projectPaused ? h('span.m-chip.m-chip-warn', {}, '⏸ Paused') : null,
     ),
+    p.pause ? h('p.m-paused', {}, pauseLine(p.pause, (at) => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))) : null,
+    p.run ? h('p.m-run', { role: 'status', class: p.run.finishedAt ? '' : 'm-run-going' }, runWords(p.run)) : null,
     p.stage ? h('p.m-stage', {}, `🧭 ${p.stage}`) : null,
     p.paused ? h('p.m-warn', {}, `💸 ${p.paused}`) : null,
     h(
@@ -55,16 +58,19 @@ export function statusCard(p: ProjectStatus, here: boolean, roster: RosterView |
       {},
       p.paused || p.spend?.cap ? h('button.btn.small', { type: 'button', onclick: () => act.raiseCap(p) }, '💸 Raise cap') : null,
       canHire ? h('button.btn.small', { type: 'button', onclick: () => act.hire(p) }, '➕ Hire') : null,
-      // Pause / Resume project: a slot until the office has the feature (it answers "not yet").
-      h('button.btn.small.m-slot', { type: 'button', title: 'Pause or resume this project (coming)', onclick: () => act.pause(p) }, p.projectPaused ? '▶ Resume' : '⏸ Pause'),
+      running(p) ? null : p.pause ? h('button.btn.small.primary', { type: 'button', onclick: () => act.resume(p) }, '▶ Resume…') : h('button.btn.small', { type: 'button', onclick: () => act.pause(p) }, '⏸ Pause'),
     ),
   );
 }
 
-export function statusList(list: readonly ProjectStatus[] | undefined, floor: string | undefined, roster: RosterView | undefined, act: StatusActions, error?: string): HTMLElement[] {
+/** A resume or pause still going: no second one until it's done. */
+export const running = (p: Pick<ProjectStatus, 'run'>) => !!p.run && !p.run.finishedAt && (p.run.status === 'running' || p.run.status === 'waiting');
+
+export function statusList(list: readonly ProjectStatus[] | undefined, floor: string | undefined, roster: RosterView | undefined, act: StatusActions, error?: string, restart?: RestartLine): HTMLElement[] {
   if (error) return [h('p.m-empty', {}, `Couldn’t load the status: ${error}`)];
+  const top = restart ? [h('p.m-restart', { role: 'status' }, restartWords(restart), h('small.m-dim', {}, ' · decided on a computer'))] : [];
   if (!list) return [h('p.m-empty', {}, 'Loading…')];
   if (!list.length) return [h('p.m-empty', {}, 'No projects yet. Add one from the home page on a computer.')];
   const sorted = [...list].sort((a, b) => (a.floor === floor ? -1 : b.floor === floor ? 1 : b.asking + b.escalations - (a.asking + a.escalations)));
-  return sorted.map((p) => statusCard(p, p.floor === floor, roster, act));
+  return [...top, ...sorted.map((p) => statusCard(p, p.floor === floor, roster, act))];
 }

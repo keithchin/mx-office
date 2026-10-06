@@ -13,7 +13,7 @@ import type { Session } from '../../auth.js';
 import type { Ctx } from '../../office/context.js';
 import { actionOf, runAction } from '../../mobile/actions.js';
 import { reauthOf, reauthenticate, sessionTokenOf } from '../../mobile/reauth.js';
-import { projectStatuses } from '../../mobile/status.js';
+import { statusView } from '../../mobile/status.js';
 import { pushOf } from '../../webpush/index.js';
 import { phoneAccessOf } from '../../phone-access/index.js';
 import { readerOf } from './phone.js';
@@ -126,7 +126,7 @@ export const mobileRoutes = {
     },
   },
   /** GET /api/m/status: each project's line on the Status tab. */
-  status: { method: 'GET', path: '/api/m/status', auth: 'session', handle: async (ctx, { res }) => send(res, 200, { projects: await projectStatuses(ctx) }) },
+  status: { method: 'GET', path: '/api/m/status', auth: 'session', handle: async (ctx, { res }) => send(res, 200, await statusView(ctx)) },
   /** POST /api/m/push/{subscribe,unsubscribe,alerts,test}: this phone's push notifications. */
   push: {
     method: 'POST',

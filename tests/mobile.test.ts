@@ -19,7 +19,8 @@ import type { Ctx } from '../src/server/office/context.ts';
 import { ReauthBook } from '../src/server/mobile/reauth.ts';
 import { actionOf, runAction } from '../src/server/mobile/actions.ts';
 import { setTunnelUrl } from '../src/server/phone-access/origin.ts';
-import { freshAuth, isMergeOrder, isRisky, REAUTH_MS } from '../src/shared/mobile.ts';
+import { freshAuth, isMergeOrder, isRisky, REAUTH_MS, restartShown, restartWords, runWords } from '../src/shared/mobile.ts';
+import type { ResumeChoice, RunProgress } from '../src/shared/project-run.ts';
 
 async function office() {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'ao-mobile-'));
@@ -114,10 +115,11 @@ test('which actions are risky', () => {
   assert.equal(isRisky({ do: 'escalation', verdict: 'reject' }, merge), false);
   assert.equal(isRisky({ do: 'escalation', verdict: 'approve' }, plain), false);
   assert.equal(isRisky({ do: 'escalation', verdict: 'approve' }, { ...plain, trigger: 'security' }), true);
-  assert.equal(isRisky({ do: 'pause' }), false);
+  assert.equal(isRisky({ do: 'pause' }), true, 'pausing stops a whole floor');
+  assert.equal(isRisky({ do: 'resume' }), true, 'resuming wakes agents, and turns cost money');
 });
 
-test('a risky action without a fresh sign-in is refused; with one it goes, and pause is a slot', async () => {
+test('a risky action without a fresh sign-in is refused; with one it goes', async () => {
   const o = await office();
   try {
     const merge = actionOf({ do: 'merge', floor: 'f1', number: 7 });
@@ -128,9 +130,6 @@ test('a risky action without a fresh sign-in is refused; with one it goes, and p
     assert.equal(ok.ok, true);
     assert.equal(ok.ok && ok.url, 'https://github.com/acme/shop/pull/7');
     assert.deepEqual(await runAction(o.ctx, merge as Exclude<typeof merge, string>, { ...who, admin: false, fresh: true }), { ok: false, status: 403, error: 'Only the Project Manager (an admin) can do that' });
-    const pause = actionOf({ do: 'pause', floor: 'f1' });
-    const r = await runAction(o.ctx, pause as Exclude<typeof pause, string>, who);
-    assert.equal(!r.ok && r.status, 501);
     assert.equal(actionOf({ do: 'raise-cap', floor: 'f1', amount: -3 }), 'A cap in dollars, more than 0');
   } finally {
     o.close();
@@ -175,12 +174,60 @@ test('through the tunnel the session cookie is Secure and same-origin is the tun
     assert.equal(via.status, 200);
     assert.match(via.cookie, /; Secure/);
     const c = via.cookie.split(';')[0];
-    const act = await fetch(`${o.base}/api/m/act`, { method: 'POST', headers: { cookie: c, origin: 'https://x7abc-4600.euw.devtunnels.ms', 'x-forwarded-host': 'x7abc-4600.euw.devtunnels.ms', 'content-type': 'application/json' }, body: JSON.stringify({ do: 'pause', floor: 'f1' }) });
-    assert.equal(act.status, 501, 'past the same-origin check');
+    const act = await fetch(`${o.base}/api/m/act`, { method: 'POST', headers: { cookie: c, origin: 'https://x7abc-4600.euw.devtunnels.ms', 'x-forwarded-host': 'x7abc-4600.euw.devtunnels.ms', 'content-type': 'application/json' }, body: JSON.stringify({ do: 'merge', floor: 'f1', number: 999 }) });
+    assert.equal(act.status, 404, 'past the same-origin check (and a fresh sign-in): that PR just is not open');
     // Someone else's forwarded host from loopback is not the tunnel.
     assert.doesNotMatch((await login(o.base, { 'x-forwarded-host': 'evil.example', 'x-forwarded-proto': 'https' })).cookie, /Secure/);
   } finally {
     setTunnelUrl(undefined);
     o.close();
   }
+});
+
+const progress = (kind: 'pause' | 'resume', statuses: RunProgress['agents'][number]['status'][], finished = false): RunProgress => ({
+  runId: 'r1',
+  kind,
+  floor: 'f1',
+  status: finished ? 'finished' : 'running',
+  by: 'Pat',
+  agents: statuses.map((status, i) => ({ name: ['Ada', 'Lin', 'Mo'][i], action: kind === 'pause' ? 'pause' : 'wake', status })),
+  startedAt: 1,
+  ...(finished ? { finishedAt: 2 } : {}),
+});
+
+test('pause and resume from the phone go through Pause / Resume project, only with a fresh sign-in', async () => {
+  const o = await office();
+  try {
+    const calls: string[] = [];
+    const runs = {
+      pause: (floor: string, by: string) => (calls.push(`pause ${floor} ${by}`), progress('pause', ['finishing', 'pending'])),
+      resume: async (floor: string, choice: ResumeChoice, by: string) => (calls.push(`resume ${floor} ${choice.mode} ${by}`), floor === 'f1' ? progress('resume', ['starting', 'pending', 'pending']) : 'Nothing to resume'),
+    };
+    const deps = { runs: () => runs as never };
+    const pause = actionOf({ do: 'pause', floor: 'f1' }) as Exclude<ReturnType<typeof actionOf>, string>;
+    const resume = actionOf({ do: 'resume', floor: 'f1', choice: { mode: 'bogus' } }) as Exclude<ReturnType<typeof actionOf>, string>;
+    assert.deepEqual(resume, { do: 'resume', floor: 'f1', choice: { mode: 'work' } }, 'those with work, unless it says otherwise');
+    const stale = { name: 'Pat', admin: true, fresh: false };
+    for (const a of [pause, resume]) assert.deepEqual(await runAction(o.ctx, a, stale, deps), { ok: false, status: 401, error: 'Confirm with your password first', reauth: true });
+    assert.deepEqual(calls, [], 'nothing ran without the fresh sign-in');
+    const p = await runAction(o.ctx, pause, { ...stale, fresh: true }, deps);
+    assert.ok(p.ok && p.run?.kind === 'pause');
+    assert.match(p.ok ? p.summary : '', /Pausing Shop: 2 agents finish their turn/);
+    const r = await runAction(o.ctx, actionOf({ do: 'resume', floor: 'f1', choice: { mode: 'all' } }) as never, { ...stale, fresh: true }, deps);
+    assert.ok(r.ok && r.run?.agents.length === 3);
+    assert.deepEqual(calls, ['pause f1 Pat', 'resume f1 all Pat']);
+    assert.deepEqual(await runAction(o.ctx, pause, { ...stale, admin: false, fresh: true }, deps), { ok: false, status: 403, error: 'Only the Project Manager (an admin) can do that' });
+  } finally {
+    o.close();
+  }
+});
+
+test('the Status tab’s lines: a run’s progress and a safe restart, read-only', () => {
+  assert.equal(runWords(progress('resume', ['woken', 'starting', 'pending'])), 'Waking 1 of 3 · Lin starting');
+  assert.equal(runWords(progress('pause', ['handoff', 'asleep'])), 'Pausing 1 of 2 · Ada writing its handoff');
+  assert.equal(runWords(progress('resume', ['woken', 'failed', 'woken'], true)), '▶ Resumed: 2 of 3 · 1 failed');
+  assert.equal(restartWords({ phase: 'waiting', waitingOn: ['Ada mid-turn', 'Lin mid-turn'] }), '🔁 Restarting safely: waiting on 2 (Ada mid-turn, Lin mid-turn)');
+  assert.equal(restartShown('idle'), false);
+  assert.equal(restartShown('cancelled'), false);
+  assert.equal(restartShown('waiting'), true);
 });

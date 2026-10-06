@@ -7,6 +7,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ## Unreleased
 
 ### New
+- **⏸ Pause and ▶ Resume a project from the phone**: the Status tab's Pause runs Pause project (after a
+  confirmation), and Resume… shows a short Resume preview (who has work waiting and why, the cost line,
+  *Those with work* or *Everyone asleep*). Both need the fresh sign-in risky actions need. Each card
+  shows the pause (*⏸ Paused by Pat · 2 waiting on you*) and a run's progress, and a safe restart in
+  progress is a read-only line on top (*Restarting safely: waiting on 2*).
 - **📱 Phone version** at `/m`: the team phone full screen as an app for your iPhone, with tabs for
   **Needs you** (Reply / Approve / Reject, Open terminal, Merge…, Raise cap…), **Projects** (each
   floor's channel), **DMs**, **Activity** and a compact **Status** per project (working / asleep /

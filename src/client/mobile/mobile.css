@@ -90,7 +90,20 @@ body.m-body { min-height: 0; background: var(--paper); overscroll-behavior: none
 .m-stage { margin: 6px 0 0; font-size: 13px; font-weight: 700; color: var(--ink-2); }
 .m-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .m-acts .btn { min-height: 40px; }
-.m-slot { opacity: .7; }
+.m-paused { margin: 6px 0 0; padding: 6px 10px; border-radius: 10px; background: var(--warn-soft); color: var(--warn-ink); font-size: 13px; font-weight: 800; }
+.m-run { margin: 6px 0 0; font-size: 13px; font-weight: 800; color: var(--ink-2); }
+.m-run-going::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--info); animation: m-pulse 1s ease-in-out infinite alternate; }
+@keyframes m-pulse { from { opacity: .3; } }
+.m-restart { margin: 0; padding: 10px 12px; border: 2px solid var(--line); border-radius: 14px; background: var(--info-soft); font-weight: 800; }
+.m-cost { margin: 10px 0 6px; font-weight: 800; }
+.m-wake { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.m-wake > li { padding: 8px 10px; border: 2px solid var(--rule-strong); border-radius: 10px; }
+.m-wake > li.m-wake-on { border-color: var(--line); background: var(--card); }
+.m-wake > li.m-wake-off { opacity: .7; }
+.m-wake-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.m-wake-h .m-chip { margin-left: auto; }
+.m-reasons { margin: 4px 0 0; padding-left: 18px; font-size: 13px; }
+.m-check { padding: 4px 8px; font-size: 12px; }
 
 /* ---- Banners and sheets ----------------------------------------------------------------------------- */
 .m-banner { position: relative; margin: 0 0 10px; padding: 12px 44px 12px 12px; border: 2px solid var(--line); border-radius: 14px; background: var(--info-soft); }

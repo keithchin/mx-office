@@ -1,7 +1,7 @@
 // The phone version's calls to the office (http/routes/mobile.ts): who you are, the password typed again
 // for a risky action, an action, the projects' status, and this phone's push subscription. Plain fetches.
 
-import type { MobileAction, ProjectStatus } from '../../shared/mobile';
+import type { MobileAction, StatusView } from '../../shared/mobile';
 import type { AlertSettings } from '../../shared/phone';
 import { storedAlerts } from '../../shared/phone';
 import { store } from '../state';
@@ -54,7 +54,7 @@ export const mobileApi = {
   me: () => call<MeView>(`/api/m/me?browser=${encodeURIComponent(browserKey())}`),
   reauth: (password: string) => call<{ ok: true; reauthUntil: number }>('/api/m/reauth', { password }),
   act: (a: MobileAction) => call<{ ok: true; summary: string; url?: string }>('/api/m/act', a as unknown as Record<string, unknown>),
-  status: () => call<{ projects: ProjectStatus[] }>('/api/m/status').then((j) => j.projects),
+  status: () => call<StatusView>('/api/m/status'),
   subscribe: (subscription: PushSubscriptionJSON, device: string, alerts: AlertSettings) => call<{ id: string; phones: PhoneView[] }>('/api/m/push/subscribe', { subscription: subscription as unknown as Record<string, unknown>, device, alerts: storedAlerts(alerts) }),
   unsubscribe: (id: string) => call<{ phones: PhoneView[] }>('/api/m/push/unsubscribe', { id }),
   alerts: (id: string, alerts: AlertSettings) => call<{ ok: true }>('/api/m/push/alerts', { id, alerts: storedAlerts(alerts) }),
