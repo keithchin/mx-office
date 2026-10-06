@@ -9,6 +9,7 @@ import { flowRoutes } from './flows.js';
 import { auditRoutes } from './audit.js';
 import { chatterRoutes } from './chatter.js';
 import { connectionsRoutes } from './connections.js';
+import { phoneRoutes } from './phone.js';
 import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
 import { gitRoutes } from './git.js';
@@ -83,6 +84,10 @@ export const routes: readonly Route[] = [
   rosterRoutes.standup,
   rosterRoutes.action,
   chatterRoutes.page,
+  phoneRoutes.send,
+  phoneRoutes.state,
+  phoneRoutes.reads,
+  phoneRoutes.markRead,
   teamRoutes.page,
   teamRoutes.labels,
   deliverableRoutes.deliverables,

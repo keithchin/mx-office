@@ -15,7 +15,7 @@ Each team page has:
 - **📦 Deliverables**: what the team is expected to hand over at each toolkit stage, on main, on a branch not merged yet, a draft, or missing, each file one click from a viewer (see [Deliverables](deliverables.md));
 - **🗂 &lt;Team&gt;'s board**: only that team's cards;
 - **👥 Subagents** with their grades, and **📓 Journal** with the latest entries;
-- **💬 Team chatter**: a short version of the Command Center's [thread](command-center.md#team-chatter), with what this team said and was told.
+- **💬 Team chatter**: how many messages this team has had today, and **Open in the team phone →**, which opens the project's channel in the [📱 Team phone](team-phone.md) filtered to this team's members.
 
 And panels for what each team cares about:
 

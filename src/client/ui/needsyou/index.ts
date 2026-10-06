@@ -11,7 +11,8 @@ import type { SetupView } from '../../../shared/wizard';
 import { store } from '../../state';
 import { h, timeAgo } from '../dom';
 import { fetchRoster } from '../roster/api';
-import { collectNeeds, hereCount, type NeedItem, type NeedTarget } from './logic';
+import { collectNeeds, hereCount, type NeedItem, type NeedKind, type NeedTarget } from './logic';
+import { hasPhone, openPhone } from '../phone/api';
 import '../pm/jeff-rank.css';
 import './needsyou.css';
 
@@ -38,6 +39,45 @@ export interface NeedsYou {
 }
 
 /** `root` is the strip, `badge` the count on the Command Center's tab button. */
+/** Each kind's words in the Needs-you row, for one and for several. */
+const KIND_WORDS: Record<NeedKind, [string, string]> = {
+  asking: ['asking', 'asking'],
+  finished: ['finished, unseen', 'finished, unseen'],
+  lost: ['worktree lost', 'worktrees lost'],
+  escalation: ['escalation', 'escalations'],
+  approval: ['to approve', 'to approve'],
+  paused: ['spend cap', 'spend cap'],
+  pr: ['failing PR', 'failing PRs'],
+  setup: ['setup', 'setup'],
+  live: ['live app', 'live app'],
+  floor: ['floor waiting', 'floors waiting'],
+  audit: ['audit', 'audit'],
+  studio: ['Studio Pro', 'Studio Pro'],
+};
+
+/** The compact row: a count per kind, most urgent kind first, and the button to the phone's Needs you. */
+export function countsRow(items: readonly NeedItem[]): HTMLElement {
+  const kinds = new Map<NeedKind, { n: number; icon: string; block: boolean }>();
+  for (const n of items) {
+    const k = kinds.get(n.kind) ?? { n: 0, icon: n.icon, block: false };
+    k.n++;
+    k.block ||= n.level === 'block';
+    kinds.set(n.kind, k);
+  }
+  const open = () => openPhone({ needs: true });
+  return h(
+    'section.ny.ny-row',
+    { 'aria-label': 'Needs you' },
+    h('b.ny-row-h', {}, '🚨 Needs you'),
+    h(
+      'span.ny-counts',
+      {},
+      ...[...kinds].map(([kind, k]) => h('button.ny-count', { type: 'button', class: k.block ? 'ny-block' : 'ny-warn', onclick: open, title: items.filter((n) => n.kind === kind).map((n) => n.text).join('\n') }, h('span', { 'aria-hidden': 'true' }, k.icon), ` ${k.n} ${KIND_WORDS[kind][k.n === 1 ? 0 : 1]}`)),
+    ),
+    h('button.btn.small.ny-open', { type: 'button', onclick: open }, 'Open in the team phone', h('span', { 'aria-hidden': 'true' }, ' →')),
+  );
+}
+
 export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: NeedsYouDeps): NeedsYou {
   let floor: string | undefined;
   let roster: RosterView | undefined;
@@ -77,6 +117,8 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
     badge.title = n ? `${n} thing${n === 1 ? '' : 's'} on this floor need${n === 1 ? 's' : ''} you` : '';
     root.classList.toggle('ny-calm', !items.length);
     if (!items.length) return void root.replaceChildren(h('p.ny-empty', { role: 'status' }, '✅ Nothing needs you right now.'));
+    // With the team phone on the page, one row of counts that opens its Needs you section (the full list is there).
+    if (hasPhone()) return void root.replaceChildren(countsRow(items));
     // A long list folds after the first few, so the Command Center isn't pushed off the screen.
     const shown = all || items.length <= FOLD_AFTER + 1 ? items : items.slice(0, FOLD_AFTER);
     const more = items.length - shown.length;

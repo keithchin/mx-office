@@ -48,6 +48,8 @@ import { viewPicker } from './ui/viewpick';
 import { flatMenu, openDocs } from './shared/flatmenu';
 import { tabBadge } from './ui/badge';
 import { routerMessage, routerOverlay, routerSpot, startRouter } from './pixel/router-room';
+import { installPhone, type Phone } from './ui/phone';
+import type { NeedTarget } from './ui/needsyou/logic';
 import './pixel/game.css';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
@@ -62,7 +64,10 @@ colorThemes($('theme'), undefined, () => {
 // The view dropdown in the top bar (ui/viewpick.ts).
 $('view-pick').replaceWith(viewPicker('2d'));
 
+// 📱 The team phone (ui/phone/), installed at the end.
+let phone: Phone | undefined;
 const session = flatSession('/pixel', (id) => workers.open(id), (msg) => {
+  phone?.route(msg);
   // The floor's team changed (hired, benched, renamed): its Leads' outfits, tags and signposts with it.
   if (msg.t === 'roster.changed' && msg.floor === store.floor) void refreshRoster(store.floor);
   // Jeff, the Router, judged something: his room reacts (pixel/router-room.ts).
@@ -415,6 +420,28 @@ flatMenu($('menu'), { net, boardActions, openWorker: workers.open, meeting: show
 
 // ---- In ----------------------------------------------------------------------------------------
 session.bellBefore($('to-home'));
+/** A Needs-you item's button from the 2D view: what's here opens here, the rest on the 1D view's tab for it. */
+function goToNeed(t: NeedTarget) {
+  if (t.to === 'worker') return workers.open(t.id);
+  if (t.to === 'firm') return location.assign(t.url);
+  if (t.to === 'floor') return net.send({ t: 'floor.go', floor: t.floor });
+  if (t.to === 'pr') {
+    const it = store.pulls.items.find((p) => p.number === t.number);
+    return it ? openPull(it, net, boardActions()) : undefined;
+  }
+  const tab = t.to === 'escalation' ? 'approvals' : t.to === 'setup' ? 'command' : t.to;
+  location.assign(`/lite?floor=${encodeURIComponent(store.floor ?? '')}&tab=${tab}`);
+}
+phone = installPhone({
+  net,
+  notifier: session.notifier,
+  openWorker: workers.open,
+  openPull: (n) => {
+    const it = store.pulls.items.find((p) => p.number === n);
+    if (it) openPull(it, net, boardActions());
+  },
+  go: goToNeed,
+});
 session.start();
 startRouter(() => store.floor);
 rebuild();

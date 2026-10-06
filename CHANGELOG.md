@@ -6,7 +6,34 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **📱 Team phone**: a button at the bottom right of the 1D and 2D views, above the Issues / PRs /
+  Queue / New task bar (a pixel-art iPhone in the Default theme, a round messages button in the
+  others), with a red count of what needs you or a grey dot for unread messages. It opens a chat like
+  Slack's: **Needs you** pinned on top, **All projects**, a channel per floor with its team chatter
+  (escalations and conversations as threads with reply counts, the old filters as chips, *working…*
+  while an agent is mid-turn), and DMs with the floor's agents.
+- **Message the team from the phone**: a plain message goes to the floor's Project Coordinator (the
+  Chief Analyst or another Lead when there's none, and it says so), `@Name` to that agent with
+  @-autocomplete, `@team` to every active Lead after a *This wakes N agents (≈N turns)* warning, a DM
+  to its agent, a reply in an escalation's thread answers the escalation. It goes through the same
+  delivery as the office's own prompts (held until the turn is over, never typed into a dialog, as
+  your turn, through a reached spend cap), is kept in the chatter as yours, and the agent's reply is
+  read off its transcript into the same thread (*replied in its terminal → Open* without one).
+- **Notifications in the phone**: every Needs-you item arrives as a message from Jeff (escalations,
+  with his priority) or the office, with **Reply / Approve / Reject**, **Open terminal**, **Merge…**,
+  **Review** or **Raise cap**; answering there resolves it everywhere. Desktop alerts and a short sound
+  only for those, with **Do not disturb** (until off, 1 hour, until 9:00 tomorrow) and a **Digest**
+  (every 15, 30 or 60 minutes) in the phone's settings. What you've read is kept per person by the office.
+
+### Improved
+- **The Command Center fits a laptop screen**: Needs you is one row of counts that opens the phone,
+  the setup panel folds to one line once its gates are fine (Show / Hide, remembered), the summary's
+  columns take the window's height with the console the widest and each scrolling on its own, its
+  sections fold (remembered), and Recent activity shows the newest 8 with **More**.
+- **💬 Team chatter moved into the team phone**: it's off the Command Center, and each team page
+  has **Open in the team phone →** filtered to that team instead of its short thread. The chatter's
+  data and `GET /api/chatter` are unchanged.
 
 ## 2026-10-06 · release 10 (`3db2145`)
 

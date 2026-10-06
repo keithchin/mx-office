@@ -28,6 +28,29 @@ export async function askNotifyPermission(): Promise<NotifyPermission> {
 /** Waiting on a person: needs input, or finished its turn and nobody has looked yet (shared/waiting.ts). */
 export { waitingOnSomeone };
 
+/** What happens to an alert: shown now, kept for the digest, or dropped (the team phone's Do not disturb, ui/phone/alerts.ts). */
+export type AlertPlan = 'now' | 'digest' | 'drop';
+let policy: (urgent: boolean) => AlertPlan = () => 'now';
+const digest: string[] = [];
+
+/** Who decides about each alert: the team phone, from its Do not disturb and digest settings. */
+export function setAlertPolicy(p: (urgent: boolean) => AlertPlan) {
+  policy = p;
+}
+
+/** How many alerts wait for the digest. */
+export const digestWaiting = () => digest.length;
+
+/** Keeps a line for the next digest (the team phone's own alerts, when they aren't urgent). */
+export const queueDigest = (line: string) => void digest.push(line);
+
+/** Whether an alert may go now, and if it's for the digest, keeps its line. */
+function mayShow(urgent: boolean, line: string): boolean {
+  const plan = policy(urgent);
+  if (plan === 'digest') digest.push(line);
+  return plan === 'now';
+}
+
 export class DesktopNotifier {
   /** The notification up for each worker, to take down once it's handled. */
   private shown = new Map<string, Notification>();
@@ -46,6 +69,7 @@ export class DesktopNotifier {
     if (!this.enabled() || notifyPermission() !== 'granted') return;
     if (!document.hidden && document.hasFocus()) return;
     const title = w.status === 'done' ? `✅ ${w.name} is done` : `🙋 ${w.name} needs you`;
+    if (!mayShow(w.status === 'needs_input', title)) return;
     const body = [w.task?.name, alertDetail(w)].filter(Boolean).join('\n');
     this.shown.get(w.id)?.close();
     // Needs input blocks the worker, so that one stays up until you deal with it.
@@ -69,6 +93,7 @@ export class DesktopNotifier {
   escalation(a: RosterAlert, open: () => void) {
     if (!this.enabled() || notifyPermission() !== 'granted') return;
     if (!document.hidden && document.hasFocus()) return;
+    if (!mayShow(true, a.title)) return;
     const n = this.show(a.title, { body: a.body, tag: `escalation-${a.id}`, requireInteraction: a.urgency === 'critical' });
     if (!n) return;
     n.onclick = () => {
@@ -76,6 +101,30 @@ export class DesktopNotifier {
       n.close();
       open();
     };
+  }
+
+  /**
+   * One of the team phone's (ui/phone/alerts.ts): a Needs-you item, after its plan said now. Only while
+   * you're in another tab or app, as the others; a click brings this one forward and runs `open`.
+   */
+  notice(title: string, body: string, tag: string, open: () => void, sticky = false) {
+    if (!this.enabled() || notifyPermission() !== 'granted') return;
+    if (!document.hidden && document.hasFocus()) return;
+    const n = this.show(title, { body, tag, requireInteraction: sticky });
+    if (!n) return;
+    n.onclick = () => {
+      window.focus();
+      n.close();
+      open();
+    };
+  }
+
+  /** The digest: what waited, as one notification (none when nothing did). */
+  flushDigest(open: () => void) {
+    const lines = digest.splice(0);
+    if (!lines.length) return;
+    const more = lines.length > 6 ? `\n…and ${lines.length - 6} more` : '';
+    this.notice(`🔔 ${lines.length} update${lines.length === 1 ? '' : 's'} from the office`, lines.slice(0, 6).join('\n') + more, 'phone-digest', open);
   }
 
   /** Takes down notifications for workers nobody needs to get to any more (someone else did). */

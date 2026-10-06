@@ -27,6 +27,18 @@ The 1D view has no page-wide shortcuts, so it never steals your typing.
 | A terminal | Ctrl+Space | Dictate (hold and talk) |
 | A terminal | Ctrl+[ | Send Esc to the terminal |
 
+## Team phone (1D and 2D views)
+
+The [📱 Team phone](../using-the-office/team-phone.md) button is in the page's Tab order (after the page's own controls); its keys work only while the phone has the focus, so they never take over the 2D view's keys.
+
+| Where | Key | Does |
+|---|---|---|
+| The phone button | Enter / Space | Open or close the phone |
+| The phone | Esc | Close the settings sheet, then the phone (a window opened from it closes first) |
+| The phone | Alt+← | Back to the channel list, or out of a thread |
+| The message box | Enter · Shift+Enter | Send · new line |
+| The message box, after `@` | ↑ / ↓ · Enter or Tab · Esc | Pick an agent or `@team` · take it · close the list |
+
 ## 2D view
 
 | Key | Does |
