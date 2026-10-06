@@ -6,7 +6,16 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **Chat view on the Command Center**: the Project Coordinator console in the middle of the Command
+  Center has **Chat | Terminal** on its header. Chat (the default) shows the conversation as messages:
+  your prompts, its replies in Markdown with its icon, each tool call as one line (*Ran mxcli check*,
+  *Edited 3 files*), and a highlighted **Open terminal to answer** card for a question or a permission
+  (answered in its terminal, never from the chat). Terminal is the live terminal as before. The office
+  reads it off the Coordinator's Claude Code transcript and never sends what a tool printed or read;
+  another agent (Codex, OpenCode…) shows its terminal's text instead. Which view it opens in is kept
+  per browser: **Command Center terminal** in the ⚙️ Settings tab (*Your view*) or the 3D office's
+  ⚙️ Settings › You.
 
 ## 2026-10-06 · release 5 (`1cff8c8`)
 

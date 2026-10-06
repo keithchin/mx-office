@@ -20,6 +20,7 @@ The 1D view has no page-wide shortcuts, so it never steals your typing.
 |---|---|---|
 | Any window | Esc | Close it |
 | Ask the Project Coordinator | Enter · Shift+Enter · ↑ / ↓ | Send · new line · recall what you sent |
+| The console's Chat / Terminal toggle | ← / → (Tab to it first) | Switch between the conversation and the terminal |
 | View dropdown | ↑ ↓ Home End · Enter / Space · Esc | Move · pick · close |
 | PR window | j / n, k / p, v | Next, previous, view |
 | Changes window | j / k | Next, previous file |

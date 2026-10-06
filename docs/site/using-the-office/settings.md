@@ -19,6 +19,8 @@ The **⚙️ Settings** tab holds the floor's team settings. Only admins can cha
 | **Issues** | Dry run: record approvals without making GitHub issues | **Off** |
 | **Jeff · Router** | *Waiting on you* and *Triage*: Off · Shadow · On; *Priority*: Off · On; *When to escalate*: Only a real ask · His say-so | **Shadow, Shadow, On, Only a real ask** |
 
+Below them, under **Your view (just you)**: **Command Center terminal**, *Chat (default)* or *Terminal*, the view the [Project Coordinator console](command-center.md#the-project-coordinator-console) opens in. Anyone can change it, it applies at once (no 💾 Save), and it's kept in this browser only.
+
 ## What each one does
 
 - **Autonomy** sets how often agents need you. Changing it rewrites every hired member's Playbook and tells the ones at work. See [Autonomy levels](../teams-and-agents/autonomy.md).

@@ -1,0 +1,94 @@
+/* The console's Chat view (ui/pm/chat/view.ts) and its Chat | Terminal toggle (ui/pm/console.ts). Colors,
+   corners and borders are the theme tokens (styles/base.css), so it follows Default, Dark, Terminal and
+   the Clean pair; Clean hides the emoji itself (ui/clean/), and the avatar shows an initial there. */
+
+/* ---- The toggle on the console's header ---------------------------------------------------------- */
+.pmc-mode { display: inline-flex; flex: none; gap: 0; border: var(--bw-thin) solid var(--line); border-radius: var(--radius-pill); overflow: hidden; background: var(--card); }
+.pmc-mode .pmc-mode-opt { font: inherit; font-size: 11px; font-weight: 900; padding: 3px 10px; min-height: 26px; border: 0; background: none; color: var(--muted); cursor: pointer; }
+.pmc-mode .pmc-mode-opt + .pmc-mode-opt { border-left: var(--bw-thin) solid var(--line); }
+.pmc-mode .pmc-mode-opt[aria-checked='true'] { background: var(--ink); color: var(--on-ink); }
+.pmc-mode .pmc-mode-opt:focus-visible { outline: var(--focus-ring); outline-offset: -3px; }
+
+/* ---- The chat itself: over the screen's box, so it never makes the column taller ------------------ */
+.pmc-screen.pmc-chatting { min-height: 380px; }
+.pmc-chat { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 8px; background: var(--card); border: var(--bw-thin) solid var(--line); border-radius: 10px; }
+.pmc-chat-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 8px; padding: 2px 4px 2px 2px; }
+.pmc-chat-list:focus-visible, .pmc-plain:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.pmc-rows { display: flex; flex-direction: column; gap: 6px; }
+.pmc-earlier { align-self: center; font-size: 11px; }
+.pmc-chat-empty { margin: auto; padding: 20px 0; font-size: 12px; font-weight: 700; color: var(--muted); text-align: center; }
+
+.pmc-msg { display: flex; gap: 7px; align-items: flex-start; min-width: 0; }
+.pmc-bubble { min-width: 0; max-width: 92%; padding: 7px 10px; border: var(--bw-thin) solid var(--line); border-radius: var(--radius-sm); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.pmc-by { display: flex; gap: 6px; align-items: baseline; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 2px; }
+.pmc-when { font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--faint); }
+.pmc-user { justify-content: flex-end; }
+.pmc-user .pmc-bubble { background: var(--info-soft); border-color: var(--info-line); }
+.pmc-user .pmc-text { white-space: pre-wrap; max-height: 260px; overflow-y: auto; }
+.pmc-agent .pmc-bubble { background: var(--paper-2); border-left: 4px solid var(--who, var(--accent)); }
+.pmc-av { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-pill); border: var(--bw-thin) solid var(--line); background: var(--who, var(--accent-soft)); font-size: 15px; line-height: 1; }
+.pmc-av-ini { display: none; font-size: 13px; font-weight: 900; color: var(--on-fill); }
+
+/* Markdown in a reply: tight, code that scrolls inside its own box. */
+.pmc-bubble .md { padding: 0; font-size: 13px; line-height: 1.5; }
+.pmc-bubble .md > :last-child { margin-bottom: 0; }
+.pmc-bubble .md p, .pmc-bubble .md ul, .pmc-bubble .md ol, .pmc-bubble .md pre, .pmc-bubble .md blockquote, .pmc-bubble .md table { margin: 0 0 6px; }
+.pmc-bubble .md ul, .pmc-bubble .md ol { padding-left: 20px; }
+.pmc-bubble .md pre { max-height: 300px; overflow: auto; padding: 8px 10px; font-size: 12px; white-space: pre; }
+.pmc-bubble .md table { display: block; max-width: 100%; overflow-x: auto; }
+.pmc-bubble .md h1, .pmc-bubble .md h2, .pmc-bubble .md h3, .pmc-bubble .md h4 { font-size: 14px; margin: 8px 0 4px; }
+.pmc-bubble .md a { color: var(--link); }
+.pmc-bubble .md img { max-width: 100%; }
+
+/* Tool calls: one quiet line each, a folded run opens to its calls. */
+.pmc-tool { display: flex; gap: 6px; align-items: baseline; min-width: 0; margin-left: 35px; font: 12px var(--font-mono); color: var(--ink-2); }
+.pmc-tools { display: block; }
+.pmc-tools > summary { display: flex; gap: 6px; align-items: baseline; cursor: pointer; list-style: none; }
+.pmc-tools > summary::-webkit-details-marker { display: none; }
+.pmc-tools > summary::after { content: '▸'; color: var(--faint); }
+.pmc-tools[open] > summary::after { content: '▾'; }
+.pmc-tools > summary:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.pmc-tools ul { margin: 3px 0 0; padding-left: 14px; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.pmc-tools li { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+.pmc-tool-mark { flex: none; width: 1.2em; text-align: center; font-weight: 900; }
+.pmc-tool-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pmc-tool-why { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--bad-ink); }
+.pmc-mark-ok::before { content: '✓'; color: var(--good-ink); }
+.pmc-mark-error::before { content: '✗'; color: var(--bad-ink); }
+.pmc-mark-running::before { content: '…'; color: var(--warn-ink); }
+
+/* What it's asking you: a card that sends you to its terminal. */
+.pmc-card { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 8px 10px; border: var(--bw-thin) solid var(--line); border-radius: var(--radius-sm); background: var(--warn-soft); font-size: 13px; }
+.pmc-card.answered { background: var(--card-dim); color: var(--muted); }
+.pmc-card-h { display: flex; gap: 6px; align-items: baseline; margin: 0; font-size: 12px; font-weight: 900; }
+.pmc-card-q { margin: 0; font-weight: 700; overflow-wrap: anywhere; white-space: pre-wrap; }
+.pmc-card-opts { margin: 0; padding-left: 18px; font-size: 12px; }
+.pmc-card-done { margin: 0; font-size: 11px; font-weight: 800; }
+.pmc-need { background: var(--bad-soft); color: var(--bad-ink); }
+.pmc-need .pmc-card-q { color: var(--ink); }
+
+/* Working: three dots and what it's doing. */
+.pmc-chat-status:empty { display: none; }
+.pmc-typing { display: flex; gap: 8px; align-items: center; min-width: 0; font-size: 12px; font-weight: 800; color: var(--muted); }
+.pmc-typing > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pmc-typing-what { font-weight: 600; }
+.pmc-dots { display: inline-flex; gap: 3px; flex: none; }
+.pmc-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--who, var(--accent)); animation: pmc-dot 1.2s infinite ease-in-out; }
+.pmc-dots i:nth-child(2) { animation-delay: .15s; }
+.pmc-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes pmc-dot { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .pmc-dots i { animation: none; opacity: .7; } }
+
+/* No transcript to read: the terminal's own text. */
+.pmc-fallback { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.pmc-fallback-note { margin: 0; padding: 4px 8px; font-size: 11px; font-weight: 800; color: var(--ink-2); background: var(--info-soft); border: var(--bw-thin) solid var(--info-line); border-radius: var(--radius-sm); }
+.pmc-plain { flex: 1; min-height: 0; margin: 0; overflow: auto; padding: 8px 10px; font: 12px/1.4 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--code-ink); background: var(--code-bg); border-radius: 8px; }
+.pmc-chat [hidden] { display: none !important; }
+
+/* ---- Themes -------------------------------------------------------------------------------------- */
+html[data-theme='terminal'] .pmc-chat { background: var(--sunken); }
+html[data-theme='terminal'] .pmc-user .pmc-bubble::before { content: '> '; color: var(--muted); }
+html[data-theme='terminal'] .pmc-mode .pmc-mode-opt[aria-checked='true'] { color: #000; text-shadow: none; }
+html[data-theme^='clean'] .pmc-av { background: var(--who, var(--accent)); }
+html[data-theme^='clean'] .pmc-av-emo { display: none; }
+html[data-theme^='clean'] .pmc-av-ini { display: block; }

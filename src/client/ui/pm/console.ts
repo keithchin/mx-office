@@ -4,7 +4,8 @@
 // read-only, the escalations the team raised to you (ui/pm/escalations.ts, above the prompt box), and a
 // box to ask the Coordinator things without opening its terminal. With no Coordinator hired it says what
 // it's for and offers to hire one; with a benched one, its latest handoff note and "Hire again". No
-// three.js here: the 1D view imports it.
+// three.js here: the 1D view imports it. Its screen has two views (Chat | Terminal on the header, the
+// default in ⚙️ Settings): the conversation as messages (ui/pm/chat/), or the terminal as it is.
 //
 // The element is made once and kept: the summary is drawn again every few seconds and only moves the
 // columns round it, so what you're typing (and the terminal) survives the redraws.
@@ -19,6 +20,8 @@ import { askText } from '../roster/ask';
 import { EscalationList } from './escalations';
 import { PM_STATE_TEXT, PromptHistory, pmView, type PmView } from './state';
 import { PmTerminal } from './term';
+import { ChatView } from './chat/view';
+import { PMC_VIEWS, PMC_VIEW_LABEL, onPmcView, savePmcView, savedPmcView, type PmcView } from './chat/pref';
 import './console.css';
 
 export interface PmConsoleDeps {
@@ -64,7 +67,14 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
   const head = h('header.pmc-h');
   const termHost = h('div.pmc-term', { role: 'log', 'aria-label': "The Project Coordinator's terminal (live, read-only)" });
   const screenNote = h('p.pmc-screen-note');
-  const screen = h('div.pmc-screen', {}, termHost, screenNote);
+  const chat = new ChatView({ openTerminal: () => view.workerId && deps.openWorker(view.workerId), lines: () => term.lines() });
+  const screen = h('div.pmc-screen', {}, termHost, chat.el, screenNote);
+  // Chat | Terminal: which view the screen shows, kept in this browser (ui/pm/chat/pref.ts).
+  let mode: PmcView = savedPmcView();
+  /** The worker whose conversation the office is sending this page now. */
+  let watching: string | null = null;
+  const modeOpts = PMC_VIEWS.map((v) => h('button.pmc-mode-opt', { type: 'button', role: 'radio', 'data-v': v, onclick: () => pickMode(v) }, PMC_VIEW_LABEL[v]));
+  const modeToggle = h('div.pmc-mode', { role: 'radiogroup', 'aria-label': 'Console view: chat or terminal' }, ...modeOpts);
   const empty = h('div.pmc-empty');
   const hint = h('p.pmc-hint');
   const box = h('textarea.pmc-box', { rows: 2, placeholder: 'Ask the Project Coordinator…', 'aria-label': 'Ask the Project Coordinator', enterkeyhint: 'send' });
@@ -80,6 +90,45 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
   });
   const el = h('section.pmc', { 'aria-label': 'Project console' }, head, screen, empty, escalations.el, foot);
   const term = new PmTerminal(net, termHost);
+  term.onWrite = () => chat.terminalChanged();
+
+  // ---- Chat | Terminal ---------------------------------------------------------------------------
+  function pickMode(v: PmcView) {
+    if (v !== mode) savePmcView(v);
+  }
+  modeToggle.addEventListener('keydown', (e) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    e.preventDefault();
+    const next = PMC_VIEWS[(PMC_VIEWS.indexOf(mode) + 1) % PMC_VIEWS.length];
+    pickMode(next);
+    modeOpts[PMC_VIEWS.indexOf(next)].focus();
+  });
+  onPmcView((v) => {
+    mode = v;
+    draw();
+  });
+  /** Asks the office for `id`'s conversation (and stops the last one's), or for none. */
+  function watch(id: string | null) {
+    if (id === watching) return;
+    if (watching) net.send({ t: 'convo.unwatch', workerId: watching });
+    watching = id;
+    if (id) net.send({ t: 'convo.watch', workerId: id });
+  }
+  function drawChat() {
+    const chatting = mode === 'chat';
+    termHost.hidden = chatting;
+    screen.classList.toggle('pmc-chatting', chatting);
+    chat.el.hidden = !chatting || !watching;
+    for (const b of modeOpts) {
+      const on = b.dataset.v === mode;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+    }
+    if (!chatting || !watching) return;
+    const pm = pmOf(roster);
+    const w = store.workers.get(watching);
+    chat.show({ workerId: watching, who: { name: pm?.name ?? w?.name ?? 'Project Coordinator', icon: pm?.icon ?? '🧭', color: w?.color }, status: w?.status, activity: w?.activity, convo: store.convo.get(watching) });
+  }
 
   const pmOf = (r: RosterView | undefined): MemberView | undefined => r?.members.find((m) => m.role === 'pm');
   const worker = (pm: MemberView | undefined) => (pm?.workerId ? store.workers.get(pm.workerId) : undefined);
@@ -179,6 +228,7 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
       h('span.pmc-icon', { 'aria-hidden': 'true' }, pm?.icon ?? '🧭'),
       h('span.pmc-who', {}, h('span.pmc-name', {}, pm?.name ?? 'Project Coordinator'), h('span.pmc-role', {}, pm ? `${pm.title}${facts ? ` · ${facts}` : ''}` : 'Project console')),
       roster ? h('span.pmc-pill', { class: `pmc-${view.state}` }, PM_STATE_TEXT[view.state]) : '',
+      roster && !view.hire ? modeToggle : '',
       view.canWake && pm ? h('button.btn.small.pmc-wake', { type: 'button', title: `Wake ${pm.name}: its session carries on`, onclick: () => wake(pm) }, '⏰ Wake') : '',
       w ? h('button.btn.small.pmc-open', { type: 'button', title: `Open ${pm?.name ?? 'the Project Coordinator'}'s full terminal`, onclick: () => deps.openWorker(w.id) }, '⤢ Open') : '',
     );
@@ -239,6 +289,8 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     // the PM's terminal, which keeps it from being benched for idling (docs/teams.md).
     term.show(deps.visible() && !document.hidden && view.live ? (view.workerId ?? null) : null);
     if (w && term.showing === w.id) term.sizeTo(w.cols, w.rows);
+    watch(mode === 'chat' ? term.showing : null);
+    drawChat();
   }
 
   function sync() {
@@ -255,6 +307,7 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
 
   store.on('floor', sync);
   store.on('workers', draw);
+  store.on('convo', drawChat);
   document.addEventListener('visibilitychange', draw);
 
   return {
@@ -262,7 +315,11 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     sync,
     route(msg) {
       term.route(msg);
-      if (msg.t === 'welcome') term.reattach();
+      if (msg.t === 'welcome') {
+        term.reattach();
+        // The office forgot what this page watched, as it forgot the terminal.
+        if (watching) net.send({ t: 'convo.watch', workerId: watching });
+      }
       if (msg.t !== 'roster.changed' || msg.floor !== floor) return;
       // A burst of changes (a standup asking four Leads) fetches once.
       clearTimeout(fetchTimer);

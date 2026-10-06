@@ -7,6 +7,7 @@
 import type { AccountsClientMsg, AccountsServerMsg, SignInsClientMsg, TeamClientMsg } from './protocol/accounts.js';
 import type { ChangesClientMsg, ChangesServerMsg } from './protocol/changes.js';
 import type { ChatterServerMsg } from './protocol/chatter.js';
+import type { ConvoClientMsg, ConvoServerMsg } from './protocol/convo.js';
 import type { FloorClientMsg, FloorServerMsg, PlanClientMsg } from './protocol/floors.js';
 import type { GitHubClientMsg, GitHubServerMsg } from './protocol/github.js';
 import type { LiveAppClientMsg, LiveAppServerMsg } from './protocol/liveapp.js';
@@ -27,6 +28,7 @@ export * from './protocol/agents.js';
 export * from './protocol/audit.js';
 export * from './protocol/changes.js';
 export * from './protocol/chatter.js';
+export * from './protocol/convo.js';
 export * from './protocol/floors.js';
 export * from './protocol/github.js';
 export * from './protocol/liveapp.js';
@@ -63,7 +65,8 @@ export type ClientMsg =
   | BallClientMsg
   | CarClientMsg
   | DogClientMsg
-  | LiveAppClientMsg;
+  | LiveAppClientMsg
+  | ConvoClientMsg;
 
 export type ServerMsg =
   | PresenceServerMsg
@@ -82,4 +85,5 @@ export type ServerMsg =
   | RosterServerMsg
   | AuditServerMsg
   | ChatterServerMsg
-  | StudioServerMsg;
+  | StudioServerMsg
+  | ConvoServerMsg;
