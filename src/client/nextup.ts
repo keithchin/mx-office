@@ -4,27 +4,12 @@
 
 import type { WorkerInfo } from '../shared/protocol';
 import { isAsleep, isBusy } from '../shared/status';
-import { waitingOnSomeone } from './notify';
+import { needingYou, waitingInOrder, waitingOnSomeone, waitingSince as since } from '../shared/waiting';
+
+// Who's waiting and in what order is shared with the server's Teams notifications (shared/waiting.ts).
+export { needingYou, waitingInOrder };
 
 type Waiting = WorkerInfo & { status: 'needs_input' | 'done' };
-
-/** Since when it's been waiting (an office from before waitingSince had only the hire time). */
-function since(w: WorkerInfo): number {
-  return w.waitingSince ?? w.createdAt;
-}
-
-/** The ones stopped on a question or a permission come first: they can't go on until someone answers. */
-const blocked = (w: WorkerInfo) => (w.status === 'needs_input' ? 0 : 1);
-
-/** Workers waiting on someone: the ones that need you, then the ones that are done, whoever has waited longest first. */
-export function waitingInOrder(workers: Iterable<WorkerInfo>): Waiting[] {
-  return [...workers].filter(waitingOnSomeone).sort((a, b) => blocked(a) - blocked(b) || since(a) - since(b) || a.createdAt - b.createdAt || a.id.localeCompare(b.id));
-}
-
-/** Workers stopped until someone answers them, whoever has waited longest first. */
-export function needingYou(workers: Iterable<WorkerInfo>): (WorkerInfo & { status: 'needs_input' })[] {
-  return waitingInOrder(workers).filter((w): w is WorkerInfo & { status: 'needs_input' } => w.status === 'needs_input');
-}
 
 /**
  * The 3D office's Workers panel: the ones that need you on top (longest first), everyone else where

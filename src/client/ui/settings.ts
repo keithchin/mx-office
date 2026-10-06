@@ -14,6 +14,8 @@ import { outsideSetting } from './settings-sky';
 import { choiceRow } from './settings-rows';
 import { consoleViewSetting } from './pm/chat/setting';
 import { connectionsPanel } from './connections';
+import { teamsSetting } from './settings-teams';
+import { keepAwakeSetting } from './settings-awake';
 
 const VIEWS: [ViewMode, string, string][] = [
   ['first', '👀 First person', 'See through your own eyes. Click the office to look around with the mouse and click things to use them. Esc frees the mouse.'],
@@ -441,6 +443,9 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
 
   // What the sky's doing, and which clock it keeps (see settings-sky.ts).
   const sky = outside && outsideSetting(net, outside, (body) => setting('Outside', 'office', ...body));
+  // Microsoft Teams notifications and keep-awake, each fetched from the office (settings-teams.ts, settings-awake.ts).
+  const teams = teamsSetting((body) => setting('Microsoft Teams', 'office', ...body));
+  const awake = keepAwakeSetting((body) => setting('Keep awake while agents work', 'office', ...body));
   const account = store.me.account;
   const signOut = h('button.btn', { type: 'button' }, '🚪 Sign out');
   signOut.addEventListener('click', onSignOut);
@@ -462,6 +467,7 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
     notify: [
       setting('Desktop notifications', 'you', notifyRow, notifyNote),
       setting('Team notifications (Slack / Discord)', 'office', h('div.webhook', {}, hookInput, hookSave), hookActions, hookStatus),
+      teams.section,
     ],
     building: [
       setting('Map', 'office', mapRow, mapNote, mapBad),
@@ -473,6 +479,7 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
     workers: [
       setting('Default worker', 'office', agentNow, agent.element, agentActions, agentNote),
       setting('Worker limit', 'office', limitRow, limitNote),
+      awake.section,
       setting('Workers whose pull request merged', 'office', leaveRow, leaveNote),
       setting('Prompts', 'office', promptsOpen, promptsNote),
     ],
@@ -528,6 +535,8 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
     doing: '⚙️ in settings',
     onClose: () => {
       offNotify();
+      teams.off();
+      awake.off();
       offDog();
       offTheme();
       sky?.off();

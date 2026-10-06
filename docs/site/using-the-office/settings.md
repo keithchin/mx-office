@@ -1,6 +1,6 @@
 ---
 title: Settings
-description: A floor's team settings - autonomy level, idle benching, review loop, early drafts, subagent cool-down, standup schedule, cost caps, dry run and Jeff (including his priority sort).
+description: A floor's team settings - autonomy level, idle benching, review loop, early drafts, subagent cool-down, standup schedule, cost caps, dry run and Jeff (including his priority sort) - and the office's Teams notifications and keep-awake.
 weight: 13
 ---
 
@@ -37,3 +37,10 @@ Below them, under **Your view (just you)**: **Command Center terminal**, *Chat (
 - **Jeff · Router**: *Waiting on you* (when an agent ends its turn: is it waiting on you? On: he escalates it if it didn't), *Triage* (which team is a new issue for? On: he labels unlabelled issues he's sure about), and *Priority* (how soon should you resolve each escalation? On: your escalations are listed in his order, #1 first). *When to escalate* says what it takes for *Waiting on you* to raise one: by default his verdict *and* a real ask at the end of the agent's message, or his verdict alone. See [Jeff · Router](../automation/jeff-router.md#when-he-escalates).
 
 All fields with their exact names and limits: [Settings reference](../reference/settings-reference.md).
+
+## The office's ⚙️ Settings: Teams and keep-awake
+
+Two settings for the whole office live in the 3D office's **☰ → ⚙️ Settings** window rather than on this tab. Admins change them; everyone sees them.
+
+- **🔔 Notifications → Microsoft Teams**: the Teams Workflows webhook (masked once saved), **📨 Send a test card**, which floors post, *Needs you only* or *Needs you + daily digest*, quiet hours, a pause (1, 4 or 12 hours) and the public office address for each card's Open button. See [Teams notifications](../integrations/teams-notifications.md).
+- **🤖 Workers → Keep awake while agents work** (on by default): the computer doesn't sleep while any worker on any floor is working or a queued task, Firm audit or gate-check runs, and may again once everything has been idle for the set minutes (10). It says what it's doing (*Keeping this computer awake: 3 agents working*) and how to set *When I close the lid* to *Do nothing* so work carries on with the lid closed. See [Running the office](../administration/running-the-office.md#keep-it-awake-and-the-lid).

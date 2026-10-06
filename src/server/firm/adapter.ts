@@ -133,6 +133,9 @@ function firmFloor(ctx: Ctx, floor: Floor): FirmFloor {
   };
 }
 
+/** The office's Firm if something already made it (keep-awake looks without starting it). */
+export const firmIfMade = (ctx: Ctx): Firm | undefined => firms.get(ctx.cfg);
+
 /** The office's Firm: made on first use, with the real floors, Claude Code and the evidence behind it. */
 export function firmOf(ctx: Ctx): Firm {
   let f = firms.get(ctx.cfg);

@@ -15,6 +15,8 @@ The office keeps its data in a `.agent-office` folder. On the Taskforce laptop t
 | `office-settings.json` | Connections' settings: the toolkit folder, the worktree cleanup on or off, the projects whose agents get the Mendix token, the workers' commit identity |
 | `accounts.json` | People's accounts |
 | `floors.json` | The list of floors |
+| `notify-teams.json`, `notify-teams-state.json` | [Teams notifications](../integrations/teams-notifications.md): the settings with the webhook URL (mode 0600), and what was posted and held |
+| `keep-awake.json` | Keep awake while agents work: on or off, and the idle minutes |
 | `roster/<floor>.json` | The team: settings, members, standups, proposals, escalations, spend, subagents |
 | `judge/<floor>.jsonl` | Jeff · Router's verdicts |
 | `chatter/<floor>.jsonl`, `chatter/<floor>.state.json` | [Team chatter](../using-the-office/command-center.md#team-chatter): the newest 1000 messages, and what the sources have already turned into messages |
