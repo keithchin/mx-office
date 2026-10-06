@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-06 · release 9 (`4b1eb83`)
+
 ### Improved
 - **Folders follow the new workspace layout**: with nothing picked in Settings → Connections → Folders and no
   environment variable, the office looks for the toolkit at `agent-spike/mendix-toolkit` and mxcli at
