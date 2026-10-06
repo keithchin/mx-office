@@ -1,5 +1,7 @@
 // Who is signed in: accounts and invites, people's own sign-ins, and the SSH team.
 
+import type { ClientMsg } from '../protocol.js';
+
 export type AccountRole = 'admin' | 'member';
 
 /** Who this browser is signed in as. */
@@ -134,4 +136,6 @@ export type AccountsServerMsg =
   /** Your own sign-ins, whenever they change (accounts only). */
   | { t: 'signins'; state: SignInsState }
   /** What you tried needs a sign-in of your own first. */
-  | { t: 'signins.needed'; which: SignInKind; why: string };
+  | { t: 'signins.needed'; which: SignInKind; why: string }
+  /** A risky action from a page that came through Phone access: type the password again, then send `retry` again. */
+  | { t: 'reauth'; retry: ClientMsg };

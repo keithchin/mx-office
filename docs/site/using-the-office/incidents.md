@@ -10,7 +10,7 @@ An **incident** is something that went wrong, or nearly did, and is worth a reco
 
 ## Where to find it
 
-The **🚨 Incidents** sub-tab inside the **🧾 Audit log** tab, on a project's 1D view (it opens on **This floor**) and on [/home](home.md) (every floor). The red count on the sub-tab is the open incidents. Open **sev1** and **sev2** incidents also appear in **Needs you** on the [Command Center](command-center.md), on the [📱 Team phone](team-phone.md) and in the [Teams notifications](../integrations/teams-notifications.md).
+The **🚨 Incidents** sub-tab inside the **🧾 Audit log** tab, on a project's 1D view (it opens on **This floor**) and on [/home](home.md) (every floor). The red count on the sub-tab is the open incidents. Open **sev1** and **sev2** incidents also appear in **Needs you** on the [Command Center](command-center.md), on the [📱 Team phone](team-phone.md) and in the [Teams notifications](../integrations/teams-notifications.md). A new **sev1** also alerts on the Team phone (a desktop notification and its sound), like its other red items: Do not disturb holds it, and it skips the digest because it's red.
 
 ## Reading it
 
@@ -32,7 +32,7 @@ The list puts open before mitigated before resolved, the worst first. Filter by 
 
 - **+ New incident**: title, severity, summary, impact, root cause, floors and corrective actions.
 - From the Events sub-tab, expand a row: **🚨 Create incident from this event** (the event is linked, its summary and floor filled in), or **Link to incident…**.
-- On an incident: **✏️ Edit**, **Mark mitigated**, **✅ Resolve…** (asks for the root cause), **Reopen**, and **Add note** on the timeline.
+- On an incident: **✏️ Edit**, **Mark mitigated**, **✅ Resolve…** (asks for the root cause), **Reopen**, and **Add note** on the timeline. Through [📱 Phone access](../administration/phone-access.md), resolving one asks for your password again unless you signed in or typed it in the last 10 minutes.
 - **⚙️ Detection rules**: turn each rule on or off and set its thresholds.
 
 Every change is in the audit log as `incident.created`, `incident.updated` or `incident.resolved`.
@@ -58,4 +58,4 @@ The settings are in `<office data>/incidents/settings.json`; the incidents in `<
 
 ## The incidents of 2026-10-06
 
-An office that was already running on 2026-10-06 gets that day's known incidents once, on the first start with this feature, marked *recorded retrospectively*: three test offices that started real Claude sessions (the cause of [test mode](../administration/test-offices.md#running-a-test-office-safely)), release restarts that interrupted workers, CHANGELOG entries that landed under published releases, and a setup panel that read a stale checkout. It's skipped if the office already has incidents; `AGENT_OFFICE_SEED_INCIDENTS=0` turns it off.
+An office whose audit log has events from 2026-10-06 (the office's local day, UTC+8) gets that day's known incidents once, on the first start with this feature, marked *recorded retrospectively*: three test offices that started real Claude sessions (the cause of [test mode](../administration/test-offices.md#running-a-test-office-safely)), release restarts that interrupted workers, CHANGELOG entries that landed under published releases, and a setup panel that read a stale checkout. A new office, or one that only ran before or after that day, gets none. It's skipped if the office already has incidents; `AGENT_OFFICE_SEED_INCIDENTS=0` turns it off and `=1` applies it whatever the audit log says.

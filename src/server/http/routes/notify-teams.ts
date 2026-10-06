@@ -6,6 +6,7 @@ import { audit, human } from '../../audit/index.js';
 import { teamsNotifyOf } from '../../notify-teams/index.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
+import { refuseStale } from '../../phone-access/reauth.js';
 
 /** An account's name, else what the browser calls its person (the shared password has no name of its own). */
 export const whoOf = (account: string | undefined, by: unknown) => account ?? (typeof by === 'string' && by.trim() ? by.trim().slice(0, 32) : 'An admin');
@@ -29,6 +30,8 @@ export const notifyTeamsRoutes = {
       if (!sameOrigin(req, ctx.cfg)) return send(res, 403, { error: 'Forbidden' });
       const me = ctx.meOf(session.account?.id);
       if (!me.admin) return send(res, 403, { error: 'Only admins can change Teams notifications' });
+      // A change in Connections: through Phone access it needs the password again.
+      if (refuseStale(ctx, req, res)) return;
       let body: TeamsSettingsPatch;
       try {
         body = JSON.parse((await readBody(req, 16 * 1024)) || '{}');

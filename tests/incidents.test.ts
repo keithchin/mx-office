@@ -20,7 +20,7 @@ import { incidentRoutes } from '../src/server/http/routes/incidents.js';
 import { DEFAULT_INCIDENT_SETTINGS, filterIncidents, normalizeSettings, sortIncidents, type IncidentSettings } from '../src/shared/incidents.js';
 import { collectNeeds } from '../src/shared/needsyou.js';
 import { providerCommand, configuredProvider } from '../src/server/agents.js';
-import { isTestPath, launchRefusal, testModeOf, useTestMode } from '../src/server/testmode.js';
+import { isRealAgentCli, isTestPath, launchRefusal, testModeOf, useTestMode } from '../src/server/testmode.js';
 import type { AuditEvent } from '../src/shared/audit.js';
 import type { WorkerInfo } from '../src/shared/protocol.js';
 import { auditIdTime, draftFromEvent } from '../src/client/ui/incidents/logic.js';
@@ -354,13 +354,16 @@ test('the seed of 2026-10-06 goes in once, marked retrospective, and never over 
   assert.equal(applySeed(), 0, 'an office with incidents gets none');
   assert.equal(other.store.list().length, 1);
   // Only an office that ran that day, unless the environment says otherwise.
-  assert.equal(wantsSeed(undefined), false);
-  assert.equal(wantsSeed(Date.UTC(2026, 9, 6, 9)), true);
-  assert.equal(wantsSeed(Date.UTC(2026, 9, 8)), false);
+  assert.equal(wantsSeed([]), false, 'a new office');
+  assert.equal(wantsSeed([Date.UTC(2026, 9, 6, 9)]), true);
+  assert.equal(wantsSeed([Date.UTC(2026, 9, 8)]), false, 'only after that day');
+  assert.equal(wantsSeed([Date.UTC(2026, 8, 1), Date.UTC(2026, 9, 8)]), false, 'before and after, but nothing that day');
+  assert.equal(wantsSeed([Date.UTC(2026, 8, 1), Date.UTC(2026, 9, 6, 2), Date.UTC(2026, 9, 8)]), true);
+  assert.equal(wantsSeed([Date.parse('2026-10-05T23:30:00+08:00'), Date.parse('2026-10-07T00:10:00+08:00')]), false, 'the office’s local day (UTC+8)');
   process.env.AGENT_OFFICE_SEED_INCIDENTS = '0';
-  assert.equal(wantsSeed(Date.UTC(2026, 9, 6, 9)), false);
+  assert.equal(wantsSeed([Date.UTC(2026, 9, 6, 9)]), false);
   process.env.AGENT_OFFICE_SEED_INCIDENTS = '1';
-  assert.equal(wantsSeed(undefined), true);
+  assert.equal(wantsSeed([]), true);
   delete process.env.AGENT_OFFICE_SEED_INCIDENTS;
 });
 
@@ -441,33 +444,52 @@ test('a fake --agent stands in for Claude workers whatever its file is called', 
   assert.equal(providerCommand('custom', '/tmp/fake.sh'), '/tmp/fake.sh');
 });
 
-test('test mode: on by flag, environment or a scratch / test-offices folder; refuses real agent CLIs with a clear message and an incident signal', () => {
+test('test mode: on by flag, environment or a test office folder (not a plain scratch); refuses real agent CLIs with a clear message and an incident signal', () => {
   const signals: string[] = [];
   const off = onIncidentSignal((s) => signals.push(s.kind));
   try {
     assert.equal(isTestPath('C:\\Users\\me\\agent-spike\\scratch\\test-offices\\x'), true);
     assert.equal(isTestPath('/home/me/test-offices/x'), true);
+    assert.equal(isTestPath('/home/me/test-office-budget/proj'), true);
+    assert.equal(isTestPath('/home/me/Test-Office'), true);
+    assert.equal(isTestPath('/home/me/scratch/proj'), false, 'a plain scratch folder no longer');
     assert.equal(isTestPath('/home/me/scratchpad/x'), false);
+    assert.equal(isTestPath('/home/me/my-test-office'), false);
     useTestMode({ flag: false, officeDir: '/home/me/office', agentCmd: 'claude', agentExplicit: false });
     assert.equal(testModeOf().on, false);
-    assert.equal(testModeOf('/home/me/scratch/proj').on, true);
+    assert.equal(testModeOf('/home/me/scratch/proj').on, false);
+    assert.equal(testModeOf('/home/me/scratch/test-offices/proj').on, true);
+    assert.equal(testModeOf('/home/me/test-office-2/proj').on, true);
     const w = worker({ id: 'w7', name: 'Ada' });
-    // A real office: nothing refused.
+    const T = '/home/me/scratch/test-offices/proj';
+    // A real office (a plain scratch folder too): nothing refused.
     assert.equal(launchRefusal('/home/me/proj', w, 'claude', '/usr/local/bin/claude'), undefined);
-    // A floor under scratch: the real claude is refused, said on the card, and signalled.
-    const msg = launchRefusal('/home/me/scratch/proj', w, 'claude', 'C:\\Users\\me\\.local\\bin\\claude.exe');
+    assert.equal(launchRefusal('/home/me/scratch/proj', w, 'claude', '/usr/local/bin/claude'), undefined);
+    // A floor of a test office: the real claude is refused, said on the card, and signalled.
+    const msg = launchRefusal(T, w, 'claude', 'C:\\Users\\me\\.local\\bin\\claude.exe');
     assert.match(msg ?? '', /Test mode: refused to start the real claude/);
     assert.match(w.activity ?? '', /Test mode/);
     assert.deepEqual(signals, ['launch.refused']);
-    assert.match(launchRefusal('/home/me/scratch/proj', w, 'codex', '/usr/bin/codex') ?? '', /codex/);
-    // A fake that lives in scratch (claude.cmd first on PATH there) or calls itself a fake is fine.
-    assert.equal(launchRefusal('/home/me/scratch/proj', w, 'claude', 'C:\\Users\\me\\scratch\\bin\\claude.cmd'), undefined);
-    assert.equal(launchRefusal('/home/me/scratch/proj', w, '/opt/fake-agent.sh', '/opt/fake-agent.sh'), undefined);
+    // Every provider's CLI, and a few more.
+    for (const bin of ['codex', 'opencode', 'grok', 'muse', 'cursor-agent', 'dsh', 'pi', 'gemini']) assert.match(launchRefusal(T, w, bin, `/usr/bin/${bin}`) ?? '', new RegExp(`real ${bin}`), bin);
+    assert.equal(isRealAgentCli('codex', 'C:\\Users\\me\\AppData\\Roaming\\npm\\codex.cmd'), true);
+    assert.equal(isRealAgentCli('claude', 'C:\\Users\\me\\scratch\\test-offices\\bin\\claude.cmd'), false, 'a fake named claude in a test office folder');
+    // Without an explicit --agent, even a fake isn't started: only the fake the office was started with.
+    assert.match(launchRefusal(T, w, 'claude', 'C:\\Users\\me\\scratch\\test-offices\\bin\\claude.cmd') ?? '', /not the fake/);
+    assert.ok(launchRefusal(T, w, '/opt/fake-agent.sh', '/opt/fake-agent.sh'));
     // The --test-mode flag, and an explicit --agent override of any name.
     useTestMode({ flag: true, officeDir: '/home/me/office', agentCmd: '/opt/stand-in.sh', agentExplicit: true });
     assert.deepEqual(testModeOf(), { on: true, why: 'started with --test-mode' });
     assert.equal(launchRefusal('/home/me/proj', w, '/opt/stand-in.sh', '/opt/stand-in.sh'), undefined);
     assert.ok(launchRefusal('/home/me/proj', w, 'opencode', '/usr/bin/opencode'));
+    // A fake named claude, given explicitly, is fine where it lives in a test office's folder.
+    useTestMode({ flag: true, agentCmd: 'C:\\o\\test-offices\\bin\\claude.cmd', agentExplicit: true });
+    assert.equal(launchRefusal('/home/me/proj', w, 'C:\\o\\test-offices\\bin\\claude.cmd', 'C:\\o\\test-offices\\bin\\claude.cmd'), undefined);
+    // A real CLI given as --agent (another provider's for Claude workers, or claude itself) is refused all the same.
+    useTestMode({ flag: true, agentCmd: 'codex', agentExplicit: true });
+    assert.match(launchRefusal('/home/me/proj', w, 'codex', '/usr/local/bin/codex') ?? '', /real codex/);
+    useTestMode({ flag: true, agentCmd: '/usr/local/bin/claude', agentExplicit: true });
+    assert.match(launchRefusal('/home/me/proj', w, '/usr/local/bin/claude', '/usr/local/bin/claude') ?? '', /real agent CLI/);
     // AGENT_OFFICE_ALLOW_REAL_AGENTS lets one through, and that's signalled as a real launch.
     process.env.AGENT_OFFICE_ALLOW_REAL_AGENTS = '1';
     assert.equal(launchRefusal('/home/me/proj', w, 'claude', '/usr/bin/claude'), undefined);
@@ -485,9 +507,11 @@ test('test mode: on by flag, environment or a scratch / test-offices folder; ref
 
 test('GET /api/test-mode tells the pages whether to show the TEST MODE badge', async () => {
   useTestMode({ flag: false, officeDir: path.join(tmp(), 'scratch', 'office'), agentCmd: 'claude', agentExplicit: false });
+  assert.equal((await call(incidentRoutes.testMode, { path: '/api/test-mode' })).body.on, false, 'a plain scratch folder');
+  useTestMode({ flag: false, officeDir: path.join(tmp(), 'scratch', 'test-offices', 'office'), agentCmd: 'claude', agentExplicit: false });
   const r = await call(incidentRoutes.testMode, { path: '/api/test-mode' });
   assert.equal(r.body.on, true);
-  assert.match(r.body.why, /scratch/);
+  assert.match(r.body.why, /test-offices/);
   useTestMode(undefined);
   assert.equal((await call(incidentRoutes.testMode, { path: '/api/test-mode' })).body.on, false);
 });

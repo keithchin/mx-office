@@ -37,16 +37,11 @@ export function interruptedIn(file: string): IncidentWorker[] {
   }
 }
 
-/** The earliest audit event the office has, for whether the seed belongs here. */
-function firstAuditAt(): number | undefined {
+/** When each of the office's audit events happened, for whether the seed belongs here (seed.ts). */
+function* auditTimes(): Generator<number> {
   const log = auditLog();
-  if (!log) return undefined;
-  let first: number | undefined;
-  for (const key of log.floors()) {
-    const e = log.events(key)[0];
-    if (e && (first === undefined || e.at < first)) first = e.at;
-  }
-  return first;
+  if (!log) return;
+  for (const key of log.floors()) for (const e of log.events(key)) yield e.at;
 }
 
 function snapshot(ctx: Ctx, f: Floor): FloorSnapshot {
@@ -69,7 +64,7 @@ export function installIncidents(ctx: Ctx) {
   useTestMode({ flag: cfg.testMode, officeDir: cfg.dir, agentCmd: cfg.agentCmd, agentExplicit: cfg.agentExplicit });
   const store = new IncidentStore(path.join(cfg.dataDir, 'incidents'));
   useIncidents(store);
-  if (!store.exists() && wantsSeed(firstAuditAt())) {
+  if (!store.exists() && wantsSeed(auditTimes())) {
     const n = applySeed();
     if (n) console.log(`  🚨 Recorded ${n} incidents of 2026-10-06 retrospectively (Audit log → Incidents)`);
   }

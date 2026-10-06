@@ -24,7 +24,7 @@ Around the teams:
 - **🧑‍⚖️ Jeff · Router**, the office's quick judge (Jev, with Claude Haiku as fallback): is an agent waiting on you, which team is a new issue for, and which escalation to resolve first.
 - **🏛️ The Firm** (`/firm`): independent Reviewer Agents that audit a project from outside its team and deliver one report to you.
 - **🧾 Audit log**: who did what and when, per floor and office-wide, hash-chained, with **🚨 Incidents**: what went wrong or nearly did, with cause and follow-up, opened by hand or by the office's detection rules.
-- **Test mode** (`--test-mode`, and by itself under a `scratch` or `test-offices` folder): a test office never starts a real agent CLI, only its fake `--agent`.
+- **Test mode** (`--test-mode`, and by itself under `scratch/test-offices` or a folder named `test-office…`): a test office never starts a real agent CLI (`claude`, `codex`, `opencode`, `grok`…), only its fake `--agent`, and refuses a real CLI given as one.
 - **💰 Budget**: what each project spent, in dollars and a local currency, against an expected plan and a budget with a forecast, alerts and an auto-pause at 100 %, three budget levels in the new-project wizard, cost insights, and chips in the top bar.
 - **💬 Team chatter**: what the agents say to each other, as a live thread on each Command Center.
 - **📱 Team phone**: a floating chat and notification centre on the 1D and 2D views (a pixel iPhone in the Default theme): each project's team chatter as a channel, DMs and threads with the agents, messages to the Project Coordinator, `@Name` or `@team`, and everything that needs you with its buttons.

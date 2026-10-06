@@ -7,6 +7,7 @@ import { addNote, createIncident, incidentStore, updateIncident } from '../../in
 import { cleanPatch } from '../../incidents/edit.js';
 import { audit, human } from '../../audit/index.js';
 import { testModeOf } from '../../testmode.js';
+import { refuseStale } from '../../phone-access/reauth.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import type { Route, RouteRequest } from '../router.js';
 import type { Ctx } from '../../office/context.js';
@@ -105,6 +106,8 @@ export const incidentRoutes = {
       const p = cleanPatch(body);
       if (typeof p === 'string') return send(r.res, 400, { error: p });
       if (p.status === 'resolved' && i.status !== 'resolved' && !(p.rootCause ?? i.rootCause)?.trim()) return send(r.res, 400, { error: 'Say what the root cause was to resolve it' });
+      // Through Phone access, resolving one needs the password again.
+      if (p.status === 'resolved' && i.status !== 'resolved' && refuseStale(ctx, r.req, r.res)) return;
       return send(r.res, 200, { incident: updateIncident(i.id, p, actorOf(r.session)) });
     },
   },

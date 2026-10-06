@@ -4,6 +4,8 @@ import type { Config } from '../config.js';
 /** Requests through 📱 Phone access's own tunnel (phone-access/origin.ts): its forwarded headers are the office's own. */
 let tunnel: { via(req: http.IncomingMessage): boolean; host(): string | undefined } | undefined;
 export const useTunnelOrigin = (t: typeof tunnel) => void (tunnel = t);
+/** Whether `req` came in through 📱 Phone access's tunnel (a risky action from there needs a fresh sign-in: mobile/reauth.ts). */
+export const viaOfficeTunnel = (req: http.IncomingMessage): boolean => !!tunnel?.via(req);
 
 export function clientIp(req: http.IncomingMessage, trustProxy: boolean): string {
   if (trustProxy || tunnel?.via(req)) {

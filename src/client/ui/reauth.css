@@ -1,0 +1,5 @@
+/* The password asked again for a risky action through Phone access (reauth.ts). */
+.reauth-modal { width: min(420px, calc(100vw - 32px)); }
+.reauth-modal .body p { margin: 0 0 10px; }
+.reauth-pw { width: 100%; min-height: 36px; font-size: 15px; }
+.reauth-err { margin: 8px 0 0; color: var(--bad-ink); font-weight: 700; min-height: 1em; }

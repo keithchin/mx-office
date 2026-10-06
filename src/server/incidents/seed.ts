@@ -7,7 +7,11 @@
 import type { CorrectiveAction, IncidentImpact, IncidentSeverity, IncidentStatus } from '../../shared/incidents.js';
 import { createIncident, incidentStore } from './index.js';
 
+const DAY_START = Date.parse('2026-10-06T00:00:00+08:00');
 const DAY_END = Date.parse('2026-10-07T00:00:00+08:00');
+
+/** Whether an audit event's time falls on 2026-10-06 (the office's local day). */
+export const onSeedDay = (t: number) => t >= DAY_START && t < DAY_END;
 const at = (hhmm: string) => Date.parse(`2026-10-06T${hhmm}:00+08:00`);
 
 interface Seed {
@@ -96,12 +100,13 @@ export const SEED_INCIDENTS: Seed[] = [
   },
 ];
 
-/** Whether this office should get the seed: it ran on 2026-10-06 (or the environment says so). */
-export function wantsSeed(firstAuditAt: number | undefined): boolean {
+/** Whether this office should get the seed: its audit log has events from 2026-10-06 (or the environment says so). */
+export function wantsSeed(auditTimes: Iterable<number>): boolean {
   const env = process.env.AGENT_OFFICE_SEED_INCIDENTS;
   if (env === '0') return false;
   if (env === '1') return true;
-  return firstAuditAt !== undefined && firstAuditAt < DAY_END;
+  for (const t of auditTimes) if (onSeedDay(t)) return true;
+  return false;
 }
 
 /** Applies the seed once: only when there's a store and it has no incidents at all. How many it added. */

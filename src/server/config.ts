@@ -130,8 +130,8 @@ Options:
                           (env AGENT_OFFICE_NO_OPEN=1)
       --agent <cmd>       Default agent command (default "claude", env AGENT_OFFICE_AGENT)
       --test-mode         Refuse to start any real agent CLI: only a fake --agent runs
-                          (env AGENT_OFFICE_TEST_MODE=1; on by itself in a folder
-                          under scratch or test-offices)
+                          (env AGENT_OFFICE_TEST_MODE=1; on by itself in a folder under
+                          scratch/test-offices or named test-office…)
       --agent-args <str>  Extra args for the configured agent, e.g. "--model opus"
                           Workers can also select Claude Code, OpenCode, Codex, Grok,
                           Muse or DeepSeek Harness in the UI

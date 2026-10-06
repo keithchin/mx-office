@@ -20,6 +20,7 @@ import { routeWhiteboardMessage } from '../ui/whiteboard';
 import { routeTeamMessage } from '../ui/team';
 import { routeAccountsMessage } from '../ui/accounts';
 import { askNotifyPermission, DesktopNotifier, notifyPermission, waitingOnSomeone } from '../notify';
+import { installReauth } from '../ui/reauth';
 
 export interface FlatSession {
   net: Net;
@@ -44,6 +45,8 @@ export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorke
   const net = new Net(() => store.profile, () => null, true);
   const settings = loadSettings();
   const notifier = new DesktopNotifier(() => settings.notify, openWorker);
+  // Through Phone access, risky actions ask for the password again (ui/reauth.ts); the phone version asks its own way.
+  if (page !== '/m') installReauth(net);
 
   /** The server version this page was loaded with. */
   let bootVersion = '';
