@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-06 · release 13 (`92d43b6`)
+
 ### New
 - **⏸ Pause and ▶ Resume a project from the phone**: the Status tab's Pause runs Pause project (after a
   confirmation), and Resume… shows a short Resume preview (who has work waiting and why, the cost line,
