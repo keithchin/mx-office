@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-06 · release 10 (`3db2145`)
+
 ### New
 - **📣 Microsoft Teams notifications.** Add the *Post to a channel when a webhook request is received*
   workflow to a Teams channel, paste its URL in **⚙️ Settings → Notifications → Microsoft Teams** (admins;
