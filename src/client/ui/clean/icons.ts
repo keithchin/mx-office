@@ -78,6 +78,7 @@ export const ICONS: Readonly<Record<string, string>> = {
   game: '<path d="M4 4.5h8a3 3 0 0 1 3 3.5l-.5 2.5a1.8 1.8 0 0 1-3.2.7L10 9.5H6l-1.3 1.7a1.8 1.8 0 0 1-3.2-.7L1 8a3 3 0 0 1 3-3.5z"/><path d="M4.5 6.5v2M3.5 7.5h2"/><circle class="fill" cx="11" cy="7.5" r=".8"/>',
   puzzle: '<path d="M2.5 5.5h3a1.5 1.5 0 1 1 3 0h3v3a1.5 1.5 0 1 1 0 3v2.5h-9v-3a1.5 1.5 0 1 0 0-3z"/>',
   glass: '<path d="M2.5 2.5h11L8 8.5z"/><path d="M8 8.5v5M5 13.5h6"/>',
+  studio: '<path d="M8.5 2.5h-6v11h11v-6"/><path d="M2.5 5.5h4"/><path d="M10 2.5h3.5V6M13.5 2.5 8 8"/>',
   dot: '<circle class="fill" cx="8" cy="8" r="2.5"/>',
 };
 
@@ -155,6 +156,7 @@ const BY_EMOJI: Readonly<Record<string, readonly string[]>> = {
   map: ['🗺'],
   game: ['🎮', '🕹'],
   puzzle: ['🧩'],
+  studio: ['🧱'],
 };
 
 const EMOJI_ICON = new Map<string, string>(Object.entries(BY_EMOJI).flatMap(([name, list]) => list.map((e) => [e, name] as [string, string])));

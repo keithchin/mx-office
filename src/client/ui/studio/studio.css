@@ -1,0 +1,14 @@
+/* "Open in Studio Pro" (ui/studio/): its button in the Command Center's heading, and its confirm. The
+   icon is an inline SVG in the text's color, so every theme (Clean and Terminal too) draws it. */
+.st-btn { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; font-size: 12px; white-space: nowrap; }
+.st-btn[hidden] { display: none; }
+.st-icon { flex: none; display: block; }
+.sm-name .st-btn { align-self: center; }
+
+.st-modal .body p { margin: 0 0 10px; }
+.st-modal .body p:last-child { margin-bottom: 0; }
+.st-warn { padding: 8px 10px; border: 2px solid var(--line); border-radius: var(--radius-sm); background: var(--warn-soft); color: var(--warn-ink); font-weight: 700; }
+.st-busy { margin: 0 0 10px; }
+.st-busy ul { margin: 0 0 8px; padding-left: 20px; font-weight: 700; }
+.st-busy p { margin: 0 0 6px; }
+.st-calm, .st-note { color: var(--muted); font-size: 13px; }

@@ -48,12 +48,22 @@ See [The toolkit](../integrations/toolkit.md).
 
 ## The project summary
 
-- **📍 Name**, the repo, and a **🌐 Live app** chip (it opens the Live app tab).
+- **📍 Name**, the repo, a **🌐 Live app** chip (it opens the Live app tab) and, for a Mendix project, **Open in Studio Pro** (see below).
 - The goal, and **🧭 phase** with stage dots and how many decisions are recorded.
 - **What's happening**: a short story of the floor, written by Claude Haiku (*AI*) or put together by the office (*auto*).
 - **Risks**: agents waiting on a human (and for how long), blocked or failing things.
 - Progress bars for **issues**, **pull requests** and the **queue**, and **💰 $x today · $y all told on this floor**.
 - **Agents (N)**, and **Recent activity** and **💬 Team chatter** on the right.
+
+## Open in Studio Pro
+
+For a floor with a Mendix project, **Open in Studio Pro** in the summary's heading (and ☰ → 🧱 **Open in Studio Pro**, on every view) opens the floor's `.mpr` in Studio Pro **on the office's computer**. It's the project in the floor's own checkout (at its top or one folder down), not the live app's clone.
+
+- **Admins only.** Everyone else sees it greyed out. It's hidden on a floor without a `.mpr`.
+- **A confirm first.** Studio Pro locks the project while it's open, and the agents write it with `mxcli exec` (one writer per app: the Lead Developer). The confirm says so, and lists the agents on the floor in the middle of a turn. Let them finish their turn before you change anything in Studio Pro, and close Studio Pro before they write again.
+- It goes through Mendix's **Version Selector**, which starts the Studio Pro version the project was saved in (*Opening in Studio Pro 11.6.4…*). Without the Version Selector, the `studiopro.exe` of that version under `C:\Program Files\Mendix` (never another version: it would offer to convert the project).
+- Opening it is written in the [Audit log](audit-log.md) (`studio.open`, under *Workers*), said in Team chatter, and toasted to everyone on the floor.
+- It can't open when the office isn't on Windows, runs without a desktop (over SSH, in CI, headless), or Studio Pro isn't installed: the button is greyed out and says why.
 
 ## 💬 Team chatter
 

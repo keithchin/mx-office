@@ -21,6 +21,7 @@ import { teamTab, type Pane } from './ui/roster';
 import { subBoards } from './ui/teams';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { liveAppView } from './ui/liveapp';
+import { mountStudio } from './ui/studio';
 import { pmConsole } from './ui/pm/console';
 import { openPull } from './ui/pull';
 import { openQueue } from './ui/queue';
@@ -286,7 +287,11 @@ function renderKanban() {
   if (tab === 'board') return renderBoard($('board'), kanban, teams.boardView(renderKanban));
   if (tab !== 'command') return;
   chatter.show(store.floor ?? undefined);
-  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el, after: chatter.el }).then(() => live.mountChip($('summary')));
+  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el, after: chatter.el }).then(() => {
+    // Beside the project's name: the 🌐 Live app chip, and Open in Studio Pro for a Mendix project (ui/studio/).
+    live.mountChip($('summary'));
+    mountStudio($('summary'));
+  });
   void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) }).then(() => needs.refresh());
 }
 /** Which model does well on what (ui/analysis.ts), for this floor or every floor. */
