@@ -31,4 +31,4 @@ The office downloads the screenshots of the newest run on the PR's branch once, 
 
 ## CI emails from the office's own fork
 
-The fork of Agent Office itself (keithchin/agent-office) runs its full test suite on every push to `main`. A GitHub email about a failed run means something broke there. That workflow never publishes releases.
+The fork of Agent Office itself (keithchin/mx-office) runs its full test suite on every push to `main`. A GitHub email about a failed run means something broke there. That workflow never publishes releases.
