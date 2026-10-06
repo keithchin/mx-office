@@ -6,6 +6,22 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+### New
+- **📣 Microsoft Teams notifications.** Add the *Post to a channel when a webhook request is received*
+  workflow to a Teams channel, paste its URL in **⚙️ Settings → Notifications → Microsoft Teams** (admins;
+  masked once saved) and press **Send a test card**. The office posts an Adaptive Card when something needs
+  a person, by the same rules as the Command Center's Needs you (now in `src/shared/needsyou.ts`, shared by
+  the browser and the server): an agent asking in its terminal, an escalation, the spend cap, failing PR
+  checks, a Firm report, a gate to sign off, Studio Pro changes to commit. Each card has the project, who,
+  a line, urgency, age, Jeff's rank and an Open button (when a public office address is set). One card per
+  item, never again after a restart; items within a minute share a card; quiet hours and a pause hold them
+  for one catch-up card. Optionally a daily digest per floor after its standup. Pick the floors that post.
+- **☕ Keep awake while agents work** (on by default, **⚙️ Settings → Workers**): while any worker is
+  working, or a queued task, a Firm audit or a gate-check runs, the office asks Windows not to sleep (a
+  hidden PowerShell helper, no new dependency; the screen may still turn off), and lets go after 10 idle
+  minutes. Settings says what it's doing and how to set *When I close the lid* to *Do nothing* so work
+  carries on with the lid closed.
+
 ### Improved
 - **📦 Deliverables reads "main" from GitHub.** *On main* now means on the project's default branch
   (`origin/main`), read the same way and with the same 90-second fetch as the setup panel, not whatever
@@ -24,6 +40,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - mermaid and playwright-core are now runtime dependencies of the office (pinned to 11.17.2 and
   1.63.0). export-pdf and screenshot answer 501 only when Chromium isn't downloaded on the machine.
   They stay commands, with no MCP tools, so their schemas don't cost every agent context on every turn.
+- Teams posts are logged as `notify.teams.sent` / `notify.teams.failed` in the audit log, never with the
+  URL. The URL sits in `.agent-office/notify-teams.json` (mode 0600) until Settings → Connections stores
+  it encrypted. Failed posts are retried with backoff and never hold the office up.
+- Keep-awake stops idle sleep only; closing the lid still sleeps the laptop unless Windows' lid setting is
+  *Do nothing* when plugged in. The office never changes power settings itself.
 
 ## 2026-10-06 · release 7 (`a603397`)
 

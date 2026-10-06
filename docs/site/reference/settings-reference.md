@@ -1,6 +1,6 @@
 ---
 title: Settings reference
-description: Every field of a floor's team settings (RosterSettings) - type, default, limits and meaning - as stored in roster/<floor>.json.
+description: Every field of a floor's team settings (RosterSettings) - type, default, limits and meaning - as stored in roster/<floor>.json, and the office's Teams notifications and keep-awake settings.
 weight: 4
 ---
 
@@ -75,3 +75,29 @@ export interface AutonomyByStage {
   build: AutonomyLevel;
 }
 ```
+
+## Office settings: Teams and keep-awake
+
+Set in the 3D office's **⚙️ Settings** (admins), for the whole office, each in its own file in the office's data folder. A bad value is refused with a reason and nothing changes.
+
+### notify-teams.json ([Teams notifications](../integrations/teams-notifications.md))
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `url` | string | none | The Teams Workflows webhook URL. https only (plain http only to this machine, for a stub). A secret: never sent to a browser (Settings shows a hint) nor written to the audit log. Kept here until Settings → Connections stores it encrypted. |
+| `floors` | `'all' | string[]` | `'all'` | Which floors post (floor ids). |
+| `level` | `'needs' | 'digest'` | `'needs'` | Red items only, or those and a daily digest per floor. |
+| `quiet` | `{ start: 'HH:MM', end: 'HH:MM' }` | none | Hold cards back between these times on the office computer's clock (may span midnight); one catch-up card follows. |
+| `pausedUntil` | ms | none | Hold cards back until then (the ⏸️ buttons: 1, 4 or 12 hours; at most a week). |
+| `publicUrl` | string | none | The office's address from outside: each card's Open button goes to `<publicUrl>/lite?floor=<id>`. Empty: no button. |
+| `by`, `at` | string, ms | | Who changed it last, and when. |
+
+What was posted is in `notify-teams-state.json` (posted item ids, items held back, each floor's last digest), so a restart posts nothing twice.
+
+### keep-awake.json ([keep-awake](../administration/running-the-office.md#keep-it-awake-and-the-lid))
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `on` | boolean | `true` | Keep the computer from sleeping while agents work. |
+| `idleMinutes` | number | `10` | Minutes of everything idle before it may sleep again. Whole minutes, 1 to 240. |
+| `by`, `at` | string, ms | | Who changed it last, and when. |

@@ -1,8 +1,10 @@
 import type { Ctx } from './context.js';
 import { SLOW_CLIENT_BYTES } from './client.js';
 import { startStudioMode } from '../studio/index.js';
+import { startNotifyTeams } from '../notify-teams/index.js';
+import { startKeepAwake } from '../keep-awake/index.js';
 
-/** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, and Studio mode's look at the Mendix floors. Returns what stops them. */
+/** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
   const { clients } = ctx;
   const resync = setInterval(() => {
@@ -34,9 +36,14 @@ export function startTimers(ctx: Ctx): () => void {
 
   // Studio Pro open on a floor's project pauses that floor's agents' mxcli writes (studio/watch.ts).
   const stopStudio = startStudioMode(ctx);
+  // What needs a person goes to a Teams channel (notify-teams/); the computer stays awake while agents work (keep-awake/).
+  const stopTeams = startNotifyTeams(ctx);
+  const stopAwake = startKeepAwake(ctx);
 
   return () => {
     stopStudio();
+    stopTeams();
+    stopAwake();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

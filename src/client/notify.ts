@@ -4,6 +4,7 @@
 
 import type { RosterAlert, WorkerInfo } from '../shared/protocol';
 import { alertDetail } from '../shared/status';
+import { waitingOnSomeone } from '../shared/waiting';
 
 export type NotifyPermission = NotificationPermission | 'unsupported';
 
@@ -24,10 +25,8 @@ export async function askNotifyPermission(): Promise<NotifyPermission> {
   return notifyPermission();
 }
 
-/** Waiting on a person: needs input, or finished its turn and nobody has looked yet. */
-export function waitingOnSomeone(w: WorkerInfo): w is WorkerInfo & { status: 'needs_input' | 'done' } {
-  return w.status === 'needs_input' || (w.status === 'done' && !w.acked);
-}
+/** Waiting on a person: needs input, or finished its turn and nobody has looked yet (shared/waiting.ts). */
+export { waitingOnSomeone };
 
 export class DesktopNotifier {
   /** The notification up for each worker, to take down once it's handled. */

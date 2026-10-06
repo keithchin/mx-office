@@ -23,6 +23,8 @@ import { deliverableRoutes } from './deliverables.js';
 import { serviceRoutes } from './services.js';
 import { studioRoutes } from './studio.js';
 import { wizardRoutes } from './wizard.js';
+import { notifyTeamsRoutes } from './notify-teams.js';
+import { keepAwakeRoutes } from './keep-awake.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -61,6 +63,11 @@ export const routes: readonly Route[] = [
   auditRoutes.settings,
   flowRoutes.list,
   homeRoutes.stats,
+  notifyTeamsRoutes.view,
+  notifyTeamsRoutes.save,
+  notifyTeamsRoutes.test,
+  keepAwakeRoutes.view,
+  keepAwakeRoutes.save,
   homeRoutes.overview,
   firmRoutes.view,
   firmRoutes.engagement,

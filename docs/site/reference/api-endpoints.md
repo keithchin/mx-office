@@ -57,6 +57,11 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/audit` | The audit log: `?floor=<id>\|all\|_office&since=&until=&actor=human,agent&action=worker.hire,github&q=&limit=&cursor=`, with counts, the chain check and a histogram |
 | GET | `/api/audit/export` | Every matching event as a download, `&format=csv\|jsonl` (admin) |
 | POST | `/api/audit/settings` | `{ promptText }`: log the first 80 characters of prompts, or not (admin) |
+| GET | `/api/notify/teams` | [Teams notifications](../integrations/teams-notifications.md): the settings (never the webhook URL, only a hint), the last error, the last card, what's waiting and held, and the floors |
+| POST | `/api/notify/teams` | `{ url?, floors?, level?, quiet?, pauseMinutes?, publicUrl? }`: change them; `url: ''` removes the webhook (admin) |
+| POST | `/api/notify/teams/test` | Post a test card now (admin) |
+| GET | `/api/keep-awake` | Keep-awake: the setting, the idle minutes, whether the office is holding the computer awake and what's running |
+| POST | `/api/keep-awake` | `{ on?, idleMinutes? }` (admin) |
 | GET | `/api/flows` | The [workflow](../automation/workflows.md) runs, newest first: id, workflow, status, step, why it stopped, floor, tries. `?floor=<id>`, `?workflow=<id>`. Never a run's state |
 | GET | `/api/firm` | The Firm's people, its engagements (newest first) and the floors an audit can be called on |
 | GET | `/api/firm/engagement` | `?id=`: one engagement with its whole transcript |

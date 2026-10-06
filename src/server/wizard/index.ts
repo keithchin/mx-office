@@ -153,6 +153,11 @@ export class Wizard {
     return undefined;
   }
 
+  /** Whether a gate-check is running for the floor (keep-awake holds the computer awake meanwhile). */
+  checkingGates(floor: Floor): boolean {
+    return this.checking.has(floor.id) || this.gates.busy(floor.dir);
+  }
+
   /** gate-check over the floor's own folder (it rewrites index.html there): only for a project with no remote. */
   private recheckFolder(floor: Floor) {
     if (this.checking.has(floor.id)) return;
@@ -245,6 +250,9 @@ export class Wizard {
 }
 
 const offices = new WeakMap<object, Wizard>();
+
+/** The office's wizard if something already made it (keep-awake looks without making one). */
+export const wizardIfMade = (ctx: Ctx): Wizard | undefined => offices.get(ctx.cfg);
 
 /** The office's wizard: made on first use, then the same one for every request. */
 export function wizardOf(ctx: Ctx): Wizard {

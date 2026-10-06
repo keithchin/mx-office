@@ -1,6 +1,6 @@
 ---
 title: Running the office
-description: Start the office from the desktop shortcut or the launcher, sign in on port 4600, restart it safely on Windows, and update it.
+description: Start the office from the desktop shortcut or the launcher, sign in on port 4600, keep the laptop awake while agents work (lid closed too), restart it safely on Windows, and update it.
 weight: 1
 ---
 
@@ -34,6 +34,17 @@ The office listens on port **4600** (`--port` or `PORT` to change it).
 
 - Saved workers come back and **resume their sessions** by themselves.
 - **Live apps don't start by themselves.** Open the 🌐 Live app tab and click ▶ Start.
+
+## Keep it awake (and the lid)
+
+While any worker on any floor is working, or a queued task, a Firm audit or a gate-check is running, the office asks Windows not to sleep, and lets go once everything has been idle for 10 minutes. The screen still turns off. It's on by default; switch it off or change the minutes in **⚙️ Settings → 🤖 Workers → Keep awake while agents work**, which also says what it's doing (*Keeping this computer awake: 3 agents working*).
+
+How: a small hidden PowerShell process calls `SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)` and waits; it exits when the office tells it to, when the office's process is gone, or with the office's window. No native dependency, and it never changes your power settings. (macOS uses `caffeinate -i`, Linux `systemd-inhibit`.)
+
+> [!IMPORTANT]
+> Keep-awake stops **idle** sleep only. To keep agents working with the **lid closed**, Windows' *When I close the lid* must be **Do nothing** when plugged in: Control Panel → Hardware and Sound → Power Options → **Choose what closing the lid does** (or run `control /name Microsoft.PowerOptions /page pageGlobalSettings`), set **Plugged in** to *Do nothing*, and **Save changes**. Leave *On battery* as it is. If the setting is greyed out, your company manages it: ask IT. Keep a closed laptop plugged in and somewhere it can breathe.
+
+If PowerShell can't load the power API (some locked-down machines block `Add-Type`), Settings shows why and the office tries again a minute later; the office itself carries on.
 
 ## Stop
 
