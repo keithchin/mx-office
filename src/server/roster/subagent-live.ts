@@ -44,7 +44,14 @@ interface Tail {
 export class SubagentLive {
   private readonly tails = new Map<string, Tail>();
 
-  constructor(private readonly roster: Roster) {}
+  /**
+   * `finished`: a run the transcript alone said was over (a background run's notification, its answer
+   * read off the file), for its subagent's record (subagents.ts recordFinished).
+   */
+  constructor(
+    private readonly roster: Roster,
+    private readonly finished?: (floor: TeamFloor, run: LiveRun) => void,
+  ) {}
 
   private runs(floor: TeamFloor): LiveRun[] {
     return this.roster.data(floor.id).subagentRuns;
@@ -53,12 +60,15 @@ export class SubagentLive {
   /** Takes in signals about runs of `who`'s subagents; the browsers are told when anything they'd see changed. */
   apply(floor: TeamFloor, who: LiveWho, signals: LiveSignal[]): boolean {
     const runs = this.runs(floor);
+    const before = who.source === 'transcript' ? new Map(runs.map((r) => [r, r.status])) : undefined;
     let changed = false;
     for (const s of signals) {
       const named = 'agent' in s && s.agent !== undefined ? { ...s, agent: cleanSubName(s.agent) } : s;
       if (applyLive(runs, who, named)) changed = true;
     }
     if (!changed) return false;
+    // Over by the transcript's word: a hook would have ended it first (and recorded it) otherwise.
+    if (before && this.finished) for (const r of runs) if (r.status !== 'working' && r.status !== 'lost' && (before.get(r) ?? 'working') === 'working') this.finished(floor, r);
     trimLive(runs);
     this.roster.touch(floor);
     return true;
@@ -154,7 +164,8 @@ export class SubagentLive {
         const run =
           (r.agentId ? rec?.runs.filter((x) => x.id === r.agentId).at(-1) : undefined) ??
           (r.endedAt !== undefined ? rec?.runs.find((x) => x.endedAt !== undefined && Math.abs(x.endedAt - r.endedAt!) <= SAME_END_MS) : undefined);
-        if (!run || run.outcome === 'pending') return { ...r };
+        if (!run) return { ...r };
+        if (run.outcome === 'pending') return { ...r, outcome: run.outcome };
         return { ...r, outcome: run.outcome, ...(run.note ? { note: run.note } : {}), ...(run.reviewedAt !== undefined ? { reviewedAt: run.reviewedAt } : {}) };
       });
   }

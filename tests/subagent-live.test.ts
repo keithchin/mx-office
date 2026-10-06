@@ -15,7 +15,10 @@ import { applyLive, expireLive, trimLive, type LiveSignal, type LiveWho } from '
 import { SubagentTranscript } from '../src/server/roster/subagent-transcript.js';
 import { reviveLiveRuns } from '../src/server/roster/subagent-store.js';
 import { LIVE_KEPT, LIVE_STALE_MS, type LiveRun } from '../src/shared/roster/subagent-live.js';
-import { cardNow, subagentCards, workingHelpers } from '../src/shared/roster/subagent-cards.js';
+import { cardNow, floorHelpers, subagentCards } from '../src/shared/roster/subagent-cards.js';
+import { chatting, CHAT_M, idleSpot, Walks, wayBetween, type LifeSpot } from '../src/client/pixel/helper-life.js';
+import { breakAt } from '../src/client/pixel/breaks.js';
+import { scoreSubagent } from '../src/shared/roster/subagents.js';
 import { noteSubagentDispatch, noteSubagentHook, noteSubagentLifecycle, onSubagentEvent } from '../src/server/workers/subagents.js';
 import { stoolSpot, STOOLS } from '../src/client/pixel/stools.js';
 import { DESKS, DESK_SIZE, deskSeat } from '../src/shared/layout.js';
@@ -317,7 +320,7 @@ test("cards: who hired each, at work on what, idle with its last run, benched; a
   assert.equal(cards.some((c) => c.lead === 'lead-developer'), false);
   // In the team's order, each Lead's together.
   assert.deepEqual([...new Set(cards.map((c) => c.lead))], ['lead-tester']);
-  assert.deepEqual(workingHelpers(cards).map((h) => [h.tag, h.leadWorkerId, h.team]), [["Explore (Hedy's)", 'w-hedy', 'testing'], ["tester (Hedy's)", 'w-hedy', 'testing']]);
+  assert.deepEqual(floorHelpers(cards).map((h) => [h.tag, h.leadWorkerId, h.team, h.state, h.runId]), [["Explore (Hedy's)", 'w-hedy', 'testing', 'working', 'toolu_2'], ["tester (Hedy's)", 'w-hedy', 'testing', 'working', 'toolu_1']]);
 
   s.onEvent(t.floor, 'w-hedy', { kind: 'result', at: T0 + 300_000, toolUseId: 'toolu_1', agent: 'tester', failed: false, background: false, durationMs: 300_000 });
   const idle = subagentCards(t.view()).find((c) => c.key === 'lead-tester/tester')!;
@@ -326,6 +329,119 @@ test("cards: who hired each, at work on what, idle with its last run, benched; a
   assert.equal(s.run(t.floor, 'lead-tester', 'bench', 'tester', { reason: 'flaky specs' }, 'Keith', 'pm'), undefined);
   const benched = subagentCards(t.view()).find((c) => c.key === 'lead-tester/tester')!;
   assert.deepEqual([benched.status, benched.state, benched.benchReason], ['benched', 'benched', 'flaky specs']);
+});
+
+test('never-run subagents: hidden unless asked for, shown while at work the first time or when benched; the 2D view has only those that have run', () => {
+  const t = setup();
+  const s = t.roster.subagents;
+  // Hedy is hired: her tester has never run.
+  assert.equal(subagentCards(t.view()).length, 0);
+  assert.deepEqual(subagentCards(t.view(), { includeNeverRun: true }).map((c) => [c.key, c.runs]), [['lead-tester/tester', 0]]);
+  assert.deepEqual(floorHelpers(subagentCards(t.view(), { includeNeverRun: true })), [], 'nobody in the 2D view that has never run');
+  // At work for the first time: it shows, and sits on its stool.
+  s.onEvent(t.floor, 'w-hedy', { kind: 'dispatch', at: T0, toolUseId: 'toolu_1', agent: 'tester', task: 'First run', background: false });
+  assert.deepEqual(subagentCards(t.view()).map((c) => [c.key, c.status]), [['lead-tester/tester', 'working']]);
+  s.onEvent(t.floor, 'w-hedy', { kind: 'result', at: T0 + 60_000, toolUseId: 'toolu_1', agent: 'tester', failed: false, background: false });
+  // Once it's run, it stays, idle about the office.
+  assert.deepEqual(floorHelpers(subagentCards(t.view())).map((h) => [h.key, h.state, h.runId]), [['lead-tester/tester', 'idle', undefined]]);
+  // A benched one that never ran shows all the same (somebody decided something about it), but not in the 2D view.
+  const u = setup();
+  assert.equal(u.roster.subagents.run(u.floor, 'lead-tester', 'bench', 'tester', { reason: 'not yet' }, 'Keith', 'pm'), undefined);
+  assert.deepEqual(subagentCards(u.view()).map((c) => [c.key, c.status, c.runs]), [['lead-tester/tester', 'benched', 0]]);
+  assert.deepEqual(floorHelpers(subagentCards(u.view())), []);
+});
+
+// ---- Runs only the transcript saw end count toward the record ------------------------------------------
+
+test("a run only the transcript says is over is an unreviewed run of the record; the Lead's verdict lands on it, and nothing counts twice", () => {
+  const t = setup();
+  t.floor.file = path.join(t.floor.dir, 'session.jsonl');
+  const s = t.roster.subagents;
+  // The hooks saw it launched in the background; no hook says when it's done.
+  s.onEvent(t.floor, 'w-hedy', { kind: 'dispatch', at: T0, toolUseId: 'toolu_1', agent: 'tester', task: 'Prove PR #46 spec', background: false });
+  s.onEvent(t.floor, 'w-hedy', { kind: 'result', at: T0 + 3000, toolUseId: 'toolu_1', agent: 'tester', failed: false, background: false, async: true, agentId: 'a7d9' });
+  writeFileSync(t.floor.file, use(T0, 'toolu_1', { subagent_type: 'tester', description: 'Prove PR #46 spec' }) + launched(T0 + 3000, 'toolu_1', 'a7d9') + notified(T0 + 600_000, 'toolu_1', 'a7d9'));
+  t.clock.now = T0 + 610_000;
+  t.roster.subagents.live.scan(t.floor);
+  const rec = () => t.data().subagents['lead-tester/tester'];
+  assert.equal(rec().runs.length, 1);
+  assert.deepEqual([rec().runs[0].id, rec().runs[0].task, rec().runs[0].outcome, rec().runs[0].durationMs], ['a7d9', 'Prove PR #46 spec', 'pending', 600_000]);
+  let card = subagentCards(t.view()).find((c) => c.key === 'lead-tester/tester')!;
+  assert.deepEqual([card.runs, card.unreviewed, card.grade], [1, 1, undefined]);
+  assert.equal(scoreSubagent(rec().runs, rec().runs[0].model).reviewed, 0, 'an unreviewed run is no part of the grade');
+  assert.equal(t.view().subagentRuns![0].outcome, 'pending', 'its live run says unreviewed');
+  // A late SubagentStop for the same run: the same run, not another.
+  s.onEvent(t.floor, 'w-hedy', { kind: 'stop', at: T0 + 601_000, agentId: 'a7d9', agent: 'tester' });
+  assert.equal(rec().runs.length, 1);
+  // Scanning again changes nothing.
+  t.roster.subagents.live.scan(t.floor);
+  assert.equal(rec().runs.length, 1);
+  // The verdict lands on that run.
+  t.clock.now = T0 + 700_000;
+  const r = s.review(t.floor, 'lead-tester', 'tester', 'accept', 'green twice');
+  assert.notEqual(typeof r, 'string');
+  assert.equal(rec().runs.length, 1);
+  assert.deepEqual([rec().runs[0].outcome, rec().runs[0].note], ['accept', 'green twice']);
+  card = subagentCards(t.view()).find((c) => c.key === 'lead-tester/tester')!;
+  assert.equal(card.unreviewed, 0);
+
+  // A run the hooks ended (and recorded) isn't recorded again when the transcript's notification comes.
+  s.onEvent(t.floor, 'w-hedy', { kind: 'dispatch', at: T0 + 800_000, toolUseId: 'toolu_2', agent: 'tester', task: 'Second', background: false });
+  s.onEvent(t.floor, 'w-hedy', { kind: 'result', at: T0 + 803_000, toolUseId: 'toolu_2', agent: 'tester', failed: false, background: false, async: true, agentId: 'b2' });
+  s.onEvent(t.floor, 'w-hedy', { kind: 'start', at: T0 + 803_100, agentId: 'b2', agent: 'tester' });
+  s.onEvent(t.floor, 'w-hedy', { kind: 'stop', at: T0 + 900_000, agentId: 'b2', agent: 'tester' });
+  appendFileSync(t.floor.file, use(T0 + 800_000, 'toolu_2', { subagent_type: 'tester', description: 'Second' }) + launched(T0 + 803_000, 'toolu_2', 'b2') + notified(T0 + 900_500, 'toolu_2', 'b2'));
+  t.roster.subagents.live.scan(t.floor);
+  assert.equal(rec().runs.length, 2);
+  // A failed notification is a failed run (which the grade counts, as a hook's failure would be).
+  s.onEvent(t.floor, 'w-hedy', { kind: 'dispatch', at: T0 + 950_000, toolUseId: 'toolu_3', agent: 'tester', task: 'Third', background: false });
+  s.onEvent(t.floor, 'w-hedy', { kind: 'result', at: T0 + 951_000, toolUseId: 'toolu_3', agent: 'tester', failed: false, background: false, async: true, agentId: 'c3' });
+  appendFileSync(t.floor.file, notified(T0 + 990_000, 'toolu_3', 'c3', 'failed'));
+  t.roster.subagents.live.scan(t.floor);
+  assert.deepEqual(rec().runs.map((x) => x.outcome), ['accept', 'pending', 'failed']);
+});
+
+// ---- Subagents about the office in the 2D view --------------------------------------------------------
+
+test("an idle subagent takes a benched Lead's breaks at a spot of its own, the same in every browser", () => {
+  const a = idleSpot('lead-tester/tester', 2, T0 + 12_345);
+  assert.deepEqual(a, idleSpot('lead-tester/tester', 2, T0 + 12_345));
+  const b = breakAt('lead-tester/tester', 2, T0 + 12_345);
+  assert.deepEqual([a.act, a.walking, a.z], [b.act, b.walking, b.z]);
+  // Sharing a break spot with another three along (index + 3): side by side, not on top of each other.
+  const still = (i: number) => idleSpot('x', i, T0, true);
+  assert.equal(still(1).act, still(4).act);
+  assert.ok(Math.abs(still(1).x - still(4).x) >= 0.5);
+  // With less motion asked for, it never walks.
+  for (let t = 0; t < 600_000; t += 7000) assert.equal(idleSpot('lead-tester/tester', 0, T0 + t, true).walking, false);
+});
+
+test('a subagent walks back to its stool when a run starts, and away when it ends; with less motion it just goes', () => {
+  const w = new Walks();
+  const away: LifeSpot = { x: -3, z: 11.3, act: 'coffee', walking: false, pose: 'front', at: 0 };
+  const stool: LifeSpot = { x: -12.5, z: -5.85, act: 'stool', walking: false, pose: 'front', at: 0 };
+  assert.deepEqual(w.place('k', away, 0), away);
+  assert.equal(w.place('k', stool, 1000).walking, true);
+  const later = w.place('k', stool, 3000);
+  assert.ok(later.walking && later.z < 11.3, 'on its way');
+  const there = w.place('k', stool, 20_000);
+  assert.deepEqual([there.x, there.z, there.walking, there.act], [stool.x, stool.z, false, 'stool']);
+  assert.equal(w.place('k', away, 21_000).walking, true, 'and away again');
+  assert.deepEqual(new Walks().place('j', stool, 0, true), stool);
+  // Its way keeps to the aisle and the gap between the patches.
+  assert.deepEqual(wayBetween(away, stool).map((p) => [p.x, p.z]), [[-3, 11.3], [-3, 8.4], [-6, 8.4], [-6, -5.85], [-12.5, -5.85]]);
+  w.keep(new Set());
+  assert.deepEqual(w.place('k', stool, 22_000), stool, 'forgotten: placed straight');
+});
+
+test('two standing about close together are talking; walking, on a stool or far apart they are not', () => {
+  const set = chatting([
+    { id: 'a', x: 0, z: 0, busy: false },
+    { id: 'b', x: CHAT_M - 0.1, z: 0, busy: false },
+    { id: 'c', x: 0.2, z: 0.2, busy: true },
+    { id: 'd', x: 20, z: 0, busy: false },
+  ]);
+  assert.deepEqual([...set].sort(), ['a', 'b']);
 });
 
 // ---- The 2D view's stools ----------------------------------------------------------------------------

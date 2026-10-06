@@ -31,14 +31,16 @@ interface Prefs {
   showGone: boolean;
   /** The Leads' subagents' cards, after their Leads' (ui/subagents/card.ts). */
   showSubs: boolean;
+  /** …and those that have never run (off: they show only once they have, or while at work the first time). */
+  neverRun: boolean;
 }
 
 function load(): Prefs {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-    return { scope: v.scope === 'all' ? 'all' : 'floor', group: ['model', 'role'].includes(v.group) ? v.group : 'none', sort: ['urgent', 'rank', 'name', 'recent'].includes(v.sort) ? v.sort : undefined, showGone: v.showGone !== false, showSubs: v.showSubs !== false };
+    return { scope: v.scope === 'all' ? 'all' : 'floor', group: ['model', 'role'].includes(v.group) ? v.group : 'none', sort: ['urgent', 'rank', 'name', 'recent'].includes(v.sort) ? v.sort : undefined, showGone: v.showGone !== false, showSubs: v.showSubs !== false, neverRun: v.neverRun === true };
   } catch {
-    return { scope: 'floor', group: 'none', showGone: true, showSubs: true };
+    return { scope: 'floor', group: 'none', showGone: true, showSubs: true, neverRun: false };
   }
 }
 
@@ -52,7 +54,7 @@ export interface RankingDeps {
   visible: () => boolean;
   emptyText: () => string;
   /** The floor's Leads' subagents as cards, and what clicking one does (ui/subagents/). */
-  subagents?: { cards(): SubagentCard[]; open(c: SubagentCard): void };
+  subagents?: { cards(includeNeverRun: boolean): SubagentCard[]; open(c: SubagentCard): void };
 }
 
 /** One card: a live worker, a worker known from its records, or both. */
@@ -192,6 +194,7 @@ export function workersRanking(d: RankingDeps) {
       h('label.rk-label', {}, 'Sort ', select),
       h('label.rk-label.rk-check', {}, gone, ' Gone home'),
       d.subagents ? h('label.rk-label.rk-check.sw-toggle', { title: "The Leads' subagents, each after its Lead" }, h('input', { type: 'checkbox', checked: prefs.showSubs, onchange: (e: Event) => ((prefs.showSubs = (e.target as HTMLInputElement).checked), save(), draw()) }), ' Show subagents') : null,
+      d.subagents && prefs.showSubs ? h('label.rk-label.rk-check.sw-toggle', { title: 'Subagents that have never run too' }, h('input', { type: 'checkbox', checked: prefs.neverRun, onchange: (e: Event) => ((prefs.neverRun = (e.target as HTMLInputElement).checked), save(), draw()) }), ' Include never-run') : null,
       c?.error ? h('span.rk-err', { title: c.error }, '⚠️ ranking unavailable') : !r ? h('span.rk-err', {}, 'Grading…') : null,
     );
   }
@@ -223,7 +226,7 @@ export function workersRanking(d: RankingDeps) {
       d.list.replaceChildren(...keys.flatMap((k) => [h('li.rk-group-h', {}, h('span', {}, k), stats.get(k)?.avgGrade ? gradeBadge(stats.get(k)!.avgGrade, stats.get(k)!.avgScore, false) : null, h('small', {}, `${groups.get(k)!.length}`)), ...groups.get(k)!.map((i) => cardOf(i, r))]));
     }
     if (r) d.list.append(h('li.rk-how-li', {}, howGraded(r)));
-    if (prefs.showSubs && d.subagents) nestSubagents(d.list, d.subagents.cards(), Date.now(), d.subagents.open);
+    if (prefs.showSubs && d.subagents) nestSubagents(d.list, d.subagents.cards(prefs.neverRun), Date.now(), d.subagents.open);
   }
 
   // Every minute while it's showing: grades move as tasks finish.

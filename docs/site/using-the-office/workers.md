@@ -17,6 +17,7 @@ The **🤖 Workers** tab shows every agent on the floor, or on all floors, ranke
 | Sort | Needs you first · Rank · Name · Recent |
 | ☐ Gone home | Also show workers who went home |
 | ☑ Show subagents | The Leads' subagents, each after its Lead (on by default) |
+| ☐ Include never-run | With Show subagents, also the ones that have never run (off by default) |
 
 Your choices are kept in this browser.
 
@@ -34,7 +35,9 @@ Each Lead's [subagents](../automation/subagents.md) get a card of their own, rig
 
 - its grade A–F (from its Lead's reviews, not the worker criteria below),
 - how it is now: **🔨 working** on what and for how long (and how many more runs of it are going at once), **💤 idle** with when it last ran and on what, or **🪑 benched** and why,
-- its model, its runs, and ⚠️ on warning or 📉 underperforming.
+- its model, its runs (👀 how many its Lead hasn't reviewed yet), and ⚠️ on warning or 📉 underperforming.
+
+A subagent that has never run has no card unless you tick **Include never-run**; it shows by itself while it's at work for the first time, and when it's benched or on warning.
 
 A Lead that isn't at work on this floor has its subagents in a group at the end. Click a card for its detail: what it's on, its recent runs (how long, how each ended, the Lead's verdict), the Lead's reviews, and **💬 Open** *Lead* (a subagent works inside its Lead's Claude Code session, so its work shows in the Lead's terminal and Chat view). The Project Manager gets **⚠️ Warn**, **🪑 Bench**, **🔁 Model** and **✅ Reinstate** there too. Subagents aren't hired or sent home like workers: their Lead sends them off.
 

@@ -17,6 +17,7 @@ export function subagentCardEl(c: SubagentCard, now: number, open: (c: SubagentC
   const sub = [
     `🧠 ${modelWord(c.model)}`,
     `${c.runs} run${c.runs === 1 ? '' : 's'}`,
+    c.unreviewed ? `👀 ${c.unreviewed} unreviewed` : '',
     c.state === 'warning' ? `⚠️ on warning` : '',
     c.underperforming ? `📉 ${c.why ?? 'underperforming'}` : '',
   ].filter(Boolean);

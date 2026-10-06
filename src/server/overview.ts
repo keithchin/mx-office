@@ -8,7 +8,7 @@ import type { WorkerInfo } from '../shared/protocol.js';
 import type { Floor } from './floor.js';
 import type { Ctx } from './office/context.js';
 import { rosterOf, teamFloor } from './roster/adapter.js';
-import { subagentCards, workingHelpers, type WorkingHelper } from '../shared/roster/subagent-cards.js';
+import { floorHelpers, subagentCards, type FloorHelper } from '../shared/roster/subagent-cards.js';
 import type { RosterView } from '../shared/roster/types.js';
 
 /** How long one answer is reused. */
@@ -48,7 +48,7 @@ export function overviewWorker(w: WorkerInfo): OverviewWorker {
 function floorOf(ctx: Ctx, floor: Floor): OverviewFloor {
   const info = floor.info();
   const team = teamOf(ctx, floor);
-  const helpers: WorkingHelper[] = team ? workingHelpers(subagentCards(team)) : [];
+  const helpers: FloorHelper[] = team ? floorHelpers(subagentCards(team)) : [];
   return {
     id: floor.id,
     name: floor.def.name,

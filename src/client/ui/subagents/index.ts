@@ -6,11 +6,11 @@ import { currentRoster, setRoster } from '../teams/world';
 import { openSubagentDetail } from './detail';
 
 /** What the Workers tab (ui/ranking/) needs to show the floor's subagents; `openWorker` opens a Lead's terminal. */
-export function floorSubagents(openWorker: (id: string) => void): { cards(): SubagentCard[]; open(c: SubagentCard): void } {
+export function floorSubagents(openWorker: (id: string) => void): { cards(includeNeverRun: boolean): SubagentCard[]; open(c: SubagentCard): void } {
   return {
-    cards: () => {
+    cards: (includeNeverRun) => {
       const v = currentRoster();
-      return v ? subagentCards(v) : [];
+      return v ? subagentCards(v, { includeNeverRun }) : [];
     },
     open: (c) => {
       const v = currentRoster();

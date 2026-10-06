@@ -122,6 +122,8 @@ export interface SubagentView {
   lastRunAt?: number;
   /** Every run its record keeps (up to RUNS_KEPT), on any model. */
   totalRuns?: number;
+  /** Of those, the ones over that its Lead hasn't reviewed yet. */
+  unreviewed?: number;
   /** Its last reviewed runs with the Lead's verdicts, newest first. */
   reviews?: SubagentReviewBrief[];
 }

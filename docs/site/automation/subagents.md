@@ -8,8 +8,8 @@ A Lead's team members are **Claude Code subagents**, running inside the Lead's s
 
 ## The track record
 
-- **Runs** come from Claude Code's hooks (subagent start and stop) and the Agent tool's results. The last 50 are kept per subagent.
-- Each run is **pending**, **accept**, **rework** or **failed**. The verdict comes from the Lead's review: `office-workers subagent review <name> --verdict accept|rework`.
+- **Runs** come from Claude Code's hooks (subagent start and stop) and the Agent tool's results, and from the Lead's transcript for a run no hook said had ended (a background run's notification). The last 50 are kept per subagent.
+- Each run is **pending** (unreviewed), **accept**, **rework** or **failed**. The verdict comes from the Lead's review: `office-workers subagent review <name> --verdict accept|rework`, which lands on its newest unreviewed run. Unreviewed runs count as runs but not toward the grade; cards say how many there are.
 - The **grade** is over the last 5 reviewed runs on its current model (at least 3 needed): accepts divided by reviewed runs, with half credit when the PR's CI failed. **A** ≥ 90, **B** ≥ 80, **C** ≥ 70, **D** ≥ 60, else **F**.
 - It is **underperforming** (📉) below 70, or with 2 or more reworks or failures in that window. Its Lead is told once, when idle.
 

@@ -13,6 +13,7 @@ import { paintScene } from './scene';
 import { benchedLeads, teamLookup, type TeamLookup } from './teams';
 import type { BreakLead } from './breaks';
 import type { Helper } from './helpers';
+import { Walks } from './helper-life';
 import { asHelpers } from './subagents';
 import type { People } from './people';
 import { drawLabels, zoneBanner, type Box, type View } from './overlay';
@@ -38,8 +39,9 @@ export class FloorArt {
   team: TeamLookup<OverviewMember> = teamLookup([]);
   /** Its benched Leads, on a break about the office (breaks.ts). */
   leads: BreakLead[] = [];
-  /** Its Leads' subagents at work, beside their desks (helpers.ts). */
+  /** Its Leads' subagents that have run: at work beside their desks, else about the office (helpers.ts). */
   helpers: Helper[] = [];
+  private readonly walks = new Walks();
   people: People = { spots: [], labels: [] };
 
   constructor(public floor: OverviewFloor, theme: Theme | null = null) {
@@ -72,7 +74,7 @@ export class FloorArt {
       this.frame,
       this.still!,
       { theme, music: false, sharing: false, colorTheme },
-      { workers: this.workers, peers: [], level: this.frame.level, hover, dog: null, signs: this.signs, dress: (w) => t.dressFor(w), tag: (w) => t.tagFor(w), breaks: { leads: this.leads, clock: Date.now(), still }, helpers: this.helpers },
+      { workers: this.workers, peers: [], level: this.frame.level, hover, dog: null, signs: this.signs, dress: (w) => t.dressFor(w), tag: (w) => t.tagFor(w), breaks: { leads: this.leads, clock: Date.now(), still }, helpers: this.helpers, helperWalks: this.walks },
       now,
     );
   }
