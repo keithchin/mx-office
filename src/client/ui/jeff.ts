@@ -121,7 +121,7 @@ function row(r: JudgeRow): HTMLElement {
     h('td', { title: new Date(r.at).toLocaleString() }, timeAgo(r.at)),
     h('td', {}, KIND_LABEL[r.kind]),
     h('td.jf-subj', { title: r.text ?? '' }, r.subject),
-    h('td', { title: r.detail }, h('b', {}, r.jeff)),
+    h('td', { title: r.detail }, h('b', {}, r.jeff), r.held ? h('small', {}, r.held === 'no-ask' ? ' · held: no real ask' : ' · held: raised already') : null),
     h('td', {}, r.rule),
     h('td', { title: r.model }, `${r.by === 'jev' ? 'Jev' : 'Haiku'} · ${r.ms} ms`),
   );

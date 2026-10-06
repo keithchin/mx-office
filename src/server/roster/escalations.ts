@@ -11,7 +11,9 @@ import { randomBytes } from 'node:crypto';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import { URGENCY_ICON, VERDICT_WORD, isAlarming, escalationOrder, makeEscalation, type Escalation, type EscalationAsk, type EscalationVerdict } from '../../shared/roster/escalation.js';
 import { ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
+import { URGENCIES, isFyi } from '../../shared/roster/autonomy.js';
 import { isAsleepStatus } from './bench.js';
+import { sameAsk } from './jeff-ask.js';
 import type { Roster } from './index.js';
 import { escalationAnswerPrompt, escalationsToCoordinatorPrompt, owedAnswersPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
@@ -31,6 +33,30 @@ export class Escalations {
   /** Raises one from worker `w` on the floor; the escalation, or why not. */
   raise(floor: TeamFloor, w: WorkerInfo, ask: EscalationAsk): Escalation {
     return this.add(floor, { workerId: w.id, by: w.name, role: this.roster.roleOf(floor, w.id) }, ask);
+  }
+
+  /**
+   * An agent's own escalation (`office-workers escalate`): when one about the same is already open on
+   * the floor (sameAsk: the same title, or nearly), it joins that one as a "+1" instead of raising a
+   * second (the same CI secret was once raised nine times), and gets the answer too.
+   */
+  raiseOrJoin(floor: TeamFloor, w: WorkerInfo, ask: EscalationAsk): { escalation: Escalation; joined: boolean } {
+    const d = this.roster.data(floor.id);
+    const fyi = isFyi(d.settings.autonomy, ask.urgency, ask.trigger);
+    // A loud one doesn't hide inside an FYI: that's only joined by another FYI.
+    const same = d.escalations.find((e) => e.status === 'open' && (!e.fyi || fyi) && sameAsk(e.title, ask.title));
+    if (!same) return { escalation: this.raise(floor, w, ask), joined: false };
+    if (w.id !== same.workerId && !same.also?.some((a) => a.workerId === w.id)) {
+      const role = this.roster.roleOf(floor, w.id);
+      (same.also ??= []).push({ workerId: w.id, by: w.name, ...(role ? { role } : {}), at: this.roster.deps.now() });
+    }
+    const note = [`+1 from ${w.name}: ${ask.title}`, ask.details.slice(0, 1500)].filter(Boolean).join('\n');
+    same.details = `${same.details}\n\n${note}`.slice(-12_000);
+    if (URGENCIES.indexOf(ask.urgency) > URGENCIES.indexOf(same.urgency)) same.urgency = ask.urgency;
+    audit.record({ floor: floor.id, actor: agent(w.name, w.id), action: 'escalation.raise', target: { kind: 'escalation', id: same.id, label: same.title }, summary: `+1 on ${same.by}'s open escalation (the same ask): ${ask.title}`, details: { joined: same.id, urgency: ask.urgency, worker: w.id }, severity: 'info' });
+    floor.activity?.(`➕ ${w.name} raised the same as ${same.by}'s open escalation: ${same.title}`);
+    this.roster.touch(floor);
+    return { escalation: same, joined: true };
   }
 
   /**
@@ -101,6 +127,13 @@ export class Escalations {
         if (err === 'Worker is not running') err = floor.wake(w.id, prompt);
         delivered = !err;
         if (err) floor.toast(`Couldn't send the answer to ${e.by}: ${err}. It's kept for its next session.`, 'warn');
+      }
+      // Those that +1'd it (raiseOrJoin) hear the answer too, when they're still at their desks.
+      for (const a of e.also ?? []) {
+        const other = floor.worker(a.workerId);
+        if (!other || other.kind !== 'agent' || other.id === w?.id) continue;
+        const prompt = escalationAnswerPrompt(e, verdict, text, by);
+        if (isAsleepStatus(other.status) ? floor.wake(other.id, prompt) : floor.prompt(other.id, prompt)) floor.toast(`Couldn't send the answer to ${a.by}, who raised the same`, 'warn');
       }
     }
     e.status = 'resolved';

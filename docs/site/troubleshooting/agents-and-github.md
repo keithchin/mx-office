@@ -10,6 +10,12 @@ weight: 1
 
 **Fix:** open its terminal and answer the prompt once. Claude Code asks this the first time it runs in a new folder (a new worktree).
 
+A Claude worker is only flagged when the prompt is actually on its screen. A project with a slow `SessionStart` hook (a toolkit project's `mxcli init --sync-skills` and `mxcli run --setup`) just shows the worker as starting for longer, up to 5 minutes before its desk is let go to idle; and once its session is up, the *Waiting on a setup prompt* line goes away. Other agents (Codex, Grok, Muse, Pi) can't be read like that, so they're still flagged when they haven't said they're up 12 seconds after starting.
+
+## A Haiku agent keeps asking permission
+
+Haiku can't use Claude Code's auto mode, so the office starts Haiku workers in *accept edits* mode: file edits don't ask. Shell commands still follow the project's permission settings, so a `git` or `gh` command may still ask; allow those in the project's `.claude/settings.json` if you want them to run unattended. See [Models and costs](../teams-and-agents/models-and-costs.md#haiku-runs-in-accept-edits-mode).
+
 ## An agent stopped after a restart
 
 **Cause:** on Windows, restarting the office stops every running agent.
@@ -24,7 +30,7 @@ weight: 1
 
 ## An agent seems idle but says it's waiting on me
 
-It may have asked in its last message without raising an escalation. Open its terminal (it's in **Needs you** as *finished, not looked at yet*) and answer there. To catch these automatically, switch Jeff's **Waiting on you** judgement to **On**. See [Jeff · Router](../automation/jeff-router.md).
+It may have asked in its last message without raising an escalation. Open its terminal (it's in **Needs you** as *finished, not looked at yet*) and answer there. To catch these automatically, switch Jeff's **Waiting on you** judgement to **On**. By default he only raises it when the end of its message really asks you something. See [Jeff · Router](../automation/jeff-router.md#when-he-escalates).
 
 ## Hiring is refused
 

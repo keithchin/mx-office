@@ -300,7 +300,7 @@ test('the waiting questions are the ones the spec names', () => {
 
 test('shadow (the default): a turn ending waiting is judged and logged, and nothing is raised', async () => {
   const { floor, roster, rows, settle } = setup(WAITING);
-  assert.deepEqual(roster.data(floor.id).settings.jeff, { waiting: 'shadow', triage: 'shadow', priority: 'on' });
+  assert.deepEqual(roster.data(floor.id).settings.jeff, { waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree' });
   floor.add('w1', 'Ada');
   floor.words.set('w1', 'I built the page.\n\nShould I deploy it to production?');
   floor.set('w1', 'working');
@@ -412,7 +412,85 @@ test('triage on: labels only an unlabelled issue, and only when confident', asyn
 
 test('old rosters revive with Jeff in shadow, and bad modes are ignored', async () => {
   const { reviveRoster, cleanSettings } = await import('../src/server/roster/store.js');
-  assert.deepEqual(reviveRoster({ settings: { autonomy: 2 } }).settings.jeff, { waiting: 'shadow', triage: 'shadow', priority: 'on' });
+  assert.deepEqual(reviveRoster({ settings: { autonomy: 2 } }).settings.jeff, { waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree' });
   const s = cleanSettings({ jeff: { waiting: 'on', triage: 'loud' } });
-  assert.deepEqual(s.jeff, { waiting: 'on', triage: 'shadow', priority: 'on' });
+  assert.deepEqual(s.jeff, { waiting: 'on', triage: 'shadow', priority: 'on', waitingPolicy: 'agree' });
+});
+
+test("the 'model' policy is kept, and a bad one is ignored", async () => {
+  const { cleanSettings } = await import('../src/server/roster/store.js');
+  assert.equal(cleanSettings({ jeff: { waitingPolicy: 'model' } }).jeff.waitingPolicy, 'model');
+  assert.equal(cleanSettings({ jeff: { waitingPolicy: 'always' } }).jeff.waitingPolicy, 'agree');
+});
+
+// A real progress report from a live floor that Jeff (on his say-so) used to escalate.
+const FYI_REPORT = "I've approved #49's test results; merging it is the PM's call.\n\nStill running: the #51 Owner-required follow-up. When it's proven and reviewed, I'll send Anita its commit to cherry-pick into #51.";
+
+test('on, agree (the default): a report Jeff thinks is waiting is held and logged as a disagreement, never raised', async () => {
+  const { floor, roster, rows, settle } = setup(WAITING);
+  roster.data(floor.id).settings.jeff.waiting = 'on';
+  floor.add('w1', 'Hedy');
+  floor.words.set('w1', FYI_REPORT);
+  floor.set('w1', 'working');
+  floor.set('w1', 'done');
+  await settle();
+  assert.equal(roster.data(floor.id).escalations.length, 0);
+  const [r] = rows();
+  assert.equal(r.jeff, 'waiting');
+  assert.equal(r.rule, 'not waiting');
+  assert.equal(r.agree, false);
+  assert.equal(r.acted, false);
+  assert.equal(r.held, 'no-ask');
+  assert.equal(floor.made[0].verdict, 'no ask: held');
+  // Under 'model' his say-so is enough again.
+  roster.data(floor.id).settings.jeff.waitingPolicy = 'model';
+  floor.set('w1', 'working');
+  floor.set('w1', 'done');
+  await settle();
+  assert.equal(roster.data(floor.id).escalations.length, 1);
+  assert.equal(rows()[1].acted, true);
+});
+
+test("on: Jeff doesn't raise again what the worker raised and was just answered", async () => {
+  const { floor, roster, rows, settle } = setup(WAITING);
+  roster.data(floor.id).settings.jeff.waiting = 'on';
+  floor.add('w1', 'Ada');
+  floor.words.set('w1', 'Done with the domain model.\n\nCan you approve the schema change?');
+  floor.set('w1', 'working');
+  floor.set('w1', 'done');
+  await settle();
+  const esc = roster.data(floor.id).escalations;
+  assert.equal(esc.length, 1);
+  esc[0].status = 'resolved';
+  esc[0].resolution = { verdict: 'approve', text: '', by: 'pm', at: Date.UTC(2026, 9, 5, 2), delivered: true };
+  floor.set('w1', 'working');
+  floor.set('w1', 'done');
+  await settle();
+  assert.equal(roster.data(floor.id).escalations.length, 1);
+  assert.equal(rows()[1].held, 'duplicate');
+  assert.equal(rows()[1].acted, false);
+});
+
+test('an agent raising what another already raised joins it as a +1, and hears the answer too', () => {
+  const { floor, roster } = setup(WAITING);
+  floor.add('w1', 'Anita');
+  floor.add('w2', 'Hedy');
+  const prompted: string[] = [];
+  floor.prompt = ((id: string) => void prompted.push(id)) as never;
+  const ask = (title: string) => ({ urgency: 'important' as const, title, details: 'CI #30 sees an empty password.', options: [] });
+  const first = roster.escalations.raiseOrJoin(floor, floor.worker('w1')!, ask('Set repo secret E2E_DEMO_ADMIN_PASSWORD'));
+  assert.equal(first.joined, false);
+  const again = roster.escalations.raiseOrJoin(floor, floor.worker('w2')!, ask('**Set repo secret E2E_DEMO_ADMIN_PASSWORD.**'));
+  assert.equal(again.joined, true);
+  assert.equal(again.escalation.id, first.escalation.id);
+  const esc = roster.data(floor.id).escalations;
+  assert.equal(esc.length, 1);
+  assert.deepEqual(esc[0].also?.map((a) => a.by), ['Hedy']);
+  assert.match(esc[0].details, /\+1 from Hedy: \*\*Set repo secret/);
+  // Hedy is waiting on it too, by the office's own rule.
+  assert.equal(roster.jeff.ruleWaiting(floor, floor.worker('w2')!), true);
+  // Something else is its own escalation.
+  assert.equal(roster.escalations.raiseOrJoin(floor, floor.worker('w2')!, ask('Merge PR #46 (e2e spec fix)')).joined, false);
+  assert.equal(roster.escalations.resolve(floor, first.escalation.id, 'reply', 'Set it now.', 'pm'), undefined);
+  assert.deepEqual(prompted.sort(), ['w1', 'w2']);
 });

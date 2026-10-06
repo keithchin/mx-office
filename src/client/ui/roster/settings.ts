@@ -5,7 +5,7 @@
 
 import { AUTONOMY, DECISION_LABEL, REVIEW_POLICY, type AutonomyLevel } from '../../../shared/roster/autonomy';
 import type { RosterSettings, RosterView } from '../../../shared/roster/types';
-import { DEFAULT_JEFF, JEFF_MODES, type JeffMode, type JeffPriorityMode } from '../../../shared/judge';
+import { DEFAULT_JEFF, JEFF_MODES, JEFF_WAITING_POLICIES, type JeffMode, type JeffPriorityMode, type JeffWaitingPolicy } from '../../../shared/judge';
 import { h } from '../dom';
 import { JEFF_MODE_LABEL, jeffPortrait } from '../jeff';
 import { act } from './api';
@@ -58,6 +58,11 @@ export function settingsView(v: RosterView, redraw: (v: RosterView) => void): HT
   s.jeff.priority ??= DEFAULT_JEFF.priority;
   const sortSel = h('select.ro-select', { disabled: off, 'aria-label': 'Jeff: Priority' }, ...(['off', 'on'] as const).map((m) => h('option', { value: m, selected: s.jeff.priority === m }, m === 'on' ? 'On: sort' : 'Off')));
   sortSel.addEventListener('change', () => (s.jeff.priority = sortSel.value as JeffPriorityMode));
+  // What it takes for him to raise one: a real ask in the message too (agree), or his say-so (model).
+  s.jeff.waitingPolicy ??= DEFAULT_JEFF.waitingPolicy;
+  const POLICY_LABEL: Record<JeffWaitingPolicy, string> = { agree: 'Only a real ask', model: 'His say-so' };
+  const policySel = h('select.ro-select', { disabled: off, 'aria-label': 'Jeff: When to escalate' }, ...JEFF_WAITING_POLICIES.map((p) => h('option', { value: p, selected: s.jeff.waitingPolicy === p }, POLICY_LABEL[p])));
+  policySel.addEventListener('change', () => (s.jeff.waitingPolicy = policySel.value as JeffWaitingPolicy));
   const days = h('div.ro-days', {}, ...DAYS.map((d, i) => check(s.schedule.days.includes(i), (b) => (s.schedule.days = b ? [...s.schedule.days, i].sort() : s.schedule.days.filter((x) => x !== i)), d)));
   const save = h('button.btn.primary', { type: 'button', disabled: off, id: 'ro-save-settings', onclick: () => void act(v.floor, 'settings', { settings: s }).then((r) => r && redraw(r)) }, '💾 Save settings');
   return h(
@@ -84,6 +89,7 @@ export function settingsView(v: RosterView, redraw: (v: RosterView) => void): HT
     h('h4.ro-jeff-h', {}, jeffPortrait(22), ' Jeff · Router'),
     h('p.ro-sub', {}, 'Jeff is the office’s quick judge. In Shadow he is watching, not acting: he logs his verdict next to the office’s own rule, and the Analysis tab shows where you agree. Switch to On where he agrees with you.'),
     h('p.ro-row', {}, mode('Waiting on you', 'waiting'), ' When an agent ends its turn: is it waiting on you? On: he escalates it to you if it didn’t.'),
+    h('p.ro-row', {}, h('label.ro-jeff-mode', {}, h('b', {}, 'When to escalate'), policySel), ' Only a real ask: he raises it only when the end of its message asks you something (a question, a request or approval, an AWAITING-PM line); a progress report he thinks is waiting is logged as a disagreement. His say-so: his verdict alone is enough. He never raises what the agent already raised.'),
     h('p.ro-row', {}, mode('Triage', 'triage'), ' When a new issue appears: which team is it for? On: he labels unlabelled issues he’s sure about.'),
     h('p.ro-row', {}, h('label.ro-jeff-mode', {}, h('b', {}, 'Priority'), sortSel), ' When an escalation is raised: how soon should you resolve it? On: your escalations are listed in his order, #1 first.'),
   );

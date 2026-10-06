@@ -45,6 +45,11 @@ export interface Escalation {
   };
   /** Jeff's rating of how soon to resolve it, and its rank among the floor's open ones (jeff-rank.ts). */
   jeffRank?: JeffRank;
+  /**
+   * Other agents that raised the same while it was open (a "+1"): merged into this one instead of a
+   * second escalation, and told the answer too (roster/escalations.ts).
+   */
+  also?: { workerId: string; by: string; role?: RoleId; at: number }[];
 }
 
 /** What an agent sends to raise one, before the office stamps it. */

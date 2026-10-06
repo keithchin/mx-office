@@ -15,11 +15,21 @@ export interface JeffSettings {
   triage: JeffMode;
   /** Which escalation should the Project Manager resolve first? Advisory (a sort order), so no shadow. */
   priority: JeffPriorityMode;
+  /** With waiting On, what it takes for him to raise an escalation the office's rule missed. */
+  waitingPolicy: JeffWaitingPolicy;
 }
 /** Jeff's priority sort is on or off: it only orders lists, so there's nothing to watch first. */
 export type JeffPriorityMode = 'off' | 'on';
 export const isJeffPriorityMode = (v: unknown): v is JeffPriorityMode => v === 'off' || v === 'on';
-export const DEFAULT_JEFF: JeffSettings = { waiting: 'shadow', triage: 'shadow', priority: 'on' };
+/**
+ * agree: he says it's waiting and the end of its message really asks you something (a question, a
+ * request or approval, an AWAITING-PM line); his say-so alone is logged as a disagreement, not raised.
+ * model: his say-so is enough (how he started out: progress reports got escalated too).
+ */
+export type JeffWaitingPolicy = 'agree' | 'model';
+export const JEFF_WAITING_POLICIES: readonly JeffWaitingPolicy[] = ['agree', 'model'];
+export const isJeffWaitingPolicy = (v: unknown): v is JeffWaitingPolicy => v === 'agree' || v === 'model';
+export const DEFAULT_JEFF: JeffSettings = { waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree' };
 
 export type JudgeKind = 'waiting' | 'triage' | 'priority';
 export const JUDGE_KINDS: readonly JudgeKind[] = ['waiting', 'triage', 'priority'];
@@ -44,6 +54,11 @@ export interface JudgeRow {
   agree: boolean | null;
   /** Whether Jeff's verdict was acted on (an escalation raised, a label put on). */
   acted: boolean;
+  /**
+   * He said it's waiting and the rule didn't, but he held back: no real ask at the end of its message
+   * ('no-ask', under the 'agree' policy), or the worker had already raised the same ('duplicate').
+   */
+  held?: 'no-ask' | 'duplicate';
   /** The judged text, clipped. */
   text?: string;
 }

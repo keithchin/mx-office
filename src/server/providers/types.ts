@@ -88,7 +88,8 @@ export interface ProviderAdapter<S = undefined, P = undefined> {
   signIn?: 'claude';
   /**
    * It says itself when it's up (a SessionStart hook): until then it's 'starting', and still silent
-   * 12s in, its desk shows this and needs a human. Without it, it's idle as soon as it runs.
+   * 12s in, its desk shows this and needs a human (unless `screen.setupScreens`: see watchBoot).
+   * Without it, it's idle as soon as it runs.
    */
   bootHint?: string;
   /** A terminal title that's only its own name, not worth showing on its card. */
@@ -107,6 +108,11 @@ export interface ProviderAdapter<S = undefined, P = undefined> {
      * in), or undefined when it can. `early`: it hasn't started, or was already found blocked.
      */
     blocked?(text: string, early: boolean): string | undefined;
+    /**
+     * `blocked` knows all its first-run screens (trust, login), so a slow start (a project's long
+     * SessionStart hook) isn't taken for one: only its screen says it needs a human.
+     */
+    setupScreens?: boolean;
   };
   usage?: ProviderUsage<S>;
   /** The office names its workers' tasks (see TaskNamer); the others keep the task their first prompt gives. */
