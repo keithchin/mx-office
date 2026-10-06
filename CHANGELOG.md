@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-06 · release 8 (`17ebd7f`)
+
 ### Improved
 - **📦 Deliverables reads "main" from GitHub.** *On main* now means on the project's default branch
   (`origin/main`), read the same way and with the same 90-second fetch as the setup panel, not whatever
