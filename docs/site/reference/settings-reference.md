@@ -49,6 +49,11 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 
 | Setting | Where | Default | Meaning |
 |---|---|---|---|
+| Connections: credentials | **☰ → 🔌 Connections** or ⚙️ Settings › 🔌 Connections (admins); `<office data>/credentials.json` (encrypted) | none | The agents' and admin GitHub tokens, the Mendix token, the Jev key; the office password's hash goes in `config.json`. See [Connections](../administration/connections.md). |
+| Connections: toolkit folder | Connections › Folders (admins); `<office data>/office-settings.json` (`toolkitDir`) | `AGENT_OFFICE_TOOLKIT_DIR`, else `~/agent-spike/mxcli-project-toolkit` | The mxcli-project-toolkit clone the wizard and the Playbooks use; must have `bin/init-project.sh`. The projects folder next to it is ⚙️ Settings › Building's *Workspace folder*. |
+| Connections: Mendix token per project | The Mendix card's ticks (admins); `office-settings.json` (`mendixFloors`) | off | That project's workers hired afterwards get `MENDIX_TOKEN` / `MX_PAT`. |
+| Connections: commit identity | git & gh › commit identity (admins); `office-settings.json` (`gitIdentity`) | none | `GIT_AUTHOR_*` / `GIT_COMMITTER_*` for the workers, when git has no identity of its own. |
+| Connections: worktree cleanup | Worktree cleanup › On / Off (admins); `office-settings.json` (`sweep`) | on | Hourly removal of merged worktrees no worker has, under each floor's `.agent-office/worktrees/`. |
 | Audit: log prompt text | [Audit log](../using-the-office/audit-log.md) tab → **Log prompt text** (admins); `POST /api/audit/settings` | off | Keep the first 80 characters of every prompt a person sends a worker. Off: only its length is logged. |
 | Command Center terminal | 1D view's ⚙️ Settings tab → *Your view*, the 3D office's ⚙️ Settings › You, or the console's **Chat | Terminal** toggle; this browser's `localStorage` (`agent-office.pmc-view`) | `chat` | `chat` or `terminal`: how the [Project Coordinator console](../using-the-office/command-center.md#the-project-coordinator-console) shows its screen. Per browser, not per floor. |
 | The Firm: each reviewer's model | `/firm` → the model picker on each reviewer's card (admins); `<office data>/firm/firm.json` | Fable 5.1 | The model a Reviewer Agent runs on unless the audit wizard picks another. See [The Firm](../using-the-office/the-firm.md). |

@@ -14,7 +14,9 @@ import { flowsOf } from '../flow/index.js';
 import { findMpr } from '../liveapp/checkout.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { everHired } from '../roster/store.js';
-import { adminTokenConfigured, redactor } from './admin-token.js';
+import { adminTokenConfigured, adminTokenSource, redactor } from './admin-token.js';
+import { credential } from '../connections/resolve.js';
+import { toolkitDir } from '../connections/store.js';
 import { configProblems, defaultMendix, mendixVersions, toolkitEnv, wizardConfig, type WizardConfig } from './config.js';
 import { existingAnswers, parseIntakeTemplate } from './intake.js';
 import { JobBook, jobId, newJob, viewOf, type JobState } from './job.js';
@@ -23,6 +25,7 @@ import { cleanPlan } from './plan.js';
 import { setupView, setupViewOf } from './setup.js';
 import { GateSource, branchInfo } from './gate-source.js';
 import { withFloorToolkitEnv } from '../toolkit-env.js';
+import { useGateLock } from '../worktree-sweep/index.js';
 import { bashPath, runCommand } from './run.js';
 import { setupSteps, type FloorRef, type SetupDeps } from './steps.js';
 
@@ -30,7 +33,7 @@ import { setupSteps, type FloorRef, type SetupDeps } from './steps.js';
 const EDIT_STEPS: StepId[] = ['intake', 'decisions', 'settings', 'commit'];
 
 export class Wizard {
-  readonly cfg: WizardConfig;
+  private base: WizardConfig;
   readonly book: JobBook;
   /** Floors whose gate-check is running now (🔄 Re-check), and when each last finished. */
   private checking = new Set<string>();
@@ -39,15 +42,22 @@ export class Wizard {
   private gates: GateSource;
 
   constructor(private ctx: Ctx) {
-    this.cfg = wizardConfig();
+    this.base = wizardConfig();
     // Its runs are on the office's workflow engine; <office data>/wizard/ holds the jobs saved before it, taken in on load.
     this.book = new JobBook(path.join(ctx.cfg.dataDir, 'wizard'), redactor([]), flowsOf(ctx));
     this.gates = new GateSource((tmp, floorDir) => this.gateCheck(tmp, floorDir, 5 * 60_000).then(() => undefined));
+    // The worktree sweep leaves a floor's ao-gates-* copy alone while its gate-check is running.
+    useGateLock((dir) => this.gates.busy(dir));
   }
 
   /** The toolkit's gate-check over `dir`, with the floor's toolkit.env (read from the floor's own folder). */
   private gateCheck(dir: string, floorDir: string, timeoutMs: number) {
     return runCommand(this.cfg.bash, [bashPath(path.join(this.cfg.toolkitDir, 'bin', 'gate-check.sh')), bashPath(dir)], { cwd: dir, env: withFloorToolkitEnv(floorDir, toolkitEnv(this.cfg)), timeoutMs, allowFail: true });
+  }
+
+  /** Where everything is: the toolkit folder looked up again each time, so a change in 🔌 Connections › Paths takes at once. */
+  get cfg(): WizardConfig {
+    return { ...this.base, toolkitDir: toolkitDir() };
   }
 
   info(admin: boolean): WizardInfo {
@@ -61,7 +71,8 @@ export class Wizard {
     return {
       admin,
       org: this.cfg.org,
-      adminToken: { configured: adminTokenConfigured(this.cfg.adminTokenFile), file: tildify(this.cfg.adminTokenFile) },
+      adminToken: { configured: adminTokenConfigured(this.cfg.adminTokenFile), file: tildify(this.cfg.adminTokenFile), source: adminTokenSource(this.cfg.adminTokenFile) },
+      mendixToken: !!credential('mendix'),
       offline: !!this.cfg.offlineDir,
       mendixVersions: versions,
       defaultMendix: defaultMendix(versions),
@@ -199,6 +210,8 @@ export class Wizard {
     const ref = (f: Floor): FloorRef => ({ id: f.id, dir: f.dir });
     return {
       cfg: this.cfg,
+      // Phase B (the Mendix Projects API) reads the Mendix token here: the wizard only, never the workers.
+      mendixToken: () => credential('mendix'),
       projectsDir: () => ctx.building.projectsDir,
       floorOf: (repo) => {
         const f = [...ctx.floors.values()].find((x) => sameRepo(x.def.repo, repo));

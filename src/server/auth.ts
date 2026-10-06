@@ -27,11 +27,17 @@ export class Auth {
   constructor(
     private verifier: Buffer,
     private salt: Buffer,
-    secret: string,
+    private secret: string,
     private accounts: Accounts,
   ) {
     this.key = createHmac('sha256', secret).update('session:').update(verifier).digest();
     this.accountKey = createHmac('sha256', secret).update('account-session:').digest();
+  }
+
+  /** A new shared password's hash (🔌 Connections): sessions signed in with the old one stop working. */
+  setVerifier(verifier: Buffer) {
+    this.verifier = verifier;
+    this.key = createHmac('sha256', this.secret).update('session:').update(verifier).digest();
   }
 
   /** scrypt runs on the libuv pool, so guessing can't stall the event loop. */

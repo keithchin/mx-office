@@ -11,6 +11,7 @@ import { graphics, switchView } from '../../graphics';
 import type { Parts } from '../../core/parts';
 import { saveSettings, store } from '../../state';
 import { openAccounts } from '../../ui/accounts';
+import { openConnections } from '../../ui/connections';
 import { openBoard } from '../../ui/boards';
 import { openCharacter } from '../../ui/character';
 import { $ } from '../../ui/dom';
@@ -87,6 +88,7 @@ export function installHud(ctx: Ctx, core: CoreState, parts: HudParts) {
     { ...MENU.accounts, run: () => openAccounts(net) },
     { ...MENU.signins, run: () => openSignIns(net) },
     { ...MENU.settings, run: showSettings },
+    { ...MENU.connections, run: () => openConnections() },
     { ...MENU.help, run: openHelp },
     { ...MENU.home, run: () => location.assign('/home') },
     { ...MENU.guide, run: () => location.assign('/docs') },

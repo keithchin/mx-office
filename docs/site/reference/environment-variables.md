@@ -30,7 +30,9 @@ Set these before starting the office (the launcher sets the main ones). Values t
 | `AGENT_OFFICE_TEAMS_DRY_RUN=1` | No GitHub issues from approved proposals, on every floor |
 | `AGENT_OFFICE_JEV_KEY_FILE` | Path of Jeff's Jev key file (the launcher points it at `~/.agent-office-jev-key`) |
 | `TYPESAFE_API_KEY` | The Jev key itself, instead of a file |
-| `AGENT_OFFICE_TOOLKIT_DIR` | The mxcli-project-toolkit clone (default `~/agent-spike/mxcli-project-toolkit`) |
+| `AGENT_OFFICE_TOOLKIT_DIR` | The mxcli-project-toolkit clone (default `~/agent-spike/mxcli-project-toolkit`); the toolkit folder picked in [Connections](../administration/connections.md#folders) beats it |
+| `MENDIX_TOKEN`, `MX_PAT` | The Mendix token, when Connections has none (then `~/Mendix/.env`). Taken out of workers' environment unless switched on for their project |
+| `AGENT_OFFICE_SECRETS_HOME` | Where the office looks for its dot-files (`~/.agent-office-gh-token` and the rest) instead of the home folder: a test office points it somewhere harmless |
 | `AGENT_OFFICE_RANKING_LLM=off` | No LLM-written highlights in the rankings |
 
 ## New-project wizard
@@ -82,6 +84,10 @@ These can also go in `<office data>/live-app.json`; the environment wins.
 | `AGENT_OFFICE_PASSWORD` | `~/.agent-office-password` |
 | `AGENT_OFFICE_JEV_KEY_FILE` | the path `~/.agent-office-jev-key` |
 
+What's saved in [Connections](../administration/connections.md) beats all three; with everything there, the launcher needs none of the files.
+
 ## Set by the office for each worker
 
 `AGENT_OFFICE_HOOK_URL`, `AGENT_OFFICE_WORKER_ID` and `AGENT_OFFICE_HOOK_TOKEN`, so `office-workers` can reach the office. All other `AGENT_OFFICE_*` variables and `TYPESAFE_API_KEY` are removed from workers' environment.
+
+From [Connections](../administration/connections.md): `GH_TOKEN` and `GITHUB_TOKEN` (the agents' token, first of Connections, the variable, the file); `MENDIX_TOKEN` and `MX_PAT` only on a project where *Give agents the Mendix token* is ticked (removed otherwise); and `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, `GIT_COMMITTER_EMAIL` when a commit identity is set there (a worker's own wins).

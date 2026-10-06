@@ -25,6 +25,8 @@ export interface FloorRef {
 
 export interface SetupDeps {
   cfg: WizardConfig;
+  /** The Mendix token from 🔌 Connections, for the Mendix Projects API (Phase B); never put in a worker's environment. */
+  mendixToken?(): string | undefined;
   projectsDir(): string;
   /** The floor for `repo` (owner/name), if the building has one. */
   floorOf(repo: string): FloorRef | undefined;
@@ -124,7 +126,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       if (seen.code === 0) return { status: 'skipped', detail: `${repo} is already on GitHub` };
       if (job.plan.createdByHand) throw new Error(`Couldn't find ${repo} on GitHub with the office's login. Create it there first (in ${job.plan.owner}, with a README), then Retry`);
       const token = readAdminToken(cfg.adminTokenFile);
-      if (!token) throw new Error(`No admin token in ${cfg.adminTokenFile}. ${adminTokenHelp(cfg.adminTokenFile, job.plan.owner).join(' ')}`);
+      if (!token) throw new Error(`No admin token in 🔌 Connections or ${cfg.adminTokenFile}. ${adminTokenHelp(cfg.adminTokenFile, job.plan.owner).join(' ')}`);
       const hide = redactor([token]);
       const args = ['repo', 'create', repo, job.plan.private ? '--private' : '--public', '--add-readme'];
       if (job.plan.description) args.push('--description', job.plan.description);

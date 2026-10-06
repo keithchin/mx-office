@@ -37,7 +37,7 @@ Around the teams:
 
 The step-by-step version, with screenshots: `/docs/get-started/quick-start`.
 
-> **Tokens** live in files and are referred to by path only: `~/.agent-office-gh-token` (the agents'), `~/.agent-office-admin-gh-token` (repo creation only), `~/.agent-office-jev-key` (Jeff's, passed as `AGENT_OFFICE_JEV_KEY_FILE`). Never paste their contents anywhere.
+> **Tokens** are managed in the office: **☰ → 🔌 Connections** (admins) keeps the agents' and admin GitHub tokens, the Mendix token, the Jev key and the office password, encrypted with Windows DPAPI, with a Test button each. The old files still work as a fallback (`~/.agent-office-gh-token`, `~/.agent-office-admin-gh-token`, `~/.agent-office-jev-key`) and **📥 Import from files** moves them in. Never paste a token anywhere else.
 >
 > **Restarts** on Windows stop running agents; their sessions are saved, the ones cut off mid-turn carry on, and the rest stay asleep until they're prompted (or you press R). To try a change, run a throwaway **test office** on a 47xx port with its own `AGENT_OFFICE_HOME` and throwaway floors, never the real ones (`/docs/administration/test-offices`).
 

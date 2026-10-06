@@ -62,6 +62,8 @@ export const MENU = {
     title: () => 'The Claude plan and GitHub account your workers run on: your own',
   },
   settings: { id: 'settings', icon: '⚙️', label: 'Settings', section: 'Office' },
+  // The office's tokens, password, git / gh, folders and worktree cleanup (ui/connections/): admins only.
+  connections: { id: 'connections', icon: '🔌', label: 'Connections', section: 'Office', shown: () => store.me.admin, title: () => 'The office’s GitHub and Mendix tokens, Jev key and password, git & gh, its folders and worktree cleanup' },
   help: { id: 'help', icon: '❓', label: 'Controls', section: 'Office', key: 'H' },
   // The office’s own manual, its own page (/docs): how everything here works.
   guide: { id: 'guide', icon: '📖', label: 'Documentation', section: 'Office', title: () => 'How the office works: guides, reference and FAQ (its own page, /docs)' },

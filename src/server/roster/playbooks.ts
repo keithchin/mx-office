@@ -8,7 +8,6 @@
 // (role id `pm`) is "the Project Coordinator".
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { autonomyBrief, HUMAN_FULL, reviewBrief, type AutonomyLevel } from '../../shared/roster/autonomy.js';
 import { teamLabel } from '../../shared/roster/card-team.js';
@@ -18,6 +17,7 @@ import { craftOn, skillsBrief, type SkillOverrides } from '../../shared/roster/s
 import type { SubagentRecord } from '../../shared/roster/subagents.js';
 import { applyStanding } from './subagent-files.js';
 import { deliverablesBrief } from './deliverables-brief.js';
+import { toolkitDir as officeToolkitDir } from '../connections/store.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
 export const FIELD_LESSONS = '.ai-context/skills/mxcli-field-lessons/SKILL.md';
@@ -41,7 +41,7 @@ export interface PlaybookContext {
 }
 
 /** Where the mxcli-project-toolkit clone is (the same setting the new-project wizard uses). */
-const toolkitDir = () => (process.env.AGENT_OFFICE_TOOLKIT_DIR || path.join(os.homedir(), 'agent-spike', 'mxcli-project-toolkit')).replace(/\\/g, '/');
+const toolkitDir = () => officeToolkitDir().replace(/\\/g, '/');
 
 /**
  * The toolkit skills and role files this role works from, pointed at in the toolkit clone rather than copied,
@@ -130,6 +130,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     ...toolkitSection(role, ctx.skills),
     '## The one-writer rule',
     ONE_WRITER,
+    'Git worktrees go only under the project’s `.agent-office/worktrees/` (`git worktree add .agent-office/worktrees/<name> -b <branch>` from the project root), never in a temp folder or next to the project: the office refuses any other place and cleans these up once merged.',
     '',
     '## Journal etiquette',
     `- Your team's journal is \`${journalPath(role.team)}\`. Append dated entries at the bottom, headed \`## YYYY-MM-DD HH:MM — <what>\` (e.g. \`— Standup\`, \`— Handoff\`, \`— Decision\`). Never rewrite old entries.`,

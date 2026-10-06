@@ -1,0 +1,50 @@
+/* 🔌 Connections: the office's credentials, its git / gh check, folders and worktree cleanup. */
+.modal.connections { width: min(760px, 100%); }
+.cx { display: flex; flex-direction: column; gap: 12px; }
+.cx p { margin: 0; }
+.cx-intro { color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+.cx-h { margin: 6px 0 0; font-size: 16px; }
+.cx-card { background: var(--card); border: var(--bw, 3px) solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 3px 0 var(--edge); }
+.cx-card.focus { outline: 3px solid var(--accent); outline-offset: 2px; }
+.cx-card.missing { background: var(--card-dim); }
+.cx-card.invalid { border-color: var(--bad); }
+.cx-card.expiring { border-color: var(--warn-ink); }
+.cx-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cx-head h4 { margin: 0; flex: 1; min-width: 160px; font-size: 15px; }
+.cx-icon { font-size: 20px; }
+.cx-status { font-size: 12px; font-weight: 900; padding: 2px 9px; border-radius: 999px; border: 2px solid var(--ink); background: var(--neutral-soft); white-space: nowrap; }
+.cx-status.connected { background: var(--good-soft); }
+.cx-status.invalid { background: var(--bad-soft); color: var(--bad-ink); }
+.cx-status.expiring { background: var(--warn-soft); color: var(--warn-ink); }
+.cx-where { font-size: 13px; color: var(--ink-2); font-weight: 700; word-break: break-word; }
+.cx-note { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.cx-sub { font-size: 13px; color: var(--ink-2); }
+.cx-warn { font-size: 13px; color: var(--warn-ink); background: var(--warn-soft); border-radius: 8px; padding: 6px 9px; }
+.cx-err { font-size: 13px; color: var(--bad-ink); font-weight: 700; }
+.cx-err:empty { display: none; }
+.cx-test { display: flex; flex-direction: column; gap: 4px; font-size: 13px; background: var(--sunken); border-radius: 10px; padding: 8px 10px; }
+.cx-repos { font-size: 12.5px; color: var(--ink-2); word-break: break-word; }
+.cx-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.cx-actions .btn, .cx-head .btn { padding: 4px 12px; font-size: 13px; }
+.cx-form { display: flex; flex-direction: column; gap: 8px; }
+.cx-two { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.cx-two input { flex: 1 1 200px; width: auto !important; }
+.cx-help summary { cursor: pointer; font-weight: 800; font-size: 13px; color: var(--link); }
+.cx-help p, .cx-help ul, .cx-help ol { font-size: 13px; margin: 6px 0 0; line-height: 1.45; }
+.cx-help ul, .cx-help ol { padding-left: 20px; }
+.cx-link { display: inline-block; margin-top: 8px; text-decoration: none; padding: 4px 12px; font-size: 13px; }
+.cx-floors { display: flex; flex-direction: column; gap: 4px; }
+.modal .cx-check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 0; font-weight: 700; }
+.cx-banner { border: 3px dashed var(--info-line); background: var(--info-soft); border-radius: 14px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; font-size: 14px; }
+.cx-banner.good { border-style: solid; border-color: var(--good-ink); background: var(--good-soft); }
+.cx-banner ul { margin: 0; padding-left: 20px; font-size: 13px; }
+.cx-toollist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.cx-path { display: flex; flex-direction: column; gap: 6px; }
+.cx-sweep ul { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; display: flex; flex-direction: column; gap: 3px; word-break: break-word; }
+.cx-sweep li.removed b { color: var(--good-ink); }
+.cx-sweep li.outside b, .cx-sweep li.failed b { color: var(--warn-ink); }
+.settings-pane .cx { padding-bottom: 8px; }
+@media (max-width: 560px) {
+  .cx-card { padding: 10px; }
+  .cx-head h4 { min-width: 120px; }
+}

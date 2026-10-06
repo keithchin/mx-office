@@ -1,10 +1,14 @@
 ---
 title: Security & tokens
-description: The office password and who is admin, the agents' and admin GitHub tokens, the Jev key, what workers can and can't see, and why the docs are behind the sign-in.
+description: The office password and who is admin, the agents' and admin GitHub tokens, the Mendix token, the Jev key, what workers can and can't see, and why the docs are behind the sign-in.
 weight: 2
 ---
 
-## Secret files
+## Connections first
+
+The tokens, the Jev key and the office password are managed from **☰ → 🔌 Connections** (admins): encrypted with Windows DPAPI in the office's data folder, with a Test button each. See [Connections](connections.md). The office looks for each one in Connections first, then its environment variable, then the files below, so the files still work (and **📥 Import from files** moves them into Connections in one click).
+
+## Secret files (the old way)
 
 | File | What | Read by |
 |---|---|---|
@@ -12,9 +16,10 @@ weight: 2
 | `~/.agent-office-gh-token` | The **agents' GitHub token** | The launcher, into `GH_TOKEN` / `GITHUB_TOKEN` for the office and its workers |
 | `~/.agent-office-admin-gh-token` | The **admin GitHub token** | The server only, just before the wizard's `gh repo create` (`AGENT_OFFICE_ADMIN_GH_TOKEN_FILE` to move it) |
 | `~/.agent-office-jev-key` | Jeff's **Jev key** | The server, by path (`AGENT_OFFICE_JEV_KEY_FILE`) |
+| `~/Mendix/.env` (`MX_PAT=`) | The **Mendix personal access token** | The server, when Connections has none (the toolkit's own convention) |
 
 > [!CAUTION]
-> Never print, paste, commit or screenshot these files. Refer to them by path only. If one leaks, revoke it on GitHub (or TypeSafe) and write a new file.
+> Never print, paste, commit or screenshot these files. Refer to them by path only. If one leaks, revoke it on GitHub (or TypeSafe, or Mendix) and replace it in Connections.
 
 ## Who is admin
 
@@ -32,11 +37,16 @@ People can also have their own accounts (**☰ → 🔑 Accounts**, admin only),
 
 - Fine-grained, owner the organization, all repositories, **Administration** and **Contents** read and write.
 - The server reads it just before use and doesn't keep it. It's passed only to the one `gh repo create` process, never put in the office's environment, and blanked out of logs and errors (as is anything that looks like a GitHub token).
-- The wizard page only checks *that* the file exists; it never sees the token.
+- The wizard page only checks *that* there is one (in Connections or the file); it never sees the token. Without one, it offers a box that saves the token straight into Connections.
+
+## The Mendix token
+
+- A personal access token from Mendix user settings, with `mx:app:create` for creating apps.
+- The wizard can read it. Workers get it (`MENDIX_TOKEN`, `MX_PAT`) only on a project where an admin ticked **Give agents the Mendix token** in Connections; everywhere else both variables are taken out of the workers' environment.
 
 ## What workers can't see
 
-The office removes from every worker's environment: the Jev key variables (`TYPESAFE_API_KEY` and all `AGENT_OFFICE_*` settings), and, for workers that run as a signed-in person, the office's own GitHub token.
+The office removes from every worker's environment: the Jev key variables (`TYPESAFE_API_KEY` and all `AGENT_OFFICE_*` settings), the Mendix token (`MENDIX_TOKEN`, `MX_PAT`) unless it's switched on for that project, and, for workers that run as a signed-in person, the office's own GitHub token. The admin token and the office password never reach a worker.
 
 ## The Firm's reviewers can't write
 

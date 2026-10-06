@@ -8,6 +8,7 @@
 import { readFileSync, statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { storedSecret } from '../connections/store.js';
 
 /** Points at the file holding the admin token (one line). */
 export const ADMIN_TOKEN_ENV = 'AGENT_OFFICE_ADMIN_GH_TOKEN_FILE';
@@ -21,8 +22,12 @@ export function adminTokenFile(env: NodeJS.ProcessEnv = process.env): string {
   return set ? path.resolve(set.replace(/^~(?=$|[\\/])/, os.homedir())) : path.join(os.homedir(), DEFAULT_ADMIN_TOKEN_FILE);
 }
 
-/** Whether there's a token to use, from the file's size alone: the info the wizard shows never needs the token itself. */
+/**
+ * Whether there's a token to use: saved in 🔌 Connections (connections/), or else in the file, going
+ * by its size alone: the info the wizard shows never needs the token itself.
+ */
 export function adminTokenConfigured(file: string): boolean {
+  if (storedSecret('github-admin')) return true;
   try {
     const s = statSync(file);
     return s.isFile() && s.size > 0;
@@ -31,8 +36,13 @@ export function adminTokenConfigured(file: string): boolean {
   }
 }
 
-/** The token, read when it's about to be used and not kept. */
+/** Where the wizard's admin token comes from now: Connections, or the file. */
+export const adminTokenSource = (file: string): 'connections' | 'file' | undefined => (storedSecret('github-admin') ? 'connections' : adminTokenConfigured(file) ? 'file' : undefined);
+
+/** The token (Connections' first, else the file's), read when it's about to be used and not kept. */
 export function readAdminToken(file: string): string | undefined {
+  const stored = storedSecret('github-admin');
+  if (stored) return stored;
   try {
     const token = readFileSync(file, 'utf8').split(/\r?\n/)[0].trim();
     return token || undefined;
@@ -69,6 +79,6 @@ export function adminTokenHelp(file: string, org: string): string[] {
     `Create a fine-grained personal access token on GitHub (Settings → Developer settings → Fine-grained tokens) with resource owner ${org}.`,
     'Repository access: All repositories (it has to reach the ones it is about to create).',
     'Permissions: Administration: Read and write, and Contents: Read and write. Nothing else.',
-    `Save it as the only line of ${file} on the office's machine (or point ${ADMIN_TOKEN_ENV} at another file). The office reads it only to create repositories; agents never see it.`,
+    `Paste it into 🔌 Connections (☰ → Connections, admins only), or save it as the only line of ${file} on the office's machine (or point ${ADMIN_TOKEN_ENV} at another file). The office reads it only to create repositories; agents never see it.`,
   ];
 }

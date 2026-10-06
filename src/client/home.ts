@@ -105,7 +105,7 @@ $('to-home').addEventListener('click', (e) => {
   scrollTo({ top: 0 });
 });
 
-for (const t of ['floors', 'peers'] as const) store.on(t, () => tab === 'projects' && projects.render());
+for (const t of ['floors', 'peers', 'me'] as const) store.on(t, () => tab === 'projects' && projects.render());
 // The numbers move on by themselves while they're on screen.
 setInterval(() => tab === 'stats' && !document.hidden && void stats.render(), 30_000);
 

@@ -11,6 +11,8 @@ The office keeps its data in a `.agent-office` folder. On the Taskforce laptop t
 | In it | What |
 |---|---|
 | `config.json` | The password hash and the session secret |
+| `credentials.json` | [Connections](connections.md)' saved tokens and keys: encrypted with Windows DPAPI for the office's user (elsewhere base64 in a 0600 file), with each one's masked tail, who saved it and its last Test |
+| `office-settings.json` | Connections' settings: the toolkit folder, the worktree cleanup on or off, the projects whose agents get the Mendix token, the workers' commit identity |
 | `accounts.json` | People's accounts |
 | `floors.json` | The list of floors |
 | `roster/<floor>.json` | The team: settings, members, standups, proposals, escalations, spend, subagents |
@@ -38,7 +40,7 @@ In `<floor checkout>\.agent-office\`:
 |---|---|
 | `workers.json` | The floor's workers and their saved sessions (restored on start) |
 | `queue.json` | The task queue |
-| `worktrees/` | Each worker's git worktree |
+| `worktrees/` | Each worker's git worktree. Agents can't make one anywhere else, and merged ones no worker has are cleaned up hourly (see [Connections](connections.md#worktree-cleanup)) |
 
 And in the project itself: Playbooks, journals, standups and insight memos. See [Playbooks and journals](../teams-and-agents/playbooks-and-journals.md).
 

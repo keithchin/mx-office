@@ -23,6 +23,7 @@ import { openSearch } from '../ui/search';
 import { openBookshelf } from '../ui/bookshelf';
 import { openTeam } from '../ui/team';
 import { openAccounts } from '../ui/accounts';
+import { openConnections } from '../ui/connections';
 import { openSignIns } from '../ui/signins';
 import { openUpgrade } from '../ui/upgrade';
 import { switchView } from '../graphics';
@@ -90,6 +91,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
     { ...MENU.accounts, run: () => openAccounts(net) },
     { ...MENU.signins, run: () => openSignIns(net) },
     in3d('settings', 'Your settings, the building and the workers'),
+    { ...MENU.connections, run: () => openConnections() },
     { ...MENU.home, shown: () => !d.home, run: () => location.assign('/home') },
     { ...MENU.guide, run: () => location.assign('/docs') },
     { ...MENU.upgrade, run: () => openUpgrade(net) },

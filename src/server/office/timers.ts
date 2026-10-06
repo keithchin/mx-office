@@ -1,6 +1,7 @@
 import type { Ctx } from './context.js';
 import { SLOW_CLIENT_BYTES } from './client.js';
 import { startStudioMode } from '../studio/index.js';
+import { startWorktreeSweep } from '../worktree-sweep/index.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, and Studio mode's look at the Mendix floors. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
@@ -34,8 +35,11 @@ export function startTimers(ctx: Ctx): () => void {
 
   // Studio Pro open on a floor's project pauses that floor's agents' mxcli writes (studio/watch.ts).
   const stopStudio = startStudioMode(ctx);
+  // Merged worktrees no worker has any more are cleaned up every hour (worktree-sweep/).
+  const stopSweep = startWorktreeSweep(ctx);
 
   return () => {
+    stopSweep();
     stopStudio();
     clearInterval(heartbeat);
     clearInterval(resync);
