@@ -26,6 +26,7 @@ import { openAccounts } from '../ui/accounts';
 import { openSignIns } from '../ui/signins';
 import { openUpgrade } from '../ui/upgrade';
 import { switchView } from '../graphics';
+import { openStudio, watchStudio } from '../ui/studio';
 import '../ui/menu.css';
 import '../ui/flatchrome.css';
 
@@ -44,7 +45,7 @@ interface FloorMenuDeps {
 }
 
 /** What only makes sense on a floor, left out of the home page's ☰. */
-const FLOOR_ONLY = new Set(['waiting', 'issues', 'pulls', 'queue', 'services', 'whiteboard', 'meeting', 'search', 'docs']);
+const FLOOR_ONLY = new Set(['waiting', 'issues', 'pulls', 'queue', 'services', 'whiteboard', 'meeting', 'search', 'docs', 'studio']);
 
 const githubUrl = (remote?: string) => {
   const m = remote?.match(/github\.com[:/]([^/]+\/[^/.]+)/);
@@ -78,6 +79,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
     { ...MENU.meeting, run: f.meeting },
     { ...MENU.search, key: undefined, run: () => openSearch((id) => f.openWorker(id)) },
     { ...MENU.docs, shown: () => !!store.floor, run: openDocs },
+    { ...MENU.studio, run: () => void openStudio() },
     // Every floor's card, with how many wait on someone, is the home page (its Projects tab, from there).
     { ...MENU.elevator, run: () => (d.home ? (document.getElementById('tab-projects')?.click(), scrollTo({ top: 0 })) : location.assign('/home')) },
     in3d('roof', 'Up to the roof: a DJ, drinks and the city'),
@@ -93,6 +95,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
     { ...MENU.upgrade, run: () => openUpgrade(net) },
   ];
   const actions = d.home ? all.filter((a) => !FLOOR_ONLY.has(a.id)) : all;
+  if (!d.home) watchStudio();
   const elsewhere = new Set<string>(['roof', 'voice', 'share', 'decor', 'settings']);
   let menu: Modal | null = null;
 

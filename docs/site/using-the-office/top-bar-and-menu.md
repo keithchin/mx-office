@@ -42,7 +42,7 @@ The same menu as in the 3D office, with what each item does from here.
 
 | Section | Items |
 |---|---|
-| **Open** | 🙋 Next worker that needs you (only when someone waits) · 📌 Issues · 🔀 Pull requests · 📋 Task queue · 🌐 Services · 📝 Whiteboard · 🤝 Meeting room · 🔎 Search · 📚 Project docs · 🛗 Floors · 🍸 Rooftop bar (3D ↗) |
+| **Open** | 🙋 Next worker that needs you (only when someone waits) · 📌 Issues · 🔀 Pull requests · 📋 Task queue · 🌐 Services · 📝 Whiteboard · 🤝 Meeting room · 🔎 Search · 📚 Project docs · 🧱 Open in Studio Pro (Mendix projects; admin) · 🛗 Floors · 🍸 Rooftop bar (3D ↗) |
 | **Together** | 🎙️ Join voice (3D ↗) · 🖥️ Share screen (3D ↗) · 🖼️ Hang a picture (3D ↗) · 👥 Invite teammates · 🔑 Accounts (admin) · 🔐 Your sign-ins |
 | **Office** | ⚙️ Settings (3D ↗) · 🏠 Home · 📖 Documentation · ⬆️ Upgrade the office (when an update is there) |
 

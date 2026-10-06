@@ -6,7 +6,14 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **Open in Studio Pro**: a button in a Mendix project's Command Center heading (and ☰ → 🧱 Open in
+  Studio Pro) opens the floor's `.mpr` in Studio Pro on the office's computer, in the version the
+  project was saved in (through Mendix's Version Selector). Admins only, after a confirm that warns
+  that no agent may run `mxcli exec` while Studio Pro has the project open and lists the agents busy on
+  the floor. Each open is in the Audit log (`studio.open`) and in Team chatter. It only works when the
+  office runs on a Windows desktop with Studio Pro installed; otherwise the button is greyed out and
+  says why.
 
 ## 2026-10-05 · release 4 (`6639313`)
 

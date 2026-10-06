@@ -47,6 +47,8 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/roster` | The floor's team |
 | GET | `/api/roster/standup` | One standup with its page |
 | POST | `/api/roster/action` | Team actions (see below) |
+| GET | `/api/studio` | `?floor=`: whether the floor has a Mendix project (`hasMpr`, `mpr`, `version`), whether Studio Pro can be opened from here, and the agents mid-turn |
+| POST | `/api/studio/open` | `{ floor }`: opens the floor's .mpr in Studio Pro on the office's computer (admin) |
 | GET | `/api/teams/page` | A team's page |
 | POST | `/api/teams/labels` | Create missing `team:` labels (admin) |
 | GET / POST | `/api/wizard/*` | The new-project wizard: GET `info`, `job`, `setup`, `answers`; POST `recheck`, `start`, `retry`, `edit` (admin) |

@@ -19,6 +19,7 @@ import { rosterRoutes } from './roster.js';
 import { searchRoutes } from './search.js';
 import { teamRoutes } from './teams.js';
 import { serviceRoutes } from './services.js';
+import { studioRoutes } from './studio.js';
 import { wizardRoutes } from './wizard.js';
 
 export const routes: readonly Route[] = [
@@ -74,6 +75,8 @@ export const routes: readonly Route[] = [
   teamRoutes.page,
   teamRoutes.labels,
   wizardRoutes.wizard,
+  studioRoutes.info,
+  studioRoutes.open,
   pageRoutes.office,
   pageRoutes.home,
   pageRoutes.firm,

@@ -7,6 +7,7 @@ import { store } from '../state';
 import { waitingInOrder, waitingLabel } from '../nextup';
 import { needsSigningIn } from './signins';
 import type { HudAction } from './menu';
+import { studioBlocked, studioShown, studioTitle } from './studio';
 
 export type MenuItem = Omit<HudAction, 'run'>;
 
@@ -40,6 +41,8 @@ export const MENU = {
   },
   search: { id: 'search', icon: '🔎', label: 'Search', section: 'Open', key: '/', title: () => 'Search the chat and every terminal' },
   docs: { id: 'docs', icon: '📚', label: 'Project docs', section: 'Open', title: () => 'Read the project’s own Markdown: its README, team journals, standups' },
+  // The floor's Mendix project in Studio Pro on the office's computer (ui/studio/): admins only, after a confirm.
+  studio: { id: 'studio', icon: '🧱', label: 'Open in Studio Pro', section: 'Open', shown: studioShown, blocked: studioBlocked, title: studioTitle },
   elevator: { id: 'elevator', icon: '🛗', label: 'Floors', section: 'Open', count: COUNTS.floors, title: () => 'Go to another project, or add one' },
   roof: { id: 'roof', icon: '🍸', label: 'Rooftop bar', section: 'Open', title: () => 'Ride the elevator up to the roof: a DJ, drinks and the city' },
   voice: { id: 'voice', icon: '🎙️', label: 'Join voice', section: 'Together', key: 'V' },

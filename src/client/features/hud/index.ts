@@ -25,6 +25,7 @@ import { openSignIns } from '../../ui/signins';
 import { openTeam } from '../../ui/team';
 import { openUpgrade } from '../../ui/upgrade';
 import { openWhiteboard } from '../../ui/whiteboard';
+import { openStudio, watchStudio } from '../../ui/studio';
 import { describeSky } from '../../world/sky';
 
 export type HudParts = Pick<Parts, 'worlds' | 'place' | 'travel' | 'you' | 'actions' | 'waiting' | 'meeting' | 'bookshelf' | 'hanging' | 'talk' | 'notifier'>;
@@ -60,6 +61,8 @@ export function installHud(ctx: Ctx, core: CoreState, parts: HudParts) {
     { ...MENU.search, run: waiting.showSearch },
     // The office has its bookshelf for them; a map of its own may not.
     { ...MENU.docs, shown: () => !inOffice(), run: parts.bookshelf.showBookshelf },
+    // The floor's Mendix project in Studio Pro on the office's computer (ui/studio/).
+    { ...MENU.studio, run: () => void openStudio() },
     { ...MENU.elevator, label: () => (inOffice() ? 'Elevator' : 'Floors'), title: () => (inOffice() ? 'Ride to another project' : 'Go to another project, or add one'), run: travel.showElevator },
     { ...MENU.roof, shown: () => !core.upTop && inOffice() && builtFloors().length > 0, run: () => travel.ride(ROOF) },
     // In voice, V is push to talk, so leaving is only from here.
@@ -102,6 +105,8 @@ export function installHud(ctx: Ctx, core: CoreState, parts: HudParts) {
     settings,
     () => saveSettings(settings),
   );
+  // Whether the floor has a Mendix project for Open in Studio Pro, asked again on each floor.
+  watchStudio();
   // The view dropdown, by the dock (ui/viewpick.ts).
   $('view-pick').replaceWith(viewPicker(graphics().view, 'dock-btn'));
   // A flat view's ☰ asked for something only the 3D office has (ui/menuitems.ts runIn3d): run it once the office is up.
