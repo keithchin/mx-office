@@ -7,7 +7,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { adminTokenFile } from './admin-token.js';
-import { toolkitDir } from '../connections/store.js';
+import { firstExisting, toolkitDir } from '../connections/store.js';
 
 export interface WizardConfig {
   /** The mxcli-project-toolkit clone (picked in 🔌 Connections › Paths, else AGENT_OFFICE_TOOLKIT_DIR). */
@@ -50,7 +50,9 @@ export function wizardConfig(env: NodeJS.ProcessEnv = process.env): WizardConfig
   const home = os.homedir();
   const local = env.LOCALAPPDATA ?? path.join(home, 'AppData', 'Local');
   const gitBash = 'C:\\Program Files\\Git\\bin\\bash.exe';
-  const ourMxcli = path.join(home, 'agent-spike', 'bin', isWin ? 'mxcli.exe' : 'mxcli');
+  // The workspace's mxcli: tools/mxcli, or bin/ before the layout change.
+  const exe = isWin ? 'mxcli.exe' : 'mxcli';
+  const ourMxcli = firstExisting([path.join(home, 'agent-spike', 'tools', 'mxcli', exe), path.join(home, 'agent-spike', 'bin', exe)]);
   const pyDir = firstDir(path.join(local, 'Python'), /^pythoncore-/);
   return {
     toolkitDir: toolkitDir(env),

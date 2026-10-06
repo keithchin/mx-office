@@ -14,7 +14,7 @@ You need these on the laptop. On the Taskforce laptop they are already set up.
 - The office's source build in `C:\Users\<you>\agent-spike\agent-office-src` (our fork), built with `npm run build`.
 - **Claude Code** (`claude`) signed in. Every agent is a Claude Code session.
 - **GitHub CLI** (`gh`) and the agents' token file `~/.agent-office-gh-token`. See [Security & tokens](../administration/security-and-tokens.md).
-- **mxcli** at `agent-spike\bin\mxcli.exe`, Studio Pro 11.6.x, and the local PostgreSQL for the live app.
+- **mxcli** at `agent-spike\tools\mxcli\mxcli.exe` (`agent-spike\bin\mxcli.exe` before the layout change), Studio Pro 11.6.x, and the local PostgreSQL for the live app.
 - The office password in `~/.agent-office-password`.
 
 > [!IMPORTANT]

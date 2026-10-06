@@ -25,7 +25,7 @@ Then open `http://127.0.0.1:4600`, sign in with the office password, and press *
 1. Reads the agents' GitHub token from `~/.agent-office-gh-token` (it refuses one that isn't fine-grained) and sets it as `GH_TOKEN` for the office only, so every worker inherits it.
 2. Reads the office password from `~/.agent-office-password` into `AGENT_OFFICE_PASSWORD`.
 3. Sets `AGENT_OFFICE_JEV_KEY_FILE` to the *path* of `~/.agent-office-jev-key` (never its contents).
-4. Puts `agent-spike\bin` on `PATH` and sets `AGENT_OFFICE_LIVE_MXCLI` to mxcli.
+4. Puts `agent-spike\tools\mxcli` (`agent-spike\bin` before the layout change) on `PATH` and sets `AGENT_OFFICE_LIVE_MXCLI` to mxcli.
 5. Runs the source build, `agent-office-src\bin\agent-office.js`, on the mx-spike floor's folder (so the office data is in `mx-spike\.agent-office\`).
 
 The office listens on port **4600** (`--port` or `PORT` to change it).

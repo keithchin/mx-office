@@ -32,7 +32,7 @@ A **✋ gate** needs an explicit `CONFIRMED` decision in the project's `PROJECT.
 
 ## Where it is
 
-`C:\Users\<you>\agent-spike\mxcli-project-toolkit` (`AGENT_OFFICE_TOOLKIT_DIR`). Its `upstream` remote is MendixMau's repository, with push disabled.
+`C:\Users\<you>\agent-spike\mendix-toolkit` (`agent-spike\mxcli-project-toolkit` before the layout change; Settings → Connections → Folders or `AGENT_OFFICE_TOOLKIT_DIR` override it). Its `upstream` remote is MendixMau's repository, with push disabled.
 
 > [!NOTE]
 > Our copy fixes a Windows problem where commits hung in the toolkit's pre-commit hook (a path loop). Always set projects up from our copy. See [Agents and GitHub problems](../troubleshooting/agents-and-github.md).

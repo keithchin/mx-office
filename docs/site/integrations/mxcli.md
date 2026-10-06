@@ -8,7 +8,7 @@ weight: 2
 
 ## Where it is
 
-`C:\Users\<you>\agent-spike\bin\mxcli.exe`. The launcher puts it on `PATH` and sets `AGENT_OFFICE_LIVE_MXCLI` to it for the live app. The wizard uses `AGENT_OFFICE_MXCLI`.
+`C:\Users\<you>\agent-spike\tools\mxcli\mxcli.exe` (`agent-spike\bin\mxcli.exe` before the layout change). The launcher puts it on `PATH` and sets `AGENT_OFFICE_LIVE_MXCLI` to it for the live app. The wizard uses `AGENT_OFFICE_MXCLI`.
 
 It's validated on Mendix **11.6.x**; earlier projects use **11.6.4**, and the new-project wizard now starts new ones on the newest **11.12** installed (11.12.4).
 

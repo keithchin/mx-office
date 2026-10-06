@@ -4,7 +4,7 @@
 // (tests, `agent-office prune`…) nothing is stored, so every credential falls back to its environment
 // variable and dot-file as it always has.
 
-import { readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { CredentialId } from '../../shared/connections.js';
@@ -75,11 +75,17 @@ export function updateOfficeSettings(patch: Partial<OfficeSettings>): OfficeSett
  */
 export const secretsHome = (env: NodeJS.ProcessEnv = process.env): string => (env.AGENT_OFFICE_SECRETS_HOME ? path.resolve(env.AGENT_OFFICE_SECRETS_HOME) : os.homedir());
 
+/** Where the toolkit clone usually is: the workspace's mendix-toolkit, or its name before the layout change. */
+const TOOLKIT_DEFAULTS = [['agent-spike', 'mendix-toolkit'], ['agent-spike', 'mxcli-project-toolkit']];
+
 /** The toolkit clone: picked in Settings, else AGENT_OFFICE_TOOLKIT_DIR, else where it usually is. */
 export function toolkitDirState(env: NodeJS.ProcessEnv = process.env): { dir: string; source: 'settings' | 'env' | 'default' } {
   if (settings.toolkitDir) return { dir: settings.toolkitDir, source: 'settings' };
   if (env.AGENT_OFFICE_TOOLKIT_DIR) return { dir: path.resolve(env.AGENT_OFFICE_TOOLKIT_DIR), source: 'env' };
-  return { dir: path.join(os.homedir(), 'agent-spike', 'mxcli-project-toolkit'), source: 'default' };
+  return { dir: firstExisting(TOOLKIT_DEFAULTS.map((p) => path.join(os.homedir(), ...p))), source: 'default' };
 }
+
+/** The first of `dirs` that exists, else the first: the default to suggest when none is there yet. */
+export const firstExisting = (dirs: string[]): string => dirs.find((d) => existsSync(d)) ?? dirs[0];
 
 export const toolkitDir = (env: NodeJS.ProcessEnv = process.env): string => toolkitDirState(env).dir;
