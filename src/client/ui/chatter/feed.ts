@@ -90,6 +90,25 @@ export function onFeed(floor: string, l: (ev: FeedEvent) => void): () => void {
 
 export const hasMore = (floor: string) => !!feedOf(floor).cursor;
 
+/**
+ * Fetches the newest page again and puts what's new on top, as if each had come live: for a floor whose
+ * chatter.new this page doesn't get (the team phone's other project channels, ui/phone/).
+ */
+export async function refetch(floor: string): Promise<void> {
+  const f = feedOf(floor);
+  if (!f.loaded) return void messages(floor);
+  try {
+    const p = await fetchPage(floor);
+    for (const m of p.messages.filter((x) => !f.ids.has(x.id)).reverse()) {
+      f.ids.add(m.id);
+      f.messages.unshift(m);
+      tell(f, { t: 'new', m });
+    }
+  } catch {
+    // The office is unreachable: next time.
+  }
+}
+
 /** Every server message: a new one goes on top of its floor's thread. */
 export function routeChatter(msg: ServerMsg) {
   if (msg.t !== 'chatter.new') return;

@@ -1,0 +1,21 @@
+/* The 1D Command Center fitted to a laptop screen (ui/command-layout.ts). */
+
+/* The setup panel folded to its one line: its title, where it stands, and Show. */
+.setup-panel.cc-folded { gap: 0; padding: 8px 12px; box-shadow: none; }
+.setup-panel.cc-folded > :not(.setup-head), .setup-panel.cc-folded .setup-head > :not(h3, .cc-setup-line, .setup-grow, .cc-fold-btn) { display: none; }
+.cc-setup-line { min-width: 0; font-size: 13px; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.setup-panel:not(.cc-folded) .cc-setup-line { display: none; }
+.setup-panel.cc-folded .setup-head { flex-wrap: nowrap; }
+.setup-panel.cc-folded .cc-setup-line { flex: 1; }
+
+/* Wide and tall enough: the summary's three columns (details, the PM console, recent activity) take what's
+   left of the window below the tabs, each scrolling on its own, so the page itself barely scrolls. The
+   console gets the widest. */
+@media (min-width: 1180px) and (min-height: 600px) {
+  .lite-main.on-command #summary.sm:has(> .pmc) {
+    grid-template-columns: minmax(260px, 1fr) minmax(420px, 1.5fr) minmax(250px, .9fr);
+    grid-template-rows: minmax(0, 1fr);
+    height: max(440px, calc(100dvh - var(--cc-top, 320px) - var(--tp-above, 72px) - 14px));
+  }
+  .lite-main.on-command #summary.sm:has(> .pmc) > * { min-height: 0; overflow-y: auto; }
+}

@@ -99,5 +99,7 @@ export function mountChat(host: HTMLElement, net: Net) {
 export function officeKeys(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
   if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return false;
+  // The team phone (ui/phone/) keeps its own keys.
+  if (t?.closest?.('.tp-win')) return false;
   return !modalOpen() && !e.altKey && !e.metaKey;
 }

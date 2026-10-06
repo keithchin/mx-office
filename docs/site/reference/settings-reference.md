@@ -51,6 +51,12 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 |---|---|---|---|
 | Audit: log prompt text | [Audit log](../using-the-office/audit-log.md) tab → **Log prompt text** (admins); `POST /api/audit/settings` | off | Keep the first 80 characters of every prompt a person sends a worker. Off: only its length is logged. |
 | Command Center terminal | 1D view's ⚙️ Settings tab → *Your view*, the 3D office's ⚙️ Settings › You, or the console's **Chat | Terminal** toggle; this browser's `localStorage` (`agent-office.pmc-view`) | `chat` | `chat` or `terminal`: how the [Project Coordinator console](../using-the-office/command-center.md#the-project-coordinator-console) shows its screen. Per browser, not per floor. |
+| Team phone: Do not disturb | The [📱 Team phone](../using-the-office/team-phone.md#phone-settings)'s ⚙ → *Do not disturb*; this browser's `localStorage` (`agent-office.phone.alerts`) | off | Off, until turned off, 1 hour, or until 9:00 tomorrow: no desktop alerts or sound meanwhile (the badge still counts). Quiets the workers' and escalations' alerts too, on the 1D and 2D views. |
+| Team phone: Digest | The phone's ⚙ → *Digest*; `agent-office.phone.alerts` | off | Bundle alerts that aren't urgent into one every 15, 30 or 60 minutes; urgent ones still come at once. |
+| Team phone: Sound | The phone's ⚙ → *Sound*; `agent-office.phone.alerts` | on | A short sound with an alert for something that needs you. |
+| Team phone: open, wide, last channel | The phone's button, **⤢**, the channel list; `agent-office.phone.open`, `.phone.wide`, `.phone.screen` | closed | Whether this browser had the phone open, widened, and on which channel. |
+| Team phone: what you've read | Opening a channel or DM; the office's `<office data>/phone/reads.json` (per account, or per browser on the shared password), mirrored in `agent-office.phone.reads` | — | The unread counts and the grey dot. |
+| Command Center: folded sections | A section heading in the summary, the setup panel's **Hide / Show**; `agent-office.cc-fold`, `agent-office.cc-setup` | open (the setup panel folds once its gates are fine) | Which parts of the [Command Center](../using-the-office/command-center.md) this browser keeps folded. |
 | The Firm: each reviewer's model | `/firm` → the model picker on each reviewer's card (admins); `<office data>/firm/firm.json` | Fable 5.1 | The model a Reviewer Agent runs on unless the audit wizard picks another. See [The Firm](../using-the-office/the-firm.md). |
 
 ## The types, as in the code

@@ -1,26 +1,16 @@
-// The team chatter on a team's page (ui/teams/panels.ts): the latest few exchanges its members are in,
-// compact. One element per floor and team, kept across the page's redraws (it's drawn again on every
-// change of the board) and updated in place as messages come in. No three.js.
+// The team chatter on a team's page (ui/teams/panels.ts): the chatter itself lives in the team phone now
+// (ui/phone/), so the page has a link that opens it filtered to the team, and says how much the team has
+// said today. One element per floor and team, kept across the page's redraws. No three.js.
 
 import { isGroup, type ChatterMessage } from '../../../shared/chatter';
 import type { TeamId } from '../../../shared/roster/roles';
 import { store } from '../../state';
 import { h } from '../dom';
+import { openPhone } from '../phone/api';
 import { messages, onFeed } from './feed';
-import { messageNode, refreshTimes, type ChatterActions } from './message';
-import { chatterActions, type ChatterDeps } from './panel';
 import './chatter.css';
 
-const SHOWN = 8;
 const made = new Map<string, HTMLElement>();
-let actions: ChatterActions | undefined;
-
-/** Where the compact panels' bubbles go: the 1D view says once (lite.ts); without it, only journal entries and standups open. */
-export function useChatterActions(deps: ChatterDeps) {
-  actions = chatterActions(deps);
-}
-
-const fallback: ChatterDeps = { openWorker: () => undefined, openEscalation: () => undefined, openPull: () => undefined };
 
 /** Whether a member of `team` is in it, saying or being told. */
 export const inTeam = (m: ChatterMessage, team: TeamId) => m.from.team === team || (!isGroup(m.to) && m.to.team === team);
@@ -28,30 +18,20 @@ export const inTeam = (m: ChatterMessage, team: TeamId) => m.from.team === team 
 export function teamChatter(team: TeamId): HTMLElement {
   const floor = store.floor ?? '';
   const head = h('h3.tm-panel-h', {}, '💬 Team chatter');
-  // Before the page knows its floor: a placeholder, not kept (the next redraw has the floor).
   if (!floor) return h('section.tm-panel.tc-team', { 'aria-label': 'Team chatter' }, head, h('p.tm-dim', {}, 'Loading…'));
   const key = `${floor}\0${team}`;
   const had = made.get(key);
   if (had) return had;
-  const act = () => actions ?? chatterActions(fallback);
-  const list = h('ol.tc-list.tc-compact');
-  const empty = h('p.tm-dim', {}, 'Loading…');
-  const el = h('section.tm-panel.tc-team', { 'aria-label': 'Team chatter' }, head, list, empty);
+  const line = h('p.tm-dim', {}, 'Loading…');
+  const open = h('button.btn.small.tc-open', { type: 'button', onclick: () => openPhone({ floor, team }) }, 'Open in the team phone →');
+  const el = h('section.tm-panel.tc-team', { 'aria-label': 'Team chatter' }, head, line, open);
   const fill = () => {
     const got = messages(floor);
-    const mine = got.list.filter((m) => inTeam(m, team)).slice(0, SHOWN);
-    list.replaceChildren(...mine.map((m) => messageNode(m, act(), true)));
-    empty.hidden = mine.length > 0;
-    empty.textContent = got.loaded ? 'Nobody on this team has said anything to anyone yet.' : 'Loading…';
+    const day = new Date().setHours(0, 0, 0, 0);
+    const today = got.list.filter((m) => m.at >= day && inTeam(m, team)).length;
+    line.textContent = !got.loaded ? 'Loading…' : `${today ? `${today} message${today === 1 ? '' : 's'} with this team today.` : 'Nobody on this team has said anything today.'} The chatter, its threads and your messages to the team are in the team phone (bottom right).`;
   };
-  onFeed(floor, (ev) => {
-    if (ev.t === 'reset') return fill();
-    if (ev.t !== 'new' || !inTeam(ev.m, team)) return;
-    list.prepend(messageNode(ev.m, act(), true));
-    while (list.childElementCount > SHOWN) list.lastElementChild!.remove();
-    empty.hidden = true;
-  });
-  setInterval(() => el.isConnected && refreshTimes(list), 30_000);
+  onFeed(floor, fill);
   fill();
   made.set(key, el);
   return el;

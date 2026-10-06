@@ -1,0 +1,70 @@
+/* The team phone as a pixel-art iPhone, in the Default theme only (<html data-theme="default">): the
+   launcher is a crisp little pixel phone (an inline SVG of rects, frame.ts), and the window a chunky
+   pixel handset. Its corners are stepped with clip-path in whole "pixels" (--p), an outline layer under
+   a graphite frame under the lit screen; the notch, the status bar (time, battery), the side buttons and
+   the home bar are plain boxes. The messages keep the page's readable font: only the status bar is
+   monospaced. */
+
+html[data-theme='default'] {
+  --p: 4px;
+  /* A rounded rectangle in whole pixels: three steps per corner. */
+  --tp-steps: polygon(
+    0 calc(4 * var(--p)), var(--p) calc(4 * var(--p)), var(--p) calc(2 * var(--p)), calc(2 * var(--p)) calc(2 * var(--p)), calc(2 * var(--p)) var(--p), calc(4 * var(--p)) var(--p), calc(4 * var(--p)) 0,
+    calc(100% - 4 * var(--p)) 0, calc(100% - 4 * var(--p)) var(--p), calc(100% - 2 * var(--p)) var(--p), calc(100% - 2 * var(--p)) calc(2 * var(--p)), calc(100% - var(--p)) calc(2 * var(--p)), calc(100% - var(--p)) calc(4 * var(--p)), 100% calc(4 * var(--p)),
+    100% calc(100% - 4 * var(--p)), calc(100% - var(--p)) calc(100% - 4 * var(--p)), calc(100% - var(--p)) calc(100% - 2 * var(--p)), calc(100% - 2 * var(--p)) calc(100% - 2 * var(--p)), calc(100% - 2 * var(--p)) calc(100% - var(--p)), calc(100% - 4 * var(--p)) calc(100% - var(--p)), calc(100% - 4 * var(--p)) 100%,
+    calc(4 * var(--p)) 100%, calc(4 * var(--p)) calc(100% - var(--p)), calc(2 * var(--p)) calc(100% - var(--p)), calc(2 * var(--p)) calc(100% - 2 * var(--p)), var(--p) calc(100% - 2 * var(--p)), var(--p) calc(100% - 4 * var(--p)), 0 calc(100% - 4 * var(--p))
+  );
+}
+
+/* ---- The launcher: a pixel phone standing on its own, with a hard drop shadow ---------------------------- */
+html[data-theme='default'] .tp-launch { width: 48px; height: 66px; border: 0; border-radius: 0; background: none; box-shadow: none; filter: drop-shadow(3px 3px 0 rgba(43, 45, 66, .35)); }
+html[data-theme='default'] .tp-launch.tp-on { background: none; }
+html[data-theme='default'] .tp-launch:hover { transform: translateY(-2px) rotate(-3deg); }
+html[data-theme='default'] .tp-ico-line { display: none; }
+html[data-theme='default'] .tp-ico-pixel { display: block; }
+html[data-theme='default'] .tp-px-phone { display: block; width: 48px; height: 72px; shape-rendering: crispEdges; }
+html[data-theme='default'] .tp-badge-count { top: -6px; right: -10px; border-radius: 0; border: 3px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; }
+html[data-theme='default'] .tp-badge-dot { top: 0; right: -4px; border-radius: 0; border: 3px solid var(--ink); }
+
+/* ---- The handset ------------------------------------------------------------------------------------------- */
+html[data-theme='default'] .tp-win { width: min(380px, calc(100vw - 32px)); filter: drop-shadow(6px 6px 0 rgba(43, 45, 66, .35)); }
+html[data-theme='default'] .tp-win.tp-is-wide { width: min(800px, calc(100vw - 32px)); }
+/* The outline: the window itself is the black edge, the frame sits a pixel in. */
+html[data-theme='default'] .tp-frame { clip-path: var(--tp-steps); background: #1b1c2b; padding: var(--p); }
+html[data-theme='default'] .tp-screen {
+  clip-path: var(--tp-steps); border: 0; border-radius: 0;
+  /* The graphite body: a lighter pixel line on its top-left, a darker one bottom-right, then the glass. */
+  background: #3d4160; padding: calc(3 * var(--p)) calc(2.5 * var(--p));
+  box-shadow: inset var(--p) var(--p) 0 #5b6088, inset calc(-1 * var(--p)) calc(-1 * var(--p)) 0 #2a2c44;
+}
+/* The glass: everything inside the body. */
+html[data-theme='default'] .tp-status,
+html[data-theme='default'] .tp-head,
+html[data-theme='default'] .tp-body,
+html[data-theme='default'] .tp-homebar { background: var(--paper); }
+html[data-theme='default'] .tp-status { position: relative; display: flex; align-items: center; justify-content: space-between; height: 26px; padding: 0 14px; clip-path: polygon(0 var(--p), var(--p) var(--p), var(--p) 0, calc(100% - var(--p)) 0, calc(100% - var(--p)) var(--p), 100% var(--p), 100% 100%, 0 100%); font: 900 12px/1 ui-monospace, 'Cascadia Mono', Consolas, monospace; color: var(--ink); }
+html[data-theme='default'] .tp-notch { position: absolute; left: 50%; top: 0; width: 96px; height: 16px; transform: translateX(-50%); background: #1b1c2b; clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--p)), calc(100% - var(--p)) calc(100% - var(--p)), calc(100% - var(--p)) 100%, var(--p) 100%, var(--p) calc(100% - var(--p)), 0 calc(100% - var(--p))); }
+html[data-theme='default'] .tp-notch::after { content: ''; position: absolute; right: 18px; top: 4px; width: 8px; height: 8px; background: #2f4a6b; box-shadow: inset 2px 2px 0 #6b8fbf; }
+html[data-theme='default'] .tp-bars { display: inline-flex; align-items: center; gap: 4px; }
+html[data-theme='default'] .tp-battery { width: 22px; height: 8px; shape-rendering: crispEdges; color: var(--ink); }
+html[data-theme='default'] .tp-head { border-bottom: 3px solid var(--ink); background: var(--paper-2); }
+html[data-theme='default'] .tp-homebar { display: flex; justify-content: center; align-items: center; height: 20px; clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--p)), calc(100% - var(--p)) calc(100% - var(--p)), calc(100% - var(--p)) 100%, var(--p) 100%, var(--p) calc(100% - var(--p)), 0 calc(100% - var(--p))); }
+html[data-theme='default'] .tp-homebar::before { content: ''; width: 110px; height: var(--p); background: var(--ink); }
+html[data-theme='default'] .tp-compose { border-top: 3px solid var(--ink); }
+/* Side buttons: volume on the left, power on the right, sticking out a pixel past the outline. */
+html[data-theme='default'] .tp-side { display: block; position: absolute; z-index: -1; width: calc(2 * var(--p)); background: #1b1c2b; }
+html[data-theme='default'] .tp-side-a { left: calc(-1 * var(--p)); top: 92px; height: 28px; }
+html[data-theme='default'] .tp-side-b { left: calc(-1 * var(--p)); top: 128px; height: 28px; }
+html[data-theme='default'] .tp-side-c { right: calc(-1 * var(--p)); top: 110px; height: 44px; }
+/* Chunkier bits inside, in keeping: square bubbles and chips, pixel-stepped buttons. */
+html[data-theme='default'] .tp-note { border-radius: 0; border-width: 3px; box-shadow: 3px 3px 0 var(--ink); }
+html[data-theme='default'] .tp-box { border-radius: 0; border-width: 3px; }
+html[data-theme='default'] .tp-chan[aria-current='true'] { border-radius: 0; border-width: 3px; box-shadow: 2px 2px 0 var(--ink); }
+
+/* A phone's own screen: no handset round the handset. */
+@media (max-width: 560px) {
+  html[data-theme='default'] .tp-win, html[data-theme='default'] .tp-win.tp-is-wide { width: 100%; filter: none; }
+  html[data-theme='default'] .tp-frame, html[data-theme='default'] .tp-screen { clip-path: none; padding: 0; box-shadow: none; }
+  html[data-theme='default'] .tp-side, html[data-theme='default'] .tp-notch { display: none; }
+  html[data-theme='default'] .tp-status { clip-path: none; padding-top: env(safe-area-inset-top); }
+}

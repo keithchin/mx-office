@@ -24,6 +24,8 @@ import { askNotifyPermission, DesktopNotifier, notifyPermission, waitingOnSomeon
 export interface FlatSession {
   net: Net;
   settings: Settings;
+  /** The desktop notifications (the team phone sends its own through it, ui/phone/). */
+  notifier: DesktopNotifier;
   /** Signs in (back to `page` afterwards), asks your name if this browser has none yet, and connects. */
   start(): void;
   /** The 🔔 to allow notifications, put before `el`, while the browser hasn't been asked. */
@@ -138,6 +140,7 @@ export function flatSession(page: '/home' | '/lite' | '/pixel', openWorker: (id:
   return {
     net,
     settings,
+    notifier,
     start: () => void signIn(page, !!saved, net),
     bellBefore(el) {
       // The browser only asks from a tap, so there's a button for it while it hasn't been asked.

@@ -15,6 +15,8 @@ export interface ChatterDraft {
   ref?: ChatterRef;
   /** Set for messages read from somewhere the office looks again (the roster, a journal): the same key is one message. */
   key?: string;
+  /** A team phone message (server/phone/): its lines and Markdown kept, up to CHATTER_LONG_MAX. */
+  long?: boolean;
 }
 
 export type ChatterEvent =

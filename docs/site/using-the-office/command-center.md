@@ -1,11 +1,13 @@
 ---
 title: Command Center
-description: The default tab of a project - The Firm strip, the Needs you strip, the project setup panel, the project summary, the Project Coordinator console with escalations, and Team chatter.
+description: The default tab of a project - The Firm strip, the Needs you row, the project setup panel, and the project summary with the Project Coordinator console and its escalations, fitted to a laptop screen.
 weight: 3
 aliases: [/docs/command-center]
 ---
 
-The **🎛️ Command Center** is the first tab of every project and the place to keep open. From top to bottom: **The Firm** strip, **Needs you**, the **Project setup** panel (toolkit projects being set up), and the **project summary** with the **Project Coordinator console** in its middle and **Team chatter** beside it.
+The **🎛️ Command Center** is the first tab of every project and the place to keep open. From top to bottom: **The Firm** strip, **Needs you** (one row), the **Project setup** panel (toolkit projects being set up; one line once its gates are fine), and the **project summary** with the **Project Coordinator console** in its middle and **Recent activity** beside it. The team chatter is in the [📱 Team phone](team-phone.md) now.
+
+**It fits a laptop screen.** On a window at least 1180 px wide and 600 px tall, the summary's three columns (the project, the console, recent activity) take the height that's left below the tabs and each scrolls on its own, the console the widest, so the page itself hardly scrolls. Narrower, they stack as before. Each section of the summary (**What's happening**, **Progress**, **Agents**, **Recent activity**) folds with a click on its heading, and this browser remembers which you folded.
 
 ![The Command Center](../images/command-center.png)
 
@@ -15,7 +17,9 @@ A slim strip at the top: **📑 Call an audit** and **The Firm →** when no aud
 
 ## 🚨 Needs you
 
-Everything waiting for a human on this floor, most urgent first; escalations in Jeff's order when his [priority sort](../automation/jeff-router.md#priority-which-escalation-first) is on. It folds after five items (**Show N more ▾**). When it's empty it says *✅ Nothing needs you right now.*
+Everything waiting for a human on this floor, as **one row of counts** (*🚩 2 escalations · 🙋 1 asking · ❌ 1 failing PR*, red for what blocks something) and **Open in the team phone →**. Any count opens the phone's pinned **Needs you** section, which has the full list, most urgent first (escalations in Jeff's order when his [priority sort](../automation/jeff-router.md#priority-which-escalation-first) is on), with each item's button. When nothing is waiting it says *✅ Nothing needs you right now.* (A view without the phone shows the list here, folded after five items.)
+
+The items, and their buttons in the list:
 
 | Icon | Item | Button |
 |---|---|---|
@@ -38,7 +42,7 @@ Everything waiting for a human on this floor, most urgent first; escalations in 
 
 ## 🧰 Project setup
 
-Shown for toolkit projects until the build plan is confirmed.
+Shown for toolkit projects until the build plan is confirmed. **Once its gates are fine** (no stage failing or waiting for a sign-off, the folder not behind main) it **folds to one line**: *🧰 Project setup · 3 passed · 3 pending · next: stage 3* with **Show ▾**. **Hide ▴** folds it whatever the gates say; this browser remembers your choice.
 
 - Chips for the entry mode (🧭) and the size tier (📏).
 - Buttons **🧭 Entry mode**, **📝 Intake** and **👥 Team** reopen the wizard at that page.
@@ -58,7 +62,7 @@ See [The toolkit](../integrations/toolkit.md).
 - **What's happening**: a short story of the floor, written by Claude Haiku (*AI*) or put together by the office (*auto*).
 - **Risks**: agents waiting on a human (and for how long), blocked or failing things.
 - Progress bars for **issues**, **pull requests** and the **queue**, and **💰 $x today · $y all told on this floor**.
-- **Agents (N)**, and **Recent activity** and **💬 Team chatter** on the right.
+- **Agents (N)**, and **Recent activity** on the right: the newest 8, with **More (N) ▾** for the rest.
 
 ## Open in Studio Pro
 
@@ -85,15 +89,7 @@ How it knows: a `studiopro.exe` whose command line names the `.mpr` (or its fold
 
 ## 💬 Team chatter
 
-Beside Recent activity: what the agents say to each other, as a chat thread, newest on top. Each message shows the speaker's portrait, who it was said to (recipient chips) and a speech bubble; click it to open what it's about (the worker, the escalation, the pull request, the standup or the journal entry).
-
-What shows up: escalations and your answers, the office's and Jeff's relays to the Project Coordinator, standups and proposal decisions, review nudges, subagent tasks and the Leads' verdicts, handoff notes and rehires, agents telling or hiring each other, PRs handed over, team journal entries (a line naming a teammate counts as said to them), and The Firm's interview questions and answers. Nothing is made up: only what was really said or written, with tokens redacted and long text clipped.
-
-- Filters: **All**, **Between agents**, **With me** (you, the Project Manager), or **Only one person**.
-- New messages slide in on top without moving your scroll; scrolled down, an **N new** pill takes you back up. **Load older** pages back.
-- Each team's page on [Team boards](team-boards.md) has a short version with that team's messages.
-
-Kept in `<office data>/chatter/<floor>.jsonl`, the newest 1000 per floor.
+The team chatter moved into the [📱 Team phone](team-phone.md) (bottom right), where each project is a channel, escalations and conversations are threads, and you can message the agents. Nothing was dropped: the same messages, filters (**All**, **Between agents**, **With me**, one person) and history, kept in `<office data>/chatter/<floor>.jsonl` (the newest 1000 per floor).
 
 ## The Project Coordinator console
 

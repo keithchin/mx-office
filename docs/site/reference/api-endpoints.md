@@ -54,6 +54,9 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | POST | `/api/teams/labels` | Create missing `team:` labels (admin) |
 | GET / POST | `/api/wizard/*` | The new-project wizard: GET `info`, `job`, `setup`, `answers`, `app-version` (`?repo=`: the Studio Pro an existing floor's `.mpr` was saved with); POST `recheck`, `start`, `retry`, `edit` (admin) |
 | GET | `/api/chatter` | Team chatter: `?floor=<id>&since=<ms>&limit=<n>&cursor=…&who=<name>` (with `as=<kind>` to tell a person from an agent of the same name) or `&with=agents\|me` |
+| POST | `/api/phone/send` | Team phone: `{floor, text, place, verdict?}` sends a person's message (plain → the Project Coordinator, `@Name`, `@team`, a DM, a thread) through the roster's delivery, or answers an escalation in its thread (admin) |
+| GET | `/api/phone/state` | Team phone: `?floor=<id>`, the replies the floor is waiting for |
+| GET / POST | `/api/phone/reads` | Team phone: what this person has read, per channel (`?browser=<key>` / `{browser, reads}`; their account's when signed in with one) |
 | GET | `/api/audit` | The audit log: `?floor=<id>\|all\|_office&since=&until=&actor=human,agent&action=worker.hire,github&q=&limit=&cursor=`, with counts, the chain check and a histogram |
 | GET | `/api/audit/export` | Every matching event as a download, `&format=csv\|jsonl` (admin) |
 | POST | `/api/audit/settings` | `{ promptText }`: log the first 80 characters of prompts, or not (admin) |

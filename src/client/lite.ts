@@ -48,9 +48,8 @@ import { tabBadges } from './ui/badge';
 import { newStandup, teamAttention } from './ui/chrome-logic';
 import { currentRoster, onRoster } from './ui/teams/world';
 import { auditView } from './ui/audit';
-import { chatterPanel } from './ui/chatter/panel';
-import { routeChatter } from './ui/chatter/feed';
-import { useChatterActions } from './ui/chatter/compact';
+import { installPhone, type Phone } from './ui/phone';
+import { collapsibleCommand } from './ui/command-layout';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -66,11 +65,13 @@ colorThemes($('theme'), $('summary'));
 // The view dropdown in the top bar (ui/viewpick.ts).
 $('view-pick').replaceWith(viewPicker('1d'));
 
+// 📱 The team phone (ui/phone/): installed once the page's parts are, at the end.
+let phone: Phone | undefined;
 const session = flatSession('/lite', (id) => openWorker(id), (m) => {
   routePreviewMessage(m);
   live.route(m);
   pm.route(m);
-  routeChatter(m);
+  phone?.route(m);
 });
 const { net } = session;
 const workers = workerActions(net);
@@ -81,10 +82,6 @@ const live = liveAppView(net, () => showTab('live'), () => tab === 'live');
 // The project manager console in the middle of the project summary (ui/pm/console.ts): its live
 // terminal only while the board is on screen.
 const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'command' });
-// 💬 Team chatter under the recent activity (ui/chatter/): its bubbles open the escalation, the PR or the terminal.
-const chatterDeps = { openWorker: (id: string) => openWorker(id), openEscalation: (id: string) => toEscalation(id), openPull: (n: number) => openPr(n) };
-const chatter = chatterPanel(chatterDeps);
-useChatterActions(chatterDeps);
 
 // ---- The floor you're on (every floor's card is on the home page, /home) -----------------------
 floorPicker(net, { onGo: () => showTab('command') });
@@ -286,8 +283,7 @@ function renderKanban() {
   if (tab === 'teams') return teams.renderPage($('teams-view'));
   if (tab === 'board') return renderBoard($('board'), kanban, teams.boardView(renderKanban));
   if (tab !== 'command') return;
-  chatter.show(store.floor ?? undefined);
-  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el, after: chatter.el }).then(() => {
+  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el }).then(() => {
     // Beside the project's name: the 🌐 Live app chip, and Open in Studio Pro for a Mendix project (ui/studio/).
     live.mountChip($('summary'));
     mountStudio($('summary'));
@@ -442,6 +438,16 @@ for (const t of ['tab-standup', 'tab-live', 'tab-teams'] as const) $(t).addEvent
 
 // ---- In ----------------------------------------------------------------------------------------
 session.bellBefore($('to-home'));
+phone = installPhone({
+  net,
+  notifier: session.notifier,
+  openWorker,
+  openPull: openPr,
+  go: goToNeed,
+  needs: () => ({ setup: cachedSetup(store.floor ?? undefined), live: live.current(), firm: firmStatus, studio: studioState() }),
+});
+// The Command Center's sections fold and remember it (ui/command-layout.ts).
+collapsibleCommand();
 session.start();
 
 renderWorkers();

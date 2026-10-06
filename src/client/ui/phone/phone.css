@@ -1,0 +1,209 @@
+/* 📱 The team phone (ui/phone/): the floating launcher above the bottom bar and the chat window it opens.
+   This sheet is the plain look every theme wears, in the theme's tokens (styles/base.css); the Default
+   theme dresses it as a pixel iPhone on top (iphone.css). */
+
+/* Room under the page for the launcher, so the last row isn't under it. */
+body.has-phone .lite-main { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
+
+.tp-launch {
+  position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(var(--tp-above, 72px) + 14px); z-index: 30;
+  width: 56px; height: 56px; display: grid; place-items: center; padding: 0;
+  border: var(--bw, 3px) solid var(--line); border-radius: 50%; background: var(--ink); color: var(--on-ink);
+  box-shadow: var(--shadow-btn, 0 3px 0 var(--edge)); cursor: pointer;
+}
+.tp-launch:hover { transform: translateY(-1px); }
+.tp-launch:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.tp-launch.tp-on { background: var(--accent); color: var(--on-fill); }
+.tp-ico-pixel { display: none; }
+.tp-ico-line { display: grid; place-items: center; }
+.tp-line-icon { width: 26px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.tp-badge { position: absolute; top: -4px; right: -4px; pointer-events: none; }
+.tp-badge-none { display: none; }
+.tp-badge-count { min-width: 22px; height: 22px; padding: 0 6px; border: 2px solid var(--paper); border-radius: 999px; background: var(--bad); color: var(--on-fill); font: 900 12px/18px var(--font); text-align: center; font-variant-numeric: tabular-nums; }
+.tp-badge-dot { top: 2px; right: 2px; width: 14px; height: 14px; border: 2px solid var(--paper); border-radius: 50%; background: var(--muted); }
+
+/* ---- The window -------------------------------------------------------------------------------------- */
+.tp-win {
+  position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(var(--tp-above, 72px) + 82px); z-index: 31;
+  width: min(390px, calc(100vw - 32px)); height: min(640px, calc(100dvh - var(--tp-above, 72px) - 160px)); min-height: 340px;
+  display: flex; flex-direction: column;
+}
+.tp-win[hidden] { display: none; }
+.tp-win.tp-is-wide { width: min(820px, calc(100vw - 32px)); }
+.tp-side, .tp-status, .tp-homebar { display: none; }
+.tp-frame, .tp-screen { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.tp-screen { position: relative; overflow: hidden; background: var(--paper); color: var(--ink); border: var(--bw, 3px) solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+
+.tp-head { display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 10px; background: var(--paper-2); border-bottom: 2px solid var(--line); }
+.tp-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tp-title { margin: 0; font-size: 15px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tp-sub { font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tp-sub:empty { display: none; }
+.tp-hbtn { flex: none; width: 34px; height: 34px; display: grid; place-items: center; padding: 0; border: 2px solid transparent; border-radius: 10px; background: none; color: var(--ink); font: 900 18px/1 var(--font); cursor: pointer; }
+.tp-hbtn:hover { background: var(--card); border-color: var(--rule-strong); }
+.tp-hbtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.tp-hbtn[hidden] { display: none; }
+.tp-back { font-size: 26px; }
+.tp-gear-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; }
+
+.tp-body { position: relative; flex: 1; min-height: 0; display: flex; }
+.tp-pane { min-width: 0; min-height: 0; }
+.tp-pane-list { flex: 1; overflow-y: auto; background: var(--paper); }
+.tp-pane-main { flex: 1; display: flex; flex-direction: column; }
+/* Narrow: the channel list is its own screen. Wide: beside what's open. */
+.tp-win:not(.tp-is-wide) .tp-body.tp-at-home .tp-pane-main, .tp-win:not(.tp-is-wide) .tp-body:not(.tp-at-home) .tp-pane-list { display: none; }
+.tp-win.tp-is-wide .tp-pane-list { flex: 0 0 240px; border-right: 2px solid var(--line); }
+.tp-win.tp-is-wide .tp-back { display: none; }
+
+/* The channel list. */
+.tp-list { padding: 8px 6px 14px; }
+.tp-chans { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.tp-sect { margin: 12px 8px 4px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.tp-chan { width: 100%; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 8px; border: 2px solid transparent; border-radius: 10px; background: none; color: var(--ink); font: 700 14px/1.2 var(--font); text-align: left; cursor: pointer; }
+.tp-chan:hover { background: var(--card); }
+.tp-chan[aria-current='true'] { background: var(--card); border-color: var(--line); }
+.tp-chan:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.tp-chan-ico { flex: none; width: 22px; text-align: center; font-weight: 900; color: var(--muted); }
+.tp-needs-ico { display: inline-grid; place-items: center; height: 22px; border-radius: 6px; background: var(--bad); color: var(--on-fill); }
+.tp-chan-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tp-count { flex: none; }
+.tp-count.tp-red { min-width: 22px; padding: 0 6px; border-radius: 999px; background: var(--bad); color: var(--on-fill); font: 900 12px/20px var(--font); text-align: center; }
+.tp-count.tp-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+.tp-dm-face { position: relative; flex: none; display: inline-grid; }
+.tp-dm-face .tc-face { border-width: 1px; border-radius: 6px; }
+.tp-dm-face::after { content: ''; position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px; border: 2px solid var(--paper); border-radius: 50%; background: var(--faint); }
+.tp-dm-face.tp-st-working::after, .tp-dm-face.tp-st-starting::after { background: var(--info); }
+.tp-dm-face.tp-st-idle::after, .tp-dm-face.tp-st-done::after { background: var(--good); }
+.tp-dm-face.tp-st-needs_input::after { background: var(--bad); }
+.tp-dim { font-size: 12px; font-weight: 700; color: var(--muted); }
+.tp-pad { margin: 4px 10px; }
+
+/* Filter chips over a channel. */
+.tp-chipbar:empty { display: none; }
+.tp-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--rule-strong); }
+.tp-chip { padding: 1px 8px; border: 2px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink-2); font: 800 11px/1.5 var(--font); cursor: pointer; }
+.tp-chip[aria-pressed='true'] { background: var(--ink); color: var(--on-ink); }
+.tp-team-chip[aria-pressed='true'] { background: var(--tc); color: var(--on-fill); text-transform: capitalize; }
+.tp-person { max-width: 130px; padding: 1px 4px; border: 2px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: 700 11px var(--font); }
+
+/* The messages. */
+.tp-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 0; }
+.tp-older { display: block; margin: 4px auto 6px; }
+.tp-older[hidden] { display: none; }
+.tp-log { list-style: none; margin: 0; padding: 0 10px; display: flex; flex-direction: column; gap: 2px; outline: none; }
+.tp-day { display: flex; justify-content: center; margin: 8px 0 4px; }
+.tp-day span { padding: 1px 10px; border: 1px solid var(--rule-strong); border-radius: 999px; background: var(--card); font-size: 11px; font-weight: 800; color: var(--muted); }
+.tp-msg { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; padding: 6px 4px; border-radius: 8px; }
+.tp-msg:hover { background: var(--paper-2); }
+.tp-msg.tp-follow { padding-top: 0; }
+.tp-face { margin: 0; }
+.tp-face .tc-face { border-radius: 8px; }
+.tp-gutter { padding-top: 3px; text-align: right; opacity: 0; }
+.tp-msg:hover .tp-gutter { opacity: 1; }
+.tp-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tp-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; }
+.tp-name { font-size: 14px; font-weight: 900; }
+.tp-role { font-size: 11px; font-weight: 700; color: var(--muted); }
+.tp-you { padding: 0 5px; border: 1px solid var(--warn); border-radius: 999px; background: var(--warn-soft); color: var(--warn-ink); font-size: 10px; font-weight: 900; }
+.tp-to, .tp-floor { font-size: 11px; font-weight: 800; color: var(--ink-2); }
+.tp-floor { color: var(--link); }
+.tp-tag { padding: 0 5px; border-radius: 4px; background: var(--bad); color: var(--on-fill); font-size: 10px; font-weight: 900; }
+.tp-time { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.tp-gutter .tp-time { margin: 0; font-size: 10px; }
+/* The words in a readable size and font, whatever the theme's headings do. */
+.tp-words { margin: 0; font-size: 14px; font-weight: 500; line-height: 1.45; overflow-wrap: anywhere; }
+.tp-words.md { padding: 0; font-size: 14px; line-height: 1.45; }
+.tp-words.md > :first-child { margin-top: 0; }
+.tp-words.md > :last-child { margin-bottom: 0; }
+.tp-words.md p, .tp-words.md ul, .tp-words.md ol { margin: 4px 0; }
+.tp-by-office .tp-words { color: var(--ink-2); font-style: italic; }
+.tp-k-escalation .tp-words { padding-left: 8px; border-left: 3px solid var(--bad); }
+.tp-k-answer .tp-words { padding-left: 8px; border-left: 3px solid var(--good); }
+.tp-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 2px; }
+.tp-link { padding: 0; border: 0; background: none; color: var(--link); font: 800 12px var(--font); cursor: pointer; }
+.tp-link:hover { text-decoration: underline; }
+.tp-replies { display: inline-flex; align-items: center; gap: 2px; padding: 2px 8px; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--card); color: var(--link); font: 900 12px var(--font); cursor: pointer; }
+.tp-replies:hover { border-color: var(--link); }
+.tp-link:focus-visible, .tp-replies:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+/* A notification: a card in the stream. */
+.tp-note { margin: 4px 0; border: 2px solid var(--line); background: var(--card); box-shadow: 0 2px 0 var(--edge); }
+.tp-note:hover { background: var(--card); }
+.tp-note-block { border-left: 6px solid var(--bad); }
+.tp-note-warn { border-left: 6px solid var(--warn); }
+.tp-note-acts { gap: 6px; margin-top: 6px; }
+.tp-act-approve { background: var(--good-soft); }
+.tp-act-reject { background: var(--bad-soft); }
+.tp-esc-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; padding: 8px; border: 2px dashed var(--rule-strong); border-radius: 10px; }
+.tp-esc-bar .tp-dim { flex: 1 1 100%; }
+.tp-esc-done { margin: 6px 4px; }
+.tp-empty { margin: 18px 8px; text-align: center; font-size: 13px; font-weight: 700; color: var(--muted); }
+.tp-calm { color: var(--good-ink); }
+
+.tp-typing { display: flex; align-items: center; gap: 8px; margin: 4px 4px 2px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.tp-dots { display: inline-flex; gap: 3px; }
+.tp-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+@media (prefers-reduced-motion: no-preference) {
+  .tp-dots i { animation: tp-dot 1.2s infinite; }
+  .tp-dots i:nth-child(2) { animation-delay: .15s; }
+  .tp-dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes tp-dot { 0%, 60%, 100% { opacity: .3; transform: none; } 30% { opacity: 1; transform: translateY(-2px); } }
+}
+
+/* The composer. */
+.tp-compose { position: relative; padding: 8px; border-top: 2px solid var(--line); background: var(--paper-2); }
+.tp-compose[hidden] { display: none; }
+.tp-row { display: flex; gap: 6px; align-items: flex-end; }
+.tp-box { flex: 1; min-width: 0; min-height: 40px; max-height: 140px; resize: none; padding: 9px 10px; border: 2px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: 500 14px/1.35 var(--font); outline: none; }
+.tp-box:focus { border-color: var(--focus); }
+.tp-box:disabled { background: var(--card-dim); }
+.tp-send { flex: none; min-height: 40px; }
+.tp-hint { margin: 0 0 6px; font-size: 11px; font-weight: 800; color: var(--muted); }
+.tp-hint:empty { display: none; }
+.tp-hint.tp-warn { padding: 4px 8px; border: 2px solid var(--warn); border-radius: 8px; background: var(--warn-soft); color: var(--warn-ink); }
+.tp-hint.tp-bad { color: var(--bad-ink); }
+.tp-ac { position: absolute; left: 8px; right: 8px; bottom: 100%; z-index: 2; list-style: none; margin: 0 0 4px; padding: 4px; border: 2px solid var(--line); border-radius: 10px; background: var(--card); box-shadow: var(--shadow); }
+.tp-ac[hidden] { display: none; }
+.tp-ac-item { display: flex; align-items: baseline; gap: 8px; padding: 5px 8px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.tp-ac-item small { font-size: 11px; font-weight: 700; color: var(--muted); }
+.tp-ac-item[aria-selected='true'] { background: var(--ink); color: var(--on-ink); }
+.tp-ac-item[aria-selected='true'] small { color: inherit; }
+
+/* The settings sheet, over the screen. */
+.tp-sheet { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; background: var(--paper); }
+.tp-sheet-h { display: flex; align-items: center; padding: 8px 8px 8px 12px; border-bottom: 2px solid var(--line); background: var(--paper-2); }
+.tp-sheet-h h3 { flex: 1; margin: 0; font-size: 15px; font-weight: 900; }
+.tp-sheet-body { flex: 1; overflow-y: auto; padding: 10px 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.tp-field { margin: 0; padding: 8px 10px; border: 2px solid var(--rule-strong); border-radius: 10px; display: flex; flex-direction: column; gap: 4px; }
+.tp-field legend { padding: 0 4px; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.tp-field .tp-dim { margin: 0; }
+.tp-radio { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.tp-select { padding: 4px; border: 2px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: 700 13px var(--font); }
+
+.tp-chatwin { width: min(720px, calc(100vw - 32px)); height: min(80vh, 760px); display: flex; flex-direction: column; }
+.tp-chatwin-body { flex: 1; min-height: 0; display: flex; flex-direction: column; border-left: 0; }
+.tp-chatwin-body .pmc-chat { flex: 1; min-height: 0; }
+
+/* A phone: the window takes the screen, the launcher stays above the bottom bar. */
+@media (max-width: 560px) {
+  .tp-win, .tp-win.tp-is-wide { right: 0; left: 0; top: 0; bottom: 0; width: 100%; height: 100dvh; min-height: 0; }
+  .tp-screen { border: 0; border-radius: 0; box-shadow: none; }
+  .tp-win.tp-is-wide .tp-pane-list { display: none; }
+  .tp-win.tp-is-wide .tp-body.tp-at-home .tp-pane-list { display: block; flex: 1; border: 0; }
+  .tp-win.tp-is-wide .tp-body.tp-at-home .tp-pane-main { display: none; }
+  .tp-win.tp-is-wide .tp-back { display: grid; }
+  .tp-wide { display: none; }
+  .tp-launch { width: 52px; height: 52px; }
+  .tp-box { font-size: 16px; }
+}
+
+/* Terminal: square, and the composer reads like a prompt. */
+html[data-theme='terminal'] .tp-launch, html[data-theme='terminal'] .tp-screen, html[data-theme='terminal'] .tp-box, html[data-theme='terminal'] .tp-chan { border-radius: 0; }
+html[data-theme='terminal'] .tp-row::before { content: '>'; align-self: center; color: var(--muted); font-weight: 900; }
+
+/* The launcher stays round in the Clean themes, whose buttons are otherwise square-ish. */
+html[data-theme^='clean'] body.lite button.tp-launch { border-radius: 50% !important; }
+/* The 2D view: above its zoom buttons, which sit in the stage's bottom-right corner. */
+body.pixel .tp-launch { bottom: calc(var(--tp-above, 40px) + 72px); }
+body.pixel .tp-win { bottom: calc(var(--tp-above, 40px) + 140px); height: min(640px, calc(100dvh - var(--tp-above, 40px) - 220px)); }
+@media (max-width: 560px) { body.pixel .tp-win { bottom: 0; height: 100dvh; } }

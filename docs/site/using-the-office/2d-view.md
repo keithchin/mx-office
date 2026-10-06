@@ -8,6 +8,8 @@ The **2D view** (`/pixel?floor=<id>`) draws the floor from above in pixel art, w
 
 ![The 2D view](../images/office-2d.png)
 
+The **📱 Team phone** sits above the zoom buttons at the bottom right: the floor's team chatter, messages to the agents and what needs you, as on the 1D view. See [Team phone](team-phone.md).
+
 ## What's on the floor
 
 - **Team zones**: 🛠️ Dev bay, 🎨 Design studio, 🧪 QA lab, 📈 Analyst corner and 🧭 Coordinator office. Each has a signpost with its Lead and status; hover for the Lead's title, name, status and model. Leads are dressed for their role, in their team's color.
