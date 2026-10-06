@@ -17,6 +17,7 @@ import {
 } from '../../../shared/deliverables';
 import { TEAM_META } from '../../../shared/roster/card-team';
 import { ROLE_BY_ID } from '../../../shared/roster/roles';
+import { staleText } from '../../../shared/wizard';
 import { h, timeAgo } from '../dom';
 import { openDeliverable, whereText } from './viewer';
 
@@ -57,6 +58,7 @@ function itemRow(floor: string, item: DeliverableItem, view: DeliverablesView, s
     ),
     item.status === 'branch' && branchy ? h('p.dv-note', {}, `Not merged: ${whereText(branchy)}. It counts once its pull request lands.`) : null,
     item.status === 'missing' && spec ? h('p.dv-note', {}, 'Expected at ', ...spec.globs.flatMap((g, i) => [i ? ', ' : '', h('code', {}, g)])) : null,
+    item.id === 'unsorted-reports' ? h('p.dv-note', {}, 'Reports straight under ', h('code', {}, 'reports/'), " that are no analyst report: each team keeps its own in ", h('code', {}, 'reports/<team>/'), '.') : null,
     list,
     rest,
   );
@@ -81,7 +83,10 @@ export function deliverablesList(floor: string, view: DeliverablesView | undefin
     );
   }
   const extras = view.items.filter((i) => !i.stage && i.files.length);
-  if (extras.length) groups.push(h('section.dv-stage', { 'data-stage': 'extras' }, h('h4.dv-stage-h', {}, h('span.dv-stage-id', {}, '+'), 'Beyond the toolkit'), h('ul.dv-items', {}, ...extras.map((i) => itemRow(floor, { ...i, title: showTeam ? 'More files' : i.title }, view, showTeam)))));
-  const looked = view.sources.length ? `Looked on main, ${view.sources.map((s) => (s.src.startsWith('wt:') ? s.label : s.branch)).join(', ')}.` : 'Looked on main (no team worktrees or office branches with deliverables).';
-  return h('div.dv', {}, ...groups, h('p.dv-foot', {}, `${looked} Merged work is the source of truth; branch work shows here so you can see it early.`));
+  if (extras.length) groups.push(h('section.dv-stage', { 'data-stage': 'extras' }, h('h4.dv-stage-h', {}, h('span.dv-stage-id', {}, '+'), 'Beyond the toolkit'), h('ul.dv-items', {}, ...extras.map((i) => itemRow(floor, { ...i, title: showTeam && i.id.startsWith('extras-') ? 'More files' : i.title }, view, showTeam)))));
+  const mainName = view.main ?? 'main';
+  const looked = view.sources.length ? `Looked on ${mainName}, ${view.sources.map((s) => (s.src.startsWith('wt:') ? s.label : s.branch)).join(', ')}.` : `Looked on ${mainName} (no team worktrees or office branches with deliverables).`;
+  // On main is origin/<default>: say so when the floor's folder is elsewhere.
+  const note = view.checkout ? h('p.dv-stale', { role: 'note' }, '⚠️ ', staleText(view.checkout, '"On main" below is')) : null;
+  return h('div.dv', {}, note, ...groups, h('p.dv-foot', {}, `${looked} Merged work is the source of truth; branch work shows here so you can see it early.`));
 }

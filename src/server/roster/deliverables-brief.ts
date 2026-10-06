@@ -22,21 +22,25 @@ const LISTS: Record<RoleId, string[]> = {
     '- Stage 2: `analysis/knowledge-base/brd/F{NNN}-<feature>.brd.json` (`brd-generation.md`, validated per `brd-validation.md`) and `analysis/brd-report.html` (the toolkit\'s `bin/brd-report.sh <project>`).',
     '- For the client, once a BRD is confirmed: `docs/requirements/BRD-<feature>.pdf` (`office-workers export-pdf analysis/brd-report.html docs/requirements/BRD-<feature>.pdf`), `docs/requirements/use-cases.xlsx` (a short `py` + openpyxl script over the BRD JSON: one row per use case with id, actor, steps, rules, sourceRef) and `docs/requirements/process-flow.md` (the main flow as a Mermaid `flowchart`).',
     '- Weekly: `docs/insights/YYYY-Www.md`, with charts as PNGs next to it made with `py` + matplotlib.',
+    '- Reports: the toolkit\'s own (`reports/validation-report.md` from `brd-validation.md`, `reports/summary.md`, `reports/gaps-report.md`) stay where the toolkit writes them; any other report of yours goes in `reports/analysis/`.',
   ],
   'lead-designer': [
     '- Stage 3 (`design-artifacts.md`): `design/brand.md`, `design/ds.css` (the tokens), `design/design-system.html` (a component showcase linking `ds.css`), `design/wireframes/<screen>.html` (one per screen, each linking `../ds.css`) and `design/components.md` (the components and where they are used).',
     '- `design/storyboard.html`: the wireframes in journey order, each a screenshot (`office-workers screenshot design/wireframes/<screen>.html design/storyboard/<nn>-<screen>.png`) with a line on what the user does there.',
     '- Stage 6 with the Lead Tester: `design/ui-reviews/ui-review-<YYYY-MM-DD>.html` per review pass.',
+    '- Any other report of yours (a design review, an accessibility check) goes in `reports/design/`.',
   ],
   'lead-developer': [
     '- Stage 3 (architect lane, `architecture-blueprint.md`): `architecture/blueprint.md` with Mermaid diagrams (layers, wiring, workflow, cross-persona journeys) and its render `architecture/blueprint.html`; `architecture/domain-model.md` (a Mermaid `erDiagram`); `architecture/adr/NNN-<decision>.md` for each real decision; `architecture/fit-gap.md`.',
     '- Stage 4 (`brd-to-build-plan.md`, `module-brief.md`, `coverage-ledger.md`): `architecture/build-plan.md`, `architecture/modules/<Module>/module-brief.md` (the first one now, the rest just in time), `architecture/coverage-ledger.md`.',
+    '- Any other report of yours (a build or layering review, a performance check) goes in `reports/development/`.',
   ],
   'lead-tester': [
     '- Stage 4: `tests/test-plan.md` (what is tested, how, by whom, the journeys and their data).',
-    '- Stage 6: `tests/e2e/<journey>.journey.json` per journey (`journey-proof.md`), `design/ui-reviews/ui-review-<YYYY-MM-DD>.html` with the Lead Designer, and the evidence report (`e2e-evidence-report.md`) as `reports/e2e-evidence-<YYYY-MM-DD>.html`, also as a PDF via `office-workers export-pdf` when the client wants one.',
+    '- Stage 6: `tests/e2e/<journey>.journey.json` per journey (`journey-proof.md`), `design/ui-reviews/ui-review-<YYYY-MM-DD>.html` with the Lead Designer, and the evidence report (`e2e-evidence-report.md`) as `reports/testing/e2e-evidence-<YYYY-MM-DD>.html`, also as a PDF via `office-workers export-pdf` when the client wants one.',
+    '- Your other reports (test runs, monkey runs, audits) go in `reports/testing/` too; the toolkit\'s `reports/test-report.html` stays where it writes it.',
   ],
-  pm: ['- The standup pages (`docs/standups/<date>.md`, the office drafts them). Optional: `docs/status/<YYYY-MM-DD>.md`, a one-page status for the client (progress per stage, what is next, what needs a decision), written after a standup when the Project Manager asks for it.'],
+  pm: ['- The standup pages (`docs/standups/<date>.md`, the office drafts them). Optional: `docs/status/<YYYY-MM-DD>.md`, a one-page status for the client (progress per stage, what is next, what needs a decision), written after a standup when the Project Manager asks for it.', '- Any other report of yours goes in `reports/management/`. A report someone left straight under `reports/` that is no analyst report shows as Unsorted on your team page: ask its author to move it into their `reports/<team>/`.'],
 };
 
 /** The drafts each role makes early, when the floor allows them. */

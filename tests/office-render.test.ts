@@ -8,7 +8,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { UsageError, parseArgs } from '../bin/office-workers.js';
 import { formatRendered } from '../bin/office-render.js';
-import { allowRequest, checkPaths, readRenderAsk, render, type BrowserLike, type PageLike, type RouteLike } from '../src/server/hooks/office-render.js';
+import { allowRequest, checkPaths, readRenderAsk, render, renderFailure, type BrowserLike, type PageLike, type RouteLike } from '../src/server/hooks/office-render.js';
 
 function dirs(t: { after(fn: () => void): void }) {
   const root = mkdtempSync(path.join(tmpdir(), 'office-render-'));
@@ -116,4 +116,12 @@ test('render drives the browser: routes every request, writes the PDF or PNG, cl
   const broken = (): BrowserLike => ({ ...fake(), newContext: async () => Promise.reject(new Error('boom')) });
   await assert.rejects(render(wt, { op: 'pdf', input, output }, { input, output }, async () => broken()), /boom/);
   assert.deepEqual(calls, ['close']);
+});
+
+test('a failed render: 501 only when the browser is missing, else 500', () => {
+  const missing = renderFailure("browserType.launch: Executable doesn't exist at C:\ms-playwright\chromium-1247\chrome.exe\n╔═══╗");
+  assert.equal(missing.status, 501);
+  assert.match(missing.error, /npx playwright-core install chromium/);
+  assert.equal(renderFailure('page.goto: Timeout 20000ms exceeded.\nCall log').status, 500);
+  assert.equal(renderFailure("Cannot find package 'playwright-core'").status, 500, 'playwright-core is a dependency now: no special case');
 });

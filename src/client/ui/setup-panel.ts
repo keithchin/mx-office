@@ -7,7 +7,7 @@ import './setup-panel.css';
  * the office for fresh verdicts. No three.js: the 1D view draws it.
  */
 import type { Net } from '../net';
-import type { SetupView } from '../../shared/wizard';
+import { staleText, type SetupView } from '../../shared/wizard';
 import { h } from './dom';
 import { wizardApi } from './wizard/api';
 import { openWizard } from './wizard';
@@ -49,13 +49,9 @@ export async function renderSetup(el: HTMLElement, floor: string | undefined, de
 }
 
 /** The floor's folder isn't on the default branch, or is behind it: the stages come from the default branch, and this says so. */
-export function staleText(c: NonNullable<SetupView['checkout']>): string {
-  const where = c.branch === c.defaultBranch ? 'This folder is' : `This folder is on ${c.branch === 'HEAD' ? 'a detached HEAD' : c.branch},`;
-  return `${where} ${c.behind} commit${c.behind === 1 ? '' : 's'} behind ${c.defaultBranch}; the stages below are read from ${c.defaultBranch}.`;
-}
 
 function staleCheckout(v: SetupView): HTMLElement | null {
-  return v.checkout ? h('p.setup-stale', { role: 'note' }, '⚠️ ', staleText(v.checkout)) : null;
+  return v.checkout ? h('p.setup-stale', { role: 'note' }, '⚠️ ', staleText(v.checkout, 'the stages below are')) : null;
 }
 
 function panel(el: HTMLElement, floor: string, v: SetupView, deps: SetupPanelDeps): HTMLElement {

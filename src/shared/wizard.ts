@@ -236,6 +236,12 @@ export interface SetupView {
   checkout?: { branch: string; behind: number; defaultBranch: string };
 }
 
+/** The floor's folder isn't on the default branch, or is behind it: what's shown comes from the default branch, and this says so. */
+export function staleText(c: { branch: string; behind: number; defaultBranch: string }, what: string): string {
+  const where = c.branch === c.defaultBranch ? 'This folder is' : `This folder is on ${c.branch === 'HEAD' ? 'a detached HEAD' : c.branch},`;
+  return `${where} ${c.behind} commit${c.behind === 1 ? '' : 's'} behind ${c.defaultBranch}; ${what} read from ${c.defaultBranch}.`;
+}
+
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 
 /** Why `name` can't be the new repository's name, or undefined when it can: lower case, digits and single hyphens. */

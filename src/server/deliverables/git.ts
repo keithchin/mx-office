@@ -88,11 +88,11 @@ const forks = new Map<string, Promise<Set<string> | undefined>>();
 
 /**
  * The files a branch changed since it forked from what `dir` has checked out (the merge base of HEAD
- * and `sha`): its own work, not the older copies of files main has moved on from. Cached by both
+ * (or `against`, origin/<default>'s commit) and `sha`): its own work, not the older copies of files main has moved on from. Cached by both
  * commits. Undefined when git can't say (no common history).
  */
-export function changedSinceFork(dir: string, sha: string): Promise<Set<string> | undefined> {
-  return run(['rev-parse', '-q', '--verify', 'HEAD'], dir).then((head) => {
+export function changedSinceFork(dir: string, sha: string, against = 'HEAD'): Promise<Set<string> | undefined> {
+  return run(['rev-parse', '-q', '--verify', `${against}^{commit}`], dir).then((head) => {
     const h = head?.trim();
     if (!h) return undefined;
     const key = `${dir}\0${h}\0${sha}`;
@@ -110,6 +110,9 @@ export function changedSinceFork(dir: string, sha: string): Promise<Set<string> 
     return p;
   });
 }
+
+/** When commit `sha` was made, ms. */
+export const commitTime = async (dir: string, sha: string) => Number((await run(['log', '-1', '--format=%ct', sha], dir))?.trim()) * 1000 || 0;
 
 /** The commit a checkout has checked out. */
 export const headOf = async (dir: string) => (await run(['rev-parse', '-q', '--verify', 'HEAD'], dir))?.trim() || undefined;

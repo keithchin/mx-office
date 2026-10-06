@@ -14,6 +14,7 @@ import {
   itemStatus,
   kindOf,
   specFor,
+  unsortedReport,
   type DeliverableFile,
   type DeliverableItem,
   type DeliverablesView,
@@ -39,6 +40,13 @@ export interface ScanInput {
   dir: string;
   /** The floor's workers (with their roles, for the team's), and the team members not hired (for their names on branches). */
   people: ScanPerson[];
+  /**
+   * The project's default branch on GitHub, when it has one: "main" is then origin/<def> at `sha`
+   * (committed `at`), not whatever the floor's folder has checked out (gate-source.ts's reading).
+   */
+  main?: { def: string; sha: string; at: number };
+  /** The floor's folder when it's on another branch than the default one, or behind it. */
+  checkout?: { branch: string; behind: number; defaultBranch: string };
 }
 
 /** How many files one item lists (the rest is a count). */
@@ -105,8 +113,16 @@ export function branchOwner(branch: string, people: readonly ScanPerson[]): { wh
 
 export async function scanDeliverables(input: ScanInput, now = Date.now()): Promise<DeliverablesView> {
   const found = new Map<string, Found>();
-  const main = await checkout(input.dir);
-  for (const [p, f] of main) found.set(p, { where: [{ src: 'main', label: 'main' }], oid: f.oid, size: f.size, mtime: f.mtime, draft: f.draft, onMain: true });
+  if (input.main) {
+    // On main means on origin/<default>: what has merged, whatever branch the floor's folder is on.
+    const label = `origin/${input.main.def}`;
+    for (const t of await treeAt(input.dir, input.main.sha)) {
+      if (isDeliverablePath(t.path)) found.set(t.path, { where: [{ src: 'main', label }], oid: t.oid, size: t.size, mtime: input.main.at, draft: draftByName(t.path), onMain: true });
+    }
+  } else {
+    for (const [p, f] of await checkout(input.dir)) found.set(p, { where: [{ src: 'main', label: 'main' }], oid: f.oid, size: f.size, mtime: f.mtime, draft: f.draft, onMain: true });
+  }
+  const base = input.main?.sha ?? 'HEAD';
   const sources: DeliverableWhere[] = [];
   /** Adds a place a file is, unless it's the same file as on main (the same blob). */
   const add = (p: string, where: DeliverableWhere, oid: string | undefined, size: number | undefined, mtime: number | undefined, draft: boolean) => {
@@ -134,7 +150,7 @@ export async function scanDeliverables(input: ScanInput, now = Date.now()): Prom
     if (m.branch) viaWorktree.add(m.branch);
     // Its own work: what it changed since its branch forked from main, committed or not (no oid: changed in the folder).
     const head = await headOf(m.dir!);
-    const mine = head ? await changedSinceFork(input.dir, head) : undefined;
+    const mine = head ? await changedSinceFork(input.dir, head, base) : undefined;
     for (const [p, f] of files) if (!f.oid || !mine || mine.has(p)) add(p, where, f.oid, f.size, f.mtime, f.draft);
   }
 
@@ -146,7 +162,7 @@ export async function scanDeliverables(input: ScanInput, now = Date.now()): Prom
     const where: DeliverableWhere = { src: `ref:${b.name}`, label: b.name, branch: b.name, who: owner.who, role: owner.role };
     let any = false;
     // Only what the branch itself changed since it forked: not the older copies of files main moved on from.
-    const mine = await changedSinceFork(input.dir, b.sha);
+    const mine = await changedSinceFork(input.dir, b.sha, base);
     for (const t of await treeAt(input.dir, b.sha)) {
       if (!isDeliverablePath(t.path) || (mine && !mine.has(t.path))) continue;
       any = true;
@@ -182,5 +198,8 @@ export async function scanDeliverables(input: ScanInput, now = Date.now()): Prom
     mine.sort((a, b) => (b.mtime ?? 0) - (a.mtime ?? 0));
     items.push({ id: `extras-${team}`, team, title: 'Beyond the toolkit', optional: true, status: itemStatus(mine), files: mine.slice(0, EXTRA_FILES), ...(mine.length > EXTRA_FILES ? { more: mine.length - EXTRA_FILES } : {}) });
   }
-  return { floor: input.floor, scannedAt: now, items, sources };
+  // A report straight under reports/ that's no analyst report and in no team's folder: the Project Coordinator sorts it.
+  const unsorted = sorted.filter((f) => unsortedReport(f.path)).sort((a, b) => (b.mtime ?? 0) - (a.mtime ?? 0));
+  if (unsorted.length) items.push({ id: 'unsorted-reports', team: 'management', title: 'Unsorted reports', optional: true, status: itemStatus(unsorted), files: unsorted.slice(0, EXTRA_FILES), ...(unsorted.length > EXTRA_FILES ? { more: unsorted.length - EXTRA_FILES } : {}) });
+  return { floor: input.floor, scannedAt: now, items, sources, ...(input.main ? { main: `origin/${input.main.def}` } : {}), ...(input.checkout ? { checkout: input.checkout } : {}) };
 }

@@ -33,6 +33,7 @@
 .dv-file .dv-file-meta { font-size: 11px; font-weight: 700; color: var(--muted); }
 .dv-more > summary { cursor: pointer; margin-top: 4px; font-size: 12px; font-weight: 800; color: var(--link); }
 .dv-dim { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); }
+.dv-stale { margin: 0; padding: 6px 10px; border-left: 4px solid var(--warn); border-radius: var(--radius-sm); background: var(--warn-soft); color: var(--warn-ink); font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
 .dv-foot { margin: 0; font-size: 11px; font-weight: 700; color: var(--muted); overflow-wrap: anywhere; }
 
 /* The setup panel's line. */
@@ -60,6 +61,9 @@
 .dv-pic img { max-width: 100%; height: auto; background: #fff; }
 .dv-pre { margin: 0; padding: 10px; background: var(--code-bg); color: var(--code-ink); border-radius: var(--radius-sm); font: 12px/1.45 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .dv-mermaid { border-left: 4px solid var(--purple); }
+.dv-diagram { margin: 10px 0; padding: 10px; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--card); overflow-x: auto; }
+.dv-diagram > svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+.dv-diagram-src > summary { cursor: pointer; font-size: 12px; font-weight: 800; color: var(--muted); }
 .dv-brd { margin: 0 0 8px; font-weight: 700; }
 .dv-xlsx { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 .dv-table-wrap { overflow: auto; }
