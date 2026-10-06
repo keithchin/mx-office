@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-06 · release 6 (`c1c4a1e`)
+
 ### New
 - **Chat view on the Command Center**: the Project Coordinator console in the middle of the Command
   Center has **Chat | Terminal** on its header. Chat (the default) shows the conversation as messages:
