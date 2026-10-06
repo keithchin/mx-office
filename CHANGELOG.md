@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-06 · release 12 (`18ff64d`)
+
 ### New
 - **▶ Resume project** (Command Center heading and team pages; **▶ Resume all projects** on Home): a
   preview first, listing every asleep or benched agent with the work waiting for it and why (answers owed,
