@@ -5,7 +5,7 @@ weight: 13.5
 aliases: [/docs/audit, /docs/preview/audit-log]
 ---
 
-The **🧾 Audit log** records who did what, and when: people, agents, the office itself, Jeff and The Firm's reviewers. It is **append-only** and **hash-chained**, so an edited or removed line shows.
+The **🧾 Audit log** records who did what, and when: people, agents, the office itself, Jeff and The Firm's reviewers. It is **append-only** and **hash-chained**, so an edited or removed line shows. Its second sub-tab, **🚨 Incidents**, keeps what went wrong or nearly did, with cause and follow-up: see [Incidents](incidents.md).
 
 ![The Audit log tab of a project](../images/audit-log.png "The Audit log: chain badge, filters, histogram and events")
 
@@ -37,6 +37,7 @@ The **histogram** above the table shows events over time. Click a bar to zoom in
 
 - **⬇ CSV** and **⬇ JSONL** download every event that matches the filters. The export itself is logged (`audit.export`).
 - **Log prompt text**: keep the first 80 characters of every prompt a person sends a worker. Off (the default), only its length is logged. Turning it on or off is logged too.
+- Under an expanded row: **🚨 Create incident from this event**, or **Link to incident…** to add it to one that's still open. See [Incidents](incidents.md).
 
 > [!IMPORTANT]
 > The audit log never records token values. Prompt text is off unless an admin turns it on.

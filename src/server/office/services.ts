@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { childEnv, resolveCommand } from '../workers.js';
 import { SignIns } from '../signins.js';
-import { agentProviders, configuredProvider } from '../agents.js';
+import { agentProviders, configuredProvider, providerCommand } from '../agents.js';
 import { Tailnet } from '../tailnet.js';
 import { Team } from '../team.js';
 import { Upgrader } from '../upgrade.js';
@@ -47,7 +47,7 @@ export function createServices(ctx: Ctx): BuildingServices {
     ctx.toastAll,
   );
 
-  const claudeBin = configuredProvider(cfg.agentCmd) === 'claude' ? resolveCommand(cfg.agentCmd) : resolveCommand('claude');
+  const claudeBin = resolveCommand(providerCommand('claude', cfg.agentCmd));
   // Everyone with an account runs on their own Claude and GitHub sign-ins (see signins.ts). On the
   // shared password, with no accounts, the office's own are used, as they always were.
   const signins = new SignIns(

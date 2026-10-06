@@ -45,7 +45,7 @@ export function matches(e: AuditEvent, q: AuditQuery): boolean {
   if (q.actions?.length && !actionMatches(e.action, q.actions)) return false;
   if (q.q) {
     const needle = q.q.toLowerCase();
-    const hay = `${e.summary} ${e.actor.name} ${e.action} ${e.target?.label ?? ''} ${e.target?.id ?? ''} ${e.floor ?? ''}`.toLowerCase();
+    const hay = `${e.summary} ${e.actor.name} ${e.action} ${e.target?.label ?? ''} ${e.target?.id ?? ''} ${e.floor ?? ''} ${e.id}`.toLowerCase();
     if (!hay.includes(needle)) return false;
   }
   return true;

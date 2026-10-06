@@ -11,6 +11,7 @@ import type { Ctx } from '../office/context.js';
 import { audit, human, office } from '../audit/index.js';
 import { officeSettings, updateOfficeSettings } from '../connections/store.js';
 import { samePath, sweepGateLeftovers, sweepRepo, within } from './sweep.js';
+import { signal } from '../incidents/signals.js';
 
 const HOUR = 60 * 60_000;
 const FIRST_MS = 10 * 60_000;
@@ -85,6 +86,7 @@ export async function runSweep(ctx: Ctx, by?: { name: string; id?: string }): Pr
       }
     }
     lastRun = { at: Date.now(), items };
+    for (const it of items) if (it.action === 'failed') signal({ kind: 'sweep.failed', floor: it.floor, path: it.path, why: it.why });
     const removed = items.filter((i) => i.action === 'removed').length;
     if (removed) console.log(`  🧹 Worktree cleanup removed ${removed} merged worktree${removed === 1 ? '' : 's'}`);
     return items;

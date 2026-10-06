@@ -1,0 +1,3 @@
+/* The TEST MODE badge (ui/testmode/): loud on purpose, in every theme. */
+.tm-badge { flex: none; align-self: center; font-size: 12px; font-weight: 900; letter-spacing: .08em; padding: 3px 10px; border-radius: var(--radius-pill); background: var(--warn); color: var(--on-warn); border: 2px dashed var(--bad-ink); white-space: nowrap; }
+body > .tm-badge { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 50; }

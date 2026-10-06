@@ -93,3 +93,10 @@
 @media (prefers-reduced-motion: reduce) {
   .au-bar span { transition: none; }
 }
+
+/* The two sub-tabs: the events and the incidents (ui/incidents/). */
+.au-subtabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 1.5px solid var(--rule-strong); }
+.au-subtab { font-size: 14px; padding: 5px 14px; border-radius: 10px 10px 0 0; margin-bottom: -1.5px; }
+.au-subtab[aria-selected='true'] { background: var(--card); border-bottom-color: var(--card); font-weight: 800; }
+.au-subn { margin-left: 6px; font-size: 11px; font-weight: 800; padding: 0 6px; border-radius: 999px; background: var(--bad); color: var(--on-fill); }
+.au-subn:empty { display: none; }

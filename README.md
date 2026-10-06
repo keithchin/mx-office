@@ -23,7 +23,8 @@ Around the teams:
 
 - **🧑‍⚖️ Jeff · Router**, the office's quick judge (Jev, with Claude Haiku as fallback): is an agent waiting on you, which team is a new issue for, and which escalation to resolve first.
 - **🏛️ The Firm** (`/firm`): independent Reviewer Agents that audit a project from outside its team and deliver one report to you.
-- **🧾 Audit log**: who did what and when, per floor and office-wide, hash-chained.
+- **🧾 Audit log**: who did what and when, per floor and office-wide, hash-chained, with **🚨 Incidents**: what went wrong or nearly did, with cause and follow-up, opened by hand or by the office's detection rules.
+- **Test mode** (`--test-mode`, and by itself under a `scratch` or `test-offices` folder): a test office never starts a real agent CLI, only its fake `--agent`.
 - **📱 Team phone**: a floating chat and notification centre on the 1D and 2D views (a pixel iPhone in the Default theme): each project's team chatter as a channel, DMs and threads with the agents, messages to the Project Coordinator, `@Name` or `@team`, and everything that needs you with its buttons.
 - **📱 Phone version and Phone access**: the team phone full screen at `/m`, installable on an iPhone with push notifications for what needs you, and a private tunnel to it (Microsoft Dev Tunnels, or Cloudflare Tunnel with Access) switched on from 🔌 Connections. See the docs: *Phone version* and *Phone access*.
 - **🎨 Five color themes**: Default, Dark, Terminal, and Clean (Light) / Clean (Dark), which look like VS Code and show no emoji.

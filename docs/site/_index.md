@@ -28,7 +28,7 @@ Agent Office is a web app that runs on your laptop. **Claude Code agents** work 
 
 - **Get Started**: the quick start, the new-project wizard, and a tour.
 - **Concepts**: the building, floors, workers, worktrees, the four views, and how work flows from an issue to a merged PR.
-- **Using the Office**: one page for every screen, from `/home` and the Command Center to the Git tab, Settings, the [Audit log](using-the-office/audit-log.md) and [The Firm](using-the-office/the-firm.md).
+- **Using the Office**: one page for every screen, from `/home` and the Command Center to the Git tab, Settings, the [Audit log](using-the-office/audit-log.md) with its [Incidents](using-the-office/incidents.md), and [The Firm](using-the-office/the-firm.md).
 - **Teams & Agents**: the team model, autonomy levels, escalations, the review loop, benching, Playbooks, models and costs.
 - **Automation**: Jeff · Router, skills and gates, and the subagent track record.
 - **Integrations**: GitHub, mxcli, the toolkit, and the CI pipeline on every pull request.

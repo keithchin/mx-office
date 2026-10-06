@@ -29,6 +29,7 @@ import { NO_TEAM, type HookEnv, type OpenedPr, type RepoSource, type RunAs, type
 import { clamp, safeEq, truncate } from './util.js';
 import { COLORS, NAMES, newWorker } from './worker.js';
 import { WorkerTrees, lostMessage } from './worktree.js';
+import { launchRefusal } from '../testmode.js';
 
 const SCREEN_INTERVAL_MS = 250;
 /** How often a steady typist's "last typed" time is refreshed for everyone. */
@@ -633,8 +634,7 @@ export class WorkerManager {
       this.emitUpdate(w);
       return;
     }
-    // The new terminal starts with what the last one showed (on a resume), or with what was saved
-    // when the office last stopped, so earlier output is still there to scroll back to and search.
+    // The new terminal starts with what the last one showed (on a resume) or was saved when the office stopped, to scroll back and search.
     const restarted = !w.term;
     const before = w.term && w.ser ? terminalTail(w.term, w.ser, SCROLLBACK) : this.scrollback.load(info.id);
     const prelude = before ? `${before}\r\n${restarted ? RESTORED_NOTE : ''}` : undefined;
@@ -653,6 +653,8 @@ export class WorkerManager {
     const cwd = this.cwd(info);
     const command = this.command(info);
     const commandPath = isShell ? undefined : configured ? this.agentPath : resolveCommand(command);
+    const refused = isShell ? undefined : launchRefusal(this.dir, info, command, commandPath); // test mode (testmode.ts)
+    if (refused) return this.startFailed(w, refused);
     const base = isShell ? (WIN && !process.env.SHELL ? [] : ['-l']) : configured ? [...this.agentArgs] : [];
     // Its provider's command line, and anything it sets for this run (see ProviderAdapter.launch).
     const plan: LaunchPlan = adapter ? adapter.launch({ h: this.handleOf(w), args: base, prompt, resumeSessionId, station: DESK_BY_ID.get(info.deskId)?.station, cwd, setup: this.setups[adapter.id] }) : { args: base };
@@ -670,8 +672,7 @@ export class WorkerManager {
     // Whichever agent it runs, a worker reaches the office's workers with office-workers, and a board
     // agent the queue with office-queue.
     if (this.officeBin) {
-      // Windows spells it Path.
-      const key = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') ?? 'PATH';
+      const key = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') ?? 'PATH'; // Windows spells it Path.
       env[key] = [this.officeBin, env[key]].filter(Boolean).join(path.delimiter);
     }
 
@@ -751,8 +752,7 @@ export class WorkerManager {
     const locate = adapter?.usage?.locate;
     if (locate) locate(this.handleOf(w), this.cwd(info), childEnv());
     this.follow(w, adopted.pty, term, undefined);
-    // A turn that ended while the office was down says so with its Stop hook, which retries until
-    // the office is back. Claude's progress report, where it gives one, says a turn is still going.
+    // A turn that ended while the office was down says so with its Stop hook (it retries); Claude's progress report says one is still going.
     if (adopted.busy && adapter?.screen?.progress) this.onProgress(w, true);
     this.emitUpdate(w);
   }

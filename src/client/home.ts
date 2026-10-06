@@ -17,6 +17,7 @@ import { projectsView } from './home/projects';
 import { statsView } from './home/stats';
 import { overviewView } from './home/overview';
 import { homeAudit } from './home/audit';
+import { testModeBadge } from './ui/testmode';
 import './home/home.css';
 
 /** The tab a link asked for (?tab= or a bare #), read before the address is tidied. */
@@ -114,6 +115,7 @@ flatMenu($('menu'), { net, home: true });
 
 session.bellBefore($('theme'));
 session.start();
+testModeBadge(); // the TEST MODE badge (ui/testmode/)
 showTab(tab);
 
 // Debug handle for quick checks from the console / headless screenshots.

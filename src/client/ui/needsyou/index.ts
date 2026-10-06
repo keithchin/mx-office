@@ -12,6 +12,7 @@ import { store } from '../../state';
 import { h, timeAgo } from '../dom';
 import { fetchRoster } from '../roster/api';
 import { collectNeeds, hereCount, type NeedItem, type NeedKind, type NeedTarget } from './logic';
+import { incidentBriefs, incidentFeedMessage, onIncidentsChanged } from '../incidents/feed';
 import { hasPhone, openPhone } from '../phone/api';
 import '../pm/jeff-rank.css';
 import './needsyou.css';
@@ -53,6 +54,7 @@ const KIND_WORDS: Record<NeedKind, [string, string]> = {
   floor: ['floor waiting', 'floors waiting'],
   audit: ['audit', 'audit'],
   studio: ['Studio Pro', 'Studio Pro'],
+  incident: ['incident', 'incidents'],
 };
 
 /** The compact row: a count per kind, most urgent kind first, and the button to the phone's Needs you. */
@@ -111,7 +113,7 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
     );
 
   function draw() {
-    const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live(), firm: deps.firm?.(), studio: deps.studio?.() });
+    const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live(), firm: deps.firm?.(), studio: deps.studio?.(), incidents: incidentBriefs() });
     const n = hereCount(items);
     badge.textContent = n ? String(n) : '';
     badge.title = n ? `${n} thing${n === 1 ? '' : 's'} on this floor need${n === 1 ? 's' : ''} you` : '';
@@ -145,12 +147,14 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
   }
 
   for (const k of ['workers', 'pulls', 'floors', 'floor', 'studio'] as const) store.on(k, refresh);
+  onIncidentsChanged(draw);
   // "3m ago" moves on by itself.
   setInterval(draw, 30_000);
 
   return {
     refresh,
     onMessage(msg) {
+      incidentFeedMessage(msg);
       if (msg.t !== 'roster.changed' || msg.floor !== floor) return;
       // A burst of changes (a standup asking four Leads) fetches once.
       clearTimeout(timer);

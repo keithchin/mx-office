@@ -18,6 +18,7 @@ import { messages, loadOlder, onFeed, refetch, routeChatter } from '../chatter/f
 import { chatterActions } from '../chatter/panel';
 import { h, modalOpen, toast } from '../dom';
 import { collectNeeds, type NeedItem, type NeedsInput, type NeedTarget } from '../needsyou/logic';
+import { incidentBriefs, incidentFeedMessage, onIncidentsChanged } from '../incidents/feed';
 import { currentRoster, onRoster, routeRosterMessage } from '../teams/world';
 import { wizardApi } from '../wizard/api';
 import { phoneAlerts } from './alerts';
@@ -124,7 +125,7 @@ export function installPhone(deps: PhoneDeps): Phone {
   function collect() {
     const extra = deps.needs?.() ?? { setup: setupNow() };
     const studio = store.studio?.floor === store.floor ? (store.studio ?? undefined) : undefined;
-    items = collectNeeds({ floor: store.floor ?? undefined, workers: store.workers.values(), roster: roster(), pulls: store.pulls.items, floors: store.floors, studio, ...extra });
+    items = collectNeeds({ floor: store.floor ?? undefined, workers: store.workers.values(), roster: roster(), pulls: store.pulls.items, floors: store.floors, studio, incidents: incidentBriefs(), ...extra });
     alerts.saw(store.floor ?? undefined, items);
   }
 
@@ -362,6 +363,8 @@ export function installPhone(deps: PhoneDeps): Phone {
 
   // ---- Keeping up ----------------------------------------------------------------------------------------
   for (const k of ['workers', 'pulls', 'floors', 'studio'] as const) store.on(k, draw);
+  onIncidentsChanged(draw); // open sev1/sev2 incidents (ui/incidents/feed.ts)
+  deps.net.onMessage(incidentFeedMessage);
   let lastFloor = store.floor;
   store.on('floor', () => {
     pending = [];

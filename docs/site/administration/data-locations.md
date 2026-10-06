@@ -25,6 +25,7 @@ The office keeps its data in a `.agent-office` folder. On the Taskforce laptop t
 | `judge/<floor>.jsonl` | Jeff · Router's verdicts |
 | `chatter/<floor>.jsonl`, `chatter/<floor>.state.json` | [Team chatter](../using-the-office/command-center.md#team-chatter): the newest 1000 messages, and what the sources have already turned into messages |
 | `audit/<floor>.jsonl`, `audit/_office.jsonl`, `audit/archive/` | The [audit log](../using-the-office/audit-log.md): append-only, hash-chained; old lines archived by month |
+| `incidents/incidents.jsonl`, `incidents/settings.json` | [Incidents](../using-the-office/incidents.md): a hash-chained line per change, and the detection rules' settings |
 | `firm/firm.json`, `firm/engagements/<id>/`, `firm/reports/<id>.json` and `.md` | [The Firm](../using-the-office/the-firm.md): reviewers' models, each audit with its reviewers' isolated folders, delivered reports |
 | `analysis/runs.jsonl` | Analysed runs (the Analysis tab) |
 | `ranking/` | Ranking history and highlights |

@@ -28,6 +28,13 @@ export function useAudit(log: AuditLog | undefined, notify?: (e: AuditEvent) => 
 
 export const auditLog = () => current;
 
+/** Others that follow every new event (the incident rules, incidents/office.ts), on top of useAudit's notify. */
+const followers = new Set<(e: AuditEvent) => void>();
+export function onAuditEvent(fn: (e: AuditEvent) => void): () => void {
+  followers.add(fn);
+  return () => followers.delete(fn);
+}
+
 const SECRET_KEY = /pass(word)?|secret|token|api[_-]?key|authorization|cookie/i;
 
 /** A detail value redacted: strings cut short and cleaned, nesting and lists kept small. */
@@ -62,6 +69,13 @@ export const audit = {
       recent.set(`${fileKey(e.floor)}:${e.action}:${e.target?.id ?? ''}`, event.at);
       if (recent.size > 2000) recent.delete(recent.keys().next().value!);
       onNew?.(event);
+      for (const fn of followers) {
+        try {
+          fn(event);
+        } catch (err) {
+          console.error(`agent-office: an audit follower failed: ${(err as Error).message}`);
+        }
+      }
       return event;
     } catch (err) {
       console.error(`agent-office: couldn't write the audit log: ${(err as Error).message}`);

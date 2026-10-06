@@ -17,9 +17,15 @@ export function agentProviders(configured: AgentProvider): AgentProvider[] {
   return AGENT_PROVIDERS.filter((p) => p !== 'custom' || configured === 'custom');
 }
 
-/** The command a provider's CLI runs as: the office's --agent when that's this provider, else its own executable. */
+/**
+ * The command a provider's CLI runs as: the office's --agent when that's this provider, else its own
+ * executable. An --agent no provider is named after (a fake for tests, a wrapper script) stands in for
+ * Claude Code too, the office's default agent, whatever its file is called: until 2026-10-06 only one
+ * named "claude" did, and test offices with a fake-agent.cmd started real Claude sessions.
+ */
 export function providerCommand(provider: AgentProvider, agentCmd: string): string {
-  return configuredProvider(agentCmd) === provider ? agentCmd : (PROVIDER_META[provider].bin ?? agentCmd);
+  const configured = configuredProvider(agentCmd);
+  return configured === provider || (provider === 'claude' && configured === 'custom') ? agentCmd : (PROVIDER_META[provider].bin ?? agentCmd);
 }
 
 export function validateWorkerModel(kind: 'agent' | 'shell', provider: AgentProvider | undefined, model: unknown): string | undefined {

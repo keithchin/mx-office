@@ -11,6 +11,7 @@ import type { RosterView } from './roster/types.js';
 import type { StudioState } from './studio.js';
 import type { SetupView } from './wizard.js';
 import { needingYou, waitingInOrder } from './waiting.js';
+import { SEVERITY_SHORT, incidentRef, needsAttention, type IncidentBrief } from './incidents.js';
 
 /** Where an item's button takes you. */
 export type NeedTarget =
@@ -23,9 +24,10 @@ export type NeedTarget =
   | { to: 'live' }
   | { to: 'git' }
   | { to: 'floor'; floor: string }
-  | { to: 'firm'; url: string };
+  | { to: 'firm'; url: string }
+  | { to: 'incident'; id: string };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio';
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident';
 
 /** How far behind its default branch a floor's folder may fall before Needs you mentions it. */
 export const STALE_COMMITS = 10;
@@ -64,6 +66,8 @@ export interface NeedsInput {
   firm?: FirmFloorStatus;
   /** Studio mode on this floor (ui/studio/): Studio Pro closed with model changes nobody committed. */
   studio?: StudioState;
+  /** Open sev1 and sev2 incidents (shared/incidents.ts), this floor's and the office's own. */
+  incidents?: readonly IncidentBrief[];
 }
 
 const URGENCY_RANK: Record<Escalation['urgency'], number> = { critical: 0, urgent: 1, important: 2, info: 3 };
@@ -85,6 +89,11 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     if (w.status !== 'done' || w.kind !== 'agent' || w.lost) continue;
     const what = w.task?.summary ?? w.task?.name ?? w.title;
     out.push({ key: `done-${w.id}`, kind: 'finished', icon: '✅', text: `${w.name} finished${what ? `: ${what}` : ' its turn'} — not looked at yet`, since: w.waitingSince, level: 'warn', action: 'Review', target: { to: 'worker', id: w.id } });
+  }
+  // Open sev1 and sev2 incidents on this floor or the whole office, the worst and then the oldest first.
+  const incidents = (i.incidents ?? []).filter((x) => needsAttention(x) && (!x.floors.length || (!!i.floor && x.floors.includes(i.floor))));
+  for (const x of [...incidents].sort((a, b) => a.severity.localeCompare(b.severity) || a.detectedAt - b.detectedAt)) {
+    out.push({ key: `incident-${x.id}`, kind: 'incident', icon: '🚨', tag: SEVERITY_SHORT[x.severity], text: `Incident ${incidentRef(x)}: ${x.title}`, since: x.detectedAt, level: x.severity === 'sev1' ? 'block' : 'warn', action: 'Review', target: { to: 'incident', id: x.id } });
   }
   // 2. Workers whose worktree was deleted outside agent-office.
   for (const w of workers.filter((x) => x.lost).sort((a, b) => a.createdAt - b.createdAt)) {
