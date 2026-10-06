@@ -39,7 +39,7 @@ The step-by-step version, with screenshots: `/docs/get-started/quick-start`.
 
 > **Tokens** live in files and are referred to by path only: `~/.agent-office-gh-token` (the agents'), `~/.agent-office-admin-gh-token` (repo creation only), `~/.agent-office-jev-key` (Jeff's, passed as `AGENT_OFFICE_JEV_KEY_FILE`). Never paste their contents anywhere.
 >
-> **Restarts** on Windows stop running agents; their sessions are saved and wake when you open them. To try a change, run a throwaway **test office** on a 47xx port with its own `AGENT_OFFICE_HOME` and throwaway floors, never the real ones (`/docs/administration/test-offices`).
+> **Restarts** on Windows stop running agents; their sessions are saved, the ones cut off mid-turn carry on, and the rest stay asleep until they're prompted (or you press R). To try a change, run a throwaway **test office** on a 47xx port with its own `AGENT_OFFICE_HOME` and throwaway floors, never the real ones (`/docs/administration/test-offices`).
 
 ## Where to read more
 

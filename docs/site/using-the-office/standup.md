@@ -28,6 +28,6 @@ Each proposal under *Proposals* becomes a card: **✅ Approve**, **❌ Reject** 
 
 - **Approve** opens a GitHub issue labelled `team:<team>` (unless dry run is on).
 - If your autonomy level already allows that kind of decision, the proposal is approved automatically.
-- Your decisions go back to the Coordinator a minute after your last one.
+- Your decisions go back to the Coordinator a minute after your last one, and each to the Lead that proposed it, as one short note between its turns (an asleep Lead gets its notes once it's back at its desk). Both wait through a restart: they're kept in the roster file until they're delivered.
 
 Pending proposals also show on [Approvals](approvals.md).

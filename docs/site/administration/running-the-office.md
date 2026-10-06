@@ -44,7 +44,7 @@ Close the **Agent Office** PowerShell window (or press Ctrl+C in it). This stops
 > [!WARNING]
 > On Windows, workers are child processes of the office server. **Restarting the office stops all running agents**, even mid-task. Check the board first, and avoid restarting while agents are in the middle of something.
 
-Their sessions are saved in each floor's `workers.json`. When the office comes back, it resumes each one from its saved session. If a resume fails, a fresh session starts and a toast says so. An agent asleep (💤) wakes when you open it.
+Their sessions are saved in each floor's `workers.json`. When the office comes back, it resumes the agents that were **mid-turn** (working, or asking something) from their saved sessions, with a prompt to carry on that reminds them their escalations are still open. The rest stay asleep (💤), sessions kept, and wake when prompted (by you, or by the office with an answer, a relay or a standup) or when you press **R** at their desk: a restart no longer starts a session for every desk. If a resume fails, a fresh session starts and a toast says so. What the office still had to pass on to the Project Coordinator and the Leads is kept in the roster file, so it isn't lost either.
 
 ## Update
 

@@ -6,7 +6,41 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **Autonomy by pipeline stage**: a new team setting (⚙️ Settings → Autonomy → *By pipeline stage*,
+  off by default) lets a toolkit project's stage pick its level: 2 Guided while it analyses,
+  specifies and designs, 3 Delegated once the build plan's gate (Stage 4) has passed (both levels
+  yours to pick). The office changes the level exactly as if you had: Playbooks rewritten, the Leads
+  at work told, the cap for the new level, a line in the recent activity and the Audit log. While it's
+  on, the Team tab's chip reads *Autonomy 2 · by stage* and the level buttons only show the level.
+
+### Improved
+- **Quieter finished turns**: a turn the office started itself (the team's relays and notes, review
+  nudges, standup questions, waking a Lead with something for it) now finishes without a ✅ Review in
+  Needs you, a ding or a desktop notification, and so does a team member's routine turn at autonomy 3
+  and up (its card still shows it done; anything that needs you comes as an escalation). A question or
+  a permission prompt still flags as before, and so does any turn you start.
+- **Relays ask for no reply**: the Project Coordinator's relays (new escalations, your proposal
+  decisions, the Leads' subagent decisions) and the Leads' notes say *no reply needed* instead of
+  asking for `noted`, so each one no longer costs a turn that nobody reads.
+- **Your decisions reach the Lead that proposed**: approving, rejecting or asking for changes to a
+  standup proposal now tells the proposing Lead too, in one short note a minute after your last
+  decision, between its turns. A subagent request you decide while its Lead is asleep or busy asking
+  someone is kept for it rather than lost.
+- **Restarts wake only who was mid-turn**: after a restart the office resumes just the agents it cut
+  off in the middle of a turn; everyone who was at rest, finished or asleep stays asleep (session kept)
+  until someone, or the office, prompts them, or you press R. Walking onto a floor no longer wakes
+  them either. The turn it carries on is told its escalations are still open, by title, instead of
+  "ask again", which brought a fresh round of the same escalations after every restart.
+
+### Fixed
+- **Relays survive a restart**: what the office still had to tell the Project Coordinator (new
+  escalations, your proposal decisions, subagent news) and the Leads is now kept in the floor's roster
+  file instead of memory, so a restart, or a Coordinator that's asleep or benched for a while, no
+  longer loses it. A floor with no Coordinator skips its relays (each Lead hears its own decisions).
+- **Go home once merged leaves the team alone**: a Lead whose pull request merged is no longer sent
+  home without a handoff note; the project team goes through its own bench and handoff, and
+  `office-workers home --merged` lists it as skipped (*on the project team*).
 
 ## 2026-10-06 · release 5 (`1cff8c8`)
 
