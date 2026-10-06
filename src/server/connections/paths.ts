@@ -53,7 +53,7 @@ export function setPath(ctx: Ctx, which: 'projectsDir' | 'toolkitDir', raw: stri
   let dir: string | undefined;
   if (text) {
     const typed = untilde(text);
-    if (!path.isAbsolute(typed)) return 'Use a full path, like ~/agent-spike/mxcli-project-toolkit';
+    if (!path.isAbsolute(typed)) return 'Use a full path, like ~/agent-spike/mendix-toolkit';
     dir = path.resolve(typed);
     const why = toolkitProblem(dir);
     if (why) return why;

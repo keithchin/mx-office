@@ -51,8 +51,8 @@ And in the project itself: Playbooks, journals, standups and insight memos. See 
 | The office (our fork) | `agent-spike\agent-office-src` (github.com/keithchin/agent-office, private) |
 | Launcher and shortcut | `agent-spike\start-office.ps1`, `agent-spike\open-agent-office.ps1`, icon `agent-office.ico` |
 | Floors | `agent-spike\mx-spike` (AI-Taskforce-Labs/mx-spike) · `agent-office\AI-Taskforce-Labs\travel-approval` |
-| Toolkit | `agent-spike\mxcli-project-toolkit` |
-| mxcli | `agent-spike\bin\mxcli.exe` |
+| Toolkit | `agent-spike\mendix-toolkit` (was `agent-spike\mxcli-project-toolkit`; Settings → Connections → Folders overrides it) |
+| mxcli | `agent-spike\tools\mxcli\mxcli.exe` (was `agent-spike\bin\mxcli.exe`) |
 | Scripts | `agent-spike\queue-runs.mjs`, `add-floor.mjs`, `token-check.mjs` |
 
 ## Backups
