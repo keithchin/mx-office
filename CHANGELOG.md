@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-06 · release 14 (`a208a15`)
+
 ### New
 - **Risky desktop actions through Phone access ask for the password again**: on the 3D office, /lite,
   /pixel or /home opened through the phone tunnel, merging a PR, hiring, raising a team cap or a budget,
