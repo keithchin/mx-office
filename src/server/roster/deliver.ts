@@ -18,6 +18,7 @@ import { isAsleepStatus } from './bench.js';
 import type { Roster } from './index.js';
 import { owedAnswersPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
+import { floorHold } from './pause.js';
 
 /** Who a prompt is from: a person, the office itself, or another agent (`office-workers tell`). */
 export type Origin = 'person' | 'office' | 'agent';
@@ -59,9 +60,9 @@ export class Delivery {
 
   constructor(private roster: Roster) {}
 
-  /** Why the office starts no turn on this floor now: its daily spend cap is reached. */
+  /** Why the office starts no turn on this floor now: its daily spend cap is reached, or a hold (the project's budget, roster/pause.ts). */
   paused(floor: TeamFloor): string | undefined {
-    return this.roster.pauseOf(this.roster.data(floor.id));
+    return this.roster.pauseOf(this.roster.data(floor.id)) ?? floorHold(floor.id);
   }
 
   /** Types `text` into agent `w`, or wakes it with it, holds it, or says why not. */

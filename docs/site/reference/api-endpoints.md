@@ -65,6 +65,8 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | POST | `/api/keep-awake` | `{ on?, idleMinutes? }` (admin) |
 | GET | `/api/budget` | [Budget](../using-the-office/budget.md): `?floor=<id>`. Returns the project's spend, budget settings, breakdowns (stage, role, agent with nested subagents, model, day, top issues/PRs), the exchange rate and the top-bar colour |
 | GET | `/api/budget/office` | Returns the office-wide view: today's and all-time spend, the daily budget, every project's line with a 14-day sparkline, the background calls by source, the Firm, and the currency settings |
+| POST | `/api/budget/action` | `{ floor, action, … }` (admin). The actions are: `settings` `{ total?, threshold?, autoPause? }`; `plan` `{ lines: [{ id, usd?, days? }] }`; `regenerate`; `firm` (apply the latest audit's re-forecast); `resume`; `level` `{ choice: { level, total, threshold, autoPause, settings } }`; `officeThreshold` `{ threshold }` (no floor). Answers with the project's view |
+| GET | `/api/budget/estimate` | `?tier=small|standard&entry=<mode>` for a new project, or `?floor=<id>` for an existing one. Returns the plan estimate at Balanced, the working days and the three level cards (preset budget, time, what each changes) |
 | POST | `/api/budget/fx` | `{ currency, mode: 'daily'|'manual', manualRate?, refresh? }`: sets the local currency and its rate (admin) |
 | GET | `/api/flows` | The [workflow](../automation/workflows.md) runs, newest first: id, workflow, status, step, why it stopped, floor, tries. `?floor=<id>`, `?workflow=<id>`. Never a run's state |
 | GET | `/api/firm` | The Firm's people, its engagements (newest first) and the floors an audit can be called on |

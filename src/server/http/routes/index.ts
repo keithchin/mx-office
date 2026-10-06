@@ -73,6 +73,8 @@ export const routes: readonly Route[] = [
   budgetRoutes.view,
   budgetRoutes.office,
   budgetRoutes.fx,
+  budgetRoutes.action,
+  budgetRoutes.estimate,
   homeRoutes.overview,
   firmRoutes.view,
   firmRoutes.engagement,

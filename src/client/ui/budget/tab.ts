@@ -106,7 +106,6 @@ function headline(v: BudgetView): HTMLElement {
 
 function notes(v: BudgetView): HTMLElement | null {
   const items = [
-    v.paused ? h('p.bud-note.bad', {}, `⏸️ ${v.paused}`) : null,
     v.unmetered.calls ? h('p.bud-note', {}, `${v.unmetered.calls} call${v.unmetered.calls === 1 ? '' : 's'} not metered (${v.unmetered.agents.join(', ')}): providers the office can't price, counted but not costed.`) : null,
     rateLine(v.fx) ? h('p.bud-note.bud-fx', {}, rateLine(v.fx)!) : null,
   ].filter(Boolean) as HTMLElement[];
@@ -115,6 +114,12 @@ function notes(v: BudgetView): HTMLElement | null {
 
 /** The tab: mounts into `root`, redraws when the feed has new numbers and the tab is showing. */
 export function budgetTab(root: HTMLElement, feed: BudgetFeed, visible: () => boolean, sections: BudgetSection[] = []) {
+  /** Set by a section's own action: the next numbers redraw even mid-edit. */
+  let force = false;
+  const refresh = () => {
+    force = true;
+    feed.refresh();
+  };
   const render = () => {
     if (!visible()) return;
     const v = feed.floor();
@@ -122,11 +127,22 @@ export function budgetTab(root: HTMLElement, feed: BudgetFeed, visible: () => bo
       root.replaceChildren(h('p.bud-empty', {}, 'Loading the budget…'));
       return;
     }
-    const keep = root.querySelector('.bud-keep-open')?.getAttribute('data-open');
+    // Someone typing in a field, or choosing a level: the numbers wait (a worker's spend updates every few seconds).
+    const active = document.activeElement;
+    const editing = (active && root.contains(active) && /^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName)) || !!root.querySelector('.bud-levels-box');
+    if (editing && !force) return;
+    force = false;
+    const open = new Set([...root.querySelectorAll<HTMLDetailsElement>('details[data-sec]')].filter((d) => d.open).map((d) => d.dataset.sec));
+    const closed = new Set([...root.querySelectorAll<HTMLDetailsElement>('details[data-sec]')].filter((d) => !d.open).map((d) => d.dataset.sec));
+    const y = window.scrollY;
     root.replaceChildren(
-      h('div.bud', {}, h('h2.lite-h', {}, `💰 Budget · ${v.name}`, h('small.bud-hsub', {}, v.stage !== '—' ? `now at Stage ${v.stage}` : '')), headline(v), notes(v), legend(v), ...sections.map((s) => s(v, feed.office(), feed.refresh)), table('By stage', v.byStage, v.fx, 'No spend yet.'), table('By role', v.byRole, v.fx), table('By agent', v.byAgent, v.fx), table('By model', v.byModel, v.fx), dayChart(v), table('Top issues and pull requests', v.topWork, v.fx, 'No spend tied to an issue or a pull request yet.')),
+      h('div.bud', {}, h('h2.lite-h', {}, `💰 Budget · ${v.name}`, h('small.bud-hsub', {}, v.stage !== '—' ? `now at Stage ${v.stage}` : '')), headline(v), notes(v), legend(v), ...sections.map((s) => s(v, feed.office(), refresh)), table('By stage', v.byStage, v.fx, 'No spend yet.'), table('By role', v.byRole, v.fx), table('By agent', v.byAgent, v.fx), table('By model', v.byModel, v.fx), dayChart(v), table('Top issues and pull requests', v.topWork, v.fx, 'No spend tied to an issue or a pull request yet.')),
     );
-    if (keep) root.querySelector(`[data-sec="${keep}"]`)?.setAttribute('open', '');
+    for (const d of root.querySelectorAll<HTMLDetailsElement>('details[data-sec]')) {
+      if (open.has(d.dataset.sec)) d.open = true;
+      if (closed.has(d.dataset.sec)) d.open = false;
+    }
+    window.scrollTo({ top: y });
   };
   feed.on(render);
   return { render };

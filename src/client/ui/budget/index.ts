@@ -2,17 +2,27 @@
 // its sections. The 2D view's chips open the 1D view's tab.
 
 import type { Net } from '../../net';
+import { store } from '../../state';
+import type { BudgetNeed, NeedTarget } from '../../../shared/needsyou';
+import { toast } from '../dom';
+import { post } from './feed';
 import { budgetChips } from './chips';
 import { budgetFeed, type BudgetFeed } from './feed';
 import { budgetTab, type BudgetSection } from './tab';
+import { planSection, varianceSection } from './plan';
+import { pausedSection, settingsSection } from './settings';
 
 /** The sections between the headline and the breakdowns, in order (the plan, variance, settings, insights plug in here). */
-export const SECTIONS: BudgetSection[] = [];
+export const SECTIONS: BudgetSection[] = [pausedSection, varianceSection, settingsSection, planSection];
 
 export interface BudgetUi {
   feed: BudgetFeed;
   /** Draws the tab (when it's showing). */
   show(): void;
+  /** What Needs you reads of the budget. */
+  need(): BudgetNeed | undefined;
+  /** A Needs-you button: the tab, or Resume. */
+  go(t: Extract<NeedTarget, { to: 'budget' }>): void;
 }
 
 /** `root` is the tab's element on the 1D view (none on the 2D view); `open` shows the tab. */
@@ -20,5 +30,20 @@ export function budgetUi(net: Net, opts: { root?: HTMLElement; visible?: () => b
   const feed = budgetFeed(net);
   budgetChips(feed, opts.open);
   const tab = opts.root ? budgetTab(opts.root, feed, opts.visible ?? (() => true), SECTIONS) : undefined;
-  return { feed, show: () => tab?.render() };
+  return {
+    feed,
+    show: () => tab?.render(),
+    need: () => {
+      const v = feed.floor();
+      return v && v.settings.total ? { floor: v.floor, alerts: v.alerts ?? [], ...(v.paused ? { paused: v.paused } : {}) } : undefined;
+    },
+    go: (t) => {
+      opts.open();
+      if (!t.resume || !store.floor) return;
+      void post('/api/budget/action', { floor: store.floor, action: 'resume' }).then((r) => {
+        if (r) toast('▶️ Resumed: the office hires and prompts on this floor again');
+        feed.refresh();
+      });
+    },
+  };
 }

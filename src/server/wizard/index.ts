@@ -10,6 +10,7 @@ import type { JobView, SetupView, StepId, WizardInfo } from '../../shared/wizard
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { tildify } from '../building.js';
+import { applyChoice } from '../budget/index.js';
 import { flowsOf } from '../flow/index.js';
 import { findMpr } from '../liveapp/checkout.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
@@ -258,6 +259,7 @@ export class Wizard {
         if (!floor) return 'No such floor';
         return rosterOf(ctx).members.hire(teamFloor(ctx, floor), role, by, account, task, model);
       },
+      applyBudget: (floorId, choice, by) => applyChoice(ctx, floorId, choice, by),
     };
   }
 }

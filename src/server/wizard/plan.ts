@@ -3,6 +3,7 @@
 
 import { ENTRY_MODES, interviewModeOf, ownerProblem, PROJECT_ROLES, slugProblem, type AnswerKind, type EntryMode, type IntakeAnswer, type ProjectPlan, type ProjectRole } from '../../shared/wizard.js';
 import { cleanAppId } from './mendix-app.js';
+import { cleanChoice } from '../../shared/budget/levels.js';
 
 export const DISCOVERY_MODELS = ['opus', 'sonnet', 'haiku'] as const;
 
@@ -58,5 +59,6 @@ export function cleanPlan(raw: unknown, versions: string[], org: string): Projec
     discovery: { issue: d.issue === true, queue: d.issue === true && d.queue === true, model },
     createdByHand: r.createdByHand === true,
     ...(kind === 'new' && cleanAppId(r.sprintrAppId) ? { sprintrAppId: cleanAppId(r.sprintrAppId) } : {}),
+    ...(cleanChoice(r.budget) ? { budget: cleanChoice(r.budget) } : {}),
   };
 }

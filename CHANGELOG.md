@@ -14,6 +14,17 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   The office's own model calls (Jeff, the analyzer, task naming, the summary, the Firm) are now
   metered and booked on the floor they served. History from before the ledger started is filled in
   from the workers and `analysis/runs.jsonl`, marked as estimated.
+- **💰 Budget: a plan, a forecast, alerts and auto-pause.** Each project gets an expected plan per
+  toolkit stage (and per build module), priced from this office's history or default rates, editable
+  line by line, or re-forecast from a Firm audit in one click. A chart compares expected and actual
+  spend; the forecast at completion colours the top-bar chip. Alerts fire at 80 % (changeable per
+  project and office-wide), at 100 % and when the forecast goes over budget, once each, through Needs
+  you, the Teams cards and the audit log. At 100 % the project pauses (no hires, no office prompts;
+  people's messages still go through) until the budget is raised or someone resumes it.
+- **New project wizard: a Budget page.** Lean, Balanced or Fast, each with a preset budget from the
+  plan estimate (travel-approval: $220 / $330 / $530), its time and what it changes (models, early
+  drafts, autonomy by stage, parallelism), or Manual. The team is hired on the level's choices;
+  **Change level** on the Budget tab does the same for a running project from the next hire.
 
 ## 2026-10-06 · release 10 (`3db2145`)
 

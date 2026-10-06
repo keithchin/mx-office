@@ -1,7 +1,8 @@
 // What GET /api/budget and GET /api/budget/office answer: a project's numbers and breakdowns, and the
 // office-wide view (every project, the office's background calls, the Firm), from the ledgers.
 
-import type { BudgetView, OfficeBudgetView, OfficeFloorBudget } from '../../shared/budget/types.js';
+import type { BudgetView, FirmForecast, OfficeBudgetView, OfficeFloorBudget } from '../../shared/budget/types.js';
+import { numbersOf, pauseWhy } from './control.js';
 import { toneOf } from '../../shared/budget/money.js';
 import { breakdowns, recentDays, totalOf, type LedgerData } from './ledger.js';
 import type { BudgetService, FloorRef } from './service.js';
@@ -20,13 +21,14 @@ function unmeteredOf(d: LedgerData) {
 }
 
 /** A project's Budget tab. */
-export function floorView(b: BudgetService, floor: FloorRef, admin: boolean): BudgetView {
+export function floorView(b: BudgetService, floor: FloorRef, admin: boolean, firm?: FirmForecast): BudgetView {
   const f = b.file(floor);
   const d = f.ledger;
   const today = b.today;
   const days = Object.keys(d.days).sort();
   const spent = totalOf(d);
   const o = b.store.office();
+  const n = numbersOf(b, floor);
   return {
     floor: floor.id,
     name: floor.name,
@@ -41,8 +43,15 @@ export function floorView(b: BudgetService, floor: FloorRef, admin: boolean): Bu
     stage: b.deps.stageOf(floor.dir),
     settings: f.settings,
     officeThreshold: o.threshold,
-    tone: toneOf(f.settings.total, spent),
+    tone: toneOf(f.settings.total, spent, n.forecast.atCompletion),
     fx: b.fx(),
+    plan: n.plan,
+    curve: n.curve,
+    variance: n.variance,
+    forecast: n.forecast,
+    alerts: f.alerts.filter((a) => a.text),
+    ...(f.pausedAt && f.settings.total ? { paused: pauseWhy(f.settings.total, spent) } : {}),
+    ...(firm ? { firm } : {}),
     admin,
   };
 }
@@ -51,13 +60,15 @@ export function floorView(b: BudgetService, floor: FloorRef, admin: boolean): Bu
 export function floorLine(b: BudgetService, floor: FloorRef): OfficeFloorBudget {
   const f = b.file(floor);
   const spent = totalOf(f.ledger);
+  const forecast = numbersOf(b, floor).forecast.atCompletion;
   return {
     id: floor.id,
     name: floor.name,
     spent,
     today: f.ledger.days[b.today]?.cost ?? 0,
     ...(f.settings.total ? { budget: f.settings.total } : {}),
-    tone: toneOf(f.settings.total, spent),
+    forecast,
+    tone: toneOf(f.settings.total, spent, forecast),
     ...(f.pausedAt ? { paused: true } : {}),
     spark: recentDays(f.ledger, b.today, SPARK_DAYS).map((x) => x.cost),
   };

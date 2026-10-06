@@ -120,4 +120,16 @@ The [Budget](../using-the-office/budget.md)'s office-wide settings live in `budg
 | `threshold` | number | `80` | The office default alert threshold, %, for projects that don't set their own. |
 | `ledger` | object | | Background calls that served no floor (the office's own). |
 
-Each project's `budget/<floor>.json` holds its ledger: daily rollups kept forever, 30 days of detailed rows, the stage timeline, and what each worker had spent when it was last booked.
+Each project's `budget/<floor>.json` holds:
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `settings.total` | number | none | The project's total budget, USD. None: spend is shown with no budget. |
+| `settings.threshold` | number | the office's | Alert at this % of the budget (1 to 99). |
+| `settings.autoPause` | boolean | `true` | Pause the project at 100 %. |
+| `settings.level` | `'lean' | 'balanced' | 'fast' | 'manual'` | none | The budget level last applied. |
+| `settings.updatedBy`, `updatedAt` | string, ms | | Who changed the settings last, and when. |
+| `plan` | object | made on first look | The expected plan: `lines` (`id`, `stage`, `label`, `usd`, `days`, `basis`: default/history/firm/edited, `editedBy`), `start`, `end`, `basis`, `edited`. |
+| `alerts` | array | `[]` | The alerts raised against the current budget (`threshold`, `full`, `forecast`), one each. Raising the budget clears them. |
+| `pausedAt` | ms | none | When the budget paused the project (put back after a restart). |
+| `ledger` | object | | Daily rollups kept forever, 30 days of detailed rows, the stage timeline, and what each worker had spent when it was last booked. |

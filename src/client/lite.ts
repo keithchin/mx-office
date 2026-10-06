@@ -366,6 +366,7 @@ function goToNeed(t: NeedTarget) {
     if (tab !== 'command') showTab('command');
     return $('setup').scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
+  if (t.to === 'budget') return budget.go(t);
   if (t.to === 'floor') {
     // Lands on that floor's Command Center, where its Needs you says who is waiting and why.
     showTab('command');
@@ -377,7 +378,8 @@ function goToNeed(t: NeedTarget) {
 }
 // The Firm (ui/firm/banner.ts): its audit of this floor, its report, or the button to call one.
 let firmStatus: FirmFloorStatus | undefined;
-const needs = needsYouStrip($('needs-you'), $('tab-command').querySelector('.ny-tab-n')!, { go: goToNeed, setup: () => cachedSetup(store.floor ?? undefined), live: () => live.current(), firm: () => firmStatus, studio: studioState });
+const needs = needsYouStrip($('needs-you'), $('tab-command').querySelector('.ny-tab-n')!, { go: goToNeed, setup: () => cachedSetup(store.floor ?? undefined), live: () => live.current(), firm: () => firmStatus, studio: studioState, budget: () => budget.need() });
+budget.feed.on(() => needs.refresh());
 const firm = firmBanner($('firm-banner'), (s) => ((firmStatus = s), needs.refresh()));
 store.on('floor', () => firm.refresh(store.floor ?? undefined));
 net.onMessage((msg) => firm.onMessage(msg));

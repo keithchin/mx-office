@@ -47,7 +47,35 @@ The toolkit's kickoff questions, as a form. Mark each answer **Answered**, **Ass
 - **Roles to staff**: all five are ticked. The ticked roles are **hired** on the new floor at the end of the setup, each with its fixed name, its Playbook and its role's model (change the model later on the Team tab), so the team is at its desks when you arrive.
 - **Discovery**: open a *Discovery* issue for the Chief Analyst (on by default). With the Chief Analyst on the team, tick **Hand it to the Chief Analyst now** and it is hired with the issue as its first task, on the model you pick in **Chief Analyst's model for Discovery** (Opus by default; its role's own model on the Team tab stays as it is for later hires). Without it, tick **Queue it now for an agent** and pick the agent's model (Opus by default).
 
-## Page 5: Review & create
+## Page 5: Budget
+
+Choose how to trade cost against speed. There are three levels, plus Manual:
+
+| Level | What it sets | Preset budget |
+|---|---|---|
+| 🪙 **Lean**: lowest cost | Leads and Discovery on Sonnet. Subagents on Haiku where the role allows it (the Developer, UI/UX Designer and Business Analyst stay on Sonnet). Early drafts off. Autonomy by stage on (Guided, then Delegated in build). Fewer agents at once. | 0.65 × the plan estimate |
+| ⚖️ **Balanced**: the default | Leads on Sonnet, the Chief Analyst on Opus for Discovery, subagents on Sonnet. Early drafts on. | the plan estimate |
+| 🚀 **Fast**: speed first | Leads on Opus, more agents and subagents in parallel. Early drafts on. Autonomy by stage on (Delegated, then Autonomous). | 1.6 × the plan estimate (Opus rates plus a 15 % margin) |
+| ✍️ **Manual** | You type the budget and pick each setting yourself. | yours |
+
+Each card shows:
+
+- the preset total budget, in dollars and the local currency.
+- the expected time (`~1.3×`, `~1.0×`, `~0.7×`), as a multiple of Balanced, with working days.
+- what the level changes.
+- the alert threshold.
+
+The plan estimate comes from the project's tier and entry mode (see [Budget](../using-the-office/budget.md#the-expected-plan)). For example, a small requirements-driven project like travel-approval comes to **Lean $220, Balanced $330, Fast $530**.
+
+Under the cards you can adjust:
+
+- the total.
+- the alert threshold (80 % by default).
+- auto-pause at 100 %.
+
+When the setup reaches its **Hire the project team** step, it saves the budget on the new floor first, then sets the Leads' and subagents' models and the team settings. Everyone is then hired on the level's choices. The Chief Analyst's Discovery model follows the level too. To change the level of a project that's already running, use its [Budget tab](../using-the-office/budget.md#budget-levels).
+
+## Page 6: Review & create
 
 Check the summary and click **✨ Create project**. A progress list runs each step. Every step can be retried, and a step that is already done is skipped.
 

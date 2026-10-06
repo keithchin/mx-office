@@ -2,6 +2,8 @@
 // with the mxcli project toolkit, and the checks both sides make on what was typed. Pure code with no
 // Node imports, so the wizard page and the server agree on what a valid project name is.
 
+import type { BudgetChoice } from './budget/levels.js';
+
 /** How a project enters the toolkit's pipeline (the runbook's "Entry Modes"), plus the no-pipeline assurance shelf. */
 export const ENTRY_MODES = ['greenfield', 'requirements-driven', 'existing-app-change', 'migration', 'assurance'] as const;
 export type EntryMode = (typeof ENTRY_MODES)[number];
@@ -151,6 +153,8 @@ export interface ProjectPlan {
    * Not asked for yet: without it the app is created unlinked, from Studio Pro's Blank template.
    */
   sprintrAppId?: string;
+  /** The Budget step: a level (Lean, Balanced, Fast) or Manual, the total and the settings it brings (shared/budget/levels.ts). */
+  budget?: BudgetChoice;
 }
 
 /** The setup, a step at a time. Each step checks what's already done first, so running it again is safe. */

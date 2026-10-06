@@ -22,6 +22,8 @@ export interface JobState {
   issue?: number;
   /** The Discovery issue went to the Chief Analyst as its first task when the team step hired it (so the queue step doesn't queue it again). */
   discoveryHired?: boolean;
+  /** The Budget step's level and budget were applied to the floor (once: a Retry doesn't apply it again). */
+  budgetApplied?: boolean;
   /**
    * Set once the answers are edited after the team step ran: the roles ticked since then that the team
    * step still has to hire (and only those). Empty once it has; undefined for a setup never edited.

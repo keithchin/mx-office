@@ -45,6 +45,87 @@ When the office starts a project's ledger, it fills in what had already been spe
 - **The office's background calls** are booked on the floor they served, and added to the office total. These are Jeff's Haiku fallback, the analyzer, task naming, the project summary and the Firm's reviewers. A call that served no floor (the office's own) goes on the office view. Jeff's calls to Jev aren't priced, so they show as not metered. Gate-check makes no model calls.
 - **Providers other than Claude** count their calls but no cost.
 
+## The expected plan
+
+Every project gets an expected plan, made automatically. It gives an expected cost per toolkit stage (and per build module once there is a build plan) and an expected end date. Expand **Expected plan** on the tab to see it. Admins can change any line's cost or working days; each edited line records who changed it.
+
+The plan is built from:
+
+- **Size tier and entry mode**, from `agent-office.project.json` or the decision register in `PROJECT.md`. If neither says, the plan assumes a standard requirements-driven project.
+- **The stages that mode runs**:
+  - Greenfield: P (light), 0 (scope only), 5 and 6.
+  - Requirements-driven: P and 0 to 6.
+  - Changing an existing app: P and 0 to 6, with stages 1 to 4 at 60 %.
+  - Migration: everything up to 7, with analysis at 130 %.
+  - Assurance only: one line.
+- **Build modules**: the folders in `architecture/modules/`, or the module headings in `architecture/build-plan.md`. Until there's a build plan, a small project assumes one module and a standard project four. While nobody has edited the plan, it follows the build plan's modules as they appear.
+- **This office's history**: once the analysis runs log has at least 5 runs of the right task types, a line is priced from their median cost. Build uses *domain-model*, *logic*, *ui-pages* and *security* runs (4 runs a module). Test uses *tests* and *bugfix* runs (4 a stage). Stages 1 and 2 use *docs* runs (6 and 5).
+- **Otherwise, the default rates** below. They're for a standard project at Balanced. A small project costs half as much for every stage except build.
+
+| Stage | Default cost | Working days |
+|---|---|---|
+| P · Kickoff | $15 | 1 |
+| 0 · Triage & scope | $30 | 1 |
+| 1 · Analysis | $90 | 3 |
+| 2 · Requirements | $80 | 3 |
+| 3 · Architecture & design | $90 | 3 |
+| 4 · Build plan | $40 | 1 |
+| 5 · Build | $120 per module | 2 per module |
+| 6 · Test | $80 | 2 |
+| 7 · Cutover | $40 | 1 |
+
+Each line's cost is spread evenly over its working days, Monday to Friday, which gives the expected cumulative curve. **Make again** rebuilds the plan from the project, and edited lines are replaced too. If a [Firm audit](the-firm.md) of the project gave a cost re-forecast or milestone dates, **Apply the Firm's re-forecast** scales the plan's lines to its total and takes its last milestone as the end date.
+
+## Plan against actual, and the forecast
+
+**Plan against actual** shows the expected cumulative spend (orange) against the actual (blue). The budget is drawn as a line, and the forecast at completion as the end point. Hover anywhere on the chart for that day's plan, actual and difference, or open **Table view** for every value. Below the chart, a table shows each stage's planned and actual cost and the difference. A stage counts as **done** once the project has moved past it.
+
+The **forecast at completion** works like this:
+
+> forecast = actual + remaining plan × (actual ÷ planned, for the completed stages)
+
+- **Remaining plan** is what's left of the current stage plus every stage ahead.
+- **The factor** (actual ÷ planned) is kept between 0.5 and 2, so one odd stage can't swing the forecast. With no stage finished yet, it's 1.
+- **The forecast** never drops below what has already been spent.
+
+The forecast appears in the headline and sets the colour of the top bar's chip.
+
+## Alerts
+
+The budget raises an alert:
+
+- at the **alert threshold** (80 % unless the project or the office sets another).
+- at **100 %**.
+- when the **forecast** goes over the budget.
+
+Each alert is raised once per budget. Raising the budget clears all of them, so crossing a level of the new budget is news again. Each alert:
+
+- goes to the [audit log](audit-log.md) (`budget.alert`) and appears as a toast.
+- shows on **🚨 Needs you** on the Command Center (kind `budget`), which also feeds the [Teams cards](../integrations/teams-notifications.md) and the Team phone.
+- at 100 %, also sends a desktop notification.
+
+## Auto-pause at 100 %
+
+When spend reaches the budget and **Pause the project at 100 %** is on (the default), the project pauses:
+
+- no new hires.
+- no prompts from the office itself (nudges, standups, relays, wakes), the same as the daily spend cap.
+- agents finish the turn they're on, and **people's messages still go through**.
+
+Needs you then says *Budget reached: project paused*, with **Raise budget** and **Resume** buttons. Raising the budget above what's spent lifts the pause. **Resume** lifts it without changing the budget; the project won't pause again for the same budget. A pause survives a restart.
+
+## Settings
+
+On the tab (admins; every change is in the audit log):
+
+- **This project**: the total budget (USD), the alert threshold and auto-pause.
+- **Budget level**: **Change level** shows the [new-project wizard's](../get-started/first-project.md#page-5-budget) cards again, priced for this project. Applying a level sets the budget and the team's models and settings.
+- **The office**: the default alert threshold, and the local currency.
+
+### Budget levels
+
+A level sets the Leads' model, their subagents' models (Haiku only where the role allows it), early drafts and autonomy by stage, and it records how many agents work at once. The office doesn't enforce that last one yet. The changes apply from each Lead's next hire or Playbook rewrite. A running session keeps the model it started on, and a Lead only hears about a subagent change between turns, so nobody is interrupted mid-turn.
+
 ## Currency
 
 Dollars are always shown. Admins pick a second, local currency (**SGD** by default) and where its rate comes from:
