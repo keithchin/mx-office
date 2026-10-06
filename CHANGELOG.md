@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-06 · release 11 (`a52ebae`)
+
 ### New
 - **📱 Team phone**: a button at the bottom right of the 1D and 2D views, above the Issues / PRs /
   Queue / New task bar (a pixel-art iPhone in the Default theme, a round messages button in the
