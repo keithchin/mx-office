@@ -15,6 +15,28 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   office runs on a Windows desktop with Studio Pro installed; otherwise the button is greyed out and
   says why.
 
+### Improved
+- **New project wizard creates the Mendix app**: a new project gets a blank app from Studio Pro's own
+  `mx create-project` (`travel-approval` → `TravelApproval.mpr`, at the repository's root where the
+  toolkit looks for it), before the toolkit's init so the scaffold names it, and committed with the
+  scaffold in one commit. Mendix's generated files (`deployment/`, `.mendix-cache/`, `theme-cache/`,
+  `*.mpr.lock` …) go into `.gitignore`. Falls back to `mxcli new` when that Studio Pro has no `mx`. The
+  live app no longer stops at "No Mendix project (.mpr)" on a fresh project.
+- **New project wizard hires the team**: the Project Coordinator and the Leads you tick are hired on
+  the new floor at the end of the setup (the Team tab's hire, each on its role's model), so they're at
+  their desks when you arrive. A Retry never hires anyone twice. With the Chief Analyst on the team,
+  the Discovery issue is its first task instead of going to a worker off the queue.
+- **Studio Pro 11.12.4 by default**: the wizard picks the newest 11.12 installed (11.6.4 when there is
+  none); the dropdown still lists every version. For an existing app that's already a floor, it picks
+  the version the app was last saved with.
+- **Interview mode in the toolkit's words**: Steering (default), Assist or Auto, the modes the toolkit's
+  `interview-mode.sh` reads from `PROJECT.md`. The wizard used to write "attended"/"unattended", which
+  the toolkit didn't recognise and quietly treated as steering.
+
+### To know
+- Setups saved with "attended"/"unattended" read as Steering/Auto. Creating the app takes about 15
+  seconds with `mx`; `mxcli new` takes longer (it downloads MxBuild first).
+
 ## 2026-10-05 · release 4 (`6639313`)
 
 ### New

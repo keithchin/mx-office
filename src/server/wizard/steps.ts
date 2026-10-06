@@ -6,12 +6,14 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { ENTRY_MODE_INFO, SMALL_TIER_LIMITS, type IntakeAnswer, type StepId } from '../../shared/wizard.js';
+import { ENTRY_MODE_INFO, INTERVIEW_MODE_INFO, PROJECT_ROLES, SMALL_TIER_LIMITS, type IntakeAnswer, type ProjectRole, type StepId } from '../../shared/wizard.js';
+import { findMpr } from '../liveapp/checkout.js';
 import { adminGhEnv, adminTokenHelp, readAdminToken, redactor } from './admin-token.js';
 import { DISCOVERY_TITLE, discoveryBrief, discoveryPrompt } from './brief.js';
-import { mxbuildPath, toolkitEnv, type WizardConfig } from './config.js';
+import { mendixVersions, mxbuildPath, toolkitEnv, type WizardConfig } from './config.js';
 import { writeIntakeAnswers } from './intake.js';
 import type { JobState, StepImpl, StepIO } from './job.js';
+import { createApp, ignoreMendixOutput, mprVersion } from './mendix-app.js';
 import { recordDecisions } from './register.js';
 import { bashPath, runCommand } from './run.js';
 
@@ -31,8 +33,14 @@ export interface SetupDeps {
   adoptFloor(repo: string, dir: string, by: string): FloorRef | string;
   /** Puts a task on a floor's queue; why not, if it couldn't. */
   queue(floor: string, prompt: string, title: string, issue: number, model: string, by: string, account?: string): string | undefined;
+  /** Whether a role of the project team is a worker on the floor already (hired, or writing its handoff). */
+  hired(floor: string, role: ProjectRole): boolean;
+  /** Hires a role of the project team the roster's way (its fixed name, its Playbook, its own model), with `task` as its first job; why not, if it couldn't. */
+  hire(floor: string, role: ProjectRole, by: string, account?: string, task?: string): Promise<string | undefined>;
   /** The office's environment (tests pass their own). */
   env?: NodeJS.ProcessEnv;
+  /** Runs a command (tests pass a fake for the Mendix tools); runCommand when not given. */
+  run?: typeof runCommand;
 }
 
 const MIN = 60_000;
@@ -53,14 +61,35 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
   const { cfg } = deps;
   const env = () => toolkitEnv(cfg, deps.env ?? process.env);
   const git = (dir: string, args: string[], io: StepIO, timeoutMs = 2 * MIN, allowFail = false) => runCommand('git', args, { cwd: dir, env: env(), timeoutMs, onLine: said(io), allowFail });
-  const bash = (dir: string, script: string, args: string[], io: StepIO, timeoutMs: number, allowFail = false) =>
-    runCommand(cfg.bash, [bashPath(script), ...args], { cwd: dir, env: env(), timeoutMs, onLine: said(io), allowFail });
+  // The toolkit's scripts run with the picked Studio Pro's mxbuild: an MXBUILD_PATH in the office's own
+  // environment would otherwise win over the project's toolkit.env (its _common.sh lets the environment win).
+  const bash = (job: JobState, script: string, args: string[], io: StepIO, timeoutMs: number, allowFail = false) =>
+    runCommand(cfg.bash, [bashPath(script), ...args], { cwd: dirOf(job), env: { ...env(), MXBUILD_PATH: mxbuildPath(cfg, job.plan.mendix) }, timeoutMs, onLine: said(io), allowFail });
   const bare = (job: JobState) => path.join(cfg.offlineDir!, job.plan.owner, `${job.plan.name}.git`);
   const dirOf = (job: JobState) => {
     if (!job.dir || !existsSync(job.dir)) throw new Error("The project's floor isn't there yet: Retry from the clone step");
     return job.dir;
   };
   const file = (job: JobState, rel: string) => path.join(dirOf(job), rel);
+  const quiet: StepIO = { log: () => undefined };
+
+  /**
+   * The toolkit's pre-commit hook refuses a model the mxbuild gate hasn't passed on this machine, so a
+   * new app that's never been committed goes through bin/verify-model.sh first (one mxbuild, which
+   * stamps it). A model that's committed already, or stamped, or a project without the hook's scripts
+   * needs nothing.
+   */
+  const verifyNewModel = async (job: JobState, io: StepIO) => {
+    const dir = dirOf(job);
+    const mpr = findMpr(dir);
+    const verify = path.join(dir, 'bin', 'verify-model.sh');
+    if (!mpr || !existsSync(verify)) return;
+    if ((await git(dir, ['ls-files', '--', path.relative(dir, mpr)], quiet)).stdout.trim()) return;
+    if ((await bash(job, path.join(dir, 'bin', 'model-stamp.sh'), ['check', '-q'], quiet, 2 * MIN, true).catch(() => ({ code: 1 }))).code === 0) return;
+    io.log("  the toolkit's pre-commit hook wants the new app through the mxbuild gate first: running bin/verify-model.sh (a minute or two)…");
+    const r = await bash(job, verify, [], io, 20 * MIN, true);
+    if (r.code !== 0) throw new Error(`bin/verify-model.sh exit ${r.code}, so the pre-commit hook would refuse the new app: ${r.tail.slice(-2).join(' ').slice(0, 300)}. Fix the cause and Retry`);
+  };
 
   return {
     async repo(job, io) {
@@ -144,11 +173,28 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       return { status: 'done', detail: `Studio Pro ${job.plan.mendix}` };
     },
 
+    async app(job, io) {
+      // Before init: init-project.sh names the .mpr in CLAUDE.local.md, and the scaffold and the app go up in one commit.
+      const dir = dirOf(job);
+      const run = deps.run ?? runCommand;
+      const mpr = findMpr(dir);
+      if (job.plan.kind === 'change') {
+        if (!mpr) return { status: 'skipped', detail: 'existing app: no .mpr found in the repository' };
+        const saved = await mprVersion(cfg, mpr, mendixVersions(cfg.mendixDir), run);
+        const off = saved && !job.plan.mendix.startsWith(saved) && !saved.startsWith(job.plan.mendix);
+        return { status: 'skipped', detail: `existing app ${path.relative(dir, mpr)}${saved ? `, last saved with Studio Pro ${saved}` : ''}${off ? ` (not the ${job.plan.mendix} picked: edit the answers to change it)` : ''}` };
+      }
+      const ignored = ignoreMendixOutput(dir);
+      if (mpr) return { status: 'skipped', detail: `already there (${path.relative(dir, mpr)})${ignored ? '; .gitignore updated' : ''}` };
+      io.log(`  creating the Mendix app with Studio Pro ${job.plan.mendix}…`);
+      return { status: 'done', detail: await createApp(cfg, job.plan, dir, { run, env: env(), onLine: said(io) }) };
+    },
+
     async init(job, io) {
       const dir = dirOf(job);
       if (SCAFFOLD.every((rel) => existsSync(path.join(dir, rel)))) return { status: 'skipped', detail: 'already scaffolded' };
       io.log('  (this takes a few minutes on Windows: the toolkit checks the machine and renders its dashboard)');
-      await bash(dir, path.join(cfg.toolkitDir, 'bin', 'init-project.sh'), [bashPath(dir), '--ignore-sources'], io, 25 * MIN);
+      await bash(job, path.join(cfg.toolkitDir, 'bin', 'init-project.sh'), [bashPath(dir), '--ignore-sources'], io, 25 * MIN);
       const missing = SCAFFOLD.filter((rel) => !existsSync(path.join(dir, rel)));
       if (missing.includes('intake.md') || missing.includes('PROJECT.md')) throw new Error(`init-project.sh finished but didn't write ${missing.join(', ')}`);
       return { status: 'done', detail: missing.length ? `scaffolded (not written: ${missing.join(', ')})` : 'scaffolded' };
@@ -158,7 +204,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       const dir = dirOf(job);
       const script = path.join(dir, 'bin', 'install-project-hooks.sh');
       if (!existsSync(script)) throw new Error("bin/install-project-hooks.sh isn't in the project: the scaffold didn't finish (Retry from init)");
-      await bash(dir, script, [], io, 2 * MIN);
+      await bash(job, script, [], io, 2 * MIN);
       return { status: 'done', detail: existsSync(path.join(dir, '.git', 'hooks', 'pre-commit')) ? 'pre-commit hook in place' : 'ran' };
     },
 
@@ -203,7 +249,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
 
     async gates(job, io) {
       const dir = dirOf(job);
-      const r = await bash(dir, path.join(cfg.toolkitDir, 'bin', 'gate-check.sh'), [bashPath(dir)], io, 10 * MIN, true);
+      const r = await bash(job, path.join(cfg.toolkitDir, 'bin', 'gate-check.sh'), [bashPath(dir)], io, 10 * MIN, true);
       return { status: 'done', detail: r.code === 0 ? 'index.html and the current stage are up to date' : `gate-check exit ${r.code}: stages still to do` };
     },
 
@@ -212,10 +258,11 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       const status = await git(dir, ['status', '--porcelain'], { log: () => undefined });
       let made = 'nothing new to commit';
       if (status.stdout.trim()) {
+        await verifyNewModel(job, io);
         // core.safecrlf off: otherwise every scaffolded file logs a line-ending warning on Windows.
         await git(dir, ['-c', 'core.safecrlf=false', 'add', '-A'], io);
         const first = !(await git(dir, ['log', '--oneline', '-n', '50'], { log: () => undefined }, MIN, true)).stdout.includes('Toolkit scaffold');
-        const subject = first ? 'Toolkit scaffold (mxcli-project-toolkit init-project via the agent-office new-project wizard)' : 'Kickoff answers updated in the agent-office new-project wizard';
+        const subject = first ? `Toolkit scaffold${job.plan.kind === 'new' ? ' and Mendix app' : ''} (mxcli-project-toolkit init-project via the agent-office new-project wizard)` : 'Kickoff answers updated in the agent-office new-project wizard';
         const body = decisionsOf(job).rows.map((r) => `- ${r.decision}`).join('\n');
         await git(dir, ['-c', 'core.safecrlf=false', 'commit', '-m', subject, '-m', body], io, 10 * MIN);
         made = 'committed';
@@ -255,16 +302,55 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       return { status: 'done', detail: `#${job.issue}` };
     },
 
+    async team(job, io) {
+      // After the push: a hire's worktree comes fresh from GitHub, so it starts on the scaffold and the app.
+      const roles = PROJECT_ROLES.filter((r) => job.plan.roles.includes(r.id));
+      if (!roles.length) return { status: 'skipped', detail: 'no roles ticked' };
+      if (cfg.offlineDir) return { status: 'skipped', detail: 'offline test office: nobody is hired' };
+      if (!job.floor) throw new Error("The project's floor isn't there yet");
+      const floor = job.floor;
+      const handOff = handsDiscoveryToAnalyst(job);
+      const made: string[] = [];
+      const had: string[] = [];
+      for (const r of roles) {
+        if (deps.hired(floor, r.id)) {
+          had.push(r.label);
+          continue;
+        }
+        io.log(`  hiring the ${r.label}${handOff && r.id === 'chief-analyst' ? `, with Discovery #${job.issue}` : ''}…`);
+        const task = handOff && r.id === 'chief-analyst' ? discoveryPrompt(job.issue!) : undefined;
+        const err = await deps.hire(floor, r.id, job.by, job.account, task);
+        if (err) throw new Error(`Couldn't hire the ${r.label}: ${err}${made.length ? ` (hired so far: ${made.join(', ')})` : ''}`);
+        if (task) job.discoveryHired = true;
+        made.push(r.label);
+      }
+      if (!made.length) return { status: 'skipped', detail: `already hired: ${had.join(', ')}` };
+      return { status: 'done', detail: `hired ${made.join(', ')}${had.length ? `; already there: ${had.join(', ')}` : ''}` };
+    },
+
     async queue(job) {
       if (!job.plan.discovery.queue) return { status: 'skipped', detail: 'not asked for' };
       if (!job.issue) return { status: 'skipped', detail: 'no Discovery issue to queue' };
       if (cfg.offlineDir) return { status: 'skipped', detail: 'offline test office: no agent is queued' };
+      if (job.discoveryHired) return { status: 'skipped', detail: `#${job.issue} went to the Chief Analyst when it was hired` };
       if (!job.floor) throw new Error("The project's floor isn't there yet");
       const err = deps.queue(job.floor, discoveryPrompt(job.issue), `Discovery #${job.issue} (${job.plan.discovery.model})`, job.issue, job.plan.discovery.model, job.by, job.account);
       if (err && !/already on the queue/i.test(err)) throw new Error(err);
       return { status: err ? 'skipped' : 'done', detail: err ?? `#${job.issue} on ${job.plan.discovery.model}` };
     },
   };
+}
+
+/** The Discovery issue goes to the Chief Analyst as its first task, rather than to a worker off the queue: asked to be queued, and the Chief Analyst is on the team. */
+export const handsDiscoveryToAnalyst = (job: JobState) => job.plan.discovery.queue && !!job.issue && job.plan.roles.includes('chief-analyst');
+
+/**
+ * Intake Q9's answer: the question asks "attended or unattended", the register's `Interview mode:` line
+ * holds the toolkit's word for it (interview-mode.sh reads steering, assist or auto), so it says both.
+ */
+export function interviewAnswer(mode: JobState['plan']['interview']): string {
+  const info = INTERVIEW_MODE_INFO[mode];
+  return `${info.q9} — Interview mode: ${mode} (${info.does}).${mode === 'auto' ? ' Chosen explicitly in the agent-office new-project wizard.' : ''}`;
 }
 
 /** The intake answers to write: the wizard's form, plus the three it decides itself (entry mode, interview mode, exec approval). */
@@ -275,7 +361,7 @@ export function intakeAnswersOf(job: JobState): IntakeAnswer[] {
   return [
     ...(token ? [{ n: 1, kind: 'answered' as const, text: token }] : []),
     ...own,
-    { n: 9, kind: 'answered', text: p.interview },
+    { n: 9, kind: 'answered', text: interviewAnswer(p.interview) },
     { n: 11, kind: 'answered', text: p.execApproval },
   ];
 }
@@ -298,7 +384,7 @@ export function decisionsOf(job: JobState) {
     { stage: 'P', decision: `Entry mode: ${info.label}`, status: when, notes: `${by}; stages that run: ${info.stages}` },
     { stage: 'P', decision: `Size tier: ${p.tier}`, status: when, notes: p.tier === 'small' ? `${by}; small-project-tier.md applies (at most ${SMALL_TIER_LIMITS}), counts confirmed at Stage 0` : by },
     { stage: 'P', decision: `Mendix version: ${p.mendix}`, status: when, notes: `${by}; Studio Pro on the office machine` },
-    { stage: 'P', decision: `Interview mode: ${p.interview}`, status: when, notes: by },
+    { stage: 'P', decision: `Interview mode: ${p.interview}`, status: when, notes: `${by}; ${INTERVIEW_MODE_INFO[p.interview].q9}: ${INTERVIEW_MODE_INFO[p.interview].does}` },
   ];
   return { flat, rows };
 }

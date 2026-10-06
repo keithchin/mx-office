@@ -44,7 +44,7 @@ Set these before starting the office (the launcher sets the main ones). Values t
 | `AGENT_OFFICE_BASH` | Git Bash |
 | `AGENT_OFFICE_JQ_DIR` | WinGet's jq |
 | `AGENT_OFFICE_PYTHON` | The newest Python |
-| `AGENT_OFFICE_WIZARD_OFFLINE` | Unset. When set, uses local bare repositories and writes issues as files (for tests) |
+| `AGENT_OFFICE_WIZARD_OFFLINE` | Unset. When set, uses local bare repositories and writes issues as files, and hires and queues nobody (for tests) |
 
 ## Live app
 

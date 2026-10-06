@@ -8,7 +8,7 @@ import './wizard.css';
  */
 import type { Net } from '../../net';
 import { loadProfile } from '../../state/persist';
-import type { JobView, ProjectPlan, WizardInfo } from '../../../shared/wizard';
+import { interviewModeOf, type JobView, type ProjectPlan, type WizardInfo } from '../../../shared/wizard';
 import { h, openModal, toast } from '../dom';
 import { wizardApi } from './api';
 import { entryPage, intakePage, PAGES, pageProblem, projectPage, reviewPage, teamPage, type PageCtx } from './forms';
@@ -38,7 +38,7 @@ function blankPlan(info: WizardInfo): ProjectPlan {
     mendix: info.defaultMendix,
     entry: 'greenfield',
     tier: 'standard',
-    interview: 'attended',
+    interview: 'steering',
     execApproval: 'auto',
     intake: [],
     clients: [],
@@ -78,6 +78,8 @@ export async function openWizard(opts: WizardOptions) {
     return;
   }
   let draft: ProjectPlan = editing ? structuredClone(editing.plan) : { ...blankPlan(info), ...(opts.floor ? {} : savedDraft()) };
+  // A draft from before the toolkit's own words (attended/unattended).
+  draft.interview = interviewModeOf(draft.interview);
   if (opts.floor && !editing) {
     // A project set up by hand: its repository and the answers already in its intake.
     const got = await wizardApi.answers(opts.floor).catch(() => undefined);

@@ -21,6 +21,7 @@ export const wizardRoutes = {
           const job = w.job(url.searchParams.get('id') ?? '');
           return job ? send(res, 200, job) : send(res, 404, { error: 'No such setup' });
         }
+        if (p === '/api/wizard/app-version') return send(res, 200, await w.appVersion(url.searchParams.get('repo') ?? ''));
         const floor = floorParam(ctx, url);
         if (p === '/api/wizard/setup') return floor ? send(res, 200, { ...w.setup(floor), admin }) : send(res, 404, { error: 'No such floor' });
         if (p === '/api/wizard/answers') return floor ? send(res, 200, { repo: floor.def.repo, answers: w.answersOf(floor) }) : send(res, 404, { error: 'No such floor' });

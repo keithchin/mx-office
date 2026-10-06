@@ -3,7 +3,8 @@
 // draft plan in place and asks for a re-render when something it shows depends on what changed.
 import type { Net } from '../../net';
 import { store } from '../../state';
-import { ENTRY_MODE_INFO, ENTRY_MODES, PROJECT_ROLES, SETUP_STEPS, SMALL_TIER_LIMITS, slugify, slugProblem, ownerProblem, type AnswerKind, type EntryMode, type ProjectPlan, type WizardInfo } from '../../../shared/wizard';
+import { ENTRY_MODE_INFO, ENTRY_MODES, INTERVIEW_MODE_INFO, INTERVIEW_MODES, PROJECT_ROLES, SETUP_STEPS, SMALL_TIER_LIMITS, slugify, slugProblem, ownerProblem, type AnswerKind, type EntryMode, type InterviewMode, type ProjectPlan, type WizardInfo } from '../../../shared/wizard';
+import { wizardApi } from './api';
 import { h } from '../dom';
 
 export interface PageCtx {
@@ -19,6 +20,9 @@ export interface PageCtx {
 export const PAGES = ['Project', 'Entry mode', 'Intake', 'Client & team', 'Review & create'] as const;
 /** The intake questions the wizard answers from its other pages: entry mode (1), interview mode (9), exec approval (11). */
 export const DERIVED = [1, 9, 11];
+
+/** The Studio Pro an existing app was last saved with, by repository, once the office has said. */
+const savedWith = new Map<string, string>();
 
 const field = (label: string, input: HTMLElement, note?: HTMLElement | string | null) => h('div.wz-field', {}, h('label', {}, label), input, note ? (typeof note === 'string' ? h('p.setting-note', {}, note) : note) : null);
 
@@ -90,9 +94,15 @@ export function projectPage(c: PageCtx): HTMLElement {
   } else {
     out.append(repoPicker(c));
   }
-  const ver = h('select', { 'aria-label': 'Studio Pro version' }, ...c.info.mendixVersions.map((v) => h('option', { value: v, selected: v === d.mendix }, `${v}${v === c.info.defaultMendix ? ' (mxcli’s validated line)' : ''}`))) as HTMLSelectElement;
+  const ver = h('select', { 'aria-label': 'Studio Pro version' }, ...c.info.mendixVersions.map((v) => h('option', { value: v, selected: v === d.mendix }, `${v}${v === c.info.defaultMendix ? ' (default)' : ''}`))) as HTMLSelectElement;
   ver.addEventListener('change', () => (d.mendix = ver.value));
-  out.append(field('Mendix (Studio Pro) version', ver, c.info.mendixVersions.length ? 'Installed on the office’s machine. It goes into .claude/toolkit.env and the decision register.' : '⚠️ No Studio Pro found on the office’s machine.'));
+  const saved = d.kind === 'change' ? savedWith.get(`${d.owner}/${d.name}`) : undefined;
+  const verNote = !c.info.mendixVersions.length
+    ? '⚠️ No Studio Pro found on the office’s machine.'
+    : d.kind === 'new'
+      ? 'Installed on the office’s machine. The new Mendix app is created with it (Studio Pro’s mx create-project), and it goes into .claude/toolkit.env and the decision register.'
+      : `Installed on the office’s machine. It goes into .claude/toolkit.env and the decision register.${saved ? ` The app was last saved with Studio Pro ${saved}${c.info.mendixVersions.some((v) => v === saved || v.startsWith(`${saved}.`)) ? '' : ', which isn’t installed here'}.` : ''}`;
+  out.append(field('Mendix (Studio Pro) version', ver, verNote));
   if (c.info.problems.length) out.append(h('div.wz-warn', {}, h('strong', {}, '⚠️ The office’s machine is missing something the toolkit needs:'), h('ul', {}, ...c.info.problems.map((p) => h('li', {}, p)))));
   return out;
 }
@@ -127,6 +137,15 @@ function repoPicker(c: PageCtx): HTMLElement {
     d.name = name ?? '';
   }, { list: 'wz-repos', placeholder: 'owner/name', 'aria-label': 'Repository' });
   if (c.editing) input.setAttribute('disabled', '');
+  // An app that's a floor already: preselect the Studio Pro its .mpr was last saved with.
+  input.addEventListener('change', async () => {
+    const repo = `${d.owner}/${d.name}`;
+    const got = d.name ? await wizardApi.appVersion(repo).catch(() => undefined) : undefined;
+    if (!got?.saved || `${d.owner}/${d.name}` !== repo) return;
+    savedWith.set(repo, got.saved);
+    if (got.installed) d.mendix = got.installed;
+    c.redraw();
+  });
   const note = store.repos.loading ? 'Asking GitHub for the repositories this office can see…' : store.repos.error ? `⚠️ ${store.repos.error}` : 'A repository that is already a floor is used where it is; any other is cloned as a new floor first.';
   return h('div', {}, field('Repository', input, note), list);
 }
@@ -201,7 +220,7 @@ export function intakePage(c: PageCtx): HTMLElement {
     {},
     h('div.wz-q-head', {}, h('strong', {}, 'Answered from the wizard')),
     h('p', {}, `Q1 Entry mode: ${ENTRY_MODE_INFO[d.entry].token ?? 'none (assurance)'}`),
-    h('div.wz-row', {}, field('Q9 Interview mode', select(d.interview, [['attended', 'Attended: every gate question is asked and waited for (default)'], ['unattended', 'Unattended: recommended options applied as ASSUMED']], (v) => (d.interview = v), 'Interview mode')), field('Q11 Exec approval', select(d.execApproval, [['auto', 'auto (default)'], ['ask', 'ask']], (v) => (d.execApproval = v), 'Exec approval'))),
+    h('div.wz-row', {}, field('Q9 Interview mode', select(d.interview, INTERVIEW_MODES.map((m) => [m, INTERVIEW_MODE_INFO[m].label] as [InterviewMode, string]), (v) => (d.interview = v), 'Interview mode'), 'The toolkit’s interview-mode.sh setting, written to PROJECT.md as “Interview mode:”.'), field('Q11 Exec approval', select(d.execApproval, [['auto', 'auto (default)'], ['ask', 'ask']], (v) => (d.execApproval = v), 'Exec approval'))),
   );
   recount();
   return h(
@@ -223,10 +242,11 @@ export function teamPage(c: PageCtx): HTMLElement {
     {},
     ...PROJECT_ROLES.map((r) => {
       const box = h('input', { type: 'checkbox', checked: d.roles.includes(r.id) }) as HTMLInputElement;
-      box.addEventListener('change', () => (d.roles = box.checked ? [...new Set([...d.roles, r.id])] : d.roles.filter((x) => x !== r.id)));
+      box.addEventListener('change', () => ((d.roles = box.checked ? [...new Set([...d.roles, r.id])] : d.roles.filter((x) => x !== r.id)), c.redraw()));
       return h('label.wz-role', {}, box, ` ${r.icon} ${r.label}`);
     }),
   );
+  const analyst = d.roles.includes('chief-analyst');
   const issue = h('input', { type: 'checkbox', checked: d.discovery.issue }) as HTMLInputElement;
   issue.addEventListener('change', () => ((d.discovery.issue = issue.checked), issue.checked || (d.discovery.queue = false), c.redraw()));
   const queue = h('input', { type: 'checkbox', checked: d.discovery.queue, disabled: !d.discovery.issue }) as HTMLInputElement;
@@ -240,11 +260,12 @@ export function teamPage(c: PageCtx): HTMLElement {
     field('Operator(s)', ops, 'The people who speak for the client in the office and answer the Chief Analyst.'),
     h('h3.wz-h', {}, 'Roles to staff'),
     roles,
-    h('p.setting-note', {}, 'Saved in the project’s settings file (agent-office.project.json, committed at the repository’s root) for the team model to pick up.'),
+    h('p.setting-note', {}, 'Hired on the new floor once the scaffold is pushed, each on its role’s own model (change it later on the Team tab), so the team is at its desks when you arrive. Also saved in agent-office.project.json at the repository’s root.'),
     h('h3.wz-h', {}, 'Discovery'),
     h('label.wz-check', {}, issue, ' Open a “Discovery” issue for the Chief Analyst (Stages P → 4, stopping at every ✋ gate)'),
-    h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, queue, ' Queue it now for an agent'), model),
-    c.info.offline ? h('p.wz-note', {}, '🧪 Offline test office: the issue is written to a file and nothing is queued.') : null,
+    h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, queue, analyst ? ' Hand it to the Chief Analyst now, as its first task' : ' Queue it now for an agent'), analyst ? null : model),
+    analyst && d.discovery.issue ? h('p.setting-note.wz-indent', {}, 'The Chief Analyst is on the team, so it works the issue itself, on its role’s model.') : null,
+    c.info.offline ? h('p.wz-note', {}, '🧪 Offline test office: the issue is written to a file, nobody is hired and nothing is queued.') : null,
   );
 }
 
@@ -252,17 +273,23 @@ export function teamPage(c: PageCtx): HTMLElement {
 export function reviewPage(c: PageCtx): HTMLElement {
   const d = c.draft;
   const answered = d.intake.filter((a) => a.text.trim() && !DERIVED.includes(a.n)).length + DERIVED.length;
+  const analyst = d.roles.includes('chief-analyst');
   const facts: [string, string][] = [
     ['Repository', `${d.owner}/${d.name}${d.kind === 'new' ? ` (new, ${d.private ? 'private' : 'public'}${d.createdByHand ? ', created by hand' : ''})` : ' (existing)'}`],
     ['Entry mode', `${ENTRY_MODE_INFO[d.entry].icon} ${ENTRY_MODE_INFO[d.entry].label} · ${d.tier} tier`],
-    ['Studio Pro', d.mendix],
+    ['Studio Pro', `${d.mendix}${d.kind === 'new' ? ' (the new Mendix app is created with it)' : ''}`],
     ['Intake', `${answered} of ${c.info.questions.length} questions answered · interview ${d.interview} · exec approval ${d.execApproval}`],
     ['Client', d.clients.join(', ') || '—'],
     ['Operators', d.operators.join(', ') || '—'],
     ['Roles', PROJECT_ROLES.filter((r) => d.roles.includes(r.id)).map((r) => r.label).join(', ') || '—'],
-    ['Discovery', d.discovery.issue ? `issue for the Chief Analyst${d.discovery.queue ? `, queued on ${d.discovery.model}` : ''}` : 'no issue'],
+    ['Discovery', d.discovery.issue ? `issue for the Chief Analyst${d.discovery.queue ? (analyst ? ', handed to it when it’s hired' : `, queued on ${d.discovery.model}`) : ''}` : 'no issue'],
   ];
-  const skip = new Set<string>([...(d.kind === 'change' ? ['repo'] : []), ...(d.discovery.issue ? [] : ['issue', 'queue']), ...(d.discovery.queue ? [] : ['queue'])]);
+  const skip = new Set<string>([
+    ...(d.kind === 'change' ? ['repo', 'app'] : []),
+    ...(d.discovery.issue ? [] : ['issue', 'queue']),
+    ...(d.discovery.queue && !analyst ? [] : ['queue']),
+    ...(d.roles.length && !c.info.offline ? [] : ['team']),
+  ]);
   return h(
     'div.wz-page',
     {},

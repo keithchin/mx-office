@@ -26,7 +26,7 @@ export function discoveryBrief(plan: ProjectPlan, toolkitDir: string): string {
     `- **What the project is:** ${goal}`,
     `- **Entry mode:** ${mode.label.toLowerCase()}, **${plan.tier} tier**${plan.tier === 'small' ? ' (one module)' : ''}. Both are already recorded in \`PROJECT.md\` by the new-project wizard; correct them there (with the client's confirmation) if discovery shows otherwise.`,
     `- **Mendix version:** ${plan.mendix}. **Interview mode:** ${plan.interview}.`,
-    roles.length ? `- **Team to staff after the build plan:** ${roles.join(', ')}.` : '',
+    roles.length ? `- **The project team** (hired on this floor by the wizard; see the Team tab): ${roles.join(', ')}.` : '',
     '- `intake.md` already carries the answers given in the wizard. Ask the questions still marked `_Not yet asked._`, and confirm the rest briefly rather than asking them again.',
     '- Run **Stages P → 4**: intake, triage/scope, requirements, architecture & design, and the **build plan** (`architecture/build-plan.md`).',
     "- Ask the customer checkpoints (CAC-1 … CAC-5) in the toolkit's **2+1 format** (two predefined questions with options and a recommendation, plus one open question), **one checkpoint at a time**, and wait for the answer.",

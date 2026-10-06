@@ -82,11 +82,23 @@ export function mendixVersions(dir: string): string[] {
   }
 }
 
-/** mxcli's validated line: the default when it's installed. */
+/** The line new projects start on: the newest 11.12 patch installed is the default. */
+export const PREFERRED_LINE = '11.12.';
+/** mxcli's validated line: the default when no 11.12 is installed but it is. */
 export const PREFERRED_MENDIX = '11.6.4';
+
+/** The version the wizard preselects: the newest 11.12.x, else mxcli's validated 11.6.4, else the newest installed. */
+export function defaultMendix(versions: string[]): string {
+  return [...versions].sort(newerFirst).find((v) => v.startsWith(PREFERRED_LINE)) ?? (versions.includes(PREFERRED_MENDIX) ? PREFERRED_MENDIX : (versions[0] ?? ''));
+}
 
 export function mxbuildPath(cfg: WizardConfig, version: string): string {
   return path.join(cfg.mendixDir, version, 'modeler', isWin ? 'mxbuild.exe' : 'mxbuild');
+}
+
+/** Studio Pro's command-line tool (mx create-project, mx show-version), next to mxbuild. */
+export function mxPath(cfg: WizardConfig, version: string): string {
+  return path.join(cfg.mendixDir, version, 'modeler', isWin ? 'mx.exe' : 'mx');
 }
 
 /** What's missing for the toolkit to run, in words for the wizard's first page. */

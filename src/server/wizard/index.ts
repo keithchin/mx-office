@@ -10,10 +10,13 @@ import type { JobView, SetupView, StepId, WizardInfo } from '../../shared/wizard
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { tildify } from '../building.js';
+import { findMpr } from '../liveapp/checkout.js';
+import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { adminTokenConfigured, redactor } from './admin-token.js';
-import { configProblems, mendixVersions, PREFERRED_MENDIX, toolkitEnv, wizardConfig, type WizardConfig } from './config.js';
+import { configProblems, defaultMendix, mendixVersions, toolkitEnv, wizardConfig, type WizardConfig } from './config.js';
 import { existingAnswers, parseIntakeTemplate } from './intake.js';
 import { JobBook, jobId, newJob, viewOf, type JobState } from './job.js';
+import { mprVersion } from './mendix-app.js';
 import { cleanPlan } from './plan.js';
 import { setupView } from './setup.js';
 import { bashPath, runCommand } from './run.js';
@@ -48,7 +51,7 @@ export class Wizard {
       adminToken: { configured: adminTokenConfigured(this.cfg.adminTokenFile), file: tildify(this.cfg.adminTokenFile) },
       offline: !!this.cfg.offlineDir,
       mendixVersions: versions,
-      defaultMendix: versions.includes(PREFERRED_MENDIX) ? PREFERRED_MENDIX : (versions[0] ?? ''),
+      defaultMendix: defaultMendix(versions),
       questions,
       problems: configProblems(this.cfg, versions),
       toolkitDir: this.cfg.toolkitDir,
@@ -96,7 +99,7 @@ export class Wizard {
     const plan = cleanPlan({ ...(raw as object), owner: job.plan.owner, name: job.plan.name, kind: job.plan.kind }, mendixVersions(this.cfg.mendixDir), this.cfg.org);
     if (typeof plan === 'string') return plan;
     const moved = plan.mendix !== job.plan.mendix;
-    job.plan = { ...plan, createdByHand: job.plan.createdByHand };
+    job.plan = { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId };
     this.book.reset(job, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
     this.go(job);
     return viewOf(job);
@@ -124,6 +127,19 @@ export class Wizard {
         this.checkedAt.set(floor.id, Date.now());
       });
     return undefined;
+  }
+
+  /**
+   * For "change an existing app": the Studio Pro version its .mpr was last saved with, when the repository
+   * is a floor already, and the installed version that matches it (to preselect). Read-only.
+   */
+  async appVersion(repo: string): Promise<{ saved?: string; installed?: string }> {
+    const floor = [...this.ctx.floors.values()].find((f) => sameRepo(f.def.repo, repo));
+    const mpr = floor && findMpr(floor.dir);
+    if (!mpr) return {};
+    const versions = mendixVersions(this.cfg.mendixDir);
+    const saved = await mprVersion(this.cfg, mpr, versions, runCommand);
+    return { saved, installed: saved && versions.find((v) => v === saved || v.startsWith(`${saved}.`)) };
   }
 
   /** The intake answers already in a floor's project, for the wizard to show when editing. */
@@ -169,6 +185,19 @@ export class Wizard {
         const floor = ctx.floors.get(floorId);
         if (!floor) return 'No such floor';
         return floor.queue.add(prompt, by, title, issue, 'claude', model, 'medium', account);
+      },
+      hired: (floorId, role) => {
+        const floor = ctx.floors.get(floorId);
+        if (!floor) return false;
+        const roster = rosterOf(ctx);
+        const m = roster.data(floor.id).members[role];
+        return (m.phase === 'active' || m.phase === 'benching') && !!roster.workerOf(teamFloor(ctx, floor), m);
+      },
+      // The Team tab's own hire: the role's fixed name, its Playbook, and the model the roster has for it (the role's default on a new floor).
+      hire: async (floorId, role, by, account, task) => {
+        const floor = ctx.floors.get(floorId);
+        if (!floor) return 'No such floor';
+        return rosterOf(ctx).members.hire(teamFloor(ctx, floor), role, by, account, task);
       },
     };
   }

@@ -5,7 +5,7 @@
 
 import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { SETUP_STEPS, type JobView, type ProjectPlan, type StepId, type StepStatus } from '../../shared/wizard.js';
+import { interviewModeOf, SETUP_STEPS, type JobView, type ProjectPlan, type StepId, type StepStatus } from '../../shared/wizard.js';
 
 export interface JobState {
   id: string;
@@ -17,6 +17,8 @@ export interface JobState {
   dir?: string;
   floor?: string;
   issue?: number;
+  /** The Discovery issue went to the Chief Analyst as its first task when the team step hired it (so the queue step doesn't queue it again). */
+  discoveryHired?: boolean;
   by: string;
   /** The account that started it, for queueing its Discovery task. */
   account?: string;
@@ -184,6 +186,8 @@ export class JobBook {
       try {
         const job = JSON.parse(readFileSync(path.join(this.dir, f), 'utf8')) as JobState;
         if (!job?.id || !job.plan || !job.steps) continue;
+        // Saved before the toolkit's own words: attended/unattended read as steering/auto.
+        job.plan.interview = interviewModeOf(job.plan.interview);
         for (const s of SETUP_STEPS) job.steps[s.id] ??= { status: 'pending' };
         if (job.status === 'running') {
           for (const s of SETUP_STEPS) if (job.steps[s.id].status === 'running') job.steps[s.id] = { status: 'failed', detail: 'The office restarted in the middle of this step: Retry carries on from here' };

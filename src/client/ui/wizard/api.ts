@@ -24,5 +24,6 @@ export const wizardApi = {
   edit: (id: string, plan: ProjectPlan) => call<JobView>('POST', `/api/wizard/edit?id=${q(id)}`, plan),
   setup: (floor: string) => call<SetupView>('GET', `/api/wizard/setup?floor=${q(floor)}`),
   answers: (floor: string) => call<{ repo?: string; answers: IntakeAnswer[] }>('GET', `/api/wizard/answers?floor=${q(floor)}`),
+  appVersion: (repo: string) => call<{ saved?: string; installed?: string }>('GET', `/api/wizard/app-version?repo=${q(repo)}`),
   recheck: (floor: string) => call<{ checking: boolean }>('POST', `/api/wizard/recheck?floor=${q(floor)}`, {}),
 };

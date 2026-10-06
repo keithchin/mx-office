@@ -70,7 +70,10 @@ export type SizeTier = 'small' | 'standard';
 /** The runbook's small-project line: at or under this, the small tier applies. */
 export const SMALL_TIER_LIMITS = '1 module, 8 screens, 25 use cases';
 
-/** The roles a project can be staffed with. The team model picks the selection up from the project's settings file. */
+/**
+ * The roles a project can be staffed with: the ids are the roster's (shared/roster/roles.ts), and the
+ * wizard's `team` step hires the ticked ones on the new floor, each on its role's own model.
+ */
 export const PROJECT_ROLES = [
   { id: 'pm', label: 'Project Coordinator', icon: '📋' },
   { id: 'lead-designer', label: 'Lead Designer', icon: '🎨' },
@@ -79,6 +82,26 @@ export const PROJECT_ROLES = [
   { id: 'chief-analyst', label: 'Chief Analyst / Consultant', icon: '🧭' },
 ] as const;
 export type ProjectRole = (typeof PROJECT_ROLES)[number]['id'];
+
+/**
+ * How much the pipeline involves the user: the toolkit's interview-mode.sh vocabulary, which is what
+ * PROJECT.md's `Interview mode:` line must hold (anything else falls back to steering with a warning).
+ * Intake Q9 still asks "attended or unattended", so each mode says which of those it is.
+ */
+export const INTERVIEW_MODES = ['steering', 'assist', 'auto'] as const;
+export type InterviewMode = (typeof INTERVIEW_MODES)[number];
+
+export const INTERVIEW_MODE_INFO: Record<InterviewMode, { label: string; q9: 'attended' | 'unattended'; does: string }> = {
+  steering: { label: 'Steering: every question is asked and waited for (attended, default)', q9: 'attended', does: 'every consequential question is asked in chat and the agent waits for the answer' },
+  assist: { label: 'Assist: questions batched at the gates, small ones assumed (attended)', q9: 'attended', does: 'questions are batched at the gates; low-consequence ones are assumed and reported rather than asked' },
+  auto: { label: 'Auto: nothing blocks, every assumption recorded (unattended)', q9: 'unattended', does: 'nothing blocks: positions are taken and recorded as ASSUMED with an auto-mode consent stamp, for reconciliation' },
+};
+
+/** An interview mode from a plan, a saved setup or a draft: the old attended/unattended spelling reads as steering/auto, anything unknown as steering (as the toolkit does). */
+export function interviewModeOf(v: unknown): InterviewMode {
+  if (v === 'unattended') return 'auto';
+  return (INTERVIEW_MODES as readonly unknown[]).includes(v) ? (v as InterviewMode) : 'steering';
+}
 
 /** One of the toolkit's intake questions, as its template words it. */
 export interface IntakeQuestion {
@@ -112,7 +135,7 @@ export interface ProjectPlan {
   mendix: string;
   entry: EntryMode;
   tier: SizeTier;
-  interview: 'attended' | 'unattended';
+  interview: InterviewMode;
   execApproval: 'auto' | 'ask';
   intake: IntakeAnswer[];
   clients: string[];
@@ -122,6 +145,11 @@ export interface ProjectPlan {
   discovery: { issue: boolean; queue: boolean; model: string };
   /** Nobody configured the admin token: the operator made the repository on GitHub by hand. */
   createdByHand: boolean;
+  /**
+   * The Mendix Portal app id (a GUID) a new app is created against (`mx create-project --sprintr-app-id`).
+   * Not asked for yet: without it the app is created unlinked, from Studio Pro's Blank template.
+   */
+  sprintrAppId?: string;
 }
 
 /** The setup, a step at a time. Each step checks what's already done first, so running it again is safe. */
@@ -129,6 +157,7 @@ export const SETUP_STEPS = [
   { id: 'repo', label: 'Create the GitHub repository' },
   { id: 'clone', label: 'Clone it as a floor' },
   { id: 'env', label: 'Write .claude/toolkit.env' },
+  { id: 'app', label: 'Create the Mendix app (.mpr)' },
   { id: 'init', label: 'Run the toolkit’s init-project.sh' },
   { id: 'hooks', label: 'Install the pre-commit hook' },
   { id: 'intake', label: 'Write the intake answers' },
@@ -137,7 +166,8 @@ export const SETUP_STEPS = [
   { id: 'gates', label: 'Refresh the gate dashboard' },
   { id: 'commit', label: 'Commit and push' },
   { id: 'issue', label: 'Open the Discovery issue' },
-  { id: 'queue', label: 'Queue the Chief Analyst' },
+  { id: 'team', label: 'Hire the project team' },
+  { id: 'queue', label: 'Queue the Discovery task' },
 ] as const;
 export type StepId = (typeof SETUP_STEPS)[number]['id'];
 export type StepStatus = 'pending' | 'running' | 'done' | 'skipped' | 'failed';
