@@ -12,7 +12,8 @@ import type { Escalation } from '../../shared/roster/escalation.js';
 import { DEFAULT_JEFF, isJeffMode, isJeffPriorityMode, isJeffWaitingPolicy } from '../../shared/judge.js';
 import { DEFAULT_BY_STAGE, type Proposal, type RosterSettings, type Standup } from '../../shared/roster/types.js';
 import { cleanOverrides, type SkillOverrides } from '../../shared/roster/skills.js';
-import { reviveSubagents, SUBAGENT_ACTIONS_KEPT } from './subagent-store.js';
+import { reviveLiveRuns, reviveSubagents, SUBAGENT_ACTIONS_KEPT } from './subagent-store.js';
+import type { LiveRun } from '../../shared/roster/subagent-live.js';
 import type { SubagentAction, SubagentRecord } from '../../shared/roster/subagents.js';
 import { emptyOutbox, reviveOutbox, type Outbox } from './relays.js';
 
@@ -60,6 +61,8 @@ export interface RosterData {
   subagents: Record<string, SubagentRecord>;
   /** Subagent actions a Lead proposed to the Project Manager, or asked them about. */
   subagentActions: SubagentAction[];
+  /** The Leads' subagents at work and their last runs, newest kept (subagent-live.ts). */
+  subagentRuns: LiveRun[];
   /** What the office has still to pass on to the Coordinator and the Leads (relays.ts): kept so a restart doesn't lose it. */
   outbox: Outbox;
 }
@@ -120,7 +123,7 @@ export function freshRoster(rng: () => number = Math.random): RosterData {
   const names = pickNames(rng);
   const members = {} as Record<RoleId, MemberRecord>;
   for (const r of ROLES) members[r.id] = { name: names[r.id], model: r.model, phase: 'none' };
-  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [], outbox: emptyOutbox() };
+  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [], subagentRuns: [], outbox: emptyOutbox() };
 }
 
 /** A saved roster, made whole: a role added since it was saved gets a name, a bad field its default. */
@@ -147,6 +150,7 @@ export function reviveRoster(raw: unknown, rng: () => number = Math.random): Ros
     spend: r.spend && typeof r.spend === 'object' && typeof r.spend.usd === 'number' ? { day: String(r.spend.day ?? ''), usd: r.spend.usd, seen: { ...(r.spend.seen ?? {}) } } : fresh.spend,
     subagents: reviveSubagents(r.subagents),
     subagentActions: Array.isArray(r.subagentActions) ? r.subagentActions.filter((a) => a && typeof a === 'object' && typeof a.id === 'string').slice(-SUBAGENT_ACTIONS_KEPT) : [],
+    subagentRuns: reviveLiveRuns(r.subagentRuns),
     outbox: reviveOutbox(r.outbox),
   };
 }

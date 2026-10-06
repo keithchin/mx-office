@@ -15,6 +15,7 @@ import { openIssue } from './ui/github/issue-window';
 import { cards, renderBoard, type KanbanActions } from './ui/kanban';
 import { renderAnalysis } from './ui/analysis';
 import { workersRanking } from './ui/ranking';
+import { floorSubagents } from './ui/subagents';
 import { cachedSetup, renderSetup } from './ui/setup-panel';
 import { renderSummary } from './ui/summary';
 import { teamTab, type Pane } from './ui/roster';
@@ -95,6 +96,8 @@ const ranking = workersRanking({
   card: workerCard,
   visible: () => tab === 'workers',
   emptyText: () => (store.project ? 'Nobody is working on this floor. ✨ New task hires someone.' : 'No workers here.'),
+  // The Leads' subagents, each after its Lead (ui/subagents/).
+  subagents: floorSubagents((id) => openWorker(id)),
 });
 function renderWorkers() {
   const list = byUrgency(store.workers.values());
@@ -152,6 +155,8 @@ function workerCard(w: WorkerInfo): HTMLElement {
 
 store.on('workers', renderWorkers);
 store.on('project', renderWorkers);
+// A subagent going to work or coming back changes the team (ui/teams/world.ts refetches it).
+onRoster(renderWorkers);
 // "3m ago" moves on by itself.
 setInterval(renderWorkers, 30_000);
 

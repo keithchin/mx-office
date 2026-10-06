@@ -9,7 +9,7 @@ import { MCP_ALLOWED, writeClaudeMcpConfig } from '../office-workers.js';
 import { QUEUE_AGENT_DISALLOWED_TOOLS } from '../stations.js';
 import { answered, notified, wantsPermission } from '../workers/lifecycle.js';
 import { shq } from '../workers/process.js';
-import { noteSubagentHook, noteSubagentLifecycle } from '../workers/subagents.js';
+import { noteSubagentDispatch, noteSubagentHook, noteSubagentLifecycle } from '../workers/subagents.js';
 import { noteDispatch } from '../chatter/bus.js';
 import { noteTranscript } from '../convo/index.js';
 import { studioGuardHook } from '../studio/guard.js';
@@ -179,6 +179,8 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
         info.action = toolAction(payload?.tool_name, payload?.tool_input);
         // A subagent dispatched: the team chatter has who asked it what (chatter/bus.ts).
         noteDispatch(info.id, payload, now);
+        // …and the live picture of a Lead's subagents at work (roster/subagent-live.ts).
+        noteSubagentDispatch(info.id, payload, now);
         h.noteTool(info.activity);
         if (info.status !== 'working') h.setStatus('working');
         else h.emit();

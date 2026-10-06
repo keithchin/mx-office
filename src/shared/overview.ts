@@ -5,6 +5,7 @@
 import type { FloorPlan } from './floorplan.js';
 import type { WorkerKind, WorkerStatus } from './protocol.js';
 import type { MemberStatus, MemberView } from './roster/types.js';
+import type { WorkingHelper } from './roster/subagent-cards.js';
 
 /** A worker as the overview draws it: at its desk, how it's doing, and a line or two for its hover card. */
 export interface OverviewWorker {
@@ -35,6 +36,8 @@ export interface OverviewFloor {
   workers: OverviewWorker[];
   /** Empty when the office has no team view for it. */
   members: OverviewMember[];
+  /** The Leads' subagents at work, beside their Leads' desks (shared/roster/subagent-cards.ts). */
+  helpers?: WorkingHelper[];
   working: number;
   waiting: number;
   prsOpen: number;

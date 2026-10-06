@@ -39,7 +39,7 @@ Above the cards:
 
 Every floor drawn in pixel art on one canvas, each under a banner with its name and numbers. It refreshes every 10 seconds.
 
-- Hover a worker, or a benched Lead on a break, for details.
+- Hover a worker, or a benched Lead on a break, for details. A Lead's subagents at work sit on stools beside its desk, as in the 2D view.
 - Click a banner (or double-click a floor) to open it in the 2D view.
 - Zoom with the wheel or pinch, drag to pan, **+ − 0** and the arrows work too.
 

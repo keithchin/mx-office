@@ -6,7 +6,21 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **🧩 Subagents as workers.** A Lead's subagents now show as workers of their own. On the **👷 Workers**
+  tab each gets a card right after its Lead's (*🧩 tester · hired by Hedy (Lead Tester)*): working on what and
+  for how long, idle since its last run, or benched; its model, runs and A–F grade. Click it for its recent
+  runs, the Lead's verdicts, Warn/Bench/Model/Reinstate (Project Manager) and a link to the Lead's terminal.
+  **☑ Show subagents** hides them. In the **2D view** (and the home page's 2D Overview) a subagent at work
+  sits on a stool behind its Lead's chair, tagged *tester (Hedy's)*; benched ones take breaks with benched Leads.
+- The office follows each run live from the hooks (the Agent call going out and coming back, SubagentStart /
+  SubagentStop) and, every 10 seconds, from the Lead's transcript, which is the only place a background
+  run says it's finished. A floor's last 50 runs are kept in its roster file.
+
+### Fixed
+- A subagent run in the background (newer Claude Code's default) no longer counts twice in its track record:
+  its launch made a run of its own besides the one its SubagentStop records. The SubagentStop's run now
+  carries the task.
 
 ## 2026-10-06 · release 11 (`a52ebae`)
 

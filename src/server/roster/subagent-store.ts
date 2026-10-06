@@ -2,6 +2,7 @@
 // when read back, a bad record dropped, the runs capped.
 
 import { isRoleId, type RoleId } from '../../shared/roster/roles.js';
+import { LIVE_KEPT, type LiveRun, type LiveStatus } from '../../shared/roster/subagent-live.js';
 import { RUNS_KEPT, type RunOutcome, type SubagentRecord, type SubagentRun, type SubagentState } from '../../shared/roster/subagents.js';
 
 export const SUBAGENT_ACTIONS_KEPT = 100;
@@ -66,6 +67,41 @@ export function reviveSubagents(raw: unknown): Record<string, SubagentRecord> {
     };
   }
   return out;
+}
+
+const LIVE_STATUSES: LiveStatus[] = ['working', 'done', 'failed', 'lost'];
+
+/** The floor's live subagent runs as saved (subagent-live.ts): a bad one dropped, the newest LIVE_KEPT kept. */
+export function reviveLiveRuns(raw: unknown): LiveRun[] {
+  if (!Array.isArray(raw)) return [];
+  const out: LiveRun[] = [];
+  for (const v of raw) {
+    if (!v || typeof v !== 'object') continue;
+    const r = v as Partial<LiveRun>;
+    const name = cleanSubName(r.name);
+    const id = str(r.id, 120);
+    const startedAt = num(r.startedAt);
+    if (!name || !id || !isRoleId(r.lead) || typeof r.workerId !== 'string' || startedAt === undefined) continue;
+    out.push({
+      id,
+      lead: r.lead,
+      workerId: r.workerId.slice(0, 80),
+      name,
+      ...(str(r.task, 160) ? { task: str(r.task, 160) } : {}),
+      ...(str(r.model, 64) ? { model: str(r.model, 64) } : {}),
+      ...(str(r.toolUseId, 80) ? { toolUseId: str(r.toolUseId, 80) } : {}),
+      ...(str(r.agentId, 80) ? { agentId: str(r.agentId, 80) } : {}),
+      ...(r.background === true ? { background: true } : {}),
+      status: LIVE_STATUSES.includes(r.status as LiveStatus) ? (r.status as LiveStatus) : 'lost',
+      startedAt,
+      ...(num(r.resumedAt) !== undefined ? { resumedAt: r.resumedAt } : {}),
+      ...(num(r.endedAt) !== undefined ? { endedAt: r.endedAt } : {}),
+      ...(num(r.durationMs) !== undefined ? { durationMs: r.durationMs } : {}),
+      seenAt: num(r.seenAt) ?? startedAt,
+      source: r.source === 'transcript' ? 'transcript' : 'hooks',
+    });
+  }
+  return out.slice(-LIVE_KEPT);
 }
 
 /** One reviewed subagent run, for the worker rankings' Lead criteria (review turnaround, review quality). */

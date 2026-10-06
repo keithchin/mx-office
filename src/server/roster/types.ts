@@ -53,6 +53,8 @@ export interface TeamFloor {
   labelIssue?(number: number, team: TeamId): Promise<string | undefined>;
   /** What an agent said last, once its turn ended: the Stop hook's message, else its transcript's end. */
   lastWords?(w: WorkerInfo): string | undefined;
+  /** A worker's Claude Code transcript (its session's .jsonl), for the subagent runs no hook told of (subagent-live.ts). */
+  transcript?(w: WorkerInfo): string | undefined;
   /** Tells the floor's browsers Jeff just judged something (his room in the 2D view reacts). */
   judged?(made: JudgeMade): void;
 }

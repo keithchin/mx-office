@@ -22,15 +22,20 @@ import { Roster, rosterFor } from './index.js';
 import { ghIssueMaker } from './issues.js';
 import type { HireAsk, TeamFloor } from './types.js';
 import { onSubagentEvent } from '../workers/subagents.js';
+import { notedTranscript } from '../convo/index.js';
+import { SCAN_MS } from './subagent-live.js';
 import { OFFICE_BY } from '../workers/lifecycle.js';
 import { setupView } from '../wizard/setup.js';
 import type { PipelineStage } from '../../shared/roster/types.js';
 
 const adapters = new WeakMap<Floor, TeamFloor>();
+/** A transcript looked up by session id and not found is looked for again after this long (it reads a folder listing). */
+const MISS_MS = 60_000;
 
 export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
   let t = adapters.get(floor);
   if (t) return t;
+  const misses = new Map<string, number>();
   t = {
     id: floor.id,
     name: floor.def.name,
@@ -78,6 +83,14 @@ export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
       return file ? lastAssistantTextOf(file) : undefined;
     },
     judged: (made) => ctx.toFloor(floor, { t: 'judge.made', floor: floor.id, ...made }),
+    transcript: (w) => {
+      const noted = notedTranscript(w.id);
+      if (noted || w.kind !== 'agent' || w.provider !== 'claude' || !w.sessionId) return noted;
+      if (Date.now() - (misses.get(w.id) ?? -Infinity) < MISS_MS) return undefined;
+      const file = findTranscript(w.sessionId, w.worktree ? path.resolve(floor.dir, w.worktree.path) : floor.dir);
+      if (!file) misses.set(w.id, Date.now());
+      return file;
+    },
   };
   adapters.set(floor, t);
   return t;
@@ -141,6 +154,12 @@ export function rosterOf(ctx: Ctx): Roster {
       const floor = ctx.workerFloor(workerId);
       if (floor) roster.subagents.onEvent(teamFloor(ctx, floor), workerId, ev);
     });
+    // …and from the Leads' transcripts, for what no hook says: a background run finishing, or
+    // anything while the office was down (roster/subagent-live.ts).
+    const scan = setInterval(() => {
+      for (const f of ctx.floors.values()) roster.subagents.live.scan(teamFloor(ctx, f));
+    }, SCAN_MS);
+    scan.unref?.();
     return roster;
   });
 }

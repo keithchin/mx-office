@@ -120,7 +120,24 @@ export interface SubagentView {
   lastWarning?: string;
   score: SubagentScore;
   lastRunAt?: number;
+  /** Every run its record keeps (up to RUNS_KEPT), on any model. */
+  totalRuns?: number;
+  /** Its last reviewed runs with the Lead's verdicts, newest first. */
+  reviews?: SubagentReviewBrief[];
 }
+
+/** A reviewed run, as a subagent's card shows it. */
+export interface SubagentReviewBrief {
+  at: number;
+  model: string;
+  task?: string;
+  outcome: RunOutcome;
+  note?: string;
+  reviewedAt?: number;
+}
+
+/** Reviewed runs a subagent's card lists. */
+export const REVIEWS_SHOWN = 6;
 
 /** A subagent action waiting on the Project Manager, or decided (its gate was propose). */
 export interface SubagentAction {

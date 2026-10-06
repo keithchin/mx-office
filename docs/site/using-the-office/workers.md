@@ -16,6 +16,7 @@ The **🤖 Workers** tab shows every agent on the floor, or on all floors, ranke
 | Group by | No groups · **By model** · **By role** |
 | Sort | Needs you first · Rank · Name · Recent |
 | ☐ Gone home | Also show workers who went home |
+| ☑ Show subagents | The Leads' subagents, each after its Lead (on by default) |
 
 Your choices are kept in this browser.
 
@@ -26,6 +27,16 @@ Your choices are kept in this browser.
 - With grouping: a card per model or role with its average grade and its spread of A–F.
 - Each worker's **card**: its grade, its live card (open the terminal, ✍️ prompt it), its rank on the floor, for its model and for its role, the trend (▲▼) and how sure the grade is.
 - **Details ▾**: highlights (🏆), the standard criteria and, for team roles, their duties.
+
+## Subagents
+
+Each Lead's [subagents](../automation/subagents.md) get a card of their own, right after their Lead's: **🧩 tester · hired by Hedy (Lead Tester)**, with
+
+- its grade A–F (from its Lead's reviews, not the worker criteria below),
+- how it is now: **🔨 working** on what and for how long (and how many more runs of it are going at once), **💤 idle** with when it last ran and on what, or **🪑 benched** and why,
+- its model, its runs, and ⚠️ on warning or 📉 underperforming.
+
+A Lead that isn't at work on this floor has its subagents in a group at the end. Click a card for its detail: what it's on, its recent runs (how long, how each ended, the Lead's verdict), the Lead's reviews, and **💬 Open** *Lead* (a subagent works inside its Lead's Claude Code session, so its work shows in the Lead's terminal and Chat view). The Project Manager gets **⚠️ Warn**, **🪑 Bench**, **🔁 Model** and **✅ Reinstate** there too. Subagents aren't hired or sent home like workers: their Lead sends them off.
 
 ## How the grade is worked out
 

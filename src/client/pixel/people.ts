@@ -18,10 +18,11 @@ import { dogAt, drawDog, drawSign, type DeskSign } from './props';
 import { waitingOnSomeone } from '../notify';
 import type { DogState } from '../../shared/dog';
 import { breakAt, breakSpot, drawBreak, type BreakLead } from './breaks';
+import { drawHelpers, type Helper } from './helpers';
 
 /** Something under the pointer: a worker, someone walking about, or a free desk to hire someone at. */
 export interface Spot {
-  kind: 'worker' | 'peer' | 'desk' | 'dog' | 'lead';
+  kind: 'worker' | 'peer' | 'desk' | 'dog' | 'lead' | 'subagent';
   id: string;
   x: number;
   y: number;
@@ -43,6 +44,8 @@ export interface Label {
   status?: string;
   /** A second, smaller line: a Lead's role (in its team's colour), or what anyone else is working on. */
   tag?: { text: string; short?: string; color?: string };
+  /** Shown whole up to 20 letters rather than 14 (a subagent's "tester (Hedy's)"). */
+  long?: boolean;
 }
 
 export interface People {
@@ -65,6 +68,8 @@ export interface Cast {
   tag: (w: WorkerInfo) => Label['tag'];
   /** The team's benched Leads, on a break about the office (breaks.ts): at wall-clock `clock`, and not walking when `still`. */
   breaks?: { leads: BreakLead[]; clock: number; still: boolean };
+  /** The Leads' subagents at work, on stools beside their Leads' desks (helpers.ts). */
+  helpers?: readonly Helper[];
 }
 
 /** When each worker last changed how it's doing, for the tick that flashes as one finishes. */
@@ -166,6 +171,15 @@ export function drawPeople(g: CanvasRenderingContext2D, f: Frame, cast: Cast, no
     // The name over their head, clear of the counter, the ashtray or the couch in front of them.
     out.labels.push({ id: l.id, text: l.name, x, y: top - 3, above: true, human: false, tag: { text: '🪑 benched', color: '#9aa7bd' } });
   });
+
+  // The Leads' subagents at work, each on a stool beside its Lead's desk (helpers.ts).
+  if (cast.helpers?.length) {
+    drawHelpers(g, f, cast.helpers, byDesk.values(), now, cast.hover, {
+      queue: (y, draw) => queue.push({ y, draw }),
+      spot: (s) => out.spots.push({ kind: 'subagent', ...s }),
+      label: (l) => out.labels.push({ ...l, above: true, human: false, status: 'working', long: true }),
+    });
+  }
 
   // The signs stand on their desks' far edges, drawn with the desk they're on.
   for (const s of cast.signs) queue.push({ y: s.y + DESK_H + Math.round((DESK_SIZE.depth * PPM) / 2) + 1, draw: () => drawSign(g, s) });
