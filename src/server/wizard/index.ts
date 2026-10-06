@@ -1,7 +1,7 @@
 // The new-project wizard's side of the office: what the wizard page is told before it opens, starting
 // a project's setup and carrying it on after a failure, editing its answers later, and the setup
 // panel over a toolkit project's board. One per office, made on first use (like the analyzer), with
-// its setups kept in <office data>/wizard/.
+// its setups run on the office's workflow engine (server/flow/).
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -10,6 +10,7 @@ import type { JobView, SetupView, StepId, WizardInfo } from '../../shared/wizard
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { tildify } from '../building.js';
+import { flowsOf } from '../flow/index.js';
 import { findMpr } from '../liveapp/checkout.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { adminTokenConfigured, redactor } from './admin-token.js';
@@ -34,7 +35,8 @@ export class Wizard {
 
   constructor(private ctx: Ctx) {
     this.cfg = wizardConfig();
-    this.book = new JobBook(path.join(ctx.cfg.dataDir, 'wizard'), redactor([]));
+    // Its runs are on the office's workflow engine; <office data>/wizard/ holds the jobs saved before it, taken in on load.
+    this.book = new JobBook(path.join(ctx.cfg.dataDir, 'wizard'), redactor([]), flowsOf(ctx));
   }
 
   info(admin: boolean): WizardInfo {

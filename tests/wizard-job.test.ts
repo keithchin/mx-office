@@ -77,15 +77,22 @@ test('a setup runs its steps in order, stops at a failure, and a retry carries o
     await book.run(job, fakeSteps(calls));
     assert.deepEqual(calls, ['intake', 'commit']);
 
-    // Saved after every step: a new office picks it up, and one that was mid-step is marked for a retry.
-    const saved = JSON.parse(readFileSync(path.join(dir, `${job.id}.json`), 'utf8'));
+    // Checkpointed after every step: a new office picks it up, and one that was mid-step is marked for a retry.
+    const file = path.join(dir, 'new-project', `${job.id}.json`);
+    const saved = JSON.parse(readFileSync(file, 'utf8'));
     saved.status = 'running';
-    saved.steps.gates = { status: 'running' };
-    writeFileSync(path.join(dir, `${job.id}.json`), JSON.stringify(saved));
-    const again = new JobBook(dir).get(job.id)!;
+    saved.state.status = 'running';
+    saved.state.steps.gates = { status: 'running' };
+    writeFileSync(file, JSON.stringify(saved));
+    const book2 = new JobBook(dir);
+    const again = book2.get(job.id)!;
     assert.equal(again.status, 'failed');
     assert.equal(again.steps.gates.status, 'failed');
     assert.match(again.steps.gates.detail ?? '', /restarted/);
+    assert.equal(book2.engine.get(job.id)?.status, 'interrupted');
+    calls.length = 0;
+    await book2.run(again, fakeSteps(calls));
+    assert.deepEqual(calls, ['gates'], 'a retry after the restart carries on from the step it stopped in');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -164,7 +171,7 @@ test('the admin token goes only to the repo-create child: not process.env, not t
     assert.equal(seen.GH_TOKEN, ADMIN, 'gh repo create ran with the admin token');
     assert.equal(seen.GITHUB_TOKEN, null);
     assert.deepEqual(seen.args.slice(0, 5), ['repo', 'create', 'Test-Org/demo-app', '--private', '--add-readme']);
-    const everything = [JSON.stringify(process.env), JSON.stringify(toolkitEnv(cfg, officeEnv)), job.log.join('\n'), ...readdirSync(path.join(dir, 'jobs')).map((f) => readFileSync(path.join(dir, 'jobs', f), 'utf8'))].join('\n');
+    const everything = [JSON.stringify(process.env), JSON.stringify(toolkitEnv(cfg, officeEnv)), job.log.join('\n'), ...(readdirSync(path.join(dir, 'jobs'), { recursive: true }) as string[]).filter((f) => f.endsWith('.json')).map((f) => readFileSync(path.join(dir, 'jobs', f), 'utf8'))].join('\n');
     assert.ok(!everything.includes(ADMIN), 'the admin token is nowhere but in that child');
     assert.ok(job.log.some((l) => l.includes('created with [redacted]')), 'what gh echoed was redacted');
   } finally {

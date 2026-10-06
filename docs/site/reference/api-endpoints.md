@@ -56,6 +56,7 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/audit` | The audit log: `?floor=<id>\|all\|_office&since=&until=&actor=human,agent&action=worker.hire,github&q=&limit=&cursor=`, with counts, the chain check and a histogram |
 | GET | `/api/audit/export` | Every matching event as a download, `&format=csv\|jsonl` (admin) |
 | POST | `/api/audit/settings` | `{ promptText }`: log the first 80 characters of prompts, or not (admin) |
+| GET | `/api/flows` | The [workflow](../automation/workflows.md) runs, newest first: id, workflow, status, step, why it stopped, floor, tries. `?floor=<id>`, `?workflow=<id>`. Never a run's state |
 | GET | `/api/firm` | The Firm's people, its engagements (newest first) and the floors an audit can be called on |
 | GET | `/api/firm/engagement` | `?id=`: one engagement with its whole transcript |
 | GET | `/api/firm/status` | `?floor=`: the floor's running audit and alerts, for its 1D view |
