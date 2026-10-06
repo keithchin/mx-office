@@ -40,6 +40,8 @@ export interface MeetingEvents {
   toast(text: string, level: 'info' | 'warn' | 'error'): void;
   /** Why nobody may be hired right now (today's budget is spent), if that's so. */
   hiringPaused(): string | undefined;
+  /** Why it hands nobody a part now (⏸ Pause project, project-run/): the meeting waits, nothing is typed. */
+  held?(): string | undefined;
   /** Posts the review panel's review on its pull request. Resolves to the review's URL. */
   postReview(pr: number, file: string, owner?: string): Promise<string>;
   /** One of the office's prompts as it has it now (rewritten in ⚙️ Settings, or the default). */
@@ -291,6 +293,7 @@ export class MeetingRoom {
       if (!m.cleared && m.seats.every((s) => !s.workerId || !byId.has(s.workerId))) void this.dismiss(m);
       return;
     }
+    if (this.events.held?.()) return;
     for (const s of m.seats) {
       const w = s.workerId ? byId.get(s.workerId) : undefined;
       if (!w) return this.halt(m, `the ${s.role} (${s.workerName ?? 'its worker'}) was sent home`);
@@ -391,9 +394,7 @@ export class MeetingRoom {
     m.turns = (this.plan(m, m.round, 1) ?? []).map((p) => ({ seat: p.seat, doing: p.doing, file: p.file, state: 'waiting' }));
   }
 
-  private isLast(m: Meeting, round: number): boolean {
-    return round >= m.rounds || m.lastRound === round;
-  }
+  private isLast(m: Meeting, round: number): boolean { return round >= m.rounds || m.lastRound === round; } // prettier-ignore
 
   /** The output is written. Commit it on the meeting's branch, or post the review on its pull request. */
   private finish(m: Meeting) {
@@ -545,14 +546,10 @@ export class MeetingRoom {
   }
 
   /** One of the office's prompts, filled in. */
-  private say(id: PromptId, vars: PromptVars = {}): string {
-    return fillPrompt(this.events.prompt?.(id) ?? PROMPTS[id].text, vars);
-  }
+  private say(id: PromptId, vars: PromptVars = {}): string { return fillPrompt(this.events.prompt?.(id) ?? PROMPTS[id].text, vars); } // prettier-ignore
 
   /** A part, as the prompt that hands it over. */
-  private ask(m: Meeting, part: Part): string {
-    return `Round ${m.round} of ${m.rounds}, ${part.doing}. ${part.ask}`;
-  }
+  private ask(m: Meeting, part: Part): string { return `Round ${m.round} of ${m.rounds}, ${part.doing}. ${part.ask}`; } // prettier-ignore
 
   /** The parts of step `step` of round `round`, or null when that round has no such step. */
   private plan(m: Meeting, round: number, step: number): Part[] | null {

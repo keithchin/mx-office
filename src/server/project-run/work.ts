@@ -15,8 +15,8 @@ export interface WorkFacts {
   cutOff: boolean;
   /** Its open pull requests whose checks fail. */
   failingPrs: { number: number; title: string }[];
-  /** Open issues that are its to do: its team's, assigned; or the one its task names. */
-  issues: { number: number; title: string }[];
+  /** Open issues that are its to do: its team's (assigned, or with nobody assigned: `unassigned`); or the one its task names. */
+  issues: { number: number; title: string; unassigned?: boolean }[];
   /** The Coordinator only: a compiled standup page it hasn't been handed. */
   standup?: string;
 }
@@ -34,7 +34,11 @@ export function workWaiting(f: WorkFacts): WorkReason[] {
   if (f.outbox.length) out.push({ kind: 'outbox', text: `${plural(f.outbox.length, 'note')} queued for it` });
   if (f.cutOff) out.push({ kind: 'cut-off', text: 'Cut off mid-turn' });
   if (f.failingPrs.length) out.push({ kind: 'failing-pr', text: `Failing checks on PR ${list(f.failingPrs)}` });
-  if (f.issues.length) out.push({ kind: 'issue', text: `Open issue ${list(f.issues)} assigned` });
+  if (f.issues.length) {
+    const mine = f.issues.filter((i) => !i.unassigned);
+    const free = f.issues.filter((i) => i.unassigned);
+    out.push({ kind: 'issue', text: [mine.length ? `Open issue ${list(mine)} assigned` : '', free.length ? `${mine.length ? '' : 'Open '}team issue ${list(free)} with nobody assigned` : ''].filter(Boolean).join('; ') });
+  }
   if (f.standup) out.push({ kind: 'standup', text: `Standup ${f.standup} page not handed over` });
   return out;
 }

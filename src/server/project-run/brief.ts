@@ -30,6 +30,8 @@ export interface BriefFacts {
   owed: string[];
   /** Notes queued for it (a Lead's), as lines. */
   notes: string[];
+  /** The Coordinator only: what the outbox held for it (relays.ts), in the same message. */
+  relays?: string;
   reasons: WorkReason[];
 }
 
@@ -67,6 +69,7 @@ export function resumeBrief(f: BriefFacts): string {
   if (branch.length) parts.push(branch.join(' '));
   if (f.owed.length) parts.push(`Answers to your escalations:\n${f.owed.join('\n')}`);
   if (f.notes.length) parts.push(`Notes for you:\n${f.notes.join('\n')}`);
+  if (f.relays) parts.push(`Relayed while you were asleep:\n\n${f.relays}`);
   const why = f.reasons.filter((r) => r.kind !== 'owed' && r.kind !== 'outbox' && r.kind !== 'cut-off');
   if (why.length) parts.push(`Waiting for you: ${why.map((r) => r.text).join('; ')}.`);
   parts.push(f.autonomy <= 2 ? 'Before acting, post a 2-line plan (what you will do next, and why), then carry on.' : 'Carry on with your work.');

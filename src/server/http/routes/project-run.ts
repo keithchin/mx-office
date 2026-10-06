@@ -71,9 +71,9 @@ export const projectRunRoutes = {
       const b = await body(req);
       if (!b) return send(res, 400, { error: 'Send JSON' });
       const who = whoOf(session.account?.name, b.by);
-      const runs = projectRunsOf(ctx);
       const floors = b.all === true ? [...ctx.floors.keys()] : typeof b.floor === 'string' && ctx.floors.has(b.floor) ? [b.floor] : [];
       if (!floors.length) return send(res, 404, { error: 'No such floor' });
+      const runs = projectRunsOf(ctx);
       const out: Record<string, unknown> = {};
       for (const id of floors) {
         switch (b.action) {

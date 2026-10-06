@@ -6,7 +6,17 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **⏸ A paused project hires nobody new:** the task queue holds, the meeting room seats no meeting and
+  hands out no parts, a desk takes no new agent, and the Team tab, an answered escalation and The Firm
+  hire no member. Each says *Project paused: no new agents until it's resumed*. In the Team tab the
+  Project Manager can still **Hire anyway** after a confirm (one hire, logged as `roster.hire-override`).
+- **▶ Resume project** now counts a Lead's own team's open issues with nobody assigned as work waiting
+  (never another team's), and folds the Project Coordinator's queued relays into its resume brief, so it
+  gets one message instead of two.
+
+### To know
+- Resume, Pause and Restart safely are admin-only on every route, not just hidden for others; tests pin it.
 
 ## 2026-10-06 · release 12 (`18ff64d`)
 
