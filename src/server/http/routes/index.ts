@@ -7,6 +7,7 @@ import { analysisRoutes } from './analysis.js';
 import { firmRoutes } from './firm.js';
 import { flowRoutes } from './flows.js';
 import { auditRoutes } from './audit.js';
+import { incidentRoutes } from './incidents.js';
 import { chatterRoutes } from './chatter.js';
 import { connectionsRoutes } from './connections.js';
 import { phoneRoutes } from './phone.js';
@@ -63,6 +64,11 @@ export const routes: readonly Route[] = [
   auditRoutes.page,
   auditRoutes.export,
   auditRoutes.settings,
+  incidentRoutes.list,
+  incidentRoutes.create,
+  incidentRoutes.settings,
+  incidentRoutes.one,
+  incidentRoutes.testMode,
   flowRoutes.list,
   homeRoutes.stats,
   notifyTeamsRoutes.view,

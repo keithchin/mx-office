@@ -18,6 +18,7 @@ import { startHookServer } from './hooks/server.js';
 import { acceptWebSockets } from './ws/upgrade.js';
 import { stopLiveApps } from './liveapp/index.js';
 import { installAudit } from './audit/office.js';
+import { installIncidents } from './incidents/office.js';
 
 /** What a test can set about how the office starts: the client bundle it serves, instead of the built one. */
 export interface StartOptions {
@@ -35,6 +36,7 @@ export async function startServer(cfg: Config, opts: StartOptions = {}) {
   const { hookServer, hookPort } = await startHookServer(ctx);
   Object.assign(ctx, createServices(ctx));
   installAudit(ctx);
+  installIncidents(ctx);
   Object.assign(ctx, await openFloors(ctx, hookPort));
   Object.assign(ctx, createLateServices(ctx));
 

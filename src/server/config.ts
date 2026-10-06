@@ -61,6 +61,10 @@ export interface Config {
   weather?: Weather;
   /** The sky keeps real time (a day a day), instead of a whole day and night every hour. */
   realTimeSky: boolean;
+  /** Test mode (--test-mode, AGENT_OFFICE_TEST_MODE=1): no real agent CLI starts, only a fake one (testmode.ts). */
+  testMode: boolean;
+  /** Whether --agent (or AGENT_OFFICE_AGENT) was given, rather than the default claude. */
+  agentExplicit: boolean;
 }
 
 export interface RTCIceServerLike {
@@ -125,6 +129,9 @@ Options:
       --no-open           Don't open the office in your browser when it starts
                           (env AGENT_OFFICE_NO_OPEN=1)
       --agent <cmd>       Default agent command (default "claude", env AGENT_OFFICE_AGENT)
+      --test-mode         Refuse to start any real agent CLI: only a fake --agent runs
+                          (env AGENT_OFFICE_TEST_MODE=1; on by itself in a folder
+                          under scratch or test-offices)
       --agent-args <str>  Extra args for the configured agent, e.g. "--model opus"
                           Workers can also select Claude Code, OpenCode, Codex, Grok,
                           Muse or DeepSeek Harness in the UI
@@ -226,6 +233,8 @@ export function loadConfig(argv: string[]): Config {
   let open = !process.env.AGENT_OFFICE_NO_OPEN || process.env.AGENT_OFFICE_NO_OPEN === '0';
   let password = process.env.AGENT_OFFICE_PASSWORD || '';
   let agentCmd = process.env.AGENT_OFFICE_AGENT || 'claude';
+  let agentExplicit = !!process.env.AGENT_OFFICE_AGENT;
+  let testMode = !!process.env.AGENT_OFFICE_TEST_MODE && process.env.AGENT_OFFICE_TEST_MODE !== '0';
   let agentArgs: string[] = splitArgs(process.env.AGENT_OFFICE_AGENT_ARGS || '');
   let dshProfile = process.env.AGENT_OFFICE_DSH_PROFILE || 'acp';
   let tlsCert = '';
@@ -265,6 +274,10 @@ export function loadConfig(argv: string[]): Config {
         break;
       case '--agent':
         agentCmd = takeValue(argv, i++, a);
+        agentExplicit = true;
+        break;
+      case '--test-mode':
+        testMode = true;
         break;
       case '--agent-args':
         // Its value is flags itself ("--model opus"), so a leading -- doesn't mean the value is missing.
@@ -467,6 +480,8 @@ export function loadConfig(argv: string[]): Config {
     city: city.trim() || undefined,
     weather: (weather as Weather) || undefined,
     realTimeSky,
+    testMode,
+    agentExplicit,
   };
 }
 

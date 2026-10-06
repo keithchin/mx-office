@@ -51,6 +51,7 @@ import { tabBadge } from './ui/badge';
 import { routerMessage, routerOverlay, routerSpot, startRouter } from './pixel/router-room';
 import { installPhone, type Phone } from './ui/phone';
 import type { NeedTarget } from './ui/needsyou/logic';
+import { testModeBadge } from './ui/testmode';
 import './pixel/game.css';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
@@ -433,6 +434,7 @@ function goToNeed(t: NeedTarget) {
     const it = store.pulls.items.find((p) => p.number === t.number);
     return it ? openPull(it, net, boardActions()) : undefined;
   }
+  if (t.to === 'incident') return location.assign(`/lite?floor=${encodeURIComponent(store.floor ?? '')}&tab=audit&incident=${encodeURIComponent(t.id)}`);
   const tab = t.to === 'escalation' ? 'approvals' : t.to === 'setup' ? 'command' : t.to;
   location.assign(`/lite?floor=${encodeURIComponent(store.floor ?? '')}&tab=${tab}`);
 }
@@ -447,6 +449,7 @@ phone = installPhone({
   go: goToNeed,
 });
 session.start();
+testModeBadge(); // the TEST MODE badge (ui/testmode/)
 startRouter(() => store.floor);
 rebuild();
 renderCount();

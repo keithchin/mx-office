@@ -16,7 +16,10 @@ Set these before starting the office (the launcher sets the main ones). Values t
 | `AGENT_OFFICE_PASSWORD` | The office password |
 | `AGENT_OFFICE_CLAIM_TOKEN` | Show a generated password once at `/claim` |
 | `AGENT_OFFICE_NO_OPEN` | Don't open the browser on start |
-| `AGENT_OFFICE_AGENT`, `AGENT_OFFICE_AGENT_ARGS` | The default agent command (`claude`) and extra arguments |
+| `AGENT_OFFICE_AGENT`, `AGENT_OFFICE_AGENT_ARGS` | The default agent command (`claude`) and extra arguments. A command named after no provider (a fake, a wrapper) also runs Claude Code workers, whatever its file name |
+| `AGENT_OFFICE_TEST_MODE` | `1`: test mode, no real agent CLI starts (see [Test offices](../administration/test-offices.md#running-a-test-office-safely)) |
+| `AGENT_OFFICE_ALLOW_REAL_AGENTS` | `1`: let real agent CLIs start in test mode anyway (each one opens an incident) |
+| `AGENT_OFFICE_SEED_INCIDENTS` | `0`: skip the one-off import of the 2026-10-06 incidents; `1`: apply it to any office without incidents |
 | `AGENT_OFFICE_BUDGET`, `AGENT_OFFICE_BUDGET_PAUSE` | Office-wide daily budget for Claude Code spend, and stop hiring when it's spent |
 | `AGENT_OFFICE_MAX_WORKERS` | Most workers at once, across floors |
 | `AGENT_OFFICE_WEBHOOK` | Slack or Discord webhook when a worker needs input or finishes |

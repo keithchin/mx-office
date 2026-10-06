@@ -51,6 +51,7 @@ import { currentRoster, onRoster } from './ui/teams/world';
 import { auditView } from './ui/audit';
 import { installPhone, type Phone } from './ui/phone';
 import { collapsibleCommand } from './ui/command-layout';
+import { testModeBadge } from './ui/testmode';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -117,6 +118,8 @@ function workerCard(w: WorkerInfo): HTMLElement {
     ? '🌿 Its worktree was deleted outside agent-office: open it to fix it'
     : w.status === 'needs_input'
       ? `🙋 ${w.activity ?? 'Waiting on an answer'}`
+      : w.status === 'exited' && w.activity?.startsWith('⛔') // a start refused (test mode, server/testmode.ts)
+        ? w.activity
       : asleep
         ? '💤 Asleep: open it to wake it up'
         : w.status === 'done'
@@ -355,6 +358,7 @@ function goToNeed(t: NeedTarget) {
   if (t.to === 'worker') return openWorker(t.id);
   if (t.to === 'firm') return location.assign(t.url);
   if (t.to === 'escalation') return toEscalation(t.id);
+  if (t.to === 'incident') return (showTab('audit'), audit.openIncident(t.id));
   if (t.to === 'approvals' || t.to === 'settings' || t.to === 'live' || t.to === 'git') return showTab(t.to);
   if (t.to === 'setup') {
     if (tab !== 'command') showTab('command');
@@ -454,6 +458,7 @@ phone = installPhone({
 // The Command Center's sections fold and remember it (ui/command-layout.ts).
 collapsibleCommand();
 session.start();
+testModeBadge(); // the TEST MODE badge (ui/testmode/)
 
 renderWorkers();
 renderNav();

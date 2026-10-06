@@ -16,8 +16,27 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - The office follows each run live from the hooks (the Agent call going out and coming back, SubagentStart /
   SubagentStop) and, every 10 seconds, from the Lead's transcript, which is the only place a background
   run says it's finished. A floor's last 50 runs are kept in its roster file.
+- **🚨 Incidents**, a second sub-tab of the **🧾 Audit log** (on each project and on the home page): what
+  went wrong or nearly did, each with a severity (sev1 to sev3, or near miss), a status (open, mitigated,
+  resolved), its impact (spend, agents, data), a timeline, the root cause, corrective actions with links,
+  and the audit events and workers it's about. Filters, counts, and a detail with everything on it. Admins
+  open one by hand or from an audit row (**🚨 Create incident from this event**, **Link to incident…**), add
+  notes, and resolve it with its root cause. Open sev1 and sev2 incidents show in **Needs you**, on the Team
+  phone and in the Teams notifications. Every change is in the audit log (`incident.*`) and the incidents
+  file is hash-chained like it.
+- The office opens incidents by itself: a real agent launched in a test office, a spend spike, the spend
+  cap reached, workers interrupted mid-turn by a stop, escalation answers not delivered after 30 minutes,
+  worker crash loops, Studio mode holding writes again and again, failing workflows or gate-checks, worktree
+  cleanup errors and repeated failed sign-ins. Each rule can be turned off and its thresholds changed under
+  **⚙️ Detection rules**; a rule firing again counts into its open incident instead of opening another.
+- The incidents of 2026-10-06 are recorded once, retrospectively, in an office that ran that day.
+- **Test mode** (`--test-mode`, `AGENT_OFFICE_TEST_MODE=1`, and by itself when the office or a floor is under
+  a `scratch` or `test-offices` folder): no real agent CLI starts, only the fake `--agent`; a refused start
+  says why on the worker's card and opens a near-miss incident, and the top bar shows **TEST MODE**.
 
 ### Fixed
+- A fake `--agent` (or `AGENT_OFFICE_AGENT`) now runs Claude Code workers whatever its file is called: only one
+  named `claude` did, so test offices with a `fake-agent.cmd` started real Claude sessions.
 - A subagent run in the background (newer Claude Code's default) no longer counts twice in its track record:
   its launch made a run of its own besides the one its SubagentStop records. The SubagentStop's run now
   carries the task.

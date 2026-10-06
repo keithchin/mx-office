@@ -12,6 +12,7 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { signal } from '../incidents/signals.js';
 
 const ENV = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' };
 
@@ -172,6 +173,7 @@ export class GateSource {
         // Remembered as tried, so it isn't run again until origin/<default> moves (or someone asks).
         if (this.rendered.get(dir)?.sha !== info.sha) this.rendered.set(dir, { sha: info.sha, at: this.now() });
         console.warn(`agent-office: gate-check on origin/${info.def} of ${dir} failed: ${err.message}`);
+        signal({ kind: 'gate-check.failed', floorDir: dir, message: err.message });
       })
       .finally(() => this.running.delete(dir));
     this.running.set(dir, p);

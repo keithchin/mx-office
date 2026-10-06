@@ -61,6 +61,13 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/audit` | The audit log: `?floor=<id>\|all\|_office&since=&until=&actor=human,agent&action=worker.hire,github&q=&limit=&cursor=`, with counts, the chain check and a histogram |
 | GET | `/api/audit/export` | Every matching event as a download, `&format=csv\|jsonl` (admin) |
 | POST | `/api/audit/settings` | `{ promptText }`: log the first 80 characters of prompts, or not (admin) |
+| GET | `/api/incidents` | The incidents: `?floor=<id>|all|_office&status=open,mitigated&severity=sev1,sev2&q=`, worst first, with counts, the history check, the detection rules and whether you're an admin |
+| POST | `/api/incidents` | `{ title, severity, summary?, floors?, impact?, rootCause?, actions?, linkAudit?, workers? }`: open one (admin) |
+| GET | `/api/incidents/<id>` | One incident |
+| POST | `/api/incidents/<id>` | Change its fields; `status: resolved` needs a `rootCause`; `linkAudit` / `unlinkAudit` link audit events (admin) |
+| POST | `/api/incidents/<id>/note` | `{ text }`: a note on its timeline (admin) |
+| GET, POST | `/api/incidents/settings` | The detection rules; POST `{ rules, dedupeHours }` changes them (admin) |
+| GET | `/api/test-mode` | `{ on, why }`: whether the office runs in test mode (the TEST MODE badge) |
 | GET | `/api/notify/teams` | [Teams notifications](../integrations/teams-notifications.md): the settings (never the webhook URL, only a hint), the last error, the last card, what's waiting and held, and the floors |
 | POST | `/api/notify/teams` | `{ url?, floors?, level?, quiet?, pauseMinutes?, publicUrl? }`: change them; `url: ''` removes the webhook (admin) |
 | POST | `/api/notify/teams/test` | Post a test card now (admin) |

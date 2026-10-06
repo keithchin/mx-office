@@ -10,6 +10,8 @@ export interface RowOpts {
   showFloor: boolean;
   floorName: (id: string) => string | undefined;
   now: number;
+  /** What goes under an opened event's details (an admin's incident buttons, ui/incidents/). */
+  extra?: (e: AuditEvent) => HTMLElement | null;
 }
 
 export function headerRow(o: Pick<RowOpts, 'showFloor'>): HTMLElement {
@@ -59,10 +61,10 @@ export function eventItem(e: AuditEvent, o: RowOpts, open: boolean, toggle: (id:
     h('span.au-target', { role: 'cell', title: target }, target),
     h('span.au-sum', { role: 'cell' }, e.summary),
   );
-  return h('div.au-item', { 'data-id': e.id, class: open ? 'open' : '' }, row, open ? details(e) : null);
+  return h('div.au-item', { 'data-id': e.id, class: open ? 'open' : '' }, row, open ? details(e, o.extra?.(e) ?? null) : null);
 }
 
-function details(e: AuditEvent): HTMLElement {
+function details(e: AuditEvent, extra: HTMLElement | null): HTMLElement {
   const diff = diffRows(e.details);
   const rest = { ...(e.details ?? {}) };
   if (diff.length) {
@@ -83,5 +85,6 @@ function details(e: AuditEvent): HTMLElement {
       : null,
     h('pre.au-json', {}, JSON.stringify(body, null, 2)),
     h('p.au-chainline', {}, `${new Date(e.at).toLocaleString()} · ${e.severity} · id ${e.id} · hash ${e.hash.slice(0, 12)}… ← prev ${e.prev ? `${e.prev.slice(0, 12)}…` : '(first)'}`),
+    extra,
   );
 }

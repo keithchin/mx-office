@@ -11,6 +11,7 @@ import type { FloorInfo, ServerMsg } from '../../../shared/protocol';
 import { h, toast } from '../dom';
 import { ACTOR_META, PRESETS, bucketLabel, fits, queryString, rangeOf, type Filter, type Preset } from './logic';
 import { eventItem, headerRow } from './rows';
+import { eventActions, incidentsView } from '../incidents';
 import './audit.css';
 
 /** 'floor' is the floor you're on (the 1D view); otherwise a floor's id, '_office' or 'all'. */
@@ -97,7 +98,67 @@ export function auditView(root: HTMLElement, opts: AuditViewOpts) {
   const newPill = h('button.btn.au-new.hidden', { type: 'button', onclick: () => showPending() });
   const table = h('div.au-table', { role: 'table', 'aria-label': 'Audit events' });
   const more = h('div.au-more');
-  root.replaceChildren(h('section.au', {}, head, bar, timeline, newPill, table, more));
+  // Two sub-tabs: the events, and the incidents made of them (ui/incidents/).
+  const subKey = `${opts.storeKey}.sub`;
+  let sub: 'events' | 'incidents' = (() => {
+    try {
+      return localStorage.getItem(subKey) === 'incidents' ? 'incidents' : 'events';
+    } catch {
+      return 'events';
+    }
+  })();
+  const evTab = h('button.btn.au-subtab', { type: 'button', role: 'tab', onclick: () => pickSub('events') }, '🧾 Events');
+  const incTab = h('button.btn.au-subtab', { type: 'button', role: 'tab', onclick: () => pickSub('incidents') }, '🚨 Incidents', h('span.au-subn', {}));
+  const eventsPane = h('section.au', {}, head, bar, timeline, newPill, table, more);
+  const incPane = h('div.au-incidents');
+  root.replaceChildren(h('div.au-subtabs', { role: 'tablist', 'aria-label': 'Audit log' }, evTab, incTab), eventsPane, incPane);
+  const incidents = incidentsView(incPane, {
+    floor: opts.floor,
+    floors: opts.floors,
+    admin: opts.admin,
+    storeKey: `${opts.storeKey}.incidents`,
+    showEvent: (id) => showEvent(id),
+    counted: (n) => {
+      const el = incTab.querySelector('.au-subn')!;
+      el.textContent = n ? String(n) : '';
+      incTab.title = `${n} open incident${n === 1 ? '' : 's'}`;
+    },
+  });
+  function pickSub(s: 'events' | 'incidents', incident?: string) {
+    sub = s;
+    try {
+      localStorage.setItem(subKey, s);
+    } catch {
+      // Just for this visit.
+    }
+    renderSub();
+    if (!visible) return;
+    if (s === 'incidents') incidents.show(incident);
+    else {
+      incidents.hide();
+      renderBar();
+      void fetchFirst();
+    }
+  }
+  function renderSub() {
+    evTab.setAttribute('aria-selected', String(sub === 'events'));
+    incTab.setAttribute('aria-selected', String(sub === 'incidents'));
+    eventsPane.classList.toggle('hidden', sub !== 'events');
+    incPane.classList.toggle('hidden', sub !== 'incidents');
+  }
+  /** A linked event from an incident: the Events sub-tab, every floor, the minutes round it, searched for by its id and opened. */
+  function showEvent(id: string) {
+    const t = parseInt(id.slice(0, 9), 36);
+    scope = 'all';
+    filter.preset = 'custom';
+    filter.since = Number.isFinite(t) ? t - 60_000 : undefined;
+    filter.until = Number.isFinite(t) ? t + 60_000 : undefined;
+    filter.q = id;
+    open.add(id);
+    save();
+    pickSub('events');
+  }
+  renderSub();
   const io = typeof IntersectionObserver === 'function' ? new IntersectionObserver((list) => list.some((x) => x.isIntersecting) && loadMore()) : undefined;
   io?.observe(more);
 
@@ -236,7 +297,7 @@ export function auditView(root: HTMLElement, opts: AuditViewOpts) {
   }
 
   // ---- The table ---------------------------------------------------------------------------------
-  const rowOpts = () => ({ showFloor: showFloor(), floorName, now: Date.now() });
+  const rowOpts = () => ({ showFloor: showFloor(), floorName, now: Date.now(), extra: (e: AuditEvent) => (opts.admin() ? eventActions(e, opts.floors, (i) => pickSub('incidents', (incidents.opened(i), i.id))) : null) });
   function toggle(id: string) {
     if (open.has(id)) open.delete(id);
     else open.add(id);
@@ -320,17 +381,30 @@ export function auditView(root: HTMLElement, opts: AuditViewOpts) {
   return {
     show() {
       visible = true;
+      // A link to an incident (Needs you, from the 2D view: /lite?tab=audit&incident=<id>).
+      const asked = new URLSearchParams(location.search).get('incident');
+      if (asked) return pickSub('incidents', asked);
+      if (sub === 'incidents') return pickSub('incidents');
+      incidents.count();
       renderBar();
       void fetchFirst();
     },
     hide() {
       visible = false;
+      incidents.hide();
+    },
+    /** Opens an incident on the Incidents sub-tab (Needs you). */
+    openIncident(id: string) {
+      visible = true;
+      pickSub('incidents', id);
     },
     /** The floor you're on changed (the 1D view): "This floor" follows it. */
     floorChanged() {
-      if (visible && scope === 'floor') void fetchFirst();
+      incidents.floorChanged();
+      if (visible && sub === 'events' && scope === 'floor') void fetchFirst();
     },
     onMessage(msg: ServerMsg) {
+      incidents.onMessage(msg);
       if (msg.t !== 'audit.new' || !visible || !page) return;
       if (!fits(msg.event, msg.floor, full(), Date.now())) return;
       if (pending.some((e) => e.id === msg.event.id) || events.some((e) => e.id === msg.event.id)) return;

@@ -12,6 +12,7 @@ import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { phoneOnWorker } from '../phone/office.js';
 import { auditGitHub } from '../audit/office.js';
 import { chatterOf } from '../chatter/office.js';
+import { incidentsOnWorker } from '../incidents/office.js';
 
 /**
  * Tells the project team about a worker, unless the floor is still being built. A floor restores its
@@ -118,6 +119,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
       }
     },
     workerChanged: (floor, w) => {
+      incidentsOnWorker(floor, w); // crash loops (incidents/rules.ts)
       if (typeof w === 'string') {
         ctx.webhook.onWorkerGone(w);
         team(ctx, floor, (t) => rosterOf(ctx).onWorkerGone(t, w));

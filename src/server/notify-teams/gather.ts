@@ -14,6 +14,7 @@ import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { wizardOf } from '../wizard/index.js';
 import { firmIfMade } from '../firm/adapter.js';
 import { studioStateOf } from '../studio/index.js';
+import { attentionBriefs } from '../incidents/index.js';
 import { officeLink, type RedItem } from './cards.js';
 
 export interface FloorNeeds {
@@ -57,6 +58,7 @@ export async function floorNeeds(ctx: Ctx, floor: Floor, now = Date.now()): Prom
     // Its report-ready line comes from an audit this office ran, so a Firm nobody made has none.
     firm: firmIfMade(ctx)?.floorStatus(floor.id),
     studio: studioStateOf(floor.id),
+    incidents: attentionBriefs(),
   };
   return { input, needs: collectNeeds(input) };
 }
