@@ -4,6 +4,7 @@ import { loadConfig, ensureSelfSigned } from './config.js';
 import { startServer } from './server.js';
 import { tildify } from './building.js';
 import { openBrowser } from './browser.js';
+import { onOfficeExit } from './restart/exit.js';
 
 const argv = process.argv.slice(2);
 if (argv[0] === 'prune') {
@@ -105,6 +106,12 @@ const stop = (signal: NodeJS.Signals) => {
   office.shutdown(keep);
   setTimeout(() => process.exit(0), 300);
 };
+// 🔁 Restart safely (restart/): the same graceful close, then the exit code a looping launcher restarts on.
+onOfficeExit((code) => {
+  closing = true;
+  office.shutdown(true);
+  setTimeout(() => process.exit(code), 300);
+});
 // Last line of defense: one bad request must never take down every running worker.
 process.on('unhandledRejection', (err) => console.error('agent-office: unhandled rejection', err));
 process.on('SIGINT', stop);

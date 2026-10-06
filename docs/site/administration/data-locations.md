@@ -17,6 +17,8 @@ The office keeps its data in a `.agent-office` folder. On the Taskforce laptop t
 | `floors.json` | The list of floors |
 | `notify-teams.json`, `notify-teams-state.json` | [Teams notifications](../integrations/teams-notifications.md): the settings with the webhook URL (mode 0600), and what was posted and held |
 | `keep-awake.json` | Keep awake while agents work: on or off, and the idle minutes |
+| `project-run.json` | [⏸ Paused](../using-the-office/resume-and-pause.md) floors (who, when, why, who's waiting on you) and each floor's resume pacing |
+| `restart-pending.json` | Only between a [🔁 safe restart](running-the-office.md#releasing-and-restarting-safely) and the next start: the floors it paused, to resume |
 | `roster/<floor>.json` | The team: settings, members, standups, proposals, escalations, spend, subagents |
 | `judge/<floor>.jsonl` | Jeff · Router's verdicts |
 | `chatter/<floor>.jsonl`, `chatter/<floor>.state.json` | [Team chatter](../using-the-office/command-center.md#team-chatter): the newest 1000 messages, and what the sources have already turned into messages |

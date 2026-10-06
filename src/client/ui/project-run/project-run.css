@@ -1,0 +1,39 @@
+/* ▶ Resume / ⏸ Pause project (ui/project-run/): the bar in the Command Center's heading and the team
+   pages, the preview and progress windows, the pacing rows and 🔁 Restart safely. Colors are tokens. */
+.pr-bar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; align-self: center; }
+.pr-bar:empty { display: none; }
+.pr-btn, .pr-chip { padding: 2px 10px; font-size: 12px; white-space: nowrap; }
+.pr-paused { display: inline-flex; align-items: center; padding: 2px 10px; border: 2px solid var(--line); border-radius: 999px; background: var(--warn-soft); color: var(--warn-ink); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.pr-chip { background: var(--info-soft); }
+.ro-head .pr-bar { margin-left: auto; }
+
+.pr-modal { width: min(720px, 100%); }
+.pr-body p { margin: 0 0 10px; }
+.pr-dim { color: var(--muted); font-size: 13px; }
+.pr-blocked, .pr-warn { padding: 8px 10px; border: 2px solid var(--line); border-radius: var(--radius-sm, 8px); font-weight: 700; }
+.pr-blocked { background: var(--bad-soft); color: var(--bad-ink); }
+.pr-warn { background: var(--warn-soft); color: var(--warn-ink); }
+.pr-modes { margin: 0 0 10px; flex-wrap: wrap; }
+.pr-agents, .pr-progress { margin: 0 0 10px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; max-height: 46vh; overflow: auto; }
+.pr-agent { padding: 8px 10px; border: 2px solid var(--rule-strong); border-radius: var(--radius-sm, 8px); background: var(--card); }
+.pr-agent.has-work { border-color: var(--line); }
+.pr-agent-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pr-title { color: var(--muted); font-size: 12px; }
+.pr-pick { margin-left: auto; font: inherit; font-size: 12px; padding: 2px 4px; }
+.pr-reasons, .pr-checks { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px; }
+.pr-reasons li { padding: 1px 8px; border-radius: 999px; background: var(--info-soft); font-size: 12px; font-weight: 700; }
+.pr-checks li { flex-basis: 100%; color: var(--warn-ink); font-size: 12px; }
+.pr-agent .pr-dim { margin: 4px 0 0; }
+.pr-estimate { font-weight: 800; }
+.pr-head { font-weight: 800; }
+.pr-progress li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 6px 10px; border-radius: var(--radius-sm, 8px); background: var(--card-dim); }
+.pr-progress small { flex-basis: 100%; color: var(--muted); }
+.pr-progress .pr-woken, .pr-progress .pr-asleep { background: var(--good-soft); }
+.pr-progress .pr-failed { background: var(--bad-soft); }
+.pr-progress .pr-waiting-on-you { background: var(--warn-soft); }
+
+.pr-restart-opts { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; margin: 8px 0; }
+.pr-restart-opts.hidden { display: none; }
+.pr-restart-choices { margin: 6px 0; flex-wrap: wrap; }
+.pr-log { max-height: 220px; overflow: auto; padding: 8px; border-radius: var(--radius-sm, 8px); background: var(--code-bg); color: var(--code-ink); font-size: 12px; white-space: pre-wrap; }
+.pr-log.hidden { display: none; }

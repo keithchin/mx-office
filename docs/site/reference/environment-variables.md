@@ -16,6 +16,7 @@ Set these before starting the office (the launcher sets the main ones). Values t
 | `AGENT_OFFICE_PASSWORD` | The office password |
 | `AGENT_OFFICE_CLAIM_TOKEN` | Show a generated password once at `/claim` |
 | `AGENT_OFFICE_NO_OPEN` | Don't open the browser on start |
+| `AGENT_OFFICE_LAUNCHER_LOOP` | `1`: the launcher restarts the office when it exits with code 75, so [🔁 Restart safely](../administration/running-the-office.md#releasing-and-restarting-safely) restarts it. Otherwise it only pauses, waits and exits |
 | `AGENT_OFFICE_AGENT`, `AGENT_OFFICE_AGENT_ARGS` | The default agent command (`claude`) and extra arguments |
 | `AGENT_OFFICE_BUDGET`, `AGENT_OFFICE_BUDGET_PAUSE` | Office-wide daily budget for Claude Code spend, and stop hiring when it's spent |
 | `AGENT_OFFICE_MAX_WORKERS` | Most workers at once, across floors |

@@ -27,6 +27,7 @@ import { studioRoutes } from './studio.js';
 import { wizardRoutes } from './wizard.js';
 import { notifyTeamsRoutes } from './notify-teams.js';
 import { keepAwakeRoutes } from './keep-awake.js';
+import { projectRunRoutes } from './project-run.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -70,6 +71,11 @@ export const routes: readonly Route[] = [
   notifyTeamsRoutes.test,
   keepAwakeRoutes.view,
   keepAwakeRoutes.save,
+  projectRunRoutes.view,
+  projectRunRoutes.preview,
+  projectRunRoutes.act,
+  projectRunRoutes.restartView,
+  projectRunRoutes.restart,
   homeRoutes.overview,
   firmRoutes.view,
   firmRoutes.engagement,

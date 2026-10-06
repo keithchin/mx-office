@@ -66,6 +66,11 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | POST | `/api/notify/teams/test` | Post a test card now (admin) |
 | GET | `/api/keep-awake` | Keep-awake: the setting, the idle minutes, whether the office is holding the computer awake and what's running |
 | POST | `/api/keep-awake` | `{ on?, idleMinutes? }` (admin) |
+| GET | `/api/project-run` | `?floor=`: [Resume and pause](../using-the-office/resume-and-pause.md): the floor's pause (`by`, `at`, `why`, who's `waiting` on you), its latest resume or pause run with each agent's status, and its pacing |
+| GET | `/api/project-run/preview` | `?floor=`: ▶ Resume project's dry run: each asleep or benched agent's reasons, safety checks, default action and options in waking order; who's awake; `blocked` (the spend cap) and warnings (Studio mode). Wakes nobody |
+| POST | `/api/project-run` | `{ floor \| all: true, action: resume\|pause\|cancel\|hold\|continue\|pacing, choice?: { mode: work\|all\|pick, picks? }, pacing?: { concurrent, gapSec } }` (admin) |
+| GET | `/api/office/restart` | [🔁 Restart safely](../administration/running-the-office.md#releasing-and-restarting-safely): its phase, who it's waiting on, whether there's a restart loop and new commits to build, a failed build's log |
+| POST | `/api/office/restart` | `{ action?: start\|wait\|anyway\|cancel, build?, timeoutMin? }` (admin; a script may send JSON with its cookie and no Origin) |
 | GET | `/api/flows` | The [workflow](../automation/workflows.md) runs, newest first: id, workflow, status, step, why it stopped, floor, tries. `?floor=<id>`, `?workflow=<id>`. Never a run's state |
 | GET | `/api/firm` | The Firm's people, its engagements (newest first) and the floors an audit can be called on |
 | GET | `/api/firm/engagement` | `?id=`: one engagement with its whole transcript |
