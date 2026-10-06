@@ -15,7 +15,9 @@ The office keeps its data in a `.agent-office` folder. On the Taskforce laptop t
 | `office-settings.json` | Connections' settings: the toolkit folder, the worktree cleanup on or off, the projects whose agents get the Mendix token, the workers' commit identity |
 | `accounts.json` | People's accounts |
 | `floors.json` | The list of floors |
-| `notify-teams.json`, `notify-teams-state.json` | [Teams notifications](../integrations/teams-notifications.md): the settings with the webhook URL (mode 0600), and what was posted and held |
+| `notify-teams.json`, `notify-teams-state.json` | [Teams notifications](../integrations/teams-notifications.md): the settings (mode 0600; the webhook URL itself is in `credentials.json`, moved there from this file once), and what was posted and held |
+| `push-subscriptions.json`, `push-state.json` | [Phone version](../using-the-office/phone-version.md#push-notifications): the phones signed up for push (per person and device, with their Do not disturb and digest; mode 0600), and which red items were pushed |
+| `office-settings.json` → `phoneAccess`, `vapidPublicKey` | [Phone access](phone-access.md): on or off, the provider, the Dev Tunnel id, the Cloudflare tunnel and hostname; Web Push's public key (its private half is in `credentials.json`) |
 | `keep-awake.json` | Keep awake while agents work: on or off, and the idle minutes |
 | `project-run.json` | [⏸ Paused](../using-the-office/resume-and-pause.md) floors (who, when, why, who's waiting on you) and each floor's resume pacing |
 | `restart-pending.json` | Only between a [🔁 safe restart](running-the-office.md#releasing-and-restarting-safely) and the next start: the floors it paused, to resume |

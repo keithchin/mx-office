@@ -73,7 +73,7 @@ export const AUDIT_GROUPS = {
   escalations: { label: 'Escalations & approvals', prefixes: ['escalation.', 'approval.', 'proposal.'] },
   github: { label: 'GitHub', prefixes: ['pr.', 'issue.'] },
   settings: { label: 'Settings', prefixes: ['settings.', 'floor.'] },
-  access: { label: 'Access', prefixes: ['login.', 'account.', 'audit.'] },
+  access: { label: 'Access', prefixes: ['login.', 'account.', 'audit.', 'access.', 'phone.'] },
   jeff: { label: 'Jeff', prefixes: ['judge.'] },
   firm: { label: 'The Firm', prefixes: ['firm.'] },
 } as const;

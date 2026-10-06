@@ -75,6 +75,10 @@ The **⚙** in the phone's header (kept in this browser):
 
 **What you've read** is kept by the office per person (your account, or this browser on the shared password), so the counts survive a reload and follow your account to another browser.
 
+## On your phone
+
+The same phone, full screen and installable on an iPhone's home screen with push notifications, is the [phone version](phone-version.md) at `/m`; from outside the office's network, through [📱 Phone access](../administration/phone-access.md).
+
 ## From elsewhere
 
 - The Command Center's **Needs you** row opens the phone at Needs you.

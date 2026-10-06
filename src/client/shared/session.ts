@@ -36,7 +36,7 @@ export interface FlatSession {
  * The connection for a flat view (or the home page) at `page`. `openWorker` opens a worker's terminal (a notification
  * clicked); `onMessage` hears every message after the store and the shared windows have.
  */
-export function flatSession(page: '/home' | '/lite' | '/pixel', openWorker: (id: string) => void, onMessage?: (msg: ServerMsg) => void): FlatSession {
+export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorker: (id: string) => void, onMessage?: (msg: ServerMsg) => void): FlatSession {
   // Your name and color from the 3D office, if this browser has been in it. Nobody sees a character
   // of yours from here, so a look is only made up to connect with.
   const saved = loadProfile();

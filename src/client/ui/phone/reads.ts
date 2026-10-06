@@ -7,7 +7,8 @@ import { cleanReads, mergeReads, type PhoneReads } from '../../../shared/phone';
 const LOCAL = 'agent-office.phone.reads';
 const BROWSER = 'agent-office.phone.browser';
 
-function browserKey(): string {
+/** This browser's own key (whose reads and push subscription it is on the shared password). */
+export function browserKey(): string {
   try {
     let k = localStorage.getItem(BROWSER);
     if (!k || !/^[\w-]{8,40}$/.test(k)) {

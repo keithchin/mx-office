@@ -11,6 +11,7 @@ import { h, openModal, toast } from '../dom';
 import { connectionsApi, type ImportResult } from './api';
 import { credentialCard, type Run } from './cards';
 import { pathsSection, sweepSection, toolsSection } from './extras';
+import { phoneAccessSection } from '../phone-access';
 
 export interface ConnectionsPanel {
   el: HTMLElement;
@@ -54,6 +55,8 @@ export function connectionsPanel(focus?: CredentialId | 'paths' | 'tools'): Conn
   const el = h('div.cx', {}, h('p.cx-note', {}, 'Loading…'));
   let view: ConnectionsView | undefined;
   const tools = toolsSection((what, done) => run(what, done));
+  // 📱 Phone access keeps its own state (ui/phone-access/): made once, so a repaint doesn't reload it.
+  const phone = phoneAccessSection();
   const paint = () => {
     if (!view) return;
     const v = view;
@@ -67,6 +70,7 @@ export function connectionsPanel(focus?: CredentialId | 'paths' | 'tools'): Conn
       ...v.credentials.map((c) => credentialCard(c, v, run, focus)),
       h('h3.cx-h', {}, '🧰 Setup'),
       tools,
+      phone,
       pathsSection(v, run),
       sweepSection(v, run),
     );

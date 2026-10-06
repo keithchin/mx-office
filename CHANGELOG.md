@@ -6,6 +6,29 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+### New
+- **📱 Phone version** at `/m`: the team phone full screen as an app for your iPhone, with tabs for
+  **Needs you** (Reply / Approve / Reject, Open terminal, Merge…, Raise cap…), **Projects** (each
+  floor's channel), **DMs**, **Activity** and a compact **Status** per project (working / asleep /
+  asking, escalations, spend against the cap, the toolkit stage; Pause / Resume waits for that
+  feature). Agents' terminals are read-only there (their Chat view).
+- **Risky actions from the phone are confirmed twice**: merging, hiring, raising a cap and approving a
+  merge-order escalation need a second tap and the password again unless you signed in within the
+  last 10 minutes. The office enforces it, and each phone action is `phone.*` in the audit log.
+- **Installable, with push notifications**: a web app manifest, pixel icons and a service worker (the
+  app opens even when the office can't be reached), *Add to Home Screen* steps for iPhone Safari, and
+  Web Push for the red Needs-you items (iOS 16.4+ home-screen apps), with each phone's own Do not
+  disturb and digest, never for a turn the office started. Tapping one opens `/m` on that item.
+  The protocol (VAPID, RFC 8291 encryption) is the office's own; the key is kept in Connections.
+- **📱 Phone access** in ⚙️ Settings → 🔌 Connections: a private tunnel to the office without
+  Tailscale or a VPN. **Microsoft Dev Tunnels** (sign in with your Microsoft work account from the
+  card, a persistent private tunnel, the same address every time) or **Cloudflare Tunnel with
+  Cloudflare Access**; a quick trycloudflare.com tunnel only behind a big warning, for an hour. A QR
+  code to scan, reconnects by itself, and is checked to be private (switched off if it isn't).
+  The Teams cards' Open buttons follow its address.
+- **The Teams webhook URL moved into 🔌 Connections** (a 💬 Microsoft Teams webhook card, DPAPI
+  encrypted): an office that had it in `notify-teams.json` moves it once at its next start.
+
 ### Improved
 - **🧩 Subagents: runs only the transcript saw finish count.** A background run that only the Lead's transcript
   reports as finished (no hook does) is now a run of its subagent's record, unreviewed until the Lead's

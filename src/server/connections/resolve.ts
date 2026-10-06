@@ -69,6 +69,9 @@ export function dotFiles(home: string, env: NodeJS.ProcessEnv = process.env): Re
     'github-admin': [line(adminSet ? path.resolve(adminSet.replace(/^~(?=$|[\\/])/, home)) : path.join(home, DEFAULT_ADMIN_TOKEN_FILE))],
     mendix: [{ file: mendix, read: (d) => dotenvValue(d.read(mendix), 'MX_PAT') }],
     jev: [line(jevSet ? path.resolve(jevSet) : path.join(home, '.agent-office-jev-key'))],
+    // Only ever in Connections (the webhook used to be in notify-teams.json, moved here once).
+    'teams-webhook': [],
+    'web-push-key': [],
     password: [line(path.join(home, '.agent-office-password'))],
   };
 }
@@ -107,6 +110,8 @@ export function resolveCredential(id: CredentialId, deps: ResolveDeps = defaults
       if (r.value && env.AGENT_OFFICE_JEV_KEY_FILE?.trim()) return { ...r, source: 'env', where: `AGENT_OFFICE_JEV_KEY_FILE → ${r.where}` };
       return fromEnv('TYPESAFE_API_KEY', env.TYPESAFE_API_KEY) ?? r;
     }
+    case 'teams-webhook':
+    case 'web-push-key':
     case 'password':
       return {};
   }

@@ -63,3 +63,13 @@ The [audit log](../using-the-office/audit-log.md) records sign-ins, settings cha
 ## The office is local
 
 By default the server listens on `127.0.0.1` only. To share it, see the upstream guides in the repository (`docs/self-hosting.md`, `docs/tunnel.md`): HTTPS, a reverse proxy, or a tunnel.
+
+## Reaching it from your phone
+
+[📱 Phone access](phone-access.md) opens a private tunnel to the office, from Settings → Connections:
+
+- **Microsoft Dev Tunnels** are created private: only the Microsoft account that set them up gets through (never `--allow-anonymous`). **Cloudflare Tunnel** is meant to sit behind **Cloudflare Access**; the office checks that a visitor who isn't signed in is stopped, and switches the tunnel off if not. A **quick tunnel** is public, needs its warning accepted every time, and switches itself off after an hour.
+- The office password is still asked, whichever tunnel. The session cookie is `Secure` on the tunnel's https address; the office trusts the forwarded headers (the phone's address, https, the host) only for requests from its own tunnel, so sign-in attempts are rate-limited per phone.
+- **Risky actions from the phone** (merge, hire, raise a cap, approve a merge-order escalation) need a second tap and the password again, unless you signed in within the last 10 minutes. The office enforces it, not just the page.
+- The audit log has the tunnel going up and down (`access.tunnel.*`), who switched it, every action from the phone (`phone.*`) and every password typed again (`login.reauth.*`).
+- **Web Push**: the private VAPID key is in Connections (DPAPI); pushes are encrypted per phone and only ever sent to the known push services (Apple, Google, Mozilla, Microsoft), never to an address a browser makes up.

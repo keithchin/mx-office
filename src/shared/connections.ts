@@ -3,7 +3,7 @@
 // to make one, and the office's paths and worktree cleanup that sit on the same admin page.
 // Pure, no Node imports: the page and the server both use it.
 
-export const CREDENTIAL_IDS = ['github-agents', 'github-admin', 'mendix', 'jev', 'password'] as const;
+export const CREDENTIAL_IDS = ['github-agents', 'github-admin', 'mendix', 'jev', 'teams-webhook', 'web-push-key', 'password'] as const;
 export type CredentialId = (typeof CREDENTIAL_IDS)[number];
 export const isCredentialId = (v: unknown): v is CredentialId => CREDENTIAL_IDS.includes(v as CredentialId);
 
@@ -125,6 +125,8 @@ export interface CredentialMeta {
   createLabel?: string;
   /** It has a Test button. */
   testable: boolean;
+  /** The office makes and keeps it itself (Web Push's key): no card on the page. */
+  hidden?: boolean;
   /** Pasted values look like this; a value that doesn't is refused with `shapeHint`. */
   shape?: RegExp;
   shapeHint?: string;
@@ -186,6 +188,25 @@ export const CREDENTIAL_META: Record<CredentialId, CredentialMeta> = {
     createUrl: () => 'https://typesafe.ai',
     createLabel: 'TypeSafe AI',
     testable: true,
+  },
+  'teams-webhook': {
+    icon: '💬',
+    label: 'Microsoft Teams webhook',
+    purpose: 'Where the office posts its Adaptive Cards when something needs a person (⚙️ Settings → Notifications → Microsoft Teams). Its sig= part lets anyone post to the channel, so it is kept here, encrypted, and never shown again.',
+    scopes: ['A Teams Workflows webhook (“Post to a channel when a webhook request is received”)'],
+    how: ['In the Teams channel: ⋯ → Workflows → “Post to a channel when a webhook request is received”.', 'Finish the workflow and copy its HTTP POST URL.', 'Paste it here, or in ⚙️ Settings → Notifications (which saves it here too).'],
+    testable: false,
+    shape: /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)[:/])\S+$/,
+    shapeHint: 'Paste the workflow’s HTTP POST URL (https://…)',
+  },
+  'web-push-key': {
+    icon: '📲',
+    label: 'Web Push key (VAPID)',
+    purpose: 'The private half of the key the office signs phone push notifications with. The office makes it the first time a phone turns notifications on.',
+    scopes: [],
+    how: [],
+    testable: false,
+    hidden: true,
   },
   password: {
     icon: '🔒',

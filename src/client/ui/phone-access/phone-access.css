@@ -1,0 +1,23 @@
+/* 📱 Phone access, a card in 🔌 Connections (ui/phone-access/). In the theme's tokens. */
+.pa-providers { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; padding: 0; border: 0; }
+.pa-providers legend { margin-bottom: 4px; font-weight: 900; }
+.pa-provider { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border: 2px solid var(--rule-strong); border-radius: 10px; cursor: pointer; }
+.pa-provider.on { border-color: var(--line); background: var(--paper-2); }
+.pa-provider input { margin-top: 3px; }
+.pa-missing { color: var(--warn-ink); font-weight: 800; }
+.pa-state { margin: 8px 0; }
+.pa-host { margin: 6px 0; }
+.pa-steps { margin: 6px 0; }
+.pa-steps summary { cursor: pointer; font-weight: 800; }
+.pa-steps ol { margin: 6px 0; padding-left: 22px; line-height: 1.5; }
+.pa-danger { margin: 8px 0; padding: 10px 12px; border: 3px solid var(--bad); border-radius: 10px; background: var(--bad-soft); color: var(--ink); }
+.pa-danger p { margin: 0 0 6px; }
+.pa-accept { display: flex; align-items: center; gap: 8px; font-weight: 800; }
+.pa-signin { margin: 8px 0; padding: 10px 12px; border: 2px solid var(--line); border-radius: 10px; background: var(--info-soft); }
+.pa-signin p { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 6px; }
+.pa-code { padding: 4px 10px; border-radius: 8px; background: var(--card); font: 900 20px/1.2 ui-monospace, monospace; letter-spacing: .12em; }
+.pa-up { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; margin: 8px 0; }
+.pa-up > div:last-child { flex: 1; min-width: 220px; }
+.pa-qr { flex: none; padding: 6px; border: 2px solid var(--line); border-radius: 10px; background: #fff; line-height: 0; }
+.pa-qr svg { width: 168px; height: 168px; image-rendering: pixelated; }
+.pa-test { margin: 6px 0 0; font-size: 13px; }
