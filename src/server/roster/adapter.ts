@@ -22,6 +22,9 @@ import { Roster, rosterFor } from './index.js';
 import { ghIssueMaker } from './issues.js';
 import type { HireAsk, TeamFloor } from './types.js';
 import { onSubagentEvent } from '../workers/subagents.js';
+import { OFFICE_BY } from '../workers/lifecycle.js';
+import { setupView } from '../wizard/setup.js';
+import type { PipelineStage } from '../../shared/roster/types.js';
 
 const adapters = new WeakMap<Floor, TeamFloor>();
 
@@ -40,8 +43,10 @@ export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
       if (note) ctx.toastFloor(floor, note);
       if (error) ctx.toastFloor(floor, error, 'warn');
     },
-    prompt: (id, text, by) => floor.workers.prompt(id, text, by ?? 'Agent Office'),
-    wake: (id, prompt) => floor.workers.resume(id, prompt),
+    // The office's own prompts (no `by`, or OFFICE_BY): the turns they start end without flagging anyone
+    // (workers/lifecycle.ts). One carrying a person's words (their answer) is theirs, and flags as usual.
+    prompt: (id, text, by) => floor.workers.prompt(id, text, by ?? OFFICE_BY),
+    wake: (id, prompt, by) => floor.workers.resume(id, prompt, !!prompt && (by ?? OFFICE_BY) === OFFICE_BY),
     rename: (id, name) => floor.workers.rename(id, name),
     cwdOf: (w: WorkerInfo) => (w.worktree ? path.resolve(floor.dir, w.worktree.path) : floor.dir),
     openPulls: () => floor.github.pulls.items.filter((p) => p.state === 'OPEN'),
@@ -109,6 +114,13 @@ function analysisLines(ctx: Ctx, floorId: string): string {
   }
 }
 
+/** Where a toolkit project's pipeline stands, as the setup panel reads it: building once its build plan (Stage 4) passed; undefined without one. */
+function pipelineStage(dir: string): PipelineStage | undefined {
+  const v = setupView(dir);
+  if (!v.stages.length) return undefined;
+  return v.show ? 'early' : 'build';
+}
+
 /** The office's Jeff (server/judge/): made on first use. */
 export const judgeOf = (ctx: Ctx) => judgeFor(ctx.cfg);
 
@@ -122,6 +134,7 @@ export function rosterOf(ctx: Ctx): Roster {
       analysis: (id) => analysisLines(ctx, id),
       now: () => Date.now(),
       judge: (text, questions, opts) => judgeOf(ctx).ask(text, questions, opts),
+      pipelineStage,
     });
     // A Lead's subagent runs, from its hooks: the team's track record (roster/subagents.ts).
     onSubagentEvent((workerId, ev) => {

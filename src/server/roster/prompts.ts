@@ -13,6 +13,9 @@ import type { SubagentResult } from '../workers/subagents.js';
 /** How much of a handoff note goes into a hire's first message: the rest is in the journal. */
 const HANDOFF_CHARS = 4000;
 
+/** How a relay that needs nothing back ends: a reply would only spend a turn that nobody reads. */
+export const NO_REPLY = 'This is a relay: no reply needed. Act on it if it asks for something, otherwise carry on.';
+
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}\n…(the rest is in the journal)` : s);
 
 /**
@@ -93,7 +96,7 @@ export function outcomesPrompt(decided: Proposal[]): string {
     const what = p.status === 'approved' ? `APPROVED${p.issue?.number ? ` → issue #${p.issue.number}` : p.issue?.dryRun ? ' (dry run: no issue made)' : ''}` : p.status === 'rejected' ? `REJECTED: ${p.reason ?? 'no reason given'}` : `CHANGE REQUESTED: ${p.reason ?? ''}`;
     return `- ${p.by} (${p.team}), ${DECISION_LABEL[p.kind]}: "${p.title}" — ${what}`;
   };
-  return [`The Project Manager decided on standup proposals:`, ...decided.map(line), '', 'Record them in `docs/team/management.md` and pass each on to the Lead concerned through its team journal. Reply `noted`.'].join('\n');
+  return [`The Project Manager decided on standup proposals:`, ...decided.map(line), '', `Record them in \`docs/team/management.md\`. Each Lead is told its own decisions by the office: only note in a Lead's journal what another team must plan around. ${NO_REPLY}`].join('\n');
 }
 
 /** To a Lead at work when the Project Manager changes the floor's autonomy level. */
@@ -127,7 +130,7 @@ export function underperformingPrompt(name: string, model: string, why: string, 
 
 /** To the Project Coordinator: what the Leads decided about their subagents (their gate was tell). */
 export function subagentNewsPrompt(lines: string[]): string {
-  return ["The Leads' subagent decisions since you were last told:", ...lines, '', "Note them in `docs/team/management.md` and mention them at the next standup. Don't act on them: they were the Leads' to decide. Reply `noted`."].join('\n');
+  return ["The Leads' subagent decisions since you were last told:", ...lines, '', `Note them in \`docs/team/management.md\` and mention them at the next standup. Don't act on them: they were the Leads' to decide. ${NO_REPLY}`].join('\n');
 }
 
 /** To a Lead at work when the Project Manager changed its skills. */
@@ -137,7 +140,15 @@ export function skillsChangedPrompt(lines: string[]): string {
 
 /** To a Lead, what became of a subagent action it proposed or asked about. */
 export function subagentDecisionPrompt(what: string, approved: boolean, by: string, reason?: string): string {
-  return [`The Project Manager (${by}) ${approved ? 'approved' : 'rejected'} your request to ${what}.${approved ? ' The office has done it.' : ''}`, ...(reason ? [reason] : []), 'Note it in your team journal and carry on. Reply `ok`.'].join('\n');
+  return [`The Project Manager (${by}) ${approved ? 'approved' : 'rejected'} your request to ${what}.${approved ? ' The office has done it.' : ''}`, ...(reason ? [reason] : []), `Note it in your team journal and carry on. ${NO_REPLY}`].join('\n');
+}
+
+/**
+ * To a Lead between turns, the notes the office queued for it (relays.ts): the Project Manager's
+ * decisions on what it proposed, and relays meant for a Coordinator the floor doesn't have.
+ */
+export function leadNotesPrompt(lines: string[]): string {
+  return ['Notes from the office since your last turn:', ...lines, '', `Record what changes your plan in your team journal and carry on. ${NO_REPLY}`].join('\n');
 }
 
 /** One escalation in a line, for the Coordinator and the standup. */
@@ -168,6 +179,6 @@ export function escalationsToCoordinatorPrompt(list: Escalation[]): string {
     `New escalation${list.length === 1 ? '' : 's'} to the Project Manager (the human) on the project console:`,
     ...list.map(escalationLine),
     '',
-    "Note them in `docs/team/management.md` and include them in the next standup summary. Don't answer them yourself: the Project Manager decides, and the office sends their answer to whoever raised it. If one blocks another team, tell that Lead through its journal. Reply `noted`.",
+    `Note them in \`docs/team/management.md\` and include them in the next standup summary. Don't answer them yourself: the Project Manager decides, and the office sends their answer to whoever raised it. If one blocks another team, tell that Lead through its journal. ${NO_REPLY}`,
   ].join('\n');
 }

@@ -96,7 +96,7 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
         const landed = floor.landed(w);
         if (!landed) continue;
         const why = landed.prs?.length ? `its pull requests merged (${landed.prs.join(', ')})` : `PR #${landed.pr} merged`;
-        const staying = w.id === me.id ? "that's you" : notLeaving(w);
+        const staying = w.id === me.id ? "that's you" : notLeaving(w, rosterOf(ctx).isMember(floor.id, w.id));
         if (staying) results.push({ worker: w.name, id: w.id, skipped: `${why}, but it's ${staying}` });
         else going.push({ w, why });
       }

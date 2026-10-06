@@ -4,7 +4,7 @@
 // Only the Project Manager (an admin) can save them; everyone else sees them read-only.
 
 import { AUTONOMY, DECISION_LABEL, REVIEW_POLICY, type AutonomyLevel } from '../../../shared/roster/autonomy';
-import type { RosterSettings, RosterView } from '../../../shared/roster/types';
+import { DEFAULT_BY_STAGE, type RosterSettings, type RosterView } from '../../../shared/roster/types';
 import { DEFAULT_JEFF, JEFF_MODES, JEFF_WAITING_POLICIES, type JeffMode, type JeffPriorityMode, type JeffWaitingPolicy } from '../../../shared/judge';
 import { h } from '../dom';
 import { JEFF_MODE_LABEL, jeffPortrait } from '../jeff';
@@ -63,6 +63,26 @@ export function settingsView(v: RosterView, redraw: (v: RosterView) => void): HT
   const POLICY_LABEL: Record<JeffWaitingPolicy, string> = { agree: 'Only a real ask', model: 'His say-so' };
   const policySel = h('select.ro-select', { disabled: off, 'aria-label': 'Jeff: When to escalate' }, ...JEFF_WAITING_POLICIES.map((p) => h('option', { value: p, selected: s.jeff.waitingPolicy === p }, POLICY_LABEL[p])));
   policySel.addEventListener('change', () => (s.jeff.waitingPolicy = policySel.value as JeffWaitingPolicy));
+  // Autonomy by pipeline stage: while it's on, the stage picks the level, so the levels above are only shown.
+  s.autonomyByStage ??= { ...DEFAULT_BY_STAGE };
+  const byStage = s.autonomyByStage;
+  const lockLevels = () => levels.querySelectorAll('input').forEach((i) => (i.disabled = off || byStage.enabled));
+  lockLevels();
+  const stageSel = (key: 'early' | 'build', label: string) => {
+    const sel = h('select.ro-select', { disabled: off, 'aria-label': label }, ...LEVELS.map((l) => h('option', { value: l, selected: byStage[key] === l }, `${l} ${AUTONOMY[l].name}`)));
+    sel.addEventListener('change', () => (byStage[key] = Number(sel.value) as AutonomyLevel));
+    return sel;
+  };
+  const stageRow = h(
+    'p.ro-row',
+    {},
+    check(byStage.enabled, (b) => ((byStage.enabled = b), lockLevels()), 'By pipeline stage:'),
+    ' ',
+    stageSel('early', 'Level until the build plan passes'),
+    ' until the build plan (Stage 4) passes, then ',
+    stageSel('build', 'Level once the build plan has passed'),
+  );
+  const stageNote = h('p.ro-sub', {}, v.byStage ? `Following the stage now: ${v.byStage === 'build' ? 'the build plan has passed' : 'before the build plan'} (level ${v.settings.autonomy}).` : 'Toolkit projects only: when the Stage 4 gate passes the office switches the level itself, as if you had picked it (Playbooks rewritten, the Leads at work told).');
   const days = h('div.ro-days', {}, ...DAYS.map((d, i) => check(s.schedule.days.includes(i), (b) => (s.schedule.days = b ? [...s.schedule.days, i].sort() : s.schedule.days.filter((x) => x !== i)), d)));
   const save = h('button.btn.primary', { type: 'button', disabled: off, id: 'ro-save-settings', onclick: () => void act(v.floor, 'settings', { settings: s }).then((r) => r && redraw(r)) }, '💾 Save settings');
   return h(
@@ -71,6 +91,8 @@ export function settingsView(v: RosterView, redraw: (v: RosterView) => void): HT
     h('div.ro-bar', {}, h('div', {}, h('h3', {}, '⚙️ Team settings'), h('p.ro-sub', {}, off ? 'Only the Project Manager (an admin) can change these.' : 'The autonomy level is written into every Lead\'s Playbook and told to the Leads at work.')), save),
     h('h4', {}, 'Autonomy'),
     levels,
+    stageRow,
+    stageNote,
     h('h4', {}, 'Benching'),
     h('p.ro-row', {}, 'Bench a Lead after ', num(s.idleMinutes, (n) => (s.idleMinutes = n ?? 0), { max: 1440, step: 1, 'aria-label': 'Idle minutes' }), ' idle minutes (0 = only by hand). A Lead mid-task or waiting on someone is never idle.'),
     h('h4', {}, 'Review loop'),

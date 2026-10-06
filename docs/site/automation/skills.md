@@ -15,8 +15,8 @@ Every skill that changes something has a **gate**:
 | Gate | Means |
 |---|---|
 | **Ask** | It raises an escalation; the action happens only once you approve. |
-| **Propose** | It goes into your **✅ Approvals**. |
-| **Tell** | The member decides; the Project Coordinator is told (batched a minute after the last one). |
+| **Propose** | It goes into your **✅ Approvals**. Your decision goes back to the member: straight away between its turns, or kept as a note for when it's back at its desk. |
+| **Tell** | The member decides; the Project Coordinator is told (batched a minute after the last one, kept through a restart, skipped on a floor with no Coordinator). |
 | **FYI** | The member decides; you get an FYI escalation. |
 
 ## The skills

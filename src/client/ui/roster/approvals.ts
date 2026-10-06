@@ -47,7 +47,7 @@ export function approvalsView(v: RosterView, redraw: (v: RosterView) => void): H
   return h(
     'section.ro-approvals',
     { 'aria-label': 'Approvals' },
-    h('div.ro-bar', {}, h('div', {}, h('h3', {}, `✅ Approvals (${v.approvals.length})`), h('p.ro-sub', {}, `Level ${a.level} · ${a.name}: ${a.summary} You, the Project Manager, always have the final say.`))),
+    h('div.ro-bar', {}, h('div', {}, h('h3', {}, `✅ Approvals (${v.approvals.length})`), h('p.ro-sub', {}, `Level ${a.level} · ${a.name}${v.byStage ? ' · by stage' : ''}: ${a.summary} You, the Project Manager, always have the final say.`))),
     items.length ? h('div.ro-props', {}, ...(byJeff && ordered.some((it) => it.kind === 'escalation') ? [sortedNote()] : []), ...items) : h('p.ro-dim', {}, 'Nothing needs you right now.'),
   );
 }

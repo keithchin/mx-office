@@ -17,6 +17,7 @@ import type { SubagentEvent } from '../workers/subagents.js';
 import { isAsleepStatus } from './bench.js';
 import type { Roster } from './index.js';
 import { NUDGE_GRACE_MS } from './nudge.js';
+import { coordinatorIs, queueOnce } from './relays.js';
 import { countRound, resetRounds, roundsLine } from './review-rounds.js';
 import { REVIEW_POLICY } from '../../shared/roster/autonomy.js';
 import { subagentDecisionPrompt, subagentNewsPrompt, underperformingPrompt } from './prompts.js';
@@ -50,7 +51,6 @@ const line = (v: unknown, n: number) => (typeof v === 'string' ? v.replace(/\s+/
 export class Subagents {
   /** Runs under way (worker:agent_id), from SubagentStart until SubagentStop. */
   private open = new Map<string, { at: number; agent?: string }>();
-  private news = new Map<string, { lines: string[]; at: number }>();
 
   constructor(private roster: Roster) {}
 
@@ -318,12 +318,15 @@ export class Subagents {
     }
     Object.assign(a, { status: approve ? 'approved' : 'rejected', decidedBy: by, decidedAt: this.roster.deps.now(), ...(reason ? { decision: line(reason, 300) } : {}) });
     floor.activity?.(`${approve ? '✅' : '❌'} ${by} ${approve ? 'approved' : 'rejected'} ${a.by}'s request to ${OP_ASK[a.op]} ${a.name}`);
-    // An ask's escalation is answered by this too; a proposal's Lead is told here.
+    // An ask's escalation is answered by this too; a proposal's Lead is told here, or as soon as it's
+    // back between turns when it's asleep or asking someone now (relays.ts keeps the note).
     if (a.escalationId) this.roster.escalations.resolve(floor, a.escalationId, approve ? 'approve' : 'reject', reason || (approve ? 'Approved: the office has done it.' : 'Rejected.'), by);
     else {
       const w = this.leadWorker(floor, a.lead);
-      // The Project Manager's decision: held while the Lead is busy or a dialog is up, and told once its turn is over.
-      if (w && !isAsleepStatus(w.status)) this.roster.delivery.send(floor, w, subagentDecisionPrompt(`${OP_ASK[a.op]} ${a.name}`, approve, by, reason), { origin: 'person', hold: true, between: true });
+      // The Project Manager's decision: held while the Lead is busy or a dialog is up, and told once its
+      // turn is over. A Lead that's asleep or away gets it as a note kept in the roster file (relays.ts).
+      const sent = !!w && !isAsleepStatus(w.status) && this.roster.delivery.send(floor, w, subagentDecisionPrompt(`${OP_ASK[a.op]} ${a.name}`, approve, by, reason), { origin: 'person', by, hold: true, between: true }).status !== 'refused';
+      if (!sent) this.roster.relays.noteLead(floor, a.lead, `The Project Manager (${by}) ${approve ? 'approved' : 'rejected'} your request to ${OP_ASK[a.op]} ${a.name}.${approve ? ' The office has done it.' : ''}${reason ? ` ${line(reason, 300)}` : ''}`);
     }
     this.roster.touch(floor);
     return undefined;
@@ -377,26 +380,33 @@ export class Subagents {
     return true;
   }
 
+  /** Queues news for the Coordinator, in the roster file's outbox (relays.ts) so a restart keeps it. */
   private queueNews(floor: TeamFloor, text: string) {
-    const box = this.news.get(floor.id) ?? { lines: [], at: 0 };
-    box.lines.push(`- ${text}`);
-    box.at = this.roster.deps.now();
-    this.news.set(floor.id, box);
+    const o = this.roster.data(floor.id).outbox;
+    o.news = queueOnce(o.news, `- ${text}`);
+    o.newsAt = this.roster.deps.now();
   }
 
-  /** Tells the Coordinator the team's subagent decisions, once a minute has passed since the last and it's between turns. */
+  /**
+   * Tells the Coordinator the team's subagent decisions, once a minute has passed since the last and
+   * it's between turns. An asleep or benched one isn't woken: they wait. A floor with no Coordinator
+   * drops them: each was a Lead's own doing, so there's nobody else to tell.
+   */
   flushNews(floor: TeamFloor, now: number, force = false): boolean {
-    const box = this.news.get(floor.id);
-    if (!box?.lines.length || (!force && now - box.at < NEWS_DEBOUNCE_MS)) return false;
-    const pm = this.roster.data(floor.id).members.pm;
-    const w = this.roster.workerOf(floor, pm);
-    if (!w || pm.phase !== 'active') {
-      this.news.delete(floor.id);
+    const o = this.roster.data(floor.id).outbox;
+    if (!o.news.length || (!force && now - (o.newsAt ?? 0) < NEWS_DEBOUNCE_MS)) return false;
+    const where = coordinatorIs(this.roster, floor);
+    if (where === 'none') {
+      o.news = [];
+      this.roster.touch(floor, true);
       return false;
     }
-    if (w.status !== 'idle' && w.status !== 'done') return false;
-    if (this.roster.delivery.prompt(floor, w, subagentNewsPrompt(box.lines))) return false;
-    this.news.delete(floor.id);
+    if (where === 'asleep') return this.roster.relays.wakeCoordinator(floor);
+    const w = this.roster.workerOf(floor, this.roster.data(floor.id).members.pm);
+    if (where === 'away' || !w || (w.status !== 'idle' && w.status !== 'done')) return false;
+    if (this.roster.delivery.prompt(floor, w, subagentNewsPrompt(o.news))) return false;
+    o.news = [];
+    this.roster.touch(floor, true);
     return true;
   }
 

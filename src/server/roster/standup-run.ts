@@ -3,7 +3,8 @@
 // being woken. Once everyone asked has answered (or 20 minutes have gone by), the office compiles the
 // page, hands the draft to the Project Coordinator to summarise and commit (with the open escalations),
 // and lists each proposal for the Project Manager (the human). Their decisions go back to the
-// Coordinator in one message, a minute after the last one.
+// Coordinator in one message, a minute after the last one, and each to the Lead that proposed it as a
+// short note (relays.ts). What's still to send is kept in the roster file's outbox.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -13,11 +14,12 @@ import { LEADS, ROLE_BY_ID, standupPath, type RoleId } from '../../shared/roster
 import { dayIn, isoWeek, standupDue } from '../../shared/roster/schedule.js';
 import type { Proposal, Standup } from '../../shared/roster/types.js';
 import { HANDOFF_START_MS, isAsleepStatus, isBusyStatus } from './bench.js';
-import { mayType } from './deliver.js';
+
 import type { Roster } from './index.js';
 import { dryRunMaker, envDryRun } from './issues.js';
 import { readJournal } from './journal-io.js';
 import { outcomesPrompt, standupCompiledPrompt, standupPrompt } from './prompts.js';
+import { coordinatorIs, queueOnce } from './relays.js';
 import { compilePage, reportFrom, standupId, toProposals } from './standup.js';
 import type { TeamFloor } from './types.js';
 import { audit, byWhom } from '../audit/index.js';
@@ -33,7 +35,8 @@ export type Decision = 'approve' | 'reject' | 'change';
 export class StandupRunner {
   /** Leads asked live, by floor and role: when, and whether they've been busy since. */
   private asks = new Map<string, { at: number; sawBusy: boolean }>();
-  private outbox = new Map<string, { list: Proposal[]; timer?: NodeJS.Timeout }>();
+  /** The Coordinator's debounce per floor; the decisions it's to hear are in the roster file's outbox. */
+  private timers = new Map<string, NodeJS.Timeout>();
 
   constructor(private roster: Roster) {}
 
@@ -106,7 +109,7 @@ export class StandupRunner {
   /** A Lead asked live finished its turn: read its standup entry. */
   onWorker(floor: TeamFloor, role: RoleId, w: WorkerInfo) {
     // The Project Coordinator back at work with decisions it hasn't heard yet.
-    if (role === 'pm' && (w.status === 'idle' || w.status === 'done') && this.outbox.get(floor.id)?.list.length && !this.outbox.get(floor.id)?.timer) this.flushPm(floor);
+    if (role === 'pm' && (w.status === 'idle' || w.status === 'done') && this.roster.data(floor.id).outbox.decisions.length && !this.timers.has(floor.id)) this.flushPm(floor);
     const s = this.collecting(floor);
     const key = `${floor.id}:${role}`;
     const ask = this.asks.get(key);
@@ -132,6 +135,8 @@ export class StandupRunner {
       for (const role of [...s.waiting]) this.answered(floor, s, role, this.roster.workerOf(floor, this.roster.data(floor.id).members[role]));
     }
     const d = this.roster.data(floor.id);
+    // Decisions that waited through a restart (no timer then) go out once the Coordinator can hear them.
+    if (d.outbox.decisions.length && !this.timers.has(floor.id)) this.flushPm(floor);
     if (!s && standupDue(now, d.settings.schedule, d.lastStandupAt, d.lastActivityAt) === 'run') this.run(floor, 'schedule');
   }
 
@@ -190,6 +195,7 @@ export class StandupRunner {
     const s = d.standups.find((x) => x.id === p.standup);
     if (s?.page) s.page = compilePage(s, d.proposals, d.settings.autonomy, floor.name);
     this.tellPm(floor, p);
+    this.roster.relays.noteLead(floor, p.role, decisionNote(p, by));
     audit.record({ floor: floor.id, actor: byWhom(by), action: 'proposal.decide', target: { kind: 'proposal', id: p.id, label: p.title }, summary: `${decision === 'approve' ? 'Approved' : decision === 'reject' ? 'Rejected' : 'Asked for changes to'} the proposal “${p.title}”${p.issue?.number ? ` (issue #${p.issue.number})` : ''}`, details: { decision, reason: why ? { length: why.length } : undefined, issue: p.issue?.number }, severity: 'notice' });
     this.roster.touch(floor);
     return undefined;
@@ -197,33 +203,46 @@ export class StandupRunner {
 
   /** Queues a decision for the Project Coordinator, sent with the others a minute after the last. */
   private tellPm(floor: TeamFloor, p: Proposal) {
-    const box = this.outbox.get(floor.id) ?? { list: [] };
-    box.list = [...box.list.filter((x) => x.id !== p.id), p];
-    clearTimeout(box.timer);
-    box.timer = setTimeout(() => this.flushPm(floor), OUTCOME_DEBOUNCE_MS);
-    box.timer.unref?.();
-    this.outbox.set(floor.id, box);
+    const d = this.roster.data(floor.id);
+    d.outbox.decisions = queueOnce(d.outbox.decisions, p.id);
+    clearTimeout(this.timers.get(floor.id));
+    const timer = setTimeout(() => this.flushPm(floor), OUTCOME_DEBOUNCE_MS);
+    timer.unref?.();
+    this.timers.set(floor.id, timer);
   }
 
   /**
-   * Sends the Project Coordinator the queued decisions if it's at work. An asleep one isn't woken for
-   * them (that costs a session): they wait until it's back at its desk. A benched or unhired one finds
-   * them on the standup pages.
+   * Sends the Project Coordinator the queued decisions if it's at work. An asleep, benched or
+   * busy-asking one isn't woken for them (that costs a session): they wait in the outbox until it's back
+   * at its desk. A floor with no Coordinator drops them: each Lead has its own as a note already.
    */
   flushPm(floor: TeamFloor): boolean {
-    const box = this.outbox.get(floor.id);
-    if (!box?.list.length) return false;
-    box.timer = undefined;
-    const pm = this.roster.data(floor.id).members.pm;
-    const w = this.roster.workerOf(floor, pm);
-    if (!w || pm.phase !== 'active') {
-      this.outbox.delete(floor.id);
+    const d = this.roster.data(floor.id);
+    if (!d.outbox.decisions.length) return false;
+    clearTimeout(this.timers.get(floor.id));
+    this.timers.delete(floor.id);
+    // Busy asking someone, booting, or the spend cap reached: they wait in the outbox.
+    const where = coordinatorIs(this.roster, floor);
+    if (where === 'away') return false;
+    // Asleep: woken once with everything it's owed (relays.ts wakeCoordinator), at most once a window.
+    if (where === 'asleep') return this.roster.relays.wakeCoordinator(floor);
+    const list = d.outbox.decisions.map((id) => d.proposals.find((p) => p.id === id)).filter((p): p is Proposal => !!p);
+    if (where === 'none' || !list.length) {
+      d.outbox.decisions = [];
+      this.roster.touch(floor, true);
       return false;
     }
-    if (isAsleepStatus(w.status) || !mayType(w.status) || this.roster.delivery.paused(floor)) return false;
-    this.outbox.delete(floor.id);
-    const sent = !this.roster.delivery.prompt(floor, w, outcomesPrompt(box.list));
-    if (sent) decisionsRelayed(floor.id, w, box.list);
-    return sent;
+    const w = this.roster.workerOf(floor, d.members.pm)!;
+    if (this.roster.delivery.prompt(floor, w, outcomesPrompt(list))) return false;
+    d.outbox.decisions = [];
+    this.roster.touch(floor, true);
+    decisionsRelayed(floor.id, w, list);
+    return true;
   }
+}
+
+/** The Lead's note about the Project Manager's decision on its proposal. */
+export function decisionNote(p: Proposal, by: string): string {
+  const what = p.status === 'approved' ? `APPROVED${p.issue?.number ? ` → issue #${p.issue.number}` : p.issue?.dryRun ? ' (dry run: no issue made)' : ''}` : p.status === 'rejected' ? `REJECTED: ${p.reason ?? 'no reason given'}` : `CHANGE REQUESTED: ${p.reason ?? ''} (propose it again once changed)`;
+  return `Your proposal “${p.title}” (standup ${p.standup}): ${what} (${by}).`;
 }

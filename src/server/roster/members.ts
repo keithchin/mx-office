@@ -10,6 +10,7 @@ import type { Roster } from './index.js';
 import { readJournal } from './journal-io.js';
 import { lessonsPathIn, writeRoleFiles, type PlaybookContext } from './playbooks.js';
 import { autonomyPrompt, benchPrompt, primePrompt } from './prompts.js';
+import { stageLevel, stageOf } from './stage-autonomy.js';
 import { cleanSettings } from './store.js';
 import type { TeamFloor } from './types.js';
 import { audit, byWhom } from '../audit/index.js';
@@ -199,6 +200,8 @@ export class Members {
     const sorted = d.settings.jeff.priority;
     const was = d.settings;
     d.settings = cleanSettings(raw, d.settings);
+    // With autonomy by stage on, on a toolkit project, the stage picks the level (stage-autonomy.ts).
+    d.settings.autonomy = stageLevel(d.settings, stageOf(this.roster, floor)) ?? d.settings.autonomy;
     audit.settingsDiff(floor.id, byWhom(by, owner), was, d.settings);
     this.roster.recheckPause(floor);
     // Jeff's priority sort switched back on: the open escalations are ranked again.

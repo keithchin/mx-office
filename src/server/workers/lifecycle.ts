@@ -20,6 +20,31 @@ export function midTurn({ info, bootBlocked }: Pick<Worker, 'info' | 'bootBlocke
   return info.kind === 'agent' && (info.status === 'working' || (info.status === 'needs_input' && !bootBlocked));
 }
 
+/** Who the office says sent the prompts it types for itself: the project team's relays, nudges and standups (roster/adapter.ts). */
+export const OFFICE_BY = 'Agent Office';
+
+/**
+ * A prompt typed into a worker by `by`: its last input, and whether the turn it starts is the office's
+ * own (officeTurn), whose end flags nobody. A prompt with no sender (one its start couldn't pass on
+ * the command line) belongs to whatever turn it was for, so it changes neither.
+ */
+export function notePromptBy(w: Pick<Worker, 'info' | 'officeTurn'>, by: string | undefined, now = Date.now()) {
+  if (!by) return;
+  w.officeTurn = by === OFFICE_BY;
+  w.info.lastInput = { by, at: now };
+}
+
+/**
+ * Whether a worker the office didn't pick back up running is left asleep as the office starts: only
+ * an agent cut off mid-turn (working, or asking something) gets back to work by itself, carrying on.
+ * One that was at rest, finished or already asleep stays stopped (its session kept), until someone or
+ * the office prompts it; waking every desk only spent sessions and repeated old questions. A shell
+ * costs nothing, so it comes back as before.
+ */
+export function dozesOnStart(w: Pick<Worker, 'info' | 'pty' | 'dsh' | 'interrupted'>): boolean {
+  return !w.pty && !w.dsh && w.info.kind === 'agent' && !w.interrupted;
+}
+
 /** Still 'starting' this long after it was spawned, an agent that says itself when it's up is blocked on a human. */
 export const BOOT_SILENT_MS = 12_000;
 /**

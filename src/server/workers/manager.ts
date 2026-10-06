@@ -19,13 +19,13 @@ import { PROVIDERS, providerAdapter, titleNoise, type LaunchPlan, type ProviderF
 import { launchAcp } from './acp.js';
 import { clockWork } from './clock.js';
 import { childEnv } from './env.js';
-import { midTurn, watchBoot } from './lifecycle.js';
+import { dozesOnStart, midTurn, notePromptBy, watchBoot } from './lifecycle.js';
 import { restoreWorkers, saveWorkers } from './persist.js';
 import { WorkerPrs } from './pr.js';
 import { WIN, binScript, defaultShell, resolveCommand, shellRun, shq, writeOfficeCommands } from './process.js';
-import { CARRY_ON_PROMPT, WorkerTasks } from './tasks.js';
+import { carryOnPrompt, WorkerTasks } from './tasks.js';
 import { flushScreens, fullScreens, newTerm, offlineBanner, screenText, type HeadlessTerminal } from './terminal.js';
-import type { HookEnv, OpenedPr, RepoSource, RunAs, Worker, WorkerContext, WorkerEvents, WorkerHandle } from './types.js';
+import { NO_TEAM, type HookEnv, type OpenedPr, type RepoSource, type RunAs, type TeamHooks, type Worker, type WorkerContext, type WorkerEvents, type WorkerHandle } from './types.js';
 import { clamp, safeEq, truncate } from './util.js';
 import { COLORS, NAMES, newWorker } from './worker.js';
 import { WorkerTrees, lostMessage } from './worktree.js';
@@ -71,6 +71,8 @@ export class WorkerManager {
   private saveTimer: NodeJS.Timeout;
   /** How many rows the floor's back office is built out: its desks past that aren't there to hire at (see WING). */
   wing: () => number = () => 0;
+  /** What the floor's project team says of its workers' turns (see TeamHooks). */
+  team: TeamHooks = NO_TEAM;
 
   constructor(
     private dir: string,
@@ -143,9 +145,9 @@ export class WorkerManager {
 
   /**
    * Picks every worker whose terminal outlived the last office (a dev-server reload, an upgrade)
-   * back up where it is, mid-turn or not. Whoever else was at a desk when the office stopped (a
-   * restart, a crash) gets straight back to work, carrying on with whatever it was in the middle of.
-   * Call once, before anyone can walk in.
+   * back up where it is, mid-turn or not. Whoever else was cut off mid-turn when the office stopped (a
+   * restart, a crash) gets straight back to work, carrying on; the rest stay asleep until prompted
+   * (see dozesOnStart). Call once, before anyone can walk in.
    */
   async start() {
     await this.host.connect();
@@ -161,6 +163,7 @@ export class WorkerManager {
     this.host.killUnclaimed();
     // Whoever's worktree was deleted while the office was down stays asleep, marked lost, rather than failing to start.
     for (const w of this.workers.values()) this.worktrees.checkLost(w);
+    for (const w of this.workers.values()) w.dozing = dozesOnStart(w);
     this.wakeAll();
     // It may have switched branches while the office was down, its terminal still going.
     void this.syncBranches();
@@ -303,8 +306,8 @@ export class WorkerManager {
     if (w && (w.info.name = name)) this.emitUpdate(w), this.persist();
   }
 
-  /** Starts a worker that isn't running again, carrying on its session, with `prompt` as its next message. */
-  resume(id: string, prompt?: string): string | undefined {
+  /** Starts a worker that isn't running again, carrying on its session, with `prompt` as its next message (the office's own, with `office`). */
+  resume(id: string, prompt?: string, office = false): string | undefined {
     const w = this.workers.get(id);
     if (!w) return 'No such worker';
     if (w.pty || w.dsh) return 'Worker is already running';
@@ -321,8 +324,9 @@ export class WorkerManager {
     }
     // Cut off mid-turn by a restart: it gets on with it, as whoever was watching would have told it to.
     const carryOn = !prompt && w.interrupted && w.info.kind === 'agent' && !!w.info.sessionId;
-    w.interrupted = false;
-    this.launch(w, carryOn ? CARRY_ON_PROMPT : first, w.info.sessionId);
+    w.interrupted = w.dozing = false;
+    w.officeTurn = office; // a turn carried on is still whoever started it's
+    this.launch(w, carryOn ? carryOnPrompt(this.team.openAsks(id)) : first, w.info.sessionId);
     return undefined;
   }
 
@@ -354,10 +358,10 @@ export class WorkerManager {
     return (w?.pty || w?.dsh) && token && safeEq(token, w.hookToken) ? w.info : undefined;
   }
 
-  /** Starts every worker that isn't running: nobody should be found asleep at their desk. */
+  /** Starts every worker that isn't running, but those left asleep at rest when the office started (dozing). */
   wakeAll() {
     // A DeepSeek Harness worker has no PTY but is still running: only the ones that are gone wake up.
-    for (const w of this.workers.values()) if (!w.pty && !w.dsh) this.resume(w.info.id);
+    for (const w of this.workers.values()) if (!w.pty && !w.dsh && !w.dozing) this.resume(w.info.id);
   }
 
   /**
@@ -456,19 +460,10 @@ export class WorkerManager {
   write(id: string, data: string, by: string) {
     const w = this.workers.get(id);
     if (!w) return;
-    if (w.dsh) {
-      // ACP has no terminal: the session buffers these into a line and submits it on Enter.
-      w.dsh.writeInput(data);
-      let changed = this.typed(w, by);
-      if (w.info.status === 'needs_input' && w.info.acked === false) {
-        w.info.acked = true;
-        changed = true;
-      }
-      if (changed) this.emitUpdate(w);
-      return;
-    }
-    if (!w.pty) return;
-    w.pty.write(data);
+    // ACP has no terminal: the session buffers these into a line and submits it on Enter.
+    if (w.dsh) w.dsh.writeInput(data);
+    else if (w.pty) w.pty.write(data);
+    else return;
     let changed = this.typed(w, by);
     if (w.info.status === 'needs_input' && w.info.acked === false) {
       w.info.acked = true;
@@ -487,6 +482,7 @@ export class WorkerManager {
    * same one after a pause (not every keystroke, or a typist would flood everyone with updates).
    */
   private typed(w: Worker, by: string): boolean {
+    w.officeTurn = false; // someone's at it: its turn is theirs
     const now = Date.now();
     const last = w.info.lastInput;
     if (last?.by === by && now - last.at < TYPED_REFRESH_MS) return false;
@@ -504,7 +500,7 @@ export class WorkerManager {
       w.dsh.prompt(clean);
       w.info.activity = truncate(clean, 80);
       this.tasks.notePrompt(w, clean);
-      if (by) w.info.lastInput = { by, at: Date.now() };
+      notePromptBy(w, by);
       this.emitUpdate(w);
       return undefined;
     }
@@ -516,7 +512,7 @@ export class WorkerManager {
     setTimeout(() => w.pty?.write('\r'), 120);
     w.info.activity = truncate(clean, 80);
     this.tasks.notePrompt(w, clean);
-    if (by) w.info.lastInput = { by, at: Date.now() };
+    notePromptBy(w, by);
     this.emitUpdate(w);
     return undefined;
   }
@@ -901,9 +897,10 @@ export class WorkerManager {
     // Done, idle or asleep: it's not acting anything out any more.
     if (status !== 'working' && status !== 'needs_input') w.info.action = undefined;
     // Nobody is looking at the terminal right now -> raise the flag (the worker jumps). A worker at the
-    // meeting table that ends its part is waiting on the meeting, not on anyone, so it stays quiet.
+    // meeting table that ends its part is waiting on the meeting, not on anyone, so it stays quiet; so
+    // does a turn the office started itself, or a routine one of the project team's (see TeamHooks).
     if (status === 'done' || status === 'needs_input') {
-      w.info.acked = status === 'done' && (w.viewers.size > 0 || !!w.info.meeting);
+      w.info.acked = status === 'done' && (w.viewers.size > 0 || !!w.info.meeting || !!w.officeTurn || this.team.quietDone(w.info));
       w.info.waitingSince = Date.now();
     } else w.info.acked = true;
     this.emitUpdate(w);

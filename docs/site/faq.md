@@ -52,10 +52,10 @@ Either a project's **pr-checks** failed on a pull request, or the office's own f
 
 The usual reasons:
 
-- **It finished its turn.** It shows as ✅ *finished, not looked at yet* in Needs you. Open it.
+- **It finished its turn.** It shows as ✅ *finished, not looked at yet* in Needs you. Open it. (A turn the office started itself, or a team member's at autonomy 3 and up, finishes [quietly](concepts/workers-and-worktrees.md#quiet-turns): no Needs you item, just its card.)
 - **It's asking you something.** 🙋 in Needs you. Answer in its terminal.
 - **It's waiting on a setup prompt** (*trust this folder*). Open its terminal and accept once.
-- **The office restarted.** On Windows that stops all agents. They resume when the office comes back; an asleep (💤) one wakes when you open it.
+- **The office restarted.** On Windows that stops all agents. The ones cut off mid-turn resume when the office comes back; the rest stay asleep (💤) until prompted, or until you press **R** at their desk.
 - **It was benched.** Hire it again from the Org chart.
 
 See [Agents and GitHub](troubleshooting/agents-and-github.md).
@@ -106,7 +106,7 @@ Yes. In **⚙️ Settings**, set a **daily cost cap** for each autonomy level. W
 
 ### Is it safe to restart the office?
 
-It's safe for your data, but on Windows **restarting stops every running agent**, even mid-task. They resume from their saved sessions. Avoid restarting while agents are in the middle of something. See [Running the office](administration/running-the-office.md#restarting).
+It's safe for your data, but on Windows **restarting stops every running agent**, even mid-task. The ones that were mid-turn resume from their saved sessions and carry on; the rest stay asleep until they're needed. Avoid restarting while agents are in the middle of something. See [Running the office](administration/running-the-office.md#restarting).
 
 ### How do I start it after a reboot?
 

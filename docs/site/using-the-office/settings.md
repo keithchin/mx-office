@@ -11,6 +11,7 @@ The **⚙️ Settings** tab holds the floor's team settings. Only admins can cha
 | Section | Setting | Default |
 |---|---|---|
 | **Autonomy** | 1 Directive · 2 Guided · 3 Delegated · 4 Autonomous | **2 Guided** |
+| **Autonomy** | By pipeline stage: one level until the build plan (Stage 4) passes, another after | **Off** (2 Guided, then 3 Delegated, when on) |
 | **Benching** | Bench a Lead after N idle minutes (0 = only by hand) | **0** (off) |
 | **Review loop** | Nudge a Lead to review its subagent's result | **On** |
 | **Subagents** | Reinstate a benched subagent after N hours (0 = only by hand) | **24** |
@@ -22,6 +23,7 @@ The **⚙️ Settings** tab holds the floor's team settings. Only admins can cha
 ## What each one does
 
 - **Autonomy** sets how often agents need you. Changing it rewrites every hired member's Playbook and tells the ones at work. See [Autonomy levels](../teams-and-agents/autonomy.md).
+- **By pipeline stage** (toolkit projects only) lets the office pick the level: the first one until the Stage 4 gate passes, the second from then on, changed as if you had picked it. While it's on, the level buttons only show the level. See [Autonomy by pipeline stage](../teams-and-agents/autonomy.md#autonomy-by-pipeline-stage).
 - **Benching** is **off by default**: Leads are benched only when you click 🪑 Bench. Set a number of minutes to bench idle Leads automatically. See [Benching and handoffs](../teams-and-agents/benching-and-handoffs.md).
 - **Review loop**: when a Lead's turn ends right after one of its subagents came back, the office prompts it once to review the result. See [The review loop](../teams-and-agents/review-loop.md).
 - **Subagents**: how long a benched subagent sits out. See [Subagents](../automation/subagents.md).

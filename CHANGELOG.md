@@ -6,23 +6,32 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-### Fixed
-- **Answers no longer typed into a permission dialog**: an answer to an escalation went into the
-  agent's terminal even while it had a permission prompt or a question open, where the Enter after it
-  picked one of the dialog's options: the answer was lost but shown as delivered. Now nothing the office
-  types (your answers, a +1's answer, a Lead told about your subagent decision, relays to the Project
-  Coordinator, The Firm's questions, one agent's `office-workers tell` to another) goes in while a
-  dialog may be up (*needs input*, or still starting). Your answer waits and goes in once that turn is
-  over, with any others it's owed, in one message, and counts as delivered only then. The Activity
-  says *… has a question open in its terminal: the answer goes in once that's answered*.
-- **The daily cost cap holds the office's own prompts, not only new hires**: once a floor's cap is
-  spent the office no longer sends review nudges, a scheduled standup's questions, relays to the
-  Coordinator, autonomy and skill change notes, The Firm's interview questions or wakes, and one agent
-  can't `tell` another. Needs you and Approvals say **💸 Spend cap reached: office prompts paused;
-  agents finish their current turn**. What you send (your answers, your typing, a standup you call, a
-  wake from the Team tab) still goes through, and no running turn is stopped.
+### New
+- **Autonomy by pipeline stage**: a new team setting (⚙️ Settings → Autonomy → *By pipeline stage*,
+  off by default) lets a toolkit project's stage pick its level: 2 Guided while it analyses,
+  specifies and designs, 3 Delegated once the build plan's gate (Stage 4) has passed (both levels
+  yours to pick). The office changes the level exactly as if you had: Playbooks rewritten, the Leads
+  at work told, the cap for the new level, a line in the recent activity and the Audit log. While it's
+  on, the Team tab's chip reads *Autonomy 2 · by stage* and the level buttons only show the level.
 
 ### Improved
+- **Quieter finished turns**: a turn the office started itself (the team's relays and notes, review
+  nudges, standup questions, waking a Lead with something for it) now finishes without a ✅ Review in
+  Needs you, a ding or a desktop notification, and so does a team member's routine turn at autonomy 3
+  and up (its card still shows it done; anything that needs you comes as an escalation). A question or
+  a permission prompt still flags as before, and so does any turn you start.
+- **Relays ask for no reply**: the Project Coordinator's relays (new escalations, your proposal
+  decisions, the Leads' subagent decisions) and the Leads' notes say *no reply needed* instead of
+  asking for `noted`, so each one no longer costs a turn that nobody reads.
+- **Your decisions reach the Lead that proposed**: approving, rejecting or asking for changes to a
+  standup proposal now tells the proposing Lead too, in one short note a minute after your last
+  decision, between its turns. A subagent request you decide while its Lead is asleep or busy asking
+  someone is kept for it rather than lost.
+- **Restarts wake only who was mid-turn**: after a restart the office resumes just the agents it cut
+  off in the middle of a turn; everyone who was at rest, finished or asleep stays asleep (session kept)
+  until someone, or the office, prompts them, or you press R. Walking onto a floor no longer wakes
+  them either. The turn it carries on is told its escalations are still open, by title, instead of
+  "ask again", which brought a fresh round of the same escalations after every restart.
 - **The review loop is bounded**: the office counts a subagent's revision rounds from its Lead's
   `subagent review` verdicts. One rework past the autonomy level's allowance (2 rounds at levels 1–2,
   3 at 3–4) raises one `revisions-exhausted` escalation for the Lead (an FYI at levels 3–4), tells the
@@ -38,6 +47,33 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   one, Jeff is asked whether it's the same ask in other words (mx-spike raised nine escalations about
   two CI secrets, each worded differently). Only a pick he's at least 85% sure of joins it as a +1;
   otherwise, or if he doesn't answer within 10 seconds, it's raised as its own.
+
+### Fixed
+- **Relays survive a restart**: what the office still had to tell the Project Coordinator (new
+  escalations, your proposal decisions, subagent news) and the Leads is now kept in the floor's roster
+  file instead of memory, so a restart, or a Coordinator that's asleep or benched for a while, no
+  longer loses it. They wait there while the daily cost cap holds and go out once it lifts. A
+  Coordinator left asleep (after a restart, say) is woken with everything it's owed in one message, at
+  most once a minute. A floor with no Coordinator skips its relays (each Lead hears its own decisions).
+  The turn that acts on your answer to an escalation is yours, not the office's: it still flags when
+  it's done.
+- **Go home once merged leaves the team alone**: a Lead whose pull request merged is no longer sent
+  home without a handoff note; the project team goes through its own bench and handoff, and
+  `office-workers home --merged` lists it as skipped (*on the project team*).
+- **Answers no longer typed into a permission dialog**: an answer to an escalation went into the
+  agent's terminal even while it had a permission prompt or a question open, where the Enter after it
+  picked one of the dialog's options: the answer was lost but shown as delivered. Now nothing the office
+  types (your answers, a +1's answer, a Lead told about your subagent decision, relays to the Project
+  Coordinator, The Firm's questions, one agent's `office-workers tell` to another) goes in while a
+  dialog may be up (*needs input*, or still starting). Your answer waits and goes in once that turn is
+  over, with any others it's owed, in one message, and counts as delivered only then. The Activity
+  says *… has a question open in its terminal: the answer goes in once that's answered*.
+- **The daily cost cap holds the office's own prompts, not only new hires**: once a floor's cap is
+  spent the office no longer sends review nudges, a scheduled standup's questions, relays to the
+  Coordinator, autonomy and skill change notes, The Firm's interview questions or wakes, and one agent
+  can't `tell` another. Needs you and Approvals say **💸 Spend cap reached: office prompts paused;
+  agents finish their current turn**. What you send (your answers, your typing, a standup you call, a
+  wake from the Team tab) still goes through, and no running turn is stopped.
 
 ### To know
 - The same-ask check follows Jeff's **Waiting on you** setting: it runs in Shadow too (it only joins,

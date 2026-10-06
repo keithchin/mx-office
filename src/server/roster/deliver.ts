@@ -67,13 +67,15 @@ export class Delivery {
   /** Types `text` into agent `w`, or wakes it with it, holds it, or says why not. */
   send(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts): Sent {
     if (w.kind !== 'agent') return { status: 'refused', why: `${w.name} is a shell, not an agent` };
+    // A person's prompt with no name is still theirs: the turn it starts flags when done (OFFICE_BY's wouldn't).
+    if (o.origin === 'person' && !o.by) o = { ...o, by: 'The Project Manager' };
     if (o.origin !== 'person') {
       const p = this.paused(floor);
       if (p) return { status: 'refused', why: `Spend cap reached: ${p}` };
     }
     if (isAsleepStatus(w.status)) {
       if (!o.wake) return { status: 'refused', why: `${w.name} is asleep` };
-      const err = floor.wake(w.id, text);
+      const err = floor.wake(w.id, text, o.by);
       if (err) return { status: 'refused', why: err };
       o.onSent?.();
       return { status: 'woke' };
@@ -87,7 +89,7 @@ export class Delivery {
     }
     let err = floor.prompt(w.id, text, o.by);
     if (err === 'Worker is not running' && o.wake) {
-      err = floor.wake(w.id, text);
+      err = floor.wake(w.id, text, o.by);
       if (!err) {
         o.onSent?.();
         return { status: 'woke' };
@@ -125,7 +127,12 @@ export class Delivery {
     const owed = asleep ? undefined : this.roster.escalations.owedTo(floor, w);
     if (!going.length && !owed?.lines.length) return;
     const text = [...(owed?.lines.length ? [owedAnswersPrompt(owed.lines)] : []), ...going.map((h) => h.text)].join(JOIN);
-    const err = asleep ? floor.wake(w.id, text) : floor.prompt(w.id, text, going.length === 1 && !owed?.lines.length ? going[0].by : undefined);
+    // Whose turn it starts: a person's when it carries their words (an answer owed, or what they sent),
+    // so it flags when done; else the one sender's, else the office's (workers/lifecycle.ts OFFICE_BY).
+    const fromPerson = going.find((h) => h.origin === 'person');
+    const person = fromPerson || owed?.lines.length ? (fromPerson?.by ?? 'The Project Manager') : undefined;
+    const by = person ?? (going.length === 1 ? going[0].by : undefined);
+    const err = asleep ? floor.wake(w.id, text, by) : floor.prompt(w.id, text, by);
     if (err) return;
     owed?.mark();
     const left = queued.filter((h) => !going.includes(h));

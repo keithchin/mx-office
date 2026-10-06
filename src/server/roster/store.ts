@@ -10,10 +10,11 @@ import { cleanName, isRoleId, pickNames, ROLES, type RoleId } from '../../shared
 import { cleanSchedule, DEFAULT_SCHEDULE } from '../../shared/roster/schedule.js';
 import type { Escalation } from '../../shared/roster/escalation.js';
 import { DEFAULT_JEFF, isJeffMode, isJeffPriorityMode, isJeffWaitingPolicy } from '../../shared/judge.js';
-import type { Proposal, RosterSettings, Standup } from '../../shared/roster/types.js';
+import { DEFAULT_BY_STAGE, type Proposal, type RosterSettings, type Standup } from '../../shared/roster/types.js';
 import { cleanOverrides, type SkillOverrides } from '../../shared/roster/skills.js';
 import { reviveSubagents, SUBAGENT_ACTIONS_KEPT } from './subagent-store.js';
 import type { SubagentAction, SubagentRecord } from '../../shared/roster/subagents.js';
+import { emptyOutbox, reviveOutbox, type Outbox } from './relays.js';
 
 /** Where a member is in its life: never hired, a worker now, writing its handoff, or benched. */
 export type Phase = 'none' | 'active' | 'benching' | 'benched';
@@ -59,6 +60,8 @@ export interface RosterData {
   subagents: Record<string, SubagentRecord>;
   /** Subagent actions a Lead proposed to the Project Manager, or asked them about. */
   subagentActions: SubagentAction[];
+  /** What the office has still to pass on to the Coordinator and the Leads (relays.ts): kept so a restart doesn't lose it. */
+  outbox: Outbox;
 }
 
 // Leads are benched only when the Project Manager says so; a floor can turn idle benching on in its settings.
@@ -70,7 +73,7 @@ const PROPOSALS_KEPT = 300;
 const ESCALATIONS_KEPT = 200;
 
 export function defaultSettings(): RosterSettings {
-  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true, jeff: { ...DEFAULT_JEFF }, subagentCooldownHours: DEFAULT_COOLDOWN_HOURS };
+  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true, jeff: { ...DEFAULT_JEFF }, subagentCooldownHours: DEFAULT_COOLDOWN_HOURS, autonomyByStage: { ...DEFAULT_BY_STAGE } };
 }
 
 /** Settings from what was saved or sent, anything malformed left as it was in `base`. */
@@ -101,6 +104,12 @@ export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings
       waitingPolicy: isJeffWaitingPolicy(s.jeff?.waitingPolicy) ? s.jeff.waitingPolicy : (base.jeff?.waitingPolicy ?? DEFAULT_JEFF.waitingPolicy),
     },
     subagentCooldownHours: typeof s.subagentCooldownHours === 'number' && Number.isFinite(s.subagentCooldownHours) ? Math.max(0, Math.min(Math.round(s.subagentCooldownHours * 10) / 10, 24 * 30)) : (base.subagentCooldownHours ?? DEFAULT_COOLDOWN_HOURS),
+    // A roster saved before it existed has it off.
+    autonomyByStage: {
+      enabled: typeof s.autonomyByStage?.enabled === 'boolean' ? s.autonomyByStage.enabled : (base.autonomyByStage?.enabled ?? DEFAULT_BY_STAGE.enabled),
+      early: isAutonomyLevel(s.autonomyByStage?.early) ? s.autonomyByStage.early : (base.autonomyByStage?.early ?? DEFAULT_BY_STAGE.early),
+      build: isAutonomyLevel(s.autonomyByStage?.build) ? s.autonomyByStage.build : (base.autonomyByStage?.build ?? DEFAULT_BY_STAGE.build),
+    },
   };
 }
 
@@ -109,7 +118,7 @@ export function freshRoster(rng: () => number = Math.random): RosterData {
   const names = pickNames(rng);
   const members = {} as Record<RoleId, MemberRecord>;
   for (const r of ROLES) members[r.id] = { name: names[r.id], model: r.model, phase: 'none' };
-  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [] };
+  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [], outbox: emptyOutbox() };
 }
 
 /** A saved roster, made whole: a role added since it was saved gets a name, a bad field its default. */
@@ -136,6 +145,7 @@ export function reviveRoster(raw: unknown, rng: () => number = Math.random): Ros
     spend: r.spend && typeof r.spend === 'object' && typeof r.spend.usd === 'number' ? { day: String(r.spend.day ?? ''), usd: r.spend.usd, seen: { ...(r.spend.seen ?? {}) } } : fresh.spend,
     subagents: reviveSubagents(r.subagents),
     subagentActions: Array.isArray(r.subagentActions) ? r.subagentActions.filter((a) => a && typeof a === 'object' && typeof a.id === 'string').slice(-SUBAGENT_ACTIONS_KEPT) : [],
+    outbox: reviveOutbox(r.outbox),
   };
 }
 

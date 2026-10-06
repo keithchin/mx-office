@@ -91,8 +91,15 @@ export interface Worker {
   scanTimer?: NodeJS.Timeout;
   /** Its terminal in the host as of the last save, and how it was doing, to pick back up after a restart. */
   saved?: { ptyId: string; status: WorkerStatus; acked: boolean; waitingSince?: number };
-  /** Its process went away mid-turn with the office or the terminal host: its next start carries on (CARRY_ON_PROMPT). */
+  /** Its process went away mid-turn with the office or the terminal host: its next start carries on (carryOnPrompt). */
   interrupted?: boolean;
+  /**
+   * Left asleep when the office came back up, as it was at rest then (see dozesOnStart): walking onto
+   * the floor doesn't wake it, a prompt (from someone, or the office) or R does.
+   */
+  dozing?: boolean;
+  /** The turn under way was started by the office's own prompt (see OFFICE_BY): when it finishes, nobody is flagged. */
+  officeTurn?: boolean;
   /** A prompt its start couldn't pass on the command line (a Muse resume): typed into its session after SessionStart. */
   pendingPrompt?: string;
   /** Output since its scrollback was last saved to disk. */
@@ -102,6 +109,18 @@ export interface Worker {
   /** Its lost worktree is being put back (see rebuild): the folder coming back mustn't wake it before that's done. */
   rebuilding?: boolean;
 }
+
+/**
+ * What the floor's project team tells the worker manager (server/roster/, through the floor): whose
+ * finished turns are routine, so they don't raise a flag, and what a worker has open with the Project
+ * Manager, for the prompt that carries on a turn a restart cut off. Nothing, without a team.
+ */
+export interface TeamHooks {
+  quietDone(info: WorkerInfo): boolean;
+  openAsks(workerId: string): string[];
+}
+
+export const NO_TEAM: TeamHooks = { quietDone: () => false, openAsks: () => [] };
 
 export interface WorkerEvents {
   update(info: WorkerInfo): void;

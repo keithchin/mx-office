@@ -43,7 +43,7 @@ The office stamps who raised it (name, role, team) and the autonomy level at the
 - Every open, non-FYI escalation is in **🚨 Needs you**, **🚩 Escalations to you** on the Command Center, and **✅ Approvals**.
 - An **urgent** or **critical** one also makes a toast and a desktop notification.
 - Jeff rates each open one and, with his **Priority** on (the default), the lists show them in his order with a **🧑‍⚖️ #1 · resolve first** chip. See [Jeff · Router](../automation/jeff-router.md#priority-which-escalation-first).
-- The Project Coordinator is told about the team's escalations (batched a minute after the last one), so it can summarise them for you.
+- The Project Coordinator is told about the team's escalations (batched a minute after the last one), so it can summarise them for you. The relay says it needs no reply. While the Coordinator is benched or asking someone, or the floor's daily cost cap is reached, they wait for it, kept in the roster file so a restart doesn't lose them. An asleep Coordinator is woken with all its relays in one message, at most once a minute. A floor with no Coordinator at all skips them (they're on the Command Center and the next standup page anyway).
 
 ## Answering
 

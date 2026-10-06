@@ -23,6 +23,8 @@ import { Jeff } from './jeff.js';
 import { Members } from './members.js';
 import { Nudges } from './nudge.js';
 import { setFloorPause } from './pause.js';
+import { Relays } from './relays.js';
+import { applyStageAutonomy, stageOf } from './stage-autonomy.js';
 import { StandupRunner } from './standup-run.js';
 import { Subagents } from './subagents.js';
 import { effectiveSkills } from '../../shared/roster/skills.js';
@@ -45,6 +47,7 @@ export class Roster {
   readonly nudges: Nudges;
   readonly jeff: Jeff;
   readonly subagents: Subagents;
+  readonly relays: Relays;
   /** Lead pull requests the office already labelled with their team (floor:number), so it asks GitHub once. */
   private labelled = new Set<string>();
   private files = new Map<string, RosterFile>();
@@ -59,6 +62,7 @@ export class Roster {
     this.nudges = new Nudges(this, tickMs > 0);
     this.jeff = new Jeff(this);
     this.subagents = new Subagents(this);
+    this.relays = new Relays(this);
     if (tickMs > 0) {
       this.timer = setInterval(() => this.tick(), tickMs);
       this.timer.unref?.();
@@ -103,6 +107,28 @@ export class Roster {
     return this.seen.get(workerId)?.idleSince;
   }
 
+  /** Whether a worker is one of the floor's team (going home on a merge is left to its bench). */
+  isMember(floorId: string, workerId: string): boolean {
+    const d = this.data(floorId);
+    return ROLES.some((r) => d.members[r.id].workerId === workerId);
+  }
+
+  /**
+   * Whether a team member's finished turn is routine, so it raises no flag (no ✅ Review in Needs you,
+   * no ding, no desktop notification; its card still shows it done): at autonomy 3 and up the team
+   * works on its own, and what needs the Project Manager reaches them as an escalation.
+   */
+  routineTurn(floorId: string, workerId: string): boolean {
+    return this.data(floorId).settings.autonomy >= 3 && this.isMember(floorId, workerId);
+  }
+
+  /** The titles of the escalations a worker has open (raised, joined, or raised by the role it's now), for the prompt that carries on a cut-off turn. */
+  openAsks(floorId: string, workerId: string): string[] {
+    const d = this.data(floorId);
+    const role = ROLES.find((r) => d.members[r.id].workerId === workerId)?.id;
+    return d.escalations.filter((e) => e.status === 'open' && (e.workerId === workerId || e.also?.some((a) => a.workerId === workerId) || (role && e.role === role))).map((e) => e.title);
+  }
+
   /** Every worker update on the floor: activity for the standup, idleness for the bench, spend for the cap. */
   onWorker(floor: TeamFloor, w: WorkerInfo) {
     const d = this.data(floor.id);
@@ -127,7 +153,10 @@ export class Roster {
     this.nudges.onWorker(floor, role, w);
     this.subagents.onMember(floor, role, now);
     if (role === 'pm') this.escalations.onCoordinator(floor, w);
-    else this.labelLeadPr(floor, role, w);
+    else {
+      this.relays.flushLead(floor, role, now);
+      this.labelLeadPr(floor, role, w);
+    }
     this.touch(floor, prev?.status === w.status && !capChanged);
   }
 
@@ -191,6 +220,9 @@ export class Roster {
       this.standups.tick(floor, now);
       this.nudges.tick(floor, LEADS.map((r) => r.id), now);
       this.subagents.tick(floor, now);
+      this.escalations.tick(floor);
+      applyStageAutonomy(this, floor);
+      this.relays.tick(floor, now);
     }
   }
 
@@ -278,6 +310,7 @@ export class Roster {
     });
     const cap = capAt(d.settings.costCaps, d.settings.autonomy);
     const paused = this.pauseOf(d);
+    const byStage = stageOf(this, floor);
     return {
       floor: floor.id,
       settings: d.settings,
@@ -296,6 +329,7 @@ export class Roster {
       lastStandupAt: d.lastStandupAt,
       activitySinceStandup: d.lastActivityAt !== undefined && d.lastActivityAt > (d.lastStandupAt ?? 0),
       admin,
+      ...(byStage ? { byStage } : {}),
     };
   }
 

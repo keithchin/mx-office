@@ -68,14 +68,15 @@ export interface Landed {
 /**
  * The workers free to go home because their work landed: a pull request of theirs merged and none
  * is still open (the same call as the purple bubble, see workerPr), they're at rest, and nobody has
- * their terminal open. Board agents, shells and the meeting table don't come and go by pull request.
+ * their terminal open. Board agents, shells and the meeting table don't come and go by pull request,
+ * nor does the project team (`team`): a Lead is benched with a handoff note, never just sent home.
  * A worker across repositories has pull requests on other floors too (`pullsOf` has their lists):
  * none of them may be open, or opened from its desk but missing from its floor's list.
  */
-export function landedWorkers(workers: WorkerInfo[], pulls: GhPull[], tasks: QueueTask[], pullsOf?: (floor: string) => GhPull[] | undefined): Landed[] {
+export function landedWorkers(workers: WorkerInfo[], pulls: GhPull[], tasks: QueueTask[], pullsOf?: (floor: string) => GhPull[] | undefined, team?: (w: WorkerInfo) => boolean): Landed[] {
   const out: Landed[] = [];
   for (const w of workers) {
-    if (notLeaving(w)) continue;
+    if (notLeaving(w, team?.(w))) continue;
     const landed = landedWork(w, pulls, tasks, pullsOf);
     if (landed) out.push(landed);
   }
@@ -84,10 +85,11 @@ export function landedWorkers(workers: WorkerInfo[], pulls: GhPull[], tasks: Que
 
 /**
  * Why a worker whose work landed doesn't go home by itself yet (see landedWorkers), in a few words;
- * undefined when nothing keeps it.
+ * undefined when nothing keeps it. `team`: it's on the floor's project team.
  */
-export function notLeaving(w: WorkerInfo): string | undefined {
+export function notLeaving(w: WorkerInfo, team = false): string | undefined {
   if (w.kind !== 'agent') return 'a shell';
+  if (team) return 'on the project team (benched with a handoff note instead)';
   if (w.meeting) return 'at the meeting table';
   if (DESK_BY_ID.get(w.deskId)?.station) return 'a board agent';
   if (isBusy(w.status)) return w.status === 'needs_input' ? 'waiting on someone' : 'still working';

@@ -74,6 +74,15 @@ export interface FloorContext {
   lent(floor: Floor): boolean;
   /** Whether the building's map locks up workers sent home (see MapPlan.sendHome), instead of letting them go. */
   locksUp(): boolean;
+  /** The floor's project team (server/roster/), on what it decides about its own workers. */
+  team?: FloorTeam;
+}
+
+/** What the project team says about a floor's workers: who's on it, whose finished turns are routine, what each has open with the Project Manager. */
+export interface FloorTeam {
+  member(floor: Floor, workerId: string): boolean;
+  quietDone(floor: Floor, info: WorkerInfo): boolean;
+  openAsks(floor: Floor, workerId: string): string[];
 }
 
 /** The open pull request on a floor's board whose head is `branch`. */
@@ -212,6 +221,8 @@ export class Floor {
       ctx.dshProfile,
     );
     this.workers.wing = () => this.plan.wing;
+    const team = ctx.team;
+    if (team) this.workers.team = { quietDone: (info) => team.quietDone(this, info), openAsks: (id) => team.openAsks(this, id) };
 
     this.github = new GitHub(
       def.dir,
@@ -344,7 +355,9 @@ export class Floor {
       this.landedTimer = undefined;
       if (!this.ctx.leaveOnMerge()) return;
       const pullsOf = (id: string) => this.ctx.floor(id)?.github.pulls.items;
-      for (const landed of landedWorkers(this.workers.list(), this.github.pulls.items, this.queue.state().tasks, pullsOf)) {
+      // The project team's Leads go home through their own bench, with a handoff note (roster/members.ts).
+      const team = (w: WorkerInfo) => !!this.ctx.team?.member(this, w.id);
+      for (const landed of landedWorkers(this.workers.list(), this.github.pulls.items, this.queue.state().tasks, pullsOf, team)) {
         const { worker, head, heads } = landed;
         if (!worker.repos?.length) {
           this.goHome(worker, `PR #${landed.pr} merged`, head);
