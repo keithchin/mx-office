@@ -96,6 +96,7 @@ export default defineConfig({
         claim: resolve(import.meta.dirname, 'src/client/claim.html'),
         join: resolve(import.meta.dirname, 'src/client/join.html'),
         docs: resolve(import.meta.dirname, 'src/client/docs.html'),
+        m: resolve(import.meta.dirname, 'src/client/m.html'),
       },
     },
   },

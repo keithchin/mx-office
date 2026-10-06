@@ -97,7 +97,7 @@ export function teamsSetting(frame: (body: Node[]) => HTMLElement): { section: H
       ? 'Posts an Adaptive Card to a Teams channel when something needs a person. In Teams, add the “Post to a channel when a webhook request is received” workflow to your channel, copy its HTTP POST URL and paste it here (see the docs: Teams notifications).'
       : v.error
         ? `⚠️ Posting to Teams (${v.hint}) failed: ${v.error}${pending}${held}`
-        : `📣 Posting to Teams (${v.hint})${v.by && v.at ? `, set by ${v.by} ${timeAgo(v.at)}` : ''}${v.lastSentAt ? ` · last card ${timeAgo(v.lastSentAt)}` : ''}${pending}${held}.${v.storedIn === 'settings-file' ? ' The URL is kept in the office’s settings file and never shown again.' : ''}`;
+        : `📣 Posting to Teams (${v.hint})${v.by && v.at ? `, set by ${v.by} ${timeAgo(v.at)}` : ''}${v.lastSentAt ? ` · last card ${timeAgo(v.lastSentAt)}` : ''}${pending}${held}.${v.storedIn === 'settings-file' ? ' The URL is kept in the office’s settings file and never shown again.' : v.storedIn === 'credential-store' ? ' The URL is kept encrypted in 🔌 Connections and never shown again.' : ''}`;
     const all = v.floors === 'all';
     const picked = new Set(all ? v.allFloors.map((f) => f.id) : (v.floors as string[]));
     floorsRow.replaceChildren(

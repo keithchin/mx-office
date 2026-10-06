@@ -27,6 +27,8 @@ import { studioRoutes } from './studio.js';
 import { wizardRoutes } from './wizard.js';
 import { notifyTeamsRoutes } from './notify-teams.js';
 import { keepAwakeRoutes } from './keep-awake.js';
+import { mobileRoutes } from './mobile.js';
+import { phoneAccessRoutes } from './phone-access.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -43,6 +45,10 @@ export const routes: readonly Route[] = [
   pageRoutes.claim,
   pageRoutes.join,
   pageRoutes.favicon,
+  // The phone version's manifest, service worker and icons (a browser fetches them without cookies).
+  mobileRoutes.manifest,
+  mobileRoutes.worker,
+  mobileRoutes.icons,
   // Signed in.
   authRoutes.whoami,
   agentRoutes.models,
@@ -88,6 +94,14 @@ export const routes: readonly Route[] = [
   phoneRoutes.state,
   phoneRoutes.reads,
   phoneRoutes.markRead,
+  mobileRoutes.me,
+  mobileRoutes.reauth,
+  mobileRoutes.act,
+  mobileRoutes.status,
+  mobileRoutes.push,
+  mobileRoutes.phones,
+  phoneAccessRoutes.view,
+  phoneAccessRoutes.save,
   teamRoutes.page,
   teamRoutes.labels,
   deliverableRoutes.deliverables,
@@ -100,6 +114,7 @@ export const routes: readonly Route[] = [
   pageRoutes.firm,
   pageRoutes.lite,
   pageRoutes.pixel,
+  mobileRoutes.page,
   pageRoutes.docs,
   pageRoutes.bundle,
 ];

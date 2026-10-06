@@ -14,6 +14,7 @@ weight: 2
 | 🛡️ **GitHub admin token** | Creating project repositories from the ✨ New project wizard, nothing else | Fine-grained, owner your organization, **All repositories**, **Administration** and **Contents**: read and write |
 | 🧱 **Mendix personal access token** | The Mendix platform: creating the app (`mx:app:create`), later Team Server and deploys | Scopes `mx:app:create`; `mx:deployment:read` lets **Test** list your apps |
 | ⚖️ **Jev key** | Jeff · Router asks Jev by TypeSafe AI instead of Haiku | A TypeSafe AI API key |
+| 💬 **Microsoft Teams webhook** | Where the office posts its [Teams cards](../integrations/teams-notifications.md) | The workflow's HTTP POST URL (saving it in ⚙️ Settings → Notifications puts it here too) |
 | 🔒 **Office password** | The shared password (it signs people in as admins) | At least 8 characters |
 
 Each card shows:
@@ -24,6 +25,12 @@ Each card shows:
 - **➕ Add / ♻️ Replace / Remove**, and **What it's for and how to make one**: the exact permissions and a **Create on GitHub** link with the form filled in (name, owner, expiry, permissions; you still pick *All repositories*).
 
 The Mendix card also has **Give agents the Mendix token**, one tick per project, **off by default**: only that project's workers hired afterwards get `MENDIX_TOKEN` and `MX_PAT`. Everywhere else the office takes both variables out of the workers' environment, even if it was started with them. The wizard can always read it (for the Mendix Projects API).
+
+## 📱 Phone access
+
+Under **🧰 Setup**, the **📱 Phone access** card switches a private tunnel to the office on or off (Microsoft Dev Tunnels, or Cloudflare Tunnel with Cloudflare Access; a quick tunnel only behind a big warning), signs in with Microsoft or Cloudflare from the page, and shows the address with a QR code to scan with your phone. See [Phone access](phone-access.md).
+
+The office also keeps **Web Push's key** (VAPID) here, made the first time a phone turns notifications on ([Phone version](../using-the-office/phone-version.md#push-notifications)). It has no card: nobody needs to paste or see it.
 
 ## Where it's kept
 

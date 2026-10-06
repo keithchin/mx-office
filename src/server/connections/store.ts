@@ -20,6 +20,12 @@ export interface OfficeSettings {
   mendixFloors?: string[];
   /** The identity the workers' commits get when git has none (GIT_AUTHOR_* / GIT_COMMITTER_*). */
   gitIdentity?: { name: string; email: string };
+  /** 📱 Phone access (phone-access/): on or off, the provider, the Dev Tunnel id, the Cloudflare tunnel and hostname. */
+  phoneAccess?: unknown;
+  /** The tunnel address phone access last put in the Teams cards' Open buttons (so it only replaces its own). */
+  phoneAccessTeamsUrl?: string;
+  /** Web Push's VAPID public key (webpush/keys.ts); its private half is in the vault. */
+  vapidPublicKey?: string;
 }
 
 /** The GitHub variables as the office was started with them, before Connections laid its token over them. */

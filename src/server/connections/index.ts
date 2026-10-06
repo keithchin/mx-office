@@ -19,11 +19,14 @@ import { connectionsVault, officeSettings, openConnections, secretsHome, updateO
 import { pathsView } from './paths.js';
 import { sweepView } from '../worktree-sweep/index.js';
 import type { Cipher } from './vault.js';
+import { wireTeamsWebhook } from './teams-webhook.js';
 
 /** Opens the vault at start (office/core.ts), before any worker starts, and puts the agents' token in the office's environment. */
 export function startConnections(dataDir: string, cipher?: Cipher) {
   openConnections(dataDir, cipher);
   applyAgentToken();
+  // The Teams webhook URL lives here too (notify-teams moves it out of its own file once).
+  wireTeamsWebhook();
 }
 
 const label = (id: CredentialId) => CREDENTIAL_META[id].label;
@@ -59,7 +62,7 @@ function importable(cfg: Ctx['cfg']): ConnectionsView['importable'] {
   const files = dotFiles(secretsHome());
   const out: ConnectionsView['importable'] = [];
   for (const id of CREDENTIAL_IDS) {
-    if (id === 'password' || vault?.get(id)) continue;
+    if (id === 'password' || CREDENTIAL_META[id].hidden || vault?.get(id)) continue;
     const f = files[id].find((d) => d.read({ read: readAll }));
     if (f) out.push({ id, file: tildify(f.file) });
   }
@@ -79,7 +82,7 @@ export function connectionsView(ctx: Ctx): ConnectionsView {
       file: tildify(vault?.file ?? path.join(ctx.cfg.dataDir, 'credentials.json')),
       warning: scheme === 'file' ? 'No Windows DPAPI on this machine: saved values are in a file only the office’s user can read (0600), not encrypted. Keep the office’s data folder private.' : undefined,
     },
-    credentials: CREDENTIAL_IDS.map((id) => credentialView(ctx, id)),
+    credentials: CREDENTIAL_IDS.filter((id) => !CREDENTIAL_META[id].hidden).map((id) => credentialView(ctx, id)),
     importable: importable(ctx.cfg),
     mendixFloors: [...ctx.floors.values()].map((f) => ({ id: f.id, name: f.def.name, dir: f.dir, on: mendixDirs.some((d) => same(d, f.dir)) })),
     paths: pathsView(ctx),
@@ -102,6 +105,7 @@ export async function saveCredential(ctx: Ctx, id: CredentialId, raw: string, wh
     return why;
   }
   const meta = CREDENTIAL_META[id];
+  if (meta.hidden) return 'The office keeps this one itself';
   if (/\s/.test(value)) return 'That has spaces or line breaks in it: paste just the token';
   if (meta.shape && !meta.shape.test(value)) return meta.shapeHint;
   const vault = connectionsVault();

@@ -19,6 +19,9 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | any | `/api/health` | `{ ok: true }` when the office is up |
 | any | `/assets/*` | The client bundle's files |
 | any | `/login`, `/claim`, `/join`, `/favicon.svg` | Pages |
+| GET | `/manifest.webmanifest` | The [phone version](../using-the-office/phone-version.md)'s web app manifest |
+| GET | `/sw.js` | The phone version's service worker (app shell, push notifications) |
+| GET | `/icons/*` | The phone version's home-screen icons |
 
 ## The office (session)
 
@@ -61,6 +64,14 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/audit` | The audit log: `?floor=<id>\|all\|_office&since=&until=&actor=human,agent&action=worker.hire,github&q=&limit=&cursor=`, with counts, the chain check and a histogram |
 | GET | `/api/audit/export` | Every matching event as a download, `&format=csv\|jsonl` (admin) |
 | POST | `/api/audit/settings` | `{ promptText }`: log the first 80 characters of prompts, or not (admin) |
+| any | `/m` | The [phone version](../using-the-office/phone-version.md) |
+| GET | `/api/m/me` | Admin or not, until when risky actions go through without the password (`reauthUntil`), the push key, this person's phones |
+| POST | `/api/m/reauth` | `{ password }`: the password typed again for risky actions (10 minutes; rate-limited like sign-in) |
+| POST | `/api/m/act` | `{ do, floor, … }`: an action from the phone: `escalation` (approve / reject / reply), `raise-cap`, `hire`, `merge` (answers the PR's URL), `pause` / `resume` (not yet). Risky ones answer 401 `{ reauth: true }` without a fresh sign-in; each is `phone.*` in the audit log |
+| GET | `/api/m/status` | Each project's status line (working, asleep, asking, stage, spend, escalations) |
+| POST | `/api/m/push/key`, `/api/m/push/subscribe`, `/api/m/push/unsubscribe`, `/api/m/push/alerts`, `/api/m/push/test` | This phone's Web Push: the VAPID public key (made once), its subscription, its Do not disturb and digest, a test |
+| GET | `/api/m/push` | This person's phones (`?all=1`: everyone's, admins) |
+| GET / POST | `/api/phone-access` | [📱 Phone access](../administration/phone-access.md): the tunnel's state, address, sign-in prompt and checks; admins switch it on or off, pick the provider and the Cloudflare hostname |
 | GET | `/api/notify/teams` | [Teams notifications](../integrations/teams-notifications.md): the settings (never the webhook URL, only a hint), the last error, the last card, what's waiting and held, and the floors |
 | POST | `/api/notify/teams` | `{ url?, floors?, level?, quiet?, pauseMinutes?, publicUrl? }`: change them; `url: ''` removes the webhook (admin) |
 | POST | `/api/notify/teams/test` | Post a test card now (admin) |

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2b2d42" />
+    <title>Agent Office</title>
+    <link rel="icon" href="/favicon.svg" />
+    <!-- Installable: the manifest (fetched with the cookie, so it works behind a private tunnel), and iPhone's own tags. -->
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Agent Office" />
+    <link rel="stylesheet" href="./lite.css" />
+    <!-- The color theme picked on this browser (ui/colortheme.ts), set before the page is drawn so it never flashes the wrong one. -->
+    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(["default","dark","terminal","clean-light","clean-dark"].indexOf(t)<0)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"default";document.documentElement.dataset.theme=t}catch(e){}</script>
+  </head>
+  <body class="lite m-body">
+    <!-- 📱 The phone version (m.ts, client/mobile/): the team phone full screen, as an app. -->
+    <div id="m-app" class="m-app"></div>
+    <div id="toasts"></div>
+    <div id="conn" class="conn hidden">Reconnecting…</div>
+    <div id="modal-root"></div>
+    <script type="module" src="./m.ts"></script>
+  </body>
+</html>

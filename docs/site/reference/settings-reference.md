@@ -95,7 +95,7 @@ Set in the 3D office's **⚙️ Settings** (admins), for the whole office, each 
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `url` | string | none | The Teams Workflows webhook URL. https only (plain http only to this machine, for a stub). A secret: never sent to a browser (Settings shows a hint) nor written to the audit log. Kept here until Settings → Connections stores it encrypted. |
+| `url` | string | none | The Teams Workflows webhook URL. https only (plain http only to this machine, for a stub). A secret: never sent to a browser (Settings shows a hint) nor written to the audit log. Only while Connections isn't open: otherwise it's in `credentials.json` (the `teams-webhook` credential, encrypted), moved there from this file once. |
 | `floors` | `'all' | string[]` | `'all'` | Which floors post (floor ids). |
 | `level` | `'needs' | 'digest'` | `'needs'` | Red items only, or those and a daily digest per floor. |
 | `quiet` | `{ start: 'HH:MM', end: 'HH:MM' }` | none | Hold cards back between these times on the office computer's clock (may span midnight); one catch-up card follows. |

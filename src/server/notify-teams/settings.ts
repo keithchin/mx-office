@@ -54,6 +54,24 @@ export class TeamsSettings {
         this.saved.url = v;
       },
     });
+    this.migrated = this.migrate();
+  }
+
+  /** Done moving a URL from the settings file into Connections (resolves at once when there was nothing to move). */
+  readonly migrated: Promise<void>;
+
+  /** Once: a webhook URL still in notify-teams.json goes into the credential store, then out of the file. */
+  private async migrate(): Promise<void> {
+    const old = this.saved.url;
+    if (this.slot.where !== 'credential-store' || !old) return;
+    try {
+      if (!this.slot.get()) await this.slot.set(old);
+      delete this.saved.url;
+      this.persist();
+      console.log('  agent-office: notify-teams: moved the Teams webhook URL into 🔌 Connections');
+    } catch (err) {
+      console.error(`agent-office: notify-teams: couldn't move the webhook URL into Connections (kept in notify-teams.json): ${(err as Error).message}`);
+    }
   }
 
   static in(dataDir: string, now?: () => number) {
@@ -139,7 +157,7 @@ export class TeamsSettings {
     next.by = by;
     next.at = this.now();
     this.saved = next;
-    if (url !== null) this.slot.set(url);
+    if (url !== null) void Promise.resolve(this.slot.set(url)).catch((err) => console.error(`agent-office: notify-teams: couldn't keep the webhook URL: ${(err as Error).message}`));
     this.persist();
     return undefined;
   }

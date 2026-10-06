@@ -1,8 +1,12 @@
 import type http from 'node:http';
 import type { Config } from '../config.js';
 
+/** Requests through 📱 Phone access's own tunnel (phone-access/origin.ts): its forwarded headers are the office's own. */
+let tunnel: { via(req: http.IncomingMessage): boolean; host(): string | undefined } | undefined;
+export const useTunnelOrigin = (t: typeof tunnel) => void (tunnel = t);
+
 export function clientIp(req: http.IncomingMessage, trustProxy: boolean): string {
-  if (trustProxy) {
+  if (trustProxy || tunnel?.via(req)) {
     const fwd = req.headers['x-forwarded-for'];
     // The rightmost hop is the one our proxy appended; anything left of it is client-controlled.
     if (typeof fwd === 'string' && fwd) return fwd.split(',').pop()!.trim();
@@ -11,7 +15,7 @@ export function clientIp(req: http.IncomingMessage, trustProxy: boolean): string
 }
 
 export function isSecure(req: http.IncomingMessage, cfg: Config): boolean {
-  if (cfg.tls) return true;
+  if (cfg.tls || tunnel?.via(req)) return true;
   return cfg.trustProxy && req.headers['x-forwarded-proto'] === 'https';
 }
 
@@ -38,7 +42,7 @@ export function readBytes(req: http.IncomingMessage, limit: number): Promise<Buf
 /** Whether the page asking is the office itself, so another site can't open a socket with a visitor's cookie. */
 export function sameOrigin(req: http.IncomingMessage, cfg: Config): boolean {
   const origin = req.headers.origin;
-  const host = (cfg.trustProxy && (req.headers['x-forwarded-host'] as string)) || req.headers.host;
+  const host = (tunnel?.via(req) && tunnel.host()) || (cfg.trustProxy && (req.headers['x-forwarded-host'] as string)) || req.headers.host;
   try {
     return !!origin && new URL(origin).host === host;
   } catch {

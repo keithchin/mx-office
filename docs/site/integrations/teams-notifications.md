@@ -30,10 +30,10 @@ The workflow belongs to you, not to the channel. If you leave the company or the
 ### 2. Paste it into the office
 
 1. In the 3D office, open **☰ → ⚙️ Settings → 🔔 Notifications**. The **Microsoft Teams** card is under *Team notifications (Slack / Discord)*. *(An empty card with a URL box and an orange Save button.)*
-2. Paste the URL and click **Save** (admins only). The box is a password field, and once saved the URL is never shown again: the card says *Posting to Teams (prod-12.westeurope.logic.azure.com/…voke)*, who set it and when.
+2. Paste the URL and click **Save** (admins only). It's kept encrypted in [🔌 Connections](../administration/connections.md) (the **💬 Microsoft Teams webhook** card, where you can also paste or remove it). The box is a password field, and once saved the URL is never shown again: the card says *Posting to Teams (prod-12.westeurope.logic.azure.com/…voke)*, who set it and when.
 3. Click **📨 Send a test card**. A card *"🔔 &lt;your name&gt; connected &lt;the office&gt; to this channel"* appears in the channel within a few seconds. If it doesn't, the card in Settings says why (for example *Teams answered 401*, or *Couldn't reach Teams*).
 4. Pick **which floors post** (all, or tick the ones you want), **what's posted** (*Needs you only*, or *Needs you + daily digest*), and optionally **quiet hours**.
-5. Fill in the **Public office address** if your phone can reach the office (for example through the coming Phone access feature). Each card then gets an **Open** button to that floor's 1D view. Leave it empty while the office is only reachable on the laptop: cards then have no button.
+5. Fill in the **Public office address** if your phone can reach the office. [📱 Phone access](../administration/phone-access.md) fills it in by itself with its tunnel's address when the tunnel comes up (an address you typed yourself is left alone). Each card then gets an **Open** button to that floor's 1D view. Leave it empty while the office is only reachable on the laptop: cards then have no button.
 
 ## What's posted
 
@@ -88,7 +88,7 @@ Every post is in the [Audit log](../using-the-office/audit-log.md) as `notify.te
 - Teams limits a message to 28 KB and about 4 requests a second: a card lists at most 10 items (then "…and N more").
 - Cards are one-way: answering happens in the office (the Open button), not in Teams.
 - Quiet hours use the office computer's clock, not your phone's.
-- The URL is kept in the office's settings file (`.agent-office/notify-teams.json`, readable only by the office's user) until Settings → Connections stores credentials encrypted; it will move there.
+- The URL is kept in [🔌 Connections](../administration/connections.md), encrypted with Windows DPAPI. An office that had it in `.agent-office/notify-teams.json` moves it there once at its next start and takes it out of that file. Without Connections (a CLI command, a test) it stays in that file, readable only by the office's user.
 - The Slack / Discord webhook above it is separate and keeps working as before.
 
 See also: [Settings reference](../reference/settings-reference.md#office-settings-teams-and-keep-awake), [API endpoints](../reference/api-endpoints.md).

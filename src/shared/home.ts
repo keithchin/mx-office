@@ -6,7 +6,7 @@
  * The pages that sign-in sends you back to (`/login?next=`), so signing in from one of them lands
  * on it again rather than on the 3D office. Anything else goes to `/`, which is never an open redirect.
  */
-export const RETURN_PAGES = ['/home', '/lite', '/pixel', '/docs'] as const;
+export const RETURN_PAGES = ['/home', '/lite', '/pixel', '/docs', '/m'] as const;
 export type ReturnPage = (typeof RETURN_PAGES)[number] | `/docs/${string}`;
 /** A page of the docs (/docs/get-started/quick-start): lower-case words, dashes and slashes only. */
 const DOC_PAGE = /^\/docs(\/[a-z0-9][a-z0-9-]*)+$/;
