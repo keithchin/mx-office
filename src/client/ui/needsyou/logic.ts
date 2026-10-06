@@ -26,6 +26,9 @@ export type NeedTarget =
 
 export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio';
 
+/** How far behind its default branch a floor's folder may fall before Needs you mentions it. */
+export const STALE_COMMITS = 10;
+
 export interface NeedItem {
   /** Stable across redraws. */
   key: string;
@@ -130,6 +133,9 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     if (f.reportReady) out.push({ key: `audit-${f.reportReady.report}`, kind: 'audit', icon: '📑', text: 'Audit report ready from The Firm', since: f.reportReady.at, level: 'warn', action: 'Read', target: { to: 'firm', url: `/firm?report=${encodeURIComponent(f.reportReady.report)}` } });
     if (f.budgetWarn) out.push({ key: `audit-budget-${f.budgetWarn.engagement}`, kind: 'audit', icon: '📑', text: `Audit budget at ${Math.min(100, Math.round((f.budgetWarn.spent / f.budgetWarn.budget) * 100))}%: $${f.budgetWarn.spent.toFixed(2)} of $${f.budgetWarn.budget.toFixed(2)}`, level: 'warn', action: 'View', target: { to: 'firm', url: '/firm' } });
   }
+  // The floor's folder far behind (low priority, so last of this floor's) its default branch: the setup panel reads main, but agents and the live app use the folder.
+  const stale = i.setup?.show ? i.setup.checkout : undefined;
+  if (stale && stale.behind > STALE_COMMITS) out.push({ key: 'setup-stale', kind: 'setup', icon: '🌿', text: `This floor's folder is on ${stale.branch}, ${stale.behind} commits behind ${stale.defaultBranch}`, level: 'warn', action: 'Setup', target: { to: 'setup' } });
   // 7. Other floors where someone is waiting.
   for (const f of i.floors) {
     if (f.id === i.floor || f.cloning || !(f.waiting > 0)) continue;

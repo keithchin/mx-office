@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { ESCALATE_TOOL, ESCALATE_USAGE, formatEscalated, parseEscalate } from './office-escalate.js';
 import { SUBAGENT_TOOL, SUBAGENT_USAGE, formatSubagent, parseSubagent } from './office-subagent.js';
 import { FIRM_USAGE, firmMain } from './office-firm.js';
+import { RENDER_USAGE, formatRendered, parseRender } from './office-render.js';
 
 const USAGE = `Usage:
   office-workers list [--json]                  everyone at a desk on this floor: status, task,
@@ -36,6 +37,7 @@ const USAGE = `Usage:
   office-workers pr --none [--worker <name|id>] take that pull request off the worker again
 ${ESCALATE_USAGE}
 ${SUBAGENT_USAGE}
+${RENDER_USAGE}
 ${FIRM_USAGE}
   office-workers mcp                            serve these as MCP tools on stdio`;
 
@@ -48,9 +50,9 @@ export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 /** How long the office may take to come back when it's restarting (a dev reload, an upgrade). */
 const RETRY_MS = 6000;
 /** Sending several workers home waits on git for each; hiring may fetch from GitHub first. */
-const TIMEOUT_MS = { list: 15_000, tell: 15_000, pr: 45_000, hire: 90_000, home: 300_000, escalate: 15_000, subagent: 15_000 };
+const TIMEOUT_MS = { list: 15_000, tell: 15_000, pr: 45_000, hire: 90_000, home: 300_000, escalate: 15_000, subagent: 15_000, render: 90_000 };
 /** Where each call goes, under /office/workers. */
-const PATHS = { list: '', hire: '', home: '/home', tell: '/tell', pr: '/pr', escalate: '/escalate', subagent: '/subagent' };
+const PATHS = { list: '', hire: '', home: '/home', tell: '/tell', pr: '/pr', escalate: '/escalate', subagent: '/subagent', render: '/render' };
 
 /**
  * Reads `--flag value` and `--flag=value` options, and the words that aren't options.
@@ -124,6 +126,7 @@ export function parseArgs(argv) {
   }
   if (cmd === 'escalate') return parseEscalate(rest, UsageError);
   if (cmd === 'subagent' || cmd === 'subagents') return parseSubagent(rest, UsageError);
+  if (cmd === 'export-pdf' || cmd === 'screenshot') return parseRender(cmd, rest, UsageError);
   if (cmd === 'hire') {
     const { opts, words } = options(rest, ['--prompt', '--provider', '--model', '--effort', '--desk', '--issue'], ['--no-worktree', '--json']);
     if (words.length) throw new UsageError(`Unexpected argument: ${words[0]} (give the task on stdin or with --prompt)`);
@@ -165,7 +168,7 @@ export function officeEnv(env) {
 
 /**
  * The HTTP request for one of the office's worker calls.
- * @param {'list' | 'hire' | 'home' | 'tell' | 'pr' | 'escalate' | 'subagent'} what
+ * @param {'list' | 'hire' | 'home' | 'tell' | 'pr' | 'escalate' | 'subagent' | 'render'} what
  * @param {{ url: string, worker: string, token: string }} office
  * @param {Record<string, unknown>} [body]
  * @returns {{ method: string, url: string, headers: Record<string, string>, body?: string, timeout: number }}
@@ -214,7 +217,7 @@ async function send(req, fetchImpl) {
 
 /**
  * Makes one call to the office; resolves to what it answered, or throws with why it said no.
- * @param {'list' | 'hire' | 'home' | 'tell' | 'pr' | 'escalate' | 'subagent'} what
+ * @param {'list' | 'hire' | 'home' | 'tell' | 'pr' | 'escalate' | 'subagent' | 'render'} what
  * @param {Record<string, unknown> | undefined} body
  * @param {{ env: Record<string, string | undefined>, fetch: typeof fetch }} io
  */
@@ -538,6 +541,12 @@ export async function main(argv, io = {}) {
       const { cmd: _s, json: asJson, ...ask } = cmd;
       const answer = await call('subagent', ask, ctx);
       out(asJson ? JSON.stringify(answer, null, 2) : formatSubagent(answer));
+      return 0;
+    }
+    if (cmd.cmd === 'render') {
+      const { cmd: _r, json: asJson, ...ask } = cmd;
+      const answer = await call('render', ask, ctx);
+      out(asJson ? JSON.stringify(answer, null, 2) : formatRendered(answer));
       return 0;
     }
     if (cmd.cmd === 'pr') {

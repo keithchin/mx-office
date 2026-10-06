@@ -49,7 +49,8 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | POST | `/api/roster/action` | Team actions (see below) |
 | GET | `/api/studio` | `?floor=`: whether the floor has a Mendix project (`hasMpr`, `mpr`, `version`), whether Studio Pro can be opened from here, the agents mid-turn, and Studio mode (`state`: `open`, `since`, `pid`, `staleLock`, `mcp`, `uncommitted`); changes come over the WebSocket as `studio.state` |
 | POST | `/api/studio/open` | `{ floor }`: opens the floor's .mpr in Studio Pro on the office's computer (admin) |
-| GET | `/api/teams/page` | A team's page |
+| GET | `/api/teams/page` | A team's page, with its 📦 deliverables |
+| GET | `/api/deliverables`, `/api/deliverables/*` | 📦 Deliverables: `?floor=<id>[&team=<team>][&fresh=1]` lists every expected and extra deliverable with its status and where it is (main, a team member's worktree, an office branch); `/file?floor=&src=main\|wt:<worker>\|ref:<branch>&path=[&download=1]` serves one (HTML self-contained under a no-network CSP for a sandboxed frame, PDF, pictures, text); `/table?…` a CSV's first 200 rows. Only catalog paths, only places the scan listed, size-capped |
 | POST | `/api/teams/labels` | Create missing `team:` labels (admin) |
 | GET / POST | `/api/wizard/*` | The new-project wizard: GET `info`, `job`, `setup`, `answers`, `app-version` (`?repo=`: the Studio Pro an existing floor's `.mpr` was saved with); POST `recheck`, `start`, `retry`, `edit` (admin) |
 | GET | `/api/chatter` | Team chatter: `?floor=<id>&since=<ms>&limit=<n>&cursor=…&who=<name>` (with `as=<kind>` to tell a person from an agent of the same name) or `&with=agents\|me` |

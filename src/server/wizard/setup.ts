@@ -1,5 +1,6 @@
 // Where a toolkit project stands, for the setup panel over its board until its build plan (Stage 4)
-// is confirmed. Read from the project's files alone, as the project summary does: the stage verdicts
+// is confirmed. Read from the project's files alone, as the project summary does (from its default
+// branch on GitHub when it has one, gate-source.ts, else from the floor's folder): the stage verdicts
 // gate-check last wrote into index.html, Stage P worked out afresh from intake.md (a cheap check of
 // the same markers, so answering a question shows at once), and the register's decisions and open
 // questions. Nothing is run here; a file is read again only once it has changed.
@@ -40,26 +41,34 @@ const stamp = (f: string) => {
 
 const settled = (status: string) => status === 'PASS' || status === 'WAIVED';
 
-export function setupView(dir: string): Omit<SetupView, 'job' | 'checking' | 'checkedAt'> {
+type Computed = Omit<SetupView, 'job' | 'checking' | 'checkedAt'>;
+
+/** The view from the floor's folder: the fallback when the project has no remote default branch. */
+export function setupView(dir: string): Computed {
   const key = FILES.map((f) => stamp(path.join(dir, f))).join('|');
   const hit = cache.get(dir);
   if (hit?.key === key) return hit.view;
-  const view = compute(dir);
+  const view = compute((f) => read(path.join(dir, f)));
   cache.set(dir, { key, view });
   return view;
 }
 
-function compute(dir: string): Omit<SetupView, 'job' | 'checking' | 'checkedAt'> {
-  const register = read(path.join(dir, 'PROJECT.md'));
+/** The view from files read elsewhere (origin/<default>, gate-source.ts). */
+export function setupViewOf(files: Partial<Record<string, string>>): Computed {
+  return compute((f) => files[f]);
+}
+
+function compute(read: (file: string) => string | undefined): Computed {
+  const register = read('PROJECT.md');
   // Only a toolkit project has a decision register.
   if (!register || !/^##\s*Decisions/m.test(register)) return { show: false, stages: [], questions: [] };
   const entry = registerField(register, 'Entry mode');
   const tier = registerField(register, 'Size tier')?.split(/\s+[—-]\s+/)[0];
   // Assurance isn't a pipeline: no stages to walk through.
   if (/assurance/i.test(entry ?? '')) return { show: false, stages: [], questions: [] };
-  const html = read(path.join(dir, 'index.html'));
+  const html = read('index.html');
   const verdicts = new Map((html ? stageVerdicts(html) : []).map((v) => [v.id, v]));
-  const intake = read(path.join(dir, 'intake.md'));
+  const intake = read('intake.md');
   const unanswered = intake ? unansweredQuestions(intake) : undefined;
   const rows = decisions(register);
 

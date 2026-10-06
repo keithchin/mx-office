@@ -38,6 +38,12 @@ office-workers subagent bench <name> --reason "…"
 office-workers subagent swap-model <name> --model haiku|sonnet|opus
 office-workers subagent reinstate <name>      each through your gate for it: ask (an escalation),
                                               propose (the Project Manager approves), tell or fyi
+office-workers export-pdf <in.html> <out.pdf> [--landscape]
+                                              render an HTML file of your worktree to an A4 PDF
+                                              with the office's headless Chromium (no network:
+                                              files inside your worktree only)
+office-workers screenshot <in.html> <out.png> [--width 1280] [--height 800] [--viewport]
+                                              the same as a PNG, the full page unless --viewport
 office-workers firm ask [--team <team>] "question"   (a reviewer) ask the project team; the
                                               answer comes back as your next prompt
 office-workers firm answer <id> "answer"      (a project worker) answer the Firm's question <id>
@@ -63,6 +69,8 @@ office-workers mcp                            serve these as MCP tools on stdio
 | `pr` | Link a pull request to a worker (yours without `--worker`) | `--none` unlinks |
 | `escalate` | Raise something to the Project Manager | See below |
 | `subagent` | Manage your subagents (Leads only) | See below |
+| `export-pdf` | An HTML file of your worktree as an A4 PDF | `--landscape`; see below |
+| `screenshot` | An HTML file of your worktree as a PNG | `--width`, `--height` (200 to 3840 by 2160), `--viewport` for the visible part only; see below |
 | `firm` | The Firm: reviewers ask and report, the team answers | See [The Firm](#the-firm) |
 | `mcp` | Serve these as MCP tools on stdio | See [MCP tools](mcp-tools.md) |
 
@@ -101,6 +109,20 @@ The answer comes back as a prompt: REPLIED, APPROVED, REJECTED or NOTED. See [Es
 | `subagent reinstate <name>` | Bring a benched one back |
 
 Warn, bench, swap-model and reinstate go through your gate for them. Anyone who isn't a Lead of this floor's team gets *Only a Lead of this floor's team manages subagents*. See [Subagents](../automation/subagents.md).
+
+## export-pdf and screenshot
+
+For deliverables the client reads: the BRD report as a PDF, a storyboard of the wireframes. The office renders the page with its own headless Chromium (playwright-core and the browsers in the office machine's Playwright cache), so nothing has to be installed in the project.
+
+```bash
+office-workers export-pdf analysis/brd-report.html docs/requirements/BRD-travel.pdf
+office-workers screenshot design/wireframes/home.html design/storyboard/01-home.png --width 1440
+```
+
+- Both paths must be inside your own worktree (relative paths are from where you run it); the output's folder must exist.
+- The page may load files from your worktree and nothing from the network. A Mermaid script from jsDelivr or unpkg is answered with the office's own copy, so `blueprint.html` renders its diagrams.
+- An input of at most 10 MB, an output of at most 50 MB, 45 seconds per render, one render at a time.
+- On an office without playwright-core or its Chromium it says so (501); use `py` with matplotlib or openpyxl instead.
 
 ## The Firm
 

@@ -16,6 +16,7 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 | `reviewNudge` | boolean | `true` | Prompt a Lead once to review a subagent's result. See [The review loop](../teams-and-agents/review-loop.md). |
 | `jeff` | `JeffSettings` | `{ waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree' }` | Per judgement: `'off'`, `'shadow'` or `'on'` (`priority`: `'off'` or `'on'`). See [Jeff · Router](../automation/jeff-router.md). |
 | `subagentCooldownHours` | number | `24` | Hours a benched subagent sits out before it's reinstated; 0 = only by hand. 0 to 720, in tenths. |
+| `earlyDrafts` | boolean | `true` | While the Chief Analyst is on Stages 0–2, Design, Development and Testing make small drafts marked as such (`-draft` in the name, a `DRAFT — before Stage 3 gate` banner): low-fi wireframes, a draft domain model and architecture sketch, a test-plan outline. Off: they wait for their stage. Written into the Playbooks. See [Deliverables](../using-the-office/deliverables.md). |
 
 ## StandupSchedule
 
@@ -54,5 +55,6 @@ export interface RosterSettings {
   reviewNudge: boolean;
   jeff: JeffSettings;
   subagentCooldownHours: number;
+  earlyDrafts: boolean;
 }
 ```

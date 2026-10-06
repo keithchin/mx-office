@@ -2,7 +2,7 @@
 // has: Testing sees the open PRs' CI scorecards and what's failing (ui/prchecks.ts), Development its
 // own open PRs (the Development team's, by the same rule as the board's tags) with their checks and the
 // live app, Analysis its memos and the analyzer's ranking for the
-// floor (GET /api/analysis), Design its artifacts and the design approvals, Management the newest
+// floor (GET /api/analysis), Design the design approvals (its artifacts are in every team's 📦 Deliverables), Management the newest
 // standup and the approvals queue (the roster). Nothing here polls or asks a model.
 
 import type { AnalysisReport } from '../../../shared/analysis';
@@ -20,6 +20,7 @@ import { subagentList } from '../roster/subagents';
 import { LEADS } from '../../../shared/roster/roles';
 import { teamWorld } from './world';
 import { teamChatter } from '../chatter/compact';
+import { deliverablesList } from '../deliverables/panel';
 
 export interface PanelDeps {
   openPull(p: GhPull): void;
@@ -122,7 +123,10 @@ function subagentsPanel(team: TeamId, v: RosterView | undefined): HTMLElement | 
 /** The team's own panels, under its header. */
 export function teamPanels(team: TeamId, v: RosterView | undefined, data: TeamPageData | undefined, deps: PanelDeps): HTMLElement[] {
   const subs = subagentsPanel(team, v);
-  return [...lanePanels(team, v, data, deps), ...(subs ? [subs] : []), teamChatter(team)];
+  // What the team has to show for itself: expected outputs by stage, on main or still on a branch.
+  const deliverables = panel('📦 Deliverables', data ? deliverablesList(store.floor ?? '', data.deliverables) : empty('Loading…'));
+  deliverables.classList.add('tm-deliverables');
+  return [deliverables, ...lanePanels(team, v, data, deps), ...(subs ? [subs] : []), teamChatter(team)];
 }
 
 function lanePanels(team: TeamId, v: RosterView | undefined, data: TeamPageData | undefined, deps: PanelDeps): HTMLElement[] {
@@ -152,7 +156,6 @@ function lanePanels(team: TeamId, v: RosterView | undefined, data: TeamPageData 
     const approvals = (v?.approvals ?? []).filter((a) => a.team === 'design');
     return [
       panel('✅ Design approvals', approvals.length ? h('ul.tm-files', {}, ...approvals.map((a) => h('li', {}, h('b', {}, a.title), a.detail ? ` — ${a.detail}` : ''))) : empty('Nothing of Design waiting on the Project Manager.')),
-      panel('🖼️ Design artifacts', data ? fileList(data.design, 'No design/ folder in the project yet.') : empty('Loading…')),
     ];
   }
   // Management: the standup and what waits on the Project Manager.

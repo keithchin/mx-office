@@ -27,6 +27,12 @@ export interface RosterSettings {
   jeff: JeffSettings;
   /** Hours a benched subagent sits out before the office reinstates it (0 = only by hand). */
   subagentCooldownHours: number;
+  /**
+   * While the Chief Analyst is on Stages 0-2, Design, Development and Testing make small drafts marked
+   * as such (low-fi wireframes, a draft domain model, a test-plan outline); off, they wait for the stage.
+   * Written into their Playbooks (roster/deliverables-brief.ts). On by default.
+   */
+  earlyDrafts: boolean;
 }
 
 /**

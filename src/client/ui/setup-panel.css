@@ -23,3 +23,4 @@
   .setup-stages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 .setup-help { margin: 6px 0 0; font-size: 13px; font-weight: 600; line-height: 1.5; color: var(--muted); }
+.setup-stale { margin: 0; padding: 6px 10px; border-left: 4px solid var(--warn); border-radius: var(--radius-sm); background: var(--warn-soft); color: var(--warn-ink); font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }

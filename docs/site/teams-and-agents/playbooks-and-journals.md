@@ -16,6 +16,8 @@ The team's instructions and memory live **in the project repository**, so they'r
 | `docs/standups/<date>.md` | The standup page | By the standup |
 | `docs/insights/YYYY-Www.md` | The Chief Analyst's weekly insight memo | At the standup, if missing |
 
+Each Playbook also has a **Your deliverables** section: the files that role hands over per toolkit stage, at the exact paths the [📦 Deliverables](../using-the-office/deliverables.md) view checks (the BRD report and a BRD PDF, `use-cases.xlsx` and a Mermaid process flow for the Chief Analyst; the design system, one wireframe per screen and a storyboard for the Lead Designer; the blueprint, domain model, ADRs, build plan and module briefs for the Lead Developer; the test plan, journeys and evidence report for the Lead Tester), how to make them on the office's machine (`office-workers export-pdf` and `screenshot`, `py` with openpyxl and matplotlib, Mermaid), and to keep them on a branch with a pull request so they merge. With **Early drafts** on (the default), Design, Development and Testing also get the rules for their small marked drafts before Stage 3.
+
 The Playbooks point at the toolkit's own skills in the toolkit clone (`AGENT_OFFICE_TOOLKIT_DIR`), rather than copying them. See [The toolkit](../integrations/toolkit.md).
 
 > [!TIP]

@@ -1,0 +1,72 @@
+/* 📦 Deliverables (ui/deliverables/): the checklist on a team page, the setup panel's line, and the
+   viewer window. Theme tokens only, so Default, Dark, Terminal and both Clean looks apply. */
+.dv { display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+.dv-stage { display: flex; flex-direction: column; gap: 6px; }
+.dv-stage-h { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.dv-stage-id { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 4px; border-radius: var(--radius-sm); background: var(--ink); color: var(--on-ink); font-size: 11px; letter-spacing: 0; }
+.dv-count { margin-left: auto; font-weight: 800; text-transform: none; letter-spacing: 0; color: var(--muted); }
+.dv-items, .dv-files { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.dv-item { padding: 6px 8px; border-radius: var(--radius-sm); background: var(--paper-2); border-left: 4px solid var(--rule-strong); min-width: 0; }
+.dv-item.dv-present { border-left-color: var(--good); }
+.dv-item.dv-branch { border-left-color: var(--info); }
+.dv-item.dv-draft { border-left-color: var(--warn); }
+.dv-item.dv-missing { border-left-color: var(--bad); }
+.dv-item.dv-optional { border-left-color: var(--rule); opacity: .8; }
+.dv-item-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.dv-title { font-weight: 900; }
+.dv-owner, .dv-team { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--muted); }
+.dv-team { padding: 0 6px; border-radius: var(--radius-pill); background: var(--tm-soft, var(--neutral-soft)); color: var(--ink); }
+.dv-badge { padding: 0 7px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 900; line-height: 18px; white-space: nowrap; background: var(--neutral-soft); color: var(--ink); }
+.dv-badge.dv-present { background: var(--good-soft); color: var(--good-ink); }
+.dv-badge.dv-branch { background: var(--info-soft); color: var(--ink); }
+.dv-badge.dv-draft { background: var(--warn-soft); color: var(--warn-ink); }
+.dv-badge.dv-missing { background: var(--bad-soft); color: var(--bad-ink); }
+.dv-note { margin: 4px 0 0; font-size: 12px; font-weight: 700; color: var(--muted); overflow-wrap: anywhere; }
+.dv-note code { font-size: 11px; }
+.dv-files { margin-top: 5px; gap: 3px; }
+.dv-file { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; column-gap: 6px; min-width: 0; }
+.dv-file-meta { grid-column: 2; }
+.dv-tag { flex: none; min-width: 34px; padding: 0 4px; border-radius: 4px; background: var(--card); border: 1px solid var(--rule); font: 800 10px/16px var(--font-mono); text-align: center; color: var(--muted); }
+.dv-file.dv-branch .dv-tag { border-color: var(--info); color: var(--ink); }
+.dv-file.dv-draft .dv-tag { border-color: var(--warn); color: var(--warn-ink); }
+.dv-open { font-size: 12px; min-width: 0; }
+.dv-file .dv-file-meta { font-size: 11px; font-weight: 700; color: var(--muted); }
+.dv-more > summary { cursor: pointer; margin-top: 4px; font-size: 12px; font-weight: 800; color: var(--link); }
+.dv-dim { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); }
+.dv-foot { margin: 0; font-size: 11px; font-weight: 700; color: var(--muted); overflow-wrap: anywhere; }
+
+/* The setup panel's line. */
+.dv-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+.dv-summary-h { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.dv-chip { padding: 1px 8px; border-radius: var(--radius-pill); border: 1px solid var(--rule); background: var(--card); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.dv-chip.dv-present { background: var(--good-soft); border-color: var(--good); }
+.dv-chip.dv-branch { background: var(--info-soft); border-color: var(--info); }
+.dv-chip.dv-missing { background: var(--card); }
+.dv-chip-b { font-weight: 700; color: var(--muted); }
+
+/* The windows. */
+.modal.dv-win { width: min(900px, calc(100vw - 24px)); }
+.dv-win-body { padding: 14px 16px; overflow-y: auto; }
+.modal.dv-view { width: min(1100px, calc(100vw - 24px)); height: calc(100vh - 40px); }
+.modal header.dv-view-head { position: relative; flex-direction: column; align-items: stretch; gap: 4px; padding-right: 56px; }
+.dv-view-head > .close { position: absolute; top: 10px; right: 12px; }
+.dv-view-head h2 { font-size: 15px; }
+.dv-view-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); }
+.dv-kind { padding: 0 6px; border-radius: 4px; background: var(--ink); color: var(--on-ink); font: 800 10px/16px var(--font-mono); }
+.dv-where-pick { padding: 2px 6px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); color: var(--ink); font: inherit; }
+.dv-view-body { flex: 1; min-height: 0; overflow: auto; padding: 12px 16px; display: flex; flex-direction: column; }
+.dv-frame { flex: 1; width: 100%; min-height: 60vh; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: #fff; }
+.dv-pic { display: grid; place-items: center; padding: 8px; background: var(--paper-2); border-radius: var(--radius-sm); }
+.dv-pic img { max-width: 100%; height: auto; background: #fff; }
+.dv-pre { margin: 0; padding: 10px; background: var(--code-bg); color: var(--code-ink); border-radius: var(--radius-sm); font: 12px/1.45 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.dv-mermaid { border-left: 4px solid var(--purple); }
+.dv-brd { margin: 0 0 8px; font-weight: 700; }
+.dv-xlsx { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.dv-table-wrap { overflow: auto; }
+.dv-table { border-collapse: collapse; font-size: 12px; }
+.dv-table th, .dv-table td { padding: 3px 8px; border: 1px solid var(--rule); text-align: left; vertical-align: top; }
+.dv-table th { position: sticky; top: 0; background: var(--paper-2); font-weight: 900; }
+@media (max-width: 720px) {
+  .modal.dv-view { height: calc(100vh - 16px); }
+  .dv-owner, .dv-team, .dv-count { margin-left: 0; }
+}

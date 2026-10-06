@@ -2,6 +2,7 @@
 // and the roster: GET /api/teams/page?floor=<id>&team=<team> (server/teams/page-data.ts). Read from the
 // floor's main checkout, so it's what has landed, not what a Lead is still writing in its worktree.
 
+import type { DeliverablesView } from '../deliverables.js';
 import type { TeamId } from './roles.js';
 
 export interface TeamJournalEntry {
@@ -23,6 +24,8 @@ export interface TeamPageData {
   design: string[];
   /** The newest standup page (docs/standups/<date>.md), for Management. */
   standup?: string;
+  /** The team's 📦 deliverables (server/deliverables/): main, its worktrees and the office branches. */
+  deliverables?: DeliverablesView;
 }
 
 /** How many journal entries the page shows, and how much of each. */

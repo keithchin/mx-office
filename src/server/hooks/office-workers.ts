@@ -10,6 +10,7 @@ import { str } from '../office/input.js';
 import { readBody, send } from '../http/util.js';
 import { officeEscalate } from './office-escalate.js';
 import { officeSubagent } from './office-subagent.js';
+import { officeRender } from './office-render.js';
 import { agent, audit } from '../audit/index.js';
 import { agentHired, agentTold, prHanded } from '../chatter/hooks.js';
 
@@ -70,7 +71,7 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
       workers: list.map((w) => workerRow(w, view, me.id)),
     });
   }
-  if (req.method !== 'POST' || !['', '/home', '/tell', '/pr', '/escalate', '/subagent'].includes(action)) return send(res, 405, { error: 'GET /office/workers, or POST to /office/workers, /office/workers/home, /office/workers/tell, /office/workers/pr, /office/workers/escalate or /office/workers/subagent' });
+  if (req.method !== 'POST' || !['', '/home', '/tell', '/pr', '/escalate', '/subagent', '/render'].includes(action)) return send(res, 405, { error: 'GET /office/workers, or POST to /office/workers, /office/workers/home, /office/workers/tell, /office/workers/pr, /office/workers/escalate, /office/workers/subagent or /office/workers/render' });
   let body: unknown;
   try {
     body = JSON.parse((await readBody(req)) || '{}');
@@ -82,6 +83,8 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
   if (action === '/escalate') return officeEscalate(ctx, floor, me, body, res);
   // A Lead managing its subagents: hooks/office-subagent.ts.
   if (action === '/subagent') return officeSubagent(ctx, floor, me, body, res);
+  // An HTML file of its own as a PDF or a PNG: hooks/office-render.ts.
+  if (action === '/render') return officeRender(ctx, floor, me, body, res);
 
   if (action === '/home') {
     const ask = readHomeRequest(body);

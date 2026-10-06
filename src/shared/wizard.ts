@@ -230,6 +230,10 @@ export interface SetupView {
   checkedAt?: number;
   /** Whoever's looking is an admin: only admins re-check the gates or save edited answers. */
   admin?: boolean;
+  /** Where the stages were read: the project's default branch on GitHub (`origin/main`), or the floor's folder when it has no remote. */
+  readFrom?: string;
+  /** The floor's folder when it isn't on the default branch or is behind it (server/wizard/gate-source.ts). */
+  checkout?: { branch: string; behind: number; defaultBranch: string };
 }
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;

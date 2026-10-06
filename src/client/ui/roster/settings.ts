@@ -75,6 +75,8 @@ export function settingsView(v: RosterView, redraw: (v: RosterView) => void): HT
     h('p.ro-row', {}, 'Bench a Lead after ', num(s.idleMinutes, (n) => (s.idleMinutes = n ?? 0), { max: 1440, step: 1, 'aria-label': 'Idle minutes' }), ' idle minutes (0 = only by hand). A Lead mid-task or waiting on someone is never idle.'),
     h('h4', {}, 'Review loop'),
     check(s.reviewNudge, (b) => (s.reviewNudge = b), "Nudge a Lead to review its subagent's result when its turn ends right after one came back (once per idle period; never while it needs you, asleep or benched)"),
+    h('h4', {}, 'Deliverables'),
+    check(s.earlyDrafts ?? true, (b) => (s.earlyDrafts = b), 'Early drafts: while the Chief Analyst is on Stages 0–2, Design, Development and Testing make small drafts marked as such (low-fi wireframes, a draft domain model, a test-plan outline), to be revised after the BRDs are confirmed. Off: they wait for their stage.'),
     h('h4', {}, 'Subagents'),
     h('p.ro-row', {}, 'Reinstate a benched subagent after ', num(s.subagentCooldownHours ?? 24, (n) => (s.subagentCooldownHours = n ?? 0), { max: 720, step: 1, 'aria-label': 'Subagent cool-down hours' }), ' hours (0 = only by hand). Who may warn, bench or swap a subagent is each Lead’s 🧰 Skills.'),
     h('h4', {}, 'Daily standup'),

@@ -24,7 +24,7 @@ export class Members {
     const d = this.roster.data(floor.id);
     const names = Object.fromEntries(ROLES.map((r) => [r.id, d.members[r.id].name])) as PlaybookContext['names'];
     const m = d.members[role];
-    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role) };
+    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role), earlyDrafts: d.settings.earlyDrafts };
   }
 
   /**
@@ -216,6 +216,8 @@ export class Members {
         if (!isAsleepStatus(w.status) && w.status !== 'needs_input') floor.prompt(w.id, autonomyPrompt(d.settings.autonomy));
       }
     }
+    // Early drafts on or off: the Leads' Playbooks say so (they read them again at their next session or prompt).
+    else if (d.settings.earlyDrafts !== was.earlyDrafts) for (const r of ROLES) this.rewrite(floor, r.id);
     this.roster.touch(floor);
     return undefined;
   }

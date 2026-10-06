@@ -70,7 +70,7 @@ const PROPOSALS_KEPT = 300;
 const ESCALATIONS_KEPT = 200;
 
 export function defaultSettings(): RosterSettings {
-  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true, jeff: { ...DEFAULT_JEFF }, subagentCooldownHours: DEFAULT_COOLDOWN_HOURS };
+  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true, jeff: { ...DEFAULT_JEFF }, subagentCooldownHours: DEFAULT_COOLDOWN_HOURS, earlyDrafts: true };
 }
 
 /** Settings from what was saved or sent, anything malformed left as it was in `base`. */
@@ -100,6 +100,8 @@ export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings
       // A roster saved before the policy existed gets the careful one: a real ask, not his say-so alone.
       waitingPolicy: isJeffWaitingPolicy(s.jeff?.waitingPolicy) ? s.jeff.waitingPolicy : (base.jeff?.waitingPolicy ?? DEFAULT_JEFF.waitingPolicy),
     },
+    // A roster saved before early drafts existed has them on, like a fresh one.
+    earlyDrafts: typeof s.earlyDrafts === 'boolean' ? s.earlyDrafts : (base.earlyDrafts ?? true),
     subagentCooldownHours: typeof s.subagentCooldownHours === 'number' && Number.isFinite(s.subagentCooldownHours) ? Math.max(0, Math.min(Math.round(s.subagentCooldownHours * 10) / 10, 24 * 30)) : (base.subagentCooldownHours ?? DEFAULT_COOLDOWN_HOURS),
   };
 }

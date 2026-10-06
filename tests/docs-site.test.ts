@@ -219,7 +219,7 @@ test('docs/site: the pictures it shows are all in docs/site/images, and none is 
 test('docs/site: the reference pages are in step with the code', () => {
   // Every office-workers command and subcommand in its usage text.
   const cli = pageText('reference/office-workers-cli');
-  const usage = ['office-workers.js', 'office-escalate.js', 'office-subagent.js'].map((f) => readFileSync(path.join(root, 'bin', f), 'utf8')).join('\n');
+  const usage = ['office-workers.js', 'office-escalate.js', 'office-subagent.js', 'office-render.js'].map((f) => readFileSync(path.join(root, 'bin', f), 'utf8')).join('\n');
   const commands = new Set([...usage.matchAll(/^\s+office-workers (\w[\w-]*)(?: (\w[\w-]*))?/gm)].map((m) => (m[1] === 'subagent' && m[2] ? `subagent ${m[2]}` : m[1])));
   assert.ok(commands.size >= 10, `found ${commands.size} commands`);
   for (const c of commands) assert.ok(cli.includes(`office-workers ${c}`), `the CLI page has office-workers ${c}`);
