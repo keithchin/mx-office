@@ -2,7 +2,8 @@
 // `office-workers escalate` or the agent-office MCP server's `escalate` tool (bin/office-workers.js).
 // The worker's own hook token says who's asking (checked by officeWorkers before it hands over); the
 // escalation itself is read and judged against the floor's autonomy level by the roster
-// (roster/escalations.ts), which never refuses one for being below the threshold: it files it as FYI.
+// (roster/escalations.ts), which never refuses one for being below the threshold: it files it as FYI,
+// and joins it to an open one that asks the same (jeff-same.ts) instead of raising it twice.
 
 import type http from 'node:http';
 import { readEscalationAsk } from '../../shared/roster/escalation.js';
@@ -12,10 +13,11 @@ import { send } from '../http/util.js';
 import type { Ctx } from '../office/context.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 
-export function officeEscalate(ctx: Ctx, floor: Floor, me: WorkerInfo, body: unknown, res: http.ServerResponse) {
+export async function officeEscalate(ctx: Ctx, floor: Floor, me: WorkerInfo, body: unknown, res: http.ServerResponse) {
   const ask = readEscalationAsk(body);
   if (typeof ask === 'string') return send(res, 400, { error: ask });
-  const { escalation: e, joined } = rosterOf(ctx).escalations.raiseOrJoin(teamFloor(ctx, floor), me, ask);
+  // The same ask already open (its title, or in other words in Jeff's judgement) is joined as a +1.
+  const { escalation: e, joined } = await rosterOf(ctx).escalations.raiseOrJoinJudged(teamFloor(ctx, floor), me, ask);
   return send(res, 200, {
     ok: true,
     escalation: { id: e.id, urgency: e.urgency, fyi: e.fyi, level: e.level, title: e.title },

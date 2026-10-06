@@ -40,7 +40,7 @@ export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
       if (note) ctx.toastFloor(floor, note);
       if (error) ctx.toastFloor(floor, error, 'warn');
     },
-    prompt: (id, text) => floor.workers.prompt(id, text, 'Agent Office'),
+    prompt: (id, text, by) => floor.workers.prompt(id, text, by ?? 'Agent Office'),
     wake: (id, prompt) => floor.workers.resume(id, prompt),
     rename: (id, name) => floor.workers.rename(id, name),
     cwdOf: (w: WorkerInfo) => (w.worktree ? path.resolve(floor.dir, w.worktree.path) : floor.dir),

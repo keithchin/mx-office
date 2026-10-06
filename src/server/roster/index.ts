@@ -16,6 +16,7 @@ import type { ApprovalItem, MemberStatus, MemberView, RosterView } from '../../s
 import { awaitingAnswer, benchStep, dueForBench, isAsleepStatus, isBusyStatus } from './bench.js';
 import { forgetSubagents } from '../workers/subagents.js';
 import { forgetLastWords } from '../judge/turns.js';
+import { Delivery } from './deliver.js';
 import { Escalations } from './escalations.js';
 import { excerpt, readJournal } from './journal-io.js';
 import { Jeff } from './jeff.js';
@@ -36,6 +37,8 @@ interface Seen {
 }
 
 export class Roster {
+  /** Every prompt the roster types into an agent: never into a dialog, and none of the office's past the cap (deliver.ts). */
+  readonly delivery: Delivery;
   readonly members: Members;
   readonly standups: StandupRunner;
   readonly escalations: Escalations;
@@ -49,6 +52,7 @@ export class Roster {
   private timer?: NodeJS.Timeout;
 
   constructor(readonly deps: RosterDeps, tickMs = 60_000) {
+    this.delivery = new Delivery(this);
     this.members = new Members(this);
     this.standups = new StandupRunner(this);
     this.escalations = new Escalations(this);
@@ -110,6 +114,8 @@ export class Roster {
     const capChanged = this.noteSpend(floor, d, w, now);
     // A turn just ended: Jeff judges whether it's waiting on the Project Manager (any agent, not just the team's).
     if (prev?.status === 'working' && (w.status === 'done' || w.status === 'idle')) void this.jeff.onTurnEnd(floor, w).catch((err: unknown) => console.error(`agent-office: Jeff on ${floor.id}: ${(err as Error)?.message ?? err}`));
+    // Between turns: the answers it's owed and the prompts held while a dialog was up go in.
+    this.delivery.onWorker(floor, w);
     const role = this.roleOf(floor, w.id);
     if (!role) return this.touch(floor, !capChanged);
     const m = d.members[role];
@@ -119,7 +125,6 @@ export class Roster {
     }
     this.standups.onWorker(floor, role, w);
     this.nudges.onWorker(floor, role, w);
-    this.escalations.onMember(floor, role, w);
     this.subagents.onMember(floor, role, now);
     if (role === 'pm') this.escalations.onCoordinator(floor, w);
     else this.labelLeadPr(floor, role, w);
@@ -134,6 +139,7 @@ export class Roster {
   /** A worker left the floor: a member sent home by hand is no longer hired (its name and handoff stay). */
   onWorkerGone(floor: TeamFloor, workerId: string) {
     this.seen.delete(workerId);
+    this.delivery.forget(workerId);
     forgetSubagents(workerId);
     forgetLastWords(workerId);
     const role = this.roleOf(floor, workerId);
@@ -221,7 +227,7 @@ export class Roster {
   pauseOf(d: RosterData): string | undefined {
     const cap = capAt(d.settings.costCaps, d.settings.autonomy);
     if (cap === undefined || d.spend.usd < cap) return undefined;
-    return `This floor's $${cap.toFixed(2)} daily team cap (autonomy level ${d.settings.autonomy}) is spent — no new hires here until tomorrow`;
+    return `This floor's $${cap.toFixed(2)} daily team cap (autonomy level ${d.settings.autonomy}) is spent: no new hires, and the office sends no prompts of its own (nudges, standups, relays, wakes) until tomorrow`;
   }
 
   /** Re-applies the cap after the settings changed. */
@@ -321,7 +327,7 @@ export class Roster {
         }
       }
     }
-    if (paused) out.push({ id: 'cap', kind: 'cap', title: 'Daily cost cap reached', detail: `${paused}. Raise the cap in the team settings to hire again today.` });
+    if (paused) out.push({ id: 'cap', kind: 'cap', title: 'Spend cap reached: office prompts paused; agents finish their current turn', detail: `${paused}. Your own answers and typing still go through. Raise the cap in the team settings to carry on today.` });
     return out;
   }
 }

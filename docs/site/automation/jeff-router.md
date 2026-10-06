@@ -37,6 +37,12 @@ Either way he never raises what the agent already raised: an escalation of its o
 > [!NOTE]
 > Agents raising the same thing are merged too: an agent's `office-workers escalate` whose title matches an open escalation on the floor (nearly word for word) adds a **+1 from** *name* with its details to that one instead of opening a second, and the agent hears your answer as well. See [Escalations](../teams-and-agents/escalations.md).
 
+## The same ask in other words
+
+When an agent's new escalation matches no open one by title, and **Waiting on you** isn't Off (Shadow counts), Jeff is asked whether it asks you for the same thing as one of the floor's open ones: the same decision, the same action, the same missing secret or access, however it's worded. He reads the new title and the start of its details, and the newest 8 open escalations' titles and details, redacted like everything he reads. Only a pick he's at least **85%** sure of joins it as a +1; *none*, a lower confidence, no answer within 10 seconds or any failure raises it as its own. He's asked at most 30 times an hour per floor, and the Haiku fallback's own hourly cap applies too.
+
+This is what would have turned mx-spike's nine escalations about two CI secrets (*Set repo secret …*, *One command to set the e2e secret …*, *Secret 404 …*) into what they were: two asks.
+
 ## Priority: which escalation first
 
 With **Priority** on (the default, Settings → Jeff · Router → **Priority**: Off or On), Jeff rates every open escalation that isn't FYI, once, and again at most once an hour or when its text changes. He picks a level, from *Can wait days* to *Blocking work right now, or a critical risk*, and says how true two things are: *agents are stopped until you answer* (blocking) and *delaying it risks security, data loss, budget overrun or a client milestone* (risk). The office turns that into a score:

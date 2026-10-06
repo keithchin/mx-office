@@ -30,7 +30,8 @@ export interface TeamFloor {
   hire(ask: HireAsk): Promise<WorkerInfo | string>;
   /** Sends a worker home: its worktree stays when it holds work that isn't on GitHub. */
   stop(id: string): Promise<void>;
-  prompt(id: string, text: string): string | undefined;
+  /** Types a prompt into a worker's session (`by`: who it's from, else the office). Go through roster/deliver.ts, which never types into a dialog. */
+  prompt(id: string, text: string, by?: string): string | undefined;
   /** Wakes an asleep worker carrying on its session, with `prompt` as its next message. */
   wake(id: string, prompt?: string): string | undefined;
   rename(id: string, name: string): void;

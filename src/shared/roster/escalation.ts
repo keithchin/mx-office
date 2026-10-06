@@ -49,7 +49,7 @@ export interface Escalation {
    * Other agents that raised the same while it was open (a "+1"): merged into this one instead of a
    * second escalation, and told the answer too (roster/escalations.ts).
    */
-  also?: { workerId: string; by: string; role?: RoleId; at: number }[];
+  also?: { workerId: string; by: string; role?: RoleId; at: number; /** Answered while a dialog was up in its terminal: told once that's over. */ pending?: boolean }[];
 }
 
 /** What an agent sends to raise one, before the office stamps it. */

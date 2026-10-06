@@ -28,7 +28,7 @@ export function officeSubagent(ctx: Ctx, floor: Floor, me: WorkerInfo, body: unk
     if (typeof run === 'string') return send(res, 400, { error: run });
     const v = roster.subagents.views(team).find((x) => x.lead === lead && x.name === b.name);
     const s = v?.score;
-    return send(res, 200, { ok: true, text: `Recorded: ${b.verdict} for ${String(b.name)}${run.task ? ` (“${run.task}”)` : ''}.${s ? ` Track record on ${s.model}: ${s.grade ? `grade ${s.grade} (${s.score}%)` : `${s.reviewed} reviewed runs, graded from 3`}${s.underperforming ? ` · underperforming: ${s.why}` : ''}.` : ''}` });
+    return send(res, 200, { ok: true, text: `Recorded: ${b.verdict} for ${String(b.name)}${run.task ? ` (“${run.task}”)` : ''}.${s ? ` Track record on ${s.model}: ${s.grade ? `grade ${s.grade} (${s.score}%)` : `${s.reviewed} reviewed runs, graded from 3`}${s.underperforming ? ` · underperforming: ${s.why}` : ''}.` : ''}${roster.subagents.roundsText(team, lead, b.name)}` });
   }
   if (!isSubagentOp(op)) return send(res, 400, { error: 'op is one of list, review, warn, bench, swap-model, reinstate' });
   const answer = roster.subagents.request(team, lead, me, op, b.name, { reason: str(b.reason, 300), model: str(b.model, 64) });
