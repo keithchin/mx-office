@@ -33,6 +33,25 @@ export const CLAUDE_MODEL_NAMES: Record<ClaudeModel, string> = {
 };
 
 /**
+ * Claude model families Claude Code's auto permission mode isn't offered for. Left to the default
+ * mode, their workers would stop at a prompt for every file they write; they start in "accept edits"
+ * mode instead (see claudePermissionMode). Shell commands still go by the project's own settings.
+ */
+export const CLAUDE_NO_AUTO_MODE: readonly string[] = ['haiku'];
+
+/**
+ * The --permission-mode a Claude worker on `model` (an alias or a full id) starts in, when the office
+ * picks one: 'acceptEdits' for a model auto mode isn't offered for, else none (its settings decide).
+ */
+export function claudePermissionMode(model: string | undefined): 'acceptEdits' | undefined {
+  const m = model?.toLowerCase() ?? '';
+  return m && CLAUDE_NO_AUTO_MODE.some((family) => m.includes(family)) ? 'acceptEdits' : undefined;
+}
+
+/** What the hire dialog says under a Claude model that starts in "accept edits" mode. */
+export const ACCEPT_EDITS_HINT = 'Haiku runs in “accept edits” mode (Claude Code’s auto mode isn’t available for it): file edits don’t ask; shell commands follow the project’s permission settings.';
+
+/**
  * What a Claude model id is called: "Opus 5.5" for `claude-opus-5-5`, "Haiku 4.5" for
  * `claude-haiku-4-5-20251001`, "Sonnet 3.5" for the older `claude-3-5-sonnet-20241022`, with or
  * without a cloud's prefix and suffix around it. Undefined for anything that isn't one.
@@ -145,6 +164,8 @@ export interface ModelField {
   max?: number;
   /** The line under the fields. */
   hint: string;
+  /** What more that line says once a model is picked, for one that runs differently (Haiku: see ACCEPT_EDITS_HINT). */
+  modelHint?: (model: string) => string | undefined;
   /** What a typed id it turns down says. */
   invalid?: string;
 }
@@ -195,6 +216,7 @@ export const PROVIDER_META: Record<AgentProvider, ProviderMeta> = {
       fixed: CLAUDE_MODELS.map((id) => ({ id, name: CLAUDE_MODEL_NAMES[id] })),
       unset: 'Default (--agent-args)',
       hint: 'The cost panel tracks each model separately.',
+      modelHint: (model) => (claudePermissionMode(model) ? ACCEPT_EDITS_HINT : undefined),
     },
     takesEffort: true,
     usage: { tracked: true, note: 'Office usage and budget track Claude Code.' },

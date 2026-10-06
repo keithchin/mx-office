@@ -90,7 +90,8 @@ export function restoreWorkers(file: string, workers: Map<string, Worker>, defau
         repos: s.worktree ? validRepos(s.repos) : undefined,
         title: s.title,
         sessionId: s.sessionId,
-        activity: s.activity,
+        // "Waiting on a setup prompt" left over on one that has since got going (an older office never cleared it).
+        activity: s.activity === providerAdapter(provider)?.bootHint && s.pty?.status !== 'needs_input' ? undefined : s.activity,
         task: validTask(s.task),
         pr: s.pr && typeof s.pr.number === 'number' && typeof s.pr.url === 'string' ? { number: s.pr.number, url: s.pr.url } : undefined,
         pastPrs: Array.isArray(s.pastPrs) && s.pastPrs.every((n: unknown) => typeof n === 'number') && s.pastPrs.length ? s.pastPrs : undefined,

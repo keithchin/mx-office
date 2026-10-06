@@ -15,11 +15,14 @@ import { rosterOf, teamFloor } from '../roster/adapter.js';
 export function officeEscalate(ctx: Ctx, floor: Floor, me: WorkerInfo, body: unknown, res: http.ServerResponse) {
   const ask = readEscalationAsk(body);
   if (typeof ask === 'string') return send(res, 400, { error: ask });
-  const e = rosterOf(ctx).escalations.raise(teamFloor(ctx, floor), me, ask);
+  const { escalation: e, joined } = rosterOf(ctx).escalations.raiseOrJoin(teamFloor(ctx, floor), me, ask);
   return send(res, 200, {
     ok: true,
     escalation: { id: e.id, urgency: e.urgency, fyi: e.fyi, level: e.level, title: e.title },
-    note: e.fyi
+    ...(joined ? { joined: true } : {}),
+    note: joined
+      ? `Already open: ${e.by === me.name ? 'you' : e.by} raised the same (${e.id}, "${e.title}"). Your +1 and details are added to it, and the Project Manager's answer comes back to you as a prompt too; don't raise it again.`
+      : e.fyi
       ? `Filed as FYI: below this floor's escalation threshold at autonomy level ${e.level}. The Project Manager sees it on the project console without an alert; carry on.`
       : `Raised to the Project Manager on the project console${e.urgency === 'urgent' || e.urgency === 'critical' ? ' with an alert' : ''}. Their answer comes back to you as a prompt; carry on with whatever it doesn't block.`,
   });

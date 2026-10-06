@@ -4,6 +4,8 @@
 // following its tool calls one by one; Claude Code's own hook is built from the same steps (see
 // providers/claude.ts). OpenCode's plugin reports statuses instead (see providers/opencode.ts).
 import { toolAction } from '../../shared/actions.js';
+import type { WorkerStatus } from '../../shared/protocol.js';
+import type { SomeAdapter } from '../providers/types.js';
 import type { Worker, WorkerHandle } from './types.js';
 import { truncate } from './util.js';
 
@@ -16,6 +18,39 @@ const ASKS = /(?:^|[._])(?:AskUserQuestion|ask_user_question|request_user_input)
 /** In the middle of a turn: working, or asking something (not stuck on a trust or login screen). */
 export function midTurn({ info, bootBlocked }: Pick<Worker, 'info' | 'bootBlocked'>): boolean {
   return info.kind === 'agent' && (info.status === 'working' || (info.status === 'needs_input' && !bootBlocked));
+}
+
+/** Still 'starting' this long after it was spawned, an agent that says itself when it's up is blocked on a human. */
+export const BOOT_SILENT_MS = 12_000;
+/**
+ * One whose setup screens are read off its terminal (screen.setupScreens) is only slow while it's
+ * still 'starting' (a project's SessionStart hook can sync tools for minutes): after this long its
+ * desk is let go to idle, never flagged.
+ */
+export const BOOT_SLOW_MS = 5 * 60_000;
+
+/** How long a worker may stay 'starting', and what it becomes if it's still that when the time is up. */
+export function bootSilence(adapter: Pick<SomeAdapter, 'bootHint' | 'screen'> | undefined): { after: number; status: 'needs_input' | 'idle' } {
+  if (adapter?.screen?.setupScreens) return { after: BOOT_SLOW_MS, status: 'idle' };
+  return { after: BOOT_SILENT_MS, status: adapter?.bootHint ? 'needs_input' : 'idle' };
+}
+
+/**
+ * Watches a run that has just started (`proc`) until its session says it's up. Silent past
+ * bootSilence's time, one with no way to read its setup screens is flagged as needing a human (its
+ * bootHint); one that reads them (Claude) has been watched on screen all along
+ * (WorkerManager.checkBlocked), so it was only slow and goes idle.
+ */
+export function watchBoot(w: Pick<Worker, 'info' | 'pty' | 'bootBlocked'>, proc: unknown, adapter: SomeAdapter | undefined, setStatus: (s: WorkerStatus) => void, timer: (fn: () => void, ms: number) => unknown = setTimeout) {
+  const { after, status } = bootSilence(adapter);
+  timer(() => {
+    if (w.info.status !== 'starting' || w.pty !== proc) return;
+    if (status === 'needs_input') {
+      w.bootBlocked = true;
+      w.info.activity = adapter?.bootHint;
+    }
+    setStatus(status);
+  }, after);
 }
 
 /** A lifecycle hook event as a provider's normalizer compacts it. */

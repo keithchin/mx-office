@@ -19,7 +19,7 @@ import { PROVIDERS, providerAdapter, titleNoise, type LaunchPlan, type ProviderF
 import { launchAcp } from './acp.js';
 import { clockWork } from './clock.js';
 import { childEnv } from './env.js';
-import { midTurn } from './lifecycle.js';
+import { midTurn, watchBoot } from './lifecycle.js';
 import { restoreWorkers, saveWorkers } from './persist.js';
 import { WorkerPrs } from './pr.js';
 import { WIN, binScript, defaultShell, resolveCommand, shellRun, shq, writeOfficeCommands } from './process.js';
@@ -826,16 +826,8 @@ export class WorkerManager {
       this.persist();
       void this.worktrees.syncBranch(w);
     });
-    // SessionStart fires as soon as Claude can take input. Still silent after a while means it is
-    // blocked on a human: folder trust dialog, login, first-run onboarding. Flag it so it jumps.
-    setTimeout(() => {
-      if (info.status !== 'starting' || w.pty !== proc) return;
-      if (adapter?.bootHint) {
-        w.bootBlocked = true;
-        info.activity = adapter.bootHint;
-        this.setStatus(w, 'needs_input');
-      } else this.setStatus(w, 'idle');
-    }, 12000);
+    // Its session says when it's up; silent too long, it's slow or stuck on a human (see watchBoot).
+    watchBoot(w, proc, adapter, (s) => this.setStatus(w, s));
   }
 
   private startFailed(w: Worker, message: string) {

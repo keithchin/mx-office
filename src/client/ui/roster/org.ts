@@ -2,7 +2,7 @@
 // where it stands (working, idle, benched…), its model and cost, its team's subagents and the newest
 // entry in its team journal; and what the Project Manager can do to it (hire or wake, bench, rename, change model).
 
-import { CLAUDE_MODEL_NAMES, claudeModelName } from '../../../shared/providers';
+import { CLAUDE_MODEL_NAMES, claudeModelName, claudePermissionMode } from '../../../shared/providers';
 import { ROLE_BY_ID } from '../../../shared/roster/roles';
 import type { MemberStatus, MemberView, RosterView } from '../../../shared/roster/types';
 import { h, timeAgo } from '../dom';
@@ -23,7 +23,8 @@ export const STATUS_TEXT: Record<MemberStatus, string> = {
 };
 
 // The models a role can run on, by what they're called today ("Sonnet 5.5"): Claude Code's aliases, newest family first.
-const MODELS = (['fable', 'opus', 'sonnet', 'haiku'] as const).map((value) => ({ value, label: CLAUDE_MODEL_NAMES[value] }));
+// Haiku has no auto mode, so it says it runs in accept edits mode (shared/providers.ts).
+const MODELS = (['fable', 'opus', 'sonnet', 'haiku'] as const).map((value) => ({ value, label: claudePermissionMode(value) ? `${CLAUDE_MODEL_NAMES[value]} (accept edits)` : CLAUDE_MODEL_NAMES[value] }));
 /** "Sonnet 5.5" for a role's model alias, or the id as it is. */
 const modelName = (m: string) => (CLAUDE_MODEL_NAMES as Record<string, string>)[m] ?? claudeModelName(m) ?? m;
 

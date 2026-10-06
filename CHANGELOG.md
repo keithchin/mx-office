@@ -51,6 +51,25 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   waiting a few seconds longer each time) when the connection drops or GitHub is busy; the log says
   *↻ … trying again in 3s*. Otherwise the wizard looks and works as before.
 
+### Fixed
+- **No more false "needs input" at boot**: a Claude worker in a project with a slow SessionStart hook
+  (a toolkit project's `mxcli init --sync-skills` and `mxcli run --setup`) shows as starting until its
+  session is up, instead of jumping to 🙋 *Waiting on a setup prompt* after 12 seconds. It's flagged
+  only when the trust or login screen is actually on its terminal. Once its session is up, the
+  *Waiting on a setup prompt* line goes from its card (idle workers used to keep it for good).
+- **Jeff escalates only real asks**: with *Waiting on you* On, Jeff raises an escalation only when the
+  end of the agent's message really asks you something (a question to you, a request or approval, an
+  `AWAITING-PM:` line). Progress reports he thinks are waiting ("Still running: …", "I also told
+  Keith …", "Merging that branch will need your approval when I open its PR") are logged as
+  disagreements, marked *held* on the Analysis tab, and not raised. He no longer raises what the agent
+  already raised (open, or answered in the last 6 hours).
+- **Duplicate escalations merge**: an agent escalating what's already open on the floor (nearly the
+  same title) adds a **+1 from** *name* with its details to the open one instead of opening another,
+  and hears your answer too.
+- **Haiku workers stop asking for every edit**: Claude Code's auto mode isn't available for Haiku, so
+  Haiku workers start in *accept edits* mode: file edits in their worktree don't ask. The hire window
+  and the Team tab's model picker say so.
+
 ### To know
 - Workflows (Docs → Automation → Workflows): runs are kept in the office's data folder under
   `flows/<workflow>/`, each run's start, finish, failure and pause is in the Audit log (`flow.*`, by
@@ -58,6 +77,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   old file in `wizard/` is kept as `<id>.json.migrated`.
 - Setups saved with "attended"/"unattended" read as Steering/Auto. Creating the app takes about 15
   seconds with `mx`; `mxcli new` takes longer (it downloads MxBuild first).
+- Jeff's old behaviour is still there: Settings → Jeff · Router → **When to escalate** → *His say-so*.
+- Haiku's shell commands (`git`, `gh`, builds) still follow the project's permission settings and may
+  still ask. A `--permission-mode` or `--dangerously-skip-permissions` in `--agent-args` overrides the
+  accept edits mode. Other agents (Codex, Grok, Muse, Pi), which can't be read off the screen, are
+  still flagged when they haven't said they're up 12 seconds in.
 
 ## 2026-10-05 · release 4 (`6639313`)
 

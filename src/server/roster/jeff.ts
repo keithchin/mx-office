@@ -3,7 +3,9 @@
 // escalation to resolve first; only a sort order, so just on or off: jeff-priority.ts):
 //   - waiting: an agent's turn just ended. Is it waiting on the Project Manager? The office's rule says
 //     so when it has an open escalation that isn't an FYI (or it's asking at its terminal). On: when
-//     Jeff is sure and the rule isn't, he raises the escalation for it, once per turn.
+//     Jeff is sure and the rule isn't, he raises the escalation for it, once per turn; under the
+//     'agree' policy (the default) only when its message really asks something (jeff-ask.ts), and
+//     never one the worker has already raised. Held back, the row is logged as a disagreement.
 //   - triage: a new issue appeared on the board. Which team is it for? The rule is its `team:` label,
 //     if it has one. On: an unlabelled issue gets Jeff's team when he's confident.
 // Shadow logs both verdicts side by side (judge/<floor>.jsonl) and never acts, so the Project Manager
@@ -17,6 +19,7 @@ import type { TeamId } from '../../shared/roster/roles.js';
 import { JudgeLog } from '../judge/log.js';
 import { clipState, type Questions, type Verdict } from '../judge/pure.js';
 import type { Roster } from './index.js';
+import { realAsk, sameAsk, waitingCall } from './jeff-ask.js';
 import { JeffPriority } from './jeff-priority.js';
 import type { TeamFloor } from './types.js';
 import { audit, jeff } from '../audit/index.js';
@@ -28,6 +31,8 @@ export const TRIAGE_AT = 0.75;
 /** New issues judged per look at the board, so a bulk import doesn't become a burst of calls. */
 const TRIAGE_PER_LOOK = 5;
 const TEXT_LOGGED = 300;
+/** An escalation of the worker's answered this recently, about the same, isn't raised for it again. */
+const DUPLICATE_WINDOW_MS = 6 * 3_600_000;
 
 export const WAITING_QUESTIONS: Questions = {
   waiting: {
@@ -62,7 +67,7 @@ export function triageQuestions(): Questions {
 export function questionLine(text: string): string {
   const lines = text
     .split('\n')
-    .map((l) => l.replace(/^[\s>#*_`-]+|[*_`]+$/g, '').trim())
+    .map((l) => l.replace(/^[\s>#*_`-]+|[*_`]+$/g, '').replace(/\*\*|__/g, '').trim())
     .filter(Boolean);
   const q = [...lines].reverse().find((l) => l.includes('?')) ?? lines[lines.length - 1] ?? '';
   return q.length > 120 ? `${q.slice(0, 119)}…` : q;
@@ -91,7 +96,13 @@ export class Jeff {
   ruleWaiting(floor: TeamFloor, w: WorkerInfo): boolean {
     if (w.status === 'needs_input') return true;
     const role = this.roster.roleOf(floor, w.id);
-    return this.roster.data(floor.id).escalations.some((e) => e.status === 'open' && !e.fyi && (e.workerId === w.id || (!!role && e.role === role)));
+    return this.roster.data(floor.id).escalations.some((e) => e.status === 'open' && !e.fyi && (e.workerId === w.id || (!!role && e.role === role) || !!e.also?.some((a) => a.workerId === w.id)));
+  }
+
+  /** The worker already raised this (open, an FYI too, or answered in the last few hours): not again. */
+  private raisedAlready(floor: TeamFloor, w: WorkerInfo, title: string): boolean {
+    const since = this.roster.deps.now() - DUPLICATE_WINDOW_MS;
+    return this.roster.data(floor.id).escalations.some((e) => (e.workerId === w.id || !!e.also?.some((a) => a.workerId === w.id)) && (e.status === 'open' || (e.resolution?.at ?? e.at) >= since) && sameAsk(e.title, title));
   }
 
   /** An agent's turn just ended: is it waiting on the Project Manager? */
@@ -112,10 +123,11 @@ export class Jeff {
       const says = noul >= WAITING_AT && kind.choice !== 'none' && kind.choice !== 'fyi';
       const now = floor.worker(w.id) ?? w;
       const rule = this.ruleWaiting(floor, now);
+      const title = questionLine(text) || `${now.name} is waiting on you`;
+      const call = waitingCall({ policy: this.roster.data(floor.id).settings.jeff.waitingPolicy ?? 'agree', says, rule, ask: realAsk(text), duplicate: this.raisedAlready(floor, now, title) });
       let acted = false;
       // Only while its turn is still over: a person (or anything else) may have moved it on meanwhile.
-      if (mode === 'on' && says && !rule && (now.status === 'done' || now.status === 'idle')) {
-        const title = questionLine(text) || `${now.name} is waiting on you`;
+      if (mode === 'on' && call.escalate && (now.status === 'done' || now.status === 'idle')) {
         const details = [`Jeff noticed ${now.name} ended its turn waiting on you (${kind.choice}, ${Math.round(noul * 100)}% sure). Answer here and it goes to ${now.name} as its next prompt.`, '', 'Its last message:', '', clipState(text, 2000)].join('\n');
         this.roster.escalations.raiseFor(
           floor,
@@ -133,8 +145,9 @@ export class Jeff {
         rule: rule ? 'waiting' : 'not waiting',
         agree: says === rule,
         acted,
+        ...(call.held ? { held: call.held } : {}),
         text: clipState(text, TEXT_LOGGED),
-        verdict: says ? '→ PM' : 'carry on',
+        verdict: call.held ? (call.held === 'no-ask' ? 'no ask: held' : 'raised already') : says ? '→ PM' : 'carry on',
       });
     } finally {
       this.asking.delete(key);

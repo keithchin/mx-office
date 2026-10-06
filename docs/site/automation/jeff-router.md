@@ -11,7 +11,7 @@ aliases: [/docs/jeff]
 
 | Judgement | Question | The office's own rule | When **On**, Jeff… |
 |---|---|---|---|
-| 🙋 **Waiting on you** | An agent just ended its turn. Is it waiting on the Project Manager? | It is *needs input*, or has an open escalation | raises the escalation the agent forgot (important, *blocked*), when he's sure (≥ 0.7) and the rule says no |
+| 🙋 **Waiting on you** | An agent just ended its turn. Is it waiting on the Project Manager? | It is *needs input*, or has an open escalation | raises the escalation the agent forgot (important, *blocked*), when he's sure (≥ 0.7), the rule says no and its message really asks you something (see [When he escalates](#when-he-escalates)) |
 | 🏷️ **Issue triage** | A new issue appeared. Which team is it for? | Its `team:` label | labels an unlabelled issue when he's sure (≥ 0.75) |
 | 🧑‍⚖️ **Priority** | An escalation is open. How soon should the Project Manager resolve it? | Urgency, then age | puts the escalation lists in his order, with a chip (see below). Advisory only |
 
@@ -24,6 +24,18 @@ Set each judgement in [Settings](../using-the-office/settings.md) → **Jeff · 
 - **On**: he acts as above. **Priority** is Off or On only, and On by default: it only orders lists, so there is nothing to watch in shadow first.
 
 Watch the **Jeff · Router** section of the [Analysis](../using-the-office/model-analysis.md) tab. It shows how often he agrees with the rule and the recent disagreements. When he agrees with *you*, switch that judgement to On.
+
+## When he escalates
+
+With **Waiting on you** On, **When to escalate** (Settings → Jeff · Router) says what it takes for him to raise an escalation the office's rule missed:
+
+- **Only a real ask** (the default, `agree`): he says it's waiting *and* the end of its last message (its last three paragraphs) asks you something: a question put to you, a request or approval (*should I…*, *can you…*, *waiting on you*, *until you decide*, *needs your approval*, *for you to merge*), or an `AWAITING-PM:` line. A progress report (*Still running: …*, *I also told Keith…*), a condition (*If you meant something else, tell me*) or the future (*Merging it will need your approval when I open its PR*) isn't one. When he says it's waiting but there's no real ask, nothing is raised: the row is logged as a disagreement, marked *held: no real ask* on the Analysis tab.
+- **His say-so** (`model`): his verdict alone is enough, as he worked before. Progress reports get escalated too.
+
+Either way he never raises what the agent already raised: an escalation of its own about the same (the same title, or nearly) that is open, or was answered in the last 6 hours, is *held: raised already*. When the rule already says it's waiting (it's *needs input*, or has an open escalation), there is nothing for him to raise.
+
+> [!NOTE]
+> Agents raising the same thing are merged too: an agent's `office-workers escalate` whose title matches an open escalation on the floor (nearly word for word) adds a **+1 from** *name* with its details to that one instead of opening a second, and the agent hears your answer as well. See [Escalations](../teams-and-agents/escalations.md).
 
 ## Priority: which escalation first
 

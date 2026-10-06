@@ -3,6 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { FAILS_TO_DESPAIR, outputFailed, toolAction } from '../../shared/actions.js';
+import { claudePermissionMode } from '../../shared/providers.js';
 import { noteLastWords } from '../judge/turns.js';
 import { MCP_ALLOWED, writeClaudeMcpConfig } from '../office-workers.js';
 import { QUEUE_AGENT_DISALLOWED_TOOLS } from '../stations.js';
@@ -23,6 +24,9 @@ const HOOK_TRIES = 6;
 /** First-run screens Claude shows before it can take a prompt. */
 const SETUP_PROMPT = /trust this folder|Do you trust the files|Select login method|Choose the text style|Press Enter to continue|Bypass Permissions mode/i;
 const NOT_LOGGED_IN = /Not logged in\s*·\s*Run \/login|Invalid API key|Please run \/login/i;
+/** What its desk says while one of those screens is up. */
+const SETUP_HINT = 'Waiting on a setup prompt (trust / login) — open the terminal';
+const LOGIN_HINT = "Claude isn't signed in on this machine — open the terminal and type /login";
 
 interface ClaudeSetup {
   /** Its --settings: the office's hooks. */
@@ -120,12 +124,16 @@ function noteOutcome(h: WorkerHandle, payload: any, failed: boolean) {
 
 /**
  * Claude Code hook callback. Any session id or transcript it names is the worker's now, and a
- * malformed payload still counts as the event. The trust and login screens are also read off its
- * screen (see blocked), so only a prompt or its session starting clears bootBlocked here.
+ * malformed payload still counts as the event. Any hook at all means its session is up, past the
+ * trust and login screens (Claude runs no hooks before them): what said it was stuck there goes.
+ * Not being signed in is read off its screen again if it's still so (see claudeBlocked).
  */
 function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
   const { info } = h;
   const now = Date.now();
+  const wasBlocked = h.bootBlocked;
+  h.bootBlocked = false;
+  if (info.activity === SETUP_HINT || info.activity === LOGIN_HINT) info.activity = undefined;
   if (payload?.session_id && typeof payload.session_id === 'string' && payload.session_id !== info.sessionId) {
     info.sessionId = payload.session_id;
     h.persist();
@@ -141,13 +149,10 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
         h.clearTask();
         h.failStreak = 0;
       }
-      if (info.status === 'starting' || (h.bootBlocked && info.status === 'needs_input')) {
-        h.bootBlocked = false;
-        h.setStatus('idle');
-      }
+      if (info.status === 'starting' || (wasBlocked && info.status === 'needs_input')) h.setStatus('idle');
+      else h.emit();
       break;
     case 'UserPromptSubmit':
-      h.bootBlocked = false;
       info.action = undefined;
       if (typeof payload?.prompt === 'string') {
         info.activity = truncate(payload.prompt, 80);
@@ -201,9 +206,28 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
  * on this machine. That needs a human, until the screen moves on.
  */
 export function claudeBlocked(text: string, early: boolean): string | undefined {
-  if (NOT_LOGGED_IN.test(text)) return "Claude isn't signed in on this machine — open the terminal and type /login";
-  if (SETUP_PROMPT.test(text) && early) return 'Waiting on a setup prompt (trust / login) — open the terminal';
+  if (NOT_LOGGED_IN.test(text)) return LOGIN_HINT;
+  if (SETUP_PROMPT.test(text) && early) return SETUP_HINT;
   return undefined;
+}
+
+/** A permission mode the command line already sets (the office's --agent-args): that one stands. */
+const SETS_MODE = /^--(permission-mode|dangerously-skip-permissions|allow-dangerously-skip-permissions)(=|$)/;
+
+/**
+ * The --permission-mode the office adds for a Claude worker: "accept edits" for a model Claude Code's
+ * auto mode isn't offered for (Haiku), so it doesn't wait on a person for every file it writes in its
+ * worktree. Its model is the one picked for it, else the one --agent-args name (the last --model
+ * wins, as in Claude Code). None when --agent-args set a mode of their own.
+ */
+export function permissionModeFor(args: readonly string[], model: string | undefined): 'acceptEdits' | undefined {
+  if (args.some((a) => SETS_MODE.test(a))) return undefined;
+  let m = model;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--model' && args[i + 1]) m = args[i + 1];
+    else if (args[i].startsWith('--model=')) m = args[i].slice('--model='.length);
+  }
+  return claudePermissionMode(m);
 }
 
 export const claude: ProviderAdapter<undefined, ClaudeSetup> = {
@@ -222,6 +246,8 @@ export const claude: ProviderAdapter<undefined, ClaudeSetup> = {
     // A model/effort chosen for this worker overrides whatever --agent-args set office-wide.
     if (info.model) args.push('--model', info.model);
     if (info.effort) args.push('--effort', info.effort);
+    const mode = permissionModeFor(args, info.model);
+    if (mode) args.push('--permission-mode', mode);
     // The queue agent only ever adds to the queue: without these it can't touch the checkout's files.
     if (station === 'queue') args.push('--disallowedTools', ...QUEUE_AGENT_DISALLOWED_TOOLS);
     if (resumeSessionId) args.push('--resume', resumeSessionId);
@@ -230,15 +256,16 @@ export const claude: ProviderAdapter<undefined, ClaudeSetup> = {
     return { args };
   },
   signIn: 'claude',
-  // SessionStart fires as soon as Claude can take input: still silent, it's blocked on a human.
-  bootHint: 'Waiting on a setup prompt (trust / login) — open the terminal',
+  // SessionStart fires as soon as Claude can take input (after the project's own SessionStart hooks,
+  // which can take minutes): until then it's 'starting', and only its screen says it's blocked.
+  bootHint: SETUP_HINT,
   titleNoise: /^claude( code)?$/i,
   // Resuming a conversation Claude no longer has ("No conversation found") exits before Claude ever starts.
   freshIfResumeFails: true,
   hook: { strictJson: false, handle: claudeHook },
   // OSC 9;4 progress (Claude Code emits it): 0 = idle, anything else = busy. Catches Esc-cancel,
   // which fires no Stop hook.
-  screen: { progress: true, blocked: claudeBlocked },
+  screen: { progress: true, blocked: claudeBlocked, setupScreens: true },
   usage: { transcript: true },
   namesTasks: true,
 };

@@ -226,7 +226,7 @@ export function agentFields(project: ProjectInfo | null, id: string, initial: Ag
     if (!field) hint.textContent = m.unpicked ?? '';
     else if (field.catalog && catalogue?.request) hint.textContent = `Loading ${m.label} models…`;
     else if (field.catalog && catalogue?.failed) hint.textContent = `${m.label}’s models couldn’t be listed: leave it empty for its default, or type a model id.`;
-    else hint.textContent = field.hint;
+    else hint.textContent = [field.hint, chosen ? field.modelHint?.(chosen) : undefined].filter(Boolean).join(' ');
     fields.classList.toggle('hidden', !field && !m.takesEffort && !hint.textContent);
     paintEffort();
   };
@@ -257,7 +257,7 @@ export function agentFields(project: ProjectInfo | null, id: string, initial: Ag
   select.addEventListener('change', () => set({ provider: value() }));
   modelSelect.addEventListener('change', () => {
     pick(modelSelect.value);
-    paintEffort();
+    paint();
   });
   modelInput.addEventListener('input', () => {
     chosen = modelInput.value.trim();
