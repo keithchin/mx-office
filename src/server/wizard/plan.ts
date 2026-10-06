@@ -1,7 +1,8 @@
 // What the browser sends as a new project, checked and trimmed before anything runs: a name that's a
 // valid repository slug, choices from the lists the wizard offered, and text cut to sane lengths.
 
-import { ENTRY_MODES, ownerProblem, PROJECT_ROLES, slugProblem, type AnswerKind, type EntryMode, type IntakeAnswer, type ProjectPlan, type ProjectRole } from '../../shared/wizard.js';
+import { ENTRY_MODES, interviewModeOf, ownerProblem, PROJECT_ROLES, slugProblem, type AnswerKind, type EntryMode, type IntakeAnswer, type ProjectPlan, type ProjectRole } from '../../shared/wizard.js';
+import { cleanAppId } from './mendix-app.js';
 
 export const DISCOVERY_MODELS = ['opus', 'sonnet', 'haiku'] as const;
 
@@ -48,7 +49,7 @@ export function cleanPlan(raw: unknown, versions: string[], org: string): Projec
     mendix,
     entry: kind === 'change' && entry !== 'assurance' ? 'existing-app-change' : entry,
     tier: r.tier === 'small' ? 'small' : 'standard',
-    interview: r.interview === 'unattended' ? 'unattended' : 'attended',
+    interview: interviewModeOf(r.interview),
     execApproval: r.execApproval === 'ask' ? 'ask' : 'auto',
     intake,
     clients: names(r.clients),
@@ -56,5 +57,6 @@ export function cleanPlan(raw: unknown, versions: string[], org: string): Projec
     roles: [...new Set(roles)],
     discovery: { issue: d.issue === true, queue: d.issue === true && d.queue === true, model },
     createdByHand: r.createdByHand === true,
+    ...(kind === 'new' && cleanAppId(r.sprintrAppId) ? { sprintrAppId: cleanAppId(r.sprintrAppId) } : {}),
   };
 }

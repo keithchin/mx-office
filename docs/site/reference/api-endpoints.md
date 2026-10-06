@@ -49,7 +49,7 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | POST | `/api/roster/action` | Team actions (see below) |
 | GET | `/api/teams/page` | A team's page |
 | POST | `/api/teams/labels` | Create missing `team:` labels (admin) |
-| GET / POST | `/api/wizard/*` | The new-project wizard: GET `info`, `job`, `setup`, `answers`; POST `recheck`, `start`, `retry`, `edit` (admin) |
+| GET / POST | `/api/wizard/*` | The new-project wizard: GET `info`, `job`, `setup`, `answers`, `app-version` (`?repo=`: the Studio Pro an existing floor's `.mpr` was saved with); POST `recheck`, `start`, `retry`, `edit` (admin) |
 | GET | `/api/chatter` | Team chatter: `?floor=<id>&since=<ms>&limit=<n>&cursor=…&who=<name>` (with `as=<kind>` to tell a person from an agent of the same name) or `&with=agents\|me` |
 | GET | `/api/audit` | The audit log: `?floor=<id>\|all\|_office&since=&until=&actor=human,agent&action=worker.hire,github&q=&limit=&cursor=`, with counts, the chain check and a histogram |
 | GET | `/api/audit/export` | Every matching event as a download, `&format=csv\|jsonl` (admin) |

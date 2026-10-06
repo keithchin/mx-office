@@ -20,7 +20,7 @@ const plan = (over: Partial<ProjectPlan> = {}): ProjectPlan => ({
   mendix: '11.6.4',
   entry: 'greenfield',
   tier: 'small',
-  interview: 'attended',
+  interview: 'steering',
   execApproval: 'auto',
   intake: [{ n: 2, kind: 'answered', text: 'A demo app.' }],
   clients: ['Acme'],
@@ -59,7 +59,7 @@ test('a setup runs its steps in order, stops at a failure, and a retry carries o
     book.add(job);
     const calls: StepId[] = [];
     await book.run(job, fakeSteps(calls, new Set<StepId>(['init'])));
-    assert.deepEqual(calls, ['repo', 'clone', 'env', 'init']);
+    assert.deepEqual(calls, ['repo', 'clone', 'env', 'app', 'init']);
     assert.equal(job.status, 'failed');
     assert.equal(job.steps.init.status, 'failed');
     assert.equal(job.steps.init.detail, 'init broke');
@@ -67,7 +67,7 @@ test('a setup runs its steps in order, stops at a failure, and a retry carries o
 
     calls.length = 0;
     await book.run(job, fakeSteps(calls));
-    assert.deepEqual(calls, SETUP_STEPS.map((s) => s.id).slice(3), 'the steps already done are not run again');
+    assert.deepEqual(calls, SETUP_STEPS.map((s) => s.id).slice(4), 'the steps already done are not run again');
     assert.equal(job.status, 'done');
     assert.equal(job.steps.queue.status, 'skipped');
 
@@ -149,6 +149,8 @@ test('the admin token goes only to the repo-create child: not process.env, not t
       addFloor: async () => 'unused',
       adoptFloor: () => 'unused',
       queue: () => undefined,
+      hired: () => false,
+      hire: async () => 'unused',
     };
     const book = new JobBook(path.join(dir, 'jobs'));
     const job = newJob(plan(), 'Probe');
@@ -184,6 +186,8 @@ test('offline setup: a local bare repository, cloned, scaffold answers written, 
       addFloor: async () => 'not offline',
       adoptFloor: (_repo, d) => ((adopted = d), { id: 'demo-app', dir: d }),
       queue: () => 'should not queue offline',
+      hired: () => false,
+      hire: async () => 'should not hire offline',
     };
     const book = new JobBook(path.join(dir, 'jobs'));
     const job = newJob(plan({ discovery: { issue: true, queue: true, model: 'sonnet' } }), 'Probe');
@@ -196,7 +200,7 @@ test('offline setup: a local bare repository, cloned, scaffold answers written, 
       return { status: 'done' };
     };
     const skip: StepImpl = async () => ({ status: 'skipped' });
-    await book.run(job, { ...steps, init: scaffold, hooks: skip, gates: skip });
+    await book.run(job, { ...steps, app: skip, init: scaffold, hooks: skip, gates: skip });
     assert.equal(job.status, 'done', job.log.slice(-5).join('\n'));
     assert.equal(adopted, path.join(projects, 'Test-Org', 'demo-app'));
     const repoDir = job.dir!;
@@ -210,6 +214,7 @@ test('offline setup: a local bare repository, cloned, scaffold answers written, 
     const register = readFileSync(path.join(repoDir, 'PROJECT.md'), 'utf8');
     assert.equal(registerField(register, 'Entry mode'), 'greenfield');
     assert.equal(registerField(register, 'Mendix version'), '11.6.4');
+    assert.equal(registerField(register, 'Interview mode'), 'steering', "the toolkit's interview-mode.sh word, not attended");
     assert.match(register, /\| P \| Size tier: small \| CONFIRMED \d{4}-\d\d-\d\d \|/);
     const settings = JSON.parse(readFileSync(path.join(repoDir, 'agent-office.project.json'), 'utf8'));
     assert.deepEqual(settings.roles, ['pm', 'chief-analyst']);
@@ -225,11 +230,12 @@ test('offline setup: a local bare repository, cloned, scaffold answers written, 
     assert.equal(job.issue, 1);
     assert.ok(existsSync(path.join(cfg.offlineDir!, 'Test-Org', 'demo-app.issues', '1.md')));
     assert.equal(job.steps.queue.status, 'skipped', 'nothing is queued offline');
+    assert.equal(job.steps.team.status, 'skipped', 'nobody is hired offline');
 
     // Running it all again finds everything done.
     book.reset(job, SETUP_STEPS.map((s) => s.id));
     job.issue = 1;
-    await book.run(job, { ...steps, init: skip, hooks: skip, gates: skip });
+    await book.run(job, { ...steps, app: skip, init: skip, hooks: skip, gates: skip });
     assert.equal(job.status, 'done');
     for (const id of ['repo', 'env', 'intake', 'decisions', 'settings'] as StepId[]) assert.equal(job.steps[id].status, 'skipped', `${id}: ${job.steps[id].detail}`);
   } finally {
