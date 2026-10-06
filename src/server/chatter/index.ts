@@ -8,7 +8,7 @@
 // model calls, and nothing is invented: a message is always something an agent, a person or the office said.
 
 import { randomBytes, createHash } from 'node:crypto';
-import { CHATTER_TEXT_MAX, chatterOrder, cursorOf, isGroup, matchesFilter, olderThan, parseCursor, type ChatterFilter, type ChatterMessage, type ChatterPage, type ChatterParty, type ChatterTo } from '../../shared/chatter.js';
+import { CHATTER_LONG_MAX, CHATTER_TEXT_MAX, chatterOrder, cursorOf, isGroup, matchesFilter, olderThan, parseCursor, type ChatterFilter, type ChatterMessage, type ChatterPage, type ChatterParty, type ChatterTo } from '../../shared/chatter.js';
 import { ROLE_BY_ID } from '../../shared/roster/roles.js';
 import { redact } from '../judge/pure.js';
 import type { Roster } from '../roster/index.js';
@@ -48,6 +48,12 @@ export interface ChatterQuery {
 export function cleanText(text: string): string {
   const one = redact(text.replace(/\r\n?/g, '\n')).replace(/\s+/g, ' ').trim();
   return one.length > CHATTER_TEXT_MAX ? `${one.slice(0, CHATTER_TEXT_MAX - 1).trimEnd()}…` : one;
+}
+
+/** A team phone message as it's kept: its lines and Markdown, secrets out, at most CHATTER_LONG_MAX characters. */
+export function cleanLong(text: string): string {
+  const t = redact(text.replace(/\r\n?/g, '\n')).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  return t.length > CHATTER_LONG_MAX ? `${t.slice(0, CHATTER_LONG_MAX - 1).trimEnd()}…` : t;
 }
 
 const idOf = (key: string) => createHash('sha1').update(key).digest('base64url').slice(0, 14);
@@ -109,7 +115,7 @@ export class Chatter {
     const st = f.state();
     if (draft.key && st.seen[draft.key] !== undefined) return undefined;
     const now = this.deps.now();
-    const text = cleanText(draft.text);
+    const text = draft.long ? cleanLong(draft.text) : cleanText(draft.text);
     if (!text) return undefined;
     const m: ChatterMessage = {
       id: draft.key ? idOf(`${floorId}:${draft.key}`) : randomBytes(7).toString('base64url'),

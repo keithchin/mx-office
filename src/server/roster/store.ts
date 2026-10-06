@@ -12,7 +12,8 @@ import type { Escalation } from '../../shared/roster/escalation.js';
 import { DEFAULT_JEFF, isJeffMode, isJeffPriorityMode, isJeffWaitingPolicy } from '../../shared/judge.js';
 import { DEFAULT_BY_STAGE, type Proposal, type RosterSettings, type Standup } from '../../shared/roster/types.js';
 import { cleanOverrides, type SkillOverrides } from '../../shared/roster/skills.js';
-import { reviveSubagents, SUBAGENT_ACTIONS_KEPT } from './subagent-store.js';
+import { reviveLiveRuns, reviveSubagents, SUBAGENT_ACTIONS_KEPT } from './subagent-store.js';
+import type { LiveRun } from '../../shared/roster/subagent-live.js';
 import type { SubagentAction, SubagentRecord } from '../../shared/roster/subagents.js';
 import { emptyOutbox, reviveOutbox, type Outbox } from './relays.js';
 
@@ -60,6 +61,8 @@ export interface RosterData {
   subagents: Record<string, SubagentRecord>;
   /** Subagent actions a Lead proposed to the Project Manager, or asked them about. */
   subagentActions: SubagentAction[];
+  /** The Leads' subagents at work and their last runs, newest kept (subagent-live.ts). */
+  subagentRuns: LiveRun[];
   /** What the office has still to pass on to the Coordinator and the Leads (relays.ts): kept so a restart doesn't lose it. */
   outbox: Outbox;
 }
@@ -77,6 +80,9 @@ export function defaultSettings(): RosterSettings {
 }
 
 /** Settings from what was saved or sent, anything malformed left as it was in `base`. */
+/** A subagent limit from what was sent (null takes it off), else what it was. */
+const subagentLimit = (v: unknown, was: number | undefined): number | undefined => (v === null ? undefined : typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 10 ? v : was);
+
 export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings()): RosterSettings {
   const s = (v && typeof v === 'object' ? v : {}) as Partial<RosterSettings>;
   const caps: Partial<Record<AutonomyLevel, number>> = {};
@@ -105,6 +111,7 @@ export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings
     },
     // A roster saved before early drafts existed has them on, like a fresh one.
     earlyDrafts: typeof s.earlyDrafts === 'boolean' ? s.earlyDrafts : (base.earlyDrafts ?? true),
+    ...(subagentLimit(s.maxSubagents, base.maxSubagents) !== undefined ? { maxSubagents: subagentLimit(s.maxSubagents, base.maxSubagents) } : {}),
     subagentCooldownHours: typeof s.subagentCooldownHours === 'number' && Number.isFinite(s.subagentCooldownHours) ? Math.max(0, Math.min(Math.round(s.subagentCooldownHours * 10) / 10, 24 * 30)) : (base.subagentCooldownHours ?? DEFAULT_COOLDOWN_HOURS),
     // A roster saved before it existed has it off.
     autonomyByStage: {
@@ -120,7 +127,7 @@ export function freshRoster(rng: () => number = Math.random): RosterData {
   const names = pickNames(rng);
   const members = {} as Record<RoleId, MemberRecord>;
   for (const r of ROLES) members[r.id] = { name: names[r.id], model: r.model, phase: 'none' };
-  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [], outbox: emptyOutbox() };
+  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [], subagentRuns: [], outbox: emptyOutbox() };
 }
 
 /** A saved roster, made whole: a role added since it was saved gets a name, a bad field its default. */
@@ -147,6 +154,7 @@ export function reviveRoster(raw: unknown, rng: () => number = Math.random): Ros
     spend: r.spend && typeof r.spend === 'object' && typeof r.spend.usd === 'number' ? { day: String(r.spend.day ?? ''), usd: r.spend.usd, seen: { ...(r.spend.seen ?? {}) } } : fresh.spend,
     subagents: reviveSubagents(r.subagents),
     subagentActions: Array.isArray(r.subagentActions) ? r.subagentActions.filter((a) => a && typeof a === 'object' && typeof a.id === 'string').slice(-SUBAGENT_ACTIONS_KEPT) : [],
+    subagentRuns: reviveLiveRuns(r.subagentRuns),
     outbox: reviveOutbox(r.outbox),
   };
 }

@@ -9,6 +9,7 @@ import { flowRoutes } from './flows.js';
 import { auditRoutes } from './audit.js';
 import { chatterRoutes } from './chatter.js';
 import { connectionsRoutes } from './connections.js';
+import { phoneRoutes } from './phone.js';
 import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
 import { gitRoutes } from './git.js';
@@ -26,6 +27,9 @@ import { studioRoutes } from './studio.js';
 import { wizardRoutes } from './wizard.js';
 import { notifyTeamsRoutes } from './notify-teams.js';
 import { keepAwakeRoutes } from './keep-awake.js';
+import { projectRunRoutes } from './project-run.js';
+import { mobileRoutes } from './mobile.js';
+import { phoneAccessRoutes } from './phone-access.js';
 import { budgetRoutes } from './budget.js';
 
 export const routes: readonly Route[] = [
@@ -43,6 +47,10 @@ export const routes: readonly Route[] = [
   pageRoutes.claim,
   pageRoutes.join,
   pageRoutes.favicon,
+  // The phone version's manifest, service worker and icons (a browser fetches them without cookies).
+  mobileRoutes.manifest,
+  mobileRoutes.worker,
+  mobileRoutes.icons,
   // Signed in.
   authRoutes.whoami,
   agentRoutes.models,
@@ -70,6 +78,11 @@ export const routes: readonly Route[] = [
   notifyTeamsRoutes.test,
   keepAwakeRoutes.view,
   keepAwakeRoutes.save,
+  projectRunRoutes.view,
+  projectRunRoutes.preview,
+  projectRunRoutes.act,
+  projectRunRoutes.restartView,
+  projectRunRoutes.restart,
   budgetRoutes.view,
   budgetRoutes.office,
   budgetRoutes.fx,
@@ -89,6 +102,18 @@ export const routes: readonly Route[] = [
   rosterRoutes.standup,
   rosterRoutes.action,
   chatterRoutes.page,
+  phoneRoutes.send,
+  phoneRoutes.state,
+  phoneRoutes.reads,
+  phoneRoutes.markRead,
+  mobileRoutes.me,
+  mobileRoutes.reauth,
+  mobileRoutes.act,
+  mobileRoutes.status,
+  mobileRoutes.push,
+  mobileRoutes.phones,
+  phoneAccessRoutes.view,
+  phoneAccessRoutes.save,
   teamRoutes.page,
   teamRoutes.labels,
   deliverableRoutes.deliverables,
@@ -101,6 +126,7 @@ export const routes: readonly Route[] = [
   pageRoutes.firm,
   pageRoutes.lite,
   pageRoutes.pixel,
+  mobileRoutes.page,
   pageRoutes.docs,
   pageRoutes.bundle,
 ];

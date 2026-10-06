@@ -202,7 +202,11 @@ A line of the audit log was edited, removed or moved after it was written. Each 
 
 ### How do I see what the agents say to each other?
 
-In **💬 Team chatter** on the Command Center, beside Recent activity: escalations, relays, standups, nudges, subagent tasks and reviews, handoffs, PR hand-overs, journal lines and The Firm's interviews. Filter by **Between agents**, **With me** or one person. See [Team chatter](using-the-office/command-center.md#team-chatter).
+In the **📱 Team phone** at the bottom right of the 1D and 2D views: each project's channel has its team chatter (escalations, relays, standups, nudges, subagent tasks and reviews, handoffs, PR hand-overs, journal lines and The Firm's interviews). Filter by **Between agents**, **With me** or one person. See [Team phone](using-the-office/team-phone.md).
+
+### Can I message an agent without opening its terminal?
+
+Yes, from the **📱 Team phone**: a plain message in a project channel goes to the Project Coordinator, `@Name` to one agent, `@team` to every Lead, and a DM to that agent. It's typed in once the agent's current turn is over, and its reply comes back in the same thread. See [Sending messages](using-the-office/team-phone.md#sending-messages).
 
 ### Can the office look plainer, without emoji?
 

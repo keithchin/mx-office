@@ -1,0 +1,99 @@
+/* The 1D Command Center fitted to a laptop screen (ui/command-layout.ts). */
+
+/* The setup panel folded to its one line: its title, where it stands, and Show. */
+.setup-panel.cc-folded { gap: 0; padding: 8px 12px; box-shadow: none; }
+.setup-panel.cc-folded > :not(.setup-head), .setup-panel.cc-folded .setup-head > :not(h3, .cc-setup-line, .setup-grow, .cc-fold-btn) { display: none; }
+.cc-setup-line { min-width: 0; font-size: 13px; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.setup-panel:not(.cc-folded) .cc-setup-line { display: none; }
+.setup-panel.cc-folded .setup-head { flex-wrap: nowrap; }
+.setup-panel.cc-folded .cc-setup-line { flex: 1; }
+.cc-setup-line.cc-bad { color: var(--bad-ink); }
+
+/* The console's escalation bar (ui/pm/console.ts) only shows on the fitted layout below. */
+.pmc-esc-bar { display: none; }
+
+/*
+ * A desktop window (at least 1024 × 560): the Command Center is a fixed-height layout. The page doesn't
+ * scroll and no column does: the summary's three columns (the project, the PM console, recent activity)
+ * take exactly the height left below the tabs and above the bottom bar, and each card inside handles its
+ * own overflow in its own frame, with a thin scrollbar in the theme's colors only when it needs one.
+ * - The project column: its heading stays; What's happening, the risks, Progress and Agents each keep
+ *   their natural height and give some up in proportion when there isn't room, scrolling inside
+ *   themselves (or fold them: a folded one gives its room to the others).
+ * - The console: its header, the escalation bar and the ask box stay; its chat list or terminal fills
+ *   the rest and is the only thing in it that scrolls. The escalation cards, when shown, take the
+ *   screen's place.
+ * - Recent activity: its list scrolls inside its frame.
+ * A phone or a narrow window stacks it all and the page scrolls as usual.
+ */
+@media (min-width: 1024px) and (min-height: 560px) {
+  /* The bits above the summary, a little tighter, so the summary has the room. */
+  body:has(.lite-main.on-command) .lite-main { padding-bottom: var(--tp-above, 72px); }
+  body:has(.lite-main.on-command) .lite-main { position: relative; }
+  body:has(.lite-main.on-command) #floor-meta { margin-bottom: 8px; padding-right: 300px; }
+  body:has(.lite-main.on-command) #firm-banner { position: absolute; top: 6px; right: 12px; max-width: 420px; }
+  body:has(.lite-main.on-command) #firm-banner > * { margin: 0; }
+  body.lite .lite-tabs { gap: 4px; margin-bottom: 8px; }
+  body.lite .lite-tabs .btn { gap: 4px; padding: 3px 6px; min-height: 28px; font-size: 12px; }
+  /* Needs you and the folded setup line share one row; an opened setup panel takes the whole width. */
+  .lite-main.on-command { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 8px; align-content: start; }
+  .lite-main.on-command > * { grid-column: 1 / -1; }
+  .lite-main.on-command > #needs-you { grid-column: 1; }
+  .lite-main.on-command > #setup:not(:empty):not(:has(.setup-panel:not(.cc-folded))) { grid-column: 2; }
+  .lite-main.on-command > #needs-you:has(+ #setup:empty), .lite-main.on-command > #needs-you:has(+ #setup .setup-panel:not(.cc-folded)) { grid-column: 1 / -1; }
+  body:has(.lite-main.on-command) #needs-you .ny, body:has(.lite-main.on-command) #needs-you .ny-empty { margin-bottom: 8px; }
+  body:has(.lite-main.on-command) #needs-you .ny-row { min-height: 44px; }
+  body:has(.lite-main.on-command) #setup .setup-panel { margin-bottom: 8px; }
+  body:has(.lite-main.on-command) #setup .setup-panel.cc-folded { min-height: 44px; padding: 4px 10px; justify-content: center; }
+  /* Opened by hand on a short window: the panel's own frame scrolls, the page doesn't. */
+  body:has(.lite-main.on-command) #setup .setup-panel:not(.cc-folded) { max-height: 26vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+
+  .lite-main.on-command #summary.sm:has(> .pmc) {
+    grid-template-columns: minmax(260px, 1fr) minmax(400px, 1.5fr) minmax(240px, .9fr);
+    grid-template-rows: minmax(0, 1fr);
+    height: max(180px, calc(100dvh - var(--cc-top, 320px) - var(--tp-above, 72px) - 8px));
+    margin-bottom: 8px;
+  }
+  /* No column scrolls: each is a frame its cards share. */
+  .lite-main.on-command #summary.sm:has(> .pmc) > * { min-height: 0; overflow: hidden; }
+
+  /* The project column. */
+  .lite-main.on-command #summary > .sm-main { display: flex; flex-direction: column; gap: 8px; }
+  .lite-main.on-command #summary > .sm-main > * { flex: 0 0 auto; min-height: 0; }
+  .lite-main.on-command #summary .sm-head { gap: 2px; }
+  .lite-main.on-command #summary .sm-goal { -webkit-line-clamp: 1; }
+  /* What's happening and Agents keep their own height while there's room, and give it up in proportion
+     when there isn't (each with room for a couple of lines at least); Progress keeps its few rows; each
+     risk is one line (its whole text on hover), and they take at most a fifth. */
+  .lite-main.on-command #summary > .sm-main > .sm-fold:not(.sm-folded) { flex: 0 1 auto; display: flex; flex-direction: column; min-height: 76px; }
+  .lite-main.on-command #summary > .sm-main > .sm-fold[data-fold='progress']:not(.sm-folded) { flex: 0 0 auto; min-height: 0; }
+  .lite-main.on-command #summary > .sm-main > .sm-risks { flex: 0 1 auto; min-height: 34px; max-height: 20%; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+  .lite-main.on-command #summary .sm-progress { gap: 3px 10px; }
+  .lite-main.on-command #summary .sm-risk { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lite-main.on-command #summary .sm-bar-l { white-space: nowrap; }
+  .lite-main.on-command #summary .sm-fold:not(.sm-folded) > .sm-fold-h { flex: none; }
+  .lite-main.on-command #summary .sm-fold-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .lite-main.on-command #summary .sm-story p { margin-top: 0; }
+
+  /* Recent activity. */
+  .lite-main.on-command #summary > .sm-activity { display: flex; flex-direction: column; }
+  .lite-main.on-command #summary > .sm-activity > .sm-fold { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; }
+
+  /* The console: one area scrolls, its chat list or terminal, filling what's left. */
+  .lite-main.on-command #summary > .pmc { display: flex; flex-direction: column; }
+  .lite-main.on-command #summary > .pmc > * { flex: none; }
+  .lite-main.on-command #summary > .pmc > .pmc-screen,
+  .lite-main.on-command #summary > .pmc > .pmc-empty { flex: 1 1 auto; min-height: 0; }
+  .lite-main.on-command #summary > .pmc > .pmc-empty { overflow-y: auto; scrollbar-width: thin; }
+  .lite-main.on-command #summary .pmc-screen.pmc-chatting, .lite-main.on-command #summary .pmc-term { min-height: 0; }
+  .lite-main.on-command #summary .pmc-box { min-height: 38px; }
+  .lite-main.on-command #summary .pmc-chat-list, .lite-main.on-command #summary .pmc-plain { scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+  /* The escalations behind their bar; shown, they take the screen's place and scroll in their own frame. */
+  .lite-main.on-command #summary .pmc-esc-bar:not([hidden]) { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 2px solid var(--line); border-radius: 10px; background: var(--card); font-size: 12px; font-weight: 800; }
+  .lite-main.on-command #summary .pmc-esc-bar.pmc-esc-loud { background: var(--bad-soft); border-color: var(--bad); }
+  .lite-main.on-command #summary .pmc-esc-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lite-main.on-command #summary .pmc:not(.pmc-show-esc) > .esc-list { display: none; }
+  .lite-main.on-command #summary .pmc.pmc-show-esc > .pmc-screen { display: none; }
+  .lite-main.on-command #summary .pmc.pmc-show-esc > .esc-list { flex: 1 1 auto; min-height: 0; max-height: none; padding: 6px; border: 1px solid var(--rule-strong); border-radius: 10px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+  .lite-main.on-command #summary .pmc.pmc-show-esc > .esc-list > .esc-list-h { display: none; }
+}

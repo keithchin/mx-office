@@ -4,6 +4,10 @@ import { startStudioMode } from '../studio/index.js';
 import { startWorktreeSweep } from '../worktree-sweep/index.js';
 import { startNotifyTeams } from '../notify-teams/index.js';
 import { startKeepAwake } from '../keep-awake/index.js';
+import { startProjectRuns } from '../project-run/adapter.js';
+import { startSafeRestart } from '../restart/office.js';
+import { startPhoneAccess } from '../phone-access/index.js';
+import { startWebPush } from '../webpush/index.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
@@ -42,12 +46,22 @@ export function startTimers(ctx: Ctx): () => void {
   // What needs a person goes to a Teams channel (notify-teams/); the computer stays awake while agents work (keep-awake/).
   const stopTeams = startNotifyTeams(ctx);
   const stopAwake = startKeepAwake(ctx);
+  // ⏸ paused floors (their pauses loaded), resume and pause runs a restart cut off, and 🔁 Restart safely (project-run/, restart/).
+  const stopRuns = startProjectRuns(ctx);
+  const stopRestart = startSafeRestart(ctx);
+  // 📱 Phone access's tunnel back on if it was (phone-access/), and red items pushed to phones (webpush/).
+  const stopTunnel = startPhoneAccess(ctx);
+  const stopPush = startWebPush(ctx);
 
   return () => {
+    stopRuns();
+    stopRestart();
     stopSweep();
     stopStudio();
     stopTeams();
     stopAwake();
+    stopTunnel();
+    stopPush();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

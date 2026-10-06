@@ -34,3 +34,12 @@
 
 /* The Command Center already lists the other floors where someone's waiting, so the line above the tabs steps aside there. */
 .lite-main.on-command #elsewhere { display: none; }
+
+/* The compact row on the Command Center when the team phone is on the page: counts, and the way in. */
+.ny-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 10px; }
+.ny-row-h { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
+.ny-counts { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ny-count { padding: 2px 10px; border: 2px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink); font: 800 12px/1.4 var(--font); cursor: pointer; }
+.ny-count.ny-block { background: var(--bad-soft); }
+.ny-count.ny-warn { background: var(--warn-soft); }
+.ny-count:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }

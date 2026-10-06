@@ -10,13 +10,16 @@ import { subagentModelAt, type BudgetChoice, type LevelSettings } from '../../sh
 import { analysisOf } from '../analysis/index.js';
 import { audit, byWhom } from '../audit/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
-import { checkFloor, restorePause, type ControlDeps } from './control.js';
+import { checkFloor, type ControlDeps } from './control.js';
 import { onBackgroundSpend } from './meter.js';
 import { BudgetService } from './service.js';
 import { currentStage } from './stage.js';
 import { rankingReport } from '../ranking/index.js';
 
 const offices = new WeakMap<object, BudgetService>();
+
+/** A level's parallelism as the Leads' Playbooks say it: at most this many subagents at once. */
+export const SUBAGENTS_AT_ONCE = { fewer: 1, normal: 2, more: 4 } as const;
 const controls = new WeakMap<BudgetService, ControlDeps>();
 
 /** How often at most a floor's alerts are checked after spend. */
@@ -92,7 +95,6 @@ export function budgetOf(ctx: Ctx): BudgetService {
     if (wait <= 0) run();
     else if (!timers.has(floor.id)) timers.set(floor.id, setTimeout(run, wait).unref());
   };
-  b.onLoad = (floor) => restorePause(budget, floor);
   offices.set(ctx.cfg, b);
   onBackgroundSpend((s) => budget.onBackground(s));
   process.once('exit', () => budget.flush());
@@ -145,7 +147,7 @@ export function applyLevelToTeam(ctx: Ctx, floorId: string, s: LevelSettings, by
       if (e) problems.push(`${sub.title}: ${e}`);
     }
   }
-  const err = roster.members.settings(tf, { earlyDrafts: s.earlyDrafts, autonomyByStage: s.autonomyByStage }, by);
+  const err = roster.members.settings(tf, { earlyDrafts: s.earlyDrafts, autonomyByStage: s.autonomyByStage, maxSubagents: SUBAGENTS_AT_ONCE[s.parallel] }, by);
   if (err) problems.push(err);
   return problems;
 }

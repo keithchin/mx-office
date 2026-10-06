@@ -28,6 +28,7 @@ import type { Ledger } from './usage.js';
 import type { Capacity } from './machine.js';
 import { officePrompt, type PromptSource } from './prompts.js';
 import { floorLedger } from './roster/pause.js';
+import { projectPauseOf } from './project-run/store.js';
 import { audit } from './audit/index.js';
 
 type ToastLevel = 'info' | 'warn' | 'error';
@@ -288,6 +289,7 @@ export class Floor {
         update: (state) => ctx.emit(this, { t: 'meeting', state }),
         toast: (text, level) => ctx.toast(this, text, level),
         hiringPaused: () => ledger.hiringPaused,
+        held: () => projectPauseOf(this.id),
         postReview: (pr, file, owner) => {
           const as = ctx.ghAs(owner);
           return typeof as === 'string' ? Promise.reject(new Error(as)) : this.github.review(pr, file, as);

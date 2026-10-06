@@ -170,3 +170,10 @@ details.bud-card[open] > summary { margin-bottom: 8px; }
 .bud-status[data-tone='bad'] { background: var(--bad-soft); border-color: var(--bad-ink); }
 .bud-spark { width: 120px; height: 28px; overflow: visible; }
 .bud-spark .bud-line { stroke-width: 2; }
+
+/* The Command Center keeps the top right for the Firm's banner (ui/command-layout.css): the branch line
+   and the budget chip leave it that room together. */
+@media (min-width: 1024px) and (min-height: 560px) {
+  body:has(.lite-main.on-command) .bud-meta-row { margin-bottom: 8px; padding-right: 300px; }
+  body:has(.lite-main.on-command) .bud-meta-row > #floor-meta { margin: 0; padding-right: 0; }
+}

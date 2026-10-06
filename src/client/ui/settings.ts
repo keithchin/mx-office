@@ -16,6 +16,7 @@ import { consoleViewSetting } from './pm/chat/setting';
 import { connectionsPanel } from './connections';
 import { teamsSetting } from './settings-teams';
 import { keepAwakeSetting } from './settings-awake';
+import { restartSetting } from './project-run';
 
 const VIEWS: [ViewMode, string, string][] = [
   ['first', '👀 First person', 'See through your own eyes. Click the office to look around with the mouse and click things to use them. Esc frees the mouse.'],
@@ -446,6 +447,7 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
   // Microsoft Teams notifications and keep-awake, each fetched from the office (settings-teams.ts, settings-awake.ts).
   const teams = teamsSetting((body) => setting('Microsoft Teams', 'office', ...body));
   const awake = keepAwakeSetting((body) => setting('Keep awake while agents work', 'office', ...body));
+  const restart = restartSetting((body) => setting('🔁 Restart safely', 'office', ...body));
   const account = store.me.account;
   const signOut = h('button.btn', { type: 'button' }, '🚪 Sign out');
   signOut.addEventListener('click', onSignOut);
@@ -480,6 +482,7 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
       setting('Default worker', 'office', agentNow, agent.element, agentActions, agentNote),
       setting('Worker limit', 'office', limitRow, limitNote),
       awake.section,
+      restart.section,
       setting('Workers whose pull request merged', 'office', leaveRow, leaveNote),
       setting('Prompts', 'office', promptsOpen, promptsNote),
     ],
@@ -537,6 +540,7 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
       offNotify();
       teams.off();
       awake.off();
+      restart.off();
       offDog();
       offTheme();
       sky?.off();

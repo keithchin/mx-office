@@ -1,0 +1,35 @@
+/* A Lead's subagents as workers: their cards in the Workers tab (card.ts) and their detail (detail.ts). */
+
+.lite-worker.sw-card { border-style: dashed; background: var(--paper-2); }
+.lite-worker.sw-card.sw-working { border-style: solid; box-shadow: var(--shadow-btn), inset 6px 0 0 var(--accent); }
+.lite-worker.sw-card.sw-benched { background: var(--card-dim); }
+.lite-worker.sw-card.sw-benched .lite-name { opacity: .75; }
+.sw-card .sw-icon { flex: none; font-size: 18px; line-height: 1; margin-top: 2px; }
+.sw-card .sw-hired { font-weight: 700; color: var(--muted); font-size: 12px; }
+.sw-card .lite-now { font-weight: 700; }
+.sw-card.sw-working .lite-now { color: var(--ink); }
+.sw-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: var(--bw) solid var(--line); font-size: 11px; font-weight: 800; white-space: nowrap; background: var(--card); }
+.sw-pill.sw-working { background: var(--good-soft); }
+.sw-pill.sw-benched { background: var(--card-dim); }
+.rk-group-h.sw-group-h { margin-top: 4px; }
+.sw-toggle { white-space: nowrap; }
+
+.sw-window { width: min(620px, 100%); }
+.sw-window .sw-hired { font-weight: 700; color: var(--muted); font-size: 13px; }
+.sw-body h4 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.sw-now { margin: 0 0 8px; font-weight: 800; }
+.sw-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sw-chip { padding: 2px 8px; border: var(--bw) solid var(--line); border-radius: 999px; background: var(--card); font-size: 12px; font-weight: 700; }
+.sw-note { margin: 8px 0 0; font-size: 13px; }
+.sw-lead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; border: var(--bw) solid var(--line); border-radius: var(--radius-sm); background: var(--card); font-size: 13px; }
+.sw-lead > span:first-child { flex: 1 1 240px; }
+.sw-dim { color: var(--muted); font-size: 13px; }
+.sw-runs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sw-run { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: var(--bw) solid var(--line); border-radius: var(--radius-sm); background: var(--card); }
+.sw-run.sw-working { box-shadow: inset 4px 0 0 var(--accent); }
+.sw-run.sw-failed { box-shadow: inset 4px 0 0 var(--bad); }
+.sw-run-task { font-weight: 800; font-size: 13px; overflow-wrap: anywhere; }
+.sw-run-meta { font-size: 12px; color: var(--muted); font-weight: 700; }
+.sw-run-verdict { font-size: 12px; overflow-wrap: anywhere; }
+.sw-actions { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+.sw-actions .sa-actions { display: flex; flex-wrap: wrap; gap: 6px; }

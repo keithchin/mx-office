@@ -18,9 +18,23 @@ export interface SubagentResult {
 
 /** One moment of a subagent run, as a worker's hooks report it. */
 export type SubagentEvent =
+  | { kind: 'dispatch'; at: number; toolUseId?: string; agent?: string; task?: string; model?: string; background: boolean }
   | { kind: 'start'; at: number; agentId?: string; agent?: string }
   | { kind: 'stop'; at: number; agentId?: string; agent?: string }
-  | { kind: 'result'; at: number; agent?: string; task?: string; model?: string; failed: boolean; durationMs?: number; background: boolean };
+  | {
+      kind: 'result';
+      at: number;
+      agent?: string;
+      task?: string;
+      model?: string;
+      failed: boolean;
+      durationMs?: number;
+      background: boolean;
+      toolUseId?: string;
+      /** Launched to run in the background (newer Claude Code's default): the call came back as it started, with its agent id. */
+      async?: boolean;
+      agentId?: string;
+    };
 
 const TOOLS = new Set(['Agent', 'Task']);
 const last = new Map<string, SubagentResult>();
@@ -43,15 +57,30 @@ export function onSubagentEvent(l: (workerId: string, ev: SubagentEvent) => void
   return () => void listeners.delete(l);
 }
 
+/**
+ * A PreToolUse hook payload: passed on as a `dispatch` run event when it's a subagent being sent off.
+ * True when it was one. The live picture of who's at work (roster/subagent-live.ts) starts a run here.
+ */
+export function noteSubagentDispatch(workerId: string, payload: unknown, now = Date.now()): boolean {
+  const p = (payload ?? {}) as { tool_name?: unknown; tool_use_id?: unknown; tool_input?: { subagent_type?: unknown; description?: unknown; prompt?: unknown; run_in_background?: unknown; model?: unknown } };
+  if (typeof p.tool_name !== 'string' || !TOOLS.has(p.tool_name)) return false;
+  const task = clip(p.tool_input?.description, 120) ?? clip(p.tool_input?.prompt, 120);
+  emit(workerId, { kind: 'dispatch', at: now, toolUseId: clip(p.tool_use_id, 80), agent: clip(p.tool_input?.subagent_type, 60), task, model: clip(p.tool_input?.model, 40), background: p.tool_input?.run_in_background === true });
+  return true;
+}
+
 /** A PostToolUse(-Failure) hook payload: noted when it's a subagent coming back. True when it was one. */
 export function noteSubagentHook(workerId: string, payload: unknown, failed: boolean, now = Date.now()): boolean {
-  const p = (payload ?? {}) as { tool_name?: unknown; tool_input?: { subagent_type?: unknown; description?: unknown; prompt?: unknown; run_in_background?: unknown; model?: unknown }; tool_response?: { totalDurationMs?: unknown } };
+  const p = (payload ?? {}) as { tool_name?: unknown; tool_use_id?: unknown; tool_input?: { subagent_type?: unknown; description?: unknown; prompt?: unknown; run_in_background?: unknown; model?: unknown }; tool_response?: { totalDurationMs?: unknown; status?: unknown; isAsync?: unknown; agentId?: unknown } };
   if (typeof p.tool_name !== 'string' || !TOOLS.has(p.tool_name)) return false;
   const agent = clip(p.tool_input?.subagent_type, 60);
   const task = clip(p.tool_input?.description, 120) ?? clip(p.tool_input?.prompt, 120);
   const background = p.tool_input?.run_in_background === true;
   const ms = p.tool_response?.totalDurationMs;
-  emit(workerId, { kind: 'result', at: now, agent, task, model: clip(p.tool_input?.model, 40), failed, background, ...(typeof ms === 'number' && ms >= 0 ? { durationMs: ms } : {}) });
+  const r = p.tool_response && typeof p.tool_response === 'object' ? p.tool_response : undefined;
+  const launched = r?.status === 'async_launched' || r?.isAsync === true;
+  const agentId = clip(r?.agentId, 80);
+  emit(workerId, { kind: 'result', at: now, agent, task, model: clip(p.tool_input?.model, 40), failed, background, ...(typeof ms === 'number' && ms >= 0 ? { durationMs: ms } : {}), ...(clip(p.tool_use_id, 80) ? { toolUseId: clip(p.tool_use_id, 80) } : {}), ...(launched ? { async: true } : {}), ...(agentId ? { agentId } : {}) });
   // A background subagent's call returns as soon as it's launched: nothing to review yet.
   if (background) return false;
   last.set(workerId, { at: now, agent, task, failed });

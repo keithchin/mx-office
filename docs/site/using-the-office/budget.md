@@ -28,7 +28,7 @@ The project chip is **green** inside the budget, **amber** within 10 % of it and
 
 Each table has a bar per row, the amount and its share of the whole:
 
-- **By stage**: the toolkit stage that was active when the money was spent (P to 7). The stage comes from the gate readings the setup panel uses. Spend outside a pipeline, or from before the office kept a ledger, shows as *No stage*.
+- **By stage**: the toolkit stage that was active when the money was spent (P to 7). The stage is read the way the setup panel reads it: from the project's default branch on origin (the floor's folder when there's no remote), checked again at most once a minute. Spend outside a pipeline, or from before the office kept a ledger, shows as *No stage*.
 - **By role**: the team's roles. Each Lead's subagents get a row of their own, and the office's background calls are under *Office background*.
 - **By agent**: every worker. A Lead's subagents are nested under it (*Business Analyst · hired by Barbara*). The Lead's own row covers both its own session and its subagents.
 - **By model**: Opus, Sonnet, Haiku and so on.
@@ -127,13 +127,14 @@ Each alert is raised once per budget. Raising the budget clears all of them, so 
 
 ## Auto-pause at 100 %
 
-When spend reaches the budget and **Pause the project at 100 %** is on (the default), the project pauses:
+When spend reaches the budget and **Pause the project at 100 %** is on (the default), the office pauses the project with [⏸ Pause project](resume-and-pause.md), recorded as the budget's doing:
 
-- no new hires.
-- no prompts from the office itself (nudges, standups, relays, wakes), the same as the daily spend cap.
-- agents finish the turn they're on, and **people's messages still go through**.
+- agents finish the turn they're on, write a handoff note and go to sleep.
+- nobody new is hired, and the office sends no prompts of its own (nudges, standups, relays, wakes).
+- **people's messages still go through**.
+- the floor's pause line reads *⏸ Paused: budget reached*, and the pause survives a restart.
 
-Needs you then says *Budget reached: project paused*, with **Raise budget** and **Resume** buttons. Raising the budget above what's spent lifts the pause. **Resume** lifts it without changing the budget; the project won't pause again for the same budget. A pause survives a restart.
+Needs you then says *Budget reached: project paused*, with **Raise budget** and **Resume** buttons. **Resume** opens the ▶ Resume project preview (who has work waiting, and what's safe). Raising the budget above what's spent resumes the project the default way (*Those with work*). Either way the project won't pause again for the same budget. If a person resumes it from ▶ Resume project instead, the budget sees that too.
 
 ## Settings
 
@@ -145,7 +146,7 @@ On the tab (admins; every change is in the audit log):
 
 ### Budget levels
 
-A level sets the Leads' model, their subagents' models (Haiku only where the role allows it), early drafts and autonomy by stage, and it records how many agents work at once. The office doesn't enforce that last one yet. The changes apply from each Lead's next hire or Playbook rewrite. A running session keeps the model it started on, and a Lead only hears about a subagent change between turns, so nobody is interrupted mid-turn.
+A level sets the Leads' model, their subagents' models (Haiku only where the role allows it), early drafts and autonomy by stage, and how many subagents a Lead runs at once: the Leads' Playbooks say "Run at most N subagents at once" (Lean 1, Balanced 2, Fast 4). The changes apply from each Lead's next hire or Playbook rewrite. A running session keeps the model it started on, and a Lead only hears about a subagent change between turns, so nobody is interrupted mid-turn.
 
 ## Currency
 

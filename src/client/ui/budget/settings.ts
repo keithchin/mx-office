@@ -10,6 +10,7 @@ import type { BudgetSection } from './tab';
 import { act } from './plan';
 import { post } from './feed';
 import { fetchEstimate, levelPicker } from './levels-ui';
+import { openResume } from '../project-run/modal';
 
 /** Paused by the budget: Raise budget and Resume, right under the headline. */
 export const pausedSection: BudgetSection = (v, _o, refresh) => {
@@ -18,9 +19,9 @@ export const pausedSection: BudgetSection = (v, _o, refresh) => {
     'div.bud-paused',
     { role: 'alert' },
     h('strong', {}, '⏸️ Budget reached: project paused'),
-    h('span', {}, 'No new hires and no office prompts; agents finish the turn they’re on, and people’s messages still go through.'),
+    h('span', {}, 'The project is paused (⏸ Pause project): agents finish their turn, hand off and sleep; no new hires and no office prompts, and people’s messages still go through.'),
     v.admin
-      ? h('span.bud-actions', {}, h('button.btn.small.primary', { type: 'button', onclick: () => document.querySelector<HTMLInputElement>('#bud-total')?.focus() }, 'Raise budget'), h('button.btn.small', { type: 'button', onclick: () => void act(v, { action: 'resume' }, refresh, '▶️ Resumed') }, 'Resume'))
+      ? h('span.bud-actions', {}, h('button.btn.small.primary', { type: 'button', onclick: () => document.querySelector<HTMLInputElement>('#bud-total')?.focus() }, 'Raise budget'), h('button.btn.small', { type: 'button', title: '▶ Resume project: see who has work waiting first', onclick: () => void openResume(v.floor, refresh) }, 'Resume'))
       : h('span.bud-note', {}, 'An admin can raise the budget or resume it.'),
   );
 };

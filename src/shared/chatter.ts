@@ -6,7 +6,7 @@
 
 import type { RoleId, TeamId } from './roster/roles.js';
 
-export type ChatterKind = 'relay' | 'escalation' | 'answer' | 'journal' | 'handoff' | 'dispatch' | 'review' | 'standup' | 'nudge' | 'firm';
+export type ChatterKind = 'relay' | 'escalation' | 'answer' | 'journal' | 'handoff' | 'dispatch' | 'review' | 'standup' | 'nudge' | 'firm' | 'message';
 /** Who's talking: an agent, the human Project Manager, the office itself, Jeff (the Router), or a Firm reviewer. */
 export type PartyKind = 'agent' | 'human' | 'office' | 'jeff' | 'reviewer';
 
@@ -36,6 +36,10 @@ export interface ChatterRef {
   standup?: string;
   /** The Firm engagement an interview is part of. */
   engagement?: string;
+  /** The team phone's thread it's in (shared/phone.ts): a person's message and the agents' replies to it. */
+  thread?: string;
+  /** The worker a team phone note is about ("replied in its terminal"), for its Open terminal. */
+  worker?: string;
 }
 
 export interface ChatterMessage {
@@ -68,6 +72,7 @@ export const CHATTER_ICON: Record<ChatterKind, string> = {
   standup: '📋',
   nudge: '👉',
   firm: '🏛️',
+  message: '📱',
 };
 
 export const CHATTER_WORD: Record<ChatterKind, string> = {
@@ -81,10 +86,13 @@ export const CHATTER_WORD: Record<ChatterKind, string> = {
   standup: 'standup',
   nudge: 'nudge',
   firm: 'interview',
+  message: 'message',
 };
 
 /** Longest text a message keeps. */
 export const CHATTER_TEXT_MAX = 400;
+/** Longest a team phone message (a person's, or an agent's reply to one) keeps, with its lines and Markdown. */
+export const CHATTER_LONG_MAX = 4000;
 
 export const isGroup = (t: ChatterTo): t is { group: 'team' | 'pm' } => 'group' in t;
 

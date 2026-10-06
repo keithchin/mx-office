@@ -58,11 +58,8 @@ const SUBAGENT_TITLE = new Map(ROLES.flatMap((r) => r.subagents.map((s) => [s.id
 export class BudgetService {
   readonly store: BudgetStore;
   private fxFetching?: Promise<unknown>;
-  private loaded = new Set<string>();
   /** After spend landed on a floor: the alerts and the pause (control.ts, set by index.ts). */
   onSpend?: (floor: FloorRef) => void;
-  /** A floor's file was first loaded: the budget's pause goes back on after a restart. */
-  onLoad?: (floor: FloorRef) => void;
 
   constructor(readonly deps: BudgetDeps) {
     this.store = new BudgetStore(deps.dataDir, deps.now);
@@ -76,10 +73,6 @@ export class BudgetService {
   file(floor: FloorRef): FloorFile {
     const fresh = !this.store.has(floor.id);
     const f = this.store.floor(floor.id);
-    if (!this.loaded.has(floor.id)) {
-      this.loaded.add(floor.id);
-      this.onLoad?.(floor);
-    }
     if (fresh && !f.ledger.backfilled) {
       backfill(f.ledger, this.deps.workers(floor.id), this.deps.runs().filter((r) => r.floor === floor.id), {
         dayOf: localDay,

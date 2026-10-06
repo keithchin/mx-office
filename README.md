@@ -26,6 +26,8 @@ Around the teams:
 - **🧾 Audit log**: who did what and when, per floor and office-wide, hash-chained.
 - **💰 Budget**: what each project spent, in dollars and a local currency, against an expected plan and a budget with a forecast, alerts and an auto-pause at 100 %, three budget levels in the new-project wizard, cost insights, and chips in the top bar.
 - **💬 Team chatter**: what the agents say to each other, as a live thread on each Command Center.
+- **📱 Team phone**: a floating chat and notification centre on the 1D and 2D views (a pixel iPhone in the Default theme): each project's team chatter as a channel, DMs and threads with the agents, messages to the Project Coordinator, `@Name` or `@team`, and everything that needs you with its buttons.
+- **📱 Phone version and Phone access**: the team phone full screen at `/m`, installable on an iPhone with push notifications for what needs you, and a private tunnel to it (Microsoft Dev Tunnels, or Cloudflare Tunnel with Access) switched on from 🔌 Connections. See the docs: *Phone version* and *Phone access*.
 - **🎨 Five color themes**: Default, Dark, Terminal, and Clean (Light) / Clean (Dark), which look like VS Code and show no emoji.
 
 ## Quick start
@@ -40,7 +42,7 @@ The step-by-step version, with screenshots: `/docs/get-started/quick-start`.
 
 > **Tokens** are managed in the office: **☰ → 🔌 Connections** (admins) keeps the agents' and admin GitHub tokens, the Mendix token, the Jev key and the office password, encrypted with Windows DPAPI, with a Test button each. The old files still work as a fallback (`~/.agent-office-gh-token`, `~/.agent-office-admin-gh-token`, `~/.agent-office-jev-key`) and **📥 Import from files** moves them in. Never paste a token anywhere else.
 >
-> **Restarts** on Windows stop running agents; their sessions are saved, the ones cut off mid-turn carry on, and the rest stay asleep until they're prompted (or you press R). To try a change, run a throwaway **test office** on a 47xx port with its own `AGENT_OFFICE_HOME` and throwaway floors, never the real ones (`/docs/administration/test-offices`).
+> **Restarts** on Windows stop running agents; their sessions are saved, the ones cut off mid-turn carry on, and the rest stay asleep until they're prompted (or you press R). **▶ Resume project** wakes the ones with work waiting, a few at a time, and **⏸ Pause project** winds a project down cleanly before a restart; **🔁 Restart safely** (⚙️ Settings → Workers) does both around a restart, given the launcher's restart loop (`/docs/using-the-office/resume-and-pause`, `/docs/administration/running-the-office`). To try a change, run a throwaway **test office** on a 47xx port with its own `AGENT_OFFICE_HOME` and throwaway floors, never the real ones (`/docs/administration/test-offices`).
 >
 > **Away from the laptop**: the office keeps Windows awake while agents work (set *When I close the lid* to *Do nothing* when plugged in to close the lid; `/docs/administration/running-the-office`), and can post what needs you to a **Microsoft Teams** channel through a Workflows webhook (⚙️ Settings → Notifications; `/docs/integrations/teams-notifications`).
 

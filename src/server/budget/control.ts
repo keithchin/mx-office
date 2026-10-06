@@ -9,7 +9,7 @@ import { forecastOf, varianceOf } from '../../shared/budget/forecast.js';
 import { addWorkDays, curveOf, generatePlan, type HistoryRun } from '../../shared/budget/plan.js';
 import { usd } from '../../shared/budget/money.js';
 import { totalOf } from './ledger.js';
-import { pauseFloorForBudget, resumeFloorFromBudget } from './pause.js';
+import { pauseFloorForBudget, pausedForBudget, resumeFloorFromBudget } from './pause.js';
 import { buildModules, projectShape } from './plan-source.js';
 import type { BudgetService, FloorRef } from './service.js';
 
@@ -92,9 +92,8 @@ export function checkFloor(b: BudgetService, floor: FloorRef, deps: ControlDeps)
   if (alerts.length === f.alerts.length) return;
   f.alerts = alerts;
   let paused = false;
-  if (raised.some((a) => a.level === 'full') && f.settings.autoPause && !f.pausedAt) {
+  if (raised.some((a) => a.level === 'full') && f.settings.autoPause && !f.pausedAt && pauseFloorForBudget(floor.id)) {
     f.pausedAt = b.deps.now();
-    pauseFloorForBudget(floor.id, pauseWhy(f.settings.total, n.spent));
     paused = true;
   }
   b.store.changed(floor.id);
@@ -103,16 +102,26 @@ export function checkFloor(b: BudgetService, floor: FloorRef, deps: ControlDeps)
 
 export const pauseWhy = (total: number, spent: number) => `Budget reached (${usd(spent)} of ${usd(total)}): project paused. No new hires and no office prompts until the budget is raised or someone resumes it; people's messages still go through`;
 
-/** Puts the budget's pause back after a restart (holds live in memory). */
-export function restorePause(b: BudgetService, floor: FloorRef) {
+/**
+ * Whether the budget's pause still stands. The pause is the office's Pause project, so a person may have
+ * resumed the floor from ▶ Resume project: then the budget forgets it paused it (the 100 % alert stays,
+ * so it doesn't pause again for this budget).
+ */
+export function budgetPaused(b: BudgetService, floor: FloorRef): boolean {
   const f = b.file(floor);
-  if (f.pausedAt && f.settings.total) pauseFloorForBudget(floor.id, pauseWhy(f.settings.total, totalOf(f.ledger)));
+  if (!f.pausedAt) return false;
+  if (pausedForBudget(floor.id) === false) {
+    f.pausedAt = undefined;
+    b.store.changed(floor.id);
+    return false;
+  }
+  return true;
 }
 
 /** Resume: takes the budget's pause off (it won't pause again for this budget: the 100 % alert stands). */
 export function resume(b: BudgetService, floor: FloorRef, by: string, deps: ControlDeps): string | undefined {
   const f = b.file(floor);
-  if (!f.pausedAt) return 'The project isn’t paused by its budget';
+  if (!budgetPaused(b, floor)) return 'The project isn’t paused by its budget';
   f.pausedAt = undefined;
   resumeFloorFromBudget(floor.id, by);
   b.store.changed(floor.id);

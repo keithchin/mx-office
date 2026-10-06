@@ -4,8 +4,7 @@
 import type { Net } from '../../net';
 import { store } from '../../state';
 import type { BudgetNeed, NeedTarget } from '../../../shared/needsyou';
-import { toast } from '../dom';
-import { post } from './feed';
+import { openResume } from '../project-run/modal';
 import { budgetChips } from './chips';
 import { budgetFeed, type BudgetFeed } from './feed';
 import { budgetTab, type BudgetSection } from './tab';
@@ -42,11 +41,8 @@ export function budgetUi(net: Net, opts: { root?: HTMLElement; visible?: () => b
     },
     go: (t) => {
       opts.open();
-      if (!t.resume || !store.floor) return;
-      void post('/api/budget/action', { floor: store.floor, action: 'resume' }).then((r) => {
-        if (r) toast('▶️ Resumed: the office hires and prompts on this floor again');
-        feed.refresh();
-      });
+      // Resume is the office's ▶ Resume project: its preview, who has work waiting and what's safe.
+      if (t.resume && store.floor) void openResume(store.floor, () => feed.refresh());
     },
   };
 }

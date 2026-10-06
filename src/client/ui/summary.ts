@@ -103,18 +103,14 @@ function phase(p: NonNullable<ProjectSummary['phase']>): HTMLElement {
 }
 
 function narrative(s: ProjectSummary): HTMLElement {
-  return h(
-    'div.sm-story',
-    {},
-    h('span.sm-story-h', {}, "What's happening", h('span.sm-by', { title: s.narrativeBy === 'llm' ? 'Written by the analyzer (Claude Haiku) from the facts below only' : 'From a template: the analyzer is busy or unavailable' }, s.narrativeBy === 'llm' ? 'AI' : 'auto')),
-    h('p', {}, s.narrative),
-  );
+  const by = h('span.sm-by', { title: s.narrativeBy === 'llm' ? 'Written by the analyzer (Claude Haiku) from the facts below only' : 'From a template: the analyzer is busy or unavailable' }, s.narrativeBy === 'llm' ? 'AI' : 'auto');
+  return fold('story', h('span.sm-story-h', {}, "What's happening", by), [h('p', {}, s.narrative)], 'sm-story');
 }
 
 function callouts(s: ProjectSummary): HTMLElement | null {
   const items: HTMLElement[] = [];
-  if (s.needsHuman.count) items.push(h('li.sm-risk.bad', {}, `🙋 ${s.needsHuman.count} agent${s.needsHuman.count === 1 ? ' needs' : 's need'} a human — longest wait ${mins(s.needsHuman.longestMs)}`));
-  for (const r of s.risks) items.push(h(`li.sm-risk.${r.level}`, {}, `${r.level === 'bad' ? '⛔' : '⚠️'} ${r.text}`));
+  if (s.needsHuman.count) items.push(h('li.sm-risk.bad', { title: `${s.needsHuman.count} agent(s) need a human` }, `🙋 ${s.needsHuman.count} agent${s.needsHuman.count === 1 ? ' needs' : 's need'} a human — longest wait ${mins(s.needsHuman.longestMs)}`));
+  for (const r of s.risks) items.push(h(`li.sm-risk.${r.level}`, { title: r.text }, `${r.level === 'bad' ? '⛔' : '⚠️'} ${r.text}`));
   return items.length ? h('ul.sm-risks', { 'aria-label': 'Needs attention' }, ...items) : null;
 }
 
@@ -133,7 +129,7 @@ function progress(s: ProjectSummary): HTMLElement {
   const p = s.progress;
   const closed = `${p.issuesClosed}${p.issuesClosedCapped ? '+' : ''}`;
   const merged = `${p.prsMerged}${p.prsMergedCapped ? '+' : ''}`;
-  return h(
+  const bars = h(
     'div.sm-progress',
     {},
     bar('Issues', p.issuesClosed, p.issuesClosed + p.issuesOpen, `${closed} closed · ${p.issuesOpen} open`),
@@ -141,42 +137,100 @@ function progress(s: ProjectSummary): HTMLElement {
     bar('Queue', p.done, p.done + p.running + p.queued, `${p.done} done · ${p.running} running · ${p.queued} queued`),
     h('div.sm-spend', {}, `💰 ${usd(s.spend.today)} today · ${usd(s.spend.total)} all told on this floor`),
   );
+  return fold('progress', h('span.sm-sub', {}, 'Progress', h('small.sm-fold-note', {}, ` · ${usd(s.spend.today)} today`)), [bars]);
 }
 
 function agents(list: SummaryAgent[]): HTMLElement {
   const order = (a: SummaryAgent) => (a.status === 'needs_input' ? 0 : a.status === 'working' ? 1 : 2);
   const sorted = [...list].sort((a, b) => order(a) - order(b));
   const shown = sorted.slice(0, 6);
-  return h(
-    'div.sm-agents',
-    {},
-    h('span.sm-sub', {}, `Agents (${list.length})`),
-    list.length
-      ? h(
-          'ul',
-          {},
-          ...shown.map((a) =>
-            h(
-              `li.sm-agent.${a.status}`,
-              {},
-              h('span.dot', { style: `background:${a.color}` }),
-              h('b', {}, a.name),
-              a.model ? h('small', {}, a.model) : null,
-              h('span.sm-doing', {}, a.doing),
-              a.waitingMs !== undefined ? h('span.sm-wait', {}, `waiting ${mins(a.waitingMs)}`) : null,
-            ),
+  const rows = list.length
+    ? h(
+        'ul',
+        {},
+        ...shown.map((a) =>
+          h(
+            `li.sm-agent.${a.status}`,
+            {},
+            h('span.dot', { style: `background:${a.color}` }),
+            h('b', {}, a.name),
+            a.model ? h('small', {}, a.model) : null,
+            h('span.sm-doing', {}, a.doing),
+            a.waitingMs !== undefined ? h('span.sm-wait', {}, `waiting ${mins(a.waitingMs)}`) : null,
           ),
-          sorted.length > shown.length ? h('li.sm-more', {}, `+ ${sorted.length - shown.length} more`) : null,
-        )
-      : h('p.sm-none', {}, 'No agents on this floor.'),
-  );
+        ),
+        sorted.length > shown.length ? h('li.sm-more', {}, `+ ${sorted.length - shown.length} more`) : null,
+      )
+    : h('p.sm-none', {}, 'No agents on this floor.');
+  return fold('agents', h('span.sm-sub', {}, `Agents (${list.length})`), [rows], 'sm-agents');
 }
 
+/** Recent activity rows shown before "More". */
+export const ACTIVITY_SHOWN = 8;
+/** Whether "More" was pressed: every row until "Fewer" (this visit). */
+let activityAll = false;
+
 function activity(items: ActivityItem[]): HTMLElement {
-  return h(
-    'aside.sm-activity',
-    {},
-    h('span.sm-sub', {}, 'Recent activity'),
-    items.length ? h('ol', {}, ...items.map((a) => h(`li.${a.kind}`, {}, h('span.sm-ico', { 'aria-hidden': 'true' }, ICON[a.kind]), h('span.sm-text', {}, a.text), h('time', { datetime: new Date(a.at).toISOString() }, timeAgo(a.at))))) : h('p.sm-none', {}, 'Nothing yet.'),
-  );
+  const shown = activityAll ? items : items.slice(0, ACTIVITY_SHOWN);
+  const row = (a: ActivityItem) => h(`li.${a.kind}`, {}, h('span.sm-ico', { 'aria-hidden': 'true' }, ICON[a.kind]), h('span.sm-text', {}, a.text), h('time', { datetime: new Date(a.at).toISOString() }, timeAgo(a.at)));
+  const list = h('ol', {}, ...shown.map(row));
+  const more =
+    items.length > ACTIVITY_SHOWN
+      ? h(
+          'button.sm-more-btn',
+          {
+            type: 'button',
+            'aria-expanded': String(activityAll),
+            onclick: (e: Event) => {
+              activityAll = !activityAll;
+              list.replaceChildren(...(activityAll ? items : items.slice(0, ACTIVITY_SHOWN)).map(row));
+              const b = e.currentTarget as HTMLButtonElement;
+              b.textContent = activityAll ? 'Fewer ▴' : `More (${items.length - ACTIVITY_SHOWN}) ▾`;
+              b.setAttribute('aria-expanded', String(activityAll));
+            },
+          },
+          activityAll ? 'Fewer ▴' : `More (${items.length - ACTIVITY_SHOWN}) ▾`,
+        )
+      : null;
+  const body: HTMLElement[] = items.length ? (more ? [list, more] : [list]) : [h('p.sm-none', {}, 'Nothing yet.')];
+  return h('aside.sm-activity', {}, fold('activity', h('span.sm-sub', {}, 'Recent activity'), body));
+}
+
+// ---- Folding: each section of the Command Center's summary opens and closes, and this browser remembers it ----
+const FOLD_KEY = 'agent-office.cc-fold';
+
+function foldState(): Record<string, boolean> {
+  try {
+    const v = JSON.parse(localStorage.getItem(FOLD_KEY) ?? '{}') as unknown;
+    return v && typeof v === 'object' ? (v as Record<string, boolean>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * A section that folds: `key` is what's remembered (folded: true). Open unless folded before. Its
+ * heading is a button; its body is a frame of its own, which scrolls inside itself (subtly) when the
+ * Command Center gives it less room than it needs (ui/command-layout.css), never the column round it.
+ */
+function fold(key: string, head: HTMLElement, body: HTMLElement[], cls = ''): HTMLElement {
+  const open = !foldState()[key];
+  const frame = h('div.sm-fold-body', { hidden: !open }, ...body);
+  const btn = h('button.sm-fold-h', { type: 'button', 'aria-expanded': String(open) }, head);
+  const el = h('section.sm-fold', { class: `${cls}${open ? '' : ' sm-folded'}`, 'data-fold': key }, btn, frame);
+  btn.addEventListener('click', () => {
+    const now = frame.hidden;
+    frame.hidden = !now;
+    btn.setAttribute('aria-expanded', String(now));
+    el.classList.toggle('sm-folded', !now);
+    const st = foldState();
+    if (now) delete st[key];
+    else st[key] = true;
+    try {
+      localStorage.setItem(FOLD_KEY, JSON.stringify(st));
+    } catch {
+      // Only this visit.
+    }
+  });
+  return el;
 }

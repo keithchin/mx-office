@@ -19,6 +19,9 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | any | `/api/health` | `{ ok: true }` when the office is up |
 | any | `/assets/*` | The client bundle's files |
 | any | `/login`, `/claim`, `/join`, `/favicon.svg` | Pages |
+| GET | `/manifest.webmanifest` | The [phone version](../using-the-office/phone-version.md)'s web app manifest |
+| GET | `/sw.js` | The phone version's service worker (app shell, push notifications) |
+| GET | `/icons/*` | The phone version's home-screen icons |
 
 ## The office (session)
 
@@ -55,14 +58,30 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET / POST | `/api/connections` | [Connections](../administration/connections.md) (admin): GET `/api/connections` (statuses and masked tails, never a value) and `/api/connections/tools` (the git / gh check); POST `/api/connections/save`, `remove`, `test` (`{ id }`, plus `value` to save), `import`, `mendix-floor` (`{ floor, on }`), `paths` (`{ which, dir }`), `git-identity`, `sweep` (`{ on }`), `sweep/run` |
 | GET / POST | `/api/wizard/*` | The new-project wizard: GET `info`, `job`, `setup`, `answers`, `app-version` (`?repo=`: the Studio Pro an existing floor's `.mpr` was saved with); POST `recheck`, `start`, `retry`, `edit` (admin) |
 | GET | `/api/chatter` | Team chatter: `?floor=<id>&since=<ms>&limit=<n>&cursor=…&who=<name>` (with `as=<kind>` to tell a person from an agent of the same name) or `&with=agents\|me` |
+| POST | `/api/phone/send` | Team phone: `{floor, text, place, verdict?}` sends a person's message (plain → the Project Coordinator, `@Name`, `@team`, a DM, a thread) through the roster's delivery, or answers an escalation in its thread (admin) |
+| GET | `/api/phone/state` | Team phone: `?floor=<id>`, the replies the floor is waiting for |
+| GET / POST | `/api/phone/reads` | Team phone: what this person has read, per channel (`?browser=<key>` / `{browser, reads}`; their account's when signed in with one) |
 | GET | `/api/audit` | The audit log: `?floor=<id>\|all\|_office&since=&until=&actor=human,agent&action=worker.hire,github&q=&limit=&cursor=`, with counts, the chain check and a histogram |
 | GET | `/api/audit/export` | Every matching event as a download, `&format=csv\|jsonl` (admin) |
 | POST | `/api/audit/settings` | `{ promptText }`: log the first 80 characters of prompts, or not (admin) |
+| any | `/m` | The [phone version](../using-the-office/phone-version.md) |
+| GET | `/api/m/me` | Admin or not, until when risky actions go through without the password (`reauthUntil`), the push key, this person's phones |
+| POST | `/api/m/reauth` | `{ password }`: the password typed again for risky actions (10 minutes; rate-limited like sign-in) |
+| POST | `/api/m/act` | `{ do, floor, … }`: an action from the phone: `escalation` (approve / reject / reply), `raise-cap`, `hire`, `merge` (answers the PR's URL), `pause`, `resume` (`choice`: `{ mode: 'work' | 'all' }`; both through [Pause / Resume project](../using-the-office/resume-and-pause.md), answering the run's progress). Risky ones answer 401 `{ reauth: true }` without a fresh sign-in; each is `phone.*` in the audit log |
+| GET | `/api/m/status` | Each project's status line (working, asleep, asking, stage, spend, escalations, its pause and latest resume or pause run), and a safe restart while one is going (`restart`) |
+| POST | `/api/m/push/key`, `/api/m/push/subscribe`, `/api/m/push/unsubscribe`, `/api/m/push/alerts`, `/api/m/push/test` | This phone's Web Push: the VAPID public key (made once), its subscription, its Do not disturb and digest, a test |
+| GET | `/api/m/push` | This person's phones (`?all=1`: everyone's, admins) |
+| GET / POST | `/api/phone-access` | [📱 Phone access](../administration/phone-access.md): the tunnel's state, address, sign-in prompt and checks; admins switch it on or off, pick the provider and the Cloudflare hostname |
 | GET | `/api/notify/teams` | [Teams notifications](../integrations/teams-notifications.md): the settings (never the webhook URL, only a hint), the last error, the last card, what's waiting and held, and the floors |
 | POST | `/api/notify/teams` | `{ url?, floors?, level?, quiet?, pauseMinutes?, publicUrl? }`: change them; `url: ''` removes the webhook (admin) |
 | POST | `/api/notify/teams/test` | Post a test card now (admin) |
 | GET | `/api/keep-awake` | Keep-awake: the setting, the idle minutes, whether the office is holding the computer awake and what's running |
 | POST | `/api/keep-awake` | `{ on?, idleMinutes? }` (admin) |
+| GET | `/api/project-run` | `?floor=`: [Resume and pause](../using-the-office/resume-and-pause.md): the floor's pause (`by`, `at`, `why`, who's `waiting` on you), its latest resume or pause run with each agent's status, and its pacing |
+| GET | `/api/project-run/preview` | `?floor=`: ▶ Resume project's dry run: each asleep or benched agent's reasons, safety checks, default action and options in waking order; who's awake; `blocked` (the spend cap) and warnings (Studio mode). Wakes nobody |
+| POST | `/api/project-run` | `{ floor \| all: true, action: resume\|pause\|cancel\|hold\|continue\|pacing, choice?: { mode: work\|all\|pick, picks? }, pacing?: { concurrent, gapSec } }` (admin) |
+| GET | `/api/office/restart` | [🔁 Restart safely](../administration/running-the-office.md#releasing-and-restarting-safely): its phase, who it's waiting on, whether there's a restart loop and new commits to build, a failed build's log |
+| POST | `/api/office/restart` | `{ action?: start\|wait\|anyway\|cancel, build?, timeoutMin? }` (admin; a script may send JSON with its cookie and no Origin) |
 | GET | `/api/budget` | [Budget](../using-the-office/budget.md): `?floor=<id>`. Returns the project's spend, budget settings, breakdowns (stage, role, agent with nested subagents, model, day, top issues/PRs), the exchange rate and the top-bar colour |
 | GET | `/api/budget/office` | Returns the office-wide view: today's and all-time spend, the daily budget, every project's line with a 14-day sparkline, the background calls by source, the Firm, and the currency settings |
 | POST | `/api/budget/action` | `{ floor, action, … }` (admin). The actions are: `settings` `{ total?, threshold?, autoPause? }`; `plan` `{ lines: [{ id, usd?, days? }] }`; `regenerate`; `firm` (apply the latest audit's re-forecast); `resume`; `level` `{ choice: { level, total, threshold, autoPause, settings } }`; `officeThreshold` `{ threshold }` (no floor). Answers with the project's view |

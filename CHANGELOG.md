@@ -7,6 +7,56 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ## Unreleased
 
 ### New
+- **⏸ Pause and ▶ Resume a project from the phone**: the Status tab's Pause runs Pause project (after a
+  confirmation), and Resume… shows a short Resume preview (who has work waiting and why, the cost line,
+  *Those with work* or *Everyone asleep*). Both need the fresh sign-in risky actions need. Each card
+  shows the pause (*⏸ Paused by Pat · 2 waiting on you*) and a run's progress, and a safe restart in
+  progress is a read-only line on top (*Restarting safely: waiting on 2*).
+- **📱 Phone version** at `/m`: the team phone full screen as an app for your iPhone, with tabs for
+  **Needs you** (Reply / Approve / Reject, Open terminal, Merge…, Raise cap…), **Projects** (each
+  floor's channel), **DMs**, **Activity** and a compact **Status** per project (working / asleep /
+  asking, escalations, spend against the cap, the toolkit stage; Pause / Resume waits for that
+  feature). Agents' terminals are read-only there (their Chat view).
+- **Risky actions from the phone are confirmed twice**: merging, hiring, raising a cap and approving a
+  merge-order escalation need a second tap and the password again unless you signed in within the
+  last 10 minutes. The office enforces it, and each phone action is `phone.*` in the audit log.
+- **Installable, with push notifications**: a web app manifest, pixel icons and a service worker (the
+  app opens even when the office can't be reached), *Add to Home Screen* steps for iPhone Safari, and
+  Web Push for the red Needs-you items (iOS 16.4+ home-screen apps), with each phone's own Do not
+  disturb and digest, never for a turn the office started. Tapping one opens `/m` on that item.
+  The protocol (VAPID, RFC 8291 encryption) is the office's own; the key is kept in Connections.
+- **📱 Phone access** in ⚙️ Settings → 🔌 Connections: a private tunnel to the office without
+  Tailscale or a VPN. **Microsoft Dev Tunnels** (sign in with your Microsoft work account from the
+  card, a persistent private tunnel, the same address every time) or **Cloudflare Tunnel with
+  Cloudflare Access**; a quick trycloudflare.com tunnel only behind a big warning, for an hour. A QR
+  code to scan, reconnects by itself, and is checked to be private (switched off if it isn't).
+  The Teams cards' Open buttons follow its address.
+- **The Teams webhook URL moved into 🔌 Connections** (a 💬 Microsoft Teams webhook card, DPAPI
+  encrypted): an office that had it in `notify-teams.json` moves it once at its next start.
+- **⏸ A paused project hires nobody new:** the task queue holds, the meeting room seats no meeting and
+  hands out no parts, a desk takes no new agent, and the Team tab, an answered escalation and The Firm
+  hire no member. Each says *Project paused: no new agents until it's resumed*. In the Team tab the
+  Project Manager can still **Hire anyway** after a confirm (one hire, logged as `roster.hire-override`).
+- **▶ Resume project** now counts a Lead's own team's open issues with nobody assigned as work waiting
+  (never another team's), and folds the Project Coordinator's queued relays into its resume brief, so it
+  gets one message instead of two.
+- **🚨 Incidents**, a second sub-tab of the **🧾 Audit log** (on each project and on the home page): what
+  went wrong or nearly did, each with a severity (sev1 to sev3, or near miss), a status (open, mitigated,
+  resolved), its impact (spend, agents, data), a timeline, the root cause, corrective actions with links,
+  and the audit events and workers it's about. Filters, counts, and a detail with everything on it. Admins
+  open one by hand or from an audit row (**🚨 Create incident from this event**, **Link to incident…**), add
+  notes, and resolve it with its root cause. Open sev1 and sev2 incidents show in **Needs you**, on the Team
+  phone and in the Teams notifications. Every change is in the audit log (`incident.*`) and the incidents
+  file is hash-chained like it.
+- The office opens incidents by itself: a real agent launched in a test office, a spend spike, the spend
+  cap reached, workers interrupted mid-turn by a stop, escalation answers not delivered after 30 minutes,
+  worker crash loops, Studio mode holding writes again and again, failing workflows or gate-checks, worktree
+  cleanup errors and repeated failed sign-ins. Each rule can be turned off and its thresholds changed under
+  **⚙️ Detection rules**; a rule firing again counts into its open incident instead of opening another.
+- The incidents of 2026-10-06 are recorded once, retrospectively, in an office that ran that day.
+- **Test mode** (`--test-mode`, `AGENT_OFFICE_TEST_MODE=1`, and by itself when the office or a floor is under
+  a `scratch` or `test-offices` folder): no real agent CLI starts, only the fake `--agent`; a refused start
+  says why on the worker's card and opens a near-miss incident, and the top bar shows **TEST MODE**.
 - **💰 Budget: what each project spent.** A new 💰 Budget tab on the 1D view shows a project's spend
   by stage, role, agent (subagents nested under the Lead that hired them), model, day and issue/PR,
   in dollars and a local currency (SGD by default, ECB rate fetched daily or set by hand). The top bar
@@ -19,11 +69,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   line by line, or re-forecast from a Firm audit in one click. A chart compares expected and actual
   spend; the forecast at completion colours the top-bar chip. Alerts fire at 80 % (changeable per
   project and office-wide), at 100 % and when the forecast goes over budget, once each, through Needs
-  you, the Teams cards and the audit log. At 100 % the project pauses (no hires, no office prompts;
-  people's messages still go through) until the budget is raised or someone resumes it.
+  you, the Teams cards and the audit log. At 100 % the project is paused with ⏸ Pause project (its line reads *⏸ Paused: budget reached*;
+  people's messages still go through) until the budget is raised or someone resumes it from the
+  Needs-you item, which opens the ▶ Resume project preview.
 - **New project wizard: a Budget page.** Lean, Balanced or Fast, each with a preset budget from the
   plan estimate (travel-approval: $220 / $330 / $530), its time and what it changes (models, early
-  drafts, autonomy by stage, parallelism), or Manual. The team is hired on the level's choices;
+  drafts, autonomy by stage, and how many subagents a Lead runs at once, written into the Leads'
+  Playbooks), or Manual. The team is hired on the level's choices;
   **Change level** on the Budget tab does the same for a running project from the next hire.
 - **💰 Budget insights and an all-projects view.** The Budget tab names what drives the spend ("Opus
   Leads are 71 % of spend", the Lead Tester's review loop this week, the Coordinator's relays a day)
@@ -31,6 +83,110 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   subagents, idle benching, Jeff's real-ask mode, early drafts off, with the worker ranking's token
   efficiency. A new 💰 Budget tab on the home page lists every project's spend against its budget,
   forecast, status and a 14-day sparkline, with the office's background calls and the Firm's audits.
+
+### Improved
+- **🧩 Subagents: runs only the transcript saw finish count.** A background run that only the Lead's transcript
+  reports as finished (no hook does) is now a run of its subagent's record, unreviewed until the Lead's
+  `office-workers subagent review`, which lands on that run rather than adding one. Grades still count only
+  reviewed runs; cards and hover cards say *N unreviewed*. A late SubagentStop for the same run isn't counted again.
+- **🧩 Subagents live about the 2D view.** Idle subagents no longer vanish: they take the same breaks benched
+  Leads do (the lounge TV, the balcony, the kitchen's coffee, walking the aisle), still small and tagged
+  *tester (Hedy's)*, with a speech bubble when two stand close; when a run starts they walk back to the stool
+  behind their Lead, and away when it ends. Benched ones do the same with a 🪑 tag. The home Overview matches.
+- **🧩 Never-run subagents are hidden.** The Workers tab shows only subagents that have run (or are at work for
+  the first time, or are benched or on warning) unless **☐ Include never-run** is ticked next to Show
+  subagents. The 2D view shows only subagents that have run at least once.
+
+### Fixed
+- A fake `--agent` (or `AGENT_OFFICE_AGENT`) now runs Claude Code workers whatever its file is called: only one
+  named `claude` did, so test offices with a `fake-agent.cmd` started real Claude sessions.
+
+### To know
+- Resume, Pause and Restart safely are admin-only on every route, not just hidden for others; tests pin it.
+- **The budget's spend ledger starts with estimated history.** The first time a project's Budget is
+  opened, what it spent before is filled in from its workers and `analysis/runs.jsonl`, spread over the
+  days and marked as estimated; everything after is booked as it happens. The office's own model calls
+  now count in the office's total spend too, so it reads a little higher than before.
+
+## 2026-10-06 · release 12 (`18ff64d`)
+
+### New
+- **▶ Resume project** (Command Center heading and team pages; **▶ Resume all projects** on Home): a
+  preview first, listing every asleep or benched agent with the work waiting for it and why (answers owed,
+  held prompts, queued relays and notes, cut off mid-turn, failing PR checks, an assigned issue, an
+  unhanded standup page) plus safety checks (the spend cap blocks, Studio mode warns, a missing worktree or
+  lost session re-hires from the handoff note, a merged branch offers Send home, behind or uncommitted is
+  noted). Wakes those with work by default, the Coordinator first and then the most blocking Leads, 2 at a
+  time 45 s apart (team settings), each with a short brief as your turn. Runs as a checkpointed workflow
+  that carries on after a restart; audited as `resume.started` / `agent.woken` / `agent.skipped` /
+  `resume.finished`.
+- **⏸ Pause project** (and **⏸ Pause all projects**): agents finish their turn (never interrupted, nothing
+  typed into a question), write a handoff note and sleep with their session kept; the office's own prompts
+  to the floor (nudges, standups, relays, review nudges, Firm interviews) are held until it's resumed, while
+  what a person sends still goes through. Shown as *⏸ Paused by … at … · N waiting on you*.
+- **🔁 Restart safely** (**⚙️ Settings → Workers**, or `POST /api/office/restart`): pauses every project,
+  waits until no agent is mid-turn (timeout: keep waiting, restart anyway, or cancel), optionally builds new
+  commits first, then exits with code 75 for a looping launcher; the next start resumes exactly the floors
+  it paused.
+- **🧩 Subagents as workers.** A Lead's subagents now show as workers of their own. On the **👷 Workers**
+  tab each gets a card right after its Lead's (*🧩 tester · hired by Hedy (Lead Tester)*): working on what and
+  for how long, idle since its last run, or benched; its model, runs and A–F grade. Click it for its recent
+  runs, the Lead's verdicts, Warn/Bench/Model/Reinstate (Project Manager) and a link to the Lead's terminal.
+  **☑ Show subagents** hides them. In the **2D view** (and the home page's 2D Overview) a subagent at work
+  sits on a stool behind its Lead's chair, tagged *tester (Hedy's)*; benched ones take breaks with benched Leads.
+- The office follows each run live from the hooks (the Agent call going out and coming back, SubagentStart /
+  SubagentStop) and, every 10 seconds, from the Lead's transcript, which is the only place a background
+  run says it's finished. A floor's last 50 runs are kept in its roster file.
+### Fixed
+- A subagent run in the background (newer Claude Code's default) no longer counts twice in its track record:
+  its launch made a run of its own besides the one its SubagentStop records. The SubagentStop's run now
+  carries the task.
+- **The Command Center no longer scrolls outside its parts**: on a desktop window it's a fixed-height
+  layout with no page scroll and no column scrollbars (the project details on the left and the console in
+  the middle used to scroll as a whole, sometimes twice). Each card scrolls inside its own frame with a
+  thin scrollbar in the theme's colors; the console's chat or terminal fills the middle and is the only
+  thing there that scrolls, with the escalation cards behind a one-line bar that swaps them in. The tabs
+  are a little smaller, Needs you and the folded setup line share a row, and on a short window the setup
+  panel starts folded. The short page scroll at 1280×720 is gone; phones still scroll the stacked page.
+- **The Team phone's button shows its messages icon in the Clean themes**: Clean gave every button its
+  ink colour, so the icon was drawn in the button's own colour and vanished. It's now its own colour (a
+  white icon on an accent-blue disc in Clean (Light) and Clean (Dark)), and checked in all five themes.
+
+### To know
+- The launcher needs the restart loop (`AGENT_OFFICE_LAUNCHER_LOOP=1` and `do { … } while ($code -eq 75)`,
+  in Running the office → Releasing and restarting safely); without it, Restart safely only pauses, waits
+  and exits. The pauses live in `<office data>/project-run.json`, so they survive a restart.
+
+## 2026-10-06 · release 11 (`a52ebae`)
+
+### New
+- **📱 Team phone**: a button at the bottom right of the 1D and 2D views, above the Issues / PRs /
+  Queue / New task bar (a pixel-art iPhone in the Default theme, a round messages button in the
+  others), with a red count of what needs you or a grey dot for unread messages. It opens a chat like
+  Slack's: **Needs you** pinned on top, **All projects**, a channel per floor with its team chatter
+  (escalations and conversations as threads with reply counts, the old filters as chips, *working…*
+  while an agent is mid-turn), and DMs with the floor's agents.
+- **Message the team from the phone**: a plain message goes to the floor's Project Coordinator (the
+  Chief Analyst or another Lead when there's none, and it says so), `@Name` to that agent with
+  @-autocomplete, `@team` to every active Lead after a *This wakes N agents (≈N turns)* warning, a DM
+  to its agent, a reply in an escalation's thread answers the escalation. It goes through the same
+  delivery as the office's own prompts (held until the turn is over, never typed into a dialog, as
+  your turn, through a reached spend cap), is kept in the chatter as yours, and the agent's reply is
+  read off its transcript into the same thread (*replied in its terminal → Open* without one).
+- **Notifications in the phone**: every Needs-you item arrives as a message from Jeff (escalations,
+  with his priority) or the office, with **Reply / Approve / Reject**, **Open terminal**, **Merge…**,
+  **Review** or **Raise cap**; answering there resolves it everywhere. Desktop alerts and a short sound
+  only for those, with **Do not disturb** (until off, 1 hour, until 9:00 tomorrow) and a **Digest**
+  (every 15, 30 or 60 minutes) in the phone's settings. What you've read is kept per person by the office.
+
+### Improved
+- **The Command Center fits a laptop screen**: Needs you is one row of counts that opens the phone,
+  the setup panel folds to one line once its gates are fine (Show / Hide, remembered), the summary's
+  columns take the window's height with the console the widest and each scrolling on its own, its
+  sections fold (remembered), and Recent activity shows the newest 8 with **More**.
+- **💬 Team chatter moved into the team phone**: it's off the Command Center, and each team page
+  has **Open in the team phone →** filtered to that team instead of its short thread. The chatter's
+  data and `GET /api/chatter` are unchanged.
 
 ## 2026-10-06 · release 10 (`3db2145`)
 

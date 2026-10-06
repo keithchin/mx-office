@@ -170,6 +170,7 @@ export class Roster {
     this.seen.delete(workerId);
     this.delivery.forget(workerId);
     forgetSubagents(workerId);
+    this.subagents.live.forget(workerId);
     forgetLastWords(workerId);
     const role = this.roleOf(floor, workerId);
     if (!role) return;
@@ -322,6 +323,7 @@ export class Roster {
       skills: Object.fromEntries(ROLES.map((r) => [r.id, effectiveSkills(r.id, d.settings.autonomy, d.members[r.id].skills)])),
       subagents: this.subagents.views(floor),
       subagentActions: this.subagents.actionsView(floor),
+      subagentRuns: this.subagents.live.views(floor),
       spentToday: d.spend.usd,
       cap,
       paused,

@@ -24,6 +24,10 @@ export function noteTranscript(workerId: string, file: unknown) {
   if (typeof file === 'string' && file && file.length < 4096 && file.endsWith('.jsonl')) noted.set(workerId, file);
 }
 
+/** The transcript this worker's hooks last named, if any (the team phone reads replies off it, server/phone/; the
+ *  Leads' subagent runs read it too, roster/subagent-live.ts). */
+export const notedTranscript = (workerId: string): string | undefined => noted.get(workerId);
+
 type Deps = Pick<Ctx, 'cfg' | 'sendTo' | 'workerFloor'>;
 
 export class ConvoService {

@@ -18,6 +18,7 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 | `subagentCooldownHours` | number | `24` | Hours a benched subagent sits out before it's reinstated; 0 = only by hand. 0 to 720, in tenths. |
 | `autonomyByStage` | `AutonomyByStage` | `{ enabled: false, early: 2, build: 3 }` | Autonomy by pipeline stage. On, on a toolkit project, the office sets `autonomy` itself: `early` until the build plan's gate (Stage 4) passes, `build` from then on. See [Autonomy by pipeline stage](../teams-and-agents/autonomy.md#autonomy-by-pipeline-stage). |
 | `earlyDrafts` | boolean | `true` | While the Chief Analyst is on Stages 0–2, Design, Development and Testing make small drafts marked as such (`-draft` in the name, a `DRAFT — before Stage 3 gate` banner): low-fi wireframes, a draft domain model and architecture sketch, a test-plan outline. Off: they wait for their stage. Written into the Playbooks. See [Deliverables](../using-the-office/deliverables.md). |
+| `maxSubagents` | number | none | At most this many subagents at once per Lead (1 to 10), written into the Leads' Playbooks as guidance. Set by the [budget level](../using-the-office/budget.md#budget-levels): Lean 1, Balanced 2, Fast 4. None: no limit given. |
 
 ## AutonomyByStage
 
@@ -56,6 +57,14 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 | Connections: worktree cleanup | Worktree cleanup › On / Off (admins); `office-settings.json` (`sweep`) | on | Hourly removal of merged worktrees no worker has, under each floor's `.agent-office/worktrees/`. |
 | Audit: log prompt text | [Audit log](../using-the-office/audit-log.md) tab → **Log prompt text** (admins); `POST /api/audit/settings` | off | Keep the first 80 characters of every prompt a person sends a worker. Off: only its length is logged. |
 | Command Center terminal | 1D view's ⚙️ Settings tab → *Your view*, the 3D office's ⚙️ Settings › You, or the console's **Chat | Terminal** toggle; this browser's `localStorage` (`agent-office.pmc-view`) | `chat` | `chat` or `terminal`: how the [Project Coordinator console](../using-the-office/command-center.md#the-project-coordinator-console) shows its screen. Per browser, not per floor. |
+| Team phone: Do not disturb | The [📱 Team phone](../using-the-office/team-phone.md#phone-settings)'s ⚙ → *Do not disturb*; this browser's `localStorage` (`agent-office.phone.alerts`) | off | Off, until turned off, 1 hour, or until 9:00 tomorrow: no desktop alerts or sound meanwhile (the badge still counts). Quiets the workers' and escalations' alerts too, on the 1D and 2D views. |
+| Team phone: Digest | The phone's ⚙ → *Digest*; `agent-office.phone.alerts` | off | Bundle alerts that aren't urgent into one every 15, 30 or 60 minutes; urgent ones still come at once. |
+| Team phone: Sound | The phone's ⚙ → *Sound*; `agent-office.phone.alerts` | on | A short sound with an alert for something that needs you. |
+| Team phone: open, wide, last channel | The phone's button, **⤢**, the channel list; `agent-office.phone.open`, `.phone.wide`, `.phone.screen` | closed | Whether this browser had the phone open, widened, and on which channel. |
+| Team phone: what you've read | Opening a channel or DM; the office's `<office data>/phone/reads.json` (per account, or per browser on the shared password), mirrored in `agent-office.phone.reads` | — | The unread counts and the grey dot. |
+| Command Center: folded sections | A section heading in the summary, the setup panel's **Hide / Show**, the console's escalation bar (**Show ▾ / Back to the chat ▴**); `agent-office.cc-fold`, `agent-office.cc-setup`, `agent-office.pmc-escalations` | open (the setup panel folds once its gates are fine, or on a window under 820 px tall; the escalation cards stay behind their bar) | Which parts of the [Command Center](../using-the-office/command-center.md) this browser keeps folded. |
+| ▶ Resume project pacing | Team settings › **▶ Resume project** (admins); `<office data>/project-run.json` (`pacing.<floor>`) | 2 at once, 45 s apart | `concurrent` (1 to 6): most agents starting at once; `gapSec` (5 to 600): seconds between wakes. A wake counts once its session is up. See [Resume and pause](../using-the-office/resume-and-pause.md#order-and-pacing). |
+| 🔁 Restart safely | ⚙️ Settings › 🤖 Workers (admins); `POST /api/office/restart` | timeout 10 min | `build` (run `npm run build` first, offered when the office's checkout has new commits), `timeoutMin` (1 to 120). Needs `AGENT_OFFICE_LAUNCHER_LOOP=1` from a looping launcher to restart rather than only exit. See [Releasing and restarting safely](../administration/running-the-office.md#releasing-and-restarting-safely). |
 | The Firm: each reviewer's model | `/firm` → the model picker on each reviewer's card (admins); `<office data>/firm/firm.json` | Fable 5.1 | The model a Reviewer Agent runs on unless the audit wizard picks another. See [The Firm](../using-the-office/the-firm.md). |
 
 ## The types, as in the code
@@ -72,6 +81,7 @@ export interface RosterSettings {
   subagentCooldownHours: number;
   autonomyByStage: AutonomyByStage;
   earlyDrafts: boolean;
+  maxSubagents?: number;
 }
 
 export interface AutonomyByStage {
@@ -89,7 +99,7 @@ Set in the 3D office's **⚙️ Settings** (admins), for the whole office, each 
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `url` | string | none | The Teams Workflows webhook URL. https only (plain http only to this machine, for a stub). A secret: never sent to a browser (Settings shows a hint) nor written to the audit log. Kept here until Settings → Connections stores it encrypted. |
+| `url` | string | none | The Teams Workflows webhook URL. https only (plain http only to this machine, for a stub). A secret: never sent to a browser (Settings shows a hint) nor written to the audit log. Only while Connections isn't open: otherwise it's in `credentials.json` (the `teams-webhook` credential, encrypted), moved there from this file once. |
 | `floors` | `'all' | string[]` | `'all'` | Which floors post (floor ids). |
 | `level` | `'needs' | 'digest'` | `'needs'` | Red items only, or those and a daily digest per floor. |
 | `quiet` | `{ start: 'HH:MM', end: 'HH:MM' }` | none | Hold cards back between these times on the office computer's clock (may span midnight); one catch-up card follows. |

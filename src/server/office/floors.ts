@@ -9,6 +9,7 @@ import { SLOW_CLIENT_BYTES, type Client } from './client.js';
 import { analysisOf } from '../analysis/index.js';
 import { summaryOf } from '../summary/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { phoneOnWorker } from '../phone/office.js';
 import { auditGitHub } from '../audit/office.js';
 import { chatterOf } from '../chatter/office.js';
 import { budgetOf } from '../budget/index.js';
@@ -131,6 +132,8 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
         budgetOf(ctx).onWorker(floor.id, w);
         // The project team: who's idle (to bench), the standup's answers, the floor's spend against its cap.
         team(ctx, floor, (t) => rosterOf(ctx).onWorker(t, w));
+        // The team phone: a reply it's waiting for may be in, now that a turn is over (server/phone/).
+        team(ctx, floor, () => phoneOnWorker(ctx, floor, w));
       }
       ctx.machine.workersChanged();
       ctx.floorsChanged();

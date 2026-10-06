@@ -14,6 +14,7 @@ import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 import { audit, human } from '../../audit/index.js';
+import { hireHoldOf, overrideHold } from '../../project-run/store.js';
 
 const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation', 'skill', 'subagent', 'subagent-decide']);
 const DECISIONS = new Set<Decision>(['approve', 'reject', 'change']);
@@ -72,9 +73,14 @@ export const rosterRoutes = {
       if (needRole && !role) return send(res, 400, { error: 'Which role?' });
       let error: string | undefined;
       switch (action) {
-        case 'hire':
-          error = await roster.members.hire(team, role!, by, owner, typeof body.task === 'string' ? body.task.slice(0, 4000) : undefined);
+        case 'hire': {
+          const hire = () => roster.members.hire(team, role!, by, owner, typeof body.task === 'string' ? body.task.slice(0, 4000) : undefined);
+          // A paused floor hires nobody (project-run/store.ts), unless the Project Manager confirmed hiring anyway.
+          const override = body.override === true && !!hireHoldOf(floor.id);
+          error = override ? await overrideHold(floor.id, hire) : await hire();
+          if (override && !error) audit.record({ floor: floor.id, actor: human(by, owner), action: 'roster.hire-override', target: { kind: 'role', id: role, label: roster.data(floor.id).members[role!].name }, summary: `Hired ${roster.data(floor.id).members[role!].name} on a paused project (confirmed)`, details: { role }, severity: 'notice' });
           break;
+        }
         case 'bench':
           error = roster.members.bench(team, role!, by);
           break;

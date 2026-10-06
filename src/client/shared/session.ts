@@ -24,6 +24,8 @@ import { askNotifyPermission, DesktopNotifier, notifyPermission, waitingOnSomeon
 export interface FlatSession {
   net: Net;
   settings: Settings;
+  /** The desktop notifications (the team phone sends its own through it, ui/phone/). */
+  notifier: DesktopNotifier;
   /** Signs in (back to `page` afterwards), asks your name if this browser has none yet, and connects. */
   start(): void;
   /** The 🔔 to allow notifications, put before `el`, while the browser hasn't been asked. */
@@ -34,7 +36,7 @@ export interface FlatSession {
  * The connection for a flat view (or the home page) at `page`. `openWorker` opens a worker's terminal (a notification
  * clicked); `onMessage` hears every message after the store and the shared windows have.
  */
-export function flatSession(page: '/home' | '/lite' | '/pixel', openWorker: (id: string) => void, onMessage?: (msg: ServerMsg) => void): FlatSession {
+export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorker: (id: string) => void, onMessage?: (msg: ServerMsg) => void): FlatSession {
   // Your name and color from the 3D office, if this browser has been in it. Nobody sees a character
   // of yours from here, so a look is only made up to connect with.
   const saved = loadProfile();
@@ -138,6 +140,7 @@ export function flatSession(page: '/home' | '/lite' | '/pixel', openWorker: (id:
   return {
     net,
     settings,
+    notifier,
     start: () => void signIn(page, !!saved, net),
     bellBefore(el) {
       // The browser only asks from a tap, so there's a button for it while it hasn't been asked.

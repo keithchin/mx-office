@@ -1,39 +1,44 @@
-// What the budget does at 100 %: pause the project. `pauseFloorForBudget(floor, why)` is the one seam.
-// When the office has a Pause project (Resume/Pause project, registered with registerProjectPause), it's
-// used; until then the floor's existing pause (roster/pause.ts) holds it, which stops new hires and the
-// office's own prompts (nudges, standups, relays, wakes) the way the daily spend cap does. Either way a
-// person's own messages still go through and no running turn is stopped.
+// What the budget does at 100 %: pause the project. `pauseFloorForBudget(floor, why)` is the one seam,
+// and the pause is the office's real ⏸ Pause project (server/project-run/), which registers itself here
+// (project-run/adapter.ts): agents finish their turn, hand off and sleep; the office's own prompts are
+// held (roster/deliver.ts) and nobody new is hired (roster/pause.ts, Members.hire); a person's messages
+// still go through. So there is one source of truth for "this floor is paused", recorded with the reason
+// 'budget' so its line reads "⏸ Paused: budget reached".
 
-import { setFloorHold } from '../roster/pause.js';
-
-/** A Pause project the office can call: the budget's way in. */
+/** The office's Pause project, as the budget uses it. */
 export interface ProjectPauser {
-  pause(floorId: string, why: string, by: string): void;
+  /** Pauses the floor for its budget. */
+  pause(floorId: string, by: string): void;
+  /** Resumes it the default way (those with work waiting). */
   resume(floorId: string, by: string): void;
+  /** Whether the floor is paused because of its budget now (a person may have resumed it from ▶ Resume project). */
+  pausedForBudget(floorId: string): boolean;
 }
 
 let pauser: ProjectPauser | undefined;
 
-/** Registers the office's Pause project (the Resume/Pause project feature); undefined takes it out. */
+/** Registers the office's Pause project; undefined takes it out (tests). */
 export function registerProjectPause(p: ProjectPauser | undefined) {
   pauser = p;
 }
 
-export const BUDGET_BY = 'The office (budget)';
-const HOLD = 'budget';
+/** Who the pause is recorded as. */
+export const BUDGET_BY = 'Budget';
 
-/** Pauses the floor because its budget is spent. Says which pause it used. */
-export function pauseFloorForBudget(floorId: string, why: string): 'project' | 'floor' {
-  if (pauser) {
-    pauser.pause(floorId, why, BUDGET_BY);
-    return 'project';
+/** Pauses the floor because its budget is spent; false when there's no Pause project to do it with. */
+export function pauseFloorForBudget(floorId: string): boolean {
+  if (!pauser) {
+    console.error(`agent-office: the budget of ${floorId} is reached, but there's no Pause project to pause it with`);
+    return false;
   }
-  setFloorHold(floorId, HOLD, why);
-  return 'floor';
+  pauser.pause(floorId, BUDGET_BY);
+  return true;
 }
 
-/** Takes the budget's pause off the floor (Resume, or a raised budget). */
+/** Resumes the floor the default way (Resume, or a raised budget). */
 export function resumeFloorFromBudget(floorId: string, by: string) {
   pauser?.resume(floorId, by);
-  setFloorHold(floorId, HOLD, undefined);
 }
+
+/** Whether the floor is still paused for its budget; undefined with no Pause project to ask. */
+export const pausedForBudget = (floorId: string): boolean | undefined => pauser?.pausedForBudget(floorId);

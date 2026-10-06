@@ -2,7 +2,7 @@
 // office-wide view (every project, the office's background calls, the Firm), from the ledgers.
 
 import type { BudgetView, FirmForecast, OfficeBudgetView, OfficeFloorBudget } from '../../shared/budget/types.js';
-import { numbersOf, pauseWhy } from './control.js';
+import { budgetPaused, numbersOf, pauseWhy } from './control.js';
 import { insights } from '../../shared/budget/insights.js';
 import { toneOf } from '../../shared/budget/money.js';
 import { breakdowns, recentDays, totalOf, type LedgerData } from './ledger.js';
@@ -51,7 +51,7 @@ export function floorView(b: BudgetService, floor: FloorRef, admin: boolean, fir
     variance: n.variance,
     ...(n.forecast ? { forecast: n.forecast } : {}),
     alerts: f.alerts.filter((a) => a.text),
-    ...(f.pausedAt && f.settings.total ? { paused: pauseWhy(f.settings.total, spent) } : {}),
+    ...(budgetPaused(b, floor) && f.settings.total ? { paused: pauseWhy(f.settings.total, spent) } : {}),
     ...(firm ? { firm } : {}),
     insights: insights({ rows: d.rows, agents: d.agents, today, stage: b.deps.stageOf(floor.dir), team: b.deps.team?.(floor.id), efficiency: b.deps.efficiency?.(floor.id) }),
     admin,
@@ -71,7 +71,7 @@ export function floorLine(b: BudgetService, floor: FloorRef): OfficeFloorBudget 
     ...(f.settings.total ? { budget: f.settings.total } : {}),
     ...(forecast !== undefined ? { forecast } : {}),
     tone: toneOf(f.settings.total, spent, forecast),
-    ...(f.pausedAt ? { paused: true } : {}),
+    ...(budgetPaused(b, floor) ? { paused: true } : {}),
     spark: recentDays(f.ledger, b.today, SPARK_DAYS).map((x) => x.cost),
   };
 }

@@ -14,6 +14,7 @@ import { stageLevel, stageOf } from './stage-autonomy.js';
 import { cleanSettings } from './store.js';
 import type { TeamFloor } from './types.js';
 import { audit, byWhom } from '../audit/index.js';
+import { hireHoldOf } from '../project-run/store.js';
 
 /** Models a role can be set to: Claude Code's aliases, or a full model id. */
 const MODEL = /^[A-Za-z0-9][A-Za-z0-9._\-[\]]{0,63}$/;
@@ -25,7 +26,7 @@ export class Members {
     const d = this.roster.data(floor.id);
     const names = Object.fromEntries(ROLES.map((r) => [r.id, d.members[r.id].name])) as PlaybookContext['names'];
     const m = d.members[role];
-    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role), earlyDrafts: d.settings.earlyDrafts };
+    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role), earlyDrafts: d.settings.earlyDrafts, maxSubagents: d.settings.maxSubagents };
   }
 
   /**
@@ -70,7 +71,7 @@ export class Members {
       if (!err) floor.toast(`${by} woke ${m.name}, the ${def.title}`);
       return err;
     }
-    const paused = this.roster.pauseOf(d);
+    const paused = this.roster.pauseOf(d) ?? hireHoldOf(floor.id);
     if (paused) return paused;
     const owed = this.roster.escalations.owed(floor, role);
     const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task, owed.lines), owner, by, team: def.team });
@@ -221,7 +222,7 @@ export class Members {
       }
     }
     // Early drafts on or off: the Leads' Playbooks say so (they read them again at their next session or prompt).
-    else if (d.settings.earlyDrafts !== was.earlyDrafts) for (const r of ROLES) this.rewrite(floor, r.id);
+    else if (d.settings.earlyDrafts !== was.earlyDrafts || d.settings.maxSubagents !== was.maxSubagents) for (const r of ROLES) this.rewrite(floor, r.id);
     this.roster.touch(floor);
     return undefined;
   }

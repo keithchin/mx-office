@@ -53,9 +53,9 @@ Choose how to trade cost against speed. There are three levels, plus Manual:
 
 | Level | What it sets | Preset budget |
 |---|---|---|
-| 🪙 **Lean**: lowest cost | Leads and Discovery on Sonnet. Subagents on Haiku where the role allows it (the Developer, UI/UX Designer and Business Analyst stay on Sonnet). Early drafts off. Autonomy by stage on (Guided, then Delegated in build). Fewer agents at once. | 0.65 × the plan estimate |
-| ⚖️ **Balanced**: the default | Leads on Sonnet, the Chief Analyst on Opus for Discovery, subagents on Sonnet. Early drafts on. | the plan estimate |
-| 🚀 **Fast**: speed first | Leads on Opus, more agents and subagents in parallel. Early drafts on. Autonomy by stage on (Delegated, then Autonomous). | 1.6 × the plan estimate (Opus rates plus a 15 % margin) |
+| 🪙 **Lean**: lowest cost | Leads and Discovery on Sonnet. Subagents on Haiku where the role allows it (the Developer, UI/UX Designer and Business Analyst stay on Sonnet). Early drafts off. Autonomy by stage on (Guided, then Delegated in build). At most 1 subagent at once per Lead. | 0.65 × the plan estimate |
+| ⚖️ **Balanced**: the default | Leads on Sonnet, the Chief Analyst on Opus for Discovery, subagents on Sonnet. Early drafts on. At most 2 subagents at once per Lead. | the plan estimate |
+| 🚀 **Fast**: speed first | Leads on Opus, up to 4 subagents at once per Lead. Early drafts on. Autonomy by stage on (Delegated, then Autonomous). | 1.6 × the plan estimate (Opus rates plus a 15 % margin) |
 | ✍️ **Manual** | You type the budget and pick each setting yourself. | yours |
 
 Each card shows:

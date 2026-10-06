@@ -10,7 +10,7 @@ import type { AgentChoice, MeetingRequest, WorkerInfo } from '../src/shared/prot
 import { MEETING_PATTERNS, MEETING_PATTERN_IDS, fixedRounds, isMeetingPattern } from '../src/shared/meetings.js';
 import { PROMPTS, type PromptId } from '../src/shared/prompts.js';
 
-function fixture(opts: { git?: boolean; rewritten?: Partial<Record<PromptId, string>>; officeDefault?: AgentChoice } = {}) {
+function fixture(opts: { git?: boolean; rewritten?: Partial<Record<PromptId, string>>; officeDefault?: AgentChoice; held?: () => string | undefined } = {}) {
   const dir = mkdtempSync(path.join(tmpdir(), 'office-meeting-'));
   const dataDir = path.join(dir, '.agent-office');
   mkdirSync(dataDir, { recursive: true });
@@ -63,6 +63,7 @@ function fixture(opts: { git?: boolean; rewritten?: Partial<Record<PromptId, str
     update() {},
     toast: (text) => toasts.push(text),
     hiringPaused: () => undefined,
+    held: opts.held,
     postReview: async (pr, file) => {
       reviews.push({ pr, file });
       return `https://github.com/o/r/pull/${pr}#pullrequestreview-1`;
@@ -337,4 +338,19 @@ test('a pattern with a set number of rounds says so, and names them; a range is 
   const f = fixture(); t.after(() => f.close());
   assert.equal(f.start({ pattern: 'lead', rounds: 5 }), undefined);
   assert.equal(f.room.state().current!.rounds, 3);
+});
+
+test('a paused floor (⏸ Pause project) holds the meeting: no part is handed over until it is resumed', (t) => {
+  let held: string | undefined;
+  const f = fixture({ held: () => held }); t.after(() => f.close());
+  assert.equal(f.start({ rounds: 3, output: 'docs/decision.md' }), undefined);
+  held = 'This floor is paused';
+  for (const i of [0, 1, 2]) f.take(i);
+  const before = f.prompts.length;
+  assert.equal(f.room.state().current!.round, 1, 'the round waits');
+  assert.ok(!f.prompts.slice(3).some((p) => /Round 2/.test(p.text)), 'nothing typed');
+  held = undefined;
+  f.room.onWorker(f.workers[0]);
+  assert.equal(f.room.state().current!.round, 2);
+  assert.ok(f.prompts.length > before);
 });

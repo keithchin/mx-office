@@ -20,12 +20,11 @@ function statePill(s: SubagentView): HTMLElement {
   return h('span.sa-pill.sa-active', {}, 'active');
 }
 
-function subagentRow(v: RosterView, s: SubagentView, redraw: (v: RosterView) => void, compact: boolean): HTMLElement {
+/** The Project Manager's Warn, Bench, Model and Reinstate for a subagent (also on its card's detail: ui/subagents/). Null for anyone else. */
+export function subagentActions(v: RosterView, s: SubagentView, redraw: (v: RosterView) => void): HTMLElement | null {
   const run = (op: string, extra: Record<string, unknown> = {}) => void act(v.floor, 'subagent', { role: s.lead, name: s.name, op, ...extra }).then((r) => r && redraw(r));
-  const sc = s.score;
-  const pct = sc.reviewed ? Math.round((100 * sc.accepted) / sc.reviewed) : undefined;
   const lead = v.members.find((m) => m.role === s.lead);
-  const buttons = v.admin && !compact
+  return v.admin
     ? h(
         'span.sa-actions',
         {},
@@ -35,6 +34,12 @@ function subagentRow(v: RosterView, s: SubagentView, redraw: (v: RosterView) => 
         s.state !== 'active' ? h('button.btn.small.ro-approve', { type: 'button', title: 'Back on the team (its warning notes stay)', onclick: () => run('reinstate') }, '✅ Reinstate') : null,
       )
     : null;
+}
+
+function subagentRow(v: RosterView, s: SubagentView, redraw: (v: RosterView) => void, compact: boolean): HTMLElement {
+  const sc = s.score;
+  const pct = sc.reviewed ? Math.round((100 * sc.accepted) / sc.reviewed) : undefined;
+  const buttons = compact ? null : subagentActions(v, s, redraw);
   return h(
     'li.sa-row',
     { class: `sa-${s.state}`, 'data-subagent': s.name },

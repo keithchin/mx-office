@@ -63,3 +63,17 @@
 .sm-text { overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sm-activity time { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .sm-activity li.needs .sm-text { color: var(--bad-ink); }
+
+/* A section that folds (ui/summary.ts fold): its heading is the toggle, with a caret, and the browser remembers it. */
+.sm-fold { min-width: 0; }
+.sm-fold > .sm-fold-h { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.sm-fold > .sm-fold-h::after { content: '▾'; margin-left: auto; font-size: 11px; color: var(--muted); }
+.sm-fold.sm-folded > .sm-fold-h::after { content: '▸'; }
+.sm-fold > .sm-fold-h .sm-sub { margin: 0; }
+.sm-fold:not(.sm-folded) > .sm-fold-h { margin-bottom: 4px; }
+.sm-fold-h:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.sm-fold-body[hidden] { display: none; }
+/* A frame that scrolls inside itself: a thin scrollbar in the theme's colors, only when it's needed. */
+.sm-fold-body { scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+.sm-fold-note { text-transform: none; letter-spacing: 0; font-weight: 700; }
+.sm-more-btn { display: block; margin: 6px 0 0; padding: 0; border: 0; background: none; color: var(--link); font: 800 12px var(--font); cursor: pointer; }

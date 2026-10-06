@@ -1,15 +1,17 @@
 // Where the Teams webhook URL is kept. Its `sig=` query lets anyone post to the channel, so it's a
 // secret: never sent to a browser (only a hint), never in the audit log.
 //
-// For now it sits in the office's own settings file for Teams (.agent-office/notify-teams.json, mode
-// 0600). The seam: once Settings → Connections (DPAPI-encrypted credentials with a resolver) is in the
-// office, `useSecretSlot` hands this module a slot backed by it, and nothing else here changes.
+// It lives in 🔌 Connections (the 'teams-webhook' credential, DPAPI-encrypted on Windows): at start
+// connections/teams-webhook.ts hands this module a slot backed by the vault (`useSecretSlot`), and a URL
+// still in the old settings file (.agent-office/notify-teams.json) is moved there once (settings.ts).
+// Without Connections open (tests, a CLI command) it stays in that file, mode 0600.
 
 export interface SecretSlot {
   /** What ⚙️ Settings says about where it is. */
   readonly where: 'settings-file' | 'credential-store';
   get(): string | undefined;
-  set(value: string | undefined): void;
+  /** A credential store encrypts on its way: the promise says when it's kept (or why not). */
+  set(value: string | undefined): void | Promise<void>;
 }
 
 let override: SecretSlot | undefined;

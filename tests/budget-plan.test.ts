@@ -13,9 +13,11 @@ import { forecastOf, varianceOf } from '../src/shared/budget/forecast.js';
 import { afterBudgetChange, checkAlerts } from '../src/shared/budget/alerts.js';
 import { cleanChoice, levelCards, LEVELS, roundBudget, subagentModelAt } from '../src/shared/budget/levels.js';
 import { BudgetService, localDay } from '../src/server/budget/service.js';
-import { checkFloor, editPlan, planOf, resume, setSettings, type ControlDeps } from '../src/server/budget/control.js';
+import { budgetPaused, checkFloor, editPlan, planOf, resume, setSettings, type ControlDeps } from '../src/server/budget/control.js';
 import { registerProjectPause } from '../src/server/budget/pause.js';
-import { floorHold, floorLedger } from '../src/server/roster/pause.js';
+import { floorLedger } from '../src/server/roster/pause.js';
+import { projectPause, projectPauseOf, setProjectPause, useProjectRunFile } from '../src/server/project-run/store.js';
+import { pauseLine, PAUSED_HIRES } from '../src/shared/project-run.js';
 import { buildModules, entryOf, firmForecastOf, projectShape } from '../src/server/budget/plan-source.js';
 import { collectNeeds } from '../src/shared/needsyou.js';
 import { zeroUsage } from '../src/server/usage.js';
@@ -166,49 +168,61 @@ test('plan edits record who made them, and the plan follows the build plan until
   assert.equal(planOf(s.b, s.floor).lines.filter((l) => l.stage === '5').length, 2);
 });
 
-test('auto-pause at 100 % goes through the seam: the existing floor pause, or the Pause project when there is one', (t) => {
+test('auto-pause at 100 % is the real Pause project, recorded as the budget\'s, and a person resuming it is respected', (t) => {
   const s = service(t);
+  useProjectRunFile(undefined);
+  t.after(() => useProjectRunFile(undefined));
   const w = { id: 'w1', name: 'Dylan', kind: 'agent', provider: 'claude', status: 'working', createdAt: NOW + 1, deskId: 'd', color: '#fff' } as WorkerInfo;
   s.workers.push(w);
+  const spend = (c: number) => s.spend(w, c);
   spend(0);
-  function spend(c: number) {
-    s.spend(w, c);
-  }
+  // No Pause project registered: nothing is paused (and nothing pretends to be).
   assert.equal(setSettings(s.b, s.floor, { total: 100 }, 'Test', s.deps), undefined);
-  spend(85);
-  checkFloor(s.b, s.floor, s.deps);
-  assert.deepEqual(s.raised, [{ level: 'threshold', paused: false }, { level: 'forecast', paused: false }].filter((x) => x.level === 'threshold' || s.raised.some((r) => r.level === x.level)));
   spend(101);
   checkFloor(s.b, s.floor, s.deps);
+  assert.ok(s.raised.some((r) => r.level === 'full' && !r.paused));
+  assert.equal(budgetPaused(s.b, s.floor), false);
+
+  // The office's Pause project, as project-run/adapter.ts registers it (its first step records the pause).
+  const calls: string[] = [];
+  registerProjectPause({
+    pause: (id, by) => (calls.push(`pause ${id} by ${by}`), setProjectPause(id, { by, at: NOW, why: 'budget', waiting: [] })),
+    resume: (id, by) => (calls.push(`resume ${id} by ${by}`), setProjectPause(id, undefined)),
+    pausedForBudget: (id) => projectPause(id)?.why === 'budget',
+  });
+  t.after(() => registerProjectPause(undefined));
+  setSettings(s.b, s.floor, { total: 150 }, 'Test', s.deps);
+  spend(151);
+  checkFloor(s.b, s.floor, s.deps);
+  assert.deepEqual(calls, ['pause travel by Budget']);
   assert.ok(s.raised.some((r) => r.level === 'full' && r.paused));
-  assert.match(floorHold('travel')!, /Budget reached \(\$101 of \$100\): project paused/);
+  assert.equal(budgetPaused(s.b, s.floor), true);
+  // One source of truth: hiring and the office's prompts stop through the Pause project, and its line says why.
   const office = { hiringPaused: undefined } as unknown as Ledger;
-  assert.match(floorLedger(office, 'travel').hiringPaused!, /project paused/, 'hiring stops');
+  assert.equal(floorLedger(office, 'travel').hiringPaused, PAUSED_HIRES);
+  assert.match(projectPauseOf('travel')!, /its budget is reached/);
+  assert.match(pauseLine(projectPause('travel')!, () => '14:05'), /^⏸ Paused: budget reached at 14:05/);
   // Needs you says so, with Raise budget and Resume.
   const f = s.b.file(s.floor);
   const needs = collectNeeds({ floor: 'travel', workers: [], pulls: [], floors: [], budget: { floor: 'travel', alerts: f.alerts, paused: 'x' } });
-  assert.deepEqual(needs.map((n) => [n.text.slice(0, 30), n.action, n.alt?.action]), [['Budget reached: project paused', 'Raise budget', 'Resume']]);
-  // Resume: off, and it doesn't pause again for this budget.
+  assert.deepEqual(needs.map((n) => [n.text.slice(0, 30), n.action, n.alt?.action, n.alt?.target]), [['Budget reached: project paused', 'Raise budget', 'Resume', { to: 'budget', resume: true }]]);
+  // Resume through the budget: the Pause project resumes, and it doesn't pause again for this budget.
   assert.equal(resume(s.b, s.floor, 'Test', s.deps), undefined);
-  assert.equal(floorHold('travel'), undefined);
-  spend(110);
+  assert.deepEqual(calls.slice(1), ['resume travel by Test']);
+  assert.equal(projectPause('travel'), undefined);
+  spend(160);
   checkFloor(s.b, s.floor, s.deps);
-  assert.equal(floorHold('travel'), undefined);
-  // Raised: the alerts reset.
+  assert.equal(calls.length, 2);
+  // Raised: the alerts reset, and the next 100 % pauses again; a person resuming from ▶ Resume project is respected.
   setSettings(s.b, s.floor, { total: 300 }, 'Test', s.deps);
   assert.equal(s.b.file(s.floor).alerts.length, 0);
-  assert.ok(s.records.some((r) => /budget\.settings: Changed travel-approval's budget: total 100 → 300/.test(r)));
-
-  // With a Pause project registered, the seam uses it instead.
-  const calls: string[] = [];
-  registerProjectPause({ pause: (id, why, by) => calls.push(`pause ${id} by ${by}: ${why.slice(0, 14)}`), resume: (id, by) => calls.push(`resume ${id} by ${by}`) });
-  t.after(() => registerProjectPause(undefined));
+  assert.ok(s.records.some((r) => /budget\.settings: Changed travel-approval's budget: total 150 → 300/.test(r)));
   spend(301);
   checkFloor(s.b, s.floor, s.deps);
-  assert.deepEqual(calls, ['pause travel by The office (budget): Budget reached']);
-  assert.equal(floorHold('travel'), undefined, 'not the fallback');
-  resume(s.b, s.floor, 'Test', s.deps);
-  assert.deepEqual(calls.slice(1), ['resume travel by Test']);
+  assert.equal(calls[2], 'pause travel by Budget');
+  setProjectPause('travel', undefined);
+  assert.equal(budgetPaused(s.b, s.floor), false, 'resumed from the Resume project preview');
+  assert.match(resume(s.b, s.floor, 'Test', s.deps)!, /isn’t paused/);
 });
 
 test('the wizard\'s levels: preset budgets from the plan estimate, durations and settings', () => {
@@ -274,4 +288,33 @@ test('the wizard\'s Budget step: the plan carries the choice, and the team step 
   // A Retry doesn't apply it again.
   await steps.team(Object.assign(job, { addRoles: undefined }), { log: () => undefined });
   assert.equal(order.filter((o) => o.startsWith('budget')).length, 1);
+});
+
+test('the ledger\'s stage is read from origin/<default>, as the setup panel reads it, not from a folder on an old branch', async (t) => {
+  const { execFileSync } = await import('node:child_process');
+  const { refreshStage, folderStage } = await import('../src/server/budget/stage.js');
+  const root = mkdtempSync(path.join(tmpdir(), 'ao-budget-stage-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const git = (cwd: string, ...a: string[]) => execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', '-c', 'init.defaultBranch=main', ...a], { cwd, stdio: 'pipe' });
+  const origin = path.join(root, 'origin.git');
+  git(root, 'init', '-q', '--bare', origin);
+  const dir = path.join(root, 'floor');
+  git(root, 'clone', '-q', origin, dir);
+  const ids = ['P', '0', '1', '2', '3', '4'];
+  const html = (open: string) => `<table>${ids.map((x, i) => `<tr><td>${x}</td><td>x</td><td>${i < ids.indexOf(open) ? 'PASS' : 'PENDING'}</td><td></td></tr>`).join('')}</table>`;
+  writeFileSync(path.join(dir, 'PROJECT.md'), '## Decisions\n\nEntry mode: requirements-driven\n');
+  writeFileSync(path.join(dir, 'index.html'), html('1'));
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '-m', 'stage 1');
+  git(dir, 'push', '-q', 'origin', 'HEAD:main');
+  git(dir, 'checkout', '-q', '-b', 'old');
+  // main moves on to Stage 3 on origin; the folder stays on its old branch.
+  git(dir, 'checkout', '-q', 'main');
+  writeFileSync(path.join(dir, 'index.html'), html('3'));
+  git(dir, 'commit', '-q', '-am', 'stage 3');
+  git(dir, 'push', '-q', 'origin', 'main');
+  git(dir, 'checkout', '-q', 'old');
+  git(dir, 'remote', 'set-head', 'origin', 'main');
+  assert.equal(folderStage(dir), '1', 'the folder says Stage 1');
+  assert.equal(await refreshStage(dir), '3', 'origin/main says Stage 3');
 });

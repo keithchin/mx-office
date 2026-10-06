@@ -17,7 +17,7 @@ export interface LevelSettings {
   earlyDrafts: boolean;
   /** Autonomy by stage: off, or the levels before and after the build plan passes. */
   autonomyByStage: { enabled: boolean; early: 1 | 2 | 3 | 4; build: 1 | 2 | 3 | 4 };
-  /** How many agents and subagents work at once. Recorded with the level and shown; the office doesn't enforce it (yet). */
+  /** How many subagents work at once: the Leads' Playbooks say "at most N" (fewer 1, normal 2, more 4; budget/index.ts). */
   parallel: 'fewer' | 'normal' | 'more';
   /** Alert at this % of the budget. */
   threshold: number;
@@ -52,7 +52,7 @@ export const LEVELS: readonly LevelDef[] = [
     costFactor: 0.65,
     timeFactor: 1.3,
     settings: { leadModel: 'sonnet', discoveryModel: 'sonnet', subagentModel: 'haiku', earlyDrafts: false, autonomyByStage: { enabled: true, early: 2, build: 3 }, parallel: 'fewer', threshold: 80 },
-    changes: ['Leads on Sonnet, Discovery on Sonnet', 'Subagents on Haiku where the role allows', 'Early drafts off', 'Autonomy by stage on (higher in build)', 'Fewer agents at once'],
+    changes: ['Leads on Sonnet, Discovery on Sonnet', 'Subagents on Haiku where the role allows', 'Early drafts off', 'Autonomy by stage on (higher in build)', 'At most 1 subagent at once per Lead'],
   },
   {
     id: 'balanced',
@@ -62,7 +62,7 @@ export const LEVELS: readonly LevelDef[] = [
     costFactor: 1,
     timeFactor: 1,
     settings: { leadModel: 'sonnet', discoveryModel: 'opus', subagentModel: 'sonnet', earlyDrafts: true, autonomyByStage: { enabled: false, early: 2, build: 3 }, parallel: 'normal', threshold: 80 },
-    changes: ['Leads on Sonnet, the Chief Analyst on Opus for Discovery', 'Subagents on Sonnet', 'Early drafts on', 'Autonomy as set on the team', 'Usual number of agents'],
+    changes: ['Leads on Sonnet, the Chief Analyst on Opus for Discovery', 'Subagents on Sonnet', 'Early drafts on', 'Autonomy as set on the team', 'At most 2 subagents at once per Lead'],
   },
   {
     id: 'fast',
@@ -72,7 +72,7 @@ export const LEVELS: readonly LevelDef[] = [
     costFactor: 1.6,
     timeFactor: 0.7,
     settings: { leadModel: 'opus', discoveryModel: 'opus', subagentModel: 'sonnet', earlyDrafts: true, autonomyByStage: { enabled: true, early: 3, build: 4 }, parallel: 'more', threshold: 80 },
-    changes: ['Leads on Opus', 'More subagents and agents in parallel', 'Early drafts on', 'Autonomy by stage on (Delegated, then Autonomous)', 'Opus rates plus a 15 % margin'],
+    changes: ['Leads on Opus', 'Up to 4 subagents at once per Lead', 'Early drafts on', 'Autonomy by stage on (Delegated, then Autonomous)', 'Opus rates plus a 15 % margin'],
   },
 ];
 

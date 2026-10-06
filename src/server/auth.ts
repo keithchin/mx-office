@@ -3,7 +3,7 @@ import type { IncomingMessage } from 'node:http';
 import type { Account, Accounts } from './accounts.js';
 
 export const COOKIE_NAME = 'ao_session';
-const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 14;
+export const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 14;
 
 const MAX_ATTEMPTS = 10;
 const WINDOW_MS = 5 * 60_000;
@@ -151,7 +151,7 @@ export class Auth {
 const linkHash = (key: string) => createHash('sha256').update(key).digest('hex');
 
 /** Cookies ignore ports, so offices sharing a host (e.g. SSH tunnels on localhost:4600 and :4601) each get their own. */
-function cookieName(req: IncomingMessage): string {
+export function cookieName(req: IncomingMessage): string {
   const port = /:(\d+)$/.exec(req.headers.host ?? '')?.[1];
   return port ? `${COOKIE_NAME}_${port}` : COOKIE_NAME;
 }
