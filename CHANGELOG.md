@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-06 · release 7 (`a603397`)
+
 ### New
 - **📦 Deliverables**: every team page starts with a checklist of what that team owes at each toolkit
   stage (triage, source ledger, knowledge base, BRDs and the BRD report; brand, ds.css, design system,
