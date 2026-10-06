@@ -16,6 +16,7 @@ import { readBuilding } from './disk.js';
 import { Haiku } from './llm.js';
 import { scorecardOf } from './scorecard.js';
 import { RunStore } from './store.js';
+import { withBilling } from '../budget/meter.js';
 
 /** After a worker's update, how long to wait for more before recording: a turn ending sends a burst. */
 const SETTLE_MS = 5_000;
@@ -111,7 +112,7 @@ export class Analysis {
 
   private async record(floor: FloorRef, w: WorkerSnapshot, task: QueueTask | undefined, useModel: boolean, freshPr = false): Promise<RunRecord> {
     const id = `${floor.id}:${w.id}`;
-    const r = await collectRun(floor, w, task, { gh: this.gh, classifier: this.classifier, useModel, previous: this.store.get(id), freshPr });
+    const r = await withBilling({ floor: floor.id, source: 'analyzer' }, () => collectRun(floor, w, task, { gh: this.gh, classifier: this.classifier, useModel, previous: this.store.get(id), freshPr }));
     this.store.put(r);
     return r;
   }

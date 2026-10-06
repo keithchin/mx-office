@@ -89,6 +89,8 @@ export function isRedNeed(n: Pick<NeedItem, 'kind' | 'key'>): boolean {
       return n.key !== 'setup-stale';
     case 'audit':
       return !n.key.startsWith('audit-budget-');
+    case 'budget':
+      return n.key === 'budget-paused' || n.key === 'budget-full';
     default:
       return false;
   }

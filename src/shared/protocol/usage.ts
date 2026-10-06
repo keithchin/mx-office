@@ -30,6 +30,12 @@ export interface Usage {
    * reads that off the session: what a worker's card says it runs, whatever was asked for.
    */
   model?: string;
+  /**
+   * The same spend split by who made it and on which model, keyed `<subagent type>|<model>` (an empty
+   * subagent type is the session itself): what the Budget ledger attributes each delta by (server/budget/).
+   * Estimated from the transcript, so it can lag `cost` after Claude Code's end-of-session tally.
+   */
+  parts?: Record<string, { cost: number; calls: number }>;
 }
 
 /** Every token a session used, cache reads and writes included: what the office shows. */

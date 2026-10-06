@@ -18,6 +18,7 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 | `subagentCooldownHours` | number | `24` | Hours a benched subagent sits out before it's reinstated; 0 = only by hand. 0 to 720, in tenths. |
 | `autonomyByStage` | `AutonomyByStage` | `{ enabled: false, early: 2, build: 3 }` | Autonomy by pipeline stage. On, on a toolkit project, the office sets `autonomy` itself: `early` until the build plan's gate (Stage 4) passes, `build` from then on. See [Autonomy by pipeline stage](../teams-and-agents/autonomy.md#autonomy-by-pipeline-stage). |
 | `earlyDrafts` | boolean | `true` | While the Chief Analyst is on Stages 0–2, Design, Development and Testing make small drafts marked as such (`-draft` in the name, a `DRAFT — before Stage 3 gate` banner): low-fi wireframes, a draft domain model and architecture sketch, a test-plan outline. Off: they wait for their stage. Written into the Playbooks. See [Deliverables](../using-the-office/deliverables.md). |
+| `maxSubagents` | number | none | At most this many subagents at once per Lead (1 to 10), written into the Leads' Playbooks as guidance. Set by the [budget level](../using-the-office/budget.md#budget-levels): Lean 1, Balanced 2, Fast 4. None: no limit given. |
 
 ## AutonomyByStage
 
@@ -83,6 +84,7 @@ export interface RosterSettings {
   subagentCooldownHours: number;
   autonomyByStage: AutonomyByStage;
   earlyDrafts: boolean;
+  maxSubagents?: number;
 }
 
 export interface AutonomyByStage {
@@ -117,3 +119,30 @@ What was posted is in `notify-teams-state.json` (posted item ids, items held bac
 | `on` | boolean | `true` | Keep the computer from sleeping while agents work. |
 | `idleMinutes` | number | `10` | Minutes of everything idle before it may sleep again. Whole minutes, 1 to 240. |
 | `by`, `at` | string, ms | | Who changed it last, and when. |
+
+## Office settings: budget
+
+The [Budget](../using-the-office/budget.md)'s office-wide settings live in `budget/office.json` in the office's data folder. Admins change them on the Budget tab.
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `fx.currency` | string | `'SGD'` | The local currency shown beside dollars (ISO 4217, three letters). `'USD'` shows dollars only. |
+| `fx.mode` | `'daily' | 'manual'` | `'daily'` | Fetch the ECB reference rate once a day (frankfurter, no key), or use the rate typed in. |
+| `fx.manualRate` | number | none | Units of the currency per US dollar, used in manual mode. |
+| `fxLast` | object | none | The last rate fetched: `currency`, `rate`, `asOf` (the rate's day), `fetchedDay`, `error` if the last fetch failed. A failed fetch keeps the last good rate. |
+| `threshold` | number | `80` | The office default alert threshold, %, for projects that don't set their own. |
+| `ledger` | object | | Background calls that served no floor (the office's own). |
+
+Each project's `budget/<floor>.json` holds:
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `settings.total` | number | none | The project's total budget, USD. None: spend is shown with no budget. |
+| `settings.threshold` | number | the office's | Alert at this % of the budget (1 to 99). |
+| `settings.autoPause` | boolean | `true` | Pause the project at 100 %. |
+| `settings.level` | `'lean' | 'balanced' | 'fast' | 'manual'` | none | The budget level last applied. |
+| `settings.updatedBy`, `updatedAt` | string, ms | | Who changed the settings last, and when. |
+| `plan` | object | made on first look | The expected plan: `lines` (`id`, `stage`, `label`, `usd`, `days`, `basis`: default/history/firm/edited, `editedBy`), `start`, `end`, `basis`, `edited`. |
+| `alerts` | array | `[]` | The alerts raised against the current budget (`threshold`, `full`, `forecast`), one each. Raising the budget clears them. |
+| `pausedAt` | ms | none | When the budget paused the project (put back after a restart). |
+| `ledger` | object | | Daily rollups kept forever, 30 days of detailed rows, the stage timeline, and what each worker had spent when it was last booked. |

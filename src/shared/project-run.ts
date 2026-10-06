@@ -77,11 +77,14 @@ export function cleanPacing(v: unknown, base: Pacing = DEFAULT_PACING): Pacing {
 /** Why a paused floor hires nobody: the queue, meetings, the roster and the Firm all say this. */
 export const PAUSED_HIRES = 'Project paused: no new agents until it’s resumed';
 
-/** A floor paused with ⏸ Pause project: who and when, and whether a person or a safe restart did it. */
+/** Who paused a floor: a person, a safe restart, or its budget at 100 % (server/budget/). */
+export type PauseWhy = 'person' | 'restart' | 'budget';
+
+/** A floor paused with ⏸ Pause project: who and when, and whether a person, a safe restart or the budget did it. */
 export interface PauseInfo {
   by: string;
   at: number;
-  why: 'person' | 'restart';
+  why: PauseWhy;
   /** Agents left with a question open in their terminal: they wait on a person. */
   waiting: string[];
 }
@@ -147,6 +150,7 @@ export function chosen(p: Pick<ResumePreview, 'agents'>, c: ResumeChoice): { age
 
 /** "⏸ Paused by Keith at 14:05 · 2 waiting on you". */
 export function pauseLine(p: PauseInfo, time: (at: number) => string): string {
+  if (p.why === 'budget') return `⏸ Paused: budget reached at ${time(p.at)}${p.waiting.length ? ` · ${p.waiting.length} waiting on you` : ''}`;
   const who = p.why === 'restart' ? `for a safe restart (${p.by})` : `by ${p.by}`;
   return `⏸ Paused ${who} at ${time(p.at)}${p.waiting.length ? ` · ${p.waiting.length} waiting on you` : ''}`;
 }

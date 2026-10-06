@@ -4,6 +4,7 @@
 // Without it, the card falls back to the prompt itself.
 
 import { spawn } from 'node:child_process';
+import { meterCliResult, withBilling } from './budget/meter.js';
 import os from 'node:os';
 import type { WorkerTask } from '../shared/protocol.js';
 
@@ -89,7 +90,8 @@ export class TaskNamer {
       this.pending.delete(id);
       if (!ctx) continue;
       this.running.add(id);
-      void this.generate(ctx).then((task) => {
+      // Billed to the worker's floor (budget/meter.ts).
+      void withBilling({ worker: id, source: 'task-namer' }, () => this.generate(ctx)).then((task) => {
         this.running.delete(id);
         if (task) this.done(id, task, ctx);
         this.pump();
@@ -100,6 +102,7 @@ export class TaskNamer {
   private async generate(ctx: TaskContext): Promise<WorkerTask | null> {
     if (!this.enabled) return null;
     const out = await run(this.claude!, this.env, this.system(), describe(ctx));
+    meterCliResult(out, 'task-namer');
     const task = out === null ? null : parse(out);
     if (task) this.fails = 0;
     else if (++this.fails >= FAILS_BEFORE_BACKOFF) {

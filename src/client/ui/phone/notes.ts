@@ -56,6 +56,8 @@ export function noteOf(n: NeedItem, admin: boolean): PhoneNote {
   const actions: NoteAction[] = [{ do: 'go', target: n.target, label }];
   // A failing PR: its window has the checks and the merge, and Review opens the same.
   if (n.kind === 'pr') actions.push({ do: 'go', target: n.target, label: 'Review' });
+  // A second button of the item's own (the budget's Resume beside Raise budget).
+  if (n.alt) actions.push({ do: 'go', target: n.alt.target, label: n.alt.action });
   return { ...base, voice: 'office', who: 'The office', actions };
 }
 

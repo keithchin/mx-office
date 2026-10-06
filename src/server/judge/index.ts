@@ -10,6 +10,7 @@ import { Haiku } from '../analysis/llm.js';
 import { childEnv } from '../workers/env.js';
 import { resolveCommand } from '../workers/process.js';
 import { JevKey } from './key.js';
+import { meterUnpriced, withBilling } from '../budget/meter.js';
 import { Breaker, clipState, FALLBACK_SYSTEM, fallbackInput, fallbackSchema, JEV_URL, jevRequest, parseFallback, parseJev, type Questions, type Verdict } from './pure.js';
 
 export type { Answer, Answers, Question, Questions, Verdict } from './pure.js';
@@ -86,6 +87,8 @@ export class Judge {
         return undefined;
       }
       this.breaker.ok();
+      // Jev isn't priced by the office: counted on the Budget tab as not metered.
+      meterUnpriced('jeff', parsed.model ?? 'jev');
       return { by: 'jev', model: parsed.model, answers: parsed.answers, ms: this.now() - start };
     } catch {
       this.breaker.fail(ctl.signal.aborted ? `Jev took longer than ${this.timeoutMs / 1000}s` : 'Jev is unreachable');
@@ -98,7 +101,7 @@ export class Judge {
   private async fallback(state: string, questions: Questions): Promise<Verdict | undefined> {
     if (!this.haiku?.enabled) return undefined;
     const start = this.now();
-    const raw = await this.haiku.ask(FALLBACK_SYSTEM, fallbackInput(state, questions), fallbackSchema(questions)).catch(() => null);
+    const raw = await withBilling({ source: 'jeff' }, () => this.haiku!.ask(FALLBACK_SYSTEM, fallbackInput(state, questions), fallbackSchema(questions))).catch(() => null);
     const answers = raw ? parseFallback(questions, raw) : undefined;
     return answers ? { by: 'haiku', model: 'claude-haiku', answers, ms: this.now() - start } : undefined;
   }

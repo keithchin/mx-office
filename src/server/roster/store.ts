@@ -80,6 +80,9 @@ export function defaultSettings(): RosterSettings {
 }
 
 /** Settings from what was saved or sent, anything malformed left as it was in `base`. */
+/** A subagent limit from what was sent (null takes it off), else what it was. */
+const subagentLimit = (v: unknown, was: number | undefined): number | undefined => (v === null ? undefined : typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 10 ? v : was);
+
 export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings()): RosterSettings {
   const s = (v && typeof v === 'object' ? v : {}) as Partial<RosterSettings>;
   const caps: Partial<Record<AutonomyLevel, number>> = {};
@@ -108,6 +111,7 @@ export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings
     },
     // A roster saved before early drafts existed has them on, like a fresh one.
     earlyDrafts: typeof s.earlyDrafts === 'boolean' ? s.earlyDrafts : (base.earlyDrafts ?? true),
+    ...(subagentLimit(s.maxSubagents, base.maxSubagents) !== undefined ? { maxSubagents: subagentLimit(s.maxSubagents, base.maxSubagents) } : {}),
     subagentCooldownHours: typeof s.subagentCooldownHours === 'number' && Number.isFinite(s.subagentCooldownHours) ? Math.max(0, Math.min(Math.round(s.subagentCooldownHours * 10) / 10, 24 * 30)) : (base.subagentCooldownHours ?? DEFAULT_COOLDOWN_HOURS),
     // A roster saved before it existed has it off.
     autonomyByStage: {

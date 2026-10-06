@@ -7,6 +7,7 @@
 
 import type { ProjectSummary } from '../../shared/summary.js';
 import type { Haiku } from '../analysis/llm.js';
+import { withBilling } from '../budget/meter.js';
 
 const MIN_GAP_MS = 60_000;
 const REFRESH_MS = 5 * 60_000;
@@ -79,7 +80,7 @@ export class Narrator {
     this.asking.add(floor);
     this.asked.set(floor, Date.now());
     try {
-      const v = await this.haiku!.ask(SYSTEM, factsFor(f), SCHEMA);
+      const v = await withBilling({ floor, source: 'summary' }, () => this.haiku!.ask(SYSTEM, factsFor(f), SCHEMA));
       const text = typeof v?.narrative === 'string' ? v.narrative.replace(/\s+/g, ' ').trim().slice(0, 700) : '';
       if (text) this.notes.set(floor, { sig, text, at: Date.now() });
     } finally {

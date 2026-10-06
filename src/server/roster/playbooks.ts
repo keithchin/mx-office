@@ -38,6 +38,8 @@ export interface PlaybookContext {
   subagents?: SubagentRecord[];
   /** The floor's early-drafts setting (on unless it was turned off): Design, Development and Testing draft before Stage 3. */
   earlyDrafts?: boolean;
+  /** At most this many subagents at once (the budget level's parallelism), when set. */
+  maxSubagents?: number;
 }
 
 /** Where the mxcli-project-toolkit clone is (the same setting the new-project wizard uses). */
@@ -145,6 +147,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     ...roleSpecific(role, ctx),
     '',
     ...deliverablesBrief(roleId, ctx.earlyDrafts ?? true),
+    ...(ctx.maxSubagents && role.subagents.length ? ['## Parallel work', `Run at most ${ctx.maxSubagents} subagent${ctx.maxSubagents === 1 ? '' : 's'} at once (the project's budget level). Wait for one to finish before dispatching another.`, ''] : []),
   ].join('\n');
 }
 

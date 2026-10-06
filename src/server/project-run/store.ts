@@ -25,7 +25,7 @@ function revive(raw: unknown): Saved {
   for (const [id, p] of Object.entries(r.pauses ?? {})) {
     const v = p as Partial<PauseInfo>;
     if (!v || typeof v.at !== 'number') continue;
-    out.pauses[id] = { by: str(v.by, 80) || 'Someone', at: v.at, why: v.why === 'restart' ? 'restart' : 'person', waiting: Array.isArray(v.waiting) ? v.waiting.map((x) => str(x, 40)).filter(Boolean).slice(0, 20) : [] };
+    out.pauses[id] = { by: str(v.by, 80) || 'Someone', at: v.at, why: v.why === 'restart' || v.why === 'budget' ? v.why : 'person', waiting: Array.isArray(v.waiting) ? v.waiting.map((x) => str(x, 40)).filter(Boolean).slice(0, 20) : [] };
   }
   for (const [id, p] of Object.entries(r.pacing ?? {})) out.pacing[id] = cleanPacing(p);
   return out;
@@ -58,7 +58,7 @@ export const projectPause = (floorId: string): PauseInfo | undefined => data.pau
 export function projectPauseOf(floorId: string): string | undefined {
   const p = data.pauses[floorId];
   if (!p) return undefined;
-  return `This floor is paused (⏸ Pause project${p.why === 'restart' ? ', for a safe restart' : ` by ${p.by}`}): the office sends its agents no prompts of its own until it's resumed`;
+  return `This floor is paused (⏸ Pause project${p.why === 'restart' ? ', for a safe restart' : p.why === 'budget' ? ': its budget is reached' : ` by ${p.by}`}): the office sends its agents no prompts of its own until it's resumed`;
 }
 
 /** Floors a person is hiring on anyway, from the Team tab, after a confirm (overrideHold). */

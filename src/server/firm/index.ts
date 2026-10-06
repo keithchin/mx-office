@@ -274,7 +274,7 @@ export class Firm {
           r.tokens.output += t.output;
           r.tokens.cacheRead += t.cacheRead;
           r.tokens.cacheWrite += t.cacheWrite;
-          this.deps.spend?.(usd);
+          this.deps.spend?.(usd, e.floor, r.model);
           this.checkBudget(e);
           this.save(e);
         },

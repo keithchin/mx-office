@@ -53,6 +53,7 @@ import { installPhone, type Phone } from './ui/phone';
 import type { NeedTarget } from './ui/needsyou/logic';
 import { testModeBadge } from './ui/testmode';
 import './pixel/game.css';
+import { budgetUi } from './ui/budget';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -79,6 +80,8 @@ const { net } = session;
 const workers = workerActions(net);
 
 floorPicker(net);
+// 💰 The budget chips on the top bar; a click opens the 1D view's Budget tab (ui/budget/).
+budgetUi(net, { open: () => location.assign(`/lite?tab=budget${store.floor ? `&floor=${encodeURIComponent(store.floor)}` : ''}`) });
 // The address follows the floor (?floor=), for bookmarks and links that open it straight away.
 followFloor();
 const stage = $('stage');

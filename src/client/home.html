@@ -31,6 +31,7 @@
         <button id="tab-stats" class="btn" type="button" role="tab">📊 Statistics</button>
         <button id="tab-overview" class="btn" type="button" role="tab">🗺️ 2D Overview</button>
         <button id="tab-audit" class="btn" type="button" role="tab">🧾 Audit log</button>
+        <button id="tab-budget" class="btn" type="button" role="tab">💰 Budget</button>
       </div>
       <!-- A card for every floor, to go into on the board or in the office, and adding one (home/projects.ts). -->
       <section id="projects-view" role="tabpanel" aria-labelledby="tab-projects"></section>
@@ -40,6 +41,8 @@
       <section id="overview-view" class="hidden" role="tabpanel" aria-labelledby="tab-overview"></section>
       <!-- Who did what, when, on every floor and the office's own (home/audit.ts). -->
       <section id="audit-view" class="hidden" role="tabpanel" aria-labelledby="tab-audit"></section>
+      <!-- Every project's spend against its budget (home/budget.ts). -->
+      <section id="budget-view" class="hidden" role="tabpanel" aria-labelledby="tab-budget"></section>
     </main>
     <div id="toasts"></div>
     <div id="conn" class="conn hidden">Reconnecting…</div>

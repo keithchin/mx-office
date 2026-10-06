@@ -14,7 +14,8 @@ import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { studioStateOf } from '../studio/index.js';
 import { ProjectRuns } from './index.js';
 import { mergesSince, probeAgent } from './safety.js';
-import { useProjectRunFile } from './store.js';
+import { projectPause, useProjectRunFile } from './store.js';
+import { registerProjectPause } from '../budget/pause.js';
 import type { RunFloor } from './types.js';
 
 const sleep = (ms: number, signal: AbortSignal) =>
@@ -69,6 +70,19 @@ export function projectRunsOf(ctx: Ctx): ProjectRuns {
       chatter: (floorId, text) => noteChatter(floorId, { kind: 'relay', from: OFFICE, to: { group: 'team' }, text }),
     });
     offices.set(ctx.cfg, r);
+    const runs = r;
+    // The budget's auto-pause at 100 % is this Pause project, recorded as the budget's (server/budget/pause.ts).
+    registerProjectPause({
+      pause: (floorId, by) => {
+        const res = runs.pause(floorId, by, undefined, 'budget');
+        if (typeof res === 'string') console.error(`agent-office: couldn't pause ${floorId} for its budget: ${res}`);
+      },
+      resume: (floorId, by) =>
+        void runs.resume(floorId, { mode: 'work' }, by, undefined, 'the budget was raised or resumed').then((res) => {
+          if (typeof res === 'string') console.error(`agent-office: couldn't resume ${floorId}: ${res}`);
+        }),
+      pausedForBudget: (floorId) => projectPause(floorId)?.why === 'budget',
+    });
   }
   return r;
 }

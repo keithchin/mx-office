@@ -31,6 +31,7 @@ import { keepAwakeRoutes } from './keep-awake.js';
 import { projectRunRoutes } from './project-run.js';
 import { mobileRoutes } from './mobile.js';
 import { phoneAccessRoutes } from './phone-access.js';
+import { budgetRoutes } from './budget.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -88,6 +89,11 @@ export const routes: readonly Route[] = [
   projectRunRoutes.act,
   projectRunRoutes.restartView,
   projectRunRoutes.restart,
+  budgetRoutes.view,
+  budgetRoutes.office,
+  budgetRoutes.fx,
+  budgetRoutes.action,
+  budgetRoutes.estimate,
   homeRoutes.overview,
   firmRoutes.view,
   firmRoutes.engagement,

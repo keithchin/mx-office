@@ -42,7 +42,7 @@ export interface PhoneDeps {
   /** Where a Needs-you item's button goes (the same as the Command Center's). */
   go(t: NeedTarget): void;
   /** What the page knows that Needs you reads (the 1D view's setup panel, live app, Firm, Studio); the 2D view leaves it out. */
-  needs?(): Partial<Pick<NeedsInput, 'setup' | 'live' | 'firm' | 'studio'>>;
+  needs?(): Partial<Pick<NeedsInput, 'setup' | 'live' | 'firm' | 'studio' | 'budget'>>;
 }
 
 export interface Phone {

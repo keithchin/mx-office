@@ -12,7 +12,7 @@
 // over it's put to sleep with its session kept, so Resume carries it on.
 
 import type { WorkerInfo, WorkerStatus } from '../../shared/protocol.js';
-import type { Pacing, ResumeAction, RunAgent } from '../../shared/project-run.js';
+import type { Pacing, PauseWhy, ResumeAction, RunAgent } from '../../shared/project-run.js';
 import { latestEntry } from '../../shared/roster/journal.js';
 import { ROLE_BY_ID } from '../../shared/roster/roles.js';
 import { audit, byWhom, office } from '../audit/index.js';
@@ -61,7 +61,7 @@ export interface PauseRun {
   floor: string;
   by: string;
   byId?: string;
-  why: 'person' | 'restart';
+  why: PauseWhy;
   agents: PauseAgent[];
   begun?: boolean;
   settled?: boolean;
@@ -369,8 +369,8 @@ export function pauseFlow(deps: RunDeps): WorkflowDef<PauseRun> {
             .workers()
             .filter((w) => w.kind === 'agent' && !isAsleepStatus(w.status))
             .map((w) => ({ key: w.id, workerId: w.id, role: deps.roster.roleOf(f.team, w.id), name: w.name, action: 'pause', status: 'pending' }));
-          audit.record({ floor: s.floor, actor: byWhom(s.by, s.byId), action: 'pause.started', target: target(f), summary: `Paused the project${s.why === 'restart' ? ' for a safe restart' : ''}: ${agents.length} agent${agents.length === 1 ? '' : 's'} to wind down`, details: { agents: agents.map((a) => a.name), why: s.why } });
-          deps.chatter?.(s.floor, `⏸ ${s.by} paused the project${s.why === 'restart' ? ' for a safe restart' : ''}: agents finish their turn, write a handoff note and sleep.`);
+          audit.record({ floor: s.floor, actor: byWhom(s.by, s.byId), action: 'pause.started', target: target(f), summary: `Paused the project${s.why === 'restart' ? ' for a safe restart' : s.why === 'budget' ? ' (budget reached)' : ''}: ${agents.length} agent${agents.length === 1 ? '' : 's'} to wind down`, details: { agents: agents.map((a) => a.name), why: s.why } });
+          deps.chatter?.(s.floor, `⏸ ${s.by} paused the project${s.why === 'restart' ? ' for a safe restart' : s.why === 'budget' ? ': its budget is reached' : ''}: agents finish their turn, write a handoff note and sleep.`);
           f.team.changed();
           return { begun: true, agents };
         },

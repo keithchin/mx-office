@@ -14,6 +14,7 @@ import { DISCOVERY_TITLE, discoveryBrief, discoveryPrompt } from './brief.js';
 import { mendixVersions, mxbuildPath, toolkitEnv, type WizardConfig } from './config.js';
 import { writeIntakeAnswers } from './intake.js';
 import type { JobState, StepImpl, StepIO } from './job.js';
+import type { BudgetChoice } from '../../shared/budget/levels.js';
 import { createApp, ignoreMendixOutput, mprVersion } from './mendix-app.js';
 import { recordDecisions } from './register.js';
 import { bashPath, runCommand } from './run.js';
@@ -45,6 +46,8 @@ export interface SetupDeps {
    * first job and on `model` for this hire when given (the role keeps its own); why not, if it couldn't.
    */
   hire(floor: string, role: ProjectRole, by: string, account?: string, task?: string, model?: string): Promise<string | undefined>;
+  /** Saves the Budget step's budget on the floor and sets the team's models and settings for its level (budget/index.ts); the problems, if any. */
+  applyBudget?(floor: string, choice: BudgetChoice, by: string): string[];
   /** The office's environment (tests pass their own). */
   env?: NodeJS.ProcessEnv;
   /** Runs a command (tests pass a fake for the Mendix tools); runCommand when not given. */
@@ -316,6 +319,12 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       // After an edit (job.addRoles): only the roles ticked since, and never one the floor has had in any
       // state (at work, benched, or sent home on purpose), so an edit doesn't undo the Team tab's choices.
       const adding = job.addRoles;
+      // The Budget step first, so every hire below is on its level's models and settings.
+      if (!adding && job.plan.budget && job.floor && deps.applyBudget && !job.budgetApplied) {
+        const problems = deps.applyBudget(job.floor, job.plan.budget, job.by);
+        io.log(`  budget: ${job.plan.budget.level}, $${job.plan.budget.total}${problems.length ? ` (${problems.join('; ')})` : ''}`);
+        job.budgetApplied = true;
+      }
       const roles = PROJECT_ROLES.filter((r) => job.plan.roles.includes(r.id) && (!adding || adding.includes(r.id)));
       if (!roles.length) return { status: 'skipped', detail: adding ? 'no roles added' : 'no roles ticked' };
       if (cfg.offlineDir) return { status: 'skipped', detail: 'offline test office: nobody is hired' };

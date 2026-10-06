@@ -16,6 +16,7 @@ import { firmIfMade } from '../firm/adapter.js';
 import { studioStateOf } from '../studio/index.js';
 import { attentionBriefs } from '../incidents/index.js';
 import { officeLink, type RedItem } from './cards.js';
+import { budgetNeedOf } from '../budget/need.js';
 
 export interface FloorNeeds {
   input: NeedsInput;
@@ -59,6 +60,7 @@ export async function floorNeeds(ctx: Ctx, floor: Floor, now = Date.now()): Prom
     firm: firmIfMade(ctx)?.floorStatus(floor.id),
     studio: studioStateOf(floor.id),
     incidents: attentionBriefs(),
+    budget: budgetNeedOf(ctx, floor),
   };
   return { input, needs: collectNeeds(input) };
 }
@@ -83,6 +85,8 @@ function whoOf(n: NeedItem, workers: readonly WorkerInfo[], roster: RosterView |
       return 'The Firm';
     case 'studio':
       return 'Studio Pro';
+    case 'budget':
+      return 'Budget';
     default:
       return 'The office';
   }

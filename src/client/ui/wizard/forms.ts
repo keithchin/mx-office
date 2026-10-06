@@ -19,7 +19,7 @@ export interface PageCtx {
   redraw(): void;
 }
 
-export const PAGES = ['Project', 'Entry mode', 'Intake', 'Client & team', 'Review & create'] as const;
+export const PAGES = ['Project', 'Entry mode', 'Intake', 'Client & team', 'Budget', 'Review & create'] as const;
 /** The intake questions the wizard answers from its other pages: entry mode (1), interview mode (9), exec approval (11). */
 export const DERIVED = [1, 9, 11];
 
@@ -310,6 +310,7 @@ export function reviewPage(c: PageCtx): HTMLElement {
     ['Client', d.clients.join(', ') || '—'],
     ['Operators', d.operators.join(', ') || '—'],
     ['Roles', PROJECT_ROLES.filter((r) => d.roles.includes(r.id)).map((r) => r.label).join(', ') || '—'],
+    ['Budget', d.budget ? `${d.budget.level[0].toUpperCase()}${d.budget.level.slice(1)} · $${d.budget.total.toLocaleString('en-US')} · alert at ${d.budget.threshold} % · ${d.budget.autoPause ? 'pauses at 100 %' : 'no auto-pause'}` : 'none'],
     ['Discovery', d.discovery.issue ? `issue for the Chief Analyst${d.discovery.queue ? (analyst ? `, handed to it when it’s hired, on ${d.discovery.model}` : `, queued on ${d.discovery.model}`) : ''}` : 'no issue'],
   ];
   const skip = new Set<string>([

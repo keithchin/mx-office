@@ -19,7 +19,7 @@ body.home-page { --lite-col: 1240px; }
 html[data-theme='terminal'] body.lite .lite-bar > .home-back { width: auto; padding: 0 8px; }
 
 /* The two tabs, as the 1D view's are. */
-.home-tabs { display: flex; gap: 8px; margin: 0 0 14px; }
+.home-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
 .home-tabs .btn { flex: none; }
 .home-tabs .btn.on { background: var(--ink); color: var(--on-ink); }
 

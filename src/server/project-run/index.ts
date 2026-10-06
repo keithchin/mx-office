@@ -3,7 +3,7 @@
 // (store.ts, which the roster's one delivery path holds office prompts on). One per office, made on
 // first use (projectRunsOf in adapter.ts); runs a restart cut off carry on when it's made.
 
-import { agentKey, chosen, type ProjectRunView, type ResumeChoice, type ResumePreview, type RunProgress } from '../../shared/project-run.js';
+import { agentKey, chosen, type PauseWhy, type ProjectRunView, type ResumeChoice, type ResumePreview, type RunProgress } from '../../shared/project-run.js';
 import type { RunRecord } from '../flow/types.js';
 import { PAUSE_FLOW, pauseFlow, RESUME_FLOW, resumeFlow, type PauseRun, type ResumeAgent, type ResumeRun } from './flows.js';
 import { previewFloor } from './preview.js';
@@ -55,7 +55,7 @@ export class ProjectRuns {
   }
 
   /** Starts pausing the floor; the run, or why not. */
-  pause(floorId: string, by: string, byId?: string, why: 'person' | 'restart' = 'person'): RunProgress | string {
+  pause(floorId: string, by: string, byId?: string, why: PauseWhy = 'person'): RunProgress | string {
     if (!this.deps.floor(floorId)) return 'No such floor';
     this.stopGoing(floorId);
     const run = this.deps.engine.create<PauseRun>(PAUSE_FLOW, { floor: floorId, by, byId, why, agents: [] }, { floor: floorId, by });

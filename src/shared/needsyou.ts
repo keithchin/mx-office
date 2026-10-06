@@ -12,6 +12,7 @@ import type { StudioState } from './studio.js';
 import type { SetupView } from './wizard.js';
 import { needingYou, waitingInOrder } from './waiting.js';
 import { SEVERITY_SHORT, incidentRef, needsAttention, type IncidentBrief } from './incidents.js';
+import type { BudgetAlert } from './budget/types.js';
 
 /** Where an item's button takes you. */
 export type NeedTarget =
@@ -25,9 +26,11 @@ export type NeedTarget =
   | { to: 'git' }
   | { to: 'floor'; floor: string }
   | { to: 'firm'; url: string }
-  | { to: 'incident'; id: string };
+  | { to: 'incident'; id: string }
+  /** The 💰 Budget tab; `resume` takes the budget's pause off the project. */
+  | { to: 'budget'; resume?: boolean };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident';
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget';
 
 /** How far behind its default branch a floor's folder may fall before Needs you mentions it. */
 export const STALE_COMMITS = 10;
@@ -50,6 +53,15 @@ export interface NeedItem {
   /** The button's words. */
   action: string;
   target: NeedTarget;
+  /** A second button (the budget's Resume beside Raise budget). */
+  alt?: { action: string; target: NeedTarget };
+}
+
+/** What Needs you reads of a project's budget (GET /api/budget): the alerts standing and the pause. */
+export interface BudgetNeed {
+  floor: string;
+  alerts: readonly BudgetAlert[];
+  paused?: string;
 }
 
 export interface NeedsInput {
@@ -68,6 +80,8 @@ export interface NeedsInput {
   studio?: StudioState;
   /** Open sev1 and sev2 incidents (shared/incidents.ts), this floor's and the office's own. */
   incidents?: readonly IncidentBrief[];
+  /** The project's budget alerts and pause (server/budget/). */
+  budget?: BudgetNeed;
 }
 
 const URGENCY_RANK: Record<Escalation['urgency'], number> = { critical: 0, urgent: 1, important: 2, info: 3 };
@@ -117,6 +131,13 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     }
     // 5. The cost cap: no hiring, and the office sends no prompts of its own; people's still go through.
     if (r.paused) out.push({ key: 'paused', kind: 'paused', icon: '💸', text: `Spend cap reached: office prompts paused; agents finish their current turn. ${r.paused}`, level: 'block', action: 'Settings', target: { to: 'settings' } });
+  }
+  // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold).
+  const b = i.budget && i.budget.floor === i.floor ? i.budget : undefined;
+  if (b) {
+    const top = (['full', 'forecast', 'threshold'] as const).map((l) => b.alerts.find((a) => a.level === l && a.text)).find(Boolean);
+    if (b.paused) out.push({ key: 'budget-paused', kind: 'budget', icon: '💸', text: 'Budget reached: project paused. No new hires and no office prompts; people’s messages still go through', since: b.alerts.find((a) => a.level === 'full')?.at, level: 'block', action: 'Raise budget', target: { to: 'budget' }, alt: { action: 'Resume', target: { to: 'budget', resume: true } } });
+    else if (top) out.push({ key: `budget-${top.level}`, kind: 'budget', icon: '💸', text: top.text, since: top.at, level: top.level === 'full' ? 'block' : 'warn', action: top.level === 'full' ? 'Raise budget' : 'Budget', target: { to: 'budget' } });
   }
   // 6. Open, ready PRs whose checks fail.
   for (const p of i.pulls) {

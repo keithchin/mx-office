@@ -46,3 +46,19 @@ Every floor drawn in pixel art on one canvas, each under a banner with its name 
 ## 🧾 Audit log
 
 The office's [audit log](audit-log.md) across **Every floor**, with a floor column and a floor picker (or **Office-wide** for sign-ins, settings and floors added and removed). Same filters, histogram, chain badge and, for admins, CSV / JSONL export as a project's tab.
+
+## 💰 Budget
+
+Every project's spend in one place. For each project you get:
+
+- a status chip: *Within budget*, *Close to budget*, *Over budget* or *Paused*.
+- what it has spent against its budget, as a meter.
+- its forecast at completion and today's spend.
+- a 14-day sparkline; hover it for the numbers.
+
+Click a project's name to open its [Budget tab](budget.md). Under the table:
+
+- **the office's own calls**, by source: Jeff, the analyzer, task naming, the project summary and the Firm.
+- **the Firm's audits**, with what each spent against its budget.
+
+The tiles across the top give today's spend for the whole office, the all-time total, the background-call overhead and the audits.

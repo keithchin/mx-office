@@ -40,6 +40,11 @@ export interface RosterSettings {
    * Written into their Playbooks (roster/deliverables-brief.ts). On by default.
    */
   earlyDrafts: boolean;
+  /**
+   * At most this many subagents at once per Lead, written into the Leads' Playbooks as guidance (the budget
+   * level sets it: Lean 1, Balanced 2, Fast 4); missing = no limit given.
+   */
+  maxSubagents?: number;
 }
 
 export interface AutonomyByStage {

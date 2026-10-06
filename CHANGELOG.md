@@ -57,6 +57,32 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **Test mode** (`--test-mode`, `AGENT_OFFICE_TEST_MODE=1`, and by itself when the office or a floor is under
   a `scratch` or `test-offices` folder): no real agent CLI starts, only the fake `--agent`; a refused start
   says why on the worker's card and opens a near-miss incident, and the top bar shows **TEST MODE**.
+- **💰 Budget: what each project spent.** A new 💰 Budget tab on the 1D view shows a project's spend
+  by stage, role, agent (subagents nested under the Lead that hired them), model, day and issue/PR,
+  in dollars and a local currency (SGD by default, ECB rate fetched daily or set by hand). The top bar
+  shows `$42 today · $252 / $600 · 42 %` next to the branch and `Office $110 today` at the far right.
+  The office's own model calls (Jeff, the analyzer, task naming, the summary, the Firm) are now
+  metered and booked on the floor they served. History from before the ledger started is filled in
+  from the workers and `analysis/runs.jsonl`, marked as estimated.
+- **💰 Budget: a plan, a forecast, alerts and auto-pause.** Each project gets an expected plan per
+  toolkit stage (and per build module), priced from this office's history or default rates, editable
+  line by line, or re-forecast from a Firm audit in one click. A chart compares expected and actual
+  spend; the forecast at completion colours the top-bar chip. Alerts fire at 80 % (changeable per
+  project and office-wide), at 100 % and when the forecast goes over budget, once each, through Needs
+  you, the Teams cards and the audit log. At 100 % the project is paused with ⏸ Pause project (its line reads *⏸ Paused: budget reached*;
+  people's messages still go through) until the budget is raised or someone resumes it from the
+  Needs-you item, which opens the ▶ Resume project preview.
+- **New project wizard: a Budget page.** Lean, Balanced or Fast, each with a preset budget from the
+  plan estimate (travel-approval: $220 / $330 / $530), its time and what it changes (models, early
+  drafts, autonomy by stage, and how many subagents a Lead runs at once, written into the Leads'
+  Playbooks), or Manual. The team is hired on the level's choices;
+  **Change level** on the Budget tab does the same for a running project from the next hire.
+- **💰 Budget insights and an all-projects view.** The Budget tab names what drives the spend ("Opus
+  Leads are 71 % of spend", the Lead Tester's review loop this week, the Coordinator's relays a day)
+  and suggests savings, each linked to the action that does it: swap a Lead's model, delegate to its
+  subagents, idle benching, Jeff's real-ask mode, early drafts off, with the worker ranking's token
+  efficiency. A new 💰 Budget tab on the home page lists every project's spend against its budget,
+  forecast, status and a 14-day sparkline, with the office's background calls and the Firm's audits.
 
 ### Improved
 - **🧩 Subagents: runs only the transcript saw finish count.** A background run that only the Lead's transcript
@@ -77,6 +103,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ### To know
 - Resume, Pause and Restart safely are admin-only on every route, not just hidden for others; tests pin it.
+- **The budget's spend ledger starts with estimated history.** The first time a project's Budget is
+  opened, what it spent before is filled in from its workers and `analysis/runs.jsonl`, spread over the
+  days and marked as estimated; everything after is booked as it happens. The office's own model calls
+  now count in the office's total spend too, so it reads a little higher than before.
 
 ## 2026-10-06 · release 12 (`18ff64d`)
 
