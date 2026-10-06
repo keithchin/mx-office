@@ -6,7 +6,24 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Improved
+- **📦 Deliverables reads "main" from GitHub.** *On main* now means on the project's default branch
+  (`origin/main`), read the same way and with the same 90-second fetch as the setup panel, not whatever
+  branch the floor's folder is on; the panel says so at the top when the folder is on another branch or
+  behind. A project with no remote still uses its folder.
+- **Mermaid diagrams render in the Deliverables viewer**: a Markdown file's ```mermaid blocks (a
+  domain model, a process flow, the blueprint) are drawn, light or dark to match your theme, with the
+  source folded under each; a block Mermaid can't parse stays as source with the reason.
+- **Each team has its own reports.** The analysts' toolkit reports stay where they are
+  (`reports/validation-report.md`, now an expected Stage 2 item, plus `summary.md` and `gaps-report.md`);
+  the other teams' go in `reports/design/`, `reports/development/`, `reports/testing/` and
+  `reports/management/`, and the Playbooks say so. A stray report straight under `reports/` shows as
+  **Unsorted reports** on the Management page instead of under Testing.
+
+### To know
+- mermaid and playwright-core are now runtime dependencies of the office (pinned to 11.17.2 and
+  1.63.0). export-pdf and screenshot answer 501 only when Chromium isn't downloaded on the machine.
+  They stay commands, with no MCP tools, so their schemas don't cost every agent context on every turn.
 
 ## 2026-10-06 · release 7 (`a603397`)
 

@@ -88,7 +88,7 @@ export function resolveRef(from: string, ref: string): string | undefined {
 /** A Mermaid build on jsDelivr or unpkg, as the toolkit's blueprint.html loads it. */
 export const MERMAID_CDN = /^https:\/\/(cdn\.jsdelivr\.net\/npm|unpkg\.com)\/mermaid(@[\w.-]+)?\/dist\/mermaid(\.min)?\.js(\?.*)?$/;
 let mermaidText: Promise<string | undefined> | undefined;
-/** The office's own Mermaid (a dependency of the whiteboard's), read once. */
+/** The office's own Mermaid (a dependency of the office), read once. */
 export function mermaidJs(): Promise<string | undefined> {
   mermaidText ??= (async () => {
     try {

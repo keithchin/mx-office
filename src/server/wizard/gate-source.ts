@@ -80,10 +80,28 @@ export interface GateSourceOptions {
 
 const DEFAULTS: GateSourceOptions = { throttleMs: 3 * 60_000, fetchMs: 90_000, timeoutMs: 5 * 60_000, fetch: true };
 
+const fetchedAt = new Map<string, number>();
+const fetching = new Map<string, Promise<void>>();
+
+/**
+ * A quiet fetch of origin/<default> into `dir`, at most every `everyMs` per folder, shared by everything
+ * that reads the default branch (the setup panel here, the 📦 Deliverables scan); resolves when it's done,
+ * or at once when it isn't due.
+ */
+export function fetchDefault(dir: string, def: string, everyMs = DEFAULTS.fetchMs, now = Date.now()): Promise<void> {
+  const going = fetching.get(dir);
+  if (going) return going;
+  if (now - (fetchedAt.get(dir) ?? -Infinity) < everyMs) return Promise.resolve();
+  const p = git(['fetch', '--quiet', '--no-tags', 'origin', `+refs/heads/${def}:refs/remotes/origin/${def}`], dir, 60_000).then(() => {
+    fetchedAt.set(dir, Date.now());
+    fetching.delete(dir);
+  });
+  fetching.set(dir, p);
+  return p;
+}
+
 export class GateSource {
   private opts: GateSourceOptions;
-  private fetchedAt = new Map<string, number>();
-  private fetching = new Map<string, Promise<void>>();
   private files = new Map<string, { sha: string; files: GateFiles['files'] }>();
   private rendered = new Map<string, { sha: string; html?: string; at: number }>();
   private running = new Map<string, Promise<void>>();
@@ -99,15 +117,7 @@ export class GateSource {
 
   /** A quiet fetch of origin/<default>, at most every fetchMs; resolves when it's done (or at once when it isn't due). */
   fetch(dir: string, def: string): Promise<void> {
-    const going = this.fetching.get(dir);
-    if (going) return going;
-    if (!this.opts.fetch || this.now() - (this.fetchedAt.get(dir) ?? 0) < this.opts.fetchMs) return Promise.resolve();
-    const p = git(['fetch', '--quiet', '--no-tags', 'origin', `+refs/heads/${def}:refs/remotes/origin/${def}`], dir, 60_000).then(() => {
-      this.fetchedAt.set(dir, this.now());
-      this.fetching.delete(dir);
-    });
-    this.fetching.set(dir, p);
-    return p;
+    return this.opts.fetch ? fetchDefault(dir, def, this.opts.fetchMs) : Promise.resolve();
   }
 
   /**

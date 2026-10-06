@@ -122,7 +122,7 @@ office-workers screenshot design/wireframes/home.html design/storyboard/01-home.
 - Both paths must be inside your own worktree (relative paths are from where you run it); the output's folder must exist.
 - The page may load files from your worktree and nothing from the network. A Mermaid script from jsDelivr or unpkg is answered with the office's own copy, so `blueprint.html` renders its diagrams.
 - An input of at most 10 MB, an output of at most 50 MB, 45 seconds per render, one render at a time.
-- On an office without playwright-core or its Chromium it says so (501); use `py` with matplotlib or openpyxl instead.
+- playwright-core is one of the office's own dependencies. On a machine where its Chromium isn't downloaded yet it says so (501, with `npx playwright-core install chromium` to run there); use `py` with matplotlib or openpyxl meanwhile.
 
 ## The Firm
 

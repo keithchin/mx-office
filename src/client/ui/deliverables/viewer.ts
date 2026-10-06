@@ -1,12 +1,13 @@
 // A deliverable in a window (GET /api/deliverables/file, server/deliverables/): an HTML report in a
 // sandboxed iframe with no origin (the office inlined what it links to), Markdown rendered like the
-// bookshelf's, a picture as a picture, a PDF in the browser's viewer, a CSV's first rows as a table,
+// bookshelf's (Mermaid blocks drawn, mermaid.ts), a picture as a picture, a PDF in the browser's viewer, a CSV's first rows as a table,
 // JSON pretty-printed (a BRD with a link to the BRD report), and an xlsx as a download.
 
 import { isDeliverablePath, kindOf, type DeliverableFile, type DeliverablesView, type DeliverableWhere } from '../../../shared/deliverables';
 import { resolveDocLink } from '../../../shared/docs';
 import { h, openModal } from '../dom';
 import { markdownFile } from '../markdown';
+import { renderMermaid } from './mermaid';
 
 const q = (floor: string, src: string, path: string, more: Record<string, string> = {}) => new URLSearchParams({ floor, src, path, ...more }).toString();
 export const fileUrl = (floor: string, src: string, path: string, download = false) => `/api/deliverables/file?${q(floor, src, path, download ? { download: '1' } : {})}`;
@@ -22,7 +23,7 @@ async function text(url: string): Promise<string> {
 
 /** Where a file is, in words: "on main", "on office/pixel-31e0 · Pixel (Chief Analyst)". */
 export function whereText(w: DeliverableWhere): string {
-  if (w.src === 'main') return 'on main';
+  if (w.src === 'main') return `on ${w.label || 'main'}`;
   if (w.src.startsWith('wt:')) return `in ${w.label}${w.branch ? ` (${w.branch})` : ''}`;
   return `on ${w.label}${w.who ? ` · ${w.who}` : ''}`;
 }
@@ -44,8 +45,8 @@ function markdownBody(floor: string, src: string, path: string, md: string, open
       open(to.path);
     });
   }
-  // Mermaid blocks stay as their source: the office has no diagram renderer in the page.
-  for (const code of body.querySelectorAll('pre > code.language-mermaid')) code.parentElement?.classList.add('dv-mermaid');
+  // Mermaid blocks drawn as diagrams in the office theme's light or dark, the source kept under each.
+  void renderMermaid(body);
   return body;
 }
 

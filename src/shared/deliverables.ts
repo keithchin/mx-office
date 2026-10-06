@@ -54,6 +54,7 @@ export const DELIVERABLES: readonly DeliverableSpec[] = [
   { id: 'knowledge-base', team: 'analysis', stage: '1', title: 'Knowledge base', owner: ANALYST, globs: ['**/knowledge-base/*.md', '**/knowledge-base/share/*.md'] },
   { id: 'brd-json', team: 'analysis', stage: '2', title: 'BRDs (F{NNN}.brd.json)', owner: ANALYST, globs: ['**/F[0-9][0-9][0-9]*.brd.json'] },
   { id: 'brd-report', team: 'analysis', stage: '2', title: 'BRD report', owner: ANALYST, globs: ['**/brd-report.html'] },
+  { id: 'brd-validation', team: 'analysis', stage: '2', title: 'BRD validation report', owner: ANALYST, globs: ['reports/validation-report.md'] },
   { id: 'brd-pdf', team: 'analysis', stage: '2', title: 'BRD as PDF (for the client)', owner: ANALYST, globs: ['docs/requirements/BRD-*.pdf'], optional: true },
   { id: 'use-cases', team: 'analysis', stage: '2', title: 'Use-case workbook', owner: ANALYST, globs: ['docs/requirements/use-cases.xlsx', 'docs/requirements/use-cases.csv'], optional: true },
   { id: 'process-flow', team: 'analysis', stage: '2', title: 'Process flow (Mermaid)', owner: ANALYST, globs: ['docs/requirements/process-flow*.md'], optional: true },
@@ -75,22 +76,29 @@ export const DELIVERABLES: readonly DeliverableSpec[] = [
   { id: 'test-plan', team: 'testing', stage: '4', title: 'Test plan', owner: TESTER, globs: ['tests/test-plan*.md'] },
   { id: 'journeys', team: 'testing', stage: '6', title: 'E2E journeys', owner: TESTER, globs: ['tests/e2e/**/*.journey.json'], exclude: ['tests/e2e/example.journey.json'] },
   { id: 'ui-reviews', team: 'testing', stage: '6', title: 'UI review reports', owner: TESTER, globs: ['design/ui-reviews/*.html'] },
-  { id: 'test-report', team: 'testing', stage: '6', title: 'Test report / e2e evidence', owner: TESTER, globs: ['**/test-report.html', '**/e2e-evidence*.html', 'reports/e2e-evidence*'], optional: true },
+  { id: 'test-report', team: 'testing', stage: '6', title: 'Test report / e2e evidence', owner: TESTER, globs: ['**/test-report.html', '**/e2e-evidence*.html', 'reports/testing/e2e-evidence*'], optional: true },
   { id: 'standups', team: 'management', stage: '5', title: 'Standup pages', owner: PM, globs: ['docs/standups/*.md'] },
   { id: 'status', team: 'management', stage: '5', title: 'Client status pages', owner: PM, globs: ['docs/status/*.md'], optional: true },
 ];
 
 /**
+ * The reports the toolkit's analyst scripts write straight under reports/, where they stay: they are
+ * Analysis's. Every other team keeps its reports in reports/<team>/.
+ */
+export const ANALYST_REPORTS: readonly string[] = ['reports/validation-report.md', 'reports/summary.md', 'reports/gaps-report.md', 'reports/analysis/**'];
+
+/**
  * What a team makes beyond the toolkit's list, by team, tried in this order: the first team whose globs
  * match a file not in the catalog gets it as an extra. Kept to folders deliverables live in, so the
- * client's own source documents (sources/) and the app never show up.
+ * client's own source documents (sources/) and the app never show up. A report straight under
+ * reports/ that's none of these is unsorted (unsortedReport), for the Project Coordinator.
  */
 export const EXTRAS: readonly { team: TeamId; globs: readonly string[] }[] = [
-  { team: 'testing', globs: ['design/ui-reviews/**', 'tests/test-plan*', 'tests/e2e/**/*.md', 'reports/**'] },
-  { team: 'design', globs: ['design/**', 'docs/design/**'] },
-  { team: 'development', globs: ['architecture/**', 'docs/architecture/**', 'docs/adr/**'] },
-  { team: 'analysis', globs: ['docs/requirements/**', 'docs/insights/**', 'analysis/**/*.{html,md,pdf,xlsx,csv,svg,png}', 'docs/**/*.{pdf,xlsx,csv}', '*.{pdf,xlsx}', ':brd'] },
-  { team: 'management', globs: ['docs/standups/**', 'docs/status/**'] },
+  { team: 'testing', globs: ['reports/testing/**', 'design/ui-reviews/**', 'tests/test-plan*', 'tests/e2e/**/*.md'] },
+  { team: 'design', globs: ['reports/design/**', 'design/**', 'docs/design/**'] },
+  { team: 'development', globs: ['reports/development/**', 'architecture/**', 'docs/architecture/**', 'docs/adr/**'] },
+  { team: 'analysis', globs: [...ANALYST_REPORTS, 'docs/requirements/**', 'docs/insights/**', 'analysis/**/*.{html,md,pdf,xlsx,csv,svg,png}', 'docs/**/*.{pdf,xlsx,csv}', '*.{pdf,xlsx}', ':brd'] },
+  { team: 'management', globs: ['reports/management/**', 'docs/standups/**', 'docs/status/**'] },
 ];
 
 /** Never deliverables: the client's sources, tooling and the office's own folders. */
@@ -155,8 +163,13 @@ export function extraTeam(p: string): TeamId | undefined {
   return EXTRAS.find((e) => anyMatch(e.globs, p))?.team;
 }
 
+/** A file under reports/ that's no catalog entry, no analyst report and in no team's reports/<team>/: shown as Unsorted in Management's panel. */
+export function unsortedReport(p: string): boolean {
+  return globMatch('reports/**', p) && !anyMatch(NEVER, p) && !specFor(p) && !extraTeam(p);
+}
+
 /** Whether the office lists and serves this path as a deliverable at all. */
-export const isDeliverablePath = (p: string): boolean => safeRelPath(p) && (!!specFor(p) || !!extraTeam(p));
+export const isDeliverablePath = (p: string): boolean => safeRelPath(p) && (!!specFor(p) || !!extraTeam(p) || unsortedReport(p));
 
 export function kindOf(p: string): DeliverableKind {
   const ext = p.slice(p.lastIndexOf('.') + 1).toLowerCase();
@@ -223,6 +236,10 @@ export interface DeliverablesView {
   items: DeliverableItem[];
   /** The places looked in besides main, for the panel's foot. */
   sources: DeliverableWhere[];
+  /** What "main" is: `origin/main` (the project's default branch on GitHub), or the floor's folder when it has no remote. */
+  main?: string;
+  /** The floor's folder when it's on another branch than the default one, or behind it. */
+  checkout?: { branch: string; behind: number; defaultBranch: string };
 }
 
 /** An item's status from its files: anything on main that isn't a draft wins, then real work on a branch, then drafts. */

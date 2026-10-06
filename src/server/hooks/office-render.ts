@@ -1,5 +1,5 @@
 // office-workers export-pdf and screenshot (bin/office-render.js): a worker turns an HTML file in its
-// own folder into a PDF or a PNG with the office's headless Chromium (playwright-core and the browsers
+// own folder into a PDF or a PNG with the office's headless Chromium (playwright-core, a dependency, and the browsers
 // in the office machine's Playwright cache), so a Lead can hand the client a BRD as a PDF or a
 // storyboard of its wireframes without installing anything in the project. The input and the output
 // must be inside the worker's own folder; the page may load files from there and nothing from the
@@ -166,9 +166,19 @@ export async function officeRender(_ctx: Ctx, floor: Floor, me: WorkerInfo, body
     const r = await render(root, ask, files);
     return send(res, 200, { ok: true, output: files.output, bytes: r.bytes });
   } catch (err) {
-    const msg = (err as Error).message ?? String(err);
-    if (/Cannot find (package|module) 'playwright-core'/i.test(msg)) return send(res, 501, { error: "This office has no playwright-core installed, so it can't render HTML. Use py (matplotlib, openpyxl) for charts and workbooks, or ask the Project Manager." });
-    if (/Executable doesn't exist|browserType\.launch/i.test(msg)) return send(res, 501, { error: `The office's Chromium isn't installed (npx playwright-core install chromium on the office machine): ${msg.split('\n')[0]}` });
-    return send(res, 500, { error: `Couldn't render it: ${msg.split('\n')[0]}` });
+    const f = renderFailure((err as Error).message ?? String(err));
+    return send(res, f.status, { error: f.error });
   }
+}
+
+/**
+ * Why a render failed, as the answer to the worker. playwright-core is a dependency of the office, so
+ * only its browser can be missing on a machine (501, with what to run); anything else is a 500.
+ */
+export function renderFailure(msg: string): { status: number; error: string } {
+  const first = msg.split('\n')[0];
+  if (/Executable doesn't exist|Please run the following command to download new browsers|playwright(-core)? install/i.test(msg)) {
+    return { status: 501, error: `The office's Chromium isn't installed (npx playwright-core install chromium on the office machine), so it can't render HTML. Use py (matplotlib, openpyxl) meanwhile, or ask the Project Manager. ${first}` };
+  }
+  return { status: 500, error: `Couldn't render it: ${first}` };
 }

@@ -15,9 +15,11 @@ import {
   safeRelPath,
   specFor,
   stageCounts,
+  unsortedReport,
   type DeliverableItem,
 } from '../src/shared/deliverables.js';
 import { branchOwner, scanDeliverables } from '../src/server/deliverables/scan.js';
+import { scanInput } from '../src/server/deliverables/index.js';
 import { CAPS, inlineHtml, parseCsv, readDeliverable, resolveRef } from '../src/server/deliverables/content.js';
 import { fileAnswer, tableAnswer } from '../src/server/deliverables/serve.js';
 import { deliverablesBrief } from '../src/server/roster/deliverables-brief.js';
@@ -49,7 +51,7 @@ test('extras go to the first team whose folders they are in; sources, tooling an
   assert.equal(extraTeam('docs/requirements/glossary.md'), 'analysis');
   assert.equal(extraTeam('docs/budget.xlsx'), 'analysis');
   assert.equal(extraTeam('travel-BRD-notes.md'), 'analysis');
-  assert.equal(extraTeam('reports/validation-report.md'), 'testing');
+  assert.equal(extraTeam('reports/testing/run-2026-10-06.html'), 'testing');
   assert.equal(extraTeam('design/ds.css'), undefined, 'a catalog file is no extra');
   for (const p of ['sources/a.pdf', 'node_modules/x/README.md', '.claude/agents/x.md', 'docs/team/design.md', 'src/main.ts', 'analysis/knowledge-base/text/deck/slide01.md']) assert.equal(isDeliverablePath(p), false, p);
 });
@@ -253,4 +255,79 @@ test('Playbooks: every Lead names its deliverables; early drafts are on by defau
     assert.ok(specFor(p), p);
     assert.ok(draftByName(p), p);
   }
+});
+
+test('reports: the analysts\' toolkit reports stay Analysis\'s where they are, every other team has reports/<team>/, the rest is unsorted', () => {
+  assert.equal(specFor('reports/validation-report.md')?.id, 'brd-validation');
+  assert.equal(specFor('reports/validation-report.md')?.team, 'analysis');
+  assert.equal(extraTeam('reports/summary.md'), 'analysis');
+  assert.equal(extraTeam('reports/gaps-report.md'), 'analysis');
+  assert.equal(extraTeam('reports/analysis/cost-model.md'), 'analysis');
+  for (const team of ['design', 'development', 'testing', 'management'] as const) assert.equal(extraTeam(`reports/${team}/review.md`), team);
+  assert.equal(specFor('reports/testing/e2e-evidence-2026-10-06.html')?.id, 'test-report');
+  assert.equal(specFor('reports/test-report.html')?.id, 'test-report', "the toolkit's own test report stays put");
+  assert.equal(extraTeam('reports/random-notes.md'), undefined);
+  assert.equal(unsortedReport('reports/random-notes.md'), true);
+  assert.equal(unsortedReport('reports/design/review.md'), false);
+  assert.equal(unsortedReport('reports/validation-report.md'), false);
+  assert.equal(isDeliverablePath('reports/random-notes.md'), true);
+});
+
+test('the scan puts an unsorted report in Management\'s panel', async (t) => {
+  const { dir, put, g } = fixture(t);
+  put(dir, 'reports/random-notes.md', '# notes');
+  put(dir, 'reports/design/a11y.md', '# a11y');
+  g(dir, 'add', '.');
+  g(dir, 'commit', '-qm', 'reports');
+  const v = await scanDeliverables({ floor: 'f', dir, people: [] });
+  const unsorted = v.items.find((i) => i.id === 'unsorted-reports');
+  assert.equal(unsorted?.team, 'management');
+  assert.deepEqual(unsorted?.files.map((f) => f.path), ['reports/random-notes.md']);
+  assert.deepEqual(v.items.find((i) => i.id === 'extras-design')?.files.map((f) => f.path), ['reports/design/a11y.md']);
+});
+
+test('with a remote, "main" is origin/<default>, not the folder\'s branch, and the view says where the folder is', async (t) => {
+  const { dir, put, g } = fixture(t);
+  // The fixture's repo becomes origin; the floor is a clone left on an old branch while main moves on.
+  const floor = `${dir}-floor`;
+  t.after(() => rmSync(floor, { recursive: true, force: true }));
+  execFileSync('git', ['clone', '-q', dir, floor], { stdio: 'pipe' });
+  g(floor, 'checkout', '-q', '-b', 'old-run');
+  put(dir, 'architecture/blueprint.md', '# Blueprint');
+  g(dir, 'add', '.');
+  g(dir, 'commit', '-qm', 'blueprint merged');
+  g(floor, 'fetch', '-q', 'origin');
+  // Something only in the folder isn't on main any more.
+  put(floor, 'design/brand.md', '# local only');
+  const input = await scanInput({ id: 'f', dir: floor }, [], false);
+  assert.equal(input.main?.def, 'main');
+  assert.deepEqual(input.checkout, { branch: 'old-run', behind: 1, defaultBranch: 'main' });
+  const v = await scanDeliverables(input);
+  const item = (id: string) => v.items.find((i) => i.id === id)!;
+  assert.equal(v.main, 'origin/main');
+  assert.deepEqual(v.checkout, { branch: 'old-run', behind: 1, defaultBranch: 'main' });
+  assert.equal(item('blueprint').status, 'present', 'merged on origin/main though the folder has not got it');
+  assert.equal(item('blueprint').files[0].where[0].label, 'origin/main');
+  assert.equal(item('brand').status, 'missing', 'the folder alone is not main');
+  assert.equal(item('brd-report').status, 'branch', 'office branches still show, against origin/main');
+  // Its content comes from that ref.
+  const r = await readDeliverable({ repo: floor, branch: 'origin/main' }, 'architecture/blueprint.md', CAPS.text);
+  assert.equal((r as { body: Buffer }).body.toString(), '# Blueprint');
+  // No remote: the folder, as before.
+  const local = await scanInput({ id: 'f', dir }, [], false);
+  assert.equal(local.main, undefined);
+});
+
+test('Playbooks say where each Lead\'s reports go; the Chief Analyst is not told to move the toolkit\'s', () => {
+  const text = (r: Parameters<typeof deliverablesBrief>[0]) => deliverablesBrief(r, true).join('\n');
+  assert.match(text('lead-designer'), /`reports\/design\/`/);
+  assert.match(text('lead-developer'), /`reports\/development\/`/);
+  assert.match(text('lead-tester'), /`reports\/testing\/e2e-evidence-<YYYY-MM-DD>\.html`/);
+  assert.match(text('pm'), /`reports\/management\/`/);
+  const analyst = text('chief-analyst');
+  assert.match(analyst, /`reports\/validation-report\.md`.*stay where the toolkit writes them/);
+  assert.doesNotMatch(analyst, /move/i);
+  // Every report path the Playbooks name is one the view gives that team.
+  assert.equal(extraTeam('reports/design/x.md'), 'design');
+  assert.equal(specFor('reports/testing/e2e-evidence-2026-10-06.html')?.team, 'testing');
 });
