@@ -32,6 +32,17 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **Interview mode in the toolkit's words**: Steering (default), Assist or Auto, the modes the toolkit's
   `interview-mode.sh` reads from `PROJECT.md`. The wizard used to write "attended"/"unattended", which
   the toolkit didn't recognise and quietly treated as steering.
+- **Each project builds with its own Studio Pro**: agents, queue workers, 🔄 Re-check gates, the
+  wizard's toolkit runs and the live app get the floor's `.claude/toolkit.env` (`MXBUILD_PATH` and the
+  rest) over the office's environment. An office started with `MXBUILD_PATH` for 10.24 no longer makes
+  an 11.12.4 project's agents build with 10.24's mxbuild (the toolkit lets the environment win over
+  `toolkit.env`). A floor without `toolkit.env` is unchanged.
+- **Edit answers hires roles ticked since**: editing a project's answers later also hires the roles
+  newly ticked, and only those: never one the floor already has, at work, benched or sent home on
+  purpose. Unticking a role sends no one home.
+- **Chief Analyst on the Discovery model**: handed the Discovery issue, the Chief Analyst is hired on
+  the model picked in the wizard (Opus by default), now shown as "Chief Analyst's model for Discovery".
+  Its role's model on the Team tab stays for later hires.
 
 ### To know
 - Setups saved with "attended"/"unattended" read as Steering/Auto. Creating the app takes about 15

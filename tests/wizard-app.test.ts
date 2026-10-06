@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import os from 'node:os';
 import path from 'node:path';
 import { interviewModeOf, SETUP_STEPS, type ProjectPlan, type ProjectRole, type StepId } from '../src/shared/wizard.js';
-import { newJob, type JobState } from '../src/server/wizard/job.js';
+import { JobBook, newJob, type JobState } from '../src/server/wizard/job.js';
 import { defaultMendix, type WizardConfig } from '../src/server/wizard/config.js';
 import { appNameOf, cleanAppId, MENDIX_IGNORES, withMendixIgnores } from '../src/server/wizard/mendix-app.js';
 import { cleanPlan } from '../src/server/wizard/plan.js';
@@ -67,6 +67,7 @@ function setup(over: Partial<SetupDeps> & { cfg: WizardConfig }) {
     adoptFloor: () => 'unused',
     queue: () => 'unused',
     hired: () => false,
+    known: () => false,
     hire: async () => 'unused',
     ...over,
   };
@@ -210,15 +211,15 @@ test('the team step hires the ticked roles once each, and hands the Discovery is
   try {
     const cfg: WizardConfig = { toolkitDir: root, bash: 'bash', mendixDir: root, org: 'Test-Org', adminTokenFile: path.join(root, 'none') };
     const on = new Set<ProjectRole>();
-    const hires: { role: ProjectRole; by: string; account?: string; task?: string }[] = [];
+    const hires: { role: ProjectRole; by: string; account?: string; task?: string; model?: string }[] = [];
     const queued: string[] = [];
     let refuse: ProjectRole | undefined = 'lead-developer';
     const steps = setup({
       cfg,
       hired: (_floor, role) => on.has(role),
-      hire: async (_floor, role, by, account, task) => {
+      hire: async (_floor, role, by, account, task, model) => {
         if (role === refuse) return 'The floor is paused';
-        hires.push({ role, by, account, task });
+        hires.push({ role, by, account, task, model });
         on.add(role);
         return undefined;
       },
@@ -235,7 +236,9 @@ test('the team step hires the ticked roles once each, and hands the Discovery is
     assert.deepEqual(hires.map((h) => h.role), ['pm', 'lead-developer', 'chief-analyst'], 'each once, in the roster order');
     assert.ok(hires.every((h) => h.by === 'Probe' && h.account === 'acct-1'));
     assert.match(hires[2].task ?? '', /issue #7/);
+    assert.equal(hires[2].model, 'opus', "the Chief Analyst is hired on the wizard's Discovery model for it");
     assert.equal(hires[0].task, undefined);
+    assert.equal(hires[0].model, undefined, "every other role on its own model");
 
     const again = await steps.team(job, io);
     assert.equal(again.status, 'skipped');
@@ -256,6 +259,87 @@ test('the team step hires the ticked roles once each, and hands the Discovery is
     assert.equal((await steps.team(jobIn(root, plan({ roles: [] })), io)).status, 'skipped');
     const offline = setup({ cfg: { ...cfg, offlineDir: root }, hire: async () => assert.fail('hired offline') });
     assert.match((await offline.team(job, io)).detail ?? '', /offline/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the Chief Analyst handed the Discovery issue is hired on the Discovery dropdown's model", async () => {
+  const root = tmp('model');
+  try {
+    const cfg: WizardConfig = { toolkitDir: root, bash: 'bash', mendixDir: root, org: 'Test-Org', adminTokenFile: path.join(root, 'none') };
+    const hires: { role: ProjectRole; model?: string }[] = [];
+    const steps = setup({ cfg, hire: async (_f, role, _by, _acct, _task, model) => (hires.push({ role, model }), undefined) });
+    await steps.team(Object.assign(jobIn(root, plan({ discovery: { issue: true, queue: true, model: 'sonnet' } })), { issue: 3 }), io);
+    assert.deepEqual(hires, [{ role: 'pm', model: undefined }, { role: 'lead-developer', model: undefined }, { role: 'chief-analyst', model: 'sonnet' }]);
+    // Not handed the issue (not asked to queue it): the Chief Analyst is on its role's own model too.
+    hires.length = 0;
+    await steps.team(Object.assign(jobIn(root, plan({ roles: ['chief-analyst'], discovery: { issue: true, queue: false, model: 'haiku' } })), { issue: 3 }), io);
+    assert.deepEqual(hires, [{ role: 'chief-analyst', model: undefined }]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('editing the answers hires only the roles ticked since, and never one the floor has had in any state', async () => {
+  const root = tmp('edit');
+  try {
+    const cfg: WizardConfig = { toolkitDir: root, bash: 'bash', mendixDir: root, org: 'Test-Org', adminTokenFile: path.join(root, 'none') };
+    const book = new JobBook(path.join(root, 'jobs'));
+    // On the floor: the Project Coordinator at work, the Lead Designer benched, the Lead Tester sent home.
+    const known = new Set<ProjectRole>(['pm', 'lead-designer', 'lead-tester']);
+    const hires: { role: ProjectRole; task?: string; model?: string }[] = [];
+    let refuse: ProjectRole | undefined;
+    const steps = setup({
+      cfg,
+      hired: (_f, role) => role === 'pm',
+      known: (_f, role) => known.has(role),
+      hire: async (_f, role, _by, _acct, task, model) => {
+        if (role === refuse) return 'The floor is paused';
+        hires.push({ role, task, model });
+        known.add(role);
+        return undefined;
+      },
+    });
+    const job = Object.assign(jobIn(root, plan({ roles: ['pm'] })), { issue: 7 });
+    book.add(job);
+    for (const s of SETUP_STEPS) job.steps[s.id] = { status: 'done' };
+
+    // Nothing added: the team step isn't run again.
+    book.edit(job, plan({ roles: ['pm'], clients: ['Other'] }), ['intake']);
+    assert.deepEqual(job.addRoles, []);
+    assert.equal(job.steps.team.status, 'done');
+    assert.equal(job.steps.intake.status, 'pending');
+
+    // Added: the Lead Developer and Chief Analyst (new), the Lead Designer and Lead Tester (the floor has had them).
+    book.edit(job, plan({ roles: ['pm', 'lead-designer', 'lead-developer', 'lead-tester', 'chief-analyst'] }), ['intake']);
+    assert.deepEqual(job.addRoles, ['lead-designer', 'lead-developer', 'lead-tester', 'chief-analyst']);
+    assert.equal(job.steps.team.status, 'pending');
+    refuse = 'chief-analyst';
+    await assert.rejects(steps.team(job, io), /Couldn't hire the Chief Analyst/);
+    assert.deepEqual(job.addRoles, ['lead-designer', 'lead-developer', 'lead-tester', 'chief-analyst'], 'kept for the Retry');
+    refuse = undefined;
+    const r = await steps.team(job, io);
+    assert.equal(r.status, 'done');
+    assert.equal(r.detail, 'hired Chief Analyst / Consultant; already on the floor: Lead Designer, Lead Developer, Lead Tester');
+    assert.deepEqual(hires.map((h) => h.role), ['lead-developer', 'chief-analyst'], 'each once, nobody the floor had');
+    assert.ok(hires.every((h) => h.task === undefined && h.model === undefined), "an edit doesn't hand the Discovery issue out again");
+    assert.deepEqual(job.addRoles, []);
+
+    // A role ticked and then unticked again before the team step hired it is dropped.
+    book.edit(job, plan({ roles: ['pm', 'lead-designer'] }), []);
+    assert.deepEqual(job.addRoles, [], 'the Lead Designer was ticked before');
+    book.edit(job, plan({ roles: ['pm', 'lead-designer', 'lead-developer'] }), []);
+    assert.deepEqual(job.addRoles, ['lead-developer']);
+    job.steps.team = { status: 'failed' };
+    book.edit(job, plan({ roles: ['pm', 'lead-designer'] }), []);
+    assert.deepEqual(job.addRoles, [], 'unticked again before it was hired');
+
+    // A setup whose team step never finished hires everything ticked, as it would have.
+    const fresh = Object.assign(jobIn(root, plan({ roles: ['pm'] })), { issue: 9 });
+    book.add(fresh);
+    book.edit(fresh, plan({ roles: ['pm', 'lead-developer'] }), ['intake']);
+    assert.equal(fresh.addRoles, undefined);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

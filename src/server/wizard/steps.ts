@@ -8,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { ENTRY_MODE_INFO, INTERVIEW_MODE_INFO, PROJECT_ROLES, SMALL_TIER_LIMITS, type IntakeAnswer, type ProjectRole, type StepId } from '../../shared/wizard.js';
 import { findMpr } from '../liveapp/checkout.js';
+import { withFloorToolkitEnv } from '../toolkit-env.js';
 import { adminGhEnv, adminTokenHelp, readAdminToken, redactor } from './admin-token.js';
 import { DISCOVERY_TITLE, discoveryBrief, discoveryPrompt } from './brief.js';
 import { mendixVersions, mxbuildPath, toolkitEnv, type WizardConfig } from './config.js';
@@ -35,8 +36,13 @@ export interface SetupDeps {
   queue(floor: string, prompt: string, title: string, issue: number, model: string, by: string, account?: string): string | undefined;
   /** Whether a role of the project team is a worker on the floor already (hired, or writing its handoff). */
   hired(floor: string, role: ProjectRole): boolean;
-  /** Hires a role of the project team the roster's way (its fixed name, its Playbook, its own model), with `task` as its first job; why not, if it couldn't. */
-  hire(floor: string, role: ProjectRole, by: string, account?: string, task?: string): Promise<string | undefined>;
+  /** Whether the floor has had a role of the project team in any state: at work, writing its handoff, benched, or sent home. */
+  known(floor: string, role: ProjectRole): boolean;
+  /**
+   * Hires a role of the project team the roster's way (its fixed name, its Playbook, its own model), with `task` as its
+   * first job and on `model` for this hire when given (the role keeps its own); why not, if it couldn't.
+   */
+  hire(floor: string, role: ProjectRole, by: string, account?: string, task?: string, model?: string): Promise<string | undefined>;
   /** The office's environment (tests pass their own). */
   env?: NodeJS.ProcessEnv;
   /** Runs a command (tests pass a fake for the Mendix tools); runCommand when not given. */
@@ -61,10 +67,11 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
   const { cfg } = deps;
   const env = () => toolkitEnv(cfg, deps.env ?? process.env);
   const git = (dir: string, args: string[], io: StepIO, timeoutMs = 2 * MIN, allowFail = false) => runCommand('git', args, { cwd: dir, env: env(), timeoutMs, onLine: said(io), allowFail });
-  // The toolkit's scripts run with the picked Studio Pro's mxbuild: an MXBUILD_PATH in the office's own
-  // environment would otherwise win over the project's toolkit.env (its _common.sh lets the environment win).
+  // The toolkit's scripts run with the project's toolkit.env over the office's environment, as everything
+  // the office starts for a floor does (toolkit-env.ts), and with the picked Studio Pro's mxbuild even
+  // before the env step has written it there.
   const bash = (job: JobState, script: string, args: string[], io: StepIO, timeoutMs: number, allowFail = false) =>
-    runCommand(cfg.bash, [bashPath(script), ...args], { cwd: dirOf(job), env: { ...env(), MXBUILD_PATH: mxbuildPath(cfg, job.plan.mendix) }, timeoutMs, onLine: said(io), allowFail });
+    runCommand(cfg.bash, [bashPath(script), ...args], { cwd: dirOf(job), env: { ...withFloorToolkitEnv(dirOf(job), env()), MXBUILD_PATH: mxbuildPath(cfg, job.plan.mendix) }, timeoutMs, onLine: said(io), allowFail });
   const bare = (job: JobState) => path.join(cfg.offlineDir!, job.plan.owner, `${job.plan.name}.git`);
   const dirOf = (job: JobState) => {
     if (!job.dir || !existsSync(job.dir)) throw new Error("The project's floor isn't there yet: Retry from the clone step");
@@ -304,28 +311,34 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
 
     async team(job, io) {
       // After the push: a hire's worktree comes fresh from GitHub, so it starts on the scaffold and the app.
-      const roles = PROJECT_ROLES.filter((r) => job.plan.roles.includes(r.id));
-      if (!roles.length) return { status: 'skipped', detail: 'no roles ticked' };
+      // After an edit (job.addRoles): only the roles ticked since, and never one the floor has had in any
+      // state (at work, benched, or sent home on purpose), so an edit doesn't undo the Team tab's choices.
+      const adding = job.addRoles;
+      const roles = PROJECT_ROLES.filter((r) => job.plan.roles.includes(r.id) && (!adding || adding.includes(r.id)));
+      if (!roles.length) return { status: 'skipped', detail: adding ? 'no roles added' : 'no roles ticked' };
       if (cfg.offlineDir) return { status: 'skipped', detail: 'offline test office: nobody is hired' };
       if (!job.floor) throw new Error("The project's floor isn't there yet");
       const floor = job.floor;
-      const handOff = handsDiscoveryToAnalyst(job);
+      // The Discovery issue went to the queue (or the Chief Analyst) when the setup first ran: an edit doesn't hand it out again.
+      const handOff = !adding && handsDiscoveryToAnalyst(job);
+      const model = job.plan.discovery.model;
       const made: string[] = [];
       const had: string[] = [];
       for (const r of roles) {
-        if (deps.hired(floor, r.id)) {
+        if (adding ? deps.known(floor, r.id) : deps.hired(floor, r.id)) {
           had.push(r.label);
           continue;
         }
-        io.log(`  hiring the ${r.label}${handOff && r.id === 'chief-analyst' ? `, with Discovery #${job.issue}` : ''}…`);
         const task = handOff && r.id === 'chief-analyst' ? discoveryPrompt(job.issue!) : undefined;
-        const err = await deps.hire(floor, r.id, job.by, job.account, task);
+        io.log(`  hiring the ${r.label}${task ? `, with Discovery #${job.issue} on ${model}` : ''}…`);
+        const err = await deps.hire(floor, r.id, job.by, job.account, task, task ? model : undefined);
         if (err) throw new Error(`Couldn't hire the ${r.label}: ${err}${made.length ? ` (hired so far: ${made.join(', ')})` : ''}`);
         if (task) job.discoveryHired = true;
         made.push(r.label);
       }
-      if (!made.length) return { status: 'skipped', detail: `already hired: ${had.join(', ')}` };
-      return { status: 'done', detail: `hired ${made.join(', ')}${had.length ? `; already there: ${had.join(', ')}` : ''}` };
+      if (adding) job.addRoles = [];
+      if (!made.length) return { status: 'skipped', detail: `${adding ? 'already on the floor' : 'already hired'}: ${had.join(', ')}` };
+      return { status: 'done', detail: `hired ${made.join(', ')}${had.length ? `; ${adding ? 'already on the floor' : 'already there'}: ${had.join(', ')}` : ''}` };
     },
 
     async queue(job) {

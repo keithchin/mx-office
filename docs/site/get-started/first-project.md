@@ -45,7 +45,7 @@ The toolkit's kickoff questions, as a form. Mark each answer **Answered**, **Ass
 
 - **Client name(s)** and **Operator(s)**.
 - **Roles to staff**: all five are ticked. The ticked roles are **hired** on the new floor at the end of the setup, each with its fixed name, its Playbook and its role's model (change the model later on the Team tab), so the team is at its desks when you arrive.
-- **Discovery**: open a *Discovery* issue for the Chief Analyst (on by default). With the Chief Analyst on the team, tick **Hand it to the Chief Analyst now** and it is hired with the issue as its first task. Without it, tick **Queue it now for an agent** and pick the agent's model (Opus by default).
+- **Discovery**: open a *Discovery* issue for the Chief Analyst (on by default). With the Chief Analyst on the team, tick **Hand it to the Chief Analyst now** and it is hired with the issue as its first task, on the model you pick in **Chief Analyst's model for Discovery** (Opus by default; its role's own model on the Team tab stays as it is for later hires). Without it, tick **Queue it now for an agent** and pick the agent's model (Opus by default).
 
 ## Page 5: Review & create
 
@@ -67,6 +67,11 @@ Check the summary and click **✨ Create project**. A progress list runs each st
 14. Queue the Discovery task for an agent (when you ticked it and the Chief Analyst isn't on the team; otherwise the Chief Analyst already has it).
 
 If a step fails, fix the cause and click **🔁 Retry from the failed step**. **✏️ Edit answers** goes back to the form. When it's done, click **🗂️ Go to the floor**.
+
+Editing the answers later (from the floor's **🧰 Project setup** panel) writes the intake answers, decisions and settings again and commits them. A role you tick that wasn't ticked before is hired too, but never one the floor already has in any state: at work, benched, or sent home on purpose. Unticking a role sends no one home. The Discovery issue isn't handed out again.
+
+> [!NOTE]
+> Agents, queue workers, **🔄 Re-check gates** and the live app all run with the project's `.claude/toolkit.env` over the office's own environment, so an 11.12.4 project builds with 11.12.4's mxbuild even when the office was started with an `MXBUILD_PATH` for another Studio Pro.
 
 ## After the wizard
 

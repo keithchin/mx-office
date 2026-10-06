@@ -5,7 +5,7 @@
 
 import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { interviewModeOf, SETUP_STEPS, type JobView, type ProjectPlan, type StepId, type StepStatus } from '../../shared/wizard.js';
+import { interviewModeOf, SETUP_STEPS, type JobView, type ProjectPlan, type ProjectRole, type StepId, type StepStatus } from '../../shared/wizard.js';
 
 export interface JobState {
   id: string;
@@ -19,6 +19,11 @@ export interface JobState {
   issue?: number;
   /** The Discovery issue went to the Chief Analyst as its first task when the team step hired it (so the queue step doesn't queue it again). */
   discoveryHired?: boolean;
+  /**
+   * Set once the answers are edited after the team step ran: the roles ticked since then that the team
+   * step still has to hire (and only those). Empty once it has; undefined for a setup never edited.
+   */
+  addRoles?: ProjectRole[];
   by: string;
   /** The account that started it, for queueing its Discovery task. */
   account?: string;
@@ -104,6 +109,19 @@ export class JobBook {
     const clean = this.redact(line).slice(0, 2000);
     job.log.push(clean);
     if (job.log.length > LOG_KEPT) job.log.splice(0, job.log.length - LOG_KEPT);
+  }
+
+  /**
+   * New answers for a job: its plan replaced, and the steps they touch set back to pending. Roles
+   * ticked since the team step ran are kept in addRoles for it to hire, and only then is it run again
+   * (a team step that never finished still hires everything ticked, as it would have).
+   */
+  edit(job: JobState, plan: ProjectPlan, ids: StepId[]) {
+    const teamRan = job.addRoles !== undefined || job.steps.team.status === 'done' || job.steps.team.status === 'skipped';
+    const added = plan.roles.filter((r) => !job.plan.roles.includes(r));
+    job.plan = plan;
+    if (teamRan) job.addRoles = [...new Set([...(job.addRoles ?? []), ...added])].filter((r) => plan.roles.includes(r));
+    this.reset(job, [...ids, ...(teamRan && job.addRoles?.length ? (['team'] as StepId[]) : [])]);
   }
 
   /** Sets these steps (and the job) back to pending, for an edit that has to write them again. */

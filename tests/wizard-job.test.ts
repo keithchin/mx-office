@@ -150,6 +150,7 @@ test('the admin token goes only to the repo-create child: not process.env, not t
       adoptFloor: () => 'unused',
       queue: () => undefined,
       hired: () => false,
+      known: () => false,
       hire: async () => 'unused',
     };
     const book = new JobBook(path.join(dir, 'jobs'));
@@ -187,6 +188,7 @@ test('offline setup: a local bare repository, cloned, scaffold answers written, 
       adoptFloor: (_repo, d) => ((adopted = d), { id: 'demo-app', dir: d }),
       queue: () => 'should not queue offline',
       hired: () => false,
+      known: () => false,
       hire: async () => 'should not hire offline',
     };
     const book = new JobBook(path.join(dir, 'jobs'));
