@@ -15,6 +15,8 @@ import { holdTerminal } from '../term-holds';
 /** The narrowest it's scaled for, in columns, and the smallest scale (about 7.5px type at 12px). */
 const MIN_COLS = 60;
 const MIN_SCALE = 0.62;
+/** Lines kept above the screen, for the Chat view's plain-text fallback (ui/pm/chat/). */
+const SCROLLBACK = 1000;
 
 export class PmTerminal {
   private term: Terminal | null = null;
@@ -47,7 +49,7 @@ export class PmTerminal {
     if (!workerId) return;
     this.workerId = workerId;
     this.release = holdTerminal(workerId);
-    const term = new Terminal({ disableStdin: true, cursorBlink: false, fontSize: 12, scrollback: 0, theme: termTheme(), allowProposedApi: false });
+    const term = new Terminal({ disableStdin: true, cursorBlink: false, fontSize: 12, scrollback: SCROLLBACK, theme: termTheme(), allowProposedApi: false });
     term.open(this.host);
     this.term = term;
     // Attaching twice from one page is harmless (the full window may have it already): the office
@@ -73,8 +75,26 @@ export class PmTerminal {
     if (msg.t === 'term.snapshot') {
       this.term.reset();
       this.term.resize(msg.cols, msg.rows);
-      this.term.write(msg.data, () => this.fit());
-    } else if (msg.t === 'term.data') this.term.write(msg.data, () => this.fitSoon());
+      this.term.write(msg.data, () => (this.fit(), this.onWrite?.()));
+    } else if (msg.t === 'term.data') this.term.write(msg.data, () => (this.fitSoon(), this.onWrite?.()));
+  }
+
+  /** Hears each write once it's on the screen (the Chat view's fallback reads the text again). */
+  onWrite: (() => void) | undefined;
+
+  /** Every line it has, the scrollback's and the screen's, as text. */
+  lines(): string[] {
+    const buf = this.term?.buffer.active;
+    if (!buf) return [];
+    const out: string[] = [];
+    for (let y = 0; y < buf.length; y++) {
+      const line = buf.getLine(y);
+      const text = line?.translateToString(true) ?? '';
+      // A long line the screen wrapped is one line of text again.
+      if (line?.isWrapped && out.length) out[out.length - 1] += text;
+      else out.push(text);
+    }
+    return out;
   }
 
   /** Output comes in bursts: placing the screen once a frame is plenty. */

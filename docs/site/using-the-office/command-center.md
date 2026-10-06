@@ -94,8 +94,12 @@ Kept in `<office data>/chatter/<floor>.jsonl`, the newest 1000 per floor.
 
 In the middle of the summary:
 
-- The Coordinator's name, model, cost and state: *Not hired*, *Starting*, *Working*, *Needs you*, *Idle*, *Asleep*, *Writing handoff* or *Benched*. **⏰ Wake** and **⤢ Open** (its full terminal).
-- Its **live terminal**, read-only. Watching it keeps the Coordinator from being benched for idling.
+- The Coordinator's name, model, cost and state: *Not hired*, *Starting*, *Working*, *Needs you*, *Idle*, *Asleep*, *Writing handoff* or *Benched*. **Chat | Terminal**, **⏰ Wake** and **⤢ Open** (its full terminal).
+- Its screen, in one of two views (**Chat** unless you changed it). Watching it keeps the Coordinator from being benched for idling.
+  - **Chat**: the conversation as messages. Your prompts on the right; its replies on the left with its icon and color, in Markdown (bold, lists, links, `code`, code blocks that scroll inside their box); each tool call as one quiet line with ✓, ✗ (and why it failed) or … while it runs (*Ran git log --oneline -5*, *Read plan.md*), runs of edits, reads or searches folded into one (*Edited 3 files*, click to open). A question it asks you (AskUserQuestion), or a permission it wants, is a highlighted card with **Open terminal to answer**: you answer in its terminal, never from the chat. Three dots and what it's doing show while it works. The newest 200 rows are shown, with **Show earlier** above them.
+  - **Terminal**: its live terminal, read-only, as it is.
+- Chat reads the Coordinator's Claude Code session transcript, which the office tails on its own machine and sends only to the browsers showing it. What a tool printed or read (a file's contents, a command's output) never leaves the office: only a line of why a tool failed. A Coordinator on another agent (Codex, OpenCode…), or one whose transcript isn't known yet, shows its terminal's text in Chat instead, under *Chat view needs Claude Code transcripts; showing terminal text*.
+- Which view it opens in is yours alone, kept in this browser: the toggle (← → on the keyboard), or **Command Center terminal** in the ⚙️ Settings tab (under *Your view*) or the 3D office's ⚙️ Settings › You.
 - **Ask the Project Coordinator…**: Enter sends, Shift+Enter adds a line, ↑/↓ recall what you sent. It confirms *Sent ✓*, or *Queued while busy ⏳* when the Coordinator is mid-turn.
 - Quick chips: **📊 Status update**, **🚧 What's blocking?**, **🗺️ Plan next steps**, **📋 Run standup**.
 - No Coordinator yet? **🤝 Hire Project Coordinator** (admin). Benched? Its latest handoff note and **🤝 Hire again**.

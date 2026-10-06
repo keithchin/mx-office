@@ -11,6 +11,7 @@ import { answered, notified, wantsPermission } from '../workers/lifecycle.js';
 import { shq } from '../workers/process.js';
 import { noteSubagentHook, noteSubagentLifecycle } from '../workers/subagents.js';
 import { noteDispatch } from '../chatter/bus.js';
+import { noteTranscript } from '../convo/index.js';
 import { studioGuardHook } from '../studio/guard.js';
 import type { WorkerHandle } from '../workers/types.js';
 import { truncate } from '../workers/util.js';
@@ -146,6 +147,8 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
     h.tracker.transcript = payload.transcript_path;
     h.persist();
   }
+  // The Command Center's Chat view reads the conversation off it (convo/).
+  noteTranscript(info.id, payload?.transcript_path);
   h.scheduleScan();
   switch (event) {
     case 'SessionStart':
