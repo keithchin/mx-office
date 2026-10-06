@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-06 · release 5 (`1cff8c8`)
+
 ### New
 - **Open in Studio Pro**: a button in a Mendix project's Command Center heading (and ☰ → 🧱 Open in
   Studio Pro) opens the floor's `.mpr` in Studio Pro on the office's computer, in the version the
