@@ -6,7 +6,18 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Improved
+- **🧩 Subagents: runs only the transcript saw finish count.** A background run that only the Lead's transcript
+  reports as finished (no hook does) is now a run of its subagent's record, unreviewed until the Lead's
+  `office-workers subagent review`, which lands on that run rather than adding one. Grades still count only
+  reviewed runs; cards and hover cards say *N unreviewed*. A late SubagentStop for the same run isn't counted again.
+- **🧩 Subagents live about the 2D view.** Idle subagents no longer vanish: they take the same breaks benched
+  Leads do (the lounge TV, the balcony, the kitchen's coffee, walking the aisle), still small and tagged
+  *tester (Hedy's)*, with a speech bubble when two stand close; when a run starts they walk back to the stool
+  behind their Lead, and away when it ends. Benched ones do the same with a 🪑 tag. The home Overview matches.
+- **🧩 Never-run subagents are hidden.** The Workers tab shows only subagents that have run (or are at work for
+  the first time, or are benched or on warning) unless **☐ Include never-run** is ticked next to Show
+  subagents. The 2D view shows only subagents that have run at least once.
 
 ## 2026-10-06 · release 12 (`18ff64d`)
 
@@ -37,19 +48,6 @@ Nothing waiting yet.
 - The office follows each run live from the hooks (the Agent call going out and coming back, SubagentStart /
   SubagentStop) and, every 10 seconds, from the Lead's transcript, which is the only place a background
   run says it's finished. A floor's last 50 runs are kept in its roster file.
-
-### Improved
-- **🧩 Subagents: runs only the transcript saw finish count.** A background run that only the Lead's transcript
-  reports as finished (no hook does) is now a run of its subagent's record, unreviewed until the Lead's
-  `office-workers subagent review`, which lands on that run rather than adding one. Grades still count only
-  reviewed runs; cards and hover cards say *N unreviewed*. A late SubagentStop for the same run isn't counted again.
-- **🧩 Subagents live about the 2D view.** Idle subagents no longer vanish: they take the same breaks benched
-  Leads do (the lounge TV, the balcony, the kitchen's coffee, walking the aisle), still small and tagged
-  *tester (Hedy's)*, with a speech bubble when two stand close; when a run starts they walk back to the stool
-  behind their Lead, and away when it ends. Benched ones do the same with a 🪑 tag. The home Overview matches.
-- **🧩 Never-run subagents are hidden.** The Workers tab shows only subagents that have run (or are at work for
-  the first time, or are benched or on warning) unless **☐ Include never-run** is ticked next to Show
-  subagents. The 2D view shows only subagents that have run at least once.
 
 ### Fixed
 - A subagent run in the background (newer Claude Code's default) no longer counts twice in its track record:
