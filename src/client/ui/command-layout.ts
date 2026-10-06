@@ -1,7 +1,8 @@
 // The 1D Command Center, made to fit a laptop screen (command-layout.css): the Needs-you row on top
 // (ui/needsyou/), the project setup panel folded to one line once its gates are fine (it opens again with
 // a click, and this browser remembers which way you left it), and the project summary below in columns
-// as tall as what's left of the window, each scrolling on its own, the PM console in the middle. The
+// exactly as tall as what's left of the window, the PM console in the middle: on a desktop the page
+// doesn't scroll and no column does, each card scrolls inside its own frame (command-layout.css). The
 // summary's own sections fold too (ui/summary.ts). The panels draw themselves as before; this only
 // decorates them as they're drawn. No three.js.
 
@@ -9,6 +10,8 @@ import { h } from './dom';
 import './command-layout.css';
 
 const SETUP_KEY = 'agent-office.cc-setup';
+/** A window shorter than this folds the setup panel at first even when a gate fails. */
+export const SHORT_PX = 820;
 
 /** Folded or open, as this browser left it; undefined when it was never touched (fine gates fold). */
 function setupChoice(): boolean | undefined {
@@ -39,8 +42,10 @@ function decorateSetup(root: HTMLElement) {
   if (!panel || !head || head.querySelector('.cc-fold-btn')) return;
   const stages = [...panel.querySelectorAll<HTMLElement>('.setup-stage')].map((el) => ({ id: el.querySelector('.setup-stage-id')?.textContent ?? '', status: (['pass', 'fail', 'manual', 'pending', 'waived'].find((c) => el.classList.contains(c)) ?? 'pending').toUpperCase() }));
   const fine = setupFine(stages, !!panel.querySelector('.setup-stale'));
-  const folded = setupChoice() ?? fine;
-  const line = h('span.cc-setup-line', {}, setupLine(stages));
+  // Never touched: folded once its gates are fine, and on a short window whatever they say (its line
+  // says what's failing, in red), so the fitted Command Center keeps its room.
+  const folded = setupChoice() ?? (fine || window.innerHeight < SHORT_PX);
+  const line = h('span.cc-setup-line', { class: fine ? '' : 'cc-bad' }, setupLine(stages));
   const btn = h('button.btn.small.cc-fold-btn', { type: 'button', 'aria-expanded': String(!folded), title: 'Show or hide the setup panel' }, folded ? 'Show ▾' : 'Hide ▴');
   const apply = (f: boolean) => {
     panel.classList.toggle('cc-folded', f);

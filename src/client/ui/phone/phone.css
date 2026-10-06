@@ -8,15 +8,18 @@ body.has-phone .lite-main { padding-bottom: calc(160px + env(safe-area-inset-bot
 .tp-launch {
   position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(var(--tp-above, 72px) + 14px); z-index: 30;
   width: 56px; height: 56px; display: grid; place-items: center; padding: 0;
-  border: var(--bw, 3px) solid var(--line); border-radius: 50%; background: var(--ink); color: var(--on-ink);
+  /* Its own two colors, never the theme's button colors (Clean gives every button its ink, which made
+     the icon the button's own color): the icon is stroked with --tp-fg, not currentColor. */
+  --tp-bg: var(--ink); --tp-fg: var(--on-ink);
+  border: var(--bw, 3px) solid var(--line); border-radius: 50%; background: var(--tp-bg); color: var(--tp-fg);
   box-shadow: var(--shadow-btn, 0 3px 0 var(--edge)); cursor: pointer;
 }
 .tp-launch:hover { transform: translateY(-1px); }
 .tp-launch:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-.tp-launch.tp-on { background: var(--accent); color: var(--on-fill); }
+.tp-launch.tp-on { --tp-bg: var(--accent); --tp-fg: var(--on-fill); }
 .tp-ico-pixel { display: none; }
 .tp-ico-line { display: grid; place-items: center; }
-.tp-line-icon { width: 26px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.tp-line-icon { width: 26px; height: 24px; fill: none; stroke: var(--tp-fg); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .tp-badge { position: absolute; top: -4px; right: -4px; pointer-events: none; }
 .tp-badge-none { display: none; }
 .tp-badge-count { min-width: 22px; height: 22px; padding: 0 6px; border: 2px solid var(--paper); border-radius: 999px; background: var(--bad); color: var(--on-fill); font: 900 12px/18px var(--font); text-align: center; font-variant-numeric: tabular-nums; }
@@ -203,6 +206,11 @@ html[data-theme='terminal'] .tp-row::before { content: '>'; align-self: center; 
 
 /* The launcher stays round in the Clean themes, whose buttons are otherwise square-ish. */
 html[data-theme^='clean'] body.lite button.tp-launch { border-radius: 50% !important; }
+/* Clean: an accent-blue disc with a white icon in both, like the theme's primary button. */
+html[data-theme^='clean'] body.lite button.tp-launch { --tp-bg: var(--accent); --tp-fg: #ffffff; color: var(--tp-fg); border-color: transparent; box-shadow: 0 2px 6px rgba(0, 0, 0, .28); }
+html[data-theme^='clean'] body.lite button.tp-launch.tp-on { --tp-bg: var(--ink); --tp-fg: var(--paper); }
+/* The header's buttons keep the ink of the window they're on, whatever a theme does to buttons. */
+html[data-theme] body.lite .tp-hbtn { color: var(--ink); }
 /* The 2D view: above its zoom buttons, which sit in the stage's bottom-right corner. */
 body.pixel .tp-launch { bottom: calc(var(--tp-above, 40px) + 72px); }
 body.pixel .tp-win { bottom: calc(var(--tp-above, 40px) + 140px); height: min(640px, calc(100dvh - var(--tp-above, 40px) - 220px)); }

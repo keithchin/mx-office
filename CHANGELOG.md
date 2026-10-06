@@ -6,7 +6,17 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+- **The Command Center no longer scrolls outside its parts**: on a desktop window it's a fixed-height
+  layout with no page scroll and no column scrollbars (the project details on the left and the console in
+  the middle used to scroll as a whole, sometimes twice). Each card scrolls inside its own frame with a
+  thin scrollbar in the theme's colors; the console's chat or terminal fills the middle and is the only
+  thing there that scrolls, with the escalation cards behind a one-line bar that swaps them in. The tabs
+  are a little smaller, Needs you and the folded setup line share a row, and on a short window the setup
+  panel starts folded. The short page scroll at 1280×720 is gone; phones still scroll the stacked page.
+- **The Team phone's button shows its messages icon in the Clean themes**: Clean gave every button its
+  ink colour, so the icon was drawn in the button's own colour and vanished. It's now its own colour (a
+  white icon on an accent-blue disc in Clean (Light) and Clean (Dark)), and checked in all five themes.
 
 ## 2026-10-06 · release 11 (`a52ebae`)
 

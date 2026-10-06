@@ -39,7 +39,19 @@ export interface PmConsole {
   sync(): void;
   /** Every server message: the team changing, the Coordinator's terminal output, a reconnect. */
   route(msg: ServerMsg): void;
+  /** Shows the escalation cards in place of the screen (the fitted Command Center keeps them behind a bar). */
+  showEscalations(): void;
 }
+
+/** Whether this browser last had the escalation cards showing in place of the Coordinator's screen. */
+const ESC_KEY = 'agent-office.pmc-escalations';
+const savedEsc = () => {
+  try {
+    return localStorage.getItem(ESC_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
 
 /** The quick questions under the box; `standup` runs the team's standup instead of sending a prompt. */
 const CHIPS: { label: string; prompt?: string; standup?: true }[] = [
@@ -88,7 +100,33 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     roster = r;
     draw();
   });
-  const el = h('section.pmc', { 'aria-label': 'Project console' }, head, screen, empty, escalations.el, foot);
+  // On the fitted Command Center (ui/command-layout.css) the cards hide behind a one-line bar, and showing
+  // them takes the screen's place, so the console has one area that scrolls, never two.
+  const escText = h('span.pmc-esc-text');
+  const escBtn = h('button.btn.small.pmc-esc-btn', { type: 'button', 'aria-expanded': 'false', onclick: () => setEsc(!showEsc) });
+  const escBar = h('div.pmc-esc-bar', { hidden: true }, escText, escBtn);
+  let showEsc = savedEsc();
+  function setEsc(on: boolean) {
+    showEsc = on;
+    try {
+      localStorage.setItem(ESC_KEY, on ? '1' : '0');
+    } catch {
+      // Only this visit.
+    }
+    drawEsc();
+  }
+  function drawEsc() {
+    const list = roster?.escalations ?? [];
+    const open = list.filter((e) => e.status === 'open');
+    const loud = open.filter((e) => !e.fyi && (e.urgency === 'urgent' || e.urgency === 'critical')).length;
+    escBar.hidden = !list.length;
+    escBar.classList.toggle('pmc-esc-loud', loud > 0);
+    escText.textContent = open.length ? `🚩 ${open.length} escalation${open.length === 1 ? '' : 's'} to you${loud ? ` · ${loud} need${loud === 1 ? 's' : ''} you now` : ''}` : `🚩 Escalations: ${list.length} answered`;
+    el.classList.toggle('pmc-show-esc', showEsc && !!list.length);
+    escBtn.textContent = showEsc ? 'Back to the chat ▴' : 'Show ▾';
+    escBtn.setAttribute('aria-expanded', String(showEsc));
+  }
+  const el = h('section.pmc', { 'aria-label': 'Project console' }, head, escBar, screen, empty, escalations.el, foot);
   const term = new PmTerminal(net, termHost);
   term.onWrite = () => chat.terminalChanged();
 
@@ -277,6 +315,7 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     foot.hidden = emptyShown;
     if (emptyShown) emptyState(pm);
     escalations.render(roster);
+    drawEsc();
     screenNote.textContent = view.live ? '' : view.state === 'asleep' ? `💤 ${pm?.name ?? 'The Project Coordinator'} is asleep` : view.workerId ? '' : `${pm?.name ?? 'The Project Coordinator'} isn't at a desk on this floor`;
     screenNote.hidden = !screenNote.textContent;
     hint.textContent = view.hint ?? '';
@@ -313,6 +352,7 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
   return {
     el,
     sync,
+    showEscalations: () => setEsc(true),
     route(msg) {
       term.route(msg);
       if (msg.t === 'welcome') {
