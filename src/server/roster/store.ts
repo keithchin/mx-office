@@ -14,6 +14,7 @@ import type { Proposal, RosterSettings, Standup } from '../../shared/roster/type
 import { cleanOverrides, type SkillOverrides } from '../../shared/roster/skills.js';
 import { reviveSubagents, SUBAGENT_ACTIONS_KEPT } from './subagent-store.js';
 import type { SubagentAction, SubagentRecord } from '../../shared/roster/subagents.js';
+import { emptyOutbox, reviveOutbox, type Outbox } from './relays.js';
 
 /** Where a member is in its life: never hired, a worker now, writing its handoff, or benched. */
 export type Phase = 'none' | 'active' | 'benching' | 'benched';
@@ -59,6 +60,8 @@ export interface RosterData {
   subagents: Record<string, SubagentRecord>;
   /** Subagent actions a Lead proposed to the Project Manager, or asked them about. */
   subagentActions: SubagentAction[];
+  /** What the office has still to pass on to the Coordinator and the Leads (relays.ts): kept so a restart doesn't lose it. */
+  outbox: Outbox;
 }
 
 // Leads are benched only when the Project Manager says so; a floor can turn idle benching on in its settings.
@@ -109,7 +112,7 @@ export function freshRoster(rng: () => number = Math.random): RosterData {
   const names = pickNames(rng);
   const members = {} as Record<RoleId, MemberRecord>;
   for (const r of ROLES) members[r.id] = { name: names[r.id], model: r.model, phase: 'none' };
-  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [] };
+  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [], outbox: emptyOutbox() };
 }
 
 /** A saved roster, made whole: a role added since it was saved gets a name, a bad field its default. */
@@ -136,6 +139,7 @@ export function reviveRoster(raw: unknown, rng: () => number = Math.random): Ros
     spend: r.spend && typeof r.spend === 'object' && typeof r.spend.usd === 'number' ? { day: String(r.spend.day ?? ''), usd: r.spend.usd, seen: { ...(r.spend.seen ?? {}) } } : fresh.spend,
     subagents: reviveSubagents(r.subagents),
     subagentActions: Array.isArray(r.subagentActions) ? r.subagentActions.filter((a) => a && typeof a === 'object' && typeof a.id === 'string').slice(-SUBAGENT_ACTIONS_KEPT) : [],
+    outbox: reviveOutbox(r.outbox),
   };
 }
 

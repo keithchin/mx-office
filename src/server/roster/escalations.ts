@@ -14,6 +14,7 @@ import { ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
 import { URGENCIES, isFyi } from '../../shared/roster/autonomy.js';
 import { isAsleepStatus } from './bench.js';
 import { sameAsk } from './jeff-ask.js';
+import { coordinatorIs, queueOnce } from './relays.js';
 import type { Roster } from './index.js';
 import { escalationAnswerPrompt, escalationsToCoordinatorPrompt, owedAnswersPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
@@ -26,7 +27,8 @@ export const COORDINATOR_DEBOUNCE_MS = 60_000;
 const RESOLVED_SHOWN = 10;
 
 export class Escalations {
-  private outbox = new Map<string, { list: Escalation[]; timer?: NodeJS.Timeout }>();
+  /** The Coordinator's debounce per floor; what it's to hear is in the roster file's outbox. */
+  private timers = new Map<string, NodeJS.Timeout>();
 
   constructor(private roster: Roster) {}
 
@@ -218,40 +220,50 @@ export class Escalations {
   }
 
   // ---- Telling the Project Coordinator ---------------------------------------------------------
+  // What it hasn't heard is kept in the roster file (relays.ts), so a restart doesn't lose it; only
+  // the minute's debounce is in memory.
 
   private tellCoordinator(floor: TeamFloor, e: Escalation) {
-    const box = this.outbox.get(floor.id) ?? { list: [] };
-    box.list.push(e);
-    clearTimeout(box.timer);
-    box.timer = setTimeout(() => this.flushCoordinator(floor), COORDINATOR_DEBOUNCE_MS);
-    box.timer.unref?.();
-    this.outbox.set(floor.id, box);
+    const d = this.roster.data(floor.id);
+    d.outbox.escalations = queueOnce(d.outbox.escalations, e.id);
+    clearTimeout(this.timers.get(floor.id));
+    const timer = setTimeout(() => this.flushCoordinator(floor), COORDINATOR_DEBOUNCE_MS);
+    timer.unref?.();
+    this.timers.set(floor.id, timer);
   }
 
   /** The Coordinator's worker changed: back at its desk with escalations it hasn't heard yet. */
   onCoordinator(floor: TeamFloor, w: WorkerInfo) {
-    const box = this.outbox.get(floor.id);
-    if (box?.list.length && !box.timer && (w.status === 'idle' || w.status === 'done')) this.flushCoordinator(floor);
+    if (this.roster.data(floor.id).outbox.escalations.length && !this.timers.has(floor.id) && (w.status === 'idle' || w.status === 'done')) this.flushCoordinator(floor);
+  }
+
+  /** The minute's look: what waited through a restart (no timer then) goes out once it can. */
+  tick(floor: TeamFloor) {
+    if (this.roster.data(floor.id).outbox.escalations.length && !this.timers.has(floor.id)) this.flushCoordinator(floor);
   }
 
   /**
-   * Sends the Coordinator the queued escalations if it's at work; still-open ones only. An asleep one
-   * isn't woken (that costs a session): they wait. With no Coordinator they're on the console and the
-   * next standup page anyway.
+   * Sends the Coordinator the queued escalations if it's at work; still-open ones only. An asleep,
+   * benched or busy-asking one isn't woken (that costs a session): they wait in the outbox. A floor
+   * with no Coordinator at all lets them go: nobody else relays, the raiser already knows, and they're
+   * on the console and the next standup page anyway.
    */
   flushCoordinator(floor: TeamFloor): boolean {
-    const box = this.outbox.get(floor.id);
-    if (!box?.list.length) return false;
-    box.timer = undefined;
-    const pm = this.roster.data(floor.id).members.pm;
-    const w = this.roster.workerOf(floor, pm);
-    if (!w || pm.phase !== 'active') {
-      this.outbox.delete(floor.id);
+    const d = this.roster.data(floor.id);
+    if (!d.outbox.escalations.length) return false;
+    clearTimeout(this.timers.get(floor.id));
+    this.timers.delete(floor.id);
+    const open = d.outbox.escalations.map((id) => d.escalations.find((e) => e.id === id)).filter((e): e is Escalation => !!e && e.status === 'open');
+    const where = coordinatorIs(this.roster, floor);
+    if (where === 'away') {
+      d.outbox.escalations = open.map((e) => e.id);
+      this.roster.touch(floor, true);
       return false;
     }
-    if (isAsleepStatus(w.status) || w.status === 'needs_input') return false;
-    const open = box.list.filter((e) => e.status === 'open');
-    this.outbox.delete(floor.id);
+    d.outbox.escalations = [];
+    this.roster.touch(floor, true);
+    if (where === 'none') return false;
+    const w = this.roster.workerOf(floor, d.members.pm)!;
     const sent = open.length > 0 && !floor.prompt(w.id, escalationsToCoordinatorPrompt(open));
     if (sent) relayedToCoordinator(floor.id, w, open);
     return sent;

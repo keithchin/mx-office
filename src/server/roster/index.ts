@@ -22,6 +22,7 @@ import { Jeff } from './jeff.js';
 import { Members } from './members.js';
 import { Nudges } from './nudge.js';
 import { setFloorPause } from './pause.js';
+import { Relays } from './relays.js';
 import { StandupRunner } from './standup-run.js';
 import { Subagents } from './subagents.js';
 import { effectiveSkills } from '../../shared/roster/skills.js';
@@ -42,6 +43,7 @@ export class Roster {
   readonly nudges: Nudges;
   readonly jeff: Jeff;
   readonly subagents: Subagents;
+  readonly relays: Relays;
   /** Lead pull requests the office already labelled with their team (floor:number), so it asks GitHub once. */
   private labelled = new Set<string>();
   private files = new Map<string, RosterFile>();
@@ -55,6 +57,7 @@ export class Roster {
     this.nudges = new Nudges(this, tickMs > 0);
     this.jeff = new Jeff(this);
     this.subagents = new Subagents(this);
+    this.relays = new Relays(this);
     if (tickMs > 0) {
       this.timer = setInterval(() => this.tick(), tickMs);
       this.timer.unref?.();
@@ -122,7 +125,10 @@ export class Roster {
     this.escalations.onMember(floor, role, w);
     this.subagents.onMember(floor, role, now);
     if (role === 'pm') this.escalations.onCoordinator(floor, w);
-    else this.labelLeadPr(floor, role, w);
+    else {
+      this.relays.flushLead(floor, role, now);
+      this.labelLeadPr(floor, role, w);
+    }
     this.touch(floor, prev?.status === w.status && !capChanged);
   }
 
@@ -185,6 +191,8 @@ export class Roster {
       this.standups.tick(floor, now);
       this.nudges.tick(floor, LEADS.map((r) => r.id), now);
       this.subagents.tick(floor, now);
+      this.escalations.tick(floor);
+      this.relays.tick(floor, now);
     }
   }
 
