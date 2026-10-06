@@ -354,3 +354,21 @@ test('notifications are the Needs-you items: the right voice, the buttons that a
   assert.ok(!fresh.some((n) => n.kind === 'asking' || n.key === 'esc-e2'));
   assert.deepEqual(newAlerts(items, new Set(items.map((n) => n.key))), []);
 });
+
+test('a new sev1 incident sounds an alert on the team phone (a sev2 only waits in Needs you); Do not disturb holds it', () => {
+  const now = Date.UTC(2026, 9, 6, 12);
+  const incidents = [
+    { id: 'i1', number: 1, title: 'Real agents started', severity: 'sev1' as const, status: 'open' as const, floors: [], detectedAt: now - 60_000 },
+    { id: 'i2', number: 2, title: 'Crash loop', severity: 'sev2' as const, status: 'open' as const, floors: ['f1'], detectedAt: now - 30_000 },
+  ];
+  const items = collectNeeds({ floor: 'f1', workers: [], roster: undefined, pulls: [], floors: [], incidents });
+  assert.deepEqual(items.filter((n) => n.kind === 'incident').map((n) => n.key), ['incident-i1', 'incident-i2']);
+  const fresh = newAlerts(items, new Set());
+  assert.deepEqual(fresh.map((n) => n.key), ['incident-i1']);
+  assert.equal(fresh[0].level, 'block');
+  assert.deepEqual(newAlerts(items, new Set(['incident-i1'])), [], 'once');
+  // It's red: shown now even with a digest on, and dropped while Do not disturb is on.
+  const s = cleanAlerts(undefined);
+  assert.equal(alertPlan(fresh[0].level === 'block', { ...s, digestMinutes: 15 }, now), 'now');
+  assert.equal(alertPlan(fresh[0].level === 'block', { ...s, dndUntil: Infinity }, now), 'drop');
+});

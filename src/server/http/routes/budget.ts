@@ -15,6 +15,8 @@ import type { FirmForecast } from '../../../shared/budget/types.js';
 import { cleanFx } from '../../budget/fx.js';
 import { floorView, officeView } from '../../budget/view.js';
 import { readBody, sameOrigin, send } from '../util.js';
+import { refuseStale } from '../../phone-access/reauth.js';
+import { raisesBudget } from '../../phone-access/risky.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 import { whoOf } from './notify-teams.js';
@@ -110,6 +112,8 @@ export const budgetRoutes = {
       const fl = ctx.floors.get(typeof body.floor === 'string' ? body.floor : '');
       if (!fl) return send(res, 404, { error: 'No such floor' });
       const floor = { id: fl.id, name: fl.def.name, dir: fl.dir };
+      // Through Phone access, raising the budget needs the password again (phone-access/reauth.ts).
+      if (refuseStale(ctx, req, res, () => raisesBudget(body, b.file(floor).settings))) return;
       let err: string | undefined;
       let note: string | undefined;
       switch (body.action) {

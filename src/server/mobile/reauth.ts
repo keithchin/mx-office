@@ -51,7 +51,7 @@ export class ReauthBook {
 }
 
 const books = new WeakMap<object, ReauthBook>();
-export function reauthOf(ctx: Ctx): ReauthBook {
+export function reauthOf(ctx: Pick<Ctx, 'cfg'>): ReauthBook {
   let b = books.get(ctx.cfg);
   if (!b) books.set(ctx.cfg, (b = new ReauthBook()));
   return b;

@@ -6,7 +6,27 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **Risky desktop actions through Phone access ask for the password again**: on the 3D office, /lite,
+  /pixel or /home opened through the phone tunnel, merging a PR, hiring, raising a team cap or a budget,
+  approving a merge-order, security, data-loss or budget-overrun escalation, ▶ Resume / ⏸ Pause /
+  🔁 Restart safely, changing Connections (credentials, the Teams webhook, Phone access), opening Studio
+  Pro and resolving an incident need a sign-in from the last 10 minutes, like the phone version. A
+  password window (✕ or Esc cancels) asks, then the action goes through. The office's own address never
+  asks.
+- **A sev1 incident sounds on the Team phone**: a desktop notification and its sound, held by Do not
+  disturb like the phone's other red items.
+
+### Changed
+- **Test mode refuses every real agent CLI**: only the fake given with `--agent` starts, and not even
+  that when it is a real CLI itself (`--agent codex` for Claude workers). A fake named `claude.cmd`
+  still works when it lives in a test office's folder.
+- **Test mode turns itself on only for test offices**: under `scratch/test-offices` or a folder named
+  `test-office…` (plus `--test-mode` and `AGENT_OFFICE_TEST_MODE`). A plain `scratch` folder no longer
+  does.
+- **The incidents of 2026-10-06 go only to offices that ran that day**: their audit log has events from
+  that day (UTC+8); one that only ran before or after it gets none. `AGENT_OFFICE_SEED_INCIDENTS` still
+  overrides.
 
 ## 2026-10-06 · release 13 (`92d43b6`)
 

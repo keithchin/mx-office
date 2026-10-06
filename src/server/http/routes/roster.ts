@@ -15,6 +15,9 @@ import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 import { audit, human } from '../../audit/index.js';
 import { hireHoldOf, overrideHold } from '../../project-run/store.js';
+import { isRisky } from '../../../shared/mobile.js';
+import { refuseStale } from '../../phone-access/reauth.js';
+import { raisesTeamCap } from '../../phone-access/risky.js';
 
 const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation', 'skill', 'subagent', 'subagent-decide']);
 const DECISIONS = new Set<Decision>(['approve', 'reject', 'change']);
@@ -71,6 +74,12 @@ export const rosterRoutes = {
       const role = isRoleId(body.role) ? body.role : undefined;
       const needRole = ['hire', 'bench', 'rename', 'model', 'skill', 'subagent'].includes(action);
       if (needRole && !role) return send(res, 400, { error: 'Which role?' });
+      // Through Phone access, what lets more be spent or code land needs the password again (phone-access/reauth.ts).
+      const risky = () =>
+        action === 'hire' ||
+        (action === 'settings' && raisesTeamCap(roster.data(floor.id).settings, body.settings)) ||
+        (action === 'escalation' && isRisky({ do: 'escalation', verdict: String(body.verdict) }, roster.escalations.view(team).find((e) => e.id === body.escalation)));
+      if (refuseStale(ctx, req, res, risky)) return;
       let error: string | undefined;
       switch (action) {
         case 'hire': {

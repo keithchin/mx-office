@@ -65,6 +65,7 @@ import { installWalking } from './features/walking';
 import { installWhiteboard } from './features/whiteboard';
 import { installWorkerActions } from './features/workers/actions';
 import { installWorkerViews } from './features/workers/views';
+import { installReauth } from './ui/reauth';
 
 // The 1D view is where the office opens, unless this browser picked the 2D view or walking around it
 // (see graphics.ts). The 1D and 2D views each have a page of their own.
@@ -114,6 +115,8 @@ parts.rooftop = installRooftop(ctx, { ambient: parts.stage.ambient, hemi: parts.
 
 // You, and how you talk to the office.
 parts.net = new Net(() => store.profile, () => parts.arrival.whereNow());
+// Through Phone access, risky actions ask for the password again (ui/reauth.ts).
+installReauth(parts.net);
 parts.voice = new Voice(parts.net);
 parts.me = makeMe(ctx);
 parts.settings = loadSettings();

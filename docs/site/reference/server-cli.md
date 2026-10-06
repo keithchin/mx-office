@@ -41,7 +41,7 @@ Given a `[dir]`, the office keeps its data in `<dir>/.agent-office` and that pro
 | `--reset-password` | Forget the generated password and exit |
 | `--no-open` | Don't open the browser |
 | `--agent <cmd>`, `--agent-args <str>` | Default agent command and extra arguments (a command named after no provider runs Claude Code workers too) |
-| `--test-mode` | Refuse to start any real agent CLI; only the fake `--agent` runs (also `AGENT_OFFICE_TEST_MODE=1`, and on by itself under a `scratch` or `test-offices` folder) |
+| `--test-mode` | Refuse to start any real agent CLI; only the fake `--agent` runs (also `AGENT_OFFICE_TEST_MODE=1`, and on by itself under `scratch/test-offices` or a folder named `test-office…`) |
 | `--dsh-profile <n>` | DeepSeek Harness profile |
 | `--tls-cert <file>`, `--tls-key <file>` | Serve HTTPS with your certificate |
 | `--self-signed` | Serve HTTPS with a generated certificate |

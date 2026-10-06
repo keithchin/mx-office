@@ -8,6 +8,7 @@ import { phoneAccessOf } from '../../phone-access/index.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { whoOf } from './notify-teams.js';
+import { refuseStale } from '../../phone-access/reauth.js';
 
 export const phoneAccessRoutes = {
   view: {
@@ -33,6 +34,9 @@ export const phoneAccessRoutes = {
       } catch {
         return send(res, 400, { error: 'Send JSON' });
       }
+      // Through the tunnel itself, changing it needs the password again; switching it off never does.
+      const offOnly = body.on === false && body.provider === undefined && body.hostname === undefined && body.signIn !== true;
+      if (!offOnly && refuseStale(ctx, req, res)) return;
       const who = whoOf(session.account?.name, body.by);
       const p = phoneAccessOf(ctx);
       const m = p.manager;

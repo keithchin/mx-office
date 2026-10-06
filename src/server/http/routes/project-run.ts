@@ -13,6 +13,7 @@ import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 import { whoOf } from './notify-teams.js';
+import { refuseStale } from '../../phone-access/reauth.js';
 
 const ACTIONS = new Set<ResumeAction>(['wake', 'rehire', 'send-home', 'skip']);
 
@@ -70,6 +71,8 @@ export const projectRunRoutes = {
       if (!ctx.meOf(session.account?.id).admin) return send(res, 403, { error: 'Only the Project Manager (an admin) can resume or pause a project' });
       const b = await body(req);
       if (!b) return send(res, 400, { error: 'Send JSON' });
+      // Through Phone access, pausing, resuming and carrying on a run need the password again.
+      if ((b.action === 'resume' || b.action === 'pause' || b.action === 'continue') && refuseStale(ctx, req, res)) return;
       const who = whoOf(session.account?.name, b.by);
       const floors = b.all === true ? [...ctx.floors.keys()] : typeof b.floor === 'string' && ctx.floors.has(b.floor) ? [b.floor] : [];
       if (!floors.length) return send(res, 404, { error: 'No such floor' });
@@ -128,6 +131,7 @@ export const projectRunRoutes = {
       if (!b) return send(res, 400, { error: 'Send JSON' });
       const r = safeRestartOf(ctx);
       const action = typeof b.action === 'string' ? b.action : 'start';
+      if ((action === 'start' || action === 'anyway') && refuseStale(ctx, req, res)) return;
       const err =
         action === 'start'
           ? r.start(whoOf(session.account?.name, b.by), { build: b.build === true, timeoutMin: typeof b.timeoutMin === 'number' ? b.timeoutMin : undefined, byId: session.account?.id })

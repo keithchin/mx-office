@@ -12,6 +12,7 @@ import type { StudioOpenResult } from '../../../shared/studio.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
+import { refuseStale } from '../../phone-access/reauth.js';
 
 /** Each problem as an HTTP status: nothing to open is the floor's, the rest the office machine's. */
 const STATUS = { 'no-mpr': 404, 'no-desktop': 503, 'not-windows': 503, 'not-installed': 503 } as const;
@@ -36,6 +37,7 @@ export const studioRoutes = {
     async handle(ctx, { req, res, session }) {
       if (!sameOrigin(req, ctx.cfg)) return send(res, 403, { error: 'Forbidden' });
       if (!ctx.meOf(session.account?.id).admin) return send(res, 403, { error: 'Only admins can open the project in Studio Pro' });
+      if (refuseStale(ctx, req, res)) return;
       let body: Record<string, unknown>;
       try {
         body = JSON.parse((await readBody(req, 4096)) || '{}');

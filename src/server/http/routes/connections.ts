@@ -12,6 +12,7 @@ import { updateOfficeSettings } from '../../connections/store.js';
 import { checkTools, cleanIdentity } from '../../connections/tools.js';
 import { audit, human } from '../../audit/index.js';
 import { runSweep, setSweep } from '../../worktree-sweep/index.js';
+import { refuseStale } from '../../phone-access/reauth.js';
 
 const str = (v: unknown, max = 4096) => (typeof v === 'string' ? v.slice(0, max) : '');
 
@@ -30,6 +31,8 @@ export const connectionsRoutes = {
       }
       if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
       if (!sameOrigin(req, ctx.cfg)) return send(res, 403, { error: 'Forbidden' });
+      // Through Phone access, changing them needs the password again (testing one doesn't).
+      if (p !== '/api/connections/test' && refuseStale(ctx, req, res)) return;
       let body: Record<string, unknown> = {};
       try {
         const text = await readBody(req, 16 * 1024);

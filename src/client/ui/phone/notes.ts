@@ -76,7 +76,14 @@ export function redCount(items: readonly NeedItem[], floors: readonly { id: stri
  */
 const OWN_ALERT: ReadonlySet<NeedKind> = new Set(['escalation', 'approval', 'paused', 'pr', 'setup', 'live', 'studio', 'audit', 'lost', 'floor']);
 
-/** Items new since `seen` that the phone alerts for (a loud escalation already alerted on its own). */
+/** Whether an item alerts by its kind: those above, and a sev1 incident (red; a sev2 only waits in Needs you). */
+const alerts = (n: NeedItem) => OWN_ALERT.has(n.kind) || (n.kind === 'incident' && n.level === 'block');
+
+/**
+ * Items new since `seen` that the phone alerts for (a loud escalation already alerted on its own). They
+ * go through the phone's alert policy (alerts.ts): Do not disturb holds them all; red ones, a sev1
+ * incident among them, skip the digest like any other red item.
+ */
 export function newAlerts(items: readonly NeedItem[], seen: ReadonlySet<string>): NeedItem[] {
-  return items.filter((n) => !seen.has(n.key) && OWN_ALERT.has(n.kind) && !(n.kind === 'escalation' && n.level === 'block'));
+  return items.filter((n) => !seen.has(n.key) && alerts(n) && !(n.kind === 'escalation' && n.level === 'block'));
 }
