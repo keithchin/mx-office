@@ -6,7 +6,51 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **📦 Deliverables**: every team page starts with a checklist of what that team owes at each toolkit
+  stage (triage, source ledger, knowledge base, BRDs and the BRD report; brand, ds.css, design system,
+  wireframes, storyboard; blueprint, domain model, ADRs, fit-gap, build plan, module briefs; test plan,
+  journeys, UI reviews, evidence; standups), each **On main**, **On a branch** (not merged, with the
+  branch and who), **Draft** or **Missing**, plus what the team made beyond the list. The office looks
+  in the floor's checkout, in each hired Lead's worktree (uncommitted work too) and on every `office/*`
+  branch, so work like travel-approval's Stage 1–2 reports on unmerged branches finally shows. Click a
+  file to read it: HTML reports in a sandboxed frame (no network, no origin), Markdown, pictures, PDFs,
+  a CSV's first rows, JSON. The setup panel shows the counts per stage with **Open deliverables →**.
+- **office-workers export-pdf** and **office-workers screenshot**: a Lead turns an HTML file of its
+  worktree into a PDF or a PNG with the office's own headless Chromium (no network, files inside its
+  worktree only), for a BRD PDF or a storyboard of wireframes, with nothing installed in the project.
+- **Early drafts** (⚙️ Settings → Deliverables, on by default): while the Chief Analyst is on Stages
+  0–2, the Lead Designer makes low-fi wireframes, the Lead Developer a draft domain model and
+  architecture sketch, and the Lead Tester a test-plan outline, all marked as drafts, small, and revised
+  once the BRDs are confirmed. Turn it off and they wait for their stage.
+
+### Improved
+- Every Lead's Playbook now has a **Your deliverables** section: the exact files it hands over per
+  stage (for the Chief Analyst also `docs/requirements/BRD-<feature>.pdf`, `use-cases.xlsx` and a
+  Mermaid `process-flow.md`; for the Lead Designer a storyboard; for the Lead Developer
+  `architecture/domain-model.md` and ADRs; for the Lead Tester `tests/test-plan.md`), how to make them
+  on the office machine (`py` with openpyxl and matplotlib, Mermaid, the new render commands), and to
+  keep them on a branch with a pull request so they merge.
+- The Design team page's 🖼️ Design artifacts panel is replaced by 📦 Deliverables, which covers it.
+
+### Fixed
+- **The setup panel no longer trusts a stale floor folder.** It reads `PROJECT.md`, `intake.md`,
+  `triage.md` and the gate dashboard from the project's default branch on GitHub (`origin/main`), after
+  a quiet fetch at most every 90 seconds, instead of whatever branch the floor's folder is on
+  (travel-approval's folder sat on an old branch, 23 commits behind, and showed Stage 0 failing long
+  after main had it signed off). When `origin/main` moves, the office re-runs the toolkit's gate-check
+  on it in a temporary worktree it deletes afterwards (at most every three minutes per floor), so the
+  verdicts follow merges; 🔄 Re-check gates does the same now. The panel says when the folder is on
+  another branch or behind, and more than 10 commits behind adds a 🌿 item to Needs you.
+
+### To know
+- Branch work shows as *not merged*: only what lands on main counts, so Leads still need their PRs
+  merged. The scan is read-only and never touches a branch or worktree.
+- Mermaid diagrams in Markdown show as their source in the viewer (the page has no diagram renderer);
+  an HTML report that loads Mermaid from a CDN (the toolkit's `blueprint.html`) gets the office's own copy.
+- Excel workbooks are offered as a download, not previewed (the office has no xlsx parser).
+- The render commands need playwright-core and its Chromium on the office machine (this office has
+  both); without them they say so. A project with no remote keeps the old setup-panel behaviour.
 
 ## 2026-10-06 · release 6 (`c1c4a1e`)
 

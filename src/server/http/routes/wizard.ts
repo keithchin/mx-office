@@ -23,7 +23,7 @@ export const wizardRoutes = {
         }
         if (p === '/api/wizard/app-version') return send(res, 200, await w.appVersion(url.searchParams.get('repo') ?? ''));
         const floor = floorParam(ctx, url);
-        if (p === '/api/wizard/setup') return floor ? send(res, 200, { ...w.setup(floor), admin }) : send(res, 404, { error: 'No such floor' });
+        if (p === '/api/wizard/setup') return floor ? send(res, 200, { ...(await w.setup(floor)), admin }) : send(res, 404, { error: 'No such floor' });
         if (p === '/api/wizard/answers') return floor ? send(res, 200, { repo: floor.def.repo, answers: w.answersOf(floor) }) : send(res, 404, { error: 'No such floor' });
         return send(res, 404, { error: 'Not found' });
       }

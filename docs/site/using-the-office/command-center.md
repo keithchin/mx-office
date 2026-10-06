@@ -26,6 +26,7 @@ Everything waiting for a human on this floor, most urgent first; escalations in 
 | 💸 | *Spend cap reached: office prompts paused; agents finish their current turn* (the daily cap is spent) | **Settings** |
 | ❌ | *PR #n has failing checks* | **Open PR #n** |
 | ✋ | *Stage X waits for your sign-off* | **Sign off**: scrolls to the setup panel |
+| 🌿 | *This floor's folder is on &lt;branch&gt;, N commits behind main* (only past 10 commits; last of this floor's items) | **Setup** |
 | 🌐 | *The live app failed* | **Live app** |
 | 🌿 | A worktree was deleted outside the office | **Fix** |
 | 🙋 | *N waiting on &lt;other floor&gt;* | **Go** |
@@ -40,9 +41,13 @@ Everything waiting for a human on this floor, most urgent first; escalations in 
 Shown for toolkit projects until the build plan is confirmed.
 
 - Chips for the entry mode (🧭) and the size tier (📏).
-- Buttons **🧭 Entry mode**, **📝 Intake** and **👥 Team** reopen the wizard at that page. **🔄 Re-check gates** (admins only) runs the toolkit's `gate-check.sh` over this floor's checkout, about a minute, so the verdicts are fresh. It rewrites the gate dashboard (`index.html`) and the *Current stage* line in `PROJECT.md`, left uncommitted for the next commit. It doesn't change answers or decisions, start agents or push anything. **ℹ️ What does Re-check gates do?** under the panel says the same.
+- Buttons **🧭 Entry mode**, **📝 Intake** and **👥 Team** reopen the wizard at that page.
+- **The stages are read from the project's default branch on GitHub** (`origin/main`, from `origin/HEAD`, else `main` or `master`), not from whatever branch the floor's folder is on: `PROJECT.md`, `intake.md`, `triage.md` and the gate dashboard `index.html`, after a quiet `git fetch` at most every 90 seconds. A committed `index.html` is often stale, so whenever `origin/main` moves (a pull request merged) the office runs the toolkit's `gate-check.sh` on it in a temporary detached worktree, with the floor's `toolkit.env`, and deletes the worktree afterwards: at most once every three minutes per floor, one at a time, five minutes at most. The floor's folder is never written to.
+- When the folder isn't on the default branch, or is behind it, the panel says so: *This folder is on run4/discovery-p-4, 23 commits behind main; the stages below are read from main.* More than 10 commits behind also puts a 🌿 item in Needs you.
+- **🔄 Re-check gates** (admins only) runs that gate-check now. A project with no remote is read from the floor's folder as before, and Re-check runs `gate-check.sh` there (it rewrites `index.html` and the *Current stage* line in `PROJECT.md`, left uncommitted). It doesn't change answers or decisions, start agents or push anything. **ℹ️ What does Re-check gates do?** under the panel says the same.
 - The stages **P** Kickoff, **0** Triage & scope, **1** Analysis, **2** Requirements, **3** Architecture & design, **4** Build plan, each ✅ PASS, ⏳ PENDING, ⚠️ FAIL, ↷ WAIVED or ✋ MANUAL.
 - *Next: …* and **❓ N open questions**.
+- **📦 Deliverables**: per stage, how many expected deliverables are on main (and how many only on a branch or drafts), and **Open deliverables →** for every team's list. See [Deliverables](deliverables.md).
 
 See [The toolkit](../integrations/toolkit.md).
 

@@ -19,6 +19,7 @@ import { rankingRoutes } from './ranking.js';
 import { rosterRoutes } from './roster.js';
 import { searchRoutes } from './search.js';
 import { teamRoutes } from './teams.js';
+import { deliverableRoutes } from './deliverables.js';
 import { serviceRoutes } from './services.js';
 import { studioRoutes } from './studio.js';
 import { wizardRoutes } from './wizard.js';
@@ -76,6 +77,7 @@ export const routes: readonly Route[] = [
   chatterRoutes.page,
   teamRoutes.page,
   teamRoutes.labels,
+  deliverableRoutes.deliverables,
   wizardRoutes.wizard,
   studioRoutes.info,
   studioRoutes.open,

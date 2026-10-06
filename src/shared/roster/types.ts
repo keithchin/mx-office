@@ -33,6 +33,12 @@ export interface RosterSettings {
    * passed and `build` from then on, through the same change a level picked by hand goes through.
    */
   autonomyByStage: AutonomyByStage;
+  /**
+   * While the Chief Analyst is on Stages 0-2, Design, Development and Testing make small drafts marked
+   * as such (low-fi wireframes, a draft domain model, a test-plan outline); off, they wait for the stage.
+   * Written into their Playbooks (roster/deliverables-brief.ts). On by default.
+   */
+  earlyDrafts: boolean;
 }
 
 export interface AutonomyByStage {

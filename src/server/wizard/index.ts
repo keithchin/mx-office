@@ -20,7 +20,8 @@ import { existingAnswers, parseIntakeTemplate } from './intake.js';
 import { JobBook, jobId, newJob, viewOf, type JobState } from './job.js';
 import { mprVersion } from './mendix-app.js';
 import { cleanPlan } from './plan.js';
-import { setupView } from './setup.js';
+import { setupView, setupViewOf } from './setup.js';
+import { GateSource, branchInfo } from './gate-source.js';
 import { withFloorToolkitEnv } from '../toolkit-env.js';
 import { bashPath, runCommand } from './run.js';
 import { setupSteps, type FloorRef, type SetupDeps } from './steps.js';
@@ -34,11 +35,19 @@ export class Wizard {
   /** Floors whose gate-check is running now (🔄 Re-check), and when each last finished. */
   private checking = new Set<string>();
   private checkedAt = new Map<string, number>();
+  /** The gates read from each floor's default branch, and gate-check run there when it moves (gate-source.ts). */
+  private gates: GateSource;
 
   constructor(private ctx: Ctx) {
     this.cfg = wizardConfig();
     // Its runs are on the office's workflow engine; <office data>/wizard/ holds the jobs saved before it, taken in on load.
     this.book = new JobBook(path.join(ctx.cfg.dataDir, 'wizard'), redactor([]), flowsOf(ctx));
+    this.gates = new GateSource((tmp, floorDir) => this.gateCheck(tmp, floorDir, 5 * 60_000).then(() => undefined));
+  }
+
+  /** The toolkit's gate-check over `dir`, with the floor's toolkit.env (read from the floor's own folder). */
+  private gateCheck(dir: string, floorDir: string, timeoutMs: number) {
+    return runCommand(this.cfg.bash, [bashPath(path.join(this.cfg.toolkitDir, 'bin', 'gate-check.sh')), bashPath(dir)], { cwd: dir, env: withFloorToolkitEnv(floorDir, toolkitEnv(this.cfg)), timeoutMs, allowFail: true });
   }
 
   info(admin: boolean): WizardInfo {
@@ -114,23 +123,47 @@ export class Wizard {
     return this.book.byFloor(floor.id) ?? this.book.all().find((j) => sameRepo(`${j.plan.owner}/${j.plan.name}`, floor.def.repo));
   }
 
-  setup(floor: Floor): SetupView {
-    const v = setupView(floor.dir);
-    return { ...v, job: this.jobForFloor(floor)?.id, checking: this.checking.has(floor.id), checkedAt: this.checkedAt.get(floor.id) };
+  /** The setup panel's view: from the default branch on GitHub when there is one, else from the floor's folder. */
+  async setup(floor: Floor): Promise<SetupView> {
+    const job = this.jobForFloor(floor)?.id;
+    const g = await this.gates.read(floor.dir).catch(() => undefined);
+    if (!g) return { ...setupView(floor.dir), job, checking: this.checking.has(floor.id), checkedAt: this.checkedAt.get(floor.id) };
+    const { info } = g;
+    const off = info.branch !== info.def || info.behind > 0;
+    return {
+      ...setupViewOf(g.files),
+      job,
+      checking: g.regenerating,
+      checkedAt: g.renderedAt,
+      readFrom: `origin/${info.def}`,
+      ...(off ? { checkout: { branch: info.branch, behind: info.behind, defaultBranch: info.def } } : {}),
+    };
   }
 
-  /** Runs gate-check over a floor's project in the background, so the panel's verdicts are fresh. */
+  /**
+   * Runs gate-check in the background so the panel's verdicts are fresh: on the default branch in a
+   * temporary worktree when the project has one (the floor's folder untouched), else over the folder.
+   */
   recheck(floor: Floor): string | undefined {
-    if (this.checking.has(floor.id)) return undefined;
+    const dir = floor.dir;
+    void branchInfo(dir).then((info) => {
+      if (info) return void this.gates.regenerate(dir, info, true);
+      this.recheckFolder(floor);
+    });
+    return undefined;
+  }
+
+  /** gate-check over the floor's own folder (it rewrites index.html there): only for a project with no remote. */
+  private recheckFolder(floor: Floor) {
+    if (this.checking.has(floor.id)) return;
     this.checking.add(floor.id);
     const dir = floor.dir;
-    void runCommand(this.cfg.bash, [bashPath(path.join(this.cfg.toolkitDir, 'bin', 'gate-check.sh')), bashPath(dir)], { cwd: dir, env: withFloorToolkitEnv(dir, toolkitEnv(this.cfg)), timeoutMs: 10 * 60_000, allowFail: true })
+    void this.gateCheck(dir, dir, 10 * 60_000)
       .catch((err: Error) => console.error(`agent-office: gate-check on ${floor.def.name} failed: ${err.message}`))
       .finally(() => {
         this.checking.delete(floor.id);
         this.checkedAt.set(floor.id, Date.now());
       });
-    return undefined;
   }
 
   /**

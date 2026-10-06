@@ -17,6 +17,7 @@ import { journalPath, playbookMirror, playbookPath, ROLE_BY_ID, ROLES, standupPa
 import { craftOn, skillsBrief, type SkillOverrides } from '../../shared/roster/skills.js';
 import type { SubagentRecord } from '../../shared/roster/subagents.js';
 import { applyStanding } from './subagent-files.js';
+import { deliverablesBrief } from './deliverables-brief.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
 export const FIELD_LESSONS = '.ai-context/skills/mxcli-field-lessons/SKILL.md';
@@ -35,6 +36,8 @@ export interface PlaybookContext {
   /** The member's skill overrides (shared/roster/skills.ts), and its subagents' standing. */
   skills?: SkillOverrides;
   subagents?: SubagentRecord[];
+  /** The floor's early-drafts setting (on unless it was turned off): Design, Development and Testing draft before Stage 3. */
+  earlyDrafts?: boolean;
 }
 
 /** Where the mxcli-project-toolkit clone is (the same setting the new-project wizard uses). */
@@ -140,6 +143,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     '',
     ...roleSpecific(role, ctx),
     '',
+    ...deliverablesBrief(roleId, ctx.earlyDrafts ?? true),
   ].join('\n');
 }
 
