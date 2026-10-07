@@ -175,7 +175,8 @@ export function phoneFrame(onOpenChange: (open: boolean) => void): Frame {
   window.addEventListener('resize', place);
   const bar = document.querySelector<HTMLElement>('#lite-nav, #px-foot');
   if (bar) new ResizeObserver(place).observe(bar);
-  place();
+  // On the next frame, not while the page is still being built: reading the bar's size here forced a layout of the whole page.
+  requestAnimationFrame(place);
 
   return {
     launcher,
@@ -188,9 +189,13 @@ export function phoneFrame(onOpenChange: (open: boolean) => void): Frame {
     isOpen: () => open,
     setOpen,
     setBadge(b, label) {
-      badge.className = `tp-badge tp-badge-${b.kind}`;
-      badge.textContent = b.kind === 'count' ? (b.n > 99 ? '99+' : String(b.n)) : '';
-      launcher.setAttribute('aria-label', `Team phone${label ? `: ${label}` : ''}`);
+      // Written only when it changes: it's worked out on every worker update, and each write restyles the page.
+      const cls = `tp-badge tp-badge-${b.kind}`;
+      const text = b.kind === 'count' ? (b.n > 99 ? '99+' : String(b.n)) : '';
+      const aria = `Team phone${label ? `: ${label}` : ''}`;
+      if (badge.className !== cls) badge.className = cls;
+      if (badge.textContent !== text) badge.textContent = text;
+      if (launcher.getAttribute('aria-label') !== aria) launcher.setAttribute('aria-label', aria);
     },
   };
 }

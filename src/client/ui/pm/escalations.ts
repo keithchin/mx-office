@@ -144,14 +144,28 @@ function saying(e: Escalation): string {
 
 const OUTFIT: Record<string, Outfit> = { pm: 'pm', 'lead-designer': 'designer', 'lead-developer': 'dev', 'lead-tester': 'qa', 'chief-analyst': 'analyst', 'solo-lead': 'dev' };
 
+/** Work that can wait for the next frames, done at most FACE_MS of it a frame. */
+const FACE_MS = 8;
+const pending: (() => void)[] = [];
+function later(fn: () => void) {
+  pending.push(fn);
+  if (pending.length === 1) requestAnimationFrame(drain);
+}
+function drain() {
+  const end = performance.now() + FACE_MS;
+  while (pending.length && performance.now() < end) pending.shift()!();
+  if (pending.length) requestAnimationFrame(drain);
+}
+
 /** The agent that raised `e` from the waist up, with its name and role under it. */
 function raisedBy(e: Escalation): HTMLElement {
   const role = e.role ? ROLE_BY_ID.get(e.role) : undefined;
   const w = store.workers.get(e.workerId);
   const color = (role && ZONE_BY_TEAM.get(role.team)?.color) ?? w?.color ?? '#00a6a6';
-  const src = standing(lookFor(e.workerId, color, (e.role && OUTFIT[e.role]) || 'plain'), 'front', false, 0);
   const c = h('canvas.esc-face', { width: 24, height: 24, role: 'img', 'aria-label': `${e.by}${role ? `, ${role.title}` : ''}` }) as HTMLCanvasElement;
-  c.getContext('2d')!.drawImage(src, 0, 0, 24, 24, 0, 0, 24, 24);
+  // Drawn a few at a time after the cards are on the page: a long list's faces (each a sprite made the
+  // first time) held up the console's first draw by a quarter of a second (the performance guard).
+  later(() => c.getContext('2d')!.drawImage(standing(lookFor(e.workerId, color, (e.role && OUTFIT[e.role]) || 'plain'), 'front', false, 0), 0, 0, 24, 24, 0, 0, 24, 24));
   return h('figure.esc-who', { title: `Raised by ${e.by}${role ? ` (${role.title})` : ''}` }, c, h('figcaption', {}, e.by), role ? h('small', {}, role.title) : null);
 }
 

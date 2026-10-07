@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { meterCliResult, withBilling } from './budget/meter.js';
 import os from 'node:os';
 import type { WorkerTask } from '../shared/protocol.js';
+import { officeCliRefused } from './testmode.js';
 
 /** What a worker has been asked and has been doing lately. */
 export interface TaskContext {
@@ -130,6 +131,7 @@ function describe(ctx: TaskContext): string {
 }
 
 function run(claude: string, env: Record<string, string>, system: string, input: string): Promise<string | null> {
+  if (officeCliRefused(claude)) return Promise.resolve(null);
   const args = [
     '-p',
     '--model', 'haiku',

@@ -5,13 +5,13 @@
 // line and a `delivery.expired` audit event, and the same prompt held twice goes in once.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { AuditEvent } from '../src/shared/audit.js';
 import type { RosterAlert, WorkerInfo, WorkerStatus } from '../src/shared/protocol.js';
 import { AuditLog, useAudit } from '../src/server/audit/index.js';
-import { Roster } from '../src/server/roster/index.js';
+import { Roster, flushRoster, rosterFor } from '../src/server/roster/index.js';
 import { HELD_KEPT, HELD_TTL_MS, heldId, reviveHeld } from '../src/server/roster/held.js';
 import { setProjectPause } from '../src/server/project-run/store.js';
 import type { TeamFloor } from '../src/server/roster/types.js';
@@ -239,4 +239,30 @@ test('a saved list is revived whole: bad rows dropped, repeated ids once, an old
   const kept = reviveHeld(many);
   assert.equal(kept.length, HELD_KEPT);
   assert.equal(kept[0].id, 'i5', 'the oldest go first');
+});
+
+// The journey test (scripts/perf/journey.mjs) found a held prompt lost by a safe restart: the roster's
+// save waits half a second on an unref'd timer, and the office's shutdown never wrote it, so the
+// restart's exit came first. The shutdown now writes the roster (flushRoster in server.ts).
+test('a held prompt is on disk the moment the office shuts down, without waiting for the save', () => {
+  const floor = new FakeFloor();
+  const x = floor.add('x1', 'Ada', 'needs_input');
+  const o = office(floor);
+  const key = {};
+  assert.equal(rosterFor(key, () => o.roster), o.roster);
+  assert.equal(o.roster.delivery.send(floor, floor.worker(x)!, 'Held through the restart', { origin: 'person', by: 'Kim', hold: true }).status, 'held');
+  const file = path.join(o.dataDir, 'roster', `${floor.id}.json`);
+  const heldOnDisk = () => existsSync(file) && (JSON.parse(readFileSync(file, 'utf8')) as { held?: { text: string }[] }).held?.some((h) => h.text === 'Held through the restart');
+  assert.ok(!heldOnDisk(), 'not yet: the save waits');
+  flushRoster(key);
+  assert.ok(heldOnDisk(), 'written by the shutdown');
+  flushRoster({});
+  o.roster.stop();
+});
+
+test("the office's shutdown writes the roster", () => {
+  const src = readFileSync(new URL('../src/server/server.ts', import.meta.url), 'utf8');
+  const shutdown = src.slice(src.indexOf('const shutdown = '), src.indexOf('};', src.indexOf('const shutdown = ')));
+  assert.match(shutdown, /flushRoster\(ctx\.cfg\)/);
+  assert.ok(shutdown.indexOf('flushRoster(') > shutdown.indexOf('f.shutdown(keep)'), 'after the floors stop (their workers leaving touch the roster too)');
 });

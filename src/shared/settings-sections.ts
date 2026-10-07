@@ -30,6 +30,7 @@ export const SETTINGS_SECTIONS = [
   { id: 'studio', icon: '🧱', label: 'Studio', blurb: 'This project’s Mendix model in Studio Pro on the office’s computer, and Studio mode (the agents’ mxcli writes paused while it’s open).', floor: true },
   { id: 'appearance', icon: '🎨', label: 'Appearance', blurb: 'The flat views’ color theme (yours), and the building’s holiday theme and map (everyone’s).' },
   { id: 'advanced', icon: '🛠️', label: 'Advanced', blurb: 'Where new projects are cloned, the sky’s clock, the office dog, and the office’s settings files.' },
+  { id: 'testing', icon: '🧪', label: 'Testing', blurb: 'Test mode (whether this office is in it, and why), and the Test Mode page: the performance and journey suites, run against a throwaway test office. Admins only.', admin: true },
 ] as const satisfies readonly SettingsSection[];
 
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]['id'];

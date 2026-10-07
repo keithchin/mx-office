@@ -57,6 +57,7 @@ import { budgetUi } from './ui/budget';
 import { mountRunToggle } from './ui/project-run';
 import { floorLoading } from './ui/loading/floor';
 import { goToSettings } from './ui/settings/flat';
+import './shared/perfwatch-on';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});

@@ -26,7 +26,7 @@ function assertFlat(href: string, section?: string) {
 }
 
 // The sections the docs and the links name, in the order of the page's list.
-const DOCUMENTED = ['you', 'workers', 'team', 'jeff', 'notify', 'budget', 'connections', 'deliverables', 'incidents', 'studio', 'appearance', 'advanced'];
+const DOCUMENTED = ['you', 'workers', 'team', 'jeff', 'notify', 'budget', 'connections', 'deliverables', 'incidents', 'studio', 'appearance', 'advanced', 'testing'];
 
 test('every documented section has one stable anchor, in order, and a flat address', () => {
   assert.deepEqual([...SETTINGS_SECTION_IDS], DOCUMENTED);
@@ -43,7 +43,7 @@ test('every documented section has one stable anchor, in order, and a flat addre
   assertFlat(settingsHref());
   assert.ok(!isSettingsSection('building') && !isSettingsSection(''), 'only real sections');
   // Connections stays admins-only, as in the 3D window; the floor's own sections say they need one.
-  assert.deepEqual(SETTINGS_SECTIONS.filter((s) => 'admin' in s).map((s) => s.id), ['connections']);
+  assert.deepEqual(SETTINGS_SECTIONS.filter((s) => 'admin' in s).map((s) => s.id), ['connections', 'testing']);
   assert.deepEqual(SETTINGS_SECTIONS.filter((s) => 'floor' in s).map((s) => s.id), ['team', 'jeff', 'budget', 'deliverables', 'studio']);
 });
 

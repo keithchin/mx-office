@@ -20,10 +20,15 @@ export function tabBadge(button: HTMLElement, b: BadgeValue, title?: string): HT
   if (el.textContent !== text) el.textContent = text;
   el.classList.toggle('dot', b === 'dot');
   el.classList.toggle('bang', b === '!');
-  // Read out with the button's name: "Board, 3: cards that need a human".
-  if (badgeShown(b) && title) el.setAttribute('aria-label', title);
-  else el.removeAttribute('aria-label');
-  el.title = badgeShown(b) ? (title ?? '') : '';
+  // Read out with the button's name: "Board, 3: cards that need a human". Written only when it changes:
+  // every write restyles the page, and the badges are worked out on every worker update (the performance guard).
+  const label = badgeShown(b) && title ? title : null;
+  if (el.getAttribute('aria-label') !== label) {
+    if (label === null) el.removeAttribute('aria-label');
+    else el.setAttribute('aria-label', label);
+  }
+  const tip = badgeShown(b) ? (title ?? '') : '';
+  if (el.title !== tip) el.title = tip;
   return el;
 }
 

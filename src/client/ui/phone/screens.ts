@@ -14,6 +14,8 @@ import { h } from '../dom';
 import type { PendingReply } from './api';
 import type { PhoneNote } from './notes';
 import { dayRow, follows, messageRow, noteRow, sameDay, typingRow, type RowActions } from './rows';
+import { newest, STREAM_CAP } from './cap';
+export { STREAM_CAP } from './cap';
 
 export type Screen = { s: 'home' } | { s: 'needs' } | { s: 'all' } | { s: 'floor'; floor: string } | { s: 'dm'; workerId: string } | { s: 'thread'; floor: string; key: string; back: Screen };
 
@@ -38,6 +40,8 @@ export interface PhoneModel {
   unreadDm(workerId: string): number;
   filter: ChatterFilter;
   team?: TeamId;
+  /** How many of the newest messages a log draws (STREAM_CAP at first; Load older adds more). */
+  limit?: number;
 }
 
 const WORKING = new Set<WorkerStatus>(['working', 'starting']);
@@ -95,11 +99,11 @@ export function homeList(m: PhoneModel, on: Screen, go: (s: Screen) => void): HT
 }
 
 /** Messages and notifications in time order, with day lines and same-speaker rows folded together. */
-function stream(items: ({ at: number; el: (follow: boolean) => HTMLElement; m?: ChatterMessage })[]): HTMLElement[] {
+function stream(items: ({ at: number; el: (follow: boolean) => HTMLElement; m?: ChatterMessage })[], limit = STREAM_CAP): HTMLElement[] {
   const out: HTMLElement[] = [];
   let prev: ChatterMessage | undefined;
   let last: number | undefined;
-  for (const it of items.sort((a, b) => a.at - b.at)) {
+  for (const it of newest(items, limit)) {
     if (last === undefined || !sameDay(last, it.at)) {
       out.push(dayRow(it.at));
       prev = undefined;
@@ -110,6 +114,7 @@ function stream(items: ({ at: number; el: (follow: boolean) => HTMLElement; m?: 
   }
   return out;
 }
+
 
 const keep = (m: PhoneModel) => (x: ChatterMessage) => matchesFilter(x, m.filter) && (!m.team || inTeam(x, m.team));
 
@@ -134,7 +139,7 @@ export function channelLog(m: PhoneModel, floor: string, act: RowActions): HTMLE
   const threads = channelView(shown);
   const items: { at: number; el: (f: boolean) => HTMLElement; m?: ChatterMessage }[] = threads.map((t: ThreadView) => ({ at: t.root.at, m: t.replies.length ? undefined : t.root, el: (f: boolean) => messageRow(t.root, act, { thread: t, follow: f && !t.replies.length }) }));
   if (floor === m.floor && m.filter.with === 'all' && !m.team) for (const n of m.notes.filter((x) => x.kind !== 'floor')) items.push({ at: n.since ?? Date.now(), el: () => noteRow(n, act) });
-  const out = stream(items);
+  const out = stream(items, m.limit);
   if (!out.length) out.push(h('li.tp-empty', {}, !got.loaded ? 'Loading…' : got.error ? `Couldn't load the chatter: ${got.error}` : m.filter.with === 'all' && !m.team ? 'Nobody has said anything yet. Escalations, relays, journal entries and your messages show up here.' : 'Nothing like that yet.'));
   const typing = floor === m.floor ? typingRow(typingLines(m, 'all')) : null;
   if (typing) out.push(typing);
@@ -153,7 +158,7 @@ export function allLog(m: PhoneModel, act: RowActions): HTMLElement[] {
 
 export function dmLog(m: PhoneModel, workerId: string, act: RowActions): HTMLElement[] {
   const list = m.floor ? dmMessages(m.feed(m.floor).list, workerId) : [];
-  const out = stream(list.map((x) => ({ at: x.at, m: x, el: (f: boolean) => messageRow(x, act, { follow: f }) })));
+  const out = stream(list.map((x) => ({ at: x.at, m: x, el: (f: boolean) => messageRow(x, act, { follow: f }) })), m.limit);
   const a = m.agents.find((x) => x.workerId === workerId);
   if (!out.length) out.push(h('li.tp-empty', {}, `This is the start of your messages with ${a?.name ?? 'this agent'}. What you send goes to it once its current turn is over, and its reply comes back here.`));
   const typing = typingRow(typingLines(m, [workerId]));

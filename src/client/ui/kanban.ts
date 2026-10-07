@@ -239,20 +239,32 @@ export function renderBoard(root: HTMLElement, a: KanbanActions, view: BoardView
   scrolled();
 }
 
-/** Notes how far the board's columns are scrolled; the function it returns puts them back after a redraw. */
+/** Where each board's columns were scrolled to, as their own scroll events said. */
+const scrolls = new WeakMap<HTMLElement, { left: number; tops: Map<string, number> }>();
+
+/**
+ * Keeps how far the board's columns are scrolled across a redraw; the function it returns puts them back
+ * and listens for the next scroll. The positions come from scroll events, never read back from the page:
+ * reading them before each redraw forced a layout of the whole board for every worker update (the
+ * performance guard, 2026-10-07).
+ */
 function keptScroll(root: HTMLElement): () => void {
-  const left = root.querySelector<HTMLElement>('.kb-columns')?.scrollLeft ?? 0;
-  const tops = new Map<string, number>();
-  for (const col of root.querySelectorAll<HTMLElement>('.kb-col')) {
-    const list = col.querySelector<HTMLElement>('.kb-cards');
-    if (col.dataset.col && list?.scrollTop) tops.set(col.dataset.col, list.scrollTop);
-  }
+  let s = scrolls.get(root);
+  if (!s) scrolls.set(root, (s = { left: 0, tops: new Map() }));
+  const kept = s;
   return () => {
     const row = root.querySelector<HTMLElement>('.kb-columns');
-    if (row && left) row.scrollLeft = left;
-    for (const [id, top] of tops) {
-      const list = root.querySelector<HTMLElement>(`.kb-col[data-col="${id}"] .kb-cards`);
-      if (list) list.scrollTop = top;
+    if (row) {
+      if (kept.left) row.scrollLeft = kept.left;
+      row.addEventListener('scroll', () => (kept.left = row.scrollLeft), { passive: true });
+    }
+    for (const col of root.querySelectorAll<HTMLElement>('.kb-col')) {
+      const list = col.querySelector<HTMLElement>('.kb-cards');
+      const id = col.dataset.col;
+      if (!list || !id) continue;
+      const top = kept.tops.get(id);
+      if (top) list.scrollTop = top;
+      list.addEventListener('scroll', () => kept.tops.set(id, list.scrollTop), { passive: true });
     }
   };
 }

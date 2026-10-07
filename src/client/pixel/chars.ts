@@ -68,7 +68,8 @@ function picture(look: Look, pose: Pose, how: How, beat: number, stands: boolean
   c = document.createElement('canvas');
   c.width = CHAR_W;
   c.height = stands ? CHAR_H : SEATED;
-  const g = c.getContext('2d')!;
+  // Read back once per sprite (the outline): a canvas kept on the CPU makes that cheap (getImageData on a GPU canvas stalled the 2D view and Home's overview on a big floor).
+  const g = c.getContext('2d', { willReadFrequently: true })!;
   draw(g, look, pose, how, beat, stands, walking);
   outline(g, c.width, c.height);
   cache.set(key, c);

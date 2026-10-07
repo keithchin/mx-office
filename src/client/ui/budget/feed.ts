@@ -55,10 +55,17 @@ export function budgetFeed(net: Net): BudgetFeed {
   let officeView: OfficeBudgetView | undefined;
   const fns: (() => void)[] = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
+  /** When the load the timer waits for is due. */
+  let due = Infinity;
   let busy = false;
+  /** Asked again while a load was out: load again once it's back. */
+  let again = false;
   const fire = () => fns.forEach((fn) => fn());
   const load = async () => {
-    if (busy) return;
+    // One at a time; an ask meanwhile (the floor changed, say) loads again after, never dropped: a
+    // dropped ask after a project switch left the new floor's budget unloaded (and its loading overlay
+    // waiting) until the next minute's look (found by the performance guard's switch test).
+    if (busy) return void (again = true);
     busy = true;
     const f = store.floor;
     const [fv, ov] = await Promise.all([f ? get<BudgetView>(`/api/budget?floor=${encodeURIComponent(f)}`) : Promise.resolve(undefined), get<OfficeBudgetView>('/api/budget/office')]);
@@ -66,10 +73,25 @@ export function budgetFeed(net: Net): BudgetFeed {
     floorView = fv?.floor === store.floor ? fv : undefined;
     officeView = ov ?? officeView;
     fire();
+    if (again || f !== store.floor) {
+      again = false;
+      void load();
+    }
   };
+  /**
+   * Loads in `ms`, or sooner if a load is already due sooner: a later ask never pushes an earlier one
+   * back (the usage messages of busy workers, every second or so, kept postponing it forever).
+   */
   const soon = (ms = 2500) => {
+    const at = Date.now() + ms;
+    if (timer !== undefined && due <= at) return;
     clearTimeout(timer);
-    timer = setTimeout(() => void load(), ms);
+    due = at;
+    timer = setTimeout(() => {
+      timer = undefined;
+      due = Infinity;
+      void load();
+    }, ms);
   };
   net.onMessage((m) => {
     if (m.t === 'usage') soon();

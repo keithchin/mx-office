@@ -19,6 +19,8 @@ import { acceptWebSockets } from './ws/upgrade.js';
 import { stopLiveApps } from './liveapp/index.js';
 import { installAudit } from './audit/office.js';
 import { installIncidents } from './incidents/office.js';
+import { installPerfWatch } from './perfwatch/office.js';
+import { flushRoster } from './roster/index.js';
 
 /** What a test can set about how the office starts: the client bundle it serves, instead of the built one. */
 export interface StartOptions {
@@ -37,6 +39,7 @@ export async function startServer(cfg: Config, opts: StartOptions = {}) {
   Object.assign(ctx, createServices(ctx));
   installAudit(ctx);
   installIncidents(ctx);
+  const stopPerfWatch = installPerfWatch(ctx);
   Object.assign(ctx, await openFloors(ctx, hookPort));
   Object.assign(ctx, createLateServices(ctx));
 
@@ -59,6 +62,7 @@ export async function startServer(cfg: Config, opts: StartOptions = {}) {
   /** With `keep` (a restart), workers' terminals keep running for the next office to pick up. */
   const shutdown = (keep = false) => {
     stopTimers();
+    stopPerfWatch();
     void stopLiveApps(ctx);
     ctx.cancelFloorsChanged();
     ctx.arcade.flush();
@@ -72,6 +76,8 @@ export async function startServer(cfg: Config, opts: StartOptions = {}) {
     for (const f of ctx.floors.values()) f.shutdown(keep);
     ctx.building.shutdown(keep);
     ctx.ledger.flush();
+    // The roster's saves wait half a second: what was held, answered or relayed just now goes to disk first.
+    flushRoster(ctx.cfg);
     ctx.limits.close();
     for (const a of ctx.accountLimits.values()) a.reader.close();
     ctx.signins.shutdown();

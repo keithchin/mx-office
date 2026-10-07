@@ -29,11 +29,12 @@ import { openSignIns } from '../ui/signins';
 import { openUpgrade } from '../ui/upgrade';
 import { switchView } from '../graphics';
 import { settingsHref } from '../../shared/settings-sections';
+import { testsHref } from '../../shared/testlab';
 import { openStudio, watchStudio } from '../ui/studio';
 import '../ui/menu.css';
 import '../ui/flatchrome.css';
 
-export type FlatMenuDeps = FloorMenuDeps | { net: Net; home: true; settings?: () => void };
+export type FlatMenuDeps = FloorMenuDeps | { net: Net; home: true; settings?: () => void; tests?: () => void };
 
 interface FloorMenuDeps {
   net: Net;
@@ -47,6 +48,8 @@ interface FloorMenuDeps {
   nKey?: boolean;
   /** ⚙️ Settings: the 1D view's own tab there, the 1D view's tab from elsewhere. */
   settings?: () => void;
+  /** 🧪 Test mode: the 1D view's own tab there, its address from elsewhere. */
+  tests?: () => void;
 }
 
 /** What only makes sense on a floor, left out of the home page's ☰. */
@@ -96,6 +99,8 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
     { ...MENU.signins, run: () => openSignIns(net) },
     { ...MENU.settings, title: () => 'Every setting: you, the workers, the team, Jeff, notifications, the budget, connections and the rest', run: () => (d.settings ? d.settings() : location.assign(settingsHref(undefined, store.floor ?? undefined))) },
     { ...MENU.connections, run: () => openConnections() },
+    // 🧪 Test mode (ui/testlab/): the flat views' page only, never the 3D office; admins only.
+    { id: 'tests', icon: '🧪', label: 'Test mode', section: 'Office', shown: () => store.me.admin, title: () => 'Test mode and the performance guard: run the page, journey and unit suites against a throwaway test office, and see the results', run: () => (d.tests ? d.tests() : location.assign(testsHref(store.floor ?? store.floors[0]?.id))) },
     { ...MENU.home, shown: () => !d.home, run: () => location.assign('/home') },
     { ...MENU.guide, run: () => location.assign('/docs') },
     { ...MENU.upgrade, run: () => openUpgrade(net) },

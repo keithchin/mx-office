@@ -22,7 +22,7 @@ import { composer, type ComposeTarget } from '../ui/phone/composer';
 import { notesOf, redCount, type NoteAction, type PhoneNote } from '../ui/phone/notes';
 import { readState } from '../ui/phone/reads';
 import type { RowActions } from '../ui/phone/rows';
-import { allLog, channelLog, dmLog, needsLog, threadLog, type PhoneAgentView, type PhoneModel } from '../ui/phone/screens';
+import { allLog, channelLog, dmLog, needsLog, STREAM_CAP, threadLog, type PhoneAgentView, type PhoneModel } from '../ui/phone/screens';
 import { currentRoster, onRoster, routeRosterMessage } from '../ui/teams/world';
 import { mobileApi, type MeView } from './api';
 import { openReadOnlyChat } from './chat';
@@ -35,6 +35,7 @@ import { running, statusList } from './status';
 import { pauseProject, resumeProject } from './resume';
 import '../ui/phone/phone.css';
 import './mobile.css';
+import { batched } from '../ui/batch';
 
 export interface MobileDeps {
   net: Net;
@@ -101,7 +102,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
   const unreadFloor = (f: string) => unreadIn(messages(f).list.filter((m) => !m.ref?.thread?.startsWith('dm-')), reads.get(floorChannel(f)));
   const unreadDm = (id: string) => (store.floor ? unreadIn(dmMessages(messages(store.floor).list, id), reads.get(dmChannel(store.floor, id))) : 0);
   const listened = new Set<string>();
-  const listen = (f: string) => void (listened.has(f) || (listened.add(f), onFeed(f, () => draw())));
+  const listen = (f: string) => void (listened.has(f) || (listened.add(f), onFeed(f, () => drawLater())));
 
   function model(): PhoneModel {
     const r = roster();
@@ -117,6 +118,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
       unreadFloor,
       unreadDm,
       filter: { with: 'all' },
+      limit,
     };
   }
 
@@ -151,11 +153,13 @@ export function installMobile(deps: MobileDeps): MobileApp {
   }
 
   // ---- Drawing ---------------------------------------------------------------------------------------------
-  let frameReq = 0;
   let toBottom = false;
-  function draw() {
-    if (!frameReq) frameReq = requestAnimationFrame(() => ((frameReq = 0), paint()));
-  }
+  /** How many of the newest messages the logs draw (Load older adds STREAM_CAP more). */
+  let limit = STREAM_CAP;
+  /** Draws on the next frame (and at most every 150 ms): you did something. */
+  const draw = batched(() => paint(), 150);
+  /** What the office sends (every worker update, every message): at most twice a second, as the team phone (ui/batch.ts). */
+  const drawLater = batched(() => paint(), 500);
 
   function paint() {
     items = collectNeeds({ floor: store.floor ?? undefined, workers: store.workers.values(), roster: roster(), pulls: store.pulls.items, floors: store.floors, studio: store.studio?.floor === store.floor ? (store.studio ?? undefined) : undefined });
@@ -177,7 +181,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
       title.textContent = `# ${rowActions.floorName(sub.floor)}`;
       subline.textContent = sub.floor === store.floor ? `${m.agents.length} agents` : 'Another project';
       rows = channelLog(m, sub.floor, rowActions);
-      older.hidden = !messages(sub.floor).more;
+      older.hidden = !messages(sub.floor).more && messages(sub.floor).list.length <= limit;
       target = { floor: sub.floor, place: { in: 'channel' }, agents: sub.floor === store.floor ? m.agents : [] };
       reads.mark(floorChannel(sub.floor), messages(sub.floor).list[0]?.at ?? 0);
     } else if (sub?.s === 'dm') {
@@ -298,6 +302,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
   }
   async function more() {
     if (sub?.s !== 'floor') return;
+    limit += STREAM_CAP;
     await loadOlder(sub.floor);
     draw();
   }
@@ -326,7 +331,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
   navigator.serviceWorker?.addEventListener('message', (e) => e.data?.t === 'open' && deepLink(String(e.data.url)));
 
   // ---- Keeping up ------------------------------------------------------------------------------------------
-  for (const k of ['workers', 'pulls', 'floors', 'studio'] as const) store.on(k, draw);
+  for (const k of ['workers', 'pulls', 'floors', 'studio'] as const) store.on(k, drawLater);
   store.on('floor', () => {
     pending = [];
     if (sub?.s === 'dm' || sub?.s === 'thread') sub = undefined;
@@ -337,7 +342,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
     store.floors.forEach((f) => !f.cloning && listen(f.id));
     if (!linked && store.floors.length) ((linked = true), deepLink(location.href));
   });
-  onRoster(draw);
+  onRoster(drawLater);
   reads.onChange(draw);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) return;
@@ -361,7 +366,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
       routeChatter(msg);
       routeRosterMessage(msg);
       if (msg.t === 'chatter.new' && msg.message.from.kind !== 'human') pending = pending.filter((p) => !(p.thread === msg.message.ref?.thread && msg.message.from.workerId === p.workerId));
-      if (msg.t === 'welcome' || msg.t === 'floor.enter' || msg.t === 'roster.changed') draw();
+      if (msg.t === 'welcome' || msg.t === 'floor.enter' || msg.t === 'roster.changed') drawLater();
     },
     openChat,
   };

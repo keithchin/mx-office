@@ -7,6 +7,7 @@ import { store } from './state';
 import { flatSession } from './shared/session';
 import { setRoster } from './ui/teams/world';
 import { installMobile, type MobileApp } from './mobile/app';
+import './shared/perfwatch-on';
 
 let app: MobileApp | undefined;
 const session = flatSession('/m', (id) => app?.openChat(id), (msg) => app?.route(msg));

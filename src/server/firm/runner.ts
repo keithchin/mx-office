@@ -6,6 +6,7 @@
 
 import { spawn, type ChildProcess } from 'node:child_process';
 import { usageOfMessage } from '../usage.js';
+import { officeCliRefused } from '../testmode.js';
 
 export interface RunSpec {
   cwd: string;
@@ -91,8 +92,8 @@ export class ClaudeHeadlessRunner implements ReviewerRunner {
   constructor(private claude: string | null) {}
 
   start(spec: RunSpec, ev: RunEvents): RunHandle {
-    if (!this.claude) {
-      queueMicrotask(() => ev.exit(1, "Claude Code isn't installed where the office can find it"));
+    if (!this.claude || officeCliRefused(this.claude)) {
+      queueMicrotask(() => ev.exit(1, this.claude ? 'Test mode: the office does not run the real Claude Code for reviewers' : "Claude Code isn't installed where the office can find it"));
       return { stop() {} };
     }
     let child: ChildProcess;

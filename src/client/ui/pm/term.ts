@@ -28,6 +28,8 @@ export class PmTerminal {
   private fitFrame = 0;
   /** Whether `term` has been opened in the box (has a renderer); a parked one hasn't. */
   private opened = false;
+  /** An open is waiting for the page to paint first (place()). */
+  private opening = false;
   private readonly ro = new ResizeObserver(() => (this.place(), this.fit()));
 
   constructor(
@@ -75,9 +77,21 @@ export class PmTerminal {
     if (!this.term || !this.workerId) return;
     const todo = termPlacement(this.opened, { width: this.host.clientWidth, height: this.host.clientHeight });
     if (todo === 'open') {
-      this.term.open(this.host);
-      this.opened = true;
-      this.fitSoon();
+      // Once the page has painted, not while it is still being built: xterm measures its glyphs on its
+      // first draw, and that forced a layout of the whole new page (the performance guard, 2026-10-07).
+      const term = this.term;
+      if (this.opening) return;
+      this.opening = true;
+      requestAnimationFrame(() =>
+        setTimeout(() => {
+          this.opening = false;
+          if (this.term !== term || this.opened) return;
+          if (termPlacement(false, { width: this.host.clientWidth, height: this.host.clientHeight }) !== 'open') return;
+          term.open(this.host);
+          this.opened = true;
+          this.fitSoon();
+        }, 0),
+      );
     } else if (todo === 'park') {
       // An opened xterm can't give its renderer back: a fresh, unopened one takes over, and a new
       // snapshot fills it (the Chat view's fallback reads its lines).

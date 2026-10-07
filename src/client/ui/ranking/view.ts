@@ -18,18 +18,21 @@ export function robot(color: string, size = 28): SVGSVGElement {
   svg.setAttribute('shape-rendering', 'crispEdges');
   svg.setAttribute('aria-hidden', 'true');
   svg.classList.add('rk-robot');
+  // Two paths (its color, and the eyes and antenna in the text color), not a rect per pixel: a long list
+  // of cards drew forty elements a robot.
+  const d = { body: '', face: '' };
   ROBOT.forEach((row, y) =>
     [...row].forEach((c, x) => {
       if (c === '.') return;
-      const r = document.createElementNS(ns, 'rect');
-      r.setAttribute('x', String(x));
-      r.setAttribute('y', String(y));
-      r.setAttribute('width', '1');
-      r.setAttribute('height', '1');
-      r.setAttribute('fill', c === 'h' || c === 'b' ? color : 'currentColor');
-      svg.append(r);
+      d[c === 'h' || c === 'b' ? 'body' : 'face'] += `M${x} ${y}h1v1h-1z`;
     }),
   );
+  for (const [k, fill] of [['body', color], ['face', 'currentColor']] as const) {
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', d[k]);
+    p.setAttribute('fill', fill);
+    svg.append(p);
+  }
   return svg;
 }
 

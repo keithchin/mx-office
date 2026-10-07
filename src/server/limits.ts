@@ -6,6 +6,7 @@
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import type { PlanLimits, PlanWindow } from '../shared/protocol.js';
+import { officeCliRefused } from './testmode.js';
 
 const POLL_MS = 2 * 60_000;
 /** Someone walking in, or clicking the meter, reads again, at most this often. */
@@ -115,6 +116,7 @@ function toWindow(label: string, w: any): PlanWindow | null {
 
 /** Claude Code's structured /usage answer, or null when it couldn't give one. */
 function ask(claude: string, env: Record<string, string>): Promise<any> {
+  if (officeCliRefused(claude)) return Promise.resolve(null);
   const args = [
     '-p',
     '--input-format', 'stream-json',

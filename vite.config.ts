@@ -80,6 +80,9 @@ export default defineConfig({
     outDir: resolve(import.meta.dirname, 'dist/public'),
     emptyOutDir: true,
     chunkSizeWarningLimit: 2000,
+    // PERF_SOURCEMAP=1 (the performance guard's own builds, scripts/perf/): hidden source maps beside
+    // the bundles, so a long task's stack names the source file and line. Never in a normal build.
+    sourcemap: process.env.PERF_SOURCEMAP === '1' ? 'hidden' : false,
     rollupOptions: {
       onwarn(warning, warn) {
         // Excalidraw's Radix UI parts start with "use client", which means nothing outside React Server Components.

@@ -102,3 +102,23 @@ export function launchRefusal(floorDir: string, info: WorkerInfo, command: strin
   info.activity = `⛔ Test mode: refused to start ${real ? 'the real ' : ''}${command}`;
   return `Test mode: refused to start ${real ? 'the real ' : ''}${command} — ${why}. Start this office with --agent <your fake> (or AGENT_OFFICE_AGENT; any file name works) to run a fake agent here`;
 }
+
+const told = new Set<string>();
+
+/**
+ * Whether the office's own call of an agent CLI (not a worker's: Jeff, the analyzer, the task namer, the
+ * usage-limits read, The Firm's reviewers, all `claude -p`) must not run. In test mode only the explicit
+ * fake may; a real CLI is refused (and said once in the log), so a test office never spends real money
+ * through them either. AGENT_OFFICE_ALLOW_REAL_AGENTS=1 lets it through, as for workers.
+ */
+export function officeCliRefused(command: string): boolean {
+  if (!testModeOf().on || allowReal()) return false;
+  const s = now();
+  if (s.agentExplicit && command === s.agentCmd && !isRealAgentCli(command, command)) return false;
+  if (!isRealAgentCli(command, command)) return false;
+  if (!told.has(command)) {
+    told.add(command);
+    console.warn(`agent-office: test mode: refused the office's own call of the real ${nameOf(command)} (${command})`);
+  }
+  return true;
+}

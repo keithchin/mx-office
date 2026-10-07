@@ -11,7 +11,22 @@ async function json<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
 
-export const fetchRoster = (floor: string) => fetch(`/api/roster?floor=${encodeURIComponent(floor)}`, { credentials: 'same-origin' }).then((r) => json<RosterView>(r));
+/** The fetches of each floor's team still on their way: everyone asking meanwhile shares the one answer. */
+const inFlight = new Map<string, Promise<RosterView>>();
+
+/**
+ * What the floor's team looks like now. A project switch had four parts of the page (Needs you, the
+ * team tab, the phone, the boards) each fetch the same roster at the same moment; they share one fetch.
+ */
+export function fetchRoster(floor: string): Promise<RosterView> {
+  const going = inFlight.get(floor);
+  if (going) return going;
+  const p = fetch(`/api/roster?floor=${encodeURIComponent(floor)}`, { credentials: 'same-origin' }).then((r) => json<RosterView>(r));
+  inFlight.set(floor, p);
+  const done = () => inFlight.get(floor) === p && inFlight.delete(floor);
+  p.then(done, done);
+  return p;
+}
 
 export const fetchStandup = (floor: string, id?: string) =>
   fetch(`/api/roster/standup?${new URLSearchParams(id ? { floor, id } : { floor })}`, { credentials: 'same-origin' }).then((r) => json<Standup>(r));

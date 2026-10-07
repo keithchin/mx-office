@@ -14,8 +14,8 @@ import { markdownFile } from '../../markdown';
 import { chatItems, sameChat, screenText, type ChatItem, type Convo, type ToolMsg } from './logic';
 import './chat.css';
 
-/** How many rows are on the page at first, and how many more each Show earlier adds. */
-export const PAGE = 200;
+/** How many rows are on the page at first, and how many more each Show earlier adds (200 at once took a tenth of a second to draw on a busy floor). */
+export const PAGE = 60;
 
 /** Who the agent is, as the office shows it. */
 export interface ChatWho {

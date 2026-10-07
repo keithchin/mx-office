@@ -16,7 +16,7 @@ export const isSeverity = (v: unknown): v is IncidentSeverity => INCIDENT_SEVERI
 export const isIncidentStatus = (v: unknown): v is IncidentStatus => INCIDENT_STATUSES.includes(v as IncidentStatus);
 
 /** The automatic detection rules (server/incidents/rules.ts), each one a setting of its own. */
-export const INCIDENT_RULES = ['realLaunch', 'spendSpike', 'spendCap', 'interrupted', 'escalationUndelivered', 'crashLoop', 'studioDenied', 'flowFailed', 'sweepErrors', 'loginFailed'] as const;
+export const INCIDENT_RULES = ['realLaunch', 'spendSpike', 'spendCap', 'interrupted', 'escalationUndelivered', 'crashLoop', 'studioDenied', 'flowFailed', 'sweepErrors', 'loginFailed', 'pageStall', 'serverStall'] as const;
 export type IncidentRule = (typeof INCIDENT_RULES)[number];
 export const isIncidentRule = (v: unknown): v is IncidentRule => INCIDENT_RULES.includes(v as IncidentRule);
 
@@ -144,6 +144,8 @@ export const DEFAULT_INCIDENT_SETTINGS: IncidentSettings = {
     flowFailed: { on: true, count: 3, minutes: 60 },
     sweepErrors: { on: true, count: 3, minutes: 360 },
     loginFailed: { on: true, count: 5, minutes: 10 },
+    pageStall: { on: true },
+    serverStall: { on: true },
   },
 };
 
@@ -158,6 +160,8 @@ export const RULE_META: Record<IncidentRule, { label: string; what: string }> = 
   flowFailed: { label: 'Workflow or gate-check failures', what: 'A workflow or gate-check run failed this many times in this long' },
   sweepErrors: { label: 'Worktree cleanup errors', what: "The worktree cleanup couldn't remove worktrees this many times in this long" },
   loginFailed: { label: 'Failed sign-ins', what: 'Sign-ins failed this many times in this long' },
+  pageStall: { label: 'A page froze', what: "A browser's page ran one task for longer than half a second (the view and where the time went are in the incident)" },
+  serverStall: { label: 'The server stalled', what: "The office server's event loop was blocked for longer than a second" },
 };
 
 /** Settings as stored, made whole: unknown rules dropped, missing fields from the defaults, numbers kept sane. */

@@ -22,7 +22,7 @@
 /* The terminal: the PTY's whole screen scaled to the column's width and shifted up (ui/pm/term.ts), so
    the newest lines are the ones in view. */
 .pmc-screen { position: relative; flex: 1; display: flex; min-height: 210px; }
-.pmc-term { flex: 1; position: relative; overflow: hidden; min-height: 210px; border: 2px solid var(--line); border-radius: 10px; background: var(--code-bg); }
+.pmc-term { flex: 1; position: relative; overflow: hidden; min-height: 210px; border: 2px solid var(--line); border-radius: 10px; background: var(--code-bg); contain: strict; }
 .pmc-term > .terminal { position: absolute; left: 0; top: 0; transform-origin: top left; pointer-events: none; }
 .pmc-screen-note { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font-size: 13px; font-weight: 800; color: var(--code-ink); text-align: center; padding: 10px; }
 

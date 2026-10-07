@@ -56,6 +56,9 @@ import { installPhone, type Phone } from './ui/phone';
 import { collapsibleCommand } from './ui/command-layout';
 import { testModeBadge } from './ui/testmode';
 import { budgetUi } from './ui/budget';
+import { testlabView } from './ui/testlab';
+import './shared/perfwatch-on';
+import { batched } from './ui/batch';
 import { floorLoading } from './ui/loading/floor';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
@@ -244,11 +247,13 @@ let pendingSection: SettingsSectionId | undefined = isSettingsSection(askedSecti
 const audit = auditView($('audit-view'), { floor: () => store.floor ?? undefined, floors: () => store.floors, admin: () => store.me.admin, storeKey: 'agent-office.audit-lite' });
 net.onMessage((msg) => audit.onMessage(msg));
 store.on('floor', () => audit.floorChanged());
-type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | Pane | 'teams' | 'audit' | 'budget' | 'settings';
+type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | Pane | 'teams' | 'audit' | 'budget' | 'settings' | 'tests';
+// 🧪 Test mode (ui/testlab/): no tab button of its own; the ☰, the home page and ⚙️ Settings › Testing open it.
+const tests = testlabView($('tests-view'));
 // The team's panes are tabs of their own (flattened from one Team tab); an old "team" means its org chart. Its settings are ⚙️ Settings › Team.
 const TEAM_PANES: readonly Pane[] = ['org', 'standup', 'approvals'];
 const isPane = (t: unknown): t is Pane => TEAM_PANES.includes(t as Pane);
-const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || isPane(t) || t === 'teams' || t === 'audit' || t === 'budget' || t === 'settings';
+const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || isPane(t) || t === 'teams' || t === 'audit' || t === 'budget' || t === 'settings' || t === 'tests';
 const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : isTab(t) ? t : undefined);
 let tab: Tab = 'command';
 try {
@@ -295,6 +300,9 @@ function showTab(t: Tab) {
   $('tab-budget').classList.toggle('on', t === 'budget');
   $('budget-view').classList.toggle('hidden', t !== 'budget');
   if (t === 'budget') budget.show();
+  $('tests-view').classList.toggle('hidden', t !== 'tests');
+  if (t === 'tests') tests.show();
+  else tests.hide();
   $('board').classList.toggle('hidden', t !== 'board');
   $('summary').classList.toggle('hidden', t !== 'command');
   $('setup').classList.toggle('hidden', t !== 'command');
@@ -347,8 +355,10 @@ store.on('floor', renderAnalysisTab);
 const team = teamTab($('team-view'), $('tab-approvals').querySelector('.ro-tab-n')!, () => isPane(tab), openWorker, { select: (p) => (p === 'settings' ? showSettings('team') : showTab(p)) });
 net.onMessage((msg) => team.onMessage(msg));
 store.on('floor', () => team.render(store.floor ?? undefined));
-for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanban);
-setInterval(renderKanban, 30_000);
+// Every worker update of every live worker comes through here: drawn at most four times a second (ui/batch.ts).
+const renderKanbanSoon = batched(renderKanban);
+for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanbanSoon);
+setInterval(renderKanbanSoon, 30_000);
 
 // ---- Needs you: what's blocked on you, at the top of the Command Center, counted on its tab ---------
 /** An escalation's card on the PM console, scrolled to with its answer box focused; the Approvals tab if it isn't there. */
@@ -431,6 +441,7 @@ flatMenu($('menu'), {
   openWorker,
   meeting: () => showMeeting(),
   settings: () => showSettings(),
+  tests: () => showTab('tests'),
   nextWaiting: () => {
     const w = waitingInOrder(store.workers.values())[0];
     if (w) openWorker(w.id);
