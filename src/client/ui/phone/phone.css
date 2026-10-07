@@ -94,6 +94,8 @@ body.has-phone .lite-main { padding-bottom: calc(160px + env(safe-area-inset-bot
 .tp-older { display: block; margin: 4px auto 6px; }
 .tp-older[hidden] { display: none; }
 .tp-log { list-style: none; margin: 0; padding: 0 10px; display: flex; flex-direction: column; gap: 2px; outline: none; }
+/* A message off screen isn't laid out or painted (a floor's channel can hold a thousand; the performance guard). */
+.tp-log > li { content-visibility: auto; contain-intrinsic-size: auto 44px; }
 .tp-day { display: flex; justify-content: center; margin: 8px 0 4px; }
 .tp-day span { padding: 1px 10px; border: 1px solid var(--rule-strong); border-radius: 999px; background: var(--card); font-size: 11px; font-weight: 800; color: var(--muted); }
 .tp-msg { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; padding: 6px 4px; border-radius: 8px; }

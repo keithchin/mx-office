@@ -15,6 +15,9 @@
 .pmc-chat-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 8px; padding: 2px 4px 2px 2px; }
 .pmc-chat-list:focus-visible, .pmc-plain:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
 .pmc-rows { display: flex; flex-direction: column; gap: 6px; }
+/* A row off screen isn't laid out or painted, and the list's own layout stays inside it: a new message on a busy floor re-laid the whole page (the performance guard). */
+.pmc-chat-list { contain: layout paint; }
+.pmc-rows > * { content-visibility: auto; contain-intrinsic-size: auto 56px; }
 .pmc-earlier { align-self: center; font-size: 11px; }
 .pmc-chat-empty { margin: auto; padding: 20px 0; font-size: 12px; font-weight: 700; color: var(--muted); text-align: center; }
 

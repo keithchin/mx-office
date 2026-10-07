@@ -14,6 +14,7 @@ import { fetchRoster } from '../roster/api';
 import { collectNeeds, hereCount, type BudgetNeed, type NeedItem, type NeedKind, type NeedTarget } from './logic';
 import { incidentBriefs, incidentFeedMessage, onIncidentsChanged } from '../incidents/feed';
 import { hasPhone, openPhone } from '../phone/api';
+import { batched } from '../batch';
 import '../pm/jeff-rank.css';
 import './needsyou.css';
 
@@ -116,9 +117,15 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
       n.alt ? h('button.btn.small.ny-go', { type: 'button', onclick: () => deps.go(n.alt!.target), 'aria-label': `${n.alt.action}: ${n.text}` }, n.alt.action) : null,
     );
 
+  /** What the strip last drew from, so a worker update that changes nothing it shows draws nothing. */
+  let drawnKey = '';
   function draw() {
     const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live(), firm: deps.firm?.(), studio: deps.studio?.(), incidents: incidentBriefs(), budget: deps.budget?.() });
     const n = hereCount(items);
+    // The time ago on each item is part of what it shows: the half-minute timer moves it on.
+    const key = JSON.stringify([all, hasPhone(), items.map((i) => [i.key, i.text, i.level, i.action, i.tag ?? '', i.rank?.chip ?? '', i.since ? timeAgo(i.since) : '', i.alt?.action ?? ''])]);
+    if (key === drawnKey) return;
+    drawnKey = key;
     badge.textContent = n ? String(n) : '';
     badge.title = n ? `${n} thing${n === 1 ? '' : 's'} on this floor need${n === 1 ? 's' : ''} you` : '';
     root.classList.toggle('ny-calm', !items.length);
@@ -150,7 +157,9 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
     draw();
   }
 
-  for (const k of ['workers', 'pulls', 'floors', 'floor', 'studio'] as const) store.on(k, refresh);
+  // Every worker update of every live worker: worked out at most four times a second (ui/batch.ts).
+  const refreshSoon = batched(refresh);
+  for (const k of ['workers', 'pulls', 'floors', 'floor', 'studio'] as const) store.on(k, refreshSoon);
   onIncidentsChanged(draw);
   // "3m ago" moves on by itself.
   setInterval(draw, 30_000);

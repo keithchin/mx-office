@@ -10,6 +10,7 @@ import type { RankedWorker, RankingReport } from '../../../shared/ranking/report
 import { byUrgency } from '../../nextup';
 import { waitingOnSomeone } from '../../notify';
 import { h } from '../dom';
+import { batched } from '../batch';
 import { groupCards, howGraded, podium, table } from './board';
 import { gradeBadge, rankFooter, recordCard } from './view';
 import type { SubagentCard } from '../../../shared/roster/subagent-cards';
@@ -23,6 +24,8 @@ type Sort = 'urgent' | 'rank' | 'name' | 'recent';
 const KEY = 'agent-office.workers-ranking';
 /** A look at the ranking is fetched again after this long, when the tab is drawn. */
 const STALE_MS = 20_000;
+/** Cards of workers gone home drawn at first (a floor's records can hold hundreds); Show more adds this many again. */
+export const GONE_CAP = 40;
 
 interface Prefs {
   scope: Scope;
@@ -75,8 +78,14 @@ export function workersRanking(d: RankingDeps) {
   const reports = new Map<string, { at: number; report?: RankingReport; error?: string }>();
   const open = new Set<string>();
   let live: WorkerInfo[] = [];
+  /** How many gone-home cards are drawn (Show more raises it). */
+  let goneCap = GONE_CAP;
   let loading = false;
   const top = h('div.rk-top');
+  // What the podium and the table were last drawn from: they're drawn again only when that changes.
+  let topShown: { report?: RankingReport; key: string } | undefined;
+  // A worker update for every tool call of every live worker: drawn at most four times a second.
+  const drawSoon = batched(() => draw());
   d.list.before(top);
   d.list.classList.add('rk-list');
 
@@ -103,7 +112,7 @@ export function workersRanking(d: RankingDeps) {
     live = workers;
     const c = current();
     if (d.visible() && (!c || Date.now() - c.at > STALE_MS)) void fetchReport();
-    draw();
+    drawSoon();
   }
 
   function items(r: RankingReport | undefined): Item[] {
@@ -204,6 +213,13 @@ export function workersRanking(d: RankingDeps) {
     const r = current()?.report;
     const waiting = live.some(waitingOnSomeone);
     const names = new Map((r?.workers ?? []).map((w) => [w.key, w.name]));
+    const key = JSON.stringify([prefs, waiting, current()?.error ?? '', !!d.floor()]);
+    if (!topShown || topShown.report !== r || topShown.key !== key) drawTop(r, waiting, names, key);
+    drawList(r, waiting);
+  }
+
+  function drawTop(r: RankingReport | undefined, waiting: boolean, names: Map<string, string>, key: string) {
+    topShown = { report: r, key };
     top.replaceChildren(
       toolbar(r, waiting),
       ...(r
@@ -213,7 +229,10 @@ export function workersRanking(d: RankingDeps) {
           ]
         : []),
     );
-    const list = sorted(items(r), waiting);
+  }
+
+  function drawList(r: RankingReport | undefined, waiting: boolean) {
+    const { shown: list, hidden } = capGone(sorted(items(r), waiting), goneCap);
     if (!list.length) return d.list.replaceChildren(h('li.lite-empty', {}, d.emptyText()));
     if (prefs.group === 'none') {
       d.list.replaceChildren(...list.map((i) => cardOf(i, r)));
@@ -225,6 +244,7 @@ export function workersRanking(d: RankingDeps) {
       const keys = [...groups.keys()].sort((a, b) => (stats.get(b)?.avgScore ?? -1) - (stats.get(a)?.avgScore ?? -1) || a.localeCompare(b));
       d.list.replaceChildren(...keys.flatMap((k) => [h('li.rk-group-h', {}, h('span', {}, k), stats.get(k)?.avgGrade ? gradeBadge(stats.get(k)!.avgGrade, stats.get(k)!.avgScore, false) : null, h('small', {}, `${groups.get(k)!.length}`)), ...groups.get(k)!.map((i) => cardOf(i, r))]));
     }
+    if (hidden) d.list.append(h('li.rk-more-li', {}, h('button.btn.small.rk-more', { type: 'button', onclick: () => ((goneCap += GONE_CAP * 2), draw()) }, `Show ${Math.min(hidden, GONE_CAP * 2)} more gone home (${hidden} not shown)`)));
     if (r) d.list.append(h('li.rk-how-li', {}, howGraded(r)));
     if (prefs.showSubs && d.subagents) nestSubagents(d.list, d.subagents.cards(prefs.neverRun), Date.now(), d.subagents.open);
   }
@@ -232,4 +252,11 @@ export function workersRanking(d: RankingDeps) {
   // Every minute while it's showing: grades move as tasks finish.
   setInterval(() => d.visible() && void fetchReport(), 60_000);
   return { render };
+}
+
+/** Every live worker's card, and the first `cap` of those gone home (in the order given): what a long list draws. */
+export function capGone<T extends { w?: unknown }>(list: readonly T[], cap: number): { shown: T[]; hidden: number } {
+  let gone = 0;
+  const shown = list.filter((i) => !!i.w || ++gone <= cap);
+  return { shown, hidden: list.length - shown.length };
 }

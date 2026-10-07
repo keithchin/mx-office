@@ -17,6 +17,7 @@ import { store } from '../../state';
 import { messages, loadOlder, onFeed, refetch, routeChatter } from '../chatter/feed';
 import { chatterActions } from '../chatter/panel';
 import { h, modalOpen, toast } from '../dom';
+import { batched } from '../batch';
 import { collectNeeds, type NeedItem, type NeedsInput, type NeedTarget } from '../needsyou/logic';
 import { incidentBriefs, incidentFeedMessage, onIncidentsChanged } from '../incidents/feed';
 import { currentRoster, onRoster, routeRosterMessage } from '../teams/world';
@@ -29,7 +30,7 @@ import { phoneFrame, wasOpen } from './frame';
 import { notesOf, redCount, type NoteAction, type PhoneNote } from './notes';
 import { readState } from './reads';
 import type { RowActions } from './rows';
-import { allLog, channelLog, dmLog, filterChips, homeList, needsLog, threadLog, type PhoneAgentView, type PhoneModel, type Screen } from './screens';
+import { allLog, channelLog, dmLog, filterChips, homeList, needsLog, STREAM_CAP, threadLog, type PhoneAgentView, type PhoneModel, type Screen } from './screens';
 import { dndLabel, settingsSheet } from './settings';
 import './phone.css';
 import './iphone.css';
@@ -71,6 +72,8 @@ export function installPhone(deps: PhoneDeps): Phone {
   let filter: ChatterFilter = { with: 'all' };
   let team: TeamId | undefined;
   let pending: PendingReply[] = [];
+  /** How many of the newest messages the logs draw (Load older adds STREAM_CAP more). */
+  let limit = STREAM_CAP;
   let items: NeedItem[] = [];
   let ownSetup: { floor: string; at: number; view?: SetupView } | undefined;
   let sheet: HTMLElement | undefined;
@@ -153,6 +156,7 @@ export function installPhone(deps: PhoneDeps): Phone {
       unreadFloor,
       unreadDm,
       filter,
+      limit,
       ...(team ? { team } : {}),
     };
   }
@@ -161,7 +165,7 @@ export function installPhone(deps: PhoneDeps): Phone {
   function listen(floor: string) {
     if (listened.has(floor)) return;
     listened.add(floor);
-    onFeed(floor, () => draw());
+    onFeed(floor, () => drawLater());
   }
 
   async function loadPending() {
@@ -192,13 +196,16 @@ export function installPhone(deps: PhoneDeps): Phone {
     return store.floor ? { s: 'floor', floor: store.floor } : { s: 'needs' };
   }
 
-  let frameReq = 0;
   /** A screen was just opened: show its newest messages. */
   let toBottom = true;
-  /** Draws on the next frame: a burst of worker updates draws once. */
-  function draw() {
-    if (!frameReq) frameReq = requestAnimationFrame(() => ((frameReq = 0), paint()));
-  }
+  /** Draws on the next frame (and at most every 150 ms): something on the phone changed. */
+  const draw = batched(() => paint(), 150);
+  /**
+   * What the office sends (every worker's update, every new message on every floor): at most twice a
+   * second, since each paint works out Needs you and every channel's unread (on a busy floor that was
+   * every frame, closed or not).
+   */
+  const drawLater = batched(() => paint(), 500);
 
   function paint() {
     collect();
@@ -213,6 +220,11 @@ export function installPhone(deps: PhoneDeps): Phone {
     const busy = m.agents.filter((a) => a.status === 'working' || a.status === 'starting').length;
     frame.sub.textContent = quiet || (s.s === 'floor' && s.floor === store.floor ? `${m.agents.length} agent${m.agents.length === 1 ? '' : 's'}${busy ? ` · ${busy} working` : ''}` : s.s === 'floor' ? 'Another floor' : (store.floors.find((f) => f.id === store.floor)?.name ?? ''));
     frame.back.hidden = screen.s === 'home';
+    // The open log is drawn again only when what it's drawn from changed: building and comparing its
+    // rows on every worker update (twice a second on a busy floor) cost a third of a second each time.
+    const key = logKey(s, m);
+    if (key === drawnKey && !toBottom) return;
+    drawnKey = key;
     const stick = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 24;
     const before = scroller.scrollHeight - scroller.scrollTop;
     let rows: HTMLElement[] = [];
@@ -233,7 +245,7 @@ export function installPhone(deps: PhoneDeps): Phone {
       frame.title.textContent = `# ${rowActions.floorName(s.floor)}`;
       chipEls.push(filterChips(m, s.floor, setFilter));
       rows = channelLog(m, s.floor, rowActions);
-      older.hidden = !messages(s.floor).more;
+      older.hidden = !messages(s.floor).more && messages(s.floor).list.length <= limit;
       target = { floor: s.floor, place: { in: 'channel' }, agents: s.floor === store.floor ? ag : [] };
       if (frame.isOpen() && !document.hidden) mark(floorChannel(s.floor), messages(s.floor).list.filter((x) => !x.ref?.thread?.startsWith('dm-'))[0]?.at);
     } else if (s.s === 'dm') {
@@ -260,6 +272,29 @@ export function installPhone(deps: PhoneDeps): Phone {
     // Newest at the bottom, as a chat: stay there when you were, else keep what you were reading in place.
     if (changed || toBottom) scroller.scrollTop = stick || toBottom ? scroller.scrollHeight : scroller.scrollHeight - before;
     toBottom = false;
+  }
+
+  let drawnKey = '';
+  /** What the open log shows is drawn from: its screen, the messages it reads, who's typing and waiting, and what's open. */
+  function logKey(s: Screen, m: PhoneModel): string {
+    const feed = (f: string) => {
+      const g = messages(f);
+      return [f, g.list.length, g.list[0]?.id ?? '', g.list[0]?.at ?? 0, g.loaded, g.more, g.error ?? ''].join(':');
+    };
+    const floors = s.s === 'all' ? store.floors.map((f) => f.id) : s.s === 'needs' ? [] : [s.s === 'dm' ? (store.floor ?? '') : 'floor' in s ? s.floor : ''];
+    return JSON.stringify([
+      s,
+      screen.s,
+      limit,
+      filter,
+      team ?? '',
+      floors.map(feed),
+      m.agents.map((a) => `${a.workerId}:${a.status}`),
+      m.pending.map((p) => `${p.workerId}:${p.thread ?? ''}`),
+      m.notes.map((n) => n.key),
+      s.s === 'thread' ? [...m.escalations.values()].map((e) => `${e.id}:${e.status}`) : [],
+      frame.win.classList.contains('tp-is-wide'),
+    ]);
   }
 
   function mark(channel: string, at: number | undefined) {
@@ -290,6 +325,7 @@ export function installPhone(deps: PhoneDeps): Phone {
   async function more() {
     const f = floorOf(shown());
     if (!f) return;
+    limit += STREAM_CAP;
     older.disabled = true;
     await loadOlder(f);
     older.disabled = false;
@@ -392,9 +428,9 @@ export function installPhone(deps: PhoneDeps): Phone {
       routeChatter(msg);
       routeRosterMessage(msg);
       if (msg.t === 'chatter.new' && msg.message.from.kind !== 'human') pending = pending.filter((p) => !(p.thread === msg.message.ref?.thread && msg.message.from.workerId === p.workerId) && !(msg.message.ref?.worker === p.workerId));
-      if (msg.t === 'welcome' || msg.t === 'floor.enter' || msg.t === 'liveapp.state' || msg.t === 'roster.changed') draw();
+      if (msg.t === 'welcome' || msg.t === 'floor.enter' || msg.t === 'liveapp.state' || msg.t === 'roster.changed') drawLater();
     },
-    refresh: draw,
+    refresh: () => drawLater(),
     open,
   };
 }

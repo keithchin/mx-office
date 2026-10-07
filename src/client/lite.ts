@@ -58,6 +58,7 @@ import { testModeBadge } from './ui/testmode';
 import { budgetUi } from './ui/budget';
 import { testlabView } from './ui/testlab';
 import './shared/perfwatch-on';
+import { batched } from './ui/batch';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -349,8 +350,10 @@ store.on('floor', renderAnalysisTab);
 const team = teamTab($('team-view'), $('tab-approvals').querySelector('.ro-tab-n')!, () => isPane(tab), openWorker, { select: (p) => (p === 'settings' ? showSettings('team') : showTab(p)) });
 net.onMessage((msg) => team.onMessage(msg));
 store.on('floor', () => team.render(store.floor ?? undefined));
-for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanban);
-setInterval(renderKanban, 30_000);
+// Every worker update of every live worker comes through here: drawn at most four times a second (ui/batch.ts).
+const renderKanbanSoon = batched(renderKanban);
+for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) store.on(k, renderKanbanSoon);
+setInterval(renderKanbanSoon, 30_000);
 
 // ---- Needs you: what's blocked on you, at the top of the Command Center, counted on its tab ---------
 /** An escalation's card on the PM console, scrolled to with its answer box focused; the Approvals tab if it isn't there. */

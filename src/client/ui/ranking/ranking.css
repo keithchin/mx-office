@@ -73,7 +73,10 @@
 
 /* The cards: a responsive grid across the whole width. */
 .lite-workers.rk-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); align-items: start; }
-.rk-list .rk-group-h, .rk-list .rk-how-li, .rk-list .lite-empty { grid-column: 1 / -1; }
+.rk-list .rk-group-h, .rk-list .rk-how-li, .rk-list .rk-more-li, .rk-list .lite-empty { grid-column: 1 / -1; }
+.rk-list .rk-more-li { list-style: none; text-align: center; padding: 6px 0; }
+/* A card off screen isn't laid out or painted: the list redraws as workers change (the performance guard). */
+.rk-list > .rk-item { content-visibility: auto; contain-intrinsic-size: auto 132px; }
 .rk-group-h { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
 .rk-group-h small { color: var(--muted); }
 .lite-worker.rk-item { flex-wrap: wrap; align-items: center; }

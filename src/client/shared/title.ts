@@ -7,5 +7,7 @@ export function renderTitle() {
   const name = store.project?.name;
   const elsewhere = store.floors.reduce((n, f) => n + (f.id === store.floor ? 0 : f.waiting), 0);
   const waiting = [...store.workers.values()].filter(waitingOnSomeone).length + elsewhere;
-  document.title = `${waiting ? `(${waiting}) ` : ''}${name ? `${name} · ` : ''}Agent Office`;
+  const title = `${waiting ? `(${waiting}) ` : ''}${name ? `${name} · ` : ''}Agent Office`;
+  // Only when it changes: it's worked out on every worker update.
+  if (document.title !== title) document.title = title;
 }
