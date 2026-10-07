@@ -53,3 +53,35 @@ test('the ranking is worked out once per RANKING_TTL_MS, whoever asks', () => {
   assert.notEqual(rankingReport(ctx, 'f2', T0), a, 'per floor');
   assert.notEqual(rankingReport(ctx, 'f1', T0 + RANKING_TTL_MS + 1), a, 'worked out again after it');
 });
+
+test("a project switch's many asks for the floor's team share one fetch", async () => {
+  const { fetchRoster } = await import('../src/client/ui/roster/api.js');
+  const real = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (async () => {
+    calls++;
+    await new Promise((r) => setTimeout(r, 20));
+    return new Response(JSON.stringify({ floor: 'f1', members: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch;
+  try {
+    const all = await Promise.all([fetchRoster('f1'), fetchRoster('f1'), fetchRoster('f1'), fetchRoster('f1')]);
+    assert.equal(calls, 1, 'four asks, one fetch');
+    assert.ok(all.every((r) => r === all[0]));
+    await fetchRoster('f1');
+    assert.equal(calls, 2, 'a later ask fetches afresh');
+    await Promise.all([fetchRoster('f1'), fetchRoster('f2')]);
+    assert.equal(calls, 4, 'per floor');
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test('the setup panel view is shared for SETUP_TTL_MS and worked out afresh after a re-check', async () => {
+  const { SETUP_TTL_MS } = await import('../src/server/wizard/index.js');
+  assert.ok(SETUP_TTL_MS > 0 && SETUP_TTL_MS <= 10_000);
+  const src = readFileSync(new URL('../src/server/wizard/index.ts', import.meta.url), 'utf8');
+  const setup = src.slice(src.indexOf('  setup(floor: Floor'), src.indexOf('  private async freshSetup('));
+  assert.match(setup, /now - had\.at < SETUP_TTL_MS\) return had\.view;/);
+  const recheck = src.slice(src.indexOf('  recheck(floor: Floor)'));
+  assert.match(recheck.slice(0, 200), /this\.setups\.delete\(floor\.id\);/);
+});

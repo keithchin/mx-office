@@ -33,6 +33,8 @@ import { setupSteps, type FloorRef, type SetupDeps } from './steps.js';
 
 /** What an edit writes again: the answers and decisions, and the commit that carries them. */
 const EDIT_STEPS: StepId[] = ['intake', 'decisions', 'settings', 'commit'];
+/** How long a floor's setup view is shared (setup()). */
+export const SETUP_TTL_MS = 5_000;
 
 export class Wizard {
   private base: WizardConfig;
@@ -137,7 +139,24 @@ export class Wizard {
   }
 
   /** The setup panel's view: from the default branch on GitHub when there is one, else from the floor's folder. */
-  async setup(floor: Floor): Promise<SetupView> {
+  /** Each floor's setup view as last worked out, and when (setup() reuses it for SETUP_TTL_MS). */
+  private setups = new Map<string, { at: number; view: Promise<SetupView> }>();
+
+  /**
+   * The setup panel's view of a floor. Working it out runs git four to six times (a quarter to over half
+   * a second on Windows), and a project switch asked for it three times at once (the setup panel, the
+   * team phone, Needs you): one answer is shared for a few seconds, and a re-check starts afresh.
+   */
+  setup(floor: Floor, now = Date.now()): Promise<SetupView> {
+    const had = this.setups.get(floor.id);
+    if (had && now - had.at < SETUP_TTL_MS) return had.view;
+    const view = this.freshSetup(floor);
+    this.setups.set(floor.id, { at: now, view });
+    view.catch(() => this.setups.get(floor.id)?.view === view && this.setups.delete(floor.id));
+    return view;
+  }
+
+  private async freshSetup(floor: Floor): Promise<SetupView> {
     const job = this.jobForFloor(floor)?.id;
     const g = await this.gates.read(floor.dir).catch(() => undefined);
     if (!g) return { ...setupView(floor.dir), job, checking: this.checking.has(floor.id), checkedAt: this.checkedAt.get(floor.id) };
@@ -158,6 +177,7 @@ export class Wizard {
    * temporary worktree when the project has one (the floor's folder untouched), else over the folder.
    */
   recheck(floor: Floor): string | undefined {
+    this.setups.delete(floor.id);
     const dir = floor.dir;
     void branchInfo(dir).then((info) => {
       if (info) return void this.gates.regenerate(dir, info, true);
