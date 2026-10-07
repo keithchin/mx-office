@@ -365,7 +365,7 @@ export class Subagents {
       const w = this.leadWorker(floor, a.lead);
       // The Project Manager's decision: held while the Lead is busy or a dialog is up, and told once its
       // turn is over. A Lead that's asleep or away gets it as a note kept in the roster file (relays.ts).
-      const sent = !!w && !isAsleepStatus(w.status) && this.roster.delivery.send(floor, w, subagentDecisionPrompt(`${OP_ASK[a.op]} ${a.name}`, approve, by, reason), { origin: 'person', by, hold: true, between: true }).status !== 'refused';
+      const sent = !!w && !isAsleepStatus(w.status) && this.roster.delivery.send(floor, w, subagentDecisionPrompt(`${OP_ASK[a.op]} ${a.name}`, approve, by, reason), { origin: 'person', by, hold: true, between: true, id: `subagent-decision:${a.id}` }).status !== 'refused';
       if (!sent) this.roster.relays.noteLead(floor, a.lead, `The Project Manager (${by}) ${approve ? 'approved' : 'rejected'} your request to ${OP_ASK[a.op]} ${a.name}.${approve ? ' The office has done it.' : ''}${reason ? ` ${line(reason, 300)}` : ''}`);
     }
     this.roster.touch(floor);

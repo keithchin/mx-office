@@ -205,7 +205,7 @@ export class Roster {
   onWorkerGone(floor: TeamFloor, workerId: string) {
     this.seen.delete(workerId);
     this.echoes.delete(workerId);
-    this.delivery.forget(workerId);
+    this.delivery.forget(floor, workerId);
     forgetSubagents(workerId);
     this.subagents.live.forget(workerId);
     forgetLastWords(workerId);
@@ -258,6 +258,12 @@ export class Roster {
       this.standups.tick(floor, now);
       this.nudges.tick(floor, LEADS.map((r) => r.id), now);
       this.subagents.tick(floor, now);
+      // Held prompts past their expiry are let go; ones that could go in now (after a restart, nothing
+      // else may announce their worker) go through onWorker, so its re-entrancy guard holds.
+      for (const id of this.delivery.tick(floor, now)) {
+        const w = floor.worker(id);
+        if (w) this.onWorker(floor, w);
+      }
       this.escalations.tick(floor);
       applyStageAutonomy(this, floor);
       this.relays.tick(floor, now);

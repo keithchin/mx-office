@@ -13,12 +13,18 @@
 // what a person sends ('person': their answers, the Team tab) still goes through, and a turn already
 // running is never stopped. A floor paused with ⏸ Pause project (project-run/store.ts) holds the
 // same way: nothing of the office's or another agent's goes in until it's resumed; a person's does.
+//
+// What's held is kept in the roster file (held.ts), so a restart doesn't lose a promise: it goes in once
+// the agent is next between turns (or the minute's look finds it so), and one that waited past its
+// expiry is let go and said so. The same prompt held twice (its id) goes in once.
 
 import type { WorkerInfo, WorkerStatus } from '../../shared/protocol.js';
 import { isAsleepStatus } from './bench.js';
 import type { Roster } from './index.js';
 import { owedAnswersPrompt } from './prompts.js';
 import { projectPauseOf } from '../project-run/store.js';
+import { audit, office } from '../audit/index.js';
+import { HELD_TTL_MS, heldId, holdOnce, type HeldPrompt } from './held.js';
 import type { TeamFloor } from './types.js';
 
 /** Who a prompt is from: a person, the office itself, or another agent (`office-workers tell`). */
@@ -40,24 +46,25 @@ export interface SendOpts {
   hold?: boolean;
   /** Only between turns (idle or done), never into one under way: held then with `hold`, else refused. */
   between?: boolean;
-  /** Called once it's typed (or woken with): now, or when a held prompt goes in. */
+  /** Called once it's typed (or woken with): now, or when a held prompt goes in (not after a restart). */
   onSent?: () => void;
+  /** A held prompt's idempotency key: held again with the same one, it still goes in once. Made from the prompt otherwise. */
+  id?: string;
+  /** How long a held prompt waits before it's let go (HELD_TTL_MS, a day, otherwise). */
+  ttlMs?: number;
 }
 
 export type Sent = { status: 'sent' | 'woke' | 'held' } | { status: 'refused'; why: string };
 
-interface Held {
-  text: string;
-  origin: Origin;
-  by?: string;
-  onSent?: () => void;
-}
+/** How long a held prompt was kept, for its activity line. */
+const waited = (ms: number) => (ms >= 3_600_000 ? `${Math.round(ms / 3_600_000)} h` : `${Math.max(1, Math.round(ms / 60_000))} min`);
 
 /** Between two held prompts typed as one message. */
 const JOIN = '\n\n---\n\n';
 
 export class Delivery {
-  private held = new Map<string, Held[]>();
+  /** What to call once a held prompt goes in, by its id: in memory only (held.ts). */
+  private sentFns = new Map<string, (() => void)[]>();
 
   constructor(private roster: Roster) {}
 
@@ -81,27 +88,56 @@ export class Delivery {
       if (!o.wake) return { status: 'refused', why: `${w.name} is asleep` };
       const err = floor.wake(w.id, text, o.by);
       if (err) return { status: 'refused', why: err };
-      o.onSent?.();
+      this.typed(floor, w, text, o);
       return { status: 'woke' };
     }
     if (!mayType(w.status) || (o.between && !between(w.status))) {
       if (!o.hold) return { status: 'refused', why: mayType(w.status) ? `${w.name} is busy` : `${w.name} is waiting on an answer in its terminal` };
-      const list = this.held.get(w.id) ?? [];
-      list.push({ text, origin: o.origin, by: o.by, onSent: o.onSent });
-      this.held.set(w.id, list);
+      this.hold(floor, w, text, o);
       return { status: 'held' };
     }
     let err = floor.prompt(w.id, text, o.by);
     if (err === 'Worker is not running' && o.wake) {
       err = floor.wake(w.id, text, o.by);
       if (!err) {
-        o.onSent?.();
+        this.typed(floor, w, text, o);
         return { status: 'woke' };
       }
     }
     if (err) return { status: 'refused', why: err };
-    o.onSent?.();
+    this.typed(floor, w, text, o);
     return { status: 'sent' };
+  }
+
+  /** Typed (or woken with) now: its sender hears, and the same prompt, if it was held before, has gone in. */
+  private typed(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts) {
+    const id = o.id ?? heldId(w.id, o.origin, text, o.by);
+    const fns = this.sentFns.get(id) ?? [];
+    o.onSent?.();
+    this.drop(floor, [id]);
+    for (const fn of fns) fn();
+  }
+
+  /** Keeps a prompt for after the turn, in the roster file, once per id. */
+  private hold(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts) {
+    const now = this.roster.deps.now();
+    const id = o.id ?? heldId(w.id, o.origin, text, o.by);
+    holdOnce(this.roster.data(floor.id).held, { id, workerId: w.id, origin: o.origin, ...(o.by ? { by: o.by } : {}), text, createdAt: now, expiresAt: now + (o.ttlMs ?? HELD_TTL_MS) });
+    if (o.onSent) this.sentFns.set(id, [...(this.sentFns.get(id) ?? []), o.onSent]);
+    this.roster.touch(floor, true);
+  }
+
+  /** Takes held prompts off the floor's list (typed, or let go). */
+  private drop(floor: TeamFloor, ids: string[]) {
+    const d = this.roster.data(floor.id);
+    const before = d.held.length;
+    d.held = d.held.filter((h) => !ids.includes(h.id));
+    for (const id of ids) this.sentFns.delete(id);
+    if (d.held.length !== before) this.roster.touch(floor, true);
+  }
+
+  private heldOf(floorId: string, workerId: string): HeldPrompt[] {
+    return this.roster.data(floorId).held.filter((h) => h.workerId === workerId);
   }
 
   /** The usual case: a prompt only worth typing now (its caller tries again later). Why not, if not. */
@@ -110,9 +146,33 @@ export class Delivery {
     return r.status === 'refused' ? r.why : undefined;
   }
 
-  /** How many prompts are held for a worker (the tests, and `tell`'s answer). */
-  heldFor(workerId: string): number {
-    return this.held.get(workerId)?.length ?? 0;
+  /** How many prompts are held for a worker (the tests, and the run preview), on its floor or any. */
+  heldFor(workerId: string, floorId?: string): number {
+    const floors = floorId ? [floorId] : this.roster.deps.floors().map((f) => f.id);
+    return floors.reduce((n, id) => n + this.heldOf(id, workerId).length, 0);
+  }
+
+  /**
+   * The minute's look: held prompts past their expiry are let go (an activity line and an audit event
+   * each). Gives back the workers with prompts still held that could go in now, for the roster to
+   * hand to onWorker (after a restart nothing else may announce them).
+   */
+  tick(floor: TeamFloor, now = this.roster.deps.now()): string[] {
+    const d = this.roster.data(floor.id);
+    const expired = d.held.filter((h) => h.expiresAt <= now);
+    for (const h of expired) {
+      const name = floor.worker(h.workerId)?.name ?? h.workerId;
+      const from = h.by ?? (h.origin === 'office' ? 'the office' : 'someone');
+      floor.activity?.(`⌛ A message from ${from} held for ${name} was let go: its turn didn't end within ${waited(h.expiresAt - h.createdAt)}`);
+      audit.record({ floor: floor.id, actor: office(), action: 'delivery.expired', target: { kind: 'worker', id: h.workerId, label: name }, summary: `A held message from ${from} for ${name} expired before it could be typed`, details: { id: h.id, origin: h.origin, by: h.by, createdAt: h.createdAt, expiresAt: h.expiresAt, length: h.text.length } });
+    }
+    if (expired.length) this.drop(floor, expired.map((h) => h.id));
+    const due = new Set<string>();
+    for (const h of d.held) {
+      const w = floor.worker(h.workerId);
+      if (w?.kind === 'agent' && (between(w.status) || isAsleepStatus(w.status))) due.add(w.id);
+    }
+    return [...due];
   }
 
   /**
@@ -125,7 +185,8 @@ export class Delivery {
     const asleep = isAsleepStatus(w.status);
     if (!between(w.status) && !asleep) return;
     const paused = !!this.paused(floor);
-    const queued = this.held.get(w.id) ?? [];
+    const now = this.roster.deps.now();
+    const queued = this.heldOf(floor.id, w.id).filter((h) => h.expiresAt > now);
     const going = queued.filter((h) => !paused || h.origin === 'person');
     // An asleep one isn't woken for owed answers alone: its next hire or wake carries them.
     const owed = asleep ? undefined : this.roster.escalations.owedTo(floor, w);
@@ -139,14 +200,13 @@ export class Delivery {
     const err = asleep ? floor.wake(w.id, text, by) : floor.prompt(w.id, text, by);
     if (err) return;
     owed?.mark();
-    const left = queued.filter((h) => !going.includes(h));
-    if (left.length) this.held.set(w.id, left);
-    else this.held.delete(w.id);
-    for (const h of going) h.onSent?.();
+    const fns = going.flatMap((h) => this.sentFns.get(h.id) ?? []);
+    this.drop(floor, going.map((h) => h.id));
+    for (const fn of fns) fn();
   }
 
   /** A worker left the floor: what was held for it goes with it. */
-  forget(workerId: string) {
-    this.held.delete(workerId);
+  forget(floor: TeamFloor, workerId: string) {
+    this.drop(floor, this.heldOf(floor.id, workerId).map((h) => h.id));
   }
 }

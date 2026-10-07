@@ -6,7 +6,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+- **Held messages survive a restart**: a prompt held until an agent's turn is over (an
+  `office-workers tell`, a phone reply, a subagent decision) is kept in the roster file instead of
+  memory, so restarting the office no longer loses it. It goes in once the agent is next between
+  turns, merged into one message, never into a dialog, and still held by the spend cap and ⏸ Pause
+  project (a person's words still go). The same message held twice goes in once, and one still
+  waiting after 24 hours is let go with an Activity line and a `delivery.expired` audit event.
 
 ## 2026-10-07 · release 15 (`62fb3cb`)
 

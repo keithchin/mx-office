@@ -17,7 +17,7 @@ Nothing is woken until you say so. Resume first opens a preview listing every ag
 | Reason | Where it comes from |
 |---|---|
 | *N escalation answers owed to it* | You answered its escalations while it slept, and it hasn't been told yet |
-| *N prompts held for it* | Prompts the office's one delivery path is holding (typed once its turn is over) |
+| *N prompts held for it* | Prompts the office's one delivery path is holding (typed once its turn is over). They're kept in the roster file, so a restart doesn't lose them; one still waiting after 24 hours is let go, with an Activity line and a `delivery.expired` audit event |
 | *N notes queued for it* | The office's outbox: relays for the Project Coordinator, the Project Manager's decisions for a Lead |
 | *Cut off mid-turn* | A restart or a crash stopped it mid-turn, and it hasn't carried on yet |
 | *Failing checks on PR #n* | Its open pull request is red on the floor's PR list |

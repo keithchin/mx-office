@@ -16,6 +16,7 @@ import { reviveLiveRuns, reviveSubagents, SUBAGENT_ACTIONS_KEPT } from './subage
 import type { LiveRun } from '../../shared/roster/subagent-live.js';
 import type { SubagentAction, SubagentRecord } from '../../shared/roster/subagents.js';
 import { emptyOutbox, reviveOutbox, type Outbox } from './relays.js';
+import { reviveHeld, type HeldPrompt } from './held.js';
 import { alsoCovers, cleanCoverage, cleanShape, defaultCoverage, type Coverage, type TeamShape } from '../../shared/roster/coverage.js';
 
 /** Where a member is in its life: never hired, a worker now, writing its handoff, or benched. */
@@ -72,6 +73,8 @@ export interface RosterData {
   subagentRuns: LiveRun[];
   /** What the office has still to pass on to the Coordinator and the Leads (relays.ts): kept so a restart doesn't lose it. */
   outbox: Outbox;
+  /** Prompts held for an agent until its turn is over (deliver.ts, held.ts): kept so a restart doesn't lose them. */
+  held: HeldPrompt[];
 }
 
 // Leads are benched only when the Project Manager says so; a floor can turn idle benching on in its settings.
@@ -134,7 +137,7 @@ export function freshRoster(rng: () => number = Math.random): RosterData {
   const names = pickNames(rng);
   const members = {} as Record<RoleId, MemberRecord>;
   for (const r of ROLES) members[r.id] = { name: names[r.id], model: r.model, phase: 'none' };
-  return { settings: defaultSettings(), shape: 'enterprise', coverage: defaultCoverage('enterprise'), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [], subagentRuns: [], outbox: emptyOutbox() };
+  return { settings: defaultSettings(), shape: 'enterprise', coverage: defaultCoverage('enterprise'), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [], subagentRuns: [], outbox: emptyOutbox(), held: [] };
 }
 
 /** A saved roster, made whole: a role added since it was saved gets a name, a bad field its default. */
@@ -167,6 +170,7 @@ export function reviveRoster(raw: unknown, rng: () => number = Math.random): Ros
     subagentActions: Array.isArray(r.subagentActions) ? r.subagentActions.filter((a) => a && typeof a === 'object' && typeof a.id === 'string').slice(-SUBAGENT_ACTIONS_KEPT) : [],
     subagentRuns: reviveLiveRuns(r.subagentRuns),
     outbox: reviveOutbox(r.outbox),
+    held: reviveHeld(r.held),
   };
 }
 
