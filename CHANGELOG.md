@@ -61,6 +61,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **Held messages survive Restart safely**: a message held just before the restart no longer goes
   missing (the roster is written before the office exits).
 - **A rebuild no longer crashes the office**: a page file that vanishes mid-request is a 404.
+- **Switching projects no longer sometimes waits 15 s on the loading overlay**: after a quick switch the
+  new floor's budget could go unloaded (an ask dropped while a load was out, and each busy worker's usage
+  message pushing the next load back again). A switch on the big test office now takes about a quarter of
+  a second (p90 about half a second, over 20 switches).
+
 
 
 ## 2026-10-07 · release 16 (`f52988c`)
