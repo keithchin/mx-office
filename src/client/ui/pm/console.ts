@@ -126,9 +126,19 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     el.classList.toggle('pmc-show-esc', showEsc && !!list.length);
     escBtn.textContent = showEsc ? 'Back to the chat ▴' : 'Show ▾';
     escBtn.setAttribute('aria-expanded', String(showEsc));
+    // The cards take the screen's place: the terminal behind it is parked (term-park.ts).
+    placeTerm();
   }
   const el = h('section.pmc', { 'aria-label': 'Project console' }, head, escBar, screen, empty, escalations.el, foot);
   const term = new PmTerminal(net, termHost);
+  /** What hid or showed the terminal's box when it was last placed: measuring the box forces a layout, so only a change does. */
+  let placed = '';
+  function placeTerm() {
+    const now = `${term.showing}|${termHost.hidden}|${screen.hidden}|${el.classList.contains('pmc-show-esc')}`;
+    if (now === placed) return;
+    placed = now;
+    term.place();
+  }
   term.onWrite = () => chat.terminalChanged();
 
   // ---- Chat | Terminal ---------------------------------------------------------------------------
@@ -158,6 +168,8 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     termHost.hidden = chatting;
     screen.classList.toggle('pmc-chatting', chatting);
     chat.el.hidden = !chatting || !watching;
+    // Hidden, the terminal is parked at once, before a frame can draw it into a box with no size (term-park.ts).
+    placeTerm();
     for (const b of modeOpts) {
       const on = b.dataset.v === mode;
       b.setAttribute('aria-checked', String(on));

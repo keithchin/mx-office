@@ -75,6 +75,33 @@ export function chatItems(messages: readonly ConvoMsg[]): ChatItem[] {
   return out;
 }
 
+/** What the Chat view draws from (view.ts ChatState), as far as deciding whether to draw again goes. */
+export interface ChatShown {
+  workerId: string;
+  who: { name: string; icon: string; color?: string };
+  status?: string;
+  activity?: string;
+  convo: Convo | undefined;
+}
+
+/**
+ * Whether `next` shows just what `prev` did, so the view needn't draw (or read its layout) again. A
+ * conversation is replaced, never changed in place (state/slices/convo.ts), so the same object is the
+ * same conversation.
+ */
+export function sameChat(prev: ChatShown | undefined, next: ChatShown): boolean {
+  return (
+    !!prev &&
+    prev.workerId === next.workerId &&
+    prev.convo === next.convo &&
+    prev.status === next.status &&
+    prev.activity === next.activity &&
+    prev.who.name === next.who.name &&
+    prev.who.icon === next.who.icon &&
+    prev.who.color === next.who.color
+  );
+}
+
 /** The terminal's escape sequences (colors, cursor moves, titles) and other control characters, gone. */
 export function stripAnsi(s: string): string {
   return (

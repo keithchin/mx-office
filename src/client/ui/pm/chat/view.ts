@@ -11,7 +11,7 @@
 import type { ConvoMsg, ConvoToolStatus } from '../../../../shared/protocol/convo';
 import { h } from '../../dom';
 import { markdownFile } from '../../markdown';
-import { chatItems, screenText, type ChatItem, type Convo, type ToolMsg } from './logic';
+import { chatItems, sameChat, screenText, type ChatItem, type Convo, type ToolMsg } from './logic';
 import './chat.css';
 
 /** How many rows are on the page at first, and how many more each Show earlier adds. */
@@ -66,7 +66,7 @@ export class ChatView {
     this.list = h('div.pmc-chat-list', { role: 'log', 'aria-label': 'Conversation', tabindex: '0' }, this.earlier, this.rows);
     this.status = h('div.pmc-chat-status', { role: 'status', 'aria-live': 'polite' });
     this.plain = h('pre.pmc-plain', { tabindex: '0', 'aria-label': "The terminal's text" });
-    this.fallback = h('div.pmc-fallback', {}, h('p.pmc-fallback-note', {}, 'Chat view needs Claude Code transcripts; showing terminal text.'), this.plain);
+    this.fallback = h('div.pmc-fallback', { hidden: true }, h('p.pmc-fallback-note', {}, 'Chat view needs Claude Code transcripts; showing terminal text.'), this.plain);
     this.el = h('div.pmc-chat', {}, this.list, this.fallback, this.status);
     this.list.addEventListener('scroll', () => (this.pinned = atBottom(this.list)), { passive: true });
     // The box shrinks when a hint or a card appears below it: the newest row stays in view.
@@ -75,6 +75,19 @@ export class ChatView {
 
   /** Draws `s`: only the rows that changed are made again. */
   show(s: ChatState) {
+    // The console draws on every change to any worker on the floor; with a busy team that's many a
+    // second, and a redraw reads the list's layout. Nothing this view shows changed: nothing to do.
+    if (sameChat(this.state, s)) return;
+    // Only what it's doing changed (each tool call): the status line, not the rows.
+    if (this.state && sameChat(this.state, { ...s, status: this.state.status, activity: this.state.activity })) {
+      this.state = s;
+      this.drawStatus(s, s.convo);
+      return;
+    }
+    this.draw(s);
+  }
+
+  private draw(s: ChatState) {
     if (this.state?.workerId !== s.workerId) this.reset();
     this.state = s;
     const c = s.convo;
@@ -105,7 +118,7 @@ export class ChatView {
   private showEarlier() {
     const before = this.list.scrollHeight;
     this.limit += PAGE;
-    if (this.state) this.show(this.state);
+    if (this.state) this.draw(this.state);
     // Keep the rows you were reading where they were.
     this.list.scrollTop += this.list.scrollHeight - before;
   }

@@ -3,7 +3,9 @@
 // snapshot and what follows into a small xterm at the PTY's own size, and scales that down to the
 // column's width with the newest lines at the box's foot. It never sends a resize: the PTY's size belongs to
 // whoever has the full terminal open. While it shows a terminal it holds it (ui/term-holds.ts), so the
-// full window or a hover preview closing doesn't stop its output.
+// full window or a hover preview closing doesn't stop its output. It only draws while its box is laid
+// out: hidden (the Chat view, the escalation cards) it's parked, taking in output but drawing nothing
+// (term-park.ts says why: a hidden xterm froze the page).
 
 import { Terminal } from '@xterm/xterm';
 import type { Net } from '../../net';
@@ -11,6 +13,7 @@ import type { ServerMsg } from '../../../shared/protocol';
 import { openTerminalFor } from '../terminal';
 import { termTheme } from '../termtheme';
 import { holdTerminal } from '../term-holds';
+import { termPlacement } from './term-park';
 
 /** The narrowest it's scaled for, in columns, and the smallest scale (about 7.5px type at 12px). */
 const MIN_COLS = 60;
@@ -23,7 +26,9 @@ export class PmTerminal {
   private workerId: string | null = null;
   private release: (() => void) | null = null;
   private fitFrame = 0;
-  private readonly ro = new ResizeObserver(() => this.fit());
+  /** Whether `term` has been opened in the box (has a renderer); a parked one hasn't. */
+  private opened = false;
+  private readonly ro = new ResizeObserver(() => (this.place(), this.fit()));
 
   constructor(
     private readonly net: Net,
@@ -49,12 +54,39 @@ export class PmTerminal {
     if (!workerId) return;
     this.workerId = workerId;
     this.release = holdTerminal(workerId);
-    const term = new Terminal({ disableStdin: true, cursorBlink: false, fontSize: 12, scrollback: SCROLLBACK, theme: termTheme(), allowProposedApi: false });
-    term.open(this.host);
-    this.term = term;
+    this.term = this.make();
+    this.opened = false;
     // Attaching twice from one page is harmless (the full window may have it already): the office
     // keeps one viewer per connection, and answers with a snapshot either way.
     this.net.send({ t: 'worker.attach', workerId });
+    // Parked until placed: the console calls place() once it has shown or hidden the box.
+  }
+
+  private make() {
+    return new Terminal({ disableStdin: true, cursorBlink: false, fontSize: 12, scrollback: SCROLLBACK, theme: termTheme(), allowProposedApi: false });
+  }
+
+  /**
+   * Opens the terminal in its box once the box is laid out, and parks it again when the box isn't
+   * (term-park.ts). The console calls it right after showing or hiding the box, before the next frame
+   * could draw into a hidden one; the box's ResizeObserver catches anything else that hides it.
+   */
+  place() {
+    if (!this.term || !this.workerId) return;
+    const todo = termPlacement(this.opened, { width: this.host.clientWidth, height: this.host.clientHeight });
+    if (todo === 'open') {
+      this.term.open(this.host);
+      this.opened = true;
+      this.fitSoon();
+    } else if (todo === 'park') {
+      // An opened xterm can't give its renderer back: a fresh, unopened one takes over, and a new
+      // snapshot fills it (the Chat view's fallback reads its lines).
+      this.term.dispose();
+      this.host.replaceChildren();
+      this.term = this.make();
+      this.opened = false;
+      this.net.send({ t: 'worker.attach', workerId: this.workerId });
+    }
   }
 
   /** After a reconnect the office has forgotten what this page watched: ask again. */
@@ -114,6 +146,7 @@ export class PmTerminal {
     if (id && openTerminalFor() !== id) this.net.send({ t: 'worker.detach', workerId: id });
     this.term?.dispose();
     this.term = null;
+    this.opened = false;
     this.workerId = null;
     this.host.replaceChildren();
   }
@@ -127,7 +160,7 @@ export class PmTerminal {
     const term = this.term;
     const screen = this.host.querySelector<HTMLElement>('.xterm-screen');
     const inner = this.host.firstElementChild as HTMLElement | null;
-    if (!term || !screen || !inner || !screen.offsetWidth) return;
+    if (!term || !this.opened || !screen || !inner || !screen.offsetWidth) return;
     const buf = term.buffer.active;
     let last = buf.cursorY;
     let used = MIN_COLS;

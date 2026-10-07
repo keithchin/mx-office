@@ -38,6 +38,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   agent survived, or stops with the reason if it didn't (or wasn't back within 2 minutes). Audited as
   `queue.reconciled` / `queue.abandoned`; each seating has an `attemptId`, kept through such a restart, and
   `queue.json` is now written atomically.
+- **The 1D Command Center no longer freezes the browser on a busy floor.** With the Project Coordinator
+  live and the console on its 💬 Chat view (or its escalation cards showing), the console kept the
+  Coordinator's terminal open in a hidden box, and every redraw there forced the page to lay itself out once
+  for each character on the screen: seconds at a time on mx-spike, until Edge offered to kill the page. The
+  terminal now only draws while it's on screen (hidden, it keeps taking in output for the Chat view's
+  fallback but draws nothing), and the Chat view no longer redraws for other workers' changes.
+  `scripts/check-command-center.mjs` checks a floor's Command Center stays responsive.
 
 ## 2026-10-07 · release 15 (`62fb3cb`)
 
