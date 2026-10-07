@@ -6,7 +6,15 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+- **No more server stall while a project is made**: the office froze for 3 to 16 s right after the
+  wizard's clone step, every time. Programs (gh, git, the wizard's commands, the usage check) now start
+  from a thread of their own, the common git questions (branch, origin, HEAD) are read from the
+  checkout's files, and hiring into a worktree runs git without blocking. The journey test now fails if
+  the server's event loop is blocked for more than 250 ms while it makes a project (it was 4.5 s; now
+  nothing over 100 ms). A test office lists its blocks at `GET /api/perf/stalls`.
+- **Windows**: a worker's terminal no longer leaks a pipe and a thread after it ends, and a stopping
+  office no longer waits five minutes on a worker's boot timer.
 
 ## 2026-10-07 · release 17 (`089e759`)
 
