@@ -13,6 +13,7 @@ export class Net {
   private ws: WebSocket | null = null;
   private handlers: Handler[] = [];
   private statusHandlers: ((up: boolean) => void)[] = [];
+  private sendHandlers: ((msg: ClientMsg) => void)[] = [];
   private retry = 0;
   private closedByUs = false;
   /** The server is restarting on purpose: retry every second instead of backing off. */
@@ -33,6 +34,11 @@ export class Net {
 
   onStatus(h: (up: boolean) => void) {
     this.statusHandlers.push(h);
+  }
+
+  /** Hears every message this page sends (the floor's loading overlay sees a floor.go start, ui/loading/). */
+  onSend(h: (msg: ClientMsg) => void) {
+    this.sendHandlers.push(h);
   }
 
   connect() {
@@ -89,6 +95,7 @@ export class Net {
   }
 
   send(msg: ClientMsg) {
+    for (const h of this.sendHandlers) h(msg);
     if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(msg));
   }
 }

@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { PauseInfo, ProjectRunView, RunAgent, RunProgress } from '../src/shared/project-run.js';
-import { cardState, pausedTitle, runningTitle, stateWords, toggleState } from '../src/client/home/run-state-logic.js';
+import { cardState, floorToggle, pausedTitle, runningTitle, stateWords, toggleState } from '../src/client/home/run-state-logic.js';
 
 const time = (at: number) => `T${at}`;
 const pacing = { concurrent: 2, gapSec: 45 };
@@ -102,4 +102,48 @@ test('a card: pausing or resuming wins over the pause, amber; none before its st
   assert.match(cardState(f, view('a', { run: run('resume', ['woken'], 'paused') }), time)!.title, /held/);
   assert.equal(cardState(f, undefined, time), undefined);
   assert.equal(cardState({ ...f, cloning: true }, view('a'), time), undefined);
+});
+
+// The Command Center's one control beside the budget chip (ui/project-run/toggle.ts), from the same state.
+test('the floor toggle: running pauses, with who is working and asleep; the state only for someone not an admin', () => {
+  const f = { workers: 5, busy: 2, waiting: 0 };
+  const t = floorToggle(f, view('a'), time)!;
+  assert.equal(t.kind, 'running');
+  assert.equal(t.icon, '▶');
+  assert.equal(t.word, 'Running');
+  assert.equal(t.action, 'pause');
+  assert.equal(t.admin, true);
+  assert.match(t.title, /^Running: 2 agents working, 3 asleep\. Click to pause/);
+  const viewer = floorToggle(f, view('a', { admin: false }), time)!;
+  assert.equal(viewer.admin, false);
+  assert.equal(viewer.title, 'Running: 2 agents working, 3 asleep');
+});
+
+test('the floor toggle: paused opens the Resume preview, with who, when, why and who waits on you', () => {
+  const f = { workers: 3, busy: 0, waiting: 0 };
+  const t = floorToggle(f, view('a', { pause: pause('person', ['Anita', 'Bo']) }), time)!;
+  assert.equal(t.kind, 'paused');
+  assert.equal(t.icon, '⏸');
+  assert.equal(t.action, 'resume');
+  assert.equal(t.word, 'Paused · 2 waiting');
+  assert.match(t.title, /^Paused by Keith at T1405 · 2 waiting on you \(Anita, Bo\)/);
+  assert.match(floorToggle(f, view('a', { pause: pause('budget') }), time)!.title, /budget reached/);
+  assert.match(floorToggle(f, view('a', { pause: pause('restart') }), time)!.title, /for a safe restart/);
+  assert.equal(floorToggle(f, view('a', { pause: pause() }), time)!.word, 'Paused');
+});
+
+test('the floor toggle: a run going is amber with its progress, and starts nothing', () => {
+  const f = { workers: 3, busy: 1, waiting: 0 };
+  const p = floorToggle(f, view('a', { run: run('pause', ['asleep', 'finishing', 'pending']) }), time)!;
+  assert.equal(p.kind, 'pausing');
+  assert.equal(p.icon, '⏳');
+  assert.equal(p.action, 'progress');
+  assert.equal(p.word, 'Pausing 1/3');
+  const r = floorToggle(f, view('a', { pause: pause(), run: run('resume', ['woken', 'woken'], 'paused') }), time)!;
+  assert.equal(r.kind, 'resuming');
+  assert.equal(r.word, 'Resuming 2/2 · held');
+  // A finished run is no longer going: back to the floor's state.
+  assert.equal(floorToggle(f, view('a', { run: run('pause', ['asleep'], 'done'), pause: pause() }), time)!.kind, 'paused');
+  assert.equal(floorToggle(f, undefined, time), undefined);
+  assert.equal(floorToggle({ ...f, cloning: true }, view('a'), time), undefined);
 });

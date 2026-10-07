@@ -23,7 +23,7 @@ import { subBoards } from './ui/teams';
 import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { liveAppView } from './ui/liveapp';
 import { mountStudio, studioState } from './ui/studio';
-import { mountProjectRun } from './ui/project-run';
+import { mountRunToggle } from './ui/project-run';
 import { pmConsole } from './ui/pm/console';
 import { openPull } from './ui/pull';
 import { openQueue } from './ui/queue';
@@ -56,6 +56,7 @@ import { installPhone, type Phone } from './ui/phone';
 import { collapsibleCommand } from './ui/command-layout';
 import { testModeBadge } from './ui/testmode';
 import { budgetUi } from './ui/budget';
+import { floorLoading } from './ui/loading/floor';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -80,6 +81,8 @@ const session = flatSession('/lite', (id) => openWorker(id), (m) => {
   phone?.route(m);
 });
 const { net } = session;
+// Changing floor: the overlay with how far the page is, from what this tab waits for (ui/loading/).
+const loading = floorLoading(net, () => (tab === 'command' ? ['roster', 'summary', 'budget', 'setup', 'convo'] : ['roster', 'budget']));
 const workers = workerActions(net);
 const openWorker = workers.open;
 const sendToWorker = workers.send;
@@ -87,7 +90,7 @@ const sendToWorker = workers.send;
 const live = liveAppView(net, () => showTab('live'), () => tab === 'live');
 // The project manager console in the middle of the project summary (ui/pm/console.ts): its live
 // terminal only while the board is on screen.
-const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'command' });
+const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'command', onLoaded: (f) => loading.done('convo', f) });
 
 // ---- The floor you're on (every floor's card is on the home page, /home) -----------------------
 floorPicker(net, { onGo: () => showTab('command') });
@@ -228,6 +231,8 @@ const git = gitView($('git-view'), { openWorker, openPull: kanban.openPull });
 // Who did what, when (🧾 Audit log, ui/audit/): this floor, the office's own or every floor.
 // 💰 The budget: the top bar's chips and the Budget tab (ui/budget/).
 const budget = budgetUi(net, { root: $('budget-view'), visible: () => tab === 'budget', open: () => showTab('budget'), go: (to) => (to === 'settings' ? showSettings('team') : showTab(to)) });
+// The floor's run state beside the budget chip: ▶ running, ⏸ paused, ⏳ a run going, and its one action (ui/project-run/).
+mountRunToggle();
 // ⚙️ Settings: every setting, a section at a time (ui/settings/page.ts), its section in the address (&section=workers).
 const settingsPage = flatSettings($('settings-view'), session, (section) => tab === 'settings' && setAddress({ section }));
 /** Settings, open at `section`: what every settings link on this page does (Needs you, the ☰, the team's Autonomy chip). */
@@ -313,14 +318,14 @@ function renderKanban() {
   if (tab === 'teams') return teams.renderPage($('teams-view'));
   if (tab === 'board') return renderBoard($('board'), kanban, teams.boardView(renderKanban));
   if (tab !== 'command') return;
+  const f = store.floor;
   void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el }).then(() => {
     // Beside the project's name: the 🌐 Live app chip, and Open in Studio Pro for a Mendix project (ui/studio/).
     live.mountChip($('summary'));
     mountStudio($('summary'));
-    // ▶ Resume / ⏸ Pause project, and the floor's pause (ui/project-run/).
-    mountProjectRun($('summary').querySelector('.sm-name'));
+    loading.done('summary', f);
   });
-  void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) }).then(() => needs.refresh());
+  void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) }).then(() => (needs.refresh(), loading.done('setup', f)));
 }
 /** Which model does well on what (ui/analysis.ts), for this floor or every floor. */
 function renderAnalysisTab() {
@@ -406,7 +411,7 @@ function goToNeed(t: NeedTarget) {
 // The Firm (ui/firm/banner.ts): its audit of this floor, its report, or the button to call one.
 let firmStatus: FirmFloorStatus | undefined;
 const needs = needsYouStrip($('needs-you'), $('tab-command').querySelector('.ny-tab-n')!, { go: goToNeed, setup: () => cachedSetup(store.floor ?? undefined), live: () => live.current(), firm: () => firmStatus, studio: studioState, budget: () => budget.need() });
-budget.feed.on(() => needs.refresh());
+budget.feed.on(() => (needs.refresh(), loading.done('budget', budget.feed.floor()?.floor)));
 const firm = firmBanner($('firm-banner'), (s) => ((firmStatus = s), needs.refresh()));
 store.on('floor', () => firm.refresh(store.floor ?? undefined));
 net.onMessage((msg) => firm.onMessage(msg));
@@ -471,7 +476,7 @@ badges.add($('tab-standup'), () => (sawStandup(), newStandup(latestStandup(), se
 badges.add($('tab-live'), () => live.current()?.status === 'failed' && '!', "The live app failed: it isn't running");
 badges.add($('tab-teams'), () => teamAttention(currentRoster()), 'Approvals and escalations from the teams');
 for (const k of ['workers', 'issues', 'pulls', 'queue', 'project', 'floor'] as const) store.on(k, () => badges.refresh());
-onRoster(() => badges.refresh());
+onRoster(() => (badges.refresh(), loading.done('roster', currentRoster()?.floor)));
 net.onMessage((msg) => {
   if (msg.t === 'liveapp.state' || msg.t === 'welcome' || msg.t === 'floor.enter') badges.refresh();
 });
