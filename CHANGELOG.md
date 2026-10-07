@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-07 · release 16 (`f52988c`)
+
 ### New
 - **Stable project ids and evidence contracts** (Knowledge & Evals step F1): every floor now has a
   project id (`prj_…`) in `floors.json`, given to existing floors on the first start and kept when a
