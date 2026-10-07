@@ -14,6 +14,8 @@ Two other inputs were folded in:
 
 Paths are relative to the repository root. `file:N` is a line at f9c9dd6.
 
+**Build status:** F1 (ids and evidence contracts) is built; see [F1 as built](#f1-as-built). The other increments are not started here.
+
 Two terms are used throughout:
 - **`<data>`** is the office data dir, `<officeDir>/.agent-office` (`src/server/config.ts:383`).
 - **`<floor>/.agent-office`** is a floor's own data dir inside its checkout (`src/server/floor.ts:166`).
@@ -356,7 +358,7 @@ Each increment merges on its own, keeps existing flows green, and adds focused t
 |---|---|---|---|---|
 | C1 | **Queue reconciliation after restart** (4.5), with atomic `queue.json` | S (1–2 d) | — | queue restart cases |
 | C2 | **Persistent held messages** (4.7) | S (1–2 d) | — | relay/delivery restart cases |
-| F1 | **Ids and EvidenceRef contracts**: `src/shared/evidence/`, `projectIdOf`, optional `AuditInput.ids`, `FloorDef.projectId` | S (2 d) | — | id minting stability, audit chain still verifies with and without ids, locator safety |
+| F1 | **Done.** **Ids and EvidenceRef contracts**: `src/shared/evidence/`, `projectIdOf`, optional `AuditInput.ids`, `FloorDef.projectId` | S (2 d) | — | id minting stability, audit chain still verifies with and without ids, locator safety |
 | F2 | **DeliveryAttempt record**, advisory (4.1): created from queue/hire, submissions from PR head sha, checks bound to sha | M (4–5 d) | F1 (C1 helpful) | transitions, sha binding, restart re-link |
 | F3 | **Trace view** over audit, chatter, roster and the ledger (read-only adapters, 4.2), plus an evidence resolver | M (3–4 d) | F1 | per-source resolver, expired source, inferred ids |
 | E1 | **Eval contracts plus the pure gate** (`src/shared/evals/`) | S (2 d) | F1 | gate truth table, schema validation |
@@ -378,6 +380,23 @@ Suggested sequence:
 6. K1. C4 can be done whenever it is decided.
 
 The review's priority 1 (acceptance record) is covered by F2. Its priority 2 controls are C1–C4.
+
+### F1 as built
+
+- **Contracts** (`src/shared/evidence/ids.ts`, `src/shared/evidence/types.ts`, pure):
+  - `TENANT_ID = 'local'`; `prj_`, `exe_` and `tsk_` ids on a ULID, with mint and validate functions; `issueTaskId` (`issue:<owner>/<repo>#<n>`) and `legacyQueueTaskId` (`queue:<floor>/<queue id>`) for work that has no minted task id; `agentInstanceId` is the worker id (`sub_<agent_id>` for a subagent, `firm_<engagement>_<reviewer>` for a reviewer); `roleId` is the roster `RoleId`; `sessionId` is the provider's own and is never folded into the agent instance id.
+  - `EvidenceRef` and `TraceEvent` as in 4.2, with `validateEvidenceRef`, `validateTraceEvent` and `parseLocator`/`formatLocator` (git paths go through `safeRelPath`). Retention classes add `chatter-capped`.
+  - A trace event's ids are each either present, with `idSource[field]` `recorded` or `inferred`, or listed in `gaps` with a reason. Validation refuses an id that is both, or neither. Costs and counts a source can't measure are `{ status: 'unknown', reason }`, never 0.
+- **Project ids** (`src/server/projects/ids.ts`): `<data>/projects/ids.json` remembers each project's repository, checkouts and floor ids, so a floor added again under another name (same repository, or same checkout when it has none) gets its id back. `Building` stamps `FloorDef.projectId` on every save, and on the first load for floors from before. The floor id stays the routing key. `byFloorId` resolves an old record's floor id, and is always treated as inferred because a slug can be reused.
+- **`AuditInput.ids`** (optional): written only when valid (`cleanIds`). Old lines and lines without ids still verify. Nothing records ids yet; F2 starts writing them.
+- **Adapters** (`src/server/evidence/adapters.ts`, read-only): audit events, chatter messages, analysis runs (started and ended), budget ledger rows and incidents, each to trace events with an EvidenceRef back to the record. `trace.ts` builds the view on demand from the files in `<data>` and stores nothing.
+- **API**: `GET /api/evidence/trace?floor=&since=&limit=` (session, like `/api/audit`; no UI). It answers the events, `coverage` per source (available, empty or missing, with its retention), and `absent`, the spec events nothing records today.
+- **Tests**: `tests/evidence.test.ts`.
+- **Differences from the design above:**
+  - The id registry is a separate file as well as `FloorDef.projectId`, because a removed floor's def leaves `floors.json`. Without the registry a re-add couldn't find its old id.
+  - The trace route reads audit, chatter, analysis, the ledger and incidents. Roster records (subagent runs, escalations) and the resolver `evidence.resolve(ref, principal)` are left for F3, with project membership (4.8).
+  - The trace event adds `floorId`, `action` (the source's own name), `summary` and `sessionId` to the envelope in 4.2. Its event types add `incident.recorded` and `other`.
+  - Queue tasks don't get a `tsk_` id yet, because `queue.ts` is C1's. Their events use `legacyQueueTaskId`, marked inferred.
 
 ### Decisions needed from the user
 

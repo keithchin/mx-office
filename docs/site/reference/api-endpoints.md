@@ -78,6 +78,7 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | POST | `/api/incidents/<id>` | Change its fields; `status: resolved` needs a `rootCause`; `linkAudit` / `unlinkAudit` link audit events (admin) |
 | POST | `/api/incidents/<id>/note` | `{ text }`: a note on its timeline (admin) |
 | GET, POST | `/api/incidents/settings` | The detection rules; POST `{ rules, dedupeHours }` changes them (admin) |
+| GET | `/api/evidence/trace` | `?floor=<id>&since=<ms or date>&limit=<n ≤ 2000>`: the floor's audit events, chatter, analysis runs, budget rows and incidents as one normalized trace, oldest first. Each event names its project, execution, task, agent instance, role and session ids, says whether each was `recorded` or `inferred`, and lists the ones it can't know under `gaps`; each points back at its record with an EvidenceRef. Also how each source fared (`coverage`) and the spec events no source records (`absent`). Read-only, with no UI yet; the design is section 4.2 of `docs/knowledge-evals/gap-map.md` |
 | GET | `/api/test-mode` | `{ on, why }`: whether the office runs in test mode (the TEST MODE badge) |
 | GET | `/api/notify/teams` | [Teams notifications](../integrations/teams-notifications.md): the settings (never the webhook URL, only a hint), the last error, the last card, what's waiting and held, and the floors |
 | POST | `/api/notify/teams` | `{ url?, floors?, level?, quiet?, pauseMinutes?, publicUrl? }`: change them; `url: ''` removes the webhook (admin) |

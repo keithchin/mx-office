@@ -6,6 +6,7 @@ import { FLOOR_PALETTES, MAX_FLOORS, normalizeRepo, sameRepo } from '../shared/f
 import type { CloneProgress, ProjectsDirState, RepoChoice } from '../shared/protocol.js';
 import { CloneRun, dropLog, whyCloneFailed, type CloneEnd, type CloneRunOptions } from './clone.js';
 import { gh } from './github.js';
+import { isProjectId } from '../shared/evidence/ids.js';
 
 /** A floor as floors.json keeps it. */
 export interface FloorDef {
@@ -13,21 +14,16 @@ export interface FloorDef {
   name: string;
   /** owner/name on GitHub. */
   repo?: string;
+  /** Stable across renames and re-adds of the same repository (server/projects/ids.ts); the id stays the routing key. */
+  projectId?: string;
   dir: string;
   palette: number;
   addedBy: string;
   addedAt: number;
 }
 
-/** A projects folder picked in ⚙️ Settings (or with --projects), as projects-folder.json keeps it. */
+/** A projects folder picked in ⚙️ Settings (or with --projects), as projects-folder.json keeps it; also the started-in checkout once taken off (local-floor.json). */
 interface PickedDir {
-  dir: string;
-  by: string;
-  at: number;
-}
-
-/** The checkout the office was started in, once it's been taken off the building (local-floor.json). */
-interface LocalOff {
   dir: string;
   by: string;
   at: number;
@@ -59,6 +55,8 @@ export interface BuildingOptions {
   terminal?: boolean;
   /** How clones are watched (tests shorten these). */
   clone?: Pick<CloneRunOptions, 'stallMs' | 'tickMs'>;
+  /** Each floor's stable project id, stamped on every save (so floors from before it get one on the first load). */
+  projectIds?: { ensure(def: FloorDef): string };
 }
 
 /** How long the list of repositories `gh` can see is reused before it's asked again. */
@@ -90,7 +88,7 @@ export class Building {
   private localId?: string;
   private localFile: string;
   /** That checkout was taken off the building: a restart doesn't put it back. */
-  private localOff?: LocalOff;
+  private localOff?: PickedDir;
 
   constructor(
     /** The office's own data folder; `gh` runs there, since the projects folder may not exist yet. */
@@ -105,6 +103,7 @@ export class Building {
     this.pickedFile = path.join(dataDir, 'projects-folder.json');
     this.localFile = path.join(dataDir, 'local-floor.json');
     this.load();
+    if (opts.projectIds && this.defs.some((d) => !d.projectId)) this.save();
     this.loadPicked();
     this.loadLocalOff();
   }
@@ -417,6 +416,7 @@ export class Building {
           id: s.id,
           name: typeof s.name === 'string' && s.name ? s.name.slice(0, 100) : path.basename(s.dir),
           repo: normalizeRepo(s.repo),
+          ...(isProjectId(s.projectId) ? { projectId: s.projectId } : {}),
           dir: s.dir,
           palette: Number.isInteger(s.palette) && (s.palette as number) >= 0 ? (s.palette as number) : 0,
           addedBy: typeof s.addedBy === 'string' ? s.addedBy : '?',
@@ -441,7 +441,7 @@ export class Building {
 
   private loadLocalOff() {
     try {
-      const saved = JSON.parse(readFileSync(this.localFile, 'utf8')) as Partial<LocalOff>;
+      const saved = JSON.parse(readFileSync(this.localFile, 'utf8')) as Partial<PickedDir>;
       if (typeof saved.dir === 'string' && path.isAbsolute(saved.dir)) {
         this.localOff = { dir: saved.dir, by: typeof saved.by === 'string' ? saved.by : '?', at: typeof saved.at === 'number' ? saved.at : Date.now() };
       }
@@ -450,7 +450,7 @@ export class Building {
     }
   }
 
-  private setLocalOff(off: LocalOff | undefined) {
+  private setLocalOff(off: PickedDir | undefined) {
     this.localOff = off;
     try {
       if (off) writeFileSync(this.localFile, JSON.stringify(off, null, 2), { mode: 0o600 });
@@ -462,6 +462,7 @@ export class Building {
 
   private save() {
     try {
+      for (const d of this.defs) if (this.opts.projectIds) d.projectId = this.opts.projectIds.ensure(d);
       writeFileSync(this.file, JSON.stringify(this.defs, null, 2), { mode: 0o600 });
     } catch (err) {
       console.error(`agent-office: couldn't save the floors: ${(err as Error).message}`);

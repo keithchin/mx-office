@@ -6,6 +6,7 @@ import { providerCommand } from '../agents.js';
 import type { AgentProvider } from '../../shared/providers.js';
 import { createModelCatalogues } from '../models.js';
 import { Building } from '../building.js';
+import { projectIdsFor } from '../projects/ids.js';
 import type { Floor } from '../floor.js';
 import { ChatLog } from '../history.js';
 import { Arcade, HighScores } from '../cabinet.js';
@@ -41,7 +42,8 @@ export function createCore(ctx: Ctx, cfg: Config, publicDir: string): Core {
   const models = createModelCatalogues(cli, cfg.dir);
 
   // --- The building: a floor per project, each with its own workers, boards and queue -----------
-  const building = new Building(cfg.dataDir, cfg.projectsDir);
+  // Each floor's stable project id (projects/ids.ts), stamped into floors.json beside its routing id.
+  const building = new Building(cfg.dataDir, cfg.projectsDir, { projectIds: projectIdsFor(cfg.dataDir) });
   if (cfg.projects) {
     const err = building.setProjectsDir(cfg.projects, 'the command line');
     if (err) console.error(`agent-office: --projects: ${err}`);
