@@ -82,6 +82,31 @@ The run after the fixes (scale 10, six live workers, 60 s soak per view):
 | Switch: 1D Board / 1D Command Center / 2D view / Home → project | | 1,113 / 535 / 169 / 337 ms | 58 to 115 ms | |
 | Switch 10× on the 1D Command Center | | p90 525 ms | 0 ms | |
 
+### The second pass (2026-10-07)
+
+- **The server stalled 3 to 16 s during the wizard**, every journey, right after the clone step. A CPU profile of the office put it on programs started on the event loop: on Windows starting a program (CreateProcess) runs on the thread that asks, and a binary the virus scanner hasn't seen yet (gh, mx, claude) takes seconds there; around them git ran with `execFileSync` for every hire, floor opened and restart-state look. Programs now start from a thread of their own (`server/offloop/exec.ts`), branch, origin and HEAD are read from the checkout's files (`server/gitfiles.ts`), and hiring into a worktree runs git without blocking. Before: a 4.4 to 4.6 s block every run; after: no block over 100 ms (the journey now fails on one over 250 ms), wizard 11.2 → 7.6 s, hiring 9.7 → 4.6 s.
+- **The first Budget look and the setup panel's first look** waited 0.8 s and 3.5 to 4.5 s on a fresh big office (the Budget one blocking the server 840 ms): the analyzer rewrote its whole record file for every record it settled, the budget files were written and renamed on the event loop, and the benchmark scored every run again for every worker. Now: written once and in the background, scored once per record, the ranking and each floor's setup view worked out in the background after the office starts and when a floor is added, and both answer stale-while-revalidate. First Budget look 830 → 130 ms; after the warm-up both answer in about 20 ms.
+- **⏸ Pause project waited three minutes** on an agent whose handoff turn was shorter than its two-second look. Every turn is counted as it starts now; the pause sees one that came and went between looks.
+- **On a scrubbed copy of this office's real data** (`scripts/perf/real-shape.mjs`: two floors, 13 worktrees) every view and project switch was within budget; Settings' first open was borderline once (202 and 221 ms, then 165 ms). Switches took 63 to 91 ms.
+- **The Command Center's terminal** draws with xterm's DOM renderer (its first draw 150 to 290 ms). xterm 6 has no canvas renderer any more, and its WebGL addon isn't installed (it isn't small, and a headless browser draws WebGL in software), so it stays as it is; the next thing to try is writing only the visible tail of the scrollback first.
+
+The quick check after this pass (`npm run test:perf:quick`, scale 10, 5 s soak):
+
+| View | Time to usable | Project switch | Longest task |
+| --- | --- | --- | --- |
+| Command Center (Chat) | 424 ms | | 75 ms |
+| Board | 259 ms | | 128 ms |
+| Team: org chart | 314 ms | | 108 ms |
+| Workers | 313 ms | | 90 ms |
+| Budget | 337 ms | | 102 ms |
+| Audit log | 244 ms | | 125 ms |
+| Home: Projects | 129 ms | | 80 ms |
+| 2D view | 199 ms | | 126 ms |
+| Team phone (open) | 442 ms | | 129 ms |
+| Switch: 1D Board / 1D Command Center | | 202 / 203 ms | 114 / 100 ms |
+| Switch 3× on the 1D Command Center | | p90 187 ms | 0 ms |
+| Journey | 12/12 steps, longest server block under 100 ms | | |
+
 ## Live warnings in the real office
 
 - **A page froze**: every flat view and the home page watch their own long tasks. One over 500 ms is reported (at most once a minute per view, never from a hidden tab) and opens an incident naming the view and the scripts that took the time.
