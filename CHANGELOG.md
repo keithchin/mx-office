@@ -14,6 +14,15 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   shows a floor's audit log, chatter, analysis runs, budget rows and incidents as one normalized trace,
   with every id it can't know listed as unknown rather than blank, and costs it can't measure as
   unknown rather than 0. No UI yet.
+- **Subagents have real names**: each Lead's subagent gets a person's first name the first time the
+  office sees it (*Nia · Tester (Hedy's subagent)*), kept in the roster file and unique on the floor
+  among Leads and subagents; a roster from before gets them the next time the office starts, the same
+  names every time. The names show on the Workers tab, in the 2D view (*Nia (Hedy's tester)*) and the
+  home Overview, on the Org chart and Team boards, in the activity, approvals, Team chatter and Team
+  phone, and on the Budget tab. Each Lead's Playbook names its subagents (*Nia, your Tester*) so the
+  Lead calls them by name; it still dispatches them by type, so `.claude/agents/<type>.md` is
+  unchanged. The Project Manager can rename one from its detail or the Org chart (✏️ Rename, audited
+  as `subagent.rename`).
 
 ### Fixed
 - **Held messages survive a restart**: a prompt held until an agent's turn is over (an

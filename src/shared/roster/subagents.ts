@@ -109,7 +109,10 @@ export const currentModel = (r: SubagentRecord, fallback: string): string => r.m
 /** What the Team tab shows of a subagent. */
 export interface SubagentView {
   lead: RoleId;
+  /** Its type, as its Lead dispatches it (`.claude/agents/<name>.md`). */
   name: string;
+  /** Its first name ("Nia"): shared/roster/subagent-names.ts. */
+  firstName: string;
   /** Defined by the office's team table (its Playbook writes its file), not one the Lead made. */
   defined: boolean;
   model: string;

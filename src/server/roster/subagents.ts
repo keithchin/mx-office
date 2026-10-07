@@ -10,7 +10,7 @@
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { WorkerInfo } from '../../shared/protocol.js';
-import { LEADS, ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
+import { cleanName, LEADS, ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
 import { effectiveSkill, effectiveSkills, GATE_WORDS, type SubagentOp } from '../../shared/roster/skills.js';
 import { currentModel, modelWord, OP_ASK, OP_ICON, OP_VERB, REVIEWS_SHOWN, RUNS_KEPT, SCORE_MIN_RUNS, scoreSubagent, type SubagentAction, type SubagentRecord, type SubagentReviewBrief, type SubagentRun, type SubagentView } from '../../shared/roster/subagents.js';
 import type { SubagentEvent } from '../workers/subagents.js';
@@ -29,6 +29,8 @@ import { SubagentLive } from './subagent-live.js';
 import type { LiveRun } from '../../shared/roster/subagent-live.js';
 import type { TeamFloor } from './types.js';
 import { struggleNudged, toldCoordinator } from '../chatter/hooks.js';
+import { ensureSubagentNames, memberNames, subagentFirstName, subagentRef } from './subagent-names.js';
+import { nameTaken, roleLower } from '../../shared/roster/subagent-names.js';
 
 /** Models a subagent can be swapped to: Claude Code's aliases, inherit, or a model id. */
 const MODEL = /^[A-Za-z0-9][A-Za-z0-9._\-[\]]{0,63}$/;
@@ -70,7 +72,14 @@ export class Subagents {
   record(floor: TeamFloor, lead: RoleId, name: string): SubagentRecord {
     const d = this.roster.data(floor.id);
     const key = subKey(lead, name);
-    return (d.subagents[key] ??= { name, lead, state: 'active', warnings: [], runs: [] });
+    const rec = (d.subagents[key] ??= { name, lead, state: 'active', warnings: [], runs: [] });
+    subagentFirstName(d, lead, name, () => this.roster.file(floor.id).save());
+    return rec;
+  }
+
+  /** "Nia (tester)": the subagent by its first name, with its type (what its Lead dispatches it as). */
+  who(floor: TeamFloor, lead: RoleId, name: string, more?: string): string {
+    return subagentRef(this.roster.data(floor.id), lead, name, () => this.roster.file(floor.id).save(), more);
   }
 
   private find(floor: TeamFloor, lead: RoleId, name: string): SubagentRecord | undefined {
@@ -118,7 +127,7 @@ export class Subagents {
       const rec = name && this.find(floor, lead, name);
       if (rec && rec.state === 'benched') {
         const m = this.roster.data(floor.id).members[lead];
-        floor.activity?.(`🪑 ${m.name} dispatched ${name}, which is benched: the office denied it in ${m.name}'s settings`);
+        floor.activity?.(`🪑 ${m.name} dispatched ${this.who(floor, lead, name)}, which is benched: the office denied it in ${m.name}'s settings`);
       }
       return;
     }
@@ -218,8 +227,9 @@ export class Subagents {
     const max = REVIEW_POLICY[level].maxRevisions;
     const w = this.leadWorker(floor, rec.lead);
     const task = run.task ?? [...rec.runs].reverse().find((r) => r.task)?.task;
+    const sub = this.who(floor, rec.lead, rec.name);
     const details = [
-      `${m.name} sent ${rec.name}'s work back ${rec.reworks} times in a row${task ? ` on “${task}”` : ''}: past the ${max} revision rounds a subagent gets on a task at autonomy level ${level}. The office has stopped nudging ${m.name} to review ${rec.name} again.`,
+      `${m.name} sent ${sub}'s work back ${rec.reworks} times in a row${task ? ` on “${task}”` : ''}: past the ${max} revision rounds a subagent gets on a task at autonomy level ${level}. The office has stopped nudging ${m.name} to review ${sub} again.`,
       run.note ? `The last review: ${run.note}` : '',
       this.trackLine(floor, rec.lead, rec.name),
       `Answer here and it goes to ${m.name} as its next prompt.`,
@@ -229,8 +239,8 @@ export class Subagents {
     const e = this.roster.escalations.raiseNoticed(
       floor,
       { workerId: w?.id ?? m.workerId ?? `lead-${rec.lead}`, by: m.name, role: rec.lead },
-      { urgency: 'important', trigger: 'revisions-exhausted', title: `${rec.name} still fails ${m.name}'s review after ${max} revision rounds${task ? `: ${task}` : ''}`.slice(0, 160), details, options: [`Give ${rec.name} one more round`, `${m.name} takes it over`, 'Rescope or drop the task'] },
-      `🔁 The office escalated for ${m.name}: ${rec.name} is out of revision rounds (${max} at level ${level})`,
+      { urgency: 'important', trigger: 'revisions-exhausted', title: `${sub} still fails ${m.name}'s review after ${max} revision rounds${task ? `: ${task}` : ''}`.slice(0, 160), details, options: [`Give ${sub} one more round`, `${m.name} takes it over`, 'Rescope or drop the task'] },
+      `🔁 The office escalated for ${m.name}: ${sub} is out of revision rounds (${max} at level ${level})`,
     );
     rec.exhaustedEscalation = e.id;
   }
@@ -244,7 +254,7 @@ export class Subagents {
     if (since < SCORE_MIN_RUNS) return;
     rec.flaggedAt = now;
     const m = this.roster.data(floor.id).members[rec.lead];
-    floor.activity?.(`📉 ${rec.name} (${modelWord(s.model)}) on ${m.name}'s team is underperforming: ${s.why}`);
+    floor.activity?.(`📉 ${this.who(floor, rec.lead, rec.name, modelWord(s.model))} on ${m.name}'s team is underperforming: ${s.why}`);
   }
 
   // ---- Warn, bench, swap model, reinstate ------------------------------------------------------
@@ -261,7 +271,8 @@ export class Subagents {
     const bad = this.check(floor, lead, op, name, args);
     if (bad) return { ok: false, message: bad };
     const gate = skill.gate ?? 'tell';
-    const what = `${OP_ASK[op]} ${name}${op === 'swap-model' ? ` to ${args.model}` : ''}`;
+    const sub = this.who(floor, lead, name);
+    const what = `${OP_ASK[op]} ${sub}${op === 'swap-model' ? ` to ${args.model}` : ''}`;
     if (gate === 'ask' || gate === 'propose') {
       const a: SubagentAction = { id: randomBytes(5).toString('hex'), at: this.roster.deps.now(), lead, by: m.name, op, name, gate, status: 'pending', ...(args.reason ? { reason: args.reason } : {}), ...(args.model ? { model: args.model } : {}) };
       d.subagentActions.push(a);
@@ -276,15 +287,15 @@ export class Subagents {
       return { ok: true, outcome: 'proposed', actionId: a.id, message: `Proposed to the Project Manager: "${what}". It's in their approvals; the office does it once they approve, and tells you either way. Carry on meanwhile.` };
     }
     this.run(floor, lead, op, name, args, m.name, 'lead');
-    const done = `Done: ${OP_VERB[op]} ${name}.`;
+    const done = `Done: ${OP_VERB[op]} ${sub}.`;
     if (gate === 'fyi') {
-      this.roster.escalations.raiseFyi(floor, w, { urgency: 'info', title: `${m.name} ${OP_VERB[op]} subagent ${name}${args.reason ? `: ${args.reason}` : ''}`, details: this.trackLine(floor, lead, name), options: [] });
+      this.roster.escalations.raiseFyi(floor, w, { urgency: 'info', title: `${m.name} ${OP_VERB[op]} subagent ${sub}${args.reason ? `: ${args.reason}` : ''}`, details: this.trackLine(floor, lead, name), options: [] });
       return { ok: true, outcome: 'done', message: `${done} The Project Manager got an FYI.` };
     }
     // The member who covers Management decided it itself: nobody else to tell.
     if (lead === managerRole(d)) return { ok: true, outcome: 'done', message: done };
-    this.queueNews(floor, `${m.name} ${OP_VERB[op]} subagent ${name}${op === 'swap-model' ? ` (now ${args.model})` : ''}${args.reason ? `: ${args.reason}` : ''}`);
-    toldCoordinator(floor.id, w, d.members[managerRole(d)], `I ${OP_VERB[op]} my subagent ${name}${op === 'swap-model' ? ` (now ${args.model})` : ''}${args.reason ? `: ${args.reason}` : ''}`, name);
+    this.queueNews(floor, `${m.name} ${OP_VERB[op]} subagent ${sub}${op === 'swap-model' ? ` (now ${args.model})` : ''}${args.reason ? `: ${args.reason}` : ''}`);
+    toldCoordinator(floor.id, w, d.members[managerRole(d)], `I ${OP_VERB[op]} my subagent ${sub}${op === 'swap-model' ? ` (now ${args.model})` : ''}${args.reason ? `: ${args.reason}` : ''}`, name);
     return { ok: true, outcome: 'done', message: `${done} The Project Coordinator is told.` };
   }
 
@@ -331,17 +342,39 @@ export class Subagents {
     const who = as === 'lead' ? `${by} (${ROLE_BY_ID.get(lead)!.title})` : as === 'pm' ? `${by} (Project Manager)` : 'The office';
     const whose = as === 'lead' ? 'subagent' : `${m.name}'s subagent`;
     const why = op === 'swap-model' ? ` to ${modelWord(args.model!)}` : reason ? `: ${reason}` : as === 'office' ? ': its cool-down is over' : '';
-    floor.activity?.(`${OP_ICON[op]} ${who} ${OP_VERB[op]} ${whose} ${name} (${before})${why}`);
+    const sub = this.who(floor, lead, name);
+    floor.activity?.(`${OP_ICON[op]} ${who} ${OP_VERB[op]} ${whose} ${this.who(floor, lead, name, before)}${why}`);
     const w = this.leadWorker(floor, lead);
     const wrote = this.roster.members.rewrite(floor, lead);
     // The Lead hears what it didn't do itself, between turns (never interrupting one, or a question to a
     // person): the Project Manager's doing is held until then; the office's is only said when it's free.
     const between = !!w && (w.status === 'idle' || w.status === 'done');
     if (as !== 'lead' && w && wrote && (between || (as === 'pm' && !isAsleepStatus(w.status)))) {
-      this.roster.delivery.send(floor, w, `${as === 'pm' ? `The Project Manager (${by})` : 'The office'} ${OP_VERB[op]} your subagent ${name}${why}. Your Playbook and its definition have been rewritten${op === 'bench' ? `: don't dispatch ${name}; do the work yourself or use another subagent` : ''}. Note it in your team journal and carry on. Reply \`ok\`.`, { origin: as === 'pm' ? 'person' : 'office', hold: true, between: true });
+      this.roster.delivery.send(floor, w, `${as === 'pm' ? `The Project Manager (${by})` : 'The office'} ${OP_VERB[op]} your subagent ${sub}${why}. Your Playbook and its definition have been rewritten${op === 'bench' ? `: don't dispatch ${sub}; do the work yourself or use another subagent` : ''}. Note it in your team journal and carry on. Reply \`ok\`.`, { origin: as === 'pm' ? 'person' : 'office', hold: true, between: true });
     }
     this.roster.touch(floor);
     return undefined;
+  }
+
+  /**
+   * The Project Manager renames a subagent: its first name only (its type, what its Lead dispatches it
+   * as, stays). Its Lead's Playbook is written again with the new name. The old and new name, or why not.
+   */
+  rename(floor: TeamFloor, lead: RoleId, type: string, raw: unknown, by: string): { was: string; now: string } | string {
+    const first = cleanName(raw);
+    if (!first) return 'Give it a name (up to 24 characters)';
+    const d = this.roster.data(floor.id);
+    const key = subKey(lead, type);
+    ensureSubagentNames(d);
+    const was = d.subagentNames[key];
+    if (!was) return `No subagent called ${type} on the ${ROLE_BY_ID.get(lead)!.title}'s team`;
+    if (was === first) return { was, now: first };
+    if (nameTaken(first, d.subagentNames, memberNames(d), key)) return `${first} is already on the team`;
+    d.subagentNames[key] = first;
+    floor.activity?.(`✏️ ${by} renamed ${d.members[lead].name}'s ${roleLower(type)} ${was} to ${first}`);
+    this.roster.members.rewrite(floor, lead);
+    this.roster.touch(floor);
+    return { was, now: first };
   }
 
   // ---- The Project Manager's decisions -----------------------------------------------------------
@@ -357,7 +390,7 @@ export class Subagents {
       if (err) return err;
     }
     Object.assign(a, { status: approve ? 'approved' : 'rejected', decidedBy: by, decidedAt: this.roster.deps.now(), ...(reason ? { decision: line(reason, 300) } : {}) });
-    floor.activity?.(`${approve ? '✅' : '❌'} ${by} ${approve ? 'approved' : 'rejected'} ${a.by}'s request to ${OP_ASK[a.op]} ${a.name}`);
+    floor.activity?.(`${approve ? '✅' : '❌'} ${by} ${approve ? 'approved' : 'rejected'} ${a.by}'s request to ${OP_ASK[a.op]} ${this.who(floor, a.lead, a.name)}`);
     // An ask's escalation is answered by this too; a proposal's Lead is told here, or as soon as it's
     // back between turns when it's asleep or asking someone now (relays.ts keeps the note).
     if (a.escalationId) this.roster.escalations.resolve(floor, a.escalationId, approve ? 'approve' : 'reject', reason || (approve ? 'Approved: the office has done it.' : 'Rejected.'), by);
@@ -365,8 +398,8 @@ export class Subagents {
       const w = this.leadWorker(floor, a.lead);
       // The Project Manager's decision: held while the Lead is busy or a dialog is up, and told once its
       // turn is over. A Lead that's asleep or away gets it as a note kept in the roster file (relays.ts).
-      const sent = !!w && !isAsleepStatus(w.status) && this.roster.delivery.send(floor, w, subagentDecisionPrompt(`${OP_ASK[a.op]} ${a.name}`, approve, by, reason), { origin: 'person', by, hold: true, between: true, id: `subagent-decision:${a.id}` }).status !== 'refused';
-      if (!sent) this.roster.relays.noteLead(floor, a.lead, `The Project Manager (${by}) ${approve ? 'approved' : 'rejected'} your request to ${OP_ASK[a.op]} ${a.name}.${approve ? ' The office has done it.' : ''}${reason ? ` ${line(reason, 300)}` : ''}`);
+      const sent = !!w && !isAsleepStatus(w.status) && this.roster.delivery.send(floor, w, subagentDecisionPrompt(`${OP_ASK[a.op]} ${this.who(floor, a.lead, a.name)}`, approve, by, reason), { origin: 'person', by, hold: true, between: true, id: `subagent-decision:${a.id}` }).status !== 'refused';
+      if (!sent) this.roster.relays.noteLead(floor, a.lead, `The Project Manager (${by}) ${approve ? 'approved' : 'rejected'} your request to ${OP_ASK[a.op]} ${this.who(floor, a.lead, a.name)}.${approve ? ' The office has done it.' : ''}${reason ? ` ${line(reason, 300)}` : ''}`);
     }
     this.roster.touch(floor);
     return undefined;
@@ -416,12 +449,12 @@ export class Subagents {
     // Noted before it's typed: once per finding, even when typing it brings this worker's update round again.
     const before = flagged.nudgedAt;
     flagged.nudgedAt = now;
-    if (this.roster.delivery.prompt(floor, w, underperformingPrompt(flagged.name, modelWord(s.model), s.why ?? 'poor reviews', skills))) {
+    if (this.roster.delivery.prompt(floor, w, underperformingPrompt(flagged.name, modelWord(s.model), s.why ?? 'poor reviews', skills, subagentFirstName(d, lead, flagged.name)))) {
       flagged.nudgedAt = before;
       return false;
     }
-    struggleNudged(floor.id, w, flagged.name, s.why ?? 'poor reviews');
-    floor.activity?.(`🔁 Nudged ${m.name} about ${flagged.name}'s track record (${s.why})`);
+    struggleNudged(floor.id, w, flagged.name, s.why ?? 'poor reviews', this.who(floor, lead, flagged.name));
+    floor.activity?.(`🔁 Nudged ${m.name} about ${this.who(floor, lead, flagged.name)}'s track record (${s.why})`);
     this.roster.touch(floor, true);
     return true;
   }
@@ -468,6 +501,9 @@ export class Subagents {
 
   views(floor: TeamFloor): SubagentView[] {
     const d = this.roster.data(floor.id);
+    // Every subagent the floor has gets its name (one only seen at work, one a new coverage brought).
+    const save = () => this.roster.file(floor.id).save();
+    if (ensureSubagentNames(d)) save();
     const out: SubagentView[] = [];
     for (const lead of LEADS) {
       const recs = Object.values(d.subagents).filter((r) => r.lead === lead.id);
@@ -479,6 +515,7 @@ export class Subagents {
         out.push({
           lead: lead.id,
           name,
+          firstName: subagentFirstName(d, lead.id, name, save),
           defined: !!def,
           model,
           state: rec?.state ?? 'active',
@@ -504,7 +541,7 @@ export class Subagents {
       ...rows.map((v) => {
         const s = v.score;
         const state = v.state === 'benched' ? `🪑 benched${v.benchedUntil ? ` until ${new Date(v.benchedUntil).toISOString().slice(0, 16).replace('T', ' ')} UTC` : ''}` : v.state === 'warning' ? '⚠️ on warning' : 'active';
-        return `${v.name} (${v.model}) · ${state} · ${s.grade ? `grade ${s.grade} (${s.score}%)` : `ungraded (${s.reviewed}/${SCORE_MIN_RUNS} reviewed runs)`} · ${s.runs} runs, ${s.accepted} accepted, ${s.reworks} reworks in the last ${s.reviewed}${s.underperforming ? ` · underperforming: ${s.why}` : ''}${v.lastWarning ? ` · last warning: ${v.lastWarning}` : ''}`;
+        return `${v.firstName} (${v.name}, ${v.model}) · ${state} · ${s.grade ? `grade ${s.grade} (${s.score}%)` : `ungraded (${s.reviewed}/${SCORE_MIN_RUNS} reviewed runs)`} · ${s.runs} runs, ${s.accepted} accepted, ${s.reworks} reworks in the last ${s.reviewed}${s.underperforming ? ` · underperforming: ${s.why}` : ''}${v.lastWarning ? ` · last warning: ${v.lastWarning}` : ''}`;
       }),
       '',
       `Your gates: ${skills.map((k) => `${k.key} ${k.enabled ? k.gate : 'off'}`).join(', ')}.`,

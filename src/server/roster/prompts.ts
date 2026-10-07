@@ -108,12 +108,12 @@ export function autonomyPrompt(level: AutonomyLevel): string {
 // ---- The review loop -----------------------------------------------------------------------------
 
 /** The office's nudge to a Lead whose turn ended right after a subagent came back. */
-export function reviewNudgePrompt(roleId: RoleId, result: SubagentResult | undefined, level: AutonomyLevel): string {
+export function reviewNudgePrompt(roleId: RoleId, result: SubagentResult | undefined, level: AutonomyLevel, first?: string): string {
   const role = ROLE_BY_ID.get(roleId)!;
-  const who = result?.agent ? `\`${result.agent}\`` : 'your subagent';
+  const who = result?.agent ? (first ? `${first}'s (\`${result.agent}\`)` : `\`${result.agent}\`'s`) : "your subagent's";
   const what = result?.task ? ` (“${result.task}”)` : '';
   return [
-    `Review ${who}'s last result${what} per your Playbook's review protocol, then continue or escalate.`,
+    `Review ${who} last result${what} per your Playbook's review protocol, then continue or escalate.`,
     `Record \`— Review: <subagent> · <task>\` with accept / revise / escalate in \`${journalPath(role.team)}\`; on accept dispatch its next step now (level ${level}: ${REVIEW_POLICY[level].askBeforeNextStep ? 'ask the Project Manager first' : "don't leave its lane idle"}); escalate only what your level escalates.`,
     `Then record the verdict for its track record: \`office-workers subagent review ${result?.agent ?? '<subagent>'} --verdict accept|rework --note "…"\`.`,
     '(Automatic nudge from Agent Office, sent once per idle period. If there is genuinely nothing left to do, say so in one line and stop.)',
@@ -121,9 +121,9 @@ export function reviewNudgePrompt(roleId: RoleId, result: SubagentResult | undef
 }
 
 /** To a Lead whose subagent the scorer flagged: consider a warning or the bench, per its skills. */
-export function underperformingPrompt(name: string, model: string, why: string, skills: string[]): string {
+export function underperformingPrompt(name: string, model: string, why: string, skills: string[], first?: string): string {
   return [
-    `Your subagent \`${name}\` (${model}) is underperforming: ${why}.`,
+    `Your subagent ${first ? `${first} (\`${name}\`, ${model})` : `\`${name}\` (${model})`} is underperforming: ${why}.`,
     `Consider it per your skills: ${skills.length ? skills.join('; ') : 'escalate to the Project Manager if it needs action'}. \`office-workers subagent list\` shows its track record. Or carry on with it if you know why.`,
     '(Automatic note from Agent Office, sent once per finding. Decide, act if you will, and carry on.)',
   ].join('\n');

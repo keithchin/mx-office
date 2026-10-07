@@ -20,7 +20,7 @@ import { refuseStale } from '../../phone-access/reauth.js';
 import { raisesTeamCap } from '../../phone-access/risky.js';
 import { levelOf } from '../../budget/index.js';
 
-const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation', 'skill', 'subagent', 'subagent-decide']);
+const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation', 'skill', 'subagent', 'subagent-decide', 'subagent-rename']);
 const DECISIONS = new Set<Decision>(['approve', 'reject', 'change']);
 
 export const rosterRoutes = {
@@ -75,7 +75,7 @@ export const rosterRoutes = {
       const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The Project Manager');
       const owner = session.account?.id;
       const role = isRoleId(body.role) ? body.role : undefined;
-      const needRole = ['hire', 'bench', 'rename', 'model', 'skill', 'subagent'].includes(action);
+      const needRole = ['hire', 'bench', 'rename', 'model', 'skill', 'subagent', 'subagent-rename'].includes(action);
       if (needRole && !role) return send(res, 400, { error: 'Which role?' });
       // Through Phone access, what lets more be spent or code land needs the password again (phone-access/reauth.ts).
       const risky = () =>
@@ -137,6 +137,15 @@ export const rosterRoutes = {
           const name = cleanSubName(body.name);
           if (!isSubagentOp(body.op) || !name || role === 'pm') return send(res, 400, { error: 'Which subagent, and warn, bench, swap-model or reinstate?' });
           error = roster.subagents.run(team, role!, body.op, name, { reason: typeof body.reason === 'string' ? body.reason : undefined, model: typeof body.model === 'string' ? body.model.trim() : undefined }, by, 'pm');
+          break;
+        }
+        case 'subagent-rename': {
+          // The Project Manager gives a Lead's subagent another first name (its type stays): audited.
+          const name = cleanSubName(body.name);
+          if (!name || role === 'pm') return send(res, 400, { error: 'Which subagent?' });
+          const got = roster.subagents.rename(team, role!, name, body.firstName, by);
+          if (typeof got === 'string') error = got;
+          else if (got.was !== got.now) audit.record({ floor: floor.id, actor: human(by, owner), action: 'subagent.rename', target: { kind: 'subagent', id: `${role}/${name}`, label: got.now }, summary: `Renamed ${roster.data(floor.id).members[role!].name}'s subagent ${got.was} (${name}) to ${got.now}`, details: { role, subagent: name, before: { name: got.was }, after: { name: got.now } } });
           break;
         }
         case 'subagent-decide':

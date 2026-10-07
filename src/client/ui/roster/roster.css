@@ -98,6 +98,7 @@ body.lite .lite-tabs { flex-wrap: wrap; }
 .sa-g-none { color: var(--muted); }
 .sa-who { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; }
 .sa-model { font-size: 11px; color: var(--muted); }
+.sa-type { font-size: 11px; color: var(--muted); margin-right: 4px; }
 .sa-stats { color: var(--muted); }
 .sa-pill { font-size: 10px; font-weight: 900; padding: 1px 7px; border: 2px solid var(--ink); border-radius: 999px; white-space: nowrap; background: var(--paper); }
 .sa-pill.sa-warning { background: color-mix(in srgb, var(--warn) 55%, var(--paper)); }

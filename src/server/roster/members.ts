@@ -13,6 +13,7 @@ import { autonomyPrompt, benchPrompt, primePrompt } from './prompts.js';
 import { stageLevel, stageOf } from './stage-autonomy.js';
 import { cleanSettings } from './store.js';
 import type { TeamFloor } from './types.js';
+import { ensureSubagentNames, namesOf } from './subagent-names.js';
 import { audit, byWhom } from '../audit/index.js';
 import { hireHoldOf } from '../project-run/store.js';
 import { coveredBy, isIdentity, managerOf } from '../../shared/roster/coverage.js';
@@ -34,9 +35,10 @@ export class Members {
 
   private ctxFor(floor: TeamFloor, role: RoleId): PlaybookContext {
     const d = this.roster.data(floor.id);
+    if (ensureSubagentNames(d)) this.roster.file(floor.id).save();
     const names = Object.fromEntries(ROLES.map((r) => [r.id, d.members[r.id].name])) as PlaybookContext['names'];
     const m = d.members[role];
-    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role), earlyDrafts: d.settings.earlyDrafts, maxSubagents: d.settings.maxSubagents, coverage: d.coverage };
+    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role), subagentNames: namesOf(d, role), earlyDrafts: d.settings.earlyDrafts, maxSubagents: d.settings.maxSubagents, coverage: d.coverage };
   }
 
   /**
@@ -186,6 +188,8 @@ export class Members {
     if (!name) return 'Give it a name (up to 24 characters)';
     const d = this.roster.data(floor.id);
     if (ROLES.some((r) => r.id !== role && d.members[r.id].name.toLowerCase() === name.toLowerCase())) return `${name} is already on the team`;
+    // Nor a subagent's: names are one per floor (subagent-names.ts).
+    if (Object.values(d.subagentNames).some((n) => n.toLowerCase() === name.toLowerCase())) return `${name} is already a subagent's name on the team`;
     const m = d.members[role];
     m.name = name;
     const w = this.roster.workerOf(floor, m);

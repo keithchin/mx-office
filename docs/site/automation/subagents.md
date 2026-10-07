@@ -6,6 +6,10 @@ weight: 3
 
 A Lead's team members are **Claude Code subagents**, running inside the Lead's session. The office keeps a **track record** for each one.
 
+## Names
+
+Each subagent (one per Lead and subagent type) gets a person's first name the first time the office sees it, like the Leads have: *Nia · Tester (Hedy's subagent)*. The name is kept in the floor's roster file and never changes by itself; no two on a floor share one, Leads included. A roster from before names gets them the next time the office starts, the same names every time. The name shows on the Workers tab, in the 2D view and the home page's Overview, in the Team chatter and the Team phone, in the activity and approvals, and on the Budget tab. Each Lead's Playbook names its subagents (*Nia, your Tester*), so the Lead calls them by name; it still dispatches each by its type, so `.claude/agents/<type>.md` and `office-workers subagent … <type>` are unchanged. The Project Manager can give one another name with **✏️ Rename** on its detail or the Org chart (recorded in the audit log as `subagent.rename`).
+
 ## The track record
 
 - **Runs** come from Claude Code's hooks (subagent start and stop) and the Agent tool's results, and from the Lead's transcript for a run no hook said had ended (a background run's notification). The last 50 are kept per subagent.

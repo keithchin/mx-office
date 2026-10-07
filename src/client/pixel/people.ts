@@ -45,7 +45,7 @@ export interface Label {
   status?: string;
   /** A second, smaller line: a Lead's role (in its team's colour), or what anyone else is working on. */
   tag?: { text: string; short?: string; color?: string };
-  /** Shown whole up to 20 letters rather than 14 (a subagent's "tester (Hedy's)"). */
+  /** Shown whole up to 32 letters rather than 14 (a subagent's "Nia (Hedy's tester)"). */
   long?: boolean;
 }
 

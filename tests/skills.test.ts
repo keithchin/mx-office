@@ -215,7 +215,7 @@ test('the gates: ask raises an escalation and approving it benches; propose wait
   const asked = t.roster.subagents.request(t.floor, 'lead-developer', w, 'bench', 'developer', { reason: '3 reworks in 5 runs' });
   assert.equal(asked.outcome, 'asked');
   const e = t.data().escalations.at(-1)!;
-  assert.match(e.title, /asks to bench developer/);
+  assert.match(e.title, /asks to bench [A-Z][a-z]+ \(developer\)/);
   assert.equal(t.data().subagents['lead-developer/developer']?.state ?? 'active', 'active', 'nothing happens before the answer');
   assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'approve', '', 'Keith'), undefined);
   assert.equal(t.data().subagents['lead-developer/developer'].state, 'benched');
@@ -228,12 +228,12 @@ test('the gates: ask raises an escalation and approving it benches; propose wait
   assert.equal(p.outcome, 'proposed');
   const view = t.roster.view(t.floor, true);
   const card = view.approvals.find((a) => a.kind === 'subagent')!;
-  assert.match(card.title, /proposes to swap the model of subagent developer to Haiku/);
+  assert.match(card.title, /proposes to swap the model of subagent [A-Z][a-z]+ \(developer\) to Haiku/);
   assert.equal(card.actionId, p.actionId);
   t.floor.prompts.length = 0;
   assert.equal(t.roster.subagents.decide(t.floor, p.actionId!, true, 'Keith'), undefined);
   assert.equal(t.data().subagents['lead-developer/developer'].model, 'haiku');
-  assert.match(t.floor.prompts.find((x) => x.id === id)!.text, /approved your request to swap the model of developer/);
+  assert.match(t.floor.prompts.find((x) => x.id === id)!.text, /approved your request to swap the model of [A-Z][a-z]+ \(developer\)/);
   assert.match(String(t.roster.subagents.decide(t.floor, p.actionId!, false, 'Keith')), /Already approved/);
   assert.equal(t.roster.view(t.floor, true).approvals.filter((a) => a.kind === 'subagent').length, 0);
   const rej = t.roster.subagents.request(t.floor, 'lead-developer', w, 'warn', 'developer', { reason: 'sloppy' });
@@ -248,17 +248,17 @@ test('the gates: tell does it and tells the Coordinator; fyi does it and files a
   assert.equal(told.outcome, 'done');
   assert.match(told.message, /Coordinator is told/);
   assert.equal(t.data().subagents['lead-developer/developer'].state, 'warning');
-  assert.match(t.floor.feed.join('\n'), /⚠️ .* \(Lead Developer\) put on warning subagent developer \(Sonnet\): skipped mxcli check/);
+  assert.match(t.floor.feed.join('\n'), /⚠️ .* \(Lead Developer\) put on warning subagent [A-Z][a-z]+ \(developer, Sonnet\): skipped mxcli check/);
   t.clock.now += 61_000;
   assert.equal(t.roster.subagents.flushNews(t.floor, t.clock.now), true);
-  assert.match(t.floor.prompts.find((x) => x.id === pm.id)!.text, /put on warning subagent developer/);
+  assert.match(t.floor.prompts.find((x) => x.id === pm.id)!.text, /put on warning subagent [A-Z][a-z]+ \(developer\)/);
 
   t.data().settings.autonomy = 4;
   const fyi = t.roster.subagents.request(t.floor, 'lead-developer', w, 'bench', 'developer', { reason: '3 reworks' });
   assert.match(fyi.message, /FYI/);
   const e = t.data().escalations.at(-1)!;
   assert.equal(e.fyi, true);
-  assert.match(e.title, /benched subagent developer/);
+  assert.match(e.title, /benched subagent [A-Z][a-z]+ \(developer\)/);
 
   assert.equal(changeSkill(t.roster, t.floor, 'lead-developer', { skill: 'reinstate', enabled: false }), undefined);
   const off = t.roster.subagents.request(t.floor, 'lead-developer', w, 'reinstate', 'developer', {});
@@ -286,8 +286,8 @@ test('warn, bench, swap-model and reinstate change the files in the Lead’s fol
   run('bench', { reason: '3 reworks in 5 runs' });
   assert.ok(!existsSync(file) && existsSync(benched), 'out of .claude/agents/');
   assert.deepEqual(JSON.parse(readFileSync(settings, 'utf8')).permissions.deny, ['Agent(developer)', 'Task(developer)']);
-  assert.match(readFileSync(pbFile, 'utf8'), /developer is benched\*\* until .*: don't dispatch developer; do the work yourself or use another subagent/);
-  assert.match(t.floor.feed.join('\n'), /🪑 Keith \(Project Manager\) benched .*'s subagent developer \(Haiku\): 3 reworks in 5 runs/);
+  assert.match(readFileSync(pbFile, 'utf8'), /\(developer\) is benched\*\* until .*: don't dispatch developer; do the work yourself or use another subagent/);
+  assert.match(t.floor.feed.join('\n'), /🪑 Keith \(Project Manager\) benched .*'s subagent [A-Z][a-z]+ \(developer, Haiku\): 3 reworks in 5 runs/);
   // A hire while benched writes it benched again, not back into .claude/agents/.
   t.roster.members.rewrite(t.floor, 'lead-developer');
   assert.ok(!existsSync(file));
@@ -312,7 +312,7 @@ test('a benched subagent is reinstated once its cool-down is over', async () => 
   t.clock.now += 2 * 3_600_000;
   t.roster.tick(t.clock.now);
   assert.equal(rec.state, 'active');
-  assert.match(t.floor.feed.at(-1)!, /The office reinstated .*'s subagent developer \(Sonnet\): its cool-down is over/);
+  assert.match(t.floor.feed.at(-1)!, /The office reinstated .*'s subagent [A-Z][a-z]+ \(developer, Sonnet\): its cool-down is over/);
   // 0 hours: only by hand.
   t.data().settings.subagentCooldownHours = 0;
   t.roster.subagents.run(t.floor, 'lead-developer', 'bench', 'developer', { reason: 'r' }, 'Keith', 'pm');
@@ -329,7 +329,7 @@ test('an underperforming subagent gets its idle Lead one nudge, with its skills'
   }
   const rec = t.data().subagents['lead-developer/developer'];
   assert.ok(rec.flaggedAt, 'flagged at 3 reviewed runs, below C');
-  assert.match(t.floor.feed.join('\n'), /📉 developer \(Sonnet\) on .*'s team is underperforming: grade D \(67% accepted\) over 3 runs/);
+  assert.match(t.floor.feed.join('\n'), /📉 [A-Z][a-z]+ \(developer, Sonnet\) on .*'s team is underperforming: grade D \(67% accepted\) over 3 runs/);
   t.floor.prompts.length = 0;
   t.floor.set(id, 'working');
   t.roster.tick(t.clock.now);
@@ -340,7 +340,7 @@ test('an underperforming subagent gets its idle Lead one nudge, with its skills'
   t.clock.now += NUDGE_GRACE_MS + 1000;
   t.roster.tick(t.clock.now);
   assert.equal(t.floor.prompts.length, 1);
-  assert.match(t.floor.prompts[0].text, /`developer` \(Sonnet\) is underperforming: 2 reworks in 4 runs/);
+  assert.match(t.floor.prompts[0].text, /[A-Z][a-z]+ \(`developer`, Sonnet\) is underperforming: 2 reworks in 4 runs/);
   assert.match(t.floor.prompts[0].text, /Bench a subagent — you propose it/);
   t.roster.tick(t.clock.now + 600_000);
   assert.equal(t.floor.prompts.length, 1, 'once per finding');

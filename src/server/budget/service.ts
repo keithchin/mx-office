@@ -43,6 +43,8 @@ export interface BudgetDeps {
   team?(floorId: string): { idleMinutes: number; jeffWaiting: 'off' | 'shadow' | 'on'; earlyDrafts: boolean } | undefined;
   /** Token efficiency (0-100) from the worker ranking, by worker id. */
   efficiency?(floorId: string): Record<string, number>;
+  /** A Lead's subagent's first name ("Nia"), by the Lead's worker id and the subagent type, when the floor has a team. */
+  subagentName?(floorId: string, workerId: string, sub: string): string | undefined;
   fetch?: typeof fetch;
 }
 
@@ -78,7 +80,7 @@ export class BudgetService {
         dayOf: localDay,
         today: this.today,
         roleOf: (id, name) => this.deps.roleOf(floor.id, id, name) ?? 'Worker',
-        agentFor: (w, sub, role) => this.agentFor(w, sub, role),
+        agentFor: (w, sub, role) => this.agentFor(w, sub, role, floor.id),
       });
       this.store.changed(floor.id);
     }
@@ -89,9 +91,11 @@ export class BudgetService {
     return this.deps.floors().find((f) => f.id === id);
   }
 
-  agentFor(w: { id: string; name: string; provider?: string }, sub: string, role: string): AgentInfo {
+  agentFor(w: { id: string; name: string; provider?: string }, sub: string, role: string, floorId?: string): AgentInfo {
     if (!sub) return { key: w.id, name: w.name, role, kind: 'worker', ...(w.provider ? { provider: w.provider } : {}) };
-    return { key: `${w.id}/${sub}`, name: SUBAGENT_TITLE.get(sub) ?? sub, role: sub, kind: 'subagent', lead: w.id };
+    // A subagent by its first name when the team gave it one (shared/roster/subagent-names.ts), else its title.
+    const first = floorId ? this.deps.subagentName?.(floorId, w.id, sub) : undefined;
+    return { key: `${w.id}/${sub}`, name: first ?? SUBAGENT_TITLE.get(sub) ?? sub, role: sub, kind: 'subagent', lead: w.id };
   }
 
   /** The stage now, noted in the floor's stage timeline. */
@@ -111,7 +115,7 @@ export class BudgetService {
     const seen = d.seen[w.id];
     if (!seen && w.createdAt < d.startedAt) {
       // Hired before the ledger started and not back-filled with the rest (it came back later): its history.
-      backfill(d, [w], [], { dayOf: localDay, today: this.today, roleOf: (id, name) => this.deps.roleOf(floorId, id, name) ?? 'Worker', agentFor: (x, sub, role) => this.agentFor(x, sub, role) });
+      backfill(d, [w], [], { dayOf: localDay, today: this.today, roleOf: (id, name) => this.deps.roleOf(floorId, id, name) ?? 'Worker', agentFor: (x, sub, role) => this.agentFor(x, sub, role, floorId) });
       this.store.changed(floorId);
       return;
     }
@@ -123,7 +127,7 @@ export class BudgetService {
     const issue = issueOf(this.deps.taskIssue(floorId, w.id), w.prompt);
     const day = this.today;
     for (const p of pieces) {
-      const agent = this.agentFor(w, p.sub, role);
+      const agent = this.agentFor(w, p.sub, role, floorId);
       book(d, { day, agent: agent.key, model: p.model, stage, cost: unmetered ? 0 : p.cost, calls: p.calls, ...(unmetered ? { unmetered: true } : {}), ...(issue !== undefined ? { issue } : {}), ...(w.pr ? { pr: w.pr.number } : {}) }, agent);
     }
     d.seen[w.id] = seenOf(w.usage);

@@ -308,7 +308,13 @@ test("cards: who hired each, at work on what, idle with its last run, benched; a
   const cards = subagentCards(t.view());
   const tester = cards.find((c) => c.key === 'lead-tester/tester')!;
   assert.equal(tester.hiredBy, 'Hedy (Lead Tester)');
-  assert.equal(tester.tag, "tester (Hedy's)");
+  const nia = t.data().subagentNames['lead-tester/tester'];
+  assert.ok(nia && /^[A-Z][a-z]+$/.test(nia), 'the tester has a first name');
+  assert.equal(tester.firstName, nia);
+  assert.equal(tester.tag, `${nia} (Hedy's tester)`);
+  assert.equal(tester.label, `${nia} · Tester (Hedy's subagent)`);
+  const exploreName = t.data().subagentNames['lead-tester/Explore'];
+  assert.ok(exploreName && exploreName !== nia, 'one only seen at work is named too, and differently');
   assert.equal(tester.status, 'working');
   assert.equal(tester.leadWorkerId, 'w-hedy');
   assert.equal(tester.task, 'Full e2e suite on main');
@@ -320,7 +326,7 @@ test("cards: who hired each, at work on what, idle with its last run, benched; a
   assert.equal(cards.some((c) => c.lead === 'lead-developer'), false);
   // In the team's order, each Lead's together.
   assert.deepEqual([...new Set(cards.map((c) => c.lead))], ['lead-tester']);
-  assert.deepEqual(floorHelpers(cards).map((h) => [h.tag, h.leadWorkerId, h.team, h.state, h.runId]), [["Explore (Hedy's)", 'w-hedy', 'testing', 'working', 'toolu_2'], ["tester (Hedy's)", 'w-hedy', 'testing', 'working', 'toolu_1']]);
+  assert.deepEqual(floorHelpers(cards).map((h) => [h.tag, h.leadWorkerId, h.team, h.state, h.runId]), [[`${exploreName} (Hedy's explore)`, 'w-hedy', 'testing', 'working', 'toolu_2'], [`${nia} (Hedy's tester)`, 'w-hedy', 'testing', 'working', 'toolu_1']].sort((a, b) => String(a[0]).localeCompare(String(b[0]))));
 
   s.onEvent(t.floor, 'w-hedy', { kind: 'result', at: T0 + 300_000, toolUseId: 'toolu_1', agent: 'tester', failed: false, background: false, durationMs: 300_000 });
   const idle = subagentCards(t.view()).find((c) => c.key === 'lead-tester/tester')!;

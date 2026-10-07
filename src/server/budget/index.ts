@@ -10,6 +10,8 @@ import { subagentModelAt, type BudgetChoice, type LevelSettings } from '../../sh
 import { analysisOf } from '../analysis/index.js';
 import { audit, byWhom } from '../audit/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { subagentFirstName } from '../roster/subagent-names.js';
+import { cleanSubName } from '../roster/subagent-store.js';
 import { checkFloor, type ControlDeps } from './control.js';
 import { onBackgroundSpend } from './meter.js';
 import { BudgetService } from './service.js';
@@ -57,6 +59,17 @@ export function budgetOf(ctx: Ctx): BudgetService {
       }
     },
     efficiency: (floorId) => efficiencyOf(ctx, floorId),
+    subagentName: (floorId, workerId, sub) => {
+      try {
+        const roster = rosterOf(ctx);
+        const d = roster.data(floorId);
+        const role = LEADS.find((r) => d.members[r.id]?.workerId === workerId)?.id;
+        const type = cleanSubName(sub);
+        return role && type ? subagentFirstName(d, role, type, () => roster.file(floorId).save()) : undefined;
+      } catch {
+        return undefined;
+      }
+    },
     runs: () => {
       try {
         return analysisOf(ctx).store.all();

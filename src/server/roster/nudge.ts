@@ -14,6 +14,8 @@ import type { WorkerInfo, WorkerStatus } from '../../shared/protocol.js';
 import { ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
 import { lastSubagentResult } from '../workers/subagents.js';
 import { cleanSubName, subKey } from './subagent-store.js';
+import { subagentFirstName } from './subagent-names.js';
+import { subRef } from '../../shared/roster/subagent-names.js';
 import { isAsleepStatus, isBusyStatus } from './bench.js';
 import type { Roster } from './index.js';
 import { reviewNudgePrompt } from './prompts.js';
@@ -164,12 +166,15 @@ export class Nudges {
     const w = this.roster.workerOf(floor, m)!;
     const t = this.track.get(this.key(floor, role))!;
     const result = lastSubagentResult(w.id);
-    if (this.roster.delivery.prompt(floor, w, reviewNudgePrompt(role, result, d.settings.autonomy))) return false;
+    const sub = result?.agent ? cleanSubName(result.agent) : undefined;
+    const first = sub && subagentFirstName(d, role, sub, () => this.roster.file(floor.id).save());
+    if (this.roster.delivery.prompt(floor, w, reviewNudgePrompt(role, result, d.settings.autonomy, first || undefined))) return false;
     t.streak = (t.streak ?? 0) + 1;
     t.nudgedAt = now;
     t.nudgedIdleAt = t.idleAt;
-    reviewNudged(floor.id, w, result?.agent);
-    floor.activity?.(`🔁 Nudged ${m.name} to review ${result?.agent ? `its ${result.agent}'s` : "its subagent's"} result and continue or escalate`);
+    const who = sub && first ? subRef(first, sub) : result?.agent;
+    reviewNudged(floor.id, w, result?.agent, first || undefined);
+    floor.activity?.(`🔁 Nudged ${m.name} to review ${who ? `${first ? '' : 'its '}${who}'s` : "its subagent's"} result and continue or escalate`);
     return true;
   }
 

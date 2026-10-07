@@ -25,13 +25,13 @@ export function decisionsRelayed(floor: string, coordinator: Who, list: Proposal
 }
 
 /** A review nudge (roster/nudge.ts): a Lead's subagent came back and its turn ended. */
-export function reviewNudged(floor: string, lead: Who, agent?: string) {
-  noteChatter(floor, { kind: 'nudge', from: OFFICE, to: workerParty(lead), text: `${agent ? `Your ${agent}` : 'Your subagent'} is back: review what it did, then carry on or escalate.`, ...(agent ? { ref: { subagent: agent } } : {}) });
+export function reviewNudged(floor: string, lead: Who, agent?: string, first?: string) {
+  noteChatter(floor, { kind: 'nudge', from: OFFICE, to: workerParty(lead), text: `${agent ? (first ? `${first}, your ${agent},` : `Your ${agent}`) : 'Your subagent'} is back: review what it did, then carry on or escalate.`, ...(agent ? { ref: { subagent: agent } } : {}) });
 }
 
 /** The nudge about a subagent with a poor track record (roster/subagents.ts nudgeLead). */
-export function struggleNudged(floor: string, lead: Who, subagent: string, why: string) {
-  noteChatter(floor, { kind: 'nudge', from: OFFICE, to: workerParty(lead), text: `${subagent} has been struggling (${why}). Warn it, bench it or swap its model if you think it's time.`, ref: { subagent } });
+export function struggleNudged(floor: string, lead: Who, subagent: string, why: string, who = subagent) {
+  noteChatter(floor, { kind: 'nudge', from: OFFICE, to: workerParty(lead), text: `${who} has been struggling (${why}). Warn it, bench it or swap its model if you think it's time.`, ref: { subagent } });
 }
 
 /** A Lead's subagent decision under a `tell` gate: it tells the Project Coordinator (roster/subagents.ts). */

@@ -7,6 +7,7 @@
 import type { ChatterParty } from '../../shared/chatter.js';
 import { journalPath, ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { OP_ASK } from '../../shared/roster/subagents.js';
+import { roleWord, subRef } from '../../shared/roster/subagent-names.js';
 import type { Escalation } from '../../shared/roster/escalation.js';
 import type { Roster } from '../roster/index.js';
 import { excerpt } from '../roster/journal-io.js';
@@ -78,7 +79,7 @@ export const rosterSource: ChatterSource = {
     }
     for (const a of d.subagentActions) {
       if (a.gate !== 'propose') continue;
-      const what = `${OP_ASK[a.op]} ${a.name}${a.op === 'swap-model' && a.model ? ` to ${a.model}` : ''}`;
+      const what = `${OP_ASK[a.op]} ${subRef(d.subagentNames[`${a.lead}/${a.name}`], a.name)}${a.op === 'swap-model' && a.model ? ` to ${a.model}` : ''}`;
       if (recent(a.at)) out.push({ kind: 'escalation', from: member(d, a.lead, undefined, a.by), to: { group: 'pm' }, text: `I'd like to ${what}${a.reason ? `: ${a.reason}` : ''}`, at: a.at, ref: { subagent: a.name }, key: `sa:${a.id}` });
       if (a.decidedBy && recent(a.decidedAt) && a.status !== 'pending') out.push({ kind: 'answer', from: human(a.decidedBy), to: member(d, a.lead, undefined, a.by), text: `${a.status === 'rejected' ? 'No' : 'Yes'}, ${a.status === 'rejected' ? "don't" : 'go ahead and'} ${what}.${a.decision ? ` ${a.decision}` : ''}`, at: a.decidedAt, ref: { subagent: a.name }, key: `sa-dec:${a.id}` });
     }
@@ -114,7 +115,7 @@ export const rosterSource: ChatterSource = {
       for (const run of rec.runs) {
         if (!recent(run.reviewedAt) || (run.outcome !== 'accept' && run.outcome !== 'rework')) continue;
         const text = run.outcome === 'accept' ? `Accepted ✅${run.note ? ` ${run.note}` : ''}` : `Needs rework 🔁${run.note ? ` ${run.note}` : ''}`;
-        out.push({ kind: 'review', from: member(d, rec.lead), to: { name: rec.name, kind: 'agent', role: `${lead.name}'s subagent`, team: ROLE_BY_ID.get(rec.lead)!.team }, text, at: run.reviewedAt, ref: { subagent: rec.name }, key: `rv:${rec.lead}/${rec.name}:${run.id}:${run.reviewedAt}` });
+        out.push({ kind: 'review', from: member(d, rec.lead), to: { name: d.subagentNames[`${rec.lead}/${rec.name}`] ?? rec.name, kind: 'agent', role: `${roleWord(rec.name)} (${lead.name}'s subagent)`, team: ROLE_BY_ID.get(rec.lead)!.team }, text, at: run.reviewedAt, ref: { subagent: rec.name }, key: `rv:${rec.lead}/${rec.name}:${run.id}:${run.reviewedAt}` });
       }
     }
     return out;

@@ -4,7 +4,7 @@
 // (ui/teams/panels.ts) and its journal feed (GET /api/teams/page, from the floor's main checkout).
 
 import { TEAM_IDS, TEAM_META, leadOf, type CardTeam } from '../../../shared/roster/card-team';
-import type { TeamId } from '../../../shared/roster/roles';
+import type { RoleId, SubagentDef, TeamId } from '../../../shared/roster/roles';
 import type { TeamPageData } from '../../../shared/roster/team-page';
 import { countTeams } from '../../../shared/roster/team-filter';
 import { askedTeam, setAddress } from '../../shared/address';
@@ -18,6 +18,13 @@ import { teamPanels, type PanelDeps } from './panels';
 import { retagControl } from './retag';
 import { currentRoster, setRoster } from './world';
 import { covererIn, coverNote } from '../roster/coverage';
+import type { RosterView } from '../../../shared/roster/types';
+
+/** A team's subagent in its header: "Nia (Tester)" once its member's subagent has a name, else "Testers". */
+function subTitle(v: RosterView | undefined, role: RoleId | undefined, s: SubagentDef): string {
+  const first = role && v?.subagentNames?.[`${role}/${s.id}`];
+  return first ? `${first} (${s.title})` : `${s.title}s`;
+}
 
 const TEAM_KEY = 'agent-office.team-page';
 const isTeam = (v: unknown): v is TeamId => typeof v === 'string' && (TEAM_IDS as readonly string[]).includes(v);
@@ -106,7 +113,7 @@ export function renderTeamPage(root: HTMLElement, deps: PageDeps) {
       {},
       h('h2.tm-title', {}, h('span.tm-title-ico', { 'aria-hidden': 'true' }, TEAM_META[team].icon), `${TEAM_META[team].name} team`, covered ? h('small.tm-covered', {}, ` · ${covered}`) : null),
       h('p.tm-mission', {}, lead.mission),
-      h('p.tm-subs', {}, '👥 ', lead.subagents.length ? lead.subagents.map((s) => `${s.title}s`).join(', ') : 'Coordinates the Leads', ` · 📓 ${pageData?.journalPath ?? `docs/team/${team}.md`}`),
+      h('p.tm-subs', {}, '👥 ', lead.subagents.length ? lead.subagents.map((s) => subTitle(v, member?.role, s)).join(', ') : 'Coordinates the Leads', ` · 📓 ${pageData?.journalPath ?? `docs/team/${team}.md`}`),
     ),
     v && member ? h('div.tm-lead', {}, memberCard(v, member, { openWorker: deps.openWorker, redraw: setRoster })) : h('p.tm-dim', {}, 'Loading the team…'),
   );

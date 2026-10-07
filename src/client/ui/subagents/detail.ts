@@ -53,7 +53,7 @@ function body(c: SubagentCard, v: RosterView, deps: SubagentDetailDeps, redraw: 
     h('div.sw-chips', {}, ...chips.map((t) => h('span.sw-chip', {}, t))),
     c.lastWarning ? h('p.sw-note', {}, `⚠️ Last warning: ${c.lastWarning}`) : null,
     c.benchReason ? h('p.sw-note', {}, `🪑 Benched: ${c.benchReason}`) : null,
-    h('div.sw-lead', {}, h('span', {}, `Works inside ${c.leadName}'s Claude Code session: its work shows in ${c.leadName}'s terminal and Chat view.`), c.leadWorkerId ? h('button.btn.small', { type: 'button', onclick: () => (close(), deps.openWorker(c.leadWorkerId!)) }, `💬 Open ${c.leadName}`) : h('span.sw-dim', {}, `${c.leadName} isn't at work now.`)),
+    h('div.sw-lead', {}, h('span', {}, `${c.firstName} is ${c.leadName}'s ${c.name} subagent and works inside ${c.leadName}'s Claude Code session: its work shows in ${c.leadName}'s terminal and Chat view.`), c.leadWorkerId ? h('button.btn.small', { type: 'button', onclick: () => (close(), deps.openWorker(c.leadWorkerId!)) }, `💬 Open ${c.leadName}`) : h('span.sw-dim', {}, `${c.leadName} isn't at work now.`)),
     h('h4', {}, 'Recent runs'),
     c.recent.length ? h('ul.sw-runs', {}, ...c.recent.map((r) => runRow(r, now))) : h('p.sw-dim', {}, 'None seen yet: the office lists runs from when this was turned on.'),
     h('h4', {}, `${c.leadName}'s reviews`),
@@ -69,13 +69,16 @@ export function openSubagentDetail(v: RosterView, key: string, deps: SubagentDet
   const find = (view: RosterView) => subagentCards(view, { includeNeverRun: true }).find((c) => c.key === key);
   const c = find(v);
   if (!c) return undefined;
-  const head = h('header', {}, h('h2', {}, `🧩 ${c.name}`, h('small.sw-hired', {}, ` · hired by ${c.hiredBy}`)));
+  // Its first name over its role; a rename shows at once.
+  const title = (x: SubagentCard) => h('h2', { title: `Dispatched as ${x.name}` }, `🧩 ${x.firstName}`, h('small.sw-hired', {}, ` · ${x.role} (${x.leadName}'s subagent)`));
+  const head = h('header', {}, title(c));
   const slot = h('div.body');
-  const win = h('div.modal.sw-window', { role: 'dialog', 'aria-label': `${c.name}, hired by ${c.hiredBy}` }, head, slot);
+  const win = h('div.modal.sw-window', { role: 'dialog', 'aria-label': c.label }, head, slot);
   let modal: Modal | undefined;
   const draw = (view: RosterView) => {
     const now = find(view);
     if (!now) return modal?.close();
+    head.firstElementChild?.replaceWith(title(now));
     slot.replaceChildren(body(now, view, deps, draw, () => modal?.close()));
     deps.onRoster?.(view);
   };

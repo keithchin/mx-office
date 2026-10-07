@@ -31,7 +31,7 @@ Your choices are kept in this browser.
 
 ## Subagents
 
-Each Lead's [subagents](../automation/subagents.md) get a card of their own, right after their Lead's: **🧩 tester · hired by Hedy (Lead Tester)**, with
+Each Lead's [subagents](../automation/subagents.md) get a card of their own, right after their Lead's, by its first name: **🧩 Nia · Tester (Hedy's subagent)**, with
 
 - its grade A–F (from its Lead's reviews, not the worker criteria below),
 - how it is now: **🔨 working** on what and for how long (and how many more runs of it are going at once), **💤 idle** with when it last ran and on what, or **🪑 benched** and why,
@@ -39,7 +39,7 @@ Each Lead's [subagents](../automation/subagents.md) get a card of their own, rig
 
 A subagent that has never run has no card unless you tick **Include never-run**; it shows by itself while it's at work for the first time, and when it's benched or on warning.
 
-A Lead that isn't at work on this floor has its subagents in a group at the end. Click a card for its detail: what it's on, its recent runs (how long, how each ended, the Lead's verdict), the Lead's reviews, and **💬 Open** *Lead* (a subagent works inside its Lead's Claude Code session, so its work shows in the Lead's terminal and Chat view). The Project Manager gets **⚠️ Warn**, **🪑 Bench**, **🔁 Model** and **✅ Reinstate** there too. Subagents aren't hired or sent home like workers: their Lead sends them off.
+A Lead that isn't at work on this floor has its subagents in a group at the end. Click a card for its detail: what it's on, its recent runs (how long, how each ended, the Lead's verdict), the Lead's reviews, and **💬 Open** *Lead* (a subagent works inside its Lead's Claude Code session, so its work shows in the Lead's terminal and Chat view). The Project Manager gets **⚠️ Warn**, **🪑 Bench**, **🔁 Model**, **✏️ Rename** and **✅ Reinstate** there too. Subagents aren't hired or sent home like workers: their Lead sends them off.
 
 ## How the grade is worked out
 

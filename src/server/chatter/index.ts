@@ -10,6 +10,9 @@
 import { randomBytes, createHash } from 'node:crypto';
 import { CHATTER_LONG_MAX, CHATTER_TEXT_MAX, chatterOrder, cursorOf, isGroup, matchesFilter, olderThan, parseCursor, type ChatterFilter, type ChatterMessage, type ChatterPage, type ChatterParty, type ChatterTo } from '../../shared/chatter.js';
 import { ROLE_BY_ID } from '../../shared/roster/roles.js';
+import { roleWord } from '../../shared/roster/subagent-names.js';
+import { subagentFirstName } from '../roster/subagent-names.js';
+import { cleanSubName } from '../roster/subagent-store.js';
 import { redact } from '../judge/pure.js';
 import type { Roster } from '../roster/index.js';
 import type { TeamFloor } from '../roster/types.js';
@@ -140,7 +143,9 @@ export class Chatter {
     const w = floor?.worker(ev.workerId);
     if (!floor || !w) return;
     const role = this.deps.roster.roleOf(floor, ev.workerId);
-    this.add(floor.id, { kind: 'dispatch', from: workerParty(w), to: { name: ev.agent, kind: 'agent', role: `${w.name}'s subagent`, ...(role ? { team: ROLE_BY_ID.get(role)!.team } : {}) }, text: ev.task, at: ev.at, ref: { subagent: ev.agent } });
+    const sub = role && role !== 'pm' ? cleanSubName(ev.agent) : undefined;
+    const first = sub && subagentFirstName(this.deps.roster.data(floor.id), role!, sub, () => this.deps.roster.file(floor.id).save());
+    this.add(floor.id, { kind: 'dispatch', from: workerParty(w), to: { name: first || ev.agent, kind: 'agent', role: `${roleWord(ev.agent)} (${w.name}'s subagent)`, ...(role ? { team: ROLE_BY_ID.get(role)!.team } : {}) }, text: ev.task, at: ev.at, ref: { subagent: ev.agent } });
   }
 
   /** Reads every source for one floor; what's new goes in, oldest first. `journals` false skips the files. */
