@@ -7,10 +7,17 @@
 //
 // FAKE_MODE      live (default): a tool call every FAKE_RATE_MS, forever. turn: one short turn per prompt.
 // FAKE_RATE_MS   how often a live worker calls a tool (default 400).
-// FAKE_DIR       where transcripts go (default <tmp>/test-offices-fake-agent). Never a real ~/.claude.
+// FAKE_DIR       where transcripts go (default <tmp>/test-offices-fake-agent). Never a real ~/.claude;
+//                claude-home: ~/.claude/projects/… when ~ is a test office's folder (see below).
 // FAKE_ESCALATE  raise an escalation to the Project Manager once, this many ms after starting.
+// FAKE_TURN_MS   the least time a turn takes (default 0: a few hundred ms).
+// FAKE_SLOW_MS   how long a prompt with "slow" in it keeps its turn going (default 60000).
+// FAKE_GH_DIR    the fake gh's folder (scripts/perf/journey/fake-gh.mjs): "pr" adds a pull request there.
 // Prompts typed into its terminal (one line each) become a user line and a short reply; a prompt with
-// "escalate" in it raises an escalation; one with "pr" in it reports a fake pull request.
+// "please escalate" at its start raises an escalation; one with "permission" in it stops at a permission
+// prompt (needs_input) until anything is typed; one with "pr" in it opens a fake pull request (in the fake gh's
+// list) and says it's its own; "deliver" writes a deliverable; "slow" keeps the turn going a while. In
+// turn mode, the prompt it was started with is its first turn.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -23,14 +30,40 @@ const at = (...names) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const sid = at('--resume', '-r', '--session-id') ?? crypto.randomUUID();
-const dir = process.env.FAKE_DIR || path.join(os.tmpdir(), 'test-offices-fake-agent');
+// FAKE_DIR=claude-home: where Claude Code keeps it, ~/.claude/projects/<the folder, encoded>, so the office
+// finds the session (and can carry it on) as it would a real one; only when ~ is itself a test office's
+// folder (the journey points USERPROFILE/HOME there), never a person's real ~/.claude.
+const testHome = /(^|[\\/])test-office/i.test(os.homedir());
+const dir =
+  process.env.FAKE_DIR === 'claude-home' && testHome
+    ? path.join(os.homedir(), '.claude', 'projects', path.resolve(process.cwd()).replace(/[^a-zA-Z0-9]/g, '-'))
+    : process.env.FAKE_DIR && process.env.FAKE_DIR !== 'claude-home'
+      ? process.env.FAKE_DIR
+      : path.join(os.tmpdir(), 'test-offices-fake-agent');
 fs.mkdirSync(dir, { recursive: true });
-const transcript = path.join(dir, `${sid}.jsonl`);
+// A big-data fixture (scripts/perf/fixture.ts) keeps each worker's past transcript in its floor: carry on in that one.
+const fixtureTranscript = path.join(process.cwd(), '.agent-office', 'transcripts', `${sid}.jsonl`);
+const transcript = fs.existsSync(fixtureTranscript) ? fixtureTranscript : path.join(dir, `${sid}.jsonl`);
 const base = process.env.AGENT_OFFICE_HOOK_URL;
 const token = process.env.AGENT_OFFICE_HOOK_TOKEN;
 const me = process.env.AGENT_OFFICE_WORKER_ID;
 const mode = process.env.FAKE_MODE || 'live';
 const rate = Math.max(50, +(process.env.FAKE_RATE_MS || 400));
+
+// One-shot calls (`claude -p`: the task namer, when the office's --agent is this fake): answer with an
+// empty result at once and leave, rather than staying up as a live worker would.
+if (args.includes('-p') || args.includes('--print')) {
+  const done = () => {
+    process.stdout.write(JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: '', structured_output: null, total_cost_usd: 0, usage: { input_tokens: 0, output_tokens: 0 } }) + '\n');
+    process.exit(0);
+  };
+  process.stdin.on('data', () => {});
+  process.stdin.on('end', done);
+  process.stdin.resume();
+  setTimeout(done, 2000);
+  await new Promise(() => {});
+}
+
 
 function post(pathname, query, body) {
   if (!base) return Promise.resolve(undefined);
@@ -87,12 +120,70 @@ async function escalate(title) {
   out(`escalated: ${r ?? 'no answer'}\n`);
 }
 
+/** A pull request for this worker's branch: added to the fake gh's list (FAKE_GH_DIR/pulls.json), then said to be its own. */
+async function fakePr() {
+  const gh = process.env.FAKE_GH_DIR;
+  if (!gh) return 'no FAKE_GH_DIR';
+  let branch = 'fake';
+  try {
+    const dotgit = path.join(process.cwd(), '.git');
+    const gitdir = fs.statSync(dotgit).isFile() ? path.resolve(process.cwd(), fs.readFileSync(dotgit, 'utf8').replace('gitdir:', '').trim()) : dotgit;
+    branch = fs.readFileSync(path.join(gitdir, 'HEAD'), 'utf8').trim().replace('ref: refs/heads/', '');
+  } catch {
+    // not a checkout
+  }
+  const file = path.join(gh, 'pulls.json');
+  let pulls = [];
+  try {
+    pulls = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    // the first one
+  }
+  const n = (pulls.at(-1)?.number ?? 0) + 1;
+  const now = new Date().toISOString();
+  pulls.push({ number: n, title: `Fake work by ${me ?? 'an agent'}`, state: 'OPEN', isDraft: false, url: `https://github.com/test-org/fake/pull/${n}`, author: { login: 'perf-tester' }, labels: [], reviewDecision: '', headRefName: branch, headRefOid: '0'.repeat(40), baseRefName: 'main', createdAt: now, updatedAt: now, additions: 3, deletions: 1, statusCheckRollup: [], body: 'Opened by the fake agent in a test office.', closingIssuesReferences: [] });
+  fs.mkdirSync(gh, { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(pulls, null, 2));
+  return (await office('/pr', { pr: n })) ?? 'no answer';
+}
+
+/** A deliverable in its checkout: the Chief Analyst's source triage (shared/deliverables.ts 'triage'). */
+function deliver() {
+  fs.writeFileSync(path.join(process.cwd(), 'triage.md'), '# Source triage (fake)\n\nWritten by the fake agent in a test office.\n');
+  out('wrote triage.md\n');
+}
+
+let waiting = false;
 async function turn(prompt) {
   line({ type: 'user', message: { role: 'user', content: prompt } });
   await hook('UserPromptSubmit', { prompt });
+  const t0 = Date.now();
   for (let i = 0; i < 3; i++) await step();
-  if (/escalat/i.test(prompt)) await escalate('Which login flow should the leave app use? (fake)');
-  if (/\bpr\b/i.test(prompt)) out(await office('/pr', { url: 'https://github.com/example/fake/pull/1' }) ?? '' + '\n');
+  // A turn takes at least FAKE_TURN_MS, as a real one does (the office polls some states every few seconds).
+  while (Date.now() - t0 < +(process.env.FAKE_TURN_MS || 0)) {
+    await new Promise((r) => setTimeout(r, 1000));
+    await step();
+  }
+  if (/^\s*please escalate/i.test(prompt)) await escalate('Which login flow should the leave app use? (fake)');
+  if (/\bpr\b/i.test(prompt)) out(`pr: ${await fakePr()}\n`);
+  if (/deliver/i.test(prompt)) deliver();
+  if (/slow/i.test(prompt)) {
+    const until = Date.now() + Math.max(1000, +(process.env.FAKE_SLOW_MS || 60000));
+    while (Date.now() < until) {
+      await step();
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  if (/permission/i.test(prompt)) {
+    // Stops at a permission prompt (needs_input) until something is typed: the office holds what's for it meanwhile.
+    waiting = true;
+    // After the last tool call has finished (its PostToolUse would read as working again).
+    await new Promise((r) => setTimeout(r, 400));
+    await hook('PermissionRequest', { tool_name: 'Bash', tool_input: { command: 'rm -rf build' } });
+    await hook('Notification', { notification_type: 'permission_prompt', message: 'Claude needs your permission to use Bash' });
+    out('Do you want to proceed?\n> 1. Yes\n  2. No\n');
+    return;
+  }
   say(`Done (fake): ${prompt.slice(0, 80)}`);
   await hook('Stop', {});
 }
@@ -103,6 +194,9 @@ if (mode === 'live') {
   setTimeout(() => hook('UserPromptSubmit', { prompt: 'carry on (fake)' }), 300);
   setInterval(step, rate);
 }
+// turn mode: the prompt it was started with (after `--`, as the office passes it) is its first turn.
+const dd = args.indexOf('--');
+if (mode === 'turn' && dd >= 0 && args[dd + 1]) setTimeout(() => turn(args.slice(dd + 1).join(' ')), 300);
 if (process.env.FAKE_ESCALATE) setTimeout(() => escalate('Which login flow should the leave app use? (fake)'), +process.env.FAKE_ESCALATE || 1000);
 
 // The office types prompts into the terminal; Enter (\r) ends one.
@@ -111,6 +205,13 @@ process.stdin.on('data', (d) => {
   buf += d.toString();
   const parts = buf.split(/\r\n|\r|\n/);
   buf = parts.pop() ?? '';
+  if (waiting && parts.length) {
+    // The answer to its permission prompt: the turn carries on and ends.
+    waiting = false;
+    say('Done (fake): permission answered');
+    hook('Stop', {});
+    return;
+  }
   for (const p of parts) if (p.trim()) turn(p.replace(/\x1b\[[0-9;?]*[A-Za-z~]|\x1b\[20[01]~/g, '').trim());
 });
 process.stdin.resume();

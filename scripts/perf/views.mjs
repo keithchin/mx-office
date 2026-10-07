@@ -32,6 +32,6 @@ export function views(f) {
     { id: 'home-budget', name: 'Home: Budget', path: '/home?tab=budget', ready: shown('#budget-view', 5) },
     { id: 'pixel', name: '2D view', path: `/pixel?floor=${q}`, ready: `(() => { const c = document.querySelector('canvas'); return !!c && c.width > 0 && !document.querySelector('.loading:not(.hidden)'); })()` },
     { id: 'phone', name: 'Team phone (open)', path: lite('board'), ready: shown('#board', 10), click: '.tp-launch', readyAfter: shown('.tp-log', 1) },
-    { id: 'mobile', name: 'Phone page (/m)', path: '/m', viewport: { width: 390, height: 844 }, mobile: true, ready: shown('body', 20) },
+    { id: 'mobile', name: 'Phone page (/m)', path: '/m', viewport: { width: 390, height: 844 }, mobile: true, ready: shown('#m-app .m-main', 5) },
   ];
 }

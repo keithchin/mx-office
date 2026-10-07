@@ -85,10 +85,11 @@ async function waitUp(base, ms, proc) {
 
 /**
  * Starts the office in `home` (a folder holding .agent-office/) in test mode with the fake agent. `env`
- * adds to the office's environment (FAKE_* settings reach the fake agents). Returns { base, password,
+ * adds to the office's environment (FAKE_* settings reach the fake agents); `agent` is the fake to run
+ * (FAKE_AGENT by default). Returns { base, password,
  * port, log, stop }.
  */
-export async function startTestOffice({ home, port, env = {}, log, fakeDir, timeoutMs = 60000 }) {
+export async function startTestOffice({ home, port, env = {}, log, fakeDir, timeoutMs = 60000, agent = FAKE_AGENT }) {
   assertTestDir(home);
   if (!fs.existsSync(path.join(REPO, 'dist', 'server', 'server', 'cli.js'))) throw new Error('the office is not built: run npm run build first');
   port = port ?? (await freePort());
@@ -102,7 +103,7 @@ export async function startTestOffice({ home, port, env = {}, log, fakeDir, time
     PATH: `${FAKEBIN}${sep}${process.env.PATH}`,
     AGENT_OFFICE_HOME: home,
     AGENT_OFFICE_PROJECTS: path.join(home, 'projects'),
-    AGENT_OFFICE_AGENT: FAKE_AGENT,
+    AGENT_OFFICE_AGENT: agent,
     AGENT_OFFICE_TEST_MODE: '1',
     AGENT_OFFICE_NO_OPEN: '1',
     AGENT_OFFICE_ALLOW_REAL_AGENTS: '',
@@ -110,7 +111,7 @@ export async function startTestOffice({ home, port, env = {}, log, fakeDir, time
     ...env,
   };
   delete childEnv.AGENT_OFFICE_PASSWORD;
-  const proc = spawn(process.execPath, [path.join(REPO, 'bin', 'agent-office.js'), '--home', home, '--port', String(port), '--password', PASSWORD, '--agent', FAKE_AGENT, '--test-mode', '--no-open'], {
+  const proc = spawn(process.execPath, [path.join(REPO, 'bin', 'agent-office.js'), '--home', home, '--port', String(port), '--password', PASSWORD, '--agent', agent, '--test-mode', '--no-open'], {
     cwd: home,
     env: childEnv,
     stdio: ['ignore', out, out],
@@ -126,12 +127,16 @@ export async function startTestOffice({ home, port, env = {}, log, fakeDir, time
     } catch {
       // closed
     }
+    // The workers' terminal host outlives the office on purpose (for the next one): not a test office's.
+    killProcessesUnder(home);
     const real = killRealAgentsUnder(home);
     if (real.length) throw new Error(`real agent CLIs were running under the test office and were killed: ${real.join('; ')}`);
   };
   try {
     await waitUp(base, timeoutMs, proc);
-    const mode = await (await fetch(`${base}/api/test-mode`)).json().catch(() => ({}));
+    // GET /api/test-mode wants a signed-in session.
+    const cookie = await login(base);
+    const mode = await (await fetch(`${base}/api/test-mode`, { headers: { cookie } })).json().catch(() => ({}));
     if (!mode.on) throw new Error('refused: the office did not come up in test mode');
   } catch (e) {
     await stop().catch(() => {});
@@ -175,4 +180,33 @@ export function removeTestDir(dir) {
   };
   unlinkLinks(dir);
   fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 });
+}
+
+/**
+ * Kills every process whose command line names `root` (the workers' terminal host the office leaves
+ * running for the next one, fake agents started in its checkouts), and everything they started. For a
+ * test office's folder only. Returns how many it killed.
+ */
+export function killProcessesUnder(root) {
+  assertTestDir(root);
+  const r = path.resolve(root).toLowerCase().replaceAll('\\', '/');
+  let lines = [];
+  try {
+    if (process.platform === 'win32') {
+      const ps = `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine } | ForEach-Object { "$($_.ProcessId)|$($_.CommandLine)" }`;
+      lines = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 30000, maxBuffer: 32 * 1024 * 1024 }).split(/\r?\n/);
+    } else {
+      lines = execFileSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8' }).split('\n').map((l) => l.trim().replace(/\s+/, '|'));
+    }
+  } catch {
+    return 0;
+  }
+  let n = 0;
+  for (const l of lines) {
+    const [pid, ...rest] = l.split('|');
+    if (!pid || Number(pid) === process.pid || !rest.join('|').toLowerCase().replaceAll('\\', '/').includes(r)) continue;
+    killTree(Number(pid));
+    n++;
+  }
+  return n;
 }

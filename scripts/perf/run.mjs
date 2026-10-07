@@ -75,7 +75,7 @@ const officeRoot = root ? path.resolve(root, id) : undefined;
 /** A fresh big-data office for the run (scripts/perf/fixture.ts). */
 async function fixture(scale) {
   progress({ done: 0, of: 1, label: `Making the test office (scale ${scale})` });
-  const r = await node(['--import', 'tsx', 'scripts/perf/fixture.ts', '--out', officeRoot, '--scale', String(scale), '--seed', '42'], { quiet: true });
+  const r = await node(['--import', 'tsx', 'scripts/perf/fixture.ts', '--out', officeRoot, '--scale', String(scale), '--seed', '42', '--base', new Date().toISOString()], { quiet: true });
   if (r.code !== 0) throw new Error(`the fixture generator failed: ${r.out.slice(-800)}`);
   const floors = JSON.parse(fs.readFileSync(path.join(officeRoot, 'office', '.agent-office', 'floors.json'), 'utf8'));
   return { home: path.join(officeRoot, 'office'), floor: floors[0].id };
