@@ -15,10 +15,11 @@ Every main view is opened in a headless browser on a big test office, with six w
 | Longest task | 200 ms | No single piece of work on the page's main thread may run longer. Over this, clicks and typing visibly lag. |
 | Time to usable | 3 s | From opening the address until the view has drawn its content and answers. |
 | Heap growth | 25 % (and over 4 MB) | How much the page's memory may grow while it stays open on live events for 60 s. Steady growth means something piles up. |
+| Project switch | 1.5 s | From picking another project (the floor picker in the 1D and 2D views, or a card on Home) until its view is usable and drawn. |
 
 The numbers are named constants, `PERF_BUDGETS` in `src/shared/testlab.ts` (and `scripts/perf/budgets.mjs`, which a test keeps the same), so they can be tuned in one place.
 
-The views: the Command Center (Chat and Terminal), the Board, the team's org chart, standup and approvals, Team boards with Deliverables, Workers, Budget, the Audit log and Incidents, Settings, Home (Projects, Overview, Budget), the 2D view, the Team phone open, and the phone page (`/m`).
+The views: the Command Center (Chat and Terminal), the Board, the team's org chart, standup and approvals, Team boards with Deliverables, Workers, Budget, the Audit log and Incidents, Settings, Home (Projects, Overview, Budget), the 2D view, the Team phone open (and its floor channel), and the phone page (`/m`). Project switches are timed on the 1D Board, the 1D Command Center, the 2D view and Home → a project, with the office's own part (from asking for the floor to getting it), the fetches that follow and any `performance.mark` timings the page sets.
 
 ## The big test office
 
@@ -37,7 +38,7 @@ node scripts/perf/run.mjs --suite pages --root <scratch>\test-offices\perf-guard
 
 It makes the test office under `--root` (which must be under `scratch\test-offices` or a `test-office…` folder), starts it in test mode with the fake agent, runs the views one after another, writes `result.json`, `summary.md` and a screenshot per view, then stops the office and removes it.
 
-A view that fails on a long task is opened again under the CPU profiler, and the result names the functions that took the time. Build with `PERF_SOURCEMAP=1` (hidden source maps, never in a normal build) to get source files and lines instead of bundle positions.
+A view that fails on time alone (a long task, time to usable, a switch) is opened once more and fails only if it fails again, since the office's own laptop is often busy with Studio Pro and more. A view that fails on a long task is then opened again under the CPU profiler, and the result names the functions that took the time. Build with `PERF_SOURCEMAP=1` (hidden source maps, never in a normal build) to get source files and lines instead of bundle positions.
 
 ## Live warnings in the real office
 

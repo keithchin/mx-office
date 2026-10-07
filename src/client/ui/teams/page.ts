@@ -126,16 +126,7 @@ export function renderTeamPage(root: HTMLElement, deps: PageDeps) {
     previewTop: (c) => retagControl(c, teams.get(c.key) ?? 'unassigned'),
   });
 
-  const journal = h(
-    'section.tm-panel.tm-journal',
-    {},
-    h('h3.tm-panel-h', {}, '📓 Journal'),
-    !pageData
-      ? h('p.tm-dim', {}, 'Reading the journal…')
-      : pageData.journal.length
-        ? h('ol.tm-entries', {}, ...pageData.journal.map((e) => h('li.tm-entry', {}, h('div.tm-entry-h', {}, e.heading), markdownFile(e.body))))
-        : h('p.tm-dim', {}, `No entries in ${pageData.journalPath} on main yet.`),
-  );
+  const journal = journalPanel(pageData);
 
   root.replaceChildren(
     h(
@@ -148,6 +139,28 @@ export function renderTeamPage(root: HTMLElement, deps: PageDeps) {
       h('div.tm-grid', {}, h('div.tm-col', {}, ...teamPanels(team, v, pageData, deps)), h('div.tm-col', {}, journal)),
     ),
   );
+}
+
+/** The newest journal entries drawn at first; Show all draws the rest. */
+export const JOURNAL_SHOWN = 20;
+/**
+ * The journal panel, made once per fetch of the page's data and moved into each redraw. The page is
+ * drawn again for every change on the floor (a few times a second with live workers), and rendering
+ * every entry's Markdown each time hung the page on a big floor (the performance guard, 2026-10-07).
+ */
+const journals = new WeakMap<TeamPageData, HTMLElement>();
+function journalPanel(pageData: TeamPageData | undefined): HTMLElement {
+  const had = pageData && journals.get(pageData);
+  if (had) return had;
+  const head = h('h3.tm-panel-h', {}, '📓 Journal');
+  if (!pageData) return h('section.tm-panel.tm-journal', {}, head, h('p.tm-dim', {}, 'Reading the journal…'));
+  const entry = (e: TeamPageData['journal'][number]) => h('li.tm-entry', {}, h('div.tm-entry-h', {}, e.heading), markdownFile(e.body));
+  const list = h('ol.tm-entries', {}, ...pageData.journal.slice(0, JOURNAL_SHOWN).map(entry));
+  const rest = pageData.journal.length - JOURNAL_SHOWN;
+  const more = rest > 0 ? h('button.btn.small.tm-more', { type: 'button', onclick: () => (list.append(...pageData.journal.slice(JOURNAL_SHOWN).map(entry)), more?.remove()) }, `Show ${rest} more`) : null;
+  const el = h('section.tm-panel.tm-journal', {}, head, pageData.journal.length ? list : h('p.tm-dim', {}, `No entries in ${pageData.journalPath} on main yet.`), more);
+  journals.set(pageData, el);
+  return el;
 }
 
 /** Forget the project data, so the next drawing reads it again (the floor changed, or a while passed). */

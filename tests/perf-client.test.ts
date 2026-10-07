@@ -153,3 +153,10 @@ test('long lists skip what is off screen, and the chat starts with fewer rows', 
   assert.ok(src('ui/phone/alerts.ts').includes('new Audio(pingUrl).play()'));
   assert.doesNotMatch(src('ui/phone/alerts.ts'), /new AudioContext/);
 });
+
+test("the Team boards page draws its journal once per fetch, its newest entries first, not on every redraw", () => {
+  const page = src('ui/teams/page.ts');
+  assert.match(page, /const journals = new WeakMap<TeamPageData, HTMLElement>\(\);/);
+  assert.match(page, /const journal = journalPanel\(pageData\);/);
+  assert.match(page, /export const JOURNAL_SHOWN = 20;/);
+});
