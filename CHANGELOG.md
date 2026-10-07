@@ -50,6 +50,12 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   (`/lite?tab=settings`). So do Needs you's *Spend cap reached → Settings*, the team phone's *Raise cap*, a
   Teams card's Open for it, the budget's *Team settings* suggestions and the team's Autonomy chip, each at its
   section (`&section=team`), and the docs' "3D view → ☰ → ⚙️ Settings" steps.
+- **The project team no longer loops on its own prompts** ("project team on travel-approval: Maximum call
+  stack size exceeded"). Typing into an agent makes the office announce it again at once, and the team
+  handled that echo while still sending: a Lead nudged about a flagged subagent was nudged over and over
+  in one go until the stack ran out (held prompts and a Lead's notes could do the same). An agent's
+  update that comes back while its last one is being handled now waits its turn, and a nudge is noted
+  before it's typed, so each goes once. The console line now carries the first frames of the stack.
 
 ## 2026-10-06 · release 14 (`a208a15`)
 

@@ -413,8 +413,13 @@ export class Subagents {
     if (idle === undefined || now - idle < NUDGE_GRACE_MS) return false;
     const s = scoreSubagent(flagged.runs, currentModel(flagged, 'inherit'));
     const skills = effectiveSkills(lead, d.settings.autonomy, m.skills, alsoOf(d, lead)).filter((k) => k.enabled && (k.key === 'warn' || k.key === 'bench' || k.key === 'swap-model')).map((k) => `${k.title} — ${GATE_WORDS[k.gate!]} (\`${k.how}\`)`);
-    if (this.roster.delivery.prompt(floor, w, underperformingPrompt(flagged.name, modelWord(s.model), s.why ?? 'poor reviews', skills))) return false;
+    // Noted before it's typed: once per finding, even when typing it brings this worker's update round again.
+    const before = flagged.nudgedAt;
     flagged.nudgedAt = now;
+    if (this.roster.delivery.prompt(floor, w, underperformingPrompt(flagged.name, modelWord(s.model), s.why ?? 'poor reviews', skills))) {
+      flagged.nudgedAt = before;
+      return false;
+    }
     struggleNudged(floor.id, w, flagged.name, s.why ?? 'poor reviews');
     floor.activity?.(`🔁 Nudged ${m.name} about ${flagged.name}'s track record (${s.why})`);
     this.roster.touch(floor, true);

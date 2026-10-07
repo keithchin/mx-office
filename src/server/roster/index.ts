@@ -55,6 +55,10 @@ export class Roster {
   private files = new Map<string, RosterFile>();
   private seen = new Map<string, Seen>();
   private timer?: NodeJS.Timeout;
+  /** Workers whose update is being handled now, and the update that came in meanwhile (see onWorker). */
+  private handling = new Set<string>();
+  private echoes = new Map<string, { floor: TeamFloor; w: WorkerInfo }>();
+  private stopped = false;
 
   constructor(readonly deps: RosterDeps, tickMs = 60_000) {
     this.delivery = new Delivery(this);
@@ -72,6 +76,7 @@ export class Roster {
   }
 
   stop() {
+    this.stopped = true;
     clearInterval(this.timer);
     for (const f of this.files.values()) f.flush();
   }
@@ -131,8 +136,36 @@ export class Roster {
     return d.escalations.filter((e) => e.status === 'open' && (e.workerId === workerId || e.also?.some((a) => a.workerId === workerId) || (role && e.role === role))).map((e) => e.title);
   }
 
-  /** Every worker update on the floor: activity for the standup, idleness for the bench, spend for the cap. */
+  /**
+   * Every worker update on the floor: activity for the standup, idleness for the bench, spend for the cap.
+   * Typing into a worker (a nudge, a relay, held prompts) makes the worker manager announce the worker
+   * again at once, which lands back here while the first update is still being handled and before its
+   * sender has noted it was sent; handled then, the same prompt would go again, and again, until the
+   * stack ran out. So an update for a worker already being handled waits (the latest one) and is
+   * handled on its own once this one is done.
+   */
   onWorker(floor: TeamFloor, w: WorkerInfo) {
+    if (this.handling.has(w.id)) {
+      if (!this.echoes.has(w.id)) setImmediate(() => this.handleEcho(w.id));
+      this.echoes.set(w.id, { floor, w });
+      return;
+    }
+    this.handling.add(w.id);
+    try {
+      this.handleWorker(floor, w);
+    } finally {
+      this.handling.delete(w.id);
+    }
+  }
+
+  private handleEcho(workerId: string) {
+    const e = this.echoes.get(workerId);
+    this.echoes.delete(workerId);
+    if (!e || this.stopped) return;
+    this.onWorker(e.floor, e.floor.worker(workerId) ?? e.w);
+  }
+
+  private handleWorker(floor: TeamFloor, w: WorkerInfo) {
     const d = this.data(floor.id);
     const now = this.deps.now();
     const prev = this.seen.get(w.id);
@@ -171,6 +204,7 @@ export class Roster {
   /** A worker left the floor: a member sent home by hand is no longer hired (its name and handoff stay). */
   onWorkerGone(floor: TeamFloor, workerId: string) {
     this.seen.delete(workerId);
+    this.echoes.delete(workerId);
     this.delivery.forget(workerId);
     forgetSubagents(workerId);
     this.subagents.live.forget(workerId);

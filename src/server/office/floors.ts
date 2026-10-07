@@ -26,7 +26,9 @@ function team(ctx: Ctx, floor: Floor, tell: (t: ReturnType<typeof teamFloor>) =>
   try {
     tell(teamFloor(ctx, floor));
   } catch (err) {
-    console.error(`  project team on ${floor.id}: ${(err as Error).message}`);
+    // The stack's first frames too: a message alone ("Maximum call stack size exceeded") doesn't say where.
+    const stack = (err as Error)?.stack?.split('\n').slice(1, 11).join('\n');
+    console.error(`  project team on ${floor.id}: ${(err as Error)?.message ?? String(err)}${stack ? `\n${stack}` : ''}`);
   }
 }
 
