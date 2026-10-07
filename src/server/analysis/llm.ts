@@ -6,6 +6,7 @@
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import { meterCliResult } from '../budget/meter.js';
+import { officeCliRefused } from '../testmode.js';
 
 const TIMEOUT_MS = 60_000;
 const FAILS_BEFORE_BACKOFF = 3;
@@ -56,6 +57,7 @@ export class Haiku {
 }
 
 function run(claude: string, env: Record<string, string>, system: string, input: string, schema: string): Promise<string | null> {
+  if (officeCliRefused(claude)) return Promise.resolve(null);
   const args = [
     '-p',
     '--model', 'haiku',
