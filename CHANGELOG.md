@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-07 · release 15 (`62fb3cb`)
+
 ### New
 - **Team shapes: Solo, Startup and Enterprise**: a project's team is one Solo Lead (Sonnet, every
   subagent type) covering every team, a Chief Analyst and a Lead Developer (design and test as their
