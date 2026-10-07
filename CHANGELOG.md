@@ -6,7 +6,14 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **Stable project ids and evidence contracts** (Knowledge & Evals step F1): every floor now has a
+  project id (`prj_…`) in `floors.json`, given to existing floors on the first start and kept when a
+  floor is taken off and added again under another name. Audit events can carry the domain ids
+  (project, execution, task, agent instance, role). A new read-only `GET /api/evidence/trace?floor=&since=`
+  shows a floor's audit log, chatter, analysis runs, budget rows and incidents as one normalized trace,
+  with every id it can't know listed as unknown rather than blank, and costs it can't measure as
+  unknown rather than 0. No UI yet.
 
 ## 2026-10-07 · release 15 (`62fb3cb`)
 

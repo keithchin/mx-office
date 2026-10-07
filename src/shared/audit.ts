@@ -2,6 +2,8 @@
 // one event per thing someone (a person, an agent, the office, Jeff or a reviewer) did, kept append
 // only with a hash chain so an edited line shows.
 
+import type { RecordedIds } from './evidence/ids.js';
+
 export type AuditActorKind = 'human' | 'agent' | 'office' | 'jeff' | 'reviewer';
 export const AUDIT_ACTOR_KINDS: readonly AuditActorKind[] = ['human', 'agent', 'office', 'jeff', 'reviewer'];
 export type AuditSeverity = 'info' | 'notice' | 'warning';
@@ -31,6 +33,11 @@ export interface AuditInput {
   details?: Record<string, unknown>;
   severity?: AuditSeverity;
   at?: number;
+  /**
+   * The domain ids it belongs to (shared/evidence/ids.ts), when the recorder knows them: optional, so
+   * older lines still read and verify. Invalid ones are dropped when it's written.
+   */
+  ids?: RecordedIds;
 }
 
 export interface AuditEvent extends AuditInput {

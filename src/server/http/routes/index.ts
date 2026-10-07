@@ -32,6 +32,7 @@ import { projectRunRoutes } from './project-run.js';
 import { mobileRoutes } from './mobile.js';
 import { phoneAccessRoutes } from './phone-access.js';
 import { budgetRoutes } from './budget.js';
+import { evidenceRoutes } from './evidence.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -77,6 +78,7 @@ export const routes: readonly Route[] = [
   incidentRoutes.settings,
   incidentRoutes.one,
   incidentRoutes.testMode,
+  evidenceRoutes.trace,
   flowRoutes.list,
   homeRoutes.stats,
   notifyTeamsRoutes.view,

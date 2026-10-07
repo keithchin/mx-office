@@ -9,6 +9,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { OFFICE_FLOOR, type AuditChain, type AuditEvent, type AuditInput } from '../../shared/audit.js';
+import { cleanIds } from '../../shared/evidence/ids.js';
 
 export const CAP_EVENTS = 50_000;
 export const KEEP_DAYS = 90;
@@ -85,6 +86,7 @@ export class AuditLog {
     const at = input.at ?? this.now();
     const id = `${at.toString(36).padStart(9, '0')}${(this.seq++ % 1296).toString(36).padStart(2, '0')}${randomBytes(3).toString('hex')}`;
     const prev = c.lines.length ? sha256(c.lines[c.lines.length - 1]) : this.anchor(key);
+    const ids = cleanIds(input.ids);
     const body: Omit<AuditEvent, 'hash'> = {
       id,
       at,
@@ -95,6 +97,7 @@ export class AuditLog {
       summary: input.summary,
       ...(input.details && Object.keys(input.details).length ? { details: input.details } : {}),
       severity: input.severity ?? 'info',
+      ...(ids ? { ids } : {}),
       prev,
     };
     const unhashed = JSON.stringify(body);
