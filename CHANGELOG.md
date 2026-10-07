@@ -6,7 +6,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+- **The 1D view's tabs no longer drop below where the Command Center has them.** On a desktop window
+  every tab but the Command Center pushed its tab bar and content about 40 px down, leaving an empty
+  band: only the Command Center put the Firm's banner (📑 Call an audit) on the floor's line next to the
+  budget chip and run state. Every tab does now, and the "someone's waiting on another floor" line sits
+  below the tabs instead of above them, so the tab bar stays put on all of them in every theme.
+  `scripts/check-tab-alignment.mjs` checks it in a browser on a test office.
 
 ## 2026-10-07 · release 17 (`089e759`)
 
