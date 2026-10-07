@@ -30,14 +30,24 @@ export function findPublicDir(): string {
 
 export function serveFile(res: http.ServerResponse, file: string, cache: boolean) {
   const ext = path.extname(file);
-  res.writeHead(200, {
-    'content-type': MIME[ext] ?? 'application/octet-stream',
-    'cache-control': cache ? 'public, max-age=31536000, immutable' : 'no-store',
-    'x-content-type-options': 'nosniff',
-    'x-frame-options': 'DENY',
-    'referrer-policy': 'no-referrer',
+  const stream = createReadStream(file);
+  // A file gone between the look and the read (a rebuild emptying dist/public) is a 404, never an
+  // unhandled stream error that takes the whole office down (found by the journey test).
+  stream.once('error', () => {
+    if (res.headersSent) return void res.destroy();
+    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+    res.end('Not found');
   });
-  createReadStream(file).pipe(res);
+  stream.once('open', () => {
+    res.writeHead(200, {
+      'content-type': MIME[ext] ?? 'application/octet-stream',
+      'cache-control': cache ? 'public, max-age=31536000, immutable' : 'no-store',
+      'x-content-type-options': 'nosniff',
+      'x-frame-options': 'DENY',
+      'referrer-policy': 'no-referrer',
+    });
+    stream.pipe(res);
+  });
 }
 
 /** A file of the client bundle, or undefined when it's missing, a folder, or outside the bundle. */
