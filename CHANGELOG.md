@@ -33,6 +33,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   end-to-end journey; about four minutes) is what to run, with `npm test`, before committing a change to
   the pages or the server. The Test Mode page has it as **Quick performance check**, and its **Unit
   tests** run `npm test` itself, every file included.
+- **The performance guard on real data shapes**: `scripts/perf/real-shape.mjs` makes a scrubbed copy of a
+  real office's data (free text replaced by filler of the same length, names, floor ids, the org and
+  paths renamed, tokens replaced; the floors' repositories stood in for by small ones with the same
+  number of files and the workers' worktrees made again), and `run.mjs --from <office>` runs a suite
+  against it. On a copy of this office's two floors every view and project switch was within budget.
 
 ## 2026-10-07 · release 17 (`089e759`)
 

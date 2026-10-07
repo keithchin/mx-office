@@ -88,8 +88,15 @@ async function fixture(scale) {
   return { home: path.join(officeRoot, 'office'), floor: floors[0].id, other: floors[1]?.id };
 }
 
+/** --from <office dir>: a test office already made (scripts/perf/real-shape.mjs), used as it is, never removed. */
+function prepared(dir) {
+  assertTestDir(dir, 'the --from office');
+  const floors = JSON.parse(fs.readFileSync(path.join(dir, '.agent-office', 'floors.json'), 'utf8'));
+  return { home: path.resolve(dir), floor: arg('floor', floors[0].id), other: floors.find((f) => f.id !== arg('floor', floors[0].id))?.id };
+}
+
 async function withOffice(scale, fn) {
-  const { home, floor, other } = await fixture(scale);
+  const { home, floor, other } = arg('from') ? prepared(arg('from')) : await fixture(scale);
   progress({ done: 0, of: 1, label: 'Starting the test office' });
   const office = await startTestOffice({ home, env: { FAKE_RATE_MS: arg('rate', '400') } });
   console.log(`test office up at ${office.base} (floor ${floor}, ${home})`);
