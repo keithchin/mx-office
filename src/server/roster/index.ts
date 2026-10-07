@@ -78,6 +78,11 @@ export class Roster {
   stop() {
     this.stopped = true;
     clearInterval(this.timer);
+    this.flush();
+  }
+
+  /** Writes every floor's roster file now, rather than in the half second its saves wait. */
+  flush() {
     for (const f of this.files.values()) f.flush();
   }
 
@@ -417,6 +422,15 @@ export class Roster {
 }
 
 const offices = new WeakMap<object, Roster>();
+
+/**
+ * Writes the office's roster files now, if it has a roster: the office is shutting down (server.ts).
+ * A save waits half a second on an unref'd timer, so a held prompt, an escalation's answer or a relay
+ * made just before a safe restart's exit was lost with it (found by the journey test, scripts/perf/journey.mjs).
+ */
+export function flushRoster(key: object) {
+  offices.get(key)?.flush();
+}
 
 /** The office's roster, keyed like the analyzer by the office's config; `make` builds it the first time. */
 export function rosterFor(key: object, make: () => Roster): Roster {

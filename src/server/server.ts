@@ -20,6 +20,7 @@ import { stopLiveApps } from './liveapp/index.js';
 import { installAudit } from './audit/office.js';
 import { installIncidents } from './incidents/office.js';
 import { installPerfWatch } from './perfwatch/office.js';
+import { flushRoster } from './roster/index.js';
 
 /** What a test can set about how the office starts: the client bundle it serves, instead of the built one. */
 export interface StartOptions {
@@ -75,6 +76,8 @@ export async function startServer(cfg: Config, opts: StartOptions = {}) {
     for (const f of ctx.floors.values()) f.shutdown(keep);
     ctx.building.shutdown(keep);
     ctx.ledger.flush();
+    // The roster's saves wait half a second: what was held, answered or relayed just now goes to disk first.
+    flushRoster(ctx.cfg);
     ctx.limits.close();
     for (const a of ctx.accountLimits.values()) a.reader.close();
     ctx.signins.shutdown();
