@@ -56,6 +56,8 @@ export interface PauseAgent extends RunAgent {
   key: string;
   askedAt?: number;
   sawBusy?: boolean;
+  /** deps.turnsStarted when it was asked: a turn started since is its handoff, however short. */
+  turnsAt?: number;
 }
 
 export interface PauseRun {
@@ -309,6 +311,8 @@ function windDown(deps: RunDeps, f: RunFloor, s: PauseRun, now: number): boolean
     }
     if (a.status === 'handoff') {
       if (busy(w.status) && !a.sawBusy) ((a.sawBusy = true), (changed = true));
+      // A handoff turn shorter than a look's interval started and ended between two looks: counted all the same.
+      if (!a.sawBusy && a.turnsAt !== undefined && (deps.turnsStarted?.(w.id) ?? 0) > a.turnsAt) ((a.sawBusy = true), (changed = true));
       // A question in its handoff turn is its own: it waits for a person like any other.
       if (w.status === 'needs_input') {
         set(a, 'handoff', 'Asking something in its terminal');
@@ -334,6 +338,7 @@ function windDown(deps: RunDeps, f: RunFloor, s: PauseRun, now: number): boolean
       else {
         a.askedAt = now;
         a.sawBusy = false;
+        a.turnsAt = deps.turnsStarted?.(w.id);
         set(a, 'handoff', 'Writing its handoff note');
       }
     }

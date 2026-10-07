@@ -15,6 +15,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   nothing over 100 ms). A test office lists its blocks at `GET /api/perf/stalls`.
 - **Windows**: a worker's terminal no longer leaks a pipe and a thread after it ends, and a stopping
   office no longer waits five minutes on a worker's boot timer.
+- **⏸ Pause project no longer waits three minutes on a quick handoff**: an agent whose handoff turn
+  was shorter than the pause's two-second look was never seen at work, so the pause waited the full
+  three minutes before putting it to sleep. Every turn is now counted as it starts, so a turn that came
+  and went between two looks still counts.
 
 ## 2026-10-07 · release 17 (`089e759`)
 
