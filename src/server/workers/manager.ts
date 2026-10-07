@@ -188,12 +188,12 @@ export class WorkerManager {
   /** Whether it was cut off mid-turn and hasn't carried on yet (▶ Resume project's preview, project-run/). */
   cutOff(id: string): boolean { return !!this.workers.get(id)?.interrupted; } // prettier-ignore
 
-  /** Puts an agent between turns to sleep, its session kept for a resume (⏸ Pause project): its exit marks it exited. */
+  /** Puts an agent between turns to sleep, its session kept for a resume (⏸ Pause project): its exit marks it exited, and dozing keeps the next wakeAll (any page connecting to the floor) from waking it (tests/pause-dozing.test.ts). */
   sleep(id: string): string | undefined {
     const w = this.workers.get(id);
     if (!w?.pty || w.dsh) return w ? `${w.info.name} has no terminal to stop` : 'No such worker';
-    w.pty.kill();
-    return undefined;
+    w.dozing = true;
+    return void w.pty.kill();
   }
 
   /** Each worker's terminal process and directory, to tell whose servers are whose. */
