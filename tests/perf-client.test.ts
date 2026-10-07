@@ -160,3 +160,19 @@ test("the Team boards page draws its journal once per fetch, its newest entries 
   assert.match(page, /const journal = journalPanel\(pageData\);/);
   assert.match(page, /export const JOURNAL_SHOWN = 20;/);
 });
+
+test("a project switch's budget load is never dropped or postponed for ever (the loading overlay's 15 s waits)", () => {
+  const feed = src('ui/budget/feed.ts');
+  // An ask while a load is out loads again after it, and a floor that changed meanwhile is loaded.
+  assert.match(feed, /if \(busy\) return void \(again = true\);/);
+  assert.match(feed, /if \(again \|\| f !== store\.floor\) \{/);
+  // A later ask (every usage message) never pushes back a load already due sooner.
+  assert.match(feed, /if \(timer !== undefined && due <= at\) return;/);
+});
+
+test("the console's escalation faces are drawn a few a frame after the cards, not in the first draw", () => {
+  const esc = src('ui/pm/escalations.ts');
+  const raised = esc.slice(esc.indexOf('function raisedBy('), esc.indexOf('export class EscalationList'));
+  assert.match(raised, /later\(\(\) => c\.getContext\('2d'\)!\.drawImage\(standing\(/);
+  assert.match(esc, /const FACE_MS = 8;/);
+});
