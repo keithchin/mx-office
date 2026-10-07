@@ -6,7 +6,7 @@
 // continues from (audit/chain.json).
 
 import { createHash, randomBytes } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { OFFICE_FLOOR, type AuditChain, type AuditEvent, type AuditInput } from '../../shared/audit.js';
 import { cleanIds } from '../../shared/evidence/ids.js';
@@ -35,7 +35,18 @@ interface Verified {
   n: number;
   last: string;
   result: AuditChain;
+  /** The file's size in bytes and when it last changed, as checked; and when the whole of it was last checked. */
+  bytes: number;
+  mtimeMs: number;
+  fullAt: number;
 }
+
+/**
+ * The whole file is hashed again at most this often; in between, a file that only grew has only its new
+ * lines checked. Hashing all of a big floor's log for every page of the Audit log blocked the server for
+ * a quarter of a second each time (the performance guard, 2026-10-07).
+ */
+export const FULL_VERIFY_MS = 60_000;
 
 export interface AuditLogOpts {
   now?: () => number;
@@ -169,8 +180,31 @@ export class AuditLog {
   verify(key: string): AuditChain {
     const file = path.join(this.dir, `${key}.jsonl`);
     if (!existsSync(file)) return { ok: true };
-    const text = readFileSync(file, 'utf8');
+    const st = statSync(file);
     const had = this.verified.get(key);
+    // Not changed since the last look: the same answer.
+    if (had && had.bytes === st.size && had.mtimeMs === st.mtimeMs) return had.result;
+    // Only grown, and checked in full a moment ago: check the lines added.
+    if (had && had.result.ok && st.size > had.bytes && this.now() - had.fullAt < FULL_VERIFY_MS) {
+      const tail = readTail(file, had.bytes, st.size);
+      if (tail !== undefined) {
+        let { n, last } = had;
+        let result: AuditChain = { ok: true };
+        for (const line of tail.split('\n')) {
+          if (!line.trim()) continue;
+          const bad = checkLine(line, last);
+          if (bad) {
+            result = { ok: false, brokenAt: bad.at, brokenFloor: key };
+            break;
+          }
+          last = sha256(line);
+          n++;
+        }
+        this.verified.set(key, { ...had, chars: had.chars + tail.length, n, last, result, bytes: st.size, mtimeMs: st.mtimeMs });
+        return result;
+      }
+    }
+    const text = readFileSync(file, 'utf8');
     const lines = text.split('\n').filter((l) => l.trim());
     let n = 0;
     let last = this.anchor(key);
@@ -187,7 +221,7 @@ export class AuditLog {
       }
       last = sha256(lines[n]);
     }
-    this.verified.set(key, { chars: text.length, prefix: sha256(text), n, last, result });
+    this.verified.set(key, { chars: text.length, prefix: sha256(text), n, last, result, bytes: Buffer.byteLength(text), mtimeMs: st.mtimeMs, fullAt: this.now() });
     return result;
   }
 
@@ -222,6 +256,20 @@ export class AuditLog {
     renameSync(`${file}.tmp`, file);
     this.cache.delete(key);
     this.verified.delete(key);
+  }
+}
+
+/** The bytes of `file` from `from` to `to` as text, when they start at a line's start (else undefined). */
+function readTail(file: string, from: number, to: number): string | undefined {
+  const fd = openSync(file, 'r');
+  try {
+    const buf = Buffer.alloc(to - from + 1);
+    // One byte before: the line before the new ones must have ended there.
+    const got = readSync(fd, buf, 0, buf.length, from - 1);
+    if (got < 1 || buf[0] !== 0x0a) return undefined;
+    return buf.subarray(1, got).toString('utf8');
+  } finally {
+    closeSync(fd);
   }
 }
 

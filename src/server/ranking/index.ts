@@ -156,8 +156,27 @@ export function rankingOf(ctx: Pick<Ctx, 'cfg'>): Ranking {
   return r;
 }
 
-/** The ranking for the whole building (no floor) or one floor, from the real office. */
-export function rankingReport(ctx: Ctx, floor?: string): RankingReport {
+/**
+ * A report is reused for this long: working it out reads every floor's analysis, journals and checkout and
+ * took a quarter of a second on a big floor, and the Workers tab, Home and every open browser each ask
+ * (the performance guard, 2026-10-07). Grades only move as tasks finish, so a few seconds old is fine.
+ */
+export const RANKING_TTL_MS = 10_000;
+const recent = new WeakMap<object, Map<string, { at: number; report: RankingReport }>>();
+
+/** The ranking for the whole building (no floor) or one floor, from the real office (at most RANKING_TTL_MS old). */
+export function rankingReport(ctx: Ctx, floor?: string, now = Date.now()): RankingReport {
+  let byFloor = recent.get(ctx.cfg);
+  if (!byFloor) recent.set(ctx.cfg, (byFloor = new Map()));
+  const key = floor ?? '';
+  const had = byFloor.get(key);
+  if (had && now - had.at < RANKING_TTL_MS) return had.report;
+  const report = freshRankingReport(ctx, floor);
+  byFloor.set(key, { at: now, report });
+  return report;
+}
+
+function freshRankingReport(ctx: Ctx, floor?: string): RankingReport {
   const floors = [...ctx.floors.values()];
   // The analyzer's own look first: it records the workers already at their desks the first time, and settles finished ones.
   const analysis = analysisOf(ctx).report(floors, {});
