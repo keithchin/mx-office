@@ -60,6 +60,8 @@ export interface ViewResult {
   /** The switch's own timings: the office's floor.go → floor.enter, the fetches after it, the page's performance marks. */
   marks?: { name: string; at: number; ms: number; bytes?: number }[];
   failures: string[];
+  /** What was odd but not the page's fault (it went quiet with no long task: a busy machine). */
+  warnings?: string[];
   /** The screenshot's file name, next to the result JSON, when one was taken. */
   screenshot?: string;
   /** Errors the page threw while it was open. */

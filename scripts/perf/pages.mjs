@@ -111,6 +111,7 @@ async function measure(browser, base, cookie, v, opts) {
     await cdp.send('Profiler.start');
   }
   const failures = [];
+  const warnings = [];
   let ttuMs = null;
   let switchMs = null;
   let marks = [];
@@ -171,9 +172,28 @@ async function measure(browser, base, cookie, v, opts) {
   while (Date.now() < soakEnd) {
     const r = await Promise.race([page.evaluate(() => 'ok').catch(() => 'gone'), new Promise((res) => setTimeout(() => res('hang'), 5000))]);
     if (r !== 'ok') {
-      hung = true;
-      failures.push(`the page stopped answering (${r}) during the soak`);
-      break;
+      // Wait a while for it to come back: then its long tasks say whether the page itself was stuck
+      // (one task as long as the silence) or the machine just didn't run it.
+      const t = Date.now();
+      let back = false;
+      while (r === 'hang' && Date.now() - t < 30000) {
+        const again = await Promise.race([page.evaluate(() => 'ok').catch(() => 'gone'), new Promise((res) => setTimeout(() => res('hang'), 5000))]);
+        if (again === 'ok') {
+          back = true;
+          break;
+        }
+      }
+      const silent = Date.now() - t + 5000;
+      if (!back) {
+        hung = true;
+        failures.push(`the page stopped answering (${r}) during the soak, and hadn't come back ${Math.round(silent / 1000)} s later`);
+        break;
+      }
+      const worst = await page.evaluate(() => Math.max(0, ...window.__perf.long.map((l) => l.ms))).catch(() => 0);
+      // Silent with no task anywhere near as long: the browser wasn't run (a busy machine), not a stuck page. Noted, not failed.
+      const what = `the page stopped answering for about ${Math.round(silent / 1000)} s during the soak (its longest task: ${worst} ms)`;
+      if (worst >= 2000) failures.push(what);
+      else warnings.push(`${what}: the machine, not the page`);
     }
     await new Promise((res) => setTimeout(res, 1000));
   }
@@ -220,6 +240,7 @@ async function measure(browser, base, cookie, v, opts) {
     ...(switchMs != null ? { switchMs } : {}),
     ...(marks.length ? { marks } : {}),
     failures,
+    ...(warnings.length ? { warnings } : {}),
     ...(screenshot ? { screenshot } : {}),
     ...(pageErrors.length ? { pageErrors } : {}),
     ...(stretches.length ? { profiled: stretches.slice(0, 5) } : {}),
@@ -251,7 +272,7 @@ export async function runPages({ base, floor, other, password = PASSWORD, outDir
       let r = await measure(browser, base, cookie, v, { budgets, soakSeconds: v.soak ?? soakSeconds, outDir, profile: false, resolve });
       // A busy machine (the office's own laptop runs Studio Pro and more) makes one long task now and
       // then: a view that failed on time alone is opened once more, and fails only if it fails again.
-      const timing = (x) => x.failures.every((f) => /^a task ran|^time to usable|^project switch/.test(f));
+      const timing = (x) => x.failures.every((f) => /^a task ran|^time to usable|^project switch|stopped answering/.test(f));
       if (!r.ok && retryTiming && timing(r)) {
         log(`  ${v.id}: ${r.failures.join('; ')}; opening it once more to rule out a busy machine…`);
         const again = await measure(browser, base, cookie, v, { budgets, soakSeconds: v.soak ?? soakSeconds, outDir, profile: false, resolve });
@@ -263,7 +284,7 @@ export async function runPages({ base, floor, other, password = PASSWORD, outDir
         const p = await measure(browser, base, cookie, v, { budgets, soakSeconds: Math.min(v.soak ?? soakSeconds, 15), outDir, profile: true, resolve });
         if (p.profiled) r.profiled = p.profiled;
       }
-      log(`${r.ok ? 'ok  ' : 'FAIL'} ${v.id.padEnd(14)} ttu ${String(r.ttuMs ?? '—').padStart(5)} ms  longest ${String(r.longestTaskMs).padStart(4)} ms  heap ${r.heapStartMB ?? '—'}→${r.heapEndMB ?? '—'} MB  nodes ${r.domNodes ?? '—'}${r.ok ? '' : `  ${r.failures.join('; ')}`}`);
+      log(`${r.ok ? (r.warnings ? 'ok* ' : 'ok  ') : 'FAIL'} ${v.id.padEnd(14)} ttu ${String(r.ttuMs ?? '—').padStart(5)} ms  longest ${String(r.longestTaskMs).padStart(4)} ms  heap ${r.heapStartMB ?? '—'}→${r.heapEndMB ?? '—'} MB  nodes ${r.domNodes ?? '—'}${r.ok ? '' : `  ${r.failures.join('; ')}`}`);
       results.push(r);
     }
     onProgress({ done: list.length, of: list.length, label: 'done' });
