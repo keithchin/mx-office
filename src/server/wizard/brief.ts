@@ -3,6 +3,7 @@
 // It's the brief the first hand-run experiment used, with this project's answers filled in.
 
 import { ENTRY_MODE_INFO, PROJECT_ROLES, type ProjectPlan } from '../../shared/wizard.js';
+import { SHAPES, shapeForRoles } from '../../shared/roster/coverage.js';
 
 export const DISCOVERY_TITLE = 'Discovery: kickoff with the client (Stages P → 4)';
 
@@ -13,9 +14,13 @@ export function discoveryBrief(plan: ProjectPlan, toolkitDir: string): string {
   const client = plan.clients.length ? list(plan.clients) : 'the client';
   const operator = plan.operators.length ? list(plan.operators) : 'the operator';
   const roles = PROJECT_ROLES.filter((r) => plan.roles.includes(r.id)).map((r) => r.label);
+  // Whoever covers Analysis on this team shape runs Discovery: the Chief Analyst, or the Solo Lead on a Solo team.
+  const shape = plan.shape ?? shapeForRoles(plan.roles);
+  const who = SHAPES[shape].coverage.analysis;
+  const runner = who === 'chief-analyst' ? 'Chief Analyst (Consultant agent)' : (PROJECT_ROLES.find((r) => r.id === who)?.label.replace(/ \(.*\)$/, '') ?? 'Lead') + ', running discovery as the analyst';
   const goal = plan.intake.find((a) => a.n === 2)?.text.trim() || plan.description || 'see intake.md';
   return [
-    `**Discovery for ${plan.name}.** You are the **Chief Analyst (Consultant agent)**.`,
+    `**Discovery for ${plan.name}.** You are the **${runner}**.`,
     '',
     '## Your role',
     'Run the discovery for this Mendix app with the client, using the **mxcli-project-toolkit** that is set up in this repo',

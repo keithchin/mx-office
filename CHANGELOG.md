@@ -45,6 +45,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - Existing projects are Enterprise, with every team covering itself, and behave as before.
 
 ### Fixed
+- **The Discovery issue names the agent that runs it**: on a Solo team it addresses the Solo Lead (who covers Analysis), not a Chief Analyst the team doesn't have.
 - No settings link sends you to the 3D view any more. The ☰ menu's **⚙️ Settings** on the 1D view, the 2D view
   and `/home` opened the 3D office's Settings window; it now opens the full Settings page on the 1D view
   (`/lite?tab=settings`). So do Needs you's *Spend cap reached → Settings*, the team phone's *Raise cap*, a

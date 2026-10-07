@@ -406,3 +406,13 @@ test('Enterprise regression: the Team tab, the standup and the relays go where t
   assert.equal(t.data().outbox.news.length, 1);
   assert.match(t.roster.subagents.request(t.floor, 'lead-developer', t.floor.worker(dev)!, 'warn', 'tester', { reason: 'r' }).message, /No subagent called tester/);
 });
+
+test('team shapes: the Discovery brief names whoever covers Analysis', async () => {
+  const { discoveryBrief } = await import('../src/server/wizard/brief.js');
+  const brief = (p: Partial<ProjectPlan>) => discoveryBrief(cleanPlan({ ...plan(), ...p }, ['11.12.4'], 'Test-Org') as ProjectPlan, '/toolkit');
+  assert.match(brief({}), /You are the \*\*Chief Analyst \(Consultant agent\)\*\*/);
+  assert.match(brief({ shape: 'startup', roles: ['chief-analyst', 'lead-developer'] }), /You are the \*\*Chief Analyst \(Consultant agent\)\*\*/);
+  const solo = brief({ shape: 'solo', roles: ['solo-lead'] });
+  assert.match(solo, /You are the \*\*Solo Lead, running discovery as the analyst\*\*/);
+  assert.doesNotMatch(solo, /You are the \*\*Chief Analyst/);
+});
