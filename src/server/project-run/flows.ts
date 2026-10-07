@@ -21,6 +21,7 @@ import { HANDOFF_START_MS, isAsleepStatus } from '../roster/bench.js';
 import { readJournal } from '../roster/journal-io.js';
 import { handoffPrompt, resumeBrief } from './brief.js';
 import { coordinatorRelays } from './relays.js';
+import { managerRole } from '../roster/coverage.js';
 import { waitBeforeNext } from './order.js';
 import { setPauseWaiting, setProjectPause } from './store.js';
 import type { RunDeps, RunFloor } from './types.js';
@@ -120,7 +121,8 @@ async function briefFor(deps: RunDeps, f: RunFloor, s: ResumeRun, a: ResumeAgent
     .map((e) => (e.status === 'resolved' && e.resolution ? `“${e.title}”: ${e.resolution.verdict}${e.resolution.text ? ` — ${e.resolution.text}` : ''} (${e.resolution.by})` : `“${e.title}” raised by ${e.by}, still open`));
   const owed = w ? deps.roster.escalations.owedTo(f.team, w) : a.role ? deps.roster.escalations.owed(f.team, a.role) : { lines: [], mark() {} };
   const notes = a.role && a.role !== 'pm' ? (d.outbox.leads[a.role]?.lines ?? []) : [];
-  const relays = a.role === 'pm' ? coordinatorRelays(deps.roster, f.team) : undefined;
+  // Whoever covers Management hears the Coordinator's relays in its brief (the Coordinator on an Enterprise team).
+  const relays = a.role && a.role === managerRole(d) ? coordinatorRelays(deps.roster, f.team) : undefined;
   const text = resumeBrief({
     name: a.name,
     role: a.role,

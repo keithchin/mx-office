@@ -13,7 +13,7 @@ import { h, openModal, toast } from '../dom';
 import { wizardApi } from './api';
 import { entryPage, intakePage, PAGES, pageProblem, projectPage, reviewPage, teamPage, type PageCtx } from './forms';
 import { progressView, type ProgressView } from './progress';
-import { budgetPage } from './budget';
+import { teamShapePage } from './team-shape';
 
 export interface WizardOptions {
   net: Net;
@@ -106,7 +106,8 @@ export async function openWizard(opts: WizardOptions) {
   );
 
   const ctx = (): PageCtx => ({ draft, info, net: opts.net, editing: !!editing || !!opts.floor, redraw: render });
-  const pages = [projectPage, entryPage, intakePage, teamPage, budgetPage, reviewPage];
+  // The team and budget come after the intake, so the office can recommend a shape and a level from the answers.
+  const pages = [projectPage, entryPage, intakePage, teamShapePage, teamPage, reviewPage];
   // Pages forward of one that isn't filled in can't be jumped to.
   const reachable = (i: number) => pages.slice(0, i).every((_, j) => !pageProblem(j, ctx()));
 

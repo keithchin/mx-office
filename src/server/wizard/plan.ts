@@ -4,6 +4,7 @@
 import { ENTRY_MODES, interviewModeOf, ownerProblem, PROJECT_ROLES, slugProblem, type AnswerKind, type EntryMode, type IntakeAnswer, type ProjectPlan, type ProjectRole } from '../../shared/wizard.js';
 import { cleanAppId } from './mendix-app.js';
 import { cleanChoice } from '../../shared/budget/levels.js';
+import { isTeamShape, shapeForRoles } from '../../shared/roster/coverage.js';
 
 export const DISCOVERY_MODELS = ['opus', 'sonnet', 'haiku'] as const;
 
@@ -60,5 +61,8 @@ export function cleanPlan(raw: unknown, versions: string[], org: string): Projec
     createdByHand: r.createdByHand === true,
     ...(kind === 'new' && cleanAppId(r.sprintrAppId) ? { sprintrAppId: cleanAppId(r.sprintrAppId) } : {}),
     ...(cleanChoice(r.budget) ? { budget: cleanChoice(r.budget) } : {}),
+    // The shape picked on the Team & budget page; a plan without one is what its roles add up to.
+    shape: isTeamShape(r.shape) ? r.shape : shapeForRoles([...new Set(roles)]),
+    ...(r.customTeam === true ? { customTeam: true } : {}),
   };
 }

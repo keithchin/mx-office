@@ -21,6 +21,7 @@ import { LEADS } from '../../../shared/roster/roles';
 import { teamWorld } from './world';
 import { teamChatter } from '../chatter/compact';
 import { deliverablesList } from '../deliverables/panel';
+import { coverageOf, coverNote } from '../roster/coverage';
 
 export interface PanelDeps {
   openPull(p: GhPull): void;
@@ -115,16 +116,19 @@ async function ranking(root: HTMLElement) {
 
 /** The team's subagents with their track record, compact (the org chart has the buttons). */
 function subagentsPanel(team: TeamId, v: RosterView | undefined): HTMLElement | null {
-  const lead = LEADS.find((r) => r.team === team);
-  if (!lead || !v) return null;
-  return panel('👥 Subagents', subagentList(v, lead.id, () => undefined, true) ?? empty('No subagent runs yet.'));
+  // The subagents belong to whoever covers the team (shared/roster/coverage.ts).
+  const own = LEADS.find((r) => r.team === team);
+  const lead = v ? coverageOf(v)[team] : own?.id;
+  if (!lead || lead === 'pm' || !v) return null;
+  return panel('👥 Subagents', subagentList(v, lead, () => undefined, true) ?? empty('No subagent runs yet.'));
 }
 
 /** The team's own panels, under its header. */
 export function teamPanels(team: TeamId, v: RosterView | undefined, data: TeamPageData | undefined, deps: PanelDeps): HTMLElement[] {
   const subs = subagentsPanel(team, v);
   // What the team has to show for itself: expected outputs by stage, on main or still on a branch.
-  const deliverables = panel('📦 Deliverables', data ? deliverablesList(store.floor ?? '', data.deliverables) : empty('Loading…'));
+  const covered = coverNote(v, team);
+  const deliverables = panel(covered ? `📦 Deliverables · ${covered}` : '📦 Deliverables', data ? deliverablesList(store.floor ?? '', data.deliverables) : empty('Loading…'));
   deliverables.classList.add('tm-deliverables');
   return [deliverables, ...lanePanels(team, v, data, deps), ...(subs ? [subs] : []), teamChatter(team)];
 }

@@ -10,7 +10,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import { latestEntry, proposalIssue } from '../../shared/roster/journal.js';
-import { LEADS, ROLE_BY_ID, standupPath, type RoleId } from '../../shared/roster/roles.js';
+import { ROLE_BY_ID, standupPath, type RoleId } from '../../shared/roster/roles.js';
+import { coveredBy, standupRoles } from '../../shared/roster/coverage.js';
+import { managerRole } from './coverage.js';
 import { dayIn, isoWeek, standupDue } from '../../shared/roster/schedule.js';
 import type { Proposal, Standup } from '../../shared/roster/types.js';
 import { HANDOFF_START_MS, isAsleepStatus, isBusyStatus } from './bench.js';
@@ -59,7 +61,8 @@ export class StandupRunner {
     d.standups.push(s);
     d.lastStandupAt = now;
     const stamp = this.roster.members.stamp(floor);
-    for (const role of LEADS) {
+    // The Leads that cover a team (the four on an Enterprise team, the Solo Lead alone on a Solo one); nobody absent is asked.
+    for (const role of standupRoles(d.coverage).map((r) => ROLE_BY_ID.get(r)!)) {
       const m = d.members[role.id];
       const w = this.roster.workerOf(floor, m);
       // Only one at its desk and not asking someone is asked; the rest come from their journals.
@@ -83,7 +86,7 @@ export class StandupRunner {
 
   /** What the Chief Analyst gets on top: the analyzer's numbers, and the weekly memo when it's due. */
   private extraFor(floor: TeamFloor, role: RoleId, now: number): string {
-    if (role !== 'chief-analyst') return '';
+    if (!coveredBy(this.roster.data(floor.id).coverage, role).includes('analysis')) return '';
     const week = isoWeek(now, this.roster.data(floor.id).settings.schedule.timeZone);
     const numbers = this.roster.deps.analysis(floor.id);
     return [numbers && `The office's analyzer data for this project:\n${numbers}`, `If \`docs/insights/${week}.md\` doesn't exist yet, write this week's insight memo there first (see your Playbook).`].filter(Boolean).join('\n');
@@ -109,7 +112,7 @@ export class StandupRunner {
   /** A Lead asked live finished its turn: read its standup entry. */
   onWorker(floor: TeamFloor, role: RoleId, w: WorkerInfo) {
     // The Project Coordinator back at work with decisions it hasn't heard yet.
-    if (role === 'pm' && (w.status === 'idle' || w.status === 'done') && this.roster.data(floor.id).outbox.decisions.length && !this.timers.has(floor.id)) this.flushPm(floor);
+    if (role === managerRole(this.roster.data(floor.id)) && (w.status === 'idle' || w.status === 'done') && this.roster.data(floor.id).outbox.decisions.length && !this.timers.has(floor.id)) this.flushPm(floor);
     const s = this.collecting(floor);
     const key = `${floor.id}:${role}`;
     const ask = this.asks.get(key);
@@ -147,7 +150,8 @@ export class StandupRunner {
     s.compiledAt = this.roster.deps.now();
     for (const p of d.proposals.filter((x) => s.proposalIds.includes(x.id) && x.status === 'auto')) p.issue = await this.makeIssue(floor, p, 'the team');
     s.page = compilePage(s, d.proposals, d.settings.autonomy, floor.name);
-    const pm = d.members.pm;
+    // To whoever covers Management: the Coordinator, or on a Solo team the Solo Lead (its daily note in docs/standups).
+    const pm = d.members[managerRole(d)];
     const w = this.roster.workerOf(floor, pm);
     const pending = d.proposals.filter((p) => s.proposalIds.includes(p.id) && p.status === 'pending').length;
     if (w && pm.phase === 'active' && !isAsleepStatus(w.status) && w.status !== 'needs_input') {
@@ -194,7 +198,8 @@ export class StandupRunner {
     p.decidedAt = this.roster.deps.now();
     const s = d.standups.find((x) => x.id === p.standup);
     if (s?.page) s.page = compilePage(s, d.proposals, d.settings.autonomy, floor.name);
-    this.tellPm(floor, p);
+    // The member who covers Management hears it with the others, unless it proposed it: then its own note says it.
+    if (p.role !== managerRole(d)) this.tellPm(floor, p);
     this.roster.relays.noteLead(floor, p.role, decisionNote(p, by));
     audit.record({ floor: floor.id, actor: byWhom(by), action: 'proposal.decide', target: { kind: 'proposal', id: p.id, label: p.title }, summary: `${decision === 'approve' ? 'Approved' : decision === 'reject' ? 'Rejected' : 'Asked for changes to'} the proposal “${p.title}”${p.issue?.number ? ` (issue #${p.issue.number})` : ''}`, details: { decision, reason: why ? { length: why.length } : undefined, issue: p.issue?.number }, severity: 'notice' });
     this.roster.touch(floor);
@@ -232,7 +237,7 @@ export class StandupRunner {
       this.roster.touch(floor, true);
       return false;
     }
-    const w = this.roster.workerOf(floor, d.members.pm)!;
+    const w = this.roster.workerOf(floor, d.members[managerRole(d)])!;
     if (this.roster.delivery.prompt(floor, w, outcomesPrompt(list))) return false;
     d.outbox.decisions = [];
     this.roster.touch(floor, true);

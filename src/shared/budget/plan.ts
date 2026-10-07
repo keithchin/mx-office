@@ -6,6 +6,8 @@
 import type { EntryMode, SizeTier } from '../wizard.js';
 import type { BudgetPlan, CurvePoint, PlanLine, StageId } from './types.js';
 import { STAGE_TITLE } from './types.js';
+import type { TeamShape } from '../roster/coverage.js';
+import { SHAPE_RATES } from './shapes.js';
 
 /**
  * The default rates: what each stage costs a standard-tier project at Balanced (Leads on Sonnet, the
@@ -78,6 +80,8 @@ export interface PlanInput {
   /** The plan's first day (YYYY-MM-DD). */
   start: string;
   now: number;
+  /** The team's shape (shared/budget/shapes.ts): Enterprise, the rates' own, when missing. */
+  shape?: TeamShape;
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -87,9 +91,12 @@ export function generatePlan(i: PlanInput): BudgetPlan {
   const lines: PlanLine[] = [];
   let fromHistory = 0;
   let fromDefaults = 0;
+  // The shape's share of each stage, its time factor and who does it (Enterprise: 1, 1, nobody named).
+  const sr = SHAPE_RATES[i.shape ?? 'enterprise'];
+  const shaped = (stage: StageId, usd: number, days: number) => ({ usd: r2(usd * sr.share[stage]), days: sr.timeFactor === 1 ? days : Math.max(1, Math.round(days * sr.timeFactor)), ...(sr.by ? { by: sr.by[stage] } : {}) });
   if (i.entry === 'assurance') {
     const a = ASSURANCE[i.tier];
-    lines.push({ id: 'assurance', stage: '—', label: 'Assurance work (no pipeline)', usd: a.usd, days: a.days, basis: 'default' });
+    lines.push({ id: 'assurance', stage: '—', label: 'Assurance work (no pipeline)', basis: 'default', ...shaped('—', a.usd, a.days) });
     fromDefaults++;
   } else {
     const weights = MODE_STAGES[i.entry];
@@ -106,27 +113,27 @@ export function generatePlan(i: PlanInput): BudgetPlan {
         const mods = i.modules?.length ? i.modules : Array.from({ length: DEFAULT_MODULES[i.tier] }, (_, n) => `Module ${n + 1}`);
         const perModule = hist !== undefined ? hist * h!.runs : rate.usd;
         for (const [n, m] of mods.entries()) {
-          lines.push({ id: `5:${n + 1}`, stage, label: i.modules?.length ? `Build · ${m}` : `Build · ${m} (assumed)`, usd: r2(perModule * weight), days, basis: hist !== undefined ? 'history' : 'default' });
+          lines.push({ id: `5:${n + 1}`, stage, label: i.modules?.length ? `Build · ${m}` : `Build · ${m} (assumed)`, basis: hist !== undefined ? 'history' : 'default', ...shaped(stage, perModule * weight, days) });
           if (hist !== undefined) fromHistory++;
           else fromDefaults++;
         }
         continue;
       }
       const usd = hist !== undefined ? hist * h!.runs * small * weight : rate.usd * small * weight;
-      lines.push({ id: stage, stage, label: `Stage ${stage} · ${STAGE_TITLE[stage]}`, usd: r2(usd), days, basis: hist !== undefined ? 'history' : 'default' });
+      lines.push({ id: stage, stage, label: `Stage ${stage} · ${STAGE_TITLE[stage]}`, basis: hist !== undefined ? 'history' : 'default', ...shaped(stage, usd, days) });
       if (hist !== undefined) fromHistory++;
       else fromDefaults++;
     }
   }
   const days = lines.reduce((n, l) => n + l.days, 0);
-  const basis = `${i.tier} ${i.entry} project${i.modules?.length ? `, ${i.modules.length} module${i.modules.length === 1 ? '' : 's'} from the build plan` : ''}: ${fromHistory ? `${fromHistory} line${fromHistory === 1 ? '' : 's'} from this office's history, ` : ''}${fromDefaults} from the default rates`;
+  const basis = `${i.tier} ${i.entry} project${i.shape && i.shape !== 'enterprise' ? ` for a ${i.shape} team` : ''}${i.modules?.length ? `, ${i.modules.length} module${i.modules.length === 1 ? '' : 's'} from the build plan` : ''}: ${fromHistory ? `${fromHistory} line${fromHistory === 1 ? '' : 's'} from this office's history, ` : ''}${fromDefaults} from the default rates`;
   return { lines, start: i.start, end: addWorkDays(i.start, days), basis, generatedAt: i.now };
 }
 
 export const planTotal = (p: Pick<BudgetPlan, 'lines'>) => r2(p.lines.reduce((n, l) => n + l.usd, 0));
 
 /** The plan's total for a tier and entry mode, at Balanced, from the defaults (and history when given). */
-export const estimateFor = (tier: SizeTier, entry: EntryMode, history?: readonly HistoryRun[]) => planTotal(generatePlan({ tier, entry, history, start: '2026-01-05', now: 0 }));
+export const estimateFor = (tier: SizeTier, entry: EntryMode, history?: readonly HistoryRun[], shape?: TeamShape) => planTotal(generatePlan({ tier, entry, history, shape, start: '2026-01-05', now: 0 }));
 
 const isWeekend = (day: string) => {
   const w = new Date(`${day}T12:00:00Z`).getUTCDay();

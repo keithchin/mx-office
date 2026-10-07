@@ -13,6 +13,7 @@ import { orgChart } from './org';
 import { settingsView } from './settings';
 import { standupView } from './standup';
 import { mountProjectRun } from '../project-run';
+import { shapeChip } from './coverage';
 import './roster.css';
 
 export { openStandupWindow } from './standup';
@@ -65,6 +66,7 @@ export function teamTab(root: HTMLElement, badge: HTMLElement, shown: () => bool
         {},
         // Flat, the page's own tabs pick the pane (the 1D view has Org chart, Standup, Approvals and Settings with its other tabs).
         opts.select ? null : h('div.ro-panes', { role: 'tablist', 'aria-label': 'Team' }, tab('org', '🏢 Org chart'), tab('standup', '📋 Standup'), tab('approvals', '✅ Approvals', v.approvals.length), tab('settings', '⚙️ Settings')),
+        shapeChip(v),
         h('button.btn.small.ro-level-chip', { type: 'button', title: a.summary, onclick: () => (opts.select ? opts.select('settings') : pick('settings')) }, `Autonomy ${a.level} · ${v.byStage ? 'by stage' : a.name}`),
       ),
       v.paused ? h('p.ro-paused', {}, `💸 ${v.paused}`) : '',

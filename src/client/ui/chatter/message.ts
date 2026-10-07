@@ -20,7 +20,7 @@ export interface ChatterActions {
   openStandup(): void;
 }
 
-const OUTFIT: Record<string, Outfit> = { pm: 'pm', 'lead-designer': 'designer', 'lead-developer': 'dev', 'lead-tester': 'qa', 'chief-analyst': 'analyst' };
+const OUTFIT: Record<string, Outfit> = { pm: 'pm', 'lead-designer': 'designer', 'lead-developer': 'dev', 'lead-tester': 'qa', 'chief-analyst': 'analyst', 'solo-lead': 'dev' };
 
 /** A speaker's face, `size` CSS pixels square. */
 export function avatar(p: ChatterParty, size = 32): HTMLElement {

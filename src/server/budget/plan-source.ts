@@ -7,6 +7,7 @@ import path from 'node:path';
 import type { Report } from '../../shared/firm/report.js';
 import type { FirmForecast } from '../../shared/budget/types.js';
 import { ENTRY_MODES, type EntryMode, type SizeTier } from '../../shared/wizard.js';
+import { isTeamShape, type TeamShape } from '../../shared/roster/coverage.js';
 
 const read = (f: string) => {
   try {
@@ -29,11 +30,12 @@ export function entryOf(text: string | undefined): EntryMode | undefined {
 }
 
 /** The project's tier and entry mode; standard requirements-driven when nothing says. */
-export function projectShape(dir: string): { tier: SizeTier; entry: EntryMode; known: boolean } {
+export function projectShape(dir: string): { tier: SizeTier; entry: EntryMode; known: boolean; team?: TeamShape } {
   try {
     const j = JSON.parse(read(path.join(dir, 'agent-office.project.json')) ?? '{}');
     const entry = entryOf(j?.entryMode);
-    if (entry) return { tier: j.sizeTier === 'small' ? 'small' : 'standard', entry, known: true };
+    // The team's shape the wizard chose (Enterprise when it doesn't say: every project before shapes).
+    if (entry) return { tier: j.sizeTier === 'small' ? 'small' : 'standard', entry, known: true, ...(isTeamShape(j.teamShape) ? { team: j.teamShape } : {}) };
   } catch {
     // not the wizard's project, or a broken file: the register, then
   }

@@ -29,8 +29,10 @@ import { StandupRunner } from './standup-run.js';
 import { Subagents } from './subagents.js';
 import { effectiveSkills } from '../../shared/roster/skills.js';
 import { OP_ASK, modelWord } from '../../shared/roster/subagents.js';
-import { RosterFile, type MemberRecord, type RosterData } from './store.js';
+import { everHired, RosterFile, type MemberRecord, type RosterData } from './store.js';
 import type { RosterDeps, TeamFloor } from './types.js';
+import { alsoOf, managerRole } from './coverage.js';
+import { coveredBy, shownRoles } from '../../shared/roster/coverage.js';
 
 interface Seen {
   status: WorkerStatus;
@@ -152,8 +154,9 @@ export class Roster {
     this.standups.onWorker(floor, role, w);
     this.nudges.onWorker(floor, role, w);
     this.subagents.onMember(floor, role, now);
-    if (role === 'pm') this.escalations.onCoordinator(floor, w);
-    else {
+    // Whoever covers Management hears the relays (the Coordinator on an Enterprise team); every Lead its notes.
+    if (role === managerRole(d)) this.escalations.onCoordinator(floor, w);
+    if (role !== 'pm') {
       this.relays.flushLead(floor, role, now);
       this.labelLeadPr(floor, role, w);
     }
@@ -284,7 +287,8 @@ export class Roster {
     const now = this.deps.now();
     // The first look since the office started: Jeff ranks the open escalations already there.
     this.jeff.priority.firstLook(floor);
-    const members: MemberView[] = ROLES.map((r) => {
+    // The shape's roles, plus any other the floor has had: an Enterprise team shows its five as before.
+    const members: MemberView[] = shownRoles(d.shape, (id) => everHired(d.members[id])).map((r) => {
       const m = d.members[r.id];
       const w = this.workerOf(floor, m);
       // A benched Lead's handoff may only be on its branch so far: the note the office kept stands in.
@@ -307,6 +311,7 @@ export class Roster {
         lastJournal: last && { heading: last.heading, excerpt: excerpt(last.body) },
         benchedAt: m.benchedAt,
         handoffAt: m.handoff?.at,
+        covers: coveredBy(d.coverage, r.id),
       };
     });
     const cap = capAt(d.settings.costCaps, d.settings.autonomy);
@@ -320,7 +325,7 @@ export class Roster {
       proposals: d.proposals.slice(-100),
       approvals: this.approvals(floor, d, paused),
       escalations: this.escalations.view(floor),
-      skills: Object.fromEntries(ROLES.map((r) => [r.id, effectiveSkills(r.id, d.settings.autonomy, d.members[r.id].skills)])),
+      skills: Object.fromEntries(ROLES.map((r) => [r.id, effectiveSkills(r.id, d.settings.autonomy, d.members[r.id].skills, alsoOf(d, r.id))])),
       subagents: this.subagents.views(floor),
       subagentActions: this.subagents.actionsView(floor),
       subagentRuns: this.subagents.live.views(floor),
@@ -332,6 +337,8 @@ export class Roster {
       activitySinceStandup: d.lastActivityAt !== undefined && d.lastActivityAt > (d.lastStandupAt ?? 0),
       admin,
       ...(byStage ? { byStage } : {}),
+      shape: d.shape,
+      coverage: d.coverage,
     };
   }
 

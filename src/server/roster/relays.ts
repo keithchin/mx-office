@@ -10,9 +10,11 @@
 //
 // The Coordinator's relays wait while it's busy asking someone, booting, benched, or the cap holds. An
 // asleep one (left asleep at a restart, or exited) is woken with everything it's owed in one message,
-// at most once a debounce window (wakeCoordinator). A floor that has no Coordinator at all (never
-// hired, or sent home without a handoff) lets them go, since what the Coordinator hears is the Leads'
-// own doing or on the console and the standup page anyway.
+// at most once a debounce window (wakeCoordinator). "The Coordinator" is whoever covers Management
+// (shared/roster/coverage.ts): the Project Coordinator on an Enterprise team, the Chief Analyst on a
+// Startup, the Solo Lead on a Solo one, so a team without a Project Coordinator still hears its relays.
+// A floor where that member isn't on the team at all (never hired, or sent home without a handoff)
+// lets them go, since what it hears is the Leads' own doing or on the console and the standup page anyway.
 //
 // A Lead's notes go out together, between its turns, a minute after the last was queued; an asleep or
 // benched Lead isn't woken for them (that costs a session): they wait for it to be back at its desk.
@@ -26,6 +28,7 @@ import { mayType } from './deliver.js';
 import type { Roster } from './index.js';
 import { escalationsToCoordinatorPrompt, leadNotesPrompt, outcomesPrompt, subagentNewsPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
+import { managerRole } from './coverage.js';
 
 /** An asleep Coordinator is woken for its relays at most this often (one wake carries them all). */
 export const COORDINATOR_WAKE_MS = 60_000;
@@ -82,7 +85,8 @@ export function queueOnce(list: string[], item: string): string[] {
  * without a handoff: the relay is let go).
  */
 export function coordinatorIs(roster: Roster, floor: TeamFloor): 'here' | 'asleep' | 'away' | 'none' {
-  const pm = roster.data(floor.id).members.pm;
+  const d = roster.data(floor.id);
+  const pm = d.members[managerRole(d)];
   if (pm.phase === 'none') return 'none';
   const w = roster.workerOf(floor, pm);
   if (!w || pm.phase !== 'active' || roster.delivery.paused(floor)) return 'away';
@@ -107,7 +111,7 @@ export class Relays {
     const now = this.roster.deps.now();
     const last = this.woke.get(floor.id);
     if (last !== undefined && now - last < COORDINATOR_WAKE_MS) return false;
-    const w = this.roster.workerOf(floor, d.members.pm);
+    const w = this.roster.workerOf(floor, d.members[managerRole(d)]);
     if (!w || coordinatorIs(this.roster, floor) !== 'asleep') return false;
     const open = d.outbox.escalations.map((id) => d.escalations.find((e) => e.id === id)).filter((e): e is Escalation => !!e && e.status === 'open');
     const decided = d.outbox.decisions.map((id) => d.proposals.find((p) => p.id === id)).filter((p): p is Proposal => !!p);

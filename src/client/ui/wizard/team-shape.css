@@ -1,0 +1,13 @@
+/* The wizard's Team & budget page (ui/wizard/team-shape.ts): three shape cards with a level switch each. */
+.wizard .wz-shapes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.wizard .wz-shape { position: relative; padding-top: 14px; }
+.wizard .wz-shape:focus-visible { outline: 3px solid var(--accent); }
+.wizard .wz-rec { position: absolute; top: -11px; right: 12px; padding: 1px 10px; border: 2px solid var(--ink); border-radius: 999px; background: var(--good); color: var(--accent-ink); font-weight: 900; font-size: 12px; }
+.wizard .wz-shape-usd { font-size: 22px; font-weight: 900; }
+.wizard .wz-shape-usd small { font-size: 13px; color: var(--muted); }
+.wizard .wz-lvl { display: inline-flex; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; align-self: flex-start; }
+.wizard .wz-lvl-b { font: inherit; font-size: 12px; font-weight: 800; padding: 3px 10px; border: 0; background: var(--paper); color: var(--ink); cursor: pointer; }
+.wizard .wz-lvl-b + .wz-lvl-b { border-left: 2px solid var(--ink); }
+.wizard .wz-lvl-b[aria-checked='true'] { background: var(--accent); color: var(--accent-ink); }
+.wizard .wz-why ul { margin: 6px 0 0; padding-left: 20px; }
+.wizard .wz-shapes-box { display: flex; flex-direction: column; gap: 14px; }

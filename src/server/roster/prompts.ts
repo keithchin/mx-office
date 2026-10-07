@@ -32,11 +32,12 @@ export const ASK_THE_PM = [
 ].join('\n');
 
 /** The first message of a fresh hire of a role: who it is, its Playbook, and where it left off. */
-export function primePrompt(roleId: RoleId, name: string, level: AutonomyLevel, handoff?: { at: number; text: string }, task?: string, answers: string[] = []): string {
+export function primePrompt(roleId: RoleId, name: string, level: AutonomyLevel, handoff?: { at: number; text: string }, task?: string, answers: string[] = [], team?: string): string {
   const role = ROLE_BY_ID.get(roleId)!;
   return [
     `You are ${name}, the ${role.title} of this project's team in Agent Office. ${role.mission}`,
-    `You work for ${HUMAN_FULL}.${roleId === 'pm' ? '' : ' The Project Coordinator is the agent that coordinates the Leads and relays escalations; it is not the Project Manager.'}`,
+    // `team`: what it covers on a Solo or Startup team (members.ts); an Enterprise member hears of the Coordinator as before.
+    `You work for ${HUMAN_FULL}.${team !== undefined ? ` ${team}` : roleId === 'pm' ? '' : ' The Project Coordinator is the agent that coordinates the Leads and relays escalations; it is not the Project Manager.'}`,
     '',
     `Start by reading your Playbook, \`${playbookPath(roleId)}\` (also loaded as the \`team-${roleId}\` skill), the project's CLAUDE.md and your team journal \`${journalPath(role.team)}\`. The office just wrote the Playbook and any missing team files into your folder: commit them with your first change.`,
     '',

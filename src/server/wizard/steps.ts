@@ -15,6 +15,7 @@ import { mendixVersions, mxbuildPath, toolkitEnv, type WizardConfig } from './co
 import { writeIntakeAnswers } from './intake.js';
 import type { JobState, StepImpl, StepIO } from './job.js';
 import type { BudgetChoice } from '../../shared/budget/levels.js';
+import { SHAPES, shapeForRoles, type TeamShape } from '../../shared/roster/coverage.js';
 import { createApp, ignoreMendixOutput, mprVersion } from './mendix-app.js';
 import { recordDecisions } from './register.js';
 import { bashPath, runCommand } from './run.js';
@@ -48,6 +49,8 @@ export interface SetupDeps {
   hire(floor: string, role: ProjectRole, by: string, account?: string, task?: string, model?: string): Promise<string | undefined>;
   /** Saves the Budget step's budget on the floor and sets the team's models and settings for its level (budget/index.ts); the problems, if any. */
   applyBudget?(floor: string, choice: BudgetChoice, by: string): string[];
+  /** Sets the floor's team shape and its coverage (roster/coverage.ts), before the team is hired. */
+  setShape?(floor: string, shape: TeamShape, by: string): void;
   /** The office's environment (tests pass their own). */
   env?: NodeJS.ProcessEnv;
   /** Runs a command (tests pass a fake for the Mendix tools); runCommand when not given. */
@@ -252,7 +255,8 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         // first time
       }
       const p = job.plan;
-      const next = { ...saved, repo: repoOf(job), description: p.description, clients: p.clients, operators: p.operators, roles: p.roles, entryMode: p.entry, sizeTier: p.tier, mendix: p.mendix, interview: p.interview, createdBy: saved.createdBy ?? job.by, createdAt: saved.createdAt ?? job.startedAt, wizardJob: job.id };
+      // The team's shape too, when it isn't Enterprise (the budget plan prices it: budget/plan-source.ts).
+      const next = { ...saved, repo: repoOf(job), description: p.description, clients: p.clients, operators: p.operators, roles: p.roles, entryMode: p.entry, sizeTier: p.tier, mendix: p.mendix, interview: p.interview, ...(p.shape && p.shape !== 'enterprise' ? { teamShape: p.shape } : {}), createdBy: saved.createdBy ?? job.by, createdAt: saved.createdAt ?? job.startedAt, wizardJob: job.id };
       if (JSON.stringify(next) === JSON.stringify(saved)) return { status: 'skipped', detail: 'already saved' };
       mkdirSync(path.dirname(f), { recursive: true });
       writeFileSync(f, `${JSON.stringify(next, null, 2)}\n`);
@@ -319,6 +323,8 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       // After an edit (job.addRoles): only the roles ticked since, and never one the floor has had in any
       // state (at work, benched, or sent home on purpose), so an edit doesn't undo the Team tab's choices.
       const adding = job.addRoles;
+      // The team's shape first (who covers which team), then the budget level, so every hire below is on its level's models and settings.
+      if (!adding && job.floor && deps.setShape) deps.setShape(job.floor, job.plan.shape ?? shapeForRoles(job.plan.roles), job.by);
       // The Budget step first, so every hire below is on its level's models and settings.
       if (!adding && job.plan.budget && job.floor && deps.applyBudget && !job.budgetApplied) {
         const problems = deps.applyBudget(job.floor, job.plan.budget, job.by);
@@ -340,7 +346,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
           had.push(r.label);
           continue;
         }
-        const task = handOff && r.id === 'chief-analyst' ? discoveryPrompt(job.issue!) : undefined;
+        const task = handOff && r.id === discoveryRole(job) ? discoveryPrompt(job.issue!) : undefined;
         io.log(`  hiring the ${r.label}${task ? `, with Discovery #${job.issue} on ${model}` : ''}…`);
         const err = await deps.hire(floor, r.id, job.by, job.account, task, task ? model : undefined);
         if (err) throw new Error(`Couldn't hire the ${r.label}: ${err}${made.length ? ` (hired so far: ${made.join(', ')})` : ''}`);
@@ -365,8 +371,11 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
   };
 }
 
-/** The Discovery issue goes to the Chief Analyst as its first task, rather than to a worker off the queue: asked to be queued, and the Chief Analyst is on the team. */
-export const handsDiscoveryToAnalyst = (job: JobState) => job.plan.discovery.queue && !!job.issue && job.plan.roles.includes('chief-analyst');
+/** Who works the Discovery issue: whoever covers Analysis on the plan's shape (the Chief Analyst, or the Solo Lead). */
+export const discoveryRole = (job: Pick<JobState, 'plan'>): ProjectRole => SHAPES[job.plan.shape ?? shapeForRoles(job.plan.roles)].coverage.analysis as ProjectRole;
+
+/** The Discovery issue goes to whoever covers Analysis as its first task, rather than to a worker off the queue: asked to be queued, and that member is on the team. */
+export const handsDiscoveryToAnalyst = (job: JobState) => job.plan.discovery.queue && !!job.issue && job.plan.roles.includes(discoveryRole(job));
 
 /**
  * Intake Q9's answer: the question asks "attended or unattended", the register's `Interview mode:` line

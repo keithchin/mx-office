@@ -1,0 +1,9 @@
+/* The team's shape chip and coverage table (ui/roster/coverage.ts). */
+.ro-shape-chip { display: inline-flex; align-items: center; gap: 2px; padding: 2px 10px; border: 2px solid var(--ink); border-radius: 999px; background: color-mix(in srgb, var(--good) 22%, var(--paper)); color: var(--ink); font-size: 12px; font-weight: 900; white-space: nowrap; }
+.ro-coverage { margin-top: 14px; padding: 10px 14px; border: 3px solid var(--ink); border-radius: 14px; background: var(--paper); }
+.ro-coverage-h { margin: 0 0 4px; font-size: 15px; font-weight: 900; }
+.ro-coverage-t { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ro-coverage-t th, .ro-coverage-t td { text-align: left; padding: 4px 8px; border-top: 1px solid var(--line); }
+.ro-coverage-t th { font-weight: 900; border-top: 0; }
+.ro-covers { margin: 0; font-size: 12px; font-weight: 800; color: var(--ink-2, var(--muted)); }
+.tm-covered { font-size: 13px; font-weight: 700; color: var(--muted); }

@@ -4,7 +4,7 @@
 
 import type { AppStats, WorkerGrade } from '../../shared/firm/report.js';
 import type { PriceOf } from '../../shared/firm/engagement.js';
-import type { RoleId } from '../../shared/roster/roles.js';
+import type { RoleId, TeamId } from '../../shared/roster/roles.js';
 import type { ReviewerRunner } from './runner.js';
 import type { PrepareOpts, ReviewerFolder } from './isolation.js';
 
@@ -24,6 +24,8 @@ export interface FirmFloor {
   repo?: string;
   branch?: string;
   lead(role: RoleId): LeadState;
+  /** Who covers a team on the floor's team (shared/roster/coverage.ts): its own Lead, or another member. */
+  coverOf?(team: TeamId): RoleId;
   /** Types a prompt into a worker's session (waking it with it when asleep); why not, when it can't. */
   deliver(workerId: string, text: string, asleep: boolean): string | undefined;
   /** Hires a benched role back with `task` as its first message (only when the engagement allows it). */

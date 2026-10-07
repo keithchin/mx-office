@@ -37,12 +37,13 @@ export class FirmDesk {
     if (ok !== true) return ok;
     const floor = this.deps.floor(e.floor);
     if (!floor) return 'The project\'s floor is closed';
-    const forRole = roleFor(team);
+    // To whoever covers the team (its own Lead, or the member covering it on a Solo or Startup team).
+    const forRole = floor.coverOf?.(team) ?? roleFor(team);
     const q: Question = { id: `Q${e.id.slice(-4)}-${e.questions.length + 1}`, reviewer: r.id, team, text, at: this.deps.now(), status: 'open' };
     e.questions.push(q);
     r.asked++;
     this.firm.note(e, r.name, `❓ ${q.id} to ${team}: ${text}`);
-    const route = routeQuestion(floor.lead(forRole), floor.lead('pm'), e.config.allowRehire);
+    const route = routeQuestion(floor.lead(forRole), floor.lead(floor.coverOf?.('management') ?? 'pm'), e.config.allowRehire);
     let note: string;
     if (route.kind === 'lead' || route.kind === 'relay' || route.kind === 'wait') {
       const to = route.to;

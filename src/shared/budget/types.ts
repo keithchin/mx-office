@@ -131,6 +131,8 @@ export interface PlanLine {
   days: number;
   /** Where its number came from: the office's default rates, this office's history, a Firm audit, or a person. */
   basis: 'default' | 'history' | 'firm' | 'edited';
+  /** Who does it on a Solo or Startup team (shared/budget/shapes.ts); missing on an Enterprise team's plan. */
+  by?: string;
   editedBy?: string;
   editedAt?: number;
 }

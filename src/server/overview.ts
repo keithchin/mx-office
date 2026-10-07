@@ -74,5 +74,5 @@ function teamOf(ctx: Ctx, floor: Floor): RosterView | undefined {
 
 /** The project team, what the drawing needs of it; none if the team view can't be had. */
 function membersOf(team: RosterView | undefined): OverviewMember[] {
-  return (team?.members ?? []).map((m) => ({ role: m.role, team: m.team, title: m.title, name: m.name, icon: m.icon, status: m.status, ...(m.workerId ? { workerId: m.workerId } : {}) }));
+  return (team?.members ?? []).map((m) => ({ role: m.role, team: m.team, title: m.title, name: m.name, icon: m.icon, status: m.status, ...(m.workerId ? { workerId: m.workerId } : {}), ...(m.covers ? { covers: m.covers } : {}) }));
 }

@@ -6,6 +6,7 @@ import { isRoleId, type RoleId } from '../../shared/roster/roles.js';
 import { cleanOverrides, effectiveSkill, GATE_WORDS, isGate, skillOf } from '../../shared/roster/skills.js';
 import type { Roster } from './index.js';
 import { skillsChangedPrompt } from './prompts.js';
+import { alsoOf } from './coverage.js';
 import type { TeamFloor } from './types.js';
 
 export interface SkillChange {
@@ -20,9 +21,11 @@ export interface SkillChange {
 export function changeSkill(roster: Roster, floor: TeamFloor, role: RoleId, c: SkillChange): string | undefined {
   if (!isRoleId(role)) return 'Which role?';
   const key = typeof c.skill === 'string' ? c.skill : '';
-  const def = skillOf(role, key);
-  if (!def) return 'No such skill for this role';
   const d = roster.data(floor.id);
+  // A member covering other teams has their skills too (strictest gate wins).
+  const also = alsoOf(d, role);
+  const def = skillOf(role, key, also);
+  if (!def) return 'No such skill for this role';
   const m = d.members[role];
   const all = { ...(m.skills ?? {}) };
   const o = { ...(all[key] ?? {}) };
@@ -41,10 +44,10 @@ export function changeSkill(roster: Roster, floor: TeamFloor, role: RoleId, c: S
     o.gate = c.gate;
   }
   all[key] = o;
-  m.skills = cleanOverrides(role, all);
+  m.skills = cleanOverrides(role, all, also);
   const wrote = roster.members.rewrite(floor, role);
   const w = roster.workerOf(floor, m);
-  const now = effectiveSkill(role, d.settings.autonomy, key, m.skills)!;
+  const now = effectiveSkill(role, d.settings.autonomy, key, m.skills, also)!;
   if (wrote && w && (w.status === 'idle' || w.status === 'done') && def.group !== 'craft') {
     roster.delivery.prompt(floor, w, skillsChangedPrompt([`- **${now.title}**: ${now.enabled ? (now.gate ? GATE_WORDS[now.gate] : 'always allowed') : 'off — escalate instead'}${now.how && now.enabled ? ` (\`${now.how}\`)` : ''}`]));
   }

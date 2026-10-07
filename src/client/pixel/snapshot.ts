@@ -10,7 +10,7 @@ import { drawOffice } from './office';
 import { frameFor, type Frame } from './frame';
 import { deskSigns, type DeskSign } from './props';
 import { paintScene } from './scene';
-import { benchedLeads, teamLookup, type TeamLookup } from './teams';
+import { benchedLeads, signLine, teamLookup, type TeamLookup } from './teams';
 import type { BreakLead } from './breaks';
 import type { Helper } from './helpers';
 import { Walks } from './helper-life';
@@ -86,7 +86,7 @@ export class FloorArt {
     if (zoom >= 0.75) {
       for (const b of zoneBoxes(this.frame)) {
         const m = this.team.leadOf(b.zone.team);
-        banners.push(zoneBanner(g, v, b, m && `${m.role === 'pm' ? 'Coordinator' : 'Lead'}: ${m.name} · ${MEMBER_STATUS[m.status]}`, banners));
+        banners.push(zoneBanner(g, v, b, m && signLine(m, b.zone.team, MEMBER_STATUS[m.status]), banners));
       }
       routerOverlay(g, v, this.frame, banners, now);
     }

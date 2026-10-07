@@ -37,7 +37,7 @@ import { Camera, driveCamera } from './pixel/camera';
 import { closeMenu, mountChat, officeKeys, openWorkerMenu } from './pixel/hud';
 import { badge, drawLabels, outline, signText, zoneBanner } from './pixel/overlay';
 import { zoneBoxes } from './pixel/zones';
-import { benched, dressFor, leadOf, memberOf, onRoster, refreshRoster, rosterNow, setRoster, tagFor, zoneOf } from './pixel/teams';
+import { benched, dressFor, leadOf, memberOf, onRoster, refreshRoster, rosterNow, setRoster, signLine, tagFor, zoneOf } from './pixel/teams';
 import { helpersOf, isSubagentId, openSubagentAt, subagentTip } from './pixel/subagents';
 import { BREAK_WORDS, breakAt } from './pixel/breaks';
 import { ZONE_BY_TEAM, ZONES } from '../shared/zones';
@@ -114,9 +114,8 @@ function showMeeting() {
 /** How a Lead stands, in a few words, for its zone's signpost. */
 const MEMBER_STATUS: Record<MemberView['status'], string> = { 'not-hired': 'not hired', working: 'working', 'needs-you': 'needs you', idle: 'idle', asleep: 'asleep', benching: 'writing handoff', benched: 'benched' };
 /** Its signpost's second line: who leads the zone and how they are (nothing until the team's fetched). */
-function leadLine(m: MemberView | undefined): string | undefined {
-  if (!m) return undefined;
-  return `${m.role === 'pm' ? 'Coordinator' : 'Lead'}: ${m.name} · ${MEMBER_STATUS[m.status]}`;
+function leadLine(m: MemberView | undefined, team: MemberView['team']): string | undefined {
+  return m && signLine(m, team, MEMBER_STATUS[m.status]);
 }
 /** A zone's hover card: its Lead, their model, and how to hire them when they aren't. */
 function zoneLine(team: MemberView['team']): () => string {
@@ -124,7 +123,7 @@ function zoneLine(team: MemberView['team']): () => string {
     const m = leadOf(team);
     if (!m) return "This floor has no project team yet: it's in the 1D view's 👥 Team tab";
     const hire = m.status === 'not-hired' || m.status === 'benched' ? ' · hire them from the 1D view’s 👥 Team tab' : '';
-    return `${m.title}: ${m.name} · ${MEMBER_STATUS[m.status]} · 🧠 ${m.model}${hire}`;
+    return `${m.team !== team ? `Covered by ${m.title}` : m.title}: ${m.name} · ${MEMBER_STATUS[m.status]} · 🧠 ${m.model}${hire}`;
   };
 }
 const spots = (f: Frame) => [
@@ -219,7 +218,7 @@ function draw(now: number) {
   blitCrisp(g, art, buffer, cam.x * dpr, cam.y * dpr, s);
   const view = { scale: s, x: cam.x * dpr, y: cam.y * dpr, dpr };
   const banners: ReturnType<typeof zoneBanner>[] = [];
-  for (const b of zoneBoxes(frame)) banners.push(zoneBanner(g, view, b, leadLine(leadOf(b.zone.team)), banners));
+  for (const b of zoneBoxes(frame)) banners.push(zoneBanner(g, view, b, leadLine(leadOf(b.zone.team), b.zone.team), banners));
   routerOverlay(g, view, frame, banners, now);
   for (const t of things) if (t.badge) badge(g, view, t, t.badge());
   if (s >= 2) for (const sign of signs) signText(g, view, sign);

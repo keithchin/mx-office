@@ -14,6 +14,7 @@ import { applyChoice } from '../budget/index.js';
 import { flowsOf } from '../flow/index.js';
 import { findMpr } from '../liveapp/checkout.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { setShape } from '../roster/coverage.js';
 import { everHired } from '../roster/store.js';
 import { adminTokenConfigured, adminTokenSource, redactor } from './admin-token.js';
 import { credential } from '../connections/resolve.js';
@@ -260,6 +261,10 @@ export class Wizard {
         return rosterOf(ctx).members.hire(teamFloor(ctx, floor), role, by, account, task, model);
       },
       applyBudget: (floorId, choice, by) => applyChoice(ctx, floorId, choice, by),
+      setShape: (floorId, shape, by) => {
+        const floor = ctx.floors.get(floorId);
+        if (floor) setShape(rosterOf(ctx), teamFloor(ctx, floor), shape, by);
+      },
     };
   }
 }

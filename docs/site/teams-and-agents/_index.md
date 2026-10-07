@@ -4,7 +4,7 @@ description: Who the agents on a floor are, how much they decide on their own, a
 weight: 40
 ---
 
-Every floor has a project team. You, the human, are the **Project Manager**. The agents are a **Project Coordinator** and four **Leads**, each Lead with its own Claude Code **subagents**.
+Every floor has a project team. You, the human, are the **Project Manager**. On an **Enterprise** team, the agents are a **Project Coordinator** and four **Leads**, each Lead with its own Claude Code **subagents**. A smaller project can be **Solo** (one Solo Lead covers every team) or **Startup** (a Chief Analyst and a Lead Developer): see [Team shapes and coverage](team-shapes.md).
 
 ```text
                          You: the PROJECT MANAGER (human)

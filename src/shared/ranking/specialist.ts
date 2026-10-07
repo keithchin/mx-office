@@ -230,7 +230,10 @@ export const SPECIALIST: Record<RoleId, SpecialistDef[]> = {
       return { score: mean(parts.map(([v]) => v)) * 100, evidence: parts.map(([, l]) => l), n: (d ? d.confirmed + d.assumed : 0) + (g?.total ?? 0) };
     },
   }),
+  // Filled in below: the Solo Lead owns every gate, so it's ranked like the Chief Analyst.
+  'solo-lead': [],
 };
+SPECIALIST['solo-lead'] = SPECIALIST['chief-analyst'];
 
 /** A team role's specialist ranking; undefined for an ordinary worker. */
 export function specialistOf(f: WorkerFacts): Specialist | undefined {

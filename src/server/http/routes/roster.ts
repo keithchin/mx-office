@@ -18,6 +18,7 @@ import { hireHoldOf, overrideHold } from '../../project-run/store.js';
 import { isRisky } from '../../../shared/mobile.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import { raisesTeamCap } from '../../phone-access/risky.js';
+import { levelOf } from '../../budget/index.js';
 
 const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation', 'skill', 'subagent', 'subagent-decide']);
 const DECISIONS = new Set<Decision>(['approve', 'reject', 'change']);
@@ -31,7 +32,9 @@ export const rosterRoutes = {
     handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
       if (!floor) return send(res, 404, { error: 'No such floor' });
-      return send(res, 200, rosterOf(ctx).view(teamFloor(ctx, floor), ctx.meOf(session.account?.id).admin));
+      // With the project's budget level, for the "Solo · Lean" chip.
+      const level = levelOf(ctx, floor.id);
+      return send(res, 200, { ...rosterOf(ctx).view(teamFloor(ctx, floor), ctx.meOf(session.account?.id).admin), ...(level ? { level } : {}) });
     },
   },
   /** GET /api/roster/standup?floor=<id>&id=<standup>: one standup in full, its page included. */
@@ -144,7 +147,8 @@ export const rosterRoutes = {
           return send(res, 400, { error: 'Unknown action' });
       }
       if (error) return send(res, 400, { error });
-      return send(res, 200, roster.view(team, me.admin));
+      const level = levelOf(ctx, floor.id);
+      return send(res, 200, { ...roster.view(team, me.admin), ...(level ? { level } : {}) });
     },
   },
 } satisfies Record<string, Route>;

@@ -24,7 +24,7 @@ export interface OverviewWorker {
 }
 
 /** A member of the floor's project team: enough to dress its Lead and name the zone's signpost. */
-export type OverviewMember = Pick<MemberView, 'role' | 'team' | 'title' | 'name' | 'icon' | 'workerId'> & { status: MemberStatus };
+export type OverviewMember = Pick<MemberView, 'role' | 'team' | 'title' | 'name' | 'icon' | 'workerId' | 'covers'> & { status: MemberStatus };
 
 export interface OverviewFloor {
   id: string;
