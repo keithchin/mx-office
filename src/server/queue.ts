@@ -1,11 +1,12 @@
 import { randomBytes } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { isAgentProvider, type AgentChoice, type AgentEffort, type AgentProvider, type GhPull, type QueueState, type QueueTask, type WorkerInfo, type WorkerStatus } from '../shared/protocol.js';
 import { DESK_BY_ID, SEATS, nextFreeSeat } from '../shared/layout.js';
 import { validateWorkerEffort, validateWorkerModel } from './agents.js';
 import { savedEffort, savedModel, takesEffort, takesModel } from '../shared/providers.js';
 import { PROMPTS } from '../shared/prompts.js';
+import { writeJsonAtomic } from './flow/store.js';
 
 /** What the queue needs from the worker manager. Narrow on purpose, so a smoke test can fake it. */
 export interface QueueWorkers {
@@ -40,11 +41,23 @@ export interface QueueEvents {
   started?(task: QueueTask, worker: WorkerInfo): void;
   /** What's added after a task that runs in its own worktree ('queue.worktree' in shared/prompts.ts); empty for nothing. */
   worktreeNote?(): string;
+  /**
+   * A task the restart left running found out about its worker (for the audit log): it survived and the
+   * task carries on, same attempt (`resumed`), or it didn't and the task stopped (`abandoned`).
+   */
+  reconciled?(task: QueueTask, result: 'resumed' | 'abandoned', why: string): void;
+}
+
+export interface QueueOptions {
+  /** How long a task the restart left running may wait for its worker to be adopted before it's given up on. */
+  reconcileMs?: number;
 }
 
 export const DEFAULT_MAX_WORKERS = 3;
 const MAX_TASKS = 100;
 const PUMP_MS = 10_000;
+/** How long after a restart the queue waits for the worker manager before deciding without it (see afterRestart). */
+export const RECONCILE_MS = 2 * 60_000;
 /** A worker in one of these states is finished with its task (and can make room for the next one). */
 const FINISHED = new Set<WorkerStatus>(['done', 'exited', 'offline']);
 
@@ -65,6 +78,8 @@ export class TaskQueue {
   /** Set on shutdown: the workers' exit events must not seat anyone into a dying office. */
   private stopped = false;
   private lastStatus = new Map<string, WorkerStatus>();
+  /** Gives up waiting for the worker manager after a restart (see afterRestart). */
+  private reconcileTimer?: NodeJS.Timeout;
 
   constructor(
     dataDir: string,
@@ -72,10 +87,16 @@ export class TaskQueue {
     /** Seat workers in their own git worktree (only when the project is a git repo). */
     private useWorktree: boolean,
     private events: QueueEvents,
+    opts: QueueOptions = {},
   ) {
     this.statePath = path.join(dataDir, 'queue.json');
     this.restore();
     this.timer = setInterval(() => this.pump(), PUMP_MS);
+    // Nothing must stay reconciling for good, should the worker manager never get going.
+    if (this.tasks.some((t) => t.reconciling)) {
+      this.reconcileTimer = setTimeout(() => this.afterRestart(true), opts.reconcileMs ?? RECONCILE_MS);
+      this.reconcileTimer.unref?.();
+    }
   }
 
   state(): QueueState {
@@ -100,7 +121,7 @@ export class TaskQueue {
     if (issue !== undefined && this.tasks.some((t) => t.issue === issue && t.status !== 'done')) return `Issue #${issue} is already on the queue`;
     if (this.tasks.filter((t) => t.status !== 'done').length >= MAX_TASKS) return `The queue is full (${MAX_TASKS} tasks)`;
     const task: QueueTask = {
-      id: randomBytes(6).toString('hex'),
+      id: newId(),
       provider,
       model: takesModel(provider) ? model : undefined,
       effort: takesEffort(provider) ? effort : undefined,
@@ -236,6 +257,46 @@ export class TaskQueue {
   shutdown() {
     this.stopped = true;
     clearInterval(this.timer);
+    clearTimeout(this.reconcileTimer);
+  }
+
+  /**
+   * The worker manager has picked back up whatever survived the restart (Workers.start): each task
+   * the restart left running carries on, same attempt, if its worker is there and awake, and stops
+   * otherwise. Also what the fallback timer calls (`timedOut`) if that never happens. Once only.
+   */
+  afterRestart(timedOut = false) {
+    clearTimeout(this.reconcileTimer);
+    this.reconcileTimer = undefined;
+    if (this.stopped) return;
+    const byId = new Map(this.workers.list().map((w) => [w.id, w]));
+    let changed = false;
+    for (const t of this.tasks) {
+      if (!t.reconciling) continue;
+      t.reconciling = undefined;
+      changed = true;
+      const w = t.workerId ? byId.get(t.workerId) : undefined;
+      const who = t.workerName ?? 'its worker';
+      if (w && w.status !== 'offline') {
+        // Done or stopped while the office was down: the pump below finishes it the usual way.
+        this.events.reconciled?.(t, 'resumed', `${who} survived the restart (${w.status})`);
+        continue;
+      }
+      const why = !w
+        ? `The office restarted and ${who} is gone`
+        : timedOut
+          ? `The office restarted and ${who} wasn't back within ${Math.round(RECONCILE_MS / 60_000)} minutes`
+          : `The office restarted and ${who} didn't survive it`;
+      t.status = 'done';
+      t.outcome = 'exited';
+      t.finishedAt = Date.now();
+      t.error = why;
+      this.events.reconciled?.(t, 'abandoned', why);
+      this.events.toast(`📋 ${why}: ${label(t)} stopped — requeue it from the queue board`, 'warn');
+    }
+    if (!changed) return;
+    this.changed();
+    this.pump();
   }
 
   // ---------------------------------------------------------------------------
@@ -245,7 +306,8 @@ export class TaskQueue {
     let changed = false;
     let done = false;
     for (const t of this.tasks) {
-      if (t.status !== 'running' || !t.workerId) continue;
+      // Its worker may not be adopted yet (it comes back offline until then): afterRestart decides.
+      if (t.status !== 'running' || !t.workerId || t.reconciling) continue;
       const w = byId.get(t.workerId);
       if (!w) this.finish(t, 'killed');
       else if (FINISHED.has(w.status)) done = this.finish(t, w.status === 'done' ? 'done' : 'exited') || done;
@@ -347,6 +409,7 @@ export class TaskQueue {
         continue;
       }
       t.status = 'running';
+      t.attemptId = newId();
       t.workerId = r.id;
       t.workerName = r.name;
       t.branch = r.worktree?.branch;
@@ -372,7 +435,7 @@ export class TaskQueue {
 
   private persist() {
     try {
-      writeFileSync(this.statePath, JSON.stringify({ maxWorkers: this.maxWorkers, tasks: this.tasks }, null, 2), { mode: 0o600 });
+      writeJsonAtomic(this.statePath, { maxWorkers: this.maxWorkers, tasks: this.tasks });
     } catch {
       // disk issues shouldn't take the office down
     }
@@ -398,6 +461,7 @@ export class TaskQueue {
           owner: typeof s.owner === 'string' && s.owner ? s.owner : undefined,
           addedAt: s.addedAt ?? Date.now(),
           status: s.status === 'running' || s.status === 'done' ? s.status : 'queued',
+          attemptId: typeof s.attemptId === 'string' ? s.attemptId : undefined,
           workerId: s.workerId,
           workerName: s.workerName,
           branch: s.branch,
@@ -407,12 +471,11 @@ export class TaskQueue {
           error: s.error,
           pr: s.pr,
         };
-        // Whatever was running died with the old office process; its worker comes back asleep at best.
+        // Its worker's terminal may have outlived the old office (ptyhost.ts) and be adopted shortly, or
+        // not: it stays running, holding its slot, until afterRestart finds out.
         if (t.status === 'running') {
-          t.status = 'done';
-          t.outcome = 'exited';
-          t.finishedAt = Date.now();
-          t.error = 'The office restarted while it was running';
+          t.reconciling = true;
+          t.attemptId ??= newId();
         }
         this.tasks.push(t);
       }
@@ -424,6 +487,10 @@ export class TaskQueue {
 
 function label(t: QueueTask): string {
   return t.issue !== undefined ? `#${t.issue}` : `“${t.title.length > 40 ? `${t.title.slice(0, 39)}…` : t.title}”`;
+}
+
+function newId(): string {
+  return randomBytes(6).toString('hex');
 }
 
 function firstLine(s: string): string {

@@ -265,7 +265,8 @@ export class Floor {
         ctx.emit(this, { t: 'gong', why: 'queue' });
       },
       worktreeNote: () => officePrompt(ctx.prompts, 'queue.worktree'),
-      started: (t, w) => audit.record({ floor: this.id, actor: { kind: 'office', name: 'The queue' }, action: 'queue.start', target: { kind: 'worker', id: w.id, label: w.name }, summary: `${w.name} started on ${t.issue !== undefined ? `issue #${t.issue}` : `“${t.title}”`} from the queue`, details: { task: t.id, queuedBy: t.addedBy, issue: t.issue } }),
+      started: (t, w) => audit.record({ floor: this.id, actor: { kind: 'office', name: 'The queue' }, action: 'queue.start', target: { kind: 'worker', id: w.id, label: w.name }, summary: `${w.name} started on ${t.issue !== undefined ? `issue #${t.issue}` : `“${t.title}”`} from the queue`, details: { task: t.id, attempt: t.attemptId, queuedBy: t.addedBy, issue: t.issue } }),
+      reconciled: (t, result, why) => audit.record({ floor: this.id, actor: { kind: 'office', name: 'The queue' }, action: result === 'resumed' ? 'queue.reconciled' : 'queue.abandoned', target: t.workerId ? { kind: 'worker', id: t.workerId, label: t.workerName } : undefined, summary: `${why}: ${t.issue !== undefined ? `issue #${t.issue}` : `“${t.title}”`} ${result === 'resumed' ? 'carries on' : 'stopped'}`, details: { task: t.id, attempt: t.attemptId, issue: t.issue }, severity: result === 'resumed' ? 'info' : 'notice' }),
     });
 
     // Meetings seat their own workers round the meeting room's table and run them round by round.
@@ -332,6 +333,9 @@ export class Floor {
     this.jukebox = new Jukebox(dataDir);
     this.whiteboard = new Whiteboard(dataDir);
     this.ready = this.workers.start();
+    // Only now does the queue know which of the tasks the restart left running still have their worker.
+    const reconcile = () => this.queue.afterRestart();
+    void this.ready.then(reconcile, reconcile);
 
     void this.github.refresh();
     // A floor with people on it, or work under way, keeps its boards fresh; the others check in now and then.

@@ -6,7 +6,14 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+- **A queue task no longer reads *stopped* while its agent is still working after a restart.** An agent's
+  terminal outlives an office restart, but the 📋 queue marked its task *stopped* before the office had picked
+  that terminal back up, inviting a requeue and duplicate work. The task now shows *🔄 Reconciling after
+  restart…*, keeps its slot (nobody else is seated for it), and once the workers are back carries on if its
+  agent survived, or stops with the reason if it didn't (or wasn't back within 2 minutes). Audited as
+  `queue.reconciled` / `queue.abandoned`; each seating has an `attemptId`, kept through such a restart, and
+  `queue.json` is now written atomically.
 
 ## 2026-10-07 · release 15 (`62fb3cb`)
 
