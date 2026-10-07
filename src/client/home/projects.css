@@ -19,3 +19,15 @@
 .home-floor-go .btn { flex: 1; min-height: 40px; justify-content: center; text-decoration: none; }
 .home-floor-go .btn[aria-disabled=true] { opacity: .5; pointer-events: none; }
 .home-add { flex: none; min-height: 40px; }
+/* Each card's state icon and the one Pause all / Resume all button (home/run-state.ts). */
+.home-run-state { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border: 2px solid var(--line); border-radius: 999px; font-size: 12px; line-height: 1; cursor: default; }
+.home-run-state.hidden { display: none; }
+.home-run-state.running { background: var(--good-soft); color: var(--good-ink); }
+.home-run-state.paused { background: var(--paper-2); color: var(--ink); }
+.home-run-state.pausing, .home-run-state.resuming { background: var(--warn-soft); color: var(--warn-ink); border-color: var(--warn); }
+.home-run { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* Above the themes' faded disabled button: a run going is news, not an unavailable button. */
+html[data-theme] body .home-run .btn.home-run-toggle.busy:disabled { background: var(--warn-soft); color: var(--warn-ink); opacity: 1; cursor: progress; }
+.home-run-more { padding: 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: 13px; font-weight: 800; text-decoration: underline; cursor: pointer; }
+.home-run-more:disabled { opacity: .5; cursor: progress; }
+.home-run-words { font-size: 13px; font-weight: 800; color: var(--muted); }

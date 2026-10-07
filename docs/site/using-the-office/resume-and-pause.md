@@ -6,7 +6,7 @@ weight: 3.5
 
 Since release 6 a restart wakes only the agents that were cut off mid-turn. Everyone else stays asleep until something prompts them. **▶ Resume project** is the safe way to bring a project's team back. **⏸ Pause project** is the clean way to stop it, for example before a restart, a release or a migration.
 
-Both buttons are in the heading of the **🎛️ Command Center**, next to the project's name, and at the top of the team pages (Org chart, Standup, Approvals, Settings). **/home** has **▶ Resume all projects** and **⏸ Pause all projects**. Only admins (the Project Manager) see the buttons. Everyone sees the floor's state, for example *⏸ Paused by Keith at 14:05 · 2 waiting on you*, and while a run is going, a progress chip such as *▶ Resuming 2/3* that opens the run.
+Both buttons are in the heading of the **🎛️ Command Center**, next to the project's name, and at the top of the team pages (Org chart, Standup, Approvals, Settings). **/home** has one button for every project: **⏸ Pause all projects** while any is running, **▶ Resume all projects** once all are paused, and with a mix a **▶ Resume N paused** link for just the paused ones; while a run is going it shows its progress (*⏸ Pausing… 3 of 7*). Each project card there has a ⏸ / ▶ / ⏳ state icon, with who paused it, when and why in its tooltip (see [Home](home.md#-projects)). Only admins (the Project Manager) see the buttons. Everyone sees the floor's state, for example *⏸ Paused by Keith at 14:05 · 2 waiting on you*, and while a run is going, a progress chip such as *▶ Resuming 2/3* that opens the run.
 
 ## ▶ Resume project
 

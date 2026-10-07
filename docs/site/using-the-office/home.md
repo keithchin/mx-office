@@ -20,10 +20,21 @@ One card per floor:
 - the one-line project summary (for example *Stage 3 · 2 agents working · 🙋 1 needs you*);
 - **🗂️ Board** (the 1D view) and **🗺️ Office** (the 2D view). The view you used last is the highlighted one.
 
+By the name, an icon says whether the project is [paused or running](resume-and-pause.md). Hover it for more:
+
+| Icon | State | Tooltip |
+| --- | --- | --- |
+| ⏸ | Paused | Who paused it and when, and why: *Paused by Keith at 14:05*, *… for a safe restart*, or *Paused at 14:05: budget reached*. |
+| ▶ | Running | *Running: 2 agents working, 3 asleep* (and anyone waiting on you). |
+| ⏳ (amber) | Pausing or resuming | How far the run is: *Pausing: 2 of 4 agents*. |
+
+The Clean themes draw them as line icons. The 2D Overview's banners show the same state at their right.
+
 Above the cards:
 
 - **✨ New project** opens the wizard. See [Create your first project](../get-started/first-project.md).
 - **➕ Add project** adds an existing repository.
+- **⏸ Pause all projects** or **▶ Resume all projects** (admins), one button that follows the projects: *Pause all* while any project is running, *Resume all* once every one is paused. With a mix there's a **▶ Resume N paused** link beside it that resumes only the paused ones. While a pause or resume is going, the button shows its progress (*⏸ Pausing… 3 of 7*) and can't be clicked. Everyone else sees the state in words (*⏸ 2 of 4 projects paused*). It and the icons keep up by themselves (every 15 seconds, every 2 while a run is going).
 
 ## 📊 Statistics
 

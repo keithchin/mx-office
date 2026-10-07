@@ -15,7 +15,7 @@ import { openWizard } from '../ui/wizard';
 import { openConnections } from '../ui/connections';
 import { summaryLine } from '../ui/summary';
 import { graphics, rememberView } from '../graphics';
-import { homeRunButtons } from '../ui/project-run';
+import { homeRunIcon, homeRunToggle } from './run-state';
 
 /** A flat view: the 1D board, or the 2D pixel office. */
 type FlatView = '1d' | '2d';
@@ -64,7 +64,7 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
     return h(
       'li.home-floor',
       { class: `${wasHere ? 'here' : ''}${f.waiting ? ' waiting' : ''}${f.cloning ? ' cloning' : ''}`, style: `--floor:${floorPalette(f.palette).trim}` },
-      h('div.home-floor-top', {}, h('span.home-floor-no', {}, String(i + 1)), h('span.home-floor-name', {}, f.name), wasHere ? h('span.home-here', {}, 'last visited') : null),
+      h('div.home-floor-top', {}, h('span.home-floor-no', {}, String(i + 1)), h('span.home-floor-name', {}, f.name), f.cloning ? null : homeRunIcon(f.id), wasHere ? h('span.home-here', {}, 'last visited') : null),
       h('p.home-floor-sub', {}, [f.repo ?? f.dir, f.branch && `⎇ ${f.branch}`].filter(Boolean).join(' · ')),
       f.cloning && f.clone?.percent !== undefined ? h('span.home-bar', {}, h('span', { style: `width:${f.clone.percent}%` })) : null,
       h('p.home-floor-stats', {}, stats.join(' · ')),
@@ -80,7 +80,7 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
     // The office's tokens and folders, for admins: what a new project needs before it starts (ui/connections/).
     const connections = store.me.admin ? h('button.btn.home-add', { type: 'button', title: 'The GitHub and Mendix tokens, the password, git & gh and the folders the office uses', onclick: () => openConnections() }, '🔌 Connections') : null;
     root.replaceChildren(
-      h('div.home-head', {}, h('h2', {}, '🏢 Projects'), h('span.seg', {}, wizard, add, connections), homeRunButtons()),
+      h('div.home-head', {}, h('h2', {}, '🏢 Projects'), h('span.seg', {}, wizard, add, connections), homeRunToggle()),
       h('p.home-intro', {}, store.floors.length ? 'Every project is a floor of this building. Open one on its board, or in the office from above.' : "This building has no floors yet. ➕ Add project clones one of your repositories, and it becomes the first floor."),
       h('ul.home-floors', {}, ...store.floors.map(card)),
     );
