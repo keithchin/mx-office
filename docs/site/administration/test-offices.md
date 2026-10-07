@@ -28,6 +28,8 @@ On 2026-10-06 three test offices started **real** Claude Code sessions instead o
 
   Anything else (another provider's CLI for a worker someone picked it for, or the real `claude` on `PATH` when the office wasn't started with `--agent`) fails to start with *Test mode: refused to start the real claude…* on the worker's card and terminal, and opens a near-miss [incident](../using-the-office/incidents.md). The top bar shows a **TEST MODE** badge. `AGENT_OFFICE_ALLOW_REAL_AGENTS=1` lets real agents through anyway (each one is a sev2 incident).
 
+The [Test Mode page](test-mode-page.md) (☰ → 🧪 Test mode, admins) shows whether the office you are on is in test mode, and runs the performance and journey suites against a throwaway test office of their own.
+
 So: start every test office with `--test-mode` and a fake `--agent`, keep it under `scratch\test-offices\<name>`, and prefer seeding data (a `workers.json`, the audit log, incidents) to hiring.
 
 ```bash

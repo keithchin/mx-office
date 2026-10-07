@@ -128,3 +128,12 @@ export interface TestLabView {
 }
 
 export const RUN_HISTORY = 50;
+
+/** The Test Mode page's address: the 1D view's tests tab (`/lite?tab=tests`), on `floor` when given (the 1D view needs one to open). Never the 3D office. */
+export function testsHref(floor?: string, run?: string): string {
+  const q = new URLSearchParams();
+  if (floor) q.set('floor', floor);
+  q.set('tab', 'tests');
+  if (run) q.set('run', run);
+  return `/lite?${q.toString()}`;
+}

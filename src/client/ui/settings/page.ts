@@ -17,6 +17,7 @@ import { desktopSetting, teamsCardsSetting, webhookSetting } from './notify';
 import { workersSettings } from './workers';
 import { budgetPart, rosterPart, studioPart } from './project';
 import { advancedPart, appearancePart, incidentsPart } from './office';
+import { testingPart } from './testing';
 
 /** Phone alerts: where each phone's own settings are (the team phone's ⚙, the phone version's). */
 const phoneAlerts = () =>
@@ -46,6 +47,7 @@ export const SECTION_BUILDERS: Record<SettingsSectionId, (d: SettingsDeps) => Bu
   studio: () => studioPart(),
   appearance: (d) => appearancePart(d),
   advanced: (d) => advancedPart(d),
+  testing: () => testingPart(),
 };
 
 export interface SettingsPage {

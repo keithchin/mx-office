@@ -34,6 +34,7 @@ import { phoneAccessRoutes } from './phone-access.js';
 import { budgetRoutes } from './budget.js';
 import { evidenceRoutes } from './evidence.js';
 import { perfRoutes } from './perf.js';
+import { testlabRoutes } from './testlab.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -79,6 +80,9 @@ export const routes: readonly Route[] = [
   incidentRoutes.settings,
   incidentRoutes.one,
   incidentRoutes.testMode,
+  testlabRoutes.view,
+  testlabRoutes.start,
+  testlabRoutes.run,
   perfRoutes.longTask,
   evidenceRoutes.trace,
   flowRoutes.list,

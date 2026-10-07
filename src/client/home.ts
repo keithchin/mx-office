@@ -20,6 +20,7 @@ import { homeAudit } from './home/audit';
 import { testModeBadge } from './ui/testmode';
 import { homeBudget } from './home/budget';
 import { goToSettings } from './ui/settings/flat';
+import { testsHref } from '../shared/testlab';
 import './home/home.css';
 import './shared/perfwatch-on';
 
@@ -119,6 +120,14 @@ setInterval(() => tab === 'stats' && !document.hidden && void stats.render(), 30
 
 // The ☰, last on the bar as on every page: here, only what doesn't need a floor (shared/flatmenu.ts).
 flatMenu($('menu'), { net, home: true, settings: () => goToSettings(session) });
+// 🧪 Test mode, for admins: the 1D view's page (ui/testlab/), on a floor so it opens.
+const renderTests = () => {
+  const a = $('to-tests') as HTMLAnchorElement;
+  a.classList.toggle('hidden', !store.me.admin);
+  a.href = testsHref(last ?? store.floors[0]?.id);
+};
+store.on('me', renderTests);
+store.on('floors', renderTests);
 
 session.bellBefore($('theme'));
 session.start();

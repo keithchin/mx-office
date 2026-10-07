@@ -11,7 +11,7 @@ The address always says where you are, so you can bookmark or share it.
 | Parameter | Values | Example |
 |---|---|---|
 | `floor` | A floor's id | `/lite?floor=travel-approval` |
-| `tab` | `command`, `board`, `teams`, `workers`, `analysis`, `live`, `git`, `org`, `standup`, `approvals`, `settings` (`team` is an old name for `org`) | `&tab=standup` |
+| `tab` | `command`, `board`, `teams`, `workers`, `analysis`, `live`, `git`, `org`, `standup`, `approvals`, `settings`, `tests` (the [Test Mode page](../administration/test-mode-page.md), admins; `&run=<id>` opens a run) (`team` is an old name for `org`) | `&tab=standup` |
 | `team` | With `tab=teams`: `management`, `design`, `development`, `testing`, `analysis` | `&tab=teams&team=testing` |
 | `teams` | With `tab=board`: the team filter | `&teams=design,testing` |
 
