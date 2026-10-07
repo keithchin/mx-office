@@ -7,6 +7,19 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ## Unreleased
 
 ### Fixed
+- **Held messages survive a restart**: a prompt held until an agent's turn is over (an
+  `office-workers tell`, a phone reply, a subagent decision) is kept in the roster file instead of
+  memory, so restarting the office no longer loses it. It goes in once the agent is next between
+  turns, merged into one message, never into a dialog, and still held by the spend cap and ⏸ Pause
+  project (a person's words still go). The same message held twice goes in once, and one still
+  waiting after 24 hours is let go with an Activity line and a `delivery.expired` audit event.
+- **A queue task no longer reads *stopped* while its agent is still working after a restart.** An agent's
+  terminal outlives an office restart, but the 📋 queue marked its task *stopped* before the office had picked
+  that terminal back up, inviting a requeue and duplicate work. The task now shows *🔄 Reconciling after
+  restart…*, keeps its slot (nobody else is seated for it), and once the workers are back carries on if its
+  agent survived, or stops with the reason if it didn't (or wasn't back within 2 minutes). Audited as
+  `queue.reconciled` / `queue.abandoned`; each seating has an `attemptId`, kept through such a restart, and
+  `queue.json` is now written atomically.
 
 ## 2026-10-07 · release 15 (`62fb3cb`)
 
