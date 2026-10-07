@@ -123,7 +123,7 @@ export class Phone {
       if (!w) continue;
       const p: Pending = { floor: floor.id, workerId: w.id, name: w.name, thread, needle: phoneTag(id), by: ask.by, at: now, sawWork: false, tries: 0 };
       // Held until the turn under way is over (between), never into a dialog; an asleep one is woken with it.
-      const r = this.deps.roster.delivery.send(floor, w, text, { origin: 'person', by: ask.by, wake: true, hold: true, between: true, onSent: () => void (p.typedAt = this.deps.now()) });
+      const r = this.deps.roster.delivery.send(floor, w, text, { origin: 'person', by: ask.by, wake: true, hold: true, between: true, id: `phone:${id}:${w.id}`, onSent: () => void (p.typedAt = this.deps.now()) });
       if (r.status === 'refused') {
         refused.push(`${w.name}: ${r.why}`);
         continue;

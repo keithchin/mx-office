@@ -33,7 +33,7 @@ export function factsFor(deps: RunDeps, f: RunFloor, w: WorkerInfo | undefined, 
   const facts = noFacts();
   if (w) {
     facts.owed = roster.escalations.owedTo(f.team, w).lines;
-    facts.held = roster.delivery.heldFor(w.id);
+    facts.held = roster.delivery.heldFor(w.id, f.team.id);
     facts.cutOff = f.cutOff(w.id);
   } else if (role) facts.owed = roster.escalations.owed(f.team, role).lines;
   // Whoever covers Management is owed the Coordinator's relays (and, unless it is the Coordinator, its own notes).
