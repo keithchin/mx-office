@@ -49,7 +49,7 @@ export function drawLabels(g: CanvasRenderingContext2D, v: View, labels: Label[]
   for (const l of labels) {
     if (!all && hover !== l.id) continue;
     g.font = `700 ${size}px ${font()}`;
-    const most = l.long ? 20 : 14;
+    const most = l.long ? 32 : 14;
     const text = l.text.length > most ? `${l.text.slice(0, most - 1)}…` : l.text;
     const dot = l.status ? Math.round(8 * v.dpr) : 0;
     const w = Math.ceil(g.measureText(text).width) + pad * 2 + dot, hgt = Math.round(size * 1.5);

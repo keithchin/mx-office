@@ -363,6 +363,7 @@ export class Roster {
       subagents: this.subagents.views(floor),
       subagentActions: this.subagents.actionsView(floor),
       subagentRuns: this.subagents.live.views(floor),
+      subagentNames: { ...d.subagentNames },
       spentToday: d.spend.usd,
       cap,
       paused,
@@ -392,7 +393,7 @@ export class Roster {
     // Subagent actions a Lead proposed (its gate was propose); an ask is an escalation above.
     for (const a of d.subagentActions.filter((x) => x.status === 'pending' && x.gate === 'propose')) {
       const m = d.members[a.lead];
-      out.push({ id: `s-${a.id}`, kind: 'subagent', title: `${m.name} proposes to ${OP_ASK[a.op]} subagent ${a.name}${a.op === 'swap-model' && a.model ? ` to ${modelWord(a.model)}` : ''}`, detail: `${m.name} (${ROLE_BY_ID.get(a.lead)?.title})${a.reason ? ` — ${a.reason}` : ''}`, team: ROLE_BY_ID.get(a.lead)?.team, actionId: a.id });
+      out.push({ id: `s-${a.id}`, kind: 'subagent', title: `${m.name} proposes to ${OP_ASK[a.op]} subagent ${this.subagents.who(floor, a.lead, a.name)}${a.op === 'swap-model' && a.model ? ` to ${modelWord(a.model)}` : ''}`, detail: `${m.name} (${ROLE_BY_ID.get(a.lead)?.title})${a.reason ? ` — ${a.reason}` : ''}`, team: ROLE_BY_ID.get(a.lead)?.team, actionId: a.id });
     }
     if (needsApproval(level, 'merge')) {
       const pulls = floor.openPulls();

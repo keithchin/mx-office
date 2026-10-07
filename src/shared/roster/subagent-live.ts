@@ -49,6 +49,3 @@ export interface LiveRunView extends LiveRun {
 export const LIVE_KEPT = 50;
 /** A run with no word of it for this long is lost (its Lead's session died mid-run, say). */
 export const LIVE_STALE_MS = 6 * 3_600_000;
-
-/** "tester (Hedy's)": a subagent's name tag in the 2D view. */
-export const helperTag = (name: string, leadName: string) => `${name} (${leadName}'s)`;

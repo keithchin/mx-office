@@ -66,8 +66,8 @@ export function subagentTip(v: RosterView | null, id: string): HTMLElement[] | n
   const c = at.card;
   const last = c.lastTask ? `Last: ${clip(c.lastTask, 80)}` : '';
   return [
-    h('b', {}, `🧩 ${c.name}`, h('span.pill', { class: c.status === 'working' ? 'working' : 'idle' }, c.status)),
-    h('div.px-role', { style: `--team: ${colorOf(c)}` }, `Subagent · hired by ${c.hiredBy}`),
+    h('b', {}, `🧩 ${c.firstName}`, h('span.pill', { class: c.status === 'working' ? 'working' : 'idle' }, c.status)),
+    h('div.px-role', { style: `--team: ${colorOf(c)}` }, `${c.role} · subagent hired by ${c.hiredBy}`),
     at.task ? h('div.px-task', {}, at.task) : c.benchReason ? h('div', {}, `🪑 ${clip(c.benchReason, 120)}`) : last ? h('div.px-dim', {}, last) : null,
     h('div.px-dim', {}, [c.model, `${c.runs} run${c.runs === 1 ? '' : 's'}`, c.unreviewed ? `${c.unreviewed} unreviewed` : '', c.grade ? `grade ${c.grade}` : 'not graded yet'].filter(Boolean).join(' · ')),
     h('div.px-hint', {}, '🖱️ Its runs and reviews'),

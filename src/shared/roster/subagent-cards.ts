@@ -5,7 +5,8 @@
 // Pure: the browser imports it, and the tests.
 
 import { ROLE_BY_ID, ROLES, type RoleId, type TeamId } from './roles.js';
-import { helperTag, type LiveRunView, type LiveStatus } from './subagent-live.js';
+import type { LiveRunView, LiveStatus } from './subagent-live.js';
+import { firstNameIn, helperTag, roleWord, subagentLabel } from './subagent-names.js';
 import type { Grade, SubagentReviewBrief, SubagentState, SubagentView } from './subagents.js';
 import type { MemberStatus, MemberView } from './types.js';
 
@@ -16,7 +17,13 @@ export interface SubagentCard {
   key: string;
   lead: RoleId;
   team: TeamId;
+  /** Its type, as its Lead dispatches it ("tester"). */
   name: string;
+  /** Its first name ("Nia"), and its type as a role ("Tester"). */
+  firstName: string;
+  role: string;
+  /** "Nia · Tester (Hedy's subagent)". */
+  label: string;
   leadName: string;
   leadTitle: string;
   leadIcon: string;
@@ -25,7 +32,7 @@ export interface SubagentCard {
   leadStatus: MemberStatus;
   /** "Hedy (Lead Tester)". */
   hiredBy: string;
-  /** "tester (Hedy's)", its name tag in the 2D view. */
+  /** "Nia (Hedy's tester)", its name tag in the 2D view. */
   tag: string;
   model: string;
   status: SubagentCardStatus;
@@ -60,7 +67,7 @@ export interface SubagentCard {
 /** Runs a card's detail lists. */
 export const RECENT_SHOWN = 10;
 
-type View = { members: readonly MemberView[]; subagents?: readonly SubagentView[]; subagentRuns?: readonly LiveRunView[] };
+type View = { members: readonly MemberView[]; subagents?: readonly SubagentView[]; subagentRuns?: readonly LiveRunView[]; subagentNames?: Readonly<Record<string, string>> };
 
 export interface CardOptions {
   /** Subagents that have never run (and aren't at work, benched or on warning) too: off unless asked for. */
@@ -79,7 +86,7 @@ export function subagentCards(v: View, opts: CardOptions = {}): SubagentCard[] {
   const views = [...(v.subagents ?? [])];
   for (const r of runs) {
     if (r.lead === 'pm' || views.some((s) => s.lead === r.lead && s.name === r.name)) continue;
-    views.push({ lead: r.lead, name: r.name, defined: false, model: r.model ?? 'inherit', state: 'active', warnings: 0, score: { model: r.model ?? 'inherit', runs: 0, reviewed: 0, accepted: 0, reworks: 0, underperforming: false } });
+    views.push({ lead: r.lead, name: r.name, firstName: firstNameIn(v.subagentNames, `${r.lead}/${r.name}`), defined: false, model: r.model ?? 'inherit', state: 'active', warnings: 0, score: { model: r.model ?? 'inherit', runs: 0, reviewed: 0, accepted: 0, reworks: 0, underperforming: false } });
   }
   const out: SubagentCard[] = [];
   for (const s of views) {
@@ -92,18 +99,22 @@ export function subagentCards(v: View, opts: CardOptions = {}): SubagentCard[] {
     const total = Math.max(s.totalRuns ?? s.score.runs, mine.length);
     if (!total && (m.status === 'not-hired' || (!opts.includeNeverRun && s.state === 'active'))) continue;
     const lastRunAt = Math.max(s.lastRunAt ?? 0, over?.startedAt ?? 0) || undefined;
+    const firstName = s.firstName || firstNameIn(v.subagentNames, `${s.lead}/${s.name}`);
     out.push({
       key: `${s.lead}/${s.name}`,
       lead: s.lead,
       team: role.team,
       name: s.name,
+      firstName,
+      role: roleWord(s.name),
+      label: subagentLabel(firstName, s.name, m.name),
       leadName: m.name,
       leadTitle: m.title,
       leadIcon: m.icon,
       ...(m.workerId ? { leadWorkerId: m.workerId } : {}),
       leadStatus: m.status,
       hiredBy: `${m.name} (${m.title})`,
-      tag: helperTag(s.name, m.name),
+      tag: helperTag(firstName, s.name, m.name),
       model: s.model,
       status: working.length ? 'working' : s.state === 'benched' ? 'benched' : 'idle',
       working,
@@ -129,7 +140,7 @@ export function subagentCards(v: View, opts: CardOptions = {}): SubagentCard[] {
   }
   const order = new Map(ROLES.map((r, i) => [r.id, i]));
   const rank = (c: SubagentCard) => (c.status === 'working' ? 0 : c.status === 'idle' ? 1 : 2);
-  return out.sort((a, b) => order.get(a.lead)! - order.get(b.lead)! || rank(a) - rank(b) || a.name.localeCompare(b.name));
+  return out.sort((a, b) => order.get(a.lead)! - order.get(b.lead)! || rank(a) - rank(b) || a.firstName.localeCompare(b.firstName));
 }
 
 /** How long, in a few words: "45s", "12m", "3h", "2d". */
@@ -160,7 +171,7 @@ export interface FloorHelper {
   key: string;
   /** Its Lead's worker: where its stool is. */
   leadWorkerId?: string;
-  /** "tester (Hedy's)". */
+  /** "Nia (Hedy's tester)". */
   tag: string;
   task?: string;
   team: TeamId;

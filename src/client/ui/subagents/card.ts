@@ -1,5 +1,5 @@
 // A Lead's subagents as cards in the 👷 Workers tab (ui/ranking/), each right after its Lead's card:
-// "🧩 tester · hired by Hedy (Lead Tester)", its model, how it is now (at work on what, benched, or when
+// "🧩 Nia · Tester (Hedy's subagent)", its model, how it is now (at work on what, benched, or when
 // it last ran), its runs and its grade A–F. A Lead that isn't on the list (not at work on this floor)
 // has its subagents in a group of their own at the end. Clicking one opens its detail (detail.ts).
 // No three.js: the 1D view imports it.
@@ -27,9 +27,9 @@ export function subagentCardEl(c: SubagentCard, now: number, open: (c: SubagentC
     gradeBadge(c.grade, c.score),
     h(
       'button.lite-card',
-      { type: 'button', onclick: () => open(c), 'aria-label': `${c.name}, a subagent hired by ${c.hiredBy}: ${PILL[c.status]}. Open its runs and reviews` },
+      { type: 'button', onclick: () => open(c), 'aria-label': `${c.label}, hired by ${c.hiredBy}: ${PILL[c.status]}. Open its runs and reviews` },
       h('span.sw-icon', { 'aria-hidden': 'true' }, '🧩'),
-      h('span.lite-info', {}, h('span.lite-name', {}, c.name, h('span.sw-hired', {}, ` · hired by ${c.hiredBy}`)), h('span.lite-now', {}, cardNow(c, now)), h('span.lite-sub', {}, sub.join(' · '))),
+      h('span.lite-info', {}, h('span.lite-name', { title: `Dispatched as ${c.name}` }, c.firstName, h('span.sw-hired', {}, ` · ${c.role} (${c.leadName}'s subagent)`)), h('span.lite-now', {}, cardNow(c, now)), h('span.lite-sub', {}, sub.join(' · '))),
       h('span.lite-state', {}, h('span.sw-pill', { class: `sw-${c.status}` }, PILL[c.status])),
     ),
   );

@@ -183,7 +183,7 @@ test('standups, decisions, handoffs, hires from a handoff and subagent reviews c
   t.roster.subagents.review(t.floor, 'lead-developer', 'developer', 'rework', 'missing the index');
   t.chatter.look(t.floor);
   const rv = t.sent.find((m) => m.kind === 'review')!;
-  assert.deepEqual([rv.from.name, toName(rv), (rv.to as ChatterParty).role, rv.text], ['Hedy', 'developer', "Hedy's subagent", 'Needs rework 🔁 missing the index']);
+  assert.deepEqual([rv.from.name, toName(rv), (rv.to as ChatterParty).role, rv.text], ['Hedy', t.d.subagentNames['lead-developer/developer'], "Developer (Hedy's subagent)", 'Needs rework 🔁 missing the index']);
   // A handoff note, then a fresh hire primed with it.
   t.clock.now += MIN;
   t.d.members['lead-designer'].handoff = { at: t.clock.now, text: '## 2026-10-05 Handoff\n\nI handed the wireframes to Hedy.' };
@@ -210,7 +210,8 @@ test('nudges, a tell between agents and a subagent dispatch come in as they happ
   assert.deepEqual([tell.kind, from(tell).name, from(tell).role, toName(tell), (tell.to as ChatterParty).role], ['relay', 'Hedy', 'Lead Developer', 'Anita', 'Lead Designer']);
   assert.equal(noteDispatch(dev, { tool_name: 'Agent', tool_input: { subagent_type: 'developer', description: 'Draft MDL for Orders', prompt: 'Write the MDL for the Orders entity' } }, t.clock.now), true);
   const dispatch = t.sent.at(-1)!;
-  assert.deepEqual([dispatch.kind, from(dispatch).name, toName(dispatch), (dispatch.to as ChatterParty).team], ['dispatch', 'Hedy', 'developer', 'development']);
+  assert.deepEqual([dispatch.kind, from(dispatch).name, toName(dispatch), (dispatch.to as ChatterParty).team], ['dispatch', 'Hedy', t.d.subagentNames['lead-developer/developer'], 'development']);
+  assert.equal((dispatch.to as ChatterParty).role, "Developer (Hedy's subagent)");
   assert.equal(dispatch.text, 'Draft MDL for Orders — Write the MDL for the Orders entity');
   assert.equal(noteDispatch(dev, { tool_name: 'Bash', tool_input: { command: 'ls' } }), false);
   // The review nudge after a subagent came back.
@@ -221,7 +222,7 @@ test('nudges, a tell between agents and a subagent dispatch come in as they happ
   t.clock.now += 20_000;
   assert.equal(t.roster.nudges.check(t.floor, 'lead-developer'), true);
   const nudge = t.sent.at(-1)!;
-  assert.deepEqual([nudge.kind, nudge.from.kind, toName(nudge), nudge.text], ['nudge', 'office', 'Hedy', 'Your developer is back: review what it did, then carry on or escalate.']);
+  assert.deepEqual([nudge.kind, nudge.from.kind, toName(nudge), nudge.text], ['nudge', 'office', 'Hedy', `${t.d.subagentNames['lead-developer/developer']}, your developer, is back: review what it did, then carry on or escalate.`]);
   t.chatter.stop();
 });
 

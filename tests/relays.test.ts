@@ -243,13 +243,13 @@ test('a propose-gated subagent decision the Lead couldn’t hear is kept for it,
   t.floor.set(dev, 'exited');
   assert.equal(t.roster.subagents.decide(t.floor, asked.actionId!, true, 'Keith'), undefined);
   assert.equal(t.floor.prompts.length, 0, 'asleep: not prompted');
-  assert.match(t.roster.relays.owed(t.floor.id, 'lead-developer')[0], /approved your request to put on warning developer/);
+  assert.match(t.roster.relays.owed(t.floor.id, 'lead-developer')[0], /approved your request to put on warning [A-Z][a-z]+ \(developer\)/);
   t.restart();
   t.floor.set(dev, 'done');
   t.clock.now += LEAD_NOTES_DEBOUNCE_MS;
   t.roster.tick(t.clock.now);
   assert.equal(t.floor.prompts.length, 1);
-  assert.match(t.floor.prompts[0].text, /approved your request to put on warning developer/);
+  assert.match(t.floor.prompts[0].text, /approved your request to put on warning [A-Z][a-z]+ \(developer\)/);
 });
 
 test('an outbox is read back whole: bad entries dropped, an old roster without one gets an empty one', () => {

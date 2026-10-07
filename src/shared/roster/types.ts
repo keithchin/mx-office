@@ -183,6 +183,8 @@ export interface RosterView {
   subagentActions: SubagentAction[];
   /** The Leads' subagents at work now and the floor's last runs, newest first (shared/roster/subagent-live.ts). */
   subagentRuns?: LiveRunView[];
+  /** The subagents' first names by `<lead role>/<type>`, those only seen at work included (shared/roster/subagent-names.ts). */
+  subagentNames?: Record<string, string>;
   /** May change the settings, decide on proposals and answer escalations: the Project Manager. */
   admin: boolean;
   /** With autonomy by stage on, on a toolkit project: the stage the level follows now. */

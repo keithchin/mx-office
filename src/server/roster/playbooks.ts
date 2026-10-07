@@ -38,6 +38,8 @@ export interface PlaybookContext {
   /** The member's skill overrides (shared/roster/skills.ts), and its subagents' standing. */
   skills?: SkillOverrides;
   subagents?: SubagentRecord[];
+  /** Its subagents' first names by type (shared/roster/subagent-names.ts), so it can call them by name. */
+  subagentNames?: Record<string, string>;
   /** The floor's early-drafts setting (on unless it was turned off): Design, Development and Testing draft before Stage 3. */
   earlyDrafts?: boolean;
   /** At most this many subagents at once (the budget level's parallelism), when set. */
@@ -115,6 +117,9 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
   }
 }
 
+/** How a Lead uses its subagents' names: people's names in what it writes and says, the type in the Agent call. */
+export const NAMES_LINE = 'Call them by name in what you write and say ("delegated the e2e suite to Nia, my tester"); dispatch each by its type (`subagent_type`).';
+
 /** A role's Playbook, the SKILL.md its session starts from. */
 export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
   const role = ROLE_BY_ID.get(roleId)!;
@@ -123,8 +128,9 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
   const shaped = !!c && !isIdentity(c);
   const also = c ? alsoCovers(c, roleId) : [];
   const subs = subagentDefsOf(c, roleId);
+  const named = ctx.subagentNames ?? {};
   const team = subs.length
-    ? subs.map((s) => `- **${s.title}** — the \`${s.id}\` subagent (\`.claude/agents/${s.id}.md\`): ${s.does}`).join('\n')
+    ? [...subs.map((s) => `- **${named[s.id] ? `${named[s.id]}, your ${s.title}` : s.title}** — the \`${s.id}\` subagent (\`.claude/agents/${s.id}.md\`): ${s.does}`), ...(subs.some((s) => named[s.id]) ? [NAMES_LINE] : [])].join('\n')
     : '- No subagents: you coordinate the Leads.';
   const who = ROLES.filter((r) => !shaped || covers(c!, r.id)).map((r) => `${r.title}: ${ctx.names[r.id]}`).join(' · ');
   const relayNote = !shaped || managerOf(c!) === 'pm' ? 'the Project Coordinator is an agent that coordinates the Leads and relays escalations to them.' : managerOf(c!) === roleId ? 'there is no Project Coordinator: you cover Management.' : `there is no Project Coordinator: ${ctx.names[managerOf(c!)]} covers Management.`;
@@ -153,7 +159,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     ...skillsBrief(roleId, ctx.level, ctx.skills, also),
     '## Your team (Claude Code subagents in your session)',
     team,
-    ...standingLines(ctx.subagents),
+    ...standingLines(ctx.subagents, named),
     'Dispatch them with the Agent tool for drafting, checking and research; keep every decision, every question to the Project Manager and every write to the app in your own session. A subagent returns the file it wrote, not a summary of it.',
     '',
     ...(subs.length ? ['## The review protocol (after every subagent result)', reviewBrief(ctx.level, journalPath(role.team)), ''] : []),
@@ -182,12 +188,13 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
 }
 
 /** What the Playbook says of subagents on warning or benched. */
-function standingLines(subs: SubagentRecord[] = []): string[] {
+function standingLines(subs: SubagentRecord[] = [], names: Record<string, string> = {}): string[] {
   const out: string[] = [];
   for (const s of subs) {
+    const who = names[s.name] ? `${names[s.name]} (${s.name})` : s.name;
     const until = s.benchedUntil ? ` until ${new Date(s.benchedUntil).toISOString().slice(0, 16).replace('T', ' ')} UTC` : '';
-    if (s.state === 'benched') out.push(`- 🪑 **${s.name} is benched**${until}${s.benchReason ? ` (${s.benchReason})` : ''}: don't dispatch ${s.name}; do the work yourself or use another subagent.`);
-    else if (s.state === 'warning') out.push(`- ⚠️ **${s.name} is on warning**: its definition ends with what went wrong; review its next results closely.`);
+    if (s.state === 'benched') out.push(`- 🪑 **${who} is benched**${until}${s.benchReason ? ` (${s.benchReason})` : ''}: don't dispatch ${s.name}; do the work yourself or use another subagent.`);
+    else if (s.state === 'warning') out.push(`- ⚠️ **${who} is on warning**: its definition ends with what went wrong; review its next results closely.`);
   }
   return out.length ? ['', ...out] : [];
 }

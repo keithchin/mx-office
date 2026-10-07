@@ -4,6 +4,7 @@
 
 import type { AgentInfo, BreakdownRow, DayRollup, SpendRow, StageId } from '../../shared/budget/types.js';
 import { STAGE_IDS, STAGE_TITLE } from '../../shared/budget/types.js';
+import { roleWord } from '../../shared/roster/subagent-names.js';
 
 /** Days of detailed rows kept; the daily rollups are kept forever. */
 export const DETAIL_DAYS = 30;
@@ -143,7 +144,7 @@ export function breakdowns(d: LedgerData, topN = 10): Breakdowns {
   const flat = rows(split(d, 'agent'), agentName, total, (k) => {
     const a = d.agents[k];
     if (!a) return undefined;
-    if (a.kind === 'subagent') return `${a.role} · hired by ${a.lead ? agentName(a.lead) : 'a Lead'}`;
+    if (a.kind === 'subagent') return `${roleWord(a.role)} · hired by ${a.lead ? agentName(a.lead) : 'a Lead'}`;
     return a.role;
   });
   // Subagents nest under their Lead; a Lead's row then covers its own session and its subagents'.

@@ -287,8 +287,8 @@ test('a Lead whose turn ends right after a subagent came back is nudged once, an
   t.clock.now += NUDGE_GRACE_MS;
   assert.equal(t.roster.nudges.check(t.floor, 'lead-developer'), true);
   assert.equal(nudges().length, 1);
-  assert.match(nudges()[0].text, /Review `developer`'s last result \(“Draft the Orders microflow”\) per your Playbook's review protocol, then continue or escalate\./);
-  assert.match(t.floor.feed.at(-1)!, /Nudged .* to review its developer's result/);
+  assert.match(nudges()[0].text, /Review \w+'s \(`developer`\) last result \(“Draft the Orders microflow”\) per your Playbook's review protocol, then continue or escalate\./);
+  assert.match(t.floor.feed.at(-1)!, /Nudged .* to review [A-Z][a-z]+ \(developer\)'s result/);
   assert.equal(t.roster.nudges.check(t.floor, 'lead-developer'), false, 'once per idle period');
   // The nudge's own turn ends with no new subagent result: no second nudge.
   t.floor.set(dev, 'working');

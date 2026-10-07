@@ -1,4 +1,4 @@
-// A Lead's subagents in the 2D view, smaller than the workers and tagged "tester (Hedy's)". At work, one
+// A Lead's subagents in the 2D view, smaller than the workers and tagged "Nia (Hedy's tester)". At work, one
 // sits on an assistant's stool behind its Lead's chair (stools.ts), in its team's colour, tapping at a
 // laptop on its knees. Idle, it lives about the office like a benched Lead (helper-life.ts): the lounge
 // TV, a smoke on the balcony, a coffee in the kitchen, a word with whoever's close by; benched, the same
@@ -21,7 +21,7 @@ export interface Helper {
   /** The subagent's card (`<lead>/<name>`), for its detail; also who it is about the office. */
   key: string;
   leadWorkerId?: string;
-  /** "tester (Hedy's)", and what it's on. */
+  /** "Nia (Hedy's tester)", and what it's on. */
   tag: string;
   task?: string;
   color: string;

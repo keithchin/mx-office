@@ -30,7 +30,7 @@ Each table has a bar per row, the amount and its share of the whole:
 
 - **By stage**: the toolkit stage that was active when the money was spent (P to 7). The stage is read the way the setup panel reads it: from the project's default branch on origin (the floor's folder when there's no remote), checked again at most once a minute. Spend outside a pipeline, or from before the office kept a ledger, shows as *No stage*.
 - **By role**: the team's roles. Each Lead's subagents get a row of their own, and the office's background calls are under *Office background*.
-- **By agent**: every worker. A Lead's subagents are nested under it (*Business Analyst · hired by Barbara*). The Lead's own row covers both its own session and its subagents.
+- **By agent**: every worker. A Lead's subagents are nested under it, by name (*Nia*, *Business Analyst · hired by Barbara*). The Lead's own row covers both its own session and its subagents.
 - **By model**: Opus, Sonnet, Haiku and so on.
 - **By day**: columns for the last 30 days. Hover a column for its amount, or open **Table view** to see every value.
 - **Top issues and pull requests**: spend is credited to the issue the worker was on. That's the issue on its queue task, or the one named in its prompt. If there's no issue, it goes to the worker's pull request.

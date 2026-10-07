@@ -246,7 +246,7 @@ test('a subagent out of revision rounds: one revisions-exhausted escalation for 
   assert.equal(esc[0].trigger, 'revisions-exhausted');
   assert.equal(esc[0].fyi, false, 'level 2 escalates revisions-exhausted');
   assert.equal(esc[0].role, 'lead-developer');
-  assert.match(esc[0].title, /developer still fails .* review after 2 revision rounds: Draft the Orders microflow/);
+  assert.match(esc[0].title, /[A-Z][a-z]+ \(developer\) still fails .* review after 2 revision rounds: Draft the Orders microflow/);
   assert.match(t.roster.subagents.roundsText(t.floor, 'lead-developer', 'developer'), new RegExp(`escalated it to the Project Manager \\(${esc[0].id}\\)`));
   assert.equal(t.roster.nudges.look(t.floor, 'lead-developer'), 'exhausted');
   assert.equal(t.roster.nudges.check(t.floor, 'lead-developer'), false);
