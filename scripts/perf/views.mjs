@@ -38,8 +38,11 @@ export function views(f, other) {
   ];
 }
 
-/** The page is on floor `f` (its picker and its line under the top bar say so) and `then` holds. */
-const onFloor = (f, then) => `(() => document.querySelector('#floor')?.value === ${JSON.stringify(f)} && (document.querySelector('#floor-meta')?.textContent ?? '').includes(${JSON.stringify(f)}) && ${then})()`;
+/**
+ * The page has finished loading floor `f`: its own record of the load (window.__aoFloorLoads, ui/loading/floor.ts)
+ * says so where the page keeps one; else its picker and the line under the top bar name it. Then `then` holds.
+ */
+const onFloor = (f, then) => `(() => { const recs = window.__aoFloorLoads; const last = recs && recs[recs.length - 1]; const loaded = recs ? !!last && last.floor === ${JSON.stringify(f)} && last.outcome !== 'cancelled' : document.querySelector('#floor')?.value === ${JSON.stringify(f)} && (document.querySelector('#floor-meta')?.textContent ?? '').includes(${JSON.stringify(f)}); return loaded && ${then}; })()`;
 
 /** Switching to the big floor `f` from `other`: the 1D view's Board and Command Center, the 2D view, and Home → a project. */
 export function switches(f, other) {

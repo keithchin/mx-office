@@ -113,6 +113,31 @@ async function runSuite() {
       // Give the live workers a moment to come up and start sending.
       await new Promise((r) => setTimeout(r, 4000));
       const res = await runPages({ base: office.base, floor, other, password: PASSWORD, outDir, soakSeconds: Number(arg('soak', PERF_BUDGETS.soakSeconds)), only: arg('only')?.split(','), onProgress: progress });
+      // Then the same switch over and over: a switch that only now and then gets stuck shows up here.
+      if (other && !arg('only')) {
+        const { switchStress } = await import('./switch-stress.mjs');
+        progress({ done: res.views.length, of: res.views.length + 1, label: 'Switching projects 10 times' });
+        const st = await switchStress({ base: office.base, floor, other, times: Number(arg('switches', '10')), outDir });
+        const bad = st.switches.filter((x) => x.outcome !== 'done' || x.stuck || (x.pageMs ?? x.wallMs) > PERF_BUDGETS.switchMs);
+        res.views.push({
+          id: 'switch-stress',
+          name: `Switch project ${st.times}× (1D Command Center)`,
+          path: `/lite?floor=${other}&tab=command`,
+          ok: st.ok,
+          ttuMs: null,
+          switchMs: st.p90,
+          longestTaskMs: Math.max(0, ...st.switches.map((x) => x.longestTaskMs)),
+          longTasks: [],
+          heapStartMB: null,
+          heapEndMB: null,
+          heapGrowthPct: null,
+          domNodes: null,
+          failures: bad.map((x) => `switch ${x.n} to ${x.to}: ${x.outcome}, ${x.pageMs ?? x.wallMs} ms${x.stuck ? ', stopped answering' : ''}`),
+          marks: [{ name: `p50 ${st.p50} ms, p90 ${st.p90} ms, max ${st.max} ms`, at: 0, ms: st.max }],
+          ...(st.stretches.length ? { profiled: st.stretches.slice(0, 3) } : {}),
+        });
+        res.ok = res.ok && st.ok;
+      }
       return { ...res, officeDir: officeRoot, summary: pagesSummary(res), failures: res.views.filter((v) => !v.ok).map((v) => `${v.name}: ${v.failures.join('; ')}`) };
     });
   }
