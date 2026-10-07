@@ -55,6 +55,10 @@ export interface ViewResult {
   heapEndMB: number | null;
   heapGrowthPct: number | null;
   domNodes: number | null;
+  /** A project-switch view: ms from picking the project until its view was usable and drawn. */
+  switchMs?: number;
+  /** The switch's own timings: the office's floor.go → floor.enter, the fetches after it, the page's performance marks. */
+  marks?: { name: string; at: number; ms: number; bytes?: number }[];
   failures: string[];
   /** The screenshot's file name, next to the result JSON, when one was taken. */
   screenshot?: string;

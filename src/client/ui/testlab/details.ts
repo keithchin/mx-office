@@ -60,7 +60,7 @@ function viewsPart(run: RunSummary, r: RunResult, d: DetailDeps): Node[] {
   const table = h(
     'table.tl-table',
     {},
-    h('thead', {}, h('tr', {}, ...['View', 'Time to usable', 'Longest task', 'Long tasks', 'Heap', 'Heap growth', 'Result'].map((t) => h('th', { scope: 'col' }, t)))),
+    h('thead', {}, h('tr', {}, ...['View', 'Time to usable', 'Project switch', 'Longest task', 'Long tasks', 'Heap', 'Heap growth', 'Result'].map((t) => h('th', { scope: 'col' }, t)))),
     h(
       'tbody',
       {},
@@ -70,6 +70,7 @@ function viewsPart(run: RunSummary, r: RunResult, d: DetailDeps): Node[] {
           { class: v.ok ? '' : 'bad' },
           h('th', { scope: 'row' }, v.ok ? v.name : h('a', { href: `#tl-view-${v.id}`, onclick: (e: Event) => (e.preventDefault(), jump(v.id)) }, v.name)),
           h('td', {}, ms(v.ttuMs)),
+          h('td', {}, v.switchMs == null ? '–' : ms(v.switchMs)),
           h('td', {}, ms(v.longestTaskMs)),
           h('td', {}, String(v.longTasks.length)),
           h('td', {}, `${mb(v.heapStartMB)} → ${mb(v.heapEndMB)}`),

@@ -6,7 +6,45 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **Test Mode page** (admins): ☰ › 🧪 Test mode, Home's 🧪 Tests link or ⚙️ Settings › 🧪 Testing open
+  `/lite?tab=tests`. It says whether this office is in test mode and why, lists the suites (unit tests,
+  page responsiveness, end-to-end journey, Command Center check) with their last run, and charts each
+  view's longest task and time to usable against the budgets. ▶ Run starts a suite against a throwaway
+  test office under `scratch	est-offices` (refused when that folder isn't a test one or overlaps the
+  office's data or a floor, and one run at a time), with live progress and log, ■ Stop, a history of
+  the last 50 runs, failure details with stacks and screenshots, and 🚨 Open incident. Risky actions ask
+  for the password again through Phone access, as Restart safely does.
+- **The performance guard** (`scripts/perf/`): a seeded big-data office (about ten times mx-spike, all
+  synthetic, loaded through the office's own loaders in a test), a headless page test that opens every
+  main view with six fake workers live and fails a view whose longest task passes 200 ms, that isn't
+  usable within 3 s, whose memory grows over a 60 s soak, or (switching projects in the 1D and 2D views
+  and from Home) that takes over 1.5 s to switch, and an end-to-end journey test (wizard offline, team
+  hired, Discovery, an escalation answered from the Team phone, pause and resume, a PR and a
+  deliverable, the budget, Restart safely, incidents) with fake agents and no spend. Budgets are named
+  constants (`PERF_BUDGETS`). See the docs' *Performance budgets* page.
+- **Live performance warnings**: a page that runs one task for longer than half a second, or a server
+  whose event loop stalls for more than a second, opens an incident (*A page froze*, naming the view and
+  the scripts that took the time; *The server stalled*), throttled and deduplicated like the other rules.
+
+### Fixed
+- **The flat views stay smooth on a big, busy floor.** The Workers view could hang the page (it redrew
+  everything for every worker update); the board, the Team phone, the phone page, the tab badges, the
+  title and Needs you redrew or rewrote the page hundreds of times a second. Updates are now drawn at
+  most a few times a second and only when something shown changed, long lists draw their first rows
+  (Show more) and skip what's off screen, and the 2D view, Home's overview and the PM terminal draw
+  their first frame several hundred milliseconds sooner.
+- **The Audit log and the ranking no longer stall the server**: each page of the Audit log no longer
+  re-hashes the whole log, and the ranking is reused for 10 s instead of worked out for every look.
+- **Switching projects asks the office less**: one shared roster fetch instead of four, and the setup
+  panel's git look shared instead of run three times.
+- **Test mode now covers the office's own Claude calls** (Jeff, the analyzer, task names, the usage
+  limits, The Firm): a test office no longer runs the real Claude Code for them.
+- **⏸ Pause project held**: a paused project no longer woke up when a page connected to its floor.
+- **Held messages survive Restart safely**: a message held just before the restart no longer goes
+  missing (the roster is written before the office exits).
+- **A rebuild no longer crashes the office**: a page file that vanishes mid-request is a 404.
+
 
 ## 2026-10-07 · release 16 (`f52988c`)
 
