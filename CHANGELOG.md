@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-07 · release 17 (`089e759`)
+
 ### New
 - **Test Mode page** (admins): ☰ › 🧪 Test mode, Home's 🧪 Tests link or ⚙️ Settings › 🧪 Testing open
   `/lite?tab=tests`. It says whether this office is in test mode and why, lists the suites (unit tests,
