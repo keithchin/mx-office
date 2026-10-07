@@ -110,3 +110,32 @@ export function stateWords(t: ToggleState, paused: number, total: number): strin
   if (t.action === 'resume') return '⏸ Every project is paused';
   return paused ? `⏸ ${paused} of ${total} projects paused` : '▶ Every project is running';
 }
+
+/** The Command Center's one run-state control (ui/project-run/toggle.ts): the floor's state, and what a click does. */
+export interface FloorToggle extends CardState {
+  /** The state in a word or two beside the icon: "Running", "Paused · 2 waiting", "Pausing 1/3". */
+  word: string;
+  /** What a click does: ⏸ Pause project (its confirm), ▶ Resume (its preview), or the run's progress while one is going. */
+  action: 'pause' | 'resume' | 'progress';
+  /** Admins act on it; everyone else sees the state only. */
+  admin: boolean;
+}
+
+/**
+ * The floor's one toggle, from the same state as Home's card icon (cardState): ▶ running (a click
+ * pauses), ⏸ paused (a click opens the Resume preview), ⏳ while a run is going (its progress, no
+ * new run). Undefined while the floor's state hasn't come, or it's being cloned.
+ */
+export function floorToggle(f: Pick<FloorInfo, 'workers' | 'busy' | 'waiting' | 'cloning'>, v: ProjectRunView | undefined, time: (at: number) => string): FloorToggle | undefined {
+  const s = cardState(f, v, time);
+  if (!s || !v) return undefined;
+  const admin = v.admin;
+  if (s.kind === 'running') return { ...s, word: 'Running', action: 'pause', admin, title: admin ? `${s.title}. Click to pause the project` : s.title };
+  if (s.kind === 'paused') {
+    const n = v.pause?.waiting.length ?? 0;
+    return { ...s, word: `Paused${n ? ` · ${n} waiting` : ''}`, action: 'resume', admin, title: admin ? `${s.title}. Click to see who would wake, and resume` : s.title };
+  }
+  const run = goingRun(v)!;
+  const { done, total } = runCount(run);
+  return { ...s, word: `${s.kind === 'pausing' ? 'Pausing' : 'Resuming'} ${done}/${total}${run.status === 'paused' ? ' · held' : ''}`, action: 'progress', admin };
+}

@@ -8,6 +8,8 @@ weight: 2
 
 The top bar has **🏠**, a **back link** to the floor you were last on (in the view you last used), **📑 The Firm** (opens [/firm](the-firm.md)), **📚 Docs**, **🎨** and **☰**.
 
+**Loading.** Home, the 1D and 2D views and the phone version open on **Mx Office**'s loading screen, drawn by the page itself so it's there at once: *Loading Mx Office… 60 %*, moving on as the page's code loads, your sign-in is checked, the connection comes up, the office's data arrives and the first view is drawn, then it fades. In the page's color theme, without emoji in the Clean themes, and without animation when your system asks for reduced motion. If the office is down or restarting (🔁 Restart safely, an update), it says *Mx Office is restarting… reconnecting*, keeps trying, and carries on once the office answers; a connection lost for more than 2 seconds later brings it back the same way.
+
 ## 🏢 Projects
 
 ![Projects on the home page](../images/home-projects.png)
@@ -28,7 +30,9 @@ By the name, an icon says whether the project is [paused or running](resume-and-
 | ▶ | Running | *Running: 2 agents working, 3 asleep* (and anyone waiting on you). |
 | ⏳ (amber) | Pausing or resuming | How far the run is: *Pausing: 2 of 4 agents*. |
 
-The Clean themes draw them as line icons. The 2D Overview's banners show the same state at their right.
+The Clean themes draw them as line icons. The 2D Overview's banners show the same state at their right, and inside a project the same state is the one control beside its budget chip (see [Command Center](command-center.md)).
+
+Opening a project shows *Loading project mx-spike… 0 %* over this page at once; the project's page then shows **Mx Office**'s loading screen and the project's own loading overlay, with real progress.
 
 Above the cards:
 

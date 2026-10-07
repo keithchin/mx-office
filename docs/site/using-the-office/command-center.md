@@ -11,6 +11,18 @@ The **🎛️ Command Center** is the first tab of every project and the place t
 
 ![The Command Center](../images/command-center.png)
 
+**Running or paused.** Beside the budget chip on the floor's line (*⎇ main · repo · 💰 $42 today · $252 / $600 · 42 %*) is one control for the project's run state, on every tab, the team pages included, and on the 2D view's bar:
+
+| It shows | State | Tooltip | A click (admins) |
+| --- | --- | --- | --- |
+| ▶ **Running**, a green dot | The team is at work | *Running: 2 agents working, 3 asleep* | **⏸ Pause project**, with its confirm |
+| ⏸ **Paused** (*· 2 waiting*) | Paused | *Paused by Keith at 14:05*, *… for a safe restart* or *Paused at 14:05: budget reached*, and *· 2 waiting on you* | The **▶ Resume** preview |
+| ⏳ **Pausing 1/3** or **Resuming 2/3**, amber, with a thin progress bar | A run is going | How far it is | Starts nothing; opens the run's progress (**⏸ Hold**, **✕ Cancel run**) |
+
+Everyone sees the state; only admins (the Project Manager) can act on it. The Clean themes draw line icons instead of the emoji. See [Resume and pause](resume-and-pause.md).
+
+**Loading.** Changing project (the floor picker, a *🙋 waiting on* button, a link with `?floor=`, or a project opened from Home) dims the page a little under an overlay that says *Loading project mx-spike… 57 %* and what it's waiting for. The percentage is real: it moves as each thing the page needs comes in (the floor itself, its workers, the team, the summary, the budget, the setup panel and the Coordinator's console) and the page is drawn with them. The top bar stays usable, so you can change your mind and pick another project (that cancels the first load); **✕** or **Esc** hides the overlay while the project carries on loading. If it takes more than 5 seconds it says it's still loading, and after 15 it goes away by itself.
+
 ## 📑 The Firm strip
 
 A slim strip at the top: **📑 Call an audit** and **The Firm →** when no audit is running (calling one is for admins); *The Firm is auditing this project: N reviewers · $spent of $cap · phase* with **View →** while one runs (amber at 80 % of the budget); **📑 Audit report ready from The Firm → Read** when it's delivered. See [The Firm](the-firm.md).
@@ -58,7 +70,6 @@ See [The toolkit](../integrations/toolkit.md).
 ## The project summary
 
 - **📍 Name**, the repo, a **🌐 Live app** chip (it opens the Live app tab) and, for a Mendix project, **Open in Studio Pro** (see below).
-- **▶ Resume project** and **⏸ Pause project** (admins), the floor's pause when it has one (*⏸ Paused by Keith at 14:05 · 2 waiting on you*), and a progress chip while a resume or a pause is running. See [Resume and pause](resume-and-pause.md).
 - The goal, and **🧭 phase** with stage dots and how many decisions are recorded.
 - **What's happening**: a short story of the floor, written by Claude Haiku (*AI*) or put together by the office (*auto*).
 - **Risks**: agents waiting on a human (and for how long), blocked or failing things.

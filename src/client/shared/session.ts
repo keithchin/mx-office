@@ -21,6 +21,7 @@ import { routeTeamMessage } from '../ui/team';
 import { routeAccountsMessage } from '../ui/accounts';
 import { askNotifyPermission, DesktopNotifier, notifyPermission, waitingOnSomeone } from '../notify';
 import { installReauth } from '../ui/reauth';
+import { bootDown, bootDrawn, bootStep } from '../ui/loading/boot';
 
 export interface FlatSession {
   net: Net;
@@ -59,6 +60,8 @@ export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorke
   };
 
   net.onStatus((up) => $('conn').classList.toggle('hidden', up));
+  // Mx Office's loading screen (ui/loading/boot.ts): the socket up, or gone (a restart).
+  net.onStatus((up) => (up ? bootStep('socket') : bootDown()));
   net.onMessage((msg) => {
     store.apply(msg);
     routeTerminalMessage(msg);
@@ -82,6 +85,8 @@ export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorke
         if (openId && store.workers.has(openId)) net.send({ t: 'worker.attach', workerId: openId });
         const watching = openChangesFor();
         if (watching && store.workers.has(watching.workerId)) net.send({ t: 'changes.watch', ...watching });
+        bootStep('data');
+        bootDrawn();
         break;
       }
       case 'floor.enter':
@@ -188,6 +193,7 @@ async function signIn(page: string, hasProfile: boolean, net: Net) {
   } catch {
     // the welcome message says it too
   }
+  bootStep('session');
   // With an account of your own, your name is that account's.
   if (store.me.account) store.profile.name = store.me.account.name;
   if (hasProfile || store.me.account) return net.connect();

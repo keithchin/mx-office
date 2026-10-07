@@ -1,0 +1,17 @@
+{
+  "note": "Test identities seeded by the leave-approval baseline (demo users + HR.ASu_SeedBaseline). Public: delivery agents may know them.",
+  "password": "Bench-Passw0rd-2026",
+  "users": [
+    { "login": "emp.alice", "userRole": "Employee", "employee": "E001", "manager": "mgr.maria" },
+    { "login": "emp.bob", "userRole": "Employee", "employee": "E002", "manager": "mgr.maria" },
+    { "login": "emp.carol", "userRole": "Employee", "employee": "E003", "manager": "mgr.mark" },
+    { "login": "mgr.maria", "userRole": "Manager", "employee": "M001", "reports": ["emp.alice", "emp.bob"] },
+    { "login": "mgr.mark", "userRole": "Manager", "employee": "M002", "reports": ["emp.carol"] },
+    { "login": "admin.ada", "userRole": "Administrator", "employee": "A001" }
+  ],
+  "regression": {
+    "directoryRows": 6,
+    "notices": ["Welcome to the company portal"],
+    "pages": ["/p/directory", "/p/notices"]
+  }
+}

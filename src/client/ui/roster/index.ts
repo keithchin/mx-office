@@ -12,7 +12,6 @@ import { approvalsView } from './approvals';
 import { orgChart } from './org';
 import { settingsView } from './settings';
 import { standupView } from './standup';
-import { mountProjectRun } from '../project-run';
 import { shapeChip } from './coverage';
 import './roster.css';
 
@@ -72,8 +71,6 @@ export function teamTab(root: HTMLElement, badge: HTMLElement, shown: () => bool
       v.paused ? h('p.ro-paused', {}, `💸 ${v.paused}`) : '',
       body,
     );
-    // ▶ Resume / ⏸ Pause project and the floor's pause, in the head (ui/project-run/).
-    mountProjectRun(root.querySelector('.ro-head'), 'team');
   };
   const pick = (p: Pane) => {
     pane = p;

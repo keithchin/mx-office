@@ -54,6 +54,8 @@ import type { NeedTarget } from './ui/needsyou/logic';
 import { testModeBadge } from './ui/testmode';
 import './pixel/game.css';
 import { budgetUi } from './ui/budget';
+import { mountRunToggle } from './ui/project-run';
+import { floorLoading } from './ui/loading/floor';
 import { goToSettings } from './ui/settings/flat';
 import './shared/perfwatch-on';
 
@@ -79,11 +81,15 @@ const session = flatSession('/pixel', (id) => workers.open(id), (msg) => {
   routerMessage(msg);
 });
 const { net } = session;
+// Changing floor: the overlay with how far the page is (ui/loading/).
+const loading = floorLoading(net, () => ['roster', 'summary', 'budget']);
 const workers = workerActions(net);
 
 floorPicker(net);
 // 💰 The budget chips on the top bar; a click opens the 1D view's Budget tab (ui/budget/).
-budgetUi(net, { open: () => location.assign(`/lite?tab=budget${store.floor ? `&floor=${encodeURIComponent(store.floor)}` : ''}`) });
+const budget = budgetUi(net, { open: () => location.assign(`/lite?tab=budget${store.floor ? `&floor=${encodeURIComponent(store.floor)}` : ''}`) });
+mountRunToggle(); // ▶ / ⏸ / ⏳ beside it (ui/project-run/)
+budget.feed.on(() => loading.done('budget', budget.feed.floor()?.floor));
 // The address follows the floor (?floor=), for bookmarks and links that open it straight away.
 followFloor();
 const stage = $('stage');
@@ -242,7 +248,10 @@ new ResizeObserver(() => resize()).observe(stage);
 store.on('floorPlan', rebuild);
 store.on('theme', rebuild);
 store.on('workers', () => (things = spots(frame)));
-store.on('floor', () => void refreshRoster(store.floor));
+store.on('floor', () => {
+  const f = store.floor;
+  void refreshRoster(f).then(() => loading.done('roster', f));
+});
 onRoster(() => draw(performance.now()));
 // A Lead's status on its signpost comes from the roster, which the office only says has changed when
 // someone acts on it: a look now and then keeps it fresh.
@@ -279,7 +288,10 @@ store.on('workers', renderCount);
 async function renderSummary() {
   $('px-summary').textContent = store.floor ? await summaryLine(store.floor) : '';
 }
-store.on('floor', () => void renderSummary());
+store.on('floor', () => {
+  const f = store.floor;
+  void renderSummary().then(() => loading.done('summary', f));
+});
 setInterval(() => void renderSummary(), 60_000);
 
 // ---- Pointing at things ----------------------------------------------------------------------------------
