@@ -40,6 +40,37 @@ It makes the test office under `--root` (which must be under `scratch\test-offic
 
 A view that fails on time alone (a long task, time to usable, a switch) is opened once more and fails only if it fails again, since the office's own laptop is often busy with Studio Pro and more. A view that fails on a long task is then opened again under the CPU profiler, and the result names the functions that took the time. Build with `PERF_SOURCEMAP=1` (hidden source maps, never in a normal build) to get source files and lines instead of bundle positions.
 
+## What it found, and the numbers now
+
+The first run on the big office (2026-10-07) failed 10 of 18 views: the Workers view hung the page, the Team phone hung when opened, the Board's memory kept growing, and the Command Center, the Team pages, the Budget, the Audit log, Home's Overview and the 2D view each had tasks of 300 to 700 ms. The causes, all fixed:
+
+- Views redrew everything for every worker update (dozens a second with six live workers): now drawn at most a few times a second, and only when something they show changed.
+- The tab badges, the title, the phone's badge and Needs you rewrote the page about 270 times a second, each write restyling all 1,400 elements: now written only when they change.
+- Long lists drew every row (hundreds of gone-home workers, a thousand chat messages): now the first or newest rows, with Show more, and rows off screen skip layout and paint.
+- The board read its scroll positions from the layout before each redraw; the 2D sprites were read back from the GPU; the phone opened a sound device in the middle of a paint.
+- On the server, each Audit log page re-hashed the whole log, and the ranking was worked out for every look.
+- Switching projects fetched the same roster four times and ran git six times for the setup panel three times over, and now and then left the new floor's budget unloaded (the loading overlay waiting 15 s).
+
+The run after the fixes (scale 10, six live workers, 60 s soak per view):
+
+| View | Time to usable | Project switch | Longest task | Heap growth |
+| --- | --- | --- | --- | --- |
+| Command Center (Chat) | 788 ms | | 165 ms | 12 % |
+| Command Center (Terminal) | 630 ms | | 194 ms | 8 % |
+| Board | 262 ms | | 166 ms | 8 % |
+| Team: org chart / standup / approvals | 340 / 229 / 358 ms | | 82 / 106 / 78 ms | under 5 % |
+| Team boards and Deliverables | 270 ms | | 125 ms | 12 % |
+| Workers | 256 ms | | 79 ms | 12 % |
+| Budget | 438 ms | | 83 ms | 4 % |
+| Audit log / Incidents | 190 / 250 ms | | 82 / 111 ms | 5 % |
+| Settings | 236 ms | | 115 ms | 9 % |
+| Home: Projects / Overview / Budget | 188 / 213 / 163 ms | | 70 / 75 / 0 ms | under 12 % |
+| 2D view | 289 ms | | 127 ms | 18 % |
+| Team phone (open / floor channel) | 265 / 615 ms | | 94 / 173 ms | under 8 % |
+| Phone page (`/m`) | 181 ms | | 0 ms | 5 % |
+| Switch: 1D Board / 1D Command Center / 2D view / Home → project | | 1,113 / 535 / 169 / 337 ms | 58 to 115 ms | |
+| Switch 10× on the 1D Command Center | | p90 525 ms | 0 ms | |
+
 ## Live warnings in the real office
 
 - **A page froze**: every flat view and the home page watch their own long tasks. One over 500 ms is reported (at most once a minute per view, never from a hidden tab) and opens an incident naming the view and the scripts that took the time.
