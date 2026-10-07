@@ -1,0 +1,32 @@
+mdl 1;
+-- Leave-approval benchmark baseline, step 1: HR + Notices modules, domain model.
+-- The leave feature itself is NOT here: that is what the delivery arms build.
+
+CREATE MODULE HR;
+CREATE MODULE Notices;
+
+/** A person in the company. Linked to the login (System.User) and to their line manager. */
+CREATE PERSISTENT ENTITY HR.Employee (
+  EmployeeNumber: String(20) NOT NULL UNIQUE,
+  FullName: String(100) NOT NULL,
+  Email: String(200)
+);
+
+/** The employee's login. */
+CREATE ASSOCIATION HR.Employee_User
+  FROM HR.Employee TO System.User
+  TYPE Reference
+  ON DELETE SET NULL;
+
+/** The employee's assigned line manager (another Employee). */
+CREATE ASSOCIATION HR.Employee_Manager
+  FROM HR.Employee TO HR.Employee
+  TYPE Reference
+  ON DELETE SET NULL;
+
+/** Unrelated baseline functionality: a company notice board. */
+CREATE PERSISTENT ENTITY Notices.Notice (
+  Title: String(200) NOT NULL,
+  Body: String(2000),
+  PublishedOn: DateTime
+);

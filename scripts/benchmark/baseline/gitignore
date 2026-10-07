@@ -1,0 +1,23 @@
+# Mendix project (benchmark baseline; same list as the office wizard's MENDIX_IGNORES)
+/**/node_modules/
+!/javascriptsource/**/node_modules/
+/*.launch
+/.classpath
+/.project
+/.mendix-cache/
+/deployment/
+/releases/
+/packages/
+/theme-cache/
+/javasource/*/proxies/
+/javasource/system/
+/modeler-merge-marker
+/nativemobile/builds/
+/project-settings.user.json
+/vendorlib/temp/
+/mprcontents/mprjournal*
+*.mpr.lock
+*.mpr.bak
+/mxcli
+/mxcli.exe
+/.mxcli/

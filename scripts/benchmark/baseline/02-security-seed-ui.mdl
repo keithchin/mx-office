@@ -1,0 +1,110 @@
+mdl 1;
+-- Leave-approval benchmark baseline, step 2: roles, test identities, seed data, pages, navigation.
+-- Password for every test identity: see fixtures/identities.json (the policy wants 12+ chars and a digit).
+
+-- ---- Module roles ---------------------------------------------------------------------------
+CREATE OR MODIFY MODULE ROLE HR.Employee DESCRIPTION 'Any employee: reads the directory';
+CREATE OR MODIFY MODULE ROLE HR.Manager DESCRIPTION 'Line manager of one or more employees';
+CREATE OR MODIFY MODULE ROLE HR.Admin DESCRIPTION 'HR administration: maintains employees';
+CREATE OR MODIFY MODULE ROLE Notices.Reader DESCRIPTION 'Reads the notice board';
+CREATE OR MODIFY MODULE ROLE Notices.Editor DESCRIPTION 'Maintains the notice board';
+
+-- ---- Entity access ----------------------------------------------------------------------------
+GRANT READ * ON ENTITY HR.Employee TO HR.Employee, HR.Manager;
+GRANT CREATE, DELETE, READ *, WRITE * ON ENTITY HR.Employee TO HR.Admin;
+GRANT READ * ON ENTITY Notices.Notice TO Notices.Reader;
+GRANT CREATE, DELETE, READ *, WRITE * ON ENTITY Notices.Notice TO Notices.Editor;
+
+-- ---- Seed data (after startup, only into an empty database) ---------------------------------
+CREATE MICROFLOW HR.ASu_SeedBaseline ()
+  RETURNS Boolean
+  FOLDER 'Startup'
+BEGIN
+  RETRIEVE $Existing FROM HR.Employee FIRST;
+  IF $Existing != empty THEN
+    RETURN true;
+  END IF;
+  RETRIEVE $UMaria FROM System.User WHERE Name = 'mgr.maria' FIRST;
+  RETRIEVE $UMark FROM System.User WHERE Name = 'mgr.mark' FIRST;
+  RETRIEVE $UAlice FROM System.User WHERE Name = 'emp.alice' FIRST;
+  RETRIEVE $UBob FROM System.User WHERE Name = 'emp.bob' FIRST;
+  RETRIEVE $UCarol FROM System.User WHERE Name = 'emp.carol' FIRST;
+  RETRIEVE $UAda FROM System.User WHERE Name = 'admin.ada' FIRST;
+  $Maria = CREATE HR.Employee (EmployeeNumber = 'M001', FullName = 'Maria Manager', Email = 'maria@example.test', HR.Employee_User = $UMaria) COMMIT;
+  $Mark = CREATE HR.Employee (EmployeeNumber = 'M002', FullName = 'Mark Manager', Email = 'mark@example.test', HR.Employee_User = $UMark) COMMIT;
+  $Alice = CREATE HR.Employee (EmployeeNumber = 'E001', FullName = 'Alice Employee', Email = 'alice@example.test', HR.Employee_User = $UAlice, HR.Employee_Manager = $Maria) COMMIT;
+  $Bob = CREATE HR.Employee (EmployeeNumber = 'E002', FullName = 'Bob Employee', Email = 'bob@example.test', HR.Employee_User = $UBob, HR.Employee_Manager = $Maria) COMMIT;
+  $Carol = CREATE HR.Employee (EmployeeNumber = 'E003', FullName = 'Carol Employee', Email = 'carol@example.test', HR.Employee_User = $UCarol, HR.Employee_Manager = $Mark) COMMIT;
+  $Ada = CREATE HR.Employee (EmployeeNumber = 'A001', FullName = 'Ada Admin', Email = 'ada@example.test', HR.Employee_User = $UAda) COMMIT;
+  $Welcome = CREATE Notices.Notice (Title = 'Welcome to the company portal', Body = 'Baseline notice used by the regression checks.', PublishedOn = [%CurrentDateTime%]) COMMIT;
+  LOG INFO NODE 'Baseline' 'Seeded 6 employees and 1 notice';
+  RETURN true;
+END;
+
+ALTER SETTINGS RUNTIME (AfterStartupMicroflow: 'HR.ASu_SeedBaseline');
+
+-- ---- Pages ---------------------------------------------------------------------------------
+CREATE PAGE HR.Employee_Directory
+  (
+    Title: 'Employee directory',
+    Layout: Atlas_Core.Atlas_Default,
+    Url: 'directory'
+  )
+  {
+    DATAGRID gridEmployees (DataSource: DATABASE HR.Employee SORT BY FullName ASC) {
+      COLUMN (Attribute: EmployeeNumber, Caption: 'Number')
+      COLUMN (Attribute: FullName, Caption: 'Name')
+      COLUMN (Attribute: Email, Caption: 'Email')
+    }
+  };
+
+CREATE PAGE Notices.Notice_Overview
+  (
+    Title: 'Notices',
+    Layout: Atlas_Core.Atlas_Default,
+    Url: 'notices'
+  )
+  {
+    DATAGRID gridNotices (DataSource: DATABASE Notices.Notice SORT BY PublishedOn DESC) {
+      COLUMN (Attribute: Title, Caption: 'Title')
+      COLUMN (Attribute: Body, Caption: 'Notice')
+      COLUMN (Attribute: PublishedOn, Caption: 'Published')
+    }
+  };
+
+GRANT VIEW ON PAGE HR.Employee_Directory TO HR.Employee, HR.Manager, HR.Admin;
+GRANT VIEW ON PAGE Notices.Notice_Overview TO Notices.Reader, Notices.Editor;
+
+-- ---- User roles and test identities ------------------------------------------------------------
+CREATE OR MODIFY USER ROLE Employee (
+  ModuleRoles: (Administration.User, FeedbackModule.User, System.User, MyFirstModule.User, HR.Employee, Notices.Reader),
+  CheckSecurity: true
+);
+CREATE OR MODIFY USER ROLE Manager (
+  ModuleRoles: (Administration.User, FeedbackModule.User, System.User, MyFirstModule.User, HR.Employee, HR.Manager, Notices.Reader),
+  CheckSecurity: true
+);
+ALTER USER ROLE Administrator ADD MODULE ROLES (HR.Admin, Notices.Editor, Notices.Reader);
+
+-- Security on before the identities: at level Off the runtime creates no demo accounts.
+ALTER APP SECURITY ( SecurityLevel: PRODUCTION, EnableDemoUsers: TRUE );
+
+DROP DEMO USER IF EXISTS 'demo_user';
+DROP DEMO USER IF EXISTS 'demo_administrator';
+DROP USER ROLE IF EXISTS User;
+
+CREATE OR MODIFY DEMO USER 'emp.alice' ( Password: 'Bench-Passw0rd-2026', Entity: Administration.Account, UserRoles: (Employee) );
+CREATE OR MODIFY DEMO USER 'emp.bob' ( Password: 'Bench-Passw0rd-2026', Entity: Administration.Account, UserRoles: (Employee) );
+CREATE OR MODIFY DEMO USER 'emp.carol' ( Password: 'Bench-Passw0rd-2026', Entity: Administration.Account, UserRoles: (Employee) );
+CREATE OR MODIFY DEMO USER 'mgr.maria' ( Password: 'Bench-Passw0rd-2026', Entity: Administration.Account, UserRoles: (Manager) );
+CREATE OR MODIFY DEMO USER 'mgr.mark' ( Password: 'Bench-Passw0rd-2026', Entity: Administration.Account, UserRoles: (Manager) );
+CREATE OR MODIFY DEMO USER 'admin.ada' ( Password: 'Bench-Passw0rd-2026', Entity: Administration.Account, UserRoles: (Administrator) );
+
+-- ---- Navigation -----------------------------------------------------------------------------
+create or modify navigation Responsive
+  home page MyFirstModule.Home_Web
+{
+  menu item 'Home' ( OnClick: show page MyFirstModule.Home_Web, Icon: glyph 57377 )
+  menu item 'Employee directory' ( OnClick: show page HR.Employee_Directory )
+  menu item 'Notices' ( OnClick: show page Notices.Notice_Overview )
+};
