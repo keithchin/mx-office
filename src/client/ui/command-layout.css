@@ -29,10 +29,12 @@
 @media (min-width: 1024px) and (min-height: 560px) {
   /* The bits above the summary, a little tighter, so the summary has the room. */
   body:has(.lite-main.on-command) .lite-main { padding-bottom: var(--tp-above, 72px); }
-  body:has(.lite-main.on-command) .lite-main { position: relative; }
-  body:has(.lite-main.on-command) #floor-meta { margin-bottom: 8px; padding-right: 300px; }
-  body:has(.lite-main.on-command) #firm-banner { position: absolute; top: 6px; right: 12px; max-width: 420px; }
-  body:has(.lite-main.on-command) #firm-banner > * { margin: 0; }
+  /* The floor's line and the Firm's banner share one line on every tab, not just here: the tab bar and
+     each tab's content then start where the Command Center's do (scripts/check-tab-alignment.mjs). */
+  .lite-main:has(> #firm-banner) { position: relative; }
+  .lite-main > #floor-meta { margin-bottom: 8px; padding-right: 300px; }
+  .lite-main > #firm-banner { position: absolute; top: 6px; right: 12px; max-width: 420px; }
+  .lite-main > #firm-banner > * { margin: 0; }
   body.lite .lite-tabs { gap: 4px; margin-bottom: 8px; }
   body.lite .lite-tabs .btn { gap: 4px; padding: 3px 6px; min-height: 28px; font-size: 12px; }
   /* Needs you and the folded setup line share one row; an opened setup panel takes the whole width. */

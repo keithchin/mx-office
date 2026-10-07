@@ -60,7 +60,6 @@
       <p id="floor-meta" class="lite-meta"></p>
       <!-- The Firm: its audit of this project running, its report ready, or the button to call one (ui/firm/banner.ts). -->
       <div id="firm-banner"></div>
-      <div id="elsewhere" class="lite-elsewhere hidden"></div>
       <div class="lite-tabs" role="tablist">
         <button id="tab-command" class="btn" type="button" role="tab" title="The project at a glance: what's happening, the project console (the Project Coordinator and the escalations to you), recent activity">🎛️ Command Center <span class="ro-tab-n ny-tab-n"></span></button>
         <button id="tab-board" class="btn" type="button" role="tab" title="The kanban board">🗂 Board</button>
@@ -76,6 +75,8 @@
         <button id="tab-budget" class="btn" type="button" role="tab" title="What the project has spent, against its budget: by stage, role, agent, model, day and issue">💰 Budget</button>
         <button id="tab-audit" class="btn" type="button" role="tab" title="Who did what, when: hires, prompts, escalations, approvals, GitHub, settings and sign-ins">🧾 Audit log</button>
       </div>
+      <!-- Other floors where someone's waiting (shared/floors.ts), below the tabs so the tab bar stays put; the Command Center lists them in Needs you instead (ui/needsyou/needsyou.css). -->
+      <div id="elsewhere" class="lite-elsewhere hidden"></div>
       <!-- What's blocked on you right now, a button to each fix, on the Command Center (ui/needsyou/). -->
       <div id="needs-you"></div>
       <!-- A toolkit project's stages until its build plan is confirmed (ui/setup-panel.ts). -->
