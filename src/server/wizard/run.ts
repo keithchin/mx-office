@@ -4,6 +4,7 @@
 // than one that fails, because a failed one can be retried.
 
 import { spawn } from 'node:child_process';
+import { spawnOff, type OffChild } from '../offloop/exec.js';
 
 export interface RunOptions {
   cwd: string;
@@ -44,9 +45,10 @@ function killTree(pid: number | undefined) {
 
 export function runCommand(cmd: string, args: string[], opts: RunOptions): Promise<RunResult> {
   return new Promise((resolve, reject) => {
-    let child;
+    let child: OffChild;
     try {
-      child = spawn(cmd, args, { cwd: opts.cwd, env: opts.env as NodeJS.ProcessEnv | undefined, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true, detached: process.platform !== 'win32' });
+      // Started off the event loop (offloop/exec.ts): starting a program can take seconds on Windows.
+      child = spawnOff(cmd, args, { cwd: opts.cwd, env: opts.env as NodeJS.ProcessEnv | undefined, windowsHide: true, detached: process.platform !== 'win32' });
     } catch (err) {
       reject(new Error(`Couldn't run ${cmd}: ${(err as Error).message}`));
       return;
@@ -54,9 +56,9 @@ export function runCommand(cmd: string, args: string[], opts: RunOptions): Promi
     const tail: string[] = [];
     let stdout = '';
     const partial = { out: '', err: '' };
-    const take = (which: 'out' | 'err', chunk: Buffer) => {
-      const text = partial[which] + chunk.toString('utf8');
-      if (which === 'out' && stdout.length < 1_000_000) stdout += chunk.toString('utf8');
+    const take = (which: 'out' | 'err', chunk: string) => {
+      const text = partial[which] + chunk;
+      if (which === 'out' && stdout.length < 1_000_000) stdout += chunk;
       const parts = text.split(/\r\n|\n|\r/);
       partial[which] = parts.pop() ?? '';
       for (const line of parts) said(line);
@@ -67,8 +69,8 @@ export function runCommand(cmd: string, args: string[], opts: RunOptions): Promi
       if (tail.length > TAIL) tail.shift();
       opts.onLine?.(line);
     };
-    child.stdout!.on('data', (c: Buffer) => take('out', c));
-    child.stderr!.on('data', (c: Buffer) => take('err', c));
+    child.on('stdout', (c: string) => take('out', c));
+    child.on('stderr', (c: string) => take('err', c));
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;

@@ -6,6 +6,7 @@ import { isBusy } from '../shared/status.js';
 import { DESK_BY_ID } from '../shared/layout.js';
 import type { FloorDef } from './building.js';
 import { excludeFromGit } from './config.js';
+import { headBranch, orGit, originUrlOf } from './gitfiles.js';
 import { agentProviders, configuredProvider } from './agents.js';
 import { WorkerManager, workedMs, type HookEnv, type RunAs } from './workers.js';
 import { GitHub, MergeWatch } from './github.js';
@@ -110,8 +111,9 @@ export function projectInfo(dir: string, name: string, agentCmd: string, agentAr
   return {
     name,
     dir,
-    branch: git(['rev-parse', '--abbrev-ref', 'HEAD']),
-    remote: git(['remote', 'get-url', 'origin']),
+    // Read from the checkout's files when they settle it (gitfiles.ts): no git run on the event loop.
+    branch: orGit(headBranch(dir), () => git(['rev-parse', '--abbrev-ref', 'HEAD'])),
+    remote: originUrlOf(dir),
     agentCmd: [agentCmd, ...agentArgs].join(' '),
     defaultProvider: configuredProvider(agentCmd),
     agentProviders: agentProviders(configuredProvider(agentCmd)),

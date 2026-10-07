@@ -86,6 +86,7 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | POST | `/api/testlab/runs/<id>/stop` | Stop the run going and every process it started (admin) |
 | POST | `/api/testlab/runs/<id>/incident` | `{ view? | step? }`: open a sev3 incident from what failed, with a link to the run (admin, once per failure) |
 | POST | `/api/perf/longtask` | `{ view, ms, floor?, stack?, url? }`: a page reporting one of its tasks ran over 500 ms; opens (or counts again into) a **A page froze** incident, at most once a minute per view (signed in; see [Performance budgets](../administration/performance-budgets.md)) |
+| GET | `/api/perf/stalls?since=<ms>` | The server's event-loop blocks over 100 ms since `since` (epoch ms), each `{ at, ms }`: a **test office** only (404 otherwise), for the journey's server budget (signed in; see [Performance budgets](../administration/performance-budgets.md)) |
 | GET | `/api/notify/teams` | [Teams notifications](../integrations/teams-notifications.md): the settings (never the webhook URL, only a hint), the last error, the last card, what's waiting and held, and the floors |
 | POST | `/api/notify/teams` | `{ url?, floors?, level?, quiet?, pauseMinutes?, publicUrl? }`: change them; `url: ''` removes the webhook (admin) |
 | POST | `/api/notify/teams/test` | Post a test card now (admin) |

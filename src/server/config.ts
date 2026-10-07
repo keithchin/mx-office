@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } fr
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { commonDirOf, orGit } from './gitfiles.js';
 import { WEATHERS, type Weather } from '../shared/protocol.js';
 import { AGENT_PROVIDERS, PROVIDER_META } from '../shared/providers.js';
 import { MAX_WORKER_LIMIT, parseWorkerLimit } from './machine.js';
@@ -210,7 +211,7 @@ export function officeHome(): string {
 /** Keep the office's own data (or another `entry` it writes into the project) out of git without touching the project's .gitignore. */
 export function excludeFromGit(dir: string, entry = '.agent-office/') {
   try {
-    const gitDir = execFileSync('git', ['rev-parse', '--git-common-dir'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    const gitDir = orGit(commonDirOf(dir), () => execFileSync('git', ['rev-parse', '--git-common-dir'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim());
     const exclude = path.resolve(dir, gitDir, 'info', 'exclude');
     const cur = existsSync(exclude) ? readFileSync(exclude, 'utf8') : '';
     if (!cur.split('\n').some((l) => l.trim() === entry || l.trim() === entry.replace(/\/$/, ''))) {

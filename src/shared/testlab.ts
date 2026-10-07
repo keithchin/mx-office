@@ -30,6 +30,8 @@ export const PERF_BUDGETS = {
   heapGrowthPct: 25,
   /** Growth below this many MB never fails, whatever the percentage (small heaps jitter). */
   heapSlackMB: 4,
+  /** No event-loop block on the office server may run longer than this while the journey makes a project (wizard, clone, hiring). */
+  serverStallMs: 250,
 } as const;
 
 /** One long main-thread task seen on a view. */

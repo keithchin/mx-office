@@ -6,6 +6,7 @@ import { FLOOR_PALETTES, MAX_FLOORS, normalizeRepo, sameRepo } from '../shared/f
 import type { CloneProgress, ProjectsDirState, RepoChoice } from '../shared/protocol.js';
 import { CloneRun, dropLog, whyCloneFailed, type CloneEnd, type CloneRunOptions } from './clone.js';
 import { gh } from './github.js';
+import { headSha, originUrlOf } from './gitfiles.js';
 import { isProjectId } from '../shared/evidence/ids.js';
 
 /** A floor as floors.json keeps it. */
@@ -525,12 +526,8 @@ function unwritable(dir: string): string | undefined {
 
 /** The GitHub repository a checkout's origin points at. */
 export function originRepo(dir: string): string | undefined {
-  try {
-    const url = execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 10_000 }).trim();
-    return /github\.com[/:]/i.test(url) ? normalizeRepo(url) : undefined;
-  } catch {
-    return undefined;
-  }
+  const url = originUrlOf(dir);
+  return url && /github\.com[/:]/i.test(url) ? normalizeRepo(url) : undefined;
 }
 
 /**
@@ -548,6 +545,7 @@ function checkoutAt(dest: string, repo: string, empty: boolean): 'none' | 'ok' |
 
 function hasCommit(dir: string): boolean {
   try {
+    if (headSha(dir)) return true; // HEAD's ref is there (gitfiles.ts): no git run on the event loop
     execFileSync('git', ['rev-parse', '--verify', '--quiet', 'HEAD^{commit}'], { cwd: dir, stdio: 'ignore', timeout: 10_000 });
     return true;
   } catch {

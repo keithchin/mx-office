@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFileOff } from './offloop/exec.js';
 import type { GhCheck, GhCloseReason, GhComment, GhIssue, GhIssueDetail, GhLabel, GhMergeMethod, GhPull, GhPullDetail, GhRepoInfo, GhReviewComment, GhState } from '../shared/protocol.js';
 import type { GhAs } from './signins.js';
 
@@ -18,7 +18,8 @@ function friendly(raw: string): string {
 /** Runs gh as the office, or with `env` as someone signed in to their own GitHub (see signins.ts). */
 export function gh(args: string[], cwd: string, timeout = 30_000, env?: Record<string, string>): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile('gh', args, { cwd, maxBuffer: 32 * 1024 * 1024, timeout, env }, (err, stdout, stderr) => {
+    // Started off the event loop (offloop/exec.ts): starting gh can take seconds on Windows.
+    execFileOff('gh', args, { cwd, maxBuffer: 32 * 1024 * 1024, timeout, env }, (err, stdout, stderr) => {
       if (err) {
         const msg = (stderr || err.message || '').trim().split('\n').slice(-2).join(' ');
         const signedOut = env && /auth login|not logged in|authentication/i.test(msg);

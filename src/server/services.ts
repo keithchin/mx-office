@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFileOff } from './offloop/exec.js';
 import { readFile, readlink } from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
@@ -49,7 +49,7 @@ interface Tracked {
 
 function run(cmd: string, args: string[]): Promise<string> {
   return new Promise((resolve) => {
-    execFile(cmd, args, { encoding: 'utf8', timeout: 5000, maxBuffer: 8 * 1024 * 1024 }, (_err, out) => resolve(out ?? ''));
+    execFileOff(cmd, args, { timeout: 5000, maxBuffer: 8 * 1024 * 1024 }, (_err, out) => resolve(out ?? ''));
   });
 }
 

@@ -106,7 +106,7 @@ async function hire(ctx: Ctx, floor: Floor, ask: HireAsk): Promise<WorkerInfo | 
   const worktree = !!floor.project.branch;
   if (worktree) await floor.workers.fetchBase();
   if (!ctx.floors.has(floor.id)) return 'This floor closed';
-  const r = floor.workers.spawn(desk, ask.by, ask.prompt, worktree, 'agent', 'claude', ask.model, undefined, undefined, ask.owner);
+  const r = await floor.workers.spawn(desk, ask.by, ask.prompt, worktree, 'agent', 'claude', ask.model, undefined, undefined, ask.owner);
   if (typeof r === 'string') return r;
   floor.workers.rename(r.id, ask.name);
   return floor.workers.get(r.id) ?? r;

@@ -3,7 +3,7 @@
 // its stream-json protocol with the numbers its /usage screen shows. Asking starts no conversation
 // and costs nothing, and Claude Code deals with the sign-in (keychain, token refresh) itself.
 
-import { spawn } from 'node:child_process';
+import { spawnOff } from './offloop/exec.js';
 import os from 'node:os';
 import type { PlanLimits, PlanWindow } from '../shared/protocol.js';
 import { officeCliRefused } from './testmode.js';
@@ -132,19 +132,19 @@ function ask(claude: string, env: Record<string, string>): Promise<any> {
   return new Promise((resolve) => {
     let settled = false;
     let buf = '';
-    const child = spawn(claude, args, { cwd: os.tmpdir(), env, stdio: ['pipe', 'pipe', 'ignore'] });
+    // Started off the event loop (offloop/exec.ts): starting claude can take seconds on Windows.
+    const child = spawnOff(claude, args, { cwd: os.tmpdir(), env, stdin: true, windowsHide: false });
     const finish = (v: any) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       resolve(v);
       // No prompt was sent, so a closed stdin ends the session; a stuck one is killed.
-      child.stdin.end();
-      setTimeout(() => child.exitCode === null && child.signalCode === null && child.kill('SIGKILL'), 10_000).unref();
+      child.end();
+      setTimeout(() => !child.closed && child.kill('SIGKILL'), 10_000).unref();
     };
     const timer = setTimeout(() => finish(null), TIMEOUT_MS);
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (d: string) => {
+    child.on('stdout', (d: string) => {
       buf += d;
       let nl: number;
       while ((nl = buf.indexOf('\n')) >= 0) {
@@ -162,7 +162,6 @@ function ask(claude: string, env: Record<string, string>): Promise<any> {
     });
     child.on('error', () => finish(null));
     child.on('close', () => finish(null));
-    child.stdin.on('error', () => {});
-    child.stdin.write(JSON.stringify({ type: 'control_request', request_id: 'usage', request: { subtype: 'get_usage', skip_behaviors: true } }) + '\n');
+    child.write(JSON.stringify({ type: 'control_request', request_id: 'usage', request: { subtype: 'get_usage', skip_behaviors: true } }) + '\n');
   });
 }

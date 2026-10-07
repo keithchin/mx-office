@@ -4,6 +4,8 @@ import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { LostBranch, WorktreeState } from '../shared/protocol.js';
+import { commonDirOf, headBranch, headSha, orGit, originUrl, refSha } from './gitfiles.js';
+import { execFileOffP } from './offloop/exec.js';
 
 export type { WorktreeCleanup, WorktreeState } from '../shared/protocol.js';
 
@@ -28,6 +30,9 @@ export interface WorktreeRef {
   /** The branch the office made for it, when the worker has since switched to `branch`, one of its own. */
   made?: string;
 }
+
+/** What Worktrees.create gives: the new worktree (with a note when commits were left out), or why there's none. */
+export type MadeTree = (Required<Omit<WorktreeRef, 'made'>> & { from?: string; note?: string }) | string;
 
 export interface ListedWorktree {
   /** Relative to the project dir. */
@@ -58,13 +63,14 @@ export class Worktrees {
    * `slug`, which is in `root` (the worker's own floor, when that isn't this project). The path it
    * returns is relative to `root`.
    */
-  create(slug: string, sub?: string, root = this.dir): (Required<Omit<WorktreeRef, 'made'>> & { from?: string; note?: string }) | string {
+  async create(slug: string, sub?: string, root = this.dir): Promise<MadeTree> {
     try {
       const from = this.currentBranch();
-      const { base, note } = this.startPoint(from);
+      const { base, note } = await this.startPoint(from);
       const rel = path.join(WORKTREES_DIR, slug, sub ?? '');
       const branch = `${BRANCH_PREFIX}${slug}`;
-      this.gitSync(['worktree', 'add', '-b', branch, path.resolve(root, rel), base]);
+      // Off the event loop: checking a big project out takes seconds (offloop/exec.ts).
+      await this.git(['worktree', 'add', '-b', branch, path.resolve(root, rel), base]);
       return { path: rel, branch, base, from, note };
     } catch (err) {
       return `Could not create a git worktree: ${gitError(err)}`;
@@ -102,6 +108,8 @@ export class Worktrees {
   }
 
   private hasOrigin(): boolean {
+    const fast = originUrl(this.dir);
+    if (fast !== null) return !!fast;
     try {
       return !!this.gitSync(['remote', 'get-url', 'origin']);
     } catch {
@@ -114,35 +122,35 @@ export class Worktrees {
    * PR merged there even if nobody pulled them into the project. HEAD instead when it already has all
    * of that (it's ahead with commits not pushed yet), or when origin doesn't have the branch.
    */
-  private startPoint(from: string | undefined): { base: string; note?: string } {
-    const head = this.gitSync(['rev-parse', 'HEAD']);
+  private async startPoint(from: string | undefined): Promise<{ base: string; note?: string }> {
+    // HEAD and origin's copy read from the checkout's files when they settle it (gitfiles.ts), else from git.
+    const head = headSha(this.dir) || (await this.git(['rev-parse', 'HEAD']));
     if (!from) return { base: head };
     let remote: string;
     try {
-      remote = this.gitSync(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${from}^{commit}`]);
+      remote = refSha(this.dir, `refs/remotes/origin/${from}`) || (await this.git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${from}^{commit}`]));
     } catch {
       return { base: head };
     }
-    if (this.isAncestor(remote, head)) return { base: head };
-    if (this.isAncestor(head, remote)) return { base: remote };
+    if (await this.isAncestor(remote, head)) return { base: head };
+    if (await this.isAncestor(head, remote)) return { base: remote };
     // Both moved on: the PR goes to origin's, so start there and say what's left behind.
-    const n = Number(this.gitSync(['rev-list', '--count', head, '--not', remote]));
+    const n = Number(await this.git(['rev-list', '--count', head, '--not', remote]));
     return { base: remote, note: `starts from origin/${from}, without the ${n} commit${n === 1 ? '' : 's'} on ${from} that origin doesn't have` };
   }
 
-  private isAncestor(a: string, b: string): boolean {
-    try {
-      this.gitSync(['merge-base', '--is-ancestor', a, b]);
-      return true;
-    } catch {
-      return false;
-    }
+  private async isAncestor(a: string, b: string): Promise<boolean> {
+    if (a === b) return true;
+    return this.git(['merge-base', '--is-ancestor', a, b]).then(
+      () => true,
+      () => false,
+    );
   }
 
   /** The git folder every worktree of this project shares, to tell two checkouts of one repository apart from two repositories. */
   commonDir(): string | undefined {
     try {
-      return real(path.resolve(this.dir, this.gitSync(['rev-parse', '--git-common-dir'])));
+      return real(path.resolve(this.dir, orGit(commonDirOf(this.dir), () => this.gitSync(['rev-parse', '--git-common-dir']))));
     } catch {
       return undefined;
     }
@@ -151,7 +159,7 @@ export class Worktrees {
   /** The branch the project is on, or undefined when HEAD is detached. */
   currentBranch(): string | undefined {
     try {
-      const b = this.gitSync(['rev-parse', '--abbrev-ref', 'HEAD']);
+      const b = orGit(headBranch(this.dir), () => this.gitSync(['rev-parse', '--abbrev-ref', 'HEAD']));
       return b === 'HEAD' ? undefined : b;
     } catch {
       return undefined;
@@ -189,6 +197,8 @@ export class Worktrees {
   /** Where a branch still is: in the project, only on origin (it was pushed), or nowhere. */
   branchState(branch: string): LostBranch {
     const has = (ref: string) => {
+      const fast = refSha(this.dir, ref);
+      if (fast !== null) return !!fast;
       try {
         this.gitSync(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]);
         return true;
@@ -347,7 +357,7 @@ export class Worktrees {
   }
 
   private async git(args: string[], cwd = this.dir): Promise<string> {
-    const { stdout } = await execFileP('git', args, { cwd, encoding: 'utf8', timeout: 60_000, maxBuffer: 16 * 1024 * 1024 });
+    const { stdout } = await execFileOffP('git', args, { cwd, timeout: 60_000, maxBuffer: 16 * 1024 * 1024 });
     return stdout.trim();
   }
 }
