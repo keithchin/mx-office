@@ -98,3 +98,12 @@ test('the flat Settings page loads on /lite, /pixel and /home without three.js; 
   // The sky's words came out of the 3D sky so the flat page can say them.
   assert.ok(!lite.has(at('world/sky.ts')), "the flat page doesn't load the 3D sky");
 });
+
+test('the loading screen and the floor overlay load on the flat pages, three.js-free; the run toggle on /lite and /pixel', () => {
+  const at = (f: string) => path.join(client, f);
+  for (const entry of ['lite.ts', 'pixel.ts', 'home.ts', 'm.ts']) assert.ok(graph(at(entry)).has(at('ui/loading/boot.ts')), `${entry} moves Mx Office's loading screen on`);
+  for (const entry of ['lite.ts', 'pixel.ts']) {
+    const g = graph(at(entry));
+    for (const f of ['ui/loading/floor.ts', 'ui/loading/progress.ts', 'ui/project-run/toggle.ts', 'home/run-state-logic.ts']) assert.ok(g.has(at(f)), `${entry} loads ${f}`);
+  }
+});

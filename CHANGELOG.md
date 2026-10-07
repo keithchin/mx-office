@@ -6,7 +6,24 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+- **One run-state control beside the budget chip.** The Command Center's ▶ Resume project and ⏸ Pause
+  project pair (and the same pair on the team pages) is one control on the floor's line, beside the
+  budget chip, on every 1D tab and on the 2D view's bar: ▶ Running with a green dot (*Running: 2 agents
+  working, 3 asleep*), ⏸ Paused (who, when, why, and who waits on you), or ⏳ amber with a progress bar
+  while a pause or resume run is going. Admins click it to pause (the same confirm), to open the Resume
+  preview, or to see the run going; everyone else sees the state. Its words are Home's card state.
+- **Loading overlay when you change project.** The floor picker, a *waiting on* button, `?floor=` and a
+  project opened from Home show *Loading project mx-spike… 57 %* over the dimmed page, the top bar still
+  usable. The percentage is real: the floor, its workers, the team, the summary, the budget, the setup
+  panel and the Coordinator's console coming in, then the page drawn. Changing again cancels it; ✕ or
+  Esc hides it; it says it's still loading after 5 s and goes after 15 s. Each step is a
+  `performance.mark` (`ao:floor:<step>`) and each load an `ao:floor-switch` measure, for the perf guard.
+- **Mx Office's loading screen.** Home, the 1D and 2D views and the phone version show *Loading Mx
+  Office… NN %* from their HTML before any code loads, through the code, the sign-in, the connection,
+  the office's data and the first view, then fade. While the office is down or restarting it says *Mx
+  Office is restarting… reconnecting* and carries on once it answers. Both screens follow the five
+  themes (no emoji in Clean), respect reduced motion and are announced as a status.
 
 ## 2026-10-07 · release 16 (`f52988c`)
 

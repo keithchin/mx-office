@@ -16,6 +16,7 @@ import { openConnections } from '../ui/connections';
 import { summaryLine } from '../ui/summary';
 import { graphics, rememberView } from '../graphics';
 import { homeRunIcon, homeRunToggle } from './run-state';
+import { hideOverlay, showOverlay } from '../ui/loading/overlay';
 
 /** A flat view: the 1D board, or the 2D pixel office. */
 type FlatView = '1d' | '2d';
@@ -28,6 +29,10 @@ export function openFloor(floor: string, view: FlatView, leaving: () => void) {
   leaving();
   rememberFloor(floor);
   rememberView(view);
+  // At once, while the next page comes (it has Mx Office's loading screen, then the floor's overlay); hidden again if Back returns here.
+  const name = store.floors.find((f) => f.id === floor)?.name ?? floor;
+  showOverlay({ title: `Loading project ${name}… 0 %`, step: view === '2d' ? 'Opening the office…' : 'Opening the board…', pct: 0 });
+  addEventListener('pageshow', (e) => e.persisted && hideOverlay(), { once: true });
   location.assign(floorUrl(floor, view));
 }
 

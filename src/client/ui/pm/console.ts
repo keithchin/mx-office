@@ -31,6 +31,8 @@ export interface PmConsoleDeps {
   openWorker(id: string): void;
   /** Whether the console is on screen now: the Command Center tab, with the floors page not over it. */
   visible(): boolean;
+  /** The console has what it shows for `floor`: the team, and the Coordinator's conversation when it watches one (the floor's loading overlay, ui/loading/). */
+  onLoaded?(floor: string): void;
 }
 
 export interface PmConsole {
@@ -195,14 +197,25 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
         roster = r;
         failed = undefined;
         draw();
+        loaded(f);
       },
       (err) => {
         if (f !== floor) return;
         failed = (err as Error).message;
         draw();
+        loaded(f);
       },
     );
   }
+  /** Waiting on the watched conversation's first messages before saying the console is loaded. */
+  let convoFor: string | undefined;
+  function loaded(f: string) {
+    if (watching && !store.convo.has(watching)) convoFor = f;
+    else deps.onLoaded?.(f);
+  }
+  store.on('convo', () => {
+    if (convoFor && (!watching || store.convo.has(watching))) (deps.onLoaded?.(convoFor), (convoFor = undefined));
+  });
   /** Does a team action and draws what it answers (act toasts why, when it's refused). */
   const run = (action: string, extra: Record<string, unknown> = {}) =>
     floor

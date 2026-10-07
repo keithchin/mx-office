@@ -1,11 +1,34 @@
-/* ▶ Resume / ⏸ Pause project (ui/project-run/): the bar in the Command Center's heading and the team
-   pages, the preview and progress windows, the pacing rows and 🔁 Restart safely. Colors are tokens. */
-.pr-bar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; align-self: center; }
-.pr-bar:empty { display: none; }
-.pr-btn, .pr-chip { padding: 2px 10px; font-size: 12px; white-space: nowrap; }
-.pr-paused { display: inline-flex; align-items: center; padding: 2px 10px; border: 2px solid var(--line); border-radius: 999px; background: var(--warn-soft); color: var(--warn-ink); font-size: 12px; font-weight: 800; white-space: nowrap; }
-.pr-chip { background: var(--info-soft); }
-.ro-head .pr-bar { margin-left: auto; }
+/* The floor's run state (ui/project-run/): the one control beside the budget chip (toggle.ts), the preview
+   and progress windows, the pacing rows and 🔁 Restart safely. Colors are tokens; the Clean themes swap
+   the emoji for a line icon (.pr-tg-svg), Terminal squares it off. */
+.pr-toggle {
+  position: relative; display: inline-flex; align-items: center; gap: 5px; flex: none; min-height: 26px; padding: 2px 9px; overflow: hidden;
+  border: 1px solid var(--rule-strong); border-radius: 999px; background: var(--card); color: var(--ink); font: 800 12px/1.2 var(--font); white-space: nowrap;
+}
+.pr-toggle[hidden] { display: none; }
+button.pr-toggle { cursor: pointer; }
+button.pr-toggle:hover { border-color: var(--ink-2); }
+button.pr-toggle:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.pr-toggle[aria-disabled='true'] { cursor: progress; }
+.pr-tg-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--muted); }
+.pr-toggle[data-kind='running'] { background: var(--good-soft); border-color: var(--good-ink); }
+.pr-toggle[data-kind='running'] .pr-tg-dot { background: var(--good-ink); box-shadow: 0 0 0 2px color-mix(in srgb, var(--good-ink) 25%, transparent); }
+.pr-toggle[data-kind='paused'] { background: var(--paper-2); }
+.pr-toggle[data-kind='paused'] .pr-tg-dot { background: var(--muted); }
+.pr-toggle:is([data-kind='pausing'], [data-kind='resuming']) { background: var(--warn-soft); border-color: var(--warn-ink); color: var(--warn-ink); }
+.pr-toggle:is([data-kind='pausing'], [data-kind='resuming']) .pr-tg-dot { background: var(--warn-ink); animation: pr-pulse 1.2s ease-in-out infinite; }
+.pr-tg-svg { display: none; width: 14px; height: 14px; }
+.pr-tg-svg svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.pr-tg-svg svg .fill { fill: currentColor; stroke: none; }
+html[data-theme^='clean'] .pr-tg-svg { display: inline-flex; }
+html[data-theme^='clean'] .pr-tg-emo { display: none; }
+.pr-tg-act { padding-left: 6px; border-left: 1px solid var(--rule-strong); color: var(--link); }
+.pr-tg-bar { position: absolute; left: 0; bottom: 0; height: 2px; width: var(--pr-pct, 0%); background: var(--warn-ink); transition: width .4s ease; }
+html[data-theme='terminal'] .pr-toggle { border-radius: 0; }
+@keyframes pr-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .pr-tg-dot { animation: none !important; } .pr-tg-bar { transition: none; } }
+body.pixel .px-meta-box .pr-toggle { min-height: 20px; padding: 1px 7px; font-size: 11px; }
+@media (max-width: 420px) { .pr-tg-act { display: none; } }
 
 .pr-modal { width: min(720px, 100%); }
 .pr-body p { margin: 0 0 10px; }

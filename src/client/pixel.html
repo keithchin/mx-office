@@ -9,8 +9,41 @@
     <link rel="stylesheet" href="./pixel.css" />
     <!-- The color theme picked on this browser, the 1D view's (ui/colortheme.ts), set before the page is drawn so it never flashes the wrong one. -->
     <script>try{var t=localStorage.getItem("agent-office.color-theme");if(["default","dark","terminal","clean-light","clean-dark"].indexOf(t)<0)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"default";document.documentElement.dataset.theme=t}catch(e){}</script>
+    <!-- Mx Office's loading screen (#ao-boot): drawn by the page itself before its code loads, so it shows at once; ui/loading/boot.ts moves it on (bundle, sign-in, socket, office data, first view) and fades it out. The same block is in lite.html, pixel.html, home.html and m.html (tests/loading-screen.test.ts keeps them alike). -->
+    <style>
+      #ao-boot{--b-bg:#fffaf3;--b-ink:#2b2d42;--b-mute:#7a6f65;--b-acc:#ff8a5b;--b-track:#fff1de;--b-font:'Nunito',ui-rounded,system-ui,-apple-system,sans-serif;--b-r:999px;position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:var(--b-bg);color:var(--b-ink);font-family:var(--b-font);opacity:1;transition:opacity .35s ease}
+      html[data-theme=dark] #ao-boot{--b-bg:#191b27;--b-ink:#eeedf7;--b-mute:#a9a6c2;--b-acc:#ff8f63;--b-track:#2b2e43}
+      html[data-theme=terminal] #ao-boot{--b-bg:#030603;--b-ink:#33ff66;--b-mute:#22c04f;--b-acc:#66ff99;--b-track:#06240e;--b-font:'Cascadia Mono',ui-monospace,Menlo,Consolas,monospace;--b-r:0}
+      html[data-theme=clean-light] #ao-boot{--b-bg:#fff;--b-ink:#1f1f1f;--b-mute:#616161;--b-acc:#005fb8;--b-track:#e5e5e5;--b-font:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif}
+      html[data-theme=clean-dark] #ao-boot{--b-bg:#1e1e1e;--b-ink:#ccc;--b-mute:#9d9d9d;--b-acc:#0078d4;--b-track:#3c3c3c;--b-font:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif}
+      #ao-boot[hidden]{display:none}
+      #ao-boot.aob-out{opacity:0;pointer-events:none}
+      #ao-boot .aob-card{display:flex;flex-direction:column;align-items:center;gap:12px;width:min(360px,100%);text-align:center}
+      #ao-boot .aob-spin{width:34px;height:34px;border:4px solid var(--b-track);border-top-color:var(--b-acc);border-radius:50%;animation:aob-spin .9s linear infinite}
+      html[data-theme=terminal] #ao-boot .aob-spin{border-radius:0}
+      #ao-boot .aob-title{margin:0;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+      #ao-boot .aob-bar{width:100%;height:6px;border-radius:var(--b-r);background:var(--b-track);overflow:hidden}
+      html[data-theme^=clean] #ao-boot .aob-bar{height:3px}
+      #ao-boot .aob-bar i{display:block;width:0;height:100%;background:var(--b-acc);transition:width .3s ease}
+      #ao-boot .aob-step{margin:0;min-height:1.3em;color:var(--b-mute);font-size:13px}
+      #ao-boot .aob-t-restart,#ao-boot.aob-restart .aob-t-load{display:none}
+      #ao-boot.aob-restart .aob-t-restart{display:inline}
+      #ao-boot.aob-restart .aob-bar i{width:30%!important;animation:aob-slide 1.4s ease-in-out infinite}
+      @keyframes aob-spin{to{transform:rotate(360deg)}}
+      @keyframes aob-slide{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}
+      @media (prefers-reduced-motion:reduce){#ao-boot,#ao-boot .aob-bar i{transition:none}#ao-boot .aob-spin{animation:none;border-right-color:var(--b-acc)}#ao-boot.aob-restart .aob-bar i{animation:none}}
+    </style>
   </head>
   <body class="lite pixel">
+    <div id="ao-boot" role="status" aria-live="polite" aria-busy="true">
+      <div class="aob-card">
+        <div class="aob-spin" aria-hidden="true"></div>
+        <p class="aob-title"><span class="aob-t-load">Loading Mx Office… <span class="aob-pct">0</span> %</span><span class="aob-t-restart">Mx Office is restarting… reconnecting</span></p>
+        <div class="aob-bar" role="progressbar" aria-label="Loading Mx Office" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+        <p class="aob-step">Loading the page…</p>
+      </div>
+    </div>
+    <script>(function(){var S=["bundle","session","socket","data","view"],L={bundle:"Loading the page…",session:"Checking your sign-in…",socket:"Connecting to the office…",data:"Getting the office’s data…",view:"Drawing the page…"},d={},el=document.getElementById("ao-boot"),gone=0,downT,polling=0;function q(s){return el.querySelector(s)}function draw(){var n=0,nx,i;for(i=0;i<S.length;i++){if(d[S[i]])n++;else if(!nx)nx=S[i]}var p=Math.floor(n/S.length*100);q(".aob-pct").textContent=p;q(".aob-bar").setAttribute("aria-valuenow",p);q(".aob-bar i").style.width=p+"%";if(!el.classList.contains("aob-restart"))q(".aob-step").textContent=nx?L[nx]:""}function restart(on){el.classList.toggle("aob-restart",!!on);if(on)q(".aob-step").textContent="Trying again every few seconds…";else draw()}function show(){gone=0;el.hidden=false;el.classList.remove("aob-out");el.setAttribute("aria-busy","true")}function hide(){gone=1;el.classList.add("aob-out");el.removeAttribute("aria-busy");setTimeout(function(){if(gone)el.hidden=true},400)}function poll(){if(polling)return;polling=1;(function go(){fetch("/api/health",{cache:"no-store"}).then(function(r){if(r.ok)location.reload();else setTimeout(go,1500)},function(){setTimeout(go,1500)})})()}window.__aoBoot={step:function(s){if(s==="socket")clearTimeout(downT);if(d[s])return;d[s]=1;if(s!=="bundle"&&s!=="session")restart(0);draw();if(s==="view")hide()},down:function(){if(!gone){if(d.bundle)restart(1);return}clearTimeout(downT);downT=setTimeout(function(){d.socket=d.data=d.view=0;show();restart(1)},2000)},shown:function(){return!gone}};addEventListener("error",function(e){var t=e.target;if(t&&t.tagName==="SCRIPT"&&!d.bundle){restart(1);poll()}},true);setTimeout(function(){if(d.bundle)return;fetch("/api/health",{cache:"no-store"}).then(function(r){if(!r.ok){restart(1);poll()}else if(!d.bundle)q(".aob-step").textContent="Still loading… (a slow connection)"},function(){restart(1);poll()})},12000)})()</script>
     <!-- The 2D view (pixel.ts): the floor from above in pixel art, every worker at its desk. -->
     <header class="lite-bar">
       <a id="to-home" class="btn" href="/home" title="Home: every project, and the office's statistics" aria-label="Home">🏠</a>
