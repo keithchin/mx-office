@@ -102,7 +102,8 @@ export function headlineOf(r: RunResult | undefined, code: number | null): { sta
   if (!r) return { status: 'error', headline: code === null ? 'Stopped before it wrote a result' : `Ended (exit ${code}) without a result` };
   if (r.error) return { status: 'error', headline: r.error.slice(0, 200) };
   const status = r.ok ? 'pass' : 'fail';
-  if (r.views?.length) return { status, headline: `${r.views.filter((v) => v.ok).length}/${r.views.length} views within budget` };
+  const stepsLine = r.steps?.length ? `${r.steps.filter((s) => s.ok).length}/${r.steps.length} steps passed` : '';
+  if (r.views?.length) return { status, headline: `${r.views.filter((v) => v.ok).length}/${r.views.length} views within budget${stepsLine ? `, ${stepsLine}` : ''}` };
   if (r.steps?.length) return { status, headline: `${r.steps.filter((s) => s.ok).length}/${r.steps.length} steps passed` };
   if (r.counts) return { status, headline: `${r.counts.pass} pass, ${r.counts.fail} fail${r.counts.skip ? `, ${r.counts.skip} skipped` : ''}` };
   return { status, headline: r.ok ? 'Passed' : (r.failures?.[0]?.slice(0, 200) ?? 'Failed') };

@@ -3,7 +3,7 @@
 // plain .mjs, so this file is their contract, not their import.
 
 /** The suites the Test Mode page can show and start. */
-export const TEST_SUITES = ['unit', 'pages', 'journey', 'command-center'] as const;
+export const TEST_SUITES = ['unit', 'perf-quick', 'pages', 'journey', 'command-center'] as const;
 export type TestSuite = (typeof TEST_SUITES)[number];
 
 export const SUITE_LABEL: Record<TestSuite, string> = {
@@ -11,6 +11,7 @@ export const SUITE_LABEL: Record<TestSuite, string> = {
   pages: 'Page responsiveness',
   journey: 'End-to-end journey',
   'command-center': 'Command Center check',
+  'perf-quick': 'Quick performance check',
 };
 
 /**

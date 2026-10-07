@@ -27,6 +27,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   per file and on the whole run, so a file that hangs is stopped and named instead of holding the suite
   up. `npm run test:one <file>` runs one file with node's own runner.
 
+### New
+- **`npm run test:perf` and `npm run test:perf:quick`**: the performance guard from a terminal. The quick
+  check (the main views on the big test office with a short soak, three project switches, then the
+  end-to-end journey; about four minutes) is what to run, with `npm test`, before committing a change to
+  the pages or the server. The Test Mode page has it as **Quick performance check**, and its **Unit
+  tests** run `npm test` itself, every file included.
+
 ## 2026-10-07 · release 17 (`089e759`)
 
 ### New
