@@ -7,6 +7,8 @@ import type { WorkerInfo } from '../../shared/protocol.js';
 import { agentKey, type AgentPreview, type ResumeAction, type ResumePreview } from '../../shared/project-run.js';
 import { teamFromLabels } from '../../shared/roster/card-team.js';
 import { ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
+import { coveredBy } from '../../shared/roster/coverage.js';
+import { managerRole } from '../roster/coverage.js';
 import { isAsleepStatus } from '../roster/bench.js';
 import { assess, okProbe } from './safety.js';
 import { wakeOrder } from './order.js';
@@ -34,20 +36,23 @@ export function factsFor(deps: RunDeps, f: RunFloor, w: WorkerInfo | undefined, 
     facts.held = roster.delivery.heldFor(w.id);
     facts.cutOff = f.cutOff(w.id);
   } else if (role) facts.owed = roster.escalations.owed(f.team, role).lines;
-  if (role === 'pm') facts.outbox = [...d.outbox.escalations, ...d.outbox.decisions, ...d.outbox.news];
+  // Whoever covers Management is owed the Coordinator's relays (and, unless it is the Coordinator, its own notes).
+  const manager = managerRole(d);
+  if (role === manager) facts.outbox = [...d.outbox.escalations, ...d.outbox.decisions, ...d.outbox.news, ...(role !== 'pm' ? (d.outbox.leads[role]?.lines ?? []) : [])];
   else if (role) facts.outbox = d.outbox.leads[role]?.lines ?? [];
   const prs = prsOf(f, w);
   facts.failingPrs = prs.filter((p) => p.state === 'OPEN' && p.checks === 'fail').map((p) => ({ number: p.number, title: p.title }));
   const open = f.issues().filter((i) => i.state === 'OPEN');
   if (role && role !== 'pm') {
-    const team = ROLE_BY_ID.get(role)!.team;
-    // Its team's open issues: assigned to someone, or to nobody yet (its Lead's to pick up). Never another team's.
-    facts.issues = open.filter((i) => teamFromLabels(i.labels) === team).map((i) => ({ number: i.number, title: i.title, ...(i.assignees.length || i.taken ? {} : { unassigned: true }) }));
+    // The open issues of every team it covers: assigned to someone, or to nobody yet (its to pick up). Never another team's.
+    const teams = coveredBy(d.coverage, role);
+    if (!teams.length) teams.push(ROLE_BY_ID.get(role)!.team);
+    facts.issues = open.filter((i) => teams.includes(teamFromLabels(i.labels)!)).map((i) => ({ number: i.number, title: i.title, ...(i.assignees.length || i.taken ? {} : { unassigned: true }) }));
   } else if (!role && w) {
     const refs = issueRefs(w.title, w.prompt, w.task?.summary);
     facts.issues = open.filter((i) => refs.includes(i.number)).map((i) => ({ number: i.number, title: i.title }));
   }
-  if (role === 'pm') {
+  if (role === manager) {
     const s = d.standups[d.standups.length - 1];
     if (s?.status === 'compiled' && !s.savedTo) facts.standup = s.id;
   }

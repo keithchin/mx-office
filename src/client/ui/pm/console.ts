@@ -23,6 +23,7 @@ import { PmTerminal } from './term';
 import { ChatView } from './chat/view';
 import { PMC_VIEWS, PMC_VIEW_LABEL, onPmcView, savePmcView, savedPmcView, type PmcView } from './chat/pref';
 import './console.css';
+import { managerIn, shapeText } from '../roster/coverage';
 
 export interface PmConsoleDeps {
   net: Net;
@@ -168,7 +169,8 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     chat.show({ workerId: watching, who: { name: pm?.name ?? w?.name ?? 'Project Coordinator', icon: pm?.icon ?? '🧭', color: w?.color }, status: w?.status, activity: w?.activity, convo: store.convo.get(watching) });
   }
 
-  const pmOf = (r: RosterView | undefined): MemberView | undefined => r?.members.find((m) => m.role === 'pm');
+  // Whoever covers Management (shared/roster/coverage.ts): the Project Coordinator, or the Chief Analyst / Solo Lead.
+  const pmOf = (r: RosterView | undefined): MemberView | undefined => managerIn(r);
   const worker = (pm: MemberView | undefined) => (pm?.workerId ? store.workers.get(pm.workerId) : undefined);
 
   // ---- The team, from the office ------------------------------------------------------------------
@@ -204,12 +206,12 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
   function hire(pm: MemberView) {
     askText(
       { title: `Hire ${pm.name}, the ${pm.title}`, label: 'A task to start on (optional): it reads its Playbook and journal first', long: true, ok: '🤝 Hire', optional: true },
-      (task) => void run('hire', { role: 'pm', ...(task ? { task } : {}) }),
+      (task) => void run('hire', { role: pm.role, ...(task ? { task } : {}) }),
     );
   }
   function wake(pm: MemberView) {
     // An admin wakes it through the team (which keeps the record); anyone can carry its session on.
-    if (roster?.admin) void run('hire', { role: 'pm' });
+    if (roster?.admin) void run('hire', { role: pm.role });
     else if (pm.workerId) net.send({ t: 'worker.resume', workerId: pm.workerId });
   }
 
@@ -264,7 +266,7 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     const facts = [view.model ? `🧠 ${view.model}` : null, view.cost !== undefined ? `💵 $${view.cost.toFixed(2)}` : null].filter(Boolean).join(' · ');
     head.replaceChildren(
       h('span.pmc-icon', { 'aria-hidden': 'true' }, pm?.icon ?? '🧭'),
-      h('span.pmc-who', {}, h('span.pmc-name', {}, pm?.name ?? 'Project Coordinator'), h('span.pmc-role', {}, pm ? `${pm.title}${facts ? ` · ${facts}` : ''}` : 'Project console')),
+      h('span.pmc-who', {}, h('span.pmc-name', {}, pm?.name ?? 'Project Coordinator'), h('span.pmc-role', {}, pm ? `${pm.title}${roster ? ` · ${shapeText(roster)}` : ''}${facts ? ` · ${facts}` : ''}` : 'Project console')),
       roster ? h('span.pmc-pill', { class: `pmc-${view.state}` }, PM_STATE_TEXT[view.state]) : '',
       roster && !view.hire ? modeToggle : '',
       view.canWake && pm ? h('button.btn.small.pmc-wake', { type: 'button', title: `Wake ${pm.name}: its session carries on`, onclick: () => wake(pm) }, '⏰ Wake') : '',
@@ -293,12 +295,12 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     }
     empty.replaceChildren(
       h('div.pmc-empty-ico', { 'aria-hidden': 'true' }, '🧭'),
-      h('p.pmc-empty-h', {}, 'No Project Coordinator yet'),
-      h('p.pmc-dim', {}, 'The Project Coordinator is the agent that keeps the plan, coordinates the four Leads, runs the standup and relays their escalations to you, the Project Manager. Hire one and ask it anything from here: a status update, what is blocking, what to do next.'),
+      h('p.pmc-empty-h', {}, `No ${pm.title} yet`),
+      h('p.pmc-dim', {}, pm.role === 'pm' ? 'The Project Coordinator is the agent that keeps the plan, coordinates the four Leads, runs the standup and relays their escalations to you, the Project Manager. Hire one and ask it anything from here: a status update, what is blocking, what to do next.' : `On this team the ${pm.title} covers Management: it runs the standup and hears the escalations. Hire it and ask it anything from here: a status update, what is blocking, what to do next.`),
       paused,
       admin
-        ? h('button.btn.primary.pmc-hire', { type: 'button', title: `Hire ${pm.name}: a fresh session from its Playbook`, onclick: () => hire(pm) }, '🤝 Hire Project Coordinator')
-        : h('p.pmc-dim', {}, 'Ask the Project Manager (an admin) to hire the Project Coordinator.'),
+        ? h('button.btn.primary.pmc-hire', { type: 'button', title: `Hire ${pm.name}: a fresh session from its Playbook`, onclick: () => hire(pm) }, `🤝 Hire ${pm.title}`)
+        : h('p.pmc-dim', {}, `Ask the Project Manager (an admin) to hire the ${pm.title}.`),
     );
   }
 
@@ -318,7 +320,11 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     drawEsc();
     screenNote.textContent = view.live ? '' : view.state === 'asleep' ? `💤 ${pm?.name ?? 'The Project Coordinator'} is asleep` : view.workerId ? '' : `${pm?.name ?? 'The Project Coordinator'} isn't at a desk on this floor`;
     screenNote.hidden = !screenNote.textContent;
-    hint.textContent = view.hint ?? '';
+    // On a Solo or Startup team the console talks to whoever covers Management: its name, not "the Project Coordinator".
+    const who = pm && pm.role !== 'pm' ? pm.name : undefined;
+    hint.textContent = who ? (view.hint ?? '').replace('The Project Coordinator', who) : (view.hint ?? '');
+    box.placeholder = `Ask ${who ?? 'the Project Coordinator'}…`;
+    box.setAttribute('aria-label', `Ask ${who ?? 'the Project Coordinator'}`);
     hint.hidden = !view.hint;
     hint.classList.toggle('bad', view.state === 'needs-you');
     box.disabled = !view.canPrompt;

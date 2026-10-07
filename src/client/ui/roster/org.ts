@@ -11,6 +11,9 @@ import { act } from './api';
 import { askText } from './ask';
 import { openSkills } from './skills';
 import { subagentList } from './subagents';
+import { coverageOf, coverageTable, managerIn } from './coverage';
+import { subagentDefsOf } from '../../../shared/roster/coverage';
+import { TEAM_META } from '../../../shared/roster/card-team';
 
 export const STATUS_TEXT: Record<MemberStatus, string> = {
   'not-hired': 'Not hired',
@@ -38,6 +41,8 @@ export interface OrgDeps {
 /** One member's card (a team page shows its Lead with it too, ui/teams/page.ts). */
 export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLElement {
   const role = ROLE_BY_ID.get(m.role)!;
+  const subs = subagentDefsOf(coverageOf(v), m.role);
+  const also = (m.covers ?? []).filter((t) => t !== m.team);
   const run = (action: string, extra: Record<string, unknown> = {}) => void act(v.floor, action, { role: m.role, ...extra }).then((r) => r && deps.redraw(r));
   const hired = !!m.workerId;
   const canHire = !hired || m.status === 'asleep';
@@ -60,9 +65,10 @@ export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLEle
       h('span.ro-who', {}, h('span.ro-name', {}, m.name), h('span.ro-title', {}, m.title)),
       h('span.ro-pill', { class: `ro-pill-${m.status}` }, STATUS_TEXT[m.status]),
     ),
+    also.length ? h('p.ro-covers', {}, '🧩 Also covers ', also.map((t) => `${TEAM_META[t].icon} ${TEAM_META[t].name}`).join(', ')) : null,
     m.activity ? h('p.ro-activity', {}, m.activity) : null,
     h('p.ro-facts', {}, facts.join(' · ')),
-    role.subagents.length ? (subagentList(v, m.role, deps.redraw) ?? h('p.ro-subs', {}, '👥 ', role.subagents.map((s) => s.title + 's').join(', '))) : h('p.ro-subs', {}, '👥 Coordinates the Leads'),
+    subs.length ? (subagentList(v, m.role, deps.redraw) ?? h('p.ro-subs', {}, '👥 ', subs.map((s) => s.title + 's').join(', '))) : h('p.ro-subs', {}, '👥 Coordinates the Leads'),
     h(
       'div.ro-journal',
       {},
@@ -96,7 +102,15 @@ export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLEle
 }
 
 export function orgChart(v: RosterView, deps: OrgDeps): HTMLElement {
-  const pm = v.members.find((m) => m.role === 'pm')!;
-  const leads = v.members.filter((m) => m.role !== 'pm');
-  return h('section.ro-org', { 'aria-label': 'Org chart' }, h('div.ro-top', {}, memberCard(v, pm, deps), jeffCard(v.floor)), h('div.ro-line', { 'aria-hidden': 'true' }), h('div.ro-leads', {}, ...leads.map((m) => memberCard(v, m, deps))));
+  // On top, whoever covers Management: the Coordinator, or the Chief Analyst / Solo Lead on a smaller team.
+  const pm = managerIn(v) ?? v.members[0];
+  const leads = v.members.filter((m) => m !== pm);
+  return h(
+    'section.ro-org',
+    { 'aria-label': 'Org chart' },
+    h('div.ro-top', {}, pm ? memberCard(v, pm, deps) : null, jeffCard(v.floor)),
+    leads.length ? h('div.ro-line', { 'aria-hidden': 'true' }) : null,
+    leads.length ? h('div.ro-leads', {}, ...leads.map((m) => memberCard(v, m, deps))) : null,
+    coverageTable(v) ?? null,
+  );
 }

@@ -69,12 +69,35 @@ export const isSubagentOp = (v: unknown): v is SubagentOp => typeof v === 'strin
 
 const craft = (role: RoleId): SkillDef[] => ROLE_BY_ID.get(role)!.toolkitSkills.map((s) => ({ key: `craft:${s}`, group: 'craft', title: s, does: `The toolkit's ${s} skill` }));
 
-/** Every skill a role has: managing up, managing down (its subagents, or the Leads), its craft. */
-export function skillsFor(role: RoleId): SkillDef[] {
-  return [...UP, ...(role === 'pm' ? DOWN_PM : DOWN_LEAD), ...craft(role)];
+/** How strict a gate is: when a member covers several roles, the strictest of theirs wins. */
+const STRICT: Record<Gate, number> = { ask: 3, propose: 2, tell: 1, fyi: 0 };
+
+/**
+ * Every skill a role has: managing up, managing down (its subagents, or the Leads), its craft. `also`:
+ * the roles whose teams it covers besides its own (shared/roster/coverage.ts): it gets the union of their
+ * skills, a skill both have keeps the strictest gate at each level, and a generalist (the Solo Lead) keeps
+ * its own short craft list. Empty (every team covering itself): exactly the role's own.
+ */
+export function skillsFor(role: RoleId, also: readonly RoleId[] = []): SkillDef[] {
+  const own = (r: RoleId) => [...UP, ...(r === 'pm' ? DOWN_PM : DOWN_LEAD), ...(r === role || !ROLE_BY_ID.get(role)?.generalist ? craft(r) : [])];
+  const out: SkillDef[] = [];
+  const at = new Map<string, number>();
+  for (const r of [role, ...also.filter((x) => x !== role)]) {
+    for (const s of own(r)) {
+      const i = at.get(s.key);
+      if (i === undefined) {
+        at.set(s.key, out.length);
+        out.push(s);
+        continue;
+      }
+      const was = out[i];
+      if (s.gates && was.gates) out[i] = { ...was, gates: was.gates.map((g, n) => (STRICT[s.gates![n]] > STRICT[g] ? s.gates![n] : g)) as unknown as SkillDef['gates'] };
+    }
+  }
+  return out;
 }
 
-export const skillOf = (role: RoleId, key: string): SkillDef | undefined => skillsFor(role).find((s) => s.key === key);
+export const skillOf = (role: RoleId, key: string, also: readonly RoleId[] = []): SkillDef | undefined => skillsFor(role, also).find((s) => s.key === key);
 
 /** What the Project Manager changed of one member's skill. */
 export interface SkillOverride {
@@ -100,8 +123,8 @@ export interface SkillView {
 }
 
 /** A member's skills as they stand: the defaults for `level` with its overrides on top. */
-export function effectiveSkills(role: RoleId, level: AutonomyLevel, overrides: SkillOverrides = {}): SkillView[] {
-  return skillsFor(role).map((s) => {
+export function effectiveSkills(role: RoleId, level: AutonomyLevel, overrides: SkillOverrides = {}, also: readonly RoleId[] = []): SkillView[] {
+  return skillsFor(role, also).map((s) => {
     const o = overrides[s.key] ?? {};
     const def = defaultGate(s, level);
     const gate = def && o.gate ? o.gate : def;
@@ -110,14 +133,14 @@ export function effectiveSkills(role: RoleId, level: AutonomyLevel, overrides: S
 }
 
 /** One member's skill, or undefined when the role doesn't have it. */
-export const effectiveSkill = (role: RoleId, level: AutonomyLevel, key: string, overrides?: SkillOverrides) => effectiveSkills(role, level, overrides).find((s) => s.key === key);
+export const effectiveSkill = (role: RoleId, level: AutonomyLevel, key: string, overrides?: SkillOverrides, also: readonly RoleId[] = []) => effectiveSkills(role, level, overrides, also).find((s) => s.key === key);
 
 /** Overrides from what was saved or sent: only the role's skills, only real values; a no-op override is dropped. */
-export function cleanOverrides(role: RoleId, raw: unknown): SkillOverrides {
+export function cleanOverrides(role: RoleId, raw: unknown, also: readonly RoleId[] = []): SkillOverrides {
   const out: SkillOverrides = {};
   if (!raw || typeof raw !== 'object') return out;
   for (const [key, v] of Object.entries(raw as Record<string, unknown>)) {
-    const s = skillOf(role, key);
+    const s = skillOf(role, key, also);
     if (!s || !v || typeof v !== 'object') continue;
     const o = v as SkillOverride;
     const clean: SkillOverride = {};
@@ -129,8 +152,8 @@ export function cleanOverrides(role: RoleId, raw: unknown): SkillOverrides {
 }
 
 /** The Playbook's skills section: each enabled skill, with its gate in plain words. */
-export function skillsBrief(role: RoleId, level: AutonomyLevel, overrides: SkillOverrides = {}): string[] {
-  const list = effectiveSkills(role, level, overrides);
+export function skillsBrief(role: RoleId, level: AutonomyLevel, overrides: SkillOverrides = {}, also: readonly RoleId[] = []): string[] {
+  const list = effectiveSkills(role, level, overrides, also);
   const line = (s: SkillView) => `- **${s.title}** — ${s.gate ? GATE_WORDS[s.gate] : 'always allowed'}${s.how ? ` (\`${s.how}\`)` : ''}. ${s.does}.`;
   const group = (g: SkillGroup) => list.filter((s) => s.group === g && s.enabled && g !== 'craft');
   const off = list.filter((s) => !s.enabled && s.group !== 'craft');
@@ -149,5 +172,5 @@ export function skillsBrief(role: RoleId, level: AutonomyLevel, overrides: Skill
 }
 
 /** The craft skills a member has on (the toolkit section of its Playbook lists only these). */
-export const craftOn = (role: RoleId, overrides: SkillOverrides = {}): string[] =>
-  ROLE_BY_ID.get(role)!.toolkitSkills.filter((s) => overrides[`craft:${s}`]?.enabled !== false);
+export const craftOn = (role: RoleId, overrides: SkillOverrides = {}, also: readonly RoleId[] = []): string[] =>
+  skillsFor(role, also).filter((s) => s.group === 'craft' && overrides[s.key]?.enabled !== false).map((s) => s.title);

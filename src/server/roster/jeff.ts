@@ -16,6 +16,7 @@ import type { GhIssue, WorkerInfo } from '../../shared/protocol.js';
 import { summarize, type JeffMode, type JeffStatus, type JudgeKind, type JudgeRow, type JudgeSummary } from '../../shared/judge.js';
 import { TEAM_IDS, TEAM_META, leadOf, teamFromLabels, teamLabel } from '../../shared/roster/card-team.js';
 import type { TeamId } from '../../shared/roster/roles.js';
+import { coveredNote } from '../../shared/roster/coverage.js';
 import { JudgeLog } from '../judge/log.js';
 import { clipState, type Questions, type Verdict } from '../judge/pure.js';
 import type { Roster } from './index.js';
@@ -176,11 +177,14 @@ export class Jeff {
     const pri = v.answers.priority?.type === 'score' ? v.answers.priority.level?.split(':')[0] : undefined;
     const rule = teamFromLabels(it.labels);
     let acted = false;
+    // The label stays the team's; the member who covers it picks it up (its own Lead, or the one covering it).
+    const d = this.roster.data(floor.id);
+    const by = coveredNote(d.coverage, team, (r) => d.members[r].name);
     if (mode === 'on' && !rule && conf >= TRIAGE_AT && floor.labelIssue) {
       const err = await floor.labelIssue(it.number, team);
       if (!err) {
         acted = true;
-        floor.activity?.(`🧑‍⚖️ Jeff (Router) labelled #${it.number} ${teamLabel(team)}`);
+        floor.activity?.(`🧑‍⚖️ Jeff (Router) labelled #${it.number} ${teamLabel(team)}${by ? ` (${by})` : ''}`);
       } else if (err !== 'skipped') floor.toast(`Jeff couldn't label #${it.number} ${teamLabel(team)}: ${err}`, 'warn');
     }
     this.record(floor, v, {
@@ -192,7 +196,7 @@ export class Jeff {
       agree: rule ? rule === team : null,
       acted,
       text: clipState(text, TEXT_LOGGED, 'head'),
-      verdict: `→ ${TEAM_META[team].name}`,
+      verdict: `→ ${TEAM_META[team].name}${by ? ` · ${by}` : ''}`,
     });
   }
 

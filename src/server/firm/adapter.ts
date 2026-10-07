@@ -119,6 +119,7 @@ function firmFloor(ctx: Ctx, floor: Floor): FirmFloor {
     repo: floor.def.repo,
     branch: floor.project.branch,
     lead: (role) => leadOf(ctx, floor, role),
+    coverOf: (team) => rosterOf(ctx).data(floor.id).coverage[team],
     // Through the roster's delivery: never typed into a question open in the Lead's terminal, and not past
     // the floor's spend cap (an interview is the office's prompt): refused, the question stays pending.
     deliver: (id, text, asleep) => {

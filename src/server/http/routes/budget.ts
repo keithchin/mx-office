@@ -9,6 +9,7 @@ import { firmIfMade } from '../../firm/adapter.js';
 import { spentOf } from '../../../shared/firm/engagement.js';
 import { cleanChoice, levelCards } from '../../../shared/budget/levels.js';
 import { generatePlan, planTotal } from '../../../shared/budget/plan.js';
+import { shapeCards } from '../../../shared/budget/shape-cards.js';
 import { ENTRY_MODES, type EntryMode } from '../../../shared/wizard.js';
 import type { Ctx } from '../../office/context.js';
 import type { FirmForecast } from '../../../shared/budget/types.js';
@@ -171,7 +172,9 @@ export const budgetRoutes = {
       const plan = fl ? numbersOf(b, { id: fl.id, name: fl.def.name, dir: fl.dir }).plan : generatePlan({ tier, entry, history, start: b.today, now: Date.now() });
       const estimate = planTotal(plan);
       const days = plan.lines.reduce((n, l) => n + l.days, 0);
-      return send(res, 200, { tier, entry, estimate, days, basis: plan.basis, levels: levelCards(estimate, days), threshold: b.store.office().threshold, fx: b.fx() });
+      // The new-project wizard's shape cards (Solo, Startup, Enterprise), each with its Lean / Balanced / Fast budgets.
+      const shapes = fl ? undefined : shapeCards(tier, entry, history, b.today, Date.now());
+      return send(res, 200, { tier, entry, estimate, days, basis: plan.basis, levels: levelCards(estimate, days), threshold: b.store.office().threshold, fx: b.fx(), ...(shapes ? { shapes } : {}) });
     },
   },
 } satisfies Record<string, Route>;

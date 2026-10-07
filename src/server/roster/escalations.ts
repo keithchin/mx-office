@@ -16,6 +16,7 @@ import { isAsleepStatus } from './bench.js';
 import { mayType } from './deliver.js';
 import { sameAsk } from './jeff-ask.js';
 import { coordinatorIs, queueOnce } from './relays.js';
+import { managerRole } from './coverage.js';
 import { SameAsk } from './jeff-same.js';
 import type { Roster } from './index.js';
 import { escalationAnswerPrompt, escalationsToCoordinatorPrompt } from './prompts.js';
@@ -140,7 +141,7 @@ export class Escalations {
     if (byOffice && !e.fyi) floor.toast(`${URGENCY_ICON[e.urgency]} ${who.by} is waiting on you: ${e.title} — answer it in the approvals and the office brings ${who.by} back with your answer`, 'warn');
     if (loud) floor.toast(`${URGENCY_ICON[e.urgency]} ${e.urgency === 'critical' ? 'Critical' : 'Urgent'} escalation from ${who.by}: ${e.title} — answer it on the project console (🎛️ Command Center)`, 'warn');
     // The Coordinator relays and summarises: it isn't told about its own, or about FYIs (they're on the standup page).
-    if (role !== 'pm' && !e.fyi) this.tellCoordinator(floor, e);
+    if (role !== managerRole(d) && !e.fyi) this.tellCoordinator(floor, e);
     this.roster.touch(floor);
     if (loud) floor.changed({ id: e.id, urgency: e.urgency as 'urgent' | 'critical', title: `${URGENCY_ICON[e.urgency]} ${who.by} needs the Project Manager`, body: e.title });
     this.roster.jeff.priority.kick(floor);
@@ -343,7 +344,7 @@ export class Escalations {
     d.outbox.escalations = [];
     this.roster.touch(floor, true);
     if (where === 'none' || !open.length) return false;
-    const w = this.roster.workerOf(floor, d.members.pm)!;
+    const w = this.roster.workerOf(floor, d.members[managerRole(d)])!;
     // Refused after all (it just went busy): they stay for its next turn.
     if (this.roster.delivery.prompt(floor, w, escalationsToCoordinatorPrompt(open))) {
       d.outbox.escalations = open.map((e) => e.id);

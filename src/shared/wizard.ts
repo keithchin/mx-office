@@ -3,6 +3,7 @@
 // Node imports, so the wizard page and the server agree on what a valid project name is.
 
 import type { BudgetChoice } from './budget/levels.js';
+import type { TeamShape } from './roster/coverage.js';
 
 /** How a project enters the toolkit's pipeline (the runbook's "Entry Modes"), plus the no-pipeline assurance shelf. */
 export const ENTRY_MODES = ['greenfield', 'requirements-driven', 'existing-app-change', 'migration', 'assurance'] as const;
@@ -83,6 +84,7 @@ export const PROJECT_ROLES = [
   { id: 'lead-developer', label: 'Lead Developer', icon: '🧑‍💻' },
   { id: 'lead-tester', label: 'Lead Tester', icon: '🧪' },
   { id: 'chief-analyst', label: 'Chief Analyst / Consultant', icon: '🧭' },
+  { id: 'solo-lead', label: 'Solo Lead (covers every team)', icon: '🧑‍🚀' },
 ] as const;
 export type ProjectRole = (typeof PROJECT_ROLES)[number]['id'];
 
@@ -155,6 +157,13 @@ export interface ProjectPlan {
   sprintrAppId?: string;
   /** The Budget step: a level (Lean, Balanced, Fast) or Manual, the total and the settings it brings (shared/budget/levels.ts). */
   budget?: BudgetChoice;
+  /**
+   * The team's shape (shared/roster/coverage.ts), from the Team & budget page: the team step sets it on the
+   * floor before it hires `roles`. Missing (a plan from before shapes): what `roles` add up to (shapeForRoles).
+   */
+  shape?: TeamShape;
+  /** The page's shape cards were set aside for picking roles by hand (Customize). */
+  customTeam?: boolean;
 }
 
 /** The setup, a step at a time. Each step checks what's already done first, so running it again is safe. */

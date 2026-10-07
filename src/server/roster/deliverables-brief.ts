@@ -15,7 +15,7 @@ const TOOLING = [
   '- Python is `py` (openpyxl, pandas, matplotlib, pypdf, PIL); not python-docx or python-pptx, and `python` is the Store stub. Diagrams are Mermaid blocks in Markdown (no mmdc here).',
 ];
 
-const LISTS: Record<RoleId, string[]> = {
+const LISTS: Partial<Record<RoleId, string[]>> = {
   'chief-analyst': [
     '- Stage 0: `triage.md` (project root) + `analysis/triage.html` (`bin/triage-report.sh`), `analysis/source-sufficiency.html`; `assessment.md` when the runbook asks for it.',
     '- Stage 1: `analysis/source-ledger.html` (`bin/source-ledger.sh report`), the knowledge base under `analysis/knowledge-base/` with `extraction-report.html` (`bin/extraction-report.sh`).',
@@ -50,14 +50,25 @@ const DRAFTS: Partial<Record<RoleId, string>> = {
   'lead-tester': 'a test-plan outline (`tests/test-plan-draft.md`: the journeys you expect and how each will be proven, headings and bullets only)',
 };
 
-/** The Playbook's "Your deliverables" section for `roleId`; `earlyDrafts` adds the early-drafts rule for Design, Development and Testing. */
-export function deliverablesBrief(roleId: RoleId, earlyDrafts: boolean): string[] {
+/**
+ * The Playbook's "Your deliverables" section for `roleId`; `earlyDrafts` adds the early-drafts rule for Design,
+ * Development and Testing. `also`: the roles whose teams it covers besides its own (shared/roster/coverage.ts),
+ * whose deliverables are its too, each under its team's heading.
+ */
+export function deliverablesBrief(roleId: RoleId, earlyDrafts: boolean, also: readonly RoleId[] = []): string[] {
   const role = ROLE_BY_ID.get(roleId)!;
+  const own = LISTS[roleId] ?? [];
   const out = [
     '## Your deliverables',
     'The office\'s 📦 Deliverables view (on your team\'s page) checks these paths per stage, so write them exactly there. Keep them on your branch and open a pull request for them ' +
       `(\`gh pr create --label ${teamLabel(role.team)}\`): the view shows branch work as "not merged", and only what lands on main counts. The toolkit skills named say how; don't copy them here.`,
-    ...LISTS[roleId],
+    ...own,
+    ...also.flatMap((r) => {
+      const team = ROLE_BY_ID.get(r)!.team;
+      // Its files only: where its other reports go is said in the heading, to keep the Playbook short.
+      const files = (LISTS[r] ?? []).filter((l) => !/^- (Any other report|Your other reports|Reports:)/.test(l));
+      return [`- **${team[0].toUpperCase()}${team.slice(1)}** (you cover it; PRs \`--label ${teamLabel(team)}\`, other reports in \`reports/${team}/\`):`, ...files.map((l) => `  ${l}`)];
+    }),
     ...TOOLING,
   ];
   const draft = DRAFTS[roleId];

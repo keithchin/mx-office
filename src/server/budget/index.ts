@@ -4,7 +4,7 @@
 // the alerts after spend, puts a budget pause back after a restart, and applies a budget level to the team.
 
 import type { Ctx } from '../office/context.js';
-import type { BudgetAlert } from '../../shared/budget/types.js';
+import type { BudgetAlert, LevelId } from '../../shared/budget/types.js';
 import { LEADS, ROLE_BY_ID, ROLES } from '../../shared/roster/roles.js';
 import { subagentModelAt, type BudgetChoice, type LevelSettings } from '../../shared/budget/levels.js';
 import { analysisOf } from '../analysis/index.js';
@@ -15,6 +15,7 @@ import { onBackgroundSpend } from './meter.js';
 import { BudgetService } from './service.js';
 import { currentStage } from './stage.js';
 import { rankingReport } from '../ranking/index.js';
+import { covers, subagentDefsOf } from '../../shared/roster/coverage.js';
 
 const offices = new WeakMap<object, BudgetService>();
 
@@ -122,6 +123,12 @@ function efficiencyOf(ctx: Ctx, floorId: string): Record<string, number> {
   return v;
 }
 
+/** A floor's budget level when it has a budget (the Team tab's "Solo · Lean" chip); nothing is made for a floor without one. */
+export function levelOf(ctx: Ctx, floorId: string): LevelId | undefined {
+  const b = budgetOf(ctx);
+  return b.store.has(floorId) ? b.store.floor(floorId).settings.level : undefined;
+}
+
 /** The control's office hooks (audit log, toasts) for the routes. */
 export const controlOf = (ctx: Ctx): ControlDeps => controls.get(budgetOf(ctx))!;
 
@@ -136,10 +143,12 @@ export function applyLevelToTeam(ctx: Ctx, floorId: string, s: LevelSettings, by
   const roster = rosterOf(ctx);
   const tf = teamFloor(ctx, floor);
   const problems: string[] = [];
-  for (const lead of LEADS) {
+  const coverage = roster.data(floorId).coverage;
+  // The Leads on this shape's team (all four on an Enterprise team), with the subagents of every team each covers.
+  for (const lead of LEADS.filter((l) => covers(coverage, l.id))) {
     const err = roster.members.setModel(tf, lead.id, s.leadModel, by);
     if (err) problems.push(`${lead.title}: ${err}`);
-    for (const sub of lead.subagents) {
+    for (const sub of subagentDefsOf(coverage, lead.id)) {
       const model = subagentModelAt(s, sub.id, sub.model);
       const rec = roster.data(floorId).subagents[`${lead.id}/${sub.id}`];
       if ((rec?.model ?? sub.model) === model) continue;

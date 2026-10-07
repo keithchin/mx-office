@@ -41,39 +41,61 @@ Then pick the **size tier**: 🐣 **Small** (at most 1 module, 8 screens and 25 
 
 The toolkit's kickoff questions, as a form. Mark each answer **Answered**, **Assumed** or **Unverified**. The wizard fills in three for you: Q1 (entry mode), Q9 (interview mode: **Steering**, every question asked and waited for, the default; **Assist**, questions batched at the gates and small ones assumed; or **Auto**, unattended: nothing blocks and every assumption is recorded. These are the toolkit's `interview-mode.sh` modes, written to `PROJECT.md` as `Interview mode:`) and Q11 (exec approval: auto or ask).
 
-## Page 4: Client & team
+## Page 4: Team and budget
 
-- **Client name(s)** and **Operator(s)**.
-- **Roles to staff**: all five are ticked. The ticked roles are **hired** on the new floor at the end of the setup, each with its fixed name, its Playbook and its role's model (change the model later on the Team tab), so the team is at its desks when you arrive.
-- **Discovery**: open a *Discovery* issue for the Chief Analyst (on by default). With the Chief Analyst on the team, tick **Hand it to the Chief Analyst now** and it is hired with the issue as its first task, on the model you pick in **Chief Analyst's model for Discovery** (Opus by default; its role's own model on the Team tab stays as it is for later hires). Without it, tick **Queue it now for an agent** and pick the agent's model (Opus by default).
+The team and the budget come **after** the intake, so the office can recommend a shape and a level from what you said. There are two dials: the [team shape](../teams-and-agents/team-shapes.md) (Solo, Startup or Enterprise) and the budget level (Lean, Balanced or Fast).
 
-## Page 5: Budget
+**The recommendation.** A box at the top names the recommended shape and level, with why, for example *★ Recommended: Solo · Lean — small tier, greenfield, you said: POC / demo, one module or feature, no integrations must stay, no SME needed*. It reads:
 
-Choose how to trade cost against speed. There are three levels, plus Manual:
+- the **size tier** and the **entry mode**.
+- **Q2**, what drives the project: a POC or demo, a hard date (and whether it's soon), or open-ended.
+- **Q4**, how much it covers: one module, flow or feature, or the whole app (three or more modules).
+- **Q5**, what must stay as it is: nothing, or integrations (three or more is "several").
+- **Q7**, the SME: not needed, available, or slow to answer.
+
+An answer it can't read changes nothing. The rules:
+
+| Shape | When |
+|---|---|
+| 🧑‍🚀 Solo | Assurance only; or a small greenfield or POC project with no integrations to keep. |
+| 🚲 Startup | A small project that's a migration, keeps several integrations or covers the whole app; a small requirements-driven or change project; a standard greenfield or POC project with nothing heavy. |
+| 🏢 Enterprise | A standard project that's a migration, keeps integrations or covers the whole app; any other standard requirements-driven or change project. |
+
+| Level | When |
+|---|---|
+| 🪙 Lean | A POC; or nothing said about the driver on a Solo project. |
+| ⚖️ Balanced | A hard date; open-ended; or nothing said. |
+| 🚀 Fast | A hard date that's soon ("asap", "in three weeks"), unless the SME is slow to answer (agents would only wait faster). |
+
+**The shape cards.** Each of the three cards has a **Lean / Balanced / Fast** switch, its budget at that level (in dollars and the local currency) and the working days it expects. The recommended card is pre-selected and badged **★ Recommended**. Clicking a card picks that shape at the level its switch shows. Each card's estimate is the [plan](../using-the-office/budget.md#the-expected-plan) priced for that shape (see [team shapes in the plan](../using-the-office/budget.md#team-shapes-in-the-plan)) times the level's factor:
+
+| | Lean | Balanced | Fast |
+|---|---|---|---|
+| **Small greenfield app** | | | |
+| 🧑‍🚀 Solo | $60 | $100 | $160 |
+| 🚲 Startup | $90 | $140 | $220 |
+| 🏢 Enterprise | $110 | $170 | $270 |
+| **Small requirements-driven** (like travel-approval) | | | |
+| 🧑‍🚀 Solo | $120 | $180 | $290 |
+| 🚲 Startup | $170 | $270 | $430 |
+| 🏢 Enterprise | $220 | $330 | $530 |
+
+The levels:
 
 | Level | What it sets | Preset budget |
 |---|---|---|
-| 🪙 **Lean**: lowest cost | Leads and Discovery on Sonnet. Subagents on Haiku where the role allows it (the Developer, UI/UX Designer and Business Analyst stay on Sonnet). Early drafts off. Autonomy by stage on (Guided, then Delegated in build). At most 1 subagent at once per Lead. | 0.65 × the plan estimate |
-| ⚖️ **Balanced**: the default | Leads on Sonnet, the Chief Analyst on Opus for Discovery, subagents on Sonnet. Early drafts on. At most 2 subagents at once per Lead. | the plan estimate |
-| 🚀 **Fast**: speed first | Leads on Opus, up to 4 subagents at once per Lead. Early drafts on. Autonomy by stage on (Delegated, then Autonomous). | 1.6 × the plan estimate (Opus rates plus a 15 % margin) |
-| ✍️ **Manual** | You type the budget and pick each setting yourself. | yours |
+| 🪙 **Lean**: lowest cost | Leads and Discovery on Sonnet. Subagents on Haiku where the role allows it (the Developer, UI/UX Designer and Business Analyst stay on Sonnet). Early drafts off. Autonomy by stage on (Guided, then Delegated in build). At most 1 subagent at once per Lead. | 0.65 × the shape's estimate |
+| ⚖️ **Balanced**: the default | Leads on Sonnet, the Chief Analyst on Opus for Discovery, subagents on Sonnet. Early drafts on. At most 2 subagents at once per Lead. | the shape's estimate |
+| 🚀 **Fast**: speed first | Leads on Opus, up to 4 subagents at once per Lead. Early drafts on. Autonomy by stage on (Delegated, then Autonomous). | 1.6 × the shape's estimate (Opus rates plus a 15 % margin) |
 
-Each card shows:
+**Customize** sets the cards aside: tick the roles to staff yourself (the five Enterprise roles and the Solo Lead) and use the full level picker, Manual included (type the budget and pick each setting), with the total, the alert threshold (80 % by default) and auto-pause at 100 %. The ticked roles decide the shape: the Solo Lead makes it Solo, only the Chief Analyst and the Lead Developer make it Startup, anything else Enterprise.
 
-- the preset total budget, in dollars and the local currency.
-- the expected time (`~1.3×`, `~1.0×`, `~0.7×`), as a multiple of Balanced, with working days.
-- what the level changes.
-- the alert threshold.
+When the setup reaches its **Hire the project team** step, it sets the floor's shape and coverage first, then saves the budget and applies the level's models and settings, then hires the shape's roles: the Solo Lead; or the Chief Analyst and the Lead Developer; or the full team. To change the level of a running project, use its [Budget tab](../using-the-office/budget.md#budget-levels).
 
-The plan estimate comes from the project's tier and entry mode (see [Budget](../using-the-office/budget.md#the-expected-plan)). For example, a small requirements-driven project like travel-approval comes to **Lean $220, Balanced $330, Fast $530**.
+## Page 5: Client and Discovery
 
-Under the cards you can adjust:
-
-- the total.
-- the alert threshold (80 % by default).
-- auto-pause at 100 %.
-
-When the setup reaches its **Hire the project team** step, it saves the budget on the new floor first, then sets the Leads' and subagents' models and the team settings. Everyone is then hired on the level's choices. The Chief Analyst's Discovery model follows the level too. To change the level of a project that's already running, use its [Budget tab](../using-the-office/budget.md#budget-levels).
+- **Client name(s)** and **Operator(s)**.
+- **Discovery**: open a *Discovery* issue for whoever covers Analysis: the Chief Analyst, or the Solo Lead (on by default). Tick **Hand it to the … now** and that member is hired with the issue as its first task, on the model you pick for Discovery (the level's Discovery model by default; its role's own model on the Team tab stays as it is for later hires). Without that member on the team, tick **Queue it now for an agent** and pick the agent's model.
 
 ## Page 6: Review & create
 
@@ -91,8 +113,8 @@ Check the summary and click **✨ Create project**. A progress list runs each st
 10. Refresh the gate dashboard (`gate-check.sh`).
 11. Commit and push: the scaffold and the app in one commit.
 12. Open the Discovery issue: *"Discovery: kickoff with the client (Stages P → 4)"*.
-13. Hire the project team: the Project Coordinator and the Leads you ticked, the roster's way (the same as **Hire** on the Team tab). A role already at work is not hired again.
-14. Queue the Discovery task for an agent (when you ticked it and the Chief Analyst isn't on the team; otherwise the Chief Analyst already has it).
+13. Hire the project team: set the floor's team shape, then hire its roles (or the ones you ticked under Customize), the roster's way (the same as **Hire** on the Team tab). A role already at work is not hired again.
+14. Queue the Discovery task for an agent (when you ticked it and whoever covers Analysis isn't on the team; otherwise that member already has it).
 
 If a step fails, fix the cause and click **🔁 Retry from the failed step**. **✏️ Edit answers** goes back to the form. When it's done, click **🗂️ Go to the floor**.
 

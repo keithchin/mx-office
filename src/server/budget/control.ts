@@ -41,7 +41,7 @@ export function makePlan(b: BudgetService, floor: FloorRef): BudgetPlan {
   const f = b.file(floor);
   const shape = projectShape(floor.dir);
   const days = Object.keys(f.ledger.days).sort();
-  return generatePlan({ tier: shape.tier, entry: shape.entry, modules: buildModules(floor.dir), history: history(b), start: days[0] ?? b.today, now: b.deps.now() });
+  return generatePlan({ tier: shape.tier, entry: shape.entry, modules: buildModules(floor.dir), history: history(b), start: days[0] ?? b.today, now: b.deps.now(), ...(shape.team ? { shape: shape.team } : {}) });
 }
 
 /**

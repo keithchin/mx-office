@@ -142,7 +142,7 @@ function saying(e: Escalation): string {
   return `Hey! Quick one: ${what}${pick || ' What do you think?'}`;
 }
 
-const OUTFIT: Record<string, Outfit> = { pm: 'pm', 'lead-designer': 'designer', 'lead-developer': 'dev', 'lead-tester': 'qa', 'chief-analyst': 'analyst' };
+const OUTFIT: Record<string, Outfit> = { pm: 'pm', 'lead-designer': 'designer', 'lead-developer': 'dev', 'lead-tester': 'qa', 'chief-analyst': 'analyst', 'solo-lead': 'dev' };
 
 /** The agent that raised `e` from the waist up, with its name and role under it. */
 function raisedBy(e: Escalation): HTMLElement {

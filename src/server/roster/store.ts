@@ -16,6 +16,7 @@ import { reviveLiveRuns, reviveSubagents, SUBAGENT_ACTIONS_KEPT } from './subage
 import type { LiveRun } from '../../shared/roster/subagent-live.js';
 import type { SubagentAction, SubagentRecord } from '../../shared/roster/subagents.js';
 import { emptyOutbox, reviveOutbox, type Outbox } from './relays.js';
+import { alsoCovers, cleanCoverage, cleanShape, defaultCoverage, type Coverage, type TeamShape } from '../../shared/roster/coverage.js';
 
 /** Where a member is in its life: never hired, a worker now, writing its handoff, or benched. */
 export type Phase = 'none' | 'active' | 'benching' | 'benched';
@@ -45,6 +46,12 @@ export const everHired = (m: MemberRecord) => m.phase !== 'none' || m.hiredAt !=
 
 export interface RosterData {
   settings: RosterSettings;
+  /**
+   * The team's shape and who covers each team (shared/roster/coverage.ts). A roster saved before shapes is
+   * Enterprise with every team covering itself, which behaves exactly as the office did before them.
+   */
+  shape: TeamShape;
+  coverage: Coverage;
   members: Record<RoleId, MemberRecord>;
   standups: Standup[];
   proposals: Proposal[];
@@ -127,7 +134,7 @@ export function freshRoster(rng: () => number = Math.random): RosterData {
   const names = pickNames(rng);
   const members = {} as Record<RoleId, MemberRecord>;
   for (const r of ROLES) members[r.id] = { name: names[r.id], model: r.model, phase: 'none' };
-  return { settings: defaultSettings(), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [], subagentRuns: [], outbox: emptyOutbox() };
+  return { settings: defaultSettings(), shape: 'enterprise', coverage: defaultCoverage('enterprise'), members, standups: [], proposals: [], escalations: [], harvested: {}, spend: { day: '', usd: 0, seen: {} }, subagents: {}, subagentActions: [], subagentRuns: [], outbox: emptyOutbox() };
 }
 
 /** A saved roster, made whole: a role added since it was saved gets a name, a bad field its default. */
@@ -135,15 +142,19 @@ export function reviveRoster(raw: unknown, rng: () => number = Math.random): Ros
   const fresh = freshRoster(rng);
   if (!raw || typeof raw !== 'object') return fresh;
   const r = raw as Partial<RosterData>;
+  const shape = cleanShape(r.shape);
+  const coverage = cleanCoverage(r.coverage, shape);
   const members = { ...fresh.members };
   for (const [id, m] of Object.entries(r.members ?? {})) {
     if (!isRoleId(id) || !m || typeof m !== 'object') continue;
     const phase: Phase = ['none', 'active', 'benching', 'benched'].includes(m.phase) ? m.phase : 'none';
-    const skills = cleanOverrides(id, m.skills);
+    const skills = cleanOverrides(id, m.skills, alsoCovers(coverage, id));
     members[id] = { ...m, name: cleanName(m.name) ?? fresh.members[id].name, model: typeof m.model === 'string' && m.model ? m.model : fresh.members[id].model, phase, skills };
   }
   return {
     settings: cleanSettings(r.settings),
+    shape,
+    coverage,
     members,
     standups: Array.isArray(r.standups) ? r.standups.slice(-STANDUPS_KEPT) : [],
     proposals: Array.isArray(r.proposals) ? r.proposals.slice(-PROPOSALS_KEPT) : [],

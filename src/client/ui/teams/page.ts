@@ -17,6 +17,7 @@ import { teamCounts, teamsOf } from './filter';
 import { teamPanels, type PanelDeps } from './panels';
 import { retagControl } from './retag';
 import { currentRoster, setRoster } from './world';
+import { covererIn, coverNote } from '../roster/coverage';
 
 const TEAM_KEY = 'agent-office.team-page';
 const isTeam = (v: unknown): v is TeamId => typeof v === 'string' && (TEAM_IDS as readonly string[]).includes(v);
@@ -94,14 +95,16 @@ export function renderTeamPage(root: HTMLElement, deps: PageDeps) {
   );
 
   const lead = leadOf(team);
-  const member = v?.members.find((m) => m.role === lead.id);
+  // Whoever covers the team: its own Lead, or another member on a Solo or Startup team.
+  const member = covererIn(v, team) ?? v?.members.find((m) => m.role === lead.id);
+  const covered = coverNote(v, team);
   const head = h(
     'header.tm-head',
     { class: `tm-${team}` },
     h(
       'div.tm-head-text',
       {},
-      h('h2.tm-title', {}, h('span.tm-title-ico', { 'aria-hidden': 'true' }, TEAM_META[team].icon), `${TEAM_META[team].name} team`),
+      h('h2.tm-title', {}, h('span.tm-title-ico', { 'aria-hidden': 'true' }, TEAM_META[team].icon), `${TEAM_META[team].name} team`, covered ? h('small.tm-covered', {}, ` · ${covered}`) : null),
       h('p.tm-mission', {}, lead.mission),
       h('p.tm-subs', {}, '👥 ', lead.subagents.length ? lead.subagents.map((s) => `${s.title}s`).join(', ') : 'Coordinates the Leads', ` · 📓 ${pageData?.journalPath ?? `docs/team/${team}.md`}`),
     ),

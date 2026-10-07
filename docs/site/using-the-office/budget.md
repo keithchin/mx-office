@@ -95,6 +95,21 @@ The plan is built from:
 | 6 · Test | $80 | 2 |
 | 7 · Cutover | $40 | 1 |
 
+### Team shapes in the plan
+
+The default rates are priced from Enterprise teams: five sessions that each prime on their Playbook, a Coordinator relaying and summarising, standups that wake four Leads, and a handoff between Leads at every stage. A [Solo or Startup team](../teams-and-agents/team-shapes.md) is priced as a share of each stage, and each line says who does it:
+
+| Stage | Solo | Startup |
+|---|---|---|
+| P, 0 | 70 % | 80 % |
+| 1 to 4 (analysis, requirements, design, build plan) | 50 % | 80 % |
+| 5 · Build | 60 % | 85 % |
+| 6 · Test | 50 % | 70 % |
+| 7 · Cutover | 70 % | 85 % |
+| Working days | × 1.4 | × 1.15 |
+
+Why these shares: single-agent focused runs in this office's analysis data cost $0.31–2.66 each, while mx-spike's full team came to about $350. A small greenfield app is some 40–60 such runs of work, so one agent doing it costs roughly $60–100 at Lean. Solo · Lean comes to $60 for a small greenfield project. The analysis and design stages shed the most (no handoffs, no Coordinator, one context instead of three). The build sheds least: the MDL still has to be written and checked by the same one writer. A Startup keeps two sessions and one handoff (analyst to developer at Stage 4), so it sits in between. The project's shape is read from `teamShape` in `agent-office.project.json`, which the wizard writes; without it, the project is Enterprise.
+
 Each line's cost is spread evenly over its working days, Monday to Friday, which gives the expected cumulative curve. **Make again** rebuilds the plan from the project, and edited lines are replaced too. If a [Firm audit](the-firm.md) of the project gave a cost re-forecast or milestone dates, **Apply the Firm's re-forecast** scales the plan's lines to its total and takes its last milestone as the end date.
 
 ## Plan against actual, and the forecast
@@ -141,7 +156,7 @@ Needs you then says *Budget reached: project paused*, with **Raise budget** and 
 On the tab (admins; every change is in the audit log):
 
 - **This project**: the total budget (USD), the alert threshold and auto-pause.
-- **Budget level**: **Change level** shows the [new-project wizard's](../get-started/first-project.md#page-5-budget) cards again, priced for this project. Applying a level sets the budget and the team's models and settings.
+- **Budget level**: **Change level** shows the [new-project wizard's](../get-started/first-project.md#page-4-team-and-budget) cards again, priced for this project. Applying a level sets the budget and the team's models and settings.
 - **The office**: the default alert threshold, and the local currency.
 
 ### Budget levels

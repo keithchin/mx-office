@@ -1,6 +1,7 @@
-// The new-project wizard's five pages: the project, how it enters the toolkit's pipeline, the intake
-// interview, the client and team, and a review of what's about to happen. Each page edits the one
-// draft plan in place and asks for a re-render when something it shows depends on what changed.
+// The new-project wizard's pages: the project, how it enters the toolkit's pipeline, the intake
+// interview, the team and budget (team-shape.ts: after the intake, so the office can recommend from
+// the answers), the client and Discovery, and a review of what's about to happen. Each page edits the
+// one draft plan in place and asks for a re-render when something it shows depends on what changed.
 import type { Net } from '../../net';
 import { store } from '../../state';
 import { ENTRY_MODE_INFO, ENTRY_MODES, INTERVIEW_MODE_INFO, INTERVIEW_MODES, PROJECT_ROLES, SETUP_STEPS, SMALL_TIER_LIMITS, slugify, slugProblem, ownerProblem, type AnswerKind, type EntryMode, type InterviewMode, type ProjectPlan, type WizardInfo } from '../../../shared/wizard';
@@ -8,6 +9,8 @@ import { wizardApi } from './api';
 import { h, toast } from '../dom';
 import { connectionsApi } from '../connections/api';
 import { openConnections } from '../connections';
+import { SHAPES, shapeForRoles } from '../../../shared/roster/coverage';
+import { ROLE_BY_ID } from '../../../shared/roster/roles';
 
 export interface PageCtx {
   draft: ProjectPlan;
@@ -19,7 +22,7 @@ export interface PageCtx {
   redraw(): void;
 }
 
-export const PAGES = ['Project', 'Entry mode', 'Intake', 'Client & team', 'Budget', 'Review & create'] as const;
+export const PAGES = ['Project', 'Entry mode', 'Intake', 'Team & budget', 'Client & Discovery', 'Review & create'] as const;
 /** The intake questions the wizard answers from its other pages: entry mode (1), interview mode (9), exec approval (11). */
 export const DERIVED = [1, 9, 11];
 
@@ -255,43 +258,36 @@ export function intakePage(c: PageCtx): HTMLElement {
   );
 }
 
-// ---- 4. Client & team -------------------------------------------------------------------------
+/** Who works the Discovery issue on the plan's team: whoever covers Analysis (the Chief Analyst, or the Solo Lead). */
+const discoveryRole = (d: ProjectPlan) => SHAPES[d.shape ?? shapeForRoles(d.roles)].coverage.analysis;
+
+// ---- 5. Client & Discovery (the team is page 4, team-shape.ts) ------------------------------------
 export function teamPage(c: PageCtx): HTMLElement {
   const d = c.draft;
+  const who = ROLE_BY_ID.get(discoveryRole(d))!.title;
   const clients = textInput(d.clients.join(', '), (v) => (d.clients = v.split(',').map((s) => s.trim()).filter(Boolean)), { placeholder: 'Acme Travel BV, Jane Doe', 'aria-label': 'Clients' });
   const ops = textInput(d.operators.join(', '), (v) => (d.operators = v.split(',').map((s) => s.trim()).filter(Boolean)), { placeholder: 'Who answers for the client in the office', 'aria-label': 'Operators' });
-  const roles = h(
-    'div.wz-roles',
-    {},
-    ...PROJECT_ROLES.map((r) => {
-      const box = h('input', { type: 'checkbox', checked: d.roles.includes(r.id) }) as HTMLInputElement;
-      box.addEventListener('change', () => ((d.roles = box.checked ? [...new Set([...d.roles, r.id])] : d.roles.filter((x) => x !== r.id)), c.redraw()));
-      return h('label.wz-role', {}, box, ` ${r.icon} ${r.label}`);
-    }),
-  );
-  const analyst = d.roles.includes('chief-analyst');
+  const analyst = d.roles.includes(discoveryRole(d));
   const issue = h('input', { type: 'checkbox', checked: d.discovery.issue }) as HTMLInputElement;
   issue.addEventListener('change', () => ((d.discovery.issue = issue.checked), issue.checked || (d.discovery.queue = false), c.redraw()));
   const queue = h('input', { type: 'checkbox', checked: d.discovery.queue, disabled: !d.discovery.issue }) as HTMLInputElement;
   queue.addEventListener('change', () => ((d.discovery.queue = queue.checked), c.redraw()));
   // Handed to the Chief Analyst, the issue's model is the one it's hired on for it (its role's own stays for later hires).
   const handed = analyst && d.discovery.queue;
-  const model = h('select', { 'aria-label': handed ? 'Chief Analyst’s model for Discovery' : 'Model', disabled: !d.discovery.issue }, ...['opus', 'sonnet', 'haiku'].map((m) => h('option', { value: m, selected: d.discovery.model === m }, m))) as HTMLSelectElement;
+  const model = h('select', { 'aria-label': handed ? `${who}’s model for Discovery` : 'Model', disabled: !d.discovery.issue }, ...['opus', 'sonnet', 'haiku'].map((m) => h('option', { value: m, selected: d.discovery.model === m }, m))) as HTMLSelectElement;
   model.addEventListener('change', () => (d.discovery.model = model.value));
   return h(
     'div.wz-page',
     {},
     field('Client name(s)', clients, 'Comma-separated. Kept in the project’s settings file (agent-office.project.json, committed with the project) for the client portal.'),
     field('Operator(s)', ops, 'The people who speak for the client in the office and answer the Chief Analyst.'),
-    h('h3.wz-h', {}, 'Roles to staff'),
-    roles,
-    h('p.setting-note', {}, 'Hired on the new floor once the scaffold is pushed, each on its role’s own model (change it later on the Team tab), so the team is at its desks when you arrive. Also saved in agent-office.project.json at the repository’s root.'),
+    h('p.setting-note', {}, `The team (${PROJECT_ROLES.filter((r) => d.roles.includes(r.id)).map((r) => r.label).join(', ') || 'nobody'}) is hired on the new floor once the scaffold is pushed, so it is at its desks when you arrive. Also saved in agent-office.project.json at the repository’s root.`),
     h('h3.wz-h', {}, 'Discovery'),
-    h('label.wz-check', {}, issue, ' Open a “Discovery” issue for the Chief Analyst (Stages P → 4, stopping at every ✋ gate)'),
-    h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, queue, analyst ? ' Hand it to the Chief Analyst now, as its first task' : ' Queue it now for an agent'), analyst ? null : model),
-    handed ? h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, 'Chief Analyst’s model for Discovery ', model)) : null,
+    h('label.wz-check', {}, issue, ` Open a “Discovery” issue for the ${who} (Stages P → 4, stopping at every ✋ gate)`),
+    h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, queue, analyst ? ` Hand it to the ${who} now, as its first task` : ' Queue it now for an agent'), analyst ? null : model),
+    handed ? h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, `${who}’s model for Discovery `, model)) : null,
     analyst && d.discovery.issue
-      ? h('p.setting-note.wz-indent', {}, handed ? 'The Chief Analyst is hired on this model to work the issue; its role’s own model (Team tab) is for its later hires.' : 'The Chief Analyst is on the team, so it works the issue itself, on its role’s model.')
+      ? h('p.setting-note.wz-indent', {}, handed ? `The ${who} is hired on this model to work the issue; its role’s own model (Team tab) is for its later hires.` : `The ${who} is on the team, so it works the issue itself, on its role’s model.`)
       : null,
     c.info.offline ? h('p.wz-note', {}, '🧪 Offline test office: the issue is written to a file, nobody is hired and nothing is queued.') : null,
   );
@@ -301,7 +297,8 @@ export function teamPage(c: PageCtx): HTMLElement {
 export function reviewPage(c: PageCtx): HTMLElement {
   const d = c.draft;
   const answered = d.intake.filter((a) => a.text.trim() && !DERIVED.includes(a.n)).length + DERIVED.length;
-  const analyst = d.roles.includes('chief-analyst');
+  const analyst = d.roles.includes(discoveryRole(d));
+  const who = ROLE_BY_ID.get(discoveryRole(d))!.title;
   const facts: [string, string][] = [
     ['Repository', `${d.owner}/${d.name}${d.kind === 'new' ? ` (new, ${d.private ? 'private' : 'public'}${d.createdByHand ? ', created by hand' : ''})` : ' (existing)'}`],
     ['Entry mode', `${ENTRY_MODE_INFO[d.entry].icon} ${ENTRY_MODE_INFO[d.entry].label} · ${d.tier} tier`],
@@ -309,9 +306,10 @@ export function reviewPage(c: PageCtx): HTMLElement {
     ['Intake', `${answered} of ${c.info.questions.length} questions answered · interview ${d.interview} · exec approval ${d.execApproval}`],
     ['Client', d.clients.join(', ') || '—'],
     ['Operators', d.operators.join(', ') || '—'],
+    ['Team', `${SHAPES[d.shape ?? shapeForRoles(d.roles)].icon} ${SHAPES[d.shape ?? shapeForRoles(d.roles)].label}${d.customTeam ? ' (customised)' : ''}`],
     ['Roles', PROJECT_ROLES.filter((r) => d.roles.includes(r.id)).map((r) => r.label).join(', ') || '—'],
     ['Budget', d.budget ? `${d.budget.level[0].toUpperCase()}${d.budget.level.slice(1)} · $${d.budget.total.toLocaleString('en-US')} · alert at ${d.budget.threshold} % · ${d.budget.autoPause ? 'pauses at 100 %' : 'no auto-pause'}` : 'none'],
-    ['Discovery', d.discovery.issue ? `issue for the Chief Analyst${d.discovery.queue ? (analyst ? `, handed to it when it’s hired, on ${d.discovery.model}` : `, queued on ${d.discovery.model}`) : ''}` : 'no issue'],
+    ['Discovery', d.discovery.issue ? `issue for the ${who}${d.discovery.queue ? (analyst ? `, handed to it when it’s hired, on ${d.discovery.model}` : `, queued on ${d.discovery.model}`) : ''}` : 'no issue'],
   ];
   const skip = new Set<string>([
     ...(d.kind === 'change' ? ['repo', 'app'] : []),

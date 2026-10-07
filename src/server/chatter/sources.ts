@@ -93,8 +93,8 @@ export const rosterSource: ChatterSource = {
         const said = [list('Done', r.done), list('Next', r.next), list('Blockers', r.blockers)].filter(Boolean).join(' ') || (r.heading ?? 'Nothing to report.');
         out.push({ kind: 'standup', from: member(d, r.role, undefined, r.name), to: { group: 'team' }, text: r.source === 'journal' ? `${said} (from my journal)` : said, at, ref: { standup: s.id }, key: `sr:${s.id}:${r.role}` });
       }
-      const pm = d.members.pm;
-      if (s.savedTo && s.compiledAt && pm.workerId) out.push({ kind: 'standup', from: OFFICE, to: member(d, 'pm'), text: `Here's the ${s.id} standup page (${s.savedTo}): summarise it and commit it.`, at: s.compiledAt, ref: { standup: s.id }, key: `sc:${s.id}` });
+      const pm = d.members[d.coverage.management];
+      if (s.savedTo && s.compiledAt && pm.workerId) out.push({ kind: 'standup', from: OFFICE, to: member(d, d.coverage.management), text: `Here's the ${s.id} standup page (${s.savedTo}): summarise it and commit it.`, at: s.compiledAt, ref: { standup: s.id }, key: `sc:${s.id}` });
     }
     for (const r of ROLES) {
       const m = d.members[r.id];

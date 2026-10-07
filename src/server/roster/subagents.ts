@@ -18,6 +18,8 @@ import { isAsleepStatus } from './bench.js';
 import type { Roster } from './index.js';
 import { NUDGE_GRACE_MS } from './nudge.js';
 import { coordinatorIs, queueOnce } from './relays.js';
+import { alsoOf, managerRole } from './coverage.js';
+import { subagentDefsOf } from '../../shared/roster/coverage.js';
 import { countRound, resetRounds, roundsLine } from './review-rounds.js';
 import { REVIEW_POLICY } from '../../shared/roster/autonomy.js';
 import { subagentDecisionPrompt, subagentNewsPrompt, underperformingPrompt } from './prompts.js';
@@ -94,7 +96,7 @@ export class Subagents {
         // its default, then
       }
     }
-    return ROLE_BY_ID.get(lead)!.subagents.find((s) => s.id === rec.name)?.model ?? 'inherit';
+    return subagentDefsOf(this.roster.data(floor.id).coverage, lead).find((s) => s.id === rec.name)?.model ?? 'inherit';
   }
 
   private addRun(rec: SubagentRecord, run: SubagentRun) {
@@ -253,7 +255,7 @@ export class Subagents {
     const m = d.members[lead];
     const name = cleanSubName(rawName);
     if (!name) return { ok: false, message: 'Name the subagent (as in .claude/agents/<name>.md)' };
-    const skill = effectiveSkill(lead, d.settings.autonomy, op, m.skills);
+    const skill = effectiveSkill(lead, d.settings.autonomy, op, m.skills, alsoOf(d, lead));
     if (!skill) return { ok: false, message: `${OP_ASK[op]} isn't one of a ${ROLE_BY_ID.get(lead)!.title}'s skills` };
     if (!skill.enabled) return { ok: false, message: `The Project Manager turned "${skill.title}" off for you: escalate instead (office-workers escalate)` };
     const bad = this.check(floor, lead, op, name, args);
@@ -279,15 +281,17 @@ export class Subagents {
       this.roster.escalations.raiseFyi(floor, w, { urgency: 'info', title: `${m.name} ${OP_VERB[op]} subagent ${name}${args.reason ? `: ${args.reason}` : ''}`, details: this.trackLine(floor, lead, name), options: [] });
       return { ok: true, outcome: 'done', message: `${done} The Project Manager got an FYI.` };
     }
+    // The member who covers Management decided it itself: nobody else to tell.
+    if (lead === managerRole(d)) return { ok: true, outcome: 'done', message: done };
     this.queueNews(floor, `${m.name} ${OP_VERB[op]} subagent ${name}${op === 'swap-model' ? ` (now ${args.model})` : ''}${args.reason ? `: ${args.reason}` : ''}`);
-    toldCoordinator(floor.id, w, d.members.pm, `I ${OP_VERB[op]} my subagent ${name}${op === 'swap-model' ? ` (now ${args.model})` : ''}${args.reason ? `: ${args.reason}` : ''}`, name);
+    toldCoordinator(floor.id, w, d.members[managerRole(d)], `I ${OP_VERB[op]} my subagent ${name}${op === 'swap-model' ? ` (now ${args.model})` : ''}${args.reason ? `: ${args.reason}` : ''}`, name);
     return { ok: true, outcome: 'done', message: `${done} The Project Coordinator is told.` };
   }
 
   /** Why `op` can't be done to `name` now, if it can't. */
   private check(floor: TeamFloor, lead: RoleId, op: SubagentOp, name: string, args: OpArgs): string | undefined {
     const rec = this.find(floor, lead, name);
-    const defined = ROLE_BY_ID.get(lead)!.subagents.some((s) => s.id === name);
+    const defined = subagentDefsOf(this.roster.data(floor.id).coverage, lead).some((s) => s.id === name);
     const w = this.leadWorker(floor, lead);
     if (!rec && !defined && !(w && definitionOf(floor.cwdOf(w), name))) return `No subagent called ${name} on the ${ROLE_BY_ID.get(lead)!.title}'s team`;
     if ((op === 'warn' || op === 'bench') && !args.reason) return `Say why: --reason "…" (it goes into ${name}'s definition and the activity)`;
@@ -393,8 +397,8 @@ export class Subagents {
 
   /** A member's worker changed: the Coordinator back between turns hears the news; a Lead may be nudged. */
   onMember(floor: TeamFloor, role: RoleId, now = this.roster.deps.now()) {
-    if (role === 'pm') this.flushNews(floor, now);
-    else this.nudgeLead(floor, role, now);
+    if (role === managerRole(this.roster.data(floor.id))) this.flushNews(floor, now);
+    if (role !== 'pm') this.nudgeLead(floor, role, now);
   }
 
   /** Nudges an idle Lead about a flagged subagent of its, once per finding. */
@@ -408,7 +412,7 @@ export class Subagents {
     const idle = this.roster.idleSince(w.id);
     if (idle === undefined || now - idle < NUDGE_GRACE_MS) return false;
     const s = scoreSubagent(flagged.runs, currentModel(flagged, 'inherit'));
-    const skills = effectiveSkills(lead, d.settings.autonomy, m.skills).filter((k) => k.enabled && (k.key === 'warn' || k.key === 'bench' || k.key === 'swap-model')).map((k) => `${k.title} — ${GATE_WORDS[k.gate!]} (\`${k.how}\`)`);
+    const skills = effectiveSkills(lead, d.settings.autonomy, m.skills, alsoOf(d, lead)).filter((k) => k.enabled && (k.key === 'warn' || k.key === 'bench' || k.key === 'swap-model')).map((k) => `${k.title} — ${GATE_WORDS[k.gate!]} (\`${k.how}\`)`);
     if (this.roster.delivery.prompt(floor, w, underperformingPrompt(flagged.name, modelWord(s.model), s.why ?? 'poor reviews', skills))) return false;
     flagged.nudgedAt = now;
     struggleNudged(floor.id, w, flagged.name, s.why ?? 'poor reviews');
@@ -439,7 +443,8 @@ export class Subagents {
       return false;
     }
     if (where === 'asleep') return this.roster.relays.wakeCoordinator(floor);
-    const w = this.roster.workerOf(floor, this.roster.data(floor.id).members.pm);
+    const d = this.roster.data(floor.id);
+    const w = this.roster.workerOf(floor, d.members[managerRole(d)]);
     if (where === 'away' || !w || (w.status !== 'idle' && w.status !== 'done')) return false;
     if (this.roster.delivery.prompt(floor, w, subagentNewsPrompt(o.news))) return false;
     o.news = [];

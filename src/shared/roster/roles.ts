@@ -4,7 +4,7 @@
 // docs/teams.md). The roles, their teams and the subagents are data here, so the office, the Playbook
 // templates and the Team tab all read the same table. Pure: the browser imports it too.
 
-export type RoleId = 'pm' | 'lead-designer' | 'lead-developer' | 'lead-tester' | 'chief-analyst';
+export type RoleId = 'pm' | 'lead-designer' | 'lead-developer' | 'lead-tester' | 'chief-analyst' | 'solo-lead';
 export type TeamId = 'management' | 'design' | 'development' | 'testing' | 'analysis';
 
 /** A Lead's team member: a Claude Code subagent file (`.claude/agents/<id>.md`) in the project. */
@@ -36,6 +36,11 @@ export interface RoleDef {
    */
   toolkitSkills: string[];
   toolkitAgents: string[];
+  /**
+   * A generalist that covers every team on its own (the Solo shape, shared/roster/coverage.ts): its craft
+   * skills are its own short list rather than the union of the roles it covers, to keep its Playbook small.
+   */
+  generalist?: boolean;
 }
 
 export const ROLES: readonly RoleDef[] = [
@@ -102,7 +107,25 @@ export const ROLES: readonly RoleDef[] = [
     toolkitSkills: ['interview-protocol', 'grill-mode', 'document-discovery', 'brd-generation', 'brd-validation', 'kb-generation', 'app-analysis', 'source-triage', 'small-project-tier', 'company-brain', 'mendix-agents'],
     toolkitAgents: ['ba-agent'],
   },
+  {
+    id: 'solo-lead',
+    title: 'Solo Lead',
+    // Its desk and journal are Development's: it is the one writer of the app.
+    team: 'development',
+    icon: '🧑‍🚀',
+    mission: 'Run the whole project on your own for the Project Manager: requirements, design, the build, the tests and the status. Dispatch subagents for drafting and checking; you decide, and you are the one writer of the Mendix app.',
+    rights: ["Own every team's deliverables: analysis, design, development, testing and management", 'Apply MDL to the app (the only one who runs `mxcli exec`)', 'Open pull requests, and write the daily standup note'],
+    // Every Lead's subagents (filled in below), so it may use every subagent type.
+    subagents: [],
+    model: 'sonnet',
+    toolkitSkills: ['small-project-tier', 'conversion-runbook', 'interview-protocol', 'brd-generation', 'design-artifacts', 'architecture-blueprint', 'brd-to-build-plan', 'walking-skeleton', 'mdl-cookbook-microflows', 'learned-mdl-preflight', 'testing-shape', 'journey-proof', 'close-the-loop'],
+    toolkitAgents: [],
+    generalist: true,
+  },
 ];
+
+// The Solo Lead's team: every other Lead's subagents, the same definitions.
+for (const r of ROLES) if (r.generalist) r.subagents = ROLES.filter((x) => !x.generalist).flatMap((x) => x.subagents);
 
 export const ROLE_BY_ID: ReadonlyMap<RoleId, RoleDef> = new Map(ROLES.map((r) => [r.id, r]));
 export const isRoleId = (v: unknown): v is RoleId => typeof v === 'string' && ROLE_BY_ID.has(v as RoleId);

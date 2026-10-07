@@ -18,6 +18,8 @@ import type { SubagentRecord } from '../../shared/roster/subagents.js';
 import { applyStanding } from './subagent-files.js';
 import { deliverablesBrief } from './deliverables-brief.js';
 import { toolkitDir as officeToolkitDir } from '../connections/store.js';
+import { alsoCovers, covers, isIdentity, managerOf, subagentDefsOf, writerOf, type Coverage } from '../../shared/roster/coverage.js';
+import { coverLines, coverTeamLine } from './playbook-cover.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
 export const FIELD_LESSONS = '.ai-context/skills/mxcli-field-lessons/SKILL.md';
@@ -40,6 +42,8 @@ export interface PlaybookContext {
   earlyDrafts?: boolean;
   /** At most this many subagents at once (the budget level's parallelism), when set. */
   maxSubagents?: number;
+  /** Who covers each team (shared/roster/coverage.ts); missing or each team covering itself: the Enterprise Playbook as before. */
+  coverage?: Coverage;
 }
 
 /** Where the mxcli-project-toolkit clone is (the same setting the new-project wizard uses). */
@@ -49,8 +53,8 @@ const toolkitDir = () => officeToolkitDir().replace(/\\/g, '/');
  * The toolkit skills and role files this role works from, pointed at in the toolkit clone rather than copied,
  * so the team reads the toolkit's current version (see RoleDef.toolkitSkills).
  */
-function toolkitSection(role: RoleDef, overrides?: SkillOverrides): string[] {
-  const skills = craftOn(role.id, overrides);
+function toolkitSection(role: RoleDef, overrides?: SkillOverrides, also: RoleId[] = []): string[] {
+  const skills = craftOn(role.id, overrides, also);
   if (!skills.length && !role.toolkitAgents.length) return [];
   const dir = toolkitDir();
   return [
@@ -63,6 +67,16 @@ function toolkitSection(role: RoleDef, overrides?: SkillOverrides): string[] {
 }
 
 const ONE_WRITER = 'One writer per Mendix app: only the Lead Developer runs `mxcli exec` (or any MCP write) against the .mpr. Everyone else — every other Lead and every subagent — drafts, checks (`mxcli check`, `mxcli -c "SHOW …"`) and reviews, and hands the change to the Lead Developer to apply.';
+
+/** The one-writer rule for whoever covers Development: the Lead Developer on an Enterprise team. */
+function oneWriter(c: Coverage | undefined, roleId: RoleId): string {
+  const writer = c ? writerOf(c) : 'lead-developer';
+  if (writer === 'lead-developer') return ONE_WRITER;
+  const title = ROLE_BY_ID.get(writer)!.title;
+  return writer === roleId
+    ? `One writer per Mendix app: you, the ${title}, are the only one who runs \`mxcli exec\` (or any MCP write) against the .mpr. Your subagents draft and check (\`mxcli check\`, \`mxcli -c "SHOW …"\`); you review and apply.`
+    : `One writer per Mendix app: only the ${title} runs \`mxcli exec\` (or any MCP write) against the .mpr. You and your subagents draft, check and review, and hand the change to the ${title} to apply.`;
+}
 
 function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
   switch (role.id) {
@@ -83,6 +97,14 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
       return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
     case 'lead-tester':
       return ['## Testing', '- Unit tests live in `tests/*.test.mdl`, Playwright e2e in `tests/e2e`; follow `.ai-context/skills/qa-tests` and the PR pipeline when the repo has them.', '- Approve test plans and results; when the framework is the bottleneck, improve it (and say so in the journal).', '- A failing test that shows the model is wrong is a finding for the Lead Developer, never a fix you make in MDL.'];
+    case 'solo-lead':
+      return [
+        '## Working alone',
+        '- Work the toolkit pipeline stage by stage yourself (`small-project-tier.md` when it applies): each stage\'s gate before the next.',
+        '- Dispatch a subagent for each draft or check (business-analyst, ui-ux-designer, developer, tester) and review every result before it lands.',
+        `- The office asks you for a daily standup, then hands you the page (\`${standupPath('YYYY-MM-DD')}\`) to finish as your daily note: a **Summary** at the top, then commit and push.`,
+        '- Nobody else relays to the Project Manager: escalate yourself whatever needs them.',
+      ];
     case 'chief-analyst':
       return [
         '## Analysis',
@@ -96,10 +118,16 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
 /** A role's Playbook, the SKILL.md its session starts from. */
 export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
   const role = ROLE_BY_ID.get(roleId)!;
-  const team = role.subagents.length
-    ? role.subagents.map((s) => `- **${s.title}** — the \`${s.id}\` subagent (\`.claude/agents/${s.id}.md\`): ${s.does}`).join('\n')
+  const c = ctx.coverage;
+  // What it covers besides its own team: nothing on an Enterprise team, which gets the Playbook as before.
+  const shaped = !!c && !isIdentity(c);
+  const also = c ? alsoCovers(c, roleId) : [];
+  const subs = subagentDefsOf(c, roleId);
+  const team = subs.length
+    ? subs.map((s) => `- **${s.title}** — the \`${s.id}\` subagent (\`.claude/agents/${s.id}.md\`): ${s.does}`).join('\n')
     : '- No subagents: you coordinate the Leads.';
-  const who = ROLES.map((r) => `${r.title}: ${ctx.names[r.id]}`).join(' · ');
+  const who = ROLES.filter((r) => !shaped || covers(c!, r.id)).map((r) => `${r.title}: ${ctx.names[r.id]}`).join(' · ');
+  const relayNote = !shaped || managerOf(c!) === 'pm' ? 'the Project Coordinator is an agent that coordinates the Leads and relays escalations to them.' : managerOf(c!) === roleId ? 'there is no Project Coordinator: you cover Management.' : `there is no Project Coordinator: ${ctx.names[managerOf(c!)]} covers Management.`;
   return [
     '---',
     `name: team-${role.id}`,
@@ -112,7 +140,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     '',
     `**Mission.** ${role.mission}`,
     '',
-    `**The team.** ${who}. You all work for ${HUMAN_FULL}; the Project Coordinator is an agent that coordinates the Leads and relays escalations to them.`,
+    `**The team.** ${who}. You all work for ${HUMAN_FULL}; ${relayNote}`,
     '',
     '## Your rights',
     ...role.rights.map((r) => `- ${r}`),
@@ -122,16 +150,16 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     '',
     ASK_THE_PM,
     '',
-    ...skillsBrief(roleId, ctx.level, ctx.skills),
+    ...skillsBrief(roleId, ctx.level, ctx.skills, also),
     '## Your team (Claude Code subagents in your session)',
     team,
     ...standingLines(ctx.subagents),
     'Dispatch them with the Agent tool for drafting, checking and research; keep every decision, every question to the Project Manager and every write to the app in your own session. A subagent returns the file it wrote, not a summary of it.',
     '',
-    ...(role.subagents.length ? ['## The review protocol (after every subagent result)', reviewBrief(ctx.level, journalPath(role.team)), ''] : []),
-    ...toolkitSection(role, ctx.skills),
+    ...(subs.length ? ['## The review protocol (after every subagent result)', reviewBrief(ctx.level, journalPath(role.team)), ''] : []),
+    ...toolkitSection(role, ctx.skills, also),
     '## The one-writer rule',
-    ONE_WRITER,
+    oneWriter(c, roleId),
     'Git worktrees go only under the project’s `.agent-office/worktrees/` (`git worktree add .agent-office/worktrees/<name> -b <branch>` from the project root), never in a temp folder or next to the project: the office refuses any other place and cleans these up once merged.',
     '',
     '## Journal etiquette',
@@ -140,14 +168,16 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     '- Anything that needs the Project Manager goes under `### Proposals` as `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget. A question or sign-off you are waiting on is an escalation, not a proposal.',
     '- Commit journal updates with your work, so the team sees them once your branch lands.',
     `- Open pull requests with your team's label: \`gh pr create --label ${teamLabel(role.team)} …\`, so the PR lands on your team's board.`,
+    ...(also.length ? [coverTeamLine(c!, roleId)] : []),
     '',
     '## Lessons',
     `Durable lessons (a gotcha, a working recipe, a mistake not to repeat) go in \`${ctx.lessons}\` — append, one dated bullet each. If \`mxcli brain capture\` is available, capture them there too.`,
     '',
     ...roleSpecific(role, ctx),
+    ...(also.length && !role.generalist ? coverLines(c!, roleId) : []),
     '',
-    ...deliverablesBrief(roleId, ctx.earlyDrafts ?? true),
-    ...(ctx.maxSubagents && role.subagents.length ? ['## Parallel work', `Run at most ${ctx.maxSubagents} subagent${ctx.maxSubagents === 1 ? '' : 's'} at once (the project's budget level). Wait for one to finish before dispatching another.`, ''] : []),
+    ...deliverablesBrief(roleId, ctx.earlyDrafts ?? true, also),
+    ...(ctx.maxSubagents && subs.length ? ['## Parallel work', `Run at most ${ctx.maxSubagents} subagent${ctx.maxSubagents === 1 ? '' : 's'} at once (the project's budget level). Wait for one to finish before dispatching another.`, ''] : []),
   ].join('\n');
 }
 
@@ -206,11 +236,13 @@ export function writeRoleFiles(dir: string, roleId: RoleId, ctx: PlaybookContext
   put(playbookMirror(roleId), text);
   // Each subagent's definition with its standing: model swap, warnings, benched (subagent-files.ts).
   const standing = new Map((ctx.subagents ?? []).map((s) => [s.name, s]));
-  for (const sub of role.subagents) {
+  // Its own subagents and those of every team it covers (shared/roster/coverage.ts).
+  const subs = subagentDefsOf(ctx.coverage, roleId);
+  for (const sub of subs) {
     const rec = standing.get(sub.id) ?? { name: sub.id, lead: roleId, state: 'active' as const, warnings: [], runs: [] };
     wrote.push(...applyStanding(dir, rec, subagentFile(sub, role, ctx.project)));
   }
-  for (const rec of standing.values()) if (!role.subagents.some((s) => s.id === rec.name)) wrote.push(...applyStanding(dir, rec));
+  for (const rec of standing.values()) if (!subs.some((s) => s.id === rec.name)) wrote.push(...applyStanding(dir, rec));
   put(journalPath(role.team), journalSeed(role.team), true);
   put(ctx.lessons, lessonsSeed(ctx.project), true);
   return wrote;

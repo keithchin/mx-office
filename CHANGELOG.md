@@ -6,12 +6,20 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-### Fixed
-- No settings link sends you to the 3D view any more. The ☰ menu's **⚙️ Settings** on the 1D view, the 2D view
-  and `/home` opened the 3D office's Settings window; it now opens the full Settings page on the 1D view
-  (`/lite?tab=settings`). So do Needs you's *Spend cap reached → Settings*, the team phone's *Raise cap*, a
-  Teams card's Open for it, the budget's *Team settings* suggestions and the team's Autonomy chip, each at its
-  section (`&section=team`), and the docs' "3D view → ☰ → ⚙️ Settings" steps.
+### New
+- **Team shapes: Solo, Startup and Enterprise**: a project's team is one Solo Lead (Sonnet, every
+  subagent type) covering every team, a Chief Analyst and a Lead Developer (design and test as their
+  subagents), or the Project Coordinator and four Leads as before. Each team is covered by its own
+  Lead or by another member, and relays, standups, issues, subagents, skills (strictest gate wins),
+  deliverables, team pages, the 2D view's signposts, the Firm's questions, ▶ Resume and the Command
+  Center go to whoever covers the team. A team without a Project Coordinator now hears its relays
+  instead of dropping them. The Team tab and the Command Center show a "Solo · Lean" chip, and a Solo
+  or Startup team's org chart a coverage table (read-only for now).
+- **The wizard recommends a team and a budget**: the Team & budget page comes after the intake and
+  pre-selects a shape and level from the tier, entry mode and the answers to Q2, Q4, Q5 and Q7, with
+  why. Three shape cards, each with a Lean / Balanced / Fast switch, its budget and working days;
+  Customize picks the roles and every setting by hand. The team step sets the shape, then hires its
+  roles. Client and Discovery moved to the page after it.
 
 ### Improved
 - **⚙️ Settings** is a full page on the 1D view: every setting, sections down the left (You, Workers, Team,
@@ -22,6 +30,19 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   settings, the incident detection rules, Studio Pro and your color theme. Admin-only parts stay read-only or
   hidden as before; it wears all five themes. The 3D office keeps its own ⚙️ window, built from the same parts,
   with an *All settings ↗* link here. On a new office with no project yet, `/home` opens it in a window.
+
+### Changed
+- **The budget plan follows the team's shape**: a Solo or Startup project's stages cost a share of the
+  Enterprise rates and say who does them. A small greenfield app is about $60 at Solo · Lean; a small
+  requirements-driven one $270 at Startup · Balanced.
+- Existing projects are Enterprise, with every team covering itself, and behave as before.
+
+### Fixed
+- No settings link sends you to the 3D view any more. The ☰ menu's **⚙️ Settings** on the 1D view, the 2D view
+  and `/home` opened the 3D office's Settings window; it now opens the full Settings page on the 1D view
+  (`/lite?tab=settings`). So do Needs you's *Spend cap reached → Settings*, the team phone's *Raise cap*, a
+  Teams card's Open for it, the budget's *Team settings* suggestions and the team's Autonomy chip, each at its
+  section (`&section=team`), and the docs' "3D view → ☰ → ⚙️ Settings" steps.
 
 ## 2026-10-06 · release 14 (`a208a15`)
 

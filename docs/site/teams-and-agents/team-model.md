@@ -15,6 +15,8 @@ weight: 1
 | 🧪 **Lead Tester** | Approves testing and improves the test framework. Mission: fewest bugs, highest quality. | Testers (unit tests `tests/*.test.mdl`, Playwright `tests/e2e`) | testing-shape, e2e-harness-base, journey-proof |
 | 📈 **Chief Analyst** | High-quality business requirements (the BRD), analysis of each app's development cycle, R&D. Writes a weekly insight memo. | Business Analysts, Data Analysts | interview-protocol, brd-generation, app-analysis |
 
+This is the **Enterprise** team. A Solo or Startup team has fewer agents, and each team is covered by one of them: see [Team shapes and coverage](team-shapes.md). There, the 🧑‍🚀 **Solo Lead** (role id `solo-lead`) runs the whole project alone with every subagent type, and is the one writer of the `.mpr`.
+
 The **Project Coordinator** (role id `pm`) is an agent. The **Project Manager** is always the human: anyone signed in with the office password, that is, an admin.
 
 **⚖️ Jeff · Router** sits beside the Coordinator on the org chart. He is staff, not an agent: you can't hire or bench him. See [Jeff · Router](../automation/jeff-router.md).

@@ -13,12 +13,12 @@ import { clip } from '../ui/dom';
 import type { Outfit } from './chars';
 import type { BreakLead } from './breaks';
 
-const OUTFIT: Record<RoleId, Outfit> = { pm: 'pm', 'lead-designer': 'designer', 'lead-developer': 'dev', 'lead-tester': 'qa', 'chief-analyst': 'analyst' };
+const OUTFIT: Record<RoleId, Outfit> = { pm: 'pm', 'lead-designer': 'designer', 'lead-developer': 'dev', 'lead-tester': 'qa', 'chief-analyst': 'analyst', 'solo-lead': 'dev' };
 /** Each role's title cut short, for name tags when the office is zoomed out and the desks are close. */
-const SHORT: Record<RoleId, string> = { pm: 'Coordinator', 'lead-designer': 'Design lead', 'lead-developer': 'Dev lead', 'lead-tester': 'QA lead', 'chief-analyst': 'Chief analyst' };
+const SHORT: Record<RoleId, string> = { pm: 'Coordinator', 'lead-designer': 'Design lead', 'lead-developer': 'Dev lead', 'lead-tester': 'QA lead', 'chief-analyst': 'Chief analyst', 'solo-lead': 'Solo lead' };
 
 /** What drawing a team needs of each member. */
-export type TeamMember = Pick<MemberView, 'role' | 'team' | 'title' | 'workerId'>;
+export type TeamMember = Pick<MemberView, 'role' | 'team' | 'title' | 'workerId' | 'covers'>;
 
 export interface TeamLookup<M extends TeamMember> {
   memberOf(w: WorkerInfo): M | undefined;
@@ -44,8 +44,16 @@ export function teamLookup<M extends TeamMember>(members: readonly M[]): TeamLoo
       const task = w.task?.name ?? w.title ?? (w.prompt ? w.prompt : undefined);
       return task ? { text: clip(task, 26) } : undefined;
     },
-    leadOf: (team) => members.find((m) => m.team === team),
+    // Whoever covers the team (shared/roster/coverage.ts): its own Lead, or the member covering it.
+    leadOf: (team) => members.find((m) => m.covers?.includes(team)) ?? members.find((m) => m.team === team && !m.covers),
   };
+}
+
+/** A zone signpost's second line: who leads (or covers) the zone and how they are. */
+export function signLine(m: Pick<MemberView, 'role' | 'team' | 'name' | 'covers'> | undefined, team: TeamId, status: string): string | undefined {
+  if (!m) return undefined;
+  if (m.team !== team) return `Covered by ${m.name} (${SHORT[m.role]}) · ${status}`;
+  return `${m.role === 'pm' ? 'Coordinator' : 'Lead'}: ${m.name} · ${status}`;
 }
 
 /** The team's benched Leads on floor `floor`, to be on a break about the office (breaks.ts). */

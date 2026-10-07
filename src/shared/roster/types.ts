@@ -9,6 +9,8 @@ import type { JeffSettings } from '../judge.js';
 import type { SkillView } from './skills.js';
 import type { SubagentAction, SubagentView } from './subagents.js';
 import type { LiveRunView } from './subagent-live.js';
+import type { Coverage, TeamShape } from './coverage.js';
+import type { LevelId } from '../budget/types.js';
 
 export interface RosterSettings {
   autonomy: AutonomyLevel;
@@ -86,6 +88,8 @@ export interface MemberView {
   lastJournal?: { heading: string; excerpt: string };
   benchedAt?: number;
   handoffAt?: number;
+  /** The teams it covers (shared/roster/coverage.ts); its own alone on an Enterprise team. */
+  covers?: TeamId[];
 }
 
 export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'change' | 'auto';
@@ -183,4 +187,9 @@ export interface RosterView {
   admin: boolean;
   /** With autonomy by stage on, on a toolkit project: the stage the level follows now. */
   byStage?: PipelineStage;
+  /** The team's shape and who covers each team (shared/roster/coverage.ts); Enterprise, each covering itself, unless the wizard set another. */
+  shape?: TeamShape;
+  coverage?: Coverage;
+  /** The project's budget level (the 💰 Budget tab's), for the "Solo · Lean" chip; added by GET /api/roster. */
+  level?: LevelId;
 }

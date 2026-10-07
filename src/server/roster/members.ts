@@ -15,6 +15,16 @@ import { cleanSettings } from './store.js';
 import type { TeamFloor } from './types.js';
 import { audit, byWhom } from '../audit/index.js';
 import { hireHoldOf } from '../project-run/store.js';
+import { coveredBy, isIdentity, managerOf } from '../../shared/roster/coverage.js';
+import type { RosterData } from './store.js';
+
+/** What a hire on a Solo or Startup team is told of the team (undefined on an Enterprise one: its first message is as before). */
+function teamLine(d: RosterData, role: RoleId): string | undefined {
+  if (isIdentity(d.coverage)) return undefined;
+  const teams = coveredBy(d.coverage, role);
+  const mgr = managerOf(d.coverage);
+  return `On this ${d.shape} team you cover ${teams.join(', ') || 'no team'}; there is no Project Coordinator${mgr === role ? ': you cover Management' : `: ${d.members[mgr].name} covers Management`}.`;
+}
 
 /** Models a role can be set to: Claude Code's aliases, or a full model id. */
 const MODEL = /^[A-Za-z0-9][A-Za-z0-9._\-[\]]{0,63}$/;
@@ -26,7 +36,7 @@ export class Members {
     const d = this.roster.data(floor.id);
     const names = Object.fromEntries(ROLES.map((r) => [r.id, d.members[r.id].name])) as PlaybookContext['names'];
     const m = d.members[role];
-    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role), earlyDrafts: d.settings.earlyDrafts, maxSubagents: d.settings.maxSubagents };
+    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role), earlyDrafts: d.settings.earlyDrafts, maxSubagents: d.settings.maxSubagents, coverage: d.coverage };
   }
 
   /**
@@ -74,7 +84,7 @@ export class Members {
     const paused = this.roster.pauseOf(d) ?? hireHoldOf(floor.id);
     if (paused) return paused;
     const owed = this.roster.escalations.owed(floor, role);
-    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task, owed.lines), owner, by, team: def.team });
+    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task, owed.lines, teamLine(d, role)), owner, by, team: def.team });
     if (typeof r === 'string') return r;
     owed.mark();
     m.workerId = r.id;
