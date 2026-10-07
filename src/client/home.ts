@@ -21,6 +21,7 @@ import { testModeBadge } from './ui/testmode';
 import { homeBudget } from './home/budget';
 import { goToSettings } from './ui/settings/flat';
 import './home/home.css';
+import './shared/perfwatch-on';
 
 /** The tab a link asked for (?tab= or a bare #), read before the address is tidied. */
 const asked = new URLSearchParams(location.search).get('tab') ?? location.hash.slice(1);

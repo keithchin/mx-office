@@ -1,0 +1,101 @@
+// Live performance warnings in the real office: a page that runs one task for longer than half a second
+// (its own PerformanceObserver, src/client/shared/perfwatch.ts, reports it to POST /api/perf/longtask),
+// and the server's own event loop blocked for longer than a second (perf_hooks' monitorEventLoopDelay,
+// read every few seconds), each open an incident (or count again into the open one) with what's known:
+// the view and the top frames for a page, how long and when for the server. Both are throttled so a
+// page stuck in a bad loop, or a slow minute, can't flood the incident list.
+
+import { monitorEventLoopDelay } from 'node:perf_hooks';
+import type { Detection } from '../incidents/index.js';
+
+export const PERF_WATCH = {
+  /** A page's task longer than this is reported (the client filters too). */
+  pageLongTaskMs: 500,
+  /** The server's event loop blocked longer than this is a stall. */
+  serverStallMs: 1000,
+  /** How often the server's loop delay is read. */
+  loopWindowMs: 5000,
+  /** At most one report per view (and one server stall) per this long. */
+  throttleMs: 60_000,
+} as const;
+
+export interface PageReport {
+  view: string;
+  ms: number;
+  floor?: string;
+  stack: string[];
+  url?: string;
+}
+
+const line = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, max) : '');
+
+/** A report as the page sent it, made safe; undefined when it isn't one (or is under the threshold). */
+export function readPageReport(body: unknown): PageReport | undefined {
+  const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
+  const ms = Number(b.ms);
+  const view = line(b.view, 60);
+  if (!view || !Number.isFinite(ms) || ms < PERF_WATCH.pageLongTaskMs || ms > 3_600_000) return undefined;
+  const stack = (Array.isArray(b.stack) ? b.stack : []).map((s) => line(s, 200)).filter(Boolean).slice(0, 8);
+  const floor = line(b.floor, 80) || undefined;
+  const url = line(b.url, 200) || undefined;
+  return { view, ms: Math.round(ms), stack, ...(floor ? { floor } : {}), ...(url ? { url } : {}) };
+}
+
+/** Lets a key through at most once per `ms`. */
+export function throttle(ms: number, now: () => number = Date.now) {
+  const last = new Map<string, number>();
+  return (key: string) => {
+    const t = now();
+    if (t - (last.get(key) ?? -Infinity) < ms) return false;
+    last.set(key, t);
+    if (last.size > 500) last.delete(last.keys().next().value!);
+    return true;
+  };
+}
+
+/** The incident a page report raises. `floorKnown` says whether its floor is one of the office's. */
+export function pageDetection(r: PageReport, who: string, floorKnown: boolean): Detection {
+  const where = r.stack.length ? `\n\nWhere the time went:\n${r.stack.map((s) => `- ${s}`).join('\n')}` : '';
+  return {
+    rule: 'pageStall',
+    ...(floorKnown && r.floor ? { floor: r.floor } : {}),
+    severity: r.ms >= 5000 ? 'sev2' : 'sev3',
+    title: `A page froze for ${r.ms} ms (${r.view})`,
+    summary: `${who}'s ${r.view} page ran one task for ${r.ms} ms${r.url ? ` at ${r.url}` : ''}.${where}`,
+    again: `Froze again: ${r.view}, ${r.ms} ms${r.stack[0] ? ` (${r.stack[0]})` : ''}`,
+  };
+}
+
+/** The incident a server stall raises. */
+export function serverDetection(ms: number): Detection {
+  return {
+    rule: 'serverStall',
+    severity: ms >= 10_000 ? 'sev2' : 'sev3',
+    title: `The office server stalled for ${Math.round(ms)} ms`,
+    summary: `The server's event loop was blocked for ${Math.round(ms)} ms: pages, hooks and workers waited that long for an answer.`,
+    again: `Stalled again: ${Math.round(ms)} ms`,
+  };
+}
+
+/** Starts watching the server's event loop; `raise` hears each stall (throttled). Returns stop. */
+export function watchEventLoop(raise: (d: Detection) => void, opts: { stallMs?: number; windowMs?: number; throttleMs?: number } = {}) {
+  const stallMs = opts.stallMs ?? PERF_WATCH.serverStallMs;
+  const h = monitorEventLoopDelay({ resolution: 20 });
+  h.enable();
+  const allow = throttle(opts.throttleMs ?? PERF_WATCH.throttleMs);
+  let last = performance.now();
+  const windowMs = opts.windowMs ?? PERF_WATCH.loopWindowMs;
+  const timer = setInterval(() => {
+    const now = performance.now();
+    // The histogram's longest delay, or how late this timer itself fired: whichever is worse.
+    const worst = Math.max(h.max / 1e6, now - last - windowMs);
+    last = now;
+    h.reset();
+    if (worst > stallMs && allow('server')) raise(serverDetection(worst));
+  }, windowMs);
+  timer.unref();
+  return () => {
+    clearInterval(timer);
+    h.disable();
+  };
+}

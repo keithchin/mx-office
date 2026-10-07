@@ -55,6 +55,7 @@ import { testModeBadge } from './ui/testmode';
 import './pixel/game.css';
 import { budgetUi } from './ui/budget';
 import { goToSettings } from './ui/settings/flat';
+import './shared/perfwatch-on';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});

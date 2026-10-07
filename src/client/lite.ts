@@ -56,6 +56,7 @@ import { installPhone, type Phone } from './ui/phone';
 import { collapsibleCommand } from './ui/command-layout';
 import { testModeBadge } from './ui/testmode';
 import { budgetUi } from './ui/budget';
+import './shared/perfwatch-on';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
