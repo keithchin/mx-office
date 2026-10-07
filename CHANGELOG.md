@@ -4,7 +4,7 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
-## Unreleased
+## 2026-10-07 · release 18 (`d07eb59`)
 
 ### New
 - **`npm run test:perf` and `npm run test:perf:quick`**: the performance guard from a terminal. The quick
