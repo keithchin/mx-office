@@ -26,7 +26,17 @@ export interface Baseline {
   valuePerMtok?: number;
 }
 
-const ranked = (runs: RunRecord[]) => runs.map((r) => ({ r, s: scoreRun(r).score })).filter((x): x is { r: RunRecord; s: number } => x.s !== undefined);
+/**
+ * A run's score, worked out once per record: the benchmark scores every run in the building for every
+ * worker, which was most of a first ranking on a big office (records are replaced, never changed, when
+ * they're updated, so the record itself is the key).
+ */
+const scores = new WeakMap<RunRecord, number | undefined>();
+const scoreOf = (r: RunRecord) => {
+  if (!scores.has(r)) scores.set(r, scoreRun(r).score);
+  return scores.get(r);
+};
+const ranked = (runs: RunRecord[]) => runs.map((r) => ({ r, s: scoreOf(r) })).filter((x): x is { r: RunRecord; s: number } => x.s !== undefined);
 /** Finished tasks that count: not still going, not a false start. */
 export const finished = (runs: RunRecord[]) => runs.filter((r) => r.outcome !== 'running' && !r.excluded);
 /** The finished tasks its PR-based criteria count: all of them for a role that delivers PRs, else only those that had one. */
@@ -56,7 +66,8 @@ export function baselineOf(all: RunRecord[], workers: WorkerFacts[]): Baseline {
   const left = new Set<string>();
   for (const w of workers) {
     const mine = counted(w);
-    for (const r of w.runs) if (!mine.includes(r)) left.add(r.id);
+    const kept = new Set(mine);
+    for (const r of w.runs) if (!kept.has(r)) left.add(r.id);
     const v = valueOf(mine);
     if (v.value <= 0) continue;
     if (v.cost > 0) perUsd.push(v.value / v.cost);

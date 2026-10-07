@@ -4,6 +4,7 @@
 // Written a second after a change, through a temporary file, so a crash never leaves half a file.
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { BudgetAlert, BudgetPlan, BudgetSettings, FxSettings } from '../../shared/budget/types.js';
 import { DEFAULT_FX, type FxLast } from './fx.js';
@@ -38,6 +39,12 @@ export class BudgetStore {
   private officeFile?: OfficeFile;
   private dirty = new Set<string>();
   private timer: NodeJS.Timeout | null = null;
+  /** The background write going now (see flushSoon): the next one waits for it, so they land in order. */
+  private writing: Promise<void> = Promise.resolve();
+  /** What that write has yet to land: flush() at exit writes it too. */
+  private inFlight = new Set<string>();
+  /** Bumped by flush(): a background write that started before it doesn't land over what it wrote. */
+  private syncs = 0;
 
   constructor(
     dataDir: string,
@@ -85,20 +92,60 @@ export class BudgetStore {
 
   changed(id: string | 'office') {
     this.dirty.add(id);
-    this.timer ??= setTimeout(() => this.flush(), 1000);
+    this.timer ??= setTimeout(() => void this.flushSoon(), 1000);
     this.timer.unref?.();
+  }
+
+  /**
+   * Writes what changed without blocking the event loop (each file to a temporary one, then renamed):
+   * the ledger's files are big on a busy project, and a rename on Windows can take a few hundred ms
+   * (it held the server for 870 ms after a budget look on the big test office). flush() is the same,
+   * at once, for the office's exit and the tests.
+   */
+  flushSoon(): Promise<void> {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
+    const ids = [...this.dirty];
+    this.dirty.clear();
+    for (const id of ids) this.inFlight.add(id);
+    const job = this.writing.then(async () => {
+      try {
+        await mkdir(this.dir, { recursive: true, mode: 0o700 });
+      } catch {
+        for (const id of ids) this.dirty.add(id), this.inFlight.delete(id);
+        return;
+      }
+      for (const id of ids) {
+        const data = id === 'office' ? this.officeFile : this.floors.get(id);
+        if (!data || (id !== 'office' && !SAFE.test(id))) continue;
+        const file = path.join(this.dir, `${id}.json`);
+        try {
+          const gen = this.syncs;
+          await writeFile(`${file}.tmp-bg`, JSON.stringify(data), { mode: 0o600 });
+          if (gen === this.syncs) await rename(`${file}.tmp-bg`, file);
+        } catch {
+          // disk trouble shouldn't take the office down; tried again on the next change
+          this.dirty.add(id);
+        }
+        this.inFlight.delete(id);
+      }
+    });
+    this.writing = job;
+    return job;
   }
 
   flush() {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
-    if (!this.dirty.size) return;
+    const ids = new Set([...this.dirty, ...this.inFlight]);
+    if (!ids.size) return;
+    this.syncs++;
     try {
       mkdirSync(this.dir, { recursive: true, mode: 0o700 });
     } catch {
       return;
     }
-    for (const id of this.dirty) {
+    for (const id of ids) {
       const data = id === 'office' ? this.officeFile : this.floors.get(id);
       if (!data || (id !== 'office' && !SAFE.test(id))) continue;
       const file = path.join(this.dir, `${id}.json`);
