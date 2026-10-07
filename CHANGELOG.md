@@ -20,6 +20,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   three minutes before putting it to sleep. Every turn is now counted as it starts, so a turn that came
   and went between two looks still counts.
 
+### Changed
+- **`npm test` runs cleanly on Windows**: every test file runs (the workers, repos and DSH tests used to
+  hang for good there) and the suite exits 0 in about two minutes. `npm test` is now
+  `scripts/test.mjs`: each file in a process of its own, a few at a time, with a time limit per test,
+  per file and on the whole run, so a file that hangs is stopped and named instead of holding the suite
+  up. `npm run test:one <file>` runs one file with node's own runner.
+
 ## 2026-10-07 · release 17 (`089e759`)
 
 ### New

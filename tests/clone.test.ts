@@ -1,32 +1,49 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Building, type FloorDef } from '../src/server/building.js';
 import { parseProgress, whyCloneFailed } from '../src/server/clone.js';
+import { removeDir } from './support/cleanup.js';
+import { runnable } from './support/winshim.js';
 
 // A stand-in for gh: `repo view` and `repo clone` from bare repositories in $FAKE_GH_REPOS. It says
 // how far along it is the way git does, can wait first ($FAKE_GH_DELAY), hang ($FAKE_GH_HANG) or
 // fail the way ssh does ($FAKE_GH_FAIL).
-const FAKE_GH = `#!/bin/sh
-case "$1 $2" in
-  "repo view")
-    [ -d "$FAKE_GH_REPOS/$3.git" ] || { echo "GraphQL: Could not resolve to a Repository with the name '$3'." >&2; exit 1; }
-    echo "{\\"nameWithOwner\\":\\"$3\\",\\"isEmpty\\":false}"
-    ;;
-  "repo clone")
-    name="$3"; dest="$4"
-    printf "Cloning into '%s'...\\n" "$dest" >&2
-    [ -n "$FAKE_GH_FAIL" ] && { echo "$FAKE_GH_FAIL" >&2; echo "fatal: Could not read from remote repository." >&2; exit 128; }
-    [ -n "$FAKE_GH_HANG" ] && exec sleep 600
-    printf "Receiving objects:  42%% (42/100), 1.00 MiB | 512.00 KiB/s\\r" >&2
-    [ -n "$FAKE_GH_DELAY" ] && sleep "$FAKE_GH_DELAY"
-    git clone -q "$FAKE_GH_REPOS/$name.git" "$dest" || exit 1
-    git -C "$dest" remote set-url origin "https://github.com/$name.git"
-    ;;
-esac
+const FAKE_GH = String.raw`#!/usr/bin/env node
+// A node script rather than sh, so it runs on Windows too (tests/support/winshim.ts).
+const { execFileSync } = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const [cmd, sub, name, dest] = process.argv.slice(2);
+const env = process.env;
+if (cmd + ' ' + sub === 'repo view') {
+  if (!fs.existsSync(path.join(env.FAKE_GH_REPOS, name + '.git'))) {
+    process.stderr.write("GraphQL: Could not resolve to a Repository with the name '" + name + "'.\n");
+    process.exit(1);
+  }
+  process.stdout.write(JSON.stringify({ nameWithOwner: name, isEmpty: false }) + '\n');
+} else if (cmd + ' ' + sub === 'repo clone') {
+  process.stderr.write("Cloning into '" + dest + "'...\n");
+  if (env.FAKE_GH_FAIL) {
+    process.stderr.write(env.FAKE_GH_FAIL + '\nfatal: Could not read from remote repository.\n');
+    process.exit(128);
+  }
+  if (env.FAKE_GH_HANG) setTimeout(() => {}, 600000);
+  else {
+    process.stderr.write('Receiving objects:  42% (42/100), 1.00 MiB | 512.00 KiB/s\r');
+    setTimeout(() => {
+      try {
+        execFileSync('git', ['clone', '-q', path.join(env.FAKE_GH_REPOS, name + '.git'), dest], { stdio: 'inherit' });
+        execFileSync('git', ['-C', dest, 'remote', 'set-url', 'origin', 'https://github.com/' + name + '.git'], { stdio: 'inherit' });
+      } catch {
+        process.exit(1);
+      }
+    }, Number(env.FAKE_GH_DELAY || 0) * 1000);
+  }
+}
 `;
 
 const fast = { clone: { tickMs: 50, stallMs: 1500 } };
@@ -37,19 +54,19 @@ function office(t: { after(fn: () => void): void }) {
   t.after(() => {
     for (const pid of pids) {
       try {
-        process.kill(-pid, 'SIGKILL');
+        process.kill(process.platform === 'win32' ? pid : -pid, 'SIGKILL');
       } catch {
         // gone
       }
     }
-    rmSync(root, { recursive: true, force: true });
+    removeDir(root);
   });
   const dataDir = path.join(root, '.agent-office');
   mkdirSync(dataDir);
   const bin = path.join(root, 'bin');
   mkdirSync(bin);
   writeFileSync(path.join(bin, 'gh'), FAKE_GH);
-  chmodSync(path.join(bin, 'gh'), 0o755);
+  runnable(path.join(bin, 'gh'));
   const repos = path.join(root, 'github');
   // acme/game on "GitHub", with a commit.
   const work = path.join(root, 'work');
@@ -153,7 +170,8 @@ test('a clone can be stopped by an admin or whoever added it', async (t) => {
   assert.equal(building.cancel(id, 'again', () => true), 'No such floor');
 });
 
-test('a restart mid-clone picks the clone back up, and it becomes its floor', async (t) => {
+// A clone is only picked back up where it runs in its own process group (clone.ts GROUPS): not on Windows.
+test('a restart mid-clone picks the clone back up, and it becomes its floor', { skip: process.platform === 'win32' && 'clones are picked back up only on Unix' }, async (t) => {
   const { dataDir, projects, saved, running } = office(t);
   process.env.FAKE_GH_DELAY = '1';
   const first = new Building(dataDir, projects, fast);

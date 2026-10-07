@@ -14,7 +14,8 @@
     "dist"
   ],
   "scripts": {
-    "test": "node --import tsx --import=#tests/css --test tests/*.test.ts",
+    "test": "node scripts/test.mjs",
+    "test:one": "node --import tsx --import=#tests/css --test",
     "dev": "concurrently -k \"vite\" \"tsx watch src/server/cli.ts --port 4600 --password dev --no-open\"",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",

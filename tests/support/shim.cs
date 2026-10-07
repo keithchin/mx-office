@@ -37,8 +37,11 @@ class Shim {
     SetInformationJobObject(job, 9, ref info, (uint)Marshal.SizeOf(typeof(EXT))); // JobObjectExtendedLimitInformation
     var psi = new ProcessStartInfo(node, line.ToString());
     psi.UseShellExecute = false;
+    // The shim joins the job first, so node is in it from the start (no window in which killing the shim
+    // leaves node behind); where the shim can't join (a job of its own that won't nest), node joins after.
+    bool inJob = AssignProcessToJobObject(job, Process.GetCurrentProcess().Handle);
     var p = Process.Start(psi);
-    AssignProcessToJobObject(job, p.Handle);
+    if (!inJob) AssignProcessToJobObject(job, p.Handle);
     p.WaitForExit();
     return p.ExitCode;
   }

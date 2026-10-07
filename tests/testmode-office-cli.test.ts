@@ -32,7 +32,9 @@ test("every place the office runs claude -p for itself asks first", () => {
   for (const f of ['analysis/llm.ts', 'tasks.ts', 'limits.ts', 'firm/runner.ts']) {
     const src = readFileSync(new URL(`../src/server/${f}`, import.meta.url), 'utf8');
     const ask = src.indexOf('officeCliRefused(');
-    const spawn = src.indexOf('spawn(', src.indexOf('officeCliRefused') + 1);
-    assert.ok(ask > 0 && spawn > ask, `${f} asks officeCliRefused before it spawns`);
+    // spawn, or spawnOff (started off the event loop, server/offloop/exec.ts).
+    const after = src.indexOf('officeCliRefused') + 1;
+    const spawn = Math.min(...['spawn(', 'spawnOff('].map((s) => src.indexOf(s, after)).filter((i) => i >= 0));
+    assert.ok(ask > 0 && Number.isFinite(spawn) && spawn > ask, `${f} asks officeCliRefused before it spawns`);
   }
 });
