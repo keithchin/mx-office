@@ -78,16 +78,16 @@ async function fixture(scale) {
   const r = await node(['--import', 'tsx', 'scripts/perf/fixture.ts', '--out', officeRoot, '--scale', String(scale), '--seed', '42', '--base', new Date().toISOString()], { quiet: true });
   if (r.code !== 0) throw new Error(`the fixture generator failed: ${r.out.slice(-800)}`);
   const floors = JSON.parse(fs.readFileSync(path.join(officeRoot, 'office', '.agent-office', 'floors.json'), 'utf8'));
-  return { home: path.join(officeRoot, 'office'), floor: floors[0].id };
+  return { home: path.join(officeRoot, 'office'), floor: floors[0].id, other: floors[1]?.id };
 }
 
 async function withOffice(scale, fn) {
-  const { home, floor } = await fixture(scale);
+  const { home, floor, other } = await fixture(scale);
   progress({ done: 0, of: 1, label: 'Starting the test office' });
   const office = await startTestOffice({ home, env: { FAKE_RATE_MS: arg('rate', '400') } });
   console.log(`test office up at ${office.base} (floor ${floor}, ${home})`);
   try {
-    return await fn(office, floor, home);
+    return await fn(office, floor, home, other);
   } finally {
     await office.stop().catch((e) => console.error(String(e.message)));
   }
@@ -109,10 +109,10 @@ async function runSuite() {
   }
   if (suite === 'pages') {
     const { runPages, pagesSummary } = await import('./pages.mjs');
-    return withOffice(Number(arg('scale', '10')), async (office, floor) => {
+    return withOffice(Number(arg('scale', '10')), async (office, floor, _home, other) => {
       // Give the live workers a moment to come up and start sending.
       await new Promise((r) => setTimeout(r, 4000));
-      const res = await runPages({ base: office.base, floor, password: PASSWORD, outDir, soakSeconds: Number(arg('soak', PERF_BUDGETS.soakSeconds)), only: arg('only')?.split(','), onProgress: progress });
+      const res = await runPages({ base: office.base, floor, other, password: PASSWORD, outDir, soakSeconds: Number(arg('soak', PERF_BUDGETS.soakSeconds)), only: arg('only')?.split(','), onProgress: progress });
       return { ...res, officeDir: officeRoot, summary: pagesSummary(res), failures: res.views.filter((v) => !v.ok).map((v) => `${v.name}: ${v.failures.join('; ')}`) };
     });
   }

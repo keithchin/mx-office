@@ -5,6 +5,8 @@ export const PERF_BUDGETS = {
   longTaskMs: 200,
   /** From navigation until the view has drawn its main content and answers. */
   timeToUsableMs: 3000,
+  /** From picking another project (the floor picker, or a card on Home) until its view is usable. */
+  switchMs: 1500,
   /** How long each view is left running on live events while its heap is watched. */
   soakSeconds: 60,
   /** The JS heap may grow by at most this much over the soak (after a GC at each end). */
