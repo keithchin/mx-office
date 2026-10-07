@@ -45,6 +45,8 @@ const RESTORED_NOTE = '\x1b[2m──── the office restarted · earlier outpu
 
 export class WorkerManager {
   private workers = new Map<string, Worker>();
+  /** Desks held, with the name, for a hire whose worktree is being made. */
+  private seating = new Map<string, string>();
   private statePath: string;
   private trees: Worktrees;
   private agentPath: string | null = null;
@@ -214,7 +216,7 @@ export class WorkerManager {
 
   deskOccupied(deskId: string): boolean {
     for (const w of this.workers.values()) if (w.info.deskId === deskId) return true;
-    return false;
+    return this.seating.has(deskId);
   }
 
   /**
@@ -222,7 +224,7 @@ export class WorkerManager {
    * (see meetings.ts), in the meeting's own worktree, which everyone at the table shares. `repos` are
    * other floors' repositories a worker in its own worktree works in too (see WorkerTrees.makeWorkspace).
    */
-  spawn(deskId: string, by: string, prompt?: string, worktree = false, kind: WorkerKind = 'agent', provider?: AgentProvider, model?: string, effort?: AgentEffort, meeting?: { id: string; worktree?: WorkerInfo['worktree'] }, owner?: string, repos: RepoSource[] = [], via?: 'herald'): WorkerInfo | string {
+  async spawn(deskId: string, by: string, prompt?: string, worktree = false, kind: WorkerKind = 'agent', provider?: AgentProvider, model?: string, effort?: AgentEffort, meeting?: { id: string; worktree?: WorkerInfo['worktree'] }, owner?: string, repos: RepoSource[] = [], via?: 'herald'): Promise<WorkerInfo | string> {
     // Nobody picked (a board agent, say): the office's default worker, model and effort included.
     if (kind === 'agent' && provider === undefined) ({ provider, model, effort } = this.officeDefault);
     const selectedProvider = kind === 'agent' ? provider : undefined;
@@ -250,24 +252,18 @@ export class WorkerManager {
     if (owner && signIn && this.runAs && !this.runAs.claudeReady(owner)) return this.runAs.why(signIn);
     const full = this.capacity?.full();
     if (full) return full;
-    const used = new Set([...this.workers.values()].map((w) => w.info.name.replace(/ 🐚$/, '')));
+    const used = new Set([...this.workers.values()].map((w) => w.info.name.replace(/ 🐚$/, '')).concat([...this.seating.values()]));
     const agent = seat.station && STATION_AGENT[seat.station];
     const name = agent ? agent.name : (NAMES.find((n) => !used.has(n)) ?? `Worker ${this.workers.size + 1}`);
     const id = randomBytes(6).toString('hex');
     let wt: WorkerInfo['worktree'] = meeting?.worktree;
     let others: WorkerRepo[] | undefined;
     if (worktree) {
-      const slug = `${name.toLowerCase()}-${id.slice(0, 4)}`;
-      const made = repos.length ? this.worktrees.makeWorkspace(slug, repos) : this.trees.create(slug);
+      // Made off the event loop (git can take seconds); the desk and the name are held meanwhile.
+      this.seating.set(deskId, name);
+      const made = await this.worktrees.makeFor(`${name.toLowerCase()}-${id.slice(0, 4)}`, name, repos).finally(() => this.seating.delete(deskId));
       if (typeof made === 'string') return made;
-      if ('repos' in made) {
-        ({ worktree: wt, repos: others } = made);
-        for (const note of made.notes) this.events.toast(`🌿 ${name}'s worktree of ${note}`, 'info');
-      } else {
-        const { note, ...ref } = made;
-        wt = ref;
-        if (note) this.events.toast(`🌿 ${name}'s worktree ${note}`, 'info');
-      }
+      ({ worktree: wt, repos: others } = made);
     }
     const info: WorkerInfo = {
       id,
@@ -338,13 +334,13 @@ export class WorkerManager {
    * up with it if it's asleep, or it's hired there with it when nobody is. Returns what went wrong, or
    * the agent and whether it was just hired.
    */
-  station(deskId: string, by: string, text: string, owner?: string): { info: WorkerInfo; hired: boolean } | string {
+  async station(deskId: string, by: string, text: string, owner?: string): Promise<{ info: WorkerInfo; hired: boolean } | string> {
     if (!DESK_BY_ID.get(deskId)?.station) return 'There is no agent to ask there';
     const clean = text.replace(/\r\n?/g, '\n').trim();
     if (!clean) return 'Empty prompt';
     const w = [...this.workers.values()].find((x) => x.info.deskId === deskId);
     if (!w) {
-      const info = this.spawn(deskId, by, clean, false, 'agent', undefined, undefined, undefined, undefined, owner);
+      const info = await this.spawn(deskId, by, clean, false, 'agent', undefined, undefined, undefined, undefined, owner);
       return typeof info === 'string' ? info : { info, hired: true };
     }
     // Typed into the question it's asking, the prompt would answer it.
@@ -785,7 +781,7 @@ export class WorkerManager {
       if (w.viewers.size) this.events.data(info.id, data, [...w.viewers.keys()]);
     });
     proc.onExit(({ exitCode, error, lost }) => {
-      if (w.pty === proc || !w.pty) adapter?.exited?.(this.handleOf(w), this.cwd(info)); // not for a run it has since replaced
+      if (!this.closing && (w.pty === proc || !w.pty)) adapter?.exited?.(this.handleOf(w), this.cwd(info)); // not for a run it has since replaced, nor again after shutdown did
       if (w.pty !== proc || this.workers.get(info.id) !== w) return;
       w.pty = undefined;
       if (error) {

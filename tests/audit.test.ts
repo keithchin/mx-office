@@ -11,6 +11,7 @@ import { csvField, csvHeader, csvRow, decodeCursor } from '../src/server/audit/q
 import { GitHubWatch } from '../src/server/audit/github.js';
 import { auditQuery } from '../src/server/http/routes/audit.js';
 import { actionMatches, auditGroupOf, type AuditEvent } from '../src/shared/audit.js';
+import { renameRetrying } from '../src/server/audit/log.js';
 import { Roster } from '../src/server/roster/index.js';
 import type { HireAsk, TeamFloor } from '../src/server/roster/types.js';
 import type { GhIssue, GhPull, WorkerInfo, WorkerStatus } from '../src/shared/protocol.js';
@@ -252,4 +253,19 @@ test('hiring, benching, a model change, the settings and an escalation and its a
   assert.deepEqual(page.chain, { ok: true });
   useAudit(undefined);
   assert.equal(audit.record({ actor: { kind: 'office', name: 'x' }, action: 'x', summary: 'nothing' }), undefined);
+});
+
+test('a rotation tries its rename again while Windows says the file is busy, and gives up on anything else', () => {
+  const busy = (code: string) => Object.assign(new Error(code), { code });
+  let calls = 0;
+  renameRetrying('a', 'b', 6, () => {
+    if (++calls < 3) throw busy(calls === 1 ? 'EPERM' : 'EBUSY');
+  });
+  assert.equal(calls, 3, 'two busy tries, then it went');
+  calls = 0;
+  assert.throws(() => renameRetrying('a', 'b', 6, () => (calls++, (() => { throw busy('ENOENT'); })())), /ENOENT/);
+  assert.equal(calls, 1, 'not tried again');
+  calls = 0;
+  assert.throws(() => renameRetrying('a', 'b', 3, () => (calls++, (() => { throw busy('EACCES'); })())), /EACCES/);
+  assert.equal(calls, 3, 'at most `tries` times');
 });

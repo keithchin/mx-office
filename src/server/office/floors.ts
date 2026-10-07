@@ -14,6 +14,7 @@ import { auditGitHub } from '../audit/office.js';
 import { chatterOf } from '../chatter/office.js';
 import { incidentsOnWorker } from '../incidents/office.js';
 import { budgetOf } from '../budget/index.js';
+import { forgetWorker, noteWorkerStatus } from '../project-run/turns.js';
 
 /**
  * Tells the project team about a worker, unless the floor is still being built. A floor restores its
@@ -123,6 +124,9 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
     },
     workerChanged: (floor, w) => {
       incidentsOnWorker(floor, w); // crash loops (incidents/rules.ts)
+      // Every turn counted as it starts, for ⏸ Pause project's handoffs (project-run/turns.ts).
+      if (typeof w === 'string') forgetWorker(w);
+      else noteWorkerStatus(w);
       if (typeof w === 'string') {
         ctx.webhook.onWorkerGone(w);
         team(ctx, floor, (t) => rosterOf(ctx).onWorkerGone(t, w));

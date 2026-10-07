@@ -52,7 +52,7 @@ export const testlabRoutes = {
     async handle(ctx, r) {
       const body = await adminPost(ctx, r);
       if (!body) return;
-      if (!isSuite(body.suite)) return send(r.res, 400, { error: 'Pick a suite: unit, pages, journey or command-center' });
+      if (!isSuite(body.suite)) return send(r.res, 400, { error: 'Pick a suite: unit, perf-quick, pages, journey or command-center' });
       const by = r.session.account?.name ?? 'An admin';
       const s = testLabOf(ctx).runner.start(body.suite, by);
       if (typeof s === 'string') return send(r.res, 409, { error: s });

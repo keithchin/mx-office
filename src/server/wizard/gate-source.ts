@@ -8,7 +8,7 @@
 // (at most once every few minutes per floor, one at a time, time-limited). The floor's own folder is
 // never written to. With no remote, the panel reads the folder as before (setup.ts).
 
-import { execFile } from 'node:child_process';
+import { execFileOff } from '../offloop/exec.js';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -18,7 +18,7 @@ const ENV = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' 
 
 function git(args: string[], cwd: string, timeout = 20_000): Promise<string | undefined> {
   return new Promise((resolve) => {
-    execFile('git', args, { cwd, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout, env: ENV, windowsHide: true }, (err, out) => resolve(err ? undefined : out));
+    execFileOff('git', args, { cwd, maxBuffer: 8 * 1024 * 1024, timeout, env: ENV, windowsHide: true }, (err, out) => resolve(err ? undefined : out));
   });
 }
 

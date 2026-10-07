@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isAsleepStatus } from '../roster/bench.js';
+import { headSha } from '../gitfiles.js';
 import { noteChatter, OFFICE } from '../chatter/bus.js';
 import type { Ctx } from '../office/context.js';
 import { projectRunsOf } from '../project-run/adapter.js';
@@ -30,7 +31,10 @@ function appDir(): string {
 }
 
 const APP = appDir();
+// Asked on every look at the restart state: read from the checkout's files when they settle it (gitfiles.ts).
 const head = () => {
+  const fast = headSha(APP);
+  if (fast !== null) return fast;
   try {
     return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: APP, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true }).trim();
   } catch {

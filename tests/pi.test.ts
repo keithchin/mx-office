@@ -79,7 +79,7 @@ test('Pi extension connectivity failures never interrupt the agent', async () =>
   await handlers.get('session_shutdown')?.({}, {});
 });
 
-test('Pi worker launches, authenticates hooks, resumes its own session, and restores its choices', (t) => {
+test('Pi worker launches, authenticates hooks, resumes its own session, and restores its choices', async (t) => {
   const root = mkdtempSync(path.join(tmpdir(), 'office-pi-worker-'));
   const file = path.join(root, process.platform === 'win32' ? 'pi.cmd' : 'pi');
   writeFileSync(file, process.platform === 'win32' ? '@echo off\r\n' : '#!/bin/sh\n', { mode: 0o700 });
@@ -104,7 +104,7 @@ test('Pi worker launches, authenticates hooks, resumes its own session, and rest
   };
   t.after(() => { managers.forEach((m) => m.shutdown()); rmSync(root, { recursive: true, force: true }); });
   const workers = open();
-  const worker = workers.spawn('desk-1', 'Tester', '- fix login', false, 'agent', 'pi', 'openai/gpt-4.1', 'high');
+  const worker = await workers.spawn('desk-1', 'Tester', '- fix login', false, 'agent', 'pi', 'openai/gpt-4.1', 'high');
   assert.ok(typeof worker === 'object');
   const first = launches[0].opts;
   assert.equal(first.file, file);

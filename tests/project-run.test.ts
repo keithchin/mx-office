@@ -25,6 +25,8 @@ import { waitBeforeNext, wakeOrder } from '../src/server/project-run/order.js';
 import { handoffPrompt, resumeBrief, SLEPT_MAX, sleptPart } from '../src/server/project-run/brief.js';
 import { hireHoldOf, overrideHold, projectPause, projectPauseOf, setProjectPause, useProjectRunFile } from '../src/server/project-run/store.js';
 import type { RunFloor } from '../src/server/project-run/types.js';
+import { noteWorkerStatus, turnsStarted } from '../src/server/project-run/turns.js';
+import { HANDOFF_START_MS } from '../src/server/roster/bench.js';
 
 const MON_0905 = Date.UTC(2026, 9, 5, 1, 5);
 const SEC = 1000;
@@ -78,6 +80,8 @@ class FakeFloor implements TeamFloor {
   set(id: string, status: WorkerStatus, patch: Partial<WorkerInfo> = {}) {
     const w = this.map.get(id)!;
     Object.assign(w, { status, ...patch });
+    // As the office hears every status change (office/floors.ts workerChanged).
+    noteWorkerStatus(w);
     this.roster.onWorker(this, w);
   }
   /** A plain worker (not on the team). */
@@ -138,7 +142,7 @@ function world(o: { hang?: (w: World) => boolean } = {}): World {
     for (const x of floor.workers()) if (x.status === 'starting' && clock.now - ((x as { startedAt?: number }).startedAt ?? 0) >= w.bootDelay) floor.set(x.id, 'idle');
     await new Promise((r) => setImmediate(r));
   };
-  const make = () => new ProjectRuns({ roster, engine: new FlowEngine({ store: new FileStore(dir), now: () => clock.now }), floor: (id) => (id === floor.id ? w.run : undefined), now: () => clock.now, sleep, pollMs: 1000, bootMs: 5 * 60 * SEC });
+  const make = () => new ProjectRuns({ roster, engine: new FlowEngine({ store: new FileStore(dir), now: () => clock.now }), floor: (id) => (id === floor.id ? w.run : undefined), now: () => clock.now, sleep, pollMs: 1000, bootMs: 5 * 60 * SEC, turnsStarted });
   w.runs = make();
   w.restart = make;
   return w;
@@ -375,6 +379,23 @@ test('a pause lets turns finish, asks for a handoff, sleeps them, and never type
   const tester = w.roster.data(w.floor.id).members['lead-tester'].name;
   assert.deepEqual(projectPause(w.floor.id)?.waiting, [tester]);
   assert.deepEqual(w.runs.view(w.floor.id, true).run!.agents.find((a) => a.name === tester)?.status, 'waiting-on-you');
+});
+
+test('a handoff turn shorter than a look still counts: the pause sleeps the agent at once, not after HANDOFF_START_MS', async () => {
+  useProjectRunFile(undefined);
+  const w = world();
+  const ids = await team(w, ['pm']);
+  w.floor.set(ids.pm, 'idle');
+  const start = w.clock.now;
+  assert.ok(typeof w.runs.pause(w.floor.id, 'Keith') !== 'string');
+  await until(() => w.floor.prompts.length >= 1, 'it is asked for its handoff');
+  // The whole handoff turn, well under a second, between two of the pause's looks (one a second here).
+  w.floor.set(ids.pm, 'working');
+  w.floor.set(ids.pm, 'done');
+  await until(() => w.runs.latest(w.floor.id)?.status === 'done', 'the pause finishes');
+  assert.deepEqual(w.floor.slept, [ids.pm]);
+  const took = w.clock.now - start;
+  assert.ok(took < 10 * SEC, `it waited ${Math.round(took / SEC)} s (HANDOFF_START_MS is ${HANDOFF_START_MS / SEC} s)`);
 });
 
 test('a resume cut off by a restart carries on from its checkpoint without waking anyone twice', async () => {

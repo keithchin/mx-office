@@ -54,7 +54,7 @@ test("a worktree starts from the PR merged on origin, not from the project's sta
   assert.equal(f.git('rev-parse', 'origin/main'), merged);
   // A burst of hires shares that fetch.
   assert.equal(trees.fetch(), undefined);
-  const made = trees.create('rex-1');
+  const made = await trees.create('rex-1');
   assert.ok(typeof made !== 'string', String(made));
   assert.equal(made.base, merged);
   assert.equal(made.from, 'main');
@@ -69,7 +69,7 @@ test('a project ahead of origin (commits not pushed yet) still branches from its
   const local = f.commit('wip.txt');
   const trees = new Worktrees(f.dir);
   await trees.fetch();
-  const made = trees.create('rex-2');
+  const made = await trees.create('rex-2');
   assert.ok(typeof made !== 'string', String(made));
   assert.equal(made.base, local);
   assert.equal(made.note, undefined);
@@ -82,7 +82,7 @@ test("when both moved on, it starts from origin's and says what it left out", as
   f.commit('wip2.txt');
   const trees = new Worktrees(f.dir);
   await trees.fetch();
-  const made = trees.create('rex-3');
+  const made = await trees.create('rex-3');
   assert.ok(typeof made !== 'string', String(made));
   assert.equal(made.base, merged);
   assert.match(made.note ?? '', /origin\/main.*2 commits on main/);
@@ -94,23 +94,23 @@ test('without an origin, or offline, it branches from HEAD as before', async (t)
   f.git('remote', 'set-url', 'origin', path.join(f.root, 'nowhere.git'));
   const trees = new Worktrees(f.dir);
   await trees.fetch();
-  const made = trees.create('rex-4');
+  const made = await trees.create('rex-4');
   assert.ok(typeof made !== 'string', String(made));
   assert.equal(made.base, f.git('rev-parse', 'HEAD'));
   f.git('remote', 'remove', 'origin');
   const again = new Worktrees(f.dir);
   assert.equal(again.fetch(), undefined, 'nothing to fetch from');
-  const other = again.create('rex-5');
+  const other = await again.create('rex-5');
   assert.ok(typeof other !== 'string', String(other));
   assert.equal(other.base, f.git('rev-parse', 'HEAD'));
 });
 
-test('on a detached HEAD there is no branch to fetch', (t) => {
+test('on a detached HEAD there is no branch to fetch', async (t) => {
   const f = fixture(t);
   f.git('checkout', '-q', '--detach');
   const trees = new Worktrees(f.dir);
   assert.equal(trees.fetch(), undefined);
-  const made = trees.create('rex-6');
+  const made = await trees.create('rex-6');
   assert.ok(typeof made !== 'string', String(made));
   assert.equal(made.base, f.git('rev-parse', 'HEAD'));
   assert.equal(made.from, undefined);
@@ -121,7 +121,7 @@ test("the Changes window doesn't count PRs merged on origin as the worker's chan
   f.merge('fix.txt');
   const trees = new Worktrees(f.dir);
   await trees.fetch();
-  const made = trees.create('rex-7');
+  const made = await trees.create('rex-7');
   assert.ok(typeof made !== 'string', String(made));
   const cwd = path.join(f.dir, made.path);
   writeFileSync(path.join(cwd, 'mine.txt'), 'mine');
@@ -139,7 +139,7 @@ test("the Changes window doesn't count PRs merged on origin as the worker's chan
 test('a worktree deleted with its branch comes back from origin when it was pushed', async (t) => {
   const f = fixture(t);
   const trees = new Worktrees(f.dir);
-  const made = trees.create('rex-9');
+  const made = await trees.create('rex-9');
   assert.ok(typeof made !== 'string', String(made));
   const abs = path.join(f.dir, made.path);
   const run = (...args: string[]) => execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { cwd: abs, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -162,4 +162,27 @@ test('a worktree deleted with its branch comes back from origin when it was push
   f.git('checkout', '-q', made.branch);
   const refused = await trees.restore(made);
   assert.ok('error' in refused && /already (checked out|used by worktree)/.test(refused.error), JSON.stringify(refused));
+});
+
+test('making a worktree never blocks the event loop: git runs off it, so the office answers meanwhile (the journey stall, 2026-10-07)', async (t) => {
+  const f = fixture(t);
+  // A PR merged on origin since, so the start point has to be worked out with git, then the checkout made.
+  f.merge('merged.txt');
+  f.git('fetch', '-q', 'origin');
+  const trees = new Worktrees(f.dir);
+  let ticks = 0;
+  let worst = 0;
+  let last = performance.now();
+  const timer = setInterval(() => {
+    const now = performance.now();
+    worst = Math.max(worst, now - last - 5);
+    last = now;
+    ticks++;
+  }, 5);
+  const made = await trees.create('rex-loop');
+  clearInterval(timer);
+  assert.notEqual(typeof made, 'string', String(made));
+  // Before, each git call (four of them here) ran with execFileSync: no timer could fire until the last was done.
+  assert.ok(ticks >= 3, `the event loop ran ${ticks} times while the worktree was made`);
+  assert.ok(worst < 250, `the event loop was blocked for ${Math.round(worst)} ms`);
 });

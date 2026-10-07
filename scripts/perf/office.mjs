@@ -111,7 +111,9 @@ export async function startTestOffice({ home, port, env = {}, log, fakeDir, time
     ...env,
   };
   delete childEnv.AGENT_OFFICE_PASSWORD;
-  const proc = spawn(process.execPath, [path.join(REPO, 'bin', 'agent-office.js'), '--home', home, '--port', String(port), '--password', PASSWORD, '--agent', agent, '--test-mode', '--no-open'], {
+  // PERF_OFFICE_NODE_ARGS adds node flags (say --cpu-prof --cpu-prof-dir=<dir>, to profile the office; the profile is written when it exits on its own).
+  const nodeArgs = (process.env.PERF_OFFICE_NODE_ARGS ?? '').split(' ').filter(Boolean);
+  const proc = spawn(process.execPath, [...nodeArgs, path.join(REPO, 'bin', 'agent-office.js'), '--home', home, '--port', String(port), '--password', PASSWORD, '--agent', agent, '--test-mode', '--no-open'], {
     cwd: home,
     env: childEnv,
     stdio: ['ignore', out, out],

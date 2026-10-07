@@ -51,7 +51,13 @@ test('rejects foreign session metadata, outside paths and symlink escapes', t =>
   writeFileSync(outside, header() + event() + '\n');
   assert.equal(reader.read(outside, 'thread-1', home), undefined);
   const link = path.join(home, 'sessions', 'rollout-link-thread-1.jsonl');
-  symlinkSync(outside, link);
+  try {
+    symlinkSync(outside, link);
+  } catch (err) {
+    // Windows only lets an account with Developer Mode (or an admin) make a symlink.
+    if (process.platform === 'win32' && (err as NodeJS.ErrnoException).code === 'EPERM') return t.diagnostic('symlink escape not checked: this Windows account may not make symlinks');
+    throw err;
+  }
   assert.equal(reader.read(link, 'thread-1', home), undefined);
 });
 

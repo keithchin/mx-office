@@ -17,6 +17,7 @@ import { mergesSince, probeAgent } from './safety.js';
 import { projectPause, useProjectRunFile } from './store.js';
 import { registerProjectPause } from '../budget/pause.js';
 import type { RunFloor } from './types.js';
+import { turnsStarted } from './turns.js';
 
 const sleep = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
@@ -68,6 +69,7 @@ export function projectRunsOf(ctx: Ctx): ProjectRuns {
       now: () => Date.now(),
       sleep,
       chatter: (floorId, text) => noteChatter(floorId, { kind: 'relay', from: OFFICE, to: { group: 'team' }, text }),
+      turnsStarted,
     });
     offices.set(ctx.cfg, r);
     const runs = r;

@@ -16,7 +16,7 @@ import { TestRunner } from '../src/server/testlab/runner.js';
 import { testlabRoutes } from '../src/server/http/routes/testlab.js';
 import { useTunnelOrigin } from '../src/server/http/util.js';
 import { barsOf, tailLines, ticksFor, viewKey } from '../src/client/ui/testlab/logic.js';
-import { RUN_HISTORY, testsHref, type RunResult, type RunSummary, type TestLabView } from '../src/shared/testlab.js';
+import { RUN_HISTORY, TEST_SUITES, testsHref, type RunResult, type RunSummary, type TestLabView } from '../src/shared/testlab.js';
 
 const tmp = (p = 'testlab-') => mkdtempSync(path.join(os.tmpdir(), p));
 const root = path.join(import.meta.dirname, '..');
@@ -175,6 +175,8 @@ test('headlines and the incident drafted from a failure', () => {
   assert.equal(headlineOf({ id: 'x', suite: 'unit', ok: false, startedAt: 0, finishedAt: 0, durationMs: 0, counts: { pass: 10, fail: 2 } }, 1).headline, '10 pass, 2 fail');
   assert.equal(headlineOf({ id: 'x', suite: 'journey', ok: true, startedAt: 0, finishedAt: 0, durationMs: 0, steps: [{ id: 'a', name: 'A', ok: true, ms: 1 }] }, 0).status, 'pass');
   assert.equal(headlineOf({ id: 'x', suite: 'pages', ok: false, startedAt: 0, finishedAt: 0, durationMs: 0, error: 'Refused: not a test path' }, 2).status, 'error');
+  const view = { id: 'board', name: 'Board', path: '/', ok: true, ttuMs: 1, longestTaskMs: 1, longTasks: [], heapStartMB: 1, heapEndMB: 1, heapGrowthPct: 0, domNodes: 1, failures: [] };
+  assert.equal(headlineOf({ id: 'x', suite: 'perf-quick', ok: false, startedAt: 0, finishedAt: 0, durationMs: 0, views: [view], steps: [{ id: 'a', name: 'A', ok: false, ms: 1 }] }, 1).headline, '1/1 views within budget, 0/1 steps passed', 'a quick check says both');
   const s = sum('run-1-a', 1, { status: 'fail' });
   const r: RunResult = { id: 'run-1-a', suite: 'pages', ok: false, startedAt: 0, finishedAt: 0, durationMs: 0, views: [{ id: 'board', name: 'Board', path: '/lite?tab=board', ok: false, ttuMs: 100, longestTaskMs: 420, longTasks: [{ ms: 420, at: 1, stack: ['renderBoard @ kanban.ts:10'] }], heapStartMB: 1, heapEndMB: 1, heapGrowthPct: 0, domNodes: 1, failures: ['a task ran 420 ms'] }] };
   const d = incidentDraft(s, r, 'board');
@@ -210,7 +212,8 @@ test('the routes are for admins only, and starting, stopping or opening an incid
   // An admin on the office's own address gets through to the view.
   const v = await call(testlabRoutes.view, '/api/testlab', { admin: true, dataDir });
   assert.equal(v.status, 200);
-  assert.equal((v.body as unknown as TestLabView).suites.length, 4);
+  assert.equal((v.body as unknown as TestLabView).suites.length, TEST_SUITES.length);
+  assert.deepEqual((v.body as unknown as TestLabView).suites.map((s) => s.suite), ['unit', 'perf-quick', 'pages', 'journey', 'command-center']);
   assert.equal((await call(testlabRoutes.start, '/api/testlab/runs', { method: 'POST', admin: true, origin: O, body: { suite: 'nope' }, dataDir })).status, 400);
   // Through the tunnel, a stale session is asked for its password before anything starts.
   useTunnelOrigin({ via: () => true, host: () => 'office.test' });

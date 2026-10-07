@@ -17,7 +17,7 @@ export interface QueueWorkers {
   deskOccupied(deskId: string): boolean;
   /** How many rows the floor's back office is built out, for its desks (see WING). */
   wing?(): number;
-  spawn(deskId: string, by: string, prompt: string, worktree: boolean, kind: 'agent', provider: AgentProvider, model?: string, effort?: AgentEffort, meeting?: undefined, owner?: string): WorkerInfo | string;
+  spawn(deskId: string, by: string, prompt: string, worktree: boolean, kind: 'agent', provider: AgentProvider, model?: string, effort?: AgentEffort, meeting?: undefined, owner?: string): WorkerInfo | string | Promise<WorkerInfo | string>;
   /** Resolves with a line about what became of the worker's worktree. */
   kill(id: string): Promise<{ note?: string; error?: string }>;
   /** Fetches what a new worktree starts from; undefined when there's nothing to wait for (see Worktrees.fetch). */
@@ -74,6 +74,8 @@ export class TaskQueue {
   private statePath: string;
   private timer: NodeJS.Timeout;
   private pumping = false;
+  /** Tasks whose worker is starting (see seat). */
+  private seating = new Set<string>();
   private again = false;
   /** Set on shutdown: the workers' exit events must not seat anyone into a dying office. */
   private stopped = false;
@@ -340,7 +342,7 @@ export class TaskQueue {
    * worker limit (`room`) is what caps everyone together.
    */
   private busy(): number {
-    return this.tasks.filter((t) => t.status === 'running').length;
+    return this.tasks.filter((t) => t.status === 'running').length + this.seating.size;
   }
 
   /** A free desk (in the back office too, as far as it's built), else a free bean bag. */
@@ -378,7 +380,7 @@ export class TaskQueue {
   private seat() {
     let changed = false;
     for (const t of this.tasks) {
-      if (t.status !== 'queued') continue;
+      if (t.status !== 'queued' || this.seating.has(t.id)) continue;
       if (this.busy() >= this.maxWorkers) break;
       // A spent budget holds the queue instead of failing every task; the pump seats them once hiring resumes.
       if (this.events.hiringPaused()) break;
@@ -399,33 +401,60 @@ export class TaskQueue {
       if (!desk) break;
       const note = this.useWorktree ? this.events.worktreeNote?.() ?? PROMPTS['queue.worktree'].text : '';
       const r = this.workers.spawn(desk, `${t.addedBy} (queue)`, note ? `${t.prompt}\n\n${note}` : t.prompt, this.useWorktree, 'agent', t.provider ?? this.workers.defaultProvider, t.model, t.effort, undefined, t.owner);
-      changed = true;
-      if (typeof r === 'string') {
-        t.status = 'done';
-        t.outcome = 'failed';
-        t.error = r;
-        t.finishedAt = Date.now();
-        this.events.toast(`📋 Couldn't start ${label(t)}: ${r}`, 'error');
+      if (r instanceof Promise) {
+        // The office's workers start off the event loop (a worktree's git can take seconds): the task
+        // holds its place, and counts as running, until its worker is in.
+        this.seating.add(t.id);
+        void r.then(
+          (got) => this.seated(t, desk, got),
+          (err) => this.seated(t, desk, String((err as Error)?.message ?? err)),
+        );
         continue;
       }
-      t.status = 'running';
-      t.attemptId = newId();
-      t.workerId = r.id;
-      t.workerName = r.name;
-      t.branch = r.worktree?.branch;
-      t.startedAt = Date.now();
-      t.error = undefined;
-      this.lastStatus.set(r.id, r.status);
-      this.events.started?.(t, r);
-      this.events.toast(`📋 ${r.name} sat down at ${DESK_BY_ID.get(desk)?.label ?? 'a desk'} to work on ${label(t)}`, 'info');
-      if (t.issue !== undefined) {
-        const issue = t.issue;
-        void this.events.claimIssue(issue, t.owner).then((err) => {
-          if (err) this.events.toast(`Couldn't assign issue #${issue} on GitHub: ${err}`, 'warn');
-        });
-      }
+      changed = true;
+      this.placed(t, desk, r);
     }
     if (changed) this.changed();
+  }
+
+  /** A worker whose start was waited for is in (or isn't): the task runs on it, unless it was taken off the queue meanwhile. */
+  private seated(t: QueueTask, desk: string, r: WorkerInfo | string) {
+    this.seating.delete(t.id);
+    if (t.status !== 'queued' || !this.tasks.includes(t) || this.stopped) {
+      if (typeof r !== 'string') void this.workers.kill(r.id);
+      return;
+    }
+    this.placed(t, desk, r);
+    this.changed();
+    this.pump();
+  }
+
+  /** Puts a task on the worker that just started for it, or marks it failed with why none did. */
+  private placed(t: QueueTask, desk: string, r: WorkerInfo | string) {
+    if (typeof r === 'string') {
+      t.status = 'done';
+      t.outcome = 'failed';
+      t.error = r;
+      t.finishedAt = Date.now();
+      this.events.toast(`📋 Couldn't start ${label(t)}: ${r}`, 'error');
+      return;
+    }
+    t.status = 'running';
+    t.attemptId = newId();
+    t.workerId = r.id;
+    t.workerName = r.name;
+    t.branch = r.worktree?.branch;
+    t.startedAt = Date.now();
+    t.error = undefined;
+    this.lastStatus.set(r.id, r.status);
+    this.events.started?.(t, r);
+    this.events.toast(`📋 ${r.name} sat down at ${DESK_BY_ID.get(desk)?.label ?? 'a desk'} to work on ${label(t)}`, 'info');
+    if (t.issue !== undefined) {
+      const issue = t.issue;
+      void this.events.claimIssue(issue, t.owner).then((err) => {
+        if (err) this.events.toast(`Couldn't assign issue #${issue} on GitHub: ${err}`, 'warn');
+      });
+    }
   }
 
   private changed() {

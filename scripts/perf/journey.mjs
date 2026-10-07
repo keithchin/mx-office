@@ -12,6 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
+import { PERF_BUDGETS } from './budgets.mjs';
 import { FAKEBIN, assertTestDir, killProcessesUnder, killRealAgentsUnder, login, startTestOffice } from './office.mjs';
 import { findChrome } from './pages.mjs';
 import { makeStubs, MENDIX_VERSION } from './journey/stubs.mjs';
@@ -39,7 +40,7 @@ const PLAN = {
   budget: { level: 'lean', total: 50 },
   by: 'Journey',
 };
-const TOTAL_STEPS = 11;
+const TOTAL_STEPS = 12;
 /** What the office calls an agent that's asleep (roster/bench.ts ASLEEP). */
 const ASLEEP = new Set(['exited', 'offline']);
 
@@ -165,6 +166,7 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
     log(`journey office up at ${office.base} (${root})`);
 
     // 1. The wizard makes the project: every setup step, offline.
+    state.makingSince = Date.now();
     await book.run({
       id: 'wizard',
       name: 'Wizard creates the project',
@@ -216,6 +218,21 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
         await go(`/lite?floor=${FLOOR}&tab=org`, '#team-view');
         await page.waitForFunction((names) => names.every((n) => document.querySelector('#team-view')?.textContent.includes(n)), [ws.a.name, ws.d.name], { timeout: 15000 });
         return { detail: `${ws.a.name} (Chief Analyst, ${ws.a.status}) and ${ws.d.name} (Lead Developer, ${ws.d.status}); ${started.size} fake sessions, no real CLI`, screenshot: await shot('02-org-chart') };
+      },
+    });
+
+    // 2b. The server never stalled while the project was made (wizard, clone, hiring): its event loop
+    // blocks over PERF_BUDGETS.serverStallMs, as the test office recorded them (GET /api/perf/stalls).
+    await book.run({
+      id: 'server-stalls',
+      name: `Server never stalled over ${PERF_BUDGETS.serverStallMs} ms making the project`,
+      run: async () => {
+        const { stalls } = await api('GET', `/api/perf/stalls?since=${state.makingSince}`);
+        const fmt = (xs) => xs.map((x) => `${x.ms} ms at +${((x.at - state.makingSince) / 1000).toFixed(1)} s`).join(', ');
+        const over = stalls.filter((x) => x.ms > PERF_BUDGETS.serverStallMs);
+        log(`server stalls over 100 ms while making the project: ${fmt(stalls) || 'none'}`);
+        if (over.length) throw new Error(`the server's event loop stalled ${over.length}× over ${PERF_BUDGETS.serverStallMs} ms: ${fmt(over)}`);
+        return `longest block ${Math.max(0, ...stalls.map((x) => x.ms))} ms (${stalls.length} over 100 ms)`;
       },
     });
 

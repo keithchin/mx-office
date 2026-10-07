@@ -69,10 +69,13 @@ The pages are Markdown under [`docs/site/`](docs/site/) (the home page is [`docs
 npm install
 npm run build        # client, server and the /docs bundle
 npm run typecheck
-node --import tsx --import=#tests/css --test tests/docs-site.test.ts   # one test file
+npm test             # every test file, a few at a time, each with time limits (about 2 min)
+npm run test:one tests/docs-site.test.ts   # one test file
+npm run test:perf:quick   # the performance guard's quick check: main views and the journey (a few minutes)
+npm run test:perf    # the whole performance guard: every view with a 60 s soak, and the journey
 ```
 
-On Windows, run the test files you touched rather than the whole `npm test`.
+Before committing a change to the pages or the server, run `npm test` and `npm run test:perf:quick`; both run on Windows too. The performance runs use a throwaway test office under `scratch\test-offices` with fake agents only (see `/docs/administration/performance-budgets`).
 
 **Release notes:** add what changed under **Unreleased** in [CHANGELOG.md](CHANGELOG.md); it becomes a release when the office restarts on it. Don't edit `docs/site/release-notes.md`: it only points at the changelog.
 

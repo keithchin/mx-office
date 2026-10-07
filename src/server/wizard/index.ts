@@ -140,7 +140,7 @@ export class Wizard {
 
   /** The setup panel's view: from the default branch on GitHub when there is one, else from the floor's folder. */
   /** Each floor's setup view as last worked out, and when (setup() reuses it for SETUP_TTL_MS). */
-  private setups = new Map<string, { at: number; view: Promise<SetupView> }>();
+  private setups = new Map<string, { at: number; view: Promise<SetupView>; done?: boolean }>();
 
   /**
    * The setup panel's view of a floor. Working it out runs git four to six times (a quarter to over half
@@ -151,6 +151,17 @@ export class Wizard {
     const had = this.setups.get(floor.id);
     if (had && now - had.at < SETUP_TTL_MS) return had.view;
     const view = this.freshSetup(floor);
+    // Stale-while-revalidate: an answer already worked out is given at once while the fresh one comes
+    // (its git takes seconds on a big project), and replaces it once it's in.
+    if (had?.done) {
+      had.at = now;
+      void view.then((v) => this.setups.get(floor.id) === had && this.setups.set(floor.id, { at: Date.now(), view: Promise.resolve(v), done: true }), () => undefined);
+      return had.view;
+    }
+    void view.then(() => {
+      const e = this.setups.get(floor.id);
+      if (e?.view === view) e.done = true;
+    }, () => undefined);
     this.setups.set(floor.id, { at: now, view });
     view.catch(() => this.setups.get(floor.id)?.view === view && this.setups.delete(floor.id));
     return view;

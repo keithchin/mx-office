@@ -84,6 +84,7 @@ export const routes: readonly Route[] = [
   testlabRoutes.start,
   testlabRoutes.run,
   perfRoutes.longTask,
+  perfRoutes.stalls,
   evidenceRoutes.trace,
   flowRoutes.list,
   homeRoutes.stats,

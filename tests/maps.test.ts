@@ -179,7 +179,8 @@ for (const [map, id, name] of [
     const want = mapJson(map, id, name);
     // After changing the castle or the station: UPDATE_CASTLE_JSON=1 node --import tsx --test tests/maps.test.ts
     if (process.env.UPDATE_CASTLE_JSON) writeFileSync(file, want);
-    assert.equal(readFileSync(file, 'utf8'), want, `docs/maps/${map.id}.json is out of date: write it again with UPDATE_CASTLE_JSON=1`);
+    // A Windows checkout (core.autocrlf) has it with CRLF line ends: the same file.
+    assert.equal(readFileSync(file, 'utf8').replace(/\r\n/g, '\n'), want, `docs/maps/${map.id}.json is out of date: write it again with UPDATE_CASTLE_JSON=1`);
     const [mine] = checkCustomMaps([{ file: `${map.id}.json`, json: JSON.parse(want) }]);
     assert.equal(mine.error, undefined);
     const plan = planOf(id, [mine]);
@@ -190,7 +191,7 @@ for (const [map, id, name] of [
 }
 
 test('every map in docs/maps.md loads', () => {
-  const doc = readFileSync(path.join(import.meta.dirname, '..', 'docs', 'maps.md'), 'utf8');
+  const doc = readFileSync(path.join(import.meta.dirname, '..', 'docs', 'maps.md'), 'utf8').replace(/\r\n/g, '\n');
   const maps = [...doc.matchAll(/```json\n([\s\S]*?)\n```/g)].map((m) => JSON.parse(m[1]) as { id: string });
   assert.ok(maps.length >= 2);
   const checked = checkCustomMaps(maps.map((json) => ({ file: `${json.id}.json`, json })));

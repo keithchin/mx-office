@@ -8,7 +8,7 @@ import { MEETING_NOTES_DIR, MEETING_PATTERNS, isMeetingPattern, meetingRecord, o
 import { isAgentEffort, isAgentProvider, tokensOf, type AgentChoice, type AgentEffort, type AgentProvider, type Meeting, type MeetingRecord, type MeetingRequest, type MeetingState, type MeetingTurn, type WorkerInfo, type WorkerStatus } from '../shared/protocol.js';
 import { validateWorkerEffort, validateWorkerModel } from './agents.js';
 import { providerMeta, takesEffort, takesModel } from '../shared/providers.js';
-import { gitError, type WorktreeRef, type WorktreeState } from './worktrees.js';
+import { gitError, type MadeTree, type WorktreeRef, type WorktreeState } from './worktrees.js';
 import { PROMPTS, fillPrompt, type PromptId, type PromptVars } from '../shared/prompts.js';
 
 const execFileP = promisify(execFile);
@@ -20,7 +20,7 @@ export interface MeetingWorkers {
   readonly officeDefault?: AgentChoice;
   list(): WorkerInfo[];
   /** Seats an agent at a chair of the meeting table, for meeting `meeting`, in its worktree when it has one. */
-  seat(deskId: string, by: string, prompt: string, provider: AgentProvider, model: string | undefined, effort: AgentEffort | undefined, meeting: { id: string; worktree?: Meeting['worktree'] }, owner?: string): WorkerInfo | string;
+  seat(deskId: string, by: string, prompt: string, provider: AgentProvider, model: string | undefined, effort: AgentEffort | undefined, meeting: { id: string; worktree?: Meeting['worktree'] }, owner?: string): WorkerInfo | string | Promise<WorkerInfo | string>;
   prompt(id: string, text: string, by?: string): string | undefined;
   /** Keys into its terminal: Esc, to stop what it's doing. */
   write(id: string, data: string, by: string): void;
@@ -30,7 +30,7 @@ export interface MeetingWorkers {
 /** Git for the meeting's own worktree: made when it starts, tidied away once everyone has gone home. */
 export interface MeetingTrees {
   /** `note` says when commits the project has were left out of it (see Worktrees.create). */
-  create(slug: string): (Required<Omit<WorktreeRef, 'made'>> & { from?: string; note?: string }) | string;
+  create(slug: string): MadeTree | Promise<MadeTree>;
   inspect(wt: WorktreeRef): Promise<WorktreeState>;
   remove(wt: WorktreeRef, cleanup: 'worktree' | 'all'): Promise<string | undefined>;
 }
@@ -119,7 +119,7 @@ export class MeetingRoom {
 
   /** Calls a meeting. Returns why it couldn't, or undefined once everyone is sitting down. */
   /** `owner` is the account calling it: the workers run on its sign-ins, and a review panel's review is posted as it. */
-  start(req: MeetingRequest, by: string, owner?: string): string | undefined {
+  async start(req: MeetingRequest, by: string, owner?: string): Promise<string | undefined> {
     if (this.current?.status === 'running') return `The meeting room is busy with “${this.current.title}”: stop that meeting first`;
     if (!isMeetingPattern(req.pattern)) return 'Unknown meeting pattern';
     const pattern = MEETING_PATTERNS[req.pattern];
@@ -164,7 +164,7 @@ export class MeetingRoom {
 
     let worktree: Meeting['worktree'];
     if (this.trees) {
-      const made = this.trees.create(`meeting-${slug}-${id.slice(0, 4)}`);
+      const made = await this.trees.create(`meeting-${slug}-${id.slice(0, 4)}`);
       if (typeof made === 'string') return made;
       const { note, ...ref } = made;
       worktree = ref;
@@ -203,7 +203,7 @@ export class MeetingRoom {
     for (let i = 0; i < m.seats.length; i++) {
       const part = first.find((p) => p.seat === i);
       const text = `${this.brief(m, i)}\n\n${part ? this.ask(m, part) : this.say('meeting.wait')}`;
-      const w = this.workers.seat(m.seats[i].deskId, `${by} (meeting)`, text, provider, model, effort, { id, worktree }, owner);
+      const w = await this.workers.seat(m.seats[i].deskId, `${by} (meeting)`, text, provider, model, effort, { id, worktree }, owner);
       if (typeof w === 'string') {
         for (const s of m.seats) if (s.workerId) void this.workers.kill(s.workerId);
         if (worktree && this.trees) void this.trees.remove(worktree, 'all');

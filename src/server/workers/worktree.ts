@@ -1,7 +1,7 @@
 // A worker's own worktree, or its workspace across repositories: their folder names, what's kept
 // of them in workers.json, making them, keeping each worker's branch up to date, noticing one deleted
 // from under a worker and putting it back, and what becomes of them when the worker goes home.
-import { execFileSync } from 'node:child_process';
+import { originUrlOf } from '../gitfiles.js';
 import { existsSync, readdirSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { WorkerInfo, WorkerRepo } from '../../shared/protocol.js';
@@ -52,11 +52,7 @@ export function validRepos(raw: unknown): WorkerRepo[] | undefined {
 
 /** owner/name of a checkout's origin on GitHub, when it has one. */
 export function originRepo(dir: string): string | undefined {
-  try {
-    return normalizeRepo(execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 }).trim());
-  } catch {
-    return undefined;
-  }
+  return normalizeRepo(originUrlOf(dir, 5000));
 }
 
 /** What starting a worker whose worktree was deleted (see WorkerInfo.lost) says instead. */
@@ -74,7 +70,7 @@ export class WorkerTrees {
    * (the 'worker.repos' prompt, as CLAUDE.md and AGENTS.md). All or nothing: when one repository
    * can't have its worktree, the ones already made are taken out again.
    */
-  makeWorkspace(slug: string, repos: RepoSource[]): { worktree: NonNullable<WorkerInfo['worktree']>; repos: WorkerRepo[]; notes: string[] } | string {
+  async makeWorkspace(slug: string, repos: RepoSource[]): Promise<{ worktree: NonNullable<WorkerInfo['worktree']>; repos: WorkerRepo[]; notes: string[] } | string> {
     // A branch can only be checked out once per repository, and two floors can be checkouts of the same one.
     const seen = new Map<string, string>();
     const own = this.ctx.trees.commonDir();
@@ -97,7 +93,7 @@ export class WorkerTrees {
       })();
       return why;
     };
-    const first = this.ctx.trees.create(slug, names[0]);
+    const first = await this.ctx.trees.create(slug, names[0]);
     if (typeof first === 'string') return fail(first);
     const { note, ...primary } = first;
     const notes = note ? [`${names[0]} ${note}`] : [];
@@ -105,7 +101,7 @@ export class WorkerTrees {
     const others: WorkerRepo[] = [];
     for (const [i, r] of repos.entries()) {
       const trees = new Worktrees(r.dir);
-      const wt = trees.create(slug, names[i + 1], this.ctx.dir);
+      const wt = await trees.create(slug, names[i + 1], this.ctx.dir);
       if (typeof wt === 'string') return fail(`${r.name}: ${wt}`);
       if (wt.note) notes.push(`${names[i + 1]} ${wt.note}`);
       made.push({ trees, ref: { ...wt, path: path.relative(r.dir, path.join(this.ctx.dir, wt.path)) } });
@@ -117,6 +113,21 @@ export class WorkerTrees {
       return fail(`Could not write the workspace's brief: ${(err as Error).message}`);
     }
     return { worktree: primary, repos: others, notes };
+  }
+
+  /** A new worker's worktree (or its workspace across repositories, with `repos`), its notes toasted as `name`'s. */
+  async makeFor(slug: string, name: string, repos: RepoSource[]): Promise<{ worktree: NonNullable<WorkerInfo['worktree']>; repos?: WorkerRepo[] } | string> {
+    if (repos.length) {
+      const made = await this.makeWorkspace(slug, repos);
+      if (typeof made === 'string') return made;
+      for (const note of made.notes) this.ctx.events.toast(`🌿 ${name}'s worktree of ${note}`, 'info');
+      return { worktree: made.worktree, repos: made.repos };
+    }
+    const made = await this.ctx.trees.create(slug);
+    if (typeof made === 'string') return made;
+    const { note, ...ref } = made;
+    if (note) this.ctx.events.toast(`🌿 ${name}'s worktree ${note}`, 'info');
+    return { worktree: ref };
   }
 
   /**

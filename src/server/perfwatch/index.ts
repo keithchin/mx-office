@@ -99,3 +99,33 @@ export function watchEventLoop(raise: (d: Detection) => void, opts: { stallMs?: 
     h.disable();
   };
 }
+
+export interface StallRecord {
+  /** When the block started (epoch ms). */
+  at: number;
+  ms: number;
+}
+
+/**
+ * Records every event-loop block over `thresholdMs` with when it started, by how late a short timer
+ * fires: what the journey's server budget reads (GET /api/perf/stalls, test mode only). Keeps the
+ * newest `keep`. Returns { list, stop }.
+ */
+export function recordStalls(opts: { thresholdMs?: number; intervalMs?: number; keep?: number } = {}) {
+  const thresholdMs = opts.thresholdMs ?? 100;
+  const intervalMs = opts.intervalMs ?? 50;
+  const keep = opts.keep ?? 500;
+  const stalls: StallRecord[] = [];
+  let last = performance.now();
+  const timer = setInterval(() => {
+    const now = performance.now();
+    const late = now - last - intervalMs;
+    last = now;
+    if (late > thresholdMs) {
+      stalls.push({ at: Math.round(Date.now() - late), ms: Math.round(late) });
+      if (stalls.length > keep) stalls.shift();
+    }
+  }, intervalMs);
+  timer.unref();
+  return { list: (since = 0) => stalls.filter((s) => s.at >= since), stop: () => clearInterval(timer) };
+}

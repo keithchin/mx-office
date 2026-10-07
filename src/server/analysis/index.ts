@@ -195,6 +195,9 @@ export function analysisOf(ctx: Pick<Ctx, 'cfg'>): Analysis {
   if (!a) {
     a = new Analysis(ctx.cfg.dataDir);
     offices.set(ctx.cfg, a);
+    // Its records are written in the background (store.ts): whatever is still due goes now.
+    const store = a.store;
+    process.once('exit', () => store.flush());
   }
   return a;
 }

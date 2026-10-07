@@ -162,7 +162,13 @@ export function rankingOf(ctx: Pick<Ctx, 'cfg'>): Ranking {
  * (the performance guard, 2026-10-07). Grades only move as tasks finish, so a few seconds old is fine.
  */
 export const RANKING_TTL_MS = 10_000;
-const recent = new WeakMap<object, Map<string, { at: number; report: RankingReport }>>();
+/**
+ * Past its TTL, a report this recent is still given at once while a fresh one is worked out in the
+ * background (stale-while-revalidate): only an office's very first ask, before the warm-up
+ * (warmup.ts) has run, waits for one.
+ */
+export const RANKING_STALE_MS = 10 * 60_000;
+const recent = new WeakMap<object, Map<string, { at: number; report: RankingReport; refreshing?: boolean }>>();
 
 /** The ranking for the whole building (no floor) or one floor, from the real office (at most RANKING_TTL_MS old). */
 export function rankingReport(ctx: Ctx, floor?: string, now = Date.now()): RankingReport {
@@ -171,6 +177,20 @@ export function rankingReport(ctx: Ctx, floor?: string, now = Date.now()): Ranki
   const key = floor ?? '';
   const had = byFloor.get(key);
   if (had && now - had.at < RANKING_TTL_MS) return had.report;
+  if (had && now - had.at < RANKING_STALE_MS) {
+    if (!had.refreshing) {
+      had.refreshing = true;
+      const map = byFloor;
+      setImmediate(() => {
+        try {
+          map.set(key, { at: Date.now(), report: freshRankingReport(ctx, floor) });
+        } catch {
+          had.refreshing = false;
+        }
+      }).unref();
+    }
+    return had.report;
+  }
   const report = freshRankingReport(ctx, floor);
   byFloor.set(key, { at: now, report });
   return report;

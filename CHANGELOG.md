@@ -6,6 +6,32 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+### New
+- **`npm run test:perf` and `npm run test:perf:quick`**: the performance guard from a terminal. The quick
+  check (the main views on the big test office with a short soak, three project switches, then the
+  end-to-end journey; about four minutes) is what to run, with `npm test`, before committing a change to
+  the pages or the server. The Test Mode page has it as **Quick performance check**, and its **Unit
+  tests** run `npm test` itself, every file included.
+- **The performance guard on real data shapes**: `scripts/perf/real-shape.mjs` makes a scrubbed copy of a
+  real office's data (free text replaced by filler of the same length, names, floor ids, the org and
+  paths renamed, tokens replaced; the floors' repositories stood in for by small ones with the same
+  number of files and the workers' worktrees made again), and `run.mjs --from <office>` runs a suite
+  against it. On a copy of this office's two floors every view and project switch was within budget.
+
+### Improved
+- **Budget and the setup panel open at once**: the first look at Budget took close to a second and
+  the setup panel 3.5 to 4.5 s on a big office. Both are now worked out in the background a few seconds
+  after the office starts (and when a project opens), cost and budget files are written in the
+  background instead of holding the server up, and a cached answer comes back at once while a fresh one
+  is worked out behind it. First Budget look about 130 ms, then about 20 ms; setup about 2 ms.
+
+### Changed
+- **`npm test` runs cleanly on Windows**: every test file runs (the workers, repos and DSH tests used to
+  hang for good there) and the suite exits 0 in about two minutes. `npm test` is now
+  `scripts/test.mjs`: each file in a process of its own, a few at a time, with a time limit per test,
+  per file and on the whole run, so a file that hangs is stopped and named instead of holding the suite
+  up. `npm run test:one <file>` runs one file with node's own runner.
+
 ### Fixed
 - **The 1D view's tabs no longer drop below where the Command Center has them.** On a desktop window
   every tab but the Command Center pushed its tab bar and content about 40 px down, leaving an empty
@@ -13,6 +39,18 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   budget chip and run state. Every tab does now, and the "someone's waiting on another floor" line sits
   below the tabs instead of above them, so the tab bar stays put on all of them in every theme.
   `scripts/check-tab-alignment.mjs` checks it in a browser on a test office.
+- **No more server stall while a project is made**: the office froze for 3 to 16 s right after the
+  wizard's clone step, every time. Programs (gh, git, the wizard's commands, the usage check) now start
+  from a thread of their own, the common git questions (branch, origin, HEAD) are read from the
+  checkout's files, and hiring into a worktree runs git without blocking. The journey test now fails if
+  the server's event loop is blocked for more than 250 ms while it makes a project (it was 4.5 s; now
+  nothing over 100 ms). A test office lists its blocks at `GET /api/perf/stalls`.
+- **Windows**: a worker's terminal no longer leaks a pipe and a thread after it ends, and a stopping
+  office no longer waits five minutes on a worker's boot timer.
+- **⏸ Pause project no longer waits three minutes on a quick handoff**: an agent whose handoff turn
+  was shorter than the pause's two-second look was never seen at work, so the pause waited the full
+  three minutes before putting it to sleep. Every turn is now counted as it starts, so a turn that came
+  and went between two looks still counts.
 
 ## 2026-10-07 · release 17 (`089e759`)
 

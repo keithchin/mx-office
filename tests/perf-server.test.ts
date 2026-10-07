@@ -7,7 +7,10 @@ import { appendFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:f
 import os from 'node:os';
 import path from 'node:path';
 import { AuditLog, FULL_VERIFY_MS } from '../src/server/audit/log.js';
-import { RANKING_TTL_MS, rankingReport } from '../src/server/ranking/index.js';
+import { RANKING_STALE_MS, RANKING_TTL_MS, rankingReport } from '../src/server/ranking/index.js';
+import { startWarmup } from '../src/server/warmup.js';
+import { BudgetStore } from '../src/server/budget/store.js';
+import { RunStore } from '../src/server/analysis/store.js';
 
 const T0 = Date.UTC(2026, 9, 7, 8, 0);
 
@@ -51,7 +54,75 @@ test('the ranking is worked out once per RANKING_TTL_MS, whoever asks', () => {
   const a = rankingReport(ctx, 'f1', T0);
   assert.equal(rankingReport(ctx, 'f1', T0 + RANKING_TTL_MS - 1), a, 'the same report within the TTL');
   assert.notEqual(rankingReport(ctx, 'f2', T0), a, 'per floor');
-  assert.notEqual(rankingReport(ctx, 'f1', T0 + RANKING_TTL_MS + 1), a, 'worked out again after it');
+  assert.notEqual(rankingReport(ctx, 'f1', T0 + RANKING_STALE_MS + 1), a, 'worked out again, there and then, once it is too old');
+});
+
+test('past its TTL the ranking is given at once and worked out again in the background (stale-while-revalidate)', async () => {
+  const dataDir = mkdtempSync(path.join(os.tmpdir(), 'perf-rank-swr-'));
+  const ctx = { cfg: { dataDir }, floors: new Map() } as unknown as Parameters<typeof rankingReport>[0];
+  const now = Date.now();
+  const a = rankingReport(ctx, 'f1', now);
+  assert.equal(rankingReport(ctx, 'f1', now + RANKING_TTL_MS + 1), a, 'the stale one, without waiting');
+  await new Promise((r) => setImmediate(r));
+  const b = rankingReport(ctx, 'f1', Date.now());
+  assert.notEqual(b, a, 'the fresh one, worked out meanwhile');
+});
+
+test('the warm-up works out the ranking, then each floor one at a time, and a floor added later too', async () => {
+  const floors = new Map<string, { id: string }>([['f1', { id: 'f1' }], ['f2', { id: 'f2' }]]);
+  const warmed: string[] = [];
+  let busy = 0;
+  let overlap = false;
+  const stop = startWarmup({ floors } as never, {
+    delayMs: 1,
+    gapMs: 1,
+    pollMs: 20,
+    warm: async (f) => {
+      overlap ||= busy > 0;
+      busy++;
+      await new Promise((r) => setTimeout(r, 5));
+      warmed.push((f as { id: string } | undefined)?.id ?? '(building)');
+      busy--;
+    },
+  });
+  try {
+    await new Promise((r) => setTimeout(r, 120));
+    assert.deepEqual(warmed, ['(building)', 'f1', 'f2']);
+    floors.set('f3', { id: 'f3' });
+    await new Promise((r) => setTimeout(r, 150));
+    assert.deepEqual(warmed, ['(building)', 'f1', 'f2', 'f3'], 'a floor opened since is warmed once');
+    assert.equal(overlap, false, 'one step at a time');
+  } finally {
+    stop();
+  }
+});
+
+test('the budget files are written in the background, in order, and flush() at exit still writes what is in flight', async () => {
+  const dataDir = mkdtempSync(path.join(os.tmpdir(), 'perf-budget-store-'));
+  const store = new BudgetStore(dataDir);
+  store.floor('f1').settings.total = 10;
+  store.changed('f1');
+  const first = store.flushSoon();
+  store.floor('f1').settings.total = 20;
+  store.changed('f1');
+  await Promise.all([first, store.flushSoon()]);
+  assert.equal(JSON.parse(readFileSync(path.join(dataDir, 'budget', 'f1.json'), 'utf8')).settings.total, 20);
+  store.floor('f1').settings.total = 30;
+  store.changed('f1');
+  const late = store.flushSoon();
+  store.flush();
+  await late;
+  assert.equal(JSON.parse(readFileSync(path.join(dataDir, 'budget', 'f1.json'), 'utf8')).settings.total, 30, 'the exit flush wins');
+});
+
+test("the analyzer's records are written once after a burst of puts, not once per put", async () => {
+  const dataDir = mkdtempSync(path.join(os.tmpdir(), 'perf-runstore-'));
+  const store = new RunStore(dataDir);
+  for (let i = 0; i < 300; i++) store.put({ id: `f:${i}`, floor: 'f', workerId: String(i) } as never);
+  await store.settled();
+  const lines = readFileSync(path.join(dataDir, 'analysis', 'runs.jsonl'), 'utf8').trim().split(/\r?\n/);
+  assert.equal(lines.length, 300);
+  assert.equal(new RunStore(dataDir).all().length, 300);
 });
 
 test("a project switch's many asks for the floor's team share one fetch", async () => {

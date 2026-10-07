@@ -43,4 +43,6 @@ export interface RunDeps {
   bootMs?: number;
   /** A line in the floor's Team chatter, from the office. */
   chatter?(floorId: string, text: string): void;
+  /** How many turns a worker has started, counted as its status changes (turns.ts): one that came and went between two looks still counts. */
+  turnsStarted?(workerId: string): number;
 }

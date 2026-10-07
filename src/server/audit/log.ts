@@ -253,9 +253,27 @@ export class AuditLog {
     const file = path.join(this.dir, `${key}.jsonl`);
     const rest = c.lines.slice(k);
     writeFileSync(`${file}.tmp`, rest.length ? `${rest.join('\n')}\n` : '', { mode: 0o600 });
-    renameSync(`${file}.tmp`, file);
+    renameRetrying(`${file}.tmp`, file);
     this.cache.delete(key);
     this.verified.delete(key);
+  }
+}
+
+/**
+ * renameSync, tried again a few times when Windows says the file is busy: a virus scanner or a reader
+ * holding the log for a moment makes the rename fail with EPERM / EBUSY / EACCES, which failed a
+ * rotation (and the audit tests, now and then, when the whole suite ran at once).
+ */
+export function renameRetrying(from: string, to: string, tries = 6, rename: (a: string, b: string) => void = renameSync) {
+  for (let i = 1; ; i++) {
+    try {
+      rename(from, to);
+      return;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code ?? '';
+      if (i >= tries || !['EPERM', 'EBUSY', 'EACCES'].includes(code)) throw err;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 15 * i);
+    }
   }
 }
 

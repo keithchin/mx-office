@@ -8,6 +8,7 @@ import { startProjectRuns } from '../project-run/adapter.js';
 import { startSafeRestart } from '../restart/office.js';
 import { startPhoneAccess } from '../phone-access/index.js';
 import { startWebPush } from '../webpush/index.js';
+import { startWarmup } from '../warmup.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
@@ -52,6 +53,8 @@ export function startTimers(ctx: Ctx): () => void {
   // 📱 Phone access's tunnel back on if it was (phone-access/), and red items pushed to phones (webpush/).
   const stopTunnel = startPhoneAccess(ctx);
   const stopPush = startWebPush(ctx);
+  // The ranking and each floor's setup view worked out in the background, so no first look waits on them (warmup.ts).
+  const stopWarmup = startWarmup(ctx);
 
   return () => {
     stopRuns();
@@ -62,6 +65,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopAwake();
     stopTunnel();
     stopPush();
+    stopWarmup();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

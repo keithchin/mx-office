@@ -22,7 +22,7 @@ export function testingPart(): Built {
       setting(
         'Test Mode page',
         'office',
-        h('p.setting-note', {}, 'The suites (unit tests, page responsiveness, the end-to-end journey, the Command Center check) with their last results, per-view timings and charts, a history of past runs, and ▶ Run to start one. Every run uses a throwaway test office of its own under scratch/test-offices, never this office or its data, and spends nothing.'),
+        h('p.setting-note', {}, 'The suites (unit tests, the quick performance check, page responsiveness, the end-to-end journey, the Command Center check) with their last results, per-view timings and charts, a history of past runs, and ▶ Run to start one. Every run uses a throwaway test office of its own under scratch/test-offices, never this office or its data, and spends nothing.'),
         h('div.seg', {}, open),
       ),
     ],

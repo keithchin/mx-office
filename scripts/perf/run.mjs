@@ -4,8 +4,12 @@
 // under --root (which must be under scratch/test-offices or a test-office… folder), runs in test mode
 // with the fake agent only, and is removed after (--keep leaves it).
 //
-//   node scripts/perf/run.mjs --suite <unit|pages|journey|command-center> --root <test-offices dir>
-//     --out <run dir> --id <run id> [--soak <s>] [--scale <n>] [--only a,b] [--keep]
+//   node scripts/perf/run.mjs --suite <unit|pages|journey|command-center|perf-quick> --root <test-offices dir>
+//     --out <run dir> --id <run id> [--soak <s>] [--scale <n>] [--only a,b] [--quick] [--keep]
+//
+// --quick (and the perf-quick suite, which is the quick pages run followed by the journey) opens the
+// main views only, each for a 5 s soak, and switches projects three times: a few minutes instead of
+// half an hour. The unit suite is `npm test` itself (scripts/test.mjs).
 //
 // Writes <run dir>/result.json (src/shared/testlab.ts RunResult), <run dir>/summary.md and screenshots.
 // Prints `@@progress {"done":n,"of":m,"label":"…"}` lines as it goes. Exit 0 pass, 1 fail, 2 refused/error.
@@ -57,7 +61,10 @@ function node(args, { env = {}, quiet = false, timeoutMs = 30 * 60 * 1000 } = {}
   });
 }
 
-const VALID = ['unit', 'pages', 'journey', 'command-center'];
+const VALID = ['unit', 'pages', 'journey', 'command-center', 'perf-quick'];
+const quick = process.argv.includes('--quick') || suite === 'perf-quick';
+/** The views a quick run opens: one of each kind of page, and the ones that were slowest before. */
+const QUICK_VIEWS = ['cc-chat', 'board', 'org', 'workers', 'budget', 'audit', 'home-projects', 'pixel', 'phone', 'switch-1d-board', 'switch-1d-command'];
 if (!VALID.includes(suite)) {
   console.error(`usage: run.mjs --suite ${VALID.join('|')} --root <test-offices dir> --out <dir> --id <id>`);
   process.exit(2);
@@ -81,8 +88,15 @@ async function fixture(scale) {
   return { home: path.join(officeRoot, 'office'), floor: floors[0].id, other: floors[1]?.id };
 }
 
+/** --from <office dir>: a test office already made (scripts/perf/real-shape.mjs), used as it is, never removed. */
+function prepared(dir) {
+  assertTestDir(dir, 'the --from office');
+  const floors = JSON.parse(fs.readFileSync(path.join(dir, '.agent-office', 'floors.json'), 'utf8'));
+  return { home: path.resolve(dir), floor: arg('floor', floors[0].id), other: floors.find((f) => f.id !== arg('floor', floors[0].id))?.id };
+}
+
 async function withOffice(scale, fn) {
-  const { home, floor, other } = await fixture(scale);
+  const { home, floor, other } = arg('from') ? prepared(arg('from')) : await fixture(scale);
   progress({ done: 0, of: 1, label: 'Starting the test office' });
   const office = await startTestOffice({ home, env: { FAKE_RATE_MS: arg('rate', '400') } });
   console.log(`test office up at ${office.base} (floor ${floor}, ${home})`);
@@ -95,29 +109,28 @@ async function withOffice(scale, fn) {
 
 async function runSuite() {
   if (suite === 'unit') {
-    // Every test file but the ones known to hang on Windows (the next pass fixes those).
-    const skip = new Set(process.platform === 'win32' ? ['dsh.test.ts', 'repos.test.ts', 'workers.test.ts'] : []);
-    const files = fs.readdirSync(path.join(REPO, 'tests')).filter((f) => f.endsWith('.test.ts') && !skip.has(f)).map((f) => `tests/${f}`);
-    progress({ done: 0, of: 1, label: `${files.length} test files` });
-    const r = await node(['--import', 'tsx', '--import=#tests/css', '--test', '--test-reporter=tap', '--test-concurrency=4', ...files], { quiet: true });
-    const num = (k) => Number(r.out.match(new RegExp(`^# ${k} (\\d+)`, 'm'))?.[1] ?? 0);
-    const failures = [...r.out.matchAll(/^\s*not ok \d+ - (.+)$/gm)].map((m) => m[1].trim()).filter((n) => !/\.test\.ts$/.test(n) || true).slice(0, 100);
-    const counts = { pass: num('pass'), fail: num('fail'), skip: num('skipped') };
-    console.log(r.out.split('\n').filter((l) => /^# /.test(l)).join('\n'));
-    const skipped = [...skip].map((f) => `skipped on Windows: tests/${f}`);
-    return { ok: r.code === 0 && counts.fail === 0, counts, failures, summary: `# Unit tests: ${counts.pass} pass, ${counts.fail} fail\n\n${[...failures.map((f) => `- FAIL ${f}`), ...skipped.map((s) => `- ${s}`)].join('\n')}\n` };
+    // `npm test` itself: every test file, each with its time limits (scripts/test.mjs).
+    fs.mkdirSync(outDir, { recursive: true });
+    const json = path.join(outDir, 'unit.json');
+    progress({ done: 0, of: 1, label: 'npm test (scripts/test.mjs)' });
+    const r = await node(['scripts/test.mjs', '--json', json]);
+    const res = fs.existsSync(json) ? JSON.parse(fs.readFileSync(json, 'utf8')) : { counts: {}, failures: [`scripts/test.mjs ended (exit ${r.code}) without a result`] };
+    const counts = { pass: res.counts.pass ?? 0, fail: (res.counts.fail ?? 0) + (res.counts.timedOut ?? 0), skip: res.counts.skipped ?? 0 };
+    const failures = (res.failures ?? []).slice(0, 100);
+    return { ok: r.code === 0 && counts.fail === 0, counts, failures, summary: `# Unit tests: ${counts.pass} pass, ${counts.fail} fail${counts.skip ? `, ${counts.skip} skipped` : ''}\n\n${failures.map((f) => `- FAIL ${f}`).join('\n')}\n` };
   }
-  if (suite === 'pages') {
+  if (suite === 'pages' || suite === 'perf-quick') {
     const { runPages, pagesSummary } = await import('./pages.mjs');
     return withOffice(Number(arg('scale', '10')), async (office, floor, _home, other) => {
       // Give the live workers a moment to come up and start sending.
       await new Promise((r) => setTimeout(r, 4000));
-      const res = await runPages({ base: office.base, floor, other, password: PASSWORD, outDir, soakSeconds: Number(arg('soak', PERF_BUDGETS.soakSeconds)), only: arg('only')?.split(','), onProgress: progress });
+      const only = arg('only')?.split(',') ?? (quick ? QUICK_VIEWS : undefined);
+      const res = await runPages({ base: office.base, floor, other, password: PASSWORD, outDir, soakSeconds: Number(arg('soak', quick ? 5 : PERF_BUDGETS.soakSeconds)), only, onProgress: progress });
       // Then the same switch over and over: a switch that only now and then gets stuck shows up here.
       if (other && !arg('only')) {
         const { switchStress } = await import('./switch-stress.mjs');
         progress({ done: res.views.length, of: res.views.length + 1, label: 'Switching projects 10 times' });
-        const st = await switchStress({ base: office.base, floor, other, times: Number(arg('switches', '10')), outDir });
+        const st = await switchStress({ base: office.base, floor, other, times: Number(arg('switches', quick ? '3' : '10')), outDir });
         const bad = st.switches.filter((x) => x.outcome !== 'done' || x.stuck || (x.pageMs ?? x.wallMs) > PERF_BUDGETS.switchMs);
         res.views.push({
           id: 'switch-stress',
@@ -139,6 +152,14 @@ async function runSuite() {
         res.ok = res.ok && st.ok;
       }
       return { ...res, officeDir: officeRoot, summary: pagesSummary(res), failures: res.views.filter((v) => !v.ok).map((v) => `${v.name}: ${v.failures.join('; ')}`) };
+    }).then(async (pages) => {
+      if (suite !== 'perf-quick') return pages;
+      // Then the journey, in a test office of its own.
+      const { runJourney, journeySummary } = await import('./journey.mjs');
+      const j = await runJourney({ root: `${officeRoot}-journey`, outDir, onProgress: progress });
+      if (fs.existsSync(`${officeRoot}-journey`) && !keep) removeTestDir(`${officeRoot}-journey`);
+      const failures = [...(pages.failures ?? []), ...(j.steps ?? []).filter((s) => !s.ok).map((s) => `${s.name}: ${s.detail ?? ''}`), ...(j.error ? [`journey: ${j.error}`] : [])];
+      return { ...pages, steps: j.steps, ok: pages.ok && j.ok, failures, summary: `${pages.summary}\n${journeySummary(j)}` };
     });
   }
   if (suite === 'command-center') {
