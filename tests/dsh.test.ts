@@ -5,9 +5,12 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { removeDir } from './support/cleanup.js';
+import { runnable } from './support/winshim.js';
 import {
   DshRenderer,
   DshSession,
@@ -199,8 +202,9 @@ function fixture(): Fixture {
   const answers = path.join(root, 'answers.jsonl');
   mkdirSync(data, { recursive: true });
   writeFileSync(agent, fakeAgent);
-  writeFileSync(dsh, `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(agent)} "$@"\n`, { mode: 0o700 });
-  chmodSync(dsh, 0o700);
+  // A node script that runs the agent, so it runs on Windows too (tests/support/winshim.ts).
+  writeFileSync(dsh, `#!/usr/bin/env node\nimport(${JSON.stringify(pathToFileURL(agent).href)});\n`, { mode: 0o700 });
+  runnable(dsh);
   writeFileSync(log, '');
   writeFileSync(answers, '');
   return {
@@ -212,7 +216,7 @@ function fixture(): Fixture {
     sessions,
     answers,
     close() {
-      rmSync(root, { recursive: true, force: true });
+      removeDir(root);
     },
   };
 }
@@ -490,7 +494,7 @@ test('the patch keeps the floor DSH sessions under the office, and argv puts the
   const patch = writeDshPatch(f.data);
   const body = readFileSync(patch, 'utf8');
   assert.match(body, /session-persistence-jsonl/);
-  assert.ok(body.includes(dshSessionsRoot(f.data)));
+  assert.ok(body.includes(JSON.stringify(dshSessionsRoot(f.data))), 'the root, quoted as YAML reads it back');
   assert.deepEqual(dshArgs({ profile: 'acp', patches: [patch], extra: ['--model', 'x'] }), ['--model', 'x', '--profile', 'acp', '--patch', patch]);
   assert.deepEqual(dshArgs({ profile: 'acp' }), ['--profile', 'acp']);
 });
@@ -800,7 +804,7 @@ test('the office hires a DSH worker over ACP, and its desk shows the work', asyn
   const updates: WorkerInfo[] = [];
   const mgr = supervised(t, f, updates);
 
-  const spawned = mgr.spawn('desk-1', 'tester', 'run the tests');
+  const spawned = await mgr.spawn('desk-1', 'tester', 'run the tests');
   assert.equal(typeof spawned, 'object', typeof spawned === 'string' ? spawned : '');
   const id = (spawned as WorkerInfo).id;
 
@@ -819,7 +823,7 @@ test('the office hires a DSH worker over ACP, and its desk shows the work', asyn
 
   // The patch keeps this floor's sessions in the office's own directory.
   const patch = readFileSync(path.join(f.data, 'dsh-patch.yml'), 'utf8');
-  assert.ok(patch.includes(dshSessionsRoot(f.data)));
+  assert.ok(patch.includes(JSON.stringify(dshSessionsRoot(f.data))));
 
   // Answering the permission from the terminal finishes the turn at the desk.
   mgr.write(id, '1\r', 'tester');
@@ -837,7 +841,7 @@ test('the office hires a DSH worker over ACP, and its desk shows the work', asyn
 test('a DSH worker comes back offline after a restart, then resumes its session', async (t) => {
   const f = tracked(t);
   const first = supervised(t, f, []);
-  const spawned = first.spawn('desk-1', 'tester', 'run the tests') as WorkerInfo;
+  const spawned = (await first.spawn('desk-1', 'tester', 'run the tests')) as WorkerInfo;
   const id = spawned.id;
   await waitFor(() => first.get(id)?.sessionId, (s) => s === 'sess-1');
   await waitFor(() => first.get(id)?.status, (s) => s === 'needs_input');
@@ -869,7 +873,7 @@ test('a DSH worker comes back offline after a restart, then resumes its session'
 test('a DSH board agent proves itself with its token, and a second question goes to its running session', async (t) => {
   const f = tracked(t);
   const mgr = supervised(t, f, []);
-  const asked = mgr.station('station-issues', 'tester', 'which issues are stale?');
+  const asked = await mgr.station('station-issues', 'tester', 'which issues are stale?');
   assert.equal(typeof asked, 'object', typeof asked === 'string' ? asked : '');
   const { info, hired } = asked as { info: WorkerInfo; hired: boolean };
   assert.equal(hired, true);
@@ -886,7 +890,7 @@ test('a DSH board agent proves itself with its token, and a second question goes
   assert.equal(mgr.authenticate(id, 'not-the-token'), undefined);
 
   // Asked again, the running agent gets the prompt; it is not "resumed" into an error.
-  const again = mgr.station('station-issues', 'tester', 'and the oldest one?');
+  const again = await mgr.station('station-issues', 'tester', 'and the oldest one?');
   assert.equal(typeof again, 'object', typeof again === 'string' ? again : '');
   assert.equal((again as { hired: boolean }).hired, false);
   await waitFor(() => mgr.get(id)?.status, (s) => s === 'needs_input');
@@ -895,7 +899,7 @@ test('a DSH board agent proves itself with its token, and a second question goes
 test('a DSH terminal fits the window it is shown in, though the agent has no size', async (t) => {
   const f = tracked(t);
   const mgr = supervised(t, f, []);
-  const id = (mgr.spawn('desk-1', 'tester', 'run the tests') as WorkerInfo).id;
+  const id = ((await mgr.spawn('desk-1', 'tester', 'run the tests')) as WorkerInfo).id;
   await waitFor(() => mgr.get(id)?.status, (s) => s === 'needs_input');
   mgr.resize(id, 120, 48);
   assert.equal(mgr.get(id)?.cols, 120);

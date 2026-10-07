@@ -213,7 +213,7 @@ export class PtyHost {
 
   /** A new terminal: in the host when there is one, else in-process. Throws if it can't start. */
   spawn(opts: SpawnOpts): Pty {
-    if (!this.sock) return pty.spawn(opts.file, opts.args, { name: 'xterm-256color', cols: opts.cols, rows: opts.rows, cwd: opts.cwd, env: opts.env });
+    if (!this.sock) return releaseOnExit(pty.spawn(opts.file, opts.args, { name: 'xterm-256color', cols: opts.cols, rows: opts.rows, cwd: opts.cwd, env: opts.env }));
     const id = randomBytes(8).toString('hex');
     const p = new RemotePty(id, (m) => this.send(m));
     this.ptys.set(id, p);
@@ -362,4 +362,27 @@ export class PtyHost {
 
 function frame(msg: ToHost): string {
   return `${JSON.stringify(msg)}\n`;
+}
+
+/**
+ * On Windows, node-pty leaves a terminal's input pipe open, and its output thread running, once its
+ * process has gone (it only closes the output side): one pipe and one worker thread leaked per worker
+ * run, which kept a test run (and an office shutting down) alive for good. Let go of both shortly
+ * after the exit, once any last output is in.
+ */
+function releaseOnExit(p: pty.IPty): pty.IPty {
+  if (process.platform !== 'win32') return p;
+  p.onExit(() => {
+    const t = setTimeout(() => {
+      const agent = (p as unknown as { _agent?: { _inSocket?: { destroy(): void }; _conoutSocketWorker?: { dispose(): void } } })._agent;
+      try {
+        agent?._inSocket?.destroy();
+        agent?._conoutSocketWorker?.dispose();
+      } catch {
+        // already let go
+      }
+    }, 1000);
+    t.unref();
+  });
+  return p;
 }

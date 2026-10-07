@@ -781,7 +781,7 @@ export class WorkerManager {
       if (w.viewers.size) this.events.data(info.id, data, [...w.viewers.keys()]);
     });
     proc.onExit(({ exitCode, error, lost }) => {
-      if (w.pty === proc || !w.pty) adapter?.exited?.(this.handleOf(w), this.cwd(info)); // not for a run it has since replaced
+      if (!this.closing && (w.pty === proc || !w.pty)) adapter?.exited?.(this.handleOf(w), this.cwd(info)); // not for a run it has since replaced, nor again after shutdown did
       if (w.pty !== proc || this.workers.get(info.id) !== w) return;
       w.pty = undefined;
       if (error) {

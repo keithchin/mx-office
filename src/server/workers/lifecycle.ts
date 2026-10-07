@@ -68,7 +68,7 @@ export function bootSilence(adapter: Pick<SomeAdapter, 'bootHint' | 'screen'> | 
  */
 export function watchBoot(w: Pick<Worker, 'info' | 'pty' | 'bootBlocked'>, proc: unknown, adapter: SomeAdapter | undefined, setStatus: (s: WorkerStatus) => void, timer: (fn: () => void, ms: number) => unknown = setTimeout) {
   const { after, status } = bootSilence(adapter);
-  timer(() => {
+  const t = timer(() => {
     if (w.info.status !== 'starting' || w.pty !== proc) return;
     if (status === 'needs_input') {
       w.bootBlocked = true;
@@ -76,6 +76,9 @@ export function watchBoot(w: Pick<Worker, 'info' | 'pty' | 'bootBlocked'>, proc:
     }
     setStatus(status);
   }, after);
+  // It only ever looks again: never a reason to keep the process alive (it held a test run, or an
+  // office being shut down, for its five minutes).
+  (t as { unref?: () => void } | undefined)?.unref?.();
 }
 
 /** A lifecycle hook event as a provider's normalizer compacts it. */
