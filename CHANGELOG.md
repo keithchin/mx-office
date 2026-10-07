@@ -22,6 +22,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   roles. Client and Discovery moved to the page after it.
 
 ### Improved
+- **/home** has one pause button instead of two: **⏸ Pause all projects** while any project is running,
+  **▶ Resume all projects** once every one is paused, and with a mix a small **▶ Resume N paused** link beside it
+  that resumes just the paused ones. While a pause or resume is going it shows its progress (*⏸ Pausing… 3 of 7*)
+  and can't be clicked. Each project card has a state icon by its name: ⏸ paused (hover for who, when and why:
+  a person, a safe restart or the budget), ▶ running (*2 agents working, 3 asleep*), and an amber ⏳ while it's
+  pausing or resuming; the 2D Overview's banners show the same. Line icons in the Clean themes; admins only for
+  the button, everyone sees the state, and it keeps up by itself.
 - **⚙️ Settings** is a full page on the 1D view: every setting, sections down the left (You, Workers, Team,
   Jeff · Router, Notifications, Budget, Connections, Deliverables, Incidents, Studio, Appearance, Advanced),
   each with its own address (`/lite?tab=settings&section=workers`) for links. It has everything the 3D window

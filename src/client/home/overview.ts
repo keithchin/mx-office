@@ -19,6 +19,8 @@ import { FloorArt } from '../pixel/snapshot';
 import { BREAK_WORDS, breakAt, type BreakLead } from '../pixel/breaks';
 import { officeKeys } from '../pixel/hud';
 import { floorUrl, openFloor } from './projects';
+import { homeRunState, onHomeRunState } from './run-state';
+import { drawRunState } from './overview-state';
 import '../pixel/game.css';
 import './overview.css';
 
@@ -57,7 +59,7 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
   let shown = false;
   let dpr = 1;
   let hover: { floor: number; worker: string } | null = null;
-  let colors: Record<'void' | 'card' | 'ink' | 'muted' | 'line' | 'warn', string> | undefined;
+  let colors: Record<'void' | 'card' | 'ink' | 'muted' | 'line' | 'warn' | 'good' | 'amber', string> | undefined;
 
   // ---- The floors, and laying them out -------------------------------------------------------------
   function layout() {
@@ -109,7 +111,7 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
   function readColors() {
     const cs = getComputedStyle(stage);
     const v = (n: string, fb: string) => cs.getPropertyValue(n).trim() || fb;
-    colors = { void: v('--px-void', '#2b2d42'), card: v('--card', '#fffaf3'), ink: v('--ink', '#2b2d42'), muted: v('--muted', '#6b6f80'), line: v('--line', '#2b2d42'), warn: v('--warn', '#ef476f') };
+    colors = { void: v('--px-void', '#2b2d42'), card: v('--card', '#fffaf3'), ink: v('--ink', '#2b2d42'), muted: v('--muted', '#6b6f80'), line: v('--line', '#2b2d42'), warn: v('--warn', '#ef476f'), good: v('--good', '#06d6a0'), amber: v('--warn', '#ffd166') };
     return colors;
   }
 
@@ -150,7 +152,11 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
     const stripe = Math.max(edge * 2, Math.round(bh * 0.14));
     g.fillRect(Math.round(x) + edge, Math.round(y) + edge, stripe, Math.round(bh) - edge * 2);
     const left = x + edge + stripe + Math.round(bh * 0.22);
-    const room = w - (left - x) - Math.round(bh * 0.22);
+    // The project's ⏸ / ▶ state at the right (home/run-state.ts), when it has come.
+    const state = homeRunState(f.id);
+    const badge = state ? Math.round(Math.min(bh * 0.5, 22 * dpr)) : 0;
+    if (state && badge >= 8) drawRunState(g, state.kind, x + w - edge - badge - Math.round(bh * 0.18), y + (bh - badge) / 2, badge, c);
+    const room = w - (left - x) - Math.round(bh * 0.22) - (badge ? badge + Math.round(bh * 0.18) : 0);
     const two = bh >= 36 * dpr;
     const big = Math.round(Math.min(32 * dpr, Math.max(10 * dpr, bh * (two ? 0.4 : 0.55))));
     const small = Math.round(Math.max(9 * dpr, big * 0.5));
@@ -274,7 +280,7 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
     canvas.classList.toggle('point', hit?.part === 'banner');
     const a = hit ? arts[hit.index] : undefined;
     const f = a?.floor;
-    const body = !a || !f || canvas.classList.contains('grabbing') ? null : who ? ('worker' in who ? tipFor(who.worker, a) : leadTip(who.lead, who.index, a)) : hit!.part === 'banner' ? [h('b', {}, f.name), h('div.ov-dim', {}, 'Click to open it in the 2D view')] : null;
+    const body = !a || !f || canvas.classList.contains('grabbing') ? null : who ? ('worker' in who ? tipFor(who.worker, a) : leadTip(who.lead, who.index, a)) : hit!.part === 'banner' ? [h('b', {}, f.name), h('div', {}, homeRunState(f.id)?.title ?? ''), h('div.ov-dim', {}, 'Click to open it in the 2D view')] : null;
     tip.classList.toggle('hidden', !body);
     if (!body) return;
     tip.replaceChildren(...body);
@@ -306,6 +312,7 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
   });
 
   setInterval(() => void refresh(), REFRESH_MS);
+  onHomeRunState(() => draw(performance.now(), false));
   document.addEventListener('visibilitychange', () => !document.hidden && void refresh());
   // A floor added or taken away: the overview catches up straight away rather than at the next refresh.
   let floorsKey = '';

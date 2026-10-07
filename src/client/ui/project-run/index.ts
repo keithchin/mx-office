@@ -1,13 +1,12 @@
 // ▶ Resume project and ⏸ Pause project on the page (server/project-run/): a small bar in the Command
 // Center's heading and at the top of the team pages, with the floor's pause ("⏸ Paused by Keith at
-// 14:05 · 2 waiting on you"), a progress chip while a run is going, and the two buttons (admins); and
-// "Resume all / Pause all projects" on Home. No three.js here: the flat views and Home load it.
+// 14:05 · 2 waiting on you"), a progress chip while a run is going, and the two buttons (admins).
+// Home's one "Pause all / Resume all projects" button is home/run-state.ts. No three.js here.
 
 import { PAUSED_HIRES, pauseLine, type ProjectRunView } from '../../../shared/project-run';
 import { store } from '../../state';
-import { h, toast } from '../dom';
-import { confirmDialog } from '../prompt';
-import { allFloors, runPreview, runView } from './api';
+import { h } from '../dom';
+import { runView } from './api';
 import { openPause, openProgress, openResume } from './modal';
 import './project-run.css';
 
@@ -79,22 +78,4 @@ export function mountProjectRun(host: Element | null, key = 'summary') {
     void refresh();
   }
   draw();
-}
-
-/** Home's "▶ Resume all projects" and "⏸ Pause all projects" (admins). */
-export function homeRunButtons(): HTMLElement | null {
-  if (!store.me.admin || !store.floors.length) return null;
-  const resume = h('button.btn.home-add', { type: 'button', title: 'Wake, on every floor, the agents that have work waiting (each floor’s preview defaults)' }, '▶ Resume all projects');
-  const pause = h('button.btn.home-add', { type: 'button', title: 'Every floor’s agents finish their turn, hand off and sleep' }, '⏸ Pause all projects');
-  resume.addEventListener('click', async () => {
-    resume.setAttribute('disabled', '');
-    const counts = await Promise.all(store.floors.map(async (f) => [f.name, (await runPreview(f.id))?.agents.filter((a) => a.action !== 'skip').length ?? 0] as const));
-    resume.removeAttribute('disabled');
-    const total = counts.reduce((n, [, c]) => n + c, 0);
-    confirmDialog('▶ Resume all projects', `${counts.map(([n, c]) => `${n}: ${c}`).join(', ')}. Wakes ${total} agent${total === 1 ? '' : 's'} with work waiting, a few at a time on each floor.`, '▶ Resume all', () => void allFloors('resume').then((r) => r && toast('▶ Resuming every project')));
-  });
-  pause.addEventListener('click', () => {
-    confirmDialog('⏸ Pause all projects', 'Agents finish their current turn, write a handoff note and sleep; office prompts are held until each is resumed. Your messages still go through.', '⏸ Pause all', () => void allFloors('pause').then((r) => r && toast('⏸ Pausing every project')));
-  });
-  return h('span.seg.pr-home', {}, resume, pause);
 }
