@@ -16,6 +16,7 @@ import { PAUSE_FLOW } from '../project-run/flows.js';
 import { projectPause } from '../project-run/store.js';
 import { exitOffice, launcherLoops } from './exit.js';
 import { resumeAfterRestart, SafeRestart, type RestartDeps } from './index.js';
+import { helperNote, helpersOf, helperSource } from './helpers.js';
 
 /** The office's own checkout (the one `npm run build` builds). */
 function appDir(): string {
@@ -59,6 +60,7 @@ function build(): Promise<{ ok: boolean; log: string }> {
 
 let current: SafeRestart | undefined;
 
+
 export function safeRestartOf(ctx: Ctx): SafeRestart {
   if (current) return current;
   const runs = projectRunsOf(ctx);
@@ -79,6 +81,12 @@ export function safeRestartOf(ctx: Ctx): SafeRestart {
           .filter((w) => w.kind === 'agent' && !isAsleepStatus(w.status) && (w.status === 'working' || w.status === 'starting' || (handing.includes(w.id) && w.status !== 'needs_input')))
           .map((w) => ({ name: w.name, floor: f.id, doing: w.status === 'starting' ? 'starting' : handing.includes(w.id) ? 'handing off' : 'mid-turn' }));
       }),
+    helpers: async () => {
+      const floors = [...ctx.floors.values()].map((f) => ({ id: f.id, workers: f.workers.list() }));
+      const now = Date.now();
+      const found = await helpersOf(helperSource(ctx), floors, now);
+      return floors.flatMap((f) => f.workers.filter((w) => found.has(w.id)).map((w) => ({ name: w.name, floor: f.id, doing: helperNote(found.get(w.id)!, now) })));
+    },
     newCommits: () => !!STARTED_ON && head() !== STARTED_ON,
     build,
     exit: (code) => exitOffice(code),

@@ -15,7 +15,7 @@ import { writeJsonAtomic } from '../flow/store.js';
 export interface Busy {
   name: string;
   floor: string;
-  /** "mid-turn", "starting". */
+  /** "mid-turn", "starting", "handing off", "background helper running (architect-agent, 18 min)". */
   doing: string;
 }
 
@@ -28,6 +28,8 @@ export interface RestartDeps {
   resume(floorId: string, by: string): Promise<unknown>;
   /** Agents mid-turn (working or starting) on any floor; idle, asleep and needs_input don't hold it up. */
   busy(): Busy[];
+  /** Agents between turns whose background helper (a subagent) is still at work (helpers.ts): said instead of what busy() says of them. */
+  helpers?(): Promise<Busy[]>;
   /** The office's checkout has commits it isn't running. */
   newCommits(): boolean;
   build(): Promise<{ ok: boolean; log: string }>;
@@ -74,6 +76,7 @@ export class SafeRestart {
   log?: string;
   error?: string;
   waitingOn: string[] = [];
+  private ticking = false;
   /** Floors this restart paused (the rest were paused by a person, or not at all). */
   ours: string[] = [];
 
@@ -106,18 +109,29 @@ export class SafeRestart {
     return undefined;
   }
 
-  /** Every second while it's under way: who it's waiting on, and on once nobody is mid-turn. */
+  /**
+   * Every second while it's under way: who it's waiting on, and on once nobody is. Past the wait limit
+   * too: the list stays true (it said "Dylan handing off" long after Dylan was asleep), and it goes on by
+   * itself once it's empty.
+   */
   async tick(): Promise<void> {
-    if (this.phase !== 'waiting') return;
-    const busy = this.deps.busy();
+    if ((this.phase !== 'waiting' && this.phase !== 'timed-out') || this.ticking) return;
+    this.ticking = true;
+    let busy: Busy[];
+    try {
+      busy = await this.whoIsBusy();
+    } finally {
+      this.ticking = false;
+    }
+    if (this.phase !== 'waiting' && this.phase !== 'timed-out') return;
     const was = this.waitingOn.join('|');
-    this.waitingOn = busy.map((b) => `${b.name} ${b.doing}`);
+    this.waitingOn = busy.map((b) => `${b.name}: ${b.doing}`);
     if (this.waitingOn.join('|') !== was) {
       if (busy.length) audit.record({ actor: OFFICE_ACTOR, action: 'restart.waiting', target: TARGET, summary: `Waiting on ${busy.length}: ${this.waitingOn.join(', ')}`, details: { busy } });
       this.deps.changed?.();
     }
     if (!busy.length) return this.proceed([]);
-    if (this.deps.now() - (this.waitStart ?? 0) >= this.timeoutMin * 60_000) {
+    if (this.phase === 'waiting' && this.deps.now() - (this.waitStart ?? 0) >= this.timeoutMin * 60_000) {
       this.phase = 'timed-out';
       this.deps.changed?.();
     }
@@ -133,8 +147,17 @@ export class SafeRestart {
       this.deps.changed?.();
       return undefined;
     }
-    await this.proceed(this.deps.busy());
+    await this.proceed(await this.whoIsBusy());
     return undefined;
+  }
+
+  /** Who holds it up: busy() with what helpers() knows, a helper's words winning for the same agent. */
+  private async whoIsBusy(): Promise<Busy[]> {
+    const busy = this.deps.busy();
+    const helpers = (await this.deps.helpers?.().catch(() => [] as Busy[])) ?? [];
+    const key = (b: Busy) => `${b.floor}|${b.name}`;
+    const byHelper = new Map(helpers.map((h) => [key(h), h]));
+    return [...busy.map((b) => byHelper.get(key(b)) ?? b), ...helpers.filter((h) => !busy.some((b) => key(b) === key(h)))];
   }
 
   /** Stops it, resuming the floors it paused. */
