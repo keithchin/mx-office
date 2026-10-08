@@ -19,7 +19,7 @@ import { forgetSubagents } from '../workers/subagents.js';
 import { forgetLastWords } from '../judge/turns.js';
 import { Delivery } from './deliver.js';
 import { Escalations } from './escalations.js';
-import { excerpt, readJournal } from './journal-io.js';
+import { excerpt, readJournalSoon } from './journal-io.js';
 import { Jeff } from './jeff.js';
 import { Members } from './members.js';
 import { Nudges } from './nudge.js';
@@ -353,7 +353,8 @@ export class Roster {
       const w = this.workerOf(floor, m);
       // A benched Lead's handoff may only be on its branch so far: the note the office kept stands in.
       const kept = m.handoff && { heading: m.handoff.text.split('\n')[0], body: m.handoff.text.split('\n').slice(1).join('\n'), date: '' };
-      const last = latestEntry(readJournal(floor, w, r.team)) ?? kept;
+      // From what was last read in the background (the chatter and the ranking read the same files): a look never waits on the disk.
+      const last = latestEntry(readJournalSoon(floor, w, r.team)) ?? kept;
       const status = this.statusOf(m, w);
       return {
         role: r.id,

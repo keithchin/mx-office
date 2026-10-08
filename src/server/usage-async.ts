@@ -30,19 +30,20 @@ async function subagentFiles(transcript: string): Promise<string[]> {
 }
 
 /** Reads whatever was appended to the session's transcripts, without holding the event loop. True when the totals changed. */
-export async function scanTrackerAsync(t: UsageTracker, slice = SLICE): Promise<boolean> {
+/** `onLine` hears every line of the session's own transcript (not a subagent's), parsed, as scanTrackerStep's does. */
+export async function scanTrackerAsync(t: UsageTracker, slice = SLICE, onLine?: (line: any) => void): Promise<boolean> {
   const transcript = t.transcript;
   if (!transcript) return false;
   let changed = false;
   for (const file of [transcript, ...(await subagentFiles(transcript))]) {
     // A new session took over meanwhile (a /clear, a resume): the next scan reads that one.
     if (t.transcript !== transcript) break;
-    if (await readAppended(t, file, file === transcript, slice)) changed = true;
+    if (await readAppended(t, file, file === transcript, slice, onLine)) changed = true;
   }
   return changed;
 }
 
-async function readAppended(t: UsageTracker, file: string, main: boolean, slice: number): Promise<boolean> {
+async function readAppended(t: UsageTracker, file: string, main: boolean, slice: number, onLine?: (line: any) => void): Promise<boolean> {
   let size: number;
   try {
     size = (await stat(file)).size;
@@ -100,6 +101,7 @@ async function readAppended(t: UsageTracker, file: string, main: boolean, slice:
           continue;
         }
         if (applyLine(t, cur, obj, main)) changed = true;
+        if (main) onLine?.(obj);
       }
       if (cur.offset < size) await new Promise((r) => setImmediate(r));
       else size = (await fh.stat()).size; // still being written: take what came meanwhile too

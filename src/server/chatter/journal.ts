@@ -7,7 +7,7 @@
 import type { ChatterParty, ChatterTo } from '../../shared/chatter.js';
 import { parseJournal, type JournalEntry } from '../../shared/roster/journal.js';
 import { journalPath, ROLES, type RoleDef } from '../../shared/roster/roles.js';
-import { excerpt, readJournal } from '../roster/journal-io.js';
+import { excerpt, readJournalSoon } from '../roster/journal-io.js';
 import type { RosterData } from '../roster/store.js';
 import type { TeamFloor } from '../roster/types.js';
 import type { ChatterDraft } from './bus.js';
@@ -95,7 +95,8 @@ export type JournalReader = (floor: TeamFloor, r: RoleDef, d: RosterData) => Jou
 
 const diskReader: JournalReader = (floor, r, d) => {
   const id = d.members[r.id].workerId;
-  return readJournal(floor, id ? floor.worker(id) : undefined, r.team);
+  // From what was last read in the background: a look never waits on the disk (journal-io.ts).
+  return readJournalSoon(floor, id ? floor.worker(id) : undefined, r.team);
 };
 
 export const textReader = (text: string): JournalEntry[] => parseJournal(text);

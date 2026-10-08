@@ -5,6 +5,7 @@
 // here, and a file is read again only when it changed.
 
 import { readFileSync, statSync } from 'node:fs';
+import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import type { ProjectSummary, StageVerdict } from '../../shared/summary.js';
 
@@ -36,21 +37,42 @@ export function projectFacts(dir: string): ProjectFacts {
   const key = FILES.map((f) => stamp(path.join(dir, f))).join('|');
   const hit = cache.get(dir);
   if (hit?.key === key) return hit.facts;
+  const facts = factsOf((f) => read(path.join(dir, f)));
+  cache.set(dir, { key, facts });
+  return facts;
+}
+
+/**
+ * projectFacts off the event loop, from the same cache: the stats and reads go to libuv's thread pool
+ * (the ranking's background refresh, where reading every floor's checkout held the loop on a loaded
+ * machine). The same answer.
+ */
+export async function projectFactsAsync(dir: string): Promise<ProjectFacts> {
+  const stamps = await Promise.all(FILES.map((f) => stat(path.join(dir, f)).then((s) => `${s.mtimeMs}:${s.size}`, () => '-')));
+  const key = stamps.join('|');
+  const hit = cache.get(dir);
+  if (hit?.key === key) return hit.facts;
+  const texts = new Map(await Promise.all(FILES.map(async (f) => [f, await readFile(path.join(dir, f), 'utf8').catch(() => undefined)] as const)));
+  const facts = factsOf((f) => texts.get(f));
+  cache.set(dir, { key, facts });
+  return facts;
+}
+
+function factsOf(read: (file: string) => string | undefined): ProjectFacts {
   const facts: ProjectFacts = {};
-  const intake = read(path.join(dir, 'intake.md'));
+  const intake = read('intake.md');
   const fromIntake = intake ? intakeGoal(intake) : undefined;
-  const readme = read(path.join(dir, 'README.md'));
+  const readme = read('README.md');
   const fromReadme = readme ? firstParagraph(readme) : undefined;
   if (fromIntake) Object.assign(facts, { goal: fromIntake, goalFrom: 'intake.md' });
   else if (fromReadme) Object.assign(facts, { goal: fromReadme, goalFrom: 'README.md' });
-  const project = read(path.join(dir, 'PROJECT.md'));
+  const project = read('PROJECT.md');
   if (project) {
-    const html = read(path.join(dir, 'index.html'));
+    const html = read('index.html');
     const label = currentStage(project);
     const stages = html ? stageVerdicts(html) : [];
     if (label || stages.length) facts.phase = { label: label ?? 'Stage unknown', from: 'PROJECT.md', stages, decisions: decisions(project) };
   }
-  cache.set(dir, { key, facts });
   return facts;
 }
 

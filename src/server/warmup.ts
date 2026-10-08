@@ -8,8 +8,9 @@
 
 import type { Ctx } from './office/context.js';
 import type { Floor } from './floor.js';
-import { rankingReport } from './ranking/index.js';
+import { primeRanking } from './ranking/index.js';
 import { wizardOf } from './wizard/index.js';
+import { dayIn, DEFAULT_SCHEDULE } from '../shared/roster/schedule.js';
 
 export interface WarmupOptions {
   /** How long after the office starts before warming begins. */
@@ -26,8 +27,10 @@ const pause = (ms: number) => new Promise<void>((r) => setTimeout(r, ms).unref()
 
 /** The default warm-up for one floor (or, with none, the building's ranking). Never throws. */
 async function warmFloor(ctx: Ctx, floor: Floor | undefined): Promise<void> {
+  // The standup clock's time zone, loaded now rather than at the first worker update (50–100 ms on a loaded machine).
+  if (!floor) dayIn(Date.now(), DEFAULT_SCHEDULE.timeZone);
   try {
-    rankingReport(ctx, floor?.id);
+    await primeRanking(ctx, floor?.id);
   } catch {
     // no ranking yet: the first look works it out
   }

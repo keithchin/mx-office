@@ -200,7 +200,37 @@ export interface BuildOpts {
 /** Everyone graded and ranked across the building; then the floor's, when one is asked for. */
 export function buildRanking(facts: WorkerFacts[], allRuns: RunRecord[], opts: BuildOpts): RankingReport {
   const base = baselineOf(allRuns, facts);
-  const graded = facts.map((f) => gradeWorker(f, base));
+  return rankGraded(
+    facts.map((f) => gradeWorker(f, base)),
+    opts,
+  );
+}
+
+/**
+ * buildRanking a slice at a time, for the office's background refresh: grading every worker against the
+ * building's runs took 0.1–0.6 s on a big office on a loaded machine, all in one go on the event loop
+ * (the busy office check, 2026-10-08). Here `pause` is awaited whenever a slice has run `sliceMs`
+ * (the office lets other work in there). The same steps in the same order: the same report.
+ */
+export async function buildRankingSliced(facts: WorkerFacts[], allRuns: RunRecord[], opts: BuildOpts, pause: () => Promise<void>, sliceMs = 12): Promise<RankingReport> {
+  let t = Date.now();
+  const breathe = async () => {
+    if (Date.now() - t < sliceMs) return;
+    await pause();
+    t = Date.now();
+  };
+  const base = baselineOf(allRuns, facts);
+  await breathe();
+  const graded: Omit<RankedWorker, 'rank' | 'trend'>[] = [];
+  for (const f of facts) {
+    graded.push(gradeWorker(f, base));
+    await breathe();
+  }
+  return rankGraded(graded, opts);
+}
+
+/** The graded workers ranked within each group, and the report around them. */
+function rankGraded(graded: Omit<RankedWorker, 'rank' | 'trend'>[], opts: BuildOpts): RankingReport {
   const g = ranksWithin(graded, () => 'all');
   const fl = ranksWithin(graded, (w) => w.floor);
   const mo = ranksWithin(graded, (w) => w.modelLabel);

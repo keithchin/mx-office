@@ -34,6 +34,8 @@ export class Analysis {
   /** Waits on a person seen live, by worker: how many, how long, and since when the current one. */
   private waits = new Map<string, { count: number; ms: number; since?: number }>();
   private busyCount = 0;
+  /** The reports worked out since the store last changed, by what was asked (report()). */
+  private reports = new Map<string, AnalysisReport>();
   /** Whether the runs already on the floors were recorded once since the office started. */
   private booted = false;
 
@@ -41,6 +43,12 @@ export class Analysis {
     this.store = new RunStore(dataDir);
     this.haiku = new Haiku(claude, childEnv());
     this.classifier = new Classifier(path.join(this.store.dir, 'classes.json'), this.haiku);
+  }
+
+  /** Writes what is still due now (the office's exit). */
+  flush() {
+    this.store.flush();
+    this.classifier.flush();
   }
 
   get busy(): boolean {
@@ -98,6 +106,24 @@ export class Analysis {
   }
 
   report(floors: Floor[], opts: { floor?: string; by?: GroupBy }): AnalysisReport {
+    const names = this.look(floors);
+    // The same report while nothing it's made from changed: every open Analysis tab and Home ask every few
+    // seconds, and adding up every run took 0.1–0.25 s on a big office on a loaded machine (2026-10-08).
+    const key = JSON.stringify([opts.floor ?? null, opts.by ?? null, this.busy, this.store.version, names]);
+    const hit = this.reports.get(key);
+    if (hit) return hit;
+    const report = buildReport(this.store.all(), { floor: opts.floor, by: opts.by, floors: names, busy: this.busy });
+    if (this.reports.size >= 16) this.reports.clear();
+    this.reports.set(key, report);
+    return report;
+  }
+
+  /**
+   * What report() does before it adds up the runs: the first look records the workers already at their
+   * desks, and every look settles finished ones. Returns every floor's name (the report's `floors`), for
+   * the ranking, which needs only that and not the report itself.
+   */
+  look(floors: Floor[]): { id: string; name: string }[] {
     // The first look since the office started: the workers already at their desks get their records.
     if (!this.booted) {
       this.booted = true;
@@ -107,7 +133,7 @@ export class Analysis {
     const names = new Map<string, string>();
     for (const r of this.store.all()) names.set(r.floor, r.floor);
     for (const f of floors) names.set(f.id, f.def.name);
-    return buildReport(this.store.all(), { floor: opts.floor, by: opts.by, floors: [...names].map(([id, name]) => ({ id, name })), busy: this.busy });
+    return [...names].map(([id, name]) => ({ id, name }));
   }
 
   private async record(floor: FloorRef, w: WorkerSnapshot, task: QueueTask | undefined, useModel: boolean, freshPr = false): Promise<RunRecord> {
@@ -195,9 +221,9 @@ export function analysisOf(ctx: Pick<Ctx, 'cfg'>): Analysis {
   if (!a) {
     a = new Analysis(ctx.cfg.dataDir);
     offices.set(ctx.cfg, a);
-    // Its records are written in the background (store.ts): whatever is still due goes now.
-    const store = a.store;
-    process.once('exit', () => store.flush());
+    // Its records and classes are written in the background (store.ts, classify.ts): whatever is still due goes now.
+    const made = a;
+    process.once('exit', () => made.flush());
   }
   return a;
 }

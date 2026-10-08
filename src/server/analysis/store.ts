@@ -44,8 +44,12 @@ export class RunStore {
     return this.runs.get(id);
   }
 
+  /** Goes up with every put: what a report worked out from all() is still good for while it stays the same. */
+  version = 0;
+
   put(r: RunRecord) {
     this.runs.set(r.id, r);
+    this.version++;
     if (this.due) return;
     this.due = true;
     setImmediate(() => void this.writeSoon()).unref();

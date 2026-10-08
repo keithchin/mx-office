@@ -32,8 +32,16 @@ const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(
  * a few times, a few milliseconds apart.
  */
 export function writeJsonAtomic(file: string, value: unknown) {
-  mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(`${file}.tmp`, JSON.stringify(value, null, 2), { mode: 0o600 });
+  const text = JSON.stringify(value, null, 2);
+  // The folder is made when the write finds it missing, not looked at first: each call costs on a loaded
+  // Windows machine (the journey's project making, 2026-10-08).
+  try {
+    writeFileSync(`${file}.tmp`, text, { mode: 0o600 });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+    mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+    writeFileSync(`${file}.tmp`, text, { mode: 0o600 });
+  }
   for (let i = 0; ; i++) {
     try {
       renameSync(`${file}.tmp`, file);

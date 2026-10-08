@@ -28,7 +28,38 @@ export function shellRun(line: string): string[] {
   return WIN && !process.env.SHELL ? ['/d', '/s', '/c', line] : ['-l', '-i', '-c', line];
 }
 
+/**
+ * Where a command was found lately, by the command and the PATH it was looked up on. Looking means an
+ * accessSync per PATH folder and extension: on a loaded Windows machine (the virus scanner) that held the
+ * event loop 60–200 ms, and the analyzer, every floor's worker manager, the judge, the live apps and the
+ * Firm each look for claude as they start (the journey's project making, 2026-10-08). A find is trusted
+ * for a minute, then checked with one access call (still there: trusted again); a miss is kept a few
+ * seconds (a CLI just installed is found soon).
+ */
+const found = new Map<string, { at: number; path: string | null }>();
+const FOUND_MS = 60_000;
+const MISSED_MS = 5_000;
+
 export function resolveCommand(cmd: string): string | null {
+  const key = [cmd, process.env.PATH, process.env.PATHEXT, process.env.SHELL].join('\0');
+  const hit = found.get(key);
+  if (hit && Date.now() - hit.at < (hit.path ? FOUND_MS : MISSED_MS)) return hit.path;
+  if (hit?.path) {
+    try {
+      accessSync(hit.path, constants.X_OK);
+      hit.at = Date.now();
+      return hit.path;
+    } catch {
+      // gone: look again
+    }
+  }
+  const p = lookUp(cmd);
+  if (found.size > 200) found.clear();
+  found.set(key, { at: Date.now(), path: p });
+  return p;
+}
+
+function lookUp(cmd: string): string | null {
   // Windows runs files by extension: `claude` is really claude.exe / claude.cmd. An npm shim with
   // no extension is a sh script the console can't run, so only take it when asked for by name.
   const exts = WIN && !path.extname(cmd) ? (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean) : [''];

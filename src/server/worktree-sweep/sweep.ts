@@ -7,19 +7,17 @@
 // folder, every symlink and junction in it is unlinked without being followed, so a node_modules
 // junction's target (another checkout's packages) is never touched.
 
-import { execFile } from 'node:child_process';
 import { lstat, readdir, rm, rmdir, unlink } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import type { SweepItem } from '../../shared/connections.js';
 import { WORKTREES_DIR, gitError } from '../worktrees.js';
-
-const execFileP = promisify(execFile);
+import { execFileOffP } from '../offloop/exec.js';
 
 export async function git(args: string[], cwd: string): Promise<string> {
-  const { stdout } = await execFileP('git', args, { cwd, encoding: 'utf8', timeout: 60_000, maxBuffer: 16 * 1024 * 1024, windowsHide: true });
+  // Started off the event loop: on Windows each start held it (offloop/exec.ts; the busy office check, 2026-10-08).
+  const { stdout } = await execFileOffP('git', args, { cwd, timeout: 60_000, maxBuffer: 16 * 1024 * 1024, windowsHide: true });
   return stdout.trim();
 }
 const ok = (args: string[], cwd: string) => git(args, cwd).then(() => true, () => false);

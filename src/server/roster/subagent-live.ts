@@ -7,6 +7,7 @@
 // own: who hired it, what it's on, and how its work was judged.
 
 import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
+import { open, type FileHandle } from 'node:fs/promises';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import { LEADS, type RoleId } from '../../shared/roster/roles.js';
 import { LIVE_STALE_MS, type LiveRun, type LiveRunView } from '../../shared/roster/subagent-live.js';
@@ -39,10 +40,14 @@ interface Tail {
   offset?: number;
   midLine: boolean;
   parser: SubagentTranscript;
+  /** Made for this look (a transcript not read before): only its recent calls count. */
+  firstLook?: boolean;
 }
 
 export class SubagentLive {
   private readonly tails = new Map<string, Tail>();
+  /** Floors whose scanSoon is out. */
+  private readonly scanning = new Set<string>();
 
   /**
    * `finished`: a run the transcript alone said was over (a background run's notification, its answer
@@ -87,60 +92,135 @@ export class SubagentLive {
 
   /** Looks at what's new in each Lead's transcript. True when that changed anything. */
   scan(floor: TeamFloor, now = this.roster.deps.now()): boolean {
-    const d = this.roster.data(floor.id);
     let changed = false;
+    for (const { lead, w, file } of this.leadsOf(floor)) if (this.take(floor, lead, w, file, this.read(w, file), now)) changed = true;
+    return changed;
+  }
+
+  /**
+   * scan(), with the transcripts read off the event loop (fs/promises), for the office's timer: the
+   * synchronous open and read held the loop up to half a second on a loaded machine, where the virus
+   * scanner looks at every open (the busy office check, 2026-10-08). One at a time: a look asked for
+   * while one is out is skipped (the next timer's look catches up).
+   */
+  async scanSoon(floor: TeamFloor): Promise<boolean> {
+    if (this.scanning.has(floor.id)) return false;
+    this.scanning.add(floor.id);
+    try {
+      let changed = false;
+      for (const { lead, w, file } of this.leadsOf(floor)) {
+        const signals = await this.readSoon(w, file);
+        if (this.take(floor, lead, w, file, signals, this.roster.deps.now())) changed = true;
+      }
+      return changed;
+    } finally {
+      this.scanning.delete(floor.id);
+    }
+  }
+
+  /** Each Lead at its desk with a transcript to read. */
+  private leadsOf(floor: TeamFloor): { lead: RoleId; w: WorkerInfo; file: string }[] {
+    const d = this.roster.data(floor.id);
+    const out: { lead: RoleId; w: WorkerInfo; file: string }[] = [];
     for (const lead of LEADS) {
       const m = d.members[lead.id];
       const w = m.workerId ? floor.worker(m.workerId) : undefined;
       const file = w && floor.transcript?.(w);
-      if (!w || !file) continue;
-      const first = this.tails.get(w.id)?.file !== file;
-      const signals = this.read(w, file);
-      if (!signals?.length) continue;
-      // An old call read off the end of a long transcript, with nothing after it, may be long over.
-      const fresh = first ? signals.filter((s) => now - s.at < LIVE_STALE_MS) : signals;
-      if (this.apply(floor, { lead: lead.id, workerId: w.id, source: 'transcript' }, fresh)) changed = true;
+      if (w && file) out.push({ lead: lead.id, w, file });
     }
-    return changed;
+    return out;
+  }
+
+  /** Applies what was read from a Lead's transcript. */
+  private take(floor: TeamFloor, lead: RoleId, w: WorkerInfo, file: string, signals: LiveSignal[] | undefined, now: number): boolean {
+    if (!signals?.length) return false;
+    // An old call read off the end of a long transcript, with nothing after it, may be long over.
+    const fresh = this.tails.get(w.id)?.firstLook ? signals.filter((s) => now - s.at < LIVE_STALE_MS) : signals;
+    return this.apply(floor, { lead, workerId: w.id, source: 'transcript' }, fresh);
+  }
+
+  /** The tail kept for `w`'s transcript (a new one when the transcript changed). */
+  private tailOf(w: WorkerInfo, file: string): Tail {
+    const had = this.tails.get(w.id);
+    if (had && had.file === file) {
+      had.firstLook = false;
+      return had;
+    }
+    const t: Tail = { file, midLine: false, parser: new SubagentTranscript(), firstLook: true };
+    this.tails.set(w.id, t);
+    return t;
+  }
+
+  /** Where the next read starts and how long it is, for a file of `size` bytes. */
+  private span(t: Tail, size: number): { start: number; len: number; midLine: boolean } {
+    if (t.offset !== undefined && size < t.offset) {
+      t.offset = undefined;
+      t.parser.reset();
+    }
+    const start = t.offset ?? Math.max(0, size - FIRST_BYTES);
+    const midLine = t.midLine || (t.offset === undefined && start > 0);
+    return { start, len: Math.min(size - start, STEP_BYTES), midLine };
+  }
+
+  /** The signals in `got` bytes read at `start`, the tail moved past the whole lines. */
+  private parse(t: Tail, start: number, midLine: boolean, buf: Buffer, got: number): LiveSignal[] {
+    const bytes = buf.subarray(0, got);
+    const from = midLine ? bytes.indexOf(0x0a) + 1 : 0;
+    const end = bytes.lastIndexOf(0x0a) + 1;
+    if ((midLine && from === 0) || end === 0) {
+      // Inside one long line: skipped when it's longer than a whole step, else waited for.
+      t.midLine = midLine || got === STEP_BYTES;
+      t.offset = got === STEP_BYTES ? start + got : start;
+      return [];
+    }
+    t.midLine = false;
+    t.offset = start + end;
+    return t.parser.feed(bytes.subarray(from, end).toString('utf8'));
   }
 
   /** What's new in `file` since the last look, as signals (undefined when it can't be read). */
   private read(w: WorkerInfo, file: string): LiveSignal[] | undefined {
-    let t = this.tails.get(w.id);
-    if (!t || t.file !== file) this.tails.set(w.id, (t = { file, midLine: false, parser: new SubagentTranscript() }));
+    const t = this.tailOf(w, file);
     let fd: number | undefined;
     try {
       fd = openSync(file, 'r');
-      const size = fstatSync(fd).size;
-      if (t.offset !== undefined && size < t.offset) {
-        t.offset = undefined;
-        t.parser.reset();
-      }
-      const start = t.offset ?? Math.max(0, size - FIRST_BYTES);
-      const midLine = t.midLine || (t.offset === undefined && start > 0);
-      const len = Math.min(size - start, STEP_BYTES);
+      const { start, len, midLine } = this.span(t, fstatSync(fd).size);
       if (len <= 0) {
         t.offset = start;
         return [];
       }
       const buf = Buffer.alloc(len);
-      const got = readSync(fd, buf, 0, len, start);
-      const bytes = buf.subarray(0, got);
-      const from = midLine ? bytes.indexOf(0x0a) + 1 : 0;
-      const end = bytes.lastIndexOf(0x0a) + 1;
-      if ((midLine && from === 0) || end === 0) {
-        // Inside one long line: skipped when it's longer than a whole step, else waited for.
-        t.midLine = midLine || got === STEP_BYTES;
-        t.offset = got === STEP_BYTES ? start + got : start;
-        return [];
-      }
-      t.midLine = false;
-      t.offset = start + end;
-      return t.parser.feed(bytes.subarray(from, end).toString('utf8'));
+      return this.parse(t, start, midLine, buf, readSync(fd, buf, 0, len, start));
     } catch {
       return undefined;
     } finally {
       if (fd !== undefined) closeSync(fd);
+    }
+  }
+
+  /** read(), off the event loop. A tail moved meanwhile (a synchronous scan) keeps its own reading. */
+  private async readSoon(w: WorkerInfo, file: string): Promise<LiveSignal[] | undefined> {
+    const t = this.tailOf(w, file);
+    const before = t.offset;
+    let fh: FileHandle | undefined;
+    try {
+      fh = await open(file, 'r');
+      const size = (await fh.stat()).size;
+      if (this.tails.get(w.id) !== t || t.offset !== before) return undefined;
+      const { start, len, midLine } = this.span(t, size);
+      if (len <= 0) {
+        t.offset = start;
+        return [];
+      }
+      const buf = Buffer.alloc(len);
+      const offset = t.offset;
+      const { bytesRead } = await fh.read(buf, 0, len, start);
+      if (this.tails.get(w.id) !== t || t.offset !== offset) return undefined;
+      return this.parse(t, start, midLine, buf, bytesRead);
+    } catch {
+      return undefined;
+    } finally {
+      await fh?.close().catch(() => undefined);
     }
   }
 

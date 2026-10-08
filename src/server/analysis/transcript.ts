@@ -4,9 +4,11 @@
 // the office keeps each worker's usage with (usage.ts), so the two always agree.
 
 import { existsSync, readdirSync, statSync } from 'node:fs';
+import { access, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { newTracker, scanTrackerStep, trackerUsage, type UsageTracker } from '../usage.js';
+import { scanTrackerAsync } from '../usage-async.js';
 import type { RunTokens } from '../../shared/analysis.js';
 
 export interface SessionStats {
@@ -49,6 +51,36 @@ export function findTranscript(sessionId: string | undefined, cwd?: string): str
     }
   } catch {
     // no Claude projects folder at all
+  }
+  return undefined;
+}
+
+const exists = (f: string) => access(f).then(
+  () => true,
+  () => false,
+);
+
+/**
+ * findTranscript off the event loop: the same answer, each folder looked at with fs/promises. Looking in
+ * every project's folder one existsSync at a time held the loop 50–300 ms per recorded run on a loaded
+ * machine (the analyzer records one at every turn's end; the busy office check, 2026-10-08).
+ */
+export async function findTranscriptAsync(sessionId: string | undefined, cwd?: string): Promise<string | undefined> {
+  if (!sessionId || !/^[\w-]{8,80}$/.test(sessionId)) return undefined;
+  const root = projectsDir();
+  if (cwd) {
+    const guess = path.join(root, encodeProjectDir(cwd), `${sessionId}.jsonl`);
+    if (await exists(guess)) return guess;
+  }
+  let dirs: string[];
+  try {
+    dirs = await readdir(root);
+  } catch {
+    return undefined; // no Claude projects folder at all
+  }
+  for (const d of dirs) {
+    const f = path.join(root, d, `${sessionId}.jsonl`);
+    if (await exists(f)) return f;
   }
   return undefined;
 }
@@ -139,6 +171,37 @@ export class SessionReader {
     return scanTrackerStep(this.tracker, { maxBytes, onLine: (l) => this.tally.take(l) }).done;
   }
 
+  /** One read at a time (readSessionLive). */
+  private reading: Promise<void> = Promise.resolve();
+
+  /**
+   * Reads everything appended since the last read, off the event loop: the stat, opens and reads go to
+   * libuv's thread pool and the lines are parsed a slice (`sliceBytes`) at a time with the loop free in
+   * between (usage-async.ts). step() did the same with readSync, and on a loaded machine each open
+   * held the loop (the busy office, 2026-10-08).
+   */
+  read(sliceBytes: number): Promise<void> {
+    const job = this.reading.then(async () => {
+      const main = this.tracker.files[this.transcript]?.offset ?? 0;
+      let size: number;
+      try {
+        size = (await stat(this.transcript)).size;
+      } catch {
+        return;
+      }
+      if (size < main) {
+        // Shorter than what was read: not the file it was. Start over.
+        this.tracker = newTracker();
+        this.tracker.transcript = this.transcript;
+        this.tally = new SessionTally();
+      }
+      const tally = this.tally;
+      await scanTrackerAsync(this.tracker, sliceBytes, (l) => tally.take(l));
+    });
+    this.reading = job.catch(() => undefined);
+    return job;
+  }
+
   stats(): SessionStats {
     const usage = trackerUsage(this.tracker);
     const t = this.tally;
@@ -185,6 +248,6 @@ export async function readSessionLive(transcript: string, stepBytes = SESSION_ST
   // Newest last: the oldest goes when there are too many.
   readers.set(transcript, r);
   if (readers.size > KEEP_READERS) readers.delete(readers.keys().next().value!);
-  while (!r.step(stepBytes)) await new Promise<void>((done) => setImmediate(done));
+  await r.read(stepBytes).catch(() => undefined);
   return r.stats();
 }

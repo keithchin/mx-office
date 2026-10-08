@@ -159,7 +159,8 @@ export function rosterOf(ctx: Ctx): Roster {
     // …and from the Leads' transcripts, for what no hook says: a background run finishing, or
     // anything while the office was down (roster/subagent-live.ts).
     const scan = setInterval(() => {
-      for (const f of ctx.floors.values()) roster.subagents.live.scan(teamFloor(ctx, f));
+      // Read off the event loop (subagent-live.ts scanSoon).
+      for (const f of ctx.floors.values()) void roster.subagents.live.scanSoon(teamFloor(ctx, f)).catch(() => false);
     }, SCAN_MS);
     scan.unref?.();
     return roster;

@@ -4,6 +4,7 @@
 // building, the queue) come in through `SetupDeps`, so the steps can be run against a fake in tests.
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ENTRY_MODE_INFO, INTERVIEW_MODE_INFO, PROJECT_ROLES, SMALL_TIER_LIMITS, type IntakeAnswer, type ProjectRole, type StepId } from '../../shared/wizard.js';
@@ -127,7 +128,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
           await git(seed, ['-c', 'user.name=agent-office', '-c', 'user.email=agent-office@localhost', 'commit', '-m', 'Initial commit'], io);
           await git(seed, ['push', 'origin', 'HEAD:main'], io);
         } finally {
-          rmSync(seed, { recursive: true, force: true });
+          await rm(seed, { recursive: true, force: true }).catch(() => undefined);
         }
         return { status: 'done', detail: `offline: a local bare repository at ${at}` };
       }
