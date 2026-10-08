@@ -45,8 +45,8 @@ const TOTAL_STEPS = 13;
 const ASLEEP = new Set(['exited', 'offline']);
 
 /** The API of a running test office, signed in. */
-/** How long the office profiles itself from the start of the wizard: the wizard and the hiring take about 15 s. */
-const MAKING_PROFILE_S = 25;
+/** How long the office profiles itself from the start of the wizard: the wizard and the hiring take 15 to 30 s. */
+const MAKING_PROFILE_S = 60;
 
 function apiOf(office, cookie) {
   return async (method, p, body) => {
@@ -169,9 +169,12 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
     log(`journey office up at ${office.base} (${root})`);
 
     // 1. The wizard makes the project: every setup step, offline.
-    state.makingSince = Date.now();
-    // The office profiles itself while the project is made (perfwatch/profile.ts), so a stall names what ran in it.
+    // The office profiles itself while the project is made (perfwatch/profile.ts), so a stall names what ran
+    // in it. Starting the profiler and saving the profile hold the loop for a moment themselves (the
+    // measuring, not the office): it starts before the measured stretch and ends well after it.
     state.profile = api('POST', '/api/perf/profile', { seconds: MAKING_PROFILE_S }).catch((e) => ({ error: String(e?.message ?? e) }));
+    await new Promise((r) => setTimeout(r, 1500));
+    state.makingSince = Date.now();
     await book.run({
       id: 'wizard',
       name: 'Wizard creates the project',
@@ -239,7 +242,7 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
         if (over.length) {
           // What ran in the longest block, from the office's own profile (it ends MAKING_PROFILE_S after the start).
           const prof = await state.profile;
-          const where = prof?.longest ? `; longest busy stretch ${prof.longest.ms} ms at +${(prof.longest.at / 1000).toFixed(1)} s of the profile: ${prof.longest.stack.slice(0, 5).map((x) => x.frame).join(' < ')}` : '';
+          const where = prof?.longest ? `; longest busy stretch in its profile ${prof.longest.ms} ms: ${prof.longest.stack.slice(0, 5).map((x) => x.frame).join(' < ')}` : '';
           throw new Error(`the server's event loop stalled ${over.length}× over ${PERF_BUDGETS.serverStallMs} ms: ${fmt(over)}${where}`);
         }
         return `longest block ${Math.max(0, ...stalls.map((x) => x.ms))} ms (${stalls.length} over 100 ms)`;

@@ -38,6 +38,8 @@ const HISTORY = { mainMB: 10, subagents: 8, subMB: 2.5 };
  * machine that is already busy, a heavy load stalls any process now and then, whatever it runs.
  */
 const LOAD = Math.max(0, Math.min(16, Number(process.env.PERF_BUSY_LOAD) || 0));
+/** How much longer than the measured minute the office profiles itself: 6 s of warm-up before it, a few seconds after. */
+const PROFILE_MARGIN_S = 10;
 /** How often the open pages ask (the Workers tab, Home and the Budget view each poll about this often). */
 const PAGE_POLL_MS = 4000;
 const PAGE_APIS = (floor) => ['/api/ranking', `/api/ranking?floor=${floor}`, '/api/analysis', '/api/budget', `/api/roster?floor=${floor}`];
@@ -184,12 +186,15 @@ export async function runBusy({ root, outDir, seconds = 90, onProgress = () => {
     const cookie = await login(office.base);
     const get = (p) => fetch(office.base + p, { headers: { cookie } }).then((r) => r.status, () => 0);
     // Let the office come up and the workers wake, then measure from there.
+    // The office's own profile starts now and ends after the stalls are read: starting the profiler and
+    // saving its profile each hold the event loop for a moment (0.2 to 1.2 s on a loaded machine), and
+    // that is the measuring, not the office, so it stays out of the measured minute.
+    const prof = fetch(`${office.base}/api/perf/profile`, { method: 'POST', headers: { cookie, origin: office.base, 'content-type': 'application/json' }, body: JSON.stringify({ seconds: seconds + PROFILE_MARGIN_S }) })
+      .then((r) => r.json())
+      .catch((e) => ({ error: String(e) }));
     await new Promise((r) => setTimeout(r, 6000));
     const t0 = Date.now();
     onProgress({ done: 2, of: 3, label: `Busy for ${seconds} s` });
-    const prof = fetch(`${office.base}/api/perf/profile`, { method: 'POST', headers: { cookie, origin: office.base, 'content-type': 'application/json' }, body: JSON.stringify({ seconds }) })
-      .then((r) => r.json())
-      .catch((e) => ({ error: String(e) }));
     const pages = setInterval(() => PAGE_APIS(floor.id).forEach((p) => void get(p)), PAGE_POLL_MS);
     const stopLoad = LOAD ? startDiskLoad(path.join(root, 'diskload'), LOAD) : () => {};
     try {
