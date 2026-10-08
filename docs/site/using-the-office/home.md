@@ -20,6 +20,7 @@ One card per floor:
 - `repo · ⎇ branch`, or a progress bar while it clones;
 - **🙋 N waiting · 👷 N working · 💻 N workers · 🧑 N here**;
 - the one-line project summary (for example *Stage 3 · 2 agents working · 🙋 1 needs you*);
+- a small [progress bar](progress-and-acceptance.md): the project's phases as coloured segments, and where it is (*Stage 3 · Architecture & Design*) or which version was accepted (*v1 accepted · 2026-10-08*);
 - **🗂️ Board** (the 1D view) and **🗺️ Office** (the 2D view). The view you used last is the highlighted one.
 
 By the name, an icon says whether the project is [paused or running](resume-and-pause.md). Hover it for more:

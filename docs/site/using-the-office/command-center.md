@@ -23,6 +23,10 @@ Everyone sees the state; only admins (the Project Manager) can act on it. The Cl
 
 **Loading.** Changing project (the floor picker, a *🙋 waiting on* button, a link with `?floor=`, or a project opened from Home) dims the page a little under an overlay that says *Loading project mx-spike… 57 %* and what it's waiting for. The percentage is real: it moves as each thing the page needs comes in (the floor itself, its workers, the team, the summary, the budget, the setup panel and the Coordinator's console) and the page is drawn with them. The top bar stays usable, so you can change your mind and pick another project (that cancels the first load); **✕** or **Esc** hides the overlay while the project carries on loading. If it takes more than 5 seconds it says it's still loading, and after 15 it goes away by itself.
 
+## The progress bar
+
+Between the floor's line and the tabs, on every tab: the project's toolkit stages, then Handover and Accepted, coloured by what was measured (gate verdicts, deliverables on main). The ✋ gates and decisions are marks on them. Hover a stage for its deliverables, dates and planned against actual spend. Click it to open the setup panel, the deliverables or the acceptance record. **▾** folds it to a thin line. See [Progress bar and acceptance](progress-and-acceptance.md).
+
 ## 📑 The Firm strip
 
 A slim strip at the top: **📑 Call an audit** and **The Firm →** when no audit is running (calling one is for admins); *The Firm is auditing this project: N reviewers · $spent of $cap · phase* with **View →** while one runs (amber at 80 % of the budget); **📑 Audit report ready from The Firm → Read** when it's delivered. See [The Firm](the-firm.md).

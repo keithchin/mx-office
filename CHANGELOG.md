@@ -4,6 +4,33 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### New
+- **A progress bar for every project.** A thin line between the floor's top row and the tabs (the same
+  on every tab, and under the top bar of the 2D view) shows the project's phases: the toolkit stages its
+  entry mode runs, then Handover and Accepted. Each is coloured by what was measured (the gate verdict,
+  the deliverables on main), with the ✋ gates and decisions as marks, and the current phase outlined. It
+  never shows a percentage nobody measured: what the office doesn't know reads as unknown. Hover a stage
+  for its deliverables, gates, dates and planned against actual spend; click it for the setup panel, the
+  deliverables or the acceptance record. **▾** folds it to a thin line (remembered on your browser).
+  Home's project cards show a small version. It updates when something changes (a merge, an Accept, a
+  project switch), never on a timer.
+- **✅ Accept a delivery, with a record of what was accepted.** The Project Manager accepts a version
+  (v1, then v1.1, v2…) explicitly; a merge never counts. The dialog shows what the record will hold: the
+  scope agreed and delivered, the commit at the head of the delivery branch, the gate checks, CI and test
+  reports (gaps shown as gaps), the documents at that commit and the spend frozen at that moment, and asks
+  for the exceptions still open, each with an owner. **↩ Reopen** starts the next version with a scope
+  note and keeps the earlier record. If the branch or the deliverables move on afterwards, the record and
+  the bar say **changed since acceptance**. Records are append-only and hash-chained, in the audit log as
+  `acceptance.accept` / `acceptance.reopen`, and in the evidence trace. Admins only.
+
+### Fixed
+- **A page no longer looks stuck when the office stops.** When the office exits without the restart loop
+  (🔁 Restart safely without it, Ctrl+C) or vanishes and doesn't answer, open pages now say **The office
+  has stopped. Start it again with start-office.ps1**. During a looping restart they say **Restarting…
+  reconnecting**. Either way, they reload by themselves once the office is back.
+
 ## 2026-10-08 · release 19 (`21cb589`)
 
 ### New

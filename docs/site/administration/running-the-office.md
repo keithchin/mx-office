@@ -78,6 +78,8 @@ The audit log and Team chatter record `restart.requested`, `restart.waiting`, `r
 
 The office can't reliably respawn itself on Windows, so the launcher has to loop: it runs the office again whenever it exits with code 75. The launcher also sets `AGENT_OFFICE_LAUNCHER_LOOP=1`, so the office knows that exiting will bring it back. Without that variable, the button reads **⏸ Pause, wait, then exit**, and Settings says *start-office.ps1 needs the restart loop*. The office then pauses, waits, and exits with code 0, and you start it again by hand. The next start still resumes the floors it paused.
 
+Open pages tell you which happened. During a restart through the loop they show **Restarting… reconnecting**, and reload by themselves once the office is back. When the office exits without the loop (or you press Ctrl+C), they show **The office has stopped. Start it again with start-office.ps1**. They also show that when the office disappears without saying why (a crash) and doesn't answer the page's next few reconnects. Either way, the page reloads by itself as soon as the office is back.
+
 In `start-office.ps1`, wrap the line that runs the office:
 
 ```powershell
