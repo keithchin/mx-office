@@ -10,6 +10,12 @@
 // the result names what ran in the longest block, from a CPU profile the office records of itself
 // (POST /api/perf/profile, server/perfwatch/profile.ts).
 //
+// Then the wake burst: six workers that were asleep are woken at once (as a safe restart or a project's
+// resume does) on an agent binary the virus scanner hasn't seen (slowstart.mjs), and the event loop must
+// stay under the same budget while they start. Release 19 started workers' terminals on the event loop,
+// where Windows' CreateProcess held it for seconds (2.6 s in the live office); they now start in the
+// terminal host (src/server/ptys.ts).
+//
 //   node scripts/perf/run.mjs --suite busy --root <test-offices dir> --out <dir> --id <id> [--seconds 90]
 //
 // run.mjs calls runBusy({ root, outDir, seconds, onProgress }); it makes its office in `root`.
@@ -18,6 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { PERF_BUDGETS } from './budgets.mjs';
 import { FAKEBIN, REPO, assertTestDir, killProcessesUnder, login, startTestOffice } from './office.mjs';
+import { slowAgent } from './slowstart.mjs';
 
 /**
  * How much history each live worker's session carries before the run, its own transcript and its
@@ -27,6 +34,9 @@ const HISTORY = { mainMB: 10, subagents: 8, subMB: 2.5 };
 /** How often the open pages ask (the Workers tab, Home and the Budget view each poll about this often). */
 const PAGE_POLL_MS = 4000;
 const PAGE_APIS = (floor) => ['/api/ranking', `/api/ranking?floor=${floor}`, '/api/analysis', '/api/budget', `/api/roster?floor=${floor}`];
+
+/** The wake burst: how many asleep workers wake at once, how big the fresh agent binary is (MB past the program; the scanner reads about 50 ms a MB here), and how long the starts are watched. */
+const BURST = { workers: 6, mb: Number(process.env.PERF_SLOW_START_MB) || 24, watchMs: 12_000 };
 
 const filler = (k) => 'checked the module and its tests, read the files around it, nothing to change. '.repeat(Math.ceil(k / 80)).slice(0, k);
 
@@ -107,6 +117,35 @@ function makeFixture(root) {
   });
 }
 
+/**
+ * Wakes up to BURST.workers asleep workers of `floor` at once (the page's ▶ on each, over the office's
+ * WebSocket), right after a fresh agent binary went in, and returns the event-loop blocks while they start.
+ */
+async function wakeBurst({ base, cookie, floor, slow }) {
+  const overview = () => fetch(`${base}/api/home/overview`, { headers: { cookie } }).then((r) => r.json());
+  // The busy floor's first, then the other's (the fixture has three asleep on each).
+  const floors = (await overview()).floors.sort((a, b) => (b.id === floor) - (a.id === floor));
+  const asleep = floors.flatMap((f) => f.workers ?? []).filter((w) => w.status === 'offline' || w.status === 'exited').slice(0, BURST.workers);
+  const fresh = slow.freshen(BURST.mb);
+  const { default: WebSocket } = await import('ws');
+  const ws = new WebSocket(`${base.replace(/^http/, 'ws')}/ws?floor=${encodeURIComponent(floor)}&name=perf-burst`, { headers: { cookie, origin: base } });
+  await new Promise((resolve, reject) => {
+    ws.once('open', resolve);
+    ws.once('error', reject);
+  });
+  const t0 = Date.now();
+  try {
+    for (const w of asleep) ws.send(JSON.stringify({ t: 'worker.resume', workerId: w.id }));
+    await new Promise((r) => setTimeout(r, BURST.watchMs));
+  } finally {
+    ws.close();
+  }
+  const stalls = (await fetch(`${base}/api/perf/stalls?since=${t0}`, { headers: { cookie } }).then((x) => x.json())).stalls ?? [];
+  const ids = new Set(asleep.map((w) => w.id));
+  const started = (await overview()).floors.flatMap((f) => f.workers ?? []).filter((w) => ids.has(w.id) && w.status !== 'offline').length;
+  return { workers: asleep.length, started, freshMB: fresh ? BURST.mb : 0, stalls, maxStallMs: Math.max(0, ...stalls.map((s) => s.ms)) };
+}
+
 const sizeOf = (files) => files.reduce((n, f) => n + (fs.existsSync(f) ? fs.statSync(f).size : 0), 0);
 
 export async function runBusy({ root, outDir, seconds = 90, onProgress = () => {}, log = console.log }) {
@@ -127,9 +166,11 @@ export async function runBusy({ root, outDir, seconds = 90, onProgress = () => {
   const before = sizeOf(transcripts);
   onProgress({ done: 1, of: 3, label: `Starting it: ${live} live workers, ${Math.round(before / 1e6)} MB of sessions` });
   const bin = bigClaude(root);
+  const slow = slowAgent(path.join(root, 'agent'));
   const office = await startTestOffice({
     home,
-    env: { PATH: `${bin}${path.delimiter}${FAKEBIN}${path.delimiter}${process.env.PATH}`, FAKE_MODE: 'cycle', FAKE_BIG: '1', FAKE_RATE_MS: '700', FAKE_WORK_MS: '12000', FAKE_IDLE_MS: '5000' },
+    agent: slow.agent,
+    env: { PATH: `${bin}${path.delimiter}${FAKEBIN}${path.delimiter}${process.env.PATH}`, FAKE_MODE: 'cycle', FAKE_BIG: '1', FAKE_RATE_MS: '700', FAKE_WORK_MS: '12000', FAKE_IDLE_MS: '5000', ...slow.env },
   });
   const res = { ok: false, seconds, live, stalls: [], maxStallMs: 0, budgetMs: PERF_BUDGETS.serverStallMs };
   try {
@@ -153,12 +194,18 @@ export async function runBusy({ root, outDir, seconds = 90, onProgress = () => {
     if (profile?.longest) res.longest = profile.longest;
     if (profile?.file) res.profile = profile.file;
     const over = res.stalls.filter((s) => s.ms > PERF_BUDGETS.serverStallMs);
+    onProgress({ done: 2, of: 3, label: `Waking ${BURST.workers} asleep workers at once on a fresh agent binary` });
+    res.burst = await wakeBurst({ base: office.base, cookie, floor: floor.id, slow });
+    const burstOver = res.burst.stalls.filter((s) => s.ms > PERF_BUDGETS.serverStallMs);
     res.failures = [
       ...over.map((s) => `the event loop blocked ${s.ms} ms at +${Math.round((s.at - t0) / 1000)} s (budget ${PERF_BUDGETS.serverStallMs} ms)`),
       ...(res.grewMB < 1 ? [`the workers hardly worked (${res.grewMB} MB of transcript in ${seconds} s): the run measured an idle office`] : []),
+      ...burstOver.map((s) => `waking ${res.burst.workers} workers at once, the event loop blocked ${s.ms} ms (budget ${PERF_BUDGETS.serverStallMs} ms)`),
+      ...(res.burst.started < res.burst.workers ? [`the wake burst started ${res.burst.started} of ${res.burst.workers} workers`] : []),
     ];
     res.ok = res.failures.length === 0;
     log(`${res.ok ? 'ok  ' : 'FAIL'} busy office: ${live} workers, ${res.grewMB} MB written, ${res.stalls.length} blocks over 100 ms, longest ${res.maxStallMs} ms (budget ${PERF_BUDGETS.serverStallMs} ms)`);
+    log(`     wake burst: ${res.burst.started}/${res.burst.workers} woken at once${res.burst.freshMB ? ` on a fresh ${res.burst.freshMB} MB agent binary` : ''}, longest block ${res.burst.maxStallMs} ms`);
     if (!res.ok && res.longest) log(`     longest busy stretch ${res.longest.ms} ms: ${res.longest.stack.slice(0, 4).map((f) => f.frame).join(' < ')}`);
   } catch (e) {
     res.error = String(e?.message ?? e);
@@ -176,6 +223,7 @@ export async function runBusy({ root, outDir, seconds = 90, onProgress = () => {
 /** The run as summary.md. */
 export function busySummary(res) {
   const lines = [`# Busy office: ${res.ok ? 'pass' : 'FAIL'}`, '', `${res.live ?? 0} live workers for ${res.seconds} s, ${res.grewMB ?? 0} MB of transcript written; ${res.stalls?.length ?? 0} event-loop blocks over 100 ms, the longest ${res.maxStallMs ?? 0} ms (budget ${res.budgetMs} ms).`];
+  if (res.burst) lines.push('', `Wake burst: ${res.burst.started} of ${res.burst.workers} asleep workers woken at once${res.burst.freshMB ? ` on a fresh ${res.burst.freshMB} MB agent binary` : ''}; ${res.burst.stalls.length} blocks over 100 ms while they started, the longest ${res.burst.maxStallMs} ms.`);
   for (const f of res.failures ?? []) lines.push(`- FAIL ${f}`);
   if (res.longest) lines.push('', `Longest busy stretch in the office's own CPU profile: ${res.longest.ms} ms`, ...res.longest.stack.slice(0, 8).map((f) => `- ${f.ms} ms ${f.frame}`));
   return `${lines.join('\n')}\n`;

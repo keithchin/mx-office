@@ -424,8 +424,11 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
         await start();
         const q = await waitFor(() => JSON.parse(fs.readFileSync(queueFile, 'utf8')).tasks.find((t) => t.id === queued.id && t.status === 'queued'), { ms: 15000, what: 'the queued task after the restart' });
         await waitFor(() => userTexts(fakeDir).some((u) => u.file === state.devTranscript && u.text.includes(heldText)), { ms: 150000, every: 1000, what: 'the held message to reach the developer after the restart' });
-        const run = await api('GET', `/api/project-run?floor=${FLOOR}`);
-        if (run.pause) throw new Error('the project is still paused after the restart');
+        // The next office resumes the floors it paused 8 s after it starts (restart/office.ts); a worker cut off
+        // mid-turn (the developer at its prompt) carries on at once, so the held message can be in before that.
+        await waitFor(async () => !(await api('GET', `/api/project-run?floor=${FLOOR}`)).pause, { ms: 30000, every: 1000, what: 'the project to be resumed after the restart' }).catch(() => {
+          throw new Error('the project is still paused after the restart');
+        });
         await go(`/lite?floor=${FLOOR}&tab=board`, '#board');
         await page.click('#btn-queue', { timeout: 10000 });
         await page.waitForFunction(() => document.body.textContent.includes('Journey queued task'), null, { timeout: 15000 });
