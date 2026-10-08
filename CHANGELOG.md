@@ -4,6 +4,20 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Fixed
+- **Starting workers no longer freezes the office on Windows.** Every time a worker's terminal started
+  (hiring, waking after a restart or a project's resume, pressing R), Windows started `claude.exe` on the
+  server's main thread, and with the virus scanner reading it that held everything for 0.65 to 2.6 s per
+  worker: after a safe restart that woke six agents the office stalled 2.6 s twice. Workers' terminals
+  now run in a small terminal host process next to the office (one per project), so starting any number
+  of them leaves pages, hooks and other workers running. The host lives and dies with the office: when
+  the office stops or crashes it ends every terminal and exits, and if the host itself crashes the
+  affected workers resume in a fresh one. The busy-office check in `npm run test:perf:quick` now wakes
+  six workers at once on a fresh agent binary and fails on any block over 250 ms (release 19: 4.8 s; now
+  none over 100 ms). `AGENT_OFFICE_PTY_HOST=off` puts terminals back in the office, for troubleshooting.
+
 ## 2026-10-08 · release 19 (`21cb589`)
 
 ### New

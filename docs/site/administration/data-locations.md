@@ -32,6 +32,7 @@ The office keeps its data in a `.agent-office` folder. On the Taskforce laptop t
 | `ranking/` | Ranking history and highlights |
 | `usage.json` | Spend and token usage |
 | `chat.jsonl`, `scrollback/` | Chat and terminal history |
+| `pty-host.json`, `pty-host.log` (each floor's `.agent-office/`) | The workers' terminal host: its connection token and its log ([Performance budgets](performance-budgets.md)) |
 | `flows/<workflow>/<run>.json`, `flows/_cache/` | [Workflow](../automation/workflows.md) runs, each checkpointed after every step (the new-project wizard's setups are `flows/new-project/`), and cached step results |
 | `wizard/` | New-project wizard jobs saved before the workflow engine (taken in on first use and renamed `.json.migrated`) |
 | `live/<floor>/`, `live/<floor>.log` | The live app's clone and log |
