@@ -1,4 +1,4 @@
-import { closeSync, existsSync, fstatSync, openSync, readdirSync, readFileSync, readSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, fstatSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Usage, UsageState } from '../shared/protocol.js';
 
@@ -75,7 +75,7 @@ export function usageOfMessage(model: string, u: any): Usage {
 // ---------------------------------------------------------------------------------------------
 // Per-worker tracking
 
-interface FileCursor {
+export interface FileCursor {
   /** Bytes of the file already read (always at a line boundary). */
   offset: number;
   /** A message with several content blocks is logged once per block, with the same id and usage. */
@@ -111,7 +111,7 @@ export function trackerUsage(t: UsageTracker): Usage {
 }
 
 /** The subagent type Claude Code wrote beside a subagent's transcript, or "subagent" when it isn't there. */
-function agentTypeOf(file: string): string {
+export function agentTypeOf(file: string): string {
   try {
     const meta = JSON.parse(readFileSync(file.replace(/\.jsonl$/, '.meta.json'), 'utf8'));
     if (typeof meta?.agentType === 'string' && /^[\w.:-]{1,80}$/.test(meta.agentType)) return meta.agentType;
@@ -148,8 +148,10 @@ export function restoreTracker(saved: any): UsageTracker {
 }
 
 /** Subagent transcripts live in <transcript dir>/<session id>/subagents/. */
+export const subagentDir = (transcript: string) => path.join(path.dirname(transcript), path.basename(transcript, '.jsonl'), 'subagents');
+
 function subagentFiles(transcript: string): string[] {
-  const dir = path.join(path.dirname(transcript), path.basename(transcript, '.jsonl'), 'subagents');
+  const dir = subagentDir(transcript);
   try {
     return readdirSync(dir)
       .filter((f) => f.endsWith('.jsonl'))
@@ -207,7 +209,7 @@ export function scanTrackerStep(t: UsageTracker, opts: ScanOptions = {}): { chan
 const isModelId = (v: unknown): v is string => typeof v === 'string' && /^[\w.:/@[\]-]{1,120}$/.test(v);
 
 /** One transcript line; `main` when it's from the session's own transcript rather than a subagent's. */
-function applyLine(t: UsageTracker, cur: FileCursor, line: any, main: boolean): boolean {
+export function applyLine(t: UsageTracker, cur: FileCursor, line: any, main: boolean): boolean {
   if (!line || typeof line !== 'object') return false;
   const at = typeof line.timestamp === 'string' ? Date.parse(line.timestamp) : NaN;
   if (at > (t.at ?? 0)) t.at = at;
@@ -256,6 +258,8 @@ const CHUNK = 4 * 1024 * 1024;
 function* readNewLines(file: string, cur: FileCursor, budget?: { left: number; more: boolean }): Generator<string> {
   let fd: number;
   try {
+    // Not grown since: no need to open it (on Windows the virus scanner looks at every open for reading).
+    if (statSync(file).size === cur.offset) return;
     fd = openSync(file, 'r');
   } catch {
     return;

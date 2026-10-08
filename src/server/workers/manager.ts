@@ -9,6 +9,7 @@ import type { PromptSource } from '../prompts.js';
 import type { GhAs } from '../signins.js';
 import type { ServiceOwner } from '../services.js';
 import { addUsage, newTracker, scanTracker, trackerUsage, zeroUsage, type Ledger } from '../usage.js';
+import { scanApart } from '../usage-async.js';
 import { PtyHost, SCROLLBACK, type Adopted, type Pty } from '../ptys.js';
 import { configuredProvider, providerCommand, validateWorkerEffort, validateWorkerModel } from '../agents.js';
 import { ScrollbackStore, searchTerminal, terminalTail } from '../history.js';
@@ -585,7 +586,7 @@ export class WorkerManager {
     clearInterval(this.saveTimer);
     for (const w of this.workers.values()) {
       clearTimeout(w.scanTimer);
-      this.scanUsage(w);
+      this.scanUsage(w, true);
       // Before the process goes, so the next office shows what it was doing, not how it was stopped.
       if (w.unsaved) this.saveScrollback(w);
       // A DSH child cannot outlive the office the way a hosted PTY can: close its session quiescently,
@@ -848,23 +849,28 @@ export class WorkerManager {
     }, 300);
   }
 
-  /** Picks up what the session logged since last time and books the difference. */
-  private scanUsage(w: Worker) {
+  /** Picks up what the session logged since last time and books the difference: off the event loop, unless `now` (shutdown). */
+  private scanUsage(w: Worker, now = false) {
     const usage = w.info.kind === 'agent' ? providerAdapter(w.info.provider)?.usage : undefined;
     if (usage?.scan) {
       if (this.workers.get(w.info.id) === w) usage.scan(this.handleOf(w));
       return;
     }
     if (!usage?.transcript || !w.tracker.transcript || this.workers.get(w.info.id) !== w) return;
+    if (!now) return scanApart(w, () => this.bookUsage(w));
     try {
-      if (!scanTracker(w.tracker)) return;
+      if (scanTracker(w.tracker)) this.bookUsage(w);
     } catch {
-      return; // an unreadable transcript is retried on the next scan
+      // an unreadable transcript is retried on the next scan
     }
+  }
+
+  private bookUsage(w: Worker) {
     const before = w.info.usage ?? zeroUsage();
     const after = trackerUsage(w.tracker);
     w.info.usage = after;
     this.ledger.add(addUsage(after, before, -1));
+    if (this.closing || this.workers.get(w.info.id) !== w) return; // sent home (or closing) while its scan was out: the spend still counts
     this.emitUpdate(w);
     this.persist();
   }
