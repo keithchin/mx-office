@@ -5,14 +5,43 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import * as pty from '@lydell/node-pty';
+import { spawnOff, type OffChild } from './offloop/exec.js';
+import type { IPty } from '@lydell/node-pty';
+import { spawnLocal } from './ptylocal.js';
 
 /**
  * Workers' terminals live in a small host process of their own (ptyhost.ts), not in the office.
- * When the office restarts (a dev-server reload, a self-upgrade), Claude keeps working in the host,
- * and the new office picks every terminal back up where it was. Without a host, terminals run
- * in-process as before and die with the office.
+ *
+ * On Unix the host is detached and outlives the office: when the office restarts (a dev-server reload,
+ * a self-upgrade), Claude keeps working in the host, and the new office picks every terminal back up
+ * where it was.
+ *
+ * On Windows the host is tied to the office instead: it's there so that node-pty's native calls run
+ * outside the office's event loop. Starting a terminal runs CreateProcess on the calling thread, and a
+ * 256 MB claude.exe under the virus scanner holds it 0.65–2.6 s, every time a worker starts (the live
+ * office stalled 2.6 s twice after a safe restart woke six agents, 2026-10-08). The host ends every
+ * terminal and exits as soon as its office is gone (its pipe closes, or its process does), and its
+ * terminals end with it if it dies itself (closing a pseudo console ends what runs in it), so nothing
+ * outlives the office: a restart wakes its workers as before. If the host dies under a running office,
+ * its workers resume in a fresh one (onClose, revive).
+ *
+ * Without a host (it couldn't be had, or AGENT_OFFICE_PTY_HOST=off), terminals run in-process as
+ * before and die with the office.
  */
+
+const WIN = process.platform === 'win32';
+/** A Windows host that dies more often than this this soon (a crash loop) isn't started again: terminals run in-process from then on. */
+const REVIVE_LIMIT = 3;
+const REVIVE_WINDOW_MS = 10 * 60_000;
+
+/** This office's Windows hosts (one per floor), for a terminal that isn't a worker's. */
+const tiedHosts = new Set<PtyHost>();
+
+/** A terminal that isn't a worker's (Claude Code's sign-in): in a host when there is one (Windows), else here. */
+export function spawnTerminal(opts: SpawnOpts): Pty {
+  for (const h of tiedHosts) if (h.hosted) return h.spawn(opts);
+  return spawnLocal(opts);
+}
 
 /** Bump whenever the host's messages change: an office that finds an older host stops it and starts its own. */
 export const PTY_PROTOCOL = 1;
@@ -72,6 +101,7 @@ export type ToHost =
 
 export type FromHost =
   | { t: 'ready'; version: number; sessions: string[] }
+  /** Said again when the pid changes (on Windows it's only known once the process is up). */
   | { t: 'spawned'; id: string; pid: number }
   | ({ t: 'attached'; id: string; pid: number } & Omit<Adopted, 'pty'>)
   | { t: 'gone'; id: string }
@@ -110,21 +140,27 @@ class RemotePty implements Pty {
   private held: string[] = [];
   private exited?: PtyExit;
 
+  /** Its session in the host, by which the next office adopts it: only from a host that outlives the office. */
+  readonly id?: string;
+
   constructor(
-    readonly id: string,
+    readonly key: string,
     private send: (msg: ToHost) => void,
-  ) {}
+    durable: boolean,
+  ) {
+    if (durable) this.id = key;
+  }
 
   write(data: string) {
-    this.send({ t: 'write', id: this.id, data });
+    this.send({ t: 'write', id: this.key, data });
   }
 
   resize(cols: number, rows: number) {
-    this.send({ t: 'resize', id: this.id, cols, rows });
+    this.send({ t: 'resize', id: this.key, cols, rows });
   }
 
   kill() {
-    this.send({ t: 'kill', id: this.id });
+    this.send({ t: 'kill', id: this.key });
   }
 
   onData(cb: (data: string) => void) {
@@ -158,6 +194,13 @@ export class PtyHost {
   private leaving = false;
   private socketPath: string;
   private infoPath: string;
+  /** A Windows host is being started (at first, or again): what's asked of it waits in `queue` (send). */
+  private starting?: Promise<boolean>;
+  private queue: ToHost[] = [];
+  /** Terminals that waited for a host that never came, run here instead (fallBack). */
+  private locals = new Map<string, IPty>();
+  /** When the host died under this office (REVIVE_LIMIT). */
+  private losses: number[] = [];
 
   constructor(
     private dataDir: string,
@@ -179,7 +222,8 @@ export class PtyHost {
    * host to be had: terminals then run in-process.
    */
   async connect(): Promise<boolean> {
-    if (process.platform === 'win32') return false;
+    if (process.env.AGENT_OFFICE_PTY_HOST === 'off') return false;
+    if (WIN) return this.startTied();
     try {
       let found = await this.hello();
       if (found && found.version !== PTY_PROTOCOL) {
@@ -200,22 +244,108 @@ export class PtyHost {
         }
       }
       if (!found) return false;
-      const { sock, sessions } = found;
-      this.sock = sock;
-      this.unclaimed = new Set(sessions);
-      readMessages(sock, (msg) => this.onMessage(msg as FromHost));
-      sock.on('close', () => this.onClose(sock));
+      this.take(found);
       return true;
     } catch {
       return false;
     }
   }
 
+  /**
+   * Windows: starts a host and, until it answers, keeps what's asked of it (a worker hired or woken
+   * meanwhile) for it. If it never answers, those terminals run here after all (fallBack).
+   */
+  private startTied(): Promise<boolean> {
+    const starting = this.connectTied().catch(() => false);
+    this.starting = starting;
+    void starting.then((ok) => {
+      if (this.starting === starting) this.starting = undefined;
+      if (!ok) this.fallBack();
+    });
+    return starting;
+  }
+
+  /** No host came: what waited for one runs here, in order. */
+  private fallBack() {
+    for (const m of this.queue.splice(0)) {
+      if (m.t === 'spawn') {
+        const p = this.ptys.get(m.id);
+        if (!p) continue;
+        this.ptys.delete(m.id);
+        try {
+          const local = spawnLocal(m.opts);
+          this.locals.set(m.id, local);
+          local.onData((d) => p.emitData(d));
+          local.onExit(({ exitCode }) => {
+            this.locals.delete(m.id);
+            p.pid = local.pid;
+            p.emitExit({ exitCode });
+          });
+          p.pid = local.pid;
+        } catch (err) {
+          p.emitExit({ exitCode: -1, error: (err as Error).message });
+        }
+      } else if (m.t === 'write' || m.t === 'resize' || m.t === 'kill') this.toLocal(m);
+    }
+  }
+
+  private toLocal(m: Extract<ToHost, { t: 'write' | 'resize' | 'kill' }>) {
+    const local = this.locals.get(m.id);
+    try {
+      if (m.t === 'write') local?.write(m.data);
+      else if (m.t === 'resize') local?.resize(m.cols, m.rows);
+      else local?.kill();
+    } catch {
+      // it has exited
+    }
+  }
+
+  /**
+   * Windows: starts this office's own host on a pipe nobody else knows, and connects to it. It never
+   * outlives this process, so there's no earlier one to find.
+   */
+  private async connectTied(): Promise<boolean> {
+    const hash = createHash('sha256').update(this.dataDir).digest('hex').slice(0, 12);
+    this.socketPath = `\\\\.\\pipe\\agent-office-ptys-${hash}-${process.pid}-${randomBytes(4).toString('hex')}`;
+    let exited = false;
+    const child = this.startHost(true);
+    child?.on('close', () => (exited = true));
+    child?.on('error', () => (exited = true));
+    let found: Awaited<ReturnType<PtyHost['hello']>>;
+    const deadline = Date.now() + 15_000;
+    while (!found && !exited && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 50));
+      found = await this.hello();
+    }
+    if (!found) {
+      child?.kill();
+      return false;
+    }
+    this.take(found);
+    return true;
+  }
+
+  private take({ sock, sessions }: { sock: net.Socket; sessions: string[] }) {
+    // The office stopped while this host was starting (again): it has nothing to do.
+    if (this.leaving) {
+      sock.end(frame({ t: 'stop' }));
+      return;
+    }
+    this.sock = sock;
+    this.unclaimed = new Set(sessions);
+    if (WIN) tiedHosts.add(this);
+    readMessages(sock, (msg) => this.onMessage(msg as FromHost));
+    sock.on('close', () => this.onClose(sock));
+    // What was asked of it while it was being started again, in order.
+    for (const m of this.queue.splice(0)) this.send(m);
+  }
+
   /** A new terminal: in the host when there is one, else in-process. Throws if it can't start. */
   spawn(opts: SpawnOpts): Pty {
-    if (!this.sock) return releaseOnExit(pty.spawn(opts.file, opts.args, { name: 'xterm-256color', cols: opts.cols, rows: opts.rows, cwd: opts.cwd, env: opts.env }));
+    if (!this.sock && !this.starting) return spawnLocal(opts);
     const id = randomBytes(8).toString('hex');
-    const p = new RemotePty(id, (m) => this.send(m));
+    // A Windows host's terminals end with the office: nothing for the next one to adopt.
+    const p = new RemotePty(id, (m) => this.send(m), !WIN);
     this.ptys.set(id, p);
     this.send({ t: 'spawn', id, opts });
     return p;
@@ -224,7 +354,7 @@ export class PtyHost {
   /** Picks up a terminal from before the restart. Undefined if the host no longer has it running. */
   async attach(id: string): Promise<Adopted | undefined> {
     if (!this.sock || !this.unclaimed.delete(id)) return undefined;
-    const p = new RemotePty(id, (m) => this.send(m));
+    const p = new RemotePty(id, (m) => this.send(m), true);
     this.ptys.set(id, p);
     const msg = await new Promise<FromHost | undefined>((resolve) => {
       // The office waits on this before it opens its doors: never for long.
@@ -254,8 +384,9 @@ export class PtyHost {
     this.unclaimed.clear();
   }
 
-  /** The office is restarting: leave every terminal running in the host for the next one. */
+  /** The office is restarting: leave every terminal running in the host for the next one (a Windows host, tied to this office, stops). */
   detach() {
+    if (WIN) return this.stop();
     this.leaving = true;
     this.sock?.end();
   }
@@ -263,18 +394,22 @@ export class PtyHost {
   /** The office is closing for good: the host ends every terminal and exits. */
   stop() {
     this.leaving = true;
+    this.queue = [];
+    tiedHosts.delete(this);
     this.sock?.end(frame({ t: 'stop' }));
   }
 
   private send(msg: ToHost) {
-    if (this.sock && !this.sock.destroyed) this.sock.write(frame(msg));
+    if ((msg.t === 'write' || msg.t === 'resize' || msg.t === 'kill') && this.locals.has(msg.id)) this.toLocal(msg);
+    else if (this.sock && !this.sock.destroyed) this.sock.write(frame(msg));
+    else if (this.starting && !this.leaving) this.queue.push(msg);
   }
 
   private onMessage(msg: FromHost) {
     switch (msg.t) {
       case 'spawned': {
         const p = this.ptys.get(msg.id);
-        if (p) p.pid = msg.pid;
+        if (p) p.pid = msg.pid ?? 0;
         break;
       }
       case 'attached':
@@ -300,11 +435,24 @@ export class PtyHost {
     for (const resolve of this.attaching.values()) resolve(undefined);
     this.attaching.clear();
     if (this.leaving) return;
-    // The host died (killed, crashed). From here on terminals run in-process.
+    // The host died (killed, crashed), and its terminals with it. On Unix terminals run in-process from
+    // here on; on Windows a fresh host is started for them (the workers resume there), unless it keeps dying.
     const lost = [...this.ptys.values()];
     this.ptys.clear();
+    if (WIN) this.revive();
     this.onLost();
     for (const p of lost) p.emitExit({ exitCode: -1, lost: true });
+  }
+
+  /** Starts a fresh Windows host after the last one died; what's asked of it meanwhile waits (send). */
+  private revive() {
+    const now = Date.now();
+    this.losses = [...this.losses.filter((t) => now - t < REVIVE_WINDOW_MS), now];
+    if (this.losses.length > REVIVE_LIMIT) {
+      console.warn(`agent-office: the workers' terminal host died ${this.losses.length} times in ${REVIVE_WINDOW_MS / 60_000} minutes; terminals run in the office from now on`);
+      return;
+    }
+    void this.startTied();
   }
 
   /** Connects and says hello with the saved token. Undefined if no host answers. */
@@ -336,53 +484,40 @@ export class PtyHost {
     });
   }
 
-  /** Starts a host, detached so that it outlives this process and never sees its Ctrl+C. */
-  private startHost() {
+
+  /**
+   * Starts a host, detached so that it never sees this process's Ctrl+C. On Unix it outlives this
+   * process. `tied` (Windows), it's told this process's pid and ends with it, and it's started from a
+   * worker thread (offloop/exec.ts), so the office's event loop isn't held while Windows starts it.
+   */
+  private startHost(tied = false): OffChild | undefined {
     writeFileSync(this.infoPath, JSON.stringify({ token: randomBytes(24).toString('hex') }), { mode: 0o600 });
     const here = fileURLToPath(import.meta.url);
     // Under tsx this is ptyhost.ts, run with the same loader flags; built, it's ptyhost.js.
     const script = path.join(path.dirname(here), `ptyhost${path.extname(here)}`);
     // A relative path in them (`--import ./x.ts`) is from where the office started, not the host's cwd.
     const flags = process.execArgv.filter((a) => !/^--(inspect|debug)/.test(a)).map((a) => a.replace(/^(--[\w-]+=)?(\.\.?\/.*)$/, (_, flag = '', p) => `${flag}${path.resolve(p)}`));
-    const log = openSync(path.join(this.dataDir, 'pty-host.log'), 'w', 0o600);
+    const logPath = path.join(this.dataDir, 'pty-host.log');
+    // Where the office's own code is, so a loader flag (`--import tsx`) resolves from its
+    // node_modules and not from whichever project this floor is.
+    const cwd = path.dirname(here);
+    // It writes its own log: the pipes spawnOff gives it go unread.
+    if (tied) return spawnOff(process.execPath, [...flags, script, this.socketPath, this.infoPath, String(process.pid), logPath], { detached: true, cwd });
+    const log = openSync(logPath, 'w', 0o600);
     try {
       const child = spawnProcess(process.execPath, [...flags, script, this.socketPath, this.infoPath], {
         detached: true,
         stdio: ['ignore', 'ignore', log],
-        // Where the office's own code is, so a loader flag (`--import tsx`) resolves from its
-        // node_modules and not from whichever project this floor is.
-        cwd: path.dirname(here),
+        cwd,
       });
       child.unref();
     } finally {
       closeSync(log);
     }
+    return undefined;
   }
 }
 
 function frame(msg: ToHost): string {
   return `${JSON.stringify(msg)}\n`;
-}
-
-/**
- * On Windows, node-pty leaves a terminal's input pipe open, and its output thread running, once its
- * process has gone (it only closes the output side): one pipe and one worker thread leaked per worker
- * run, which kept a test run (and an office shutting down) alive for good. Let go of both shortly
- * after the exit, once any last output is in.
- */
-function releaseOnExit(p: pty.IPty): pty.IPty {
-  if (process.platform !== 'win32') return p;
-  p.onExit(() => {
-    const t = setTimeout(() => {
-      const agent = (p as unknown as { _agent?: { _inSocket?: { destroy(): void }; _conoutSocketWorker?: { dispose(): void } } })._agent;
-      try {
-        agent?._inSocket?.destroy();
-        agent?._conoutSocketWorker?.dispose();
-      } catch {
-        // already let go
-      }
-    }, 1000);
-    t.unref();
-  });
-  return p;
 }
