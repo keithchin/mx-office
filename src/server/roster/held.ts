@@ -29,6 +29,8 @@ export interface HeldPrompt {
   createdAt: number;
   /** When it's let go if it still hasn't gone in. */
   expiresAt: number;
+  /** Typed with the resume line at its end (resume.ts): the office's words. */
+  resume?: boolean;
 }
 
 /** The id a held prompt gets when its sender gave none: the same prompt to the same agent is the same one. */
@@ -54,7 +56,7 @@ export function reviveHeld(raw: unknown): HeldPrompt[] {
     const createdAt = typeof r.createdAt === 'number' ? r.createdAt : 0;
     const by = str(r.by, 200);
     ids.add(id);
-    out.push({ id, workerId, origin: r.origin as Origin, ...(by ? { by } : {}), text, createdAt, expiresAt: typeof r.expiresAt === 'number' ? r.expiresAt : createdAt + HELD_TTL_MS });
+    out.push({ id, workerId, origin: r.origin as Origin, ...(by ? { by } : {}), text, createdAt, expiresAt: typeof r.expiresAt === 'number' ? r.expiresAt : createdAt + HELD_TTL_MS, ...(r.resume === true ? { resume: true } : {}) });
   }
   return out.slice(-HELD_KEPT);
 }

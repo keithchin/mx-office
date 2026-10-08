@@ -4,6 +4,40 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### New
+- **The office's messages never replace an agent's task.** The office now keeps what each team member
+  was last given to do (its hire's task, a prompt you typed to it, what the Coordinator told it), and
+  every message it writes to an agent (a standup, an autonomy or skills notice, an answer, a decision, a
+  relay) ends with *When you've done this, carry on with: <task>*. An agent with no task is told to say
+  what it will do next or escalate. A task is finished when its issue closes, its PR is no longer open,
+  or the agent says `task done`.
+- **Back to work.** When a team member stops with its task still open, nothing escalated, the office
+  sends it one prompt half a minute later: *You stopped with <task> open: carry on, or escalate if you're
+  blocked.* Once per stop, at most twice per task an hour, and never while it's busy, asking you,
+  asleep, benched, watched, waiting on you, or the project is paused, over its cap or in Studio mode, nor
+  at autonomy level 1. On by default (⚙️ Settings › 👥 Team › Review loop).
+- **💤 Idle with an open task in Needs you.** A member idle 10 minutes with a task open and nothing
+  escalated shows in Needs you (and the Team phone's), with a one-click **Nudge**.
+- **You choose before your actions interrupt busy agents.** Run standup and the console's quick
+  questions first show who is ready and who is working (on what, for how long) when anyone is mid-turn,
+  and ask per person or the same for all: **Interrupt now**, **After their current turn** (the default)
+  or, for the standup, **Skip: use their journal**. A quick question's choice also holds the
+  Coordinator's relays of it to those Leads. What you type to the Coordinator yourself still goes
+  straight in; while it's mid-turn a note says so, with **Send after their turn**.
+
+### Changed
+- **The office never cuts into a turn under way.** Its own messages (scheduled standup, autonomy and
+  skills notices, relays, notes) wait for the agent's turn to end and are typed then; the scheduled
+  standup reads busy Leads from their journals. Notices no longer ask for an `ok` reply.
+- **No catch-up standup on a new team's first day.** A team hired after the day's standup time has its
+  first standup at the next scheduled one (a team hired at 14:17 was asked for a standup three minutes
+  in, and its analyst stopped there).
+- **A decision a Lead was waiting on reaches it at once.** Your decision on its proposal goes out within
+  ten seconds (a few in a row as one message) and wakes an asleep Lead; a busy one hears it when its turn
+  ends. Answers to escalations already went straight in; now they end with the task too.
+
 ## 2026-10-08 · release 21 (`3128cec`)
 
 ### New

@@ -14,6 +14,7 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 | `costCaps` | `{ 1?: number, 2?: number, 3?: number, 4?: number }` | `{}` | A daily dollar cap per autonomy level; the one for the current level applies; missing = off. Each above 0, in cents, at most 100000. |
 | `dryRunIssues` | boolean | `false` | Approved proposals are recorded but no GitHub issue is made. `AGENT_OFFICE_TEAMS_DRY_RUN=1` forces it on. |
 | `reviewNudge` | boolean | `true` | Prompt a Lead once to review a subagent's result. See [The review loop](../teams-and-agents/review-loop.md). |
+| `backToWork` | boolean | `true` | Nudge a member that stopped with its task open to carry on or escalate (twice per task an hour at most; never at level 1). See [Interruptions and back to work](../teams-and-agents/interruptions.md#back-to-work). |
 | `jeff` | `JeffSettings` | `{ waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree' }` | Per judgement: `'off'`, `'shadow'` or `'on'` (`priority`: `'off'` or `'on'`). See [Jeff · Router](../automation/jeff-router.md). |
 | `subagentCooldownHours` | number | `24` | Hours a benched subagent sits out before it's reinstated; 0 = only by hand. 0 to 720, in tenths. |
 | `autonomyByStage` | `AutonomyByStage` | `{ enabled: false, early: 2, build: 3 }` | Autonomy by pipeline stage. On, on a toolkit project, the office sets `autonomy` itself: `early` until the build plan's gate (Stage 4) passes, `build` from then on. See [Autonomy by pipeline stage](../teams-and-agents/autonomy.md#autonomy-by-pipeline-stage). |
@@ -80,6 +81,7 @@ export interface RosterSettings {
   costCaps: Partial<Record<AutonomyLevel, number>>;
   dryRunIssues: boolean;
   reviewNudge: boolean;
+  backToWork: boolean;
   jeff: JeffSettings;
   subagentCooldownHours: number;
   autonomyByStage: AutonomyByStage;

@@ -1,8 +1,9 @@
 // The project team, as the office runs it (see docs/teams.md): per floor, each role's fixed name and
 // the worker it is now; who's idle and for how long, benching Leads that sat idle too long; the
 // floor's spend against its daily cap; the daily standup (standup-run.ts); the escalations raised to
-// the Project Manager (escalations.ts); and the review nudge to a Lead whose subagent just came back
-// (nudge.ts). Everything here is bookkeeping on worker updates plus a once-a-minute look: no model
+// the Project Manager (escalations.ts); the review nudge to a Lead whose subagent just came back
+// (nudge.ts); what each member is on (resume.ts) and the back-to-work nudge when one stops with it open
+// (back-to-work.ts); and the Project Manager's choices about interrupting busy agents (interrupts.ts). Everything here is bookkeeping on worker updates plus a once-a-minute look: no model
 // calls of its own, so a quiet floor costs nothing. One per office, made on first use (rosterOf), like the analyzer.
 
 import path from 'node:path';
@@ -22,6 +23,9 @@ import { excerpt, readJournal } from './journal-io.js';
 import { Jeff } from './jeff.js';
 import { Members } from './members.js';
 import { Nudges } from './nudge.js';
+import { BackToWork } from './back-to-work.js';
+import { Interrupts } from './interrupts.js';
+import { Tasks } from './resume.js';
 import { setFloorPause } from './pause.js';
 import { Relays } from './relays.js';
 import { applyStageAutonomy, stageOf } from './stage-autonomy.js';
@@ -47,6 +51,11 @@ export class Roster {
   readonly standups: StandupRunner;
   readonly escalations: Escalations;
   readonly nudges: Nudges;
+  readonly tasks: Tasks;
+  readonly backToWork: BackToWork;
+  readonly interrupts: Interrupts;
+  /** Whether the debounces run on timers (the tests drive them by hand instead). */
+  readonly timers: boolean;
   readonly jeff: Jeff;
   readonly subagents: Subagents;
   readonly relays: Relays;
@@ -65,7 +74,11 @@ export class Roster {
     this.members = new Members(this);
     this.standups = new StandupRunner(this);
     this.escalations = new Escalations(this);
-    this.nudges = new Nudges(this, tickMs > 0);
+    this.timers = tickMs > 0;
+    this.nudges = new Nudges(this, this.timers);
+    this.tasks = new Tasks(this);
+    this.backToWork = new BackToWork(this, this.timers);
+    this.interrupts = new Interrupts(this);
     this.jeff = new Jeff(this);
     this.subagents = new Subagents(this);
     this.relays = new Relays(this);
@@ -191,6 +204,7 @@ export class Roster {
     }
     this.standups.onWorker(floor, role, w);
     this.nudges.onWorker(floor, role, w);
+    this.backToWork.onWorker(floor, role, w);
     this.subagents.onMember(floor, role, now);
     // Whoever covers Management hears the relays (the Coordinator on an Enterprise team); every Lead its notes.
     if (role === managerRole(d)) this.escalations.onCoordinator(floor, w);
@@ -203,6 +217,7 @@ export class Roster {
 
   /** The floor's issues came back from GitHub: Jeff triages the new ones. */
   onIssues(floor: TeamFloor, issues: Parameters<Jeff['onIssues']>[1]) {
+    this.tasks.onIssues(floor.id, issues);
     void this.jeff.onIssues(floor, issues).catch((err: unknown) => console.error(`agent-office: Jeff's triage on ${floor.id}: ${(err as Error)?.message ?? err}`));
   }
 
@@ -357,6 +372,9 @@ export class Roster {
         benchedAt: m.benchedAt,
         handoffAt: m.handoff?.at,
         covers: coveredBy(d.coverage, r.id),
+        // What it's on and whether it waits on the Project Manager: Needs you's "idle with an open task".
+        ...(w && this.tasks.current(floor, w) ? { task: this.tasks.current(floor, w) } : {}),
+        ...(w && this.openAsks(floor.id, w.id).length ? { waitingOnPm: true } : {}),
       };
     });
     const cap = capAt(d.settings.costCaps, d.settings.autonomy);

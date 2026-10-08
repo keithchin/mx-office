@@ -7,6 +7,7 @@ import { issueNumber, num, str } from '../../office/input.js';
 import { here, workerOf } from './common.js';
 import { audit, human, promptDetails } from '../../audit/index.js';
 import type { FeatureHooks, HandlerMap, ViewPieces } from './types.js';
+import { rosterOf, teamFloor } from '../../roster/adapter.js';
 
 const CLEANUPS = new Set(['keep', 'worktree', 'all']);
 
@@ -124,6 +125,8 @@ export const workerHandlers = {
     ctx.warn(c, err);
     // That someone prompted it, never what they said (its start only when an admin turned that on).
     if (w && !err) audit.record({ floor: w.floor.id, actor: human(who, c.accountId), action: 'worker.prompt', target: { kind: 'worker', id: w.wid, label: w.info.name }, summary: `Prompted ${w.info.name}`, details: promptDetails(text) });
+    // What a person gives a team member to do is its task (roster/resume.ts); a reply or a question isn't.
+    if (w && !err && w.info.kind === 'agent') rosterOf(ctx).tasks.assign(teamFloor(ctx, w.floor), w.wid, text, who);
     const issue = w?.info.kind === 'agent' ? issueNumber(msg.issue) : undefined;
     if (w && !err && issue) {
       ctx.toastFloor(w.floor, `${who} handed issue #${issue} to ${w.info.name}`);

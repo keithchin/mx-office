@@ -80,6 +80,7 @@ export class Members {
       if (m.phase === 'benching') return `${m.name} is writing a handoff note before being benched`;
       if (!isAsleepStatus(w.status)) return `${m.name} is already at work`;
       const err = floor.wake(w.id, task);
+      if (!err && task) this.roster.tasks.assignRole(floor, role, task, by);
       if (!err) floor.toast(`${by} woke ${m.name}, the ${def.title}`);
       return err;
     }
@@ -94,6 +95,8 @@ export class Members {
     m.hiredAt = this.roster.deps.now();
     m.benchAskedAt = undefined;
     m.benchSawBusy = undefined;
+    // What it's to carry on with after the office's own messages (resume.ts); one brought back without a task keeps its last.
+    if (task) this.roster.tasks.assignRole(floor, role, task, by);
     // Its Playbook, its team's subagents and the journals, in the folder it works in, before its
     // session has booted far enough to read them.
     try {
@@ -124,7 +127,7 @@ export class Members {
     if (waiting) return `Can't bench ${m.name}: it's waiting on a person: answer its escalation “${waiting.title}” first`;
     const text = benchPrompt(role, lessonsPathIn(floor.dir), this.stamp(floor));
     // The idle bench is the office's doing (held past the spend cap: an idle one costs nothing); a person's goes through.
-    const sent = this.roster.delivery.send(floor, w, text, { origin: by === 'idle' ? 'office' : 'person', wake: true });
+    const sent = this.roster.delivery.send(floor, w, text, { origin: by === 'idle' ? 'office' : 'person', wake: true, resume: false });
     if (sent.status === 'refused') return sent.why;
     m.phase = 'benching';
     m.benchAskedAt = this.roster.deps.now();

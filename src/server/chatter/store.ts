@@ -4,6 +4,7 @@
 // bad line or a missing file: that's no messages.
 
 import { appendFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { ChatterMessage } from '../../shared/chatter.js';
 
@@ -88,16 +89,55 @@ export class ChatterFile {
     return this.st;
   }
 
+  /**
+   * Written in the background: a write and rename on the event loop held it for a second once with the
+   * virus scanner busy (busy-office check, 2026-10-08). Saves asked for while one is in flight become one
+   * more after it; whatever is still unsaved when the process exits is written then, synchronously.
+   */
   saveState(now: number) {
     const st = this.state();
     for (const [k, at] of Object.entries(st.seen)) if (now - at > SEEN_KEPT_MS) delete st.seen[k];
+    this.dirty = true;
+    if (!this.exitHooked) {
+      this.exitHooked = true;
+      process.once('exit', () => this.flushSync());
+    }
+    void this.write();
+  }
+
+  private dirty = false;
+  private writing = false;
+  private exitHooked = false;
+
+  private async write() {
+    if (this.writing) return;
+    this.writing = true;
     try {
-      mkdirSync(this.dir, { recursive: true });
-      const tmp = `${this.stateFile}.tmp`;
-      writeFileSync(tmp, JSON.stringify(st));
-      renameSync(tmp, this.stateFile);
+      while (this.dirty) {
+        this.dirty = false;
+        const tmp = `${this.stateFile}.tmp`;
+        await mkdir(this.dir, { recursive: true });
+        await writeFile(tmp, JSON.stringify(this.state()));
+        await rename(tmp, this.stateFile);
+      }
     } catch (err) {
       console.error(`agent-office: couldn't save the ${this.floor} chatter state: ${(err as Error).message}`);
+    } finally {
+      this.writing = false;
+    }
+  }
+
+  /** At exit: the last changes, on the loop (nothing else is waiting by then). */
+  flushSync() {
+    if (!this.dirty) return;
+    this.dirty = false;
+    try {
+      mkdirSync(this.dir, { recursive: true });
+      const tmp = `${this.stateFile}.sync.tmp`;
+      writeFileSync(tmp, JSON.stringify(this.state()));
+      renameSync(tmp, this.stateFile);
+    } catch {
+      // exiting anyway
     }
   }
 }

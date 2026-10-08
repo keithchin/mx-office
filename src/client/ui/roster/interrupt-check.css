@@ -1,0 +1,17 @@
+/* The check before a standup or a team question reaches busy agents (interrupt-check.ts). */
+.ic { width: min(620px, 94vw); }
+.ic .body { display: flex; flex-direction: column; gap: 10px; }
+.ic-lead { margin: 0; font-size: 14px; }
+.ic-note { margin: 0; font-size: 12px; color: var(--muted); }
+.ic-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+.ic-row { display: grid; grid-template-columns: minmax(110px, auto) 1fr; gap: 4px 10px; align-items: baseline; padding: 8px 10px; border: 2px solid var(--rule-soft); border-radius: 10px; background: var(--card); }
+.ic-row.ic-working, .ic-row.ic-asking { border-color: var(--warn); background: var(--warn-soft); }
+.ic-row.ic-away { color: var(--muted); }
+.ic-who { font-size: 14px; }
+.ic-state { font-size: 13px; color: var(--ink-2); min-width: 0; overflow-wrap: anywhere; }
+.ic-what { color: var(--muted); }
+.ic-opts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.ic-opt.on { background: var(--ink); color: var(--on-ink); }
+.ic-same { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; background: var(--sunken); }
+.ic-same-l { font-size: 13px; font-weight: 700; }
+.ic-same .ic-opts { grid-column: auto; }

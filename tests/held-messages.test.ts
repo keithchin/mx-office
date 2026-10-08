@@ -199,7 +199,7 @@ test("past the spend cap or paused, only a person's held prompts go in; the rest
     setProjectPause(floor.id, undefined);
   }
   o.roster.tick();
-  assert.deepEqual(floor.prompts.map((p) => p.text), ['From a person', 'From the office'], 'resumed: it goes in');
+  assert.deepEqual(floor.prompts.map((p) => p.text.split('\n\n')[0]), ['From a person', 'From the office'], 'resumed: it goes in');
   // The daily cap holds it the same way.
   floor.set(x, 'needs_input');
   o.roster.delivery.send(floor, floor.worker(x)!, 'Office again', { origin: 'office', hold: true });

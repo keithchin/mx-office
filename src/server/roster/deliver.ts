@@ -17,6 +17,12 @@
 // What's held is kept in the roster file (held.ts), so a restart doesn't lose a promise: it goes in once
 // the agent is next between turns (or the minute's look finds it so), and one that waited past its
 // expiry is let go and said so. The same prompt held twice (its id) goes in once.
+//
+// The office's own messages (origin 'office': a scheduled standup, a settings notice, relays, notes)
+// never go into a turn under way: they're held and typed once it's over, so an agent mid-task finishes
+// what it was doing first (only a caller that says `interrupt` may cut in). And every message the
+// office composes ends with the resume line (resume.ts), "When you've done this, carry on with: <task>",
+// added as it's typed (one line for several held messages typed together), so it never replaces the task.
 
 import type { WorkerInfo, WorkerStatus } from '../../shared/protocol.js';
 import { isAsleepStatus } from './bench.js';
@@ -25,6 +31,7 @@ import { owedAnswersPrompt } from './prompts.js';
 import { projectPauseOf } from '../project-run/store.js';
 import { audit, office } from '../audit/index.js';
 import { HELD_TTL_MS, heldId, holdOnce, type HeldPrompt } from './held.js';
+import { withResume } from './resume.js';
 import type { TeamFloor } from './types.js';
 
 /** Who a prompt is from: a person, the office itself, or another agent (`office-workers tell`). */
@@ -52,6 +59,10 @@ export interface SendOpts {
   id?: string;
   /** How long a held prompt waits before it's let go (HELD_TTL_MS, a day, otherwise). */
   ttlMs?: number;
+  /** End it with the resume line (resume.ts): the office's own messages do unless they say not; a person's decision the office words says so. */
+  resume?: boolean;
+  /** An office message that may go into a turn under way (the default holds it for the turn's end). */
+  interrupt?: boolean;
 }
 
 export type Sent = { status: 'sent' | 'woke' | 'held' } | { status: 'refused'; why: string };
@@ -84,9 +95,12 @@ export class Delivery {
       const held = projectPauseOf(floor.id);
       if (held) return { status: 'refused', why: held };
     }
+    // The office's own words wait for the turn under way to end, and are typed then.
+    if (o.origin === 'office' && !o.interrupt) o = { ...o, hold: true, between: true };
+    const typed = this.resumes(o) ? withResume(text, this.roster.tasks.line(floor, w)) : text;
     if (isAsleepStatus(w.status)) {
       if (!o.wake) return { status: 'refused', why: `${w.name} is asleep` };
-      const err = floor.wake(w.id, text, o.by);
+      const err = floor.wake(w.id, typed, o.by);
       if (err) return { status: 'refused', why: err };
       this.typed(floor, w, text, o);
       return { status: 'woke' };
@@ -96,9 +110,9 @@ export class Delivery {
       this.hold(floor, w, text, o);
       return { status: 'held' };
     }
-    let err = floor.prompt(w.id, text, o.by);
+    let err = floor.prompt(w.id, typed, o.by);
     if (err === 'Worker is not running' && o.wake) {
-      err = floor.wake(w.id, text, o.by);
+      err = floor.wake(w.id, typed, o.by);
       if (!err) {
         this.typed(floor, w, text, o);
         return { status: 'woke' };
@@ -108,6 +122,8 @@ export class Delivery {
     this.typed(floor, w, text, o);
     return { status: 'sent' };
   }
+
+  private resumes = (o: SendOpts) => o.resume ?? o.origin === 'office';
 
   /** Typed (or woken with) now: its sender hears, and the same prompt, if it was held before, has gone in. */
   private typed(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts) {
@@ -122,7 +138,7 @@ export class Delivery {
   private hold(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts) {
     const now = this.roster.deps.now();
     const id = o.id ?? heldId(w.id, o.origin, text, o.by);
-    holdOnce(this.roster.data(floor.id).held, { id, workerId: w.id, origin: o.origin, ...(o.by ? { by: o.by } : {}), text, createdAt: now, expiresAt: now + (o.ttlMs ?? HELD_TTL_MS) });
+    holdOnce(this.roster.data(floor.id).held, { id, workerId: w.id, origin: o.origin, ...(o.by ? { by: o.by } : {}), text, createdAt: now, expiresAt: now + (o.ttlMs ?? HELD_TTL_MS), ...(this.resumes(o) ? { resume: true } : {}) });
     if (o.onSent) this.sentFns.set(id, [...(this.sentFns.get(id) ?? []), o.onSent]);
     this.roster.touch(floor, true);
   }
@@ -191,7 +207,9 @@ export class Delivery {
     // An asleep one isn't woken for owed answers alone: its next hire or wake carries them.
     const owed = asleep ? undefined : this.roster.escalations.owedTo(floor, w);
     if (!going.length && !owed?.lines.length) return;
-    const text = [...(owed?.lines.length ? [owedAnswersPrompt(owed.lines)] : []), ...going.map((h) => h.text)].join(JOIN);
+    const joined = [...(owed?.lines.length ? [owedAnswersPrompt(owed.lines)] : []), ...going.map((h) => h.text)].join(JOIN);
+    // One resume line at the end, for the office's words and the answers it's owed (resume.ts).
+    const text = owed?.lines.length || going.some((h) => h.resume) ? withResume(joined, this.roster.tasks.line(floor, w)) : joined;
     // Whose turn it starts: a person's when it carries their words (an answer owed, or what they sent),
     // so it flags when done; else the one sender's, else the office's (workers/lifecycle.ts OFFICE_BY).
     const fromPerson = going.find((h) => h.origin === 'person');

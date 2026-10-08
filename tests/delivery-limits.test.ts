@@ -165,12 +165,13 @@ test('held prompts go in together as one message once the turn is over; an aslee
   const sent: string[] = [];
   assert.equal(t.roster.delivery.send(tf, tf.worker(x)!, 'First note', { origin: 'agent', by: 'Bob', hold: true, onSent: () => sent.push('1') }).status, 'held');
   assert.equal(t.roster.delivery.send(tf, tf.worker(x)!, 'Second note', { origin: 'agent', by: 'Cy', hold: true, onSent: () => sent.push('2') }).status, 'held');
-  assert.equal(t.roster.delivery.send(tf, tf.worker(x)!, 'Not held', { origin: 'office' }).status, 'refused');
-  assert.equal(t.roster.delivery.heldFor(x), 2);
+  // The office's own words are always held for the turn's end (roster/deliver.ts), even unasked.
+  assert.equal(t.roster.delivery.send(tf, tf.worker(x)!, 'Office note', { origin: 'office' }).status, 'held');
+  assert.equal(t.roster.delivery.heldFor(x), 3);
   assert.equal(tf.prompts.length, 0);
   tf.set(x, 'done');
   assert.equal(tf.prompts.length, 1, 'one message, not two pastes racing their Enters');
-  assert.match(tf.prompts[0].text, /First note\n\n---\n\nSecond note/);
+  assert.match(tf.prompts[0].text, /First note\n\n---\n\nSecond note\n\n---\n\nOffice note\n\nWhen you've done this/);
   assert.deepEqual(sent, ['1', '2']);
   assert.equal(t.roster.delivery.heldFor(x), 0);
   // Held, then it exits: woken with it.

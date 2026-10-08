@@ -43,6 +43,7 @@ The items, and their buttons in the list:
 | ✅ | *&lt;name&gt; finished: &lt;summary&gt;, not looked at yet* (not for a [quiet turn](../concepts/workers-and-worktrees.md#quiet-turns): one the office started, or a team member's at autonomy 3 and up) | **Review**: opens its terminal |
 | 🚩 | An escalation, tagged CRITICAL, URGENT, IMPORTANT or INFO | **Answer** (admin) or **View**: jumps to the card |
 | 🔀 💸 🧰 📝 | An approval: a merge, a cost cap, a subagent action, a proposal | **Review**: opens Approvals |
+| 💤 | *&lt;name&gt; is idle with an open task: …* (idle 10 minutes, nothing escalated) | **Nudge**: tells it to carry on, or escalate if it's blocked ([back to work](../teams-and-agents/interruptions.md#back-to-work)) |
 | 💸 | *Spend cap reached: office prompts paused; agents finish their current turn* (the daily cap is spent) | **Settings** |
 | ❌ | *PR #n has failing checks* | **Open PR #n** |
 | ✋ | *Stage X waits for your sign-off* | **Sign off**: scrolls to the setup panel |
@@ -117,8 +118,8 @@ In the middle of the summary:
   - **Terminal**: its live terminal, read-only, as it is.
 - Chat reads the Coordinator's Claude Code session transcript, which the office tails on its own machine and sends only to the browsers showing it. What a tool printed or read (a file's contents, a command's output) never leaves the office: only a line of why a tool failed. A Coordinator on another agent (Codex, OpenCode…), or one whose transcript isn't known yet, shows its terminal's text in Chat instead, under *Chat view needs Claude Code transcripts; showing terminal text*.
 - Which view it opens in is yours alone, kept in this browser: the toggle (← → on the keyboard), or **Command Center terminal** in ⚙️ Settings › 🧍 You (`/lite?tab=settings&section=you`) or the 3D office's ⚙️ Settings › You.
-- **Ask the Project Coordinator…**: Enter sends, Shift+Enter adds a line, ↑/↓ recall what you sent. It confirms *Sent ✓*, or *Queued while busy ⏳* when the Coordinator is mid-turn.
-- Quick chips: **📊 Status update**, **🚧 What's blocking?**, **🗺️ Plan next steps**, **📋 Run standup**.
+- **Ask the Project Coordinator…**: Enter sends, Shift+Enter adds a line, ↑/↓ recall what you sent. It confirms *Sent ✓*, or *Queued while busy ⏳* when the Coordinator is mid-turn. While it's mid-turn a note above the box says so (*working 4 min*), with **Send after their turn** to hold what you send until that turn ends.
+- Quick chips: **📊 Status update**, **🚧 What's blocking?**, **🗺️ Plan next steps**, **📋 Run standup**. When anyone they'd reach is mid-turn, a small window lists who is ready and who is working (on what, for how long) and asks, per person or the same for all: **Interrupt now**, **After their current turn** (the default) or, for the standup, **Skip: use their journal**. See [Interruptions and back to work](../teams-and-agents/interruptions.md).
 - No Coordinator yet? **🤝 Hire Project Coordinator** (admin). Benched? Its latest handoff note and **🤝 Hire again**.
 
 ## 🚩 Escalations to you

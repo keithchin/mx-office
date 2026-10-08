@@ -40,6 +40,14 @@ function myName(): string | undefined {
   }
 }
 
+/** Needs you's Nudge: an idle team member is told to carry on with its open task, or escalate. */
+export async function nudgeMember(floor: string | null | undefined, role: string): Promise<void> {
+  if (!floor) return;
+  const r = await act(floor, 'nudge', { role });
+  const m = r?.members.find((x) => x.role === role);
+  if (r) toast(`🔁 Nudged ${m?.name ?? 'them'} back to work`);
+}
+
 /** Does `action` on the floor's team; the team after it, or undefined (with a toast saying why) when it was refused. */
 export async function act(floor: string, action: string, extra: Record<string, unknown> = {}): Promise<RosterView | undefined> {
   try {

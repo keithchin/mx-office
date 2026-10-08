@@ -18,6 +18,7 @@ import type { SubagentAction, SubagentRecord } from '../../shared/roster/subagen
 import { emptyOutbox, reviveOutbox, type Outbox } from './relays.js';
 import { reviveHeld, type HeldPrompt } from './held.js';
 import { ensureSubagentNames } from './subagent-names.js';
+import { reviveAssignment, type Assignment } from './resume.js';
 import { alsoCovers, cleanCoverage, cleanShape, defaultCoverage, type Coverage, type TeamShape } from '../../shared/roster/coverage.js';
 
 /** Where a member is in its life: never hired, a worker now, writing its handoff, or benched. */
@@ -38,6 +39,8 @@ export interface MemberRecord {
   handoff?: { at: number; text: string };
   /** What the Project Manager changed of its skills (shared/roster/skills.ts): on/off and gate per skill. */
   skills?: SkillOverrides;
+  /** What it was last given to do, for the resume line and the back-to-work nudge (resume.ts). */
+  task?: Assignment;
 }
 
 /**
@@ -89,7 +92,7 @@ const PROPOSALS_KEPT = 300;
 const ESCALATIONS_KEPT = 200;
 
 export function defaultSettings(): RosterSettings {
-  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true, jeff: { ...DEFAULT_JEFF }, subagentCooldownHours: DEFAULT_COOLDOWN_HOURS, autonomyByStage: { ...DEFAULT_BY_STAGE }, earlyDrafts: true };
+  return { autonomy: DEFAULT_AUTONOMY, idleMinutes: DEFAULT_IDLE_MINUTES, schedule: { ...DEFAULT_SCHEDULE }, costCaps: {}, dryRunIssues: false, reviewNudge: true, backToWork: true, jeff: { ...DEFAULT_JEFF }, subagentCooldownHours: DEFAULT_COOLDOWN_HOURS, autonomyByStage: { ...DEFAULT_BY_STAGE }, earlyDrafts: true };
 }
 
 /** Settings from what was saved or sent, anything malformed left as it was in `base`. */
@@ -113,6 +116,8 @@ export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings
     dryRunIssues: typeof s.dryRunIssues === 'boolean' ? s.dryRunIssues : base.dryRunIssues,
     // A roster saved before the review nudge existed has it on, like a fresh one.
     reviewNudge: typeof s.reviewNudge === 'boolean' ? s.reviewNudge : (base.reviewNudge ?? true),
+    // A roster saved before the back-to-work nudge existed has it on, like a fresh one.
+    backToWork: typeof s.backToWork === 'boolean' ? s.backToWork : (base.backToWork ?? true),
     // A roster saved before Jeff has him in shadow mode on both.
     jeff: {
       waiting: isJeffMode(s.jeff?.waiting) ? s.jeff.waiting : (base.jeff?.waiting ?? DEFAULT_JEFF.waiting),
@@ -157,7 +162,9 @@ export function reviveRoster(raw: unknown, rng: () => number = Math.random): Ros
     if (!isRoleId(id) || !m || typeof m !== 'object') continue;
     const phase: Phase = ['none', 'active', 'benching', 'benched'].includes(m.phase) ? m.phase : 'none';
     const skills = cleanOverrides(id, m.skills, alsoCovers(coverage, id));
-    members[id] = { ...m, name: cleanName(m.name) ?? fresh.members[id].name, model: typeof m.model === 'string' && m.model ? m.model : fresh.members[id].model, phase, skills };
+    const task = reviveAssignment(m.task);
+    members[id] = { ...m, name: cleanName(m.name) ?? fresh.members[id].name, model: typeof m.model === 'string' && m.model ? m.model : fresh.members[id].model, phase, skills, task };
+    if (!task) delete members[id].task;
   }
   const out: RosterData = {
     settings: cleanSettings(r.settings),
