@@ -61,7 +61,7 @@ export function interruptCheck(o: CheckOptions): Promise<Choices | undefined> {
         'li.ic-row',
         { class: `ic-${r.state}` },
         h('span.ic-who', {}, h('span', { 'aria-hidden': 'true' }, `${r.icon} `), h('b', {}, r.name)),
-        h('span.ic-state', {}, STATE_TEXT[r.state], isBusyRow(r) && r.state === 'working' ? ` · ${workingFor(r.since, now)}` : '', r.what ? h('span.ic-what', {}, ` on ${r.what}`) : ''),
+        h('span.ic-state', {}, STATE_TEXT[r.state], r.state === 'working' && r.since !== undefined ? ` · ${workingFor(r.since, now).replace(/^working,?\s*/, '')}` : '', r.what ? h('span.ic-what', {}, ` on ${r.what}`) : ''),
         isBusyRow(r) ? group(`What to do about ${r.name}`, r.role) : '',
       );
     let answered = false;
