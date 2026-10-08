@@ -4,7 +4,7 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
-## Unreleased
+## 2026-10-08 · release 21 (`3128cec`)
 
 ### New
 - **A progress bar for every project.** A thin line between the floor's top row and the tabs (the same
