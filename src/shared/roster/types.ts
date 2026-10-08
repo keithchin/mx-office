@@ -26,6 +26,12 @@ export interface RosterSettings {
    * review that result per its Playbook and continue or escalate (on by default; see roster/nudge.ts).
    */
   reviewNudge: boolean;
+  /**
+   * When a member's turn ends with its task still open (no escalation, nothing finished), the office
+   * sends it one "carry on, or escalate" nudge, a couple at most per task an hour (on by default; see
+   * roster/back-to-work.ts). Never at autonomy level 1, where the Project Manager drives every step.
+   */
+  backToWork: boolean;
   /** Jeff, the Router (shared/judge.ts): per judgement off, shadow (log next to the rule, never act) or on. */
   jeff: JeffSettings;
   /** Hours a benched subagent sits out before the office reinstates it (0 = only by hand). */
@@ -90,6 +96,10 @@ export interface MemberView {
   handoffAt?: number;
   /** The teams it covers (shared/roster/coverage.ts); its own alone on an Enterprise team. */
   covers?: TeamId[];
+  /** What it was last given to do (its hire's task, the Project Manager's or the Coordinator's prompt), while that's open (server/roster/resume.ts). */
+  task?: string;
+  /** It has an escalation open to the Project Manager (an FYI too): idle because the next move may be theirs. */
+  waitingOnPm?: boolean;
 }
 
 export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'change' | 'auto';

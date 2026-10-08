@@ -27,6 +27,7 @@ import { SCAN_MS } from './subagent-live.js';
 import { OFFICE_BY } from '../workers/lifecycle.js';
 import { setupView } from '../wizard/setup.js';
 import type { PipelineStage } from '../../shared/roster/types.js';
+import { studioStateOf } from '../studio/index.js';
 
 const adapters = new WeakMap<Floor, TeamFloor>();
 /** A transcript looked up by session id and not found is looked for again after this long (it reads a folder listing). */
@@ -148,6 +149,7 @@ export function rosterOf(ctx: Ctx): Roster {
       now: () => Date.now(),
       judge: (text, questions, opts) => judgeOf(ctx).ask(text, questions, opts),
       pipelineStage,
+      studioOpen: (id) => !!studioStateOf(id)?.open,
     });
     // A Lead's subagent runs, from its hooks: the team's track record (roster/subagents.ts).
     onSubagentEvent((workerId, ev) => {

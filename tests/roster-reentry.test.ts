@@ -105,7 +105,9 @@ test('a prompt held behind a dialog is typed once when the turn is over', async 
   assert.equal(t.roster.delivery.send(t.floor, w, 'Held for after the dialog', { origin: 'office', hold: true, onSent: () => sent++ }).status, 'held');
   t.floor.set(t.id, 'done');
   await settle();
-  assert.deepEqual(t.floor.prompts.map((p) => p.text), ['Held for after the dialog']);
+  // The office's words end with the resume line (roster/resume.ts).
+  assert.deepEqual(t.floor.prompts.map((p) => p.text.split('\n\n')[0]), ['Held for after the dialog']);
+  assert.match(t.floor.prompts[0].text, /When you've done this/);
   assert.equal(sent, 1);
   assert.equal(t.roster.delivery.heldFor(t.id), 0);
   t.roster.stop();

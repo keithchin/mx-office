@@ -5,6 +5,13 @@
 // and lists each proposal for the Project Manager (the human). Their decisions go back to the
 // Coordinator in one message, a minute after the last one, and each to the Lead that proposed it as a
 // short note (relays.ts). What's still to send is kept in the roster file's outbox.
+//
+// A standup never takes over a turn under way unless the Project Manager says so: a scheduled one asks
+// only the Leads between turns and reads the busy ones' journals; one the Project Manager runs asks the
+// busy ones as they chose in the check (shared/roster/interrupt.ts): now, after their current turn (held,
+// and asked once it's typed), or from their journal. Each ask ends with the resume line (resume.ts), so
+// answering it isn't the end of the turn. And a team hired after today's slot gets no catch-up standup
+// on its first day (newTeam in standup.ts): its first standup is the next scheduled one.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -16,13 +23,14 @@ import { managerRole } from './coverage.js';
 import { dayIn, isoWeek, standupDue } from '../../shared/roster/schedule.js';
 import type { Proposal, Standup } from '../../shared/roster/types.js';
 import { HANDOFF_START_MS, isAsleepStatus, isBusyStatus } from './bench.js';
+import type { InterruptChoice } from '../../shared/roster/interrupt.js';
 
 import type { Roster } from './index.js';
 import { dryRunMaker, envDryRun } from './issues.js';
 import { readJournal } from './journal-io.js';
 import { outcomesPrompt, standupCompiledPrompt, standupPrompt } from './prompts.js';
 import { coordinatorIs, queueOnce } from './relays.js';
-import { compilePage, reportFrom, standupId, toProposals } from './standup.js';
+import { compilePage, newTeam, reportFrom, standupId, toProposals } from './standup.js';
 import type { TeamFloor } from './types.js';
 import { audit, byWhom } from '../audit/index.js';
 import { decisionsRelayed } from '../chatter/hooks.js';
@@ -51,8 +59,11 @@ export class StandupRunner {
     return this.roster.data(floor.id).standups.find((s) => s.status === 'collecting');
   }
 
-  /** Starts a standup now (`by` a person, or "schedule"). The standup, or why not. */
-  run(floor: TeamFloor, by: string): Standup | string {
+  /**
+   * Starts a standup now (`by` a person, or "schedule"). `choices`: what the Project Manager picked for
+   * each busy Lead (after their turn when unsaid). The standup, or why not.
+   */
+  run(floor: TeamFloor, by: string, choices: Partial<Record<RoleId, InterruptChoice>> = {}): Standup | string {
     if (this.collecting(floor)) return 'A standup is already being collected';
     const d = this.roster.data(floor.id);
     const now = this.roster.deps.now();
@@ -61,24 +72,44 @@ export class StandupRunner {
     d.standups.push(s);
     d.lastStandupAt = now;
     const stamp = this.roster.members.stamp(floor);
+    const scheduled = by === 'schedule';
+    /** Asked after their current turn: held, and asked once it's typed. */
+    const later: RoleId[] = [];
     // The Leads that cover a team (the four on an Enterprise team, the Solo Lead alone on a Solo one); nobody absent is asked.
     for (const role of standupRoles(d.coverage).map((r) => ROLE_BY_ID.get(r)!)) {
       const m = d.members[role.id];
       const w = this.roster.workerOf(floor, m);
       // Only one at its desk and not asking someone is asked; the rest come from their journals.
-      // A scheduled one is the office's: past the spend cap, everyone's comes from their journal.
+      // A scheduled one is the office's: past the spend cap, everyone's comes from their journal, and so
+      // does a busy one's (the office never takes over a turn under way).
       if (w && m.phase === 'active' && !isAsleepStatus(w.status) && w.status !== 'needs_input') {
-        const err = this.roster.delivery.prompt(floor, w, standupPrompt(role.id, date, stamp, this.extraFor(floor, role.id, now)), by === 'schedule' ? 'office' : 'person');
-        if (!err) {
-          s.waiting.push(role.id);
-          this.asks.set(`${floor.id}:${role.id}`, { at: now, sawBusy: false });
-          continue;
+        const busy = isBusyStatus(w.status);
+        const choice: InterruptChoice = !busy ? 'interrupt' : scheduled ? 'journal' : (choices[role.id] ?? 'after');
+        if (choice !== 'journal') {
+          const key = `${floor.id}:${role.id}`;
+          const r = this.roster.delivery.send(floor, w, standupPrompt(role.id, date, stamp, this.extraFor(floor, role.id, now)), {
+            origin: scheduled ? 'office' : 'person',
+            ...(scheduled ? {} : { by }),
+            resume: true,
+            id: `standup:${s.id}:${role.id}`,
+            ...(choice === 'after' ? { hold: true, between: true, ttlMs: COLLECT_MS } : {}),
+            // Asked once it's typed: a held one isn't waited on until then (its turn under way isn't the answer).
+            onSent: () => this.asks.set(key, { at: this.roster.deps.now(), sawBusy: false }),
+          });
+          if (r.status !== 'refused') {
+            s.waiting.push(role.id);
+            if (r.status === 'held') later.push(role.id);
+            continue;
+          }
         }
       }
       this.fromJournal(floor, s, role.id, w);
     }
-    audit.record({ floor: floor.id, actor: byWhom(by), action: 'standup.run', target: { kind: 'standup', id: s.id, label: `Standup ${s.date}` }, summary: by === 'schedule' ? 'The daily standup started' : 'Called a standup', details: { asked: s.waiting } });
-    floor.toast(`📋 ${by === 'schedule' ? 'The daily standup' : `${by} called a standup`}: ${s.waiting.length ? `asking ${s.waiting.map((r) => d.members[r].name).join(', ')}` : 'from the journals'}`);
+    const now2 = s.waiting.filter((r) => !later.includes(r));
+    audit.record({ floor: floor.id, actor: byWhom(by), action: 'standup.run', target: { kind: 'standup', id: s.id, label: `Standup ${s.date}` }, summary: scheduled ? 'The daily standup started' : 'Called a standup', details: { asked: now2, ...(later.length ? { afterTurn: later } : {}) } });
+    const names = (rs: RoleId[]) => rs.map((r) => d.members[r].name).join(', ');
+    const parts = [now2.length ? `asking ${names(now2)}` : '', later.length ? `after their turn: ${names(later)}` : ''].filter(Boolean);
+    floor.toast(`📋 ${scheduled ? 'The daily standup' : `${by} called a standup`}: ${parts.length ? `${parts.join('; ')}; the rest from their journals` : 'from the journals'}`);
     if (!s.waiting.length) void this.compile(floor, s);
     this.roster.touch(floor);
     return s;
@@ -140,7 +171,8 @@ export class StandupRunner {
     const d = this.roster.data(floor.id);
     // Decisions that waited through a restart (no timer then) go out once the Coordinator can hear them.
     if (d.outbox.decisions.length && !this.timers.has(floor.id)) this.flushPm(floor);
-    if (!s && standupDue(now, d.settings.schedule, d.lastStandupAt, d.lastActivityAt) === 'run') this.run(floor, 'schedule');
+    // A team hired after today's slot has its first standup at the next one, not a catch-up now.
+    if (!s && standupDue(now, d.settings.schedule, d.lastStandupAt, d.lastActivityAt) === 'run' && !newTeam(now, d.settings.schedule, Object.values(d.members).map((m) => m.hiredAt))) this.run(floor, 'schedule');
   }
 
   /** Everyone's in: the page, the auto-approved proposals' issues, and the Project Coordinator's draft. */
@@ -160,7 +192,7 @@ export class StandupRunner {
         mkdirSync(path.dirname(file), { recursive: true });
         writeFileSync(file, s.page);
         s.savedTo = standupPath(s.id);
-        this.roster.delivery.prompt(floor, w, standupCompiledPrompt(s.id, pending, d.escalations.filter((e) => e.status === 'open' || e.at >= (d.standups[d.standups.length - 2]?.startedAt ?? 0))), s.by === 'schedule' ? 'office' : 'person');
+        this.roster.delivery.send(floor, w, standupCompiledPrompt(s.id, pending, d.escalations.filter((e) => e.status === 'open' || e.at >= (d.standups[d.standups.length - 2]?.startedAt ?? 0))), { origin: s.by === 'schedule' ? 'office' : 'person', resume: true });
       } catch (err) {
         floor.toast(`Couldn't hand the standup page to ${pm.name}: ${(err as Error).message}`, 'warn');
       }
@@ -200,7 +232,8 @@ export class StandupRunner {
     if (s?.page) s.page = compilePage(s, d.proposals, d.settings.autonomy, floor.name);
     // The member who covers Management hears it with the others, unless it proposed it: then its own note says it.
     if (p.role !== managerRole(d)) this.tellPm(floor, p);
-    this.roster.relays.noteLead(floor, p.role, decisionNote(p, by));
+    // What it proposed and waited on: it hears soon, woken for it if it's asleep (relays.ts).
+    this.roster.relays.noteLead(floor, p.role, decisionNote(p, by), true);
     audit.record({ floor: floor.id, actor: byWhom(by), action: 'proposal.decide', target: { kind: 'proposal', id: p.id, label: p.title }, summary: `${decision === 'approve' ? 'Approved' : decision === 'reject' ? 'Rejected' : 'Asked for changes to'} the proposal “${p.title}”${p.issue?.number ? ` (issue #${p.issue.number})` : ''}`, details: { decision, reason: why ? { length: why.length } : undefined, issue: p.issue?.number }, severity: 'notice' });
     this.roster.touch(floor);
     return undefined;

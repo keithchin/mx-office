@@ -124,6 +124,7 @@ function allSettings(v: RosterView, redraw: (v: RosterView) => void): HTMLElemen
     h('p.ro-row', {}, 'Bench a Lead after ', num(s.idleMinutes, (n) => (s.idleMinutes = n ?? 0), { max: 1440, step: 1, 'aria-label': 'Idle minutes' }), ' idle minutes (0 = only by hand). A Lead mid-task or waiting on someone is never idle.'),
     h('h4', {}, 'Review loop'),
     check(s.reviewNudge, (b) => (s.reviewNudge = b), "Nudge a Lead to review its subagent's result when its turn ends right after one came back (once per idle period; never while it needs you, asleep or benched)"),
+    check(s.backToWork ?? true, (b) => (s.backToWork = b), 'Back to work: when a member stops with its task still open (nothing escalated, nothing finished), nudge it once to carry on or escalate (at most twice per task an hour; never at level 1, while paused or in Studio mode, or while someone is at its terminal)'),
     h('h4', {}, 'Deliverables'),
     check(s.earlyDrafts ?? true, (b) => (s.earlyDrafts = b), 'Early drafts: while the Chief Analyst is on Stages 0–2, Design, Development and Testing make small drafts marked as such (low-fi wireframes, a draft domain model, a test-plan outline), to be revised after the BRDs are confirmed. Off: they wait for their stage.'),
     h('h4', {}, 'Subagents'),

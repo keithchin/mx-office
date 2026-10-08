@@ -74,4 +74,6 @@ export interface RosterDeps {
   pipelineStage?: (dir: string) => PipelineStage | undefined;
   /** Jeff's answers (server/judge/): undefined when he has none, and with no judge at all he's never asked. */
   judge?: (text: string, questions: Questions, opts?: AskOpts) => Promise<Verdict | undefined>;
+  /** Whether Studio Pro has the floor's project open (Studio mode holds the agents' writes): no back-to-work nudge then. */
+  studioOpen?: (floorId: string) => boolean;
 }

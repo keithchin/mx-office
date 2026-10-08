@@ -2,7 +2,7 @@
 // agents only, nothing spent and nothing sent to GitHub or Mendix. The new-project wizard makes a
 // project for real (offline: local bare repositories, the stand-ins in journey/stubs.mjs), the team is
 // hired with the Discovery brief handed to its analyst, an agent raises an escalation that is answered
-// from the Team phone, the project is paused and resumed, a pull request and a deliverable turn up, the
+// from the Team phone (the answer ending with the task to carry on with), the project is paused and resumed, a pull request and a deliverable turn up, the
 // budget moves, a safe restart keeps the queue and a held message, and the incidents stay clean. Each
 // step is checked through the API and the pages.
 //
@@ -40,7 +40,7 @@ const PLAN = {
   budget: { level: 'lean', total: 50 },
   by: 'Journey',
 };
-const TOTAL_STEPS = 12;
+const TOTAL_STEPS = 13;
 /** What the office calls an agent that's asleep (roster/bench.ts ASLEEP). */
 const ASLEEP = new Set(['exited', 'offline']);
 
@@ -285,6 +285,23 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
         const e = await waitFor(async () => (await roster()).escalations.find((x) => x.id === state.escalation.id && x.status !== 'open'), { ms: 20000, what: 'the escalation to be resolved' });
         const typed = await waitFor(() => userTexts(fakeDir).filter((u) => u.file === state.analystTranscript && /answered your escalation/i.test(u.text))[before], { ms: 30000, what: 'the answer to reach the agent' });
         return { detail: `${e.resolution?.verdict ?? e.status} by ${e.resolution?.by ?? '?'}; typed to the agent: "${typed.text.slice(0, 80)}"`, screenshot: await shot('05-phone-answered') };
+      },
+    });
+
+    // 5b. The office's words never replace the task (roster/resume.ts): the answer it typed ends with
+    // what the analyst is to carry on with, and the Team tab knows that task.
+    await book.run({
+      id: 'resume-line',
+      name: "Office messages end with the agent's task",
+      needs: ['answer'],
+      run: async () => {
+        const typed = userTexts(fakeDir).filter((u) => u.file === state.analystTranscript && /answered your escalation/i.test(u.text)).at(-1);
+        const line = typed?.text.match(/When you've done this[^\n]*/)?.[0];
+        if (!line) throw new Error(`the answer typed to the analyst has no resume line: "${(typed?.text ?? '').slice(-160)}"`);
+        const m = await member('chief-analyst');
+        if (!m?.task) throw new Error(`the Team tab knows no task for ${m?.name ?? 'the analyst'}`);
+        if (!line.includes('carry on with:')) throw new Error(`the resume line names no task: "${line}"`);
+        return `"${line.slice(0, 120)}"; ${m.name}'s task: ${m.task.slice(0, 80)}`;
       },
     });
 

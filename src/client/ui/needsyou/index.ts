@@ -50,6 +50,7 @@ const KIND_WORDS: Record<NeedKind, [string, string]> = {
   lost: ['worktree lost', 'worktrees lost'],
   escalation: ['escalation', 'escalations'],
   approval: ['to approve', 'to approve'],
+  idle: ['idle with a task', 'idle with a task'],
   paused: ['spend cap', 'spend cap'],
   pr: ['failing PR', 'failing PRs'],
   setup: ['setup', 'setup'],

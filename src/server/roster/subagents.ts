@@ -350,7 +350,7 @@ export class Subagents {
     // person): the Project Manager's doing is held until then; the office's is only said when it's free.
     const between = !!w && (w.status === 'idle' || w.status === 'done');
     if (as !== 'lead' && w && wrote && (between || (as === 'pm' && !isAsleepStatus(w.status)))) {
-      this.roster.delivery.send(floor, w, `${as === 'pm' ? `The Project Manager (${by})` : 'The office'} ${OP_VERB[op]} your subagent ${sub}${why}. Your Playbook and its definition have been rewritten${op === 'bench' ? `: don't dispatch ${sub}; do the work yourself or use another subagent` : ''}. Note it in your team journal and carry on. Reply \`ok\`.`, { origin: as === 'pm' ? 'person' : 'office', hold: true, between: true });
+      this.roster.delivery.send(floor, w, `${as === 'pm' ? `The Project Manager (${by})` : 'The office'} ${OP_VERB[op]} your subagent ${sub}${why}. Your Playbook and its definition have been rewritten${op === 'bench' ? `: don't dispatch ${sub}; do the work yourself or use another subagent` : ''}. Note it in your team journal and carry on. Reply \`ok\`.`, { origin: as === 'pm' ? 'person' : 'office', hold: true, between: true, resume: true });
     }
     this.roster.touch(floor);
     return undefined;
@@ -398,7 +398,7 @@ export class Subagents {
       const w = this.leadWorker(floor, a.lead);
       // The Project Manager's decision: held while the Lead is busy or a dialog is up, and told once its
       // turn is over. A Lead that's asleep or away gets it as a note kept in the roster file (relays.ts).
-      const sent = !!w && !isAsleepStatus(w.status) && this.roster.delivery.send(floor, w, subagentDecisionPrompt(`${OP_ASK[a.op]} ${this.who(floor, a.lead, a.name)}`, approve, by, reason), { origin: 'person', by, hold: true, between: true, id: `subagent-decision:${a.id}` }).status !== 'refused';
+      const sent = !!w && !isAsleepStatus(w.status) && this.roster.delivery.send(floor, w, subagentDecisionPrompt(`${OP_ASK[a.op]} ${this.who(floor, a.lead, a.name)}`, approve, by, reason), { origin: 'person', by, hold: true, between: true, resume: true, id: `subagent-decision:${a.id}` }).status !== 'refused';
       if (!sent) this.roster.relays.noteLead(floor, a.lead, `The Project Manager (${by}) ${approve ? 'approved' : 'rejected'} your request to ${OP_ASK[a.op]} ${this.who(floor, a.lead, a.name)}.${approve ? ' The office has done it.' : ''}${reason ? ` ${line(reason, 300)}` : ''}`);
     }
     this.roster.touch(floor);

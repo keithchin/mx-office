@@ -29,6 +29,11 @@ export function reviewNudged(floor: string, lead: Who, agent?: string, first?: s
   noteChatter(floor, { kind: 'nudge', from: OFFICE, to: workerParty(lead), text: `${agent ? (first ? `${first}, your ${agent},` : `Your ${agent}`) : 'Your subagent'} is back: review what it did, then carry on or escalate.`, ...(agent ? { ref: { subagent: agent } } : {}) });
 }
 
+/** The back-to-work nudge (roster/back-to-work.ts): a member stopped with its task open; `by` when a person pressed Nudge. */
+export function backToWorkNudged(floor: string, member: Who, task?: string, by?: string) {
+  noteChatter(floor, { kind: 'nudge', from: OFFICE, to: workerParty(member), text: `${task ? `You stopped with ${task} open: carry on, or escalate if you're blocked.` : "You're idle with no task: say what you'll do next, or escalate."}${by ? ` (${by} asked)` : ''}` });
+}
+
 /** The nudge about a subagent with a poor track record (roster/subagents.ts nudgeLead). */
 export function struggleNudged(floor: string, lead: Who, subagent: string, why: string, who = subagent) {
   noteChatter(floor, { kind: 'nudge', from: OFFICE, to: workerParty(lead), text: `${who} has been struggling (${why}). Warn it, bench it or swap its model if you think it's time.`, ref: { subagent } });

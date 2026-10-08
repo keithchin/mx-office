@@ -7,6 +7,10 @@
 // three.js here: the 1D view imports it. Its screen has two views (Chat | Terminal on the header, the
 // default in ⚙️ Settings): the conversation as messages (ui/pm/chat/), or the terminal as it is.
 //
+// The quick questions and Run standup reach agents that may be mid-turn: the check in
+// ui/roster/interrupt-check.ts asks first what to do about the busy ones. What you type yourself just
+// goes; while the Coordinator is mid-turn a note says so and offers "after their turn" instead.
+//
 // The element is made once and kept: the summary is drawn again every few seconds and only moves the
 // columns round it, so what you're typing (and the terminal) survives the redraws.
 
@@ -24,6 +28,8 @@ import { ChatView } from './chat/view';
 import { PMC_VIEWS, PMC_VIEW_LABEL, onPmcView, savePmcView, savedPmcView, type PmcView } from './chat/pref';
 import './console.css';
 import { managerIn, shapeText } from '../roster/coverage';
+import { checkStandup, checkTeamAsk } from '../roster/interrupt-check';
+import { workingFor } from '../../../shared/roster/interrupt';
 
 export interface PmConsoleDeps {
   net: Net;
@@ -96,7 +102,11 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
   const sendBtn = h('button.btn.primary.pmc-send', { type: 'button', title: 'Send (Enter); Shift+Enter for a new line', 'aria-label': 'Send to the Project Coordinator' }, '➤');
   const ack = h('span.pmc-ack', { role: 'status', 'aria-live': 'polite' });
   const chips = h('div.pmc-chips', { role: 'group', 'aria-label': 'Quick questions' });
-  const foot = h('footer.pmc-foot', {}, hint, h('div.pmc-ask', {}, box, sendBtn), h('div.pmc-row', {}, chips, ack));
+  // While the Coordinator is mid-turn: what you send goes in now unless you tick this (held for its turn's end).
+  const afterBox = h('input', { type: 'checkbox', 'aria-label': 'Send after their current turn' }) as HTMLInputElement;
+  const turnText = h('span.pmc-turn-text');
+  const turnNote = h('label.pmc-turn', { hidden: true }, turnText, h('span.pmc-turn-opt', {}, afterBox, ' Send after their turn'));
+  const foot = h('footer.pmc-foot', {}, hint, turnNote, h('div.pmc-ask', {}, box, sendBtn), h('div.pmc-row', {}, chips, ack));
   // Escalations to you sit above the prompt box, and stay there when no Coordinator is hired.
   const escalations = new EscalationList((r) => {
     if (r.floor !== floor) return;
@@ -250,6 +260,11 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
   function send(text: string) {
     const prompt = text.trim();
     if (!prompt || !view.canPrompt || !view.workerId) return false;
+    if (!turnNote.hidden && afterBox.checked) {
+      void run('tell', { prompt, when: 'after' }).then((r) => r && say('Queued for after their turn ⏳'));
+      history.add(prompt);
+      return true;
+    }
     net.send({ t: 'worker.prompt', workerId: view.workerId, prompt });
     history.add(prompt);
     say(view.ack === 'sent' ? 'Sent ✓' : 'Queued while busy ⏳');
@@ -279,11 +294,34 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
   });
   for (const c of CHIPS) {
     const b = h('button.btn.small.pmc-chip', { type: 'button', 'data-standup': c.standup ? '1' : undefined, title: c.prompt ?? "Ask every Lead for its standup; the Project Coordinator compiles the page" }, c.label);
-    b.addEventListener('click', () => {
-      if (c.prompt) send(c.prompt);
-      else void run('standup').then((r) => r && say('📋 Standup started'));
-    });
+    b.addEventListener('click', () => void chip(c));
     chips.append(b);
+  }
+
+  /** A quick question or Run standup: the check first when anyone it reaches is mid-turn. */
+  async function chip(c: (typeof CHIPS)[number]) {
+    const r = roster;
+    if (!r) return;
+    if (!c.prompt) {
+      const choices = await checkStandup(r);
+      if (choices) void run('standup', { choices }).then((x) => x && say('📋 Standup started'));
+      return;
+    }
+    const pm = pmOf(r);
+    const choices = await checkTeamAsk(r, c.label, pm?.name ?? 'the Coordinator');
+    if (!choices || !pm) return;
+    // The office sends it (a question, never the Coordinator's task), now or after the Coordinator's turn, and holds its relays to the Leads as picked.
+    const { [pm.role]: own, ...leads } = choices;
+    history.add(c.prompt);
+    void run('tell', { prompt: c.prompt, when: own === 'after' ? 'after' : 'now', leads }).then((x) => x && say(own === 'after' ? 'Queued for after their turn ⏳' : 'Sent ✓'));
+  }
+
+  /** The note over the box while the Coordinator is mid-turn. */
+  function drawTurn(w: ReturnType<typeof worker>, pm: MemberView | undefined) {
+    const busy = !!w && w.status === 'working' && view.canPrompt;
+    turnNote.hidden = !busy;
+    if (!busy) return void (afterBox.checked = false);
+    turnText.textContent = `⏳ ${pm?.name ?? 'The Coordinator'} is mid-turn (${workingFor(w.workingSince, Date.now())}): what you send goes in now. `;
   }
 
   // ---- Drawing ---------------------------------------------------------------------------------
@@ -355,6 +393,7 @@ export function pmConsole(deps: PmConsoleDeps): PmConsole {
     box.disabled = !view.canPrompt;
     sendBtn.disabled = !view.canPrompt;
     for (const b of chips.querySelectorAll<HTMLButtonElement>('.pmc-chip')) b.disabled = b.dataset.standup ? !roster : !view.canPrompt;
+    drawTurn(w, pm);
     // The terminal only while it's on screen and the tab is in front: a watcher counts as someone at
     // the PM's terminal, which keeps it from being benched for idling (docs/teams.md).
     term.show(deps.visible() && !document.hidden && view.live ? (view.workerId ?? null) : null);

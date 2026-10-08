@@ -77,7 +77,7 @@ export function standupPrompt(roleId: RoleId, date: string, stamp: string, extra
     '### Done', '### Next', '### Blockers', '### Proposals',
     'Proposals are what needs the Project Manager (or what you suggest the project does): one per line, `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget. Each becomes an Approve / Reject / Change card for the Project Manager; approved ones become GitHub issues for your team.',
     extra,
-    "Then reply `standup posted`. Don't start new work in this turn; carry on with what you were doing afterwards.",
+    "Don't start new work because of it, and don't end your turn on it: it's a pause in your task, not the end of it.",
   ].filter(Boolean).join('\n');
 }
 
@@ -102,7 +102,7 @@ export function outcomesPrompt(decided: Proposal[]): string {
 
 /** To a Lead at work when the Project Manager changes the floor's autonomy level. */
 export function autonomyPrompt(level: AutonomyLevel): string {
-  return [`The Project Manager changed this floor's autonomy level. Your Playbook has been rewritten with it (autonomy and review protocol); from now on:`, '', autonomyBrief(level), '', `Escalate a review outcome when: ${REVIEW_POLICY[level].rule}`, '', 'Carry on. Reply `ok`.'].join('\n');
+  return [`The Project Manager changed this floor's autonomy level. Your Playbook has been rewritten with it (autonomy and review protocol); from now on:`, '', autonomyBrief(level), '', `Escalate a review outcome when: ${REVIEW_POLICY[level].rule}`, '', 'No reply needed.'].join('\n');
 }
 
 // ---- The review loop -----------------------------------------------------------------------------
@@ -117,6 +117,18 @@ export function reviewNudgePrompt(roleId: RoleId, result: SubagentResult | undef
     `Record \`— Review: <subagent> · <task>\` with accept / revise / escalate in \`${journalPath(role.team)}\`; on accept dispatch its next step now (level ${level}: ${REVIEW_POLICY[level].askBeforeNextStep ? 'ask the Project Manager first' : "don't leave its lane idle"}); escalate only what your level escalates.`,
     `Then record the verdict for its track record: \`office-workers subagent review ${result?.agent ?? '<subagent>'} --verdict accept|rework --note "…"\`.`,
     '(Automatic nudge from Agent Office, sent once per idle period. If there is genuinely nothing left to do, say so in one line and stop.)',
+  ].join('\n');
+}
+
+/**
+ * The back-to-work nudge (back-to-work.ts): a member's turn ended with its task still open and nothing
+ * escalated. One short prompt, a couple per task an hour at most; `by` when the Project Manager pressed Nudge.
+ */
+export function backToWorkPrompt(task: string, by?: string): string {
+  return [
+    `You stopped with ${task.replace(/[.\s]+$/, '')} open: carry on, or escalate if you're blocked.`,
+    "If it's finished, say `task done` and what you delivered in one line, then stop. If you're waiting on another Lead, tell them with `office-workers tell` and carry on with what that doesn't block.",
+    by ? `(${by} pressed Nudge in the Command Center.)` : '(Automatic nudge from Agent Office: one per stop, a couple per task an hour at most.)',
   ].join('\n');
 }
 
@@ -136,7 +148,7 @@ export function subagentNewsPrompt(lines: string[]): string {
 
 /** To a Lead at work when the Project Manager changed its skills. */
 export function skillsChangedPrompt(lines: string[]): string {
-  return ['The Project Manager changed your skills. Your Playbook has been rewritten (## Your skills); now:', ...lines, '', 'Carry on. Reply `ok`.'].join('\n');
+  return ['The Project Manager changed your skills. Your Playbook has been rewritten (## Your skills); now:', ...lines, '', 'No reply needed.'].join('\n');
 }
 
 /** To a Lead, what became of a subagent action it proposed or asked about. */

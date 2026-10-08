@@ -182,7 +182,7 @@ export class Escalations {
         if (busy(w)) later.push(e.by);
         else {
           // `by`: the turn acting on a person's answer is theirs, not the office's (it flags when it's done).
-          const r = this.roster.delivery.send(floor, w, prompt, { origin: 'person', by, wake: true });
+          const r = this.roster.delivery.send(floor, w, prompt, { origin: 'person', by, wake: true, resume: true });
           delivered = r.status !== 'refused';
           if (r.status === 'refused') floor.toast(`Couldn't send the answer to ${e.by}: ${r.why}. It's kept for its next session.`, 'warn');
         }
@@ -196,7 +196,7 @@ export class Escalations {
           later.push(a.by);
           continue;
         }
-        const r = this.roster.delivery.send(floor, other, prompt, { origin: 'person', by, wake: true });
+        const r = this.roster.delivery.send(floor, other, prompt, { origin: 'person', by, wake: true, resume: true });
         if (r.status === 'refused') floor.toast(`Couldn't send the answer to ${a.by}, who raised the same`, 'warn');
       }
     }

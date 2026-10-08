@@ -8,12 +8,25 @@ import type { JournalEntry, ParsedProposal } from '../../shared/roster/journal.j
 import { parseStandup } from '../../shared/roster/journal.js';
 import { ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
 import type { Proposal, Standup, StandupReportView } from '../../shared/roster/types.js';
+import { lastSlot, type StandupSchedule } from '../../shared/roster/schedule.js';
 
 /** A standup's id: its date, or date-2, date-3… for another one the same day. */
 export function standupId(date: string, taken: Iterable<string>): string {
   const ids = new Set(taken);
   if (!ids.has(date)) return date;
   for (let n = 2; ; n++) if (!ids.has(`${date}-${n}`)) return `${date}-${n}`;
+}
+
+/**
+ * Whether the team is newer than the standup slot that's due: nobody on it was hired before it. A team
+ * hired at 14:17 has no catch-up for that morning's 09:00 (on the live floor it pulled the Chief Analyst
+ * off her first task three minutes in); its first standup is the next slot. `hiredAts`: every member's
+ * last hire, undefined for one never hired.
+ */
+export function newTeam(now: number, schedule: StandupSchedule, hiredAts: readonly (number | undefined)[]): boolean {
+  const slot = lastSlot(now, schedule);
+  const hired = hiredAts.filter((t): t is number => typeof t === 'number');
+  return slot !== undefined && hired.length > 0 && Math.min(...hired) > slot;
 }
 
 /** A Lead's report from a journal entry (or none), and its proposals as cards for the Project Manager. */

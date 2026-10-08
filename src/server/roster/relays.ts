@@ -18,6 +18,9 @@
 //
 // A Lead's notes go out together, between its turns, a minute after the last was queued; an asleep or
 // benched Lead isn't woken for them (that costs a session): they wait for it to be back at its desk.
+// Except a decision it was waiting on (the Project Manager's on its proposal): that one goes out
+// DECISION_WAKE_MS after the last such, and wakes an asleep Lead, so the work it unblocks starts now.
+// Never into a turn under way: a Lead at work hears it when that turn ends.
 
 import { isRoleId, ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
 import type { Escalation } from '../../shared/roster/escalation.js';
@@ -35,6 +38,8 @@ export const COORDINATOR_WAKE_MS = 60_000;
 
 /** A Lead hears its notes this long after the last one was queued, all in one message. */
 export const LEAD_NOTES_DEBOUNCE_MS = 60_000;
+/** A decision a Lead was waiting on goes out this long after the last one (a few approved in a row are one message). */
+export const DECISION_WAKE_MS = 10_000;
 /** The most of each kind an outbox keeps (the oldest go first): a floor nobody reads mustn't grow it for ever. */
 export const OUTBOX_KEPT = 50;
 
@@ -46,8 +51,8 @@ export interface Outbox {
   /** The Leads' subagent decisions for the Coordinator, and when the last was queued. */
   news: string[];
   newsAt?: number;
-  /** Notes owed to each Lead, and when the last was queued. */
-  leads: Partial<Record<RoleId, { lines: string[]; at: number }>>;
+  /** Notes owed to each Lead, and when the last was queued; `wake` when one is a decision it was waiting on. */
+  leads: Partial<Record<RoleId, { lines: string[]; at: number; wake?: boolean }>>;
 }
 
 export const emptyOutbox = (): Outbox => ({ escalations: [], decisions: [], news: [], leads: {} });
@@ -62,7 +67,7 @@ export function reviveOutbox(raw: unknown): Outbox {
   for (const [role, box] of Object.entries(r.leads ?? {})) {
     if (!isRoleId(role) || !box || typeof box !== 'object') continue;
     const lines = strings(box.lines, 1000);
-    if (lines.length) leads[role] = { lines, at: typeof box.at === 'number' ? box.at : 0 };
+    if (lines.length) leads[role] = { lines, at: typeof box.at === 'number' ? box.at : 0, ...(box.wake === true ? { wake: true } : {}) };
   }
   return {
     escalations: strings(r.escalations, 40),
@@ -98,6 +103,8 @@ export function coordinatorIs(roster: Roster, floor: TeamFloor): 'here' | 'aslee
 export class Relays {
   /** When each floor's Coordinator was last woken for its relays. */
   private woke = new Map<string, number>();
+  /** The short wait before a Lead hears a decision it was waiting on, per floor:role. */
+  private soon = new Map<string, NodeJS.Timeout>();
 
   constructor(private roster: Roster) {}
 
@@ -134,15 +141,28 @@ export class Relays {
     return true;
   }
 
-  /** Queues a short note for a Lead, sent with its others between its turns. Not for the Coordinator. */
-  noteLead(floor: TeamFloor, role: RoleId, line: string) {
+  /**
+   * Queues a short note for a Lead, sent with its others between its turns. Not for the Coordinator.
+   * `waited`: a decision it was waiting on, sent within DECISION_WAKE_MS and waking it if it's asleep.
+   */
+  noteLead(floor: TeamFloor, role: RoleId, line: string, waited = false) {
     if (role === 'pm' || !ROLE_BY_ID.has(role)) return;
     const d = this.roster.data(floor.id);
     const box = d.outbox.leads[role] ?? { lines: [], at: 0 };
     box.lines = queueOnce(box.lines, `- ${line.replace(/\s+/g, ' ').trim().slice(0, 900)}`);
     box.at = this.roster.deps.now();
+    if (waited) box.wake = true;
     d.outbox.leads[role] = box;
     this.roster.touch(floor, true);
+    if (!waited || !this.roster.timers) return;
+    const key = `${floor.id}:${role}`;
+    clearTimeout(this.soon.get(key));
+    const timer = setTimeout(() => {
+      this.soon.delete(key);
+      this.flushLead(floor, role);
+    }, DECISION_WAKE_MS + 100);
+    timer.unref?.();
+    this.soon.set(key, timer);
   }
 
   /** What a Lead is owed and hasn't been told yet (the tests and the Team tab's count). */
@@ -157,12 +177,14 @@ export class Relays {
   flushLead(floor: TeamFloor, role: RoleId, now = this.roster.deps.now(), force = false): boolean {
     const d = this.roster.data(floor.id);
     const box = d.outbox.leads[role];
-    if (!box?.lines.length || (!force && now - box.at < LEAD_NOTES_DEBOUNCE_MS)) return false;
+    if (!box?.lines.length || (!force && now - box.at < (box.wake ? DECISION_WAKE_MS : LEAD_NOTES_DEBOUNCE_MS))) return false;
     const m = d.members[role];
     const w = this.roster.workerOf(floor, m);
-    if (!w || m.phase !== 'active' || w.kind !== 'agent' || (w.status !== 'idle' && w.status !== 'done') || this.roster.standups.isAsked(floor, role)) return false;
+    // Asleep, only for a decision it was waiting on: woken with it.
+    const wake = !!box.wake && !!w && isAsleepStatus(w.status);
+    if (!w || m.phase !== 'active' || w.kind !== 'agent' || (w.status !== 'idle' && w.status !== 'done' && !wake) || this.roster.standups.isAsked(floor, role)) return false;
     // The one delivery path: refused while the cap holds, so the notes wait for it to lift.
-    if (this.roster.delivery.prompt(floor, w, leadNotesPrompt(box.lines))) return false;
+    if (this.roster.delivery.send(floor, w, leadNotesPrompt(box.lines), { origin: 'office', wake }).status === 'refused') return false;
     delete d.outbox.leads[role];
     this.roster.touch(floor, true);
     return true;

@@ -141,10 +141,15 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
     if (limited) return send(res, 429, { error: limited });
     // Never typed into a question open in its terminal (Enter would answer it): held until its turn is
     // over. Stopped or asleep, it wakes up with this as its next message. Not past the floor's spend cap.
-    const sent = rosterOf(ctx).delivery.send(teamFloor(ctx, floor), w, text, { origin: 'agent', by: who, wake: true, hold: true });
+    // A Coordinator relaying the Project Manager's question to a Lead they said not to interrupt: held for its turn's end (roster/interrupts.ts).
+    const roster = rosterOf(ctx);
+    const team = teamFloor(ctx, floor);
+    const sent = roster.delivery.send(team, w, text, { origin: 'agent', by: who, wake: true, hold: true, ...roster.interrupts.tellOpts(team, me.id, w.id) });
     if (sent.status === 'refused') return send(res, sent.why.startsWith('Spend cap') ? 409 : 400, { error: sent.why });
     agentTold(floor.id, me, w, text);
-    return send(res, 200, { ok: true, worker: row(w.id), ...(sent.status === 'held' ? { held: true, note: `${w.name} has a question open in its terminal: your message goes in once its turn is over. Don't send it again.` } : {}) });
+    // What a member was told to do is its task (roster/resume.ts): the office's messages end by sending it back to it.
+    roster.tasks.assign(team, w.id, text, who);
+    return send(res, 200, { ok: true, worker: row(w.id), ...(sent.status === 'held' ? { held: true, note: `${w.name} is ${w.status === 'needs_input' ? 'answering a question in its terminal' : 'mid-turn'}: your message goes in once its turn is over. Don't send it again.` } : {}) });
   }
 
   if (action === '/pr') {

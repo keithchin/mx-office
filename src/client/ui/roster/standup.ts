@@ -8,6 +8,7 @@ import { h, openModal, timeAgo } from '../dom';
 import { markdownFile } from '../markdown';
 import { act, fetchStandup } from './api';
 import { proposalCard } from './proposals';
+import { checkStandup } from './interrupt-check';
 
 let picked: string | undefined;
 
@@ -27,7 +28,7 @@ export function standupView(v: RosterView, redraw: (v: RosterView) => void): HTM
       'div.ro-bar',
       {},
       h('div', {}, h('h3', {}, '📋 Standup'), h('p.ro-sub', {}, next, v.lastStandupAt ? ` · last ${timeAgo(v.lastStandupAt)}` : '')),
-      h('button.btn.primary', { type: 'button', id: 'ro-run-standup', disabled: list.some((s) => s.status === 'collecting'), onclick: () => void act(v.floor, 'standup').then((r) => r && ((picked = r.standups[0]?.id), redraw(r))) }, list.some((s) => s.status === 'collecting') ? '⏳ Collecting…' : '▶️ Run standup'),
+      h('button.btn.primary', { type: 'button', id: 'ro-run-standup', disabled: list.some((s) => s.status === 'collecting'), onclick: () => void checkStandup(v).then((choices) => choices && act(v.floor, 'standup', { choices }).then((r) => r && ((picked = r.standups[0]?.id), redraw(r)))) }, list.some((s) => s.status === 'collecting') ? '⏳ Collecting…' : '▶️ Run standup'),
     ),
     list.length > 1
       ? h('div.ro-tabs', { role: 'tablist' }, ...list.map((s) => h(`button.btn.small${s.id === picked ? '.on' : ''}`, { type: 'button', onclick: () => ((picked = s.id), redraw(v)) }, s.id, s.status === 'collecting' ? ' ⏳' : '')))

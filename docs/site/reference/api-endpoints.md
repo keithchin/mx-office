@@ -118,7 +118,11 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 
 ### /api/roster/action
 
-Actions: `hire`, `bench`, `rename`, `model`, `settings`, `standup`, `decide`, `escalation`, `skill`, `subagent`, `subagent-decide`. All are **admin-only** except `standup`. POSTs must come from the office's own pages (same origin).
+Actions: `hire`, `bench`, `rename`, `model`, `settings`, `standup`, `decide`, `escalation`, `skill`, `subagent`, `subagent-decide`, `tell`, `nudge`. All are **admin-only** except `standup`, `tell` and `nudge`. POSTs must come from the office's own pages (same origin).
+
+- `standup` takes `choices`: `{ <role>: "interrupt" | "after" | "journal" }` for the Leads mid-turn (after their current turn when unsaid).
+- `tell` `{ prompt, when: "now" | "after", leads? }`: a question for whoever covers Management, now or after its current turn; `leads` (`interrupt` or `after` per role) holds its relays to busy Leads for half an hour.
+- `nudge` `{ role }`: Needs you's **Nudge**, the back-to-work prompt to an idle member, as yours.
 
 ## Pages (session)
 

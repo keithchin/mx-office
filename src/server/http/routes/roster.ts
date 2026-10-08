@@ -1,6 +1,7 @@
 // The Team tab (see server/roster/): GET what a floor's team looks like and one standup's page, and
 // POST what the Project Manager (the human; an admin) does: hire, bench, rename, change a model, run a
-// standup, decide on a proposal, answer an escalation, change the team settings. Those that are the
+// standup, decide on a proposal, answer an escalation, change the team settings, ask the Coordinator
+// something now or after its turn (with how its relays reach busy Leads), nudge an idle member back to work. Those that are the
 // Project Manager's need an admin (anyone with the shared office password is one).
 
 import { isEscalationVerdict } from '../../../shared/roster/escalation.js';
@@ -19,6 +20,7 @@ import { isRisky } from '../../../shared/mobile.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import { raisesTeamCap } from '../../phone-access/risky.js';
 import { levelOf } from '../../budget/index.js';
+import { cleanChoices } from '../../../shared/roster/interrupt.js';
 
 const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation', 'skill', 'subagent', 'subagent-decide', 'subagent-rename']);
 const DECISIONS = new Set<Decision>(['approve', 'reject', 'change']);
@@ -75,7 +77,7 @@ export const rosterRoutes = {
       const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The Project Manager');
       const owner = session.account?.id;
       const role = isRoleId(body.role) ? body.role : undefined;
-      const needRole = ['hire', 'bench', 'rename', 'model', 'skill', 'subagent', 'subagent-rename'].includes(action);
+      const needRole = ['hire', 'bench', 'rename', 'model', 'skill', 'subagent', 'subagent-rename', 'nudge'].includes(action);
       if (needRole && !role) return send(res, 400, { error: 'Which role?' });
       // Through Phone access, what lets more be spent or code land needs the password again (phone-access/reauth.ts).
       const risky = () =>
@@ -110,7 +112,8 @@ export const rosterRoutes = {
           error = roster.members.settings(team, body.settings, by, owner);
           break;
         case 'standup': {
-          const s = roster.standups.run(team, by);
+          // What the Project Manager picked for each busy Lead in the check (after their turn when unsaid).
+          const s = roster.standups.run(team, by, cleanChoices(body.choices, 'standup'));
           error = typeof s === 'string' ? s : undefined;
           break;
         }
@@ -128,6 +131,15 @@ export const rosterRoutes = {
           error = roster.escalations.resolve(team, String(body.escalation ?? ''), body.verdict, body.text, by);
           break;
         }
+        case 'tell':
+          // A question for the Coordinator from the console: now or after its current turn, and its relays to busy Leads as picked.
+          if (typeof body.prompt !== 'string') return send(res, 400, { error: 'Say what to ask' });
+          error = roster.interrupts.tell(team, body.prompt, by, body.when === 'after' ? 'after' : 'now', cleanChoices(body.leads, 'ask'), owner);
+          break;
+        case 'nudge':
+          // Needs you's Nudge: an idle member with an open task, told to carry on or escalate.
+          error = roster.backToWork.nudgeNow(team, role!, by);
+          break;
         case 'skill':
           // One member's skill: on/off, its gate, or back to the project's default (🧰 Skills).
           error = changeSkill(roster, team, role!, { skill: body.skill, enabled: body.enabled, gate: body.gate, reset: body.reset });

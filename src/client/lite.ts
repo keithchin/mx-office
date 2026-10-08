@@ -46,6 +46,7 @@ import { firmBanner } from './ui/firm/banner';
 import type { FirmFloorStatus } from '../shared/firm/engagement';
 import { gitView } from './ui/git';
 import type { NeedTarget } from './ui/needsyou/logic';
+import { nudgeMember } from './ui/roster/api';
 import { viewPicker } from './ui/viewpick';
 import { flatMenu } from './shared/flatmenu';
 import { tabBadges } from './ui/badge';
@@ -413,6 +414,7 @@ function goToNeed(t: NeedTarget) {
     return $('setup').scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
   if (t.to === 'budget') return budget.go(t);
+  if (t.to === 'nudge') return void nudgeMember(store.floor, t.role);
   if (t.to === 'floor') {
     // Lands on that floor's Command Center, where its Needs you says who is waiting and why.
     showTab('command');
