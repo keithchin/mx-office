@@ -161,13 +161,22 @@ export function stagesFor(entry: EntryMode | undefined, verdicts: readonly Verdi
   return TOOLKIT_STAGES.filter((s) => !skip.has(s.id) || something(s.id));
 }
 
+/**
+ * A failing gate verdict that only waits on a person's confirmation, not on broken work: a ✋ gate with no
+ * sign-off yet, or a 'Confirmed by:' line still holding the toolkit's shipped placeholder. gate-check calls
+ * both FAIL; the office shows them as waiting so a project that has barely started doesn't look broken.
+ */
+export function waitsOnPerson(detail: string | undefined): boolean {
+  return /✋|placeholder|Confirmed by|CONFIRMED decision|sign-?off/i.test(detail ?? '');
+}
+
 function statusOf(v: VerdictIn | undefined, d: StageDeliverablesIn | undefined): PhaseStatus {
   if (!v) return 'unknown';
   const s = v.status.toUpperCase();
   if (s === 'PASS') return 'done';
   if (s === 'WAIVED') return 'waived';
   // A ✋ gate with artifacts and no sign-off is waiting on a person, not broken.
-  if (s === 'FAIL') return (v.detail ?? '').includes('✋') ? 'waiting' : 'failed';
+  if (s === 'FAIL') return waitsOnPerson(v.detail) ? 'waiting' : 'failed';
   if (s === 'MANUAL') return 'waiting';
   if (s === 'PENDING') return d && d.present + d.branch + d.draft > 0 ? 'active' : 'pending';
   return 'unknown';
@@ -180,7 +189,7 @@ function gateMilestone(stage: ToolkitStage, v: VerdictIn | undefined, rows: read
   const s = v?.status.toUpperCase();
   if (s === 'PASS') return { kind: 'gate', label, status: 'passed', detail: v?.detail };
   if (s === 'WAIVED') return { kind: 'gate', label, status: 'waived', detail: v?.detail };
-  if (s === 'FAIL') return { kind: 'gate', label, status: (v?.detail ?? '').includes('✋') ? 'waiting' : 'failed', detail: v?.detail };
+  if (s === 'FAIL') return { kind: 'gate', label, status: waitsOnPerson(v?.detail) ? 'waiting' : 'failed', detail: v?.detail };
   if (s === 'PENDING' || s === 'MANUAL') return { kind: 'gate', label, status: 'pending', detail: v?.detail };
   return { kind: 'gate', label, status: 'unknown', detail: 'gate-check has not rendered a verdict for this stage' };
 }

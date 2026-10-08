@@ -4,7 +4,7 @@
 // never a count or percentage nobody measured.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { derivePhases, progressLabel, spendText, stagesFor, type ProgressAcceptance, type ProgressInput, type VerdictIn } from '../src/shared/progress.js';
+import { derivePhases, progressLabel, spendText, stagesFor, waitsOnPerson, type ProgressAcceptance, type ProgressInput, type VerdictIn } from '../src/shared/progress.js';
 
 const open: ProgressAcceptance = { version: 'v1', cycle: 1, earlier: [] };
 const v = (id: string, status: string, detail?: string): VerdictIn => ({ id, title: `Stage ${id}`, status, ...(detail ? { detail } : {}) });
@@ -118,4 +118,16 @@ test('a click opens the setup panel while it shows, else the deliverables; Hando
   assert.deepEqual(shown.map((p) => [p.id, p.open]).filter(([id]) => ['2', '5', 'handover', 'accepted'].includes(id)), [['2', 'setup'], ['5', 'deliverables'], ['handover', 'acceptance'], ['accepted', 'acceptance']]);
   const gone = derivePhases(input({ verdicts: [v('2', 'PASS')], setupShown: false }));
   assert.equal(gone.find((p) => p.id === '2')!.open, 'deliverables', 'past Stage 4 the setup panel is gone');
+});
+
+test('a gate failing only for a missing sign-off is waiting, not failed (a fresh project looked broken)', () => {
+  const placeholder = `'Confirmed by:' still holds the shipped placeholder: "[user] on [date] — required before Phase 2/3 proceed."`;
+  assert.equal(waitsOnPerson(placeholder), true);
+  assert.equal(waitsOnPerson('artifacts exist but PROJECT.md has no Stage-3 CONFIRMED decision — ✋ gate'), true);
+  assert.equal(waitsOnPerson('triage.md is missing'), false);
+  assert.equal(waitsOnPerson(undefined), false);
+  const phases = derivePhases(input({ entry: 'greenfield', verdicts: [v('P', 'PASS'), v('0', 'FAIL', placeholder)] }));
+  assert.equal(phases.find((p) => p.id === '0')?.status, 'waiting');
+  const broken = derivePhases(input({ entry: 'greenfield', verdicts: [v('P', 'PASS'), v('0', 'FAIL', 'triage.md is missing')] }));
+  assert.equal(broken.find((p) => p.id === '0')?.status, 'failed');
 });

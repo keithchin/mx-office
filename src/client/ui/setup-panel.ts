@@ -8,6 +8,7 @@ import './setup-panel.css';
  */
 import type { Net } from '../net';
 import { staleText, type SetupView } from '../../shared/wizard';
+import { waitsOnPerson } from '../../shared/progress';
 import { h } from './dom';
 import { wizardApi } from './wizard/api';
 import { openWizard } from './wizard';
@@ -16,7 +17,7 @@ import { deliverablesSummary } from './deliverables/summary';
 /** Asked again at most this often while nothing's happening; the board re-renders far more often than that. */
 const FRESH_MS = 15_000;
 const CHECKING_MS = 5_000;
-const ICON: Record<string, string> = { PASS: '✅', PENDING: '⏳', FAIL: '⚠️', WAIVED: '↷', MANUAL: '✋' };
+const ICON: Record<string, string> = { PASS: '✅', PENDING: '⏳', FAIL: '⚠️', WAIVED: '↷', MANUAL: '✋', WAITING: '✋' };
 
 let last: { floor: string; at: number; view: SetupView } | undefined;
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -63,6 +64,11 @@ function panel(el: HTMLElement, floor: string, v: SetupView, deps: SetupPanelDep
     void renderSetup(el, floor, deps, true);
   });
   const editAt = (page: number) => () => void openWizard({ net: deps.net, go: deps.go, ...(v.job ? { job: v.job, page } : { floor, page }) });
+  // A gate gate-check fails only for a missing sign-off (a ✋ gate, or the shipped 'Confirmed by:' placeholder) is
+  // waiting on a person, not broken: shown as such so a project that has barely started doesn't look failed.
+  const nextId = v.next?.match(/^Stage (\w+)/)?.[1];
+  const nextWaits = waitsOnPerson(v.next);
+  const waiting = (s: SetupView['stages'][number]) => s.status === 'FAIL' && (waitsOnPerson(s.detail) || (s.id === nextId && nextWaits));
   const chips = [v.entry && `🧭 ${v.entry}`, v.tier && `📏 ${v.tier} tier`].filter((s): s is string => !!s);
   return h(
     'section.setup-panel',
@@ -83,12 +89,13 @@ function panel(el: HTMLElement, floor: string, v: SetupView, deps: SetupPanelDep
     h(
       'ol.setup-stages',
       {},
-      ...v.stages.map((s) =>
-        h('li', { class: `setup-stage ${s.status.toLowerCase()}`, title: s.detail ?? s.status }, h('span.setup-stage-id', {}, s.id), h('span.setup-stage-title', {}, s.title), h('span.setup-stage-status', {}, `${ICON[s.status] ?? '•'} ${s.status}`)),
-      ),
+      ...v.stages.map((s) => {
+        const status = waiting(s) ? 'WAITING' : s.status;
+        return h('li', { class: `setup-stage ${status.toLowerCase()}`, title: s.detail ?? s.status }, h('span.setup-stage-id', {}, s.id), h('span.setup-stage-title', {}, s.title), h('span.setup-stage-status', {}, `${ICON[status] ?? '•'} ${status === 'WAITING' ? 'NEEDS SIGN-OFF' : status}`));
+      }),
     ),
     deliverablesSummary(floor, () => void renderSetup(el, floor, deps)),
-    v.next ? h('p.setup-next', {}, h('strong', {}, 'Next: '), v.next) : null,
+    v.next ? h('p.setup-next', {}, h('strong', {}, nextWaits ? 'Next, once the team has it ready, your sign-off: ' : 'Next: '), v.next) : null,
     v.questions.length
       ? h('details.setup-questions', {}, h('summary', {}, `❓ ${v.questions.length} open question${v.questions.length === 1 ? '' : 's'}`), h('ul', {}, ...v.questions.map((q) => h('li', {}, q))))
       : null,
