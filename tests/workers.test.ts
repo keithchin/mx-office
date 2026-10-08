@@ -12,6 +12,10 @@ import { Worktrees } from '../src/server/worktrees.js';
 import type { AgentProvider, WorkerInfo } from '../src/shared/protocol.js';
 import type { PromptSource } from '../src/server/prompts.js';
 import { PROMPTS } from '../src/shared/prompts.js';
+import { SAVE_SOON_MS } from '../src/server/workers/persist.js';
+/** workers.json is written in the background (WorkersSaver): give a pending save time to land. */
+const savedSoon = () => new Promise((r) => setTimeout(r, SAVE_SOON_MS + 500));
+
 
 type Invocation = {
   kind: string;
@@ -1292,6 +1296,7 @@ test('a Claude worker that opens a pull request itself has it as its own', async
   hook('PostToolUse', { ...create, tool_response: { stdout: 'https://github.com/acme/app/pull/12\n', stderr: 'Creating pull request for fix-login into main in acme/app' } });
   assert.deepEqual(pr(), { number: 12, url: 'https://github.com/acme/app/pull/12' });
   assert.deepEqual(toasts, [`${worker.name} opened PR #12`]);
+  await savedSoon();
   assert.equal(JSON.parse(readFileSync(path.join(f.data, 'workers.json'), 'utf8')).find((w: { id: string }) => w.id === worker.id).pr.number, 12, 'kept across a restart');
   // A follow-up whose branch already had one: gh fails, and says which.
   hook('PostToolUseFailure', { ...create, error: 'Exit code 1\na pull request for branch "fix-more" into branch "main" already exists:\nhttps://github.com/acme/app/pull/14' });
@@ -1496,6 +1501,7 @@ test('a worktree worker that makes its own branch is followed there: O finds the
   assert.equal(info.worktree!.made, office);
   assert.equal(updates.at(-1)?.worktree?.branch, 'fix-x');
   // Saved, for a restarted office and for `agent-office prune`.
+  await savedSoon();
   const saved = JSON.parse(readFileSync(path.join(f.data, 'workers.json'), 'utf8')) as WorkerInfo[];
   assert.deepEqual(saved.find((w) => w.id === worker.id)?.worktree, info.worktree);
   // O at the desk: the PR it opened, not "has no commits on office/… yet".

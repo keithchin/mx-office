@@ -1,5 +1,6 @@
 // workers.json: every worker as the office last saw it, to pick them all back up after a restart.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { rename, writeFile } from 'node:fs/promises';
 import type { AgentProvider, WorkerInfo, WorkerStatus, WorkerTask } from '../../shared/protocol.js';
 import { DESK_BY_ID } from '../../shared/layout.js';
 import { isAgentProvider, savedEffort, savedModel } from '../../shared/providers.js';
@@ -15,8 +16,8 @@ import { validRepos } from './worktree.js';
 /** What a worker with a live terminal can be doing. */
 const RUNNING = new Set<unknown>(['starting', 'idle', 'working', 'done', 'needs_input'] satisfies WorkerStatus[]);
 
-/** Saves every worker; `stopping`: the office is closing for good, so nobody is in the middle of anything. */
-export function saveWorkers(file: string, workers: Iterable<Worker>, stopping: boolean) {
+/** Every worker as workers.json holds it; `stopping`: the office is closing for good, so nobody is in the middle of anything. */
+export function workersJson(workers: Iterable<Worker>, stopping: boolean): string {
   const saved = [...workers].map(({ info, owner, tracker, state, hookToken, pty, bootBlocked, interrupted }) => ({
     id: info.id,
     owner,
@@ -49,10 +50,78 @@ export function saveWorkers(file: string, workers: Iterable<Worker>, stopping: b
     // In the middle of something: if its terminal doesn't make it through a restart, it carries on after.
     midTurn: !stopping && (!!interrupted || midTurn({ info, bootBlocked })),
   }));
+  return JSON.stringify(saved, null, 2);
+}
+
+/** Saves every worker now, on the event loop. */
+export function saveWorkers(file: string, workers: Iterable<Worker>, stopping: boolean) {
   try {
-    writeFileSync(file, JSON.stringify(saved, null, 2), { mode: 0o600 });
+    writeFileSync(file, workersJson(workers, stopping), { mode: 0o600 });
   } catch {
     // disk issues shouldn't take the office down
+  }
+}
+
+/** How long changes are gathered before workers.json is written in the background. */
+export const SAVE_SOON_MS = 1000;
+
+/**
+ * workers.json written off the event loop. Every booked usage, status and task change asked for a save,
+ * and each wrote the file on the event loop: on Windows a virus scanner can hold one open for half a
+ * second (509 ms, the busy-office check, 2026-10-08). Changes within SAVE_SOON_MS are written once, to a
+ * temp file renamed over the old one, so a crash mid-write never leaves half a file. `now()` writes at
+ * once on the loop (shutdown), and a background write that started before it is dropped, not renamed over it.
+ */
+export class WorkersSaver {
+  private timer?: ReturnType<typeof setTimeout>;
+  private writing = false;
+  private again = false;
+  private gen = 0;
+  constructor(
+    private file: string,
+    private json: () => string,
+  ) {}
+
+  soon() {
+    if (this.timer) return;
+    this.timer = setTimeout(() => {
+      this.timer = undefined;
+      void this.write();
+    }, SAVE_SOON_MS);
+    this.timer.unref();
+  }
+
+  now() {
+    this.gen++;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = undefined;
+    try {
+      writeFileSync(this.file, this.json(), { mode: 0o600 });
+    } catch {
+      // disk issues shouldn't take the office down
+    }
+  }
+
+  private async write() {
+    if (this.writing) {
+      this.again = true;
+      return;
+    }
+    this.writing = true;
+    const gen = this.gen;
+    const tmp = `${this.file}.tmp`;
+    try {
+      await writeFile(tmp, this.json(), { mode: 0o600 });
+      if (gen === this.gen) await rename(tmp, this.file);
+    } catch {
+      // disk issues shouldn't take the office down; the next change writes it again
+    } finally {
+      this.writing = false;
+      if (this.again) {
+        this.again = false;
+        this.soon();
+      }
+    }
   }
 }
 
