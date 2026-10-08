@@ -1404,8 +1404,8 @@ test('a restart that takes a mid-turn worker down resumes it with continue; a fi
   assert.equal(promptOf(woke), 'next step');
 });
 
-// Terminals outlive the office only in the pty host, which is Unix-only (ptys.ts PtyHost.connect): on Windows they run in-process.
-test('a worker whose terminal outlives the office is picked back up mid-turn, not relaunched or told to continue', { skip: process.platform === 'win32' && 'the pty host is Unix-only' }, async (t) => {
+// Terminals outlive the office only in the Unix pty host (ptys.ts): the Windows one is tied to the office and ends with it (tests/ptys-host-win.test.ts).
+test('a worker whose terminal outlives the office is picked back up mid-turn, not relaunched or told to continue', { skip: process.platform === 'win32' && 'terminals outlive the office only on Unix' }, async (t) => {
   const f = carryOnFixture(t);
   const before = manager(f, f.claude, []);
   await before.start();

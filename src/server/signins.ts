@@ -2,8 +2,8 @@ import { execFile, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import * as pty from '@lydell/node-pty';
 import type { SignInKind, SignInState, SignInsState } from '../shared/protocol.js';
+import { spawnTerminal, type Pty } from './ptys.js';
 
 /*
  * Everyone's own Claude and GitHub
@@ -377,10 +377,10 @@ export class SignIns {
     const l = this.get(id);
     // BROWSER=true: Claude "opens" the page with the `true` command and just prints it, for the browser to show.
     const env = { ...this.claudeEnv(id), BROWSER: 'true', TERM: 'xterm-256color' };
-    let p: pty.IPty;
+    let p: Pty;
     try {
-      // Wide, so the link comes out on one line.
-      p = pty.spawn(this.claude, ['auth', 'login', '--claudeai'], { name: 'xterm-256color', cols: 4000, rows: 40, cwd: this.home(id), env });
+      // Wide, so the link comes out on one line. In the terminal host on Windows, where starting claude.exe holds the thread that asks for seconds (ptys.ts).
+      p = spawnTerminal({ file: this.claude, args: ['auth', 'login', '--claudeai'], cols: 4000, rows: 40, cwd: this.home(id), env });
     } catch (err) {
       return `Couldn't start Claude Code's sign-in: ${(err as Error).message}`;
     }
