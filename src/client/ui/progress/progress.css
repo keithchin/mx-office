@@ -1,0 +1,104 @@
+/* The project progress bar (ui/progress/): a fixed-height line above the tabs, the same on every tab, so
+   the tab bar never moves between tabs (tests/tab-alignment.test.ts). Colours are the theme's tokens. */
+.pg-host { flex: none; min-width: 0; margin: 0 0 8px; }
+.pg-bar { display: flex; align-items: center; gap: 6px; height: 28px; min-width: 0; }
+.pg-bar.collapsed { height: 10px; }
+.pg-bar.pg-empty { background: none; }
+.pg-fold { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; line-height: 1; cursor: pointer; }
+.pg-fold:hover { background: var(--hover); color: var(--ink); }
+.pg-bar.collapsed .pg-fold { width: 18px; height: 10px; font-size: 9px; }
+.pg-track { flex: 1 1 auto; display: flex; gap: 3px; min-width: 0; height: 100%; }
+.pg-seg { position: relative; flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 4px; height: 100%; padding: 0 6px; overflow: hidden; border: 1px solid var(--rule); border-radius: 6px; background: var(--card); color: var(--muted); font: inherit; font-size: 11px; font-weight: 800; line-height: 1; white-space: nowrap; text-align: left; cursor: pointer; }
+span.pg-seg { cursor: default; padding: 0; }
+.pg-bar.collapsed .pg-seg { border-radius: 3px; border-width: 0; padding: 0; cursor: default; }
+.pg-seg:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pg-seg-id { flex: none; }
+.pg-seg-t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 700; opacity: .85; }
+.pg-seg.done { background: var(--good-soft); border-color: var(--good); color: var(--good-ink); }
+.pg-seg.waived { background: var(--neutral-soft); color: var(--muted); }
+.pg-seg.failed { background: var(--bad-soft); border-color: var(--bad); color: var(--bad-ink); }
+.pg-seg.waiting { background: var(--warn-soft); border-color: var(--warn); color: var(--warn-ink); }
+.pg-seg.active { background: var(--info-soft); border-color: var(--info-line); color: var(--ink); }
+.pg-seg.pending { border-style: dashed; }
+.pg-seg.unknown { border-style: dotted; background: repeating-linear-gradient(135deg, var(--card) 0 5px, var(--sunken) 5px 10px); }
+.pg-seg.current { box-shadow: inset 0 0 0 2px var(--accent); }
+.pg-seg.k-handover, .pg-seg.k-accepted, .pg-seg.k-delivery { flex-grow: 1.4; }
+.pg-marks { flex: none; display: inline-flex; gap: 2px; margin-left: auto; }
+.pg-mark { display: inline-grid; place-items: center; min-width: 14px; height: 14px; padding: 0 2px; border-radius: 7px; background: var(--card); color: var(--muted); font-size: 9px; font-style: normal; font-weight: 900; }
+.pg-mark.gate { background: none; font-size: 11px; }
+.pg-mark.gate.waiting, .pg-mark.gate.failed { filter: drop-shadow(0 0 2px var(--warn)); }
+.pg-mark.gate.pending, .pg-mark.gate.unknown { opacity: .45; }
+.pg-mark.passed { color: var(--good-ink); }
+.pg-mark.failed { color: var(--bad-ink); }
+.pg-mark.waiting, .pg-mark.assumed { color: var(--warn-ink); }
+.pg-seg-tiny { display: none; }
+.pg-label { flex: 0 1 auto; max-width: 28%; min-width: 0; height: 24px; padding: 0 8px; overflow: hidden; border: 0; border-radius: 6px; background: transparent; color: var(--ink); font: inherit; font-size: 12px; font-weight: 800; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+.pg-label:hover { background: var(--hover); }
+.pg-bar.changed .pg-label { color: var(--warn-ink); }
+.pg-tip { position: fixed; z-index: 60; padding: 10px 12px; border: 2px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); box-shadow: var(--shadow-pop); font-size: 12px; line-height: 1.4; pointer-events: none; }
+.pg-tip[hidden] { display: none; }
+.pg-tip-h { display: block; margin-bottom: 4px; }
+.pg-tip-list { margin: 2px 0 4px; padding-left: 16px; }
+.pg-tip-sec b { display: block; margin-top: 4px; font-size: 11px; color: var(--muted); }
+.pg-tip-p { margin: 4px 0 0; }
+.pg-tip-foot { margin: 6px 0 0; color: var(--muted); font-size: 11px; }
+@media (max-width: 640px) {
+  /* A phone: the stage ids and an icon for the rest; the marks and titles are in the tooltip and the record. */
+  .pg-seg-t, .pg-marks { display: none; }
+  .pg-seg { padding: 0 2px; justify-content: center; }
+  .pg-seg:is(.k-handover, .k-accepted, .k-delivery) .pg-seg-id { display: none; }
+  .pg-seg-tiny { display: inline; }
+  .pg-seg.k-handover, .pg-seg.k-accepted, .pg-seg.k-delivery { flex-grow: 1; }
+  .pg-label { max-width: 32%; font-size: 11px; padding: 0 4px; }
+}
+/* The 2D view: a strip of its own between the top bar and the office. */
+body.pixel .pg-host { margin: 0; padding: 4px 14px; background: var(--px-panel, var(--card)); border-bottom: 2px solid var(--line); }
+/* The Terminal theme's square corners, the clean themes' flat thin look. */
+html[data-theme='terminal'] :is(.pg-seg, .pg-fold, .pg-label, .pg-tip, .pg-mark) { border-radius: 0; }
+html[data-theme^='clean'] .pg-seg { border-radius: 2px; font-weight: 600; }
+html[data-theme^='clean'] .pg-tip { border-width: 1px; border-radius: 4px; }
+
+/* Home's cards: the same segments, thin, and the one line. */
+.pg-mini { display: flex; flex-direction: column; gap: 3px; min-height: 22px; margin: 4px 0 2px; }
+.pg-mini-track { display: flex; gap: 2px; height: 6px; }
+.pg-mini-track .pg-seg { height: 6px; border: 0; border-radius: 3px; padding: 0; }
+.pg-mini-label { overflow: hidden; color: var(--muted); font-size: 11px; font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
+html[data-theme='terminal'] .pg-mini-track .pg-seg { border-radius: 0; }
+
+/* The acceptance record and its dialogs (ui/progress/acceptance.ts). */
+.acc-modal { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.acc-modal.acc-small { width: min(480px, calc(100vw - 32px)); }
+.acc-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 4px 2px; }
+.acc-intro, .acc-dim { color: var(--muted); font-size: 12px; }
+.acc-sec { margin: 10px 0; }
+.acc-sec h3 { margin: 0 0 4px; font-size: 13px; }
+.acc-lines { margin: 0; padding: 0; list-style: none; }
+.acc-lines li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 3px 0; border-bottom: 1px solid var(--rule-soft); font-size: 12px; }
+.acc-lines small { color: var(--muted); overflow-wrap: anywhere; }
+.acc-l { overflow-wrap: anywhere; font-weight: 700; }
+.acc-st { flex: none; }
+.acc-missing .acc-st, .acc-unknown .acc-st { color: var(--warn-ink); font-weight: 800; }
+.acc-fail .acc-st { color: var(--bad-ink); }
+.acc-changed { padding: 8px 10px; border-radius: 8px; background: var(--warn-soft); color: var(--warn-ink); font-weight: 700; }
+.acc-gaps { margin: 4px 0; padding-left: 18px; color: var(--warn-ink); font-size: 12px; }
+.acc-cycle { margin: 8px 0; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 8px; }
+.acc-cycle > summary { cursor: pointer; font-weight: 800; }
+.acc-who { font-weight: 800; }
+.acc-note { white-space: pre-wrap; }
+.acc-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.acc-form input, .acc-form textarea, .acc-exc input { min-width: 0; font: inherit; }
+.acc-wide { display: flex; flex-direction: column; flex: 1 1 100%; gap: 2px; }
+.acc-excs { margin: 0 0 6px; padding: 0; list-style: none; }
+.acc-exc { display: flex; gap: 6px; margin: 4px 0; }
+.acc-exc input:first-child { flex: 2 1 0; }
+.acc-exc input:nth-child(2) { flex: 1 1 0; }
+.acc-confirm { display: block; margin: 10px 0 0; font-weight: 700; }
+.acc-problem { min-height: 1.2em; margin: 6px 0 0; color: var(--bad-ink); font-weight: 700; }
+/* Thin as they are, the mini segments carry the full colour. */
+.pg-mini-track .pg-seg.done { background: var(--good); }
+.pg-mini-track .pg-seg.waived { background: var(--rule-strong); }
+.pg-mini-track .pg-seg.failed { background: var(--bad); }
+.pg-mini-track .pg-seg.waiting { background: var(--warn); }
+.pg-mini-track .pg-seg.active { background: var(--info); }
+.pg-mini-track .pg-seg.pending { background: var(--rule); }
+.pg-mini-track .pg-seg.current { box-shadow: 0 0 0 1px var(--accent); }

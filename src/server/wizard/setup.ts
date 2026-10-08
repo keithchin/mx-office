@@ -65,9 +65,10 @@ function compute(read: (file: string) => string | undefined): Computed {
   const entry = registerField(register, 'Entry mode');
   const tier = registerField(register, 'Size tier')?.split(/\s+[—-]\s+/)[0];
   // Assurance isn't a pipeline: no stages to walk through.
-  if (/assurance/i.test(entry ?? '')) return { show: false, stages: [], questions: [] };
+  if (/assurance/i.test(entry ?? '')) return { show: false, toolkit: true, entry, stages: [], questions: [] };
   const html = read('index.html');
-  const verdicts = new Map((html ? stageVerdicts(html) : []).map((v) => [v.id, v]));
+  const all = html ? stageVerdicts(html) : [];
+  const verdicts = new Map(all.map((v) => [v.id, v]));
   const intake = read('intake.md');
   const unanswered = intake ? unansweredQuestions(intake) : undefined;
   const rows = decisions(register);
@@ -94,9 +95,13 @@ function compute(read: (file: string) => string | undefined): Computed {
   ];
   return {
     show: !done4,
+    toolkit: true,
     entry,
     tier,
     stages,
+    // The progress bar's (server/progress/): every stage the dashboard has, P to 7 (Stage P as worked out above), and the whole register.
+    verdicts: [...stages.filter((s) => s.id === 'P' && unanswered), ...all.filter((v) => /^[0-7]$/.test(v.id) || (v.id === 'P' && !unanswered))],
+    decisions: rows,
     next: next ? `Stage ${next.id} — ${next.title}${next.detail ? `: ${next.detail}` : ''}` : undefined,
     questions: questions.slice(0, 12),
   };

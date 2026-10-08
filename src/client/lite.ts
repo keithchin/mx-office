@@ -60,6 +60,8 @@ import { testlabView } from './ui/testlab';
 import './shared/perfwatch-on';
 import { batched } from './ui/batch';
 import { floorLoading } from './ui/loading/floor';
+import { mountProgressBar } from './ui/progress';
+import { openFloorDeliverablesNow } from './ui/deliverables/summary';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -236,6 +238,8 @@ const git = gitView($('git-view'), { openWorker, openPull: kanban.openPull });
 const budget = budgetUi(net, { root: $('budget-view'), visible: () => tab === 'budget', open: () => showTab('budget'), go: (to) => (to === 'settings' ? showSettings('team') : showTab(to)) });
 // The floor's run state beside the budget chip: ▶ running, ⏸ paused, ⏳ a run going, and its one action (ui/project-run/).
 mountRunToggle();
+// The project's progress above the tabs: a phase opens the setup panel, the deliverables or the acceptance record (ui/progress/).
+mountProgressBar($('progress-bar'), { setup: () => goToNeed({ to: 'setup' }), deliverables: openFloorDeliverablesNow });
 // ⚙️ Settings: every setting, a section at a time (ui/settings/page.ts), its section in the address (&section=workers).
 const settingsPage = flatSettings($('settings-view'), session, (section) => tab === 'settings' && setAddress({ section }));
 /** Settings, open at `section`: what every settings link on this page does (Needs you, the ☰, the team's Autonomy chip). */

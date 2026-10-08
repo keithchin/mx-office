@@ -179,6 +179,7 @@ export class Wizard {
       checking: g.regenerating,
       checkedAt: g.renderedAt,
       readFrom: `origin/${info.def}`,
+      head: { branch: info.def, sha: info.sha },
       ...(off ? { checkout: { branch: info.branch, behind: info.behind, defaultBranch: info.def } } : {}),
     };
   }

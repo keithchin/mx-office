@@ -17,6 +17,7 @@ import { summaryLine } from '../ui/summary';
 import { graphics, rememberView } from '../graphics';
 import { homeRunIcon, homeRunToggle } from './run-state';
 import { hideOverlay, showOverlay } from '../ui/loading/overlay';
+import { miniProgress } from '../ui/progress/mini';
 
 /** A flat view: the 1D board, or the 2D pixel office. */
 type FlatView = '1d' | '2d';
@@ -74,6 +75,8 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
       f.cloning && f.clone?.percent !== undefined ? h('span.home-bar', {}, h('span', { style: `width:${f.clone.percent}%` })) : null,
       h('p.home-floor-stats', {}, stats.join(' · ')),
       f.cloning ? null : summaryOf(f.id),
+      // Its progress bar, small: the phases and where it is, or the version accepted (ui/progress/mini.ts).
+      f.cloning ? null : miniProgress(f.id),
       h('div.home-floor-go', {}, button('1d', '🗂️ Board', `${f.name}'s board: its pipeline from issue to merged PR, and its workers`), button('2d', '🗺️ Office', `${f.name} from above: every worker at its desk`)),
     );
   };

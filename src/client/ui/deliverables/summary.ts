@@ -32,6 +32,13 @@ export function openFloorDeliverables(floor: string, view: DeliverablesView) {
   openModal(h('div.modal.dv-win', { role: 'dialog', 'aria-label': 'Deliverables' }, h('header', {}, h('h2', {}, '📦 Deliverables')), body));
 }
 
+/** The floor's deliverables window from anywhere (the progress bar): what's cached when it's fresh, else fetched first. */
+export async function openFloorDeliverablesNow(floor: string) {
+  const fresh = last?.floor === floor && last.view && Date.now() - last.at < FRESH_MS ? last.view : undefined;
+  const view = fresh ?? (await fetch(`/api/deliverables?${new URLSearchParams({ floor })}`, { credentials: 'same-origin' }).then((r) => (r.ok ? (r.json() as Promise<DeliverablesView>) : undefined)).catch(() => undefined));
+  if (view) openFloorDeliverables(floor, view);
+}
+
 /** The line for the setup panel, from what's cached (fetching it when stale; `redraw` draws the panel again). */
 export function deliverablesSummary(floor: string, redraw: () => void): HTMLElement | null {
   load(floor, redraw);

@@ -10,6 +10,7 @@ import type { ChatterMessage } from '../../shared/chatter.js';
 import { issueTaskId, isRoleId, legacyQueueTaskId, workerInstanceId, type IdField } from '../../shared/evidence/ids.js';
 import type { Measured, TraceEvent, TraceEventType } from '../../shared/evidence/types.js';
 import type { Incident } from '../../shared/incidents.js';
+import type { AcceptanceLine } from '../acceptance/store.js';
 import { envelope, evidenceRef, firstFound, inferred, recorded, sha256, wasRedacted, type Found } from './refs.js';
 
 /** What every adapter is told about the floor it reads for. */
@@ -231,5 +232,38 @@ export function fromIncident(i: Incident, c: AdapterCtx): TraceEvent {
     payload: { number: i.number, severity: i.severity, status: i.status, detectedBy: i.detectedBy, workers, auditIds: i.auditIds, occurrences: i.occurrences, ...(i.resolvedAt ? { resolvedAt: i.resolvedAt } : {}), actions: i.actions.map((a) => ({ status: a.status, ...(a.link ? { link: a.link } : {}) })) },
     source: evidenceRef({ kind: 'incident', sourceSystem: 'incidents', sourceId: ref, sourceVersion: String(i.updatedAt), record: i, locator: `incidents:${i.id}`, retentionClass: 'permanent', projectId: c.projectId, capturedAt: c.now }),
     redacted: wasRedacted([i.summary, i.timeline]),
+  });
+}
+
+// ---- Acceptance records (gap map F2) --------------------------------------------------------------
+
+/** An ✅ Accept is a review completed by a person; a ↩ Reopen is kept under its own action. */
+export function fromAcceptance(l: AcceptanceLine, c: AdapterCtx): TraceEvent {
+  const isAccept = l.op === 'accept';
+  const id = isAccept ? l.record.id : l.reopen.id;
+  const by = isAccept ? l.record.acceptedBy : l.reopen.by;
+  const version = isAccept ? l.record.version : l.reopen.version;
+  const found: Record<IdField, Found> = {
+    projectId: projectOf(c, isAccept ? l.record.projectId : undefined),
+    executionId: { reason: 'an acceptance covers a delivery version, not one execution' },
+    taskId: { reason: 'an acceptance covers a delivery version, not one task' },
+    agentInstanceId: { reason: 'a person accepts, not an agent' },
+    roleId: { reason: 'the acceptance records who accepted, not a roster role' },
+    sessionId: { reason: NO_SESSION },
+  };
+  return envelope({
+    eventId: `delivery:${id}`,
+    occurredAt: l.at,
+    ingestedAt: c.now,
+    floorId: c.floorId,
+    ids: found,
+    eventType: isAccept ? 'review.completed' : 'other',
+    action: isAccept ? 'acceptance.accept' : 'acceptance.reopen',
+    summary: isAccept ? `${version} accepted by ${by.name}` : `Reopened: ${version} after ${l.reopen.from}`,
+    payload: isAccept
+      ? { version, cycle: l.record.cycle, by: by.name, commit: l.record.source.commit ?? null, exceptions: l.record.exceptions.length, refs: l.record.refs.map((r) => r.locator), spent: l.record.cost.spent }
+      : { version, from: l.reopen.from, by: by.name, scopeNote: l.reopen.scopeNote },
+    source: evidenceRef({ kind: 'human_assessment', sourceSystem: 'delivery', sourceId: id, sourceVersion: l.hash, contentHash: l.hash, locator: `delivery:${c.floorId}:${id}`, retentionClass: 'permanent', projectId: c.projectId, capturedAt: c.now }),
+    redacted: false,
   });
 }
