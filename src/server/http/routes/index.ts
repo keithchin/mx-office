@@ -26,6 +26,7 @@ import { deliverableRoutes } from './deliverables.js';
 import { serviceRoutes } from './services.js';
 import { studioRoutes } from './studio.js';
 import { wizardRoutes } from './wizard.js';
+import { toolkitRoutes } from './toolkit.js';
 import { notifyTeamsRoutes } from './notify-teams.js';
 import { keepAwakeRoutes } from './keep-awake.js';
 import { projectRunRoutes } from './project-run.js';
@@ -140,6 +141,7 @@ export const routes: readonly Route[] = [
   progressRoutes.draft,
   progressRoutes.act,
   wizardRoutes.wizard,
+  toolkitRoutes.toolkit,
   connectionsRoutes.connections,
   studioRoutes.info,
   studioRoutes.open,

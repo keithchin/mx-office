@@ -13,6 +13,7 @@ import { h } from './dom';
 import { wizardApi } from './wizard/api';
 import { openWizard } from './wizard';
 import { deliverablesSummary } from './deliverables/summary';
+import { toolkitRow } from './toolkit/line';
 
 /** Asked again at most this often while nothing's happening; the board re-renders far more often than that. */
 const FRESH_MS = 15_000;
@@ -86,6 +87,7 @@ function panel(el: HTMLElement, floor: string, v: SetupView, deps: SetupPanelDep
       v.admin ? recheck : null,
     ),
     staleCheckout(v),
+    toolkitRow(floor, () => void renderSetup(el, floor, deps, true)),
     h(
       'ol.setup-stages',
       {},

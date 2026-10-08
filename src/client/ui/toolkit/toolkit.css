@@ -1,0 +1,41 @@
+/* A project's Toolkit line, the progress bar's toolkit chip and the Toolkit window (ui/toolkit/). Colors are tokens, so the color themes change them. */
+.tk-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 10px; border: 2px solid var(--rule-strong); border-radius: 12px; background: var(--card); font-size: 13px; font-weight: 700; }
+.tk-row.new { border-color: var(--info-line); background: var(--info-soft); }
+.tk-row.warn { border-color: var(--warn); background: var(--warn-soft); }
+.tk-row .btn { padding: 3px 10px; font-size: 12px; }
+.tk-text { overflow-wrap: anywhere; min-width: 0; }
+.tk-icon { font-size: 15px; }
+.tk-grow { flex: 1; }
+.tk-tag { padding: 1px 8px; border: 2px solid var(--rule-strong); border-radius: 999px; background: var(--paper); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.tk-tag.bad { border-color: var(--bad); color: var(--bad-ink); }
+.tk-dim { color: var(--muted); font-size: 12px; font-weight: 600; }
+
+.pg-tk { flex: 0 0 auto; margin-left: 6px; padding: 2px 9px; border: 2px solid var(--rule-strong); border-radius: 999px; background: var(--card); color: var(--ink); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.pg-tk.new { border-color: var(--info-line); background: var(--info-soft); }
+.pg-tk.warn { border-color: var(--warn); background: var(--warn-soft); color: var(--warn-ink); }
+.pg-bar.collapsed .pg-tk { display: none; }
+
+.tk-modal { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.tk-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 4px 2px; }
+.tk-headline { margin: 4px 0 8px; font-size: 15px; font-weight: 900; overflow-wrap: anywhere; }
+.tk-facts { margin: 0 0 8px; padding-left: 18px; font-size: 13px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.tk-sec { margin: 12px 0; }
+.tk-sec h3 { margin: 0 0 6px; font-size: 14px; font-weight: 900; }
+.tk-sec p { margin: 4px 0; font-size: 13px; }
+.tk-commits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.tk-commits li { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.tk-commits code { font-size: 12px; color: var(--ink-2); }
+.tk-subj { flex: 1 1 280px; min-width: 0; overflow-wrap: anywhere; }
+.tk-kind { padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 1.5px solid var(--rule-strong); }
+.tk-kind.fix { background: var(--good-soft); color: var(--good-ink); }
+.tk-kind.new { background: var(--info-soft); color: var(--link); }
+.tk-kind.gate { background: var(--warn-soft); color: var(--warn-ink); border-color: var(--warn); }
+.tk-changes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 700; }
+.tk-changes li { padding: 5px 8px; border-radius: 8px; overflow-wrap: anywhere; }
+.tk-changes li.worse { background: var(--bad-soft); color: var(--bad-ink); }
+.tk-changes li.better { background: var(--good-soft); color: var(--good-ink); }
+.tk-warn { margin: 6px 0; padding: 6px 10px; border-left: 4px solid var(--warn); border-radius: 6px; background: var(--warn-soft); color: var(--warn-ink); font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.tk-warn.bad { border-left-color: var(--bad); background: var(--bad-soft); color: var(--bad-ink); }
+.tk-pre { margin: 6px 0 0; padding: 8px 10px; max-height: 220px; overflow: auto; border-radius: 8px; background: var(--code-bg); color: var(--code-ink); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tk-log summary, .tk-sec details summary { cursor: pointer; font-weight: 800; font-size: 13px; }
+.tk-foot { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }

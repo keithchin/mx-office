@@ -27,6 +27,7 @@ import { cleanPlan } from './plan.js';
 import { setupView, setupViewOf } from './setup.js';
 import { GateSource, branchInfo } from './gate-source.js';
 import { withFloorToolkitEnv } from '../toolkit-env.js';
+import { toolkitBusy, toolkitDirFor } from '../toolkit-pin/index.js';
 import { useGateLock } from '../worktree-sweep/index.js';
 import { bashPath, runCommand } from './run.js';
 import { setupSteps, type FloorRef, type SetupDeps } from './steps.js';
@@ -53,12 +54,28 @@ export class Wizard {
     this.book = new JobBook(path.join(ctx.cfg.dataDir, 'wizard'), redactor([]), flowsOf(ctx));
     this.gates = new GateSource((tmp, floorDir) => this.gateCheck(tmp, floorDir, 5 * 60_000).then(() => undefined));
     // The worktree sweep leaves a floor's ao-gates-* copy alone while its gate-check is running.
-    useGateLock((dir) => this.gates.busy(dir));
+    useGateLock((dir) => this.gates.busy(dir) || toolkitBusy(dir));
   }
 
   /** The toolkit's gate-check over `dir`, with the floor's toolkit.env (read from the floor's own folder). */
-  private gateCheck(dir: string, floorDir: string, timeoutMs: number) {
-    return runCommand(this.cfg.bash, [bashPath(path.join(this.cfg.toolkitDir, 'bin', 'gate-check.sh')), bashPath(dir)], { cwd: dir, env: withFloorToolkitEnv(floorDir, toolkitEnv(this.cfg)), timeoutMs, allowFail: true });
+  private async gateCheck(dir: string, floorDir: string, timeoutMs: number) {
+    const tk = await toolkitDirFor(floorDir, this.cfg.toolkitDir);
+    return this.gateCheckWith(tk.dir, dir, floorDir, timeoutMs, tk.pinned);
+  }
+
+  /**
+   * gate-check.sh of the toolkit at `toolkit` over `dir`, with the floor's toolkit.env (read from the floor's own
+   * folder). From a pin (toolkit-pin/) it doesn't fetch: the pin is the commit the project acknowledges, by design.
+   */
+  gateCheckWith(toolkit: string, dir: string, floorDir: string, timeoutMs: number, pinned = true) {
+    const env = { ...withFloorToolkitEnv(floorDir, toolkitEnv(this.cfg)), ...(pinned ? { MXTK_NO_FETCH: '1' } : {}) };
+    return runCommand(this.cfg.bash, [bashPath(path.join(toolkit, 'bin', 'gate-check.sh')), bashPath(dir)], { cwd: dir, env, timeoutMs, allowFail: true });
+  }
+
+  /** The toolkit's sync-project.sh of the toolkit at `toolkit` over `dir` (Update toolkit: the copies refreshed as the toolkit intends). */
+  syncWith(toolkit: string, dir: string, floorDir: string, onLine: (line: string) => void) {
+    const env = { ...withFloorToolkitEnv(floorDir, toolkitEnv(this.cfg)), MXTK_SYNC_SKIP_CLONE_CHECK: '1' };
+    return runCommand(this.cfg.bash, [bashPath(path.join(toolkit, 'bin', 'sync-project.sh')), bashPath(dir)], { cwd: dir, env, timeoutMs: 10 * 60_000, onLine, allowFail: true }).then(() => undefined);
   }
 
   /** Where everything is: the toolkit folder looked up again each time, so a change in 🔌 Connections › Paths takes at once. */

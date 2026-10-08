@@ -29,6 +29,8 @@ export interface JobState {
    * step still has to hire (and only those). Empty once it has; undefined for a setup never edited.
    */
   addRoles?: ProjectRole[];
+  /** The toolkit commit the project was set up on, and its pin folder (toolkit-pin/): init-project.sh and gate-check run from there. */
+  toolkit?: { sha: string; dir: string; date?: string };
   by: string;
   /** The account that started it, for queueing its Discovery task. */
   account?: string;

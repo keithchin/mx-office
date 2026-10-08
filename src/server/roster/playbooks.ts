@@ -46,20 +46,33 @@ export interface PlaybookContext {
   maxSubagents?: number;
   /** Who covers each team (shared/roster/coverage.ts); missing or each team covering itself: the Enterprise Playbook as before. */
   coverage?: Coverage;
+  /** The project's toolkit folder: its pin (toolkit-pin/) and the commit, when it's pinned; else the shared clone. */
+  toolkit?: { dir: string; sha?: string };
 }
 
 /** Where the mxcli-project-toolkit clone is (the same setting the new-project wizard uses). */
 const toolkitDir = () => officeToolkitDir().replace(/\\/g, '/');
 
+/** The project's toolkit is pinned: nobody pulls it, the office's Update toolkit moves it. */
+export function pinnedLines(dir: string, sha: string): string[] {
+  return [
+    '## The toolkit version',
+    `This project's toolkit is pinned at \`${sha.slice(0, 7)}\`, a read-only copy at \`${dir}\`. Never \`git pull\`, fetch, check out or edit anything there, even where older instructions (the session-start ritual in CLAUDE.local.md) say to pull: the pin keeps the rules from changing under a stage, and only the Project Manager moves it, with the office's Update toolkit. If the project needs something from a newer toolkit, say so in your journal.`,
+    '',
+  ];
+}
+
 /**
  * The toolkit skills and role files this role works from, pointed at in the toolkit clone rather than copied,
  * so the team reads the toolkit's current version (see RoleDef.toolkitSkills).
  */
-function toolkitSection(role: RoleDef, overrides?: SkillOverrides, also: RoleId[] = []): string[] {
+function toolkitSection(role: RoleDef, overrides?: SkillOverrides, also: RoleId[] = [], tk?: PlaybookContext['toolkit']): string[] {
   const skills = craftOn(role.id, overrides, also);
-  if (!skills.length && !role.toolkitAgents.length) return [];
-  const dir = toolkitDir();
+  const dir = tk?.dir.replace(/\\/g, '/') ?? toolkitDir();
+  const pinned = tk?.sha ? pinnedLines(dir, tk.sha) : [];
+  if (!skills.length && !role.toolkitAgents.length) return pinned;
   return [
+    ...pinned,
     '## Your toolkit skills (mxcli-project-toolkit)',
     `Before a piece of work, read the skills below that apply to it, from the toolkit clone at \`${dir}\`. They are the team's hard-won practice: where one disagrees with this Playbook on how to do something, follow the skill; on who decides, follow this Playbook.`,
     ...skills.map((s) => `- \`${dir}/skills/${s}.md\``),
@@ -163,7 +176,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     'Dispatch them with the Agent tool for drafting, checking and research; keep every decision, every question to the Project Manager and every write to the app in your own session. A subagent returns the file it wrote, not a summary of it.',
     '',
     ...(subs.length ? ['## The review protocol (after every subagent result)', reviewBrief(ctx.level, journalPath(role.team)), ''] : []),
-    ...toolkitSection(role, ctx.skills, also),
+    ...toolkitSection(role, ctx.skills, also, ctx.toolkit),
     '## The one-writer rule',
     oneWriter(c, roleId),
     'Git worktrees go only under the project’s `.agent-office/worktrees/` (`git worktree add .agent-office/worktrees/<name> -b <branch>` from the project root), never in a temp folder or next to the project: the office refuses any other place and cleans these up once merged.',

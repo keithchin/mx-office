@@ -9,6 +9,7 @@ import { startSafeRestart } from '../restart/office.js';
 import { startPhoneAccess } from '../phone-access/index.js';
 import { startWebPush } from '../webpush/index.js';
 import { startWarmup } from '../warmup.js';
+import { startToolkitPins } from '../toolkit-pin/office.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
