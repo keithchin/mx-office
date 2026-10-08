@@ -1,5 +1,5 @@
 // The normalized trace view (gap map 4.2): one floor's audit events, chatter, analysis runs, budget
-// ledger rows and incidents read through the adapters into trace events, built on demand and stored
+// ledger rows, incidents and acceptance records read through the adapters into trace events, built on demand and stored
 // nowhere. Reading never writes: the sources are read from the office's data dir as they are on disk.
 // What the office doesn't record at all is listed, so a missing event reads as a gap, not as "none".
 
@@ -16,7 +16,8 @@ import { RunStore } from '../analysis/store.js';
 import { AuditLog, fileKey } from '../audit/log.js';
 import { ChatterFile } from '../chatter/store.js';
 import { IncidentStore } from '../incidents/store.js';
-import { fromAudit, fromChatter, fromIncident, fromRun, fromSpendRow, type AdapterCtx } from './adapters.js';
+import { AcceptanceStore, type AcceptanceLine } from '../acceptance/store.js';
+import { fromAcceptance, fromAudit, fromChatter, fromIncident, fromRun, fromSpendRow, type AdapterCtx } from './adapters.js';
 
 /** Where each source's records come from; undefined means the source couldn't be read at all. */
 export interface TraceSources {
@@ -25,6 +26,8 @@ export interface TraceSources {
   runs(): readonly RunRecord[] | undefined;
   spend(): readonly SpendRow[] | undefined;
   incidents(): readonly Incident[] | undefined;
+  /** The floor's acceptance records and reopens (acceptance/store.ts); optional for callers from before them. */
+  acceptance?(): readonly AcceptanceLine[] | undefined;
 }
 
 const attempt = <T>(fn: () => T): T | undefined => {
@@ -48,15 +51,17 @@ export function diskSources(dataDir: string, floorId: string, live?: AuditLog): 
       return Array.isArray(rows) ? rows : undefined;
     },
     incidents: () => attempt(() => new IncidentStore(path.join(dataDir, 'incidents')).list().filter((i) => i.floors.includes(floorId))),
+    acceptance: () => attempt(() => new AcceptanceStore(path.join(dataDir, 'acceptance'), floorId).all()),
   };
 }
 
-const RETENTION: Record<'audit' | 'chatter' | 'analysis' | 'budget' | 'incidents', { retention: RetentionClass; note: string }> = {
+const RETENTION: Record<'audit' | 'chatter' | 'analysis' | 'budget' | 'incidents' | 'delivery', { retention: RetentionClass; note: string }> = {
   audit: { retention: 'audit-90d', note: 'kept 90 days or the newest 50k events; older ones are archived' },
   chatter: { retention: 'chatter-capped', note: 'a derived view, capped at 1000 messages per floor' },
   analysis: { retention: 'permanent', note: 'one record per worker task; cost is an estimate from the office price table' },
   budget: { retention: 'ledger-30d', note: 'detailed rows kept 30 days, at day precision' },
   incidents: { retention: 'permanent', note: 'hash-chained, one snapshot per change' },
+  delivery: { retention: 'permanent', note: 'acceptance records and reopens, append only and hash-chained' },
 };
 
 /**
@@ -105,6 +110,7 @@ export function buildTrace(req: TraceRequest, sources: TraceSources): TraceView 
   take('analysis', 'analysis', sources.runs(), (r) => fromRun(r, c));
   take('budget', 'budget', sources.spend()?.filter((r) => DAY_RE.test(r.day)), (r) => fromSpendRow(r, c));
   take('incidents', 'incidents', sources.incidents(), (i) => fromIncident(i, c));
+  if (sources.acceptance) take('delivery', 'delivery', sources.acceptance(), (l) => fromAcceptance(l, c));
   all.sort((a, b) => a.occurredAt - b.occurredAt || (a.sequence ?? 0) - (b.sequence ?? 0));
   const limit = Math.max(1, Math.min(TRACE_MAX, Math.floor(req.limit ?? TRACE_MAX)));
   const events = all.length > limit ? all.slice(-limit) : all;

@@ -274,7 +274,7 @@ test('trace: disk sources read the office files without writing any', (t) => {
   new AuditLog(path.join(dataDir, 'audit')).append({ floor: 'shop', actor: { kind: 'office', name: 'q' }, action: 'queue.add', summary: 'queued' });
   const view = buildTrace({ floorId: 'shop', projectId: PRJ }, diskSources(dataDir, 'shop'));
   assert.equal(view.events.length, 1);
-  assert.deepEqual(view.coverage.map((c) => [c.source, c.status]), [['audit', 'available'], ['chatter', 'empty'], ['analysis', 'empty'], ['budget', 'empty'], ['incidents', 'empty']]);
+  assert.deepEqual(view.coverage.map((c) => [c.source, c.status]), [['audit', 'available'], ['chatter', 'empty'], ['analysis', 'empty'], ['budget', 'empty'], ['incidents', 'empty'], ['delivery', 'empty']]);
   assert.deepEqual(readdir(dataDir), ['audit'], 'no other source made a file');
 });
 const readdir = (d: string) => readdirSync(d).sort();

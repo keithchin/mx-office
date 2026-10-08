@@ -32,7 +32,7 @@ export interface EvidenceRef {
   /** sha256 of the record as it was read. */
   contentHash?: string;
   capturedAt: number;
-  /** Logical, never a client-supplied path: `audit:<floor>:<eventId>`, `git:<sha>:<relpath>` (see parseLocator). */
+  /** Logical, never a client-supplied path: `audit:<floor>:<eventId>`, `git:<sha>:<relpath>`, `delivery:<floor>:<acc_ id>` (see parseLocator). */
   locator: string;
   excerpt?: { start?: number; end?: number };
   availability: Availability;
@@ -142,6 +142,7 @@ export type Locator =
   | { scheme: 'analysis'; runId: string }
   | { scheme: 'budget'; floor: string; rowKey: string }
   | { scheme: 'incidents'; incidentId: string }
+  | { scheme: 'delivery'; floor: string; recordId: string }
   | { scheme: 'git'; sha: string; path: string };
 
 const SEG = /^[A-Za-z0-9_.@#|+-]{1,200}$/;
@@ -166,6 +167,8 @@ export function parseLocator(s: unknown): Locator | undefined {
       return rest.length === 2 && FLOOR.test(rest[0]) && ok(rest[1]) ? { scheme, runId: `${rest[0]}:${rest[1]}` } : undefined;
     case 'incidents':
       return rest.length === 1 && ok(rest[0]) ? { scheme, incidentId: rest[0] } : undefined;
+    case 'delivery':
+      return rest.length === 2 && FLOOR.test(rest[0]) && ok(rest[1]) ? { scheme, floor: rest[0], recordId: rest[1] } : undefined;
     case 'git': {
       const p = rest.slice(1).join(':');
       return rest.length >= 2 && SHA.test(rest[0]) && safeRelPath(p) ? { scheme, sha: rest[0], path: p } : undefined;
@@ -188,6 +191,8 @@ export function formatLocator(l: Locator): string {
       return `budget:${l.floor}:${l.rowKey}`;
     case 'incidents':
       return `incidents:${l.incidentId}`;
+    case 'delivery':
+      return `delivery:${l.floor}:${l.recordId}`;
     case 'git':
       return `git:${l.sha}:${l.path}`;
   }

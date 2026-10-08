@@ -249,6 +249,14 @@ export interface SetupView {
   readFrom?: string;
   /** The floor's folder when it isn't on the default branch or is behind it (server/wizard/gate-source.ts). */
   checkout?: { branch: string; behind: number; defaultBranch: string };
+  /** A toolkit project (it has a decision register), whether or not the panel shows. */
+  toolkit?: boolean;
+  /** For the progress bar (server/progress/): every stage gate-check's dashboard has, P to 7, Stage P worked out as above. */
+  verdicts?: { id: string; title: string; status: string; detail?: string }[];
+  /** The register's decision rows. */
+  decisions?: { stage: string; decision: string; status: string }[];
+  /** The delivery branch's head, when the stages were read from origin/<default>. */
+  head?: { branch: string; sha: string };
 }
 
 /** The floor's folder isn't on the default branch, or is behind it: what's shown comes from the default branch, and this says so. */

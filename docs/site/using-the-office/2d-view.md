@@ -8,6 +8,8 @@ The **2D view** (`/pixel?floor=<id>`) draws the floor from above in pixel art, w
 
 ![The 2D view](../images/office-2d.png)
 
+Under the top bar is the project's [progress bar](progress-and-acceptance.md), as on the 1D view. Its setup stages open the 1D view's Command Center.
+
 The **📱 Team phone** sits above the zoom buttons at the bottom right: the floor's team chatter, messages to the agents and what needs you, as on the 1D view. See [Team phone](team-phone.md).
 
 ## What's on the floor

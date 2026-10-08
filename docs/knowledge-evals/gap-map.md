@@ -14,7 +14,7 @@ Two other inputs were folded in:
 
 Paths are relative to the repository root. `file:N` is a line at f9c9dd6.
 
-**Build status:** F1 (ids and evidence contracts) is built; see [F1 as built](#f1-as-built). The other increments are not started here.
+**Build status:** F1 (ids and evidence contracts) is built; see [F1 as built](#f1-as-built). F2's acceptance record is built (the DeliveryAttempt part is not); see [F2 acceptance as built](#f2-acceptance-as-built). The other increments are not started here.
 
 Two terms are used throughout:
 - **`<data>`** is the office data dir, `<officeDir>/.agent-office` (`src/server/config.ts:383`).
@@ -398,10 +398,22 @@ The review's priority 1 (acceptance record) is covered by F2. Its priority 2 con
   - The trace event adds `floorId`, `action` (the source's own name), `summary` and `sessionId` to the envelope in 4.2. Its event types add `incident.recorded` and `other`.
   - Queue tasks don't get a `tsk_` id yet, because `queue.ts` is C1's. Their events use `legacyQueueTaskId`, marked inferred.
 
+### F2 acceptance as built
+
+The user's decisions: acceptance is an explicit Project Manager action (never "merge = accepted"), deliveries are versioned (v1, v1.1, v2…), and reopening never erases an earlier acceptance. Built as the acceptance half of 4.1; the DeliveryAttempt record (executions, submissions per head sha) is still to do.
+
+- **Contracts** (`src/shared/acceptance.ts`, pure): `AcceptanceRecord` (id `acc_<ulid>`, project id, version, cycle, who and when, scope agreed and delivered, the delivery branch's head with build and deploy references or gaps, test evidence lines, documents with `git:<sha>:<path>` locators, exceptions with owners, a frozen `CostSnapshot`, a deliverables digest, and `refs: EvidenceRef[]`), `Reopen`, and the cycles they make. Rules: `cyclesOf`, `suggestVersion`, `versionProblem`, `cleanExceptions` and `changedSince`. An evidence line is `pass`, `fail`, `pending`, `present`, or a gap (`missing`, `unknown`), never a zero.
+- **Store** (`src/server/acceptance/store.ts`): `<data>/acceptance/<floor>.jsonl`, append-only and hash-chained like the incidents (`prev`, `hash`), with `verify()`.
+- **Service** (`src/server/acceptance/index.ts`, `evidence.ts`): the evidence is gathered from what the office already keeps (`src/server/progress/gather.ts`): the setup view's gate verdicts and decision register, the deliverables scan, the floor's pull requests and their CI rollups, and the budget ledger and plan. Accept and reopen are audited (`acceptance.accept`, `acceptance.reopen`) with `ids.projectId`. "Changed since acceptance" is computed on view: the delivery branch's head (`origin/<default>`, or the folder's branch with no remote) against the record's commit, and the deliverables digest (paths and sizes on main).
+- **Trace**: `diskSources` reads the acceptance file, `fromAcceptance` maps an accept to `review.completed` and a reopen to `other`, with source system `delivery`, kind `human_assessment` and the new locator `delivery:<floor>:<id>`.
+- **API**: `GET /api/acceptance`, `GET /api/acceptance/draft`, `POST /api/acceptance` (admin, same-origin or JSON, re-auth through Phone access). The progress bar (`GET /api/progress`, `src/shared/progress.ts`) shows it.
+- **Left for delivery closing**: handover packs and wind-down attach to a record by its `id`. The bar's Handover phase is `unknown` until then.
+- **Tests**: `tests/acceptance.test.ts`, `tests/progress.test.ts`.
+
 ### Decisions needed from the user
 
 1. **Do merge checks block?** The options are: advisory badge only (the default proposal); block the office's merge button per project; or also publish a GitHub status, which binds `--auto` and agents' own `gh pr merge` but needs branch protection on each generated repo. Note that mx-office's own `main` has no branch protection.
-2. **What counts as "accepted"?** An explicit PM action per attempt, or "merge = acceptance" recorded as a declared policy.
+2. ~~**What counts as "accepted"?**~~ Decided: an explicit PM action, versioned, and a reopen never erases an earlier acceptance (see [F2 acceptance as built](#f2-acceptance-as-built)).
 3. **Who curates knowledge?** A project owner for project scope, and a named human curator for organisation scope. Agents can submit candidates. Shared-password sessions can't curate.
 4. **Lease strictness.** Is a deny for a non-writer a hard block from day one, or audit-only (shadow) for a period, as Jeff does?
 5. **Benchmark runtime path** (comes out of E3), the **benchmark office**, and the **experiment budget and caps per arm**.

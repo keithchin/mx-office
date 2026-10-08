@@ -21,6 +21,7 @@ import { installAudit } from './audit/office.js';
 import { installIncidents } from './incidents/office.js';
 import { installPerfWatch } from './perfwatch/office.js';
 import { flushRoster } from './roster/index.js';
+import { closeCodeFor, type OfficeClosing } from '../shared/office-down.js';
 
 /** What a test can set about how the office starts: the client bundle it serves, instead of the built one. */
 export interface StartOptions {
@@ -59,8 +60,11 @@ export async function startServer(cfg: Config, opts: StartOptions = {}) {
   services.start();
   tailnet.start(() => services.list().map((s) => s.port));
 
-  /** With `keep` (a restart), workers' terminals keep running for the next office to pick up. */
-  const shutdown = (keep = false) => {
+  /**
+   * With `keep` (a restart), workers' terminals keep running for the next office to pick up. `why` goes to
+   * every open page as its socket's close code, so it can say "restarting" or "stopped" (ui/loading/office-down.ts).
+   */
+  const shutdown = (keep = false, why?: OfficeClosing) => {
     stopTimers();
     stopPerfWatch();
     void stopLiveApps(ctx);
@@ -81,7 +85,7 @@ export async function startServer(cfg: Config, opts: StartOptions = {}) {
     ctx.limits.close();
     for (const a of ctx.accountLimits.values()) a.reader.close();
     ctx.signins.shutdown();
-    for (const c of ctx.clients.values()) c.ws.close();
+    for (const c of ctx.clients.values()) (why ? c.ws.close(closeCodeFor(why), why) : c.ws.close());
     server.close();
     hookServer.close();
   };

@@ -24,6 +24,7 @@ import { routeWhiteboardMessage } from '../ui/whiteboard';
 import type { Ctx } from './context';
 import type { CoreState } from './ctx';
 import { builtFloors, pastTheWing } from './floors';
+import { installOfficeDown } from '../ui/loading/office-down';
 import type { Parts } from './parts';
 
 export type ArrivalParts = Pick<Parts, 'worlds' | 'place' | 'travel' | 'maps' | 'views' | 'cards' | 'hoops' | 'bar' | 'golf' | 'bargames' | 'cars' | 'focus'>;
@@ -44,6 +45,8 @@ export function installArrival(ctx: Ctx, core: CoreState, parts: ArrivalParts) {
   let upgradePhase = '';
 
   net.onStatus((up) => $('conn').classList.toggle('hidden', up));
+  // Gone for more than a blip: restarting or stopped, full page, and a reload once it's back (ui/loading/office-down.ts).
+  installOfficeDown(net);
   /** Whether this page has shown someone their sign-ins yet (it greets a newcomer once). */
   let signInsGreeted = false;
   net.onMessage((msg) => ctx.messages.dispatch(msg));

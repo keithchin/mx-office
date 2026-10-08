@@ -33,6 +33,7 @@ import { mobileRoutes } from './mobile.js';
 import { phoneAccessRoutes } from './phone-access.js';
 import { budgetRoutes } from './budget.js';
 import { evidenceRoutes } from './evidence.js';
+import { progressRoutes } from './progress.js';
 import { perfRoutes } from './perf.js';
 import { testlabRoutes } from './testlab.js';
 
@@ -134,6 +135,10 @@ export const routes: readonly Route[] = [
   teamRoutes.page,
   teamRoutes.labels,
   deliverableRoutes.deliverables,
+  progressRoutes.view,
+  progressRoutes.acceptance,
+  progressRoutes.draft,
+  progressRoutes.act,
   wizardRoutes.wizard,
   connectionsRoutes.connections,
   studioRoutes.info,

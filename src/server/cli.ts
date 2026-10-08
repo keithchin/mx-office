@@ -5,6 +5,7 @@ import { startServer } from './server.js';
 import { tildify } from './building.js';
 import { openBrowser } from './browser.js';
 import { onOfficeExit } from './restart/exit.js';
+import { RESTART_EXIT_CODE } from '../shared/project-run.js';
 
 const argv = process.argv.slice(2);
 if (argv[0] === 'prune') {
@@ -103,13 +104,14 @@ const stop = (signal: NodeJS.Signals) => {
   closing = true;
   const keep = signal === 'SIGTERM';
   console.log(keep ? '\n  closing the office — workers keep running for the next one…' : '\n  closing the office…');
-  office.shutdown(keep);
+  office.shutdown(keep, keep ? 'restart' : 'stop');
   setTimeout(() => process.exit(0), 300);
 };
 // 🔁 Restart safely (restart/): the same graceful close, then the exit code a looping launcher restarts on.
 onOfficeExit((code) => {
   closing = true;
-  office.shutdown(true);
+  // Only the looping launcher's code brings it back: any other exit leaves the office stopped, and the pages say so.
+  office.shutdown(true, code === RESTART_EXIT_CODE ? 'restart' : 'stop');
   setTimeout(() => process.exit(code), 300);
 });
 // Last line of defense: one bad request must never take down every running worker.

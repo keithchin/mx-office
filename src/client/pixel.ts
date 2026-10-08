@@ -57,6 +57,8 @@ import { budgetUi } from './ui/budget';
 import { mountRunToggle } from './ui/project-run';
 import { floorLoading } from './ui/loading/floor';
 import { goToSettings } from './ui/settings/flat';
+import { mountProgressBar } from './ui/progress';
+import { openFloorDeliverablesNow } from './ui/deliverables/summary';
 import './shared/perfwatch-on';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
@@ -89,6 +91,8 @@ floorPicker(net);
 // 💰 The budget chips on the top bar; a click opens the 1D view's Budget tab (ui/budget/).
 const budget = budgetUi(net, { open: () => location.assign(`/lite?tab=budget${store.floor ? `&floor=${encodeURIComponent(store.floor)}` : ''}`) });
 mountRunToggle(); // ▶ / ⏸ / ⏳ beside it (ui/project-run/)
+// The project's progress under the top bar; its setup stages open the 1D view's Command Center (ui/progress/).
+mountProgressBar($('progress-bar'), { setup: () => location.assign(`/lite?tab=command${store.floor ? `&floor=${encodeURIComponent(store.floor)}` : ''}`), deliverables: openFloorDeliverablesNow });
 budget.feed.on(() => loading.done('budget', budget.feed.floor()?.floor));
 // The address follows the floor (?floor=), for bookmarks and links that open it straight away.
 followFloor();
