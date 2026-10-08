@@ -4,6 +4,31 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Fixed
+- **A busy office no longer stalls on a loaded machine.** With builds running and the virus scanner busy,
+  the server still blocked for 0.4 to 1.8 s at a time while six workers worked: the ranking's background
+  refresh read every journal and project file and graded everyone in one go, every worker update made a
+  new time-zone formatter and wrote the roster and the Office Ledger synchronously, the machine monitor's
+  CPU reading (`os.cpus()`) took up to a second, and the analyzer looked for each session's transcript one
+  folder at a time. The ranking now reads its files in the background (only the ones that changed) and
+  grades a few workers at a time with the server free in between, giving the same ranking; the rest read
+  and write off the server's main thread. The busy-office check in `npm run test:perf:quick` on this
+  machine with three Mendix builds running (35 to 70 % CPU): before, up to 50 blocks over 100 ms, the
+  longest 966 ms to 2.4 s; now no block over 100 ms in the last three runs.
+- **Making a project stalls the server less.** The wizard's clone step and checkpoints, opening the new
+  floor, a hire's Playbook files and every part of the office looking for `claude` on the PATH held it
+  0.3 to 1.7 s in one go; the steps now let other work in between, checkpoints are written in the
+  background and a command is looked up once. On a heavily loaded machine a few wizard steps still
+  block for 0.3 to 0.6 s (the journey's server check can fail there).
+- **The Team tab's "last journal entry" and the chatter feed** read journals from what was last read in
+  the background: a journal that just changed shows on the next look (a few seconds later).
+- **The performance guard's own profilers** no longer count against the server: the busy check and the
+  journey start the office's CPU profile before the stretch they measure (starting and saving one held
+  the server for up to a second on a loaded machine). The journey names what ran in a stall it finds, and
+  `PERF_BUSY_LOAD=<n>` runs the busy check with n disk hammers, to reproduce a loaded machine.
+
 ## 2026-10-08 · release 22 (`6c26905`)
 
 ### New
