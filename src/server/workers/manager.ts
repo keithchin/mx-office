@@ -30,6 +30,7 @@ import { clamp, safeEq, truncate } from './util.js';
 import { COLORS, NAMES, newWorker } from './worker.js';
 import { WorkerTrees, lostMessage } from './worktree.js';
 import { launchRefusal } from '../testmode.js';
+import { eachApart } from '../offloop/apart.js';
 
 const SCREEN_INTERVAL_MS = 250;
 /** How often a steady typist's "last typed" time is refreshed for everyone. */
@@ -135,15 +136,9 @@ export class WorkerManager {
     // A session may have ended (and written its final tally) while the office was down.
     for (const w of this.workers.values()) this.scanUsage(w);
     this.screenTimer = setInterval(() => flushScreens(this.workers.values(), this.events, (w) => this.checkBlocked(w)), SCREEN_INTERVAL_MS);
-    this.usageTimer = setInterval(() => {
-      for (const w of this.workers.values()) {
-        this.scanUsage(w);
-        this.worktrees.watchFolder(w);
-      }
-    }, USAGE_SCAN_MS);
-    this.saveTimer = setInterval(() => {
-      for (const w of this.workers.values()) if (w.unsaved) this.saveScrollback(w);
-    }, SAVE_SCROLLBACK_MS);
+    this.usageTimer = setInterval(() => void eachApart(this.workers.values(), (w) => this.workers.get(w.info.id) === w && (this.scanUsage(w), this.worktrees.watchFolder(w))), USAGE_SCAN_MS);
+    // One terminal at a time, the event loop free in between: serializing one takes tens of ms (offloop/apart.ts).
+    this.saveTimer = setInterval(() => void eachApart(this.workers.values(), (w) => w.unsaved && this.workers.get(w.info.id) === w && this.saveScrollback(w)), SAVE_SCROLLBACK_MS);
   }
 
   /**
