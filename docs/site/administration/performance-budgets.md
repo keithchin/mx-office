@@ -16,7 +16,7 @@ Every main view is opened in a headless browser on a big test office, with six w
 | Time to usable | 3 s | From opening the address until the view has drawn its content and answers. |
 | Heap growth | 25 % (and over 4 MB) | How much the page's memory may grow while it stays open on live events for 60 s. Steady growth means something piles up. |
 | Project switch | 1.5 s | From picking another project (the floor picker in the 1D and 2D views, or a card on Home) until its view is usable and drawn. |
-| Server stall | 250 ms | No block of the office server's event loop while the journey makes a project (wizard, clone, hiring). A test office records every block over 100 ms (`GET /api/perf/stalls`). |
+| Server stall | 250 ms | No block of the office server's event loop while the journey makes a project (wizard, clone, hiring), nor while six workers are busy for minutes in the busy office. A test office records every block over 100 ms (`GET /api/perf/stalls`). |
 
 The numbers are named constants, `PERF_BUDGETS` in `src/shared/testlab.ts` (and `scripts/perf/budgets.mjs`, which a test keeps the same), so they can be tuned in one place.
 
@@ -34,8 +34,8 @@ From the [Test Mode page](test-mode-page.md), or from a terminal with the same e
 
 ```sh
 npm test                  # every unit test file, with time limits (Windows too)
-npm run test:perf:quick   # builds, then the main views (5 s soak) and the journey: a few minutes
-npm run test:perf         # builds, then every view (60 s soak), the switch stress and the journey
+npm run test:perf:quick   # builds, then the main views (5 s soak), the journey and a minute of the busy office: a few minutes
+npm run test:perf         # builds, then every view (60 s soak), the switch stress, the journey and 3 minutes of the busy office
 ```
 
 Before committing a change to the pages or the server, run `npm test` and `npm run test:perf:quick`. The test offices go under the nearest `scratch\test-offices\perf-guard\runs` (or `AGENT_OFFICE_TEST_OFFICES`), the results under its `results` folder.
@@ -107,10 +107,23 @@ The quick check after this pass (`npm run test:perf:quick`, scale 10, 5 s soak):
 | Switch 3× on the 1D Command Center | | p90 187 ms | 0 ms |
 | Journey | 12/12 steps, longest server block under 100 ms | | |
 
+### The third pass: stalls with workers live (2026-10-08)
+
+The first two passes measured views and the journey, never an office whose workers kept working for hours. Release 18 then stalled for 1.6 to 3.2 s every few minutes on this machine (incident INC-12), while its agents sat idle and nobody touched it. A profiler couldn't be attached to the live office, so the causes were found by reading what runs on its own and timing each piece on the same machine:
+
+- **Starting the `claude` binary held the event loop 0.65 s every time.** The office's own background calls to Claude Haiku (the analyzer classifying a run, the project summaries, Jeff's fallback, the ranking's highlights), the task namer and the Firm's reviewers started `claude -p` on the main thread. On Windows the start itself (CreateProcess, with the virus scanner looking at the 256 MB binary) runs on the thread that asks: 650 ms each time, measured on the office's own laptop, and 1.3 to 7.9 s the first time a new binary starts (after a Claude Code update, or mxcli's first run). The live office's ledger shows 32 such calls that day with no agent working. They now start from the process-starter thread (`server/offloop/exec.ts`), as gh and git already did, and so does Studio mode's look for Studio Pro every 4 s.
+- **The analyzer read each session's whole transcript, and every subagent's, again for every run it recorded**: at every turn's end, every open PR's quarter-hourly look and the first look after a start. About 6 ms per MB, and a long session with its subagents is tens of MB (155 MB for one here: 0.9 s). It now keeps a reader per session and reads only what was appended, a half-MB slice at a time with the event loop free in between (`analysis/transcript.ts` `readSessionLive`).
+- **The scrollback save serialized every busy terminal in one go** every 15 s (80 to 180 ms with a few workers): now one terminal per turn of the event loop, and the 10 s usage scan the same (`server/offloop/apart.ts`).
+- **A sleeping computer counted as a stall** (a 155 s "stall" the night before): see below.
+
+The **busy office** (`scripts/perf/busy.mjs`, suite `busy`, part of `npm run test:perf:quick` for a minute and of `npm run test:perf` for three) now holds this: a fresh fixture whose six live workers work like real ones (turns of tool calls with real-sized results, a Stop, a pause, the next prompt) on sessions with 30 MB of history each, open PRs due their look, a background `claude` as big as the real one, and pages asking for the ranking, analysis, budget and roster every 4 s. On release 18 it failed: 18 blocks over 100 ms in 90 s, the longest 309 ms. Now: 2 blocks over 100 ms, the longest 108 ms. On the scrubbed copy of the real office with its workers busy and two pages open: 5 blocks over 100 ms and a 365 ms one at start before, none over 100 ms after.
+
 ## Live warnings in the real office
 
 - **A page froze**: every flat view and the home page watch their own long tasks. One over 500 ms is reported (at most once a minute per view, never from a hidden tab) and opens an incident naming the view and the scripts that took the time.
-- **The server stalled**: the server reads its event-loop delay every 5 s. A block over 1 s opens an incident.
+- **The server stalled**: the server reads its event-loop delay every 5 s. A block over 1 s opens an incident. A gap of a minute or more during which the process used almost no CPU (under a fifth of the gap), or the wall clock ran ahead of the monotonic one, is the computer sleeping: it is logged as a notice and opens no incident.
+- **The office profiles itself when a stall comes back.** A second stall within 30 minutes of the first starts a CPU profile of the office's own main thread (in-process, through `node:inspector`: nothing to attach, nothing running until then), at most once an hour. It runs until the next stall is caught (or 5 minutes) and goes on the stall's incident timeline: where the `.cpuprofile` was saved, what ran in the longest block and which office functions called it, and the top 10 functions by self time. The last 10 profiles are kept in `.agent-office/perf/profiles`.
+- **Record one by hand**: the [Test Mode page](test-mode-page.md)'s *This office's server* part has ⏺ Record 60 s CPU profile (admins only; `POST /api/perf/profile {seconds}`, 5 to 300). It shows the same summary and links the file; `GET /api/perf/profiles` lists them and `GET /api/perf/profiles/<file>` downloads one for Chrome DevTools (Performance › Load profile) or VS Code.
 
 Both are incident rules (**A page froze**, **The server stalled**) that can be switched off in the incident settings like the others.
 

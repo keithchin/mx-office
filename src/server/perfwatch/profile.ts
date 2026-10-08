@@ -7,7 +7,8 @@
 // its own when the event loop stalls again soon after a stall (at most once an hour), so the next stall
 // is caught in the act and its incident says which functions blocked the loop.
 
-import { mkdirSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, statSync, unlinkSync } from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 /** One node of V8's CPU profile (Profiler.Profile), as much of it as is read here. */
@@ -161,7 +162,7 @@ export function recordProfile(dir: string, ms: number, opts: { until?: Promise<u
       mkdirSync(dir, { recursive: true });
       const stamp = new Date((opts.now ?? Date.now)()).toISOString().replace(/[-:]/g, '').replace(/\..*$/, '');
       const file = path.join(dir, `${stamp}${opts.label ? `-${opts.label.replace(/[^\w-]/g, '')}` : ''}.cpuprofile`);
-      writeFileSync(file, JSON.stringify(profile));
+      await writeFile(file, JSON.stringify(profile));
       prune(dir);
       return { file, ...summarize(profile) };
     } finally {

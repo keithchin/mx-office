@@ -25,7 +25,7 @@ The page is part of the flat views. The 3D office doesn't have it.
   | Suite | What it checks |
   |---|---|
   | Unit tests | The office's own test suite: `npm test` itself (every test file, a few at a time, each with a time limit per test, per file and on the whole run, so a file that hangs is stopped and named) |
-  | Quick performance check | `npm run test:perf:quick`: the main views on the big fixture with a 5 s soak, three project switches, then the end-to-end journey. A few minutes; what a build agent runs before committing a change to the pages or the server |
+  | Quick performance check | `npm run test:perf:quick`: the main views on the big fixture with a 5 s soak, three project switches, then the end-to-end journey, then a minute of the busy office (six fake workers busy on long sessions while pages poll: no server stall over 250 ms). A few minutes; what a build agent runs before committing a change to the pages or the server |
   | Page responsiveness | Every main view on a big fixture (about 10 times a real project) with live fake workers: no main-thread task over 200 ms, usable within 3 s, and heap growth under the limit over a minute of live events |
   | End-to-end journey | A project from the wizard to a deliverable with fake agents: hiring, an escalation answered from the Team phone, pause and resume, the budget, a restart, and clean incidents. It also fails when the office server's event loop is blocked for more than 250 ms while the project is made |
   | Command Center check | The 1D Command Center stays responsive on a busy floor (the release 15 freeze) |
@@ -33,6 +33,7 @@ The page is part of the flat views. The 3D office doesn't have it.
 - **Running**: the run going, with a progress bar, its live log and **■ Stop**.
 - **Run details**: for a page responsiveness run, two charts (the longest task per view, and the time to usable, each against its budget line) and a table per view: time to usable, longest task, long tasks, heap before and after, heap growth and the result. A view that failed lists what failed, its longest tasks with the top stack frames, any page errors, and a screenshot you can open full size. A journey run lists its steps.
 - **History**: the last 50 runs. Click one to see its details.
+- **This office's server**: **⏺ Record 60 s CPU profile** records what this office's own server does for a minute (not a test office; nothing runs until you press it) and shows the functions that took the time, what ran in the longest block, and a link to the `.cpuprofile` for Chrome DevTools or VS Code. The profiles the office recorded by itself after a returning stall are listed below it. See [Performance budgets](performance-budgets.md#live-warnings-in-the-real-office).
 
 ## Starting a run
 
