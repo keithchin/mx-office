@@ -4,7 +4,7 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
-## Unreleased
+## 2026-10-08 · release 22 (`6c26905`)
 
 ### New
 - **The office's messages never replace an agent's task.** The office now keeps what each team member
