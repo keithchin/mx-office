@@ -102,7 +102,7 @@ When the setup reaches its **Hire the project team** step, it sets the floor's s
 Check the summary and click **✨ Create project**. A progress list runs each step. Every step can be retried, and a step that is already done is skipped.
 
 1. Create the GitHub repository (`gh repo create`, private, with the admin token).
-2. Clone it as a floor.
+2. Clone it as a floor. On Windows the clone gets `core.longpaths true` (a Mendix app's npm packages go past 260 characters inside a worker's worktree), and the floor's folder is marked trusted in the office's Claude Code config, so the team's agents start without the *Do you trust the files in this folder?* prompt.
 3. Write `.claude/toolkit.env` (MXBUILD_PATH, mxcli nightly, Python).
 4. Create the Mendix app (new projects only): Studio Pro's own `mx create-project` makes a blank app named after the project (`travel-approval` → `TravelApproval.mpr`) at the repository's root, where the toolkit looks for it. Without `mx` in that Studio Pro it falls back to `mxcli new`. Mendix's generated files (`deployment/`, `.mendix-cache/`, `theme-cache/`, `*.mpr.lock` and so on) are added to `.gitignore`. An existing app is left alone; the step only reports which Studio Pro its `.mpr` was saved with.
 5. Run the toolkit's `init-project.sh` (after the app, so its `CLAUDE.local.md` names the `.mpr`).
