@@ -6,6 +6,7 @@
 // waits on it.
 
 import type { ProjectSummary } from '../../shared/summary.js';
+import { waitsOnPerson } from '../../shared/progress.js';
 import type { Haiku } from '../analysis/llm.js';
 import { withBilling } from '../budget/meter.js';
 
@@ -50,7 +51,8 @@ function factsFor(f: Facts): string {
     project: f.name,
     goal: f.goal,
     phase: f.phase?.label,
-    failingGates: f.phase?.stages.filter((s) => s.status === 'FAIL').map((s) => s.title),
+    failingGates: f.phase?.stages.filter((s) => s.status === 'FAIL' && !waitsOnPerson(s.detail)).map((s) => s.title),
+    gatesAwaitingSignoff: f.phase?.stages.filter((s) => s.status === 'FAIL' && waitsOnPerson(s.detail)).map((s) => s.title),
     progress: f.progress,
     agents: f.agents.map((a) => ({ name: a.name, model: a.model, status: a.status, doing: a.doing, waitingMinutes: a.waitingMs !== undefined ? Math.round(a.waitingMs / 60_000) : undefined })),
     needsHuman: f.needsHuman.count,

@@ -14,6 +14,7 @@ import { gh } from '../github.js';
 import type { Haiku } from '../analysis/llm.js';
 import { Narrator } from './narrate.js';
 import { projectFacts } from './project.js';
+import { waitsOnPerson } from '../../shared/progress.js';
 
 /** Waiting on a person longer than this is a risk, not just a wait. */
 export const WAIT_RISK_MS = 10 * 60_000;
@@ -120,7 +121,8 @@ export class Summaries {
       const about = this.about(floor.dir);
       if (about) Object.assign(facts, { goal: about, goalFrom: 'the GitHub repository description' });
     }
-    const failing = facts.phase?.stages.filter((s) => s.status === 'FAIL') ?? [];
+    // A gate failing only for a missing sign-off is waiting on a person, not broken (waitsOnPerson): not a risk.
+    const failing = facts.phase?.stages.filter((s) => s.status === 'FAIL' && !waitsOnPerson(s.detail)) ?? [];
     if (failing.length) risks.push({ level: 'warn', text: `${failing.length} toolkit gate${failing.length === 1 ? '' : 's'} failing: ${failing.slice(0, 3).map((s) => s.title).join(', ')}` });
 
     const activity = this.activity(floor, workers, runs).slice(0, ACTIVITY_SHOWN);

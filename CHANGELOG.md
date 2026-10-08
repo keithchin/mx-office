@@ -26,6 +26,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   `acceptance.accept` / `acceptance.reopen`, and in the evidence trace. Admins only.
 
 ### Fixed
+- **A project that has only just started no longer shows a failed gate.** The toolkit's gate check calls a
+  ✋ gate FAIL while it waits on your sign-off (on a new project, Stage 0's "Confirmed by:" line still holds
+  its template text), so the setup panel said ⚠️ FAIL and the Command Center "1 toolkit gate failing" before
+  anything had happened. A gate that only waits on a person now shows as ✋ NEEDS SIGN-OFF, in the progress
+  bar as waiting, and isn't counted as a risk; a gate that fails for anything else still shows as failing.
 - **A page no longer looks stuck when the office stops.** When the office exits without the restart loop
   (🔁 Restart safely without it, Ctrl+C) or vanishes and doesn't answer, open pages now say **The office
   has stopped. Start it again with start-office.ps1**. During a looping restart they say **Restarting…
