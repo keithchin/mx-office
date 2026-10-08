@@ -26,6 +26,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   `acceptance.accept` / `acceptance.reopen`, and in the evidence trace. Admins only.
 
 ### Fixed
+- **Agents booking their usage no longer hold the server up**: the office saved its list of workers to disk
+  every time an agent's usage was counted, on the server's main thread, and with the virus scanner busy one
+  save took half a second. Changes are now gathered for a second and written in the background (a shutdown
+  still saves at once).
 - **A project that has only just started no longer shows a failed gate.** The toolkit's gate check calls a
   ✋ gate FAIL while it waits on your sign-off (on a new project, Stage 0's "Confirmed by:" line still holds
   its template text), so the setup panel said ⚠️ FAIL and the Command Center "1 toolkit gate failing" before

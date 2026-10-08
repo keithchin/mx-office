@@ -28,6 +28,10 @@ import {
   type DshLaunch,
 } from '../src/server/dsh.js';
 import { Ledger } from '../src/server/usage.js';
+import { SAVE_SOON_MS } from '../src/server/workers/persist.js';
+
+/** workers.json is written in the background (WorkersSaver): give a pending save time to land. */
+const savedSoon = () => new Promise((r) => setTimeout(r, SAVE_SOON_MS + 500));
 import { WorkerManager, type WorkerEvents } from '../src/server/workers.js';
 import type { Usage, WorkerAction, WorkerInfo, WorkerStatus } from '../src/shared/protocol.js';
 
@@ -832,6 +836,7 @@ test('the office hires a DSH worker over ACP, and its desk shows the work', asyn
   // Usage and the session id survive in the floor's state file.
   await waitFor(() => mgr.get(id)?.usage, (u) => u !== undefined);
   assert.equal(mgr.get(id)?.usage?.contextSize, 200000);
+  await savedSoon();
   const saved = JSON.parse(readFileSync(path.join(f.data, 'workers.json'), 'utf8')) as { provider?: string; sessionId?: string; usage?: { contextSize?: number } }[];
   const row = saved.find((s) => s.provider === 'dsh');
   assert.equal(row?.sessionId, 'sess-1');
@@ -883,6 +888,7 @@ test('a DSH board agent proves itself with its token, and a second question goes
   await waitFor(() => mgr.get(id)?.status, (s) => s === 'done');
 
   // office-queue authenticates with the token the office handed the child, though there is no PTY.
+  await savedSoon();
   const saved = JSON.parse(readFileSync(path.join(f.data, 'workers.json'), 'utf8')) as { id: string; hookToken?: string }[];
   const token = saved.find((s) => s.id === id)?.hookToken ?? '';
   assert.ok(token);

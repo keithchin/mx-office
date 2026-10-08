@@ -21,7 +21,7 @@ import { launchAcp } from './acp.js';
 import { clockWork } from './clock.js';
 import { childEnv } from './env.js';
 import { dozesOnStart, midTurn, notePromptBy, watchBoot } from './lifecycle.js';
-import { restoreWorkers, saveWorkers } from './persist.js';
+import { restoreWorkers, workersJson, WorkersSaver } from './persist.js';
 import { WorkerPrs } from './pr.js';
 import { WIN, binScript, defaultShell, resolveCommand, shellRun, shq, writeOfficeCommands } from './process.js';
 import { carryOnPrompt, WorkerTasks } from './tasks.js';
@@ -50,6 +50,7 @@ export class WorkerManager {
   /** Desks held, with the name, for a hire whose worktree is being made. */
   private seating = new Map<string, string>();
   private statePath: string;
+  private saver: WorkersSaver;
   private trees: Worktrees;
   private agentPath: string | null = null;
   readonly defaultProvider: AgentProvider;
@@ -99,6 +100,7 @@ export class WorkerManager {
     this.defaultProvider = configuredProvider(agentCmd);
     this.trees = new Worktrees(dir);
     this.statePath = path.join(dataDir, 'workers.json');
+    this.saver = new WorkersSaver(this.statePath, () => workersJson(this.workers.values(), this.stopping));
     // bin/office-workers.js is also the office's MCP server, for the agents that take one.
     const floor: ProviderFloor = { dir: this.dir, dataDir, mcpScript: binScript('office-workers.js'), dshProfile };
     for (const p of AGENT_PROVIDERS) this.setups[p] = PROVIDERS[p].prepare?.(floor);
@@ -1005,6 +1007,7 @@ export class WorkerManager {
   }
 
   private persist() {
-    saveWorkers(this.statePath, this.workers.values(), this.stopping);
+    if (this.closing) this.saver.now();
+    else this.saver.soon();
   }
 }
