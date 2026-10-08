@@ -10,6 +10,7 @@ import './ui.css';
 import { SUITE_LABEL, type RunResult, type RunSummary, type TestLabView, type TestSuite } from '../../../shared/testlab';
 import { h, toast } from '../dom';
 import { runDetails } from './details';
+import { profilePart } from './profile';
 import { hideTip } from './charts';
 import { duration, MAX_ROWS, STATUS_WORD, tailLines, viewKey } from './logic';
 
