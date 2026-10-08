@@ -22,6 +22,7 @@ import { routeAccountsMessage } from '../ui/accounts';
 import { askNotifyPermission, DesktopNotifier, notifyPermission, waitingOnSomeone } from '../notify';
 import { installReauth } from '../ui/reauth';
 import { bootDown, bootDrawn, bootStep } from '../ui/loading/boot';
+import { installOfficeDown } from '../ui/loading/office-down';
 
 export interface FlatSession {
   net: Net;
@@ -62,6 +63,8 @@ export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorke
   net.onStatus((up) => $('conn').classList.toggle('hidden', up));
   // Mx Office's loading screen (ui/loading/boot.ts): the socket up, or gone (a restart).
   net.onStatus((up) => (up ? bootStep('socket') : bootDown()));
+  // The office gone for more than a blip: "Restarting… reconnecting" or "The office has stopped", then a reload once it's back.
+  installOfficeDown(net);
   net.onMessage((msg) => {
     store.apply(msg);
     routeTerminalMessage(msg);

@@ -1,6 +1,7 @@
 import type { ClientMsg, ServerMsg } from '../shared/protocol';
 import { lastFloor, store, type Profile, type Spot } from './state';
 import { isReturnPage } from '../shared/home';
+import { OFFICE_CLOSE } from '../shared/office-down';
 
 type Handler = (msg: ServerMsg) => void;
 
@@ -19,6 +20,9 @@ export class Net {
   /** The server is restarting on purpose: retry every second instead of backing off. */
   private restartExpected = false;
   up = false;
+  /** The close code of the connection that last went, and the reconnects that failed since (ui/loading/office-down.ts reads them). */
+  closeCode: number | undefined;
+  failures = 0;
 
   constructor(
     private profile: () => Profile,
@@ -58,6 +62,8 @@ export class Net {
     this.ws = ws;
     ws.onopen = () => {
       this.retry = 0;
+      this.failures = 0;
+      this.closeCode = undefined;
       this.up = true;
       this.statusHandlers.forEach((h) => h(true));
     };
@@ -70,8 +76,13 @@ export class Net {
       }
       for (const h of this.handlers) h(msg);
     };
-    ws.onclose = async () => {
+    ws.onclose = async (ev) => {
       if (this.ws !== ws) return;
+      // The first close says why (the office's own code as it shuts down); a failed reconnect after it only counts.
+      if (this.up) this.closeCode = ev.code;
+      else this.failures++;
+      // The office said it's restarting: try every second, as for an upgrade.
+      if (ev.code === OFFICE_CLOSE.restarting) this.restartExpected = true;
       this.up = false;
       this.statusHandlers.forEach((h) => h(false));
       if (this.closedByUs) return;
@@ -92,6 +103,11 @@ export class Net {
 
   expectRestart() {
     this.restartExpected = true;
+  }
+
+  /** The office said it was restarting (an upgrade, or the close code a restart sends). */
+  get restarting(): boolean {
+    return this.restartExpected;
   }
 
   send(msg: ClientMsg) {
