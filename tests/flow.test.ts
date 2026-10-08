@@ -489,6 +489,8 @@ test('GET /api/flows lists the office engine’s runs by floor, without their st
     const one = call('?floor=f1');
     assert.deepEqual(one.body.runs.map((r) => [r.runId, r.status, r.workflow]), [['a1', 'done', 'review']]);
     assert.ok(!('state' in one.body.runs[0]), 'no state');
+    // Written in the background (the office's store): there a moment later.
+    for (let i = 0; i < 100 && !existsSync(path.join(dir, 'flows', 'review', 'a1.json')); i++) await new Promise((r) => setTimeout(r, 10));
     assert.ok(existsSync(path.join(dir, 'flows', 'review', 'a1.json')), 'kept in <data>/flows');
   } finally {
     rmSync(dir, { recursive: true, force: true });

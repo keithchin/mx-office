@@ -228,8 +228,27 @@ const lessonsSeed = (project: string) => `---\nname: project-lessons\ndescriptio
  * lessons Playbook (the last two only when missing) into `dir`. Returns the paths it wrote.
  */
 export function writeRoleFiles(dir: string, roleId: RoleId, ctx: PlaybookContext): string[] {
-  const role = ROLE_BY_ID.get(roleId)!;
   const wrote: string[] = [];
+  const steps = roleFileSteps(dir, roleId, ctx, wrote);
+  while (!steps.next().done) continue;
+  return wrote;
+}
+
+/**
+ * writeRoleFiles with a turn of the event loop after each file: a Lead's are a dozen files, each read,
+ * compared and written, and on a loaded machine a hire held the loop 1.7 s writing them in one go (the
+ * journey's hiring, 2026-10-08). The same files.
+ */
+export async function writeRoleFilesSoon(dir: string, roleId: RoleId, ctx: PlaybookContext): Promise<string[]> {
+  const wrote: string[] = [];
+  const steps = roleFileSteps(dir, roleId, ctx, wrote);
+  while (!steps.next().done) await new Promise<void>((r) => setImmediate(r));
+  return wrote;
+}
+
+/** writeRoleFiles's work, a file at a time. */
+function* roleFileSteps(dir: string, roleId: RoleId, ctx: PlaybookContext, wrote: string[]): Generator<void> {
+  const role = ROLE_BY_ID.get(roleId)!;
   const put = (rel: string, text: string, keep = false) => {
     const file = path.join(dir, rel);
     if (keep && existsSync(file)) return;
@@ -240,7 +259,9 @@ export function writeRoleFiles(dir: string, roleId: RoleId, ctx: PlaybookContext
   };
   const text = playbook(roleId, ctx);
   put(playbookPath(roleId), text);
+  yield;
   put(playbookMirror(roleId), text);
+  yield;
   // Each subagent's definition with its standing: model swap, warnings, benched (subagent-files.ts).
   const standing = new Map((ctx.subagents ?? []).map((s) => [s.name, s]));
   // Its own subagents and those of every team it covers (shared/roster/coverage.ts).
@@ -248,9 +269,14 @@ export function writeRoleFiles(dir: string, roleId: RoleId, ctx: PlaybookContext
   for (const sub of subs) {
     const rec = standing.get(sub.id) ?? { name: sub.id, lead: roleId, state: 'active' as const, warnings: [], runs: [] };
     wrote.push(...applyStanding(dir, rec, subagentFile(sub, role, ctx.project)));
+    yield;
   }
-  for (const rec of standing.values()) if (!subs.some((s) => s.id === rec.name)) wrote.push(...applyStanding(dir, rec));
+  for (const rec of standing.values()) {
+    if (subs.some((s) => s.id === rec.name)) continue;
+    wrote.push(...applyStanding(dir, rec));
+    yield;
+  }
   put(journalPath(role.team), journalSeed(role.team), true);
+  yield;
   put(ctx.lessons, lessonsSeed(ctx.project), true);
-  return wrote;
 }

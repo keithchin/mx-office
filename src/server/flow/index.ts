@@ -45,7 +45,8 @@ const offices = new WeakMap<object, FlowEngine>();
 export function flowsOf(ctx: Pick<Ctx, 'cfg'>): FlowEngine {
   let e = offices.get(ctx.cfg);
   if (!e) {
-    e = new FlowEngine({ store: new FileStore(path.join(ctx.cfg.dataDir, 'flows')) });
+    // Checkpoints written in the background (flow/store.ts).
+    e = new FlowEngine({ store: new FileStore(path.join(ctx.cfg.dataDir, 'flows'), { background: true }) });
     auditFlows(e);
     offices.set(ctx.cfg, e);
   }

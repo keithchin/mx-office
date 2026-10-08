@@ -7,7 +7,7 @@
 // write from before it never lands over it.
 
 import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
-import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export class BackgroundFile {
@@ -46,6 +46,18 @@ export class BackgroundFile {
     }
   }
 
+  /** What the file will hold once the writes still out land (undefined when none is). */
+  pending(): string | undefined {
+    return this.due ?? (this.running ? this.latest : undefined);
+  }
+
+  /** Drops what's still to be written: a write still out doesn't land (the file is being removed). */
+  cancel() {
+    this.due = undefined;
+    this.latest = undefined;
+    this.syncs++;
+  }
+
   /** Resolves once the background writes are done (tests). */
   settled(): Promise<void> {
     return this.idle;
@@ -62,14 +74,32 @@ export class BackgroundFile {
         try {
           if (this.opts.mkdir) await mkdir(path.dirname(this.file), { recursive: true, mode: 0o700 });
           await writeFile(tmp, text, { mode: this.opts.mode ?? 0o600 });
-          // Flushed meanwhile: what's there is newer.
-          if (gen === this.syncs) await rename(tmp, this.file);
+          // Flushed or cancelled meanwhile: what's there is newer, or is to go.
+          if (gen === this.syncs) await renameRetrying(tmp, this.file);
+          else await rm(tmp, { force: true });
         } catch (err) {
           this.opts.onError?.(err);
         }
       }
     } finally {
       this.running = false;
+    }
+  }
+}
+
+/**
+ * A rename over a file something else has open for a moment (on Windows the virus scanner or the search
+ * indexer) fails with EPERM, EBUSY or EACCES: tried again a few times, a few ms apart (as flow/store.ts
+ * writeJsonAtomic does in place).
+ */
+async function renameRetrying(from: string, to: string) {
+  for (let i = 0; ; i++) {
+    try {
+      return await rename(from, to);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (i >= 5 || (code !== 'EPERM' && code !== 'EBUSY' && code !== 'EACCES')) throw err;
+      await new Promise((r) => setTimeout(r, 5 * (i + 1)));
     }
   }
 }

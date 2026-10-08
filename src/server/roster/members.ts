@@ -8,7 +8,7 @@ import { dayIn } from '../../shared/roster/schedule.js';
 import { awaitingAnswer, awaitingPmLine, isAsleepStatus, mayBench } from './bench.js';
 import type { Roster } from './index.js';
 import { readJournal } from './journal-io.js';
-import { lessonsPathIn, writeRoleFiles, type PlaybookContext } from './playbooks.js';
+import { lessonsPathIn, writeRoleFiles, writeRoleFilesSoon, type PlaybookContext } from './playbooks.js';
 import { autonomyPrompt, benchPrompt, primePrompt } from './prompts.js';
 import { stageLevel, stageOf } from './stage-autonomy.js';
 import { cleanSettings } from './store.js';
@@ -100,7 +100,7 @@ export class Members {
     // Its Playbook, its team's subagents and the journals, in the folder it works in, before its
     // session has booted far enough to read them.
     try {
-      writeRoleFiles(floor.cwdOf(r), role, this.ctxFor(floor, role));
+      await writeRoleFilesSoon(floor.cwdOf(r), role, this.ctxFor(floor, role));
     } catch (err) {
       floor.toast(`Couldn't write ${m.name}'s Playbook: ${(err as Error).message}`, 'warn');
     }

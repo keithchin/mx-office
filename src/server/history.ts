@@ -4,6 +4,7 @@ import type headless from '@xterm/headless';
 import type serialize from '@xterm/addon-serialize';
 import type { ChatLine } from '../shared/protocol.js';
 import { logicalLines, searchKey, snippet } from '../shared/search.js';
+import { BackgroundFile } from './offloop/save.js';
 
 type HeadlessTerminal = InstanceType<typeof headless.Terminal>;
 type Serializer = InstanceType<typeof serialize.SerializeAddon>;
@@ -85,28 +86,45 @@ export class ChatLog {
   }
 }
 
+/** Every scrollback store, for the office's exit: what each still has to write goes then. */
+const stores = new Set<ScrollbackStore>();
+process.once('exit', () => {
+  for (const s of stores) s.flush();
+});
+
 /** Each worker's latest terminal output, kept in .agent-office/scrollback/<worker id>.ansi across restarts. */
 export class ScrollbackStore {
   private dir: string;
+  /**
+   * Each worker's file, written in the background (offloop/save.ts): the save every 15 s wrote each busy
+   * terminal's tail synchronously, and on a loaded machine one write held the event loop for over a
+   * second (the busy office check, 2026-10-08). What's still due is written at the office's exit.
+   */
+  private out = new Map<string, BackgroundFile>();
 
   constructor(dataDir: string) {
     this.dir = path.join(dataDir, 'scrollback');
+    stores.add(this);
   }
 
   save(workerId: string, data: string) {
     const file = this.file(workerId);
     if (!file) return;
-    try {
-      mkdirSync(this.dir, { recursive: true, mode: 0o700 });
-      if (data) writeFileSync(file, data, { mode: 0o600 });
-      else rmSync(file, { force: true });
-    } catch {
-      // disk issues shouldn't take the office down
-    }
+    if (!data) return this.remove(workerId);
+    let out = this.out.get(workerId);
+    if (!out) this.out.set(workerId, (out = new BackgroundFile(file, { mkdir: true })));
+    void out.write(data);
+  }
+
+  /** Writes every save still out now (the office's exit). */
+  flush() {
+    for (const out of this.out.values()) out.flush();
   }
 
   load(workerId: string): string | undefined {
     const file = this.file(workerId);
+    const due = this.out.get(workerId)?.pending();
+    if (due !== undefined) return due;
     try {
       return file && existsSync(file) ? readFileSync(file, 'utf8') : undefined;
     } catch {
@@ -116,6 +134,8 @@ export class ScrollbackStore {
 
   remove(workerId: string) {
     const file = this.file(workerId);
+    this.out.get(workerId)?.cancel();
+    this.out.delete(workerId);
     try {
       if (file) rmSync(file, { force: true });
     } catch {
@@ -125,6 +145,7 @@ export class ScrollbackStore {
 
   /** Deletes what's kept for workers that are no longer at a desk. */
   prune(keep: Set<string>) {
+    for (const id of [...this.out.keys()]) if (!keep.has(id)) this.remove(id);
     try {
       for (const f of readdirSync(this.dir)) {
         if (f.endsWith('.ansi') && !keep.has(f.slice(0, -'.ansi'.length))) rmSync(path.join(this.dir, f), { force: true });
