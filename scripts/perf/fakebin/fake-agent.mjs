@@ -6,6 +6,10 @@
 // activity line and budget meter all see a live, busy worker.
 //
 // FAKE_MODE      live (default): a tool call every FAKE_RATE_MS, forever. turn: one short turn per prompt.
+//                cycle: like a real busy agent, turns of FAKE_WORK_MS (default 30000, give or take half) that
+//                end with a Stop, then FAKE_IDLE_MS (default 15000) idle before the next prompt, forever.
+// FAKE_BIG       1: tool results of real size (a couple of KB, every seventh about 24 KB), so the
+//                transcript grows as a real one does.
 // FAKE_RATE_MS   how often a live worker calls a tool (default 400).
 // FAKE_DIR       where transcripts go (default <tmp>/test-offices-fake-agent). Never a real ~/.claude;
 //                claude-home: ~/.claude/projects/… when ~ is a test office's folder (see below).
@@ -49,6 +53,8 @@ const token = process.env.AGENT_OFFICE_HOOK_TOKEN;
 const me = process.env.AGENT_OFFICE_WORKER_ID;
 const mode = process.env.FAKE_MODE || 'live';
 const rate = Math.max(50, +(process.env.FAKE_RATE_MS || 400));
+const big = process.env.FAKE_BIG === '1';
+const bulk = (k) => 'checked the module and its tests; nothing to change here. '.repeat(Math.ceil(k / 58)).slice(0, k);
 
 // One-shot calls (`claude -p`: the task namer, when the office's --agent is this fake): answer with an
 // empty result at once and leave, rather than staying up as a live worker would.
@@ -109,8 +115,8 @@ async function step() {
   assistant([{ type: 'tool_use', id, name, input }]);
   out(`\x1b[32m●\x1b[0m ${name}(${JSON.stringify(input).slice(0, 60)})\n  ⎿ ok ${'.'.repeat(n % 30)}\n`);
   setTimeout(() => {
-    line({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'ok', is_error: n % 23 === 0 }] } });
-    hook('PostToolUse', { tool_name: name, tool_input: input, tool_response: { stdout: 'ok' } });
+    line({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: big ? bulk(n % 7 === 0 ? 24000 : 1800) : 'ok', is_error: n % 23 === 0 }] } });
+    hook('PostToolUse', { tool_name: name, tool_input: input, tool_response: { stdout: big ? bulk(1800) : 'ok' } });
   }, Math.min(150, rate / 2));
   if (n % 9 === 0) say(`Step ${n}: checked module ${n % 37}; the tests pass. Moving on to the next one.`);
 }
@@ -193,6 +199,24 @@ await hook('SessionStart', { source: at('--resume', '-r') ? 'resume' : 'startup'
 if (mode === 'live') {
   setTimeout(() => hook('UserPromptSubmit', { prompt: 'carry on (fake)' }), 300);
   setInterval(step, rate);
+}
+if (mode === 'cycle') {
+  const work = +(process.env.FAKE_WORK_MS || 30000);
+  const idle = +(process.env.FAKE_IDLE_MS || 15000);
+  const cycle = async () => {
+    line({ type: 'user', message: { role: 'user', content: 'carry on with the next step (fake)' } });
+    await hook('UserPromptSubmit', { prompt: 'carry on with the next step (fake)' });
+    const until = Date.now() + work * (0.5 + Math.random());
+    while (Date.now() < until) {
+      await step();
+      await new Promise((r) => setTimeout(r, rate));
+    }
+    say('Done with this step (fake). Waiting for the next one.');
+    line({ type: 'system', subtype: 'turn_duration', durationMs: Math.round(work), isSidechain: false });
+    await hook('Stop', {});
+    setTimeout(cycle, idle * (0.5 + Math.random()));
+  };
+  setTimeout(cycle, 300 + Math.random() * 3000);
 }
 // turn mode: the prompt it was started with (after `--`, as the office passes it) is its first turn.
 const dd = args.indexOf('--');

@@ -160,24 +160,47 @@ function subagentFiles(transcript: string): string[] {
   }
 }
 
+export interface ScanOptions {
+  /** Read at most about this many bytes (across the session's files) in this call; the rest waits for the next. */
+  maxBytes?: number;
+  /** Hears every line of the session's own transcript (not a subagent's), parsed, as it's read. */
+  onLine?: (line: any) => void;
+}
+
 /** Reads whatever was appended to the session's transcripts. True when the totals changed. */
 export function scanTracker(t: UsageTracker): boolean {
-  if (!t.transcript) return false;
+  return scanTrackerStep(t).changed;
+}
+
+/**
+ * One step of scanTracker: at most `maxBytes` read, so a long backlog (a whole session read for the
+ * first time) can be taken a slice at a time with the event loop free in between. `done` once
+ * everything there was read.
+ */
+export function scanTrackerStep(t: UsageTracker, opts: ScanOptions = {}): { changed: boolean; done: boolean } {
+  if (!t.transcript) return { changed: false, done: true };
+  const budget = opts.maxBytes === undefined ? undefined : { left: opts.maxBytes, more: false };
   let changed = false;
   for (const file of [t.transcript, ...subagentFiles(t.transcript)]) {
+    if (budget && budget.left <= 0) {
+      budget.more = true;
+      break;
+    }
     const cur = (t.files[file] ??= { offset: 0 });
-    if (file !== t.transcript && cur.agent === undefined) cur.agent = agentTypeOf(file);
-    for (const line of readNewLines(file, cur)) {
+    const main = file === t.transcript;
+    if (!main && cur.agent === undefined) cur.agent = agentTypeOf(file);
+    for (const line of readNewLines(file, cur, budget)) {
       let obj: any;
       try {
         obj = JSON.parse(line);
       } catch {
         continue;
       }
-      if (applyLine(t, cur, obj, file === t.transcript)) changed = true;
+      if (applyLine(t, cur, obj, main)) changed = true;
+      if (main) opts.onLine?.(obj);
     }
   }
-  return changed;
+  return { changed, done: !budget?.more };
 }
 
 /** A model id as a session logs it: Claude Code's own placeholder messages ("<synthetic>") aren't one. */
@@ -226,8 +249,11 @@ function applyLine(t: UsageTracker, cur: FileCursor, line: any, main: boolean): 
 
 const CHUNK = 4 * 1024 * 1024;
 
-/** Complete lines appended since the cursor; a half-written last line waits for the next read. */
-function* readNewLines(file: string, cur: FileCursor): Generator<string> {
+/**
+ * Complete lines appended since the cursor; a half-written last line waits for the next read. With a
+ * `budget`, it stops once that many bytes were read (at a line's end) and says whether more is there.
+ */
+function* readNewLines(file: string, cur: FileCursor, budget?: { left: number; more: boolean }): Generator<string> {
   let fd: number;
   try {
     fd = openSync(file, 'r');
@@ -242,8 +268,14 @@ function* readNewLines(file: string, cur: FileCursor): Generator<string> {
       cur.lastId = undefined;
       cur.lastUsage = undefined;
     }
-    let want = CHUNK;
+    // With a budget, a slice of what is left of it (a line longer than that still grows the read until it ends).
+    const step = () => (budget ? Math.max(64 * 1024, Math.min(CHUNK, budget.left)) : CHUNK);
+    let want = step();
     while (cur.offset < size) {
+      if (budget && budget.left <= 0) {
+        budget.more = true;
+        return;
+      }
       const len = Math.min(want, size - cur.offset);
       const buf = Buffer.allocUnsafe(len);
       let got = 0;
@@ -263,7 +295,8 @@ function* readNewLines(file: string, cur: FileCursor): Generator<string> {
       }
       const text = buf.toString('utf8', 0, end);
       cur.offset += end + 1;
-      want = CHUNK;
+      if (budget) budget.left -= end + 1;
+      want = step();
       for (const line of text.split('\n')) if (line) yield line;
     }
   } finally {

@@ -29,6 +29,7 @@
 .tl-going-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
 .tl-log { max-height: 260px; overflow: auto; margin: 0; padding: 8px 10px; background: var(--code-bg); color: var(--code-ink); border-radius: var(--radius-sm); font-size: 12px; line-height: 1.35; white-space: pre-wrap; word-break: break-word; contain: content; }
 .tl-history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.tl-frames { margin: 2px 0 8px; padding-left: 22px; font: 12px/1.5 var(--mono, ui-monospace, monospace); word-break: break-all; }
 .tl-hist-btn { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; width: 100%; padding: 6px 8px; border-radius: var(--radius-sm); font-size: 13px; color: var(--ink); }
 .tl-hist-btn:hover, .tl-hist-btn:focus-visible, .tl-history li.on .tl-hist-btn { background: var(--sunken); }
 .tl-hist-btn:focus-visible { outline: 2px solid var(--accent); }

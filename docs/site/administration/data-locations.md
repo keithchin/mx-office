@@ -28,6 +28,7 @@ The office keeps its data in a `.agent-office` folder. On the Taskforce laptop t
 | `incidents/incidents.jsonl`, `incidents/settings.json` | [Incidents](../using-the-office/incidents.md): a hash-chained line per change, and the detection rules' settings |
 | `firm/firm.json`, `firm/engagements/<id>/`, `firm/reports/<id>.json` and `.md` | [The Firm](../using-the-office/the-firm.md): reviewers' models, each audit with its reviewers' isolated folders, delivered reports |
 | `analysis/runs.jsonl` | Analysed runs (the Analysis tab) |
+| `perf/profiles/` | CPU profiles of the office's own server (`.cpuprofile`, the last 10): recorded by hand on the Test Mode page or by the office itself after a returning stall ([Performance budgets](performance-budgets.md#live-warnings-in-the-real-office)) |
 | `ranking/` | Ranking history and highlights |
 | `usage.json` | Spend and token usage |
 | `chat.jsonl`, `scrollback/` | Chat and terminal history |

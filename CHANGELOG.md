@@ -4,6 +4,35 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### New
+- **The office records what its server was doing when it stalls.** When the server stalls again within
+  half an hour of a stall, the office records a CPU profile of itself (in-process, nothing to attach, at
+  most once an hour) until the next stall is caught, and notes it on the stall's incident: where the
+  profile was saved, what ran in the longest block and who called it, and the top 10 functions. Admins can
+  also record one by hand on the Test Mode page (**⏺ Record 60 s CPU profile**, under *This office's
+  server*) and download it for Chrome DevTools or VS Code. Nothing runs until one is asked for.
+- **A busy-office check in the performance guard**: six fake workers working like real ones (turns that
+  end, real-sized output, long sessions with subagents behind them) while pages poll, and the check fails
+  if the server blocks for more than 250 ms. A minute of it is part of `npm run test:perf:quick`, three
+  minutes of `npm run test:perf`. On release 18 it fails (longest block 309 ms, 18 blocks over 100 ms in
+  90 s); now the longest is about 100 ms.
+
+### Fixed
+- **The office no longer freezes for a second or more every few minutes.** Release 18 stalled for 1.6 to
+  3.2 s at a time (incident INC-12) even with every agent idle. Two causes: the office's own background
+  calls to Claude Haiku (sorting runs, project summaries, Jeff, the ranking's highlights, the task names)
+  started the `claude` program on the server's main thread, and on Windows just starting it holds that
+  thread for 0.65 s every time (several seconds right after a Claude Code update); and the run analyzer
+  re-read every session's whole transcript and all its subagents' (tens of MB) each time it recorded a
+  run, at every turn's end and every open PR's quarter-hourly look. Programs now start from a helper
+  thread, the analyzer reads only what was added since its last look, a slice at a time, and the
+  terminals' scrollback is saved one terminal at a time.
+- **A computer that slept is no longer reported as a server stall.** A gap of a minute or more in which
+  the office used almost no CPU (or the clock jumped ahead) is logged as the computer sleeping and opens
+  no incident (the 155 s "stall" on INC-12 was the PC asleep).
+
 ## 2026-10-07 · release 18 (`d07eb59`)
 
 ### New

@@ -8,7 +8,7 @@ import path from 'node:path';
 import type { QueueTask, Usage } from '../../shared/protocol.js';
 import { modelLabel, type RunOutcome, type RunRecord } from '../../shared/analysis.js';
 import { gh } from '../github.js';
-import { findTranscript, readSession, type SessionStats } from './transcript.js';
+import { findTranscript, readSessionLive, type SessionStats } from './transcript.js';
 import { scorecardOf } from './scorecard.js';
 import type { Classifier } from './classify.js';
 
@@ -154,7 +154,7 @@ export interface CollectDeps {
 export async function collectRun(floor: FloorRef, w: WorkerSnapshot, task: QueueTask | undefined, deps: CollectDeps): Promise<RunRecord> {
   const cwd = w.worktreePath ? path.resolve(floor.dir, w.worktreePath) : floor.dir;
   const transcript = w.transcript && existsSync(w.transcript) ? w.transcript : findTranscript(w.sessionId, cwd);
-  const stats = transcript ? readSession(transcript) : emptyStats();
+  const stats = transcript ? await readSessionLive(transcript) : emptyStats();
   // No transcript left to read (cleared, or another provider): the office's own tally.
   if (!stats.apiCalls && w.usage) {
     stats.apiCalls = w.usage.calls;

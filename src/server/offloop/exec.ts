@@ -186,6 +186,8 @@ export interface SpawnOffOptions {
   env?: NodeJS.ProcessEnv;
   windowsHide?: boolean;
   detached?: boolean;
+  /** Through the shell (a .cmd or .bat on Windows). */
+  shell?: boolean;
   /** Whether stdin is a pipe to write to (else ignored). */
   stdin?: boolean;
 }

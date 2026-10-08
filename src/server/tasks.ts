@@ -3,7 +3,7 @@
 // the worker's prompts and recent tool calls, told how by the 'office.namer' prompt (shared/prompts.ts).
 // Without it, the card falls back to the prompt itself.
 
-import { spawn } from 'node:child_process';
+import { spawnOff } from './offloop/exec.js';
 import { meterCliResult, withBilling } from './budget/meter.js';
 import os from 'node:os';
 import type { WorkerTask } from '../shared/protocol.js';
@@ -154,22 +154,18 @@ function run(claude: string, env: Record<string, string>, system: string, input:
       clearTimeout(timer);
       resolve(v);
     };
-    const child = spawn(claude, args, {
-      // A neutral directory, so it doesn't pick up the project's CLAUDE.md.
-      cwd: os.tmpdir(),
-      env: { ...env, MAX_THINKING_TOKENS: '0' },
-      stdio: ['pipe', 'pipe', 'ignore'],
-    });
+    // A neutral directory, so it doesn't pick up the project's CLAUDE.md. Started off the event loop
+    // (offloop/exec.ts): starting the claude binary holds the thread that asks for 0.6 s or more on Windows.
+    const child = spawnOff(claude, args, { cwd: os.tmpdir(), env: { ...env, MAX_THINKING_TOKENS: '0' }, stdin: true });
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
       finish(null);
     }, TIMEOUT_MS);
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (d: string) => (out += d));
+    child.on('stdout', (d: string) => (out += d));
     child.on('error', () => finish(null));
-    child.on('close', (code) => finish(code === 0 ? out : null));
-    child.stdin.on('error', () => {});
-    child.stdin.end(input);
+    child.on('close', (code: number | null) => finish(code === 0 ? out : null));
+    child.write(input);
+    child.end();
   });
 }
 

@@ -77,21 +77,65 @@ export function serverDetection(ms: number): Detection {
   };
 }
 
+/**
+ * A gap this long, with signs the whole machine stopped rather than the office (the process used almost
+ * no CPU through it, or the wall clock moved on further than the monotonic one), is the computer
+ * sleeping: a notice, never a stall. A blocked event loop burns CPU the whole time it's blocked.
+ */
+export const SLEEP_GAP = {
+  /** Shorter gaps are always taken at their word. */
+  minMs: 60_000,
+  /** At most this share of the gap spent on the CPU reads as a suspended machine. */
+  maxCpuShare: 0.2,
+  /** The wall clock running ahead of the monotonic one by this much is a suspend (Linux/macOS: the monotonic clock stops while asleep). */
+  clockSkewMs: 30_000,
+} as const;
+
+/** What a gap in the event loop was: `monoMs` by the monotonic clock, `wallMs` by Date.now, `cpuMs` the process's CPU time (user + system) over it. */
+export function gapKind(g: { monoMs: number; wallMs: number; cpuMs: number }): 'sleep' | 'stall' {
+  if (g.wallMs - g.monoMs > SLEEP_GAP.clockSkewMs) return 'sleep';
+  const gap = Math.max(g.monoMs, g.wallMs);
+  if (gap >= SLEEP_GAP.minMs && g.cpuMs < gap * SLEEP_GAP.maxCpuShare) return 'sleep';
+  return 'stall';
+}
+
+export interface LoopWatchOptions {
+  stallMs?: number;
+  windowMs?: number;
+  throttleMs?: number;
+  /** Every stall, throttled or not (the self-profiler counts them, office.ts). */
+  onStall?: (ms: number) => void;
+  /** A gap that was the machine asleep, not the office: logged, no incident. */
+  onSleep?: (ms: number) => void;
+  /** Clocks, for tests. */
+  clocks?: { mono: () => number; wall: () => number; cpuMs: () => number };
+}
+
+const cpuMs = () => {
+  const u = process.cpuUsage();
+  return (u.user + u.system) / 1000;
+};
+
 /** Starts watching the server's event loop; `raise` hears each stall (throttled). Returns stop. */
-export function watchEventLoop(raise: (d: Detection) => void, opts: { stallMs?: number; windowMs?: number; throttleMs?: number } = {}) {
+export function watchEventLoop(raise: (d: Detection) => void, opts: LoopWatchOptions = {}) {
   const stallMs = opts.stallMs ?? PERF_WATCH.serverStallMs;
+  const clocks = opts.clocks ?? { mono: () => performance.now(), wall: Date.now, cpuMs };
   const h = monitorEventLoopDelay({ resolution: 20 });
   h.enable();
   const allow = throttle(opts.throttleMs ?? PERF_WATCH.throttleMs);
-  let last = performance.now();
+  let last = { mono: clocks.mono(), wall: clocks.wall(), cpu: clocks.cpuMs() };
   const windowMs = opts.windowMs ?? PERF_WATCH.loopWindowMs;
   const timer = setInterval(() => {
-    const now = performance.now();
+    const now = { mono: clocks.mono(), wall: clocks.wall(), cpu: clocks.cpuMs() };
     // The histogram's longest delay, or how late this timer itself fired: whichever is worse.
-    const worst = Math.max(h.max / 1e6, now - last - windowMs);
+    const worst = Math.max(h.max / 1e6, now.mono - last.mono - windowMs);
+    const gap = { monoMs: now.mono - last.mono, wallMs: now.wall - last.wall, cpuMs: now.cpu - last.cpu };
     last = now;
     h.reset();
-    if (worst > stallMs && allow('server')) raise(serverDetection(worst));
+    if (worst <= stallMs) return;
+    if (gapKind(gap) === 'sleep') return opts.onSleep?.(Math.max(gap.monoMs, gap.wallMs));
+    opts.onStall?.(worst);
+    if (allow('server')) raise(serverDetection(worst));
   }, windowMs);
   timer.unref();
   return () => {

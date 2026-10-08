@@ -6,7 +6,7 @@
 // localhost for the MCP server, only while a project is open. The parsing and the matching are pure,
 // for the tests.
 
-import { execFile } from 'node:child_process';
+import { execFileOff } from '../offloop/exec.js';
 import http from 'node:http';
 import path from 'node:path';
 
@@ -153,7 +153,8 @@ export interface DetectDeps {
 }
 
 const run = (cmd: string, args: string[], timeout = 8000) =>
-  new Promise<string>((resolve) => execFile(cmd, args, { windowsHide: true, timeout, maxBuffer: 1 << 20 }, (err, out) => resolve(err ? '' : String(out))));
+  // Off the event loop (offloop/exec.ts): every few seconds, and a program's start can hold the thread that asks.
+  new Promise<string>((resolve) => execFileOff(cmd, args, { windowsHide: true, timeout, maxBuffer: 1 << 20 }, (err, out) => resolve(err ? '' : out)));
 
 /** Any HTTP answer (a 4xx too: an MCP server wants a POST) means it's there. */
 export function httpAnswers(url: string, timeout = 1200): Promise<boolean> {
