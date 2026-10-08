@@ -118,7 +118,8 @@ test('after a restart a run that was mid-step is interrupted, and resumes from i
     first.register(flow(true));
     first.create('pipe', { did: [] } as S, { runId: 'p1' });
     void first.start('p1'); // build never ends: the office "stops" there
-    await new Promise((r) => setImmediate(r));
+    // The engine lets the event loop turn between steps.
+    for (let i = 0; i < 10 && calls.length < 2; i++) await new Promise((r) => setImmediate(r));
     assert.deepEqual(calls, ['fetch', 'build']);
 
     // A new office reads the file.

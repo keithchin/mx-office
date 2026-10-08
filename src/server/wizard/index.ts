@@ -267,9 +267,11 @@ export class Wizard {
       },
       // The office's own Claude Code (CLAUDE_CONFIG_DIR in its environment, else ~/.claude.json), as signins.ts's base.
       trustFloor: (dir) => void trustFloor(dir, childEnv()),
-      adoptFloor: (repo, dir, by) => {
+      adoptFloor: async (repo, dir, by) => {
         const r = ctx.building.adopt(repo, dir, by);
         if (typeof r === 'string') return r;
+        // Opening the floor is a block of its own (its worker manager writes each provider's files).
+        await new Promise<void>((done) => setImmediate(done));
         const floor = ctx.floors.get(r.id) ?? ctx.openFloor(r);
         ctx.floorsChanged();
         return floor ? ref(floor) : `Couldn't open the floor at ${dir} — see the office's log`;

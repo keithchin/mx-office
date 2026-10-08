@@ -11,6 +11,10 @@ import type { Floor } from './floor.js';
 import { primeRanking } from './ranking/index.js';
 import { wizardOf } from './wizard/index.js';
 import { dayIn, DEFAULT_SCHEDULE } from '../shared/roster/schedule.js';
+import { resolveCommandSoon } from './workers/process.js';
+
+/** The programs the office looks for as its parts start (resolveCommand): looked up off the event loop first. */
+const COMMANDS = ['claude', 'gh', 'git', 'mxcli', 'psql'];
 
 export interface WarmupOptions {
   /** How long after the office starts before warming begins. */
@@ -28,7 +32,10 @@ const pause = (ms: number) => new Promise<void>((r) => setTimeout(r, ms).unref()
 /** The default warm-up for one floor (or, with none, the building's ranking). Never throws. */
 async function warmFloor(ctx: Ctx, floor: Floor | undefined): Promise<void> {
   // The standup clock's time zone, loaded now rather than at the first worker update (50–100 ms on a loaded machine).
-  if (!floor) dayIn(Date.now(), DEFAULT_SCHEDULE.timeZone);
+  if (!floor) {
+    dayIn(Date.now(), DEFAULT_SCHEDULE.timeZone);
+    await Promise.all(COMMANDS.map((c) => resolveCommandSoon(c).catch(() => undefined)));
+  }
   try {
     await primeRanking(ctx, floor?.id);
   } catch {

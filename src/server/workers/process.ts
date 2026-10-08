@@ -1,6 +1,7 @@
 // Starting things for the workers: which shell, where a command is, how to run one without
 // blocking the office, and the install's own bin/ scripts and the commands that run them.
 import { accessSync, chmodSync, constants, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { access } from 'node:fs/promises';
 import { execFile, execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,7 +9,17 @@ import { fileURLToPath } from 'node:url';
 export const WIN = process.platform === 'win32';
 
 /** A script in bin/ of the install this office runs from (src/server/workers under tsx, dist/server/server/workers built). */
+/** binScript's finds: the install doesn't move while the office runs, and each look is a few existsSync calls. */
+const scripts = new Map<string, string | undefined>();
+
 export function binScript(name: string): string | undefined {
+  if (scripts.has(name)) return scripts.get(name);
+  const found = findBinScript(name);
+  scripts.set(name, found);
+  return found;
+}
+
+function findBinScript(name: string): string | undefined {
   let dir = path.dirname(fileURLToPath(import.meta.url));
   // One level deeper than server/ itself, so five tries reach the same folders four did from there.
   for (let i = 0; i < 5; i++, dir = path.dirname(dir)) {
@@ -33,15 +44,18 @@ export function shellRun(line: string): string[] {
  * accessSync per PATH folder and extension: on a loaded Windows machine (the virus scanner) that held the
  * event loop 60–200 ms, and the analyzer, every floor's worker manager, the judge, the live apps and the
  * Firm each look for claude as they start (the journey's project making, 2026-10-08). A find is trusted
- * for a minute, then checked with one access call (still there: trusted again); a miss is kept a few
- * seconds (a CLI just installed is found soon).
+ * for a minute, then checked with one access call (still there: trusted again); a miss (mxcli or psql
+ * where they aren't installed) is answered from the last look while a new one runs off the event loop
+ * (resolveCommandSoon), so only the very first look at a command walks PATH on the loop.
  */
-const found = new Map<string, { at: number; path: string | null }>();
+const found = new Map<string, { at: number; path: string | null; looking?: boolean }>();
 const FOUND_MS = 60_000;
-const MISSED_MS = 5_000;
+const MISSED_MS = 10_000;
+const keyOf = (cmd: string) => [cmd, process.env.PATH, process.env.PATHEXT, process.env.SHELL].join('\0');
+const hasDir = (cmd: string) => cmd.includes('/') || (WIN && cmd.includes('\\'));
 
 export function resolveCommand(cmd: string): string | null {
-  const key = [cmd, process.env.PATH, process.env.PATHEXT, process.env.SHELL].join('\0');
+  const key = keyOf(cmd);
   const hit = found.get(key);
   if (hit && Date.now() - hit.at < (hit.path ? FOUND_MS : MISSED_MS)) return hit.path;
   if (hit?.path) {
@@ -52,11 +66,49 @@ export function resolveCommand(cmd: string): string | null {
     } catch {
       // gone: look again
     }
+  } else if (hit) {
+    void resolveCommandSoon(cmd);
+    return null;
   }
   const p = lookUp(cmd);
   if (found.size > 200) found.clear();
   found.set(key, { at: Date.now(), path: p });
   return p;
+}
+
+/**
+ * Looks `cmd` up off the event loop (fs/promises over PATH) into resolveCommand's cache. The warm-up does
+ * this for the commands the office looks for, so their first synchronous look is a cache hit. Where only
+ * the login shell would find it (Unix, nothing on PATH), what was known is kept.
+ */
+export async function resolveCommandSoon(cmd: string): Promise<void> {
+  const key = keyOf(cmd);
+  const had = found.get(key);
+  if (had?.looking) return;
+  if (had) had.looking = true;
+  try {
+    const exts = WIN && !path.extname(cmd) ? (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean) : [''];
+    const usable = async (p: string): Promise<string | null> => {
+      for (const ext of exts) if (await access(p + ext, constants.X_OK).then(() => true, () => false)) return p + ext;
+      return null;
+    };
+    let p: string | null = null;
+    if (hasDir(cmd)) {
+      const f = await usable(cmd);
+      p = f && path.resolve(f);
+    } else {
+      for (const dir of (process.env.PATH || '').split(path.delimiter)) if (dir && (p = await usable(path.join(dir, cmd)))) break;
+      if (!p && !(WIN && !process.env.SHELL)) {
+        // Only the login shell might know (lookUp's last resort): keep what was known.
+        if (had) had.at = Date.now();
+        return;
+      }
+    }
+    if (found.size > 200) found.clear();
+    found.set(key, { at: Date.now(), path: p });
+  } finally {
+    if (had) had.looking = false;
+  }
 }
 
 function lookUp(cmd: string): string | null {
@@ -115,7 +167,17 @@ export function shq(s: string) {
  * script in bin/ with the office's own node, and returns that directory. Rewritten on every start,
  * so after an upgrade they run the new install's scripts.
  */
+/** The data dirs whose commands this office already wrote (every floor's worker manager asks, as it opens). */
+const commandsWritten = new Map<string, string | undefined>();
+
 export function writeOfficeCommands(dataDir: string): string | undefined {
+  if (commandsWritten.has(dataDir)) return commandsWritten.get(dataDir);
+  const out = writeCommands(dataDir);
+  commandsWritten.set(dataDir, out);
+  return out;
+}
+
+function writeCommands(dataDir: string): string | undefined {
   const dir = path.join(dataDir, 'bin');
   let wrote = false;
   for (const [name, what] of [['office-queue', "Agent Office's task queue, for the board agents"], ['office-workers', "Agent Office's workers, for every worker"]]) {

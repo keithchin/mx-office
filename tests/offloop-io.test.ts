@@ -14,6 +14,7 @@ import { journalFileAsync, readJournal, readJournalSoon } from '../src/server/ro
 import { projectFacts, projectFactsAsync } from '../src/server/summary/project.js';
 import { encodeProjectDir, findTranscript, findTranscriptAsync } from '../src/server/analysis/transcript.js';
 import { journalPath } from '../src/shared/roster/roles.js';
+import { resolveCommand, resolveCommandSoon } from '../src/server/workers/process.js';
 
 const tmp = (p: string) => mkdtempSync(path.join(os.tmpdir(), p));
 
@@ -115,5 +116,24 @@ test('a session transcript is found off the loop where findTranscript finds it',
     process.env.HOME = before.HOME;
     process.env.USERPROFILE = before.USERPROFILE;
     rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('a command looked up off the loop is what resolveCommand finds, and a known miss is answered at once', async () => {
+  const dir = tmp('offloop-cmd-');
+  const before = process.env.PATH;
+  try {
+    const name = `ao-fake-${process.pid}`;
+    const file = path.join(dir, process.platform === 'win32' ? `${name}.cmd` : name);
+    writeFileSync(file, process.platform === 'win32' ? '@echo off\r\n' : '#!/bin/sh\n', { mode: 0o755 });
+    process.env.PATH = dir;
+    await resolveCommandSoon(name);
+    // As the synchronous look gives it: PATHEXT's case on Windows.
+    assert.equal(resolveCommand(name)?.toLowerCase(), file.toLowerCase());
+    await resolveCommandSoon(`${name}-missing`);
+    assert.equal(resolveCommand(`${name}-missing`), null);
+  } finally {
+    process.env.PATH = before;
+    rmSync(dir, { recursive: true, force: true });
   }
 });
