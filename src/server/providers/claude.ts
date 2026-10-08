@@ -16,6 +16,7 @@ import { studioGuardHook } from '../studio/guard.js';
 import { worktreeGuardHook } from '../worktree-guard.js';
 import type { WorkerHandle } from '../workers/types.js';
 import { truncate } from '../workers/util.js';
+import { trustFloor } from '../claude-trust.js';
 import type { ProviderAdapter } from './types.js';
 
 /**
@@ -32,6 +33,8 @@ const SETUP_HINT = 'Waiting on a setup prompt (trust / login) — open the termi
 const LOGIN_HINT = "Claude isn't signed in on this machine — open the terminal and type /login";
 
 interface ClaudeSetup {
+  /** The floor's checkout, trusted in the Claude config each worker starts with (claude-trust.ts). */
+  floorDir: string;
   /** Its --settings: the office's hooks. */
   settings: string;
   /** Its --mcp-config: the office's MCP server. */
@@ -247,7 +250,8 @@ export const claude: ProviderAdapter<undefined, ClaudeSetup> = {
   id: 'claude',
   scrubEnv: ['CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'CLAUDE_CODE_SSE_PORT', 'CLAUDE_CODE_EXECPATH', 'CLAUDE_PID', 'CLAUDE_EFFORT'],
   scrubPrefixes: ['CLAUDE_CODE_SESSION', 'CLAUDE_CODE_CHILD', 'CLAUDE_CODE_MESSAGING'],
-  prepare: ({ dataDir, mcpScript }) => ({
+  prepare: ({ dir, dataDir, mcpScript }) => ({
+    floorDir: dir,
     settings: writeHookSettings(dataDir),
     mcp: mcpScript ? writeClaudeMcpConfig(dataDir, mcpScript) : undefined,
   }),
@@ -266,7 +270,9 @@ export const claude: ProviderAdapter<undefined, ClaudeSetup> = {
     if (resumeSessionId) args.push('--resume', resumeSessionId);
     // `--` so a prompt like "- fix login" is never parsed as a CLI option.
     if (prompt) args.push('--', prompt);
-    return { args };
+    // No "Do you trust the files in this folder?" on the floor's agents: the office manages this floor, so it
+    // marks it trusted in the config this one starts with (the office's, or its account's), which covers its worktrees.
+    return { args, finishEnv: (env) => void trustFloor(setup.floorDir, env) };
   },
   signIn: 'claude',
   // SessionStart fires as soon as Claude can take input (after the project's own SessionStart hooks,

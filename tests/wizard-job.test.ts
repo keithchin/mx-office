@@ -186,6 +186,7 @@ test('offline setup: a local bare repository, cloned, scaffold answers written, 
     const projects = path.join(dir, 'projects');
     const cfg: WizardConfig = { toolkitDir: dir, bash: 'bash', mendixDir: 'C:\\Mendix', org: 'Test-Org', adminTokenFile: path.join(dir, 'none'), offlineDir: path.join(dir, 'github'), python: 'C:\\py\\python.exe' };
     let adopted: string | undefined;
+    const trusted: string[] = [];
     const deps: SetupDeps = {
       cfg,
       env: { ...process.env, GIT_AUTHOR_NAME: 'Probe', GIT_AUTHOR_EMAIL: 'p@x', GIT_COMMITTER_NAME: 'Probe', GIT_COMMITTER_EMAIL: 'p@x' },
@@ -193,6 +194,7 @@ test('offline setup: a local bare repository, cloned, scaffold answers written, 
       floorOf: () => undefined,
       addFloor: async () => 'not offline',
       adoptFloor: (_repo, d) => ((adopted = d), { id: 'demo-app', dir: d }),
+      trustFloor: (d) => trusted.push(d),
       queue: () => 'should not queue offline',
       hired: () => false,
       known: () => false,
@@ -215,6 +217,9 @@ test('offline setup: a local bare repository, cloned, scaffold answers written, 
     const repoDir = job.dir!;
     const git = (...args: string[]) => execFileSync('git', args, { cwd: repoDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
     assert.equal(git('remote', 'get-url', 'origin'), 'https://github.com/Test-Org/demo-app.git', 'origin reads as GitHub, for the floor');
+    assert.deepEqual(trusted, [repoDir], "the new floor is trusted in the office's Claude Code config");
+    // A Mendix app's npm packages pass 260 characters inside a worker's worktree (longpaths.ts).
+    if (process.platform === 'win32') assert.equal(git('config', '--local', 'core.longpaths'), 'true');
     assert.equal(readFileSync(path.join(repoDir, '.claude', 'toolkit.env'), 'utf8').includes('MXBUILD_PATH=C:\\Mendix'), true);
     const intake = readFileSync(path.join(repoDir, 'intake.md'), 'utf8');
     assert.match(intake, /Answered \(CONFIRMED\): greenfield/);

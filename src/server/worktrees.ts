@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import type { LostBranch, WorktreeState } from '../shared/protocol.js';
 import { commonDirOf, headBranch, headSha, orGit, originUrl, refSha } from './gitfiles.js';
 import { execFileOffP } from './offloop/exec.js';
+import { ensureLongPaths } from './longpaths.js';
 
 export type { WorktreeCleanup, WorktreeState } from '../shared/protocol.js';
 
@@ -69,6 +70,8 @@ export class Worktrees {
       const { base, note } = await this.startPoint(from);
       const rel = path.join(WORKTREES_DIR, slug, sub ?? '');
       const branch = `${BRANCH_PREFIX}${slug}`;
+      // A Mendix app's npm packages go deeper than Windows' 260 characters inside a worktree (longpaths.ts).
+      await ensureLongPaths(this.dir);
       // Off the event loop: checking a big project out takes seconds (offloop/exec.ts).
       await this.git(['worktree', 'add', '-b', branch, path.resolve(root, rel), base]);
       return { path: rel, branch, base, from, note };
@@ -220,6 +223,7 @@ export class Worktrees {
     try {
       // Git still lists the deleted folder, and won't check its branch out anywhere else while it does.
       await this.git(['worktree', 'prune']);
+      await ensureLongPaths(this.dir);
       const from = this.branchState(wt.branch);
       if (from === 'here') await this.git(['worktree', 'add', abs, wt.branch]);
       else if (from === 'origin') await this.git(['worktree', 'add', '-b', wt.branch, abs, `refs/remotes/origin/${wt.branch}`]);

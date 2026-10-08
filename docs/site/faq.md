@@ -54,7 +54,7 @@ The usual reasons:
 
 - **It finished its turn.** It shows as ✅ *finished, not looked at yet* in Needs you. Open it. (A turn the office started itself, or a team member's at autonomy 3 and up, finishes [quietly](concepts/workers-and-worktrees.md#quiet-turns): no Needs you item, just its card.)
 - **It's asking you something.** 🙋 in Needs you. Answer in its terminal.
-- **It's waiting on a setup prompt** (*trust this folder*). Open its terminal and accept once.
+- **It's waiting on a setup prompt** (*trust this folder*). Open its terminal and accept once. The office marks the floors it manages trusted by itself, so a new project's agents shouldn't ask (see [Agents and GitHub](troubleshooting/agents-and-github.md#an-agent-waits-on-a-setup-prompt-trust--login)).
 - **The office restarted.** On Windows that stops all agents. The ones cut off mid-turn resume when the office comes back; the rest stay asleep (💤) until prompted, or until you press **R** at their desk.
 - **It was benched.** Hire it again from the Org chart.
 

@@ -35,6 +35,23 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   (🔁 Restart safely without it, Ctrl+C) or vanishes and doesn't answer, open pages now say **The office
   has stopped. Start it again with start-office.ps1**. During a looping restart they say **Restarting…
   reconnecting**. Either way, they reload by themselves once the office is back.
+- **A new Mendix project's team can be hired on Windows.** The wizard's *Hire the project team* step failed
+  with `Could not create a git worktree: … Filename too long`: a Mendix app's `javascriptsource` carries npm
+  packages with deep `node_modules` folders, and inside a worker's worktree those paths pass Windows' 260
+  characters. The office now sets `core.longpaths true` in the project's own git config on Windows: on the
+  wizard's clone, and before it makes any worker's worktree (read from the config file, so a hire costs no
+  extra git run). Floors from before this get it at their next hire.
+- **No more "Do you trust the files in this folder?" on a new floor.** Every agent's terminal on a new
+  project stopped on Claude Code's trust prompt until someone clicked each one. The office now marks the
+  floors it manages trusted itself: the wizard's new floor in the office's own Claude Code config, and each
+  floor in the config a Claude worker starts with (the office's, or the hiring account's own sign-in). The
+  floor's folder covers every worktree under it. Only that one entry is written, never when it's already
+  there, and a config file it can't read is left alone; test offices never touch a real config.
+- **Busy offices no longer stall on reading agents' sessions.** With six busy workers the server blocked for
+  up to 1.3 s at a time while it read their transcripts (each session and every subagent's, for every worker
+  every 10 s), which failed the busy-office check in `npm run test:perf:quick`. Those reads now run off the
+  server's main thread, a file that hasn't grown isn't opened at all, and what was read is taken half a MB
+  at a time with the server free in between.
 
 ## 2026-10-08 · release 20 (`86279d8`)
 

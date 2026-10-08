@@ -89,6 +89,9 @@ export interface Worker {
   /** Where the session's tokens and cost are read from (see usage.ts). */
   tracker: UsageTracker;
   scanTimer?: NodeJS.Timeout;
+  /** A scan of its transcripts is out (usage-async.ts); `rescan` when another was asked for meanwhile. */
+  scanning?: boolean;
+  rescan?: boolean;
   /** Its terminal in the host as of the last save, and how it was doing, to pick back up after a restart. */
   saved?: { ptyId: string; status: WorkerStatus; acked: boolean; waitingSince?: number };
   /** Its process went away mid-turn with the office or the terminal host: its next start carries on (carryOnPrompt). */

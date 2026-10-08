@@ -8,9 +8,19 @@ weight: 1
 
 **Symptom:** the agent shows as waiting, and its terminal asks whether to *trust this folder*, or to log in.
 
-**Fix:** open its terminal and answer the prompt once. Claude Code asks this the first time it runs in a new folder (a new worktree).
+**Fix:** open its terminal and answer the prompt once.
+
+The office trusts the projects it manages by itself, so this should be rare: when the new-project wizard clones a floor it marks the folder trusted in the office's own Claude Code config (`~/.claude.json`, or `<CLAUDE_CONFIG_DIR>/.claude.json` when the office runs with `CLAUDE_CONFIG_DIR`), and before every Claude worker starts it marks the floor trusted in the config that worker uses (the office's, or the hiring account's own under *Your sign-ins*). Claude Code looks a worktree's trust up by the project it belongs to, so the floor's folder covers every worker's worktree. Only the `hasTrustDialogAccepted` entry for that floor is written (nothing else in the file changes, and nothing is written when it's already there); a config file that isn't valid JSON is left alone, and the prompt shows as before. Test offices never touch a real config. If it still asks, the floor is outside what the office manages (a folder you opened by hand), or the config couldn't be read.
 
 A Claude worker is only flagged when the prompt is actually on its screen. A project with a slow `SessionStart` hook (a toolkit project's `mxcli init --sync-skills` and `mxcli run --setup`) just shows the worker as starting for longer, up to 5 minutes before its desk is let go to idle; and once its session is up, the *Waiting on a setup prompt* line goes away. Other agents (Codex, Grok, Muse, Pi) can't be read like that, so they're still flagged when they haven't said they're up 12 seconds after starting.
+
+## Hiring fails with "Filename too long"
+
+**Symptom:** hiring an agent (or the wizard's *Hire the project team* step) fails with `Could not create a git worktree: … Filename too long`.
+
+**Cause:** a Mendix app's `javascriptsource` holds npm packages with deep `node_modules` folders; inside a worker's worktree under `<floor>/.agent-office/worktrees/` those paths pass Windows' 260 characters.
+
+**Fix:** none needed any more: the office sets `core.longpaths true` in the project's own git config on Windows when the wizard clones it, and before it makes any worker's worktree. On an older office, run `git config core.longpaths true` in the floor's folder once.
 
 ## A Haiku agent keeps asking permission
 
