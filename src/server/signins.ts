@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { SignInKind, SignInState, SignInsState } from '../shared/protocol.js';
 import { spawnTerminal, type Pty } from './ptys.js';
+import { claudeConfigFile, trustKey, trusts } from './claude-trust.js';
 
 /*
  * Everyone's own Claude and GitHub
@@ -582,16 +583,15 @@ export class SignIns {
   private trust(configDir: string, dirs: string[]) {
     let office: any;
     try {
-      const base = this.base();
-      office = JSON.parse(readFileSync(base.CLAUDE_CONFIG_DIR ? path.join(base.CLAUDE_CONFIG_DIR, '.claude.json') : path.join(os.homedir(), '.claude.json'), 'utf8'));
+      office = JSON.parse(readFileSync(claudeConfigFile(this.base()), 'utf8'));
     } catch {
       return;
     }
-    const trusted = (d: string) => office?.projects?.[d]?.hasTrustDialogAccepted === true;
-    if (!dirs.some(trusted)) return;
+    // A floor's checkout trusted covers the worktrees under it (claude-trust.ts).
+    if (!dirs.some((d) => trusts(office, d, { ancestors: true }))) return;
     this.seed(configDir, (c) => {
       c.projects ??= {};
-      for (const d of dirs) c.projects[d] = { ...c.projects[d], hasTrustDialogAccepted: true };
+      for (const k of dirs.map((d) => trustKey(d))) c.projects[k] = { ...c.projects[k], hasTrustDialogAccepted: true };
     });
   }
 

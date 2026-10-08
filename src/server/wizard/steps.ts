@@ -52,6 +52,8 @@ export interface SetupDeps {
   applyBudget?(floor: string, choice: BudgetChoice, by: string): string[];
   /** Sets the floor's team shape and its coverage (roster/coverage.ts), before the team is hired. */
   setShape?(floor: string, shape: TeamShape, by: string): void;
+  /** Marks the floor's folder trusted in the office's own Claude Code config (claude-trust.ts), so its agents start without the trust prompt. */
+  trustFloor?(dir: string): void;
   /** The office's environment (tests pass their own). */
   env?: NodeJS.ProcessEnv;
   /** Runs a command (tests pass a fake for the Mendix tools); runCommand when not given. */
@@ -155,9 +157,12 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         job.dir = f.dir;
         return { status: 'done' as const, detail };
       };
-      // The floor's repository takes long paths (a Mendix app's npm packages, longpaths.ts).
+      // The floor's repository takes long paths (a Mendix app's npm packages, longpaths.ts), and the office's Claude Code trusts the floor.
       const floorReady = async <T>(r: T) => {
-        if (job.dir) await ensureLongPaths(job.dir);
+        if (job.dir) {
+          await ensureLongPaths(job.dir);
+          deps.trustFloor?.(job.dir);
+        }
         return r;
       };
       if (known) return await floorReady({ ...settle(known, ''), status: 'skipped', detail: `already a floor (${known.dir})` });

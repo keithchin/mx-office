@@ -30,6 +30,8 @@ import { withFloorToolkitEnv } from '../toolkit-env.js';
 import { useGateLock } from '../worktree-sweep/index.js';
 import { bashPath, runCommand } from './run.js';
 import { setupSteps, type FloorRef, type SetupDeps } from './steps.js';
+import { trustFloor } from '../claude-trust.js';
+import { childEnv } from '../workers/env.js';
 
 /** What an edit writes again: the answers and decisions, and the commit that carries them. */
 const EDIT_STEPS: StepId[] = ['intake', 'decisions', 'settings', 'commit'];
@@ -263,6 +265,8 @@ export class Wizard {
         const floor = ctx.openFloor(r);
         return floor ? ref(floor) : `Cloned ${repo}, but couldn't open its floor — see the office's log`;
       },
+      // The office's own Claude Code (CLAUDE_CONFIG_DIR in its environment, else ~/.claude.json), as signins.ts's base.
+      trustFloor: (dir) => void trustFloor(dir, childEnv()),
       adoptFloor: (repo, dir, by) => {
         const r = ctx.building.adopt(repo, dir, by);
         if (typeof r === 'string') return r;
