@@ -4,10 +4,10 @@
 // under --root (which must be under scratch/test-offices or a test-office… folder), runs in test mode
 // with the fake agent only, and is removed after (--keep leaves it).
 //
-//   node scripts/perf/run.mjs --suite <unit|pages|journey|command-center|perf-quick> --root <test-offices dir>
+//   node scripts/perf/run.mjs --suite <unit|pages|journey|command-center|perf-quick|busy> --root <test-offices dir>
 //     --out <run dir> --id <run id> [--soak <s>] [--scale <n>] [--only a,b] [--quick] [--keep]
 //
-// --quick (and the perf-quick suite, which is the quick pages run followed by the journey) opens the
+// --quick (and the perf-quick suite: the quick pages run, then the journey, then a minute of the busy office) opens the
 // main views only, each for a 5 s soak, and switches projects three times: a few minutes instead of
 // half an hour. The unit suite is `npm test` itself (scripts/test.mjs).
 //
@@ -61,7 +61,7 @@ function node(args, { env = {}, quiet = false, timeoutMs = 30 * 60 * 1000 } = {}
   });
 }
 
-const VALID = ['unit', 'pages', 'journey', 'command-center', 'perf-quick'];
+const VALID = ['unit', 'pages', 'journey', 'command-center', 'perf-quick', 'busy'];
 const quick = process.argv.includes('--quick') || suite === 'perf-quick';
 /** The views a quick run opens: one of each kind of page, and the ones that were slowest before. */
 const QUICK_VIEWS = ['cc-chat', 'board', 'org', 'workers', 'budget', 'audit', 'home-projects', 'pixel', 'phone', 'switch-1d-board', 'switch-1d-command'];
@@ -158,8 +158,12 @@ async function runSuite() {
       const { runJourney, journeySummary } = await import('./journey.mjs');
       const j = await runJourney({ root: `${officeRoot}-journey`, outDir, onProgress: progress });
       if (fs.existsSync(`${officeRoot}-journey`) && !keep) removeTestDir(`${officeRoot}-journey`);
-      const failures = [...(pages.failures ?? []), ...(j.steps ?? []).filter((s) => !s.ok).map((s) => `${s.name}: ${s.detail ?? ''}`), ...(j.error ? [`journey: ${j.error}`] : [])];
-      return { ...pages, steps: j.steps, ok: pages.ok && j.ok, failures, summary: `${pages.summary}\n${journeySummary(j)}` };
+      // Then the busy office, a minute of live workers, in one more of its own.
+      const { runBusy, busySummary } = await import('./busy.mjs');
+      const b = await runBusy({ root: `${officeRoot}-busy`, outDir, seconds: Number(arg('seconds', '60')), onProgress: progress });
+      if (fs.existsSync(`${officeRoot}-busy`) && !keep) removeTestDir(`${officeRoot}-busy`);
+      const failures = [...(pages.failures ?? []), ...(j.steps ?? []).filter((s) => !s.ok).map((s) => `${s.name}: ${s.detail ?? ''}`), ...(j.error ? [`journey: ${j.error}`] : []), ...(b.failures ?? []).map((x) => `busy office: ${x}`)];
+      return { ...pages, steps: j.steps, busy: b, ok: pages.ok && j.ok && b.ok, failures, summary: `${pages.summary}\n${journeySummary(j)}\n${busySummary(b)}` };
     });
   }
   if (suite === 'command-center') {
@@ -174,6 +178,11 @@ async function runSuite() {
       progress({ done: 2, of: 2, label: 'done' });
       return { ok: failures.length === 0, failures, officeDir: officeRoot, counts: { pass: 2 - failures.length, fail: failures.length }, summary: `# Command Center check: ${failures.length ? 'FAIL' : 'pass'}\n\n${failures.map((f) => `- ${f}`).join('\n')}\n` };
     });
+  }
+  if (suite === 'busy') {
+    const { runBusy, busySummary } = await import('./busy.mjs');
+    const res = await runBusy({ root: officeRoot, outDir, seconds: Number(arg('seconds', '180')), onProgress: progress });
+    return { ...res, officeDir: officeRoot, counts: { pass: res.ok ? 1 : 0, fail: res.ok ? 0 : 1 }, summary: busySummary(res) };
   }
   if (suite === 'journey') {
     const { runJourney, journeySummary } = await import('./journey.mjs');
