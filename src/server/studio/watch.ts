@@ -7,7 +7,7 @@
 // A lock with no Studio Pro running is a stale lock: shown, never enforced. What changed is kept in
 // the floor's data folder (.agent-office/studio-mode.json), so a restart picks up where it was.
 
-import { execFile } from 'node:child_process';
+import { execFileOff } from '../offloop/exec.js';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { AuditInput } from '../../shared/audit.js';
@@ -238,7 +238,7 @@ export class StudioWatch {
 
 const gitStatus = (dir: string) =>
   new Promise<string>((resolve, reject) =>
-    execFile('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: dir, windowsHide: true, timeout: 15000, maxBuffer: 8 << 20 }, (err, out) => (err ? reject(err) : resolve(String(out)))),
+    execFileOff('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: dir, windowsHide: true, timeout: 15000, maxBuffer: 8 << 20 }, (err, out) => (err ? reject(err) : resolve(out))),
   );
 
 /** This machine's. */

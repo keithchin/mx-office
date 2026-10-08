@@ -3,7 +3,7 @@
 // time, a few failures in a row pause it for a while, and there's a cap per hour, so a bug elsewhere
 // can never turn it into a loop that spends money. Everything that uses it has a fallback without it.
 
-import { spawn } from 'node:child_process';
+import { spawnOff, type OffChild } from '../offloop/exec.js';
 import os from 'node:os';
 import { meterCliResult } from '../budget/meter.js';
 import { officeCliRefused } from '../testmode.js';
@@ -80,10 +80,12 @@ function run(claude: string, env: Record<string, string>, system: string, input:
       clearTimeout(timer);
       resolve(v);
     };
-    let child;
+    let child: OffChild;
     try {
-      // A neutral directory, so it doesn't pick up a project's CLAUDE.md.
-      child = spawn(claude, args, { cwd: os.tmpdir(), env: { ...env, MAX_THINKING_TOKENS: '0' }, stdio: ['pipe', 'pipe', 'ignore'] });
+      // A neutral directory, so it doesn't pick up a project's CLAUDE.md. Started off the event loop
+      // (offloop/exec.ts): starting the claude binary holds the thread that asks for 0.6 s or more on
+      // Windows, and the analyzer, the summaries and Jeff ask often (the stall pass, 2026-10-08).
+      child = spawnOff(claude, args, { cwd: os.tmpdir(), env: { ...env, MAX_THINKING_TOKENS: '0' }, stdin: true });
     } catch {
       return resolve(null);
     }
@@ -91,12 +93,11 @@ function run(claude: string, env: Record<string, string>, system: string, input:
       child.kill('SIGKILL');
       finish(null);
     }, TIMEOUT_MS);
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (d: string) => (out += d));
+    child.on('stdout', (d: string) => (out += d));
     child.on('error', () => finish(null));
-    child.on('close', (code) => finish(code === 0 ? out : null));
-    child.stdin.on('error', () => {});
-    child.stdin.end(input);
+    child.on('close', (code: number | null) => finish(code === 0 ? out : null));
+    child.write(input);
+    child.end();
   });
 }
 

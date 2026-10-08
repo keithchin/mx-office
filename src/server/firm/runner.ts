@@ -4,7 +4,8 @@
 // (priced per message from the office's price table, then snapped to Claude Code's own total at the
 // end), which is what the engagement's budget is held to. The tests use a fake runner instead.
 
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import { spawnOff, type OffChild } from '../offloop/exec.js';
 import { usageOfMessage } from '../usage.js';
 import { officeCliRefused } from '../testmode.js';
 
@@ -96,10 +97,11 @@ export class ClaudeHeadlessRunner implements ReviewerRunner {
       queueMicrotask(() => ev.exit(1, this.claude ? 'Test mode: the office does not run the real Claude Code for reviewers' : "Claude Code isn't installed where the office can find it"));
       return { stop() {} };
     }
-    let child: ChildProcess;
+    let child: OffChild;
     const win = process.platform === 'win32' && /\.(cmd|bat)$/i.test(this.claude);
     try {
-      child = spawn(this.claude, claudeArgs(spec), { cwd: spec.cwd, env: spec.env, windowsHide: true, shell: win, stdio: ['pipe', 'pipe', 'pipe'] });
+      // Off the event loop (offloop/exec.ts): starting claude holds the thread that asks for 0.6 s or more on Windows.
+      child = spawnOff(this.claude, claudeArgs(spec), { cwd: spec.cwd, env: spec.env, windowsHide: true, shell: win, stdin: true });
     } catch (err) {
       queueMicrotask(() => ev.exit(1, (err as Error).message));
       return { stop() {} };
@@ -107,7 +109,7 @@ export class ClaudeHeadlessRunner implements ReviewerRunner {
     const seen = { ids: new Set<string>(), usd: 0 };
     let buf = '';
     let err = '';
-    child.stdout?.setEncoding('utf8').on('data', (d: string) => {
+    child.on('stdout', (d: string) => {
       buf += d;
       let i;
       while ((i = buf.indexOf('\n')) >= 0) {
@@ -116,13 +118,14 @@ export class ClaudeHeadlessRunner implements ReviewerRunner {
         if (line) readStreamLine(line, seen, ev);
       }
     });
-    child.stderr?.setEncoding('utf8').on('data', (d: string) => (err = (err + d).slice(-2000)));
-    child.on('error', (e) => (err = e.message));
-    child.on('close', (code) => {
+    child.on('stderr', (d: string) => (err = (err + d).slice(-2000)));
+    child.on('error', (e: Error) => (err = e.message));
+    child.on('close', (code: number | null) => {
       if (buf.trim()) readStreamLine(buf.trim(), seen, ev);
       ev.exit(code, code ? err.trim().split('\n').slice(-2).join(' ') || `claude exited with ${code}` : undefined);
     });
-    child.stdin?.end(spec.prompt);
+    child.write(spec.prompt);
+    child.end();
     return {
       stop() {
         try {
