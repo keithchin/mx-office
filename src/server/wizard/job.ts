@@ -9,6 +9,7 @@ import { readFileSync, readdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import { interviewModeOf, SETUP_STEPS, type JobView, type ProjectPlan, type ProjectRole, type StepId, type StepStatus } from '../../shared/wizard.js';
 import { FileStore, FlowEngine, transientError, type RetryPolicy, type RunRecord, type RunStatus, type StepCtx } from '../flow/index.js';
+import { runningCommands } from './run.js';
 
 export interface JobState {
   id: string;
@@ -53,6 +54,17 @@ export const SETUP_FLOW = 'new-project';
 const SETUP_FLOW_VERSION = 1;
 
 const LOG_KEPT = 1500;
+/**
+ * A step that has said nothing for this long says where it is: the commands it has running and for how
+ * long, or that none is (it waits on something in the office). A setup must never just sit there.
+ */
+export const STEP_QUIET_MS = 30_000;
+
+/** What a quiet step is waiting on, from the commands running now (run.ts). */
+export function waitingOn(now: number, commands: Iterable<{ line: string; since: number; started: boolean }> = runningCommands.values()): string {
+  const list = [...commands].map((c) => `${c.line} (${c.started ? 'running' : 'starting'} ${Math.round((now - c.since) / 1000)} s)`);
+  return list.length ? `waiting on ${list.join('; ')}` : 'no command running: waiting on the office';
+}
 
 /** The steps that talk to GitHub or download something: a dropped connection or a rate limit is tried again, twice. */
 const NETWORK: RetryPolicy = { maxAttempts: 3, baseMs: 3000, maxMs: 30_000, retryOn: transientError };
@@ -120,6 +132,8 @@ export class JobBook {
   readonly engine: FlowEngine;
   /** The step implementations of each running job (given to run()). */
   private impls = new Map<string, Record<StepId, StepImpl>>();
+  /** How long a step may say nothing before it says what it waits on (STEP_QUIET_MS; the tests shorten it). */
+  quietMs = STEP_QUIET_MS;
 
   constructor(
     private dir: string,
@@ -236,9 +250,24 @@ export class JobBook {
     this.log(job, `▶ ${label}${ctx.attempt > 1 ? ` (try ${ctx.attempt} of ${ctx.maxAttempts})` : ''}`);
     this.save(job);
     let throttle = 0;
+    let heard = Date.now();
+    let noted = 0;
+    // Quiet for STEP_QUIET_MS: it says what it waits on, in its log and its line, and again every STEP_QUIET_MS.
+    const watch = setInterval(() => {
+      const now = Date.now();
+      if (now - heard < this.quietMs || now - noted < this.quietMs) return;
+      noted = now;
+      const what = waitingOn(now);
+      job.steps[id] = { status: 'running', detail: `no progress for ${Math.round((now - heard) / 1000)} s: ${what}` };
+      this.log(job, `⏳ ${label}: no progress for ${Math.round((now - heard) / 1000)} s, ${what}`);
+      console.warn(`agent-office: setup ${job.id}: ${label} has made no progress for ${Math.round((now - heard) / 1000)} s, ${what}`);
+      job.updatedAt = now;
+    }, Math.min(this.quietMs, 5_000));
+    watch.unref?.();
     // Long steps note the time now and then, so a browser polling sees their output.
     const io: StepIO = {
       log: (line) => {
+        heard = Date.now();
         this.log(job, line);
         if (Date.now() - throttle > 1000) {
           throttle = Date.now();
@@ -250,11 +279,13 @@ export class JobBook {
     try {
       r = await impl(job, io);
     } catch (err) {
+      clearInterval(watch);
       const why = this.redact((err as Error).message || String(err));
       job.steps[id] = { status: 'failed', detail: why };
       this.log(job, `✗ ${label}: ${why}`);
       throw new Error(why);
     }
+    clearInterval(watch);
     const detail = r.detail ? this.redact(r.detail) : undefined;
     job.steps[id] = { status: r.status, detail };
     this.log(job, `${r.status === 'done' ? '✓' : '↷'} ${label}${detail ? ` — ${detail}` : ''}`);

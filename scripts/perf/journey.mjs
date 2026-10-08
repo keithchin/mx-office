@@ -187,7 +187,10 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
           const j = await api('GET', `/api/wizard/job?id=${job.id}`);
           if (j.status === 'failed') throw Object.assign(new Error(`setup failed: ${j.steps.filter((s) => s.status === 'failed').map((s) => `${s.label}: ${s.detail}`).join('; ')}`), { fatal: true });
           return j.status === 'done' && j;
-        }, { ms: 180000, every: 1000, what: 'the setup to finish' }).catch((e) => {
+        }, { ms: 180000, every: 1000, what: 'the setup to finish' }).catch(async (e) => {
+          // Where it stood: each step's status and the job's last lines, so a hang says where.
+          const j = await api('GET', `/api/wizard/job?id=${job.id}`).catch(() => undefined);
+          if (j) e.message += `; status ${j.status}, steps ${j.steps.map((x) => `${x.id}:${x.status}`).join(' ')}; last lines: ${j.log.slice(-6).join(' | ').slice(0, 900)}`;
           throw e;
         });
         if (done.floor !== FLOOR) throw new Error(`the setup made floor ${done.floor}, not ${FLOOR}`);

@@ -5,7 +5,9 @@ import { existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync
 import os from 'node:os';
 import path from 'node:path';
 import { SETUP_STEPS, type ProjectPlan, type StepId } from '../src/shared/wizard.js';
-import { JobBook, newJob, type StepImpl } from '../src/server/wizard/job.js';
+import { JobBook, newJob, waitingOn, type StepImpl } from '../src/server/wizard/job.js';
+import { runCommand, runningCommands } from '../src/server/wizard/run.js';
+import { EventEmitter } from 'node:events';
 import { adminGhEnv, adminTokenConfigured, redactor } from '../src/server/wizard/admin-token.js';
 import { toolkitEnv, type WizardConfig } from '../src/server/wizard/config.js';
 import { setupSteps, type SetupDeps } from '../src/server/wizard/steps.js';
@@ -255,4 +257,54 @@ test('offline setup: a local bare repository, cloned, scaffold answers written, 
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('a step that makes no progress says which step and what it waits on, and never just sits there', async () => {
+  const dir = tmp('quiet');
+  try {
+    const book = new JobBook(dir);
+    book.quietMs = 40;
+    const job = newJob(plan(), 'Probe');
+    book.add(job);
+    const calls: StepId[] = [];
+    const steps = fakeSteps(calls);
+    let release!: () => void;
+    // The clone step starts git and then waits on it, saying nothing.
+    steps.clone = async () => {
+      runningCommands.set(-1, { line: 'git clone https://example.invalid/x.git', since: Date.now(), started: true });
+      await new Promise<void>((r) => (release = r));
+      runningCommands.delete(-1);
+      return { status: 'done' };
+    };
+    const done = book.run(job, steps);
+    for (let i = 0; i < 100 && !String(job.steps.clone.detail ?? '').includes('no progress'); i++) await new Promise((r) => setTimeout(r, 20));
+    assert.equal(job.steps.clone.status, 'running');
+    assert.match(job.steps.clone.detail ?? '', /no progress for \d+ s: waiting on git clone https:\/\/example\.invalid\/x\.git \(running \d+ s\)/);
+    assert.ok(job.log.some((l) => /⏳ .*no progress/.test(l)), 'in its log too');
+    release();
+    await done;
+    assert.equal(job.status, 'done');
+    assert.equal(job.steps.clone.detail, undefined, 'its line is its result once it ends');
+    assert.equal(waitingOn(Date.now(), []), 'no command running: waiting on the office');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a command whose process is gone but whose end never comes through fails the step instead of hanging it", async () => {
+  // What the setup sat on for minutes (1 run in 30, release 22 too): mx wrote the app and went, and its
+  // end never reached "Create the Mendix app".
+  const child = Object.assign(new EventEmitter(), { pid: 4242, closed: false, exitCode: null, signalCode: null, write() {}, end() {}, kill() {} });
+  let isAlive = true;
+  const started = Date.now();
+  const run = runCommand('mx', ['create-project'], { cwd: os.tmpdir(), timeoutMs: 60_000 }, { spawn: (() => child) as never, alive: () => isAlive, checkMs: 10, graceMs: 50 });
+  queueMicrotask(() => child.emit('spawn'));
+  await new Promise((r) => setTimeout(r, 40));
+  assert.ok(runningCommands.size >= 1, 'running while its process is there');
+  isAlive = false;
+  const err = await Promise.race([run.then(() => undefined, (e: Error) => e), new Promise<string>((r) => setTimeout(() => r('still waiting'), 3_000))]);
+  assert.ok(err instanceof Error, `it ${String(err)}`);
+  assert.match(err.message, /mx create-project ended \(process 4242 is gone\) but its end never came through: Retry runs it again/);
+  assert.ok(Date.now() - started < 3_000);
+  assert.ok(![...runningCommands.values()].some((c) => c.line.startsWith('mx create-project')), 'not listed as running any more');
 });
