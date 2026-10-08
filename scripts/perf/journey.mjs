@@ -45,6 +45,9 @@ const TOTAL_STEPS = 13;
 const ASLEEP = new Set(['exited', 'offline']);
 
 /** The API of a running test office, signed in. */
+/** How long the office profiles itself from the start of the wizard: the wizard and the hiring take about 15 s. */
+const MAKING_PROFILE_S = 25;
+
 function apiOf(office, cookie) {
   return async (method, p, body) => {
     const r = await fetch(office.base + p, { method, headers: { cookie, origin: office.base, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -167,6 +170,8 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
 
     // 1. The wizard makes the project: every setup step, offline.
     state.makingSince = Date.now();
+    // The office profiles itself while the project is made (perfwatch/profile.ts), so a stall names what ran in it.
+    state.profile = api('POST', '/api/perf/profile', { seconds: MAKING_PROFILE_S }).catch((e) => ({ error: String(e?.message ?? e) }));
     await book.run({
       id: 'wizard',
       name: 'Wizard creates the project',
@@ -231,7 +236,12 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
         const fmt = (xs) => xs.map((x) => `${x.ms} ms at +${((x.at - state.makingSince) / 1000).toFixed(1)} s`).join(', ');
         const over = stalls.filter((x) => x.ms > PERF_BUDGETS.serverStallMs);
         log(`server stalls over 100 ms while making the project: ${fmt(stalls) || 'none'}`);
-        if (over.length) throw new Error(`the server's event loop stalled ${over.length}× over ${PERF_BUDGETS.serverStallMs} ms: ${fmt(over)}`);
+        if (over.length) {
+          // What ran in the longest block, from the office's own profile (it ends MAKING_PROFILE_S after the start).
+          const prof = await state.profile;
+          const where = prof?.longest ? `; longest busy stretch ${prof.longest.ms} ms at +${(prof.longest.at / 1000).toFixed(1)} s of the profile: ${prof.longest.stack.slice(0, 5).map((x) => x.frame).join(' < ')}` : '';
+          throw new Error(`the server's event loop stalled ${over.length}× over ${PERF_BUDGETS.serverStallMs} ms: ${fmt(over)}${where}`);
+        }
         return `longest block ${Math.max(0, ...stalls.map((x) => x.ms))} ms (${stalls.length} over 100 ms)`;
       },
     });

@@ -25,12 +25,19 @@ import path from 'node:path';
 import { PERF_BUDGETS } from './budgets.mjs';
 import { FAKEBIN, REPO, assertTestDir, killProcessesUnder, login, startTestOffice } from './office.mjs';
 import { slowAgent } from './slowstart.mjs';
+import { startDiskLoad } from './diskload.mjs';
 
 /**
  * How much history each live worker's session carries before the run, its own transcript and its
  * subagents': about what the live office's longest sessions had (10 MB and 27 subagent files, 2026-10-08).
  */
 const HISTORY = { mainMB: 10, subagents: 8, subMB: 2.5 };
+/**
+ * PERF_BUSY_LOAD=<n> runs n disk hammers in the test office's folder for the busy minute (diskload.mjs), so
+ * synchronous file work on the event loop shows as it does on a loaded machine. Off by default: on a
+ * machine that is already busy, a heavy load stalls any process now and then, whatever it runs.
+ */
+const LOAD = Math.max(0, Math.min(16, Number(process.env.PERF_BUSY_LOAD) || 0));
 /** How often the open pages ask (the Workers tab, Home and the Budget view each poll about this often). */
 const PAGE_POLL_MS = 4000;
 const PAGE_APIS = (floor) => ['/api/ranking', `/api/ranking?floor=${floor}`, '/api/analysis', '/api/budget', `/api/roster?floor=${floor}`];
@@ -184,8 +191,14 @@ export async function runBusy({ root, outDir, seconds = 90, onProgress = () => {
       .then((r) => r.json())
       .catch((e) => ({ error: String(e) }));
     const pages = setInterval(() => PAGE_APIS(floor.id).forEach((p) => void get(p)), PAGE_POLL_MS);
-    await new Promise((r) => setTimeout(r, seconds * 1000));
-    clearInterval(pages);
+    const stopLoad = LOAD ? startDiskLoad(path.join(root, 'diskload'), LOAD) : () => {};
+    try {
+      await new Promise((r) => setTimeout(r, seconds * 1000));
+    } finally {
+      stopLoad();
+      clearInterval(pages);
+    }
+    res.diskLoad = LOAD;
     const r = await fetch(`${office.base}/api/perf/stalls?since=${t0}`, { headers: { cookie } }).then((x) => x.json());
     res.stalls = r.stalls ?? [];
     res.maxStallMs = Math.max(0, ...res.stalls.map((s) => s.ms));
@@ -204,7 +217,7 @@ export async function runBusy({ root, outDir, seconds = 90, onProgress = () => {
       ...(res.burst.started < res.burst.workers ? [`the wake burst started ${res.burst.started} of ${res.burst.workers} workers`] : []),
     ];
     res.ok = res.failures.length === 0;
-    log(`${res.ok ? 'ok  ' : 'FAIL'} busy office: ${live} workers, ${res.grewMB} MB written, ${res.stalls.length} blocks over 100 ms, longest ${res.maxStallMs} ms (budget ${PERF_BUDGETS.serverStallMs} ms)`);
+    log(`${res.ok ? 'ok  ' : 'FAIL'} busy office: ${live} workers${LOAD ? ` (with ${LOAD} disk hammers)` : ''}, ${res.grewMB} MB written, ${res.stalls.length} blocks over 100 ms, longest ${res.maxStallMs} ms (budget ${PERF_BUDGETS.serverStallMs} ms)`);
     log(`     wake burst: ${res.burst.started}/${res.burst.workers} woken at once${res.burst.freshMB ? ` on a fresh ${res.burst.freshMB} MB agent binary` : ''}, longest block ${res.burst.maxStallMs} ms`);
     if (!res.ok && res.longest) log(`     longest busy stretch ${res.longest.ms} ms: ${res.longest.stack.slice(0, 4).map((f) => f.frame).join(' < ')}`);
   } catch (e) {
