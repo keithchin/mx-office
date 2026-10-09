@@ -9,7 +9,7 @@ import { readFileSync, readdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import { interviewModeOf, SETUP_STEPS, type JobView, type ProjectPlan, type ProjectRole, type StepId, type StepStatus } from '../../shared/wizard.js';
 import { FileStore, FlowEngine, transientError, type RetryPolicy, type RunRecord, type RunStatus, type StepCtx } from '../flow/index.js';
-import { runningCommands } from './run.js';
+import { lostEnd, runningCommands } from './run.js';
 
 export interface JobState {
   id: string;
@@ -69,8 +69,11 @@ export function waitingOn(now: number, commands: Iterable<{ line: string; since:
 }
 
 /** The steps that talk to GitHub or download something: a dropped connection or a rate limit is tried again, twice. */
-const NETWORK: RetryPolicy = { maxAttempts: 3, baseMs: 3000, maxMs: 30_000, retryOn: transientError };
+const NETWORK: RetryPolicy = { maxAttempts: 3, baseMs: 3000, maxMs: 30_000, retryOn: (err) => transientError(err) || lostEnd(err) };
+/** Every other step: a command whose end was lost (run.ts LostEndError) is run once more by itself. */
+const LOST: RetryPolicy = { maxAttempts: 2, baseMs: 1000, maxMs: 1000, retryOn: lostEnd };
 const RETRIES: Partial<Record<StepId, RetryPolicy>> = { repo: NETWORK, clone: NETWORK, app: NETWORK, commit: NETWORK, issue: NETWORK };
+const retryFor = (id: StepId): RetryPolicy => RETRIES[id] ?? LOST;
 
 const RESTARTED = 'The office restarted in the middle of this step: Retry carries on from here';
 
@@ -150,7 +153,7 @@ export class JobBook {
         id,
         label,
         done: (job: JobState) => finished(job.steps[id].status),
-        retry: RETRIES[id],
+        retry: retryFor(id),
         run: (ctx: StepCtx<JobState>) => this.step(ctx, id, label),
       })),
       log: (job, line) => this.log(job, line),
@@ -283,9 +286,14 @@ export class JobBook {
     } catch (err) {
       clearInterval(watch);
       const why = this.redact((err as Error).message || String(err));
-      job.steps[id] = { status: 'failed', detail: why };
+      const lost = lostEnd(err as Error);
+      // A lost end with a try left is run again by the engine at once (retryFor): the step stays running meanwhile.
+      job.steps[id] = lost && ctx.attempt < ctx.maxAttempts ? { status: 'running', detail: 'its command ended without word: trying it again' } : { status: 'failed', detail: why };
       this.log(job, `✗ ${label}: ${why}`);
-      throw new Error(why);
+      // A lost end stays recognisable, so the engine can tell it apart from other failures.
+      const out = new Error(why);
+      if (lost) out.name = 'LostEndError';
+      throw out;
     }
     clearInterval(watch);
     const detail = r.detail ? this.redact(r.detail) : undefined;

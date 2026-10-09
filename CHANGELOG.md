@@ -4,6 +4,15 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Fixed
+- **A setup step whose command's end got lost is tried again by itself.** When a step's program has
+  gone but its end never reached the office (seen on Windows with freshly written programs the virus
+  scanner held), the step now runs once more on its own (its log says "try 2 of 2") instead of stopping
+  at once; only when that happens twice in a row does it stop and ask for Retry. Steps that talk to
+  GitHub still get their three tries.
+
 ## 2026-10-09 · release 27 (`640ac22`)
 
 ### New

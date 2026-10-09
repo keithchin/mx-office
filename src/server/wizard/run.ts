@@ -58,6 +58,18 @@ export function alive(pid: number): boolean {
 }
 
 /**
+ * A command whose process is gone but whose end never reached the office (seen on Windows with freshly
+ * written programs the virus scanner held, 2026-10-08/09). The steps run again safely (each checks what is
+ * already done first), so the setup tries such a step once more by itself (job.ts) before it asks for Retry.
+ */
+export class LostEndError extends Error {
+  override name = 'LostEndError';
+}
+
+/** Whether `err` is a command's lost end (LostEndError). */
+export const lostEnd = (err: Error): boolean => err instanceof LostEndError || err.name === 'LostEndError';
+
+/**
  * How long after a command's process is gone its end may take to come through before the step stops
  * waiting for it. A setup once sat on "Create the Mendix app" for minutes after mx had written the app and
  * gone (the journey, 1 in 30 runs, release 22 too): its end never reached the step.
@@ -98,7 +110,7 @@ export function runCommand(cmd: string, args: string[], opts: RunOptions, hooks:
       clearInterval(look);
       clearTimeout(timer);
       runningCommands.delete(id);
-      reject(new Error(`${cmd} ${args[0] ?? ''} ended (process ${child.pid} is gone) but its end never came through: Retry runs it again`));
+      reject(new LostEndError(`${cmd} ${args[0] ?? ''} ended (process ${child.pid} is gone) but its end never came through: Retry runs it again`));
     }, hooks.checkMs);
     look.unref?.();
     const tail: string[] = [];
