@@ -141,3 +141,4 @@ html[data-theme^='portal'] .pt-ext { width: 13px; height: 13px; }
   html[data-theme^='portal'] body.lite.pt-has-nav #needs-you .ny-counts { flex-basis: 100%; }
   html[data-theme^='portal'] .pt-card { padding: 16px; }
 }
+html[data-theme^='portal'] .pt-details-sub { display: block; margin-top: 2px; font-family: var(--font); font-size: 13px; color: var(--ink-2); }

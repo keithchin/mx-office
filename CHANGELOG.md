@@ -26,7 +26,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   Recent activity as a separated list; What's happening, progress and agents; and on the right
   light-grey cards for the Team (agents' faces with a status dot, +N), the Technical contact (the
   Project Coordinator or Solo Lead) and Details (repository, branch, Mendix version, toolkit pin, last
-  commit, budget, live app). The page scrolls instead of fitting the screen.
+  commit, budget, live app). The page scrolls instead of fitting the screen. The last commit is the
+  default branch's newest, with its date and subject (from the Git tab's graph, asked at most every two
+  minutes while the Overview redraws).
+- **Portal: no repeated titles.** Agents, Settings, Budget, Audit log and Test mode no longer repeat the
+  page header's title in a heading of their own (the Agents page keeps its waiting count).
 - **Portal: the top bar's search finds more.** Projects, the project's pages, its agents, issues and pull
   requests (by title or #number), the office's pages and the docs (by title or heading), in groups with
   the best match first, ↑ ↓ over the headings. The docs' titles are fetched once, the first time you
@@ -46,6 +50,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   badges' tooltips, the audit log's filter, the queue and meeting windows. Addresses stay:
   `?tab=workers` and `section=workers` still work, and `?tab=agents` opens the Agents page too.
 - **The docs are MxOffice Docs** (the brand in the docs page's bar).
+
+### Fixed
+- **Portal: one × on every window.** The close button of every window (dialogs, the PR and issue windows,
+  the queue, the deliverables, the team phone) showed two × in the Portal themes: the line icon and the ✕
+  text beside it. Now it's the icon alone, as in Clean.
 - **Entering a project opens its Command Center** (the Portal Overview), not the tab this browser had
   last: from Home, the project switcher, the launcher, Go to Board or /lite, and when you switch project
   inside the 1D view. A link that names a tab (`?tab=…`: Needs you, notifications, a PR's View in Model)

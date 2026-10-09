@@ -62,8 +62,8 @@ export interface DetailFacts {
   dir?: string;
   mendix?: string;
   toolkit?: { sha: string; date?: string; state: string };
-  /** The newest commit the office knows on the delivery branch (or what the live app runs). */
-  lastCommit?: { sha: string; branch?: string };
+  /** The newest commit on the default branch (the Git tab's graph), or the delivery branch's head; when and what, when known. */
+  lastCommit?: { sha: string; branch?: string; when?: string; subject?: string };
   budget?: { spent: number; total?: number; text: string };
   live?: { status: string; url?: string };
 }
@@ -78,6 +78,8 @@ export interface DetailRow {
   external?: boolean;
   /** A tab to open instead of a link. */
   tab?: string;
+  /** A second, quieter line under the value (a commit's date and subject). */
+  sub?: string;
 }
 
 const short = (sha: string) => sha.slice(0, 7);
@@ -90,10 +92,26 @@ export function detailRows(f: DetailFacts): DetailRow[] {
   if (f.branch) rows.push({ label: 'Branch', value: f.branch, mono: true, tab: 'git' });
   if (f.mendix) rows.push({ label: 'Mendix version', value: f.mendix, tab: 'model' });
   if (f.toolkit) rows.push({ label: 'Toolkit', value: `${f.toolkit.state === 'pinned' ? 'Pinned at' : 'At'} ${short(f.toolkit.sha)}${f.toolkit.date ? ` · ${f.toolkit.date}` : ''}`, mono: true });
-  if (f.lastCommit) rows.push({ label: 'Last commit', value: `${short(f.lastCommit.sha)}${f.lastCommit.branch ? ` on ${f.lastCommit.branch}` : ''}`, mono: true, tab: 'git' });
+  if (f.lastCommit) {
+    const sub = [f.lastCommit.when, f.lastCommit.subject && clipSubject(f.lastCommit.subject)].filter(Boolean).join(' · ');
+    rows.push({ label: 'Last commit', value: `${short(f.lastCommit.sha)}${f.lastCommit.branch ? ` on ${f.lastCommit.branch}` : ''}`, mono: true, tab: 'git', ...(sub ? { sub } : {}) });
+  }
   if (f.budget) rows.push({ label: 'Budget', value: f.budget.text, tab: 'budget' });
   if (f.live) rows.push(f.live.url && f.live.status === 'running' ? { label: 'Live app', value: f.live.url.replace(/^https?:\/\//, '').replace(/\/$/, ''), href: f.live.url, external: true } : { label: 'Live app', value: f.live.status, tab: 'live' });
   return rows;
+}
+
+/** A commit's subject, its first line, at most 72 characters. */
+export function clipSubject(s: string): string {
+  const line = s.split(/\r?\n/)[0].trim();
+  return line.length > 72 ? `${line.slice(0, 71)}…` : line;
+}
+
+/** "Oct 9, 2026, 14:05" for an ISO date, in the viewer's locale (en-US by default); '' when it isn't one. */
+export function commitWhen(iso: string, locale = 'en-US'): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString(locale, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 /** "$1,608 of $2,000 spent (80 %)", or just what's spent when there's no budget. */

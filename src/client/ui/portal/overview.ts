@@ -21,7 +21,8 @@ import type { ToolkitStatus } from '../../../shared/toolkit';
 import { batched } from '../batch';
 import { initials } from './topbar';
 import { icon } from './icons';
-import { alertKey, budgetText, detailRows, teamFaces, technicalContact, type DetailFacts } from './overview-logic';
+import { alertKey, budgetText, commitWhen, detailRows, teamFaces, technicalContact, type DetailFacts } from './overview-logic';
+import type { GitGraph } from '../../../shared/gitgraph';
 import './overview.css';
 
 export interface OverviewDeps {
@@ -120,21 +121,42 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
     );
   }
 
+  // The default branch's newest commit: the Git tab's graph (GET /api/git, read off the event loop and
+  // cached on the server), asked when the Overview is drawn for a project, then at most every two minutes
+  // as it redraws. Never on a timer.
+  let lastCommit: { floor: string; at: number; v?: GitGraph['history'][number] & { branch: string } } | undefined;
+  const COMMIT_EVERY_MS = 120_000;
+  function wantCommit() {
+    const floor = store.floor;
+    if (!floor || (lastCommit?.floor === floor && Date.now() - lastCommit.at < COMMIT_EVERY_MS)) return;
+    const keep = lastCommit?.floor === floor ? lastCommit.v : undefined;
+    lastCommit = { floor, at: Date.now(), v: keep };
+    void fetch(`/api/git?floor=${encodeURIComponent(floor)}`, { credentials: 'same-origin' })
+      .then((r) => (r.ok ? (r.json() as Promise<GitGraph>) : undefined))
+      .then((g) => {
+        const c = g?.history[0];
+        if (c && lastCommit?.floor === floor) ((lastCommit.v = { ...c, branch: g!.defaultBranch }), drawDetails());
+      })
+      .catch(() => undefined);
+  }
+
   let detailsKey = '';
   function drawDetails() {
     wantToolkit();
+    wantCommit();
     const f = store.currentFloor();
     const p = store.project;
     const b = deps.budget();
     const tk = toolkit?.floor === store.floor ? toolkit.v : undefined;
     const head = deps.setup()?.head;
+    const commit = lastCommit?.floor === store.floor ? lastCommit.v : undefined;
     const facts: DetailFacts = {
       repo: f?.repo,
       dir: f?.repo ? undefined : (f?.dir ?? p?.dir),
       branch: p?.branch ?? f?.branch,
       mendix: deps.mendix(),
       toolkit: tk?.commit ? { sha: tk.commit.sha, date: tk.commit.date, state: tk.state } : undefined,
-      lastCommit: head ? { sha: head.sha, branch: head.branch } : undefined,
+      lastCommit: commit ? { sha: commit.sha, branch: commit.branch, when: commitWhen(commit.date, navigator.language), subject: commit.subject } : head ? { sha: head.sha, branch: head.branch } : undefined,
       budget: b ? { spent: b.spent, total: b.total, text: budgetText(b.spent, b.total) } : undefined,
       live: deps.live(),
     };
@@ -153,6 +175,7 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
             : r.tab
               ? h('button.pt-link', { type: 'button', title: `Open ${r.tab === 'live' ? 'the Live app page' : `the ${r.tab[0].toUpperCase()}${r.tab.slice(1)} page`}`, onclick: () => deps.show(r.tab!) }, r.value)
               : r.value,
+          r.sub ? h('small.pt-details-sub', {}, r.sub) : null,
         ),
       ]),
     );

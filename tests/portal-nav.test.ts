@@ -314,3 +314,33 @@ test('entering a project opens its Command Center; a link that names a tab opens
   assert.doesNotMatch(lite, /localStorage\.(get|set)Item\(TAB_KEY/, 'no "last tab ever" any more');
   assert.match(read('src/client/shared/start-tab.ts'), /sessionStorage\.setItem\(TAB_SESSION_KEY, t\)/);
 });
+
+test('the Details card’s last commit says when and what, from the Git tab’s graph, asked now and then, never on a timer', async () => {
+  const { clipSubject, commitWhen, detailRows: rows } = await import('../src/client/ui/portal/overview-logic.js');
+  const r = rows({ lastCommit: { sha: 'abcdef1234', branch: 'main', when: commitWhen('2026-10-09T14:05:00', 'en-US'), subject: 'Fix the order form\n\nLonger body' } });
+  assert.equal(r[0].value, 'abcdef1 on main');
+  assert.match(r[0].sub ?? '', /^Oct 9, 2026, 14:05 · Fix the order form$/);
+  assert.equal(rows({ lastCommit: { sha: 'abcdef1234' } })[0].sub, undefined);
+  assert.equal(commitWhen('not a date'), '');
+  assert.equal(clipSubject('x'.repeat(80)).length, 72);
+  const ov = read('src/client/ui/portal/overview.ts');
+  assert.match(ov, /fetch\(`\/api\/git\?floor=\$\{encodeURIComponent\(floor\)\}`/);
+  assert.match(ov, /COMMIT_EVERY_MS = 120_000/);
+  assert.doesNotMatch(ov, /setInterval|setTimeout/);
+});
+
+test('in Portal the pages don’t repeat the header’s title in a heading of their own', () => {
+  const css = read('src/client/ui/portal/layout.css');
+  for (const sel of ['#settings-view .fs-title', '#budget-view .bud > h2.lite-h', '#audit-view .au-head > h2.lite-h', '#tests-view .tl-page > h2.lite-h']) assert.ok(css.includes(sel), sel);
+  assert.match(css, /#workers-view > \.lite-h \{ margin: 0; font-size: 0; \}/);
+  assert.match(css, /#waiting-now:not\(:empty\) \{ display: block;/, 'the waiting count stays');
+});
+
+test('a window’s ✕ is one × in Portal: the line icon alone, its text sized away like Clean does', () => {
+  // Every window's ✕ is a .btn.close (ui/dom.ts); Clean marks it data-ao-icon="close" and draws the icon. Portal's
+  // 14px buttons once outranked Clean's font-size: 0 and brought the ✕ back beside it.
+  assert.match(read('src/client/ui/dom.ts'), /h\('button\.btn\.close', \{ type: 'button', 'aria-label': 'Close'/);
+  const parts = read('src/client/styles/theme-portal-parts.css');
+  assert.match(parts, /html\[data-theme\^='portal'\] body\.lite\.lite :is\(\.btn\.btn, \.close\.close\)\[data-ao-icon\]:not\(\[data-ao-icon='none'\]\) \{ font-size: 0; \}/);
+  assert.match(read('src/client/styles/theme-clean.css'), /\[data-ao-icon\]:not\(\[data-ao-icon='none'\]\) \{ font-size: 0; \}/);
+});
