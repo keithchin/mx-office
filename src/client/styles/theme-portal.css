@@ -66,9 +66,11 @@ html[data-theme^='portal'] {
 }
 
 /* ---- Portal (Light) ---------------------------------------------------------------------------------- */
-/* Also on the top bar's own pop-ups, which hang in the navy bar but are drawn in the page's colours. */
+/* Also on the top bar's own pop-ups, which hang in the navy bar but are drawn in the page's colours, and on
+   every tooltip, menu and list that opens out of the bar or the dark band (the progress bar's phase card):
+   with the band's see-through --card they were drawn transparent over the page. */
 html[data-theme='portal-light'],
-html[data-theme='portal-light'] :is(.pt-pagecolors, .lite-bar .vp-list, .dx-bar .dx-results) {
+html[data-theme='portal-light'] :is(.pt-pagecolors, .lite-bar .vp-list, .dx-bar .dx-results, :is(.lite-bar, .pt-band) :is(.pg-tip, [role='tooltip'], [role='menu'], [role='listbox'])) {
   color-scheme: light;
   --paper: #ffffff;
   --paper-2: #f7f7f8;
@@ -132,7 +134,7 @@ html[data-theme='portal-light'] :is(.pt-pagecolors, .lite-bar .vp-list, .dx-bar 
 
 /* ---- Portal (Dark) ----------------------------------------------------------------------------------- */
 html[data-theme='portal-dark'],
-html[data-theme='portal-dark'] :is(.pt-pagecolors, .lite-bar .vp-list, .dx-bar .dx-results) {
+html[data-theme='portal-dark'] :is(.pt-pagecolors, .lite-bar .vp-list, .dx-bar .dx-results, :is(.lite-bar, .pt-band) :is(.pg-tip, [role='tooltip'], [role='menu'], [role='listbox'])) {
   color-scheme: dark;
   --paper: #0f1625;
   --paper-2: #0b1220;

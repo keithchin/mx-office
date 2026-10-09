@@ -12,6 +12,15 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   scanner held), the step now runs once more on its own (its log says "try 2 of 2") instead of stopping
   at once; only when that happens twice in a row does it stop and ask for Retry. Steps that talk to
   GitHub still get their three tries.
+- **Portal: the top bar and the left navigation stay put while the page scrolls.** Scrolling a long page
+  (the Overview, the Board) took the navy bar away with it and left the pane hanging under an empty strip.
+  Now the bar stays at the top of the window and the pane under it, only the page scrolls (one
+  scrollbar), and a pane longer than the window scrolls on its own. The folded rail and the phone's
+  drawer work as before.
+- **Portal: the progress bar's phase card is solid again.** Hovering a phase or stage in the dark band
+  showed its card see-through over the page (it took the band's faint wash for a background). It's a
+  white card in Portal (Light) and a dark one in Portal (Dark), with a border, a shadow and readable
+  text, and so is any other tooltip or menu that opens out of the band or the top bar.
 
 ## 2026-10-09 · release 27 (`640ac22`)
 
