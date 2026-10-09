@@ -93,7 +93,7 @@ export function incidentsView(root: HTMLElement, opts: IncidentsViewOpts) {
     const scope = h('select.au-scope', { 'aria-label': 'Which floor', onchange: (e: Event) => ((filter.floor = (e.target as HTMLSelectElement).value), changed()) }, ...scopes.map(([v, l]) => h('option', { value: v, selected: v === filter.floor }, l)));
     const search = h('input.au-q', {
       type: 'search',
-      placeholder: 'Search titles, summaries, causes, workers…',
+      placeholder: 'Search titles, summaries, causes, agents…',
       'aria-label': 'Search incidents',
       value: filter.q,
       oninput: (e: Event) => {

@@ -10,6 +10,12 @@
 //     [--viewports 1440x900,1280x720,390x844] [--themes default,dark,terminal,clean-light,clean-dark,portal-light,portal-dark]
 //     [--shots <dir>] [--json <file>] [--chrome <chrome.exe>]
 //
+// In a Portal theme there's no tab row: the left navigation (ui/portal/nav.ts) opens each page and the page
+// header (#pt-head) and the band under it (.pt-band: the floor's line and the progress bar) come first, so
+// it checks those instead: the header's top, the content's left edge and the navigation's box are the same
+// on every page, and no page leaves an empty gap between the band and its content wider than the
+// Overview's (the content must not jump between pages). The Firm's banner is on the Audit log page.
+//
 // It also shows the "someone's waiting on another floor" line (#elsewhere) on the Board, the way the page
 // does when another floor waits on someone, and checks the tab bar doesn't move for it either.
 //
@@ -43,12 +49,18 @@ if (!floor) {
   process.exit(2);
 }
 
-/** In the page: the tab bar's box and the first box the tab shows below it. */
+/** In the page: the tab bar's box (in Portal, the page header's) and the first box the tab shows below it. */
 const MEASURE = () => {
   const main = document.querySelector('.lite-main');
-  const bar = document.querySelector('.lite-tabs');
+  const portal = document.documentElement.dataset.theme.startsWith('portal');
+  const bar = portal ? document.getElementById('pt-head') : document.querySelector('.lite-tabs');
   const r = bar.getBoundingClientRect();
-  const after = [...main.children].slice([...main.children].indexOf(bar) + 1);
+  // In Portal the band under the header (the floor's line and the progress bar) ends what's above the content.
+  const band = portal ? main.querySelector(':scope > .pt-band') : null;
+  const end = band && band.getBoundingClientRect().height ? band : bar;
+  const from = [...main.children].indexOf(end);
+  const after = [...main.children].slice(from + 1).flatMap((el) => (getComputedStyle(el).display === 'contents' ? [...el.children] : [el]));
+  const nav = portal ? document.getElementById('pt-nav')?.getBoundingClientRect() : null;
   let first = null;
   for (const el of after) {
     const b = el.getBoundingClientRect();
@@ -57,7 +69,8 @@ const MEASURE = () => {
     break;
   }
   const scrolls = document.documentElement.scrollHeight > innerHeight + 1;
-  return { barTop: Math.round(r.top + scrollY), barBottom: Math.round(r.bottom + scrollY), first, gap: first ? first.top - Math.round(r.bottom + scrollY) : null, scrolls };
+  const below = Math.round(end.getBoundingClientRect().bottom + scrollY);
+  return { barTop: Math.round(r.top + scrollY), barBottom: below, left: Math.round(r.left), nav: nav && `${Math.round(nav.left)},${Math.round(nav.top)},${Math.round(nav.width)}`, first, gap: first ? first.top - below : null, scrolls };
 };
 
 const browser = await chromium.launch({ headless: true, executablePath: arg('chrome') });
@@ -83,7 +96,8 @@ try {
         if (t === 'tests') {
           await page.goto(`${base}/lite?floor=${encodeURIComponent(floor)}&tab=tests`, { waitUntil: 'load' });
           await page.waitForFunction(() => !window.__aoBoot?.shown?.(), null, { timeout: 30000 }).catch(() => {});
-        } else await page.click(`#tab-${t}`);
+        } else if (theme.startsWith('portal')) await page.evaluate((id) => document.querySelector(`.pt-nav [data-nav="${id}"]`).click(), t);
+        else await page.click(`#tab-${t}`);
         await page.waitForTimeout(700);
         await page.evaluate(() => scrollTo(0, 0));
         row.tabs[t] = await page.evaluate(MEASURE);
@@ -107,6 +121,8 @@ try {
         if (t === 'command') continue;
         const where = `${row.viewport} ${theme} ${t}`;
         if (Math.abs(m.barTop - cc.barTop) > TOL) failures.push(`${where}: the tab bar's top is ${m.barTop} px, the Command Center's ${cc.barTop} px`);
+        if (m.left !== cc.left) failures.push(`${where}: the content starts ${m.left} px from the left, the Overview's ${cc.left} px`);
+        if (m.nav !== cc.nav) failures.push(`${where}: the navigation is at ${m.nav}, on the Overview at ${cc.nav}`);
         if (t !== 'board+elsewhere' && m.gap != null && cc.gap != null && m.gap > cc.gap + TOL) failures.push(`${where}: ${m.gap} px of empty band above the content (#${m.first.id}), the Command Center has ${cc.gap} px`);
       }
       results.push(row);

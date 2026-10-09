@@ -81,7 +81,7 @@ export function openPromptEditor(net: Net, first: PromptId = PROMPT_IDS[0]) {
     const lines: string[] = [];
     if (!ta.value.trim() && !def.optional) lines.push('It can’t be empty: write something, or put the default back.');
     for (const name of inText) if (!(name in def.vars)) lines.push(`{{${name}}} isn’t filled in here, so it’s sent just as it’s written.`);
-    for (const name of def.needs ?? []) if (!inText.includes(name)) lines.push(`The office counts on {{${name}}} (${def.vars[name].toLowerCase()}): without it the worker isn’t told.`);
+    for (const name of def.needs ?? []) if (!inText.includes(name)) lines.push(`The office counts on {{${name}}} (${def.vars[name].toLowerCase()}): without it the agent isn’t told.`);
     warnings.replaceChildren(...lines.map((l) => h('p', {}, `⚠️ ${l}`)));
   };
 

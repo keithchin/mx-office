@@ -41,7 +41,7 @@ export function openIssue(first: GhIssue, net: Net, actions: BoardActions) {
   };
   const queue = h('button.btn', { type: 'button', onclick: addIssueToQueue }) as HTMLButtonElement;
   const carry = actions.pickUp;
-  const pickUp = carry ? h('button.btn', { type: 'button', title: 'Carry its card to an empty desk, a worker or the queue board, and press E there', onclick: () => carry(it) }, '✋ Pick it up') : null;
+  const pickUp = carry ? h('button.btn', { type: 'button', title: 'Carry its card to an empty desk, an agent or the queue board, and press E there', onclick: () => carry(it) }, '✋ Pick it up') : null;
   const meta = h('div.gh-meta');
   const el = h(
     'div.modal.gh-window.issue',
@@ -53,13 +53,13 @@ export function openIssue(first: GhIssue, net: Net, actions: BoardActions) {
       'footer',
       {},
       h('a.grow', { href: it.url, target: '_blank', rel: 'noopener noreferrer' }, 'Open on GitHub ↗'),
-      h('button.btn', { type: 'button', title: 'Send a worker your own prompt about this issue', onclick: () => actions.ask(issueContext(it), `Ask about issue #${it.number}`) }, '✍️ Ask a worker…'),
-      h('button.btn', { type: 'button', title: 'Workers take it on together in the meeting room: a debate, lead & team, map-reduce or red / blue', onclick: () => actions.meeting(issueMeeting(it.number, it.title)) }, '🤝 Meeting…'),
+      h('button.btn', { type: 'button', title: 'Send an agent your own prompt about this issue', onclick: () => actions.ask(issueContext(it), `Ask about issue #${it.number}`) }, '✍️ Ask an agent…'),
+      h('button.btn', { type: 'button', title: 'Agents take it on together in the meeting room: a debate, lead & team, map-reduce or red / blue', onclick: () => actions.meeting(issueMeeting(it.number, it.title)) }, '🤝 Meeting…'),
       closeIssue,
       queueProvider.element,
       queue,
       pickUp,
-      h('button.btn.primary', { type: 'button', onclick: () => actions.assign(issuePrompt(it), `Hand issue #${it.number} to a worker`, it.number) }, '🤖 Hand to a worker'),
+      h('button.btn.primary', { type: 'button', onclick: () => actions.assign(issuePrompt(it), `Hand issue #${it.number} to an agent`, it.number) }, '🤖 Hand to an agent'),
     ),
   );
   const renderFrame = () => {
@@ -69,7 +69,7 @@ export function openIssue(first: GhIssue, net: Net, actions: BoardActions) {
         avatar(it.author),
         h('b', {}, it.author),
         h('span', {}, `opened this ${timeAgo(it.createdAt)}`),
-        it.assignees.length ? h('span', {}, `· 👤 ${it.assignees.join(', ')}`) : it.taken ? h('span', {}, '· 🤖 handed to a worker') : null,
+        it.assignees.length ? h('span', {}, `· 👤 ${it.assignees.join(', ')}`) : it.taken ? h('span', {}, '· 🤖 handed to an agent') : null,
         ...it.labels.map(labelChip),
         labelButton('issue', () => it, net, (labels) => ((it = { ...it, labels }), renderFrame())),
         windowTeamPicker('issue', it, net, (labels) => ((it = { ...it, labels }), renderFrame())),
@@ -84,8 +84,8 @@ export function openIssue(first: GhIssue, net: Net, actions: BoardActions) {
     queueProvider.element.classList.toggle('hidden', !isOpen || onQueue);
     queue.classList.toggle('hidden', !isOpen);
     queue.disabled = onQueue;
-    queue.title = onQueue ? '' : 'A worker picks it up by itself when a desk is free and there is room under the worker limit';
-    queue.textContent = onQueue ? (task!.status === 'running' ? `🤖 ${task!.workerName ?? 'A worker'} is on it` : '📋 On the queue') : '📋 Add to queue';
+    queue.title = onQueue ? '' : 'An agent picks it up by itself when a desk is free and there is room under the agent limit';
+    queue.textContent = onQueue ? (task!.status === 'running' ? `🤖 ${task!.workerName ?? 'An agent'} is on it` : '📋 On the queue') : '📋 Add to queue';
   };
   const render = () => {
     thread.replaceChildren(commentCard({ id: 'body', author: it.author, body: detail?.body ?? it.body, createdAt: it.createdAt, url: it.url }, itemUrl, 'opened this'));

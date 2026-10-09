@@ -171,9 +171,8 @@ details.bud-card[open] > summary { margin-bottom: 8px; }
 .bud-spark { width: 120px; height: 28px; overflow: visible; }
 .bud-spark .bud-line { stroke-width: 2; }
 
-/* Every tab of the 1D view keeps the top right for the Firm's banner (ui/command-layout.css): the branch
-   line and the budget chip leave it that room together. */
+/* The branch line and the budget chip, a little tighter on the fitted Command Center's window size, on every tab alike. */
 @media (min-width: 1024px) and (min-height: 560px) {
-  .lite-main > .bud-meta-row { margin-bottom: 8px; padding-right: 300px; }
+  .lite-main > .bud-meta-row { margin-bottom: 8px; }
   .lite-main > .bud-meta-row > #floor-meta { margin: 0; padding-right: 0; }
 }

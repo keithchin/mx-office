@@ -83,7 +83,7 @@ const COLUMNS: Column[] = [
     sort: (f) => (f.leads ? f.leads.hired * 100 + f.leads.benched : -1),
     cell: (f) => (f.leads ? h('span', {}, `${f.leads.hired} of ${f.leads.total} hired`, f.leads.benched ? h('small', {}, ` · ${f.leads.benched} benched`) : null) : '—'),
   },
-  { key: 'spend', label: 'Spend', title: 'What its workers spent all told, and today', sort: (f) => f.spend.total, cell: (f) => h('span', {}, usd(f.spend.total), f.spend.today ? h('small', {}, ` ${usd(f.spend.today)} today`) : null) },
+  { key: 'spend', label: 'Spend', title: 'What its agents spent all told, and today', sort: (f) => f.spend.total, cell: (f) => h('span', {}, usd(f.spend.total), f.spend.today ? h('small', {}, ` ${usd(f.spend.today)} today`) : null) },
   { key: 'last', label: 'Last activity', title: 'When anything last happened there', sort: (f) => f.lastActivity ?? 0, cell: (f) => (f.lastActivity ? timeAgo(f.lastActivity) : '—') },
 ];
 
@@ -168,7 +168,7 @@ export function statsView(root: HTMLElement, leaving: () => void): StatsView {
   const rankingTable = (r: AnalysisReport | null | undefined) => {
     if (r === undefined) return h('p.hs-note', {}, 'Loading the ranking…');
     const rows = r?.leaderboard.slice(0, RANKED) ?? [];
-    if (!rows.length) return h('p.hs-note', {}, 'No finished runs to rank yet: models are ranked once workers finish tasks.');
+    if (!rows.length) return h('p.hs-note', {}, 'No finished runs to rank yet: models are ranked once agents finish tasks.');
     const row = (x: LeaderRow, i: number) =>
       h(
         'tr',

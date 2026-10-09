@@ -74,7 +74,7 @@ export function incidentDetail(i: Incident, o: DetailOpts): HTMLElement {
     section('Root cause', i.rootCause ? h('p.inc-text', {}, i.rootCause) : h('p.inc-none', {}, i.status === 'resolved' ? 'Not recorded' : 'Not known yet')),
     section('Corrective actions', actions.length ? h('ul.inc-actions', {}, ...actions) : h('p.inc-none', {}, 'None yet')),
     section('Timeline', o.admin ? h('div.inc-noteline', {}, note, h('button.btn', { type: 'button', onclick: () => void addNote() }, 'Add note')) : null, h('ol.inc-timeline', {}, ...timeline)),
-    i.workers.length ? section('Workers', h('ul.inc-workers', {}, ...i.workers.map((w) => h('li', {}, w.name, w.floor && i.floors.length !== 1 ? ` (${o.floorName(w.floor)})` : '')))) : null,
+    i.workers.length ? section('Agents', h('ul.inc-workers', {}, ...i.workers.map((w) => h('li', {}, w.name, w.floor && i.floors.length !== 1 ? ` (${o.floorName(w.floor)})` : '')))) : null,
     section('Linked audit events', events.length ? h('ul.inc-events', {}, ...events) : h('p.inc-none', {}, 'None yet: expand a row on the Events tab and use “Link to incident…”')),
   );
 }

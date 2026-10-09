@@ -9,7 +9,7 @@ import { switchView, type View } from '../graphics';
 import { stepIndex } from './chrome-logic';
 
 const VIEWS: { view: View; icon: string; label: string; what: string }[] = [
-  { view: '1d', icon: '🗂️', label: '1D', what: "The floor's board and its workers" },
+  { view: '1d', icon: '🗂️', label: '1D', what: "The floor's board and its agents" },
   { view: '2d', icon: '🗺️', label: '2D', what: 'The floor from above in pixel art' },
   { view: '3d', icon: '🏢', label: '3D', what: 'The 3D office, where you walk around' },
   { view: 'retro', icon: '👾', label: 'Retro', what: 'The office in chunky 16-bit pixels' },
@@ -108,4 +108,22 @@ export function viewPicker(current: View, cls = ''): HTMLElement {
     if (o) pick(Number(o.dataset.i));
   });
   return root;
+}
+
+/**
+ * What the flat views' top bars have instead of the dropdown: one button to the other flat view of the
+ * same project. On the 1D view "Go to Office" (the 2D office from above); on the 2D view "Go to Board"
+ * (back to the 1D view). The 3D and Retro views aren't offered from the flat views any more.
+ */
+export function viewButton(current: '1d' | '2d'): HTMLElement {
+  const to: View = current === '1d' ? '2d' : '1d';
+  const label = to === '2d' ? 'Go to Office' : 'Go to Board';
+  const what = to === '2d' ? "The project's office from above, its agents at their desks" : "The project's board, its pages and its agents";
+  return h(
+    'button.btn.vp-go',
+    { type: 'button', title: `${label}: ${what}`, 'aria-label': label, onclick: () => switchView(to) },
+    h('span.ao-emo.vp-ico', { 'aria-hidden': 'true' }, to === '2d' ? '🗺️' : '🗂️'),
+    h('span.vp-label', {}, label),
+    h('span.vp-short', { 'aria-hidden': 'true' }, to === '2d' ? 'Office' : 'Board'),
+  );
 }

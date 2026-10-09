@@ -78,6 +78,8 @@ export function watchStudio() {
 
 /** Whether the floor you're on has a project to open: until the office says, it's offered. */
 export const studioShown = () => !!store.floor && (infoFor !== store.floor || !info || info.hasMpr);
+/** The Mendix version the floor's project opens in, once the office has said (the Portal Overview's Details). */
+export const studioVersion = () => (infoFor === store.floor ? (info?.version ?? undefined) : undefined);
 
 /** Why it can't be opened from here, if it can't: it's greyed out and says so. */
 export function studioBlocked(): string | undefined {

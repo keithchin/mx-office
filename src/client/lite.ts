@@ -38,6 +38,7 @@ import { flatSession } from './shared/session';
 import { workerActions } from './shared/workers';
 import { floorPicker } from './shared/floors';
 import { askedSection, askedTab, followFloor, leaveForHome, setAddress } from './shared/address';
+import { floorSwitched, isReload, rememberSessionTab, sessionTab, startTab } from './shared/start-tab';
 import { flatSettings } from './ui/settings/flat';
 import { isSettingsSection, type SettingsSectionId } from '../shared/settings-sections';
 import { colorThemes } from './ui/colortheme';
@@ -48,7 +49,7 @@ import { gitView } from './ui/git';
 import { modelView } from './ui/model';
 import type { NeedTarget } from './ui/needsyou/logic';
 import { nudgeMember } from './ui/roster/api';
-import { viewPicker } from './ui/viewpick';
+import { viewButton } from './ui/viewpick';
 import { flatMenu } from './shared/flatmenu';
 import { tabBadges } from './ui/badge';
 import { newStandup, teamAttention } from './ui/chrome-logic';
@@ -59,6 +60,8 @@ import { collapsibleCommand } from './ui/command-layout';
 import { testModeBadge } from './ui/testmode';
 import { portalBar } from './ui/portal/topbar';
 import { portalDeepLinks } from './ui/portal/deeplink';
+import { portalLayout, type PortalLayout } from './ui/portal/layout';
+import { appUrl } from './ui/liveapp';
 import { budgetUi } from './ui/budget';
 import { testlabView } from './ui/testlab';
 import './shared/perfwatch-on';
@@ -78,8 +81,8 @@ if (new URLSearchParams(location.search).get('why') === 'webgl') {
 rememberView('1d');
 // The 🎨 in the top bar: the Default, Dark or Terminal look (ui/colortheme.ts).
 colorThemes($('theme'), $('summary'));
-// The view dropdown in the top bar (ui/viewpick.ts).
-$('view-pick').replaceWith(viewPicker('1d'));
+// Go to Office: the 2D office of this project, where the view dropdown was (ui/viewpick.ts).
+$('view-pick').replaceWith(viewButton('1d'));
 
 // 📱 The team phone (ui/phone/): installed once the page's parts are, at the end.
 let phone: Phone | undefined;
@@ -112,7 +115,7 @@ const ranking = workersRanking({
   floor: () => store.floor ?? undefined,
   card: workerCard,
   visible: () => tab === 'workers',
-  emptyText: () => (store.project ? 'Nobody is working on this floor. ✨ New task hires someone.' : 'No workers here.'),
+  emptyText: () => (store.project ? 'Nobody is working on this floor. ✨ New task hires someone.' : 'No agents here.'),
   // The Leads' subagents, each after its Lead (ui/subagents/).
   subagents: floorSubagents((id) => openWorker(id)),
 });
@@ -233,8 +236,6 @@ const teams = subBoards(
   () => renderKanban(),
 );
 net.onMessage((msg) => teams.route(msg));
-// A new key since the Command Center became the first tab, so everyone starts there once rather than on the board they last had.
-const TAB_KEY = 'agent-office.lite-tab2';
 // The floor's branches as a metro map (🌳 Git, ui/git/).
 const git = gitView($('git-view'), { openWorker, openPull: kanban.openPull });
 // The app as Studio Pro shows it (📐 Model, ui/model/): main or a branch, and what a branch changed.
@@ -264,24 +265,22 @@ const tests = testlabView($('tests-view'));
 const TEAM_PANES: readonly Pane[] = ['org', 'standup', 'approvals'];
 const isPane = (t: unknown): t is Pane => TEAM_PANES.includes(t as Pane);
 const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || t === 'model' || isPane(t) || t === 'teams' || t === 'audit' || t === 'budget' || t === 'settings' || t === 'tests';
-const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : isTab(t) ? t : undefined);
-let tab: Tab = 'command';
-try {
-  const saved = localStorage.getItem(TAB_KEY);
-  tab = asTab(saved) ?? tab;
-} catch {
-  // No storage: the Command Center, as usual.
-}
-// A link that names the tab (?tab=team) opens on it, whatever this browser had last.
-tab = asTab(askedTab) ?? tab;
+// ?tab=agents is the Agents page's own name for its id (workers, kept so saved links and state still work).
+const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : t === 'agents' ? 'workers' : isTab(t) ? t : undefined);
+// Entering a project opens its Command Center; a link that names a tab (?tab=team) opens that one, and a
+// reload of this browser tab keeps the tab it showed (shared/start-tab.ts).
+let tab: Tab = startTab(asTab(askedTab), isReload(), asTab(sessionTab()), 'command');
+let portal: PortalLayout | undefined;
 followFloor();
+// Switching project here (the project switcher, a waiting-on button) lands on the new one's Command Center.
+let floorWas = store.floor;
+store.on('floor', () => {
+  if (floorSwitched(floorWas, store.floor) && tab !== 'command') showTab('command');
+  floorWas = store.floor;
+});
 function showTab(t: Tab) {
   tab = t;
-  try {
-    localStorage.setItem(TAB_KEY, t);
-  } catch {
-    // Just for this visit, then.
-  }
+  rememberSessionTab(t);
   if (t === 'settings') settingsPage.show(pendingSection);
   else settingsPage.hide();
   pendingSection = undefined;
@@ -305,6 +304,8 @@ function showTab(t: Tab) {
   if (t === 'model') model.show();
   else model.hide();
   $('tab-audit').classList.toggle('on', t === 'audit');
+  // The Firm's banner (Call an audit, The Firm →, a running audit, a ready report) is on the Audit log page.
+  $('firm-banner').classList.toggle('hidden', t !== 'audit');
   $('audit-view').classList.toggle('hidden', t !== 'audit');
   if (t === 'audit') audit.show();
   else audit.hide();
@@ -334,6 +335,7 @@ function showTab(t: Tab) {
   team.render(store.floor ?? undefined);
   // Off the Command Center, the PM console lets go of its terminal.
   pm.sync();
+  portal?.selected(t);
 }
 /** Whatever the tab shows that follows the floor's work: the Command Center (the setup panel and the project summary with the PM console in it), the board (just the kanban), or a team's page. */
 function renderKanban() {
@@ -341,7 +343,8 @@ function renderKanban() {
   if (tab === 'board') return renderBoard($('board'), kanban, teams.boardView(renderKanban));
   if (tab !== 'command') return;
   const f = store.floor;
-  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el }).then(() => {
+  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el, after: portal?.side }).then((s) => {
+    portal?.summary(s);
     // Beside the project's name: the 🌐 Live app chip, and Open in Studio Pro for a Mendix project (ui/studio/).
     live.mountChip($('summary'));
     mountStudio($('summary'));
@@ -498,7 +501,7 @@ function sawStandup() {
 }
 const badges = tabBadges();
 badges.add($('tab-board'), () => cards(kanban).filter((c) => c.column === 'human').length, 'Cards that need a human');
-badges.add($('tab-workers'), () => waitingInOrder(store.workers.values()).length, 'Workers waiting on someone');
+badges.add($('tab-workers'), () => waitingInOrder(store.workers.values()).length, 'Agents waiting on someone');
 badges.add($('tab-standup'), () => (sawStandup(), newStandup(latestStandup(), seenStandup()) && 'dot'), 'A new standup');
 badges.add($('tab-live'), () => live.current()?.status === 'failed' && '!', "The live app failed: it isn't running");
 badges.add($('tab-teams'), () => teamAttention(currentRoster()), 'Approvals and escalations from the teams');
@@ -520,7 +523,20 @@ phone = installPhone({
   needs: () => ({ setup: cachedSetup(store.floor ?? undefined), live: live.current(), firm: firmStatus, studio: studioState(), budget: budget.need() }),
 });
 // The Portal themes' top bar (ui/portal/): the launcher, the search, the bell for the phone above.
-portalBar({ settings: () => showSettings() });
+portalBar({ settings: () => showSettings(), search: () => portal?.searchItems() ?? [] });
+// In a Portal theme: the left navigation, the page header and the Overview's cards (ui/portal/layout.ts).
+portal = portalLayout({
+  show: showTab,
+  openWorker,
+  openIssue: kanban.openIssue,
+  openPull: kanban.openPull,
+  documents: () => void (store.floor && openFloorDeliverablesNow(store.floor)),
+  live: () => ((s) => (s ? { status: s.status, url: appUrl(s) } : undefined))(live.current()),
+  budget: () => ((v) => (v ? { spent: v.spent, total: v.settings.total } : undefined))(budget.feed.floor()),
+  setup: () => cachedSetup(store.floor ?? undefined),
+});
+budget.feed.on(() => portal?.refresh());
+net.onMessage((m) => m.t === 'liveapp.state' && portal?.refresh());
 portalDeepLinks(); // &open=studio, from Home's Portal project cards
 // The Command Center's sections fold and remember it (ui/command-layout.ts).
 collapsibleCommand();

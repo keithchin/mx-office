@@ -115,7 +115,7 @@ export function openSearch(openTerminal: (workerId: string, find: TerminalFind) 
       return;
     }
     if (!found) {
-      status.textContent = `Finds words in the office chat and in every worker's terminal, including what they showed before the office restarted.`;
+      status.textContent = `Finds words in the office chat and in every agent's terminal, including what they showed before the office restarted.`;
       results.replaceChildren();
       return;
     }

@@ -44,14 +44,15 @@ export function views(f, other) {
  */
 const onFloor = (f, then) => `(() => { const recs = window.__aoFloorLoads; const last = recs && recs[recs.length - 1]; const loaded = recs ? !!last && last.floor === ${JSON.stringify(f)} && last.outcome !== 'cancelled' : document.querySelector('#floor')?.value === ${JSON.stringify(f)} && (document.querySelector('#floor-meta')?.textContent ?? '').includes(${JSON.stringify(f)}); return loaded && ${then}; })()`;
 
-/** Switching to the big floor `f` from `other`: the 1D view's Board and Command Center, the 2D view, and Home → a project. */
+/** Switching to the big floor `f` from `other`: the 1D view from its Board and from its Command Center (both land on the Command Center), the 2D view, and Home → a project. */
 export function switches(f, other) {
   if (!other) return [];
   const q = encodeURIComponent(f);
   const from = (page, tab) => `/${page}?floor=${encodeURIComponent(other)}${tab ? `&tab=${tab}` : ''}`;
   const pick = (ready) => [{ select: '#floor', value: f, ready, switch: true }];
   return [
-    { id: 'switch-1d-board', name: 'Switch project: 1D Board', path: from('lite', 'board'), soak: 3, ready: shown('#board', 5), steps: pick(onFloor(f, shown('#board', 10))) },
+    // From the Board: switching project lands on the new project's Command Center (shared/start-tab.ts), so that's what it waits for.
+    { id: 'switch-1d-board', name: 'Switch project: 1D, from the Board', path: from('lite', 'board'), soak: 3, ready: shown('#board', 5), steps: pick(onFloor(f, shown('#summary .pmc', 5))) },
     { id: 'switch-1d-command', name: 'Switch project: 1D Command Center', path: from('lite', 'command'), soak: 3, ready: shown('#summary .pmc', 5), steps: pick(onFloor(f, shown('#summary .pmc', 5))) },
     { id: 'switch-2d', name: 'Switch project: 2D view', path: from('pixel'), soak: 3, ready: `(() => !!document.querySelector('canvas'))()`, steps: pick(onFloor(f, `!!document.querySelector('canvas')`)) },
     { id: 'switch-home', name: 'Home → open a project', path: '/home?tab=projects', soak: 3, ready: shown('#projects-view', 5), steps: [{ click: `#projects-view a[href="/lite?floor=${q}"]`, nav: '/lite', ready: shown('#summary .pmc', 5), switch: true }] },

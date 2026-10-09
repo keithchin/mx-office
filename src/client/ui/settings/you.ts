@@ -42,11 +42,11 @@ function volumeRow(d: SettingsDeps, label: string, level: 'volume' | 'music', mu
 
 /** The alarm when a worker stops to ask you something; picking one plays it (where there's sound). */
 export function alarmSetting(d: SettingsDeps): HTMLElement {
-  const row = choiceRow<NeedsYouSound>('When a worker needs you', [['once', '🔔 Ring once'], ['remind', '🔁 Keep reminding me'], ['off', '🔕 Off']], () => d.settings().needsYouSound, (needsYouSound) => {
+  const row = choiceRow<NeedsYouSound>('When an agent needs you', [['once', '🔔 Ring once'], ['remind', '🔁 Keep reminding me'], ['off', '🔕 Off']], () => d.settings().needsYouSound, (needsYouSound) => {
     d.change({ needsYouSound });
     if (needsYouSound !== 'off') d.sound?.needsYou();
   });
-  return setting('When a worker needs you', 'you', row, h('p.setting-note', {}, 'An alarm the moment a worker stops to ask you something or wants a permission. Keep reminding me rings it again, softly, every 30 seconds until someone opens that worker’s terminal. It’s as loud as the office sounds are.'));
+  return setting('When an agent needs you', 'you', row, h('p.setting-note', {}, 'An alarm the moment an agent stops to ask you something or wants a permission. Keep reminding me rings it again, softly, every 30 seconds until someone opens that agent’s terminal. It’s as loud as the office sounds are.'));
 }
 
 /** Sound & voice: the office's sounds, the jukebox, page turns and voice chat (yours alone). */
@@ -54,7 +54,7 @@ export function soundSettings(d: SettingsDeps): Built {
   const pagesRow = choiceRow('Page turns at the bookshelf', [[true, '📖 On'], [false, 'Off']], () => d.settings().pageTurns, (pageTurns) => d.change({ pageTurns }));
   const talkRow = choiceRow('Voice chat', [[false, '🎙️ Open mic'], [true, '✋ Push to talk']], () => d.settings().pushToTalk, (pushToTalk) => d.change({ pushToTalk }));
   return plain(
-    setting('Office sounds', 'you', volumeRow(d, 'Office sounds volume', 'volume', 'muted', () => d.sound?.ding('done')), h('p.setting-note', {}, 'Workers typing, footsteps, the coffee machine, birds and rain outside, the dog, the ding when a worker is done and the alarm when one needs you. Voice chat isn’t affected.')),
+    setting('Office sounds', 'you', volumeRow(d, 'Office sounds volume', 'volume', 'muted', () => d.sound?.ding('done')), h('p.setting-note', {}, 'Agents typing, footsteps, the coffee machine, birds and rain outside, the dog, the ding when an agent is done and the alarm when one needs you. Voice chat isn’t affected.')),
     alarmSetting(d),
     setting('Page turns at the bookshelf', 'you', pagesRow, h('p.setting-note', {}, 'A soft swish each time the book in your hands turns a page, as you open a doc or scroll through one. The 🔈 at the top of the bookshelf turns it off too.')),
     setting('Jukebox', 'you', volumeRow(d, 'Jukebox volume', 'music', 'musicMuted'), h('p.setting-note', {}, 'The jukebox in the lounge. Everyone on the floor hears the same song, louder the closer they are to it; this is how loud it is for you alone.')),

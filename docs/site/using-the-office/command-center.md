@@ -1,15 +1,25 @@
 ---
 title: Command Center
-description: The default tab of a project - The Firm strip, the Needs you row, the project setup panel, and the project summary with the Project Coordinator console and its escalations, fitted to a laptop screen.
+description: The default tab of a project - the Needs you row, the project setup panel, and the project summary with the Project Coordinator console and its escalations, fitted to a laptop screen.
 weight: 3
 aliases: [/docs/command-center]
 ---
 
-The **🎛️ Command Center** is the first tab of every project and the place to keep open. From top to bottom: **The Firm** strip, **Needs you** (one row), the **Project setup** panel (toolkit projects being set up; one line once its gates are fine), and the **project summary** with the **Project Coordinator console** in its middle and **Recent activity** beside it. The team chatter is in the [📱 Team phone](team-phone.md) now.
+The **🎛️ Command Center** is the first tab of every project and the place to keep open. Entering a project always opens it (from Home, the project switcher, the launcher, **Go to Board**, or switching project inside the 1D view); only a link that names a tab (`?tab=…`, from Needs you, a notification or a PR's *View in Model*) opens another, and a reload keeps the tab you were on. From top to bottom: **Needs you** (one row), the **Project setup** panel (toolkit projects being set up; one line once its gates are fine), and the **project summary** with the **Project Coordinator console** in its middle and **Recent activity** beside it. The team chatter is in the [📱 Team phone](team-phone.md) now.
 
 **It fits the screen.** On a desktop window (at least 1024 × 560 px) the Command Center is a fixed-height layout: the page doesn't scroll, and neither does any column. Needs you and the folded setup line share one row, and the summary's three columns (the project, the console, recent activity) take exactly the height that's left above the bottom bar. Each card scrolls inside its own frame when it has to, with a thin scrollbar in the theme's colors: **What's happening** and **Agents** keep their height while there's room and give it up in proportion when there isn't, **Progress** keeps its rows, each risk is one line (hover for all of it), and Recent activity's list scrolls in its box. In the console, its chat or terminal fills the middle and is the only thing there that scrolls; the escalation cards sit behind a one-line bar (*🚩 2 escalations to you · 1 needs you now* **Show ▾**) and, shown, take the screen's place until **Back to the chat ▴** (this browser remembers which; **Answer** in Needs you shows them). Each section of the summary (**What's happening**, **Progress**, **Agents**, **Recent activity**) folds with a click on its heading, and a folded one gives its room to the others. On a short window (under 820 px) the setup panel starts folded even with a failing gate (its line says so in red); opened, its own frame scrolls. A phone or a narrow window stacks everything and the page scrolls as usual.
 
 ![The Command Center](../images/command-center.png)
+
+### In a Portal theme: the Overview
+
+In Portal (Light) and Portal (Dark) the Command Center is the **Overview** (the first item of the [left navigation](top-bar-and-menu.md#portal-layout)), laid out like a low-code platform's app overview, and the page scrolls instead of fitting the screen:
+
+- **The header**: the project's tile, name and what it's for, **Pin project** (it comes first on Home's Projects page) and the blue **New task**. Under it the band with the floor's line (the budget chip and **● Running | Pause**, the run-state control below) and the progress bar. **Call an audit** is on the [Audit log](audit-log.md) page.
+- **The main column**: **Needs you** as a blue info alert (its **✕** hides it for this browser session, until something new needs you), the setup panel when there is one, the **Project console** (with **View board**), **Recent activity** as a list with a line between rows, and **What's happening**, **Progress** and **Agents** under it.
+- **The right column**, light-grey cards: **Team** (each agent's initials with a dot, red when it needs someone and green while it works, the rest as *+N*; a face opens its terminal, **View team** the Agents page), **Technical contact** (the Project Coordinator, or the Solo Lead, and a way to its terminal) and **Details** (repository or folder, branch, Mendix version, toolkit pin, last commit on the delivery branch, budget spent of total, and the live app's address when it runs). Rows the office doesn't know are left out.
+
+Under 1180 px the cards go under the console; on a phone everything is one column.
 
 **Running or paused.** Beside the budget chip on the floor's line (*⎇ main · repo · 💰 $42 today · $252 / $600 · 42 %*) is one control for the project's run state, on every tab, the team pages included, and on the 2D view's bar:
 
@@ -29,7 +39,7 @@ Between the floor's line and the tabs, on every tab: the project's toolkit stage
 
 ## 📑 The Firm strip
 
-A slim strip at the top: **📑 Call an audit** and **The Firm →** when no audit is running (calling one is for admins); *The Firm is auditing this project: N reviewers · $spent of $cap · phase* with **View →** while one runs (amber at 80 % of the budget); **📑 Audit report ready from The Firm → Read** when it's delivered. See [The Firm](the-firm.md).
+It's on the [Audit log](audit-log.md) page now, above the log (in a Portal theme in its page header): **📑 Call an audit** and **The Firm →** when no audit is running (calling one is for admins); *The Firm is auditing this project: N reviewers · $spent of $cap · phase* with **View →** while one runs (amber at 80 % of the budget); **📑 Audit report ready from The Firm → Read** when it's delivered. See [The Firm](the-firm.md).
 
 ## 🚨 Needs you
 

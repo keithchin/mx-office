@@ -9,7 +9,7 @@
 .firm-strip.active.cap { border-color: var(--bad); }
 html[data-theme='terminal'] .firm-strip.active { background: var(--card); color: var(--ink); border-color: var(--accent); }
 .firm-strip.ready { background: var(--good-soft); }
-.firm-strip.idle { box-shadow: none; border: 0; padding: 0; justify-content: flex-end; }
+.firm-strip.idle { box-shadow: none; border: 0; padding: 0; justify-content: flex-start; }
 .firm-strip-ico { font-size: 18px; }
 .firm-strip-text { flex: 1; min-width: 0; line-height: 1.35; }
 .firm-strip-go { flex: none; font-weight: 900; }

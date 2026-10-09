@@ -215,7 +215,7 @@ export function renderUsage() {
         {
           title: [
             'DeepSeek Harness reports what is in each session\u2019s context window over ACP after a turn; cost appears only when the harness supplies it, and is never billing.',
-            `${currentDshReports} worker${currentDshReports === 1 ? '' : 's'} · ${fmtTokens(currentDshTokens)}${context} context tokens`,
+            `${currentDshReports} agent${currentDshReports === 1 ? '' : 's'} · ${fmtTokens(currentDshTokens)}${context} context tokens`,
           ].join('\n'),
         },
         `DeepSeek Harness current desks ${spend}${fmtTokens(currentDshTokens)}${context} context`,

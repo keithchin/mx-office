@@ -55,14 +55,14 @@ export function repoPicker(options: { id: string; name: string }[] | undefined, 
 }
 
 export function openPrompt(opts: PromptOptions) {
-  const ta = h('textarea', { rows: 7, placeholder: opts.placeholder ?? 'What should the worker work on?', 'aria-label': 'Prompt' }) as HTMLTextAreaElement;
+  const ta = h('textarea', { rows: 7, placeholder: opts.placeholder ?? 'What should the agent work on?', 'aria-label': 'Prompt' }) as HTMLTextAreaElement;
   ta.value = opts.initial ?? '';
   const wtBox = h('input', { type: 'checkbox', id: 'wt-toggle' }) as HTMLInputElement;
   wtBox.checked = worktreePref();
   const wtRow = opts.worktreeOption
     ? h(
         'label',
-        { for: 'wt-toggle', style: 'display:flex;gap:8px;align-items:center;margin:10px 0 0;font-weight:700;cursor:pointer', title: 'Isolate this worker on its own branch so parallel workers never collide' },
+        { for: 'wt-toggle', style: 'display:flex;gap:8px;align-items:center;margin:10px 0 0;font-weight:700;cursor:pointer', title: 'Isolate this agent on its own branch so parallel agents never collide' },
         wtBox,
         '🌿 Work in its own git worktree & branch',
     )
@@ -292,7 +292,7 @@ export function lostWorktreeDialog(opts: LostWorktreeOptions) {
       {},
       h('p', { style: 'margin:0 0 10px;font-weight:700' }, `${folder} was deleted outside agent-office, so ${name} ${opts.openTerminal ? 'is running in a folder that no longer exists' : "can't start there"}.`),
       h('p.wt-status', { style: 'margin:0' }, what),
-      others.length ? h('p.wt-status.warn', {}, `${plural(others.length, 'other worker')} on this floor lost ${others.length === 1 ? 'its worktree' : 'their worktrees'} too: ${others.join(', ')}.`) : null,
+      others.length ? h('p.wt-status.warn', {}, `${plural(others.length, 'other agent')} on this floor lost ${others.length === 1 ? 'its worktree' : 'their worktrees'} too: ${others.join(', ')}.`) : null,
     ),
     h('footer', {}, home, h('span.grow'), look, all, one),
   );

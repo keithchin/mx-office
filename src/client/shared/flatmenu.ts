@@ -97,7 +97,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
     { ...MENU.team, run: () => openTeam(net) },
     { ...MENU.accounts, run: () => openAccounts(net) },
     { ...MENU.signins, run: () => openSignIns(net) },
-    { ...MENU.settings, title: () => 'Every setting: you, the workers, the team, Jeff, notifications, the budget, connections and the rest', run: () => (d.settings ? d.settings() : location.assign(settingsHref(undefined, store.floor ?? undefined))) },
+    { ...MENU.settings, title: () => 'Every setting: you, the agents, the team, Jeff, notifications, the budget, connections and the rest', run: () => (d.settings ? d.settings() : location.assign(settingsHref(undefined, store.floor ?? undefined))) },
     { ...MENU.connections, run: () => openConnections() },
     // 🧪 Test mode (ui/testlab/): the flat views' page only, never the 3D office; admins only.
     { id: 'tests', icon: '🧪', label: 'Test mode', section: 'Office', shown: () => store.me.admin, title: () => 'Test mode and the performance guard: run the page, journey and unit suites against a throwaway test office, and see the results', run: () => (d.tests ? d.tests() : location.assign(testsHref(store.floor ?? store.floors[0]?.id))) },
@@ -124,7 +124,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
       { role: 'menu', 'aria-label': 'Menu' },
       h('div.menu-col', {}, ...section('Open', rows('Open'))),
       h('div.menu-col', {}, ...section('Together', rows('Together')), ...section('Office', rows('Office'))),
-      h('p.menu-foot', {}, d.home ? 'The ones marked 3D ↗ open the 3D office there. What works on one floor (its issues, PRs, queue, whiteboard, meeting…) is in each project.' : 'The ones marked 3D ↗ open the 3D office there. The view is in the dropdown by the ☰.'),
+      h('p.menu-foot', {}, d.home ? 'The ones marked 3D ↗ open the 3D office there. What works on one floor (its issues, PRs, queue, whiteboard, meeting…) is in each project.' : 'The ones marked 3D ↗ open the 3D office there. The other flat view (Go to Office, Go to Board) is a button by the ☰.'),
     );
     menu = openDropdown(button, el, () => (menu = null));
   }

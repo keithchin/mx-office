@@ -95,7 +95,7 @@ export function workerActions(net: Net): WorkerActions {
     // The back office's desks too, as far as the floor's built out (see WING).
     const desk = deskId && !store.workerAtDesk(deskId) ? deskId : nextFreeSeat((id) => !!store.workerAtDesk(id), store.floorPlan.wing)?.id;
     const awake = [...store.workers.values()].filter((w) => w.kind === 'agent' && !isAsleep(w.status));
-    if (!desk && !awake.length) return toast('Every desk and bean bag is taken — send a worker home first', 'warn');
+    if (!desk && !awake.length) return toast('Every desk and bean bag is taken — send an agent home first', 'warn');
     openAsk({
       title,
       ...text,

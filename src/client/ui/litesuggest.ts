@@ -28,8 +28,8 @@ export function offerLite(why: 'touch' | 'slow') {
   offered = true;
   const say =
     why === 'touch'
-      ? '📱 On a phone? The 1D view is made for it: every worker and how it’s doing, its terminal, and the boards.'
-      : '🐢 The 3D office is running slowly on this computer. The 1D view has the workers, their terminals and the boards, without the 3D.';
+      ? '📱 On a phone? The 1D view is made for it: every agent and how it’s doing, its terminal, and the boards.'
+      : '🐢 The 3D office is running slowly on this computer. The 1D view has the agents, their terminals and the boards, without the 3D.';
   const stay = h('button.btn', { type: 'button' }, 'Stay in 3D');
   const el = h(
     'div.lite-offer.panel',

@@ -28,7 +28,7 @@ export function openSignIns(net: Net, why?: string) {
     h(
       'div.body.team',
       {},
-      h('p.note.lead', {}, 'Your workers run on your own Claude plan, and the office acts on GitHub as you: comments, merges and pull requests show up under your name. Only your workers use them.'),
+      h('p.note.lead', {}, 'Your agents run on your own Claude plan, and the office acts on GitHub as you: comments, merges and pull requests show up under your name. Only your agents use them.'),
       banner,
       cards,
       h('p.note', {}, 'Or open a 🐚 shell at any desk: it runs as you, so ', h('code', {}, 'claude auth login'), ' and ', h('code', {}, 'gh auth login'), ' typed there sign you in too.'),
@@ -116,7 +116,7 @@ export function openSignIns(net: Net, why?: string) {
     if (s.status === 'ok') {
       const change = button(s.how === 'office' ? 'Use my own instead' : 'Sign out', () => {
         if (s.how === 'office') return net.send({ t: 'signins.signout', which });
-        confirmDialog(`Sign out of ${NAMES[which]}?`, which === 'claude' ? 'Workers you hire from now on need a new sign-in. The ones already running keep going.' : 'The office stops acting on GitHub as you until you sign in again.', 'Sign out', () => net.send({ t: 'signins.signout', which }));
+        confirmDialog(`Sign out of ${NAMES[which]}?`, which === 'claude' ? 'Agents you hire from now on need a new sign-in. The ones already running keep going.' : 'The office stops acting on GitHub as you until you sign in again.', 'Sign out', () => net.send({ t: 'signins.signout', which }));
       });
       body.append(h('div.signin-actions', {}, change));
       return box;
@@ -141,7 +141,7 @@ export function openSignIns(net: Net, why?: string) {
     const typing = document.activeElement;
     cards.replaceChildren();
     if (!s) {
-      cards.append(h('p.empty', {}, store.me.account ? 'Loading…' : 'On the shared office password, workers run on the office’s own sign-ins.'));
+      cards.append(h('p.empty', {}, store.me.account ? 'Loading…' : 'On the shared office password, agents run on the office’s own sign-ins.'));
       return;
     }
     cards.append(card('claude', s.claude, s.office), card('github', s.github, s.office));

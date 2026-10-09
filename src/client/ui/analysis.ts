@@ -94,7 +94,7 @@ function toolbar(r: AnalysisReport, scope: Scope, by: GroupBy, floor: string | u
         remember(BY_KEY, v);
         again();
       }),
-      h('button.btn', { type: 'button', title: 'Record every worker again and re-classify new runs (admins only)', onclick: () => void backfill(again) }, '↻ Re-analyse'),
+      h('button.btn', { type: 'button', title: 'Record every agent again and re-classify new runs (admins only)', onclick: () => void backfill(again) }, '↻ Re-analyse'),
     ),
   );
 }
@@ -104,7 +104,7 @@ async function backfill(again: () => void) {
     const res = await fetch('/api/analysis/backfill', { method: 'POST', credentials: 'same-origin' });
     const body = await res.json().catch(() => null);
     if (!res.ok) return void toast(body?.error ?? `Re-analysis failed (HTTP ${res.status})`, 'warn');
-    toast(body?.started ? '📊 Re-analysing every worker: refresh in a minute' : '📊 Already analysing');
+    toast(body?.started ? '📊 Re-analysing every agent: refresh in a minute' : '📊 Already analysing');
     setTimeout(again, 4000);
   } catch {
     toast('Re-analysis failed: the office is unreachable', 'warn');
@@ -126,7 +126,7 @@ function scoreCell(score: number, low: boolean, n: number): HTMLElement {
 }
 
 function leaderboard(r: AnalysisReport): HTMLElement {
-  if (!r.leaderboard.length) return section('🏆 Leaderboard', 'No finished runs to rank yet', h('p.an-empty', {}, 'Runs appear here once a worker finishes a task. Runs still going, and false starts (no PR, under 10 API calls), are not ranked.'));
+  if (!r.leaderboard.length) return section('🏆 Leaderboard', 'No finished runs to rank yet', h('p.an-empty', {}, 'Runs appear here once an agent finishes a task. Runs still going, and false starts (no PR, under 10 API calls), are not ranked.'));
   const head = ['#', r.by === 'effort' ? 'Model · effort' : 'Model', 'Score', 'n', 'PRs merged', 'Quality', 'mx check clean', 'Avg cost', 'Avg working time', 'Avg wall time', 'Human nudges'];
   const row = (x: LeaderRow, i: number) =>
     h(
@@ -151,8 +151,8 @@ function leaderboard(r: AnalysisReport): HTMLElement {
     h(
       'p.an-towork',
       {},
-      'Models, by their tasks’ scores. Each worker’s A–F grade, built on these scores, is on ',
-      h('button.btn', { type: 'button', onclick: () => document.getElementById('tab-workers')?.click() }, '👷 Workers'),
+      'Models, by their tasks’ scores. Each agent’s A–F grade, built on these scores, is on ',
+      h('button.btn', { type: 'button', onclick: () => document.getElementById('tab-workers')?.click() }, '👷 Agents'),
     ),
     h('div.an-scroll', {}, h('table.an-table', {}, h('thead', {}, h('tr', {}, ...head.map((t) => h('th', { scope: 'col' }, t)))), h('tbody', {}, ...r.leaderboard.flatMap((x, i) => [row(x, i), sub(x)])))),
   );
@@ -229,7 +229,7 @@ function runsView(r: AnalysisReport, grades: Map<string, Grade>): HTMLElement {
         'div.an-run-facts',
         {},
         h(`span.an-outcome.${cls}`, {}, outcome),
-        h('span', {}, `👷 ${x.worker}`, grades.has(x.id) ? h(`b.an-grade.g-${grades.get(x.id)}`, { title: 'The worker’s grade on the 👷 Workers tab' }, grades.get(x.id)!) : null),
+        h('span', {}, `👷 ${x.worker}`, grades.has(x.id) ? h(`b.an-grade.g-${grades.get(x.id)}`, { title: 'The agent’s grade on the 👷 Agents tab' }, grades.get(x.id)!) : null),
         r.scope === 'global' ? h('span', {}, `🏢 ${floorName(x.floor)}`) : null,
         h('span', { title: 'Wall clock / time actually working' }, `⏱ ${mins(x.durationMs)} (${mins(x.activeMs)} working)`),
         h('span', {}, `💰 ${usd(x.cost)}`),

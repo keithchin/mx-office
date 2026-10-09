@@ -161,7 +161,7 @@ function loadCatalogue(provider: AgentProvider): Promise<void> | undefined {
 export function agentFields(project: ProjectInfo | null, id: string, initial: AgentChoice, label = 'Provider'): AgentFields {
   const options = supportedProviders(project);
   const fallback = resolvedProvider(project?.defaultProvider, project);
-  const select = h('select.provider-select', { id, 'aria-label': 'Worker provider' }) as HTMLSelectElement;
+  const select = h('select.provider-select', { id, 'aria-label': 'Agent provider' }) as HTMLSelectElement;
   for (const provider of options) select.append(h('option', { value: provider }, PROVIDER_LABEL[provider]));
   const note = h('small.provider-note');
   // A model is picked from a list or typed in, by provider: the two controls take turns.
@@ -289,7 +289,7 @@ export function agentFields(project: ProjectInfo | null, id: string, initial: Ag
  * Which worker to start: the office's default (⚙️ Settings), shown as a line, with an ✏️ Edit button
  * that opens the provider, model and effort fields to pick another for this one.
  */
-export function providerPicker(project: ProjectInfo | null, id: string, label = 'Worker'): ProviderPicker {
+export function providerPicker(project: ProjectInfo | null, id: string, label = 'Agent'): ProviderPicker {
   let editing = false;
   const fields = agentFields(project, id, officeChoice(project));
   fields.element.classList.add('hidden');
@@ -299,7 +299,7 @@ export function providerPicker(project: ProjectInfo | null, id: string, label = 
   const paint = () => {
     const def = officeChoice(project);
     current.textContent = choiceLabel(def);
-    current.title = store.prompts.agent ? 'The office’s default worker, set in ⚙️ Settings' : 'The office’s default worker (its --agent); an admin can pick another in ⚙️ Settings';
+    current.title = store.prompts.agent ? 'The office’s default agent, set in ⚙️ Settings' : 'The office’s default agent (its --agent); an admin can pick another in ⚙️ Settings';
     current.classList.toggle('hidden', editing);
     edit.textContent = editing ? '↺ Use the default' : '✏️ Edit';
     edit.title = editing ? `Back to ${choiceLabel(def)}` : 'Pick another provider, model or effort for this one';

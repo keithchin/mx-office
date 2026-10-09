@@ -158,7 +158,7 @@ export function gitView(root: HTMLElement, deps: GitViewDeps): GitView {
 
   function foot(g: GitGraph): HTMLElement {
     const bits: string[] = [];
-    if (!g.branches.length) bits.push(`🌱 Only ${g.defaultBranch} here so far. Hire a worker and its branch sprouts off the trunk.`);
+    if (!g.branches.length) bits.push(`🌱 Only ${g.defaultBranch} here so far. Hire an agent and its branch sprouts off the trunk.`);
     if (g.hidden.merged) bits.push(`🧹 ${g.hidden.merged} old merged ${g.hidden.merged === 1 ? 'branch' : 'branches'} tucked away`);
     if (g.hidden.more) bits.push(`➕ ${g.hidden.more} more not shown`);
     if (g.fetchError) bits.push(`📡 Couldn't fetch origin (${g.fetchError}): showing what's here`);

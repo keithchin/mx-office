@@ -79,7 +79,7 @@ export function keepAwakeSetting(frame: (body: Node[]) => HTMLElement): { sectio
     note.classList.toggle('bad', !!v.error);
     note.textContent = v.error
       ? `⚠️ ${v.error}`
-      : `While any worker on any floor is working, or a queued task, a Firm audit or a gate-check is running, the office asks this computer not to sleep, and lets go once everything has been idle for ${v.idleMinutes} minutes. The screen can still turn off. It never outlives the office.${v.admin ? '' : ' Admins can change it.'}`;
+      : `While any agent on any floor is working, or a queued task, a Firm audit or a gate-check is running, the office asks this computer not to sleep, and lets go once everything has been idle for ${v.idleMinutes} minutes. The screen can still turn off. It never outlives the office.${v.admin ? '' : ' Admins can change it.'}`;
     lid.replaceChildren(lidNote(v.platform));
   };
   idleSave.addEventListener('click', () => void send({ idleMinutes: Number(idle.value) }));
