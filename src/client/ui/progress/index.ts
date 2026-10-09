@@ -13,6 +13,7 @@ import { store } from '../../state';
 import { getProgress } from './api';
 import { barRow, tipContent } from './bar';
 import { openAcceptance } from './acceptance';
+import { toolkitChip } from '../toolkit/line';
 
 const FOLD_KEY = 'agent-office.progress-folded';
 /** Coming back to a hidden tab asks again only when the answer is older than this. */
@@ -91,6 +92,8 @@ export function mountProgressBar(root: HTMLElement, deps: ProgressDeps): Progres
       open: (ph) => open(ph.open),
       label: () => open('acceptance'),
     });
+    // The project's toolkit commit at the end (ui/toolkit/), when it's a toolkit project.
+    if (data.toolkit && store.floor) row.append(toolkitChip(store.floor, () => void load()));
     root.replaceChildren(row, tip);
   }
   /** Before the first answer: the bar's height, empty, so nothing below it moves when it comes. */

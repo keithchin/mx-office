@@ -21,6 +21,11 @@ import { createApp, ignoreMendixOutput, mprVersion } from './mendix-app.js';
 import { recordDecisions } from './register.js';
 import { bashPath, runCommand } from './run.js';
 import { LONGPATHS_CLONE_ARGS, ensureLongPaths } from '../longpaths.js';
+import { toolkitDirFor } from '../toolkit-pin/index.js';
+import { pinInstructions } from '../toolkit-pin/instructions.js';
+import { writeToolkitEnv } from '../toolkit-pin/jobs.js';
+import { pinForNew } from '../toolkit-pin/pins.js';
+import { nextRecord } from '../toolkit-pin/record.js';
 
 export interface FloorRef {
   id: string;
@@ -59,6 +64,8 @@ export interface SetupDeps {
   env?: NodeJS.ProcessEnv;
   /** Runs a command (tests pass a fake for the Mendix tools); runCommand when not given. */
   run?: typeof runCommand;
+  /** The pin a new project starts on (toolkit-pin/pins.ts pinForNew); tests can pass their own. */
+  pinToolkit?(root: string): Promise<{ sha: string; dir: string; date?: string } | undefined>;
 }
 
 const MIN = 60_000;
@@ -220,8 +227,18 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     async init(job, io) {
       const dir = dirOf(job);
       if (SCAFFOLD.every((rel) => existsSync(path.join(dir, rel)))) return { status: 'skipped', detail: 'already scaffolded' };
+      // A new project starts on the fork's newest commit, as a pin of its own (toolkit-pin/): its wiring names the pin, so later toolkit commits never reach it mid-stage.
+      const tk = job.toolkit ?? (await (deps.pinToolkit ?? pinForNew)(cfg.toolkitDir).catch((err: Error) => void io.log(`  couldn't pin the toolkit (${err.message}): using ${cfg.toolkitDir} as it is`)));
+      if (tk) {
+        job.toolkit = tk;
+        io.log(`  toolkit pinned at ${tk.sha.slice(0, 7)}${tk.date ? ` (${tk.date})` : ''}: ${tk.dir}`);
+      }
       io.log('  (this takes a few minutes on Windows: the toolkit checks the machine and renders its dashboard)');
-      await bash(job, path.join(cfg.toolkitDir, 'bin', 'init-project.sh'), [bashPath(dir), '--ignore-sources'], io, 25 * MIN);
+      await bash(job, path.join(tk?.dir ?? cfg.toolkitDir, 'bin', 'init-project.sh'), [bashPath(dir), '--ignore-sources'], io, 25 * MIN);
+      if (tk) {
+        pinInstructions(dir, { pin: tk.dir, sha: tk.sha, date: tk.date, names: [path.basename(path.resolve(cfg.toolkitDir))] });
+        writeToolkitEnv(dir, tk.dir);
+      }
       const missing = SCAFFOLD.filter((rel) => !existsSync(path.join(dir, rel)));
       if (missing.includes('intake.md') || missing.includes('PROJECT.md')) throw new Error(`init-project.sh finished but didn't write ${missing.join(', ')}`);
       return { status: 'done', detail: missing.length ? `scaffolded (not written: ${missing.join(', ')})` : 'scaffolded' };
@@ -268,7 +285,8 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       }
       const p = job.plan;
       // The team's shape too, when it isn't Enterprise (the budget plan prices it: budget/plan-source.ts).
-      const next = { ...saved, repo: repoOf(job), description: p.description, clients: p.clients, operators: p.operators, roles: p.roles, entryMode: p.entry, sizeTier: p.tier, mendix: p.mendix, interview: p.interview, ...(p.shape && p.shape !== 'enterprise' ? { teamShape: p.shape } : {}), createdBy: saved.createdBy ?? job.by, createdAt: saved.createdAt ?? job.startedAt, wizardJob: job.id };
+      const toolkit = job.toolkit && !saved.toolkit ? { toolkit: nextRecord(undefined, job.toolkit.sha, job.by, 'create') } : {};
+      const next = { ...saved, ...toolkit, repo: repoOf(job), description: p.description, clients: p.clients, operators: p.operators, roles: p.roles, entryMode: p.entry, sizeTier: p.tier, mendix: p.mendix, interview: p.interview, ...(p.shape && p.shape !== 'enterprise' ? { teamShape: p.shape } : {}), createdBy: saved.createdBy ?? job.by, createdAt: saved.createdAt ?? job.startedAt, wizardJob: job.id };
       if (JSON.stringify(next) === JSON.stringify(saved)) return { status: 'skipped', detail: 'already saved' };
       mkdirSync(path.dirname(f), { recursive: true });
       writeFileSync(f, `${JSON.stringify(next, null, 2)}\n`);
@@ -277,7 +295,8 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
 
     async gates(job, io) {
       const dir = dirOf(job);
-      const r = await bash(job, path.join(cfg.toolkitDir, 'bin', 'gate-check.sh'), [bashPath(dir)], io, 10 * MIN, true);
+      const tk = job.toolkit?.dir ?? (await toolkitDirFor(dir, cfg.toolkitDir)).dir;
+      const r = await bash(job, path.join(tk, 'bin', 'gate-check.sh'), [bashPath(dir)], io, 10 * MIN, true);
       return { status: 'done', detail: r.code === 0 ? 'index.html and the current stage are up to date' : `gate-check exit ${r.code}: stages still to do` };
     },
 
@@ -302,7 +321,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     async issue(job, io) {
       if (!job.plan.discovery.issue) return { status: 'skipped', detail: 'not asked for' };
       if (job.issue) return { status: 'skipped', detail: `already #${job.issue}` };
-      const body = discoveryBrief(job.plan, cfg.toolkitDir);
+      const body = discoveryBrief(job.plan, job.toolkit?.dir ?? cfg.toolkitDir, job.toolkit?.sha);
       if (cfg.offlineDir) {
         const dir = path.join(cfg.offlineDir, job.plan.owner, `${job.plan.name}.issues`);
         mkdirSync(dir, { recursive: true });

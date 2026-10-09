@@ -8,6 +8,7 @@ For whoever looks after the office: you, the Project Manager, on the Taskforce l
 
 - [Running the office](running-the-office.md): start, stop, restart, update.
 - [Connections](connections.md): the tokens, the Jev key and the password from the office itself, git & gh, the folders and the worktree cleanup.
+- [Toolkit versions](toolkit-versions.md): each project's pinned toolkit commit, the Toolkit line, Update toolkit with its gate preview and roll back, and syncing the fork with Maurits' repository.
 - [Security & tokens](security-and-tokens.md): the password, the tokens and the Jev key, and who is admin.
 - [Data locations](data-locations.md): what is stored where, and what to back up.
 - [Test offices](test-offices.md): trying changes without touching the real office.

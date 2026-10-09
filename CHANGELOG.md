@@ -6,6 +6,28 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+### New
+- **Each project runs on its own pinned toolkit commit.** A project's toolkit is now a read-only copy of
+  one commit (`mendix-toolkit-pins\<sha>`, next to the shared clone), and its instruction files, the team's
+  Playbooks and the office's own gate checks use it. The toolkit's session-start ritual used to
+  `git pull` the shared clone in every agent session, so new toolkit rules reached running projects
+  mid-stage; for a pinned project that step now just reads the pinned commit, and an Agent Office block in
+  `CLAUDE.local.md` says not to pull. New projects start pinned on the fork's newest commit. The commit is
+  recorded in `agent-office.project.json` (with its history) and in `PROJECT.md`'s `Toolkit commit:` line.
+- **A Toolkit line in the setup panel, and a 🧰 chip on the progress bar**: *toolkit 7b4b4cf (2026-10-08) ·
+  3 newer commits available (fix/new/gate-rule changes)*. Commits are classed by their prefix and by
+  whether they touch gate rules (gate-check, its tables, the runbook, the checkpoints). The fork is fetched
+  in the background at most every six hours, or with **🔄 Check now**; never on a page load. When the clone
+  has Maurits' repository as `upstream`, the Toolkit window shows how far behind it the fork is.
+- **🧰 Update toolkit (admins), with a preview.** The preview runs the gate check over the project's
+  default branch with the current toolkit and with the new one and shows what would change (*Stage 2 PASS →
+  FAIL because …*), the commits in between, and a warning when the current stage is mid-way. Confirm moves
+  the pin, brings untouched copied scripts up to date, runs the toolkit's own `sync-project.sh`, and pushes
+  one commit `chore(toolkit): update to <sha>`; it's in the audit log as `toolkit.update`. **Roll back**
+  goes to the previous pin the same way. Projects made before pins show *≈ <sha> · not pinned* (worked out
+  from `PROJECT.md` or the copied scripts) and are pinned from the same window. See Toolkit versions in the
+  docs, which also explain how to sync the fork with Maurits' repository.
+
 ### Fixed
 - **A busy office no longer stalls on a loaded machine.** With builds running and the virus scanner busy,
   the server still blocked for 0.4 to 1.8 s at a time while six workers worked: the ranking's background

@@ -9,7 +9,7 @@ export const DISCOVERY_TITLE = 'Discovery: kickoff with the client (Stages P →
 
 const list = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : (xs[0] ?? ''));
 
-export function discoveryBrief(plan: ProjectPlan, toolkitDir: string): string {
+export function discoveryBrief(plan: ProjectPlan, toolkitDir: string, pinnedSha?: string): string {
   const mode = ENTRY_MODE_INFO[plan.entry];
   const client = plan.clients.length ? list(plan.clients) : 'the client';
   const operator = plan.operators.length ? list(plan.operators) : 'the operator';
@@ -26,6 +26,7 @@ export function discoveryBrief(plan: ProjectPlan, toolkitDir: string): string {
     'Run the discovery for this Mendix app with the client, using the **mxcli-project-toolkit** that is set up in this repo',
     '(read `CLAUDE.local.md` first and follow its session-start ritual; the toolkit runbook is',
     `\`skills/conversion-runbook.md\` in the toolkit clone at \`${toolkitDir}\`).`,
+    ...(pinnedSha ? [`The toolkit is pinned for this project at \`${pinnedSha.slice(0, 7)}\`: never \`git pull\`, fetch or check out in that folder (the office's Update toolkit moves it).`] : []),
     '',
     `- **The client is ${client}**, answering through ${operator} in this terminal. Treat them as the business owner.`,
     `- **What the project is:** ${goal}`,
