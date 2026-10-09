@@ -143,7 +143,7 @@ export function workersRanking(d: RankingDeps) {
 
   function groupOf(i: Item): string {
     if (prefs.group === 'model') return i.r?.modelLabel ?? (i.w?.kind === 'agent' ? modelLabel(i.w.usage?.model ?? i.w.model ?? 'unknown') : 'Shells');
-    return i.r?.roleLabel ?? (i.w?.kind === 'agent' ? 'Worker' : 'Shells');
+    return i.r?.roleLabel ?? (i.w?.kind === 'agent' ? 'Agent' : 'Shells');
   }
 
   function cardOf(i: Item, r: RankingReport | undefined): HTMLElement {
@@ -224,7 +224,7 @@ export function workersRanking(d: RankingDeps) {
       toolbar(r, waiting),
       ...(r
         ? [
-            h('div.rk-board', {}, podium(r, pick) ?? h('p.rk-empty', {}, '🏁 No grades yet: a worker is graded once it finishes a task.'), table(r, pick)),
+            h('div.rk-board', {}, podium(r, pick) ?? h('p.rk-empty', {}, '🏁 No grades yet: an agent is graded once it finishes a task.'), table(r, pick)),
             ...(prefs.group !== 'none' ? [groupCards(prefs.group === 'model' ? r.byModel : r.byRole, names, prefs.group)] : []),
           ]
         : []),

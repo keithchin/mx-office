@@ -279,7 +279,7 @@ function renderCount() {
   const list = [...store.workers.values()];
   const count = (...statuses: string[]) => list.filter((w) => statuses.includes(w.status)).length;
   const working = count('working', 'starting'), done = count('done'), asleep = count('exited', 'offline'), waiting = count('needs_input');
-  const parts = [`${list.length} worker${list.length === 1 ? '' : 's'}`, working && `${working} working`, done && `${done} done`, asleep && `${asleep} asleep`].filter(Boolean);
+  const parts = [`${list.length} agent${list.length === 1 ? '' : 's'}`, working && `${working} working`, done && `${done} done`, asleep && `${asleep} asleep`].filter(Boolean);
   $('px-count').replaceChildren(parts.join(' · '), waiting ? h('span.warn', {}, ` · 🙋 ${waiting} need${waiting === 1 ? 's' : ''} you`) : '');
   const next = waitingInOrder(list).length;
   ($('px-next') as HTMLButtonElement).disabled = !next;

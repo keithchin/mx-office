@@ -86,7 +86,7 @@ function dayChart(v: BudgetView): HTMLElement {
 
 function legend(v: BudgetView): HTMLElement | null {
   if (!v.estimated) return null;
-  return h('p.bud-legend', {}, h('span.bud-key.bud-key-x'), 'Booked as it happened', h('span.bud-key.bud-key-e'), `Estimated from history (${usdCents(v.estimated)}: what was spent before the ledger started, spread over the days each worker was around)`);
+  return h('p.bud-legend', {}, h('span.bud-key.bud-key-x'), 'Booked as it happened', h('span.bud-key.bud-key-e'), `Estimated from history (${usdCents(v.estimated)}: what was spent before the ledger started, spread over the days each agent was around)`);
 }
 
 /** The headline: spent, budget, remaining, forecast, days active. */

@@ -139,7 +139,7 @@ export class DesktopNotifier {
 
   /** What one looks like, from ⚙️ Settings. */
   sample() {
-    const n = this.show('🔔 Notifications are on', { body: 'This is how a worker that needs you or is done gets your attention while you are in another tab. Click one to go straight to that worker.' });
+    const n = this.show('🔔 Notifications are on', { body: 'This is how an agent that needs you or is done gets your attention while you are in another tab. Click one to go straight to that agent.' });
     if (!n) return;
     n.onclick = () => {
       window.focus();

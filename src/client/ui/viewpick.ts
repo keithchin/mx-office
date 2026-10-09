@@ -9,7 +9,7 @@ import { switchView, type View } from '../graphics';
 import { stepIndex } from './chrome-logic';
 
 const VIEWS: { view: View; icon: string; label: string; what: string }[] = [
-  { view: '1d', icon: '🗂️', label: '1D', what: "The floor's board and its workers" },
+  { view: '1d', icon: '🗂️', label: '1D', what: "The floor's board and its agents" },
   { view: '2d', icon: '🗺️', label: '2D', what: 'The floor from above in pixel art' },
   { view: '3d', icon: '🏢', label: '3D', what: 'The 3D office, where you walk around' },
   { view: 'retro', icon: '👾', label: 'Retro', what: 'The office in chunky 16-bit pixels' },

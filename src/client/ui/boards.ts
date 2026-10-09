@@ -106,7 +106,7 @@ function queueChip(issue: number): Node | '' {
   if (t.status === 'running') {
     const w = t.workerId ? store.workers.get(t.workerId) : undefined;
     if (w) return workerChip(w, `${w.name} is working on this at ${store.plan().byId.get(w.deskId)?.label ?? 'a desk'} · ${provider}`);
-    return h('span.qchip.running', {}, `🤖 ${t.workerName ?? 'a worker'} · ${provider}`);
+    return h('span.qchip.running', {}, `🤖 ${t.workerName ?? 'an agent'} · ${provider}`);
   }
   return t.pr ? h('span.qchip.done', {}, `🔀 PR #${t.pr.number} · ${provider}`) : '';
 }
@@ -259,7 +259,7 @@ export function openBoard(kind: 'issues' | 'pulls', net: Net, actions: BoardActi
       for (const col of issueColumns(store.issues.items)) {
         body.append(
           column(col, all, (it, i) =>
-            card(it.number, it.title, [...labelChips(it.labels), queueChip(it.number), it.assignees.length ? `👤 ${it.assignees.join(', ')}` : it.taken ? '🤖 handed to a worker' : `by ${it.author}`, it.comments ? `💬 ${it.comments}` : '', timeAgo(it.updatedAt)], i, () => openIssue(it, net, actions), () => openLabels('issue', it, net)),
+            card(it.number, it.title, [...labelChips(it.labels), queueChip(it.number), it.assignees.length ? `👤 ${it.assignees.join(', ')}` : it.taken ? '🤖 handed to an agent' : `by ${it.author}`, it.comments ? `💬 ${it.comments}` : '', timeAgo(it.updatedAt)], i, () => openIssue(it, net, actions), () => openLabels('issue', it, net)),
           ),
         );
       }

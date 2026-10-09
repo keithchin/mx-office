@@ -13,13 +13,13 @@ export function toolsSection(run: Run): HTMLElement {
   const paint = (t: ToolsView) => {
     const name = h('input', { type: 'text', placeholder: 'Agent Office', value: t.officeIdentity?.name ?? '', 'aria-label': 'Commit name' }) as HTMLInputElement;
     const email = h('input', { type: 'text', placeholder: 'agents@your-org.example', value: t.officeIdentity?.email ?? '', 'aria-label': 'Commit email' }) as HTMLInputElement;
-    const set = h('button.btn.primary', { type: 'button' }, t.officeIdentity ? 'Update' : 'Use for the workers’ commits');
+    const set = h('button.btn.primary', { type: 'button' }, t.officeIdentity ? 'Update' : 'Use for the agents’ commits');
     set.addEventListener('click', () => void run(() => connectionsApi.identity(name.value, email.value), 'Commit identity set').then(load));
     const clear = t.officeIdentity ? h('button.btn', { type: 'button', onclick: () => void run(() => connectionsApi.clearIdentity(), 'Commit identity cleared').then(load) }, 'Clear') : null;
     body.replaceChildren(
       h('ul.cx-toollist', {}, row('git', t.git), row('gh', t.gh), row('gh with the agents’ token', t.ghAuth), row('Commit identity', t.identity)),
       !t.identity.ok || t.officeIdentity
-        ? h('div.cx-form', {}, h('p.cx-sub', {}, 'The workers’ commits (GIT_AUTHOR_* / GIT_COMMITTER_* in their environment; git’s own settings stay as they are):'), h('div.cx-two', {}, name, email), h('div.cx-actions', {}, set, clear))
+        ? h('div.cx-form', {}, h('p.cx-sub', {}, 'The agents’ commits (GIT_AUTHOR_* / GIT_COMMITTER_* in their environment; git’s own settings stay as they are):'), h('div.cx-two', {}, name, email), h('div.cx-actions', {}, set, clear))
         : '',
     );
   };
@@ -81,7 +81,7 @@ export function sweepSection(view: ConnectionsView, run: Run): HTMLElement {
     'section.cx-card',
     { id: 'cx-sweep' },
     h('div.cx-head', {}, h('span.cx-icon', { 'aria-hidden': 'true' }, '🧹'), h('h4', {}, 'Worktree cleanup'), toggle, now),
-    h('p.cx-note', {}, 'Every hour, worktrees under each project’s .agent-office/worktrees/ that no worker has any more, whose branch is merged and that hold no uncommitted changes, are removed with their branch (each one in the Audit log). Links inside them (node_modules junctions) are unlinked, never followed. Worktrees made anywhere else are only listed here.'),
+    h('p.cx-note', {}, 'Every hour, worktrees under each project’s .agent-office/worktrees/ that no agent has any more, whose branch is merged and that hold no uncommitted changes, are removed with their branch (each one in the Audit log). Links inside them (node_modules junctions) are unlinked, never followed. Worktrees made anywhere else are only listed here.'),
     s.lastRun
       ? h('div.cx-sweep', {}, h('p.cx-sub', {}, `Last run ${timeAgo(s.lastRun.at)}: ${items.length ? '' : 'nothing to do.'}`), items.length ? h('ul', {}, ...items.map((i) => h('li', { class: i.action }, h('b', {}, `${ITEM[i.action]} `), `${i.floor ? `${i.floor}: ` : ''}${i.path}${i.branch ? ` (${i.branch})` : ''} — ${i.why}`))) : null)
       : h('p.cx-note', {}, 'Not run yet since the office started.'),

@@ -116,8 +116,8 @@ function renderStatus(m: Meeting, body: HTMLElement, foot: HTMLElement, net: Net
   const head = m.seats[0]?.workerId ? store.workers.get(m.seats[0].workerId) : undefined;
   foot.replaceChildren(
     ...present(
-    h('span.grow', {}, running ? 'The workers stay at the table after it ends, so you can read their terminals.' : 'Clearing the room sends the workers home. A committed output stays on its branch.'),
-    running ? h('button.btn', { type: 'button', onclick: () => confirmDialog('Stop the meeting?', `The workers stop where they are and stay at the table. ${m.output} is only there if it was written.`, 'Stop it', () => net.send({ t: 'meeting.stop' })) }, '⛔ Stop meeting') : null,
+    h('span.grow', {}, running ? 'The agents stay at the table after it ends, so you can read their terminals.' : 'Clearing the room sends the agents home. A committed output stays on its branch.'),
+    running ? h('button.btn', { type: 'button', onclick: () => confirmDialog('Stop the meeting?', `The agents stop where they are and stay at the table. ${m.output} is only there if it was written.`, 'Stop it', () => net.send({ t: 'meeting.stop' })) }, '⛔ Stop meeting') : null,
     !running && m.commit && head?.worktree ? h('button.btn', { type: 'button', title: `Push ${m.worktree?.branch} and open a pull request`, onclick: () => actions.openPr(head.id) }, head.pr ? `🔀 PR #${head.pr.number}` : '🔀 Open PR') : null,
     !running ? h('button.btn', { type: 'button', onclick: () => net.send({ t: 'meeting.clear' }) }, '🧹 Clear the room') : null,
     !running ? h('button.btn.primary', { type: 'button', onclick: callAnother }, '🤝 Call a meeting…') : null,
@@ -144,8 +144,8 @@ function meetingForm(net: Net, preset: MeetingPreset | undefined, done: () => vo
   const partsIn = h('textarea', { rows: 3, placeholder: 'src/server/\nsrc/client/\nsrc/shared/', 'aria-label': 'Parts', spellcheck: 'false' }) as HTMLTextAreaElement;
   const partsRow = h('div.meeting-field', {}, h('label', {}, 'Parts, one per line'), partsIn, h('small.muted', {}, 'Handed out to the mappers in turn: files, folders, modules or issues.'));
   const count = h('b');
-  const minus = h('button.btn.small', { type: 'button', 'aria-label': 'Fewer workers' }, '−');
-  const plus = h('button.btn.small', { type: 'button', 'aria-label': 'More workers' }, '+');
+  const minus = h('button.btn.small', { type: 'button', 'aria-label': 'Fewer agents' }, '−');
+  const plus = h('button.btn.small', { type: 'button', 'aria-label': 'More agents' }, '+');
   const roleList = h('div.meeting-roles');
   const roundsSel = h('select.provider-select.meeting-rounds', { 'aria-label': 'Round limit' }) as HTMLSelectElement;
   // A pattern that always runs the same rounds says so, where a locked control would look broken.
@@ -207,7 +207,7 @@ function meetingForm(net: Net, preset: MeetingPreset | undefined, done: () => vo
     renderRoles();
   });
   plus.addEventListener('click', () => {
-    if (roles.length < def().seats.max) roles.push(def().roles[roles.length] ?? `Worker ${roles.length + 1}`);
+    if (roles.length < def().seats.max) roles.push(def().roles[roles.length] ?? `Agent ${roles.length + 1}`);
     renderRoles();
   });
   outputIn.addEventListener('input', () => {
@@ -241,7 +241,7 @@ function meetingForm(net: Net, preset: MeetingPreset | undefined, done: () => vo
     if (def().needs === 'pr' && !pr()) return prSel.focus();
     const parts = partsIn.value.split('\n').map((l) => l.trim()).filter(Boolean);
     if (def().needs === 'parts' && parts.length < roles.length - 1) {
-      toast(`List at least ${roles.length - 1} parts, one per line, or seat fewer workers`, 'warn');
+      toast(`List at least ${roles.length - 1} parts, one per line, or seat fewer agents`, 'warn');
       return partsIn.focus();
     }
     const output = outputIn.value.trim();
@@ -262,7 +262,7 @@ function meetingForm(net: Net, preset: MeetingPreset | undefined, done: () => vo
       model: provider.model(),
       effort: provider.effort(),
     });
-    toast(`🤝 Calling the ${def().label} meeting: the workers are heading for the meeting room`);
+    toast(`🤝 Calling the ${def().label} meeting: the agents are heading for the meeting room`);
     done();
   };
   bodyEl.addEventListener('submit', (e) => {
@@ -289,7 +289,7 @@ function meetingForm(net: Net, preset: MeetingPreset | undefined, done: () => vo
     }
     const m = store.meeting.current;
     const taken = m?.status === 'running';
-    busy.textContent = taken ? `The room is busy with “${m.title}” until it ends or someone stops it.` : m ? `Starting this sends the last meeting’s workers home.` : '';
+    busy.textContent = taken ? `The room is busy with “${m.title}” until it ends or someone stops it.` : m ? `Starting this sends the last meeting’s agents home.` : '';
     submit.toggleAttribute('disabled', taken);
   };
   pickPattern(pattern);

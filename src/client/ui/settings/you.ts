@@ -42,11 +42,11 @@ function volumeRow(d: SettingsDeps, label: string, level: 'volume' | 'music', mu
 
 /** The alarm when a worker stops to ask you something; picking one plays it (where there's sound). */
 export function alarmSetting(d: SettingsDeps): HTMLElement {
-  const row = choiceRow<NeedsYouSound>('When a worker needs you', [['once', '🔔 Ring once'], ['remind', '🔁 Keep reminding me'], ['off', '🔕 Off']], () => d.settings().needsYouSound, (needsYouSound) => {
+  const row = choiceRow<NeedsYouSound>('When an agent needs you', [['once', '🔔 Ring once'], ['remind', '🔁 Keep reminding me'], ['off', '🔕 Off']], () => d.settings().needsYouSound, (needsYouSound) => {
     d.change({ needsYouSound });
     if (needsYouSound !== 'off') d.sound?.needsYou();
   });
-  return setting('When a worker needs you', 'you', row, h('p.setting-note', {}, 'An alarm the moment a worker stops to ask you something or wants a permission. Keep reminding me rings it again, softly, every 30 seconds until someone opens that worker’s terminal. It’s as loud as the office sounds are.'));
+  return setting('When an agent needs you', 'you', row, h('p.setting-note', {}, 'An alarm the moment an agent stops to ask you something or wants a permission. Keep reminding me rings it again, softly, every 30 seconds until someone opens that agent’s terminal. It’s as loud as the office sounds are.'));
 }
 
 /** Sound & voice: the office's sounds, the jukebox, page turns and voice chat (yours alone). */

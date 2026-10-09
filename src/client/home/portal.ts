@@ -148,8 +148,8 @@ export function portalProjects(root: HTMLElement, deps: PortalDeps) {
 
   const moreItems = (f: FloorInfo): PopItem[] => {
     const items: PopItem[] = [
-      { label: 'Open the board', hint: 'Its pipeline, workers and tabs', href: floorUrl(f.id), run: () => deps.open(f.id, '1d') },
-      { label: 'Open the office', hint: 'From above, every worker at a desk', href: `/pixel?floor=${encodeURIComponent(f.id)}`, run: () => deps.open(f.id, '2d') },
+      { label: 'Open the board', hint: 'Its pipeline, agents and tabs', href: floorUrl(f.id), run: () => deps.open(f.id, '1d') },
+      { label: 'Open the office', hint: 'From above, every agent at a desk', href: `/pixel?floor=${encodeURIComponent(f.id)}`, run: () => deps.open(f.id, '2d') },
       { label: 'View live app', hint: 'The app running from main', href: floorUrl(f.id, '&tab=live') },
       { label: 'Edit in Studio Pro', hint: 'Opens on the office’s computer (admins)', href: floorUrl(f.id, '&open=studio') },
     ];
@@ -188,7 +188,7 @@ export function portalProjects(root: HTMLElement, deps: PortalDeps) {
       if (!f.cloning) deps.open(f.id, '1d');
     });
     const sub = [f.repo ?? 'Local folder', f.branch && f.branch !== 'HEAD' ? `⎇ ${f.branch}` : ''].filter(Boolean).join(' · ');
-    const people = [f.busy && `${f.busy} working`, `${f.workers} worker${f.workers === 1 ? '' : 's'}`, f.people && `${f.people} here`].filter(Boolean).join(' · ');
+    const people = [f.busy && `${f.busy} working`, `${f.workers} agent${f.workers === 1 ? '' : 's'}`, f.people && `${f.people} here`].filter(Boolean).join(' · ');
     const summary = h('p.ph-line', {}, summaries.get(f.id) ?? people);
     if (!summaries.has(f.id) && !f.cloning) void summaryLine(f.id).then((t) => (summaries.set(f.id, t), summary.isConnected && t && (summary.textContent = t)));
     return h(

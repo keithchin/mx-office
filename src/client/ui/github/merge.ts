@@ -85,8 +85,8 @@ export function openMerge(it: GhPull, d: GhPullDetail, net: Net, handToWorker: (
   const cancel = h('button.btn', { type: 'button' }, 'Cancel');
   // Conflicts can't be merged from here, so fixing them is the main button.
   const worker = conflicted(d)
-    ? h('button.btn.primary', { type: 'button', title: 'A new worker merges the base in, resolves the conflicts, then merges it the way picked above' }, '✨ New worker: fix conflicts & merge')
-    : h('button.btn', { type: 'button', title: 'A worker fixes whatever is in the way, then merges' }, '🤖 Hand to a worker');
+    ? h('button.btn.primary', { type: 'button', title: 'A new agent merges the base in, resolves the conflicts, then merges it the way picked above' }, '✨ New agent: fix conflicts & merge')
+    : h('button.btn', { type: 'button', title: 'An agent fixes whatever is in the way, then merges' }, '🤖 Hand to an agent');
 
   const el = h(
     'div.modal.gh-merge',

@@ -156,7 +156,7 @@ export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorke
     bellBefore(el) {
       // The browser only asks from a tap, so there's a button for it while it hasn't been asked.
       if (notifyPermission() !== 'default' || !settings.notify) return;
-      const bell = h('button.btn', { type: 'button', title: 'Get a notification when a worker needs input or is done', 'aria-label': 'Turn on notifications' }, '🔔');
+      const bell = h('button.btn', { type: 'button', title: 'Get a notification when an agent needs input or is done', 'aria-label': 'Turn on notifications' }, '🔔');
       bell.addEventListener('click', async () => {
         await askNotifyPermission();
         bell.remove();

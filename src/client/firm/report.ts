@@ -46,7 +46,7 @@ function reviewerSection(id: ReviewerId, s: ReviewerSection): HTMLElement {
 }
 
 export function renderReport(root: HTMLElement, r: Report, admin: boolean, back: () => void) {
-  const nav = [['exec', 'Summary'], ['stats', 'Statistics'], ['findings', 'Findings'], ['pros', 'Pros & cons'], ['rca', 'Root causes'], ['timeline', 'Timeline'], ['expect', 'Expectations'], ['workers', 'Workers'], ['risks', 'Risks'], ['recs', 'Recommendations'], ['appendix', 'Appendix']];
+  const nav = [['exec', 'Summary'], ['stats', 'Statistics'], ['findings', 'Findings'], ['pros', 'Pros & cons'], ['rca', 'Root causes'], ['timeline', 'Timeline'], ['expect', 'Expectations'], ['workers', 'Agents'], ['risks', 'Risks'], ['recs', 'Recommendations'], ['appendix', 'Appendix']];
   const slackers = r.workers.filter((w) => w.slacking).length;
   root.replaceChildren(
     h('div.firm-report', {},
@@ -78,8 +78,8 @@ export function renderReport(root: HTMLElement, r: Report, admin: boolean, back:
       section('rca', 'Root cause analysis', causalChains(r.rootCauses)),
       section('timeline', 'Project timeline after review', r.timeline.summary ? h('p', {}, r.timeline.summary) : null, timelineChart(r.timeline.milestones)),
       section('expect', 'Expectations vs reality', table(['Area', 'Expected', 'Actual', 'Gap', 'Note'], r.expectations.map((e) => [h('b', {}, e.area), e.expected, e.actual, h('span.firm-gap', { class: e.gap }, GAP[e.gap] ?? e.gap), e.note ?? '']))),
-      section('workers', `Worker performance${slackers ? ` · ${slackers} flagged` : ''}`,
-        table(['Worker', 'Role', 'Model', 'Grade', 'Office ranking', 'Output', 'Spend', 'Slacking?', 'Evidence'], r.workers.map((w) => [
+      section('workers', `Agent performance${slackers ? ` · ${slackers} flagged` : ''}`,
+        table(['Agent', 'Role', 'Model', 'Grade', 'Office ranking', 'Output', 'Spend', 'Slacking?', 'Evidence'], r.workers.map((w) => [
           h('b', {}, w.name), w.role ?? '', w.model ?? '', h('span.firm-grade', { class: `g-${w.grade}` }, w.grade), w.rankingGrade ?? '—', w.output, w.spend === undefined ? '—' : usd(w.spend),
           w.slacking ? h('span.firm-slack', {}, '🚩 Yes') : h('span.firm-noslack', {}, 'No'), w.evidence,
         ]), 'firm-workers'),

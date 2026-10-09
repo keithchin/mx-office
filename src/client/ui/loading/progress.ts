@@ -6,7 +6,7 @@
 /** What the flat views wait for when they enter a floor (each view picks the ones it shows). */
 export const FLOOR_STEPS = {
   enter: 'Entering the floor',
-  workers: 'The workers',
+  workers: 'The agents',
   roster: 'The team',
   summary: 'The summary',
   budget: 'The budget',

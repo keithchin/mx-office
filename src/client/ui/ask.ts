@@ -41,7 +41,7 @@ const WT_KEY = 'agent-office.worktree';
 
 export function openAsk(opts: AskOptions) {
   let to: string | null = opts.newDesk ? null : (opts.workers[0]?.id ?? null);
-  const ta = h('textarea', { rows: opts.initial ? 9 : 5, placeholder: opts.placeholder ?? 'What should the worker do?', 'aria-label': 'Prompt' }) as HTMLTextAreaElement;
+  const ta = h('textarea', { rows: opts.initial ? 9 : 5, placeholder: opts.placeholder ?? 'What should the agent do?', 'aria-label': 'Prompt' }) as HTMLTextAreaElement;
   ta.value = opts.initial ?? '';
   const wtBox = h('input', { type: 'checkbox', id: 'ask-wt' }) as HTMLInputElement;
   try {
@@ -49,7 +49,7 @@ export function openAsk(opts: AskOptions) {
   } catch {
     // storage blocked
   }
-  const wtRow = h('label.ask-wt', { for: 'ask-wt', title: 'Isolate the new worker on its own branch so parallel workers never collide' }, wtBox, '🌿 Work in its own git worktree & branch');
+  const wtRow = h('label.ask-wt', { for: 'ask-wt', title: 'Isolate the new agent on its own branch so parallel agents never collide' }, wtBox, '🌿 Work in its own git worktree & branch');
   const repos = repoPicker(opts.worktreeOption ? opts.repoOptions : undefined, wtBox);
   const provider: ProviderPicker | null = opts.providerOption ? providerPicker(store.project, 'ask-provider') : null;
   const submit = h('button.btn.primary', { type: 'submit' });
@@ -63,7 +63,7 @@ export function openAsk(opts: AskOptions) {
     provider?.element.classList.toggle('hidden', !!id);
     submit.textContent = id ? 'Send ✨' : 'Hire & start';
   };
-  if (opts.newDesk) choices.append(h('button.btn', { type: 'button', 'data-to': '', onclick: () => pick(null) }, `✨ New worker · ${opts.newDesk}`));
+  if (opts.newDesk) choices.append(h('button.btn', { type: 'button', 'data-to': '', onclick: () => pick(null) }, `✨ New agent · ${opts.newDesk}`));
   for (const w of opts.workers) {
     choices.append(h('button.btn', { type: 'button', 'data-to': w.id, title: `Type it into ${w.name}'s prompt`, onclick: () => pick(w.id) }, h('span.dot', { style: `background:${w.color}` }), w.name, h('small', {}, STATUS_LABEL[w.status] ?? w.status)));
   }
@@ -78,7 +78,7 @@ export function openAsk(opts: AskOptions) {
       {},
       h('label', {}, 'Send to'),
       choices,
-      opts.context ? h('details.ask-context', {}, h('summary', {}, 'The worker is told first…'), h('pre', {}, opts.context)) : null,
+      opts.context ? h('details.ask-context', {}, h('summary', {}, 'The agent is told first…'), h('pre', {}, opts.context)) : null,
       h('label', { style: 'margin-top:14px' }, 'Prompt'),
       dictateField(ta),
       provider?.element ?? null,

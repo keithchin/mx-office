@@ -344,3 +344,15 @@ test('a window’s ✕ is one × in Portal: the line icon alone, its text sized 
   assert.match(parts, /html\[data-theme\^='portal'\] body\.lite\.lite :is\(\.btn\.btn, \.close\.close\)\[data-ao-icon\]:not\(\[data-ao-icon='none'\]\) \{ font-size: 0; \}/);
   assert.match(read('src/client/styles/theme-clean.css'), /\[data-ao-icon\]:not\(\[data-ao-icon='none'\]\) \{ font-size: 0; \}/);
 });
+
+test('the New task window and the rest say agent, not worker, where a person reads it', () => {
+  const ask = read('src/client/ui/ask.ts');
+  assert.match(ask, /'What should the agent do\?'/);
+  assert.match(ask, /`✨ New agent · \$\{opts\.newDesk\}`/);
+  assert.doesNotMatch(ask, /'What should the worker do\?'|New worker ·/);
+  assert.match(read('src/client/ui/palette.ts'), /Find an agent, issue, PR/);
+  assert.match(read('src/client/ui/menuitems.ts'), /label: 'Next agent that needs you'/);
+  // Ids, message types and data keys keep the old name.
+  assert.match(read('src/client/lite.html'), /id="tab-workers"/);
+  assert.match(read('src/client/ui/ranking/view.ts'), /r\.roleLabel !== 'Worker'/);
+});

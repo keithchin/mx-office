@@ -26,8 +26,8 @@ export const COUNTS = {
 export const MENU = {
   issues: { id: 'issues', icon: '📌', label: 'Issues', section: 'Open', count: COUNTS.issues },
   pulls: { id: 'pulls', icon: '🔀', label: 'Pull requests', section: 'Open', count: COUNTS.pulls },
-  queue: { id: 'queue', icon: '📋', label: 'Task queue', section: 'Open', count: COUNTS.queue, title: () => 'Issues and tasks waiting for a worker' },
-  services: { id: 'services', icon: '🌐', label: 'Services', section: 'Open', count: COUNTS.services, title: () => 'Web servers the workers are running' },
+  queue: { id: 'queue', icon: '📋', label: 'Task queue', section: 'Open', count: COUNTS.queue, title: () => 'Issues and tasks waiting for an agent' },
+  services: { id: 'services', icon: '🌐', label: 'Services', section: 'Open', count: COUNTS.services, title: () => 'Web servers the agents are running' },
   whiteboard: { id: 'whiteboard', icon: '📝', label: 'Whiteboard', section: 'Open', title: () => 'Draw together, live' },
   // Up on the 3D top bar while a meeting is on: what's being worked through in the meeting room.
   meeting: {
@@ -37,7 +37,7 @@ export const MENU = {
     section: 'Open',
     status: () => store.meeting.current?.status === 'running',
     chip: () => 'In a meeting',
-    title: () => 'Call a meeting: workers work through a question or a task together',
+    title: () => 'Call a meeting: agents work through a question or a task together',
   },
   search: { id: 'search', icon: '🔎', label: 'Search', section: 'Open', key: '/', title: () => 'Search the chat and every terminal' },
   docs: { id: 'docs', icon: '📚', label: 'Project docs', section: 'Open', title: () => 'Read the project’s own Markdown: its README, team journals, standups' },
@@ -59,7 +59,7 @@ export const MENU = {
     tone: () => (needsSigningIn() ? 'danger' : undefined),
     status: needsSigningIn,
     chip: () => 'Sign in to Claude',
-    title: () => 'The Claude plan and GitHub account your workers run on: your own',
+    title: () => 'The Claude plan and GitHub account your agents run on: your own',
   },
   settings: { id: 'settings', icon: '⚙️', label: 'Settings', section: 'Office' },
   // The office's tokens, password, git / gh, folders and worktree cleanup (ui/connections/): admins only.
@@ -84,7 +84,7 @@ export const MENU = {
   waiting: {
     id: 'waiting',
     icon: () => (waitingNow().some((w) => w.status === 'needs_input') ? '🙋' : '✅'),
-    label: 'Next worker that needs you',
+    label: 'Next agent that needs you',
     section: 'Open',
     key: 'N',
     count: () => waitingNow().length,
@@ -93,7 +93,7 @@ export const MENU = {
     chip: () => waitingLabel(waitingNow()).replace(/^(🙋|✅) /, ''),
     on: () => waitingNow().every((w) => w.status === 'done'),
     tone: () => (waitingNow().some((w) => w.status === 'needs_input') ? 'danger' : undefined),
-    title: () => 'Go to the next worker waiting on someone: the ones that need you first (N)',
+    title: () => 'Go to the next agent waiting on someone: the ones that need you first (N)',
   },
 } satisfies Record<string, MenuItem>;
 

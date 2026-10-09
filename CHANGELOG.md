@@ -47,7 +47,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ### Changed
 - **Workers are called Agents** wherever you read it: the tab and page (Agents), Settings › Agents, the
-  badges' tooltips, the audit log's filter, the queue and meeting windows. Addresses stay:
+  badges' tooltips, the audit log's filter, the queue and meeting windows, the New task window (Agent,
+  "What should the agent do?", New agent), the issue and PR windows, the rankings, The Firm's report, the
+  menus, tooltips, toasts and empty states. Addresses stay:
   `?tab=workers` and `section=workers` still work, and `?tab=agents` opens the Agents page too.
 - **The docs are MxOffice Docs** (the brand in the docs page's bar).
 

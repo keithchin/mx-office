@@ -62,7 +62,7 @@ function pages(opts: PortalBarOpts): { label: string; hint: string; href: string
     { label: 'Projects', hint: 'Home: every project', href: '/home', run: location.pathname === '/home' ? opts.onHome : undefined },
     { label: 'The Firm', hint: 'Independent Reviewer Agents', href: '/firm' },
     { label: 'Documentation', hint: 'Guides, reference and FAQ', href: '/docs' },
-    { label: 'Settings', hint: 'You, the workers, the team, the look', href: settingsHref(undefined, store.floor ?? undefined), run: opts.settings },
+    { label: 'Settings', hint: 'You, the agents, the team, the look', href: settingsHref(undefined, store.floor ?? undefined), run: opts.settings },
   ];
 }
 
