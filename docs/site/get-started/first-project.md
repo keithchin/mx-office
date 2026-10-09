@@ -1,7 +1,7 @@
 ---
 title: Create your first project
 description: Use the ✨ New project wizard to create a GitHub repo in AI-Taskforce-Labs, add it as a floor, create the Mendix app, set up the mxcli-project-toolkit and hire the project team.
-weight: 2
+weight: 3
 ---
 
 The **✨ New project** wizard on **/home** turns a few answers into a ready project: a private GitHub repository, a floor in the office, a blank Mendix app (`.mpr`), the toolkit's scaffold, recorded decisions, the project team at their desks and a Discovery issue for the Chief Analyst.

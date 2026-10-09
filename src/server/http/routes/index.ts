@@ -39,6 +39,7 @@ import { progressRoutes } from './progress.js';
 import { perfRoutes } from './perf.js';
 import { testlabRoutes } from './testlab.js';
 import { projectRoutes } from './projects.js';
+import { firstRunRoutes } from './first-run.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -151,6 +152,9 @@ export const routes: readonly Route[] = [
   wizardRoutes.wizard,
   toolkitRoutes.toolkit,
   connectionsRoutes.connections,
+  // 🚀 First-run setup: its page and its calls (first-run.ts).
+  firstRunRoutes.api,
+  firstRunRoutes.page,
   studioRoutes.info,
   studioRoutes.open,
   pageRoutes.office,

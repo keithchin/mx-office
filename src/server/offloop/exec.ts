@@ -21,6 +21,8 @@ export interface OffOptions {
   timeout?: number;
   maxBuffer?: number;
   windowsHide?: boolean;
+  /** Windows: hand the arguments to the program as they are (cmd.exe /s /c "…" for a .cmd shim). */
+  windowsVerbatimArguments?: boolean;
   /** Written to the program's stdin, which is then closed. */
   input?: string;
 }

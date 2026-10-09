@@ -184,6 +184,31 @@ export function removeTestDir(dir) {
   fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 });
 }
 
+/** What Windows says while something still has a file in the folder open for a moment (the office's
+ * terminal host, a virus scanner, the search indexer letting go): worth another try. */
+const TRANSIENT = new Set(['EPERM', 'EBUSY', 'ENOTEMPTY', 'EACCES']);
+
+/**
+ * removeTestDir at the end of a run, made to never fail it: a folder Windows still holds is tried again
+ * `attempts` times, `delayMs` apart, and if it still won't go, `warn` says so and it's left for later.
+ * Resolves true when it's gone. A run's result never depends on its cleanup.
+ */
+export async function cleanupTestDir(dir, { attempts = 6, delayMs = 1000, remove = removeTestDir, warn = (m) => console.warn(m), sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
+  for (let i = 1; ; i++) {
+    try {
+      remove(dir);
+      return true;
+    } catch (e) {
+      if (TRANSIENT.has(e?.code) && i < attempts) {
+        await sleep(delayMs);
+        continue;
+      }
+      warn(`perf: couldn't remove ${dir} after ${i} tr${i === 1 ? 'y' : 'ies'} (${e?.code ?? e?.message ?? e}); left in place, delete it by hand. The run's result stands.`);
+      return false;
+    }
+  }
+}
+
 /**
  * Kills every process whose command line names `root` (the workers' terminal host the office leaves
  * running for the next one, fake agents started in its checkouts), and everything they started. For a

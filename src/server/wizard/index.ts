@@ -18,8 +18,8 @@ import { setShape } from '../roster/coverage.js';
 import { everHired } from '../roster/store.js';
 import { adminTokenConfigured, adminTokenSource, redactor } from './admin-token.js';
 import { credential } from '../connections/resolve.js';
-import { toolkitDir } from '../connections/store.js';
-import { configProblems, defaultMendix, mendixVersions, toolkitEnv, wizardConfig, type WizardConfig } from './config.js';
+import { officeSettings, toolkitDir } from '../connections/store.js';
+import { configProblems, mendixVersions, preferredMendix, projectOrg, toolkitEnv, wizardConfig, type WizardConfig } from './config.js';
 import { existingAnswers, parseIntakeTemplate } from './intake.js';
 import { JobBook, jobId, newJob, viewOf, type JobState } from './job.js';
 import { mprVersion } from './mendix-app.js';
@@ -80,7 +80,8 @@ export class Wizard {
 
   /** Where everything is: the toolkit folder looked up again each time, so a change in 🔌 Connections › Paths takes at once. */
   get cfg(): WizardConfig {
-    return { ...this.base, toolkitDir: toolkitDir() };
+    // The organization and mxcli too: first-run setup can change either while the office runs.
+    return { ...this.base, toolkitDir: toolkitDir(), org: projectOrg().value, mxcli: officeSettings().mxcliPath || this.base.mxcli };
   }
 
   info(admin: boolean): WizardInfo {
@@ -98,7 +99,7 @@ export class Wizard {
       mendixToken: !!credential('mendix'),
       offline: !!this.cfg.offlineDir,
       mendixVersions: versions,
-      defaultMendix: defaultMendix(versions),
+      defaultMendix: preferredMendix(versions),
       questions,
       problems: configProblems(this.cfg, versions),
       toolkitDir: this.cfg.toolkitDir,

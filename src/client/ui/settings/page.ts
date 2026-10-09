@@ -19,6 +19,7 @@ import { budgetPart, rosterPart, studioPart } from './project';
 import { advancedPart, appearancePart, incidentsPart } from './office';
 import { testingPart } from './testing';
 import { dangerPart } from '../project-delete/danger';
+import { rerunSetupSetting } from '../../first-run/rerun';
 
 /** Phone alerts: where each phone's own settings are (the team phone's ⚙, the phone version's). */
 const phoneAlerts = () =>
@@ -42,7 +43,7 @@ export const SECTION_BUILDERS: Record<SettingsSectionId, (d: SettingsDeps) => Bu
   jeff: () => rosterPart('jeff'),
   notify: (d) => together(desktopSetting(d), alarmSetting(d), phoneAlerts(), webhookSetting(d), teamsCardsSetting()),
   budget: (d) => budgetPart(d),
-  connections: () => (store.me.admin ? plain(connectionsPanel().el) : plain(h('p.setting-note', {}, 'Only admins see the office’s connections.'))),
+  connections: () => (store.me.admin ? plain(rerunSetupSetting(), connectionsPanel().el) : plain(h('p.setting-note', {}, 'Only admins see the office’s connections.'))),
   deliverables: () => rosterPart('deliverables'),
   incidents: () => incidentsPart(),
   studio: () => studioPart(),

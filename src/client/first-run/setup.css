@@ -1,0 +1,73 @@
+/* 🚀 First-run setup (/setup): the stepper and its steps. Colours are the theme tokens only, so it
+   reads in every theme (Portal Light and Dark first). */
+.fr-main { max-width: 1000px; }
+.fr-page { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; align-items: start; }
+.fr-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 76px; }
+.fr-step button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius-sm, 8px); background: none; color: var(--ink-2); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.fr-step button:hover:not(:disabled) { background: var(--paper-2); }
+.fr-step button:disabled { color: var(--faint); cursor: not-allowed; }
+.fr-step.on button { background: var(--card); color: var(--ink); box-shadow: inset 3px 0 0 var(--accent); }
+.fr-num { display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--rule-strong); font-size: 12px; font-weight: 800; }
+.fr-step.on .fr-num { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.fr-step.done .fr-num { border-color: var(--good-ink); color: var(--good-ink); }
+.fr-body { min-width: 0; background: var(--card); border: 1px solid var(--rule-strong); border-radius: var(--radius-lg, 12px); padding: 18px 22px 20px; box-shadow: var(--shadow, none); }
+.fr-head { margin-bottom: 12px; }
+.fr-head h2 { margin: 2px 0 0; font-size: 22px; color: var(--ink); }
+.fr-kicker { margin: 0; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.fr-step-body { display: flex; flex-direction: column; gap: 10px; color: var(--ink); font-size: 14px; line-height: 1.45; }
+.fr-step-body p { margin: 0; }
+.fr-step-body h3 { margin: 10px 0 0; font-size: 15px; }
+.fr-intro ol { margin: 6px 0 0; padding-left: 22px; }
+.fr-field { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 10px; align-items: center; margin: 0; }
+.fr-field span { font-weight: 700; color: var(--ink-2); font-size: 13px; }
+.fr-field input, .fr-inline input, .fr-inline select { width: 100%; min-width: 0; }
+.fr-inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.fr-inline input, .fr-inline select { flex: 1 1 240px; width: auto; }
+.fr-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.fr-actions .btn { text-decoration: none; }
+.fr-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.fr-foot:not(:has(*)) { display: none; }
+.fr-foot .fr-next { margin-left: auto; }
+.fr-ok { color: var(--good-ink); font-weight: 700; }
+.fr-bad { color: var(--bad-ink); font-weight: 700; }
+.fr-summary { flex: 1 1 260px; margin: 0; font-weight: 700; }
+.fr-summary.good { color: var(--good-ink); }
+.fr-summary.bad { color: var(--bad-ink); }
+.fr-rows { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fr-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--rule-strong); border-left-width: 4px; border-radius: var(--radius-sm, 8px); background: var(--card); }
+.fr-row.ok { border-left-color: var(--good-ink); }
+.fr-row.missing { border-left-color: var(--bad-ink); background: var(--bad-soft); }
+.fr-row.warn { border-left-color: var(--warn-ink); background: var(--warn-soft); }
+.fr-row.loading { color: var(--muted); }
+.fr-row-icon { flex: none; width: 22px; font-size: 16px; line-height: 1.3; }
+.fr-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fr-row-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.fr-row-text { font-size: 13px; color: var(--ink); word-break: break-word; }
+.fr-row-why { font-size: 12.5px; color: var(--muted); }
+.fr-row-fix { font-size: 12.5px; color: var(--ink-2); font-weight: 700; }
+.fr-row-link { flex: none; align-self: center; text-decoration: none; font-size: 13px; padding: 4px 10px; }
+.fr-row .fr-inline { margin-top: 6px; }
+.fr-badge { font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--rule-strong); color: var(--ink-2); background: var(--paper-2); }
+.fr-badge.req { color: var(--info-ink, var(--link)); }
+.fr-log { max-height: 220px; overflow: auto; margin: 0; padding: 10px 12px; border-radius: var(--radius-sm, 8px); background: var(--code-bg); color: var(--code-ink); font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
+.fr-summary-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fr-summary-list li { padding: 8px 10px; border-radius: var(--radius-sm, 8px); background: var(--paper-2); }
+.fr-summary-list li.bad { background: var(--warn-soft); color: var(--warn-ink); }
+.fr-cards { gap: 10px; }
+@media (max-width: 760px) {
+  .fr-page { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .fr-steps { position: static; flex-direction: row; overflow-x: auto; gap: 2px; }
+  .fr-step button { padding: 6px 8px; white-space: nowrap; }
+  .fr-step:not(.on) .fr-label { display: none; }
+  .fr-body { padding: 14px; }
+  .fr-field { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}
+/* The bar: the page's name beside Home, the docs and the theme. */
+.fr-bar .fr-title { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.fr-bar .fr-title h1 { margin: 0; font: 900 19px/1.2 var(--font); color: var(--ink); white-space: nowrap; }
+/* Text boxes outside a window: the same in every theme (the Clean family pads text ones like this). */
+.fr-page :is(input[type=text], input[type=password], select) { font: inherit; font-size: var(--fs-body, 14px); padding: 5px 8px; border: 1px solid var(--rule-strong); border-radius: var(--radius-sm, 8px); background: var(--card); color: var(--ink); min-height: 32px; }
+.fr-prereqs p, .fr-row p { margin: 0; }
+.fr-prereqs { display: flex; flex-direction: column; gap: 4px; }
+/* The Portal bar has no search here: its icons still go to the right. */
+html[data-theme^='portal'] .fr-bar .pt-icons { margin-left: auto; }

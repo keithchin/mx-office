@@ -4,6 +4,48 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### New
+- **🚀 First-run setup.** A new office (its password still the generated one, or no projects folder yet) opens
+  on `/setup`: a six-step stepper in the Portal look (every theme): **Welcome** (set the office password and
+  your name), **Prerequisites** (a green or red row each for Node 22.5+, Git and Git Bash, `gh` and its sign-in,
+  Claude Code and its sign-in, Studio Pro, mxcli, jq, the toolkit and the Live app's PostgreSQL, marked required
+  or optional, with what each is for, the fix and an install link; 🔄 Re-check runs them again, off the event
+  loop, and Claude Code is only ever asked `--version`), **GitHub** (the organization new projects go in, and the
+  agents' and admin tokens on 🔌 Connections' own cards with their 🧪 Test), **Mendix** (the token, and the Studio
+  Pro version new projects start on), **Toolkit** (pick an existing clone, or clone it with git's progress shown
+  as it comes; the URL is a setting, the upstream by default), and **Done** (a summary, ✨ Create your first
+  project, 📚 Open docs). Admins only after the welcome; each step is saved, so a reload or a restart opens on
+  the same one; every change is in the audit log; no token is ever shown back. ⚙️ Settings › 🔌 Connections has
+  **🚀 Run setup again**.
+- **Start the office from the repository.** `scriptsstart-office.ps1` (Windows PowerShell 5.1 and 7) has no
+  personal paths: the office home is `%USERPROFILE%mx-office` (`-OfficeHome`), `-Port` picks the port, it
+  runs `npm install` / `npm run build` when they're missing, just opens the browser when an office already
+  answers, says so when the port is taken, and keeps the restart loop (exit code 75,
+  `AGENT_OFFICE_LAUNCHER_LOOP=1`). It reads no token files: the office keeps those in Connections. Environment
+  variables already set still win, so an older launcher keeps working. `scriptsinstall-shortcut.ps1` adds a
+  **Mx Office** shortcut to the desktop and Start menu.
+- **Docs: Set up on a new machine** (`/docs/get-started/new-machine`): prerequisites with links, clone, install
+  and build, the launcher, the first-run setup, the shortcut, and troubleshooting (Windows Terminal, long paths,
+  Defender's first-run slowness, a port in use). Quick start and the README point there.
+
+### Changed
+- The GitHub organization new projects go in is a setting now (first-run setup), ahead of
+  `AGENT_OFFICE_PROJECT_ORG`; an office that never set one keeps AI-Taskforce-Labs as before. The default Studio
+  Pro version and mxcli's path can be set there too (mxcli's folder goes first on the agents' PATH). The toolkit
+  is also looked for in `~/mendix-toolkit` (where the setup clones it), before the older agent-spike folders.
+- A new office started from a terminal by `start-office.ps1` skips the terminal walkthrough
+  (`AGENT_OFFICE_NO_WELCOME`): the browser's setup asks instead.
+
+### Fixed
+- **No freeze right after the office starts**: the keep-awake helper (PowerShell on Windows) was started on the server's
+  main thread, which held it for 1.3 to 2 s after every start or Restart safely while Windows checked PowerShell.
+  It now starts from the office's helper thread (about 20 ms on the main thread instead of about 100 ms, and no
+  multi-second freeze).
+- The performance guard no longer fails a whole run because Windows still held its test office folder for a
+  moment at the end: removing it is retried a few times, then left with a warning.
+
 ## 2026-10-09 · release 28 (`aa67940`)
 
 ### New

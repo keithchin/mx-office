@@ -7,14 +7,15 @@ import { existsSync, readdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { adminTokenFile } from './admin-token.js';
-import { firstExisting, toolkitDir } from '../connections/store.js';
+import { firstExisting, officeSettings, toolkitDir } from '../connections/store.js';
+import type { OrgSource } from '../../shared/first-run.js';
 
 export interface WizardConfig {
   /** The mxcli-project-toolkit clone (picked in 🔌 Connections › Paths, else AGENT_OFFICE_TOOLKIT_DIR). */
   toolkitDir: string;
   /** Git Bash, which runs the toolkit's scripts (AGENT_OFFICE_BASH). */
   bash: string;
-  /** The mxcli the toolkit's `mxcli init` should use (AGENT_OFFICE_MXCLI). */
+  /** The mxcli the toolkit's `mxcli init` should use (first-run setup's, else AGENT_OFFICE_MXCLI). */
   mxcli?: string;
   /** The folder jq is in (AGENT_OFFICE_JQ_DIR). */
   jqDir?: string;
@@ -22,7 +23,7 @@ export interface WizardConfig {
   python?: string;
   /** Where Studio Pro versions are installed, one folder each (AGENT_OFFICE_MENDIX_DIR). */
   mendixDir: string;
-  /** The organization new repositories go in by default (AGENT_OFFICE_PROJECT_ORG). */
+  /** The organization new repositories go in by default (first-run setup's, else AGENT_OFFICE_PROJECT_ORG). */
   org: string;
   adminTokenFile: string;
   /**
@@ -57,14 +58,26 @@ export function wizardConfig(env: NodeJS.ProcessEnv = process.env): WizardConfig
   return {
     toolkitDir: toolkitDir(env),
     bash: env.AGENT_OFFICE_BASH || (isWin && existsSync(gitBash) ? gitBash : 'bash'),
-    mxcli: env.AGENT_OFFICE_MXCLI || (existsSync(ourMxcli) ? ourMxcli : undefined),
+    mxcli: officeSettings().mxcliPath || env.AGENT_OFFICE_MXCLI || (existsSync(ourMxcli) ? ourMxcli : undefined),
     jqDir: env.AGENT_OFFICE_JQ_DIR || (isWin ? firstDir(path.join(local, 'Microsoft', 'WinGet', 'Packages'), /^jqlang\.jq/) : undefined),
     python: env.AGENT_OFFICE_PYTHON || (pyDir && existsSync(path.join(pyDir, 'python.exe')) ? path.join(pyDir, 'python.exe') : undefined),
     mendixDir: env.AGENT_OFFICE_MENDIX_DIR || (isWin ? 'C:\\Program Files\\Mendix' : '/opt/mendix'),
-    org: env.AGENT_OFFICE_PROJECT_ORG || 'AI-Taskforce-Labs',
+    org: projectOrg(env).value,
     adminTokenFile: adminTokenFile(env),
     offlineDir: env.AGENT_OFFICE_WIZARD_OFFLINE ? path.resolve(env.AGENT_OFFICE_WIZARD_OFFLINE) : undefined,
   };
+}
+
+/**
+ * The organization new projects go in: the one picked in first-run setup, else AGENT_OFFICE_PROJECT_ORG,
+ * else the organization offices used before there was a setting (so an existing office carries on as it was).
+ */
+export const LEGACY_PROJECT_ORG = 'AI-Taskforce-Labs';
+export function projectOrg(env: NodeJS.ProcessEnv = process.env): { value: string; source: OrgSource } {
+  const saved = officeSettings().projectOrg;
+  if (saved) return { value: saved, source: 'settings' };
+  if (env.AGENT_OFFICE_PROJECT_ORG) return { value: env.AGENT_OFFICE_PROJECT_ORG, source: 'env' };
+  return { value: LEGACY_PROJECT_ORG, source: 'default' };
 }
 
 const ver = (v: string) => v.split('.').map((n) => Number.parseInt(n, 10) || 0);
@@ -93,6 +106,12 @@ export const PREFERRED_MENDIX = '11.6.4';
 /** The version the wizard preselects: the newest 11.12.x, else mxcli's validated 11.6.4, else the newest installed. */
 export function defaultMendix(versions: string[]): string {
   return [...versions].sort(newerFirst).find((v) => v.startsWith(PREFERRED_LINE)) ?? (versions.includes(PREFERRED_MENDIX) ? PREFERRED_MENDIX : (versions[0] ?? ''));
+}
+
+/** The version new projects start on: the one picked in first-run setup when it's installed, else defaultMendix's pick. */
+export function preferredMendix(versions: string[]): string {
+  const saved = officeSettings().defaultMendix;
+  return saved && versions.includes(saved) ? saved : defaultMendix(versions);
 }
 
 export function mxbuildPath(cfg: WizardConfig, version: string): string {

@@ -61,6 +61,7 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/deliverables`, `/api/deliverables/*` | 📦 Deliverables: `?floor=<id>[&team=<team>][&fresh=1]` lists every expected and extra deliverable with its status and where it is (main, which is `origin/<default>` when the project has a remote, a team member's worktree, an office branch), with `main` and `checkout` saying what main was and where the folder is; `/file?floor=&src=main\|wt:<worker>\|ref:<branch>&path=[&download=1]` serves one (HTML self-contained under a no-network CSP for a sandboxed frame, PDF, pictures, text); `/table?…` a CSV's first 200 rows. Only catalog paths, only places the scan listed, size-capped |
 | POST | `/api/teams/labels` | Create missing `team:` labels (admin) |
 | GET / POST | `/api/connections` | [Connections](../administration/connections.md) (admin): GET `/api/connections` (statuses and masked tails, never a value) and `/api/connections/tools` (the git / gh check); POST `/api/connections/save`, `remove`, `test` (`{ id }`, plus `value` to save), `import`, `mendix-floor` (`{ floor, on }`), `paths` (`{ which, dir }`), `git-identity`, `sweep` (`{ on }`), `sweep/run` |
+| GET / POST | `/api/setup` | [First-run setup](../get-started/new-machine.md#step-3-the-first-run-setup): GET `/api/setup` (where the setup is; anyone signed in, details for admins) and `/api/setup/needed` (`{ needed, admin }`, the home page's one look on load); admins: GET `/api/setup/checks` (the prerequisite rows, run when asked), POST `/api/setup/password` (`{ password }`), `step` (`{ step }`), `org` (`{ org }`), `mendix` (`{ version }`), `mxcli` (`{ path }`), `toolkit` (`{ dir }`), `toolkit/clone` (`{ url, dir }`, answers with git's progress as JSON lines), `finish`, `rerun` |
 | GET / POST | `/api/wizard/*` | The new-project wizard: GET `info`, `job`, `setup`, `answers`, `app-version` (`?repo=`: the Studio Pro an existing floor's `.mpr` was saved with); POST `recheck`, `start`, `retry`, `edit` (admin) |
 | GET / POST | `/api/toolkit` | A floor's [toolkit version](../administration/toolkit-versions.md): GET `?floor=` (its Toolkit line, from a cache), GET `/api/toolkit/job?id=`; POST `/api/toolkit/check` (fetch the fork now, once a minute at most), `/api/toolkit/preview` and `/api/toolkit/apply` with `{ to: <sha> | latest | previous }` (admin) |
 | GET | `/api/chatter` | Team chatter: `?floor=<id>&since=<ms>&limit=<n>&cursor=…&who=<name>` (with `as=<kind>` to tell a person from an agent of the same name) or `&with=agents\|me` |
@@ -139,6 +140,7 @@ Actions: `hire`, `bench`, `rename`, `model`, `settings`, `standup`, `decide`, `e
 | `/lite` | The 1D view |
 | `/pixel` | The 2D view |
 | `/firm` | The Firm (`?report=<id>` opens a report) |
+| `/setup` | 🚀 [First-run setup](../get-started/new-machine.md#step-3-the-first-run-setup) |
 | `/docs`, `/docs/*` | These docs; `/docs/site.json` is their bundle, `/docs/images/*` their pictures |
 | `/*` | Anything else in the client bundle, or 404 |
 
