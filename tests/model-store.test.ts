@@ -1,56 +1,19 @@
 // The Model tab's server plumbing (server/model/): reading units (BSON, the .mpr's unit table), the
-// per-commit snapshots and answers (taken once, shared while in flight, pruned), mxcli's output,
+// answers kept by content (worked out once, shared while in flight, pruned), mxcli's output,
 // the limiter, the service's refs and access checks, and the routes.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { decodeBson, guidOf, list, textOf } from '../src/server/model/bson.js';
+import { bson, guidBytes, project } from './support/mendix.js';
 import { diffIndexes, openIndex } from '../src/server/model/mpr.js';
 import { Limiter, parseJsonOut, stripNoise } from '../src/server/model/mxcli.js';
-import { ModelStore, mprIn, SNAP_MAX } from '../src/server/model/store.js';
+import { keyOf, ModelStore, mprIn } from '../src/server/model/store.js';
 import { ModelService, REF_OK } from '../src/server/model/index.js';
 import { modelRoutes } from '../src/server/http/routes/model.js';
 import type { GitGraph } from '../src/shared/gitgraph.js';
-
-// ---- a small BSON writer, for units made up in the tests ----
-type V = string | number | boolean | null | V[] | { [k: string]: V } | Uint8Array;
-function bson(doc: Record<string, V>): Buffer {
-  const parts: Buffer[] = [];
-  const cstr = (s: string) => Buffer.concat([Buffer.from(s, 'utf8'), Buffer.from([0])]);
-  for (const [k, v] of Object.entries(doc)) {
-    if (v instanceof Uint8Array) {
-      const len = Buffer.alloc(4);
-      len.writeInt32LE(v.length);
-      parts.push(Buffer.from([0x05]), cstr(k), len, Buffer.from([0]), Buffer.from(v));
-    } else if (typeof v === 'string') {
-      const s = Buffer.from(v, 'utf8');
-      const len = Buffer.alloc(4);
-      len.writeInt32LE(s.length + 1);
-      parts.push(Buffer.from([0x02]), cstr(k), len, s, Buffer.from([0]));
-    } else if (typeof v === 'number') {
-      const b = Buffer.alloc(4);
-      b.writeInt32LE(v);
-      parts.push(Buffer.from([0x10]), cstr(k), b);
-    } else if (typeof v === 'boolean') parts.push(Buffer.from([0x08]), cstr(k), Buffer.from([v ? 1 : 0]));
-    else if (v === null) parts.push(Buffer.from([0x0a]), cstr(k));
-    else if (Array.isArray(v)) parts.push(Buffer.from([0x04]), cstr(k), bson(Object.fromEntries(v.map((x, i) => [String(i), x]))));
-    else parts.push(Buffer.from([0x03]), cstr(k), bson(v as Record<string, V>));
-  }
-  const body = Buffer.concat(parts);
-  const len = Buffer.alloc(4);
-  len.writeInt32LE(body.length + 5);
-  return Buffer.concat([len, body, Buffer.from([0])]);
-}
-
-const guidBytes = (n: number) => {
-  const b = new Uint8Array(16);
-  b[0] = n;
-  b[15] = 0xab;
-  return b;
-};
 
 test('BSON: documents, lists without their marker, ids as GUIDs, texts', () => {
   const id = guidBytes(1);
@@ -67,24 +30,6 @@ test('BSON: documents, lists without their marker, ids as GUIDs, texts', () => {
   assert.equal(decodeBson(bson({ A: { B: 'deep' }, Name: 'top' }), 0).A, null);
   assert.throws(() => decodeBson(Buffer.from([1, 2])));
 });
-
-/** A made-up MPR v2 project: the unit table in an SQLite .mpr and each unit's BSON in mprcontents/. */
-async function project(dir: string, units: { n: number; container: number; hash: string; doc: Record<string, V> }[]) {
-  const { DatabaseSync } = await import('node:sqlite');
-  mkdirSync(dir, { recursive: true });
-  const db = new DatabaseSync(path.join(dir, 'App.mpr'));
-  db.exec('CREATE TABLE Unit (UnitID BLOB PRIMARY KEY NOT NULL, ContainerID BLOB, ContainmentName TEXT, TreeConflict LONG, ContentsHash TEXT, ContentsConflicts TEXT)');
-  const ins = db.prepare('INSERT INTO Unit VALUES (?, ?, ?, 0, ?, ?)');
-  for (const u of units) {
-    ins.run(guidBytes(u.n), guidBytes(u.container), '', u.hash, '');
-    const id = guidOf(guidBytes(u.n));
-    const f = path.join(dir, 'mprcontents', id.slice(0, 2), id.slice(2, 4), `${id}.mxunit`);
-    mkdirSync(path.dirname(f), { recursive: true });
-    writeFileSync(f, bson(u.doc));
-  }
-  db.close();
-  return path.join(dir, 'App.mpr');
-}
 
 test('the unit index: qualified names through the containers, and documents changed by content hash', async (t) => {
   try {
@@ -142,12 +87,15 @@ test('the limiter runs at most n at once, in order', async () => {
   assert.equal(lim.busy, 0);
 });
 
-test('the store: one answer per (commit, key) on disk, shared while in flight', async (t) => {
+test('the store: one answer per key on disk and in memory, shared while in flight, pruned by size, old copies removed', async (t) => {
   const root = mkdtempSync(path.join(tmpdir(), 'ao-model-store-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const store = new ModelStore(root);
   let calls = 0;
-  const work = () => store.cached('abc1234', 'doc:microflow:M.F', async () => {
+  const key = keyOf('v1', 'flow', 'M.F', 'blobhash');
+  assert.equal(key, keyOf('v1', 'flow', 'M.F', 'blobhash'));
+  assert.notEqual(key, keyOf('v1', 'flow', 'M.F', 'otherhash'));
+  const work = () => store.cached(key, async () => {
     calls++;
     await new Promise((r) => setTimeout(r, 20));
     return { ok: true };
@@ -156,44 +104,26 @@ test('the store: one answer per (commit, key) on disk, shared while in flight', 
   assert.deepEqual(x, { ok: true });
   assert.deepEqual(y, { ok: true });
   assert.equal(calls, 1, 'two asks at once share one read');
+  assert.equal(store.misses, 1);
   const again = new ModelStore(root);
-  assert.deepEqual(await again.cached('abc1234', 'doc:microflow:M.F', async () => (calls++, { ok: false })), { ok: true });
-  assert.equal(calls, 1, 'a commit is read once, then from disk');
-  await assert.rejects(store.snapshot(root, 'not-a-sha;rm'), /not a commit/);
+  assert.deepEqual(await again.cached(key, async () => (calls++, { ok: false })), { ok: true });
+  assert.equal(calls, 1, 'worked out once, then from disk');
+  assert.deepEqual(await again.peek(key), { ok: true });
+  assert.equal(await again.peek(keyOf('nope')), undefined);
+  // Past the size limit the least recently used answers go.
+  for (let i = 0; i < 5; i++) await store.put(keyOf('big', String(i)), 'x'.repeat(1000));
+  await store.prune(2500);
+  const left = await Promise.all([0, 1, 2, 3, 4].map((i) => new ModelStore(root).peek(keyOf('big', String(i)))));
+  assert.ok(left.filter((v) => v === undefined).length >= 3, 'the oldest went');
+  // What older offices kept (a copy of each commit, answers per commit) is removed.
+  mkdirSync(path.join(root, 'model', 'snap', 'abc', 'mprcontents'), { recursive: true });
+  mkdirSync(path.join(root, 'model', 'cache', 'abc'), { recursive: true });
+  await store.dropLegacy();
+  assert.ok(!existsSync(path.join(root, 'model', 'snap')));
+  assert.ok(!existsSync(path.join(root, 'model', 'cache')));
   assert.equal(mprIn(['README.md', 'app/App.mpr', 'App.mpr', '.hidden/x.mpr', 'a/b/c.mpr']), 'App.mpr');
   assert.equal(mprIn(['app/App.mpr']), 'app/App.mpr');
   assert.equal(mprIn(['a/b/c.mpr']), undefined);
-});
-
-test('snapshots: the commit\'s .mpr and mprcontents taken out of git once, the oldest let go', async (t) => {
-  const root = mkdtempSync(path.join(tmpdir(), 'ao-model-snap-'));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
-  const repo = path.join(root, 'repo');
-  mkdirSync(path.join(repo, 'mprcontents', 'aa'), { recursive: true });
-  const git = (...a: string[]) => execFileSync('git', a, { cwd: repo, encoding: 'utf8' }).trim();
-  git('init', '-q', '-b', 'main');
-  git('config', 'user.email', 't@t');
-  git('config', 'user.name', 't');
-  writeFileSync(path.join(repo, 'App.mpr'), 'sqlite');
-  writeFileSync(path.join(repo, 'mprcontents', 'aa', 'u.mxunit'), 'unit');
-  writeFileSync(path.join(repo, 'README.md'), 'not taken');
-  git('add', '-A');
-  git('commit', '-qm', 'one');
-  const sha = git('rev-parse', 'HEAD');
-  const store = new ModelStore(path.join(root, 'data'));
-  const [s1, s2] = await Promise.all([store.snapshot(repo, sha), store.snapshot(repo, sha)]);
-  assert.equal(s1.dir, s2.dir);
-  assert.ok(existsSync(s1.mpr));
-  assert.ok(existsSync(path.join(s1.dir, 'mprcontents', 'aa', 'u.mxunit')));
-  assert.ok(!existsSync(path.join(s1.dir, 'README.md')), 'only the model is taken out');
-  // More than SNAP_MAX snapshots: the oldest go.
-  for (let i = 0; i < SNAP_MAX + 2; i++) {
-    const d = path.join(root, 'data', 'model', 'snap', `${String(i).padStart(7, '0')}aaa`);
-    mkdirSync(d, { recursive: true });
-    writeFileSync(path.join(d, '.ok'), 'App.mpr');
-  }
-  await store.prune();
-  assert.equal(readdirSync(path.join(root, 'data', 'model', 'snap')).length, SNAP_MAX);
 });
 
 function graph(): GitGraph {

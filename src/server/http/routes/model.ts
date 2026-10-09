@@ -23,21 +23,38 @@ function answer(fn: Answer) {
 
 const ref = (q: URLSearchParams) => q.get('ref') || 'main';
 
+/** ?type=<type>&name=<Module.Name>, when both look right. */
+function docParams(q: URLSearchParams): { type: string; name: string } | null {
+  const type = q.get('type') ?? '';
+  const name = q.get('name') ?? '';
+  return /^[a-z]{2,40}$/.test(type) && /^[\w.]{1,300}$/.test(name) ? { type, name } : null;
+}
+
+const asked = () => Promise.reject(new Error('type and name, please'));
+
 export const modelRoutes = {
   /** GET /api/model/refs?floor=<id>: main and the branches the Model tab can show. */
   refs: { method: 'GET', path: '/api/model/refs', auth: 'session', handle: answer((m, f) => m.refs(f)) },
-  /** GET /api/model/tree?floor=<id>&ref=<branch>: the app's tree (Studio Pro's App Explorer). */
-  tree: { method: 'GET', path: '/api/model/tree', auth: 'session', handle: answer((m, f, q) => m.tree(f, ref(q))) },
+  /** GET /api/model/tree?floor=<id>&ref=<branch>[&fresh=1]: the app's tree (Studio Pro's App Explorer). */
+  tree: { method: 'GET', path: '/api/model/tree', auth: 'session', handle: answer((m, f, q) => m.tree(f, ref(q), q.get('fresh') === '1')) },
   /** GET /api/model/doc?floor=<id>&ref=<branch>&type=<type>&name=<Module.Name>[&compare=1]: one document. */
   doc: {
     method: 'GET',
     path: '/api/model/doc',
     auth: 'session',
     handle: answer((m, f, q) => {
-      const type = q.get('type') ?? '';
-      const name = q.get('name') ?? '';
-      if (!/^[a-z]{2,40}$/.test(type) || !/^[\w.]{1,300}$/.test(name)) return Promise.reject(new Error('type and name, please'));
-      return m.doc(f, ref(q), type, name, q.get('compare') === '1');
+      const d = docParams(q);
+      return d ? m.doc(f, ref(q), d.type, d.name, q.get('compare') === '1') : asked();
+    }),
+  },
+  /** GET /api/model/mdl?floor=<id>&ref=<branch>&type=<microflow|nanoflow>&name=<Module.Name>: a flow's MDL, after its diagram. */
+  mdl: {
+    method: 'GET',
+    path: '/api/model/mdl',
+    auth: 'session',
+    handle: answer((m, f, q) => {
+      const d = docParams(q);
+      return d ? m.mdl(f, ref(q), d.type, d.name) : asked();
     }),
   },
   /** GET /api/model/changes?floor=<id>&ref=<branch>: what the branch changed against main. */

@@ -1,11 +1,11 @@
-// The units of a Mendix project, read straight from a snapshot of it (never the floor's live files):
-// the .mpr is an SQLite database with one row per unit (its id, what contains it, a hash of its
-// contents), and the units themselves are BSON, in mprcontents/ (MPR v2) or in the row (MPR v1).
+// The units of a Mendix project (never read from the floor's live files): the .mpr is an SQLite
+// database with one row per unit (its id, what contains it, a hash of its contents), and the units
+// themselves are BSON, in mprcontents/ (MPR v2) or in the row (MPR v1).
 //
-// mxcli gives the office the tree and each diagram's flow; this index adds what only the units have
-// (sizes, annotations, connection points, a content hash per document for "what changed") and finds
-// a document's unit by its qualified name. It needs node:sqlite (Node 22.5+); without it `openIndex`
-// returns null and the views fall back to mxcli alone.
+// The index finds a document's unit by its qualified name and knows each unit's content hash (for
+// "what changed" and for keeping answers by content). units.ts builds it from git (`indexUnits` over
+// the .mpr's rows, each unit read by blob); `openIndex` builds it from a project on disk. It needs
+// node:sqlite (Node 22.5+); without it the views fall back to mxcli alone.
 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -76,46 +76,63 @@ function unitFile(projectDir: string, id: string): string {
   return path.join(projectDir, 'mprcontents', id.slice(0, 2), id.slice(2, 4), `${id}.mxunit`);
 }
 
-/** Reads the unit table of `mprFile` and the top-level fields of every unit. */
-export async function openIndex(mprFile: string): Promise<UnitIndex | null> {
+export interface UnitRow {
+  id: string;
+  container: string;
+  /** Studio Pro's ContentsHash column. */
+  hash: string;
+  /** The unit itself, in an MPR v1 project (whose units live in the .mpr). */
+  contents?: Uint8Array;
+}
+
+/** The unit table of `mprFile` (null without node:sqlite). Synchronous inside, but an MPR v2 .mpr is small. */
+export async function readUnitRows(mprFile: string): Promise<{ rows: UnitRow[]; v1: boolean } | null> {
   const lib = await loadSqlite();
   if (!lib) return null;
-  const projectDir = path.dirname(mprFile);
-  let rows: Record<string, unknown>[];
+  let raw: Record<string, unknown>[];
   let v1 = false;
   const db = new lib.DatabaseSync(mprFile, { readOnly: true });
   try {
     const cols = db.prepare("select name from pragma_table_info('Unit')").all().map((r) => String(r.name));
     v1 = cols.includes('Contents');
-    rows = db.prepare(`select UnitID, ContainerID, ContentsHash${v1 ? ', Contents' : ''} from Unit`).all();
+    raw = db.prepare(`select UnitID, ContainerID, ContentsHash${v1 ? ', Contents' : ''} from Unit`).all();
   } finally {
     db.close();
   }
-  const blobs = new Map<string, Uint8Array>();
-  const units = new Map<string, UnitInfo>();
-  for (const r of rows) {
+  const rows = raw.map((r): UnitRow => {
     const id = guidOf(r.UnitID as Uint8Array);
-    const container = r.ContainerID ? guidOf(r.ContainerID as Uint8Array) : '';
-    if (v1 && r.Contents) blobs.set(id, r.Contents as Uint8Array);
-    units.set(id, { id, container, type: '', name: '', hash: String(r.ContentsHash ?? ''), qn: '' });
-  }
-  const readRaw = async (id: string): Promise<Uint8Array | null> => {
-    if (v1) return blobs.get(id) ?? null;
-    try {
-      return await readFile(unitFile(projectDir, id));
-    } catch {
-      return null;
-    }
-  };
+    return { id, container: r.ContainerID ? guidOf(r.ContainerID as Uint8Array) : '', hash: String(r.ContentsHash ?? ''), contents: v1 && r.Contents ? (r.Contents as Uint8Array) : undefined };
+  });
+  return { rows, v1 };
+}
+
+/** What a unit's top level says (its type and name), kept by content hash so a unit is looked at once. */
+export type UnitMeta = Map<string, { type: string; name: string }>;
+const META_MAX = 50_000;
+
+/**
+ * The index of a project's units: each row's type and name (from its top level, read with `readRaw`),
+ * its module, and documents by kind and qualified name. `hashOf` gives a unit's content hash (the
+ * ContentsHash column, or the unit's git blob); `meta` keeps what was read by that hash.
+ */
+export async function indexUnits(rows: UnitRow[], readRaw: (id: string) => Promise<Uint8Array | null>, hashOf: (r: UnitRow) => string = (r) => r.hash, meta?: UnitMeta): Promise<UnitIndex> {
+  const units = new Map<string, UnitInfo>();
+  for (const r of rows) units.set(r.id, { id: r.id, container: r.container, type: '', name: '', hash: hashOf(r), qn: '' });
   // Only the top level of each unit: its type and name (nested documents are skipped by length).
   await Promise.all(
     [...units.values()].map(async (u) => {
+      const known = u.hash ? meta?.get(u.hash) : undefined;
+      if (known) return void Object.assign(u, known);
       const raw = await readRaw(u.id);
       if (!raw) return;
       try {
         const top = decodeBson(raw, 0);
         u.type = str(top.$Type);
         u.name = str(top.Name);
+        if (meta && u.hash) {
+          if (meta.size >= META_MAX) meta.clear();
+          meta.set(u.hash, { type: u.type, name: u.name });
+        }
       } catch {
         /* a unit we can't read is left nameless */
       }
@@ -152,6 +169,23 @@ export async function openIndex(mprFile: string): Promise<UnitIndex | null> {
       }
     },
   };
+}
+
+/** Reads the unit table of `mprFile` and the top-level fields of every unit (from mprcontents/ beside it, or the .mpr for v1). */
+export async function openIndex(mprFile: string): Promise<UnitIndex | null> {
+  const t = await readUnitRows(mprFile);
+  if (!t) return null;
+  const projectDir = path.dirname(mprFile);
+  const v1 = new Map(t.rows.filter((r) => r.contents).map((r) => [r.id, r.contents as Uint8Array]));
+  const readRaw = async (id: string): Promise<Uint8Array | null> => {
+    if (t.v1) return v1.get(id) ?? null;
+    try {
+      return await readFile(unitFile(projectDir, id));
+    } catch {
+      return null;
+    }
+  };
+  return indexUnits(t.rows, readRaw);
 }
 
 /** Documents (by `${kind}:${qn}`) whose contents differ between two indexes. */

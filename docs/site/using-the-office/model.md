@@ -59,17 +59,21 @@ A pull request's window has a **📐 View in Model** button that opens its branc
 
 ## Where it comes from
 
-The office reads the app with [mxcli](../integrations/mxcli.md), never Studio Pro. It reads only and never writes to the project.
+The office reads the app straight from the floor's git history, never from Studio Pro. It reads only and never writes to the project.
 
 **What it reads:**
-- It reads each commit from a copy taken out of the floor's git history into the office's data folder (`.agent-office/model/`).
-- So it never reads the floor's checkout, and it doesn't matter if Studio Pro has the project open.
-- Positions and sizes come from the project itself, so diagrams keep the developer's layout and nothing is auto-arranged.
+- Each commit's model files come out of git one by one, as they're needed. The office never reads the floor's checkout, and it doesn't matter if Studio Pro has the project open.
+- Microflows, nanoflows and domain models are drawn from the model's own files, in milliseconds, without [mxcli](../integrations/mxcli.md). Positions and sizes come from the project itself, so diagrams keep the developer's layout and nothing is auto-arranged.
+- mxcli is used for the rest: the App Explorer tree, the MDL beside a diagram, and documents shown as MDL. The MDL panel fills in a moment after the diagram ("Reading the MDL…").
 
 **When it reads:**
 - Only while the tab is open.
-- The first look at a commit takes a few seconds. After that, each document is kept per commit and opens straight away.
+- Each document is kept by its content, not by commit. A new commit on main that left a document alone shows it straight away.
+- The tree is kept by the app's structure. A commit that only changed what's inside documents keeps the same tree. If the structure changed, the last tree shows at once and the new one replaces it when mxcli has it, usually within a few seconds.
+- Opening a document reads the rest of its module ahead. When main moves while someone used the tab in the last 15 minutes, the office reads the new tree and the changed diagrams before anyone asks.
 - A merge or a new commit on a branch is picked up a few seconds after the board or workers change.
+
+**Where it keeps things:** in `.agent-office/model/`. `docs/` holds the answers (200 MB at most, least used first out). `mpr/` holds a small copy of each version of the `.mpr`. `work/` holds three folders mxcli reads, each moved from commit to commit by the files that differ. Older offices kept a full copy of every commit in `snap/`; that folder is removed on first use.
 
 The tab finds mxcli the same way the [Live app](live-app.md) does: `AGENT_OFFICE_LIVE_MXCLI`, then `AGENT_OFFICE_MXCLI`, then the workspace's `tools/mxcli`, then `PATH`. Without mxcli, the tab says so.
 

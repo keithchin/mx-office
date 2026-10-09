@@ -8,7 +8,7 @@
 // document, and a few seconds after the workers or pull requests change (a merge moves main). No timer.
 // Read-only. No three.js here: the flat views import it.
 
-import { modelHref, type ChangeStatus, type DocChange, type DocDiff, type ModelDoc, type ModelRef, type ModelTreeNode } from '../../../shared/model';
+import { modelHref, type ChangeStatus, type DocChange, type DocDiff, type FlowDoc, type ModelDoc, type ModelRef, type ModelTreeNode } from '../../../shared/model';
 import { setAddress } from '../../shared/address';
 import { store } from '../../state';
 import { currentTheme } from '../colortheme';
@@ -209,6 +209,7 @@ export function modelView(root: HTMLElement): ModelView {
       renderSide();
       address();
       treeView.reveal((n) => n.qn === qn && (n.type === type || (type === 'domainmodel' && n.type === 'domainmodel')));
+      if ((doc.kind === 'microflow' || doc.kind === 'nanoflow') && doc.mdlLater) void loadMdl(doc);
     } catch (err) {
       if (mine !== seq) return;
       doc = null;
@@ -216,6 +217,21 @@ export function modelView(root: HTMLElement): ModelView {
       say(`Couldn't read ${want.qn}: ${(err as Error).message}`);
       renderSide();
     }
+  }
+
+  /** A flow's MDL, after its diagram: put in the open document and the details redrawn (the diagram stays as it is). */
+  async function loadMdl(flow: FlowDoc) {
+    if (!floor) return;
+    try {
+      const m = await modelApi.mdl(floor, ref, flow.kind, flow.name);
+      if (doc !== flow) return;
+      flow.mdl = m.mdl;
+      for (const n of flow.nodes) if (m.lines[n.id]) n.lines = m.lines[n.id];
+    } catch {
+      if (doc !== flow) return;
+    }
+    flow.mdlLater = false;
+    renderSide();
   }
 
   function openDoc(o: Open) {
@@ -263,6 +279,7 @@ export function modelView(root: HTMLElement): ModelView {
       if (mine !== seq || f !== floor) return;
       tree = [{ label: `App '${store.project?.name ?? f}'`, type: 'app', children: t.nodes }];
       treeView.set(tree);
+      if (t.stale) void freshTree(f, ref);
       void loadChanges();
       if (open) await loadDoc();
       else {
@@ -272,6 +289,19 @@ export function modelView(root: HTMLElement): ModelView {
       }
     } catch (err) {
       if (mine === seq) say(`Couldn't read the app: ${(err as Error).message}`);
+    }
+  }
+
+  /** The app's structure changed: the tree shown is the last one until mxcli has the new one. */
+  async function freshTree(f: string, r: string) {
+    try {
+      const t = await modelApi.tree(f, r, undefined, true);
+      if (f !== floor || r !== ref) return;
+      tree = [{ label: `App '${store.project?.name ?? f}'`, type: 'app', children: t.nodes }];
+      treeView.set(tree);
+      if (open) treeView.reveal((n) => n.qn === open?.qn && n.type === open?.type);
+    } catch {
+      /* the next load tries again */
     }
   }
 

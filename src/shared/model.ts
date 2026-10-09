@@ -34,6 +34,8 @@ export interface ModelTree {
   sha: string;
   ref: string;
   nodes: ModelTreeNode[];
+  /** The app's structure changed and its new tree isn't worked out yet: this is the last one, ask again with &fresh=1. */
+  stale?: boolean;
 }
 
 /** One end of a flow or the point an element sits at. */
@@ -104,6 +106,8 @@ export interface FlowDoc {
   nodes: FlowNode[];
   edges: FlowEdge[];
   mdl: string;
+  /** The diagram came straight from the units and its MDL isn't worked out yet: ask GET /api/model/mdl for it. */
+  mdlLater?: boolean;
   /** Where positions came from: the units (exact sizes) or mxcli's MDL alone (default sizes). */
   source: 'units' | 'mdl';
 }
@@ -204,6 +208,14 @@ export interface ModelDocResponse {
   doc: ModelDoc;
   /** With ?compare=1 on a branch: what changed in this document against main. */
   diff?: DocDiff;
+}
+
+/** A flow's MDL (GET /api/model/mdl), which comes after its diagram: the text and each element's lines in it. */
+export interface ModelMdlResponse {
+  sha: string;
+  mdl: string;
+  /** Element id → its lines in `mdl` (0-based, inclusive). */
+  lines: Record<string, [number, number]>;
 }
 
 /** The address of the Model tab showing one document on one ref. */

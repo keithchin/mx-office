@@ -34,8 +34,9 @@ function kv(rows: [string, string | undefined | null][]): HTMLElement {
   return dl;
 }
 
-function mdlBlock(mdl: string, lines?: [number, number]): HTMLElement | null {
-  if (!mdl) return null;
+function mdlBlock(mdl: string, lines?: [number, number], later?: boolean): HTMLElement | null {
+  // The diagram comes straight from the model; its MDL (from mxcli) follows a moment later.
+  if (!mdl) return later ? h('div', {}, h('h4', {}, 'MDL'), h('p.mx-kind', {}, 'Reading the MDL…')) : null;
   const all = mdl.split('\n');
   const text = lines ? all.slice(lines[0], lines[1] + 1).join('\n') : mdl;
   return text.trim() ? h('div', {}, h('h4', {}, 'MDL'), h('pre.mx-mdl', {}, text)) : null;
@@ -59,7 +60,7 @@ function flowDetails(doc: FlowDoc, id: string): HTMLElement[] {
     );
     if (node.details?.length) out.push(h('h4', {}, 'Details'), h('ul', {}, ...node.details.map((d) => h('li', {}, d))));
     if (node.kind === 'annotation') out.push(h('p', {}, node.caption));
-    const m = mdlBlock(doc.mdl, node.lines);
+    const m = mdlBlock(doc.mdl, node.lines, doc.mdlLater);
     if (m) out.push(m);
     return out;
   }
@@ -128,7 +129,7 @@ export function details(doc: ModelDoc, id: string | null, diff?: DocDiff): HTMLE
     out.push(h('h3', {}, doc.name), h('div.mx-kind', {}, `${doc.kind === 'nanoflow' ? 'Nanoflow (runs in the browser or on the device)' : 'Microflow (runs on the server)'}${doc.returnType ? ` · returns ${doc.returnType}` : ''}`));
     if (params.length) out.push(h('h4', {}, 'Parameters'), h('ul', {}, ...params.map((p) => h('li', {}, `${p.output?.name}${p.output?.type ? `: ${p.output.type}` : ''}`))));
     out.push(h('p', { class: 'mx-kind' }, doc.source === 'units' ? 'Drawn from the app\'s model, at the developer\'s positions and sizes.' : 'Drawn from mxcli\'s MDL at the developer\'s positions (default sizes).'));
-    const m = mdlBlock(doc.mdl);
+    const m = mdlBlock(doc.mdl, undefined, doc.mdlLater);
     if (m) out.push(m);
   } else if (doc.kind === 'text') {
     out.push(h('h3', {}, doc.name), h('div.mx-kind', {}, doc.type));

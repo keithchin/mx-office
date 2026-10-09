@@ -73,6 +73,7 @@ export const routes: readonly Route[] = [
   modelRoutes.refs,
   modelRoutes.tree,
   modelRoutes.doc,
+  modelRoutes.mdl,
   modelRoutes.changes,
   analysisRoutes.report,
   analysisRoutes.backfill,

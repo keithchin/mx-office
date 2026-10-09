@@ -93,10 +93,13 @@ export function actionInfo(a: BsonDoc | undefined, assocTarget: (assoc: string) 
       return { action: 'rollback', category: 'object', caption: `Rollback ${str(a.RollbackVariableName)}`, refresh: a.RefreshInClient === true };
     case 'CastAction':
       return { action: 'cast', category: 'object', caption: 'Cast object', output: out(str(a.VariableName)) };
+    // Newer models call them AggregateAction and ListOperationsAction, with other field names.
     case 'AggregateListAction':
-      return { action: 'aggregate', category: 'list', caption: `${humanize(str(a.AggregateFunction) || 'Aggregate')} of ${str(a.InputListVariableName)}`, output: out(str(a.OutputVariableName)) };
+    case 'AggregateAction':
+      return { action: 'aggregate', category: 'list', caption: `${humanize(str(a.AggregateFunction) || 'Aggregate')} of ${str(a.InputListVariableName) || str(a.AggregateVariableName)}`, output: out(str(a.OutputVariableName) || str(a.VariableName)) };
     case 'ListOperationAction':
-      return { action: 'list-op', category: 'list', caption: `${humanize(typeOf(a.NewOperation) || typeOf(a.Operation) || 'List operation')}`, output: out(str(a.OutputVariableName)) };
+    case 'ListOperationsAction':
+      return { action: 'list-op', category: 'list', caption: `${humanize(typeOf(a.NewOperation) || typeOf(a.Operation) || 'List operation')}`, output: out(str(a.OutputVariableName) || str(a.ResultVariableName)) };
     case 'CreateListAction':
       return { action: 'create-list', category: 'list', caption: `Create list of ${short(str(a.Entity))}`, output: out(str(a.OutputVariableName), `List of ${short(str(a.Entity))}`) };
     case 'ChangeListAction':

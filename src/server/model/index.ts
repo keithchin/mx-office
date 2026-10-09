@@ -2,31 +2,43 @@
 // branch. Asked for only when someone opens the tab (GET /api/model/…, http/routes/model.ts).
 //
 // A ref (main, or a branch) is turned into a commit with the Git tab's graph (which also fetches
-// origin, at most once a minute); that commit is taken out of the floor's history into the data
-// folder (store.ts) and read there by mxcli (mxcli.ts) and from its units (mpr.ts). Every answer is
-// kept per commit, so a commit is read once, and two people opening the same diagram share one read.
+// origin, at most once a minute). The commit's model is read straight out of git (units.ts: its unit
+// table and each unit by blob hash, no copy of the commit on disk), and a microflow, nanoflow or domain
+// model is drawn from its units (read.ts), in milliseconds and without mxcli. Each answer is kept by
+// the content hashes it was read from (store.ts), so a document a new commit left alone is answered at
+// once. mxcli (mxcli.ts) is left for what only it gives: the tree when the app's structure changed, a
+// flow's MDL (asked for after the diagram, GET /api/model/mdl), the documents shown as MDL, and
+// projects the units can't be read from (MPR without node:sqlite); it reads a commit from a folder
+// that moves from commit to commit by the files that differ (workdir.ts). Opening a document reads
+// the rest of its module ahead, and main moving while the tab was in use reads what changed
+// (prefetch.ts).
 
 import { gitGraphsOf, type GraphFloor } from '../gitgraph/index.js';
-import { doc, list, str } from './bson.js';
+import { modelFiles, type BlobsOptions, type ModelFiles } from './blobs.js';
 import { changesFrom, diffUnits, DOC_TYPES, treeDiff } from './diff.js';
-import { domainFromElk, entityPositions, parseDomain, systemPersistable, type ElkDomain } from './domain.js';
-import { short } from './flow-actions.js';
+import { domainFromElk, entityPositions, type ElkDomain } from './domain.js';
 import { parseFlow, type ElkFlow } from './flow.js';
-import { diffIndexes, openIndex, type UnitIndex } from './mpr.js';
+import { diffIndexes } from './mpr.js';
 import { findMxcli, Limiter, mxRunner, parseJsonOut, stripNoise, type MxRun } from './mxcli.js';
-import { gitOff, ModelStore, type GitRun, type Snapshot } from './store.js';
+import { Prefetcher, type Task } from './prefetch.js';
+import { mdlOf, readDomain, readFlow, withMdl, type FlowMdl } from './read.js';
+import { gitOff, keyOf, ModelStore, type GitRun } from './store.js';
 import { parseTree } from './tree.js';
+import { ModelUnits, type CommitModel } from './units.js';
+import { WorkDirs } from './workdir.js';
 import type { GitGraph } from '../../shared/gitgraph.js';
-import type { DmAnnotation, DomainDoc, ModelChanges, ModelDoc, ModelDocResponse, ModelRef, ModelRefs, ModelTree, ModelTreeNode } from '../../shared/model.js';
+import type { DmAnnotation, DomainDoc, FlowDoc, ModelChanges, ModelDoc, ModelDocResponse, ModelMdlResponse, ModelRef, ModelRefs, ModelTree, ModelTreeNode } from '../../shared/model.js';
 
 /** mxcli processes at once, office-wide. */
 export const MX_PARALLEL = 2;
-const INDEX_MAX = 4;
-/** Bumped when what's kept per commit changes shape, so answers worked out by an older office are worked out again. */
-export const CACHE_VERSION = 1;
+/** Bumped when what's kept changes shape, so answers worked out by an older office are worked out again. */
+export const CACHE_VERSION = 2;
+/** Main moving reads ahead only when someone used the tab this recently. */
+export const WARM_WINDOW_MS = 15 * 60_000;
 
 /** Types `mxcli describe` takes, for documents shown as their MDL. */
 const DESCRIBE = new Set(['enumeration', 'constant', 'workflow', 'page', 'snippet', 'buildingblock', 'layout', 'javaaction', 'jsonstructure', 'importmapping', 'exportmapping', 'restclient', 'odataclient', 'odataservice', 'imagecollection', 'menu', 'queue', 'scheduledevent', 'regularexpression', 'modulerole', 'userrole', 'projectsecurity', 'settings', 'demouser', 'navigation', 'module', 'association', 'entity', 'businesseventservice', 'databaseconnection']);
+const FLOW = new Set(['microflow', 'nanoflow']);
 
 /** A branch name we'll hand to git: no options, no ranges, nothing odd. */
 export const REF_OK = /^(?!-)(?!.*\.\.)[\w./@+-]{1,200}$/;
@@ -36,18 +48,27 @@ export interface ModelDeps {
   /** mxcli, or null when there's none; looked up on first use when left out. */
   mx?: MxRun | null;
   graph?: (floor: GraphFloor) => Promise<GitGraph>;
+  blobs?: BlobsOptions;
 }
 
 export class ModelService {
   readonly store: ModelStore;
+  readonly units: ModelUnits;
+  readonly work: WorkDirs;
+  readonly prefetch = new Prefetcher();
   private git: GitRun;
   private mxRun: MxRun | null | undefined;
   private graphOf: (floor: GraphFloor) => Promise<GitGraph>;
-  private indexes = new Map<string, Promise<UnitIndex | null>>();
+  /** Per floor: main's commit when last seen, and when the tab was last used. */
+  private mainSeen = new Map<string, string>();
+  private usedAt = new Map<string, number>();
+  private legacyDropped = false;
 
   constructor(private dataDir: string, deps: ModelDeps = {}) {
     this.git = deps.git ?? gitOff;
-    this.store = new ModelStore(dataDir, this.git);
+    this.store = new ModelStore(dataDir);
+    this.units = new ModelUnits(this.store.root, deps.blobs);
+    this.work = new WorkDirs(this.store.root);
     this.mxRun = deps.mx;
     this.graphOf = deps.graph ?? ((f) => gitGraphsOf({ cfg: this }).graph(f));
   }
@@ -60,16 +81,34 @@ export class ModelService {
     return this.mxRun;
   }
 
-  private needMx(): MxRun {
+  /** Runs mxcli with `args(mpr)` on commit `sha`, from a work folder at that commit. */
+  private async mxAt(floor: GraphFloor, sha: string, args: (mpr: string) => string[]): Promise<string> {
     const mx = this.mx;
     if (!mx) throw new Error('mxcli isn\'t on this machine (set AGENT_OFFICE_LIVE_MXCLI or AGENT_OFFICE_MXCLI)');
-    return mx;
+    const files = await this.filesAt(floor, sha);
+    return this.work.use(this.units.blobs(floor.dir), sha, files, (mpr, cwd) => mx(args(mpr), { cwd }));
+  }
+
+  private async filesAt(floor: GraphFloor, sha: string): Promise<ModelFiles> {
+    const files = await modelFiles(this.units.blobs(floor.dir), sha);
+    if (!files) throw new Error('no Mendix project (.mpr) in this commit');
+    return files;
+  }
+
+  /** The commit's model from its units, or null when they can't be read here (no node:sqlite). */
+  private commit(floor: GraphFloor, sha: string): Promise<CommitModel | null> {
+    if (!this.legacyDropped) {
+      this.legacyDropped = true;
+      void this.store.dropLegacy();
+    }
+    return this.units.commit(floor.dir, sha);
   }
 
   /** Main and the branches worth looking at (workers' and open pull requests'), newest first. */
   async refs(floor: GraphFloor): Promise<ModelRefs> {
     const g = await this.graphOf(floor);
     const main: ModelRef = { ref: 'main', label: g.defaultBranch, kind: 'main', sha: g.history[0]?.sha };
+    if (main.sha) this.sawMain(floor, main.sha);
     const branches: ModelRef[] = g.branches
       .filter((b) => !b.merged && (b.worker || (b.pr && b.pr.state === 'OPEN') || b.ahead > 0))
       .map((b) => ({ ref: b.name, label: b.name, kind: 'branch', sha: b.sha, worker: b.worker?.name, pr: b.pr?.number, prUrl: b.pr?.url }));
@@ -82,6 +121,7 @@ export class ModelService {
     if (!ref || ref === 'main' || ref === g.defaultBranch) {
       const sha = g.history[0]?.sha;
       if (!sha) throw new Error('the floor has no main branch yet');
+      this.sawMain(floor, sha);
       return { sha };
     }
     if (!REF_OK.test(ref)) throw new Error('not a branch name');
@@ -97,124 +137,124 @@ export class ModelService {
     throw new Error(`no branch ${ref}`);
   }
 
-  private snap(floor: GraphFloor, sha: string): Promise<Snapshot> {
-    return this.store.snapshot(floor.dir, sha);
-  }
-
-  /** The units of a commit (null when they can't be read here), a few commits kept in memory. */
-  private index(floor: GraphFloor, sha: string): Promise<UnitIndex | null> {
-    let ix = this.indexes.get(sha);
-    if (!ix) {
-      ix = this.snap(floor, sha).then((s) => openIndex(s.mpr).catch(() => null));
-      this.indexes.set(sha, ix);
-      ix.catch(() => this.indexes.delete(sha));
-      while (this.indexes.size > INDEX_MAX) this.indexes.delete(this.indexes.keys().next().value as string);
-    }
-    return ix;
-  }
-
-  async tree(floor: GraphFloor, ref: string): Promise<ModelTree> {
+  /**
+   * The tree at `ref`. When the app's structure changed and mxcli hasn't given the new tree yet, the
+   * floor's last tree comes back at once (`stale`) while the new one is worked out; `fresh` waits for it.
+   */
+  async tree(floor: GraphFloor, ref: string, fresh = false): Promise<ModelTree> {
+    this.usedAt.set(floor.id, Date.now());
     const { sha } = await this.resolve(floor, ref);
+    const key = await this.treeKey(floor, sha);
+    if (!fresh && !(await this.store.peek(key))) {
+      const last = await this.store.peek<ModelTreeNode[]>(this.lastTreeKey(floor));
+      if (last) {
+        void this.treeAt(floor, sha).catch(() => {});
+        return { sha, ref, nodes: last, stale: true };
+      }
+    }
     const nodes = await this.treeAt(floor, sha);
     return { sha, ref, nodes };
   }
 
-  private treeAt(floor: GraphFloor, sha: string): Promise<ModelTreeNode[]> {
-    return this.store.cached(sha, `v${CACHE_VERSION}:tree`, async () => {
-      const s = await this.snap(floor, sha);
-      return parseTree(parseJsonOut(await this.needMx()(['project-tree', '-p', s.mpr], { cwd: s.dir })));
+  private lastTreeKey(floor: GraphFloor): string {
+    return keyOf(`v${CACHE_VERSION}`, 'last-tree', floor.dir);
+  }
+
+  /** The tree's key: the app's structure (units.ts structureOf), so a commit that only changed documents' insides has its parent's. */
+  private async treeKey(floor: GraphFloor, sha: string): Promise<string> {
+    const cm = await this.commit(floor, sha).catch(() => null);
+    return cm ? keyOf(`v${CACHE_VERSION}`, 'tree', cm.structure) : keyOf(`v${CACHE_VERSION}`, 'tree@', floor.dir, sha);
+  }
+
+  private async treeAt(floor: GraphFloor, sha: string): Promise<ModelTreeNode[]> {
+    return this.store.cached(await this.treeKey(floor, sha), async () => {
+      const nodes = parseTree(parseJsonOut(await this.mxAt(floor, sha, (mpr) => ['project-tree', '-p', mpr])));
+      await this.store.put(this.lastTreeKey(floor), nodes);
+      return nodes;
     });
   }
 
   async doc(floor: GraphFloor, ref: string, type: string, qn: string, compare = false): Promise<ModelDocResponse> {
+    this.usedAt.set(floor.id, Date.now());
     const { sha, base } = await this.resolve(floor, ref);
-    const d = await this.docAt(floor, sha, type, qn);
+    const cm = await this.commit(floor, sha);
+    let d = await this.docAt(floor, sha, cm, type, qn);
+    if (d.kind !== 'text' && d.kind !== 'domainmodel' && d.mdlLater && cm) {
+      // The MDL too, when it was worked out before (on this commit or any with the same flow).
+      const m = await this.store.peek<FlowMdl>(this.mdlKey(cm, type, qn));
+      if (m) d = withMdl(d, m);
+    }
     const out: ModelDocResponse = { sha, doc: d };
-    if (compare && base && base !== sha && (type === 'domainmodel' || type === 'microflow' || type === 'nanoflow')) {
-      const [bi, hi] = await Promise.all([this.index(floor, base), this.index(floor, sha)]);
-      if (bi && hi) {
+    if (compare && base && base !== sha && (type === 'domainmodel' || FLOW.has(type))) {
+      const bm = await this.commit(floor, base);
+      if (bm && cm) {
         const key = `${type}:${qn}`;
-        const unitOf = (ix: UnitIndex) => {
-          const id = ix.byName.get(key);
-          return id ? ix.read(id) : Promise.resolve(null);
+        const unitOf = (m: CommitModel) => {
+          const id = m.ix.byName.get(key);
+          return id ? m.ix.read(id) : Promise.resolve(null);
         };
-        out.diff = diffUnits(type, await unitOf(bi), await unitOf(hi));
+        out.diff = diffUnits(type, await unitOf(bm), await unitOf(cm));
       }
     }
+    if (cm) this.readAhead(floor, sha, cm, type, qn);
     return out;
   }
 
-  private docAt(floor: GraphFloor, sha: string, type: string, qn: string): Promise<ModelDoc> {
-    return this.store.cached(sha, `v${CACHE_VERSION}:doc:${type}:${qn}`, async () => {
-      if (type === 'microflow' || type === 'nanoflow') return this.flowAt(floor, sha, type, qn);
-      if (type === 'domainmodel') return this.domainAt(floor, sha, qn);
+  private async docAt(floor: GraphFloor, sha: string, cm: CommitModel | null, type: string, qn: string): Promise<ModelDoc> {
+    if (cm && FLOW.has(type)) {
+      const r = await readFlow(cm, type as 'microflow' | 'nanoflow', qn);
+      if (r) return this.store.cached(r.key, async () => ({ ...r.build(), mdlLater: true }));
+    }
+    if (cm && type === 'domainmodel') {
+      const r = await readDomain(cm, qn);
+      if (r) return this.store.cached(r.key, async () => r.build());
+    }
+    // A document shown as its MDL: kept by its unit's hash when it has one, else by commit.
+    const unitHash = cm?.hashOf(`${type}:${qn}`) ?? '';
+    const key = unitHash ? keyOf(`v${CACHE_VERSION}`, 'doc', type, qn, unitHash) : keyOf(`v${CACHE_VERSION}`, 'doc@', floor.dir, sha, type, qn);
+    return this.store.cached(key, async (): Promise<ModelDoc> => {
+      if (FLOW.has(type)) return this.flowFromMx(floor, sha, type as 'microflow' | 'nanoflow', qn);
+      if (type === 'domainmodel') return this.domainFromMx(floor, sha, qn);
       const dtype = type === 'navprofile' ? 'navigation' : type;
       if (!DESCRIBE.has(dtype)) return { kind: 'text', type, name: qn, mdl: '' };
-      const s = await this.snap(floor, sha);
-      const mdl = stripNoise(await this.needMx()(['describe', '-p', s.mpr, dtype, qn], { cwd: s.dir })).replace(/^mdl 1;\n?/, '');
+      const mdl = stripNoise(await this.mxAt(floor, sha, (mpr) => ['describe', '-p', mpr, dtype, qn])).replace(/^mdl 1;\n?/, '');
       return { kind: 'text', type, name: qn, mdl };
     });
   }
 
-  private async flowAt(floor: GraphFloor, sha: string, type: 'microflow' | 'nanoflow', qn: string): Promise<ModelDoc> {
-    const s = await this.snap(floor, sha);
-    const [elk, ix] = await Promise.all([
-      this.needMx()(['describe', '-p', s.mpr, '--format', 'elk', type, qn], { cwd: s.dir }).then((o) => parseJsonOut<ElkFlow>(o)),
-      this.index(floor, sha),
-    ]);
-    const id = ix?.byName.get(`${type}:${qn}`);
-    const unit = id && ix ? await ix.read(id) : null;
-    const targets = new Map<string, string>();
-    if (unit && ix) {
-      // Retrieves over an association: which entity each association leads to, from its module's domain model.
-      const assocs = new Set<string>();
-      JSON.stringify(unit, (k, v) => (k === 'AssociationId' && typeof v === 'string' && v && assocs.add(v), v));
-      for (const a of assocs) {
-        const mod = a.slice(0, a.indexOf('.'));
-        const dm = ix.byName.get(`domainmodel:${mod}`);
-        const u = dm ? await ix.read(dm) : null;
-        const found = list(u?.Associations).find((x) => str(x.Name) === short(a));
-        const child = list(u?.Entities).find((e) => str(e.$ID) === str(found?.ChildPointer));
-        if (child) targets.set(a, `${mod}.${str(child.Name)}`);
-      }
-    }
-    return parseFlow(type, qn, elk, unit, (a) => targets.get(a));
+  private mdlKey(cm: CommitModel, type: string, qn: string): string {
+    return keyOf(`v${CACHE_VERSION}`, 'mdl', type, qn, cm.hashOf(`${type}:${qn}`));
   }
 
-  private async domainAt(floor: GraphFloor, sha: string, module: string): Promise<DomainDoc> {
-    const ix = await this.index(floor, sha);
-    const id = ix?.byName.get(`domainmodel:${module}`);
-    const unit = id && ix ? await ix.read(id) : null;
-    if (ix && unit) {
-      const persistable = new Map<string, boolean>();
-      for (const e of list(unit.Entities)) {
-        const g = str(doc(e.MaybeGeneralization)?.Generalization);
-        if (!g || g.startsWith(`${module}.`) || g.startsWith('System.')) continue;
-        const other = ix.byName.get(`domainmodel:${g.slice(0, g.indexOf('.'))}`);
-        const ou = other ? await ix.read(other) : null;
-        const pe = ou ? parseDomain(g.slice(0, g.indexOf('.')), ou).entities.find((x) => x.name === short(g)) : undefined;
-        if (pe) persistable.set(g, pe.kind === 'persistent');
-      }
-      return parseDomain(module, unit, (qn) => persistable.get(qn) ?? systemPersistable(qn));
-    }
-    return this.domainFromMx(floor, sha, module);
+  /** A flow's MDL and each element's lines in it: mxcli's elk description, kept by the flow's hash. */
+  async mdl(floor: GraphFloor, ref: string, type: string, qn: string): Promise<ModelMdlResponse> {
+    if (!FLOW.has(type)) throw new Error('only microflows and nanoflows have their MDL asked for apart');
+    const { sha } = await this.resolve(floor, ref);
+    const cm = await this.commit(floor, sha);
+    const key = cm && cm.hashOf(`${type}:${qn}`) ? this.mdlKey(cm, type, qn) : keyOf(`v${CACHE_VERSION}`, 'mdl@', floor.dir, sha, type, qn);
+    const m = await this.store.cached(key, async () => mdlOf(parseJsonOut<ElkFlow>(await this.mxAt(floor, sha, (mpr) => ['describe', '-p', mpr, '--format', 'elk', type, qn]))));
+    return { sha, ...m };
+  }
+
+  /** Without the units: the flow from mxcli's elk description and MDL alone. */
+  private async flowFromMx(floor: GraphFloor, sha: string, type: 'microflow' | 'nanoflow', qn: string): Promise<FlowDoc> {
+    const elk = parseJsonOut<ElkFlow>(await this.mxAt(floor, sha, (mpr) => ['describe', '-p', mpr, '--format', 'elk', type, qn]));
+    return parseFlow(type, qn, elk, null);
   }
 
   /** Without the units: mxcli's elk view of the module, each entity's MDL for its position. */
   private async domainFromMx(floor: GraphFloor, sha: string, module: string): Promise<DomainDoc> {
-    const mx = this.needMx();
-    const s = await this.snap(floor, sha);
     const tree = await this.treeAt(floor, sha);
     const mod = tree.find((n) => n.type === 'module' && n.qn === module);
     const dmNode = mod?.children?.find((c) => c.type === 'domainmodel');
     const entities = (dmNode?.children ?? []).filter((c) => c.type === 'entity' && c.qn).map((c) => c.qn as string);
     if (!entities.length) return { kind: 'domainmodel', module, entities: [], associations: [], annotations: [], source: 'mdl' };
-    const elk = parseJsonOut<ElkDomain>(await mx(['describe', '-p', s.mpr, '--format', 'elk', 'entity', entities[0]], { cwd: s.dir }));
-    const mdl = await mx(['-p', s.mpr, '--continue-on-error', '-c', entities.map((e) => `describe entity ${e};`).join(' ')], { cwd: s.dir }).catch((e: Error) => e.message);
+    const elk = parseJsonOut<ElkDomain>(await this.mxAt(floor, sha, (mpr) => ['describe', '-p', mpr, '--format', 'elk', 'entity', entities[0]]));
+    const mdl = await this.mxAt(floor, sha, (mpr) => ['-p', mpr, '--continue-on-error', '-c', entities.map((e) => `describe entity ${e};`).join(' ')]).catch((e: Error) => e.message);
     const owners = new Map<string, string>();
-    const assoc = await mx(['-p', s.mpr, '--json', '-c', `list associations in ${module}`], { cwd: s.dir }).catch(() => '[]');
+    const assoc = await this.mxAt(floor, sha, (mpr) => ['-p', mpr, '--json', '-c', `list associations in ${module}`]).catch(() => '[]');
     for (const a of parseJsonOut<Record<string, string>[]>(assoc)) owners.set(String(a.Name), String(a.Owner));
-    const notes = await mx(['-p', s.mpr, '--json', '-c', 'show annotations'], { cwd: s.dir }).catch(() => '[]');
+    const notes = await this.mxAt(floor, sha, (mpr) => ['-p', mpr, '--json', '-c', 'show annotations']).catch(() => '[]');
     const annotations: DmAnnotation[] = parseJsonOut<Record<string, unknown>[]>(notes)
       .filter((a) => a.Module === module)
       .map((a, i) => {
@@ -228,12 +268,45 @@ export class ModelService {
   async changes(floor: GraphFloor, ref: string): Promise<ModelChanges> {
     const { sha, base } = await this.resolve(floor, ref);
     if (!base || base === sha) return { base: base ?? sha, head: sha, docs: [] };
-    return this.store.cached(sha, `v${CACHE_VERSION}:changes:${base}`, async () => {
-      const [bi, hi] = await Promise.all([this.index(floor, base), this.index(floor, sha)]);
-      if (bi && hi) return { base, head: sha, docs: changesFrom(diffIndexes(bi, hi)).filter((c) => DOC_TYPES.has(c.type)) };
-      const [bt, ht] = await Promise.all([this.treeAt(floor, base), this.treeAt(floor, sha)]);
-      return { base, head: sha, docs: treeDiff(bt, ht) };
-    });
+    const [bm, hm] = await Promise.all([this.commit(floor, base), this.commit(floor, sha)]);
+    if (bm && hm) return { base, head: sha, docs: changesFrom(diffIndexes(bm.ix, hm.ix)).filter((c) => DOC_TYPES.has(c.type)) };
+    const [bt, ht] = await Promise.all([this.treeAt(floor, base), this.treeAt(floor, sha)]);
+    return { base, head: sha, docs: treeDiff(bt, ht) };
+  }
+
+  /** A diagram worked out (and kept) for the read-ahead, if it isn't already. */
+  private warmTask(floor: GraphFloor, sha: string, key: string): Task {
+    const [kind, qn] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)];
+    return async () => {
+      const cm = await this.commit(floor, sha);
+      if (cm) await this.docAt(floor, sha, cm, kind, qn);
+    };
+  }
+
+  /** After a document opens: the rest of its module's diagrams (its domain model first), read ahead. */
+  private readAhead(floor: GraphFloor, sha: string, cm: CommitModel, type: string, qn: string) {
+    const module = type === 'domainmodel' ? qn : qn.slice(0, qn.indexOf('.'));
+    const keys = [...cm.ix.byName.keys()].filter((k) => k !== `${type}:${qn}` && (k === `domainmodel:${module}` || (/^(microflow|nanoflow):/.test(k) && k.slice(k.indexOf(':') + 1).startsWith(`${module}.`))));
+    keys.sort((a, b) => Number(b.startsWith('domainmodel:')) - Number(a.startsWith('domainmodel:')) || a.localeCompare(b));
+    void this.prefetch.run(floor.id, keys.map((k) => this.warmTask(floor, sha, k)));
+  }
+
+  /** Main is at `sha`: if it moved and someone used the tab lately, read the tree and the changed diagrams ahead. */
+  private sawMain(floor: GraphFloor, sha: string) {
+    const was = this.mainSeen.get(floor.id);
+    this.mainSeen.set(floor.id, sha);
+    if (!was || was === sha || Date.now() - (this.usedAt.get(floor.id) ?? 0) > WARM_WINDOW_MS) return;
+    void this.warmMove(floor, was, sha).catch(() => {});
+  }
+
+  /** Reading ahead after main moved from `was` to `sha`; resolves when it's done (tests wait on it). */
+  async warmMove(floor: GraphFloor, was: string, sha: string): Promise<number> {
+    const [bm, hm] = await Promise.all([this.commit(floor, was).catch(() => null), this.commit(floor, sha)]);
+    if (!hm) return 0;
+    const d = bm ? diffIndexes(bm.ix, hm.ix) : { added: [], changed: [...hm.ix.byName.keys()], removed: [] };
+    const keys = [...d.changed, ...d.added].filter((k) => /^(microflow|nanoflow|domainmodel):/.test(k));
+    const tasks: Task[] = [() => this.treeAt(floor, sha), ...keys.map((k) => this.warmTask(floor, sha, k))];
+    return this.prefetch.run(`${floor.id}:main`, tasks);
   }
 }
 
@@ -245,5 +318,3 @@ export function modelOf(ctx: { cfg: { dataDir: string } }): ModelService {
   if (!m) offices.set(ctx.cfg, (m = new ModelService(ctx.cfg.dataDir, { graph: (f) => gitGraphsOf(ctx).graph(f) })));
   return m;
 }
-
-

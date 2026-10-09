@@ -4,6 +4,29 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Changed
+- **📐 Model tab: diagrams open at once.** Microflows, nanoflows and domain models are now drawn
+  straight from the app's model files, in milliseconds, instead of one mxcli run per document (1 to 7
+  seconds each). The MDL beside a diagram fills in a moment later ("Reading the MDL…"). Documents are
+  kept by their content, not by commit: after an agent commits to main, everything it left alone
+  opens straight away. On a copy of travel-approval, a microflow went from 1.6 to 1.9 s to under
+  80 ms the first time, and from 1.8 s to 15 ms after main moved.
+- **The App Explorer tree no longer waits on every commit.** It is kept by the app's structure, so a
+  commit that only edits documents keeps it. When the structure changed, the last tree shows at once
+  and the new one replaces it when it's ready.
+- **Reading ahead.** Opening a document reads the rest of its module in the background. When main
+  moves while someone used the tab in the last 15 minutes, the new tree and the changed diagrams are
+  read before anyone asks.
+- **Much less disk.** The office no longer keeps a full copy of the app per commit (`model/snap/`,
+  19 MB each); that folder is removed on first use. mxcli reads three work folders that move from
+  commit to commit by the few files that differ.
+
+### Fixed
+- **Aggregate and list-operation activities** in newer models get their own icon and caption ("Count
+  of Orders") instead of a generic one.
+
 ## 2026-10-09 · release 24 (`b32d844`)
 
 ### New

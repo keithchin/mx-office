@@ -57,7 +57,7 @@ parentPort.on('message', (m) => {
     }
     kids.set(m.id, child);
     post({ id: m.id, ev: 'spawn', pid: child.pid });
-    child.stdout?.on('data', (d) => post({ id: m.id, ev: 'stdout', data: d.toString('utf8') }));
+    child.stdout?.on('data', (d) => post({ id: m.id, ev: 'stdout', data: m.binary ? d : d.toString('utf8') }));
     child.stderr?.on('data', (d) => post({ id: m.id, ev: 'stderr', data: d.toString('utf8') }));
     child.stdin?.on('error', () => {});
     child.on('error', (err) => post({ id: m.id, ev: 'error', err: errOf(err) }));
@@ -75,7 +75,7 @@ parentPort.on('message', (m) => {
 });
 `;
 
-type Msg = { id: number; ev: string; err?: { message: string; code?: number | string; killed?: boolean; signal?: string | null }; stdout?: string; stderr?: string; data?: string; pid?: number; code?: number | null; signal?: NodeJS.Signals | null };
+type Msg = { id: number; ev: string; err?: { message: string; code?: number | string; killed?: boolean; signal?: string | null }; stdout?: string; stderr?: string; data?: string | Uint8Array; pid?: number; code?: number | null; signal?: NodeJS.Signals | null };
 
 let worker: Worker | undefined;
 let broken = false;
@@ -190,11 +190,13 @@ export interface SpawnOffOptions {
   shell?: boolean;
   /** Whether stdin is a pipe to write to (else ignored). */
   stdin?: boolean;
+  /** stdout as bytes (a Uint8Array per 'stdout' event) instead of utf8 text, for a program that prints binary (git cat-file). */
+  binary?: boolean;
 }
 
 /** spawn, started from a worker thread (see above). stdout and stderr are pipes; stdin is one when `stdin` says so. */
 export function spawnOff(file: string, args: readonly string[], opts: SpawnOffOptions = {}): OffChild {
-  const { stdin, env, ...rest } = opts;
+  const { stdin, env, binary, ...rest } = opts;
   const o: SpawnOptions = { windowsHide: true, ...rest, ...envOpt(env), stdio: [stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'] };
   let id: number | undefined;
   const child = new OffChild((m) => id !== undefined && worker?.postMessage({ ...m, id }));
@@ -213,14 +215,14 @@ export function spawnOff(file: string, args: readonly string[], opts: SpawnOffOp
       child.emit('close', m.code ?? null, m.signal ?? null);
     }
   };
-  id = send({ op: 'spawn', file, args: [...args], opts: o }, take);
+  id = send({ op: 'spawn', file, args: [...args], opts: o, binary }, take);
   if (id !== undefined) return child;
   // No worker: start it here, wired to the same events.
   const local = spawn(file, [...args], o);
   const ctl = (m: { op: string; data?: string; signal?: NodeJS.Signals }) => (m.op === 'write' ? local.stdin?.write(m.data!) : m.op === 'end' ? local.stdin?.end() : local.kill(m.signal));
   const fallback = new OffChild((m) => ctl(m as never));
   fallback.pid = local.pid;
-  local.stdout?.on('data', (d: Buffer) => fallback.emit('stdout', d.toString('utf8')));
+  local.stdout?.on('data', (d: Buffer) => fallback.emit('stdout', binary ? d : d.toString('utf8')));
   local.stderr?.on('data', (d: Buffer) => fallback.emit('stderr', d.toString('utf8')));
   local.stdin?.on('error', () => undefined);
   local.on('spawn', () => fallback.emit('spawn'));
