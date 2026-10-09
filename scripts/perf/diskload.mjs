@@ -17,7 +17,7 @@ const SELF = fileURLToPath(import.meta.url);
 /** Starts `n` hammers in `dir` (made if missing). Returns what stops them; they also stop when this process ends. */
 export function startDiskLoad(dir, n) {
   fs.mkdirSync(dir, { recursive: true });
-  const kids = Array.from({ length: n }, (_, i) => fork(SELF, [path.join(dir, `load${i}`)], { stdio: 'ignore' }));
+  const kids = Array.from({ length: n }, (_, i) => fork(SELF, [path.join(dir, `load${i}`)], { stdio: 'ignore', windowsHide: true }));
   return () => {
     for (const k of kids) k.kill();
   };

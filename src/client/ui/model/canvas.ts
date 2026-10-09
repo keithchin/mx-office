@@ -286,6 +286,8 @@ export class Canvas {
       else if (e.key === 'ArrowUp') this.ty += step;
       else if (e.key === 'ArrowDown') this.ty -= step;
       else if (e.key === 'Escape') {
+        // Something picked: Esc lets go of it (and doesn't also leave full screen, ui/model/fullscreen.ts).
+        if (this.selected) e.preventDefault();
         this.select(null);
         this.on.select(null);
         return;

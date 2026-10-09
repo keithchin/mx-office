@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { SETUP_STEPS, type ProjectPlan, type StepId } from '../src/shared/wizard.js';
 import { JobBook, newJob, waitingOn, type StepImpl } from '../src/server/wizard/job.js';
-import { runCommand, runningCommands } from '../src/server/wizard/run.js';
+import { LostEndError, runCommand, runningCommands } from '../src/server/wizard/run.js';
 import { EventEmitter } from 'node:events';
 import { adminGhEnv, adminTokenConfigured, redactor } from '../src/server/wizard/admin-token.js';
 import { toolkitEnv, type WizardConfig } from '../src/server/wizard/config.js';
@@ -291,7 +291,7 @@ test('a step that makes no progress says which step and what it waits on, and ne
   }
 });
 
-test("a command whose process is gone but whose end never comes through fails the step instead of hanging it", async () => {
+test("a command whose process is gone but whose end never comes through ends with a lost end instead of hanging the step", async () => {
   // What the setup sat on for minutes (1 run in 30, release 22 too): mx wrote the app and went, and its
   // end never reached "Create the Mendix app".
   const child = Object.assign(new EventEmitter(), { pid: 4242, closed: false, exitCode: null, signalCode: null, write() {}, end() {}, kill() {} });
@@ -303,8 +303,59 @@ test("a command whose process is gone but whose end never comes through fails th
   assert.ok(runningCommands.size >= 1, 'running while its process is there');
   isAlive = false;
   const err = await Promise.race([run.then(() => undefined, (e: Error) => e), new Promise<string>((r) => setTimeout(() => r('still waiting'), 3_000))]);
-  assert.ok(err instanceof Error, `it ${String(err)}`);
+  assert.ok(err instanceof LostEndError, `it ${String(err)}`);
   assert.match(err.message, /mx create-project ended \(process 4242 is gone\) but its end never came through: Retry runs it again/);
   assert.ok(Date.now() - started < 3_000);
   assert.ok(![...runningCommands.values()].some((c) => c.line.startsWith('mx create-project')), 'not listed as running any more');
+});
+
+test('a step whose command end was lost is tried again by itself once, and asks for Retry when it is lost twice', async () => {
+  const dir = tmp('lost');
+  try {
+    const book = new JobBook(dir);
+    const lostMsg = 'mx create-project ended (process 4242 is gone) but its end never came through: Retry runs it again';
+    // Lost once: the step (init: no network retries of its own) runs a second time and the setup finishes.
+    const job = newJob(plan(), 'Probe');
+    book.add(job);
+    const calls: StepId[] = [];
+    const steps = fakeSteps(calls);
+    let lost = 1;
+    steps.init = async (_job, io) => {
+      calls.push('init');
+      io.log('doing init');
+      if (lost-- > 0) throw new LostEndError(lostMsg);
+      return { status: 'done' };
+    };
+    await book.run(job, steps);
+    assert.equal(job.status, 'done', job.log.join('\n'));
+    assert.equal(calls.filter((c) => c === 'init').length, 2, 'init ran twice');
+    assert.ok(job.log.some((l) => /▶ .*\(try 2 of 2\)/.test(l)), 'its log says it is the second try');
+    assert.ok(job.log.some((l) => /↻ .*failed \(try 1 of 2\)/.test(l)), 'and that the first try was lost');
+    assert.equal(job.steps.init.status, 'done');
+
+    // Lost twice in a row: the step fails with the Retry message.
+    const job2 = newJob(plan(), 'Probe');
+    book.add(job2);
+    const calls2: StepId[] = [];
+    const steps2 = fakeSteps(calls2);
+    steps2.init = async () => {
+      calls2.push('init');
+      throw new LostEndError(lostMsg);
+    };
+    await book.run(job2, steps2);
+    assert.equal(job2.status, 'failed');
+    assert.equal(calls2.filter((c) => c === 'init').length, 2, 'tried twice, not more');
+    assert.equal(job2.steps.init.status, 'failed');
+    assert.match(job2.steps.init.detail ?? '', /its end never came through: Retry runs it again/);
+
+    // Any other failure still stops at once.
+    const job3 = newJob(plan(), 'Probe');
+    book.add(job3);
+    const calls3: StepId[] = [];
+    await book.run(job3, fakeSteps(calls3, new Set<StepId>(['init'])));
+    assert.equal(job3.status, 'failed');
+    assert.equal(calls3.filter((c) => c === 'init').length, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

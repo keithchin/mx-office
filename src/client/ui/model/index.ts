@@ -24,6 +24,7 @@ import { looksUnarranged } from './domain-layout';
 import { tidyDomain } from './domain-tidy';
 import { drawFlow } from './flow-draw';
 import { Tree, opens } from './tree';
+import { fullScreen } from './fullscreen';
 import './model.css';
 
 const DARK = new Set(['dark', 'terminal', 'clean-dark', 'portal-dark']);
@@ -121,6 +122,13 @@ export function modelView(root: HTMLElement): ModelView {
   });
   canvasHost.append(text, msg);
   const treeView = new Tree({ open: (n) => openNode(n) });
+  // Full screen: the explorer, the diagram and the details fill the window (F, or the button; Esc leaves),
+  // the drawing fitted again each way. Back in the page, the tab fits between the bars again.
+  const full = fullScreen(root, () => {
+    if (!full.on) fitHeight();
+    if (doc) canvas.fit();
+  });
+  const fullBtn = full.button;
   const scrim = h('div.mx-scrim', { onclick: () => root.classList.remove('mx-drawer') });
   const body = h('div.mx-body', {}, treeView.el, canvasHost, side, scrim);
   const bar = h(
@@ -140,6 +148,7 @@ export function modelView(root: HTMLElement): ModelView {
       h('button.btn', { type: 'button', title: 'Zoom in (+)', onclick: () => canvas.zoom(1.25) }, '+'),
       h('button.btn', { type: 'button', title: 'Fit the document in view (0)', onclick: () => canvas.fit() }, 'Fit'),
     ),
+    fullBtn,
   );
   root.replaceChildren(bar, body);
   explorerBtn.addEventListener('click', () => root.classList.toggle('mx-drawer'));
@@ -382,6 +391,7 @@ export function modelView(root: HTMLElement): ModelView {
       treeView.focusFilter();
     }
   });
+  full.keys();
 
   // A merge or a new commit on a worker's branch: look again once things settle (only when on screen).
   const kick = () => {
@@ -433,6 +443,7 @@ export function modelView(root: HTMLElement): ModelView {
     },
     hide() {
       if (!visible) return;
+      full.exit();
       visible = false;
       clearTimeout(settle);
       setAddress({ ref: null, doc: null, type: null, changes: null });

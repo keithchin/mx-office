@@ -9,6 +9,7 @@ class Shim {
   [DllImport("kernel32.dll")] static extern IntPtr CreateJobObject(IntPtr a, string n);
   [DllImport("kernel32.dll")] static extern bool SetInformationJobObject(IntPtr j, int c, ref EXT i, uint l);
   [DllImport("kernel32.dll")] static extern bool AssignProcessToJobObject(IntPtr j, IntPtr p);
+  [DllImport("kernel32.dll")] static extern uint GetConsoleCP();
 
   // One argument as CommandLineToArgvW reads it back (quotes, and the backslashes before them).
   static string Q(string s) {
@@ -37,6 +38,9 @@ class Shim {
     SetInformationJobObject(job, 9, ref info, (uint)Marshal.SizeOf(typeof(EXT))); // JobObjectExtendedLimitInformation
     var psi = new ProcessStartInfo(node, line.ToString());
     psi.UseShellExecute = false;
+    // No console to share (the shim was started detached): node gets a hidden one, not a window of its own.
+    // With one (a terminal, a pseudo console, a hidden one) node shares it, as before.
+    psi.CreateNoWindow = GetConsoleCP() == 0;
     // The shim joins the job first, so node is in it from the start (no window in which killing the shim
     // leaves node behind); where the shim can't join (a job of its own that won't nest), node joins after.
     bool inJob = AssignProcessToJobObject(job, Process.GetCurrentProcess().Handle);

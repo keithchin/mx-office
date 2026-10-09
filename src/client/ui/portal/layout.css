@@ -5,6 +5,16 @@
 
 html[data-theme^='portal'] body.lite.pt-has-nav { --pt-nav-w: 228px; --pt-top: calc(var(--pt-h) + 1px + env(safe-area-inset-top)); }
 html[data-theme^='portal'] body.lite.pt-has-nav.pt-rail { --pt-nav-w: 56px; }
+/* The bar stays at the top and the pane under it (nav.css, fixed) while the page scrolls under both. lite.css
+   gives body overflow:auto, which makes body the bar's scroll container: body never scrolls (the window
+   does), so the bar's position:sticky never held and it scrolled away, leaving the pane hanging below an
+   empty strip. With body not a scroll container the window is the only one: one scrollbar, the page's. */
+html[data-theme^='portal'] body.lite.pt-has-nav { overflow: visible; }
+html[data-theme^='portal'] body.lite.pt-has-nav header.lite-bar { position: sticky; top: 0; }
+/* Something scrolled into view (a search result, a deep link) lands under the bar, not behind it. */
+html[data-theme^='portal']:has(body.lite.pt-has-nav) { scroll-padding-top: calc(var(--pt-h) + 9px); }
+/* What sticks in the page's own flow sticks under the bar now, not behind it (the audit log's new-entries pill). */
+html[data-theme^='portal'] body.lite.pt-has-nav .au-new { top: calc(var(--pt-top) + 8px); }
 
 /* The page: beside the pane, the whole width left, 24px in from the pane and 32px at the sides. */
 html[data-theme^='portal'] body.lite.pt-has-nav .lite-main {

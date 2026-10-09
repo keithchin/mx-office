@@ -16,6 +16,34 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   `<data>/deleted/<project>-<time>/` and removes it, and takes the project off `floors.json`; the folder and the
   repository stay. Delete can also take the local folder and the GitHub repository, each only when ticked.
   Everyone on the project goes Home with a *Deleted shop* toast. Docs: Using the office › Delete or remove a project.
+- **Model: full screen.** A **Full screen** button at the end of the Model tab's bar (or **F** / **Shift+F**
+  with the focus in the tab) spreads the App Explorer, the diagram and the details over the whole window,
+  fitted to it; **Esc** or **Exit full screen** brings it back, fitted again. It uses the browser's full
+  screen, or covers the window where the browser has none. Pan, zoom and Fit work as before, in every
+  theme. Esc with an element picked lets go of it first.
+
+### Fixed
+- **A setup step whose command's end got lost is tried again by itself.** When a step's program has
+  gone but its end never reached the office (seen on Windows with freshly written programs the virus
+  scanner held), the step now runs once more on its own (its log says "try 2 of 2") instead of stopping
+  at once; only when that happens twice in a row does it stop and ask for Retry. Steps that talk to
+  GitHub still get their three tries.
+- **Portal: the top bar and the left navigation stay put while the page scrolls.** Scrolling a long page
+  (the Overview, the Board) took the navy bar away with it and left the pane hanging under an empty strip.
+  Now the bar stays at the top of the window and the pane under it, only the page scrolls (one
+  scrollbar), and a pane longer than the window scrolls on its own. The folded rail and the phone's
+  drawer work as before.
+- **Portal: the progress bar's phase card is solid again.** Hovering a phase or stage in the dark band
+  showed its card see-through over the page (it took the band's faint wash for a background). It's a
+  white card in Portal (Light) and a dark one in Portal (Dark), with a border, a shadow and readable
+  text, and so is any other tooltip or menu that opens out of the band or the top bar.
+- **No more terminal windows popping up on Windows.** With Windows Terminal as the default terminal,
+  programs the office (and its tests and performance checks) started from a process without a console
+  each opened a terminal window of their own, most of them when an agent's terminal was stopped (the
+  terminal library forks a helper from the pty host, which runs without a console). Everything the pty
+  host starts, and what the office starts off its main thread, the test runner, the performance harness
+  and the tests' agent shims start, now starts without a window; Studio Pro and the browser still open
+  as windows.
 
 ### Good to know
 - **Guarded.** Nothing starts during a pause, a resume, a safe restart or a toolkit update. Worktrees with

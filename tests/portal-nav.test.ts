@@ -356,3 +356,42 @@ test('the New task window and the rest say agent, not worker, where a person rea
   assert.match(read('src/client/lite.html'), /id="tab-workers"/);
   assert.match(read('src/client/ui/ranking/view.ts'), /r\.roleLabel !== 'Worker'/);
 });
+
+test('in Portal the top bar stays at the top and the pane under it while only the page scrolls', () => {
+  const layout = read('src/client/ui/portal/layout.css');
+  const nav = read('src/client/ui/portal/nav.css');
+  // lite.css makes body a scroll container (overflow:auto) that never scrolls, so a sticky bar inside it
+  // scrolled away with the page: on the Portal pages with the pane body isn't one, and the bar sticks.
+  assert.match(read('src/client/lite.css'), /html, body \{[^}]*overflow: auto;/);
+  assert.match(layout, /html\[data-theme\^='portal'\] body\.lite\.pt-has-nav \{ overflow: visible; \}/);
+  assert.match(layout, /html\[data-theme\^='portal'\] body\.lite\.pt-has-nav header\.lite-bar \{ position: sticky; top: 0; \}/);
+  assert.match(layout, /--pt-top: calc\(var\(--pt-h\) \+ 1px \+ env\(safe-area-inset-top\)\)/);
+  // The pane: fixed under the bar to the window's foot, scrolling on its own when its groups are longer.
+  assert.match(nav, /\.pt-nav \{\s*position: fixed; left: 0; top: var\(--pt-top\); bottom: 0;/);
+  assert.match(nav, /\.pt-nav-in \{ height: 100%; overflow-x: hidden; overflow-y: auto;/);
+  // What scrolls into view, and the audit log's pill, land under the bar.
+  assert.match(layout, /scroll-padding-top: calc\(var\(--pt-h\) \+ 9px\)/);
+  assert.match(layout, /\.pt-has-nav \.au-new \{ top: calc\(var\(--pt-top\) \+ 8px\); \}/);
+});
+
+test('a tooltip or menu out of the dark band or the top bar has a solid page-coloured card, readable at 4.5:1', () => {
+  const theme = read('src/client/styles/theme-portal.css');
+  const head = read('src/client/ui/portal/pagehead.css');
+  // Why it was see-through: the band's --card is a white wash for its chips, and the phase card is drawn inside the band.
+  assert.match(head, /\.pt-band \{[^}]*--card: rgba\(255, 255, 255, \.07\)/);
+  assert.match(read('src/client/ui/progress/progress.css'), /\.pg-tip \{[^}]*background: var\(--card\); color: var\(--ink\);/);
+  assert.match(read('src/client/ui/progress/index.ts'), /tip\.className = 'pg-tip';/);
+  for (const t of ['portal-light', 'portal-dark']) {
+    const i = theme.indexOf(`html[data-theme='${t}'] :is(`);
+    assert.ok(i >= 0, `${t}: the page-colours rule`);
+    const sel = theme.slice(i, theme.indexOf('{', i));
+    assert.match(sel, /:is\(\.lite-bar, \.pt-band\) :is\(\.pg-tip, \[role='tooltip'\], \[role='menu'\], \[role='listbox'\]\)/, `${t}: the band's and bar's pop-ups take the page's colours`);
+    const block = theme.slice(i, theme.indexOf('\n}', i));
+    const v = Object.fromEntries([...block.matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})\b/gi)].map((m) => [m[1], m[2]]));
+    assert.match(v.card ?? '', /^#[0-9a-f]{6}$/i, `${t}: --card is a solid colour (${v.card})`);
+    for (const fg of ['ink', 'muted']) assert.ok(ratio(v[fg], v.card) >= 4.5, `${t}: --${fg} ${v[fg]} on --card ${v.card} is ${ratio(v[fg], v.card).toFixed(2)}:1`);
+  }
+  // The navigation's flyout, the bar's menus and the search's results were already page-coloured.
+  assert.match(read('src/client/ui/portal/nav.ts'), /h\('div\.pt-flyout\.pt-only\.pt-pagecolors'/);
+  assert.match(read('src/client/ui/portal/pop.ts'), /ul\.pt-pop\.pt-pagecolors/);
+});

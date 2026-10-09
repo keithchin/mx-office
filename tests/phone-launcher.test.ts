@@ -30,8 +30,8 @@ const THEMES: Record<string, Record<string, string>> = {
   terminal: { ...tokens(sheets.base, ':root'), ...tokens(sheets.themes, "html[data-theme='terminal']") },
   'clean-light': { ...tokens(sheets.base, ':root'), ...tokens(sheets.clean, FAMILY), ...tokens(sheets.clean, "html[data-theme='clean-light']") },
   'clean-dark': { ...tokens(sheets.base, ':root'), ...tokens(sheets.clean, FAMILY), ...tokens(sheets.clean, "html[data-theme='clean-dark']") },
-  'portal-light': { ...tokens(sheets.base, ':root'), ...tokens(sheets.clean, FAMILY), ...tokens(sheets.portal, "html[data-theme^='portal']"), ...tokens(sheets.portal, "html[data-theme='portal-light'],\nhtml[data-theme='portal-light'] :is(.pt-pagecolors, .lite-bar .vp-list, .dx-bar .dx-results)") },
-  'portal-dark': { ...tokens(sheets.base, ':root'), ...tokens(sheets.clean, FAMILY), ...tokens(sheets.portal, "html[data-theme^='portal']"), ...tokens(sheets.portal, "html[data-theme='portal-dark'],\nhtml[data-theme='portal-dark'] :is(.pt-pagecolors, .lite-bar .vp-list, .dx-bar .dx-results)") },
+  'portal-light': { ...tokens(sheets.base, ':root'), ...tokens(sheets.clean, FAMILY), ...tokens(sheets.portal, "html[data-theme^='portal']"), ...tokens(sheets.portal, "html[data-theme='portal-light'],\nhtml[data-theme='portal-light'] :is(.pt-pagecolors, .lite-bar .vp-list, .dx-bar .dx-results, :is(.lite-bar, .pt-band) :is(.pg-tip, [role='tooltip'], [role='menu'], [role='listbox']))") },
+  'portal-dark': { ...tokens(sheets.base, ':root'), ...tokens(sheets.clean, FAMILY), ...tokens(sheets.portal, "html[data-theme^='portal']"), ...tokens(sheets.portal, "html[data-theme='portal-dark'],\nhtml[data-theme='portal-dark'] :is(.pt-pagecolors, .lite-bar .vp-list, .dx-bar .dx-results, :is(.lite-bar, .pt-band) :is(.pg-tip, [role='tooltip'], [role='menu'], [role='listbox']))") },
 };
 
 /** A value with its var()s looked up, down to a colour. */

@@ -22,7 +22,7 @@ const opt = (name: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const repo = path.resolve(args.find((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--')) ?? '.');
-const git = (...a: string[]) => execFileSync('git', a, { cwd: repo, encoding: 'utf8' }).trim();
+const git = (...a: string[]) => execFileSync('git', a, { cwd: repo, encoding: 'utf8', windowsHide: true }).trim();
 const modelCommits = git('log', '--format=%H', '--', '*.mpr', 'mprcontents', '*/mprcontents').split('\n').filter(Boolean);
 const to = opt('to') ?? modelCommits[0];
 const from = opt('from') ?? modelCommits[modelCommits.indexOf(to) + 1] ?? to;

@@ -45,6 +45,8 @@ The **📐 Model** tab shows the floor's Mendix app the way Studio Pro does, wit
 
 Long flows open at their start.
 
+**Full screen:** the **Full screen** button at the end of the bar (or **F**, or **Shift+F**, with the focus in the Model tab) spreads the App Explorer, the diagram and the details over the whole window; the drawing is fitted to it. **Esc** or **Exit full screen** brings it back into the page, fitted again. It uses the browser's full screen where it can, and otherwise covers the window. Pan, zoom and Fit work as usual in it, in every theme.
+
 The diagram uses Studio Pro's colours: its light canvas on the light themes, its dark canvas on the dark ones (Dark, Terminal, Clean dark).
 
 On a phone, the App Explorer is a drawer: open it with **☰ Explorer**.

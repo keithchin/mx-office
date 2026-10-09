@@ -12,8 +12,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const isWin = process.platform === 'win32';
 export const MENDIX_VERSION = '11.12.4';
 
-const SHIM_CS = `using System; using System.Diagnostics; using System.IO; using System.Text;
+const SHIM_CS = `using System; using System.Diagnostics; using System.IO; using System.Text; using System.Runtime.InteropServices;
 class Shim {
+  [DllImport("kernel32.dll")] static extern uint GetConsoleCP();
   static string Q(string s) {
     if (s.Length > 0 && s.IndexOfAny(new char[] { ' ', '\\t', '"' }) < 0) return s;
     var sb = new StringBuilder("\\"");
@@ -35,6 +36,8 @@ class Shim {
     foreach (var a in args) { line.Append(' '); line.Append(Q(a)); }
     var psi = new ProcessStartInfo(node, line.ToString());
     psi.UseShellExecute = false;
+    // No console to share (started detached): node gets a hidden one, not a window of its own.
+    psi.CreateNoWindow = GetConsoleCP() == 0;
     var p = Process.Start(psi);
     p.WaitForExit();
     return p.ExitCode;
@@ -138,7 +141,7 @@ export function makeStubs(root) {
     shimExe = path.join(base, 'shim.exe');
     if (!fs.existsSync(shimExe)) {
       fs.writeFileSync(path.join(base, 'shim.cs'), SHIM_CS);
-      execFileSync(csc(), ['/nologo', '/optimize', `/out:${shimExe}`, path.join(base, 'shim.cs')], { stdio: 'pipe' });
+      execFileSync(csc(), ['/nologo', '/optimize', `/out:${shimExe}`, path.join(base, 'shim.cs')], { stdio: 'pipe', windowsHide: true });
     }
   }
   shim(bin, 'gh', path.join(HERE, 'fake-gh.mjs'), shimExe);

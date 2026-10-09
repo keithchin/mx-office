@@ -269,6 +269,13 @@
 .mx-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; color: var(--muted); }
 
 body:has(#model-view:not(.hidden)) .lite-main { padding-bottom: 0; }
+/* Full screen (fullscreen.ts): the tab over the whole window, in the browser's full screen or, where there is none,
+   laid over the viewport. Above the bars, the left navigation and the dock; the page under it doesn't scroll. */
+.mxv.mx-full { position: fixed; inset: 0; z-index: 1000; width: auto !important; height: auto !important; min-height: 0; max-width: none; margin: 0 !important; border: 0; border-radius: 0; }
+.mxv:fullscreen { width: 100% !important; height: 100% !important; }
+.mxv::backdrop { background: var(--paper, #000); }
+html:has(body.mx-full-open) { overflow: hidden; }
+.mxv .mx-full-btn[aria-pressed='true'] { background: var(--accent-soft); }
 
 /* A phone: the explorer is a drawer, the details a sheet under the diagram. */
 @media (max-width: 760px) {

@@ -87,7 +87,7 @@ function gitInit(dir: string, name: string, at: number) {
   write(path.join(dir, '.gitignore'), '.agent-office/\n');
   const date = new Date(at).toISOString();
   const env = { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date };
-  const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false', ...args], { cwd: dir, env, stdio: 'ignore' });
+  const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false', ...args], { cwd: dir, env, stdio: 'ignore', windowsHide: true });
   git('init', '-q', '-b', 'main');
   git('add', '-A');
   git('commit', '-qm', 'Initial commit');
