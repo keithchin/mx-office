@@ -7,7 +7,8 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ## Unreleased
 
 ### New
-- **🚀 First-run setup.** A new office (its password still the generated one, or no projects folder yet) opens
+- **🚀 First-run setup.** A new office (no projects yet, and its password still the generated one or no projects
+  folder yet; an office that already has projects never) opens
   on `/setup`: a six-step stepper in the Portal look (every theme): **Welcome** (set the office password and
   your name), **Prerequisites** (a green or red row each for Node 22.5+, Git and Git Bash, `gh` and its sign-in,
   Claude Code and its sign-in, Studio Pro, mxcli, jq, the toolkit and the Live app's PostgreSQL, marked required

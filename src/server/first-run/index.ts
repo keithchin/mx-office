@@ -48,7 +48,7 @@ function passwordState(ctx: Ctx): FirstRunView['password'] {
 /** Why the office should open the setup by itself now (empty: it shouldn't). */
 export function setupReasons(ctx: Ctx): string[] {
   const pw = passwordState(ctx);
-  return firstRunReasons({ passwordGenerated: pw.source === 'generated', adminAccount: pw.source === 'accounts', projectsDirExists: isDir(ctx.building.projectsDir), setup: setupRecord() });
+  return firstRunReasons({ passwordGenerated: pw.source === 'generated', adminAccount: pw.source === 'accounts', projectsDirExists: isDir(ctx.building.projectsDir), floors: ctx.floors.size, setup: setupRecord() });
 }
 
 export function firstRunView(ctx: Ctx, admin: boolean): FirstRunView {

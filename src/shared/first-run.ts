@@ -35,9 +35,11 @@ export interface SetupRecord {
 }
 
 /** Why the office opens the setup by itself: what it's missing. Empty means it doesn't. */
-export function firstRunReasons(o: { passwordGenerated: boolean; adminAccount: boolean; projectsDirExists: boolean; setup: SetupRecord | undefined }): string[] {
+export function firstRunReasons(o: { passwordGenerated: boolean; adminAccount: boolean; projectsDirExists: boolean; floors: number; setup: SetupRecord | undefined }): string[] {
   if (o.setup?.rerun) return ['Run setup again was picked in ⚙️ Settings'];
   if (o.setup?.completedAt) return [];
+  // An office that already has projects is set up, whatever else it lacks: an upgrade never lands it here.
+  if (o.floors > 0) return [];
   const why: string[] = [];
   if (o.passwordGenerated && !o.adminAccount) why.push('The office password hasn’t been set yet (it’s still the generated one)');
   if (!o.projectsDirExists) why.push('The folder new projects go in isn’t there yet');

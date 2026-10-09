@@ -126,3 +126,17 @@ test('the performance guard’s cleanup tries a held folder again, and never fai
   assert.equal(await cleanupTestDir('C:/x/test-offices/c', { ...opts, remove: held(1, 'ENOENT_ODD') }), false);
   assert.deepEqual(slept, []);
 });
+
+test('the performance guard marks first-run setup as done in its test offices, keeping their other settings', async () => {
+  // @ts-expect-error: a plain .mjs script, no types
+  const { markSetupDone } = await import('../scripts/perf/office.mjs');
+  const home = mkdtempSync(path.join(os.tmpdir(), 'perf-setup-'));
+  markSetupDone(home);
+  const file = path.join(home, '.agent-office', 'office-settings.json');
+  assert.ok(JSON.parse(readFileSync(file, 'utf8')).setup.completedAt > 0);
+  writeFileSync(file, JSON.stringify({ sweep: false }));
+  markSetupDone(home);
+  const after = JSON.parse(readFileSync(file, 'utf8'));
+  assert.equal(after.sweep, false, 'other settings stay');
+  assert.ok(after.setup.completedAt > 0);
+});

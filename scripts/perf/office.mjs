@@ -111,6 +111,7 @@ export async function startTestOffice({ home, port, env = {}, log, fakeDir, time
     ...env,
   };
   delete childEnv.AGENT_OFFICE_PASSWORD;
+  markSetupDone(home);
   // PERF_OFFICE_NODE_ARGS adds node flags (say --cpu-prof --cpu-prof-dir=<dir>, to profile the office; the profile is written when it exits on its own).
   const nodeArgs = (process.env.PERF_OFFICE_NODE_ARGS ?? '').split(' ').filter(Boolean);
   const proc = spawn(process.execPath, [...nodeArgs, path.join(REPO, 'bin', 'agent-office.js'), '--home', home, '--port', String(port), '--password', PASSWORD, '--agent', agent, '--test-mode', '--no-open'], {
@@ -145,6 +146,23 @@ export async function startTestOffice({ home, port, env = {}, log, fakeDir, time
     throw e;
   }
   return { base, port, password: PASSWORD, log: logFile, proc, stop };
+}
+
+/**
+ * Marks 🚀 first-run setup as finished in a test office's settings (kept with whatever else is there),
+ * so Home never hands the harness's browser over to /setup.
+ */
+export function markSetupDone(home) {
+  const file = path.join(home, '.agent-office', 'office-settings.json');
+  let settings = {};
+  try {
+    settings = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    // none yet
+  }
+  if (settings.setup?.completedAt) return;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ ...settings, setup: { step: 'done', completedAt: Date.now(), completedBy: 'the performance guard' } }, null, 2));
 }
 
 /** Signs in to a test office and returns the session cookie header. */
