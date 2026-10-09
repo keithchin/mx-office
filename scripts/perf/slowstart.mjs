@@ -32,7 +32,7 @@ function shimExe() {
   const tmp = path.join(dir, `build-${process.pid}-${Date.now()}`);
   fs.mkdirSync(tmp, { recursive: true });
   fs.writeFileSync(path.join(tmp, 'shim.cs'), src);
-  execFileSync(csc, ['/nologo', '/optimize', `/out:${path.join(tmp, 'shim.exe')}`, path.join(tmp, 'shim.cs')], { stdio: 'pipe' });
+  execFileSync(csc, ['/nologo', '/optimize', `/out:${path.join(tmp, 'shim.exe')}`, path.join(tmp, 'shim.cs')], { stdio: 'pipe', windowsHide: true });
   try {
     fs.renameSync(path.join(tmp, 'shim.exe'), exe);
   } catch {

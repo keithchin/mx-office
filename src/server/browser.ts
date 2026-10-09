@@ -15,7 +15,8 @@ export function openBrowser(url: string): boolean {
   if (!onDesktop()) return false;
   const [cmd, args] =
     process.platform === 'darwin' ? ['open', [url]] : process.platform === 'win32' ? ['rundll32', ['url.dll,FileProtocolHandler', url]] : ['xdg-open', [url]];
-  spawn(cmd, args, { stdio: 'ignore', detached: true })
+  // windowsHide: false — the browser it opens is a window (hidewindows.ts would start it hidden).
+  spawn(cmd, args, { stdio: 'ignore', detached: true, windowsHide: false })
     .on('error', () => {})
     .unref();
   return true;

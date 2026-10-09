@@ -21,6 +21,12 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   showed its card see-through over the page (it took the band's faint wash for a background). It's a
   white card in Portal (Light) and a dark one in Portal (Dark), with a border, a shadow and readable
   text, and so is any other tooltip or menu that opens out of the band or the top bar.
+- **No more terminal windows popping up on Windows.** With Windows Terminal as the default terminal,
+  programs the office (and its tests and performance checks) started from a process without a console
+  each opened a terminal window of their own, most of them when an agent's terminal was stopped (the
+  terminal library forks a helper from the pty host, which runs without a console). Every program the
+  office, its pty host, the test runner, the performance harness and the tests' agent shims start on
+  Windows now starts without a window; Studio Pro and the browser still open as windows.
 
 ### New
 - **Model: full screen.** A **Full screen** button at the end of the Model tab's bar (or **F** / **Shift+F**

@@ -13,6 +13,8 @@
  *   node ptyhost.js <socket> <info.json>                  (Unix)
  *   node ptyhost.js <pipe> <info.json> <office pid> <log>  (Windows)
  */
+// First: node-pty forks a helper on every session it stops, and this host has no console (hidewindows.ts).
+import './hidewindows.js';
 import { appendFileSync, readFileSync, statSync, truncateSync, unlinkSync } from 'node:fs';
 import net from 'node:net';
 import * as pty from '@lydell/node-pty';

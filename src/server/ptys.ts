@@ -501,8 +501,9 @@ export class PtyHost {
     // Where the office's own code is, so a loader flag (`--import tsx`) resolves from its
     // node_modules and not from whichever project this floor is.
     const cwd = path.dirname(here);
-    // It writes its own log: the pipes spawnOff gives it go unread.
-    if (tied) return spawnOff(process.execPath, [...flags, script, this.socketPath, this.infoPath, String(process.pid), logPath], { detached: true, cwd });
+    // It writes its own log: the pipes spawnOff gives it go unread. Detached it has no console, so nothing it starts
+    // may want one (windowsHide here, and hidewindows.ts in the host for what node-pty starts).
+    if (tied) return spawnOff(process.execPath, [...flags, script, this.socketPath, this.infoPath, String(process.pid), logPath], { detached: true, cwd, windowsHide: true });
     const log = openSync(logPath, 'w', 0o600);
     try {
       const child = spawnProcess(process.execPath, [...flags, script, this.socketPath, this.infoPath], {

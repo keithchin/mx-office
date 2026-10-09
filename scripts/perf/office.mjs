@@ -38,7 +38,7 @@ export function freePort() {
 export function killTree(pid) {
   if (!pid) return;
   try {
-    if (process.platform === 'win32') execFileSync('taskkill', ['/T', '/F', '/PID', String(pid)], { stdio: 'ignore' });
+    if (process.platform === 'win32') execFileSync('taskkill', ['/T', '/F', '/PID', String(pid)], { stdio: 'ignore', windowsHide: true });
     else process.kill(-pid, 'SIGKILL');
   } catch {
     // already gone
@@ -53,7 +53,7 @@ export function realAgentsUnder(root) {
   if (process.platform !== 'win32') return [];
   try {
     const ps = `Get-CimInstance Win32_Process -Filter "Name='claude.exe' OR Name='codex.exe'" | ForEach-Object { "$($_.ProcessId)|$($_.ExecutablePath)|$($_.CommandLine)" }`;
-    const outp = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 20000 });
+    const outp = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 20000, windowsHide: true });
     const r = path.resolve(root).toLowerCase().replaceAll('\\', '/');
     return outp.split(/\r?\n/).filter((l) => l.trim() && l.toLowerCase().replaceAll('\\', '/').includes(r));
   } catch {
@@ -196,7 +196,7 @@ export function killProcessesUnder(root) {
   try {
     if (process.platform === 'win32') {
       const ps = `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine } | ForEach-Object { "$($_.ProcessId)|$($_.CommandLine)" }`;
-      lines = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 30000, maxBuffer: 32 * 1024 * 1024 }).split(/\r?\n/);
+      lines = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 30000, maxBuffer: 32 * 1024 * 1024, windowsHide: true }).split(/\r?\n/);
     } else {
       lines = execFileSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8' }).split('\n').map((l) => l.trim().replace(/\s+/, '|'));
     }

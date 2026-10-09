@@ -173,7 +173,7 @@ fs.writeFileSync(
 
 // ---- The floors: their data, and stand-in repositories ------------------------------------------
 const FLOOR_KEEP = ['budget', 'incidents', 'phone', 'scrollback', 'project-run.json', 'queue.json', 'workers.json', 'meetings.json', 'dog.json'];
-const git = (cwd, ...a) => execFileSync('git', ['-c', 'user.name=Shape', '-c', 'user.email=shape@test-office.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false', ...a], { cwd, stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8' });
+const git = (cwd, ...a) => execFileSync('git', ['-c', 'user.name=Shape', '-c', 'user.email=shape@test-office.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false', ...a], { cwd, stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8', windowsHide: true });
 const report = [];
 for (const f of floors) {
   const id = rename.get(f.id);
@@ -181,7 +181,7 @@ for (const f of floors) {
   // How many files the real checkout tracks: read from its index, nothing written there.
   let count = 0;
   try {
-    count = execFileSync('git', ['-C', f.dir, 'ls-files', '-z'], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 }).split('\0').filter(Boolean).length;
+    count = execFileSync('git', ['-C', f.dir, 'ls-files', '-z'], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, windowsHide: true }).split('\0').filter(Boolean).length;
   } catch {
     count = 100;
   }

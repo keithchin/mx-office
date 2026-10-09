@@ -32,7 +32,7 @@ const files = (argv.length ? argv : fs.readdirSync(path.join(REPO, 'tests')).fil
 function killTree(child) {
   if (!child.pid || child.exitCode !== null) return;
   try {
-    if (process.platform === 'win32') execFileSync('taskkill', ['/T', '/F', '/PID', String(child.pid)], { stdio: 'ignore' });
+    if (process.platform === 'win32') execFileSync('taskkill', ['/T', '/F', '/PID', String(child.pid)], { stdio: 'ignore', windowsHide: true });
     else process.kill(-child.pid, 'SIGKILL');
   } catch {
     // gone already
