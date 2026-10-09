@@ -56,6 +56,8 @@ const nameOf = (p: string) =>
 export interface TestModeView {
   on: boolean;
   why?: string;
+  /** The docs screenshots' office (docsShots below): the pages leave the TEST MODE badge off. */
+  docsShots?: boolean;
 }
 
 const WHERE = 'under scratch/test-offices or a test-office… folder';
@@ -68,6 +70,22 @@ export function testModeOf(floorDir?: string): TestModeView {
   if (isTestPath(s.officeDir)) return { on: true, why: `the office's folder is ${WHERE}` };
   if (isTestPath(floorDir)) return { on: true, why: `the floor's folder is ${WHERE}` };
   return { on: false };
+}
+
+/**
+ * The docs screenshots' office (scripts/docs-shots.mjs): AGENT_OFFICE_DOCS_SHOTS=1 leaves the TEST MODE
+ * badge off the pages, so a published screenshot doesn't carry it. Only in test mode: outside it the
+ * variable is ignored, so a real office always shows what it is.
+ */
+export function docsShots(): boolean {
+  const v = process.env.AGENT_OFFICE_DOCS_SHOTS;
+  return !!v && v !== '0' && testModeOf().on;
+}
+
+/** GET /api/test-mode's answer: test mode, and whether the badge is left off for the docs screenshots. */
+export function testModeAnswer(): TestModeView {
+  const mode = testModeOf();
+  return docsShots() ? { ...mode, docsShots: true } : mode;
 }
 
 /** An executable that's plainly a stand-in: it lives in a test office's folder, or says it's a fake. */

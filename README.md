@@ -8,7 +8,7 @@
 - **🖼️ Visual tour:** [README.html](README.html).
 - **⬇️ Releases:** every release has its notes on the [GitHub releases page](https://github.com/keithchin/mx-office/releases).
 
-![The Command Center of a project](docs/site/images/command-center.png)
+![The Overview of a project in Mx Office (Portal theme)](docs/site/images/command-center.png)
 
 ## What it is
 
@@ -28,6 +28,8 @@ What a project gives you:
 - **🧰 Pinned toolkit**: each project runs on its own mxcli-project-toolkit commit; **Update toolkit** previews what would change at the gates (Stage 2 PASS → FAIL, and why) before it commits, and can roll back.
 - **🤫 Interruptions handled**: every office message ends with "carry on with" the agent's task; an agent that stops with work open gets one nudge; **Run standup** or a status question first shows who's ready and who's busy, and asks before interrupting.
 - **🗑 Delete a project**, GitHub-style: a Danger zone in Settings, remove from the office or delete (optionally the folder and the GitHub repo), confirmed by typing its name; its data is archived first and the audit log keeps the record.
+
+![The Projects page in Mx Office (Portal theme): a card per project with its stage, status and spend](docs/site/images/readme-projects.png)
 
 Around the projects:
 
