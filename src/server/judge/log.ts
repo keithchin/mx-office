@@ -2,6 +2,7 @@
 // what the office's own rule said, whether they agreed and whether it was acted on. Capped: past
 // MAX_LINES the oldest are dropped down to KEEP_LINES. Text in it is already redacted and clipped.
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { isJudgeKind, type JudgeRow } from '../../shared/judge.js';
@@ -11,6 +12,8 @@ const KEEP_LINES = 4000;
 
 export class JudgeLog {
   private counts = new Map<string, number>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => dropKeys(o.counts, f));
 
   constructor(
     readonly dir: string,

@@ -3,6 +3,7 @@
 // fork fetched off the event loop at most every six hours or when someone asks, never on a page load,
 // and the Update toolkit previews and updates (jobs.ts). One per office (office.ts makes it).
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -40,6 +41,8 @@ export class ToolkitService {
   readonly book: PinBook;
   private now: () => number;
   private cache = new Map<string, { at: number; view: Promise<ToolkitStatus> }>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => (dropKeys(o.cache, f), o.book.remove(f.id)));
   private fetching?: Promise<void>;
   private askedAt = 0;
 

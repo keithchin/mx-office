@@ -6,6 +6,7 @@
 // Booking can't wait on git, so the stage is kept per floor and read again in the background at most
 // once a minute; until the first read lands (and for a project with no remote) the floor's folder is read.
 
+import { dropKeys, onForgetFloor } from '../office/forget.js';
 import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import type { StageId } from '../../shared/budget/types.js';
@@ -45,6 +46,7 @@ export function folderStage(dir: string): StageId {
 
 const cache = new Map<string, { stage: StageId; at: number }>();
 const reading = new Set<string>();
+onForgetFloor((f) => (dropKeys(cache, f), dropKeys(reading, f)));
 
 /** Reads the stage from origin/<default> into the cache (the folder's when there's no remote). */
 export async function refreshStage(dir: string, now = Date.now()): Promise<StageId> {

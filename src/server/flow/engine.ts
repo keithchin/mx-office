@@ -133,6 +133,16 @@ export class FlowEngine {
     return [...this.runs.values()].filter((r) => (!filter.floor || r.floor === filter.floor) && (!filter.workflow || r.workflow === filter.workflow)).sort((a, b) => b.updatedAt - a.updatedAt);
   }
 
+  /** Forgets a deleted project's finished runs (a running one is left to finish); gives them back for its archive. */
+  forgetFloor(floor: string): RunRecord[] {
+    const gone = [...this.runs.values()].filter((r) => r.floor === floor && !this.active.has(r.runId));
+    for (const r of gone) {
+      this.runs.delete(r.runId);
+      this.store.remove?.(r);
+    }
+    return gone;
+  }
+
   summaries(filter: ListFilter = {}): RunSummary[] {
     return this.list(filter).map((r) => ({
       runId: r.runId,

@@ -5,6 +5,7 @@
 // something significant changed, and every few minutes otherwise, in the background: a request never
 // waits on it.
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import type { ProjectSummary } from '../../shared/summary.js';
 import { waitsOnPerson } from '../../shared/progress.js';
 import type { Haiku } from '../analysis/llm.js';
@@ -65,6 +66,8 @@ function factsFor(f: Facts): string {
 export class Narrator {
   private notes = new Map<string, { sig: string; text: string; at: number }>();
   private asked = new Map<string, number>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => (dropKeys(o.notes, f), dropKeys(o.asked, f)));
   private asking = new Set<string>();
 
   constructor(private haiku: Haiku | null) {}

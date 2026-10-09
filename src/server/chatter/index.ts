@@ -7,6 +7,7 @@
 // appended to the floor's capped JSONL (store.ts) and sent to the floor's browsers as chatter.new. No
 // model calls, and nothing is invented: a message is always something an agent, a person or the office said.
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { CHATTER_LONG_MAX, CHATTER_TEXT_MAX, chatterOrder, cursorOf, isGroup, matchesFilter, olderThan, parseCursor, type ChatterFilter, type ChatterMessage, type ChatterPage, type ChatterParty, type ChatterTo } from '../../shared/chatter.js';
 import { ROLE_BY_ID } from '../../shared/roster/roles.js';
@@ -64,6 +65,8 @@ const idOf = (key: string) => createHash('sha1').update(key).digest('base64url')
 export class Chatter {
   private files = new Map<string, ChatterFile>();
   private journalAt = new Map<string, number>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => (dropKeys(o.files, f), dropKeys(o.journalAt, f)));
   private timer?: NodeJS.Timeout;
   private off: () => void;
   private sources: { roster: ChatterSource; journal: ChatterSource };

@@ -161,5 +161,7 @@ export type FloorServerMsg =
   | { t: 'floor.added'; repo: string; floor?: string; error?: string }
   /** The projects folder moved (see floor.projectsDir). */
   | { t: 'projectsDir'; state: ProjectsDirState }
+  /** A project was deleted or removed from the office (server/project-delete/): pages that were on it (`wasHere`) go Home. */
+  | { t: 'project.deleted'; floor: string; name: string; by: string; wasHere?: boolean }
   /** Your floor's signs changed, or its back office was built out or walled up. */
   | { t: 'plan'; plan: FloorPlan };

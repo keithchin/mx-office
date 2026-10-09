@@ -6,6 +6,7 @@
 // (shared/incidents.ts); a rule that's off is never counted. A counted rule fires once its count is in
 // its window, then starts counting again, so one burst is one incident (or one "seen again").
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import type { AuditEvent } from '../../shared/audit.js';
 import type { IncidentSettings, IncidentWorker } from '../../shared/incidents.js';
 import type { WorkerInfo } from '../../shared/protocol.js';
@@ -57,6 +58,8 @@ export class IncidentDetector {
   private refusedAt = new Map<string, number>();
   private spend = new Map<string, SpendTrack>();
   private paused = new Map<string, string | undefined>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => (dropKeys(o.windows, f), dropKeys(o.spend, f), dropKeys(o.paused, f)));
   private toldUndelivered = new Set<string>();
 
   constructor(private d: DetectorDeps) {}

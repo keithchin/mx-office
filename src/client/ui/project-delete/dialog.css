@@ -1,0 +1,233 @@
+/* ⚙️ Settings › Danger zone and the delete confirmation (ui/project-delete/). Tokens only, so every
+   theme (Default, Dark, Terminal, Clean, Portal) colours it. */
+
+.pd-zone {
+  border: 1px solid var(--bad);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--card);
+  margin: 4px 0 12px;
+  overflow: hidden;
+}
+.pd-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+}
+.pd-row + .pd-row {
+  border-top: 1px solid var(--rule-strong);
+}
+.pd-row-text {
+  flex: 1;
+  min-width: 0;
+}
+.pd-row-text h4 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+.pd-row-text p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+.pd-row-btn {
+  flex: none;
+  white-space: nowrap;
+}
+.btn.pd-outline {
+  background: var(--card);
+  color: var(--bad-ink);
+  border-color: var(--rule-strong);
+}
+.btn.pd-outline:hover {
+  background: var(--bad);
+  color: var(--on-fill);
+  border-color: var(--bad);
+}
+@media (max-width: 560px) {
+  .pd-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.modal.pd-modal {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+.pd-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+}
+.pd-warn {
+  border: 1px solid var(--bad);
+  background: var(--bad-soft);
+  color: var(--ink);
+  border-radius: var(--radius-sm, 8px);
+  padding: 10px 12px;
+}
+.pd-warn strong {
+  color: var(--bad-ink);
+}
+.pd-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 0.9rem;
+}
+.pd-list li {
+  overflow-wrap: anywhere;
+  margin: 2px 0;
+}
+.pd-flash {
+  border-radius: var(--radius-sm, 8px);
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+.pd-flash.warn {
+  background: var(--warn-soft);
+  color: var(--ink);
+  border: 1px solid var(--warn);
+}
+.pd-choices,
+.pd-work {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pd-work p,
+.pd-work ul {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.pd-work ul {
+  padding-left: 18px;
+}
+.pd-choice {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  cursor: pointer;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.pd-choice input {
+  margin-top: 3px;
+  flex: none;
+}
+.pd-choice small {
+  display: block;
+  font-weight: 400;
+  color: var(--muted);
+}
+.pd-choice.off {
+  cursor: default;
+  color: var(--muted);
+}
+.pd-type {
+  margin: 4px 0 0;
+}
+.pd-type strong {
+  font-family: ui-monospace, Consolas, monospace;
+}
+.pd-input {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-family: ui-monospace, Consolas, monospace;
+  padding: 7px 10px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--card);
+  color: var(--ink);
+}
+.pd-input:focus {
+  outline: 2px solid var(--bad);
+  outline-offset: 0;
+}
+.btn.pd-go {
+  width: 100%;
+  justify-content: center;
+}
+.btn.pd-go:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.pd-why {
+  margin: 0;
+  min-height: 1em;
+  color: var(--bad-ink);
+  font-size: 0.85rem;
+}
+.pd-why:empty {
+  display: none;
+}
+.pd-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+.pd-note.bad {
+  color: var(--bad-ink);
+}
+.pd-head {
+  margin: 0;
+  font-weight: 700;
+}
+.pd-head.failed {
+  color: var(--bad-ink);
+}
+.pd-head.done {
+  color: var(--good-ink);
+}
+.pd-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pd-steps li {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  column-gap: 8px;
+  align-items: center;
+}
+.pd-steps li small {
+  grid-column: 2;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.pd-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--rule-strong);
+}
+.pd-steps li[data-st='running'] .pd-dot {
+  background: var(--info);
+  animation: pulse 1s infinite;
+}
+.pd-steps li[data-st='done'] .pd-dot {
+  background: var(--good);
+}
+.pd-steps li[data-st='skipped'] .pd-dot {
+  background: var(--faint);
+}
+.pd-steps li[data-st='skipped'] > span {
+  color: var(--muted);
+}
+.pd-steps li[data-st='failed'] .pd-dot {
+  background: var(--bad);
+}
+.pd-foot {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

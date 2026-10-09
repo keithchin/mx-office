@@ -4,6 +4,7 @@
 // (watch.ts, started here by startStudioMode) sees it open or close however it was opened, and
 // pauses the agents' mxcli writes meanwhile (guard.ts).
 
+import { dropKeys, onForgetFloor } from '../office/forget.js';
 import { isBusy } from '../../shared/status.js';
 import type { Floor } from '../floor.js';
 import type { StudioInfo, StudioOpen, StudioState } from '../../shared/studio.js';
@@ -65,6 +66,7 @@ export function startStudioMode(ctx: Pick<Ctx, 'floors' | 'toFloor' | 'toastFloo
 }
 
 const last = new Map<string, StudioOpen>();
+onForgetFloor((f) => dropKeys(last, f));
 const listeners = new Set<(o: StudioOpen) => void>();
 
 /** Hears every time a floor's project is opened in Studio Pro; returns how to stop. */

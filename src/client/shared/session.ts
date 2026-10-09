@@ -15,6 +15,7 @@ import { openChangesFor, routeChangesMessage } from '../ui/changes';
 import { routeWorktreeMessage } from '../ui/prompt';
 import { routePullMessage } from '../ui/pull';
 import { routeElevatorMessage } from '../ui/elevator';
+import { routeProjectDeleted } from '../ui/project-delete/api';
 import { openSignIns } from '../ui/signins';
 import { routeWhiteboardMessage } from '../ui/whiteboard';
 import { routeTeamMessage } from '../ui/team';
@@ -76,6 +77,7 @@ export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorke
     routeWhiteboardMessage(msg, net);
     routeTeamMessage(msg);
     routeAccountsMessage(msg);
+    routeProjectDeleted(msg);
     switch (msg.t) {
       case 'welcome': {
         // Back from a restart on another version: this page's code is stale, so load the new one.

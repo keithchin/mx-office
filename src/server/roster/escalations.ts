@@ -7,6 +7,7 @@
 // resolves it. The office never blocks on one; the only model it asks is Jeff, how soon to resolve it
 // (jeff-priority.ts: a sort order, re-ranked as one is raised or answered).
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import { randomBytes } from 'node:crypto';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import { URGENCY_ICON, VERDICT_WORD, isAlarming, escalationOrder, makeEscalation, type Escalation, type EscalationAsk, type EscalationVerdict } from '../../shared/roster/escalation.js';
@@ -37,6 +38,8 @@ const answerLine = (e: Escalation) => `- “${e.title}”: ${VERDICT_WORD[e.reso
 export class Escalations {
   /** The Coordinator's debounce per floor; what it's to hear is in the roster file's outbox. */
   private timers = new Map<string, NodeJS.Timeout>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => dropKeys(o.timers, f));
   /** Jeff's "the same ask in other words?" (jeff-same.ts). */
   private same: SameAsk;
 

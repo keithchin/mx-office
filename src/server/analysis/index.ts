@@ -3,6 +3,7 @@
 // Analysis tab with rankings across every floor or one (shared/analysis.ts). One per office, made
 // the first time something asks for it (analysisOf), so it needs no stage of its own in startServer.
 
+import { forgetWith } from '../office/forget.js';
 import path from 'node:path';
 import type { QueueTask, WorkerInfo } from '../../shared/protocol.js';
 import { buildReport, type AnalysisReport, type GroupBy, type RunRecord } from '../../shared/analysis.js';
@@ -36,6 +37,8 @@ export class Analysis {
   private busyCount = 0;
   /** The reports worked out since the store last changed, by what was asked (report()). */
   private reports = new Map<string, AnalysisReport>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o) => o.reports.clear());
   /** Whether the runs already on the floors were recorded once since the office started. */
   private booted = false;
 

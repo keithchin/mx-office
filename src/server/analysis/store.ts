@@ -44,6 +44,19 @@ export class RunStore {
     return this.runs.get(id);
   }
 
+  /** Takes a deleted project's runs out (written soon); gives them back for its archive. */
+  dropFloor(floor: string): RunRecord[] {
+    const gone = [...this.runs.values()].filter((r) => r.floor === floor);
+    if (!gone.length) return gone;
+    for (const r of gone) this.runs.delete(r.id);
+    this.version++;
+    if (!this.due) {
+      this.due = true;
+      setImmediate(() => void this.writeSoon()).unref();
+    }
+    return gone;
+  }
+
   /** Goes up with every put: what a report worked out from all() is still good for while it stays the same. */
   version = 0;
 

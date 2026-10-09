@@ -39,6 +39,8 @@ The office keeps its data in a `.agent-office` folder. On the Taskforce laptop t
 | `wizard/` | New-project wizard jobs saved before the workflow engine (taken in on first use and renamed `.json.migrated`) |
 | `live/<floor>/`, `live/<floor>.log` | The live app's clone and log |
 | `live-app.json` | Live app settings (optional) |
+| `deleted/<floor>-<date-time>/`, `deleted/jobs/<floor>.json` | [Deleted or removed projects](../using-the-office/delete-project.md#whats-archived-and-where): the archive of each one's office data, and a deletion that stopped part way (to carry on) |
+| `projects/ids.json` | Each project's stable `prj_` id, with the ones retired when a project was deleted |
 | `pr-shots/` | Downloaded CI screenshots |
 | `homes/<id>/signins.json` | People's own sign-ins |
 | `hook-port`, `agent-office-mcp.json` | How workers reach the office |

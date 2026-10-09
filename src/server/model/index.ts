@@ -13,6 +13,7 @@
 // the rest of its module ahead, and main moving while the tab was in use reads what changed
 // (prefetch.ts).
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import { gitGraphsOf, type GraphFloor } from '../gitgraph/index.js';
 import { modelFiles, type BlobsOptions, type ModelFiles } from './blobs.js';
 import { changesFrom, diffUnits, DOC_TYPES, treeDiff } from './diff.js';
@@ -62,6 +63,8 @@ export class ModelService {
   /** Per floor: main's commit when last seen, and when the tab was last used. */
   private mainSeen = new Map<string, string>();
   private usedAt = new Map<string, number>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => (dropKeys(o.mainSeen, f), dropKeys(o.usedAt, f)));
   private legacyDropped = false;
 
   constructor(private dataDir: string, deps: ModelDeps = {}) {

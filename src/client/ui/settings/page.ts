@@ -18,6 +18,7 @@ import { workersSettings } from './workers';
 import { budgetPart, rosterPart, studioPart } from './project';
 import { advancedPart, appearancePart, incidentsPart } from './office';
 import { testingPart } from './testing';
+import { dangerPart } from '../project-delete/danger';
 
 /** Phone alerts: where each phone's own settings are (the team phone's ⚙, the phone version's). */
 const phoneAlerts = () =>
@@ -48,6 +49,7 @@ export const SECTION_BUILDERS: Record<SettingsSectionId, (d: SettingsDeps) => Bu
   appearance: (d) => appearancePart(d),
   advanced: (d) => advancedPart(d),
   testing: () => testingPart(),
+  danger: () => dangerPart(),
 };
 
 export interface SettingsPage {

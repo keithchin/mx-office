@@ -4,6 +4,7 @@
 // from what the office already keeps (the floor's workers, queue and GitHub lists, the analyzer's run
 // records): nothing here asks GitHub or runs a script on a request.
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import type { ActivityItem, ProjectSummary, Risk, SummaryAgent } from '../../shared/summary.js';
 import { modelLabel, type RunRecord } from '../../shared/analysis.js';
@@ -34,6 +35,8 @@ export class Summaries {
   private log = new Map<string, ActivityItem[]>();
   private seen = new Map<string, Seen>();
   private descriptions = new Map<string, string>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => (dropKeys(o.log, f), dropKeys(o.descriptions, f)));
   private narrator: Narrator;
 
   constructor(
