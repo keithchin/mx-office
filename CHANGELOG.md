@@ -6,6 +6,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+### New
+- **Model: full screen.** A **Full screen** button at the end of the Model tab's bar (or **F** / **Shift+F**
+  with the focus in the tab) spreads the App Explorer, the diagram and the details over the whole window,
+  fitted to it; **Esc** or **Exit full screen** brings it back, fitted again. It uses the browser's full
+  screen, or covers the window where the browser has none. Pan, zoom and Fit work as before, in every
+  theme. Esc with an element picked lets go of it first.
+
 ### Fixed
 - **A setup step whose command's end got lost is tried again by itself.** When a step's program has
   gone but its end never reached the office (seen on Windows with freshly written programs the virus
@@ -27,13 +34,6 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   terminal library forks a helper from the pty host, which runs without a console). Every program the
   office, its pty host, the test runner, the performance harness and the tests' agent shims start on
   Windows now starts without a window; Studio Pro and the browser still open as windows.
-
-### New
-- **Model: full screen.** A **Full screen** button at the end of the Model tab's bar (or **F** / **Shift+F**
-  with the focus in the tab) spreads the App Explorer, the diagram and the details over the whole window,
-  fitted to it; **Esc** or **Exit full screen** brings it back, fitted again. It uses the browser's full
-  screen, or covers the window where the browser has none. Pan, zoom and Fit work as before, in every
-  theme. Esc with an element picked lets go of it first.
 
 ## 2026-10-09 · release 27 (`640ac22`)
 
