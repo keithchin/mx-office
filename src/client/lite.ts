@@ -45,6 +45,7 @@ import { needsYouStrip } from './ui/needsyou';
 import { firmBanner } from './ui/firm/banner';
 import type { FirmFloorStatus } from '../shared/firm/engagement';
 import { gitView } from './ui/git';
+import { modelView } from './ui/model';
 import type { NeedTarget } from './ui/needsyou/logic';
 import { nudgeMember } from './ui/roster/api';
 import { viewPicker } from './ui/viewpick';
@@ -234,6 +235,8 @@ net.onMessage((msg) => teams.route(msg));
 const TAB_KEY = 'agent-office.lite-tab2';
 // The floor's branches as a metro map (🌳 Git, ui/git/).
 const git = gitView($('git-view'), { openWorker, openPull: kanban.openPull });
+// The app as Studio Pro shows it (📐 Model, ui/model/): main or a branch, and what a branch changed.
+const model = modelView($('model-view'));
 // Who did what, when (🧾 Audit log, ui/audit/): this floor, the office's own or every floor.
 // 💰 The budget: the top bar's chips and the Budget tab (ui/budget/).
 const budget = budgetUi(net, { root: $('budget-view'), visible: () => tab === 'budget', open: () => showTab('budget'), go: (to) => (to === 'settings' ? showSettings('team') : showTab(to)) });
@@ -252,13 +255,13 @@ let pendingSection: SettingsSectionId | undefined = isSettingsSection(askedSecti
 const audit = auditView($('audit-view'), { floor: () => store.floor ?? undefined, floors: () => store.floors, admin: () => store.me.admin, storeKey: 'agent-office.audit-lite' });
 net.onMessage((msg) => audit.onMessage(msg));
 store.on('floor', () => audit.floorChanged());
-type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | Pane | 'teams' | 'audit' | 'budget' | 'settings' | 'tests';
+type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | 'model' | Pane | 'teams' | 'audit' | 'budget' | 'settings' | 'tests';
 // 🧪 Test mode (ui/testlab/): no tab button of its own; the ☰, the home page and ⚙️ Settings › Testing open it.
 const tests = testlabView($('tests-view'));
 // The team's panes are tabs of their own (flattened from one Team tab); an old "team" means its org chart. Its settings are ⚙️ Settings › Team.
 const TEAM_PANES: readonly Pane[] = ['org', 'standup', 'approvals'];
 const isPane = (t: unknown): t is Pane => TEAM_PANES.includes(t as Pane);
-const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || isPane(t) || t === 'teams' || t === 'audit' || t === 'budget' || t === 'settings' || t === 'tests';
+const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || t === 'model' || isPane(t) || t === 'teams' || t === 'audit' || t === 'budget' || t === 'settings' || t === 'tests';
 const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : isTab(t) ? t : undefined);
 let tab: Tab = 'command';
 try {
@@ -295,6 +298,10 @@ function showTab(t: Tab) {
   $('git-view').classList.toggle('hidden', t !== 'git');
   if (t === 'git') git.show();
   else git.hide();
+  $('tab-model').classList.toggle('on', t === 'model');
+  $('model-view').classList.toggle('hidden', t !== 'model');
+  if (t === 'model') model.show();
+  else model.hide();
   $('tab-audit').classList.toggle('on', t === 'audit');
   $('audit-view').classList.toggle('hidden', t !== 'audit');
   if (t === 'audit') audit.show();
@@ -350,6 +357,7 @@ $('tab-workers').addEventListener('click', () => showTab('workers'));
 $('tab-analysis').addEventListener('click', () => showTab('analysis'));
 $('tab-live').addEventListener('click', () => showTab('live'));
 $('tab-git').addEventListener('click', () => showTab('git'));
+$('tab-model').addEventListener('click', () => showTab('model'));
 for (const p of TEAM_PANES) $(`tab-${p}`).addEventListener('click', () => showTab(p));
 $('tab-teams').addEventListener('click', () => showTab('teams'));
 $('tab-audit').addEventListener('click', () => showTab('audit'));

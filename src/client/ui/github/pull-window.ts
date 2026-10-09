@@ -2,6 +2,7 @@ import './windows.css';
 import type { GhPull, GhPullDetail, GhReviewComment } from '../../../shared/protocol';
 import type { Net } from '../../net';
 import { store, workerForPull } from '../../state';
+import { modelHref } from '../../../shared/model';
 import { h, openModal, type Modal } from '../dom';
 import { officePrompt } from '../prompts';
 import { getJson, getText } from './api';
@@ -125,6 +126,7 @@ export function openPull(first: GhPull, net: Net, actions: BoardActions) {
           ? h('button.btn', { type: 'button', title: 'A worker addresses the review comments, gets the checks green, then merges', onclick: handToWorker }, '🤖 Fix comments & merge')
           : null,
       isOpen ? h('button.btn', { type: 'button', title: 'Close this pull request without merging it', onclick: () => openClose('pull', it, net, loadAll) }, '🚫 Close PR…') : null,
+      isOpen && store.floor ? h('a.btn', { href: modelHref(store.floor, it.headRefName, undefined, true), title: 'The app on this branch in the 📐 Model tab, with what it changed marked' }, '📐 View in Model') : null,
       isOpen ? merge : null,
       ),
     );

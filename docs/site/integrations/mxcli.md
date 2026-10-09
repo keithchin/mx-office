@@ -34,3 +34,7 @@ Hard-won lessons (reserved names, MDL pitfalls, Windows limits) are kept in `.ai
 ## The live app
 
 The **🌐 Live app** tab runs `mxcli run --local` on a separate clone of `main`. See [Live app](../using-the-office/live-app.md) and [Live app problems](../troubleshooting/live-app.md).
+
+## The Model tab
+
+The **📐 Model** tab reads the app with mxcli (`project-tree`, and `describe --format elk` for microflows and nanoflows) on a copy of each commit in the office's data folder, read-only. See [Model tab](../using-the-office/model.md).

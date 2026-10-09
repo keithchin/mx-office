@@ -14,6 +14,7 @@ import { phoneRoutes } from './phone.js';
 import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
 import { gitRoutes } from './git.js';
+import { modelRoutes } from './model.js';
 import { githubRoutes } from './github.js';
 import { homeRoutes } from './home.js';
 import { pageRoutes } from './pages.js';
@@ -69,6 +70,10 @@ export const routes: readonly Route[] = [
   serviceRoutes.forwards,
   githubRoutes.github,
   gitRoutes.graph,
+  modelRoutes.refs,
+  modelRoutes.tree,
+  modelRoutes.doc,
+  modelRoutes.changes,
   analysisRoutes.report,
   analysisRoutes.backfill,
   analysisRoutes.summary,

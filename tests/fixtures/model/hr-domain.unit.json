@@ -1,0 +1,174 @@
+{
+ "$ID": "68348f0d-a7d3-4339-a8ab-a62882dac1b4",
+ "$Type": "DomainModels$DomainModel",
+ "Documentation": "",
+ "Annotations": [
+  3
+ ],
+ "Entities": [
+  3,
+  {
+   "$ID": "a72b0698-0737-4090-a796-deed80f05738",
+   "$Type": "DomainModels$EntityImpl",
+   "Name": "Employee",
+   "Location": "100;100",
+   "Documentation": "A person in the company. Linked to the login (System.User) and to their line manager.",
+   "MaybeGeneralization": {
+    "$ID": "b2115555-2b15-4ffc-ba4b-214787c18b02",
+    "$Type": "DomainModels$NoGeneralization",
+    "HasChangedByAttr": false,
+    "HasChangedDateAttr": false,
+    "HasCreatedDateAttr": false,
+    "HasOwnerAttr": false,
+    "Persistable": true
+   },
+   "Attributes": [
+    3,
+    {
+     "$ID": "499df540-6136-4a87-9ecf-059cfbc4ac56",
+     "$Type": "DomainModels$Attribute",
+     "Name": "EmployeeNumber",
+     "NewType": {
+      "$ID": "e263ca92-316e-40cb-b59e-0b5617f3c244",
+      "$Type": "DomainModels$StringAttributeType",
+      "Length": 20
+     },
+     "Documentation": "",
+     "Value": {
+      "$ID": "b763a40f-623c-4641-be01-a05bd36c2211",
+      "$Type": "DomainModels$StoredValue",
+      "DefaultValue": ""
+     },
+     "ExportLevel": "Hidden",
+     "GUID": "499df540-6136-4a87-9ecf-059cfbc4ac56"
+    },
+    {
+     "$ID": "7c5429ee-0c2d-45a2-895c-39212fbcbe31",
+     "$Type": "DomainModels$Attribute",
+     "Name": "FullName",
+     "NewType": {
+      "$ID": "f7cbb72e-1da7-4668-9d7f-556c27197a5a",
+      "$Type": "DomainModels$StringAttributeType",
+      "Length": 100
+     },
+     "Documentation": "",
+     "Value": {
+      "$ID": "6ced9ac6-a64a-4adf-a51a-f4c587aecc3f",
+      "$Type": "DomainModels$StoredValue",
+      "DefaultValue": ""
+     },
+     "ExportLevel": "Hidden",
+     "GUID": "7c5429ee-0c2d-45a2-895c-39212fbcbe31"
+    },
+    {
+     "$ID": "a2d57920-c6e9-4495-8d32-629de5d40a7c",
+     "$Type": "DomainModels$Attribute",
+     "Name": "Email",
+     "NewType": {
+      "$ID": "540c12bf-2c33-4fc1-89f4-14cb31caa477",
+      "$Type": "DomainModels$StringAttributeType",
+      "Length": 200
+     },
+     "Documentation": "",
+     "Value": {
+      "$ID": "eb9e32e4-768a-4883-9891-4f6f45a372e1",
+      "$Type": "DomainModels$StoredValue",
+      "DefaultValue": ""
+     },
+     "ExportLevel": "Hidden",
+     "GUID": "a2d57920-c6e9-4495-8d32-629de5d40a7c"
+    }
+   ],
+   "ValidationRules": [
+    3,
+    {
+     "$ID": "d97509e3-926a-4db7-b49b-e6560e795b49",
+     "$Type": "DomainModels$ValidationRule",
+     "Attribute": "HR.Employee.EmployeeNumber",
+     "RuleInfo": {
+      "$ID": "f0a65c66-b1d7-4e5c-ae7c-a7f9d5978459",
+      "$Type": "DomainModels$RequiredRuleInfo"
+     }
+    },
+    {
+     "$ID": "e382ba00-1ea2-4e25-b321-37a14159c538",
+     "$Type": "DomainModels$ValidationRule",
+     "Attribute": "HR.Employee.EmployeeNumber",
+     "RuleInfo": {
+      "$ID": "3d75f09c-e385-4442-8580-33fb4a5c7fe0",
+      "$Type": "DomainModels$UniqueRuleInfo"
+     }
+    },
+    {
+     "$ID": "b9ba38ba-aeee-4945-8df9-87a94a9707fb",
+     "$Type": "DomainModels$ValidationRule",
+     "Attribute": "HR.Employee.FullName",
+     "RuleInfo": {
+      "$ID": "aa785d15-fb86-4d66-8a57-8aa76e3c32a2",
+      "$Type": "DomainModels$RequiredRuleInfo"
+     }
+    }
+   ],
+   "ExportLevel": "Hidden",
+   "GUID": "a72b0698-0737-4090-a796-deed80f05738",
+   "Indexes": [
+    3
+   ],
+   "Events": [
+    3
+   ]
+  }
+ ],
+ "Associations": [
+  3,
+  {
+   "$ID": "2b3f1980-b073-4066-82d0-0dd4ee42425e",
+   "$Type": "DomainModels$Association",
+   "Name": "Employee_Manager",
+   "Type": "Reference",
+   "Owner": "Default",
+   "StorageFormat": "Column",
+   "DeleteBehavior": {
+    "$ID": "ab0d5f59-07c4-4eb4-a50b-2a3eec7ab29d",
+    "$Type": "DomainModels$DeleteBehavior",
+    "ParentDeleteBehavior": "DeleteMeButKeepReferences",
+    "ChildDeleteBehavior": "DeleteMeButKeepReferences",
+    "ChildErrorMessage": null,
+    "ParentErrorMessage": null
+   },
+   "ParentPointer": "a72b0698-0737-4090-a796-deed80f05738",
+   "Documentation": "The employee's assigned line manager (another Employee).",
+   "ExportLevel": "Hidden",
+   "ChildPointer": "a72b0698-0737-4090-a796-deed80f05738",
+   "ParentConnection": "0;50",
+   "ChildConnection": "100;50",
+   "GUID": "2b3f1980-b073-4066-82d0-0dd4ee42425e",
+   "Source": null
+  }
+ ],
+ "CrossAssociations": [
+  3,
+  {
+   "$ID": "949a40e7-d760-416d-9a40-0ffd8f482547",
+   "$Type": "DomainModels$CrossAssociation",
+   "Name": "Employee_User",
+   "Type": "Reference",
+   "Owner": "Default",
+   "StorageFormat": "Column",
+   "DeleteBehavior": {
+    "$ID": "d94efda7-06b9-447b-88fc-2816b042a325",
+    "$Type": "DomainModels$DeleteBehavior",
+    "ParentDeleteBehavior": "DeleteMeButKeepReferences",
+    "ChildDeleteBehavior": "DeleteMeButKeepReferences",
+    "ChildErrorMessage": null,
+    "ParentErrorMessage": null
+   },
+   "ParentPointer": "a72b0698-0737-4090-a796-deed80f05738",
+   "Documentation": "The employee's login.",
+   "ExportLevel": "Hidden",
+   "Child": "System.User",
+   "GUID": "949a40e7-d760-416d-9a40-0ffd8f482547",
+   "Source": null
+  }
+ ]
+}

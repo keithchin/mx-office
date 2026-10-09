@@ -1,0 +1,451 @@
+{
+  "format": "elk",
+  "type": "microflow",
+  "name": "HR.ASu_SeedBaseline",
+  "parameters": null,
+  "returnType": "Boolean",
+  "nodes": [
+    {
+      "id": "node-5e7056be-b32e-4278-97ef-2a206d5320eb",
+      "type": "start",
+      "category": "event",
+      "label": "Start",
+      "width": 85.5,
+      "height": 36
+    },
+    {
+      "id": "node-53b0f0af-f3e0-47e5-babf-1902e4be5859",
+      "type": "action",
+      "category": "retrieve",
+      "label": "Retrieve HR.Employee",
+      "details": [
+        "Output: $Existing",
+        "From: HR.Employee",
+        "Range: First"
+      ],
+      "width": 174,
+      "height": 76
+    },
+    {
+      "id": "node-e33b6a80-a8ae-465f-8560-409bcecef31a",
+      "type": "split",
+      "category": "controlflow",
+      "label": "$Existing != empty",
+      "details": [
+        "Caption: $Existing != empty",
+        "Condition: $Existing != empty"
+      ],
+      "width": 183,
+      "height": 60
+    },
+    {
+      "id": "node-7a354ea0-0de1-4f87-bdf0-bb6f1e23d3d6",
+      "type": "end",
+      "category": "event",
+      "label": "Return: true",
+      "details": [
+        "Return: true"
+      ],
+      "width": 138,
+      "height": 36
+    },
+    {
+      "id": "node-8ff84d1b-ef25-4293-913d-10bf843d19fd",
+      "type": "action",
+      "category": "retrieve",
+      "label": "Retrieve System.User",
+      "details": [
+        "Output: $UMaria",
+        "From: System.User",
+        "Where: [Name = 'mgr.maria']",
+        "Range: First"
+      ],
+      "width": 227,
+      "height": 92
+    },
+    {
+      "id": "node-b69ed173-e448-4034-a846-d46588f3e3e0",
+      "type": "action",
+      "category": "retrieve",
+      "label": "Retrieve System.User",
+      "details": [
+        "Output: $UMark",
+        "From: System.User",
+        "Where: [Name = 'mgr.mark']",
+        "Range: First"
+      ],
+      "width": 219,
+      "height": 92
+    },
+    {
+      "id": "node-ab7b0a4c-c2cc-40c8-9484-7d91fbda7f73",
+      "type": "action",
+      "category": "retrieve",
+      "label": "Retrieve System.User",
+      "details": [
+        "Output: $UAlice",
+        "From: System.User",
+        "Where: [Name = 'emp.alice']",
+        "Range: First"
+      ],
+      "width": 227,
+      "height": 92
+    },
+    {
+      "id": "node-e3169773-3a62-49c7-8f7d-ee0998bab503",
+      "type": "action",
+      "category": "retrieve",
+      "label": "Retrieve System.User",
+      "details": [
+        "Output: $UBob",
+        "From: System.User",
+        "Where: [Name = 'emp.bob']",
+        "Range: First"
+      ],
+      "width": 212,
+      "height": 92
+    },
+    {
+      "id": "node-22f13482-7921-4b6b-b491-b447087400ce",
+      "type": "action",
+      "category": "retrieve",
+      "label": "Retrieve System.User",
+      "details": [
+        "Output: $UCarol",
+        "From: System.User",
+        "Where: [Name = 'emp.carol']",
+        "Range: First"
+      ],
+      "width": 227,
+      "height": 92
+    },
+    {
+      "id": "node-6f6a4e65-aff4-4529-b1fe-51e4d81cfa4a",
+      "type": "action",
+      "category": "retrieve",
+      "label": "Retrieve System.User",
+      "details": [
+        "Output: $UAda",
+        "From: System.User",
+        "Where: [Name = 'admin.ada']",
+        "Range: First"
+      ],
+      "width": 227,
+      "height": 92
+    },
+    {
+      "id": "node-f3fa28bd-adec-4991-b6fd-43efcda3a228",
+      "type": "action",
+      "category": "object",
+      "label": "Create HR.Employee",
+      "details": [
+        "Entity: HR.Employee",
+        "Output: $Maria",
+        "Commit: Yes",
+        "EmployeeNumber = 'M001'",
+        "FullName = 'Maria Manager'",
+        "Email = 'maria@example.test'",
+        "Employee_User = $UMaria"
+      ],
+      "width": 234,
+      "height": 140
+    },
+    {
+      "id": "node-e9252c3e-0ea8-4456-b0e2-f7db9264d9d3",
+      "type": "action",
+      "category": "object",
+      "label": "Create HR.Employee",
+      "details": [
+        "Entity: HR.Employee",
+        "Output: $Mark",
+        "Commit: Yes",
+        "EmployeeNumber = 'M002'",
+        "FullName = 'Mark Manager'",
+        "Email = 'mark@example.test'",
+        "Employee_User = $UMark"
+      ],
+      "width": 227,
+      "height": 140
+    },
+    {
+      "id": "node-d7bcea48-7cd4-4972-8ed3-e988a4c061de",
+      "type": "action",
+      "category": "object",
+      "label": "Create HR.Employee",
+      "details": [
+        "Entity: HR.Employee",
+        "Output: $Alice",
+        "Commit: Yes",
+        "EmployeeNumber = 'E001'",
+        "FullName = 'Alice Employee'",
+        "Email = 'alice@example.test'",
+        "Employee_User = $UAlice",
+        "Employee_Manager = $Maria"
+      ],
+      "width": 234,
+      "height": 156
+    },
+    {
+      "id": "node-5e6352bf-28be-46bd-9ff8-7070d5c12cbe",
+      "type": "action",
+      "category": "object",
+      "label": "Create HR.Employee",
+      "details": [
+        "Entity: HR.Employee",
+        "Output: $Bob",
+        "Commit: Yes",
+        "EmployeeNumber = 'E002'",
+        "FullName = 'Bob Employee'",
+        "Email = 'bob@example.test'",
+        "Employee_User = $UBob",
+        "Employee_Manager = $Maria"
+      ],
+      "width": 219,
+      "height": 156
+    },
+    {
+      "id": "node-33749755-07ea-4bc3-9892-7a6495b85434",
+      "type": "action",
+      "category": "object",
+      "label": "Create HR.Employee",
+      "details": [
+        "Entity: HR.Employee",
+        "Output: $Carol",
+        "Commit: Yes",
+        "EmployeeNumber = 'E003'",
+        "FullName = 'Carol Employee'",
+        "Email = 'carol@example.test'",
+        "Employee_User = $UCarol",
+        "Employee_Manager = $Mark"
+      ],
+      "width": 234,
+      "height": 156
+    },
+    {
+      "id": "node-4961b8cc-a7bf-411b-bcfb-f65c765d0d13",
+      "type": "action",
+      "category": "object",
+      "label": "Create HR.Employee",
+      "details": [
+        "Entity: HR.Employee",
+        "Output: $Ada",
+        "Commit: Yes",
+        "EmployeeNumber = 'A001'",
+        "FullName = 'Ada Admin'",
+        "Email = 'ada@example.test'",
+        "Employee_User = $UAda"
+      ],
+      "width": 219,
+      "height": 140
+    },
+    {
+      "id": "node-0f592266-d715-426e-8e30-b5b45c8030c7",
+      "type": "action",
+      "category": "object",
+      "label": "Create Notices.Notice",
+      "details": [
+        "Entity: Notices.Notice",
+        "Output: $Welcome",
+        "Commit: Yes",
+        "Title = 'Welcome to the company portal'",
+        "Body = 'Baseline notice used by the regression checks.'",
+        "PublishedOn = [%CurrentDateTime%]"
+      ],
+      "width": 437,
+      "height": 124
+    },
+    {
+      "id": "node-ac93b10e-d7c6-4b36-9e64-2907755acf5b",
+      "type": "action",
+      "category": "log",
+      "label": "Log Message",
+      "details": [
+        "Level: Info",
+        "Node: 'Baseline'",
+        "Message: Seeded 6 employees and 1 notice"
+      ],
+      "width": 324,
+      "height": 76
+    },
+    {
+      "id": "node-0d9f9da8-884a-45fc-adfe-b1686d1b95a1",
+      "type": "end",
+      "category": "event",
+      "label": "Return: true",
+      "details": [
+        "Return: true"
+      ],
+      "width": 138,
+      "height": 36
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-0",
+      "sourceId": "node-5e7056be-b32e-4278-97ef-2a206d5320eb",
+      "targetId": "node-53b0f0af-f3e0-47e5-babf-1902e4be5859"
+    },
+    {
+      "id": "edge-1",
+      "sourceId": "node-e33b6a80-a8ae-465f-8560-409bcecef31a",
+      "targetId": "node-7a354ea0-0de1-4f87-bdf0-bb6f1e23d3d6",
+      "label": "true"
+    },
+    {
+      "id": "edge-2",
+      "sourceId": "node-53b0f0af-f3e0-47e5-babf-1902e4be5859",
+      "targetId": "node-e33b6a80-a8ae-465f-8560-409bcecef31a"
+    },
+    {
+      "id": "edge-3",
+      "sourceId": "node-e33b6a80-a8ae-465f-8560-409bcecef31a",
+      "targetId": "node-8ff84d1b-ef25-4293-913d-10bf843d19fd",
+      "label": "false"
+    },
+    {
+      "id": "edge-4",
+      "sourceId": "node-8ff84d1b-ef25-4293-913d-10bf843d19fd",
+      "targetId": "node-b69ed173-e448-4034-a846-d46588f3e3e0"
+    },
+    {
+      "id": "edge-5",
+      "sourceId": "node-b69ed173-e448-4034-a846-d46588f3e3e0",
+      "targetId": "node-ab7b0a4c-c2cc-40c8-9484-7d91fbda7f73"
+    },
+    {
+      "id": "edge-6",
+      "sourceId": "node-ab7b0a4c-c2cc-40c8-9484-7d91fbda7f73",
+      "targetId": "node-e3169773-3a62-49c7-8f7d-ee0998bab503"
+    },
+    {
+      "id": "edge-7",
+      "sourceId": "node-e3169773-3a62-49c7-8f7d-ee0998bab503",
+      "targetId": "node-22f13482-7921-4b6b-b491-b447087400ce"
+    },
+    {
+      "id": "edge-8",
+      "sourceId": "node-22f13482-7921-4b6b-b491-b447087400ce",
+      "targetId": "node-6f6a4e65-aff4-4529-b1fe-51e4d81cfa4a"
+    },
+    {
+      "id": "edge-9",
+      "sourceId": "node-6f6a4e65-aff4-4529-b1fe-51e4d81cfa4a",
+      "targetId": "node-f3fa28bd-adec-4991-b6fd-43efcda3a228"
+    },
+    {
+      "id": "edge-10",
+      "sourceId": "node-f3fa28bd-adec-4991-b6fd-43efcda3a228",
+      "targetId": "node-e9252c3e-0ea8-4456-b0e2-f7db9264d9d3"
+    },
+    {
+      "id": "edge-11",
+      "sourceId": "node-e9252c3e-0ea8-4456-b0e2-f7db9264d9d3",
+      "targetId": "node-d7bcea48-7cd4-4972-8ed3-e988a4c061de"
+    },
+    {
+      "id": "edge-12",
+      "sourceId": "node-d7bcea48-7cd4-4972-8ed3-e988a4c061de",
+      "targetId": "node-5e6352bf-28be-46bd-9ff8-7070d5c12cbe"
+    },
+    {
+      "id": "edge-13",
+      "sourceId": "node-5e6352bf-28be-46bd-9ff8-7070d5c12cbe",
+      "targetId": "node-33749755-07ea-4bc3-9892-7a6495b85434"
+    },
+    {
+      "id": "edge-14",
+      "sourceId": "node-33749755-07ea-4bc3-9892-7a6495b85434",
+      "targetId": "node-4961b8cc-a7bf-411b-bcfb-f65c765d0d13"
+    },
+    {
+      "id": "edge-15",
+      "sourceId": "node-4961b8cc-a7bf-411b-bcfb-f65c765d0d13",
+      "targetId": "node-0f592266-d715-426e-8e30-b5b45c8030c7"
+    },
+    {
+      "id": "edge-16",
+      "sourceId": "node-0f592266-d715-426e-8e30-b5b45c8030c7",
+      "targetId": "node-ac93b10e-d7c6-4b36-9e64-2907755acf5b"
+    },
+    {
+      "id": "edge-17",
+      "sourceId": "node-ac93b10e-d7c6-4b36-9e64-2907755acf5b",
+      "targetId": "node-0d9f9da8-884a-45fc-adfe-b1686d1b95a1"
+    }
+  ],
+  "mdlSource": "create or modify microflow HR.ASu_SeedBaseline ()\nreturns Boolean\nbegin\n  @position(360, 200)\n  retrieve $Existing from HR.Employee\n    first;\n  @position(520, 200)\n  if $Existing != empty then\n    @position(690, 300)\n    return true;\n  end if;\n  @position(690, 200)\n  retrieve $UMaria from System.User\n    where Name = 'mgr.maria'\n    first;\n  @position(850, 200)\n  retrieve $UMark from System.User\n    where Name = 'mgr.mark'\n    first;\n  @position(1010, 200)\n  retrieve $UAlice from System.User\n    where Name = 'emp.alice'\n    first;\n  @position(1170, 200)\n  retrieve $UBob from System.User\n    where Name = 'emp.bob'\n    first;\n  @position(1330, 200)\n  retrieve $UCarol from System.User\n    where Name = 'emp.carol'\n    first;\n  @position(1490, 200)\n  retrieve $UAda from System.User\n    where Name = 'admin.ada'\n    first;\n  @position(1650, 200)\n  $Maria = create HR.Employee (EmployeeNumber = 'M001', FullName = 'Maria Manager', Email = 'maria@example.test', Employee_User = $UMaria) commit;\n  @position(1810, 200)\n  $Mark = create HR.Employee (EmployeeNumber = 'M002', FullName = 'Mark Manager', Email = 'mark@example.test', Employee_User = $UMark) commit;\n  @position(1970, 200)\n  $Alice = create HR.Employee (EmployeeNumber = 'E001', FullName = 'Alice Employee', Email = 'alice@example.test', Employee_User = $UAlice, Employee_Manager = $Maria) commit;\n  @position(2130, 200)\n  $Bob = create HR.Employee (EmployeeNumber = 'E002', FullName = 'Bob Employee', Email = 'bob@example.test', Employee_User = $UBob, Employee_Manager = $Maria) commit;\n  @position(2290, 200)\n  $Carol = create HR.Employee (EmployeeNumber = 'E003', FullName = 'Carol Employee', Email = 'carol@example.test', Employee_User = $UCarol, Employee_Manager = $Mark) commit;\n  @position(2450, 200)\n  $Ada = create HR.Employee (EmployeeNumber = 'A001', FullName = 'Ada Admin', Email = 'ada@example.test', Employee_User = $UAda) commit;\n  @position(2610, 200)\n  $Welcome = create Notices.Notice (Title = 'Welcome to the company portal', Body = 'Baseline notice used by the regression checks.', PublishedOn = [%CurrentDateTime%]) commit;\n  @position(2770, 200)\n  log node 'Baseline' 'Seeded 6 employees and 1 notice';\n  @position(2930, 200)\n  return true;\nend;",
+  "sourceMap": {
+    "node-0d9f9da8-884a-45fc-adfe-b1686d1b95a1": {
+      "startLine": 38,
+      "endLine": 39
+    },
+    "node-0f592266-d715-426e-8e30-b5b45c8030c7": {
+      "startLine": 34,
+      "endLine": 35
+    },
+    "node-22f13482-7921-4b6b-b491-b447087400ce": {
+      "startLine": 18,
+      "endLine": 19
+    },
+    "node-33749755-07ea-4bc3-9892-7a6495b85434": {
+      "startLine": 30,
+      "endLine": 31
+    },
+    "node-4961b8cc-a7bf-411b-bcfb-f65c765d0d13": {
+      "startLine": 32,
+      "endLine": 33
+    },
+    "node-53b0f0af-f3e0-47e5-babf-1902e4be5859": {
+      "startLine": 3,
+      "endLine": 4
+    },
+    "node-5e6352bf-28be-46bd-9ff8-7070d5c12cbe": {
+      "startLine": 28,
+      "endLine": 29
+    },
+    "node-6f6a4e65-aff4-4529-b1fe-51e4d81cfa4a": {
+      "startLine": 20,
+      "endLine": 21
+    },
+    "node-7a354ea0-0de1-4f87-bdf0-bb6f1e23d3d6": {
+      "startLine": 7,
+      "endLine": 8
+    },
+    "node-8ff84d1b-ef25-4293-913d-10bf843d19fd": {
+      "startLine": 10,
+      "endLine": 11
+    },
+    "node-ab7b0a4c-c2cc-40c8-9484-7d91fbda7f73": {
+      "startLine": 14,
+      "endLine": 15
+    },
+    "node-ac93b10e-d7c6-4b36-9e64-2907755acf5b": {
+      "startLine": 36,
+      "endLine": 37
+    },
+    "node-b69ed173-e448-4034-a846-d46588f3e3e0": {
+      "startLine": 12,
+      "endLine": 13
+    },
+    "node-d7bcea48-7cd4-4972-8ed3-e988a4c061de": {
+      "startLine": 26,
+      "endLine": 27
+    },
+    "node-e3169773-3a62-49c7-8f7d-ee0998bab503": {
+      "startLine": 16,
+      "endLine": 17
+    },
+    "node-e33b6a80-a8ae-465f-8560-409bcecef31a": {
+      "startLine": 5,
+      "endLine": 9
+    },
+    "node-e9252c3e-0ea8-4456-b0e2-f7db9264d9d3": {
+      "startLine": 24,
+      "endLine": 25
+    },
+    "node-f3fa28bd-adec-4991-b6fd-43efcda3a228": {
+      "startLine": 22,
+      "endLine": 23
+    }
+  }
+}

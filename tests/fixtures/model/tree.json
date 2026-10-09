@@ -1,0 +1,262 @@
+[
+ {
+  "label": "System Overview",
+  "type": "systemoverview",
+  "qualifiedName": "SystemOverview"
+ },
+ {
+  "label": "Navigation",
+  "type": "navigation",
+  "qualifiedName": "Navigation",
+  "children": [
+   {
+    "label": "Responsive",
+    "type": "navprofile",
+    "qualifiedName": "Responsive",
+    "children": [
+     {
+      "label": "Home: MyFirstModule.Home_Web",
+      "type": "navhome"
+     },
+     {
+      "label": "Menu",
+      "type": "navmenu",
+      "children": [
+       {
+        "label": "Home → MyFirstModule.Home_Web",
+        "type": "navmenuitem"
+       },
+       {
+        "label": "Employee directory → HR.Employee_Directory",
+        "type": "navmenuitem"
+       },
+       {
+        "label": "Notices → Notices.Notice_Overview",
+        "type": "navmenuitem"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "label": "HR",
+  "type": "module",
+  "qualifiedName": "HR",
+  "children": [
+   {
+    "label": "Domain Model",
+    "type": "domainmodel",
+    "qualifiedName": "HR",
+    "children": [
+     {
+      "label": "Employee",
+      "type": "entity",
+      "qualifiedName": "HR.Employee"
+     },
+     {
+      "label": "Employee_Manager",
+      "type": "association",
+      "qualifiedName": "HR.Employee_Manager"
+     }
+    ]
+   },
+   {
+    "label": "Security",
+    "type": "security",
+    "children": [
+     {
+      "label": "Admin",
+      "type": "modulerole",
+      "qualifiedName": "HR.Admin"
+     },
+     {
+      "label": "Employee",
+      "type": "modulerole",
+      "qualifiedName": "HR.Employee"
+     },
+     {
+      "label": "Manager",
+      "type": "modulerole",
+      "qualifiedName": "HR.Manager"
+     }
+    ]
+   },
+   {
+    "label": "Startup",
+    "type": "folder",
+    "children": [
+     {
+      "label": "ASu_SeedBaseline",
+      "type": "microflow",
+      "qualifiedName": "HR.ASu_SeedBaseline"
+     }
+    ]
+   },
+   {
+    "label": "Employee_Directory",
+    "type": "page",
+    "qualifiedName": "HR.Employee_Directory"
+   }
+  ]
+ },
+ {
+  "label": "MyFirstModule",
+  "type": "module",
+  "qualifiedName": "MyFirstModule",
+  "children": [
+   {
+    "label": "Security",
+    "type": "security",
+    "children": [
+     {
+      "label": "User",
+      "type": "modulerole",
+      "qualifiedName": "MyFirstModule.User"
+     }
+    ]
+   },
+   {
+    "label": "Home_Web",
+    "type": "page",
+    "qualifiedName": "MyFirstModule.Home_Web"
+   },
+   {
+    "label": "Images",
+    "type": "imagecollection",
+    "qualifiedName": "MyFirstModule.Images"
+   },
+   {
+    "label": "MyFirstLogic",
+    "type": "microflow",
+    "qualifiedName": "MyFirstModule.MyFirstLogic"
+   }
+  ]
+ },
+ {
+  "label": "Notices",
+  "type": "module",
+  "qualifiedName": "Notices",
+  "children": [
+   {
+    "label": "Domain Model",
+    "type": "domainmodel",
+    "qualifiedName": "Notices",
+    "children": [
+     {
+      "label": "Notice",
+      "type": "entity",
+      "qualifiedName": "Notices.Notice"
+     }
+    ]
+   },
+   {
+    "label": "Security",
+    "type": "security",
+    "children": [
+     {
+      "label": "Editor",
+      "type": "modulerole",
+      "qualifiedName": "Notices.Editor"
+     },
+     {
+      "label": "Reader",
+      "type": "modulerole",
+      "qualifiedName": "Notices.Reader"
+     }
+    ]
+   },
+   {
+    "label": "Notice_Overview",
+    "type": "page",
+    "qualifiedName": "Notices.Notice_Overview"
+   }
+  ]
+ },
+ {
+  "label": "Project Security",
+  "type": "projectsecurity",
+  "qualifiedName": "ProjectSecurity",
+  "children": [
+   {
+    "label": "User Roles",
+    "type": "category",
+    "children": [
+     {
+      "label": "Administrator",
+      "type": "userrole",
+      "qualifiedName": "Administrator"
+     },
+     {
+      "label": "Employee",
+      "type": "userrole",
+      "qualifiedName": "Employee"
+     },
+     {
+      "label": "Manager",
+      "type": "userrole",
+      "qualifiedName": "Manager"
+     }
+    ]
+   },
+   {
+    "label": "Demo Users",
+    "type": "category",
+    "children": [
+     {
+      "label": "admin.ada",
+      "type": "demouser",
+      "qualifiedName": "admin.ada"
+     },
+     {
+      "label": "emp.alice",
+      "type": "demouser",
+      "qualifiedName": "emp.alice"
+     },
+     {
+      "label": "emp.bob",
+      "type": "demouser",
+      "qualifiedName": "emp.bob"
+     },
+     {
+      "label": "emp.carol",
+      "type": "demouser",
+      "qualifiedName": "emp.carol"
+     },
+     {
+      "label": "mgr.maria",
+      "type": "demouser",
+      "qualifiedName": "mgr.maria"
+     },
+     {
+      "label": "mgr.mark",
+      "type": "demouser",
+      "qualifiedName": "mgr.mark"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "label": "Settings",
+  "type": "settings",
+  "qualifiedName": "Settings",
+  "children": [
+   {
+    "label": "Model",
+    "type": "settingscategory",
+    "children": [
+     {
+      "label": "After Startup: HR.ASu_SeedBaseline",
+      "type": "settingsitem"
+     }
+    ]
+   },
+   {
+    "label": "Default Language: en_US",
+    "type": "settingsitem"
+   }
+  ]
+ }
+]
