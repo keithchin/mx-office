@@ -41,7 +41,7 @@ export function openQueue(net: Net, actions: QueueActions) {
   const limitValue = h('b');
   const minus = h('button.btn', { type: 'button', title: 'Fewer workers at once', 'aria-label': 'Fewer workers at once' }, '−');
   const plus = h('button.btn', { type: 'button', title: 'More workers at once', 'aria-label': 'More workers at once' }, '+');
-  const limit = h('div.queue-limit', { title: 'How many workers the queue keeps busy at once. 0 pauses it.' }, 'Workers at once', minus, limitValue, plus);
+  const limit = h('div.queue-limit', { title: 'How many agents the queue keeps busy at once. 0 pauses it.' }, 'Agents at once', minus, limitValue, plus);
   minus.addEventListener('click', () => net.send({ t: 'queue.limit', maxWorkers: store.queue.maxWorkers - 1 }));
   plus.addEventListener('click', () => net.send({ t: 'queue.limit', maxWorkers: store.queue.maxWorkers + 1 }));
   const el = h(

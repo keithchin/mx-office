@@ -4,6 +4,55 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### New
+- **Portal: a left navigation on every project page.** In Portal (Light) and Portal (Dark) the 1D view's
+  tab row gives way to a pane down the left, like a low-code platform's app pane: a project card at the
+  top (tile, name, ⌄ to switch project), then groups that open and close (General: Overview, Team, Team
+  boards, Documents; Project Management: Board, Approvals, Standup; App Insights: Analysis, Budget, Audit
+  log; Repository: Git, Model; Deployment: Live app; Monitoring: Agents, Tests for admins) and, under a
+  rule, Settings, View App and Edit in Studio Pro. The page you're on is a grey pill, its group opens by
+  itself, each item carries its tab's badge and a closed group adds them up. Hovering a closed group
+  shows its items in a flyout; the chevron on the pane's edge folds it to an icon rail with flyouts. The
+  open groups and the rail are remembered per viewer in this browser. On a phone it's a drawer behind ☰.
+  `?tab=` links, badges and every other way to a page work as before.
+- **Portal: a page header.** Each page starts with its name and a line about it, and its buttons: the run
+  state (● Running | Pause), the budget chip and a blue New task on every page, Issues / PRs / Queue on
+  the Board, Pin project and Call an audit on the Overview. The progress bar sits under it. The bottom
+  bar and the floor's line are folded into it.
+- **Portal: the Command Center as an app Overview.** The project's tile, name and what it's for; Needs you
+  as a blue info alert (✕ hides it for the session until something new needs you); the Project console;
+  Recent activity as a separated list; What's happening, progress and agents; and on the right
+  light-grey cards for the Team (agents' faces with a status dot, +N), the Technical contact (the
+  Project Coordinator or Solo Lead) and Details (repository, branch, Mendix version, toolkit pin, last
+  commit, budget, live app). The page scrolls instead of fitting the screen.
+- **Portal: the top bar's search finds more.** Projects, the project's pages, its agents, issues and pull
+  requests (by title or #number), the office's pages and the docs (by title or heading), in groups with
+  the best match first, ↑ ↓ over the headings. The docs' titles are fetched once, the first time you
+  click into it; everything else was already on the page.
+- **Call an audit and The Firm → are on the Audit log page** (its page header in Portal; above the log in the
+  other themes), with a running audit or a ready report shown there too. The floor's line no longer keeps
+  room for them at the top right.
+- **Portal: the floor's line and the progress bar are one band** under the page header: branch, folder,
+  who's here, the budget chip and the run-state toggle over the progress bar, on a mid dark grey with a
+  faint shade and a soft shadow (a charcoal a little lighter than the page in Portal (Dark)), every text
+  and status colour at 4.5:1 or more on it. Clean, Fun and Terminal keep their floor line as it was.
+- **Go to Office** in the 1D view's top bar opens the project's 2D office (and **Go to Board** on the 2D
+  view comes back). The view dropdown (1D / 2D / 3D / Retro) is gone from the flat views.
+
+### Changed
+- **Workers are called Agents** wherever you read it: the tab and page (Agents), Settings › Agents, the
+  badges' tooltips, the audit log's filter, the queue and meeting windows. Addresses stay:
+  `?tab=workers` and `section=workers` still work, and `?tab=agents` opens the Agents page too.
+- **The docs are MxOffice Docs** (the brand in the docs page's bar).
+- **Entering a project opens its Command Center** (the Portal Overview), not the tab this browser had
+  last: from Home, the project switcher, the launcher, Go to Board or /lite, and when you switch project
+  inside the 1D view. A link that names a tab (`?tab=…`: Needs you, notifications, a PR's View in Model)
+  still opens it, and a reload keeps the tab that browser tab showed.
+- Clean (Light), Clean (Dark), Fun, Fun (Dark) and Terminal keep the tab row and the bottom bar exactly as
+  before.
+
 ## 2026-10-09 · release 26 (`bee523f`)
 
 ### New

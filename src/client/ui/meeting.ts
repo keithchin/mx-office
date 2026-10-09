@@ -151,7 +151,7 @@ function meetingForm(net: Net, preset: MeetingPreset | undefined, done: () => vo
   // A pattern that always runs the same rounds says so, where a locked control would look broken.
   const roundsFixed = h('span.meeting-fixed');
   const roundsNote = h('small.muted');
-  const provider = providerPicker(store.project, 'meeting-provider', 'Workers');
+  const provider = providerPicker(store.project, 'meeting-provider', 'Agents');
   const busy = h('p.meeting-busy');
   const submit = h('button.btn.primary', { type: 'submit' }, '🤝 Start the meeting');
   const cancel = h('button.btn', { type: 'button', onclick: store.meeting.current ? back : done }, store.meeting.current ? '← Back' : 'Cancel');
@@ -227,7 +227,7 @@ function meetingForm(net: Net, preset: MeetingPreset | undefined, done: () => vo
     prRow,
     partsRow,
     h('div.meeting-field', {}, h('label', {}, 'Output file'), outputIn, outputNote),
-    h('div.meeting-field', {}, h('label.meeting-count', {}, 'Workers at the table', minus, count, plus), roleList),
+    h('div.meeting-field', {}, h('label.meeting-count', {}, 'Agents at the table', minus, count, plus), roleList),
     h('div.meeting-field', {}, h('label', {}, 'Round limit'), roundsSel, roundsFixed, roundsNote),
     provider.element,
     busy,

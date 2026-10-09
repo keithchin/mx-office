@@ -46,7 +46,7 @@ import { paintScene } from './pixel/scene';
 import { blitCrisp } from './pixel/blit';
 import { colorThemes, currentTheme } from './ui/colortheme';
 import { portalBar } from './ui/portal/topbar';
-import { viewPicker } from './ui/viewpick';
+import { viewButton } from './ui/viewpick';
 import { flatMenu, openDocs } from './shared/flatmenu';
 import { tabBadge } from './ui/badge';
 import { routerMessage, routerOverlay, routerSpot, startRouter } from './pixel/router-room';
@@ -71,8 +71,8 @@ colorThemes($('theme'), undefined, () => {
   voidColor = '';
   draw(performance.now());
 });
-// The view dropdown in the top bar (ui/viewpick.ts).
-$('view-pick').replaceWith(viewPicker('2d'));
+// Go to Board: back to the 1D view of this project, where the view dropdown was (ui/viewpick.ts).
+$('view-pick').replaceWith(viewButton('2d'));
 
 // 📱 The team phone (ui/phone/), installed at the end.
 let phone: Phone | undefined;
@@ -165,7 +165,7 @@ const spots = (f: Frame) => [
       whiteboard: () => (store.drawing.length ? `✏️ ${store.drawing.length} drawing on it now` : 'Draw on it together, live'),
       meeting: () => {
         const m = store.meeting.current;
-        return m?.status === 'running' ? `In a meeting: ${clip(m.title, 60)}` : 'Workers work through a question or a task together';
+        return m?.status === 'running' ? `In a meeting: ${clip(m.title, 60)}` : 'Agents work through a question or a task together';
       },
     },
   }),
@@ -284,7 +284,7 @@ function renderCount() {
   const next = waitingInOrder(list).length;
   ($('px-next') as HTMLButtonElement).disabled = !next;
   // The same red count as the 1D view's Workers tab (ui/badge.ts).
-  tabBadge($('px-next'), next, 'Workers waiting on someone');
+  tabBadge($('px-next'), next, 'Agents waiting on someone');
   renderTitle();
 }
 store.on('workers', renderCount);

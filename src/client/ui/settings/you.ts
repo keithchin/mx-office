@@ -54,7 +54,7 @@ export function soundSettings(d: SettingsDeps): Built {
   const pagesRow = choiceRow('Page turns at the bookshelf', [[true, '📖 On'], [false, 'Off']], () => d.settings().pageTurns, (pageTurns) => d.change({ pageTurns }));
   const talkRow = choiceRow('Voice chat', [[false, '🎙️ Open mic'], [true, '✋ Push to talk']], () => d.settings().pushToTalk, (pushToTalk) => d.change({ pushToTalk }));
   return plain(
-    setting('Office sounds', 'you', volumeRow(d, 'Office sounds volume', 'volume', 'muted', () => d.sound?.ding('done')), h('p.setting-note', {}, 'Workers typing, footsteps, the coffee machine, birds and rain outside, the dog, the ding when a worker is done and the alarm when one needs you. Voice chat isn’t affected.')),
+    setting('Office sounds', 'you', volumeRow(d, 'Office sounds volume', 'volume', 'muted', () => d.sound?.ding('done')), h('p.setting-note', {}, 'Agents typing, footsteps, the coffee machine, birds and rain outside, the dog, the ding when an agent is done and the alarm when one needs you. Voice chat isn’t affected.')),
     alarmSetting(d),
     setting('Page turns at the bookshelf', 'you', pagesRow, h('p.setting-note', {}, 'A soft swish each time the book in your hands turns a page, as you open a doc or scroll through one. The 🔈 at the top of the bookshelf turns it off too.')),
     setting('Jukebox', 'you', volumeRow(d, 'Jukebox volume', 'music', 'musicMuted'), h('p.setting-note', {}, 'The jukebox in the lounge. Everyone on the floor hears the same song, louder the closer they are to it; this is how loud it is for you alone.')),

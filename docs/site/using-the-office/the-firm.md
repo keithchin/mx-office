@@ -22,7 +22,7 @@ aliases: [/docs/firm, /docs/preview/the-firm]
 ## Where to find it
 
 - **/firm**, its own page like `/home`: from **📑 The Firm** on [/home](home.md)'s top bar.
-- On a project's [Command Center](command-center.md), a slim strip under the top bar: **📑 Call an audit** and **The Firm →** when nothing is running; *The Firm is auditing this project: 5 reviewers · $12.40 of $60 · Interviews & review* while an audit runs; **📑 Audit report ready from The Firm → Read** when it's done. The report also shows in **Needs you**.
+- On a project's [Audit log](audit-log.md) page, a slim strip above the log (in a Portal theme, the page header's buttons): **📑 Call an audit** and **The Firm →** when nothing is running; *The Firm is auditing this project: 5 reviewers · $12.40 of $60 · Interviews & review* while an audit runs; **📑 Audit report ready from The Firm → Read** when it's done. The report also shows in **Needs you**.
 
 ## The people
 

@@ -107,7 +107,7 @@ export function limitSetting({ net }: SettingsDeps): Built {
 
 /** Whether a worker whose pull request merged goes home by itself, for everyone. */
 export function leaveOnMergeSetting({ net }: SettingsDeps): Built {
-  const row = h('div.seg', { role: 'radiogroup', 'aria-label': 'Workers whose pull request merged' });
+  const row = h('div.seg', { role: 'radiogroup', 'aria-label': 'Agents whose pull request merged' });
   const note = h('p.setting-note');
   const paint = () => {
     const { on, by, at } = store.leaveOnMerge;
@@ -125,7 +125,7 @@ export function leaveOnMergeSetting({ net }: SettingsDeps): Built {
     note.textContent = `${now} It’s the same for everyone in the building${by ? `, set by ${by}${at ? ` ${timeAgo(at)}` : ''}` : ''}.`;
   };
   paint();
-  return { nodes: [setting('Workers whose pull request merged', 'office', row, note)], off: store.on('leaveOnMerge', paint) };
+  return { nodes: [setting('Agents whose pull request merged', 'office', row, note)], off: store.on('leaveOnMerge', paint) };
 }
 
 /** Keep awake while agents work (settings-awake.ts), fetched from the office. */

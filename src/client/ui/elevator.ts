@@ -133,7 +133,7 @@ export function openElevator(opts: ElevatorOptions): void {
     else {
       if (f.busy) stats.push(h('span', { title: 'Working' }, `👷 ${f.busy}`));
       if (f.waiting) stats.push(h('span.waiting', { title: 'Waiting on someone' }, `🙋 ${f.waiting}`));
-      stats.push(h('span', { title: 'Workers at desks' }, `💻 ${f.workers}`));
+      stats.push(h('span', { title: 'Agents at desks' }, `💻 ${f.workers}`));
       if (f.people) stats.push(h('span', { title: 'People on this floor' }, `🧑 ${f.people}`));
     }
     const btn = h(

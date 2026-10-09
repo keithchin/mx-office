@@ -124,7 +124,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
       { role: 'menu', 'aria-label': 'Menu' },
       h('div.menu-col', {}, ...section('Open', rows('Open'))),
       h('div.menu-col', {}, ...section('Together', rows('Together')), ...section('Office', rows('Office'))),
-      h('p.menu-foot', {}, d.home ? 'The ones marked 3D ↗ open the 3D office there. What works on one floor (its issues, PRs, queue, whiteboard, meeting…) is in each project.' : 'The ones marked 3D ↗ open the 3D office there. The view is in the dropdown by the ☰.'),
+      h('p.menu-foot', {}, d.home ? 'The ones marked 3D ↗ open the 3D office there. What works on one floor (its issues, PRs, queue, whiteboard, meeting…) is in each project.' : 'The ones marked 3D ↗ open the 3D office there. The other flat view (Go to Office, Go to Board) is a button by the ☰.'),
     );
     menu = openDropdown(button, el, () => (menu = null));
   }

@@ -1,6 +1,7 @@
 // The Portal top bar's and Projects page's own line icons (16 × 16, a 1.5 stroke in currentColor), drawn
 // for this office: the launcher's grid of dots, the search glass, a bell, a question mark, a moon, a sun,
-// an eye, a pin, the ⋯, a cube for a project, the sort arrows and a funnel. Inline SVG, so they show
+// an eye, a pin, the ⋯, a cube for a project, the sort arrows and a funnel; the left navigation's groups,
+// chevrons and bottom rows, the alert's info mark, and the search results' kinds. Inline SVG, so they show
 // in any theme the moment they're drawn (they're only on Portal's own pieces).
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -24,6 +25,32 @@ export const PORTAL_ICONS = {
   plus: '<path d="M8 3v10M3 8h10"/>',
   close: '<path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/>',
   chevron: '<path d="M4 6l4 4 4-4"/>',
+  chevronUp: '<path d="M4 10l4-4 4 4"/>',
+  chevronRight: '<path d="M6 4l4 4-4 4"/>',
+  chevronLeft: '<path d="M10 4L6 8l4 4"/>',
+  menu: '<path d="M2.5 4h11M2.5 8h11M2.5 12h11"/>',
+  // The left navigation's groups and its bottom rows.
+  home: '<path d="M2.5 7.2L8 2.5l5.5 4.7V13.5h-3.7V9.6H6.2v3.9H2.5z"/>',
+  kanban: '<rect x="2" y="2.5" width="12" height="11" rx="1"/><path d="M6 2.5v11M10 2.5v11M3.4 5h1.2M7.4 5h1.2M7.4 7.2h1.2M11.4 5h1.2"/>',
+  chart: '<path d="M2.5 13.5h11M4 11V8M7 11V4.5M10 11V6.5M13 11V9"/>',
+  branch: '<circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="5.5" r="1.5"/><path d="M4.5 5v6M11.5 7c0 2.5-3.5 2.5-6.6 4.3"/>',
+  rocket: '<path d="M9.8 2.2c2.1-.3 3.7 0 4 .3.3.3.6 1.9.3 4-.4 2.2-2.5 4.4-5.6 6.1L6 10 3.6 7.5c1.7-3.1 3.9-5 6.2-5.3z"/><circle cx="10.4" cy="5.8" r="1.1"/><path d="M5.6 6.4L3 6.6 1.8 8.8l2.4.4M9.8 10.6l-.2 2.6-2.2 1.2-.4-2.4M3.7 11.1c-.9.3-1.4 1.4-1.6 2.9 1.5-.2 2.6-.7 2.9-1.6"/>',
+  pulse: '<path d="M1.5 8.5h3l1.6-4 2.6 8 1.8-5.2.9 1.2h3.1"/>',
+  gear: '<circle cx="8" cy="8" r="2.2"/><path d="M8 1.6v1.7M8 12.7v1.7M14.4 8h-1.7M3.3 8H1.6M12.5 3.5l-1.2 1.2M4.7 11.3l-1.2 1.2M12.5 12.5l-1.2-1.2M4.7 4.7L3.5 3.5"/><circle cx="8" cy="8" r="4.6"/>',
+  studio: '<rect x="1.8" y="2.5" width="12.4" height="11" rx="1.5"/><path d="M4.5 10.5V6.2l1.9 2.6 1.9-2.6v4.3M10 6.3l2 4.2M12 6.3l-2 4.2"/>',
+  doc: '<path d="M4 1.8h5.2L12.5 5v9.2H4z"/><path d="M9 1.8V5.2h3.5M6 8h4.5M6 10.5h4.5"/>',
+  info: '<circle cx="8" cy="8" r="6.3"/><path d="M8 7.2v4"/><circle class="f" cx="8" cy="4.9" r=".85"/>',
+  external: '<path d="M9 2.5h4.5V7M13.5 2.5L7.5 8.5M11.5 9.5v3.8H2.7V4.5h3.8"/>',
+  person: '<circle cx="8" cy="5.3" r="2.6"/><path d="M2.8 14c.5-2.9 2.6-4.4 5.2-4.4s4.7 1.5 5.2 4.4"/>',
+  users: '<circle cx="6" cy="5.5" r="2.3"/><path d="M1.8 13.5c.4-2.6 2.1-3.9 4.2-3.9s3.8 1.3 4.2 3.9"/><circle cx="11.3" cy="5.8" r="1.9"/><path d="M11.4 9.6c1.6.1 2.7 1.2 3 3.4"/>',
+  play: '<path d="M5 3.2v9.6l7.6-4.8z"/>',
+  pause: '<path d="M5.2 3v10M10.8 3v10"/>',
+  audit: '<path d="M3 2.5h7.5L13 5v8.5H3z"/><path d="M5.5 7.2l1.6 1.6L10.5 5.6M5.5 11h5"/>',
+  issue: '<circle cx="8" cy="8" r="6"/><circle class="f" cx="8" cy="8" r="1.4"/>',
+  pr: '<circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="12.5" r="1.5"/><path d="M4 5v6M12 11V6.5c0-1.4-.8-2-2-2H7.5M9 3l-1.6 1.5L9 6"/>',
+  queue: '<path d="M3 4h10M3 8h10M3 12h6"/>',
+  agent: '<rect x="3" y="4.5" width="10" height="8" rx="2"/><path d="M8 4.5V2.5"/><circle class="f" cx="6" cy="8.5" r=".9"/><circle class="f" cx="10" cy="8.5" r=".9"/><path d="M1.5 8v2M14.5 8v2"/>',
+  tab: '<rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12M6 3v3"/>',
 } as const;
 
 export type PortalIcon = keyof typeof PORTAL_ICONS;

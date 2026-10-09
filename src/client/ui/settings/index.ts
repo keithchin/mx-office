@@ -31,7 +31,7 @@ export const PANES: { id: SettingsPane; icon: string; label: string; blurb: stri
   { id: 'sound', icon: '🔊', label: 'Sound & voice', blurb: 'How loud the office is for you, and how voice chat works.' },
   { id: 'notify', icon: '🔔', label: 'Notifications', blurb: 'Hear about a worker that needs someone, or finished, while you’re somewhere else.' },
   { id: 'building', icon: '🏢', label: 'Building', blurb: 'The map, the decorations, the sky, the dog, and where new floors are cloned.' },
-  { id: 'workers', icon: '🤖', label: 'Workers', blurb: 'What workers start on, how many run at once, when they go home and what the office tells them.' },
+  { id: 'workers', icon: '🤖', label: 'Agents', blurb: 'What agents start on, how many run at once, when they go home and what the office tells them.' },
   { id: 'connections', icon: '🔌', label: 'Connections', blurb: 'The tokens and password the office signs in with, git & gh, its folders and worktree cleanup. Admins only.', admin: true },
 ];
 

@@ -91,6 +91,13 @@ html[data-theme^='portal'] .pt-result.active, html[data-theme^='portal'] .pt-res
 html[data-theme^='portal'] .pt-result-l { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 html[data-theme^='portal'] .pt-result-k { flex: none; color: var(--muted); font-size: 12px; }
 html[data-theme^='portal'] .pt-none { color: var(--muted); cursor: default; }
+/* The results in groups, each under a small heading, an icon for what each one is. */
+html[data-theme^='portal'] .pt-result-group { padding: 10px 12px 4px; font-size: 12px; font-weight: var(--fw-semi); color: var(--muted); letter-spacing: .02em; cursor: default; }
+html[data-theme^='portal'] .pt-result-group:first-child { padding-top: 6px; }
+html[data-theme^='portal'] .pt-result { align-items: center; }
+html[data-theme^='portal'] .pt-result-ico { flex: none; width: 16px; height: 16px; color: var(--ink-2); }
+html[data-theme^='portal'] .pt-result-l { flex: 1; }
+html[data-theme^='portal'] .pt-result-k { max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---- The right: bell, help, dark mode, 🎨, avatar ----------------------------------------------------- */
 html[data-theme^='portal'] .pt-icons { flex: none; display: flex; align-items: center; gap: 4px; }

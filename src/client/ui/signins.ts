@@ -116,7 +116,7 @@ export function openSignIns(net: Net, why?: string) {
     if (s.status === 'ok') {
       const change = button(s.how === 'office' ? 'Use my own instead' : 'Sign out', () => {
         if (s.how === 'office') return net.send({ t: 'signins.signout', which });
-        confirmDialog(`Sign out of ${NAMES[which]}?`, which === 'claude' ? 'Workers you hire from now on need a new sign-in. The ones already running keep going.' : 'The office stops acting on GitHub as you until you sign in again.', 'Sign out', () => net.send({ t: 'signins.signout', which }));
+        confirmDialog(`Sign out of ${NAMES[which]}?`, which === 'claude' ? 'Agents you hire from now on need a new sign-in. The ones already running keep going.' : 'The office stops acting on GitHub as you until you sign in again.', 'Sign out', () => net.send({ t: 'signins.signout', which }));
       });
       body.append(h('div.signin-actions', {}, change));
       return box;

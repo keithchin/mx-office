@@ -109,3 +109,21 @@ export function viewPicker(current: View, cls = ''): HTMLElement {
   });
   return root;
 }
+
+/**
+ * What the flat views' top bars have instead of the dropdown: one button to the other flat view of the
+ * same project. On the 1D view "Go to Office" (the 2D office from above); on the 2D view "Go to Board"
+ * (back to the 1D view). The 3D and Retro views aren't offered from the flat views any more.
+ */
+export function viewButton(current: '1d' | '2d'): HTMLElement {
+  const to: View = current === '1d' ? '2d' : '1d';
+  const label = to === '2d' ? 'Go to Office' : 'Go to Board';
+  const what = to === '2d' ? "The project's office from above, its agents at their desks" : "The project's board, its pages and its agents";
+  return h(
+    'button.btn.vp-go',
+    { type: 'button', title: `${label}: ${what}`, 'aria-label': label, onclick: () => switchView(to) },
+    h('span.ao-emo.vp-ico', { 'aria-hidden': 'true' }, to === '2d' ? '🗺️' : '🗂️'),
+    h('span.vp-label', {}, label),
+    h('span.vp-short', { 'aria-hidden': 'true' }, to === '2d' ? 'Office' : 'Board'),
+  );
+}
