@@ -1,0 +1,137 @@
+/* The Portal top bar (ui/portal/topbar.ts): the flat pages' .lite-bar as a portal header, a navy band
+   44px high across the whole window. Its own pieces (.pt-only) are only shown in a Portal theme; every
+   other theme hides them, and its bar is as it was. Inside the bar the tokens are the bar's (white ink
+   on navy), so what the bar already had (the floor picker, the view dropdown, the bell, the budget
+   chip, Back to a floor) follows without rules of its own; its pop-ups take the page's colours back
+   (.pt-pagecolors, styles/theme-portal.css). */
+
+html:not([data-theme^='portal']) .pt-only { display: none !important; }
+
+/* ---- The band ------------------------------------------------------------------------------------- */
+html[data-theme^='portal'] body.lite header.lite-bar {
+  --ink: var(--pt-bar-ink);
+  --ink-2: var(--pt-bar-ink);
+  --muted: var(--pt-bar-muted);
+  --faint: var(--pt-bar-field-ink);
+  --line: var(--pt-bar-line);
+  --hover: var(--pt-bar-hover);
+  --card: var(--pt-bar-field);
+  --paper-2: var(--pt-bar-field);
+  --accent-soft: rgba(255, 255, 255, .14);
+  --link: #9cc3ff;
+  min-height: var(--pt-h);
+  gap: 4px;
+  padding: 0 16px;
+  padding-top: env(safe-area-inset-top);
+  background: var(--pt-bar);
+  border-bottom: 1px solid var(--pt-bar-line);
+  color: var(--pt-bar-ink);
+  box-shadow: none;
+}
+/* The pieces it replaces: the 🏠 (the wordmark goes home), the page titles (the section says it), Home's
+   links to The Firm and the docs (the launcher has both, the ? the docs), and the bell that asks to turn
+   notifications on (⚙️ Settings › Notifications and the team phone's settings ask too; the bar's bell
+   is the team phone's). */
+html[data-theme^='portal'] body.lite header.lite-bar :is(#to-home, .home-title, .lite-floor-label, #to-firm, #to-docs, .btn[aria-label='Turn on notifications']) { display: none; }
+
+/* The bar's own buttons: quiet white glyphs on the navy, a light wash under the pointer. */
+html[data-theme^='portal'] body.lite header.lite-bar .btn {
+  height: 32px; min-height: 32px; padding: 0 10px; border: 1px solid transparent; background: transparent; color: var(--pt-bar-ink); font-size: 13px;
+}
+html[data-theme^='portal'] body.lite header.lite-bar .btn:hover:not(:disabled) { background: var(--pt-bar-hover); }
+html[data-theme^='portal'] body.lite header.lite-bar :is(.btn[aria-expanded=true], .btn.on) { background: var(--pt-bar-hover); color: var(--pt-bar-ink); }
+html[data-theme^='portal'] body.lite header.lite-bar :is(.btn, .pt-iconbtn):focus-visible { outline: 2px solid #8fbfff; outline-offset: 1px; }
+html[data-theme^='portal'] body.lite header.lite-bar :is(.lite-theme, .lite-menu) { width: 32px; padding: 0; justify-content: center; }
+html[data-theme^='portal'] .pt-iconbtn {
+  position: relative; flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; margin: 0;
+  border: 0; border-radius: 50% !important; background: transparent; color: var(--pt-bar-ink); cursor: pointer;
+}
+html[data-theme^='portal'] .pt-iconbtn:hover { background: var(--pt-bar-hover); }
+html[data-theme^='portal'] .pt-iconbtn[aria-expanded=true] { background: var(--pt-bar-hover); }
+html[data-theme^='portal'] .pt-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+html[data-theme^='portal'] .pt-icon .f { fill: currentColor; stroke: none; }
+html[data-theme^='portal'] .pt-launch { margin-left: -6px; }
+html[data-theme^='portal'] .pt-launch .pt-icon { width: 16px; height: 16px; }
+
+/* ---- The wordmark and the section ----------------------------------------------------------------- */
+html[data-theme^='portal'] .pt-brand { flex: none; display: inline-flex; align-items: center; height: 32px; padding: 0 4px; margin-left: 4px; color: var(--pt-bar-ink); text-decoration: none; border-radius: 3px; }
+html[data-theme^='portal'] .pt-wordmark { font-size: 20px; line-height: 1; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
+html[data-theme^='portal'] .pt-wordmark b { margin-left: .22em; font-weight: 400; }
+html[data-theme^='portal'] .pt-sep { flex: none; width: 1px; height: 20px; margin: 0 10px 0 8px; background: #4a5263; }
+html[data-theme^='portal'] .pt-section { flex: none; font-size: 13px; letter-spacing: .03em; text-transform: uppercase; color: #e1e2e4; white-space: nowrap; }
+/* On a floor's pages the floor picker is the section: a capitalised title with a white chevron. */
+html[data-theme^='portal'] body.lite header.lite-bar .lite-floor { flex: 0 1 auto; min-width: 0; max-width: 260px; }
+html[data-theme^='portal'] body.lite header.lite-bar .lite-floor select {
+  height: 32px; max-width: 100%; padding: 0 20px 0 4px; border: 0; border-radius: 3px; background-color: transparent; color: #e1e2e4;
+  font: 400 13px/32px var(--font); letter-spacing: .03em; text-transform: uppercase;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1.5 1.5l4.5 4.5 4.5-4.5' fill='none' stroke='%23e1e2e4' stroke-width='1.4'/%3E%3C/svg%3E");
+  background-size: 10px; background-position: right 4px center; background-repeat: no-repeat;
+}
+html[data-theme^='portal'] body.lite header.lite-bar .lite-floor select:hover { background-color: var(--pt-bar-hover); }
+html[data-theme^='portal'] body.lite header.lite-bar .lite-floor select option { background: #ffffff; color: #2f3646; text-transform: none; }
+
+/* ---- The search, wide in the middle ---------------------------------------------------------------- */
+html[data-theme^='portal'] .pt-search-wrap { flex: 1 1 auto; display: flex; justify-content: center; min-width: 0; margin: 0 16px; }
+html[data-theme^='portal'] .pt-search { position: relative; flex: 0 1 600px; min-width: 0; }
+html[data-theme^='portal'] body.lite.lite header.lite-bar .pt-search .pt-search-input {
+  width: 100%; height: 32px; min-height: 32px; padding: 0 34px 0 12px; border: 1px solid transparent; border-radius: 3px;
+  background: var(--pt-bar-field); color: #ffffff; caret-color: #ffffff; font: 400 14px/32px var(--font); box-shadow: none;
+}
+html[data-theme^='portal'] body.lite.lite header.lite-bar .pt-search .pt-search-input::placeholder { color: var(--pt-bar-field-ink); }
+html[data-theme^='portal'] body.lite.lite header.lite-bar .pt-search .pt-search-input:focus { border-color: #5c9dff; outline: none; box-shadow: 0 0 0 1px #5c9dff; }
+html[data-theme^='portal'] .pt-search .pt-search-input::-webkit-search-cancel-button { filter: invert(1); }
+html[data-theme^='portal'] .pt-search-ico { position: absolute; right: 10px; top: 50%; width: 15px; height: 15px; transform: translateY(-50%); color: var(--pt-bar-field-ink); pointer-events: none; }
+html[data-theme^='portal'] .pt-search-btn { display: none; }
+html[data-theme^='portal'] .pt-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 40; margin: 0; padding: 4px 0; list-style: none; max-height: 60vh; overflow: auto;
+  background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow-pop);
+}
+html[data-theme^='portal'] .pt-result { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 7px 12px; cursor: pointer; font-size: 14px; }
+html[data-theme^='portal'] .pt-result.active, html[data-theme^='portal'] .pt-result:hover:not(.pt-none) { background: var(--pt-selected); }
+html[data-theme^='portal'] .pt-result-l { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-theme^='portal'] .pt-result-k { flex: none; color: var(--muted); font-size: 12px; }
+html[data-theme^='portal'] .pt-none { color: var(--muted); cursor: default; }
+
+/* ---- The right: bell, help, dark mode, 🎨, avatar ----------------------------------------------------- */
+html[data-theme^='portal'] .pt-icons { flex: none; display: flex; align-items: center; gap: 4px; }
+html[data-theme^='portal'] .pt-count {
+  position: absolute; top: 1px; right: 0; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px !important;
+  background: #e5484d; color: #ffffff; font: 600 10px/15px var(--font); text-align: center; pointer-events: none;
+}
+html[data-theme^='portal'] .pt-count[hidden] { display: none; }
+html[data-theme^='portal'] .pt-dark .pt-sun, html[data-theme^='portal'] .pt-dark[aria-pressed=true] .pt-moon { display: none; }
+html[data-theme^='portal'] .pt-dark[aria-pressed=true] .pt-sun { display: block; }
+/* The ☰ as your avatar: your initials on your colour, the office's menu under it. */
+html[data-theme^='portal'] body.lite header.lite-bar #menu.pt-avatar {
+  width: 30px; height: 30px; min-height: 30px; margin-left: 6px; padding: 0; border: 2px solid rgba(255, 255, 255, .85); border-radius: 50% !important;
+  background: var(--pt-me, #146ff4); color: #ffffff; font-size: 0;
+}
+html[data-theme^='portal'] body.lite header.lite-bar #menu.pt-avatar::before {
+  content: attr(data-pt-initials); width: auto; height: auto; background: none; -webkit-mask-image: none; mask-image: none;
+  font: 600 11px/1 var(--font); letter-spacing: .02em; color: #ffffff; text-shadow: 0 1px 1px rgba(0, 0, 0, .35); vertical-align: 0;
+}
+html[data-theme^='portal'] body.lite header.lite-bar #menu.pt-avatar:hover:not(:disabled) { background: var(--pt-me, #146ff4); filter: brightness(1.08); }
+/* The budget chip and the TEST MODE badge sit on the navy like the icons. */
+html[data-theme^='portal'] body.lite header.lite-bar .bud-chip { height: 28px; border-color: rgba(255, 255, 255, .25); background: transparent; color: var(--pt-bar-ink); }
+html[data-theme^='portal'] body.lite header.lite-bar .bud-chip:hover { background: var(--pt-bar-hover); }
+
+/* ---- A phone: the search folds into a magnifier, the help goes to the ☰ ------------------------------------ */
+@media (max-width: 760px) {
+  html[data-theme^='portal'] body.lite header.lite-bar { padding: 0 8px; padding-top: env(safe-area-inset-top); gap: 2px; }
+  html[data-theme^='portal'] .pt-search-wrap { flex: 0 0 auto; margin: 0 0 0 auto; }
+  html[data-theme^='portal'] .pt-search { display: none; }
+  html[data-theme^='portal'] .pt-search-btn { display: inline-grid; }
+  html[data-theme^='portal'] :is(.pt-help, .pt-sep, .pt-dark) { display: none; }
+  html[data-theme^='portal'] .pt-wordmark { font-size: 17px; }
+  html[data-theme^='portal'] .pt-section { font-size: 12px; margin-left: 6px; }
+  html[data-theme^='portal'] body.lite header.lite-bar .lite-floor { flex: 1 1 auto; min-width: 64px; max-width: 40vw; }
+  html[data-theme^='portal'] .pt-brand { margin-left: 0; }
+  html[data-theme^='portal'] body.lite header.lite-bar .bud-office { display: none; }
+  /* The field opened over the bar. */
+  html[data-theme^='portal'] header.lite-bar.pt-searching .pt-search-wrap { position: absolute; inset: env(safe-area-inset-top) 8px 0; z-index: 3; display: flex; align-items: center; margin: 0; background: var(--pt-bar); }
+  html[data-theme^='portal'] header.lite-bar.pt-searching .pt-search { display: block; flex: 1 1 auto; }
+  html[data-theme^='portal'] header.lite-bar.pt-searching .pt-search-btn { display: none; }
+}
+@media (max-width: 420px) {
+  html[data-theme^='portal'] .pt-wordmark b { display: none; }
+}

@@ -18,6 +18,8 @@ import { graphics, rememberView } from '../graphics';
 import { homeRunIcon, homeRunToggle } from './run-state';
 import { hideOverlay, showOverlay } from '../ui/loading/overlay';
 import { miniProgress } from '../ui/progress/mini';
+import { isPortal } from '../ui/clean';
+import { portalProjects } from './portal';
 
 /** A flat view: the 1D board, or the 2D pixel office. */
 type FlatView = '1d' | '2d';
@@ -39,6 +41,10 @@ export function openFloor(floor: string, view: FlatView, leaving: () => void) {
 
 export interface ProjectsView {
   render(): void;
+  /** ✨ New project: the wizard. */
+  newProject(): void;
+  /** ➕ Add project: clone one of the repositories. */
+  addProject(): void;
 }
 
 /**
@@ -81,10 +87,16 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
     );
   };
 
+  const addProject = () => openElevator({ net, addOnly: true, downstairs: () => false, ride: go });
+  const newProject = () => void openWizard({ net, go });
+  // In a Portal theme the tab is the Projects page (home/portal.ts).
+  const portal = portalProjects(root, { net, last, open: (id, view) => openFloor(id, view, leaving), newProject, addProject, connections: () => openConnections() });
+
   const render = () => {
+    if (isPortal()) return portal.render();
     const add = h('button.btn.home-add', { type: 'button', title: "Clone one of the repositories this office's gh login can see, as a new floor" }, '➕ Add project');
-    add.addEventListener('click', () => openElevator({ net, addOnly: true, downstairs: () => false, ride: go }));
-    const wizard = h('button.btn.primary.home-add', { type: 'button', title: 'Create a new project repository and set it up with the mxcli project toolkit, a step at a time', onclick: () => void openWizard({ net, go }) }, '✨ New project');
+    add.addEventListener('click', addProject);
+    const wizard = h('button.btn.primary.home-add', { type: 'button', title: 'Create a new project repository and set it up with the mxcli project toolkit, a step at a time', onclick: newProject }, '✨ New project');
     // The office's tokens and folders, for admins: what a new project needs before it starts (ui/connections/).
     const connections = store.me.admin ? h('button.btn.home-add', { type: 'button', title: 'The GitHub and Mendix tokens, the password, git & gh and the folders the office uses', onclick: () => openConnections() }, '🔌 Connections') : null;
     root.replaceChildren(
@@ -93,5 +105,5 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
       h('ul.home-floors', {}, ...store.floors.map(card)),
     );
   };
-  return { render };
+  return { render, newProject, addProject };
 }

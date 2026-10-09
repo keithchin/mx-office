@@ -32,7 +32,7 @@
 }
 
 /* ---- What both share: the shape and the type -------------------------------------------------------- */
-html[data-theme^='clean'] {
+html:is([data-theme^='clean'], [data-theme^='portal']) {
   --edge: transparent;
   --shadow: 0 1px 2px rgba(0, 0, 0, .16);
   --shadow-btn: none;
@@ -192,28 +192,28 @@ html[data-theme='clean-dark'] {
 }
 
 /* ---- The page, its text and its boxes ------------------------------------------------------------- */
-html[data-theme^='clean'] { background: var(--paper); }
-html[data-theme^='clean'] body { font-size: var(--fs-body); line-height: 1.4; -webkit-font-smoothing: auto; }
-html[data-theme^='clean'] :is(input, textarea, select, button) { font-family: inherit; color: var(--ink); caret-color: var(--ink); }
-html[data-theme^='clean'] :is(code, kbd, pre, samp, tt) { font-family: var(--font-mono); font-weight: 400; }
-html[data-theme^='clean'] select option { background: var(--card); color: var(--ink); }
-html[data-theme^='clean'] ::placeholder { color: var(--faint); opacity: 1; }
-html[data-theme^='clean'] * { scrollbar-color: var(--rule-strong) transparent; }
-html[data-theme^='clean'] ::selection { background: color-mix(in srgb, var(--focus) 30%, transparent); }
-html[data-theme^='clean'] :is(b, strong, th, h1, h2, h3, h4, h5, h6) { font-weight: var(--fw-semi); }
-html[data-theme^='clean'] :focus-visible { outline: var(--focus-ring); outline-offset: -1px; }
-html[data-theme^='clean'] a { color: var(--link); }
-html[data-theme^='clean'] a.btn, html[data-theme^='clean'] .btn a { color: inherit; }
+html:is([data-theme^='clean'], [data-theme^='portal']) { background: var(--paper); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body { font-size: var(--fs-body); line-height: 1.4; -webkit-font-smoothing: auto; }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(input, textarea, select, button) { font-family: inherit; color: var(--ink); caret-color: var(--ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(code, kbd, pre, samp, tt) { font-family: var(--font-mono); font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) select option { background: var(--card); color: var(--ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) ::placeholder { color: var(--faint); opacity: 1; }
+html:is([data-theme^='clean'], [data-theme^='portal']) * { scrollbar-color: var(--rule-strong) transparent; }
+html:is([data-theme^='clean'], [data-theme^='portal']) ::selection { background: color-mix(in srgb, var(--focus) 30%, transparent); }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(b, strong, th, h1, h2, h3, h4, h5, h6) { font-weight: var(--fw-semi); }
+html:is([data-theme^='clean'], [data-theme^='portal']) :focus-visible { outline: var(--focus-ring); outline-offset: -1px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) a { color: var(--link); }
+html:is([data-theme^='clean'], [data-theme^='portal']) a.btn, html:is([data-theme^='clean'], [data-theme^='portal']) .btn a { color: inherit; }
 
 /* ---- No emoji, and line icons where one was all a button had (ui/clean/) ---------------------------- */
-html[data-theme^='clean'] .ao-emo:not([data-ao-icon]) { display: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .ao-emo:not([data-ao-icon]) { display: none; }
 /* One in the middle of a sentence that has an icon shows the icon, a little smaller, where it was. */
-html[data-theme^='clean'] .ao-emo[data-ao-icon]::before { width: 14px; height: 14px; margin: 0 .25rem 0 .05rem; vertical-align: -2px; }
-html[data-theme^='clean'] [data-ao-icon]::before {
+html:is([data-theme^='clean'], [data-theme^='portal']) .ao-emo[data-ao-icon]::before { width: 14px; height: 14px; margin: 0 .25rem 0 .05rem; vertical-align: -2px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) [data-ao-icon]::before {
   content: ''; display: inline-block; flex: none; width: 16px; height: 16px; vertical-align: -3px;
   background: currentColor; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-position: center; mask-position: center; -webkit-mask-size: contain; mask-size: contain;
 }
-html[data-theme^='clean'] [data-ao-icon='none']::before { content: none; }
-html[data-theme^='clean'] [data-ao-icon]:not([data-ao-icon='none']) { font-size: 0; }
-html[data-theme^='clean'] [data-ao-icon]:not([data-ao-icon='none']) > * { font-size: var(--fs-pill); }
+html:is([data-theme^='clean'], [data-theme^='portal']) [data-ao-icon='none']::before { content: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) [data-ao-icon]:not([data-ao-icon='none']) { font-size: 0; }
+html:is([data-theme^='clean'], [data-theme^='portal']) [data-ao-icon]:not([data-ao-icon='none']) > * { font-size: var(--fs-pill); }

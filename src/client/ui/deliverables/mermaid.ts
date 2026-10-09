@@ -14,7 +14,7 @@ export interface MermaidBlock {
   failed(why: string): void;
 }
 
-const DARK_THEMES = new Set(['dark', 'terminal', 'clean-dark']);
+const DARK_THEMES = new Set(['dark', 'terminal', 'clean-dark', 'portal-dark']);
 
 /** Mermaid's theme for the office theme on <html data-theme>. */
 export const mermaidTheme = (officeTheme: string | undefined): 'dark' | 'default' => (DARK_THEMES.has(officeTheme ?? '') ? 'dark' : 'default');

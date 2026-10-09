@@ -12,6 +12,17 @@ The top bar has **🏠**, a **back link** to the floor you were last on (in the 
 
 ## 🏢 Projects
 
+**In the Portal themes** (the default) this tab is a **Projects** page, like a low-code platform's portal:
+
+- the page's title, **Projects**, with **Add project** and **New project** (the wizard) at its right, over Home's tabs (Projects, Statistics, 2D Overview, Audit log, Budget) drawn as underline tabs;
+- a filter row: **Search by project name** (the name or the repository), a status select (*All statuses*, *Needs you*, *Running*, *Paused*, *Being added*), the sort (*Pinned*, *Recent activity*, *Name*) with a button that turns the order round, and **Pause all projects** / **Resume all** and **Connections** (admins). The status and the sort are remembered in this browser;
+- a card per project: a tile with its letters in the floor's colour, its name (opens its board), `repo · ⎇ branch`, the one-line summary, the small progress bar, and at the bottom its status (*Running*, *Needs you*, *Paused*, *Being added*) and what it has spent against its budget;
+- at each card's top right: **👁 watch** (on by default; a project you stop watching no longer calls you over from another floor's pages or counts in the tab title), **pin** (pinned projects come first under *Pinned*), and **⋯**: *Open the board*, *Open the office*, *View live app*, *Edit in Studio Pro* (asks to open it from the project's page, admins) and, for admins, *Pause project* or *Resume project*.
+
+Pins and watches are kept per viewer, in this browser. The cards follow the office live; on a phone they're one a row.
+
+In the other themes the tab is as below.
+
 ![Projects on the home page](../images/home-projects.png)
 
 One card per floor:
@@ -31,7 +42,7 @@ By the name, an icon says whether the project is [paused or running](resume-and-
 | ▶ | Running | *Running: 2 agents working, 3 asleep* (and anyone waiting on you). |
 | ⏳ (amber) | Pausing or resuming | How far the run is: *Pausing: 2 of 4 agents*. |
 
-The Clean themes draw them as line icons. The 2D Overview's banners show the same state at their right, and inside a project the same state is the one control beside its budget chip (see [Command Center](command-center.md)).
+The Clean and Portal themes draw them as line icons. The 2D Overview's banners show the same state at their right, and inside a project the same state is the one control beside its budget chip (see [Command Center](command-center.md)).
 
 Opening a project shows *Loading project mx-spike… 0 %* over this page at once; the project's page then shows **Mx Office**'s loading screen and the project's own loading overlay, with real progress.
 

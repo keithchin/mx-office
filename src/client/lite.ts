@@ -57,6 +57,8 @@ import { auditView } from './ui/audit';
 import { installPhone, type Phone } from './ui/phone';
 import { collapsibleCommand } from './ui/command-layout';
 import { testModeBadge } from './ui/testmode';
+import { portalBar } from './ui/portal/topbar';
+import { portalDeepLinks } from './ui/portal/deeplink';
 import { budgetUi } from './ui/budget';
 import { testlabView } from './ui/testlab';
 import './shared/perfwatch-on';
@@ -517,6 +519,9 @@ phone = installPhone({
   go: goToNeed,
   needs: () => ({ setup: cachedSetup(store.floor ?? undefined), live: live.current(), firm: firmStatus, studio: studioState(), budget: budget.need() }),
 });
+// The Portal themes' top bar (ui/portal/): the launcher, the search, the bell for the phone above.
+portalBar({ settings: () => showSettings() });
+portalDeepLinks(); // &open=studio, from Home's Portal project cards
 // The Command Center's sections fold and remember it (ui/command-layout.ts).
 collapsibleCommand();
 session.start();

@@ -26,7 +26,7 @@ import { drawFlow } from './flow-draw';
 import { Tree, opens } from './tree';
 import './model.css';
 
-const DARK = new Set(['dark', 'terminal', 'clean-dark']);
+const DARK = new Set(['dark', 'terminal', 'clean-dark', 'portal-dark']);
 const SETTLE_MS = 4000;
 const TIDY_KEY = 'agent-office.model.tidy';
 

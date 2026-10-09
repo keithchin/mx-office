@@ -177,7 +177,7 @@ export function iconUrl(name: string): string {
 
 /** The sheet that draws each icon, under a Clean theme only. */
 export function iconSheet(): string {
-  const at = "html[data-theme^='clean']";
+  const at = "html:is([data-theme^='clean'], [data-theme^='portal'])";
   const rules = Object.keys(ICONS).map((n) => `${at} [data-ao-icon='${n}']::before { -webkit-mask-image: ${iconUrl(n)}; mask-image: ${iconUrl(n)}; }`);
   return rules.join('\n');
 }

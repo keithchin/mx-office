@@ -92,6 +92,6 @@
 html[data-theme='terminal'] .pmc-chat { background: var(--sunken); }
 html[data-theme='terminal'] .pmc-user .pmc-bubble::before { content: '> '; color: var(--muted); }
 html[data-theme='terminal'] .pmc-mode .pmc-mode-opt[aria-checked='true'] { color: #000; text-shadow: none; }
-html[data-theme^='clean'] .pmc-av { background: var(--who, var(--accent)); }
-html[data-theme^='clean'] .pmc-av-emo { display: none; }
-html[data-theme^='clean'] .pmc-av-ini { display: block; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .pmc-av { background: var(--who, var(--accent)); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .pmc-av-emo { display: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .pmc-av-ini { display: block; }

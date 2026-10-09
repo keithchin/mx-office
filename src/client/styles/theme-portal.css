@@ -1,0 +1,205 @@
+/* The Portal themes, Portal (Light) and Portal (Dark) (ui/colortheme.ts sets <html data-theme="portal-…">):
+   the office drawn like a low-code platform's web portal. A dark navy top bar over white pages, slate
+   ink, one strong blue for what to press and a deeper one for links, 1px light-grey lines, light-grey
+   table heads and panels, soft-shadowed cards, and a humanist sans-serif (Noto Sans) with semibold
+   titles. Portal is of the Clean family: every rule in styles/theme-clean*.css is under
+   html:is([data-theme^='clean'], [data-theme^='portal']), so it wears Clean's flat shapes and has no
+   emoji either (ui/clean/). This sheet only sets the tokens (styles/base.css says what each is for);
+   the parts that look different from Clean (the top bar, tabs, buttons, inputs, cards) are in
+   styles/theme-portal-parts.css, the top bar's own pieces in ui/portal/.
+
+   Measured from the portal: bar #0a1324, its search #222b3a with #9ca3af words, ink #2f3646, body
+   text #535965, secondary #6c717c, primary #146ff4, links #064ae4, lines #e7e7e9, inputs' border
+   #c1c3c8, panels and table heads #f2f2f3, the picked side-nav item #e6e7e9, the info alert #dceefe,
+   the focus ring #298efb. Portal (Dark) has no original to measure: the same blues on navy and
+   charcoal, every text colour at 4.5:1 or more on its surface (tests/portal-theme.test.ts checks). */
+
+/* ---- The type: Noto Sans, regular and semibold ------------------------------------------------------ */
+/* Noto Sans comes from Google Fonts once the page has loaded (ui/portal/font.ts), as a variable font
+   from 400 to 600: whatever weight a part asks for above that (the office's 800 and 900) comes out
+   semibold, never heavier. Until it's there, or with no internet, "AO Portal" is the system's sans-serif
+   at the same two weights, as "AO Clean" is (styles/theme-clean.css). */
+@font-face {
+  font-family: 'AO Portal';
+  font-weight: 1 549;
+  src: local('Noto Sans'), local('NotoSans-Regular'), local('Open Sans'), local('OpenSans-Regular'), local('Segoe UI'), local('SegoeUI'), local('Helvetica Neue'), local('Roboto'), local('Arial');
+}
+@font-face {
+  font-family: 'AO Portal';
+  font-weight: 550 1000;
+  src: local('Noto Sans SemiBold'), local('NotoSans-SemiBold'), local('Open Sans SemiBold'), local('OpenSans-SemiBold'), local('Segoe UI Semibold'), local('SegoeUI-Semibold'), local('HelveticaNeue-Medium'), local('Roboto Medium'), local('Arial Bold');
+}
+
+/* ---- What both share: the shape and the type ------------------------------------------------------- */
+html[data-theme^='portal'] {
+  --shadow: 0 1px 3px rgba(10, 19, 36, .12);
+  --shadow-pop: 0 4px 12px rgba(10, 19, 36, .16);
+  --radius: 4px;
+  --radius-sm: 3px;
+  --radius-lg: 6px;
+  --radius-pill: 10px;
+  --focus-ring: 2px solid var(--focus);
+  --font: 'AO Blank', 'Noto Sans', 'AO Portal', 'Open Sans', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+  --font-mono: 'AO Blank', 'Cascadia Code', Consolas, 'SF Mono', Menlo, 'Courier New', monospace;
+  --fs-h1: 28px;
+  --fs-title: 16px;
+  --fs-section: 12px;
+  --fs-body: 14px;
+  --fs-small: 12px;
+  --fs-btn: 14px;
+  --fs-note: 12px;
+  --fs-pill: 11px;
+  /* Semibold: Noto's 600 (and the local face's semibold). */
+  --fw-semi: 600;
+  --fw-title: 600;
+  --fw-btn: 400;
+  --fw-note: 400;
+  /* The top bar, the same navy in light and dark. */
+  --pt-bar: #0a1324;
+  --pt-bar-ink: #ffffff;
+  --pt-bar-muted: #c2c4c8;
+  --pt-bar-field: #222b3a;
+  --pt-bar-field-ink: #9ca3af;
+  --pt-bar-line: #2c3547;
+  --pt-bar-hover: rgba(255, 255, 255, .1);
+  --pt-h: 44px;
+}
+
+/* ---- Portal (Light) ---------------------------------------------------------------------------------- */
+/* Also on the top bar's own pop-ups, which hang in the navy bar but are drawn in the page's colours. */
+html[data-theme='portal-light'],
+html[data-theme='portal-light'] :is(.pt-pagecolors, .lite-bar .vp-list, .dx-bar .dx-results) {
+  color-scheme: light;
+  --paper: #ffffff;
+  --paper-2: #f7f7f8;
+  --card: #ffffff;
+  --card-dim: #f9f9fa;
+  --sunken: #f2f2f3;
+  --glass: rgba(255, 255, 255, .75);
+  --ink: #2f3646;
+  --ink-2: #535965;
+  --muted: #6c717c;
+  --faint: #8d929b;
+  --line: #e7e7e9;
+  --rule: rgba(10, 19, 36, .08);
+  --rule-strong: #c1c3c8;
+  --rule-soft: #eeeef0;
+  --accent: #146ff4;
+  --accent-ink: #ffffff;
+  --good: #1f8a3d;
+  --warn: #c98a00;
+  --bad: #d92d20;
+  --info: #146ff4;
+  --purple: #7a3fc4;
+  --on-fill: #ffffff;
+  --on-warn: #ffffff;
+  --on-ink: #ffffff;
+  --good-ink: #17752f;
+  --bad-ink: #b42318;
+  --warn-ink: #8a5d00;
+  --link: #064ae4;
+  --good-soft: #e5f4e9;
+  --bad-soft: #fde8e7;
+  --bad-soft-2: #fad3d0;
+  --warn-soft: #fdf3dc;
+  --info-soft: #dceefe;
+  --info-line: #9ccafc;
+  --accent-soft: #e3eefe;
+  --purple-soft: #f1e9fb;
+  --neutral-soft: #f2f2f3;
+  --code-bg: #f7f8fa;
+  --code-ink: #2f3646;
+  --gutter: #f7f8fa;
+  --diff-add: #e7f5ea;
+  --diff-add-n: #d2ecd8;
+  --diff-del: #fde8e7;
+  --diff-del-n: #f8d0cd;
+  --del-ink: #b42318;
+  --diff-hunk: #e8f2fe;
+  --diff-hunk-n: #d3e5fd;
+  --hunk-ink: #064ae4;
+  --flash: #fdf0c4;
+  --cork: #f2f2f3;
+  --sticky: #ffffff;
+  --sticky-edge: rgba(10, 19, 36, .12);
+  --backdrop: rgba(10, 19, 36, .4);
+  --hover: rgba(10, 19, 36, .05);
+  --hover-light: rgba(10, 19, 36, .03);
+  --pop-glow: rgba(10, 19, 36, .16);
+  --focus: #298efb;
+  --pt-selected: #e6e7e9;
+}
+
+/* ---- Portal (Dark) ----------------------------------------------------------------------------------- */
+html[data-theme='portal-dark'],
+html[data-theme='portal-dark'] :is(.pt-pagecolors, .lite-bar .vp-list, .dx-bar .dx-results) {
+  color-scheme: dark;
+  --paper: #0f1625;
+  --paper-2: #0b1220;
+  --card: #172033;
+  --card-dim: #131b2b;
+  --sunken: #0b1220;
+  --glass: rgba(15, 22, 37, .75);
+  --ink: #e4e7ed;
+  --ink-2: #c6cbd5;
+  --muted: #9ba4b4;
+  --faint: #7a8496;
+  --line: #2a3448;
+  --rule: rgba(255, 255, 255, .08);
+  --rule-strong: #46526a;
+  --rule-soft: #212b3d;
+  --accent: #146ff4;
+  --accent-ink: #ffffff;
+  --good: #4cc477;
+  --warn: #e0a526;
+  --bad: #f2645a;
+  --info: #5c9dff;
+  --purple: #b48cf0;
+  --on-fill: #0f1625;
+  --on-warn: #0f1625;
+  --on-ink: #0f1625;
+  --good-ink: #6fd394;
+  --bad-ink: #ff8c84;
+  --warn-ink: #f0bf56;
+  --link: #79b0ff;
+  --good-soft: #15301f;
+  --bad-soft: #3a1c1f;
+  --bad-soft-2: #522324;
+  --warn-soft: #33290f;
+  --info-soft: #142a4a;
+  --info-line: #2c5694;
+  --accent-soft: #15315c;
+  --purple-soft: #2c2347;
+  --neutral-soft: #222c3e;
+  --code-bg: #0b1220;
+  --code-ink: #d5d9e1;
+  --gutter: #0f1625;
+  --diff-add: #173022;
+  --diff-add-n: #1e3d2b;
+  --diff-del: #3d1d20;
+  --diff-del-n: #4d2327;
+  --del-ink: #ff8c84;
+  --diff-hunk: #142640;
+  --diff-hunk-n: #1b3354;
+  --hunk-ink: #79b0ff;
+  --flash: #3d3412;
+  --cork: #172033;
+  --sticky: #1c2639;
+  --sticky-edge: rgba(0, 0, 0, .5);
+  --backdrop: rgba(0, 0, 0, .55);
+  --hover: rgba(255, 255, 255, .06);
+  --hover-light: rgba(255, 255, 255, .04);
+  --pop-glow: rgba(0, 0, 0, .4);
+  --focus: #5c9dff;
+  --shadow: 0 1px 3px rgba(0, 0, 0, .45);
+  --shadow-pop: 0 4px 14px rgba(0, 0, 0, .5);
+  --pt-selected: #222c3e;
+  --pt-bar: #060b16;
+  --pt-bar-line: #1f2a3d;
+}
+
+/* ---- The page and its type --------------------------------------------------------------------------- */
+html[data-theme^='portal'] body { line-height: 1.45; -webkit-font-smoothing: antialiased; }
+html[data-theme^='portal'] :focus-visible { outline: var(--focus-ring); outline-offset: 1px; }
+html[data-theme^='portal'] a { color: var(--link); text-decoration: underline; text-underline-offset: 2px; }
+html[data-theme^='portal'] :is(a.btn, .btn a, a.dx-iconbtn, .lite-bar a) { text-decoration: none; }

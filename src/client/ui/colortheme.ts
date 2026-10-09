@@ -1,10 +1,14 @@
-// The flat views' color themes: Clean (Light) and Clean (Dark), flat and quiet like a code editor's light
-// and dark themes with no emoji (the default since 2026-10-09); Fun, the office's original bright, chunky look
+// The flat views' color themes: Portal (Light) and Portal (Dark), the look of a low-code platform's web
+// portal (a dark navy top bar, white pages, one blue, no emoji: the default since release 26); Clean (Light)
+// and Clean (Dark), flat and quiet like a code editor's light and dark themes with no emoji; Fun, the office's original bright, chunky look
 // (its id stays 'default' so earlier picks keep working); Fun (Dark); and Terminal (a green phosphor screen). The 🎨 in the 1D and 2D top bars opens a list of them, and this browser
 // remembers the pick for both: a change in one tab reaches the other views open in other tabs too.
 // A theme is <html data-theme="…">: the colors are tokens in styles/base.css, the other themes' values
 // are in styles/themes.css, Terminal's shapes in styles/theme-terminal.css, and the Clean pair's in
-// styles/theme-clean.css and theme-clean-parts.css (ui/clean/ hides their emoji). lite.html, pixel.html
+// styles/theme-clean.css and theme-clean-parts.css (ui/clean/ hides their emoji). Portal is of the Clean family:
+// it wears Clean's flat shapes and has no emoji either (every Clean rule is under
+// html:is([data-theme^='clean'], [data-theme^='portal'])), with its own tokens and parts in
+// styles/theme-portal.css and theme-portal-parts.css, its top bar in ui/portal/ and Home as its Projects page. lite.html, pixel.html
 // and home.html set the attribute in a line of script before anything is drawn, so a dark page never
 // flashes white first; this module keeps it, the 🎨 and the browser's bar color in step after that.
 
@@ -12,31 +16,41 @@ import '../styles/themes.css';
 import '../styles/theme-terminal.css';
 import '../styles/theme-clean.css';
 import '../styles/theme-clean-parts.css';
+import '../styles/theme-portal.css';
+import '../styles/theme-portal-parts.css';
 import './flatchrome.css';
 import { h, toast } from './dom';
 import { stepIndex } from './chrome-logic';
-import { startClean } from './clean';
+import { isCleanFamily, startClean } from './clean';
+import { loadPortalFont } from './portal/font';
 
 /** Every theme, in the 🎨 list's order. The pages' early scripts (lite.html, pixel.html, home.html) list the same names. */
-export const COLOR_THEMES = ['clean-light', 'clean-dark', 'default', 'dark', 'terminal'] as const;
+export const COLOR_THEMES = ['portal-light', 'portal-dark', 'clean-light', 'clean-dark', 'default', 'dark', 'terminal'] as const;
 export type ColorTheme = (typeof COLOR_THEMES)[number];
 
 /** Where the pick is kept. The pages' early scripts read the same key. */
 const KEY = 'agent-office.color-theme';
-export const THEME_LABEL: Record<ColorTheme, string> = { 'clean-light': 'Clean (Light)', 'clean-dark': 'Clean (Dark)', default: 'Fun', dark: 'Fun (Dark)', terminal: 'Terminal' };
+export const THEME_LABEL: Record<ColorTheme, string> = { 'portal-light': 'Portal (Light)', 'portal-dark': 'Portal (Dark)', 'clean-light': 'Clean (Light)', 'clean-dark': 'Clean (Dark)', default: 'Fun', dark: 'Fun (Dark)', terminal: 'Terminal' };
 const WHAT: Record<ColorTheme, string> = {
   default: 'The office’s own bright, chunky look',
   dark: 'The same chunky look, at night',
   terminal: 'A green phosphor screen',
+  'portal-light': 'Like a low-code platform’s web portal: navy bar, white pages',
+  'portal-dark': 'The portal look in dark mode: navy and charcoal',
   'clean-light': 'Flat and quiet, like an editor’s light theme',
   'clean-dark': 'Flat and quiet, like an editor’s dark theme',
 };
 /** The browser's own bar (on a phone) in each theme's top-bar color. */
-const BAR: Record<ColorTheme, string> = { default: '#fff1de', dark: '#222536', terminal: '#071009', 'clean-light': '#f3f3f3', 'clean-dark': '#181818' };
+const BAR: Record<ColorTheme, string> = { default: '#fff1de', dark: '#222536', terminal: '#071009', 'clean-light': '#f3f3f3', 'clean-dark': '#181818', 'portal-light': '#0a1324', 'portal-dark': '#060b16' };
+
+/** Each theme's light or dark twin, for the Portal top bar's dark-mode switch (Terminal has none). */
+export const DARK_TWIN: Record<ColorTheme, ColorTheme> = { 'portal-light': 'portal-dark', 'portal-dark': 'portal-light', 'clean-light': 'clean-dark', 'clean-dark': 'clean-light', default: 'dark', dark: 'default', terminal: 'terminal' };
+/** Whether a theme is a dark one (its twin is the light one). */
+export const isDarkTheme = (t: ColorTheme) => t === 'dark' || t === 'terminal' || t.endsWith('-dark');
 
 export const isTheme = (t: unknown): t is ColorTheme => COLOR_THEMES.includes(t as ColorTheme);
 
-/** The theme to show: the one picked here before, else Clean (Light), or Clean (Dark) for someone whose system is dark. */
+/** The theme to show: the one picked here before, else Portal (Light), or Portal (Dark) for someone whose system is dark. */
 export function savedTheme(): ColorTheme {
   try {
     const t = localStorage.getItem(KEY);
@@ -44,18 +58,19 @@ export function savedTheme(): ColorTheme {
   } catch {
     // No storage (a private window, blocked site data): fall through to the system's preference.
   }
-  return matchMedia('(prefers-color-scheme: dark)').matches ? 'clean-dark' : 'clean-light';
+  return matchMedia('(prefers-color-scheme: dark)').matches ? 'portal-dark' : 'portal-light';
 }
 
 export function currentTheme(): ColorTheme {
   const t = document.documentElement.dataset.theme;
-  return isTheme(t) ? t : 'clean-light';
+  return isTheme(t) ? t : 'portal-light';
 }
 
 export function applyTheme(t: ColorTheme, remember = false) {
   document.documentElement.dataset.theme = t;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', BAR[t]);
-  if (t.startsWith('clean')) startClean();
+  if (isCleanFamily(t)) startClean();
+  if (t.startsWith('portal')) loadPortalFont();
   if (!remember) return;
   try {
     localStorage.setItem(KEY, t);
@@ -71,13 +86,16 @@ export function applyTheme(t: ColorTheme, remember = false) {
  */
 export function colorThemes(button: HTMLElement, summary?: HTMLElement, onChange?: (t: ColorTheme) => void) {
   applyTheme(savedTheme());
-  const list = themeList(button, (t) => {
+  const choose = (t: ColorTheme) => {
     if (t === currentTheme()) return;
     applyTheme(t, true);
     label();
     onChange?.(t);
+    themeListeners.forEach((fn) => fn(t));
     toast(`🎨 ${THEME_LABEL[t]} theme`);
-  });
+  };
+  picker = choose;
+  const list = themeList(button, choose);
   const label = () => {
     const t = currentTheme();
     button.title = `Theme: ${THEME_LABEL[t]}. Click to pick another`;
@@ -93,8 +111,25 @@ export function colorThemes(button: HTMLElement, summary?: HTMLElement, onChange
     applyTheme(t);
     label();
     onChange?.(t);
+    themeListeners.forEach((fn) => fn(t));
   });
   if (summary) typeStories(summary);
+}
+
+/** The page's pick (colorThemes's), once it's wired: the Portal top bar's dark-mode switch goes through it. */
+let picker: ((t: ColorTheme) => void) | undefined;
+const themeListeners = new Set<(t: ColorTheme) => void>();
+
+/** Picks `t` as the 🎨 list would: remembered, the 🎨 relabelled, the page told. */
+export function pickTheme(t: ColorTheme) {
+  if (picker) picker(t);
+  else applyTheme(t, true);
+}
+
+/** Hears every change of theme on this page, picked here or in another tab. Returns how to stop. */
+export function onThemeChange(fn: (t: ColorTheme) => void): () => void {
+  themeListeners.add(fn);
+  return () => themeListeners.delete(fn);
 }
 
 /**

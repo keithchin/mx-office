@@ -7,7 +7,7 @@
 // never someone's real one: it signs in and clicks like a person would.
 //
 //   node scripts/check-tab-alignment.mjs --base http://127.0.0.1:49xx --password <pw> --floor big-spike
-//     [--viewports 1440x900,1280x720,390x844] [--themes default,dark,terminal,clean-light,clean-dark]
+//     [--viewports 1440x900,1280x720,390x844] [--themes default,dark,terminal,clean-light,clean-dark,portal-light,portal-dark]
 //     [--shots <dir>] [--json <file>] [--chrome <chrome.exe>]
 //
 // It also shows the "someone's waiting on another floor" line (#elsewhere) on the Board, the way the page
@@ -35,7 +35,7 @@ const viewports = arg('viewports', '1440x900,1280x720,390x844')
   .split(',')
   .map((s) => s.split('x').map(Number))
   .map(([width, height]) => ({ width, height }));
-const themes = arg('themes', 'default,dark,terminal,clean-light,clean-dark').split(',');
+const themes = arg('themes', 'default,dark,terminal,clean-light,clean-dark,portal-light,portal-dark').split(',');
 const TABS = ['command', 'board', 'workers', 'analysis', 'live', 'git', 'model', 'org', 'standup', 'approvals', 'settings', 'teams', 'budget', 'audit', 'tests'];
 const TOL = 1;
 if (!floor) {

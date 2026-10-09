@@ -6,6 +6,7 @@
 import { isActive } from '../shared/firm/engagement';
 import { $, h, toast } from './ui/dom';
 import { colorThemes } from './ui/colortheme';
+import { portalBar } from './ui/portal/topbar';
 import { fetchFirm, fetchReport, reportUrl, type FirmView } from './firm/api';
 import { renderEngagements } from './firm/engagements';
 import { firmOffice } from './firm/office';
@@ -16,6 +17,7 @@ import './home/home.css';
 import './firm/firm.css';
 
 colorThemes($('theme'));
+portalBar({ section: 'The Firm' }); // the Portal themes' top bar (ui/portal/)
 
 const office = firmOffice();
 let view: FirmView | undefined;
