@@ -4,6 +4,24 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Improved
+- **📐 Model tab: domain models you can read.** Associations nobody arranged in Studio Pro (still at its
+  default connection points, as agents and mxcli create them) no longer run from one box's left edge to
+  another's right edge across the entities between. They leave from the sides the two entities face
+  each other with, spread along a side when there are several, and run in straight horizontal and
+  vertical segments around the other entities, with their names and 1/* discs where they cover no box
+  when there's room. Associations someone arranged in Studio Pro keep their points exactly; colours,
+  discs, owner dot and arrow are as before.
+- **Tidy layout.** A new **As in Studio Pro / Tidy layout** switch in the Model tab's bar rearranges a
+  domain model's entities for reading (layers along the associations, referenced entities on top,
+  loose entities in a grid beside them). View only, never written to the model; your browser
+  remembers the choice. An unarranged-looking model (entities on an even grid, lines at the default
+  points) suggests it: *Lines overlap? Try Tidy layout*.
+- **Follow one line.** Pointing at (or clicking) an association lights it and its two entities and
+  dims the rest.
+
 ## 2026-10-09 · release 24 (`b32d844`)
 
 ### New

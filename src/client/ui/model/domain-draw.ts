@@ -4,19 +4,18 @@
 // generalization in a blue label on top; associations as grey lines between the connection points the
 // developer chose, with "1" and "*" discs near each end, a dot on the owner's end, an arrow at the
 // other unless both own it, and the name in a box half way. Annotations sit where they were put.
+// Associations nobody arranged (still at Studio Pro's default points) get ends and a route around the
+// boxes from domain-layout.ts, so their lines don't run across other entities.
 
 import type { DmAssociation, DmEntity, DocDiff, DomainDoc, Pt } from '../../../shared/model';
+import { ENTITY_W, entityHeight, routeAssociations, type Box, type Route } from './domain-layout';
 import type { Drawn } from './flow-draw';
 import { ellipsis, esc, measure, n, wrap } from './text';
 
-export const ENTITY_W = 170;
 const HEAD = 30;
 const ROW = 16.5;
-const MIN_H = 89;
 
-export const entityHeight = (e: DmEntity): number => Math.max(MIN_H, 40.5 + e.attrs.length * ROW);
-
-type Box = { x: number; y: number; w: number; h: number };
+export { ENTITY_W, entityHeight };
 
 function entitySvg(e: DmEntity, w: number, h: number): string {
   const { x, y } = e;
@@ -58,17 +57,6 @@ const along = (a: Pt, b: Pt, d: number): Pt => {
   return { x: a.x + ((b.x - a.x) / len) * d, y: a.y + ((b.y - a.y) / len) * d };
 };
 
-/** Where an association meets a box: its connection point when stored, else the middle of the side facing `toward`. */
-function endOn(b: Box, conn: Pt | undefined, toward: Pt): Pt {
-  if (conn) return { x: b.x + (b.w * conn.x) / 100, y: b.y + (b.h * conn.y) / 100 };
-  const cx = b.x + b.w / 2;
-  const cy = b.y + b.h / 2;
-  const dx = toward.x - cx;
-  const dy = toward.y - cy;
-  if (Math.abs(dx) * b.h >= Math.abs(dy) * b.w) return { x: dx >= 0 ? b.x + b.w : b.x, y: cy };
-  return { x: cx, y: dy >= 0 ? b.y + b.h : b.y };
-}
-
 function disc(p: Pt, text: string): string {
   const star = text === '*';
   return `<g class="mx-mult"><circle cx="${n(p.x)}" cy="${n(p.y)}" r="7.5"/>${star ? `<path d="M${n(p.x)} ${n(p.y - 4)}v8M${n(p.x - 3.5)} ${n(p.y - 2)}l7 4M${n(p.x + 3.5)} ${n(p.y - 2)}l-7 4"/>` : `<text x="${n(p.x)}" y="${n(p.y + 4)}" text-anchor="middle">1</text>`}</g>`;
@@ -90,63 +78,58 @@ function arrowAt(tip: Pt, from: Pt): string {
   return `<path class="mx-arrow" d="M${n(back.x + px)} ${n(back.y + py)}L${n(tip.x)} ${n(tip.y)}L${n(back.x - px)} ${n(back.y - py)}"/>`;
 }
 
-function assocSvg(a: DmAssociation, boxes: Map<string, Box>): { svg: string; box: Box } | null {
-  const pb = boxes.get(a.parent);
-  if (!pb) return null;
+const pathD = (pts: Pt[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${n(p.x)} ${n(p.y)}`).join('');
+/** A wide invisible line under the drawn one, so a thin line is easy to point at. */
+const hitLine = (d: string) => `<path class="mx-hit" d="${d}"/>`;
+
+function assocSvg(a: DmAssociation, r: Route, pb: Box): { svg: string; box: Box } {
   const parentMult = a.type === 'ReferenceSet' || a.owner === 'Default' ? '*' : '1';
   const childMult = a.type === 'ReferenceSet' ? '*' : '1';
-  if (a.cross) {
-    // To an entity in another module: a stub out of the box with the other entity's name at its end.
-    const start = endOn(pb, a.parentConn, { x: pb.x - 100, y: pb.y + pb.h / 2 });
-    const left = start.x <= pb.x + pb.w / 2;
-    const end = { x: start.x + (left ? -150 : 150), y: start.y };
-    let s = `<path class="mx-assoc" d="M${n(start.x)} ${n(start.y)}L${n(end.x)} ${n(end.y)}"/>`;
-    s += disc(along(start, end, 22), parentMult) + disc(along(end, start, 10), childMult);
-    s += nameBox({ x: (start.x + end.x) / 2, y: start.y }, a.name, true);
-    s += `<text class="mx-cross-to" x="${n(end.x + (left ? -4 : 4))}" y="${n(end.y + 22)}" text-anchor="${left ? 'end' : 'start'}">${esc(a.child)}</text>`;
-    s += `<circle class="mx-owner" cx="${n(start.x)}" cy="${n(start.y)}" r="3.2"/>`;
-    return { svg: s, box: { x: Math.min(start.x, end.x) - 10, y: start.y - 20, w: 170, h: 40 } };
-  }
-  const cb = boxes.get(a.child);
-  if (!cb) return null;
-  const cc = { x: cb.x + cb.w / 2, y: cb.y + cb.h / 2 };
-  const pc = { x: pb.x + pb.w / 2, y: pb.y + pb.h / 2 };
-  const p = endOn(pb, a.parentConn, cc);
-  const c = endOn(cb, a.childConn, pc);
+  const p = r.pts[0];
+  const c = r.pts[r.pts.length - 1];
   let s: string;
-  let mid: Pt;
-  let pNear: Pt;
-  let cNear: Pt;
-  if (a.parent === a.child || Math.hypot(p.x - c.x, p.y - c.y) < 4) {
-    // An association from an entity to itself: a loop over the box.
-    const top = pb.y - 46;
-    const c1 = { x: p.x, y: top };
-    s = `<path class="mx-assoc" d="M${n(p.x)} ${n(p.y)}C${n(p.x - 40)} ${n(p.y)} ${n(c1.x - 40)} ${n(top)} ${n(pb.x + pb.w / 2)} ${n(top)}S${n(c.x + 40)} ${n(c.y)} ${n(c.x)} ${n(c.y)}"/>`;
-    mid = { x: pb.x + pb.w / 2, y: top };
-    pNear = { x: p.x - 18, y: p.y - 10 };
-    cNear = { x: c.x + 18, y: c.y - 10 };
-  } else {
-    s = `<path class="mx-assoc" d="M${n(p.x)} ${n(p.y)}L${n(c.x)} ${n(c.y)}"/>`;
-    mid = { x: (p.x + c.x) / 2, y: (p.y + c.y) / 2 };
-    // A line too short for its name between the two discs: the name sits beside the line instead.
-    const len = Math.hypot(c.x - p.x, c.y - p.y);
-    if (len < measure(a.name, 11.5) + 8 + 2 * 32) {
-      const nx = -(c.y - p.y) / (len || 1);
-      const ny = (c.x - p.x) / (len || 1);
-      const side = ny > 0 ? -1 : 1;
-      mid = { x: mid.x + nx * 17 * side, y: mid.y + ny * 17 * side };
-    }
-    pNear = along(p, c, 22.5);
-    cNear = along(c, p, 22.5);
-    if (a.owner === 'Default') s += arrowAt(c, p);
+  if (r.kind === 'cross') {
+    // To an entity in another module: a stub out of the box with the other entity's name at its end.
+    const d = pathD(r.pts);
+    s = `${hitLine(d)}<path class="mx-assoc" d="${d}"/>`;
+    s += disc(r.pDisc, parentMult) + disc(r.cDisc, childMult);
+    s += nameBox(r.name, a.name, true);
+    const t = r.crossText!;
+    s += `<text class="mx-cross-to" x="${n(t.x)}" y="${n(t.y)}" text-anchor="${t.anchor}">${esc(a.child)}</text>`;
+    s += `<circle class="mx-owner" cx="${n(p.x)}" cy="${n(p.y)}" r="3.2"/>`;
+    const x0 = Math.min(p.x, c.x, r.name.x - 60, t.x - (t.anchor === 'start' ? 0 : 120));
+    const y0 = Math.min(p.y, c.y, r.name.y - 12, t.y - 14);
+    const x1 = Math.max(p.x, c.x, r.name.x + 60, t.x + (t.anchor === 'end' ? 0 : 120));
+    const y1 = Math.max(p.y, c.y, r.name.y + 12, t.y + 4);
+    return { svg: s, box: { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } };
   }
-  s += nameBox(mid, a.name, false);
-  s += disc(pNear, parentMult) + disc(cNear, childMult);
+  const extra: Pt[] = [];
+  if (r.kind === 'loop') {
+    // An association from an entity to itself at its stored points: Studio Pro's loop over the box.
+    const top = r.name.y;
+    const d = `M${n(p.x)} ${n(p.y)}C${n(p.x - 40)} ${n(p.y)} ${n(p.x - 40)} ${n(top)} ${n(pb.x + pb.w / 2)} ${n(top)}S${n(c.x + 40)} ${n(c.y)} ${n(c.x)} ${n(c.y)}`;
+    s = `${hitLine(d)}<path class="mx-assoc" d="${d}"/>`;
+    extra.push({ x: p.x - 40, y: top }, { x: c.x + 40, y: c.y });
+  } else {
+    const d = pathD(r.pts);
+    s = `${hitLine(d)}<path class="mx-assoc" d="${d}"/>`;
+    if (a.owner === 'Default') s += arrowAt(c, r.pts[r.pts.length - 2]);
+  }
+  s += nameBox(r.name, a.name, false);
+  s += disc(r.pDisc, parentMult) + disc(r.cDisc, childMult);
   s += `<circle class="mx-owner" cx="${n(p.x)}" cy="${n(p.y)}" r="3.2"/>`;
   if (a.owner === 'Both') s += `<circle class="mx-owner" cx="${n(c.x)}" cy="${n(c.y)}" r="3.2"/>`;
-  const x0 = Math.min(p.x, c.x, mid.x - 60);
-  const y0 = Math.min(p.y, c.y, mid.y - 12);
-  return { svg: s, box: { x: x0, y: y0, w: Math.max(p.x, c.x, mid.x + 60) - x0, h: Math.max(p.y, c.y, mid.y + 12) - y0 } };
+  let x0 = r.name.x - 60;
+  let y0 = r.name.y - 12;
+  let x1 = r.name.x + 60;
+  let y1 = r.name.y + 12;
+  for (const q of [...r.pts, ...extra]) {
+    x0 = Math.min(x0, q.x - 8);
+    y0 = Math.min(y0, q.y - 8);
+    x1 = Math.max(x1, q.x + 8);
+    y1 = Math.max(y1, q.y + 8);
+  }
+  return { svg: s, box: { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } };
 }
 
 export function drawDomain(doc: DomainDoc, diff?: DocDiff): Drawn {
@@ -166,12 +149,22 @@ export function drawDomain(doc: DomainDoc, diff?: DocDiff): Drawn {
     const body = `<rect class="mx-note" x="${n(a.x)}" y="${n(a.y)}" width="${n(a.w)}" height="${n(h)}"/><path class="mx-note-edge" d="M${n(a.x + 22)} ${n(a.y)}H${n(a.x)}V${n(a.y + h)}H${n(a.x + 22)}"/>${t.map((l, i) => `<text class="mx-note-t" x="${n(a.x + 8)}" y="${n(a.y + 19 + i * 15)}">${esc(l)}</text>`).join('')}`;
     parts.push(`<g class="mx-el${mark(a.id)}" data-id="${esc(a.id)}" data-box="${n(a.x)},${n(a.y)},${n(a.w)},${n(h)}">${body}</g>`);
   }
+  // What lines go round: the entities (with the label over them) and the annotations.
+  const obstacles = doc.entities.map((e) => {
+    const b = boxes.get(e.id)!;
+    const top = e.generalization || e.service ? 22 : 0;
+    return { x: b.x, y: b.y - top, w: b.w, h: b.h + top };
+  });
+  const routes = routeAssociations(doc.associations, boxes, [...obstacles, ...all]);
   for (const a of doc.associations) {
-    const r = assocSvg(a, boxes);
-    if (!r) continue;
+    const route = routes.get(a.id);
+    if (!route) continue;
+    const r = assocSvg(a, route, boxes.get(a.parent)!);
     all.push(r.box);
-    parts.push(`<g class="mx-edge${mark(a.id)}" data-id="${esc(a.id)}" data-box="${n(r.box.x)},${n(r.box.y)},${n(r.box.w)},${n(r.box.h)}">${r.svg}</g>`);
+    const ends = a.cross ? a.parent : `${a.parent} ${a.child}`;
+    parts.push(`<g class="mx-edge${mark(a.id)}" data-id="${esc(a.id)}" data-ends="${esc(ends)}" data-box="${n(r.box.x)},${n(r.box.y)},${n(r.box.w)},${n(r.box.h)}">${r.svg}</g>`);
   }
+
   for (const e of doc.entities) {
     const b = boxes.get(e.id)!;
     const top = e.generalization || e.service ? 24 : 0;
