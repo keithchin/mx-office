@@ -25,6 +25,13 @@ export function withConnections(env: Record<string, string>, floorDir?: string):
     const mx = credential('mendix');
     if (mx) for (const k of MENDIX_VARS) env[k] = mx;
   }
+  // The mxcli picked in first-run setup: its folder first on PATH, so agents' `mxcli` is that one.
+  const mxcli = officeSettings().mxcliPath;
+  if (mxcli) {
+    const key = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') ?? 'PATH';
+    const dir = path.dirname(mxcli);
+    if (!(env[key] ?? '').split(path.delimiter).some((d) => same(d || '.', dir))) env[key] = [dir, env[key]].filter(Boolean).join(path.delimiter);
+  }
   const who = officeSettings().gitIdentity;
   if (who) {
     env.GIT_AUTHOR_NAME ??= who.name;

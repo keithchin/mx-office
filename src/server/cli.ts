@@ -30,7 +30,8 @@ await ensureSelfSigned(cfg);
 const { interactive, welcome } = await import('./setup.js');
 const atTerminal = interactive();
 // A new office started in a terminal: where projects go, GitHub, and the first floor, before it opens.
-if (!cfg.project && atTerminal) await welcome(cfg);
+// Not from scripts/start-office.ps1 (AGENT_OFFICE_NO_WELCOME): the browser's first-run setup does it there.
+if (!cfg.project && atTerminal && !process.env.AGENT_OFFICE_NO_WELCOME) await welcome(cfg);
 
 let office: Awaited<ReturnType<typeof startServer>>;
 try {

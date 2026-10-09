@@ -8,6 +8,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { CredentialId } from '../../shared/connections.js';
+import type { SetupRecord } from '../../shared/first-run.js';
 import { Vault, defaultCipher, type Cipher } from './vault.js';
 
 /** What 🔌 Connections keeps in <office data>/office-settings.json: none of it secret. */
@@ -26,6 +27,16 @@ export interface OfficeSettings {
   phoneAccessTeamsUrl?: string;
   /** Web Push's VAPID public key (webpush/keys.ts); its private half is in the vault. */
   vapidPublicKey?: string;
+  /** 🚀 First-run setup's progress (first-run/): the step it's on, and when it was finished. */
+  setup?: SetupRecord;
+  /** The GitHub organization (or user) new projects are created in (beats AGENT_OFFICE_PROJECT_ORG). */
+  projectOrg?: string;
+  /** The Studio Pro version new projects start on, when it's installed (else the wizard's own pick). */
+  defaultMendix?: string;
+  /** Where the toolkit is cloned from (first-run setup's Toolkit step). */
+  toolkitRepo?: string;
+  /** mxcli, picked in first-run setup (beats AGENT_OFFICE_MXCLI); its folder goes first on the agents' PATH. */
+  mxcliPath?: string;
 }
 
 /** The GitHub variables as the office was started with them, before Connections laid its token over them. */
@@ -81,8 +92,11 @@ export function updateOfficeSettings(patch: Partial<OfficeSettings>): OfficeSett
  */
 export const secretsHome = (env: NodeJS.ProcessEnv = process.env): string => (env.AGENT_OFFICE_SECRETS_HOME ? path.resolve(env.AGENT_OFFICE_SECRETS_HOME) : os.homedir());
 
-/** Where the toolkit clone usually is: the workspace's mendix-toolkit, or its name before the layout change. */
-const TOOLKIT_DEFAULTS = [['agent-spike', 'mendix-toolkit'], ['agent-spike', 'mxcli-project-toolkit']];
+/**
+ * Where the toolkit clone usually is, in the home folder: mendix-toolkit (where first-run setup clones
+ * it), or an older workspace's agent-spike/mendix-toolkit (agent-spike/mxcli-project-toolkit before that).
+ */
+export const TOOLKIT_DEFAULTS = [['mendix-toolkit'], ['agent-spike', 'mendix-toolkit'], ['agent-spike', 'mxcli-project-toolkit']];
 
 /** The toolkit clone: picked in Settings, else AGENT_OFFICE_TOOLKIT_DIR, else where it usually is. */
 export function toolkitDirState(env: NodeJS.ProcessEnv = process.env): { dir: string; source: 'settings' | 'env' | 'default' } {

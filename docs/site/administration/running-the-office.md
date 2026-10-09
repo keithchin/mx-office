@@ -8,25 +8,21 @@ weight: 1
 
 Pick one:
 
-- **The Agent Office icon** on the desktop or the taskbar. It runs `agent-spike\open-agent-office.ps1`: if the office doesn't answer on `http://127.0.0.1:4600/api/health`, it starts the launcher in a new PowerShell window, waits up to 90 seconds, and opens your browser.
-- **Ask Claude Code**: *"Run Agent Office"*.
-- **By hand**, from Git Bash:
+- **The Mx Office shortcut** on the desktop or in the Start menu (`scriptsinstall-shortcut.ps1` makes it). It runs `scriptsstart-office.ps1`: when an office already answers on its port it only opens the browser, otherwise it starts one.
+- **By hand**, in PowerShell in the office's folder: `.scriptsstart-office.ps1` (`-OfficeHome <folder>`, `-Port <n>`, `-NoBrowser`; anything else goes to the office as it is, like `--city Berlin`).
 
-```bash
-cmd //c start "Agent Office" powershell -NoExit -ExecutionPolicy Bypass -File "C:/Users/<you>/agent-spike/start-office.ps1"
-```
-
-Then open `http://127.0.0.1:4600`, sign in with the office password, and press **Ctrl+F5** after an update.
+The office opens in your browser already signed in. Press **Ctrl+F5** after an update. Setting up a new machine is on [Set up on a new machine](../get-started/new-machine.md).
 
 ## What the launcher does
 
-`agent-spike\start-office.ps1`:
+`scriptsstart-office.ps1` (Windows PowerShell 5.1 and PowerShell 7):
 
-1. Reads the agents' GitHub token from `~/.agent-office-gh-token` (it refuses one that isn't fine-grained) and sets it as `GH_TOKEN` for the office only, so every worker inherits it.
-2. Reads the office password from `~/.agent-office-password` into `AGENT_OFFICE_PASSWORD`.
-3. Sets `AGENT_OFFICE_JEV_KEY_FILE` to the *path* of `~/.agent-office-jev-key` (never its contents).
-4. Puts `agent-spike\tools\mxcli` (`agent-spike\bin` before the layout change) on `PATH` and sets `AGENT_OFFICE_LIVE_MXCLI` to mxcli.
-5. Runs the source build, `agent-office-src\bin\agent-office.js`, on the mx-spike floor's folder (so the office data is in `mx-spike\.agent-office\`).
+1. Picks the office home: `-OfficeHome`, else `AGENT_OFFICE_HOME`, else `%USERPROFILE%mx-office`. The office keeps its data in `<home>.agent-office` and clones new projects into the home (unless `AGENT_OFFICE_PROJECTS` says otherwise).
+2. Checks Node.js is 22.5 or newer, runs `npm install` and `npm run build` when the checkout has no `node_modules` or `dist` yet, and stops with a clear message when the port is taken by another program.
+3. Reads the office's own settings (`office-settings.json`, nothing secret): the mxcli picked in the first-run setup goes first on `PATH`.
+4. Runs `binagent-office.js` in a loop that starts it again when it exits with code 75 (**🔁 Restart safely**), with `AGENT_OFFICE_LAUNCHER_LOOP=1` so the office offers that restart, and `AGENT_OFFICE_NO_WELCOME=1` so a new office asks its questions in the browser's [first-run setup](../get-started/new-machine.md#step-3-the-first-run-setup) instead of the terminal.
+
+It reads no token or password file: the office keeps those itself, encrypted, in [🔌 Connections](connections.md), and still falls back to the old dot-files. An environment variable that is already set wins over everything the launcher would pick, so an older launcher script (one that sets `GH_TOKEN`, `AGENT_OFFICE_PASSWORD`, `AGENT_OFFICE_HOME` or `AGENT_OFFICE_MXCLI` itself) keeps working unchanged.
 
 The office listens on port **4600** (`--port` or `PORT` to change it).
 

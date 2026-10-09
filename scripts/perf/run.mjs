@@ -16,7 +16,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { REPO, assertTestDir, startTestOffice, killRealAgentsUnder, removeTestDir, PASSWORD } from './office.mjs';
+import { REPO, assertTestDir, startTestOffice, killRealAgentsUnder, cleanupTestDir, PASSWORD } from './office.mjs';
 import { PERF_BUDGETS } from './budgets.mjs';
 
 const arg = (n, d) => {
@@ -157,11 +157,11 @@ async function runSuite() {
       // Then the journey, in a test office of its own.
       const { runJourney, journeySummary } = await import('./journey.mjs');
       const j = await runJourney({ root: `${officeRoot}-journey`, outDir, onProgress: progress });
-      if (fs.existsSync(`${officeRoot}-journey`) && !keep) removeTestDir(`${officeRoot}-journey`);
+      if (fs.existsSync(`${officeRoot}-journey`) && !keep) await cleanupTestDir(`${officeRoot}-journey`);
       // Then the busy office, a minute of live workers, in one more of its own.
       const { runBusy, busySummary } = await import('./busy.mjs');
       const b = await runBusy({ root: `${officeRoot}-busy`, outDir, seconds: Number(arg('seconds', '60')), onProgress: progress });
-      if (fs.existsSync(`${officeRoot}-busy`) && !keep) removeTestDir(`${officeRoot}-busy`);
+      if (fs.existsSync(`${officeRoot}-busy`) && !keep) await cleanupTestDir(`${officeRoot}-busy`);
       const failures = [...(pages.failures ?? []), ...(j.steps ?? []).filter((s) => !s.ok).map((s) => `${s.name}: ${s.detail ?? ''}`), ...(j.error ? [`journey: ${j.error}`] : []), ...(b.failures ?? []).map((x) => `busy office: ${x}`)];
       return { ...pages, steps: j.steps, busy: b, ok: pages.ok && j.ok && b.ok, failures, summary: `${pages.summary}\n${journeySummary(j)}\n${busySummary(b)}` };
     });
@@ -205,7 +205,8 @@ try {
       result = { ...(result ?? {}), ok: false, error: `real agent CLIs ran under the test office and were killed: ${real.join('; ')}` };
       code = 2;
     }
-    if (!keep && fs.existsSync(officeRoot) && !outDir.startsWith(officeRoot)) removeTestDir(officeRoot);
+    // Never fails the run: a folder Windows still holds is retried, then left with a warning.
+    if (!keep && fs.existsSync(officeRoot) && !outDir.startsWith(officeRoot)) await cleanupTestDir(officeRoot);
   }
 }
 finish(result, code);

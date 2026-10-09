@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a1324" />
+    <title>Setup · Mx Office</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="./lite.css" />
+    <!-- The color theme picked on this browser (ui/colortheme.ts), set before the page is drawn so it never flashes the wrong one. -->
+    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(["default","dark","terminal","clean-light","clean-dark","portal-light","portal-dark"].indexOf(t)<0)t=matchMedia("(prefers-color-scheme: dark)").matches?"portal-dark":"portal-light";document.documentElement.dataset.theme=t}catch(e){}</script>
+  </head>
+  <body class="lite setup-page">
+    <!-- 🚀 First-run setup (setup.ts, first-run/): the office password, the machine's prerequisites, GitHub, Mendix, the toolkit, then the first project. -->
+    <header class="lite-bar fr-bar">
+      <a class="btn" href="/home" title="Home" aria-label="Home">🏠</a>
+      <div class="fr-title">
+        <span class="lite-floor-label">First-run setup</span>
+        <h1>Mx Office</h1>
+      </div>
+      <a class="btn" href="/docs/get-started/new-machine" target="_blank" rel="noopener" title="Set up on a new machine: the documentation" aria-label="Documentation">📚</a>
+      <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
+    </header>
+    <main id="setup" class="lite-main fr-main"></main>
+    <div id="toasts"></div>
+    <div id="modal-root"></div>
+    <script type="module" src="./setup.ts"></script>
+  </body>
+</html>

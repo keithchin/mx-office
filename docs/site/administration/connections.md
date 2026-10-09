@@ -56,7 +56,11 @@ So an office started the old way, with `start-office.ps1`, keeps working unchang
 When the dot-files are there, a banner offers **📥 Import from files**: one click saves each value into Connections (the password as its hash) and lists the files you can now delete.
 
 > [!WARNING]
-> `start-office.ps1` stops if `~/.agent-office-gh-token` is missing. Make that check optional in the launcher before you delete the file.
+> An older launcher script that stops when `~/.agent-office-gh-token` is missing needs that check made optional before you delete the file. The launcher in the repository (`scriptsstart-office.ps1`) reads no token files.
+
+## Run setup again
+
+At the top of this section in ⚙️ Settings, **🚀 Run setup again** opens the [first-run setup](../get-started/new-machine.md#step-3-the-first-run-setup) once more from its first step: the password, the prerequisites check, GitHub (including the organization new projects go in), Mendix (including the default Studio Pro version) and the toolkit. Nothing already set is lost.
 
 ## git & gh
 
@@ -67,7 +71,7 @@ If git has no identity, set one for the workers' commits there: it goes into the
 ## Folders
 
 - **Projects folder**: where new projects are cloned (`<folder>/<owner>/<repo>`); the same setting as ⚙️ Settings › 🛠️ Advanced › *Workspace folder* (the 3D window's Building).
-- **Toolkit folder**: the mxcli-project-toolkit clone the wizard runs and the Playbooks point at. It must contain `bin/init-project.sh`. Picked here, it beats `AGENT_OFFICE_TOOLKIT_DIR`; **Default** goes back to the variable or `~/agent-spike/mxcli-project-toolkit`.
+- **Toolkit folder**: the mxcli-project-toolkit clone the wizard runs and the Playbooks point at. It must contain `bin/init-project.sh`. Picked here (or in the first-run setup, which can also clone it), it beats `AGENT_OFFICE_TOOLKIT_DIR`; **Default** goes back to the variable or the first of `~/mendix-toolkit`, `~/agent-spike/mendix-toolkit` and `~/agent-spike/mxcli-project-toolkit` that is there.
 
 ## Worktrees stay in the project
 

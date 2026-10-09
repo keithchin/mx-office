@@ -23,6 +23,7 @@ import { goToSettings } from './ui/settings/flat';
 import { testsHref } from '../shared/testlab';
 import { portalBar } from './ui/portal/topbar';
 import { portalHead } from './home/portal';
+import { firstRunGate } from './first-run/gate';
 import './home/home.css';
 import './shared/perfwatch-on';
 
@@ -145,6 +146,7 @@ portalBar({ section: 'Projects', onHome: backToProjects, settings: () => goToSet
 portalHead(document.querySelector<HTMLElement>('.home-main')!, projects);
 session.start();
 testModeBadge(); // the TEST MODE badge (ui/testmode/)
+firstRunGate(() => projects.newProject()); // 🚀 a new office's setup (first-run/), and ?new from its last step
 showTab(tab);
 
 // Debug handle for quick checks from the console / headless screenshots.

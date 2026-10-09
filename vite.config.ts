@@ -100,6 +100,7 @@ export default defineConfig({
         join: resolve(import.meta.dirname, 'src/client/join.html'),
         docs: resolve(import.meta.dirname, 'src/client/docs.html'),
         m: resolve(import.meta.dirname, 'src/client/m.html'),
+        setup: resolve(import.meta.dirname, 'src/client/setup.html'),
       },
     },
   },

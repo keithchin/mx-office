@@ -1,7 +1,7 @@
 ---
 title: A tour of the office
 description: What is on the home page, the top bar and each tab of a project, and which view to use for what.
-weight: 3
+weight: 4
 ---
 
 This page shows where everything is. Each screen has its own page under [Using the Office](../using-the-office/_index.md).

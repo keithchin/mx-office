@@ -34,8 +34,18 @@ Around the teams:
 
 ## Quick start
 
-1. **Start** the office with the **Agent Office** desktop/taskbar icon (it starts `agent-spike\start-office.ps1` if the office isn't up), or ask Claude Code *"Run Agent Office"*. Keep its window open: closing it stops the office and its agents.
-2. **Open** `http://127.0.0.1:4600` and sign in with the office password (kept in `~/.agent-office-password`). Signing in with it makes you admin: the Project Manager.
+On a fresh Windows machine (Node.js 22.5+, Git, `gh`, Claude Code, Studio Pro and mxcli installed; the office checks each one for you):
+
+```powershell
+git clone https://github.com/keithchin/mx-office.git
+cd mx-office
+npm install
+npm run build
+.\scripts\start-office.ps1
+```
+
+1. **Start**: `scripts\start-office.ps1` keeps the office's data in `%USERPROFILE%\mx-office` (`-OfficeHome` for another folder, `-Port` for another port than 4600), builds it if `dist` is missing, opens it in your browser signed in, and restarts it after **🔁 Restart safely**. Keep its window open: closing it stops the office and its agents. `scripts\install-shortcut.ps1` adds a **Mx Office** shortcut to the desktop and Start menu.
+2. **Set it up**: a new office opens on **🚀 First-run setup** (`/setup`): the office password, a prerequisites check with install links, GitHub (the organization new projects go in, and the two tokens), Mendix (token and default Studio Pro), and the toolkit (pick a folder or clone it). Signing in with the office password makes you admin: the Project Manager. The full walkthrough: `/docs/get-started/new-machine` ([docs/site/get-started/new-machine.md](docs/site/get-started/new-machine.md)).
 3. On **🏠 Home**, open a project's **🗂️ Board**, or click **✨ New project** to create a Mendix app with the wizard.
 4. In the project, **🏢 Org chart → 🤝 Hire** the Project Coordinator (Sonnet 5.5 is a good default), then the Leads you need.
 5. On **🎛️ Command Center**, ask the Coordinator for the first plan, and answer what shows up in **🚨 Needs you** and **🚩 Escalations to you**.
