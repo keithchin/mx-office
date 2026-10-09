@@ -6,7 +6,7 @@ import { countIncidents, filterIncidents, isIncidentStatus, isSeverity, normaliz
 import { addNote, createIncident, incidentStore, updateIncident } from '../../incidents/index.js';
 import { cleanPatch } from '../../incidents/edit.js';
 import { audit, human } from '../../audit/index.js';
-import { testModeOf } from '../../testmode.js';
+import { testModeAnswer } from '../../testmode.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import type { Route, RouteRequest } from '../router.js';
@@ -111,13 +111,13 @@ export const incidentRoutes = {
       return send(r.res, 200, { incident: updateIncident(i.id, p, actorOf(r.session)) });
     },
   },
-  /** GET /api/test-mode: whether the office runs in test mode, for the TEST MODE badge. */
+  /** GET /api/test-mode: whether the office runs in test mode, for the TEST MODE badge (left off for the docs screenshots). */
   testMode: {
     method: 'GET',
     path: '/api/test-mode',
     auth: 'session',
     handle(_ctx, { res }) {
-      return send(res, 200, testModeOf());
+      return send(res, 200, testModeAnswer());
     },
   },
 } satisfies Record<string, Route>;
