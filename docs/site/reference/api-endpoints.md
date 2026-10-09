@@ -39,8 +39,9 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/gh/pull`, `/api/gh/issue`, `/api/gh/labels`, `/api/gh/pull/diff` | GitHub PR and issue windows |
 | GET | `/api/git` | The branch map |
 | GET | `/api/model/refs` | The Model tab: main and the branches it can show (`?floor=`) |
-| GET | `/api/model/tree` | The Model tab: the app's tree (`?floor=&ref=`) |
+| GET | `/api/model/tree` | The Model tab: the app's tree (`?floor=&ref=`, `&fresh=1` waits for a new tree instead of the last one) |
 | GET | `/api/model/doc` | The Model tab: one document, drawn or as MDL (`?floor=&ref=&type=&name=`, `&compare=1` for what the branch changed) |
+| GET | `/api/model/mdl` | The Model tab: a microflow's or nanoflow's MDL and each element's lines in it, asked for after its diagram (`?floor=&ref=&type=&name=`) |
 | GET | `/api/model/changes` | The Model tab: the documents a branch changed against main (`?floor=&ref=`) |
 | GET | `/api/analysis` | The analysis report (`?scope=global`, `?floor=`, `&by=effort`) |
 | POST | `/api/analysis/backfill` | Re-record every worker (admin) |

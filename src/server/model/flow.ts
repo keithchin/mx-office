@@ -1,11 +1,13 @@
-// A microflow or nanoflow as the page draws it. mxcli's `describe --format elk` gives the flow's nodes
-// with what each does (labels, details) and its MDL, whose `@position` / `@start` lines carry Studio
-// Pro's coordinates; the flow's unit, when the project's units can be read, adds the exact sizes,
-// annotations, connection sides, curves and error-handler flows. Either way the diagram sits where
-// the developer put it: nothing is laid out automatically.
+// A microflow or nanoflow as the page draws it. From the flow's unit when the project's units can be
+// read: every object at its exact place and size, its annotations, connection sides, curves and
+// error-handler flows, and each element's details (flow-details.ts) — no mxcli. Its MDL (mxcli's
+// `describe --format elk`) comes after, for the details panel, and each element's lines in it. Without
+// the units, from mxcli alone: the elk nodes at the MDL's `@position` / `@start` coordinates. Either
+// way the diagram sits where the developer put it: nothing is laid out automatically.
 
 import { doc, list, point, str, typeOf, type BsonDoc } from './bson.js';
 import { actionInfo, caseLabel, short, typeLabel } from './flow-actions.js';
+import { NODE_CATEGORY, objectDetails } from './flow-details.js';
 import type { FlowDoc, FlowEdge, FlowNode, FlowNodeKind, Pt } from '../../shared/model.js';
 
 export interface ElkNode {
@@ -298,7 +300,7 @@ function fromUnit(unit: BsonDoc, elk: ElkFlow | null, lines: string[], assocTarg
       const e = elkById.get(id);
       const loc = where.get(id);
       const sm = loc ? { startLine: loc.from, endLine: loc.to } : undefined;
-      const node: FlowNode = { id, kind, ...box(kind, c, point(o.Size)), caption: '', category: e?.category, details: e?.details ?? undefined, parent, lines: sm ? [sm.startLine, sm.endLine] : undefined };
+      const node: FlowNode = { id, kind, ...box(kind, c, point(o.Size)), caption: '', category: e?.category ?? NODE_CATEGORY[kind], details: (e ? e.details : objectDetails(o)) ?? undefined, parent, lines: sm ? [sm.startLine, sm.endLine] : undefined };
       if (kind === 'action') {
         const info = actionInfo(doc(o.Action), assocTarget);
         node.action = info.action;

@@ -156,6 +156,32 @@ Measured on this laptop (32 threads, the live office busy with its builds):
 | After, quick check | 59 % CPU, 4 java, 2 mxbuild | 0 blocks over 100 ms | 340 ms in opening the new floor (fixed since) |
 | After, quick check | 70 % CPU, 4 java, 2 mxbuild | 0 blocks over 100 ms | 5 blocks of 280 to 580 ms in wizard steps: still open |
 
+### The Model tab (release 25)
+
+Opening a microflow or a domain model on the live office took several seconds. Each commit was first copied out of git in full (19 MB for travel-approval). Then every document was its own mxcli run (0.8 s just to start, 1 to 7 s in all), kept per commit. Agents commit to main often, so each new commit missed every document again.
+
+What changed:
+- **Diagrams without mxcli.** Microflows, nanoflows and domain models are drawn from the model's units (`server/model/read.ts`, `flow-details.ts`). mxcli is still used for the tree, the MDL beside a diagram (asked for after it) and documents shown as MDL. The details panel words each element as mxcli did: all 1,619 elements of travel-approval's 138 flows match, nodes, flows and MDL lines included (`tests/model-equiv.test.ts` checks the fixtures).
+- **No copy per commit.** One long-lived `git cat-file --batch` per repository, started off the event loop, gives any unit in under a millisecond (`blobs.ts`). A new commit is indexed in 11 to 24 ms by walking its trees, which are kept.
+- **Kept by content, not by commit.** A unit's git blob is its content hash. A diagram is kept under the hashes of the units it was read from, so a new commit reuses every document it left alone. The tree is kept under the app's structure, so a commit that only edits documents keeps it. Over travel-approval's 70 model commits that gave 47 distinct trees, and every commit with the same key had the same mxcli tree. When the structure did change, the last tree answers at once and the new one follows.
+- **mxcli reads a work folder** that moves from commit to commit by the 1 to 4 files that differ, not a fresh 558-file copy.
+- **Reading ahead:** opening a document reads the rest of its module (40 documents at most, one at a time, stopped when you move on). Main moving while the tab was used in the last 15 minutes reads the new tree and the changed diagrams.
+- **The Git tab's graph starts git off the event loop.** The Model tab asks for it on every look. A profile of a test office showed its git starts holding the server's loop 60 to 350 ms each (`gitgraph/index.ts` now uses `execFileOff`).
+
+Measured on a copy of travel-approval, from commit b6e589b to d00af53 (18 microflows added, the domain model changed), with `npx tsx scripts/perf/model.ts <copy> --from b6e589b` (`--impl` runs an older version for the before):
+
+| Step | Before | After |
+| --- | --- | --- |
+| Cold: tree (mxcli, first time) | 13.1 s | 12.4 s (mxcli itself; it varies from 1.5 to 13 s on this machine) |
+| Cold: microflow / domain model | 1,899 / 25 ms | 78 / 11 ms (its MDL follows in 1.7 s) |
+| Warm: tree / microflow / domain model | 5 / 3 / 3 ms | 0 / 2 / 1 ms |
+| A microflow never opened (another module / same module) | 1,566 / 1,667 ms | 9 / 9 ms |
+| Main moved: tree | 14.3 s | 90 ms (the last tree; the new one is ready 3.5 s later) |
+| Main moved: unchanged microflow / domain model / added microflow | 1,825 / 91 / 1,667 ms | 15 / 3 / 8 ms |
+| Longest event-loop delay during the run | 58 ms | 41 ms |
+
+In the browser, on a test office whose floor is that copy (the page's own timings of `/api/model/*`): a microflow or domain model opened again 5 to 7 ms; one never opened (read ahead) 6 ms; after main moved, the tree 10 ms (the last one, the new one fetched behind it), an unchanged microflow 6 ms, an added one 5 ms (read ahead after the move). Its MDL follows in 1.6 to 1.8 s. The first tree on an empty data folder is still mxcli's (16 s on this machine).
+
 ## Live warnings in the real office
 
 - **A page froze**: every flat view and the home page watch their own long tasks. One over 500 ms is reported (at most once a minute per view, never from a hidden tab) and opens an incident naming the view and the scripts that took the time.
