@@ -75,7 +75,7 @@ export function portalBar(opts: PortalBarOpts = {}) {
     const floors = store.floors.filter((f) => !f.cloning);
     if (floors.length) {
       items.push({ label: 'Projects', heading: true });
-      for (const f of floors.slice(0, 12)) items.push({ label: f.name, hint: f.id === store.floor ? 'You’re here' : undefined, href: floorHref(f.id), run: () => goFloor(f.id) });
+      for (const f of floors.slice(0, 12)) items.push({ label: f.name, hint: f.id === store.floor && location.pathname !== '/home' ? 'You’re here' : undefined, href: floorHref(f.id), run: () => goFloor(f.id) });
       if (floors.length > 12) items.push({ label: `All ${floors.length} projects…`, href: '/home', run: location.pathname === '/home' ? opts.onHome : undefined });
     }
     openPop(launch, items, { label: 'Go to', cls: 'pt-launcher' });
@@ -150,12 +150,15 @@ function phoneBell(): HTMLElement | null {
   return bell;
 }
 
+/** A tab button's own words, not its badge's count (a child of it). */
+const ownText = (b: Element) => [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent ?? '').join('');
+
 /** What the search looks through: the tabs on this page, every project, the office's pages. */
 function searchSources(opts: PortalBarOpts): SearchItem[] {
   const where = location.pathname === '/home' ? 'Home' : store.floors.find((f) => f.id === store.floor)?.name;
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('.lite-tabs [role=tab], .home-tabs [role=tab]')]
     .filter((b) => !b.hidden && !b.classList.contains('hidden'))
-    .map((b): SearchItem => ({ kind: 'tab', label: tabLabel(b.textContent ?? ''), hint: where, go: () => b.click() }))
+    .map((b): SearchItem => ({ kind: 'tab', label: tabLabel(ownText(b)), hint: where, go: () => b.click() }))
     .filter((t) => t.label);
   const projects = store.floors
     .filter((f) => !f.cloning)

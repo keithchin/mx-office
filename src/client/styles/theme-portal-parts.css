@@ -36,6 +36,7 @@ html[data-theme^='portal'] body.lite.lite :is(.lite-tabs, .home-tabs) .btn.on:ho
 @media (max-width: 640px) {
   html[data-theme^='portal'] body.lite.lite :is(.lite-tabs, .home-tabs) { flex-wrap: nowrap; gap: 0; overflow-x: auto; scrollbar-width: none; }
   html[data-theme^='portal'] body.lite.lite :is(.lite-tabs, .home-tabs) .btn { flex: none; padding: 8px 12px; }
+  html[data-theme^='portal'] body.lite.lite .btn { padding: 4px 8px; }
 }
 
 /* ---- Text boxes and selects: a grey 1px box, the focus ring in the blue -------------------------------- */
