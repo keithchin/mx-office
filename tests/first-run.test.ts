@@ -35,11 +35,13 @@ function audited(): { events: AuditInput[]; stop(): void } {
 }
 
 test('a new office opens the setup when its password is still generated or it has no projects folder; a finished one only when asked again', () => {
-  const base = { passwordGenerated: false, adminAccount: false, projectsDirExists: true, setup: undefined };
+  const base = { passwordGenerated: false, adminAccount: false, projectsDirExists: true, floors: 0, setup: undefined };
   assert.deepEqual(firstRunReasons(base), [], 'an existing office with a password set is left alone');
   assert.equal(firstRunReasons({ ...base, passwordGenerated: true }).length, 1, 'generated password: show it');
   assert.deepEqual(firstRunReasons({ ...base, passwordGenerated: true, adminAccount: true }), [], 'accounts with an admin count as configured');
   assert.equal(firstRunReasons({ ...base, projectsDirExists: false }).length, 1, 'no projects folder: show it');
+  assert.deepEqual(firstRunReasons({ ...base, projectsDirExists: false, floors: 3 }), [], 'an office with projects is set up, even with its projects folder missing');
+  assert.deepEqual(firstRunReasons({ ...base, passwordGenerated: true, projectsDirExists: false, floors: 1 }), [], 'and even on a generated password: an upgrade never lands it on /setup');
   assert.deepEqual(firstRunReasons({ ...base, passwordGenerated: true, setup: { completedAt: 1 } }), [], 'finished: never by itself again');
   assert.equal(firstRunReasons({ ...base, setup: { completedAt: 1, rerun: true } }).length, 1, 'Run setup again');
 });
@@ -208,7 +210,7 @@ test('mxcli and the default Studio Pro version are checked before they are saved
 });
 
 /** A test office's HTTP side: the setup's routes, an admin (the shared password) and a member account. */
-async function office(opts: { generated?: boolean } = {}) {
+async function office(opts: { generated?: boolean; projectsDir?: string; floors?: number } = {}) {
   const dir = tmp('fr-http-');
   const data = path.join(dir, '.agent-office');
   mkdirSync(data, { recursive: true });
@@ -223,8 +225,8 @@ async function office(opts: { generated?: boolean } = {}) {
     auth,
     accounts,
     publicDir: dir,
-    building: { projectsDir: dir, projectsDirState: () => ({ dir, custom: false }), setProjectsDir: () => undefined },
-    floors: new Map(),
+    building: { projectsDir: opts.projectsDir ?? dir, projectsDirState: () => ({ dir: opts.projectsDir ?? dir, custom: false }), setProjectsDir: () => undefined },
+    floors: new Map(Array.from({ length: opts.floors ?? 0 }, (_, i) => [`f${i}`, { id: `f${i}`, def: { name: `P${i}` } }])),
     meOf: (id?: string) => ({ admin: !id }),
     services: { lookup: () => undefined },
   } as unknown as Ctx;
@@ -282,6 +284,28 @@ test('a finished setup stops sending the admin to it; an office with a password 
     assert.deepEqual(await (await existing.call('/api/setup/needed', 'admin')).json(), { needed: false, admin: true });
   } finally {
     existing.close();
+  }
+});
+
+test('an office upgraded from before first-run setup never lands on /setup: launcher password, existing floors, even a missing projects folder', async () => {
+  // The live office's shape: AGENT_OFFICE_PASSWORD (from ~/.agent-office-password), floors, no setup record,
+  // and (the performance guard's offices) AGENT_OFFICE_PROJECTS pointing at a folder that isn't there yet.
+  const missing = path.join(tmp('fr-upgrade-'), 'projects-not-made-yet');
+  for (const o of [{ generated: false, floors: 4, projectsDir: missing }, { generated: true, floors: 2, projectsDir: missing }, { generated: false, floors: 3 }]) {
+    const up = await office(o);
+    try {
+      assert.deepEqual(await (await up.call('/api/setup/needed', 'admin')).json(), { needed: false, admin: true }, JSON.stringify(o));
+      assert.equal(officeSettings().setup, undefined, 'nothing written by just looking');
+    } finally {
+      up.close();
+    }
+  }
+  // A fresh office whose launcher set the password, with no projects and no projects folder, still gets it.
+  const fresh = await office({ generated: false, floors: 0, projectsDir: missing });
+  try {
+    assert.equal((await (await fresh.call('/api/setup/needed', 'admin')).json()).needed, true);
+  } finally {
+    fresh.close();
   }
 });
 

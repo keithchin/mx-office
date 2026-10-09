@@ -104,6 +104,6 @@ git config --system core.longpaths true
 
 **A row stays red after you installed the program.** The office only sees programs that were on its PATH when it started. Close the office's window, open a new PowerShell, and start the office again.
 
-**The setup page doesn't open by itself.** It opens on its own only while the office password is still the generated one. Open `/setup` yourself, or use **⚙️ Settings › 🔌 Connections › 🚀 Run setup again**.
+**The setup page doesn't open by itself.** It opens on its own only on an office with no projects yet, while its password is still the generated one or its projects folder isn't there. An office that already has projects never opens it by itself. Open `/setup` yourself, or use **⚙️ Settings › 🔌 Connections › 🚀 Run setup again**.
 
 More problems and their fixes are on [The office and the browser](../troubleshooting/office-and-browser.md).
