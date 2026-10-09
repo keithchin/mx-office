@@ -12,13 +12,14 @@
   </head>
   <body class="lite setup-page">
     <!-- 🚀 First-run setup (setup.ts, first-run/): the office password, the machine's prerequisites, GitHub, Mendix, the toolkit, then the first project. -->
+    <!-- In the Portal themes the navy Portal top bar (ui/portal/topbar.ts, minimal: launcher to Home and the docs, the wordmark, SETUP, help, dark mode, 🎨); the bar below in the others. -->
     <header class="lite-bar fr-bar">
-      <a class="btn" href="/home" title="Home" aria-label="Home">🏠</a>
-      <div class="fr-title">
+      <a id="to-home" class="btn" href="/home" title="Home" aria-label="Home">🏠</a>
+      <div class="home-title fr-title">
         <span class="lite-floor-label">First-run setup</span>
         <h1>Mx Office</h1>
       </div>
-      <a class="btn" href="/docs/get-started/new-machine" target="_blank" rel="noopener" title="Set up on a new machine: the documentation" aria-label="Documentation">📚</a>
+      <a id="to-docs" class="btn" href="/docs/get-started/new-machine" target="_blank" rel="noopener" title="Set up on a new machine: the documentation" aria-label="Documentation">📚</a>
       <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
     </header>
     <main id="setup" class="lite-main fr-main"></main>

@@ -38,6 +38,8 @@ export interface PortalBarOpts {
   settings?: () => void;
   /** What else the search finds on this page (the 1D view: its pages, agents, issues and pull requests), in place of the tab row's buttons. */
   search?: () => SearchItem[];
+  /** A page with no office behind it yet (🚀 first-run setup, /setup): no search, and the launcher only goes Home and to the docs. */
+  minimal?: boolean;
 }
 
 /** A floor's 1D board. */
@@ -58,12 +60,13 @@ export function initials(name: string): string {
 
 /** The office's pages, for the launcher and the search. */
 function pages(opts: PortalBarOpts): { label: string; hint: string; href: string; run?: () => void }[] {
-  return [
+  const all = [
     { label: 'Projects', hint: 'Home: every project', href: '/home', run: location.pathname === '/home' ? opts.onHome : undefined },
     { label: 'The Firm', hint: 'Independent Reviewer Agents', href: '/firm' },
     { label: 'Documentation', hint: 'Guides, reference and FAQ', href: '/docs' },
     { label: 'Settings', hint: 'You, the agents, the team, the look', href: settingsHref(undefined, store.floor ?? undefined), run: opts.settings },
   ];
+  return opts.minimal ? all.filter((p) => p.href === '/home' || p.href === '/docs') : all;
 }
 
 /** Adds the Portal pieces to the page's `.lite-bar` (once). */
@@ -76,7 +79,7 @@ export function portalBar(opts: PortalBarOpts = {}) {
   const launch = h('button.pt-iconbtn.pt-launch.pt-only', { type: 'button', 'aria-label': 'Go to', title: 'Go to: projects, The Firm, docs, settings', 'aria-haspopup': 'menu', 'aria-expanded': 'false' }, icon('launcher'));
   launch.addEventListener('click', () => {
     const items: PopItem[] = [{ label: 'Go to', heading: true }, ...pages(opts).map((p) => ({ label: p.label, hint: p.hint, href: p.href, run: p.run }))];
-    const floors = store.floors.filter((f) => !f.cloning);
+    const floors = opts.minimal ? [] : store.floors.filter((f) => !f.cloning);
     if (floors.length) {
       items.push({ label: 'Projects', heading: true });
       for (const f of floors.slice(0, 12)) items.push({ label: f.name, hint: f.id === store.floor && location.pathname !== '/home' ? 'You’re here' : undefined, href: floorHref(f.id), run: () => goFloor(f.id) });
@@ -97,8 +100,7 @@ export function portalBar(opts: PortalBarOpts = {}) {
   bar.prepend(launch, brand, sep, ...(section ? [section] : []));
 
   // ---- The middle: the search ---------------------------------------------------------------------
-  const search = portalSearch(bar, () => searchSources(opts));
-  (section ?? sep).after(search);
+  if (!opts.minimal) (section ?? sep).after(portalSearch(bar, () => searchSources(opts)));
   // On a floor's pages the floor picker is the section: it goes right after the wordmark.
   const floor = bar.querySelector<HTMLElement>('.lite-floor');
   if (floor && !section) sep.after(floor);
