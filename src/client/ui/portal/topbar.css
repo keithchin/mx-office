@@ -111,8 +111,6 @@ html[data-theme^='portal'] body.lite header.lite-bar #menu.pt-avatar::before {
   font: 600 11px/1 var(--font); letter-spacing: .02em; color: #ffffff; text-shadow: 0 1px 1px rgba(0, 0, 0, .35); vertical-align: 0;
 }
 html[data-theme^='portal'] body.lite header.lite-bar #menu.pt-avatar:hover:not(:disabled) { background: var(--pt-me, #146ff4); filter: brightness(1.08); }
-/* The team phone's own launcher steps aside: the bell is its button now. */
-html[data-theme^='portal'] body.lite button.tp-launch.pt-docked:not([aria-expanded=true]) { display: none; }
 /* The budget chip and the TEST MODE badge sit on the navy like the icons. */
 html[data-theme^='portal'] body.lite header.lite-bar .bud-chip { height: 28px; border-color: rgba(255, 255, 255, .25); background: transparent; color: var(--pt-bar-ink); }
 html[data-theme^='portal'] body.lite header.lite-bar .bud-chip:hover { background: var(--pt-bar-hover); }

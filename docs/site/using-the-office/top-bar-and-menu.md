@@ -31,7 +31,7 @@ The Portal themes draw the same bar as a navy portal header, the whole width of 
 | **Mx Office** | The wordmark goes to Home (it stands in for 🏠). |
 | Section | The page in capitals: **PROJECTS** on Home, **THE FIRM**, or on a project's pages its name, which is the floor picker (click to switch project). |
 | Search | Finds a project, a tab of the page you're on, or an office page as you type; ↑/↓ and Enter go there, Esc clears. Everything it searches is already in the page. On a phone it folds into a 🔍 button. |
-| Bell | Opens the [team phone](team-phone.md), with its count (it replaces the phone's floating button). |
+| Bell | Opens the [team phone](team-phone.md), with its count (the phone's floating button is still there too). |
 | ? | The documentation. |
 | Moon / sun | Dark mode: switches between Portal (Light) and Portal (Dark). |
 | 🎨 | Every theme, as above. |

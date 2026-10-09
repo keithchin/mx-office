@@ -131,11 +131,10 @@ export function portalBar(opts: PortalBarOpts = {}) {
   }
 }
 
-/** The bell: opens the team phone (ui/phone/) and shows its badge, on pages that have it. */
+/** The bell: opens the team phone (ui/phone/) and shows its badge, on pages that have it (its floating button stays too). */
 function phoneBell(): HTMLElement | null {
   const launcher = document.querySelector<HTMLButtonElement>('button.tp-launch');
   if (!launcher) return null;
-  launcher.classList.add('pt-docked');
   const count = h('span.pt-count', { 'aria-hidden': 'true' });
   const bell = h('button.pt-iconbtn.pt-bell', { type: 'button', title: 'Notifications: the team phone', 'aria-haspopup': 'dialog' }, icon('bell'), count);
   bell.addEventListener('click', () => launcher.click());
