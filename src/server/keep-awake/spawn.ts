@@ -9,7 +9,7 @@
 // - Linux: `systemd-inhibit --what=sleep:idle` around a shell loop that ends when the office does.
 // - Anything else: not supported (Settings says so).
 
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawnOff, type OffChild } from '../offloop/exec.js';
 import type { Holder, Spawner } from './machine.js';
 
 /** ES_CONTINUOUS | ES_SYSTEM_REQUIRED, and ES_CONTINUOUS alone to clear it. */
@@ -46,7 +46,7 @@ export function helperCommand(platform: NodeJS.Platform, parentPid: number): { c
 }
 
 /** Every helper still running, so an office that exits takes them along (the helpers watch for that too). */
-const live = new Set<ChildProcess>();
+const live = new Set<OffChild>();
 let hooked = false;
 function hookExit() {
   if (hooked) return;
@@ -61,18 +61,19 @@ export function systemSpawner(platform: NodeJS.Platform = process.platform, pare
   const how = helperCommand(platform, parentPid);
   if (!how) return undefined;
   return (exited): Holder => {
-    const child = spawn(how.cmd, how.args, { stdio: ['pipe', 'ignore', 'pipe'], windowsHide: true });
+    // Started from the off-loop thread: on Windows starting PowerShell held the event loop for 1.3-2 s,
+    // the freeze after every office start (the live office and the perf journey, 2026-10-09).
+    const child = spawnOff(how.cmd, how.args, { stdin: true, windowsHide: true });
     hookExit();
     live.add(child);
     let stopping = false;
     let err = '';
-    child.stderr?.on('data', (d: Buffer) => (err = (err + d.toString()).slice(-400)));
-    child.stdin?.on('error', () => {});
+    child.on('stderr', (d: string) => (err = (err + d).slice(-400)));
     child.on('error', (e) => {
       live.delete(child);
       if (!stopping) exited(`Couldn't start ${how.cmd}: ${e.message}`);
     });
-    child.on('exit', (code) => {
+    child.on('close', (code: number | null) => {
       live.delete(child);
       if (!stopping) exited(`${how.cmd} stopped (exit ${code ?? 'signal'})${err.trim() ? `: ${err.trim().split('\n').pop()}` : ''}`);
     });
@@ -80,11 +81,8 @@ export function systemSpawner(platform: NodeJS.Platform = process.platform, pare
       stop() {
         stopping = true;
         // Windows: a line on stdin lets it clear its request itself; then make sure.
-        try {
-          child.stdin?.end('release\n');
-        } catch {
-          // already gone
-        }
+        child.write('release\n');
+        child.end();
         const t = setTimeout(() => child.kill(), platform === 'win32' ? 3000 : 0);
         t.unref?.();
       },

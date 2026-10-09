@@ -39,6 +39,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   (`AGENT_OFFICE_NO_WELCOME`): the browser's setup asks instead.
 
 ### Fixed
+- **No freeze right after the office starts**: the keep-awake helper (PowerShell on Windows) was started on the server's
+  main thread, which held it for 1.3 to 2 s after every start or Restart safely while Windows checked PowerShell.
+  It now starts from the office's helper thread (about 20 ms on the main thread instead of about 100 ms, and no
+  multi-second freeze).
 - The performance guard no longer fails a whole run because Windows still held its test office folder for a
   moment at the end: removing it is retried a few times, then left with a warning.
 
