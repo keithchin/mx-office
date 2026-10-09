@@ -74,7 +74,7 @@ export class FloorArt {
       this.frame,
       this.still!,
       { theme, music: false, sharing: false, colorTheme },
-      { workers: this.workers, peers: [], level: this.frame.level, hover, dog: null, signs: this.signs, dress: (w) => t.dressFor(w), tag: (w) => t.tagFor(w), breaks: { leads: this.leads, clock: Date.now(), still }, helpers: this.helpers, helperWalks: this.walks },
+      { workers: this.workers, level: this.frame.level, hover, dog: null, signs: this.signs, dress: (w) => t.dressFor(w), tag: (w) => t.tagFor(w), breaks: { leads: this.leads, clock: Date.now(), still }, helpers: this.helpers, helperWalks: this.walks },
       now,
     );
   }

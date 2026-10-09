@@ -201,7 +201,7 @@
       <text x="640" y="112" font-size="11.5" fill="var(--muted)" text-anchor="middle">push / PR</text>
       <text x="640" y="202" font-size="11.5" fill="var(--muted)" text-anchor="middle">scorecard</text>
       <text x="640" y="292" font-size="11.5" fill="var(--muted)" text-anchor="middle">runs main</text>
-      <text x="210" y="200" font-size="11.5" fill="var(--muted)" text-anchor="middle">1D/2D/3D</text>
+      <text x="210" y="200" font-size="11.5" fill="var(--muted)" text-anchor="middle">1D/2D</text>
     </svg>
   </div>
 </section>
@@ -215,7 +215,7 @@
     <tr><td><b>Floor = project</b></td><td>One GitHub repo in AI-Taskforce-Labs, cloned here. Today: <code>mx-spike</code> (the SEA AI Hub) and <code>travel-approval</code>.</td></tr>
     <tr><td><b>Worker / agent</b></td><td>A Claude Code session at a desk, usually in its own git <b>worktree</b> (its own copy and branch). Name, model (Haiku 4.5 · Sonnet 5.5 · Opus 5.5 · Fable 5.1), status and cost.</td></tr>
     <tr><td><b>Board</b></td><td>The project's Kanban: Backlog → Queued → In progress → Needs a human → In review → Done, every card tagged with its team.</td></tr>
-    <tr><td><b>Views</b></td><td><b>1D</b> (boards and tabs, the default), <b>2D</b> (pixel-art office with team zones), <b>3D</b> (walk around), <b>Retro</b> (chunky-pixel 3D).</td></tr>
+    <tr><td><b>Views</b></td><td><b>1D</b> (the Command Center, board and tabs; every project opens here) and the <b>2D Office view</b> (pixel-art office with team zones, from <b>Go to Office</b>; <b>Return to Project</b> comes back). The 3D and Retro views are gone.</td></tr>
     <tr><td><b>Home</b></td><td><code>/home</code>: 🏢 Projects (a card per floor, ✨ New project, ➕ Add project), 📊 Statistics, 🗺️ 2D Overview of every floor, the 🧾 Audit log of the whole office, and links to 📑 The Firm and 📚 Docs.</td></tr>
   </table></div>
   <div class="grid g2" style="margin-top:20px">
@@ -506,7 +506,6 @@
   <div class="tablewrap"><table>
     <tr><th style="width:340px">Symptom</th><th>Fix</th></tr>
     <tr><td>Agent stuck "waiting on a setup prompt (trust / login)"</td><td>Open its terminal and accept Claude Code's <i>trust this folder</i> once.</td></tr>
-    <tr><td>3D view laggy</td><td>Use 1D or 2D for daily work; in 3D try <code>?gfx=low</code> or the Retro view.</td></tr>
     <tr><td>Live app: "initial build failed: Object reference not set…"</td><td>Stale build output; the office clears it and retries once automatically.</td></tr>
     <tr><td>mxcli: "A required privilege is not held by the client"</td><td>Create the directory junction mxcli names (<code>cmd /c mklink /J &lt;link&gt; &lt;target&gt;</code>) or enable Windows Developer Mode.</td></tr>
     <tr><td>Commits hang in a toolkit project</td><td>Use our toolkit copy (fixed); in scripts run git with stdin closed.</td></tr>

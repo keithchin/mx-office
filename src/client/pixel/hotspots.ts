@@ -41,7 +41,7 @@ export interface HotspotActions {
   /** Each team's patch, for its signpost's hover card. */
   zones(): { team: TeamId; title: string; sub: () => string }[];
   /** What each says about itself, from the floor's state. */
-  say: { jukebox(): string; arcade(): string; machine(): string; whiteboard(): string; meeting(): string };
+  say: { jukebox(): string; machine(): string; whiteboard(): string; meeting(): string };
 }
 
 export function hotspots(f: Frame, a: HotspotActions): Hotspot[] {
@@ -94,8 +94,8 @@ export function hotspots(f: Frame, a: HotspotActions): Hotspot[] {
   const jw = Math.round(JUKEBOX.width * PPM), jd = Math.round(JUKEBOX.depth * PPM);
   out.push({ id: 'jukebox', title: '🎵 Jukebox', sub: a.say.jukebox, x: east - jd - 1, y: az(f, JUKEBOX.z) - (jw >> 1) - 18, w: jd + 1, h: jw + 18 });
   const cw = Math.round(CABINET.width * PPM), cd = Math.round(CABINET.depth * PPM);
-  out.push({ id: 'arcade', title: '🕹️ Arcade', sub: a.say.arcade, x: east - cd - 1, y: az(f, CABINET.z) - (cw >> 1) - 20, w: cd + 1, h: cw + 20 });
-  out.push({ id: 'coffee', title: '☕ Coffee machine', sub: () => 'A cup is a minute of quicker feet, in the 3D office', x: ax(f, KITCHEN.coffee) - 8, y: az(f, FLOOR.maxZ) - Math.round(KITCHEN.depth * PPM) - 18, w: 16, h: 20 });
+  out.push({ id: 'arcade', title: '🕹️ Arcade', sub: () => 'The lounge’s arcade cabinet', x: east - cd - 1, y: az(f, CABINET.z) - (cw >> 1) - 20, w: cd + 1, h: cw + 20 });
+  out.push({ id: 'coffee', title: '☕ Coffee machine', sub: () => 'Fresh coffee for the team', x: ax(f, KITCHEN.coffee) - 8, y: az(f, FLOOR.maxZ) - Math.round(KITCHEN.depth * PPM) - 18, w: 16, h: 20 });
   const mh = Math.round(MACHINE_MONITOR.width * PPM);
   out.push({ id: 'machine', title: '🖥️ The office’s machine', sub: a.say.machine, x: ax(f, FLOOR.minX) - 2, y: az(f, MACHINE_MONITOR.z) - (mh >> 1), w: 12, h: mh });
   out.push({ id: 'gong', title: '🔔 Gong', sub: () => 'Rings when a pull request merges', x: ax(f, GONG.x) - 12, y: north - FACE + 6, w: 24, h: 28 });

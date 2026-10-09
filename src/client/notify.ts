@@ -57,7 +57,7 @@ export class DesktopNotifier {
 
   constructor(
     private enabled: () => boolean,
-    /** What a click on a worker's notification does: in the 3D office, over to its desk with its terminal open. */
+    /** What a click on a worker's notification does: its terminal open. */
     private openWorker: (workerId: string) => void,
   ) {
     // Back in the office, which shows who's waiting by itself.

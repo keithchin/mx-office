@@ -4,7 +4,7 @@
 // folder, the GitHub repository, each off until ticked and only offered when the office may), then
 // "To confirm, type <owner/name> in the box below" and the red button, which stays disabled until the
 // box says exactly that. Once started it shows the job's steps as they run; a job that stopped part way
-// carries on with Retry. ✕ and Esc close it (openModal). No three.js here.
+// carries on with Retry. ✕ and Esc close it (openModal).
 
 import './dialog.css';
 import { consequences, confirmMatches, worktreesWithWork, type DeleteJobView, type DeleteMode, type DeletePlan } from '../../../shared/project-delete';

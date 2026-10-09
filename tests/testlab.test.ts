@@ -242,7 +242,7 @@ test('the page’s pure parts: a cheap key, the chart’s bars and ticks, the lo
   assert.equal(testsHref('f1', 'run-1-a'), '/lite?floor=f1&tab=tests&run=run-1-a');
 });
 
-test('the page is in the flat views only: the 1D view, the ☰, the home page and Settings › Testing, never the 3D office', () => {
+test('the page is in the flat views only: the 1D view, the ☰, the home page and Settings › Testing', () => {
   const lite = src('src/client/lite.ts');
   assert.match(lite, /import \{ testlabView \} from '\.\/ui\/testlab'/);
   assert.match(lite, /tests: \(\) => showTab\('tests'\)/);
@@ -250,7 +250,7 @@ test('the page is in the flat views only: the 1D view, the ☰, the home page an
   assert.match(src('src/client/shared/flatmenu.ts'), /id: 'tests'.*shown: \(\) => store\.me\.admin/);
   assert.match(src('src/client/home.html'), /id="to-tests"/);
   assert.match(src('src/client/ui/settings/page.ts'), /testing: \(\) => testingPart\(\)/);
-  for (const f of ['src/client/main.ts', 'src/client/ui/settings/index.ts', 'src/client/ui/menuitems.ts']) assert.doesNotMatch(src(f), /testlab|settings\/testing|'\.\/testing'/, `${f} doesn't load the Test Mode page`);
+  for (const f of ['src/client/ui/menuitems.ts']) assert.doesNotMatch(src(f), /testlab|settings\/testing|'\.\/testing'/, `${f} doesn't load the Test Mode page`);
   // Colors are the theme's tokens: no hex in its stylesheet.
   assert.doesNotMatch(src('src/client/ui/testlab/ui.css'), /#[0-9a-f]{3,8}\b/i);
 });

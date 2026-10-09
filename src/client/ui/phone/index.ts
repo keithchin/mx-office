@@ -4,7 +4,7 @@
 // its DMs the floor's agents; its notifications are the Needs-you items (ui/needsyou/logic.ts, the one
 // place their rules live), counted red on the button, with ordinary unread messages a grey dot. What
 // you've read is kept per person by the office (reads.ts); alerts follow Do not disturb and the digest
-// (alerts.ts). No three.js: both flat views load it.
+// (alerts.ts).
 
 import type { ChatterFilter } from '../../../shared/chatter';
 import { badgeOf, dmChannel, dmMessages, floorChannel, unreadIn } from '../../../shared/phone';

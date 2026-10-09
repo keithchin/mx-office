@@ -1,6 +1,6 @@
 // What the page keeps of each floor's team chatter: the messages fetched (GET /api/chatter, newest
 // first, a page at a time) and the ones that came in since (chatter.new). The Command Center's panel
-// and the team pages' compact ones both listen here, so one fetch serves them all. No three.js.
+// and the team pages' compact ones both listen here, so one fetch serves them all.
 
 import type { ChatterMessage, ChatterPage } from '../../../shared/chatter';
 import type { ServerMsg } from '../../../shared/protocol';

@@ -79,11 +79,10 @@ test('Needs you, the team phone and Teams cards send a spend cap to Settings ›
   assert.ok(goes.length && goes.every((a) => a.do === 'go' && a.target.to === 'settings' && a.target.section === 'team'));
 });
 
-test('no page sends a settings link to the 3D office', () => {
-  // The ☰ on the 1D, 2D and home pages: Settings is a flat item, not a "3D ↗" one.
+test('every page sends Settings to the Settings page', () => {
+  // The ☰ on the 1D, 2D and home pages: Settings is the Settings page.
   const menu = src('src/client/shared/flatmenu.ts');
-  assert.doesNotMatch(menu, /in3d\('settings'/, 'the ☰ never opens Settings in 3D');
-  assert.doesNotMatch(menu.match(/const elsewhere = new Set<string>\(\[[^\]]*\]\)/)![0], /'settings'/, "Settings isn't marked 3D ↗");
+  assert.doesNotMatch(menu, /in3d|runIn3d|switchView/, 'nothing in the ☰ opens a 3D office');
   assert.match(menu, /\.\.\.MENU\.settings, .*run: \(\) => \(d\.settings \? d\.settings\(\) : location\.assign\(settingsHref\(/);
   // Each page hands the ☰ its way to Settings.
   assert.match(src('src/client/lite.ts'), /settings: \(\) => showSettings\(\)/);
@@ -96,33 +95,11 @@ test('no page sends a settings link to the 3D office', () => {
   // The budget's insights ("Team settings") and the team's Autonomy chip open Settings › Team.
   assert.match(src('src/client/lite.ts'), /go: \(to\) => \(to === 'settings' \? showSettings\('team'\) : showTab\(to\)\)/);
   assert.match(src('src/client/lite.ts'), /select: \(p\) => \(p === 'settings' \? showSettings\('team'\) : showTab\(p\)\)/);
-  // Where there's no Settings tab, a link goes to the 1D view's (flat.ts), never switchView('3d') or runIn3d.
+  // Where there's no Settings tab, a link goes to the 1D view's (flat.ts).
   const flat = src('src/client/ui/settings/flat.ts');
   assert.match(flat, /location\.assign\(settingsHref\(section, floor\)\)/);
   for (const f of ['src/client/ui/settings/flat.ts', 'src/client/ui/settings/page.ts', 'src/client/shared/flatmenu.ts', 'src/client/pixel.ts', 'src/client/home.ts', 'src/client/lite.ts']) {
-    assert.doesNotMatch(src(f), /runIn3d\('settings'\)|showSettings\(.*switchView\('3d'\)/, `${f} never opens Settings in 3D`);
-  }
-});
-
-test("the 3D office's ⚙️ window still builds every pane, from the shared section builders", () => {
-  const win = src('src/client/ui/settings/index.ts');
-  const panes = [...win.slice(win.indexOf('export const PANES'), win.indexOf('];', win.indexOf('export const PANES'))).matchAll(/\{ id: '(\w+)'/g)].map((m) => m[1]);
-  assert.deepEqual(panes, ['you', 'sound', 'notify', 'building', 'workers', 'connections']);
-  const builders = win.slice(win.indexOf('export const PANE_BUILDERS'), win.indexOf('};', win.indexOf('export const PANE_BUILDERS')));
-  for (const p of panes) assert.match(builders, new RegExp(`^\\s+${p}: `, 'm'), `the 3D window builds ${p}`);
-  // The same builders as the flat page: Workers, Notifications, sound and the building's settings.
-  for (const name of ['workersSettings', 'notifySettings', 'soundSettings', 'mapSetting', 'holidaySetting', 'workspaceSetting', 'dogSettingBuilt', 'skySetting', 'consoleSetting', 'signedInSetting']) {
-    assert.match(builders, new RegExp(`\\b${name}\\(`), `the 3D window uses ${name}`);
-  }
-  // Connections only for admins; the window keeps its ✕, and links to the full page.
-  assert.match(win, /if \(p\.admin && !store\.me\.admin\) continue;/);
-  assert.match(win, /h\('button\.btn\.close', \{ 'aria-label': 'Close' \}, '✕'\)/);
-  assert.match(win, /settingsHref\(undefined, store\.floor/);
-  // Every section module is the shared one the flat page loads too, not a copy.
-  const page = src('src/client/ui/settings/page.ts');
-  for (const m of ['./you', './notify', './workers']) {
-    assert.match(win, new RegExp(`from '${m}'`), `the 3D window imports ${m}`);
-    assert.match(page, new RegExp(`from '${m}'`), `the flat page imports ${m}`);
+    assert.doesNotMatch(src(f), /runIn3d|switchView/, `${f} never opens a 3D office`);
   }
 });
 

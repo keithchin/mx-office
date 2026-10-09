@@ -17,7 +17,7 @@ The top bar has **🏠**, a **back link** to the floor you were last on (in the 
 - the page's title, **Projects**, with **Add project** and **New project** (the wizard) at its right, over Home's tabs (Projects, Statistics, 2D Overview, Audit log, Budget) drawn as underline tabs;
 - a filter row: **Search by project name** (the name or the repository), a status select (*All statuses*, *Needs you*, *Running*, *Paused*, *Being added*), the sort (*Pinned*, *Recent activity*, *Name*) with a button that turns the order round, and **Pause all projects** / **Resume all** and **Connections** (admins). The status and the sort are remembered in this browser;
 - a card per project: a tile with its letters in the floor's colour, its name (opens its board), `repo · ⎇ branch`, the one-line summary, the small progress bar, and at the bottom its status (*Running*, *Needs you*, *Paused*, *Being added*) and what it has spent against its budget;
-- at each card's top right: **👁 watch** (on by default; a project you stop watching no longer calls you over from another floor's pages or counts in the tab title), **pin** (pinned projects come first under *Pinned*), and **⋯**: *Open the board*, *Open the office*, *View live app*, *Edit in Studio Pro* (asks to open it from the project's page, admins) and, for admins, *Pause project* or *Resume project*.
+- at each card's top right: **👁 watch** (on by default; a project you stop watching no longer calls you over from another floor's pages or counts in the tab title), **pin** (pinned projects come first under *Pinned*), and **⋯**: *Open project*, *View live app*, *Edit in Studio Pro* (asks to open it from the project's page, admins) and, for admins, *Pause project* or *Resume project*.
 
 Pins and watches are kept per viewer, in this browser. The cards follow the office live; on a phone they're one a row.
 
@@ -32,7 +32,7 @@ One card per floor:
 - **🙋 N waiting · 👷 N working · 💻 N workers · 🧑 N here**;
 - the one-line project summary (for example *Stage 3 · 2 agents working · 🙋 1 needs you*);
 - a small [progress bar](progress-and-acceptance.md): the project's phases as coloured segments, and where it is (*Stage 3 · Architecture & Design*) or which version was accepted (*v1 accepted · 2026-10-08*);
-- **🗂️ Board** (the 1D view) and **🗺️ Office** (the 2D view). The view you used last is the highlighted one.
+- **🗂️ Open project**: its 1D view, on the Command Center (the 2D Office view is the project's **Go to Office**).
 
 By the name, an icon says whether the project is [paused or running](resume-and-pause.md). Hover it for more:
 
@@ -67,7 +67,7 @@ Above the cards:
 Every floor drawn in pixel art on one canvas, each under a banner with its name and numbers. It refreshes every 10 seconds.
 
 - Hover a worker, or a benched Lead on a break, for details. A Lead's subagents are there as in the 2D view: on stools beside its desk while they work, about the office otherwise.
-- Click a banner (or double-click a floor) to open it in the 2D view.
+- Click a banner (or double-click a floor) to open the project (its 1D view).
 - Zoom with the wheel or pinch, drag to pan, **+ − 0** and the arrows work too.
 
 ## 🧾 Audit log

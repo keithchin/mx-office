@@ -12,4 +12,4 @@ Read these pages to understand how the office is put together. The task pages as
 | **Floor** | One project: a GitHub repository cloned on this machine, with its own board, team, live app and settings. |
 | **Worker / agent** | A Claude Code session at a desk, usually in its own git worktree. |
 | **Team** | The Project Coordinator and four Leads of a floor, each Lead with its subagents. |
-| **View** | The same office drawn four ways: 1D, 2D, 3D and Retro. |
+| **View** | Each project two ways: the 1D view (where it opens) and the 2D Office view (the floor from above). |

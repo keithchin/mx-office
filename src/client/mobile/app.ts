@@ -3,7 +3,7 @@
 // floor's chatter) and Status (each project at a glance). Built from the team phone's own pieces
 // (ui/phone/: its screens, rows, composer, notifications and read state) and the same Needs-you rules
 // (ui/needsyou/logic.ts). Risky actions are confirmed with a fresh sign-in (confirm.ts); an agent's
-// terminal is read-only here (chat.ts). No three.js.
+// terminal is read-only here (chat.ts).
 
 import { MOBILE_TABS, type MobileTab, type ProjectStatus, type RestartLine } from '../../shared/mobile';
 import { dmChannel, dmMessages, floorChannel, unreadIn } from '../../shared/phone';

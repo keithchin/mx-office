@@ -1,0 +1,21 @@
+/* ---- ➕ Add a project (ui/add-project.ts) ------------------------------------------------------- */
+.modal.add-project { width: min(640px, 100%); }
+.add-project .clone-bar { display: block; height: 7px; margin-top: 5px; border: 2px solid var(--line); border-radius: 6px; background: var(--paper-2); overflow: hidden; }
+.add-project .clone-bar > span { display: block; height: 100%; background: var(--good); transition: width .6s ease; }
+.add-project .note + .clone-bar { margin-top: 6px; }
+.add-project .add { margin-top: 16px; }
+.add-project .repo-search { display: flex; gap: 8px; }
+.add-project .repo-search input { flex: 1; }
+.add-project .repo-list { margin-top: 8px; max-height: 280px; overflow: auto; border: 3px solid var(--line); border-radius: 12px; background: var(--card); }
+.add-project .repo { display: flex; gap: 8px; align-items: baseline; padding: 7px 10px; border-bottom: 2px solid var(--paper-2); cursor: pointer; }
+.add-project .repo:last-child { border-bottom: 0; }
+.add-project .repo:hover { background: var(--paper-2); }
+.add-project .repo.sel { background: var(--accent-soft); }
+.add-project .repo .nm { font-weight: 800; white-space: nowrap; }
+.add-project .repo .desc { flex: 1; min-width: 0; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.add-project .repo .when { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.add-project .note { margin: 8px 0 0; font-size: 12px; font-weight: 700; color: var(--muted); overflow-wrap: anywhere; }
+.add-project .note.busy { color: var(--ink); }
+/* The folder's Change button: styles/base.css, after the button rules it restyles. */
+.add-project .dir-pick { margin-top: 8px; }
+.add-project .err { margin: 8px 0 0; font-size: 13px; font-weight: 800; color: var(--bad); overflow-wrap: anywhere; }

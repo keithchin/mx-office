@@ -1,6 +1,6 @@
 @import './styles/base.css';
 
-/* The 1D view (lite.html): a page that scrolls, made for a phone, rather than a HUD over the 3D office. */
+/* The 1D view (lite.html): a page that scrolls, and works on a phone too. */
 html, body { height: auto; min-height: 100%; overflow: auto; }
 body.lite { min-height: 100dvh; background: var(--paper); -webkit-tap-highlight-color: transparent; }
 

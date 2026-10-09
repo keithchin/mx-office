@@ -4,7 +4,7 @@ import './wizard.css';
  * project toolkit, a page at a time, instead of only cloning a repository that's already there.
  * It collects a plan (the repository, the entry mode, the intake answers, the client and team), hands
  * it to the office to run, and shows the setup's progress. Opened again on a setup, it edits its
- * answers. No three.js here: the flat views open it.
+ * answers.
  */
 import type { Net } from '../../net';
 import { loadProfile } from '../../state/persist';

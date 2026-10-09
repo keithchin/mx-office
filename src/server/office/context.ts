@@ -11,7 +11,6 @@ import type { Tailnet } from '../tailnet.js';
 import type { Team } from '../team.js';
 import type { Upgrader } from '../upgrade.js';
 import type { Services } from '../services.js';
-import type { ImageProxy } from '../decor.js';
 import type { Ledger } from '../usage.js';
 import type { PlanLimitsReader } from '../limits.js';
 import type { Webhook } from '../webhook.js';
@@ -24,7 +23,6 @@ import type { Maps } from '../maps.js';
 import type { OfficePrompts } from '../prompts.js';
 import type { LeaveOnMerge } from '../leave-on-merge.js';
 import type { ChatLog } from '../history.js';
-import type { Arcade, HighScores } from '../cabinet.js';
 import type { AgentProvider, FloorInfo, Me, ServerMsg, ServiceInfo, ServicesState, SignInKind } from '../../shared/protocol.js';
 import type { Client } from './client.js';
 import type { Spot } from './input.js';
@@ -42,9 +40,6 @@ export interface Core {
   clients: Map<string, Client>;
   /** Kept on disk, so a restart doesn't wipe it. */
   chat: ChatLog;
-  /** The arcade's high scores: one table for the whole building, on every floor's cabinet. */
-  highScores: HighScores;
-  arcade: Arcade;
   /** What the office is called where it has no project of its own to go by (webhooks, invites). */
   officeName: string;
   /** The models each provider's own CLI lists, for the ones that list them (see models.ts). */
@@ -86,7 +81,6 @@ export interface LateServices {
   team: Team;
   tailnet: Tailnet;
   services: Services;
-  images: ImageProxy;
   upgrader: Upgrader;
   /** A floor's Services board: its own workers' servers. */
   servicesState(floor: Floor | undefined, items?: ServiceInfo[]): ServicesState;

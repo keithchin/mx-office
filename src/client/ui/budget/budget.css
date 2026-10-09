@@ -35,7 +35,6 @@ html:is([data-theme^='clean'], [data-theme^='portal']) .bud-emo { display: none;
 @media (max-width: 640px) { .lite-bar .bud-office .bud-chip-t { font-size: 11px; } .bud-meta-row { flex-wrap: wrap; } }
 @media (max-width: 420px) { .lite-bar .bud-office { display: none; } }
 body.pixel .bud-meta-row { margin: 0; }
-body.pixel .px-meta-box .bud-chip { min-height: 20px; padding: 1px 7px; font-size: 11px; }
 
 /* ---- The tab ---- */
 .bud { display: flex; flex-direction: column; gap: 12px; }

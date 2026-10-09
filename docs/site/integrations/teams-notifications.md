@@ -29,7 +29,7 @@ The workflow belongs to you, not to the channel. If you leave the company or the
 
 ### 2. Paste it into the office
 
-1. Open **☰ → ⚙️ Settings → 🔔 Notifications** on the 1D view (or go straight to `/lite?tab=settings&section=notify`; the 3D office's ⚙️ window has it too). The **Microsoft Teams** card is under *Team notifications (Slack / Discord)*. *(An empty card with a URL box and an orange Save button.)*
+1. Open **☰ → ⚙️ Settings → 🔔 Notifications** on the 1D view (or go straight to `/lite?tab=settings&section=notify`). The **Microsoft Teams** card is under *Team notifications (Slack / Discord)*. *(An empty card with a URL box and an orange Save button.)*
 2. Paste the URL and click **Save** (admins only). It's kept encrypted in [🔌 Connections](../administration/connections.md) (the **💬 Microsoft Teams webhook** card, where you can also paste or remove it). The box is a password field, and once saved the URL is never shown again: the card says *Posting to Teams (prod-12.westeurope.logic.azure.com/…voke)*, who set it and when.
 3. Click **📨 Send a test card**. A card *"🔔 &lt;your name&gt; connected &lt;the office&gt; to this channel"* appears in the channel within a few seconds. If it doesn't, the card in Settings says why (for example *Teams answered 401*, or *Couldn't reach Teams*).
 4. Pick **which floors post** (all, or tick the ones you want), **what's posted** (*Needs you only*, or *Needs you + daily digest*), and optionally **quiet hours**.

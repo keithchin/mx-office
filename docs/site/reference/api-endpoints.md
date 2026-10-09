@@ -135,7 +135,7 @@ Actions: `hire`, `bench`, `rename`, `model`, `settings`, `standup`, `decide`, `e
 
 | Path | Page |
 |---|---|
-| `/`, `/index.html` | The 3D office |
+| `/`, `/index.html` | Redirect to the 1D view (`/lite`, keeping `?floor=`): the 3D office was here |
 | `/home` | Home |
 | `/lite` | The 1D view |
 | `/pixel` | The 2D view |

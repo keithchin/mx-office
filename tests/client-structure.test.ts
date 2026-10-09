@@ -39,67 +39,61 @@ function graph(entry: string): Set<string> {
   return seen;
 }
 
-test('main.ts installs every feature, each with one install line', () => {
-  const main = read(path.join(client, 'main.ts'));
-  const features = readdirSync(path.join(client, 'features')).filter((d) => statSync(path.join(client, 'features', d)).isDirectory());
-  assert.ok(features.length >= 30, `found ${features.length} features`);
-  for (const f of features) {
-    const dir = path.join(client, 'features', f);
-    const installs = readdirSync(dir)
-      .filter((x) => x.endsWith('.ts'))
-      .flatMap((x) => [...read(path.join(dir, x)).matchAll(/^export function (install\w+)\(/gm)].map((m) => m[1]));
-    assert.ok(installs.length, `features/${f} has an install function`);
-    for (const name of installs) assert.equal(main.split(`${name}(ctx`).length - 1, 1, `main.ts calls ${name} once`);
+// The pages the browser loads (each an entry in vite.config.ts) and what they load. The 3D office (its
+// page at /, main.ts, three.js and the core/, features/, input/, world/, player/ and models/ folders) is
+// gone: / opens the 1D view now (server/http/routes/pages.ts), so nothing here may bring it back.
+const ENTRIES = ['lite.ts', 'pixel.ts', 'home.ts', 'firm.ts', 'docs.ts', 'm.ts', 'setup.ts', 'login.ts', 'claim.ts', 'join.ts'];
+
+test('the 3D office is gone: no page, no three.js, none of its folders', () => {
+  for (const f of ['main.ts', 'index.html', 'style.css', 'graphics.ts', 'core', 'features', 'input', 'world', 'player', 'models', 'lab', 'sound']) assert.ok(!existsSync(path.join(client, f)), `src/client/${f} is gone`);
+  const pkg = JSON.parse(read(path.join(client, '../../package.json')));
+  for (const dep of ['three', '@types/three']) assert.ok(!pkg.dependencies?.[dep] && !pkg.devDependencies?.[dep], `package.json has no ${dep}`);
+  const vite = read(path.join(client, '../../vite.config.ts'));
+  assert.doesNotMatch(vite, /src\/client\/index\.html/, 'vite builds no 3D page');
+  for (const rel of readdirSync(client, { recursive: true }) as string[]) {
+    if (!/\.(ts|html)$/.test(rel)) continue;
+    assert.doesNotMatch(read(path.join(client, rel)), /from 'three(?:\/[^']*)?'/, `${rel} imports three.js`);
   }
 });
 
-test('no part of the office imports main.ts: it only puts them together', () => {
-  for (const dir of ['core', 'features', 'input', 'shared']) {
-    for (const rel of readdirSync(path.join(client, dir), { recursive: true }) as string[]) {
-      if (!rel.endsWith('.ts')) continue;
-      const file = path.join(client, dir, rel);
-      for (const dep of importsOf(file)) assert.notEqual(path.relative(client, dep), 'main.ts', `${dir}/${rel} imports main.ts`);
-    }
+test('every client module is loaded by one of the pages: nothing is left over', () => {
+  const loaded = new Set<string>();
+  const todo = ENTRIES.map((e) => path.join(client, e));
+  while (todo.length) {
+    const f = todo.pop()!;
+    if (loaded.has(f)) continue;
+    loaded.add(f);
+    todo.push(...importsOf(f, true));
   }
+  const left = (readdirSync(client, { recursive: true }) as string[])
+    .filter((rel) => rel.endsWith('.ts') && !rel.endsWith('.d.ts'))
+    .filter((rel) => !loaded.has(path.join(client, rel)))
+    .map((rel) => rel.split(path.sep).join('/'));
+  assert.deepEqual(left, [], 'modules no page loads');
 });
 
-// The 1D view (lite.ts, the board at /lite), the 2D view (pixel.ts, the pixel office at /pixel) and
-// the home page (home.ts, at /home: every project's card and the office's statistics), The Firm
-// (firm.ts, at /firm: the Reviewer Agents, their engagements and reports) and the docs (docs.ts, at
-// /docs: the office's documentation site) and the phone version (m.ts, at /m).
+// The 1D view (lite.ts, at /lite), the 2D Office view (pixel.ts, at /pixel), the home page (home.ts, at
+// /home), The Firm (firm.ts, at /firm), the docs (docs.ts, at /docs) and the phone version (m.ts, at /m).
 for (const entry of ['lite.ts', 'pixel.ts', 'home.ts', 'firm.ts', 'docs.ts', 'm.ts']) {
-  test(`${entry} loads no three.js, and none of the 3D office: what it shares with it is three.js-free`, () => {
+  test(`${entry} loads only modules that are there`, () => {
     const page = graph(path.join(client, entry));
-    for (const f of page) {
-      // With forward slashes, so the folder check below holds on Windows too.
-      const rel = path.relative(client, f).split(path.sep).join('/');
-      assert.doesNotMatch(read(f), /from 'three(?:\/[^']*)?'/, `${rel} (loaded by ${entry}) imports three.js`);
-      assert.ok(!/^(core|features|input|world|player)\//.test(rel), `${entry} loads ${rel}, part of the 3D office`);
-    }
-    // What the flat views and the 3D office share (the home page, the Firm and the docs have no title count or hiring).
-    if (entry === 'home.ts' || entry === 'firm.ts' || entry === 'docs.ts' || entry === 'm.ts') return;
-    for (const shared of ['shared/title.ts', 'shared/hiring.ts']) {
-      assert.ok(page.has(path.join(client, shared)), `${entry} uses ${shared}`);
-      assert.ok(graph(path.join(client, 'main.ts')).has(path.join(client, shared)), `the 3D office uses ${shared}`);
-    }
+    assert.ok(page.size > 1, `${entry} loads something`);
+    if (entry !== 'lite.ts' && entry !== 'pixel.ts') return;
+    // What both views of a project share: the tab title's count and hiring.
+    for (const shared of ['shared/title.ts', 'shared/hiring.ts']) assert.ok(page.has(path.join(client, shared)), `${entry} uses ${shared}`);
   });
 }
 
-// ⚙️ Settings (ui/settings/): the flat views' full page and the 3D office's window share the section
-// builders, which are three.js-free, so the 1D view (its Settings tab), the 2D view and the home page
-// (whose links go there) load them without the 3D office, and the 3D office still has its window.
-test('the flat Settings page loads on /lite, /pixel and /home without three.js; the 3D office keeps its window', () => {
+// ⚙️ Settings (ui/settings/): the full page is the 1D view's Settings tab; the 2D view and the home page
+// (whose links go there) reach it through ui/settings/flat.ts.
+test('the Settings page loads on /lite, and /pixel and /home reach it', () => {
   const at = (f: string) => path.join(client, f);
   const lite = graph(at('lite.ts'));
   for (const f of ['ui/settings/page.ts', 'ui/settings/flat.ts', 'ui/settings/you.ts', 'ui/settings/notify.ts', 'ui/settings/workers.ts', 'ui/settings/building.ts', 'ui/settings/project.ts', 'ui/settings/office.ts']) assert.ok(lite.has(at(f)), `lite.ts loads ${f}`);
   for (const entry of ['pixel.ts', 'home.ts']) assert.ok(graph(at(entry)).has(at('ui/settings/flat.ts')), `${entry} reaches Settings through ui/settings/flat.ts`);
-  const office = graph(at('main.ts'));
-  for (const f of ['ui/settings/index.ts', 'ui/settings/you.ts', 'ui/settings/notify.ts', 'ui/settings/workers.ts', 'ui/settings/building.ts']) assert.ok(office.has(at(f)), `the 3D office loads ${f}`);
-  // The sky's words came out of the 3D sky so the flat page can say them.
-  assert.ok(!lite.has(at('world/sky.ts')), "the flat page doesn't load the 3D sky");
 });
 
-test('the loading screen and the floor overlay load on the flat pages, three.js-free; the run toggle on /lite and /pixel', () => {
+test('the loading screen and the floor overlay load on the flat pages; the run toggle on /lite and /pixel', () => {
   const at = (f: string) => path.join(client, f);
   for (const entry of ['lite.ts', 'pixel.ts', 'home.ts', 'm.ts']) assert.ok(graph(at(entry)).has(at('ui/loading/boot.ts')), `${entry} moves Mx Office's loading screen on`);
   for (const entry of ['lite.ts', 'pixel.ts']) {

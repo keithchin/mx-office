@@ -1,6 +1,6 @@
 // The home page's 💰 Budget tab: every project's spend against its budget, its forecast, a status chip and
 // a 14-day sparkline, then the office's own background calls and the Firm's audits. From GET
-// /api/budget/office. No three.js here.
+// /api/budget/office.
 
 import type { OfficeBudgetView, OfficeFloorBudget } from '../../shared/budget/types';
 import { local, pctOf, rateLine, TONE_WORD, usd, usdCents } from '../../shared/budget/money';

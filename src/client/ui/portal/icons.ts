@@ -51,6 +51,14 @@ export const PORTAL_ICONS = {
   queue: '<path d="M3 4h10M3 8h10M3 12h6"/>',
   agent: '<rect x="3" y="4.5" width="10" height="8" rx="2"/><path d="M8 4.5V2.5"/><circle class="f" cx="6" cy="8.5" r=".9"/><circle class="f" cx="10" cy="8.5" r=".9"/><path d="M1.5 8v2M14.5 8v2"/>',
   tab: '<rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12M6 3v3"/>',
+  // The 2D Office view: Return to Project, and its canvas toolbar.
+  back: '<path d="M13.5 8h-11M6.5 4L2.5 8l4 4"/>',
+  zoomIn: '<circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4L14 14M5 7h4M7 5v4"/>',
+  zoomOut: '<circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4L14 14M5 7h4"/>',
+  fit: '<path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/>',
+  keys: '<rect x="1.8" y="4" width="12.4" height="8" rx="1.2"/><path d="M4.2 6.5h1M7.5 6.5h1M10.8 6.5h1M5 9.5h6"/>',
+  next: '<path d="M3 8h8M8 4.5L11.5 8 8 11.5M13.5 3.5v9"/>',
+  palette: '<path d="M8 1.8a6.2 6.2 0 1 0 0 12.4c1 0 1.5-.6 1.5-1.3 0-.9-.8-1.2-.8-2 0-.8.6-1.3 1.4-1.3h1.6a2.6 2.6 0 0 0 2.6-2.6C14.3 4.1 11.5 1.8 8 1.8z"/><circle class="f" cx="4.8" cy="7.2" r=".9"/><circle class="f" cx="6.8" cy="4.6" r=".9"/><circle class="f" cx="10" cy="4.6" r=".9"/>',
 } as const;
 
 export type PortalIcon = keyof typeof PORTAL_ICONS;

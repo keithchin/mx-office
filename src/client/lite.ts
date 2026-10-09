@@ -1,5 +1,4 @@
-// The 1D view (/lite): the office without the 3D, for a phone or a computer the 3D office is too
-// much for. The floor's board, every worker on the floor and how it's doing, the ones waiting on
+// The 1D view (/lite): where every project opens, on its Command Center. The floor's board, every worker on the floor and how it's doing, the ones waiting on
 // someone first; its terminal, with the keys a phone's keyboard hasn't got and a box to send it a
 // prompt; and the boards and the task queue. The home page (🏠, /home) has every floor of the
 // building. You're in the office as someone on the 1D view (PeerInfo.lite), not standing anywhere in it.
@@ -31,8 +30,7 @@ import { openMeeting, type MeetingPreset } from './ui/meeting';
 import { modelBadge, providerLabel } from './ui/provider';
 import { byUrgency, waitingInOrder, waitingLabel } from './nextup';
 import { waitingOnSomeone } from './notify';
-import { rememberView } from './graphics';
-// The tab title counts the workers waiting on someone, on every floor, as the 3D office's does.
+// The tab title counts the workers waiting on someone, on every floor.
 import { renderTitle } from './shared/title';
 import { flatSession } from './shared/session';
 import { workerActions } from './shared/workers';
@@ -49,7 +47,7 @@ import { gitView } from './ui/git';
 import { modelView } from './ui/model';
 import type { NeedTarget } from './ui/needsyou/logic';
 import { nudgeMember } from './ui/roster/api';
-import { viewButton } from './ui/viewpick';
+import { goToOfficeButton } from './ui/viewpick';
 import { flatMenu } from './shared/flatmenu';
 import { tabBadges } from './ui/badge';
 import { newStandup, teamAttention } from './ui/chrome-logic';
@@ -72,17 +70,10 @@ import { openFloorDeliverablesNow } from './ui/deliverables/summary';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
-// Sent here because this browser can't draw the 3D office (see noWebGL in core/scene.ts).
-if (new URLSearchParams(location.search).get('why') === 'webgl') {
-  history.replaceState(null, '', location.pathname);
-  toast("This browser can't draw the 3D office (WebGL is off or missing), so here's the 1D view", 'warn');
-}
-// Here, the office opens on the 1D view next time too (see graphics.ts).
-rememberView('1d');
 // The 🎨 in the top bar: the Default, Dark or Terminal look (ui/colortheme.ts).
 colorThemes($('theme'), $('summary'));
-// Go to Office: the 2D office of this project, where the view dropdown was (ui/viewpick.ts).
-$('view-pick').replaceWith(viewButton('1d'));
+// Go to Office: the 2D Office view of this project, its only way in (ui/viewpick.ts).
+$('view-pick').replaceWith(goToOfficeButton(() => store.floor));
 
 // 📱 The team phone (ui/phone/): installed once the page's parts are, at the end.
 let phone: Phone | undefined;
@@ -453,7 +444,7 @@ $('btn-issues').addEventListener('click', () => openBoard('issues', net, boardAc
 $('btn-pulls').addEventListener('click', () => openBoard('pulls', net, boardActions()));
 $('btn-queue').addEventListener('click', () => openQueue(net, { openTerminal: openWorker }));
 $('btn-new').addEventListener('click', () => sendToWorker('✨ New task'));
-// The ☰: everything the 3D office's menu has (shared/flatmenu.ts).
+// The ☰: the project's windows, the office's settings and the docs (shared/flatmenu.ts).
 flatMenu($('menu'), {
   net,
   boardActions,

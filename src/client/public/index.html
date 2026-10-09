@@ -1,0 +1,9 @@
+<!doctype html>
+<!-- The 3D office used to be this page. It's gone: the office answers / and /index.html with a redirect to the
+     1D view (server/http/routes/pages.ts) and never serves this file. It's kept in the bundle so an office on an
+     older version, which checks the build made dist/public/index.html before it upgrades, can still upgrade. -->
+<meta charset="utf-8" />
+<title>Mx Office</title>
+<meta http-equiv="refresh" content="0; url=/lite" />
+<script>location.replace('/lite' + location.search);</script>
+<a href="/lite">Open the office</a>

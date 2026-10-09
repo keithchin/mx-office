@@ -4,7 +4,7 @@
 // here and 🏠 here stays here. Its address never keeps parameters: which tab you were on is kept in
 // this browser instead (a link can still open one, ?tab=overview or #overview, before it's tidied).
 // Like the flat views it is in the office over the socket (the floors' cards follow it live, and
-// adding a project needs it), and it loads no three.js.
+// adding a project needs it).
 
 import { store } from './state';
 import { forgetFloor, lastFloor } from './state/persist';
@@ -12,7 +12,7 @@ import { $ } from './ui/dom';
 import { colorThemes } from './ui/colortheme';
 import { flatSession } from './shared/session';
 import { flatMenu } from './shared/flatmenu';
-import { graphics, viewUrl } from './graphics';
+import { projectUrl } from './ui/viewpick';
 import { projectsView } from './home/projects';
 import { statsView } from './home/stats';
 import { overviewView } from './home/overview';
@@ -40,7 +40,7 @@ let leaving = false;
 const session = flatSession(
   '/home',
   // A notification clicked: the worker's terminal is on the 1D view.
-  () => location.assign(viewUrl('1d')),
+  () => location.assign(projectUrl(lastFloor())),
   (msg) => {
     audit.onMessage(msg);
     // Coming in puts this page on a floor nobody picked: a browser that had never been on one still
@@ -57,15 +57,14 @@ colorThemes($('theme'), $('stats-view'), () => {
   if (tab === 'projects') projects.render();
 });
 
-// ---- Back to the floor you were last on, in the view you were last in -----------------------------
+// ---- Back to the floor you were last on -------------------------------------------------------------
 function renderBack() {
   const a = $('to-floor') as HTMLAnchorElement;
   const f = last ? store.floors.find((x) => x.id === last && !x.cloning) : undefined;
   a.classList.toggle('hidden', !f);
   if (!f) return;
-  const view = graphics().view;
-  a.href = viewUrl(view);
-  a.replaceChildren(`${view === '2d' ? '🗺️' : view === '1d' ? '🗂️' : '🏢'} `, Object.assign(document.createElement('span'), { className: 'home-back-name', textContent: f.name }), ' →');
+  a.href = projectUrl(f.id);
+  a.replaceChildren('🗂️ ', Object.assign(document.createElement('span'), { className: 'home-back-name', textContent: f.name }), ' →');
   a.title = `Back to ${f.name}`;
 }
 store.on('floors', renderBack);

@@ -4,7 +4,7 @@
 // exactly as tall as what's left of the window, the PM console in the middle: on a desktop the page
 // doesn't scroll and no column does, each card scrolls inside its own frame (command-layout.css). The
 // summary's own sections fold too (ui/summary.ts). The panels draw themselves as before; this only
-// decorates them as they're drawn. No three.js.
+// decorates them as they're drawn.
 
 import { h } from './dom';
 import './command-layout.css';

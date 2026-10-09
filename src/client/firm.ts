@@ -1,7 +1,7 @@
 // The Firm (/firm): the office's Reviewer Agents, an independent consultancy that audits a project
 // from outside its team. Its people, the engagements under way (live), the past ones and their
 // reports; "📑 Call an audit" opens the wizard (firm/wizard.ts); ?report=<id> opens a report
-// (firm/report.ts). It follows the 1D view's color themes and loads no three.js.
+// (firm/report.ts). It follows the 1D view's color themes.
 
 import { isActive } from '../shared/firm/engagement';
 import { $, h, toast } from './ui/dom';

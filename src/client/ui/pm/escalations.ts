@@ -2,8 +2,7 @@
 // (ui/roster/approvals.ts): what an agent raised to the Project Manager — you, the human — with
 // Reply / Approve / Reject. The answer goes back to the agent that raised it as its next prompt and the
 // card is resolved (server/roster/escalations.ts). Urgent and critical ones are highlighted; FYIs (below
-// the floor's threshold at its autonomy level) are dimmed and get a plain "Noted". No three.js here:
-// the flat views import it.
+// the floor's threshold at its autonomy level) are dimmed and get a plain "Noted".
 //
 // The list is drawn again whenever the team is fetched, so a card being answered is kept, not rebuilt:
 // what you're typing in it survives the redraws.

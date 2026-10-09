@@ -1,6 +1,6 @@
 // ⚙️ Settings › Workers, for the whole office: the worker everyone starts on, how many run at once,
 // keeping the computer awake, restarting safely, whether merged workers go home, and the prompts the
-// office writes. Admins change them; everyone sees them. No three.js here: the flat Settings page uses it.
+// office writes. Admins change them; everyone sees them.
 
 import { store } from '../../state';
 import { h, timeAgo } from '../dom';
@@ -142,5 +142,5 @@ export function restartBuilt(): Built {
   return { nodes: [r.section], off: r.off };
 }
 
-/** Everything under Workers, in the 3D window's order. */
+/** Everything under Workers, in order. */
 export const workersSettings = (d: SettingsDeps): Built => together(defaultWorkerSetting(d), limitSetting(d), keepAwakeBuilt(), restartBuilt(), leaveOnMergeSetting(d), promptsSetting(d));

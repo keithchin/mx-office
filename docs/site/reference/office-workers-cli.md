@@ -141,7 +141,7 @@ The Engagement Partner sends the sections `executive`, `statistics`, `findings`,
 
 ## office-queue
 
-Board agents (the ones at the issues board, PR board and queue in the 3D office) also have `office-queue`:
+Board agents (the ones at the issues board, PR board and queue) also have `office-queue`:
 
 ```text
 office-queue list                                  what's on the queue: id, status, title, worker, PR

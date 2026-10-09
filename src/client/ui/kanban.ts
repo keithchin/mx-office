@@ -2,7 +2,7 @@
 // request, with the agents in between. Each card is something the office already has (an issue, a
 // queued task, a worker, a PR): just its title on the board, the rest in a preview on hover
 // (ui/kanban-preview.ts). Dragging an issue onto Queued queues it, onto In progress hires an agent
-// for it. No three.js here: the 1D view imports it.
+// for it.
 
 import type { GhIssue, GhPull, QueueTask, WorkerInfo } from '../../shared/protocol';
 import { isAsleep } from '../../shared/status';

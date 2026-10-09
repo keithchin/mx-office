@@ -1,6 +1,6 @@
 // ⚙️ Settings: the building, for everyone. The map, the holiday theme, the sky's clock, the office dog
-// and where new projects are cloned. The 3D window has them under Building; the flat Settings page under
-// Appearance (map, holiday) and Advanced (the rest). No three.js here.
+// and where new projects are cloned. The Settings page has them under
+// Appearance (map, holiday) and Advanced (the rest).
 
 import type { ThemePick } from '../../../shared/protocol';
 import { THEME_PICKS } from '../../../shared/theme';
@@ -74,7 +74,7 @@ export function mapSetting({ net }: SettingsDeps): Built {
   return { nodes: [setting('Map', 'office', row, note, bad)], off: store.on('map', paint) };
 }
 
-/** What the sky's doing, and which clock it keeps (settings-sky.ts). `outside` is the 3D office's words for it. */
+/** What the sky's doing, and which clock it keeps (settings-sky.ts). `outside`: other words for it, if the page has them. */
 export function skySetting({ net }: SettingsDeps, outside?: { now: string; live: boolean }): Built {
   const sky = outsideSetting(net, outside, framed('Outside', 'office'));
   return { nodes: [sky.section], off: sky.off };

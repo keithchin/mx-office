@@ -1,4 +1,4 @@
-// The 2D view's office (pixel.ts): the floor plan the 3D office is built from (shared/layout.ts),
+// The 2D view's office (pixel.ts): the floor plan (shared/layout.ts),
 // drawn from above in a three-quarter view, a pixel at a time. This is what stands still (the floor,
 // each team's patch of it, the walls and what's on them, the lounge, the meeting room, the plants,
 // the light from the windows and the lamps), drawn once per floor plan into a canvas of its own; the
@@ -58,7 +58,7 @@ export function drawOffice(f: Frame, theme: Theme | null = null): HTMLCanvasElem
   meetingRoom(g, f);
   drawProps(g, f, theme);
   drawZoneDecor(g, f);
-  // The plants take turns, as the 3D office's do (see floorPlant there), by where each is in the full list.
+  // The plants take turns, by where each is in the full list.
   for (const [x, z, scale] of plantsAt(f.level)) drawPlant(g, ax(f, x), az(f, z), scale * 1.35, plantSpecies(PLANTS.findIndex((p) => p[0] === x && p[1] === z)));
   drawLamps(g, f);
   return c;

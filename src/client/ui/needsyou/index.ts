@@ -1,7 +1,7 @@
 // The "Needs you" strip at the top of the 1D view's 🎛️ Command Center: whatever is blocked on you right
 // now (ui/needsyou/logic.ts), most urgent first, each with one button straight to the fix, and a count
 // on the Command Center's tab button whichever tab is showing. One calm line when nothing is. It
-// fetches the floor's team itself, again when the office says it changed. No three.js here.
+// fetches the floor's team itself, again when the office says it changed.
 
 import type { FirmFloorStatus } from '../../../shared/firm/engagement';
 import type { LiveAppState, ServerMsg } from '../../../shared/protocol';

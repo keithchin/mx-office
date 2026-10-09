@@ -1,7 +1,7 @@
 /**
  * 📱 The phone version (/m): the team phone full screen, installable on a phone's home screen, with push
  * notifications for what needs you (client/mobile/, docs/site: "Phone version"). It connects like the flat
- * views do (shared/session.ts) and loads no three.js.
+ * views do (shared/session.ts).
  */
 import { store } from './state';
 import { flatSession } from './shared/session';

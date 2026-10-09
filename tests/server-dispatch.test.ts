@@ -182,10 +182,13 @@ test('answers the open routes before anyone signs in', async () => {
   assert.equal(asset.headers.get('cache-control'), 'public, max-age=31536000, immutable');
   assert.equal((await get('/assets/missing.js')).status, 404);
 
+  // The old 3D office's address sends you on to the 1D view (which asks for the sign-in), never a 404.
+  const old = await get('/');
+  assert.equal(old.status, 302);
+  assert.equal(old.headers.get('location'), '/lite');
+  assert.equal((await get('/?view=3d&floor=f1')).headers.get('location'), '/lite?floor=f1');
+  assert.equal((await get('/index.html?3d=1&view=retro')).headers.get('location'), '/lite');
   // Everything else waits for a session.
-  const home = await get('/');
-  assert.equal(home.status, 302);
-  assert.equal(home.headers.get('location'), '/login');
   assert.equal((await get('/home')).headers.get('location'), '/login?next=/home');
   assert.equal((await get('/api/home/stats')).status, 401);
   assert.equal((await get('/api/home/overview')).status, 401);
@@ -228,7 +231,9 @@ test('signs in with the office password', async () => {
 test('answers the signed-in routes', async () => {
   const me = { cookie };
   assert.deepEqual(await (await get('/api/whoami', me)).json(), { ok: true, me: { admin: true } });
-  assert.match(await (await get('/', me)).text(), /<title>index<\/title>/);
+  const old = await get('/?view=retro', me);
+  assert.equal(old.status, 302);
+  assert.equal(old.headers.get('location'), '/lite');
   assert.match(await (await get('/home', me)).text(), /<title>home<\/title>/);
   assert.match(await (await get('/lite', me)).text(), /<title>lite<\/title>/);
   // The home page's statistics: a row per floor, from what the office already keeps.
@@ -302,7 +307,7 @@ test('welcomes a browser and dispatches what it sends', async () => {
   assert.equal(ada?.name, 'Ada');
   assert.equal(ada?.color, '#ff8a5b');
   assert.equal(ada?.floor, floor.id);
-  assert.deepEqual(Object.keys(welcome).slice(-17), ['floor', 'project', 'workers', 'issues', 'pulls', 'queue', 'decor', 'plan', 'services', 'dog', 'ball', 'cars', 'jail', 'jukebox', 'whiteboard', 'meeting', 'cabinet']);
+  assert.deepEqual(Object.keys(welcome).slice(-13), ['floor', 'project', 'workers', 'issues', 'pulls', 'queue', 'plan', 'services', 'dog', 'jail', 'jukebox', 'whiteboard', 'meeting']);
 
   a.send({ t: 'ping', at: 42 });
   const pong = await a.take('pong');
@@ -377,14 +382,13 @@ test('the toys on a floor, and letting go of them on leaving the floor or the of
   a.send({ t: 'dog.name', name: 'Rex' });
   assert.equal((await b.take('toast', (m) => m.text.startsWith('🐶'))).text, '🐶 Cy named the dog Rex');
 
-  // The gong once, not twice in a row; no air horn off the roof, and no golf without a club.
-  a.send({ t: 'gong' });
-  a.send({ t: 'gong' });
-  a.send({ t: 'horn' });
-  a.send({ t: 'golf', yaw: 0, loft: 0.5, power: 0.5 });
-  a.send({ t: 'act', golf: true });
-  a.send({ t: 'golf', yaw: 0.25, loft: 0.5, power: 0.5 });
-  assert.deepEqual(await b.next(3), ['gong', 'peer.act', 'golf']);
+  // What only the 3D office sent (the arcade, the ball, the cars, pictures, golf, darts, the gong and the
+  // air horn) has no handler any more: it's dropped like any unknown message, and the office carries on.
+  for (const t of ['cabinet.play', 'ball.take', 'car.enter', 'decor.add', 'golf', 'toss', 'gong', 'horn']) a.send({ t });
+  a.send({ t: 'ping', at: 7 });
+  assert.equal((await a.take('pong')).at, 7);
+  await b.drain();
+  assert.deepEqual(b.pending('cabinet'), []);
 
   a.send({ t: 'wb.open' });
   assert.deepEqual((await b.take('wb.people')).people, [cy]);
@@ -393,29 +397,20 @@ test('the toys on a floor, and letting go of them on leaving the floor or the of
   a.send({ t: 'wb.pointer', x: 1, y: 2, tool: 'laser', button: 'down' });
   assert.deepEqual(await b.take('wb.pointer'), { t: 'wb.pointer', id: cy, x: 1, y: 2, tool: 'laser', button: 'down' });
 
-  const holdEverything = async () => {
-    a.send({ t: 'wb.open' });
-    a.send({ t: 'ball.take' });
-    assert.equal((await b.take('ball')).ball.holder, cy);
-    a.send({ t: 'car.enter', car: 0, seat: 'driver' });
-    await a.take('cars', (m) => m.answer === true);
-    await b.take('cars');
-    a.send({ t: 'cabinet.play' });
-    assert.equal((await b.take('cabinet')).state.player?.id, cy);
-    await b.drain();
-  };
-  await holdEverything();
-  // Up to the roof: the floor sees the arcade free up, Cy go, and then the whiteboard, the ball and the car.
+  // Up to the roof: the floor sees Cy go, and then the whiteboard let go of.
+  await b.drain();
   a.send({ t: 'floor.go', floor: '@roof' });
   assert.equal((await a.take('floor.enter')).floor, '@roof');
-  assert.deepEqual(await b.next(5), ['cabinet', 'peer.update', 'wb.people', 'ball', 'cars']);
+  assert.deepEqual(await b.next(2), ['peer.update', 'wb.people']);
 
   a.send({ t: 'floor.go', floor: floor.id });
   assert.equal((await a.take('floor.enter')).floor, floor.id);
-  await holdEverything();
-  // Out of the office: the whiteboard, the arcade, the ball and the car, then Cy's gone.
+  a.send({ t: 'wb.open' });
+  await b.take('wb.people', (m) => m.people.includes(cy));
+  await b.drain();
+  // Out of the office: the whiteboard, then Cy's gone.
   await a.close();
-  assert.deepEqual(await b.next(5), ['wb.people', 'cabinet', 'ball', 'cars', 'peer.leave']);
+  assert.deepEqual(await b.next(2), ['wb.people', 'peer.leave']);
   await b.close();
 });
 

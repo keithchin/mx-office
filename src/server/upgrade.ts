@@ -195,7 +195,7 @@ export class Upgrader {
       await run('sh', ['-c', 'git archive "$1" | tar -x -C "$2"', 'sh', sha, next]);
       // npm install runs the prepare script, which builds the client and the server.
       await run('npm', ['install', '--no-audit', '--no-fund'], { cwd: next, timeout: 15 * 60_000 });
-      for (const f of ['dist/server/server/cli.js', 'dist/public/index.html']) {
+      for (const f of ['dist/server/server/cli.js', 'dist/public/lite.html']) {
         if (!existsSync(path.join(next, f))) throw new Error(`the build didn't produce ${f}`);
       }
       // Swap it in. The running process already has everything it needs loaded.

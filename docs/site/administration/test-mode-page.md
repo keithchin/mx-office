@@ -15,7 +15,7 @@ It is for admins only. Open it in one of these ways:
 - **⚙️ Settings › 🧪 Testing** ([section=testing](/lite?tab=settings&section=testing)), then **Open the Test Mode page**.
 - The address `/lite?tab=tests`. Add `&run=<id>` to open one run.
 
-The page is part of the flat views. The 3D office doesn't have it.
+The page is part of the 1D view.
 
 ## What it shows
 

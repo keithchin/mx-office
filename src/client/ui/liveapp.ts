@@ -1,7 +1,6 @@
 // The 🌐 Live app tab of the 1D view: the floor's Mendix app, built from main and run on the office's
 // machine (server/liveapp/), with ▶ / ⟳ / ■, the commit it runs, and the app itself in a frame. And
-// the small chip in the project summary that says how it is and leads here. No three.js here: the
-// 1D view imports it.
+// the small chip in the project summary that says how it is and leads here.
 
 import type { Net } from '../net';
 import type { LiveAppState, LiveAppStatus, ServerMsg } from '../../shared/protocol';

@@ -70,7 +70,7 @@ If git has no identity, set one for the workers' commits there: it goes into the
 
 ## Folders
 
-- **Projects folder**: where new projects are cloned (`<folder>/<owner>/<repo>`); the same setting as ⚙️ Settings › 🛠️ Advanced › *Workspace folder* (the 3D window's Building).
+- **Projects folder**: where new projects are cloned (`<folder>/<owner>/<repo>`); the same setting as ⚙️ Settings › 🛠️ Advanced › *Workspace folder*.
 - **Toolkit folder**: the mxcli-project-toolkit clone the wizard runs and the Playbooks point at. It must contain `bin/init-project.sh`. Picked here (or in the first-run setup, which can also clone it), it beats `AGENT_OFFICE_TOOLKIT_DIR`; **Default** goes back to the variable or the first of `~/mendix-toolkit`, `~/agent-spike/mendix-toolkit` and `~/agent-spike/mxcli-project-toolkit` that is there.
 
 ## Worktrees stay in the project

@@ -1,6 +1,6 @@
 ---
 title: FAQ
-description: Answers to the questions people actually ask - signing in, tokens, agents that stop, benched Leads, other floors, models, costs, restarts, 3D, the live app, CI emails, Jeff, rankings and skills.
+description: Answers to the questions people actually ask - signing in, tokens, agents that stop, benched Leads, other floors, models, costs, restarts, the views, the live app, CI emails, Jeff, rankings and skills.
 weight: 95
 aliases: [/docs/questions]
 ---
@@ -118,9 +118,9 @@ Yes: a [test office](administration/test-offices.md) on another port with its ow
 
 ## Views and the browser
 
-### The 3D view lags. What can I do?
+### Where did the 3D office go?
 
-Use **1D** or **2D** for daily work. In 3D, try `?gfx=low` or the **Retro** view, and make sure the browser uses the fast GPU (Edge is set to the NVIDIA GPU on the Taskforce laptop).
+The 3D and Retro views are removed. Every project opens on its **1D view**; **Go to Office** there shows the floor from above (the **2D Office view**), and **Return to Project** comes back. Old `/?view=3d` links open the 1D view. See [The two views](concepts/views.md).
 
 ### How do I switch to dark mode?
 

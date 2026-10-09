@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { open, readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { insideCheckout } from './changes.js';
-import type { ImageResult } from './decor.js';
+import type { ImageResult } from './images.js';
 import { changedImageType } from '../shared/protocol.js';
 import { isDocPath, type DocFile, type DocList, type DocText } from '../shared/docs.js';
 

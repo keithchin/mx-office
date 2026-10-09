@@ -1,7 +1,7 @@
 /**
  * What the flat views (the 1D board at /lite and the 2D pixel office at /pixel) do with a worker:
  * open its terminal (waking it, or fixing its worktree, first), send it a prompt, or give someone new
- * work. No three.js here: both flat views import it.
+ * work.
  */
 import type { Net } from '../net';
 import { store } from '../state';

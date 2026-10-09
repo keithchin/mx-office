@@ -1,5 +1,5 @@
 /**
- * Hiring, as the 3D office and the 1D view (/lite) both do it. No three.js here: the 1D view imports it.
+ * Hiring, as the 1D view (/lite) does it.
  */
 import { store } from '../state';
 

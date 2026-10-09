@@ -3,7 +3,7 @@
 // robot at the tip and its pull request beside it. It asks GET /api/git (server/gitgraph/) when the tab
 // shows, a few seconds after the workers or pull requests change, and every minute while it's on
 // screen; the workers and pull requests themselves come from the store, so they're never behind.
-// No three.js here: the flat views import it.
+//
 
 import { ownerInfo, ownerOf, pullInfo, pullOf, STALE_BEHIND, type GitBranch, type GitGraph } from '../../../shared/gitgraph';
 import type { GhPull, WorkerInfo } from '../../../shared/protocol';

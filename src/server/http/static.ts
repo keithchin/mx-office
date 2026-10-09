@@ -17,14 +17,13 @@ const MIME: Record<string, string> = {
   '.wasm': 'application/wasm',
   '.mp3': 'audio/mpeg',
   '.ogg': 'audio/ogg',
-  '.glb': 'model/gltf-binary',
 };
 
 export function findPublicDir(): string {
   // Two folders up from here, as from server.ts before it: src/ under tsx, dist/server/ once built.
   const here = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
   const candidates = [path.resolve(here, '../../public'), path.resolve(here, '../../dist/public')];
-  for (const c of candidates) if (existsSync(path.join(c, 'index.html'))) return c;
+  for (const c of candidates) if (existsSync(path.join(c, 'lite.html'))) return c;
   throw new Error(`Client bundle not found (looked in ${candidates.join(', ')}). Run \`npm run build\`.`);
 }
 

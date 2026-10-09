@@ -2,7 +2,7 @@
 // shoulders), his status pill, and his section on the Analysis tab: per judgement its mode, how often
 // he agrees with the office's own rule, Jev vs Haiku, latency, agreement by day, and the latest
 // disagreements, so after a week the Project Manager can judge where to switch him to On. It asks
-// GET /api/judge. No three.js here.
+// GET /api/judge.
 
 import type { JeffMode, JeffStatus, JudgeKind, JudgeKindSummary, JudgeRow, JudgeSummary } from '../../shared/judge';
 import { JEFF_LOOK, standing } from '../pixel/chars';

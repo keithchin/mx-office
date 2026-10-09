@@ -1,6 +1,6 @@
 /**
- * The board agents (see STATIONS in shared/layout.ts): what each offers and does, for the 3D office's
- * kiosks and the 2D view's alike. No three.js here: the 2D view imports it.
+ * The board agents (see STATIONS in shared/layout.ts): what each offers and does, for the 2D view's
+ * kiosks.
  */
 import type { StationKind } from '../../shared/layout';
 

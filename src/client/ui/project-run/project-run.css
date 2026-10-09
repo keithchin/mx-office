@@ -27,7 +27,6 @@ html:is([data-theme^='clean'], [data-theme^='portal']) .pr-tg-emo { display: non
 html[data-theme='terminal'] .pr-toggle { border-radius: 0; }
 @keyframes pr-pulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .pr-tg-dot { animation: none !important; } .pr-tg-bar { transition: none; } }
-body.pixel .px-meta-box .pr-toggle { min-height: 20px; padding: 1px 7px; font-size: 11px; }
 @media (max-width: 420px) { .pr-tg-act { display: none; } }
 
 .pr-modal { width: min(720px, 100%); }

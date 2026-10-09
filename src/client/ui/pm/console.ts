@@ -3,8 +3,7 @@
 // Project Coordinator (the agent, role id `pm`; docs/teams.md) at a glance, its terminal live and
 // read-only, the escalations the team raised to you (ui/pm/escalations.ts, above the prompt box), and a
 // box to ask the Coordinator things without opening its terminal. With no Coordinator hired it says what
-// it's for and offers to hire one; with a benched one, its latest handoff note and "Hire again". No
-// three.js here: the 1D view imports it. Its screen has two views (Chat | Terminal on the header, the
+// it's for and offers to hire one; with a benched one, its latest handoff note and "Hire again". Its screen has two views (Chat | Terminal on the header, the
 // default in ⚙️ Settings): the conversation as messages (ui/pm/chat/), or the terminal as it is.
 //
 // The quick questions and Run standup reach agents that may be mid-turn: the check in

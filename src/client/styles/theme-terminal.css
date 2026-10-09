@@ -49,7 +49,6 @@ html[data-theme='terminal'] body.lite .btn { background: transparent; border-col
 html[data-theme='terminal'] body.lite .btn::before { content: '['; color: var(--muted); }
 html[data-theme='terminal'] body.lite .btn::after { content: ']'; color: var(--muted); }
 html[data-theme='terminal'] body.lite .btn:is(:hover, :active, .on, .primary),
-html[data-theme='terminal'] body.lite .vp-btn[aria-expanded=true] { background: var(--ink); color: #000; text-shadow: none; transform: none; }
 html[data-theme='terminal'] body.lite .btn.danger { background: transparent; color: var(--bad); }
 html[data-theme='terminal'] body.lite .btn.danger:hover { background: var(--bad); color: #000; }
 html[data-theme='terminal'] body.lite .btn:is(:hover, :active, .on, .primary)::before,
@@ -63,8 +62,8 @@ html[data-theme='terminal'] body.lite .lite-bar > .btn { width: 44px; justify-co
 /* A phone has no room for the brackets in its top bar: the views get a box too, and the 🎨 a small one. */
 @media (max-width: 640px) {
   html[data-theme='terminal'] body.lite .lite-bar > .lite-theme { width: 30px; }
-  html[data-theme='terminal'] body.lite .lite-bar .vp-btn { border-color: var(--line); padding: 0 6px; }
-  html[data-theme='terminal'] body.lite .lite-bar .vp-btn::before, html[data-theme='terminal'] body.lite .lite-bar .vp-btn::after { content: none; }
+  html[data-theme='terminal'] body.lite .lite-bar .vp-go { border-color: var(--line); padding: 0 6px; }
+  html[data-theme='terminal'] body.lite .lite-bar .vp-go::before, html[data-theme='terminal'] body.lite .lite-bar .vp-go::after { content: none; }
 }
 
 /* ---- Status: [WORKING] in its color, the ones that want you in reverse video ---------------------- */

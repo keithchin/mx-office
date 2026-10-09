@@ -1,24 +1,12 @@
 // The workers waiting on you on this floor, the ones that need you before the ones that are done and
-// longest first: N takes you to each in turn (see features/waiting), arrows at the edge of the screen
-// point to them (ui/compass.ts), and the top bar and the Workers panel count them.
+// longest first: N on the 2D Office view goes to the first, and the 1D view lists and counts them.
 
 import type { WorkerInfo } from '../shared/protocol';
 import { isAsleep, isBusy } from '../shared/status';
-import { needingYou, waitingInOrder, waitingOnSomeone, waitingSince as since } from '../shared/waiting';
+import { needingYou, waitingInOrder, waitingOnSomeone } from '../shared/waiting';
 
 // Who's waiting and in what order is shared with the server's Teams notifications (shared/waiting.ts).
 export { needingYou, waitingInOrder };
-
-type Waiting = WorkerInfo & { status: 'needs_input' | 'done' };
-
-/**
- * The 3D office's Workers panel: the ones that need you on top (longest first), everyone else where
- * they've always been, in the order they were hired, so the list only moves when someone's stuck.
- */
-export function needyFirst(workers: Iterable<WorkerInfo>): WorkerInfo[] {
-  const all = [...workers];
-  return [...needingYou(all), ...all.filter((w) => w.status !== 'needs_input').sort((a, b) => a.createdAt - b.createdAt)];
-}
 
 /**
  * Every worker, as the 1D view lists them: the ones waiting on someone first (see waitingInOrder), then
@@ -36,28 +24,4 @@ export function waitingLabel(waiting: readonly WorkerInfo[]): string {
   const needs = waiting.filter((w) => w.status === 'needs_input').length;
   const done = waiting.length - needs;
   return [needs && `🙋 ${needs} ${needs === 1 ? 'needs' : 'need'} you`, done && `✅ ${done} done`].filter(Boolean).join(' · ');
-}
-
-/**
- * One press of N after another: the first worker in line (see waitingInOrder) you haven't been to yet
- * this round, and once you've been to them all, the first again. A worker that starts waiting again after
- * you've been to it is new to this round.
- */
-export class NextUp {
-  /** Who this round has been to, and the wait each was on then. */
-  private visited = new Map<string, number>();
-
-  /** The one to go to next. `here` is the worker you're standing at, which only comes up if it's the only one. */
-  next(workers: Iterable<WorkerInfo>, here?: string): Waiting | undefined {
-    const waiting = waitingInOrder(workers);
-    for (const [id, at] of this.visited) if (!waiting.some((w) => w.id === id && since(w) === at)) this.visited.delete(id);
-    const others = waiting.filter((w) => w.id !== here);
-    let pick = others.find((w) => !this.visited.has(w.id));
-    if (!pick) {
-      this.visited.clear();
-      pick = others[0] ?? waiting[0];
-    }
-    if (pick) this.visited.set(pick.id, since(pick));
-    return pick;
-  }
 }

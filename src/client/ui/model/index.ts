@@ -6,7 +6,7 @@
 //
 // It asks the server (api.ts) only while the tab is open: when it opens, when you pick a branch or a
 // document, and a few seconds after the workers or pull requests change (a merge moves main). No timer.
-// Read-only. No three.js here: the flat views import it.
+// Read-only.
 //
 // A domain model shows "As in Studio Pro" (the developer's layout) or, chosen per viewer and
 // remembered in this browser, "Tidy layout": the entities rearranged for reading, for the view only.

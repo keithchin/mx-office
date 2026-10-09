@@ -2,10 +2,10 @@
  * The home page's 🗺️ 2D Overview tab: every floor of the building as its own pixel office, the same
  * art as the 2D view's (pixel/snapshot.ts), side by side on one canvas, each under a banner with its
  * name and numbers. It's for looking: hover a worker (or a benched Lead on a break) for who it is and what it's on, and click a
- * floor's banner (or double-click the floor) to open it in the 2D view. It opens with every floor
+ * floor's banner (or double-click the floor) to open the project. It opens with every floor
  * showing and zooms like the 2D view (pixel/camera.ts): the wheel, a pinch, + − 0, the buttons, and
  * a drag to pan. The floors come from GET /api/home/overview, again every 10 seconds while the tab
- * is on screen. No three.js here.
+ * is on screen.
  */
 import { store } from '../state';
 import { overviewColumns, overviewGrid, overviewHit, overviewStats, type Overview, type OverviewCell, type OverviewWorker } from '../../shared/overview';
@@ -38,7 +38,7 @@ export interface OverviewView {
 
 /** Draws the tab into `root`. `leaving` hears the page head off to a floor. */
 export function overviewView(root: HTMLElement, leaving: () => void): OverviewView {
-  const canvas = h('canvas.ov-canvas', { 'aria-label': 'Every floor from above: hover an agent for what it is on, click a floor’s name to open it in the 2D view' });
+  const canvas = h('canvas.ov-canvas', { 'aria-label': 'Every floor from above: hover an agent for what it is on, click a floor’s name to open the project' });
   const tip = h('div.ov-tip.px-panel.hidden', { role: 'tooltip' });
   const level = h('span', {}, 'Fit');
   const zoomBtn = (id: string, label: string, title: string, child: Node | string) => h('button.px-btn', { id, type: 'button', title, 'aria-label': label }, child);
@@ -88,7 +88,7 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
       a.update(f, theme);
       return a;
     });
-    note.textContent = o.floors.length ? `Every floor from above, live · click a floor's name (or double-click the floor) to open it in the 2D view` : 'No projects yet: ➕ Add project on the Projects tab.';
+    note.textContent = o.floors.length ? `Every floor from above, live · click a floor's name (or double-click the floor) to open the project` : 'No projects yet: ➕ Add project on the Projects tab.';
     layout();
   }
 
@@ -280,7 +280,7 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
     canvas.classList.toggle('point', hit?.part === 'banner');
     const a = hit ? arts[hit.index] : undefined;
     const f = a?.floor;
-    const body = !a || !f || canvas.classList.contains('grabbing') ? null : who ? ('worker' in who ? tipFor(who.worker, a) : leadTip(who.lead, who.index, a)) : hit!.part === 'banner' ? [h('b', {}, f.name), h('div', {}, homeRunState(f.id)?.title ?? ''), h('div.ov-dim', {}, 'Click to open it in the 2D view')] : null;
+    const body = !a || !f || canvas.classList.contains('grabbing') ? null : who ? ('worker' in who ? tipFor(who.worker, a) : leadTip(who.lead, who.index, a)) : hit!.part === 'banner' ? [h('b', {}, f.name), h('div', {}, homeRunState(f.id)?.title ?? ''), h('div.ov-dim', {}, 'Click to open the project')] : null;
     tip.classList.toggle('hidden', !body);
     if (!body) return;
     tip.replaceChildren(...body);
@@ -299,7 +299,7 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
   });
   const go = (i: number) => {
     const f = arts[i]?.floor;
-    if (f) openFloor(f.id, '2d', leaving);
+    if (f) openFloor(f.id, leaving);
   };
   canvas.addEventListener('click', (e) => {
     if (camera.dragged()) return;
@@ -324,7 +324,7 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
   });
 
   // For headless checks and screenshots: the data, the camera, and a way to put floors in without a server.
-  (window as any).__overview = { cam, take, data: () => data, cells: () => cells, spots: (i: number) => arts[i]?.people.spots, url: (i: number) => (arts[i] ? floorUrl(arts[i].floor.id, '2d') : undefined) };
+  (window as any).__overview = { cam, take, data: () => data, cells: () => cells, spots: (i: number) => arts[i]?.people.spots, url: (i: number) => (arts[i] ? floorUrl(arts[i].floor.id) : undefined) };
 
   return {
     show() {

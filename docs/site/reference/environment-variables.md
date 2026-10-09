@@ -25,7 +25,7 @@ Set these before starting the office (the launcher sets the main ones). Values t
 | `AGENT_OFFICE_MAX_WORKERS` | Most workers at once, across floors |
 | `AGENT_OFFICE_WEBHOOK` | Slack or Discord webhook when a worker needs input or finishes |
 | `AGENT_OFFICE_TURN` | TURN servers for voice |
-| `AGENT_OFFICE_CITY`, `AGENT_OFFICE_WEATHER`, `AGENT_OFFICE_SKY_CLOCK` | The 3D office's sky and weather |
+| `AGENT_OFFICE_CITY`, `AGENT_OFFICE_WEATHER`, `AGENT_OFFICE_SKY_CLOCK` | The office's sky and weather (⚙️ Settings › Advanced › Outside) |
 
 ## Teams and Jeff
 

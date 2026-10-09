@@ -1,5 +1,4 @@
-// The smoking balcony out past the south wall's glass doors (shared/layout.ts BALCONY), as the 3D
-// office has it: a deck of boards, a railing round its three open sides, the standing ashtray where a
+// The smoking balcony out past the south wall's glass doors (shared/layout.ts BALCONY): a deck of boards, a railing round its three open sides, the standing ashtray where a
 // smoke break happens, and a planter. Part of the still office (office.ts); benched Leads come out
 // here for a smoke (breaks.ts).
 

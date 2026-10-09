@@ -3,7 +3,7 @@
 // stands, and the way to its Lead's terminal or Chat view (it works inside its Lead's session, so that's
 // where its work shows). The Project Manager gets Warn, Bench, Model and Reinstate here too, through the
 // same gates as on the Team tab (ui/roster/subagents.ts). It isn't hired or sent home like a worker:
-// its Lead sends it off. No three.js: the 1D and 2D views open it.
+// its Lead sends it off.
 
 import { cardNow, shortSpan, subagentCards, type SubagentCard } from '../../../shared/roster/subagent-cards';
 import type { LiveRunView } from '../../../shared/roster/subagent-live';

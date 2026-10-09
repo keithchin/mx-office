@@ -4,8 +4,7 @@
 // confirm: Studio Pro locks the project the agents write with `mxcli exec` (the one-writer rule),
 // so it says so and names the agents on the floor mid-turn. Beside the button, Studio mode's chip:
 // the office sees Studio Pro open on the project (server/studio/watch.ts), however it was opened,
-// and pauses the agents' mxcli writes meanwhile; the button says it's open and waits. No three.js
-// here: the flat views load it.
+// and pauses the agents' mxcli writes meanwhile; the button says it's open and waits.
 
 import type { StudioInfo, StudioOpenResult, StudioState } from '../../../shared/studio';
 import { store } from '../../state';

@@ -1,19 +1,15 @@
 /**
- * The ☰ menu on the flat views' top bars (the 1D board and the 2D pixel office): the 3D office's menu
- * (ui/menuitems.ts has its items, ui/menu.ts draws them), with what each does from here. What only
- * the 3D office has (voice, sharing your screen, hanging a picture, the rooftop bar) is marked 3D and
- * opens the 3D office at it. ⚙️ Settings never does: it's the flat Settings page (ui/settings/page.ts),
- * the 1D view's ⚙️ Settings tab, which `settings` opens (or goToSettings, ui/settings/flat.ts). The
- * camera keys (Controls), the mute button (only while in voice), the 3D panels and the view items
- * (the view dropdown has those) aren't offered. The home page has it too, without what needs a floor
- * (home: true): its issues, PRs, queue, services, whiteboard, meeting, search, docs and who's waiting.
- * No three.js here: both flat views and the home page import it.
+ * The ☰ menu on the flat pages' top bars (the 1D view, the 2D Office view and Home): its items are
+ * ui/menuitems.ts, ui/menu.ts draws them, and this says what each does from here. ⚙️ Settings is the
+ * Settings page (ui/settings/page.ts), the 1D view's ⚙️ Settings tab, which `settings` opens (or
+ * goToSettings, ui/settings/flat.ts). The home page has it too, without what needs a floor (home: true):
+ * its issues, PRs, queue, services, whiteboard, meeting, search, docs and who's waiting.
  */
 import type { Net } from '../net';
 import { store } from '../state';
 import { h, type Modal } from '../ui/dom';
 import { menuItem, openDropdown, type HudAction } from '../ui/menu';
-import { MENU, runIn3d, type MenuId } from '../ui/menuitems';
+import { MENU } from '../ui/menuitems';
 import { badgeText } from '../ui/chrome-logic';
 import type { BoardActions } from '../ui/github/prompts';
 import { openBoard } from '../ui/boards';
@@ -27,7 +23,6 @@ import { openAccounts } from '../ui/accounts';
 import { openConnections } from '../ui/connections';
 import { openSignIns } from '../ui/signins';
 import { openUpgrade } from '../ui/upgrade';
-import { switchView } from '../graphics';
 import { settingsHref } from '../../shared/settings-sections';
 import { testsHref } from '../../shared/testlab';
 import { openStudio, watchStudio } from '../ui/studio';
@@ -44,7 +39,7 @@ interface FloorMenuDeps {
   meeting: () => void;
   /** The next worker waiting on someone. */
   nextWaiting: () => void;
-  /** The page has the 3D office's N for it (the 2D view does). */
+  /** The page has N for it (the 2D view does). */
   nKey?: boolean;
   /** ⚙️ Settings: the 1D view's own tab there, the 1D view's tab from elsewhere. */
   settings?: () => void;
@@ -73,8 +68,6 @@ const count = (n: number | undefined) => (n ? h('span.ro-tab-n', {}, badgeText(n
 /** Wires `button` (the ☰ on the top bar) to open the menu. */
 export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
   const { net } = d;
-  /** One only the 3D office has: it opens there and runs it. */
-  const in3d = (id: MenuId, title: string): HudAction => ({ ...MENU[id], key: undefined, title: () => `${title} · opens the 3D office`, run: () => (runIn3d(id), switchView('3d')) });
   // On the home page none of the floor's items are offered, so these never run there.
   const f: FloorMenuDeps = d.home ? { net, boardActions: () => ({}) as BoardActions, openWorker: () => {}, meeting: () => {}, nextWaiting: () => {} } : d;
   const all: HudAction[] = [
@@ -90,16 +83,12 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
     { ...MENU.studio, run: () => void openStudio() },
     // Every floor's card, with how many wait on someone, is the home page (its Projects tab, from there).
     { ...MENU.elevator, run: () => (d.home ? (document.getElementById('tab-projects')?.click(), scrollTo({ top: 0 })) : location.assign('/home')) },
-    in3d('roof', 'Up to the roof: a DJ, drinks and the city'),
-    in3d('voice', 'Talk with the others in the office'),
-    in3d('share', 'Share your screen with the others in the office'),
-    in3d('decor', 'Hang a picture on the office wall'),
     { ...MENU.team, run: () => openTeam(net) },
     { ...MENU.accounts, run: () => openAccounts(net) },
     { ...MENU.signins, run: () => openSignIns(net) },
     { ...MENU.settings, title: () => 'Every setting: you, the agents, the team, Jeff, notifications, the budget, connections and the rest', run: () => (d.settings ? d.settings() : location.assign(settingsHref(undefined, store.floor ?? undefined))) },
     { ...MENU.connections, run: () => openConnections() },
-    // 🧪 Test mode (ui/testlab/): the flat views' page only, never the 3D office; admins only.
+    // 🧪 Test mode (ui/testlab/): the 1D view's page; admins only.
     { id: 'tests', icon: '🧪', label: 'Test mode', section: 'Office', shown: () => store.me.admin, title: () => 'Test mode and the performance guard: run the page, journey and unit suites against a throwaway test office, and see the results', run: () => (d.tests ? d.tests() : location.assign(testsHref(store.floor ?? store.floors[0]?.id))) },
     { ...MENU.home, shown: () => !d.home, run: () => location.assign('/home') },
     { ...MENU.guide, run: () => location.assign('/docs') },
@@ -107,16 +96,11 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
   ];
   const actions = d.home ? all.filter((a) => !FLOOR_ONLY.has(a.id)) : all;
   if (!d.home) watchStudio();
-  const elsewhere = new Set<string>(['roof', 'voice', 'share', 'decor']);
   let menu: Modal | null = null;
 
   function open() {
     const close = () => menu?.close();
-    const row = (a: HudAction) => {
-      const item = menuItem(a, close, count);
-      if (elsewhere.has(a.id)) item.querySelector('.mi-label')!.after(h('span.mi-3d', { 'aria-hidden': 'true' }, '3D ↗'));
-      return h('div.menu-row', {}, item);
-    };
+    const row = (a: HudAction) => h('div.menu-row', {}, menuItem(a, close, count));
     const section = (name: string, rows: HTMLElement[]) => (rows.length ? [h('div.menu-sec', {}, name), ...rows] : []);
     const rows = (s: HudAction['section']) => actions.filter((a) => a.section === s && (a.shown?.() ?? true)).map(row);
     const el = h(
@@ -124,7 +108,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
       { role: 'menu', 'aria-label': 'Menu' },
       h('div.menu-col', {}, ...section('Open', rows('Open'))),
       h('div.menu-col', {}, ...section('Together', rows('Together')), ...section('Office', rows('Office'))),
-      h('p.menu-foot', {}, d.home ? 'The ones marked 3D ↗ open the 3D office there. What works on one floor (its issues, PRs, queue, whiteboard, meeting…) is in each project.' : 'The ones marked 3D ↗ open the 3D office there. The other flat view (Go to Office, Go to Board) is a button by the ☰.'),
+      d.home ? h('p.menu-foot', {}, 'What works on one project (its issues, PRs, queue, whiteboard, meeting…) is in each project.') : null,
     );
     menu = openDropdown(button, el, () => (menu = null));
   }

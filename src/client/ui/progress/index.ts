@@ -6,7 +6,7 @@ import './progress.css';
  * showing only what was measured. It asks the office when something it heard of changed: the floor you
  * open, a pull request merged (main moved), coming back to the tab after a while, an Accept or a
  * Reopen. No timer of its own. It draws again only when the answer differs. Folding it to a thin line is
- * remembered on this browser. No three.js here.
+ * remembered on this browser.
  */
 import type { Phase, PhaseOpen, ProjectProgress } from '../../../shared/progress';
 import { store } from '../../state';

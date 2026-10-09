@@ -14,7 +14,7 @@
 
 Mx Office is a web app (a Node server on your machine, your browser as the screen) where **Claude Code agents** work on **GitHub repositories**. It started as a fork of Agent Office and turns it into an **App Factory for Mendix**:
 
-- Every **project** is one Mendix app in its own GitHub repository (in the organization you pick in setup; AI-Taskforce-Labs by default).
+- Every **project** is one Mendix app in its own GitHub repository (in the organization you pick in setup; AI-Taskforce-Labs by default), with two views: its **1D view** (`/lite`: the Overview, board and the other pages, where every project opens) and its **2D Office view** (`/pixel`: the floor from above in pixel art, from **Go to Office**; **Return to Project** comes back). The old 3D and Retro views are gone; `/` and old `/?view=3d` links open the 1D view.
 - Every floor has a **team** in one of three shapes: **Enterprise**, a **Project Coordinator** and four **Leads** (Design, Development, Testing, Analysis), each with its own Claude Code subagents; **Startup**, a Chief Analyst and a Lead Developer; or **Solo**, one Solo Lead covering every team. The new-project wizard recommends a shape and a budget level from the intake answers.
 - The agents change the app with **mxcli** and follow the **mxcli-project-toolkit**, stages P (kickoff) to 7 (cutover), with ✋ gates that need a `CONFIRMED` decision.
 - **You are the Project Manager**: you approve what matters and answer escalations. The **autonomy level** (1 Directive … 4 Autonomous) sets how often agents need you.

@@ -14,12 +14,12 @@ import type { LiveAppClientMsg, LiveAppServerMsg } from './protocol/liveapp.js';
 import type { MeetingClientMsg, MeetingServerMsg } from './protocol/meetings.js';
 import type { PresenceClientMsg, PresenceServerMsg } from './protocol/presence.js';
 import type { QueueClientMsg, QueueServerMsg } from './protocol/queue.js';
-import type { RooftopClientMsg, RooftopServerMsg } from './protocol/rooftop.js';
+import type { RooftopServerMsg } from './protocol/rooftop.js';
 import type { AuditServerMsg } from './protocol/audit.js';
 import type { RosterServerMsg } from './protocol/roster.js';
 import type { SettingsClientMsg, SettingsServerMsg } from './protocol/settings.js';
 import type { StudioServerMsg } from './protocol/studio.js';
-import type { BallClientMsg, CabinetClientMsg, CarClientMsg, DecorClientMsg, DogClientMsg, JukeboxClientMsg, ToysServerMsg, WhiteboardClientMsg } from './protocol/toys.js';
+import type { DogClientMsg, JukeboxClientMsg, ToysServerMsg, WhiteboardClientMsg } from './protocol/toys.js';
 import type { UsageClientMsg, UsageServerMsg } from './protocol/usage.js';
 import type { WorkerClientMsg, WorkerServerMsg } from './protocol/workers.js';
 
@@ -45,7 +45,6 @@ export * from './protocol/workers.js';
 
 export type ClientMsg =
   | PresenceClientMsg
-  | RooftopClientMsg
   | WorkerClientMsg
   | GitHubClientMsg
   | QueueClientMsg
@@ -58,12 +57,8 @@ export type ClientMsg =
   | SignInsClientMsg
   | SettingsClientMsg
   | UsageClientMsg
-  | DecorClientMsg
   | JukeboxClientMsg
-  | CabinetClientMsg
   | WhiteboardClientMsg
-  | BallClientMsg
-  | CarClientMsg
   | DogClientMsg
   | LiveAppClientMsg
   | ConvoClientMsg;

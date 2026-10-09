@@ -1,7 +1,7 @@
 // A pull request's checks, as its pr-checks run left them (GET /api/pr-shots): the scorecard's rows
 // (mx check, lint, the best-practices score, unit and e2e tests) and a strip of the Playwright
 // screenshots, each opening larger on a click. Shown in a PR card's hover preview and its window;
-// a PR with no run yet shows nothing at all. No three.js here: the 1D view imports it.
+// a PR with no run yet shows nothing at all.
 
 import type { PrChecks, PrShot } from '../../shared/prshots';
 import { store } from '../state';

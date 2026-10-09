@@ -1,4 +1,4 @@
-// The Firm's API from the browser (server/http/routes/firm.ts). No three.js here.
+// The Firm's API from the browser (server/http/routes/firm.ts).
 
 import type { Engagement, EngagementConfig, Estimate, FirmFloorStatus } from '../../shared/firm/engagement';
 import type { Report } from '../../shared/firm/report';

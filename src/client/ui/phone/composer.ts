@@ -2,7 +2,7 @@
 // for a new line). A line under it says where the message goes before it's sent (the floor's Project
 // Coordinator, the @mentioned agent, every Lead with @team and what that costs, the thread's agent, the
 // escalation it answers), from the same routeMessage the office uses. Typing @ offers the floor's
-// agents and @team, picked with the arrows and Enter or Tab. No three.js.
+// agents and @team, picked with the arrows and Enter or Tab.
 
 import { parseMention, routeMessage, teamWarning, type PhoneAgent, type PhonePlace } from '../../../shared/phone';
 import { h, toast } from '../dom';

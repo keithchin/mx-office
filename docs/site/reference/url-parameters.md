@@ -1,6 +1,6 @@
 ---
 title: URL parameters
-description: Addresses you can bookmark or share - floors, tabs, teams, board filters, views, graphics and the docs.
+description: Addresses you can bookmark or share - floors, tabs, teams, board filters, views and the docs.
 weight: 8
 ---
 
@@ -20,12 +20,9 @@ The address always says where you are, so you can bookmark or share it.
 
 `/pixel?floor=<id>`.
 
-## 3D office (`/`)
+## Old 3D office links (`/`)
 
-| Parameter | Values |
-|---|---|
-| `view` | `1d`, `2d`, `3d`, `retro` (also on the other pages, to switch) |
-| `gfx` | `low`, `medium`, `high` |
+`/` and `/index.html` redirect to the 1D view, keeping `?floor=<id>`; `view`, `3d` and `gfx` are ignored (the 3D and Retro views are gone).
 
 ## Home (`/home`)
 

@@ -51,7 +51,7 @@ let opener: ((o: PhoneOpen) => void) | undefined;
 /** The page's phone says how to open it (ui/phone/index.ts). */
 export const setPhoneOpener = (fn: (o: PhoneOpen) => void) => void (opener = fn);
 
-/** Opens the team phone, if this page has one; false when it hasn't (the 3D office). */
+/** Opens the team phone, if this page has one; false when it hasn't. */
 export function openPhone(o: PhoneOpen = {}): boolean {
   if (!opener) return false;
   opener(o);

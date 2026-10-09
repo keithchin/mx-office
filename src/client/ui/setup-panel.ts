@@ -4,7 +4,7 @@ import './setup-panel.css';
  * confirmed: the toolkit's stages from kickoff to build plan with their gate verdicts, what's next,
  * the questions still open, and a way back into the new-project wizard to change the answers. What
  * it shows comes from the project's files (server/wizard/setup.ts); 🔄 Re-check runs gate-check on
- * the office for fresh verdicts. No three.js: the 1D view draws it.
+ * the office for fresh verdicts.
  */
 import type { Net } from '../net';
 import { staleText, type SetupView } from '../../shared/wizard';

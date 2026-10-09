@@ -1,7 +1,7 @@
-// The flat Settings page's sections for the whole office that the 3D window doesn't have on their own:
+// The Settings page's sections for the whole office:
 // Incidents (the detection rules, ui/incidents/form.ts), Appearance (the flat views' color theme, yours,
 // beside the building's holiday theme and map) and Advanced (the workspace folder, the sky's clock, the
-// office dog and where the office keeps its settings). No three.js here.
+// office dog and where the office keeps its settings).
 
 import '../incidents/ui.css';
 import { INCIDENT_RULES, RULE_META, type IncidentSettings } from '../../../shared/incidents';
@@ -47,7 +47,7 @@ export function incidentsPart(): Built {
 /** The flat views' color theme, yours alone (the 🎨 on the top bar picks it too). */
 export function colorThemeSetting(): HTMLElement {
   const row = choiceRow<ColorTheme>('Color theme', COLOR_THEMES.map((t) => [t, THEME_LABEL[t]] as const), currentTheme, (t) => applyTheme(t, true));
-  return setting('Color theme', 'you', row, h('p.setting-note', {}, 'How the 1D view, the 2D view and the home page look in this browser: Default, Dark, Terminal (green on black), or Clean (Light or Dark), plain and without emoji. The 🎨 on the top bar picks it too. The 3D office always wears its own colors.'));
+  return setting('Color theme', 'you', row, h('p.setting-note', {}, 'How the 1D view, the 2D view and the home page look in this browser: Default, Dark, Terminal (green on black), or Clean (Light or Dark), plain and without emoji. The 🎨 on the top bar picks it too.'));
 }
 
 /** Appearance: your color theme, and the building's holiday theme and map (everyone's). */

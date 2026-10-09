@@ -1,6 +1,6 @@
 // The office's project-deletion API (server/http/routes/projects.ts), and what a page does when it hears
 // a project was deleted: a page on that project goes Home, where a toast says so; any other page just
-// toasts. No three.js here: the flat views and the home page import it.
+// toasts.
 
 import { goesHome, type DeleteJobView, type DeletePlan, type DeleteRequest } from '../../../shared/project-delete';
 import type { ServerMsg } from '../../../shared/protocol';

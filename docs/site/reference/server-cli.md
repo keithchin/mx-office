@@ -50,7 +50,7 @@ Given a `[dir]`, the office keeps its data in `<dir>/.agent-office` and that pro
 | `--budget <usd>`, `--budget-pause` | Office-wide daily budget, and stop hiring when it's spent |
 | `--max-workers <n>` | Most workers at once |
 | `--webhook <url>` | Slack or Discord webhook |
-| `--city <name>`, `--weather <kind>`, `--real-time-sky` | The 3D office's sky |
+| `--city <name>`, `--weather <kind>`, `--real-time-sky` | The office's sky (⚙️ Settings › Advanced › Outside) |
 | `-h, --help` | Help |
 
 ## Examples

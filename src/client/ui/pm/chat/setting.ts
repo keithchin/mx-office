@@ -1,6 +1,6 @@
 // The Command Center terminal setting: which view the 1D view's Command Center console opens its worker
 // in (pref.ts). It's in the 1D view's ⚙️ Settings tab (under Your view, beside the team's settings) and in
-// the 3D office's ⚙️ Settings › You; the console's own Chat | Terminal toggle changes the same setting.
+// ⚙️ Settings › You; the console's own Chat | Terminal toggle changes the same setting.
 
 import { h } from '../../dom';
 import { choiceRow } from '../../settings-rows';

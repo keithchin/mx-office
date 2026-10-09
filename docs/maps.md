@@ -2,7 +2,10 @@
 
 Back to the [README](../README.md).
 
-The office is one map the building can be. Under **⚙️ Settings › 🎨 Appearance → Map** (`/lite?tab=settings&section=appearance`; in the 3D office's ⚙️ window, 🏢 Building → Map), anyone can change it for everyone, on every floor: to the **🏰 Castle**, to the **🚀 Space station**, or to a map of your own. Everything that makes the office work comes along: the workers and their terminals, the issues and PR boards, the task queue and its agent, the services board, meetings, the merge gong, the budget and the limits. Workers keep their seats, since every map places the same seats (see [Seats](#seats)), so a map can change while they work.
+> [!NOTE]
+> The maps were drawn for the 3D office, which is gone (2026-10-09). The office still keeps a map (its seats, its boards and where things stand come from it, and ⚙️ Settings › Appearance still picks one), but nothing walks around in it any more: the 2D Office view draws the office floor plan. See [The two views](site/concepts/views.md).
+
+The office is one map the building can be. Under **⚙️ Settings › 🎨 Appearance → Map** (`/lite?tab=settings&section=appearance`), anyone can change it for everyone, on every floor: to the **🏰 Castle**, to the **🚀 Space station**, or to a map of your own. Everything that makes the office work comes along: the workers and their terminals, the issues and PR boards, the task queue and its agent, the services board, meetings, the merge gong, the budget and the limits. Workers keep their seats, since every map places the same seats (see [Seats](#seats)), so a map can change while they work.
 
 The office has plenty of its own that a map doesn't (the elevator, the balcony, the rooftop bar, the lounge, the dog, pictures on the walls). On another map you go to another project from the floor list in the top-left corner (or **☰ → Floors**), and each project's hall is dressed in its own colors: the castle's banners and shields, the station's lines of light.
 

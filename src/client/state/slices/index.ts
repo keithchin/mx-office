@@ -10,11 +10,7 @@
 import type { Slice } from '../store';
 import { building, floor, me, presence } from '../core';
 import { accounts } from './accounts';
-import { ball } from './ball';
-import { cabinet } from './cabinet';
-import { cars } from './cars';
 import { convo } from './convo';
-import { decor } from './decor';
 import { dog } from './dog';
 import { floorPlan } from './floor-plan';
 import { jail } from './jail';
@@ -50,15 +46,11 @@ export const SLICES: readonly Slice[] = [
   map,
   floor,
   meeting,
-  decor,
   floorPlan,
   services,
   dog,
   jukebox,
   whiteboard,
-  cabinet,
-  ball,
-  cars,
   jail,
   team,
   accounts,

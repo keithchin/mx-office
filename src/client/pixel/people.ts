@@ -1,13 +1,13 @@
 // The 2D view's desks and the people at them (pixel.ts), drawn over the still office (office.ts)
 // every frame: each worker at its desk acting out how it's doing (typing while it works, nodding
 // off asleep, a speech bubble when it wants you, a tick when it's done), dressed for its role on
-// the team (teams.ts, chars.ts), and the people walking about the 3D office where they are. What's
+// the team (teams.ts, chars.ts). What's
 // nearer you is drawn over what's further away, so someone behind a desk is hidden by it.
 
 import { DESKS, DESK_SIZE, KIOSK, MEETING_SEATS, MEETING_TABLE, STATIONS, BEANBAGS, WING_DESKS, beanbagsOut, deskBuilt, deskSeat, type DeskDef } from '../../shared/layout';
 import { ZONE_OF_DESK } from '../../shared/zones';
 import { isAsleep } from '../../shared/status';
-import type { PeerInfo, WorkerInfo } from '../../shared/protocol';
+import type { WorkerInfo } from '../../shared/protocol';
 import { C, bubble, check, zed } from './sprites';
 import { lookFor, seated, standing, type Outfit, type Pose } from './chars';
 import { blob, oval, rect, solid } from './paint';
@@ -21,9 +21,9 @@ import { breakAt, breakSpot, drawBreak, type BreakLead } from './breaks';
 import { drawHelpers, floorWalks, type Helper } from './helpers';
 import type { Walks } from './helper-life';
 
-/** Something under the pointer: a worker, someone walking about, or a free desk to hire someone at. */
+/** Something under the pointer: a worker, a Lead or a subagent, the dog, or a free desk to hire someone at. */
 export interface Spot {
-  kind: 'worker' | 'peer' | 'desk' | 'dog' | 'lead' | 'subagent';
+  kind: 'worker' | 'desk' | 'dog' | 'lead' | 'subagent';
   id: string;
   x: number;
   y: number;
@@ -54,10 +54,9 @@ export interface People {
   labels: Label[];
 }
 
-/** What the scene is drawn from: the floor's workers, who's walking about it, and what the pointer is on. */
+/** What the scene is drawn from: the floor's workers, and what the pointer is on. */
 export interface Cast {
   workers: Iterable<WorkerInfo>;
-  peers: Iterable<PeerInfo>;
   level: number;
   hover: string | null;
   /** The floor's dog, and when (performance.now()) the leg it's on began. */
@@ -147,23 +146,6 @@ export function drawPeople(g: CanvasRenderingContext2D, f: Frame, cast: Cast, no
     },
   });
   for (const m of MEETING_SEATS) seat(m, byDesk.get(m.id));
-
-  // ---- People walking about the 3D office, where they are ----
-  for (const p of cast.peers) {
-    const x = ax(f, p.x), y = az(f, p.z);
-    queue.push({
-      y,
-      draw: () => {
-        const look = lookFor(p.id, p.color);
-        const pose = Math.cos(p.rotY) > 0.5 ? 'back' : 'front';
-        blob(g, x, y, 8, 2);
-        g.drawImage(standing(look, pose, p.moving, beat), x - 12, y - STAND);
-        if (cast.hover === p.id) ring(x, y);
-      },
-    });
-    out.spots.push({ kind: 'peer', id: p.id, x: x - 10, y: y - STAND - 1, w: 20, h: STAND + 2 });
-    out.labels.push({ id: p.id, text: p.name, x, y: y + 3, above: false, human: true });
-  }
 
   // Benched Leads, on a break: the TV, a smoke on the balcony, a coffee (breaks.ts).
   cast.breaks?.leads.forEach((l, i) => {

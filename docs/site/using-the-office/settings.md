@@ -10,11 +10,11 @@ The sections are down the left; pick one and the address follows (`&section=work
 
 | Section | Link | What's in it |
 |---|---|---|
-| 🧍 **You** | [section=you](/lite?tab=settings&section=you) | Command Center terminal (Chat or Terminal), how you're signed in, and your sounds and voice chat (heard in the 3D office) |
+| 🧍 **You** | [section=you](/lite?tab=settings&section=you) | Command Center terminal (Chat or Terminal), how you're signed in |
 | 🤖 **Agents** | [section=workers](/lite?tab=settings&section=workers) | Default worker, worker limit, keep awake while agents work, 🔁 restart safely, workers whose PR merged, the prompts |
 | 👥 **Team** | [section=team](/lite?tab=settings&section=team) | This project's team settings (the table below, without Jeff and early drafts), and ▶ Resume project pacing |
 | ⚖️ **Jeff · Router** | [section=jeff](/lite?tab=settings&section=jeff) | *Waiting on you*, *When to escalate*, *Triage*, *Priority* |
-| 🔔 **Notifications** | [section=notify](/lite?tab=settings&section=notify) | Desktop notifications, the alarm when a worker needs you, phone alerts, Slack / Discord, Microsoft Teams |
+| 🔔 **Notifications** | [section=notify](/lite?tab=settings&section=notify) | Desktop notifications, phone alerts, Slack / Discord, Microsoft Teams |
 | 💰 **Budget** | [section=budget](/lite?tab=settings&section=budget) | This project's budget, alert threshold, auto-pause and level; the office's default threshold and local currency (FX) |
 | 🔌 **Connections** | [section=connections](/lite?tab=settings&section=connections) | Tokens, password, git & gh, phone access, folders, worktree cleanup (admins; also ☰ → 🔌 Connections) |
 | 📦 **Deliverables** | [section=deliverables](/lite?tab=settings&section=deliverables) | Early drafts |
@@ -25,7 +25,6 @@ The sections are down the left; pick one and the address follows (`&section=work
 | 🧪 **Testing** | [section=testing](/lite?tab=settings&section=testing) | Admins only: whether this office is in test mode and why, and the way to the [Test Mode page](../administration/test-mode-page.md) |
 | ⚠️ **Danger zone** | [section=danger](/lite?tab=settings&section=danger) | Admins only: Remove this project from the office, or delete it (its folder and GitHub repository too, if you tick them). See [Delete or remove a project](delete-project.md) |
 
-The 3D office keeps its own **☰ → ⚙️ Settings** window for when you're in it: the camera and your character, which only it has, plus the same Agents, Notifications, sound and building sections (they're built from the same parts), and an *All settings ↗* link to this page.
 
 ## The team settings
 
