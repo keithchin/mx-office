@@ -4,6 +4,15 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Fixed
+- **The Agents and Budget pages stay smooth on a big project.** The Agents page no longer rebuilds every card
+  a few times a second while agents work: only the cards that changed are redrawn (its longest stall on the
+  performance guard's big floor: about 200 ms → about 100 ms). The Budget page no longer lays the whole page
+  out twice while it draws, and formats its amounts faster (about 220 ms → about 100 ms). Nothing they show
+  changed, except that an opened "How agents are graded" no longer folds shut as the list updates.
+
 ## 2026-10-09 · release 29 (`daa71db`)
 
 ### New

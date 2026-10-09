@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { batched, type BatchClock } from '../src/client/ui/batch.js';
 import { GONE_CAP, capGone } from '../src/client/ui/ranking/index.js';
+import { reuseSame, syncChildren } from '../src/client/ui/keep.js';
 
 function fakeClock() {
   let t = 0;
@@ -175,4 +176,96 @@ test("the console's escalation faces are drawn a few a frame after the cards, no
   const raised = esc.slice(esc.indexOf('function raisedBy('), esc.indexOf('export class EscalationList'));
   assert.match(raised, /later\(\(\) => c\.getContext\('2d'\)!\.drawImage\(standing\(/);
   assert.match(esc, /const FACE_MS = 8;/);
+});
+
+// A tiny stand-in for a DOM parent: enough for syncChildren, and it counts what it did to the page.
+class FakeNode {
+  parent?: FakeParent;
+  constructor(readonly name: string) {}
+  get nextSibling(): FakeNode | null {
+    const k = this.parent!.kids;
+    return k[k.indexOf(this) + 1] ?? null;
+  }
+}
+class FakeParent {
+  kids: FakeNode[] = [];
+  writes = 0;
+  get firstChild() {
+    return this.kids[0] ?? null;
+  }
+  insertBefore(n: FakeNode, ref: FakeNode | null) {
+    this.writes++;
+    if (n.parent) n.parent.kids.splice(n.parent.kids.indexOf(n), 1);
+    n.parent = this;
+    this.kids.splice(ref ? this.kids.indexOf(ref) : this.kids.length, 0, n);
+  }
+  removeChild(n: FakeNode) {
+    this.writes++;
+    this.kids.splice(this.kids.indexOf(n), 1);
+    n.parent = undefined;
+  }
+}
+
+test('keepSame: a redraw that builds a card the same keeps the one on the page; a changed card is the new one', () => {
+  const stored = new WeakMap<object, string>();
+  const sig = (n: FakeNode) => n.name;
+  const first = ['a', 'b', 'c', 'b'].map((x) => new FakeNode(x));
+  const shown = reuseSame([], first, sig, stored);
+  assert.deepEqual(shown, first, 'nothing on the page yet: every new one');
+  const again = ['a', 'b', 'x', 'b', 'c'].map((x) => new FakeNode(x));
+  const next = reuseSame(shown, again, sig, stored);
+  assert.equal(next[0], first[0]);
+  assert.equal(next[1], first[1]);
+  assert.equal(next[2], again[2], 'a changed card is drawn anew');
+  assert.equal(next[3], first[3], 'two cards built the same each keep one of their own');
+  assert.equal(next[4], first[2], 'a card that moved is still the one on the page');
+  // The new card is remembered for the next redraw; one never put on the page isn't.
+  assert.equal(stored.get(again[2]), 'x');
+  assert.equal(stored.get(again[0]), undefined);
+});
+
+test('syncChildren: only the children not already in their place touch the page', () => {
+  const p = new FakeParent();
+  const [a, b, c, d] = ['a', 'b', 'c', 'd'].map((x) => new FakeNode(x));
+  syncChildren(p, [a, b, c]);
+  assert.deepEqual(p.kids, [a, b, c]);
+  p.writes = 0;
+  syncChildren(p, [a, b, c]);
+  assert.equal(p.writes, 0, 'the same children: nothing written');
+  syncChildren(p, [a, d, b, c]);
+  assert.deepEqual(p.kids, [a, d, b, c]);
+  assert.equal(p.writes, 1, 'one new card: one insert');
+  p.writes = 0;
+  syncChildren(p, [a, c]);
+  assert.deepEqual(p.kids, [a, c]);
+  assert.equal(p.writes, 2, 'two gone: two removals');
+  syncChildren(p, [c, a]);
+  assert.deepEqual(p.kids, [c, a]);
+  syncChildren(p, []);
+  assert.deepEqual(p.kids, []);
+});
+
+test("the Workers list keeps the cards a redraw draws the same, and the Budget tab doesn't lay the page out mid-draw", () => {
+  const ranking = src('ui/ranking/index.ts');
+  const drawList = ranking.slice(ranking.indexOf('  function drawList('), ranking.indexOf('  function buildList('));
+  assert.match(drawList, /keepSame\(d\.list, \[\.\.\.out\.children\]\);/);
+  assert.doesNotMatch(ranking.slice(ranking.indexOf('  function buildList('), ranking.indexOf('// Every minute')), /d\.list\./, 'the list is built off the page');
+  const tab = src('ui/budget/tab.ts');
+  const render = tab.slice(tab.indexOf('  const render = () => {'), tab.indexOf('  feed.on(render);'));
+  assert.doesNotMatch(render.slice(0, render.indexOf('requestAnimationFrame')), /window\.scroll(Y|To)/, 'no layout read or scroll before the frame');
+  assert.match(tab, /addEventListener\('scroll', \(\) => \(scrolledTo = window\.scrollY\), \{ passive: true \}\);/);
+  // Money formats made once, not per amount.
+  assert.doesNotMatch(readFileSync(new URL('../src/shared/budget/money.ts', import.meta.url), 'utf8'), /toLocaleString\(/);
+});
+
+test('the money formats still read as before', async () => {
+  const { usd, usdCents, local } = await import('../src/shared/budget/money.js');
+  assert.equal(usd(1250.4), '$1,250');
+  assert.equal(usd(4.2), '$4.20');
+  assert.equal(usd(-12345.6), '−$12,346');
+  assert.equal(usdCents(252.4), '$252.40');
+  assert.equal(usdCents(1234567.891), '$1,234,567.89');
+  assert.equal(usdCents(-3), '−$3.00');
+  assert.equal(usdCents(0.001), '<$0.01');
+  assert.equal(local(1000, { currency: 'SGD', rate: 1.282, source: 'ecb' } as never), 'S$1,282');
 });

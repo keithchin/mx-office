@@ -30,7 +30,8 @@ function bar(r: BreakdownRow, max: number): HTMLElement {
 function rowsOf(list: BreakdownRow[], max: number, fx: BudgetView['fx'], depth = 0): HTMLElement[] {
   const out: HTMLElement[] = [];
   for (const r of list) {
-    const tip = [`${r.label}: ${both(r.cost, fx)} (${Math.round(r.share * 100)} %)`, r.est ? `${usdCents(r.est)} of it estimated from history` : '', r.hint ?? ''].filter(Boolean).join('\n');
+    // Its words worked out when it's hovered, not for every row of every draw.
+    const tip = () => [`${r.label}: ${both(r.cost, fx)} (${Math.round(r.share * 100)} %)`, r.est ? `${usdCents(r.est)} of it estimated from history` : '', r.hint ?? ''].filter(Boolean).join('\n');
     const tr = h(
       'tr',
       { class: depth ? 'bud-sub' : '' },
@@ -39,7 +40,7 @@ function rowsOf(list: BreakdownRow[], max: number, fx: BudgetView['fx'], depth =
       h('td.bud-num', {}, usdCents(r.cost)),
       h('td.bud-num.bud-pct', {}, `${Math.round(r.share * 100)} %`),
     );
-    tooltip(tr, () => tip);
+    tooltip(tr, tip);
     out.push(tr);
     if (r.sub) out.push(...rowsOf(r.sub, max, fx, depth + 1));
   }
@@ -116,6 +117,10 @@ function notes(v: BudgetView): HTMLElement | null {
 export function budgetTab(root: HTMLElement, feed: BudgetFeed, visible: () => boolean, sections: BudgetSection[] = []) {
   /** Set by a section's own action: the next numbers redraw even mid-edit. */
   let force = false;
+  // Where the page is scrolled, kept from its scroll events: reading window.scrollY in the draw made the
+  // browser work out the whole page's style first (60 ms on a big floor, the performance guard, 2026-10-09).
+  let scrolledTo = window.scrollY;
+  addEventListener('scroll', () => (scrolledTo = window.scrollY), { passive: true });
   const refresh = () => {
     force = true;
     feed.refresh();
@@ -134,7 +139,7 @@ export function budgetTab(root: HTMLElement, feed: BudgetFeed, visible: () => bo
     force = false;
     const open = new Set([...root.querySelectorAll<HTMLDetailsElement>('details[data-sec]')].filter((d) => d.open).map((d) => d.dataset.sec));
     const closed = new Set([...root.querySelectorAll<HTMLDetailsElement>('details[data-sec]')].filter((d) => !d.open).map((d) => d.dataset.sec));
-    const y = window.scrollY;
+    const y = scrolledTo;
     root.replaceChildren(
       h('div.bud', {}, h('h2.lite-h', {}, `💰 Budget · ${v.name}`, h('small.bud-hsub', {}, v.stage !== '—' ? `now at Stage ${v.stage}` : '')), headline(v), notes(v), legend(v), ...sections.map((s) => s(v, feed.office(), refresh)), table('By stage', v.byStage, v.fx, 'No spend yet.'), table('By role', v.byRole, v.fx), table('By agent', v.byAgent, v.fx), table('By model', v.byModel, v.fx), dayChart(v), table('Top issues and pull requests', v.topWork, v.fx, 'No spend tied to an issue or a pull request yet.')),
     );
@@ -142,7 +147,11 @@ export function budgetTab(root: HTMLElement, feed: BudgetFeed, visible: () => bo
       if (open.has(d.dataset.sec)) d.open = true;
       if (closed.has(d.dataset.sec)) d.open = false;
     }
-    window.scrollTo({ top: y });
+    // Back where it was on the frame that shows the new numbers, before it's painted, rather than now:
+    // scrolling now laid the whole page out once more inside this task, on top of the frame's own layout.
+    requestAnimationFrame(() => {
+      if (window.scrollY !== y) window.scrollTo({ top: y });
+    });
   };
   feed.on(render);
   return { render };

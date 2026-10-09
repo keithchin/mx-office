@@ -3,23 +3,30 @@
 
 import type { BudgetTone, FxView } from './types.js';
 
+// The number formats, made once: toLocaleString with options builds a new one on every call, and the
+// Budget tab formats a few hundred amounts per draw (the performance guard, 2026-10-09). Same output.
+let whole: Intl.NumberFormat | undefined;
+let cents: Intl.NumberFormat | undefined;
+const wholeStr = (n: number) => (whole ??= new Intl.NumberFormat('en-US')).format(n);
+const centsStr = (n: number) => (cents ??= new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })).format(n);
+
 /** Whole dollars from $10 up ("$42", "$1,250"), cents below ("$4.20"). */
 export function usd(n: number): string {
   const v = Math.abs(n) < 0.005 ? 0 : n;
   const abs = Math.abs(v);
-  const s = abs >= 10 ? Math.round(abs).toLocaleString('en-US') : abs.toFixed(2);
+  const s = abs >= 10 ? wholeStr(Math.round(abs)) : abs.toFixed(2);
   return `${v < 0 ? '−' : ''}$${s}`;
 }
 
 /** Dollars with cents always ("$252.40"): tables. */
-export const usdCents = (n: number) => (n > 0 && n < 0.005 ? '<$0.01' : `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+export const usdCents = (n: number) => (n > 0 && n < 0.005 ? '<$0.01' : `${n < 0 ? '−' : ''}$${centsStr(Math.abs(n))}`);
 
 /** An amount in the local currency ("S$325"), or undefined with no rate. */
 export function local(n: number, fx: FxView | undefined): string | undefined {
   if (!fx || fx.source === 'none' || !(fx.rate > 0) || fx.currency === 'USD') return undefined;
   const v = n * fx.rate;
   const abs = Math.abs(v);
-  const digits = abs >= 10 ? Math.round(abs).toLocaleString('en-US') : abs.toFixed(2);
+  const digits = abs >= 10 ? wholeStr(Math.round(abs)) : abs.toFixed(2);
   const sym = SYMBOL[fx.currency];
   return `${v < 0 ? '−' : ''}${sym ?? `${fx.currency} `}${digits}`;
 }
