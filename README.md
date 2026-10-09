@@ -1,4 +1,4 @@
-# Agent Office — the AI Taskforce Labs App Factory
+# Mx Office — the AI Taskforce Labs App Factory
 
 > A shared office where **teams of AI agents build Mendix apps**, and you run them as their **Project Manager**.
 > Built by the DI SW SEA AI Taskforce on top of the open-source [Agent Office](https://github.com/AgentSystemLabs/agent-office) (MIT).
@@ -6,20 +6,30 @@
 - **📚 Full documentation:** in the office at **`/docs`** (`http://127.0.0.1:4600/docs`; also ☰ → 📖 Documentation, or 📚 Docs on Home).
 - **📝 What changed:** [CHANGELOG.md](CHANGELOG.md), the single source of the release notes (the *Release notes* page in `/docs` shows this file).
 - **🖼️ Visual tour:** [README.html](README.html).
+- **⬇️ Releases:** every release has its notes on the [GitHub releases page](https://github.com/keithchin/mx-office/releases).
 
 ![The Command Center of a project](docs/site/images/command-center.png)
 
 ## What it is
 
-Agent Office is a web app (a Node server on this laptop, your browser as the screen) where **Claude Code agents** sit at desks and work on **GitHub repositories**. Our fork turns it into an **App Factory for Mendix**:
+Mx Office is a web app (a Node server on your machine, your browser as the screen) where **Claude Code agents** work on **GitHub repositories**. It started as a fork of Agent Office and turns it into an **App Factory for Mendix**:
 
-- Every **project** (one Mendix app in its own repo in **AI-Taskforce-Labs**) is a **floor** of the building.
+- Every **project** is one Mendix app in its own GitHub repository (in the organization you pick in setup; AI-Taskforce-Labs by default).
 - Every floor has a **team** in one of three shapes: **Enterprise**, a **Project Coordinator** and four **Leads** (Design, Development, Testing, Analysis), each with its own Claude Code subagents; **Startup**, a Chief Analyst and a Lead Developer; or **Solo**, one Solo Lead covering every team. The new-project wizard recommends a shape and a budget level from the intake answers.
 - The agents change the app with **mxcli** and follow the **mxcli-project-toolkit**, stages P (kickoff) to 7 (cutover), with ✋ gates that need a `CONFIRMED` decision.
 - **You are the Project Manager**: you approve what matters and answer escalations. The **autonomy level** (1 Directive … 4 Autonomous) sets how often agents need you.
-- Every pull request gets CI (consistency check, lint, best-practice score, unit and Playwright tests, screenshots), and the **live app** runs from `main` on the laptop.
+- Every pull request gets CI (consistency check, lint, best-practice score, unit and Playwright tests, screenshots), and the **live app** runs from `main` on your machine, so you don't have to open Studio Pro to see it running.
 
-Around the teams:
+What a project gives you:
+
+- **🧭 Overview** (the Command Center): what needs you, the Project Coordinator's console, recent activity, and Team, Technical contact and Details cards, under a **progress bar** of the toolkit's stages and ✋ gates with real counts (a gate waiting only on your sign-off says **NEEDS SIGN-OFF**, not FAIL).
+- **📐 Model**: an App Explorer and the app's domain models, microflows and nanoflows drawn the way Studio Pro draws them, from the model itself, at the developer's own positions; per branch, with what an agent changed highlighted, a Tidy layout for messy domain models, and full screen.
+- **✅ Accept a delivery**: an explicit acceptance record bound to the version, its evidence (gates, CI, tests, documents), exceptions with owners and a frozen cost; reopening starts v1.1 and keeps the old record.
+- **🧰 Pinned toolkit**: each project runs on its own mxcli-project-toolkit commit; **Update toolkit** previews what would change at the gates (Stage 2 PASS → FAIL, and why) before it commits, and can roll back.
+- **🤫 Interruptions handled**: every office message ends with "carry on with" the agent's task; an agent that stops with work open gets one nudge; **Run standup** or a status question first shows who's ready and who's busy, and asks before interrupting.
+- **🗑 Delete a project**, GitHub-style: a Danger zone in Settings, remove from the office or delete (optionally the folder and the GitHub repo), confirmed by typing its name; its data is archived first and the audit log keeps the record.
+
+Around the projects:
 
 - **🧑‍⚖️ Jeff · Router**, the office's quick judge (Jev, with Claude Haiku as fallback): is an agent waiting on you, which team is a new issue for, and which escalation to resolve first.
 - **🏛️ The Firm** (`/firm`): independent Reviewer Agents that audit a project from outside its team and deliver one report to you.
@@ -28,7 +38,8 @@ Around the teams:
 - **Performance guard and the Test Mode page** (admins, `/lite?tab=tests`, from ☰ › 🧪 Test mode, Home or ⚙️ Settings › 🧪 Testing): run the unit tests, the page-responsiveness test (every main view on a big synthetic office with live fake workers: longest task 200 ms, usable in 3 s, project switch 1.5 s, no memory growth), the end-to-end journey and the Command Center check against a throwaway test office, and read the results, charts and history (`/docs/administration/test-mode-page`, `/docs/administration/performance-budgets`). A page that freezes over half a second, or a server stall over a second, opens an incident.
 - **💰 Budget**: what each project spent, in dollars and a local currency, against an expected plan and a budget with a forecast, alerts and an auto-pause at 100 %, three budget levels in the new-project wizard, cost insights, and chips in the top bar.
 - **💬 Team chatter**: what the agents say to each other, as a live thread on each Command Center.
-- **📱 Team phone**: a floating chat and notification centre on the 1D and 2D views (a pixel iPhone in the Fun theme): each project's team chatter as a channel, DMs and threads with the agents, messages to the Project Coordinator, `@Name` or `@team`, and everything that needs you with its buttons.
+- **🏢 Go to Office**: the 2D office view, where the agents sit and walk around, a button away from every project.
+- **📱 Team phone**: a floating chat and notification centre on the project and office views (a pixel iPhone in the Fun theme): each project's team chatter as a channel, DMs and threads with the agents, messages to the Project Coordinator, `@Name` or `@team`, and everything that needs you with its buttons.
 - **📱 Phone version and Phone access**: the team phone full screen at `/m`, installable on an iPhone with push notifications for what needs you, and a private tunnel to it (Microsoft Dev Tunnels, or Cloudflare Tunnel with Access) switched on from 🔌 Connections. See the docs: *Phone version* and *Phone access*.
 - **🎨 Seven color themes**: Portal (Light) / Portal (Dark), the default, drawn like a low-code platform's web portal (navy top bar with a launcher and a search over projects, pages, agents, issues, pull requests and the docs; a project's pages in a left navigation of collapsible groups that folds to an icon rail, with a page header and an app-overview Overview; Home as a Projects card grid); Clean (Light) / Clean (Dark), which look like VS Code; both pairs show no emoji. And Fun, Fun (Dark) and Terminal.
 
@@ -91,4 +102,4 @@ Before committing a change to the pages or the server, run `npm test` and `npm r
 
 ---
 
-*Agent Office is MIT-licensed by AgentSystemLabs; this fork adds the App Factory, the team model, Jeff, The Firm and the Mendix pipeline for the DI SW SEA AI Taskforce. The original project's README is [docs/upstream-README.md](docs/upstream-README.md).*
+*Agent Office is MIT-licensed by AgentSystemLabs; Mx Office adds the App Factory, the team model, Jeff, The Firm and the Mendix pipeline for the DI SW SEA AI Taskforce. The original project's README is [docs/upstream-README.md](docs/upstream-README.md).*
