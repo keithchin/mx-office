@@ -13,6 +13,35 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   out twice while it draws, and formats its amounts faster (about 220 ms → about 100 ms). Nothing they show
   changed, except that an opened "How agents are graded" no longer folds shut as the list updates.
 
+### Changed
+- **The 2D Office view: Return to Project, and a tidy top bar.** The 2D Office view (`/pixel`) is reached
+  only from the 1D view's **Go to Office** (Home's cards, its ⋯, the 2D Overview, the launcher, notifications and
+  links all open the 1D view), and its **Go to Board** is now **Return to Project**: back to the 1D view of the same
+  project, on its Command Center. Its top bar is the Portal bar's shape in every theme: the launcher, **Mx Office**,
+  **OFFICE · PROJECT ⌄** (the project switcher), the search, **Return to Project** as its one primary button, then
+  the bell, help, dark mode, 🎨, TEST MODE and your avatar (☰); the other themes have 🏠, OFFICE / the project,
+  Return to Project, 🎨 and ☰. Everything about the office itself moved onto a **toolbar over the canvas**: the
+  project's status line on the left, its budget chip, **● Running | Pause** and the office's spend today beside it,
+  and **− Fit +** with a **⋯** (next agent waiting, chat, fit, and the keys, which used to fill the footer) on the
+  right. Home's project cards have one **🗂️ Open project** button instead of Board and Office.
+
+### Removed
+- **The 3D and Retro views.** The original three.js office you walked around in, and its chunky-pixel Retro
+  version, are gone with everything only they used: the 3D page and its code (`main.ts`, `core/`, `features/`,
+  `world/`, `player/`, `input/`, `sound/`, the Blender models, the graphics presets, the retro pass, the
+  elevator panel's floors, the HUD, the view dropdown and the ☰ menu's 3D ↗ items), **three.js** and
+  **@types/three** (and their own dependencies) from `package.json`, and the server side of the toys only the 3D
+  office could play (the arcade cabinet and its high scores, the basketball, the cars in the garage, pictures on the
+  walls and the `/api/image` proxy behind them, golf, darts and axes, the gong you hit and the air horn). Old
+  addresses still work: `/`, `/index.html` and links like `/?view=3d`, `/?3d=1&view=retro` or `/?gfx=low`
+  redirect to the 1D view (of the floor the link named, `?floor=`, else the one you were on, else Home), and the
+  old 3D docs page lands on **The two views**. The client bundle is 5.4 MB smaller on disk (21.4 → 16.0 MB, the
+  3.9 MB of models included), its JavaScript 1.5 MB smaller (10.75 → 9.26 MB; the 1.45 MB / 457 kB gzipped 3D
+  page is gone). ➕ Add project keeps its panel (`ui/add-project.ts`, out of the old elevator). ⚙️ Settings ›
+  You loses the 3D office's sounds and voice chat; the browser's old 3D settings are left alone and not read.
+  The server still accepts the old presence messages (walking, sitting, emotes) and the `floor.remove` op, so an
+  older page or script doesn't break.
+
 ## 2026-10-09 · release 30 (`5ef483c`)
 
 ### Changed
@@ -52,33 +81,6 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   is also looked for in `~/mendix-toolkit` (where the setup clones it), before the older agent-spike folders.
 - A new office started from a terminal by `start-office.ps1` skips the terminal walkthrough
   (`AGENT_OFFICE_NO_WELCOME`): the browser's setup asks instead.
-- **The 2D Office view: Return to Project, and a tidy top bar.** The 2D Office view (`/pixel`) is reached
-  only from the 1D view's **Go to Office** (Home's cards, its ⋯, the 2D Overview, the launcher, notifications and
-  links all open the 1D view), and its **Go to Board** is now **Return to Project**: back to the 1D view of the same
-  project, on its Command Center. Its top bar is the Portal bar's shape in every theme: the launcher, **Mx Office**,
-  **OFFICE · PROJECT ⌄** (the project switcher), the search, **Return to Project** as its one primary button, then
-  the bell, help, dark mode, 🎨, TEST MODE and your avatar (☰); the other themes have 🏠, OFFICE / the project,
-  Return to Project, 🎨 and ☰. Everything about the office itself moved onto a **toolbar over the canvas**: the
-  project's status line on the left, its budget chip, **● Running | Pause** and the office's spend today beside it,
-  and **− Fit +** with a **⋯** (next agent waiting, chat, fit, and the keys, which used to fill the footer) on the
-  right. Home's project cards have one **🗂️ Open project** button instead of Board and Office.
-
-### Removed
-- **The 3D and Retro views.** The original three.js office you walked around in, and its chunky-pixel Retro
-  version, are gone with everything only they used: the 3D page and its code (`main.ts`, `core/`, `features/`,
-  `world/`, `player/`, `input/`, `sound/`, the Blender models, the graphics presets, the retro pass, the
-  elevator panel's floors, the HUD, the view dropdown and the ☰ menu's 3D ↗ items), **three.js** and
-  **@types/three** (and their own dependencies) from `package.json`, and the server side of the toys only the 3D
-  office could play (the arcade cabinet and its high scores, the basketball, the cars in the garage, pictures on the
-  walls and the `/api/image` proxy behind them, golf, darts and axes, the gong you hit and the air horn). Old
-  addresses still work: `/`, `/index.html` and links like `/?view=3d`, `/?3d=1&view=retro` or `/?gfx=low`
-  redirect to the 1D view (of the floor the link named, `?floor=`, else the one you were on, else Home), and the
-  old 3D docs page lands on **The two views**. The client bundle is 5.4 MB smaller on disk (21.4 → 16.0 MB, the
-  3.9 MB of models included), its JavaScript 1.5 MB smaller (10.75 → 9.26 MB; the 1.45 MB / 457 kB gzipped 3D
-  page is gone). ➕ Add project keeps its panel (`ui/add-project.ts`, out of the old elevator). ⚙️ Settings ›
-  You loses the 3D office's sounds and voice chat; the browser's old 3D settings are left alone and not read.
-  The server still accepts the old presence messages (walking, sitting, emotes) and the `floor.remove` op, so an
-  older page or script doesn't break.
 
 ### Fixed
 - **No freeze right after the office starts**: the keep-awake helper (PowerShell on Windows) was started on the server's
@@ -591,8 +593,6 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   new floor's budget could go unloaded (an ask dropped while a load was out, and each busy worker's usage
   message pushing the next load back again). A switch on the big test office now takes about a quarter of
   a second (p90 about half a second, over 20 switches).
-
-
 
 ## 2026-10-07 · release 16 (`f52988c`)
 
