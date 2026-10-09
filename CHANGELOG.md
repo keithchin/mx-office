@@ -4,6 +4,14 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Changed
+- **Domain models stay readable in Studio Pro too**: whoever writes the model (the Lead Developer, or a Solo Lead)
+  now tidies a module's domain model with `mxcli layout` after changing its entities, in the same pull request.
+  Agents used to leave entities on mxcli's default grid with every association drawn edge to edge. A module a
+  person arranged in Studio Pro is never re-arranged.
+
 ## 2026-10-09 · release 24 (`b32d844`)
 
 ### New
