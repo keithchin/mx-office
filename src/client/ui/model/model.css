@@ -1,0 +1,273 @@
+/* The 📐 Model tab (ui/model/): App Explorer, diagram, details. The tab's own chrome uses the office's
+   colour tokens, so it follows the five themes; the diagram canvas uses Studio Pro's colours (the --mx-
+   tokens below, measured from Studio Pro's light editor, and its dark editor under .mx-dark), because
+   it should look like Studio Pro whatever the office looks like. */
+
+.mxv {
+  --mx-canvas: #ffffff;
+  --mx-dm-canvas: #f7f7f7;
+  --mx-ink: #000000;
+  --mx-type: #0595db;
+  --mx-line: #000000;
+  --mx-act-fill: #daeffa;
+  --mx-act-line: #82caed;
+  --mx-sel: #0098ec;
+  --mx-split-fill: #fef0dd;
+  --mx-split-line: #fccd8e;
+  --mx-start-fill: #bbe480;
+  --mx-start-line: #78ca02;
+  --mx-end-fill: #f68d91;
+  --mx-end-line: #ed1c24;
+  --mx-error-fill: #fcd3a5;
+  --mx-error-line: #f08a1c;
+  --mx-param-fill: #fefbd9;
+  --mx-param-line: #fbcd94;
+  --mx-lbl-fill: #ffffff;
+  --mx-lbl-line: #000000;
+  --mx-note-fill: #f2f2f3;
+  --mx-note-line: #535965;
+  --mx-note-ink: #2f3646;
+  --mx-ent-ink: #2f3646;
+  --mx-p-fill: #c2e2ff;
+  --mx-p-line: #47a9ff;
+  --mx-np-fill: #ffe9ac;
+  --mx-np-line: #fcc73a;
+  --mx-v-fill: #b8f3b8;
+  --mx-v-line: #6ce66c;
+  --mx-x-fill: #cdc4ff;
+  --mx-x-line: #9c81fe;
+  --mx-ent-sel: #146ff4;
+  --mx-gen-fill: #146ff4;
+  --mx-gen-ink: #ffffff;
+  --mx-assoc: #535965;
+  --mx-aname-line: #535965;
+  --mx-aname-cross: #535965;
+  --mx-mult-fill: #ffffff;
+  --mx-ico-bg: #ffffff;
+  --mx-added: #1fa855;
+  --mx-changed: #e8930c;
+  display: flex;
+  flex-direction: column;
+  min-height: 360px;
+  border: var(--bw, 2px) solid var(--line);
+  border-radius: var(--radius, 12px);
+  background: var(--card);
+  overflow: hidden;
+}
+.mxv.mx-dark {
+  --mx-canvas: #252525;
+  --mx-dm-canvas: #252525;
+  --mx-ink: #e2e2e2;
+  --mx-type: #4fb6f2;
+  --mx-line: #c9c9c9;
+  --mx-act-fill: #1d3a52;
+  --mx-act-line: #3d8fcf;
+  --mx-sel: #3fb0ff;
+  --mx-split-fill: #4a3b24;
+  --mx-split-line: #c9944a;
+  --mx-start-fill: #3f5e1d;
+  --mx-start-line: #7fcb12;
+  --mx-end-fill: #5e2427;
+  --mx-end-line: #ef4a50;
+  --mx-error-fill: #5c3a14;
+  --mx-error-line: #f0953a;
+  --mx-param-fill: #4a4628;
+  --mx-param-line: #c8a45a;
+  --mx-lbl-fill: #2e2e2e;
+  --mx-lbl-line: #9a9a9a;
+  --mx-note-fill: #33363d;
+  --mx-note-line: #9396a1;
+  --mx-note-ink: #c9ccd4;
+  --mx-ent-ink: #c8cbd6;
+  --mx-p-fill: #29314b;
+  --mx-p-line: #3144ae;
+  --mx-np-fill: #4a3f1e;
+  --mx-np-line: #b8902a;
+  --mx-v-fill: #23402a;
+  --mx-v-line: #3f9c4f;
+  --mx-x-fill: #352d55;
+  --mx-x-line: #7a5ee0;
+  --mx-ent-sel: #5aa0ff;
+  --mx-gen-fill: #5aa0ff;
+  --mx-gen-ink: #0e1a33;
+  --mx-assoc: #8a8a8a;
+  --mx-aname-line: #9a4848;
+  --mx-aname-cross: #5d5d5d;
+  --mx-mult-fill: #2a2a2a;
+  --mx-ico-bg: #3a4466;
+  --mx-added: #3fd27a;
+  --mx-changed: #ffb340;
+}
+
+/* The bar: branch, changes, document, zoom. */
+.mx-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 8px; border-bottom: 1px solid var(--rule-strong); background: var(--paper-2); }
+.mx-bar select { max-width: 260px; min-height: 32px; font: inherit; font-size: 13px; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--card); color: var(--ink); padding: 2px 6px; }
+.mx-bar .btn { min-height: 32px; padding: 3px 10px; font-size: 13px; }
+.mx-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); cursor: pointer; user-select: none; }
+.mx-toggle input { width: 16px; height: 16px; accent-color: var(--accent); }
+.mx-title { flex: 1 1 160px; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mx-title b { color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+.mx-zoom { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.mx-zoom .btn { min-width: 32px; padding: 3px 6px; }
+.mxv .mx-explorer-btn { display: none; }
+
+/* Explorer | diagram | details. */
+.mx-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(200px, 270px) minmax(0, 1fr) minmax(220px, 300px); }
+.mx-scrim { display: none; }
+.mx-body.mx-noside { grid-template-columns: minmax(200px, 270px) minmax(0, 1fr) 0; }
+.mx-tree { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--rule-strong); background: var(--card); }
+.mx-tree-head { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-bottom: 1px solid var(--rule); }
+.mx-tree-title { font-weight: 700; font-size: 13px; color: var(--ink); }
+.mx-filter { width: 100%; min-height: 30px; font: inherit; font-size: 13px; padding: 3px 8px; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--paper); color: var(--ink); }
+.mx-tree-scroll { position: relative; flex: 1 1 auto; min-height: 0; overflow: auto; outline: none; scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+.mx-tree-scroll:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
+.mx-tree-spacer { width: 1px; }
+.mx-tree-win { position: absolute; left: 0; right: 0; top: 0; min-width: max-content; }
+.mx-row { display: flex; align-items: center; gap: 4px; height: 22px; padding-right: 8px; font-size: 12.5px; font-family: 'Segoe UI', var(--font); color: var(--ink); white-space: nowrap; cursor: pointer; user-select: none; }
+.mx-row:hover { background: var(--paper-2); }
+.mx-row.mx-active { box-shadow: inset 0 0 0 1px var(--rule-strong); }
+.mx-row.mx-current { background: var(--accent-soft); }
+.mx-twisty { width: 12px; flex: none; text-align: center; font-size: 10px; color: var(--muted); }
+.mx-tico { width: 16px; height: 16px; flex: none; display: inline-flex; }
+.mx-ico { display: block; }
+.mx-tlabel { overflow: hidden; text-overflow: ellipsis; }
+.mx-tmark { margin-left: 4px; font-size: 11px; font-weight: 700; line-height: 1; }
+.mx-tmark.mx-added { color: var(--good-ink); }
+.mx-tmark.mx-changed, .mx-tmark.mx-inside { color: var(--warn-ink); }
+.mx-tmark.mx-removed { color: var(--bad-ink); }
+
+.mx-stage { position: relative; min-width: 0; min-height: 0; background: var(--mx-canvas); }
+.mx-stage.mx-dm { background: var(--mx-dm-canvas); }
+.mx-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: default; outline: none; font-family: 'Segoe UI', 'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 11.5px; }
+.mx-svg.mx-panning { cursor: grabbing; }
+.mx-svg:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
+.mx-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); font-size: 14px; }
+.mx-msg[hidden] { display: none; }
+.mx-text { position: absolute; inset: 0; overflow: auto; margin: 0; padding: 14px 16px; font: 12.5px/1.5 Consolas, 'Cascadia Mono', monospace; color: var(--ink); background: var(--card); white-space: pre; scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+
+/* Microflows and nanoflows. */
+.mx-t { fill: var(--mx-ink); }
+.mx-type { fill: var(--mx-type); }
+.mx-flow { fill: none; stroke: var(--mx-line); stroke-width: 1.1; }
+.mx-head { fill: var(--mx-line); }
+.mx-aflow { fill: none; stroke: var(--mx-note-line); stroke-width: 1; stroke-dasharray: 4 3; }
+.mx-err.mx-flow { stroke: var(--mx-end-line); }
+.mx-err.mx-head { fill: var(--mx-end-line); }
+.mx-lbl rect { fill: var(--mx-lbl-fill); stroke: var(--mx-lbl-line); stroke-width: 1; }
+.mx-lbl text { fill: var(--mx-ink); }
+.mx-lbl.mx-err text { fill: var(--mx-end-line); }
+.mx-act { fill: var(--mx-act-fill); stroke: var(--mx-act-line); stroke-width: 1.8; }
+.mx-nano .mx-act { stroke: color-mix(in srgb, var(--mx-act-line) 72%, #8a63d2); }
+.mx-nano .mx-act.mx-client { stroke-dasharray: none; }
+.mx-bg-blue { fill: #b9dcf7; }
+.mx-bg-green { fill: #cdeec0; }
+.mx-bg-red { fill: #f7c6c7; }
+.mx-bg-yellow { fill: #fbf0b5; }
+.mx-bg-purple { fill: #e1d3f5; }
+.mx-bg-gray { fill: #e2e2e2; }
+.mx-bg-orange { fill: #fbd9b5; }
+.mx-split { fill: var(--mx-split-fill); stroke: var(--mx-split-line); stroke-width: 1.8; }
+.mx-start { fill: var(--mx-start-fill); stroke: var(--mx-start-line); stroke-width: 2; }
+.mx-end { fill: var(--mx-end-fill); stroke: var(--mx-end-line); stroke-width: 2; }
+.mx-error { fill: var(--mx-error-fill); stroke: var(--mx-error-line); stroke-width: 2; }
+.mx-break, .mx-continue { fill: var(--mx-act-fill); stroke: var(--mx-act-line); stroke-width: 2; }
+.mx-glyph { fill: none; stroke: var(--mx-act-line); stroke-width: 1.6; }
+.mx-param { fill: var(--mx-param-fill); stroke: var(--mx-param-line); stroke-width: 1.2; }
+.mx-loop { fill: none; stroke: var(--mx-act-line); stroke-width: 1.6; }
+.mx-note { fill: var(--mx-note-fill); }
+.mx-note-edge { fill: none; stroke: var(--mx-note-line); stroke-width: 1.2; }
+.mx-note-t { fill: var(--mx-note-ink); }
+.mx-el.mx-sel .mx-act, .mx-el.mx-sel .mx-split, .mx-el.mx-sel .mx-loop { stroke: var(--mx-sel); stroke-width: 2.2; }
+.mx-el.mx-sel .mx-start, .mx-el.mx-sel .mx-end, .mx-el.mx-sel .mx-param { stroke: var(--mx-sel); }
+.mx-edge.mx-sel .mx-flow { stroke: var(--mx-sel); stroke-width: 2; }
+.mx-edge.mx-sel .mx-head { fill: var(--mx-sel); }
+.mx-selbox rect { fill: var(--mx-canvas); stroke: var(--mx-ink); stroke-width: 1; }
+.mx-el, .mx-edge { cursor: pointer; }
+.mx-disabled { opacity: .45; }
+
+/* Domain models. */
+.mx-ent { stroke-width: 2; }
+.mx-ent-line { fill: none; stroke-width: 2; }
+.mx-ent.mx-ent-persistent { fill: var(--mx-p-fill); stroke: var(--mx-p-line); }
+.mx-ent.mx-ent-nonpersistent { fill: var(--mx-np-fill); stroke: var(--mx-np-line); }
+.mx-ent.mx-ent-view { fill: var(--mx-v-fill); stroke: var(--mx-v-line); }
+.mx-ent.mx-ent-external { fill: var(--mx-x-fill); stroke: var(--mx-x-line); }
+.mx-ent-line.mx-ent-persistent { stroke: var(--mx-p-line); }
+.mx-ent-line.mx-ent-nonpersistent { stroke: var(--mx-np-line); }
+.mx-ent-line.mx-ent-view { stroke: var(--mx-v-line); }
+.mx-ent-line.mx-ent-external { stroke: var(--mx-x-line); }
+.mx-el.mx-sel .mx-ent, .mx-el.mx-sel .mx-ent-line { stroke: var(--mx-ent-sel); }
+.mx-ent-name, .mx-ent-attr { fill: var(--mx-ent-ink); font-size: 12px; }
+.mx-ent-ico { fill: none; stroke: var(--mx-ent-ink); stroke-width: 1.1; }
+.mx-ent-ico .mx-ico-bg { fill: var(--mx-ico-bg); stroke: none; }
+.mx-ent-ico circle { fill: none; }
+.mx-evt { fill: none; stroke: #db5f12; stroke-width: 1.3; stroke-linejoin: round; }
+.mx-valid { fill: none; stroke: #0d990d; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.mx-calc circle { fill: #146ff4; }
+.mx-calc path { fill: #ffffff; }
+.mx-gen rect { fill: var(--mx-gen-fill); }
+.mx-gen text { fill: var(--mx-gen-ink); font-size: 12px; }
+.mx-svc rect { fill: #2a1fc4; }
+.mx-svc path { stroke: #ffffff; stroke-width: 1.5; }
+.mx-svc-name { fill: var(--mx-ent-ink); font-size: 12px; }
+.mx-assoc { fill: none; stroke: var(--mx-assoc); stroke-width: 1.3; }
+.mx-arrow { fill: none; stroke: var(--mx-assoc); stroke-width: 1.4; stroke-linejoin: round; }
+.mx-owner { fill: var(--mx-assoc); }
+.mx-mult circle { fill: var(--mx-mult-fill); stroke: var(--mx-assoc); stroke-width: 1.2; }
+.mx-mult text { fill: var(--mx-ent-ink); font-size: 10.5px; }
+.mx-mult path { stroke: var(--mx-ent-ink); stroke-width: 1.2; }
+.mx-aname rect { fill: var(--mx-dm-canvas); stroke: var(--mx-aname-line); stroke-width: 1.1; }
+.mx-aname.mx-cross rect { stroke: var(--mx-aname-cross); }
+.mx-aname text { fill: var(--mx-ent-ink); }
+.mx-cross-to { fill: var(--mx-note-line); font-size: 11px; }
+.mx-edge.mx-sel .mx-assoc, .mx-edge.mx-sel .mx-arrow { stroke: var(--mx-ent-sel); stroke-width: 2; }
+.mx-edge.mx-sel .mx-aname rect { stroke: var(--mx-ent-sel); }
+
+/* What the branch changed. */
+.mx-halo { fill: none; stroke-width: 3; stroke-dasharray: 6 3; }
+.mx-added .mx-halo { stroke: var(--mx-added); }
+.mx-changed .mx-halo { stroke: var(--mx-changed); }
+.mx-edge.mx-added .mx-flow, .mx-edge.mx-added .mx-assoc { stroke: var(--mx-added); stroke-width: 2; }
+.mx-edge.mx-changed .mx-flow, .mx-edge.mx-changed .mx-assoc { stroke: var(--mx-changed); stroke-width: 2; }
+.mx-edge.mx-added .mx-head { fill: var(--mx-added); }
+.mx-edge.mx-changed .mx-head { fill: var(--mx-changed); }
+
+/* Details. */
+.mx-side { min-width: 0; min-height: 0; overflow: auto; border-left: 1px solid var(--rule-strong); background: var(--card); padding: 10px 12px; font-size: 13px; color: var(--ink); scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+.mx-noside .mx-side { display: none; }
+.mx-side h3 { margin: 0 0 4px; font-size: 14px; }
+.mx-side h4 { margin: 12px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.mx-kind { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.mx-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; margin: 0; }
+.mx-kv dt { color: var(--muted); }
+.mx-kv dd { margin: 0; overflow-wrap: anywhere; }
+.mx-side ul { margin: 0; padding-left: 18px; }
+.mx-side li { margin: 1px 0; overflow-wrap: anywhere; }
+.mx-mdl { margin: 4px 0 0; padding: 8px; max-height: 260px; overflow: auto; font: 11.5px/1.45 Consolas, 'Cascadia Mono', monospace; white-space: pre; background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; scrollbar-width: thin; }
+.mx-changes li { list-style: none; margin-left: -18px; }
+.mx-changes button { all: unset; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.mx-changes button:hover { text-decoration: underline; }
+.mx-changes button:focus-visible { outline: 2px solid var(--focus); }
+.mx-pill { display: inline-block; min-width: 54px; padding: 0 6px; border-radius: 999px; font-size: 11px; text-align: center; }
+.mx-pill.mx-added { background: var(--good-soft); color: var(--good-ink); }
+.mx-pill.mx-changed { background: var(--warn-soft); color: var(--warn-ink); }
+.mx-pill.mx-removed { background: var(--bad-soft); color: var(--bad-ink); }
+.mx-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; color: var(--muted); }
+
+body:has(#model-view:not(.hidden)) .lite-main { padding-bottom: 0; }
+
+/* A phone: the explorer is a drawer, the details a sheet under the diagram. */
+@media (max-width: 760px) {
+  .mxv .mx-explorer-btn { display: inline-flex; }
+  .mx-body, .mx-body.mx-noside { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; position: relative; }
+  .mx-tree { position: absolute; z-index: 5; top: 0; bottom: 0; left: 0; width: min(86%, 320px); transform: translateX(-105%); visibility: hidden; transition: transform .18s ease, visibility .18s; box-shadow: 4px 0 16px rgba(0, 0, 0, .18); }
+  .mxv.mx-drawer .mx-tree { transform: none; visibility: visible; }
+  .mx-scrim { display: none; }
+  .mxv.mx-drawer .mx-scrim { display: block; position: absolute; inset: 0; z-index: 4; background: rgba(0, 0, 0, .25); }
+  .mx-side { max-height: 34vh; border-left: 0; border-top: 1px solid var(--rule-strong); }
+  .mx-noside .mx-side { display: none; }
+  .mx-title { flex-basis: 100%; order: 5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mx-tree { transition: none; }
+}

@@ -4,6 +4,26 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### New
+- **📐 Model tab: the app as Studio Pro shows it.** A new tab beside 🌳 Git shows the floor's Mendix
+  app the way Studio Pro does, read-only. The App Explorer is on the left: the app's tree with an icon per
+  document type, a filter (Ctrl+F) and the keyboard. The chosen document is on the right: a module's
+  domain model (entities by type and colour, attributes, validation, calculated and event-handler
+  markers, generalizations, associations with multiplicity and owner, annotations), or a microflow or
+  nanoflow (events, activities with their icons and variables, decisions with outcome labels, merges,
+  loops, parameters, annotations, error handlers). Diagrams keep the developer's own positions and
+  sizes. Pan, zoom and fit; click an element for its details and MDL. Light themes get Studio Pro's
+  light canvas, dark themes its dark one. On a phone the explorer is a drawer.
+- **What did the agent change?** Pick a worker's branch or an open pull request in the Model tab and
+  tick **Changes in this branch**. The documents the branch added or changed are marked in the tree and
+  listed beside the diagram, and inside a diagram the added elements are ringed green and the changed
+  ones orange. A pull request's window has **📐 View in Model**, which opens it there.
+- It reads each commit with mxcli from a copy in the office's data folder, never the floor's checkout
+  or the .mpr itself. It reads only while the tab is open, and keeps each answer per commit, so a
+  document opens straight away the second time (docs: Using the office › Model tab).
+
 ## 2026-10-08 · release 22 (`6c26905`)
 
 ### New

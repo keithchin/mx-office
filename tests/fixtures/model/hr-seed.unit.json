@@ -1,0 +1,1141 @@
+{
+ "$ID": "4a400712-e1fa-41e9-acd5-7834bbd575e9",
+ "$Type": "Microflows$Microflow",
+ "Name": "ASu_SeedBaseline",
+ "Documentation": "",
+ "Excluded": false,
+ "ExportLevel": "Hidden",
+ "ObjectCollection": {
+  "$ID": "90da1db4-ca18-40f5-ac9f-c82912e0ac2a",
+  "$Type": "Microflows$MicroflowObjectCollection",
+  "Objects": [
+   3,
+   {
+    "$ID": "5e7056be-b32e-4278-97ef-2a206d5320eb",
+    "$Type": "Microflows$StartEvent",
+    "RelativeMiddlePoint": "200;200",
+    "Size": "20;20"
+   },
+   {
+    "$ID": "53b0f0af-f3e0-47e5-babf-1902e4be5859",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "360;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "c473c8f6-376b-4a15-a555-1267e94d3f4f",
+     "$Type": "Microflows$RetrieveAction",
+     "ErrorHandlingType": "Rollback",
+     "RetrieveSource": {
+      "$ID": "6765ce76-92c2-4950-9033-e8016c169ed4",
+      "$Type": "Microflows$DatabaseRetrieveSource",
+      "Entity": "HR.Employee",
+      "Range": {
+       "$ID": "c0c2802e-134d-40ee-9b92-6fb60e4c023e",
+       "$Type": "Microflows$ConstantRange",
+       "SingleObject": true
+      },
+      "NewSortings": {
+       "$ID": "7e4f0203-ff89-4edc-81fe-6546163fbe34",
+       "$Type": "Microflows$SortingsList",
+       "Sortings": [
+        2
+       ]
+      }
+     },
+     "ResultVariableName": "Existing"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "e33b6a80-a8ae-465f-8560-409bcecef31a",
+    "$Type": "Microflows$ExclusiveSplit",
+    "RelativeMiddlePoint": "520;200",
+    "Size": "90;60",
+    "SplitCondition": {
+     "$ID": "43b7eed0-e0e8-4a3e-9856-7461cc259be3",
+     "$Type": "Microflows$ExpressionSplitCondition",
+     "Expression": "$Existing != empty"
+    },
+    "Caption": "$Existing != empty",
+    "ErrorHandlingType": "Rollback",
+    "Documentation": ""
+   },
+   {
+    "$ID": "7a354ea0-0de1-4f87-bdf0-bb6f1e23d3d6",
+    "$Type": "Microflows$EndEvent",
+    "RelativeMiddlePoint": "690;300",
+    "Size": "20;20",
+    "ReturnValue": "true",
+    "Documentation": ""
+   },
+   {
+    "$ID": "8ff84d1b-ef25-4293-913d-10bf843d19fd",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "690;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "319491fc-0243-415f-bf44-2486e3766ecc",
+     "$Type": "Microflows$RetrieveAction",
+     "ErrorHandlingType": "Rollback",
+     "RetrieveSource": {
+      "$ID": "1321714d-129d-4f89-adb7-6a686418c758",
+      "$Type": "Microflows$DatabaseRetrieveSource",
+      "Entity": "System.User",
+      "Range": {
+       "$ID": "c3957fa4-4156-4dd8-afca-bba6bbba9a80",
+       "$Type": "Microflows$ConstantRange",
+       "SingleObject": true
+      },
+      "XpathConstraint": "[Name = 'mgr.maria']",
+      "NewSortings": {
+       "$ID": "10c7843a-9a31-4ba0-a484-22c53fe0851c",
+       "$Type": "Microflows$SortingsList",
+       "Sortings": [
+        2
+       ]
+      }
+     },
+     "ResultVariableName": "UMaria"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "b69ed173-e448-4034-a846-d46588f3e3e0",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "850;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "65f1e702-0aae-4466-b3ff-0bcecf7a7591",
+     "$Type": "Microflows$RetrieveAction",
+     "ErrorHandlingType": "Rollback",
+     "RetrieveSource": {
+      "$ID": "9007dabb-011a-4117-a04c-aaa919aede07",
+      "$Type": "Microflows$DatabaseRetrieveSource",
+      "Entity": "System.User",
+      "Range": {
+       "$ID": "9e806181-b587-49a6-9dbe-4d44b8e79d53",
+       "$Type": "Microflows$ConstantRange",
+       "SingleObject": true
+      },
+      "XpathConstraint": "[Name = 'mgr.mark']",
+      "NewSortings": {
+       "$ID": "33e42694-1359-448f-a1d2-654f650b8f18",
+       "$Type": "Microflows$SortingsList",
+       "Sortings": [
+        2
+       ]
+      }
+     },
+     "ResultVariableName": "UMark"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "ab7b0a4c-c2cc-40c8-9484-7d91fbda7f73",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "1010;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "38cf1035-658a-4c11-8c2f-43e90529c90e",
+     "$Type": "Microflows$RetrieveAction",
+     "ErrorHandlingType": "Rollback",
+     "RetrieveSource": {
+      "$ID": "f9b2a846-3051-464b-bb4c-05a65b941b2a",
+      "$Type": "Microflows$DatabaseRetrieveSource",
+      "Entity": "System.User",
+      "Range": {
+       "$ID": "2ffc28bb-67ad-4637-a7fa-561d91a92d86",
+       "$Type": "Microflows$ConstantRange",
+       "SingleObject": true
+      },
+      "XpathConstraint": "[Name = 'emp.alice']",
+      "NewSortings": {
+       "$ID": "c511254a-c8b3-4f37-9f43-6d16738d65ab",
+       "$Type": "Microflows$SortingsList",
+       "Sortings": [
+        2
+       ]
+      }
+     },
+     "ResultVariableName": "UAlice"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "e3169773-3a62-49c7-8f7d-ee0998bab503",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "1170;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "0d52043d-531d-47d3-9e96-c648186d2b62",
+     "$Type": "Microflows$RetrieveAction",
+     "ErrorHandlingType": "Rollback",
+     "RetrieveSource": {
+      "$ID": "94903edb-5769-4213-8142-8742f07a4cd4",
+      "$Type": "Microflows$DatabaseRetrieveSource",
+      "Entity": "System.User",
+      "Range": {
+       "$ID": "9fbab807-e439-4316-824a-e5ee2ed8df03",
+       "$Type": "Microflows$ConstantRange",
+       "SingleObject": true
+      },
+      "XpathConstraint": "[Name = 'emp.bob']",
+      "NewSortings": {
+       "$ID": "8a2f78b7-c067-44f7-ae5d-18c30bef5738",
+       "$Type": "Microflows$SortingsList",
+       "Sortings": [
+        2
+       ]
+      }
+     },
+     "ResultVariableName": "UBob"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "22f13482-7921-4b6b-b491-b447087400ce",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "1330;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "84f68d65-f202-46fe-a9d0-3063941d45d6",
+     "$Type": "Microflows$RetrieveAction",
+     "ErrorHandlingType": "Rollback",
+     "RetrieveSource": {
+      "$ID": "02081676-203e-4265-883e-2c4aef4f9fec",
+      "$Type": "Microflows$DatabaseRetrieveSource",
+      "Entity": "System.User",
+      "Range": {
+       "$ID": "b3f81ca3-a98d-4467-ad6e-189b75006345",
+       "$Type": "Microflows$ConstantRange",
+       "SingleObject": true
+      },
+      "XpathConstraint": "[Name = 'emp.carol']",
+      "NewSortings": {
+       "$ID": "1e3b8aea-6102-4fde-bec3-f033559163b7",
+       "$Type": "Microflows$SortingsList",
+       "Sortings": [
+        2
+       ]
+      }
+     },
+     "ResultVariableName": "UCarol"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "6f6a4e65-aff4-4529-b1fe-51e4d81cfa4a",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "1490;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "13d4e840-c08d-42f0-a1d6-aaedfb5fb664",
+     "$Type": "Microflows$RetrieveAction",
+     "ErrorHandlingType": "Rollback",
+     "RetrieveSource": {
+      "$ID": "010f9de7-a27b-4ec2-9788-b59d542de85b",
+      "$Type": "Microflows$DatabaseRetrieveSource",
+      "Entity": "System.User",
+      "Range": {
+       "$ID": "0dbb15d2-5f57-4402-ba36-19360da5ad76",
+       "$Type": "Microflows$ConstantRange",
+       "SingleObject": true
+      },
+      "XpathConstraint": "[Name = 'admin.ada']",
+      "NewSortings": {
+       "$ID": "c4a18a6b-ddfd-4f5c-8fda-3b5bb78cbe68",
+       "$Type": "Microflows$SortingsList",
+       "Sortings": [
+        2
+       ]
+      }
+     },
+     "ResultVariableName": "UAda"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "f3fa28bd-adec-4991-b6fd-43efcda3a228",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "1650;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "1f27e439-506e-4534-a10a-67dec7bc1a33",
+     "$Type": "Microflows$CreateChangeAction",
+     "ErrorHandlingType": "Rollback",
+     "Items": [
+      2,
+      {
+       "$ID": "fe03c26f-8927-4132-9027-5a0f10b2cd58",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.EmployeeNumber",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'M001'"
+      },
+      {
+       "$ID": "40a0a89f-fffe-4b45-9333-52b567fc5d90",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.FullName",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'Maria Manager'"
+      },
+      {
+       "$ID": "97d4e264-9ea6-4180-bd55-78262affcba7",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.Email",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'maria@example.test'"
+      },
+      {
+       "$ID": "85a435d1-eb7c-4c31-ad81-69b925274d1f",
+       "$Type": "Microflows$ChangeActionItem",
+       "Association": "HR.Employee_User",
+       "Type": "Set",
+       "Value": "$UMaria"
+      }
+     ],
+     "RefreshInClient": false,
+     "Commit": "Yes",
+     "Entity": "HR.Employee",
+     "VariableName": "Maria"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "e9252c3e-0ea8-4456-b0e2-f7db9264d9d3",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "1810;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "5609e2e4-7612-4ba1-a9d2-c48a7d721bc4",
+     "$Type": "Microflows$CreateChangeAction",
+     "ErrorHandlingType": "Rollback",
+     "Items": [
+      2,
+      {
+       "$ID": "a44b2bc9-f5a1-40a0-8ddf-4edc3a2c7f24",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.EmployeeNumber",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'M002'"
+      },
+      {
+       "$ID": "308ffc58-69c7-4112-8569-eec233be8967",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.FullName",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'Mark Manager'"
+      },
+      {
+       "$ID": "5625f8db-f921-4def-9f69-7f360d1b4fa3",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.Email",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'mark@example.test'"
+      },
+      {
+       "$ID": "19bd2786-e499-468e-9b07-b35d6e31b15e",
+       "$Type": "Microflows$ChangeActionItem",
+       "Association": "HR.Employee_User",
+       "Type": "Set",
+       "Value": "$UMark"
+      }
+     ],
+     "RefreshInClient": false,
+     "Commit": "Yes",
+     "Entity": "HR.Employee",
+     "VariableName": "Mark"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "d7bcea48-7cd4-4972-8ed3-e988a4c061de",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "1970;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "3a6bda1a-ae5a-4c25-85af-0f257ed1b78b",
+     "$Type": "Microflows$CreateChangeAction",
+     "ErrorHandlingType": "Rollback",
+     "Items": [
+      2,
+      {
+       "$ID": "0c83ad28-a574-48c2-b753-fa68272501a2",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.EmployeeNumber",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'E001'"
+      },
+      {
+       "$ID": "57727dd2-3f62-4031-a5bb-267a77d33996",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.FullName",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'Alice Employee'"
+      },
+      {
+       "$ID": "c97a24a8-07e8-4a1d-897c-57fb598b1d34",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.Email",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'alice@example.test'"
+      },
+      {
+       "$ID": "257e7379-f285-4f34-ba76-d079cb564e5f",
+       "$Type": "Microflows$ChangeActionItem",
+       "Association": "HR.Employee_User",
+       "Type": "Set",
+       "Value": "$UAlice"
+      },
+      {
+       "$ID": "709f526b-3d0b-4387-b9aa-802e40744bed",
+       "$Type": "Microflows$ChangeActionItem",
+       "Association": "HR.Employee_Manager",
+       "Type": "Set",
+       "Value": "$Maria"
+      }
+     ],
+     "RefreshInClient": false,
+     "Commit": "Yes",
+     "Entity": "HR.Employee",
+     "VariableName": "Alice"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "5e6352bf-28be-46bd-9ff8-7070d5c12cbe",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "2130;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "34a7778f-bd7a-4910-97a7-a8e06c0d9037",
+     "$Type": "Microflows$CreateChangeAction",
+     "ErrorHandlingType": "Rollback",
+     "Items": [
+      2,
+      {
+       "$ID": "93014acd-992b-4db2-bc1b-8a81ffa9b96e",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.EmployeeNumber",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'E002'"
+      },
+      {
+       "$ID": "cd256424-d009-41a6-bbdb-4876ee2241db",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.FullName",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'Bob Employee'"
+      },
+      {
+       "$ID": "1c0c1249-92b5-491c-af45-9e75ad1a2a9c",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.Email",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'bob@example.test'"
+      },
+      {
+       "$ID": "85de0bd4-55aa-4eb1-9e6d-3fb0c34e251b",
+       "$Type": "Microflows$ChangeActionItem",
+       "Association": "HR.Employee_User",
+       "Type": "Set",
+       "Value": "$UBob"
+      },
+      {
+       "$ID": "83d569a3-8358-4282-8894-4a46e216e9dc",
+       "$Type": "Microflows$ChangeActionItem",
+       "Association": "HR.Employee_Manager",
+       "Type": "Set",
+       "Value": "$Maria"
+      }
+     ],
+     "RefreshInClient": false,
+     "Commit": "Yes",
+     "Entity": "HR.Employee",
+     "VariableName": "Bob"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "33749755-07ea-4bc3-9892-7a6495b85434",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "2290;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "051d7eea-3aa1-406a-b9f0-4d170daecb26",
+     "$Type": "Microflows$CreateChangeAction",
+     "ErrorHandlingType": "Rollback",
+     "Items": [
+      2,
+      {
+       "$ID": "ac663cab-0a32-497e-b699-94961a43a45c",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.EmployeeNumber",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'E003'"
+      },
+      {
+       "$ID": "0bdb6f6e-53fe-43f7-a6eb-24a2096353e5",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.FullName",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'Carol Employee'"
+      },
+      {
+       "$ID": "f73618c6-8d3d-4e7a-988f-93fb57d40075",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.Email",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'carol@example.test'"
+      },
+      {
+       "$ID": "c80bc027-32da-42ea-b3cf-49cd8d51186f",
+       "$Type": "Microflows$ChangeActionItem",
+       "Association": "HR.Employee_User",
+       "Type": "Set",
+       "Value": "$UCarol"
+      },
+      {
+       "$ID": "336f6758-8dbd-4bd1-8aeb-3baef0c0fd74",
+       "$Type": "Microflows$ChangeActionItem",
+       "Association": "HR.Employee_Manager",
+       "Type": "Set",
+       "Value": "$Mark"
+      }
+     ],
+     "RefreshInClient": false,
+     "Commit": "Yes",
+     "Entity": "HR.Employee",
+     "VariableName": "Carol"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "4961b8cc-a7bf-411b-bcfb-f65c765d0d13",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "2450;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "d9c76888-dc39-4284-98ef-9bc109248a2d",
+     "$Type": "Microflows$CreateChangeAction",
+     "ErrorHandlingType": "Rollback",
+     "Items": [
+      2,
+      {
+       "$ID": "9a8fe73f-980e-4eeb-a3c2-179d8a41f706",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.EmployeeNumber",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'A001'"
+      },
+      {
+       "$ID": "e79a55aa-d95f-4b62-a9b2-c546601a3c5e",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.FullName",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'Ada Admin'"
+      },
+      {
+       "$ID": "ef7bc9be-36b0-4247-8b6a-e2852643862a",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "HR.Employee.Email",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'ada@example.test'"
+      },
+      {
+       "$ID": "4bc51b4c-1555-4d55-8c66-80cd7d195d96",
+       "$Type": "Microflows$ChangeActionItem",
+       "Association": "HR.Employee_User",
+       "Type": "Set",
+       "Value": "$UAda"
+      }
+     ],
+     "RefreshInClient": false,
+     "Commit": "Yes",
+     "Entity": "HR.Employee",
+     "VariableName": "Ada"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "0f592266-d715-426e-8e30-b5b45c8030c7",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "2610;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "6c1ca973-4e17-4eb8-b0f7-ef847a84d579",
+     "$Type": "Microflows$CreateChangeAction",
+     "ErrorHandlingType": "Rollback",
+     "Items": [
+      2,
+      {
+       "$ID": "582ab719-0a97-4785-9b72-5ab11676770a",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "Notices.Notice.Title",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'Welcome to the company portal'"
+      },
+      {
+       "$ID": "6ca161f7-0eed-4985-90dd-7869a8e53a2f",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "Notices.Notice.Body",
+       "Association": "",
+       "Type": "Set",
+       "Value": "'Baseline notice used by the regression checks.'"
+      },
+      {
+       "$ID": "2b21d176-a242-40e8-afca-e6e8d26fc3ff",
+       "$Type": "Microflows$ChangeActionItem",
+       "Attribute": "Notices.Notice.PublishedOn",
+       "Association": "",
+       "Type": "Set",
+       "Value": "[%CurrentDateTime%]"
+      }
+     ],
+     "RefreshInClient": false,
+     "Commit": "Yes",
+     "Entity": "Notices.Notice",
+     "VariableName": "Welcome"
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "ac93b10e-d7c6-4b36-9e64-2907755acf5b",
+    "$Type": "Microflows$ActionActivity",
+    "RelativeMiddlePoint": "2770;200",
+    "Size": "120;60",
+    "Action": {
+     "$ID": "189cd6ce-13c5-4b38-a13c-27278cca415f",
+     "$Type": "Microflows$LogMessageAction",
+     "ErrorHandlingType": "Rollback",
+     "Level": "Info",
+     "Node": "'Baseline'",
+     "MessageTemplate": {
+      "$ID": "563c6968-13df-4b24-9930-484719d7d5fb",
+      "$Type": "Microflows$StringTemplate",
+      "Text": "Seeded 6 employees and 1 notice",
+      "Parameters": [
+       2
+      ]
+     },
+     "IncludeLatestStackTrace": false
+    },
+    "Disabled": false,
+    "Caption": "",
+    "AutoGenerateCaption": true,
+    "BackgroundColor": "Default",
+    "Documentation": ""
+   },
+   {
+    "$ID": "0d9f9da8-884a-45fc-adfe-b1686d1b95a1",
+    "$Type": "Microflows$EndEvent",
+    "RelativeMiddlePoint": "2930;200",
+    "Size": "20;20",
+    "ReturnValue": "true",
+    "Documentation": ""
+   }
+  ]
+ },
+ "Flows": [
+  3,
+  {
+   "$ID": "2659f9dd-8411-4045-99fb-f97853793edd",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "5e7056be-b32e-4278-97ef-2a206d5320eb",
+   "DestinationPointer": "53b0f0af-f3e0-47e5-babf-1902e4be5859",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "68c4af22-d07f-4a40-ac5f-382709932fde",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "a4f94db0-f4e0-4711-a7b7-ad6b8a3579fa",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "766d5690-b9b1-4cbd-bfbc-4ee7f841e3ec",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "e33b6a80-a8ae-465f-8560-409bcecef31a",
+   "DestinationPointer": "7a354ea0-0de1-4f87-bdf0-bb6f1e23d3d6",
+   "OriginConnectionIndex": 2,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "2abfedde-aee1-497d-8017-4b071d744b97",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "9fb0bd16-fdb3-4d43-944e-f0975c0d654a",
+     "$Type": "Microflows$EnumerationCase",
+     "Value": "true"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "cf7085b6-09ad-43d1-90d3-c0aa24770907",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "53b0f0af-f3e0-47e5-babf-1902e4be5859",
+   "DestinationPointer": "e33b6a80-a8ae-465f-8560-409bcecef31a",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "8d95f2ef-a15d-4497-aed7-50a33b73cad2",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "bf55b760-14f9-4fea-9524-c9be7722da8a",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "0113b59a-e765-4c78-a486-acf9d08a309e",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "e33b6a80-a8ae-465f-8560-409bcecef31a",
+   "DestinationPointer": "8ff84d1b-ef25-4293-913d-10bf843d19fd",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "57d48bae-bb89-48b2-94d2-0386cfb4cc02",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "0cbcec82-f993-4d9c-813e-6a3c5a6904aa",
+     "$Type": "Microflows$EnumerationCase",
+     "Value": "false"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "c26aa9e4-e4ab-4596-b777-07088d85fc80",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "8ff84d1b-ef25-4293-913d-10bf843d19fd",
+   "DestinationPointer": "b69ed173-e448-4034-a846-d46588f3e3e0",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "337ffad1-e4a5-4c2d-b72e-d18fb7d85413",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "5410a027-b228-4f17-9917-5bc2adc5c513",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "4763ac06-c3b2-4ec3-934d-e9a8ef0f5412",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "b69ed173-e448-4034-a846-d46588f3e3e0",
+   "DestinationPointer": "ab7b0a4c-c2cc-40c8-9484-7d91fbda7f73",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "5ae034ff-544e-45f0-b621-6b756c504048",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "485974fa-4fa1-426c-870f-6076aa0b2856",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "bf34d7d8-a1ed-4495-b99f-252435a343fd",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "ab7b0a4c-c2cc-40c8-9484-7d91fbda7f73",
+   "DestinationPointer": "e3169773-3a62-49c7-8f7d-ee0998bab503",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "a8361939-1b5b-454f-8efb-4a0ecb028c18",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "674d1388-047f-4a3e-aca0-87438fcc2427",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "3e2dafe1-e700-424c-838f-8e3ce74cf659",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "e3169773-3a62-49c7-8f7d-ee0998bab503",
+   "DestinationPointer": "22f13482-7921-4b6b-b491-b447087400ce",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "4fc3eed8-dd45-4f9c-ac0a-f28a2ea002bd",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "65fc169c-5254-4fac-8542-ce3796d3396e",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "c46e6be8-75df-4516-a132-09847b068f50",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "22f13482-7921-4b6b-b491-b447087400ce",
+   "DestinationPointer": "6f6a4e65-aff4-4529-b1fe-51e4d81cfa4a",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "cd96561a-5e2b-404b-b28f-2486e36e8f40",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "3d9f8295-b090-4dfc-9690-655fbc92962f",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "dec89249-b63a-4307-9e22-79a1541ddf86",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "6f6a4e65-aff4-4529-b1fe-51e4d81cfa4a",
+   "DestinationPointer": "f3fa28bd-adec-4991-b6fd-43efcda3a228",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "15f671c3-a1ea-4216-b642-d2b5bf32da94",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "a8e52c06-0595-4231-9c25-3c20acf7954b",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "c696a9ee-1e80-430d-b204-2991c889b8cc",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "f3fa28bd-adec-4991-b6fd-43efcda3a228",
+   "DestinationPointer": "e9252c3e-0ea8-4456-b0e2-f7db9264d9d3",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "7ff7dd4e-cf2d-44ac-b15b-52e3f9738406",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "b4f4fdee-4c84-45ae-b902-3d7e170649c8",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "8848f863-cfac-435a-bb7a-1745c79b80f6",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "e9252c3e-0ea8-4456-b0e2-f7db9264d9d3",
+   "DestinationPointer": "d7bcea48-7cd4-4972-8ed3-e988a4c061de",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "15f642ae-edb5-499b-a7ae-f9946069181c",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "d48c75a8-4bdc-4a59-b083-2486cb24b5d2",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "699132df-77de-4849-9d38-a335d2a4587e",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "d7bcea48-7cd4-4972-8ed3-e988a4c061de",
+   "DestinationPointer": "5e6352bf-28be-46bd-9ff8-7070d5c12cbe",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "f9a7bad6-bf43-4135-94ec-c6bdacf940bf",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "a21d09c1-acb9-4221-afaf-fcf29c3362df",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "85a9cfa9-dcb7-4521-8bd4-2cf23e8aca69",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "5e6352bf-28be-46bd-9ff8-7070d5c12cbe",
+   "DestinationPointer": "33749755-07ea-4bc3-9892-7a6495b85434",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "498aee3f-3263-47e9-9806-2ef0dc4ddd73",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "c240f736-80bb-4b12-abd4-6e928fe65608",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "85bd6a5f-b3e7-4b8d-9c38-b3c9ad128739",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "33749755-07ea-4bc3-9892-7a6495b85434",
+   "DestinationPointer": "4961b8cc-a7bf-411b-bcfb-f65c765d0d13",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "e9a3f3d2-0fba-41be-ada6-38c5ba7c6402",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "06caf732-9d45-4001-a213-97a275619ae9",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "ce800e73-d513-47e8-b8b4-87bdaab36c9e",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "4961b8cc-a7bf-411b-bcfb-f65c765d0d13",
+   "DestinationPointer": "0f592266-d715-426e-8e30-b5b45c8030c7",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "aafcf94c-a3cc-4993-9412-895ff6f61235",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "935ff762-cc0c-48f9-949c-65d617cb1268",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "9cf77759-485c-4525-a32b-f841ce32235e",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "0f592266-d715-426e-8e30-b5b45c8030c7",
+   "DestinationPointer": "ac93b10e-d7c6-4b36-9e64-2907755acf5b",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "a3fb821f-9ecc-4471-a575-6f8c25574cf2",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "f0d9e40c-d75a-4398-a461-7d4a86309821",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  },
+  {
+   "$ID": "fbc3da3c-392b-4981-82ba-a27acff8568d",
+   "$Type": "Microflows$SequenceFlow",
+   "OriginPointer": "ac93b10e-d7c6-4b36-9e64-2907755acf5b",
+   "DestinationPointer": "0d9f9da8-884a-45fc-adfe-b1686d1b95a1",
+   "OriginConnectionIndex": 1,
+   "DestinationConnectionIndex": 3,
+   "Line": {
+    "$ID": "bc18826c-85c7-42f6-b46b-17faa999a111",
+    "$Type": "Microflows$BezierCurve",
+    "OriginControlVector": "0;0",
+    "DestinationControlVector": "0;0"
+   },
+   "CaseValues": [
+    2,
+    {
+     "$ID": "0622e3fd-30bd-44ee-88f8-1a7872c2d203",
+     "$Type": "Microflows$NoCase"
+    }
+   ],
+   "IsErrorHandler": false
+  }
+ ],
+ "MicroflowReturnType": {
+  "$ID": "3bb90a18-b20b-49f7-90af-b92328687e4b",
+  "$Type": "DataTypes$BooleanType"
+ },
+ "MarkAsUsed": false,
+ "ReturnVariableName": "",
+ "ApplyEntityAccess": false,
+ "AllowedModuleRoles": [
+  1
+ ],
+ "AllowConcurrentExecution": true,
+ "ConcurrenyErrorMessage": {
+  "$ID": "998bb216-4206-4d0f-9ba0-ef50a439d12b",
+  "$Type": "Texts$Text",
+  "Items": [
+   3
+  ]
+ },
+ "ConcurrencyErrorMicroflow": "",
+ "Url": "",
+ "UrlSearchParameters": [
+  1
+ ],
+ "MicroflowActionInfo": null,
+ "WorkflowActionInfo": null,
+ "StableId": "1165772a-3881-44b2-9caa-f392a768134f"
+}

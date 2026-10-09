@@ -36,7 +36,7 @@ const viewports = arg('viewports', '1440x900,1280x720,390x844')
   .map((s) => s.split('x').map(Number))
   .map(([width, height]) => ({ width, height }));
 const themes = arg('themes', 'default,dark,terminal,clean-light,clean-dark').split(',');
-const TABS = ['command', 'board', 'workers', 'analysis', 'live', 'git', 'org', 'standup', 'approvals', 'settings', 'teams', 'budget', 'audit', 'tests'];
+const TABS = ['command', 'board', 'workers', 'analysis', 'live', 'git', 'model', 'org', 'standup', 'approvals', 'settings', 'teams', 'budget', 'audit', 'tests'];
 const TOL = 1;
 if (!floor) {
   console.error('usage: node scripts/check-tab-alignment.mjs --base <url> --password <pw> --floor <id>');

@@ -91,6 +91,8 @@ For a floor with a Mendix project, **Open in Studio Pro** in the summary's headi
 - Opening it is written in the [Audit log](audit-log.md) (`studio.open`, under *Workers*), said in Team chatter, and toasted to everyone on the floor.
 - It can't open when the office isn't on Windows, runs without a desktop (over SSH, in CI, headless), or Studio Pro isn't installed: the button is greyed out and says why.
 
+To look at the app without Studio Pro, or at what a worker's branch changed, use the **📐 Model** tab: the App Explorer, domain models and microflows drawn as Studio Pro draws them, read-only, on any branch. See [Model tab](model.md).
+
 ### Studio mode
 
 The office looks for itself whether Studio Pro has the floor's project open, however it was opened (the button, the Version Selector, Studio Pro's own start page), every 4 seconds, for floors with a `.mpr` only. While it's open, the floor is in **Studio mode**:

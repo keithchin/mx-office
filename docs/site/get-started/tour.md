@@ -32,6 +32,7 @@ On the 1D and 2D views, left to right: **🏠** (home), the **floor** picker, th
 | 📊 **Analysis** | Compare models, and see Jeff · Router's judgements. |
 | 🌐 **Live app** | Run the app built from `main` and click through it (admin). |
 | 🌳 **Git** | The branch map: every branch and PR as a railway line. |
+| 📐 **Model** | The Mendix app as Studio Pro shows it (App Explorer, domain models, microflows) on main or any branch, and what a branch changed. See [Model tab](../using-the-office/model.md). |
 | 🏢 **Org chart** | Hire, wake, bench, rename and change the model of the team; skills and subagents. |
 | 📋 **Standup** | The daily standup and its proposals. |
 | ✅ **Approvals** | Everything waiting for the Project Manager. |
