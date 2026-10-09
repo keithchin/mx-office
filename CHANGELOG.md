@@ -4,7 +4,7 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
-## Unreleased
+## 2026-10-09 · release 27 (`640ac22`)
 
 ### New
 - **Portal: a left navigation on every project page.** In Portal (Light) and Portal (Dark) the 1D view's
