@@ -4,6 +4,24 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### New
+- **🎨 Portal (Light) and Portal (Dark), the new default theme.** The office drawn like a low-code platform's
+  web portal: a navy top bar across the window with a ⋮⋮⋮ launcher (Projects, The Firm, docs, Settings,
+  every project), the **Mx Office** wordmark and the section in capitals (PROJECTS, THE FIRM, or the
+  project's name, which still switches project), a search in the middle that finds a project, a tab or a
+  page as you type, and at the right the team phone's bell with its count, help, a dark-mode switch, the
+  🎨 and your initials for the ☰ menu. White pages, Noto Sans, the portal's blue for primary buttons,
+  underline tabs, light-grey lines and table heads; no emoji, as in Clean. A browser that never picked a
+  theme gets Portal (Light), or Portal (Dark) when the system is dark; a theme picked before is kept.
+- **Home as a Projects page** (Portal themes): the title with Add project and New project, a filter row
+  (search by name, status, sort by Pinned / Recent activity / Name with a reverse button, Pause all), and
+  a card per project with its tile, name, repository, summary, progress, status and spend, plus 👁 watch,
+  pin and ⋯ (open the board or the office, live app, Edit in Studio Pro, Pause / Resume). Pins and watches
+  are per viewer, in this browser; an unwatched project no longer calls you over from other floors.
+- Clean (Light), Clean (Dark), Fun, Fun (Dark) and Terminal look exactly as before.
+
 ## 2026-10-09 · release 25 (`9ab7e96`)
 
 ### Improved
