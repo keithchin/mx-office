@@ -8,13 +8,15 @@
 // - The launcher opens a menu of where to go: Home's projects, every project, The Firm, the docs and
 //   Settings.
 // - The wordmark goes Home; the section is the page's name in capitals (PROJECTS on Home), or the floor
-//   picker on a floor's pages, drawn as a capitalised title.
-// - The search (./search.ts) finds a project, a tab of this page or a page of the office.
+//   picker on the 2D view, drawn as a capitalised title (on the 1D view the page's name: the floor picker
+//   is in the left navigation's project card there, ./layout.ts).
+// - The search (./search.ts) finds a project, a page of this project (or a tab of this page), its agents,
+//   issues and pull requests (the page says, opts.search), a page of the office or a docs page.
 // - The bell opens the team phone and shows its count (pages with the phone); the ? opens the docs;
 //   the moon switches between Portal (Light) and Portal (Dark); the 🎨 still lists every theme, and the
 //   ☰ (the office's menu, with Settings and the rest) is drawn as your initials, like a profile menu.
-// Everything the bar had stays where it was in the page, so every function is still reachable; the left
-// navigation the portal has is the next step (the ☰ and the tabs keep everything until then).
+// Everything the bar had stays where it was in the page, so every function is still reachable; the 1D
+// view's left navigation, page header and Overview are ./layout.ts.
 
 import { store } from '../../state';
 import { rememberFloor } from '../../state/persist';
@@ -34,6 +36,8 @@ export interface PortalBarOpts {
   onHome?: () => void;
   /** Settings, as the page opens it (the 1D view's tab; elsewhere its address). */
   settings?: () => void;
+  /** What else the search finds on this page (the 1D view: its pages, agents, issues and pull requests), in place of the tab row's buttons. */
+  search?: () => SearchItem[];
 }
 
 /** A floor's 1D board. */
@@ -58,7 +62,7 @@ function pages(opts: PortalBarOpts): { label: string; hint: string; href: string
     { label: 'Projects', hint: 'Home: every project', href: '/home', run: location.pathname === '/home' ? opts.onHome : undefined },
     { label: 'The Firm', hint: 'Independent Reviewer Agents', href: '/firm' },
     { label: 'Documentation', hint: 'Guides, reference and FAQ', href: '/docs' },
-    { label: 'Settings', hint: 'You, the workers, the team, the look', href: settingsHref(undefined, store.floor ?? undefined), run: opts.settings },
+    { label: 'Settings', hint: 'You, the agents, the team, the look', href: settingsHref(undefined, store.floor ?? undefined), run: opts.settings },
   ];
 }
 
@@ -155,14 +159,15 @@ const ownText = (b: Element) => [...b.childNodes].filter((n) => n.nodeType === N
 
 /** What the search looks through: the tabs on this page, every project, the office's pages. */
 function searchSources(opts: PortalBarOpts): SearchItem[] {
+  const projects = store.floors
+    .filter((f) => !f.cloning)
+    .map((f): SearchItem => ({ kind: 'project', label: f.name, hint: f.repo ?? undefined, also: `${f.repo ?? ''} ${f.id}`, go: () => goFloor(f.id) }));
+  const pageItems = pages(opts).map((p): SearchItem => ({ kind: 'page', label: p.label, hint: p.hint, go: () => (p.run ? p.run() : location.assign(p.href)) }));
+  if (opts.search) return [...projects, ...opts.search(), ...pageItems];
   const where = location.pathname === '/home' ? 'Home' : store.floors.find((f) => f.id === store.floor)?.name;
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('.lite-tabs [role=tab], .home-tabs [role=tab]')]
     .filter((b) => !b.hidden && !b.classList.contains('hidden'))
     .map((b): SearchItem => ({ kind: 'tab', label: tabLabel(ownText(b)), hint: where, go: () => b.click() }))
     .filter((t) => t.label);
-  const projects = store.floors
-    .filter((f) => !f.cloning)
-    .map((f): SearchItem => ({ kind: 'project', label: f.name, hint: f.repo ?? undefined, also: `${f.repo ?? ''} ${f.id}`, go: () => goFloor(f.id) }));
-  const pageItems = pages(opts).map((p): SearchItem => ({ kind: 'page', label: p.label, hint: p.hint, go: () => (p.run ? p.run() : location.assign(p.href)) }));
   return [...projects, ...tabs, ...pageItems];
 }

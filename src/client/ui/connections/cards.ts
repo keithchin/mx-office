@@ -87,7 +87,7 @@ function mendixFloors(view: ConnectionsView, run: Run): HTMLElement | null {
   return h(
     'div.cx-floors',
     {},
-    h('p.cx-sub', {}, 'Give agents the Mendix token (MENDIX_TOKEN / MX_PAT), per project. Off by default; workers hired after the change get it:'),
+    h('p.cx-sub', {}, 'Give agents the Mendix token (MENDIX_TOKEN / MX_PAT), per project. Off by default; agents hired after the change get it:'),
     ...view.mendixFloors.map((f) => {
       const box = h('input', { type: 'checkbox', checked: f.on }) as HTMLInputElement;
       box.addEventListener('change', () => void run(() => connectionsApi.mendixFloor(f.id, box.checked), `${f.name}: ${box.checked ? 'agents get the Mendix token' : 'no Mendix token for agents'}`));

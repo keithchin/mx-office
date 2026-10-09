@@ -40,7 +40,7 @@ function elsewhere(s: ServicesState): boolean {
 
 function describe(svc: ServiceInfo): { who: string; color: string; branch?: string } {
   const w = store.workers.get(svc.workerId);
-  return { who: w?.name ?? 'A worker', color: w?.color ?? '#8d99ae', branch: w?.worktree?.branch };
+  return { who: w?.name ?? 'An agent', color: w?.color ?? '#8d99ae', branch: w?.worktree?.branch };
 }
 
 export function openServices() {
@@ -82,8 +82,8 @@ export function openServices() {
         'p.note',
         { style: 'margin:0 0 12px' },
         direct
-          ? 'Web servers the workers are running. Each has its own link on your Tailscale network: open it, or click the row to copy it for someone else on the network.'
-          : 'Web servers the workers are running. Click one to copy a command that opens it on your computer — run it in a terminal and the page opens by itself.',
+          ? 'Web servers the agents are running. Each has its own link on your Tailscale network: open it, or click the row to copy it for someone else on the network.'
+          : 'Web servers the agents are running. Click one to copy a command that opens it on your computer — run it in a terminal and the page opens by itself.',
       ),
     );
     if (!direct && elsewhere(s)) {
@@ -95,9 +95,9 @@ export function openServices() {
           h(
             'p.note',
             {},
-            'Run this on your computer and leave it running. Every server a worker starts opens on the same port there (',
+            'Run this on your computer and leave it running. Every server an agent starts opens on the same port there (',
             h('code', {}, 'localhost:5173'),
-            ' is the worker’s), and closes when the worker stops it. It needs the ',
+            ' is the agent’s), and closes when the agent stops it. It needs the ',
             h('code', {}, 'agent-office'),
             ' command on your computer: the install line in the README.',
           ),
@@ -111,7 +111,7 @@ export function openServices() {
           'div.svc-empty',
           {},
           h('p', {}, 'Nothing running yet.'),
-          h('p.note', {}, 'When a worker starts a web server — ', h('code', {}, 'npm run dev'), ', a preview build, ', h('code', {}, 'python -m http.server'), ' — it shows up here within a few seconds. Try prompting: “start the dev server in the background so we can review it”.'),
+          h('p.note', {}, 'When an agent starts a web server — ', h('code', {}, 'npm run dev'), ', a preview build, ', h('code', {}, 'python -m http.server'), ' — it shows up here within a few seconds. Try prompting: “start the dev server in the background so we can review it”.'),
         ),
       );
       return;

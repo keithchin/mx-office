@@ -53,7 +53,7 @@ export function openUpgrade(net: Net) {
             'p.note',
             {},
             'Upgrading builds the new version while the office keeps running, then restarts it. Everyone reconnects on the new version automatically. ',
-            awake ? 'Workers keep working through the restart, and whatever they were in the middle of carries on.' : '',
+            awake ? 'Agents keep working through the restart, and whatever they were in the middle of carries on.' : '',
           ),
         );
       }

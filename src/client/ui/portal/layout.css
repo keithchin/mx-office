@@ -1,0 +1,47 @@
+/* The Portal layout of the 1D view (ui/portal/layout.ts): the left navigation down the side, the page
+   to its right starting at the top with its header, the tab row and the bottom bar gone (their buttons
+   are the navigation's items and the header's buttons now). Every rule is under a Portal theme and
+   body.pt-has-nav (the 1D view), so the other themes and the other pages are as they were. */
+
+html[data-theme^='portal'] body.lite.pt-has-nav { --pt-nav-w: 228px; --pt-top: calc(var(--pt-h) + 1px + env(safe-area-inset-top)); }
+html[data-theme^='portal'] body.lite.pt-has-nav.pt-rail { --pt-nav-w: 56px; }
+
+/* The page: beside the pane, the whole width left, 24px in from the pane and 32px at the sides. */
+html[data-theme^='portal'] body.lite.pt-has-nav .lite-main {
+  width: auto; max-width: none; margin: 0 0 0 var(--pt-nav-w); padding: 0 32px 40px; transition: margin-left .18s ease;
+}
+/* The fitted Command Center's bottom padding (room for the bottom bar) isn't needed: there's no bar. */
+html[data-theme^='portal'] body.lite.pt-has-nav:has(.lite-main.on-command) .lite-main { padding-bottom: 40px; }
+/* What the navigation and the header took over. */
+html[data-theme^='portal'] body.lite.pt-has-nav :is(.lite-tabs, .lite-nav) { display: none; }
+/* The other floors waiting on someone: a quiet line under the header (Needs you lists them on the Overview). */
+html[data-theme^='portal'] body.lite.pt-has-nav .lite-elsewhere { margin: 0 0 16px; }
+html[data-theme^='portal'] body.lite.pt-has-nav .lite-go { min-height: 36px; border: 1px solid var(--bad); background: var(--bad-soft); }
+
+
+/* The toasts and the reconnecting line clear the bar, not the old two rows. */
+html[data-theme^='portal'] body.lite.pt-has-nav :is(#toasts, .conn) { top: calc(var(--pt-top) + 12px); }
+
+/* The page's own headings that say again what the header's title says (Agents, Settings, Budget, Audit
+   log, Test mode): gone, what's beside them kept (the Agents page's waiting count, the audit log's badge
+   and exports). */
+html[data-theme^='portal'] body.lite.pt-has-nav :is(#settings-view .fs-title, #budget-view .bud > h2.lite-h, #audit-view .au-head > h2.lite-h, #tests-view .tl-page > h2.lite-h) { display: none; }
+html[data-theme^='portal'] body.lite.pt-has-nav #workers-view > .lite-h { margin: 0; font-size: 0; }
+html[data-theme^='portal'] body.lite.pt-has-nav #workers-view > .lite-h > #waiting-now:not(:empty) { display: block; margin: 0 0 12px; font-size: 14px; }
+
+/* A phone: the pane is a drawer, the page takes the width. */
+@media (max-width: 760px) {
+  html[data-theme^='portal'] body.lite.pt-has-nav, html[data-theme^='portal'] body.lite.pt-has-nav.pt-rail { --pt-nav-w: 0px; }
+  html[data-theme^='portal'] body.lite.pt-has-nav .lite-main { padding: 0 16px 32px; }
+  html[data-theme^='portal'] body.lite.pt-has-nav .lite-bar .pt-launch { display: none; }
+}
+/* A small phone: the page's name gives the bar's icons their room (the header says it). */
+@media (max-width: 420px) {
+  html[data-theme^='portal'] body.lite.pt-has-nav .lite-bar .pt-page-name { display: none; }
+}
+@media (min-width: 761px) {
+  html[data-theme^='portal'] body.lite .pt-navbtn { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme^='portal'] body.lite.pt-has-nav .lite-main { transition: none; }
+}

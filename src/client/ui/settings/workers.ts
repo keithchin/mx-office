@@ -33,7 +33,7 @@ export function defaultWorkerSetting({ net }: SettingsDeps): Built {
     back.textContent = `Back to ${store.project?.agentCmd.split(' ')[0].split(/[\\/]/).pop() ?? 'the --agent'}`;
     if (!touched) agent.set(choice);
     note.textContent =
-      'Every worker starts on this: hired at a desk, handed an issue or a pull request from the boards, taken off the queue, the board agents and meetings. Where you start one, ✏️ Edit picks another just for it.' +
+      'Every agent starts on this: hired at a desk, handed an issue or a pull request from the boards, taken off the queue, the board agents and meetings. Where you start one, ✏️ Edit picks another just for it.' +
       (picked ? ` Set by ${picked.by} ${timeAgo(picked.at)}.` : ' It’s the agent the office was started with, on its own default model.') +
       (admin ? '' : ' Admins can change it.');
   };
@@ -48,7 +48,7 @@ export function defaultWorkerSetting({ net }: SettingsDeps): Built {
     net.send({ t: 'prompts.agent', choice: null });
   });
   const offs = [store.on('prompts', paint), store.on('me', paint), store.on('project', paint)];
-  return { nodes: [setting('Default worker', 'office', now, agent.element, actions, note)], off: () => offs.forEach((off) => off()) };
+  return { nodes: [setting('Default agent', 'office', now, agent.element, actions, note)], off: () => offs.forEach((off) => off()) };
 }
 
 /** The prompts the office writes for workers by itself, for the whole office. Admins rewrite them. */
@@ -59,7 +59,7 @@ export function promptsSetting({ net }: SettingsDeps): Built {
     const n = rewrittenPrompts();
     open.textContent = store.me.admin ? '📝 Edit the prompts…' : '📝 Read the prompts…';
     note.textContent =
-      'What 🤖 Hand to a worker, 🔍 Review and the boards’ other buttons tell a worker, the note the queue adds to a task, the board agents’ briefs, the meeting room’s parts and the sign writer’s instructions. ' +
+      'What 🤖 Hand to an agent, 🔍 Review and the boards’ other buttons tell an agent, the note the queue adds to a task, the board agents’ briefs, the meeting room’s parts and the sign writer’s instructions. ' +
       (n ? `${n} of them rewritten.` : 'All as the office wrote them.') +
       (store.me.admin ? '' : ' Admins can rewrite them.');
   };
@@ -70,7 +70,7 @@ export function promptsSetting({ net }: SettingsDeps): Built {
 
 /** The most workers the office runs at once, across every floor. Admins set it. */
 export function limitSetting({ net }: SettingsDeps): Built {
-  const input = h('input', { type: 'text', inputmode: 'numeric', 'aria-label': 'Most workers at once', spellcheck: 'false', autocomplete: 'off' }) as HTMLInputElement;
+  const input = h('input', { type: 'text', inputmode: 'numeric', 'aria-label': 'Most agents at once', spellcheck: 'false', autocomplete: 'off' }) as HTMLInputElement;
   const save = h('button.btn.primary', { type: 'button' }, 'Set limit');
   const clear = h('button.btn', { type: 'button', onclick: () => net.send({ t: 'machine.limit', limit: null }) });
   const row = h('div.webhook', {}, input, save, clear);
@@ -84,8 +84,8 @@ export function limitSetting({ net }: SettingsDeps): Built {
     clear.classList.toggle('hidden', !m.set);
     const now =
       m.limit === undefined
-        ? `No limit: the office hires a worker for every free seat. ${m.workers} ${m.workers === 1 ? 'is' : 'are'} here now, across every floor.`
-        : `At most ${m.limit} worker${m.limit === 1 ? '' : 's'} at once, across every floor (${m.workers} now), shells and board agents too. Hiring past that is refused.`;
+        ? `No limit: the office hires an agent for every free seat. ${m.workers} ${m.workers === 1 ? 'is' : 'are'} here now, across every floor.`
+        : `At most ${m.limit} agent${m.limit === 1 ? '' : 's'} at once, across every floor (${m.workers} now), shells and board agents too. Hiring past that is refused.`;
     const from = m.set ? ` Set by ${m.set.by} ${timeAgo(m.set.at)}.` : '';
     const cap = m.ceiling ? ` The office was started with --max-workers ${m.ceiling}, so it can't go any higher.` : '';
     note.textContent = now + from + cap + (admin ? '' : ' Admins can change it.');
@@ -102,12 +102,12 @@ export function limitSetting({ net }: SettingsDeps): Built {
     if (e.key === 'Enter') send();
   });
   const offs = [store.on('machine', paint), store.on('me', paint)];
-  return { nodes: [setting('Worker limit', 'office', row, note)], off: () => offs.forEach((off) => off()) };
+  return { nodes: [setting('Agent limit', 'office', row, note)], off: () => offs.forEach((off) => off()) };
 }
 
 /** Whether a worker whose pull request merged goes home by itself, for everyone. */
 export function leaveOnMergeSetting({ net }: SettingsDeps): Built {
-  const row = h('div.seg', { role: 'radiogroup', 'aria-label': 'Workers whose pull request merged' });
+  const row = h('div.seg', { role: 'radiogroup', 'aria-label': 'Agents whose pull request merged' });
   const note = h('p.setting-note');
   const paint = () => {
     const { on, by, at } = store.leaveOnMerge;
@@ -120,12 +120,12 @@ export function leaveOnMergeSetting({ net }: SettingsDeps): Built {
       ).map(([value, label]) => h('button.btn', { type: 'button', role: 'radio', 'aria-checked': String(on === value), class: on === value ? 'on' : '', onclick: () => store.leaveOnMerge.on !== value && net.send({ t: 'leaveOnMerge.set', on: value }) }, label)),
     );
     const now = on
-      ? 'Once a worker’s pull request merges, it goes home as soon as it isn’t working or waiting on you and nobody has its terminal open, and its worktree and branch are deleted. A worktree with uncommitted changes, or commits that aren’t on GitHub, is kept.'
-      : 'A worker whose pull request merged stays at its desk, outlined in purple, until someone sends it home. Turned on, the ones already merged go too.';
+      ? 'Once an agent’s pull request merges, it goes home as soon as it isn’t working or waiting on you and nobody has its terminal open, and its worktree and branch are deleted. A worktree with uncommitted changes, or commits that aren’t on GitHub, is kept.'
+      : 'An agent whose pull request merged stays at its desk, outlined in purple, until someone sends it home. Turned on, the ones already merged go too.';
     note.textContent = `${now} It’s the same for everyone in the building${by ? `, set by ${by}${at ? ` ${timeAgo(at)}` : ''}` : ''}.`;
   };
   paint();
-  return { nodes: [setting('Workers whose pull request merged', 'office', row, note)], off: store.on('leaveOnMerge', paint) };
+  return { nodes: [setting('Agents whose pull request merged', 'office', row, note)], off: store.on('leaveOnMerge', paint) };
 }
 
 /** Keep awake while agents work (settings-awake.ts), fetched from the office. */

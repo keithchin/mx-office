@@ -67,7 +67,7 @@ export async function enablePush(alerts: AlertSettings): Promise<string | undefi
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') return 'Notifications were not allowed. Settings → Notifications → Agent Office turns them on.';
   const reg = await registerWorker();
-  if (!reg) return 'This browser has no service worker here (it needs https).';
+  if (!reg) return 'This browser has no service agent here (it needs https).';
   try {
     const { vapidKey } = await mobileApi.pushKey();
     const old = await reg.pushManager.getSubscription();

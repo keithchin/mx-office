@@ -11,6 +11,8 @@ The **🧾 Audit log** records who did what, and when: people, agents, the offic
 
 ## Where to find it
 
+Above the log is The Firm's strip: **📑 Call an audit** and **The Firm →**, or the audit running, or its report ready (in a Portal theme these are the page header's buttons). See [The Firm](the-firm.md).
+
 - On a project's 1D view: the **🧾 Audit log** tab (`?tab=audit`). It opens on **This floor**.
 - On [/home](home.md): the **🧾 Audit log** tab, across **Every floor**, with a floor column.
 
@@ -28,7 +30,7 @@ The **🧾 Audit log** records who did what, and when: people, agents, the offic
 | Scope | **This floor**, **Office-wide** (logins, settings, floors added and removed), **Every floor**; on /home, each floor by name |
 | Time | **Last hour**, **Today**, **7 days**, **30 days**, **Custom** (From … to …) |
 | Who | **Human**, **Agent**, **Office**, **Jeff**, **Reviewer**, each with a count |
-| Kind of action | Every action, Team, Workers, Escalations & approvals, GitHub, Settings, Access, Jeff, The Firm |
+| Kind of action | Every action, Team, Agents, Escalations & approvals, GitHub, Settings, Access, Jeff, The Firm |
 | Search | Summaries, people and targets |
 
 The **histogram** above the table shows events over time. Click a bar to zoom into it.

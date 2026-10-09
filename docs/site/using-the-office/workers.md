@@ -1,10 +1,10 @@
 ---
-title: Workers and rankings
-description: The Workers tab - every agent graded A to F, the criteria behind the grade, specialist duties for team roles, the leaderboard and grouping.
+title: Agents and rankings
+description: The Agents page (once the Workers tab) - every agent graded A to F, the criteria behind the grade, specialist duties for team roles, the leaderboard and grouping.
 weight: 6
 ---
 
-The **🤖 Workers** tab shows every agent on the floor, or on all floors, ranked by a grade from **A** to **F**.
+The **🤖 Agents** page (it was called Workers; its address is still `?tab=workers`, and `?tab=agents` works too) shows every agent on the floor, or on all floors, ranked by a grade from **A** to **F**.
 
 ![Worker rankings](../images/workers-ranking.png)
 

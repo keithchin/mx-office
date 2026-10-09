@@ -120,7 +120,7 @@ export function rankFooter(r: RankedWorker, scope: 'floor' | 'all', share: numbe
 
 /** A worker only the records know (gone home, or on another floor). */
 export function recordCard(r: RankedWorker, scope: 'floor' | 'all'): HTMLElement {
-  const where = [r.roleLabel !== 'Worker' ? `🎖 ${r.roleLabel}` : '👷 Worker', `⚙️ ${r.modelLabel}`, scope === 'all' ? `🏢 ${r.floorName}` : undefined, `${r.tasks} task${r.tasks === 1 ? '' : 's'}`].filter(Boolean).join(' · ');
+  const where = [r.roleLabel !== 'Worker' ? `🎖 ${r.roleLabel}` : '👷 Agent', `⚙️ ${r.modelLabel}`, scope === 'all' ? `🏢 ${r.floorName}` : undefined, `${r.tasks} task${r.tasks === 1 ? '' : 's'}`].filter(Boolean).join(' · ');
   return h(
     'div.lite-card.rk-record',
     {},

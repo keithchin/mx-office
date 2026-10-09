@@ -257,7 +257,7 @@ export function auditView(root: HTMLElement, opts: AuditViewOpts) {
     totalEl.textContent = page ? `${page.total} event${page.total === 1 ? '' : 's'}` : '';
     if (!opts.admin()) return exports.replaceChildren();
     const href = (format: string) => `/api/audit/export?${queryString(full(), Date.now(), { format })}`;
-    const prompt = h('label.au-prompt', { title: 'Keep the first 80 characters of every prompt a person sends a worker (off: only its length)' }, h('input', { type: 'checkbox', checked: !!page?.promptText, onchange: (e: Event) => void setPromptText((e.target as HTMLInputElement).checked) }), ' Log prompt text');
+    const prompt = h('label.au-prompt', { title: 'Keep the first 80 characters of every prompt a person sends an agent (off: only its length)' }, h('input', { type: 'checkbox', checked: !!page?.promptText, onchange: (e: Event) => void setPromptText((e.target as HTMLInputElement).checked) }), ' Log prompt text');
     exports.replaceChildren(h('a.btn.au-export', { href: href('csv'), download: '' }, '⬇ CSV'), h('a.btn.au-export', { href: href('jsonl'), download: '' }, '⬇ JSONL'), prompt);
   }
 

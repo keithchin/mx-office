@@ -3,7 +3,10 @@
    the list is a card in the theme's tokens. */
 
 .vp { position: relative; flex: none; display: flex; }
-.vp-btn { gap: 6px; padding: 0 10px; white-space: nowrap; }
+.vp-btn, .vp-go { gap: 6px; padding: 0 10px; white-space: nowrap; }
+/* Go to Office / Go to Board: one word on a phone, where the bar is full. */
+.vp-short { display: none; font-weight: 900; }
+@media (max-width: 520px) { .vp-go .vp-label { display: none; } .vp-go .vp-short { display: inline; } }
 .vp-ico { font-size: 16px; line-height: 1; }
 .vp-label { font-weight: 900; }
 /* A ▾ drawn in the text's own color, so it follows every theme. */

@@ -4,7 +4,7 @@ description: The same office drawn as 1D boards, a 2D pixel office, a 3D world a
 weight: 3
 ---
 
-The office can be drawn four ways. They all show the same floor, live. Pick one in the **view dropdown** in the top bar, next to the ☰. Your browser remembers the choice.
+The office can be drawn four ways. They all show the same floor, live. On the 1D view **Go to Office** in the top bar opens the 2D view of the same project, and on the 2D view **Go to Board** comes back. Your browser remembers the choice.
 
 | View | Address | Best for |
 |---|---|---|
@@ -15,7 +15,7 @@ The office can be drawn four ways. They all show the same floor, live. Pick one 
 
 ## Switching views
 
-- The **view dropdown** in the top bar (↑/↓ and Enter work too).
+- **Go to Office** (1D → 2D) and **Go to Board** (2D → 1D) in the flat views' top bar. The 3D and Retro views are no longer offered there.
 - A link with `?view=1d|2d|3d|retro`.
 - In 3D, the ☰ menu has the views too.
 

@@ -38,7 +38,7 @@ export interface OverviewView {
 
 /** Draws the tab into `root`. `leaving` hears the page head off to a floor. */
 export function overviewView(root: HTMLElement, leaving: () => void): OverviewView {
-  const canvas = h('canvas.ov-canvas', { 'aria-label': 'Every floor from above: hover a worker for what it is on, click a floor’s name to open it in the 2D view' });
+  const canvas = h('canvas.ov-canvas', { 'aria-label': 'Every floor from above: hover an agent for what it is on, click a floor’s name to open it in the 2D view' });
   const tip = h('div.ov-tip.px-panel.hidden', { role: 'tooltip' });
   const level = h('span', {}, 'Fit');
   const zoomBtn = (id: string, label: string, title: string, child: Node | string) => h('button.px-btn', { id, type: 'button', title, 'aria-label': label }, child);

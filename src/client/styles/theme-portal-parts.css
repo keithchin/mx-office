@@ -21,6 +21,10 @@ html[data-theme^='portal'] body.lite.lite .btn.danger { background: var(--bad); 
 html[data-theme^='portal'] body.lite.lite .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 html[data-theme^='portal'] body.lite.lite .close { width: 28px; height: 28px; min-height: 28px; padding: 0; border-color: transparent; background: transparent; color: var(--muted); }
 html[data-theme^='portal'] body.lite.lite .close:hover { background: var(--hover); color: var(--ink); }
+/* A button that's only an icon (a window's ✕, a 🔔): its line icon alone. The buttons' 14px above would
+   otherwise bring back the ✕ beside the icon Clean draws in its place (two × on every window). */
+html[data-theme^='portal'] body.lite.lite :is(.btn.btn, .close.close)[data-ao-icon]:not([data-ao-icon='none']) { font-size: 0; }
+html[data-theme^='portal'] body.lite.lite :is(.btn.btn, .close.close)[data-ao-icon]:not([data-ao-icon='none']) > * { font-size: var(--fs-pill); }
 
 /* ---- Tabs: the portal's underline tabs, the open one in the ink with a 3px bar under it --------------- */
 html[data-theme^='portal'] body.lite.lite :is(.lite-tabs, .home-tabs) { gap: 8px; border-bottom: 1px solid var(--line); }

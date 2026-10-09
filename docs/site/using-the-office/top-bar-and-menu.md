@@ -1,6 +1,6 @@
 ---
 title: Top bar & menu
-description: The 🏠 button, floor picker, view dropdown, 🎨 color themes, the ☰ menu, tab badges and notifications.
+description: The 🏠 button, floor picker, Go to Office, 🎨 color themes, the ☰ menu, the Portal layout's left navigation and search, tab badges and notifications.
 weight: 1
 ---
 
@@ -13,13 +13,13 @@ On the 1D and 2D views, from left to right:
 | 🔔 | *Turn on notifications*. Shown until your browser has been asked once. Desktop notifications take you to the worker that needs you. |
 | 🏠 | Goes to `/home`. |
 | **Floor** picker | Switches project. Each option shows `· 🙋 N` when agents there wait on you, or clone progress while a floor is cloning. Under the bar: `⎇ branch · repo/dir · 👥 N here`. |
-| **View** dropdown | 🗂️ 1D, 🗺️ 2D, 🏢 3D, 👾 Retro. ↑/↓/Home/End move, Enter or Space picks, Esc closes. |
+| **Go to Office** | Opens the project's office from above, the [2D view](2d-view.md). On the 2D view the same place has **Go to Board**, back to the 1D view. (The view dropdown is gone from the flat views.) |
 | 🎨 | Lists the color themes. |
 | ☰ | The menu. |
 
 When agents wait on another floor, buttons like **🙋 2 waiting on travel-approval →** appear under the bar. They land on that floor's Command Center.
 
-The browser tab's title counts the workers waiting on you, so you see it from other tabs too (projects you stopped watching on Home are left out).
+The browser tab's title counts the agents waiting on you, so you see it from other tabs too (projects you stopped watching on Home are left out).
 
 ### In the Portal themes
 
@@ -29,15 +29,15 @@ The Portal themes draw the same bar as a navy portal header, the whole width of 
 |---|---|
 | ⋮⋮⋮ launcher | A menu of where to go: **Projects** (Home), **The Firm**, the **Documentation**, **Settings**, and every project. ↑/↓ move, Enter picks, Esc closes. |
 | **Mx Office** | The wordmark goes to Home (it stands in for 🏠). |
-| Section | The page in capitals: **PROJECTS** on Home, **THE FIRM**, or on a project's pages its name, which is the floor picker (click to switch project). |
-| Search | Finds a project, a tab of the page you're on, or an office page as you type; ↑/↓ and Enter go there, Esc clears. Everything it searches is already in the page. On a phone it folds into a 🔍 button. |
+| Section | The page in capitals: **PROJECTS** on Home, **THE FIRM**, or on a project's pages the page you're on (**OVERVIEW**, **BOARD**…). The project itself is switched in the left navigation's project card (see [Portal layout](#portal-layout)); on the 2D view the section is still the floor picker. |
+| Search | Finds, as you type, in groups: **Projects**, the **Pages of this project**, its **Agents**, **Issues** and **Pull requests** (by title or `#number`), the **Office** pages and the **Documentation** (by title or heading). The group with the best match comes first. ↑/↓ walk the results, Enter goes there, Esc clears. Everything but the docs is already in the page; the docs' titles are fetched once, the first time you click into the search. On a phone it folds into a 🔍 button. |
 | Bell | Opens the [team phone](team-phone.md), with its count (the phone's floating button is still there too). |
 | ? | The documentation. |
 | Moon / sun | Dark mode: switches between Portal (Light) and Portal (Dark). |
 | 🎨 | Every theme, as above. |
 | Your initials | The ☰ menu. |
 
-Everything else the bar had (the view dropdown, the budget chip, TEST MODE, Back to a floor on Home) stays in it. The bell that asks to turn notifications on is in ⚙️ Settings › Notifications instead.
+Everything else the bar had (Go to Office, the office's budget chip, TEST MODE, Back to a floor on Home) stays in it. The bell that asks to turn notifications on is in ⚙️ Settings › Notifications instead.
 
 ## Color themes
 
@@ -74,13 +74,25 @@ The same menu as in the 3D office, with what each item does from here.
 > [!NOTE]
 > **⚙️ Settings** in the ☰ menu opens the full Settings page, the 1D view's **⚙️ Settings** tab (`/lite?tab=settings`), from the 1D view, the 2D view and `/home` alike: it never switches to the 3D office. The 3D office keeps its own ⚙️ window (camera, character, the building) for when you're in it. See [Settings](settings.md).
 
+### Portal layout
+
+In a Portal theme the 1D view is laid out like a low-code platform's app pages (the other themes keep the tab row and the bottom bar):
+
+- **The left navigation**, about 230 px wide. At the top a **project card**: the project's tile and name with **⌄**, a click opens the list of projects (it's the floor picker). Below it the pages in groups that open and close (this browser remembers which, per viewer): **General** (Overview, Team, Team boards, Documents), **Project Management** (Board, Approvals, Standup), **App Insights** (Analysis, Budget, Audit log), **Repository** (Git, Model), **Deployment** (Live app) and **Monitoring** (Agents, and Tests for admins). Under a rule: **Settings**, **View App** (the live app in a new tab, or the Live app page when it isn't running) and **Edit in Studio Pro** (Mendix projects). The page you're on is a grey pill, and its group opens by itself. Each item carries its tab's badge; a closed group shows its items' badges added up. Hovering a closed group shows its items in a flyout beside the pane.
+- **Folding it**: the chevron on the pane's edge folds it to a rail of icons (remembered too). Hovering or clicking a group's icon shows its items in a flyout; **Esc** closes it.
+- **On a phone** the navigation is a drawer: **☰** at the bar's left opens it (it also has *All projects*, *The Firm* and *Documentation*, the launcher's places). Picking a page, a tap beside it or **Esc** closes it.
+- **The page header** across the top of every page: the page's name and a line about it (on the Overview the project's tile, name and what it's for), and its buttons: the page's own (**Pin project** on the Overview, **Issues**, **PRs** and **Queue** with their counts on the Board, **Call an audit** and **The Firm →** on the Audit log) and the blue **New task**.
+- **The band** under it, the same on every page: the floor's line (branch, folder, who's here, the budget chip and the run state **● Running | Pause**, see [Command Center](command-center.md)) over the progress bar, on a mid dark grey.
+
+Links with `?tab=` still open the same pages (`?tab=agents` works too, for the Agents page, `?tab=workers`).
+
 ## Tab badges
 
 | Tab | Badge |
 |---|---|
 | 🎛️ Command Center | How many items are in Needs you. |
 | 🗂 Board | Cards in 🙋 Needs a human. |
-| 🤖 Workers | Workers waiting on you. |
+| 🤖 Agents | Agents waiting on you. |
 | 📋 Standup | A dot when there's a standup you haven't seen. |
 | 🌐 Live app | `!` when it failed. |
 | ✅ Approvals | Items waiting for you. |
@@ -88,4 +100,4 @@ The same menu as in the 3D office, with what each item does from here.
 
 ## The bottom bar (1D)
 
-**📌 Issues**, **🔀 PRs** and **📋 Queue** with their counts, and **✨ New task** to give a task to a new worker.
+**📌 Issues**, **🔀 PRs** and **📋 Queue** with their counts, and **✨ New task** to give a task to a new agent. In a Portal theme they're in the page header instead (Issues, PRs and Queue on the Board's).

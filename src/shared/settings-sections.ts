@@ -19,7 +19,7 @@ export interface SettingsSection {
 
 export const SETTINGS_SECTIONS = [
   { id: 'you', icon: '🧍', label: 'You', blurb: 'How the office looks and sounds for you, the Command Center terminal, and how you’re signed in. Just you, kept in this browser.' },
-  { id: 'workers', icon: '🤖', label: 'Workers', blurb: 'What workers start on, how many run at once, keeping the computer awake, restarting safely, and what the office tells them.' },
+  { id: 'workers', icon: '🤖', label: 'Agents', blurb: 'What agents start on, how many run at once, keeping the computer awake, restarting safely, and what the office tells them.' },
   { id: 'team', icon: '👥', label: 'Team', blurb: 'This project’s team: autonomy (and autonomy by stage), idle benching, the review loop, subagent cool-downs, the standup, cost caps and resume pacing.', floor: true },
   { id: 'jeff', icon: '⚖️', label: 'Jeff · Router', blurb: 'The office’s quick judge on this project: waiting on you, when to escalate, triage and priority.', floor: true },
   { id: 'notify', icon: '🔔', label: 'Notifications', blurb: 'Desktop alerts, the alarm when a worker needs you, Slack / Discord, and Microsoft Teams.' },

@@ -54,7 +54,7 @@ export function hotspots(f: Frame, a: HotspotActions): Hotspot[] {
     out.push({ id, title, sub: () => sub, action: 'Open it', x: ax(f, b.x) - (w >> 1), y: north - FACE + 6, w, h: FACE - 12, run, badge });
   };
   board('issues', '📌 Issues', "The project's GitHub issues", () => a.board('issues'), () => a.counts().issues);
-  board('queue', '📋 Task queue', 'Issues and tasks waiting for the next free worker', a.queue, () => a.counts().queue);
+  board('queue', '📋 Task queue', 'Issues and tasks waiting for the next free agent', a.queue, () => a.counts().queue);
   board('pulls', '🔀 Pull requests', "The project's open PRs", () => a.board('pulls'), () => a.counts().pulls);
 
   const ew = Math.round(ELEVATOR.doorWidth * PPM) + 8;
@@ -68,8 +68,8 @@ export function hotspots(f: Frame, a: HotspotActions): Hotspot[] {
 
   // The TV and the services board, flat on the east wall: a wider box than they're drawn, to hit.
   const slab = (z: number, width: number) => ({ x: east - 12, y: az(f, z) - Math.round((width * PPM) / 2), w: 18, h: Math.round(width * PPM) });
-  out.push({ id: 'tv', title: '📺 TV', sub: () => `Shows whoever is sharing their screen · ${a.counts().services} web server${a.counts().services === 1 ? '' : 's'} running`, action: 'The workers’ web servers', ...slab(TV.z, TV.width), run: a.services });
-  out.push({ id: 'services', title: '🌐 Services', sub: () => 'Web servers the workers are running', action: 'Open the list', ...slab(BOARDS.services.z, BOARDS.services.width), run: a.services, badge: () => a.counts().services });
+  out.push({ id: 'tv', title: '📺 TV', sub: () => `Shows whoever is sharing their screen · ${a.counts().services} web server${a.counts().services === 1 ? '' : 's'} running`, action: 'The agents’ web servers', ...slab(TV.z, TV.width), run: a.services });
+  out.push({ id: 'services', title: '🌐 Services', sub: () => 'Web servers the agents are running', action: 'Open the list', ...slab(BOARDS.services.z, BOARDS.services.width), run: a.services, badge: () => a.counts().services });
 
   const bw = Math.round(BOOKSHELF.width * PPM);
   out.push({ id: 'bookshelf', title: '📚 Bookshelf', sub: () => "Every Markdown file in the project", action: 'Read the docs', x: ax(f, BOOKSHELF.x) - (bw >> 1), y: az(f, BOOKSHELF.z) - 14, w: bw, h: 18, run: a.docs });

@@ -1,8 +1,8 @@
 // The 1D view's tab bar sits at the same height on every tab (scripts/check-tab-alignment.mjs measures it
-// in a browser). What's above it, the floor's line with the budget chip and run state, the Firm's banner,
-// and the tab bar itself, must be laid out the same whichever tab is on: a rule for them scoped to the
+// in a browser). What's above it, the floor's line with the budget chip and run state, and the tab bar itself, must be laid out the same whichever tab is on: a rule for them scoped to the
 // Command Center (.on-command) once took the Firm's banner out of the flow there only, so every other tab
-// dropped its tab bar and content by the banner's height (about 40 px), leaving an empty band.
+// dropped its tab bar and content by the banner's height (about 40 px), leaving an empty band. The banner is
+// on the Audit log page now, below the tabs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -55,7 +55,8 @@ function above(): RegExp {
   const html = read('src/client/lite.html');
   const main = html.slice(html.indexOf('<main class="lite-main">'), html.indexOf('class="lite-tabs"'));
   const ids = [...main.matchAll(/\sid="([\w-]+)"/g)].map((m) => `#${m[1]}`);
-  assert.ok(ids.includes('#floor-meta') && ids.includes('#firm-banner'), 'lite.html: the floor line and the Firm banner sit above the tabs');
+  assert.ok(ids.includes('#floor-meta'), 'lite.html: the floor line sits above the tabs');
+  assert.ok(!ids.includes('#firm-banner'), "lite.html: the Firm's banner is on the Audit log page, not above the tabs");
   return new RegExp([...ids, '.bud-meta-row', '#budget-chip', '.pr-toggle', '.lite-tabs'].map((s) => `${s.replace(/[.#-]/g, '\\$&')}(?![\\w-])`).join('|'));
 }
 
@@ -75,14 +76,16 @@ test('nothing above the 1D tab bar is laid out only on the Command Center', () =
   assert.deepEqual(bad, [], 'these rules move what sits above the tabs on the Command Center only, so the other tabs start lower');
 });
 
-test("on a desktop window the Firm's banner shares the floor's line on every tab", () => {
-  const cl = rules(read('src/client/ui/command-layout.css'));
-  const banner = cl.find((r) => r.sel === '.lite-main > #firm-banner');
-  assert.ok(banner, 'no .lite-main > #firm-banner rule');
-  assert.match(banner.media, /min-width: 1024px/);
-  assert.match(banner.body, /position: absolute/);
-  const row = rules(read('src/client/ui/budget/budget.css')).find((r) => r.sel === '.lite-main > .bud-meta-row');
-  assert.ok(row, 'no .lite-main > .bud-meta-row rule');
-  assert.equal(row.media, banner.media, "the floor's line leaves the banner its room at the same sizes");
-  assert.match(row.body, /padding-right: 300px/);
+test("the Firm's banner is on the Audit log page, and nothing above the tabs keeps room for it any more", () => {
+  const html = read('src/client/lite.html');
+  const banner = html.indexOf('id="firm-banner"');
+  assert.ok(banner > html.indexOf('class="lite-tabs"'), 'below the tabs');
+  assert.ok(banner < html.indexOf('id="audit-view"'), 'just above the Audit log');
+  assert.match(read('src/client/lite.ts'), /\$\('firm-banner'\)\.classList\.toggle\('hidden', t !== 'audit'\);/);
+  // The room the floor's line left it at the top right is gone, on every tab alike.
+  assert.doesNotMatch(read('src/client/ui/command-layout.css'), /#firm-banner|padding-right: 300px/);
+  assert.doesNotMatch(read('src/client/ui/budget/budget.css'), /padding-right: 300px/);
+  // In a Portal theme it's in the Audit log's page header (ui/portal/pagehead.css), with The Firm → beside Call an audit.
+  const head = read('src/client/ui/portal/pagehead.css');
+  assert.match(head, /\.pt-head:not\(\[data-page='audit'\]\) #firm-banner \{ display: none; \}/);
 });

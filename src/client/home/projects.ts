@@ -67,7 +67,7 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
     const wasHere = f.id === last;
     const stats: string[] = f.cloning
       ? [cloneLabel(f.clone)]
-      : [f.waiting && `🙋 ${f.waiting} waiting`, f.busy && `👷 ${f.busy} working`, `💻 ${f.workers} worker${f.workers === 1 ? '' : 's'}`, f.people && `🧑 ${f.people} here`].filter((s): s is string => !!s);
+      : [f.waiting && `🙋 ${f.waiting} waiting`, f.busy && `👷 ${f.busy} working`, `💻 ${f.workers} agent${f.workers === 1 ? '' : 's'}`, f.people && `🧑 ${f.people} here`].filter((s): s is string => !!s);
     const button = (into: FlatView, label: string, title: string) =>
       h('a.btn', { href: floorUrl(f.id, into), class: into === usual ? 'primary' : '', 'aria-disabled': f.cloning ? 'true' : undefined, title, onclick: (e: Event) => {
           e.preventDefault();
@@ -83,7 +83,7 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
       f.cloning ? null : summaryOf(f.id),
       // Its progress bar, small: the phases and where it is, or the version accepted (ui/progress/mini.ts).
       f.cloning ? null : miniProgress(f.id),
-      h('div.home-floor-go', {}, button('1d', '🗂️ Board', `${f.name}'s board: its pipeline from issue to merged PR, and its workers`), button('2d', '🗺️ Office', `${f.name} from above: every worker at its desk`)),
+      h('div.home-floor-go', {}, button('1d', '🗂️ Board', `${f.name}'s board: its pipeline from issue to merged PR, and its agents`), button('2d', '🗺️ Office', `${f.name} from above: every agent at its desk`)),
     );
   };
 

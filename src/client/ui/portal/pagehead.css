@@ -1,0 +1,110 @@
+/* The Portal page header (ui/portal/pagehead.ts): a white strip across the top of the page with a 1px
+   line under it, the page's title on the left (the Overview: the project's tile, name and line) and its
+   buttons on the right, the portal's grey-outlined ones and the one blue New task; the pieces moved in
+   from the page (the Firm's banner, the bottom bar's buttons) are drawn as header buttons. Under it the
+   band: the floor's line and the progress bar on a mid dark grey. Only in a Portal theme. */
+
+html[data-theme^='portal'] body.lite .pt-head {
+  display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px;
+  margin: 0 -32px; padding: 24px 32px; border-bottom: 1px solid var(--line); background: var(--paper);
+}
+html[data-theme^='portal'] .pt-head-id { flex: 1 1 320px; min-width: 0; display: flex; align-items: center; gap: 20px; }
+html[data-theme^='portal'] .pt-head-tile {
+  flex: none; display: grid; place-items: center; width: 72px; height: 72px; border: 1px solid var(--line); border-radius: 4px;
+  background: color-mix(in srgb, var(--tile, var(--accent)) 72%, #0a1324); color: #ffffff; font: 600 24px/1 var(--font); letter-spacing: .02em;
+  box-shadow: 0 1px 2px rgba(10, 19, 36, .08);
+}
+html[data-theme^='portal'] .pt-head-tile[hidden] { display: none; }
+html[data-theme^='portal'] .pt-head-text { min-width: 0; }
+html[data-theme^='portal'] body.lite .pt-head-title { margin: 0; font-size: 24px; line-height: 1.25; font-weight: var(--fw-semi); color: var(--ink); overflow-wrap: anywhere; }
+html[data-theme^='portal'] .pt-head-desc { margin: 4px 0 0; font-size: 14px; line-height: 1.45; color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+html[data-theme^='portal'] .pt-head-desc[hidden] { display: none; }
+html[data-theme^='portal'] body.lite .pt-head.pt-head-ov .pt-head-title { font-size: 26px; }
+
+/* ---- The buttons --------------------------------------------------------------------------------------- */
+html[data-theme^='portal'] .pt-head-actions { flex: 0 1 auto; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; min-width: 0; padding-top: 2px; }
+html[data-theme^='portal'] :is(.pt-head-board, .pt-head-new, .pt-head-firm) { display: contents; }
+html[data-theme^='portal'] body.lite.lite .pt-head-actions .btn { min-height: 32px; height: 32px; padding: 0 12px; gap: 6px; font-size: 14px; white-space: nowrap; }
+html[data-theme^='portal'] .pt-btn-ico { width: 16px; height: 16px; }
+html[data-theme^='portal'] .pt-head-pin .pt-pin-on, html[data-theme^='portal'] .pt-head-pin.on-pin .pt-pin-off { display: none; }
+html[data-theme^='portal'] .pt-head-pin.on-pin .pt-pin-on { display: block; color: var(--accent); }
+
+/* What's only on some pages: Pin on the Overview, Issues / PRs / Queue on the Board, the Firm on the Audit log. */
+html[data-theme^='portal'] .pt-head:not(.pt-head-ov) .pt-head-pin { display: none; }
+html[data-theme^='portal'] .pt-head:not([data-page='board']) :is(#btn-issues, #btn-pulls, #btn-queue) { display: none; }
+html[data-theme^='portal'] .pt-head:not([data-page='audit']) #firm-banner { display: none; }
+
+/* The Firm's banner on the Audit log: Call an audit as a header button and The Firm → beside it; a running audit or a ready report as a chip. */
+html[data-theme^='portal'] .pt-head #firm-banner { display: flex; align-items: center; margin: 0; }
+html[data-theme^='portal'] .pt-head #firm-banner:empty { display: none; }
+html[data-theme^='portal'] .pt-head #firm-banner > * { margin: 0; }
+html[data-theme^='portal'] .pt-head .firm-strip { display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+html[data-theme^='portal'] .pt-head .firm-strip-link { font-size: 14px; font-weight: 400; white-space: nowrap; }
+html[data-theme^='portal'] .pt-head :is(.firm-strip.active, .firm-strip.ready) {
+  height: 32px; padding: 0 12px; border: 1px solid var(--info-line); border-radius: 3px; background: var(--info-soft); color: var(--ink); font-size: 13px; text-decoration: none; white-space: nowrap;
+}
+html[data-theme^='portal'] .pt-head :is(.firm-strip.active, .firm-strip.ready) .firm-strip-text { max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- The band: the floor's line and the progress bar together on a mid dark grey ------------------------- */
+/* A solid slate with a faint shade from top to bottom and a soft shadow under it, the whole width of the
+   page. Inside it the tokens are the band's, as the top bar's are the bar's: light text, light lines, and
+   lighter good / warn / bad shades that keep their meaning (all 4.5:1 or more on it,
+   tests/portal-nav.test.ts), so the budget chip, the run-state toggle and the progress bar's phases need
+   no rules of their own to stay readable. */
+html[data-theme^='portal'] body.lite .pt-band {
+  --ink: #ffffff; --ink-2: #e6e9ef; --muted: #c9ced8; --faint: #aab1bd;
+  --line: rgba(255, 255, 255, .2); --rule: rgba(255, 255, 255, .14); --rule-strong: rgba(255, 255, 255, .4); --rule-soft: rgba(255, 255, 255, .1); --edge: rgba(0, 0, 0, .25);
+  --card: rgba(255, 255, 255, .07); --card-dim: rgba(255, 255, 255, .04); --paper: #343a48; --paper-2: rgba(255, 255, 255, .06); --sunken: rgba(0, 0, 0, .18);
+  --neutral-soft: rgba(255, 255, 255, .1); --hover: rgba(255, 255, 255, .1); --code-bg: rgba(0, 0, 0, .2);
+  --link: #a9cbff; --accent: #6aa6ff; --accent-ink: #0a1324; --accent-soft: rgba(106, 166, 255, .22); --info: #8fbfff; --focus: #8fbfff;
+  --good: #5fd28a; --good-ink: #8be3a8; --good-soft: rgba(95, 210, 138, .16);
+  --warn: #f2bd4a; --warn-ink: #f6cf72; --warn-soft: rgba(242, 189, 74, .16);
+  --bad: #ff8077; --bad-ink: #ffa39c; --bad-soft: rgba(255, 128, 119, .16);
+  --info-soft: rgba(143, 191, 255, .14); --info-line: rgba(143, 191, 255, .4);
+  --pt-band-top: #3a4150; --pt-band-bottom: #2f3542;
+  position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px;
+  margin: 0 -32px 24px; padding: 12px 32px 14px;
+  background: linear-gradient(180deg, var(--pt-band-top) 0%, var(--pt-band-bottom) 100%); color: var(--ink);
+  box-shadow: 0 2px 6px rgba(10, 19, 36, .24);
+}
+html[data-theme='portal-dark'] body.lite .pt-band { --pt-band-top: #262e3d; --pt-band-bottom: #1e2532; --paper: #222937; box-shadow: 0 2px 8px rgba(0, 0, 0, .55); }
+html[data-theme^='portal'] body.lite .pt-band:not(:has(> :not(:empty))) { display: none; }
+html[data-theme^='portal'] body.lite .pt-band .bud-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin: 0; padding: 0; min-width: 0; }
+html[data-theme^='portal'] body.lite .pt-band #floor-meta { flex: 0 1 auto; min-width: 0; margin: 0; color: var(--muted); font-size: 13px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-theme^='portal'] body.lite .pt-band .bud-chip {
+  height: 28px; min-height: 28px; padding: 0 10px; border: 1px solid var(--rule-strong); border-radius: 3px !important; background: var(--card); color: var(--ink);
+  font: 400 13px/26px var(--font); white-space: nowrap;
+}
+html[data-theme^='portal'] body.lite .pt-band .bud-chip:hover { background: var(--hover); border-color: #ffffff; }
+html[data-theme^='portal'] body.lite .pt-band .bud-chip[data-tone='bad'] { border-color: var(--bad); color: var(--bad-ink); }
+html[data-theme^='portal'] body.lite .pt-band .bud-chip[data-tone='warn'] { border-color: var(--warn); color: var(--warn-ink); }
+html[data-theme^='portal'] body.lite .pt-band .bud-chip[data-tone='good'] { border-color: var(--good); color: var(--ink); }
+/* The run-state toggle: its dot and state, a line, then Pause or Resume in the band's blue. */
+html[data-theme^='portal'] body.lite .pt-band .pr-toggle { min-height: 28px; height: 28px; padding: 0 10px; gap: 6px; border-radius: 3px; font: 400 13px/26px var(--font); }
+html[data-theme^='portal'] body.lite .pt-band button.pr-toggle:hover { border-color: #ffffff; }
+html[data-theme^='portal'] body.lite .pt-band .pr-tg-act { margin-left: 2px; padding-left: 8px; border-left-color: var(--line); color: var(--link); font-weight: var(--fw-semi); }
+html[data-theme^='portal'] body.lite .pt-band :focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+html[data-theme^='portal'] body.lite .pt-band #progress-bar { margin: 0; }
+
+/* The bottom bar's buttons as header buttons, their counts as grey chips (New task in the blue). */
+html[data-theme^='portal'] .pt-head :is(#btn-issues, #btn-pulls, #btn-queue, #btn-new) { flex: none; }
+html[data-theme^='portal'] .pt-head :is(#btn-issues, #btn-pulls, #btn-queue) .n:not(:empty) {
+  min-width: 20px; padding: 0 6px; border-radius: 10px !important; background: var(--sunken); color: var(--ink); font-size: 12px; line-height: 20px; text-align: center;
+}
+html[data-theme^='portal'] .pt-head :is(#btn-issues, #btn-pulls, #btn-queue) .n:empty { display: none; }
+html[data-theme^='portal'] .pt-head #btn-new .n { display: none; }
+
+/* A narrower window: the buttons go under the title. */
+@media (max-width: 1180px) {
+  html[data-theme^='portal'] .pt-head-actions { flex-basis: 100%; justify-content: flex-start; }
+}
+@media (max-width: 760px) {
+  html[data-theme^='portal'] body.lite .pt-head { margin: 0 -16px; padding: 16px; gap: 12px; }
+  html[data-theme^='portal'] body.lite .pt-band { margin: 0 -16px 16px; padding: 10px 16px 12px; }
+  html[data-theme^='portal'] body.lite .pt-band #floor-meta { white-space: normal; flex-basis: 100%; }
+  html[data-theme^='portal'] .pt-head-id { gap: 12px; flex-basis: 100%; }
+  html[data-theme^='portal'] .pt-head-tile { width: 48px; height: 48px; font-size: 17px; }
+  html[data-theme^='portal'] body.lite .pt-head-title, html[data-theme^='portal'] body.lite .pt-head.pt-head-ov .pt-head-title { font-size: 20px; }
+  html[data-theme^='portal'] .pt-head-desc { font-size: 13px; }
+  html[data-theme^='portal'] body.lite.lite .pt-head-actions .btn { padding: 0 10px; }
+}

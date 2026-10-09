@@ -28,7 +28,7 @@ export function podium(r: RankingReport, pick: (key: string) => void): HTMLEleme
 
 export function table(r: RankingReport, pick: (key: string) => void): HTMLElement {
   const graded = r.workers.filter((w) => w.score !== undefined);
-  const head = ['#', 'Grade', 'Worker', 'Role', 'Model', ...(r.scope === 'all' ? ['Floor'] : []), 'Score', 'Trend', 'Tasks'];
+  const head = ['#', 'Grade', 'Agent', 'Role', 'Model', ...(r.scope === 'all' ? ['Floor'] : []), 'Score', 'Trend', 'Tasks'];
   const row = (w: RankedWorker) =>
     h(
       `tr${w.gone ? '.gone' : ''}`,
@@ -76,7 +76,7 @@ export function groupCards(groups: GroupStats[], names: Map<string, string>, wha
           'span.rk-group-info',
           {},
           h('b', {}, g.label),
-          h('small', {}, `${g.count} worker${g.count === 1 ? '' : 's'}${g.graded < g.count ? `, ${g.graded} graded` : ''}${g.top ? ` · best: ${names.get(g.top) ?? ''}` : ''}`),
+          h('small', {}, `${g.count} agent${g.count === 1 ? '' : 's'}${g.graded < g.count ? `, ${g.graded} graded` : ''}${g.top ? ` · best: ${names.get(g.top) ?? ''}` : ''}`),
           g.graded ? spread(g) : h('small', {}, 'No grades yet'),
         ),
       ),
@@ -90,11 +90,11 @@ export function howGraded(r: RankingReport): HTMLElement {
   return h(
     'details.rk-how',
     {},
-    h('summary', {}, 'ℹ️ How workers are graded'),
+    h('summary', {}, 'ℹ️ How agents are graded'),
     h(
       'ul',
       {},
-      h('li', {}, h('b', {}, `${r.labels.benchmark} ${p(w.benchmark)}`), ' — its tasks’ score (the 📊 Analysis tab’s run score) against other workers on the same model and against every model, and its cost and working time against its model’s average. On par is 75.'),
+      h('li', {}, h('b', {}, `${r.labels.benchmark} ${p(w.benchmark)}`), ' — its tasks’ score (the 📊 Analysis tab’s run score) against other agents on the same model and against every model, and its cost and working time against its model’s average. On par is 75.'),
       h('li', {}, h('b', {}, `${r.labels.delivery} ${p(w.delivery)}`), ' — its pull requests: merged, open, closed unmerged (rework); CI green; the quality scorecard. Leads who deliver through their team aren’t marked down for tasks without a PR.'),
       h('li', {}, h('b', {}, `${r.labels.autonomy} ${p(w.autonomy)}`), ' — people typing into it and stops on questions per task, escalations the Project Manager didn’t dismiss, standup proposals approved.'),
       h('li', {}, h('b', {}, `${r.labels.efficiency} ${p(w.efficiency)}`), ' — value delivered (merged 1, open 0.7, closed 0.2) per dollar and per million tokens against the building’s median, and its cache hits. Spending with nothing delivered scores 0.'),

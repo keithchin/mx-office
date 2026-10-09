@@ -6,7 +6,7 @@ weight: 15
 
 The **3D office** is the original Agent Office: a cartoon building you walk around in, with desks, boards, a meeting room, an elevator, a garage and a rooftop bar. **Retro** draws the same world in chunky 16-bit pixels.
 
-Open it from the view dropdown, or go to `/?3d=1&view=3d` (or `view=retro`).
+Open it from the 3D office's own view dropdown, or go to `/?3d=1&view=3d` (or `view=retro`).
 
 > [!TIP]
 > For daily project work, use 1D or 2D: they show more and need no GPU. 3D is great for demos and for voice and the whiteboard together.
