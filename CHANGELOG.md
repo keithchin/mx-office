@@ -22,6 +22,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   white card in Portal (Light) and a dark one in Portal (Dark), with a border, a shadow and readable
   text, and so is any other tooltip or menu that opens out of the band or the top bar.
 
+### New
+- **Model: full screen.** A **Full screen** button at the end of the Model tab's bar (or **F** / **Shift+F**
+  with the focus in the tab) spreads the App Explorer, the diagram and the details over the whole window,
+  fitted to it; **Esc** or **Exit full screen** brings it back, fitted again. It uses the browser's full
+  screen, or covers the window where the browser has none. Pan, zoom and Fit work as before, in every
+  theme. Esc with an element picked lets go of it first.
+
 ## 2026-10-09 · release 27 (`640ac22`)
 
 ### New
