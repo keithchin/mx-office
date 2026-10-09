@@ -10,6 +10,7 @@ import type { SetupView } from '../../shared/wizard.js';
 import { budgetOf } from '../budget/index.js';
 import { numbersOf } from '../budget/control.js';
 import { deliverablesOf } from '../deliverables/index.js';
+import { headOf } from '../deliverables/git.js';
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { execFileOff } from '../offloop/exec.js';
@@ -99,9 +100,12 @@ export async function deliveryHead(floor: Pick<Floor, 'dir'>, setup: SetupView |
     const info = await branchInfo(floor.dir);
     return info ? { branch: info.def, commit: info.sha } : { branch: setup.head.branch, commit: setup.head.sha };
   }
-  const out = await new Promise<string | undefined>((resolve) =>
-    execFileOff('git', ['rev-parse', '--abbrev-ref', 'HEAD', 'HEAD'], { cwd: floor.dir, timeout: 10_000, windowsHide: true, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } }, (err, o) => resolve(err ? undefined : String(o))),
-  );
-  const [branch, commit] = (out ?? '').trim().split(/\r?\n/);
+  const [out, commit] = await Promise.all([
+    new Promise<string | undefined>((resolve) =>
+      execFileOff('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: floor.dir, timeout: 10_000, windowsHide: true, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } }, (err, o) => resolve(err ? undefined : String(o))),
+    ),
+    headOf(floor.dir),
+  ]);
+  const branch = out?.trim();
   return commit && /^[a-f0-9]{40}$/.test(commit) ? { branch, commit } : {};
 }

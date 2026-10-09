@@ -231,6 +231,8 @@ export interface DeliverableItem {
 
 /** What GET /api/deliverables answers. */
 export interface DeliverablesView {
+  /** The immutable commit scanned as main; absent for a mutable working-tree scan. */
+  sourceCommit?: string;
   floor: string;
   scannedAt: number;
   items: DeliverableItem[];

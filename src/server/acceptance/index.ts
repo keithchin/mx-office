@@ -20,6 +20,7 @@ import { deliverablesDigest, deliveryHead, gather } from '../progress/gather.js'
 import { projectIdsFor } from '../projects/ids.js';
 import { draftOf } from './evidence.js';
 import { AcceptanceStore } from './store.js';
+import { acceptanceSource, reviewToken } from './snapshot.js';
 
 const stores = new Map<string, AcceptanceStore>();
 onForgetFloor((f) => {
@@ -48,9 +49,10 @@ export async function acceptanceDraft(ctx: Ctx, floor: Floor, admin: boolean): P
 }
 
 async function draftWith(ctx: Ctx, floor: Floor, admin: boolean) {
-  const g = await gather(ctx, floor);
-  const head = await deliveryHead(floor, g.setup);
-  const draft = draftOf({ floor: floor.id, version: suggestVersion(acceptanceStore(ctx.cfg.dataDir, floor.id).cycles()), ...g, pulls: floor.github.pulls.items, head, budget: { b: budgetOf(ctx), ref: ref(floor) }, admin, now: Date.now() });
+  const g = await acceptanceSource(floor);
+  const cycles = acceptanceStore(ctx.cfg.dataDir, floor.id).cycles();
+  const evidence = draftOf({ floor: floor.id, version: suggestVersion(cycles), ...g, pulls: floor.github.pulls.items, budget: { b: budgetOf(ctx), ref: ref(floor) }, admin, now: Date.now() });
+  const draft = { ...evidence, reviewToken: reviewToken(evidence, cycles.at(-1)!.n) };
   return { draft, g };
 }
 
@@ -93,6 +95,7 @@ function refsOf(floor: Floor, projectId: string | undefined, d: AcceptanceDraft,
 
 /** ✅ Accept: records the current cycle's delivery as `body.version`. A string says why it can't. */
 export async function accept(ctx: Ctx, floor: Floor, body: Record<string, unknown>, who: Who): Promise<AcceptanceRecord | string> {
+  if (typeof body.reviewToken !== 'string' || !/^[a-f0-9]{64}$/.test(body.reviewToken)) return 'Open the acceptance dialog and review the evidence before accepting';
   const store = acceptanceStore(ctx.cfg.dataDir, floor.id);
   const cycles = store.cycles();
   const cur = cycles[cycles.length - 1];
@@ -102,8 +105,13 @@ export async function accept(ctx: Ctx, floor: Floor, body: Record<string, unknow
   if (bad) return bad;
   const exceptions = cleanExceptions(body.exceptions);
   if (typeof exceptions === 'string') return exceptions;
-  const now = Date.now();
   const { draft: d, g } = await draftWith(ctx, floor, true);
+  if (!d.source.commit) return 'The delivery commit could not be read. Commit the delivery and reopen the acceptance dialog';
+  if (body.reviewToken !== d.reviewToken || g.current.commit !== d.source.commit || g.current.branch !== d.source.branch) return 'The delivery, evidence or cost changed. Close and reopen the acceptance dialog to review it again';
+  // No await between this check and append: another request may have accepted/reopened while Git ran.
+  const latest = store.cycles().at(-1)!;
+  if (latest.record || latest.n !== cur.n || latest.version !== cur.version) return 'The delivery cycle changed. Reopen the acceptance dialog';
+  const now = Date.now();
   const projectId = projectOf(ctx, floor);
   const build = text(body.build, 200);
   const deploy = text(body.deploy, 200);

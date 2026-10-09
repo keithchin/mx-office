@@ -134,7 +134,7 @@ async function openAccept(floor: string, view: AcceptanceView, after: () => void
     const bad = versionProblem(version.value.trim(), view.cycles) ?? (exceptions.find((e) => !e.text || !e.owner) ? 'Every exception needs words and an owner' : !confirm.checked ? 'Tick the confirmation first' : undefined);
     if (bad) return void (problem.textContent = bad);
     go.disabled = true;
-    const r = await postAccept(floor, { version: version.value.trim(), scopeNote: note.value.trim() || undefined, exceptions, build: build.value.trim() || undefined, deploy: deploy.value.trim() || undefined });
+    const r = await postAccept(floor, { reviewToken: d.reviewToken, version: version.value.trim(), scopeNote: note.value.trim() || undefined, exceptions, build: build.value.trim() || undefined, deploy: deploy.value.trim() || undefined });
     go.disabled = false;
     if (!r) return;
     modal.close();

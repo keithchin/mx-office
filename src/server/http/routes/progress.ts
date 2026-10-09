@@ -49,7 +49,7 @@ export const progressRoutes = {
       return send(res, 200, await acceptanceDraft(ctx, floor, ctx.meOf(session.account?.id).admin));
     },
   },
-  /** POST /api/acceptance {floor, action: accept|reopen, version?, scopeNote?, exceptions?, build?, deploy?}. The Project Manager (an admin) only. */
+  /** POST /api/acceptance {floor, action: accept|reopen, reviewToken (accept), version?, scopeNote?, exceptions?, build?, deploy?}. The Project Manager (an admin) only. */
   act: {
     method: 'POST',
     path: '/api/acceptance',

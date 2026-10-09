@@ -34,6 +34,7 @@ export const getAcceptance = (floor: string) => get<AcceptanceView>(`/api/accept
 export const getDraft = (floor: string) => get<AcceptanceDraft>(`/api/acceptance/draft?${q(floor)}`);
 
 export interface AcceptInput {
+  reviewToken: string;
   version: string;
   scopeNote?: string;
   exceptions: Exception[];

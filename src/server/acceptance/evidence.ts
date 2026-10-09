@@ -61,7 +61,8 @@ function scopeOf(i: DraftInput): AcceptanceDraft['scope'] {
   for (const f of brds.slice(0, LIST_MAX)) agreed.push({ label: `BRD ${f.path.slice(f.path.lastIndexOf('/') + 1).replace(/\.brd\.json$/i, '')}`, status: 'present', locator: gitLoc(i.head.commit, f.path) });
   if (brd?.more || brds.length > LIST_MAX) agreed.push({ label: 'More BRDs', status: 'present', detail: `${brds.length - LIST_MAX + (brd?.more ?? 0)} more not listed` });
   const plan = v?.items.find((x) => x.id === 'build-plan');
-  if (plan && (run.has('4') || plan.status === 'present')) agreed.push({ label: 'Build plan', status: plan.status === 'present' ? 'present' : 'missing', detail: plan.status === 'present' ? plan.files[0]?.path : `not on main (${plan.status})`, locator: plan.status === 'present' && plan.files[0] ? gitLoc(i.head.commit, plan.files[0].path) : undefined });
+  const planFile = plan?.files.find((f) => f.status === 'present');
+  if (plan && (run.has('4') || plan.status === 'present')) agreed.push({ label: 'Build plan', status: plan.status === 'present' ? 'present' : 'missing', detail: plan.status === 'present' ? planFile?.path : `not on main (${plan.status})`, locator: planFile ? gitLoc(i.head.commit, planFile.path) : undefined });
   for (const r of (i.setup?.decisions ?? []).filter((d) => /^confirmed/i.test(d.status)).slice(0, LIST_MAX)) agreed.push({ label: `Decision, Stage ${r.stage}: ${r.decision}`, status: 'present', detail: r.status });
   const delivered: EvidenceLine[] = [];
   if (v) {
@@ -80,7 +81,7 @@ function testsOf(i: DraftInput): EvidenceLine[] {
   const verdicts = i.setup?.verdicts ?? [];
   const when = i.setup?.checkedAt ? `checked ${stamp(i.setup.checkedAt)}` : 'from the committed dashboard';
   if (!verdicts.length) out.push({ label: 'Gate checks', status: 'missing', detail: 'gate-check has not rendered a dashboard for this project' });
-  for (const g of verdicts) out.push({ label: `Gate ${g.id} · ${g.title}`, status: GATE[g.status.toUpperCase()] ?? 'unknown', detail: `${g.status}${g.status.toUpperCase() === 'WAIVED' ? ' (waived)' : ''}${g.detail ? `: ${g.detail}` : ''} · ${when}`, locator: i.head.commit ? `git:${i.head.commit}:index.html` : undefined });
+  for (const g of verdicts) out.push({ label: `Gate ${g.id} · ${g.title}`, status: GATE[g.status.toUpperCase()] ?? 'unknown', detail: `${g.status}${g.status.toUpperCase() === 'WAIVED' ? ' (waived)' : ''}${g.detail ? `: ${g.detail}` : ''} · ${g.id === 'P' ? 'from the committed intake/dashboard' : when}`, locator: g.id !== 'P' && !i.setup?.checkedAt ? gitLoc(i.head.commit, 'index.html') : undefined });
   const merged = i.pulls.filter((p) => p.state === 'MERGED');
   const last = merged[0];
   if (!i.pulls.length) out.push({ label: 'CI', status: 'unknown', detail: 'no pull requests seen on this floor, so no CI results' });
@@ -89,7 +90,8 @@ function testsOf(i: DraftInput): EvidenceLine[] {
   for (const id of ['test-plan', 'journeys', 'ui-reviews', 'test-report']) {
     const it = i.deliverables?.items.find((x) => x.id === id);
     if (!it) continue;
-    out.push({ label: it.title, status: it.status === 'present' ? 'present' : 'missing', detail: it.status === 'present' ? `${it.files.length + (it.more ?? 0)} file${it.files.length + (it.more ?? 0) === 1 ? '' : 's'} on main` : it.status === 'missing' ? 'not found' : `only ${it.status === 'branch' ? 'on a branch' : 'as a draft'}`, locator: it.status === 'present' && it.files[0] ? gitLoc(i.head.commit, it.files[0].path) : undefined });
+    const files = it.files.filter((f) => f.status === 'present');
+    out.push({ label: it.title, status: it.status === 'present' ? 'present' : 'missing', detail: it.status === 'present' ? `${files.length} listed file${files.length === 1 ? '' : 's'} on main` : it.status === 'missing' ? 'not found' : `only ${it.status === 'branch' ? 'on a branch' : 'as a draft'}`, locator: files[0] ? gitLoc(i.head.commit, files[0].path) : undefined });
   }
   return out;
 }
@@ -131,9 +133,15 @@ export function costSnapshot(b: BudgetService, ref: FloorRef, now: number): Cost
 }
 
 /** The draft an Accept would record now. */
-export function draftOf(i: DraftInput): AcceptanceDraft {
+export function draftOf(i: DraftInput): Omit<AcceptanceDraft, 'reviewToken'> {
+  // Defense in depth: callers must never relabel another commit's (or a working tree's) evidence.
+  const deliverablesMatch = !!i.head.commit && i.deliverables?.sourceCommit === i.head.commit;
+  const setupMatches = !!i.head.commit && i.setup?.head?.sha === i.head.commit;
+  const mismatched = (i.deliverables && !deliverablesMatch) || (i.setup && !setupMatches);
+  i = { ...i, deliverables: deliverablesMatch ? i.deliverables : undefined, setup: setupMatches ? i.setup : undefined };
   const { docs, more } = docsOf(i);
   const gaps = [...(i.head.commit ? [] : ["the delivery branch's head couldn't be read"]), "no build reference: the office doesn't record builds (type one in if there is)", "no deploy reference: the office doesn't record deployments (type one in if there is)"];
+  if (mismatched) gaps.push('Some evidence was not read at the delivery commit and has been left unknown');
   return {
     floor: i.floor,
     version: i.version,
