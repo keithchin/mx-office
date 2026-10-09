@@ -4,6 +4,13 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Changed
+- **Clean is the default theme.** A browser that has never picked a theme now opens in Clean (Light), or Clean
+  (Dark) when the system is in dark mode. The 🎨 list starts with the two Clean themes, and the original
+  bright look is now called **Fun** (with **Fun (Dark)**). A theme you picked before stays picked.
+
 ## 2026-10-09 · release 24 (`b32d844`)
 
 ### New

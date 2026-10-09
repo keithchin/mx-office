@@ -25,4 +25,4 @@ Add `?gfx=low`, `?gfx=medium` or `?gfx=high` (the default) to the 3D address. Lo
 
 ## Color themes (1D, 2D and home)
 
-The **🎨** button steps through **Default**, **Dark** and **Terminal** (black and phosphor green). It applies to the 1D view, the 2D view, `/home` and these docs, and stays in step across your open tabs. See [Top bar & menu](../using-the-office/top-bar-and-menu.md#color-themes). Two more, **Clean (Light)** and **Clean (Dark)**, look like VS Code and show no emoji.
+The **🎨** button picks a theme: **Clean (Light)** and **Clean (Dark)** (the default), **Fun**, **Fun (Dark)** and **Terminal** (black and phosphor green). It applies to the 1D view, the 2D view, `/home` and these docs, and stays in step across your open tabs. See [Top bar & menu](../using-the-office/top-bar-and-menu.md#color-themes). The Clean pair looks like VS Code and shows no emoji.
