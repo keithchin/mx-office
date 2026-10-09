@@ -1,5 +1,3 @@
-// First: every program the office starts on Windows starts without a console window (hidewindows.ts).
-import './hidewindows.js';
 import os from 'node:os';
 import path from 'node:path';
 import { loadConfig, ensureSelfSigned } from './config.js';

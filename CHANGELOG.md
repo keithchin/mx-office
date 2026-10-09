@@ -31,9 +31,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **No more terminal windows popping up on Windows.** With Windows Terminal as the default terminal,
   programs the office (and its tests and performance checks) started from a process without a console
   each opened a terminal window of their own, most of them when an agent's terminal was stopped (the
-  terminal library forks a helper from the pty host, which runs without a console). Every program the
-  office, its pty host, the test runner, the performance harness and the tests' agent shims start on
-  Windows now starts without a window; Studio Pro and the browser still open as windows.
+  terminal library forks a helper from the pty host, which runs without a console). Everything the pty
+  host starts, and what the office starts off its main thread, the test runner, the performance harness
+  and the tests' agent shims start, now starts without a window; Studio Pro and the browser still open
+  as windows.
 
 ## 2026-10-09 · release 27 (`640ac22`)
 

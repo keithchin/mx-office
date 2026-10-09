@@ -5,9 +5,12 @@
 // terminals opening up" during a test run, 2026-10-09: node-pty forking its console-list helper from the
 // pty host on every agent it stops). `windowsHide: true` starts them without one.
 //
-// The office's own calls say so where they're written; this covers every other one, a library's
-// included (node-pty's fork): from the moment hideChildWindows() runs, child_process's spawn, execFile,
-// exec, fork and their Sync forms default `windowsHide` to true on Windows. A call that says
+// The office's own calls say so where they're written (offloop/exec.ts starts everything windowless
+// unless told otherwise). This is for the pty host, which runs detached without a console, and whatever
+// a library starts there (node-pty's fork): from the moment hideChildWindows() runs, child_process's
+// spawn, execFile, exec, fork and their Sync forms default `windowsHide` to true on Windows. Not in the
+// office itself: started from a terminal or by a harness with a (hidden) console, its children share it,
+// and a windowless child costs a console host of its own each time. A call that says
 // `windowsHide: false` (opening Studio Pro, a program with a window of its own) keeps it. Elsewhere it
 // does nothing. libuv only starts a child windowless when none of its stdio is inherited, so a program
 // run in the office's own terminal (stdio 'inherit') is as before.

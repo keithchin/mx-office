@@ -44,8 +44,9 @@ test('patched, child_process still runs programs, and execFile’s promise form 
   await assert.rejects(promisify(execFile)(process.execPath, ['-e', 'process.stderr.write("bad"); process.exit(3)']), (e: Error & { code?: number; stderr?: string }) => e.code === 3 && e.stderr === 'bad');
 });
 
-test('the office and its pty host load it first; what they start themselves says windowsHide; the shims and harnesses too', () => {
-  assert.match(read('src/server/cli.ts'), /^\/\/ First: [^\n]*\nimport '\.\/hidewindows\.js';/);
+test('the pty host loads it first; what the office starts itself says windowsHide; the shims and harnesses too', () => {
+  // Not the office itself: its children share its (hidden) console, and a windowless child costs a console host each.
+  assert.doesNotMatch(read('src/server/cli.ts'), /hidewindows/);
   assert.match(read('src/server/ptyhost.ts'), /\n\/\/ First: node-pty forks[^\n]*\nimport '\.\/hidewindows\.js';/);
   // node-pty's helper, forked from the detached host on every session it stops, with no options of its own.
   assert.match(read('src/server/ptys.ts'), /spawnOff\(process\.execPath, \[[^\]]*\], \{ detached: true, cwd, windowsHide: true \}\)/);
