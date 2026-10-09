@@ -26,7 +26,12 @@ export const evidenceRoutes = {
       const p = url.searchParams;
       const id = p.get('floor') ?? '';
       const def = ctx.building.list().find((d) => d.id === id);
-      if (!def || !ctx.floors.has(id)) return send(res, 404, { error: 'No such floor' });
+      if (!def || !ctx.floors.has(id)) {
+        // A deleted project's id is retired (server/project-delete/): say so, rather than "no such floor".
+        const gone = projectIdsFor(ctx.cfg.dataDir).deletedFor(p.get('project') || id);
+        if (gone?.deleted) return send(res, 410, { error: `${gone.deleted.name || id} was deleted on ${new Date(gone.deleted.at).toISOString().slice(0, 10)}`, projectId: gone.projectId, deleted: gone.deleted });
+        return send(res, 404, { error: 'No such floor' });
+      }
       const since = time(p.get('since'));
       if (p.get('since') && since === undefined) return send(res, 400, { error: 'since: milliseconds or a date' });
       const projectId = def.projectId ?? projectIdsFor(ctx.cfg.dataDir).byFloorId(id);

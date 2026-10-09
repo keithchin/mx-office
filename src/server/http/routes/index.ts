@@ -38,6 +38,7 @@ import { evidenceRoutes } from './evidence.js';
 import { progressRoutes } from './progress.js';
 import { perfRoutes } from './perf.js';
 import { testlabRoutes } from './testlab.js';
+import { projectRoutes } from './projects.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -108,6 +109,7 @@ export const routes: readonly Route[] = [
   projectRunRoutes.act,
   projectRunRoutes.restartView,
   projectRunRoutes.restart,
+  projectRoutes.project,
   budgetRoutes.view,
   budgetRoutes.office,
   budgetRoutes.fx,

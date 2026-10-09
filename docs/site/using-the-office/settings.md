@@ -6,7 +6,7 @@ weight: 13
 
 **⚙️ Settings** is a page of its own on the 1D view: its **⚙️ Settings** tab, `/lite?tab=settings`. The ☰ menu's **⚙️ Settings** opens it from the 1D view, the 2D view and `/home` alike, and so does every settings button and link in the office (Needs you's *Raise cap → Settings*, the team phone, Teams cards, the budget's suggestions, these docs): none of them switches to the 3D office. On a brand-new office with no project yet, `/home` opens it in a window instead.
 
-The sections are down the left; pick one and the address follows (`&section=workers`), so a link can open any of them. Settings marked *Just you* are kept in this browser; *This floor* and *Everyone* are the office's, and only admins change those (everyone else sees them read-only). 🔌 Connections and 🧪 Testing are listed for admins only.
+The sections are down the left; pick one and the address follows (`&section=workers`), so a link can open any of them. Settings marked *Just you* are kept in this browser; *This floor* and *Everyone* are the office's, and only admins change those (everyone else sees them read-only). 🔌 Connections, 🧪 Testing and ⚠️ Danger zone are listed for admins only.
 
 | Section | Link | What's in it |
 |---|---|---|
@@ -23,6 +23,7 @@ The sections are down the left; pick one and the address follows (`&section=work
 | 🎨 **Appearance** | [section=appearance](/lite?tab=settings&section=appearance) | Your color theme (Default, Dark, Terminal, Clean Light/Dark), the building's holiday theme and map |
 | 🛠️ **Advanced** | [section=advanced](/lite?tab=settings&section=advanced) | Workspace folder, the sky's clock, the office dog, where the settings files are |
 | 🧪 **Testing** | [section=testing](/lite?tab=settings&section=testing) | Admins only: whether this office is in test mode and why, and the way to the [Test Mode page](../administration/test-mode-page.md) |
+| ⚠️ **Danger zone** | [section=danger](/lite?tab=settings&section=danger) | Admins only: Remove this project from the office, or delete it (its folder and GitHub repository too, if you tick them). See [Delete or remove a project](delete-project.md) |
 
 The 3D office keeps its own **☰ → ⚙️ Settings** window for when you're in it: the camera and your character, which only it has, plus the same Workers, Notifications, sound and building sections (they're built from the same parts), and an *All settings ↗* link to this page.
 

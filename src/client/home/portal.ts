@@ -24,6 +24,7 @@ import { openPop, type PopItem } from '../ui/portal/pop';
 import { miniProgress } from '../ui/progress/mini';
 import { summaryLine } from '../ui/summary';
 import { startPause, startResume } from '../ui/project-run/api';
+import { openDeleteDialog } from '../ui/project-delete/dialog';
 import { isPinned, isWatched, onProjectPrefs, setPinned, setWatched } from '../shared/project-prefs';
 import { homeRunState, homeRunToggle, onHomeRunState, refreshHomeRunState } from './run-state';
 import { activityScore, SORTS, STATUS_FILTERS, statusOf, tileLetters, visibleProjects, type SortKey, type StatusFilter } from './portal-logic';
@@ -157,6 +158,7 @@ export function portalProjects(root: HTMLElement, deps: PortalDeps) {
       const k = homeRunState(f.id)?.kind;
       if (k === 'paused') items.push({ label: 'Resume project', hint: 'Wake its agents with work waiting', run: () => confirmRun(f, 'resume') });
       else if (k === 'running') items.push({ label: 'Pause project', hint: 'Agents finish their turn, then sleep', run: () => confirmRun(f, 'pause') });
+      if (!f.cloning) items.push({ label: 'Delete…', hint: 'Remove it from the office, or delete it for good', run: () => openDeleteDialog(f.id, f.name, 'delete') });
     }
     return items;
   };

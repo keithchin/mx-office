@@ -101,6 +101,15 @@ export class PinBook {
     this.save();
   }
 
+  /** Takes a deleted project's floor out of the book; gives back what it had. */
+  remove(floor: string): BookEntry | undefined {
+    const had = this.data.floors[floor];
+    if (!had) return undefined;
+    delete this.data.floors[floor];
+    this.save();
+    return had;
+  }
+
   all(): BookEntry[] {
     return Object.values(this.data.floors);
   }

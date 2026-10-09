@@ -4,6 +4,32 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### New
+- **⚠️ Delete a project, the GitHub way.** ⚙️ Settings › ⚠️ Danger zone (admins, at the bottom of the list, red
+  border) has **Remove from office** and **Delete this project**, and a Portal project card's ⋯ has **Delete…**.
+  Both open one confirmation: a red summary of exactly what will happen (N agents stopped, N worktrees removed and
+  how many hold unpushed work, where the data is archived, folder and repository kept or deleted), then *type
+  owner/name to confirm*; the red button stays disabled until it matches exactly, and the office checks it again.
+  Remove stops and sends home every agent, removes the office's worktrees, archives the project's office data to
+  `<data>/deleted/<project>-<time>/` and removes it, and takes the project off `floors.json`; the folder and the
+  repository stay. Delete can also take the local folder and the GitHub repository, each only when ticked.
+  Everyone on the project goes Home with a *Deleted shop* toast. Docs: Using the office › Delete or remove a project.
+
+### Good to know
+- **Guarded.** Nothing starts during a pause, a resume, a safe restart or a toolkit update. Worktrees with
+  uncommitted or unpushed work are listed and need **Remove them anyway**; an unpushed branch stays in the
+  repository when the folder does. The folder is only deleted inside the projects folder, never through a
+  junction or symlink, never the office's own checkout, and in test mode only under scratch/test-offices; junctions
+  inside are unlinked, not followed; a locked file stops the step with a clear message and **Retry**. The
+  repository is only deleted when the office's GitHub token has `delete_repo` (otherwise the dialog links to its
+  settings page on GitHub). A Mendix Portal / Team Server app is never deleted: the dialog links to the Portal.
+- **Resumable and recorded.** A failed step stops the job; Retry (even after a restart) carries on from it. The
+  audit log is never deleted and gets a `project.delete` event; the project's `prj_` id is retired (adding the
+  repository again makes a new project) and its evidence trace says when it was deleted.
+- **Archive isn't here yet**: ⏸ Pause project stops a project's agents and keeps everything.
+
 ## 2026-10-09 · release 26 (`bee523f`)
 
 ### New

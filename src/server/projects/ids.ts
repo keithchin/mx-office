@@ -28,6 +28,8 @@ export interface ProjectEntry {
   currentFloorId?: string;
   createdAt: number;
   lastSeenAt: number;
+  /** The project was deleted (server/project-delete/): its id is retired, never handed out again. */
+  deleted?: { at: number; by: string; name: string };
 }
 
 interface RegistryFile {
@@ -69,15 +71,18 @@ export class ProjectIds {
     const dir = normDir(floor.dir);
     const carried = isProjectId(floor.projectId) ? floor.projectId : undefined;
     // The id the floor carries wins; only a floor without one is matched by repository or checkout.
+    // A deleted project's id is retired: the same repository or checkout added again is a new project.
+    const live = this.entries.filter((x) => !x.deleted);
     let e = carried
-      ? this.entries.find((x) => x.projectId === carried)
+      ? live.find((x) => x.projectId === carried)
       : repo
-        ? this.entries.find((x) => sameRepo(x.repo, repo))
-        : this.entries.find((x) => !x.repo && x.dirs.includes(dir));
+        ? live.find((x) => sameRepo(x.repo, repo))
+        : live.find((x) => !x.repo && x.dirs.includes(dir));
     let changed = false;
     if (!e) {
       const at = this.now();
-      e = { projectId: carried ?? mintProjectId(at), dirs: [], floorIds: [], createdAt: at, lastSeenAt: at };
+      const adopt = carried && !this.entries.some((x) => x.projectId === carried);
+      e = { projectId: adopt ? carried : mintProjectId(at), dirs: [], floorIds: [], createdAt: at, lastSeenAt: at };
       this.entries.push(e);
       changed = true;
     }
@@ -115,9 +120,27 @@ export class ProjectIds {
     return this.entries.filter((e) => e.floorIds.includes(floorId)).sort((a, b) => b.lastSeenAt - a.lastSeenAt)[0]?.projectId;
   }
 
+  /** Retires a deleted project's id: kept on record (when, by whom, its name), never handed out again. */
+  retire(projectId: string, by: string, name: string): ProjectEntry | undefined {
+    const e = this.entries.find((x) => x.projectId === projectId);
+    if (!e) return undefined;
+    if (!e.deleted) {
+      e.deleted = { at: this.now(), by, name };
+      delete e.currentFloorId;
+      this.save();
+    }
+    return this.get(projectId);
+  }
+
+  /** The deleted project a project id or floor id stood for, when it was one (the latest deleted). */
+  deletedFor(idOrFloor: string): ProjectEntry | undefined {
+    const e = this.entries.filter((x) => x.deleted && (x.projectId === idOrFloor || x.floorIds.includes(idOrFloor))).sort((a, b) => (b.deleted?.at ?? 0) - (a.deleted?.at ?? 0))[0];
+    return e && this.get(e.projectId);
+  }
+
   get(projectId: string): ProjectEntry | undefined {
     const e = this.entries.find((x) => x.projectId === projectId);
-    return e && { ...e, dirs: [...e.dirs], floorIds: [...e.floorIds] };
+    return e && { ...e, dirs: [...e.dirs], floorIds: [...e.floorIds], ...(e.deleted ? { deleted: { ...e.deleted } } : {}) };
   }
 
   list(): ProjectEntry[] {
@@ -143,6 +166,7 @@ export class ProjectIds {
         ...(typeof p.currentFloorId === 'string' ? { currentFloorId: p.currentFloorId } : {}),
         createdAt: typeof p.createdAt === 'number' ? p.createdAt : 0,
         lastSeenAt: typeof p.lastSeenAt === 'number' ? p.lastSeenAt : 0,
+        ...(p.deleted && typeof p.deleted.at === 'number' ? { deleted: { at: p.deleted.at, by: String(p.deleted.by ?? ''), name: String(p.deleted.name ?? '') } } : {}),
       });
     }
   }
