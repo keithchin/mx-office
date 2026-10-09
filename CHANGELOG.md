@@ -30,6 +30,33 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **Aggregate and list-operation activities** in newer models get their own icon and caption ("Count
   of Orders") instead of a generic one.
 
+## 2026-10-09 · release 25 (`9ab7e96`)
+
+### Improved
+- **📐 Model tab: domain models you can read.** Associations nobody arranged in Studio Pro (still at its
+  default connection points, as agents and mxcli create them) no longer run from one box's left edge to
+  another's right edge across the entities between. They leave from the sides the two entities face
+  each other with, spread along a side when there are several, and run in straight horizontal and
+  vertical segments around the other entities, with their names and 1/* discs where they cover no box
+  when there's room. Associations someone arranged in Studio Pro keep their points exactly; colours,
+  discs, owner dot and arrow are as before.
+- **Tidy layout.** A new **As in Studio Pro / Tidy layout** switch in the Model tab's bar rearranges a
+  domain model's entities for reading (layers along the associations, referenced entities on top,
+  loose entities in a grid beside them). View only, never written to the model; your browser
+  remembers the choice. An unarranged-looking model (entities on an even grid, lines at the default
+  points) suggests it: *Lines overlap? Try Tidy layout*.
+- **Follow one line.** Pointing at (or clicking) an association lights it and its two entities and
+  dims the rest.
+
+### Changed
+- **Clean is the default theme.** A browser that has never picked a theme now opens in Clean (Light), or Clean
+  (Dark) when the system is in dark mode. The 🎨 list starts with the two Clean themes, and the original
+  bright look is now called **Fun** (with **Fun (Dark)**). A theme you picked before stays picked.
+- **Domain models stay readable in Studio Pro too**: whoever writes the model (the Lead Developer, or a Solo Lead)
+  now tidies a module's domain model with `mxcli layout` after changing its entities, in the same pull request.
+  Agents used to leave entities on mxcli's default grid with every association drawn edge to edge. A module a
+  person arranged in Studio Pro is never re-arranged.
+
 ## 2026-10-09 · release 24 (`b32d844`)
 
 ### New

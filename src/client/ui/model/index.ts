@@ -7,8 +7,11 @@
 // It asks the server (api.ts) only while the tab is open: when it opens, when you pick a branch or a
 // document, and a few seconds after the workers or pull requests change (a merge moves main). No timer.
 // Read-only. No three.js here: the flat views import it.
+//
+// A domain model shows "As in Studio Pro" (the developer's layout) or, chosen per viewer and
+// remembered in this browser, "Tidy layout": the entities rearranged for reading, for the view only.
 
-import { modelHref, type ChangeStatus, type DocChange, type DocDiff, type FlowDoc, type ModelDoc, type ModelRef, type ModelTreeNode } from '../../../shared/model';
+import { modelHref, type ChangeStatus, type DocChange, type DocDiff, type DomainDoc, type FlowDoc, type ModelDoc, type ModelRef, type ModelTreeNode } from '../../../shared/model';
 import { setAddress } from '../../shared/address';
 import { store } from '../../state';
 import { currentTheme } from '../colortheme';
@@ -17,12 +20,38 @@ import { modelApi } from './api';
 import { Canvas } from './canvas';
 import { changeList, details } from './details';
 import { drawDomain } from './domain-draw';
+import { looksUnarranged } from './domain-layout';
+import { tidyDomain } from './domain-tidy';
 import { drawFlow } from './flow-draw';
 import { Tree, opens } from './tree';
 import './model.css';
 
 const DARK = new Set(['dark', 'terminal', 'clean-dark']);
 const SETTLE_MS = 4000;
+const TIDY_KEY = 'agent-office.model.tidy';
+
+const recallTidy = (): boolean => {
+  try {
+    return localStorage.getItem(TIDY_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+const rememberTidy = (on: boolean) => {
+  try {
+    localStorage.setItem(TIDY_KEY, on ? '1' : '0');
+  } catch {
+    // just for this visit, then
+  }
+};
+
+/** The tidy layout of a document, worked out once per document read. */
+const tidied = new WeakMap<DomainDoc, DomainDoc>();
+const tidyOf = (d: DomainDoc): DomainDoc => {
+  let t = tidied.get(d);
+  if (!t) tidied.set(d, (t = tidyDomain(d)));
+  return t;
+};
 
 export interface ModelView {
   show(): void;
@@ -62,6 +91,7 @@ export function modelView(root: HTMLElement): ModelView {
   let settle: ReturnType<typeof setTimeout> | undefined;
   /** &zoom=100 in the address: the first document opens at that zoom. */
   let zoomOnce = first.zoom;
+  let tidy = recallTidy();
 
   root.classList.add('mxv');
   const refPick = h('select', { 'aria-label': 'Branch' });
@@ -69,6 +99,13 @@ export function modelView(root: HTMLElement): ModelView {
   changesBox.checked = changesOn;
   const changesToggle = h('label.mx-toggle', { title: 'Mark what this branch added and changed against main' }, changesBox, 'Changes in this branch');
   const title = h('div.mx-title');
+  const layoutBtn = (on: boolean, label: string, tip: string) => h('button.btn', { type: 'button', title: tip, 'aria-pressed': String(tidy === on), onclick: () => setTidy(on) }, label);
+  const studioBtn = layoutBtn(false, 'As in Studio Pro', 'The layout the developer made in Studio Pro');
+  const tidyBtn = layoutBtn(true, 'Tidy layout', 'Rearrange the entities for reading (this view only; the model is not changed)');
+  const layoutSeg = h('span.mx-seg', { role: 'group', 'aria-label': 'Layout' }, studioBtn, tidyBtn);
+  const hint = h('span.mx-hint', {}, 'Lines overlap? Try ', h('button.mx-link', { type: 'button', onclick: () => setTidy(true) }, 'Tidy layout'));
+  layoutSeg.hidden = true;
+  hint.hidden = true;
   const zoomPct = h('span', {}, '100%');
   const canvasHost = h('div.mx-stage');
   const msg = h('div.mx-msg');
@@ -92,6 +129,8 @@ export function modelView(root: HTMLElement): ModelView {
     explorerBtn,
     refPick,
     changesToggle,
+    layoutSeg,
+    hint,
     title,
     h(
       'span.mx-zoom',
@@ -162,7 +201,25 @@ export function modelView(root: HTMLElement): ModelView {
     body.classList.toggle('mx-noside', !parts.length || (phone && !selected && !(changesOn && ref !== 'main')));
   }
 
+  function renderLayout() {
+    const dm = doc?.kind === 'domainmodel';
+    layoutSeg.hidden = !dm;
+    studioBtn.classList.toggle('on', !tidy);
+    tidyBtn.classList.toggle('on', tidy);
+    studioBtn.setAttribute('aria-pressed', String(!tidy));
+    tidyBtn.setAttribute('aria-pressed', String(tidy));
+    hint.hidden = !(dm && !tidy && looksUnarranged(doc as DomainDoc));
+  }
+
+  function setTidy(on: boolean) {
+    if (on === tidy) return;
+    tidy = on;
+    rememberTidy(on);
+    draw();
+  }
+
   function draw(keepView = false) {
+    renderLayout();
     if (!doc) return;
     canvasHost.classList.toggle('mx-dm', doc.kind === 'domainmodel');
     canvasHost.classList.toggle('mx-nano', doc.kind === 'nanoflow');
@@ -174,7 +231,7 @@ export function modelView(root: HTMLElement): ModelView {
       return;
     }
     text.hidden = true;
-    const d = doc.kind === 'domainmodel' ? drawDomain(doc, changesOn ? diff : undefined) : drawFlow(doc, changesOn ? diff : undefined);
+    const d = doc.kind === 'domainmodel' ? drawDomain(tidy ? tidyOf(doc) : doc, changesOn ? diff : undefined) : drawFlow(doc, changesOn ? diff : undefined);
     canvas.show(d, keepView);
     if (zoomOnce && !keepView) {
       canvas.zoomTo(zoomOnce / 100);
@@ -214,6 +271,7 @@ export function modelView(root: HTMLElement): ModelView {
       if (mine !== seq) return;
       doc = null;
       canvas.clear();
+      renderLayout();
       say(`Couldn't read ${want.qn}: ${(err as Error).message}`);
       renderSide();
     }
@@ -357,6 +415,7 @@ export function modelView(root: HTMLElement): ModelView {
       ref = 'main';
       changes = [];
       canvas.clear();
+      renderLayout();
     }
     if (visible) void load();
   });

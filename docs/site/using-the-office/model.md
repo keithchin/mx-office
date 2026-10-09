@@ -18,6 +18,9 @@ The **📐 Model** tab shows the floor's Mendix app the way Studio Pro does, wit
     - Each entity lists its attributes and their types, with markers for validation rules, calculated values and event handlers.
     - A specialization shows its generalization in a blue label on top.
     - Associations show their name, the **1** and **\*** multiplicity at each end, a dot on the owner's end, and an arrow towards the other end (no arrow when both own it).
+    - An association whose connection points someone moved in Studio Pro is drawn exactly between those points.
+    - An association nobody arranged (still at Studio Pro's default points, as agents and mxcli create them) leaves from the sides its two entities face each other with. Several lines on one side are spread along it. The line runs in straight horizontal and vertical segments around the other entities, and its name and multiplicity sit where they cover no entity when there's room.
+    - Point at an association (or click it) to light it and its two entities and dim the rest: handy in a dense model.
     - Annotations sit where they were put.
   - A **microflow** or **nanoflow**:
     - A green start, red ends, blue activity boxes with the action's icon, orange decisions and merges.
@@ -27,6 +30,7 @@ The **📐 Model** tab shows the floor's Mendix app the way Studio Pro does, wit
     - Loops, annotations and error-handler flows are drawn too.
     - Nanoflows look like microflows, as in Studio Pro. Their activity outlines have a faint purple tint so you can tell them apart.
   - Any other document (a page, an enumeration, a constant…) shows as its MDL.
+- **As in Studio Pro / Tidy layout** (in the bar, for a domain model): **As in Studio Pro** (the default) shows the developer's layout. **Tidy layout** rearranges the entities for reading: connected entities in layers, the referenced ones above the ones that reference them, and entities without associations in a grid beside them. It changes only this view, never the model, and your browser remembers the choice. When a domain model looks unarranged (entities on an even grid and lines at the default points), the bar suggests it: *Lines overlap? Try Tidy layout*.
 - **Details** (right): click an element to see what it is and does:
   - for an activity: its action, condition, variable and its lines of MDL;
   - for an entity: its attributes and associations;
@@ -63,7 +67,7 @@ The office reads the app straight from the floor's git history, never from Studi
 
 **What it reads:**
 - Each commit's model files come out of git one by one, as they're needed. The office never reads the floor's checkout, and it doesn't matter if Studio Pro has the project open.
-- Microflows, nanoflows and domain models are drawn from the model's own files, in milliseconds, without [mxcli](../integrations/mxcli.md). Positions and sizes come from the project itself, so diagrams keep the developer's layout and nothing is auto-arranged.
+- Microflows, nanoflows and domain models are drawn from the model's own files, in milliseconds, without [mxcli](../integrations/mxcli.md). Positions and sizes come from the project itself, so diagrams keep the developer's layout. Only **Tidy layout** rearranges entities, and only in your view.
 - mxcli is used for the rest: the App Explorer tree, the MDL beside a diagram, and documents shown as MDL. The MDL panel fills in a moment after the diagram ("Reading the MDL…").
 
 **When it reads:**

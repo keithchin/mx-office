@@ -107,6 +107,14 @@
 .mx-toggle input { width: 16px; height: 16px; accent-color: var(--accent); }
 .mx-title { flex: 1 1 160px; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .mx-title b { color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+.mx-seg { display: inline-flex; gap: 0; }
+.mx-seg .btn { border-radius: 0; margin: 0; }
+.mx-seg .btn:first-child { border-radius: 8px 0 0 8px; }
+.mx-seg .btn:last-child { border-radius: 0 8px 8px 0; margin-left: -1px; }
+.mx-hint { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.mx-link { all: unset; cursor: pointer; color: var(--ink); font-weight: 600; text-decoration: underline; }
+.mx-link:focus-visible { outline: 2px solid var(--focus); }
+.mx-seg[hidden], .mx-hint[hidden] { display: none; }
 .mx-zoom { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .mx-zoom .btn { min-width: 32px; padding: 3px 6px; }
 .mxv .mx-explorer-btn { display: none; }
@@ -222,6 +230,12 @@
 .mx-cross-to { fill: var(--mx-note-line); font-size: 11px; }
 .mx-edge.mx-sel .mx-assoc, .mx-edge.mx-sel .mx-arrow { stroke: var(--mx-ent-sel); stroke-width: 2; }
 .mx-edge.mx-sel .mx-aname rect { stroke: var(--mx-ent-sel); }
+/* A wide, invisible copy of each association line: easy to point at. */
+.mx-hit { fill: none; stroke: transparent; stroke-width: 11; pointer-events: stroke; }
+/* Pointing at (or picking) an association: it and its two entities stay, the rest steps back. */
+.mx-svg g.mx-focus > :is(.mx-el, .mx-edge):not(.mx-hot) { opacity: .2; }
+.mx-svg g.mx-focus > .mx-edge.mx-hot .mx-assoc, .mx-svg g.mx-focus > .mx-edge.mx-hot .mx-arrow { stroke-width: 2.2; }
+.mx-svg g > :is(.mx-el, .mx-edge) { transition: opacity .12s; }
 
 /* What the branch changed. */
 .mx-halo { fill: none; stroke-width: 3; stroke-dasharray: 6 3; }
@@ -270,4 +284,5 @@ body:has(#model-view:not(.hidden)) .lite-main { padding-bottom: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .mx-tree { transition: none; }
+  .mx-svg g > :is(.mx-el, .mx-edge) { transition: none; }
 }

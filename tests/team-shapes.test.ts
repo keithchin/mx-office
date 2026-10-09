@@ -416,3 +416,12 @@ test('team shapes: the Discovery brief names whoever covers Analysis', async () 
   assert.match(solo, /You are the \*\*Solo Lead, running discovery as the analyst\*\*/);
   assert.doesNotMatch(solo, /You are the \*\*Chief Analyst/);
 });
+
+test('whoever writes the model tidies the domain models the team laid out, never a person\'s arrangement', () => {
+  for (const role of ['lead-developer', 'solo-lead'] as const) {
+    const text = playbook(role, ctx(role === 'solo-lead' ? { coverage: defaultCoverage('solo') } : {}));
+    assert.match(text, /mxcli layout -p <app>\.mpr --module <Module> --dry-run/);
+    assert.match(text, /if a person arranged the module in Studio Pro/);
+  }
+  assert.doesNotMatch(playbook('lead-tester', ctx()), /mxcli layout/);
+});

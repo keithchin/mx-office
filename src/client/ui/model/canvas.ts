@@ -1,7 +1,8 @@
 // The Model tab's drawing surface: one SVG with a group that moves. Wheel zooms around the pointer,
 // dragging (or one finger) pans, two fingers pinch, and a click picks the element under it. With
 // many elements only those in view are kept in the page (the rest get display:none), so a big
-// domain model or microflow pans smoothly.
+// domain model or microflow pans smoothly. Pointing at (or picking) an association lights it and its two
+// entities and dims the rest, so one line can be followed through a dense domain model.
 
 import type { Drawn } from './flow-draw';
 
@@ -29,6 +30,8 @@ export class Canvas {
   private items: { el: SVGGElement; box: Box; shown: boolean }[] = [];
   private frame = 0;
   private selected: string | null = null;
+  private byId = new Map<string, SVGGElement>();
+  private hot: SVGGElement[] = [];
 
   constructor(private host: HTMLElement, private on: CanvasEvents) {
     this.svg = document.createElementNS(NS, 'svg');
@@ -49,6 +52,8 @@ export class Canvas {
     this.g.innerHTML = d.svg;
     this.bounds = d.bounds;
     this.boxes = d.boxes;
+    this.byId = new Map([...this.g.querySelectorAll<SVGGElement>('[data-id]')].map((el) => [el.dataset.id ?? '', el]));
+    this.hot = [];
     this.items = [...this.g.querySelectorAll<SVGGElement>('[data-box]')].map((el) => {
       const [x, y, w, h] = (el.dataset.box ?? '0,0,0,0').split(',').map(Number);
       return { el, box: { x, y, w, h }, shown: true };
@@ -60,6 +65,9 @@ export class Canvas {
 
   clear() {
     this.g.innerHTML = '';
+    this.byId = new Map();
+    this.hot = [];
+    this.g.classList.remove('mx-focus');
     this.sel.innerHTML = '';
     this.items = [];
     this.boxes = new Map();
@@ -119,9 +127,10 @@ export class Canvas {
     this.selected = id;
     for (const el of this.g.querySelectorAll('.mx-sel')) el.classList.remove('mx-sel');
     this.sel.innerHTML = '';
+    const el = id ? this.byId.get(id) : undefined;
+    this.focus(el?.dataset.ends ? el : null);
     const b = id ? this.boxes.get(id) : undefined;
     if (!id || !b) return;
-    const el = [...this.g.querySelectorAll<SVGGElement>('[data-id]')].find((x) => x.dataset.id === id);
     el?.classList.add('mx-sel');
     const hs = 6;
     const pad = 5;
@@ -142,6 +151,27 @@ export class Canvas {
         this.apply();
       }
     }
+  }
+
+  /** Lights an association and the entities it joins, dimming everything else (none: all as drawn). */
+  private focus(edge: SVGGElement | null) {
+    for (const el of this.hot) el.classList.remove('mx-hot');
+    this.hot = [];
+    if (edge) {
+      this.hot.push(edge);
+      for (const id of (edge.dataset.ends ?? '').split(' ')) {
+        const el = this.byId.get(id);
+        if (el) this.hot.push(el);
+      }
+      for (const el of this.hot) el.classList.add('mx-hot');
+    }
+    this.g.classList.toggle('mx-focus', !!edge);
+  }
+
+  /** The picked association, if one is picked: what stays lit when the pointer moves off. */
+  private pinned(): SVGGElement | null {
+    const el = this.selected ? this.byId.get(this.selected) : undefined;
+    return el?.dataset.ends ? el : null;
   }
 
   get zoomLevel(): number {
@@ -234,6 +264,16 @@ export class Canvas {
         this.on.select(id);
       }
     };
+    this.svg.addEventListener('pointerover', (e) => {
+      if (pts.size) return;
+      const edge = (e.target as Element | null)?.closest?.('[data-ends]') as SVGGElement | null;
+      const next = edge && this.g.contains(edge) ? edge : this.pinned();
+      if (next !== (this.hot[0] ?? null)) this.focus(next);
+    });
+    this.svg.addEventListener('pointerleave', () => {
+      const next = this.pinned();
+      if (next !== (this.hot[0] ?? null)) this.focus(next);
+    });
     this.svg.addEventListener('pointerup', up);
     this.svg.addEventListener('pointercancel', up);
     this.svg.addEventListener('keydown', (e) => {

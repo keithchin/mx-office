@@ -81,7 +81,15 @@ function toolkitSection(role: RoleDef, overrides?: SkillOverrides, also: RoleId[
   ];
 }
 
-const ONE_WRITER = 'One writer per Mendix app: only the Lead Developer runs `mxcli exec` (or any MCP write) against the .mpr. Everyone else — every other Lead and every subagent — drafts, checks (`mxcli check`, `mxcli -c "SHOW …"`) and reviews, and hands the change to the Lead Developer to apply.';
+/**
+ * Domain models laid out by agents land on mxcli's default grid with every association drawn edge to edge,
+ * unreadable in Studio Pro and the Model tab (travel-approval, 2026-10-09). `mxcli layout` arranges a
+ * module from its associations, but replaces every position in it, a person's arrangement included.
+ */
+const LAYOUT =
+  "- After adding or changing entities or associations, tidy that module's domain model: `mxcli layout -p <app>.mpr --module <Module> --dry-run`, then without `--dry-run`, in the same pull request. Only for modules the team laid out: if a person arranged the module in Studio Pro (its entities aren't on mxcli's even grid), leave it and say so in the pull request instead. Never on Marketplace modules or System.";
+
+const ONE_WRITER ='One writer per Mendix app: only the Lead Developer runs `mxcli exec` (or any MCP write) against the .mpr. Everyone else — every other Lead and every subagent — drafts, checks (`mxcli check`, `mxcli -c "SHOW …"`) and reviews, and hands the change to the Lead Developer to apply.';
 
 /** The one-writer rule for whoever covers Development: the Lead Developer on an Enterprise team. */
 function oneWriter(c: Coverage | undefined, roleId: RoleId): string {
@@ -109,7 +117,7 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
     case 'lead-designer':
       return ['## Design', '- Every page follows the Atlas design system and the agreed wireframes. Review design changes and record approvals (or what must change) in `docs/team/design.md`.', '- Hand page specs to the Lead Developer; never build pages yourself.'];
     case 'lead-developer':
-      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
+      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', LAYOUT, '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
     case 'lead-tester':
       return ['## Testing', '- Unit tests live in `tests/*.test.mdl`, Playwright e2e in `tests/e2e`; follow `.ai-context/skills/qa-tests` and the PR pipeline when the repo has them.', '- Approve test plans and results; when the framework is the bottleneck, improve it (and say so in the journal).', '- A failing test that shows the model is wrong is a finding for the Lead Developer, never a fix you make in MDL.'];
     case 'solo-lead':
@@ -117,6 +125,7 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         '## Working alone',
         '- Work the toolkit pipeline stage by stage yourself (`small-project-tier.md` when it applies): each stage\'s gate before the next.',
         '- Dispatch a subagent for each draft or check (business-analyst, ui-ux-designer, developer, tester) and review every result before it lands.',
+        LAYOUT,
         `- The office asks you for a daily standup, then hands you the page (\`${standupPath('YYYY-MM-DD')}\`) to finish as your daily note: a **Summary** at the top, then commit and push.`,
         '- Nobody else relays to the Project Manager: escalate yourself whatever needs them.',
       ];
