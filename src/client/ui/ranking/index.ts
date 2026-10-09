@@ -11,6 +11,7 @@ import { byUrgency } from '../../nextup';
 import { waitingOnSomeone } from '../../notify';
 import { h } from '../dom';
 import { batched } from '../batch';
+import { keepSame } from '../keep';
 import { groupCards, howGraded, podium, table } from './board';
 import { gradeBadge, rankFooter, recordCard } from './view';
 import type { SubagentCard } from '../../../shared/roster/subagent-cards';
@@ -232,21 +233,29 @@ export function workersRanking(d: RankingDeps) {
   }
 
   function drawList(r: RankingReport | undefined, waiting: boolean) {
+    // Built off the page, then put in keeping every card drawn the same as before (ui/keep.ts): a
+    // worker update changes a card or two, and rewriting them all cost a 190 ms task each time.
+    const out = h('ul');
+    buildList(out, r, waiting);
+    keepSame(d.list, [...out.children]);
+  }
+
+  function buildList(into: HTMLElement, r: RankingReport | undefined, waiting: boolean) {
     const { shown: list, hidden } = capGone(sorted(items(r), waiting), goneCap);
-    if (!list.length) return d.list.replaceChildren(h('li.lite-empty', {}, d.emptyText()));
+    if (!list.length) return into.replaceChildren(h('li.lite-empty', {}, d.emptyText()));
     if (prefs.group === 'none') {
-      d.list.replaceChildren(...list.map((i) => cardOf(i, r)));
+      into.replaceChildren(...list.map((i) => cardOf(i, r)));
     } else {
       const groups = new Map<string, Item[]>();
       for (const i of list) groups.set(groupOf(i), [...(groups.get(groupOf(i)) ?? []), i]);
       const stats = new Map((prefs.group === 'model' ? r?.byModel : r?.byRole)?.map((g) => [g.label, g]) ?? []);
       // Best average first, as the group cards are; groups without grades after.
       const keys = [...groups.keys()].sort((a, b) => (stats.get(b)?.avgScore ?? -1) - (stats.get(a)?.avgScore ?? -1) || a.localeCompare(b));
-      d.list.replaceChildren(...keys.flatMap((k) => [h('li.rk-group-h', {}, h('span', {}, k), stats.get(k)?.avgGrade ? gradeBadge(stats.get(k)!.avgGrade, stats.get(k)!.avgScore, false) : null, h('small', {}, `${groups.get(k)!.length}`)), ...groups.get(k)!.map((i) => cardOf(i, r))]));
+      into.replaceChildren(...keys.flatMap((k) => [h('li.rk-group-h', {}, h('span', {}, k), stats.get(k)?.avgGrade ? gradeBadge(stats.get(k)!.avgGrade, stats.get(k)!.avgScore, false) : null, h('small', {}, `${groups.get(k)!.length}`)), ...groups.get(k)!.map((i) => cardOf(i, r))]));
     }
-    if (hidden) d.list.append(h('li.rk-more-li', {}, h('button.btn.small.rk-more', { type: 'button', onclick: () => ((goneCap += GONE_CAP * 2), draw()) }, `Show ${Math.min(hidden, GONE_CAP * 2)} more gone home (${hidden} not shown)`)));
-    if (r) d.list.append(h('li.rk-how-li', {}, howGraded(r)));
-    if (prefs.showSubs && d.subagents) nestSubagents(d.list, d.subagents.cards(prefs.neverRun), Date.now(), d.subagents.open);
+    if (hidden) into.append(h('li.rk-more-li', {}, h('button.btn.small.rk-more', { type: 'button', onclick: () => ((goneCap += GONE_CAP * 2), draw()) }, `Show ${Math.min(hidden, GONE_CAP * 2)} more gone home (${hidden} not shown)`)));
+    if (r) into.append(h('li.rk-how-li', {}, howGraded(r)));
+    if (prefs.showSubs && d.subagents) nestSubagents(into, d.subagents.cards(prefs.neverRun), Date.now(), d.subagents.open);
   }
 
   // Every minute while it's showing: grades move as tasks finish.
