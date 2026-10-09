@@ -1,6 +1,6 @@
-// The flat views' color themes: Default (the office's own light look), Dark, Terminal (a green
-// phosphor screen), and Clean (Light) and Clean (Dark), flat and quiet like a code editor's light and
-// dark themes, with no emoji. The 🎨 in the 1D and 2D top bars opens a list of them, and this browser
+// The flat views' color themes: Clean (Light) and Clean (Dark), flat and quiet like a code editor's light
+// and dark themes with no emoji (the default since 2026-10-09); Fun, the office's original bright, chunky look
+// (its id stays 'default' so earlier picks keep working); Fun (Dark); and Terminal (a green phosphor screen). The 🎨 in the 1D and 2D top bars opens a list of them, and this browser
 // remembers the pick for both: a change in one tab reaches the other views open in other tabs too.
 // A theme is <html data-theme="…">: the colors are tokens in styles/base.css, the other themes' values
 // are in styles/themes.css, Terminal's shapes in styles/theme-terminal.css, and the Clean pair's in
@@ -18,12 +18,12 @@ import { stepIndex } from './chrome-logic';
 import { startClean } from './clean';
 
 /** Every theme, in the 🎨 list's order. The pages' early scripts (lite.html, pixel.html, home.html) list the same names. */
-export const COLOR_THEMES = ['default', 'dark', 'terminal', 'clean-light', 'clean-dark'] as const;
+export const COLOR_THEMES = ['clean-light', 'clean-dark', 'default', 'dark', 'terminal'] as const;
 export type ColorTheme = (typeof COLOR_THEMES)[number];
 
 /** Where the pick is kept. The pages' early scripts read the same key. */
 const KEY = 'agent-office.color-theme';
-export const THEME_LABEL: Record<ColorTheme, string> = { default: 'Default', dark: 'Dark', terminal: 'Terminal', 'clean-light': 'Clean (Light)', 'clean-dark': 'Clean (Dark)' };
+export const THEME_LABEL: Record<ColorTheme, string> = { 'clean-light': 'Clean (Light)', 'clean-dark': 'Clean (Dark)', default: 'Fun', dark: 'Fun (Dark)', terminal: 'Terminal' };
 const WHAT: Record<ColorTheme, string> = {
   default: 'The office’s own bright, chunky look',
   dark: 'The same chunky look, at night',
@@ -36,7 +36,7 @@ const BAR: Record<ColorTheme, string> = { default: '#fff1de', dark: '#222536', t
 
 export const isTheme = (t: unknown): t is ColorTheme => COLOR_THEMES.includes(t as ColorTheme);
 
-/** The theme to show: the one picked here before, or Dark for someone whose system is dark and hasn't picked. */
+/** The theme to show: the one picked here before, else Clean (Light), or Clean (Dark) for someone whose system is dark. */
 export function savedTheme(): ColorTheme {
   try {
     const t = localStorage.getItem(KEY);
@@ -44,12 +44,12 @@ export function savedTheme(): ColorTheme {
   } catch {
     // No storage (a private window, blocked site data): fall through to the system's preference.
   }
-  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default';
+  return matchMedia('(prefers-color-scheme: dark)').matches ? 'clean-dark' : 'clean-light';
 }
 
 export function currentTheme(): ColorTheme {
   const t = document.documentElement.dataset.theme;
-  return isTheme(t) ? t : 'default';
+  return isTheme(t) ? t : 'clean-light';
 }
 
 export function applyTheme(t: ColorTheme, remember = false) {

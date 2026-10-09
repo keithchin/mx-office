@@ -8,7 +8,7 @@
     <link rel="icon" href="/favicon.svg" />
     <link rel="stylesheet" href="./pixel.css" />
     <!-- The color theme picked on this browser, the 1D view's (ui/colortheme.ts), set before the page is drawn so it never flashes the wrong one. -->
-    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(["default","dark","terminal","clean-light","clean-dark"].indexOf(t)<0)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"default";document.documentElement.dataset.theme=t}catch(e){}</script>
+    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(["default","dark","terminal","clean-light","clean-dark"].indexOf(t)<0)t=matchMedia("(prefers-color-scheme: dark)").matches?"clean-dark":"clean-light";document.documentElement.dataset.theme=t}catch(e){}</script>
     <!-- Mx Office's loading screen (#ao-boot): drawn by the page itself before its code loads, so it shows at once; ui/loading/boot.ts moves it on (bundle, sign-in, socket, office data, first view) and fades it out. The same block is in lite.html, pixel.html, home.html and m.html (tests/loading-screen.test.ts keeps them alike). -->
     <style>
       #ao-boot{--b-bg:#fffaf3;--b-ink:#2b2d42;--b-mute:#7a6f65;--b-acc:#ff8a5b;--b-track:#fff1de;--b-font:'Nunito',ui-rounded,system-ui,-apple-system,sans-serif;--b-r:999px;position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:var(--b-bg);color:var(--b-ink);font-family:var(--b-font);opacity:1;transition:opacity .35s ease}

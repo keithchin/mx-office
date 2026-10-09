@@ -25,12 +25,12 @@ The browser tab's title counts the workers waiting on you, so you see it from ot
 
 Click **🎨** and pick one from the list:
 
-- **Default**: the office's own warm light look.
-- **Dark**: dark blue-grey, easy on the eyes at night.
+- **Clean (Light)** and **Clean (Dark)** (the default): plain and quiet, like VS Code's classic light and dark themes. Neutral greys with a blue accent, a sans-serif font at 13px with a strict type scale and nothing heavier than semi-bold, 2–4px corners and 1px borders, flat buttons and VS Code-style tabs. **No emoji**: they're hidden everywhere, and buttons that were only an emoji (🔔 🏠 🎨 ☰) show line icons instead. The 2D office is barely tinted in Clean (Light) and a neutral grey night in Clean (Dark).
+- **Fun**: the office's original warm, chunky light look (called Default before 2026-10-09).
+- **Fun (Dark)**: the same look in dark blue-grey, easy on the eyes at night.
 - **Terminal**: black and phosphor green, one monospace font, square boxes and faint scanlines. In Terminal, the project summary's *What's happening* types itself out (not if you asked your system for less motion).
-- **Clean (Light)** and **Clean (Dark)**: plain and quiet, like VS Code's classic light and dark themes. Neutral greys with a blue accent, a sans-serif font at 13px with a strict type scale and nothing heavier than semi-bold, 2–4px corners and 1px borders, flat buttons and VS Code-style tabs. **No emoji**: they're hidden everywhere, and buttons that were only an emoji (🔔 🏠 🎨 ☰) show line icons instead. The 2D office is barely tinted in Clean (Light) and a neutral grey night in Clean (Dark).
 
-The pick is kept in this browser (`agent-office.color-theme` in local storage). It applies to the 1D view, the 2D view (the office is tinted to match), `/home`, The Firm and these docs, and follows along in your other open tabs. Without a pick, it follows your system's dark mode. The 3D office keeps its own look.
+The pick is kept in this browser (`agent-office.color-theme` in local storage). It applies to the 1D view, the 2D view (the office is tinted to match), `/home`, The Firm and these docs, and follows along in your other open tabs. Without a pick it's Clean: Clean (Light), or Clean (Dark) when your system is in dark mode. The 3D office keeps its own look.
 
 ![The Dark theme](../images/theme-dark.png)
 

@@ -6,7 +6,7 @@ weight: 3.5
 
 The **📱 Team phone** is the round button at the bottom right of the 1D and 2D views, above the bar with Issues, PRs, Queue and New task (on the 2D view, above the zoom buttons). It's on every tab. It holds the team chatter, lets you message the agents, and is where everything that needs you arrives. It isn't in the 3D office.
 
-- In the **Default** theme the button is a little pixel-art iPhone, and the window is a pixel iPhone too: a chunky frame, the notch, a status bar with the time and battery, and the home bar. The messages keep the normal, readable font.
+- In the **Fun** theme the button is a little pixel-art iPhone, and the window is a pixel iPhone too: a chunky frame, the notch, a status bar with the time and battery, and the home bar. The messages keep the normal, readable font.
 - In **Dark**, **Terminal**, **Clean (Light)** and **Clean (Dark)** it's a round button with a messages icon, and the window is a plain chat window in the theme's colors.
 
 **The badge.** A **red number** counts what needs you: this floor's Needs-you items plus everyone waiting on your other floors. With nothing red, a **grey dot** means messages you haven't read. Each channel in the list shows the same: red for what needs you there, grey for unread.
