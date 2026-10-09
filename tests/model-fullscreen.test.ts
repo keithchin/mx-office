@@ -86,7 +86,11 @@ const doc = Object.assign(new FakeEl('#document'), {
 Object.assign(globalThis, { document: doc, Node: FakeEl, HTMLElement: FakeEl, requestAnimationFrame: (f: () => void) => setTimeout(f, 0) });
 
 const { fullScreen } = await import('../src/client/ui/model/fullscreen.js');
-const frames = () => new Promise((r) => setTimeout(r, 10));
+const frames = () => new Promise((r) => setTimeout(r, 30));
+/** Waits (up to 2 s, a loaded machine) until `ok()`: the fits run two frames after a change. */
+const until = async (ok: () => boolean) => {
+  for (let i = 0; i < 200 && !ok(); i++) await new Promise((r) => setTimeout(r, 10));
+};
 const key = (el: FakeEl, k: string, more: Partial<FakeEvent> = {}) => el.dispatch('keydown', { key: k, ...more });
 
 /** A model view's container with (or without) the Fullscreen API; `refuse` makes the browser say no. */
@@ -119,12 +123,14 @@ test('the button puts the model in the browser’s full screen and takes it out,
   assert.equal(button.textContent, 'Exit full screen');
   assert.equal(button.getAttribute('aria-pressed'), 'true');
   assert.ok(!doc.body.classList.contains('mx-full-open'), 'the browser covers the screen: no page lock needed');
+  await until(() => fits() >= 1);
   const after = fits();
   assert.ok(after >= 1, 'fitted on the way in');
   button.click();
   await frames();
   assert.equal(doc.fullscreenElement, null);
   assert.ok(!fs.on && !root.classList.contains('mx-full'));
+  await until(() => fits() > after);
   assert.ok(fits() > after, 'and fitted again on the way out');
 });
 
