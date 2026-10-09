@@ -8,8 +8,8 @@ import { ICONS, iconFor, iconSheet } from '../src/client/ui/clean/icons.js';
 
 const root = path.join(import.meta.dirname, '..');
 
-test('the two Clean themes come first (Clean is the default), then Fun, Fun (Dark) and Terminal, in the 🎨 list’s order', () => {
-  assert.deepEqual([...COLOR_THEMES], ['clean-light', 'clean-dark', 'default', 'dark', 'terminal']);
+test('the two Clean themes come after the two Portal ones (Portal is the default), then Fun, Fun (Dark) and Terminal, in the 🎨 list’s order', () => {
+  assert.deepEqual([...COLOR_THEMES], ['portal-light', 'portal-dark', 'clean-light', 'clean-dark', 'default', 'dark', 'terminal']);
   assert.equal(THEME_LABEL.default, 'Fun');
   assert.equal(THEME_LABEL.dark, 'Fun (Dark)');
   assert.equal(THEME_LABEL['clean-light'], 'Clean (Light)');
@@ -101,12 +101,14 @@ test('an emoji-only button gets a line icon, whatever selector or skin tone it h
   assert.equal(iconFor('Board'), undefined);
   for (const [name, body] of Object.entries(ICONS)) assert.match(body, /^<(path|circle) /, `${name} is SVG shapes`);
   const sheet = iconSheet();
-  assert.match(sheet, /html\[data-theme\^='clean'\] \[data-ao-icon='bell'\]::before \{ -webkit-mask-image: url\("data:image\/svg\+xml,/);
+  // Drawn in the Clean family: the Clean pair and the Portal pair (which wears Clean's shapes).
+  assert.match(sheet, /html:is\(\[data-theme\^='clean'\], \[data-theme\^='portal'\]\) \[data-ao-icon='bell'\]::before \{ -webkit-mask-image: url\("data:image\/svg\+xml,/);
 });
 
-test('a browser that has never picked a theme gets Clean: Light, or Dark when the system is dark', () => {
+test('a browser that has never picked a theme gets Portal (since release 26; tests/portal-theme.test.ts), not Clean', () => {
   for (const f of ['docs', 'firm', 'home', 'lite', 'm', 'pixel']) {
     const html = readFileSync(path.join(root, 'src/client', `${f}.html`), 'utf8');
-    assert.match(html, /"clean-dark":"clean-light"/, f);
+    assert.doesNotMatch(html, /"clean-dark":"clean-light"/, f);
+    assert.match(html, /"portal-dark":"portal-light"/, f);
   }
 });

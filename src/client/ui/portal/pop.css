@@ -1,0 +1,15 @@
+/* The Portal pop-up menus (ui/portal/pop.ts): the launcher and a project card's ⋯, in the page's colours. */
+.pt-pop {
+  position: fixed; z-index: 1000; min-width: 220px; max-width: min(340px, calc(100vw - 16px)); margin: 0; padding: 6px 0; list-style: none; overflow: auto;
+  background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow-pop, 0 4px 12px rgba(0, 0, 0, .16)); font: 400 14px/1.4 var(--font);
+}
+.pt-pop-h { padding: 8px 14px 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.pt-pop-item {
+  display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 7px 14px; border: 0; border-radius: 0 !important; background: none;
+  color: var(--ink) !important; font: inherit; text-align: left; text-decoration: none !important; cursor: pointer;
+}
+.pt-pop-item:hover, .pt-pop-item:focus-visible { background: var(--pt-selected, var(--hover)); outline: none; }
+.pt-pop-item:focus-visible { box-shadow: inset 2px 0 0 var(--focus); }
+.pt-pop-item:disabled { opacity: .5; cursor: default; }
+.pt-pop-hint { color: var(--muted); font-size: 12px; }
+.pt-launcher { min-width: 260px; }

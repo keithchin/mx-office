@@ -96,8 +96,38 @@ export const TERM_THEME_CLEAN_DARK = {
   brightWhite: '#e5e5e5',
 };
 
-/** The colors for a terminal opened now: green while the 1D view wears its Terminal theme (ui/colortheme.ts), an editor's in a Clean theme, the usual ones otherwise. */
+/** The Portal (Light) theme's terminal (styles/theme-portal.css): its slate ink on its --code-bg, the portal's blue for the cursor. */
+export const TERM_THEME_PORTAL_LIGHT = {
+  ...TERM_THEME_CLEAN_LIGHT,
+  background: '#f7f8fa',
+  foreground: '#2f3646',
+  cursor: '#146ff4',
+  selectionBackground: '#cfe3fd',
+  blue: '#064ae4',
+  brightBlue: '#146ff4',
+};
+
+/** The Portal (Dark) theme's terminal: on its navy --code-bg. */
+export const TERM_THEME_PORTAL_DARK = {
+  ...TERM_THEME_CLEAN_DARK,
+  background: '#0b1220',
+  foreground: '#d5d9e1',
+  cursor: '#5c9dff',
+  selectionBackground: '#1d3a66',
+  blue: '#4d8dff',
+  brightBlue: '#7fb0ff',
+};
+
+/** Each theme's terminal colors: green in Terminal (ui/colortheme.ts), an editor's in a Clean theme, the portal's in Portal, the usual ones otherwise. */
+const TERM_BY_THEME: Record<string, typeof TERM_THEME> = {
+  terminal: TERM_THEME_GREEN,
+  'clean-light': TERM_THEME_CLEAN_LIGHT,
+  'clean-dark': TERM_THEME_CLEAN_DARK,
+  'portal-light': TERM_THEME_PORTAL_LIGHT,
+  'portal-dark': TERM_THEME_PORTAL_DARK,
+};
+
+/** The colors for a terminal opened now, in the theme the page wears. */
 export function termTheme() {
-  const t = document.documentElement.dataset.theme;
-  return t === 'terminal' ? TERM_THEME_GREEN : t === 'clean-light' ? TERM_THEME_CLEAN_LIGHT : t === 'clean-dark' ? TERM_THEME_CLEAN_DARK : TERM_THEME;
+  return TERM_BY_THEME[document.documentElement.dataset.theme ?? ''] ?? TERM_THEME;
 }

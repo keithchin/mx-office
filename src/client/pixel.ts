@@ -45,6 +45,7 @@ import type { MemberView } from '../shared/roster/types';
 import { paintScene } from './pixel/scene';
 import { blitCrisp } from './pixel/blit';
 import { colorThemes, currentTheme } from './ui/colortheme';
+import { portalBar } from './ui/portal/topbar';
 import { viewPicker } from './ui/viewpick';
 import { flatMenu, openDocs } from './shared/flatmenu';
 import { tabBadge } from './ui/badge';
@@ -470,6 +471,7 @@ phone = installPhone({
   },
   go: goToNeed,
 });
+portalBar({ settings: () => goToSettings(session) }); // the Portal themes' top bar (ui/portal/)
 session.start();
 testModeBadge(); // the TEST MODE badge (ui/testmode/)
 startRouter(() => store.floor);

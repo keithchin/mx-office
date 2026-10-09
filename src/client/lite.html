@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#fff1de" />
+    <meta name="theme-color" content="#0a1324" />
     <title>Agent Office</title>
     <link rel="icon" href="/favicon.svg" />
     <link rel="stylesheet" href="./lite.css" />
     <!-- The color theme picked on this browser (ui/colortheme.ts), set before the page is drawn so it never flashes the wrong one. -->
-    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(["default","dark","terminal","clean-light","clean-dark"].indexOf(t)<0)t=matchMedia("(prefers-color-scheme: dark)").matches?"clean-dark":"clean-light";document.documentElement.dataset.theme=t}catch(e){}</script>
+    <script>try{var t=localStorage.getItem("agent-office.color-theme");if(["default","dark","terminal","clean-light","clean-dark","portal-light","portal-dark"].indexOf(t)<0)t=matchMedia("(prefers-color-scheme: dark)").matches?"portal-dark":"portal-light";document.documentElement.dataset.theme=t}catch(e){}</script>
     <!-- Mx Office's loading screen (#ao-boot): drawn by the page itself before its code loads, so it shows at once; ui/loading/boot.ts moves it on (bundle, sign-in, socket, office data, first view) and fades it out. The same block is in lite.html, pixel.html, home.html and m.html (tests/loading-screen.test.ts keeps them alike). -->
     <style>
       #ao-boot{--b-bg:#fffaf3;--b-ink:#2b2d42;--b-mute:#7a6f65;--b-acc:#ff8a5b;--b-track:#fff1de;--b-font:'Nunito',ui-rounded,system-ui,-apple-system,sans-serif;--b-r:999px;position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:var(--b-bg);color:var(--b-ink);font-family:var(--b-font);opacity:1;transition:opacity .35s ease}
@@ -16,6 +16,8 @@
       html[data-theme=terminal] #ao-boot{--b-bg:#030603;--b-ink:#33ff66;--b-mute:#22c04f;--b-acc:#66ff99;--b-track:#06240e;--b-font:'Cascadia Mono',ui-monospace,Menlo,Consolas,monospace;--b-r:0}
       html[data-theme=clean-light] #ao-boot{--b-bg:#fff;--b-ink:#1f1f1f;--b-mute:#616161;--b-acc:#005fb8;--b-track:#e5e5e5;--b-font:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif}
       html[data-theme=clean-dark] #ao-boot{--b-bg:#1e1e1e;--b-ink:#ccc;--b-mute:#9d9d9d;--b-acc:#0078d4;--b-track:#3c3c3c;--b-font:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif}
+      html[data-theme=portal-light] #ao-boot{--b-bg:#fff;--b-ink:#2f3646;--b-mute:#6c717c;--b-acc:#146ff4;--b-track:#e7e7e9;--b-font:'Noto Sans','Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif}
+      html[data-theme=portal-dark] #ao-boot{--b-bg:#0f1625;--b-ink:#e4e7ed;--b-mute:#9ba4b4;--b-acc:#5c9dff;--b-track:#2a3448;--b-font:'Noto Sans','Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif}
       #ao-boot[hidden]{display:none}
       #ao-boot.aob-out{opacity:0;pointer-events:none}
       #ao-boot .aob-card{display:flex;flex-direction:column;align-items:center;gap:12px;width:min(360px,100%);text-align:center}
@@ -23,7 +25,7 @@
       html[data-theme=terminal] #ao-boot .aob-spin{border-radius:0}
       #ao-boot .aob-title{margin:0;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
       #ao-boot .aob-bar{width:100%;height:6px;border-radius:var(--b-r);background:var(--b-track);overflow:hidden}
-      html[data-theme^=clean] #ao-boot .aob-bar{height:3px}
+      html[data-theme^=clean] #ao-boot .aob-bar,html[data-theme^=portal] #ao-boot .aob-bar{height:3px}
       #ao-boot .aob-bar i{display:block;width:0;height:100%;background:var(--b-acc);transition:width .3s ease}
       #ao-boot .aob-step{margin:0;min-height:1.3em;color:var(--b-mute);font-size:13px}
       #ao-boot .aob-t-restart,#ao-boot.aob-restart .aob-t-load{display:none}

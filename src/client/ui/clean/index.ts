@@ -18,8 +18,14 @@ import { iconFor, iconSheet } from './icons';
 
 export { stripEmoji } from './emoji';
 
-/** Whether a Clean theme is on (<html data-theme="clean-…">). */
-export const isClean = () => (document.documentElement.dataset.theme ?? '').startsWith('clean');
+/** Whether `theme` is of the Clean family: the Clean pair, or the Portal pair that wears Clean's shapes and has no emoji either. */
+export const isCleanFamily = (theme: string | undefined) => !!theme && (theme.startsWith('clean') || theme.startsWith('portal'));
+
+/** Whether a Portal theme is on (<html data-theme="portal-…">): its top bar (ui/portal/) and Home as its Projects page. */
+export const isPortal = () => (document.documentElement.dataset.theme ?? '').startsWith('portal');
+
+/** Whether a Clean-family theme is on (<html data-theme="clean-…"> or "portal-…"). */
+export const isClean = () => isCleanFamily(document.documentElement.dataset.theme);
 
 /** The Clean UI font for a canvas's `font`: the same stack as the pages' (styles/theme-clean.css). */
 export const CLEAN_FONT = "'AO Blank', 'AO Clean', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif";

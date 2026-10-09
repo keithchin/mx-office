@@ -1,5 +1,5 @@
 /* The Clean themes (styles/theme-clean.css has their tokens): the parts that draw their own chunky
-   look rather than the tokens', flattened. Everything is under html[data-theme^='clean'], which only
+   look rather than the tokens', flattened. Everything is under html:is([data-theme^='clean'], [data-theme^='portal']), which only
    the flat views set (ui/colortheme.ts), and body.lite, the 1D, 2D and home pages. The broad rules
    come first, so a part added later that sets its own 3px border, 16px corners or a hard shadow still
    comes out flat; then the shared pieces (tabs, buttons, bars, menus, windows) like an editor's; then
@@ -7,191 +7,191 @@
 
 /* ---- Lines and corners, everywhere --------------------------------------------------------------- */
 /* One-pixel lines (the ▾ drawn with borders keeps its size). */
-html[data-theme^='clean'] body.lite *:not(.vp-caret) { border-width: 1px !important; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite *:not(.vp-caret) { border-width: 1px !important; }
 /* 4px corners on cards and panels, 2px on buttons and boxes, 10px at most on pills and counts, round
    only what's a dot or a face. */
-html[data-theme^='clean'] body.lite :is(*, *::before, *::after) { border-radius: var(--radius) !important; }
-html[data-theme^='clean'] body.lite :is(button, .btn, input, select, textarea, kbd, .key, .mi-key, [role=tab], [role=option], .menu-item, .vp-opt) { border-radius: var(--radius-sm) !important; }
-html[data-theme^='clean'] body.lite :is(.pill, [class*='pill'], [class*='chip'], [class*='badge'], [class*='-tag'], [class*='count'], [class*='-tab-n'], .n, .kb-n, .label) { border-radius: var(--radius-pill) !important; }
-html[data-theme^='clean'] body.lite :is(.dot, [class$='-dot'], .swatch, .spinner, .avatar, .gh-avatar, .switch, .switch::after, .floor-no, .wb-person, .sm-by, .gp-dot, .esc-face, [class*='avatar'], [class*='portrait']) { border-radius: 50% !important; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(*, *::before, *::after) { border-radius: var(--radius) !important; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(button, .btn, input, select, textarea, kbd, .key, .mi-key, [role=tab], [role=option], .menu-item, .vp-opt) { border-radius: var(--radius-sm) !important; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.pill, [class*='pill'], [class*='chip'], [class*='badge'], [class*='-tag'], [class*='count'], [class*='-tab-n'], .n, .kb-n, .label) { border-radius: var(--radius-pill) !important; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.dot, [class$='-dot'], .swatch, .spinner, .avatar, .gh-avatar, .switch, .switch::after, .floor-no, .wb-person, .sm-by, .gp-dot, .esc-face, [class*='avatar'], [class*='portrait']) { border-radius: 50% !important; }
 /* The hard shadows drawn in the ink rather than the --edge token. */
-html[data-theme^='clean'] body.lite :is(.floor-item, .hud-menu, .btn.small, .settings-tab.on, .wb-window, .wizard .wz-card, .key, .elevator .floor-btn, .gp-label) { box-shadow: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.floor-item, .hud-menu, .btn.small, .settings-tab.on, .wb-window, .wizard .wz-card, .key, .elevator .floor-btn, .gp-label) { box-shadow: none; }
 /* The lines drawn in the ink: the theme's line color instead. */
-html[data-theme^='clean'] body.lite :is(.hud-menu, .mi-key, .menu-foot kbd, .switch, .switch::after, .menu-item.on .mi-label::after, .ro-card, .ro-leads, .ro-pill, .ro-md, .ro-prop, .ro-kind, .ro-level, .ro-num, .ro-text, .ro-ask-input, .ro-paused, .ro-select, .sa-grade, .sa-pill, .sk-row, .sk-gate, .setup-panel, .setup-chip, .setup-stage, .settings-nav, .scope, .svc-auto, .repo-pulls li, .floor-item, .floor-no, .accounts .invite-row select, .role, .bs-side, .bs-toc, .sign-preview, .upgrade-status, .upgrade-error, .wb-window, .wb-window > header, .wizard :is(.wz-nav, select, .wz-card, .wz-warn, .wz-note, .wz-q, .wz-role, .wz-facts, .wz-step, .wz-log), .dot, .pill, .card) { border-color: var(--line); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.hud-menu, .mi-key, .menu-foot kbd, .switch, .switch::after, .menu-item.on .mi-label::after, .ro-card, .ro-leads, .ro-pill, .ro-md, .ro-prop, .ro-kind, .ro-level, .ro-num, .ro-text, .ro-ask-input, .ro-paused, .ro-select, .sa-grade, .sa-pill, .sk-row, .sk-gate, .setup-panel, .setup-chip, .setup-stage, .settings-nav, .scope, .svc-auto, .repo-pulls li, .floor-item, .floor-no, .accounts .invite-row select, .role, .bs-side, .bs-toc, .sign-preview, .upgrade-status, .upgrade-error, .wb-window, .wb-window > header, .wizard :is(.wz-nav, select, .wz-card, .wz-warn, .wz-note, .wz-q, .wz-role, .wz-facts, .wz-step, .wz-log), .dot, .pill, .card) { border-color: var(--line); }
 /* Nothing presses down or tips over. */
-html[data-theme^='clean'] body.lite :is(.btn, .floor-item, .floor-btn, .gp-label, .lite-bar #to-home):is(:active, .on, .here) { transform: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.btn, .floor-item, .floor-btn, .gp-label, .lite-bar #to-home):is(:active, .on, .here) { transform: none; }
 
 /* ---- Buttons: flat, a hover tint, the primary one in the accent ------------------------------------ */
-html[data-theme^='clean'] body.lite .btn { gap: 6px; padding: 4px 10px; min-height: 26px; line-height: 18px; background: var(--card); border-color: var(--line); transition: background-color .1s; }
-html[data-theme^='clean'] body.lite .btn:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 6%, var(--card)); }
-html[data-theme^='clean'] body.lite .btn:active:not(:disabled) { background: color-mix(in srgb, var(--ink) 11%, var(--card)); }
-html[data-theme^='clean'] body.lite :is(.btn.primary, .btn.on) { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-html[data-theme^='clean'] body.lite :is(.btn.primary, .btn.on):hover:not(:disabled) { background: color-mix(in srgb, #000 12%, var(--accent)); }
-html[data-theme^='clean'] body.lite .btn.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
-html[data-theme^='clean'] body.lite .btn:disabled { opacity: .45; }
-html[data-theme^='clean'] body.lite .btn:focus-visible { outline: 1px solid var(--focus); outline-offset: 1px; }
-html[data-theme^='clean'] body.lite .close { width: 26px; height: 26px; min-height: 26px; padding: 0; background: transparent; border-color: transparent; color: var(--muted); }
-html[data-theme^='clean'] body.lite .close:hover { background: var(--hover); color: var(--ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .btn { gap: 6px; padding: 4px 10px; min-height: 26px; line-height: 18px; background: var(--card); border-color: var(--line); transition: background-color .1s; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .btn:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 6%, var(--card)); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .btn:active:not(:disabled) { background: color-mix(in srgb, var(--ink) 11%, var(--card)); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.btn.primary, .btn.on) { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.btn.primary, .btn.on):hover:not(:disabled) { background: color-mix(in srgb, #000 12%, var(--accent)); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .btn.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .btn:disabled { opacity: .45; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .btn:focus-visible { outline: 1px solid var(--focus); outline-offset: 1px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .close { width: 26px; height: 26px; min-height: 26px; padding: 0; background: transparent; border-color: transparent; color: var(--muted); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .close:hover { background: var(--hover); color: var(--ink); }
 
 /* ---- Tabs: an editor's toolbar of flat tabs, the open one underlined in the accent ----------------- */
-html[data-theme^='clean'] body.lite :is(.lite-tabs, .home-tabs) { gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
-html[data-theme^='clean'] body.lite :is(.lite-tabs, .home-tabs) .btn {
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.lite-tabs, .home-tabs) { gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.lite-tabs, .home-tabs) .btn {
   min-height: 34px; padding: 6px 12px; margin-bottom: -1px; background: transparent; border: 0; border-bottom: 1px solid transparent !important;
   border-radius: 0 !important; color: var(--muted); font-size: var(--fs-body); font-weight: 400;
 }
-html[data-theme^='clean'] body.lite :is(.lite-tabs, .home-tabs) .btn:hover { background: var(--hover); color: var(--ink); }
-html[data-theme^='clean'] body.lite :is(.lite-tabs, .home-tabs) .btn.on { background: transparent; color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.lite-tabs, .home-tabs) .btn:hover { background: var(--hover); color: var(--ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.lite-tabs, .home-tabs) .btn.on { background: transparent; color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
 
 /* ---- The bars: the top one like a title bar, the bottom one like a panel's toolbar ----------------- */
-html[data-theme^='clean'] body.lite .lite-bar { gap: 6px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: 6px; background: var(--paper-2); }
-html[data-theme^='clean'] body.lite .lite-bar .btn { height: 30px; min-height: 30px; padding: 0 8px; background: transparent; border-color: transparent; color: var(--ink); }
-html[data-theme^='clean'] body.lite .lite-bar .btn:hover { background: var(--hover); }
-html[data-theme^='clean'] body.lite .lite-bar .btn.on, html[data-theme^='clean'] body.lite .lite-bar .btn[aria-expanded=true] { background: var(--hover); color: var(--ink); }
-html[data-theme^='clean'] body.lite .lite-bar :is(#to-home, .lite-theme, .lite-menu) { width: 30px; padding: 0; justify-content: center; }
-html[data-theme^='clean'] .lite-floor-label { font-size: var(--fs-section); font-weight: var(--fw-semi); letter-spacing: .04em; }
-html[data-theme^='clean'] .lite-floor select { font: var(--fw-semi) 15px/1.25 var(--font); }
-html[data-theme^='clean'] .lite-floor select:not(:disabled) { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1.5 1.5l4.5 4.5 4.5-4.5' fill='none' stroke='%23888' stroke-width='1.3'/%3E%3C/svg%3E"); background-size: 10px; }
-html[data-theme^='clean'] body.lite .lite-nav { gap: 6px; padding-top: 6px; background: var(--paper-2); }
-html[data-theme^='clean'] body.lite .lite-nav .btn { min-height: 34px; font-size: var(--fs-body); }
-html[data-theme^='clean'] body.lite .lite-nav .n { background: var(--muted); color: var(--paper); font-size: var(--fs-pill); line-height: 16px; min-width: 16px; }
-html[data-theme^='clean'] body.lite .lite-nav .btn.primary .n { background: var(--accent-ink); color: var(--accent); }
-html[data-theme^='clean'] .lite-meta { font-size: var(--fs-small); font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-bar { gap: 6px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: 6px; background: var(--paper-2); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-bar .btn { height: 30px; min-height: 30px; padding: 0 8px; background: transparent; border-color: transparent; color: var(--ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-bar .btn:hover { background: var(--hover); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-bar .btn.on, html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-bar .btn[aria-expanded=true] { background: var(--hover); color: var(--ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-bar :is(#to-home, .lite-theme, .lite-menu) { width: 30px; padding: 0; justify-content: center; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .lite-floor-label { font-size: var(--fs-section); font-weight: var(--fw-semi); letter-spacing: .04em; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .lite-floor select { font: var(--fw-semi) 15px/1.25 var(--font); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .lite-floor select:not(:disabled) { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1.5 1.5l4.5 4.5 4.5-4.5' fill='none' stroke='%23888' stroke-width='1.3'/%3E%3C/svg%3E"); background-size: 10px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-nav { gap: 6px; padding-top: 6px; background: var(--paper-2); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-nav .btn { min-height: 34px; font-size: var(--fs-body); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-nav .n { background: var(--muted); color: var(--paper); font-size: var(--fs-pill); line-height: 16px; min-width: 16px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-nav .btn.primary .n { background: var(--accent-ink); color: var(--accent); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .lite-meta { font-size: var(--fs-small); font-weight: 400; }
 @media (max-width: 640px) {
-  html[data-theme^='clean'] body.lite .lite-bar :is(#to-home, .lite-theme, .lite-menu) { width: 28px; }
+  html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-bar :is(#to-home, .lite-theme, .lite-menu) { width: 28px; }
 }
 
 /* ---- Headings: the type scale ------------------------------------------------------------------ */
-html[data-theme^='clean'] body.lite h1 { font-size: var(--fs-h1); font-weight: var(--fw-semi); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite h1 { font-size: var(--fs-h1); font-weight: var(--fw-semi); }
 /* A section's header, in small capitals like an editor's side bar titles. */
-html[data-theme^='clean'] body.lite :is(.lite-h, .menu-sec, .an-h h3, .kb-col-h) { font-size: var(--fs-section); font-weight: var(--fw-semi); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-html[data-theme^='clean'] body.lite .modal header h2 { font-size: var(--fs-title); font-weight: var(--fw-semi); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.lite-h, .menu-sec, .an-h h3, .kb-col-h) { font-size: var(--fs-section); font-weight: var(--fw-semi); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .modal header h2 { font-size: var(--fs-title); font-weight: var(--fw-semi); }
 
 /* ---- Cards and the worker list -------------------------------------------------------------------- */
-html[data-theme^='clean'] body.lite .lite-worker { background: var(--card); }
-html[data-theme^='clean'] body.lite .lite-worker.waiting { box-shadow: inset 2px 0 0 var(--bad); }
-html[data-theme^='clean'] body.lite .lite-worker.done.waiting { box-shadow: inset 2px 0 0 var(--good); }
-html[data-theme^='clean'] .lite-card { padding: 10px 10px 10px 12px; }
-html[data-theme^='clean'] .lite-card .dot { width: 10px; height: 10px; margin-top: 4px; border: 0; }
-html[data-theme^='clean'] .lite-name { font-size: var(--fs-body); font-weight: var(--fw-semi); }
-html[data-theme^='clean'] :is(.lite-task, .lite-now) { font-size: var(--fs-body); font-weight: 400; }
-html[data-theme^='clean'] :is(.lite-sub, .lite-state small) { font-size: var(--fs-small); font-weight: 400; }
-html[data-theme^='clean'] body.lite .lite-say { width: 30px; height: 30px; min-height: 30px; }
-html[data-theme^='clean'] .lite-empty { font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-worker { background: var(--card); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-worker.waiting { box-shadow: inset 2px 0 0 var(--bad); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-worker.done.waiting { box-shadow: inset 2px 0 0 var(--good); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .lite-card { padding: 10px 10px 10px 12px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .lite-card .dot { width: 10px; height: 10px; margin-top: 4px; border: 0; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .lite-name { font-size: var(--fs-body); font-weight: var(--fw-semi); }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(.lite-task, .lite-now) { font-size: var(--fs-body); font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(.lite-sub, .lite-state small) { font-size: var(--fs-small); font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-say { width: 30px; height: 30px; min-height: 30px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .lite-empty { font-weight: 400; }
 
 /* ---- Status pills and dots: small, flat, the color in a soft fill ---------------------------------- */
-html[data-theme^='clean'] body.lite .pill { padding: 1px 6px; border-color: transparent; font-weight: 400; line-height: 16px; background: var(--neutral-soft); color: var(--ink-2); }
-html[data-theme^='clean'] body.lite .pill:is(.starting, .idle) { background: var(--info-soft); color: var(--ink-2); }
-html[data-theme^='clean'] body.lite .pill.working { background: var(--warn-soft); color: var(--warn-ink); }
-html[data-theme^='clean'] body.lite .pill.needs_input { background: var(--bad); color: #fff; animation: none; }
-html[data-theme^='clean'] body.lite .pill.done { background: var(--good-soft); color: var(--good-ink); }
-html[data-theme^='clean'] body.lite .pill.lost { background: var(--warn-soft); color: var(--warn-ink); }
-html[data-theme^='clean'] body.lite .dot { border-color: transparent; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .pill { padding: 1px 6px; border-color: transparent; font-weight: 400; line-height: 16px; background: var(--neutral-soft); color: var(--ink-2); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .pill:is(.starting, .idle) { background: var(--info-soft); color: var(--ink-2); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .pill.working { background: var(--warn-soft); color: var(--warn-ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .pill.needs_input { background: var(--bad); color: #fff; animation: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .pill.done { background: var(--good-soft); color: var(--good-ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .pill.lost { background: var(--warn-soft); color: var(--warn-ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .dot { border-color: transparent; }
 /* Badges, like an editor's activity badges: small, round, the accent or the error color. */
-html[data-theme^='clean'] body.lite :is(.ro-badge, .lite-tabs .ro-tab-n:not(:empty), .ro-tab-n:not(:empty)) { min-width: 16px; padding: 0 4px; font-size: var(--fs-pill); font-weight: var(--fw-semi); line-height: 16px; border: 0; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.ro-badge, .lite-tabs .ro-tab-n:not(:empty), .ro-tab-n:not(:empty)) { min-width: 16px; padding: 0 4px; font-size: var(--fs-pill); font-weight: var(--fw-semi); line-height: 16px; border: 0; }
 
 /* ---- Menus: the ☰, the view dropdown, the 🎨's list ------------------------------------------------- */
-html[data-theme^='clean'] body.lite :is(.hud-menu, .vp-list) { padding: 4px; background: var(--card); border-color: var(--line); box-shadow: 0 2px 8px rgba(0, 0, 0, .16); }
-html[data-theme^='clean'] body.lite :is(.menu-item, .vp-opt) { padding: 4px 8px; font-size: var(--fs-body); font-weight: 400; }
-html[data-theme^='clean'] body.lite :is(.menu-item:hover, .menu-item:focus-visible, .vp-opt.active) { background: var(--accent-soft); box-shadow: none; color: var(--ink); }
-html[data-theme^='clean'] body.lite .vp-text b { font-size: var(--fs-body); font-weight: 400; }
-html[data-theme^='clean'] body.lite .vp-opt[aria-selected=true] .vp-text b { color: var(--ink); font-weight: var(--fw-semi); }
-html[data-theme^='clean'] body.lite .vp-text small, html[data-theme^='clean'] body.lite .mi-label small { font-size: var(--fs-pill); font-weight: 400; }
-html[data-theme^='clean'] body.lite .vp-tick { color: var(--accent); font-weight: 400; }
-html[data-theme^='clean'] body.lite .vp-label { font-weight: 400; }
-html[data-theme^='clean'] body.lite .vp-ico { display: none; }
-html[data-theme^='clean'] body.lite .mi-icon { width: 16px; font-size: 0; color: var(--muted); }
-html[data-theme^='clean'] body.lite .mi-key, html[data-theme^='clean'] body.lite .menu-foot kbd { font: 400 11px/16px var(--font-mono); border-bottom-width: 1px; background: var(--paper-2); }
-html[data-theme^='clean'] body.lite .menu-foot { border-top: 1px solid var(--line); font-weight: 400; }
-html[data-theme^='clean'] body.lite .menu-item.primary .mi-label { color: var(--link); }
-html[data-theme^='clean'] body.lite .switch { background: var(--neutral-soft); }
-html[data-theme^='clean'] body.lite .menu-toggle[aria-checked=true] .switch { background: var(--accent); border-color: var(--accent); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.hud-menu, .vp-list) { padding: 4px; background: var(--card); border-color: var(--line); box-shadow: 0 2px 8px rgba(0, 0, 0, .16); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.menu-item, .vp-opt) { padding: 4px 8px; font-size: var(--fs-body); font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.menu-item:hover, .menu-item:focus-visible, .vp-opt.active) { background: var(--accent-soft); box-shadow: none; color: var(--ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .vp-text b { font-size: var(--fs-body); font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .vp-opt[aria-selected=true] .vp-text b { color: var(--ink); font-weight: var(--fw-semi); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .vp-text small, html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .mi-label small { font-size: var(--fs-pill); font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .vp-tick { color: var(--accent); font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .vp-label { font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .vp-ico { display: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .mi-icon { width: 16px; font-size: 0; color: var(--muted); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .mi-key, html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .menu-foot kbd { font: 400 11px/16px var(--font-mono); border-bottom-width: 1px; background: var(--paper-2); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .menu-foot { border-top: 1px solid var(--line); font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .menu-item.primary .mi-label { color: var(--link); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .switch { background: var(--neutral-soft); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .menu-toggle[aria-checked=true] .switch { background: var(--accent); border-color: var(--accent); }
 /* The 🎨's list (ui/colortheme.ts): only a theme's name and what it's like. */
 .theme-list { min-width: 250px; }
 .theme-list .vp-tick { visibility: hidden; }
 .theme-list .vp-opt[aria-selected=true] .vp-tick { visibility: visible; }
 
 /* ---- Windows, toasts and text boxes ------------------------------------------------------------- */
-html[data-theme^='clean'] body.lite .modal { box-shadow: 0 4px 16px rgba(0, 0, 0, .2); }
-html[data-theme^='clean'] body.lite .modal header { padding: 8px 12px; background: var(--paper-2); }
-html[data-theme^='clean'] body.lite .modal footer { padding: 8px 12px; }
-html[data-theme^='clean'] body.lite .modal footer .grow { font-weight: 400; }
-html[data-theme^='clean'] body.lite :is(.modal textarea, .modal input[type=text], .modal input[type=password], .modal select, input[type=text], input[type=search], input[type=number], textarea, select) { background: var(--card); border-color: var(--line); padding: 5px 8px; font-size: var(--fs-body); }
-html[data-theme^='clean'] body.lite :is(input, textarea, select):focus { border-color: var(--focus); outline: none; }
-html[data-theme^='clean'] body.lite .modal label { font-size: var(--fs-body); font-weight: var(--fw-semi); }
-html[data-theme^='clean'] body.lite .toast { padding: 6px 12px; background: var(--card); border-color: var(--line); box-shadow: 0 2px 8px rgba(0, 0, 0, .16); }
-html[data-theme^='clean'] body.lite .toast.warn { background: var(--warn-soft); }
-html[data-theme^='clean'] body.lite .toast.error { background: var(--bad-soft); }
-html[data-theme^='clean'] body.lite .conn { font-weight: var(--fw-semi); border: 0; }
-html[data-theme^='clean'] body.lite :is(.svc-title) { font-weight: var(--fw-semi); }
-html[data-theme^='clean'] body.lite :is(.svc-meta, .when, .setting-note) { font-weight: 400; }
-html[data-theme^='clean'] body.lite .svc-list li { box-shadow: none; }
-html[data-theme^='clean'] body.lite .swatch.sel { outline: 1px solid var(--focus); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .modal { box-shadow: 0 4px 16px rgba(0, 0, 0, .2); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .modal header { padding: 8px 12px; background: var(--paper-2); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .modal footer { padding: 8px 12px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .modal footer .grow { font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.modal textarea, .modal input[type=text], .modal input[type=password], .modal select, input[type=text], input[type=search], input[type=number], textarea, select) { background: var(--card); border-color: var(--line); padding: 5px 8px; font-size: var(--fs-body); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(input, textarea, select):focus { border-color: var(--focus); outline: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .modal label { font-size: var(--fs-body); font-weight: var(--fw-semi); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .toast { padding: 6px 12px; background: var(--card); border-color: var(--line); box-shadow: 0 2px 8px rgba(0, 0, 0, .16); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .toast.warn { background: var(--warn-soft); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .toast.error { background: var(--bad-soft); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .conn { font-weight: var(--fw-semi); border: 0; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.svc-title) { font-weight: var(--fw-semi); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.svc-meta, .when, .setting-note) { font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .svc-list li { box-shadow: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .swatch.sel { outline: 1px solid var(--focus); }
 
 /* ---- The 2D view's game frames, flat --------------------------------------------------------------- */
-html[data-theme^='clean'] :is(body.pixel, .px-game) { --px-step: 0px; --px-shade: transparent; --px-ink: var(--line); --px-teal-hi: var(--focus); }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(body.pixel, .px-game) { --px-step: 0px; --px-shade: transparent; --px-ink: var(--line); --px-teal-hi: var(--focus); }
 html[data-theme='clean-light'] :is(body.pixel, .px-game) { --px-void: #e8e8e8; }
 html[data-theme='clean-dark'] :is(body.pixel, .px-game) { --px-void: #111111; --px-face-lo: #2d2d2d; }
-html[data-theme^='clean'] :is(body.pixel .btn, body.pixel .px-btn, .px-game .px-btn) {
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(body.pixel .btn, body.pixel .px-btn, .px-game .px-btn) {
   min-height: 28px; margin: 0; padding: 0 10px; border: 1px solid var(--line); box-shadow: none; filter: none;
   font: 400 var(--fs-body)/1 var(--font); letter-spacing: 0; transition: background-color .1s;
 }
-html[data-theme^='clean'] :is(body.pixel .btn, body.pixel .px-btn, .px-game .px-btn):active:not(:disabled) { transform: none; box-shadow: none; background: var(--px-face-lo); }
-html[data-theme^='clean'] :is(body.pixel .btn, body.pixel .px-btn, .px-game .px-btn):hover:not(:disabled) { filter: none; background: color-mix(in srgb, var(--ink) 6%, var(--card)); }
-html[data-theme^='clean'] :is(body.pixel .btn.primary, body.pixel .px-btn.on, .px-game .px-btn.on) { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: none; }
-html[data-theme^='clean'] :is(body.pixel .btn, body.pixel .px-btn):disabled { transform: none; filter: none; opacity: .45; }
-html[data-theme^='clean'] body.pixel .lite-bar .btn { height: 30px; min-height: 30px; }
-html[data-theme^='clean'] body.pixel .lite-bar .btn[aria-expanded=true] { transform: none; background: var(--hover); }
-html[data-theme^='clean'] :is(.px-panel, body.pixel .px-tip) { border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0, 0, 0, .16); }
-html[data-theme^='clean'] body.pixel :is(.vp-list, .hud-menu) { border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0, 0, 0, .16); background: var(--card); }
-html[data-theme^='clean'] body.pixel kbd { box-shadow: none; border: 1px solid var(--line); background: var(--paper-2); font: 400 10px/1.4 var(--font-mono); }
-html[data-theme^='clean'] :is(body.pixel, .px-game) .px-btn kbd { box-shadow: none; }
-html[data-theme^='clean'] body.pixel .px-next:not(:disabled) { animation: none; }
-html[data-theme^='clean'] .px-menu-title { font-size: var(--fs-section); font-weight: var(--fw-semi); color: var(--muted); }
-html[data-theme^='clean'] body.pixel .px-menu-item { margin-bottom: 2px; width: 100%; }
-html[data-theme^='clean'] .px-zoom { padding: 4px; gap: 4px; }
-html[data-theme^='clean'] :is(body.pixel, .px-game) .px-zoom .px-btn { font-size: 15px; }
-html[data-theme^='clean'] .px-chat-input { box-shadow: none; border: 1px solid var(--line); font: 400 var(--fs-body) var(--font); }
-html[data-theme^='clean'] .px-chat-input:focus { border-color: var(--focus); box-shadow: none; }
-html[data-theme^='clean'] :is(.px-summary, .px-tip .px-task, .px-tip .px-role) { font-weight: 400; }
-html[data-theme^='clean'] :is(.px-meta, .px-foot, .px-keys, .px-tip, .px-chat-log) { font-weight: 400; }
-html[data-theme^='clean'] .px-tip b { font-size: var(--fs-body); font-weight: var(--fw-semi); }
-html[data-theme^='clean'] body.pixel .lite-bar, html[data-theme^='clean'] .px-foot { border-color: var(--line); }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(body.pixel .btn, body.pixel .px-btn, .px-game .px-btn):active:not(:disabled) { transform: none; box-shadow: none; background: var(--px-face-lo); }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(body.pixel .btn, body.pixel .px-btn, .px-game .px-btn):hover:not(:disabled) { filter: none; background: color-mix(in srgb, var(--ink) 6%, var(--card)); }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(body.pixel .btn.primary, body.pixel .px-btn.on, .px-game .px-btn.on) { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(body.pixel .btn, body.pixel .px-btn):disabled { transform: none; filter: none; opacity: .45; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.pixel .lite-bar .btn { height: 30px; min-height: 30px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.pixel .lite-bar .btn[aria-expanded=true] { transform: none; background: var(--hover); }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(.px-panel, body.pixel .px-tip) { border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0, 0, 0, .16); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.pixel :is(.vp-list, .hud-menu) { border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0, 0, 0, .16); background: var(--card); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.pixel kbd { box-shadow: none; border: 1px solid var(--line); background: var(--paper-2); font: 400 10px/1.4 var(--font-mono); }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(body.pixel, .px-game) .px-btn kbd { box-shadow: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.pixel .px-next:not(:disabled) { animation: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .px-menu-title { font-size: var(--fs-section); font-weight: var(--fw-semi); color: var(--muted); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.pixel .px-menu-item { margin-bottom: 2px; width: 100%; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .px-zoom { padding: 4px; gap: 4px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(body.pixel, .px-game) .px-zoom .px-btn { font-size: 15px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .px-chat-input { box-shadow: none; border: 1px solid var(--line); font: 400 var(--fs-body) var(--font); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .px-chat-input:focus { border-color: var(--focus); box-shadow: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(.px-summary, .px-tip .px-task, .px-tip .px-role) { font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) :is(.px-meta, .px-foot, .px-keys, .px-tip, .px-chat-log) { font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .px-tip b { font-size: var(--fs-body); font-weight: var(--fw-semi); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.pixel .lite-bar, html:is([data-theme^='clean'], [data-theme^='portal']) .px-foot { border-color: var(--line); }
 
 /* ---- The board, the corkboards and the summary ---------------------------------------------------- */
 /* The sticky notes lie flat, without their pins, as plain cards. */
-html[data-theme^='clean'] .card { transform: none; background: var(--card) !important; color: var(--ink); box-shadow: none; }
-html[data-theme^='clean'] .card:hover { transform: none; background: var(--hover) !important; }
-html[data-theme^='clean'] .card::before { content: none; }
-html[data-theme^='clean'] .card :is(.num, .meta) { color: var(--muted); }
-html[data-theme^='clean'] .md img { background: transparent; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .card { transform: none; background: var(--card) !important; color: var(--ink); box-shadow: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .card:hover { transform: none; background: var(--hover) !important; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .card::before { content: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .card :is(.num, .meta) { color: var(--muted); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .md img { background: transparent; }
 
 /* ---- The Git tab's metro map (ui/git/) ------------------------------------------------------------- */
 /* The robots' ✨ 🙋 🎉 💤 become a plain mark: a dot while working, a ? when asking, a ✓ when done. */
 .gp-fx-clean { display: none; }
-html[data-theme^='clean'] .gp-fx { display: none; }
-html[data-theme^='clean'] .gp-fx-clean { display: inline; font: var(--fw-semi) 13px var(--font); }
-html[data-theme^='clean'] .gp-svg text.gp-fx-clean { fill: var(--muted); }
-html[data-theme^='clean'] .gp-svg text.gp-fx-clean.st-needs_input { fill: var(--bad); }
-html[data-theme^='clean'] .gp-svg text.gp-fx-clean.st-done { fill: var(--good-ink); }
-html[data-theme^='clean'] .gp-svg text.gp-fx-clean.st-working { fill: var(--accent); }
-html[data-theme^='clean'] .gp-older { font-weight: var(--fw-semi); font-size: 16px; }
-html[data-theme^='clean'] .gp-bed { stroke: var(--rule-soft); }
-html[data-theme^='clean'] .gp-rail { stroke: var(--rule-strong); stroke-width: 4; }
-html[data-theme^='clean'] .gp-sleepers { display: none; }
-html[data-theme^='clean'] .gp-st circle { stroke-width: 1.5; }
-html[data-theme^='clean'] .gp-scroll { background-image: none; background-color: var(--paper); }
-html[data-theme^='clean'] .gp-line { stroke-width: 3; }
-html[data-theme^='clean'] .gp-line-bed { stroke-width: 6; stroke: var(--paper); }
-html[data-theme^='clean'] .gp-lane:hover .gp-line { stroke-width: 4; }
-html[data-theme^='clean'] .gp-lane:hover .gp-line-bed { stroke-width: 7; }
-html[data-theme^='clean'] .gp-dot { stroke-width: 1.5; }
-html[data-theme^='clean'] .gp-more { font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-fx { display: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-fx-clean { display: inline; font: var(--fw-semi) 13px var(--font); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-svg text.gp-fx-clean { fill: var(--muted); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-svg text.gp-fx-clean.st-needs_input { fill: var(--bad); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-svg text.gp-fx-clean.st-done { fill: var(--good-ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-svg text.gp-fx-clean.st-working { fill: var(--accent); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-older { font-weight: var(--fw-semi); font-size: 16px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-bed { stroke: var(--rule-soft); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-rail { stroke: var(--rule-strong); stroke-width: 4; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-sleepers { display: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-st circle { stroke-width: 1.5; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-scroll { background-image: none; background-color: var(--paper); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-line { stroke-width: 3; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-line-bed { stroke-width: 6; stroke: var(--paper); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-lane:hover .gp-line { stroke-width: 4; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-lane:hover .gp-line-bed { stroke-width: 7; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-dot { stroke-width: 1.5; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .gp-more { font-weight: 400; }
 /* The label keeps its branch's color down its left edge. */
-html[data-theme^='clean'] body.lite .gp-label { border-left: 2px solid var(--lane, var(--line)) !important; border-color: var(--line); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .gp-label { border-left: 2px solid var(--lane, var(--line)) !important; border-color: var(--line); }
 /* The floor picker in the top bar is a title, not a box. */
-html[data-theme^='clean'] body.lite .lite-bar .lite-floor select { padding: 0 18px 0 0; border: 0; background-color: transparent; font-size: 15px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-bar .lite-floor select { padding: 0 18px 0 0; border: 0; background-color: transparent; font-size: 15px; }
 /* The open tab stays a tab under the pointer too (not a lit primary button). */
-html[data-theme^='clean'] body.lite :is(.lite-tabs, .home-tabs) .btn.btn:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.lite-tabs, .home-tabs) .btn.btn:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
 /* The home page's 🏠 while you're on it, and its floors' numbers: quiet, like the rest of the bar. */
-html[data-theme^='clean'] body.lite .lite-bar #to-home.on { background: var(--hover); color: var(--ink); box-shadow: none; }
-html[data-theme^='clean'] .kb-n { background: var(--neutral-soft); color: var(--ink-2); font-weight: 400; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lite-bar #to-home.on { background: var(--hover); color: var(--ink); box-shadow: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .kb-n { background: var(--neutral-soft); color: var(--ink-2); font-weight: 400; }

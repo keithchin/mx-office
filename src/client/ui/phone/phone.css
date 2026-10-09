@@ -207,10 +207,10 @@ html[data-theme='terminal'] .tp-launch, html[data-theme='terminal'] .tp-screen, 
 html[data-theme='terminal'] .tp-row::before { content: '>'; align-self: center; color: var(--muted); font-weight: 900; }
 
 /* The launcher stays round in the Clean themes, whose buttons are otherwise square-ish. */
-html[data-theme^='clean'] body.lite button.tp-launch { border-radius: 50% !important; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite button.tp-launch { border-radius: 50% !important; }
 /* Clean: an accent-blue disc with a white icon in both, like the theme's primary button. */
-html[data-theme^='clean'] body.lite button.tp-launch { --tp-bg: var(--accent); --tp-fg: #ffffff; color: var(--tp-fg); border-color: transparent; box-shadow: 0 2px 6px rgba(0, 0, 0, .28); }
-html[data-theme^='clean'] body.lite button.tp-launch.tp-on { --tp-bg: var(--ink); --tp-fg: var(--paper); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite button.tp-launch { --tp-bg: var(--accent); --tp-fg: #ffffff; color: var(--tp-fg); border-color: transparent; box-shadow: 0 2px 6px rgba(0, 0, 0, .28); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite button.tp-launch.tp-on { --tp-bg: var(--ink); --tp-fg: var(--paper); }
 /* The header's buttons keep the ink of the window they're on, whatever a theme does to buttons. */
 html[data-theme] body.lite .tp-hbtn { color: var(--ink); }
 /* The 2D view: above its zoom buttons, which sit in the stage's bottom-right corner. */

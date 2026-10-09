@@ -28,8 +28,8 @@
 
 html[data-theme='terminal'] .ld-card, html[data-theme='terminal'] .ld-bar, html[data-theme='terminal'] .ld-fill { border-radius: 0; box-shadow: none; }
 html[data-theme='terminal'] .ld-spin { border-radius: 0; }
-html[data-theme^='clean'] .ld-card { border-width: 1px; border-color: var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14); }
-html[data-theme^='clean'] .ld-bar { height: 3px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .ld-card { border-width: 1px; border-color: var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14); }
+html:is([data-theme^='clean'], [data-theme^='portal']) .ld-bar { height: 3px; }
 
 @media (prefers-reduced-motion: reduce) {
   .ld-spin { animation: none; border-top-color: var(--rule-strong); border-right-color: var(--accent); }

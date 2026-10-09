@@ -70,6 +70,9 @@ function start() {
   void refresh();
 }
 
+/** Asks for every floor's state again now (the Portal cards' Pause and Resume, home/portal.ts). */
+export const refreshHomeRunState = () => void refresh();
+
 /** Ask again soon after a click, so its run shows. */
 const soon = () => setTimeout(() => void refresh(), 600);
 

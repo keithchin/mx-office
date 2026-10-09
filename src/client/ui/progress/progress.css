@@ -55,8 +55,8 @@ span.pg-seg { cursor: default; padding: 0; }
 body.pixel .pg-host { margin: 0; padding: 4px 14px; background: var(--px-panel, var(--card)); border-bottom: 2px solid var(--line); }
 /* The Terminal theme's square corners, the clean themes' flat thin look. */
 html[data-theme='terminal'] :is(.pg-seg, .pg-fold, .pg-label, .pg-tip, .pg-mark) { border-radius: 0; }
-html[data-theme^='clean'] .pg-seg { border-radius: 2px; font-weight: 600; }
-html[data-theme^='clean'] .pg-tip { border-width: 1px; border-radius: 4px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .pg-seg { border-radius: 2px; font-weight: 600; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .pg-tip { border-width: 1px; border-radius: 4px; }
 
 /* Home's cards: the same segments, thin, and the one line. */
 .pg-mini { display: flex; flex-direction: column; gap: 3px; min-height: 22px; margin: 4px 0 2px; }

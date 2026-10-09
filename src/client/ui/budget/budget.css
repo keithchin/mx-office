@@ -6,7 +6,7 @@
   --bud-s1-est: #9ec5f4;
   --bud-s2: #eb6834;
 }
-html[data-theme='dark'], html[data-theme='terminal'], html[data-theme='clean-dark'] {
+html[data-theme='dark'], html[data-theme='terminal'], html[data-theme='clean-dark'], html[data-theme='portal-dark'] {
   --bud-s1: #3987e5;
   --bud-s1-est: #184f95;
   --bud-s2: #d95926;
@@ -28,8 +28,8 @@ html[data-theme='dark'], html[data-theme='terminal'], html[data-theme='clean-dar
 .bud-chip[data-tone='warn']::after { background: var(--warn-ink); }
 .bud-chip[data-tone='bad']::after { background: var(--bad-ink); }
 .bud-icon { display: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
-html[data-theme^='clean'] .bud-icon { display: inline-block; }
-html[data-theme^='clean'] .bud-emo { display: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .bud-icon { display: inline-block; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .bud-emo { display: none; }
 .lite-bar .bud-office { margin-left: auto; height: auto; }
 .lite-bar .lite-menu + .bud-office, .lite-bar .lite-theme ~ .bud-office { margin-left: 4px; }
 @media (max-width: 640px) { .lite-bar .bud-office .bud-chip-t { font-size: 11px; } .bud-meta-row { flex-wrap: wrap; } }

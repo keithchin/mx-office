@@ -20,8 +20,8 @@ button.pr-toggle:focus-visible { outline: 2px solid var(--link); outline-offset:
 .pr-tg-svg { display: none; width: 14px; height: 14px; }
 .pr-tg-svg svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 .pr-tg-svg svg .fill { fill: currentColor; stroke: none; }
-html[data-theme^='clean'] .pr-tg-svg { display: inline-flex; }
-html[data-theme^='clean'] .pr-tg-emo { display: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .pr-tg-svg { display: inline-flex; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .pr-tg-emo { display: none; }
 .pr-tg-act { padding-left: 6px; border-left: 1px solid var(--rule-strong); color: var(--link); }
 .pr-tg-bar { position: absolute; left: 0; bottom: 0; height: 2px; width: var(--pr-pct, 0%); background: var(--warn-ink); transition: width .4s ease; }
 html[data-theme='terminal'] .pr-toggle { border-radius: 0; }

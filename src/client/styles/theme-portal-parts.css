@@ -1,0 +1,84 @@
+/* The Portal themes' parts (tokens in styles/theme-portal.css): where the portal looks different from
+   Clean, whose flat shapes it otherwise wears (styles/theme-clean-parts.css). Everything is under
+   html[data-theme^='portal'], so no other theme changes; a rule here that must beat a Clean one of the
+   same shape is one step more specific (header.lite-bar, a doubled class) rather than relying on the
+   order the sheets load in. The top bar is ui/portal/topbar.css, Home's Projects page home/portal.css. */
+
+/* ---- The page: white, a 14px body, semibold titles -------------------------------------------------- */
+html[data-theme^='portal'] body.lite { background: var(--paper); color: var(--ink); }
+html[data-theme^='portal'] body.lite h1 { font-size: var(--fs-h1); font-weight: var(--fw-semi); letter-spacing: -.005em; }
+html[data-theme^='portal'] body.lite h2 { font-weight: var(--fw-semi); }
+/* Section headings in sentence case like the portal's, not an editor's small capitals. */
+html[data-theme^='portal'] body.lite.lite :is(.lite-h, .an-h h3, .kb-col-h) { font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--ink); }
+html[data-theme^='portal'] body.lite .lite-meta { font-size: 13px; color: var(--muted); }
+
+/* ---- Buttons: grey-outlined, the primary one in the portal's blue ------------------------------------- */
+html[data-theme^='portal'] body.lite.lite .btn { min-height: 32px; padding: 5px 12px; border-color: var(--rule-strong); border-radius: var(--radius-sm) !important; background: var(--card); color: var(--ink); font-size: var(--fs-btn); }
+html[data-theme^='portal'] body.lite.lite .btn:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 5%, var(--card)); border-color: var(--ink-2); }
+html[data-theme^='portal'] body.lite.lite :is(.btn.primary, .btn.on) { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+html[data-theme^='portal'] body.lite.lite :is(.btn.primary, .btn.on):hover:not(:disabled) { background: #0f5fd6; border-color: #0f5fd6; }
+html[data-theme^='portal'] body.lite.lite .btn.danger { background: var(--bad); border-color: var(--bad); color: #ffffff; }
+html[data-theme^='portal'] body.lite.lite .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+html[data-theme^='portal'] body.lite.lite .close { width: 28px; height: 28px; min-height: 28px; padding: 0; border-color: transparent; background: transparent; color: var(--muted); }
+html[data-theme^='portal'] body.lite.lite .close:hover { background: var(--hover); color: var(--ink); }
+
+/* ---- Tabs: the portal's underline tabs, the open one in the ink with a 3px bar under it --------------- */
+html[data-theme^='portal'] body.lite.lite :is(.lite-tabs, .home-tabs) { gap: 8px; border-bottom: 1px solid var(--line); }
+html[data-theme^='portal'] body.lite.lite :is(.lite-tabs, .home-tabs) .btn {
+  min-height: 40px; padding: 8px 14px; border: 0; border-bottom: 0 !important; border-radius: 0 !important; background: transparent;
+  color: var(--muted); font-size: 14px; font-weight: 400;
+}
+html[data-theme^='portal'] body.lite.lite :is(.lite-tabs, .home-tabs) .btn:hover:not(:disabled) { background: transparent; color: var(--ink); box-shadow: inset 0 -2px 0 var(--line); }
+html[data-theme^='portal'] body.lite.lite :is(.lite-tabs, .home-tabs) .btn.on { background: transparent; color: var(--ink); font-weight: var(--fw-semi); box-shadow: inset 0 -3px 0 var(--ink); }
+html[data-theme^='portal'] body.lite.lite :is(.lite-tabs, .home-tabs) .btn.on:hover:not(:disabled) { box-shadow: inset 0 -3px 0 var(--ink); }
+
+/* A phone: the tabs in one row that scrolls sideways, as the portal's do. */
+@media (max-width: 640px) {
+  html[data-theme^='portal'] body.lite.lite :is(.lite-tabs, .home-tabs) { flex-wrap: nowrap; gap: 0; overflow-x: auto; scrollbar-width: none; }
+  html[data-theme^='portal'] body.lite.lite :is(.lite-tabs, .home-tabs) .btn { flex: none; padding: 8px 12px; }
+}
+
+/* ---- Text boxes and selects: a grey 1px box, the focus ring in the blue -------------------------------- */
+html[data-theme^='portal'] body.lite.lite :is(input[type=text], input[type=search], input[type=number], input[type=password], input[type=email], input[type=url], textarea, select) {
+  border: 1px solid var(--rule-strong); border-radius: var(--radius-sm) !important; background-color: var(--card); color: var(--ink);
+}
+html[data-theme^='portal'] body.lite.lite :is(input, textarea, select):focus { border-color: var(--focus); outline: none; box-shadow: 0 0 0 1px var(--focus); }
+
+/* ---- Tables: a light-grey head, a line between rows ----------------------------------------------------- */
+html[data-theme^='portal'] body.lite table th { background: var(--sunken); color: var(--ink); font-weight: var(--fw-semi); }
+html[data-theme^='portal'] body.lite table :is(td, th) { border-color: var(--line); }
+
+/* ---- Menus and windows: a soft shadow, the picked item in the portal's grey -------------------------------- */
+html[data-theme^='portal'] body.lite.lite :is(.hud-menu, .vp-list) { border-color: var(--line); border-radius: 4px !important; box-shadow: var(--shadow-pop); color: var(--ink); }
+html[data-theme^='portal'] body.lite.lite :is(.menu-item:hover, .menu-item:focus-visible, .vp-opt.active) { background: var(--pt-selected); }
+html[data-theme^='portal'] body.lite.lite .modal { border-radius: 6px !important; box-shadow: 0 8px 28px rgba(10, 19, 36, .24); }
+html[data-theme^='portal'] body.lite.lite .modal header { padding: 12px 16px; background: var(--card); border-bottom: 1px solid var(--line); }
+html[data-theme^='portal'] body.lite.lite .modal header h2 { font-size: 18px; }
+html[data-theme^='portal'] body.lite.lite .modal footer { padding: 12px 16px; border-top: 1px solid var(--line); }
+html[data-theme^='portal'] body.lite.lite .toast { border-radius: 4px !important; box-shadow: var(--shadow-pop); }
+
+/* ---- The bottom bar: white, like the page ---------------------------------------------------------------- */
+html[data-theme^='portal'] body.lite.lite .lite-nav { background: var(--paper); border-top: 1px solid var(--line); }
+html[data-theme^='portal'] body.lite.lite .lite-nav .btn { min-height: 36px; }
+
+/* ---- Pills and badges: the portal's soft chips ------------------------------------------------------------- */
+html[data-theme^='portal'] body.lite.lite .pill { border-radius: 10px !important; }
+html[data-theme^='portal'] body.lite.lite :is(.lite-tabs .ro-tab-n:not(:empty), .ro-badge) { background: #e5484d; color: #ffffff; }
+
+/* ---- The 2D view's frames: the portal's lines ------------------------------------------------------------- */
+html[data-theme='portal-light'] :is(body.pixel, .px-game) { --px-void: #eef0f3; }
+html[data-theme='portal-dark'] :is(body.pixel, .px-game) { --px-void: #070c17; --px-face-lo: #222c3e; }
+
+/* ---- The docs' bar (docs.html, its own), in the top bar's navy -------------------------------------  */
+html[data-theme^='portal'] body.docs-page { --dx-bar: 44px; }
+html[data-theme^='portal'] .dx-bar { --ink: var(--pt-bar-ink); --muted: var(--pt-bar-muted); --line: var(--pt-bar-line); --hover: var(--pt-bar-hover); background: var(--pt-bar); border-bottom: 1px solid var(--pt-bar-line); color: var(--pt-bar-ink); box-shadow: none; }
+html[data-theme^='portal'] .dx-bar .dx-brand { text-decoration: none; color: var(--pt-bar-ink) !important; font-size: 18px; font-weight: 600; }
+html[data-theme^='portal'] .dx-bar .dx-brand b { color: #9cc3ff; font-weight: 600; }
+html[data-theme^='portal'] .dx-bar .dx-iconbtn { color: var(--pt-bar-ink); background: transparent; border-color: transparent; }
+html[data-theme^='portal'] .dx-bar .dx-iconbtn:hover { background: var(--pt-bar-hover); }
+html[data-theme^='portal'] body.lite.lite .dx-bar .dx-search input { height: 32px; background: var(--pt-bar-field); border-color: transparent; color: #ffffff; border-radius: 3px; }
+html[data-theme^='portal'] body.lite.lite .dx-bar .dx-search input::placeholder { color: var(--pt-bar-field-ink); }
+html[data-theme^='portal'] body.lite.lite .dx-bar .dx-search input:focus { border-color: #5c9dff; box-shadow: 0 0 0 1px #5c9dff; }
+html[data-theme^='portal'] .dx-bar .dx-kbd { color: var(--pt-bar-field-ink); border-color: #4a5263; }
+html[data-theme^='portal'] .dx-bar .dx-results { color: var(--ink); }
+

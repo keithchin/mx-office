@@ -21,6 +21,8 @@ import { testModeBadge } from './ui/testmode';
 import { homeBudget } from './home/budget';
 import { goToSettings } from './ui/settings/flat';
 import { testsHref } from '../shared/testlab';
+import { portalBar } from './ui/portal/topbar';
+import { portalHead } from './home/portal';
 import './home/home.css';
 import './shared/perfwatch-on';
 
@@ -48,7 +50,11 @@ const session = flatSession(
 const { net } = session;
 
 // The 🎨 in the top bar: the Default, Dark or Terminal look (ui/colortheme.ts). The overview's floors are tinted to match.
-colorThemes($('theme'), $('stats-view'), () => overview.themed());
+colorThemes($('theme'), $('stats-view'), () => {
+  overview.themed();
+  // The Portal themes draw the projects as their Projects page (home/portal.ts), the others as cards.
+  if (tab === 'projects') projects.render();
+});
 
 // ---- Back to the floor you were last on, in the view you were last in -----------------------------
 function renderBack() {
@@ -130,6 +136,13 @@ store.on('me', renderTests);
 store.on('floors', renderTests);
 
 session.bellBefore($('theme'));
+// The Portal themes' top bar (ui/portal/) and the Projects page's title over the tabs (home/portal.ts).
+const backToProjects = () => {
+  showTab('projects');
+  scrollTo({ top: 0 });
+};
+portalBar({ section: 'Projects', onHome: backToProjects, settings: () => goToSettings(session) });
+portalHead(document.querySelector<HTMLElement>('.home-main')!, projects);
 session.start();
 testModeBadge(); // the TEST MODE badge (ui/testmode/)
 showTab(tab);

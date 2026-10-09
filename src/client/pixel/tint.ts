@@ -1,7 +1,7 @@
 // The 2D view's office in the flat views' color theme (ui/colortheme.ts): Default as it's drawn, Dark
 // at night (the room in a blue dusk, each lamp a warm pool in it), Terminal on a green phosphor screen
 // (every colour turned to the one green, its brightness kept), Clean (Light) as drawn with its colours
-// a touch quieter, and Clean (Dark) at a grey, colourless night. Laid over the art canvas each frame,
+// a touch quieter, and Clean (Dark) at a grey, colourless night (the Portal pair as the Clean pair). Laid over the art canvas each frame,
 // after the people and before the names, which stay sharp and readable on top.
 
 import type { ColorTheme } from '../ui/colortheme';
@@ -12,13 +12,13 @@ import type { Frame } from './frame';
 export function tintScene(g: CanvasRenderingContext2D, f: Frame, theme: ColorTheme) {
   if (theme === 'default') return;
   g.save();
-  if (theme === 'clean-light') {
+  if (theme === 'clean-light' || theme === 'portal-light') {
     // A little of the colour out, nothing else: a light grey laid over in 'saturation'.
     g.globalCompositeOperation = 'saturation';
     g.globalAlpha = 0.18;
     g.fillStyle = '#808080';
     g.fillRect(0, 0, f.width, f.height);
-  } else if (theme === 'clean-dark') {
+  } else if (theme === 'clean-dark' || theme === 'portal-dark') {
     // Night without a colour cast: half the colour out, then a neutral grey multiplied in, and the lamps
     // a soft white pool each.
     g.globalCompositeOperation = 'saturation';
