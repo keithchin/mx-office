@@ -26,6 +26,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **Clean is the default theme.** A browser that has never picked a theme now opens in Clean (Light), or Clean
   (Dark) when the system is in dark mode. The 🎨 list starts with the two Clean themes, and the original
   bright look is now called **Fun** (with **Fun (Dark)**). A theme you picked before stays picked.
+- **Domain models stay readable in Studio Pro too**: whoever writes the model (the Lead Developer, or a Solo Lead)
+  now tidies a module's domain model with `mxcli layout` after changing its entities, in the same pull request.
+  Agents used to leave entities on mxcli's default grid with every association drawn edge to edge. A module a
+  person arranged in Studio Pro is never re-arranged.
 
 ## 2026-10-09 · release 24 (`b32d844`)
 
