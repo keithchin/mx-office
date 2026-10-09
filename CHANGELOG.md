@@ -4,6 +4,11 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## 2026-10-09 · release 30 (`5ef483c`)
+
+### Changed
+- **README in the Portal theme**: the README now shows the Overview and the Projects page in Portal (Light), on believable demo data, and `scripts/docs-shots.mjs` retakes the docs screenshots in one command.
+
 ## 2026-10-09 · release 29 (`daa71db`)
 
 ### New
