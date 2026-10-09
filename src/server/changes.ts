@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
-import type { ImageResult } from './decor.js';
+import type { ImageResult } from './images.js';
 import { changedImageType, type ChangedFile, type ChangeStatus, type ChangesState } from '../shared/protocol.js';
 
 // What a worker changed, for the Changes window at its desk: the files it touched and their diff,

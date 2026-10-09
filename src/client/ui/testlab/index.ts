@@ -4,7 +4,7 @@
 // each that runs it against a throwaway test office (server/testlab/, never this office), the run going
 // with its progress and log, the history, and a run's details (ui/testlab/details.ts). Admins only.
 // It polls once a second only while a run is going, the tab is on it and the window is visible, and
-// draws a part again only when what it shows changed. No three.js: the flat views load it.
+// draws a part again only when what it shows changed.
 
 import './ui.css';
 import { SUITE_LABEL, type RunResult, type RunSummary, type TestLabView, type TestSuite } from '../../../shared/testlab';

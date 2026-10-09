@@ -3,7 +3,7 @@
 // who is ready and who is working, on what and for how long, and for each busy one asks: interrupt now,
 // after their current turn (the default: the office holds it and types it when that turn ends), or for a
 // standup, skip them and read their journal. "Same for all" sets every row at once. Nobody busy: no window,
-// it just goes. ✕ and Esc cancel. No three.js here: the 1D view imports it.
+// it just goes. ✕ and Esc cancel.
 
 import type { RoleId } from '../../../shared/roster/roles';
 import type { RosterView } from '../../../shared/roster/types';

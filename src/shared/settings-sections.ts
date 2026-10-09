@@ -1,8 +1,7 @@
 // ⚙️ Settings' sections, in the order its left-hand list has them, and the address of each. The full
 // Settings page lives in the flat views (the 1D view's ⚙️ Settings tab, /lite?tab=settings, which the
-// 2D view, the home page, the Needs-you strip, the team phone and the docs all link to by section), so
-// no settings link ever sends anyone to the 3D office. The 3D office keeps its own ⚙️ window for what
-// only it has (the camera, your character, the building's world). Pure: the pages, the server's
+// 2D view, the home page, the Needs-you strip, the team phone and the docs all link to by section), .
+// Pure: the pages, the server's
 // Teams cards and the tests read the same list.
 
 export interface SettingsSection {
@@ -11,18 +10,18 @@ export interface SettingsSection {
   label: string;
   /** One line under the section's name. */
   blurb: string;
-  /** Only admins see it at all (the others are shown read-only to everyone, as in the 3D window). */
+  /** Only admins see it at all (the others are shown read-only to everyone). */
   admin?: true;
   /** It's about the floor you're on (the team, its budget, its project), so it needs one. */
   floor?: true;
 }
 
 export const SETTINGS_SECTIONS = [
-  { id: 'you', icon: '🧍', label: 'You', blurb: 'How the office looks and sounds for you, the Command Center terminal, and how you’re signed in. Just you, kept in this browser.' },
+  { id: 'you', icon: '🧍', label: 'You', blurb: 'The Command Center terminal, and how you’re signed in. Just you, kept in this browser.' },
   { id: 'workers', icon: '🤖', label: 'Agents', blurb: 'What agents start on, how many run at once, keeping the computer awake, restarting safely, and what the office tells them.' },
   { id: 'team', icon: '👥', label: 'Team', blurb: 'This project’s team: autonomy (and autonomy by stage), idle benching, the review loop, subagent cool-downs, the standup, cost caps and resume pacing.', floor: true },
   { id: 'jeff', icon: '⚖️', label: 'Jeff · Router', blurb: 'The office’s quick judge on this project: waiting on you, when to escalate, triage and priority.', floor: true },
-  { id: 'notify', icon: '🔔', label: 'Notifications', blurb: 'Desktop alerts, the alarm when a worker needs you, Slack / Discord, and Microsoft Teams.' },
+  { id: 'notify', icon: '🔔', label: 'Notifications', blurb: 'Desktop alerts, phone alerts, Slack / Discord, and Microsoft Teams.' },
   { id: 'budget', icon: '💰', label: 'Budget', blurb: 'This project’s budget, alert threshold and auto-pause, and the office’s default threshold and local currency.', floor: true },
   { id: 'connections', icon: '🔌', label: 'Connections', blurb: 'The tokens and password the office signs in with, git & gh, its folders, phone access and worktree cleanup. Admins only.', admin: true },
   { id: 'deliverables', icon: '📦', label: 'Deliverables', blurb: 'What the teams make before their stage: early drafts while the Chief Analyst is on Stages 0–2.', floor: true },
@@ -47,7 +46,7 @@ export const SETTINGS_PAGE = '/lite';
 
 /**
  * The address of Settings at `section` (`/lite?tab=settings&section=workers`), on `floor` when one is
- * given (the 1D view opens the floor you were last on otherwise). Never the 3D office.
+ * given (the 1D view opens the floor you were last on otherwise).
  */
 export function settingsHref(section?: SettingsSectionId, floor?: string): string {
   const q = new URLSearchParams();

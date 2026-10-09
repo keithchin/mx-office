@@ -90,7 +90,6 @@ export default defineConfig({
         warn(warning);
       },
       input: {
-        main: resolve(import.meta.dirname, 'src/client/index.html'),
         lite: resolve(import.meta.dirname, 'src/client/lite.html'),
         pixel: resolve(import.meta.dirname, 'src/client/pixel.html'),
         home: resolve(import.meta.dirname, 'src/client/home.html'),

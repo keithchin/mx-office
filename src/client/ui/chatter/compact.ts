@@ -1,6 +1,6 @@
 // The team chatter on a team's page (ui/teams/panels.ts): the chatter itself lives in the team phone now
 // (ui/phone/), so the page has a link that opens it filtered to the team, and says how much the team has
-// said today. One element per floor and team, kept across the page's redraws. No three.js.
+// said today. One element per floor and team, kept across the page's redraws.
 
 import { isGroup, type ChatterMessage } from '../../../shared/chatter';
 import type { TeamId } from '../../../shared/roster/roles';

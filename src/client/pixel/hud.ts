@@ -56,8 +56,7 @@ addEventListener('pointerdown', (e) => {
 
 // ---- Chat ----------------------------------------------------------------------------------------------
 /**
- * The chat in the corner: the building's latest lines, and a box to say something. T opens it (as in
- * the 3D office), Enter sends, Esc puts it away.
+ * The chat in the corner: the building's latest lines, and a box to say something. T opens it, Enter sends, Esc puts it away.
  */
 export function mountChat(host: HTMLElement, net: Net) {
   const log = h('ol.px-chat-log', { 'aria-live': 'polite' });

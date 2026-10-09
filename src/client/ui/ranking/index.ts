@@ -2,7 +2,7 @@
 // the podium and the full ranking, grouped by model or role if you like, and a card per worker: the
 // live ones as the 1D view draws them (their terminal, a prompt) with their grade and Details added,
 // the ones gone home from their records, dimmed. This floor or every floor; sorted by who needs you
-// first, rank, name or most recent. No three.js: the 1D view imports it.
+// first, rank, name or most recent.
 
 import type { WorkerInfo } from '../../../shared/protocol';
 import { modelLabel } from '../../../shared/analysis';

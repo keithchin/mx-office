@@ -1,10 +1,8 @@
-// What ⚙️ Settings' sections are made of, in the 3D office's window (index.ts) and on the flat views'
-// Settings page (page.ts) alike: a card per setting with who it's for, and what every section builder
-// gets and gives back. No three.js here: the flat views load every section.
+// What ⚙️ Settings' sections are made of, on the Settings page (page.ts): a card per setting with who
+// it's for, and what every section builder gets and gives back.
 
 import './settings.css';
 import type { Net } from '../../net';
-import type { OfficeSound } from '../../sound';
 import type { DesktopNotifier } from '../../notify';
 import type { Settings } from '../../state';
 import { h } from '../dom';
@@ -32,8 +30,6 @@ export interface SettingsDeps {
   /** Changes some of your own settings, and has the page take them up. */
   change(some: Partial<Settings>): void;
   notifier: DesktopNotifier;
-  /** The 3D office's sound, to play a sample; the flat views have none. */
-  sound?: Pick<OfficeSound, 'ding' | 'needsYou'>;
   signOut(): void;
 }
 

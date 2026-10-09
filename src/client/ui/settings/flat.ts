@@ -1,7 +1,7 @@
 // The flat views' end of ⚙️ Settings: the page (page.ts) wired to a flat session (your settings kept in
 // this browser, its notifications), and where a page with no Settings tab sends a settings link (the 2D
 // view and the home page go to the 1D view's tab; the home page with no project yet opens it in a window).
-// No three.js here.
+//
 
 import { settingsHref, type SettingsSectionId } from '../../../shared/settings-sections';
 import { lastFloor } from '../../state/persist';
@@ -35,7 +35,7 @@ const floorFor = () => store.floor ?? lastFloor() ?? store.floors.find((f) => !f
 
 /**
  * Opens Settings at `section` from a page with no Settings tab (the 2D view, the home page): the 1D
- * view's tab, never the 3D office. With no project at all yet (a new office's home page), a window here
+ * view's tab. With no project at all yet (a new office's home page), a window here
  * instead, with ✕ and Esc to close it.
  */
 export function goToSettings(session: Pick<FlatSession, 'net' | 'settings' | 'notifier'>, section?: SettingsSectionId) {

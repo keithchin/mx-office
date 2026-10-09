@@ -13,13 +13,10 @@ import { GitHub, MergeWatch } from './github.js';
 import type { GhAs } from './signins.js';
 import { TaskQueue } from './queue.js';
 import { Changes } from './changes.js';
-import { Decor } from './decor.js';
 import { FloorPlanStore } from './floorplan.js';
 import { Docs } from './docs.js';
 import { Dog } from './dog.js';
-import { Court } from './court.js';
 import { Jail } from './jail.js';
-import { Garage } from './garage.js';
 import { Jukebox } from './jukebox.js';
 import { Whiteboard } from './whiteboard.js';
 import { MeetingRoom } from './meetings.js';
@@ -132,7 +129,6 @@ export class Floor {
   readonly github: GitHub;
   readonly queue: TaskQueue;
   readonly changes: Changes;
-  readonly decor: Decor;
   /** The signs over its desks, and how far its back office is built out. */
   readonly plan: FloorPlanStore;
   readonly jukebox: Jukebox;
@@ -145,10 +141,6 @@ export class Floor {
   /** Settles once the workers whose terminals outlived the last office are picked back up, and the rest woken. */
   readonly ready: Promise<void>;
   readonly dog: Dog;
-  /** The basketball by the hoop: who has it, or how it was last thrown. */
-  readonly court = new Court();
-  /** The cars in the garage: who's in which, and where their drivers have left them. */
-  readonly garage = new Garage();
   /** Workers sent home on a map that locks them up (see MapPlan.sendHome). */
   readonly jail: Jail;
   private timer: NodeJS.Timeout;
@@ -331,7 +323,6 @@ export class Floor {
       },
     );
 
-    this.decor = new Decor(dataDir);
     this.jukebox = new Jukebox(dataDir);
     this.whiteboard = new Whiteboard(dataDir);
     this.ready = this.workers.start();

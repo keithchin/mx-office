@@ -60,7 +60,7 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 | Incidents: detection rules | Audit log → **🚨 Incidents** → **⚙️ Detection rules** (admins); `<office data>/incidents/settings.json`; `POST /api/incidents/settings` | all on; see [the defaults](../using-the-office/incidents.md#automatic-detection) | Each rule on or off, with its count, minutes or dollars. Changing them is logged (`settings.change`). |
 | Incidents: dedupe window | The same window, *Same incident if seen again within (hours)*; `settings.json` (`dedupeHours`) | 24 | A rule firing again on the same floor while its incident is still open, within this many hours, counts into that incident instead of opening a new one. |
 | Test mode | `--test-mode` or `AGENT_OFFICE_TEST_MODE=1`; on by itself under `scratch/test-offices` or a folder named `test-office…` (not a plain `scratch`) | off | No real agent CLI starts, only a fake `--agent`. See [Test offices](../administration/test-offices.md#running-a-test-office-safely). |
-| Command Center terminal | ⚙️ Settings › 🧍 You (the 1D view's tab, `/lite?tab=settings&section=you`), the 3D office's ⚙️ Settings › You, or the console's **Chat | Terminal** toggle; this browser's `localStorage` (`agent-office.pmc-view`) | `chat` | `chat` or `terminal`: how the [Project Coordinator console](../using-the-office/command-center.md#the-project-coordinator-console) shows its screen. Per browser, not per floor. |
+| Command Center terminal | ⚙️ Settings › 🧍 You (the 1D view's tab, `/lite?tab=settings&section=you`), or the console's **Chat | Terminal** toggle; this browser's `localStorage` (`agent-office.pmc-view`) | `chat` | `chat` or `terminal`: how the [Project Coordinator console](../using-the-office/command-center.md#the-project-coordinator-console) shows its screen. Per browser, not per floor. |
 | Team phone: Do not disturb | The [📱 Team phone](../using-the-office/team-phone.md#phone-settings)'s ⚙ → *Do not disturb*; this browser's `localStorage` (`agent-office.phone.alerts`) | off | Off, until turned off, 1 hour, or until 9:00 tomorrow: no desktop alerts or sound meanwhile (the badge still counts). Quiets the workers' and escalations' alerts too, on the 1D and 2D views. |
 | Team phone: Digest | The phone's ⚙ → *Digest*; `agent-office.phone.alerts` | off | Bundle alerts that aren't urgent into one every 15, 30 or 60 minutes; urgent ones still come at once. |
 | Team phone: Sound | The phone's ⚙ → *Sound*; `agent-office.phone.alerts` | on | A short sound with an alert for something that needs you. |
@@ -98,7 +98,7 @@ export interface AutonomyByStage {
 
 ## Office settings: Teams and keep-awake
 
-Set in **⚙️ Settings** (the 1D view's tab: › 🔔 Notifications and › 🤖 Workers; the 3D office's ⚙️ window has them too; admins), for the whole office, each in its own file in the office's data folder. A bad value is refused with a reason and nothing changes.
+Set in **⚙️ Settings** (the 1D view's tab: › 🔔 Notifications and › 🤖 Workers; admins), for the whole office, each in its own file in the office's data folder. A bad value is refused with a reason and nothing changes.
 
 ### notify-teams.json ([Teams notifications](../integrations/teams-notifications.md))
 

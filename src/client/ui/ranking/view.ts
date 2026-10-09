@@ -1,6 +1,6 @@
 // The ranking's pieces on a worker: its grade badge, its rank chips, the Details panel with every
 // criterion as a bar and the evidence behind it, and the card for a worker that has gone home. The
-// little pixel robot in the worker's color is here too, for the cards and the podium. No three.js.
+// little pixel robot in the worker's color is here too, for the cards and the podium.
 
 import type { Criterion, Grade } from '../../../shared/ranking/model';
 import type { RankedWorker } from '../../../shared/ranking/report';

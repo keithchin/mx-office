@@ -12,14 +12,13 @@ This page shows where everything is. Each screen has its own page under [Using t
 |---|---|
 | `/home` | Every project as a card, office-wide **📊 Statistics**, a **🗺️ 2D Overview** of all floors, and the **🧾 Audit log** of the whole office. See [Home](../using-the-office/home.md). |
 | `/lite?floor=<id>` | The **1D view** of one project, with a tab for everything. The default and most useful view. |
-| `/pixel?floor=<id>` | The **2D view**: the floor from above in pixel art. See [2D view](../using-the-office/2d-view.md). |
-| `/?3d=1&view=3d` | The **3D office**, where you walk around. `view=retro` draws it in chunky pixels. See [3D and Retro](../using-the-office/3d-view.md). |
+| `/pixel?floor=<id>` | The **2D Office view**: the floor from above in pixel art, opened from the 1D view's **Go to Office**. See [2D Office view](../using-the-office/2d-view.md). |
 | `/firm` | **🏛️ The Firm**: independent Reviewer Agents that audit a project and report to you. See [The Firm](../using-the-office/the-firm.md). |
 | `/docs` | These docs. |
 
 ## The top bar
 
-On the 1D and 2D views, left to right: **🏠** (home), the **floor** picker, the **view** dropdown (1D, 2D, 3D, Retro), **🎨** (color theme: Default, Dark, Terminal, Clean (Light), Clean (Dark)) and **☰** (the menu). See [Top bar & menu](../using-the-office/top-bar-and-menu.md).
+On the 1D view: the launcher, **Mx Office**, the project, the search, **Go to Office**, the bell, help, dark mode, **🎨** (color theme) and your avatar (the **☰** menu). The 2D Office view has the same bar with **OFFICE · &lt;project&gt;** and **Return to Project**. See [Top bar & menu](../using-the-office/top-bar-and-menu.md).
 
 ## The tabs of a project (1D view)
 

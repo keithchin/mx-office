@@ -1,6 +1,6 @@
 ---
 title: Office and browser
-description: Signing in, old pages after an update, floors missing after a restart, a slow 3D view and the GPU, and screenshots with Playwright.
+description: Signing in, old pages after an update, floors missing after a restart, the GPU, and screenshots with Playwright.
 weight: 3
 ---
 
@@ -21,11 +21,11 @@ Press **Ctrl+F5** to reload without the cache.
 
 This was a bug (the team hook broke floor start-up) and is fixed. If it happens again, check the Agent Office window for errors, and that the floor folders still exist.
 
-## The 3D view is slow
+## The 2D Office view is slow
 
-- Use **1D** or **2D** for daily work.
-- In 3D, add `?gfx=low`, or use the **Retro** view.
+- Use the **1D** view for daily work; the 2D Office view is for looking at the floor.
 - Make the browser use the fast GPU. On the Taskforce laptop, Edge is set to the NVIDIA GPU (Windows Settings → Display → Graphics).
+- The 3D and Retro views (and `?gfx=`) are gone: an old `/?view=3d` link opens the 1D view.
 
 ## Notifications don't appear
 

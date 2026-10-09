@@ -1,7 +1,7 @@
 // The Analysis tab on the 2D view: which model does well on which kind of task. A leaderboard per
 // model, a model × task-type matrix, the latest runs with the analyzer's note on each, and how the
 // score is worked out (from the weights the server ranked with, so the page can't disagree with it).
-// It asks GET /api/analysis for this project or the whole building. No three.js here: the 2D view imports it.
+// It asks GET /api/analysis for this project or the whole building.
 
 import type { AnalysisReport, GroupBy, LeaderRow, RunRecord, TaskType } from '../../shared/analysis';
 import { TASK_TYPE_LABEL } from '../../shared/analysis';

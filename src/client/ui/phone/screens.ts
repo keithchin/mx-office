@@ -1,6 +1,6 @@
 // The team phone's screens, drawn from what the phone knows (PhoneModel): the channel list (Needs you
 // pinned on top, All projects, a channel per floor, DMs with the floor's agents), a project channel
-// with its threads and its notifications, All projects, a DM, a thread, and the Needs you section. No three.js.
+// with its threads and its notifications, All projects, a DM, a thread, and the Needs you section.
 
 import { isGroup, matchesFilter, type ChatterFilter, type ChatterMessage, type ChatterParty } from '../../../shared/chatter';
 import { badgeOf, channelView, dmMessages, type PhoneAgent, type ThreadView } from '../../../shared/phone';

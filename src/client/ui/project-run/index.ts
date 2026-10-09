@@ -4,7 +4,7 @@
 // run is going, with its progress) and, for admins, does the one thing that state allows: running →
 // ⏸ Pause project (its confirm), paused → ▶ Resume (its preview), a run going → its progress window.
 // The state's words are Home's (home/run-state-logic.ts: floorToggle). Home's one "Pause all / Resume
-// all projects" button is home/run-state.ts. No three.js here.
+// all projects" button is home/run-state.ts.
 
 import type { ProjectRunView } from '../../../shared/project-run';
 import { floorToggle, goingRun } from '../../home/run-state-logic';

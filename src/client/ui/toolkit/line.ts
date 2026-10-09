@@ -4,7 +4,7 @@ import './toolkit.css';
  * 7b4b4cf (2026-10-08) · 3 newer commits available (fix/new/gate-rule changes)"), in the setup panel, and
  * as a small chip at the end of the progress bar. One answer per floor is kept here for a minute and
  * shared by both; asking is one GET the office answers from its cache (it fetches the fork on its own
- * clock, never because a page opened). Either opens the Toolkit window (modal.ts). No three.js.
+ * clock, never because a page opened). Either opens the Toolkit window (modal.ts).
  */
 import { short, toolkitLine, type ToolkitStatus } from '../../../shared/toolkit';
 import { h } from '../dom';

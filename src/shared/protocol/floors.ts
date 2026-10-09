@@ -1,11 +1,7 @@
 // The building: its floors, going between them, and what each floor holds.
 
-import type { CabinetView } from '../cabinet.js';
-import type { Decoration } from '../decor.js';
 import type { DogState } from '../dog.js';
 import type { FloorPlan } from '../floorplan.js';
-import type { CarState } from '../garage.js';
-import type { BallState } from '../hoop.js';
 import type { JukeboxState } from '../jukebox.js';
 import type { WhiteboardView } from '../whiteboard.js';
 import type { AgentProvider } from './agents.js';
@@ -103,8 +99,6 @@ export interface FloorView {
   issues: GhState<GhIssue>;
   pulls: GhState<GhPull>;
   queue: QueueState;
-  /** Pictures on this floor's walls. */
-  decor: Decoration[];
   /** The signs over this floor's desks, and how far its back office is built out. */
   plan: FloorPlan;
   services: ServicesState;
@@ -112,16 +106,10 @@ export interface FloorView {
   dog: DogState | null;
   /** What the lounge jukebox is playing. */
   jukebox: JukeboxState;
-  /** Who's at the arcade cabinet, what's on its screen, and the building's high scores. */
-  cabinet: CabinetView;
   /** What's drawn on this floor's whiteboard, and who's drawing. */
   whiteboard: WhiteboardView;
   /** The meeting room: who's meeting about what, and the meetings before. */
   meeting: MeetingState;
-  /** The basketball by the hoop: who has it, or how it was last thrown. */
-  ball: BallState;
-  /** The cars in the garage (see CARS in shared/garage.ts): where each one is, and who's in it. */
-  cars: CarState[];
   /** Workers sent home and locked up in the dungeon, on a map that has one. */
   jail: JailState;
 }

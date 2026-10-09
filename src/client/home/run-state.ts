@@ -3,7 +3,7 @@
 // again every 15 seconds, every 2 while a run is going, and straight after a click. It draws the one
 // "⏸ Pause all / ▶ Resume all projects" button (admins; the state in words for everyone else) and the
 // state icon on each project's card; the 2D Overview reads `homeRunState` for its banners.
-// The words and which-is-which are pure, in run-state-logic.ts. No three.js here.
+// The words and which-is-which are pure, in run-state-logic.ts.
 
 import type { ProjectRunView } from '../../shared/project-run';
 import { store } from '../state';

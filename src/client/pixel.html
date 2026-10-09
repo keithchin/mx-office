@@ -46,41 +46,49 @@
       </div>
     </div>
     <script>(function(){var S=["bundle","session","socket","data","view"],L={bundle:"Loading the page…",session:"Checking your sign-in…",socket:"Connecting to the office…",data:"Getting the office’s data…",view:"Drawing the page…"},d={},el=document.getElementById("ao-boot"),gone=0,downT,polling=0;function q(s){return el.querySelector(s)}function draw(){var n=0,nx,i;for(i=0;i<S.length;i++){if(d[S[i]])n++;else if(!nx)nx=S[i]}var p=Math.floor(n/S.length*100);q(".aob-pct").textContent=p;q(".aob-bar").setAttribute("aria-valuenow",p);q(".aob-bar i").style.width=p+"%";if(!el.classList.contains("aob-restart"))q(".aob-step").textContent=nx?L[nx]:""}function restart(on){el.classList.toggle("aob-restart",!!on);if(on)q(".aob-step").textContent="Trying again every few seconds…";else draw()}function show(){gone=0;el.hidden=false;el.classList.remove("aob-out");el.setAttribute("aria-busy","true")}function hide(){gone=1;el.classList.add("aob-out");el.removeAttribute("aria-busy");setTimeout(function(){if(gone)el.hidden=true},400)}function poll(){if(polling)return;polling=1;(function go(){fetch("/api/health",{cache:"no-store"}).then(function(r){if(r.ok)location.reload();else setTimeout(go,1500)},function(){setTimeout(go,1500)})})()}window.__aoBoot={step:function(s){if(s==="socket")clearTimeout(downT);if(d[s])return;d[s]=1;if(s!=="bundle"&&s!=="session")restart(0);draw();if(s==="view")hide()},down:function(){if(!gone){if(d.bundle)restart(1);return}clearTimeout(downT);downT=setTimeout(function(){d.socket=d.data=d.view=0;show();restart(1)},2000)},shown:function(){return!gone}};addEventListener("error",function(e){var t=e.target;if(t&&t.tagName==="SCRIPT"&&!d.bundle){restart(1);poll()}},true);setTimeout(function(){if(d.bundle)return;fetch("/api/health",{cache:"no-store"}).then(function(r){if(!r.ok){restart(1);poll()}else if(!d.bundle)q(".aob-step").textContent="Still loading… (a slow connection)"},function(){restart(1);poll()})},12000)})()</script>
-    <!-- The 2D view (pixel.ts): the floor from above in pixel art, every worker at its desk. -->
-    <header class="lite-bar">
+    <!-- The 2D Office view (pixel.ts): the floor from above in pixel art, every worker at its desk. Reached only
+         from the 1D view's Go to Office. The top bar is the Portal bar's shape in every theme: where you are
+         (OFFICE · the project, its switcher), Return to Project, then the icons; the office's own controls are
+         on its toolbar over the canvas. -->
+    <header class="lite-bar px-bar">
       <a id="to-home" class="btn" href="/home" title="Home: every project, and the office's statistics" aria-label="Home">🏠</a>
-      <label class="lite-floor" title="The floor you're on: pick another to see its office">
-        <span class="lite-floor-label">Floor</span>
-        <select id="floor" aria-label="Floor"></select>
+      <label class="lite-floor" title="The project whose office this is: pick another to see its office">
+        <span id="px-floor-label" class="lite-floor-label">Office</span>
+        <select id="floor" aria-label="Project"></select>
       </label>
-      <div class="px-meta-box">
-        <p id="px-summary" class="px-summary"></p>
-        <p id="floor-meta" class="px-meta"></p>
-      </div>
-      <!-- Go to Board (ui/viewpick.ts viewButton), the 🎨 (the 1D view's theme, ui/colortheme.ts) and the ☰ (shared/flatmenu.ts). -->
+      <span class="px-bar-gap" aria-hidden="true"></span>
+      <!-- Return to Project: this project's 1D view, on its Command Center (ui/viewpick.ts); then the 🎨 (ui/colortheme.ts) and the ☰ (shared/flatmenu.ts). -->
       <div id="view-pick"></div>
       <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
-      <button id="menu" class="btn lite-menu" type="button" title="Menu: everything the 3D office's ☰ has" aria-label="Menu">☰</button>
+      <button id="menu" class="btn lite-menu" type="button" title="Menu: the project's windows, the office's settings and the docs" aria-label="Menu">☰</button>
     </header>
     <!-- The project's progress: its toolkit stages, Handover and Accepted, measured (ui/progress/). -->
     <div id="progress-bar"></div>
     <main id="stage" class="px-stage">
       <canvas id="office" aria-label="The office from above: click someone for their terminal, or a free desk to give someone new work there"></canvas>
       <div id="px-tip" class="px-tip hidden" role="tooltip"></div>
-      <div id="elsewhere" class="px-elsewhere hidden"></div>
-      <!-- Zooming in whole steps, and back to all of it showing (pixel/camera.ts). -->
-      <div class="px-panel px-zoom" role="group" aria-label="Zoom">
-        <button id="px-zoom-out" class="px-btn" type="button" title="Zoom out (−)" aria-label="Zoom out">−</button>
-        <button id="px-zoom-fit" class="px-btn px-zoom-level" type="button" title="Fit the whole floor (0)" aria-label="Fit the whole floor"><span id="px-zoom-level">Fit</span></button>
-        <button id="px-zoom-in" class="px-btn" type="button" title="Zoom in (+)" aria-label="Zoom in">+</button>
+      <!-- The office's toolbar over the canvas (pixel.ts): what the project's up to, then its budget, the office's
+           spend today and Pause / Resume on the left; zooming in whole steps (pixel/camera.ts) and ⋯ (the keys,
+           the next one waiting, the chat) on the right. -->
+      <div class="px-toolbar" role="toolbar" aria-label="Office">
+        <div class="px-panel px-status">
+          <p id="px-summary" class="px-summary"></p>
+          <p id="floor-meta" class="px-meta"></p>
+        </div>
+        <div id="px-project" class="px-panel px-project"></div>
+        <div class="px-panel px-tools" role="group" aria-label="Zoom and more">
+          <button id="px-zoom-out" class="px-btn px-tool" type="button" title="Zoom out (−)" aria-label="Zoom out">−</button>
+          <button id="px-zoom-fit" class="px-btn px-tool px-zoom-level" type="button" title="Fit the whole floor (0)" aria-label="Fit the whole floor"><span id="px-zoom-level">Fit</span></button>
+          <button id="px-zoom-in" class="px-btn px-tool" type="button" title="Zoom in (+)" aria-label="Zoom in">+</button>
+          <button id="px-more" class="px-btn px-tool px-tools-more" type="button" title="More: the keys, the next one waiting, the chat" aria-label="More" aria-haspopup="menu" aria-expanded="false">⋯</button>
+        </div>
       </div>
+      <div id="elsewhere" class="px-elsewhere hidden"></div>
     </main>
     <!-- Who's doing what on this floor, and what the colors mean. -->
     <footer id="px-foot" class="px-foot">
       <span id="px-count" class="px-count"></span>
       <button id="px-next" class="px-btn px-next" type="button" title="Whoever has waited longest on you: their terminal (N)">🙋 Next waiting <kbd>N</kbd></button>
-      <!-- The keys, as the 3D office's hint bar shows them. -->
-      <span class="px-keys" aria-label="Keys"><span><kbd>Click</kbd> open</span><span><kbd>Right-click</kbd> menu</span><span><kbd>T</kbd> chat</span><span><kbd>+</kbd><kbd>−</kbd><kbd>0</kbd> zoom</span><span><kbd>←</kbd><kbd>→</kbd> pan</span></span>
       <span class="px-legend" aria-hidden="true">
         <span><i style="background: #5fd9cb"></i>working</span><span><i style="background: #f2b33d"></i>needs you</span><span><i style="background: #2fbf8a"></i>done</span><span><i style="background: #8fa3bf"></i>asleep</span>
       </span>

@@ -1,71 +1,35 @@
-/* The view dropdown (ui/viewpick.ts) on every top bar, and the flat views' ☰ menu (shared/flatmenu.ts).
-   The trigger is the page's own .btn, so it looks like the bar's other buttons in each view and theme;
-   the list is a card in the theme's tokens. */
+/* The views' buttons on the top bars (ui/viewpick.ts: Go to Office on the 1D view, Return to Project on
+   the 2D Office view) and the flat pages' ☰ menu (shared/flatmenu.ts). Each button is the page's own .btn,
+   so it looks like the bar's other buttons in each view and theme; the menu is a card in the theme's tokens. */
 
-.vp { position: relative; flex: none; display: flex; }
-.vp-btn, .vp-go { gap: 6px; padding: 0 10px; white-space: nowrap; }
-/* Go to Office / Go to Board: one word on a phone, where the bar is full. */
+.vp-go { gap: 6px; padding: 0 10px; white-space: nowrap; }
+/* Go to Office / Return to Project: one word on a phone, where the bar is full. */
 .vp-short { display: none; font-weight: 900; }
 @media (max-width: 520px) { .vp-go .vp-label { display: none; } .vp-go .vp-short { display: inline; } }
 .vp-ico { font-size: 16px; line-height: 1; }
 .vp-label { font-weight: 900; }
-/* A ▾ drawn in the text's own color, so it follows every theme. */
-.vp-caret { width: 0; height: 0; margin-left: 1px; border-left: 4.5px solid transparent; border-right: 4.5px solid transparent; border-top: 6px solid currentColor; transition: transform .12s; }
-.vp.open .vp-caret { transform: rotate(180deg); }
-.vp-btn[aria-expanded=true] { background: var(--paper-2); }
-
-.vp-list {
-  position: absolute; top: calc(100% + 8px); right: 0; z-index: 70; min-width: 264px; margin: 0; padding: 6px; list-style: none;
-  background: var(--paper); color: var(--ink); border: var(--bw) solid var(--line); border-radius: calc(var(--radius) - 2px); box-shadow: 0 5px 0 var(--edge);
-  animation: vp-in .12s ease-out; transform-origin: top right; outline: none;
-}
-.vp-list[hidden] { display: none; }
-@keyframes vp-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
-.vp-opt { display: flex; align-items: center; gap: 10px; padding: 7px 9px; border-radius: 9px; cursor: pointer; }
-.vp-opt.active { background: var(--paper-2); box-shadow: inset 0 0 0 2px var(--accent); }
-.vp-opt[aria-selected=true] .vp-text b { color: var(--accent); }
-.vp-opt .vp-ico { width: 22px; text-align: center; font-size: 18px; }
-.vp-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.vp-text b { font-size: 14px; font-weight: 900; }
-.vp-text small { font-size: 11px; font-weight: 700; color: var(--muted); }
-.vp-tick { font-weight: 900; color: var(--accent); }
-@media (prefers-reduced-motion: reduce) { .vp-list { animation: none; } .vp-caret { transition: none; } }
-
-/* On a phone, the label alone: the bar is short of room. */
-@media (max-width: 640px) {
-  .lite-bar .vp-btn { padding: 0 8px; gap: 4px; }
-  .lite-bar .vp-btn .vp-ico { display: none; }
-}
-
-/* The 3D top bar: next to the dock, at its height. */
-.topbar > .vp { margin-left: auto; }
-.topbar .vp-btn.dock-btn { font-size: 14px; }
 
 /* ---- The flat views' ☰ ------------------------------------------------------------------------- */
 .lite-bar .lite-menu { width: 44px; padding: 0; justify-content: center; font-size: 20px; }
 .lite-bar .lite-menu[aria-expanded=true] { background: var(--paper-2); }
-.flat-menu .mi-3d { flex: none; padding: 0 5px; border: 1.5px solid var(--rule-strong); border-radius: 6px; font-size: 10px; font-weight: 900; line-height: 16px; color: var(--muted); }
 .flat-menu .ro-tab-n { margin-left: 0; }
 /* The menu's key caps and dividers in the theme's colors. */
 html[data-theme] .mi-key, html[data-theme] .menu-foot kbd { background: var(--card); border-color: var(--line); }
 html[data-theme] .menu-foot { border-top-color: var(--rule); }
 html[data-theme] .hud-menu { border-color: var(--line); box-shadow: 0 5px 0 var(--edge); }
-html[data-theme='terminal'] .hud-menu, html[data-theme='terminal'] .vp-list { border-style: double !important; border-width: 3px !important; }
-html[data-theme='terminal'] .vp-opt.active, html[data-theme='terminal'] .menu-item:is(:hover, :focus-visible) { background: var(--ink); color: #000; box-shadow: none; text-shadow: none; }
-html[data-theme='terminal'] .vp-opt.active :is(small, b, .vp-tick) { color: #000; }
+html[data-theme='terminal'] .hud-menu { border-style: double !important; border-width: 3px !important; }
+html[data-theme='terminal'] .menu-item:is(:hover, :focus-visible) { background: var(--ink); color: #000; box-shadow: none; text-shadow: none; }
 @media (max-width: 640px) {
   .lite-bar .lite-menu { width: 34px; font-size: 17px; }
   html[data-theme='terminal'] body.lite .lite-bar > .lite-menu { width: 34px; }
 }
 
-/* ---- The 2D view: square, pixel-framed versions of both -------------------------------------------- */
-body.pixel .vp-list, body.pixel .hud-menu {
+/* ---- The 2D Office view: a square, pixel-framed menu ----------------------------------------------- */
+body.pixel .hud-menu {
   border: 0; border-radius: 0; background: var(--px-panel); color: var(--px-text);
   box-shadow: 0 -3px 0 0 var(--px-ink), 0 3px 0 0 var(--px-ink), -3px 0 0 0 var(--px-ink), 3px 0 0 0 var(--px-ink), inset 0 0 0 2px var(--px-panel-hi), 0 8px 0 0 var(--px-shade);
 }
-body.pixel .vp-list { top: calc(100% + 12px); }
-body.pixel :is(.vp-opt, .menu-item, .menu-pin) { border-radius: 0; }
-body.pixel .menu-item { color: var(--px-text); }
-body.pixel :is(.vp-opt.active, .menu-item:hover, .menu-item:focus-visible) { background: var(--px-face-lo); }
+body.pixel .menu-item { border-radius: 0; color: var(--px-text); }
+body.pixel :is(.menu-item:hover, .menu-item:focus-visible) { background: var(--px-face-lo); }
 body.pixel .lite-bar .lite-menu { width: 40px; padding: 0; font-size: 18px; }
 @media (max-width: 640px) { body.pixel .lite-bar .lite-menu { width: 32px; font-size: 15px; } }

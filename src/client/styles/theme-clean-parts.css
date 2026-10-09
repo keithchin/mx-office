@@ -7,19 +7,19 @@
 
 /* ---- Lines and corners, everywhere --------------------------------------------------------------- */
 /* One-pixel lines (the ▾ drawn with borders keeps its size). */
-html:is([data-theme^='clean'], [data-theme^='portal']) body.lite *:not(.vp-caret) { border-width: 1px !important; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite * { border-width: 1px !important; }
 /* 4px corners on cards and panels, 2px on buttons and boxes, 10px at most on pills and counts, round
    only what's a dot or a face. */
 html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(*, *::before, *::after) { border-radius: var(--radius) !important; }
 html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(button, .btn, input, select, textarea, kbd, .key, .mi-key, [role=tab], [role=option], .menu-item, .vp-opt) { border-radius: var(--radius-sm) !important; }
 html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.pill, [class*='pill'], [class*='chip'], [class*='badge'], [class*='-tag'], [class*='count'], [class*='-tab-n'], .n, .kb-n, .label) { border-radius: var(--radius-pill) !important; }
-html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.dot, [class$='-dot'], .swatch, .spinner, .avatar, .gh-avatar, .switch, .switch::after, .floor-no, .wb-person, .sm-by, .gp-dot, .esc-face, [class*='avatar'], [class*='portrait']) { border-radius: 50% !important; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.dot, [class$='-dot'], .swatch, .spinner, .avatar, .gh-avatar, .wb-person, .sm-by, .gp-dot, .esc-face, [class*='avatar'], [class*='portrait']) { border-radius: 50% !important; }
 /* The hard shadows drawn in the ink rather than the --edge token. */
-html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.floor-item, .hud-menu, .btn.small, .settings-tab.on, .wb-window, .wizard .wz-card, .key, .elevator .floor-btn, .gp-label) { box-shadow: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.hud-menu, .btn.small, .settings-tab.on, .wb-window, .wizard .wz-card, .key, .gp-label) { box-shadow: none; }
 /* The lines drawn in the ink: the theme's line color instead. */
-html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.hud-menu, .mi-key, .menu-foot kbd, .switch, .switch::after, .menu-item.on .mi-label::after, .ro-card, .ro-leads, .ro-pill, .ro-md, .ro-prop, .ro-kind, .ro-level, .ro-num, .ro-text, .ro-ask-input, .ro-paused, .ro-select, .sa-grade, .sa-pill, .sk-row, .sk-gate, .setup-panel, .setup-chip, .setup-stage, .settings-nav, .scope, .svc-auto, .repo-pulls li, .floor-item, .floor-no, .accounts .invite-row select, .role, .bs-side, .bs-toc, .sign-preview, .upgrade-status, .upgrade-error, .wb-window, .wb-window > header, .wizard :is(.wz-nav, select, .wz-card, .wz-warn, .wz-note, .wz-q, .wz-role, .wz-facts, .wz-step, .wz-log), .dot, .pill, .card) { border-color: var(--line); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.hud-menu, .mi-key, .menu-foot kbd, .menu-item.on .mi-label::after, .ro-card, .ro-leads, .ro-pill, .ro-md, .ro-prop, .ro-kind, .ro-level, .ro-num, .ro-text, .ro-ask-input, .ro-paused, .ro-select, .sa-grade, .sa-pill, .sk-row, .sk-gate, .setup-panel, .setup-chip, .setup-stage, .settings-nav, .scope, .svc-auto li, .accounts .invite-row select, .role, .bs-side, .bs-toc, .upgrade-status, .upgrade-error, .wb-window, .wb-window > header, .wizard :is(.wz-nav, select, .wz-card, .wz-warn, .wz-note, .wz-q, .wz-role, .wz-facts, .wz-step, .wz-log), .dot, .pill, .card) { border-color: var(--line); }
 /* Nothing presses down or tips over. */
-html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.btn, .floor-item, .floor-btn, .gp-label, .lite-bar #to-home):is(:active, .on, .here) { transform: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.btn, .gp-label, .lite-bar #to-home):is(:active, .on, .here) { transform: none; }
 
 /* ---- Buttons: flat, a hover tint, the primary one in the accent ------------------------------------ */
 html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .btn { gap: 6px; padding: 4px 10px; min-height: 26px; line-height: 18px; background: var(--card); border-color: var(--line); transition: background-color .1s; }
@@ -103,8 +103,6 @@ html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .mi-icon { widt
 html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .mi-key, html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .menu-foot kbd { font: 400 11px/16px var(--font-mono); border-bottom-width: 1px; background: var(--paper-2); }
 html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .menu-foot { border-top: 1px solid var(--line); font-weight: 400; }
 html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .menu-item.primary .mi-label { color: var(--link); }
-html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .switch { background: var(--neutral-soft); }
-html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .menu-toggle[aria-checked=true] .switch { background: var(--accent); border-color: var(--accent); }
 /* The 🎨's list (ui/colortheme.ts): only a theme's name and what it's like. */
 .theme-list { min-width: 250px; }
 .theme-list .vp-tick { visibility: hidden; }

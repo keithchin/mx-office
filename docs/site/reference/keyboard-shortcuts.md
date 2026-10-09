@@ -1,6 +1,6 @@
 ---
 title: Keyboard shortcuts
-description: Keys in the docs, the 1D view, the 2D view, the 2D Overview and the 3D office.
+description: Keys in the docs, the 1D view, the 2D Office view and the 2D Overview.
 weight: 7
 ---
 
@@ -53,25 +53,5 @@ The [📱 Team phone](../using-the-office/team-phone.md) button is in the page's
 
 Wheel to zoom, drag to pan, **+ − 0** and the arrows.
 
-## 3D office
-
-| Key | Does |
-|---|---|
-| W A S D (Shift) | Walk (run) |
-| Space | Jump |
-| E / click | Use what you look at |
-| N | Next worker that needs you |
-| P | Prompt the worker at the desk you face |
-| C | Its changes |
-| O | Open its pull request |
-| R | Resume a sleeping worker |
-| X | Send a worker home |
-| B | A shared shell at an empty desk |
-| T | Chat |
-| V | Voice (hold to talk); M mutes |
-| G / 1–6 | Emotes |
-| / | Search the chat and terminals |
-| Ctrl+K | Command palette |
-| Tab | The ☰ menu |
 | H | All controls |
 | Esc | Close a window |

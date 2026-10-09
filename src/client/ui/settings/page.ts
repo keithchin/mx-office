@@ -1,10 +1,8 @@
 // The full ⚙️ Settings page of the flat views: the 1D view's ⚙️ Settings tab (/lite?tab=settings), which
 // the 2D view, the home page, the Needs-you strip, the team phone and the docs link to, a section at a
 // time (&section=workers). Its sections, down the left in shared/settings-sections.ts's order, are built
-// from the same builders as the 3D office's ⚙️ window (you.ts, notify.ts, workers.ts, building.ts) and
-// from the tabs' own settings (the team's, the budget's, the incident rules). Only the section showing
-// is built, and put away (its timers and listeners let go) when another is picked. No three.js here:
-// tests/client-structure.test.ts follows /lite's imports to check.
+// from the builders (you.ts, notify.ts, workers.ts, building.ts) and from the tabs' own settings (the team's, the budget's, the incident rules). Only the section showing
+// is built, and put away (its timers and listeners let go) when another is picked.test.ts follows /lite's imports to check.
 
 import './page.css';
 import { SETTINGS_SECTIONS, isSettingsSection, settingsSection, type SettingsSectionId } from '../../../shared/settings-sections';
@@ -12,7 +10,7 @@ import { store } from '../../state';
 import { h } from '../dom';
 import { connectionsPanel } from '../connections';
 import { plain, setting, together, type Built, type SettingsDeps } from './kit';
-import { consoleSetting, signedInSetting, soundSettings, alarmSetting } from './you';
+import { consoleSetting, signedInSetting } from './you';
 import { desktopSetting, teamsCardsSetting, webhookSetting } from './notify';
 import { workersSettings } from './workers';
 import { budgetPart, rosterPart, studioPart } from './project';
@@ -37,11 +35,11 @@ const phoneAlerts = () =>
 
 /** What each section shows. Every id in SETTINGS_SECTIONS has one (the typecheck says so). */
 export const SECTION_BUILDERS: Record<SettingsSectionId, (d: SettingsDeps) => Built> = {
-  you: (d) => together(consoleSetting(), signedInSetting(d), soundSettings(d)),
+  you: (d) => together(consoleSetting(), signedInSetting(d)),
   workers: (d) => workersSettings(d),
   team: () => rosterPart('team'),
   jeff: () => rosterPart('jeff'),
-  notify: (d) => together(desktopSetting(d), alarmSetting(d), phoneAlerts(), webhookSetting(d), teamsCardsSetting()),
+  notify: (d) => together(desktopSetting(d), phoneAlerts(), webhookSetting(d), teamsCardsSetting()),
   budget: (d) => budgetPart(d),
   connections: () => (store.me.admin ? plain(rerunSetupSetting(), connectionsPanel().el) : plain(h('p.setting-note', {}, 'Only admins see the office’s connections.'))),
   deliverables: () => rosterPart('deliverables'),

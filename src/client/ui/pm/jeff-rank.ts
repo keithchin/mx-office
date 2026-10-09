@@ -1,6 +1,6 @@
 // Jeff's order on the escalation lists (the console's "Escalations to you", the approvals, the
 // Needs-you strip): the chip that goes beside a card, never inside it, and the note above a list he
-// sorted. The order itself is shared/roster/jeff-rank.ts. No three.js here.
+// sorted. The order itself is shared/roster/jeff-rank.ts.
 
 import { rankChip, rankOf, rankTip, SORTED_NOTE } from '../../../shared/roster/jeff-rank';
 import type { Escalation } from '../../../shared/roster/escalation';

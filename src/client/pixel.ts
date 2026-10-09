@@ -1,13 +1,13 @@
-// The 2D view (/pixel): the floor you're on from above, in pixel art, without the 3D. Every worker
-// sits at its desk acting out how it's doing, each project team in its own patch of the floor (the
-// dev bay, the design studio, the QA lab, the analyst corner, the PM's office; see pixel/zones.ts)
-// with its Leads dressed for their roles (a benched one off on a break about the office, see
-// pixel/breaks.ts), and the people walking about the 3D office are where they are. Hover over anything for what it is; click a worker for its terminal (right-click for its
-// menu), a free desk to give someone new work there, or what's on the walls and about the room for
-// its window: the boards, the whiteboard, the meeting room, the elevator, the TV, the bookshelf. It
-// fills the window and zooms in whole steps (see pixel/camera.ts). The home page (🏠, /home) has every
-// floor of the building. Like the 1D view, you're in the office without standing anywhere in it
-// (PeerInfo.lite), and it loads no three.js.
+// The 2D Office view (/pixel): the project's floor from above, in pixel art. Every worker sits at its
+// desk acting out how it's doing, each project team in its own patch of the floor (the dev bay, the
+// design studio, the QA lab, the analyst corner, the PM's office; see pixel/zones.ts) with its Leads
+// dressed for their roles (a benched one off on a break about the office, see pixel/breaks.ts). Hover
+// over anything for what it is; click a worker for its terminal (right-click for its menu), a free desk
+// to give someone new work there, or what's on the walls and about the room for its window: the boards,
+// the whiteboard, the meeting room, the TV, the bookshelf. It fills the window and zooms in whole steps
+// (see pixel/camera.ts). It's reached only from the 1D view's Go to Office, and Return to Project goes
+// back there (ui/viewpick.ts). Like the 1D view, you're in the office without standing anywhere in it
+// (PeerInfo.lite).
 
 import { store } from './state';
 import { DESK_BY_ID } from '../shared/layout';
@@ -22,7 +22,6 @@ import { openServices } from './ui/services';
 import { openWhiteboard } from './ui/whiteboard';
 import type { BoardActions } from './ui/github/prompts';
 import { summaryLine } from './ui/summary';
-import { rememberView } from './graphics';
 import { waitingInOrder } from './nextup';
 import { flatSession } from './shared/session';
 import { workerActions } from './shared/workers';
@@ -46,7 +45,9 @@ import { paintScene } from './pixel/scene';
 import { blitCrisp } from './pixel/blit';
 import { colorThemes, currentTheme } from './ui/colortheme';
 import { portalBar } from './ui/portal/topbar';
-import { viewButton } from './ui/viewpick';
+import { returnToProjectButton } from './ui/viewpick';
+import { menuItem, openDropdown, type HudAction } from './ui/menu';
+import type { Modal } from './ui/dom';
 import { flatMenu, openDocs } from './shared/flatmenu';
 import { tabBadge } from './ui/badge';
 import { routerMessage, routerOverlay, routerSpot, startRouter } from './pixel/router-room';
@@ -64,15 +65,13 @@ import './shared/perfwatch-on';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
-// Here, the office opens on the 2D view next time too (see graphics.ts).
-rememberView('2d');
 // The 1D view's color theme here too (ui/colortheme.ts): the bars and windows in its colors, the office tinted to match.
 colorThemes($('theme'), undefined, () => {
   voidColor = '';
   draw(performance.now());
 });
-// Go to Board: back to the 1D view of this project, where the view dropdown was (ui/viewpick.ts).
-$('view-pick').replaceWith(viewButton('2d'));
+// Return to Project: back to the 1D view of this project, on its Command Center (ui/viewpick.ts).
+$('view-pick').replaceWith(returnToProjectButton(() => store.floor));
 
 // 📱 The team phone (ui/phone/), installed at the end.
 let phone: Phone | undefined;
@@ -89,9 +88,12 @@ const loading = floorLoading(net, () => ['roster', 'summary', 'budget']);
 const workers = workerActions(net);
 
 floorPicker(net);
-// 💰 The budget chips on the top bar; a click opens the 1D view's Budget tab (ui/budget/).
+// 💰 The budget chips; a click opens the 1D view's Budget tab (ui/budget/).
 const budget = budgetUi(net, { open: () => location.assign(`/lite?tab=budget${store.floor ? `&floor=${encodeURIComponent(store.floor)}` : ''}`) });
 mountRunToggle(); // ▶ / ⏸ / ⏳ beside it (ui/project-run/)
+// The project's budget, the office's spend today and Pause / Resume: one group on the office's toolbar,
+// out of the top bar (they land beside the floor's line, #floor-meta, and are moved here).
+for (const el of [document.getElementById('budget-chip'), document.querySelector('.bud-meta-row .pr-toggle'), document.getElementById('budget-office')]) if (el) $('px-project').append(el);
 // The project's progress under the top bar; its setup stages open the 1D view's Command Center (ui/progress/).
 mountProgressBar($('progress-bar'), { setup: () => location.assign(`/lite?tab=command${store.floor ? `&floor=${encodeURIComponent(store.floor)}` : ''}`), deliverables: openFloorDeliverablesNow });
 budget.feed.on(() => loading.done('budget', budget.feed.floor()?.floor));
@@ -159,8 +161,7 @@ const spots = (f: Frame) => [
     }),
     zones: () => ZONES.map((z) => ({ team: z.team, title: `${z.icon} ${z.name}`, sub: zoneLine(z.team) })),
     say: {
-      jukebox: () => (store.jukebox.on ? `♪ ${trackTitle(store.jukebox)} · it plays in the 3D office` : 'Off · put something on in the 3D office'),
-      arcade: () => (store.cabinet.player ? `${store.cabinet.player.name} is playing` : store.cabinet.scores[0] ? `High score: ${store.cabinet.scores[0].name}` : 'Play it in the 3D office'),
+      jukebox: () => (store.jukebox.on ? `♪ ${trackTitle(store.jukebox)}` : 'Off'),
       machine: () => `CPU ${Math.round(store.machine.cpu)}% of ${store.machine.cores} cores · memory ${Math.round((store.machine.memUsed / Math.max(1, store.machine.memTotal)) * 100)}%${store.machine.pressure ? ` · ${store.machine.pressure}` : ''}`,
       whiteboard: () => (store.drawing.length ? `✏️ ${store.drawing.length} drawing on it now` : 'Draw on it together, live'),
       meeting: () => {
@@ -217,10 +218,9 @@ function resize() {
 }
 
 function draw(now: number) {
-  const peers = [...store.peers.values()].filter((p) => p.id !== store.you && !p.lite && store.onMyFloor(p));
   const hoverId = hover && 'kind' in hover && hover.kind !== 'desk' ? hover.id : null;
   const scene = { theme: store.theme.active, music: store.jukebox.on, sharing: [...store.peers.values()].some((p) => p.sharing && store.onMyFloor(p)), colorTheme: currentTheme() };
-  people = paintScene(ag, frame, still, scene, { workers: store.workers.values(), peers, level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs, dress: dressFor, tag: tagFor, breaks: { leads: benched(store.floor), clock: Date.now(), still: calm.matches }, helpers: helpersOf(rosterNow(), store.floor) }, now);
+  people = paintScene(ag, frame, still, scene, { workers: store.workers.values(), level: frame.level, hover: hoverId, dog: store.dog ? { state: store.dog, start: store.dogStart } : null, signs, dress: dressFor, tag: tagFor, breaks: { leads: benched(store.floor), clock: Date.now(), still: calm.matches }, helpers: helpersOf(rosterNow(), store.floor) }, now);
 
   g.imageSmoothingEnabled = false;
   voidColor ||= getComputedStyle(document.body).getPropertyValue('--px-void').trim() || '#0d1828';
@@ -326,10 +326,6 @@ function tipFor(s: Spot | Hotspot): HTMLElement[] | null {
     return [h('b', {}, `${leads[i].name} · ${leads[i].title}`), h('div', {}, `🪑 Benched (${b.walking ? `on the way, ${BREAK_WORDS[b.act]}` : BREAK_WORDS[b.act]})`), h('div.px-hint', {}, '🖱️ Hire them again from the 1D view’s Org chart')];
   }
   if (s.kind === 'dog') return store.dog ? [h('b', {}, `🐕 ${store.dog.name}`), h('div.px-dim', {}, `The office dog · ${store.dog.act}`)] : null;
-  if (s.kind === 'peer') {
-    const p = store.peers.get(s.id);
-    return p ? [h('b', {}, p.name), h('div.px-dim', {}, p.doing ?? 'Walking about the 3D office')] : null;
-  }
   const w = store.workers.get(s.id);
   if (!w) return null;
   const member = memberOf(w), zone = zoneOf(w);
@@ -381,7 +377,6 @@ function use(s: Spot | Hotspot) {
   else if ((s.kind === 'subagent' || s.kind === 'lead') && openSubagentAt(rosterNow(), s.id, workers.open, setRoster)) return;
   else if (s.kind === 'desk') workers.send('✨ New task', {}, undefined, s.id);
   else if (s.kind === 'lead' && store.floor) location.assign(`/lite?tab=org&floor=${encodeURIComponent(store.floor)}`);
-  else if (s.kind === 'peer') toast(`🚶 ${store.peers.get(s.id)?.name ?? 'They'} is walking about the 3D office`);
 }
 canvas.addEventListener('click', (e) => {
   if (camera.dragged()) return;
@@ -407,7 +402,7 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointerup', () => clearTimeout(press));
 canvas.addEventListener('pointercancel', () => clearTimeout(press));
 
-// ---- Keys (as the 3D office's, where they mean the same) ----------------------------------------------------
+// ---- Keys ---------------------------------------------------------------------------------------------------
 const chat = mountChat(stage, net);
 /** N: to whoever's waited longest on you, their terminal open and the office turned to them. */
 function nextWaiting() {
@@ -441,7 +436,23 @@ addEventListener('keydown', (e) => {
   draw(performance.now());
 });
 
-// The ☰: everything the 3D office's menu has (shared/flatmenu.ts).
+// ---- The toolbar's ⋯: the next one waiting, the chat, fitting the floor, and the keys -------------------------
+let more: Modal | null = null;
+const moreBtn = $('px-more');
+moreBtn.addEventListener('click', () => {
+  if (more) return more.close();
+  const items: HudAction[] = [
+    { id: 'waiting', icon: '🙋', label: 'Next agent waiting on you', section: 'Open', key: 'N', run: nextWaiting },
+    { id: 'chat', icon: '💬', label: 'Chat', section: 'Open', key: 'T', run: () => chat.open() },
+    { id: 'fit', icon: '🔍', label: 'Fit the whole floor', section: 'Open', key: '0', run: () => zoom(0) },
+  ];
+  const close = () => more?.close();
+  const keys = h('p.menu-foot.px-keys', { 'aria-label': 'Keys' }, ...([['Click', 'open'], ['Right-click', 'menu'], ['+ −', 'zoom'], ['← →', 'pan']] as const).map(([k, what]) => h('span', {}, h('kbd', {}, k), ` ${what}`)));
+  const el = h('div.hud-menu.flat-menu.px-more-menu', { role: 'menu', 'aria-label': 'More' }, h('div.menu-col', {}, ...items.map((a) => h('div.menu-row', {}, menuItem(a, close)))), keys);
+  more = openDropdown(moreBtn, el, () => (more = null));
+});
+
+// The ☰: the project's windows, the office's settings and the docs (shared/flatmenu.ts).
 flatMenu($('menu'), { net, boardActions, openWorker: workers.open, meeting: showMeeting, nextWaiting, nKey: true, settings: () => goToSettings(session) });
 
 // ---- In ----------------------------------------------------------------------------------------
@@ -455,7 +466,7 @@ function goToNeed(t: NeedTarget) {
     const it = store.pulls.items.find((p) => p.number === t.number);
     return it ? openPull(it, net, boardActions()) : undefined;
   }
-  // Settings is the 1D view's tab, at the section the item is about (never the 3D office).
+  // Settings is the 1D view's tab, at the section the item is about.
   if (t.to === 'settings') return goToSettings(session, t.section ?? 'team');
   if (t.to === 'incident') return location.assign(`/lite?floor=${encodeURIComponent(store.floor ?? '')}&tab=audit&incident=${encodeURIComponent(t.id)}`);
   const tab = t.to === 'escalation' ? 'approvals' : t.to === 'setup' ? 'command' : t.to;

@@ -1,7 +1,7 @@
 // ⚙️ Settings › ⚠️ Danger zone (admins, about the project you're on): GitHub's red-bordered box at the
 // bottom of a repository's settings, a row per thing that can't be taken back lightly, each with what it
 // does and its button. Remove from office keeps the folder and the repository; Delete project can take
-// them too. Both open the same confirmation (dialog.ts). No three.js here.
+// them too. Both open the same confirmation (dialog.ts).
 
 import './dialog.css';
 import { store } from '../../state';

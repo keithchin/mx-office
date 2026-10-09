@@ -2,7 +2,7 @@
 // newest on top (server/chatter/). Filters: everything, only agents among themselves, only what
 // involves you (the Project Manager), or one person. New messages are put on top as nodes of their own,
 // never by drawing the list again, so where you've scrolled to stays put; scrolled down, a "N new" pill
-// takes you back up. The panel is one element the summary keeps (ui/summary.ts `after`). No three.js.
+// takes you back up. The panel is one element the summary keeps (ui/summary.ts `after`).
 
 import { matchesFilter, isGroup, type ChatterFilter, type ChatterMessage, type ChatterParty, type PartyKind } from '../../../shared/chatter';
 import { parseJournal } from '../../../shared/roster/journal';

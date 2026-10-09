@@ -1,5 +1,4 @@
-/* The flat views' ⚙️ Settings page (page.ts): the 3D window's look (settings.css), laid out in the page
-   rather than a window, and in the color tokens so every theme (Default, Dark, Terminal, Clean) wears it. */
+/* The flat views' ⚙️ Settings page (page.ts): the settings' look (settings.css), laid out in the page, in the color tokens so every theme (Default, Dark, Terminal, Clean) wears it. */
 .fs-page { display: flex; flex-direction: column; min-height: 0; }
 .fs-title { margin-bottom: 8px; }
 .fs-grid { display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: start; background: var(--paper); border: 3px solid var(--line); border-radius: 16px; box-shadow: 0 4px 0 var(--edge); overflow: hidden; }

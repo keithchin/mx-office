@@ -4,7 +4,7 @@
 
 /**
  * The pages that sign-in sends you back to (`/login?next=`), so signing in from one of them lands
- * on it again rather than on the 3D office. Anything else goes to `/`, which is never an open redirect.
+ * on it again. Anything else goes to `/` (which opens the 1D view), never an open redirect.
  */
 export const RETURN_PAGES = ['/home', '/lite', '/pixel', '/docs', '/m'] as const;
 export type ReturnPage = (typeof RETURN_PAGES)[number] | `/docs/${string}`;
@@ -22,6 +22,16 @@ export function flatViewGoesHome(search: string, remembered: string | null): boo
   const q = new URLSearchParams(search);
   if (q.has('home')) return true;
   return !q.get('floor') && !remembered;
+}
+
+/**
+ * Where an address of the old 3D office goes now: `/` and `/index.html` (with `?view=3d`, `?view=retro`,
+ * `?3d=1`, `?gfx=…` or anything else) open the 1D view, of the floor the link named when it named one
+ * (`?floor=`); the 1D view itself hands over to Home when there's no floor to open (flatViewGoesHome).
+ */
+export function legacyOfficeUrl(search: string): string {
+  const floor = new URLSearchParams(search).get('floor');
+  return floor ? `/lite?floor=${encodeURIComponent(floor)}` : '/lite';
 }
 
 /** One project's row in the Statistics tab's comparison table. */

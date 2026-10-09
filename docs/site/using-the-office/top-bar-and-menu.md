@@ -1,19 +1,19 @@
 ---
 title: Top bar & menu
-description: The 🏠 button, floor picker, Go to Office, 🎨 color themes, the ☰ menu, the Portal layout's left navigation and search, tab badges and notifications.
+description: The 🏠 button, floor picker, Go to Office and Return to Project, the 2D Office view's bar and toolbar, 🎨 color themes, the ☰ menu, the Portal layout's left navigation and search, tab badges and notifications.
 weight: 1
 ---
 
 ## The top bar
 
-On the 1D and 2D views, from left to right:
+On the 1D view, from left to right (the 2D Office view's bar is [below](#the-2d-office-views-top-bar)):
 
 | Part | What it does |
 |---|---|
 | 🔔 | *Turn on notifications*. Shown until your browser has been asked once. Desktop notifications take you to the worker that needs you. |
 | 🏠 | Goes to `/home`. |
 | **Floor** picker | Switches project. Each option shows `· 🙋 N` when agents there wait on you, or clone progress while a floor is cloning. Under the bar: `⎇ branch · repo/dir · 👥 N here`. |
-| **Go to Office** | Opens the project's office from above, the [2D view](2d-view.md). On the 2D view the same place has **Go to Board**, back to the 1D view. (The view dropdown is gone from the flat views.) |
+| **Go to Office** | Opens the project's office from above, the [2D Office view](2d-view.md): the only way there. On the 2D Office view the same place has **Return to Project**, back to the 1D view's Command Center. |
 | 🎨 | Lists the color themes. |
 | ☰ | The menu. |
 
@@ -29,7 +29,7 @@ The Portal themes draw the same bar as a navy portal header, the whole width of 
 |---|---|
 | ⋮⋮⋮ launcher | A menu of where to go: **Projects** (Home), **The Firm**, the **Documentation**, **Settings**, and every project. ↑/↓ move, Enter picks, Esc closes. |
 | **Mx Office** | The wordmark goes to Home (it stands in for 🏠). |
-| Section | The page in capitals: **PROJECTS** on Home, **THE FIRM**, or on a project's pages the page you're on (**OVERVIEW**, **BOARD**…). The project itself is switched in the left navigation's project card (see [Portal layout](#portal-layout)); on the 2D view the section is still the floor picker. |
+| Section | The page in capitals: **PROJECTS** on Home, **THE FIRM**, or on a project's pages the page you're on (**OVERVIEW**, **BOARD**…). The project itself is switched in the left navigation's project card (see [Portal layout](#portal-layout)); on the 2D Office view the section is **OFFICE ·** and the floor picker. |
 | Search | Finds, as you type, in groups: **Projects**, the **Pages of this project**, its **Agents**, **Issues** and **Pull requests** (by title or `#number`), the **Office** pages and the **Documentation** (by title or heading). The group with the best match comes first. ↑/↓ walk the results, Enter goes there, Esc clears. Everything but the docs is already in the page; the docs' titles are fetched once, the first time you click into the search. On a phone it folds into a 🔍 button. |
 | Bell | Opens the [team phone](team-phone.md), with its count (the phone's floating button is still there too). |
 | ? | The documentation. |
@@ -38,6 +38,19 @@ The Portal themes draw the same bar as a navy portal header, the whole width of 
 | Your initials | The ☰ menu. |
 
 Everything else the bar had (Go to Office, the office's budget chip, TEST MODE, Back to a floor on Home) stays in it. The bell that asks to turn notifications on is in ⚙️ Settings › Notifications instead.
+
+### The 2D Office view's top bar
+
+The [2D Office view](2d-view.md) has the same bar, kept short. In Portal: the launcher, **Mx Office**, **OFFICE · PROJECT ⌄** (the project switcher, opening that project's office), the search, **Return to Project** (the bar's one blue button: back to the project's 1D view, on its Command Center), the bell, help, dark mode, **🎨**, TEST MODE when the office is in test mode, and your avatar (the **☰** menu). The other themes have 🏠, **OFFICE / the project**, **Return to Project**, 🎨 and ☰.
+
+Everything else is on the office's **toolbar**, floating over the top of the canvas:
+
+| Part | What it does |
+|---|---|
+| Status (left) | What the project's up to (*6 agents working · 9 queued*) over `⎇ branch · folder · 👥 N here`. Hidden on a narrow window. |
+| Project group | The project's 💰 budget chip, **● Running \| Pause** (admins pause or resume the project here) and the office's spend today; a chip opens the 1D view's Budget tab. |
+| **− Fit +** (right) | Zoom out, fit the whole floor, zoom in (also **−**, **0**, **+**). |
+| **⋯** | Next agent waiting on you (**N**), Chat (**T**), Fit the whole floor (**0**), and the keys. |
 
 ## Color themes
 
@@ -49,7 +62,7 @@ Click **🎨** and pick one from the list:
 - **Fun (Dark)**: the same look in dark blue-grey, easy on the eyes at night.
 - **Terminal**: black and phosphor green, one monospace font, square boxes and faint scanlines. In Terminal, the project summary's *What's happening* types itself out (not if you asked your system for less motion).
 
-The pick is kept in this browser (`agent-office.color-theme` in local storage). It applies to the 1D view, the 2D view (the office is tinted to match), `/home`, The Firm and these docs, and follows along in your other open tabs. Without a pick it's Portal: Portal (Light), or Portal (Dark) when your system is in dark mode. A pick made before (Clean, Fun…) is kept. The 3D office keeps its own look.
+The pick is kept in this browser (`agent-office.color-theme` in local storage). It applies to the 1D view, the 2D view (the office is tinted to match), `/home`, The Firm and these docs, and follows along in your other open tabs. Without a pick it's Portal: Portal (Light), or Portal (Dark) when your system is in dark mode. A pick made before (Clean, Fun…) is kept.
 
 ![The Dark theme](../images/theme-dark.png)
 
@@ -57,22 +70,21 @@ The pick is kept in this browser (`agent-office.color-theme` in local storage). 
 
 ## The ☰ menu
 
-The same menu as in the 3D office, with what each item does from here.
+The same menu on the 1D view, the 2D Office view and Home.
 
 | Section | Items |
 |---|---|
-| **Open** | 🙋 Next worker that needs you (only when someone waits) · 📌 Issues · 🔀 Pull requests · 📋 Task queue · 🌐 Services · 📝 Whiteboard · 🤝 Meeting room · 🔎 Search · 📚 Project docs · 🧱 Open in Studio Pro (Mendix projects; admin) · 🛗 Floors · 🍸 Rooftop bar (3D ↗) |
-| **Together** | 🎙️ Join voice (3D ↗) · 🖥️ Share screen (3D ↗) · 🖼️ Hang a picture (3D ↗) · 👥 Invite teammates · 🔑 Accounts (admin) · 🔐 Your sign-ins |
+| **Open** | 🙋 Next worker that needs you (only when someone waits) · 📌 Issues · 🔀 Pull requests · 📋 Task queue · 🌐 Services · 📝 Whiteboard · 🤝 Meeting room · 🔎 Search · 📚 Project docs · 🧱 Open in Studio Pro (Mendix projects; admin) · 🏢 Projects |
+| **Together** | 👥 Invite teammates · 🔑 Accounts (admin) · 🔐 Your sign-ins |
 | **Office** | ⚙️ Settings · 🏠 Home · 📖 Documentation · ⬆️ Upgrade the office (when an update is there) |
 
-- Items marked **3D ↗** open the 3D office and run there.
 - **📚 Project docs** opens the floor's own Markdown files (its README, `docs/team/*.md`, standups) on the bookshelf.
 - **📖 Documentation** opens these docs.
 - Red numbers are counts: open issues, open PRs, queued tasks, people waiting on other floors.
 - On `/home`, the items that need a floor are left out.
 
 > [!NOTE]
-> **⚙️ Settings** in the ☰ menu opens the full Settings page, the 1D view's **⚙️ Settings** tab (`/lite?tab=settings`), from the 1D view, the 2D view and `/home` alike: it never switches to the 3D office. The 3D office keeps its own ⚙️ window (camera, character, the building) for when you're in it. See [Settings](settings.md).
+> **⚙️ Settings** in the ☰ menu opens the full Settings page, the 1D view's **⚙️ Settings** tab (`/lite?tab=settings`), from the 1D view, the 2D Office view and `/home` alike. See [Settings](settings.md).
 
 ### Portal layout
 

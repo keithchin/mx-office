@@ -1,16 +1,20 @@
 ---
-title: 2D view
-description: The floor from above in pixel art - team zones, Jeff's glass room, benched Leads on breaks, clicking, keys and zoom.
+title: 2D Office view
+description: The floor from above in pixel art - reached by Go to Office, back with Return to Project; its top bar and toolbar, team zones, Jeff's glass room, clicking, keys and zoom.
 weight: 14
 ---
 
-The **2D view** (`/pixel?floor=<id>`) draws the floor from above in pixel art, with every worker at its desk.
+The **2D Office view** (`/pixel?floor=<id>`) draws the floor from above in pixel art, with every worker at its desk. You get there with **Go to Office** on the project's 1D view (Home and links always open the 1D view), and **Return to Project** in its top bar takes you back to the 1D view of the same project, on its Command Center.
 
-![The 2D view](../images/office-2d.png)
+![The 2D Office view](../images/office-2d.png)
+
+## Top bar and toolbar
+
+The top bar only says where you are and how to get back: **OFFICE · &lt;project&gt;** (switching project opens that project's office), **Return to Project**, and the bar's icons (bell, help, dark mode, 🎨, your avatar for the ☰ menu). Everything about the office itself is on its **toolbar** over the top of the canvas: the project's status line on the left, then its budget chip, **● Running | Pause** and the office's spend today; **− Fit +** and **⋯** (next agent waiting, chat, fit, and the keys) on the right. See [Top bar & menu](top-bar-and-menu.md#the-2d-office-views-top-bar).
 
 Under the top bar is the project's [progress bar](progress-and-acceptance.md), as on the 1D view. Its setup stages open the 1D view's Command Center.
 
-The **📱 Team phone** sits above the zoom buttons at the bottom right: the floor's team chatter, messages to the agents and what needs you, as on the 1D view. See [Team phone](team-phone.md).
+The **📱 Team phone** sits at the bottom right: the floor's team chatter, messages to the agents and what needs you, as on the 1D view. See [Team phone](team-phone.md).
 
 ## What's on the floor
 
@@ -18,7 +22,7 @@ The **📱 Team phone** sits above the zoom buttons at the bottom right: the flo
 - **Jeff's room**: *Router · Jeff* (⚖️), a glass office east of the design studio. Jeff is always seated, in a charcoal suit, glasses and moustache. A switchboard lights up and trays fill for the PM and each team as he routes; a bubble (*→ PM*, *→ Development*) shows each verdict. Click him for today's numbers.
 - **Benched Leads on breaks**: a benched Lead takes a break, moving between the lounge TV, a smoke on the balcony and coffee at the kitchen machine. Hover for *🪑 Benched (watching TV…)*; click to open the Org chart and hire them again. Every browser shows the same scene. With reduced motion they stay put.
 - **Subagents**: every subagent that has run at least once is a smaller character tagged with its name, *Nia (Hedy's tester)*. While it runs it sits on a stool just behind its Lead's chair, typing on a laptop, with its task under its tag (zoom in, or hover); up to three at once per Lead (the last tag says how many more). Idle, it lives about the office like a benched Lead: the lounge TV, a smoke on the balcony, a coffee in the kitchen, walking between them, and a speech bubble when it's standing by someone else on a break. When a run starts it walks back to its stool along the aisle, and away again when the run ends. A benched one does the same with a *🪑 benched* tag. Hover for who hired it, its model, runs (and how many are unreviewed) and grade; click for its runs and reviews.
-- **Things to click**: the 📌 Issues, 📋 Task queue and 🔀 Pull requests boards, the 🛗 elevator (to /home), the 📝 whiteboard, the 🤝 meeting room, 📺 Services and the 📚 bookshelf (the project's docs).
+- **Things to click**: the 📌 Issues, 📋 Task queue and 🔀 Pull requests boards, the 🛗 elevator (to Home), the 📝 whiteboard, the 🤝 meeting room, 📺 Services and the 📚 bookshelf (the project's docs).
 
 ![A team zone](../images/office-2d-zone.png)
 
@@ -39,6 +43,6 @@ The **📱 Team phone** sits above the zoom buttons at the bottom right: the flo
 | Arrows | Pan. |
 | Esc | Close the menu. |
 
-Drag to pan, Ctrl+wheel or pinch to zoom. The footer shows worker counts, **🙋 Next waiting**, the keys and a legend.
+Drag to pan, Ctrl+wheel or pinch to zoom. The footer shows worker counts, **🙋 Next waiting** and a legend; the keys are in the toolbar's **⋯**.
 
-The 2D view follows the **🎨** theme: Default as drawn, Dark as a blue dusk with warm lamp pools, Terminal in green phosphor, Clean (Light) almost untinted, Clean (Dark) a neutral grey night.
+The 2D Office view follows the **🎨** theme: Default as drawn, Dark as a blue dusk with warm lamp pools, Terminal in green phosphor, Clean (Light) almost untinted, Clean (Dark) a neutral grey night.

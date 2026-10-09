@@ -6,7 +6,7 @@
 // (Codex, OpenCode…) it shows the terminal's own text instead.
 //
 // Only the newest rows are on the page (Show earlier adds more), and a redraw only rebuilds the rows
-// that changed. No three.js here: the 1D view imports it.
+// that changed.
 
 import type { ConvoMsg, ConvoToolStatus } from '../../../../shared/protocol/convo';
 import { h } from '../../dom';

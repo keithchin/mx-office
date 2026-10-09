@@ -1,4 +1,4 @@
-// The 2D view's props (pixel.ts): the rest of what the 3D office has standing about, drawn a pixel at
+// The 2D view's props (pixel.ts): the rest of what the office has standing about, drawn a pixel at
 // a time like office.ts's walls and floor. The kitchen and its coffee machine, the lounge's coffee
 // table, the basketball hoop, three kinds of potted plant, the holiday decorations when the
 // building's dressed up, the signs on the desks, and the dog. Some of it moves a little every frame
@@ -15,7 +15,7 @@ import { LIFT, PPM, ax, az, type Frame } from './frame';
 import { lamps, pool } from './light';
 import { drawZoneMoving } from './decor';
 
-/** Where the kitchen counter runs along the south wall, and its coffee machine (where the 3D office's cup is poured). */
+/** Where the kitchen counter runs along the south wall, and its coffee machine . */
 export const KITCHEN = { minX: -17.2, maxX: -12, depth: 0.75, coffee: -15.7 } as const;
 /** The lounge's coffee table. */
 const COFFEE_TABLE = { x: 13, z: 0, width: 1.6, depth: 1.6 } as const;
@@ -94,7 +94,7 @@ function halloween(g: CanvasRenderingContext2D, f: Frame) {
 }
 
 // ---- Plants ---------------------------------------------------------------------------------------
-/** The 3D office's three kinds of floor plant, taking turns round the room: monstera, snake plant and ficus. */
+/** The office's three kinds of floor plant, taking turns round the room: monstera, snake plant and ficus. */
 export function plantSpecies(i: number): 'monstera' | 'snake' | 'ficus' {
   return (['monstera', 'snake', 'ficus'] as const)[i % 3];
 }

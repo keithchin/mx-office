@@ -1,7 +1,7 @@
 /* The Portal top bar (ui/portal/topbar.ts): the flat pages' .lite-bar as a portal header, a navy band
    44px high across the whole window. Its own pieces (.pt-only) are only shown in a Portal theme; every
    other theme hides them, and its bar is as it was. Inside the bar the tokens are the bar's (white ink
-   on navy), so what the bar already had (the floor picker, the view dropdown, the bell, the budget
+   on navy), so what the bar already had (the floor picker, Go to Office or Return to Project, the bell, the budget
    chip, Back to a floor) follows without rules of its own; its pop-ups take the page's colours back
    (.pt-pagecolors, styles/theme-portal.css). */
 

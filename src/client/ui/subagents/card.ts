@@ -2,7 +2,7 @@
 // "🧩 Nia · Tester (Hedy's subagent)", its model, how it is now (at work on what, benched, or when
 // it last ran), its runs and its grade A–F. A Lead that isn't on the list (not at work on this floor)
 // has its subagents in a group of their own at the end. Clicking one opens its detail (detail.ts).
-// No three.js: the 1D view imports it.
+//
 
 import { cardNow, type SubagentCard } from '../../../shared/roster/subagent-cards';
 import { modelWord } from '../../../shared/roster/subagents';

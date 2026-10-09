@@ -1,7 +1,7 @@
 // Where each project team works on a floor (see docs/teams.md): the 2D view paints every team's
 // patch of floor in its own style, and hiring a role (server/roster/adapter.ts) sits it at a free
 // desk in its team's patch first. It's a fixed map of the room's existing desks rather than new
-// desks, so the 3D office, saved floors and every other way of hiring stay exactly as they were.
+// desks, so saved floors and every other way of hiring stay exactly as they were.
 // Pure, with no Node imports: the browser reads it too.
 
 import { DESK_BY_ID, deskBuilt } from './layout.js';

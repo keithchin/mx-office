@@ -1,6 +1,6 @@
 // ⚙️ Settings › 🧪 Testing (admins): whether this office is in test mode and why (GET /api/test-mode),
 // what test mode is, and the way to the Test Mode page (/lite?tab=tests, ui/testlab/), where the
-// performance and journey suites run against a throwaway test office. No three.js here.
+// performance and journey suites run against a throwaway test office.
 
 import { testsHref } from '../../../shared/testlab';
 import { store } from '../../state';

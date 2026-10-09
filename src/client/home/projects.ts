@@ -1,8 +1,8 @@
 import './projects.css';
 /**
  * The home page's 🏢 Projects tab: a card for every floor of the building (every project), each to
- * open on the board (/lite) or in the 2D office (/pixel), with ✨ New project and ➕ Add project.
- * It used to be the floors page over the flat views (shared/floors.ts). No three.js here.
+ * open on its 1D view (/lite, its Command Center), with ✨ New project and ➕ Add project.
+ * It used to be the floors page over the flat views (shared/floors.ts).
  */
 import type { Net } from '../net';
 import { store } from '../state';
@@ -10,33 +10,29 @@ import { rememberFloor } from '../state/persist';
 import { cloneLabel, floorPalette } from '../../shared/floors';
 import type { FloorInfo } from '../../shared/protocol';
 import { h } from '../ui/dom';
-import { openElevator } from '../ui/elevator';
+import { openAddProject } from '../ui/add-project';
 import { openWizard } from '../ui/wizard';
 import { openConnections } from '../ui/connections';
 import { summaryLine } from '../ui/summary';
-import { graphics, rememberView } from '../graphics';
 import { homeRunIcon, homeRunToggle } from './run-state';
 import { hideOverlay, showOverlay } from '../ui/loading/overlay';
 import { miniProgress } from '../ui/progress/mini';
 import { isPortal } from '../ui/clean';
 import { portalProjects } from './portal';
+import { projectUrl } from '../ui/viewpick';
 
-/** A flat view: the 1D board, or the 2D pixel office. */
-type FlatView = '1d' | '2d';
+/** The page that opens `floor`: its 1D view, whose address names the floor, so it opens straight on it. */
+export const floorUrl = (floor: string) => projectUrl(floor);
 
-/** The page that opens `floor` in `view`: its address names the floor, so it opens straight on it. */
-export const floorUrl = (floor: string, view: FlatView) => `${view === '2d' ? '/pixel' : '/lite'}?floor=${encodeURIComponent(floor)}`;
-
-/** Into `floor` on `view`, which both become what this browser remembers. `leaving` hears it go first. */
-export function openFloor(floor: string, view: FlatView, leaving: () => void) {
+/** Into `floor` (its 1D view), which becomes what this browser remembers. `leaving` hears it go first. */
+export function openFloor(floor: string, leaving: () => void) {
   leaving();
   rememberFloor(floor);
-  rememberView(view);
   // At once, while the next page comes (it has Mx Office's loading screen, then the floor's overlay); hidden again if Back returns here.
   const name = store.floors.find((f) => f.id === floor)?.name ?? floor;
-  showOverlay({ title: `Loading project ${name}… 0 %`, step: view === '2d' ? 'Opening the office…' : 'Opening the board…', pct: 0 });
+  showOverlay({ title: `Loading project ${name}… 0 %`, step: 'Opening the project…', pct: 0 });
   addEventListener('pageshow', (e) => e.persisted && hideOverlay(), { once: true });
-  location.assign(floorUrl(floor, view));
+  location.assign(floorUrl(floor));
 }
 
 export interface ProjectsView {
@@ -52,9 +48,7 @@ export interface ProjectsView {
  * `leaving` hears the page head off to a floor.
  */
 export function projectsView(root: HTMLElement, net: Net, last: string | null, leaving: () => void): ProjectsView {
-  // The view you were last in is the one each card offers first.
-  const usual: FlatView = graphics().view === '2d' ? '2d' : '1d';
-  const go = (id: string) => openFloor(id, usual, leaving);
+  const go = (id: string) => openFloor(id, leaving);
 
   /** The floor's project summary in a line (its stage, who's working, who needs you), filled in once it's fetched. */
   const summaryOf = (floor: string) => {
@@ -68,11 +62,10 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
     const stats: string[] = f.cloning
       ? [cloneLabel(f.clone)]
       : [f.waiting && `🙋 ${f.waiting} waiting`, f.busy && `👷 ${f.busy} working`, `💻 ${f.workers} agent${f.workers === 1 ? '' : 's'}`, f.people && `🧑 ${f.people} here`].filter((s): s is string => !!s);
-    const button = (into: FlatView, label: string, title: string) =>
-      h('a.btn', { href: floorUrl(f.id, into), class: into === usual ? 'primary' : '', 'aria-disabled': f.cloning ? 'true' : undefined, title, onclick: (e: Event) => {
-          e.preventDefault();
-          if (!f.cloning) openFloor(f.id, into, leaving);
-        } }, label);
+    const open = h('a.btn.primary', { href: floorUrl(f.id), 'aria-disabled': f.cloning ? 'true' : undefined, title: `${f.name}: its Command Center, board, agents and tabs`, onclick: (e: Event) => {
+        e.preventDefault();
+        if (!f.cloning) openFloor(f.id, leaving);
+      } }, '🗂️ Open project');
     return h(
       'li.home-floor',
       { class: `${wasHere ? 'here' : ''}${f.waiting ? ' waiting' : ''}${f.cloning ? ' cloning' : ''}`, style: `--floor:${floorPalette(f.palette).trim}` },
@@ -83,14 +76,14 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
       f.cloning ? null : summaryOf(f.id),
       // Its progress bar, small: the phases and where it is, or the version accepted (ui/progress/mini.ts).
       f.cloning ? null : miniProgress(f.id),
-      h('div.home-floor-go', {}, button('1d', '🗂️ Board', `${f.name}'s board: its pipeline from issue to merged PR, and its agents`), button('2d', '🗺️ Office', `${f.name} from above: every agent at its desk`)),
+      h('div.home-floor-go', {}, open),
     );
   };
 
-  const addProject = () => openElevator({ net, addOnly: true, downstairs: () => false, ride: go });
+  const addProject = () => openAddProject({ net, go });
   const newProject = () => void openWizard({ net, go });
   // In a Portal theme the tab is the Projects page (home/portal.ts).
-  const portal = portalProjects(root, { net, last, open: (id, view) => openFloor(id, view, leaving), newProject, addProject, connections: () => openConnections() });
+  const portal = portalProjects(root, { net, last, open: (id) => openFloor(id, leaving), newProject, addProject, connections: () => openConnections() });
 
   const render = () => {
     if (isPortal()) return portal.render();
@@ -101,7 +94,7 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
     const connections = store.me.admin ? h('button.btn.home-add', { type: 'button', title: 'The GitHub and Mendix tokens, the password, git & gh and the folders the office uses', onclick: () => openConnections() }, '🔌 Connections') : null;
     root.replaceChildren(
       h('div.home-head', {}, h('h2', {}, '🏢 Projects'), h('span.seg', {}, wizard, add, connections), homeRunToggle()),
-      h('p.home-intro', {}, store.floors.length ? 'Every project is a floor of this building. Open one on its board, or in the office from above.' : "This building has no floors yet. ➕ Add project clones one of your repositories, and it becomes the first floor."),
+      h('p.home-intro', {}, store.floors.length ? 'Every project is a floor of this building. Open one for its Command Center, board and agents.' : "This building has no floors yet. ➕ Add project clones one of your repositories, and it becomes the first floor."),
       h('ul.home-floors', {}, ...store.floors.map(card)),
     );
   };

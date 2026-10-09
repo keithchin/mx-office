@@ -2,7 +2,7 @@
 // selection, open groups, folded rail and flyouts (ui/portal/nav-logic.ts), deep links still picking the
 // right item, the badges, the Overview's cards (ui/portal/overview-logic.ts), the search's groups and
 // ranking (ui/portal/search-logic.ts), and all of it drawn only in a Portal theme, the other themes
-// keeping the tab row. Also the Workers → Agents wording, Go to Office in place of the view dropdown and
+// keeping the tab row. Also the Workers → Agents wording, Go to Office / Return to Project in place of the view dropdown and
 // the docs' brand.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -235,15 +235,16 @@ test('Agents, not Workers, where a person reads it; the ids stay', () => {
   assert.match(read('src/shared/audit.ts'), /workers: \{ label: 'Agents'/);
 });
 
-test('Go to Office in place of the view dropdown on the flat views', () => {
+test('Go to Office on the 1D view, Return to Project on the 2D view, and no view dropdown', () => {
   const lite = read('src/client/lite.ts');
   const pixel = read('src/client/pixel.ts');
-  assert.doesNotMatch(lite, /viewPicker/);
-  assert.doesNotMatch(pixel, /viewPicker/);
-  assert.match(lite, /replaceWith\(viewButton\('1d'\)\)/);
-  assert.match(pixel, /replaceWith\(viewButton\('2d'\)\)/);
+  assert.doesNotMatch(lite + pixel, /viewPicker|viewButton/);
+  assert.match(lite, /replaceWith\(goToOfficeButton\(\(\) => store\.floor\)\)/);
+  assert.match(pixel, /replaceWith\(returnToProjectButton\(\(\) => store\.floor\)\)/);
   const vp = read('src/client/ui/viewpick.ts');
-  assert.match(vp, /to === '2d' \? 'Go to Office' : 'Go to Board'/);
+  assert.match(vp, /'Go to Office'/);
+  assert.match(vp, /'Return to Project'/);
+  assert.doesNotMatch(vp, /Go to Board/);
 });
 
 test('the docs are MxOffice Docs', () => {
@@ -350,7 +351,6 @@ test('the New task window and the rest say agent, not worker, where a person rea
   assert.match(ask, /'What should the agent do\?'/);
   assert.match(ask, /`✨ New agent · \$\{opts\.newDesk\}`/);
   assert.doesNotMatch(ask, /'What should the worker do\?'|New worker ·/);
-  assert.match(read('src/client/ui/palette.ts'), /Find an agent, issue, PR/);
   assert.match(read('src/client/ui/menuitems.ts'), /label: 'Next agent that needs you'/);
   // Ids, message types and data keys keep the old name.
   assert.match(read('src/client/lite.html'), /id="tab-workers"/);

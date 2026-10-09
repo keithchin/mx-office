@@ -5,7 +5,7 @@ import './portal.css';
  * (search by name, a status select, the sort with its direction, Pause all), and a card per project in a
  * grid. A card has its tile (the project's letters in its floor's colour), its name (to its board), what
  * it is, its 👁 (watch: shared/project-prefs.ts), its pin (pinned ones first under "Pinned", kept in
- * this browser) and its ⋯ (open the board or the office, the live app, Edit in Studio Pro, Pause or
+ * this browser) and its ⋯ (open the project, the live app, Edit in Studio Pro, Pause or
  * Resume it), and at the bottom its progress, its status and its spend. What it shows and in what order
  * is home/portal-logic.ts. It asks the office for nothing new: the floors are the store's, the run
  * state home/run-state.ts's (already kept up to date for Home), the spend one GET /api/budget/office
@@ -36,8 +36,8 @@ export interface PortalDeps {
   net: Net;
   /** The floor this browser was last on (marked on its card). */
   last: string | null;
-  /** Into a floor, on the board or in the office from above (home/projects.ts openFloor). */
-  open: (floor: string, view: '1d' | '2d') => void;
+  /** Into a floor: its 1D view (home/projects.ts openFloor). */
+  open: (floor: string) => void;
   newProject: () => void;
   addProject: () => void;
   connections?: () => void;
@@ -149,8 +149,7 @@ export function portalProjects(root: HTMLElement, deps: PortalDeps) {
 
   const moreItems = (f: FloorInfo): PopItem[] => {
     const items: PopItem[] = [
-      { label: 'Open the board', hint: 'Its pipeline, agents and tabs', href: floorUrl(f.id), run: () => deps.open(f.id, '1d') },
-      { label: 'Open the office', hint: 'From above, every agent at a desk', href: `/pixel?floor=${encodeURIComponent(f.id)}`, run: () => deps.open(f.id, '2d') },
+      { label: 'Open project', hint: 'Its Command Center, board, agents and tabs', href: floorUrl(f.id), run: () => deps.open(f.id) },
       { label: 'View live app', hint: 'The app running from main', href: floorUrl(f.id, '&tab=live') },
       { label: 'Edit in Studio Pro', hint: 'Opens on the office’s computer (admins)', href: floorUrl(f.id, '&open=studio') },
     ];
@@ -187,7 +186,7 @@ export function portalProjects(root: HTMLElement, deps: PortalDeps) {
     const name = h('a.ph-name', { href: floorUrl(f.id), title: `${f.name}: its board` }, f.name);
     name.addEventListener('click', (e) => {
       e.preventDefault();
-      if (!f.cloning) deps.open(f.id, '1d');
+      if (!f.cloning) deps.open(f.id);
     });
     const sub = [f.repo ?? 'Local folder', f.branch && f.branch !== 'HEAD' ? `⎇ ${f.branch}` : ''].filter(Boolean).join(' · ');
     const people = [f.busy && `${f.busy} working`, `${f.workers} agent${f.workers === 1 ? '' : 's'}`, f.people && `${f.people} here`].filter(Boolean).join(' · ');

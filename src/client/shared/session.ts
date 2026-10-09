@@ -1,8 +1,7 @@
 /**
  * Being in the office from one of its flat views, the 1D board (/lite) or the 2D pixel office
  * (/pixel), and the home page (/home): the connection, the windows that hear from it, what you have open for the others to
- * see, notifications, and coming in (signing in, and your name the first time). No three.js here:
- * both flat views import it.
+ * see, notifications, and coming in (signing in, and your name the first time).
  */
 import { Net } from '../net';
 import { AVATAR_COLORS, loadProfile, loadSettings, saveProfile, store, type Settings } from '../state';
@@ -14,7 +13,7 @@ import { openTerminalFor, routeTerminalMessage } from '../ui/terminal';
 import { openChangesFor, routeChangesMessage } from '../ui/changes';
 import { routeWorktreeMessage } from '../ui/prompt';
 import { routePullMessage } from '../ui/pull';
-import { routeElevatorMessage } from '../ui/elevator';
+import { routeAddProjectMessage } from '../ui/add-project';
 import { routeProjectDeleted } from '../ui/project-delete/api';
 import { openSignIns } from '../ui/signins';
 import { routeWhiteboardMessage } from '../ui/whiteboard';
@@ -41,11 +40,11 @@ export interface FlatSession {
  * clicked); `onMessage` hears every message after the store and the shared windows have.
  */
 export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorker: (id: string) => void, onMessage?: (msg: ServerMsg) => void): FlatSession {
-  // Your name and color from the 3D office, if this browser has been in it. Nobody sees a character
-  // of yours from here, so a look is only made up to connect with.
+  // Your name and color, if this browser has them. Nobody sees a character of yours, so a look is
+  // only made up to connect with.
   const saved = loadProfile();
   store.profile = { name: saved?.name ?? 'Guest', color: saved?.color ?? AVATAR_COLORS[1], look: saved?.look ?? randomLook() };
-  const net = new Net(() => store.profile, () => null, true);
+  const net = new Net(() => store.profile);
   const settings = loadSettings();
   const notifier = new DesktopNotifier(() => settings.notify, openWorker);
   // Through Phone access, risky actions ask for the password again (ui/reauth.ts); the phone version asks its own way.
@@ -54,7 +53,7 @@ export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorke
   /** The server version this page was loaded with. */
   let bootVersion = '';
 
-  /** Nothing to see up on the roof from here: down to the first floor instead (the 3D office left you up there, say). */
+  /** Nothing to see up on the roof from here: down to the first floor instead (a link from before, say). */
   const offTheRoof = () => {
     if (store.floor !== ROOF) return;
     const to = store.floors.find((f) => !f.cloning);
@@ -72,7 +71,7 @@ export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorke
     routeChangesMessage(msg);
     routePullMessage(msg);
     routeWorktreeMessage(msg);
-    routeElevatorMessage(msg);
+    routeAddProjectMessage(msg);
     // The windows the ☰ menu opens (shared/flatmenu.ts).
     routeWhiteboardMessage(msg, net);
     routeTeamMessage(msg);
@@ -204,7 +203,6 @@ async function signIn(page: string, hasProfile: boolean, net: Net) {
   if (hasProfile || store.me.account) return net.connect();
   askName((name) => {
     store.profile.name = name;
-    // No look: the 3D office still has you pick a character the first time you go in.
     saveProfile({ name, color: store.profile.color });
     net.connect();
   });

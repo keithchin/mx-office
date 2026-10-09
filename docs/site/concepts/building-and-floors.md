@@ -29,7 +29,6 @@ Floors don't share workers. To run two apps in parallel, use two floors. The rul
 - **🏠 Home → 🏢 Projects**: every floor as a card, with how many agents wait on you.
 - The **floor** picker in the top bar of the 1D and 2D views. A floor with people waiting shows `· 🙋 N`.
 - When an agent on another floor starts waiting, you get a toast and a ding, and a **🙋 N waiting on &lt;floor&gt; →** button. It lands on that floor's Command Center.
-- In the 3D office, the elevator on the north wall.
 
 ## Adding and removing floors
 

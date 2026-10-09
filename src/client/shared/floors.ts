@@ -1,7 +1,6 @@
 /**
  * The floor picker on the flat views' top bar (the 1D board at /lite and the 2D pixel office at
- * /pixel). Every floor's card, and adding a project, are on the home page (/home, see home/). No
- * three.js here: both flat views import it.
+ * /pixel). Every floor's card, and adding a project, are on the home page (/home, see home/).
  */
 import type { Net } from '../net';
 import { store } from '../state';

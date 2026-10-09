@@ -1,7 +1,7 @@
 // The project summary on the 2D view: a compact panel above the board saying what's happening on the
 // floor (GET /api/summary): a few plain sentences, where the project stands, how far along it is,
 // who's on what, who needs a human, what's in the way, and the latest things that happened. Also the
-// one line a floor's card on the home page shows (summaryLine). No three.js here: the 2D view imports it.
+// one line a floor's card on the home page shows (summaryLine).
 
 import { oneLine, type ActivityItem, type ProjectSummary, type SummaryAgent } from '../../shared/summary';
 import { h, timeAgo } from './dom';

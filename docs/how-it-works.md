@@ -2,6 +2,9 @@
 
 Back to the [README](../README.md). [Code layout](code-layout.md) says where the code lives, and how a feature plugs in.
 
+> [!NOTE]
+> Parts of this page (pictures on the walls, golf, the rooftop, the dog's walks) describe the 3D office, which is gone (2026-10-09); the server parts it describes may still be there. See [The two views](site/concepts/views.md).
+
 ```
 browser ──HTTPS/WSS──▶ agent-office (Node)
                          ├─ node-pty ─▶ claude / opencode (one PTY per worker, cwd = project dir)

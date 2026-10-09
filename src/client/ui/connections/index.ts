@@ -4,7 +4,7 @@ import './connections.css';
  * Jev key, the office password), the git / gh check, the office's folders and the worktree cleanup, for
  * admins. A window of its own (☰ → Connections, the home page, the wizard) and a pane of ⚙️ Settings.
  * It talks to the office over plain fetches (server/http/routes/connections.ts) and never holds a
- * secret: what it shows comes back as statuses and masked tails. No three.js here.
+ * secret: what it shows comes back as statuses and masked tails.
  */
 import { CREDENTIAL_META, type ConnectionsView, type CredentialId } from '../../../shared/connections';
 import { h, openModal, toast } from '../dom';

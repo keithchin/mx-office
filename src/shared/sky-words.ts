@@ -1,6 +1,5 @@
-// The sky over the office in words, for ⚙️ Settings' Outside (the 3D window and the flat Settings page
-// alike): "🌙 Clear · 9:41 PM outside · Berlin, Germany, 11 °C". Pure, no three.js, so the flat views
-// can say it too; the 3D sky (client/world/sky.ts) re-exports it.
+// The sky over the office in words, for ⚙️ Settings' Outside: "🌙 Clear · 9:41 PM outside · Berlin,
+// Germany, 11 °C". Pure.
 
 import type { SkyState, Weather } from './protocol.js';
 import { skyNow, sunPosition } from './sun.js';

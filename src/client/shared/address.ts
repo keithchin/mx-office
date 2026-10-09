@@ -1,6 +1,6 @@
 // The flat views' address says where you are: `?floor=<id>` (and on the 1D view `&tab=<tab>`), so a
 // bookmark or a link someone sends opens that floor (and tab) straight away, and the address follows
-// along as you change floor or tab. No three.js here: the 1D and 2D views import it.
+// along as you change floor or tab.
 
 import { store } from '../state';
 import { lastFloor, rememberFloor } from '../state/persist';

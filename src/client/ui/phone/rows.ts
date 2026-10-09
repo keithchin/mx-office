@@ -1,6 +1,6 @@
 // The team phone's rows, Slack-like: a message (the speaker's face, name and role, when, who it's to,
 // the words, Markdown for a phone message and its reply), a thread's root with its reply count, a
-// notification (a Needs-you item from Jeff or the office, with its buttons) and the typing line. No three.js.
+// notification (a Needs-you item from Jeff or the office, with its buttons) and the typing line.
 
 import { CHATTER_WORD, isGroup, type ChatterMessage, type ChatterTo } from '../../../shared/chatter';
 import type { ThreadView } from '../../../shared/phone';

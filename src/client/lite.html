@@ -46,7 +46,7 @@
       </div>
     </div>
     <script>(function(){var S=["bundle","session","socket","data","view"],L={bundle:"Loading the page…",session:"Checking your sign-in…",socket:"Connecting to the office…",data:"Getting the office’s data…",view:"Drawing the page…"},d={},el=document.getElementById("ao-boot"),gone=0,downT,polling=0;function q(s){return el.querySelector(s)}function draw(){var n=0,nx,i;for(i=0;i<S.length;i++){if(d[S[i]])n++;else if(!nx)nx=S[i]}var p=Math.floor(n/S.length*100);q(".aob-pct").textContent=p;q(".aob-bar").setAttribute("aria-valuenow",p);q(".aob-bar i").style.width=p+"%";if(!el.classList.contains("aob-restart"))q(".aob-step").textContent=nx?L[nx]:""}function restart(on){el.classList.toggle("aob-restart",!!on);if(on)q(".aob-step").textContent="Trying again every few seconds…";else draw()}function show(){gone=0;el.hidden=false;el.classList.remove("aob-out");el.setAttribute("aria-busy","true")}function hide(){gone=1;el.classList.add("aob-out");el.removeAttribute("aria-busy");setTimeout(function(){if(gone)el.hidden=true},400)}function poll(){if(polling)return;polling=1;(function go(){fetch("/api/health",{cache:"no-store"}).then(function(r){if(r.ok)location.reload();else setTimeout(go,1500)},function(){setTimeout(go,1500)})})()}window.__aoBoot={step:function(s){if(s==="socket")clearTimeout(downT);if(d[s])return;d[s]=1;if(s!=="bundle"&&s!=="session")restart(0);draw();if(s==="view")hide()},down:function(){if(!gone){if(d.bundle)restart(1);return}clearTimeout(downT);downT=setTimeout(function(){d.socket=d.data=d.view=0;show();restart(1)},2000)},shown:function(){return!gone}};addEventListener("error",function(e){var t=e.target;if(t&&t.tagName==="SCRIPT"&&!d.bundle){restart(1);poll()}},true);setTimeout(function(){if(d.bundle)return;fetch("/api/health",{cache:"no-store"}).then(function(r){if(!r.ok){restart(1);poll()}else if(!d.bundle)q(".aob-step").textContent="Still loading… (a slow connection)"},function(){restart(1);poll()})},12000)})()</script>
-    <!-- The 1D view (lite.ts): the office without the 3D, for a phone or a computer the 3D is too much for. -->
+    <!-- The 1D view (lite.ts): every project opens here, on its Command Center. -->
     <header class="lite-bar">
       <a id="to-home" class="btn" href="/home" title="Home: every project, and the office's statistics" aria-label="Home">🏠</a>
       <label class="lite-floor" title="The floor you're on: pick another to see its agents">
@@ -56,7 +56,7 @@
       <!-- Go to Office: the project's 2D office (ui/viewpick.ts viewButton). -->
       <div id="view-pick"></div>
       <button id="theme" class="btn lite-theme" type="button" title="Color theme" aria-label="Color theme">🎨</button>
-      <button id="menu" class="btn lite-menu" type="button" title="Menu: everything the 3D office's ☰ has" aria-label="Menu">☰</button>
+      <button id="menu" class="btn lite-menu" type="button" title="Menu: the project's windows, the office's settings and the docs" aria-label="Menu">☰</button>
     </header>
     <main class="lite-main">
       <p id="floor-meta" class="lite-meta"></p>

@@ -1,7 +1,7 @@
 // One team chatter message as a line of a chat thread: who said it (their 2D character from the waist
 // up, as on the escalation cards; Jeff's own portrait; a badge for the Project Manager, who is a
 // person; a Firm reviewer's framed portrait; 🏢 for the office), their name and role, who it's to, the words in a speech bubble, what kind
-// of exchange it is, and when. The bubble opens what it's about. No three.js.
+// of exchange it is, and when. The bubble opens what it's about.
 
 import { CHATTER_ICON, CHATTER_WORD, isGroup, type ChatterMessage, type ChatterParty, type ChatterTo } from '../../../shared/chatter';
 import { ZONE_BY_TEAM } from '../../../shared/zones';

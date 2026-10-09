@@ -1,6 +1,5 @@
 // ⚙️ Settings › Notifications: this browser's desktop notifications (yours), the office's Slack /
-// Discord webhook and its Microsoft Teams cards (everyone's). No three.js here: the flat Settings page
-// uses these too.
+// Discord webhook and its Microsoft Teams cards (everyone's).
 
 import type { WebhookKind } from '../../../shared/protocol';
 import { store } from '../../state';
@@ -97,5 +96,5 @@ export function teamsCardsSetting(): Built {
   return { nodes: [t.section], off: t.off };
 }
 
-/** The three the 3D window's Notifications has. */
+/** The three Notifications has. */
 export const notifySettings = (d: SettingsDeps): Built => together(desktopSetting(d), webhookSetting(d), teamsCardsSetting());

@@ -3,12 +3,12 @@
 // page that has one (the 1D and 2D views, Home, The Firm) and shown only while a Portal theme is on, so
 // switching themes is CSS alone and the other themes' bars stay exactly as they were:
 //
-//   ⋮⋮⋮ launcher · "Mx Office" | SECTION · [ search ] · bell · help · dark mode · 🎨 · avatar (☰)
+//   ⋮⋮⋮ launcher · "Mx Office" | SECTION · [ search ] · (the page's action) · bell · help · dark mode · 🎨 · avatar (☰)
 //
 // - The launcher opens a menu of where to go: Home's projects, every project, The Firm, the docs and
 //   Settings.
 // - The wordmark goes Home; the section is the page's name in capitals (PROJECTS on Home), or the floor
-//   picker on the 2D view, drawn as a capitalised title (on the 1D view the page's name: the floor picker
+//   picker on the 2D Office view, drawn as a capitalised title after OFFICE · (on the 1D view the page's name: the floor picker
 //   is in the left navigation's project card there, ./layout.ts).
 // - The search (./search.ts) finds a project, a page of this project (or a tab of this page), its agents,
 //   issues and pull requests (the page says, opts.search), a page of the office or a docs page.
@@ -99,11 +99,13 @@ export function portalBar(opts: PortalBarOpts = {}) {
   const section = opts.section ? h('span.pt-section.pt-only', {}, opts.section) : null;
   bar.prepend(launch, brand, sep, ...(section ? [section] : []));
 
-  // ---- The middle: the search ---------------------------------------------------------------------
-  if (!opts.minimal) (section ?? sep).after(portalSearch(bar, () => searchSources(opts)));
-  // On a floor's pages the floor picker is the section: it goes right after the wordmark.
+  // On a floor's pages the floor picker is the section: it goes right after the wordmark (after the 🏠,
+  // which Portal hides, so the other themes keep 🏠 then the picker).
   const floor = bar.querySelector<HTMLElement>('.lite-floor');
-  if (floor && !section) sep.after(floor);
+  if (floor && !section) (bar.querySelector<HTMLElement>('#to-home') ?? sep).after(floor);
+
+  // ---- The middle: the search, after the section ----------------------------------------------------
+  if (!opts.minimal) (section ?? (floor && !section ? floor : sep)).after(portalSearch(bar, () => searchSources(opts)));
 
   // ---- Right: notifications, help, dark mode, and the ☰ as your avatar -----------------------------
   const help = h('a.pt-iconbtn.pt-help.pt-only', { href: '/docs', title: 'Help: the documentation', 'aria-label': 'Help: the documentation' }, icon('help'));

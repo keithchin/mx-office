@@ -3,7 +3,7 @@
  * waiting or asleep, what's open on GitHub), every project side by side in a table you sort by any
  * column, and which models do best across every project. The numbers come from GET /api/home/stats
  * (server/home-stats.ts, built from what the office already keeps) and the ranking from the
- * Analysis tab's own GET /api/analysis?scope=global: nothing here asks a model anything. No three.js.
+ * Analysis tab's own GET /api/analysis?scope=global: nothing here asks a model anything.
  */
 import type { HomeFloorStats, HomeStats } from '../../shared/home';
 import type { AnalysisReport, LeaderRow } from '../../shared/analysis';
@@ -51,7 +51,7 @@ const COLUMNS: Column[] = [
     label: 'Project',
     title: 'The project (its floor): open its board',
     sort: (f) => f.name.toLowerCase(),
-    cell: (f, leaving) => h('a.hs-name', { href: floorUrl(f.id, '1d'), onclick: (e: Event) => (e.preventDefault(), openFloor(f.id, '1d', leaving)) }, f.name),
+    cell: (f, leaving) => h('a.hs-name', { href: floorUrl(f.id), onclick: (e: Event) => (e.preventDefault(), openFloor(f.id, leaving)) }, f.name),
   },
   { key: 'repo', label: 'Repo', title: 'Its repository on GitHub', sort: (f) => (f.repo ?? '').toLowerCase(), cell: (f) => f.repo ?? '—' },
   { key: 'stage', label: 'Stage', title: "A toolkit project's current stage", sort: (f) => (f.stage ?? '').toLowerCase(), cell: (f) => f.stage ?? '—' },

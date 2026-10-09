@@ -2,7 +2,7 @@
    and Terminal. The tokens and what each is for are in styles/base.css, where their values are the
    Default look; the other two only set different values here, so every sheet that names its colors with
    the tokens follows along. lite.html and pixel.html set the attribute (the 2D view follows the 1D
-   view's pick); the 3D office keeps its own look whatever this browser picked. Terminal's own
+   view's pick). Terminal's own
    shapes (square corners, brackets round buttons, the scanlines) are in styles/theme-terminal.css. */
 
 /* ---- Dark: the Default look, chunky borders and all, at night ------------------------------------- */

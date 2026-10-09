@@ -135,7 +135,7 @@ body.pixel .px-chat-toggle.news::after { content: ''; position: absolute; top: -
 .px-chat-input { width: 100%; padding: 8px 10px; border: 0; border-radius: 0; background: var(--card); color: var(--ink); font: 600 14px var(--font); box-shadow: inset 0 0 0 2px var(--px-panel-hi); }
 .px-chat-input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--px-teal); }
 
-/* ---- The footer: who's doing what, the next one waiting, and the keys ---- */
+/* ---- The footer: who's doing what, the next one waiting, the legend; the keys (in the toolbar's ⋯) ---- */
 body.pixel .px-next { min-height: 30px; font-size: 12px; }
 body.pixel .px-next:not(:disabled) { background: var(--warn); color: var(--on-warn); animation: px-nudge 2.4s ease-in-out infinite; }
 .px-keys { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--px-dim); font-size: 11px; font-weight: 700; }
@@ -152,7 +152,6 @@ body.pixel .px-next:not(:disabled) { background: var(--warn); color: var(--on-wa
   body.pixel .px-next:not(:disabled), body.pixel .px-chat-toggle.news::after { animation: none; }
 }
 @media (max-width: 640px) {
-  .px-keys { display: none; }
   /* A phone's top bar: smaller keys. */
   body.pixel .lite-bar { gap: 2px; padding: 6px 8px; }
   body.pixel .lite-bar .btn { height: 32px; min-height: 32px; padding: 0 9px; font-size: 12px; margin: 3px 3px 7px; }

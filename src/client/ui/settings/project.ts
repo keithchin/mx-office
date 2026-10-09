@@ -1,7 +1,7 @@
 // The flat Settings page's sections about the floor you're on: its team (ui/roster/settings.ts, split
 // into Team, Jeff · Router and Deliverables), its budget (ui/budget/settings.ts) and its Mendix model in
 // Studio Pro (ui/studio/). Admins change them; everyone else sees them read-only, as on the tabs they
-// come from. No three.js here.
+// come from.
 
 import '../budget/budget.css';
 import type { RosterView } from '../../../shared/roster/types';

@@ -3,7 +3,7 @@
 // fetches once; from then on every page, the sidebar, the "On this page" list and the search are drawn
 // here without going back to the server. Addresses are /docs/<section>/<page>#<heading>, so any of
 // them can be bookmarked or linked from the office; /docs/search?q= is the full search.
-// It isn't in the office over the socket (nothing on it is live), and it loads no three.js.
+// It isn't in the office over the socket (nothing on it is live).
 
 import { $, h } from './ui/dom';
 import { colorThemes } from './ui/colortheme';
