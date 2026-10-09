@@ -4,7 +4,7 @@
 // answer for long and never failing it. Each branch's counts are kept by commit, so a refresh only asks
 // git about branches that moved.
 
-import { execFile } from 'node:child_process';
+import { execFileOff } from '../offloop/exec.js';
 import type { GitBranch, GitGraph } from '../../shared/gitgraph.js';
 import type { GhPull, WorkerInfo } from '../../shared/protocol.js';
 import { defaultFromSymref, finish, LOG_FORMAT, mergeRefs, parseCounts, parseLog, parseRefs, pick, REF_FORMAT, type Candidate } from './parse.js';
@@ -36,7 +36,9 @@ export type Git = (args: string[], cwd: string, timeout?: number) => Promise<str
 /** Runs git with `args` (no shell) in `cwd`; a non-zero exit throws with git's message. */
 export const runGit: Git = (args, cwd, timeout = GIT_TIMEOUT_MS) =>
   new Promise((resolve, reject) => {
-    execFile('git', args, { cwd, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, timeout, windowsHide: true, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' } }, (err, stdout, stderr) => {
+    // Started off the event loop (offloop/exec.ts): the Git and Model tabs ask for the graph on every
+    // look, and each git start on the main thread held it 10 to 350 ms on Windows.
+    execFileOff('git', args, { cwd, maxBuffer: 16 * 1024 * 1024, timeout, windowsHide: true, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' } }, (err, stdout, stderr) => {
       if (err) return reject(new Error(String(stderr || err.message).trim().split('\n').pop() || 'git failed'));
       resolve(stdout);
     });

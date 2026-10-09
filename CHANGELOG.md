@@ -24,6 +24,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   commit to commit by the few files that differ.
 
 ### Fixed
+- **The Git tab's branch graph no longer holds up the office.** It started git on the server's main
+  thread, up to 350 ms at a time on Windows, and the Model tab asks for it on every look. It now
+  starts git off the event loop.
 - **Aggregate and list-operation activities** in newer models get their own icon and caption ("Count
   of Orders") instead of a generic one.
 

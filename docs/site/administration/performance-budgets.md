@@ -166,6 +166,7 @@ What changed:
 - **Kept by content, not by commit.** A unit's git blob is its content hash. A diagram is kept under the hashes of the units it was read from, so a new commit reuses every document it left alone. The tree is kept under the app's structure, so a commit that only edits documents keeps it. Over travel-approval's 70 model commits that gave 47 distinct trees, and every commit with the same key had the same mxcli tree. When the structure did change, the last tree answers at once and the new one follows.
 - **mxcli reads a work folder** that moves from commit to commit by the 1 to 4 files that differ, not a fresh 558-file copy.
 - **Reading ahead:** opening a document reads the rest of its module (40 documents at most, one at a time, stopped when you move on). Main moving while the tab was used in the last 15 minutes reads the new tree and the changed diagrams.
+- **The Git tab's graph starts git off the event loop.** The Model tab asks for it on every look. A profile of a test office showed its git starts holding the server's loop 60 to 350 ms each (`gitgraph/index.ts` now uses `execFileOff`).
 
 Measured on a copy of travel-approval, from commit b6e589b to d00af53 (18 microflows added, the domain model changed), with `npx tsx scripts/perf/model.ts <copy> --from b6e589b` (`--impl` runs an older version for the before):
 
@@ -178,6 +179,8 @@ Measured on a copy of travel-approval, from commit b6e589b to d00af53 (18 microf
 | Main moved: tree | 14.3 s | 90 ms (the last tree; the new one is ready 3.5 s later) |
 | Main moved: unchanged microflow / domain model / added microflow | 1,825 / 91 / 1,667 ms | 15 / 3 / 8 ms |
 | Longest event-loop delay during the run | 58 ms | 41 ms |
+
+In the browser, on a test office whose floor is that copy (the page's own timings of `/api/model/*`): a microflow or domain model opened again 5 to 7 ms; one never opened (read ahead) 6 ms; after main moved, the tree 10 ms (the last one, the new one fetched behind it), an unchanged microflow 6 ms, an added one 5 ms (read ahead after the move). Its MDL follows in 1.6 to 1.8 s. The first tree on an empty data folder is still mxcli's (16 s on this machine).
 
 ## Live warnings in the real office
 

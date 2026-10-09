@@ -126,7 +126,8 @@ export class WorkDirs {
         const data = await blobs.blob(b);
         if (!data) throw new Error(`git has no ${p} for ${sha.slice(0, 12)}`);
         await writeFile(path.join(slot.dir, p), data);
-        this.written++;
+        // A whole app the first time (hundreds of files): the event loop gets a turn now and then.
+        if (++this.written % 16 === 0) await new Promise((r) => setImmediate(r));
       }
     };
     await Promise.all(Array.from({ length: Math.min(WRITE_PARALLEL, write.length) }, lane));

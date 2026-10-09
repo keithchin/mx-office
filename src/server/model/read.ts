@@ -7,7 +7,7 @@
 // Also the MDL lines of each element, from mxcli's elk description, for the MDL beside the diagram,
 // which now comes after the diagram rather than before it.
 
-import { doc, list, str, type BsonDoc } from './bson.js';
+import { doc, list, str, type BsonDoc, type BsonValue } from './bson.js';
 import { parseDomain, systemPersistable } from './domain.js';
 import { short } from './flow-actions.js';
 import { locate, parseFlow, type ElkFlow } from './flow.js';
@@ -25,6 +25,17 @@ export interface Read<T> {
 
 const moduleOf = (qn: string) => qn.slice(0, qn.indexOf('.'));
 
+/** Every AssociationId anywhere in `v` (retrieves over an association), into `out`. */
+function associationIds(v: BsonValue, out: Set<string>) {
+  if (Array.isArray(v)) for (const x of v) associationIds(x, out);
+  else if (v && typeof v === 'object')
+    for (const k in v) {
+      const x = v[k];
+      if (k === 'AssociationId' && typeof x === 'string' && x) out.add(x);
+      else if (x && typeof x === 'object') associationIds(x, out);
+    }
+}
+
 /** A flow's unit, the domain models it reads, and its key; null when the commit has no such flow. */
 export async function readFlow(cm: CommitModel, type: 'microflow' | 'nanoflow', qn: string): Promise<Read<FlowDoc> | null> {
   const id = cm.ix.byName.get(`${type}:${qn}`);
@@ -32,7 +43,7 @@ export async function readFlow(cm: CommitModel, type: 'microflow' | 'nanoflow', 
   if (!unit) return null;
   // Retrieves over an association: which entity each association leads to, from its module's domain model.
   const assocs = new Set<string>();
-  JSON.stringify(unit, (k, v) => (k === 'AssociationId' && typeof v === 'string' && v && assocs.add(v), v));
+  associationIds(unit, assocs);
   const targets = new Map<string, string>();
   const deps = new Set<string>();
   for (const a of assocs) {
