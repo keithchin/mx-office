@@ -298,6 +298,20 @@ test('the transcript fills in what the hooks missed, and the same run from both 
   assert.equal(u.data().subagentRuns.length, 0);
 });
 
+test("the office's timer reads the transcripts off the event loop (scanSoon): the same runs as scan()", async () => {
+  const t = setup();
+  t.floor.file = path.join(t.floor.dir, 'session.jsonl');
+  t.roster.subagents.onEvent(t.floor, 'w-hedy', { kind: 'dispatch', at: T0, toolUseId: 'toolu_1', agent: 'tester', task: 'Prove PR #46 spec', background: false });
+  writeFileSync(t.floor.file, use(T0, 'toolu_1', { subagent_type: 'tester', description: 'Prove PR #46 spec' }) + launched(T0 + 3000, 'toolu_1', 'a7d9') + use(T0 + 4000, 'toolu_2', { subagent_type: 'tester', description: 'Admin role check on #30' }));
+  t.clock.now = T0 + 10_000;
+  assert.equal(await t.roster.subagents.live.scanSoon(t.floor), true);
+  assert.deepEqual(t.data().subagentRuns.map((r) => [r.toolUseId, r.status, r.source]), [['toolu_1', 'working', 'hooks'], ['toolu_2', 'working', 'transcript']]);
+  assert.equal(await t.roster.subagents.live.scanSoon(t.floor), false, 'nothing new, nothing changes');
+  appendFileSync(t.floor.file, notified(T0 + 600_000, 'toolu_1', 'a7d9'));
+  assert.equal(await t.roster.subagents.live.scanSoon(t.floor), true);
+  assert.deepEqual(t.data().subagentRuns.map((r) => r.status), ['done', 'working']);
+});
+
 // ---- The cards ----------------------------------------------------------------------------------------
 
 test("cards: who hired each, at work on what, idle with its last run, benched; a Lead not hired shows only subagents that ran", () => {

@@ -118,7 +118,8 @@ test('after a restart a run that was mid-step is interrupted, and resumes from i
     first.register(flow(true));
     first.create('pipe', { did: [] } as S, { runId: 'p1' });
     void first.start('p1'); // build never ends: the office "stops" there
-    await new Promise((r) => setImmediate(r));
+    // The engine lets the event loop turn between steps.
+    for (let i = 0; i < 10 && calls.length < 2; i++) await new Promise((r) => setImmediate(r));
     assert.deepEqual(calls, ['fetch', 'build']);
 
     // A new office reads the file.
@@ -488,6 +489,8 @@ test('GET /api/flows lists the office engine’s runs by floor, without their st
     const one = call('?floor=f1');
     assert.deepEqual(one.body.runs.map((r) => [r.runId, r.status, r.workflow]), [['a1', 'done', 'review']]);
     assert.ok(!('state' in one.body.runs[0]), 'no state');
+    // Written in the background (the office's store): there a moment later.
+    for (let i = 0; i < 100 && !existsSync(path.join(dir, 'flows', 'review', 'a1.json')); i++) await new Promise((r) => setTimeout(r, 10));
     assert.ok(existsSync(path.join(dir, 'flows', 'review', 'a1.json')), 'kept in <data>/flows');
   } finally {
     rmSync(dir, { recursive: true, force: true });

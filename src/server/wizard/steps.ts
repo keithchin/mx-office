@@ -4,6 +4,7 @@
 // building, the queue) come in through `SetupDeps`, so the steps can be run against a fake in tests.
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ENTRY_MODE_INFO, INTERVIEW_MODE_INFO, PROJECT_ROLES, SMALL_TIER_LIMITS, type IntakeAnswer, type ProjectRole, type StepId } from '../../shared/wizard.js';
@@ -36,7 +37,7 @@ export interface SetupDeps {
   /** Clones `repo` with the office's gh login and opens it as a floor (the elevator's way). */
   addFloor(repo: string, by: string, account?: string): Promise<FloorRef | string>;
   /** Opens a checkout already on disk as `repo`'s floor (the offline test office's way). */
-  adoptFloor(repo: string, dir: string, by: string): FloorRef | string;
+  adoptFloor(repo: string, dir: string, by: string): FloorRef | string | Promise<FloorRef | string>;
   /** Puts a task on a floor's queue; why not, if it couldn't. */
   queue(floor: string, prompt: string, title: string, issue: number, model: string, by: string, account?: string): string | undefined;
   /** Whether a role of the project team is a worker on the floor already (hired, or writing its handoff). */
@@ -127,7 +128,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
           await git(seed, ['-c', 'user.name=agent-office', '-c', 'user.email=agent-office@localhost', 'commit', '-m', 'Initial commit'], io);
           await git(seed, ['push', 'origin', 'HEAD:main'], io);
         } finally {
-          rmSync(seed, { recursive: true, force: true });
+          await rm(seed, { recursive: true, force: true }).catch(() => undefined);
         }
         return { status: 'done', detail: `offline: a local bare repository at ${at}` };
       }
@@ -175,7 +176,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
           await git(dest, ['remote', 'set-url', 'origin', `https://github.com/${repo}.git`], io);
           await git(dest, ['remote', 'set-url', '--push', 'origin', bare(job)], io);
         }
-        return await floorReady(settle(deps.adoptFloor(repo, dest, job.by), `offline floor at ${dest}`));
+        return await floorReady(settle(await deps.adoptFloor(repo, dest, job.by), `offline floor at ${dest}`));
       }
       io.log(`  cloning ${repo} with the office's gh login…`);
       return await floorReady(settle(await deps.addFloor(repo, job.by, job.account), `cloned into ${deps.projectsDir()}`));

@@ -4,7 +4,8 @@
 // hash of what it was asked, so a task is classified once, and again only when its PR or scorecard changes.
 
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { BackgroundFile } from '../offloop/save.js';
 import { TASK_TYPES, TASK_TYPE_LABEL, type RunRecord, type TaskType } from '../../shared/analysis.js';
 import type { Haiku } from './llm.js';
 
@@ -88,6 +89,7 @@ const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s
 
 export class Classifier {
   private cache: Record<string, Cached> = {};
+  private out?: BackgroundFile;
 
   constructor(
     private file: string,
@@ -124,12 +126,14 @@ export class Classifier {
     return { types: answer.types, typesBy: answer.by, note: answer.note };
   }
 
+  /** In the background (offloop/save.ts): written synchronously it held the event loop up to 300 ms on a loaded machine (2026-10-08). */
   private save() {
-    try {
-      writeFileSync(this.file, JSON.stringify(this.cache, null, 1), { mode: 0o600 });
-    } catch {
-      // disk issues shouldn't take the office down
-    }
+    void (this.out ??= new BackgroundFile(this.file)).write(JSON.stringify(this.cache, null, 1));
+  }
+
+  /** Writes what's still due now (the office's exit). */
+  flush() {
+    this.out?.flush();
   }
 }
 

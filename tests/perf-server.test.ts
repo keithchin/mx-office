@@ -63,8 +63,12 @@ test('past its TTL the ranking is given at once and worked out again in the back
   const now = Date.now();
   const a = rankingReport(ctx, 'f1', now);
   assert.equal(rankingReport(ctx, 'f1', now + RANKING_TTL_MS + 1), a, 'the stale one, without waiting');
-  await new Promise((r) => setImmediate(r));
-  const b = rankingReport(ctx, 'f1', Date.now());
+  // Worked out off the event loop, over a few turns of it (ranking/inputs.ts, buildRankingSliced).
+  let b = a;
+  for (let i = 0; i < 200 && b === a; i++) {
+    await new Promise((r) => setTimeout(r, 5));
+    b = rankingReport(ctx, 'f1', Date.now());
+  }
   assert.notEqual(b, a, 'the fresh one, worked out meanwhile');
 });
 

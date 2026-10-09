@@ -1,6 +1,7 @@
-import { closeSync, existsSync, fstatSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, fstatSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs';
 import path from 'node:path';
 import type { Usage, UsageState } from '../shared/protocol.js';
+import { BackgroundFile } from './offloop/save.js';
 
 /*
  * Where a worker's numbers come from
@@ -339,6 +340,7 @@ export class Ledger {
   private warnedDay = '';
   private shownDay = '';
   private saveTimer: NodeJS.Timeout | null = null;
+  private out: BackgroundFile;
   private emitTimer: NodeJS.Timeout | null = null;
   private tick: NodeJS.Timeout;
 
@@ -349,6 +351,7 @@ export class Ledger {
     private toast: (text: string, level: 'info' | 'warn') => void,
   ) {
     this.file = path.join(dataDir, 'usage.json');
+    this.out = new BackgroundFile(this.file);
     this.load();
     this.shownDay = localDay();
     // Midnight: "today" starts over and a paused office hires again.
@@ -410,16 +413,20 @@ export class Ledger {
     if (this.saveTimer) return;
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
-      this.write();
+      this.writeSoon();
     }, 1000);
   }
 
+  /**
+   * The save, without blocking the event loop (a temporary file, then renamed): on a loaded machine the
+   * synchronous write of this small file held it 0.4–1 s (the busy office check, 2026-10-08).
+   */
+  private writeSoon() {
+    void this.out.write(JSON.stringify({ total: this.total, days: this.days }, null, 2));
+  }
+
   private write() {
-    try {
-      writeFileSync(this.file, JSON.stringify({ total: this.total, days: this.days }, null, 2), { mode: 0o600 });
-    } catch {
-      // disk issues shouldn't take the office down
-    }
+    this.out.flush(JSON.stringify({ total: this.total, days: this.days }, null, 2));
   }
 
   private load() {

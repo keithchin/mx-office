@@ -44,7 +44,7 @@ test('it pauses only the floors nobody paused, writes them down, and exits with 
     assert.deepEqual(readPending(deps.dataDir)?.floors, ['a', 'b']);
     await r.tick();
     assert.equal(r.phase, 'waiting');
-    assert.deepEqual(r.view(true).waitingOn, ['Anita mid-turn', 'Hedy mid-turn']);
+    assert.deepEqual(r.view(true).waitingOn, ['Anita: mid-turn', 'Hedy: mid-turn']);
     s.busy = [];
     await r.tick();
     assert.equal(r.phase, 'exiting');
@@ -136,4 +136,48 @@ test('the next office resumes exactly the floors the restart paused, then delete
   assert.deepEqual(resumed, ['a']);
   assert.equal(readPending(deps.dataDir), undefined);
   assert.deepEqual(await resumeAfterRestart({ dataDir: deps.dataDir, floors: () => ['a'], pausedForRestart: () => true, resume: async () => undefined }), []);
+});
+
+test('past the wait limit the list stays true, and it goes on by itself once nobody is left', async () => {
+  const events: string[] = [];
+  const record = audit.record;
+  audit.record = (e) => (events.push(e.summary), undefined);
+  try {
+    const a = stub();
+    a.s.busy = [{ name: 'Dylan', floor: 'a', doing: 'handing off' }, { name: 'Anita', floor: 'b', doing: 'mid-turn' }];
+    a.r.start('Keith', { timeoutMin: 1 });
+    await a.r.tick();
+    a.clock.now += 60_000;
+    await a.r.tick();
+    assert.equal(a.r.phase, 'timed-out');
+    // Dylan fell asleep after the limit: the panel stops naming him, and the audit says so.
+    a.s.busy = [{ name: 'Anita', floor: 'b', doing: 'mid-turn' }];
+    await a.r.tick();
+    assert.equal(a.r.phase, 'timed-out', 'still asking: Anita is busy');
+    assert.deepEqual(a.r.view(true).waitingOn, ['Anita: mid-turn']);
+    assert.ok(events.some((e) => e === 'Waiting on 1: Anita: mid-turn'), events.join(' / '));
+    a.s.busy = [];
+    await a.r.tick();
+    assert.equal(a.r.phase, 'exiting', 'nobody left: no need to ask');
+    assert.deepEqual(a.s.exits, [RESTART_EXIT_CODE]);
+  } finally {
+    audit.record = record;
+  }
+});
+
+test("a background helper says why someone between turns holds it up, in place of what busy() says of them", async () => {
+  const helpers: Busy[] = [{ name: 'Katherine', floor: 'a', doing: 'background helper running (architect-agent, 18 min)' }];
+  const a = stub({ helpers: async () => helpers });
+  a.s.busy = [{ name: 'Katherine', floor: 'a', doing: 'handing off' }, { name: 'Anita', floor: 'b', doing: 'mid-turn' }];
+  a.r.start('Keith');
+  await a.r.tick();
+  assert.deepEqual(a.r.view(true).waitingOn, ['Katherine: background helper running (architect-agent, 18 min)', 'Anita: mid-turn']);
+  // Her own turn over and her hand-off done (busy() no longer names her): still waited on, for the helper.
+  a.s.busy = [];
+  await a.r.tick();
+  assert.equal(a.r.phase, 'waiting');
+  assert.deepEqual(a.r.view(true).waitingOn, ['Katherine: background helper running (architect-agent, 18 min)']);
+  helpers.length = 0;
+  await a.r.tick();
+  assert.equal(a.r.phase, 'exiting');
 });

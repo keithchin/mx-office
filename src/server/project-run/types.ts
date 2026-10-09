@@ -34,6 +34,8 @@ export interface RunDeps {
   roster: Roster;
   engine: FlowEngine;
   floor(id: string): RunFloor | undefined;
+  /** Why an agent between turns is still busy: its background helper (restart/helpers.ts), for the pause's progress. */
+  helperNote?(floorId: string, workerId: string): string | undefined;
   now(): number;
   /** Waits (a test's fake clock moves on); rejects when `signal` aborts. */
   sleep(ms: number, signal: AbortSignal): Promise<void>;

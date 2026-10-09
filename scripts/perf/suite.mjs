@@ -63,7 +63,7 @@ const step = async (name, args) => {
   results.push({ name, ok: code === 0, code });
 };
 
-await step('Performance guard unit tests (fixture, budgets, journey bookkeeping, server caches, stall guard, self-profiling)', ['scripts/test.mjs', 'tests/perf-fixture.test.ts', 'tests/perf-budgets.test.ts', 'tests/perf-journey.test.ts', 'tests/perf-server.test.ts', 'tests/offloop-exec.test.ts', 'tests/stall-guard.test.ts', 'tests/perfwatch-self.test.ts']);
+await step('Performance guard unit tests (fixture, budgets, journey bookkeeping, server caches, stall guard, self-profiling)', ['scripts/test.mjs', 'tests/perf-fixture.test.ts', 'tests/perf-budgets.test.ts', 'tests/perf-journey.test.ts', 'tests/perf-server.test.ts', 'tests/offloop-exec.test.ts', 'tests/offloop-io.test.ts', 'tests/stall-guard.test.ts', 'tests/perfwatch-self.test.ts']);
 if (quick) {
   const id = `quick-${stamp}`;
   await step('Quick: main views, the journey and the busy office', ['scripts/perf/run.mjs', '--suite', 'perf-quick', '--root', root, '--id', id, '--out', path.join(root, 'results', id)]);

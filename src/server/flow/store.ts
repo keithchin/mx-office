@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { RunRecord } from './types.js';
+import { BackgroundFile } from '../offloop/save.js';
 
 export interface CachedResult {
   key: string;
@@ -32,8 +33,16 @@ const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(
  * a few times, a few milliseconds apart.
  */
 export function writeJsonAtomic(file: string, value: unknown) {
-  mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(`${file}.tmp`, JSON.stringify(value, null, 2), { mode: 0o600 });
+  const text = JSON.stringify(value, null, 2);
+  // The folder is made when the write finds it missing, not looked at first: each call costs on a loaded
+  // Windows machine (the journey's project making, 2026-10-08).
+  try {
+    writeFileSync(`${file}.tmp`, text, { mode: 0o600 });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+    mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+    writeFileSync(`${file}.tmp`, text, { mode: 0o600 });
+  }
   for (let i = 0; ; i++) {
     try {
       renameSync(`${file}.tmp`, file);
@@ -47,7 +56,44 @@ export function writeJsonAtomic(file: string, value: unknown) {
 }
 
 export class FileStore implements CheckpointStore {
-  constructor(readonly root: string) {}
+  /** Checkpoints and cached results written in the background, by file (`background` stores only). */
+  private out = new Map<string, BackgroundFile>();
+
+  /**
+   * `background`: checkpoints are written off the event loop (offloop/save.ts), the latest one per run, and
+   * whatever is still due at the office's exit. The office's store is one: a checkpoint written in place
+   * held the loop up to 1.5 s on a loaded machine in the middle of the wizard (2026-10-08). A crash in the
+   * few ms before one lands resumes from the checkpoint before it, as a crash mid-step does.
+   */
+  constructor(
+    readonly root: string,
+    private opts: { background?: boolean } = {},
+  ) {
+    if (opts.background) process.once('exit', () => this.flush());
+  }
+
+  /** Writes what's still due now. */
+  flush() {
+    for (const b of this.out.values()) b.flush();
+  }
+
+  private write(file: string, value: unknown, what: string) {
+    const onError = (err: unknown) => console.error(`agent-office: couldn't save ${what}: ${(err as Error).message}`);
+    if (!this.opts.background) {
+      try {
+        writeJsonAtomic(file, value);
+      } catch (err) {
+        onError(err);
+      }
+      return;
+    }
+    let b = this.out.get(file);
+    if (!b) this.out.set(file, (b = new BackgroundFile(file, { mkdir: true, onError })));
+    const mine = b;
+    void b.write(JSON.stringify(value, null, 2)).then(() => {
+      if (this.out.get(file) === mine && mine.pending() === undefined) this.out.delete(file);
+    });
+  }
 
   fileOf(workflow: string, runId: string) {
     return path.join(this.root, safe(workflow), `${safe(runId)}.json`);
@@ -83,11 +129,7 @@ export class FileStore implements CheckpointStore {
   }
 
   save(run: RunRecord) {
-    try {
-      writeJsonAtomic(this.fileOf(run.workflow, run.runId), run);
-    } catch (err) {
-      console.error(`agent-office: couldn't save the checkpoint of ${run.workflow} ${run.runId}: ${(err as Error).message}`);
-    }
+    this.write(this.fileOf(run.workflow, run.runId), run, `the checkpoint of ${run.workflow} ${run.runId}`);
   }
 
   private cacheFile(workflow: string, step: string, key: string) {
@@ -96,7 +138,8 @@ export class FileStore implements CheckpointStore {
 
   cacheGet(workflow: string, step: string, key: string): CachedResult | undefined {
     try {
-      const c = JSON.parse(readFileSync(this.cacheFile(workflow, step, key), 'utf8')) as CachedResult;
+      const file = this.cacheFile(workflow, step, key);
+      const c = JSON.parse(this.out.get(file)?.pending() ?? readFileSync(file, 'utf8')) as CachedResult;
       return c.key === key ? c : undefined;
     } catch {
       return undefined;
@@ -104,10 +147,6 @@ export class FileStore implements CheckpointStore {
   }
 
   cachePut(workflow: string, step: string, entry: CachedResult) {
-    try {
-      writeJsonAtomic(this.cacheFile(workflow, step, entry.key), entry);
-    } catch (err) {
-      console.error(`agent-office: couldn't cache ${workflow} ${step}: ${(err as Error).message}`);
-    }
+    this.write(this.cacheFile(workflow, step, entry.key), entry, `the cache of ${workflow} ${step}`);
   }
 }

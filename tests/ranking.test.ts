@@ -4,7 +4,7 @@ import type { RunRecord } from '../src/shared/analysis.js';
 import { combine, criterion, gradeOf, relDiff, relRatio, type WorkerFacts } from '../src/shared/ranking/model.js';
 import { autonomy, baselineOf, benchmark, delivery, efficiency, STANDARD_WEIGHTS } from '../src/shared/ranking/standard.js';
 import { SPECIALIST, SPECIALIST_SHARE, specialistOf } from '../src/shared/ranking/specialist.js';
-import { buildRanking, overallOf, ranksWithin, ruleHighlights } from '../src/shared/ranking/report.js';
+import { buildRanking, buildRankingSliced, overallOf, ranksWithin, ruleHighlights } from '../src/shared/ranking/report.js';
 import { gatherFacts, roleResolver } from '../src/server/ranking/facts.js';
 import { ROLES } from '../src/shared/roster/roles.js';
 import type { Escalation } from '../src/shared/roster/escalation.js';
@@ -180,6 +180,15 @@ test('buildRanking: everyone ranked, floor scope filtered, groups averaged, tren
   assert.equal(r.byModel.length, 1);
   assert.equal(r.byModel[0].count, 2);
   assert.ok(r.workers[0].highlights.some((h) => /Merged PR #7/.test(h.text)));
+});
+
+test("buildRankingSliced (the office's background refresh) gives the same report as buildRanking, pausing between slices", async () => {
+  const runs = Array.from({ length: 60 }, (_, i) => run({ id: `f${i % 3}:w${i % 20}:${i}`, floor: `f${i % 3}`, workerId: `w${i % 20}`, worker: `W${i % 20}`, outcome: i % 4 ? 'merged' : 'open', humanPrompts: i % 3, cost: 0.5 + (i % 7) / 10 }));
+  const opts = { floors: [], now: 1_000, previous: (k: string) => (k.endsWith('w1') ? 50 : undefined), floor: 'f1' };
+  let pauses = 0;
+  const sliced = await buildRankingSliced(gatherFacts([], runs), runs, opts, async () => void pauses++, 0);
+  assert.deepEqual(sliced, buildRanking(gatherFacts([], runs), runs, opts));
+  assert.ok(pauses >= 20, `paused ${pauses} times`);
 });
 
 test('facts: a team role is one entry across its hires, and roles come from the roster', () => {

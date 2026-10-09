@@ -97,9 +97,19 @@ export class ProjectRuns {
 
   view(floorId: string, admin: boolean): ProjectRunView {
     const r = this.latest(floorId);
-    return { floor: floorId, pause: projectPause(floorId), run: r && progressOf(r), pacing: pacingOf(floorId), admin };
+    return { floor: floorId, pause: projectPause(floorId), run: r && this.withHelpers(progressOf(r)), pacing: pacingOf(floorId), admin };
+  }
+
+  /** A pause's agents still to go to sleep say why, when a background helper of theirs is still at work (restart/helpers.ts). */
+  private withHelpers(p: RunProgress): RunProgress {
+    const note = this.deps.helperNote;
+    if (p.kind !== 'pause' || !note) return p;
+    return { ...p, agents: p.agents.map((a) => (a.workerId && WAITING.has(a.status) ? { ...a, note: note(p.floor, a.workerId) ?? a.note } : a)) };
   }
 }
+
+/** A pause's agents not asleep yet. */
+const WAITING = new Set<RunProgress['agents'][number]['status']>(['pending', 'finishing', 'handoff']);
 
 /** A run as the browser shows it. */
 export function progressOf(r: RunRecord<ResumeRun | PauseRun>): RunProgress {

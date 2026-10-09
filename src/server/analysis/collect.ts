@@ -3,12 +3,12 @@
 // (scorecard.ts), and the analyzer agent for what kind of task it was (classify.ts). The office
 // (live.ts) and the backfill from disk (disk.ts) both describe their workers the same way to it.
 
-import { existsSync } from 'node:fs';
+import { access } from 'node:fs/promises';
 import path from 'node:path';
 import type { QueueTask, Usage } from '../../shared/protocol.js';
 import { modelLabel, type RunOutcome, type RunRecord } from '../../shared/analysis.js';
 import { gh } from '../github.js';
-import { findTranscript, readSessionLive, type SessionStats } from './transcript.js';
+import { findTranscriptAsync, readSessionLive, type SessionStats } from './transcript.js';
 import { scorecardOf } from './scorecard.js';
 import type { Classifier } from './classify.js';
 
@@ -153,7 +153,9 @@ export interface CollectDeps {
 
 export async function collectRun(floor: FloorRef, w: WorkerSnapshot, task: QueueTask | undefined, deps: CollectDeps): Promise<RunRecord> {
   const cwd = w.worktreePath ? path.resolve(floor.dir, w.worktreePath) : floor.dir;
-  const transcript = w.transcript && existsSync(w.transcript) ? w.transcript : findTranscript(w.sessionId, cwd);
+  // Looked for off the event loop: on a loaded machine each existsSync held it (transcript.ts findTranscriptAsync).
+  const known = w.transcript && (await access(w.transcript).then(() => true, () => false)) ? w.transcript : undefined;
+  const transcript = known ?? (await findTranscriptAsync(w.sessionId, cwd));
   const stats = transcript ? await readSessionLive(transcript) : emptyStats();
   // No transcript left to read (cleared, or another provider): the office's own tally.
   if (!stats.apiCalls && w.usage) {

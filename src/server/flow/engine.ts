@@ -321,6 +321,9 @@ export class FlowEngine {
         this.checkpoint(run);
         this.emit('step-finished', { run, step: step.id, status: out.status, next: to });
         if (over && to !== END) return this.stopShort(run, { kind: 'budget', message: over });
+        // A turn of the event loop between steps: a step's synchronous tail, its checkpoint and the next
+        // step's start ran as one block otherwise (0.3 s on a loaded machine in the wizard's clone).
+        await new Promise<void>((r) => setImmediate(r));
       }
       return this.finish(run, 'done');
     } catch (err) {

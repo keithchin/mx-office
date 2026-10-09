@@ -45,6 +45,9 @@ const TOTAL_STEPS = 13;
 const ASLEEP = new Set(['exited', 'offline']);
 
 /** The API of a running test office, signed in. */
+/** How long the office profiles itself from the start of the wizard: the wizard and the hiring take 15 to 30 s. */
+const MAKING_PROFILE_S = 60;
+
 function apiOf(office, cookie) {
   return async (method, p, body) => {
     const r = await fetch(office.base + p, { method, headers: { cookie, origin: office.base, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -166,6 +169,11 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
     log(`journey office up at ${office.base} (${root})`);
 
     // 1. The wizard makes the project: every setup step, offline.
+    // The office profiles itself while the project is made (perfwatch/profile.ts), so a stall names what ran
+    // in it. Starting the profiler and saving the profile hold the loop for a moment themselves (the
+    // measuring, not the office): it starts before the measured stretch and ends well after it.
+    state.profile = api('POST', '/api/perf/profile', { seconds: MAKING_PROFILE_S }).catch((e) => ({ error: String(e?.message ?? e) }));
+    await new Promise((r) => setTimeout(r, 1500));
     state.makingSince = Date.now();
     await book.run({
       id: 'wizard',
@@ -179,7 +187,10 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
           const j = await api('GET', `/api/wizard/job?id=${job.id}`);
           if (j.status === 'failed') throw Object.assign(new Error(`setup failed: ${j.steps.filter((s) => s.status === 'failed').map((s) => `${s.label}: ${s.detail}`).join('; ')}`), { fatal: true });
           return j.status === 'done' && j;
-        }, { ms: 180000, every: 1000, what: 'the setup to finish' }).catch((e) => {
+        }, { ms: 180000, every: 1000, what: 'the setup to finish' }).catch(async (e) => {
+          // Where it stood: each step's status and the job's last lines, so a hang says where.
+          const j = await api('GET', `/api/wizard/job?id=${job.id}`).catch(() => undefined);
+          if (j) e.message += `; status ${j.status}, steps ${j.steps.map((x) => `${x.id}:${x.status}`).join(' ')}; last lines: ${j.log.slice(-6).join(' | ').slice(0, 900)}`;
           throw e;
         });
         if (done.floor !== FLOOR) throw new Error(`the setup made floor ${done.floor}, not ${FLOOR}`);
@@ -231,7 +242,12 @@ export async function runJourney({ root, outDir, onProgress = () => {}, log = co
         const fmt = (xs) => xs.map((x) => `${x.ms} ms at +${((x.at - state.makingSince) / 1000).toFixed(1)} s`).join(', ');
         const over = stalls.filter((x) => x.ms > PERF_BUDGETS.serverStallMs);
         log(`server stalls over 100 ms while making the project: ${fmt(stalls) || 'none'}`);
-        if (over.length) throw new Error(`the server's event loop stalled ${over.length}× over ${PERF_BUDGETS.serverStallMs} ms: ${fmt(over)}`);
+        if (over.length) {
+          // What ran in the longest block, from the office's own profile (it ends MAKING_PROFILE_S after the start).
+          const prof = await state.profile;
+          const where = prof?.longest ? `; longest busy stretch in its profile ${prof.longest.ms} ms: ${prof.longest.stack.slice(0, 5).map((x) => x.frame).join(' < ')}` : '';
+          throw new Error(`the server's event loop stalled ${over.length}× over ${PERF_BUDGETS.serverStallMs} ms: ${fmt(over)}${where}`);
+        }
         return `longest block ${Math.max(0, ...stalls.map((x) => x.ms))} ms (${stalls.length} over 100 ms)`;
       },
     });

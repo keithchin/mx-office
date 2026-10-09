@@ -8,7 +8,7 @@ import { dayIn } from '../../shared/roster/schedule.js';
 import { awaitingAnswer, awaitingPmLine, isAsleepStatus, mayBench } from './bench.js';
 import type { Roster } from './index.js';
 import { readJournal } from './journal-io.js';
-import { lessonsPathIn, writeRoleFiles, type PlaybookContext } from './playbooks.js';
+import { lessonsPathIn, writeRoleFiles, writeRoleFilesSoon, type PlaybookContext } from './playbooks.js';
 import { autonomyPrompt, benchPrompt, primePrompt } from './prompts.js';
 import { stageLevel, stageOf } from './stage-autonomy.js';
 import { cleanSettings } from './store.js';
@@ -97,16 +97,16 @@ export class Members {
     m.benchSawBusy = undefined;
     // What it's to carry on with after the office's own messages (resume.ts); one brought back without a task keeps its last.
     if (task) this.roster.tasks.assignRole(floor, role, task, by);
-    // Its Playbook, its team's subagents and the journals, in the folder it works in, before its
-    // session has booted far enough to read them.
-    try {
-      writeRoleFiles(floor.cwdOf(r), role, this.ctxFor(floor, role));
-    } catch (err) {
-      floor.toast(`Couldn't write ${m.name}'s Playbook: ${(err as Error).message}`, 'warn');
-    }
     floor.toast(`${by} hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`);
     audit.record({ floor: floor.id, actor: byWhom(by, owner), action: 'worker.hire', target: { kind: 'worker', id: r.id, label: m.name }, summary: `Hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`, details: { role, model: model || m.model, task: task ? { length: task.length } : undefined } });
     this.roster.touch(floor);
+    // Then its Playbook, its team's subagents and the journals, in the folder it works in, before its
+    // session has booted far enough to read them.
+    try {
+      await writeRoleFilesSoon(floor.cwdOf(r), role, this.ctxFor(floor, role));
+    } catch (err) {
+      floor.toast(`Couldn't write ${m.name}'s Playbook: ${(err as Error).message}`, 'warn');
+    }
     return undefined;
   }
 

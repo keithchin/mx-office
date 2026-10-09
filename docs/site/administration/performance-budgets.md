@@ -126,6 +126,36 @@ On Windows every worker's terminal now runs in the **terminal host**, a small no
 
 The busy office (`scripts/perf/busy.mjs`) now ends with a **wake burst**: six asleep workers are woken at once, right after a fresh agent binary went in (`scripts/perf/slowstart.mjs`: the tests' shim with 24 MB of random bytes after it, which the scanner reads through on its first start), and the server must stay under 250 ms while they start. With terminals in the office (release 19's way, `AGENT_OFFICE_PTY_HOST=off`) it fails: one block of 3.9 to 4.8 s. With the host: no block over 100 ms. `tests/ptys-host-win.test.ts` checks the host itself: output, multi-line input, resize, exit codes, kill, a failed start, the host dying under the office, the office dying under the host, and three fresh binaries starting with the event loop held under 250 ms.
 
+### The fifth pass: a loaded machine (2026-10-08)
+
+The busy office and the journey passed on a quiet machine but failed on this laptop while the live office ran three Mendix builds (java, mxbuild) with the virus scanner busy: blocks of 0.4 to 2.4 s. The office's own CPU profiles (and `PERF_BUSY_LOAD=<n>`, which runs the busy check with n disk hammers in the test office's folder, `scripts/perf/diskload.mjs`, to reproduce it at will) put every one on synchronous file work or a synchronous system call on the event loop, each harmless on a quiet machine:
+
+| What held the loop | Where | Longest seen | Now |
+| --- | --- | --- | --- |
+| The ranking's background refresh: every journal, every project's files, every worker graded in one go | `ranking/index.ts` | 1,807 ms | Inputs read with fs/promises, only files whose time or size changed (`ranking/inputs.ts`); grading a slice at a time (`buildRankingSliced`, the same report) |
+| The machine monitor's `os.cpus()` (Windows reads each core's details from the registry) | `machine.ts` | 1,105 ms | Read in a worker thread (`offloop/cpu.ts`); the core count read once |
+| The Office Ledger's `usage.json`, the roster files, the analyzer's classes, the ranking's history, the scrollback, the flow checkpoints | various | 1,500 ms | Written in the background, a temporary file then a rename, the latest text only (`offloop/save.ts` `BackgroundFile`); what's still due is written at exit |
+| A new time-zone formatter at every worker update (the standup clock) | `shared/roster/schedule.ts` | 313 ms | One per zone |
+| Looking for each session's transcript one folder at a time, then reading it with readSync | `analysis/transcript.ts` | 303 ms | fs/promises |
+| The Leads' transcripts every 10 s, the chatter's and the Team tab's journals | `roster/subagent-live.ts`, `roster/journal-io.ts` | 564 ms | fs/promises; a journal look answers from the last background read |
+| Every part of the office looking for `claude` on the PATH (an access call per folder and extension) | `workers/process.ts` | 203 ms | Cached; the warm-up looks the usual commands up in the background |
+| The wizard's clone step, its checkpoint and opening the new floor in one go; a hire writing a dozen Playbook files | `flow/engine.ts`, `roster/playbooks.ts` | 1,684 ms | A turn of the loop between steps, before opening the floor, and after each file |
+| Every busy terminal's screen read in one flush | `workers/terminal.ts` | 201 ms | At most 20 ms per flush; the rest go in the next |
+
+Two of the blocks were the guard's own: starting the office's CPU profiler and saving its profile each held the loop 0.2 to 1.2 s on the loaded machine, inside the measured minute. The busy check and the journey now start the profile before the stretch they measure, and the journey's server check names what ran in a stall it finds.
+
+What is left is the machine itself. With the builds running, a block now and then still lands on code that does almost nothing (a 1 s garbage collection of a small heap, 300 ms in Node's HTTP header parser, 100 ms in a regular expression): the office's thread wasn't given the CPU. Those are scheduling, not work to move, and the 250 ms budget stays as it is.
+
+Measured on this laptop (32 threads, the live office busy with its builds):
+
+| Run | Machine | Busy office (60 s) | Journey's server check |
+| --- | --- | --- | --- |
+| Before (release 22) | 3 builds, scanner busy | 13 blocks over 100 ms, longest 966 ms; 1.8 s in another run | one block of 412 to 789 ms |
+| With 6 disk hammers, before / after the hook-path fixes | 63 % CPU | 50 blocks, longest 2.4 s / 34 blocks, longest 1.2 s, all on trivial frames | |
+| After, quick check | 34 % CPU, 4 java, 3 mxbuild | 0 blocks over 100 ms | longest 203 ms: pass |
+| After, quick check | 59 % CPU, 4 java, 2 mxbuild | 0 blocks over 100 ms | 340 ms in opening the new floor (fixed since) |
+| After, quick check | 70 % CPU, 4 java, 2 mxbuild | 0 blocks over 100 ms | 5 blocks of 280 to 580 ms in wizard steps: still open |
+
 ## Live warnings in the real office
 
 - **A page froze**: every flat view and the home page watch their own long tasks. One over 500 ms is reported (at most once a minute per view, never from a hidden tab) and opens an incident naming the view and the scripts that took the time.

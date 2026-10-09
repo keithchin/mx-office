@@ -3,8 +3,9 @@
 // the standups and their proposals, the escalations raised to the Project Manager, and the floor's spend today for the cost cap. Saved a moment
 // after each change, so a burst of worker updates writes once.
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { BackgroundFile } from '../offloop/save.js';
 import { DEFAULT_AUTONOMY, isAutonomyLevel, type AutonomyLevel } from '../../shared/roster/autonomy.js';
 import { cleanName, isRoleId, pickNames, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { cleanSchedule, DEFAULT_SCHEDULE } from '../../shared/roster/schedule.js';
@@ -212,10 +213,12 @@ export class RosterFile {
   readonly data: RosterData;
   private file: string;
   private timer?: NodeJS.Timeout;
+  private out: BackgroundFile;
 
   constructor(dir: string, floorId: string) {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     this.file = path.join(dir, `${floorId.replace(/[^A-Za-z0-9._-]/g, '_')}.json`);
+    this.out = new BackgroundFile(this.file, { onError: (err) => console.error(`agent-office: couldn't save ${this.file}`, err) });
     let raw: unknown;
     try {
       raw = existsSync(this.file) ? JSON.parse(readFileSync(this.file, 'utf8')) : undefined;
@@ -229,24 +232,34 @@ export class RosterFile {
   /** Saves shortly, once for a burst of changes. */
   save() {
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.flush(), 500);
+    this.timer = setTimeout(() => void this.flushSoon(), 500);
     this.timer.unref?.();
   }
 
-  flush() {
-    clearTimeout(this.timer);
-    this.timer = undefined;
+  /** What's written: the lists trimmed to what's kept. */
+  private text(): string {
     const d = this.data;
     d.standups = d.standups.slice(-STANDUPS_KEPT);
     d.proposals = d.proposals.slice(-PROPOSALS_KEPT);
     d.escalations = d.escalations.slice(-ESCALATIONS_KEPT);
     d.subagentActions = d.subagentActions.slice(-SUBAGENT_ACTIONS_KEPT);
-    try {
-      const tmp = `${this.file}.tmp`;
-      writeFileSync(tmp, JSON.stringify(d, null, 2), { mode: 0o600 });
-      renameSync(tmp, this.file);
-    } catch (err) {
-      console.error(`agent-office: couldn't save ${this.file}`, err);
-    }
+    return JSON.stringify(d, null, 2);
+  }
+
+  /**
+   * The save itself, written without blocking the event loop (to a temporary file, then renamed): on a
+   * loaded machine the synchronous write and rename held it 40–140 ms after each burst of worker updates
+   * (the busy office check, 2026-10-08). flush() is the same at once, for the office's stop and the tests.
+   */
+  flushSoon(): Promise<void> {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    return this.out.write(this.text());
+  }
+
+  flush() {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    this.out.flush(this.text());
   }
 }

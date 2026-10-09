@@ -118,7 +118,8 @@ test('the classifier falls back to keywords without a model, and keeps one answe
   assert.equal(got.typesBy, 'keywords');
   assert.deepEqual(got.types, ['domain-model']);
   assert.match(got.note!, /PR #1 merged, best-practices 95\/100 \(self-reported\), mx check clean, needed a human 1 time/);
-  // A new classifier reads the same answer back from disk.
+  // A new classifier reads the same answer back from disk (written in the background; flush() as at exit).
+  c.flush();
   const again = await new Classifier(file, null).classify(r, { task: 'Create entity Experiment with attributes and an enumeration', report: '', files: [] }, true);
   assert.deepEqual(again, got);
   assert.equal(fallbackNote({ ...r, excluded: 'still working' }), 'Not ranked: still working.');

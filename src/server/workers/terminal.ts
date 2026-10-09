@@ -53,9 +53,19 @@ export function fullScreens(workers: Iterable<Worker>) {
   return out;
 }
 
-/** Sends every screen that changed (see snapshotScreen), each looked at by `check` first. */
-export function flushScreens(workers: Iterable<Worker>, events: WorkerEvents, check: (w: Worker) => void) {
+/**
+ * How long one flush may take before the screens still to send wait for the next (a quarter of a second
+ * later): reading a screen cell by cell is a few ms, but every worker's keyframe falls due together and
+ * on a loaded machine one flush of six took 100–200 ms (the busy office check, 2026-10-08).
+ */
+export const FLUSH_BUDGET_MS = 20;
+/** When each worker's screen was last sent, so the ones left over go first next time. */
+const sentAt = new WeakMap<Worker, number>();
+
+/** Sends every screen that changed (see snapshotScreen), each looked at by `check` first, until FLUSH_BUDGET_MS has gone by. */
+export function flushScreens(workers: Iterable<Worker>, events: WorkerEvents, check: (w: Worker) => void, budgetMs = FLUSH_BUDGET_MS) {
   const now = Date.now();
+  const due: Worker[] = [];
   for (const w of workers) {
     if (!w.term) continue;
     // Diffs can be dropped for slow clients, so resend the whole screen now and then.
@@ -64,10 +74,17 @@ export function flushScreens(workers: Iterable<Worker>, events: WorkerEvents, ch
       w.lastLines = [];
       w.screenDirty = true;
     }
-    if (!w.screenDirty) continue;
+    if (w.screenDirty) due.push(w);
+  }
+  due.sort((a, b) => (sentAt.get(a) ?? 0) - (sentAt.get(b) ?? 0));
+  const t0 = performance.now();
+  for (const w of due) {
+    // At least one per flush; the rest stay dirty for the next.
+    if (w !== due[0] && performance.now() - t0 > budgetMs) break;
     w.screenDirty = false;
+    sentAt.set(w, now);
     check(w);
-    const frame = snapshotScreen(w.term, w.lastLines);
+    const frame = snapshotScreen(w.term!, w.lastLines);
     if (frame) events.screen(w.info.id, frame);
   }
 }

@@ -114,8 +114,15 @@ export class AuditLog {
     const unhashed = JSON.stringify(body);
     const event = { ...body, hash: sha256(unhashed) } as AuditEvent;
     const line = JSON.stringify(event);
-    mkdirSync(this.dir, { recursive: true, mode: 0o700 });
-    appendFileSync(this.fileOf(input.floor), `${line}\n`, { mode: 0o600 });
+    // The folder is made when an append finds it missing, not looked at before every append (each call
+    // costs on a loaded Windows machine, where the virus scanner looks at them).
+    try {
+      appendFileSync(this.fileOf(input.floor), `${line}\n`, { mode: 0o600 });
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+      mkdirSync(this.dir, { recursive: true, mode: 0o700 });
+      appendFileSync(this.fileOf(input.floor), `${line}\n`, { mode: 0o600 });
+    }
     c.events.push(event);
     c.lines.push(line);
     c.size += Buffer.byteLength(line) + 1;

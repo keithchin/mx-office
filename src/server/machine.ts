@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { MachineState } from '../shared/protocol.js';
+import { cpuTimesOff, type CpuTimes } from './offloop/cpu.js';
 
 /** How often the CPU and memory are read. */
 const SAMPLE_MS = 5_000;
@@ -35,17 +36,6 @@ export function parseWorkerLimit(v: unknown): number | undefined {
   return typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= MAX_WORKER_LIMIT ? n : undefined;
 }
 
-/** Every core's busy and idle time so far; two of these a few seconds apart give how busy it was. */
-function cpuTimes(): { idle: number; total: number } {
-  let idle = 0;
-  let total = 0;
-  for (const c of os.cpus()) {
-    idle += c.times.idle;
-    total += c.times.user + c.times.nice + c.times.sys + c.times.irq + c.times.idle;
-  }
-  return { idle, total };
-}
-
 /**
  * Memory the machine can still hand out, in bytes. On Linux os.freemem() is MemAvailable and on
  * Windows the available physical memory, but on macOS it counts only pages that were never used: a
@@ -72,7 +62,10 @@ export class Machine implements Capacity {
   private saved?: Saved;
   private path: string;
   private timer?: NodeJS.Timeout;
-  private last = cpuTimes();
+  /** Every core's busy and idle time at the last reading; two readings a few seconds apart give how busy it was. */
+  private last?: CpuTimes;
+  /** Read once: os.cpus() is slow on Windows (offloop/cpu.ts). */
+  private cores = os.availableParallelism();
   private cpu = 0;
   private memUsed = 0;
   private history: [number, number][] = [];
@@ -94,7 +87,7 @@ export class Machine implements Capacity {
 
   start() {
     // The memory now; the CPU takes two readings a while apart.
-    this.last = cpuTimes();
+    void cpuTimesOff().then((t) => (this.last ??= t));
     void this.sample(false);
     this.timer = setInterval(() => void this.sample(), SAMPLE_MS);
     this.timer.unref();
@@ -126,7 +119,7 @@ export class Machine implements Capacity {
     const memTotal = os.totalmem();
     return {
       cpu: this.cpu,
-      cores: os.cpus().length,
+      cores: this.cores,
       memUsed: this.memUsed,
       memTotal,
       history: this.history.slice(),
@@ -169,9 +162,10 @@ export class Machine implements Capacity {
 
   private async sample(cpu = true) {
     if (cpu) {
-      const now = cpuTimes();
-      const total = now.total - this.last.total;
-      if (total > 0) this.cpu = Math.max(0, Math.min(100, Math.round((1 - (now.idle - this.last.idle) / total) * 100)));
+      const now = await cpuTimesOff();
+      const last = this.last;
+      const total = last ? now.total - last.total : 0;
+      if (last && total > 0) this.cpu = Math.max(0, Math.min(100, Math.round((1 - (now.idle - last.idle) / total) * 100)));
       this.last = now;
     }
     const memTotal = os.totalmem();

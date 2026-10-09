@@ -32,9 +32,19 @@ function validZone(tz: string): boolean {
   }
 }
 
+/**
+ * One formatter per time zone, made once: making one loads the zone's rules and took 50–160 ms on a
+ * loaded machine, and the team asks for today's date at every worker update (the busy office's hooks).
+ */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
 /** The wall-clock parts of `at` in `tz`. */
 function partsIn(at: number, tz: string) {
-  const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short' });
+  let f = formatters.get(tz);
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short' });
+    formatters.set(tz, f);
+  }
   const p: Record<string, string> = {};
   for (const x of f.formatToParts(new Date(at))) p[x.type] = x.value;
   const wd = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.weekday);
