@@ -28,6 +28,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **Resumable and recorded.** A failed step stops the job; Retry (even after a restart) carries on from it. The
   audit log is never deleted and gets a `project.delete` event; the project's `prj_` id is retired (adding the
   repository again makes a new project) and its evidence trace says when it was deleted.
+- **Starts clean if added again.** The office lets go of everything it kept about the project in memory (team,
+  budget, pause and pacing, caches, live app), and its Analysis runs and workflow runs move into the archive.
+  The audit event names your account, or on the shared password the name you go by in the office.
 - **Archive isn't here yet**: ⏸ Pause project stops a project's agents and keeps everything.
 
 ## 2026-10-09 · release 26 (`bee523f`)

@@ -35,7 +35,10 @@ Before anything is removed, a copy goes to `<office data>/deleted/<project>-<dat
 
 - `office/`: the project's team (roster), chatter, budget ledger, acceptance records and the live app's log;
 - `project-agent-office/`: the project's own `.agent-office` folder (workers, queue, boards, pictures), without the worktrees;
+- `analysis-runs.jsonl` and `flows.json`: its runs on the Analysis tab and its workflow runs (pauses, resumes, the new-project wizard), taken out of the office's shared records;
 - `toolkit-pin.json` (its entry in the toolkit pin book), `incidents.jsonl` (the incidents that named it), `floor.json` (what `floors.json` had) and `manifest.json` (every step and what it did).
+
+The office also lets go of everything it kept about the project in memory (its team, budget, pause and pacing, caches, live app), so a project added again under the same name before the office restarts starts clean. In the audit event, *who* is your account, or on the shared password the name you go by in the office.
 
 To bring a removed project back, add its repository again (its folder is reused when it's still where the projects folder clones it) and copy back what you need from the archive. It comes back as a new project: a deleted project's `prj_` id is never used again, and an evidence trace for it says *deleted on &lt;date&gt;*.
 

@@ -254,6 +254,8 @@ export class ProjectDeletes {
         };
       }
       case 'data': {
+        // In memory first, so nothing writes the files back once they're gone.
+        await d.forget(f, job.archiveDir ?? archiveDirFor(d.dataDir, f.id, d.now()));
         await removeLiveData(d.dataDir, f.id, f.dir, f.local);
         d.pin(f.id, true);
         return {

@@ -20,6 +20,17 @@ import type { DeleteDeps, DeleteFloor } from '../src/server/project-delete/types
 import { ProjectIds } from '../src/server/projects/ids.js';
 import { projectPath } from '../src/server/http/routes/projects.js';
 import { removeDir } from './support/cleanup.js';
+import { forgetProject } from '../src/server/project-delete/forget.js';
+import { dropKeys, forgetWith, keyOfFloor, onForgetFloor } from '../src/server/office/forget.js';
+import { BudgetStore } from '../src/server/budget/store.js';
+import { RunStore } from '../src/server/analysis/store.js';
+import { acceptanceStore } from '../src/server/acceptance/index.js';
+import { pacingOf, projectPause, setPacing, setProjectPause, useProjectRunFile } from '../src/server/project-run/store.js';
+import { FlowEngine } from '../src/server/flow/engine.js';
+import type { RunRecord as AnalysisRun } from '../src/shared/analysis.js';
+import { DEFAULT_PACING } from '../src/shared/project-run.js';
+import { whoOf } from '../src/server/http/routes/notify-teams.js';
+import { profileBy } from '../src/client/ui/project-delete/api.js';
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const ENV = ['-c', 'user.name=T', '-c', 'user.email=t@x', '-c', 'commit.gpgsign=false'];
@@ -84,6 +95,7 @@ function office(t: { after(fn: () => void): void }, opts: { scopes?: string; tes
     stopAgents: async () => (calls.stopped++, calls.stopped === 1 ? 2 : 0),
     removeFloor: () => ((onFloors = false), calls.removed++, undefined),
     pin: () => ({ commit: 'abc1234', floorDir: dir, at: 1 }),
+    forget: async (f, archive) => void (await forgetProject(f, archive, {})),
     retire: () => void calls.retired++,
     audit: (_f, _by, job) => void calls.audits.push(job),
     announce: () => void calls.announced++,
@@ -363,4 +375,76 @@ test('pages that were on a deleted project go Home; Home and other projects only
   assert.ok(goesHome(msg, { path: '/lite', floor: null, search: '?floor=shop&tab=settings' }));
   assert.ok(!goesHome(msg, { path: '/lite', floor: 'other', search: '?floor=other' }));
   assert.ok(!goesHome({ ...msg, wasHere: true }, { path: '/home', floor: 'shop', search: '' }), 'Home stays Home');
+});
+
+test('which cache keys belong to a floor: its id, <id>:… keys and its folder, never another floor that starts the same', () => {
+  const f = { id: 'shop', dir: path.resolve('/projects/acme/shop') };
+  for (const k of ['shop', 'shop:lead', 'shop|stage', path.resolve('/projects/acme/shop'), path.join(path.resolve('/projects/acme/shop'), '.agent-office')]) assert.ok(keyOfFloor(k, f), k);
+  for (const k of ['shop-2', 'shop-2:lead', 'workshop', 'w_123', path.resolve('/projects/acme/shop-2')]) assert.ok(!keyOfFloor(k, f), k);
+  const m = new Map<string, unknown>([['shop', 1], ['shop:x', 2], ['crm', 3]]);
+  const timer = setTimeout(() => assert.fail('a dropped timer still ran'), 50);
+  m.set('shop|t', timer);
+  dropKeys(m, f);
+  assert.deepEqual([...m.keys()], ['crm']);
+  // Instances are held weakly; module caches until they stop.
+  let heard = 0;
+  const off = onForgetFloor(() => heard++);
+  const owner = { n: 0 };
+  forgetWith(owner, (o) => o.n++);
+  const archive = mkdtempSync(path.join(os.tmpdir(), 'test-office-forget-'));
+  return forgetProject({ ...f, name: 'shop', local: false }, archive, {}).then((errors) => {
+    off();
+    removeDir(archive);
+    assert.deepEqual(errors, []);
+    assert.equal(heard, 1);
+    assert.equal(owner.n, 1);
+  });
+});
+
+test('delete, then add the same floor id again before a restart: its budget, acceptance, pause, pacing, analysis and workflow runs start fresh', async (t) => {
+  const o = office(t);
+  useProjectRunFile(o.data);
+  t.after(() => useProjectRunFile(undefined));
+  const budget = new BudgetStore(o.data);
+  budget.floor('shop').alerts.push({ at: 1, level: 'full' } as never);
+  budget.changed('shop');
+  await budget.flushSoon();
+  const accept = acceptanceStore(o.data, 'shop');
+  setProjectPause('shop', { by: 'Ada', at: 1, why: 'person', waiting: [] });
+  setPacing('shop', { concurrent: 1, gapSec: 99 });
+  const runs = new RunStore(o.data);
+  runs.put({ id: 'shop:w1', floor: 'shop', worker: 'Ana', workerId: 'w1' } as AnalysisRun);
+  runs.put({ id: 'crm:w2', floor: 'crm', worker: 'Bo', workerId: 'w2' } as AnalysisRun);
+  const removed: string[] = [];
+  const engine = new FlowEngine({
+    store: { loadAll: () => [{ runId: 'project-pause-1', workflow: 'project-pause', floor: 'shop', status: 'done', updatedAt: 1 } as never], save() {}, cacheGet: () => undefined, cachePut() {}, remove: (r) => void removed.push(r.runId) },
+  });
+  assert.equal(engine.list({ floor: 'shop' }).length, 1);
+  o.deps.forget = async (f, archive) => void (await forgetProject(f, archive, { runs, flows: engine }));
+
+  await run(o, { mode: 'remove' });
+  const done = (await o.svc.job('shop'))!;
+  assert.equal(done.status, 'done', done.error);
+  // The same floor id, added again: nothing of the old project comes back.
+  assert.equal(budget.has('shop'), false);
+  assert.equal(budget.floor('shop').alerts.length, 0);
+  assert.notEqual(acceptanceStore(o.data, 'shop'), accept, 'a fresh acceptance store');
+  assert.equal(acceptanceStore(o.data, 'shop').all().length, 0);
+  assert.equal(projectPause('shop'), undefined);
+  assert.deepEqual(pacingOf('shop'), DEFAULT_PACING);
+  assert.deepEqual(runs.all().map((r) => r.id), ['crm:w2'], 'another project keeps its runs');
+  assert.equal(engine.list({ floor: 'shop' }).length, 0);
+  assert.deepEqual(removed, ['project-pause-1']);
+  // ...and the old ones are in the archive.
+  assert.match(readFileSync(path.join(done.archiveDir!, 'analysis-runs.jsonl'), 'utf8'), /"shop:w1"/);
+  assert.match(readFileSync(path.join(done.archiveDir!, 'flows.json'), 'utf8'), /project-pause-1/);
+  assert.match(readFileSync(path.join(done.archiveDir!, 'office', 'budget', 'shop.json'), 'utf8'), /"full"/);
+});
+
+test('who deleted it: the account, else the name this browser goes by, else "An admin"', () => {
+  assert.equal(whoOf('Keith', 'Ada'), 'Keith');
+  assert.equal(whoOf(undefined, profileBy('Ada')), 'Ada');
+  assert.equal(whoOf(undefined, profileBy('Guest')), 'An admin');
+  assert.equal(whoOf(undefined, profileBy('  ')), 'An admin');
+  assert.equal(whoOf(undefined, profileBy(undefined)), 'An admin');
 });

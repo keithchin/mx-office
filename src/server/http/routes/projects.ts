@@ -49,7 +49,8 @@ export const projectRoutes = {
         } catch {
           return send(res, 400, { error: 'Send JSON' });
         }
-        const who = whoOf(session.account?.name, undefined);
+        // An account's own name; on the shared password, the name this browser goes by in the office (else "An admin").
+        const who = whoOf(session.account?.name, (body as { by?: unknown } | null)?.by);
         const job = await svc.start(at.floor, body, {
           name: who,
           id: session.account?.id,

@@ -3,6 +3,7 @@
 // baseline, so a restart doesn't log the whole board again. What a person just did from the office
 // (merging from the PR window) is already logged with their name, and isn't repeated here.
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import type { GhIssue, GhPull } from '../../shared/protocol.js';
 import type { AuditActor, AuditInput } from '../../shared/audit.js';
 
@@ -25,6 +26,8 @@ const ts = (s: string) => Date.parse(s) || 0;
 export class GitHubWatch {
   private pulls = new Map<string, Seen>();
   private issues = new Map<string, Seen>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => (dropKeys(o.pulls, f), dropKeys(o.issues, f)));
 
   /** Events for a floor's pull requests as they are now; `branchOwner` names the agent working on a branch. */
   onPulls(floor: string, items: readonly GhPull[], now: number, branchOwner: (branch: string) => AuditActor | undefined): AuditInput[] {

@@ -3,6 +3,7 @@
 // office's own (the currency, the default alert threshold, and the background calls that served no floor).
 // Written a second after a change, through a temporary file, so a crash never leaves half a file.
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -36,6 +37,8 @@ const SAFE = /^[\w.-]{1,120}$/;
 export class BudgetStore {
   readonly dir: string;
   private floors = new Map<string, FloorFile>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => (dropKeys(o.floors, f), dropKeys(o.dirty, f), dropKeys(o.inFlight, f)));
   private officeFile?: OfficeFile;
   private dirty = new Set<string>();
   private timer: NodeJS.Timeout | null = null;

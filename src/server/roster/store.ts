@@ -229,6 +229,12 @@ export class RosterFile {
     if (raw === undefined || namesAdded(raw, this.data)) this.save();
   }
 
+  /** Drops what was waiting to be written (its project was deleted: the file is archived and gone). */
+  discard() {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+  }
+
   /** Saves shortly, once for a burst of changes. */
   save() {
     clearTimeout(this.timer);

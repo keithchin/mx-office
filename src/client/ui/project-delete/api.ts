@@ -27,12 +27,15 @@ export const fetchDeleteJob = (floor: string) =>
     cache: 'no-store',
   }).then((r) => json<DeleteJobView>(r));
 
+/** The name this browser goes by in the office (its profile), sent as who did it when there's no account. */
+export const profileBy = (name: string | undefined): string | undefined => (name && name.trim() && name.trim() !== 'Guest' ? name.trim().slice(0, 32) : undefined);
+
 export const startDelete = (floor: string, req: DeleteRequest) =>
   fetch(`${base(floor)}/delete`, {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(req),
+    body: JSON.stringify({ ...req, by: profileBy(store.profile?.name) }),
   }).then((r) => json<DeleteJobView>(r));
 
 const FLASH = 'agent-office.deleted-flash';

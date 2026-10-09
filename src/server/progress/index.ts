@@ -4,6 +4,7 @@
 // redo it; an Accept or a Reopen lets go of it at once. Nothing is polled: a page asks when something
 // it heard of changed (ui/progress/).
 
+import { dropKeys, onForgetFloor } from '../office/forget.js';
 import { lastAccepted, type Cycle } from '../../shared/acceptance.js';
 import { derivePhases, type ProgressAcceptance, type ProjectProgress } from '../../shared/progress.js';
 import { entryOf } from '../budget/plan-source.js';
@@ -15,6 +16,7 @@ import { brdCount, gather, stageDeliverables, stageSpend } from './gather.js';
 /** An answer is handed out again for this long (ms). */
 export const PROGRESS_FRESH_MS = 15_000;
 const cache = new Map<string, { at: number; p: Promise<Omit<ProjectProgress, 'admin'>> }>();
+onForgetFloor((f) => dropKeys(cache, f));
 onAcceptanceChange((floorId) => {
   for (const k of cache.keys()) if (k.startsWith(`${floorId}|`)) cache.delete(k);
 });

@@ -4,6 +4,7 @@
 // the current stage into PROJECT.md on every full run, so reading those is enough: nothing is run
 // here, and a file is read again only when it changed.
 
+import { dropKeys, onForgetFloor } from '../office/forget.js';
 import { readFileSync, statSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -13,6 +14,7 @@ export type ProjectFacts = Pick<ProjectSummary, 'goal' | 'goalFrom' | 'phase'>;
 
 const GOAL_MAX = 400;
 const cache = new Map<string, { key: string; facts: ProjectFacts }>();
+onForgetFloor((f) => dropKeys(cache, f));
 
 function stamp(file: string): string {
   try {

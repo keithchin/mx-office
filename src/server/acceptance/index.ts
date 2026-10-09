@@ -5,6 +5,7 @@
 // note and keeps every earlier record. "Changed since acceptance" is worked out when someone looks:
 // the delivery branch's head and the deliverables on main against what the record froze.
 
+import { onForgetFloor } from '../office/forget.js';
 import path from 'node:path';
 import { changedSince, cleanExceptions, suggestVersion, versionProblem, type AcceptanceDraft, type AcceptanceRecord, type AcceptanceView, type Cycle, type Reopen } from '../../shared/acceptance.js';
 import { ulid } from '../../shared/evidence/ids.js';
@@ -21,6 +22,9 @@ import { draftOf } from './evidence.js';
 import { AcceptanceStore } from './store.js';
 
 const stores = new Map<string, AcceptanceStore>();
+onForgetFloor((f) => {
+  for (const k of [...stores.keys()]) if (path.basename(k) === f.id) stores.delete(k);
+});
 
 /** The floor's acceptance file (one instance per file, so its cache is shared). */
 export function acceptanceStore(dataDir: string, floorId: string): AcceptanceStore {

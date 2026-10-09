@@ -2,6 +2,7 @@
 // and renamed over the old one so a crash mid-write leaves the last good checkpoint. Cached step
 // results sit beside them in <root>/_cache/<workflow>/<step>/<hash of the key>.json.
 
+import { rm } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -20,6 +21,8 @@ export interface CheckpointStore {
   save(run: RunRecord): void;
   cacheGet(workflow: string, step: string, key: string): CachedResult | undefined;
   cachePut(workflow: string, step: string, entry: CachedResult): void;
+  /** Forgets a run for good (its project was deleted); optional. */
+  remove?(run: RunRecord): void;
 }
 
 const CACHE = '_cache';
@@ -93,6 +96,14 @@ export class FileStore implements CheckpointStore {
     void b.write(JSON.stringify(value, null, 2)).then(() => {
       if (this.out.get(file) === mine && mine.pending() === undefined) this.out.delete(file);
     });
+  }
+
+  /** Deletes a run's checkpoint (what was still to be written lands first, then goes). */
+  remove(run: RunRecord) {
+    const file = this.fileOf(run.workflow, run.runId);
+    this.out.get(file)?.flush();
+    this.out.delete(file);
+    void rm(file, { force: true }).catch(() => undefined);
   }
 
   fileOf(workflow: string, runId: string) {

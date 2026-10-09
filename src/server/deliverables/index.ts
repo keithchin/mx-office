@@ -5,6 +5,7 @@
 // flipping between teams don't ask git each time; and which folder or branch a file route may read
 // (only one the scan listed).
 
+import { dropKeys, onForgetFloor } from '../office/forget.js';
 import path from 'node:path';
 import { ROLES } from '../../shared/roster/roles.js';
 import type { DeliverablesView } from '../../shared/deliverables.js';
@@ -19,6 +20,7 @@ import { commitTime } from './git.js';
 /** A scan is handed out again for this long (ms). */
 const FRESH_MS = 20_000;
 const cache = new Map<string, { at: number; p: Promise<DeliverablesView> }>();
+onForgetFloor((f) => dropKeys(cache, f));
 
 /** The floor's workers and its team members (hired or not, for their names on branches). */
 function people(ctx: Ctx, floor: Floor): ScanPerson[] {

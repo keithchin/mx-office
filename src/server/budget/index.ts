@@ -3,6 +3,7 @@
 // the office's Ledger behind it. It hears the office's background calls from the meter (meter.ts), checks
 // the alerts after spend, puts a budget pause back after a restart, and applies a budget level to the team.
 
+import { dropKeys, forgetWith, onForgetFloor } from '../office/forget.js';
 import type { Ctx } from '../office/context.js';
 import type { BudgetAlert, LevelId } from '../../shared/budget/types.js';
 import { LEADS, ROLE_BY_ID, ROLES } from '../../shared/roster/roles.js';
@@ -95,6 +96,7 @@ export function budgetOf(ctx: Ctx): BudgetService {
   controls.set(b, deps);
   const last = new Map<string, number>();
   const timers = new Map<string, NodeJS.Timeout>();
+  forgetWith(b, (_o, f) => (dropKeys(last, f), dropKeys(timers, f)));
   b.onSpend = (floor) => {
     const run = () => {
       last.set(floor.id, Date.now());
@@ -116,6 +118,7 @@ export function budgetOf(ctx: Ctx): BudgetService {
 }
 
 const effCache = new Map<string, { at: number; v: Record<string, number> }>();
+onForgetFloor((f) => dropKeys(effCache, f));
 /** How long a floor's token-efficiency scores are kept before the ranking is asked again. */
 const EFF_TTL_MS = 10 * 60_000;
 

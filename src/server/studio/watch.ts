@@ -7,6 +7,7 @@
 // A lock with no Studio Pro running is a stale lock: shown, never enforced. What changed is kept in
 // the floor's data folder (.agent-office/studio-mode.json), so a restart picks up where it was.
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import { execFileOff } from '../offloop/exec.js';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -101,6 +102,8 @@ const same = (a: StudioState, b: StudioState) => JSON.stringify(a) === JSON.stri
 
 export class StudioWatch {
   private floors = new Map<string, Kept>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => dropKeys(o.floors, f));
   private procs = new Map<number, string>();
   private busy = false;
 

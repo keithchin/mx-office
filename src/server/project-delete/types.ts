@@ -31,6 +31,11 @@ export interface DeleteDeps {
   removeFloor(id: string, by: string): string | undefined;
   /** Its entry in the toolkit pin book (for the archive); `remove` takes it out. */
   pin(id: string, remove?: boolean): unknown;
+  /**
+   * Every service lets go of what it keeps in memory for the floor (office/forget.ts), and the office's
+   * shared records of it (analysis runs, workflow runs) are moved into the archive at `archiveDir`.
+   */
+  forget(f: DeleteFloor, archiveDir: string): Promise<void>;
   /** Retires its prj_ id. */
   retire(f: DeleteFloor, by: string): void;
   /** The audit log's project.delete record. */

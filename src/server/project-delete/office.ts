@@ -17,6 +17,9 @@ import { liveAppsOf } from '../liveapp/index.js';
 import { resolveCommand } from '../workers/process.js';
 import { ProjectDeletes } from './index.js';
 import type { DeleteFloor } from './types.js';
+import { analysisOf } from '../analysis/index.js';
+import { flowsOf } from '../flow/index.js';
+import { forgetProject } from './forget.js';
 
 const services = new WeakMap<object, ProjectDeletes>();
 /** The pages that were on a project when its floor closed, so they go Home once it's deleted. */
@@ -92,6 +95,10 @@ export function projectDeletesOf(ctx: Ctx): ProjectDeletes {
     pin: (id, remove) => {
       const book = toolkitOfOffice(ctx).svc.book;
       return remove ? book.remove(id) : book.get(id);
+    },
+    forget: async (f, archive) => {
+      const errors = await forgetProject(f, archive, { runs: analysisOf(ctx).store, flows: flowsOf(ctx) });
+      for (const err of errors) console.error(`agent-office: letting go of ${f.id}: ${err}`);
     },
     retire: (f, by) => {
       const ids = projectIdsFor(ctx.cfg.dataDir);

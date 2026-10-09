@@ -4,6 +4,7 @@
 // delivery path can ask without a handle on the office; useProjectRunFile points it at the office's
 // data dir (until then, and in tests that don't, it lives in memory only).
 
+import { onForgetFloor } from '../office/forget.js';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { cleanPacing, DEFAULT_PACING, PAUSED_HIRES, type Pacing, type PauseInfo } from '../../shared/project-run.js';
@@ -63,6 +64,13 @@ export function projectPauseOf(floorId: string): string | undefined {
 
 /** Floors a person is hiring on anyway, from the Team tab, after a confirm (overrideHold). */
 const overriding = new Map<string, number>();
+onForgetFloor((f) => {
+  overriding.delete(f.id);
+  if (!(f.id in data.pauses) && !(f.id in data.pacing)) return;
+  delete data.pauses[f.id];
+  delete data.pacing[f.id];
+  save();
+});
 
 /**
  * Why nobody new is hired on this floor now: it's paused. roster/pause.ts's floorLedger adds it to the

@@ -6,6 +6,7 @@
 // (back-to-work.ts); and the Project Manager's choices about interrupting busy agents (interrupts.ts). Everything here is bookkeeping on worker updates plus a once-a-minute look: no model
 // calls of its own, so a quiet floor costs nothing. One per office, made on first use (rosterOf), like the analyzer.
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import path from 'node:path';
 import type { WorkerInfo, WorkerStatus } from '../../shared/protocol.js';
 import { AUTONOMY, capAt, needsApproval } from '../../shared/roster/autonomy.js';
@@ -63,6 +64,12 @@ export class Roster {
   private labelled = new Set<string>();
   private files = new Map<string, RosterFile>();
   private seen = new Map<string, Seen>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => {
+    o.files.get(f.id)?.discard();
+    dropKeys(o.files, f);
+    dropKeys(o.labelled, f);
+  });
   private timer?: NodeJS.Timeout;
   /** Workers whose update is being handled now, and the update that came in meanwhile (see onWorker). */
   private handling = new Set<string>();

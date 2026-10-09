@@ -3,6 +3,7 @@
 // GitHub, and stopped with the office. Nothing a browser sends picks what runs: the command, the
 // checkout and the ports are all the office's own.
 
+import { forgetWith } from '../office/forget.js';
 import path from 'node:path';
 import type { LiveAppState } from '../../shared/protocol.js';
 import { resolveCommand } from '../workers/process.js';
@@ -17,6 +18,13 @@ type Deps = Pick<Ctx, 'cfg' | 'floors' | 'toFloor'>;
 export class LiveApps {
   readonly cfg: LiveAppConfig;
   private apps = new Map<string, LiveApp>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => {
+    const app = o.apps.get(f.id);
+    if (!app) return;
+    o.apps.delete(f.id);
+    void app.shutdown().catch(() => undefined);
+  });
   private timer: NodeJS.Timeout | undefined;
   private mxcli: string | null;
 

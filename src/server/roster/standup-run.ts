@@ -13,6 +13,7 @@
 // answering it isn't the end of the turn. And a team hired after today's slot gets no catch-up standup
 // on its first day (newTeam in standup.ts): its first standup is the next scheduled one.
 
+import { dropKeys, forgetWith } from '../office/forget.js';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { WorkerInfo } from '../../shared/protocol.js';
@@ -47,6 +48,8 @@ export class StandupRunner {
   private asks = new Map<string, { at: number; sawBusy: boolean }>();
   /** The Coordinator's debounce per floor; the decisions it's to hear are in the roster file's outbox. */
   private timers = new Map<string, NodeJS.Timeout>();
+  /** Lets go of a deleted project's floor (office/forget.ts). */
+  private readonly forgetsFloor = forgetWith(this, (o, f) => (dropKeys(o.asks, f), dropKeys(o.timers, f)));
 
   constructor(private roster: Roster) {}
 

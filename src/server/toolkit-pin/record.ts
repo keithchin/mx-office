@@ -6,6 +6,7 @@
 // Also the toolkit's own record of it, PROJECT.md's `Toolkit commit: <sha>` line (the session ack that
 // gate-check's protocol-freshness check reads), which the Update toolkit action moves along with the pin.
 
+import { dropKeys, onForgetFloor } from '../office/forget.js';
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { ToolkitHistoryEntry, ToolkitPinRecord } from '../../shared/toolkit.js';
@@ -137,6 +138,7 @@ export class PinBook {
 }
 
 const folderCache = new Map<string, { key: string; rec?: ToolkitPinRecord }>();
+onForgetFloor((f) => dropKeys(folderCache, f));
 
 /** The record in the floor folder's own agent-office.project.json (a small read, remembered until the file changes). */
 export function folderRecord(floorDir: string): ToolkitPinRecord | undefined {
