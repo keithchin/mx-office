@@ -4,7 +4,7 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
-## Unreleased
+## 2026-10-09 · release 24 (`b32d844`)
 
 ### New
 - **📐 Model tab: the app as Studio Pro shows it.** A new tab beside 🌳 Git shows the floor's Mendix
