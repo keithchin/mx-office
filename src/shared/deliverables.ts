@@ -151,25 +151,48 @@ export function safeRelPath(p: unknown): p is string {
   return p.split('/').every((seg) => seg !== '' && seg !== '.' && seg !== '..');
 }
 
-/** Which catalog entry a project file is, if any. */
-export function specFor(p: string): DeliverableSpec | undefined {
-  if (anyMatch(NEVER, p)) return undefined;
-  return DELIVERABLES.find((d) => anyMatch(d.globs, p) && !(d.exclude ?? []).some((x) => x.toLowerCase() === p.toLowerCase()));
+/** What a project path is: its catalog entry, else whose extra, else an unsorted report, else nothing. */
+interface PathClass {
+  spec?: DeliverableSpec;
+  extra?: TeamId;
+  unsorted: boolean;
+  /** Listed and served at all (and a safe path). */
+  deliverable: boolean;
 }
+/**
+ * Paths classified before: a scan asks about every file of every branch and worktree it looks at (a
+ * Mendix repo's thousands, the same ones again on each), and each ask tried some sixty globs three
+ * times over (2.5 s of a travel-approval scan, 2026-10-11).
+ */
+const classes = new Map<string, PathClass>();
+const CLASSES_KEPT = 50_000;
+
+function classify(p: string): PathClass {
+  const hit = classes.get(p);
+  if (hit) return hit;
+  let out: PathClass = { unsorted: false, deliverable: false };
+  if (!anyMatch(NEVER, p)) {
+    const spec = DELIVERABLES.find((d) => anyMatch(d.globs, p) && !(d.exclude ?? []).some((x) => x.toLowerCase() === p.toLowerCase()));
+    const extra = spec ? undefined : EXTRAS.find((e) => anyMatch(e.globs, p))?.team;
+    const unsorted = !spec && !extra && globMatch('reports/**', p);
+    out = { spec, extra, unsorted, deliverable: (!!spec || !!extra || unsorted) && safeRelPath(p) };
+  }
+  if (classes.size >= CLASSES_KEPT) classes.clear();
+  classes.set(p, out);
+  return out;
+}
+
+/** Which catalog entry a project file is, if any. */
+export const specFor = (p: string): DeliverableSpec | undefined => classify(p).spec;
 
 /** Whose extra a project file is, when it's no catalog entry. */
-export function extraTeam(p: string): TeamId | undefined {
-  if (anyMatch(NEVER, p) || specFor(p)) return undefined;
-  return EXTRAS.find((e) => anyMatch(e.globs, p))?.team;
-}
+export const extraTeam = (p: string): TeamId | undefined => classify(p).extra;
 
 /** A file under reports/ that's no catalog entry, no analyst report and in no team's reports/<team>/: shown as Unsorted in Management's panel. */
-export function unsortedReport(p: string): boolean {
-  return globMatch('reports/**', p) && !anyMatch(NEVER, p) && !specFor(p) && !extraTeam(p);
-}
+export const unsortedReport = (p: string): boolean => classify(p).unsorted;
 
 /** Whether the office lists and serves this path as a deliverable at all. */
-export const isDeliverablePath = (p: string): boolean => safeRelPath(p) && (!!specFor(p) || !!extraTeam(p) || unsortedReport(p));
+export const isDeliverablePath = (p: string): boolean => typeof p === 'string' && classify(p).deliverable;
 
 export function kindOf(p: string): DeliverableKind {
   const ext = p.slice(p.lastIndexOf('.') + 1).toLowerCase();

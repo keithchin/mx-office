@@ -1,47 +1,123 @@
-// The few git calls the deliverables scan makes, read-only: what a checkout counts as its files, which
-// office branches there are, what's on one (ls-tree, cached by the commit it points at, so asking
-// again costs nothing until someone pushes), and one file's bytes from a branch.
+// The few git calls the deliverables scan makes, read-only, every one started off the event loop
+// (offloop/exec.ts: on Windows starting a process holds the thread that asks, often 50–400 ms each):
+// which office branches there are (one for-each-ref), what each one changed since it forked from main
+// (one `diff --raw base...branch`, cached by both commits, so asking again costs nothing until someone
+// pushes), what a worktree has that its commit hasn't (one `status`), what's at a commit (ls-tree,
+// cached by the commit), the sizes of a set of blobs (one cat-file --batch-check, cached by blob id),
+// and one file's bytes from a branch. A scan of travel-approval made 133 git calls one after another
+// (20 s cold, 9–14 s warm, 2026-10-11); it makes about 30 cold and a dozen warm now, a few at a time.
 
-import { execFile } from 'node:child_process';
+import { spawnOff, execFileOff } from '../offloop/exec.js';
 
 const ENV = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' };
 
-function run(args: string[], cwd: string, maxBuffer = 32 * 1024 * 1024): Promise<string | undefined> {
+/** How many git processes one scan runs at once. */
+export const GIT_PARALLEL = 6;
+
+function run(args: string[], cwd: string, opts: { maxBuffer?: number; input?: string } = {}): Promise<string | undefined> {
   return new Promise((resolve) => {
-    execFile('git', args, { cwd, encoding: 'utf8', maxBuffer, timeout: 20_000, env: ENV, windowsHide: true }, (err, out) => resolve(err ? undefined : out));
+    execFileOff('git', args, { cwd, maxBuffer: opts.maxBuffer ?? 32 * 1024 * 1024, timeout: 20_000, env: ENV, windowsHide: true, input: opts.input }, (err, out) => resolve(err ? undefined : out));
   });
 }
 
-/** A file's bytes, at most `max` (more is an error, not a cut). */
+/** A file's bytes, at most `max` (more is an error, not a cut). Started off the event loop too. */
 export function gitBytes(args: string[], cwd: string, max: number): Promise<Buffer | undefined> {
   return new Promise((resolve) => {
-    execFile('git', args, { cwd, encoding: 'buffer', maxBuffer: max, timeout: 20_000, env: ENV, windowsHide: true }, (err, out) => resolve(err ? undefined : out));
+    const child = spawnOff('git', args, { cwd, env: ENV, windowsHide: true, binary: true });
+    const parts: Buffer[] = [];
+    let size = 0;
+    let over = false;
+    const timer = setTimeout(() => child.kill(), 20_000);
+    child.on('stdout', (d: Uint8Array | string) => {
+      if (over) return;
+      const b = typeof d === 'string' ? Buffer.from(d) : Buffer.from(d.buffer, d.byteOffset, d.byteLength);
+      size += b.length;
+      if (size > max) {
+        over = true;
+        child.kill();
+        return;
+      }
+      parts.push(b);
+    });
+    child.on('error', () => undefined);
+    child.on('close', (code: number | null) => {
+      clearTimeout(timer);
+      resolve(over || code !== 0 ? undefined : Buffer.concat(parts));
+    });
   });
 }
 
-/** The checkout's files as git has them: tracked, or new and not ignored. Undefined when it isn't a git checkout. */
-export async function checkoutFiles(dir: string): Promise<string[] | undefined> {
-  const out = await run(['ls-files', '-z', '--cached', '--others', '--exclude-standard'], dir);
-  return out === undefined ? undefined : [...new Set(out.split('\0').filter(Boolean))];
+/** Runs `fn` over `items`, at most `n` at once, in order of the answers' places. */
+export async function pool<T, R>(items: readonly T[], n: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const lane = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, lane));
+  return out;
+}
+
+/** Keeps a map to its newest `max` entries. */
+function bound<K, V>(m: Map<K, V>, max: number) {
+  while (m.size > max) m.delete(m.keys().next().value!);
+}
+
+export interface WorktreeState {
+  /** The commit it has checked out (undefined before its first commit). */
+  head?: string;
+  /** Paths changed since that commit, staged or not, and new ones (not ignored). */
+  dirty: Set<string>;
+  /** Paths deleted from the folder or the index. */
+  gone: Set<string>;
 }
 
 /**
- * The blob each tracked file has in the index, without the ones changed in the working tree since
- * HEAD (or new): a file whose id matches a branch's is the same file, whatever line endings the
- * checkout gave it.
+ * What a checkout has that its commit hasn't, in one `git status` (porcelain v2): its HEAD, what's
+ * changed or new, and what's gone. Together with the tree at HEAD (treeAt, cached), that's every file
+ * the checkout counts, and which of them are the committed blob. Undefined when it isn't a git checkout.
  */
-export async function committedIds(dir: string): Promise<Map<string, string>> {
-  const [staged, changed] = await Promise.all([run(['ls-files', '-s', '-z'], dir), run(['diff', '--name-only', '-z', 'HEAD'], dir)]);
-  const out = new Map<string, string>();
-  const dirty = new Set((changed ?? '').split('\0').filter(Boolean));
-  for (const rec of (staged ?? '').split('\0')) {
-    // <mode> SP <object> SP <stage> TAB <path>
-    const tab = rec.indexOf('\t');
-    if (tab < 0) continue;
-    const p = rec.slice(tab + 1);
-    if (!dirty.has(p)) out.set(p, rec.slice(0, tab).split(' ')[1]);
+export async function worktreeState(dir: string): Promise<WorktreeState | undefined> {
+  const out = await run(['-c', 'core.quotepath=off', 'status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all', '--no-renames'], dir);
+  return out === undefined ? undefined : parseStatus(out);
+}
+
+/** `git status --porcelain=v2 --branch -z` read. */
+export function parseStatus(out: string): WorktreeState {
+  const st: WorktreeState = { dirty: new Set(), gone: new Set() };
+  const recs = out.split('\0');
+  for (let i = 0; i < recs.length; i++) {
+    const rec = recs[i];
+    if (!rec) continue;
+    const kind = rec[0];
+    if (kind === '#') {
+      const m = /^# branch\.oid ([0-9a-f]{40,64})$/.exec(rec);
+      if (m) st.head = m[1];
+      continue;
+    }
+    if (kind === '?') {
+      st.dirty.add(rec.slice(2));
+      continue;
+    }
+    // 1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>; 2 … <Xscore> <path>\0<orig>; u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
+    const fields = kind === '1' ? 8 : kind === '2' ? 9 : kind === 'u' ? 10 : -1;
+    if (fields < 0) continue;
+    let at = 0;
+    for (let f = 0; f < fields && at >= 0; f++) at = rec.indexOf(' ', at + 1);
+    if (at < 0) continue;
+    const p = rec.slice(at + 1);
+    const xy = rec.slice(2, 4);
+    if (kind === '2') {
+      // A rename (only when asked for them): the old path is gone.
+      st.gone.add(recs[++i] ?? '');
+    }
+    if (xy.includes('D')) st.gone.add(p);
+    else st.dirty.add(p);
   }
-  return out;
+  return st;
 }
 
 export interface BranchRef {
@@ -84,35 +160,54 @@ export async function officeBranches(dir: string, also: readonly string[] = [], 
   return [...local.values()].sort((a, b) => b.at - a.at).slice(0, max);
 }
 
-const forks = new Map<string, Promise<Set<string> | undefined>>();
+const KEPT = 400;
+const forks = new Map<string, Promise<Map<string, string> | undefined>>();
 
 /**
- * The files a branch changed since it forked from what `dir` has checked out (the merge base of HEAD
- * (or `against`, origin/<default>'s commit) and `sha`): its own work, not the older copies of files main has moved on from. Cached by both
- * commits. Undefined when git can't say (no common history).
+ * What commit `sha` changed since it forked from commit `base` (`git diff --raw base...sha`: from their
+ * merge base): each file it added or changed, with its blob id there (a file it deleted isn't listed).
+ * Its own work, not the older copies of files main has moved on from. Cached by both commits (pass
+ * commit ids, not names). Undefined when git can't say (no common history).
  */
-export function changedSinceFork(dir: string, sha: string, against = 'HEAD'): Promise<Set<string> | undefined> {
-  return run(['rev-parse', '-q', '--verify', `${against}^{commit}`], dir).then((head) => {
-    const h = head?.trim();
-    if (!h) return undefined;
-    const key = `${dir}\0${h}\0${sha}`;
-    let p = forks.get(key);
-    if (!p) {
-      p = (async () => {
-        const base = (await run(['merge-base', h, sha], dir))?.trim();
-        if (!base) return undefined;
-        const out = await run(['diff', '--name-only', '-z', '--no-renames', base, sha], dir);
-        return out === undefined ? undefined : new Set(out.split('\0').filter(Boolean));
-      })();
-      forks.set(key, p);
-      if (forks.size > TREES_KEPT) forks.delete(forks.keys().next().value!);
-    }
-    return p;
-  });
+export function forkChanges(dir: string, base: string, sha: string): Promise<Map<string, string> | undefined> {
+  const key = `${dir}\0${base}\0${sha}`;
+  let p = forks.get(key);
+  if (!p) {
+    p = run(['-c', 'core.quotepath=off', 'diff', '--raw', '-z', '--no-renames', '--no-abbrev', '--no-textconv', '--no-ext-diff', `${base}...${sha}`], dir).then((out) => (out === undefined ? undefined : parseRaw(out)));
+    forks.set(key, p);
+    bound(forks, KEPT);
+  }
+  return p;
 }
 
-/** When commit `sha` was made, ms. */
-export const commitTime = async (dir: string, sha: string) => Number((await run(['log', '-1', '--format=%ct', sha], dir))?.trim()) * 1000 || 0;
+/** `git diff --raw -z` read: path → its new blob, for what was added or changed. */
+export function parseRaw(out: string): Map<string, string> {
+  const files = new Map<string, string>();
+  const recs = out.split('\0');
+  for (let i = 0; i + 1 < recs.length; i += 2) {
+    // :<old mode> <new mode> <old oid> <new oid> <status>
+    const meta = recs[i].split(' ');
+    const p = recs[i + 1];
+    const status = meta[4]?.[0];
+    if (!p || !status || status === 'D') continue;
+    files.set(p, meta[3]);
+  }
+  return files;
+}
+
+const times = new Map<string, Promise<number>>();
+
+/** When commit `sha` was made, ms. Cached: a commit never changes. */
+export function commitTime(dir: string, sha: string): Promise<number> {
+  const key = `${dir}\0${sha}`;
+  let p = times.get(key);
+  if (!p) {
+    p = run(['log', '-1', '--format=%ct', sha], dir).then((out) => Number(out?.trim()) * 1000 || 0);
+    times.set(key, p);
+    bound(times, KEPT);
+  }
+  return p;
+}
 
 /** The commit a checkout has checked out. */
 export const headOf = async (dir: string) => (await run(['rev-parse', '-q', '--verify', 'HEAD'], dir))?.trim() || undefined;
@@ -125,14 +220,13 @@ export interface TreeFile {
 }
 
 const trees = new Map<string, Promise<TreeFile[]>>();
-const TREES_KEPT = 200;
 
 /** Every file at commit `sha` with its size. Cached by sha: a commit never changes. */
 export function treeAt(dir: string, sha: string): Promise<TreeFile[]> {
   const key = `${dir}\0${sha}`;
   const hit = trees.get(key);
   if (hit) return hit;
-  const p = run(['ls-tree', '-r', '-l', '-z', '--full-tree', sha], dir).then((out) => {
+  const p = run(['-c', 'core.quotepath=off', 'ls-tree', '-r', '-l', '-z', '--full-tree', sha], dir).then((out) => {
     if (out === undefined) {
       trees.delete(key);
       return [];
@@ -149,18 +243,35 @@ export function treeAt(dir: string, sha: string): Promise<TreeFile[]> {
     return files;
   });
   trees.set(key, p);
-  if (trees.size > TREES_KEPT) trees.delete(trees.keys().next().value!);
+  bound(trees, KEPT);
   return p;
+}
+
+const sizes = new Map<string, number>();
+
+/** The sizes of blobs `oids`, in one `cat-file --batch-check` for the ones not asked before (a blob never changes). */
+export async function blobSizes(dir: string, oids: Iterable<string>): Promise<Map<string, number>> {
+  const want = [...new Set(oids)].filter((o) => /^[0-9a-f]{40,64}$/.test(o));
+  const ask = want.filter((o) => !sizes.has(o));
+  if (ask.length) {
+    const out = await run(['cat-file', '--batch-check=%(objectname) %(objectsize)'], dir, { input: `${ask.join('\n')}\n` });
+    for (const line of (out ?? '').split('\n')) {
+      const [oid, n] = line.split(' ');
+      if (oid && /^\d+$/.test(n ?? '')) sizes.set(oid, Number(n));
+    }
+    bound(sizes, 20_000);
+  }
+  return new Map(want.filter((o) => sizes.has(o)).map((o) => [o, sizes.get(o)!]));
 }
 
 /** The size of `path` on a branch, or undefined when it isn't there. */
 export async function sizeOnBranch(dir: string, branch: string, path: string): Promise<number | undefined> {
-  const out = await run(['cat-file', '-s', `${branch}:${path}`], dir, 1024);
+  const out = await run(['cat-file', '-s', `${branch}:${path}`], dir, { maxBuffer: 1024 });
   const n = Number(out?.trim());
   return out === undefined || !Number.isFinite(n) ? undefined : n;
 }
 
 /** `path`'s bytes on a branch (`cat-file`, not `show`: no textconv filters), at most `max`. */
 export function blobOnBranch(dir: string, branch: string, path: string, max: number): Promise<Buffer | undefined> {
-  return gitBytes(['cat-file', 'blob', `${branch}:${path}`], dir, max + 1);
+  return gitBytes(['cat-file', 'blob', `${branch}:${path}`], dir, max);
 }
