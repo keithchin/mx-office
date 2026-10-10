@@ -6,6 +6,7 @@
 import type { ChangeStatus, ModelTreeNode } from '../../../shared/model';
 import { h } from '../dom';
 import { treeIcon } from './icons';
+import { opensNode } from './targets';
 
 export const ROW_H = 22;
 
@@ -238,6 +239,5 @@ export class Tree {
   }
 }
 
-/** Tree types that show something when chosen (the rest just open and close). */
-export const OPENS = new Set(['domainmodel', 'entity', 'association', 'microflow', 'nanoflow', 'page', 'snippet', 'layout', 'enumeration', 'constant', 'javaaction', 'workflow', 'jsonstructure', 'importmapping', 'exportmapping', 'imagecollection', 'scheduledevent', 'buildingblock', 'menu', 'restclient', 'odataclient', 'odataservice', 'regularexpression', 'queue', 'modulerole', 'userrole', 'demouser', 'projectsecurity', 'settings', 'navigation', 'navprofile']);
-export const opens = (n: ModelTreeNode): boolean => OPENS.has(n.type) && (!!n.qn || n.type === 'navigation');
+/** Whether choosing a node shows something (targets.ts); the rest just open and close. */
+export const opens = opensNode;

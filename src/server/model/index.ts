@@ -21,6 +21,7 @@ import { domainFromElk, entityPositions, type ElkDomain } from './domain.js';
 import { parseFlow, type ElkFlow } from './flow.js';
 import { diffIndexes } from './mpr.js';
 import { findMxcli, Limiter, mxRunner, parseJsonOut, stripNoise, type MxRun } from './mxcli.js';
+import { parseOverview, type ElkOverview } from './overview.js';
 import { Prefetcher, type Task } from './prefetch.js';
 import { mdlOf, readDomain, readFlow, withMdl, type FlowMdl } from './read.js';
 import { gitOff, keyOf, ModelStore, type GitRun } from './store.js';
@@ -182,7 +183,7 @@ export class ModelService {
     const { sha, base } = await this.resolve(floor, ref);
     const cm = await this.commit(floor, sha);
     let d = await this.docAt(floor, sha, cm, type, qn);
-    if (d.kind !== 'text' && d.kind !== 'domainmodel' && d.mdlLater && cm) {
+    if ((d.kind === 'microflow' || d.kind === 'nanoflow') && d.mdlLater && cm) {
       // The MDL too, when it was worked out before (on this commit or any with the same flow).
       const m = await this.store.peek<FlowMdl>(this.mdlKey(cm, type, qn));
       if (m) d = withMdl(d, m);
@@ -212,6 +213,8 @@ export class ModelService {
       const r = await readDomain(cm, qn);
       if (r) return this.store.cached(r.key, async () => r.build());
     }
+    const other = await this.appDoc(floor, sha, cm, type, qn);
+    if (other) return other;
     // A document shown as its MDL: kept by its unit's hash when it has one, else by commit.
     const unitHash = cm?.hashOf(`${type}:${qn}`) ?? '';
     const key = unitHash ? keyOf(`v${CACHE_VERSION}`, 'doc', type, qn, unitHash) : keyOf(`v${CACHE_VERSION}`, 'doc@', floor.dir, sha, type, qn);
@@ -223,6 +226,35 @@ export class ModelService {
       const mdl = stripNoise(await this.mxAt(floor, sha, (mpr) => ['describe', '-p', mpr, dtype, qn])).replace(/^mdl 1;\n?/, '');
       return { kind: 'text', type, name: qn, mdl };
     });
+  }
+
+  /**
+   * The app-level nodes that are no single document: the System Overview (the module graph, kept by every
+   * unit's hash), the whole Navigation (each profile's MDL, kept by the app's structure, which navigation is
+   * part of) and a module's Security (its roles and security matrix, kept by commit).
+   */
+  private async appDoc(floor: GraphFloor, sha: string, cm: CommitModel | null, type: string, qn: string): Promise<ModelDoc | null> {
+    if (type === 'systemoverview') {
+      const key = cm ? keyOf(`v${CACHE_VERSION}`, 'overview', cm.structure, ...[...cm.ix.byName.keys()].sort().map((k) => cm.hashOf(k))) : keyOf(`v${CACHE_VERSION}`, 'overview@', floor.dir, sha);
+      return this.store.cached(key, async () => parseOverview(parseJsonOut<ElkOverview>(await this.mxAt(floor, sha, (mpr) => ['describe', '-p', mpr, '--format', 'elk', 'systemoverview', 'SystemOverview']))));
+    }
+    if (type === 'navigation') {
+      const key = cm ? keyOf(`v${CACHE_VERSION}`, 'navigation', cm.structure) : keyOf(`v${CACHE_VERSION}`, 'navigation@', floor.dir, sha);
+      return this.store.cached(key, async (): Promise<ModelDoc> => {
+        const nav = (await this.treeAt(floor, sha)).find((n) => n.type === 'navigation');
+        const profiles = (nav?.children ?? []).filter((c) => c.type === 'navprofile' && c.qn && /^\w+$/.test(c.qn)).map((c) => c.qn as string);
+        if (!profiles.length) return { kind: 'text', type, name: 'Navigation', mdl: '' };
+        const out = await this.mxAt(floor, sha, (mpr) => ['-p', mpr, '--continue-on-error', '-c', profiles.map((p) => `describe navigation ${p};`).join(' ')]);
+        return { kind: 'text', type, name: 'Navigation', mdl: stripNoise(out).replace(/^mdl 1;\n?/gm, '').trim() };
+      });
+    }
+    if (type === 'modulesecurity' && /^\w+$/.test(qn)) {
+      return this.store.cached(keyOf(`v${CACHE_VERSION}`, 'modsec@', floor.dir, sha, qn), async (): Promise<ModelDoc> => {
+        const out = await this.mxAt(floor, sha, (mpr) => ['-p', mpr, '--continue-on-error', '-c', `show module roles in ${qn}; show security matrix in ${qn};`]);
+        return { kind: 'text', type, name: `${qn} › Security`, mdl: stripNoise(out) };
+      });
+    }
+    return null;
   }
 
   private mdlKey(cm: CommitModel, type: string, qn: string): string {
