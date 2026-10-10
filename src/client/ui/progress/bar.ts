@@ -12,7 +12,7 @@ const TIP_LIST_MAX = 8;
 
 const STATUS_WORD: Record<Phase['status'], string> = { done: 'passed', waived: 'waived', failed: 'failing', waiting: 'waiting on someone', active: 'in progress', pending: 'not started', unknown: 'unknown' };
 const MARK_ICON: Record<Milestone['status'], string> = { passed: '✓', waived: '↷', failed: '!', waiting: '…', assumed: '~', pending: '·', unknown: '?' };
-const OPEN_WORD: Record<Phase['open'], string> = { setup: 'the setup panel', deliverables: 'the deliverables', acceptance: 'the acceptance record' };
+const OPEN_WORD: Record<Phase['open'], string> = { setup: 'the setup panel', deliverables: 'the Documents page', acceptance: 'the acceptance record' };
 
 const short = (p: Phase) => (p.kind === 'stage' ? p.id : p.title);
 
@@ -49,7 +49,7 @@ export function tipContent(ph: Phase): HTMLElement {
     h('strong.pg-tip-h', {}, `${ph.kind === 'stage' ? `Stage ${ph.id} · ${ph.title}` : ph.title} — ${STATUS_WORD[ph.status]}${ph.current ? ' (now)' : ''}`),
     h('ul.pg-tip-list', {}, ...ph.measures.slice(0, TIP_LIST_MAX).map((m) => h('li', {}, m))),
     ph.deliverables?.items.length
-      ? h('div.pg-tip-sec', {}, h('b', {}, 'Deliverables'), h('ul.pg-tip-list', {}, ...ph.deliverables.items.slice(0, TIP_LIST_MAX).map((i) => h('li', { class: `dv-${i.status}` }, `${i.title}: ${i.status === 'present' ? 'on main' : i.status}`))))
+      ? h('div.pg-tip-sec', {}, h('b', {}, 'Documents'), h('ul.pg-tip-list', {}, ...ph.deliverables.items.slice(0, TIP_LIST_MAX).map((i) => h('li', { class: `dv-${i.status}` }, `${i.title}: ${i.status === 'present' ? 'on main' : i.status}`))))
       : null,
     ph.milestones.length
       ? h('div.pg-tip-sec', {}, h('b', {}, 'Gates and decisions'), h('ul.pg-tip-list', {}, ...ph.milestones.slice(0, TIP_LIST_MAX).map((m) => h('li', {}, `${m.kind === 'gate' ? '' : `${MARK_ICON[m.status]} `}${m.label}: ${m.status}${m.at ? ` · ${m.at}` : ''}`))))

@@ -56,7 +56,7 @@ function scopeOf(i: DraftInput): AcceptanceDraft['scope'] {
   const brds = brd?.files.filter((f) => f.status === 'present') ?? [];
   // BRDs are Stage 2's and the build plan Stage 4's: a project whose entry mode skips them has nothing missing there.
   const wantsBrds = run.has('2') || brds.length > 0;
-  if (wantsBrds && !v) agreed.push({ label: 'BRDs', status: 'unknown', detail: "the deliverables couldn't be scanned" });
+  if (wantsBrds && !v) agreed.push({ label: 'BRDs', status: 'unknown', detail: "the documents couldn't be scanned" });
   else if (wantsBrds && !brds.length) agreed.push({ label: 'BRDs', status: 'missing', detail: 'no BRD files (F###.brd.json) on main' });
   for (const f of brds.slice(0, LIST_MAX)) agreed.push({ label: `BRD ${f.path.slice(f.path.lastIndexOf('/') + 1).replace(/\.brd\.json$/i, '')}`, status: 'present', locator: gitLoc(i.head.commit, f.path) });
   if (brd?.more || brds.length > LIST_MAX) agreed.push({ label: 'More BRDs', status: 'present', detail: `${brds.length - LIST_MAX + (brd?.more ?? 0)} more not listed` });
@@ -66,8 +66,8 @@ function scopeOf(i: DraftInput): AcceptanceDraft['scope'] {
   for (const r of (i.setup?.decisions ?? []).filter((d) => /^confirmed/i.test(d.status)).slice(0, LIST_MAX)) agreed.push({ label: `Decision, Stage ${r.stage}: ${r.decision}`, status: 'present', detail: r.status });
   const delivered: EvidenceLine[] = [];
   if (v) {
-    for (const c of stageDeliverables(v).filter((x) => run.has(x.stage))) delivered.push({ label: `Stage ${c.stage} deliverables`, status: c.present === c.expected ? 'present' : c.present ? 'pending' : 'missing', detail: `${c.present} of ${c.expected} on main${c.branch ? `, ${c.branch} on a branch` : ''}${c.draft ? `, ${c.draft} draft` : ''}` });
-  } else delivered.push({ label: 'Deliverables', status: 'unknown', detail: "the deliverables couldn't be scanned" });
+    for (const c of stageDeliverables(v).filter((x) => run.has(x.stage))) delivered.push({ label: `Stage ${c.stage} documents`, status: c.present === c.expected ? 'present' : c.present ? 'pending' : 'missing', detail: `${c.present} of ${c.expected} on main${c.branch ? `, ${c.branch} on a branch` : ''}${c.draft ? `, ${c.draft} draft` : ''}` });
+  } else delivered.push({ label: 'Documents', status: 'unknown', detail: "the documents couldn't be scanned" });
   const merged = i.pulls.filter((p) => p.state === 'MERGED');
   delivered.push(merged.length ? { label: 'Merged pull requests', status: 'present', detail: `${merged.length}${merged.length >= 40 ? '+' : ''} (the office keeps the latest 40)` } : { label: 'Merged pull requests', status: 'unknown', detail: 'none seen on this floor (GitHub not connected, or nothing merged)' });
   if (brds.length) delivered.push({ label: 'BRDs built', status: 'unknown', detail: "which BRDs are built isn't recorded: compare the agreed list with the merged work" });
@@ -97,9 +97,9 @@ function testsOf(i: DraftInput): EvidenceLine[] {
 }
 
 function docsOf(i: DraftInput): { docs: EvidenceLine[]; more?: number } {
-  if (!i.deliverables) return { docs: [{ label: 'Documents', status: 'unknown', detail: "the deliverables couldn't be scanned" }] };
+  if (!i.deliverables) return { docs: [{ label: 'Documents', status: 'unknown', detail: "the documents couldn't be scanned" }] };
   const files = i.deliverables.items.filter((x) => x.stage).flatMap((x) => x.files.filter((f) => f.status === 'present').map((f) => ({ x, f })));
-  if (!files.length) return { docs: [{ label: 'Documents', status: 'missing', detail: 'no catalog deliverables on main' }] };
+  if (!files.length) return { docs: [{ label: 'Documents', status: 'missing', detail: 'no catalog documents on main' }] };
   const docs: EvidenceLine[] = files.slice(0, DOCS_MAX).map(({ x, f }) => ({ label: f.path, status: 'present', detail: `${x.title}${f.mtime ? ` · ${day(f.mtime)}` : ''}`, locator: gitLoc(i.head.commit, f.path) }));
   return { docs, ...(files.length > DOCS_MAX ? { more: files.length - DOCS_MAX } : {}) };
 }

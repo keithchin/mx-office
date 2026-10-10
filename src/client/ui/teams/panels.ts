@@ -128,7 +128,7 @@ export function teamPanels(team: TeamId, v: RosterView | undefined, data: TeamPa
   const subs = subagentsPanel(team, v);
   // What the team has to show for itself: expected outputs by stage, on main or still on a branch.
   const covered = coverNote(v, team);
-  const deliverables = panel(covered ? `📦 Deliverables · ${covered}` : '📦 Deliverables', data ? deliverablesList(store.floor ?? '', data.deliverables) : empty('Loading…'));
+  const deliverables = panel(covered ? `📄 Documents · ${covered}` : '📄 Documents', data ? deliverablesList(store.floor ?? '', data.deliverables) : empty('Loading…'));
   deliverables.classList.add('tm-deliverables');
   return [deliverables, ...lanePanels(team, v, data, deps), ...(subs ? [subs] : []), teamChatter(team)];
 }

@@ -1,16 +1,18 @@
 ---
-title: Deliverables
-description: What each team has produced, stage by stage - on main, on a branch not merged yet, a draft, or missing - and a viewer for HTML reports, Markdown, PDFs, pictures and CSVs.
+title: Documents
+description: The Documents page - what each team has produced, stage by stage (on main, on a branch not merged yet, a draft, or missing) - and a viewer for HTML reports, Markdown, PDFs, pictures and CSVs.
 weight: 5.5
 ---
 
-Every team page on the **🧩 Team boards** tab starts with a **📦 Deliverables** panel: the files that team is expected to hand over at each toolkit stage, and what the office found of them. The Command Center's [Project setup](command-center.md#project-setup) panel shows a line of counts per stage, and **Open deliverables →** opens every team's list in one window.
+The **📄 Documents** page (**General › Documents** in the Portal navigation, the **📄 Documents** tab in the other themes, `/lite?tab=documents`) lists every team's documents: the files each team is expected to hand over at each toolkit stage, and what the office found of them, stage by stage. Find one by name, show only what's **On main**, **On a branch**, **Draft** or **Missing**, and see when the office last looked (**Refresh** looks again now). The page shows at once, with what it found last time while it looks again. The Command Center's [Project setup](command-center.md#project-setup) panel shows a line of counts per stage and **Open documents →**; the [progress bar](progress-and-acceptance.md)'s later stages open the page too, and so does the 2D view's. An old `?tab=deliverables` link still lands here.
+
+Every team page on the **🧩 Team boards** tab starts with the same list for that team, in a **📄 Documents** panel.
 
 ## What it checks
 
 The list comes from the toolkit's conversion runbook and the Leads' Playbooks (`src/shared/deliverables.ts`). A few examples:
 
-| Stage | Team | Deliverables |
+| Stage | Team | Documents |
 |---|---|---|
 | 0 Triage | Analysis | `triage.md` / `analysis/triage.html`, `analysis/source-sufficiency.html`, `assessment.md` |
 | 1 Analysis | Analysis | `analysis/source-ledger.html`, `analysis/knowledge-base/extraction-report.html`, the knowledge base |
@@ -42,7 +44,7 @@ The Playbooks tell each Lead its folder.
 - **Each hired team member's worktree**, uncommitted work included.
 - **Every other `office/*` branch**, local or on GitHub, newest first (40 at most), with who it belongs to: the worker on it, else the team member whose name starts it (`office/barbara-stage1` is Barbara's).
 
-The scan is read-only and kept for 20 seconds; a branch's file list is cached by its head commit.
+The scan is read-only and quick to ask again: a branch's own work is one `git diff` from where it forked, cached by its commit and main's; a worktree is one `git status` over its commit's cached file list; every git call runs off the office's main thread, a few at a time. An answer is handed out for 20 seconds, and after that at once while a newer scan runs behind it. The first look after the office starts waits at most a second and a half for the fetch from GitHub; the next one sees what it brought.
 
 ## Statuses
 
@@ -64,8 +66,8 @@ Click a file to open it. **Download** saves it; HTML, PDFs and pictures also hav
 
 ## How the Leads make them
 
-Each Lead's Playbook has a **Your deliverables** section with the exact paths per stage, and the tools on the office machine: `office-workers export-pdf` and `office-workers screenshot` (see [office-workers CLI](../reference/office-workers-cli.md#export-pdf-and-screenshot)), `py` with openpyxl, pandas and matplotlib, and Mermaid in Markdown. Leads keep deliverables on their branch and open a pull request so they merge.
+Each Lead's Playbook has a **Your deliverables** section with the exact paths per stage, and the tools on the office machine: `office-workers export-pdf` and `office-workers screenshot` (see [office-workers CLI](../reference/office-workers-cli.md#export-pdf-and-screenshot)), `py` with openpyxl, pandas and matplotlib, and Mermaid in Markdown. Leads keep their documents on their branch and open a pull request so they merge.
 
 ## Early drafts
 
-**⚙️ Settings › 📦 Deliverables → Early drafts** (`/lite?tab=settings&section=deliverables`) is on by default. While the Chief Analyst is on Stages 0–2, the Lead Designer makes low-fi wireframes for screens the sources already show, the Lead Developer a draft domain model and a one-page architecture sketch, and the Lead Tester a test-plan outline. Drafts are marked, never claim a gate, stay small (three files and about half an hour at most) and are revised or deleted once the BRDs are confirmed. Turn it off and they wait for their stage. Changing it rewrites the hired Leads' Playbooks. See [Settings](settings.md).
+**⚙️ Settings › 📄 Documents → Early drafts** (`/lite?tab=settings&section=deliverables`) is on by default. While the Chief Analyst is on Stages 0–2, the Lead Designer makes low-fi wireframes for screens the sources already show, the Lead Developer a draft domain model and a one-page architecture sketch, and the Lead Tester a test-plan outline. Drafts are marked, never claim a gate, stay small (three files and about half an hour at most) and are revised or deleted once the BRDs are confirmed. Turn it off and they wait for their stage. Changing it rewrites the hired Leads' Playbooks. See [Settings](settings.md).

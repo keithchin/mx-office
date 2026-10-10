@@ -221,8 +221,8 @@ export function derivePhases(input: ProgressInput): Phase[] {
     measures.push(v ? `Gate: ${v.status.toUpperCase()}${v.detail ? ` (${v.detail})` : ''}` : 'Gate: unknown (gate-check has not rendered this stage)');
     if (d) {
       const extra = [d.branch && `${d.branch} on a branch`, d.draft && `${d.draft} draft`].filter(Boolean).join(', ');
-      measures.push(`${d.present} of ${d.expected} deliverable${d.expected === 1 ? '' : 's'} on main${extra ? ` (+${extra})` : ''}`);
-    } else if (input.deliverables) measures.push('No deliverables expected at this stage');
+      measures.push(`${d.present} of ${d.expected} document${d.expected === 1 ? '' : 's'} on main${extra ? ` (+${extra})` : ''}`);
+    } else if (input.deliverables) measures.push('No documents expected at this stage');
     if (st.id === '2' && input.brds !== undefined) measures.push(`${input.brds} BRD${input.brds === 1 ? '' : 's'} on main (how many are planned isn't recorded)`);
     const sp = input.spend?.[st.id];
     const milestones = [...(st.hand ? [gateMilestone(st, v, rows)] : []), ...decisionMilestones(rows, st.hand)];

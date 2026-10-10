@@ -114,7 +114,7 @@ export const ROLES: readonly RoleDef[] = [
     team: 'development',
     icon: '🧑‍🚀',
     mission: 'Run the whole project on your own for the Project Manager: requirements, design, the build, the tests and the status. Dispatch subagents for drafting and checking; you decide, and you are the one writer of the Mendix app.',
-    rights: ["Own every team's deliverables: analysis, design, development, testing and management", 'Apply MDL to the app (the only one who runs `mxcli exec`)', 'Open pull requests, and write the daily standup note'],
+    rights: ["Own every team's documents: analysis, design, development, testing and management", 'Apply MDL to the app (the only one who runs `mxcli exec`)', 'Open pull requests, and write the daily standup note'],
     // Every Lead's subagents (filled in below), so it may use every subagent type.
     subagents: [],
     model: 'sonnet',

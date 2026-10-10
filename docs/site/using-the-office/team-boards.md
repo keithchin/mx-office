@@ -12,7 +12,7 @@ Each team page has:
 
 - the team's name, **mission**, subagents and journal path (`docs/team/<team>.md`);
 - the **Lead's card** from the org chart;
-- **📦 Deliverables**: what the team is expected to hand over at each toolkit stage, on main, on a branch not merged yet, a draft, or missing, each file one click from a viewer (see [Deliverables](deliverables.md));
+- **📄 Documents**: what the team is expected to hand over at each toolkit stage, on main, on a branch not merged yet, a draft, or missing, each file one click from a viewer (see [Deliverables](deliverables.md));
 - **🗂 &lt;Team&gt;'s board**: only that team's cards;
 - **👥 Subagents** with their grades, and **📓 Journal** with the latest entries;
 - **💬 Team chatter**: how many messages this team has had today, and **Open in the team phone →**, which opens the project's channel in the [📱 Team phone](team-phone.md) filtered to this team's members.
@@ -22,7 +22,7 @@ And panels for what each team cares about:
 | Team | Panels |
 |---|---|
 | 🧭 Management | 📋 Latest standup · ✅ Approvals |
-| 🎨 Design | ✅ Design approvals (its artifacts are in 📦 Deliverables) |
+| 🎨 Design | ✅ Design approvals (its artifacts are in 📄 Documents) |
 | 🛠️ Development | 🌐 Live app · 🔀 Development PRs |
 | 🧪 Testing | ❌ Failing · 🧪 CI scorecards |
 | 📈 Analysis | 📑 BRD & insight memos · 📊 Model ranking on this floor |
