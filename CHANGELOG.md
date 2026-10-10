@@ -33,6 +33,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **The Overview's dark band is two rows again.** Since release 34 its progress bar lay on top of the floor's line
   (branch, who's here, the budget chip, Running | Pause): the Model tab's new Page view styled a class name the progress
   bar also uses. Each now has its own.
+- **The Portal top bar stays put.** It is fixed at the top on the project pages, Home, The Firm and setup: on Home
+  and The Firm it scrolled away with the page, and scrolling the left navigation to its end scrolled the page under
+  it. The navigation scrolls on its own now, and its project card and items sit flush to the pane's edges.
 
 
 ## 2026-10-11 · release 34 (`622bf6d`)

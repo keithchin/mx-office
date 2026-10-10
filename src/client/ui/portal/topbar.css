@@ -28,6 +28,12 @@ html[data-theme^='portal'] body.lite header.lite-bar {
   color: var(--pt-bar-ink);
   box-shadow: none;
 }
+/* Fixed at the top of the window on every Portal page with this bar (the 1D view, Home, The Firm, setup), its
+   height kept free at the top of the page: nothing the page or the left navigation scrolls moves it (it was
+   sticky, which Home's and The Firm's scrolling body let go of). The 2D Office view's page never scrolls; the
+   docs have their own bar. */
+html[data-theme^='portal'] body.lite.lite:is(.pt-has-nav, .home-page, .firm-page, .setup-page) > header.lite-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; }
+html[data-theme^='portal'] body.lite:is(.pt-has-nav, .home-page, .firm-page, .setup-page) { padding-top: calc(var(--pt-h) + env(safe-area-inset-top)); }
 /* The pieces it replaces: the 🏠 (the wordmark goes home), the page titles (the section says it), Home's
    links to The Firm and the docs (the launcher has both, the ? the docs), and the bell that asks to turn
    notifications on (⚙️ Settings › Notifications and the team phone's settings ask too; the bar's bell
