@@ -12,22 +12,29 @@
 // remembered in this browser, "Tidy layout": the entities rearranged for reading, for the view only.
 
 import { modelHref, type ChangeStatus, type DocChange, type DocDiff, type DomainDoc, type FlowDoc, type ModelDoc, type ModelRef, type ModelTreeNode } from '../../../shared/model';
+import type { MdlItem } from './mdl-tree';
 import { setAddress } from '../../shared/address';
 import { store } from '../../state';
 import { currentTheme } from '../colortheme';
 import { h } from '../dom';
 import { modelApi } from './api';
 import { Canvas } from './canvas';
-import { changeList, details } from './details';
+import { changeList, details, widgetDetails } from './details';
+import { docViews } from './doc-views';
 import { drawDomain } from './domain-draw';
 import { looksUnarranged } from './domain-layout';
 import { tidyDomain } from './domain-tidy';
 import { drawFlow } from './flow-draw';
-import { Tree, opens } from './tree';
+import { drawOverview } from './overview-draw';
+import { sidePanel } from './side-panel';
+import { pathTo, targetOf, type Target } from './targets';
+import { Tree } from './tree';
 import { fullScreen } from './fullscreen';
 import './model.css';
+import './page.css';
 
 const DARK = new Set(['dark', 'terminal', 'clean-dark', 'portal-dark']);
+const TYPE_LABEL: Record<string, string> = { domainmodel: 'Domain model', systemoverview: 'System Overview', modulesecurity: 'Module security', navprofile: 'Navigation profile', projectsecurity: 'Project security' };
 const SETTLE_MS = 4000;
 const TIDY_KEY = 'agent-office.model.tidy';
 
@@ -59,19 +66,14 @@ export interface ModelView {
   hide(): void;
 }
 
-interface Open {
-  type: string;
-  qn: string;
-  /** An element to pick once it's drawn (an entity or association chosen in the tree, by name). */
-  pick?: string;
-}
+type Open = Target;
 
 /** What the address asked for when the page opened (&ref=, &doc=, &type=, &changes=1). */
 function asked(): { ref?: string; open?: Open; changes: boolean; zoom?: number } {
   const q = new URLSearchParams(location.search);
   const doc = q.get('doc');
   const type = q.get('type');
-  return { ref: q.get('ref') ?? undefined, open: doc && type ? { type, qn: doc } : undefined, changes: q.get('changes') === '1', zoom: Number(q.get('zoom')) || undefined };
+  return { ref: q.get('ref') ?? undefined, open: doc && type ? { type, qn: doc, pick: type === 'entity' || type === 'association' ? doc : undefined } : undefined, changes: q.get('changes') === '1', zoom: Number(q.get('zoom')) || undefined };
 }
 
 export function modelView(root: HTMLElement): ModelView {
@@ -93,6 +95,8 @@ export function modelView(root: HTMLElement): ModelView {
   /** &zoom=100 in the address: the first document opens at that zoom. */
   let zoomOnce = first.zoom;
   let tidy = recallTidy();
+  /** The widget picked in the Page view. */
+  let widget: MdlItem | null = null;
 
   root.classList.add('mxv');
   const refPick = h('select', { 'aria-label': 'Branch' });
@@ -113,6 +117,14 @@ export function modelView(root: HTMLElement): ModelView {
   const text = h('pre.mx-text');
   text.hidden = true;
   const side = h('aside.mx-side', { 'aria-label': 'Details' });
+  const views = docViews({
+    switched: () => draw(true),
+    select(item) {
+      widget = item;
+      renderSide();
+    },
+    open: (type, qn) => openDoc({ type, qn }),
+  });
   const explorerBtn = h('button.btn.mx-explorer-btn', { type: 'button', 'aria-label': 'App Explorer' }, '☰ Explorer');
   const canvas = new Canvas(canvasHost, {
     select(id) {
@@ -120,7 +132,7 @@ export function modelView(root: HTMLElement): ModelView {
       renderSide();
     },
   });
-  canvasHost.append(text, msg);
+  canvasHost.append(text, ...views.hosts, msg);
   const treeView = new Tree({ open: (n) => openNode(n) });
   // Full screen: the explorer, the diagram and the details fill the window (F, or the button; Esc leaves),
   // the drawing fitted again each way. Back in the page, the tab fits between the bars again.
@@ -131,6 +143,12 @@ export function modelView(root: HTMLElement): ModelView {
   const fullBtn = full.button;
   const scrim = h('div.mx-scrim', { onclick: () => root.classList.remove('mx-drawer') });
   const body = h('div.mx-body', {}, treeView.el, canvasHost, side, scrim);
+  // The details panel closes, opens again and widens (side-panel.ts), remembered per viewer.
+  const panel = sidePanel(body, () => renderSide());
+  canvasHost.append(panel.reopen);
+  panel.apply();
+  const zoomBy = (f: number) => (views.active === 'page' ? (views.page.zoom(f), (zoomPct.textContent = `${views.page.percent}%`)) : canvas.zoom(f));
+  const fitView = () => (views.active === 'page' ? (views.page.fit(), (zoomPct.textContent = '100%')) : canvas.fit());
   const bar = h(
     'div.mx-bar',
     {},
@@ -138,15 +156,16 @@ export function modelView(root: HTMLElement): ModelView {
     refPick,
     changesToggle,
     layoutSeg,
+    views.seg,
     hint,
     title,
     h(
       'span.mx-zoom',
       {},
-      h('button.btn', { type: 'button', title: 'Zoom out (−)', onclick: () => canvas.zoom(1 / 1.25) }, '−'),
+      h('button.btn', { type: 'button', title: 'Zoom out (−)', onclick: () => zoomBy(1 / 1.25) }, '−'),
       zoomPct,
-      h('button.btn', { type: 'button', title: 'Zoom in (+)', onclick: () => canvas.zoom(1.25) }, '+'),
-      h('button.btn', { type: 'button', title: 'Fit the document in view (0)', onclick: () => canvas.fit() }, 'Fit'),
+      h('button.btn', { type: 'button', title: 'Zoom in (+)', onclick: () => zoomBy(1.25) }, '+'),
+      h('button.btn', { type: 'button', title: 'Fit the document in view (0)', onclick: () => fitView() }, 'Fit'),
     ),
     fullBtn,
   );
@@ -197,17 +216,21 @@ export function modelView(root: HTMLElement): ModelView {
   }
 
   function renderTitle() {
-    const kind = open ? (open.type === 'domainmodel' ? 'Domain model' : open.type) : '';
-    title.replaceChildren(open ? h('b', {}, open.type === 'domainmodel' ? `${open.qn} › Domain model` : open.qn) : h('span', {}, 'Pick a document in the App Explorer'), open ? h('span', {}, kind === 'Domain model' ? '' : `· ${kind}`) : '');
+    const kind = open ? TYPE_LABEL[open.type] ?? open.type : '';
+    const name = open?.type === 'domainmodel' ? `${open.qn} › Domain model` : open?.type === 'systemoverview' ? 'System Overview' : open?.type === 'modulesecurity' ? `${open.qn} › Security` : open?.qn;
+    title.replaceChildren(open ? h('b', {}, name ?? '') : h('span', {}, 'Pick a document in the App Explorer'), open && !/›|System Overview/.test(name ?? '') && kind.toLowerCase() !== (name ?? '').toLowerCase() ? h('span', {}, `· ${kind}`) : '');
   }
 
   function renderSide() {
-    const parts: HTMLElement[] = doc ? details(doc, selected, changesOn ? diff : undefined) : [];
+    const parts: HTMLElement[] = doc ? (doc.kind === 'text' && widget && views.active === 'page' ? widgetDetails(widget, doc.mdl) : details(doc, selected, changesOn ? diff : undefined)) : [];
+    if (doc?.kind === 'text' && open?.note) parts.push(h('p', {}, open.note));
+    if (doc?.kind === 'text' && views.active === 'page' && !widget) parts.push(h('p.mx-kind', {}, 'Click a widget to see its properties and its MDL.'));
     if (changesOn && ref !== 'main') parts.push(changeList(changes, (c) => openDoc({ type: c.type, qn: c.qn })));
-    side.replaceChildren(...parts);
+    side.replaceChildren(panel.grip, panel.head(), ...parts);
     // On a phone the details only take room from the diagram when there's something to say.
     const phone = window.innerWidth <= 760;
-    body.classList.toggle('mx-noside', !parts.length || (phone && !selected && !(changesOn && ref !== 'main')));
+    body.classList.toggle('mx-noside', !parts.length || (phone && !selected && !widget && !(changesOn && ref !== 'main')));
+    panel.reopen.classList.toggle('mx-none', !parts.length);
   }
 
   function renderLayout() {
@@ -230,23 +253,30 @@ export function modelView(root: HTMLElement): ModelView {
   function draw(keepView = false) {
     renderLayout();
     if (!doc) return;
-    canvasHost.classList.toggle('mx-dm', doc.kind === 'domainmodel');
+    canvasHost.classList.toggle('mx-dm', doc.kind === 'domainmodel' || doc.kind === 'overview');
     canvasHost.classList.toggle('mx-nano', doc.kind === 'nanoflow');
     if (doc.kind === 'text') {
       canvas.clear();
-      text.hidden = false;
-      text.textContent = doc.mdl || 'mxcli has no description for this kind of document.';
-      say(null);
+      widget = null;
+      // A page or the navigation: its visual view when that's chosen (only then is it worked out), else its MDL.
+      const shown = views.show(doc);
+      if (!shown) text.textContent = doc.mdl || (open?.note ? '' : 'mxcli has no description for this kind of document.');
+      text.hidden = shown || (!doc.mdl && !!open?.note);
+      zoomPct.textContent = views.active === 'page' ? `${views.page.percent}%` : zoomPct.textContent;
+      say(open?.note && !doc.mdl ? open.note : null);
       return;
     }
+    views.hide();
     text.hidden = true;
-    const d = doc.kind === 'domainmodel' ? drawDomain(tidy ? tidyOf(doc) : doc, changesOn ? diff : undefined) : drawFlow(doc, changesOn ? diff : undefined);
+    const d = doc.kind === 'domainmodel' ? drawDomain(tidy ? tidyOf(doc) : doc, changesOn ? diff : undefined) : doc.kind === 'overview' ? drawOverview(doc) : drawFlow(doc, changesOn ? diff : undefined);
     canvas.show(d, keepView);
+    // The module graph is read as a whole: all of it in view.
+    if (doc.kind === 'overview' && !keepView) canvas.fit();
     if (zoomOnce && !keepView) {
       canvas.zoomTo(zoomOnce / 100);
       zoomOnce = undefined;
     }
-    const empty = doc.kind === 'domainmodel' ? !doc.entities.length && !doc.annotations.length : !doc.nodes.length;
+    const empty = doc.kind === 'domainmodel' ? !doc.entities.length && !doc.annotations.length : doc.kind === 'overview' ? !doc.modules.length : !doc.nodes.length;
     say(empty ? 'This document is empty.' : null);
   }
 
@@ -257,6 +287,16 @@ export function modelView(root: HTMLElement): ModelView {
     say('Reading the document…');
     text.hidden = true;
     renderTitle();
+    if (want.note) {
+      // Nothing more to ask the server: the note is all there is.
+      doc = { kind: 'text', type: want.type, name: want.qn, mdl: '' };
+      diff = undefined;
+      selected = null;
+      draw();
+      renderSide();
+      address();
+      return;
+    }
     try {
       const type = want.type === 'entity' || want.type === 'association' ? 'domainmodel' : want.type;
       const qn = type === 'domainmodel' && want.type !== 'domainmodel' ? want.qn.slice(0, want.qn.indexOf('.')) : want.qn;
@@ -265,6 +305,7 @@ export function modelView(root: HTMLElement): ModelView {
       doc = r.doc;
       diff = r.diff;
       open = { type, qn };
+      widget = null;
       if (want.pick && doc.kind === 'domainmodel') {
         const name = want.pick.slice(want.pick.lastIndexOf('.') + 1);
         selected = (doc.entities.find((e) => e.name === name) ?? doc.associations.find((a) => a.name === name))?.id ?? null;
@@ -308,9 +349,8 @@ export function modelView(root: HTMLElement): ModelView {
   }
 
   function openNode(n: ModelTreeNode) {
-    if (!opens(n) || !n.qn) return;
-    if (n.type === 'entity' || n.type === 'association') openDoc({ type: n.type, qn: n.qn, pick: n.qn });
-    else openDoc({ type: n.type, qn: n.qn });
+    const t = targetOf(n, pathTo(tree, n) ?? []);
+    if (t) openDoc(t);
   }
 
   async function loadChanges() {

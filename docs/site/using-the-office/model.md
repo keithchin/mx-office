@@ -29,14 +29,20 @@ The **📐 Model** tab shows the floor's Mendix app the way Studio Pro does, wit
     - Decision outcomes appear in small label boxes on the flow lines.
     - Loops, annotations and error-handler flows are drawn too.
     - Nanoflows look like microflows, as in Studio Pro. Their activity outlines have a faint purple tint so you can tell them apart.
-  - Any other document (a page, an enumeration, a constant…) shows as its MDL.
+  - A **page**, **snippet** or **layout** opens in its **Page** view (switch to **MDL** in the bar; your browser remembers the choice): a *structure preview* laid out like Studio Pro's page editor. It shows layout grids in rows and columns, containers, data views, list views and data grids (with their columns), text and headings, buttons, inputs labelled with their attribute (`[TripTitle]`), snippets as purple labelled boxes, and the layout's placeholders. Widgets it doesn't know get a labelled box. It is drawn from the page's MDL, not run: the banner says so and links to the **Live app**, which shows the page running. Click a widget to see its properties and its lines of MDL in the details.
+  - **System Overview**: the modules and how they depend on each other, as boxes and arrows (pan, zoom and Fit as for a diagram). Each arrow points from a module to one it uses and says how many references; modules nothing uses are at the top and System at the bottom, Marketplace and platform modules dashed, modules with no dependency in a row below. Click a module for its counts and what it uses and is used by, or an arrow for the kinds of reference.
+  - **Navigation**: each profile (Responsive, Phone, …) with its home page, the home page per user role, its login page and its menu as a tree; every page in it opens in the tab. **MDL** shows the profiles' MDL. A profile, its home pages and its menu entries open their profile.
+  - A module's **Security**: its module roles and security matrix. **User Roles** and **Demo Users** open Project Security, a setting opens Settings.
+  - Any other document (an enumeration, a constant, a module role…) shows as its MDL. JavaScript actions and page templates, which mxcli can't describe, say so.
 - **As in Studio Pro / Tidy layout** (in the bar, for a domain model): **As in Studio Pro** (the default) shows the developer's layout. **Tidy layout** rearranges the entities for reading: connected entities in layers, the referenced ones above the ones that reference them, and entities without associations in a grid beside them. It changes only this view, never the model, and your browser remembers the choice. When a domain model looks unarranged (entities on an even grid and lines at the default points), the bar suggests it: *Lines overlap? Try Tidy layout*.
 - **Details** (right): click an element to see what it is and does:
   - for an activity: its action, condition, variable and its lines of MDL;
-  - for an entity: its attributes and associations;
+  - for an entity: its attributes and associations, and its **access rules**: a matrix with a column per module role and a row per attribute and association (**RW** read and write, **R** read, **–** none), the roles' create and delete rights on top, and each rule's XPath constraint underneath. Several rules for one role add up. Many roles scroll sideways inside the panel; an entity with no rules says that only System can use it;
   - for an association: its owner, type and multiplicity.
 
   With nothing selected, the panel describes the document itself.
+
+  **✕** at the panel's top hides it, so the drawing gets the whole width; **‹ Details** on the drawing's edge brings it back. **‹ Wider** widens it to 60% of the tab (**› Narrower** goes back), or drag its left edge (or focus the edge and press **← →**; double-click for the usual width). Your browser remembers both, in full screen too.
 
 **Pan and zoom:**
 - Pan: drag (one finger on a phone).
@@ -70,7 +76,7 @@ The office reads the app straight from the floor's git history, never from Studi
 **What it reads:**
 - Each commit's model files come out of git one by one, as they're needed. The office never reads the floor's checkout, and it doesn't matter if Studio Pro has the project open.
 - Microflows, nanoflows and domain models are drawn from the model's own files, in milliseconds, without [mxcli](../integrations/mxcli.md). Positions and sizes come from the project itself, so diagrams keep the developer's layout. Only **Tidy layout** rearranges entities, and only in your view.
-- mxcli is used for the rest: the App Explorer tree, the MDL beside a diagram, and documents shown as MDL. The MDL panel fills in a moment after the diagram ("Reading the MDL…").
+- mxcli is used for the rest: the App Explorer tree, the MDL beside a diagram, documents shown as MDL (a page's Page view is drawn in your browser from that same MDL, in a millisecond or so, and only while the Page view is on screen), the System Overview, the Navigation and a module's security. The MDL panel fills in a moment after the diagram ("Reading the MDL…").
 
 **When it reads:**
 - Only while the tab is open.

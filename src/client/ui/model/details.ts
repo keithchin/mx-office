@@ -2,9 +2,13 @@
 // condition and variable, an entity's attributes and associations, an association's owner and
 // multiplicity) with its MDL, or with nothing picked the document itself and, on a branch, what changed.
 
-import type { DocChange, DocDiff, DomainDoc, FlowDoc, ModelDoc } from '../../../shared/model';
+import type { DocChange, DocDiff, DomainDoc, FlowDoc, ModelDoc, OverviewDoc } from '../../../shared/model';
 import { h } from '../dom';
+import { accessSection } from './access';
 import { treeIcon } from './icons';
+import type { MdlItem } from './mdl-tree';
+import { edgeId, moduleId } from './overview-draw';
+import { widgetFacts } from './page-view';
 
 const icon = (type: string) => {
   const el = h('span.mx-tico');
@@ -94,6 +98,7 @@ function domainDetails(doc: DomainDoc, id: string): HTMLElement[] {
         : h('p', {}, 'None.'),
       assocs.length ? h('h4', {}, 'Associations') : null,
       assocs.length ? h('ul', {}, ...assocs.map((a) => h('li', {}, `${a.name} (${nameOf(a.parent)} → ${a.cross ? a.child : nameOf(a.child)})`))) : null,
+      ...accessSection(e),
     ].filter((x): x is HTMLElement => !!x);
   }
   const a = doc.associations.find((x) => x.id === id);
@@ -116,10 +121,57 @@ function domainDetails(doc: DomainDoc, id: string): HTMLElement[] {
   return note ? [h('h3', {}, 'Annotation'), h('p', { style: 'white-space:pre-wrap' }, note.text)] : [];
 }
 
+const kindsText = (kinds: Record<string, number>) =>
+  Object.entries(kinds)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `${v} ${k}`)
+    .join(' · ');
+
+function overviewDetails(doc: OverviewDoc, id: string | null): HTMLElement[] {
+  const m = doc.modules.find((x) => moduleId(x.name) === id);
+  if (m) {
+    const uses = doc.edges.filter((e) => e.from === m.name);
+    const usedBy = doc.edges.filter((e) => e.to === m.name);
+    return [
+      h('h3', {}, m.name),
+      h('div.mx-kind', {}, m.system ? 'Module · Marketplace or platform' : 'Module'),
+      kv([
+        ['Entities', String(m.entities)],
+        ['Microflows', String(m.microflows)],
+        ['Pages', String(m.pages)],
+      ]),
+      h('h4', {}, `Uses (${uses.length})`),
+      uses.length ? h('ul', {}, ...uses.map((e) => h('li', { title: kindsText(e.kinds) }, `${e.to} · ${e.count}`))) : h('p.mx-kind', {}, 'No other module.'),
+      h('h4', {}, `Used by (${usedBy.length})`),
+      usedBy.length ? h('ul', {}, ...usedBy.map((e) => h('li', { title: kindsText(e.kinds) }, `${e.from} · ${e.count}`))) : h('p.mx-kind', {}, 'No other module.'),
+    ];
+  }
+  const e = doc.edges.find((x) => edgeId(x.from, x.to) === id);
+  if (e) return [h('h3', {}, `${e.from} → ${e.to}`), h('div.mx-kind', {}, `${e.count} references`), h('ul', {}, ...Object.entries(e.kinds).sort((a, b) => b[1] - a[1]).map(([k, v]) => h('li', {}, `${k}: ${v}`)))];
+  return [
+    h('h3', {}, 'System Overview'),
+    h('div.mx-kind', {}, `${doc.modules.length} modules · ${doc.edges.length} dependencies`),
+    h('p', {}, 'Each arrow points from a module to one it uses, with how many references (calls, retrieves, layouts, attributes, …). Modules nothing uses are at the top; System is at the bottom.'),
+  ];
+}
+
+/** A widget picked in the Page view: its properties as written, and its lines of the page's MDL. */
+export function widgetDetails(item: MdlItem, mdl: string): HTMLElement[] {
+  const f = widgetFacts(item);
+  const out: HTMLElement[] = [h('h3', {}, f.title), h('div.mx-kind', {}, f.kind)];
+  if (f.props.length) out.push(kv(f.props));
+  const lines = mdl.split('\n').slice(item.lines[0], item.lines[1] + 1);
+  const indent = Math.min(...lines.filter((l) => l.trim()).map((l) => /^ */.exec(l)?.[0].length ?? 0));
+  const text = lines.map((l) => l.slice(Number.isFinite(indent) ? indent : 0)).join('\n');
+  if (text.trim()) out.push(h('div', {}, h('h4', {}, 'MDL'), h('pre.mx-mdl', {}, text)));
+  return out;
+}
+
 /** The panel's content for `id` in `doc` (or the document's summary when nothing is picked). */
 export function details(doc: ModelDoc, id: string | null, diff?: DocDiff): HTMLElement[] {
   if (id && doc.kind === 'domainmodel') return domainDetails(doc, id);
   if (id && (doc.kind === 'microflow' || doc.kind === 'nanoflow')) return flowDetails(doc, id);
+  if (doc.kind === 'overview') return overviewDetails(doc, id);
   const out: HTMLElement[] = [];
   if (doc.kind === 'domainmodel') {
     out.push(h('h3', {}, `${doc.module} › Domain model`), h('div.mx-kind', {}, `${doc.entities.length} entities · ${doc.associations.length} associations`));
