@@ -425,3 +425,16 @@ test('whoever writes the model tidies the domain models the team laid out, never
   }
   assert.doesNotMatch(playbook('lead-tester', ctx()), /mxcli layout/);
 });
+
+test('whoever writes the model files the flows it creates in a folder per prefix, with mxcli\'s folder clause', () => {
+  for (const role of ['lead-developer', 'solo-lead'] as const) {
+    const text = playbook(role, ctx(role === 'solo-lead' ? { coverage: defaultCoverage('solo') } : {}));
+    for (const [prefix, folder] of [['ACT_', 'Actions'], ['SUB_', 'SubMicroflows'], ['DS_', 'DataSources'], ['OCH_', 'OnChange'], ['VAL_', 'Validations'], ['SCH_', 'Scheduled'], ['DEC_', 'Decisions'], ['BCO_', 'BeforeCommit'], ['ACO_', 'AfterCommit']])
+      assert.ok(text.includes(`\`${prefix}\` → \`${folder}\``), `${role}: ${prefix} → ${folder}`);
+    assert.match(text, /`Stubs`/);
+    assert.match(text, /CREATE OR MODIFY MICROFLOW Module\.ACT_Name \(\) FOLDER 'Actions' BEGIN … END;/);
+    assert.match(text, /never move documents a person organised, nor anything in Marketplace modules or System/);
+    assert.match(text, /List every move in the pull request/);
+  }
+  for (const role of ['lead-tester', 'lead-designer', 'pm'] as const) assert.doesNotMatch(playbook(role, ctx()), /FOLDER 'Actions'/);
+});

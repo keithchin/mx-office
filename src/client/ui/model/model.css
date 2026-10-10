@@ -120,7 +120,11 @@
 .mxv .mx-explorer-btn { display: none; }
 
 /* Explorer | diagram | details. */
-.mx-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(200px, 270px) minmax(0, 1fr) minmax(220px, 300px); }
+.mx-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(200px, 270px) minmax(0, 1fr) var(--mx-side-w, minmax(220px, 300px)); }
+/* The details panel closed (side-panel.ts): the drawing takes the width; a tab on its edge opens the panel again. */
+.mx-body.mx-sideclosed { grid-template-columns: minmax(200px, 270px) minmax(0, 1fr) 0; }
+.mx-sideclosed .mx-side { display: none; }
+.mx-body.mx-resizing { cursor: col-resize; user-select: none; }
 .mx-scrim { display: none; }
 .mx-body.mx-noside { grid-template-columns: minmax(200px, 270px) minmax(0, 1fr) 0; }
 .mx-tree { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--rule-strong); background: var(--card); }
@@ -249,6 +253,18 @@
 /* Details. */
 .mx-side { min-width: 0; min-height: 0; overflow: auto; border-left: 1px solid var(--rule-strong); background: var(--card); padding: 10px 12px; font-size: 13px; color: var(--ink); scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
 .mx-noside .mx-side { display: none; }
+.mx-side { position: relative; }
+.mx-side-grip { position: absolute; top: 0; bottom: 0; left: 0; width: 7px; cursor: col-resize; z-index: 2; }
+.mx-side-grip:hover, .mx-side-grip:focus-visible, .mx-resizing .mx-side-grip { background: color-mix(in srgb, var(--accent, #146ff4) 35%, transparent); outline: none; }
+.mx-side-head { position: sticky; top: -10px; z-index: 1; display: flex; justify-content: flex-end; gap: 4px; margin: -10px -12px 6px; padding: 4px 6px; background: var(--card); border-bottom: 1px solid var(--rule); }
+.mx-side-btn { all: unset; cursor: pointer; padding: 2px 8px; border-radius: 6px; font-size: 12px; color: var(--ink-2, var(--ink)); }
+.mx-side-btn:hover { background: var(--paper-2); color: var(--ink); }
+.mx-side-btn:focus-visible { outline: 2px solid var(--focus); }
+.mx-side-open { position: absolute; top: 10px; right: 0; z-index: 3; padding: 6px 10px; border: 1px solid var(--rule-strong); border-right: 0; border-radius: 8px 0 0 8px; background: var(--card); color: var(--ink); font: inherit; font-size: 12.5px; cursor: pointer; box-shadow: -2px 2px 8px rgba(0, 0, 0, .12); }
+.mx-side-open:hover { background: var(--paper-2); }
+.mx-side-open:focus-visible { outline: 2px solid var(--focus); }
+.mx-side-open[hidden], .mx-side-open.mx-none { display: none; }
+.mx-noside .mx-side-open { display: none; }
 .mx-side h3 { margin: 0 0 4px; font-size: 14px; }
 .mx-side h4 { margin: 12px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .mx-kind { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
@@ -280,13 +296,14 @@ html:has(body.mx-full-open) { overflow: hidden; }
 /* A phone: the explorer is a drawer, the details a sheet under the diagram. */
 @media (max-width: 760px) {
   .mxv .mx-explorer-btn { display: inline-flex; }
-  .mx-body, .mx-body.mx-noside { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; position: relative; }
+  .mx-body, .mx-body.mx-noside, .mx-body.mx-sideclosed { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; position: relative; }
   .mx-tree { position: absolute; z-index: 5; top: 0; bottom: 0; left: 0; width: min(86%, 320px); transform: translateX(-105%); visibility: hidden; transition: transform .18s ease, visibility .18s; box-shadow: 4px 0 16px rgba(0, 0, 0, .18); }
   .mxv.mx-drawer .mx-tree { transform: none; visibility: visible; }
   .mx-scrim { display: none; }
   .mxv.mx-drawer .mx-scrim { display: block; position: absolute; inset: 0; z-index: 4; background: rgba(0, 0, 0, .25); }
   .mx-side { max-height: 34vh; border-left: 0; border-top: 1px solid var(--rule-strong); }
   .mx-noside .mx-side { display: none; }
+  .mx-side-grip, .mx-side-head .mx-side-btn:first-child { display: none; }
   .mx-title { flex-basis: 100%; order: 5; }
 }
 @media (prefers-reduced-motion: reduce) {

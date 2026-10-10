@@ -4,6 +4,31 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Added
+- **Pages in the Model tab have a Page view next to their MDL.** A page, snippet or layout opens as a structure
+  preview laid out like Studio Pro's page editor: layout grids in rows and columns, containers, data views, list
+  views and data grids with their columns, text, buttons, inputs labelled with their attribute, snippets and the
+  layout's placeholders, unknown widgets as labelled boxes. Click a widget for its properties and its MDL. It is
+  drawn from the page's MDL in the browser (about a millisecond for travel-approval's biggest page) and only while
+  the Page view is on screen; the banner says it isn't the running page and links to the Live app. **MDL** in the
+  bar shows the text, and your browser remembers the choice.
+- **Entities show their access rules per role.** Click an entity: under its attributes, a matrix with a column per
+  module role and R / RW / – per attribute and association, create and delete on top, and each rule's XPath
+  constraint. Read from the domain model itself, so it comes with the diagram.
+- **System Overview and Navigation show something.** System Overview draws the module dependency graph (boxes and
+  arrows with reference counts, pan, zoom and Fit); Navigation shows each profile's home pages, per-role home pages
+  and menu tree, with every page a link. A module's Security shows its roles and security matrix; User Roles and
+  Demo Users open Project Security, settings open Settings, and JavaScript actions and page templates say why
+  there's nothing to show.
+- **The Model tab's details panel closes and widens.** ✕ gives the drawing the whole width (‹ Details brings the
+  panel back); ‹ Wider or dragging its edge makes it up to 60% of the tab. Remembered per viewer, in full screen too.
+- **Agents file the flows they create in a folder per kind.** The Lead Developer's and Solo Lead's Playbook puts
+  each new microflow or nanoflow in its module's folder for its prefix (`ACT_` → Actions, `SUB_` → SubMicroflows,
+  `DS_` → DataSources, `OCH_` → OnChange, `VAL_`, `DEC_`, `SCH_`, `BCO_`, `ACO_`, and Stubs) with mxcli's folder
+  clause, never moves documents a person organised or Marketplace and System modules, and lists moves in the PR.
+
 ## 2026-10-11 · release 34 (`622bf6d`)
 
 ### Fixed

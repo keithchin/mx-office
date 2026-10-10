@@ -135,6 +135,24 @@ export interface DmEntity {
   doc?: string;
   /** External entities: the service they come from. */
   service?: string;
+  /** Its access rules (read from the units; left out when the domain model came from mxcli alone). */
+  access?: DmAccessRule[];
+}
+
+/** Read, or read and write, as Studio Pro's access rule editor offers them (no access is left out). */
+export type DmRight = 'R' | 'RW';
+
+/** One access rule of an entity: the module roles it is for, what they may do, and its XPath constraint. */
+export interface DmAccessRule {
+  /** Module roles, qualified (Module.Role). */
+  roles: string[];
+  create: boolean;
+  delete: boolean;
+  xpath?: string;
+  /** Attribute name (its last part, for inherited ones too) → right. */
+  attrs: Record<string, DmRight>;
+  /** Association name (without its module) → right. */
+  assocs: Record<string, DmRight>;
 }
 
 export interface DmAssociation {
@@ -179,7 +197,31 @@ export interface TextDoc {
   mdl: string;
 }
 
-export type ModelDoc = FlowDoc | DomainDoc | TextDoc;
+/** The System Overview: the app's modules and how they depend on each other (mxcli's module overview). */
+export interface OverviewModule {
+  name: string;
+  /** A Marketplace or platform module (mxcli's isSystem): drawn quieter. */
+  system: boolean;
+  entities: number;
+  microflows: number;
+  pages: number;
+}
+
+export interface OverviewEdge {
+  from: string;
+  to: string;
+  /** How many references, and of which kinds (call, retrieve, layout, member, …). */
+  count: number;
+  kinds: Record<string, number>;
+}
+
+export interface OverviewDoc {
+  kind: 'overview';
+  modules: OverviewModule[];
+  edges: OverviewEdge[];
+}
+
+export type ModelDoc = FlowDoc | DomainDoc | TextDoc | OverviewDoc;
 
 export type ChangeStatus = 'added' | 'changed' | 'removed';
 
