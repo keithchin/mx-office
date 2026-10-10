@@ -108,9 +108,10 @@ html[data-theme^='portal'] .pt-count {
 html[data-theme^='portal'] .pt-count[hidden] { display: none; }
 html[data-theme^='portal'] .pt-dark .pt-sun, html[data-theme^='portal'] .pt-dark[aria-pressed=true] .pt-moon { display: none; }
 html[data-theme^='portal'] .pt-dark[aria-pressed=true] .pt-sun { display: block; }
-/* The ☰ as your avatar: your initials on your colour, the office's menu under it. */
+/* The ☰ as your avatar: your initials on your colour, the office's menu under it. 32 px like the icons
+   beside it; no gap, or the hidden ☰ (a flex item of no width) pushes the initials 3 px off centre. */
 html[data-theme^='portal'] body.lite header.lite-bar #menu.pt-avatar {
-  width: 30px; height: 30px; min-height: 30px; margin-left: 6px; padding: 0; border: 2px solid rgba(255, 255, 255, .85); border-radius: 50% !important;
+  width: 32px; height: 32px; min-height: 32px; margin-left: 6px; padding: 0; gap: 0; justify-content: center; align-items: center; border: 2px solid rgba(255, 255, 255, .85); border-radius: 50% !important;
   background: var(--pt-me, #146ff4); color: #ffffff; font-size: 0;
 }
 html[data-theme^='portal'] body.lite header.lite-bar #menu.pt-avatar::before {

@@ -8,9 +8,11 @@
 //   ▓▓ ⎇ main · repo · 👥 1 here · [$ budget] [● Running | Pause] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 //   ▓▓ [ the progress bar ]                                                         ▓▓
 //
-// Under it, the band (.pt-band): the floor's line (branch, folder, who's here, the budget chip and the
-// run-state toggle, .bud-meta-row) and the progress bar together on a mid dark grey, the same on every
-// page. Nothing in either is new: they, the Firm's banner and the bottom bar's buttons (#btn-issues,
+// Under it, on the Overview only, the band (.pt-band): the floor's line (branch, folder, who's here, the
+// budget chip and the run-state toggle, .bud-meta-row) and the progress bar together on a mid dark grey.
+// The other pages have their header alone, the same gap under it on each (pagehead.css); the budget is
+// on the Budget page and the top bar's office chip, Pause / Resume on the Overview, Home's cards and the
+// 2D Office view's toolbar. Nothing in either is new: they, the Firm's banner and the bottom bar's buttons (#btn-issues,
 // #btn-pulls, #btn-queue, #btn-new) are the page's own elements, moved here while Portal is on
 // (./slot.ts) and back in the other themes, so what draws, counts and clicks them is unchanged. Pin is
 // Home's pin (shared/project-prefs.ts).
@@ -67,6 +69,7 @@ export function pageHead(main: HTMLElement): PageHead {
     const overview = tab === 'command';
     el.dataset.page = tab;
     el.classList.toggle('pt-head-ov', overview);
+    band.classList.toggle('pt-band-off', !overview);
     const f = store.currentFloor();
     tile.hidden = !overview;
     tile.textContent = f ? tileLetters(f.name) : '?';

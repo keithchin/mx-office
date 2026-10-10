@@ -4,6 +4,25 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Fixed
+- **The 🎨 theme picker opens as a dropdown again.** Since the 3D views were removed its list opened inside the
+  top bar, stretching the bar to several times its height; it is a menu under the 🎨 once more, on every page and
+  theme and on a phone, closing on a pick, Esc or a click elsewhere.
+- **Everything in the Portal pages lines up.** Your avatar's initials sit in the middle of its circle (they were
+  3 px left), and it is the same 32 px as the icons beside it; the bell, a dialog's ✕ and the Clean theme's 🏠, 🎨 and ☰
+  are centred too, as is the count on the team phone's button. Needs you's icon is on one line with its label and
+  chips, and the alert keeps the console's column: with the setup line open or finished it ran under the Team card.
+  The Budget page's fields, selects and Save buttons are one height; the 2D Office view's two toolbars are one
+  height, and on a phone its 🎨, avatar and zoom buttons no longer run off the screen.
+
+### Changed
+- **The dark band is on the Overview only.** The floor's line (branch, who's here, the budget chip, Running | Pause)
+  and the progress bar show on General › Overview; the other pages have their header alone, their content starting
+  at the same height on each. The budget is also on the Budget page and the top bar's office chip; Pause and Resume
+  on the Overview, Home's project cards (⋯) and the 2D Office view's toolbar.
+
 ## 2026-10-10 · release 33 (`fc082cc`)
 
 ### Fixed

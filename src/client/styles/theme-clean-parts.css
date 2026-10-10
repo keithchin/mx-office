@@ -30,7 +30,9 @@ html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.btn.primar
 html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .btn.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
 html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .btn:disabled { opacity: .45; }
 html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .btn:focus-visible { outline: 1px solid var(--focus); outline-offset: 1px; }
-html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .close { width: 26px; height: 26px; min-height: 26px; padding: 0; background: transparent; border-color: transparent; color: var(--muted); }
+/* The bar's icon-only buttons: no gap, or the hidden emoji (a flex item of no width) pushes the line icon 3 px left. */
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite header.lite-bar :is(#to-home, .lite-theme, .lite-menu) { gap: 0; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .close { width: 26px; height: 26px; min-height: 26px; padding: 0; gap: 0; justify-content: center; align-items: center; background: transparent; border-color: transparent; color: var(--muted); }
 html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .close:hover { background: var(--hover); color: var(--ink); }
 
 /* ---- Tabs: an editor's toolbar of flat tabs, the open one underlined in the accent ----------------- */
