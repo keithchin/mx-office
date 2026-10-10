@@ -89,6 +89,32 @@ function toolkitSection(role: RoleDef, overrides?: SkillOverrides, also: RoleId[
 const LAYOUT =
   "- After adding or changing entities or associations, tidy that module's domain model: `mxcli layout -p <app>.mpr --module <Module> --dry-run`, then without `--dry-run`, in the same pull request. Only for modules the team laid out: if a person arranged the module in Studio Pro (its entities aren't on mxcli's even grid), leave it and say so in the pull request instead. Never on Marketplace modules or System.";
 
+/**
+ * Flows the team creates go in a folder per kind inside their module, named for their prefix, so the App
+ * Explorer reads like a well-kept Studio Pro app (Model tab feedback, 2026-10-10). The folder clause is
+ * mxcli's (`mxcli syntax document-folder`): missing folders are created, and on CREATE OR MODIFY it moves
+ * the document.
+ */
+export const FLOW_FOLDERS: [prefix: string, folder: string][] = [
+  ['ACT_', 'Actions'],
+  ['SUB_', 'SubMicroflows'],
+  ['DS_', 'DataSources'],
+  ['OCH_', 'OnChange'],
+  ['VAL_', 'Validations'],
+  ['DEC_', 'Decisions'],
+  ['SCH_', 'Scheduled'],
+  ['BCO_', 'BeforeCommit'],
+  ['ACO_', 'AfterCommit'],
+];
+
+const FOLDERS = [
+  "- Put each microflow or nanoflow the team creates in its module's folder for its prefix: ",
+  FLOW_FOLDERS.map(([p, f]) => `\`${p}\` → \`${f}\``).join(', '),
+  ", and stubs (placeholders to fill in later) in `Stubs`; in a module organised by feature folders the kind folder goes inside the feature's (`Request/Actions`). ",
+  "Use mxcli's folder clause, after the signature and before BEGIN: `CREATE OR MODIFY MICROFLOW Module.ACT_Name () FOLDER 'Actions' BEGIN … END;` (missing folders are created; `mxcli syntax document-folder`). ",
+  "Only for flows the team creates: never move documents a person organised, nor anything in Marketplace modules or System (`MOVE MICROFLOW Module.Name TO FOLDER 'Path';` is for the team's own). List every move in the pull request.",
+].join('');
+
 const ONE_WRITER ='One writer per Mendix app: only the Lead Developer runs `mxcli exec` (or any MCP write) against the .mpr. Everyone else — every other Lead and every subagent — drafts, checks (`mxcli check`, `mxcli -c "SHOW …"`) and reviews, and hands the change to the Lead Developer to apply.';
 
 /** The one-writer rule for whoever covers Development: the Lead Developer on an Enterprise team. */
@@ -117,7 +143,7 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
     case 'lead-designer':
       return ['## Design', '- Every page follows the Atlas design system and the agreed wireframes. Review design changes and record approvals (or what must change) in `docs/team/design.md`.', '- Hand page specs to the Lead Developer; never build pages yourself.'];
     case 'lead-developer':
-      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', LAYOUT, '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
+      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', LAYOUT, FOLDERS, '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
     case 'lead-tester':
       return ['## Testing', '- Unit tests live in `tests/*.test.mdl`, Playwright e2e in `tests/e2e`; follow `.ai-context/skills/qa-tests` and the PR pipeline when the repo has them.', '- Approve test plans and results; when the framework is the bottleneck, improve it (and say so in the journal).', '- A failing test that shows the model is wrong is a finding for the Lead Developer, never a fix you make in MDL.'];
     case 'solo-lead':
@@ -126,6 +152,7 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         '- Work the toolkit pipeline stage by stage yourself (`small-project-tier.md` when it applies): each stage\'s gate before the next.',
         '- Dispatch a subagent for each draft or check (business-analyst, ui-ux-designer, developer, tester) and review every result before it lands.',
         LAYOUT,
+        FOLDERS,
         `- The office asks you for a daily standup, then hands you the page (\`${standupPath('YYYY-MM-DD')}\`) to finish as your daily note: a **Summary** at the top, then commit and push.`,
         '- Nobody else relays to the Project Manager: escalate yourself whatever needs them.',
       ];
