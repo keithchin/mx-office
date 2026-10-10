@@ -144,6 +144,12 @@ export class GateSource {
     return { files, info, regenerating: this.running.has(dir), ...(fresh ? { renderedAt: r!.at } : {}) };
   }
 
+  /** index.html as gate-check rendered it from exactly `sha` (not committed anywhere), when it has. */
+  renderedAt(dir: string, sha: string): { html: string; at: number } | undefined {
+    const r = this.rendered.get(dir);
+    return r?.sha === sha && r.html !== undefined ? { html: r.html, at: r.at } : undefined;
+  }
+
   /** Whether a gate-check is running for the floor at `dir`. */
   busy(dir: string): boolean {
     return this.running.has(dir);

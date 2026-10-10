@@ -21,6 +21,7 @@ import { projectIdsFor } from '../projects/ids.js';
 import { draftOf } from './evidence.js';
 import { AcceptanceStore } from './store.js';
 import { acceptanceSource, reviewToken } from './snapshot.js';
+import { wizardIfMade } from '../wizard/index.js';
 
 const stores = new Map<string, AcceptanceStore>();
 onForgetFloor((f) => {
@@ -49,7 +50,7 @@ export async function acceptanceDraft(ctx: Ctx, floor: Floor, admin: boolean): P
 }
 
 async function draftWith(ctx: Ctx, floor: Floor, admin: boolean) {
-  const g = await acceptanceSource(floor);
+  const g = await acceptanceSource(floor, (dir, sha) => wizardIfMade(ctx)?.renderedGates(dir, sha));
   const cycles = acceptanceStore(ctx.cfg.dataDir, floor.id).cycles();
   const evidence = draftOf({ floor: floor.id, version: suggestVersion(cycles), ...g, pulls: floor.github.pulls.items, budget: { b: budgetOf(ctx), ref: ref(floor) }, admin, now: Date.now() });
   const draft = { ...evidence, reviewToken: reviewToken(evidence, cycles.at(-1)!.n) };
@@ -62,7 +63,10 @@ export async function changedNow(ctx: Ctx, floor: Floor, cycles: readonly Cycle[
   if (!rec) return [];
   const g = await gather(ctx, floor, true);
   const head = await deliveryHead(floor, g.setup);
-  const digest = mini ? undefined : deliverablesDigest(await deliverablesOf(ctx, floor));
+  // The record's digest is of the files at its commit: the same commit has the same files, and a scan of a
+  // working tree (a floor with no remote) isn't comparable with it.
+  const view = mini || (head.commit && head.commit === rec.source.commit) ? undefined : await deliverablesOf(ctx, floor);
+  const digest = view && view.sourceCommit && view.sourceCommit === head.commit ? deliverablesDigest(view) : undefined;
   return changedSince(rec, { commit: head.commit, digest });
 }
 
@@ -93,9 +97,15 @@ function refsOf(floor: Floor, projectId: string | undefined, d: AcceptanceDraft,
   return out;
 }
 
+/** What Accept answers when the review no longer matches: the page refreshes the evidence and asks again. */
+export const STALE_REVIEW = 'The delivery, its evidence or the budget changed since it was reviewed, so nothing was recorded. Look at the evidence again and confirm';
+export const NO_REVIEW = 'Open the acceptance dialog and review the evidence before accepting';
+export const CYCLE_MOVED = 'The delivery cycle changed meanwhile (accepted or reopened elsewhere). Close this and open the acceptance record again';
+export const isStale = (why: string) => why === STALE_REVIEW || why === NO_REVIEW;
+
 /** ✅ Accept: records the current cycle's delivery as `body.version`. A string says why it can't. */
 export async function accept(ctx: Ctx, floor: Floor, body: Record<string, unknown>, who: Who): Promise<AcceptanceRecord | string> {
-  if (typeof body.reviewToken !== 'string' || !/^[a-f0-9]{64}$/.test(body.reviewToken)) return 'Open the acceptance dialog and review the evidence before accepting';
+  if (typeof body.reviewToken !== 'string' || !/^[a-f0-9]{64}$/.test(body.reviewToken)) return NO_REVIEW;
   const store = acceptanceStore(ctx.cfg.dataDir, floor.id);
   const cycles = store.cycles();
   const cur = cycles[cycles.length - 1];
@@ -107,10 +117,10 @@ export async function accept(ctx: Ctx, floor: Floor, body: Record<string, unknow
   if (typeof exceptions === 'string') return exceptions;
   const { draft: d, g } = await draftWith(ctx, floor, true);
   if (!d.source.commit) return 'The delivery commit could not be read. Commit the delivery and reopen the acceptance dialog';
-  if (body.reviewToken !== d.reviewToken || g.current.commit !== d.source.commit || g.current.branch !== d.source.branch) return 'The delivery, evidence or cost changed. Close and reopen the acceptance dialog to review it again';
+  if (body.reviewToken !== d.reviewToken || g.current.commit !== d.source.commit || g.current.branch !== d.source.branch) return STALE_REVIEW;
   // No await between this check and append: another request may have accepted/reopened while Git ran.
   const latest = store.cycles().at(-1)!;
-  if (latest.record || latest.n !== cur.n || latest.version !== cur.version) return 'The delivery cycle changed. Reopen the acceptance dialog';
+  if (latest.record || latest.n !== cur.n || latest.version !== cur.version) return CYCLE_MOVED;
   const now = Date.now();
   const projectId = projectOf(ctx, floor);
   const build = text(body.build, 200);

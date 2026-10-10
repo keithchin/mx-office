@@ -218,6 +218,11 @@ export class Wizard {
     return undefined;
   }
 
+  /** The dashboard gate-check rendered from exactly `sha` of the floor at `dir` (acceptance reads it as a dated check). */
+  renderedGates(dir: string, sha: string): { html: string; at: number } | undefined {
+    return this.gates.renderedAt(dir, sha);
+  }
+
   /** Whether a gate-check is running for the floor (keep-awake holds the computer awake meanwhile). */
   checkingGates(floor: Floor): boolean {
     return this.checking.has(floor.id) || this.gates.busy(floor.dir);

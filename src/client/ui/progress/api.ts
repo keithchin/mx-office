@@ -15,10 +15,12 @@ async function get<T>(url: string): Promise<T | undefined> {
   }
 }
 
-async function post<T>(body: object): Promise<T | undefined> {
+/** A failed POST toasts why and comes back undefined, except a stale review (409 { stale }), handed back to re-review. */
+async function post<T>(body: object): Promise<T | { stale: string } | undefined> {
   try {
     const res = await fetch('/api/acceptance', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...body, by: myName() }) });
     const data = await res.json().catch(() => null);
+    if (res.status === 409 && data?.stale === true) return { stale: String(data.error ?? 'The evidence changed: review it again') };
     if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
     return data as T;
   } catch (err) {
@@ -43,4 +45,4 @@ export interface AcceptInput {
 }
 
 export const postAccept = (floor: string, a: AcceptInput) => post<{ record: AcceptanceRecord }>({ floor, action: 'accept', confirm: true, ...a });
-export const postReopen = (floor: string, version: string, scopeNote: string) => post<{ reopen: Reopen }>({ floor, action: 'reopen', version, scopeNote });
+export const postReopen = (floor: string, version: string, scopeNote: string) => post<{ reopen: Reopen }>({ floor, action: 'reopen', version, scopeNote }) as Promise<{ reopen: Reopen } | undefined>;

@@ -1,11 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
-import { accept, acceptanceDraft, acceptanceStore, reopen } from '../src/server/acceptance/index.js';
+import { accept, acceptanceDraft, acceptanceStore, acceptanceView, reopen, STALE_REVIEW } from '../src/server/acceptance/index.js';
+import { acceptanceSource } from '../src/server/acceptance/snapshot.js';
+import { book } from '../src/server/budget/ledger.js';
+import { useTunnelOrigin } from '../src/server/http/util.js';
+import { removeDir } from './support/cleanup.js';
 import { draftOf } from '../src/server/acceptance/evidence.js';
 import { budgetOf } from '../src/server/budget/index.js';
 import { deliverablesOf } from '../src/server/deliverables/index.js';
@@ -30,7 +34,9 @@ function fixture(t: { after(fn: () => void): void }) {
   const ctx = { cfg: { dataDir: path.join(root, 'data'), trustProxy: false }, floors: new Map([[floor.id, floor]]), meOf: () => ({ admin: true }), workerFloor: () => undefined } as unknown as Ctx;
   const b = budgetOf(ctx);
   b.file({ id: floor.id, name: 'Shop', dir }).plan = { edited: true, start: '2026-10-10', lines: [] } as never;
-  t.after(async () => { await rosterOf(ctx).file(floor.id).flushSoon(); b.flush(); rmSync(root, { recursive: true, force: true }); });
+  // No daily exchange-rate fetch from the network in a test.
+  b.store.office().fx = { currency: 'USD', mode: 'manual' };
+  t.after(async () => { await rosterOf(ctx).file(floor.id).flushSoon(); b.flush(); removeDir(root); });
   return { ctx, floor, git, write, commit, a, b, dir };
 }
 
@@ -74,7 +80,8 @@ test('POST rejects a reviewed A after same-size content changes at B; a fresh B 
   const body = { floor: f.floor.id, action: 'accept', confirm: true, reviewToken: a.reviewToken };
   const stale = await post(f.ctx, body);
   assert.equal(stale.status, 409);
-  assert.match(stale.data.error, /review it again/);
+  assert.equal(stale.data.error, STALE_REVIEW);
+  assert.equal(stale.data.stale, true, 'the dialog refreshes the evidence on a stale review');
   assert.equal(acceptanceStore(f.ctx.cfg.dataDir, f.floor.id).all().length, 0);
   const d = await acceptanceDraft(f.ctx, f.floor, true);
   const accepted = await post(f.ctx, { ...body, reviewToken: d.reviewToken });
@@ -149,4 +156,95 @@ test('a branch-only report sorted first never gets cited as a file on the accept
   assert.equal(line?.locator, `git:${f.a}:test-report.html`);
   assert.equal(line?.detail, '1 listed file on main');
   for (const l of [...d.docs, ...d.tests, ...d.scope.agreed]) if (l.locator) f.git('cat-file', '-e', l.locator.slice(4));
+});
+
+/** Spend booked on the floor today, as an agent's turn would. */
+function spend(f: ReturnType<typeof fixture>, cost: number) {
+  const ledger = f.b.file({ id: f.floor.id, name: 'Shop', dir: f.dir }).ledger;
+  book(ledger, { day: new Date().toISOString().slice(0, 10), agent: 'w1', model: 'claude-test', stage: '6', cost, calls: 1 }, { key: 'w1', name: 'Tess', role: 'Lead Tester', kind: 'worker' } as never);
+}
+
+test('spend and the exchange rate moving while someone reads do not refuse the confirm; the record freezes the spend then; crossing the budget does', async (t) => {
+  const f = fixture(t);
+  f.b.file({ id: f.floor.id, name: 'Shop', dir: f.dir }).settings.total = 100;
+  const d = await acceptanceDraft(f.ctx, f.floor, true);
+  assert.equal(d.cost.spent, 0);
+  spend(f, 1.25);
+  f.b.store.office().fx = { currency: 'SGD', mode: 'manual', manualRate: 1.3 };
+  const r1 = await post(f.ctx, { floor: f.floor.id, action: 'accept', confirm: true, reviewToken: d.reviewToken });
+  // The currency itself is a term of the review: switching it asks again.
+  assert.equal(r1.status, 409);
+  const d2 = await acceptanceDraft(f.ctx, f.floor, true);
+  f.b.store.office().fx = { currency: 'SGD', mode: 'manual', manualRate: 1.31 };
+  spend(f, 0.5);
+  const over = await acceptanceDraft(f.ctx, f.floor, true);
+  assert.equal(over.reviewToken, d2.reviewToken, 'a new rate and a little more spend are the same review');
+  spend(f, 150);
+  const r2 = await post(f.ctx, { floor: f.floor.id, action: 'accept', confirm: true, reviewToken: d2.reviewToken });
+  assert.equal(r2.status, 409, 'going over the budget is a material change');
+  const d3 = await acceptanceDraft(f.ctx, f.floor, true);
+  spend(f, 2);
+  const ok = await post(f.ctx, { floor: f.floor.id, action: 'accept', confirm: true, reviewToken: d3.reviewToken });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.data.record.cost.spent, 153.75, 'the spend at the moment of confirming');
+  assert.equal(acceptanceStore(f.ctx.cfg.dataDir, f.floor.id).all().length, 1);
+});
+
+test('through Phone access a confirm needs the password again; a record from before the review token still reads and chains', async (t) => {
+  const f = fixture(t);
+  const store = acceptanceStore(f.ctx.cfg.dataDir, f.floor.id);
+  // A record written by release 30 (no review token, no sourceCommit anywhere).
+  store.append({ op: 'accept', record: { schemaVersion: 1, id: 'acc_old', floorId: f.floor.id, version: 'v1', cycle: 1, acceptedAt: 1, acceptedBy: { name: 'Pat' }, scope: { agreed: [], delivered: [] }, source: { branch: 'main', commit: f.a, gaps: [] }, tests: [], docs: [], exceptions: [], cost: { at: 1, spent: 3, estimated: 0, unmeteredCalls: 0, byStage: [] }, refs: [] } as never });
+  const view = await acceptanceView(f.ctx, f.floor, true);
+  assert.equal(view.cycles[0].record?.id, 'acc_old');
+  assert.equal(view.chain.ok, true);
+  assert.deepEqual(view.changed, []);
+  assert.notEqual(typeof reopen(f.ctx, f.floor, { scopeNote: 'More' }, { name: 'Pat' }), 'string');
+  const d = await acceptanceDraft(f.ctx, f.floor, true);
+  useTunnelOrigin({ via: () => true, host: () => 'office.test' });
+  try {
+    const r = await post(f.ctx, { floor: f.floor.id, action: 'accept', confirm: true, reviewToken: d.reviewToken });
+    assert.equal(r.status, 401);
+    assert.equal(r.data.reauth, true);
+  } finally {
+    useTunnelOrigin(undefined);
+  }
+  assert.equal(store.all().length, 2, 'nothing appended through the tunnel');
+  assert.equal((await post(f.ctx, { floor: f.floor.id, action: 'accept', confirm: true, reviewToken: d.reviewToken })).status, 200);
+  assert.equal(store.verify().ok, true);
+});
+
+test('a dashboard gate-check rendered in memory is a dated check, never cited as the committed index.html; Stage P gets no dashboard locator', async (t) => {
+  const f = fixture(t);
+  f.write('PROJECT.md', '# Project\n\nEntry mode: Requirements-driven\n\n## Decisions\n\n| Stage | Decision | Status |\n|---|---|---|\n');
+  f.write('intake.md', '# Intake\n\n## Q1. Who?\n\n**Answer:** Shoppers\n');
+  const sha = f.commit();
+  const html = '<table><tr><td>0</td><td>Triage</td><td>FAIL</td><td>rendered</td></tr></table>';
+  const g = await acceptanceSource(f.floor, (_dir, at) => (at === sha ? { html, at: 1_700_000_000_000 } : undefined));
+  const d = draftOf({ floor: f.floor.id, version: 'v1', ...g, pulls: [], budget: { b: f.b, ref: { id: f.floor.id, name: 'Shop', dir: f.dir } }, admin: true, now: Date.now() });
+  const gate0 = d.tests.find((l) => l.label === 'Gate 0 · Triage');
+  assert.equal(gate0?.status, 'fail', 'the rendered verdict, not the committed PASS');
+  assert.equal(gate0?.locator, undefined);
+  assert.match(gate0?.detail ?? '', /checked /);
+  const gateP = d.tests.filter((x) => x.label.startsWith('Gate P'));
+  assert.ok(gateP.length, 'Stage P comes from the intake');
+  for (const l of gateP) assert.equal(l.locator, undefined);
+  for (const l of d.tests) assert.ok(!l.locator?.endsWith(':index.html'));
+  // A dashboard rendered from another commit isn't used at all.
+  const other = await acceptanceSource(f.floor, () => undefined);
+  const committed = draftOf({ floor: f.floor.id, version: 'v1', ...other, pulls: [], budget: { b: f.b, ref: { id: f.floor.id, name: 'Shop', dir: f.dir } }, admin: true, now: Date.now() });
+  assert.equal(committed.tests.find((l) => l.label === 'Gate 0 · Triage')?.locator, `git:${sha}:index.html`);
+});
+
+test('a floor with no remote and uncommitted deliverables does not read as changed right after acceptance', async (t) => {
+  const f = fixture(t);
+  f.write('reports/test-plan.md', 'not committed');
+  f.write('test-report.html', 'edited, not committed');
+  const d = await acceptanceDraft(f.ctx, f.floor, true);
+  assert.equal(d.source.commit, f.a);
+  assert.notEqual(typeof (await accept(f.ctx, f.floor, { reviewToken: d.reviewToken }, { name: 'Pat' })), 'string');
+  assert.deepEqual((await acceptanceView(f.ctx, f.floor, true)).changed, []);
+  const b = f.commit();
+  const changed = (await acceptanceView(f.ctx, f.floor, true)).changed;
+  assert.ok(changed.some((c) => c.includes(b.slice(0, 8))), changed.join('; '));
 });
