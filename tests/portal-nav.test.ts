@@ -364,7 +364,8 @@ test('in Portal the top bar stays at the top and the pane under it while only th
   // scrolled away with the page: on the Portal pages with the pane body isn't one, and the bar sticks.
   assert.match(read('src/client/lite.css'), /html, body \{[^}]*overflow: auto;/);
   assert.match(layout, /html\[data-theme\^='portal'\] body\.lite\.pt-has-nav \{ overflow: visible; \}/);
-  assert.match(layout, /html\[data-theme\^='portal'\] body\.lite\.pt-has-nav header\.lite-bar \{ position: sticky; top: 0; \}/);
+  // The bar itself is fixed now (topbar.css; tests/portal-fixed-bar.test.ts scrolls it in a browser).
+  assert.match(read('src/client/ui/portal/topbar.css'), /:is\(\.pt-has-nav, [^)]*\) > header\.lite-bar \{ position: fixed; top: 0;/);
   assert.match(layout, /--pt-top: calc\(var\(--pt-h\) \+ 1px \+ env\(safe-area-inset-top\)\)/);
   // The pane: fixed under the bar to the window's foot, scrolling on its own when its groups are longer.
   assert.match(nav, /\.pt-nav \{\s*position: fixed; left: 0; top: var\(--pt-top\); bottom: 0;/);

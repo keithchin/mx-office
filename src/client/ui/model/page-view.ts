@@ -42,7 +42,7 @@ export function pageView(on: PageEvents): PageView {
   let scale = 1;
   let selected: HTMLElement | null = null;
   const sheet = h('div.pg-sheet');
-  const el = h('div.pg-host', {}, sheet);
+  const el = h('div.pgv-host', {}, sheet);
   el.hidden = true;
 
   el.addEventListener('click', (e) => {
@@ -116,8 +116,8 @@ export function pageView(on: PageEvents): PageView {
     if (INPUTS.has(k)) {
       const attr = attrOf(it);
       const label = it.props.Label ?? short(attr.slice(attr.lastIndexOf('/') + 1));
-      if (k === 'checkbox' || k === 'switch') return node(it, 'pg-input.pg-check', null, h('span.pg-box'), h('span.pg-label', {}, label || it.name || ''), h('span.pg-attr', {}, attr ? `[${attr}]` : ''));
-      return node(it, `pg-input${k === 'textarea' || k === 'richtext' ? '.pg-tall' : ''}`, null, h('span.pg-label', {}, label || it.name || k), h('span.pg-field', {}, attr ? `[${attr}]` : k, /combobox|dropdown|referenceselector|datepicker/.test(k) ? h('span.pg-caret', {}, k === 'datepicker' ? '▦' : '▾') : null));
+      if (k === 'checkbox' || k === 'switch') return node(it, 'pg-input.pg-check', null, h('span.pg-box'), h('span.pgv-label', {}, label || it.name || ''), h('span.pg-attr', {}, attr ? `[${attr}]` : ''));
+      return node(it, `pg-input${k === 'textarea' || k === 'richtext' ? '.pg-tall' : ''}`, null, h('span.pgv-label', {}, label || it.name || k), h('span.pg-field', {}, attr ? `[${attr}]` : k, /combobox|dropdown|referenceselector|datepicker/.test(k) ? h('span.pg-caret', {}, k === 'datepicker' ? '▦' : '▾') : null));
     }
     if (FILTERS.has(k)) return node(it, 'pg-input.pg-filter', null, h('span.pg-field', {}, `${k.replace('filter', ' filter')}${attrOf(it) ? ` [${attrOf(it)}]` : ''}`));
     if (k === 'snippetcall') return node(it, 'pg-snippet', null, h('span.pg-tag', {}, 'Snippet'), h('b', {}, it.props.Snippet ?? it.name ?? ''));

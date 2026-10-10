@@ -35,6 +35,17 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   each new microflow or nanoflow in its module's folder for its prefix (`ACT_` → Actions, `SUB_` → SubMicroflows,
   `DS_` → DataSources, `OCH_` → OnChange, `VAL_`, `DEC_`, `SCH_`, `BCO_`, `ACO_`, and Stubs) with mxcli's folder
   clause, never moves documents a person organised or Marketplace and System modules, and lists moves in the PR.
+
+### Fixed
+- **The Overview's dark band is two rows again.** Since release 34 its progress bar lay on top of the floor's line
+  (branch, who's here, the budget chip, Running | Pause): the Model tab's new Page view styled a class name the progress
+  bar also uses. Each now has its own.
+- **The Portal top bar stays put.** It is fixed at the top on the project pages, Home, The Firm and setup: on Home
+  and The Firm it scrolled away with the page, and scrolling the left navigation to its end scrolled the page under
+  it. The navigation scrolls on its own now, and its project card and items sit flush to the pane's edges.
+- **The Overview's Team and Technical contact cards show each agent's own character**, as the office, the team
+  chatter and the escalation cards draw it, in its circle with its status dot, instead of coloured initials.
+
 
 ## 2026-10-11 · release 34 (`622bf6d`)
 
@@ -50,6 +61,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   height, and on a phone its 🎨, avatar and zoom buttons no longer run off the screen.
 
 ### Changed
+- **The Mx mark is the office's icon.** The browser tab, bookmarks and the phone version's home-screen icon now show the top bar's **Mx** in white on the Portal navy, instead of the old pixel desk.
 - **The dark band is on the Overview only.** The floor's line (branch, who's here, the budget chip, Running | Pause)
   and the progress bar show on General › Overview; the other pages have their header alone, their content starting
   at the same height on each. The budget is also on the Budget page and the top bar's office chip; Pause and Resume

@@ -12,6 +12,7 @@
 // Point it at a TEST office, never someone's real one: it signs in and clicks like a person would.
 //
 //   node scripts/check-alignment.mjs --base http://127.0.0.1:49xx --password <pw> --floor <id>
+//     [--floor2 <id>: a second project for the band check, default equipment-loan-desk]
 //     [--themes portal-light,portal-dark] [--viewport 1440x900] [--only topbar,nav,...]
 //     [--shots <dir>] [--tag before] [--json <file>] [--chrome <chrome.exe>]
 //
@@ -48,6 +49,8 @@ const SURFACES = [
   { name: 'nav', url: lite('command'), scope: '#pt-nav' },
   { name: 'pagehead', url: lite('command'), scope: '#pt-head' },
   { name: 'band', url: lite('command'), scope: '.pt-band' },
+  // A second project (fewer phases), the band's rows checked again.
+  { name: 'band-2', url: `/lite?floor=${encodeURIComponent(arg('floor2', 'equipment-loan-desk'))}&tab=command`, scope: '.pt-band' },
   { name: 'overview', url: lite('command'), scope: '.lite-main', not: '#pt-head, .pt-band' },
   // The setup line opened: the desktop layout's rule then gave Needs you the whole width, under the Team card.
   { name: 'overview-setup', url: lite('command'), scope: '#needs-you, #setup', prepare: async (page) => {
@@ -214,6 +217,42 @@ function MEASURE({ scope, not, lists, tol }) {
     else if (tall) flag('clip', el, `text ${el.scrollHeight}px tall in ${el.clientHeight}px`);
   }
 
+  // The Overview's dark band: its rows (the floor's line, the progress bar) stacked, none drawn over
+  // another, each inside the band (release 34 drew the progress bar over the floor's line: another
+  // page's .pg-host rule took it out of the flow).
+  for (const band of document.querySelectorAll('.pt-band')) {
+    if (!inScope(band) || !visible(band)) continue;
+    const bb = band.getBoundingClientRect();
+    const rows = [...band.children].filter((k) => visible(k) && k.getBoundingClientRect().height >= 4);
+    for (const k of rows) {
+      const r = k.getBoundingClientRect();
+      if (!inFlow(k)) flag('overlap', k, `a band row is position: ${getComputedStyle(k).position}, out of the band's flow`);
+      if (r.top < bb.top - tol || r.bottom > bb.bottom + tol) flag('clip', k, `a band row ${r2(r.top)}..${r2(r.bottom)}px outside the band ${r2(bb.top)}..${r2(bb.bottom)}px`);
+    }
+    for (let i = 0; i < rows.length; i++) for (let j = i + 1; j < rows.length; j++) {
+      const a = rows[i].getBoundingClientRect();
+      const b = rows[j].getBoundingClientRect();
+      const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+      const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+      if (x > 1 && y > 1) flag('overlap', band, `${describe(rows[i])} and ${describe(rows[j])} drawn over each other (${r2(y)}px)`);
+    }
+  }
+
+  // The Overview's Team and Technical contact faces: each agent's own icon (its character, ui/portal/face.ts),
+  // filling its circle and centred in it; initials only for the "+N" and an agent with no icon.
+  for (const face of document.querySelectorAll('.pt-face:not(.pt-face-more), .pt-contact-face')) {
+    // (Every agent has a character: the office draws one for any id. A face with no agent behind it, the
+    // contact card's person icon, has no initials either.)
+    if (!inScope(face) || !visible(face) || !(face.querySelector('.pt-face-i') || /^[A-Z?]{1,3}$/.test(face.textContent.trim()))) continue;
+    const px = face.querySelector('.pt-face-px');
+    if (!face.classList.contains('pt-has-px') || !px || !visible(px)) { flag('ink', face, "shows initials, not the agent's icon"); continue; }
+    const a = face.getBoundingClientRect();
+    const b = px.getBoundingClientRect();
+    const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+    const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+    if (Math.abs(dx) > tol || Math.abs(dy) > tol || b.width < a.width - 4) flag('ink', face, `the icon ${r2(b.width)}px, off its ${r2(a.width)}px circle's centre by x ${r2(dx)}, y ${r2(dy)}`);
+  }
+
   // Needs you in the Portal Overview: the console's column, its right edge on the console's.
   const ny = document.querySelector('.lite-main.on-command > #needs-you');
   const pmc = document.querySelector('.lite-main.on-command #summary > .pmc');
@@ -251,6 +290,8 @@ function MEASURE({ scope, not, lists, tol }) {
     const iconBtn = isBtn && square && (words.length === 0 || [...words].length <= 2 || el.matches('#menu.pt-avatar')) && (el.querySelector('svg') || words.length || getComputedStyle(el, '::before').content !== 'none');
     if (!avatar && !iconBtn) continue;
     if (el.closest('[data-al]') && el.closest('[data-al]') !== el) continue;
+    // A pixel-art portrait isn't a glyph to centre by its ink (its hair, a headset): checked above by its box.
+    if (el.classList.contains('pt-has-px')) continue;
     const id = `al${n++}`;
     el.dataset.al = id;
     const bt = parseFloat(c.borderTopWidth) || 0;

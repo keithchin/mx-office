@@ -21,6 +21,7 @@ import type { ToolkitStatus } from '../../../shared/toolkit';
 import { batched } from '../batch';
 import { initials } from './topbar';
 import { icon } from './icons';
+import { agentFace } from './face';
 import { alertKey, budgetText, commitWhen, detailRows, teamFaces, technicalContact, type DetailFacts } from './overview-logic';
 import type { GitGraph } from '../../../shared/gitgraph';
 import './overview.css';
@@ -66,7 +67,9 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
   let teamKey = '';
   function drawTeam() {
     const t = teamFaces(store.workers.values());
-    const key = JSON.stringify(t);
+    const members = currentRoster()?.members;
+    // The roster dresses each face (its role, its team's colour): a change there redraws them too.
+    const key = JSON.stringify([t, members?.map((m) => [m.workerId, m.role, m.team])]);
     if (key === teamKey) return;
     teamKey = key;
     if (!t.total) return void faces.replaceChildren(h('p.pt-card-none', {}, 'No agents yet: New task hires one.'));
@@ -78,7 +81,7 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
           h(
             'li',
             {},
-            h('button.pt-face', { type: 'button', title: f.title, 'aria-label': `${f.title}: open its terminal`, style: `--face:${f.color}`, onclick: () => deps.openWorker(f.id) }, initials(f.name), h('span.pt-face-dot', { class: `pt-dot-${f.dot}`, 'aria-hidden': 'true' })),
+            h('button.pt-face', { type: 'button', title: f.title, 'aria-label': `${f.title}: open its terminal`, style: `--face:${f.color}`, onclick: () => deps.openWorker(f.id) }, h('span.pt-face-i', { 'aria-hidden': 'true' }, initials(f.name)), agentFace(f, members), h('span.pt-face-dot', { class: `pt-dot-${f.dot}`, 'aria-hidden': 'true' })),
           ),
         ),
         t.more ? h('li', {}, h('button.pt-face.pt-face-more', { type: 'button', title: `${t.more} more: the Agents page`, 'aria-label': `${t.more} more agents: the Agents page`, onclick: () => deps.show('workers') }, `+${t.more}`)) : null,
@@ -96,7 +99,7 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
     if (!m) return void contact.replaceChildren(h('p.pt-card-none', {}, 'No Project Coordinator on this project yet.'));
     const w = m.workerId ? store.workers.get(m.workerId) : undefined;
     contact.replaceChildren(
-      h('span.pt-contact-face', { 'aria-hidden': 'true', style: w ? `--face:${w.color}` : '' }, w ? initials(m.name) : icon('person')),
+      h('span.pt-contact-face', { 'aria-hidden': 'true', style: w ? `--face:${w.color}` : '' }, ...(w ? [h('span.pt-face-i', {}, initials(m.name)), agentFace(w, currentRoster()?.members)] : [icon('person')])),
       h(
         'div.pt-contact-who',
         {},
