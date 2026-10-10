@@ -4,7 +4,7 @@
 // the office's own page (or a script sending JSON), and through Phone access only with the password again.
 
 import type http from 'node:http';
-import { accept, acceptanceDraft, acceptanceView, reopen } from '../../acceptance/index.js';
+import { accept, acceptanceDraft, acceptanceView, isStale, reopen } from '../../acceptance/index.js';
 import type { Ctx } from '../../office/context.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import { progressOf } from '../../progress/index.js';
@@ -49,7 +49,7 @@ export const progressRoutes = {
       return send(res, 200, await acceptanceDraft(ctx, floor, ctx.meOf(session.account?.id).admin));
     },
   },
-  /** POST /api/acceptance {floor, action: accept|reopen, version?, scopeNote?, exceptions?, build?, deploy?}. The Project Manager (an admin) only. */
+  /** POST /api/acceptance {floor, action: accept|reopen, reviewToken (accept), version?, scopeNote?, exceptions?, build?, deploy?}. The Project Manager (an admin) only. */
   act: {
     method: 'POST',
     path: '/api/acceptance',
@@ -71,7 +71,8 @@ export const progressRoutes = {
       if (body.action === 'accept') {
         if (body.confirm !== true) return send(res, 400, { error: 'Confirm the acceptance' });
         const r = await accept(ctx, floor, body, who);
-        return typeof r === 'string' ? send(res, 409, { error: r }) : send(res, 200, { record: r });
+        // stale: the reviewed evidence no longer matches; the dialog fetches it again and asks for a new confirm.
+        return typeof r === 'string' ? send(res, 409, { error: r, ...(isStale(r) ? { stale: true } : {}) }) : send(res, 200, { record: r });
       }
       if (body.action === 'reopen') {
         const r = reopen(ctx, floor, body, who);

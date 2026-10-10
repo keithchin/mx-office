@@ -79,11 +79,17 @@ Open the acceptance record (click Accepted or the line on the right of the bar),
 - **Scope agreed**: the BRDs on main, the build plan, and the confirmed decisions in the register.
 - **Scope delivered**: the deliverables on main for each stage, and the merged pull requests. The office can't tell which BRDs have been built, so that line says *unknown*.
 - **The delivery branch's head**: the commit being accepted. You can add a build or deploy reference. Without one, the record lists the gap.
-- **Test evidence**: each gate verdict and when it was checked, CI on the last merged pull request and on open pull requests with failing checks, and the test plan, journeys, UI reviews and test report among the deliverables. Anything missing is shown as a gap, never as zero.
+- **Test evidence**: gate verdicts at the delivery commit (the dashboard the office's gate-check rendered from that very commit, with when it was checked, else the committed dashboard; Stage P can also come from the committed intake), CI on the last merged pull request and on open pull requests with failing checks, and the committed test plan, journeys, UI reviews and test report. Anything missing is shown as a gap, never as zero. PR checks describe the named PR revision, not necessarily the accepted delivery commit.
 - **Documents**: each deliverable on main at the accepted commit.
-- **Spend**: what was spent, by stage, against the plan and the budget. This is frozen at the moment of acceptance. The budget ledger keeps counting afterwards.
+- **Spend**: what was spent, by stage, against the plan and the budget. The record freezes it at the moment you confirm (agents still at work may add a little while you read). The budget ledger keeps counting afterwards.
 
 Add the **exceptions** that are still open, each with an owner. The dialog suggests gaps and failures it found (a failing gate, a missing deliverable, failing CI), and **+ owner** adds one to your list. Then tick the confirmation and click **✅ Accept**.
+
+Documents, the decision register and gate files are read at one immutable commit: the locally fetched `origin/<default>` revision, or committed `HEAD` when there is no remote default branch. Uncommitted files are never accepted as evidence, and a dashboard the office rendered in memory is recorded as a dated check, not as a file in Git. Acceptance does not force a network fetch, so check the displayed revision against the delivery you intend to approve.
+
+If the delivery revision, the reviewed evidence (documents, gates, CI), the budget or plan, or the delivery cycle changes before you confirm, nothing is recorded: the dialog shows the evidence as it is now, keeps your version, notes and exceptions, and asks you to tick the confirmation again. Spend that agents add while you read, and the day's exchange rate, don't count as a change; going over the budget does. A project needs a readable commit to be accepted. Existing records remain unchanged; this safeguard does not repair historical records.
+
+API clients must GET `/api/acceptance/draft?floor=<id>` and send its `reviewToken` with `action: "accept"` and `confirm: true` to POST `/api/acceptance`. Missing or stale tokens return HTTP 409 with `stale: true`. Tokens bind the reviewed draft and cycle; they do not replace sign-in, admin permission or same-origin checks.
 
 ### Reading the record
 

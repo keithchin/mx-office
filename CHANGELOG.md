@@ -7,6 +7,12 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ## 2026-10-10 · release 31 (`2500beb`)
 
 ### Fixed
+- **✅ Accept records exactly the delivery you reviewed.** The evidence (documents, gate verdicts, the
+  decision register, test reports) is read at the one commit being accepted, never from the panels'
+  caches or uncommitted files, so a report deleted since can't be recorded as present. If the delivery,
+  its evidence or the budget changes while the dialog is open, nothing is recorded: the dialog shows the
+  evidence as it is now, keeps what you typed and asks you to confirm again. Spend from agents still at
+  work doesn't count as a change. A project with no GitHub remote now records its commit too.
 - **The Agents and Budget pages stay smooth on a big project.** The Agents page no longer rebuilds every card
   a few times a second while agents work: only the cards that changed are redrawn (its longest stall on the
   performance guard's big floor: about 200 ms → about 100 ms). The Budget page no longer lays the whole page

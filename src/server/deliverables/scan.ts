@@ -201,5 +201,5 @@ export async function scanDeliverables(input: ScanInput, now = Date.now()): Prom
   // A report straight under reports/ that's no analyst report and in no team's folder: the Project Coordinator sorts it.
   const unsorted = sorted.filter((f) => unsortedReport(f.path)).sort((a, b) => (b.mtime ?? 0) - (a.mtime ?? 0));
   if (unsorted.length) items.push({ id: 'unsorted-reports', team: 'management', title: 'Unsorted reports', optional: true, status: itemStatus(unsorted), files: unsorted.slice(0, EXTRA_FILES), ...(unsorted.length > EXTRA_FILES ? { more: unsorted.length - EXTRA_FILES } : {}) });
-  return { floor: input.floor, scannedAt: now, items, sources, ...(input.main ? { main: `origin/${input.main.def}` } : {}), ...(input.checkout ? { checkout: input.checkout } : {}) };
+  return { floor: input.floor, scannedAt: now, items, sources, ...(input.main ? { main: `origin/${input.main.def}`, sourceCommit: input.main.sha } : {}), ...(input.checkout ? { checkout: input.checkout } : {}) };
 }

@@ -26,12 +26,12 @@ function lines(title: string, list: readonly EvidenceLine[], more?: number): HTM
   );
 }
 
-function costLines(c: AcceptanceRecord['cost']): HTMLElement {
+function costLines(c: AcceptanceRecord['cost'], live = false): HTMLElement {
   const fx = c.fx ? ` (${c.fx.currency} ${(c.spent * c.fx.rate).toFixed(2)})` : '';
   return h(
     'section.acc-sec',
     {},
-    h('h3', {}, `💰 Spend at acceptance, frozen ${when(c.at)}`),
+    h('h3', {}, live ? `💰 Spend as of ${when(c.at)} (the record freezes it when you confirm)` : `💰 Spend at acceptance, frozen ${when(c.at)}`),
     h('p', {}, `${usd(c.spent)}${fx} spent${c.estimated ? `, ${usd(c.estimated)} of it estimated from history` : ''}${c.budget ? ` · budget ${usd(c.budget)}` : ''}${c.planned ? ` · plan ${usd(c.planned)}` : ''}`),
     c.unmeteredCalls ? h('p.acc-dim', {}, `⚠️ ${c.unmeteredCalls} calls the office couldn't price: the spend is a floor, not the whole cost.`) : null,
     c.byStage.length ? h('ul.acc-lines', {}, ...c.byStage.map((s) => h('li', {}, h('span.acc-l', {}, s.label), h('small', {}, `${usd(s.actual)}${s.planned !== undefined ? ` of ${usd(s.planned)} planned` : ''}`)))) : null,
@@ -102,26 +102,36 @@ async function openAccept(floor: string, view: AcceptanceView, after: () => void
   const footer = h('footer');
   const el = h('div.modal.acc-modal', { role: 'dialog', 'aria-label': 'Accept the delivery' }, h('header', {}, h('h2', {}, '✅ Accept the delivery')), body, footer);
   const modal = openModal(el, { doing: 'accepting a delivery' });
-  const d: AcceptanceDraft | undefined = await getDraft(floor);
+  let d: AcceptanceDraft | undefined = await getDraft(floor);
   if (!d) return void body.replaceChildren(h('p.acc-dim', {}, "The evidence couldn't be gathered just now."));
   const version = h('input', { type: 'text', value: d.version, maxlength: 12, 'aria-label': 'Version', size: 8 }) as HTMLInputElement;
   const note = h('textarea', { rows: 2, maxlength: 2000, placeholder: 'What this version is (optional)', 'aria-label': 'Scope note' }) as HTMLTextAreaElement;
   const build = h('input', { type: 'text', maxlength: 200, placeholder: 'Build reference (optional)', 'aria-label': 'Build reference' }) as HTMLInputElement;
   const deploy = h('input', { type: 'text', maxlength: 200, placeholder: 'Deploy reference (optional)', 'aria-label': 'Deploy reference' }) as HTMLInputElement;
   const excs = h('ul.acc-excs', {});
-  const suggested = h('ul.acc-lines', {}, ...d.suggestions.map((s) => h('li', {}, h('span.acc-l', {}, s.text), h('button.btn.small', { type: 'button', onclick: (e: Event) => (exceptionRow(s, excs), (e.currentTarget as HTMLElement).closest('li')?.remove()) }, `+ owner ${s.owner}`))));
   const confirm = h('input', { type: 'checkbox', id: 'acc-confirm' }) as HTMLInputElement;
   const problem = h('p.acc-problem', { role: 'alert' });
+  // The evidence and the suggestions are redrawn after a stale review; what was typed (version, note, build, deploy, exceptions) stays.
+  const evidence = h('div.acc-evidence', {});
+  const suggestedBox = h('div', {});
+  const drawEvidence = (x: AcceptanceDraft) => {
+    evidence.replaceChildren(...kids(
+      h('p.acc-dim', {}, `Delivery branch: ${x.source.branch ?? 'unknown'}${x.source.commit ? ` @ ${x.source.commit.slice(0, 12)}` : ''}`),
+      x.source.gaps.length ? h('ul.acc-gaps', {}, ...x.source.gaps.map((g) => h('li', {}, `⚠️ ${g}`))) : null,
+      lines('Scope agreed', x.scope.agreed),
+      lines('Scope delivered', x.scope.delivered),
+      lines('Test evidence', x.tests),
+      lines('Documents', x.docs, x.docsMore),
+      costLines(x.cost, true),
+    ));
+    const suggested = h('ul.acc-lines', {}, ...x.suggestions.map((s) => h('li', {}, h('span.acc-l', {}, s.text), h('button.btn.small', { type: 'button', onclick: (e: Event) => (exceptionRow(s, excs), (e.currentTarget as HTMLElement).closest('li')?.remove()) }, `+ owner ${s.owner}`))));
+    suggestedBox.replaceChildren(...(x.suggestions.length ? [h('p.acc-dim', {}, 'Gaps and failures found now, to carry as exceptions:'), suggested] : []));
+  };
+  drawEvidence(d);
   body.replaceChildren(...kids(
     h('div.acc-form', {}, h('label', {}, 'Version ', version), h('label.acc-wide', {}, 'Scope note', note), build, deploy),
-    h('p.acc-dim', {}, `Delivery branch: ${d.source.branch ?? 'unknown'}${d.source.commit ? ` @ ${d.source.commit.slice(0, 12)}` : ''}`),
-    d.source.gaps.length ? h('ul.acc-gaps', {}, ...d.source.gaps.map((g) => h('li', {}, `⚠️ ${g}`))) : null,
-    lines('Scope agreed', d.scope.agreed),
-    lines('Scope delivered', d.scope.delivered),
-    lines('Test evidence', d.tests),
-    lines('Documents', d.docs, d.docsMore),
-    costLines(d.cost),
-    h('section.acc-sec', {}, h('h3', {}, 'Exceptions (each with an owner)'), excs, h('button.btn.small', { type: 'button', onclick: () => exceptionRow({ text: '', owner: '' }, excs).querySelector('input')?.focus() }, '+ Add an exception'), d.suggestions.length ? h('div', {}, h('p.acc-dim', {}, 'Gaps and failures found now, to carry as exceptions:'), suggested) : null),
+    evidence,
+    h('section.acc-sec', {}, h('h3', {}, 'Exceptions (each with an owner)'), excs, h('button.btn.small', { type: 'button', onclick: () => exceptionRow({ text: '', owner: '' }, excs).querySelector('input')?.focus() }, '+ Add an exception'), suggestedBox),
     h('label.acc-confirm', {}, confirm, ` I accept ${floor}'s delivery as recorded above, with these exceptions.`),
     problem,
   ));
@@ -134,7 +144,19 @@ async function openAccept(floor: string, view: AcceptanceView, after: () => void
     const bad = versionProblem(version.value.trim(), view.cycles) ?? (exceptions.find((e) => !e.text || !e.owner) ? 'Every exception needs words and an owner' : !confirm.checked ? 'Tick the confirmation first' : undefined);
     if (bad) return void (problem.textContent = bad);
     go.disabled = true;
-    const r = await postAccept(floor, { version: version.value.trim(), scopeNote: note.value.trim() || undefined, exceptions, build: build.value.trim() || undefined, deploy: deploy.value.trim() || undefined });
+    const r = await postAccept(floor, { reviewToken: d!.reviewToken, version: version.value.trim(), scopeNote: note.value.trim() || undefined, exceptions, build: build.value.trim() || undefined, deploy: deploy.value.trim() || undefined });
+    if (r && 'stale' in r) {
+      // Nothing was recorded: show what's there now and ask for the confirmation again.
+      const fresh = await getDraft(floor);
+      go.disabled = false;
+      confirm.checked = false;
+      if (!fresh) return void (problem.textContent = `${r.stale}. The evidence couldn't be read again just now: close this and open it again.`);
+      d = fresh;
+      drawEvidence(fresh);
+      problem.textContent = `⚠️ ${r.stale}. Your version, notes and exceptions are kept; tick the confirmation again to accept.`;
+      problem.scrollIntoView?.({ block: 'nearest' });
+      return;
+    }
     go.disabled = false;
     if (!r) return;
     modal.close();

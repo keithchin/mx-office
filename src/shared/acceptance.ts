@@ -99,6 +99,8 @@ export interface AcceptanceView {
 
 /** GET /api/acceptance/draft's answer: what an Accept would record now, for the dialog to show. */
 export interface AcceptanceDraft {
+  /** Send back on Accept. A changed delivery/evidence/cost requires a new review. */
+  reviewToken: string;
   floor: string;
   version: string;
   scope: { agreed: EvidenceLine[]; delivered: EvidenceLine[] };
