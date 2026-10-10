@@ -45,8 +45,9 @@
 }
 
 /* The Page view. */
-.pg-host { position: absolute; inset: 0; overflow: auto; background: var(--pg-bg); color: var(--pg-ink); font: 13px/1.35 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; scrollbar-width: thin; }
-.pg-host[hidden] { display: none; }
+/* pgv-, not pg-: the progress bar owns .pg-host and .pg-label (ui/progress); sharing them made its root absolute in the Overview band. */
+.pgv-host { position: absolute; inset: 0; overflow: auto; background: var(--pg-bg); color: var(--pg-ink); font: 13px/1.35 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; scrollbar-width: thin; }
+.pgv-host[hidden] { display: none; }
 .pg-note { position: sticky; top: 0; z-index: 2; padding: 6px 12px; font-size: 12.5px; color: var(--pg-muted); background: color-mix(in srgb, var(--pg-bg) 92%, transparent); border-bottom: 1px solid var(--pg-line-2); backdrop-filter: blur(2px); }
 .pg-note b { color: var(--pg-ink); }
 .pg-note .mx-link { color: var(--pg-data); }
@@ -97,7 +98,7 @@
 .pg-btn-success { background: var(--ax-rw); border-color: var(--ax-rw); color: #fff; }
 .pg-linkbtn { border-color: transparent; background: none; color: var(--pg-primary); text-decoration: underline; padding-left: 2px; padding-right: 2px; }
 .pg-input { display: grid; gap: 2px; margin: 4px 0; }
-.pg-label { font-size: 12px; color: var(--pg-muted); }
+.pgv-label { font-size: 12px; color: var(--pg-muted); }
 .pg-field { display: flex; justify-content: space-between; gap: 6px; padding: 4px 8px; border: 1px solid var(--pg-line); border-radius: 4px; background: var(--pg-sheet); color: var(--pg-data); font-family: Consolas, 'Cascadia Mono', monospace; font-size: 11.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .pg-tall .pg-field { min-height: 44px; align-items: flex-start; }
 .pg-caret { color: var(--pg-muted); font-family: inherit; }

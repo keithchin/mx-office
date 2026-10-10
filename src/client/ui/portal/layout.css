@@ -10,7 +10,7 @@ html[data-theme^='portal'] body.lite.pt-has-nav.pt-rail { --pt-nav-w: 56px; }
    does), so the bar's position:sticky never held and it scrolled away, leaving the pane hanging below an
    empty strip. With body not a scroll container the window is the only one: one scrollbar, the page's. */
 html[data-theme^='portal'] body.lite.pt-has-nav { overflow: visible; }
-html[data-theme^='portal'] body.lite.pt-has-nav header.lite-bar { position: sticky; top: 0; }
+/* (The bar itself is fixed at the top in every Portal page: ui/portal/topbar.css.) */
 /* Something scrolled into view (a search result, a deep link) lands under the bar, not behind it. */
 html[data-theme^='portal']:has(body.lite.pt-has-nav) { scroll-padding-top: calc(var(--pt-h) + 9px); }
 /* What sticks in the page's own flow sticks under the bar now, not behind it (the audit log's new-entries pill). */

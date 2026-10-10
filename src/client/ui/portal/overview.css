@@ -105,6 +105,15 @@ html[data-theme^='portal'] body.lite.lite .pt-face {
   background: color-mix(in srgb, var(--face, var(--accent)) 78%, #0a1324); color: #ffffff; font: 600 11px/1 var(--font); cursor: pointer;
 }
 html[data-theme='portal-dark'] .pt-face { border-color: var(--card); }
+/* The agent's own icon (face.ts): its character from the waist up, pixel-sharp, filling the circle on a
+   light wash of its colour; the initials until it's drawn, and if it can't be. */
+/* The contact's face has no dot over its edge: it clips to its circle. */
+html[data-theme^='portal'] body.lite .pt-contact .pt-contact-face { overflow: hidden; border-radius: 50% !important; }
+html[data-theme^='portal'] :is(.pt-face, .pt-contact-face) .pt-face-px { display: none; width: 100%; height: 100%; border-radius: 50%; image-rendering: pixelated; }
+html[data-theme^='portal'] body.lite.lite :is(.pt-face, .pt-contact-face).pt-has-px { background: color-mix(in srgb, var(--face, var(--accent)) 22%, #ffffff); }
+html[data-theme='portal-dark'] body.lite.lite :is(.pt-face, .pt-contact-face).pt-has-px { background: color-mix(in srgb, var(--face, var(--accent)) 35%, #1c2639); }
+html[data-theme^='portal'] :is(.pt-face, .pt-contact-face).pt-has-px .pt-face-px { display: block; }
+html[data-theme^='portal'] :is(.pt-face, .pt-contact-face).pt-has-px .pt-face-i { display: none; }
 html[data-theme^='portal'] .pt-face:hover { z-index: 1; transform: translateY(-1px); }
 html[data-theme^='portal'] .pt-face:focus-visible { z-index: 1; outline: 2px solid var(--focus); outline-offset: 1px; }
 html[data-theme^='portal'] .pt-face-more { background: #0a1324; }
