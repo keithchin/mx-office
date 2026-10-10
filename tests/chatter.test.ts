@@ -82,7 +82,11 @@ function setup(journals: Record<string, string> = {}) {
   );
   const d = roster.data(floor.id);
   // The names the test uses: the Coordinator is Keith, like the Project Manager.
-  for (const [role, name] of [['pm', 'Keith'], ['lead-developer', 'Hedy'], ['lead-designer', 'Anita'], ['lead-tester', 'Toni'], ['chief-analyst', 'Ada']] as const) d.members[role].name = name;
+  // Every role named here, the Solo Lead too: the roster picks the others' names at random from NAME_POOL,
+  // so one left out drew 'Anita' (or Hedy, Ada) one time in thirty and two members shared a name, which the
+  // office never allows (members.rename): a journal line naming Anita was then said to both.
+  for (const [role, name] of [['pm', 'Keith'], ['lead-developer', 'Hedy'], ['lead-designer', 'Anita'], ['lead-tester', 'Toni'], ['chief-analyst', 'Ada'], ['solo-lead', 'Sol']] as const) d.members[role].name = name;
+  assert.equal(new Set(Object.values(d.members).map((m) => m.name.toLowerCase())).size, Object.keys(d.members).length, 'every member a different name');
   return { clock, floor, roster, chatter, sent, d, dataDir, journals };
 }
 
