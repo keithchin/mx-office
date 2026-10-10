@@ -7,6 +7,12 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ## Unreleased
 
 ### Fixed
+- **The Command Center's project summary stops redrawing itself when nothing changed.** The board redraws the
+  summary up to four times a second while agents work, and it built its whole panel each time; now it builds
+  nothing when what it would show is the same (the same project, facts and "… ago"s), and when something did
+  change only that section is replaced. On the performance guard's big floor, a minute of live updates built
+  about 260 summary elements instead of about 26,000. The console's typed text, focus and the chatter's scroll
+  stay put, and a summary arriving late for the project you just left no longer paints over the new one.
 - **The setup panel asks the office once per project, however often the page redraws.** Redraws that came
   together each sent their own setup request; now they share one per project, a re-check always asks again,
   and an older answer arriving late can no longer replace a newer one or show another project's stages after
