@@ -14,41 +14,66 @@ import { wizardApi } from './wizard/api';
 import { openWizard } from './wizard';
 import { deliverablesSummary } from './deliverables/summary';
 import { toolkitRow } from './toolkit/line';
+import { SetupCache } from './setup-cache';
 
 /** Asked again at most this often while nothing's happening; the board re-renders far more often than that. */
 const FRESH_MS = 15_000;
 const CHECKING_MS = 5_000;
 const ICON: Record<string, string> = { PASS: '✅', PENDING: '⏳', FAIL: '⚠️', WAIVED: '↷', MANUAL: '✋', WAITING: '✋' };
 
-let last: { floor: string; at: number; view: SetupView } | undefined;
-let timer: ReturnType<typeof setTimeout> | undefined;
+/** Each floor's answer, asked for once however many redraws want it at the same moment (setup-cache.ts). */
+const cache = new SetupCache<SetupView>(
+  (floor) => wizardApi.setup(floor),
+  (v) => (v.checking ? CHECKING_MS : FRESH_MS),
+  24,
+);
+/** Per panel element: the floor it's showing, the number of its newest draw, and its gate-check poll. */
+const panels = new WeakMap<HTMLElement, { floor?: string; gen: number; timer?: ReturnType<typeof setTimeout> }>();
+let hooked = false;
 
 /** What the panel last fetched for `floor`, if anything (the Command Center's "Needs you" reads its ✋ gates). */
-export const cachedSetup = (floor: string | undefined): SetupView | undefined => (floor && last?.floor === floor ? last.view : undefined);
+export const cachedSetup = (floor: string | undefined): SetupView | undefined => (floor ? cache.peek(floor) : undefined);
 
 export interface SetupPanelDeps {
   net: Net;
   go(floor: string): void;
 }
 
-/** Draws the panel into `el` for `floor` (nothing when the floor isn't a toolkit project being set up). */
+/**
+ * Draws the panel into `el` for `floor` (nothing when the floor isn't a toolkit project being set up).
+ * Only the newest call for `el` draws: an answer for a floor the panel has moved off since, or one
+ * overtaken by a later call, is dropped. `force` asks the office again whatever is kept.
+ */
 export async function renderSetup(el: HTMLElement, floor: string | undefined, deps: SetupPanelDeps, force = false) {
-  if (!floor) return el.replaceChildren();
-  const fresh = last && last.floor === floor && Date.now() - last.at < (last.view.checking ? CHECKING_MS : FRESH_MS);
-  if (!fresh || force) {
-    try {
-      last = { floor, at: Date.now(), view: await wizardApi.setup(floor) };
-    } catch {
-      return el.replaceChildren();
-    }
+  if (!hooked) {
+    hooked = true;
+    // A deleted project's answer goes with it.
+    deps.net.onMessage((m) => void (m.t === 'project.deleted' && cache.forget(m.floor)));
   }
-  const v = last!.view;
+  let st = panels.get(el);
+  if (!st) panels.set(el, (st = { gen: 0 }));
+  const gen = ++st.gen;
+  st.floor = floor;
+  // One poll per panel at most: a new draw replaces the last one's.
+  if (st.timer) clearTimeout(st.timer);
+  st.timer = undefined;
+  if (!floor) return el.replaceChildren();
+  let v: SetupView;
+  try {
+    v = await cache.get(floor, force);
+  } catch {
+    if (st.gen === gen) el.replaceChildren();
+    return;
+  }
+  if (st.gen !== gen || st.floor !== floor) return;
   if (!v.show) return el.replaceChildren();
-  if (timer) clearTimeout(timer);
   // While gate-check runs, look again until it's done.
-  if (v.checking) timer = setTimeout(() => void renderSetup(el, floor, deps, true), CHECKING_MS);
+  if (v.checking) st.timer = setTimeout(() => void renderSetup(el, floor, deps, true), CHECKING_MS);
   el.replaceChildren(panel(el, floor, v, deps));
 }
+
+/** Lets go of what's kept for `floor` (tests; a deleted project does it by itself). */
+export const forgetSetup = (floor: string) => cache.forget(floor);
 
 /** The floor's folder isn't on the default branch, or is behind it: the stages come from the default branch, and this says so. */
 

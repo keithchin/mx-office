@@ -76,12 +76,27 @@ export const SHOTS = [
     theme: 'portal-light',
     // Two projects fill the top of the page: no empty half below them.
     viewport: '1440x700',
-    ready: async (page) => {
-      await page.waitForFunction(() => document.querySelectorAll('.ph-card').length >= 2 && [...document.querySelectorAll('.ph-card')].every((c) => /$/.test(c.textContent ?? '')), null, { timeout: 30000 });
-    },
+    // Every card's spend in (its .ph-spend, drawn once GET /api/budget/office answers): the budget feed can
+    // land after the cards, and a shot without it shows cards with no spend.
+    ready: (page, { timeout = 30000 } = {}) => readyOrSay(page, projectsLoaded, timeout, 'the Projects cards never showed their spend (.ph-card .ph-spend with a $ amount): the budget feed did not answer'),
     settle: 4000,
   },
 ];
+
+/** Whether the Projects page has drawn two cards or more, each with its spend (runs in the page). */
+export function projectsLoaded() {
+  const cards = [...document.querySelectorAll('.ph-card')];
+  return cards.length >= 2 && cards.every((c) => /\$\d/.test(c.querySelector('.ph-spend')?.textContent ?? ''));
+}
+
+/** Waits until `check` holds in the page, else fails saying what never came (not just "Timeout exceeded"). */
+async function readyOrSay(page, check, timeout, what) {
+  try {
+    await page.waitForFunction(check, null, { timeout });
+  } catch (e) {
+    throw new Error(`not ready after ${Math.round(timeout / 1000)} s: ${what} (${e?.message ?? e})`);
+  }
+}
 
 // ---- The command line ----------------------------------------------------------------------------------
 

@@ -13,6 +13,20 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   its evidence or the budget changes while the dialog is open, nothing is recorded: the dialog shows the
   evidence as it is now, keeps what you typed and asks you to confirm again. Spend from agents still at
   work doesn't count as a change. A project with no GitHub remote now records its commit too.
+- **The docs' Projects screenshot waits for the spend.** `scripts/docs-shots.mjs` took the Projects shot as soon as
+  the cards were there (its check matched any text), so a late budget feed could leave the spend off the picture.
+  It now waits until every card shows its spend, and fails with a readiness timeout saying the budget feed never
+  answered instead of saving an incomplete shot.
+- **The Command Center's project summary stops redrawing itself when nothing changed.** The board redraws the
+  summary up to four times a second while agents work, and it built its whole panel each time; now it builds
+  nothing when what it would show is the same (the same project, facts and "… ago"s), and when something did
+  change only that section is replaced. On the performance guard's big floor, a minute of live updates built
+  about 260 summary elements instead of about 26,000. The console's typed text, focus and the chatter's scroll
+  stay put, and a summary arriving late for the project you just left no longer paints over the new one.
+- **The setup panel asks the office once per project, however often the page redraws.** Redraws that came
+  together each sent their own setup request; now they share one per project, a re-check always asks again,
+  and an older answer arriving late can no longer replace a newer one or show another project's stages after
+  you switch projects. A failed request is retried on the next redraw, and a deleted project's answer is let go.
 - **The Agents and Budget pages stay smooth on a big project.** The Agents page no longer rebuilds every card
   a few times a second while agents work: only the cards that changed are redrawn (its longest stall on the
   performance guard's big floor: about 200 ms → about 100 ms). The Budget page no longer lays the whole page

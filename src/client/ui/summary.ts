@@ -5,6 +5,7 @@
 
 import { oneLine, type ActivityItem, type ProjectSummary, type SummaryAgent } from '../../shared/summary';
 import { h, timeAgo } from './dom';
+import { keepSame, syncChildren } from './keep';
 import './summary.css';
 
 /** How long a fetched summary is reused (summaryLine, and redraws close together). */
@@ -48,37 +49,104 @@ const ICON: Record<ActivityItem['kind'], string> = {
   team: '👥',
 };
 
+/** Per summary root: the newest call's number, and what it last drew (to skip drawing it again the same). */
+interface Drawn {
+  gen: number;
+  sig?: string;
+  nodes?: HTMLElement[];
+  middle?: HTMLElement;
+  after?: HTMLElement;
+}
+const roots = new WeakMap<HTMLElement, Drawn>();
+
+/**
+ * What the panel would show for `s`, as a string: the summary's facts with each time turned into the
+ * words shown for it ("12 min", "5m ago"), so a redraw that would show the same is told apart from one
+ * that wouldn't without building anything. Times not shown (when it was made, how long an agent's been
+ * quiet) are left out.
+ */
+export function summarySig(floor: string, s: ProjectSummary): string {
+  return JSON.stringify([floor, activityAll, s], (k, v: unknown) => {
+    if (k === 'generatedAt' || k === 'quietMs') return undefined;
+    if ((k === 'waitingMs' || k === 'longestMs') && typeof v === 'number') return mins(v);
+    if (k === 'activity' && Array.isArray(v)) return (v as ActivityItem[]).map((a) => [a.kind, a.text, a.at, timeAgo(a.at)]);
+    return v;
+  });
+}
+
 /**
  * Draws the panel for `floor` into `root`; call it again to refresh (it reuses a summary fetched moments ago). Never throws.
  * `middle` is a column of the caller's to keep between the details and the recent activity (the 1D view's
  * project manager console, ui/pm/console.ts): it's moved, never redrawn, so what's typed in it survives.
  * `after` is kept the same way, last (the 💬 Team chatter, ui/chatter/, or the Portal Overview's right
  * column, ui/portal/overview.ts), so its scroll stays put. Resolves with the summary it drew.
+ *
+ * Nothing is built when the panel would show what it already shows (the same project, facts and
+ * "… ago"s: summarySig); otherwise only the sections that changed go on the page (keep.ts), the rest
+ * stay as they are. Only the newest call for `root` draws: one answering after a later call (another
+ * project's summary, arriving late) resolves with nothing and leaves the panel alone.
  */
 export async function renderSummary(root: HTMLElement, floor: string | undefined, opts: { fresh?: boolean; middle?: HTMLElement; after?: HTMLElement } = {}): Promise<ProjectSummary | undefined> {
   root.classList.add('sm');
-  if (!floor) return void root.replaceChildren();
+  let st = roots.get(root);
+  if (!st) roots.set(root, (st = { gen: 0 }));
+  const gen = ++st.gen;
+  if (!floor) {
+    st.sig = st.nodes = undefined;
+    return void root.replaceChildren();
+  }
   let s: ProjectSummary;
   try {
     s = await fetchSummary(floor, opts.fresh);
   } catch (err) {
-    columns(root, opts.middle, [h('p.sm-error', {}, `Couldn't load the project summary: ${(err as Error).message}`)], [], opts.after);
+    if (st.gen !== gen) return;
+    const msg = `Couldn't load the project summary: ${(err as Error).message}`;
+    draw(root, st, `error ${floor} ${msg}`, opts, () => [[h('p.sm-error', {}, msg)], []]);
     return;
   }
-  columns(root, opts.middle, [h('div.sm-main', {}, head(s), narrative(s), callouts(s), progress(s), agents(s.agents))], [activity(s.activity)], opts.after);
+  if (st.gen !== gen) return;
+  draw(root, st, summarySig(floor, s), opts, () => [[h('div.sm-main', {}, head(s), narrative(s), callouts(s), progress(s), agents(s.agents))], [activity(s.activity)]]);
   return s;
 }
 
-/** Puts `before`, `middle`, `after` and `last` in `root`, replacing what was round `middle` and `last` without taking them out of the page (that would drop focus and scroll). */
-function columns(root: HTMLElement, middle: HTMLElement | undefined, before: HTMLElement[], after: HTMLElement[], last?: HTMLElement) {
-  if (!middle && !last) return root.replaceChildren(...before, ...after);
-  for (const c of [...root.children]) if (c !== middle && c !== last) c.remove();
-  if (middle && middle.parentElement !== root) (last?.parentElement === root ? last.before(middle) : root.append(middle));
-  if (last && last.parentElement !== root) root.append(last);
-  if (middle) {
-    middle.before(...before);
-    middle.after(...after);
-  } else last!.before(...before, ...after);
+/** Draws what `build` makes into `root`, unless it already shows that (`sig`) with the same columns round it. */
+function draw(root: HTMLElement, st: Drawn, sig: string, opts: { middle?: HTMLElement; after?: HTMLElement }, build: () => [HTMLElement[], HTMLElement[]]) {
+  const { middle, after } = opts;
+  const intact = !!st.nodes?.every((n) => n.parentElement === root) && (!middle || middle.parentElement === root) && (!after || after.parentElement === root);
+  if (st.sig === sig && st.middle === middle && st.after === after && intact) return;
+  const [before, rest] = build();
+  st.nodes = columns(root, middle, before, rest, after);
+  st.sig = sig;
+  st.middle = middle;
+  st.after = after;
+}
+
+/** The columns kept from one draw to the next, their sections compared one by one. */
+const COLUMN = '.sm-main, .sm-activity';
+
+/**
+ * Puts `before`, `middle`, `after` and `last` in `root` without taking `middle` and `last` out of the page
+ * (that would drop focus and scroll). A column already there of the same kind (.sm-main, .sm-activity)
+ * stays, with only its sections that weren't built the same replaced (keep.ts). Returns what it drew.
+ */
+function columns(root: HTMLElement, middle: HTMLElement | undefined, before: HTMLElement[], after: HTMLElement[], last?: HTMLElement): HTMLElement[] {
+  const old = [...root.children].filter((c): c is HTMLElement => c !== middle && c !== last);
+  const place = (n: HTMLElement): HTMLElement => {
+    const column = n.matches(COLUMN);
+    const same = column ? old.find((o) => o.tagName === n.tagName && o.className === n.className) : undefined;
+    // A new column's sections are remembered as built, for the next draw to compare against.
+    if (!same) {
+      if (column) keepSame(n, [...n.children]);
+      return n;
+    }
+    old.splice(old.indexOf(same), 1);
+    keepSame(same, [...n.children]);
+    return same;
+  };
+  const b = before.map(place);
+  const a = after.map(place);
+  syncChildren<ChildNode>(root, [...b, ...(middle ? [middle] : []), ...a, ...(last ? [last] : [])]);
+  return [...b, ...a];
 }
 
 function head(s: ProjectSummary): HTMLElement {
@@ -172,10 +240,19 @@ export const ACTIVITY_SHOWN = 8;
 /** Whether "More" was pressed: every row until "Fewer" (this visit). */
 let activityAll = false;
 
+/** A short key for a list of activity rows (FNV-1a over what each says and when). */
+function rowsKey(items: ActivityItem[]): string {
+  let x = 0x811c9dc5;
+  for (const a of items) for (const ch of `${a.kind}|${a.text}|${a.at}
+`) x = Math.imul(x ^ ch.charCodeAt(0), 0x01000193);
+  return `${items.length}-${(x >>> 0).toString(36)}`;
+}
+
 function activity(items: ActivityItem[]): HTMLElement {
   const shown = activityAll ? items : items.slice(0, ACTIVITY_SHOWN);
   const row = (a: ActivityItem) => h(`li.${a.kind}`, {}, h('span.sm-ico', { 'aria-hidden': 'true' }, ICON[a.kind]), h('span.sm-text', {}, a.text), h('time', { datetime: new Date(a.at).toISOString() }, timeAgo(a.at)));
-  const list = h('ol', {}, ...shown.map(row));
+  // Which rows it holds, the ones under "More" too: a list built for other rows is never kept for these (keep.ts).
+  const list = h('ol', { 'data-rows': rowsKey(items) }, ...shown.map(row));
   const more =
     items.length > ACTIVITY_SHOWN
       ? h(
