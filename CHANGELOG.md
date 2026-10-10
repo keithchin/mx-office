@@ -36,6 +36,8 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **The Portal top bar stays put.** It is fixed at the top on the project pages, Home, The Firm and setup: on Home
   and The Firm it scrolled away with the page, and scrolling the left navigation to its end scrolled the page under
   it. The navigation scrolls on its own now, and its project card and items sit flush to the pane's edges.
+- **The Overview's Team and Technical contact cards show each agent's own character**, as the office, the team
+  chatter and the escalation cards draw it, in its circle with its status dot, instead of coloured initials.
 
 
 ## 2026-10-11 · release 34 (`622bf6d`)

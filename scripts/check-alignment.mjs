@@ -238,6 +238,21 @@ function MEASURE({ scope, not, lists, tol }) {
     }
   }
 
+  // The Overview's Team and Technical contact faces: each agent's own icon (its character, ui/portal/face.ts),
+  // filling its circle and centred in it; initials only for the "+N" and an agent with no icon.
+  for (const face of document.querySelectorAll('.pt-face:not(.pt-face-more), .pt-contact-face')) {
+    // (Every agent has a character: the office draws one for any id. A face with no agent behind it, the
+    // contact card's person icon, has no initials either.)
+    if (!inScope(face) || !visible(face) || !(face.querySelector('.pt-face-i') || /^[A-Z?]{1,3}$/.test(face.textContent.trim()))) continue;
+    const px = face.querySelector('.pt-face-px');
+    if (!face.classList.contains('pt-has-px') || !px || !visible(px)) { flag('ink', face, "shows initials, not the agent's icon"); continue; }
+    const a = face.getBoundingClientRect();
+    const b = px.getBoundingClientRect();
+    const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+    const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+    if (Math.abs(dx) > tol || Math.abs(dy) > tol || b.width < a.width - 4) flag('ink', face, `the icon ${r2(b.width)}px, off its ${r2(a.width)}px circle's centre by x ${r2(dx)}, y ${r2(dy)}`);
+  }
+
   // Needs you in the Portal Overview: the console's column, its right edge on the console's.
   const ny = document.querySelector('.lite-main.on-command > #needs-you');
   const pmc = document.querySelector('.lite-main.on-command #summary > .pmc');
@@ -275,6 +290,8 @@ function MEASURE({ scope, not, lists, tol }) {
     const iconBtn = isBtn && square && (words.length === 0 || [...words].length <= 2 || el.matches('#menu.pt-avatar')) && (el.querySelector('svg') || words.length || getComputedStyle(el, '::before').content !== 'none');
     if (!avatar && !iconBtn) continue;
     if (el.closest('[data-al]') && el.closest('[data-al]') !== el) continue;
+    // A pixel-art portrait isn't a glyph to centre by its ink (its hair, a headset): checked above by its box.
+    if (el.classList.contains('pt-has-px')) continue;
     const id = `al${n++}`;
     el.dataset.al = id;
     const bt = parseFloat(c.borderTopWidth) || 0;
