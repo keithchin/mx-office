@@ -20,7 +20,7 @@ Every main view is opened in a headless browser on a big test office, with six w
 
 The numbers are named constants, `PERF_BUDGETS` in `src/shared/testlab.ts` (and `scripts/perf/budgets.mjs`, which a test keeps the same), so they can be tuned in one place.
 
-The views: the Command Center (Chat and Terminal), the Board, the team's org chart, standup and approvals, Team boards with Deliverables, Workers, Budget, the Audit log and Incidents, Settings, Home (Projects, Overview, Budget), the 2D view, the Team phone open (and its floor channel), and the phone page (`/m`). Project switches are timed on the 1D Board, the 1D Command Center, the 2D view and Home → a project, with the office's own part (from asking for the floor to getting it), the fetches that follow and any `performance.mark` timings the page sets.
+The views: the Command Center (Chat and Terminal), the Board, the team's org chart, standup and approvals, Team boards, Documents (opened, then Refresh: a fresh scan, with the office's own event-loop stalls meanwhile checked against the server budget), Workers, Budget, the Audit log and Incidents, Settings, Home (Projects, Overview, Budget), the 2D view, the Team phone open (and its floor channel), and the phone page (`/m`). Project switches are timed on the 1D Board, the 1D Command Center, the 2D view and Home → a project, with the office's own part (from asking for the floor to getting it), the fetches that follow and any `performance.mark` timings the page sets.
 
 ## The big test office
 
@@ -70,7 +70,8 @@ The run after the fixes (scale 10, six live workers, 60 s soak per view):
 | Command Center (Terminal) | 630 ms | | 194 ms | 8 % |
 | Board | 262 ms | | 166 ms | 8 % |
 | Team: org chart / standup / approvals | 340 / 229 / 358 ms | | 82 / 106 / 78 ms | under 5 % |
-| Team boards and Deliverables | 270 ms | | 125 ms | 12 % |
+| Team boards | 270 ms | | 125 ms | 12 % |
+| Documents (added 2026-10-11, a 5 s soak) | 391 ms | | 73 ms | 2 % |
 | Workers | 256 ms | | 79 ms | 12 % |
 | Budget | 438 ms | | 83 ms | 4 % |
 | Audit log / Incidents | 190 / 250 ms | | 82 / 111 ms | 5 % |

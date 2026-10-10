@@ -21,7 +21,9 @@ export function views(f, other) {
     { id: 'org', name: 'Team: org chart', path: lite('org'), ready: shown('#team-view', 10) },
     { id: 'standup', name: 'Team: standup', path: lite('standup'), ready: shown('#team-view', 5) },
     { id: 'approvals', name: 'Team: approvals', path: lite('approvals'), ready: shown('#team-view', 5) },
-    { id: 'teams', name: 'Team boards and Deliverables', path: lite('teams'), ready: shown('#teams-view', 10) },
+    { id: 'teams', name: 'Team boards', path: lite('teams'), ready: shown('#teams-view', 10) },
+    // Usable once the list is drawn (not the skeleton), and again after Refresh (a fresh scan); the office mustn't stall meanwhile.
+    { id: 'documents', name: 'Documents', path: lite('documents'), serverStalls: true, ready: shown('#documents-view .dv-page-body > .dv', 20), steps: [{ click: '#documents-view .dv-page-refresh', ready: "(() => { const b = document.querySelector('#documents-view .dv-page-refresh'); return !!b && !b.disabled && !!document.querySelector('#documents-view .dv-page-body > .dv'); })()" }] },
     { id: 'workers', name: 'Workers', path: lite('workers'), ready: shown('#workers-view', 10) },
     { id: 'budget', name: 'Budget', path: lite('budget'), ready: shown('#budget-view', 10) },
     { id: 'audit', name: 'Audit log', path: lite('audit'), storage: { 'agent-office.audit-lite.sub': 'events' }, ready: shown('#audit-view', 10) },
