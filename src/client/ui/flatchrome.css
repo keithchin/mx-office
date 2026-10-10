@@ -9,6 +9,31 @@
 .vp-ico { font-size: 16px; line-height: 1; }
 .vp-label { font-weight: 900; }
 
+/* ---- The 🎨's list of themes (ui/colortheme.ts) -------------------------------------------------------
+   A popover over the page, never in the bar's flow: fixed, so neither the bar's own layout nor a
+   scrolling/clipping bar (overflow on a phone) holds it; colortheme.ts puts it under the 🎨, its right
+   edge on the button's, kept inside the window. These rules went with the old view dropdown (the 3D
+   removal) and the list then opened inline, stretching the top bar. */
+.vp-list {
+  position: fixed; top: 0; left: 0; z-index: 1000; box-sizing: border-box; min-width: 264px; max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px); overflow: auto; margin: 0; padding: 6px; list-style: none;
+  background: var(--paper); color: var(--ink); border: var(--bw, 1px) solid var(--line); border-radius: calc(var(--radius, 8px) - 2px); box-shadow: 0 5px 0 var(--edge);
+  animation: vp-in .12s ease-out; transform-origin: top right; outline: none; text-align: left; text-transform: none; letter-spacing: normal;
+}
+.vp-list[hidden] { display: none; }
+@keyframes vp-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+.vp-opt { display: flex; align-items: center; gap: 10px; padding: 7px 9px; border-radius: 9px; cursor: pointer; }
+.vp-opt.active { background: var(--paper-2); box-shadow: inset 0 0 0 2px var(--accent); }
+.vp-opt[aria-selected=true] .vp-text b { color: var(--accent); }
+.vp-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.vp-text b { font-size: 14px; font-weight: 900; }
+.vp-text small { font-size: 11px; font-weight: 700; color: var(--muted); }
+.vp-tick { flex: none; font-weight: 900; color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .vp-list { animation: none; } }
+html[data-theme='terminal'] .vp-list { border-style: double !important; border-width: 3px !important; }
+html[data-theme='terminal'] .vp-opt.active { background: var(--ink); color: #000; box-shadow: none; text-shadow: none; }
+html[data-theme='terminal'] .vp-opt.active :is(small, b, .vp-tick) { color: #000; }
+
 /* ---- The flat views' ☰ ------------------------------------------------------------------------- */
 .lite-bar .lite-menu { width: 44px; padding: 0; justify-content: center; font-size: 20px; }
 .lite-bar .lite-menu[aria-expanded=true] { background: var(--paper-2); }
@@ -25,11 +50,12 @@ html[data-theme='terminal'] .menu-item:is(:hover, :focus-visible) { background: 
 }
 
 /* ---- The 2D Office view: a square, pixel-framed menu ----------------------------------------------- */
-body.pixel .hud-menu {
+body.pixel .vp-list, body.pixel .hud-menu {
   border: 0; border-radius: 0; background: var(--px-panel); color: var(--px-text);
   box-shadow: 0 -3px 0 0 var(--px-ink), 0 3px 0 0 var(--px-ink), -3px 0 0 0 var(--px-ink), 3px 0 0 0 var(--px-ink), inset 0 0 0 2px var(--px-panel-hi), 0 8px 0 0 var(--px-shade);
 }
 body.pixel .menu-item { border-radius: 0; color: var(--px-text); }
-body.pixel :is(.menu-item:hover, .menu-item:focus-visible) { background: var(--px-face-lo); }
+body.pixel .vp-opt { border-radius: 0; }
+body.pixel :is(.vp-opt.active, .menu-item:hover, .menu-item:focus-visible) { background: var(--px-face-lo); }
 body.pixel .lite-bar .lite-menu { width: 40px; padding: 0; font-size: 18px; }
 @media (max-width: 640px) { body.pixel .lite-bar .lite-menu { width: 32px; font-size: 15px; } }

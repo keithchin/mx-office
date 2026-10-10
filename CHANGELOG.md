@@ -4,6 +4,13 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Fixed
+- **The 🎨 theme picker opens as a dropdown again.** Since the 3D views were removed its list opened inside the
+  top bar, stretching the bar to several times its height; it is a menu under the 🎨 once more, on every page and
+  theme and on a phone, closing on a pick, Esc or a click elsewhere.
+
 ## 2026-10-10 · release 33 (`fc082cc`)
 
 ### Fixed

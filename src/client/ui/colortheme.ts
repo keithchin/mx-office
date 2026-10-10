@@ -134,8 +134,9 @@ export function onThemeChange(fn: (t: ColorTheme) => void): () => void {
 
 /**
  * The 🎨's list, a listbox under it in the view dropdown's look (ui/flatchrome.css): ↑ ↓ Home End move,
- * Enter or Space picks, Esc or Tab or a click elsewhere closes it. It hangs in the button's bar, lined
- * up with the button's right edge, so the bar's layout stays as it was.
+ * Enter or Space picks, Esc or Tab or a click elsewhere closes it. It sits in the button's bar in the
+ * DOM but is drawn over the page (fixed, see place()), lined up with the button's right edge, so the
+ * bar's layout stays as it was.
  */
 function themeList(button: HTMLElement, pick: (t: ColorTheme) => void) {
   const id = 'theme-list';
@@ -160,16 +161,35 @@ function themeList(button: HTMLElement, pick: (t: ColorTheme) => void) {
     list.setAttribute('aria-activedescendant', options[i].id);
   };
   const isOpen = () => !list.hidden;
+  /**
+   * A popover over the page (ui/flatchrome.css: position fixed): 8 px under the button, its right edge on
+   * the button's, kept inside the window. Measured back after placing, so an ancestor that makes itself
+   * the fixed list's frame (a transform or filter) can't push it off.
+   */
+  function place(opening?: unknown) {
+    // Measured without the opening animation's scale, which would skew the box read back.
+    list.style.animation = 'none';
+    const b = button.getBoundingClientRect();
+    const w = list.offsetWidth;
+    const left = Math.max(8, Math.min(Math.round(b.right - w), document.documentElement.clientWidth - w - 8));
+    const top = Math.round(b.bottom + 8);
+    list.style.left = `${left}px`;
+    list.style.top = `${top}px`;
+    const r = list.getBoundingClientRect();
+    if (Math.abs(r.left - left) > 0.5 || Math.abs(r.top - top) > 0.5) {
+      list.style.left = `${left - (r.left - left)}px`;
+      list.style.top = `${top - (r.top - top)}px`;
+    }
+    // Only the opening plays the animation again (it restarts here); a scroll or resize just moves it.
+    list.style.animation = opening === true ? '' : 'none';
+  }
   function open() {
     if (isOpen()) return;
-    // Under the button, its right edge on the button's, in whatever the bar is positioned by.
-    const host = (list.offsetParent ?? list.parentElement ?? document.body) as HTMLElement;
     list.hidden = false;
-    const hb = (list.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? host.getBoundingClientRect();
-    const b = button.getBoundingClientRect();
-    list.style.top = `${Math.round(b.bottom - hb.top + 8)}px`;
-    list.style.right = `${Math.max(8, Math.round(hb.right - b.right))}px`;
+    place(true);
     button.setAttribute('aria-expanded', 'true');
+    addEventListener('resize', place);
+    addEventListener('scroll', place, true);
     mark(Math.max(0, COLOR_THEMES.indexOf(currentTheme())));
     list.focus({ preventScroll: true });
     document.addEventListener('pointerdown', outside, true);
@@ -179,6 +199,8 @@ function themeList(button: HTMLElement, pick: (t: ColorTheme) => void) {
     list.hidden = true;
     button.setAttribute('aria-expanded', 'false');
     document.removeEventListener('pointerdown', outside, true);
+    removeEventListener('resize', place);
+    removeEventListener('scroll', place, true);
     if (refocus) button.focus({ preventScroll: true });
   }
   const choose = (i: number) => {
