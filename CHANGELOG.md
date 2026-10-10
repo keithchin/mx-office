@@ -54,6 +54,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   height, and on a phone its 🎨, avatar and zoom buttons no longer run off the screen.
 
 ### Changed
+- **The Mx mark is the office's icon.** The browser tab, bookmarks and the phone version's home-screen icon now show the top bar's **Mx** in white on the Portal navy, instead of the old pixel desk.
 - **The dark band is on the Overview only.** The floor's line (branch, who's here, the budget chip, Running | Pause)
   and the progress bar show on General › Overview; the other pages have their header alone, their content starting
   at the same height on each. The budget is also on the Budget page and the top bar's office chip; Pause and Resume
