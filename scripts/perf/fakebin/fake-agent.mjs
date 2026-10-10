@@ -223,12 +223,41 @@ const dd = args.indexOf('--');
 if (mode === 'turn' && dd >= 0 && args[dd + 1]) setTimeout(() => turn(args.slice(dd + 1).join(' ')), 300);
 if (process.env.FAKE_ESCALATE) setTimeout(() => escalate('Which login flow should the leave app use? (fake)'), +process.env.FAKE_ESCALATE || 1000);
 
-// The office types prompts into the terminal; Enter (\r) ends one.
+// The office types prompts into the terminal as a bracketed paste (\x1b[200~ … \x1b[201~), then Enter (\r)
+// ends one. As in Claude Code, a newline inside the paste is part of the prompt, not the end of it: a
+// multi-line message (an answer, then its resume line) is one prompt. A Linux terminal hands the paste
+// over line by line, so where a prompt ends is worked out here, across reads, rather than by splitting
+// each read on newlines (which made each of those lines a prompt of its own off Windows).
+const PASTE_START = '\x1b[200~';
+const PASTE_END = '\x1b[201~';
 let buf = '';
+let cur = '';
+let pasting = false;
 process.stdin.on('data', (d) => {
   buf += d.toString();
-  const parts = buf.split(/\r\n|\r|\n/);
-  buf = parts.pop() ?? '';
+  const parts = [];
+  let i = 0;
+  while (i < buf.length) {
+    if (buf.startsWith(PASTE_START, i)) {
+      pasting = true;
+      i += PASTE_START.length;
+    } else if (buf.startsWith(PASTE_END, i)) {
+      pasting = false;
+      i += PASTE_END.length;
+    } else if (buf[i] === '\x1b' && buf.length - i < PASTE_START.length && (PASTE_START.startsWith(buf.slice(i)) || PASTE_END.startsWith(buf.slice(i)))) {
+      break; // the rest of a paste marker is still to come
+    } else {
+      const c = buf[i++];
+      if (c === '\r' || c === '\n') {
+        if (pasting) cur += '\n';
+        else {
+          parts.push(cur);
+          cur = '';
+        }
+      } else cur += c;
+    }
+  }
+  buf = buf.slice(i);
   if (waiting && parts.length) {
     // The answer to its permission prompt: the turn carries on and ends.
     waiting = false;

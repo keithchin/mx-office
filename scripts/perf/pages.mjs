@@ -9,6 +9,7 @@
 // run.mjs starts the test office and calls runPages; this CLI is for an office you started yourself (a
 // TEST one: it signs in and watches like a person would).
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { PERF_BUDGETS } from './budgets.mjs';
@@ -21,17 +22,32 @@ const ASSETS = path.join(REPO, 'dist', 'public', 'assets');
 const MB = 1024 * 1024;
 const round = (n, d = 1) => (n == null ? null : Math.round(n * 10 ** d) / 10 ** d);
 
-/** The Chromium playwright-core installed, or undefined to let it find one. */
+/** Where `playwright-core install` puts browsers on this machine (PLAYWRIGHT_BROWSERS_PATH, or the OS's cache folder). */
+function playwrightRoots() {
+  if (process.env.PLAYWRIGHT_BROWSERS_PATH && process.env.PLAYWRIGHT_BROWSERS_PATH !== '0') return [process.env.PLAYWRIGHT_BROWSERS_PATH];
+  const home = os.homedir();
+  if (process.platform === 'win32') return [path.join(process.env.LOCALAPPDATA ?? path.join(home, 'AppData', 'Local'), 'ms-playwright')];
+  if (process.platform === 'darwin') return [path.join(home, 'Library', 'Caches', 'ms-playwright')];
+  return [path.join(process.env.XDG_CACHE_HOME || path.join(home, '.cache'), 'ms-playwright')];
+}
+
+/**
+ * The full Chromium playwright-core installed, or undefined to let it find one. The full browser on every
+ * OS, as the guard has always measured on Windows: left to itself, playwright-core runs headless on its
+ * stripped-down headless shell, which kills a page that asks for on-device speech recognition (the
+ * dictation button) as a "bad IPC message", so a guard on Linux crashed where Windows didn't.
+ */
 export function findChrome() {
-  const root = path.join(process.env.LOCALAPPDATA ?? '', 'ms-playwright');
-  try {
-    const dirs = fs.readdirSync(root).filter((d) => /^chromium-\d+$/.test(d)).sort((a, b) => Number(b.split('-')[1]) - Number(a.split('-')[1]));
-    for (const d of dirs) for (const sub of ['chrome-win64/chrome.exe', 'chrome-win/chrome.exe', 'chrome-linux/chrome']) {
-      const p = path.join(root, d, sub);
-      if (fs.existsSync(p)) return p;
+  for (const root of playwrightRoots()) {
+    try {
+      const dirs = fs.readdirSync(root).filter((d) => /^chromium-\d+$/.test(d)).sort((a, b) => Number(b.split('-')[1]) - Number(a.split('-')[1]));
+      for (const d of dirs) for (const sub of ['chrome-win64/chrome.exe', 'chrome-win/chrome.exe', 'chrome-linux64/chrome', 'chrome-linux/chrome', 'chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium', 'chrome-mac/Chromium.app/Contents/MacOS/Chromium']) {
+        const p = path.join(root, d, sub);
+        if (fs.existsSync(p)) return p;
+      }
+    } catch {
+      // none there
     }
-  } catch {
-    // none there
   }
   return undefined;
 }
