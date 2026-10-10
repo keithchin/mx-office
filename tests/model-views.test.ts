@@ -116,7 +116,7 @@ test('the Page view is read only when it is shown: the client reads a page in do
   const { readFileSync } = await import('node:fs');
   const views = readFileSync(path.join(import.meta.dirname, '../src/client/ui/model/doc-views.ts'), 'utf8');
   const index = readFileSync(path.join(import.meta.dirname, '../src/client/ui/model/index.ts'), 'utf8');
-  assert.match(views, /if \(!kind \|\| !doc\.mdl \|\| !visual\) return false;[\s\S]*page\.show\(doc\.mdl\)/, 'the MDL is read only on the visual view');
+  assert.match(views, /if \(!kind \|\| !doc\.mdl \|\| mode === 'mdl'\) return false;[\s\S]*page\.show\(doc\.mdl\)/, 'the MDL is read only on the visual view');
   assert.doesNotMatch(index, /pageModel\(|parseMdl\(/, 'opening a document reads no MDL');
 });
 

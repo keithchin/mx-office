@@ -7,6 +7,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ## Unreleased
 
 ### Added
+- **Pages in the Model tab have a Preview: the page as the running app would look.** Pages, snippets and layouts now
+  switch between **Structure | Preview | MDL**. Preview draws the page inside its layout (top bar and menu), with its
+  snippets filled in, form fields per attribute type, data grids as tables with sample rows, list views as cards and
+  buttons in their styles, in an Atlas-like look of our own, with sample values made up from the attribute names and a
+  Desktop / Tablet / Phone width. It runs in a sealed frame (no scripts, nothing fetched) and is drawn only while
+  shown, in about a millisecond for travel-approval's largest pages. The Structure view lost its banner; a small
+  **Live app ↗** link sits beside the switch instead. Pages whose MDL starts with a `/** … */` comment are now read too.
 - **Pages in the Model tab have a Page view next to their MDL.** A page, snippet or layout opens as a structure
   preview laid out like Studio Pro's page editor: layout grids in rows and columns, containers, data views, list
   views and data grids with their columns, text, buttons, inputs labelled with their attribute, snippets and the

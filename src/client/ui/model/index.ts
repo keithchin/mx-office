@@ -124,6 +124,8 @@ export function modelView(root: HTMLElement): ModelView {
       renderSide();
     },
     open: (type, qn) => openDoc({ type, qn }),
+    // The Preview's snippets, layout and menu, from the ref on show (each kept by its content on the server).
+    fetch: (type, qn) => (floor ? modelApi.doc(floor, ref, type, qn, false).then((r) => (r.doc.kind === 'text' ? r.doc.mdl || null : null)) : Promise.resolve(null)),
   });
   const explorerBtn = h('button.btn.mx-explorer-btn', { type: 'button', 'aria-label': 'App Explorer' }, '☰ Explorer');
   const canvas = new Canvas(canvasHost, {
