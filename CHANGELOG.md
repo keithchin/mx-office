@@ -7,6 +7,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ## Unreleased
 
 ### Fixed
+- **The setup panel asks the office once per project, however often the page redraws.** Redraws that came
+  together each sent their own setup request; now they share one per project, a re-check always asks again,
+  and an older answer arriving late can no longer replace a newer one or show another project's stages after
+  you switch projects. A failed request is retried on the next redraw, and a deleted project's answer is let go.
 - **The Agents and Budget pages stay smooth on a big project.** The Agents page no longer rebuilds every card
   a few times a second while agents work: only the cards that changed are redrawn (its longest stall on the
   performance guard's big floor: about 200 ms → about 100 ms). The Budget page no longer lays the whole page
