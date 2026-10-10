@@ -4,9 +4,9 @@
 // when the units can be read; otherwise from mxcli (its elk description of the module's entities and
 // associations, and each entity's `@Position` in its MDL).
 
-import { doc, list, point, str, typeOf, type BsonDoc } from './bson.js';
+import { doc, list, point, str, strings, typeOf, type BsonDoc } from './bson.js';
 import { short } from './flow-actions.js';
-import type { DmAssociation, DmAttribute, DmEntity, DomainDoc, EntityKind } from '../../shared/model.js';
+import type { DmAccessRule, DmAssociation, DmAttribute, DmEntity, DmRight, DomainDoc, EntityKind } from '../../shared/model.js';
 
 const ATTR_TYPE: Record<string, string> = {
   StringAttributeType: 'String',
@@ -81,6 +81,7 @@ export function parseDomain(module: string, unit: BsonDoc, others: PersistableOf
     if (str(e.Image)) ent.image = true;
     if (str(e.Documentation)) ent.doc = str(e.Documentation);
     if (service) ent.service = service;
+    ent.access = accessRules(e);
     return ent;
   });
   const assoc = (a: BsonDoc, cross: boolean): DmAssociation => {
@@ -109,6 +110,24 @@ export function parseDomain(module: string, unit: BsonDoc, others: PersistableOf
     annotations: list(unit.Annotations).map((a) => ({ id: str(a.$ID), text: str(a.Caption).replace(/\r\n/g, '\n'), ...point(a.Location), w: Number(a.Width) || 200 })),
     source: 'units',
   };
+}
+
+const RIGHT: Record<string, DmRight> = { ReadOnly: 'R', ReadWrite: 'RW' };
+
+/** An entity's access rules: per rule its module roles, create and delete, its XPath, and each member's right (no access left out). */
+export function accessRules(e: BsonDoc): DmAccessRule[] {
+  return list(e.AccessRules).map((r) => {
+    const rule: DmAccessRule = { roles: strings(r.AllowedModuleRoles), create: r.AllowCreate === true, delete: r.AllowDelete === true, attrs: {}, assocs: {} };
+    const xpath = str(r.XPathConstraint).trim();
+    if (xpath) rule.xpath = xpath;
+    for (const m of list(r.MemberAccesses)) {
+      const right = RIGHT[str(m.AccessRights)];
+      if (!right) continue;
+      if (str(m.Attribute)) rule.attrs[short(str(m.Attribute))] = right;
+      else if (str(m.Association)) rule.assocs[short(str(m.Association))] = right;
+    }
+    return rule;
+  });
 }
 
 /** mxcli's elk description of a module's domain model (`describe --format elk entity M.E`). */

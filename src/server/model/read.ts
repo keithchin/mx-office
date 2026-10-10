@@ -17,6 +17,8 @@ import type { DomainDoc, FlowDoc } from '../../shared/model.js';
 
 /** Bumped when a diagram read from the units changes shape, so older answers are read again. */
 export const READ_VERSION = 2;
+/** The same for domain models alone (3: entities' access rules), so flows already kept stay kept. */
+export const DOMAIN_VERSION = 3;
 
 export interface Read<T> {
   key: string;
@@ -77,7 +79,7 @@ export async function readDomain(cm: CommitModel, module: string): Promise<Read<
     const pe = ou ? parseDomain(moduleOf(g), ou).entities.find((x) => x.name === short(g)) : undefined;
     if (pe) persistable.set(g, pe.kind === 'persistent');
   }
-  const key = keyOf(`v${READ_VERSION}`, 'domain', module, cm.hashOf(`domainmodel:${module}`), ...[...deps].sort());
+  const key = keyOf(`v${DOMAIN_VERSION}`, 'domain', module, cm.hashOf(`domainmodel:${module}`), ...[...deps].sort());
   return { key, build: () => parseDomain(module, unit, (qn) => persistable.get(qn) ?? systemPersistable(qn)) };
 }
 
