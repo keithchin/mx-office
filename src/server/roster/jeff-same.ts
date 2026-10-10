@@ -76,9 +76,11 @@ export class SameAsk {
     const list = open.slice(-OPEN_MAX);
     let timer: NodeJS.Timeout | undefined;
     try {
+      // Not unref'd: the raise awaits this deadline, so it has to fire even when nothing else keeps the
+      // process going (unref'd, a judge that never answered left the raise pending forever on a quiet
+      // event loop, which is how Linux CI ended the test). It's cleared as soon as Jeff answers.
       const late = new Promise<undefined>((resolve) => {
         timer = setTimeout(() => resolve(undefined), this.timeoutMs);
-        timer.unref?.();
       });
       const v = await Promise.race([judge(sameState(ask, list), sameQuestions(list.length), { max: STATE_MAX, keep: 'head' }), late]);
       return readSame(v, list);

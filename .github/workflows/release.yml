@@ -6,6 +6,12 @@ name: Release
 #
 # Pull requests get the same build, tests and a real install of the packed release through
 # install.sh, but publish nothing.
+#
+# The perf job runs the performance guard's quick check (npm run test:perf:quick: the main views on a
+# big test office in headless Chromium, the journey, a minute of the busy office; fake agents only)
+# against the unchanged budgets. Its pass or fail is the guard's own: a browser that can't launch, or a
+# budget missed, fails it. Its result.json, summary.md and screenshots are uploaded every time. It
+# runs beside the release job and doesn't hold up publishing, but a failure makes the run red.
 
 on:
   push:
@@ -13,15 +19,19 @@ on:
     paths:
       - 'src/**'
       - 'bin/**'
+      - 'scripts/**'
+      - 'tests/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig*.json'
       - 'vite.config.ts'
+      - 'install.sh'
       - '.github/workflows/release.yml'
   pull_request:
     paths:
       - 'src/**'
       - 'bin/**'
+      - 'scripts/**'
       - 'tests/**'
       - 'package.json'
       - 'package-lock.json'
@@ -109,3 +119,78 @@ jobs:
             exit 0
           fi
           gh release create "$TAG" agent-office.tgz --target "$GITHUB_SHA" --title "$TAG" --generate-notes --latest
+
+  perf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install and build
+        run: npm ci # its prepare script builds the client and the server
+
+      - name: Install Chromium for the repository's playwright-core
+        # playwright-core's own CLI, so the browser is the build that version expects (package-lock.json
+        # pins it); --with-deps adds the system libraries it needs on the runner.
+        run: |
+          npx --no-install playwright-core --version
+          npx --no-install playwright-core install --with-deps chromium
+
+      - name: Check that the browser launches (blocks the guard if it can't)
+        # The same Chromium the guard uses (scripts/perf/pages.mjs findChrome: the full browser, not the headless shell).
+        run: |
+          node --input-type=module -e "
+            import { chromium } from 'playwright-core';
+            import { findChrome } from './scripts/perf/pages.mjs';
+            const exe = findChrome();
+            if (!exe) { console.error('BLOCKED: no Chromium from playwright-core install, so the performance guard cannot run'); process.exit(1); }
+            try {
+              const b = await chromium.launch({ headless: true, executablePath: exe });
+              console.log('Chromium', b.version(), 'launches from', exe);
+              await b.close();
+            } catch (e) {
+              console.error('BLOCKED: headless Chromium did not launch, so the performance guard cannot run:', e.message);
+              process.exit(1);
+            }
+          " browser-check
+
+      - name: Performance guard (quick)
+        env:
+          # The guard's throwaway test offices, and its results under results/<run id>/.
+          AGENT_OFFICE_TEST_OFFICES: ${{ runner.temp }}/test-offices
+        run: |
+          mkdir -p "$AGENT_OFFICE_TEST_OFFICES"
+          npm run test:perf:quick
+
+      - name: Performance guard summary
+        if: always()
+        env:
+          AGENT_OFFICE_TEST_OFFICES: ${{ runner.temp }}/test-offices
+        run: |
+          shopt -s nullglob
+          files=("$AGENT_OFFICE_TEST_OFFICES"/results/*/summary.md)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "The performance guard wrote no summary (it didn't get as far as running)." >> "$GITHUB_STEP_SUMMARY"
+          else
+            cat "${files[@]}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          for f in "$AGENT_OFFICE_TEST_OFFICES"/results/*/result.json; do
+            node -e "const r = require(process.argv[1]); console.log((r.ok ? 'PASS' : 'FAIL') + ': ' + r.suite + (r.error ? ' (' + r.error + ')' : '')); for (const x of r.failures ?? []) console.log('  - ' + x);" "$f"
+          done
+
+      - name: Upload the performance guard's results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-guard-results
+          path: |
+            ${{ runner.temp }}/test-offices/results/**/result.json
+            ${{ runner.temp }}/test-offices/results/**/summary.md
+            ${{ runner.temp }}/test-offices/results/**/*.png
+          if-no-files-found: warn
+          retention-days: 30

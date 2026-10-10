@@ -45,6 +45,10 @@ export interface CheckDeps {
   secrets(): (string | undefined)[];
 }
 
+/** Path rules for the machine the checks describe (d.platform), not the one the code runs on: the same on a
+ * real machine, and a Windows machine modelled in a test on Linux keeps its Windows paths. */
+const pathFor = (d: Pick<CheckDeps, 'platform'>) => (d.platform === 'win32' ? path.win32 : path.posix);
+
 const firstLine = (s: string) => s.split(/\r?\n/).find((l) => l.trim())?.trim() ?? '';
 
 /** Whether a file is there (and, off Windows, can be run). */
@@ -133,11 +137,12 @@ const CHECKS: Record<PrereqId, Check> = {
   async 'claude-auth'(d) {
     const byEnv = CLAUDE_ENV.find((k) => d.env[k]);
     if (byEnv) return { status: 'ok', text: `Signed in through ${byEnv}` };
-    const dir = d.env.CLAUDE_CONFIG_DIR ? path.resolve(d.env.CLAUDE_CONFIG_DIR) : path.join(d.home, '.claude');
-    if (await d.exists(path.join(dir, '.credentials.json'))) return { status: 'ok', text: 'Signed in (Claude Code’s sign-in is on this machine)' };
+    const p = pathFor(d);
+    const dir = d.env.CLAUDE_CONFIG_DIR ? p.resolve(d.env.CLAUDE_CONFIG_DIR) : p.join(d.home, '.claude');
+    if (await d.exists(p.join(dir, '.credentials.json'))) return { status: 'ok', text: 'Signed in (Claude Code’s sign-in is on this machine)' };
     // macOS keeps it in the keychain, which isn't looked at: say so rather than call it missing.
     if (d.platform === 'darwin') return { status: 'warn', text: 'Couldn’t tell (macOS keeps the sign-in in the keychain)', fix: 'Run claude once in a terminal and sign in with /login if it asks.' };
-    return { status: 'missing', text: 'No Claude Code sign-in found for this Windows user', fix: 'Run claude once in a terminal and sign in (/login), then Re-check.' };
+    return { status: 'missing', text: `No Claude Code sign-in found for this ${d.platform === 'win32' ? 'Windows user' : 'user'}`, fix: 'Run claude once in a terminal and sign in (/login), then Re-check.' };
   },
   async studio(d) {
     const m = d.mendix();
@@ -152,7 +157,8 @@ const CHECKS: Record<PrereqId, Check> = {
   },
   async jq(d) {
     const dir = d.jqDir();
-    const p = (dir && (await d.exists(path.join(dir, 'jq.exe'))) ? path.join(dir, 'jq.exe') : undefined) ?? (await d.find('jq'));
+    const exe = dir ? pathFor(d).join(dir, 'jq.exe') : undefined;
+    const p = (exe && (await d.exists(exe)) ? exe : undefined) ?? (await d.find('jq'));
     if (p) return { status: 'ok', text: `jq at ${p}`, path: p };
     return { status: 'missing', text: 'No jq found', fix: 'winget install jqlang.jq, then restart the office (or set AGENT_OFFICE_JQ_DIR).' };
   },

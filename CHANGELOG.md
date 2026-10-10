@@ -4,6 +4,36 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Fixed
+- **Squash-merged worktrees are tidied on machines with no git name set.** The worktree cleanup works out a
+  squash merge with a throwaway commit only it reads; on a machine with no git user configured (a fresh office
+  machine, a CI runner) git refused to make it, so every squash-merged worktree was kept as "not merged". That
+  commit now brings its own identity. Worktrees with uncommitted or unpushed work are still never removed.
+- **Jeff's "is it the same ask?" always gives up after its 10 seconds.** Its deadline didn't keep the office's
+  process going, so with nothing else running a judge that never answered left the escalation waiting forever.
+- **First-run checks describe the machine they check.** Where Claude Code's sign-in and jq are looked for now
+  follows that machine's path rules, and off Windows a missing sign-in no longer says "this Windows user".
+- **The performance guard runs on Linux.** Three things only worked on Windows: the fake agent's launcher
+  wasn't executable in a Linux checkout (the busy office measured an idle office), the fake agent took each line
+  of a multi-line message for a prompt of its own (it now reads the office's bracketed paste as one prompt, as
+  Claude Code does), and off Windows the guard ran Playwright's stripped-down headless shell, which kills a page
+  that asks for on-device speech recognition; it now uses the full Chromium on every OS, as on Windows.
+
+### Changed
+- **CI on Linux is green and dependable.** The tests that only passed on a fast or Windows machine now use
+  controlled events: the clone-restart test lets its fake clone finish on a signal and keep reporting progress
+  (and a new test checks that a picked-up clone that goes quiet is still stopped as stalled), the "making a
+  worktree never blocks the event loop" test counts event-loop turns instead of 5 ms timer ticks, the worktree
+  cleanup has a test without any git identity, and the surviving-terminal test also checks a worker waiting on
+  someone keeps that state and that nothing is typed into either terminal.
+- **CI runs on changes to `scripts/`, `tests/` and `install.sh` too**, not only the app's own folders.
+- **CI runs the performance guard's quick check** (`npm run test:perf:quick`) in a job of its own, in headless
+  Chromium installed for the repository's `playwright-core`, with the budgets unchanged. A browser that can't
+  launch fails it, a missed budget fails it, and its `result.json`, `summary.md` and screenshots are uploaded
+  every time (the run's `perf-guard-results` artifact). It doesn't hold up the release job.
+
 ## 2026-10-10 · release 32 (`6fbdbc6`)
 
 ### Fixed
