@@ -66,7 +66,8 @@ import './shared/perfwatch-on';
 import { batched } from './ui/batch';
 import { floorLoading } from './ui/loading/floor';
 import { mountProgressBar } from './ui/progress';
-import { openFloorDeliverablesNow } from './ui/deliverables/summary';
+import { documentsPage } from './ui/deliverables/page';
+import { documentsOpener, openDocuments } from './ui/deliverables/open';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
 if (leaveForHome()) await new Promise(() => {});
@@ -236,8 +237,8 @@ const model = modelView($('model-view'));
 const budget = budgetUi(net, { root: $('budget-view'), visible: () => tab === 'budget', open: () => showTab('budget'), go: (to) => (to === 'settings' ? showSettings('team') : showTab(to)) });
 // The floor's run state beside the budget chip: ▶ running, ⏸ paused, ⏳ a run going, and its one action (ui/project-run/).
 mountRunToggle();
-// The project's progress above the tabs: a phase opens the setup panel, the deliverables or the acceptance record (ui/progress/).
-mountProgressBar($('progress-bar'), { setup: () => goToNeed({ to: 'setup' }), deliverables: openFloorDeliverablesNow });
+// The project's progress above the tabs: a phase opens the setup panel, the Documents page or the acceptance record (ui/progress/).
+mountProgressBar($('progress-bar'), { setup: () => goToNeed({ to: 'setup' }), deliverables: openDocuments });
 // ⚙️ Settings: every setting, a section at a time (ui/settings/page.ts), its section in the address (&section=workers).
 const settingsPage = flatSettings($('settings-view'), session, (section) => tab === 'settings' && setAddress({ section }));
 /** Settings, open at `section`: what every settings link on this page does (Needs you, the ☰, the team's Autonomy chip). */
@@ -249,15 +250,18 @@ let pendingSection: SettingsSectionId | undefined = isSettingsSection(askedSecti
 const audit = auditView($('audit-view'), { floor: () => store.floor ?? undefined, floors: () => store.floors, admin: () => store.me.admin, storeKey: 'agent-office.audit-lite' });
 net.onMessage((msg) => audit.onMessage(msg));
 store.on('floor', () => audit.floorChanged());
-type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | 'model' | Pane | 'teams' | 'audit' | 'budget' | 'settings' | 'tests';
+type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | 'model' | Pane | 'teams' | 'documents' | 'audit' | 'budget' | 'settings' | 'tests';
+// 📄 Every team's documents by stage (ui/deliverables/page.ts); every opener of it shows this tab.
+const documents = documentsPage($('documents-view'));
+documentsOpener(() => showTab('documents'));
 // 🧪 Test mode (ui/testlab/): no tab button of its own; the ☰, the home page and ⚙️ Settings › Testing open it.
 const tests = testlabView($('tests-view'));
 // The team's panes are tabs of their own (flattened from one Team tab); an old "team" means its org chart. Its settings are ⚙️ Settings › Team.
 const TEAM_PANES: readonly Pane[] = ['org', 'standup', 'approvals'];
 const isPane = (t: unknown): t is Pane => TEAM_PANES.includes(t as Pane);
-const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || t === 'model' || isPane(t) || t === 'teams' || t === 'audit' || t === 'budget' || t === 'settings' || t === 'tests';
-// ?tab=agents is the Agents page's own name for its id (workers, kept so saved links and state still work).
-const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : t === 'agents' ? 'workers' : isTab(t) ? t : undefined);
+const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || t === 'model' || isPane(t) || t === 'teams' || t === 'documents' || t === 'audit' || t === 'budget' || t === 'settings' || t === 'tests';
+// ?tab=agents is the Agents page's own name for its id (workers, kept so saved links and state still work); an old ?tab=deliverables is Documents.
+const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : t === 'agents' ? 'workers' : t === 'deliverables' ? 'documents' : isTab(t) ? t : undefined);
 // Entering a project opens its Command Center; a link that names a tab (?tab=team) opens that one, and a
 // reload of this browser tab keeps the tab it showed (shared/start-tab.ts).
 let tab: Tab = startTab(asTab(askedTab), isReload(), asTab(sessionTab()), 'command');
@@ -279,6 +283,10 @@ function showTab(t: Tab) {
   teams.address(t);
   $('tab-teams').classList.toggle('on', t === 'teams');
   $('teams-view').classList.toggle('hidden', t !== 'teams');
+  $('tab-documents').classList.toggle('on', t === 'documents');
+  $('documents-view').classList.toggle('hidden', t !== 'documents');
+  if (t === 'documents') documents.show();
+  else documents.hide();
   $('tab-command').classList.toggle('on', t === 'command');
   $('tab-board').classList.toggle('on', t === 'board');
   $('tab-workers').classList.toggle('on', t === 'workers');
@@ -356,6 +364,7 @@ $('tab-git').addEventListener('click', () => showTab('git'));
 $('tab-model').addEventListener('click', () => showTab('model'));
 for (const p of TEAM_PANES) $(`tab-${p}`).addEventListener('click', () => showTab(p));
 $('tab-teams').addEventListener('click', () => showTab('teams'));
+$('tab-documents').addEventListener('click', () => showTab('documents'));
 $('tab-audit').addEventListener('click', () => showTab('audit'));
 $('tab-settings').addEventListener('click', () => showTab('settings'));
 $('tab-budget').addEventListener('click', () => showTab('budget'));
@@ -521,7 +530,6 @@ portal = portalLayout({
   openWorker,
   openIssue: kanban.openIssue,
   openPull: kanban.openPull,
-  documents: () => void (store.floor && openFloorDeliverablesNow(store.floor)),
   live: () => ((s) => (s ? { status: s.status, url: appUrl(s) } : undefined))(live.current()),
   budget: () => ((v) => (v ? { spent: v.spent, total: v.settings.total } : undefined))(budget.feed.floor()),
   setup: () => cachedSetup(store.floor ?? undefined),

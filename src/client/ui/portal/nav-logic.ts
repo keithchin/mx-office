@@ -1,14 +1,14 @@
 // What the Portal left navigation of the 1D view shows and remembers, without the page (ui/portal/nav.ts
 // draws it): its groups and their items, each item one of the 1D view's tabs (the ids lite.ts's showTab
-// and ?tab= know) or an action (the deliverables window, the live app, Studio Pro); which group a tab is
+// and ?tab= know) or an action (the live app, Studio Pro); which group a tab is
 // in, the page's name for the bar and the header, which groups are open and whether the pane is folded
 // to its icon rail (kept per viewer in this browser), and what a closed group's badge says. Pure, so
 // tests/portal-nav.test.ts runs it.
 
 /** The 1D view's tabs (lite.ts's Tab type, the same ids). */
-export type NavTab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | 'model' | 'org' | 'standup' | 'approvals' | 'teams' | 'audit' | 'budget' | 'settings' | 'tests';
+export type NavTab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | 'model' | 'org' | 'standup' | 'approvals' | 'teams' | 'documents' | 'audit' | 'budget' | 'settings' | 'tests';
 /** The items that do something rather than open a tab. */
-export type NavAction = 'documents' | 'view-app' | 'studio';
+export type NavAction = 'view-app' | 'studio';
 
 export type GroupId = 'general' | 'pm' | 'insights' | 'repo' | 'deploy' | 'monitor';
 export type GroupIcon = 'home' | 'kanban' | 'chart' | 'branch' | 'rocket' | 'pulse';
@@ -44,7 +44,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       tab('command', 'Overview', 'The project at a glance: what needs you, the project console, the team and recent activity'),
       tab('org', 'Team', 'The project team: the Project Coordinator and the Leads, who covers what'),
       tab('teams', 'Team boards', 'A board per team: its own cards, Lead, panels and journal'),
-      action('documents', 'Documents', 'The deliverables, every team’s, by stage'),
+      tab('documents', 'Documents', 'Every team’s documents by toolkit stage: on main, on a branch, drafts and what’s still missing'),
     ],
   },
   {

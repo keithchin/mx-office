@@ -5,7 +5,7 @@
 
 import { isDeliverablePath, kindOf, type DeliverableFile, type DeliverablesView, type DeliverableWhere } from '../../../shared/deliverables';
 import { resolveDocLink } from '../../../shared/docs';
-import { h, openModal } from '../dom';
+import { h, openModal, type Modal } from '../dom';
 import { markdownFile } from '../markdown';
 import { renderMermaid } from './mermaid';
 
@@ -63,8 +63,14 @@ async function csvTable(floor: string, src: string, path: string): Promise<HTMLE
   );
 }
 
-/** Opens `file` (found at `where`, else its best place) in a window. `view` finds the BRD report for a BRD. */
-export function openDeliverable(floor: string, file: Pick<DeliverableFile, 'path' | 'where'> & Partial<DeliverableFile>, view?: DeliverablesView, where = file.where[0]) {
+/** The document showing now: one at a time, so a second click on its link (or a quick double click) doesn't open another. */
+let showing: { key: string; modal: Modal } | undefined;
+
+/** Opens `file` (found at `where`, else its best place) in a window, or keeps the one showing it. `view` finds the BRD report for a BRD. */
+export function openDeliverable(floor: string, file: Pick<DeliverableFile, 'path' | 'where'> & Partial<DeliverableFile>, view?: DeliverablesView, where = file.where[0]): Modal {
+  const key = `${floor}|${where?.src ?? 'main'}|${file.path}`;
+  if (showing?.key === key) return showing.modal;
+  showing?.modal.close();
   const path = file.path;
   const kind = kindOf(path);
   const src = where?.src ?? 'main';
@@ -89,7 +95,8 @@ export function openDeliverable(floor: string, file: Pick<DeliverableFile, 'path
     ),
     body,
   );
-  const modal = openModal(win, { doing: `reading ${path.slice(path.lastIndexOf('/') + 1)}`, reading: true });
+  const modal = openModal(win, { doing: `reading ${path.slice(path.lastIndexOf('/') + 1)}`, reading: true, onClose: () => showing?.modal === modal && (showing = undefined) });
+  showing = { key, modal };
   others?.addEventListener('change', () => {
     modal.close();
     openDeliverable(floor, file, view, file.where[Number(others.value)]);
