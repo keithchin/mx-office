@@ -29,6 +29,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   `DS_` → DataSources, `OCH_` → OnChange, `VAL_`, `DEC_`, `SCH_`, `BCO_`, `ACO_`, and Stubs) with mxcli's folder
   clause, never moves documents a person organised or Marketplace and System modules, and lists moves in the PR.
 
+### Changed
+- **The Mx mark is the office's icon.** The browser tab, bookmarks and the phone version's home-screen icon now show the top bar's **Mx** in white on the Portal navy, instead of the old pixel desk.
+
 ## 2026-10-11 · release 34 (`622bf6d`)
 
 ### Fixed
