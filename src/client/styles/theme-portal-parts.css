@@ -19,7 +19,7 @@ html[data-theme^='portal'] body.lite.lite :is(.btn.primary, .btn.on) { backgroun
 html[data-theme^='portal'] body.lite.lite :is(.btn.primary, .btn.on):hover:not(:disabled) { background: #0f5fd6; border-color: #0f5fd6; }
 html[data-theme^='portal'] body.lite.lite .btn.danger { background: var(--bad); border-color: var(--bad); color: #ffffff; }
 html[data-theme^='portal'] body.lite.lite .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
-html[data-theme^='portal'] body.lite.lite .close { width: 28px; height: 28px; min-height: 28px; padding: 0; border-color: transparent; background: transparent; color: var(--muted); }
+html[data-theme^='portal'] body.lite.lite .close { width: 28px; height: 28px; min-height: 28px; padding: 0; gap: 0; justify-content: center; align-items: center; border-color: transparent; background: transparent; color: var(--muted); }
 html[data-theme^='portal'] body.lite.lite .close:hover { background: var(--hover); color: var(--ink); }
 /* A button that's only an icon (a window's ✕, a 🔔): its line icon alone. The buttons' 14px above would
    otherwise bring back the ✕ beside the icon Clean draws in its place (two × on every window). */

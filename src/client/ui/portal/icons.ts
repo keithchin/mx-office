@@ -9,7 +9,7 @@ const SVG = 'http://www.w3.org/2000/svg';
 export const PORTAL_ICONS = {
   launcher: '<circle class="f" cx="3" cy="3" r="1.3"/><circle class="f" cx="8" cy="3" r="1.3"/><circle class="f" cx="13" cy="3" r="1.3"/><circle class="f" cx="3" cy="8" r="1.3"/><circle class="f" cx="8" cy="8" r="1.3"/><circle class="f" cx="13" cy="8" r="1.3"/><circle class="f" cx="3" cy="13" r="1.3"/><circle class="f" cx="8" cy="13" r="1.3"/><circle class="f" cx="13" cy="13" r="1.3"/>',
   search: '<circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4L14 14"/>',
-  bell: '<path d="M4 11.5V7.5a4 4 0 0 1 8 0v4l1.2 1.2H2.8L4 11.5z"/><path d="M6.6 14.2a1.6 1.6 0 0 0 2.8 0"/>',
+  bell: '<path d="M4 10.65V6.65a4 4 0 0 1 8 0v4l1.2 1.2H2.8L4 10.65z"/><path d="M6.6 13.35a1.6 1.6 0 0 0 2.8 0"/>',
   help: '<circle cx="8" cy="8" r="6.3"/><path d="M6.2 6.3a1.9 1.9 0 0 1 3.7.5c0 1.3-1.9 1.6-1.9 2.9"/><circle class="f" cx="8" cy="11.6" r=".8"/>',
   moon: '<path d="M13.2 10.1A5.6 5.6 0 0 1 5.9 2.8a5.6 5.6 0 1 0 7.3 7.3z"/>',
   sun: '<circle cx="8" cy="8" r="2.8"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/>',

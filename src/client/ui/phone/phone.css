@@ -23,6 +23,8 @@ body.has-phone .lite-main { padding-bottom: calc(160px + env(safe-area-inset-bot
 .tp-badge { position: absolute; top: -4px; right: -4px; pointer-events: none; }
 .tp-badge-none { display: none; }
 .tp-badge-count { min-width: 22px; height: 22px; padding: 0 6px; border: 2px solid var(--paper); border-radius: 999px; background: var(--bad); color: var(--on-fill); font: 900 12px/18px var(--font); text-align: center; font-variant-numeric: tabular-nums; }
+/* Portal's font sets its figures high in an 18 px line: a 20 px line brings the count to the circle's middle. */
+html[data-theme^='portal'] .tp-badge-count { line-height: 20px; }
 .tp-badge-dot { top: 2px; right: 2px; width: 14px; height: 14px; border: 2px solid var(--paper); border-radius: 50%; background: var(--muted); }
 
 /* ---- The window -------------------------------------------------------------------------------------- */

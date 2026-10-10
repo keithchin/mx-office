@@ -17,6 +17,8 @@ body.pixel .lite-floor { flex: 0 1 auto; min-width: 0; max-width: 340px; }
 /* In Portal: OFFICE · PROJECT ▾ as the section, the search takes the middle, Return to Project in the accent. */
 html[data-theme^='portal'] .px-bar-gap { display: none; }
 html[data-theme^='portal'] body.pixel.lite header.lite-bar .lite-floor { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 6px; }
+/* On a phone the project's name gives way (as on the 1D view), or Return to Project pushed the 🎨 and your avatar off the bar. */
+@media (max-width: 760px) { html[data-theme^='portal'] body.pixel.lite header.lite-bar .lite-floor { flex: 1 1 auto; min-width: 64px; } }
 html[data-theme^='portal'] body.pixel.lite header.lite-bar #px-floor-label { display: inline; font: 400 13px/1 var(--font); letter-spacing: .03em; text-transform: uppercase; color: #e1e2e4; white-space: nowrap; }
 html[data-theme^='portal'] body.pixel.lite header.lite-bar #px-floor-label::after { content: ' ·'; }
 html[data-theme^='portal'] body.pixel.lite header.lite-bar .vp-return { margin: 0 8px 0 4px; padding: 0 14px; border-radius: 3px; background: var(--accent); border-color: var(--accent); color: var(--accent-ink, #fff); font-weight: var(--fw-semi); }
@@ -44,6 +46,8 @@ body.pixel .px-tools .px-zoom-level { min-width: 52px; font-size: 12px; }
 html:is([data-theme^='clean'], [data-theme^='portal']) .px-tools { padding: 4px; gap: 4px; }
 html:is([data-theme^='clean'], [data-theme^='portal']) .px-status { padding: 6px 10px; }
 html:is([data-theme^='clean'], [data-theme^='portal']) .px-project { padding: 4px 6px; }
+/* Its chips as tall as the zoom buttons, so the two panels side by side are one height. */
+html:is([data-theme^='clean'], [data-theme^='portal']) .px-project :is(.bud-chip, .pr-toggle) { height: 28px; min-height: 28px; }
 html[data-theme^='portal'] .px-toolbar .px-panel { border-radius: 4px; }
 /* ⋯'s menu: one column, the keys under it. */
 .px-more-menu.hud-menu { grid-template-columns: 1fr; width: min(300px, calc(100vw - 16px)); }
@@ -51,7 +55,8 @@ html[data-theme^='portal'] .px-toolbar .px-panel { border-radius: 4px; }
 .px-more-menu .px-keys > span { white-space: nowrap; }
 /* A phone: the status line folds away; the project group and the tools stay. */
 @media (max-width: 900px) { .px-status { display: none; } }
-@media (max-width: 640px) { .px-toolbar { top: 8px; left: 8px; right: 8px; gap: 6px; } .px-project .bud-office { display: none; } }
+/* A phone: the zoom buttons go under the spend and run state when they don't fit beside them (they ran off the window). */
+@media (max-width: 640px) { .px-toolbar { top: 8px; left: 8px; right: 8px; gap: 6px; flex-wrap: wrap; } .px-project .bud-office { display: none; } }
 
 .px-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .px-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; cursor: default; }

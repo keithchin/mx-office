@@ -69,6 +69,10 @@ html[data-theme^='portal'] body.lite .pt-band {
 }
 html[data-theme='portal-dark'] body.lite .pt-band { --pt-band-top: #262e3d; --pt-band-bottom: #1e2532; --paper: #222937; box-shadow: 0 2px 8px rgba(0, 0, 0, .55); }
 html[data-theme^='portal'] body.lite .pt-band:not(:has(> :not(:empty))) { display: none; }
+/* The band is the Overview's only (pagehead.ts): every other page has its header alone, with the band's
+   gap under it, so their content starts at the same height on each. */
+html[data-theme^='portal'] body.lite .pt-band.pt-band-off { display: none; }
+html[data-theme^='portal'] body.lite .pt-head:not(.pt-head-ov) { margin-bottom: 24px; }
 html[data-theme^='portal'] body.lite .pt-band .bud-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin: 0; padding: 0; min-width: 0; }
 html[data-theme^='portal'] body.lite .pt-band #floor-meta { flex: 0 1 auto; min-width: 0; margin: 0; color: var(--muted); font-size: 13px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 html[data-theme^='portal'] body.lite .pt-band .bud-chip {
@@ -101,6 +105,7 @@ html[data-theme^='portal'] .pt-head #btn-new .n { display: none; }
 @media (max-width: 760px) {
   html[data-theme^='portal'] body.lite .pt-head { margin: 0 -16px; padding: 16px; gap: 12px; }
   html[data-theme^='portal'] body.lite .pt-band { margin: 0 -16px 16px; padding: 10px 16px 12px; }
+  html[data-theme^='portal'] body.lite .pt-head:not(.pt-head-ov) { margin-bottom: 16px; }
   html[data-theme^='portal'] body.lite .pt-band #floor-meta { white-space: normal; flex-basis: 100%; }
   html[data-theme^='portal'] .pt-head-id { gap: 12px; flex-basis: 100%; }
   html[data-theme^='portal'] .pt-head-tile { width: 48px; height: 48px; font-size: 17px; }

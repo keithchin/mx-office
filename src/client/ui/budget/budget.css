@@ -133,8 +133,14 @@ details.bud-card[open] > summary { margin-bottom: 8px; }
 .bud-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 16px; }
 .bud-field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
 .bud-row { display: inline-flex; align-items: center; gap: 4px; }
+/* Its fields, selects and buttons one height, the tallest's (the browser draws a select 2 to 4 px taller than a field). */
+.bud-row > :is(input, select, .btn) { align-self: stretch; }
 .bud-row select, .bud-field select { padding: 4px 6px; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--card); color: var(--ink); font: 700 13px var(--font); }
 .bud-check { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--ink); }
+/* As tall as the fields it sits beside (bottom-aligned in .bud-fields), so it's centred on them, not on their bottom edge. */
+.bud-fields > .bud-check { min-height: 30px; }
+html[data-theme^='portal'] .bud-fields > .bud-check { min-height: 31px; }
+html[data-theme^='clean'] .bud-fields > .bud-check { min-height: 29px; }
 .bud-paused { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 10px 12px; border: 1px solid var(--bad-ink); border-radius: var(--radius); background: var(--bad-soft); color: var(--ink); font-size: 13px; }
 .bud-paused .bud-actions { margin: 0; }
 .bud-levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-bottom: 8px; }
