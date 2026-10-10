@@ -4,6 +4,44 @@ What changed in the App Factory (our fork of agent-office), newest first. A rele
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### New
+- **A Documents page.** What the 📦 Deliverables window showed is now a page of its own: **General ›
+  Documents** in the Portal navigation (the **📄 Documents** tab in the other themes, `/lite?tab=documents`),
+  with the page header, every team's documents by toolkit stage (on main, on a branch, drafts, missing), a
+  search, a status filter, when the office last looked and **Refresh**. It shows at once (what it found last
+  time, or a skeleton) and fills in when the office answers. A document still opens in the viewer (✕ or Esc).
+  The setup panel's **Open documents →**, the progress bar's later stages and the 2D view all go to the page;
+  an old `?tab=deliverables` link lands there too.
+
+### Changed
+- **Deliverables are called Documents** wherever you read it: the setup panel, the team pages' panel, the
+  progress bar's card, Settings (the section keeps its `deliverables` id), the acceptance record and the docs.
+  The API (`/api/deliverables`) and saved links are unchanged.
+
+### Fixed
+- **Documents shows in about a second instead of 10 to 20, and the office no longer freezes while it looks.**
+  On travel-approval a cold look took 20.7 s and a repeat 9–14 s: 133 git processes one after another, each
+  started on the office's main thread (up to 400 ms of the office frozen per start), and 2.5 s of matching
+  every file of every branch against the catalog. Now each office branch is one cached `git diff`, a worktree
+  one `git status`, every git call starts off the main thread a few at a time, and a path is classified once:
+  1–2 s cold and 0.5 s warm for the scan, answered at once after that while a newer one runs behind it. The
+  first look after a restart waits at most 1.5 s for the fetch from GitHub.
+- **Clicking Documents again while it loads no longer stacks windows.** Each click waited for the whole scan and
+  then opened its own window, so a slow scan left several to close. Repeat clicks now share one request, and a
+  document already open in the viewer isn't opened twice. Call an audit, Resume on the phone and Open in Studio
+  Pro had the same pattern (a click while their first fetch was on its way opened a second window) and are one
+  at a time too.
+- **Mermaid diagrams no longer freeze the page.** Drawing a document's diagrams held the office page for up to
+  3 s each (travel-approval's domain model); they're drawn in a sandboxed frame the browser runs in a process
+  of its own, so the page keeps answering.
+
+### To know
+- The Documents page is one of the guarded views (and in the quick run): usable once its list is drawn, again
+  after Refresh, with no long task over 200 ms and the office's event loop checked meanwhile. The big test
+  office's project now has a toolkit team's documents among a few thousand app files, and office branches.
+
 ## 2026-10-10 · release 33 (`fc082cc`)
 
 ### Fixed
