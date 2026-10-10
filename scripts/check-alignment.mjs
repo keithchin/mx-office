@@ -12,6 +12,7 @@
 // Point it at a TEST office, never someone's real one: it signs in and clicks like a person would.
 //
 //   node scripts/check-alignment.mjs --base http://127.0.0.1:49xx --password <pw> --floor <id>
+//     [--floor2 <id>: a second project for the band check, default equipment-loan-desk]
 //     [--themes portal-light,portal-dark] [--viewport 1440x900] [--only topbar,nav,...]
 //     [--shots <dir>] [--tag before] [--json <file>] [--chrome <chrome.exe>]
 //
@@ -48,6 +49,8 @@ const SURFACES = [
   { name: 'nav', url: lite('command'), scope: '#pt-nav' },
   { name: 'pagehead', url: lite('command'), scope: '#pt-head' },
   { name: 'band', url: lite('command'), scope: '.pt-band' },
+  // A second project (fewer phases), the band's rows checked again.
+  { name: 'band-2', url: `/lite?floor=${encodeURIComponent(arg('floor2', 'equipment-loan-desk'))}&tab=command`, scope: '.pt-band' },
   { name: 'overview', url: lite('command'), scope: '.lite-main', not: '#pt-head, .pt-band' },
   // The setup line opened: the desktop layout's rule then gave Needs you the whole width, under the Team card.
   { name: 'overview-setup', url: lite('command'), scope: '#needs-you, #setup', prepare: async (page) => {
@@ -212,6 +215,27 @@ function MEASURE({ scope, not, lists, tol }) {
     const tall = el.scrollHeight > el.clientHeight + 2 && /hidden|clip/.test(c.overflowY) && el.clientHeight < 60 && c.webkitLineClamp === 'none';
     if (wide && c.textOverflow !== 'ellipsis' && ![...el.querySelectorAll('*')].some((d) => getComputedStyle(d).textOverflow === 'ellipsis')) flag('clip', el, `text ${el.scrollWidth}px in ${el.clientWidth}px, no ellipsis`);
     else if (tall) flag('clip', el, `text ${el.scrollHeight}px tall in ${el.clientHeight}px`);
+  }
+
+  // The Overview's dark band: its rows (the floor's line, the progress bar) stacked, none drawn over
+  // another, each inside the band (release 34 drew the progress bar over the floor's line: another
+  // page's .pg-host rule took it out of the flow).
+  for (const band of document.querySelectorAll('.pt-band')) {
+    if (!inScope(band) || !visible(band)) continue;
+    const bb = band.getBoundingClientRect();
+    const rows = [...band.children].filter((k) => visible(k) && k.getBoundingClientRect().height >= 4);
+    for (const k of rows) {
+      const r = k.getBoundingClientRect();
+      if (!inFlow(k)) flag('overlap', k, `a band row is position: ${getComputedStyle(k).position}, out of the band's flow`);
+      if (r.top < bb.top - tol || r.bottom > bb.bottom + tol) flag('clip', k, `a band row ${r2(r.top)}..${r2(r.bottom)}px outside the band ${r2(bb.top)}..${r2(bb.bottom)}px`);
+    }
+    for (let i = 0; i < rows.length; i++) for (let j = i + 1; j < rows.length; j++) {
+      const a = rows[i].getBoundingClientRect();
+      const b = rows[j].getBoundingClientRect();
+      const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+      const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+      if (x > 1 && y > 1) flag('overlap', band, `${describe(rows[i])} and ${describe(rows[j])} drawn over each other (${r2(y)}px)`);
+    }
   }
 
   // Needs you in the Portal Overview: the console's column, its right edge on the console's.
