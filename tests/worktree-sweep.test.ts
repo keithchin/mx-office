@@ -86,6 +86,41 @@ test('merged, clean worktrees no worker has go with their branch; the rest stay,
   assert.equal(items.find((i) => path.resolve(i.path) === path.resolve(dir)), undefined, 'never the project itself');
 });
 
+test('a squash merge is still found on a machine with no git identity (a CI runner), and an unmerged branch still isn’t', async () => {
+  // No global or system git config, and git told not to guess a name from the user account and host:
+  // what a fresh CI runner or office machine looks like. The synthetic squash-check commit must bring
+  // its own identity; the test's commits bring theirs too (ENV).
+  const saved = { ...process.env };
+  const empty = path.join(realpathSync(mkdtempSync(path.join(os.tmpdir(), 'sweep-noid-'))), 'gitconfig');
+  writeFileSync(empty, '');
+  for (const k of ['GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL', 'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL', 'EMAIL']) delete process.env[k];
+  Object.assign(process.env, { GIT_CONFIG_GLOBAL: empty, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'user.useConfigOnly', GIT_CONFIG_VALUE_0: 'true' });
+  try {
+    const { dir } = project();
+    const wt = tree(dir, 'squashed');
+    git(dir, 'worktree', 'add', '-q', '-b', 'office/squashed', wt, 'main');
+    commit(wt, 'b.txt', 'b1\n');
+    commit(wt, 'b.txt', 'b2\n');
+    git(dir, ...ENV, 'merge', '-q', '--squash', 'office/squashed');
+    git(dir, ...ENV, 'commit', '-q', '-m', 'squash');
+    git(dir, 'push', '-q', 'origin', 'main');
+    const open = tree(dir, 'open');
+    git(dir, 'worktree', 'add', '-q', '-b', 'office/open', open, 'main');
+    commit(open, 'c.txt', 'c\n');
+    // This environment really has no identity: a bare commit-tree fails in it.
+    assert.throws(() => git(dir, 'commit-tree', git(dir, 'rev-parse', 'HEAD^{tree}'), '-m', 'x'), /identity|empty ident|user\.useConfigOnly|tell me who you are/i);
+    assert.ok(await isMerged(dir, 'office/squashed', 'refs/remotes/origin/main'), 'a squash merge counts without a git identity');
+    assert.ok(!(await isMerged(dir, 'office/open', 'refs/remotes/origin/main')), 'and an unmerged branch still doesn’t');
+    const items = await sweepRepo(dir, { owned: () => false, floor: 'proj' });
+    assert.equal(items.find((i) => i.branch === 'office/squashed')?.action, 'removed');
+    assert.equal(items.find((i) => i.branch === 'office/open')?.action, 'kept');
+    assert.ok(existsSync(open), 'unpushed work stays');
+  } finally {
+    for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
+    Object.assign(process.env, saved);
+  }
+});
+
 test('links inside a worktree are unlinked, never followed: a node_modules junction’s target survives', async () => {
   const { root, dir } = project();
   // Another checkout's packages, which a worktree links to (as this very worktree does).

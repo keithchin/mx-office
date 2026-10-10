@@ -1415,14 +1415,20 @@ test('a worker whose terminal outlives the office is picked back up mid-turn, no
   const before = manager(f, f.claude, []);
   await before.start();
   const worker = await hireInState(f, before, 'desk-1', 'kept', 'working');
+  const asking = await hireInState(f, before, 'desk-2', 'kept-asking', 'needs_input');
   before.shutdown(true);
 
   const after = manager(f, f.claude, []);
   t.after(() => after.shutdown());
   await after.start();
+  // Adopted as they were: still mid-turn, still waiting on someone, not starting over or asleep.
   assert.equal(after.get(worker.id)?.status, 'working');
+  assert.equal(after.get(asking.id)?.status, 'needs_input');
   await new Promise((resolve) => setTimeout(resolve, 300));
-  assert.equal(launches(f).length, 1);
+  // Not relaunched (two launches, both from before), and nothing typed into the terminals that carried
+  // on: a continuation prompt would show up as stdin the fake agent heard.
+  assert.equal(launches(f).filter((r) => r.stdin === undefined).length, 2);
+  assert.deepEqual(f.read().filter((r) => r.stdin !== undefined).map((r) => r.stdin), []);
 });
 
 test('a worker whose terminal was in the host when an older office went down carries on if the host is gone', async (t) => {

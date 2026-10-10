@@ -10,11 +10,12 @@ import { removeDir } from './support/cleanup.js';
 import { runnable } from './support/winshim.js';
 
 // A stand-in for gh: `repo view` and `repo clone` from bare repositories in $FAKE_GH_REPOS. It says
-// how far along it is the way git does, can wait first ($FAKE_GH_DELAY), hang ($FAKE_GH_HANG) or
-// fail the way ssh does ($FAKE_GH_FAIL).
+// how far along it is the way git does, over and over while it works, can wait first ($FAKE_GH_DELAY
+// seconds, and until the file $FAKE_GH_GATE exists), hang silently ($FAKE_GH_HANG) or fail the way ssh
+// does ($FAKE_GH_FAIL).
 const FAKE_GH = String.raw`#!/usr/bin/env node
 // A node script rather than sh, so it runs on Windows too (tests/support/winshim.ts).
-const { execFileSync } = require('node:child_process');
+const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const [cmd, sub, name, dest] = process.argv.slice(2);
@@ -33,15 +34,27 @@ if (cmd + ' ' + sub === 'repo view') {
   }
   if (env.FAKE_GH_HANG) setTimeout(() => {}, 600000);
   else {
-    process.stderr.write('Receiving objects:  42% (42/100), 1.00 MiB | 512.00 KiB/s\r');
-    setTimeout(() => {
+    // Like git, which redraws its progress line at least every second while a clone is going, it keeps
+    // saying how far along it is until it's done, so a clone that's working is never taken for a stalled
+    // one however slow the machine is (the office calls it stalled when the log stops growing).
+    const say = () => process.stderr.write('Receiving objects:  42% (42/100), 1.00 MiB | 512.00 KiB/s\r');
+    say();
+    const beat = setInterval(say, 100);
+    const git = (args) => new Promise((ok, no) => spawn('git', args, { stdio: 'inherit' }).on('error', no).on('exit', (code) => (code === 0 ? ok() : no(new Error('git ' + code)))));
+    const until = Date.now() + Number(env.FAKE_GH_DELAY || 0) * 1000;
+    // It waits out $FAKE_GH_DELAY, and for $FAKE_GH_GATE to exist when that's set: the test says when it finishes.
+    const ready = () => Date.now() >= until && (!env.FAKE_GH_GATE || fs.existsSync(env.FAKE_GH_GATE));
+    const finish = async () => {
       try {
-        execFileSync('git', ['clone', '-q', path.join(env.FAKE_GH_REPOS, name + '.git'), dest], { stdio: 'inherit' });
-        execFileSync('git', ['-C', dest, 'remote', 'set-url', 'origin', 'https://github.com/' + name + '.git'], { stdio: 'inherit' });
+        await git(['clone', '-q', path.join(env.FAKE_GH_REPOS, name + '.git'), dest]);
+        await git(['-C', dest, 'remote', 'set-url', 'origin', 'https://github.com/' + name + '.git']);
       } catch {
         process.exit(1);
       }
-    }, Number(env.FAKE_GH_DELAY || 0) * 1000);
+      clearInterval(beat);
+    };
+    const wait = () => (ready() ? void finish() : setTimeout(wait, 20));
+    wait();
   }
 }
 `;
@@ -77,7 +90,7 @@ function office(t: { after(fn: () => void): void }) {
   execFileSync('git', ['clone', '-q', '--bare', work, path.join(repos, 'acme', 'game.git')]);
   process.env.PATH = `${bin}${path.delimiter}${process.env.PATH}`;
   process.env.FAKE_GH_REPOS = repos;
-  for (const k of ['FAKE_GH_DELAY', 'FAKE_GH_HANG', 'FAKE_GH_FAIL']) delete process.env[k];
+  for (const k of ['FAKE_GH_DELAY', 'FAKE_GH_GATE', 'FAKE_GH_HANG', 'FAKE_GH_FAIL']) delete process.env[k];
   const projects = path.join(root, 'projects');
   /** The clones under way, as the office keeps them for the next one. */
   const saved = () => (existsSync(path.join(dataDir, 'cloning.json')) ? (JSON.parse(readFileSync(path.join(dataDir, 'cloning.json'), 'utf8')) as (FloorDef & { pid: number })[]) : []);
@@ -172,23 +185,55 @@ test('a clone can be stopped by an admin or whoever added it', async (t) => {
 
 // A clone is only picked back up where it runs in its own process group (clone.ts GROUPS): not on Windows.
 test('a restart mid-clone picks the clone back up, and it becomes its floor', { skip: process.platform === 'win32' && 'clones are picked back up only on Unix' }, async (t) => {
-  const { dataDir, projects, saved, running } = office(t);
-  process.env.FAKE_GH_DELAY = '1';
+  const { root, dataDir, projects, saved, running } = office(t);
+  // The clone finishes only when the test opens the gate, so it can't finish before the restart, nor
+  // be cut short by a fixed delay running out on a slow machine; meanwhile it keeps reporting progress.
+  const gate = path.join(root, 'gate');
+  process.env.FAKE_GH_GATE = gate;
   const first = new Building(dataDir, projects, fast);
   void first.add('acme/game', 'Sam', () => {});
-  await running();
+  const pid = await running();
   // The office restarts (tsx watch, systemd): the clone carries on without it.
   first.shutdown(true);
   const second = new Building(dataDir, projects, fast);
   const done: (FloorDef | string)[] = [];
   second.resumeClones((r) => done.push(r));
   assert.deepEqual(second.pending().map((d) => d.repo), ['acme/game'], "it's on its way again");
+  const id = second.pending()[0].id;
+  // The adopted clone is watched like any other: its progress reads from the log it's still writing,
+  // and well past the stall limit (1.5 s here) it isn't called stalled, because the log keeps growing.
+  await until(() => second.cloneProgress(id)?.percent === 42);
+  assert.deepEqual(second.cloneProgress(id), { step: 'Downloading', percent: 42, detail: '1.00 MiB · 512.00 KiB/s' });
+  await new Promise((r) => setTimeout(r, fast.clone.stallMs + 500));
+  assert.deepEqual(done, [], 'a clone still reporting progress is not stalled');
+  assert.ok(alive(pid), 'and it was left running');
+  writeFileSync(gate, '');
   await until(() => done.length > 0);
   assert.equal(typeof done[0], 'object', String(done[0]));
   assert.deepEqual(second.list().map((d) => d.repo), ['acme/game']);
   assert.deepEqual(saved(), []);
   // Saved, so the next office has it too.
   assert.deepEqual(new Building(dataDir, projects).list().map((d) => d.repo), ['acme/game']);
+});
+
+test('a clone picked back up after a restart that then goes quiet is stopped as stalled, and not left for the next office', { skip: process.platform === 'win32' && 'clones are picked back up only on Unix' }, async (t) => {
+  const { dataDir, projects, saved, running } = office(t);
+  process.env.FAKE_GH_HANG = '1';
+  const first = new Building(dataDir, projects, fast);
+  void first.add('acme/game', 'Sam', () => {});
+  const pid = await running();
+  first.shutdown(true);
+  const second = new Building(dataDir, projects, fast);
+  const done: (FloorDef | string)[] = [];
+  second.resumeClones((r) => done.push(r));
+  assert.deepEqual(second.pending().map((d) => d.repo), ['acme/game'], 'picked back up');
+  await until(() => done.length > 0);
+  assert.match(String(done[0]), /stalled/);
+  await until(() => !alive(pid));
+  assert.ok(!alive(pid), 'the clone was stopped');
+  assert.deepEqual(second.pending(), []);
+  assert.deepEqual(second.list(), []);
+  assert.deepEqual(saved(), [], 'nothing left in cloning.json');
 });
 
 test('a clone that finished while no office was watching becomes its floor at the next start', async (t) => {

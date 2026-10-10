@@ -170,19 +170,30 @@ test('making a worktree never blocks the event loop: git runs off it, so the off
   f.merge('merged.txt');
   f.git('fetch', '-q', 'origin');
   const trees = new Worktrees(f.dir);
-  let ticks = 0;
+  // Turns of the event loop while it's made, counted with setImmediate rather than a 5 ms timer: how many
+  // timer ticks fit depends on how fast the machine's git is (on a Linux runner the whole thing takes a
+  // few ms, two ticks), but every turn of the loop runs an immediate, so this counts whether the loop
+  // turned at all, not how long git took.
+  let turns = 0;
+  let making = true;
+  const spin = () => {
+    turns++;
+    if (making) setImmediate(spin);
+  };
+  setImmediate(spin);
+  // How long the loop was held up at worst, on a timer.
   let worst = 0;
   let last = performance.now();
   const timer = setInterval(() => {
     const now = performance.now();
     worst = Math.max(worst, now - last - 5);
     last = now;
-    ticks++;
   }, 5);
   const made = await trees.create('rex-loop');
+  making = false;
   clearInterval(timer);
   assert.notEqual(typeof made, 'string', String(made));
-  // Before, each git call (four of them here) ran with execFileSync: no timer could fire until the last was done.
-  assert.ok(ticks >= 3, `the event loop ran ${ticks} times while the worktree was made`);
+  // Before, each git call (four of them here) ran with execFileSync: the loop didn't turn once until the last was done.
+  assert.ok(turns >= 4, `the event loop turned ${turns} times while the worktree was made`);
   assert.ok(worst < 250, `the event loop was blocked for ${Math.round(worst)} ms`);
 });

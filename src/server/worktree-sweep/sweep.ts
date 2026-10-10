@@ -78,6 +78,9 @@ export async function targetRefs(dir: string): Promise<string[]> {
   return refs;
 }
 
+/** The identity for commits the office makes only to compare trees (never pushed, never on a branch). */
+const SYNTHETIC_COMMITTER = ['-c', 'user.name=Agent Office', '-c', 'user.email=agent-office@localhost', '-c', 'commit.gpgsign=false'];
+
 /**
  * Whether everything on `branch` is in `into`: it's an ancestor (merged, fast-forwarded), or its changes
  * since they parted are one commit's worth that `into` already has (squash- or rebase-merged), found
@@ -89,7 +92,10 @@ export async function isMerged(dir: string, branch: string, into: string): Promi
     const base = await git(['merge-base', into, branch], dir);
     const tree = await git(['rev-parse', `${branch}^{tree}`], dir);
     if (tree === (await git(['rev-parse', `${base}^{tree}`], dir))) return true;
-    const squashed = await git(['commit-tree', tree, '-p', base, '-m', 'agent-office: squash check'], dir);
+    // A throwaway commit only `git cherry` reads, never a ref: its own identity (and no signing), so the
+    // check works on a machine with no git user configured (a CI runner, a fresh office machine), where
+    // commit-tree would fail and every squash-merged worktree would be kept as "not merged".
+    const squashed = await git([...SYNTHETIC_COMMITTER, 'commit-tree', tree, '-p', base, '-m', 'agent-office: squash check'], dir);
     return (await git(['cherry', into, squashed], dir)).startsWith('-');
   } catch {
     return false;
