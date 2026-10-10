@@ -111,3 +111,25 @@ test('one document viewer at a time: a second click on the same link keeps the o
   assert.match(v, /if \(showing\?\.key === key\) return showing\.modal;/);
   assert.match(v, /showing\?\.modal\.close\(\);/);
 });
+
+test('openers that ask the office before their window shows are one at a time (Call an audit, Resume, Open in Studio Pro)', async () => {
+  const { oneAtATime } = await import('../src/client/ui/once.js');
+  let calls = 0;
+  let done!: (v: string) => void;
+  const open = oneAtATime(async (n: number) => {
+    calls++;
+    return new Promise<string>((r) => (done = (v) => r(`${v}${n}`)));
+  });
+  const clicks = [open(1), open(2), open(3)];
+  assert.equal(calls, 1, 'three clicks while the office is slow: one call, one window');
+  done('w');
+  assert.deepEqual(await Promise.all(clicks), ['w1', 'w1', 'w1']);
+  const later = open(4);
+  assert.equal(calls, 2, 'once it has shown, a new click is a new call');
+  done('v');
+  assert.equal(await later, 'v4');
+  assert.match(read('src/client/firm/wizard.ts'), /export const openAuditWizard = oneAtATime\(auditWizard\);/);
+  assert.match(read('src/client/ui/firm/banner.ts'), /const callAudit = oneAtATime\(/);
+  assert.match(read('src/client/mobile/resume.ts'), /export const resumeProject = oneAtATime\(resumeSheet\);/);
+  assert.match(read('src/client/ui/studio/index.ts'), /export const openStudio = oneAtATime\(openStudioNow\);/);
+});
