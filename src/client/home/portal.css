@@ -16,6 +16,10 @@ html[data-theme^='portal'] body.lite.lite .btn.ph-outline:hover:not(:disabled) {
 /* Home's tabs sit under it, as My Projects and Company Projects do. */
 html[data-theme^='portal'] body.home-page .home-tabs { margin-bottom: 0; }
 html[data-theme^='portal'] body.home-page .home-tabs .btn { min-height: 48px; padding: 12px 16px; }
+/* A tab's own heading that says the tab's name again (2D Overview, Audit log): gone under the tab row,
+   what's beside it kept (the 2D Overview's line, the audit log's badge, count and exports). */
+html[data-theme^='portal'] body.home-page :is(#overview-view > .home-head > h2, #audit-view .au-head > h2.lite-h) { display: none; }
+html[data-theme^='portal'] body.home-page #overview-view > .home-head { margin: 12px 0; }
 
 /* ---- The filter row --------------------------------------------------------------------------------- */
 .ph-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 32px 0 6px; }

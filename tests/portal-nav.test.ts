@@ -337,6 +337,56 @@ test('in Portal the pages don’t repeat the header’s title in a heading of th
   assert.match(css, /#waiting-now:not\(:empty\) \{ display: block;/, 'the waiting count stays');
 });
 
+/**
+ * Every tab of the 1D view and what in it would say the Portal header's title again: the selectors
+ * ui/portal/layout.css hides (in Portal only), or [] when the page has no heading of its own that repeats it
+ * (scripts/check-titles.mjs measures them all in the browser, at 1440 and 390 px, Light and Dark).
+ */
+const REPEATS: Record<string, string[]> = {
+  command: [],
+  org: [],
+  teams: [],
+  documents: [],
+  board: [],
+  approvals: ['#team-view .ro-approvals > .ro-bar .ro-apv-name'],
+  standup: ['#team-view .ro-standup > .ro-bar h3'],
+  analysis: [],
+  budget: ['#budget-view .bud > h2.lite-h'],
+  audit: ['#audit-view .au-head > h2.lite-h'],
+  git: [],
+  model: [],
+  live: [],
+  workers: [],
+  settings: ['#settings-view .fs-title', '#settings-view .ro-settings > .ro-bar h3', "#settings-view .ro-settings[data-part='jeff'] > h4.ro-jeff-h", "#settings-view .ro-settings[data-part='deliverables'] > h4:first-of-type"],
+  tests: ['#tests-view .tl-page > h2.lite-h'],
+};
+
+test('in Portal no tab of the 1D view shows its title twice: each repeating heading is hidden, what was beside it kept', () => {
+  const css = read('src/client/ui/portal/layout.css');
+  assert.deepEqual(Object.keys(REPEATS).sort(), [...liteTabs()].sort(), 'every tab id is listed');
+  const hidden = [...css.matchAll(/^html\[data-theme\^='portal'\] body\.lite\.pt-has-nav :is\((.+)\) \{ display: none; \}$/gm)].flatMap((m) => m[1].split(/, (?=#)/));
+  for (const [tab, sels] of Object.entries(REPEATS)) for (const sel of sels) assert.ok(hidden.includes(sel), `${tab}: ${sel} hidden in Portal`);
+  // Agents: the heading sized away, its waiting count kept.
+  assert.match(css, /#workers-view > \.lite-h \{ margin: 0; font-size: 0; \}/);
+  // Approvals: the name goes, the count stays as a line of its own (only in Portal: the other themes keep "✅ Approvals (n)").
+  const apv = read('src/client/ui/roster/approvals.ts');
+  assert.ok(apv.includes("h('span.ro-apv-name', {}, `✅ Approvals (${v.approvals.length})`)"));
+  assert.ok(apv.includes("h('span.ro-apv-wait', {}, `${v.approvals.length} waiting on you`)"));
+  assert.match(read('src/client/ui/roster/roster.css'), /^\.ro-apv-wait \{ display: none; \}$/m);
+  assert.match(css, /#team-view \.ro-approvals > \.ro-bar \.ro-apv-wait \{ display: block;/);
+  // Standup keeps Run standup and its schedule line, a settings section Save settings and its note: only headings are hidden.
+  assert.doesNotMatch(css, /ro-bar (\.ro-sub|\.btn|button)[^{]*\{ display: none/);
+  // Home: a tab's own heading under the tab row that says the tab's name again.
+  const home = read('src/client/home/portal.css');
+  assert.ok(home.includes("html[data-theme^='portal'] body.home-page :is(#overview-view > .home-head > h2, #audit-view .au-head > h2.lite-h) { display: none; }"));
+  // The browser check covers every tab and every Settings section.
+  const check = read('scripts/check-titles.mjs');
+  const ids = (name: string) => (new RegExp(`const ${name} = \\[([^\\]]+)\\]`).exec(check)?.[1].match(/'([a-z]+)'/g) ?? []).map((t) => t.slice(1, -1));
+  assert.deepEqual(ids('TABS').sort(), [...liteTabs()].sort());
+  const known = [...read('src/shared/settings-sections.ts').matchAll(/\{ id: '([a-z]+)'/g)].map((m) => m[1]);
+  assert.deepEqual(ids('SETTINGS').sort(), [...known].sort());
+});
+
 test('a window’s ✕ is one × in Portal: the line icon alone, its text sized away like Clean does', () => {
   // Every window's ✕ is a .btn.close (ui/dom.ts); Clean marks it data-ao-icon="close" and draws the icon. Portal's
   // 14px buttons once outranked Clean's font-size: 0 and brought the ✕ back beside it.

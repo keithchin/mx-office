@@ -4,6 +4,12 @@ What changed in Mx Office, newest first. A release is what went
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Fixed
+
+- **No page says its title twice in Portal.** Approvals and Standup no longer repeat the page header's title in a heading of their own (Approvals keeps its count as *5 waiting on you* and its autonomy line; Standup its schedule line and Run standup), the Settings sections drawn from the team's settings drop their extra *Team settings* heading and the second *Jeff · Router* / *Documents* heading (Save settings and the note stay), and Home's 2D Overview and Audit log tabs no longer say the tab's name again under the tab row. Portal only: the other themes have no page header and keep their headings. `scripts/check-titles.mjs` checks every page in Portal Light and Dark, at 1440 and 390 px wide.
+
 ## 2026-10-11 · release 37 (`d6eddd1`)
 
 ### Fixed

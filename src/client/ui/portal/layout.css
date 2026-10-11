@@ -38,6 +38,13 @@ html[data-theme^='portal'] body.lite.pt-has-nav :is(#toasts, .conn) { top: calc(
 html[data-theme^='portal'] body.lite.pt-has-nav :is(#settings-view .fs-title, #budget-view .bud > h2.lite-h, #audit-view .au-head > h2.lite-h, #tests-view .tl-page > h2.lite-h) { display: none; }
 html[data-theme^='portal'] body.lite.pt-has-nav #workers-view > .lite-h { margin: 0; font-size: 0; }
 html[data-theme^='portal'] body.lite.pt-has-nav #workers-view > .lite-h > #waiting-now:not(:empty) { display: block; margin: 0 0 12px; font-size: 14px; }
+/* The same on Approvals, Standup and the Settings sections drawn from the team's settings: the Approvals
+   page keeps its count ("5 waiting on you") and its level line, the Standup page its schedule line and Run
+   standup, a Settings section its note and Save settings; their "Team settings" bar heading and a
+   heading that says the section's name again (Jeff · Router, Documents) go, the section's own title says it. */
+html[data-theme^='portal'] body.lite.pt-has-nav :is(#team-view .ro-approvals > .ro-bar .ro-apv-name, #team-view .ro-standup > .ro-bar h3) { display: none; }
+html[data-theme^='portal'] body.lite.pt-has-nav #team-view .ro-approvals > .ro-bar .ro-apv-wait { display: block; margin: 0 0 2px; font-size: 14px; line-height: 1.45; font-weight: var(--fw-semi); color: var(--ink); }
+html[data-theme^='portal'] body.lite.pt-has-nav :is(#settings-view .ro-settings > .ro-bar h3, #settings-view .ro-settings[data-part='jeff'] > h4.ro-jeff-h, #settings-view .ro-settings[data-part='deliverables'] > h4:first-of-type) { display: none; }
 
 /* A phone: the pane is a drawer, the page takes the width. */
 @media (max-width: 760px) {
