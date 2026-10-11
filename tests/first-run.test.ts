@@ -16,7 +16,7 @@ import { checkPrereqs, prereqIdsFor, type CheckDeps } from '../src/server/first-
 import { closeConnections, officeSettings, openConnections } from '../src/server/connections/store.js';
 import { fileCipher } from '../src/server/connections/vault.js';
 import { LEGACY_PROJECT_ORG, preferredMendix, projectOrg } from '../src/server/wizard/config.js';
-import { currentStep, finishSetup, rerunSetup, setOrg, setStep, setupReasons, setMxcli } from '../src/server/first-run/index.js';
+import { currentStep, finishSetup, rerunSetup, setOrg, setStep, setupReasons, setMxcli, turnOnLongPaths } from '../src/server/first-run/index.js';
 import { cloneToolkit, cloneDirProblem } from '../src/server/first-run/clone.js';
 import { Auth } from '../src/server/auth.js';
 import { requestHandler } from '../src/server/http/router.js';
@@ -63,7 +63,7 @@ test('Node is new enough from 22.5; a required check that fails holds things up,
 function fakeMachine(over: Partial<CheckDeps> = {}, programs: Record<string, (args: string[]) => { code: number; out: string }> = {}) {
   const ran: string[] = [];
   const all: Record<string, (args: string[]) => { code: number; out: string }> = {
-    git: () => ({ code: 0, out: 'git version 2.47.1.windows.1' }),
+    git: (a) => (a[0] === 'config' ? { code: 0, out: 'true' } : { code: 0, out: 'git version 2.47.1.windows.1' }),
     gh: (a) => (a[0] === 'auth' ? { code: 0, out: 'github.com\n  ✓ Logged in to github.com account octo (keyring)\n  - Token: gho_************' } : { code: 0, out: 'gh version 2.63.0 (2024-11-27)' }),
     claude: () => ({ code: 0, out: '2.1.3 (Claude Code)' }),
     mxcli: () => ({ code: 0, out: 'mxcli v0.9.0' }),
@@ -145,6 +145,39 @@ test('Claude Code counts as signed in from an API key or its credentials file, a
   // A check that throws is a red row, not a failed page.
   const broken = fakeMachine({ mendix: () => { throw new Error('boom'); } }).d; // prettier-ignore
   assert.match(byId(await checkPrereqs(broken)).studio.text, /boom/);
+});
+
+test('long paths for git: an optional Windows row that reads git’s system and user config and Windows’ registry setting, never changing either by itself', async () => {
+  assert.equal(PREREQ_META.longpaths.required, false);
+  assert.ok(prereqIdsFor('win32').includes('longpaths') && !prereqIdsFor('linux').includes('longpaths'));
+  const regOff = { reg: () => ({ code: 0, out: 'HKEY_LOCAL_MACHINE  LongPathsEnabled    REG_DWORD    0x0' }) };
+  // Off in both of git's files: amber, with the button, and the registry's state said read-only.
+  const off = fakeMachine({ find: async (cmd) => `C:/bin/${cmd}.exe` }, { git: (a) => (a[0] === 'config' ? { code: 1, out: '' } : { code: 0, out: 'git version 2.47.1' }), ...regOff });
+  const row = byId(await checkPrereqs(off.d)).longpaths;
+  assert.equal(row.status, 'warn');
+  assert.equal(row.action, 'longpaths-global');
+  assert.match(row.text, /Not on in git’s system or user config/);
+  assert.match(row.text, /LongPathsEnabled\): off/);
+  assert.match(row.fix ?? '', /never changes/);
+  assert.ok(off.ran.includes('git.exe config --system --get core.longpaths') && off.ran.includes('git.exe config --global --get core.longpaths'));
+  assert.ok(!off.ran.some((r) => /config --global core\.longpaths true|reg(\.exe)? add/.test(r)), 'the check changes nothing');
+  // On in the user's config: green, no button.
+  const on = fakeMachine({ find: async (cmd) => `C:/bin/${cmd}.exe` }, { git: (a) => (a[1] === '--global' ? { code: 0, out: 'true' } : a[0] === 'config' ? { code: 1, out: '' } : { code: 0, out: 'git version 2.47.1' }), reg: () => ({ code: 0, out: 'LongPathsEnabled    REG_DWORD    0x1' }) });
+  const ok = byId(await checkPrereqs(on.d)).longpaths;
+  assert.equal(ok.status, 'ok');
+  assert.equal(ok.action, undefined);
+  assert.match(ok.text, /user \(global\) config.*LongPathsEnabled\): on/);
+  // The button: git config --global core.longpaths true, and in the audit log.
+  const a = audited();
+  try {
+    const ran: string[][] = [];
+    assert.equal(await turnOnLongPaths({ name: 'Ada' }, async (_f, args) => (ran.push(args), { code: 0, out: '' })), undefined);
+    assert.deepEqual(ran, [['config', '--global', 'core.longpaths', 'true']]);
+    assert.ok(a.events.some((e) => e.target?.id === 'gitLongPaths' && e.actor.name === 'Ada'), 'audited');
+    assert.match((await turnOnLongPaths({ name: 'Ada' }, async () => ({ code: 128, out: 'error: could not lock config file' }))) ?? '', /could not lock/);
+  } finally {
+    a.stop();
+  }
 });
 
 test('the organization: the one saved in setup, else AGENT_OFFICE_PROJECT_ORG, else the old default an existing office had', async () => {

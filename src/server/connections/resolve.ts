@@ -8,6 +8,7 @@ import path from 'node:path';
 import type { CredentialId, CredentialSource } from '../../shared/connections.js';
 import { ADMIN_TOKEN_ENV, DEFAULT_ADMIN_TOKEN_FILE } from '../wizard/admin-token.js';
 import { STARTED_ENV, connectionsOpen, secretsHome, storedSecret } from './store.js';
+import { tokensWithheld, withheld } from '../testcreds.js';
 
 export interface Resolved {
   value?: string;
@@ -78,6 +79,8 @@ export function dotFiles(home: string, env: NodeJS.ProcessEnv = process.env): Re
 
 /** The value of a credential the office uses now, and where it's from. The password has no value here (only its hash is kept). */
 export function resolveCredential(id: CredentialId, deps: ResolveDeps = defaults()): Resolved {
+  // A test office hands out no outside token (testcreds.ts).
+  if (withheld(id)) return {};
   const { env, home } = deps;
   const stored = deps.stored(id);
   if (stored) return { value: stored, source: 'connections' };
@@ -127,8 +130,10 @@ export const credential = (id: CredentialId): string | undefined => resolveCrede
  */
 export function applyAgentToken(env: NodeJS.ProcessEnv = process.env) {
   const token = credential('github-agents');
+  // A test office keeps none, not even what it was started with (testcreds.ts).
+  const none = tokensWithheld();
   for (const k of ['GH_TOKEN', 'GITHUB_TOKEN'] as const) {
-    const v = token ?? STARTED_ENV[k];
+    const v = none ? undefined : (token ?? STARTED_ENV[k]);
     if (v) env[k] = v;
     else delete env[k];
   }

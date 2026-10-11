@@ -10,6 +10,7 @@ import path from 'node:path';
 import type { CredentialId } from '../../shared/connections.js';
 import type { SetupRecord } from '../../shared/first-run.js';
 import { Vault, defaultCipher, type Cipher } from './vault.js';
+import { withheld } from '../testcreds.js';
 
 /** What 🔌 Connections keeps in <office data>/office-settings.json: none of it secret. */
 export interface OfficeSettings {
@@ -71,7 +72,8 @@ export const connectionsVault = (): Vault | undefined => vault;
 export const connectionsOpen = (): boolean => !!vault;
 
 /** A value saved in Connections, if there is one. */
-export const storedSecret = (id: CredentialId): string | undefined => vault?.get(id);
+/** A saved secret; a test office gets no outside token (testcreds.ts), so a DPAPI-stored one can't leak into it. */
+export const storedSecret = (id: CredentialId): string | undefined => (withheld(id) ? undefined : vault?.get(id));
 
 export const officeSettings = (): Readonly<OfficeSettings> => settings;
 

@@ -37,6 +37,8 @@ async function mendixOf(dir: string): Promise<DeletePlan['mendix']> {
 
 export class ProjectDeletes {
   private running = new Map<string, Promise<void>>();
+  /** Jobs running now: read from here, never the file (a reader holding it open on Windows makes the next save's rename fail, and the job stopped there). */
+  private live = new Map<string, JobRecord>();
   private finished = new Map<string, JobRecord>();
 
   constructor(private deps: DeleteDeps) {}
@@ -46,6 +48,8 @@ export class ProjectDeletes {
   }
 
   private async saved(floor: string): Promise<JobRecord | undefined> {
+    const live = this.live.get(floor);
+    if (live) return live;
     try {
       const j = JSON.parse(await readFile(this.jobFile(floor), 'utf8')) as JobRecord;
       return j && j.floor === floor && Array.isArray(j.steps) ? j : undefined;
@@ -54,8 +58,13 @@ export class ProjectDeletes {
     }
   }
 
+  /** Saves the job; a save Windows refuses (a scanner holding the file) is said, and the next step's save tries again. */
   private save(job: JobRecord) {
-    writeJsonAtomic(this.jobFile(job.floor), job);
+    try {
+      writeJsonAtomic(this.jobFile(job.floor), job);
+    } catch (err) {
+      console.warn(`agent-office: couldn't save the deletion of ${job.name} (${(err as Error).message}); it carries on and saves again at its next step`);
+    }
   }
 
   private folderRules(f: DeleteFloor) {
@@ -72,12 +81,14 @@ export class ProjectDeletes {
     const job = this.finished.get(floor) ?? (await this.saved(floor));
     const f = this.deps.floor(floor) ?? job?.def;
     if (!f) return 'No such project';
-    const [worktrees, refusal, repoDelete, mendix] = await Promise.all([officeWorktrees(f.dir), folderRefusal(f.dir, this.folderRules(f)), canDeleteRepo(this.deps.gh, f.repo), mendixOf(f.dir)]);
-    if (repoDelete.possible && this.deps.testMode() && !this.deps.ghIsFake())
-      Object.assign(repoDelete, {
-        possible: false,
-        why: 'the office is in test mode, and test mode never deletes a real GitHub repository',
-      });
+    // Test mode with a real gh: it isn't even asked what its token may do.
+    const realGhInTest = this.deps.testMode() && !this.deps.ghIsFake();
+    const [worktrees, refusal, repoDelete, mendix] = await Promise.all([
+      officeWorktrees(f.dir),
+      folderRefusal(f.dir, this.folderRules(f)),
+      realGhInTest ? Promise.resolve({ possible: false, why: 'the office is in test mode, and test mode never deletes a real GitHub repository' } as DeletePlan['repoDelete']) : canDeleteRepo(this.deps.gh, f.repo),
+      mendixOf(f.dir),
+    ]);
     return {
       floor: f.id,
       name: f.name,
@@ -156,8 +167,9 @@ export class ProjectDeletes {
       };
     }
     this.finished.delete(floor);
+    this.live.set(floor, job);
     this.save(job);
-    const run = this.run(job).finally(() => this.running.delete(floor));
+    const run = this.run(job).finally(() => (this.running.delete(floor), this.live.delete(floor)));
     this.running.set(floor, run);
     return view(job);
   }

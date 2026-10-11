@@ -1,7 +1,8 @@
 import './projects.css';
 /**
  * The home page's 🏢 Projects tab: a card for every floor of the building (every project), each to
- * open on its 1D view (/lite, its Command Center), with ✨ New project and ➕ Add project.
+ * open on its 1D view (/lite, its Command Center), with ✨ New project and ➕ Add project, and above them
+ * the new-project setups that didn't finish (ui/wizard/unfinished.ts): Retry, Cancel & undo, Open project.
  * It used to be the floors page over the flat views (shared/floors.ts).
  */
 import type { Net } from '../net';
@@ -12,6 +13,7 @@ import type { FloorInfo } from '../../shared/protocol';
 import { h } from '../ui/dom';
 import { openAddProject } from '../ui/add-project';
 import { openWizard } from '../ui/wizard';
+import { unfinishedSection } from '../ui/wizard/unfinished';
 import { openConnections } from '../ui/connections';
 import { summaryLine } from '../ui/summary';
 import { homeRunIcon, homeRunToggle } from './run-state';
@@ -82,10 +84,19 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
 
   const addProject = () => openAddProject({ net, go });
   const newProject = () => void openWizard({ net, go });
+  // Setups that didn't finish: asked for once here, again after a change and at most every half minute as Home redraws.
+  const unfinished = unfinishedSection({ net, go, carryOn: (id) => void openWizard({ net, go, job: id }), changed: () => setTimeout(() => render(), 600) });
+  let askedAt = Date.now();
+  const fresh = () => {
+    if (Date.now() - askedAt < 30_000) return;
+    askedAt = Date.now();
+    unfinished.refresh();
+  };
   // In a Portal theme the tab is the Projects page (home/portal.ts).
-  const portal = portalProjects(root, { net, last, open: (id) => openFloor(id, leaving), newProject, addProject, connections: () => openConnections() });
+  const portal = portalProjects(root, { net, last, open: (id) => openFloor(id, leaving), newProject, addProject, connections: () => openConnections(), unfinished: unfinished.el });
 
   const render = () => {
+    fresh();
     if (isPortal()) return portal.render();
     const add = h('button.btn.home-add', { type: 'button', title: "Clone one of the repositories this office's gh login can see, as a new floor" }, '➕ Add project');
     add.addEventListener('click', addProject);
@@ -94,6 +105,7 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
     const connections = store.me.admin ? h('button.btn.home-add', { type: 'button', title: 'The GitHub and Mendix tokens, the password, git & gh and the folders the office uses', onclick: () => openConnections() }, '🔌 Connections') : null;
     root.replaceChildren(
       h('div.home-head', {}, h('h2', {}, '🏢 Projects'), h('span.seg', {}, wizard, add, connections), homeRunToggle()),
+      unfinished.el,
       h('p.home-intro', {}, store.floors.length ? 'Every project is a floor of this building. Open one for its Command Center, board and agents.' : "This building has no floors yet. ➕ Add project clones one of your repositories, and it becomes the first floor."),
       h('ul.home-floors', {}, ...store.floors.map(card)),
     );

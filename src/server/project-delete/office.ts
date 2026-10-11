@@ -11,10 +11,10 @@ import type { Ctx } from '../office/context.js';
 import { projectRunsOf } from '../project-run/adapter.js';
 import { projectIdsFor } from '../projects/ids.js';
 import { safeRestartOf } from '../restart/office.js';
-import { isTestPath, testModeOf } from '../testmode.js';
+import { testModeOf } from '../testmode.js';
+import { ghIsFake } from './fakegh.js';
 import { toolkitOfOffice } from '../toolkit-pin/office.js';
 import { liveAppsOf } from '../liveapp/index.js';
-import { resolveCommand } from '../workers/process.js';
 import { ProjectDeletes } from './index.js';
 import type { DeleteFloor } from './types.js';
 import { analysisOf } from '../analysis/index.js';
@@ -138,10 +138,8 @@ export function projectDeletesOf(ctx: Ctx): ProjectDeletes {
     },
     gh: (args) => gh(args, ctx.cfg.dataDir, 60_000),
     testMode: () => testModeOf().on,
-    ghIsFake: () => {
-      const p = resolveCommand('gh');
-      return !!p && (isTestPath(p) || /fake/i.test(p));
-    },
+    // What execFile('gh') really starts, never a .cmd shim a PATHEXT lookup finds (fakegh.ts).
+    ghIsFake: () => ghIsFake(),
     now: () => Date.now(),
   });
   services.set(ctx.cfg, s);

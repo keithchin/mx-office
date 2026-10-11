@@ -8,10 +8,17 @@
 //
 // The check reads the repository's config file (as gitfiles.ts does) so a hire costs no git run;
 // only a repository without the setting gets one `git config`, started off the event loop.
+//
+// This is the repository's own copy, for people's git in the folder (Studio Pro's, a terminal's). The
+// office's own git doesn't depend on it: every git it starts has core.longpaths through the environment
+// (gitenv.ts), since a floor cloned before this code shipped never got it here (release 21's miss).
+// A repository it can't set is said in the audit log (and the office's log), not only on the console.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { audit, office } from './audit/index.js';
 import { commonDirOf } from './gitfiles.js';
+import { OFFICE_FLOOR } from '../shared/audit.js';
 import { execFileOffP } from './offloop/exec.js';
 
 /** Clone arguments (`git clone -c …`) that give the new repository the setting from the start; none off Windows. */
@@ -53,6 +60,8 @@ export function hasLongPaths(dir: string): boolean | null {
 
 /** Repositories (their shared git folder) seen with the setting this run: no need to read again. */
 const known = new Set<string>();
+/** Repositories it couldn't set this run, said once each (not on every hire). */
+const failed = new Set<string>();
 
 /**
  * Makes sure the repository at `dir` has core.longpaths true in its own config, on Windows (elsewhere
@@ -67,7 +76,13 @@ export async function ensureLongPaths(dir: string, platform: NodeJS.Platform = p
     try {
       await execFileOffP('git', ['config', '--local', 'core.longpaths', 'true'], { cwd: dir, timeout: 20_000, windowsHide: true });
     } catch (err) {
-      console.warn(`agent-office: couldn't set core.longpaths in ${dir}: ${(err as Error).message}`);
+      const why = ((err as { stderr?: string }).stderr || (err as Error).message || String(err)).trim().split(/\r?\n/)[0];
+      console.warn(`agent-office: couldn't set core.longpaths in ${dir}: ${why}`);
+      if (!failed.has(key)) {
+        failed.add(key);
+        // The office's own git still has it (gitenv.ts); people's git in the folder may hit "Filename too long".
+        audit.record({ floor: OFFICE_FLOOR, actor: office(), action: 'git.longpaths', target: { kind: 'repository', id: dir, label: path.basename(dir) }, summary: `Couldn't turn on long paths (core.longpaths) in ${dir}'s git config: ${why}. The office's own git has them anyway; git run by hand in that folder may say "Filename too long" until it's set (git config core.longpaths true).`, details: { dir, error: why }, severity: 'warning' });
+      }
       return;
     }
   }
@@ -77,4 +92,5 @@ export async function ensureLongPaths(dir: string, platform: NodeJS.Platform = p
 /** Forgets what ensureLongPaths saw (tests). */
 export function forgetLongPaths() {
   known.clear();
+  failed.clear();
 }

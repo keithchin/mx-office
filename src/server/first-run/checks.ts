@@ -103,6 +103,16 @@ const CLAUDE_ENV = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_OA
 
 type Check = (d: CheckDeps) => Promise<Omit<PrereqResult, 'id'>>;
 
+/** Windows' LongPathsEnabled, read with `reg query` (read only, never written); undefined when it can't tell. */
+async function windowsLongPaths(d: CheckDeps): Promise<boolean | undefined> {
+  const reg = await d.find('reg');
+  if (!reg) return undefined;
+  const r = await d.run(reg, ['query', 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\FileSystem', '/v', 'LongPathsEnabled']);
+  const m = /LongPathsEnabled\s+REG_DWORD\s+0x([0-9a-f]+)/i.exec(r.out);
+  if (m) return Number.parseInt(m[1], 16) !== 0;
+  return r.code === 0 ? undefined : false;
+}
+
 /** A program's version row: found on PATH and answering `args`. */
 const versionOf = (cmd: string, args: string[], missing: string, fix: string): Check => async (d) => {
   const p = await d.find(cmd);
@@ -121,6 +131,26 @@ const CHECKS: Record<PrereqId, Check> = {
     const bash = d.bash();
     if (await d.exists(bash)) return { status: 'ok', text: `Git Bash at ${bash}`, path: bash };
     return { status: 'missing', text: `Git Bash isn’t at ${bash}`, fix: 'It comes with Git for Windows (winget install Git.Git); set AGENT_OFFICE_BASH if it’s somewhere else.' };
+  },
+  async longpaths(d) {
+    const git = await d.find('git');
+    if (!git) return { status: 'missing', text: 'Needs git first' };
+    // git config --system / --global read only that file: the office's own GIT_CONFIG_* (gitenv.ts) doesn't count here.
+    const on = async (scope: 'system' | 'global') => {
+      const r = await d.run(git, ['config', `--${scope}`, '--get', 'core.longpaths']);
+      return r.code === 0 && /^(true|yes|on|1)$/i.test(firstLine(r.out));
+    };
+    const [system, global] = await Promise.all([on('system'), on('global')]);
+    const win = await windowsLongPaths(d);
+    const winText = `Windows’ own long paths (LongPathsEnabled): ${win === undefined ? 'couldn’t tell' : win ? 'on' : 'off'}`;
+    const winFix = win === false ? ' Windows’ own LongPathsEnabled is a separate, machine-wide setting the office never changes: an administrator turns it on (Group Policy “Enable Win32 long paths”, or HKLM\\SYSTEM\\CurrentControlSet\\Control\\FileSystem LongPathsEnabled = 1) for other programs; git doesn’t need it.' : '';
+    if (system || global) return { status: 'ok', text: `On in git’s ${system ? 'system' : 'user (global)'} config · ${winText}` };
+    return {
+      status: 'warn',
+      text: `Not on in git’s system or user config (the office’s own git and the agents’ have long paths anyway) · ${winText}`,
+      fix: `So git you run yourself in a project folder doesn’t say “Filename too long”, turn it on for your Windows user.${winFix}`,
+      action: 'longpaths-global',
+    };
   },
   gh: versionOf('gh', ['--version'], 'gh (the GitHub CLI) isn’t installed (or not on the office’s PATH)', 'winget install GitHub.cli, then restart the office.'),
   async 'gh-auth'(d) {

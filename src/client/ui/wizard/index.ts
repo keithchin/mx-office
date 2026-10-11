@@ -4,7 +4,8 @@ import './wizard.css';
  * project toolkit, a page at a time, instead of only cloning a repository that's already there.
  * It collects a plan (the repository, the entry mode, the intake answers, the client and team), hands
  * it to the office to run, and shows the setup's progress. Opened again on a setup, it edits its
- * answers.
+ * answers. ✨ New project always opens a fresh wizard: setups that didn't finish are cards at the top of
+ * its first page (and on Home), to carry on, retry or cancel and undo (unfinished.ts).
  */
 import type { Net } from '../../net';
 import { loadProfile } from '../../state/persist';
@@ -14,6 +15,7 @@ import { wizardApi } from './api';
 import { entryPage, intakePage, PAGES, pageProblem, projectPage, reviewPage, teamPage, type PageCtx } from './forms';
 import { progressView, type ProgressView } from './progress';
 import { teamShapePage } from './team-shape';
+import { unfinishedSection } from './unfinished';
 
 export interface WizardOptions {
   net: Net;
@@ -111,10 +113,24 @@ export async function openWizard(opts: WizardOptions) {
   // Pages forward of one that isn't filled in can't be jumped to.
   const reachable = (i: number) => pages.slice(0, i).every((_, j) => !pageProblem(j, ctx()));
 
+  // A fresh wizard: the setups that didn't finish, above its first page (made once, so they're asked for once).
+  const fresh = !editing && !opts.floor;
+  const unfinished = fresh
+    ? unfinishedSection({
+        net: opts.net,
+        go: (floor) => (modal.close(), opts.go(floor)),
+        carryOn: (id) =>
+          void wizardApi.job(id).then(
+            (job) => showProgress(job),
+            (err: Error) => toast(err.message, 'error'),
+          ),
+      })
+    : undefined;
+
   function render() {
     if (progress) return;
     const scroll = body.scrollTop;
-    body.replaceChildren(pages[page](ctx()));
+    body.replaceChildren(...(page === 0 && unfinished && !editing ? [unfinished.el] : []), pages[page](ctx()));
     body.scrollTop = scroll;
     chrome();
   }
@@ -150,6 +166,7 @@ export async function openWizard(opts: WizardOptions) {
     progress = progressView(
       job,
       (floor) => (modal.close(), opts.go(floor)),
+      info.admin,
       () => {
         progress?.stop();
         progress = undefined;
@@ -170,9 +187,10 @@ export async function openWizard(opts: WizardOptions) {
       draft = blankPlan(info);
       page = 0;
       footer.replaceChildren(problem, back, next);
+      unfinished?.refresh();
       render();
     });
-    footer.replaceChildren(h('span.grow', {}, 'You can close this window: the setup carries on, and ✨ New project shows it again.'), another, progress.actions);
+    footer.replaceChildren(h('span.grow', {}, 'You can close this window: the setup carries on, and it stays under Unfinished setups (Home, and ✨ New project) until it’s done.'), another, progress.actions);
   }
 
   back.addEventListener('click', () => ((page = Math.max(0, page - 1)), render()));
@@ -193,14 +211,8 @@ export async function openWizard(opts: WizardOptions) {
   });
 
   const modal = openModal(el, { doing: '✨ setting up a new project', backdropCloses: false, onClose: () => progress?.stop() });
-  // A setup still going (or stopped) for this office: show it rather than a blank form.
-  const open = !editing && !opts.floor ? info.jobs[0] : undefined;
-  if (editing && opts.page === undefined) {
-    // From the setup panel without a page: how the setup went.
-    showProgress(editing);
-  } else if (open) {
-    const job = await wizardApi.job(open.id).catch(() => undefined);
-    if (job) showProgress(job);
-    else render();
-  } else render();
+  // From the setup panel (or an unfinished card) without a page: how the setup went. Otherwise a fresh
+  // wizard, with the unfinished setups as cards above its first page, never one of them taking it over.
+  if (editing && opts.page === undefined) showProgress(editing);
+  else render();
 }

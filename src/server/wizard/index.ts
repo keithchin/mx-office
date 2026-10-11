@@ -33,6 +33,8 @@ import { bashPath, runCommand } from './run.js';
 import { setupSteps, type FloorRef, type SetupDeps } from './steps.js';
 import { trustFloor } from '../claude-trust.js';
 import { childEnv } from '../workers/env.js';
+import { blockerOf } from './unfinished.js';
+import type { SetupBlocker } from '../../shared/setup-cancel.js';
 
 /** What an edit writes again: the answers and decisions, and the commit that carries them. */
 const EDIT_STEPS: StepId[] = ['intake', 'decisions', 'settings', 'commit'];
@@ -132,9 +134,17 @@ export class Wizard {
     return viewOf(job);
   }
 
+  /** What would stop the setup's Retry now (a paused project, a safe restart, Studio Pro open), said before it runs. */
+  retryBlocker(id: string): SetupBlocker | undefined {
+    const job = this.book.get(id);
+    return job && !this.book.isRunning(id) ? blockerOf(this.ctx, job) : undefined;
+  }
+
   retry(id: string): JobView | string {
     const job = this.book.get(id);
     if (!job) return 'No such setup';
+    const blocked = this.retryBlocker(id);
+    if (blocked) return blocked.text;
     this.go(job);
     return viewOf(job);
   }

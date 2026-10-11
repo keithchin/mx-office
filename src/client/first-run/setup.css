@@ -47,6 +47,8 @@
 .fr-row-fix { font-size: 12.5px; color: var(--ink-2); font-weight: 700; }
 .fr-row-link { flex: none; align-self: center; text-decoration: none; font-size: 13px; padding: 4px 10px; }
 .fr-row .fr-inline { margin-top: 6px; }
+/* A row's one-click fix (long paths): its label says the exact command, so it wraps rather than widens the row. */
+.fr-row .btn.fr-row-action { white-space: normal; text-align: left; max-width: 100%; height: auto; }
 .fr-badge { font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--rule-strong); color: var(--ink-2); background: var(--paper-2); }
 .fr-badge.req { color: var(--info-ink, var(--link)); }
 .fr-log { max-height: 220px; overflow: auto; margin: 0; padding: 10px 12px; border-radius: var(--radius-sm, 8px); background: var(--code-bg); color: var(--code-ink); font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-all; }

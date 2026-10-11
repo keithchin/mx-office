@@ -7,6 +7,7 @@ import type { Route } from '../router.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import { wizardOf } from '../../wizard/index.js';
 import { floorParam } from './files.js';
+import { setupCancelsOf, unfinishedSetups } from '../../wizard/unfinished.js';
 
 export const wizardRoutes = {
   wizard: {
@@ -20,6 +21,16 @@ export const wizardRoutes = {
         if (p === '/api/wizard/job') {
           const job = w.job(url.searchParams.get('id') ?? '');
           return job ? send(res, 200, job) : send(res, 404, { error: 'No such setup' });
+        }
+        // Unfinished setups (Home's cards, the wizard's first page), and Cancel & undo's plan and progress.
+        if (p === '/api/wizard/unfinished') return send(res, 200, { admin, setups: await unfinishedSetups(ctx, w) });
+        if (p === '/api/wizard/cancel-plan') {
+          const plan = await setupCancelsOf(ctx, w).plan(url.searchParams.get('id') ?? '');
+          return typeof plan === 'string' ? send(res, 404, { error: plan }) : send(res, 200, plan);
+        }
+        if (p === '/api/wizard/cancel') {
+          const job = await setupCancelsOf(ctx, w).job(url.searchParams.get('id') ?? '');
+          return job ? send(res, 200, job) : send(res, 404, { error: 'No cancel for that setup' });
         }
         if (p === '/api/wizard/app-version') return send(res, 200, await w.appVersion(url.searchParams.get('repo') ?? ''));
         const floor = floorParam(ctx, url);
@@ -49,6 +60,16 @@ export const wizardRoutes = {
       const named = typeof (body as { by?: unknown }).by === 'string' ? (body as { by: string }).by.replace(/[^\p{L}\p{N} ._'-]/gu, '').trim().slice(0, 60) : '';
       const who = session.account?.name ?? (named || 'an admin');
       const id = url.searchParams.get('id') ?? '';
+      if (p === '/api/wizard/cancel') {
+        // Cancel & undo: deletes what the setup made (when ticked), GitHub-style typed confirmation.
+        const r = await setupCancelsOf(ctx, w).start(id, body, { name: who, id: session.account?.id });
+        if (typeof r === 'string') return send(res, 400, { error: r });
+        console.log(`  ${who} is cancelling the setup of ${r.repo} (Cancel & undo)`);
+        return send(res, 202, r);
+      }
+      // A Retry that would fail anyway (a paused project…) says so first, with what to do.
+      const blocker = p === '/api/wizard/retry' ? w.retryBlocker(id) : undefined;
+      if (blocker) return send(res, 409, { error: blocker.text, blocker });
       const r =
         p === '/api/wizard/start' ? w.start(body, who, session.account?.id) : p === '/api/wizard/retry' ? w.retry(id) : p === '/api/wizard/edit' ? w.edit(id, body) : undefined;
       if (r === undefined) return send(res, 404, { error: 'Not found' });

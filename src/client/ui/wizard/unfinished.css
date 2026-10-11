@@ -1,0 +1,131 @@
+/* Unfinished new-project setups (ui/wizard/unfinished.ts): a card each on Home and at the top of the
+   wizard's first page. Tokens only, so every theme (Default, Dark, Terminal, Clean, Portal) colours it. */
+
+.us-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+.us-section.hidden {
+  display: none;
+}
+.us-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.us-intro {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.us-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 12px;
+}
+.us-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--rule-strong);
+  border-left: 4px solid var(--warn);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--card);
+  color: var(--ink);
+  min-width: 0;
+}
+.us-card[data-st='failed'],
+.us-card[data-st='cancelling'] {
+  border-left-color: var(--bad);
+}
+.us-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.us-name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.us-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-strong);
+  color: var(--muted);
+}
+.us-card[data-st='failed'] .us-badge,
+.us-card[data-st='cancelling'] .us-badge {
+  color: var(--bad-ink);
+  border-color: var(--bad);
+}
+.us-line {
+  margin: 0;
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+.us-line.us-muted {
+  color: var(--muted);
+}
+.us-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rule-strong);
+  overflow: hidden;
+}
+.us-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--warn);
+}
+.us-blocker {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--warn);
+  background: var(--warn-soft);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 0.88rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.us-blocker > span {
+  flex: 1 1 200px;
+}
+.us-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.btn.us-danger {
+  color: var(--bad-ink);
+  border-color: var(--rule-strong);
+}
+.btn.us-danger:hover {
+  background: var(--bad);
+  color: var(--on-fill);
+  border-color: var(--bad);
+}
+.us-did {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 6px 8px 6px 28px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 0.85rem;
+  color: var(--muted);
+  max-height: 150px;
+  overflow: auto;
+}
+.us-did li {
+  overflow-wrap: anywhere;
+}

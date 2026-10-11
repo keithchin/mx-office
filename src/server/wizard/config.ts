@@ -7,6 +7,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { adminTokenFile } from './admin-token.js';
+import { withGitLongPaths } from '../gitenv.js';
 import { firstExisting, officeSettings, toolkitDir } from '../connections/store.js';
 import type { OrgSource } from '../../shared/first-run.js';
 
@@ -143,5 +144,6 @@ export function toolkitEnv(cfg: WizardConfig, base: NodeJS.ProcessEnv = process.
   env[pathKey] = [...extra, env[pathKey] ?? ''].join(path.delimiter);
   env.MXTK_NO_GUIDE = '1';
   env.GIT_TERMINAL_PROMPT = '0';
-  return env;
+  // The setup's git, gh and toolkit scripts have long paths on Windows even with a test's own base env (gitenv.ts).
+  return withGitLongPaths(env);
 }

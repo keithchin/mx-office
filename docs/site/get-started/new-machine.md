@@ -92,11 +92,13 @@ This puts a **Mx Office** shortcut on the desktop and in the Start menu. It runs
 
 **The office opens in a Windows Terminal tab, or closes with it.** When Windows Terminal is your default terminal, the shortcut opens there. That works the same way: keep the tab open. To use the classic console window instead, set *Windows Terminal → Settings → Startup → Default terminal application* to *Windows Console Host*.
 
-**Cloning or a worktree fails with "Filename too long".** Mendix projects and their worktrees can have long paths. Optionally allow long paths for Git once, in an administrator PowerShell:
+**"Filename too long" from git.** Mendix projects and their worktrees have paths past Windows' 260 characters (a Mendix app's npm packages). The office's own git, and the git its agents run, always have long paths on: the office hands git `core.longpaths=true` through its environment on Windows, whatever any git config says. Git you run yourself in a project folder (a terminal, Studio Pro) reads only your config: first-run setup's *Long paths for git* row checks it and has a **Turn on for my user** button (it runs `git config --global core.longpaths true`, only when an admin presses it). Or once, for every user, in an administrator PowerShell:
 
 ```powershell
 git config --system core.longpaths true
 ```
+
+Windows' own *LongPathsEnabled* setting (Group Policy *Enable Win32 long paths*) is separate and machine-wide: the row shows whether it's on, and the office never changes it. Git doesn't need it.
 
 **The first start, or the first check of a program, is slow.** Microsoft Defender scans each new program the first time it runs: Node, `gh`, `claude`, mxcli and the toolkit's scripts. The first start of the office and the first prerequisite check can take a minute. Later starts are quick.
 

@@ -41,6 +41,8 @@ export interface PortalDeps {
   newProject: () => void;
   addProject: () => void;
   connections?: () => void;
+  /** The new-project setups that didn't finish (ui/wizard/unfinished.ts), over the filter row. */
+  unfinished?: HTMLElement;
 }
 
 const floorUrl = (id: string, extra = '') => `/lite?floor=${encodeURIComponent(id)}${extra}`;
@@ -238,7 +240,7 @@ export function portalProjects(root: HTMLElement, deps: PortalDeps) {
   return {
     render() {
       if (!filters.isConnected) {
-        root.replaceChildren(filters, count, grid);
+        root.replaceChildren(...(deps.unfinished ? [deps.unfinished] : []), filters, count, grid);
         askBudget();
       }
       // The Pause all / Resume all button (home/run-state.ts), drawn again for who you are.

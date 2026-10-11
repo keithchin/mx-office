@@ -19,7 +19,7 @@ import { toolkitProblem } from '../connections/paths.js';
 import { credential } from '../connections/resolve.js';
 import { liveAppConfig } from '../liveapp/config.js';
 import { mendixVersions, preferredMendix, projectOrg, wizardConfig } from '../wizard/config.js';
-import { checkPrereqs, machineDeps } from './checks.js';
+import { checkPrereqs, findOnPath, machineDeps, runOff } from './checks.js';
 
 export type Who = { name: string; id?: string };
 
@@ -134,6 +134,20 @@ export function finishSetup(who: Who) {
 export function rerunSetup(who: Who) {
   updateOfficeSettings({ setup: { ...setupRecord(), rerun: true, step: 'welcome' } });
   record(who, 'firstRun', 'First-run setup', `${who.name} asked for first-run setup again`, { after: { rerun: true } });
+}
+
+/**
+ * The long-paths row's button: core.longpaths true in git's user (global) config, for git people run
+ * themselves (the office's own has it from its environment, gitenv.ts). Only ever when an admin presses
+ * it; Windows' own LongPathsEnabled (the registry) is never touched. Returns why it couldn't.
+ */
+export async function turnOnLongPaths(who: Who, run: (file: string, args: string[]) => Promise<{ code: number; out: string }> = runOff): Promise<string | undefined> {
+  const git = await findOnPath('git');
+  if (!git) return 'git isn’t on the office’s PATH';
+  const r = await run(git, ['config', '--global', 'core.longpaths', 'true']);
+  if (r.code !== 0) return `git couldn’t set it: ${r.out.split(/\r?\n/)[0] || `exit ${r.code}`}`;
+  record(who, 'gitLongPaths', 'Long paths for git', `${who.name} turned on long paths in git’s user config (git config --global core.longpaths true)`, { after: { 'core.longpaths': true, scope: 'global' } });
+  return undefined;
 }
 
 /** The step a finished-or-not setup is on (for tests and the page). */

@@ -51,7 +51,7 @@ export const nextStep = (s: FirstRunStep): FirstRunStep => FIRST_RUN_STEPS[Math.
 
 // ---- Prerequisites --------------------------------------------------------------------------------
 
-export const PREREQ_IDS = ['node', 'git', 'gitbash', 'gh', 'gh-auth', 'claude', 'claude-auth', 'studio', 'mxcli', 'jq', 'toolkit', 'postgres'] as const;
+export const PREREQ_IDS = ['node', 'git', 'gitbash', 'longpaths', 'gh', 'gh-auth', 'claude', 'claude-auth', 'studio', 'mxcli', 'jq', 'toolkit', 'postgres'] as const;
 export type PrereqId = (typeof PREREQ_IDS)[number];
 
 /** ok: there and working. missing: not there (or not working). warn: there, but something to look at. */
@@ -66,7 +66,15 @@ export interface PrereqResult {
   fix?: string;
   /** A path the check found or used (mxcli, the toolkit folder). */
   path?: string;
+  /** A one-click fix an admin may press (never done by itself): long paths in git's user config. */
+  action?: PrereqAction;
 }
+
+/** The one-click fixes a row can offer. */
+export type PrereqAction = 'longpaths-global';
+
+/** What the long-paths row's button says and does. */
+export const LONGPATHS_ACTION_LABEL = 'Turn on for my user (git config --global core.longpaths true)';
 
 export interface PrereqMeta {
   label: string;
@@ -94,6 +102,7 @@ export const PREREQ_META: Record<PrereqId, PrereqMeta> = {
   node: { label: `Node.js ${NODE_MIN.join('.')} or newer`, purpose: 'Runs the office itself (node:sqlite reads Mendix models).', required: true, link: 'https://nodejs.org/en/download', linkLabel: 'nodejs.org' },
   git: { label: 'Git', purpose: 'Clones projects, makes each agent its own worktree, commits and pushes.', required: true, link: 'https://git-scm.com/download/win', linkLabel: 'git-scm.com' },
   gitbash: { label: 'Git Bash', purpose: 'Runs the toolkit’s scripts (it comes with Git for Windows).', required: true, link: 'https://git-scm.com/download/win', linkLabel: 'git-scm.com', windowsOnly: true },
+  longpaths: { label: 'Long paths for git', purpose: 'A Mendix app’s npm packages go past Windows’ 260-character paths inside a worktree. The office’s own git always has long paths on (and so do the agents’); this is for git you run yourself, in a terminal or from Studio Pro.', required: false, link: 'https://learn.microsoft.com/windows/win32/fileio/maximum-file-path-limitation#enable-long-paths-in-windows-10-version-1607-and-later', linkLabel: 'Windows long paths', windowsOnly: true },
   gh: { label: 'GitHub CLI (gh)', purpose: 'Lists your repositories, opens issues and pull requests for the agents.', required: true, link: 'https://cli.github.com', linkLabel: 'cli.github.com' },
   'gh-auth': { label: 'gh signed in', purpose: 'gh needs a GitHub sign-in (or the agents’ token, next step) to reach your repositories.', required: true, link: 'https://cli.github.com/manual/gh_auth_login', linkLabel: 'gh auth login' },
   claude: { label: 'Claude Code (claude)', purpose: 'Every agent is a Claude Code session.', required: true, link: 'https://docs.claude.com/en/docs/claude-code/setup', linkLabel: 'Install Claude Code' },
