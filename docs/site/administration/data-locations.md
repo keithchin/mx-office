@@ -1,12 +1,12 @@
 ---
 title: Data locations
-description: Where the office keeps its data, each floor's files, the projects and tools on the Taskforce laptop, and what to back up.
+description: Where the office keeps its data, each floor's files, the projects and tools on the office laptop, and what to back up.
 weight: 3
 ---
 
 ## The office's data folder
 
-The office keeps its data in a `.agent-office` folder. On the Taskforce laptop the launcher runs the office on the mx-spike floor, so it's `agent-spike\mx-spike\.agent-office\`. (By default it's `~/agent-office/.agent-office/`, or `AGENT_OFFICE_HOME`.)
+The office keeps its data in a `.agent-office` folder. On the office laptop the launcher runs the office on the mx-spike floor, so it's `agent-spike\mx-spike\.agent-office\`. (By default it's `~/agent-office/.agent-office/`, or `AGENT_OFFICE_HOME`.)
 
 | In it | What |
 |---|---|
@@ -57,11 +57,11 @@ In `<floor checkout>\.agent-office\`:
 
 And in the project itself: Playbooks, journals, standups and insight memos. See [Playbooks and journals](../teams-and-agents/playbooks-and-journals.md).
 
-## On the Taskforce laptop
+## On the office laptop
 
 | What | Where |
 |---|---|
-| The office (our fork) | `agent-spike\agent-office-src` (github.com/keithchin/mx-office, public) |
+| The office | `agent-spike\agent-office-src` (github.com/keithchin/mx-office, public) |
 | Launcher and shortcut | `agent-spike\start-office.ps1`, `agent-spike\open-agent-office.ps1`, icon `agent-office.ico` |
 | Floors | `agent-spike\mx-spike` (AI-Taskforce-Labs/mx-spike) · `agent-office\AI-Taskforce-Labs\travel-approval` |
 | Toolkit | `agent-spike\mendix-toolkit` (was `agent-spike\mxcli-project-toolkit`; Settings → Connections → Folders overrides it) |

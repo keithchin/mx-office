@@ -1,11 +1,14 @@
 # Railway reference
 
-The full story behind `deploy/railway.sh`. The short version is in the [README](../README.md#deploy-to-railway).
+The full story behind `deploy/railway.sh`.
+
+> [!WARNING]
+> **Not supported in Mx Office.** Mx Office runs on a Windows machine: see the [Quick start](../README.md#quick-start). This page describes server scripts in `deploy/` that haven't been adapted or tested for Mx Office, and some of their clone, upgrade and install steps may still fetch code from somewhere other than this repository. It's kept for reference only.
 
 You need the **Railway CLI 5 or newer, logged in** (`railway login`; update an older one with `railway upgrade` or `brew upgrade railway`), plus `ssh`, `curl`, Node.js and a clone of this repo:
 
 ```bash
-git clone https://github.com/AgentSystemLabs/agent-office && cd agent-office
+git clone https://github.com/keithchin/mx-office && cd mx-office
 deploy/railway.sh up --claude-token "$(claude setup-token)"
 ```
 

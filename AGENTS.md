@@ -1,4 +1,4 @@
-# agent-office
+# Mx Office
 
 - Ship every code change as a PR branched from freshly fetched `origin/main`, and end with the PR URL instead of stopping at a local commit or asking first.
 - The main checkout is shared with other live sessions and board agents, so do branch work in a worktree and never stash, reset or commit anyone else's changes there.
@@ -6,4 +6,4 @@
 - When a change affects how people run, deploy or use the office, update `README.md` and the matching `docs/*.md` page in the same PR.
 - New features plug in through the registries as modules of their own (see `docs/code-layout.md`), never by adding their code to `lite.ts`, `server.ts`, the state store, `protocol.ts` or another feature's files, and `tests/size.test.ts` must stay green.
 - Every modal needs a top-right ✕, and closing it by ✕ or Esc must return focus to where it was opened from, with no extra click.
-- When asked to merge PRs, merge only webdevcody's (anyone else's only when linked, after a security review), resolve conflicts so both sides survive, and squash-merge.
+- Changes are merged into `staging/integration` only after review (anyone else's PR only when linked, after a security review), resolving conflicts so both sides survive; `main` moves only by a release from `staging/integration`.

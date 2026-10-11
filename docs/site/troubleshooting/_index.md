@@ -16,4 +16,4 @@ Find your symptom in the table, then follow the link.
 | The 2D Office view is slow | [Office and browser](office-and-browser.md#the-2d-office-view-is-slow) |
 | Screenshots with Playwright fail | [Office and browser](office-and-browser.md#headless-edge-is-blocked) |
 
-Still stuck? Look in the **Agent Office** PowerShell window for errors, and check the [FAQ](../faq.md).
+Still stuck? Look in the **Mx Office** PowerShell window for errors, and check the [FAQ](../faq.md).

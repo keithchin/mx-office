@@ -1,6 +1,6 @@
 # Release notes
 
-What changed in the App Factory (our fork of agent-office), newest first. A release is what went
+What changed in Mx Office, newest first. A release is what went
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
@@ -39,6 +39,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **The Overview's Team and Technical contact cards show each agent's own character**, as the office, the team
   chatter and the escalation cards draw it, in its circle with its status dot, instead of coloured initials.
 
+
+### Changed
+- **The docs and README describe Mx Office on its own.** References to the project it started from, and the team
+  attributions, are gone from the README, README.html, AGENTS.md and the docs (docs/upstream-README.md is deleted; the
+  older server-hosting pages say plainly that they aren't supported), the app's titles and phone app say Mx Office,
+  and CI no longer carries a publish step that could never run here. The LICENSE keeps its original copyright
+  notice, as the MIT license requires.
 
 ## 2026-10-11 · release 34 (`622bf6d`)
 

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Agent Office: App Factory Guide</title>
-<meta name="description" content="A visual guide to the AI Taskforce Labs Agent Office: what it is, floors, roles, Jeff, The Firm, how work flows and how to use it. The full documentation is at /docs in the office.">
+<title>Mx Office: App Factory Guide</title>
+<meta name="description" content="A visual guide to Mx Office: what it is, floors, roles, Jeff, The Firm, how work flows and how to use it. The full documentation is at /docs in the office.">
 <style>
   :root {
     --bg: #f6f7fb; --paper: #ffffff; --ink: #0b1630; --ink-2: #33415c; --muted: #6b7690;
@@ -114,7 +114,7 @@
 
 <header class="nav">
   <div class="wrap">
-    <a class="brand" href="#top"><span class="logo"><svg width="18" height="18" viewBox="0 0 16 16"><rect x="3" y="4" width="10" height="9" rx="3" fill="#00c1b6"/><rect x="4.5" y="6" width="7" height="4" rx="1.2" fill="#0c0e2e"/><rect x="6" y="7" width="1.4" height="1.4" fill="#fff"/><rect x="8.6" y="7" width="1.4" height="1.4" fill="#fff"/><rect x="7.6" y="1.5" width="0.8" height="2.5" fill="#00ffb9"/></svg></span>Agent Office</a>
+    <a class="brand" href="#top"><span class="logo"><svg width="18" height="18" viewBox="0 0 16 16"><rect x="3" y="4" width="10" height="9" rx="3" fill="#00c1b6"/><rect x="4.5" y="6" width="7" height="4" rx="1.2" fill="#0c0e2e"/><rect x="6" y="7" width="1.4" height="1.4" fill="#fff"/><rect x="8.6" y="7" width="1.4" height="1.4" fill="#fff"/><rect x="7.6" y="1.5" width="0.8" height="2.5" fill="#00ffb9"/></svg></span>Mx Office</a>
     <nav>
       <a href="#what">What it is</a><a href="#concepts">Floors</a><a href="#roles">Roles</a><a href="#jeff-firm">Jeff &amp; The Firm</a><a href="#flow">Workflow</a><a href="#use">Using it</a><a href="#gallery">Gallery</a><a href="#mendix">Mendix</a><a href="#run">Running</a><a href="#help">Help</a>
     </nav>
@@ -124,7 +124,7 @@
 
 <div class="hero" id="top">
   <div class="wrap">
-    <h1>Agent Office<br><span style="color:#5ee0d4">the AI Taskforce Labs App Factory</span></h1>
+    <h1>Mx Office<br><span style="color:#5ee0d4">an App Factory for Mendix</span></h1>
     <p class="lead">A shared office where <b>teams of AI agents build Mendix apps</b>, and you run them as their <b>Project Manager</b>. You see every project from above, approve what matters, and watch the app being built, live.</p>
     <div class="chips">
       <span class="chip">🏢 Projects = floors</span><span class="chip">🧭 A team per project</span><span class="chip">🛠️ Mendix via mxcli</span>
@@ -144,7 +144,7 @@
 
 <section id="what">
   <h2><span class="num">1</span>What it is</h2>
-  <p class="sub">A web app (a server on this laptop, your browser as the screen) where Claude Code agents sit at desks and work on GitHub repositories. The DI SW SEA AI Taskforce built on the open-source <a href="https://github.com/AgentSystemLabs/agent-office">Agent Office</a> (MIT) to make it an App Factory for Mendix: a <b>digital twin of a hybrid software team</b>.</p>
+  <p class="sub">A web app (a server on this laptop, your browser as the screen) where Claude Code agents sit at desks and work on GitHub repositories. It's an App Factory for Mendix: a <b>digital twin of a hybrid software team</b>.</p>
   <div class="grid g3">
     <div class="card"><h4><span class="ico">🏢</span>Every project is a floor</h4><p>One GitHub repo per Mendix app in the AI-Taskforce-Labs org, each with its own board, team, queue and live app.</p></div>
     <div class="card"><h4><span class="ico">🧭</span>A team per project</h4><p>A Project Coordinator plus four Leads (Design, Development, Testing, Analysis), each running its own subagents.</p></div>
@@ -155,7 +155,7 @@
   </div>
 
   <h3>How the pieces fit</h3>
-  <div class="diagram" role="img" aria-label="Architecture: you in the browser talk to the Agent Office server on this laptop; it runs a team of agents per floor; agents work on GitHub repos with mxcli; CI checks pull requests; the live app runs from main.">
+  <div class="diagram" role="img" aria-label="Architecture: you in the browser talk to the Mx Office server on this laptop; it runs a team of agents per floor; agents work on GitHub repos with mxcli; CI checks pull requests; the live app runs from main.">
     <svg viewBox="0 0 1000 420">
       <defs>
         <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
@@ -171,7 +171,7 @@
       <text x="95" y="258" text-anchor="middle" font-size="12.5" fill="var(--muted)">in the browser</text>
       <!-- office -->
       <rect x="250" y="30" width="340" height="360" rx="18" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="2"/>
-      <text x="420" y="62" text-anchor="middle" font-size="16" font-weight="800" fill="var(--ink)">Agent Office server · :4600</text>
+      <text x="420" y="62" text-anchor="middle" font-size="16" font-weight="800" fill="var(--ink)">Mx Office server · :4600</text>
       <g font-size="13">
         <rect x="275" y="80" width="290" height="88" rx="12" fill="var(--paper)" stroke="var(--line)"/>
         <text x="290" y="104" font-weight="700" fill="var(--ink)">🏢 Floor: travel-approval</text>
@@ -493,7 +493,7 @@
 <section id="run">
   <h2><span class="num">7</span>Running it</h2>
   <div class="grid g2">
-    <div class="card"><h4><span class="ico">▶️</span>Start</h4><p>The <b>Agent Office</b> desktop/taskbar icon opens it (and starts it if needed), or ask Claude Code <i>"Run Agent Office"</i>. It runs in a window titled <b>Agent Office</b>; closing that window stops it.</p></div>
+    <div class="card"><h4><span class="ico">▶️</span>Start</h4><p>The <b>Mx Office</b> desktop/taskbar icon opens it (and starts it if needed), or ask Claude Code <i>"Run Mx Office"</i>. It runs in a window titled <b>Mx Office</b>; closing that window stops it.</p></div>
     <div class="card"><h4><span class="ico">🔐</span>Sign in</h4><p><code>http://127.0.0.1:4600</code> → <code>/home</code>. The shared office password makes you admin (the Project Manager): hiring, approvals, settings and the live app are admin-only.</p></div>
     <div class="card"><h4><span class="ico">🔑</span>Tokens (never share)</h4><p><code>~/.agent-office-gh-token</code>: the agents' token (AI-Taskforce-Labs, Contents/Issues/PRs only). <code>~/.agent-office-admin-gh-token</code>: only for creating repos from the wizard. <code>~/.agent-office-password</code>: the office password. <code>~/.agent-office-jev-key</code>: Jeff's key, passed by path (<code>AGENT_OFFICE_JEV_KEY_FILE</code>).</p></div>
     <div class="card"><h4><span class="ico">🔄</span>Restarts</h4><p>On Windows a restart stops running agents. Their sessions are saved: open an asleep (💤) agent to wake it with its memory. Try changes on a throwaway <b>test office</b> (port 47xx, its own data folder), never the real floors.</p></div>
@@ -509,25 +509,25 @@
     <tr><td>Live app: "initial build failed: Object reference not set…"</td><td>Stale build output; the office clears it and retries once automatically.</td></tr>
     <tr><td>mxcli: "A required privilege is not held by the client"</td><td>Create the directory junction mxcli names (<code>cmd /c mklink /J &lt;link&gt; &lt;target&gt;</code>) or enable Windows Developer Mode.</td></tr>
     <tr><td>Commits hang in a toolkit project</td><td>Use our toolkit copy (fixed); in scripts run git with stdin closed.</td></tr>
-    <tr><td>GitHub emails about failed runs</td><td>The fork's CI runs the full test suite on every push to <code>main</code>; an email means something broke. It never publishes releases.</td></tr>
+    <tr><td>GitHub emails about failed runs</td><td>The office's own CI runs the full test suite on every push to <code>main</code>; an email means something broke. It never publishes releases.</td></tr>
   </table></div>
 
   <h3>Where things are</h3>
   <div class="tablewrap"><table>
     <tr><th style="width:240px">What</th><th>Where</th></tr>
-    <tr><td>This app (our fork)</td><td><code>agent-spike\agent-office-src</code> · github.com/keithchin/mx-office</td></tr>
+    <tr><td>This app</td><td><code>agent-spike\agent-office-src</code> · github.com/keithchin/mx-office</td></tr>
     <tr><td>Launcher and shortcut</td><td><code>agent-spike\start-office.ps1</code>, <code>open-agent-office.ps1</code>, <code>agent-office.ico</code></td></tr>
     <tr><td>Office data</td><td><code>agent-spike\mx-spike\.agent-office\</code></td></tr>
     <tr><td>Projects</td><td><code>agent-spike\mx-spike</code> · <code>agent-office\AI-Taskforce-Labs\travel-approval</code></td></tr>
     <tr><td>Toolkit (our copy)</td><td><code>agent-spike\mxcli-project-toolkit</code> · AI-Taskforce-Labs/mxcli-project-toolkit</td></tr>
-    <tr><td>Documentation</td><td><b><code>/docs</code></b> in the office (<a href="http://127.0.0.1:4600/docs">127.0.0.1:4600/docs</a>), from the Markdown in <a href="docs/site/_index.md">docs/site/</a> · release notes: <a href="CHANGELOG.md">CHANGELOG.md</a> · <a href="docs/upstream-README.md">upstream README</a></td></tr>
+    <tr><td>Documentation</td><td><b><code>/docs</code></b> in the office (<a href="http://127.0.0.1:4600/docs">127.0.0.1:4600/docs</a>), from the Markdown in <a href="docs/site/_index.md">docs/site/</a> · release notes: <a href="CHANGELOG.md">CHANGELOG.md</a></td></tr>
   </table></div>
 
   <h3>What's next</h3>
   <div class="grid g3">
     <div class="card"><h4><span class="ico">🧩</span>Plan → issues</h4><p>Turn the toolkit's approved build plan into GitHub issues for the team automatically.</p></div>
     <div class="card"><h4><span class="ico">🤝</span>Client portal</h4><p>A restricted Client role: progress, test link and approvals at the toolkit's gates.</p></div>
-    <div class="card"><h4><span class="ico">☁️</span>Taskforce Lab on AWS</h4><p>The office on a shared Linux server for the Taskforce, with a GitHub App and a live-app proxy.</p></div>
+    <div class="card"><h4><span class="ico">☁️</span>A shared server</h4><p>The office on a shared Linux server for the whole team, with a GitHub App and a live-app proxy.</p></div>
     <div class="card"><h4><span class="ico">🎨</span>Clean themes</h4><p>Clean light and Clean dark, next to Default, Dark and Terminal. Being built.</p></div>
   </div>
 </section>
@@ -535,7 +535,7 @@
 </main>
 
 <footer>
-  <div class="wrap">Agent Office is MIT-licensed by AgentSystemLabs. This fork adds the App Factory, the team model, Jeff, The Firm and the Mendix pipeline for the DI SW SEA AI Taskforce. · <a href="README.md">README.md</a> · <a href="CHANGELOG.md">CHANGELOG.md</a> · full docs at <code>/docs</code></div>
+  <div class="wrap">Mx Office is MIT-licensed (see <a href="LICENSE">LICENSE</a>). · <a href="README.md">README.md</a> · <a href="CHANGELOG.md">CHANGELOG.md</a> · full docs at <code>/docs</code></div>
 </footer>
 
 <div id="lb" aria-hidden="true"><img alt=""></div>

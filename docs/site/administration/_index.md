@@ -4,7 +4,7 @@ description: Running and restarting the office, tokens and security, where data 
 weight: 70
 ---
 
-For whoever looks after the office: you, the Project Manager, on the Taskforce laptop.
+For whoever looks after the office: you, the Project Manager, on the office laptop.
 
 - [Running the office](running-the-office.md): start, stop, restart, update.
 - [Connections](connections.md): the tokens, the Jev key and the password from the office itself, git & gh, the folders and the worktree cleanup.

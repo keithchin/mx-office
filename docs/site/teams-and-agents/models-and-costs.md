@@ -49,4 +49,4 @@ What you send still goes through: your answers to escalations, your typing in a 
 The day resets at midnight in the standup's time zone (Asia/Singapore by default).
 
 > [!NOTE]
-> There is also an office-wide daily budget, `--budget` / `AGENT_OFFICE_BUDGET`, from the original Agent Office. It's separate from the team caps. See [Server CLI](../reference/server-cli.md).
+> There is also an office-wide daily budget, `--budget` / `AGENT_OFFICE_BUDGET`, an older setting. It's separate from the team caps. See [Server CLI](../reference/server-cli.md).

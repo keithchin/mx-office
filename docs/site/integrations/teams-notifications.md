@@ -15,10 +15,10 @@ The office can post to a **Microsoft Teams channel** whenever something needs a 
 
 You need to be a member of the team and allowed to use the Workflows app (most company tenants allow it; no admin consent is needed).
 
-1. In Teams, go to the **team and channel** where the cards should appear (a private channel just for you works well, e.g. *Agent Office*).
+1. In Teams, go to the **team and channel** where the cards should appear (a private channel just for you works well, e.g. *Mx Office*).
 2. Hover over the channel name and click **⋯ More options**, then **Workflows**. *(A panel opens listing workflow templates for this channel.)*
 3. Search for **webhook** and pick **Post to a channel when a webhook request is received** (on some tenants it's called **Send webhook alerts to a channel**). *(A wizard opens with the template's name at the top.)*
-4. Give it a name (e.g. *Agent Office*), check that the account shown is yours, and click **Next**. *(The second step shows the Team and Channel it will post to.)*
+4. Give it a name (e.g. *Mx Office*), check that the account shown is yours, and click **Next**. *(The second step shows the Team and Channel it will post to.)*
 5. Check the **Team** and **Channel**, and click **Add workflow**. *(After a few seconds: "Workflow added successfully!" with a box holding a long URL.)*
 6. Click the **copy** icon next to the URL and **Done**. The URL looks like `https://prod-…logic.azure.com:443/workflows/…/triggers/manual/paths/invoke?…&sig=…` or `https://….environment.api.powerplatform.com/powerautomate/automations/direct/workflows/…&sig=…`.
 

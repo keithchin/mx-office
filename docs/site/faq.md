@@ -44,7 +44,7 @@ No. The admin token is only passed to the one `gh repo create` the wizard runs. 
 
 ### Why do I get GitHub emails about failed runs?
 
-Either a project's **pr-checks** failed on a pull request, or the office's own fork failed its tests on `main`. The fork's workflow tests but never publishes. See [CI pipeline](integrations/ci-pipeline.md).
+Either a project's **pr-checks** failed on a pull request, or the office's own repository failed its tests on `main`. Its workflow tests but never publishes. See [CI pipeline](integrations/ci-pipeline.md).
 
 ## Agents
 
@@ -110,7 +110,7 @@ It's safe for your data, but on Windows **restarting stops every running agent**
 
 ### How do I start it after a reboot?
 
-Click the **Agent Office** icon on the desktop or taskbar, or ask Claude Code *"Run Agent Office"*. Keep the PowerShell window open.
+Click the **Mx Office** icon on the desktop or Start menu, or ask Claude Code *"Run Mx Office"*. Keep the PowerShell window open.
 
 ### Can I try a change without risking the real office?
 

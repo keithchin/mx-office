@@ -1,7 +1,6 @@
-# Mx Office — the AI Taskforce Labs App Factory
+# Mx Office — an App Factory for Mendix
 
 > A shared office where **teams of AI agents build Mendix apps**, and you run them as their **Project Manager**.
-> Built by the DI SW SEA AI Taskforce on top of the open-source [Agent Office](https://github.com/AgentSystemLabs/agent-office) (MIT).
 
 - **📚 Full documentation:** in the office at **`/docs`** (`http://127.0.0.1:4600/docs`; also ☰ → 📖 Documentation, or 📚 Docs on Home).
 - **📝 What changed:** [CHANGELOG.md](CHANGELOG.md), the single source of the release notes (the *Release notes* page in `/docs` shows this file).
@@ -12,7 +11,7 @@
 
 ## What it is
 
-Mx Office is a web app (a Node server on your machine, your browser as the screen) where **Claude Code agents** work on **GitHub repositories**. It started as a fork of Agent Office and turns it into an **App Factory for Mendix**:
+Mx Office is a web app (a Node server on your machine, your browser as the screen) where **Claude Code agents** work on **GitHub repositories**, built as an **App Factory for Mendix**:
 
 - Every **project** is one Mendix app in its own GitHub repository (in the organization you pick in setup; AI-Taskforce-Labs by default), with two views: its **1D view** (`/lite`: the Overview, board and the other pages, where every project opens) and its **2D Office view** (`/pixel`: the floor from above in pixel art, from **Go to Office**; **Return to Project** comes back). The old 3D and Retro views are gone; `/` and old `/?view=3d` links open the 1D view.
 - Every floor has a **team** in one of three shapes: **Enterprise**, a **Project Coordinator** and four **Leads** (Design, Development, Testing, Analysis), each with its own Claude Code subagents; **Startup**, a Chief Analyst and a Lead Developer; or **Solo**, one Solo Lead covering every team. The new-project wizard recommends a shape and a budget level from the intake answers.
@@ -104,4 +103,6 @@ Before committing a change to the pages or the server, run `npm test` and `npm r
 
 ---
 
-*Agent Office is MIT-licensed by AgentSystemLabs; Mx Office adds the App Factory, the team model, Jeff, The Firm and the Mendix pipeline for the DI SW SEA AI Taskforce. The original project's README is [docs/upstream-README.md](docs/upstream-README.md).*
+## License
+
+MIT: see [LICENSE](LICENSE).

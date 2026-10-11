@@ -70,4 +70,4 @@ The agents' token (`~/.agent-office-gh-token`) must be fine-grained, owner **AI-
 
 ## GitHub emails about failed runs
 
-The office's own fork runs its full test suite on every push to `main`. An email means something broke there. It never publishes releases. Project repositories send emails when their **pr-checks** fail on a PR. See [CI pipeline](../integrations/ci-pipeline.md).
+The office's own repository (keithchin/mx-office) runs its full test suite on every push to `main`. An email means something broke there. It never publishes releases. Project repositories send emails when their **pr-checks** fail on a PR. See [CI pipeline](../integrations/ci-pipeline.md).

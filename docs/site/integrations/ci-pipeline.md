@@ -29,6 +29,6 @@ The office downloads the screenshots of the newest run on the PR's branch once, 
 > [!NOTE]
 > The office doesn't write the workflow; each project carries its own, from the mx-spike pipeline. Copy it into a new project's `.github/workflows/`.
 
-## CI emails from the office's own fork
+## CI emails from the office's own repository
 
-The fork of Agent Office itself (keithchin/mx-office) runs its full test suite on every push to `main`. A GitHub email about a failed run means something broke there. That workflow never publishes releases.
+Mx Office itself (keithchin/mx-office) runs its full test suite on every push to `main`. A GitHub email about a failed run means something broke there. That workflow never publishes releases.

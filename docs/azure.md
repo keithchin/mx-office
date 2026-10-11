@@ -1,11 +1,14 @@
 # Azure reference
 
-The full story behind `deploy/azure.sh`. The short version is in the [README](../README.md#deploy-to-azure).
+The full story behind `deploy/azure.sh`.
+
+> [!WARNING]
+> **Not supported in Mx Office.** Mx Office runs on a Windows machine: see the [Quick start](../README.md#quick-start). This page describes server scripts in `deploy/` that haven't been adapted or tested for Mx Office, and some of their clone, upgrade and install steps may still fetch code from somewhere other than this repository. It's kept for reference only.
 
 It's the Azure twin of [`deploy/aws.sh`](aws.md): the same commands, the same [`deploy/provision.sh`](../deploy/provision.sh) on the machine, and the same rule that the office is only ever reached through an SSH tunnel. If you have the Azure CLI signed in (`az login`), one command gives you your own office on an Azure VM:
 
 ```bash
-git clone https://github.com/AgentSystemLabs/agent-office && cd agent-office
+git clone https://github.com/keithchin/mx-office && cd mx-office
 deploy/azure.sh up
 ```
 
