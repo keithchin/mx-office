@@ -1,6 +1,7 @@
 import type { Ctx } from './context.js';
 import { SLOW_CLIENT_BYTES } from './client.js';
 import { startStudioMode } from '../studio/index.js';
+import { startFloorSync } from '../floor-sync/index.js';
 import { startWorktreeSweep } from '../worktree-sweep/index.js';
 import { startNotifyTeams } from '../notify-teams/index.js';
 import { startKeepAwake } from '../keep-awake/index.js';
@@ -43,6 +44,8 @@ export function startTimers(ctx: Ctx): () => void {
 
   // Studio Pro open on a floor's project pauses that floor's agents' mxcli writes (studio/watch.ts).
   const stopStudio = startStudioMode(ctx);
+  // Each floor's own folder kept up to date with GitHub by safe fast-forwards (floor-sync/).
+  const stopFloorSync = startFloorSync(ctx);
   // Merged worktrees no worker has any more are cleaned up every hour (worktree-sweep/).
   const stopSweep = startWorktreeSweep(ctx);
   // What needs a person goes to a Teams channel (notify-teams/); the computer stays awake while agents work (keep-awake/).
@@ -62,6 +65,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopRestart();
     stopSweep();
     stopStudio();
+    stopFloorSync();
     stopTeams();
     stopAwake();
     stopTunnel();

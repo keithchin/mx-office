@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import type { LostBranch, WorktreeState } from '../shared/protocol.js';
 import { commonDirOf, headBranch, headSha, orGit, originUrl, refSha } from './gitfiles.js';
 import { execFileOffP } from './offloop/exec.js';
+import { originNews } from './floor-sync/bus.js';
 import { ensureLongPaths } from './longpaths.js';
 
 export type { WorktreeCleanup, WorktreeState } from '../shared/protocol.js';
@@ -95,7 +96,10 @@ export class Worktrees {
     const env = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
     this.fetching = execFileP('git', ['fetch', '--quiet', '--no-tags', 'origin', from], { cwd: this.dir, env, timeout: FETCH_TIMEOUT_MS })
       .then(
-        () => (this.fetchError = undefined),
+        () => {
+          this.fetchError = undefined;
+          originNews(this.dir);
+        },
         (err) => {
           // Its first complaint says what's wrong; the last line is advice about access rights.
           const why = String((err as { stderr?: string }).stderr ?? '').split('\n').find((l) => /^(fatal|error):/.test(l)) ?? gitError(err);

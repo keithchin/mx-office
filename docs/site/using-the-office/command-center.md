@@ -96,11 +96,27 @@ See [The toolkit](../integrations/toolkit.md).
 
 For a floor with a Mendix project, **Open in Studio Pro** in the summary's heading (and ☰ → 🧱 **Open in Studio Pro**, on every view) opens the floor's `.mpr` in Studio Pro **on the office's computer**. It's the project in the floor's own checkout (at its top or one folder down), not the live app's clone.
 
-- **Admins only.** Everyone else sees it greyed out. It's hidden on a floor without a `.mpr`.
+- **Admins only.** Everyone else sees it greyed out. It's on every project page (in Portal, **Edit in Studio Pro** at the bottom of the navigation), never hidden: when it truly can't work it's greyed out and its tooltip says why.
+- **The project folder is brought up to date first.** Before it opens, the office fast-forwards the floor's folder to `origin/main` when that's safe (see [The project folder stays current](#the-project-folder-stays-current)), so Studio Pro opens what main has. When it can't, it says why and what to do (*Your project folder is 386 commits behind GitHub and has local changes in README.md — commit or stash them, then try again*); with a `.mpr` there it still opens the folder as it is, and the confirm says how far behind it is.
 - **A confirm first.** Studio Pro locks the project while it's open, and the agents write it with `mxcli exec` (one writer per app: the Lead Developer). The confirm says the office pauses their mxcli writes automatically while Studio Pro is open (see [Studio mode](#studio-mode)), and lists the agents on the floor in the middle of a turn. Let them finish their turn before you change anything in Studio Pro.
 - It goes through Mendix's **Version Selector**, which starts the Studio Pro version the project was saved in (*Opening in Studio Pro 11.6.4…*). Without the Version Selector, the `studiopro.exe` of that version under `C:\Program Files\Mendix` (never another version: it would offer to convert the project).
 - Opening it is written in the [Audit log](audit-log.md) (`studio.open`, under *Workers*), said in Team chatter, and toasted to everyone on the floor.
 - It can't open when the office isn't on Windows, runs without a desktop (over SSH, in CI, headless), or Studio Pro isn't installed: the button is greyed out and says why.
+
+## The project folder stays current
+
+Agents work in worktrees cut from GitHub's main and their pull requests merge on GitHub, so nothing used to move the floor's own folder (the one the wizard cloned, which Studio Pro opens): it could sit hundreds of commits behind, without the `.mpr` main had. Now the office brings it up to date by a **fast-forward** (`git merge --ff-only origin/main`) when the office starts, when it notices main moved on GitHub (whenever it fetches, or the Live app sees main move), when someone walks onto the floor, and before **Open in Studio Pro**. No polling of its own.
+
+It only ever does it when nobody can lose anything, and otherwise leaves the folder exactly as it is and says why:
+
+- **Local changes**: anything staged, changed or untracked (what `.gitignore` ignores, and the office's own `.agent-office/` folder with the worktrees in it, don't count). Commit or stash them.
+- **Another branch, or no branch**: the folder isn't on main (`git switch main`).
+- **Diverged**: the folder's main has commits GitHub hasn't got. Push them (or open a pull request), then reset main to `origin/main`.
+- **A merge, rebase, cherry-pick or revert in progress**: finish or abort it.
+- **Studio Pro has the project open**: the office never changes files under an open Studio Pro. Close it (and commit what you changed).
+- **An agent mid-turn in the folder itself** (one without a worktree of its own): it waits until the turn ends.
+
+A move is in the [Audit log](audit-log.md) as `floor.sync` (from → to, and how many commits); a refusal as `floor.sync-refused`, once per reason until the folder is current again, never on every look.
 
 To look at the app without Studio Pro, or at what a worker's branch changed, use the **📐 Model** tab: the App Explorer, domain models and microflows drawn as Studio Pro draws them, read-only, on any branch. See [Model tab](model.md).
 

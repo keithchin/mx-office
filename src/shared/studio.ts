@@ -33,6 +33,10 @@ export interface StudioInfo {
   last?: StudioOpen;
   /** Studio mode: whether Studio Pro has the project open right now. */
   state?: StudioState;
+  /** With no .mpr in the folder: what keeps Studio Pro from opening anything here at all (no desktop, not Windows, not installed). */
+  machine?: { problem: StudioProblem; error: string };
+  /** The floor's folder against GitHub, from the office's last look (server/floor-sync/). */
+  sync?: FloorSyncState;
 }
 
 /** How the office knows Studio Pro has the project open. */
@@ -89,4 +93,45 @@ export function hasStudioMcp(version: string | undefined): boolean {
 }
 
 /** POST /api/studio/open {floor}: what happened. */
-export type StudioOpenResult = { ok: true; mpr: string; version?: string } | { ok: false; error: string; problem?: StudioProblem };
+export type StudioOpenResult = { ok: true; mpr: string; version?: string; sync?: FloorSyncState } | { ok: false; error: string; problem?: StudioProblem; sync?: FloorSyncState };
+
+/** POST /api/studio/sync {floor}: the folder brought up to date (or why not), and what the button needs to know now. */
+export interface StudioSyncResult {
+  sync?: FloorSyncState;
+  info: StudioInfo;
+}
+
+/**
+ * Why the office didn't bring a floor's own checkout up to date with GitHub (server/floor-sync/):
+ * every one of them is something it won't do by itself, since it would lose or change someone's work.
+ */
+export type FloorSyncRefusal = 'dirty' | 'branch' | 'detached' | 'diverged' | 'studio-open' | 'in-progress' | 'agent-busy' | 'failed';
+
+/**
+ * Where a floor's own checkout (the folder Studio Pro opens) stands against origin/<default>, from the
+ * office's last look: `current` (nothing on GitHub it hasn't got), `moved` (fast-forwarded just now),
+ * `refused` (behind, but the office won't fast-forward it: `reason` and `message` say why and what to
+ * do), or `no-remote` (nothing to compare with).
+ */
+export interface FloorSyncState {
+  floor: string;
+  state: 'current' | 'moved' | 'refused' | 'no-remote';
+  /** The default branch (main). */
+  branch?: string;
+  /** Commits on origin/<default> the folder hasn't got (after a move: 0). */
+  behind: number;
+  /** Commits the folder's default branch has that GitHub doesn't. */
+  ahead?: number;
+  /** A move: from which commit to which, and how many commits it brought. */
+  from?: string;
+  to?: string;
+  commits?: number;
+  reason?: FloorSyncRefusal;
+  /** One plain sentence: why, and what to do about it. */
+  message?: string;
+  /** The changes in the way (dirty), the first few. */
+  files?: string[];
+  /** The branch it's on instead (branch). */
+  on?: string;
+  at: number;
+}

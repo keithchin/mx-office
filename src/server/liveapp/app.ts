@@ -13,6 +13,7 @@ import { isUp, nextStatus, type LiveAppEvent } from './machine.js';
 import { pickPorts } from './ports.js';
 import { pgBinDir, startTree, stopTree } from './process.js';
 import { floorToolkitEnv } from '../toolkit-env.js';
+import { originNews } from '../floor-sync/bus.js';
 
 /** Lines of the log kept for the page. */
 const TAIL = 30;
@@ -95,6 +96,8 @@ export class LiveApp {
       return this.note(`auto-refresh: couldn't ask the remote about ${this.s.branch}: ${(err as Error).message}`);
     }
     if (!head || head === this.s.sha || this.s.status !== 'running') return;
+    // Main moved on GitHub: the floor's own folder may follow it too (floor-sync/).
+    originNews(this.d.floorDir, 'stale');
     await this.act('update', 'auto-refresh', () => this.launch(true), `Updating to ${head.slice(0, 7)}…`);
   }
 

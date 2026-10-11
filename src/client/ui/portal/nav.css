@@ -51,6 +51,8 @@ html[data-theme^='portal'] :is(.pt-chev-open, .pt-chev-closed) { flex: none; wid
 html[data-theme^='portal'] .pt-group:not(.open) .pt-chev-open, html[data-theme^='portal'] .pt-group.open .pt-chev-closed { display: none; }
 html[data-theme^='portal'] .pt-items .pt-item { padding-left: 28px; }
 html[data-theme^='portal'] .pt-item.on { background: var(--pt-selected); font-weight: var(--fw-semi); }
+/* An action that can't work right now (Edit in Studio Pro with no Studio Pro here): there, greyed, its reason as the tooltip. */
+html[data-theme^='portal'] .pt-item.pt-blocked { opacity: 0.55; cursor: not-allowed; }
 html[data-theme^='portal'] .pt-item-ico { flex: none; width: 18px; height: 18px; color: var(--ink-2); }
 html[data-theme^='portal'] .pt-nav-rule { height: 1px; margin: 16px 0; border: 0; background: var(--line); }
 html[data-theme^='portal'] .pt-goto { display: none; }

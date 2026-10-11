@@ -48,8 +48,10 @@ export interface PortalNavDeps {
   show(tab: NavTab): void;
   /** Does an action: the deliverables window, the live app, Studio Pro. */
   run(action: NavAction): void;
-  /** Whether an action is offered now (Studio Pro only on a Mendix project). */
+  /** Whether an action is offered now. */
   offered?(action: NavAction): boolean;
+  /** Why an action can't work right now, if it can't: greyed out with that as its tooltip, never hidden for it. */
+  blocked?(action: NavAction): string | undefined;
 }
 
 export interface PortalNav {
@@ -57,6 +59,8 @@ export interface PortalNav {
   selected(tab: string): void;
   /** Opens or closes the phone's drawer. */
   drawer(open?: boolean): void;
+  /** Something an action's state depends on changed (Studio Pro's): draws the items again, whatever the page. */
+  refresh(): void;
 }
 
 const BOTTOM_ICON: Record<string, PortalIcon> = { settings: 'gear', 'view-app': 'cube', studio: 'studio' };
@@ -187,6 +191,12 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
     for (const it of NAV_BOTTOM) {
       const li = bottom.querySelector<HTMLElement>(`[data-li="${it.id}"]`)!;
       li.hidden = it.kind === 'action' && deps.offered ? !deps.offered(it.id as NavAction) : false;
+      const btn = itemEls.get(it.id)!;
+      const why = it.kind === 'action' ? deps.blocked?.(it.id as NavAction) : undefined;
+      btn.classList.toggle('pt-blocked', !!why);
+      if (why) btn.setAttribute('aria-disabled', 'true');
+      else btn.removeAttribute('aria-disabled');
+      btn.title = why ?? it.hint;
     }
     drawGroupBadges();
   }
@@ -368,5 +378,6 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
       syncFlyout();
     },
     drawer,
+    refresh: drawGroups,
   };
 }
