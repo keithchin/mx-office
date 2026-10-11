@@ -32,7 +32,8 @@ export class Interrupts {
     const m = d.members[managerRole(d)];
     const w = this.roster.workerOf(floor, m);
     if (!w || m.phase !== 'active') return `${m.name} isn't at work`;
-    const r = this.roster.delivery.send(floor, w, prompt, { origin: 'person', by, wake: true, hold: true, ...(when === 'after' ? { between: true } : {}) });
+    // With the run state before it as it is when it's typed (awareness.ts): answered from that, never from an old "paused".
+    const r = this.roster.delivery.send(floor, w, prompt, { origin: 'person', by, wake: true, hold: true, facts: true, ...(when === 'after' ? { between: true } : {}) });
     if (r.status === 'refused') return r.why;
     if (Object.keys(leads).length) this.fanout.set(floor.id, { until: this.roster.deps.now() + FANOUT_MS, choices: leads });
     else this.fanout.delete(floor.id);

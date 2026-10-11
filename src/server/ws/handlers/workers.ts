@@ -121,7 +121,10 @@ export const workerHandlers = {
     const who = c.peer.name;
     const w = workerOf(ctx, msg.workerId);
     const text = str(msg.prompt, 20000);
-    const err = w ? w.floor.workers.prompt(w.wid, text, who) : 'No such worker';
+    // An agent that slept through a pause hears it was resumed, and the Coordinator gets the run state (roster/awareness.ts).
+    const dressed = w?.info.kind === 'agent' ? rosterOf(ctx).awareness.dress(teamFloor(ctx, w.floor), w.info, text) : undefined;
+    const err = w ? w.floor.workers.prompt(w.wid, dressed?.text ?? text, who) : 'No such worker';
+    if (!err) dressed?.sent();
     ctx.warn(c, err);
     // That someone prompted it, never what they said (its start only when an admin turned that on).
     if (w && !err) audit.record({ floor: w.floor.id, actor: human(who, c.accountId), action: 'worker.prompt', target: { kind: 'worker', id: w.wid, label: w.info.name }, summary: `Prompted ${w.info.name}`, details: promptDetails(text) });

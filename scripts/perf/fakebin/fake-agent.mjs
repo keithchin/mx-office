@@ -18,7 +18,7 @@
 // FAKE_SLOW_MS   how long a prompt with "slow" in it keeps its turn going (default 60000).
 // FAKE_GH_DIR    the fake gh's folder (scripts/perf/journey/fake-gh.mjs): "pr" adds a pull request there.
 // Prompts typed into its terminal (one line each) become a user line and a short reply; a prompt with
-// "please escalate" at its start raises an escalation; one with "permission" in it stops at a permission
+// "please escalate" at its start (or after a note the office put first) raises an escalation; one with "permission" in it stops at a permission
 // prompt (needs_input) until anything is typed; one with "pr" in it opens a fake pull request (in the fake gh's
 // list) and says it's its own; "deliver" writes a deliverable; "slow" keeps the turn going a while. In
 // turn mode, the prompt it was started with is its first turn.
@@ -170,7 +170,8 @@ async function turn(prompt) {
     await new Promise((r) => setTimeout(r, 1000));
     await step();
   }
-  if (/^\s*please escalate/i.test(prompt)) await escalate('Which login flow should the leave app use? (fake)');
+  // After the office's own note, if it put one first (a pty may run its lines together: "…messages.Please escalate").
+  if (/(?:^|[\n.!?)]\s*)please escalate/i.test(prompt)) await escalate('Which login flow should the leave app use? (fake)');
   if (/\bpr\b/i.test(prompt)) out(`pr: ${await fakePr()}\n`);
   if (/deliver/i.test(prompt)) deliver();
   if (/slow/i.test(prompt)) {

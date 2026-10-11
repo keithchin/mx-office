@@ -10,6 +10,18 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 - **Edit in Studio Pro opens what main has.** The floor's own folder (the one the wizard cloned, which Studio Pro opens) was never moved after the clone: agents work in worktrees and merge on GitHub, so it could sit hundreds of commits behind without the `.mpr` main had, and Edit in Studio Pro said there was no `.mpr`. The office now fast-forwards it to `origin/main` when the office starts, when it notices main moved on GitHub (whenever it fetches, or the Live app sees main move), when someone walks onto the floor, and before opening Studio Pro, with no polling of its own. Only when nobody can lose anything: on main, nothing staged, changed or untracked, no merge or rebase in progress, nothing of its own GitHub hasn't got, Studio Pro not open on the project, no agent mid-turn in the folder itself. Otherwise the folder is left as it is and the button says why and what to do (*Your project folder is 386 commits behind GitHub and has local changes in README.md — commit or stash them, then try again*); a move is in the Audit log as `floor.sync`, a refusal as `floor.sync-refused` once per reason. The docs: Command Center, *The project folder stays current*.
 - **Edit in Studio Pro no longer disappears when you change page.** It was offered only once the office had found an `.mpr`, and the Portal navigation asked only when the page changed, so it vanished one page after the office said there was none. It's now on every project page, greyed out with the reason as its tooltip when it truly can't work (no Studio Pro on the office's computer, not an admin, already open), and redrawn whenever what the office says about it changes.
+- **After a resume, nobody reports the project as paused any more.** A safe restart pauses every agent and the
+  resume wakes only those with work, so the Coordinator and the other Leads kept "the project is paused" as their
+  latest context, and the Coordinator told the Project Manager to resume a project that was running. Now every
+  resume (a person's, after 🔁 Restart safely, after the budget's auto-pause) tells whoever covers Management when
+  and why it resumed, who's awake and who's asleep, and to re-plan: in its resume brief when it's woken for its own
+  work, otherwise as an office message (it wakes a sleeping Coordinator, waits for a busy one's turn, respects the
+  spend cap). Other Leads aren't woken automatically. An agent that slept through the pause hears once, at the start
+  of its next message, *Note from the office: the project was resumed on Sat 10 Oct 13:20 — you're running; carry on with
+  work on GitHub issue #7.* And what you ask the Coordinator from the console and its quick questions goes in with a one-line
+  fact block: the run state (Running since the last resume, Paused by whom since when, Budget-paused), who's
+  working, idle and asleep. The console's Chat view shows only what you typed. See
+  **Resume and pause** in the docs.
 
 ## 2026-10-11 · release 36 (`35eb29a`)
 

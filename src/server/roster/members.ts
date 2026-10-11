@@ -80,7 +80,10 @@ export class Members {
     if (w) {
       if (m.phase === 'benching') return `${m.name} is writing a handoff note before being benched`;
       if (!isAsleepStatus(w.status)) return `${m.name} is already at work`;
-      const err = floor.wake(w.id, task);
+      // Woken with a task after sleeping through a pause: it hears first that the project was resumed (awareness.ts).
+      const note = task ? this.roster.awareness.noteFor(floor, w) : undefined;
+      const err = floor.wake(w.id, note ? `${note}\n\n${task}` : task);
+      if (!err && note) this.roster.awareness.ack(floor, w.id);
       if (!err && task) this.roster.tasks.assignRole(floor, role, task, by);
       if (!err) floor.toast(`${by} woke ${m.name}, the ${def.title}`);
       return err;
@@ -128,7 +131,7 @@ export class Members {
     if (waiting) return `Can't bench ${m.name}: it's waiting on a person: answer its escalation “${waiting.title}” first`;
     const text = benchPrompt(role, lessonsPathIn(floor.dir), this.stamp(floor));
     // The idle bench is the office's doing (held past the spend cap: an idle one costs nothing); a person's goes through.
-    const sent = this.roster.delivery.send(floor, w, text, { origin: by === 'idle' ? 'office' : 'person', wake: true, resume: false });
+    const sent = this.roster.delivery.send(floor, w, text, { origin: by === 'idle' ? 'office' : 'person', wake: true, resume: false, note: false });
     if (sent.status === 'refused') return sent.why;
     m.phase = 'benching';
     m.benchAskedAt = this.roster.deps.now();

@@ -23,7 +23,8 @@ import { handoffPrompt, resumeBrief } from './brief.js';
 import { coordinatorRelays } from './relays.js';
 import { managerRole } from '../roster/coverage.js';
 import { waitBeforeNext } from './order.js';
-import { setPauseWaiting, setProjectPause } from './store.js';
+import { noteResumed, noteSlept, projectPause, setPauseWaiting, setProjectPause } from './store.js';
+import { resumeWhy } from '../roster/awareness.js';
 import type { RunDeps, RunFloor } from './types.js';
 import type { Candidate } from './preview.js';
 
@@ -50,6 +51,11 @@ export interface ResumeRun {
   begun?: boolean;
   /** Said by the safe restart that started it (restart/). */
   reason?: string;
+  /** When the pause was lifted, and how that's said ("after a safe restart"): for the notes after it (roster/awareness.ts). */
+  resumedAt?: number;
+  why?: string;
+  /** Whoever covers Management has heard the project resumed: in its resume brief, or the note after the wakes. */
+  told?: boolean;
 }
 
 export interface PauseAgent extends RunAgent {
@@ -143,12 +149,19 @@ async function briefFor(deps: RunDeps, f: RunFloor, s: ResumeRun, a: ResumeAgent
     relays: relays?.text,
     reasons: c?.reasons ?? [],
   });
+  // Whoever covers Management hears who's awake and who's asleep, and to re-plan, in the same message.
+  const manages = !!a.role && a.role === managerRole(d) && s.resumedAt !== undefined;
+  const waking = s.agents.filter((x) => (x.action === 'wake' || x.action === 'rehire') && x.status !== 'failed').map((x) => x.name);
+  const note = manages ? deps.roster.awareness.resumeNote(f.team, { at: s.resumedAt!, why: s.why ?? 'after a pause', me: w?.id, waking }) : undefined;
   return {
-    text,
+    text: note ? `${text}\n\n${note}` : text,
     mark: () => {
       owed.mark();
       if (notes.length && a.role) delete d.outbox.leads[a.role];
       relays?.mark(w ?? workerOf(deps, f, a));
+      if (note) s.told = true;
+      // Its resume brief says the project resumed: never the once-only note as well (roster/awareness.ts).
+      if (w) deps.roster.awareness.ack(f.team, w.id);
       deps.roster.touch(f.team, true);
     },
   };
@@ -188,7 +201,7 @@ async function act(deps: RunDeps, f: RunFloor, s: ResumeRun, a: ResumeAgent): Pr
       a.note = 'It left the floor';
       return;
     }
-    const r = deps.roster.delivery.send(f.team, w, brief.text, { origin: 'person', by, wake: true });
+    const r = deps.roster.delivery.send(f.team, w, brief.text, { origin: 'person', by, wake: true, note: false });
     if (r.status === 'refused') {
       a.status = 'failed';
       a.note = r.why;
@@ -199,6 +212,26 @@ async function act(deps: RunDeps, f: RunFloor, s: ResumeRun, a: ResumeAgent): Pr
   a.status = 'starting';
   a.startedAt = deps.now();
   s.lastAt = a.startedAt;
+}
+
+/**
+ * After the wakes, whoever covers Management (the Coordinator, a Solo Lead) hears the project resumed,
+ * who's awake and who's asleep, and to re-plan, unless its resume brief said so. It isn't every Lead:
+ * the Coordinator decides who's needed. An office message: woken with it when asleep, typed after
+ * the turn under way when busy, never past the spend cap.
+ */
+function tellManager(deps: RunDeps, f: RunFloor, s: ResumeRun) {
+  const w = deps.roster.awareness.manager(f.team);
+  const actor = office('Resume project');
+  if (!w) {
+    audit.record({ floor: s.floor, actor, action: 'resume.coordinator', target: target(f), summary: 'Nobody covering Management is at work to hear the project resumed', details: {} });
+    return;
+  }
+  const text = deps.roster.awareness.resumeNote(f.team, { at: s.resumedAt ?? deps.now(), why: s.why ?? 'after a pause', me: w.id });
+  const r = deps.roster.delivery.send(f.team, w, text, { origin: 'office', wake: true, resume: false, note: false, id: `resume-note-${s.floor}-${s.resumedAt ?? 0}` });
+  if (r.status !== 'refused') deps.roster.awareness.ack(f.team, w.id);
+  const how = r.status === 'refused' ? `couldn't: ${r.why}` : r.status === 'woke' ? 'woken with it' : r.status === 'held' ? 'after its current turn' : 'typed now';
+  audit.record({ floor: s.floor, actor, action: 'resume.coordinator', target: { kind: 'worker', id: w.id, label: w.name }, summary: `Told ${w.name} the project resumed, to re-plan (${how})`, details: { status: r.status }, severity: r.status === 'refused' ? 'notice' : 'info' });
 }
 
 export function resumeFlow(deps: RunDeps): WorkflowDef<ResumeRun> {
@@ -216,11 +249,15 @@ export function resumeFlow(deps: RunDeps): WorkflowDef<ResumeRun> {
         done: (s) => !!s.begun,
         async run({ state: s }) {
           const f = floorOf(deps, s.floor);
+          const resumedAt = deps.now();
+          const why = resumeWhy(s.reason, projectPause(s.floor), s.by);
           setProjectPause(s.floor, undefined);
+          // Everyone the pause wound down is owed, once, word that it's over (roster/awareness.ts).
+          noteResumed(s.floor, { at: resumedAt, why, by: s.by });
           audit.record({ floor: s.floor, actor: byWhom(s.by, s.byId), action: 'resume.started', target: target(f), summary: `Resumed the project: ${s.agents.length} agent${s.agents.length === 1 ? '' : 's'} to wake${s.reason ? ` (${s.reason})` : ''}`, details: { agents: s.agents.map((a) => ({ name: a.name, action: a.action })), pacing: s.pacing } });
           deps.chatter?.(s.floor, `▶ ${s.by} resumed the project: waking ${s.agents.map((a) => a.name).join(', ') || 'nobody'}.`);
           f.team.changed();
-          return { begun: true };
+          return { begun: true, resumedAt, why };
         },
       },
       {
@@ -248,7 +285,7 @@ export function resumeFlow(deps: RunDeps): WorkflowDef<ResumeRun> {
           if (done === 'failed' || done === 'sent-home')
             audit.record({ floor: s.floor, actor: office('Resume project'), action: done === 'failed' ? 'agent.skipped' : 'agent.sent-home', target: { kind: 'worker', id: w?.id ?? a.key, label: a.name }, summary: done === 'failed' ? `Couldn't wake ${a.name}: ${a.note}` : `Sent ${a.name} home instead of waking it: its branch is merged`, details: { action: a.action }, severity: done === 'failed' ? 'notice' : 'info' });
           f.team.changed();
-          return { i: s.i + 1, agents: s.agents, lastAt: s.lastAt };
+          return { i: s.i + 1, agents: s.agents, lastAt: s.lastAt, told: s.told };
         },
       },
       {
@@ -270,11 +307,20 @@ export function resumeFlow(deps: RunDeps): WorkflowDef<ResumeRun> {
         },
       },
       {
+        id: 'coordinator',
+        label: 'Tell the Coordinator',
+        done: (s) => !!s.told,
+        async run({ state: s }) {
+          tellManager(deps, floorOf(deps, s.floor), s);
+          return { told: true };
+        },
+      },
+      {
         id: 'end',
         label: 'Done',
         async run({ state: s }) {
           const f = floorOf(deps, s.floor);
-          const n = (st: RunAgent['status']) => s.agents.filter((a) => a.status === st).length;
+          const n =(st: RunAgent['status']) => s.agents.filter((a) => a.status === st).length;
           const summary = `Resumed the project: ${n('woken')} woken, ${n('failed')} couldn't be, ${n('sent-home')} sent home`;
           audit.record({ floor: s.floor, actor: byWhom(s.by, s.byId), action: 'resume.finished', target: target(f), summary, details: { agents: s.agents.map((a) => ({ name: a.name, status: a.status, note: a.note })) } });
           deps.chatter?.(s.floor, `▶ ${summary}.`);
@@ -376,6 +422,8 @@ export function pauseFlow(deps: RunDeps): WorkflowDef<PauseRun> {
             .workers()
             .filter((w) => w.kind === 'agent' && !isAsleepStatus(w.status))
             .map((w) => ({ key: w.id, workerId: w.id, role: deps.roster.roleOf(f.team, w.id), name: w.name, action: 'pause', status: 'pending' }));
+          // Each is told the project is pausing: once it's resumed, each is owed word of that (roster/awareness.ts).
+          noteSlept(s.floor, agents.map((a) => a.key));
           audit.record({ floor: s.floor, actor: byWhom(s.by, s.byId), action: 'pause.started', target: target(f), summary: `Paused the project${s.why === 'restart' ? ' for a safe restart' : s.why === 'budget' ? ' (budget reached)' : ''}: ${agents.length} agent${agents.length === 1 ? '' : 's'} to wind down`, details: { agents: agents.map((a) => a.name), why: s.why } });
           deps.chatter?.(s.floor, `⏸ ${s.by} paused the project${s.why === 'restart' ? ' for a safe restart' : s.why === 'budget' ? ': its budget is reached' : ''}: agents finish their turn, write a handoff note and sleep.`);
           f.team.changed();

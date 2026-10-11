@@ -31,6 +31,8 @@ export interface HeldPrompt {
   expiresAt: number;
   /** Typed with the resume line at its end (resume.ts): the office's words. */
   resume?: boolean;
+  /** Typed with the run-state fact block before it, as it is then (awareness.ts): the Project Manager's question to the Coordinator. */
+  facts?: boolean;
 }
 
 /** The id a held prompt gets when its sender gave none: the same prompt to the same agent is the same one. */
@@ -56,7 +58,7 @@ export function reviveHeld(raw: unknown): HeldPrompt[] {
     const createdAt = typeof r.createdAt === 'number' ? r.createdAt : 0;
     const by = str(r.by, 200);
     ids.add(id);
-    out.push({ id, workerId, origin: r.origin as Origin, ...(by ? { by } : {}), text, createdAt, expiresAt: typeof r.expiresAt === 'number' ? r.expiresAt : createdAt + HELD_TTL_MS, ...(r.resume === true ? { resume: true } : {}) });
+    out.push({ id, workerId, origin: r.origin as Origin, ...(by ? { by } : {}), text, createdAt, expiresAt: typeof r.expiresAt === 'number' ? r.expiresAt : createdAt + HELD_TTL_MS, ...(r.resume === true ? { resume: true } : {}), ...(r.facts === true ? { facts: true } : {}) });
   }
   return out.slice(-HELD_KEPT);
 }

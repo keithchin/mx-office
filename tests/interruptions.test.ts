@@ -433,7 +433,9 @@ test("the Project Manager's Nudge and their after-the-turn question; the Coordin
   assert.equal(floor.typed.length, 0, 'held for its turn');
   assert.equal(d().members.pm.task, undefined, "a question isn't its task");
   floor.set(pm, 'done');
-  assert.equal(floor.typed.at(-1)!.text, "What's blocking the team?");
+  // With the run state as it is when it goes in (roster/awareness.ts), then the question.
+  assert.match(floor.typed.at(-1)!.text, /^\[Office facts, [^\]]+\] Project: Running\. Agents working: [^;]*; awake and idle: \w+ \(you\);/);
+  assert.match(floor.typed.at(-1)!.text, /\n\nWhat's blocking the team\?$/);
   const opts = roster.interrupts.tellOpts(floor, pm, kat);
   assert.deepEqual(opts, { hold: true, between: true });
   assert.equal(roster.delivery.send(floor, floor.worker(kat)!, 'Katherine: any blockers on issue #1?', { origin: 'agent', by: 'Niklaus', wake: true, hold: true, ...opts }).status, 'held');
