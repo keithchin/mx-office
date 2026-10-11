@@ -4,6 +4,12 @@ What changed in Mx Office, newest first. A release is what went
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Fixed
+
+- **A closed pull request or an agent's own "task done" no longer counts as delivered.** A team member's task used to count as finished whenever its pull request stopped being open (closed without merging included) or the agent said `task done`, so rejected or abandoned work looked delivered. Now only a merged pull request, or its issue closed as completed, counts as delivered. An issue closed as *not planned* cancels the task. A pull request closed without merging asks you in Needs you whether to rework it, cancel the task, or which PR replaced it (a newer PR from the same agent's branch replaces it by itself). An agent's own `task done` is pending verification until its PR merges or its issue closes. Neither gets back-to-work nudges: they wait for you, as a finished task does. Tasks finished before this keep the record they had.
+
 ## 2026-10-11 · release 38 (`928af9b`)
 
 ### Fixed

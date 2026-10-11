@@ -227,7 +227,7 @@ export class Roster {
   }
 
   /** The floor's issues came back from GitHub: Jeff triages the new ones. */
-  onIssues(floor: TeamFloor, issues: Parameters<Jeff['onIssues']>[1]) {
+  onIssues(floor: TeamFloor, issues: readonly (Parameters<Jeff['onIssues']>[1][number] & { stateReason?: string })[]) {
     this.tasks.onIssues(floor.id, issues);
     void this.jeff.onIssues(floor, issues).catch((err: unknown) => console.error(`agent-office: Jeff's triage on ${floor.id}: ${(err as Error)?.message ?? err}`));
   }

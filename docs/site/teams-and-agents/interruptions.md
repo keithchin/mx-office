@@ -16,7 +16,14 @@ Every message the office writes to an agent (a standup, an autonomy or skills no
 
 An agent with no task is told *you have no task yet: tell the Coordinator what you will do next, or escalate if you are blocked*. Several messages typed together get one line, at the end.
 
-A task is **finished** when the office can tell: the issue it names was closed, its pull request is no longer open, or the agent ended a turn saying `task done`.
+How a task ends is worked out from GitHub's own lists, and only real delivery counts as delivered:
+
+- **Delivered**: its pull request was **merged**, or the issue it names was closed as *completed*.
+- **Cancelled**: the issue was closed as *not planned* (or as a duplicate). It's finished, but not delivered.
+- **Closed without merging**: its pull request was closed and not merged. That's never success. If the same agent opened a newer pull request from its branch for the same issue, the old one is just **replaced** and the work carries on. Otherwise the office asks you in [Needs you](../using-the-office/command-center.md#needs-you): *PR #9 was closed without merging: rework, cancel, or replaced?*
+- **Pending verification**: the agent ended a turn saying `task done`, but no pull request merged and no issue closed. The office takes it as a claim and notes it in the project's recent activity. It becomes delivered once the pull request merges or the issue closes.
+
+A task waiting on your decision or pending verification gets no back-to-work nudges, the same as a finished one: it waits for you. Its resume line tells the agent not to carry on with that task until you answer. Tasks finished before this change keep the record they had.
 
 ## The office never cuts into a turn under way
 
@@ -36,7 +43,7 @@ When a team member's turn ends with its task still open, the office waits half a
 
 It's sent once per stop, and at most **twice per task an hour**. Never when:
 
-- the member has an escalation open (the next move is yours), or its task is finished;
+- the member has an escalation open (the next move is yours), or its task is finished, waiting on your decision or pending verification;
 - it's working, asking you something in its terminal, asleep, benched or answering a standup;
 - someone has its terminal open, or messages are waiting to be typed to it (they carry the resume line);
 - the project is paused (⏸ Pause project, a safe restart, the budget) or the daily spend cap is reached;
