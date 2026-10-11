@@ -5,6 +5,7 @@
 // git about branches that moved.
 
 import { execFileOff } from '../offloop/exec.js';
+import { originNews } from '../floor-sync/bus.js';
 import type { GitBranch, GitGraph } from '../../shared/gitgraph.js';
 import type { GhPull, WorkerInfo } from '../../shared/protocol.js';
 import { defaultFromSymref, finish, LOG_FORMAT, mergeRefs, parseCounts, parseLog, parseRefs, pick, REF_FORMAT, type Candidate } from './parse.js';
@@ -144,7 +145,10 @@ export class GitGraphs {
       mine.running = this.git(['remote'], dir)
         .then((out) => (out.split('\n').some((l) => l.trim() === 'origin') ? this.git(['fetch', '--prune', '--quiet', 'origin'], dir, FETCH_TIMEOUT_MS) : ''))
         .then(
-          () => void (mine.error = undefined),
+          () => {
+            mine.error = undefined;
+            originNews(dir);
+          },
           (err: Error) => void (mine.error = err.message),
         )
         .finally(() => {

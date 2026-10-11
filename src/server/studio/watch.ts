@@ -114,6 +114,12 @@ export class StudioWatch {
     return this.floors.get(id)?.state;
   }
 
+  /** Looks for floor `id`'s .mpr again on the next look, not a minute later (the floor sync just brought one, or someone opened it). */
+  refind(id: string) {
+    const k = this.floors.get(id);
+    if (k) k.foundAt = 0;
+  }
+
   historyOf(id: string): readonly StudioTransition[] {
     return this.floors.get(id)?.history ?? [];
   }

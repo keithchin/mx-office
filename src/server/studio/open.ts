@@ -77,6 +77,18 @@ export function launcherFor(mpr: string, version: string | undefined, d: Pick<St
   return { problem: 'not-installed', error: `Studio Pro isn't installed on the office's computer (nothing in ${root})` };
 }
 
+/**
+ * What keeps Studio Pro from opening anything on this machine, whatever the project: no desktop, not
+ * Windows, nothing installed. For a floor with no .mpr in its folder yet (bringing it up to date with
+ * GitHub may bring one), so the button can say whether it could open one at all.
+ */
+export function machineProblem(d: Pick<StudioDeps, 'platform' | 'env' | 'exists' | 'readdir'>): { problem: StudioProblem; error: string } | undefined {
+  if (!onDesktop(d.env, d.platform)) return { problem: 'no-desktop', error: "The office isn't running on a desktop (it's over SSH, in CI or headless), so there's nowhere to open Studio Pro" };
+  if (d.platform !== 'win32') return { problem: 'not-windows', error: "Studio Pro runs on Windows only, and the office isn't on Windows" };
+  const l = launcherFor('project.mpr', undefined, d);
+  return 'problem' in l ? l : undefined;
+}
+
 /** Everything short of opening it: the project, its version, and what would open it (or why nothing can). */
 export function checkStudio(dir: string, d: StudioDeps): StudioCheck {
   let mpr: string | undefined;

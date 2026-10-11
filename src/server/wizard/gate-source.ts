@@ -13,6 +13,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { signal } from '../incidents/signals.js';
+import { originNews } from '../floor-sync/bus.js';
 
 const ENV = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' };
 
@@ -93,9 +94,11 @@ export function fetchDefault(dir: string, def: string, everyMs = DEFAULTS.fetchM
   const going = fetching.get(dir);
   if (going) return going;
   if (now - (fetchedAt.get(dir) ?? -Infinity) < everyMs) return Promise.resolve();
-  const p = git(['fetch', '--quiet', '--no-tags', 'origin', `+refs/heads/${def}:refs/remotes/origin/${def}`], dir, 60_000).then(() => {
+  const p = git(['fetch', '--quiet', '--no-tags', 'origin', `+refs/heads/${def}:refs/remotes/origin/${def}`], dir, 60_000).then((out) => {
     fetchedAt.set(dir, Date.now());
     fetching.delete(dir);
+    // The floor sync looks whether the folder can follow (floor-sync/).
+    if (out !== undefined) originNews(dir);
   });
   fetching.set(dir, p);
   return p;

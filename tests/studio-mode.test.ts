@@ -277,6 +277,30 @@ test('floors without an .mpr cost nothing: no process list is asked for', async 
   assert.equal(w.stateOf('web')?.open, false);
 });
 
+test('an .mpr the floor sync just brought is looked for at the next look, not a minute later (refind)', async () => {
+  let found = 0;
+  let mpr: string | undefined;
+  const w = new StudioWatch({
+    now: () => 1,
+    detect: { platform: 'win32', pids: async () => [], commandLines: async () => [], answers: async () => false },
+    readLock: () => undefined,
+    findMpr: () => (found++, mpr),
+    readVersion: () => undefined,
+    gitStatus: async () => '',
+    mcpUrl: DEFAULT_STUDIO_MCP_URL,
+    sink: { state: () => undefined, audit: () => undefined, chatter: () => undefined, toast: () => undefined },
+  });
+  const floor = { id: 'travel', dir: tmpdir(), def: { name: 'Travel' } };
+  await w.poll([floor]);
+  assert.equal(found, 1);
+  mpr = path.join(tmpdir(), 'project.mpr');
+  await w.poll([floor]);
+  assert.equal(found, 1, 'within the minute: not looked for again');
+  w.refind('travel');
+  await w.poll([floor]);
+  assert.equal(found, 2, 'after refind: looked for at once');
+});
+
 // ---- The guard: which commands write the model ----------------------------------------------
 
 test('shell words: quotes, escapes, and ; && | ( ) $( ) and newlines between commands', () => {

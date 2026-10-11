@@ -11,12 +11,16 @@ import type { StudioInfo, StudioOpen, StudioState } from '../../shared/studio.js
 import { audit } from '../audit/index.js';
 import { noteChatter } from '../chatter/bus.js';
 import type { Ctx } from '../office/context.js';
-import { checkStudio, machine, type StudioDeps } from './open.js';
+import { checkStudio, machine, machineProblem, type StudioDeps } from './open.js';
+import type { FloorSyncState } from '../../shared/studio.js';
 import { POLL_MS, StudioWatch, machineWatchDeps } from './watch.js';
 
 export type { StudioInfo, StudioOpen };
 
 let watch: StudioWatch | undefined;
+
+/** Studio mode looks for floor `id`'s .mpr again at its next look: the floor sync just changed the folder (floor-sync/). */
+export const refindMpr = (id: string): void => watch?.refind(id);
 
 /** Floor `id`'s Studio mode, once the office has looked. */
 export const studioStateOf = (id: string): StudioState | undefined => watch?.stateOf(id);
@@ -47,7 +51,8 @@ export function startStudioMode(ctx: Pick<Ctx, 'floors' | 'toFloor' | 'toastFloo
   timer.unref?.();
   const soon = new Set<NodeJS.Timeout>();
   // Opened from the floor page: Studio Pro takes a few seconds to start, so look again shortly.
-  const off = onStudioOpened(() => {
+  const off = onStudioOpened((o) => {
+    w.refind(o.floor);
     for (const ms of [3000, 8000, 15000]) {
       const t = setTimeout(() => {
         soon.delete(t);
@@ -97,8 +102,13 @@ export const busyAgents = (floor: Pick<Floor, 'workers'>): string[] =>
     .filter((w) => w.kind === 'agent' && isBusy(w.status))
     .map((w) => w.name);
 
-export function studioInfo(floor: Pick<Floor, 'id' | 'dir' | 'workers'>, admin: boolean, d: StudioDeps = machine()): StudioInfo {
+/**
+ * What the floor page needs to know about the button. `sync`: the floor's folder against GitHub, from
+ * the floor sync's last look (floor-sync/), passed in so this module doesn't need that one.
+ */
+export function studioInfo(floor: Pick<Floor, 'id' | 'dir' | 'workers'>, admin: boolean, d: StudioDeps = machine(), sync?: FloorSyncState): StudioInfo {
   const c = checkStudio(floor.dir, d);
+  const blocked = c.mpr ? undefined : machineProblem(d);
   const rel = (p: string) => p.slice(floor.dir.length).replace(/^[\\/]+/, '') || p;
   return {
     hasMpr: !!c.mpr,
@@ -110,5 +120,7 @@ export function studioInfo(floor: Pick<Floor, 'id' | 'dir' | 'workers'>, admin: 
     busy: busyAgents(floor),
     ...(last.has(floor.id) ? { last: last.get(floor.id) } : {}),
     ...(studioStateOf(floor.id) ? { state: studioStateOf(floor.id) } : {}),
+    ...(blocked ? { machine: blocked } : {}),
+    ...(sync ? { sync } : {}),
   };
 }

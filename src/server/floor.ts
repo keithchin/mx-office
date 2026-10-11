@@ -7,6 +7,7 @@ import { DESK_BY_ID } from '../shared/layout.js';
 import type { FloorDef } from './building.js';
 import { excludeFromGit } from './config.js';
 import { headBranch, orGit, originUrlOf } from './gitfiles.js';
+import { originNews } from './floor-sync/bus.js';
 import { agentProviders, configuredProvider } from './agents.js';
 import { WorkerManager, workedMs, type HookEnv, type RunAs } from './workers.js';
 import { GitHub, MergeWatch } from './github.js';
@@ -404,6 +405,8 @@ export class Floor {
 
   /** Someone just walked in: boards that haven't been looked at in a while get fetched again. */
   arrived() {
+    // The floor's own folder brought up to date with GitHub when that's safe (floor-sync/).
+    originNews(this.dir, 'stale');
     if (Date.now() - Math.max(this.github.issues.fetchedAt, this.github.pulls.fetchedAt) > REFRESH_MS) void this.github.refresh();
   }
 
