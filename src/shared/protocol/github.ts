@@ -22,6 +22,8 @@ export interface GhIssue {
   updatedAt: string;
   body: string;
   comments: number;
+  /** Why GitHub closed it (gh's stateReason: COMPLETED, NOT_PLANNED, DUPLICATE), when it's closed and GitHub says. */
+  stateReason?: string;
 }
 
 export interface GhPull {

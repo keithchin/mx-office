@@ -56,6 +56,7 @@ export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
     rename: (id, name) => floor.workers.rename(id, name),
     cwdOf: (w: WorkerInfo) => (w.worktree ? path.resolve(floor.dir, w.worktree.path) : floor.dir),
     openPulls: () => floor.github.pulls.items.filter((p) => p.state === 'OPEN'),
+    pulls: () => floor.github.pulls.items,
     toast: (text, level) => ctx.toastFloor(floor, text, level),
     changed: (alert) => ctx.toFloor(floor, { t: 'roster.changed', floor: floor.id, ...(alert ? { alert } : {}) }),
     activity: (text) => summaryOf(ctx).noteTeam(floor.id, text),

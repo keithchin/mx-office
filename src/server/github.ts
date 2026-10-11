@@ -424,7 +424,7 @@ export class GitHub {
     const asked = Date.now();
     try {
       // Open and closed separately, so old open issues are never crowded out by recent closed ones.
-      const fields = 'number,title,state,url,author,labels,assignees,createdAt,updatedAt,body,comments';
+      const fields = 'number,title,state,stateReason,url,author,labels,assignees,createdAt,updatedAt,body,comments';
       const [open, closed] = await Promise.all([
         gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', fields], this.dir),
         gh(['issue', 'list', '--state', 'closed', '--limit', '40', '--json', fields], this.dir),
@@ -441,6 +441,7 @@ export class GitHub {
         updatedAt: i.updatedAt,
         body: String(i.body ?? '').slice(0, 4000),
         comments: Array.isArray(i.comments) ? i.comments.length : Number(i.comments ?? 0),
+        ...(i.state !== 'OPEN' && typeof i.stateReason === 'string' && i.stateReason ? { stateReason: i.stateReason } : {}),
       }));
       const items = this.claims.mark(this.relabel('issue', fetched, asked), asked);
       this.issues = { items, fetchedAt: Date.now(), loading: false };

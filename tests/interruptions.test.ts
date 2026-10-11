@@ -60,15 +60,16 @@ test('the resume line names the task, or says what to do without one, and a mess
   assert.equal(withResume(once, resumeLine('other')), once, 'not twice');
 });
 
-test('a task is finished when its issue closed, its PR is no longer open, or the agent said task done', () => {
+test('a task stops being nudged when its issue closed, its PR merged or closed, or the agent said task done (task-outcomes.test.ts has how each counts)', () => {
   const task = { text: 'issue #1', at: 0, by: 'K', issue: 1 };
   assert.equal(finishedWhy({ task }), undefined);
-  assert.equal(finishedWhy({ task, closed: new Set([1]) }), 'issue #1 closed');
-  assert.equal(finishedWhy({ task, closed: new Set([2]) }), undefined);
-  assert.equal(finishedWhy({ task, pr: { number: 9, open: false } }), 'PR #9 is no longer open');
-  assert.equal(finishedWhy({ task, pr: { number: 9, open: undefined } }), undefined, "the list isn't loaded: not a reason");
-  assert.equal(finishedWhy({ task, lastWords: 'Task done: the BRD is in docs/brd.md.' }), 'it said task done');
-  assert.equal(finishedWhy({ task: { ...task, doneAt: 3, doneWhy: 'issue #1 closed' } }), 'issue #1 closed');
+  assert.equal(finishedWhy({ task, closed: new Map([[1, 'COMPLETED']]) }), 'issue #1 closed');
+  assert.equal(finishedWhy({ task, closed: new Map([[2, '']]) }), undefined);
+  assert.equal(finishedWhy({ task, pr: { number: 9 }, pulls: [{ number: 9, state: 'MERGED' }] }), 'PR #9 merged');
+  assert.equal(finishedWhy({ task, pr: { number: 9 }, pulls: [{ number: 9, state: 'CLOSED' }] }), 'PR #9 was closed without merging');
+  assert.equal(finishedWhy({ task, pr: { number: 9 }, pulls: [] }), undefined, "the list isn't loaded: not a reason");
+  assert.equal(finishedWhy({ task, lastWords: 'Task done: the BRD is in docs/brd.md.' }), 'it said task done (pending verification)');
+  assert.equal(finishedWhy({ task: { ...task, doneAt: 3, doneWhy: 'issue #1 closed' } }), 'issue #1 closed', 'a legacy record stays as it was');
 });
 
 // ---- The back-to-work nudge's rules ----------------------------------------------------------------------
