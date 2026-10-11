@@ -60,7 +60,7 @@ export function deliverablesBrief(roleId: RoleId, earlyDrafts: boolean, also: re
   const own = LISTS[roleId] ?? [];
   const out = [
     '## Your deliverables',
-    'The office\'s 📦 Deliverables view (on your team\'s page) checks these paths per stage, so write them exactly there. Keep them on your branch and open a pull request for them ' +
+    'The office\'s 📄 Documents page (and your team\'s page) checks these paths per stage, so write them exactly there. Keep them on your branch and open a pull request for them ' +
       `(\`gh pr create --label ${teamLabel(role.team)}\`): the view shows branch work as "not merged", and only what lands on main counts. The toolkit skills named say how; don't copy them here.`,
     ...own,
     ...also.flatMap((r) => {
@@ -79,7 +79,7 @@ export function deliverablesBrief(roleId: RoleId, earlyDrafts: boolean, also: re
     '',
     '### Early drafts (on for this floor)',
     `While the Chief Analyst is still on Stages 0–2, make ${draft}. Rules:`,
-    `- Mark every draft: \`-draft\` in its file name, and \`${DRAFT_BANNER}\` as the first line (a heading or an HTML banner). The Deliverables view lists them as Draft.`,
+    `- Mark every draft: \`-draft\` in its file name, and \`${DRAFT_BANNER}\` as the first line (a heading or an HTML banner). The Documents page lists them as Draft.`,
     '- A draft never claims a gate: don\'t tick a stage, run its gate as done, or call it approved.',
     '- Keep it small: at most three files and about 30 minutes of work, no high-fidelity design, no MDL. Read the sources and the knowledge base; don\'t interview anyone for it.',
     '- Once the BRDs are confirmed (Stage 2 gate), revise each draft into the real deliverable (drop the `-draft` and the banner) or delete it, and say which in your journal.',

@@ -1,6 +1,6 @@
 // The project progress bar's phases (shared/progress.ts): the toolkit's stages less the ones the entry mode
 // doesn't run (unless something is in one after all), then Handover and Accepted; only measured facts
-// ("3 of 5 deliverables on main", a gate's verdict, a decision's date), and unknown shown as unknown,
+// ("3 of 5 documents on main", a gate's verdict, a decision's date), and unknown shown as unknown,
 // never a count or percentage nobody measured.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -32,7 +32,7 @@ test('phases end with Handover and Accepted, and the current one is the first no
   assert.equal(p.find((x) => x.id === '1')!.status, 'waived');
 });
 
-test('only measured counts: deliverables "x of y on main", BRDs without a made-up total; unscanned leaves them out', () => {
+test('only measured counts: documents "x of y on main", BRDs without a made-up total; unscanned leaves them out', () => {
   const scanned = derivePhases(
     input({
       verdicts: [v('2', 'PENDING')],
@@ -41,13 +41,13 @@ test('only measured counts: deliverables "x of y on main", BRDs without a made-u
     }),
   );
   const two = scanned.find((x) => x.id === '2')!;
-  assert.ok(two.measures.includes('1 of 3 deliverables on main (+1 on a branch)'));
+  assert.ok(two.measures.includes('1 of 3 documents on main (+1 on a branch)'));
   assert.ok(two.measures.some((m) => m.startsWith('4 BRDs on main') && /isn't recorded/.test(m)));
   // Some work there but no verdict past PENDING yet: in progress, not "not started".
   assert.equal(two.status, 'active');
   assert.ok(!two.measures.some((m) => /%/.test(m)), 'never a percentage');
   const mini = derivePhases(input({ verdicts: [v('2', 'PENDING')] }));
-  assert.ok(!mini.find((x) => x.id === '2')!.measures.some((m) => /deliverable/.test(m)), 'no scan, no counts (not zeros)');
+  assert.ok(!mini.find((x) => x.id === '2')!.measures.some((m) => /document/.test(m)), 'no scan, no counts (not zeros)');
   assert.equal(mini.find((x) => x.id === '2')!.deliverables, undefined);
 });
 

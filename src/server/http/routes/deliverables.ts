@@ -1,11 +1,12 @@
 // 📦 Deliverables (server/deliverables/): GET the floor's list (a team's, with ?team=), one file to view
 // or download from wherever the scan found it (?src=main|wt:<worker>|ref:<branch>), and a CSV's first
-// rows as a table. Anyone signed in may read them; only catalog or extra paths, only places the scan
-// listed, never past the caps (deliverables/serve.ts).
+// rows as a table; and the page that draws the viewer's Mermaid diagrams. Anyone signed in may read
+// them; only catalog or extra paths, only places the scan listed, never past the caps
+// (deliverables/serve.ts).
 
 import { isCardTeam } from '../../../shared/roster/card-team.js';
 import { deliverablesOf, sourceOf } from '../../deliverables/index.js';
-import { fileAnswer, tableAnswer } from '../../deliverables/serve.js';
+import { fileAnswer, mermaidFrameAnswer, tableAnswer } from '../../deliverables/serve.js';
 import { str } from '../../office/input.js';
 import { send } from '../util.js';
 import type { Route } from '../router.js';
@@ -17,6 +18,12 @@ export const deliverableRoutes = {
     prefix: '/api/deliverables',
     auth: 'session',
     async handle(ctx, { res, url, path: p }) {
+      if (p === '/api/deliverables/mermaid') {
+        // The viewer's diagram drawer (no floor: the office's own Mermaid in a sandboxed frame).
+        const a = await mermaidFrameAnswer();
+        res.writeHead(a.status, a.headers);
+        return res.end(a.body);
+      }
       const floor = floorParam(ctx, url);
       if (!floor) return send(res, 404, { error: 'No such floor' });
       if (p === '/api/deliverables') {

@@ -79,7 +79,7 @@ Shown for toolkit projects until the build plan is confirmed. **Once its gates a
 - **🔄 Re-check gates** (admins only) runs that gate-check now. A project with no remote is read from the floor's folder as before, and Re-check runs `gate-check.sh` there (it rewrites `index.html` and the *Current stage* line in `PROJECT.md`, left uncommitted). It doesn't change answers or decisions, start agents or push anything. **ℹ️ What does Re-check gates do?** under the panel says the same.
 - The stages **P** Kickoff, **0** Triage & scope, **1** Analysis, **2** Requirements, **3** Architecture & design, **4** Build plan, each ✅ PASS, ⏳ PENDING, ⚠️ FAIL, ↷ WAIVED or ✋ MANUAL.
 - *Next: …* and **❓ N open questions**.
-- **📦 Deliverables**: per stage, how many expected deliverables are on main (and how many only on a branch or drafts), and **Open deliverables →** for every team's list. See [Deliverables](deliverables.md).
+- **📄 Documents**: per stage, how many expected documents are on main (and how many only on a branch or drafts), and **Open documents →** for every team's list. See [Deliverables](deliverables.md).
 
 See [The toolkit](../integrations/toolkit.md).
 

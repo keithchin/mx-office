@@ -22,8 +22,6 @@ export interface PortalLayoutDeps {
   openWorker(id: string): void;
   openIssue(it: GhIssue): void;
   openPull(it: GhPull): void;
-  /** The project's deliverables window. */
-  documents(): void;
   /** The live app's state and address (null until the office says). */
   live(): { status: string; url?: string } | undefined;
   budget(): { spent: number; total?: number } | undefined;
@@ -50,7 +48,7 @@ export function portalLayout(deps: PortalLayoutDeps): PortalLayout {
     if (s?.status === 'running' && s.url) window.open(s.url, '_blank', 'noopener');
     else deps.show('live');
   };
-  const run = (a: NavAction) => (a === 'documents' ? deps.documents() : a === 'view-app' ? viewApp() : void openStudio());
+  const run = (a: NavAction) => (a === 'view-app' ? viewApp() : void openStudio());
   const nav = portalNav({ show: deps.show, run, offered: (a) => a !== 'studio' || studioShown() });
   const head = pageHead(main);
   const overview = portalOverview({ show: (t) => deps.show(t as NavTab), openWorker: deps.openWorker, live: deps.live, budget: deps.budget, mendix: studioVersion, setup: deps.setup });

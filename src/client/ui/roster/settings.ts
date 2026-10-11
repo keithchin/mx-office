@@ -25,13 +25,13 @@ export function settingsView(v: RosterView, redraw: (v: RosterView) => void, par
 
 /**
  * Keeps the bar (with 💾 Save, which saves them all) and the headings of `part` with what follows each:
- * Deliverables' early drafts, Jeff's modes, or the rest (the team's own). Your view is the You section's there.
+ * Documents' early drafts, Jeff's modes, or the rest (the team's own). Your view is the You section's there.
  */
 function onlyPart(el: HTMLElement, part: Exclude<RosterSettingsPart, 'all'>): HTMLElement {
   let group: RosterSettingsPart | 'you' = 'team';
   for (const child of [...el.children]) {
     if (child.matches('.ro-bar')) continue;
-    if (child.tagName === 'H4') group = child.textContent === 'Deliverables' ? 'deliverables' : child.matches('.ro-jeff-h') ? 'jeff' : child.textContent?.startsWith('Your view') ? 'you' : 'team';
+    if (child.tagName === 'H4') group = child.textContent === 'Documents' ? 'deliverables' : child.matches('.ro-jeff-h') ? 'jeff' : child.textContent?.startsWith('Your view') ? 'you' : 'team';
     // Resume pacing comes after Jeff, and is the team's.
     const mine = child.matches('.pr-pacing') ? part === 'team' : group === part;
     if (!mine) child.remove();
@@ -125,7 +125,7 @@ function allSettings(v: RosterView, redraw: (v: RosterView) => void): HTMLElemen
     h('h4', {}, 'Review loop'),
     check(s.reviewNudge, (b) => (s.reviewNudge = b), "Nudge a Lead to review its subagent's result when its turn ends right after one came back (once per idle period; never while it needs you, asleep or benched)"),
     check(s.backToWork ?? true, (b) => (s.backToWork = b), 'Back to work: when a member stops with its task still open (nothing escalated, nothing finished), nudge it once to carry on or escalate (at most twice per task an hour; never at level 1, while paused or in Studio mode, or while someone is at its terminal)'),
-    h('h4', {}, 'Deliverables'),
+    h('h4', {}, 'Documents'),
     check(s.earlyDrafts ?? true, (b) => (s.earlyDrafts = b), 'Early drafts: while the Chief Analyst is on Stages 0–2, Design, Development and Testing make small drafts marked as such (low-fi wireframes, a draft domain model, a test-plan outline), to be revised after the BRDs are confirmed. Off: they wait for their stage.'),
     h('h4', {}, 'Subagents'),
     h('p.ro-row', {}, 'Reinstate a benched subagent after ', num(s.subagentCooldownHours ?? 24, (n) => (s.subagentCooldownHours = n ?? 0), { max: 720, step: 1, 'aria-label': 'Subagent cool-down hours' }), ' hours (0 = only by hand). Who may warn, bench or swap a subagent is each Lead’s 🧰 Skills.'),

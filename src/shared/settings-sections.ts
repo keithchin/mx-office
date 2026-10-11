@@ -24,7 +24,7 @@ export const SETTINGS_SECTIONS = [
   { id: 'notify', icon: '🔔', label: 'Notifications', blurb: 'Desktop alerts, phone alerts, Slack / Discord, and Microsoft Teams.' },
   { id: 'budget', icon: '💰', label: 'Budget', blurb: 'This project’s budget, alert threshold and auto-pause, and the office’s default threshold and local currency.', floor: true },
   { id: 'connections', icon: '🔌', label: 'Connections', blurb: 'The tokens and password the office signs in with, git & gh, its folders, phone access and worktree cleanup. Admins only.', admin: true },
-  { id: 'deliverables', icon: '📦', label: 'Deliverables', blurb: 'What the teams make before their stage: early drafts while the Chief Analyst is on Stages 0–2.', floor: true },
+  { id: 'deliverables', icon: '📄', label: 'Documents', blurb: 'What the teams make before their stage: early drafts while the Chief Analyst is on Stages 0–2.', floor: true },
   { id: 'incidents', icon: '🚨', label: 'Incidents', blurb: 'The detection rules that open an incident by themselves, and how long one counts again before a new one opens.' },
   { id: 'studio', icon: '🧱', label: 'Studio', blurb: 'This project’s Mendix model in Studio Pro on the office’s computer, and Studio mode (the agents’ mxcli writes paused while it’s open).', floor: true },
   { id: 'appearance', icon: '🎨', label: 'Appearance', blurb: 'The flat views’ color theme (yours), and the building’s holiday theme and map (everyone’s).' },

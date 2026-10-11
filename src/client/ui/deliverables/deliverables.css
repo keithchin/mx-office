@@ -1,5 +1,5 @@
-/* 📦 Deliverables (ui/deliverables/): the checklist on a team page, the setup panel's line, and the
-   viewer window. Theme tokens only, so Default, Dark, Terminal and both Clean looks apply. */
+/* 📄 Documents (ui/deliverables/): the Documents page, the checklist on a team page, the setup panel's
+   line, and the viewer window. Theme tokens only, so Default, Dark, Terminal and both Clean looks apply. */
 .dv { display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
 .dv-stage { display: flex; flex-direction: column; gap: 6px; }
 .dv-stage-h { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
@@ -45,9 +45,7 @@
 .dv-chip.dv-missing { background: var(--card); }
 .dv-chip-b { font-weight: 700; color: var(--muted); }
 
-/* The windows. */
-.modal.dv-win { width: min(900px, calc(100vw - 24px)); }
-.dv-win-body { padding: 14px 16px; overflow-y: auto; }
+/* The viewer window. */
 .modal.dv-view { width: min(1100px, calc(100vw - 24px)); height: calc(100vh - 40px); }
 .modal header.dv-view-head { position: relative; flex-direction: column; align-items: stretch; gap: 4px; padding-right: 56px; }
 .dv-view-head > .close { position: absolute; top: 10px; right: 12px; }
@@ -74,3 +72,30 @@
   .modal.dv-view { height: calc(100vh - 16px); }
   .dv-owner, .dv-team, .dv-count { margin-left: 0; }
 }
+
+/* The Documents page (page.ts): a bar (search, status filter, when, Refresh) over the stages, each a
+   card whose items flow in columns on a wide screen. */
+.dv-page { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+html[data-theme^='portal'] .dv-page-h { display: none; }
+.dv-page-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.dv-page-search { flex: 0 1 260px; min-width: 0; padding: 5px 10px; border: 1px solid var(--line, var(--rule)); border-radius: var(--radius-sm); background: var(--card); color: var(--ink); font: inherit; font-size: 13px; }
+.dv-page-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.dv-page-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border: 1px solid var(--rule); border-radius: var(--radius-pill); background: var(--card); color: var(--ink); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.dv-page-chip.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+.dv-page-n { font-weight: 700; opacity: .75; font-variant-numeric: tabular-nums; }
+.dv-page-gap { flex: 1; }
+.dv-page-when { font-size: 12px; font-weight: 700; color: var(--muted); }
+.dv-page-sum, .dv-page-none { margin: 0; font-size: 13px; font-weight: 700; color: var(--muted); }
+.dv-page .dv { gap: 14px; }
+.dv-page .dv-stage { padding: 12px 14px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--card); }
+.dv-page .dv-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 8px; }
+/* The skeleton while the first answer is on its way. */
+.dv-skel { display: flex; flex-direction: column; gap: 14px; }
+.dv-skel-stage { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--card); }
+.dv-skel-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 8px; }
+.dv-skel-item { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: var(--radius-sm); background: var(--paper-2); }
+.dv-skel-line { display: block; height: 10px; border-radius: 5px; background: var(--rule); animation: dv-skel 1.2s ease-in-out infinite alternate; }
+.dv-skel-short { width: 40%; }
+.dv-skel-head { width: 180px; height: 12px; }
+@keyframes dv-skel { from { opacity: .45; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .dv-skel-line { animation: none; } }

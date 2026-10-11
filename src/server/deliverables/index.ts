@@ -2,8 +2,9 @@
 // project's default branch on GitHub, origin/<default>, read the way the setup panel reads its gates,
 // wizard/gate-source.ts, with the same 90 s fetch; the floor's folder only when there's no remote), its
 // team's worktrees and the office branches, kept a little while so several pages and a team page
-// flipping between teams don't ask git each time; and which folder or branch a file route may read
-// (only one the scan listed).
+// flipping between teams don't ask git each time, and after that still handed out at once while a new
+// scan runs behind it (one at a time per floor); and which folder or branch a file route may read (only
+// one the scan listed).
 
 import { dropKeys, onForgetFloor } from '../office/forget.js';
 import path from 'node:path';
@@ -17,9 +18,18 @@ import { scanDeliverables, type ScanInput, type ScanPerson } from './scan.js';
 import { branchInfo, fetchDefault } from '../wizard/gate-source.js';
 import { commitTime } from './git.js';
 
-/** A scan is handed out again for this long (ms). */
+/** A scan is handed out again for this long (ms); after it, it's still handed out at once while a new one runs. */
 const FRESH_MS = 20_000;
-const cache = new Map<string, { at: number; p: Promise<DeliverablesView> }>();
+/** The first look waits this long at most for the fetch of origin/<default> (GitHub can take many seconds): the next scan sees what it brought. */
+export const FIRST_FETCH_WAIT_MS = 1500;
+interface Entry {
+  at: number;
+  /** The scan handed out: the newest finished one, or the first one while it runs. */
+  p: Promise<DeliverablesView>;
+  /** A scan running now (the first one, or a newer one behind `p`). */
+  next?: Promise<DeliverablesView>;
+}
+const cache = new Map<string, Entry>();
 onForgetFloor((f) => dropKeys(cache, f));
 
 /** The floor's workers and its team members (hired or not, for their names on branches). */
@@ -46,12 +56,15 @@ export async function scanInput(floor: Pick<Floor, 'id' | 'dir'>, who: ScanPerso
   let info = await branchInfo(floor.dir);
   if (!info) return input;
   if (fetch) {
-    // Waited for only the first time this office looks; after that the next scan sees what it brought.
+    // Waited for only the first time this office looks, and only so long (a slow GitHub held the first
+    // Documents page up for the whole fetch); after that the next scan sees what it brought.
     const f = fetchDefault(floor.dir, info.def);
     if (!fetchedOnce.has(floor.dir)) {
       fetchedOnce.add(floor.dir);
-      await f;
-      info = (await branchInfo(floor.dir)) ?? info;
+      let timer: NodeJS.Timeout | undefined;
+      const done = await Promise.race([f.then(() => true), new Promise<false>((r) => (timer = setTimeout(() => r(false), FIRST_FETCH_WAIT_MS)))]);
+      clearTimeout(timer);
+      if (done) info = (await branchInfo(floor.dir)) ?? info;
     }
   }
   input.main = { def: info.def, sha: info.sha, at: await commitTime(floor.dir, info.sha) };
@@ -60,15 +73,25 @@ export async function scanInput(floor: Pick<Floor, 'id' | 'dir'>, who: ScanPerso
 }
 const fetchedOnce = new Set<string>();
 
-/** The floor's deliverables, scanned at most every FRESH_MS (or now, with `fresh`). Never throws. */
+/**
+ * The floor's deliverables, never more than one scan at a time per floor. Within FRESH_MS of the last
+ * scan, that one; after it, still that one at once while a new scan runs behind it (the next ask gets
+ * the new one); with `fresh` (Refresh), the newest scan itself. Never throws.
+ */
 export function deliverablesOf(ctx: Ctx, floor: Floor, fresh = false): Promise<DeliverablesView> {
   const hit = cache.get(floor.id);
+  if (hit?.next) return fresh ? hit.next : hit.p;
   if (hit && !fresh && Date.now() - hit.at < FRESH_MS) return hit.p;
   const p = scanInput(floor, people(ctx, floor))
     .then((input) => scanDeliverables(input))
     .catch(() => ({ floor: floor.id, scannedAt: Date.now(), items: [], sources: [] }) as DeliverablesView);
-  cache.set(floor.id, { at: Date.now(), p });
-  return p;
+  // The first scan, or a fresh one, is handed out itself; a stale one's answer is handed out until the new one is done.
+  const entry: Entry = !hit || fresh ? { at: Date.now(), p, next: p } : { ...hit, next: p };
+  cache.set(floor.id, entry);
+  void p.then(() => {
+    if (cache.get(floor.id) === entry) cache.set(floor.id, { at: Date.now(), p });
+  });
+  return entry.p;
 }
 
 /**

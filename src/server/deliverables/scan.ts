@@ -1,7 +1,10 @@
 // The deliverables scan: every catalog or extra path (shared/deliverables.ts) in the floor's main
 // checkout, in each hired team member's worktree (uncommitted work included), and on the office's
 // other branches (committed work not merged yet), put together into the view the panels show.
-// Read-only; a branch's listing is cached by its head commit (git.ts), a checkout's is read fresh.
+// Read-only, and cheap to ask again: a branch's own work is one `git diff --raw` cached by its commit
+// and main's (git.ts), a worktree one `git status` plus its commit's cached tree, and only the files
+// that will show are stat'ed (a draft's banner read once per version of the file). Worktrees and
+// branches are looked at a few at a time, every git call off the event loop.
 
 import { open, stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -22,7 +25,7 @@ import {
 } from '../../shared/deliverables.js';
 import type { RoleId, TeamId } from '../../shared/roster/roles.js';
 import { TEAM_IDS } from '../../shared/roster/card-team.js';
-import { changedSinceFork, checkoutFiles, committedIds, headOf, officeBranches, treeAt } from './git.js';
+import { blobSizes, forkChanges, GIT_PARALLEL, headOf, officeBranches, pool, treeAt, worktreeState } from './git.js';
 
 /** Someone on the floor: a worker, and the team role it is, if it's a team member. */
 export interface ScanPerson {
@@ -75,27 +78,50 @@ async function head(file: string): Promise<string> {
   }
 }
 
-/** A checkout's deliverable files with their size, time, committed blob id and whether they're drafts. */
-async function checkout(dir: string): Promise<Map<string, { size: number; mtime: number; draft: boolean; oid?: string }>> {
-  const out = new Map<string, { size: number; mtime: number; draft: boolean; oid?: string }>();
-  const [listed, ids] = await Promise.all([checkoutFiles(dir), committedIds(dir)]);
-  const paths = (listed ?? []).filter(isDeliverablePath);
-  for (let i = 0; i < paths.length; i += 32) {
-    await Promise.all(
-      paths.slice(i, i + 32).map(async (p) => {
-        try {
-          const abs = path.join(dir, p);
-          const s = await stat(abs);
-          if (!s.isFile()) return;
-          const k = kindOf(p);
-          const draft = draftByName(p) || ((k === 'md' || k === 'html') && draftByHead(await head(abs)));
-          out.set(p, { size: s.size, mtime: Math.round(s.mtimeMs), draft, oid: ids.get(p) });
-        } catch {
-          // gone since git listed it
-        }
-      }),
-    );
+/** A file's draft banner, read once per version of the file (its path, size and time). */
+const banners = new Map<string, boolean>();
+async function draftAt(abs: string, p: string, size: number, mtime: number): Promise<boolean> {
+  if (draftByName(p)) return true;
+  const k = kindOf(p);
+  if (k !== 'md' && k !== 'html') return false;
+  const key = `${abs}\0${size}\0${mtime}`;
+  const hit = banners.get(key);
+  if (hit !== undefined) return hit;
+  const draft = draftByHead(await head(abs));
+  banners.set(key, draft);
+  if (banners.size > 5000) banners.delete(banners.keys().next().value!);
+  return draft;
+}
+
+/** A checkout file: its committed blob id, unless it's changed (or new) in the folder. */
+type CheckoutFile = { oid?: string };
+
+/** A checkout's deliverable files, from its commit's tree (cached) and one `git status`; undefined when it isn't a git checkout. */
+async function checkoutFiles(repo: string, dir: string): Promise<{ head?: string; files: Map<string, CheckoutFile> } | undefined> {
+  const st = await worktreeState(dir);
+  if (!st) return undefined;
+  const files = new Map<string, CheckoutFile>();
+  for (const t of st.head ? await treeAt(repo, st.head) : []) {
+    if (isDeliverablePath(t.path) && !st.gone.has(t.path)) files.set(t.path, st.dirty.has(t.path) ? {} : { oid: t.oid });
   }
+  for (const p of st.dirty) if (!files.has(p) && !st.gone.has(p) && isDeliverablePath(p)) files.set(p, {});
+  return { head: st.head, files };
+}
+
+/** `paths` in `dir` with their size, time and whether they're drafts (a few dozen at a time; one gone since git listed it is left out). */
+async function statFiles(dir: string, paths: readonly string[]): Promise<Map<string, { size: number; mtime: number; draft: boolean }>> {
+  const out = new Map<string, { size: number; mtime: number; draft: boolean }>();
+  await pool(paths, 32, async (p) => {
+    try {
+      const abs = path.join(dir, p);
+      const s = await stat(abs);
+      if (!s.isFile()) return;
+      const mtime = Math.round(s.mtimeMs);
+      out.set(p, { size: s.size, mtime, draft: await draftAt(abs, p, s.size, mtime) });
+    } catch {
+      // gone since git listed it
+    }
+  });
   return out;
 }
 
@@ -111,18 +137,68 @@ export function branchOwner(branch: string, people: readonly ScanPerson[]): { wh
   return { who: bare ? bare[0].toUpperCase() + bare.slice(1) : local };
 }
 
+/** One place's files, before they're put together: each with its blob (when committed), size, time and draft. */
+type Listing = { where: DeliverableWhere; files: { path: string; oid?: string; size?: number; mtime?: number; draft: boolean }[] };
+
 export async function scanDeliverables(input: ScanInput, now = Date.now()): Promise<DeliverablesView> {
   const found = new Map<string, Found>();
-  if (input.main) {
-    // On main means on origin/<default>: what has merged, whatever branch the floor's folder is on.
-    const label = `origin/${input.main.def}`;
-    for (const t of await treeAt(input.dir, input.main.sha)) {
-      if (isDeliverablePath(t.path)) found.set(t.path, { where: [{ src: 'main', label }], oid: t.oid, size: t.size, mtime: input.main.at, draft: draftByName(t.path), onMain: true });
+  // Main, the worktrees and the branches are read side by side; what they found is put together in order after.
+  const base = input.main?.sha ?? (await headOf(input.dir));
+  const mainP = (async () => {
+    if (input.main) {
+      // On main means on origin/<default>: what has merged, whatever branch the floor's folder is on.
+      const label = `origin/${input.main.def}`;
+      for (const t of await treeAt(input.dir, input.main.sha)) {
+        if (isDeliverablePath(t.path)) found.set(t.path, { where: [{ src: 'main', label }], oid: t.oid, size: t.size, mtime: input.main.at, draft: draftByName(t.path), onMain: true });
+      }
+      return;
     }
-  } else {
-    for (const [p, f] of await checkout(input.dir)) found.set(p, { where: [{ src: 'main', label: 'main' }], oid: f.oid, size: f.size, mtime: f.mtime, draft: f.draft, onMain: true });
-  }
-  const base = input.main?.sha ?? 'HEAD';
+    const co = await checkoutFiles(input.dir, input.dir);
+    if (!co) return;
+    const stats = await statFiles(input.dir, [...co.files.keys()]);
+    for (const [p, f] of co.files) {
+      const s = stats.get(p);
+      if (s) found.set(p, { where: [{ src: 'main', label: 'main' }], oid: f.oid, size: s.size, mtime: s.mtime, draft: s.draft, onMain: true });
+    }
+  })();
+
+  // The team's worktrees: what a Lead is still writing, committed or not.
+  const members = input.people.filter((p) => p.role && p.dir && p.workerId && path.resolve(p.dir) !== path.resolve(input.dir));
+  const viaWorktree = new Set(members.map((m) => m.branch).filter((b): b is string => !!b));
+  const worktreesP = pool(members, GIT_PARALLEL, async (m): Promise<Listing> => {
+    const where: DeliverableWhere = { src: `wt:${m.workerId}`, label: `${m.name}'s worktree`, branch: m.branch, who: m.name, role: m.role };
+    const co = await checkoutFiles(input.dir, m.dir!);
+    if (!co) return { where, files: [] };
+    // Its own work: what it changed since its branch forked from main, committed or not (no oid: changed in the folder).
+    const mine = co.head && base ? await forkChanges(input.dir, base, co.head) : undefined;
+    const shown = [...co.files].filter(([p, f]) => !f.oid || !mine || mine.has(p));
+    const stats = await statFiles(m.dir!, shown.map(([p]) => p));
+    return { where, files: shown.flatMap(([p, f]) => (stats.has(p) ? [{ path: p, oid: f.oid, ...stats.get(p)! }] : [])) };
+  });
+
+  // Every other office branch: committed work not merged, only what the branch itself changed since it
+  // forked (not the older copies of files main moved on from).
+  const also = input.people.map((p) => p.branch).filter((b): b is string => !!b);
+  const branchesP = officeBranches(input.dir, also).then((list) =>
+    pool(
+      list.filter((b) => !viaWorktree.has(b.name) && !viaWorktree.has(b.name.replace(/^origin\//, ''))),
+      GIT_PARALLEL,
+      async (b): Promise<Listing> => {
+        const owner = branchOwner(b.name, input.people);
+        const where: DeliverableWhere = { src: `ref:${b.name}`, label: b.name, branch: b.name, who: owner.who, role: owner.role };
+        const mine = base ? await forkChanges(input.dir, base, b.sha) : undefined;
+        // No common history with main: everything on it.
+        const files = mine ? [...mine].map(([p, oid]) => ({ path: p, oid, size: undefined as number | undefined })) : (await treeAt(input.dir, b.sha)).map((t) => ({ path: t.path, oid: t.oid, size: t.size as number | undefined }));
+        return { where, files: files.filter((f) => isDeliverablePath(f.path)).map((f) => ({ ...f, mtime: b.at, draft: draftByName(f.path) })) };
+      },
+    ),
+  );
+
+  const [, worktrees, branches] = await Promise.all([mainP, worktreesP, branchesP]);
+  // The branches' files' sizes, in one call for all of them (a blob's size never changes).
+  const unsized = branches.flatMap((l) => l.files.filter((f) => f.size === undefined && f.oid).map((f) => f.oid!));
+  const sized = unsized.length ? await blobSizes(input.dir, unsized) : new Map<string, number>();
+
   const sources: DeliverableWhere[] = [];
   /** Adds a place a file is, unless it's the same file as on main (the same blob). */
   const add = (p: string, where: DeliverableWhere, oid: string | undefined, size: number | undefined, mtime: number | undefined, draft: boolean) => {
@@ -138,38 +214,16 @@ export async function scanDeliverables(input: ScanInput, now = Date.now()): Prom
       }
     }
   };
-
-  // The team's worktrees: what a Lead is still writing, committed or not.
-  const members = input.people.filter((p) => p.role && p.dir && p.workerId);
-  const viaWorktree = new Set<string>();
-  for (const m of members) {
-    if (path.resolve(m.dir!) === path.resolve(input.dir)) continue;
-    const files = await checkout(m.dir!);
-    const where: DeliverableWhere = { src: `wt:${m.workerId}`, label: `${m.name}'s worktree`, branch: m.branch, who: m.name, role: m.role };
-    sources.push(where);
-    if (m.branch) viaWorktree.add(m.branch);
-    // Its own work: what it changed since its branch forked from main, committed or not (no oid: changed in the folder).
-    const head = await headOf(m.dir!);
-    const mine = head ? await changedSinceFork(input.dir, head, base) : undefined;
-    for (const [p, f] of files) if (!f.oid || !mine || mine.has(p)) add(p, where, f.oid, f.size, f.mtime, f.draft);
+  for (const l of worktrees) {
+    sources.push(l.where);
+    for (const f of l.files) add(f.path, l.where, f.oid, f.size, f.mtime, f.draft);
+  }
+  for (const l of branches) {
+    if (!l.files.length) continue;
+    for (const f of l.files) add(f.path, l.where, f.oid, f.size ?? (f.oid ? sized.get(f.oid) : undefined), f.mtime, f.draft);
+    sources.push(l.where);
   }
 
-  // Every other office branch: committed work not merged.
-  const also = input.people.map((p) => p.branch).filter((b): b is string => !!b);
-  for (const b of await officeBranches(input.dir, also)) {
-    if (viaWorktree.has(b.name) || viaWorktree.has(b.name.replace(/^origin\//, ''))) continue;
-    const owner = branchOwner(b.name, input.people);
-    const where: DeliverableWhere = { src: `ref:${b.name}`, label: b.name, branch: b.name, who: owner.who, role: owner.role };
-    let any = false;
-    // Only what the branch itself changed since it forked: not the older copies of files main moved on from.
-    const mine = await changedSinceFork(input.dir, b.sha, base);
-    for (const t of await treeAt(input.dir, b.sha)) {
-      if (!isDeliverablePath(t.path) || (mine && !mine.has(t.path))) continue;
-      any = true;
-      add(t.path, where, t.oid, t.size, b.at, draftByName(t.path));
-    }
-    if (any) sources.push(where);
-  }
 
   const files = new Map<string, DeliverableFile>();
   for (const [p, f] of found) {

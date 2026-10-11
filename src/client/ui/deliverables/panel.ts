@@ -66,7 +66,7 @@ function itemRow(floor: string, item: DeliverableItem, view: DeliverablesView, s
 
 /** The checklist for `view`'s items (one team's, or all with `showTeam`). */
 export function deliverablesList(floor: string, view: DeliverablesView | undefined, showTeam = false): HTMLElement {
-  if (!view) return h('p.tm-dim', {}, 'Looking for deliverables…');
+  if (!view) return h('p.tm-dim', {}, 'Looking for documents…');
   const groups: HTMLElement[] = [];
   const counts = new Map(stageCounts(view.items).map((c) => [c.stage, c]));
   for (const stage of DELIVERABLE_STAGES) {
@@ -85,7 +85,7 @@ export function deliverablesList(floor: string, view: DeliverablesView | undefin
   const extras = view.items.filter((i) => !i.stage && i.files.length);
   if (extras.length) groups.push(h('section.dv-stage', { 'data-stage': 'extras' }, h('h4.dv-stage-h', {}, h('span.dv-stage-id', {}, '+'), 'Beyond the toolkit'), h('ul.dv-items', {}, ...extras.map((i) => itemRow(floor, { ...i, title: showTeam && i.id.startsWith('extras-') ? 'More files' : i.title }, view, showTeam)))));
   const mainName = view.main ?? 'main';
-  const looked = view.sources.length ? `Looked on ${mainName}, ${view.sources.map((s) => (s.src.startsWith('wt:') ? s.label : s.branch)).join(', ')}.` : `Looked on ${mainName} (no team worktrees or office branches with deliverables).`;
+  const looked = view.sources.length ? `Looked on ${mainName}, ${view.sources.map((s) => (s.src.startsWith('wt:') ? s.label : s.branch)).join(', ')}.` : `Looked on ${mainName} (no team worktrees or office branches with documents).`;
   // On main is origin/<default>: say so when the floor's folder is elsewhere.
   const note = view.checkout ? h('p.dv-stale', { role: 'note' }, '⚠️ ', staleText(view.checkout, '"On main" below is')) : null;
   return h('div.dv', {}, note, ...groups, h('p.dv-foot', {}, `${looked} Merged work is the source of truth; branch work shows here so you can see it early.`));

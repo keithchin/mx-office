@@ -178,6 +178,19 @@ async function measure(browser, base, cookie, v, opts) {
   } catch (e) {
     failures.push(`couldn't open: ${e.message.split('\n')[0]}`);
   }
+  // A view whose opening makes the office work (the Documents page's scan): the office's own event-loop
+  // stalls while it opened (GET /api/perf/stalls, test mode; it records any over 100 ms) are noted, and
+  // one past the server budget fails it.
+  let serverStallMs;
+  if (v.serverStalls) {
+    const stalls = await fetch(`${base}/api/perf/stalls?since=${t0}`, { headers: { cookie: cookie.map((c) => `${c.name}=${c.value}`).join('; ') } })
+      .then((x) => x.json())
+      .then((j) => j.stalls ?? [])
+      .catch(() => []);
+    serverStallMs = Math.max(0, ...stalls.map((s) => s.ms));
+    if (stalls.length) warnings.push(`the office stalled ${stalls.length}× while it opened, the longest ${serverStallMs} ms`);
+    if (serverStallMs > budgets.serverStallMs) failures.push(`the office's event loop stalled ${serverStallMs} ms (budget ${budgets.serverStallMs})`);
+  }
   if (ttuMs != null && ttuMs > budgets.timeToUsableMs) failures.push(`time to usable ${ttuMs} ms (budget ${budgets.timeToUsableMs})`);
   if (switchMs != null && switchMs > budgets.switchMs) failures.push(`project switch ${switchMs} ms (budget ${budgets.switchMs})`);
   // Let it settle, then watch the heap over the soak while live events come in.
@@ -254,6 +267,7 @@ async function measure(browser, base, cookie, v, opts) {
     heapGrowthPct: round(growth),
     domNodes: perf.nodes,
     ...(switchMs != null ? { switchMs } : {}),
+    ...(serverStallMs != null ? { serverStallMs } : {}),
     ...(marks.length ? { marks } : {}),
     failures,
     ...(warnings.length ? { warnings } : {}),

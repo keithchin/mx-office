@@ -4,7 +4,7 @@
 // the office only, an xlsx (or anything asked with download) as an attachment, a CSV as table rows.
 
 import { kindOf } from '../../shared/deliverables.js';
-import { CAPS, contentType, HTML_CSP, inlineHtml, parseCsv, readDeliverable, type Source } from './content.js';
+import { CAPS, contentType, HTML_CSP, inlineHtml, mermaidJs, parseCsv, readDeliverable, type Source } from './content.js';
 
 export interface Answer {
   status: number;
@@ -42,3 +42,43 @@ export async function fileAnswer(source: Source, file: string, download: boolean
   if (kind === 'pdf') return sized({ 'content-type': 'application/pdf', 'content-security-policy': "frame-ancestors 'self'" }, r.body);
   return sized({ 'content-type': contentType(file), 'content-security-policy': PLAIN_CSP }, r.body);
 }
+
+/**
+ * The page that draws the viewer's Mermaid diagrams (GET /api/deliverables/mermaid): the office's own
+ * Mermaid inlined, in a frame the viewer keeps sandboxed with no origin, so the browser runs it in a
+ * process of its own. Drawing a big diagram is seconds of work that held the office page still (a
+ * 3 s task for travel-approval's domain model, 2026-10-11); there, the page stays responsive. It's
+ * asked for a diagram by postMessage ({ id, source, theme }) and answers { id, svg } or { id, error }.
+ */
+export async function mermaidFrameAnswer(): Promise<Answer> {
+  const js = await mermaidJs();
+  if (!js) return json(503, { error: "The office's Mermaid isn't installed" });
+  const page = `<!doctype html><meta charset="utf-8"><body><script>${js.replace(/<\/script/gi, '<\\/script')}</script><script>${MERMAID_FRAME}</script></body>`;
+  const body = Buffer.from(page, 'utf8');
+  // The same for a build: kept by the browser for an hour (it's 3 MB), never shared.
+  return { status: 200, headers: { ...BASE, 'cache-control': 'private, max-age=3600', 'content-type': 'text/html; charset=utf-8', 'content-security-policy': HTML_CSP, 'content-length': String(body.length) }, body };
+}
+
+/** The frame's own script: one diagram at a time, strict, in the theme asked for. */
+const MERMAID_FRAME = `(() => {
+  let theme = '';
+  let queue = Promise.resolve();
+  addEventListener('message', (e) => {
+    if (e.source !== parent || !e.data || typeof e.data.source !== 'string') return;
+    const { id, source } = e.data;
+    const want = e.data.theme === 'dark' ? 'dark' : 'default';
+    queue = queue.then(async () => {
+      try {
+        if (want !== theme) {
+          mermaid.initialize({ startOnLoad: false, theme: want, securityLevel: 'strict' });
+          theme = want;
+        }
+        const { svg } = await mermaid.render('dv-mermaid-' + String(id).replace(/\\W/g, ''), source);
+        parent.postMessage({ id, svg }, '*');
+      } catch (err) {
+        parent.postMessage({ id, error: String((err && err.message) || err).split('\\n')[0] || 'Mermaid could not draw this' }, '*');
+      }
+    });
+  });
+  parent.postMessage({ ready: true }, '*');
+})();`;

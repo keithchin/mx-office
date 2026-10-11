@@ -60,7 +60,7 @@ import { mountRunToggle } from './ui/project-run';
 import { floorLoading } from './ui/loading/floor';
 import { goToSettings } from './ui/settings/flat';
 import { mountProgressBar } from './ui/progress';
-import { openFloorDeliverablesNow } from './ui/deliverables/summary';
+import { openDocuments } from './ui/deliverables/open';
 import './shared/perfwatch-on';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
@@ -95,7 +95,7 @@ mountRunToggle(); // ▶ / ⏸ / ⏳ beside it (ui/project-run/)
 // out of the top bar (they land beside the floor's line, #floor-meta, and are moved here).
 for (const el of [document.getElementById('budget-chip'), document.querySelector('.bud-meta-row .pr-toggle'), document.getElementById('budget-office')]) if (el) $('px-project').append(el);
 // The project's progress under the top bar; its setup stages open the 1D view's Command Center (ui/progress/).
-mountProgressBar($('progress-bar'), { setup: () => location.assign(`/lite?tab=command${store.floor ? `&floor=${encodeURIComponent(store.floor)}` : ''}`), deliverables: openFloorDeliverablesNow });
+mountProgressBar($('progress-bar'), { setup: () => location.assign(`/lite?tab=command${store.floor ? `&floor=${encodeURIComponent(store.floor)}` : ''}`), deliverables: openDocuments });
 budget.feed.on(() => loading.done('budget', budget.feed.floor()?.floor));
 // The address follows the floor (?floor=), for bookmarks and links that open it straight away.
 followFloor();

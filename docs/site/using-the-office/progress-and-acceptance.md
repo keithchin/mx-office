@@ -43,7 +43,7 @@ The marks on a segment are its milestones:
 
 Hover over a segment to see:
 
-- what was measured, for example "Gate: PASS" or "3 of 7 deliverables on main";
+- what was measured, for example "Gate: PASS" or "3 of 7 documents on main";
 - each expected deliverable and where it is;
 - the gates and decisions, with their dates;
 - the days spend was booked to that stage;
@@ -52,7 +52,7 @@ Hover over a segment to see:
 Click a segment to open the right place:
 
 - stages P to 4 open the [Project setup](command-center.md#project-setup) panel;
-- stages 5 to 7 open the [deliverables](deliverables.md);
+- stages 5 to 7 open the [Documents](deliverables.md) page;
 - Handover, Accepted and the line on the right open the acceptance record.
 
 ### Folding it

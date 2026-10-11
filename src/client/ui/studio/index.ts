@@ -9,6 +9,7 @@
 import type { StudioInfo, StudioOpenResult, StudioState } from '../../../shared/studio';
 import { store } from '../../state';
 import { h, openModal, toast } from '../dom';
+import { oneAtATime } from '../once';
 import './studio.css';
 
 /** A window with an arrow out of it: thin lines in the text's color, the same in every theme (no emoji, so Clean keeps it). */
@@ -157,8 +158,10 @@ export function mountStudio(summary: HTMLElement) {
   if (at && mode.parentElement !== at) at.append(mode);
 }
 
-/** Asks again (who's busy may have changed), confirms, and opens it. */
-export async function openStudio() {
+/** Asks again (who's busy may have changed), confirms, and opens it; clicked again meanwhile, the same call (ui/once.ts). */
+export const openStudio = oneAtATime(openStudioNow);
+
+async function openStudioNow() {
   const floor = store.floor;
   if (!floor) return;
   const now = await fetchInfo(floor);

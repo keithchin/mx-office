@@ -53,3 +53,22 @@ test('mermaid and playwright-core are runtime dependencies, pinned to the instal
     assert.ok(!lock.packages[`node_modules/${name}`].dev, `${name} is not dev-only in the lock`);
   }
 });
+
+test("diagrams are drawn in a sandboxed frame of their own, off the page's main thread", async () => {
+  const { mermaidFrameAnswer } = await import('../src/server/deliverables/serve.js');
+  const a = await mermaidFrameAnswer();
+  assert.equal(a.status, 200);
+  assert.equal(a.headers['content-type'], 'text/html; charset=utf-8');
+  assert.match(a.headers['content-security-policy'], /default-src 'none'.*sandbox allow-scripts/);
+  assert.doesNotMatch(a.headers['content-security-policy'], /allow-same-origin|connect-src/);
+  const html = a.body.toString('utf8');
+  assert.ok(html.length > 500_000, "the office's own Mermaid, inlined");
+  assert.match(html, /securityLevel: 'strict'/);
+  assert.match(html, /if \(e\.source !== parent/);
+  assert.ok(!/<\/script/i.test(html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('<script>') - 9)), 'no early end of the inlined script');
+  const client = readFileSync('src/client/ui/deliverables/mermaid.ts', 'utf8');
+  assert.doesNotMatch(client, /import\('mermaid'\)/, 'not drawn on the page itself any more');
+  assert.match(client, /setAttribute\('sandbox', 'allow-scripts'\)/);
+  assert.match(client, /el\.src = '\/api\/deliverables\/mermaid'/);
+  assert.match(client, /e\.source !== el\.contentWindow/);
+});

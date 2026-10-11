@@ -6,6 +6,7 @@
 import { ARTIFACT_LABEL, ARTIFACTS, AUDIT_TEAMS, DEPTHS, DOC_LABEL, DOCS, TEST_TYPE_LABEL, TEST_TYPES, type EngagementConfig, type Estimate } from '../../shared/firm/engagement';
 import { FIRM_MODELS, firmModelLabel, REVIEWERS, REVIEWER_BY_ID } from '../../shared/firm/roles';
 import { h, openModal, toast } from '../ui/dom';
+import { oneAtATime } from '../ui/once';
 import { fetchDefaults, firmAction, postEstimate, usd } from './api';
 import './wizard.css';
 
@@ -18,7 +19,10 @@ export interface WizardOpts {
   onStarted?: (id: string) => void;
 }
 
-export async function openAuditWizard(o: WizardOpts) {
+/** The wizard, once: clicked again while its defaults are on their way, the same call (ui/once.ts). */
+export const openAuditWizard = oneAtATime(auditWizard);
+
+async function auditWizard(o: WizardOpts) {
   const floors = o.floors.filter((f) => !f.auditing);
   if (!floors.length) return toast(o.floors.length ? 'The Firm is already auditing every project' : 'No project to audit yet', 'warn');
   let floor = floors.find((f) => f.id === o.floor)?.id ?? floors[0].id;

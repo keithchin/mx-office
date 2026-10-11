@@ -1,54 +1,29 @@
-// The setup panel's line of 📦 deliverables (ui/setup-panel.ts): per toolkit stage, how many expected
-// outputs are on main, only on a branch, or drafts, and a button that opens the floor's whole list.
-// Fetched at most every half minute; the panel is drawn far more often.
+// The setup panel's line of 📄 documents (ui/setup-panel.ts): per toolkit stage, how many expected
+// outputs are on main, only on a branch, or drafts, and a button to the Documents page (page.ts).
+// Asked for through store.ts (one request at a time, at most every half minute); the panel is drawn far
+// more often.
 
-import { STAGE_TITLE, stageCounts, type DeliverablesView } from '../../../shared/deliverables';
-import { h, openModal } from '../dom';
-import { deliverablesList } from './panel';
+import { STAGE_TITLE, stageCounts } from '../../../shared/deliverables';
+import { h } from '../dom';
+import { openDocuments } from './open';
+import { cachedDocs, docsLoading, loadDocs, onDocs } from './store';
 
-const FRESH_MS = 30_000;
-let last: { floor: string; at: number; view?: DeliverablesView; p?: Promise<void> } | undefined;
+let redrawFor: { floor: string; redraw: () => void } | undefined;
+onDocs((floor) => {
+  if (redrawFor?.floor === floor && !docsLoading(floor)) redrawFor.redraw();
+});
 
-function load(floor: string, redraw: () => void, fresh = false) {
-  if (last?.floor === floor && (last.p || (!fresh && Date.now() - last.at < FRESH_MS))) return;
-  const keep = last?.floor === floor ? last.view : undefined;
-  const entry: NonNullable<typeof last> = { floor, at: Date.now(), view: keep };
-  entry.p = fetch(`/api/deliverables?${new URLSearchParams({ floor, ...(fresh ? { fresh: '1' } : {}) })}`, { credentials: 'same-origin' })
-    .then((r) => (r.ok ? (r.json() as Promise<DeliverablesView>) : undefined))
-    .then((v) => {
-      if (v) entry.view = v;
-    })
-    .catch(() => undefined)
-    .finally(() => {
-      entry.p = undefined;
-      if (last === entry) redraw();
-    });
-  last = entry;
-}
-
-/** The floor's deliverables in a window, every team's, by stage. */
-export function openFloorDeliverables(floor: string, view: DeliverablesView) {
-  const body = h('div.dv-win-body', {}, deliverablesList(floor, view, true));
-  openModal(h('div.modal.dv-win', { role: 'dialog', 'aria-label': 'Deliverables' }, h('header', {}, h('h2', {}, '📦 Deliverables')), body));
-}
-
-/** The floor's deliverables window from anywhere (the progress bar): what's cached when it's fresh, else fetched first. */
-export async function openFloorDeliverablesNow(floor: string) {
-  const fresh = last?.floor === floor && last.view && Date.now() - last.at < FRESH_MS ? last.view : undefined;
-  const view = fresh ?? (await fetch(`/api/deliverables?${new URLSearchParams({ floor })}`, { credentials: 'same-origin' }).then((r) => (r.ok ? (r.json() as Promise<DeliverablesView>) : undefined)).catch(() => undefined));
-  if (view) openFloorDeliverables(floor, view);
-}
-
-/** The line for the setup panel, from what's cached (fetching it when stale; `redraw` draws the panel again). */
+/** The line for the setup panel, from what's kept (asking again when it's old; `redraw` draws the panel again). */
 export function deliverablesSummary(floor: string, redraw: () => void): HTMLElement | null {
-  load(floor, redraw);
-  const view = last?.floor === floor ? last.view : undefined;
+  redrawFor = { floor, redraw };
+  void loadDocs(floor);
+  const view = cachedDocs(floor)?.view;
   if (!view) return null;
   const counts = stageCounts(view.items).filter((c) => c.stage !== 'P');
   return h(
     'div.dv-summary',
     {},
-    h('span.dv-summary-h', {}, '📦 Deliverables'),
+    h('span.dv-summary-h', {}, '📄 Documents'),
     ...counts.map((c) =>
       h(
         'span.dv-chip',
@@ -59,6 +34,6 @@ export function deliverablesSummary(floor: string, redraw: () => void): HTMLElem
         c.draft ? h('span.dv-chip-b', {}, ` +${c.draft} draft`) : null,
       ),
     ),
-    h('button.btn.small', { type: 'button', onclick: () => openFloorDeliverables(floor, view) }, 'Open deliverables →'),
+    h('button.btn.small', { type: 'button', onclick: () => openDocuments(floor) }, 'Open documents →'),
   );
 }

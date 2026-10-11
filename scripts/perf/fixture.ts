@@ -7,7 +7,8 @@
 // It writes:
 //   <out>/office/.agent-office/   the office's data dir: floors.json, roster/, chatter/, analysis/,
 //                                 budget/, incidents/, audit/, project-run.json
-//   <out>/floors/big-spike/       the big project: a git repo (one commit) whose .agent-office/ holds
+//   <out>/floors/big-spike/       the big project: a git repo (the team's documents among thousands of
+//                                 app files, and four office branches with more) whose .agent-office/ holds
 //                                 workers.json and queue.json
 //   <out>/floors/small-app/       a small second project, so multi-project views have two
 //
@@ -82,15 +83,50 @@ const write = (file: string, text: string) => {
 };
 const json = (file: string, v: unknown) => write(file, `${JSON.stringify(v, null, 2)}\n`);
 
-function gitInit(dir: string, name: string, at: number) {
+/**
+ * A toolkit project's documents (shared/deliverables.ts's catalog paths and extras) and the app files
+ * around them, `s` the scale: what the Documents page lists, among what it has to skip.
+ */
+export function projectFiles(s: number): Record<string, string> {
+  const files: Record<string, string> = {};
+  const md = (title: string, body = '') => `# ${title}\n\n${body}Synthetic, for the performance tests.\n`;
+  for (const p of ['PROJECT.md', 'intake.md', 'triage.md', 'assessment.md', 'fit-gap.md', 'design/brand.md', 'design/components.md', 'architecture/blueprint.md', 'architecture/build-plan.md', 'architecture/coverage-ledger.md', 'tests/test-plan.md']) files[p] = md(p);
+  for (const p of ['analysis/triage.html', 'analysis/source-sufficiency.html', 'analysis/source-ledger.html', 'analysis/knowledge-base/extraction-report.html', 'analysis/brd-report.html', 'design/design-system.html', 'design/storyboard.html', 'architecture/blueprint.html']) files[p] = `<!doctype html><title>${p}</title><h1>${p}</h1>\n`;
+  files['architecture/domain-model.md'] = md('Domain model', '```mermaid\nerDiagram\n  Request ||--o{ Approval : has\n```\n\n');
+  files['design/ds.css'] = ':root { --accent: #146ff4; }\n';
+  const n = Math.max(4, Math.round(8 * s));
+  for (let i = 1; i <= n; i++) {
+    const id = String(i).padStart(3, '0');
+    files[`analysis/knowledge-base/brd/F${id}-feature.brd.json`] = `${JSON.stringify({ id: `F${id}`, title: `Feature ${id}` })}\n`;
+    files[`design/wireframes/screen-${id}.html`] = `<h1>Screen ${id}</h1>\n`;
+    files[`architecture/adr/${id}-decision.md`] = md(`ADR ${id}`);
+    files[`docs/standups/2026-09-${String((i % 28) + 1).padStart(2, '0')}-${id}.md`] = md(`Standup ${id}`);
+  }
+  // The app around them, which the page skips: a Mendix project's thousands of files.
+  for (let i = 0; i < Math.round(200 * s); i++) files[`javasource/module${i % 20}/actions/Action${i}.java`] = `// ${i}\n`;
+  for (let i = 0; i < Math.round(100 * s); i++) files[`theme/web/part${i}.scss`] = `/* ${i} */\n`;
+  return files;
+}
+
+function gitInit(dir: string, name: string, at: number, extra: Record<string, string> = {}, branches = 0) {
   write(path.join(dir, 'README.md'), `# ${name}\n\nA synthetic project for the office's performance tests.\n`);
   write(path.join(dir, '.gitignore'), '.agent-office/\n');
+  for (const [p, text] of Object.entries(extra)) write(path.join(dir, p), text);
   const date = new Date(at).toISOString();
   const env = { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date };
   const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false', ...args], { cwd: dir, env, stdio: 'ignore', windowsHide: true });
   git('init', '-q', '-b', 'main');
   git('add', '-A');
   git('commit', '-qm', 'Initial commit');
+  // Office branches with work not merged yet: a new document and a changed one each.
+  for (let b = 1; b <= branches; b++) {
+    git('checkout', '-q', '-b', `office/lead-${b}`);
+    write(path.join(dir, `design/wireframes/branch-${b}.html`), `<h1>Branch ${b}</h1>\n`);
+    write(path.join(dir, 'architecture/blueprint.md'), `# Blueprint, revised on branch ${b}\n`);
+    git('add', '-A');
+    git('commit', '-qm', `Branch ${b}`);
+    git('checkout', '-q', 'main');
+  }
 }
 
 export async function generateFixture(opts: FixtureOpts): Promise<Fixture> {
@@ -122,7 +158,7 @@ export async function generateFixture(opts: FixtureOpts): Promise<Fixture> {
     const s = f.scale;
     const cast = makeCast(g, f.id, f.workers, f.live, f.team);
     liveWorkerIds.push(...cast.workers.filter((w) => w.live).map((w) => w.id));
-    gitInit(f.dir, f.name, g.base - 40 * 86_400_000);
+    gitInit(f.dir, f.name, g.base - 40 * 86_400_000, f.team ? projectFiles(s) : {}, f.team ? 4 : 0);
     const fdata = path.join(f.dir, '.agent-office');
     const ws = workersJson(g, cast, f.dir, (w) => Math.round((w.role ? 60 : 10) * s));
     json(path.join(fdata, 'workers.json'), ws.saved);

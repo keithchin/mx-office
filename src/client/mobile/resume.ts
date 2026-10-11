@@ -6,6 +6,7 @@
 import { chosen, estimateLine, type ResumeChoice, type ResumePreview } from '../../shared/project-run';
 import type { ProjectStatus } from '../../shared/mobile';
 import { h, openModal, toast } from '../ui/dom';
+import { oneAtATime } from '../ui/once';
 import { act } from './confirm';
 
 const ACTION_WORD = { wake: 'wakes', rehire: 'hired again from its handoff', 'send-home': 'sent home', skip: 'left asleep' } as const;
@@ -26,8 +27,10 @@ async function fetchPreview(floor: string): Promise<ResumePreview> {
   return j;
 }
 
-/** The preview as a sheet; resolves true once a resume was started. */
-export async function resumeProject(p: Pick<ProjectStatus, 'floor' | 'name'>): Promise<boolean> {
+/** The preview as a sheet; resolves true once a resume was started. A second tap while the preview is on its way (or the sheet is up) is the same call (ui/once.ts). */
+export const resumeProject = oneAtATime(resumeSheet);
+
+async function resumeSheet(p: Pick<ProjectStatus, 'floor' | 'name'>): Promise<boolean> {
   let preview: ResumePreview;
   try {
     preview = await fetchPreview(p.floor);

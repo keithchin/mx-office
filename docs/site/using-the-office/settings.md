@@ -17,7 +17,7 @@ The sections are down the left; pick one and the address follows (`&section=work
 | 🔔 **Notifications** | [section=notify](/lite?tab=settings&section=notify) | Desktop notifications, phone alerts, Slack / Discord, Microsoft Teams |
 | 💰 **Budget** | [section=budget](/lite?tab=settings&section=budget) | This project's budget, alert threshold, auto-pause and level; the office's default threshold and local currency (FX) |
 | 🔌 **Connections** | [section=connections](/lite?tab=settings&section=connections) | Tokens, password, git & gh, phone access, folders, worktree cleanup (admins; also ☰ → 🔌 Connections) |
-| 📦 **Deliverables** | [section=deliverables](/lite?tab=settings&section=deliverables) | Early drafts |
+| 📄 **Documents** | [section=deliverables](/lite?tab=settings&section=deliverables) | Early drafts |
 | 🚨 **Incidents** | [section=incidents](/lite?tab=settings&section=incidents) | The detection rules and the dedupe window (admins edit them) |
 | 🧱 **Studio** | [section=studio](/lite?tab=settings&section=studio) | Studio mode now, and Open in Studio Pro (admins) |
 | 🎨 **Appearance** | [section=appearance](/lite?tab=settings&section=appearance) | Your color theme (Default, Dark, Terminal, Clean Light/Dark), the building's holiday theme and map |
@@ -28,7 +28,7 @@ The sections are down the left; pick one and the address follows (`&section=work
 
 ## The team settings
 
-Under 👥 Team, ⚖️ Jeff · Router and 📦 Deliverables. Only admins can change them. Click **💾 Save settings** when done (it saves all three).
+Under 👥 Team, ⚖️ Jeff · Router and 📄 Documents. Only admins can change them. Click **💾 Save settings** when done (it saves all three).
 
 ![Settings](../images/settings.png)
 
@@ -38,7 +38,7 @@ Under 👥 Team, ⚖️ Jeff · Router and 📦 Deliverables. Only admins can ch
 | **Autonomy** | By pipeline stage: one level until the build plan (Stage 4) passes, another after | **Off** (2 Guided, then 3 Delegated, when on) |
 | **Benching** | Bench a Lead after N idle minutes (0 = only by hand) | **0** (off) |
 | **Review loop** | Nudge a Lead to review its subagent's result | **On** |
-| **Deliverables** | Early drafts while the Chief Analyst is on Stages 0–2 | **On** |
+| **Documents** | Early drafts while the Chief Analyst is on Stages 0–2 | **On** |
 | **Subagents** | Reinstate a benched subagent after N hours (0 = only by hand) | **24** |
 | **Daily standup** | Scheduled · time · time zone · days | **On, 09:00, Asia/Singapore, Mon–Fri** |
 | **Daily cost cap** | A dollar cap for each autonomy level | **Blank** (no cap) |
@@ -53,7 +53,7 @@ Under 🧍 **You**: **Command Center terminal**, *Chat (default)* or *Terminal*,
 - **By pipeline stage** (toolkit projects only) lets the office pick the level: the first one until the Stage 4 gate passes, the second from then on, changed as if you had picked it. While it's on, the level buttons only show the level. See [Autonomy by pipeline stage](../teams-and-agents/autonomy.md#autonomy-by-pipeline-stage).
 - **Benching** is **off by default**: Leads are benched only when you click 🪑 Bench. Set a number of minutes to bench idle Leads automatically. See [Benching and handoffs](../teams-and-agents/benching-and-handoffs.md).
 - **Review loop**: when a Lead's turn ends right after one of its subagents came back, the office prompts it once to review the result. See [The review loop](../teams-and-agents/review-loop.md).
-- **Deliverables → Early drafts**: while the Chief Analyst is still on Stages 0–2, Design, Development and Testing make small drafts marked as drafts (low-fi wireframes, a draft domain model and architecture sketch, a test-plan outline), to revise once the BRDs are confirmed. Off: they wait for their stage. Changing it rewrites the hired Leads' Playbooks. See [Deliverables](deliverables.md#early-drafts).
+- **Documents → Early drafts**: while the Chief Analyst is still on Stages 0–2, Design, Development and Testing make small drafts marked as drafts (low-fi wireframes, a draft domain model and architecture sketch, a test-plan outline), to revise once the BRDs are confirmed. Off: they wait for their stage. Changing it rewrites the hired Leads' Playbooks. See [Deliverables](deliverables.md#early-drafts).
 - **Subagents**: how long a benched subagent sits out. See [Subagents](../automation/subagents.md).
 - **Daily standup**: see [Standup](standup.md).
 - **Daily cost cap**: one cap per autonomy level, for this floor. Only the cap for the current level counts. When it's spent, hiring stops on this floor until midnight (in the standup's time zone). See [Models and costs](../teams-and-agents/models-and-costs.md).

@@ -60,6 +60,8 @@ export interface ViewResult {
   domNodes: number | null;
   /** A project-switch view: ms from picking the project until its view was usable and drawn. */
   switchMs?: number;
+  /** A view whose opening makes the office work (Documents): the office's longest event-loop stall meanwhile, ms (0: none over 100 ms). */
+  serverStallMs?: number;
   /** The switch's own timings: the office's floor.go → floor.enter, the fetches after it, the page's performance marks. */
   marks?: { name: string; at: number; ms: number; bytes?: number }[];
   failures: string[];

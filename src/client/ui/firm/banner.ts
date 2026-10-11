@@ -8,6 +8,7 @@ import type { ServerMsg } from '../../../shared/protocol';
 import { fetchFirm, fetchFloorStatus, reportUrl, usd } from '../../firm/api';
 import { openAuditWizard } from '../../firm/wizard';
 import { h, toast } from '../dom';
+import { oneAtATime } from '../once';
 import './banner.css';
 
 export interface FirmBanner {
@@ -20,14 +21,15 @@ export function firmBanner(root: HTMLElement, onStatus?: (s: FirmFloorStatus | u
   let floor: string | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
-  async function callAudit() {
+  // Two round trips before the wizard shows: a second click meanwhile is the same call (ui/once.ts).
+  const callAudit = oneAtATime(async () => {
     try {
       const v = await fetchFirm();
       await openAuditWizard({ floors: v.floors, floor, admin: v.admin, onStarted: () => load() });
     } catch (err) {
       toast((err as Error).message, 'error');
     }
-  }
+  });
 
   function draw(s: FirmFloorStatus | undefined) {
     onStatus?.(s);
