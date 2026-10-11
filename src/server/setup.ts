@@ -14,7 +14,7 @@ import { officeHome, type Config } from './config.js';
 // picking the first repositories to clone as floors. A new office walks you through it the first time
 // it starts in a terminal, so it opens on projects of your own instead of an empty building (or
 // whatever folder it happened to be started in). `agent-office setup` runs it again, or does it
-// without asking when given --projects / --project (deploy/provision.sh does).
+// without asking when given --projects / --project.
 
 /** How many repositories a list shows; typing a word narrows it down. */
 const SHOWN = 12;

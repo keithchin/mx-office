@@ -69,7 +69,6 @@ export async function startServer(cfg: Config, opts: StartOptions = {}) {
     stopPerfWatch();
     void stopLiveApps(ctx);
     ctx.cancelFloorsChanged();
-    ctx.upgrader.stop();
     services.stop();
     tailnet.stop();
     ctx.webhook.stop();

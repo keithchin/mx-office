@@ -320,11 +320,11 @@ Output: a short findings note appended to this document, and a decision on usage
 
 - [x] README: provider list, hire flow, status, usage, resume, provider-specific section.
 - [x] `--help` text in `config.ts`.
-- [x] `install.sh` / `install.ps1`: include DSH in the "no provider found" hint.
+- [x] ~~`install.sh` / `install.ps1`: include DSH in the "no provider found" hint.~~ (The installers are gone from Mx Office.)
 - [ ] Model catalogue endpoint mirroring `/api/agents/opencode/models`, if DSH exposes one.
       (It does expose a catalog, in `session/new`'s options; see findings. The picker still takes a
       typed id and resolves it against that catalog at launch.)
-- [x] `deploy/aws.sh` note.
+- [x] ~~`deploy/aws.sh` note.~~ (The deploy scripts are gone from Mx Office.)
 
 ### Phase 5 — optional web-embed mode
 

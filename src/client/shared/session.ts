@@ -107,12 +107,6 @@ export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorke
       case 'signins.needed':
         openSignIns(net, msg.why);
         break;
-      case 'upgrade':
-        if (msg.state.phase === 'restarting') {
-          net.expectRestart();
-          toast('⬆️ The office is restarting on its new version. Back in a minute.');
-        }
-        break;
     }
     onMessage?.(msg);
   });

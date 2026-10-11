@@ -54,7 +54,6 @@ const welcome = () =>
     ice: [],
     chat: [],
     invites: false,
-    upgrade: { available: false, phase: 'idle' },
     usage: { total: {}, today: {}, day: 'd', pauseHiring: false },
     limits: { windows: [], at: 1 },
     me: { admin: true },
@@ -72,11 +71,11 @@ const welcome = () =>
 const FLOOR_TOPICS = ['floor', 'project', 'workers', 'issues', 'pulls', 'queue', 'meeting', 'floorPlan', 'services', 'dog', 'jukebox', 'whiteboard', 'drawing', 'jail', 'studio'];
 
 /** Every topic, to listen for them all. */
-const TOPICS = ['peers', 'workers', 'issues', 'pulls', 'chat', 'project', 'screens', 'team', 'upgrade', 'services', 'floorPlan', 'usage', 'limits', 'queue', 'me', 'accounts', 'signins', 'notify', 'machine', 'floors', 'floor', 'projectsDir', 'repos', 'dog', 'jukebox', 'sky', 'theme', 'map', 'leaveOnMerge', 'whiteboard', 'drawing', 'meeting', 'prompts', 'jail', 'studio'] as const;
+const TOPICS = ['peers', 'workers', 'issues', 'pulls', 'chat', 'project', 'screens', 'team', 'services', 'floorPlan', 'usage', 'limits', 'queue', 'me', 'accounts', 'signins', 'notify', 'machine', 'floors', 'floor', 'projectsDir', 'repos', 'dog', 'jukebox', 'sky', 'theme', 'map', 'leaveOnMerge', 'whiteboard', 'drawing', 'meeting', 'prompts', 'jail', 'studio'] as const;
 
 /** Every message the store takes in (and one it doesn't), and the topics it fires, in the order it has always fired them. */
 const RUN: [ServerMsg, string[]][] = [
-  [welcome(), ['map', ...FLOOR_TOPICS, 'peers', 'chat', 'upgrade', 'usage', 'limits', 'me', 'notify', 'machine', 'floors', 'projectsDir', 'sky', 'theme', 'prompts', 'leaveOnMerge']],
+  [welcome(), ['map', ...FLOOR_TOPICS, 'peers', 'chat', 'usage', 'limits', 'me', 'notify', 'machine', 'floors', 'projectsDir', 'sky', 'theme', 'prompts', 'leaveOnMerge']],
   [msg({ t: 'pong', at: 0, now: 1_000_000 }), ['jukebox']],
   [msg({ t: 'studio.state', state: { floor: 'nowhere', open: true, since: 1 } }), []],
   [msg({ t: 'studio.state', state: { floor: 'f1', open: true, since: 1 } }), ['studio']],
@@ -98,7 +97,6 @@ const RUN: [ServerMsg, string[]][] = [
   [msg({ t: 'me', me: { admin: false } }), ['me']],
   [msg({ t: 'accounts', state: {} }), ['accounts']],
   [msg({ t: 'signins', state: {} }), ['signins']],
-  [msg({ t: 'upgrade', state: { available: true, phase: 'idle' } }), ['upgrade']],
   [msg({ t: 'services', state: { items: [], port: 1 } }), ['services']],
   [msg({ t: 'plan', plan: { labels: {}, wing: 2 } }), ['floorPlan']],
   [msg({ t: 'jukebox', state: { on: false, track: 'lofi', startedAt: 0, elapsed: 0 } }), ['jukebox']],
@@ -200,7 +198,7 @@ test('what the browser remembers keeps its keys and shapes', () => {
 
 test("the store's keys are its state, as window.__office shows them", () => {
   // As the office had them before its store was split into slices: methods and the slices aren't among them.
-  assert.deepEqual(Object.keys(store).sort(), ['accounts', 'chat', 'clock', 'convo', 'dog', 'dogStart', 'drawing', 'floor', 'floorPlan', 'floors', 'ice', 'invites', 'issues', 'jail', 'jukebox', 'leaveOnMerge', 'limits', 'machine', 'map', 'me', 'meeting', 'notify', 'peers', 'profile', 'project', 'projectsDir', 'prompts', 'pulls', 'queue', 'repos', 'screens', 'services', 'signins', 'sky', 'studio', 'subs', 'team', 'theme', 'upgrade', 'usage', 'whiteboard', 'workers', 'you']);
+  assert.deepEqual(Object.keys(store).sort(), ['accounts', 'chat', 'clock', 'convo', 'dog', 'dogStart', 'drawing', 'floor', 'floorPlan', 'floors', 'ice', 'invites', 'issues', 'jail', 'jukebox', 'leaveOnMerge', 'limits', 'machine', 'map', 'me', 'meeting', 'notify', 'peers', 'profile', 'project', 'projectsDir', 'prompts', 'pulls', 'queue', 'repos', 'screens', 'services', 'signins', 'sky', 'studio', 'subs', 'team', 'theme', 'usage', 'whiteboard', 'workers', 'you']);
 });
 
 test('a new store starts every field where it always has', async () => {
@@ -216,7 +214,6 @@ test('a new store starts every field where it always has', async () => {
       you: '', peers: [], workers: [], screens: [], project: null, floors: [], floor: null, projectsDir: { dir: '', custom: false },
       repos: { list: [], loading: false, at: 0 }, issues: { items: [], fetchedAt: 0, loading: true }, pulls: { items: [], fetchedAt: 0, loading: true },
       ice: [], chat: [], invites: false, queue: { tasks: [], maxWorkers: 0 }, me: { admin: false },
-      upgrade: { available: false, phase: 'idle' },
       usage: { total: { input: 0, output: 0, cacheWrite: 0, cacheRead: 0, cost: 0, calls: 0 }, today: { input: 0, output: 0, cacheWrite: 0, cacheRead: 0, cost: 0, calls: 0 }, day: '', pauseHiring: false },
       limits: { windows: [], at: 0 }, notify: {}, machine: { cpu: 0, cores: 0, memUsed: 0, memTotal: 0, history: [], workers: 0 },
       sky: null, studio: null, theme: { pick: 'auto', active: null }, prompts: { custom: {} }, leaveOnMerge: { on: false }, map: { pick: 'office', custom: [] },

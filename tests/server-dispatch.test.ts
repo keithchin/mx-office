@@ -436,7 +436,6 @@ test('settings, accounts, sign-ins and the boards answer as before', async () =>
   assert.equal(await told('🤖'), '🤖 Eve put the office’s default worker back to claude');
   a.send({ t: 'notify.webhook', url: 'not a url' });
   assert.match((await a.take('toast', (m) => m.level === 'warn')).text, /./);
-  a.send({ t: 'upgrade.check' });
   a.send({ t: 'limits.refresh' });
 
   a.send({ t: 'accounts.invite', name: 'Fay', role: 'member' });

@@ -18,7 +18,7 @@ import { mapNews } from './handlers/settings.js';
  * then whatever they send, until they leave.
  */
 export function onConnection(ctx: Ctx, ws: WebSocket, url: URL, session: Session) {
-  const { cfg, accounts, clients, chat, building, floors, maps, team, upgrader, ledger, webhook, machine, sky, themes, prompts, leaveOnMerge, signins } = ctx;
+  const { cfg, accounts, clients, chat, building, floors, maps, team, version, ledger, webhook, machine, sky, themes, prompts, leaveOnMerge, signins } = ctx;
   const { sendTo, broadcast, floorInfos, floorsChanged, arrivalFloor, meOf, accountsChanged, limitsOf } = ctx;
   const id = randomBytes(5).toString('hex');
   // Back on the floor they were on before a reload, a restart or closing the tab, else the first floor.
@@ -71,8 +71,7 @@ export function onConnection(ctx: Ctx, ws: WebSocket, url: URL, session: Session
     ice: cfg.iceServers,
     chat: chat.recent(50),
     invites: team.available || !!cfg.tailnet,
-    version: upgrader.version,
-    upgrade: upgrader.state,
+    version,
     usage: ledger.state(),
     limits: limitsOf(client).state,
     me,

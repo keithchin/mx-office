@@ -6,7 +6,7 @@ import type { EmoteId } from '../emotes.js';
 import type { DrinkId } from '../rooftop.js';
 import type { Me } from './accounts.js';
 import type { FloorInfo, FloorView, ProjectsDirState } from './floors.js';
-import type { LeaveOnMergeState, MachineState, MapState, NotifyState, PromptsState, SkyState, ThemeState, UpgradeState } from './settings.js';
+import type { LeaveOnMergeState, MachineState, MapState, NotifyState, PromptsState, SkyState, ThemeState } from './settings.js';
 import type { PlanLimits, UsageState } from './usage.js';
 
 /** The issue on a card someone carries around the floor (see PeerInfo.carrying). */
@@ -118,9 +118,8 @@ export type PresenceServerMsg =
       chat: ChatLine[];
       /** Whether teammates can be invited from the office (see TeamState). */
       invites: boolean;
-      /** The running server's version; a change after a reconnect means the office was upgraded. */
+      /** The running server's version; a change after a reconnect means the office was rebuilt. */
       version: string;
-      upgrade: UpgradeState;
       usage: UsageState;
       limits: PlanLimits;
       me: Me;

@@ -1,11 +1,11 @@
-// Who may SSH-tunnel into an office deployed with deploy/aws.sh or deploy/azure.sh.
+// Who may SSH-tunnel into an office on a server (see server/team.ts).
 import type { TeamClientMsg } from '../../../shared/protocol.js';
 import type { Ctx } from '../../office/context.js';
 import { str } from '../../office/input.js';
 import type { HandlerMap } from './types.js';
 import { audit, human } from '../../audit/index.js';
 
-const teamState = async (ctx: Ctx) => ({ ...(await ctx.team.state()), deploy: ctx.cfg.deployScript });
+const teamState = (ctx: Ctx) => ctx.team.state();
 const teamChanged = async (ctx: Ctx) => ctx.broadcast({ t: 'team', state: await teamState(ctx) });
 
 export const teamHandlers = {

@@ -1,4 +1,4 @@
-// ⚙️ Settings: team notifications, the worker limit, upgrades, the holiday theme, the building's map,
+// ⚙️ Settings: team notifications, the worker limit, the holiday theme, the building's map,
 // the office's prompts and default worker, and whether merged workers go home by themselves.
 import path from 'node:path';
 import { OPEN_CODE_MODEL_MAX } from '../../../shared/providers.js';
@@ -63,16 +63,6 @@ export const settingsHandlers = {
     changed(c, 'machine.limit', 'Worker limit', { limit: was ?? null }, { limit: now ?? null }, `Set the worker limit to ${now ?? 'none'}`);
     ctx.toastAll(limit !== undefined ? `⚙️ ${who} set the worker limit to ${now}` : now === undefined ? `⚙️ ${who} took the worker limit off` : `⚙️ ${who} put the worker limit back to ${now} (--max-workers)`);
     ctx.pumpQueues();
-  },
-  'upgrade.check'(ctx) {
-    void ctx.upgrader.check();
-  },
-  'upgrade.start'(ctx, c) {
-    const who = c.peer.name;
-    void ctx.upgrader.start(who).then((err) => {
-      if (err) ctx.warn(c, err);
-      else ctx.toastAll(`${who} is upgrading the office — it restarts when the new version is built`);
-    });
   },
   'theme.set'(ctx, c, msg) {
     const who = c.peer.name;

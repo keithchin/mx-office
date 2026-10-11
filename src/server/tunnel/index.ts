@@ -210,7 +210,7 @@ export async function tunnelCommand(argv: string[]): Promise<number> {
         if (reachable) say("  … the office isn't answering: still trying");
         reachable = false;
       } else if (list === 'old') {
-        return fail("this office is a version from before it could list its workers' servers. Upgrade it (⬆️ Upgrade the office in its ☰ menu, or the deploy script's update), then run this again.");
+        return fail("this office is a version from before it could list its workers' servers. Update it (git pull, npm run build, then Restart safely), then run this again.");
       } else if (list === 'signed-out') {
         forget(office, key);
         say('  … signed out of the office (the password changed, or the session ran out)');

@@ -144,10 +144,10 @@ export function openTeam(net: Net) {
         t.fingerprint ? h('span', {}, 'The first time, ssh asks whether to trust the server: the fingerprint must be ', h('code', {}, t.fingerprint), '.') : null,
       ),
     );
-    // Railway's TCP proxy, a Fly.io app's IP address and the port Dokploy or Coolify publishes
-    // (addresses with a port of their own) answer every IP; AWS's firewall doesn't.
+    // A public address with a port of its own (a proxy in front of port 22) usually answers every
+    // IP; a server's firewall on port 22 may not.
     if (!t.ssh?.startsWith('ssh://')) {
-      body.append(h('p.note', {}, 'SSH only answers IP addresses you allowed. If theirs isn\'t, run ', h('code', {}, `${t.deploy ?? 'deploy/aws.sh'} allow <their-ip>`), ' (or ', h('code', {}, 'allow anywhere'), ') on your machine.'));
+      body.append(h('p.note', {}, 'SSH only answers IP addresses the server\'s firewall allows. If theirs isn\'t, allow it there first.'));
     }
 
     body.append(h('h4', {}, `Invited `, h('span.count', {}, String(t.members.length))), memberList(t));

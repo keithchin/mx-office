@@ -17,7 +17,7 @@ export interface HudAction {
   on?: () => boolean;
   /** Stands out: an update to install, a sign-in that's needed. */
   tone?: () => 'primary' | 'danger' | undefined;
-  /** Only offered some of the time (Invite, Accounts, Upgrade). */
+  /** Only offered some of the time (Invite, Accounts). */
   shown?: () => boolean;
   /** Worth calling out now (an update is out, agents wait on you). */
   status?: () => boolean;

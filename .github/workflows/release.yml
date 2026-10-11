@@ -1,9 +1,10 @@
 name: Release
 
-# Every change to the app that lands on main is built and tested, packed as a release tarball and
-# installed through install.sh to check that the packed release really starts. The version is
-# package.json's major.minor plus the number of commits on main (v0.1.68, v0.1.69, ...). Nothing is
-# published: Mx Office releases are made by hand (see CHANGELOG.md). Pull requests get the same run.
+# Every change to the app that lands on main is built and tested, and the built tree is started the
+# way the launcher starts it (node bin/agent-office.js, in test mode, on a throwaway office home) to
+# check that it really starts; the launcher's own plan (scripts/start-office.ps1 -DryRun) is checked
+# under pwsh too. Nothing is published: Mx Office installs by cloning and building, and releases are
+# made by hand (see CHANGELOG.md). Pull requests get the same run.
 #
 # The perf job runs the performance guard's quick check (npm run test:perf:quick: the main views on a
 # big test office in headless Chromium, the journey, a minute of the busy office; fake agents only)
@@ -23,7 +24,6 @@ on:
       - 'package-lock.json'
       - 'tsconfig*.json'
       - 'vite.config.ts'
-      - 'install.sh'
       - '.github/workflows/release.yml'
   pull_request:
     paths:
@@ -35,7 +35,6 @@ on:
       - 'package-lock.json'
       - 'tsconfig*.json'
       - 'vite.config.ts'
-      - 'install.sh'
       - '.github/workflows/release.yml'
   workflow_dispatch:
 
@@ -66,42 +65,39 @@ jobs:
 
       - run: npm test
 
-      - name: Pack the release
-        id: pack
-        run: |
-          version="$(node -p 'require("./package.json").version.split(".").slice(0, 2).join(".")').$(git rev-list --count HEAD)"
-          npm version "$version" --no-git-tag-version --allow-same-version
-          # It's built already, and installs don't have the build tools.
-          npm pkg delete scripts.prepare
-          # Installs get exactly the dependency versions tested here.
-          cp package-lock.json npm-shrinkwrap.json
-          npm pkg set 'files[]=npm-shrinkwrap.json'
-          npm pack --ignore-scripts
-          mv "agent-office-$version.tgz" agent-office.tgz
-          tar -tzf agent-office.tgz | grep -qx 'package/npm-shrinkwrap.json'
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Install it with install.sh and start it
+      - name: Start the built office and check it answers
         env:
-          AGENT_OFFICE_TARBALL: ${{ github.workspace }}/agent-office.tgz
-          AGENT_OFFICE_INSTALL_DIR: ${{ runner.temp }}/install
-          AGENT_OFFICE_BIN_DIR: ${{ runner.temp }}/bin
           AGENT_OFFICE_HOME: ${{ runner.temp }}/office
-          AGENT_OFFICE_INSTALL_ONLY: '1'
         run: |
-          bash install.sh
-          cd "$RUNNER_TEMP"
-          "$RUNNER_TEMP/bin/agent-office" --host 127.0.0.1 --port 4700 --password ci > office.log 2>&1 &
+          mkdir -p "$AGENT_OFFICE_HOME"
+          # Test mode: no real agent CLI can start. A fresh office home has no projects anyway.
+          node bin/agent-office.js --host 127.0.0.1 --port 4700 --password ci --no-open --test-mode > "$RUNNER_TEMP/office.log" 2>&1 &
           office=$!
+          code=000
           for _ in $(seq 60); do
             code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4700/login.html || true)
             [ "$code" = 200 ] && break
+            kill -0 "$office" 2>/dev/null || break
             sleep 1
           done
-          cat office.log
-          [ "$code" = 200 ] || { echo "the installed office didn't answer (last status: $code)"; exit 1; }
-          grep -qx "v${{ steps.pack.outputs.version }}" install/current
-          kill -INT "$office"
+          # Ctrl+C stops it (and its terminal host); give it 15 s, then make sure.
+          kill -INT "$office" 2>/dev/null || true
+          for _ in $(seq 15); do kill -0 "$office" 2>/dev/null || break; sleep 1; done
+          kill -KILL "$office" 2>/dev/null || true
+          if [ "$code" != 200 ]; then
+            cat "$RUNNER_TEMP/office.log"
+            echo "the built office didn't answer on /login.html (last status: $code)"
+            exit 1
+          fi
+          echo "the built office answered 200 on /login.html"
+
+      - name: Check the launcher's plan (start-office.ps1 -DryRun)
+        shell: pwsh
+        run: |
+          $out = ./scripts/start-office.ps1 -DryRun -NoBrowser -OfficeHome "$env:RUNNER_TEMP/launcher-home" -Port 4701 | Out-String
+          $out
+          $plan = $out | ConvertFrom-Json
+          if ($plan.port -ne 4701 -or -not $plan.officeHome -or $plan.setEnv.AGENT_OFFICE_LAUNCHER_LOOP -ne '1') { throw "start-office.ps1 -DryRun gave an unexpected plan" }
 
   perf:
     runs-on: ubuntu-latest

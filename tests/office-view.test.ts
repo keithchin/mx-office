@@ -32,9 +32,8 @@ test('/ and /index.html answer with a redirect, signed in or not, never a 404 or
     assert.equal(status, 302);
     assert.equal(headers.location, location);
   }
-  // The bundle still carries a stub index.html (an older office checks for it before it upgrades), but it only sends you on.
+  // The bundle still carries a stub index.html, but it only sends you on.
   assert.match(read('src/client/public/index.html'), /location\.replace\('\/lite'/);
-  assert.match(read('src/server/upgrade.ts'), /'dist\/public\/lite\.html'/);
   assert.match(read('src/server/http/static.ts'), /'lite\.html'/);
 });
 
