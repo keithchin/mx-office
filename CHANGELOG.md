@@ -4,7 +4,7 @@ What changed in Mx Office, newest first. A release is what went
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
-## Unreleased
+## 2026-10-11 · release 36 (`35eb29a`)
 
 ### Removed
 
