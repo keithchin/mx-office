@@ -1,6 +1,7 @@
 // Cancel & undo for an unfinished setup (shared/setup-cancel.ts), GitHub-style: what the setup did, a
-// summary of exactly what will happen, the local folder and the GitHub repository each offered ticked
-// only when this setup made it (never a repository someone created by hand), the Mendix note (the .mpr
+// summary of exactly what will happen, the local folder and the GitHub repository each offered (ticked)
+// only when this setup recorded proof of making it, and the server's reason when not (no proof, a
+// different repository at that name now, GitHub couldn't say, a junction), the Mendix note (the .mpr
 // goes with the folder and the repository; a Portal / Team Server app never does), then "To confirm,
 // type <owner/name>" and the red button, disabled until the box says exactly that. Once started it
 // shows the steps as they run; one that stopped part way carries on with Retry. ✕ and Esc close it.
@@ -52,14 +53,14 @@ export function openCancelDialog(id: string, repo: string, opts: { done?: () => 
     const folderNote = !plan.folder.exists
       ? 'It isn’t there.'
       : !plan.folder.deletable
-        ? `Can’t: ${plan.folder.why}`
+        ? `Not offered: ${plan.folder.why}.`
         : plan.folder.createdBySetup
           ? `This setup cloned it. Everything in it goes${plan.mendix.mpr ? ', the Mendix app (.mpr) too' : ''}; there is no recycle bin.`
-          : 'This setup didn’t create it (it was a floor already): left unticked.';
+          : 'This setup didn’t clone it: left unticked.';
     const repoNote = plan.repoDelete.offline
       ? 'A test office’s local repository: nothing on GitHub.'
       : !plan.repoDelete.possible
-        ? h('span', {}, `${plan.repoDelete.why ?? 'The token can’t delete it.'} `, plan.repoDelete.settingsUrl ? h('a', { href: plan.repoDelete.settingsUrl, target: '_blank', rel: 'noopener' }, 'Delete it on GitHub ↗') : null)
+        ? h('span', {}, `${plan.repoDelete.why ? `Not offered: ${plan.repoDelete.why}.` : 'The token can’t delete it.'} `, plan.repoDelete.settingsUrl ? h('a', { href: plan.repoDelete.settingsUrl, target: '_blank', rel: 'noopener' }, 'Delete it on GitHub ↗') : null)
         : plan.repoDelete.createdBySetup
           ? 'This setup created it on GitHub. Its code, issues and pull requests go, for good.'
           : 'You created this repository yourself (or it was there already): left unticked.';

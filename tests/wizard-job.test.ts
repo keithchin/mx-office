@@ -134,7 +134,12 @@ test('the admin token goes only to the repo-create child: not process.env, not t
       fake,
       `const args = [require('path').basename(process.argv[1]), ...process.argv.slice(2)];
        const fs = require('fs');
-       if (args[0] === 'repo' && args[1] === 'view') process.exit(1);
+       if (args[0] === 'repo' && args[1] === 'view') {
+         // Not there until it's created (the step asks again after, for GitHub's id).
+         if (fs.existsSync(${JSON.stringify(record)})) { console.log(JSON.stringify({ id: 'R_kgDOdemo', nameWithOwner: args[2] })); process.exit(0); }
+         console.error("GraphQL: Could not resolve to a Repository with the name '" + args[2] + "'. (repository)");
+         process.exit(1);
+       }
        fs.writeFileSync(${JSON.stringify(record)}, JSON.stringify({ args, GH_TOKEN: process.env.GH_TOKEN, GITHUB_TOKEN: process.env.GITHUB_TOKEN || null }));
        console.log('created with ' + process.env.GH_TOKEN);
        process.exit(0);`,
@@ -173,6 +178,7 @@ test('the admin token goes only to the repo-create child: not process.env, not t
     const seen = JSON.parse(readFileSync(record, 'utf8'));
     assert.equal(seen.GH_TOKEN, ADMIN, 'gh repo create ran with the admin token');
     assert.equal(seen.GITHUB_TOKEN, null);
+    assert.equal(job.provenance?.repo?.githubId, 'R_kgDOdemo', 'the setup recorded GitHub’s id for what it created');
     assert.deepEqual(seen.args.slice(0, 5), ['repo', 'create', 'Test-Org/demo-app', '--private', '--add-readme']);
     const everything = [JSON.stringify(process.env), JSON.stringify(toolkitEnv(cfg, officeEnv)), job.log.join('\n'), ...(readdirSync(path.join(dir, 'jobs'), { recursive: true }) as string[]).filter((f) => f.endsWith('.json')).map((f) => readFileSync(path.join(dir, 'jobs', f), 'utf8'))].join('\n');
     assert.ok(!everything.includes(ADMIN), 'the admin token is nowhere but in that child');

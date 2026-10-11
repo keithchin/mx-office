@@ -7,6 +7,9 @@
 // own record goes. Each step is saved in <data>/deleted/setup-cancels/<id>.json as it ends, so one that
 // stops (a locked file, GitHub down) carries on where it stopped when asked again. A Mendix Portal or
 // Team Server app is never deleted. Everything that could be slow is async (git and gh off the event loop).
+// The folder and the repository go only on the setup's recorded proof (ownership.ts), checked by the plan
+// and again by the steps themselves right before deleting: a request that asks for more is refused for
+// that item. The repository is never handed to Delete project's job, so its id is checked right before it goes.
 
 import { existsSync } from 'node:fs';
 import { readFile, readdir, rm } from 'node:fs/promises';
@@ -16,9 +19,11 @@ import { CANCEL_STEPS, cancelConfirmed, cleanCancelRequest, madeBySetup, type Ca
 import { SETUP_STEPS, type StepId, type StepStatus } from '../../shared/wizard.js';
 import { writeJsonAtomic } from '../flow/store.js';
 import type { DeleteJobView, DeletePlan } from '../../shared/project-delete.js';
-import { folderRefusal, removeTree } from '../project-delete/fsops.js';
-import { canDeleteRepo, deleteRepo, type Gh } from '../project-delete/repo.js';
+import { removeTree } from '../project-delete/fsops.js';
+import { canDeleteRepo, deleteRepo, repoSettingsUrl, type Gh } from '../project-delete/repo.js';
 import type { JobState } from './job.js';
+import { readProvenance, type SetupProvenance } from '../../shared/setup-provenance.js';
+import { folderAuthority, repoAuthority, type FolderAuthority } from './ownership.js';
 
 const DONE_KEEP_MS = 10 * 60_000;
 
@@ -30,13 +35,19 @@ export interface SetupSnapshot {
   floor?: string;
   dir: string;
   steps: { id: StepId; status: StepStatus; detail?: string }[];
+  /** The setup's proof of what it made (absent for a setup saved before it: nothing is then the setup's to delete). */
+  provenance?: SetupProvenance;
 }
 
 interface CancelRecord extends CancelJobView {
   setup: SetupSnapshot;
   byId?: string;
-  /** The project step took the folder and the repository with it (Delete project did them). */
+  /** The project step ran through Delete project (a record without `ownership` let it take the folder and the repository too). */
   viaProject?: boolean;
+  /** Delete project took the folder with the project (its proof was checked first). */
+  folderViaProject?: boolean;
+  /** Made by this office's ownership rules: the repository is never Delete project's to delete. Older records lack it. */
+  ownership?: 1;
 }
 
 export interface CancelDeps {
@@ -79,6 +90,7 @@ export function snapshotOf(job: JobState, dir: string): SetupSnapshot {
     ...(job.floor ? { floor: job.floor } : {}),
     dir: job.dir ?? dir,
     steps: SETUP_STEPS.map((s) => ({ id: s.id, status: job.steps[s.id]?.status ?? 'pending', ...(job.steps[s.id]?.detail ? { detail: job.steps[s.id].detail } : {}) })),
+    ...(readProvenance(job.provenance) ? { provenance: readProvenance(job.provenance) } : {}),
   };
 }
 
@@ -143,6 +155,16 @@ export class SetupCancels {
     return { home: this.deps.projectsHome(), dataDir: this.deps.dataDir, local: false, testMode: this.deps.testMode() };
   }
 
+  /** Whether the folder is the setup's to delete now (ownership.ts); `refusal` is Delete project's, while the floor is there. */
+  private folderAuth(s: SetupSnapshot, refusal?: string): Promise<FolderAuthority> {
+    return folderAuthority(s.dir, readProvenance(s.provenance), madeBySetup(s.steps).legacyFolder, this.rules(s.dir), refusal);
+  }
+
+  /** Whether the repository is the setup's to delete now: its proof, and the same id on GitHub at that name. */
+  private repoAuth(s: SetupSnapshot) {
+    return repoAuthority(this.deps.gh, readProvenance(s.provenance), normalizeRepo(s.repo) ?? s.repo, madeBySetup(s.steps).legacyRepo);
+  }
+
   /** Why nothing may start now. */
   private blocked(s: SetupSnapshot): string | undefined {
     if (this.running.has(s.id)) return 'It’s already being cancelled';
@@ -161,25 +183,30 @@ export class SetupCancels {
     const old = this.finished.get(id) ?? (await this.saved(id));
     const s = this.snapshot(id, old);
     if (!s) return 'No such setup';
-    const made = madeBySetup(s.steps);
+    const made = madeBySetup(s.steps, s.provenance);
     const onFloor = !!s.floor && this.deps.hasFloor(s.floor);
     const dp = onFloor ? await this.deps.deletes.plan(s.floor!) : undefined;
     const delPlan = typeof dp === 'object' ? dp : undefined;
     const exists = existsSync(s.dir);
-    const refusal = delPlan ? (delPlan.folder.deletable ? undefined : delPlan.folder.why) : await folderRefusal(s.dir, this.rules(s.dir));
+    const refusal = delPlan ? (delPlan.folder.deletable ? undefined : delPlan.folder.why) : undefined;
+    const folderAuth = exists ? await this.folderAuth(s, refusal) : undefined;
     let repoDelete: CancelPlan['repoDelete'];
     if (made.offline) repoDelete = { createdBySetup: false, byHand: false, offline: true, possible: false, why: 'a test office’s local repository: nothing on GitHub' };
     else {
       // Test mode with a real gh: it isn't even asked what its token may do.
       const fakeOnly = this.deps.testMode() && !this.deps.ghIsFake();
-      const can = fakeOnly ? { possible: false } : delPlan ? delPlan.repoDelete : await canDeleteRepo(this.deps.gh, normalizeRepo(s.repo));
+      // Proof first (and GitHub's id at that name now); only then what the token may do.
+      const auth = fakeOnly ? undefined : await this.repoAuth(s);
+      const can = fakeOnly || !auth?.ok ? { possible: false } : delPlan ? delPlan.repoDelete : await canDeleteRepo(this.deps.gh, normalizeRepo(s.repo));
+      const why = fakeOnly ? 'the office is in test mode, and test mode never deletes a real GitHub repository' : auth && !auth.ok ? auth.why : can.why;
       repoDelete = {
         createdBySetup: made.repo,
         byHand: made.repoByHand,
         offline: false,
-        possible: can.possible && !fakeOnly,
-        ...(fakeOnly ? { why: 'the office is in test mode, and test mode never deletes a real GitHub repository' } : can.why ? { why: can.why } : {}),
-        ...(can.settingsUrl ? { settingsUrl: can.settingsUrl } : {}),
+        possible: can.possible && !fakeOnly && !!auth?.ok,
+        ...(auth ? { proof: auth.ok ? 'recorded' : auth.proof } : {}),
+        ...(why ? { why } : {}),
+        ...(can.settingsUrl ? { settingsUrl: can.settingsUrl } : { settingsUrl: repoSettingsUrl(s.repo) }),
       };
     }
     const did = s.steps.filter((x) => x.status === 'done' || x.status === 'skipped').map((x) => `${SETUP_STEPS.find((d) => d.id === x.id)?.label ?? x.id}${x.detail ? `: ${x.detail}` : ''}${x.status === 'skipped' ? ' (nothing to do)' : ''}`);
@@ -193,7 +220,13 @@ export class SetupCancels {
       did,
       agents: delPlan?.agents ?? 0,
       worktrees: delPlan?.worktrees.length ?? 0,
-      folder: { exists, createdBySetup: made.folder, deletable: exists && !refusal, ...(refusal ? { why: refusal } : !exists ? { why: 'it isn’t there' } : {}) },
+      folder: {
+        exists,
+        createdBySetup: made.folder,
+        deletable: !!folderAuth?.ok,
+        ...(folderAuth ? { proof: folderAuth.ok ? 'recorded' : folderAuth.proof } : {}),
+        ...(folderAuth && !folderAuth.ok ? { why: folderAuth.why } : !exists ? { why: 'it isn’t there' } : {}),
+      },
       repoDelete,
       mendix: { mpr: exists && (await hasMpr(s.dir)) },
       ...(blocked ? { blocked } : {}),
@@ -232,6 +265,7 @@ export class SetupCancels {
         ...(by.id ? { byId: by.id } : {}),
         startedAt: this.deps.now(),
         setup: s,
+        ownership: 1,
       };
     }
     this.finished.delete(id);
@@ -282,6 +316,8 @@ export class SetupCancels {
   private async step(id: CancelStepId, rec: CancelRecord): Promise<{ detail?: string; skipped?: boolean }> {
     const s = rec.setup;
     const d = this.deps;
+    // A record from before the ownership rules let Delete project take the folder and the repository with the project.
+    const legacyVia = rec.viaProject && !rec.ownership;
     switch (id) {
       case 'project': {
         const floor = s.floor;
@@ -289,28 +325,44 @@ export class SetupCancels {
         if (!floor || (!d.hasFloor(floor) && (!pending || pending.status === 'done'))) return { detail: 'the setup never made a floor', skipped: true };
         const plan = await d.deletes.plan(floor);
         if (typeof plan === 'string') throw new Error(plan);
-        const strong = rec.deleteFolder || rec.deleteRepo;
-        const started = await d.deletes.start(floor, { mode: strong ? 'delete' : 'remove', deleteFolder: rec.deleteFolder, deleteRepo: rec.deleteRepo, discardWork: true, confirm: plan.confirm }, { name: rec.by, id: rec.byId });
+        // The folder goes with the project only on the setup's proof, checked now; the repository never does (its step checks GitHub's id right before).
+        const folder = rec.deleteFolder && existsSync(s.dir) && (await this.folderAuth(s)).ok;
+        // A Delete project job an older office started for this cancel carries on with what it asked then: never one that would delete without proof.
+        if (pending && pending.status !== 'done' && (pending.deleteRepo || (pending.deleteFolder && !folder)))
+          throw new Error(
+            `the Delete project job this cancel started earlier would also delete the ${pending.deleteRepo ? 'GitHub repository' : 'local folder'}, and the office no longer does that without proof the setup made it: carry it on from the project’s own Delete project, which asks again`,
+          );
+        const started = await d.deletes.start(floor, { mode: folder ? 'delete' : 'remove', deleteFolder: folder, deleteRepo: false, discardWork: true, confirm: plan.confirm }, { name: rec.by, id: rec.byId });
         if (typeof started === 'string') throw new Error(started);
         await d.deletes.settled(floor);
         const job = await d.deletes.job(floor);
         if (!job || job.status !== 'done') throw new Error(job?.error ?? 'Delete project stopped part way: Retry carries it on');
         rec.viaProject = true;
+        rec.folderViaProject = job.deleteFolder;
         return { detail: `taken off the office as Delete project does${job.archiveDir ? `; office data archived to ${job.archiveDir}` : ''}` };
       }
       case 'folder': {
-        if (rec.viaProject && rec.deleteFolder) return { detail: `deleted ${s.dir} (with the project)` };
+        if (rec.deleteFolder && (rec.folderViaProject || legacyVia)) return { detail: `deleted ${s.dir} (with the project)` };
         if (!rec.deleteFolder) return { detail: `kept ${s.dir}`, skipped: true };
         if (!existsSync(s.dir)) return { detail: `${s.dir} was already gone` };
-        const why = await folderRefusal(s.dir, this.rules(s.dir));
-        if (why) throw new Error(`refusing to delete ${s.dir}: ${why}`);
+        // Checked again here, whatever was asked: no proof, a link, or outside the projects folder keeps it.
+        const auth = await this.folderAuth(s);
+        if (!auth.ok) return { detail: `kept ${s.dir}: not deleted, because ${auth.why}`, skipped: true };
         await removeTree(s.dir);
         return { detail: `deleted ${s.dir}` };
       }
       case 'repo': {
-        if (rec.viaProject && rec.deleteRepo) return { detail: `deleted ${s.repo} (with the project)` };
+        if (rec.deleteRepo && legacyVia) return { detail: `deleted ${s.repo} (with the project)` };
         if (!rec.deleteRepo) return { detail: madeBySetup(s.steps).offline ? 'a local repository: nothing on GitHub' : `kept ${s.repo}`, skipped: true };
         if (d.testMode() && !d.ghIsFake()) throw new Error('test mode never deletes a real GitHub repository');
+        // Checked again right before deleting, whatever was asked: the setup's proof, and the same id at that name on GitHub now.
+        const auth = await this.repoAuth(s);
+        if (!auth.ok) {
+          if (auth.proof === 'gone') return { detail: `${s.repo} was already gone` };
+          // GitHub couldn't say: stopped, so Retry asks again (never deleted on a guess).
+          if (auth.proof === 'unknown') throw new Error(auth.why);
+          return { detail: `kept ${s.repo}: not deleted, because ${auth.why}`, skipped: true };
+        }
         const can = await canDeleteRepo(d.gh, s.repo);
         if (!can.possible) throw new Error(can.why ?? 'the token can’t delete it');
         const r = await deleteRepo(d.gh, s.repo);
@@ -327,6 +379,6 @@ export class SetupCancels {
 }
 
 function view(r: CancelRecord): CancelJobView {
-  const { setup: _s, byId: _b, viaProject: _v, ...v } = r;
+  const { setup: _s, byId: _b, viaProject: _v, folderViaProject: _f, ownership: _o, ...v } = r;
   return { ...v, steps: v.steps.map((s) => ({ ...s })) };
 }

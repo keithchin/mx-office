@@ -3,10 +3,12 @@
 // first what would stop it: a paused project, a safe restart, Studio Pro open), Cancel & undo, and Open
 // project. Cancel & undo puts back what the setup did, in reverse, GitHub-style (type the repository's
 // name): the project off the office through Delete project (server/project-delete/), then, when ticked,
-// the local folder and the GitHub repository, but only offered ticked for what this setup made itself,
-// then the setup's own record. Pure: the page, the server and the tests read the same rules.
+// the local folder and the GitHub repository, but only what this setup recorded proof of making
+// (shared/setup-provenance.ts; server/wizard/ownership.ts checks it again before deleting), then the
+// setup's own record. Pure: the page, the server and the tests read the same rules.
 
 import type { StepView } from './wizard.js';
+import { readProvenance } from './setup-provenance.js';
 
 /** Why Retry would fail right now, said before it runs, with what to do about it. */
 export interface SetupBlocker {
@@ -75,10 +77,12 @@ export interface CancelPlan {
   did: string[];
   agents: number;
   worktrees: number;
-  folder: { exists: boolean; createdBySetup: boolean; deletable: boolean; why?: string };
+  /** `proof`: how the office knows who made it (server/wizard/ownership.ts); only 'recorded' ever lets it be deleted. */
+  folder: { exists: boolean; createdBySetup: boolean; deletable: boolean; why?: string; proof?: string };
   repoDelete: {
-    /** This setup created it on GitHub (its repo step says "created …"). */
+    /** This setup recorded creating it on GitHub (its provenance record, never its log line). */
     createdBySetup: boolean;
+    proof?: string;
     /** Someone created it on GitHub by hand, or it was there already. */
     byHand: boolean;
     /** A test office's local bare repository: nothing on GitHub. */
@@ -105,21 +109,30 @@ export interface CancelRequest {
 const stepOf = (steps: readonly Pick<StepView, 'id' | 'status' | 'detail'>[], id: StepView['id']) => steps.find((s) => s.id === id);
 
 /**
- * What this setup made itself, from its steps: the GitHub repository when its repo step created it
- * ("created owner/name on GitHub"), never one made by hand or already there, nor a test office's local
- * bare one; the folder when its clone step cloned it ("cloned into …", "offline floor at …"), never one
- * that was a floor already. These are the boxes Cancel & undo offers ticked.
+ * What this setup made itself: the GitHub repository and the folder only when its provenance record says
+ * it created them (the repo and clone steps write it as they make something). The steps' log lines
+ * ("created owner/name on GitHub", "cloned into …") are only a hint (`legacyRepo`, `legacyFolder`, for a
+ * setup saved before the record): they never make anything the setup's to delete. A test office's local
+ * bare repository (`offline`) is nothing on GitHub.
  */
-export function madeBySetup(steps: readonly Pick<StepView, 'id' | 'status' | 'detail'>[]): { repo: boolean; repoByHand: boolean; offline: boolean; folder: boolean } {
+export function madeBySetup(
+  steps: readonly Pick<StepView, 'id' | 'status' | 'detail'>[],
+  provenance?: unknown,
+): { repo: boolean; repoByHand: boolean; offline: boolean; folder: boolean; legacyRepo: boolean; legacyFolder: boolean } {
+  const prov = readProvenance(provenance);
   const repo = stepOf(steps, 'repo');
   const clone = stepOf(steps, 'clone');
   const offline = /^offline:/i.test(repo?.detail ?? '');
-  const created = repo?.status === 'done' && /^created\s/i.test(repo.detail ?? '');
+  const saysCreated = repo?.status === 'done' && /^created\s/i.test(repo.detail ?? '');
+  const saysCloned = clone?.status === 'done' && /^(cloned into|offline floor at)\s/i.test(clone.detail ?? '');
+  const made = !!prov?.repo?.createdBySetup;
   return {
-    repo: created,
-    repoByHand: !created && !offline,
+    repo: made,
+    repoByHand: !made && !offline && !saysCreated,
     offline,
-    folder: clone?.status === 'done' && /^(cloned into|offline floor at)\s/i.test(clone.detail ?? ''),
+    folder: !!prov?.folder?.createdBySetup,
+    legacyRepo: saysCreated && !prov?.repo,
+    legacyFolder: saysCloned && !prov?.folder,
   };
 }
 
