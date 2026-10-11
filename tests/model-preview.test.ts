@@ -128,7 +128,7 @@ test('isolation: everything escaped, no scripts, a frame that is sandboxed and f
   assert.match(doc, /<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:">/);
   assert.doesNotMatch(PREVIEW_CSS, /url\(|@import/, 'the stylesheet fetches nothing');
   const frame = ui('page-frame.ts');
-  assert.match(frame, /h\('iframe\.pv-frame', \{ sandbox: '',/, 'the frame is sandboxed with nothing allowed');
+  assert.match(frame, /h\('iframe\.pgp-frame', \{ sandbox: '',/, 'the frame is sandboxed with nothing allowed');
   assert.match(frame, /frame\.srcdoc = previewDocument\(/);
 });
 

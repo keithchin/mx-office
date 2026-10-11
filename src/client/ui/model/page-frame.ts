@@ -38,10 +38,10 @@ export function pageFrame(fetch: Fetch): PageFrame {
   } catch {
     // the default, then
   }
-  const frame = h('iframe.pv-frame', { sandbox: '', referrerpolicy: 'no-referrer', title: 'Page preview' }) as HTMLIFrameElement;
+  const frame = h('iframe.pgp-frame', { sandbox: '', referrerpolicy: 'no-referrer', title: 'Page preview' }) as HTMLIFrameElement;
   const btns = (Object.keys(WIDTHS) as Width[]).map((w) => h('button.btn', { type: 'button', 'aria-pressed': String(w === width), onclick: () => setWidth(w) }, w[0].toUpperCase() + w.slice(1)));
-  const stage = h('div.pv-stage', {}, frame);
-  const el = h('div.pv-host', {}, h('div.pv-bar', {}, h('span.mx-seg', { role: 'group', 'aria-label': 'Width' }, ...btns), h('span.pv-note', {}, 'Sample data · drawn from the model')), stage);
+  const stage = h('div.pgp-stage', {}, frame);
+  const el = h('div.pgp-host', {}, h('div.pgp-bar', {}, h('span.mx-seg', { role: 'group', 'aria-label': 'Width' }, ...btns), h('span.pgp-note', {}, 'Sample data · drawn from the model')), stage);
   el.hidden = true;
 
   function setWidth(w: Width) {
@@ -52,6 +52,8 @@ export function pageFrame(fetch: Fetch): PageFrame {
       // just for this visit
     }
     paintWidth();
+    // Drawn again at the new width (a sandboxed frame resized in place can stay blank until it repaints).
+    if (current) draw(current);
   }
   function paintWidth() {
     btns.forEach((b, i) => {
@@ -60,7 +62,7 @@ export function pageFrame(fetch: Fetch): PageFrame {
       b.setAttribute('aria-pressed', String(on));
     });
     frame.style.width = WIDTHS[width] ? `${WIDTHS[width]}px` : '100%';
-    stage.classList.toggle('pv-narrow', !!WIDTHS[width]);
+    stage.classList.toggle('pgp-narrow', !!WIDTHS[width]);
   }
   paintWidth();
 
