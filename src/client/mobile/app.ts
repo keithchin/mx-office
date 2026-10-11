@@ -70,7 +70,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
   let flash: string | undefined;
 
   const back = h('button.m-hbtn', { type: 'button', 'aria-label': 'Back', hidden: true, onclick: () => goBack() }, '‹');
-  const title = h('h1.m-title', {}, 'Agent Office');
+  const title = h('h1.m-title', {}, 'Mx Office');
   const subline = h('p.m-sub');
   const gear = h('button.m-hbtn', { type: 'button', 'aria-label': 'Phone settings', onclick: () => openSettings(me, draw) }, '⚙');
   const floorSel = h('select.m-floor', { id: 'floor', 'aria-label': 'Project' });
@@ -261,7 +261,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
     }
     if (tab === 'needs' && !sub && isIos() && !isStandalone() && !dismissed) {
       const x = h('button.m-hbtn.m-x', { type: 'button', 'aria-label': 'Hide', onclick: () => (localStorage.setItem(HINT_KEY, '1'), draw()) }, '✕');
-      out.push(h('section.m-banner', {}, x, h('b', {}, '📲 Put Agent Office on your home screen'), h('p.m-dim', {}, 'It opens full screen like an app, and can then tell you when something needs you.'), installSteps()));
+      out.push(h('section.m-banner', {}, x, h('b', {}, '📲 Put Mx Office on your home screen'), h('p.m-dim', {}, 'It opens full screen like an app, and can then tell you when something needs you.'), installSteps()));
     }
     return out;
   }

@@ -62,9 +62,9 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: 'Agent Office', body: event.data ? event.data.text() : '' };
+    data = { title: 'Mx Office', body: event.data ? event.data.text() : '' };
   }
-  const title = data.title || 'Agent Office';
+  const title = data.title || 'Mx Office';
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || 'Something needs you in the office',

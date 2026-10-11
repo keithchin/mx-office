@@ -27,7 +27,7 @@ function hero(v: FirmView, away: Set<string>) {
   const live = v.engagements.filter((e) => isActive(e.phase)).length;
   $('firm-hero').replaceChildren(
     h('div.firm-hero-text', {},
-      h('p.firm-kicker', {}, 'Est. inside Agent Office'),
+      h('p.firm-kicker', {}, 'Est. inside Mx Office'),
       h('h2', {}, 'Independent review, no shared context, no bias.'),
       h('p', {}, 'The Firm\'s Reviewer Agents sit outside every project. Call an audit and the Firm attaches a reviewer to each project team: they interview the Leads, review what was built in their own read-only checkout, and the Engagement Partner delivers one report to you.'),
       h('p.firm-hero-stats', {}, h('span', {}, `👥 ${v.people.length} reviewers`), h('span', {}, `🧳 ${away.size} with a client`), h('span', {}, `📑 ${v.engagements.filter((e) => e.reportId).length} reports`), live ? h('span', {}, `⏳ ${live} under way`) : null),
@@ -78,7 +78,7 @@ async function showReport(id: string) {
 function showFirm() {
   $('firm-report').classList.add('hidden');
   for (const s of ['firm-hero', 'firm-active', 'firm-people', 'firm-reports']) $(s).classList.remove('hidden');
-  document.title = 'The Firm · Agent Office';
+  document.title = 'The Firm · Mx Office';
   void load();
 }
 

@@ -36,7 +36,7 @@ function show(scrollTo: 'top' | 'hash' | 'keep' = 'hash') {
     renderSearch(main, bundle, query);
     renderSide(side, bundle, '');
     renderToc(toc, undefined);
-    document.title = `Search · Docs · Agent Office`;
+    document.title = `Search · Docs · Mx Office`;
   } else {
     const page = findPage(bundle, slug);
     if (page && page.slug !== slug) {
@@ -48,12 +48,12 @@ function show(scrollTo: 'top' | 'hash' | 'keep' = 'hash') {
       renderSide(side, bundle, page.slug);
       renderToc(toc, page);
       stopToc = watchToc(main, toc);
-      document.title = `${page.slug ? `${page.title} · ` : ''}Docs · Agent Office`;
+      document.title = `${page.slug ? `${page.title} · ` : ''}Docs · Mx Office`;
     } else {
       renderMissing(main, bundle, slug);
       renderSide(side, bundle, '');
       renderToc(toc, undefined);
-      document.title = 'Not found · Docs · Agent Office';
+      document.title = 'Not found · Docs · Mx Office';
     }
   }
   const target = scrollTo === 'hash' && location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;

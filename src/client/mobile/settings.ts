@@ -24,7 +24,7 @@ export function installSteps(): HTMLElement {
     h('li', {}, 'Open this page in ', h('b', {}, 'Safari'), ' (not inside Teams or another app).'),
     h('li', {}, 'Tap ', h('b', {}, 'Share'), ' ', h('span.m-share', { 'aria-label': 'the Share button' }, '⬆︎'), ' at the bottom of the screen.'),
     h('li', {}, 'Scroll down and tap ', h('b', {}, 'Add to Home Screen'), ', then ', h('b', {}, 'Add'), '.'),
-    h('li', {}, 'Open ', h('b', {}, 'Agent Office'), ' from your home screen, then ⚙ → ', h('b', {}, 'Turn on notifications'), '.'),
+    h('li', {}, 'Open ', h('b', {}, 'Mx Office'), ' from your home screen, then ⚙ → ', h('b', {}, 'Turn on notifications'), '.'),
   );
 }
 
@@ -32,7 +32,7 @@ const STATE_TEXT: Record<PushState, string> = {
   unsupported: 'This browser can’t get push notifications.',
   insecure: 'Push needs https: open the office through 📱 Phone access (⚙️ Settings › 🔌 Connections, on the office’s 1D view on a computer: /lite?tab=settings&section=connections).',
   'install-first': 'On an iPhone, push only works once the office is on your home screen:',
-  denied: 'Notifications are blocked for the office: allow them in Settings → Notifications → Agent Office, then come back.',
+  denied: 'Notifications are blocked for the office: allow them in Settings → Notifications → Mx Office, then come back.',
   off: 'Off on this phone. Turn them on to hear about red items (an agent stopped on you, an escalation, failing checks) even with the app closed.',
   on: 'On: red items arrive here, under Do not disturb and the digest below.',
 };

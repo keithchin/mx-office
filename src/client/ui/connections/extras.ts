@@ -11,7 +11,7 @@ export function toolsSection(run: Run): HTMLElement {
   const body = h('div.cx-tools', {}, h('p.cx-note', {}, 'Checks git and gh on the office’s machine, and signs gh in with the agents’ token in a throwaway config, so your own gh login is never touched.'));
   const check = h('button.btn', { type: 'button' }, '🔍 Check git & gh');
   const paint = (t: ToolsView) => {
-    const name = h('input', { type: 'text', placeholder: 'Agent Office', value: t.officeIdentity?.name ?? '', 'aria-label': 'Commit name' }) as HTMLInputElement;
+    const name = h('input', { type: 'text', placeholder: 'Mx Office', value: t.officeIdentity?.name ?? '', 'aria-label': 'Commit name' }) as HTMLInputElement;
     const email = h('input', { type: 'text', placeholder: 'agents@your-org.example', value: t.officeIdentity?.email ?? '', 'aria-label': 'Commit email' }) as HTMLInputElement;
     const set = h('button.btn.primary', { type: 'button' }, t.officeIdentity ? 'Update' : 'Use for the agents’ commits');
     set.addEventListener('click', () => void run(() => connectionsApi.identity(name.value, email.value), 'Commit identity set').then(load));
