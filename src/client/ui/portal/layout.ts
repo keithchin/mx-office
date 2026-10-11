@@ -9,7 +9,7 @@ import { store } from '../../state';
 import type { GhIssue, GhPull } from '../../../shared/protocol';
 import type { ProjectSummary } from '../../../shared/summary';
 import { h } from '../dom';
-import { openStudio, studioShown, studioVersion } from '../studio';
+import { onStudioChange, openStudio, studioBlocked, studioShown, studioVersion, watchStudio } from '../studio';
 import { portalNav } from './nav';
 import { pageHead } from './pagehead';
 import { portalOverview } from './overview';
@@ -49,7 +49,12 @@ export function portalLayout(deps: PortalLayoutDeps): PortalLayout {
     else deps.show('live');
   };
   const run = (a: NavAction) => (a === 'view-app' ? viewApp() : void openStudio());
-  const nav = portalNav({ show: deps.show, run, offered: (a) => a !== 'studio' || studioShown() });
+  // Edit in Studio Pro is on every project page: greyed out with the reason when it can't work, and drawn
+  // again whenever what the office says about it changes, not only when the page does (it used to vanish
+  // one page after the office said there was no .mpr).
+  const nav = portalNav({ show: deps.show, run, offered: (a) => a !== 'studio' || studioShown(), blocked: (a) => (a === 'studio' ? studioBlocked() : undefined) });
+  onStudioChange(() => nav.refresh());
+  watchStudio();
   const head = pageHead(main);
   const overview = portalOverview({ show: (t) => deps.show(t as NavTab), openWorker: deps.openWorker, live: deps.live, budget: deps.budget, mendix: studioVersion, setup: deps.setup });
 

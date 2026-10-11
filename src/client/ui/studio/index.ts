@@ -5,8 +5,14 @@
 // so it says so and names the agents on the floor mid-turn. Beside the button, Studio mode's chip:
 // the office sees Studio Pro open on the project (server/studio/watch.ts), however it was opened,
 // and pauses the agents' mxcli writes meanwhile; the button says it's open and waits.
+//
+// The button is on every project page, always: greyed out with the reason when it truly can't work (no
+// Studio Pro on the office's computer, not an admin, already open), never hidden because the office
+// hasn't found an .mpr. Opening brings the floor's folder up to date with GitHub first when that's safe
+// (server/floor-sync/), and says why when it isn't (local changes, another branch, Studio Pro open).
 
-import type { StudioInfo, StudioOpenResult, StudioState } from '../../../shared/studio';
+import type { StudioInfo, StudioOpenResult, StudioState, StudioSyncResult } from '../../../shared/studio';
+import { ADMINS_ONLY_TEXT, afterSync, stopBeforeSync, syncLine } from './logic';
 import { store } from '../../state';
 import { h, openModal, toast } from '../dom';
 import { oneAtATime } from '../once';
@@ -21,6 +27,13 @@ let info: StudioInfo | null = null;
 let infoFor: string | null = null;
 let watching = false;
 const buttons = new Set<HTMLButtonElement>();
+const changed = new Set<() => void>();
+
+/** Hears every redraw of what the office says about the button (the Portal navigation's item follows it); returns how to stop. */
+export function onStudioChange(fn: () => void): () => void {
+  changed.add(fn);
+  return () => void changed.delete(fn);
+}
 
 /** Your name as this browser has it, for the record (an account's name wins on the server). */
 function myName(): string | undefined {
@@ -76,8 +89,12 @@ export function watchStudio() {
   if (store.floor) void refresh();
 }
 
-/** Whether the floor you're on has a project to open: until the office says, it's offered. */
-export const studioShown = () => !!store.floor && (infoFor !== store.floor || !info || info.hasMpr);
+/**
+ * Whether the button is offered: on every project page, whatever the office has found. It used to wait
+ * for an .mpr, and since the Portal navigation asks only when the page changes, it vanished one page
+ * after the office said "none" (the folder was behind GitHub, without the .mpr main had).
+ */
+export const studioShown = () => !!store.floor;
 /** The Mendix version the floor's project opens in, once the office has said (the Portal Overview's Details). */
 export const studioVersion = () => (infoFor === store.floor ? (info?.version ?? undefined) : undefined);
 
@@ -85,13 +102,21 @@ export const studioVersion = () => (infoFor === store.floor ? (info?.version ?? 
 export function studioBlocked(): string | undefined {
   const s = studioState();
   if (s?.open) return `Studio Pro already has the project open (${sinceText(s.since)}): the agents' mxcli writes are paused until it's closed`;
-  if (!store.me.admin) return 'Only admins can open the project in Studio Pro';
-  if (info && infoFor === store.floor && !info.available) return info.error;
+  if (!store.me.admin) return ADMINS_ONLY_TEXT;
+  if (info && infoFor === store.floor && !info.available) return info.problem === 'no-mpr' ? info.machine?.error : info.error;
   return undefined;
 }
 
-export const studioTitle = () =>
-  info?.mpr ? `Open ${info.mpr}${info.version ? ` (Mendix ${info.version})` : ''} in Studio Pro on the office's computer` : "Open the floor's Mendix project in Studio Pro on the office's computer";
+export function studioTitle(): string {
+  const here = infoFor === store.floor ? info : null;
+  const base = here?.mpr
+    ? `Open ${here.mpr}${here.version ? ` (Mendix ${here.version})` : ''} in Studio Pro on the office's computer`
+    : here && !here.hasMpr
+      ? "No .mpr in the project folder yet: clicking brings the folder up to date with GitHub first, then opens it in Studio Pro on the office's computer"
+      : "Open the floor's Mendix project in Studio Pro on the office's computer";
+  const note = here?.sync?.state === 'refused' ? here.sync.message : undefined;
+  return note ? `${base}. ${note}` : base;
+}
 
 function draw() {
   const shown = studioShown();
@@ -106,6 +131,7 @@ function draw() {
     if (label) label.textContent = s?.open ? 'Studio Pro is open' : 'Open in Studio Pro';
   }
   for (const c of chips) drawChip(c, shown ? s : undefined);
+  for (const fn of changed) fn();
 }
 
 const chips = new Set<HTMLElement>();
@@ -171,15 +197,39 @@ async function openStudioNow() {
     infoFor = floor;
     draw();
   }
-  if (!now) return void toast("Couldn't ask the office about the project", 'warn');
-  if (!now.hasMpr) return void toast(now.error ?? 'No Mendix project (.mpr) on this floor', 'warn');
-  if (now.state?.open) return void toast("Studio Pro already has the project open: the agents' mxcli writes are paused until it's closed", 'warn');
-  if (!now.admin) return void toast('Only admins can open the project in Studio Pro', 'warn');
-  if (!now.available) return void toast(now.error ?? "Studio Pro can't be opened from here", 'warn');
-  confirmOpen(floor, now);
+  const stop = stopBeforeSync(now);
+  if (stop) return void toast(stop, 'warn');
+  // The folder brought up to date with GitHub first, when that's safe: what main has is what opens.
+  const busy = toast(now?.hasMpr ? 'Checking the project folder is up to date with GitHub…' : 'No .mpr in the project folder yet: bringing it up to date with GitHub…');
+  const r = await syncNow(floor);
+  busy.remove();
+  if (store.floor !== floor) return;
+  if (r) {
+    info = r.info;
+    infoFor = floor;
+    draw();
+  }
+  const next = afterSync(r);
+  if ('stop' in next) return void toast(next.stop, 'warn');
+  if (next.moved && next.note) toast(next.note);
+  confirmOpen(floor, r!.info, next.moved ? undefined : next.note);
 }
 
-function confirmOpen(floor: string, s: StudioInfo) {
+async function syncNow(floor: string): Promise<StudioSyncResult | null> {
+  try {
+    const res = await fetch('/api/studio/sync', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor }) });
+    if (!res.ok) {
+      const e = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (e?.error) toast(e.error, 'warn');
+      return null;
+    }
+    return (await res.json()) as StudioSyncResult;
+  } catch {
+    return null;
+  }
+}
+
+function confirmOpen(floor: string, s: StudioInfo, behind?: string) {
   const yes = h('button.btn.primary', { type: 'button' }, 'Open in Studio Pro');
   const no = h('button.btn', { type: 'button' }, 'Never mind');
   const remote = !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
@@ -196,6 +246,7 @@ function confirmOpen(floor: string, s: StudioInfo) {
       h('p', {}, h('code', {}, s.mpr ?? 'the project'), s.version ? ` opens in Studio Pro ${s.version}.` : ' opens in Studio Pro.'),
       h('p.st-warn', { role: 'alert' }, "Studio Pro locks the project while it's open, and agents write it with mxcli: one writer at a time. The office sees Studio Pro open and pauses the agents' mxcli writes automatically until you close it."),
       h('p.st-note', {}, 'When you close Studio Pro, commit your changes so the agents build on them.'),
+      behind ? h('p.st-warn.st-behind', { role: 'status' }, behind) : null,
       s.state?.staleLock ? h('p.st-note', {}, "The project's .mpr.lock is already there with no Studio Pro running: a stale lock, left by an earlier Studio Pro. Studio Pro takes it over when it opens.") : null,
       busy,
       s.last ? h('p.st-note', {}, `Last opened by ${s.last.by} at ${new Date(s.last.at).toLocaleTimeString()}.`) : null,
@@ -223,6 +274,7 @@ async function post(floor: string, s: StudioInfo) {
     });
     const r = (await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }))) as StudioOpenResult;
     if (!r.ok) toast(r.error, 'warn');
+    else if (r.sync?.state === 'moved') toast(syncLine(r.sync)!);
   } catch {
     toast("Couldn't reach the office", 'warn');
   }
