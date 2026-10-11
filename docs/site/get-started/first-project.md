@@ -118,6 +118,21 @@ Check the summary and click **✨ Create project**. A progress list runs each st
 
 If a step fails, fix the cause and click **🔁 Retry from the failed step**. **✏️ Edit answers** goes back to the form. When it's done, click **🗂️ Go to the floor**.
 
+### Unfinished setups
+
+A setup that hasn't finished never takes over **✨ New project**: it always opens a fresh wizard. Unfinished setups are cards instead, at the top of the wizard's first page and on Home (Projects), each with where it stopped and why, how many of the 14 steps are done, and:
+
+- **Retry** carries on from the step that stopped. It says first what would stop it right now, rather than failing again: *This project is paused (by Keith): resume it, then Retry* (a paused project takes no new agents, so the team can't be hired) with a **Resume project** button for admins; the same for a project paused because its budget is reached, a pause or resume under way, a safe restart, and Studio Pro open on the project when the steps left write in its folder.
+- **Show setup** opens the setup's progress in the wizard, to carry on with it there (Edit answers, Retry).
+- **Open project**, once its floor is there.
+- **Cancel & undo…** (admins) undoes what the setup did, in reverse. The dialog lists the steps that ran, says exactly what will happen, and asks you to type the repository's name (`owner/name`), as GitHub does:
+  1. The project comes off the office the way [Delete project](../using-the-office/delete-project.md) does it: agents stopped and sent home, worktrees removed, the office data archived and then removed, the floor taken off `floors.json`, its project id retired.
+  2. **Also delete the local folder**: ticked when this setup cloned it, unticked when it was a floor already.
+  3. **Also delete the GitHub repository**: ticked when this setup created it (*created … on GitHub*), never when you created it yourself (*I created this repository myself*) or it was there already. It needs a token with the `delete_repo` scope, as Delete project does; without one the dialog links to the repository's settings on GitHub instead.
+  4. The setup itself is removed, so New project no longer lists it.
+
+  The Mendix app (`.mpr`) lives in the folder and the repository, so it goes with them. A Mendix Portal or Team Server app is never deleted automatically: remove it in the Portal yourself if there is one. Cancel & undo is refused while an agent is mid-turn on the project, a pause or resume of it is under way, or a safe restart is running. If a step fails (a locked file, GitHub down), it stops and says why; the card shows *Cancel & undo stopped* and **Carry on cancelling…** picks it up from that step. The audit log records `project.setup-cancel` (and Delete project's `project.delete`).
+
 Editing the answers later (from the floor's **🧰 Project setup** panel) writes the intake answers, decisions and settings again and commits them. A role you tick that wasn't ticked before is hired too, but never one the floor already has in any state: at work, benched, or sent home on purpose. Unticking a role sends no one home. The Discovery issue isn't handed out again.
 
 > [!NOTE]

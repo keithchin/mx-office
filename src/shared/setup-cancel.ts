@@ -1,0 +1,148 @@
+// Unfinished new-project setups (server/wizard/unfinished.ts, cancel.ts; ui/wizard/unfinished.ts,
+// cancel.ts): a card for each on Home and at the top of the wizard's first page, with Retry (which says
+// first what would stop it: a paused project, a safe restart, Studio Pro open), Cancel & undo, and Open
+// project. Cancel & undo puts back what the setup did, in reverse, GitHub-style (type the repository's
+// name): the project off the office through Delete project (server/project-delete/), then, when ticked,
+// the local folder and the GitHub repository, but only offered ticked for what this setup made itself,
+// then the setup's own record. Pure: the page, the server and the tests read the same rules.
+
+import type { StepView } from './wizard.js';
+
+/** Why Retry would fail right now, said before it runs, with what to do about it. */
+export interface SetupBlocker {
+  kind: 'paused' | 'budget' | 'pause-run' | 'resume-run' | 'restart' | 'studio';
+  text: string;
+  /** The floor a Resume button wakes (an admin's, shown with a paused project). */
+  resume?: string;
+}
+
+/** A setup that hasn't finished, as its card shows it. */
+export interface UnfinishedSetup {
+  id: string;
+  /** owner/name. */
+  repo: string;
+  name: string;
+  status: 'running' | 'failed' | 'idle' | 'cancelling';
+  /** The step it stopped at (or is on), and why it stopped. */
+  step?: string;
+  error?: string;
+  done: number;
+  total: number;
+  /** The floor it made, when it's still in the office. */
+  floor?: string;
+  by: string;
+  updatedAt: number;
+  blocker?: SetupBlocker;
+  /** A Cancel & undo of it that stopped part way (Retry carries it on), or is running. */
+  cancel?: CancelJobView;
+}
+
+export type CancelStepId = 'project' | 'folder' | 'repo' | 'record';
+
+/** Cancel & undo's steps, in the order they run: the reverse of what the setup did. */
+export const CANCEL_STEPS: readonly { id: CancelStepId; label: string }[] = [
+  { id: 'project', label: 'Taking the project off the office (agents, worktrees, office data)' },
+  { id: 'folder', label: 'Deleting the local folder' },
+  { id: 'repo', label: 'Deleting the GitHub repository' },
+  { id: 'record', label: 'Removing the setup' },
+];
+
+export type CancelStepStatus = 'pending' | 'running' | 'done' | 'skipped' | 'failed';
+
+export interface CancelJobView {
+  id: string;
+  repo: string;
+  deleteFolder: boolean;
+  deleteRepo: boolean;
+  status: 'running' | 'failed' | 'done';
+  steps: { id: CancelStepId; label: string; status: CancelStepStatus; detail?: string }[];
+  error?: string;
+  by: string;
+  startedAt: number;
+  finishedAt?: number;
+}
+
+/** What Cancel & undo would do, worked out before anything happens (GET /api/wizard/cancel-plan). */
+export interface CancelPlan {
+  id: string;
+  repo: string;
+  /** What has to be typed: the repository, owner/name, exactly. */
+  confirm: string;
+  /** The floor it made, while it's in the office. */
+  floor?: string;
+  dir: string;
+  /** What the setup did, a line per step that ran. */
+  did: string[];
+  agents: number;
+  worktrees: number;
+  folder: { exists: boolean; createdBySetup: boolean; deletable: boolean; why?: string };
+  repoDelete: {
+    /** This setup created it on GitHub (its repo step says "created …"). */
+    createdBySetup: boolean;
+    /** Someone created it on GitHub by hand, or it was there already. */
+    byHand: boolean;
+    /** A test office's local bare repository: nothing on GitHub. */
+    offline: boolean;
+    possible: boolean;
+    why?: string;
+    settingsUrl?: string;
+  };
+  /** The Mendix app: its .mpr goes with the folder and the repository; a Portal / Team Server app never does. */
+  mendix: { mpr: boolean; portalUrl?: string };
+  /** Something that stops it now, in words. */
+  blocked?: string;
+  unfinished?: CancelJobView;
+}
+
+/** POST /api/wizard/cancel. */
+export interface CancelRequest {
+  /** Typed by hand: exactly the plan's `confirm`. */
+  confirm: string;
+  deleteFolder: boolean;
+  deleteRepo: boolean;
+}
+
+const stepOf = (steps: readonly Pick<StepView, 'id' | 'status' | 'detail'>[], id: StepView['id']) => steps.find((s) => s.id === id);
+
+/**
+ * What this setup made itself, from its steps: the GitHub repository when its repo step created it
+ * ("created owner/name on GitHub"), never one made by hand or already there, nor a test office's local
+ * bare one; the folder when its clone step cloned it ("cloned into …", "offline floor at …"), never one
+ * that was a floor already. These are the boxes Cancel & undo offers ticked.
+ */
+export function madeBySetup(steps: readonly Pick<StepView, 'id' | 'status' | 'detail'>[]): { repo: boolean; repoByHand: boolean; offline: boolean; folder: boolean } {
+  const repo = stepOf(steps, 'repo');
+  const clone = stepOf(steps, 'clone');
+  const offline = /^offline:/i.test(repo?.detail ?? '');
+  const created = repo?.status === 'done' && /^created\s/i.test(repo.detail ?? '');
+  return {
+    repo: created,
+    repoByHand: !created && !offline,
+    offline,
+    folder: clone?.status === 'done' && /^(cloned into|offline floor at)\s/i.test(clone.detail ?? ''),
+  };
+}
+
+/** A request read from JSON: anything missing or odd is the safe choice (keep the folder, keep the repository). */
+export function cleanCancelRequest(v: unknown): CancelRequest | string {
+  if (!v || typeof v !== 'object') return 'Send JSON';
+  const r = v as Record<string, unknown>;
+  return { confirm: typeof r.confirm === 'string' ? r.confirm.slice(0, 300) : '', deleteFolder: r.deleteFolder === true, deleteRepo: r.deleteRepo === true };
+}
+
+/** The dialog's summary: exactly what will happen, a line each. */
+export function cancelConsequences(p: CancelPlan, r: Pick<CancelRequest, 'deleteFolder' | 'deleteRepo'>): string[] {
+  const lines: string[] = [];
+  if (p.floor) {
+    const first = `${p.agents ? `${p.agents} agent${p.agents === 1 ? '' : 's'} stopped and sent home; ` : ''}${p.worktrees ? `${p.worktrees} worktree${p.worktrees === 1 ? '' : 's'} removed; ` : ''}the project’s office data archived, then the project taken off the office (as Delete project does). The audit log is kept.`;
+    lines.push(first.charAt(0).toUpperCase() + first.slice(1));
+  }
+  lines.push(r.deleteFolder ? `The local folder ${p.dir} deleted, for good${p.mendix.mpr ? ', with the Mendix app (.mpr) in it' : ''}.` : `The local folder ${p.dir} kept.`);
+  if (!p.repoDelete.offline) lines.push(r.deleteRepo ? `The GitHub repository ${p.repo} deleted, for good.` : `The GitHub repository ${p.repo} kept.`);
+  lines.push('The setup itself removed: New project no longer lists it.');
+  lines.push('A Mendix Portal / Team Server app is never deleted by the office: delete it in the Portal yourself if there is one.');
+  return lines;
+}
+
+/** Exactly what was asked for: no trimming, no case folding (GitHub's rule). */
+export const cancelConfirmed = (typed: unknown, target: string): boolean => typeof typed === 'string' && target.length > 0 && typed === target;

@@ -49,6 +49,7 @@ Opening a project shows *Loading project mx-spike… 0 %* over this page at once
 Above the cards:
 
 - **✨ New project** opens the wizard. See [Create your first project](../get-started/first-project.md).
+- **Unfinished setups**: a new project whose setup didn't finish is a card above the projects (and at the top of the wizard's first page), with where it stopped, **Retry** (which first says what would stop it, such as a paused project, with **Resume project**), **Show setup**, **Open project** and, for admins, **Cancel & undo…**. New project always opens a fresh wizard. See [Unfinished setups](../get-started/first-project.md#unfinished-setups).
 - **➕ Add project** adds an existing repository.
 - **⏸ Pause all projects** or **▶ Resume all projects** (admins), one button that follows the projects: *Pause all* while any project is running, *Resume all* once every one is paused. With a mix there's a **▶ Resume N paused** link beside it that resumes only the paused ones. While a pause or resume is going, the button shows its progress (*⏸ Pausing… 3 of 7*) and can't be clicked. Everyone else sees the state in words (*⏸ 2 of 4 projects paused*). It and the icons keep up by themselves (every 15 seconds, every 2 while a run is going).
 

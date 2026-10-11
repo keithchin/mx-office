@@ -189,6 +189,12 @@ export class JobBook {
     this.save(job);
   }
 
+  /** Takes a setup out for good (Cancel & undo's last step); false while it runs. */
+  remove(id: string): boolean {
+    if (this.engine.isActive(id)) return false;
+    return !!this.engine.forget(id) || !this.get(id);
+  }
+
   isRunning(id: string): boolean {
     return this.engine.isActive(id);
   }

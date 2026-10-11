@@ -143,6 +143,15 @@ export class FlowEngine {
     return gone;
   }
 
+  /** Forgets one finished run for good (a cancelled setup); gives it back, or undefined when it's running or unknown. */
+  forget(runId: string): RunRecord | undefined {
+    const r = this.runs.get(runId);
+    if (!r || this.active.has(runId)) return undefined;
+    this.runs.delete(runId);
+    this.store.remove?.(r);
+    return r;
+  }
+
   summaries(filter: ListFilter = {}): RunSummary[] {
     return this.list(filter).map((r) => ({
       runId: r.runId,
