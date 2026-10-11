@@ -36,6 +36,12 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   `DS_` → DataSources, `OCH_` → OnChange, `VAL_`, `DEC_`, `SCH_`, `BCO_`, `ACO_`, and Stubs) with mxcli's folder
   clause, never moves documents a person organised or Marketplace and System modules, and lists moves in the PR.
 
+### Changed
+- **The Model tab fills the page in Portal.** Under the page header, the Model view now runs edge to edge: the
+  App Explorer against the left navigation, the details panel against the window's right edge, the drawing down to
+  the bottom of the window, with no frame or gap around it and no page scrollbar (on a phone too). Full screen is
+  unchanged; the other themes keep their framed tab.
+
 ### Fixed
 - **The Overview's dark band is two rows again.** Since release 34 its progress bar lay on top of the floor's line
   (branch, who's here, the budget chip, Running | Pause): the Model tab's new Page view styled a class name the progress

@@ -58,6 +58,8 @@ Long flows open at their start.
 
 The diagram uses Studio Pro's colours: its light canvas on the light themes, its dark canvas on the dark ones (Dark, Terminal, Clean dark).
 
+In the Portal themes the tab fills the page under its header edge to edge: the App Explorer against the left navigation, the details against the window's right edge, the drawing down to the bottom of the window.
+
 On a phone, the App Explorer is a drawer: open it with **☰ Explorer**.
 
 ## Branches and "what did the agent change"

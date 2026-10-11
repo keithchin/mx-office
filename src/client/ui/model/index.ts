@@ -196,6 +196,12 @@ export function modelView(root: HTMLElement): ModelView {
     const top = root.getBoundingClientRect().top + window.scrollY;
     const nav = document.querySelector<HTMLElement>('.lite-nav');
     const below = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect().height : 0;
+    // Portal: the tab fills the rest of the window edge to edge under the page header (model.css sets --mx-flush).
+    if (getComputedStyle(root).getPropertyValue('--mx-flush').trim() === '1') {
+      root.style.height = `${Math.max(360, window.innerHeight - top - below)}px`;
+      root.style.marginBottom = `${below}px`;
+      return;
+    }
     // On a phone the tab bar alone fills the first screen: the tab takes (almost) a screen of its own below it.
     const phone = window.innerWidth <= 760;
     root.style.height = `${phone ? Math.max(420, window.innerHeight - below - 70) : Math.max(360, window.innerHeight - top - below - 10)}px`;
