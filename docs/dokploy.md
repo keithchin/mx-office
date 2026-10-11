@@ -1,11 +1,14 @@
 # Dokploy reference
 
-The full story behind `deploy/dokploy.sh`. The short version is in the [README](../README.md#deploy-to-dokploy).
+The full story behind `deploy/dokploy.sh`.
+
+> [!WARNING]
+> **Not supported in Mx Office.** Mx Office runs on a Windows machine: see the [Quick start](../README.md#quick-start). This page describes server scripts in `deploy/` that haven't been adapted or tested for Mx Office, and some of their clone, upgrade and install steps may still fetch code from somewhere other than this repository. It's kept for reference only.
 
 You need a **[Dokploy](https://dokploy.com) server** and an **API key** for it, plus `ssh`, `curl`, `git`, Node.js and a clone of this repo. Make the key in Dokploy under **Settings → Profile → API/CLI Keys**, and leave its rate limiting off: the script checks on the build every few seconds.
 
 ```bash
-git clone https://github.com/AgentSystemLabs/agent-office && cd agent-office
+git clone https://github.com/keithchin/mx-office && cd mx-office
 export DOKPLOY_API_KEY=<your key>
 deploy/dokploy.sh up --url https://dokploy.example.com --claude-token "$(claude setup-token)"
 ```

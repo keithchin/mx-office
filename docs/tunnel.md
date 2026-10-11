@@ -2,6 +2,9 @@
 
 Back to the [README](../README.md).
 
+> [!WARNING]
+> **Not supported in Mx Office.** Mx Office runs on a Windows machine: see the [Quick start](../README.md#quick-start). This page is about an office running on a server, which hasn't been adapted or tested for Mx Office, and the install steps below (`install.sh`, `install.ps1`) still download releases from somewhere other than this repository. It's kept for reference only.
+
 When the office runs on a server, the web servers its workers start (`npm run dev`, a preview build, `python -m http.server`) listen on that machine, not on yours. `agent-office tunnel` brings them to you: run it once on your own computer and leave it running, and whenever a worker starts a server, the same port opens on your computer. `http://localhost:5173` in your browser is the worker's `localhost:5173`. When the worker stops the server, the port closes again a few seconds later. There's no command per server, and nothing to restart when a new one shows up.
 
 ```bash
@@ -39,11 +42,11 @@ The **🌐 Services** board in the office shows the command for the way you came
 It's part of `agent-office`, so it needs Node.js 20 or newer and the office installed on your computer (you don't have to run one there). To install without starting an office:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/AgentSystemLabs/agent-office/main/install.sh | AGENT_OFFICE_INSTALL_ONLY=1 bash
+curl -fsSL https://raw.githubusercontent.com/keithchin/mx-office/main/install.sh | AGENT_OFFICE_INSTALL_ONLY=1 bash
 ```
 
 ```powershell
-$env:AGENT_OFFICE_INSTALL_ONLY = 1; irm https://raw.githubusercontent.com/AgentSystemLabs/agent-office/main/install.ps1 | iex
+$env:AGENT_OFFICE_INSTALL_ONLY = 1; irm https://raw.githubusercontent.com/keithchin/mx-office/main/install.ps1 | iex
 ```
 
 The office it talks to has to be new enough to list its workers' servers. If it isn't, the command says so: upgrade the office (**⬆️ Upgrade the office** in the **☰** menu, or the deploy script's `update`).

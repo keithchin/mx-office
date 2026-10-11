@@ -22,8 +22,8 @@ import { audit, human } from '../../audit/index.js';
 
 /** The web app manifest: "Add to Home Screen" opens /m full screen, with the office's pixel icon. */
 export const MANIFEST = {
-  name: 'Agent Office',
-  short_name: 'Agent Office',
+  name: 'Mx Office',
+  short_name: 'Mx Office',
   description: 'What needs you in the office, from your phone',
   id: '/m',
   start_url: '/m',
@@ -169,7 +169,7 @@ export const mobileRoutes = {
         case '/api/m/push/test': {
           const s = push.subs.get(id);
           if (!s || s.owner !== owner) return send(res, 404, { error: 'No such phone' });
-          const err = await push.send(s, { title: '🔔 Agent Office', body: 'Push notifications work on this phone. Red items that need you arrive like this.', tag: 'test', url: '/m' });
+          const err = await push.send(s, { title: '🔔 Mx Office', body: 'Push notifications work on this phone. Red items that need you arrive like this.', tag: 'test', url: '/m' });
           return err ? send(res, 502, { error: err }) : send(res, 200, { ok: true });
         }
         default:

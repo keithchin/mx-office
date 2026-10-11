@@ -1,6 +1,9 @@
 # Coolify reference
 
-The full story behind `deploy/coolify.sh`. The short version is in the [README](../README.md#deploy-to-coolify).
+The full story behind `deploy/coolify.sh`.
+
+> [!WARNING]
+> **Not supported in Mx Office.** Mx Office runs on a Windows machine: see the [Quick start](../README.md#quick-start). This page describes server scripts in `deploy/` that haven't been adapted or tested for Mx Office, and some of their clone, upgrade and install steps may still fetch code from somewhere other than this repository. It's kept for reference only.
 
 You need a **[Coolify](https://coolify.io) v4 server** with its API turned on, an **API token** for it, plus `ssh`, `curl`, `git`, Node.js and a clone of this repo:
 
@@ -10,7 +13,7 @@ You need a **[Coolify](https://coolify.io) v4 server** with its API turned on, a
 - **HEAD pushed to a public repository.** Coolify builds from git, never from your files (see below).
 
 ```bash
-git clone https://github.com/AgentSystemLabs/agent-office && cd agent-office
+git clone https://github.com/keithchin/mx-office && cd mx-office
 export COOLIFY_API_TOKEN=<your token>
 deploy/coolify.sh up --url https://coolify.example.com --claude-token "$(claude setup-token)"
 ```

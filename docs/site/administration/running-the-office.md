@@ -44,7 +44,7 @@ If PowerShell can't load the power API (some locked-down machines block `Add-Typ
 
 ## Stop
 
-Close the **Agent Office** PowerShell window (or press Ctrl+C in it). This stops the office **and every running agent**.
+Close the **Mx Office** PowerShell window (or press Ctrl+C in it). This stops the office **and every running agent**.
 
 ## Restarting
 
@@ -90,7 +90,7 @@ Keep the rest of the launcher (the token, the password, `PATH`) above the loop, 
 
 ## Update
 
-The office runs from our fork's source build in `agent-spike\agent-office-src`, branch `main`:
+The office runs from its source build in `agent-spike\agent-office-src`, branch `main`:
 
 1. Pull the new `main` (feature branches are merged through `staging/integration` and tried on a [test office](test-offices.md) first).
 2. `npm run build`.

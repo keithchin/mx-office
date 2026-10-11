@@ -1,9 +1,9 @@
 ---
-title: App Factory documentation
-description: Everything about Agent Office, the AI Taskforce Labs App Factory, where teams of Claude Code agents build Mendix apps and you run them as their Project Manager.
+title: Mx Office documentation
+description: Everything about Mx Office, an App Factory for Mendix where teams of Claude Code agents build Mendix apps and you run them as their Project Manager.
 ---
 
-Agent Office is a web app that runs on your laptop. **Claude Code agents** work at desks in it, on **GitHub repositories**. Our fork turns it into an **App Factory for Mendix**:
+Mx Office is a web app that runs on your laptop. **Claude Code agents** work at desks in it, on **GitHub repositories**, as an **App Factory for Mendix**:
 
 - every project (one Mendix app in its own repo) is a **floor** of the building;
 - every floor has a **team**: a Project Coordinator and four Leads, each with Claude Code subagents;

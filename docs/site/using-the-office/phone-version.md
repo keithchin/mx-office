@@ -31,7 +31,7 @@ The floor picker is at the top; **⚙** opens the phone's settings.
 1. Open the address in **Safari** (not inside Teams or another app's browser).
 2. Tap **Share** (the square with the arrow) at the bottom.
 3. Tap **Add to Home Screen**, then **Add**.
-4. Open **Agent Office** from the home screen: it runs full screen, like an app.
+4. Open **Mx Office** from the home screen: it runs full screen, like an app.
 
 On Android or a desktop browser, use the browser's menu → **Install app** (or **Add to Home screen**).
 

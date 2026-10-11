@@ -8,14 +8,14 @@ weight: 9
 |---|---|
 | **Admin** | Anyone signed in with the shared office password: the Project Manager. |
 | **Agent** | See *Worker*. |
-| **App Factory** | Our fork of Agent Office, where agents build Mendix apps. |
+| **App Factory** | What Mx Office is for: an office where agents build Mendix apps. |
 | **Approval** | Something waiting for the Project Manager's yes or no: a proposal, an escalation, a subagent action, a merge, a spent cap. |
 | **Audit log** | The append-only, hash-chained record of who did what and when, per floor and office-wide. A tab on each project and on /home. |
 | **Autonomy level** | How often agents need you: 1 Directive, 2 Guided, 3 Delegated, 4 Autonomous. |
 | **Bench** | Clear a team member's session after it wrote a handoff note. A benched Lead takes a break in the 2D view. |
 | **Board** | A floor's Kanban of issues, tasks, workers and PRs. |
 | **BRD** | Business requirements document, written by the Chief Analyst. |
-| **Building / office** | The whole Agent Office server, with all its floors. |
+| **Building / office** | The whole Mx Office server, with all its floors. |
 | **Command Center** | The first tab of a project: Needs you, setup, summary, Coordinator console. |
 | **Cool-down** | How long a benched subagent sits out (24 hours by default). |
 | **Engagement** | One audit by The Firm: its configuration, reviewers, interviews, spend and report. |

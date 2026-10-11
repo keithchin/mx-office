@@ -8,7 +8,7 @@ Read these pages to understand how the office is put together. The task pages as
 
 | Idea | In one line |
 |---|---|
-| **Building / office** | The whole Agent Office: one server on `http://127.0.0.1:4600`, one password, all projects. |
+| **Building / office** | The whole Mx Office: one server on `http://127.0.0.1:4600`, one password, all projects. |
 | **Floor** | One project: a GitHub repository cloned on this machine, with its own board, team, live app and settings. |
 | **Worker / agent** | A Claude Code session at a desk, usually in its own git worktree. |
 | **Team** | The Project Coordinator and four Leads of a floor, each Lead with its subagents. |

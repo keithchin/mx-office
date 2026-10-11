@@ -1,11 +1,14 @@
 # AWS reference
 
-The full story behind `deploy/aws.sh`. The short version is in the [README](../README.md#deploy-to-aws-ec2).
+The full story behind `deploy/aws.sh`.
+
+> [!WARNING]
+> **Not supported in Mx Office.** Mx Office runs on a Windows machine: see the [Quick start](../README.md#quick-start). This page describes server scripts in `deploy/` that haven't been adapted or tested for Mx Office, and some of their clone, upgrade and install steps may still fetch code from somewhere other than this repository. It's kept for reference only.
 
 If you have the AWS CLI logged in, one command gives you your own office on EC2. No Terraform needed:
 
 ```bash
-git clone https://github.com/AgentSystemLabs/agent-office && cd agent-office
+git clone https://github.com/keithchin/mx-office && cd mx-office
 deploy/aws.sh up
 ```
 

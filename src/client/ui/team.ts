@@ -28,7 +28,7 @@ export function tunnelCommand(t: TeamState, os: Os): string {
 function inviteMessage(t: TeamState, os: Os): string {
   const project = store.project?.name ?? 'our';
   return [
-    `You're invited to the ${project} Agent Office. Run this in a terminal (${OS_LABEL[os]}):`,
+    `You're invited to the ${project} Mx Office. Run this in a terminal (${OS_LABEL[os]}):`,
     '',
     tunnelCommand(t, os),
     '',
@@ -44,7 +44,7 @@ function inviteMessage(t: TeamState, os: Os): string {
 function tailnetMessage(t: TeamState): string {
   const project = store.project?.name ?? 'our';
   return [
-    `You're invited to the ${project} Agent Office: https://${t.tailnet}`,
+    `You're invited to the ${project} Mx Office: https://${t.tailnet}`,
     '',
     "It's on our Tailscale network. If you aren't on it yet: install Tailscale (https://tailscale.com/download), sign in, and accept the invite I send you from Tailscale. Then open the link and sign in with the office password, or the account link you get from me.",
   ].join('\n');

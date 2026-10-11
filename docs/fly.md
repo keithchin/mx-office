@@ -1,11 +1,14 @@
 # Fly.io reference
 
-The full story behind `deploy/fly.sh`. The short version is in the [README](../README.md#deploy-to-flyio).
+The full story behind `deploy/fly.sh`.
+
+> [!WARNING]
+> **Not supported in Mx Office.** Mx Office runs on a Windows machine: see the [Quick start](../README.md#quick-start). This page describes server scripts in `deploy/` that haven't been adapted or tested for Mx Office, and some of their clone, upgrade and install steps may still fetch code from somewhere other than this repository. It's kept for reference only.
 
 You need an up-to-date **flyctl, logged in** (`fly auth login`; [install it](https://fly.io/docs/flyctl/install/) with `brew install flyctl` or `curl -L https://fly.io/install.sh | sh`, and update an old one with `fly version upgrade`), plus `ssh`, `curl`, Node.js and a clone of this repo:
 
 ```bash
-git clone https://github.com/AgentSystemLabs/agent-office && cd agent-office
+git clone https://github.com/keithchin/mx-office && cd mx-office
 deploy/fly.sh up --claude-token "$(claude setup-token)"
 ```
 

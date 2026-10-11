@@ -19,12 +19,12 @@ Press **Ctrl+F5** to reload without the cache.
 
 ## Floors are missing after a restart
 
-This was a bug (the team hook broke floor start-up) and is fixed. If it happens again, check the Agent Office window for errors, and that the floor folders still exist.
+This was a bug (the team hook broke floor start-up) and is fixed. If it happens again, check the Mx Office window for errors, and that the floor folders still exist.
 
 ## The 2D Office view is slow
 
 - Use the **1D** view for daily work; the 2D Office view is for looking at the floor.
-- Make the browser use the fast GPU. On the Taskforce laptop, Edge is set to the NVIDIA GPU (Windows Settings → Display → Graphics).
+- Make the browser use the fast GPU. On the office laptop, Edge is set to the NVIDIA GPU (Windows Settings → Display → Graphics).
 - The 3D and Retro views (and `?gfx=`) are gone: an old `/?view=3d` link opens the 1D view.
 
 ## Notifications don't appear
@@ -33,4 +33,4 @@ Click **🔔** in the top bar to allow them, and check that Windows allows notif
 
 ## Headless Edge is blocked
 
-On the Taskforce laptop, headless Edge is blocked by policy. For Playwright screenshots, use `playwright-core` with the **bundled Chromium** instead (under `%LOCALAPPDATA%\ms-playwright\`).
+On the office laptop, headless Edge is blocked by policy. For Playwright screenshots, use `playwright-core` with the **bundled Chromium** instead (under `%LOCALAPPDATA%\ms-playwright\`).

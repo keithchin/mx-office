@@ -1,7 +1,7 @@
 # DeepSeek Harness (DSH) as a fourth provider, over ACP
 
 Status: **implemented** (Phases 1–4; Phase 0 measurements, and the one item still open, are recorded
-at the end). Target: agent-office `main`, DSH `0.1.7-rc.2`.
+at the end). Target: Mx Office `main`, DSH `0.1.7-rc.2`.
 
 ## Summary
 
@@ -99,7 +99,7 @@ deletion and fork, additional directories, modes, commands, plans, terminals, cl
 operations and elicitation. The practical loss is slash-commands such as `/compact`, which the
 other three providers expose through their terminals. See Risks.
 
-## Mapping onto agent-office
+## Mapping onto the office
 
 ### Provider seams
 

@@ -57,7 +57,7 @@ test('manifest, service worker and icons are served to anyone; /m only signed in
     assert.equal(m.status, 200);
     assert.equal(m.headers.get('content-type'), 'application/manifest+json');
     const j = await m.json();
-    assert.equal(j.name, 'Agent Office');
+    assert.equal(j.name, 'Mx Office');
     assert.equal(j.start_url, '/m');
     assert.equal(j.display, 'standalone');
     assert.ok(j.icons.some((i: { sizes: string }) => i.sizes === '512x512'));

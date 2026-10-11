@@ -58,11 +58,11 @@ The [audit log](../using-the-office/audit-log.md) records sign-ins, settings cha
 
 ## The docs are behind the sign-in
 
-`/docs` uses the same sign-in as the rest of the office, because these pages name token files, folders and ports. The original upstream docs in the repository (`docs/*.md`) stay readable on GitHub.
+`/docs` uses the same sign-in as the rest of the office, because these pages name token files, folders and ports. The older pages in the repository (`docs/*.md`) stay readable on GitHub.
 
 ## The office is local
 
-By default the server listens on `127.0.0.1` only. To share it, see the upstream guides in the repository (`docs/self-hosting.md`, `docs/tunnel.md`): HTTPS, a reverse proxy, or a tunnel.
+By default the server listens on `127.0.0.1` only. Running it on a server for a whole team isn't supported in Mx Office; to reach it from your phone, use [Phone access](phone-access.md).
 
 ## Reaching it from your phone
 

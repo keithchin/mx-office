@@ -6,7 +6,7 @@ weight: 1
 
 ## The building
 
-The **building** (or *office*) is one Agent Office server. On the Taskforce laptop it runs at `http://127.0.0.1:4600` behind one password. Everything in it, every project and every agent, is one building.
+The **building** (or *office*) is one Mx Office server. On the office laptop it runs at `http://127.0.0.1:4600` behind one password. Everything in it, every project and every agent, is one building.
 
 Two things belong to the building rather than to a floor: **🏛️ The Firm** at `/firm`, whose Reviewer Agents audit a floor from outside its team (see [The Firm](../using-the-office/the-firm.md)), and the office-wide side of the **🧾 Audit log** (sign-ins, settings, floors added and removed).
 

@@ -65,7 +65,7 @@ const keyBytes = (b64: string) => {
 /** Asks for permission (from a tap), subscribes and tells the office. Why not, if it couldn't. */
 export async function enablePush(alerts: AlertSettings): Promise<string | undefined> {
   const perm = await Notification.requestPermission();
-  if (perm !== 'granted') return 'Notifications were not allowed. Settings → Notifications → Agent Office turns them on.';
+  if (perm !== 'granted') return 'Notifications were not allowed. Settings → Notifications → Mx Office turns them on.';
   const reg = await registerWorker();
   if (!reg) return 'This browser has no service agent here (it needs https).';
   try {
