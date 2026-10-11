@@ -10,32 +10,62 @@ import path from 'node:path';
 import { cleanPacing, DEFAULT_PACING, PAUSED_HIRES, type Pacing, type PauseInfo } from '../../shared/project-run.js';
 import { writeJsonAtomic } from '../flow/store.js';
 
+/**
+ * A floor's latest resume, for the office's notes after it (roster/awareness.ts): when, why, and the
+ * agents that slept through the pause before it and haven't been told yet. Each is told once, with its
+ * next message, and then taken off `owed`: that's the pause it acknowledged.
+ */
+export interface ResumeMark {
+  at: number;
+  /** "after a safe restart", "after a pause by Keith". */
+  why: string;
+  by: string;
+  /** Workers that slept through the pause and haven't been told of this resume. */
+  owed: string[];
+}
+
 interface Saved {
   pauses: Record<string, PauseInfo>;
   pacing: Record<string, Pacing>;
+  resumes: Record<string, ResumeMark>;
+  /** Workers a pause wound down (asked for a handoff, or put to sleep) since the floor's last resume. */
+  slept: Record<string, string[]>;
 }
 
 let file: string | undefined;
-let data: Saved = { pauses: {}, pacing: {} };
+const empty = (): Saved => ({ pauses: {}, pacing: {}, resumes: {}, slept: {} });
+let data: Saved = empty();
 
 const str = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
+/** The most workers a floor's owed and slept lists keep. */
+const IDS_MAX = 60;
+const ids = (v: unknown) => (Array.isArray(v) ? [...new Set(v.map((x) => str(x, 64)).filter(Boolean))].slice(-IDS_MAX) : []);
 
 function revive(raw: unknown): Saved {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<Record<keyof Saved, Record<string, unknown>>>;
-  const out: Saved = { pauses: {}, pacing: {} };
+  const out = empty();
   for (const [id, p] of Object.entries(r.pauses ?? {})) {
     const v = p as Partial<PauseInfo>;
     if (!v || typeof v.at !== 'number') continue;
     out.pauses[id] = { by: str(v.by, 80) || 'Someone', at: v.at, why: v.why === 'restart' || v.why === 'budget' ? v.why : 'person', waiting: Array.isArray(v.waiting) ? v.waiting.map((x) => str(x, 40)).filter(Boolean).slice(0, 20) : [] };
   }
   for (const [id, p] of Object.entries(r.pacing ?? {})) out.pacing[id] = cleanPacing(p);
+  for (const [id, m] of Object.entries(r.resumes ?? {})) {
+    const v = m as Partial<ResumeMark>;
+    if (!v || typeof v.at !== 'number') continue;
+    out.resumes[id] = { at: v.at, why: str(v.why, 120) || 'after a pause', by: str(v.by, 80) || 'Someone', owed: ids(v.owed) };
+  }
+  for (const [id, l] of Object.entries(r.slept ?? {})) {
+    const v = ids(l);
+    if (v.length) out.slept[id] = v;
+  }
   return out;
 }
 
 /** Keeps it in `dir`/project-run.json from now on, loading what's there (undefined: memory only, emptied). */
 export function useProjectRunFile(dir: string | undefined) {
   file = dir ? path.join(dir, 'project-run.json') : undefined;
-  data = { pauses: {}, pacing: {} };
+  data = empty();
   if (!file || !existsSync(file)) return;
   try {
     data = revive(JSON.parse(readFileSync(file, 'utf8')));
@@ -66,9 +96,11 @@ export function projectPauseOf(floorId: string): string | undefined {
 const overriding = new Map<string, number>();
 onForgetFloor((f) => {
   overriding.delete(f.id);
-  if (!(f.id in data.pauses) && !(f.id in data.pacing)) return;
+  if (![data.pauses, data.pacing, data.resumes, data.slept].some((m) => f.id in m)) return;
   delete data.pauses[f.id];
   delete data.pacing[f.id];
+  delete data.resumes[f.id];
+  delete data.slept[f.id];
   save();
 });
 
@@ -111,4 +143,41 @@ export function setPacing(floorId: string, p: unknown): Pacing {
   data.pacing[floorId] = v;
   save();
   return v;
+}
+
+// ---- After a resume: who slept through the pause and hasn't heard (roster/awareness.ts) -------------
+
+export const lastResume = (floorId: string): ResumeMark | undefined => data.resumes[floorId];
+
+/**
+ * A pause wound these workers down (told "the project is pausing"): each is owed a word once it's
+ * resumed. Those still owed one from the last resume carry into this pause too.
+ */
+export function noteSlept(floorId: string, workerIds: string[]) {
+  const m = data.resumes[floorId];
+  const v = ids([...(data.slept[floorId] ?? []), ...(m?.owed ?? []), ...workerIds]);
+  if (m) m.owed = [];
+  if (v.length) data.slept[floorId] = v;
+  save();
+}
+
+/** The floor was resumed: everyone who slept through the pause is owed the note, once. */
+export function noteResumed(floorId: string, m: Omit<ResumeMark, 'owed'>) {
+  data.resumes[floorId] = { ...m, owed: ids([...(data.resumes[floorId]?.owed ?? []), ...(data.slept[floorId] ?? [])]) };
+  delete data.slept[floorId];
+  save();
+}
+
+/** The resume this worker is still to hear about, while the floor isn't paused again. */
+export function resumeOwed(floorId: string, workerId: string): ResumeMark | undefined {
+  const m = data.resumes[floorId];
+  return m && !data.pauses[floorId] && m.owed.includes(workerId) ? m : undefined;
+}
+
+/** The worker has heard (its note went in, or it was told another way): never again for this resume. */
+export function ackResume(floorId: string, workerId: string) {
+  const m = data.resumes[floorId];
+  if (!m?.owed.includes(workerId)) return;
+  m.owed = m.owed.filter((x) => x !== workerId);
+  save();
 }

@@ -79,8 +79,13 @@ function typed(l: any): string | undefined {
   if (typeof text !== 'string' || !text.trim()) return undefined;
   // Slash-command echoes, hook and system notes, and "[Request interrupted…]" are the CLI's own.
   if (/^\s*(<[a-z-]+>|\[Request interrupted|Caveat:)/i.test(text)) return undefined;
-  return text;
+  // The office's run-state notes before a person's words (roster/awareness.ts) aren't what they typed.
+  const own = text.replace(OFFICE_NOTES, '');
+  return own.trim() ? own : text;
 }
+
+/** The once-only "the project was resumed" note and the Coordinator's fact block, at a message's start. */
+const OFFICE_NOTES = /^(?:\s*(?:Note from the office: the project was resumed[^\n]*|\[Office facts, [^\n]*)\n\n)+/;
 
 const timeOf = (l: any) => {
   const t = typeof l.timestamp === 'string' ? Date.parse(l.timestamp) : NaN;

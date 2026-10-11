@@ -26,6 +26,7 @@ import { Members } from './members.js';
 import { Nudges } from './nudge.js';
 import { BackToWork } from './back-to-work.js';
 import { Interrupts } from './interrupts.js';
+import { Awareness } from './awareness.js';
 import { Tasks } from './resume.js';
 import { setFloorPause } from './pause.js';
 import { Relays } from './relays.js';
@@ -55,6 +56,8 @@ export class Roster {
   readonly tasks: Tasks;
   readonly backToWork: BackToWork;
   readonly interrupts: Interrupts;
+  /** What agents are told of the project's run state after a pause and resume (awareness.ts). */
+  readonly awareness: Awareness;
   /** Whether the debounces run on timers (the tests drive them by hand instead). */
   readonly timers: boolean;
   readonly jeff: Jeff;
@@ -86,6 +89,7 @@ export class Roster {
     this.tasks = new Tasks(this);
     this.backToWork = new BackToWork(this, this.timers);
     this.interrupts = new Interrupts(this);
+    this.awareness = new Awareness(this);
     this.jeff = new Jeff(this);
     this.subagents = new Subagents(this);
     this.relays = new Relays(this);

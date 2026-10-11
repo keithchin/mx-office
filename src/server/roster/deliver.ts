@@ -63,12 +63,19 @@ export interface SendOpts {
   resume?: boolean;
   /** An office message that may go into a turn under way (the default holds it for the turn's end). */
   interrupt?: boolean;
+  /** false: no "the project was resumed" note before it, even if the agent slept through the pause (awareness.ts). */
+  note?: boolean;
+  /** The run-state fact block before it, as things are when it's typed (awareness.ts): the Project Manager's questions to the Coordinator. */
+  facts?: boolean;
 }
 
 export type Sent = { status: 'sent' | 'woke' | 'held' } | { status: 'refused'; why: string };
 
 /** How long a held prompt was kept, for its activity line. */
 const waited = (ms: number) => (ms >= 3_600_000 ? `${Math.round(ms / 3_600_000)} h` : `${Math.max(1, Math.round(ms / 60_000))} min`);
+
+/** Both, in turn. */
+const chain = (a: (() => void) | undefined, b: () => void) => () => (a?.(), b());
 
 /** Between two held prompts typed as one message. */
 const JOIN = '\n\n---\n\n';
@@ -97,7 +104,9 @@ export class Delivery {
     }
     // The office's own words wait for the turn under way to end, and are typed then.
     if (o.origin === 'office' && !o.interrupt) o = { ...o, hold: true, between: true };
-    const typed = this.resumes(o) ? withResume(text, this.roster.tasks.line(floor, w)) : text;
+    const resumed = this.resumes(o) ? withResume(text, this.roster.tasks.line(floor, w)) : text;
+    const { text: typed, noted } = this.dress(floor, w, resumed, o.note !== false, !!o.facts);
+    if (noted) o = { ...o, onSent: chain(o.onSent, () => this.roster.awareness.ack(floor, w.id)) };
     if (isAsleepStatus(w.status)) {
       if (!o.wake) return { status: 'refused', why: `${w.name} is asleep` };
       const err = floor.wake(w.id, typed, o.by);
@@ -125,6 +134,16 @@ export class Delivery {
 
   private resumes = (o: SendOpts) => o.resume ?? o.origin === 'office';
 
+  /**
+   * What goes in before a message as it's typed (awareness.ts): the once-only "the project was resumed"
+   * note for an agent that slept through the pause, then, with `facts`, the run-state fact block.
+   */
+  private dress(floor: TeamFloor, w: WorkerInfo, body: string, note: boolean, facts: boolean): { text: string; noted: boolean } {
+    const n = note ? this.roster.awareness.noteFor(floor, w) : undefined;
+    const parts = [n, facts ? this.roster.awareness.facts(floor, w.id) : undefined, body].filter(Boolean);
+    return { text: parts.join('\n\n'), noted: !!n };
+  }
+
   /** Typed (or woken with) now: its sender hears, and the same prompt, if it was held before, has gone in. */
   private typed(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts) {
     const id = o.id ?? heldId(w.id, o.origin, text, o.by);
@@ -138,7 +157,7 @@ export class Delivery {
   private hold(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts) {
     const now = this.roster.deps.now();
     const id = o.id ?? heldId(w.id, o.origin, text, o.by);
-    holdOnce(this.roster.data(floor.id).held, { id, workerId: w.id, origin: o.origin, ...(o.by ? { by: o.by } : {}), text, createdAt: now, expiresAt: now + (o.ttlMs ?? HELD_TTL_MS), ...(this.resumes(o) ? { resume: true } : {}) });
+    holdOnce(this.roster.data(floor.id).held, { id, workerId: w.id, origin: o.origin, ...(o.by ? { by: o.by } : {}), text, createdAt: now, expiresAt: now + (o.ttlMs ?? HELD_TTL_MS), ...(this.resumes(o) ? { resume: true } : {}), ...(o.facts ? { facts: true } : {}) });
     if (o.onSent) this.sentFns.set(id, [...(this.sentFns.get(id) ?? []), o.onSent]);
     this.roster.touch(floor, true);
   }
@@ -209,7 +228,8 @@ export class Delivery {
     if (!going.length && !owed?.lines.length) return;
     const joined = [...(owed?.lines.length ? [owedAnswersPrompt(owed.lines)] : []), ...going.map((h) => h.text)].join(JOIN);
     // One resume line at the end, for the office's words and the answers it's owed (resume.ts).
-    const text = owed?.lines.length || going.some((h) => h.resume) ? withResume(joined, this.roster.tasks.line(floor, w)) : joined;
+    const ended = owed?.lines.length || going.some((h) => h.resume) ? withResume(joined, this.roster.tasks.line(floor, w)) : joined;
+    const { text, noted } = this.dress(floor, w, ended, true, going.some((h) => h.facts));
     // Whose turn it starts: a person's when it carries their words (an answer owed, or what they sent),
     // so it flags when done; else the one sender's, else the office's (workers/lifecycle.ts OFFICE_BY).
     const fromPerson = going.find((h) => h.origin === 'person');
@@ -217,6 +237,7 @@ export class Delivery {
     const by = person ?? (going.length === 1 ? going[0].by : undefined);
     const err = asleep ? floor.wake(w.id, text, by) : floor.prompt(w.id, text, by);
     if (err) return;
+    if (noted) this.roster.awareness.ack(floor, w.id);
     owed?.mark();
     const fns = going.flatMap((h) => this.sentFns.get(h.id) ?? []);
     this.drop(floor, going.map((h) => h.id));
