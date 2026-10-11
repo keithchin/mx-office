@@ -1,17 +1,15 @@
 name: Release
 
-# Every change to the app that lands on main is built, tested and published as a GitHub release,
-# and install.sh installs the newest one. The version is package.json's major.minor plus the
-# number of commits on main (v0.1.68, v0.1.69, ...); bump package.json for a new minor.
-#
-# Pull requests get the same build, tests and a real install of the packed release through
-# install.sh, but publish nothing.
+# Every change to the app that lands on main is built and tested, packed as a release tarball and
+# installed through install.sh to check that the packed release really starts. The version is
+# package.json's major.minor plus the number of commits on main (v0.1.68, v0.1.69, ...). Nothing is
+# published: Mx Office releases are made by hand (see CHANGELOG.md). Pull requests get the same run.
 #
 # The perf job runs the performance guard's quick check (npm run test:perf:quick: the main views on a
 # big test office in headless Chromium, the journey, a minute of the busy office; fake agents only)
 # against the unchanged budgets. Its pass or fail is the guard's own: a browser that can't launch, or a
 # budget missed, fails it. Its result.json, summary.md and screenshots are uploaded every time. It
-# runs beside the release job and doesn't hold up publishing, but a failure makes the run red.
+# runs beside the release job, and a failure makes the run red.
 
 on:
   push:
@@ -51,8 +49,6 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -106,19 +102,6 @@ jobs:
           [ "$code" = 200 ] || { echo "the installed office didn't answer (last status: $code)"; exit 1; }
           grep -qx "v${{ steps.pack.outputs.version }}" install/current
           kill -INT "$office"
-
-      - name: Publish
-        # Only the original repository publishes releases; a fork (ours, keithchin/mx-office) builds and tests and stops here.
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'AgentSystemLabs/agent-office'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: v${{ steps.pack.outputs.version }}
-        run: |
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            echo "$TAG is already released"
-            exit 0
-          fi
-          gh release create "$TAG" agent-office.tgz --target "$GITHUB_SHA" --title "$TAG" --generate-notes --latest
 
   perf:
     runs-on: ubuntu-latest
