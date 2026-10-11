@@ -77,7 +77,8 @@ export function documentsPage(root: HTMLElement): DocumentsPage {
       drawn = docsLoading(f) ? 'skeleton' : 'empty';
       return;
     }
-    const sig = `${f}|${view.scannedAt}|${filter}|${query}`;
+    // Drawn again only when what it lists changed (a new scan finding the same leaves an open "n more" open).
+    const sig = `${f}|${filter}|${query}|${JSON.stringify(view.items)}|${JSON.stringify(view.sources)}|${JSON.stringify(view.checkout ?? null)}`;
     if (!force && sig === drawn) return;
     drawn = sig;
     drawChips(view.items);
