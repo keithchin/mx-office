@@ -7,6 +7,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ## Unreleased
 
 ### Added
+- **Pages in the Model tab have a Preview: the page as the running app would look.** Pages, snippets and layouts now
+  switch between **Structure | Preview | MDL**. Preview draws the page inside its layout (top bar and menu), with its
+  snippets filled in, form fields per attribute type, data grids as tables with sample rows, list views as cards and
+  buttons in their styles, in an Atlas-like look of our own, with sample values made up from the attribute names and a
+  Desktop / Tablet / Phone width. It runs in a sealed frame (no scripts, nothing fetched) and is drawn only while
+  shown, in about a millisecond for travel-approval's largest pages. The Structure view lost its banner; a small
+  **Live app ↗** link sits beside the switch instead. Pages whose MDL starts with a `/** … */` comment are now read too.
 - **Pages in the Model tab have a Page view next to their MDL.** A page, snippet or layout opens as a structure
   preview laid out like Studio Pro's page editor: layout grids in rows and columns, containers, data views, list
   views and data grids with their columns, text, buttons, inputs labelled with their attribute, snippets and the
@@ -29,6 +36,12 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   `DS_` → DataSources, `OCH_` → OnChange, `VAL_`, `DEC_`, `SCH_`, `BCO_`, `ACO_`, and Stubs) with mxcli's folder
   clause, never moves documents a person organised or Marketplace and System modules, and lists moves in the PR.
 
+### Changed
+- **The Model tab fills the page in Portal.** Under the page header, the Model view now runs edge to edge: the
+  App Explorer against the left navigation, the details panel against the window's right edge, the drawing down to
+  the bottom of the window, with no frame or gap around it and no page scrollbar (on a phone too). Full screen is
+  unchanged; the other themes keep their framed tab.
+
 ### Fixed
 - **Documents shows in about a second instead of 10 to 20, and the office no longer freezes while it looks.**
   On travel-approval a cold look took 20.7 s and a repeat 9–14 s: 133 git processes one after another, each

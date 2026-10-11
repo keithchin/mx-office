@@ -1,8 +1,8 @@
 // The Page view of a page, snippet or layout: a read-only wireframe of its structure, as Studio Pro's page
 // editor lays it out in structure mode: layout grids in rows and columns, containers, data views, list
 // views and data grids (with their columns), text, buttons, inputs labelled with their attribute, snippets
-// as labelled boxes and the layout's placeholders. Widgets it doesn't know get a labelled box. It is not
-// the running page: the banner says so and links to the Live app, which is.
+// as labelled boxes and the layout's placeholders. Widgets it doesn't know get a labelled box. (The Preview,
+// page-frame.ts, shows the page as the running app would; the Live app shows it running.)
 //
 // It's drawn from the page's MDL (page-model.ts), only while the view is on screen; clicking a widget
 // shows its properties and MDL beside it (details via `on.select`).
@@ -42,16 +42,13 @@ export function pageView(on: PageEvents): PageView {
   let scale = 1;
   let selected: HTMLElement | null = null;
   const sheet = h('div.pg-sheet');
-  const liveLink = h('button.mx-link', { type: 'button', onclick: () => document.getElementById('tab-live')?.click() }, 'the Live app');
-  const banner = h('div.pg-note', { role: 'note' }, h('b', {}, 'Structure preview'), ' · not the running page; ', liveLink, ' shows it running.');
-  const el = h('div.pgv-host', {}, banner, sheet);
+  const el = h('div.pgv-host', {}, sheet);
   el.hidden = true;
 
   el.addEventListener('click', (e) => {
     let t = e.target as HTMLElement | null;
     while (t && t !== el && !items.has(t)) t = t.parentElement;
     const item = t && t !== el ? items.get(t) ?? null : null;
-    if (item === null && (e.target as HTMLElement).closest('.pg-note')) return;
     selected?.classList.remove('pg-sel');
     selected = item ? t : null;
     selected?.classList.add('pg-sel');

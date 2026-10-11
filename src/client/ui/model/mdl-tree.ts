@@ -62,6 +62,12 @@ class Scanner {
       } else if (c === ' ' || c === '\t' || c === '\r') this.i++;
       else if (c === '-' && s[this.i + 1] === '-') {
         while (this.i < s.length && s[this.i] !== '\n') this.i++;
+      } else if (c === '/' && s[this.i + 1] === '*') {
+        // A /** documentation */ comment, as mxcli writes above a document.
+        const end = s.indexOf('*/', this.i + 2);
+        const stop = end < 0 ? s.length : end + 2;
+        for (let j = this.i; j < stop; j++) if (s[j] === '\n') this.line++;
+        this.i = stop;
       } else break;
     }
     return nl;
