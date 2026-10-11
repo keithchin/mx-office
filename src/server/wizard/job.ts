@@ -10,6 +10,7 @@ import path from 'node:path';
 import { interviewModeOf, SETUP_STEPS, type JobView, type ProjectPlan, type ProjectRole, type StepId, type StepStatus } from '../../shared/wizard.js';
 import { FileStore, FlowEngine, transientError, type RetryPolicy, type RunRecord, type RunStatus, type StepCtx } from '../flow/index.js';
 import { lostEnd, runningCommands } from './run.js';
+import { withProvenance, type SetupProvenance } from '../../shared/setup-provenance.js';
 
 export interface JobState {
   id: string;
@@ -32,6 +33,11 @@ export interface JobState {
   addRoles?: ProjectRole[];
   /** The toolkit commit the project was set up on, and its pin folder (toolkit-pin/): init-project.sh and gate-check run from there. */
   toolkit?: { sha: string; dir: string; date?: string };
+  /**
+   * Proof of what the setup made itself (shared/setup-provenance.ts), written by the repo and clone steps
+   * when they make something: what Cancel & undo may delete. A setup saved before it has none.
+   */
+  provenance?: SetupProvenance;
   by: string;
   /** The account that started it, for queueing its Discovery task. */
   account?: string;
@@ -42,6 +48,8 @@ export interface JobState {
 export interface StepResult {
   status: 'done' | 'skipped';
   detail?: string;
+  /** What the step made (or found there already), kept in the job's provenance record. */
+  provenance?: Partial<Pick<SetupProvenance, 'repo' | 'folder'>>;
 }
 
 /** What a step can do besides its own work: say things in the log. */
@@ -304,6 +312,7 @@ export class JobBook {
     clearInterval(watch);
     const detail = r.detail ? this.redact(r.detail) : undefined;
     job.steps[id] = { status: r.status, detail };
+    if (r.provenance) job.provenance = withProvenance(job.provenance, r.provenance);
     this.log(job, `${r.status === 'done' ? '✓' : '↷'} ${label}${detail ? ` — ${detail}` : ''}`);
   }
 

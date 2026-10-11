@@ -8,7 +8,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { cancelConfirmed, cancelConsequences, cleanCancelRequest, madeBySetup, type CancelJobView, type CancelPlan } from '../src/shared/setup-cancel.js';
@@ -18,10 +18,11 @@ import { forgetScopes } from '../src/server/project-delete/repo.js';
 import { forgetProject } from '../src/server/project-delete/forget.js';
 import type { DeleteDeps, DeleteFloor } from '../src/server/project-delete/types.js';
 import { JobBook, newJob, type JobState } from '../src/server/wizard/job.js';
-import { SetupCancels, type CancelDeps, type SetupSnapshot } from '../src/server/wizard/cancel.js';
+import { SetupCancels, snapshotOf, type CancelDeps, type SetupSnapshot } from '../src/server/wizard/cancel.js';
 import { setupBlocker } from '../src/server/wizard/blockers.js';
 import { removeDir } from './support/cleanup.js';
 import { executableOf, ghIsFake } from '../src/server/project-delete/fakegh.js';
+import { PROVENANCE_VERSION, type SetupProvenance } from '../src/shared/setup-provenance.js';
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const ENV = ['-c', 'user.name=T', '-c', 'user.email=t@x', '-c', 'commit.gpgsign=false'];
@@ -73,11 +74,22 @@ interface World {
   deletes: ProjectDeletes;
   calls: { gh: string[][]; audits: { setup: SetupSnapshot; job: CancelJobView }[]; deleteAudits: number; removedFloor: number };
   onFloors(): boolean;
-  set: { busy: string[]; blocked?: string; failDelete: number };
+  set: { busy: string[]; blocked?: string; failDelete: number; view: 'found' | 'gone' | 'unknown'; ghId: string };
 }
 
+/** The id the fake GitHub gives acme/shop, and the setup's proof that it made it (and cloned the folder) by default. */
+const SHOP_ID = 'R_kgDOshop';
+const proofOf = (dir: string, parts: ('repo' | 'folder')[] = ['repo', 'folder']): SetupProvenance => ({
+  v: PROVENANCE_VERSION,
+  ...(parts.includes('repo') ? { repo: { createdBySetup: true, nameWithOwner: 'acme/shop', githubId: SHOP_ID, at: 1 } } : {}),
+  ...(parts.includes('folder') ? { folder: { createdBySetup: true, path: dir, at: 1 } } : {}),
+});
+
 /** A test office with one setup that stopped (by default at the team step, with its floor, folder and repository made). */
-function world(t: { after(fn: () => void): void }, opts: { steps?: Steps; floor?: boolean; scopes?: string; testMode?: boolean } = {}): World {
+function world(
+  t: { after(fn: () => void): void },
+  opts: { steps?: Steps; floor?: boolean; scopes?: string; testMode?: boolean; provenance?: (dir: string) => SetupProvenance | undefined } = {},
+): World {
   forgetScopes();
   const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'test-office-cancel-')));
   t.after(() => removeDir(root));
@@ -104,6 +116,8 @@ function world(t: { after(fn: () => void): void }, opts: { steps?: Steps; floor?
   const book = new JobBook(path.join(data, 'wizard'));
   const job = newJob(PLAN, 'Keith');
   for (const [id, s] of Object.entries(opts.steps ?? CREATED)) job.steps[id as StepId] = { ...s! };
+  const prov = opts.provenance ? opts.provenance(dir) : proofOf(dir);
+  if (prov) job.provenance = prov;
   job.status = 'failed';
   if (hasFloor) {
     job.floor = 'shop';
@@ -114,10 +128,15 @@ function world(t: { after(fn: () => void): void }, opts: { steps?: Steps; floor?
   book.save(job);
   let onFloors = hasFloor;
   const calls: World['calls'] = { gh: [], audits: [], deleteAudits: 0, removedFloor: 0 };
-  const set: World['set'] = { busy: [], failDelete: 0 };
+  const set: World['set'] = { busy: [], failDelete: 0, view: 'found', ghId: SHOP_ID };
   const floor: DeleteFloor = { id: 'shop', name: 'shop', repo: 'acme/shop', dir, local: false };
   const gh = async (args: string[]) => {
     calls.gh.push(args);
+    if (args[0] === 'repo' && args[1] === 'view') {
+      if (set.view === 'unknown') throw new Error('HTTP 401: Bad credentials (https://api.github.com/graphql)');
+      if (set.view === 'gone') throw new Error(`GraphQL: Could not resolve to a Repository with the name '${args[2]}'. (repository)`);
+      return JSON.stringify({ id: set.ghId, nameWithOwner: args[2] });
+    }
     if (args[0] === 'api' && args[1] === '-i') return `HTTP/2.0 200 OK\nX-Oauth-Scopes: ${opts.scopes ?? 'repo, delete_repo'}\n\n{}`;
     if (args.includes('DELETE')) {
       if (set.failDelete > 0) {
@@ -175,15 +194,18 @@ const deleted = (w: World) => w.calls.gh.filter((a) => a.includes('DELETE')).map
 
 test('what the setup made itself, from its steps: offered ticked for that and nothing else', () => {
   const steps = (s: Steps) => SETUP_STEPS.map((x) => ({ id: x.id, status: s[x.id]?.status ?? 'pending', detail: s[x.id]?.detail }));
-  assert.deepEqual(madeBySetup(steps(CREATED)), { repo: true, repoByHand: false, offline: false, folder: true });
+  assert.deepEqual(madeBySetup(steps(CREATED), proofOf('C:\\p')), { repo: true, repoByHand: false, offline: false, folder: true, legacyRepo: false, legacyFolder: false });
+  // The same log lines without the proof (a setup saved before it): only a hint, never the setup's.
+  assert.deepEqual(madeBySetup(steps(CREATED)), { repo: false, repoByHand: false, offline: false, folder: false, legacyRepo: true, legacyFolder: true });
   // Created by hand, or there already: never the setup's to delete.
-  assert.deepEqual(madeBySetup(steps({ repo: { status: 'skipped', detail: 'acme/shop is already on GitHub' }, clone: { status: 'done', detail: 'cloned into C:\\p' } })), { repo: false, repoByHand: true, offline: false, folder: true });
+  const there: SetupProvenance = { v: PROVENANCE_VERSION, repo: { createdBySetup: false, preExisting: true, nameWithOwner: 'acme/shop', githubId: 'R_x', at: 1 } };
+  assert.deepEqual(madeBySetup(steps({ repo: { status: 'skipped', detail: 'acme/shop is already on GitHub' }, clone: { status: 'done', detail: 'cloned into C:\\p' } }), there), { repo: false, repoByHand: true, offline: false, folder: false, legacyRepo: false, legacyFolder: true });
   // A floor already: the folder isn't the setup's either.
   assert.equal(madeBySetup(steps({ clone: { status: 'skipped', detail: 'already a floor (C:\\p)' } })).folder, false);
   // A test office's local bare repository: nothing on GitHub.
-  assert.deepEqual(madeBySetup(steps({ repo: { status: 'done', detail: 'offline: a local bare repository at C:\\x' }, clone: { status: 'done', detail: 'offline floor at C:\\p' } })), { repo: false, repoByHand: false, offline: true, folder: true });
+  assert.equal(madeBySetup(steps({ repo: { status: 'done', detail: 'offline: a local bare repository at C:\\x' }, clone: { status: 'done', detail: 'offline floor at C:\\p' } }), proofOf('C:\\p', ['folder'])).offline, true);
   // Failed before it made anything.
-  assert.deepEqual(madeBySetup(steps({ repo: { status: 'failed', detail: 'no token' } })), { repo: false, repoByHand: true, offline: false, folder: false });
+  assert.deepEqual(madeBySetup(steps({ repo: { status: 'failed', detail: 'no token' } })), { repo: false, repoByHand: true, offline: false, folder: false, legacyRepo: false, legacyFolder: false });
   // The request: anything odd is the safe choice; the typed name exactly.
   assert.deepEqual(cleanCancelRequest({ confirm: 'acme/shop', deleteFolder: 'yes' }), { confirm: 'acme/shop', deleteFolder: false, deleteRepo: false });
   for (const typed of ['Acme/shop', 'acme/shop ', 'shop', '', undefined]) assert.ok(!cancelConfirmed(typed, 'acme/shop'), String(typed));
@@ -256,7 +278,10 @@ test('Cancel & undo with the boxes as offered: floor, office data, setup record,
 });
 
 test('a repository someone created by hand is not deleted by default, and the folder only when ticked', async (t) => {
-  const w = world(t, { steps: { ...CREATED, repo: { status: 'skipped', detail: 'acme/shop is already on GitHub' } } });
+  const w = world(t, {
+    steps: { ...CREATED, repo: { status: 'skipped', detail: 'acme/shop is already on GitHub' } },
+    provenance: (dir) => ({ ...proofOf(dir, ['folder']), repo: { createdBySetup: false, preExisting: true, nameWithOwner: 'acme/shop', githubId: SHOP_ID, at: 1 } }),
+  });
   const p = (await w.svc.plan(w.job.id)) as CancelPlan;
   assert.equal(p.repoDelete.createdBySetup, false);
   assert.equal(p.repoDelete.byHand, true);
@@ -271,7 +296,7 @@ test('a repository someone created by hand is not deleted by default, and the fo
 });
 
 test('a setup that never made a floor: its repository (made by it) deleted here, the folder it never cloned left alone', async (t) => {
-  const w = world(t, { floor: false, steps: { repo: { status: 'done', detail: 'created acme/shop on GitHub (private)' }, clone: { status: 'failed', detail: 'gh repo clone failed' } } });
+  const w = world(t, { floor: false, steps: { repo: { status: 'done', detail: 'created acme/shop on GitHub (private)' }, clone: { status: 'failed', detail: 'gh repo clone failed' } }, provenance: (dir) => proofOf(dir, ['repo']) });
   const p = (await w.svc.plan(w.job.id)) as CancelPlan;
   assert.equal(p.floor, undefined);
   assert.equal(p.folder.createdBySetup, false, 'its clone failed: the folder isn’t its own');
@@ -358,4 +383,130 @@ test('test mode only lets a fake gh delete: the gh execFile really starts, never
   assert.equal(executableOf('gh', env, 'win32'), path.join(fake, 'gh.exe'));
   assert.equal(ghIsFake(env, 'win32'), true);
   assert.equal(ghIsFake({ PATH: '' }, 'win32'), false, 'no gh at all is no fake');
+});
+
+// Ownership on proof (shared/setup-provenance.ts, server/wizard/ownership.ts): what Cancel & undo may delete.
+
+test('O2: a repository that was on GitHub already is never offered, and a forced request to delete it is refused', async (t) => {
+  const w = world(t, {
+    steps: { ...CREATED, repo: { status: 'skipped', detail: 'acme/shop is already on GitHub' } },
+    provenance: (dir) => ({ ...proofOf(dir, ['folder']), repo: { createdBySetup: false, preExisting: true, nameWithOwner: 'acme/shop', githubId: SHOP_ID, at: 1 } }),
+  });
+  const p = (await w.svc.plan(w.job.id)) as CancelPlan;
+  assert.deepEqual([p.repoDelete.createdBySetup, p.repoDelete.possible, p.repoDelete.proof], [false, false, 'pre-existing']);
+  assert.match(p.repoDelete.why ?? '', /on GitHub already/);
+  assert.match(String(await w.svc.start(w.job.id, { confirm: 'acme/shop', deleteFolder: false, deleteRepo: true }, { name: 'K' })), /repository can’t be deleted/);
+  assert.deepEqual(deleted(w), [], 'GitHub untouched');
+  assert.ok(w.onFloors() && w.book.get(w.job.id), 'nothing started');
+});
+
+test('O4: another repository at that name now (a different GitHub id), or GitHub unable to say, is refused', async (t) => {
+  const w = world(t);
+  w.set.ghId = 'R_kgDOsomeoneelse';
+  const p = (await w.svc.plan(w.job.id)) as CancelPlan;
+  assert.deepEqual([p.repoDelete.createdBySetup, p.repoDelete.possible, p.repoDelete.proof], [true, false, 'mismatch']);
+  assert.match(p.repoDelete.why ?? '', /isn’t the one this setup created/);
+  assert.match(String(await w.svc.start(w.job.id, { confirm: 'acme/shop', deleteFolder: false, deleteRepo: true }, { name: 'K' })), /repository can’t be deleted/);
+  w.set.view = 'unknown';
+  const q = (await w.svc.plan(w.job.id)) as CancelPlan;
+  assert.deepEqual([q.repoDelete.possible, q.repoDelete.proof], [false, 'unknown']);
+  assert.match(q.repoDelete.why ?? '', /couldn’t check which repository is at acme\/shop/);
+  assert.deepEqual(deleted(w), []);
+});
+
+test('O4: the server checks the id again right before deleting: a repository swapped in after the plan is kept', async (t) => {
+  const w = world(t);
+  const p = (await w.svc.plan(w.job.id)) as CancelPlan;
+  assert.equal(p.repoDelete.possible, true);
+  await w.svc.start(w.job.id, asTicked(p), { name: 'K' });
+  w.set.ghId = 'R_kgDOreplaced';
+  await w.svc.settled(w.job.id);
+  const j = await w.svc.job(w.job.id);
+  assert.equal(j?.status, 'done', JSON.stringify(j));
+  assert.match(j?.steps.find((s) => s.id === 'repo')?.detail ?? '', /kept acme\/shop: not deleted, because the repository at acme\/shop now isn’t the one/);
+  assert.deepEqual(deleted(w), [], 'never deleted');
+});
+
+test('O6: a setup with only its log lines ("created …", "cloned into …") and no proof gets no deletion, whatever the wording or the request', async (t) => {
+  const w = world(t, { provenance: () => undefined });
+  const p = (await w.svc.plan(w.job.id)) as CancelPlan;
+  assert.deepEqual([p.repoDelete.createdBySetup, p.repoDelete.possible, p.repoDelete.proof], [false, false, 'legacy']);
+  assert.match(p.repoDelete.why ?? '', /log says it created the repository, but the office didn’t record proof/);
+  assert.deepEqual([p.folder.createdBySetup, p.folder.deletable, p.folder.proof], [false, false, 'legacy']);
+  assert.match(p.folder.why ?? '', /didn’t record proof/);
+  assert.equal(asTicked(p).deleteRepo || asTicked(p).deleteFolder, false, 'nothing ticked');
+  assert.match(String(await w.svc.start(w.job.id, { confirm: 'acme/shop', deleteFolder: false, deleteRepo: true }, { name: 'K' })), /repository can’t be deleted/);
+  assert.match(String(await w.svc.start(w.job.id, { confirm: 'acme/shop', deleteFolder: true, deleteRepo: false }, { name: 'K' })), /folder can’t be deleted/);
+  // Other wording, or a record of a version this office doesn't know, or one that doesn't read right: still no proof.
+  const odd: [string, unknown][] = [
+    ['Created acme/shop on GitHub', undefined],
+    ['made acme/shop on GitHub (private)', undefined],
+    ['created acme/shop on GitHub (private)', { v: 2, repo: { createdBySetup: true, nameWithOwner: 'acme/shop', githubId: SHOP_ID, at: 1 } }],
+    ['created acme/shop on GitHub (private)', { v: 1, repo: { createdBySetup: 'yes', nameWithOwner: 'acme/shop', githubId: SHOP_ID, at: 1 } }],
+    ['created acme/shop on GitHub (private)', { v: 1, repo: { createdBySetup: true, preExisting: true, nameWithOwner: 'acme/shop', githubId: SHOP_ID, at: 1 } }],
+    ['created acme/shop on GitHub (private)', { v: 1, repo: { createdBySetup: true, nameWithOwner: 'acme/other', githubId: SHOP_ID, at: 1 } }],
+    ['created acme/shop on GitHub (private)', { v: 1, repo: { createdBySetup: true, nameWithOwner: 'acme/shop', at: 1 } }],
+  ];
+  for (const [detail, prov] of odd) {
+    const x = world(t, { floor: false, steps: { repo: { status: 'done', detail } }, provenance: () => prov as SetupProvenance });
+    const q = (await x.svc.plan(x.job.id)) as CancelPlan;
+    assert.equal(q.repoDelete.possible, false, `${detail} ${JSON.stringify(prov)}`);
+    assert.match(String(await x.svc.start(x.job.id, { confirm: 'acme/shop', deleteFolder: false, deleteRepo: true }, { name: 'K' })), /repository can’t be deleted/);
+    assert.deepEqual(deleted(x), []);
+  }
+  assert.deepEqual(deleted(w), []);
+  assert.ok(existsSync(w.dir));
+});
+
+test('O6: a folder that is a junction pointing outside the projects folder is refused, even with the setup’s proof', async (t) => {
+  const w = world(t, { floor: false, steps: { repo: { status: 'done', detail: 'created acme/shop on GitHub (private)' }, clone: { status: 'done', detail: 'cloned into x' } } });
+  const outside = path.join(w.root, 'outside', 'precious');
+  mkdirSync(outside, { recursive: true });
+  writeFileSync(path.join(outside, 'keep.txt'), 'keep');
+  removeDir(w.dir);
+  symlinkSync(outside, w.dir, 'junction');
+  const p = (await w.svc.plan(w.job.id)) as CancelPlan;
+  assert.deepEqual([p.folder.exists, p.folder.deletable, p.folder.proof], [true, false, 'link']);
+  assert.match(p.folder.why ?? '', /junction or symbolic link/);
+  assert.match(String(await w.svc.start(w.job.id, { confirm: 'acme/shop', deleteFolder: true, deleteRepo: false }, { name: 'K' })), /folder can’t be deleted/);
+  assert.ok(existsSync(path.join(outside, 'keep.txt')), 'what the junction points at is untouched');
+  // The proof was recorded for another real path (the folder moved, or a link further up): refused too.
+  const moved = world(t, { floor: false, provenance: (dir) => ({ ...proofOf(dir), folder: { createdBySetup: true, path: path.join(dir, '..', 'elsewhere'), at: 1 } }) });
+  const m = (await moved.svc.plan(moved.job.id)) as CancelPlan;
+  assert.deepEqual([m.folder.deletable, m.folder.proof], [false, 'moved']);
+});
+
+test('the server refuses on its own: a stopped cancel that asked for the folder and the repository carries on without deleting what has no proof', async (t) => {
+  const w = world(t, { floor: false, provenance: () => undefined });
+  // A cancel record from before the ownership rules: it asked for both, and the setup has only log lines.
+  const setup = snapshotOf(w.job, w.dir);
+  assert.equal(setup.provenance, undefined);
+  const rec = {
+    id: w.job.id,
+    repo: 'acme/shop',
+    deleteFolder: true,
+    deleteRepo: true,
+    status: 'failed',
+    steps: [
+      { id: 'project', label: 'p', status: 'skipped' },
+      { id: 'folder', label: 'f', status: 'pending' },
+      { id: 'repo', label: 'r', status: 'failed', detail: 'GitHub down' },
+      { id: 'record', label: 'x', status: 'pending' },
+    ],
+    by: 'Keith',
+    startedAt: 1,
+    setup,
+  };
+  const file = path.join(w.data, 'deleted', 'setup-cancels', `${w.job.id}.json`);
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, JSON.stringify(rec));
+  const r = await w.svc.start(w.job.id, { confirm: 'acme/shop', deleteFolder: true, deleteRepo: true }, { name: 'Keith' });
+  assert.ok(typeof r === 'object', String(r));
+  await w.svc.settled(w.job.id);
+  const j = await w.svc.job(w.job.id);
+  assert.equal(j?.status, 'done', JSON.stringify(j));
+  assert.match(j?.steps.find((s) => s.id === 'folder')?.detail ?? '', /kept .*: not deleted, because this setup’s log says it cloned the folder/);
+  assert.match(j?.steps.find((s) => s.id === 'repo')?.detail ?? '', /kept acme\/shop: not deleted, because this setup’s log says it created the repository/);
+  assert.deepEqual(deleted(w), [], 'GitHub untouched');
+  assert.ok(existsSync(w.dir), 'the folder kept');
 });

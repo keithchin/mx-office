@@ -4,6 +4,17 @@ What changed in Mx Office, newest first. A release is what went
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Fixed
+
+- **A new project's setup never creates a GitHub repository on a guess.** The setup's first step used to take any failure to look the repository up (a timeout, a login that doesn't work, no permission, GitHub down) as "not there" and go on to create it. Now it creates the repository only when GitHub says plainly that it isn't there. Otherwise the step stops with *Couldn't check whether owner/name exists on GitHub: …*: check the office's GitHub login in 🔌 Connections, then Retry.
+- **Cancel & undo deletes only what the setup can prove it made.** When the setup creates the GitHub repository or clones the folder, it now records that it did, with GitHub's id for the repository. Cancel & undo offers to delete the repository only on that record, and only while GitHub still shows the same repository under that name. It never deletes a repository that was there already, one that has since been replaced by another of the same name, or one it can't check right now. It offers the folder only on that record too, and never a junction or link that points outside the projects folder. The office checks all of this again on the server right before deleting, whatever the request asks for, and the dialog says why when something isn't offered.
+
+### Changed
+
+- **Unfinished setups from an older version of the office keep their folder and repository on Cancel & undo.** They have only their log lines (*created … on GitHub*, *cloned into …*), not the new record, so the office no longer deletes on those. Cancel & undo still takes the project off the office and removes the setup. The dialog says *this setup's log says it created it, but the office didn't record proof, so delete it on GitHub yourself if you're sure*, with a link to the repository's settings.
+
 ## 2026-10-11 · release 38 (`928af9b`)
 
 ### Fixed

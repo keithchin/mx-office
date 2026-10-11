@@ -20,6 +20,9 @@ import { SHAPES, shapeForRoles, type TeamShape } from '../../shared/roster/cover
 import { createApp, ignoreMendixOutput, mprVersion } from './mendix-app.js';
 import { recordDecisions } from './register.js';
 import { bashPath, runCommand } from './run.js';
+import { couldntCheck, lookupWithRun, recordFound } from './repo-lookup.js';
+import { folderRecord } from './ownership.js';
+import { withProvenance } from '../../shared/setup-provenance.js';
 import { LONGPATHS_CLONE_ARGS, ensureLongPaths } from '../longpaths.js';
 import { toolkitDirFor } from '../toolkit-pin/index.js';
 import { pinInstructions } from '../toolkit-pin/instructions.js';
@@ -139,8 +142,11 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         }
         return { status: 'done', detail: `offline: a local bare repository at ${at}` };
       }
-      const seen = await runCommand('gh', ['repo', 'view', repo, '--json', 'nameWithOwner'], { cwd: deps.projectsDir(), env: env(), timeoutMs: MIN, allowFail: true }).catch(() => ({ code: 1 }));
-      if (seen.code === 0) return { status: 'skipped', detail: `${repo} is already on GitHub` };
+      // Created only when GitHub says plainly it isn't there: a lookup that couldn't tell (a timeout, the login, a 403, GitHub down) stops here (repo-lookup.ts).
+      const look = () => lookupWithRun((a) => (deps.run ?? runCommand)('gh', a, { cwd: deps.projectsDir(), env: env(), timeoutMs: MIN, allowFail: true }), repo);
+      const seen = await look();
+      if (seen.state === 'found') return { status: 'skipped', detail: `${repo} is already on GitHub`, provenance: { repo: recordFound(job.provenance?.repo, repo, seen, Date.now()) } };
+      if (seen.state === 'unknown') throw new Error(couldntCheck(repo, seen.reason));
       if (job.plan.createdByHand) throw new Error(`Couldn't find ${repo} on GitHub with the office's login. Create it there first (in ${job.plan.owner}, with a README), then Retry`);
       const token = readAdminToken(cfg.adminTokenFile);
       if (!token) throw new Error(`No admin token in 🔌 Connections or ${cfg.adminTokenFile}. ${adminTokenHelp(cfg.adminTokenFile, job.plan.owner).join(' ')}`);
@@ -149,11 +155,17 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       if (job.plan.description) args.push('--description', job.plan.description);
       try {
         // The admin token goes to this one child and nowhere else (see admin-token.ts).
-        await runCommand('gh', args, { cwd: deps.projectsDir(), env: adminGhEnv(deps.env ?? process.env, token), timeoutMs: 2 * MIN, onLine: (l) => io.log(`  ${hide(l)}`) });
+        await (deps.run ?? runCommand)('gh', args, { cwd: deps.projectsDir(), env: adminGhEnv(deps.env ?? process.env, token), timeoutMs: 2 * MIN, onLine: (l) => io.log(`  ${hide(l)}`) });
       } catch (err) {
         throw new Error(hide((err as Error).message));
       }
-      return { status: 'done', detail: `created ${repo} on GitHub (${job.plan.private ? 'private' : 'public'})` };
+      // Proof for Cancel & undo: GitHub's id for what was just made (a repository made later at this name has another).
+      let made = await look();
+      if (made.state !== 'found' || !made.githubId) made = await look();
+      const githubId = made.state === 'found' ? made.githubId : undefined;
+      if (!githubId) io.log(`  couldn't read GitHub's id for ${repo} (${made.state === 'unknown' ? made.reason : made.state}): Cancel & undo won't delete it, delete it on GitHub yourself if you need to`);
+      const nameWithOwner = (made.state === 'found' && made.nameWithOwner) || repo;
+      return { status: 'done', detail: `created ${repo} on GitHub (${job.plan.private ? 'private' : 'public'})`, provenance: { repo: { createdBySetup: true, nameWithOwner, ...(githubId ? { githubId } : {}), at: Date.now() } } };
     },
 
     async clone(job, io) {
@@ -173,20 +185,33 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         }
         return r;
       };
-      if (known) return await floorReady({ ...settle(known, ''), status: 'skipped', detail: `already a floor (${known.dir})` });
+      // Proof of the folder for Cancel & undo (ownership.ts): recorded as soon as it's there, so a later failure in this step doesn't lose it.
+      const own = async (dir: string, existed: boolean) => {
+        job.provenance = withProvenance(job.provenance, { folder: await folderRecord(job.provenance?.folder, dir, existed, Date.now()) });
+      };
+      if (known) {
+        await own(known.dir, true);
+        return await floorReady({ ...settle(known, ''), status: 'skipped', detail: `already a floor (${known.dir})` });
+      }
       if (cfg.offlineDir) {
         const dest = path.join(deps.projectsDir(), job.plan.owner, job.plan.name);
+        const existed = existsSync(dest);
         if (!existsSync(path.join(dest, '.git'))) {
           mkdirSync(path.dirname(dest), { recursive: true });
           await git(path.dirname(dest), ['clone', ...LONGPATHS_CLONE_ARGS, bare(job), dest], io);
+          await own(dest, existed);
           // origin reads as GitHub (the office keys floors by it); pushes go to the local bare repository.
           await git(dest, ['remote', 'set-url', 'origin', `https://github.com/${repo}.git`], io);
           await git(dest, ['remote', 'set-url', '--push', 'origin', bare(job)], io);
-        }
+        } else await own(dest, true);
         return await floorReady(settle(await deps.adoptFloor(repo, dest, job.by), `offline floor at ${dest}`));
       }
       io.log(`  cloning ${repo} with the office's gh login…`);
-      return await floorReady(settle(await deps.addFloor(repo, job.by, job.account), `cloned into ${deps.projectsDir()}`));
+      // The building moves into a checkout already at its place rather than cloning (building.ts): that one is never the setup's.
+      const existed = existsSync(path.join(deps.projectsDir(), job.plan.owner, job.plan.name));
+      const added = await deps.addFloor(repo, job.by, job.account);
+      if (typeof added !== 'string') await own(added.dir, existed);
+      return await floorReady(settle(added, `cloned into ${deps.projectsDir()}`));
     },
 
     async env(job) {
