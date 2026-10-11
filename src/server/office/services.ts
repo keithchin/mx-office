@@ -4,7 +4,7 @@ import { SignIns } from '../signins.js';
 import { agentProviders, configuredProvider, providerCommand } from '../agents.js';
 import { Tailnet } from '../tailnet.js';
 import { Team } from '../team.js';
-import { Upgrader } from '../upgrade.js';
+import { officeVersion } from '../version.js';
 import { Services } from '../services.js';
 import { Ledger } from '../usage.js';
 import { PlanLimitsReader } from '../limits.js';
@@ -127,7 +127,7 @@ export function createServices(ctx: Ctx): BuildingServices {
   return { sky, themes, maps, prompts, leaveOnMerge, ledger, signins, limits, accountLimits, webhook, machine, limitsOf, pumpQueues };
 }
 
-/** What's made once the floors are open: the SSH team, the tailnet, workers' web servers, pictures and upgrades. */
+/** What's made once the floors are open: the SSH team, the tailnet, workers' web servers and the version. */
 export function createLateServices(ctx: Ctx): LateServices {
   const { cfg, clients, floors } = ctx;
   const team = new Team(cfg.publicHost, cfg.port, cfg.tailnet);
@@ -138,7 +138,6 @@ export function createLateServices(ctx: Ctx): LateServices {
   const servicesState = (floor: Floor | undefined, items: ServiceInfo[] = services.list()): ServicesState => ({
     items: floor ? items.filter((s) => floor.workers.get(s.workerId)) : [],
     port: cfg.port,
-    deploy: cfg.deployScript,
     ssh: team.ssh,
     tailnet: cfg.tailnet,
   });
@@ -151,13 +150,5 @@ export function createLateServices(ctx: Ctx): LateServices {
   );
 
 
-  const upgrader = new Upgrader(
-    (state) => ctx.broadcast({ t: 'upgrade', state }),
-    () => {
-      // cli.ts shuts down gracefully, leaving the workers running in their terminal host; systemd
-      // (Restart=always) then starts the new version, which picks them back up.
-      process.kill(process.pid, 'SIGTERM');
-    },
-  );
-  return { team, tailnet, services, upgrader, servicesState };
+  return { team, tailnet, services, version: officeVersion(), servicesState };
 }

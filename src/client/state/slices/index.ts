@@ -27,13 +27,11 @@ import { sky } from './sky';
 import { studio } from './studio';
 import { team } from './team';
 import { theme } from './theme';
-import { upgrade } from './upgrade';
 import { usage } from './usage';
 import { whiteboard } from './whiteboard';
 
 export const SLICES: readonly Slice[] = [
   presence,
-  upgrade,
   usage,
   me,
   notify,

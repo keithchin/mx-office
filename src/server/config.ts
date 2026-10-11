@@ -41,11 +41,9 @@ export interface Config {
   tls?: { cert: string; key: string };
   trustProxy: boolean;
   iceServers: RTCIceServerLike[];
-  /** How to run the script that deployed the office, e.g. "deploy/azure.sh --name team2" (set by deploy/provision.sh), for the commands it suggests. */
-  deployScript?: string;
-  /** Address teammates SSH-tunnel to (set by deploy/provision.sh); enables invites from the office. */
+  /** Address teammates SSH-tunnel to (env AGENT_OFFICE_PUBLIC_HOST); with the team helper installed, enables invites from the office. */
   publicHost?: string;
-  /** The office's name on a Tailscale network, e.g. agent-office.tail1234.ts.net (set by deploy/provision.sh --tailscale). */
+  /** The office's name on a Tailscale network, e.g. agent-office.tail1234.ts.net (env AGENT_OFFICE_TAILSCALE_HOST). */
   tailnet?: string;
   /** Daily tracked Claude Code spend budget, USD. OpenCode/Codex/Grok/Muse spend is excluded. */
 
@@ -173,7 +171,6 @@ Options:
 
 Started in a terminal, the office opens in your browser already signed in, with
 a link that works once. Only this machine can reach it unless you pass --host.
-To run it on a server for your team, see deploy/provision.sh.
 
 Voice and screen sharing need a secure context: use https (a reverse proxy,
 --tls-cert/--tls-key or --self-signed) unless everyone is on localhost.
@@ -252,7 +249,7 @@ export function loadConfig(argv: string[]): Config {
   let weather = process.env.AGENT_OFFICE_WEATHER || '';
   let realTimeSky = process.env.AGENT_OFFICE_SKY_CLOCK === 'real';
   const iceServers: RTCIceServerLike[] = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
-  // A container can't take --turn (deploy/container/compose.yaml), so the TURN servers come from the environment too.
+  // A container can't always take --turn, so the TURN servers come from the environment too.
   for (const url of (process.env.AGENT_OFFICE_TURN ?? '').split(/\s+/).filter(Boolean)) iceServers.push(parseTurn(url));
 
   for (let i = 0; i < argv.length; i++) {
@@ -471,7 +468,6 @@ export function loadConfig(argv: string[]): Config {
     tls,
     trustProxy,
     iceServers,
-    deployScript: process.env.AGENT_OFFICE_DEPLOY_SCRIPT || undefined,
     publicHost: process.env.AGENT_OFFICE_PUBLIC_HOST || undefined,
     tailnet: process.env.AGENT_OFFICE_TAILSCALE_HOST?.toLowerCase().replace(/\.$/, '') || undefined,
     budget: budgetUsd,

@@ -72,7 +72,7 @@ function passwordLine() {
 }
 
 // Someone started it in a terminal: a link that signs them in once, opened in their browser, so
-// there's no password to copy. Not for an office that's claimed from a link (deploy/provision.sh)
+// there's no password to copy. Not for an office that's claimed from a link (--claim-token)
 // or signed in to with accounts only.
 let signIn = '';
 let opened = false;
@@ -98,8 +98,8 @@ ${cfg.tls || loopback ? '' : '\n  tip: voice & screen share need https off local
 let closing = false;
 // SIGTERM is a restart (tsx watch reloading, a plain `kill`, systemd): workers keep running in their
 // terminal host and the next office picks them back up. Ctrl+C closes the office and stops them.
-// (Under systemd that needs KillMode=process, or stopping the service stops the host with it; see
-// deploy/provision.sh. Workers cut off that way are resumed and carry on.)
+// (Under systemd that needs KillMode=process, or stopping the service stops the host with it.
+// Workers cut off that way are resumed and carry on.)
 const stop = (signal: NodeJS.Signals) => {
   if (closing) process.exit(1);
   closing = true;

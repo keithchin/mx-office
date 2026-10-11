@@ -60,18 +60,6 @@ export const MENU = {
   // The office’s own manual, its own page (/docs): how everything here works.
   guide: { id: 'guide', icon: '📖', label: 'Documentation', section: 'Office', title: () => 'How the office works: guides, reference and FAQ (its own page, /docs)' },
   home: { id: 'home', icon: '🏠', label: 'Home', section: 'Office', title: () => 'Every project in the building, and the office in numbers (its own page, /home)' },
-  upgrade: {
-    id: 'upgrade',
-    icon: '⬆️',
-    label: () => (store.upgrade.phase === 'building' ? 'Upgrading…' : store.upgrade.latest ? 'Update the office' : 'Upgrade the office'),
-    section: 'Office',
-    shown: () => store.upgrade.available,
-    // A new version, or one being built, gets a place on the top bar until it's in.
-    status: () => !!store.upgrade.latest || store.upgrade.phase === 'building',
-    chip: () => (store.upgrade.phase === 'building' ? 'Upgrading…' : 'Update'),
-    tone: () => (store.upgrade.latest && store.upgrade.phase !== 'building' ? 'primary' : undefined),
-    title: () => (store.upgrade.latest ? `New version: ${store.upgrade.latest.subject}` : 'Upgrade the office'),
-  },
   // While workers wait on someone (N does the same).
   waiting: {
     id: 'waiting',

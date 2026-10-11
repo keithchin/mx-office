@@ -76,7 +76,7 @@ The same menu on the 1D view, the 2D Office view and Home.
 |---|---|
 | **Open** | 🙋 Next worker that needs you (only when someone waits) · 📌 Issues · 🔀 Pull requests · 📋 Task queue · 🌐 Services · 📝 Whiteboard · 🤝 Meeting room · 🔎 Search · 📚 Project docs · 🧱 Open in Studio Pro (Mendix projects; admin) · 🏢 Projects |
 | **Together** | 👥 Invite teammates · 🔑 Accounts (admin) · 🔐 Your sign-ins |
-| **Office** | ⚙️ Settings · 🏠 Home · 📖 Documentation · ⬆️ Upgrade the office (when an update is there) |
+| **Office** | ⚙️ Settings · 🏠 Home · 📖 Documentation |
 
 - **📚 Project docs** opens the floor's own Markdown files (its README, `docs/team/*.md`, standups) on the bookshelf.
 - **📖 Documentation** opens these docs.

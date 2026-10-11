@@ -3,7 +3,7 @@
 Back to the [README](../README.md).
 
 > [!WARNING]
-> **Not supported in Mx Office.** Mx Office runs on a Windows machine: see the [Quick start](../README.md#quick-start). This page is about an office running on a server, which hasn't been adapted or tested for Mx Office, and the install steps below (`install.sh`, `install.ps1`) still download releases from somewhere other than this repository. It's kept for reference only.
+> **Not tested in Mx Office.** Mx Office runs on a Windows machine: see the [Quick start](../README.md#quick-start), and **Phone access** for reaching it from elsewhere. This page is about an office you reach over SSH or on another address, which hasn't been tested for Mx Office. It's kept for reference.
 
 When the office runs on a server, the web servers its workers start (`npm run dev`, a preview build, `python -m http.server`) listen on that machine, not on yours. `agent-office tunnel` brings them to you: run it once on your own computer and leave it running, and whenever a worker starts a server, the same port opens on your computer. `http://localhost:5173` in your browser is the worker's `localhost:5173`. When the worker stops the server, the port closes again a few seconds later. There's no command per server, and nothing to restart when a new one shows up.
 
@@ -11,7 +11,7 @@ When the office runs on a server, the web servers its workers start (`npm run de
 agent-office tunnel office@203.0.113.7
 ```
 
-That's the SSH address **👥 Invite teammates** shows (on Railway, Fly.io and Dokploy it looks like `ssh://office@host:2222`). It opens the SSH tunnel to the office, opens the office in your browser, and then follows the workers:
+That's the SSH address **👥 Invite teammates** shows (behind a proxy with a port of its own it looks like `ssh://office@host:2222`). It opens the SSH tunnel to the office, opens the office in your browser, and then follows the workers:
 
 ```
   🔌 agent-office tunnel
@@ -29,7 +29,7 @@ That's the SSH address **👥 Invite teammates** shows (on Railway, Fly.io and D
 Already have the office open in a browser? Give it that address instead, and it leaves the way you get there alone:
 
 ```bash
-agent-office tunnel                              # http://localhost:4600: deploy/aws.sh open, or the ssh command, is running
+agent-office tunnel                              # http://localhost:4600: an ssh tunnel to the office is running
 agent-office tunnel http://localhost:4601        # a tunnel on another port
 agent-office tunnel https://office.example.com   # an office on its own domain
 agent-office tunnel https://agent-office.tail1234.ts.net   # or on your tailnet
@@ -39,17 +39,9 @@ The **🌐 Services** board in the office shows the command for the way you came
 
 ## Getting the command
 
-It's part of `agent-office`, so it needs Node.js 20 or newer and the office installed on your computer (you don't have to run one there). To install without starting an office:
+It's part of the office, so it needs Node.js and a checkout of the office on your computer, built the same way as for running one (you don't have to run one there): clone the repository, then `npm install` and `npm run build` (see *Set up on a new machine*). Run it from that folder as `node bin/agent-office.js tunnel …`.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/keithchin/mx-office/main/install.sh | AGENT_OFFICE_INSTALL_ONLY=1 bash
-```
-
-```powershell
-$env:AGENT_OFFICE_INSTALL_ONLY = 1; irm https://raw.githubusercontent.com/keithchin/mx-office/main/install.ps1 | iex
-```
-
-The office it talks to has to be new enough to list its workers' servers. If it isn't, the command says so: upgrade the office (**⬆️ Upgrade the office** in the **☰** menu, or the deploy script's `update`).
+The office it talks to has to be new enough to list its workers' servers. If it isn't, the command says so: update that office (`git pull`, `npm run build`, then **🔁 Restart safely**).
 
 ## Signing in
 
@@ -82,4 +74,4 @@ agent-office tunnel [where] [options] [-- <ssh options>]
 
 Everything after `--` goes to `ssh`, for a key that isn't your default one: `agent-office tunnel office@203.0.113.7 -- -i ~/.ssh/office`.
 
-One server at a time still works, with nothing to install: click it on the **🌐 Services** board to copy an `ssh` command that opens just that one (*Reviewing what workers build* in the [AWS reference](aws.md)).
+One server at a time still works, with nothing to install: click it on the **🌐 Services** board to copy an `ssh` command that opens just that one.

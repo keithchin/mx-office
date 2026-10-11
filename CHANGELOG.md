@@ -72,6 +72,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **The Overview's Team and Technical contact cards show each agent's own character**, as the office, the team
   chatter and the escalation cards draw it, in its circle with its status dot, instead of coloured initials.
 
+### Removed
+
+- **The old installers and server deploy scripts are gone.** `install.sh`, `install.ps1` and everything under `deploy/` (AWS, Azure, Fly.io, Railway, Coolify, Dokploy, the container image and `provision.sh`) downloaded releases from the old upstream repository, so they are removed, together with their docs pages (aws, azure, fly, railway, coolify, dokploy, self-hosting), the self-upgrade from the ☰ menu (⬆️ Upgrade the office) that only offices set up by those scripts had, and the deploy-script hints in 👥 Invite teammates and 🌐 Services. Install Mx Office by cloning it (see *Set up on a new machine*, `/docs/get-started/new-machine`); update with `git pull`, `npm run build` and **🔁 Restart safely**. CI now starts the built office and checks the launcher’s plan instead of packing a release tarball.
+
 ## 2026-10-11 · release 34 (`622bf6d`)
 
 ### Fixed

@@ -1,4 +1,4 @@
-// ⚙️ Settings and the building's services: notifications, the machine, upgrades, the sky, holidays, maps, prompts.
+// ⚙️ Settings and the building's services: notifications, the machine, the sky, holidays, maps, prompts.
 
 import type { CustomMap } from '../maps/index.js';
 import type { PromptId } from '../prompts.js';
@@ -76,38 +76,10 @@ export interface ServicesState {
   items: ServiceInfo[];
   /** The office's port on its machine. Service tunnels end there and the office relays them. */
   port: number;
-  /** How to run the script that deployed the office, as in TeamState. */
-  deploy?: string;
-  /** Where teammates tunnel to (offices deployed with deploy/aws.sh, deploy/railway.sh, deploy/fly.sh, deploy/dokploy.sh or deploy/coolify.sh), as in TeamState */
+  /** Where teammates tunnel to (offices with SSH invites set up: see TeamState) */
   ssh?: string;
   /** The office's name on its Tailscale network: each server is also on https://<it>:<port> there. */
   tailnet?: string;
-}
-
-export interface VersionInfo {
-  sha: string;
-  subject: string;
-  /** ISO commit date */
-  date: string;
-}
-
-/** Self-upgrade of an office installed from git by deploy/aws.sh (see server/upgrade.ts). */
-export interface UpgradeState {
-  /** False when the office can't upgrade itself (not installed by deploy/aws.sh). */
-  available: boolean;
-  current?: VersionInfo;
-  /** Newest commit upstream, when it differs from current. */
-  latest?: VersionInfo;
-  /** New commits since current, newest first (at most 15). */
-  changes?: { sha: string; subject: string }[];
-  /** How many new commits there are in all ("50" means 50 or more). */
-  behind?: number;
-  checking?: boolean;
-  checkedAt?: number;
-  phase: 'idle' | 'building' | 'restarting' | 'failed';
-  /** Who started the upgrade. */
-  by?: string;
-  error?: string;
 }
 
 export type Weather = 'clear' | 'cloudy' | 'rain' | 'storm' | 'snow' | 'fog';
@@ -177,8 +149,6 @@ export type SettingsClientMsg =
   | { t: 'notify.test' }
   /** Admins: the most workers the office runs at once, across every floor; null takes the limit off. */
   | { t: 'machine.limit'; limit: number | null }
-  | { t: 'upgrade.check' }
-  | { t: 'upgrade.start' }
   /** Dress the building up for a holiday, take the decorations down ('off'), or follow the calendar ('auto'). */
   | { t: 'theme.set'; pick: ThemePick }
   /** The sky on the real clock (true), or a whole day and night every hour (false), for everyone. */
@@ -193,7 +163,6 @@ export type SettingsClientMsg =
   | { t: 'prompts.agent'; choice: AgentChoice | null };
 
 export type SettingsServerMsg =
-  | { t: 'upgrade'; state: UpgradeState }
   | { t: 'services'; state: ServicesState }
   | { t: 'notify'; state: NotifyState }
   | { t: 'machine'; state: MachineState }

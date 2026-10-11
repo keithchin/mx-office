@@ -71,12 +71,12 @@ export interface AccountsState {
 }
 
 export interface TeamMember {
-  /** GitHub username (or the name deploy/aws.sh or deploy/azure.sh invited a key file under). */
+  /** GitHub username (or the name a key file was invited under). */
   name: string;
   keys: number;
 }
 
-/** Who may SSH-tunnel into the office. Only offices deployed with deploy/aws.sh or deploy/azure.sh manage this. */
+/** Who may SSH-tunnel into the office. Only offices with the team helper installed (AGENT_OFFICE_TEAM_HELPER) and a public address (AGENT_OFFICE_PUBLIC_HOST) manage this. */
 export interface TeamState {
   /** Why invites can't be managed from the office, when they can't. */
   unavailable?: string;
@@ -85,8 +85,6 @@ export interface TeamState {
   ssh?: string;
   /** The office's port on the box (tunnel destination). */
   port: number;
-  /** How to run the script that deployed the office (deploy/azure.sh, --name and all), for the commands the panel suggests. deploy/aws.sh when unknown. */
-  deploy?: string;
   /** SHA256 fingerprint of the box's ED25519 host key, to check on first connect. */
   fingerprint?: string;
   members: TeamMember[];

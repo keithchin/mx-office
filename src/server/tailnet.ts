@@ -1,12 +1,12 @@
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
-// On an office set up with `deploy/provision.sh --tailscale`, Tailscale Serve puts the office on
+// On an office on a Tailscale network (AGENT_OFFICE_TAILSCALE_HOST set), Tailscale Serve puts the office on
 // https://<office>.ts.net for everyone on the tailnet. Each worker's web server gets its own port
 // there too, https://<office>.ts.net:5173, which Serve also points at the office's port: the office
 // checks the visitor is signed in and relays it by that port (relay.ts), like a service tunnel.
-// Changing Tailscale's settings takes root, so this goes through a helper provision.sh installs
-// (with a sudoers line) that only ever points a port at the office.
+// Changing Tailscale's settings takes root, so this goes through a helper (AGENT_OFFICE_SERVE_HELPER,
+// installed with a sudoers line) that only ever points a port at the office.
 const HELPER = process.env.AGENT_OFFICE_SERVE_HELPER || '/usr/local/bin/agent-office-serve';
 /** Long enough for the first scan of workers' servers to land, so a restart doesn't drop them for a moment. */
 const FIRST_SYNC_MS = 10_000;
