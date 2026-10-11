@@ -8,6 +8,7 @@ import { tildify } from './building.js';
 import { openBrowser } from './browser.js';
 import { onOfficeExit } from './restart/exit.js';
 import { RESTART_EXIT_CODE } from '../shared/project-run.js';
+import { dropTestCredentials } from './testcreds.js';
 
 const argv = process.argv.slice(2);
 if (argv[0] === 'prune') {
@@ -28,6 +29,8 @@ if (argv[0] === 'tunnel') {
 }
 
 const cfg = loadConfig(argv);
+// A test office drops every GitHub credential before anything can start gh or git with one (testcreds.ts).
+dropTestCredentials({ testMode: cfg.testMode, dir: cfg.dir });
 await ensureSelfSigned(cfg);
 const { interactive, welcome } = await import('./setup.js');
 const atTerminal = interactive();

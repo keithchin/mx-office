@@ -9,6 +9,7 @@ import { readFileSync, statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { storedSecret } from '../connections/store.js';
+import { withheld } from '../testcreds.js';
 
 /** Points at the file holding the admin token (one line). */
 export const ADMIN_TOKEN_ENV = 'AGENT_OFFICE_ADMIN_GH_TOKEN_FILE';
@@ -27,6 +28,8 @@ export function adminTokenFile(env: NodeJS.ProcessEnv = process.env): string {
  * by its size alone: the info the wizard shows never needs the token itself.
  */
 export function adminTokenConfigured(file: string): boolean {
+  // A test office reads no admin token file either (testcreds.ts).
+  if (withheld('github-admin')) return false;
   if (storedSecret('github-admin')) return true;
   try {
     const s = statSync(file);
@@ -41,6 +44,7 @@ export const adminTokenSource = (file: string): 'connections' | 'file' | undefin
 
 /** The token (Connections' first, else the file's), read when it's about to be used and not kept. */
 export function readAdminToken(file: string): string | undefined {
+  if (withheld('github-admin')) return undefined;
   const stored = storedSecret('github-admin');
   if (stored) return stored;
   try {
