@@ -27,6 +27,8 @@ export const setupApi = {
   toolkit: (dir: string) => call<FirstRunView>('POST', '/api/setup/toolkit', { dir }),
   finish: () => call<FirstRunView>('POST', '/api/setup/finish', {}),
   rerun: () => call<FirstRunView>('POST', '/api/setup/rerun', {}),
+  /** The long-paths row's button: git config --global core.longpaths true (never the registry). */
+  longpaths: () => call<FirstRunView>('POST', '/api/setup/longpaths', {}),
   /** Clones the toolkit, telling `on` each line git prints and how it ended. */
   async clone(url: string, dir: string, on: (e: CloneEvent) => void): Promise<void> {
     const res = await fetch('/api/setup/toolkit/clone', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url, dir, by: loadProfile()?.name }) });

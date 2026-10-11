@@ -13,7 +13,7 @@ import { setPath } from '../../connections/paths.js';
 import { updateOfficeSettings } from '../../connections/store.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import { cloneToolkit } from '../../first-run/clone.js';
-import { finishSetup, firstRunView, rerunSetup, runPrereqs, setDefaultMendix, setMxcli, setOrg, setStep, setupReasons } from '../../first-run/index.js';
+import { finishSetup, firstRunView, rerunSetup, runPrereqs, setDefaultMendix, setMxcli, setOrg, setStep, setupReasons, turnOnLongPaths } from '../../first-run/index.js';
 import { tildify } from '../../building.js';
 import type { CloneEvent } from '../../../shared/first-run.js';
 
@@ -68,6 +68,9 @@ export const firstRunRoutes = {
         case '/api/setup/finish':
           finishSetup(who);
           return answer();
+        case '/api/setup/longpaths':
+          // The long-paths row's one-click fix: git's user config only, never the registry.
+          return answer(await turnOnLongPaths(who));
         case '/api/setup/rerun':
           rerunSetup(who);
           return answer();

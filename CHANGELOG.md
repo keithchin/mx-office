@@ -4,6 +4,12 @@ What changed in Mx Office, newest first. A release is what went
 live with an office restart; **Unreleased** is merged into `staging/integration` and waits for the
 next one. Each entry says what you'll notice, then anything to know. Commit hashes are on `main`.
 
+## Unreleased
+
+### Fixed
+
+- **"Filename too long" can't stop a hire or a floor sync any more, whatever git's config says.** On Windows the office now hands every git it starts `core.longpaths=true` through the environment (`GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0`): clones, worktrees, the floor sync's fast-forward, toolkit pins, the wizard's steps, the Live app's checkout, meetings, deleting a project. The agents' own environment carries it too, so their `git worktree add` and `checkout` can't hit it either. Release 21 only wrote the setting into each project's own git config, and equipment-rental slipped through: its floor was cloned at 16:03 on 8 October, 45 minutes before release 21 was merged, so the clone never set it, and the one later place that would have, the worker's worktree, sits behind the hire's pause check, which every Retry hit first. The per-project setting stays (for git you run there yourself) and is now also written on each floor's first floor-sync look; when it can't be written, the Audit log says so (`git.longpaths`). First-run setup's prerequisites have a new optional row, **Long paths for git**: whether git's system or user config has it, a **Turn on for my user** button for admins (`git config --global core.longpaths true`, only when pressed), and Windows' own *LongPathsEnabled* shown read-only (the office never changes the registry). The docs: *Setting up a new machine* and *Troubleshooting › Hiring fails with "Filename too long"*.
+
 ## 2026-10-11 · release 37 (`d6eddd1`)
 
 ### Fixed

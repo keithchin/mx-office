@@ -14,6 +14,8 @@
 import { execFile, spawn, type ExecFileOptions, type SpawnOptions } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { SHARE_ENV, Worker } from 'node:worker_threads';
+// Every git started from here (most of the office's) has long paths on Windows: it's in process.env (gitenv.ts).
+import '../gitenv.js';
 
 export interface OffOptions {
   cwd?: string;

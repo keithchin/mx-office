@@ -20,7 +20,11 @@ A Claude worker is only flagged when the prompt is actually on its screen. A pro
 
 **Cause:** a Mendix app's `javascriptsource` holds npm packages with deep `node_modules` folders; inside a worker's worktree under `<floor>/.agent-office/worktrees/` those paths pass Windows' 260 characters.
 
-**Fix:** none needed any more: the office sets `core.longpaths true` in the project's own git config on Windows when the wizard clones it, and before it makes any worker's worktree. On an older office, run `git config core.longpaths true` in the floor's folder once.
+**Fix:** none needed any more. On Windows every git the office starts (clones, worktrees, the floor sync's fast-forward, the toolkit pins, the wizard's steps) and every agent's own git gets `core.longpaths=true` through the environment (`GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0`), so no config file has to say it. The office also writes `core.longpaths true` into each project's own git config (when the wizard clones it, on the floor sync's first look, before a worktree), for git you run there yourself; if it can't, the audit log says so (*git.longpaths*).
+
+Until October 2026 the office relied on that per-project setting alone. A floor cloned before release 21 never got it, and the one place that would have added it, the worker's worktree, came after the hire's pause check: a paused new project kept failing (equipment-rental, October 2026). On such an office, run `git config core.longpaths true` in the floor's folder once, or upgrade.
+
+For git you run by hand: first-run setup's *Long paths for git* row ([Setting up a new machine](../get-started/new-machine.md)) turns it on in your user config.
 
 ## A Haiku agent keeps asking permission
 

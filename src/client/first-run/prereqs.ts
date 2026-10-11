@@ -1,7 +1,7 @@
 // First-run setup's step 2: what this machine has of what the office needs, a row each (green, red, or
 // amber), what each is for, whether it's required, and where to get it. The check runs when the step
 // opens and when Re-check is pressed, never on a timer (server/first-run/checks.ts).
-import { PREREQ_META, prereqsReady, type PrereqResult } from '../../shared/first-run';
+import { LONGPATHS_ACTION_LABEL, PREREQ_META, prereqsReady, type PrereqResult } from '../../shared/first-run';
 import { h, toast } from '../ui/dom';
 import { setupApi } from './api';
 
@@ -22,6 +22,21 @@ function mxcliForm(r: PrereqResult, recheck: () => void): HTMLElement {
   return h('div.fr-inline', {}, input, save);
 }
 
+/** A row's one-click fix (long paths in git's user config): only when pressed, never by itself. */
+function actionButton(r: PrereqResult, recheck: () => void): HTMLElement | null {
+  if (r.action !== 'longpaths-global') return null;
+  const b = h('button.btn.fr-row-action', { type: 'button' }, LONGPATHS_ACTION_LABEL) as HTMLButtonElement;
+  b.addEventListener('click', () => {
+    b.disabled = true;
+    setupApi
+      .longpaths()
+      .then(() => (toast('Long paths are on in git’s user config'), recheck()))
+      .catch((e: Error) => toast(e.message, 'error'))
+      .finally(() => (b.disabled = false));
+  });
+  return h('div.fr-inline', {}, b);
+}
+
 function row(r: PrereqResult, recheck: () => void): HTMLElement {
   const m = PREREQ_META[r.id];
   return h(
@@ -36,6 +51,7 @@ function row(r: PrereqResult, recheck: () => void): HTMLElement {
       h('p.fr-row-why', {}, m.purpose),
       r.status !== 'ok' && r.fix ? h('p.fr-row-fix', {}, r.fix) : null,
       r.id === 'mxcli' && r.status !== 'ok' ? mxcliForm(r, recheck) : null,
+      r.status !== 'ok' ? actionButton(r, recheck) : null,
     ),
     r.status !== 'ok' && m.link ? h('a.btn.fr-row-link', { href: m.link, target: '_blank', rel: 'noopener noreferrer' }, `${m.linkLabel ?? 'Get it'} ↗`) : null,
   );

@@ -14,6 +14,7 @@ import path from 'node:path';
 import { audit } from '../audit/index.js';
 import { dropKeys, onForgetFloor } from '../office/forget.js';
 import { execFileOff } from '../offloop/exec.js';
+import { ensureLongPaths } from '../longpaths.js';
 import { isBusy } from '../../shared/status.js';
 import type { FloorSyncState } from '../../shared/studio.js';
 import type { Floor } from '../floor.js';
@@ -143,6 +144,10 @@ export function syncFloorNow(floor: SyncFloor, ask: SyncAsk = {}): Promise<Floor
   const going = running.get(floor.id);
   if (going) return going;
   const p = (async () => {
+    // Every floor's repository gets core.longpaths in its own config on its first look (once per run,
+    // a file read after that): people's git in the folder needs it too, and a floor cloned before
+    // release 21 never got it (the office's own git has it from the environment, gitenv.ts).
+    await ensureLongPaths(floor.dir);
     if (ask.fetch) {
       const def = await defaultBranch(floor.dir);
       if (def) {

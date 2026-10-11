@@ -1,3 +1,5 @@
+// First: git's long paths in the office's environment before anything starts a git (gitenv.ts).
+import './gitenv.js';
 import os from 'node:os';
 import path from 'node:path';
 import { loadConfig, ensureSelfSigned } from './config.js';
