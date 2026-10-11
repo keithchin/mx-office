@@ -1,4 +1,4 @@
-# Mx Office — an App Factory for Mendix
+# Mx Office — an Agentic App Factory for Mendix
 
 > A shared office where **teams of AI agents build Mendix apps**, and you run them as their **Project Manager**.
 
