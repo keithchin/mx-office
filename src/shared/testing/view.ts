@@ -79,6 +79,14 @@ export interface RunSummary {
   at?: string;
   ingestedAt: number;
   counts: { passed: number; failed: number; skipped: number };
+  /** Results that were harness errors (counted here, not under skipped): never passed, never a business failure. */
+  harness?: number;
+  /** The whole run could not complete (an office-launched run): a harness error, not failed tests. */
+  harnessError?: string;
+  /** What ran it (an office-launched run): mxcli version, runtime, Mendix version. */
+  environment?: TestRunRecord['environment'];
+  /** A few results by stable id, for a run the office launched (mxcli-test): failures and harness errors first. */
+  tests?: { name: string; status: TestRunRecord['results'][number]['status']; harness?: true; detail?: string; assertions?: number }[];
   /** Tests in this run that passed and failed on the same tested revision. */
   flaky: string[];
   freshness: Freshness;
@@ -122,7 +130,7 @@ export interface TestingView {
   cacheKey: string;
   gate6?: GateVerdict;
   /** Runs on exactly main's commit, by suite (the checks CI or the office ran there). */
-  checksOnMain: { suite: string; source: RunSource; result: ResultState; runId: string }[];
+  checksOnMain: { suite: string; source: RunSource; result: ResultState; runId: string; harness?: true }[];
   counts: {
     /** Per acceptance criterion. */
     coverage: Record<Coverage, number>;
@@ -144,6 +152,8 @@ export interface TestingView {
 
 export const RUNS_SHOWN = 60;
 export const RUNS_PER_ROW = 10;
+/** Results listed per office-launched run in the view (the rest stay in the record and its JUnit file). */
+export const TESTS_PER_RUN = 40;
 
 const when = (r: TestRunRecord) => Date.parse(r.finishedAt ?? r.startedAt ?? '') || r.ingestedAt;
 
@@ -293,8 +303,9 @@ export function buildTestingView(floor: string, facts: TestingFacts, all: readon
   if (main)
     for (const r of records) {
       if (!sameRevision(r.testedRevision, main) || checksOnMain.some((c) => c.suite === r.suite)) continue;
-      const s = summary(r, main, flaky).counts;
-      checksOnMain.push({ suite: r.suite, source: r.source, result: s.failed ? 'failed' : s.passed ? 'passed' : s.skipped ? 'skipped' : 'none', runId: r.id });
+      const sum = summary(r, main, flaky);
+      const s = sum.counts;
+      checksOnMain.push({ suite: r.suite, source: r.source, result: s.failed ? 'failed' : s.passed ? 'passed' : s.skipped ? 'skipped' : 'none', runId: r.id, ...(sum.harness || sum.harnessError ? { harness: true as const } : {}) });
     }
   const newestKnown = records.find((r) => isKnown(r.testedRevision));
   const stale = main && newestKnown && !records.some((r) => sameRevision(r.testedRevision, main)) ? { lastTested: newestKnown.testedRevision, runId: newestKnown.id } : undefined;
@@ -323,7 +334,19 @@ function strip(a: AcView & { hitIds?: string[]; flaky?: boolean }): AcView {
 
 function summary(r: TestRunRecord, main: string | undefined, flaky: Set<string>): RunSummary {
   const counts = { passed: 0, failed: 0, skipped: 0 };
-  for (const t of r.results) counts[t.status]++;
+  let harness = 0;
+  for (const t of r.results) {
+    if (t.harness) harness++;
+    else counts[t.status]++;
+  }
+  const rank = (t: TestRunRecord['results'][number]) => (t.status === 'failed' ? 0 : t.harness ? 1 : t.status === 'skipped' ? 2 : 3);
+  const tests =
+    r.source === 'mxcli-test'
+      ? [...r.results]
+          .sort((a, b) => rank(a) - rank(b))
+          .slice(0, TESTS_PER_RUN)
+          .map((t) => ({ name: t.name, status: t.status, ...(t.harness ? { harness: true as const } : {}), ...(t.detail ? { detail: t.detail.slice(0, 300) } : {}), ...(t.assertions !== undefined ? { assertions: t.assertions } : {}) }))
+      : undefined;
   return {
     id: r.id,
     source: r.source,
@@ -336,6 +359,10 @@ function summary(r: TestRunRecord, main: string | undefined, flaky: Set<string>)
     ...(r.finishedAt || r.startedAt ? { at: r.finishedAt ?? r.startedAt } : {}),
     ingestedAt: r.ingestedAt,
     counts,
+    ...(harness ? { harness } : {}),
+    ...(r.harnessError ? { harnessError: r.harnessError } : {}),
+    ...(r.environment ? { environment: r.environment } : {}),
+    ...(tests ? { tests } : {}),
     flaky: [...new Set(r.results.filter((t) => flaky.has(testKey(r, t.name))).map((t) => t.name))].slice(0, 20),
     freshness: freshnessOf(r.testedRevision, main),
     links: r.links,

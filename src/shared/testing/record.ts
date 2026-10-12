@@ -9,7 +9,7 @@
 export type Revision = string;
 export const UNKNOWN = 'unknown';
 
-export type RunSource = 'pr-checks' | 'report-file' | 'gate-check';
+export type RunSource = 'pr-checks' | 'report-file' | 'gate-check' | 'mxcli-test';
 
 export type ResultStatus = 'passed' | 'failed' | 'skipped';
 
@@ -30,8 +30,16 @@ export interface Link {
 
 export interface TestResult {
   name: string;
+  /**
+   * 'skipped' for a harness error too (`harness` set): the test never reached a verdict, so it counts
+   * neither as passed nor as a business failure, and a required check it decides is never met.
+   */
   status: ResultStatus;
   detail?: string;
+  /** The harness broke on this test (JUnit <error>: it threw outside its assertions, or asserted nothing under --require-assertions). Its status is 'skipped'. */
+  harness?: true;
+  /** How many assertions it checked (mxcli test's JUnit property). */
+  assertions?: number;
   /** The ids the source tied this test to (declared links, and inferred ones with their rule). */
   links: Link[];
 }
@@ -66,9 +74,26 @@ export interface TestRunRecord {
   /** Links the whole run carries (a PR title naming BR012), beside each result's own. */
   links: Link[];
   actor: { kind: 'ci' | 'office' | 'repo'; name: string };
+  /** What ran it, for a run the office launched itself (mxcli-test): the build and runtime identity. */
+  environment?: RunEnvironment;
+  /** The launched program's exit code (null: it never started, or was stopped). Never a verdict on its own. */
+  exitCode?: number | null;
+  /** The whole run could not complete (no runtime, no JUnit written, a timeout): a harness error, never failed tests. */
+  harnessError?: string;
   importer: string;
   /** When the office ingested it (ms). */
   ingestedAt: number;
+}
+
+export interface RunEnvironment {
+  runner: string;
+  mxcliVersion: string;
+  /** How the app under test ran: mxcli's local runtime, a Docker container, or an app already up. */
+  runtime: 'local' | 'docker' | 'attach';
+  /** The Mendix version the model says (mxcli's "Connected to: … (Mendix x.y.z)"), when it said. */
+  mendixVersion?: string;
+  /** Where it ran: the office's own work folder (never a floor checkout or an agent's worktree). */
+  workFolder: string;
 }
 
 /** What an importer hands the store: everything but the id and the time it was taken in. */

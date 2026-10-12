@@ -18,7 +18,7 @@ export function header(v: TestingView): HTMLElement {
     : h('p.tst-main', {}, 'No main commit yet');
   const gate = h('p.tst-gate', {}, h('span.tst-k', {}, 'Stage 6 gate: '), v.gate6 ? pill(v.gate6.status, v.gate6.status === 'PASS' ? 'good' : v.gate6.status === 'FAIL' ? 'bad' : 'muted') : pill('not known', 'muted'), v.gate6 ? h('small.tst-from', {}, ` ${v.gate6.from}${v.gate6.detail ? `: ${v.gate6.detail}` : ''}`) : null);
   const checks = v.checksOnMain.length
-    ? h('p.tst-gate', {}, h('span.tst-k', {}, 'Runs on main: '), ...v.checksOnMain.map((c) => h('span.tst-check', {}, `${c.suite} `, pill(RESULT[c.result].word, RESULT[c.result].tone))))
+    ? h('p.tst-gate', {}, h('span.tst-k', {}, 'Runs on main: '), ...v.checksOnMain.map((c) => h('span.tst-check', {}, `${c.suite} `, c.harness && c.result !== 'failed' && c.result !== 'passed' ? pill('Harness error', 'warn') : pill(RESULT[c.result].word, RESULT[c.result].tone))))
     : h('p.tst-gate', {}, h('span.tst-k', {}, 'Runs on main: '), h('span.tst-muted', {}, v.main ? `no run has tested ${rev(v.main.sha)}` : 'none'));
   const group = (title: string, sub: string, items: { key: string; n: number; word: string }[], tones: Record<string, { tone: Tone }>) =>
     h('div.tst-count', { role: 'group', 'aria-label': title }, h('span.tst-count-h', {}, title, h('small', {}, ` ${sub}`)), h('div.tst-count-row', {}, ...items.map((i) => h('span.tst-count-i', { 'data-tone': i.n ? tones[i.key].tone : 'muted' }, h('strong', {}, String(i.n)), ` ${i.word}`))));
@@ -146,8 +146,9 @@ export function runsPanel(v: TestingView): HTMLElement {
       'li.tst-run',
       {},
       h('div.tst-run-top', {}, h('strong', {}, r.suite), h('small.tst-from', {}, ` ${SOURCE_WORD[r.source] ?? r.source}${r.branch ? ` · ${r.branch}` : ''}${r.pr ? ` · PR #${r.pr}` : ''}${r.at ? ` · ${when(r.at)}` : ''}`)),
-      h('div.tst-run-mid', {}, pill(countLine(r.counts), r.counts.failed ? 'bad' : r.counts.passed ? 'good' : 'muted'), ' ', pill(FRESHNESS[r.freshness].word, FRESHNESS[r.freshness].tone), r.flaky.length ? pill(`Flaky: ${r.flaky.length}`, 'warn', r.flaky.join('\n')) : null),
+      h('div.tst-run-mid', {}, r.harnessError ? pill('Harness error', 'warn', 'The run could not complete: not failed tests') : pill(countLine(r.counts, r.harness), r.counts.failed ? 'bad' : r.harness ? 'warn' : r.counts.passed ? 'good' : 'muted'), ' ', pill(FRESHNESS[r.freshness].word, FRESHNESS[r.freshness].tone), r.flaky.length ? pill(`Flaky: ${r.flaky.length}`, 'warn', r.flaky.join('\n')) : null),
       revisions(r),
+      ...officeRun(r),
       r.links.length ? h('div.tst-run-links', {}, ...r.links.slice(0, 8).map(linkChip)) : null,
     );
   const list = h('ul.tst-runlist', {}, ...v.runs.slice(0, FIRST).map(row));
@@ -171,4 +172,24 @@ export function runsPanel(v: TestingView): HTMLElement {
     h('h3.tst-h', {}, 'Test runs', h('small.tst-hsub', {}, `${v.totalRuns} recorded${v.totalRuns > v.runs.length ? `, newest ${v.runs.length} shown` : ''}`)),
     v.runs.length ? h('div', {}, list, more) : h('p.tst-empty', {}, 'No test runs recorded yet. They come from pr-checks runs on pull requests, report files under reports/testing/ and docs/report.json, and the office’s own gate-check of main.'),
   );
+}
+
+const TEST_WORD = (t: NonNullable<RunSummary['tests']>[number]): [string, Tone] => (t.harness ? ['Harness error', 'warn'] : t.status === 'failed' ? ['Failed', 'bad'] : t.status === 'passed' ? ['Passed', 'good'] : ['Skipped', 'muted']);
+
+/** An office-launched run's own lines (Testing release 1b): what ran it, a harness error, its tests by stable id. */
+function officeRun(r: RunSummary): (HTMLElement | null)[] {
+  const e = r.environment;
+  if (!e && !r.harnessError && !r.tests) return [];
+  return [
+    e ? h('div.tst-run-env', {}, `${e.runner} · mxcli ${e.mxcliVersion} · runtime ${e.runtime}${e.mendixVersion ? ` · Mendix ${e.mendixVersion}` : ''} · JUnit `, h('code', {}, r.evidence.locator.replace(/^office:/, ''))) : null,
+    r.harnessError ? h('p.tst-run-harness', {}, `Harness error, not failed tests: ${r.harnessError}`) : null,
+    r.tests?.length
+      ? h(
+          'details.tst-run-tests',
+          {},
+          h('summary', {}, `Tests (${r.tests.length}${r.tests.length >= 40 ? '+' : ''}, by file and @test name)`),
+          h('ul', {}, ...r.tests.map((t) => h('li', {}, pill(...TEST_WORD(t)), ' ', h('code', {}, t.name), t.assertions !== undefined ? h('small.tst-from', {}, ` ${t.assertions} assertion${t.assertions === 1 ? '' : 's'}`) : null, t.detail ? h('small.tst-from', {}, ` ${t.detail}`) : null))),
+        )
+      : null,
+  ];
 }

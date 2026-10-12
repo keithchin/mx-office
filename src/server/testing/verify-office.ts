@@ -13,6 +13,7 @@ import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { setupView } from '../wizard/setup.js';
 import { acJourneys, officeDeps, testingAt, testingStore, testingView } from './index.js';
 import { MainChecks, officeRunner } from './main-checks.js';
+import { qualityOnMain } from './mxcli-office.js';
 import { mainOf } from './repo.js';
 import { forgetVerifyStores, projectPolicy, stageLookOf, testFirst, verifyStore, verifyTasks } from './verify.js';
 
@@ -38,10 +39,10 @@ export async function verifyOnPulls(ctx: Ctx, floor: Floor): Promise<void> {
   try {
     const mc = mainChecksOf(ctx);
     const look = { floorId: floor.id, dir: floor.dir, repo: floor.def.repo, pullsAt: pulls.fetchedAt, loading: false };
-    if (mc.due(look)) {
-      const main = await mainOf(floor.dir);
-      if (main?.remote) await testingStore(ctx.cfg.dataDir, floor.id).ingest(await mc.poll({ ...look, branch: main.branch }));
-    }
+    const main = await mainOf(floor.dir);
+    if (mc.due(look) && main?.remote) await testingStore(ctx.cfg.dataDir, floor.id).ingest(await mc.poll({ ...look, branch: main.branch }));
+    // Release 1b: a new main commit gets its quality scores (once per commit and mxcli version, in the office's work folder).
+    void qualityOnMain(ctx.cfg.dataDir, floor, main);
     const roster = rosterOf(ctx);
     const team = teamFloor(ctx, floor);
     await verifyTasks(ctx.cfg.dataDir, roster, team, floor, await acJourneys(floor.id));

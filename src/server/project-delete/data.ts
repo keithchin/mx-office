@@ -24,11 +24,13 @@ export const officeFiles = (floor: string): string[] => [
   `acceptance/${floor}`,
   `testing/${floor}.jsonl`,
   `testing/${floor}.verify.json`,
+  `testing/quality/${floor}.jsonl`,
+  `testing/evidence/${floor}`,
   `live/${floor}.log`,
 ];
 
-/** Removed but not archived: the live app's own clone of the repository (made again from GitHub). */
-export const derivedFiles = (floor: string): string[] => [`live/${floor}`];
+/** Removed but not archived: the live app's own clone of the repository (made again from GitHub), and the Testing work folders (disposable copies of a commit). */
+export const derivedFiles = (floor: string): string[] => [`live/${floor}`, `testing/work/${floor}`];
 
 /** <data>/deleted/<floor>-<yyyymmdd-hhmmss>. */
 export function archiveDirFor(dataDir: string, floor: string, at: number): string {

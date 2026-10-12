@@ -35,7 +35,7 @@ export const FRESHNESS: Record<Freshness, { word: string; tone: Tone }> = {
   none: { word: 'No run', tone: 'muted' },
 };
 
-export const SOURCE_WORD: Record<string, string> = { 'pr-checks': 'CI (pr-checks)', 'report-file': 'Report file', 'gate-check': 'Office gate-check' };
+export const SOURCE_WORD: Record<string, string> = { 'pr-checks': 'CI (pr-checks)', 'report-file': 'Report file', 'gate-check': 'Office gate-check', 'mxcli-test': 'Office run (mxcli test)' };
 
 /** A revision as people read it: 7 characters of a sha, "unknown" spelled out. */
 export const rev = (r: Revision | undefined) => (r && r !== UNKNOWN ? shortRev(r) : 'unknown');
@@ -43,9 +43,9 @@ export const rev = (r: Revision | undefined) => (r && r !== UNKNOWN ? shortRev(r
 /** "recorded" / "inferred (business rule id in the PR title)". */
 export const linkWord = (l: Pick<Link, 'basis' | 'rule'>) => (l.basis === 'recorded' ? 'recorded' : `inferred${l.rule ? ` (${l.rule})` : ''}`);
 
-/** "3 passed · 1 failed" (zeroes left out; "no results" when all are). */
-export function countLine(c: { passed: number; failed: number; skipped: number }): string {
-  const parts = [c.passed ? `${c.passed} passed` : '', c.failed ? `${c.failed} failed` : '', c.skipped ? `${c.skipped} skipped` : ''].filter(Boolean);
+/** "3 passed · 1 failed · 1 harness error" (zeroes left out; "no results" when all are). */
+export function countLine(c: { passed: number; failed: number; skipped: number }, harness = 0): string {
+  const parts = [c.passed ? `${c.passed} passed` : '', c.failed ? `${c.failed} failed` : '', harness ? `${harness} harness error${harness === 1 ? '' : 's'}` : '', c.skipped ? `${c.skipped} skipped` : ''].filter(Boolean);
   return parts.join(' · ') || 'no results';
 }
 

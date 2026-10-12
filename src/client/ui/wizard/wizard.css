@@ -54,14 +54,6 @@
 .wizard .wz-facts dd { margin: 0; font-weight: 600; }
 .wizard .wz-plan { margin: 0; padding-left: 22px; line-height: 1.7; font-weight: 700; }
 .wizard .wz-actions { display: flex; gap: 8px; }
-.wizard .wz-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px; }
-.wizard .wz-step { display: grid; grid-template-columns: 26px 1fr; gap: 0 8px; padding: 6px 10px; border: 2px solid var(--ink); border-radius: 10px; background: var(--paper); font-weight: 800; font-size: 13px; }
-.wizard .wz-step small { grid-column: 2; color: var(--muted); font-weight: 600; overflow-wrap: anywhere; }
-.wizard .wz-step.running { background: color-mix(in srgb, var(--warn) 30%, var(--paper)); }
-.wizard .wz-step.done { background: color-mix(in srgb, var(--good) 15%, var(--paper)); }
-.wizard .wz-step.skipped { background: var(--paper-2); }
-.wizard .wz-step.failed { background: color-mix(in srgb, var(--bad) 15%, var(--paper)); border-color: var(--bad); }
-.wizard .wz-step.pending { color: var(--muted); }
 .wizard .wz-log { margin: 0; min-height: 220px; max-height: 340px; overflow: auto; padding: 10px 12px; background: var(--ink); color: var(--paper); border: 3px solid var(--ink); border-radius: 12px; font: 12px/1.45 ui-monospace, 'Cascadia Mono', Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 640px) {
   .wizard .wz-q-answer { flex-direction: column; align-items: stretch; }

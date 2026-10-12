@@ -183,7 +183,7 @@ export async function openWizard(opts: WizardOptions) {
         render();
       },
     );
-    nav.replaceChildren(h('span.wz-running', {}, editing ? '✏️ Setup answers' : '⚙️ Project setup'));
+    nav.replaceChildren(h('span.wz-running', {}, '⚙️ Project setup'));
     body.replaceChildren(progress.el);
     const another = h('button.btn', { type: 'button', title: 'Leave this setup to carry on, and start another project' }, '➕ Another project');
     another.addEventListener('click', () => {
