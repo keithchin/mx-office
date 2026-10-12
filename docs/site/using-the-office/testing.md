@@ -4,7 +4,7 @@ description: App Insights › Testing - the project's test runs, each bound to t
 weight: 16.5
 ---
 
-The **Testing** page (**App Insights › Testing** in the Portal navigation, `/lite?tab=testing`) shows the project's test evidence and what it really proves. It never changes the repository or GitHub. Admins can set the verification policy and give waivers (see [Verification policy and waivers](#verification-policy-and-waivers)); everything else is read-only.
+The **Testing** page (**App Insights › Testing** in the Portal navigation, `/lite?tab=testing`) shows the project's test evidence and what it really proves. It never changes the repository or GitHub. Admins can set the verification policy and give waivers (see [Verification policy and waivers](#verification-policy-and-waivers)), and start the office's own mxcli runs (see [Quality](#quality) and [Microflow tests](#microflow-tests)); everything else is read-only.
 
 ![The Testing page](../images/testing.png "The Testing page: main and the Stage 6 gate, the three counts, the test plan, a row per use case and the runs")
 
@@ -25,6 +25,7 @@ Where the records come from (nothing new is asked of GitHub):
 - **pr-checks runs.** The Board's check results on a pull request's head commit, and the pr-checks run the Board fetches when you hover a PR card. The run's head commit is both the tested and the tests-from revision. The evidence is the CI run.
 - **Report files** on main: the JSON reports under `reports/testing/` and the toolkit's `docs/report.json`. The evidence revision is the commit that last added or changed the file. The tested revision comes only from the file itself (`appRevision`, `testedRevision`, or `project.gitCommit` in `docs/report.json`), the tests-from revision from `testRevision`. Otherwise both are unknown.
 - **The office's own gate-check** of main, which the setup panel runs when main moves. The commit gate-check read is both revisions. The evidence is the office's store.
+- **The office's own microflow test runs** (see [Microflow tests](#microflow-tests)): the work folder's commit is both revisions, the evidence the JUnit file in the office's store.
 
 Reading the same run or report again never records it twice. The records are kept in `<data>/testing/<project>.jsonl`, append-only and hash-chained like the audit log.
 
@@ -32,7 +33,7 @@ Reading the same run or report again never records it twice. The records are kep
 
 - **main at** the commit main is on. **Stale** shows when no run has tested that commit yet.
 - **Stage 6 gate**: gate-check's verdict for Test, from the office's own run on main, or else the committed `index.html` (which may be older than main).
-- **Runs on main**: each suite that ran on exactly main's commit, and its result.
+- **Runs on main**: each suite that ran on exactly main's commit, and its result (**Harness error** when the run couldn't reach a verdict).
 - Three counts, kept apart: **Coverage** (per acceptance criterion), **Results** (per use case, latest run) and **Freshness** (per use case, against main).
 
 ## Coverage, result and freshness
@@ -102,12 +103,55 @@ When a task is *Merged, not verified*, its Needs you item offers:
 
 The office raises it once per task and merge commit, and never nudges the agent about it.
 
+## Quality
+
+The **Quality** card, under the header, shows how the app scores on mxcli's own checks, per commit:
+
+- The six scores of `mxcli report` (**Security**, **Quality**, **Architecture**, **Performance**, **Naming**, **Design**) and the **Overall** score, all from one commit and one mxcli version, which the card names together with the catalog schema and the Mendix version. A score the report didn't give shows as **–**, never as 0.
+- A small trend beside each score: one bar per recorded commit, the last 10, newest on the right. Hover a bar for its commit and score.
+- **Lint**: `mxcli lint`'s findings by severity (errors, warnings, info, hints) and the rules with the most findings.
+- **Rules that could not run**: lint rules or catalog reads that failed, so their findings are missing rather than zero (from the JSON's `ruleFailures` where mxcli writes it, and from what lint says on stderr, such as *lint could not read the catalog for …*). When none failed the card says so.
+- **Stale** when main has moved since the scored commit, **Current** when it hasn't.
+
+How the scores are made:
+
+- The office works them out **once for each new main commit** (when the Testing page or the Board's poll sees main move), and again only for a different mxcli version: scoring the same commit with the same mxcli twice keeps one record. At most one quality run per project at a time. While the project's agents are working it waits, for up to 30 minutes.
+- An admin can also click **Score main now**.
+- Each run happens in the **office's own work folder** (`<data>/testing/work/<project>/quality`), a fresh copy of that commit made from the project's git objects, wiped before and after. It never runs in the project's checkout or an agent's worktree, because mxcli's catalog refresh rewrites `.ai-context/skills/widgets/` and creates `.claude/skills/widgets/` in the folder it runs in.
+- On travel-approval a run takes about 19 s: about 3 s for the copy, 14 s for `report` (it builds the catalog from scratch in the fresh folder), 1.2 s for `lint` and 0.6 s to read the catalog's schema.
+- The records are kept in `<data>/testing/quality/<project>.jsonl` (append-only, hash-chained), and the raw report and lint JSON in `<data>/testing/evidence/<project>/`.
+
+## Microflow tests
+
+An admin can click **Run microflow tests on main** on the Quality card. The office then:
+
+1. makes a fresh copy of main's commit in its own work folder (`<data>/testing/work/<project>/tests`), never the project's checkout;
+2. runs `mxcli test <the .test.mdl and .test.md files> -p <app>.mpr --local --require-assertions --junit <file>` there, with a 15-minute timeout and one run at a time per project;
+3. keeps the JUnit file in `<data>/testing/evidence/<project>/` and records the run, then wipes the work folder.
+
+The run record says:
+
+- **Tested app** and **Tests from**: both the work folder's commit.
+- **Evidence**: the JUnit file in the office's store.
+- What ran it: the mxcli version, the runtime (`local`) and the Mendix version the model reports, plus when it started and finished.
+- Each test by its file and `@test` name (`tests/core.test.mdl#Request number: …`), never mxcli's positional `test_1`, with its assertion count.
+
+How results are read:
+
+- JUnit `<failure>` is **Failed**. `<skipped>` is **Skipped**.
+- JUnit `<error>` is a **harness error**: the test never reached a verdict (it threw outside its assertions, or asserted nothing, which `--require-assertions` makes an error). A harness error never counts as passed, never as a failed business rule, and never meets a required check.
+- mxcli's exit code 1 means both "a test failed" and "the run broke", so the office never reads it on its own: the JUnit content decides. When mxcli writes no JUnit at all (no Mendix runtime, a timeout, a start failure), the whole run is shown as **Harness error, not failed tests**.
+- A JUnit file found in the repository is never imported by itself: only the file from a run the office started counts as evidence.
+
+`mxcli test --local` needs a Mendix runtime on the office's machine, so the run can fail to start; that's recorded as a harness error. In test mode only a fake mxcli runs.
+
 ## Test first
 
 Two light prompts, nothing blocks:
 
 - When the build plan (Stage 4) has passed and Stage 5 isn't confirmed yet, Needs you shows **N acceptance criteria have no linked test**. It's raised once and its count is kept up to date.
 - The Playbooks ask the Tester Lead to write or extend a task's test first and name the criteria it covers, and developers to run the task's tests before opening a pull request and to put `Covers: AC-xx, BRyyy` in its description. The office reads that line as a **recorded** link.
+- New microflow tests are run with `mxcli test --require-assertions`, and whoever writes the model checks what uses an entity or microflow first (`mxcli refs`, `impact` or `context`, which only read the catalog) and keeps the widget docs that `lint`, `report` and `refresh catalog` rewrite out of commits.
 
 ## Acceptance
 
@@ -115,4 +159,4 @@ When the Project Manager accepts a delivery, the acceptance record also keeps th
 
 ## Not in this release
 
-Per-task usage, task and attempt ids, and changes to the Board come in later releases.
+Per-task usage, task and attempt ids, and changes to the Board come in later releases. `mxcli playwright verify` isn't imported: the projects' own end-to-end JSON reports stay the source for UI tests.

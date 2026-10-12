@@ -452,3 +452,18 @@ test('test first: the Tester Lead writes the test first and names its criteria; 
   assert.doesNotMatch(playbook('lead-designer', ctx()), /Covers: AC-/);
   assert.doesNotMatch(playbook('lead-developer', ctx()), /Test first:/);
 });
+
+test('microflow tests run with --require-assertions; whoever writes the model checks impact first and keeps widget docs out of commits', () => {
+  for (const role of ['lead-tester', 'solo-lead'] as const) {
+    const text = playbook(role, ctx(role === 'solo-lead' ? { coverage: defaultCoverage('solo') } : {}));
+    assert.match(text, /mxcli test <file> -p <app>\.mpr --require-assertions/, role);
+    assert.match(text, /a test that asserts nothing is an error, never a pass/, role);
+  }
+  for (const role of ['lead-developer', 'solo-lead'] as const) {
+    const text = playbook(role, ctx(role === 'solo-lead' ? { coverage: defaultCoverage('solo') } : {}));
+    assert.match(text, /Before changing an entity or microflow, see what uses it: `mxcli refs`, `mxcli impact` or `mxcli context/, role);
+    assert.match(text, /never commit those changes \(`git checkout -- \.ai-context\/skills\/widgets`, delete `\.claude\/skills\/widgets\/`\)/, role);
+  }
+  assert.doesNotMatch(playbook('lead-designer', ctx()), /--require-assertions|mxcli impact/);
+  assert.doesNotMatch(playbook('lead-developer', ctx()), /--require-assertions/);
+});
