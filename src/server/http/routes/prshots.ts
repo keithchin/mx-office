@@ -6,6 +6,7 @@ import { prShotsOf } from '../../prshots/index.js';
 import { send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
+import { ingestPrChecks } from '../../testing/index.js';
 
 const prNumber = (url: URL) => {
   const n = Number(url.searchParams.get('pr'));
@@ -25,7 +26,10 @@ export const prShotRoutes = {
       if (!floor.def.repo) return send(res, 200, { pr, rows: [], shots: [], note: 'This floor has no GitHub repository' });
       const head = floor.github.pulls.items.find((p) => p.number === pr)?.headRefName;
       try {
-        return send(res, 200, await prShotsOf(ctx).checks(floor.def.repo, floor.dir, pr, head));
+        const checks = await prShotsOf(ctx).checks(floor.def.repo, floor.dir, pr, head);
+        // A finished pr-checks run becomes a test-run record (server/testing/); nothing more is fetched for it.
+        void ingestPrChecks(ctx.cfg.dataDir, floor, checks, head);
+        return send(res, 200, checks);
       } catch (err) {
         return send(res, 502, { error: (err as Error).message });
       }

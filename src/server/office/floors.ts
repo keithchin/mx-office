@@ -15,6 +15,7 @@ import { chatterOf } from '../chatter/office.js';
 import { incidentsOnWorker } from '../incidents/office.js';
 import { budgetOf } from '../budget/index.js';
 import { forgetWorker, noteWorkerStatus } from '../project-run/turns.js';
+import { ingestPulls } from '../testing/index.js';
 
 /**
  * Tells the project team about a worker, unless the floor is still being built. A floor restores its
@@ -161,6 +162,8 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
     floor: (id) => floors.get(id),
     pullsChanged: (floor) => {
       auditGitHub(floor, 'pulls');
+      // Each decided check rollup on a PR head becomes a test-run record (server/testing/).
+      void ingestPulls(ctx.cfg.dataDir, floor);
       for (const f of floors.values()) if (f !== floor && worksIn(f, floor)) f.sendLandedHome();
     },
     issuesChanged: (floor) => {
