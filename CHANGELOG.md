@@ -23,6 +23,12 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 - **The New project brief says honestly what approving does.** Approving now reads *records your scope decision for ✋ Stage 0 in PROJECT.md. Stage 0 passes when the Chief Analyst’s triage is signed off.*, and the folded brief says *✋ Stage 0 scope · approved by you*. The toolkit passes Stage 0 on triage.md’s sign-off, not on the PROJECT.md row, so Stage 0 stays pending until then, as before.
 - **Hiring no longer holds up the office on a busy machine.** A hire’s Playbook, subagent files and journals are now read and written off the main thread, so a slow disk can’t freeze the pages for a moment while they are written. The same files as before.
+- **A confirmation said in the chat is recorded.** When you tell the Chief Analyst something that was already in the brief, the item now says *confirmed by you in the chat · 10:44* (Answered, even if it was Assumed), is highlighted in the reply and moves the DRAFT version on; before, the reply said so but the brief showed no change.
+- **PROJECT.md agrees with itself.** Every item still Assumed at the approval is also listed under *Assumptions (ASSUMED, unresolved)* instead of *None yet.*, and the brief's open questions fill the *Open questions* table (`OQ-01`…, `OPEN`), so the setup panel lists them as questions still to answer.
+- **Unknowns are open questions, not assumptions.** The Chief Analyst is told that something not stated is an open question and an assumption is a concrete default it chose; an "assumed" item that only says something is not stated, unknown or unclear becomes an open question. Open questions keep the document that raised them (*open question (from workshop.pdf p.3)*).
+- **Role statements say who wrote them.** A role's *When I…, I need to…* statement that the Chief Analyst wrote says *Statement drafted by the Chief Analyst* (in the brief, `docs/project-brief.md` and the intake answers) instead of borrowing the role's Answered tag, until you edit or confirm the role.
+- **The drafting estimate matches the bill.** The start page priced `sonnet` at an old $3/$15 per million tokens while the CLI runs Sonnet 5.5 at $2/$10; it now uses the price the office books, and covers the brief, one chat message and the domains: about $0.15 for a draft like the first real one ($0.125), where it said $0.20 before.
+- **No doubled punctuation** ("kiosk.; Host", "90 days..") in the intake answers and the Discovery issue built from the brief.
 
 ## 2026-10-12 · release 39 (`d5a85e7`)
 

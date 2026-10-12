@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { applyOp, attachProblem, changedIds, cleanBrief, counts, emptyBrief, mergeTurn, safeFileName, ATTACH_MAX_BYTES, ATTACH_MAX_FILES, ATTACH_TYPES, START_MODES, type AttachmentNote, type ItemOp, type PlannerStatus, type StartMode } from '../../../shared/brief.js';
 import { interviewModeOf } from '../../../shared/wizard.js';
-import { priceOf } from '../../usage.js';
+import { priceOf, resolvedModel } from '../../usage.js';
 import { resolveCommand } from '../../workers/process.js';
 import { childEnv } from '../../workers/env.js';
 import { testModeOf } from '../../testmode.js';
@@ -50,8 +50,14 @@ export function plannerConfig(env: NodeJS.ProcessEnv = process.env): PlannerConf
   };
 }
 
-/** Rough sizes of a draft's two calls, for the start page's "about $…": the brief and the domains. */
-const EST = { inTokens: 6_000, briefOut: 3_500, domainsOut: 3_000, tokensPerMb: 80_000 };
+/**
+ * Rough sizes of a draft's calls, for the start page's "about $…": the brief, one chat turn and the
+ * domains, every input token priced as a cache write (what the CLI sends it as). From the first real
+ * run (2026-10-12, Sonnet 5.5, a 0.056 MB PDF): brief about 11,000 in (with the PDF) and 2,900 out,
+ * $0.049; chat 5,700 in and 3,300 out, $0.047; domains 4,200 in and 1,800 out, $0.029; $0.125 in all.
+ * Rounded up, these give $0.150 for that draft.
+ */
+const EST = { brief: [7_000, 3_500], chat: [6_000, 3_500], domains: [4_500, 2_500], tokensPerMb: 80_000 } as const;
 const FAILS_BEFORE_PAUSE = 3;
 const PAUSE_MS = 10 * 60_000;
 /** Text read from each attached file, and from all of them, at most. */
@@ -102,8 +108,9 @@ export class Planner {
 
   status(): PlannerStatus {
     const fake = this.engine.kind === 'fake';
-    const [pin, pout] = priceOf(this.config.model);
-    const call = (inT: number, outT: number) => (inT * pin * 1.25 + outT * pout) / 1e6;
+    // Priced as the meter will book it: the model the CLI runs for the alias (sonnet: claude-sonnet-5-5).
+    const [pin, pout] = priceOf(resolvedModel(this.config.model));
+    const call = ([inT, outT]: readonly [number, number]) => (inT * pin * 1.25 + outT * pout) / 1e6;
     const why = this.unavailable();
     return {
       available: !why,
@@ -111,7 +118,7 @@ export class Planner {
       fake,
       model: fake ? 'test planner' : this.config.model,
       capUsd: this.config.capUsd,
-      estimateUsd: fake ? 0 : call(EST.inTokens, EST.briefOut) + call(EST.inTokens + EST.briefOut, EST.domainsOut),
+      estimateUsd: fake ? 0 : call(EST.brief) + call(EST.chat) + call(EST.domains),
       perMbUsd: fake ? 0 : (EST.tokensPerMb * pin * 1.25) / 1e6,
       limits: { maxFiles: ATTACH_MAX_FILES, maxBytes: ATTACH_MAX_BYTES, types: [...ATTACH_TYPES] },
     };

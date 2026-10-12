@@ -22,18 +22,24 @@ export const SECTION_INFO: Record<SectionId, { title: string; status: string; ti
   questions: { title: 'Open questions', status: 'Listing what I couldn’t find…', tip: 'Open questions stay Unverified until someone answers them.', prefix: 'q' },
 };
 
-/** How a person settled an item in the brief. */
-export type SettledHow = 'confirmed' | 'edited' | 'added' | 'chat';
+/** How a person settled an item in the brief: "chat-confirmed" is an item already in the brief that they confirmed in the chat. */
+export type SettledHow = 'confirmed' | 'edited' | 'added' | 'chat' | 'chat-confirmed';
+const SETTLED: readonly string[] = ['confirmed', 'edited', 'added', 'chat', 'chat-confirmed'];
+
+/** A role's "When I…" statement the Chief Analyst wrote itself (nobody said it in those words). */
+export const DRAFTED = 'drafted by the Chief Analyst';
 
 export interface BriefItem {
   id: string;
   text: string;
   tag: BriefTag;
-  /** Where it came from: "from your description", "from notes.pdf p.2", "inferred from …", "open question". */
+  /** Where it came from: "from your description", "from notes.pdf p.2", "inferred from …", "open question (from notes.pdf p.3)". */
   source: string;
   /** User roles: the role's name and its "When I… I need to…" statement (`text` is what the role is). */
   name?: string;
   when?: string;
+  /** Where the statement came from: DRAFTED unless the person or a document says it ("from notes.pdf p.1"). */
+  whenSource?: string;
   /** Scope: in or out. */
   side?: 'in' | 'out';
   /** A person settled it here: confirmed, edited, added it, or said it in the chat. */
@@ -163,7 +169,7 @@ export interface PlannerStatus {
   model: string;
   /** The per-draft cap, USD. */
   capUsd: number;
-  /** About what a draft costs (the brief and the domains), USD, before attachments; and per MB attached. */
+  /** About what a draft costs (the brief, one chat turn and the domains), USD, before attachments; and per MB attached. */
   estimateUsd: number;
   perMbUsd: number;
   limits: { maxFiles: number; maxBytes: number; types: string[] };
@@ -196,6 +202,26 @@ const str = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\r/
 const isTag = (v: unknown): v is BriefTag => (BRIEF_TAGS as readonly unknown[]).includes(v);
 /** A source that says the item wasn't given but worked out. */
 const INFERRED = /^(inferred|assum|guess|a common|common|typical|probabl|likely|default|usual)/i;
+/** An "assumption" that only says something isn't known: that's an open question, not a default anyone chose. */
+const UNKNOWN = /\b(not stated|unknown|unclear|not specified)\b/i;
+/** A source the model said came from the chat. */
+export const FROM_CHAT = /^from (the|our) chat/i;
+
+/** An open question's source: "open question", keeping where it came from ("open question (from notes.pdf p.3)"). */
+function questionSource(source: string): string {
+  const s = source.trim();
+  if (/^open question/i.test(s)) return s;
+  return /^from /i.test(s) && !FROM_CHAT.test(s) ? `open question (${s})` : 'open question';
+}
+
+/** A role's statement source: kept when it names where the words came from, else drafted. */
+const whenSourceOf = (v: unknown) => {
+  const s = str(v, 200);
+  return /^from /i.test(s) ? s : DRAFTED;
+};
+
+/** Whether a role's statement is still the Chief Analyst's own wording (a person who confirmed, edited or added the role made it theirs). */
+export const whenDrafted = (it: BriefItem) => !!it.when && (it.whenSource ?? DRAFTED) === DRAFTED && !(it.by && it.by.how !== 'chat' && it.by.how !== 'chat-confirmed');
 
 export const emptyBrief = (title = ''): Brief => ({ title, description: '', sections: { goal: [], success: [], roles: [], scope: [], constraints: [], questions: [] } });
 
@@ -205,7 +231,7 @@ export const emptyBrief = (title = ''): Brief => ({ title, description: '', sect
  * item says it was inferred.
  */
 export function honestItem(it: BriefItem, section: SectionId): BriefItem {
-  if (section === 'questions') return { ...it, tag: 'unverified', source: it.source || 'open question', by: undefined };
+  if (section === 'questions') return { ...it, tag: 'unverified', source: questionSource(it.source), by: undefined };
   if (it.by) return { ...it, tag: 'answered' };
   const source = it.source.trim();
   if (it.tag === 'answered' && (!source || INFERRED.test(source))) return { ...it, tag: 'assumed', source: source || 'inferred (no source given)' };
@@ -220,13 +246,13 @@ function cleanItem(raw: unknown, section: SectionId, id: string): BriefItem | un
   const name = section === 'roles' ? str(r.name, 80) : '';
   if (!text && !name) return undefined;
   const by = r.by && typeof r.by === 'object' ? (r.by as Record<string, unknown>) : undefined;
-  const how = ['confirmed', 'edited', 'added', 'chat'].includes(by?.how as string) ? (by!.how as SettledHow) : undefined;
+  const how = SETTLED.includes(by?.how as string) ? (by!.how as SettledHow) : undefined;
   const item: BriefItem = {
     id: /^[a-z][a-z0-9-]{0,30}$/i.test(String(r.id ?? '')) ? String(r.id) : id,
     text,
     tag: isTag(r.tag) ? r.tag : 'assumed',
     source: str(r.source, 200),
-    ...(section === 'roles' ? { name: name || 'Unnamed role', when: str(r.when, 400) } : {}),
+    ...(section === 'roles' ? { name: name || 'Unnamed role', when: str(r.when, 400), whenSource: whenSourceOf(r.whenSource) } : {}),
     ...(section === 'scope' ? { side: r.side === 'out' ? ('out' as const) : ('in' as const) } : {}),
     ...(how && str(by!.name, 80) ? { by: { name: str(by!.name, 80), at: str(by!.at, 40), how } } : {}),
   };
@@ -242,13 +268,21 @@ export function cleanBrief(raw: unknown): Brief | undefined {
   out.description = str(r.description, 300).replace(/\n+/g, ' ');
   const seen = new Set<string>();
   let any = false;
+  /** "Assumed" items that only say something isn't known: they become open questions (the last section). */
+  const unknowns: BriefItem[] = [];
   for (const s of SECTION_IDS) {
     const list = Array.isArray(secs[s]) ? (secs[s] as unknown[]).slice(0, 40) : [];
     if (Array.isArray(secs[s])) any = true;
     let n = 0;
-    for (const x of list) {
-      let it = cleanItem(x, s, `${SECTION_INFO[s].prefix}${++n}`);
+    const moved = s === 'questions' ? unknowns.splice(0) : [];
+    for (const x of [...list, ...moved]) {
+      let it = moved.includes(x as BriefItem) ? honestItem({ ...(x as BriefItem), id: `q${++n}` }, s) : cleanItem(x, s, `${SECTION_INFO[s].prefix}${++n}`);
       if (!it) continue;
+      if (s !== 'questions' && s !== 'roles' && it.tag === 'assumed' && !it.by && UNKNOWN.test(it.text)) {
+        const { side: _side, ...rest } = it;
+        unknowns.push(rest);
+        continue;
+      }
       if (s === 'scope' && it.side === 'out' && /^i\d+$/.test(it.id)) it = { ...it, id: it.id.replace(/^i/, 'o') };
       while (seen.has(it.id)) it = { ...it, id: `${SECTION_INFO[s].prefix}${++n}` };
       seen.add(it.id);
@@ -268,17 +302,21 @@ export function counts(b: Brief): { assumed: number; open: number; answered: num
 }
 
 const same = (a: BriefItem, b: BriefItem) => a.text === b.text && a.tag === b.tag && (a.name ?? '') === (b.name ?? '') && (a.when ?? '') === (b.when ?? '') && (a.side ?? '') === (b.side ?? '');
+/** Settled the same way by the same person (a confirmation in the chat is a change too). */
+const sameBy = (a: BriefItem, b: BriefItem) => (a.by?.how ?? '') === (b.by?.how ?? '') && (a.by?.name ?? '') === (b.by?.name ?? '') && (a.by?.at ?? '') === (b.by?.at ?? '');
 
-/** The ids of items new or changed in `next` against `prev`. */
+/** The ids of items new or changed in `next` against `prev`, including an item a person has now settled. */
 export function changedIds(prev: Brief | undefined, next: Brief): string[] {
   const old = new Map((prev ? allItems(prev) : []).map((x) => [x.id, x]));
-  return allItems(next).filter((x) => !old.has(x.id) || !same(old.get(x.id)!, x)).map((x) => x.id);
+  return allItems(next).filter((x) => !old.has(x.id) || !same(old.get(x.id)!, x) || !sameBy(old.get(x.id)!, x)).map((x) => x.id);
 }
 
 /**
  * A brief the model sent back after a chat turn, made to keep what the person settled: an item they
  * confirmed, edited or added keeps its words and its Answered tag unless the model changed it from what
  * they said in the chat ("from the chat"), and an item the model says came from the chat is the person's.
+ * An item already in the brief whose only change is its source, now the chat, is one the person
+ * confirmed in the chat ("confirmed by you in the chat"): Answered, and counted as a change.
  */
 export function mergeTurn(prev: Brief, next: Brief, who: { name: string; at: string }): Brief {
   const old = new Map(allItems(prev).map((x) => [x.id, x]));
@@ -287,10 +325,13 @@ export function mergeTurn(prev: Brief, next: Brief, who: { name: string; at: str
   for (const s of SECTION_IDS) {
     out.sections[s] = next.sections[s].map((it) => {
       const was = old.get(it.id);
-      const fromChat = /^from (the|our) chat/i.test(it.source);
+      const fromChat = FROM_CHAT.test(it.source);
       if (was?.by && !fromChat) return was;
-      if (fromChat && s !== 'questions' && (!was || !same(was, it))) return honestItem({ ...it, by: { name: who.name, at: who.at, how: 'chat' } }, s);
-      return it;
+      if (!fromChat || s === 'questions') return it;
+      if (!was || !same(was, it)) return honestItem({ ...it, by: { name: who.name, at: who.at, how: 'chat' } }, s);
+      // Only the source changed: the person re-confirmed the item, unless they had settled it already.
+      if (was.by || FROM_CHAT.test(was.source)) return was;
+      return honestItem({ ...it, tag: 'answered', by: { name: who.name, at: who.at, how: 'chat-confirmed' } }, s);
     });
   }
   return out;
@@ -359,7 +400,7 @@ export function sourceText(it: BriefItem, me?: string): string {
   if (!it.by) return it.source;
   const who = me && it.by.name === me ? 'you' : it.by.name;
   const at = /T(\d\d:\d\d)/.exec(it.by.at)?.[1] ?? '';
-  const how = it.by.how === 'chat' ? `from the chat with ${who}` : `${it.by.how} by ${who}`;
+  const how = it.by.how === 'chat' ? `from the chat with ${who}` : it.by.how === 'chat-confirmed' ? `confirmed by ${who} in the chat` : `${it.by.how} by ${who}`;
   return at ? `${how} · ${at}` : how;
 }
 

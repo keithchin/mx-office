@@ -1,0 +1,252 @@
+{
+  "reply": "The security desk and watch list were already in the brief from the workshop notes. I've now also marked them as confirmed by you in the chat, on the Security desk officer role and the watch-list scope item. Nothing else changed. Whether the check is manual or automatic is still open (q1).",
+  "title": "Visitor Registration",
+  "description": "An office visitor sign-in app with host approval and printed badges, replacing the paper visitor book at three offices.",
+  "goal": [
+    {
+      "id": "g1",
+      "text": "Replace the paper visitor book at the Lindenberg, Harbour Point and Eastgate offices with a digital sign-in, host approval and badge process.",
+      "tag": "answered",
+      "source": "from your description; offices named in visitor-process-workshop.pdf p.1"
+    },
+    {
+      "id": "g2",
+      "text": "Give the facilities manager a reliable list of who is in the building for evacuations.",
+      "tag": "answered",
+      "source": "from your description"
+    }
+  ],
+  "success": [
+    {
+      "id": "s1",
+      "text": "A visitor can sign in in under one minute.",
+      "tag": "answered",
+      "source": "from your description"
+    },
+    {
+      "id": "s2",
+      "text": "Hosts respond to approval requests fast. The target response time still has to be agreed.",
+      "tag": "answered",
+      "source": "from your description (\"hosts respond fast\"); no number given"
+    },
+    {
+      "id": "s3",
+      "text": "The in-building list is reliable for evacuations. Visitors who forget to sign out are not shown as still present, which is the paper book's problem today (about a third forget).",
+      "tag": "assumed",
+      "source": "inferred from your description and visitor-process-workshop.pdf p.1 (a third forget to sign out)"
+    },
+    {
+      "id": "s4",
+      "text": "No visitor gets past reception before the host or a named delegate has approved.",
+      "tag": "answered",
+      "source": "from visitor-process-workshop.pdf p.2"
+    },
+    {
+      "id": "s5",
+      "text": "Every badge shows the visitor's name, photo and host, and expires at 18:00 on the day it is issued.",
+      "tag": "answered",
+      "source": "from your description; expiry from visitor-process-workshop.pdf p.2"
+    },
+    {
+      "id": "s6",
+      "text": "The paper book is no longer used at any of the three offices.",
+      "tag": "assumed",
+      "source": "inferred from \"replace the paper visitor book\""
+    }
+  ],
+  "roles": [
+    {
+      "id": "r1",
+      "name": "Visitor",
+      "when": "When I arrive at an office, I need to sign in quickly at reception or a kiosk, so I can get my badge and meet my host.",
+      "text": "A guest who comes to an office for a meeting or interview.",
+      "tag": "answered",
+      "source": "from visitor-process-workshop.pdf p.1"
+    },
+    {
+      "id": "r2",
+      "name": "Host",
+      "when": "When my visitor arrives, I need to be notified and approve (or delegate approval) straight away, so I can keep my visitor from waiting.",
+      "text": "The employee the visitor is meeting. The host is responsible for the visitor in the building.",
+      "tag": "answered",
+      "source": "from your description; visitor-process-workshop.pdf p.1"
+    },
+    {
+      "id": "r3",
+      "name": "Receptionist",
+      "when": "When a visitor arrives, I need to check them in and print their badge, so I can get them to their host without paperwork.",
+      "text": "Greets visitors, checks them in and hands out badges.",
+      "tag": "answered",
+      "source": "from visitor-process-workshop.pdf p.1"
+    },
+    {
+      "id": "r4",
+      "name": "Security desk officer",
+      "when": "When a visitor is expected or walks in, I need to check them against the watch list, so I can stop a badge being issued to someone who should not enter.",
+      "text": "Checks visitors against the company watch list before a badge is issued. Issues a new badge when a visitor stays past 18:00.",
+      "tag": "answered",
+      "source": "from the chat; visitor-process-workshop.pdf p.1-2"
+    },
+    {
+      "id": "r5",
+      "name": "Facilities manager",
+      "when": "When there is an evacuation, I need an accurate list of who is in each building, so I can run the roll call and confirm everyone is out.",
+      "text": "Owns the process across the three offices and runs the evacuation roll call.",
+      "tag": "answered",
+      "source": "from visitor-process-workshop.pdf p.1"
+    }
+  ],
+  "scope": [
+    {
+      "id": "i1",
+      "side": "in",
+      "text": "Visitor sign-in at reception and on a kiosk.",
+      "tag": "answered",
+      "source": "from your description"
+    },
+    {
+      "id": "i2",
+      "side": "in",
+      "text": "Host notification and approval, including a named delegate.",
+      "tag": "answered",
+      "source": "from your description; delegate from visitor-process-workshop.pdf p.2"
+    },
+    {
+      "id": "i3",
+      "side": "in",
+      "text": "Badge printing with the visitor's name, photo and host.",
+      "tag": "answered",
+      "source": "from your description"
+    },
+    {
+      "id": "i4",
+      "side": "in",
+      "text": "Sign-out, and a live list of who is in the building for each office, for evacuations.",
+      "tag": "answered",
+      "source": "from your description; visitor-process-workshop.pdf p.1"
+    },
+    {
+      "id": "i5",
+      "side": "in",
+      "text": "Watch-list check by the security desk officer before a badge is issued. The check may be manual or automatic (see open questions).",
+      "tag": "answered",
+      "source": "from the chat; visitor-process-workshop.pdf p.1 and p.2"
+    },
+    {
+      "id": "i6",
+      "side": "in",
+      "text": "Badge expiry at 18:00 and deletion of visitor records after 90 days.",
+      "tag": "answered",
+      "source": "from visitor-process-workshop.pdf p.2"
+    },
+    {
+      "id": "o7",
+      "side": "out",
+      "text": "Parking space booking for visitors.",
+      "tag": "answered",
+      "source": "from visitor-process-workshop.pdf p.2"
+    },
+    {
+      "id": "o8",
+      "side": "out",
+      "text": "Contractor safety inductions, which the separate contractor portal handles.",
+      "tag": "answered",
+      "source": "from visitor-process-workshop.pdf p.2"
+    },
+    {
+      "id": "o9",
+      "side": "out",
+      "text": "Catering and meeting-room booking.",
+      "tag": "answered",
+      "source": "from visitor-process-workshop.pdf p.2"
+    }
+  ],
+  "constraints": [
+    {
+      "id": "c1",
+      "text": "Visitor records are deleted after 90 days. The facilities manager and the data protection officer decided this.",
+      "tag": "answered",
+      "source": "from visitor-process-workshop.pdf p.2"
+    },
+    {
+      "id": "c2",
+      "text": "Badges expire at 18:00 on the day of issue. A visitor who stays later needs a new badge from the security desk.",
+      "tag": "answered",
+      "source": "from visitor-process-workshop.pdf p.2"
+    },
+    {
+      "id": "c3",
+      "text": "A visitor may not go past reception until the host or a named delegate has approved.",
+      "tag": "answered",
+      "source": "from visitor-process-workshop.pdf p.2"
+    },
+    {
+      "id": "c4",
+      "text": "The app must work at three offices (Lindenberg, Harbour Point, Eastgate), at reception and on kiosks, and print badges.",
+      "tag": "answered",
+      "source": "from your description; visitor-process-workshop.pdf p.1"
+    },
+    {
+      "id": "c5",
+      "text": "The app stores visitor photos and personal data, so privacy rules such as GDPR probably apply. The data protection officer is already involved.",
+      "tag": "assumed",
+      "source": "inferred from the photo capture and the 90-day deletion rule; the regulation is not named"
+    },
+    {
+      "id": "c6",
+      "text": "The host notification channel, the badge printer models and the kiosk hardware are not stated.",
+      "tag": "assumed",
+      "source": "inferred from the description; none of these are named"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "text": "Should the watch-list check be automatic against the security team's list, or stay a manual check by the security desk officer? If automatic, where does the list live and how often is it updated (today it is printed weekly)?",
+      "tag": "unverified",
+      "source": "open question"
+    },
+    {
+      "id": "q2",
+      "text": "Do visitors need to sign a non-disclosure agreement at Harbour Point, where the lab is? If so, should it be signed on screen?",
+      "tag": "unverified",
+      "source": "open question"
+    },
+    {
+      "id": "q3",
+      "text": "How is a host notified (email, Teams, SMS or push), and which employee directory identifies hosts?",
+      "tag": "unverified",
+      "source": "open question"
+    },
+    {
+      "id": "q4",
+      "text": "How fast must a host respond, and what happens if there is no answer (escalate to the team, as reception does today, or to the delegate)?",
+      "tag": "unverified",
+      "source": "open question"
+    },
+    {
+      "id": "q5",
+      "text": "How is sign-out handled so that the in-building list stays accurate (kiosk sign-out, badge scan, or automatic removal at 18:00)?",
+      "tag": "unverified",
+      "source": "open question"
+    },
+    {
+      "id": "q6",
+      "text": "Can visitors be pre-registered by hosts before they arrive? The workshop mentions \"expected\" visitors.",
+      "tag": "unverified",
+      "source": "open question"
+    },
+    {
+      "id": "q7",
+      "text": "What badge printers and kiosk hardware exist at each office?",
+      "tag": "unverified",
+      "source": "open question"
+    },
+    {
+      "id": "q8",
+      "text": "Who may see the evacuation list, and does it need to work offline or on a phone during an evacuation?",
+      "tag": "unverified",
+      "source": "open question"
+    }
+  ]
+}
