@@ -150,6 +150,7 @@ export const routes: readonly Route[] = [
   progressRoutes.draft,
   progressRoutes.act,
   testingRoutes.view,
+  testingRoutes.change,
   wizardRoutes.wizard,
   toolkitRoutes.toolkit,
   connectionsRoutes.connections,

@@ -93,3 +93,18 @@
   .tst-card, .tst-head { padding: 10px; }
 }
 .tst-c-uc .tst-pill { margin-left: 6px; vertical-align: 1px; }
+
+/* The Verification panel (verification.ts, Testing release 2). */
+.tst-verify { display: flex; flex-direction: column; gap: 6px; }
+.tst-link { margin-left: 8px; font-size: 12px; font-weight: 700; color: var(--link); }
+.tst-vchecks, .tst-vtasks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.tst-vcheck { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 13px; color: var(--ink); padding: 4px 0; border-bottom: 1px solid var(--rule); }
+.tst-vcheck-k { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.tst-waiver { font-size: 12px; color: var(--link); font-weight: 600; overflow-wrap: anywhere; }
+.tst-vtask { padding: 6px 0; border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tst-vtask-h { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13px; color: var(--ink); overflow-wrap: anywhere; }
+.tst-waive { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; }
+.tst-wreason { flex: 1 1 220px; min-width: 0; font-size: 13px; padding: 4px 6px; border: 1px solid var(--rule-strong); border-radius: 4px; background: var(--paper); color: var(--ink); }
+.tst-wsel { max-width: 100%; font-size: 12px; }
+.tst-vwaivers summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.tst-vwaivers ul { margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--ink-2); }

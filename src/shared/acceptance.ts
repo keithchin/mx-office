@@ -8,6 +8,7 @@
 // Delivery closing (handover packs, wind-down) attaches to a record by its id later.
 
 import type { EvidenceRef } from './evidence/types.js';
+import type { TestingSummary } from './testing/verify.js';
 
 /** One fact the record cites: what it is, what the office found, and a gap's reason when it found nothing. */
 export interface EvidenceLine {
@@ -63,6 +64,8 @@ export interface AcceptanceRecord {
   deliverablesDigest?: string;
   /** What the record cites, as evidence refs (the trace and later Evals read these). */
   refs: EvidenceRef[];
+  /** Testing release 2: the Testing coverage summary and policy evaluation at the accepted commit (records before it have none). */
+  testing?: TestingSummary;
 }
 
 export interface Reopen {

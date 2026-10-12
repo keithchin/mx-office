@@ -438,3 +438,17 @@ test('whoever writes the model files the flows it creates in a folder per prefix
   }
   for (const role of ['lead-tester', 'lead-designer', 'pm'] as const) assert.doesNotMatch(playbook(role, ctx()), /FOLDER 'Actions'/);
 });
+
+test('test first: the Tester Lead writes the test first and names its criteria; developers run the tests and say what a PR covers', () => {
+  for (const role of ['lead-tester', 'solo-lead'] as const) {
+    const text = playbook(role, ctx(role === 'solo-lead' ? { coverage: defaultCoverage('solo') } : {}));
+    assert.match(text, /Test first: before a task is built, write or extend its test/, role);
+    assert.match(text, /name the criteria it covers in it \(`Covers: AC-04, BR012`\)/, role);
+  }
+  for (const role of ['lead-developer', 'solo-lead'] as const) {
+    const text = playbook(role, ctx(role === 'solo-lead' ? { coverage: defaultCoverage('solo') } : {}));
+    assert.match(text, /Before opening a pull request, run the task’s tests; put `Covers: AC-xx, BRyyy` in its description/, role);
+  }
+  assert.doesNotMatch(playbook('lead-designer', ctx()), /Covers: AC-/);
+  assert.doesNotMatch(playbook('lead-developer', ctx()), /Test first:/);
+});

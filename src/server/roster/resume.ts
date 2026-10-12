@@ -17,6 +17,9 @@ import type { RoleId } from '../../shared/roster/roles.js';
 import type { Roster } from './index.js';
 import { managerRole } from './coverage.js';
 import type { TeamFloor } from './types.js';
+import type { VerificationPolicy } from '../../shared/testing/policy.js';
+import type { TaskVerification } from '../../shared/testing/verify.js';
+import { reviveVerifyFields } from './task-verify.js';
 import { closedPrAsk, outcome, OUTCOME_V, type FinalOutcome, type Outcome, type PendingOutcome, type PullLook } from './task-outcome.js';
 
 export interface Assignment {
@@ -40,6 +43,10 @@ export interface Assignment {
   pending?: { kind: PendingOutcome; at: number; why: string; pr?: number; escalationId?: string };
   /** Its PR was closed unmerged and a newer one from the same worker replaced it. */
   superseded?: { pr: number; by: number };
+  /** Testing release 2 (task-verify.ts): this task's own verification policy, beating the project's. */
+  policy?: VerificationPolicy;
+  /** Testing release 2: an integrated task judged on its merge commit (only "verified" is delivered). */
+  verify?: TaskVerification;
 }
 
 /** A task's provenance: open, pending, or how it finished ("legacy": finished before outcomes were kept). */
@@ -85,6 +92,7 @@ export function reviveAssignment(raw: unknown): Assignment | undefined {
     ...(typeof r.issue === 'number' && Number.isInteger(r.issue) ? { issue: r.issue } : {}),
     ...(typeof r.doneAt === 'number' ? { doneAt: r.doneAt, doneWhy: typeof r.doneWhy === 'string' ? r.doneWhy.slice(0, 120) : 'finished' } : {}),
     ...reviveOutcome(r),
+    ...reviveVerifyFields(r),
   };
 }
 

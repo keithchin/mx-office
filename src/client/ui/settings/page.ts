@@ -16,6 +16,7 @@ import { workersSettings } from './workers';
 import { budgetPart, rosterPart, studioPart } from './project';
 import { advancedPart, appearancePart, incidentsPart } from './office';
 import { testingPart } from './testing';
+import { verificationPart } from './verification';
 import { dangerPart } from '../project-delete/danger';
 import { rerunSetupSetting } from '../../first-run/rerun';
 
@@ -48,6 +49,7 @@ export const SECTION_BUILDERS: Record<SettingsSectionId, (d: SettingsDeps) => Bu
   appearance: (d) => appearancePart(d),
   advanced: (d) => advancedPart(d),
   testing: () => testingPart(),
+  verification: () => verificationPart(),
   danger: () => dangerPart(),
 };
 

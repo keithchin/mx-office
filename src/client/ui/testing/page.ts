@@ -7,6 +7,8 @@ import type { TestingView } from '../../../shared/testing/view';
 import { h } from '../dom';
 import { markdownFile } from '../markdown';
 import { domainsPanel, header, planPanel, runsPanel } from './render';
+import { verificationPanel } from './verification';
+import type { VerificationView } from '../../../shared/testing/verify';
 import './testing.css';
 
 const AGAIN_MS = 20_000;
@@ -28,12 +30,32 @@ export function testingTab(root: HTMLElement) {
   let floor: string | null = null;
   let key = '';
   let asked = 0;
+  /** The Verification panel (release 2): fetched on its own, so the release 1 panels draw as they did. */
+  const vslot = h('div.tst-vslot');
+  const send = async (b: Record<string, unknown>): Promise<string | undefined> => {
+    const f = floor;
+    const res = await fetch('/api/testing/verification', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...b, floor: f, by: store.me.account?.name ?? store.profile.name }) }).catch(() => undefined);
+    const out = (await res?.json().catch(() => ({}))) as { error?: string } | undefined;
+    if (!res?.ok) return out?.error ?? 'the office could not be reached';
+    void loadVerification();
+    return undefined;
+  };
+  async function loadVerification() {
+    const f = floor;
+    if (!f) return;
+    try {
+      const v = await get<VerificationView>(`/api/testing?floor=${encodeURIComponent(f)}&part=verification`);
+      if (f === store.floor) vslot.replaceChildren(verificationPanel(v, send));
+    } catch (err) {
+      if (f === store.floor) vslot.replaceChildren(h('p.tst-muted', {}, `Couldn’t load the verification: ${(err as Error).message}`));
+    }
+  }
 
   const draw = (v: TestingView) => {
     if (v.cacheKey === key && body.childElementCount) return;
     key = v.cacheKey;
     const f = floor;
-    body.replaceChildren(header(v), planPanel(v, () => get<{ markdown: string }>(`/api/testing?floor=${encodeURIComponent(f ?? '')}&part=plan`), markdownFile), domainsPanel(v), runsPanel(v));
+    body.replaceChildren(header(v), vslot, planPanel(v, () => get<{ markdown: string }>(`/api/testing?floor=${encodeURIComponent(f ?? '')}&part=plan`), markdownFile), domainsPanel(v), runsPanel(v));
   };
 
   async function load(force = false) {
@@ -46,6 +68,7 @@ export function testingTab(root: HTMLElement) {
     if (f !== floor) {
       key = '';
       body.replaceChildren();
+      vslot.replaceChildren();
     }
     floor = f;
     const n = ++asked;
@@ -56,6 +79,7 @@ export function testingTab(root: HTMLElement) {
       loadedAt = Date.now();
       status.textContent = '';
       draw(v);
+      void loadVerification();
     } catch (err) {
       if (n !== asked) return;
       status.textContent = `Couldn’t load the testing view: ${(err as Error).message}`;

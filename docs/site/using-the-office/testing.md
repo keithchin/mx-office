@@ -4,7 +4,7 @@ description: App Insights › Testing - the project's test runs, each bound to t
 weight: 16.5
 ---
 
-The **Testing** page (**App Insights › Testing** in the Portal navigation, `/lite?tab=testing`) shows the project's test evidence and what it really proves. It's read-only: it never changes the repository, GitHub or any task.
+The **Testing** page (**App Insights › Testing** in the Portal navigation, `/lite?tab=testing`) shows the project's test evidence and what it really proves. It never changes the repository or GitHub. Admins can set the verification policy and give waivers (see [Verification policy and waivers](#verification-policy-and-waivers)); everything else is read-only.
 
 ![The Testing page](../images/testing.png "The Testing page: main and the Stage 6 gate, the three counts, the test plan, a row per use case and the runs")
 
@@ -60,6 +60,59 @@ Every link says how the office knows it:
 
 The page loads when you first open it and again when you come back to it (at most every 20 seconds), when you switch projects, or on **⟳ Refresh**. A new run on an unchanged commit shows at once.
 
+## Verification
+
+The **Verification** panel, under the header, answers a different question from the rest of the page: did a merged task's required checks pass on the commit that actually landed on the default branch? A check that passed on the pull request's head proves nothing about the merge commit, so the two are kept apart.
+
+- **Policy in force**: the checks this project requires, and whether that's the default or who set it.
+- **Newest integrated revision**: the merge commit of the newest merged pull request, and each required check's state on it.
+- **Merged tasks not verified**: the team's merged tasks that are *Merged, not verified* or *Passed on PR head, integrated revision not checked*, each with its pull request, merge commit, PR head and what's missing or failed.
+
+A merged task is in one of three states:
+
+| State | When |
+|---|---|
+| **Done (verified)** | Every required check passed, or was waived, on the merge commit. Only this counts as delivered. |
+| **Merged, not verified** | A required check failed, is missing or was skipped on the merge commit. The office asks you once in [Needs you](command-center.md#needs-you), with what failed or is missing and the options. |
+| **Passed on PR head, integrated revision not checked** | The pull request's head passed, and the merge commit has no results yet. Never counted as verified; no Needs you item. |
+
+Where merge-commit results come from: on each look at the pull requests (the Board's poll, never more often), the office also reads the default branch's newest pr-checks runs and the check runs on its newest commit, with two `gh` calls started off the main thread. A merged pull request's merge commit comes from the same pull-request list. Nothing is ever written to GitHub. A test office never starts its own `gh` for this.
+
+If your pr-checks workflow only runs on pull requests, merge commits never get results, and merged tasks stay *Passed on PR head, integrated revision not checked*. Run the workflow on pushes to the default branch too, or waive.
+
+## Verification policy and waivers
+
+The **verification policy** is the list of checks a merged task needs on its merge commit. Admins set it per project in [⚙️ Settings › ✅ Verification](/lite?tab=settings&section=verification), a short list of checkboxes:
+
+- **pr-checks run**, its overall conclusion;
+- the pr-checks scorecard rows: **Studio Pro mx check**, **Lint**, **Unit tests**, **E2E tests**;
+- **E2E journeys for the task's linked acceptance criteria**: applies only when the task's pull request says `Covers: AC-…`. Each criterion needs a test result on the merge commit that names it or one of its journeys.
+
+With nothing set, the default applies: **the pr-checks conclusion on the merge commit is required**, plus the linked-criteria rule for tasks that have linked criteria. A single task can have its own policy (`POST /api/testing/verification` with `action: "task-policy"`), which beats the project's. Every change is recorded in the audit log as `testing.policy`.
+
+Each required check on a revision is **passed**, **failed**, **missing** (it never ran on that revision), **skipped**, or **waived**. Missing and skipped never count as passed.
+
+A **waiver** accepts a check that didn't pass on one revision. It needs a named person and a reason, is recorded in the audit log as `testing.waive`, and is shown everywhere with who and why. Admins give one in the Verification panel: pick the check, write why, **Waive**. It counts for that check on that commit only.
+
+When a task is *Merged, not verified*, its Needs you item offers:
+
+- **Re-run checks**: re-run the pr-checks workflow on GitHub yourself (or ask the agent to). The office never re-runs anything; it picks up the new run on its next look.
+- **Waive (with a reason)**: in the Verification panel, as above.
+- **Send back for rework**: your answer goes to the agent as its next prompt.
+
+The office raises it once per task and merge commit, and never nudges the agent about it.
+
+## Test first
+
+Two light prompts, nothing blocks:
+
+- When the build plan (Stage 4) has passed and Stage 5 isn't confirmed yet, Needs you shows **N acceptance criteria have no linked test**. It's raised once and its count is kept up to date.
+- The Playbooks ask the Tester Lead to write or extend a task's test first and name the criteria it covers, and developers to run the task's tests before opening a pull request and to put `Covers: AC-xx, BRyyy` in its description. The office reads that line as a **recorded** link.
+
+## Acceptance
+
+When the Project Manager accepts a delivery, the acceptance record also keeps the Testing summary at the accepted commit: the coverage, result and freshness counts, and the verification policy's evaluation there. Records from before this change are left as they were.
+
 ## Not in this release
 
-Verification policies, "Done (verified)", waivers, per-task usage and changes to the Board come in later releases.
+Per-task usage, task and attempt ids, and changes to the Board come in later releases.

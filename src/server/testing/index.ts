@@ -50,7 +50,7 @@ export function ingestPulls(dataDir: string, floor: FloorLike): Promise<TestRunR
 /** pr-checks answered for a pull request (or a branch): its finished run is a record. */
 export function ingestPrChecks(dataDir: string, floor: FloorLike, checks: PrChecks, branch?: string): Promise<TestRunRecord[]> {
   const pull = floor.github.pulls.items.find((p) => p.number === checks.pr);
-  const d = draftFromPrChecks(repoOf(floor), checks, { branch: branch ?? pull?.headRefName, title: pull?.title });
+  const d = draftFromPrChecks(repoOf(floor), checks, { branch: branch ?? pull?.headRefName, title: pull?.title, body: pull?.body });
   return d ? testingStore(dataDir, floor.id).ingest([d]).catch(() => []) : Promise.resolve([]);
 }
 
@@ -125,6 +125,28 @@ export async function testPlanText(floor: FloorLike): Promise<{ path: string; ma
   if (!repo.plan) return undefined;
   const markdown = await readPlan(floor.dir, main, repo.plan.path);
   return markdown === undefined ? undefined : { path: repo.plan.path, markdown, sha: main.sha };
+}
+
+/** Each acceptance criterion's journeys, from the facts already read at main (no git started for it). */
+export async function acJourneys(floorId: string): Promise<Map<string, string[]>> {
+  const had = facts.get(floorId);
+  const repo = had ? await had.p.catch(() => undefined) : undefined;
+  return new Map((repo?.acs ?? []).map((a) => [a.id, a.journeys]));
+}
+
+/**
+ * The Testing coverage summary at `commit` (Testing release 2, for the acceptance record): the counts of
+ * coverage, results and freshness, the facts read at main and freshness measured against `commit`.
+ */
+export async function testingAt(dataDir: string, floor: FloorLike, commit: string, deps: TestingDeps = {}): Promise<TestingView> {
+  await testingView(dataDir, floor, deps);
+  const main = await mainOf(floor.dir);
+  const repo = main ? await factsAt(floor, main).catch(() => undefined) : undefined;
+  return buildTestingView(
+    floor.id,
+    { main: { branch: main?.branch ?? 'main', sha: commit }, brds: repo?.brds ?? [], acs: repo?.acs ?? [], tests: repo?.tests ?? [], notes: main && main.sha !== commit ? [`The files were read at main (${main.sha.slice(0, 7)}); freshness is against the accepted commit`] : [] },
+    await testingStore(dataDir, floor.id).all(),
+  );
 }
 
 /** The office's deps: the wizard's gate renders. */

@@ -61,6 +61,8 @@ export interface TestRunRecord {
   startedAt?: string;
   finishedAt?: string;
   results: TestResult[];
+  /** The run's own overall conclusion, when the source gave one apart from its results (a CI run's). Release 2; optional. */
+  conclusion?: ResultStatus;
   /** Links the whole run carries (a PR title naming BR012), beside each result's own. */
   links: Link[];
   actor: { kind: 'ci' | 'office' | 'repo'; name: string };

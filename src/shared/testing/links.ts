@@ -153,6 +153,18 @@ export function inferredLinks(text: string, where: InferWhere, via: string): Lin
   return out;
 }
 
+/**
+ * Recorded links from a pull request's "Covers: AC-04, BR012, J-02" line (the developers' Playbook asks
+ * for one): each id it names, kept as recorded, since the author said so. Nothing without that line.
+ */
+export function coversLinks(body: string | undefined, via: string): Link[] {
+  const out: Link[] = [];
+  for (const m of (body ?? '').replace(/\r/g, '').matchAll(/^[\s>*_-]*covers\**\s*:\s*\**(.+)$/gim)) {
+    for (const id of [...idsIn(m[1]), ...journeysIn(m[1])]) if (!out.some((l) => l.target === id)) out.push({ target: id, basis: 'recorded', via: `${via} (Covers:)` });
+  }
+  return out;
+}
+
 /** Links joined by target, a recorded one winning over an inferred one for the same target. */
 export function mergeLinks(...lists: Link[][]): Link[] {
   const by = new Map<string, Link>();
