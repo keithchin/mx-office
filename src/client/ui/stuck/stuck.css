@@ -1,15 +1,15 @@
 /* A stuck item's card (dialog.ts). */
-.st { width: min(640px, 94vw); }
-.st .body { display: flex; flex-direction: column; gap: 10px; max-height: 70vh; overflow-y: auto; }
-.st-title { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
-.st-part h3 { margin: 0 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-.st-part p { margin: 0; font-size: 14px; line-height: 1.4; }
-.st-list { margin: 0; padding-left: 18px; font-size: 14px; }
-.st-ev code { font-size: 12px; overflow-wrap: anywhere; }
-.st-answer { width: 100%; box-sizing: border-box; font: inherit; padding: 8px; border: 2px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
-.st-note { margin: 0; font-size: 13px; color: var(--ink-2); }
-.st-interrupt { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 10px; background: var(--warn-soft); }
-.st-whens { display: flex; flex-wrap: wrap; gap: 6px; }
-.st-when.on { background: var(--ink); color: var(--on-ink); }
-.st-status { margin: 0; font-size: 13px; color: var(--muted); min-height: 1em; }
-.st footer { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.stuckc { width: min(640px, 94vw); }
+.stuckc .body { display: flex; flex-direction: column; gap: 10px; max-height: 70vh; overflow-y: auto; }
+.stuckc-title { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+.stuckc-part h3 { margin: 0 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.stuckc-part p { margin: 0; font-size: 14px; line-height: 1.4; }
+.stuckc-list { margin: 0; padding-left: 18px; font-size: 14px; }
+.stuckc-ev code { font-size: 12px; overflow-wrap: anywhere; }
+.stuckc-answer { width: 100%; box-sizing: border-box; font: inherit; padding: 8px; border: 2px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
+.stuckc-note { margin: 0; font-size: 13px; color: var(--ink-2); }
+.stuckc-interrupt { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 10px; background: var(--warn-soft); }
+.stuckc-whens { display: flex; flex-wrap: wrap; gap: 6px; }
+.stuckc-when.on { background: var(--ink); color: var(--on-ink); }
+.stuckc-status { margin: 0; font-size: 13px; color: var(--muted); min-height: 1em; }
+.stuckc footer { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
