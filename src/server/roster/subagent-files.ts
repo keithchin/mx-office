@@ -5,6 +5,7 @@
 // can't dispatch it either); reinstating undoes both and keeps the warnings.
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { SubagentRecord } from '../../shared/roster/subagents.js';
 
@@ -64,27 +65,43 @@ export function placeDefinition(dir: string, name: string, text: string, benched
   return changed;
 }
 
-/** Denies (or allows again) dispatching `name` in the folder's .claude/settings.local.json, leaving everything else in it. */
-export function denyDispatch(dir: string, name: string, deny: boolean): boolean {
-  const file = path.join(dir, SETTINGS);
+/**
+ * The folder's .claude/settings.local.json (`raw`, undefined when there's none) with dispatching `name`
+ * denied (or allowed again), everything else in it left; undefined when nothing changes or the file is broken.
+ */
+function settingsAfter(raw: string | undefined, name: string, deny: boolean): string | undefined {
   let cfg: Record<string, unknown> = {};
   try {
-    if (existsSync(file)) cfg = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
+    if (raw !== undefined) cfg = JSON.parse(raw) as Record<string, unknown>;
   } catch {
     // a broken file is left alone
-    return false;
+    return undefined;
   }
   const perms = (cfg.permissions && typeof cfg.permissions === 'object' ? cfg.permissions : {}) as Record<string, unknown>;
   const list = Array.isArray(perms.deny) ? (perms.deny as unknown[]).filter((x): x is string => typeof x === 'string') : [];
   const rules = [`Agent(${name})`, `Task(${name})`];
   const next = deny ? [...new Set([...list, ...rules])] : list.filter((r) => !rules.includes(r));
-  if (next.length === list.length && next.every((r, i) => r === list[i])) return false;
+  if (next.length === list.length && next.every((r, i) => r === list[i])) return undefined;
   if (!next.length && !deny) delete perms.deny;
   else perms.deny = next;
   cfg.permissions = perms;
   if (!Object.keys(perms).length) delete cfg.permissions;
+  return `${JSON.stringify(cfg, null, 2)}\n`;
+}
+
+/** Denies (or allows again) dispatching `name` in the folder's .claude/settings.local.json, leaving everything else in it. */
+export function denyDispatch(dir: string, name: string, deny: boolean): boolean {
+  const file = path.join(dir, SETTINGS);
+  let raw: string | undefined;
+  try {
+    raw = existsSync(file) ? readFileSync(file, 'utf8') : undefined;
+  } catch {
+    return false;
+  }
+  const next = settingsAfter(raw, name, deny);
+  if (next === undefined) return false;
   mkdirSync(path.dirname(file), { recursive: true });
-  writeFileSync(file, `${JSON.stringify(cfg, null, 2)}\n`);
+  writeFileSync(file, next);
   return true;
 }
 
@@ -99,5 +116,62 @@ export function applyStanding(dir: string, rec: SubagentRecord, base?: string): 
   const text = base ?? (found ? readFileSync(found.file, 'utf8') : undefined);
   if (text !== undefined && placeDefinition(dir, rec.name, withStanding(text, rec), benched)) did.push(`${benched ? benchedDir : agentsDir}/${rec.name}.md`);
   if (denyDispatch(dir, rec.name, benched)) did.push(`${SETTINGS} (${benched ? 'denies' : 'allows'} Agent(${rec.name}))`);
+  return did;
+}
+
+// The same with node:fs/promises, for a hire's files (playbooks.ts writeRoleFilesSoon): the reads and
+// writes run on libuv's threads, so a slow disk (an antivirus scan, a loaded machine) never holds the loop.
+
+/** Its text, or undefined when there's no such file. */
+const readIf = (file: string) => readFile(file, 'utf8').catch((err: NodeJS.ErrnoException) => (err.code === 'ENOENT' ? undefined : Promise.reject(err)));
+
+async function definitionTextOf(dir: string, name: string): Promise<string | undefined> {
+  for (const rel of [agentsDir, benchedDir]) {
+    const text = await readIf(path.join(dir, rel, `${name}.md`));
+    if (text !== undefined) return text;
+  }
+  return undefined;
+}
+
+async function placeDefinitionAsync(dir: string, name: string, text: string, benched: boolean): Promise<boolean> {
+  const want = path.join(dir, benched ? benchedDir : agentsDir, `${name}.md`);
+  const other = path.join(dir, benched ? agentsDir : benchedDir, `${name}.md`);
+  let changed = false;
+  if ((await readIf(want)) !== text) {
+    await mkdir(path.dirname(want), { recursive: true });
+    await writeFile(want, text);
+    changed = true;
+  }
+  try {
+    await rm(other);
+    changed = true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+  }
+  return changed;
+}
+
+async function denyDispatchAsync(dir: string, name: string, deny: boolean): Promise<boolean> {
+  const file = path.join(dir, SETTINGS);
+  let raw: string | undefined;
+  try {
+    raw = await readIf(file);
+  } catch {
+    return false;
+  }
+  const next = settingsAfter(raw, name, deny);
+  if (next === undefined) return false;
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, next);
+  return true;
+}
+
+/** applyStanding off the event loop: the same files, the same answer. */
+export async function applyStandingAsync(dir: string, rec: SubagentRecord, base?: string): Promise<string[]> {
+  const did: string[] = [];
+  const benched = rec.state === 'benched';
+  const text = base ?? (await definitionTextOf(dir, rec.name));
+  if (text !== undefined && (await placeDefinitionAsync(dir, rec.name, withStanding(text, rec), benched))) did.push(`${benched ? benchedDir : agentsDir}/${rec.name}.md`);
+  if (await denyDispatchAsync(dir, rec.name, benched)) did.push(`${SETTINGS} (${benched ? 'denies' : 'allows'} Agent(${rec.name}))`);
   return did;
 }

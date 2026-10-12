@@ -111,7 +111,7 @@ test('the brief becomes intake answers Q2, Q4, Q5 and Q8, each item with its tag
   assert.equal(out.split('\n').filter(isAnswerLine).length, 4);
 });
 
-test('approving with items still Assumed records Stage 0 CONFIRMED and each assumption as ASSUMED', () => {
+test('approving with items still Assumed records the Stage 0 scope decision CONFIRMED and each assumption as ASSUMED', () => {
   const { brief } = fakeBrief([]);
   const confirmed = applyOp(brief, { op: 'confirm', id: 's2' }, who) as typeof brief;
   const pb: PlanBrief = { brief: confirmed, attachments: [], approved: { by: 'Alex Lee', at: '2026-10-12T10:45:00.000Z', assumed: counts(confirmed).assumed } };
@@ -131,6 +131,19 @@ test('approving with items still Assumed records Stage 0 CONFIRMED and each assu
   assert.equal(once.split('\n').filter((l) => l.startsWith('| 0 |')).length, rows.length);
   assert.equal(recordDecisions(once, [], rows), once);
   assert.match(once, /\| 0 \| Brief assumption c3: Visitor personal data is deleted after 30 days \(GDPR\)\. \| ASSUMED 2026-10-12 \|/);
+});
+
+test('the approve copy is honest: it records the Stage 0 scope decision; Stage 0 passes on the triage sign-off', () => {
+  // gate-check passes Stage 0 on triage.md's `## Sign-off` (and its capability map), not on a PROJECT.md row.
+  const plan = readFileSync(new URL('../src/client/ui/wizard/new/plan.ts', import.meta.url), 'utf8');
+  const view = readFileSync(new URL('../src/client/ui/wizard/new/brief-view.ts', import.meta.url), 'utf8');
+  const docs = readFileSync(new URL('../docs/site/get-started/first-project.md', import.meta.url), 'utf8');
+  for (const src of [plan, docs]) assert.ok(src.includes('Approving records your scope decision for ✋ Stage 0 in PROJECT.md. Stage 0 passes when the Chief Analyst’s triage is signed off.'));
+  assert.ok(plan.includes('Stage 0 passes when its triage is signed off.'), 'the approve dialog says when Stage 0 passes');
+  assert.ok(view.includes('✋ Stage 0 scope · approved by '));
+  for (const src of [plan, view, docs]) {
+    assert.doesNotMatch(src, /Stage 0 decision as CONFIRMED|Stage 0 recorded as confirmed|Stage 0 · confirmed by/);
+  }
 });
 
 test('docs/project-brief.md and the Discovery issue carry the brief, its tags, the domains and what Stage 0 still needs', () => {

@@ -210,7 +210,7 @@ export function briefPanel(flow: Flow, ctx: BriefPanelCtx) {
     const approved = !!d.approved;
     badge.className = approved ? 'nw-badge ok' : 'nw-badge draft';
     badge.textContent = approved ? 'APPROVED' : 'DRAFT';
-    approvedLine.textContent = approved ? `✋ Stage 0 · confirmed by ${d.approved!.by === flow.me ? 'you' : d.approved!.by} · ${hhmm(d.approved!.at)}${d.approved!.assumed ? ` · ${d.approved!.assumed} ASSUMED` : ''}` : '';
+    approvedLine.textContent = approved ? `✋ Stage 0 scope · approved by ${d.approved!.by === flow.me ? 'you' : d.approved!.by} · ${hhmm(d.approved!.at)}${d.approved!.assumed ? ` · ${d.approved!.assumed} ASSUMED` : ''}` : '';
     head.disabled = !approved;
     if (approved && !prev?.approved) {
       head.setAttribute('aria-expanded', 'false');

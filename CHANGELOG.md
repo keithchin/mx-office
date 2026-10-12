@@ -22,6 +22,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **The Overview is laid out as cards.** The progress bar is the Overview's Progress card, its stage names wrapping onto a second line instead of being cut off. The project console has left the middle of the page (it's the team-lead panel now), escalations are no longer above its box, and the Technical contact card is gone (the panel shows the lead). The other themes keep their Command Center, with the panel beside it; there, **Answer** on an escalation opens Approvals.
 - **Settings › You: the team-lead panel.** **Show the team-lead panel** (on by default) and **Team-lead panel view** (Chat or Terminal, the old Command Center terminal setting) are kept in this browser.
 
+### Fixed
+
+- **The New project brief says honestly what approving does.** Approving now reads *records your scope decision for ✋ Stage 0 in PROJECT.md. Stage 0 passes when the Chief Analyst’s triage is signed off.*, and the folded brief says *✋ Stage 0 scope · approved by you*. The toolkit passes Stage 0 on triage.md’s sign-off, not on the PROJECT.md row, so Stage 0 stays pending until then, as before.
+- **Hiring no longer holds up the office on a busy machine.** A hire’s Playbook, subagent files and journals are now read and written off the main thread, so a slow disk can’t freeze the pages for a moment while they are written. The same files as before.
+
 ## 2026-10-12 · release 39 (`d5a85e7`)
 
 ### New
