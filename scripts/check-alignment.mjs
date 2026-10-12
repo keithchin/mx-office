@@ -253,13 +253,13 @@ function MEASURE({ scope, not, lists, tol }) {
     if (Math.abs(dx) > tol || Math.abs(dy) > tol || b.width < a.width - 4) flag('ink', face, `the icon ${r2(b.width)}px, off its ${r2(a.width)}px circle's centre by x ${r2(dx)}, y ${r2(dy)}`);
   }
 
-  // Needs you in the Portal Overview: the console's column, its right edge on the console's.
-  const ny = document.querySelector('.lite-main.on-command > #needs-you');
-  const pmc = document.querySelector('.lite-main.on-command #summary > .pmc');
-  if (ny && pmc && inScope(ny) && visible(ny) && visible(pmc)) {
+  // Needs you in the Portal Overview: the main column's card, its edges on the recent activity's below it.
+  const ny = document.querySelector('.lite-main.on-command #pt-needs');
+  const act = document.querySelector('.lite-main.on-command #summary > .sm-activity');
+  if (ny && act && inScope(ny) && visible(ny) && visible(act)) {
     const a = ny.getBoundingClientRect();
-    const b = pmc.getBoundingClientRect();
-    if (Math.abs(a.right - b.right) > tol || Math.abs(a.left - b.left) > tol) flag('left', ny, `Needs you spans ${r2(a.left)}..${r2(a.right)}px, the project console ${r2(b.left)}..${r2(b.right)}px`);
+    const b = act.getBoundingClientRect();
+    if (Math.abs(a.right - b.right) > tol || Math.abs(a.left - b.left) > tol) flag('left', ny, `Needs you spans ${r2(a.left)}..${r2(a.right)}px, the recent activity ${r2(b.left)}..${r2(b.right)}px`);
   }
 
   // Stacked lists' left edges.

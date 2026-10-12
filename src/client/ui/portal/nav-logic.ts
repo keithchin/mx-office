@@ -46,7 +46,7 @@ const BUILTIN_GROUPS: readonly NavGroup[] = [
     label: 'General',
     icon: 'home',
     items: [
-      tab('command', 'Overview', 'The project at a glance: what needs you, the project console, the team and recent activity'),
+      tab('command', 'Overview', 'The project at a glance: what needs you, the team and recent activity'),
       tab('org', 'Team', 'The project team: the Project Coordinator and the Leads, who covers what'),
       tab('teams', 'Team boards', 'A board per team: its own cards, Lead, panels and journal'),
       tab('documents', 'Documents', 'Every team’s documents by toolkit stage: on main, on a branch, drafts and what’s still missing'),

@@ -15,10 +15,11 @@ const MODE: Record<StartMode, string> = {
 const RULES = [
   'Honesty rules, for every item:',
   '- tag "answered" only for what the person said or a document states; its source says where: "from your description", or "from <file name> p.<page>" (or "from <file name>" when it has no pages).',
-  '- tag "assumed" for anything you inferred, a sensible default or a guess; its source starts with "inferred from …" and says from what ("inferred from \\"hosts respond fast\\"", "a common retention period; not stated in your notes").',
-  '- "questions" are what you could not find out: tag "unverified", source "open question".',
+  '- tag "assumed" only for a concrete default you chose (a value, a rule, a behaviour: "visitor data is kept 30 days"); its source starts with "inferred from …" and says from what ("inferred from \\"hosts respond fast\\"", "a common retention period; not stated in your notes").',
+  '- Something not stated is an open question (unverified), not an assumption: never write an "assumed" item that only says something is not stated, unknown or unclear.',
+  '- "questions" are what you could not find out: tag "unverified", source "open question", or "open question (from <file name> p.<page>)" when a document raises it.',
   '- Never invent facts about the client, their systems or their numbers. When unsure, make it an open question.',
-  '- Write for a business reader, short and concrete. User roles get a "When I…, I need to…, so I can…" statement.',
+  '- Write for a business reader, short and concrete. User roles get a "When I…, I need to…, so I can…" statement. Its whenSource is "drafted" when you wrote it, or "from your description" / "from <file name> p.<page>" only when the person or a document says it in about those words; the role\'s tag and source are about the role itself.',
 ].join('\n');
 
 export function briefSystem(mode: StartMode): string {
@@ -42,7 +43,7 @@ export function chatSystem(mode: StartMode): string {
     'You are the Chief Analyst of a Mendix delivery team in Mx Office, planning a project with a person. You and they are refining its project brief together.',
     `The project is ${MODE[mode]}.`,
     'You get the brief as it is now (every item with its id, tag and source) and the person’s message. Answer briefly (two or three sentences, saying what you changed) and send the whole brief back with your changes.',
-    'Keep every item’s id. Give a new item no id. Items the person confirmed, edited or added (their source says "confirmed by", "edited by", "added by") stay as they are unless their message changes them.',
+    'Keep every item’s id, and every role’s whenSource unless the person gives the statement. Give a new item no id. Items the person confirmed, edited or added (their source says "confirmed by", "edited by", "added by") stay as they are unless their message changes them.',
     'What the person tells you in this message is "answered" with the source "from the chat". If they ask something you cannot settle, add it to the open questions.',
     RULES,
   ].join('\n\n');

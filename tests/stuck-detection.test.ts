@@ -405,3 +405,16 @@ test('no new gh calls, no GitHub writes, no synchronous fs or child processes in
   assert.doesNotMatch(src, /node:child_process|from '\.\.\/github\.js'|gh\(\[|api\.github\.com|octokit/i);
   assert.match(src, /from '\.\.\/testing\/repo\.js'/, 'repo reads go through the off-loop git reader');
 });
+
+test('the Overview Needs you card shows stuck items as actionable rows tagged Stuck, counted in "N waiting on you"', async () => {
+  const { rowModel } = await import('../src/client/ui/portal/needs-logic.js');
+  const { waitingCount } = await import('../src/client/ui/needsyou/feed.js');
+  const h = harness();
+  await h.svc.look(h.floor);
+  const v = await h.svc.view(h.floor, true);
+  const needs = collectNeeds({ floor: 'expense', workers: [], pulls: [], floors: [], stuck: { floor: 'expense', items: v.items }, now: NOW });
+  const row = rowModel(needs.find((n) => n.key === 'stuck-pr-51')!);
+  assert.equal(row.tag, 'Stuck');
+  assert.equal(row.tone, 'block');
+  assert.equal(waitingCount(needs), 3);
+});

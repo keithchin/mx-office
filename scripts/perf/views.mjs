@@ -10,13 +10,16 @@ const shown = (sel, min = 1) => `(() => {
   return !/^\\s*Loading/.test(el.textContent.slice(0, 80));
 })()`;
 
+/** The Command Center (the Overview) is up: its summary drawn and the team-lead panel docked beside it (ui/lead-panel/). */
+const overview = () => `(${shown('#summary', 5)} && ${shown('#lead-panel .lp-body', 5)})`;
+
 /** Every view, for the floor `f` (and the project switches to it from `other`, when there is one). */
 export function views(f, other) {
   const q = encodeURIComponent(f);
   const lite = (tab) => `/lite?floor=${q}&tab=${tab}`;
   return [
-    { id: 'cc-chat', name: 'Command Center (Chat)', path: lite('command'), storage: { 'agent-office.pmc-view': 'chat' }, ready: shown('#summary .pmc', 5) },
-    { id: 'cc-terminal', name: 'Command Center (Terminal)', path: lite('command'), storage: { 'agent-office.pmc-view': 'terminal' }, ready: shown('#summary .pmc', 5) },
+    { id: 'cc-chat', name: 'Command Center (Chat)', path: lite('command'), storage: { 'agent-office.pmc-view': 'chat' }, ready: overview() },
+    { id: 'cc-terminal', name: 'Command Center (Terminal)', path: lite('command'), storage: { 'agent-office.pmc-view': 'terminal' }, ready: overview() },
     { id: 'board', name: 'Board', path: lite('board'), ready: shown('#board', 10) },
     { id: 'org', name: 'Team: org chart', path: lite('org'), ready: shown('#team-view', 10) },
     { id: 'standup', name: 'Team: standup', path: lite('standup'), ready: shown('#team-view', 5) },
@@ -54,9 +57,9 @@ export function switches(f, other) {
   const pick = (ready) => [{ select: '#floor', value: f, ready, switch: true }];
   return [
     // From the Board: switching project lands on the new project's Command Center (shared/start-tab.ts), so that's what it waits for.
-    { id: 'switch-1d-board', name: 'Switch project: 1D, from the Board', path: from('lite', 'board'), soak: 3, ready: shown('#board', 5), steps: pick(onFloor(f, shown('#summary .pmc', 5))) },
-    { id: 'switch-1d-command', name: 'Switch project: 1D Command Center', path: from('lite', 'command'), soak: 3, ready: shown('#summary .pmc', 5), steps: pick(onFloor(f, shown('#summary .pmc', 5))) },
+    { id: 'switch-1d-board', name: 'Switch project: 1D, from the Board', path: from('lite', 'board'), soak: 3, ready: shown('#board', 5), steps: pick(onFloor(f, overview())) },
+    { id: 'switch-1d-command', name: 'Switch project: 1D Command Center', path: from('lite', 'command'), soak: 3, ready: overview(), steps: pick(onFloor(f, overview())) },
     { id: 'switch-2d', name: 'Switch project: 2D view', path: from('pixel'), soak: 3, ready: `(() => !!document.querySelector('canvas'))()`, steps: pick(onFloor(f, `!!document.querySelector('canvas')`)) },
-    { id: 'switch-home', name: 'Home → open a project', path: '/home?tab=projects', soak: 3, ready: shown('#projects-view', 5), steps: [{ click: `#projects-view a[href="/lite?floor=${q}"]`, nav: '/lite', ready: shown('#summary .pmc', 5), switch: true }] },
+    { id: 'switch-home', name: 'Home → open a project', path: '/home?tab=projects', soak: 3, ready: shown('#projects-view', 5), steps: [{ click: `#projects-view a[href="/lite?floor=${q}"]`, nav: '/lite', ready: overview(), switch: true }] },
   ];
 }

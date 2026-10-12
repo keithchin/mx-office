@@ -5,6 +5,7 @@
 import type { BudgetChoice } from './budget/levels.js';
 import type { TeamShape } from './roster/coverage.js';
 import type { PlanBrief } from './brief.js';
+import type { OperationNotice } from './setup-operations.js';
 
 /** How a project enters the toolkit's pipeline (the runbook's "Entry Modes"), plus the no-pipeline assurance shelf. */
 export const ENTRY_MODES = ['greenfield', 'requirements-driven', 'existing-app-change', 'migration', 'assurance'] as const;
@@ -214,6 +215,8 @@ export interface JobView {
   by: string;
   startedAt: number;
   updatedAt: number;
+  /** An operation whose outcome isn't settled (or waits to be adopted): setup is paused until it is (shared/setup-operations.ts). */
+  operation?: OperationNotice;
 }
 
 /** What the wizard needs to know about the office before it opens. */

@@ -10,7 +10,7 @@ The sections are down the left; pick one and the address follows (`&section=work
 
 | Section | Link | What's in it |
 |---|---|---|
-| 🧍 **You** | [section=you](/lite?tab=settings&section=you) | Command Center terminal (Chat or Terminal), how you're signed in |
+| 🧍 **You** | [section=you](/lite?tab=settings&section=you) | The team-lead panel (shown or not, Chat or Terminal), how you're signed in |
 | 🤖 **Agents** | [section=workers](/lite?tab=settings&section=workers) | Default worker, worker limit, keep awake while agents work, 🔁 restart safely, workers whose PR merged, the prompts |
 | 👥 **Team** | [section=team](/lite?tab=settings&section=team) | This project's team settings (the table below, without Jeff and early drafts), and ▶ Resume project pacing |
 | ⚖️ **Jeff · Router** | [section=jeff](/lite?tab=settings&section=jeff) | *Waiting on you*, *When to escalate*, *Triage*, *Priority* |
@@ -47,7 +47,7 @@ Under 👥 Team, ⚖️ Jeff · Router and 📄 Documents. Only admins can chang
 | **Issues** | Dry run: record approvals without making GitHub issues | **Off** |
 | **Jeff · Router** | *Waiting on you* and *Triage*: Off · Shadow · On; *Priority*: Off · On; *When to escalate*: Only a real ask · His say-so | **Shadow, Shadow, On, Only a real ask** |
 
-Under 🧍 **You**: **Command Center terminal**, *Chat (default)* or *Terminal*, the view the [Project Coordinator console](command-center.md#the-project-coordinator-console) opens in. Anyone can change it, it applies at once (no 💾 Save), and it's kept in this browser only.
+Under 🧍 **You**: **Show the team-lead panel**, *On (default)* or *Off*, and **Team-lead panel view**, *Chat (default)* or *Terminal*, the view the [team-lead panel](command-center.md#the-team-lead-panel) opens in. Anyone can change it, it applies at once (no 💾 Save), and it's kept in this browser only.
 
 ## What each one does
 

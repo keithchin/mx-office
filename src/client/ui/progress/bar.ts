@@ -27,13 +27,49 @@ function marks(p: Phase): HTMLElement | null {
   return h('span.pg-marks', { 'aria-hidden': 'true' }, ...shown.map((m) => h('i.pg-mark', { class: `${m.kind} ${m.status}` }, m.kind === 'gate' ? '✋' : MARK_ICON[m.status])), p.milestones.length > MARKS_MAX ? h('i.pg-mark.more', {}, `+${p.milestones.length - MARKS_MAX}`) : null);
 }
 
+const DAY = /^(d{4})-(d{2})-(d{2})$/;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** "2 Oct" for 2026-10-02. */
+const shortDay = (d: string) => ((m) => (m ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]}` : d))(d.match(DAY));
+
+/**
+ * The line under a stage's name on the Overview's Progress card (ui/portal/overview.css shows it): its ✋
+ * gate when it has one ("✋ confirmed 2 Oct", "✋ needs your sign-off"), else where it stands ("done",
+ * what was measured while it's the one in progress, "next" for the one after it).
+ */
+export function segmentDetail(ph: Phase, next = false): string {
+  const gate = ph.milestones.find((m) => m.kind === 'gate');
+  if (gate?.status === 'passed') return `✋ confirmed${gate.at ? ` ${shortDay(gate.at)}` : ''}`;
+  if (gate?.status === 'waiting') return '✋ needs your sign-off';
+  if (gate?.status === 'failed') return '✋ failing';
+  if (ph.status === 'done') return 'done';
+  if (ph.status === 'waived') return 'waived';
+  if (ph.status === 'failed') return 'failing';
+  if (ph.status === 'waiting') return 'waiting on someone';
+  if (ph.status === 'active') return ph.measures[0] ?? 'in progress';
+  if (gate && ph.status === 'pending') return next ? 'next · ✋ ahead' : '✋ needs a decision';
+  return next ? 'next' : '';
+}
+
 /** The bar's segments; `words` puts each phase's id or name in it (the full bar), without them for the mini one. */
 export function segments(p: ProjectProgress, words: boolean, onOpen?: (phase: Phase) => void): HTMLElement[] {
-  return p.phases.slice(0, 12).map((ph) => {
+  const cur = p.phases.findIndex((x) => x.current);
+  return p.phases.slice(0, 12).map((ph, i) => {
     const attrs = { class: `${ph.status}${ph.current ? ' current' : ''} k-${ph.kind}`, 'data-phase': ph.id, 'aria-label': segmentLabel(ph) };
     if (!words || !onOpen) return h('span.pg-seg', attrs);
     const tiny = ph.kind === 'handover' ? '🤝' : ph.kind === 'accepted' ? '✅' : ph.kind === 'delivery' ? '…' : undefined;
-    return h('button.pg-seg', { ...attrs, type: 'button', onclick: () => onOpen(ph) }, h('span.pg-seg-id', {}, short(ph)), tiny ? h('span.pg-seg-tiny', { 'aria-hidden': 'true' }, tiny) : null, ph.kind === 'stage' ? h('span.pg-seg-t', {}, ph.title) : null, marks(ph));
+    // The name and the line under it are the Overview's Progress card's (hidden in the bar); its tooltip has the whole of both.
+    const name = ph.kind === 'stage' ? `${ph.id} · ${ph.title}` : ph.title;
+    return h(
+      'button.pg-seg',
+      { ...attrs, type: 'button', onclick: () => onOpen(ph) },
+      h('span.pg-seg-id', {}, short(ph)),
+      tiny ? h('span.pg-seg-tiny', { 'aria-hidden': 'true' }, tiny) : null,
+      ph.kind === 'stage' ? h('span.pg-seg-t', {}, ph.title) : null,
+      marks(ph),
+      h('span.pg-seg-n', { 'aria-hidden': 'true' }, name),
+      h('span.pg-seg-d', { 'aria-hidden': 'true' }, segmentDetail(ph, cur >= 0 && i === cur + 1)),
+    );
   });
 }
 

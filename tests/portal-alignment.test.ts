@@ -30,12 +30,29 @@ test('the bell is drawn in the middle of its 16 px box', () => {
   assert.match(bell, /M6\.6 13\.35a1\.6 1\.6 0 0 0 2\.8 0/);
 });
 
-test('Needs you keeps the Overview’s main column (the console’s width and gutter), its icon on the line', () => {
+test('Needs you is the Overview’s card in the main column; the strip steps aside there (its tab count stays)', () => {
   const css = read('src/client/ui/portal/overview.css');
   // The id twice outweighs command-layout.css's whole-width rule (two ids through :has).
-  assert.match(css, /\.lite-main\.on-command > #needs-you#needs-you \{ grid-column: 1; grid-row: 3; min-width: 0; \}/);
-  assert.match(read('src/client/ui/command-layout.css'), /#needs-you:has\(\+ #setup:empty\)/, 'the rule it outweighs is still there for the other themes');
-  assert.match(css, /\.pt-ny-ico \{[^}]*align-self: center;/);
+  assert.match(css, /\.lite-main\.on-command > #needs-you#needs-you \{ display: none; \}/);
+  assert.match(read('src/client/ui/command-layout.css'), /#needs-you:has\(\+ #setup:empty\)/, 'the strip keeps its place in the other themes');
+  // The card is in the main column, beside the right-hand cards, and goes under them when the page is narrow (the panel open).
+  assert.match(css, /\.lite-main\.on-command > #summary \{ grid-column: 1; grid-row: 5; min-width: 0; \}/);
+  assert.match(css, /\.lite-main\.on-command > \.pt-ov-side \{ grid-column: 2; grid-row: 5; align-self: start; \}/);
+  assert.match(css, /@container ov \(max-width: 680px\)/);
+  assert.match(read('src/client/ui/portal/overview.ts'), /const main = h\('div\.pt-ov-main\.pt-only', \{\}, needs\.el, brief\.el\);/);
+});
+
+test('the Progress card’s stage names wrap onto a second line instead of being cut off; the whole name is in the tooltip', () => {
+  const css = read('src/client/ui/portal/overview.css');
+  const name = css.match(/\.pt-prog \.pg-seg-n \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(name, /-webkit-line-clamp: 2/);
+  assert.match(name, /overflow-wrap: break-word/);
+  // Wide enough for two lines: the stages wrap onto another row before a name is squeezed.
+  assert.match(css, /\.pt-prog \.pg-track \{[^}]*grid-template-columns: repeat\(auto-fit, minmax\(112px, 1fr\)\);/);
+  assert.doesNotMatch(name, /white-space: nowrap|text-overflow: ellipsis/);
+  assert.match(css, /\.pt-prog \.pg-seg \{[^}]*white-space: normal;/);
+  // The bar's tooltip (the segment's hover and focus) has the whole name and what was measured.
+  assert.match(read('src/client/ui/progress/index.ts'), /root\.addEventListener\('focusin', enter\);/);
 });
 
 test('the band (floor line, budget, run state, progress bar) is on the Overview only; the other pages keep the gap under their header', () => {

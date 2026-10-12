@@ -21,7 +21,8 @@ Mx Office is a web app (a Node server on your machine, your browser as the scree
 
 What a project gives you:
 
-- **🧭 Overview** (the Command Center): what needs you, the Project Coordinator's console, recent activity, and Team, Technical contact and Details cards, under a **progress bar** of the toolkit's stages and ✋ gates with real counts (a gate waiting only on your sign-off says **NEEDS SIGN-OFF**, not FAIL).
+- **🧭 Overview** (the Command Center): the **Progress** card of the toolkit's stages and ✋ gates with real counts (a gate waiting only on your sign-off says **NEEDS SIGN-OFF**, not FAIL), **Needs you** with every escalation as a full card you answer in place (its options, the recommendation, why), the project brief, recent activity, and Team, Budget, Quick links and Details cards.
+- **The team-lead panel** docked on the right of every project tab: the agent who leads the team (the Project Coordinator, or the Chief Analyst or Solo Lead on a smaller team) by name, its conversation as a chat or its terminal live (connected only while you can see it), *N waiting on you →*, quick actions (status, standup, what's blocked) and a box to ask it anything; a slim rail when collapsed, a bottom sheet on a phone.
 - **📐 Model**: an App Explorer and the app's domain models, microflows and nanoflows drawn the way Studio Pro draws them, from the model itself, at the developer's own positions; per branch, with what an agent changed highlighted, a Tidy layout for messy domain models, and full screen.
 - **✅ Accept a delivery**: review the committed evidence at one delivery revision, exceptions with owners and a frozen cost. Confirmation requires the reviewed draft to still match; reopening starts v1.1 and keeps the old record.
 - **🧰 Pinned toolkit**: each project runs on its own mxcli-project-toolkit commit; **Update toolkit** previews what would change at the gates (Stage 2 PASS → FAIL, and why) before it commits, and can roll back.
@@ -62,7 +63,7 @@ npm run build
 2. **Set it up**: a new office opens on **🚀 First-run setup** (`/setup`): the office password, a prerequisites check with install links, GitHub (the organization new projects go in, and the two tokens), Mendix (token and default Studio Pro), and the toolkit (pick a folder or clone it). Signing in with the office password makes you admin: the Project Manager. The full walkthrough: `/docs/get-started/new-machine` ([docs/site/get-started/new-machine.md](docs/site/get-started/new-machine.md)).
 3. On **🏠 Home**, open a project's **🗂️ Board**, or click **✨ New project**: describe the app (and attach documents), review the project brief the Chief Analyst drafts, approve the scope, and create the project ([Create your first project](docs/site/get-started/first-project.md)).
 4. In the project, **🏢 Org chart → 🤝 Hire** the Project Coordinator (Sonnet 5.5 is a good default), then the Leads you need.
-5. On **🎛️ Command Center**, ask the Coordinator for the first plan, and answer what shows up in **🚨 Needs you** and **🚩 Escalations to you**.
+5. On **🎛️ Command Center** (the Overview), ask the team lead in the panel on the right for the first plan, and answer what shows up in **🚨 Needs you** (escalations are answered right there).
 
 The step-by-step version, with screenshots: `/docs/get-started/quick-start`.
 

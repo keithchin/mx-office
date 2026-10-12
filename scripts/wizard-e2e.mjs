@@ -60,7 +60,9 @@ async function main() {
   const tk = path.join(root, 'stubs', 'toolkit', 'bin');
   fs.writeFileSync(path.join(tk, 'lib', 'intake-template.sh'), `cat <<'MXTK_INTAKE_EOF'\n${INTAKE}\nMXTK_INTAKE_EOF\n`);
   const init = fs.readFileSync(path.join(tk, 'init-project.sh'), 'utf8').replace(/echo '[A-Za-z0-9+/=]+' \| base64 -d > "\$d\/intake.md"/, `echo '${Buffer.from(INTAKE).toString('base64')}' | base64 -d > "$d/intake.md"`);
-  fs.writeFileSync(path.join(tk, 'init-project.sh'), init);
+  // PROJECT.md with the sections the toolkit's init-project.sh writes after Decisions (Open questions, Assumptions).
+  const register = ['# PROJECT.md — Decision Register', '', 'Toolkit commit: stub', 'Exec approval: auto', '', '## Current stage', 'P', '', '## Decisions', '', '| Stage | Decision | Status | Notes |', '|---|---|---|---|', '', '## Open questions', '', '| # | Question | Raised at | Status |', '|---|---|---|---|', '', '## Assumptions (ASSUMED, unresolved)', '', 'None yet.', ''].join('\n');
+  fs.writeFileSync(path.join(tk, 'init-project.sh'), init.replace(/echo '[A-Za-z0-9+/=]+' \| base64 -d > "\$d\/PROJECT\.md"/, `echo '${Buffer.from(register).toString('base64')}' | base64 -d > "$d/PROJECT.md"`));
   const userHome = path.join(root, 'userhome');
   const ghConfig = fs.mkdtempSync(path.join(os.tmpdir(), 'ao-empty-gh-'));
   fs.mkdirSync(userHome, { recursive: true });
@@ -147,6 +149,16 @@ async function main() {
     await page.waitForTimeout(300);
     await shot('06-brief-confirm-and-chat');
     check(await page.isVisible('.nw-msg:has-text("Security officer")'), 'the Chief Analyst answers in the chat and the brief changes');
+    // An item the chat only re-sourced is the person's confirmation; a role statement the Chief Analyst wrote says so.
+    const chatSrc = await page.locator('#nw-it-i2 .nw-src').textContent();
+    check(/confirmed by you in the chat · \d\d:\d\d/.test(chatSrc ?? ''), `a confirmation said in the chat is recorded: "${chatSrc?.trim()}"`);
+    const drafted = await page.locator('.nw-role .nw-drafted').first().textContent();
+    check(/Statement drafted by the Chief Analyst/.test(drafted ?? ''), `a role statement the Chief Analyst wrote says so: "${drafted?.trim()}"`);
+    await page.setViewportSize({ width: 1440, height: 1400 });
+    await page.locator('#nw-it-i2').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(250);
+    await shot('06b-brief-drafted-statement-and-chat-confirmed');
+    await page.setViewportSize({ width: 1440, height: 900 });
 
     // Dark and phone shots of the brief.
     await page.evaluate(() => (document.documentElement.dataset.theme = 'portal-dark'));
@@ -257,6 +269,10 @@ async function main() {
     check(/\| 0 \| Scope: project brief approved \(docs\/project-brief\.md\) \| CONFIRMED \d{4}-\d\d-\d\d \|/.test(reg), 'PROJECT.md records the Stage 0 scope approval as CONFIRMED');
     check((reg.match(/\| ASSUMED \d{4}/g) ?? []).length === 2, `PROJECT.md records the ${(reg.match(/\| ASSUMED \d{4}/g) ?? []).length} items still Assumed as ASSUMED`);
     check(/Interview mode: steering/.test(reg), 'PROJECT.md has the interview mode');
+    const assumptions = /## Assumptions \(ASSUMED, unresolved\)\n([\s\S]*)$/.exec(reg.replace(/\r/g, ''))?.[1] ?? '';
+    check(!/None yet/.test(assumptions) && (assumptions.match(/^- Brief assumption /gm) ?? []).length === 2, `PROJECT.md's Assumptions section lists the 2 ASSUMED items instead of "None yet.": ${assumptions.trim().split('\n').length} line(s)`);
+    const oq = (reg.match(/^\| OQ-\d\d \| .* \| Stage 0: project brief q\d+ \(docs\/project-brief\.md\) \| OPEN \|$/gm) ?? []).length;
+    check(oq === 2, `PROJECT.md's Open questions table has the brief's ${oq} open questions (OPEN)`);
     check(/# Project brief: Visitor Registration/.test(briefMd) && /Security officer/.test(briefMd) && /### VIS: Visitor check-in/.test(briefMd), 'docs/project-brief.md has the brief, the chat’s change and the domains');
     check(/confirmed by Alex Lee/.test(briefMd), 'docs/project-brief.md says who confirmed what');
     check(fs.existsSync(path.join(projDir, 'sources', 'Visitor-process-workshop.md')), 'the attachment is in sources/');

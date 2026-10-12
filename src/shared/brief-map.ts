@@ -4,14 +4,23 @@
 // docs/project-brief.md, and the brief's part of the Discovery issue. Every item keeps its tag and its
 // source; an item still Assumed at the approval is recorded ASSUMED, never CONFIRMED.
 
-import { READ_LABEL, SECTION_IDS, SECTION_INFO, sourceText, type Brief, type BriefItem, type BriefTag, type PlanBrief } from './brief.js';
+import { DRAFTED, READ_LABEL, SECTION_IDS, SECTION_INFO, sourceText, whenDrafted, type Brief, type BriefItem, type BriefTag, type PlanBrief } from './brief.js';
 import type { IntakeAnswer } from './wizard.js';
 
 const TAG_WORD: Record<BriefTag, string> = { answered: 'Answered', assumed: 'ASSUMED', unverified: 'Unverified' };
 /** Where an item came from, for a file: who settled it is named, never "you". */
-const src = (it: BriefItem) => (it.by ? `${it.by.how === 'chat' ? 'from the chat with' : `${it.by.how} by`} ${it.by.name}${it.by.at ? ` ${it.by.at.slice(0, 16).replace('T', ' ')}` : ''}` : it.source);
-const line = (it: BriefItem) => `- ${it.name ? `${it.name}: ` : ''}${it.text}${it.when ? ` (${it.when})` : ''} [${TAG_WORD[it.tag]}, ${src(it)}]`;
+const src = (it: BriefItem) => {
+  if (!it.by) return it.source;
+  const at = it.by.at ? ` ${it.by.at.slice(0, 16).replace('T', ' ')}` : '';
+  return it.by.how === 'chat' ? `from the chat with ${it.by.name}${at}` : it.by.how === 'chat-confirmed' ? `confirmed by ${it.by.name} in the chat${at}` : `${it.by.how} by ${it.by.name}${at}`;
+};
+/** A role's statement, saying when the Chief Analyst wrote it rather than anyone saying it. */
+const whenText = (it: BriefItem) => (it.when ? `${it.when}${whenDrafted(it) ? ` (${DRAFTED})` : ''}` : '');
+const line = (it: BriefItem) => `- ${it.name ? `${it.name}: ` : ''}${it.text}${it.when ? ` (${whenText(it)})` : ''} [${TAG_WORD[it.tag]}, ${src(it)}]`;
 const oneLine = (s: string) => s.replace(/\s+/g, ' ').trim();
+/** One line without its closing period, for joining with "; " or ending with one (no "kiosk.; Host" or "days.."). */
+const bare = (s: string) => oneLine(s).replace(/[.;,:\s]+$/, '');
+const joined = (items: BriefItem[]) => items.map((x) => bare(x.text)).join('; ');
 
 /** The weakest tag of a set: one Assumed item makes the answer Assumed; Unverified only when nothing is known. */
 function kindOf(items: BriefItem[]): IntakeAnswer['kind'] {
@@ -38,10 +47,10 @@ export function intakeFromBrief(pb: PlanBrief): IntakeAnswer[] {
   const outs = s.scope.filter((x) => x.side === 'out');
   if (s.scope.length || pb.attachments.length) {
     const docs = pb.attachments.length ? `Input documents: ${pb.attachments.map((a) => a.name).join(', ')} (in sources/).` : 'Input documents: none, the description only.';
-    const head = [ins.length ? `In scope: ${ins.map((x) => oneLine(x.text)).join('; ')}.` : '', outs.length ? `Out of scope: ${outs.map((x) => oneLine(x.text)).join('; ')}.` : '', docs].filter(Boolean).join(' ');
+    const head = [ins.length ? `In scope: ${joined(ins)}.` : '', outs.length ? `Out of scope: ${joined(outs)}.` : '', docs].filter(Boolean).join(' ');
     out.push({ n: 4, kind: s.scope.length ? kindOf(s.scope) : 'answered', text: [head, ...(ins.length ? ['In scope:', ...ins.map(line)] : []), ...(outs.length ? ['Out of scope:', ...outs.map(line)] : [])].join('\n') });
   }
-  if (s.constraints.length) out.push({ n: 5, kind: kindOf(s.constraints), text: [oneLine(s.constraints.map((c) => c.text).join('; ')), ...s.constraints.map(line)].join('\n') });
+  if (s.constraints.length) out.push({ n: 5, kind: kindOf(s.constraints), text: [`${joined(s.constraints)}.`, ...s.constraints.map(line)].join('\n') });
   if (s.questions.length) out.push({ n: 8, kind: 'unverified', text: [`ask the client in the Discovery interview (the brief's open questions): ${s.questions.map((q, i) => `(${i + 1}) ${oneLine(q.text)}`).join(' ')}`, ...s.questions.map(line)].join('\n') });
   return out;
 }
@@ -81,6 +90,27 @@ export function briefDecisionRows(pb: PlanBrief, date: string): BriefDecisionRow
   return rows;
 }
 
+/** The "## Assumptions (ASSUMED, unresolved)" lines of PROJECT.md: each item still Assumed at the approval, as its Decisions row says. */
+export function briefAssumptions(pb: PlanBrief): string[] {
+  if (!pb.approved) return [];
+  return SECTION_IDS.flatMap((s) => pb.brief.sections[s].filter((x) => x.tag === 'assumed').map((x) => `- Brief assumption ${x.id}: ${x.name ? `${x.name}: ` : ''}${bare(x.text)} (${SECTION_INFO[s].title}; ${x.source}). Recorded as an ASSUMED Stage 0 row; confirm it with the client.`));
+}
+
+export interface BriefQuestionRow {
+  question: string;
+  raised: string;
+  status: string;
+}
+
+/** The "## Open questions" rows of PROJECT.md: the brief's open questions, still to ask (OPEN), with where each came from. */
+export function briefOpenQuestions(pb: PlanBrief): BriefQuestionRow[] {
+  if (!pb.approved) return [];
+  return pb.brief.sections.questions.map((q) => {
+    const from = /^open question \((.+)\)$/i.exec(q.source)?.[1];
+    return { question: `${oneLine(q.text)}${from ? ` (${from})` : ''}`, raised: `Stage 0: project brief ${q.id} (docs/project-brief.md)`, status: 'OPEN' };
+  });
+}
+
 const tagCell = (it: BriefItem) => `${TAG_WORD[it.tag]} · ${src(it)}`;
 
 /** docs/project-brief.md: the approved brief and its functional domains, committed with the project. */
@@ -93,7 +123,7 @@ export function briefMarkdown(pb: PlanBrief, meta: { repo: string; entry: string
   out.push('', 'Every item says how it is known: **Answered** (given or confirmed), **ASSUMED** (inferred, to be confirmed with the client) or **Unverified** (an open question), and where it came from.');
   const list = (items: BriefItem[]) => items.map((it) => `- ${it.text} _(${tagCell(it)})_`);
   out.push('', '## Goal', '', ...list(s.goal), '', '## Success criteria', '', ...list(s.success), '', '## User roles', '');
-  for (const r of s.roles) out.push(`- **${r.name}**: ${r.text}${r.when ? `\n  _${r.when}_` : ''} _(${tagCell(r)})_`);
+  for (const r of s.roles) out.push(`- **${r.name}**: ${r.text}${r.when ? `\n  _${r.when}_${whenDrafted(r) ? ` (${DRAFTED})` : ''}` : ''} _(${tagCell(r)})_`);
   out.push('', '## Scope', '', '**In scope**', '', ...list(s.scope.filter((x) => x.side !== 'out')), '', '**Out of scope**', '', ...list(s.scope.filter((x) => x.side === 'out')));
   out.push('', '## Constraints', '', ...list(s.constraints), '', '## Open questions', '', ...list(s.questions));
   if (pb.domains?.domains.length) {
@@ -122,11 +152,11 @@ export function briefForDiscovery(pb: PlanBrief): string[] {
     `The client${pb.approved ? ` (${pb.approved.by})` : ''} drafted and approved a project brief with the office before this project was created: **\`docs/project-brief.md\`** has it in full, with every item tagged Answered, ASSUMED or Unverified and where it came from.`,
     `- **Goal:** ${s.goal.map((g) => oneLine(g.text)).join(' ') || '(none written)'}`,
     `- **User roles:** ${s.roles.map((r) => `${r.name}${r.tag === 'assumed' ? ' (ASSUMED)' : ''}`).join(', ') || '(none written)'}`,
-    `- **In scope:** ${s.scope.filter((x) => x.side !== 'out').map((x) => oneLine(x.text)).join('; ') || '(none written)'}`,
-    `- **Out of scope:** ${s.scope.filter((x) => x.side === 'out').map((x) => oneLine(x.text)).join('; ') || '(none written)'}`,
+    `- **In scope:** ${joined(s.scope.filter((x) => x.side !== 'out')) || '(none written)'}`,
+    `- **Out of scope:** ${joined(s.scope.filter((x) => x.side === 'out')) || '(none written)'}`,
   ];
-  if (assumed.length) out.push(`- **Still ASSUMED (confirm these with the client first):** ${assumed.map((x) => `${x.name ? `${x.name}: ` : ''}${oneLine(x.text)}`).join('; ')}`);
-  if (s.questions.length) out.push(`- **Open questions (Unverified):** ${s.questions.map((q) => oneLine(q.text)).join('; ')}`);
+  if (assumed.length) out.push(`- **Still ASSUMED (confirm these with the client first):** ${assumed.map((x) => `${x.name ? `${x.name}: ` : ''}${bare(x.text)}`).join('; ')}`);
+  if (s.questions.length) out.push(`- **Open questions (Unverified):** ${joined(s.questions)}`);
   if (pb.domains?.domains.length) {
     out.push('', '### Functional domains', 'Start the BRDs (Stage 2) and the build plan (Stage 4) from these; every story is ASSUMED until the client confirms it.');
     for (const d of pb.domains.domains) out.push(`- **${d.code} ${d.name}** (${d.roles.join(', ')}): ${d.stories.map((st) => `${st.id} ${st.title}`).join('; ')}`);
@@ -142,5 +172,5 @@ export function briefForDiscovery(pb: PlanBrief): string[] {
 
 /** The brief as plain text for a prompt: every item with its id, tag and source. */
 export function briefAsText(b: Brief): string {
-  return JSON.stringify({ title: b.title, description: b.description, sections: Object.fromEntries(SECTION_IDS.map((s) => [s, b.sections[s].map((x) => ({ id: x.id, ...(x.name ? { name: x.name, when: x.when } : {}), ...(x.side ? { side: x.side } : {}), text: x.text, tag: x.tag, source: sourceText(x) }))])) });
+  return JSON.stringify({ title: b.title, description: b.description, sections: Object.fromEntries(SECTION_IDS.map((s) => [s, b.sections[s].map((x) => ({ id: x.id, ...(x.name ? { name: x.name, when: x.when, whenSource: whenDrafted(x) ? 'drafted' : x.whenSource && x.whenSource !== DRAFTED ? x.whenSource : sourceText(x) } : {}), ...(x.side ? { side: x.side } : {}), text: x.text, tag: x.tag, source: sourceText(x) }))])) });
 }

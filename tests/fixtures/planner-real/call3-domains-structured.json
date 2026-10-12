@@ -1,0 +1,158 @@
+{
+  "domains": [
+    {
+      "code": "VIS",
+      "name": "Visitor Sign-in",
+      "roles": [
+        "Visitor",
+        "Receptionist"
+      ],
+      "description": "Visitors sign in at reception or a kiosk at any of the three offices and get a badge request started in under a minute.",
+      "stories": [
+        {
+          "title": "Sign in at kiosk",
+          "text": "As a Visitor, I want to sign in on a kiosk by entering my name, host and office and taking my photo, so that I can get my badge and meet my host without waiting.",
+          "ac": 5
+        },
+        {
+          "title": "Check-in at reception",
+          "text": "As a Receptionist, I want to check in a visitor on their behalf at reception, so that visitors without kiosk access are handled without paperwork.",
+          "ac": 4
+        },
+        {
+          "title": "Photo capture and privacy notice",
+          "text": "As a Visitor, I want to see how my photo and personal data are used before I submit, so that I know my data is handled in line with privacy rules.",
+          "ac": 3
+        },
+        {
+          "title": "Office selection",
+          "text": "As a Receptionist, I want sign-in to be tied to the office (Lindenberg, Harbour Point or Eastgate) where I work, so that each visitor is recorded at the right building.",
+          "ac": 3
+        }
+      ]
+    },
+    {
+      "code": "APR",
+      "name": "Host Approval",
+      "roles": [
+        "Host",
+        "Visitor",
+        "Receptionist"
+      ],
+      "description": "Notifies the host of an arrival and records approval by the host or a named delegate before the visitor passes reception.",
+      "stories": [
+        {
+          "title": "Notify host of arrival",
+          "text": "As a Host, I want to be notified when my visitor signs in, so that I can respond straight away and keep my visitor from waiting.",
+          "ac": 4
+        },
+        {
+          "title": "Approve or decline visitor",
+          "text": "As a Host, I want to approve or decline a visitor request, so that nobody gets past reception without my consent.",
+          "ac": 4
+        },
+        {
+          "title": "Name a delegate",
+          "text": "As a Host, I want to name a delegate who can approve in my place, so that visitors are still approved when I am unavailable.",
+          "ac": 4
+        },
+        {
+          "title": "See approval status",
+          "text": "As a Receptionist, I want to see whether a visitor is approved, pending or declined, so that I only let approved visitors past reception.",
+          "ac": 3
+        }
+      ]
+    },
+    {
+      "code": "BDG",
+      "name": "Security Check and Badges",
+      "roles": [
+        "Security desk officer",
+        "Receptionist",
+        "Visitor"
+      ],
+      "description": "Watch-list check, badge printing with name, photo and host, and 18:00 expiry with reissue.",
+      "stories": [
+        {
+          "title": "Watch-list check",
+          "text": "As a Security desk officer, I want to check a visitor against the company watch list before a badge is issued, so that nobody who should not enter gets a badge.",
+          "ac": 4
+        },
+        {
+          "title": "Print badge",
+          "text": "As a Receptionist, I want to print a badge showing the visitor's name, photo and host once the visitor is approved and cleared, so that I can send them to their host.",
+          "ac": 5
+        },
+        {
+          "title": "Badge expiry",
+          "text": "As a Security desk officer, I want every badge to expire at 18:00 on the day of issue, so that old badges cannot be used to enter.",
+          "ac": 3
+        },
+        {
+          "title": "Reissue badge after 18:00",
+          "text": "As a Security desk officer, I want to issue a new badge to a visitor who stays past 18:00, so that they can remain in the building legitimately.",
+          "ac": 4
+        }
+      ]
+    },
+    {
+      "code": "EVC",
+      "name": "Sign-out and In-building List",
+      "roles": [
+        "Facilities manager",
+        "Visitor",
+        "Receptionist"
+      ],
+      "description": "Sign-out and a live per-office list of who is in the building, kept reliable for evacuations.",
+      "stories": [
+        {
+          "title": "Sign out",
+          "text": "As a Visitor, I want to sign out when I leave, so that I am no longer counted as in the building.",
+          "ac": 4
+        },
+        {
+          "title": "Live in-building list",
+          "text": "As a Facilities manager, I want a live list of visitors in each office, so that I can run the evacuation roll call.",
+          "ac": 5
+        },
+        {
+          "title": "Handle missed sign-outs",
+          "text": "As a Facilities manager, I want visitors who forget to sign out not to appear as still present, so that the evacuation list stays reliable.",
+          "ac": 4
+        },
+        {
+          "title": "Mark visitor as out at reception",
+          "text": "As a Receptionist, I want to sign out a visitor on their behalf, so that the list stays accurate when they forget.",
+          "ac": 3
+        }
+      ]
+    },
+    {
+      "code": "DAT",
+      "name": "Data Retention",
+      "roles": [
+        "Facilities manager"
+      ],
+      "description": "Deletes visitor records and photos after 90 days in line with the data protection decision.",
+      "stories": [
+        {
+          "title": "Delete records after 90 days",
+          "text": "As a Facilities manager, I want visitor records and photos deleted automatically after 90 days, so that we comply with the data protection decision.",
+          "ac": 4
+        },
+        {
+          "title": "Retention audit trail",
+          "text": "As a Facilities manager, I want a log of deletion runs without personal data, so that I can show the rule is being applied.",
+          "ac": 3
+        },
+        {
+          "title": "Visit history within retention",
+          "text": "As a Facilities manager, I want to look up visits per office within the 90-day period, so that I can answer questions about recent visits.",
+          "ac": 3
+        }
+      ]
+    }
+  ],
+  "tier": "standard",
+  "tierWhy": "The app has five domains and about 20 use cases, with kiosk and reception UIs, notifications, badge printing, scheduled jobs and likely integrations. That is more than one module with 8 screens is suited for."
+}

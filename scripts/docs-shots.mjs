@@ -60,12 +60,12 @@ const drawn = (sel) => async (page) => {
 export const SHOTS = [
   {
     name: 'command-center',
-    what: 'The Overview of a project (Portal theme): the progress bar, Needs you, the project console and the Team, Technical contact and Details cards',
+    what: 'The Overview of a project (Portal theme): Progress, Needs you, Team, Budget and Quick links, with the team-lead panel docked on the right',
     url: `/lite?floor=${MAIN}&tab=command`,
     theme: 'portal-light',
     ready: async (page) => {
-      await drawn('#summary .pmc')(page);
-      await page.waitForFunction(() => document.querySelectorAll('.pt-details dt').length >= 4 && !!document.querySelector('.pt-band') && !!document.querySelector('.pt-face-list'), null, { timeout: 30000 });
+      await drawn('#lead-panel .lp-body')(page);
+      await page.waitForFunction(() => document.querySelectorAll('.pt-details dt').length >= 4 && !!document.querySelector('.pt-band') && !!document.querySelector('.pt-team li'), null, { timeout: 30000 });
     },
     settle: 4000,
   },

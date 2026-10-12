@@ -208,7 +208,8 @@ test('it is all Portal-only: the other themes keep the tab row, the bottom bar a
   assert.match(read('src/client/ui/portal/nav.ts'), /'div\.pt-flyout\.pt-only/);
   assert.match(read('src/client/ui/portal/pagehead.ts'), /'header\.pt-head\.pt-only'/);
   assert.match(read('src/client/ui/portal/overview.ts'), /'aside\.pt-ov-side\.pt-only'/);
-  assert.match(read('src/client/ui/portal/overview.ts'), /icon\('info', 'pt-ny-ico pt-only'\)/, 'the alert icon added to the Needs-you row is Portal-only too');
+  assert.match(read('src/client/ui/portal/overview.ts'), /'div\.pt-ov-main\.pt-only'/, 'the main column (Needs you, the brief) is Portal-only too');
+  assert.match(read('src/client/ui/portal/overview.ts'), /'section\.pt-ov-card\.pt-prog\.pt-only'/, 'and the Progress card');
   assert.match(read('src/client/ui/portal/layout.ts'), /'span\.pt-section\.pt-only\.pt-page-name'/);
   // What's moved is moved back the moment another theme is picked.
   const slot = read('src/client/ui/portal/slot.ts');
@@ -287,10 +288,10 @@ test('the floor’s line and the progress bar are one mid dark grey band under t
   // A shade from top to bottom and a shadow under it.
   assert.match(body("html[data-theme^='portal'] body.lite .pt-band"), /linear-gradient\(180deg, var\(--pt-band-top\) 0%, var\(--pt-band-bottom\) 100%\)/);
   assert.match(body("html[data-theme^='portal'] body.lite .pt-band"), /box-shadow: 0 2px 6px/);
-  // The page's own floor line and progress bar go into it, in Portal only.
+  // The page's own floor line goes into it, in Portal only; the progress bar is the Overview's Progress card's now.
   const head = read('src/client/ui/portal/pagehead.ts');
   assert.match(head, /portalSlot\(document\.querySelector\('\.bud-meta-row'\) \?\? document\.getElementById\('floor-meta'\), band\);/);
-  assert.match(head, /portalSlot\(document\.getElementById\('progress-bar'\), band\);/);
+  assert.match(read('src/client/ui/portal/overview.ts'), /portalSlot\(document\.getElementById\('progress-bar'\), progress\);/);
   assert.match(head, /h\('div\.pt-band\.pt-only'\)/);
 });
 

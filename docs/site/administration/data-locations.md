@@ -37,6 +37,7 @@ The office keeps its data in a `.agent-office` folder. On the office laptop the 
 | `flows/<workflow>/<run>.json`, `flows/_cache/` | [Workflow](../automation/workflows.md) runs, each checkpointed after every step (the new-project wizard's setups are `flows/new-project/`), and cached step results |
 | `toolkit-pins.json` | Which [toolkit commit](toolkit-versions.md) each floor is pinned to, and when the toolkit fork was last fetched (each project's committed `agent-office.project.json` has the same, with its history) |
 | `wizard/` | New-project wizard jobs saved before the workflow engine (taken in on first use and renamed `.json.migrated`) |
+| `wizard/operations/<setup>.json` | Each setup's operation records: creating and deleting its GitHub repository and its folder, written before and after each one (see [Durable records](#durable-records)). Renamed `.retired` when Cancel & undo removes the setup |
 | `wizard-drafts/<id>/` | New project briefs in progress: `draft.json` (the brief, the chat, the approval, the planning spend) and `files/` (the attached documents). Removed when the project's setup finishes, when it's discarded, or after two weeks unused |
 | `live/<floor>/`, `live/<floor>.log` | The live app's clone and log |
 | `live-app.json` | Live app settings (optional) |
@@ -45,6 +46,14 @@ The office keeps its data in a `.agent-office` folder. On the office laptop the 
 | `pr-shots/` | Downloaded CI screenshots |
 | `homes/<id>/signins.json` | People's own sign-ins |
 | `hook-port`, `agent-office-mcp.json` | How workers reach the office |
+
+## Durable records
+
+Most of the office's files are written in the background: the newest version is saved a moment later, and a failed save is logged and tried again with the next change. That's fine for anything the office can work out again (checkpoints, caches, views).
+
+The setup's operation records (`wizard/operations/`) are written differently, because they're the office's only memory of something it did outside (a repository created on GitHub, a folder deleted). Each write goes to a temporary file that's flushed to the disk, then renamed over the old one, and the office waits for it: if the write fails, the office doesn't send the command (or, when the command already ran, pauses the setup until it has looked again). The folder is flushed too where Windows allows it (usually it doesn't).
+
+What that guarantees: **the records survive the office stopping at any moment** (a crash, being killed, a restart), and a reader always sees a whole record, the old one or the new one. What it doesn't claim: surviving a power cut or a Windows crash in the moment after a write. If that ever happens, the office still never deletes on a guess; it finds an outcome it can't confirm and asks you to check it.
 
 ## Each floor's folder
 

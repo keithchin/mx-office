@@ -20,6 +20,7 @@ import { setupBlocker } from './blockers.js';
 import { SetupCancels } from './cancel.js';
 import type { JobState } from './job.js';
 import type { Wizard } from './index.js';
+import { operationNotice } from '../../shared/setup-operations.js';
 
 const finished = (s: string | undefined) => s === 'done' || s === 'skipped';
 
@@ -64,6 +65,8 @@ export function setupCancelsOf(ctx: Ctx, wizard: Wizard): SetupCancels {
     studioOpen: (id) => !!studioStateOf(id)?.open,
     deletes,
     gh: (args) => gh(args, ctx.cfg.dataDir, 60_000),
+    // The setups' operation records: a delete is one of its own, and only a confirmed create gives the right to delete.
+    operations: wizard.book.ops,
     testMode: () => testModeOf().on,
     // What execFile('gh') really starts, never a .cmd shim a PATHEXT lookup finds (fakegh.ts).
     ghIsFake: () => ghIsFake(),
@@ -96,6 +99,7 @@ export async function unfinishedSetups(ctx: Ctx, wizard: Wizard): Promise<Unfini
     stopped.delete(job.id);
     const floor = job.floor && ctx.building.list().some((d) => d.id === job.floor) ? job.floor : undefined;
     const blocker = running ? undefined : blockerOf(ctx, job);
+    const operation = running ? undefined : operationNotice(wizard.book.opsOf(job));
     out.push({
       id: job.id,
       repo: `${job.plan.owner}/${job.plan.name}`,
@@ -109,6 +113,7 @@ export async function unfinishedSetups(ctx: Ctx, wizard: Wizard): Promise<Unfini
       by: job.by,
       updatedAt: job.updatedAt,
       ...(blocker ? { blocker } : {}),
+      ...(operation ? { operation } : {}),
       ...(cancel ? { cancel } : {}),
     });
   }

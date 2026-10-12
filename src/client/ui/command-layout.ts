@@ -1,7 +1,7 @@
 // The 1D Command Center, made to fit a laptop screen (command-layout.css): the Needs-you row on top
 // (ui/needsyou/), the project setup panel folded to one line once its gates are fine (it opens again with
 // a click, and this browser remembers which way you left it), and the project summary below in columns
-// exactly as tall as what's left of the window, the PM console in the middle: on a desktop the page
+// exactly as tall as what's left of the window (the team lead is the panel docked beside it, ui/lead-panel/): on a desktop the page
 // doesn't scroll and no column does, each card scrolls inside its own frame (command-layout.css). The
 // summary's own sections fold too (ui/summary.ts). The panels draw themselves as before; this only
 // decorates them as they're drawn.
