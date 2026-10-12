@@ -11,7 +11,7 @@ import { staleText, type SetupView } from '../../shared/wizard';
 import { waitsOnPerson } from '../../shared/progress';
 import { h } from './dom';
 import { wizardApi } from './wizard/api';
-import { openWizard } from './wizard';
+import { openWizard } from './wizard/open';
 import { deliverablesSummary } from './deliverables/summary';
 import { toolkitRow } from './toolkit/line';
 import { SetupCache } from './setup-cache';

@@ -71,6 +71,12 @@ function saveDraft(d: ProjectPlan | undefined) {
 }
 
 export async function openWizard(opts: WizardOptions) {
+  // ✨ New project is the brief-first flow (./new/): start page, live brief with the Chief Analyst, approve,
+  // domains, team & budget. This form stays as the editor of a setup's answers (the setup panel's buttons).
+  if (!opts.job && !opts.floor) {
+    const { openNewProject } = await import('./new');
+    return openNewProject({ net: opts.net, go: opts.go, edit: (job) => void openWizard({ ...opts, job, page: 2 }) });
+  }
   let info: WizardInfo;
   let editing: JobView | undefined;
   try {
