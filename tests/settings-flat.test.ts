@@ -26,7 +26,7 @@ function assertFlat(href: string, section?: string) {
 }
 
 // The sections the docs and the links name, in the order of the page's list.
-const DOCUMENTED = ['you', 'workers', 'team', 'jeff', 'notify', 'budget', 'connections', 'deliverables', 'incidents', 'studio', 'appearance', 'advanced', 'testing', 'verification', 'danger'];
+const DOCUMENTED = ['you', 'workers', 'team', 'jeff', 'notify', 'budget', 'connections', 'deliverables', 'incidents', 'stuck', 'studio', 'appearance', 'advanced', 'testing', 'verification', 'danger'];
 
 test('every documented section has one stable anchor, in order, and a flat address', () => {
   assert.deepEqual([...SETTINGS_SECTION_IDS], DOCUMENTED);

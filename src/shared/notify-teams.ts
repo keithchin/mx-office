@@ -73,7 +73,7 @@ export function inQuietHours(q: QuietHours | undefined, minuteOfDay: number): bo
 /**
  * The "Needs you" items Teams hears about: a person is the only way forward. An agent asking in its
  * terminal, an escalation, the spend cap, a PR's checks failing, a Firm report in, a toolkit gate to sign
- * off, and Studio Pro changes to commit. Not a finished turn (the office's own quiet turns end the same
+ * off, Studio Pro changes to commit, and work the office found stuck. Not a finished turn (the office's own quiet turns end the same
  * way, and nobody needs a phone buzz for one), a lost worktree, a proposal, the live app, a stale folder
  * or the Firm's budget warning: those wait for the Command Center.
  */
@@ -84,6 +84,8 @@ export function isRedNeed(n: Pick<NeedItem, 'kind' | 'key'>): boolean {
     case 'paused':
     case 'pr':
     case 'studio':
+    // Stuck work (server/stuck/): raised once per round, so one buzz each.
+    case 'stuck':
       return true;
     case 'setup':
       return n.key !== 'setup-stale';

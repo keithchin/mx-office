@@ -19,6 +19,7 @@ The sections are down the left; pick one and the address follows (`&section=work
 | 🔌 **Connections** | [section=connections](/lite?tab=settings&section=connections) | Tokens, password, git & gh, phone access, folders, worktree cleanup (admins; also ☰ → 🔌 Connections) |
 | 📄 **Documents** | [section=deliverables](/lite?tab=settings&section=deliverables) | Early drafts |
 | 🚨 **Incidents** | [section=incidents](/lite?tab=settings&section=incidents) | The detection rules and the dedupe window (admins edit them) |
+| 🧭 **Stuck detection** | [section=stuck](/lite?tab=settings&section=stuck) | On or off and the four thresholds of [stuck detection](stuck-detection.md) (admins edit them) |
 | 🧱 **Studio** | [section=studio](/lite?tab=settings&section=studio) | Studio mode now, and Open in Studio Pro (admins) |
 | 🎨 **Appearance** | [section=appearance](/lite?tab=settings&section=appearance) | Your color theme (Default, Dark, Terminal, Clean Light/Dark), the building's holiday theme and map |
 | 🛠️ **Advanced** | [section=advanced](/lite?tab=settings&section=advanced) | Workspace folder, the sky's clock, the office dog, where the settings files are |

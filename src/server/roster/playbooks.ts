@@ -21,6 +21,7 @@ import { deliverablesBrief } from './deliverables-brief.js';
 import { toolkitDir as officeToolkitDir } from '../connections/store.js';
 import { alsoCovers, covers, isIdentity, managerOf, subagentDefsOf, writerOf, type Coverage } from '../../shared/roster/coverage.js';
 import { coverLines, coverTeamLine } from './playbook-cover.js';
+import { blockerLines } from './playbook-blockers.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
 export const FIELD_LESSONS = '.ai-context/skills/mxcli-field-lessons/SKILL.md';
@@ -253,6 +254,8 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     `Durable lessons (a gotcha, a working recipe, a mistake not to repeat) go in \`${ctx.lessons}\` — append, one dated bullet each. If \`mxcli brain capture\` is available, capture them there too.`,
     '',
     ...roleSpecific(role, ctx),
+    '',
+    ...blockerLines(roleId, c, ctx.names),
     ...(also.length && !role.generalist ? coverLines(c!, roleId) : []),
     '',
     ...deliverablesBrief(roleId, ctx.earlyDrafts ?? true, also),

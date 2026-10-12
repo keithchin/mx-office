@@ -37,6 +37,7 @@ import { pauseProject, resumeProject } from './resume';
 import '../ui/phone/phone.css';
 import './mobile.css';
 import { batched } from '../ui/batch';
+import { onStuckChanged, stuckFeedMessage, stuckNeed } from '../ui/stuck/feed';
 
 export interface MobileDeps {
   net: Net;
@@ -162,9 +163,10 @@ export function installMobile(deps: MobileDeps): MobileApp {
   const draw = batched(() => paint(), 150);
   /** What the office sends (every worker update, every message): at most twice a second, as the team phone (ui/batch.ts). */
   const drawLater = batched(() => paint(), 500);
+  onStuckChanged(() => drawLater());
 
   function paint() {
-    items = collectNeeds({ floor: store.floor ?? undefined, workers: store.workers.values(), roster: roster(), pulls: store.pulls.items, floors: store.floors, studio: store.studio?.floor === store.floor ? (store.studio ?? undefined) : undefined });
+    items = collectNeeds({ floor: store.floor ?? undefined, workers: store.workers.values(), roster: roster(), pulls: store.pulls.items, floors: store.floors, studio: store.studio?.floor === store.floor ? (store.studio ?? undefined) : undefined, stuck: stuckNeed(store.floor) });
     alerts.saw(store.floor ?? undefined, items);
     const m = model();
     const floorName = store.currentFloor()?.name ?? '';
@@ -367,6 +369,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
     route(msg) {
       routeChatter(msg);
       routeRosterMessage(msg);
+      stuckFeedMessage(msg);
       if (msg.t === 'chatter.new' && msg.message.from.kind !== 'human') pending = pending.filter((p) => !(p.thread === msg.message.ref?.thread && msg.message.from.workerId === p.workerId));
       if (msg.t === 'welcome' || msg.t === 'floor.enter' || msg.t === 'roster.changed') drawLater();
     },

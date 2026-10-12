@@ -467,3 +467,28 @@ test('microflow tests run with --require-assertions; whoever writes the model ch
   assert.doesNotMatch(playbook('lead-designer', ctx()), /--require-assertions|mxcli impact/);
   assert.doesNotMatch(playbook('lead-developer', ctx()), /--require-assertions/);
 });
+
+// ---- Blockers only the Project Manager can clear (stuck detection, part B) ------------------------------
+
+test("each team shape's lead runs a daily blocker sweep and escalates PM-only blockers; every Lead says when it works around one", () => {
+  for (const shape of Object.keys(SHAPES) as (keyof typeof SHAPES)[]) {
+    const coverage = defaultCoverage(shape);
+    const lead = managerOf(coverage);
+    const text = playbook(lead, ctx({ coverage }));
+    assert.match(text, /## Blockers only the Project Manager can clear/, `${shape}: ${lead}`);
+    assert.match(text, /\*\*Blocker sweep\.\*\* At every standup, and at least once a day while you are working/, `${shape}: ${lead}`);
+    assert.match(text, /blocked work for more than a day must be raised with `office-workers escalate`/, `${shape}: ${lead}`);
+    assert.match(text, /with the options and your recommendation\. Don't just work around it silently/, `${shape}: ${lead}`);
+    assert.match(text, /\*\*Blocked on you\*\*/, `${shape}: ${lead}`);
+    // Every other Lead on the team: the workaround line, telling whoever covers Management.
+    const others = [...new Set(Object.values(coverage))].filter((r) => r !== lead && r !== 'pm');
+    for (const r of others) {
+      const t = playbook(r, ctx({ coverage }));
+      assert.match(t, /\*\*Working around a blocker\?\*\* .*say so in your handoff/, `${shape}: ${r}`);
+      assert.ok(t.includes(`tell ${names[lead]} (\`office-workers tell\`)`), `${shape}: ${r} tells ${lead}`);
+      assert.doesNotMatch(t, /\*\*Blocker sweep\.\*\*/, `${shape}: ${r} has no sweep`);
+    }
+    // A lead that is also a Lead (Solo, Startup) works around blockers out loud too, by escalating.
+    if (lead !== 'pm') assert.match(text, /\*\*Working around a blocker\?\*\* .*escalate it \(the blocker sweep above\)/, `${shape}: ${lead}`);
+  }
+});

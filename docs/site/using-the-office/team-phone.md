@@ -58,7 +58,7 @@ Everything you send is a real chatter message from you, kept with the floor's ch
 
 ## Notifications
 
-Everything in [Needs you](command-center.md#needs-you) arrives in the phone: agents asking in their terminal (*Keith is asking in its terminal: … → Open terminal*), escalations, approvals, the spend cap (**Raise cap** opens Settings), failing PR checks (**Merge…** and **Review** open the PR window), the Studio Pro commit nudge, The Firm's report, setup stages waiting for your sign-off, and a floor folder far behind main.
+Everything in [Needs you](command-center.md#needs-you) arrives in the phone: agents asking in their terminal (*Keith is asking in its terminal: … → Open terminal*), escalations, approvals, the spend cap (**Raise cap** opens Settings), failing PR checks (**Merge…** and **Review** open the PR window), the Studio Pro commit nudge, The Firm's report, setup stages waiting for your sign-off, a floor folder far behind main, and work the office found [stuck](stuck-detection.md) (its button opens the item's card).
 
 Answering from the phone is answering: an escalation approved, rejected or replied to here is resolved for everyone, and Needs you, the Approvals tab and the console's escalation list follow at once.
 
