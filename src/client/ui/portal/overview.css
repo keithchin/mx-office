@@ -108,6 +108,8 @@ html[data-theme^='portal'] .pt-nrow-b { display: flex; flex-wrap: wrap; gap: 6px
 html[data-theme^='portal'] .pt-done { display: flex; align-items: flex-start; gap: 8px; color: var(--ink-2); font-size: 13px; }
 html[data-theme^='portal'] .pt-done small { display: block; }
 html[data-theme^='portal'] .pt-calm { color: var(--good-ink); }
+html[data-theme^='portal'] .pt-needs-more { margin-top: 8px; }
+html[data-theme^='portal'] .pt-needs-more[hidden] { display: none; }
 
 /* ---- Project brief ------------------------------------------------------------------------------------- */
 html[data-theme^='portal'] .pt-brief[hidden] { display: none; }

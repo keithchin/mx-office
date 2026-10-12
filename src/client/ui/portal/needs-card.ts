@@ -38,6 +38,9 @@ export interface NeedsCard {
 const TONE_CLASS: Record<Tone, string> = { block: 't-block', normal: 't-normal', verify: 't-verify', later: 't-later', done: 't-done' };
 const ICON: Record<Tone, string> = { block: '⛔', normal: '⚑', verify: '⚠', later: '✋', done: '✓' };
 
+/** Items shown before Show N more. */
+const FOLD_AFTER = 6;
+
 const tagEl = (tone: Tone, text: string) => h('span.pt-tag', { class: TONE_CLASS[tone] }, h('span.pt-tag-i', { 'aria-hidden': 'true' }, ICON[tone]), text);
 
 export function needsCard(deps: NeedsCardDeps): NeedsCard {
@@ -53,6 +56,10 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
   const answered = new Map<string, { title: string; text: string }>();
   let floor: string | undefined;
   let snap: NeedsSnapshot | undefined;
+  /** Every item, not just the first few (Show N more). */
+  let all = false;
+  const more = h('button.pt-link.pt-needs-more', { type: 'button', hidden: true, onclick: () => ((all = !all), snap && draw(snap)) }) as HTMLButtonElement;
+  el.append(more);
 
   function escCard(e: Escalation, r: RosterView, m: EscModel): HTMLElement {
     const lead = leadOf(r);
@@ -123,7 +130,7 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
       'article.pt-nitem.pt-esc',
       { 'data-id': e.id, 'aria-label': `${m.tag}: ${e.title}` },
       h('div.pt-esc-h', {}, tagEl(m.tone, m.tag), h('b.pt-esc-t', {}, m.title)),
-      h('p.pt-esc-meta', {}, m.meta),
+      h('p.pt-esc-meta.pt-esc-by', {}, m.meta),
       m.question ? h('p.pt-esc-q', {}, m.question) : null,
       verify ? null : opts,
       m.why ? h('p.pt-esc-why', {}, h('b', {}, `${m.why.label} `), m.why.text) : null,
@@ -167,13 +174,21 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
       keep.set(`done-${id}`, d);
       nodes.push(d.el);
     }
-    for (const it of items) {
+    // A long list folds after the first few, so the Overview isn't one long card (and isn't all built at once).
+    const shown = all || items.length <= FOLD_AFTER + 1 ? items : items.slice(0, FOLD_AFTER);
+    more.hidden = shown.length === items.length && !(all && items.length > FOLD_AFTER + 1);
+    more.textContent = shown.length < items.length ? `Show ${items.length - shown.length} more ▾` : 'Show fewer ▴';
+    more.setAttribute('aria-expanded', String(all));
+    for (const it of shown) {
       const e = it.target.to === 'escalation' ? r?.escalations.find((x) => x.id === (it.target as { id: string }).id) : undefined;
       if (e && r) {
         const m = escalationModel(e, { leadName, ago: (at) => timeAgo(at) });
-        const sig = JSON.stringify([e.status, r.admin, leadName, e.options, e.recommendation, e.details, m.meta]);
+        // "18m ago" moves on by itself: the line is brought up to date in place, so the card (your pick, what you typed) stays.
+        const sig = JSON.stringify([e.status, r.admin, leadName, e.title, e.options, e.recommendation, e.details, e.urgency, e.trigger]);
         const had = drawn.get(it.key);
         const d = had?.sig === sig ? had : { sig, el: escCard(e, r, m) };
+        const meta = d.el.querySelector<HTMLElement>('.pt-esc-by');
+        if (meta && meta.textContent !== m.meta) meta.textContent = m.meta;
         keep.set(it.key, d);
         nodes.push(d.el);
         continue;
@@ -205,6 +220,8 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
   return {
     el,
     focusEscalation(id) {
+      // One folded away under Show N more: unfold first.
+      if (!all && snap && !list.querySelector(`.pt-esc[data-id="${CSS.escape(id)}"]`) && snap.items.some((n) => n.target.to === 'escalation' && n.target.id === id)) ((all = true), draw(snap));
       const card = list.querySelector<HTMLElement>(`.pt-esc[data-id="${CSS.escape(id)}"]`);
       if (!card || el.offsetParent === null) return false;
       card.scrollIntoView({ block: 'center' });

@@ -149,3 +149,17 @@ test('someone who isn’t the Project Manager sees the card but can’t answer i
   assert.match(all, /Only the Project Manager \(an admin\) can answer it\./);
   assert.equal((card.el as unknown as FakeEl).querySelector('.pt-esc-send'), null);
 });
+
+test('a long list folds after six items behind Show N more, and an escalation asked for unfolds it', () => {
+  const card = needsCard({ show: () => {}, answer: async () => undefined, ask: () => true });
+  const many = Array.from({ length: 10 }, (_, i) => esc({ id: `m${i}`, title: `Question ${i}`, at: Date.now() - (10 - i) * 1000 }));
+  const r = roster(many);
+  publishNeeds({ floor: 'f1', items: collectNeeds({ floor: 'f1', roster: r, workers: [], pulls: [], floors: [] }), roster: r, go: () => {} });
+  const el = card.el as unknown as FakeEl;
+  assert.equal(el.querySelectorAll('.pt-esc').length, 6);
+  const more = el.querySelector('.pt-needs-more')!;
+  assert.match(text(more), /Show 4 more/);
+  more.click();
+  assert.equal(el.querySelectorAll('.pt-esc').length, 10);
+  assert.match(text(more), /Show fewer/);
+});

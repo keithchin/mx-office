@@ -93,7 +93,7 @@ export class LeadPanel {
     const { net } = deps;
     this.termHost = h('div.lp-termhost', { role: 'log', 'aria-live': 'off', tabindex: '0' });
     this.term = new PmTerminal(net, this.termHost);
-    this.chat = new ChatView({ openTerminal: () => this.view.workerId && deps.openWorker(this.view.workerId), lines: () => this.term.lines() });
+    this.chat = new ChatView({ openTerminal: () => this.view.workerId && deps.openWorker(this.view.workerId), lines: () => this.term.lines(), page: 24 });
     this.term.onWrite = () => this.chat.terminalChanged();
     this.composer = new Composer({ send: (t, p) => this.send(t, p), quick: (q) => void this.quick(q), draft: (t) => this.floor && deps.draft(this.floor, t) });
 
@@ -230,6 +230,7 @@ export class LeadPanel {
   }
 
   private headKey = '';
+  private avKey = '';
   private drawHead() {
     const hd = leadHeading(this.lead);
     const w = this.worker();
@@ -238,7 +239,8 @@ export class LeadPanel {
     const key = JSON.stringify([this.avatarKey(), hd, st, facts, this.view.canWake]);
     if (key === this.headKey) return;
     this.headKey = key;
-    this.head.av.replaceChildren(this.avatarEl());
+    // The face only when it changed (the status line changes with every tool call).
+    if (this.avKey !== this.avatarKey()) ((this.avKey = this.avatarKey()), this.head.av.replaceChildren(this.avatarEl()));
     this.head.name.textContent = hd.name;
     this.head.role.textContent = this.lead?.kind === 'none' ? '' : ` · ${hd.role}`;
     this.head.status.replaceChildren(h('span.lp-st', { class: `lp-st-${st.dot}` }, h('i', { 'aria-hidden': 'true' }), st.text));
@@ -361,7 +363,8 @@ export class LeadPanel {
 
   private drawChat() {
     const id = this.watching;
-    if (this.chatPane.hidden || !id) return;
+    // Only while you can see it: collapsed (or on a phone, with the sheet down) it draws nothing; opening it catches up.
+    if (this.chatPane.hidden || !id || !this.deps.open() || document.hidden) return;
     const m = this.member();
     const w = store.workers.get(id);
     const convo = store.convo.get(id);

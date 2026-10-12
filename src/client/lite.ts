@@ -376,6 +376,7 @@ setInterval(renderKanbanSoon, 30_000);
 /** An escalation's full card in the Overview's Needs you (Portal), scrolled to with its answer focused; the Approvals tab if it isn't there (the other themes). */
 function toEscalation(id: string) {
   if (tab !== 'command') showTab('command');
+  if (!document.getElementById('pt-needs')?.offsetParent) return showTab('approvals'); // the other themes: the card is on Approvals
   // Needs you draws from the team as fetched: wait a moment for the card, up to a second and a half.
   const started = Date.now();
   const look = () => {
