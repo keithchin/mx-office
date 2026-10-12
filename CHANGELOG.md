@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-12 · release 39 (`d5a85e7`)
+
 ### New
 
 - **App Insights › Testing: test evidence bound to revisions.** A new read-only page lists each project's test runs (from pull request checks the Board already shows, the JSON reports under `reports/testing/` and `docs/report.json` on main, and the office's own gate-check of main) with three revisions kept apart: the app commit that was tested, the commit the tests came from, and where the report is kept. A report that doesn't say what it tested shows its tested revision as *unknown* and counts for no commit. Per BRD use case (grouped by feature) and per acceptance criterion it shows coverage, latest result and freshness as separate columns, so a criterion with no linked test reads "No linked test", never "Failed", and a run on an older commit reads "Stale". Every link says whether a file recorded it or the office inferred it (and by which rule); tests that passed and failed on the same commit are marked flaky. The test plan opens in place. Nothing on the page changes the repository, GitHub or any task.
