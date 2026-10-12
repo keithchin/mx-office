@@ -257,7 +257,10 @@ test('V2: definition and app revisions differ: both shown, freshness follows the
 
 test('T4: pass and fail on the same tested revision is flagged flaky; on different revisions it is not', () => {
   const runs = [rec({ id: 'tr_1', results: [res('J-01 submit', 'passed', ['J-01'])] }), rec({ id: 'tr_2', ingestedAt: 2000, results: [res('J-01 submit', 'failed', ['J-01'])] }), rec({ id: 'tr_3', testedRevision: B, results: [res('J-02 approve', 'passed', ['J-02'])] }), rec({ id: 'tr_4', testedRevision: C, results: [res('J-02 approve', 'failed', ['J-02'])] })];
-  assert.deepEqual([...flakyTests(runs)], ['e2e::J-01 submit']);
+  assert.deepEqual([...flakyTests(runs)], [`e2e::J-01 submit@${A.slice(0, 7)}`]);
+  // The same test on another revision, passing only, is not flagged there.
+  const other = buildTestingView('shop', facts(), [...runs, rec({ id: 'tr_5', testedRevision: B, results: [res('J-01 submit', 'passed', ['J-01'])] })]);
+  assert.deepEqual(other.runs.find((r) => r.id === 'tr_5')!.flaky, []);
   const v = buildTestingView('shop', facts(), runs);
   assert.deepEqual(v.runs.find((r) => r.id === 'tr_2')!.flaky, ['J-01 submit']);
   assert.equal(v.features[0].rows[0].flaky, true);

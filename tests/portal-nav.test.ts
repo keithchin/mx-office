@@ -32,10 +32,10 @@ import { KIND_ORDER, searchGroups } from '../src/client/ui/portal/search-logic.j
 const root = path.join(import.meta.dirname, '..');
 const read = (p: string) => readFileSync(path.join(root, p), 'utf8').replace(/\r\n/g, '\n');
 
-/** The 1D view's tabs: its tab row's buttons, and the test lab (no button, the ☰ opens it). */
+/** The 1D view's tabs: its tab row's buttons, and the registered ones (the test lab, Testing). */
 function liteTabs(): string[] {
   const ids = [...read('src/client/lite.html').matchAll(/id="tab-([a-z]+)"/g)].map((m) => m[1]);
-  return [...ids, 'tests'];
+  return [...ids, 'tests', 'testing'];
 }
 
 test('every tab of the 1D view is one item of the navigation, in one group or under the rule, with the same id', () => {
@@ -362,6 +362,7 @@ const REPEATS: Record<string, string[]> = {
   workers: [],
   settings: ['#settings-view .fs-title', '#settings-view .ro-settings > .ro-bar h3', "#settings-view .ro-settings[data-part='jeff'] > h4.ro-jeff-h", "#settings-view .ro-settings[data-part='deliverables'] > h4:first-of-type"],
   tests: ['#tests-view .tl-page > h2.lite-h'],
+  testing: [],
 };
 
 test('in Portal no tab of the 1D view shows its title twice: each repeating heading is hidden, what was beside it kept', () => {

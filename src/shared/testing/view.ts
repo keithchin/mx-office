@@ -6,7 +6,7 @@
 // Pure: the server builds it (server/testing/), the page only shows it.
 
 import type { AcRow, Brd } from './links.js';
-import { isKnown, sameRevision, type Link, type Revision, type RunSource, type TestRunRecord } from './record.js';
+import { isKnown, sameRevision, UNKNOWN, type Link, type Revision, type RunSource, type TestRunRecord } from './record.js';
 
 export type Coverage = 'linked' | 'inferred' | 'none';
 export type UcCoverage = 'full' | 'partial' | 'inferred' | 'none';
@@ -156,25 +156,26 @@ export function freshnessOf(tested: Revision | undefined, main: string | undefin
   return sameRevision(tested, main) ? 'current' : 'stale';
 }
 
-/** Tests (suite and name) that passed and failed on the same known tested revision. */
+/** Tests that passed and failed on the same known tested revision, as "suite::name@revision" (testKey). */
 export function flakyTests(records: readonly TestRunRecord[]): Set<string> {
   const seen = new Map<string, Set<string>>();
   for (const r of records) {
     if (!isKnown(r.testedRevision)) continue;
     for (const t of r.results) {
       if (t.status === 'skipped') continue;
-      const k = `${testKey(r, t.name)}@${r.testedRevision.slice(0, 7).toLowerCase()}`;
+      const k = testKey(r, t.name);
       const s = seen.get(k) ?? new Set<string>();
       s.add(t.status);
       seen.set(k, s);
     }
   }
   const out = new Set<string>();
-  for (const [k, s] of seen) if (s.has('passed') && s.has('failed')) out.add(k.slice(0, k.lastIndexOf('@')));
+  for (const [k, s] of seen) if (s.has('passed') && s.has('failed')) out.add(k);
   return out;
 }
 
-const testKey = (r: TestRunRecord, name: string) => `${r.suite}::${name}`;
+/** A test on the revision it tested: flaky is per test and per tested revision, never across revisions. */
+const testKey = (r: TestRunRecord, name: string) => `${r.suite}::${name}@${isKnown(r.testedRevision) ? r.testedRevision.slice(0, 7).toLowerCase() : UNKNOWN}`;
 
 /** What ties to a set of ids: test definitions and run results, and through which links. */
 function linkedTo(ids: Set<string>, tests: readonly TestDef[], records: readonly TestRunRecord[]) {
