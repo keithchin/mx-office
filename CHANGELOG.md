@@ -17,6 +17,11 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 - **New project is one flow instead of six pages.** After the brief and the domains, one Team & budget card shows the recommended team and budget level with Change; the repository, Mendix version, client, Discovery and every other setting from the old form are under Advanced, with problems shown next to the field. The old form remains for editing a project's setup answers later. The wizard's code now loads only when it's opened.
 
+### Fixed
+
+- **The New project brief says honestly what approving does.** Approving now reads *records your scope decision for ✋ Stage 0 in PROJECT.md. Stage 0 passes when the Chief Analyst’s triage is signed off.*, and the folded brief says *✋ Stage 0 scope · approved by you*. The toolkit passes Stage 0 on triage.md’s sign-off, not on the PROJECT.md row, so Stage 0 stays pending until then, as before.
+- **Hiring no longer holds up the office on a busy machine.** A hire’s Playbook, subagent files and journals are now read and written off the main thread, so a slow disk can’t freeze the pages for a moment while they are written. The same files as before.
+
 ## 2026-10-12 · release 39 (`d5a85e7`)
 
 ### New
