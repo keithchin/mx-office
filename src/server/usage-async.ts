@@ -67,8 +67,6 @@ async function readAppended(t: UsageTracker, file: string, main: boolean, slice:
       if (size < cur.offset) {
         // Shorter than last time: not the file we knew. Start over.
         cur.offset = 0;
-        cur.lastId = undefined;
-        cur.lastUsage = undefined;
       }
       if (cur.offset >= size) break;
       const start = cur.offset;

@@ -2,6 +2,7 @@ import { closeSync, existsSync, fstatSync, openSync, readdirSync, readFileSync, 
 import path from 'node:path';
 import type { Usage, UsageState } from '../shared/protocol.js';
 import { BackgroundFile } from './offloop/save.js';
+import { growth, maxUsage, SeenIds } from './usage-seen.js';
 
 /*
  * Where a worker's numbers come from
@@ -13,6 +14,13 @@ import { BackgroundFile } from './offloop/save.js';
  * it; those are read too. When a session ends, Claude Code appends a `cost-state` line with its own
  * tally — that also covers calls that never reach the transcript (titles, summaries) — and the
  * worker's figures snap to it; anything logged after (a resume) is estimated on top again.
+ *
+ * Each API request is counted once per worker. Claude Code writes a response as several lines, one
+ * per content block, sharing the message id (and request id) and usage; those lines need not be next
+ * to each other, and a subagent's request can show up both in the session's own transcript (an
+ * `isSidechain` line) and in its subagent file. So the tracker remembers the ids it counted, across
+ * all of the worker's files (SeenIds): a known id adds only what its usage grew by (streaming), and a
+ * subagent's request is booked under the subagent, never under both it and the session.
  *
  * The transcript format is Claude Code's own and may change: everything below is defensive, and a
  * line it does not understand is skipped, never fatal.
@@ -79,9 +87,6 @@ export function usageOfMessage(model: string, u: any): Usage {
 export interface FileCursor {
   /** Bytes of the file already read (always at a line boundary). */
   offset: number;
-  /** A message with several content blocks is logged once per block, with the same id and usage. */
-  lastId?: string;
-  lastUsage?: Usage;
   /** A subagent transcript's type, from the meta file beside it (`agent-<id>.meta.json`). */
   agent?: string;
 }
@@ -90,6 +95,8 @@ export interface UsageTracker {
   /** The session's transcript, from the hook payloads. */
   transcript?: string;
   files: Record<string, FileCursor>;
+  /** The requests counted so far, across all of the worker's files (see SeenIds); made on first use. */
+  seen?: SeenIds;
   /** Claude Code's own tally from the end of a session; `at` is the transcript time it covers up to. */
   base?: Usage & { at: number };
   /** Estimated from the messages logged after `base`. */
@@ -130,10 +137,14 @@ export function restoreTracker(saved: any): UsageTracker {
   const t = newTracker();
   if (!saved || typeof saved !== 'object') return t;
   if (typeof saved.transcript === 'string') t.transcript = saved.transcript;
+  if (Array.isArray(saved.seen)) t.seen = SeenIds.restore(saved.seen);
   if (saved.files && typeof saved.files === 'object') {
     for (const [file, c] of Object.entries<any>(saved.files)) {
       if (!c || typeof c !== 'object') continue;
-      t.files[file] = { offset: num(c.offset), lastId: typeof c.lastId === 'string' ? c.lastId : undefined, lastUsage: asUsage(c.lastUsage), ...(typeof c.agent === 'string' ? { agent: c.agent } : {}) };
+      t.files[file] = { offset: num(c.offset), ...(typeof c.agent === 'string' ? { agent: c.agent } : {}) };
+      // Saved before SeenIds: the last message each file counted is what there is to go on.
+      const lastUsage = asUsage(c.lastUsage);
+      if (typeof c.lastId === 'string' && lastUsage && !t.seen?.get([c.lastId])) (t.seen ??= new SeenIds()).add({ ids: [c.lastId], usage: lastUsage, sub: file !== saved.transcript });
     }
   }
   const base = asUsage(saved.base);
@@ -218,16 +229,37 @@ export function applyLine(t: UsageTracker, cur: FileCursor, line: any, main: boo
     const msg = line.message;
     if (!msg || typeof msg !== 'object' || typeof msg.id !== 'string' || !msg.usage) return false;
     if (main && !line.isSidechain && isModelId(msg.model)) t.model = msg.model;
-    // Already inside Claude Code's own tally.
-    if (t.base && at <= t.base.at) return false;
     const u = usageOfMessage(typeof msg.model === 'string' ? msg.model : '', msg.usage);
-    const delta = cur.lastId === msg.id && cur.lastUsage ? addUsage(u, cur.lastUsage, -1) : u;
-    cur.lastId = msg.id;
-    cur.lastUsage = u;
-    if (isZero(delta)) return false;
+    const ids = [msg.id, ...(typeof line.requestId === 'string' && line.requestId ? [`req:${line.requestId}`] : [])];
+    // A subagent's request: from its own file, or an isSidechain line in the session's transcript.
+    const key = `${main && !line.isSidechain ? '' : (cur.agent ?? 'subagent')}|${isModelId(msg.model) ? msg.model : ''}`;
+    const seen = (t.seen ??= new SeenIds());
+    const known = seen.get(ids);
+    // Already inside Claude Code's own tally: remembered, so a later line of it isn't counted either.
+    if (t.base && at <= t.base.at) {
+      if (known) known.usage = maxUsage(known.usage, u);
+      else seen.add({ ids, usage: u, part: key, sub: !main });
+      return false;
+    }
+    let delta = u;
+    let moved = false;
+    if (!known) seen.add({ ids, usage: u, part: key, sub: !main });
+    else {
+      // Counted before: only what its usage grew by (a streamed response's climbs), never less.
+      const booked = known.usage;
+      delta = growth(booked, u);
+      known.usage = maxUsage(booked, u);
+      // First met as an isSidechain line in the session's transcript, now in the subagent's own file:
+      // it moves to the subagent's type, so it sits under one part only.
+      if (!main && !known.sub) {
+        known.sub = true;
+        if (known.part !== undefined && known.part !== key) moved = movePart(t, known.part, key, booked);
+        known.part = key;
+      }
+    }
+    if (isZero(delta)) return moved;
     t.since = addUsage(t.since, delta);
-    const key = `${main ? '' : (cur.agent ?? 'subagent')}|${isModelId(msg.model) ? msg.model : ''}`;
-    const part = ((t.parts ??= {})[key] ??= { cost: 0, calls: 0 });
+    const part = ((t.parts ??= {})[known?.part ?? key] ??= { cost: 0, calls: 0 });
     part.cost += delta.cost;
     part.calls += delta.calls;
     return true;
@@ -250,6 +282,22 @@ export function applyLine(t: UsageTracker, cur: FileCursor, line: any, main: boo
   return false;
 }
 
+/** Moves what was booked of one request (`booked`) from part `from` to part `to`. True when anything moved. */
+function movePart(t: UsageTracker, from: string, to: string, booked: Usage): boolean {
+  const parts = (t.parts ??= {});
+  const old = parts[from];
+  if (!old) return false;
+  const cost = Math.min(old.cost, booked.cost);
+  const calls = Math.min(old.calls, booked.calls);
+  old.cost -= cost;
+  old.calls -= calls;
+  if (old.cost <= 1e-12 && old.calls <= 0) delete parts[from];
+  const next = (parts[to] ??= { cost: 0, calls: 0 });
+  next.cost += cost;
+  next.calls += calls;
+  return cost > 0 || calls > 0;
+}
+
 const CHUNK = 4 * 1024 * 1024;
 
 /**
@@ -270,8 +318,6 @@ function* readNewLines(file: string, cur: FileCursor, budget?: { left: number; m
     if (size < cur.offset) {
       // Shorter than last time: not the file we knew. Start over.
       cur.offset = 0;
-      cur.lastId = undefined;
-      cur.lastUsage = undefined;
     }
     // With a budget, a slice of what is left of it (a line longer than that still grows the read until it ends).
     const step = () => (budget ? Math.max(64 * 1024, Math.min(CHUNK, budget.left)) : CHUNK);
