@@ -15,6 +15,7 @@ import { SEVERITY_SHORT, incidentRef, needsAttention, type IncidentBrief } from 
 import type { BudgetAlert } from './budget/types.js';
 import type { SettingsSectionId } from './settings-sections.js';
 import type { RoleId } from './roster/roles.js';
+import { STUCK_ICON, stuckTitle, type StuckView } from './stuck.js';
 
 /** Where an item's button takes you. */
 export type NeedTarget =
@@ -33,9 +34,11 @@ export type NeedTarget =
   /** The 💰 Budget tab; `resume` takes the budget's pause off the project. */
   | { to: 'budget'; resume?: boolean }
   /** Nudges an idle team member back to its open task (the office's back-to-work prompt, as the Project Manager's). */
-  | { to: 'nudge'; role: RoleId };
+  | { to: 'nudge'; role: RoleId }
+  /** A stuck item's card (ui/stuck/): what's stuck, the evidence and its buttons. */
+  | { to: 'stuck'; id: string };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget';
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck';
 
 /** How long a team member sits idle with an open task (nothing escalated) before Needs you says so. */
 export const IDLE_TASK_MS = 10 * 60_000;
@@ -65,6 +68,12 @@ export interface NeedItem {
   alt?: { action: string; target: NeedTarget };
 }
 
+/** What Needs you reads of a project's stuck items (GET /api/stuck, server/stuck/): the ones showing. */
+export interface StuckNeed {
+  floor: string;
+  items: readonly StuckView[];
+}
+
 /** What Needs you reads of a project's budget (GET /api/budget): the alerts standing and the pause. */
 export interface BudgetNeed {
   floor: string;
@@ -90,6 +99,8 @@ export interface NeedsInput {
   incidents?: readonly IncidentBrief[];
   /** The project's budget alerts and pause (server/budget/). */
   budget?: BudgetNeed;
+  /** Work the office found stuck (server/stuck/): a PR nobody touches, a decision waiting on you, a test red for days, the team going in circles. */
+  stuck?: StuckNeed;
   /** Now (ms), for how long someone has been idle: Date.now() unless a test says. */
   now?: number;
 }
@@ -147,6 +158,13 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     }
     // 5. The cost cap: no hiring, and the office sends no prompts of its own; people's still go through.
     if (r.paused) out.push({ key: 'paused', kind: 'paused', icon: '💸', text: `Spend cap reached: office prompts paused; agents finish their current turn. ${r.paused}`, level: 'block', action: 'Settings', target: { to: 'settings', section: 'team' } });
+  }
+  // Work the office found stuck (server/stuck/): a decision or a PR waiting on a person blocks; a test red for days or the team going in circles is worth a look.
+  const st = i.stuck && i.stuck.floor === i.floor ? i.stuck : undefined;
+  for (const s of st?.items ?? []) {
+    const lead = s.lead ?? 'the lead';
+    const action = s.kind === 'decision' ? 'Answer' : s.kind === 'stale-pr' ? `Ask ${lead}` : s.kind === 'circles' ? 'Ask for blockers' : 'Review';
+    out.push({ key: `stuck-${s.id}`, kind: 'stuck', icon: STUCK_ICON[s.kind], tag: 'Stuck', text: stuckTitle(s, i.now ?? Date.now()), since: s.since, level: s.kind === 'decision' || s.kind === 'stale-pr' ? 'block' : 'warn', action, target: { to: 'stuck', id: s.id } });
   }
   // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold).
   const b = i.budget && i.budget.floor === i.floor ? i.budget : undefined;

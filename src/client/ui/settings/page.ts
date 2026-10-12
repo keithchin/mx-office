@@ -17,6 +17,7 @@ import { budgetPart, rosterPart, studioPart } from './project';
 import { advancedPart, appearancePart, incidentsPart } from './office';
 import { testingPart } from './testing';
 import { verificationPart } from './verification';
+import { stuckPart } from './stuck';
 import { dangerPart } from '../project-delete/danger';
 import { rerunSetupSetting } from '../../first-run/rerun';
 
@@ -45,6 +46,7 @@ export const SECTION_BUILDERS: Record<SettingsSectionId, (d: SettingsDeps) => Bu
   connections: () => (store.me.admin ? plain(rerunSetupSetting(), connectionsPanel().el) : plain(h('p.setting-note', {}, 'Only admins see the office’s connections.'))),
   deliverables: () => rosterPart('deliverables'),
   incidents: () => incidentsPart(),
+  stuck: () => stuckPart(),
   studio: () => studioPart(),
   appearance: (d) => appearancePart(d),
   advanced: (d) => advancedPart(d),

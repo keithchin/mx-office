@@ -40,6 +40,8 @@ export interface OfficeSettings {
   mxcliPath?: string;
   /** The Testing safety switches (testing/switches.ts): judging merged tasks, scoring main automatically. Off unless saved on. */
   testingSwitches?: unknown;
+  /** Stuck detection: on/off and its thresholds (shared/stuck.ts, server/stuck/settings.ts); on with 24 h / 48 h when nothing was saved. */
+  stuckDetection?: unknown;
   /** When an office with task outcomes (release 39) first started: PRs closed before it never raise the closed-PR decision (roster/closed-since.ts). */
   outcomesSince?: number;
 }

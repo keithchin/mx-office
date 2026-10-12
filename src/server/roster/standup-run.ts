@@ -32,6 +32,7 @@ import { readJournal } from './journal-io.js';
 import { outcomesPrompt, standupCompiledPrompt, standupPrompt } from './prompts.js';
 import { coordinatorIs, queueOnce } from './relays.js';
 import { compilePage, newTeam, reportFrom, standupId, toProposals } from './standup.js';
+import { blockedOnYou } from './blocked-on-you.js';
 import type { TeamFloor } from './types.js';
 import { audit, byWhom } from '../audit/index.js';
 import { decisionsRelayed } from '../chatter/hooks.js';
@@ -184,7 +185,7 @@ export class StandupRunner {
     s.status = 'compiled';
     s.compiledAt = this.roster.deps.now();
     for (const p of d.proposals.filter((x) => s.proposalIds.includes(x.id) && x.status === 'auto')) p.issue = await this.makeIssue(floor, p, 'the team');
-    s.page = compilePage(s, d.proposals, d.settings.autonomy, floor.name);
+    s.page = compilePage(s, d.proposals, d.settings.autonomy, floor.name, await blockedOnYou(floor.id));
     // To whoever covers Management: the Coordinator, or on a Solo team the Solo Lead (its daily note in docs/standups).
     const pm = d.members[managerRole(d)];
     const w = this.roster.workerOf(floor, pm);
@@ -232,7 +233,7 @@ export class StandupRunner {
     p.decidedBy = by;
     p.decidedAt = this.roster.deps.now();
     const s = d.standups.find((x) => x.id === p.standup);
-    if (s?.page) s.page = compilePage(s, d.proposals, d.settings.autonomy, floor.name);
+    if (s?.page) s.page = compilePage(s, d.proposals, d.settings.autonomy, floor.name, await blockedOnYou(floor.id));
     // The member who covers Management hears it with the others, unless it proposed it: then its own note says it.
     if (p.role !== managerRole(d)) this.tellPm(floor, p);
     // What it proposed and waited on: it hears soon, woken for it if it's asleep (relays.ts).

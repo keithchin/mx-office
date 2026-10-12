@@ -64,8 +64,15 @@ function decision(p: Proposal): string {
   }
 }
 
-/** The page, from the standup's reports and its proposals (by id). */
-export function compilePage(s: Standup, proposals: Proposal[], level: AutonomyLevel, project: string): string {
+/** A Lead's blocker that only the Project Manager or the client can clear (a decision, an owner, an access, a PR needing a person). */
+export const onThePm = (b: string) => /\b(PM|Project Manager|client|customer|sponsor|decision|owner|access|approval|sign-?off)\b/i.test(b) && !/^\s*(none|nothing|-)\s*\.?$/i.test(b);
+
+/**
+ * The page, from the standup's reports and its proposals (by id). `blocked`: what the office's stuck
+ * detection has standing for the Project Manager (roster/blocked-on-you.ts), one line each; with the
+ * Leads' blockers that only the Project Manager or the client can clear, they make "Blocked on you".
+ */
+export function compilePage(s: Standup, proposals: Proposal[], level: AutonomyLevel, project: string, blocked: readonly string[] = []): string {
   const mine = proposals.filter((p) => s.proposalIds.includes(p.id));
   const out = [`# Standup ${s.date} — ${project}`, '', `Run by ${s.by} · autonomy level ${level} (${AUTONOMY[level].name}) · compiled by Agent Office and summarised by the Project Coordinator for the Project Manager.`, ''];
   for (const r of s.reports) {
@@ -81,6 +88,9 @@ export function compilePage(s: Standup, proposals: Proposal[], level: AutonomyLe
     const props = mine.filter((p) => p.role === r.role);
     if (props.length) out.push('**Proposals**', ...props.map((p) => `- [${p.kind}] ${p.title}${p.detail ? ` — ${p.detail}` : ''} · ${decision(p)}`), '');
   }
+  // What only the Project Manager can unblock: the office's stuck items, then the Leads' blockers that name a decision, an owner, an access or the PM.
+  const theirs = s.reports.flatMap((r) => r.blockers.filter(onThePm).map((b) => `${r.name}: ${b}`));
+  out.push('## Blocked on you', '', [...blocked, ...theirs].length ? [...blocked.map((b) => `- ${b}`), ...theirs.map((b) => `- ${b}`)].join('\n') : '- nothing', '');
   const pending = mine.filter((p) => p.status === 'pending');
   out.push('## Needs the Project Manager', '', pending.length ? pending.map((p) => `- ${p.by}: ${p.title} (${DECISION_LABEL[p.kind]})`).join('\n') : '- nothing', '');
   return out.join('\n');

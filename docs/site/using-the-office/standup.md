@@ -23,7 +23,7 @@ The tab shows *Next: &lt;when&gt;*, or that the daily standup is off.
    - The **scheduled** standup never interrupts a Lead mid-turn: a busy one is read from its journal.
    - When **you** run it and someone is busy, a small window asks first, per person or the same for all: **Interrupt now**, **After their current turn** (the default: asked once that turn ends) or **Skip: use their journal**. See [Interruptions and back to work](../teams-and-agents/interruptions.md).
 2. The Chief Analyst also gets the analysis numbers and writes the weekly insight memo `docs/insights/YYYY-Www.md` if it's missing.
-3. After up to 20 minutes the office writes `docs/standups/<date>.md` and hands it to the Project Coordinator to summarise and commit.
+3. After up to 20 minutes the office writes `docs/standups/<date>.md` and hands it to the Project Coordinator to summarise and commit. Above *Needs the Project Manager* the page has **Blocked on you**: what [stuck detection](stuck-detection.md) has standing on the project, and the Leads' blockers that name a decision, an owner, an access or you.
 
 ## Proposals
 

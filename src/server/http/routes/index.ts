@@ -42,6 +42,7 @@ import { testlabRoutes } from './testlab.js';
 import { projectRoutes } from './projects.js';
 import { firstRunRoutes } from './first-run.js';
 import { testingRoutes } from './testing.js';
+import { stuckRoutes } from './stuck.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -155,6 +156,10 @@ export const routes: readonly Route[] = [
   testingRoutes.run,
   testingRoutes.switches,
   testingRoutes.setSwitches,
+  stuckRoutes.view,
+  stuckRoutes.act,
+  stuckRoutes.settings,
+  stuckRoutes.setSettings,
   wizardRoutes.wizard,
   briefRoutes.brief,
   toolkitRoutes.toolkit,

@@ -35,3 +35,11 @@
 /* In a window (the home page before any project, ui/settings/flat.ts): the page fills it and scrolls. */
 .fs-window .fs-window-body { flex: 1; min-height: 0; overflow: auto; padding: 12px; }
 .fs-window .fs-title { display: none; }
+
+/* ⚙️ Settings › 🧭 Stuck detection (stuck.ts). */
+.stk-set { display: flex; flex-direction: column; gap: 8px; }
+.stk-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 2px solid var(--rule-soft); border-radius: 10px; background: var(--card); }
+.stk-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stk-l small { color: var(--muted); font-size: 12px; }
+.stk-in { flex: none; white-space: nowrap; }
+.stk-h { width: 5em; }

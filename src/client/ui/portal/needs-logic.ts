@@ -130,6 +130,7 @@ const ROW_TAG: Record<NeedKind, string> = {
   studio: 'Studio Pro',
   incident: 'Incident',
   budget: 'Budget',
+  stuck: 'Stuck',
 };
 
 export interface RowModel {
