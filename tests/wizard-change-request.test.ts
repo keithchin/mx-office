@@ -170,6 +170,8 @@ test('change mode on a live toolkit project: no init, intake.md byte-identical, 
     // A Retry changes nothing, and still never runs init.
     assert.equal((await s.decisions(job, io)).status, 'skipped');
     assert.equal((await s.init(job, io)).status, 'skipped');
+    // gate-check isn't run over it either: on a fresh clone it rewrote the stage line from checkout times (Stage 5 read as Stage 3).
+    assert.equal((await s.gates(job, io)).status, 'skipped');
     assert.equal(readFileSync(path.join(dir, 'PROJECT.md'), 'utf8'), md);
   } finally {
     rmSync(root, { recursive: true, force: true });

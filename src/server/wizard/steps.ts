@@ -414,6 +414,9 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     },
 
     async gates(job, io) {
+      // gate-check rewrites PROJECT.md's stage line and the dashboard from its verdicts, and on a fresh clone its
+      // staleness checks read checkout times (rehearsal 2: a live Stage 5 project read Stage 3), so a live project's are left as they are.
+      if (job.existingProject) return { status: 'skipped', detail: 'existing toolkit project: its stage and dashboard stay as committed (run gate-check on the floor to refresh them)' };
       const dir = dirOf(job);
       const tk = job.toolkit?.dir ?? (await toolkitDirFor(dir, cfg.toolkitDir)).dir;
       const r = await bash(job, path.join(tk, 'bin', 'gate-check.sh'), [bashPath(dir)], io, 10 * MIN, true);
