@@ -61,18 +61,24 @@ export function coveredBy(d: StuckDraft, escs: readonly { title: string; details
 export class StuckService {
   private books = new Map<string, Promise<StuckBook>>();
   private timer?: NodeJS.Timeout;
+  private first?: NodeJS.Timeout;
+  /** Stopped (the office closing): no more looks, and nothing more written. */
+  private stopped = false;
   private looking = false;
 
   constructor(private readonly deps: StuckDeps) {}
 
   start() {
-    const first = setTimeout(() => void this.lookAll(), 30_000);
+    this.stopped = false;
+    const first = (this.first = setTimeout(() => void this.lookAll(), 30_000));
     first.unref?.();
     this.timer = setInterval(() => void this.lookAll(), LOOK_MS);
     this.timer.unref?.();
   }
 
   stop() {
+    this.stopped = true;
+    clearTimeout(this.first);
     clearInterval(this.timer);
   }
 
@@ -94,6 +100,7 @@ export class StuckService {
   }
 
   private async save(floorId: string, book: StuckBook) {
+    if (this.stopped) return;
     const f = this.file(floorId);
     try {
       await mkdir(path.dirname(f), { recursive: true });
@@ -106,7 +113,7 @@ export class StuckService {
 
   /** Every floor, one after another; never overlaps, never throws. */
   async lookAll(): Promise<void> {
-    if (this.looking) return;
+    if (this.looking || this.stopped) return;
     this.looking = true;
     try {
       for (const f of this.deps.floors()) {
