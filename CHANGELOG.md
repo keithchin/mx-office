@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-12 · release 40 (`a16e04b`)
+
 ### New
 
 - **New project starts with a project brief, drafted with the Chief Analyst.** ✨ New project opens a page that asks *What would you like to build?*: pick how to start (Plan with the team, Change an existing app, Migrate an app, or Assurance only), describe the app in one box and attach documents (.pdf, .docx, .md, .txt, up to 5 MB each). **Draft project brief** has the Chief Analyst write the goal, success criteria, user roles, scope, constraints and open questions, each marked Answered, Assumed or Unverified with where it came from. You confirm or edit items, chat with the Chief Analyst to change the brief, pick the interview style, then **Approve scope**. The page says plainly which attachments were read and how.
