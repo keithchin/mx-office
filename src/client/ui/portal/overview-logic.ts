@@ -123,3 +123,100 @@ export function budgetText(spent: number, total?: number): string {
 
 /** What a dismissed Needs-you alert is remembered under: the floor and what it said, so something new shows it again. */
 export const alertKey = (floor: string, text: string) => `${floor}|${text.replace(/\s+/g, ' ').trim()}`;
+
+// ---- The Team card's rows (the roster's members, as the panel's lead sees them) --------------------------
+
+export type TeamDot = 'work' | 'idle' | 'wait' | 'off';
+
+export interface TeamMemberLike {
+  role: string;
+  name: string;
+  title: string;
+  status: string;
+  workerId?: string;
+  activity?: string;
+  task?: string;
+  waitingOnPm?: boolean;
+}
+
+export interface TeamRowView {
+  role: string;
+  name: string;
+  title: string;
+  /** What it's doing, in a line. */
+  what: string;
+  dot: TeamDot;
+  status: string;
+  workerId?: string;
+  /** Whoever covers Management: the team-lead panel's agent. */
+  lead: boolean;
+  /** The lead isn't hired: the row offers to hire one. */
+  missing?: boolean;
+}
+
+/**
+ * The Team card: every hired member, the lead (whoever covers Management) first, each with a dot and its
+ * status in words; the lead's row says it isn't hired when it isn't. `live` is the member's worker as the
+ * page has it (its status wins over the roster's, which is fetched now and then).
+ */
+export function teamRows(members: readonly TeamMemberLike[], leadRole: string, live: (id: string) => { status: string; activity?: string } | undefined): TeamRowView[] {
+  const rows: TeamRowView[] = [];
+  for (const m of members) {
+    if (m.status === 'not-hired') {
+      if (m.role === leadRole) rows.push({ role: m.role, name: m.title, title: m.title, what: 'Not hired: no one covers Management', dot: 'off', status: 'Not hired', lead: true, missing: true });
+      continue;
+    }
+    const w = m.workerId ? live(m.workerId) : undefined;
+    const s = w?.status;
+    const [dot, status]: [TeamDot, string] =
+      m.status === 'benched' ? ['off', 'Benched']
+      : m.status === 'benching' ? ['wait', 'Writing handoff']
+      : s === 'needs_input' || m.status === 'needs-you' ? ['wait', 'Asking you']
+      : s === 'working' || s === 'starting' || (!s && m.status === 'working') ? ['work', 'Working']
+      : s === 'exited' || s === 'offline' || m.status === 'asleep' ? ['off', 'Asleep']
+      : m.waitingOnPm ? ['wait', 'Waiting on you']
+      : ['idle', 'Ready'];
+    const what = (dot === 'off' && m.status === 'benched' ? 'Session cleared to save money' : (w?.activity ?? m.activity ?? m.task ?? (dot === 'idle' ? 'Waiting for work' : ''))).replace(/\s+/g, ' ').trim();
+    rows.push({ role: m.role, name: m.name, title: m.title, what, dot, status, workerId: m.workerId, lead: m.role === leadRole });
+  }
+  return rows.sort((a, b) => Number(b.lead) - Number(a.lead));
+}
+
+// ---- The Budget card ---------------------------------------------------------------------------------
+
+export interface BudgetLike {
+  spent: number;
+  today: number;
+  settings: { total?: number; autoPause: boolean; threshold?: number };
+  officeThreshold: number;
+  forecast?: { atCompletion: number; over?: number };
+  paused?: string;
+}
+
+export interface BudgetFacts {
+  spent: string;
+  /** "of $330", with a budget. */
+  of?: string;
+  /** Share of the budget spent, 0–100, with a budget. */
+  pct?: number;
+  tone: 'good' | 'warn' | 'bad';
+  rows: [label: string, value: string][];
+}
+
+const money = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const whole = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+
+/** What the Budget card says: spent of the budget, today, the forecast at the end, the alert and auto-pause. */
+export function budgetFacts(v: BudgetLike): BudgetFacts {
+  const total = v.settings.total;
+  const pct = total ? Math.min(100, Math.round((v.spent / total) * 100)) : undefined;
+  const threshold = v.settings.threshold ?? v.officeThreshold;
+  const rows: [string, string][] = [['Today', money(v.today)]];
+  if (v.forecast) rows.push(['Forecast', `${whole(v.forecast.atCompletion)} at the end: ${v.forecast.over ? `over by ${whole(v.forecast.over)}` : total ? 'within budget' : 'no budget set'}`]);
+  if (total) {
+    rows.push(['Alert', `at ${threshold}% (${whole((total * threshold) / 100)})`]);
+    rows.push(['Auto-pause', v.paused ? 'paused now: budget reached' : v.settings.autoPause ? `at 100% (${whole(total)})` : 'off']);
+  }
+  const tone = v.paused || (pct ?? 0) >= 100 ? 'bad' : (pct ?? 0) >= threshold || v.forecast?.over ? 'warn' : 'good';
+  return { spent: money(v.spent), ...(total ? { of: `of ${whole(total)}`, pct } : {}), tone, rows };
+}

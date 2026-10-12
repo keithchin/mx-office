@@ -23,7 +23,7 @@ import { routePreviewMessage, usePreviewNet } from './ui/kanban-preview';
 import { liveAppView } from './ui/liveapp';
 import { mountStudio, studioState } from './ui/studio';
 import { mountRunToggle } from './ui/project-run';
-import { pmConsole } from './ui/pm/console';
+import { leadPanel } from './ui/lead-panel';
 import { openPull } from './ui/pull';
 import { openQueue } from './ui/queue';
 import { openMeeting, type MeetingPreset } from './ui/meeting';
@@ -93,9 +93,8 @@ const openWorker = workers.open;
 const sendToWorker = workers.send;
 // The floor's app, running from main (the 🌐 Live app tab, ui/liveapp.ts).
 const live = liveAppView(net, () => showTab('live'), () => tab === 'live');
-// The project manager console in the middle of the project summary (ui/pm/console.ts): its live
-// terminal only while the board is on screen.
-const pm = pmConsole({ net, openWorker: (id) => openWorker(id), visible: () => tab === 'command', onLoaded: (f) => loading.done('convo', f) });
+// The team lead (whoever covers Management) docked beside every tab (ui/lead-panel/): its terminal only while it's on screen.
+const pm = leadPanel({ net, openWorker: (id) => openWorker(id), show: (t) => showTab(asTab(t) ?? 'command'), onLoaded: (f) => loading.done('convo', f) });
 
 // ---- The floor you're on (every floor's card is on the home page, /home) -----------------------
 floorPicker(net, { onGo: () => showTab('command') });
@@ -329,17 +328,15 @@ function showTab(t: Tab) {
   renderKanban();
   renderAnalysisTab();
   team.render(store.floor ?? undefined);
-  // Off the Command Center, the PM console lets go of its terminal.
-  pm.sync();
   portal?.selected(t);
 }
-/** Whatever the tab shows that follows the floor's work: the Command Center (the setup panel and the project summary with the PM console in it), the board (just the kanban), or a team's page. */
+/** Whatever the tab shows that follows the floor's work: the Command Center (the setup panel and the project summary with the Overview's cards in it), the board (just the kanban), or a team's page. */
 function renderKanban() {
   if (tab === 'teams') return teams.renderPage($('teams-view'));
   if (tab === 'board') return renderBoard($('board'), kanban, teams.boardView(renderKanban));
   if (tab !== 'command') return;
   const f = store.floor;
-  void renderSummary($('summary'), store.floor ?? undefined, { middle: pm.el, after: portal?.side }).then((s) => {
+  void renderSummary($('summary'), store.floor ?? undefined, { middle: portal?.main }).then((s) => {
     portal?.summary(s);
     // Beside the project's name: the 🌐 Live app chip, and Open in Studio Pro for a Mendix project (ui/studio/).
     live.mountChip($('summary'));
@@ -376,36 +373,18 @@ for (const k of ['workers', 'issues', 'pulls', 'queue', 'project'] as const) sto
 setInterval(renderKanbanSoon, 30_000);
 
 // ---- Needs you: what's blocked on you, at the top of the Command Center, counted on its tab ---------
-/** An escalation's card on the PM console, scrolled to with its answer box focused; the Approvals tab if it isn't there. */
+/** An escalation's full card in the Overview's Needs you (Portal), scrolled to with its answer focused; the Approvals tab if it isn't there (the other themes). */
 function toEscalation(id: string) {
   if (tab !== 'command') showTab('command');
-  // The fitted Command Center keeps the cards behind a bar: bring them up first.
-  pm.showEscalations();
-  const find = () => document.querySelector<HTMLElement>(`#summary:not(.hidden) .esc[data-id="${CSS.escape(id)}"]`);
-  // Only as far as needed, in one go: the escalations list to the card, then the page just enough to
-  // show it. A smooth scroll to the middle got thrown about by the summary redrawing around it.
-  const focus = (card: HTMLElement) => {
-    const list = card.closest<HTMLElement>('.esc-list');
-    if (list) list.scrollTop += card.getBoundingClientRect().top - list.getBoundingClientRect().top - 40;
-    card.scrollIntoView({ block: 'nearest' });
-    card.querySelector<HTMLTextAreaElement>('.esc-reply')?.focus({ preventScroll: true });
-    card.classList.remove('esc-flash');
-    void card.offsetWidth;
-    card.classList.add('esc-flash');
-  };
-  // The summary draws after a fetch: wait for the card (and for it to stop moving), up to a second and a half.
+  if (!document.getElementById('pt-needs')?.offsetParent) return showTab('approvals'); // the other themes: the card is on Approvals
+  // Needs you draws from the team as fetched: wait a moment for the card, up to a second and a half.
   const started = Date.now();
-  let lastTop: number | undefined;
   const look = () => {
-    const card = find();
-    const top = card?.getBoundingClientRect().top;
-    if (card && top === lastTop) return focus(card);
-    lastTop = top;
+    if (portal?.focusEscalation(id)) return;
     if (Date.now() - started < 1500) return void setTimeout(look, 100);
-    if (card) focus(card);
-    else showTab('approvals');
+    showTab('approvals');
   };
-  look();
+  requestAnimationFrame(look);
 }
 /** A PR's window by number, if the floor has it. */
 function openPr(n: number) {
@@ -528,7 +507,7 @@ portal = portalLayout({
   openIssue: kanban.openIssue,
   openPull: kanban.openPull,
   live: () => ((s) => (s ? { status: s.status, url: appUrl(s) } : undefined))(live.current()),
-  budget: () => ((v) => (v ? { spent: v.spent, total: v.settings.total } : undefined))(budget.feed.floor()),
+  budget: () => budget.feed.floor(),
   setup: () => cachedSetup(store.floor ?? undefined),
 });
 budget.feed.on(() => portal?.refresh());

@@ -1,5 +1,5 @@
 // The Portal layout of the 1D view, in one call from lite.ts: the left navigation (./nav.ts), the page
-// header (./pagehead.ts), the Overview's right-hand cards and alert (./overview.ts), the bar's section
+// header (./pagehead.ts), the Overview's cards (./overview.ts), the bar's section
 // (the page's name, now that the floor picker is in the navigation's project card) and what the top
 // bar's search finds on this page (its pages, agents, issues and pull requests). All of it is drawn only
 // in a Portal theme (.pt-only) and leaves the tabs, their ids and showTab as they were, so every other
@@ -8,6 +8,7 @@
 import { store } from '../../state';
 import type { GhIssue, GhPull } from '../../../shared/protocol';
 import type { ProjectSummary } from '../../../shared/summary';
+import type { BudgetView } from '../../../shared/budget/types';
 import { h } from '../dom';
 import { onStudioChange, openStudio, studioBlocked, studioShown, studioVersion, watchStudio } from '../studio';
 import { portalNav } from './nav';
@@ -24,13 +25,15 @@ export interface PortalLayoutDeps {
   openPull(it: GhPull): void;
   /** The live app's state and address (null until the office says). */
   live(): { status: string; url?: string } | undefined;
-  budget(): { spent: number; total?: number } | undefined;
+  budget(): BudgetView | undefined;
   setup(): { toolkit?: boolean; head?: { branch: string; sha: string } } | undefined;
 }
 
 export interface PortalLayout {
-  /** The Overview's right column, for ui/summary.ts to keep last in the summary. */
-  side: HTMLElement;
+  /** The Overview's main column (Needs you, the brief), for ui/summary.ts to keep before the recent activity. */
+  main: HTMLElement;
+  /** Scrolls to an escalation's card in the Overview's Needs you; false when it isn't there. */
+  focusEscalation(id: string): boolean;
   /** The page showing now (lite.ts's showTab). */
   selected(tab: string): void;
   /** The project summary just drawn (its goal is the Overview's line). */
@@ -56,14 +59,16 @@ export function portalLayout(deps: PortalLayoutDeps): PortalLayout {
   onStudioChange(() => nav.refresh());
   watchStudio();
   const head = pageHead(main);
-  const overview = portalOverview({ show: (t) => deps.show(t as TabId), openWorker: deps.openWorker, live: deps.live, budget: deps.budget, mendix: studioVersion, setup: deps.setup });
+  const overview = portalOverview({ show: (t) => deps.show(t as TabId), openWorker: deps.openWorker, live: deps.live, budget: deps.budget, mendix: studioVersion, setup: deps.setup, viewApp, studio: { shown: studioShown, blocked: studioBlocked, open: () => void openStudio() } });
+  onStudioChange(() => overview.refresh());
 
   // The bar's section: the page's name, where the floor picker was (it's in the navigation's card now).
   const section = h('span.pt-section.pt-only.pt-page-name', { 'aria-live': 'polite' });
   document.querySelector('.lite-bar .pt-sep')?.after(section);
 
   return {
-    side: overview.side,
+    main: overview.main,
+    focusEscalation: overview.focusEscalation,
     selected(t) {
       nav.selected(t);
       head.page(t);

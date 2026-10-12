@@ -1,15 +1,11 @@
-// Escalations on the project console (🎛️ Command Center) (ui/pm/console.ts) and in the Team tab's approvals
+// Escalations in the Team tab's approvals (the Overview's Needs you draws its own full cards, ui/portal/needs-card.ts, with answer() below)
 // (ui/roster/approvals.ts): what an agent raised to the Project Manager — you, the human — with
 // Reply / Approve / Reject. The answer goes back to the agent that raised it as its next prompt and the
 // card is resolved (server/roster/escalations.ts). Urgent and critical ones are highlighted; FYIs (below
 // the floor's threshold at its autonomy level) are dimmed and get a plain "Noted".
-//
-// The list is drawn again whenever the team is fetched, so a card being answered is kept, not rebuilt:
-// what you're typing in it survives the redraws.
 
 import { TRIGGER_LABEL } from '../../../shared/roster/autonomy';
-import { URGENCY_ICON, escalationOrder, type Escalation, type EscalationVerdict } from '../../../shared/roster/escalation';
-import { jeffOrder, rankOf, sortedByJeff } from '../../../shared/roster/jeff-rank';
+import { URGENCY_ICON, type Escalation, type EscalationVerdict } from '../../../shared/roster/escalation';
 import { ROLE_BY_ID } from '../../../shared/roster/roles';
 import type { RosterView } from '../../../shared/roster/types';
 import { h, timeAgo, toast } from '../dom';
@@ -17,7 +13,6 @@ import { act } from '../roster/api';
 import { store } from '../../state';
 import { ZONE_BY_TEAM } from '../../../shared/zones';
 import { lookFor, standing, type Outfit } from '../../pixel/chars';
-import { rankChipEl, sortedNote } from './jeff-rank';
 import './escalations.css';
 
 const VERDICT_DONE: Record<EscalationVerdict, string> = { reply: '💬 Replied', approve: '✅ Approved', reject: '❌ Rejected', dismiss: '✓ Noted' };
@@ -166,46 +161,4 @@ function raisedBy(e: Escalation): HTMLElement {
   // first time) held up the console's first draw by a quarter of a second (the performance guard).
   later(() => c.getContext('2d')!.drawImage(standing(lookFor(e.workerId, color, (e.role && OUTFIT[e.role]) || 'plain'), 'front', false, 0), 0, 0, 24, 24, 0, 0, 24, 24));
   return h('figure.esc-who', { title: `Raised by ${e.by}${role ? ` (${role.title})` : ''}` }, c, h('figcaption', {}, e.by), role ? h('small', {}, role.title) : null);
-}
-
-/**
- * The console's list of escalations: the open ones as cards, the answered ones folded away. When Jeff
- * ranked them (his priority sort is on), the open ones are in his order, each with its chip beside the card.
- */
-export class EscalationList {
-  readonly el = h('section.esc-list', { 'aria-label': 'Escalations to you, the Project Manager' });
-  private cards = new Map<string, { sig: string; el: HTMLElement }>();
-  /** Kept between redraws, so it stays open once you've opened it. */
-  private folded = h('details.esc-answered');
-  /** What was drawn last: the console draws often (every worker update), and moving a card would lose your caret. */
-  private drawn = '';
-
-  constructor(private done: (v: RosterView) => void) {}
-
-  render(v: RosterView | undefined) {
-    const list = v?.escalations ?? [];
-    const byJeff = sortedByJeff(list, v?.settings?.jeff?.priority);
-    const open = jeffOrder(list.filter((e) => e.status === 'open'), byJeff, escalationOrder);
-    const answered = list.filter((e) => e.status === 'resolved').slice(0, 3);
-    this.el.hidden = !list.length;
-    const sig = `${v?.floor}|${v?.admin}|${byJeff}|${list.map((e) => `${e.id}:${e.status}:${byJeff ? `${rankOf(e) ?? ''}@${e.jeffRank?.at ?? ''}` : ''}`).join(',')}`;
-    if (sig === this.drawn) return;
-    this.drawn = sig;
-    if (!v || !list.length) return void this.el.replaceChildren();
-    const loud = open.filter((e) => !e.fyi && (e.urgency === 'urgent' || e.urgency === 'critical')).length;
-    const keep = new Map<string, { sig: string; el: HTMLElement }>();
-    const cardFor = (e: Escalation) => {
-      const sig = `${e.status}|${v.admin}`;
-      const had = this.cards.get(e.id);
-      const c = had && had.sig === sig ? had : { sig, el: escalationCard(v.floor, e, v.admin, this.done) };
-      keep.set(e.id, c);
-      return c.el;
-    };
-    const head = h('header.esc-list-h', {}, h('b', {}, `🚩 Escalations to you${open.length ? ` (${open.length} open)` : ''}`), loud ? h('span.esc-loud', {}, `${loud} need${loud === 1 ? 's' : ''} you now`) : null);
-    this.folded.replaceChildren(h('summary', {}, `Answered (${answered.length})`), ...answered.map(cardFor));
-    // Jeff's chip goes beside the card, not in it: the card keeps its element (and what you typed).
-    const opened = open.flatMap((e) => [byJeff ? rankChipEl(e) : null, cardFor(e)].filter((x): x is HTMLElement => !!x));
-    this.el.replaceChildren(head, ...(byJeff ? [sortedNote()] : []), ...opened, ...(answered.length ? [this.folded] : []));
-    this.cards = keep;
-  }
 }

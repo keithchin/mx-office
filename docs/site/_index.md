@@ -10,7 +10,7 @@ Mx Office is a web app that runs on your laptop. **Claude Code agents** work at 
 - the agents build the app with **mxcli** and follow the **mxcli-project-toolkit**;
 - **you are the Project Manager**: you approve what matters and answer escalations.
 
-![The Command Center of a project](images/command-center.png "The Command Center: what needs you, the project summary and the Project Coordinator console")
+![The Command Center of a project](images/command-center.png "The Overview: progress, Needs you with the escalations as cards, the team and the budget, and the team-lead panel on the right")
 
 ## Start here
 

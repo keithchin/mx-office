@@ -1,4 +1,4 @@
-// The console's Chat view (ui/pm/console.ts): the worker's conversation as messages instead of its
+// The team-lead panel's Chat view (ui/lead-panel/panel.ts): the worker's conversation as messages instead of its
 // screen. What you sent on one side, its replies on the other with its icon and color, its tool calls
 // as compact rows (logic.ts folds runs of them), and what it's asking you as a highlighted card that
 // sends you to its terminal: a choice is never answered from here. Fed by the office reading its
@@ -40,6 +40,8 @@ export interface ChatDeps {
   openTerminal(): void;
   /** The terminal's lines, for the fallback. */
   lines(): string[];
+  /** Rows shown at first (at most PAGE): a narrow panel needs fewer, and each costs a draw. */
+  page?: number;
 }
 
 const STATUS_WORD: Record<ConvoToolStatus, string> = { running: 'running', ok: 'done', error: 'failed' };
@@ -54,13 +56,17 @@ export class ChatView {
   private readonly plain: HTMLElement;
   /** Each row on the page by its item's id, with what it was drawn from. */
   private readonly drawn = new Map<string, { sig: string; el: HTMLElement }>();
-  private limit = PAGE;
+  private limit: number;
+  /** Rows on the page at first, and how many more each Show earlier adds. */
+  private readonly page: number;
   private state: ChatState | undefined;
   private plainFrame = 0;
   /** Whether the list is scrolled to its newest row, so it stays there as rows come and the box changes size. */
   private pinned = true;
 
   constructor(private readonly deps: ChatDeps) {
+    this.page = Math.min(PAGE, deps.page ?? PAGE);
+    this.limit = this.page;
     this.earlier = h('button.btn.small.pmc-earlier', { type: 'button', onclick: () => this.showEarlier() }, 'Show earlier');
     this.rows = h('div.pmc-rows');
     this.list = h('div.pmc-chat-list', { role: 'log', 'aria-label': 'Conversation', tabindex: '0' }, this.earlier, this.rows);
@@ -111,13 +117,13 @@ export class ChatView {
   private reset() {
     this.drawn.clear();
     this.rows.replaceChildren();
-    this.limit = PAGE;
+    this.limit = this.page;
     this.pinned = true;
   }
 
   private showEarlier() {
     const before = this.list.scrollHeight;
-    this.limit += PAGE;
+    this.limit += this.page;
     if (this.state) this.draw(this.state);
     // Keep the rows you were reading where they were.
     this.list.scrollTop += this.list.scrollHeight - before;

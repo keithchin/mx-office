@@ -61,7 +61,7 @@ const filesNote = () =>
     h(
       'p.setting-note',
       {},
-      'What’s set here is kept in the office’s data folder (~/agent-office by default): the office’s own settings in office-settings.json and one file each for Teams, keep-awake, incidents and the budget; a project’s team settings with its roster; the tokens in credentials.json, encrypted. Yours (the color theme, the sounds, the Command Center terminal) stay in this browser. Every field, its file and its command-line flag: the docs’ Settings reference (📖 Documentation).',
+      'What’s set here is kept in the office’s data folder (~/agent-office by default): the office’s own settings in office-settings.json and one file each for Teams, keep-awake, incidents and the budget; a project’s team settings with its roster; the tokens in credentials.json, encrypted. Yours (the color theme, the sounds, the team-lead panel) stay in this browser. Every field, its file and its command-line flag: the docs’ Settings reference (📖 Documentation).',
     ),
   );
 

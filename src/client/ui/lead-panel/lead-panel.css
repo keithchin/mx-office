@@ -1,0 +1,167 @@
+/* The team-lead panel (ui/lead-panel/): docked on the right of every project tab of the 1D view, the full
+   height under the top bar; a slim rail when collapsed; a bottom sheet from a floating avatar on a phone.
+   Colours are the theme's tokens (styles/base.css), so every theme gets it; Portal's look is the default
+   shape, the other themes keep their own fonts, corners and borders through the tokens. */
+
+:root { --lp-w: 400px; --lp-rail: 52px; --lp-top: 64px; }
+@media (max-width: 1180px) { :root { --lp-w: 360px; } }
+body.lite.lp-on { --lp-space: var(--lp-w); }
+body.lite.lp-on.lp-collapsed { --lp-space: var(--lp-rail); }
+/* The page makes room: the 1D view's main column and the classic themes' bottom bar end where the panel starts. */
+body.lite.lp-on .lite-main { width: auto; margin-right: var(--lp-space); transition: margin-right .18s ease; }
+html[data-theme^='portal'] body.lite.pt-has-nav.lp-on .lite-main { margin-right: var(--lp-space); }
+body.lite.lp-on .lite-nav { right: var(--lp-space); }
+html[data-theme^='portal'] body.lite.lp-on { --lp-top: var(--pt-top, 45px); }
+
+/* ---- The panel ------------------------------------------------------------------------------------- */
+.lp { position: fixed; top: var(--lp-top); right: 0; bottom: 0; z-index: 18; width: var(--lp-w); display: flex; flex-direction: column; background: var(--card); color: var(--ink); border-left: 1px solid var(--line); transition: transform .18s ease, opacity .18s ease; }
+.lp[hidden], .lp-rail[hidden], .lp-fab[hidden] { display: none !important; }
+body.lp-collapsed .lp { transform: translateX(24px); opacity: 0; visibility: hidden; }
+.lp-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.lp [hidden] { display: none !important; }
+.lp-grow { flex: 1; min-width: 0; }
+
+.lp-h { flex: none; padding: 12px 12px 0 16px; border-bottom: 1px solid var(--line); }
+.lp-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.lp-who { flex: 1; min-width: 0; }
+.lp-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lp-name-r { font-weight: 400; color: var(--ink-2); }
+.lp-status { min-height: 18px; margin-top: 1px; overflow: hidden; font-size: 12px; color: var(--ink-2); white-space: nowrap; text-overflow: ellipsis; }
+.lp-status .lp-st { display: flex; min-width: 0; }
+.lp-st-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-st { display: inline-flex; align-items: center; gap: 5px; }
+.lp-st i, .lp-rail-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.lp-st-work i, .lp-rail-dot.lp-st-work { background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); }
+.lp-st-wait i { background: var(--warn); }
+.lp-st-off i, .lp-rail-dot.lp-st-off { background: transparent; border: 1.5px solid var(--faint); }
+.lp-iconbtn { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--ink-2); font: inherit; font-size: 18px; line-height: 1; cursor: pointer; }
+.lp-iconbtn:hover { background: var(--hover); }
+.lp :focus-visible, .lp-rail :focus-visible, .lp-fab:focus-visible { outline: 2px solid var(--focus, var(--accent)); outline-offset: 2px; }
+.lp-expand, .lp-wake { flex: none; }
+.lp-termlink { display: none; flex: none; padding: 2px 0; border: 0; background: none; color: var(--link); font: inherit; font-size: 13px; cursor: pointer; }
+.lp-sheet-x { display: none; }
+
+/* The avatar: the agent's icon on its colour; the initials in the themes without emoji (Clean, Portal). */
+.lp-face { --size: 34px; position: relative; flex: none; display: grid; place-items: center; width: var(--size); height: var(--size); border-radius: 50%; background: var(--face, var(--accent)); color: #fff; font-size: calc(var(--size) * .36); font-weight: 600; line-height: 1; box-shadow: 0 0 0 2px var(--card); }
+.lp-face-emo { font-size: calc(var(--size) * .55); }
+.lp-face-i { display: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .lp-face-emo { display: none; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .lp-face-i { display: inline; }
+.lp-face.lp-face-off { background: var(--paper-2); color: var(--faint); border: 1.5px dashed var(--rule-strong); box-shadow: none; }
+
+/* Chat | Terminal */
+.lp-tabs { display: flex; gap: 2px; margin-top: 8px; }
+.lp-tab { position: relative; height: 36px; padding: 0 12px; border: 0; border-radius: 3px 3px 0 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 13.5px; cursor: pointer; }
+.lp-tab:hover { background: var(--hover); }
+.lp-tab[aria-selected='true'] { color: var(--ink); font-weight: 600; }
+.lp-tab[aria-selected='true']::after { content: ''; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--accent); }
+.lp-tab.lp-dot::before { content: ''; position: absolute; top: 9px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+.lp-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* "N waiting on you →" */
+.lp-wait { flex: none; display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 16px; border: 0; border-bottom: 1px solid var(--warn); background: var(--warn-soft); color: var(--warn-ink); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.lp-wait:hover { filter: brightness(.97); }
+.lp-wait b { font-weight: 600; }
+
+/* The conversation (ui/pm/chat/view.ts draws it): as tall as the panel leaves it. */
+.lp-chat > .pmc-chat { position: relative; inset: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px 0; border: 0; border-radius: 0; background: transparent; }
+.lp-chat .pmc-chat-list { flex: 1; min-height: 0; max-height: none; scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+.lp-chat .pmc-fallback { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.lp-chat .pmc-plain { flex: 1; min-height: 0; max-height: none; }
+
+/* The composer */
+.lp-comp { flex: none; padding: 10px 12px 12px; border-top: 1px solid var(--line); background: var(--card); }
+.lp-qa { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.lp-qchip { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper-2); color: var(--ink); font: inherit; font-size: 12.5px; cursor: pointer; }
+.lp-qchip:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--info-line); }
+.lp-qchip:disabled { opacity: .5; cursor: not-allowed; }
+.lp-qi { font-size: 12px; }
+html:is([data-theme^='clean'], [data-theme^='portal']) .lp-qi { display: none; }
+.lp-hint { margin: 0 0 8px; padding: 6px 9px; border: 1px solid var(--info-line); border-radius: 4px; background: var(--info-soft); font-size: 12px; color: var(--ink); }
+.lp-hint.bad { border-color: var(--bad); background: var(--bad-soft); color: var(--bad-ink); }
+.lp-turn { margin-bottom: 8px; padding: 8px 10px; border: 1px solid var(--warn); border-radius: 4px; background: var(--warn-soft); color: var(--warn-ink); font-size: 12.5px; }
+.lp-turn-b { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.lp-composer { border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--card); }
+.lp-composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.lp-box { display: block; width: 100%; min-height: 46px; max-height: 140px; padding: 10px 12px 2px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); font: inherit; font-size: 13.5px; resize: none; outline: none; }
+.lp-box::placeholder { color: var(--faint); }
+.lp-box:disabled { cursor: not-allowed; }
+.lp-cbar { display: flex; align-items: center; gap: 8px; padding: 4px 6px 6px 12px; }
+.lp-cbar-t { flex: 1; min-width: 0; font-size: 11px; color: var(--faint); }
+.lp-send { flex: none; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 4px; background: var(--accent); color: var(--on-fill, #fff); font-size: 14px; cursor: pointer; }
+.lp-send:disabled { background: var(--rule-strong); cursor: not-allowed; }
+
+/* The terminal: the PTY's screen scaled to the panel's width, the newest lines at its foot (ui/pm/term.ts). */
+.lp-term { background: var(--code-bg); }
+.lp-term-bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--line); color: var(--code-ink); font-size: 12px; opacity: .85; }
+.lp-term-frame { position: relative; flex: 1; min-height: 0; display: flex; }
+.lp-termhost { position: relative; flex: 1; min-height: 0; overflow: hidden; contain: strict; background: var(--code-bg); }
+.lp-termhost > .terminal { position: absolute; left: 0; top: 0; transform-origin: top left; pointer-events: none; }
+.lp-term-off { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 10px; color: var(--code-ink); font-size: 13px; text-align: center; }
+.lp-term-note { flex: none; margin: 0; padding: 8px 14px 10px; border-top: 1px solid var(--line); color: var(--code-ink); font-size: 11.5px; opacity: .75; }
+.lp-conn-b { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 10px; background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good); font-size: 11px; font-weight: 600; }
+.lp-conn-b i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.lp-conn-b.lp-conn-off { background: transparent; color: var(--code-ink); opacity: .7; }
+
+/* Nobody leads, or a benched lead */
+.lp-empty { flex: 1; overflow-y: auto; padding: 28px 22px; text-align: center; }
+.lp-big { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 12px; border: 1.5px dashed var(--rule-strong); border-radius: 50%; background: var(--paper-2); font-size: 26px; }
+.lp-empty-h { margin: 0; font-size: 16px; font-weight: 600; }
+.lp-dim { margin: 8px 0 0; font-size: 13px; color: var(--ink-2); }
+.lp-warn { margin: 8px 0 0; font-size: 12px; color: var(--warn-ink); }
+.lp-empty .btn { margin-top: 16px; }
+.lp-handoff { margin: 16px 0 0; padding: 10px 12px; border-left: 3px solid var(--accent); border-radius: 0 4px 4px 0; background: var(--paper-2); color: var(--ink-2); font-size: 13px; text-align: left; overflow-wrap: anywhere; }
+.lp-hh { display: block; margin-bottom: 4px; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+
+/* ---- Collapsed: the rail --------------------------------------------------------------------------- */
+.lp-rail { position: fixed; top: var(--lp-top); right: 0; bottom: 0; z-index: 17; width: var(--lp-rail); display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 12px; border-left: 1px solid var(--line); background: var(--paper-2); }
+.lp-rail-btn { position: relative; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.lp-rail-btn .lp-face { --size: 36px; }
+.lp-badge[hidden] { display: none; }
+.lp-badge { position: absolute; top: -3px; right: -4px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 600; box-shadow: 0 0 0 2px var(--paper-2); }
+.lp-rail-dot { width: 9px; height: 9px; }
+.lp-vlabel { writing-mode: vertical-rl; max-height: 50vh; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; letter-spacing: .02em; color: var(--ink-2); }
+
+/* ---- The phone: a floating avatar and a bottom sheet (chat only) --------------------------------- */
+.lp-fab, .lp-backdrop { display: none; }
+@media (max-width: 760px) {
+  body.lite.lp-on { --lp-space: 0px; }
+  body.lite.lp-on .lite-main { margin-right: 0; }
+  .lp, body.lp-collapsed .lp { top: auto; left: 0; right: 0; bottom: 0; z-index: 50; width: auto; height: 84%; height: 84dvh; border: 0; border-radius: 14px 14px 0 0; box-shadow: 0 -8px 28px rgba(10, 19, 36, .18); transform: translateY(100%); opacity: 1; visibility: hidden; transition: transform .2s ease, visibility 0s linear .2s; }
+  body.lp-sheet .lp { transform: none; visibility: visible; transition: transform .2s ease, visibility 0s; }
+  body.lp-sheet .lp-backdrop { display: block; position: fixed; inset: 0; z-index: 45; background: var(--backdrop, rgba(10, 19, 36, .4)); }
+  .lp-h { padding-bottom: 10px; }
+  .lp-h::before { content: ''; display: block; width: 36px; height: 4px; margin: -4px auto 8px; border-radius: 2px; background: var(--rule-strong); }
+  .lp-tabs, .lp-collapse, .lp-expand { display: none !important; }
+  .lp-termlink { display: inline-flex; }
+  .lp-termlink[hidden] { display: none; }
+  .lp-sheet-x { display: inline-grid; }
+  .lp-name { white-space: normal; }
+  .lp-fab { display: grid; place-items: center; position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(var(--tp-above, 0px) + 14px + env(safe-area-inset-bottom)); z-index: 40; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: var(--card); box-shadow: 0 8px 28px rgba(10, 19, 36, .2); cursor: pointer; }
+  .lp-fab .lp-face { --size: 48px; }
+  .lp-fab .lp-badge { top: -2px; right: -2px; box-shadow: 0 0 0 2px var(--card); }
+}
+
+/* ---- The expanded terminal ------------------------------------------------------------------------- */
+.modal.lp-tx { width: min(1200px, calc(100vw - 48px)); max-width: none; height: calc(100dvh - var(--lp-top) - 40px); display: flex; flex-direction: column; padding: 0; overflow: hidden; background: var(--code-bg); color: var(--code-ink); }
+.modal.lp-tx > header { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-bottom: 1px solid var(--line); }
+.modal.lp-tx > header h2 { margin: 0; font-size: 14px; color: var(--code-ink); }
+.lp-tx-sub { flex: 1; font-size: 12px; opacity: .75; }
+.lp-tx-host { flex: 1; min-height: 0; display: flex; }
+@media (max-width: 760px) { .modal.lp-tx { width: 100vw; height: calc(100dvh - 8px); border-radius: 10px 10px 0 0; } }
+
+/* Where "N waiting on you →" lands: a ring for a moment. */
+.lp-ring { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent) !important; border-color: var(--accent) !important; transition: box-shadow .2s; }
+
+/* Round whatever a theme does to buttons and spans (Clean and Portal square them off). */
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.lp-fab, .lp-rail-btn, .lp-face, .lp-badge, .lp-st i, .lp-rail-dot) { border-radius: 50% !important; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lp-badge { border-radius: 9px !important; }
+/* The team phone's button (ui/phone/) moves out of the panel's way: beside it on a computer, left of the floating avatar on a phone. */
+body.lite.lp-on .tp-launch { right: calc(var(--lp-space) + 16px); }
+@media (max-width: 760px) { body.lite.lp-on .tp-launch { right: calc(max(16px, env(safe-area-inset-right)) + 68px); } }
+
+/* ---- The other themes ------------------------------------------------------------------------------- */
+html[data-theme='terminal'] :is(.lp-qchip, .lp-composer, .lp-box, .lp-send, .lp-turn, .lp-hint, .lp-face, .lp-badge, .lp-tab, .lp-iconbtn) { border-radius: 0; }
+html:not([data-theme^='clean']):not([data-theme^='portal']) .lp { border-left-width: var(--bw, 2px); }
+@media (prefers-reduced-motion: reduce) { .lp, body.lite.lp-on .lite-main { transition: none; } }

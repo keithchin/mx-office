@@ -53,7 +53,7 @@ score = 100 × (0.45 × level + 0.35 × blocking + 0.20 × risk)  +  20 × block
 
 So an old blocker climbs past a fresh one of the same weight, while an old nice-to-have doesn't climb at all.
 
-- **Escalations to you** on the [Command Center](../using-the-office/command-center.md), the [Approvals](../using-the-office/approvals.md) tab and **Needs you** list the open escalations in his order, under the note *Sorted by Jeff · Router — resolve from the top*.
+- **Needs you** on the [Command Center](../using-the-office/command-center.md) (the Overview) and the [Approvals](../using-the-office/approvals.md) tab list the open escalations in his order, under the note *Sorted by Jeff · Router — resolve from the top*.
 - Beside each card is a chip: **🧑‍⚖️ #1 · resolve first**, then **#2**, **#3**… Hover it for *Jeff (Jev) ranks this #1: blocking 92%, risk 40%* and his level.
 - A **critical** or **urgent** escalation he hasn't rated yet (just raised, or he's down) stays above his list; other unrated ones go below it.
 - Off, or nothing rated yet: the lists keep their usual order (urgency, then age).

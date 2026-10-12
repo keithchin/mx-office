@@ -14,6 +14,7 @@ import { getProgress } from './api';
 import { barRow, tipContent } from './bar';
 import { openAcceptance } from './acceptance';
 import { toolkitChip } from '../toolkit/line';
+import { onThemeChange } from '../colortheme';
 
 const FOLD_KEY = 'agent-office.progress-folded';
 /** Coming back to a hidden tab asks again only when the answer is older than this. */
@@ -73,13 +74,15 @@ export function mountProgressBar(root: HTMLElement, deps: ProgressDeps): Progres
   const hideTip = () => (tip.hidden = true);
 
   function draw() {
-    const sig = `${collapsed}|${data ? JSON.stringify({ ...data, generatedAt: 0 }) : ''}`;
+    // In the Portal Overview's Progress card (ui/portal/overview.ts moves the bar there) it's never folded: the card is its words.
+    const fold = collapsed && !root.closest('.pt-prog');
+    const sig = `${fold}|${data ? JSON.stringify({ ...data, generatedAt: 0 }) : ''}`;
     if (sig === drawn) return;
     drawn = sig;
     hideTip();
-    root.classList.toggle('pg-folded', collapsed);
+    root.classList.toggle('pg-folded', fold);
     if (!data) return root.replaceChildren(h0());
-    const row = barRow(data, collapsed, {
+    const row = barRow(data, fold, {
       toggle: () => {
         collapsed = !collapsed;
         try {
@@ -99,7 +102,7 @@ export function mountProgressBar(root: HTMLElement, deps: ProgressDeps): Progres
   /** Before the first answer: the bar's height, empty, so nothing below it moves when it comes. */
   const h0 = () => {
     const el = document.createElement('div');
-    el.className = `pg-bar pg-empty${collapsed ? ' collapsed' : ''}`;
+    el.className = `pg-bar pg-empty${collapsed && !root.closest('.pt-prog') ? ' collapsed' : ''}`;
     return el;
   };
   // The segments' tooltips, from one listener pair on the bar.
@@ -107,7 +110,7 @@ export function mountProgressBar(root: HTMLElement, deps: ProgressDeps): Progres
   const enter = (e: Event) => {
     const s = seg(e);
     const ph = s && data?.phases.find((p) => p.id === s.dataset.phase);
-    if (s && ph && !collapsed) showTip(ph, s);
+    if (s && ph && !root.classList.contains('pg-folded')) showTip(ph, s);
   };
   root.addEventListener('mouseover', enter);
   root.addEventListener('focusin', enter);
@@ -139,6 +142,8 @@ export function mountProgressBar(root: HTMLElement, deps: ProgressDeps): Progres
     void load();
   });
   // A pull request merged moves main: the gates and deliverables may have moved with it.
+  // Moved into (or out of) the Portal Overview's card with a theme change: drawn for where it is now.
+  onThemeChange(() => requestAnimationFrame(draw));
   store.on('pulls', () => {
     const sig = store.pulls.items.filter((p) => p.state === 'MERGED').map((p) => p.number).join(',');
     if (sig === mergedSig) return;
