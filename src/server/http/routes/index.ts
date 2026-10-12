@@ -40,6 +40,7 @@ import { perfRoutes } from './perf.js';
 import { testlabRoutes } from './testlab.js';
 import { projectRoutes } from './projects.js';
 import { firstRunRoutes } from './first-run.js';
+import { testingRoutes } from './testing.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -148,6 +149,7 @@ export const routes: readonly Route[] = [
   progressRoutes.acceptance,
   progressRoutes.draft,
   progressRoutes.act,
+  testingRoutes.view,
   wizardRoutes.wizard,
   toolkitRoutes.toolkit,
   connectionsRoutes.connections,

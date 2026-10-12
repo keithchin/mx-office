@@ -22,6 +22,7 @@ export const officeFiles = (floor: string): string[] => [
   `budget/${floor}.json`,
   `acceptance/${floor}.jsonl`,
   `acceptance/${floor}`,
+  `testing/${floor}.jsonl`,
   `live/${floor}.log`,
 ];
 

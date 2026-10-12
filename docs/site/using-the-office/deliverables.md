@@ -38,6 +38,8 @@ Each team has its own reports:
 
 The Playbooks tell each Lead its folder.
 
+The JSON reports under `reports/testing/`, the toolkit's `docs/report.json` and `tests/test-plan*.md` are also read by **App Insights › [Testing](testing.md)**, which records each report as a test run bound to revisions: the commit that last changed the file is only where the evidence is kept, and the tested revision is *unknown* unless the report says what it tested.
+
 ## Where it looks
 
 - **Main**: the project's default branch on GitHub, `origin/<default>` (from `origin/HEAD`, else `main` or `master`), read with `git ls-tree` and `git cat-file` after a quiet fetch at most every 90 seconds, the same one the [setup panel](command-center.md#project-setup) uses. So *On main* means merged, whatever branch the floor's folder is on. When the folder is on another branch or behind, the panel says so at the top: *This folder is on run4/discovery-p-4, 23 commits behind main; "On main" below is read from main.* Only a project with no remote uses the folder itself (tracked files, or new and not ignored).

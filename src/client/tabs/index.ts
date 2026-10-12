@@ -4,3 +4,4 @@
 // group, a tab without an `order` follows the ones above it here.
 
 import '../ui/testlab/tab';
+import '../ui/testing/tab';

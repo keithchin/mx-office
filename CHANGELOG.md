@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+### New
+
+- **App Insights › Testing: test evidence bound to revisions.** A new read-only page lists each project's test runs (from pull request checks the Board already shows, the JSON reports under `reports/testing/` and `docs/report.json` on main, and the office's own gate-check of main) with three revisions kept apart: the app commit that was tested, the commit the tests came from, and where the report is kept. A report that doesn't say what it tested shows its tested revision as *unknown* and counts for no commit. Per BRD use case (grouped by feature) and per acceptance criterion it shows coverage, latest result and freshness as separate columns, so a criterion with no linked test reads "No linked test", never "Failed", and a run on an older commit reads "Stale". Every link says whether a file recorded it or the office inferred it (and by which rule); tests that passed and failed on the same commit are marked flaky. The test plan opens in place. Nothing on the page changes the repository, GitHub or any task.
+
 ### Fixed
 
 - **A closed pull request or an agent's own "task done" no longer counts as delivered.** A team member's task used to count as finished whenever its pull request stopped being open (closed without merging included) or the agent said `task done`, so rejected or abandoned work looked delivered. Now only a merged pull request, or its issue closed as completed, counts as delivered. An issue closed as *not planned* cancels the task. A pull request closed without merging asks you in Needs you whether to rework it, cancel the task, or which PR replaced it (a newer PR from the same agent's branch replaces it by itself). An agent's own `task done` is pending verification until its PR merges or its issue closes. Neither gets back-to-work nudges: they wait for you, as a finished task does. Tasks finished before this keep the record they had.
