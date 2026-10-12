@@ -66,7 +66,7 @@ export function planView(flow: Flow) {
     if (next === 'approve') {
       const b = h('button.btn.primary.nw-primary', { type: 'button', id: 'nw-approve' }, icon('check'), 'Approve scope');
       b.addEventListener('click', () => onApprove(b));
-      primaryWrap.replaceChildren(b, h('span.nw-approve-hint', {}, 'Approving records the ✋ Stage 0 decision as CONFIRMED in PROJECT.md.'));
+      primaryWrap.replaceChildren(b, h('span.nw-approve-hint', {}, 'Approving records your scope decision for ✋ Stage 0 in PROJECT.md. Stage 0 passes when the Chief Analyst’s triage is signed off.'));
     } else if (next === 'mapping') {
       primaryWrap.replaceChildren(h('button.btn.primary.nw-primary', { type: 'button', disabled: true }, 'Mapping domains…'), h('span.nw-approve-hint', {}, 'Next: team & budget, then create.'));
     } else {
@@ -86,7 +86,7 @@ export function planView(flow: Flow) {
     const dlg = openDialog(
       el,
       'Approve with assumptions?',
-      [h('p', {}, `${n} item${n === 1 ? ' is' : 's are'} still Assumed; ${n === 1 ? 'it' : 'they'}’ll be recorded as ASSUMED. Approve anyway?`), h('p.nw-hint', {}, 'The team can still confirm them later: the Chief Analyst starts Discovery by confirming them with the client.')],
+      [h('p', {}, `${n} item${n === 1 ? ' is' : 's are'} still Assumed; ${n === 1 ? 'it' : 'they'}’ll be recorded as ASSUMED. Approve anyway?`), h('p.nw-hint', {}, 'The team can still confirm them later: the Chief Analyst starts Discovery by confirming them with the client, and Stage 0 passes when its triage is signed off.')],
       { opener: btn, foot: [review, anyway] },
     );
     review.addEventListener('click', () => (dlg.close(), setTimeout(() => brief.reviewAssumed(), 200)));
@@ -97,7 +97,7 @@ export function planView(flow: Flow) {
     const d = flow.draft!;
     try {
       flow.setDraft(await briefApi.approve(d.id));
-      flow.say('Scope approved. Stage 0 recorded as confirmed. Mapping functional domains');
+      flow.say('Scope approved and recorded for Stage 0. Mapping functional domains');
       setTimeout(() => domains.el.scrollIntoView({ block: 'start', behavior: 'smooth' }), 240);
     } catch (err) {
       toast((err as Error).message, 'warn');

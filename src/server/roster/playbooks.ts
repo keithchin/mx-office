@@ -8,6 +8,7 @@
 // (role id `pm`) is "the Project Coordinator".
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { autonomyBrief, HUMAN_FULL, reviewBrief, type AutonomyLevel } from '../../shared/roster/autonomy.js';
 import { teamLabel } from '../../shared/roster/card-team.js';
@@ -15,7 +16,7 @@ import { ASK_THE_PM } from './prompts.js';
 import { journalPath, playbookMirror, playbookPath, ROLE_BY_ID, ROLES, standupPath, type RoleDef, type RoleId, type SubagentDef, type TeamId } from '../../shared/roster/roles.js';
 import { craftOn, skillsBrief, type SkillOverrides } from '../../shared/roster/skills.js';
 import type { SubagentRecord } from '../../shared/roster/subagents.js';
-import { applyStanding } from './subagent-files.js';
+import { applyStanding, applyStandingAsync } from './subagent-files.js';
 import { deliverablesBrief } from './deliverables-brief.js';
 import { toolkitDir as officeToolkitDir } from '../connections/store.js';
 import { alsoCovers, covers, isIdentity, managerOf, subagentDefsOf, writerOf, type Coverage } from '../../shared/roster/coverage.js';
@@ -301,54 +302,67 @@ const lessonsSeed = (project: string) => `---\nname: project-lessons\ndescriptio
  */
 export function writeRoleFiles(dir: string, roleId: RoleId, ctx: PlaybookContext): string[] {
   const wrote: string[] = [];
-  const steps = roleFileSteps(dir, roleId, ctx, wrote);
-  while (!steps.next().done) continue;
+  for (const step of roleFileSteps(roleId, ctx)) {
+    if (step.kind === 'standing') wrote.push(...applyStanding(dir, step.rec, step.base));
+    else {
+      const file = path.join(dir, step.rel);
+      const old = existsSync(file) ? readFileSync(file, 'utf8') : undefined;
+      if (old !== undefined && (step.keep || old === step.text)) continue;
+      mkdirSync(path.dirname(file), { recursive: true });
+      writeFileSync(file, step.text);
+      wrote.push(step.rel);
+    }
+  }
   return wrote;
 }
 
 /**
- * writeRoleFiles with a turn of the event loop after each file: a Lead's are a dozen files, each read,
- * compared and written, and on a loaded machine a hire held the loop 1.7 s writing them in one go (the
- * journey's hiring, 2026-10-08). The same files.
+ * writeRoleFiles off the event loop, for a hire: a Lead's are a dozen files, each read, compared and
+ * written. In one go a hire held the loop 1.7 s on a loaded machine (the journey's hiring, 2026-10-08);
+ * a file per turn of the loop still held it 333 ms for one file's sync write under load (perf-quick,
+ * 2026-10-12). So every read and write goes through node:fs/promises (libuv's threads), with a turn
+ * of the loop between files for the strings. The same files, written only when they changed.
  */
 export async function writeRoleFilesSoon(dir: string, roleId: RoleId, ctx: PlaybookContext): Promise<string[]> {
   const wrote: string[] = [];
-  const steps = roleFileSteps(dir, roleId, ctx, wrote);
-  while (!steps.next().done) await new Promise<void>((r) => setImmediate(r));
-  return wrote;
+  const steps = roleFileSteps(roleId, ctx);
+  for (;;) {
+    await new Promise<void>((r) => setImmediate(r));
+    const { value: step, done } = steps.next();
+    if (done) return wrote;
+    if (step.kind === 'standing') wrote.push(...(await applyStandingAsync(dir, step.rec, step.base)));
+    else {
+      const file = path.join(dir, step.rel);
+      const old = await readFile(file, 'utf8').catch((err: NodeJS.ErrnoException) => (err.code === 'ENOENT' ? undefined : Promise.reject(err)));
+      if (old !== undefined && (step.keep || old === step.text)) continue;
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, step.text);
+      wrote.push(step.rel);
+    }
+  }
 }
 
-/** writeRoleFiles's work, a file at a time. */
-function* roleFileSteps(dir: string, roleId: RoleId, ctx: PlaybookContext, wrote: string[]): Generator<void> {
+/** One of a role's files: a file put in place (`keep`: only when it's missing), or a subagent's standing applied. */
+type RoleFileStep = { kind: 'put'; rel: string; text: string; keep?: boolean } | { kind: 'standing'; rec: SubagentRecord; base?: string };
+
+/** writeRoleFiles's work, a file at a time, each one's text made only when it's asked for. */
+function* roleFileSteps(roleId: RoleId, ctx: PlaybookContext): Generator<RoleFileStep> {
   const role = ROLE_BY_ID.get(roleId)!;
-  const put = (rel: string, text: string, keep = false) => {
-    const file = path.join(dir, rel);
-    if (keep && existsSync(file)) return;
-    if (existsSync(file) && readFileSync(file, 'utf8') === text) return;
-    mkdirSync(path.dirname(file), { recursive: true });
-    writeFileSync(file, text);
-    wrote.push(rel);
-  };
   const text = playbook(roleId, ctx);
-  put(playbookPath(roleId), text);
-  yield;
-  put(playbookMirror(roleId), text);
-  yield;
+  yield { kind: 'put', rel: playbookPath(roleId), text };
+  yield { kind: 'put', rel: playbookMirror(roleId), text };
   // Each subagent's definition with its standing: model swap, warnings, benched (subagent-files.ts).
   const standing = new Map((ctx.subagents ?? []).map((s) => [s.name, s]));
   // Its own subagents and those of every team it covers (shared/roster/coverage.ts).
   const subs = subagentDefsOf(ctx.coverage, roleId);
   for (const sub of subs) {
     const rec = standing.get(sub.id) ?? { name: sub.id, lead: roleId, state: 'active' as const, warnings: [], runs: [] };
-    wrote.push(...applyStanding(dir, rec, subagentFile(sub, role, ctx.project)));
-    yield;
+    yield { kind: 'standing', rec, base: subagentFile(sub, role, ctx.project) };
   }
   for (const rec of standing.values()) {
     if (subs.some((s) => s.id === rec.name)) continue;
-    wrote.push(...applyStanding(dir, rec));
-    yield;
+    yield { kind: 'standing', rec };
   }
-  put(journalPath(role.team), journalSeed(role.team), true);
-  yield;
-  put(ctx.lessons, lessonsSeed(ctx.project), true);
+  yield { kind: 'put', rel: journalPath(role.team), text: journalSeed(role.team), keep: true };
+  yield { kind: 'put', rel: ctx.lessons, text: lessonsSeed(ctx.project), keep: true };
 }

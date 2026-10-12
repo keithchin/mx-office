@@ -70,7 +70,7 @@ Every section can be added to (**Add user role**, **Add to scope**…), and **As
 
 ## 3. Approve scope
 
-**Approve scope** is the brief's one primary action: *Approving records the ✋ Stage 0 decision as CONFIRMED in PROJECT.md.* If items are still Assumed, it asks first: *2 items are still Assumed; they'll be recorded as ASSUMED. Approve anyway?* **Review them** takes you to the first one; **Approve anyway** goes on. Once approved, the brief folds away (*✋ Stage 0 · confirmed by you · 10:45 · 2 ASSUMED*) and can't be changed here: a message to the Chief Analyst after that is noted for Discovery.
+**Approve scope** is the brief's one primary action: *Approving records your scope decision for ✋ Stage 0 in PROJECT.md. Stage 0 passes when the Chief Analyst’s triage is signed off.* If items are still Assumed, it asks first: *2 items are still Assumed; they'll be recorded as ASSUMED. Approve anyway?* **Review them** takes you to the first one; **Approve anyway** goes on. Once approved, the brief folds away (*✋ Stage 0 scope · approved by you · 10:45 · 2 ASSUMED*) and can't be changed here: a message to the Chief Analyst after that is noted for Discovery.
 
 ### What the approval records
 

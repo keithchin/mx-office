@@ -166,13 +166,21 @@ async function main() {
     await shot('21-phone-chat-sheet', pp2);
     await phone.close();
 
-    // Approve with assumptions left.
+    // Approve with assumptions left. The hint is honest: approving records the scope decision; Stage 0 itself
+    // passes on triage.md's sign-off (gate-check), not on the PROJECT.md row.
+    const hint = (await page.textContent('.nw-approve-hint')) ?? '';
+    check(/records your scope decision for ✋ Stage 0 in PROJECT\.md/.test(hint) && /Stage 0 passes when the Chief Analyst’s triage is signed off/.test(hint) && !/CONFIRMED/.test(hint), 'the approve hint records the scope decision and says when Stage 0 passes');
+    await page.locator('#nw-approve').scrollIntoViewIfNeeded();
+    await shot('06b-approve-hint');
     await page.click('#nw-approve');
     await page.waitForSelector('.nw-modal:has-text("Approve with assumptions?")');
+    await page.waitForTimeout(300);
     await shot('07-approve-dialog');
     check(/2 items are still Assumed; they’ll be recorded as ASSUMED/.test((await page.textContent('.nw-modal')) ?? ''), 'the approve dialog says what stays ASSUMED');
+    check(/Stage 0 passes when its triage is signed off/.test((await page.textContent('.nw-modal')) ?? ''), 'the approve dialog says Stage 0 passes on the triage sign-off');
     await page.click('.nw-modal button:has-text("Approve anyway")');
     await page.waitForSelector('.nw-panel[aria-label="Functional domains"] .nw-drafting', { timeout: 10000 });
+    check(/^✋ Stage 0 scope · approved by you · \d\d:\d\d · 2 ASSUMED$/.test((await page.textContent('.nw-approved')) ?? ''), 'the folded brief says the Stage 0 scope was approved, not that Stage 0 is confirmed');
     await shot('08-domains-analysing');
     await page.waitForSelector('.nw-dcard', { timeout: 20000 });
     await page.waitForTimeout(500);
