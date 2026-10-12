@@ -244,9 +244,13 @@ test('the page’s pure parts: a cheap key, the chart’s bars and ticks, the lo
 
 test('the page is in the flat views only: the 1D view, the ☰, the home page and Settings › Testing', () => {
   const lite = src('src/client/lite.ts');
-  assert.match(lite, /import \{ testlabView \} from '\.\/ui\/testlab'/);
+  // A project tab from the tab registry (tabs/registry.ts): its module registers it, the index loads it,
+  // and the page gives it #tests-view and mounts it there the first time it shows (tabs/host.ts).
+  assert.doesNotMatch(lite, /testlab/, 'lite.ts does not load the test lab itself');
+  assert.match(src('src/client/tabs/index.ts'), /import '\.\.\/ui\/testlab\/tab'/);
+  assert.match(src('src/client/ui/testlab/tab.ts'), /id: 'tests',\s+group: 'monitor',[\s\S]*admin: true,[\s\S]*mount: \(container\) => testlabView\(container\)/);
+  assert.match(src('src/client/tabs/host.ts'), /id: `\$\{def\.id\}-view`/);
   assert.match(lite, /tests: \(\) => showTab\('tests'\)/);
-  assert.match(src('src/client/lite.html'), /id="tests-view"/);
   assert.match(src('src/client/shared/flatmenu.ts'), /id: 'tests'.*shown: \(\) => store\.me\.admin/);
   assert.match(src('src/client/home.html'), /id="to-tests"/);
   assert.match(src('src/client/ui/settings/page.ts'), /testing: \(\) => testingPart\(\)/);

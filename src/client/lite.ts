@@ -59,9 +59,10 @@ import { testModeBadge } from './ui/testmode';
 import { portalBar } from './ui/portal/topbar';
 import { portalDeepLinks } from './ui/portal/deeplink';
 import { portalLayout, type PortalLayout } from './ui/portal/layout';
+import { asTab, type TabId } from './ui/portal/nav-logic';
+import { projectTabs } from './tabs/host';
 import { appUrl } from './ui/liveapp';
 import { budgetUi } from './ui/budget';
-import { testlabView } from './ui/testlab';
 import './shared/perfwatch-on';
 import { batched } from './ui/batch';
 import { floorLoading } from './ui/loading/floor';
@@ -250,18 +251,16 @@ let pendingSection: SettingsSectionId | undefined = isSettingsSection(askedSecti
 const audit = auditView($('audit-view'), { floor: () => store.floor ?? undefined, floors: () => store.floors, admin: () => store.me.admin, storeKey: 'agent-office.audit-lite' });
 net.onMessage((msg) => audit.onMessage(msg));
 store.on('floor', () => audit.floorChanged());
-type Tab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | 'model' | Pane | 'teams' | 'documents' | 'audit' | 'budget' | 'settings' | 'tests';
+type Tab = TabId;
 // 📄 Every team's documents by stage (ui/deliverables/page.ts); every opener of it shows this tab.
 const documents = documentsPage($('documents-view'));
 documentsOpener(() => showTab('documents'));
-// 🧪 Test mode (ui/testlab/): no tab button of its own; the ☰, the home page and ⚙️ Settings › Testing open it.
-const tests = testlabView($('tests-view'));
+// The tabs features add (tabs/registry.ts, 🧪 Tests among them): their views, mounted the first time they show.
+const featureTabs = projectTabs($('workers-view'), document.querySelector('.lite-tabs'), (id) => showTab(id));
 // The team's panes are tabs of their own (flattened from one Team tab); an old "team" means its org chart. Its settings are ⚙️ Settings › Team.
 const TEAM_PANES: readonly Pane[] = ['org', 'standup', 'approvals'];
 const isPane = (t: unknown): t is Pane => TEAM_PANES.includes(t as Pane);
-const isTab = (t: unknown): t is Tab => t === 'command' || t === 'board' || t === 'workers' || t === 'analysis' || t === 'live' || t === 'git' || t === 'model' || isPane(t) || t === 'teams' || t === 'documents' || t === 'audit' || t === 'budget' || t === 'settings' || t === 'tests';
-// ?tab=agents is the Agents page's own name for its id (workers, kept so saved links and state still work); an old ?tab=deliverables is Documents.
-const asTab = (t: unknown): Tab | undefined => (t === 'team' ? 'org' : t === 'agents' ? 'workers' : t === 'deliverables' ? 'documents' : isTab(t) ? t : undefined);
+// ?tab=agents is the Agents page's own name for its id (workers, kept so saved links and state still work); an old ?tab=deliverables is Documents (asTab, ui/portal/nav-logic.ts).
 // Entering a project opens its Command Center; a link that names a tab (?tab=team) opens that one, and a
 // reload of this browser tab keeps the tab it showed (shared/start-tab.ts).
 let tab: Tab = startTab(asTab(askedTab), isReload(), asTab(sessionTab()), 'command');
@@ -314,9 +313,7 @@ function showTab(t: Tab) {
   $('tab-budget').classList.toggle('on', t === 'budget');
   $('budget-view').classList.toggle('hidden', t !== 'budget');
   if (t === 'budget') budget.show();
-  $('tests-view').classList.toggle('hidden', t !== 'tests');
-  if (t === 'tests') tests.show();
-  else tests.hide();
+  featureTabs.show(t);
   $('board').classList.toggle('hidden', t !== 'board');
   $('summary').classList.toggle('hidden', t !== 'command');
   $('setup').classList.toggle('hidden', t !== 'command');

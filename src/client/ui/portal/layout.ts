@@ -13,12 +13,12 @@ import { onStudioChange, openStudio, studioBlocked, studioShown, studioVersion, 
 import { portalNav } from './nav';
 import { pageHead } from './pagehead';
 import { portalOverview } from './overview';
-import { NAV_BOTTOM, NAV_GROUPS, pageTitle, type NavAction, type NavTab } from './nav-logic';
+import { NAV_BOTTOM, navGroups, pageTitle, type NavAction, type TabId } from './nav-logic';
 import type { SearchItem } from './search-logic';
 import './layout.css';
 
 export interface PortalLayoutDeps {
-  show(tab: NavTab): void;
+  show(tab: TabId): void;
   openWorker(id: string): void;
   openIssue(it: GhIssue): void;
   openPull(it: GhPull): void;
@@ -56,7 +56,7 @@ export function portalLayout(deps: PortalLayoutDeps): PortalLayout {
   onStudioChange(() => nav.refresh());
   watchStudio();
   const head = pageHead(main);
-  const overview = portalOverview({ show: (t) => deps.show(t as NavTab), openWorker: deps.openWorker, live: deps.live, budget: deps.budget, mendix: studioVersion, setup: deps.setup });
+  const overview = portalOverview({ show: (t) => deps.show(t as TabId), openWorker: deps.openWorker, live: deps.live, budget: deps.budget, mendix: studioVersion, setup: deps.setup });
 
   // The bar's section: the page's name, where the floor picker was (it's in the navigation's card now).
   const section = h('span.pt-section.pt-only.pt-page-name', { 'aria-live': 'polite' });
@@ -77,9 +77,9 @@ export function portalLayout(deps: PortalLayoutDeps): PortalLayout {
     searchItems() {
       const here = store.currentFloor()?.name;
       const admin = store.me.admin;
-      const pages: SearchItem[] = [...NAV_GROUPS.flatMap((g) => g.items.filter((i) => !i.admin || admin).map((i) => ({ i, where: g.label }))), ...NAV_BOTTOM.map((i) => ({ i, where: here ?? 'This project' }))]
+      const pages: SearchItem[] = [...navGroups().flatMap((g) => g.items.filter((i) => !i.admin || admin).map((i) => ({ i, where: g.label }))), ...NAV_BOTTOM.map((i) => ({ i, where: here ?? 'This project' }))]
         .filter(({ i }) => i.kind === 'tab' || i.id === 'documents' || (i.id === 'studio' ? studioShown() : true))
-        .map(({ i, where }) => ({ kind: 'tab', label: i.label, hint: where, also: `${i.hint}${i.id === 'command' ? ' command center' : ''}`, go: () => (i.kind === 'tab' ? deps.show(i.id as NavTab) : run(i.id as NavAction)) }));
+        .map(({ i, where }) => ({ kind: 'tab', label: i.label, hint: where, also: `${i.hint}${i.id === 'command' ? ' command center' : ''}`, go: () => (i.kind === 'tab' ? deps.show(i.id as TabId) : run(i.id as NavAction)) }));
       const agents: SearchItem[] = [...store.workers.values()].map((w) => ({ kind: 'agent', label: w.name, hint: w.task?.name ?? w.title ?? w.status, also: `${w.worktree?.branch ?? ''} ${w.model ?? ''}`, go: () => deps.openWorker(w.id) }));
       const issues: SearchItem[] = store.issues.items.map((it) => ({ kind: 'issue', label: `#${it.number} ${it.title}`, hint: it.state === 'OPEN' ? 'Open issue' : 'Closed issue', also: String(it.number), go: () => deps.openIssue(it) }));
       const pulls: SearchItem[] = store.pulls.items.map((p) => ({ kind: 'pr', label: `#${p.number} ${p.title}`, hint: `${p.state === 'OPEN' ? (p.isDraft ? 'Draft' : 'Open') : p.state === 'MERGED' ? 'Merged' : 'Closed'} · ${p.headRefName}`, also: `${p.number} ${p.headRefName}`, go: () => deps.openPull(p) }));
