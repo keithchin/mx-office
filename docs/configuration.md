@@ -31,6 +31,8 @@ Until a toolkit project's build plan (Stage 4) is confirmed, its board on the 1D
 
 **A floor's `.claude/toolkit.env`** is laid over the office's environment for everything started for that floor: its workers (agents and shells, hired by hand, by the roster or off the queue), Re-check gates, the wizard's toolkit runs and the live app. Its keys (`MXBUILD_PATH`, `MXCLI_VERSION`, `PYTHON` …, never `PATH` or `AGENT_OFFICE_*`) win over the inherited ones, because the toolkit's own scripts let the environment win over the file: an office started with `MXBUILD_PATH` set for one Studio Pro would otherwise build every project with it. A floor without the file keeps the office's environment.
 
+**New project's brief** is drafted by the Chief Analyst with one capped planning call through the `claude` CLI (Sonnet by default, `AGENT_OFFICE_PLANNER_MODEL`; at most `AGENT_OFFICE_PLANNER_CAP_USD`, $2 by default, per draft; `AGENT_OFFICE_PLANNER_PER_HOUR` calls an hour), counted as office spend. `AGENT_OFFICE_PLANNER=fake` uses the deterministic test planner instead (test offices), `off` leaves every brief to be filled in by hand. In test mode the real CLI is never called. See [Create your first project](site/get-started/first-project.md).
+
 `AGENT_OFFICE_WIZARD_OFFLINE=<folder>` is for a test office: repositories are local bare git repositories in that folder, issues are files there, nobody is hired and nothing is queued, so the whole setup runs for real without touching GitHub.
 
 ## Command line

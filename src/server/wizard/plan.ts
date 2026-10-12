@@ -5,6 +5,7 @@ import { ENTRY_MODES, interviewModeOf, ownerProblem, PROJECT_ROLES, slugProblem,
 import { cleanAppId } from './mendix-app.js';
 import { cleanChoice } from '../../shared/budget/levels.js';
 import { isTeamShape, shapeForRoles } from '../../shared/roster/coverage.js';
+import { cleanBrief, cleanDomains, counts, safeFileName, type PlanBrief, type ReadState } from '../../shared/brief.js';
 
 export const DISCOVERY_MODELS = ['opus', 'sonnet', 'haiku'] as const;
 
@@ -64,5 +65,33 @@ export function cleanPlan(raw: unknown, versions: string[], org: string): Projec
     // The shape picked on the Team & budget page; a plan without one is what its roles add up to.
     shape: isTeamShape(r.shape) ? r.shape : shapeForRoles([...new Set(roles)]),
     ...(r.customTeam === true ? { customTeam: true } : {}),
+    ...(cleanPlanBrief(r.brief) ? { brief: cleanPlanBrief(r.brief) } : {}),
+  };
+}
+
+const READS: ReadState[] = ['text', 'extracted', 'given', 'read', 'not-read'];
+
+/** The plan's project brief, cleaned (shared/brief.ts): the honesty rules applied again, whatever was sent. */
+export function cleanPlanBrief(v: unknown): PlanBrief | undefined {
+  if (!v || typeof v !== 'object') return undefined;
+  const r = v as Record<string, unknown>;
+  const brief = cleanBrief(r.brief);
+  if (!brief) return undefined;
+  const a = (r.approved ?? {}) as Record<string, unknown>;
+  const approved = text(a.by, 80) && /^\d{4}-\d\d-\d\dT/.test(text(a.at, 40)) ? { by: text(a.by, 80), at: text(a.at, 40), assumed: counts(brief).assumed } : undefined;
+  const attachments = (Array.isArray(r.attachments) ? r.attachments : []).slice(0, 10).map((x: Record<string, unknown>) => ({
+    name: safeFileName(text(x?.name, 200)),
+    size: Math.max(0, Number(x?.size) || 0),
+    read: READS.includes(x?.read as ReadState) ? (x.read as ReadState) : 'not-read',
+    ...(text(x?.note, 200) ? { note: text(x.note, 200) } : {}),
+  }));
+  const domains = cleanDomains(r.domains);
+  return {
+    ...(typeof r.draftId === 'string' && /^d-[a-z0-9-]{6,40}$/.test(r.draftId) ? { draftId: r.draftId } : {}),
+    brief,
+    ...(domains ? { domains } : {}),
+    ...(approved ? { approved } : {}),
+    attachments,
+    ...(r.manual === true ? { manual: true } : {}),
   };
 }

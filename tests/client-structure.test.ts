@@ -12,9 +12,10 @@ const read = (file: string) => readFileSync(file, 'utf8');
  */
 function importsOf(file: string, types = true): string[] {
   const out: string[] = [];
-  for (const m of read(file).matchAll(/^\s*(import|export)\s(type\s)?[^'"]*?from\s+'(\.[^']+)'|^\s*import\s+'(\.[^']+)'/gm)) {
+  // Static imports, and dynamic ones (`import('./x')`: a module a page loads only when it's needed, like the wizard).
+  for (const m of read(file).matchAll(/^\s*(import|export)\s(type\s)?[^'"]*?from\s+'(\.[^']+)'|^\s*import\s+'(\.[^']+)'|\bimport\(\s*'(\.[^']+)'\s*\)/gm)) {
     if (m[2] && !types) continue;
-    const spec = m[3] ?? m[4];
+    const spec = m[3] ?? m[4] ?? m[5];
     // A stylesheet, or an asset's URL (a model, a sound).
     if (spec.endsWith('.css') || spec.includes('?')) continue;
     // The shared code (src/shared) names its imports as the server does, with .js for .ts.

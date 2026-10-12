@@ -4,7 +4,7 @@ import { cloneStep, normalizeRepo, sameRepo } from '../../shared/floors';
 import type { Net } from '../net';
 import { store } from '../state';
 import { h, openModal, timeAgo, toast, type Modal } from './dom';
-import { openWizard } from './wizard';
+import { openWizard } from './wizard/open';
 
 // ➕ Add project (Home's Projects tab): clones one of the repositories the office's gh login can see,
 // or any owner/name, and it becomes a new project (a floor of the building). Admins can change the
