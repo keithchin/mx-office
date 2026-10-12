@@ -265,8 +265,19 @@ export class Planner {
     d.chat = [...d.chat, { who: 'you', text: d.prompt.trim().slice(0, 600), at: iso(this.now()), ...(d.attachments.length ? { files: d.attachments.map((a) => a.name) } : {}) }];
     this.background(d, who, 'brief', async () => {
       const files = this.filesFor(d);
-      const r = await this.engine.brief({ mode: d.mode, prompt: d.prompt, files, budgetUsd: d.cap - d.spent });
+      const req = { mode: d.mode, prompt: d.prompt, files };
+      let r = await this.engine.brief({ ...req, budgetUsd: d.cap - d.spent });
       d.spent += r.cost;
+      // A PDF that came back unread (rehearsal 2: the model asked for page ranges and the page renderer failed): one
+      // retry naming it, only while the draft's cap and the hourly limit allow, and counted against that limit.
+      const unread = (filesRead: string[]) => d.attachments.filter((a) => a.read === 'given' && !filesRead.includes(a.name)).map((a) => a.name);
+      const missed = r.value ? unread(r.value.filesRead) : [];
+      if (r.value && missed.length && !this.unavailable() && d.cap - d.spent >= 0.01) {
+        this.recent.push(this.now());
+        const again = await this.engine.brief({ ...req, unread: missed, budgetUsd: d.cap - d.spent });
+        d.spent += again.cost;
+        if (again.value && unread(again.value.filesRead).length < missed.length) r = { ...again, value: { brief: again.value.brief, filesRead: [...new Set([...r.value.filesRead, ...again.value.filesRead])] } };
+      }
       this.settle(!!r.value);
       if (!r.value) {
         d.status = d.brief ? 'ready' : 'failed';

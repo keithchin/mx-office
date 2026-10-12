@@ -19,6 +19,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 - **The Overview is laid out as cards.** The progress bar is the Overview's Progress card, its stage names wrapping onto a second line instead of being cut off. The project console has left the middle of the page (it's the team-lead panel now), escalations are no longer above its box, and the Technical contact card is gone (the panel shows the lead). The other themes keep their Command Center, with the panel beside it; there, **Answer** on an escalation opens Approvals.
 - **Settings › You: the team-lead panel.** **Show the team-lead panel** (on by default) and **Team-lead panel view** (Chat or Terminal, the old Command Center terminal setting) are kept in this browser.
 
+### Fixed
+
+- **"Change an existing app" leaves a live toolkit project as it is.** On a repository that already has its `intake.md` and `PROJECT.md`, the setup no longer re-runs `init-project.sh` (it judged the scaffold by git-ignored files a fresh clone never has, and rewrote `AGENTS.md`, `CLAUDE.md` and `CLAUDE.local.md` with `.mxtk-backup` copies), never rewrites the confirmed intake answers, the Decisions rows or the register's flat lines, and so never moves the project's stage. The approved brief is recorded as a change request instead: `docs/project-brief.md`, and Stage 0b rows (the change request, then one ASSUMED row per assumption) appended to the Decisions table, its open questions carrying on the project's OQ numbering. The scaffold check reads committed files only, so a fresh clone of any scaffolded project is not scaffolded again; the git hooks are still installed, being per machine.
+- **Attached PDFs are read.** The Chief Analyst is told to read each PDF whole, without a page range (a page range needs a PDF renderer the office's machine doesn't have, so the PDF came back unread), and a brief whose PDF still comes back unread is drafted once more, naming it, while the draft's planning budget and the 20-calls-an-hour limit allow (the retry counts against both).
+- **No intake answer says CONFIRMED while it holds an Unverified item.** Unverified items from any section of the brief now go to intake Q8 and the register's open questions, and each answer's kind comes from the items that are left.
+- **Smaller brief fixes.** A greenfield project's constraints no longer answer Q5 ("what must stay as it is"), and the team recommendation counts distinct integrations rather than list items, so a greenfield app isn't told "several integrations must stay"; the suggested size tier no longer ends in "use cases.)."; the goal row names its source once.
+
 ## 2026-10-12 · release 40 (`a16e04b`)
 
 ### New

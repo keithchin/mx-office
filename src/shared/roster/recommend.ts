@@ -71,9 +71,9 @@ export function integrationsOf(raw: string): Integrations {
   if (!q5) return 'unknown';
   if (/^(none|nothing|n\/?a|no(ne)?\.?|-)$|\bno integrations?\b|nothing (external|must stay)|stand-?alone|greenfield/.test(q5)) return 'none';
   const hits = q5.match(/\b(api|rest|soap|odata|sap|salesforce|integration|interface|feed|export|import|sso|ldap|active directory|azure ad|entra|database|db|contract|url|report|scheduled|batch|job|queue|kafka|file drop|sftp|email)s?\b/g) ?? [];
-  const items = q5.split(/[,;\n]| and /).map((s) => s.trim()).filter(Boolean).length;
   if (!hits.length) return 'unknown';
-  return new Set(hits).size >= 3 || items >= 3 ? 'many' : 'some';
+  // Distinct integration words, not list items: three constraints that name one integration between them are still "some".
+  return new Set(hits.map((w) => w.replace(/s$/, ''))).size >= 3 ? 'many' : 'some';
 }
 
 /** Q7: an SME who answers fast, one who's slow (which reshapes the plan as much as none), or none needed. */

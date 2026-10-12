@@ -63,6 +63,9 @@ export const spawnRunner: CliRunner = (claude, env, args, input, cwd, timeoutMs)
     child.end();
   });
 
+/** How to read an attached PDF: whole, in one Read call with only its file_path. */
+export const PDF_READ = 'Read each one whole with the Read tool, before you answer: one Read call per file with only its file_path, and WITHOUT the pages parameter (a page range fails on this machine). List each file you read in filesRead.';
+
 /** The arguments of one call. */
 export function cliArgs(c: CliCall, withFiles: boolean): string[] {
   return [
@@ -89,7 +92,8 @@ export async function runPlannerCall(claude: string, env: Record<string, string>
   const sandbox = mkdtempSync(path.join(os.tmpdir(), 'ao-planner-'));
   try {
     for (const f of files) copyFileSync(f.path, path.join(sandbox, f.name));
-    const input = files.length ? `${c.input}\n\nThe attached PDF files are in your working folder: ${files.map((f) => f.name).join(', ')}. Read each one with the Read tool before you answer.` : c.input;
+    // Whole, without `pages`: a page range makes the Read tool render pages with pdftoppm, which isn't on the office's machine (rehearsal 2).
+    const input = files.length ? `${c.input}\n\nThe attached PDF files are in your working folder: ${files.map((f) => f.name).join(', ')}. ${PDF_READ}` : c.input;
     const r = await run(claude, env, cliArgs(c, files.length > 0), input, sandbox, c.timeoutMs);
     if (r.timedOut) return { value: null, cost: 0, error: `The Chief Analyst took longer than ${Math.round(c.timeoutMs / 1000)} s and was stopped` };
     meterCliResult(r.out || null, 'planner', resolvedModel(c.model));

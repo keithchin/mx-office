@@ -5,7 +5,7 @@
 import { cleanBrief, cleanDomains, type Brief, type ChatMsg, type Domains, type StartMode } from '../../../shared/brief.js';
 import { BRIEF_SCHEMA, CHAT_SCHEMA, DOMAINS_SCHEMA } from '../../../shared/brief-schema.js';
 import { briefInput, briefSystem, chatInput, chatSystem, domainsInput, domainsSystem } from './prompts.js';
-import { runPlannerCall, type CliRunner } from './cli.js';
+import { PDF_READ, runPlannerCall, type CliRunner } from './cli.js';
 
 /** An attached file as the planner hands it on: its text (md, txt, docx) or, for a PDF, its path to read. */
 export interface PlannerFile {
@@ -27,7 +27,8 @@ export interface PlannerEngine {
   model: string;
   /** Why it can't run now, or undefined when it can. */
   why(): string | undefined;
-  brief(req: { mode: StartMode; prompt: string; files: PlannerFile[]; budgetUsd: number }): Promise<Answer<{ brief: Brief; filesRead: string[] }>>;
+  /** `unread`: the attached PDFs the first try came back without reading (the Planner retries once, naming them). */
+  brief(req: { mode: StartMode; prompt: string; files: PlannerFile[]; budgetUsd: number; unread?: string[] }): Promise<Answer<{ brief: Brief; filesRead: string[] }>>;
   chat(req: { mode: StartMode; brief: Brief; history: ChatMsg[]; text: string; budgetUsd: number }): Promise<Answer<{ brief: Brief; reply: string }>>;
   domains(req: { brief: Brief; budgetUsd: number }): Promise<Answer<Domains>>;
 }
@@ -52,7 +53,8 @@ export function cliEngine(o: CliEngineOpts): PlannerEngine {
     async brief(req) {
       const texts = req.files.filter((f) => f.text !== undefined).map((f) => ({ name: f.name, text: f.text!, note: f.note }));
       const pdfs = req.files.filter((f) => f.text === undefined);
-      const r = await call(briefSystem(req.mode), briefInput(req.prompt, texts, pdfs.map((f) => f.name)), BRIEF_SCHEMA, req.budgetUsd, pdfs);
+      const again = req.unread?.length ? `\n\nYour last try came back without reading ${req.unread.join(', ')}. ${PDF_READ}` : '';
+      const r = await call(briefSystem(req.mode), briefInput(req.prompt, texts, pdfs.map((f) => f.name)) + again, BRIEF_SCHEMA, req.budgetUsd, pdfs);
       const brief = r.value ? cleanBrief(r.value) : undefined;
       const filesRead = Array.isArray(r.value?.filesRead) ? (r.value.filesRead as unknown[]).filter((x): x is string => typeof x === 'string') : [];
       return brief ? { value: { brief, filesRead }, cost: r.cost } : { value: null, cost: r.cost, error: r.error ?? 'The brief came back empty', budgetHit: r.budgetHit };

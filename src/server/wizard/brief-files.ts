@@ -9,12 +9,12 @@ import { ENTRY_MODE_INFO, type ProjectPlan } from '../../shared/wizard.js';
 
 export const BRIEF_FILE = 'docs/project-brief.md';
 
-/** Writes the brief and copies the attachments; what it did, in short lines (nothing when there's no brief). */
-export function writeBriefFiles(dir: string, plan: ProjectPlan, files: { name: string; path: string }[]): string[] {
+/** Writes the brief (as a change request, for an existing toolkit project) and copies the attachments; what it did, in short lines (nothing when there's no brief). */
+export function writeBriefFiles(dir: string, plan: ProjectPlan, files: { name: string; path: string }[], opts: { change?: boolean } = {}): string[] {
   if (!plan.brief) return [];
   const did: string[] = [];
   const f = path.join(dir, ...BRIEF_FILE.split('/'));
-  const md = briefMarkdown(plan.brief, { repo: `${plan.owner}/${plan.name}`, entry: ENTRY_MODE_INFO[plan.entry].label });
+  const md = briefMarkdown(plan.brief, { repo: `${plan.owner}/${plan.name}`, entry: ENTRY_MODE_INFO[plan.entry].label, change: opts.change });
   let had = '';
   try {
     had = readFileSync(f, 'utf8');
