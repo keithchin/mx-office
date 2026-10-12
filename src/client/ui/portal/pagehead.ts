@@ -53,7 +53,7 @@ export function pageHead(main: HTMLElement): PageHead {
 
   // The page's own pieces, moved in while Portal is on.
   portalSlot(document.querySelector('.bud-meta-row') ?? document.getElementById('floor-meta'), band);
-  portalSlot(document.getElementById('progress-bar'), band);
+  // (The progress bar is the Overview's Progress card's now: ./overview.ts.)
   portalSlot(document.getElementById('firm-banner'), firm);
   for (const id of ['btn-issues', 'btn-pulls', 'btn-queue']) portalSlot(document.getElementById(id), board);
   portalSlot(document.getElementById('btn-new'), fresh);

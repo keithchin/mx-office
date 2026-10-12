@@ -46,6 +46,8 @@ const PM: RoleId = 'pm';
 export const DELIVERABLES: readonly DeliverableSpec[] = [
   { id: 'intake', team: 'management', stage: 'P', title: 'Intake answers', owner: PM, globs: ['intake.md'] },
   { id: 'project-record', team: 'management', stage: 'P', title: 'Project record (decisions, scope)', owner: PM, globs: ['PROJECT.md'] },
+  // The brief approved in the new-project wizard, when the project was made from one (the Overview's Project brief card reads it).
+  { id: 'project-brief', team: 'management', stage: 'P', title: 'Project brief', owner: PM, globs: ['docs/project-brief.md'], optional: true },
   { id: 'triage', team: 'analysis', stage: '0', title: 'Source triage', owner: ANALYST, globs: ['triage.md', '**/triage.html'] },
   { id: 'assessment', team: 'analysis', stage: '0', title: 'Assessment', owner: ANALYST, globs: ['assessment.md', '**/assessment.md'], optional: true },
   { id: 'source-sufficiency', team: 'analysis', stage: '0', title: 'Source sufficiency', owner: ANALYST, globs: ['**/source-sufficiency.html'] },
