@@ -62,7 +62,7 @@ try {
     const worst = Math.max(0, ...long);
     console.log(`long tasks (ms): ${long.join(', ') || 'none'}`);
     if (worst > LONG_MS) failed = `a task ran ${worst} ms (over ${LONG_MS})`;
-    else if (!(await page.$('#summary .pmc'))) failed = 'the Command Center never drew its console';
+    else if (!(await page.$('#lead-panel .lp-body'))) failed = 'the Command Center never drew the team-lead panel';
   }
 } finally {
   clearTimeout(killer);

@@ -89,7 +89,7 @@ try {
       const page = await ctx.newPage();
       page.on('pageerror', (e) => console.log('page error:', e.message));
       await page.goto(`${base}/lite?floor=${encodeURIComponent(floor)}&tab=command`, { waitUntil: 'load', timeout: 30000 });
-      await page.waitForFunction(() => !window.__aoBoot?.shown?.() && !!document.querySelector('#summary .pmc'), null, { timeout: 30000 }).catch(() => {});
+      await page.waitForFunction(() => !window.__aoBoot?.shown?.() && !!document.querySelector('#summary .sm-activity') && !!document.querySelector('#lead-panel .lp-body'), null, { timeout: 30000 }).catch(() => {});
       await page.waitForTimeout(1200);
       const row = { viewport: `${vp.width}x${vp.height}`, theme, tabs: {} };
       for (const t of TABS) {
