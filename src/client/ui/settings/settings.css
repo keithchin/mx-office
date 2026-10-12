@@ -33,3 +33,5 @@
 .vp-set { border: 1px solid var(--rule); border-radius: var(--radius); padding: 6px 10px 8px; margin: 6px 0; display: flex; flex-direction: column; gap: 4px; }
 .vp-set legend { font-size: 12px; font-weight: 800; color: var(--ink-2); padding: 0 4px; }
 .vp-row { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); }
+.vp-switch { margin: 2px 0 8px; }
+.vp-switch .setting-note { margin: 2px 0 0 22px; }

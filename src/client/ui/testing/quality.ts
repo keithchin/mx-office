@@ -3,7 +3,8 @@
 // over the last recorded commits (inline bars, no chart library), lint counts by severity with the top
 // rules, and the rules that could not run, shown as such (missing findings, never zero). Stale when main
 // has moved since. An admin starts the office's own mxcli runs from here: the microflow tests on main and
-// a quality run, each one at a time, in the office's work folder.
+// a quality run, each one at a time, in the office's work folder. While "Score main automatically with
+// mxcli" is off (the default) the card says so next to the button.
 
 import type { QualityPart, QualityView, ScoreCell } from '../../../shared/testing/quality';
 import { h } from '../dom';
@@ -33,10 +34,10 @@ function cell(c: ScoreCell): HTMLElement {
 }
 
 /** The header itself (no buttons): scores, lint, rules that could not run. */
-export function qualityHeader(v: QualityView): HTMLElement {
+export function qualityHeader(v: QualityView, auto = true): HTMLElement {
   const l = v.latest;
   if (!l)
-    return h('div.tst-q-empty', {}, h('p.tst-empty', {}, v.totalRecords ? 'The last quality run gave no scores (see the note on its run).' : 'No quality scores yet. The office works them out (mxcli report and lint) once for each new main commit, in its own work folder; an admin can also score main now.'));
+    return h('div.tst-q-empty', {}, h('p.tst-empty', {}, v.totalRecords ? 'The last quality run gave no scores (see the note on its run).' : auto ? 'No quality scores yet. The office works them out (mxcli report and lint) once for each new main commit, in its own work folder; an admin can also score main now.' : 'No quality scores yet. An admin can score main now (mxcli report and lint, in the office’s own work folder).'));
   const stale = v.stale ? pill('Stale', 'warn', `main is at ${rev(v.stale.main)}; these scores are from ${rev(v.stale.scored)}`) : pill('Current', 'good', 'Scored on the commit main is at');
   const id = h('p.tst-q-id', {}, h('span.tst-k', {}, 'Scored '), h('code.tst-sha', { title: l.commit }, rev(l.commit)), ' ', stale, h('small.tst-from', {}, ` mxcli ${l.mxcliVersion}${l.catalogSchema ? ` · catalog schema ${l.catalogSchema}` : ''}${l.mendixVersion ? ` · Mendix ${l.mendixVersion}` : ''} · ${when(l.finishedAt)} · ${l.trigger === 'auto' ? 'new main commit' : `asked by ${l.trigger}`}`));
   const overall = h('div.tst-score.tst-score-all', { 'data-tone': scoreTone(l.overall) }, h('span.tst-score-n', {}, fmt(l.overall)), h('span.tst-score-l', {}, 'Overall'), trend(l.overallTrend, 'Overall'));
@@ -58,14 +59,17 @@ export function qualityHeader(v: QualityView): HTMLElement {
   return h('div.tst-q', {}, id, scores, lint, failures, errors, timing);
 }
 
+/** The microflow test button's tooltip: it starts the Mendix runtime on the office's own computer. */
+export const TESTS_TIP = 'Needs a local Mendix runtime on the office’s computer (mxcli test --local --require-assertions); without one the run is recorded as a harness error, never as failed tests. Admins only.';
+
 export type RunAsk = (what: 'tests' | 'quality') => Promise<string | undefined>;
 
 /** The whole Quality card: the header, plus the office's mxcli runs and their buttons. */
 export function qualityPanel(p: QualityPart, ask: RunAsk): HTMLElement {
   const r = p.runs;
   const note = h('small.tst-from', { role: 'status' });
-  const button = (what: 'tests' | 'quality', label: string, running: boolean) => {
-    const b = h('button.btn.small', { type: 'button', disabled: running || !r.available }, running ? `${label}…` : label) as HTMLButtonElement;
+  const button = (what: 'tests' | 'quality', label: string, running: boolean, title?: string) => {
+    const b = h('button.btn.small', { type: 'button', disabled: running || !r.available, ...(title ? { title } : {}) }, running ? `${label}…` : label) as HTMLButtonElement;
     b.onclick = async () => {
       b.disabled = true;
       note.textContent = 'Starting…';
@@ -83,8 +87,8 @@ export function qualityPanel(p: QualityPart, ask: RunAsk): HTMLElement {
     h('ul.tst-q-runlist', {}, line('Microflow tests', r.tests), line('Quality scores', r.quality)),
     !r.available ? h('p.tst-muted', {}, `The office can’t run mxcli here: ${r.why ?? 'not available'}`) : null,
     p.admin
-      ? h('div.tst-q-btns', {}, button('tests', 'Run microflow tests on main', r.tests.running), button('quality', 'Score main now', r.quality.running), note)
+      ? h('div.tst-q-btns', {}, button('tests', 'Run microflow tests on main', r.tests.running, TESTS_TIP), button('quality', 'Score main now', r.quality.running), p.auto === false ? h('small.tst-from.tst-auto-off', {}, 'Automatic scoring is off') : null, note)
       : h('p.tst-muted', {}, 'An admin can run the microflow tests on main (mxcli test --local --require-assertions) and score main now.'),
   );
-  return h('section.tst-card.tst-quality', {}, h('h3.tst-h', {}, 'Quality', h('small.tst-hsub', {}, 'mxcli report and lint, per commit, in the office’s own work folder')), qualityHeader(p.quality), runs);
+  return h('section.tst-card.tst-quality', {}, h('h3.tst-h', {}, 'Quality', h('small.tst-hsub', {}, 'mxcli report and lint, per commit, in the office’s own work folder')), qualityHeader(p.quality, p.auto !== false), runs);
 }

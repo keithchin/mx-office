@@ -17,6 +17,7 @@ import type { TeamFloor } from '../roster/types.js';
 import path from 'node:path';
 import { testingStore } from './index.js';
 import { VerifyStore } from './policy-store.js';
+import { mergedAtOf } from './switches.js';
 
 const stores = new Map<string, VerifyStore>();
 
@@ -44,8 +45,11 @@ export function criteriaOf(pull: Pick<GhPull, 'body' | 'number'> | undefined, jo
     .map((l) => ({ id: l.target, ...(journeys?.get(l.target)?.length ? { journeys: journeys.get(l.target) } : {}) }));
 }
 
-/** Judges every member's integrated task on its merge commit; how many changed. */
-export async function verifyTasks(dataDir: string, roster: Roster, team: TeamFloor, floor: PullsLike, journeys?: ReadonlyMap<string, string[]>): Promise<number> {
+/**
+ * Judges every member's integrated task on its merge commit; how many changed. `since` (the judging
+ * switch's time, testing/switches.ts): only PRs merged from then on are judged, older ones never.
+ */
+export async function verifyTasks(dataDir: string, roster: Roster, team: TeamFloor, floor: PullsLike, journeys?: ReadonlyMap<string, string[]>, since?: number): Promise<number> {
   const d = roster.data(floor.id);
   const work = Object.entries(d.members).filter(([, m]) => m.task?.outcome === 'integrated' && m.task.doneAt !== undefined && m.task.pr !== undefined);
   if (!work.length) return 0;
@@ -56,6 +60,7 @@ export async function verifyTasks(dataDir: string, roster: Roster, team: TeamFlo
     const pull = floor.github.pulls.items.find((p) => p.number === t.pr);
     // Fell off the list (or not loaded): what it was judged last stands.
     if (!pull || pull.state !== 'MERGED') continue;
+    if (since !== undefined && (mergedAtOf(pull, t.doneAt) ?? 0) < since) continue;
     const policy = policyFor(file.policy, t.policy);
     const criteria = criteriaOf(pull, journeys);
     const r = verifyIntegrated({ policy, records, head: pull.headRefOid, merge: pull.mergeCommit, criteria, waivers: file.waivers });

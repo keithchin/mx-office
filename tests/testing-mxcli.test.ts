@@ -19,7 +19,9 @@ import type { TestRunRecord } from '../src/shared/testing/record.js';
 import { runMicroflowTests, runQuality, NoTestsError } from '../src/server/testing/mxcli-run.js';
 import { QualityStore } from '../src/server/testing/quality-store.js';
 import { assertOfficeFolder, mprIn, testPathsIn, workDirOf } from '../src/server/testing/workfolder.js';
-import { qualityOnMain, qualityStore, startMicroflowTests } from '../src/server/testing/mxcli-office.js';
+import { qualityOnMain, qualityPart, qualityStore, startMicroflowTests, startQuality } from '../src/server/testing/mxcli-office.js';
+import { setTestingSwitches, testingSwitches } from '../src/server/testing/switches.js';
+import { closeConnections } from '../src/server/connections/store.js';
 import { testingStore, testingView } from '../src/server/testing/index.js';
 import { versionOf } from '../src/server/testing/mxcli-tool.js';
 import { runnable } from './support/winshim.js';
@@ -355,7 +357,7 @@ test('work folders: only under the office data folder, never in the checkout; th
   assert.deepEqual(testPathsIn(['tests/b.test.mdl', 'tests/a.test.md', 'tests/e2e/x.js', 'node_modules/p/z.test.mdl']), ['tests/a.test.md', 'tests/b.test.mdl']);
 });
 
-test('the office wiring: a new main commit is scored once per mxcli version, waits while agents work, one test run at a time', async () => {
+test('the office wiring: automatic scoring is off by default; on, a new main commit is scored once per mxcli version, never while agents work; one test run at a time', async () => {
   const s = setup();
   try {
     const tool = async () => ({ bin: s.exe, version: 'nightly-fake-1' });
@@ -364,6 +366,17 @@ test('the office wiring: a new main commit is scored once per mxcli version, wai
     const main = { sha: s.sha, branch: 'main' };
     let t = 1_000_000;
     const deps = { tool, now: () => t };
+    // The default (nothing saved): no automatic run from either trigger, even with the floor idle.
+    working = false;
+    assert.equal(testingSwitches().autoScore, false);
+    assert.equal(await qualityOnMain(s.dataDir, floor, main, deps), undefined, 'off by default: nothing runs');
+    const part = await qualityPart(s.dataDir, floor, true, deps);
+    assert.equal(part.auto, false, 'the card says automatic scoring is off');
+    assert.equal(part.runs.quality.running, false);
+    assert.equal((await qualityStore(s.dataDir, 'f2').all()).length, 0);
+    // Turned on (audited elsewhere): as before, but never while an agent works.
+    assert.ok(typeof setTestingSwitches({ autoScore: true }, { name: 'Ann' }) !== 'string');
+    working = true;
     assert.equal(await qualityOnMain(s.dataDir, floor, main, deps), undefined, 'deferred while the agents work');
     working = false;
     const run = await qualityOnMain(s.dataDir, floor, main, deps);
@@ -371,14 +384,17 @@ test('the office wiring: a new main commit is scored once per mxcli version, wai
     await run.done;
     assert.equal((await qualityStore(s.dataDir, 'f2').all()).length, 1);
     assert.equal(await qualityOnMain(s.dataDir, floor, main, deps), undefined, 'the same commit and version: not again');
-    // Busy for longer than the most it waits: it goes ahead.
+    // Busy for however long: it never goes ahead while an agent works, and runs at the first idle look.
     s.g('commit', '-q', '--allow-empty', '-m', 'second');
     const next = { sha: s.g('rev-parse', 'HEAD'), branch: 'main' };
     working = true;
     assert.equal(await qualityOnMain(s.dataDir, floor, next, deps), undefined);
-    t += 31 * 60_000;
+    t += 3 * 60 * 60_000;
+    assert.equal(await qualityOnMain(s.dataDir, floor, next, deps), undefined, 'hours later, still busy: still waiting');
+    assert.match(String((await qualityPart(s.dataDir, floor, true, deps)).runs.quality.deferred), /Waiting for the agents/);
+    working = false;
     const late = await qualityOnMain(s.dataDir, floor, next, deps);
-    assert.ok(late);
+    assert.ok(late, 'idle: it runs');
     await late.done;
     assert.equal((await qualityStore(s.dataDir, 'f2').all()).length, 2);
     untouched(s);
@@ -393,7 +409,19 @@ test('the office wiring: a new main commit is scored once per mxcli version, wai
     assert.equal(recs[0].testedRevision, next.sha);
     assert.equal(recs[0].actor.name, 'Ann');
     untouched(s);
+
+    // Off again: an admin's "Score main now" still works.
+    assert.ok(typeof setTestingSwitches({ autoScore: false }, { name: 'Ann' }) !== 'string');
+    s.g('commit', '-q', '--allow-empty', '-m', 'third');
+    const third = { sha: s.g('rev-parse', 'HEAD'), branch: 'main' };
+    assert.equal(await qualityOnMain(s.dataDir, floor, third, deps), undefined, 'off: no automatic run');
+    const asked = await startQuality(s.dataDir, floor, { name: 'Ann' }, deps);
+    assert.ok(typeof asked !== 'string', String(asked));
+    await asked.done;
+    assert.equal((await qualityStore(s.dataDir, 'f2').all()).length, 3, 'the manual run scored main');
+    untouched(s);
   } finally {
+    closeConnections();
     rmSync(s.root, { recursive: true, force: true });
   }
 });

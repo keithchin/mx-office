@@ -38,6 +38,10 @@ export interface OfficeSettings {
   toolkitRepo?: string;
   /** mxcli, picked in first-run setup (beats AGENT_OFFICE_MXCLI); its folder goes first on the agents' PATH. */
   mxcliPath?: string;
+  /** The Testing safety switches (testing/switches.ts): judging merged tasks, scoring main automatically. Off unless saved on. */
+  testingSwitches?: unknown;
+  /** When an office with task outcomes (release 39) first started: PRs closed before it never raise the closed-PR decision (roster/closed-since.ts). */
+  outcomesSince?: number;
 }
 
 /** The GitHub variables as the office was started with them, before Connections laid its token over them. */

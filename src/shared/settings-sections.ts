@@ -30,7 +30,7 @@ export const SETTINGS_SECTIONS = [
   { id: 'appearance', icon: '🎨', label: 'Appearance', blurb: 'The flat views’ color theme (yours), and the building’s holiday theme and map (everyone’s).' },
   { id: 'advanced', icon: '🛠️', label: 'Advanced', blurb: 'Where new projects are cloned, the sky’s clock, the office dog, and the office’s settings files.' },
   { id: 'testing', icon: '🧪', label: 'Testing', blurb: 'Test mode (whether this office is in it, and why), and the Test Mode page: the performance and journey suites, run against a throwaway test office. Admins only.', admin: true },
-  { id: 'verification', icon: '✅', label: 'Verification', blurb: 'This project’s verification policy: the checks a merged task needs on its merge commit before it counts as delivered. Admins only; each change is audited.', admin: true, floor: true },
+  { id: 'verification', icon: '✅', label: 'Verification', blurb: 'The office-wide Testing switches (judging merged tasks against checks, scoring main automatically with mxcli; both off by default), and this project’s verification policy: the checks a merged task needs on its merge commit before it counts as delivered. Admins only; each change is audited.', admin: true, floor: true },
   { id: 'danger', icon: '⚠️', label: 'Danger zone', blurb: 'Remove this project from the office, or delete it (its folder and GitHub repository too, if you say so). Admins only.', admin: true, floor: true },
 ] as const satisfies readonly SettingsSection[];
 

@@ -61,6 +61,15 @@ Every link says how the office knows it:
 
 The page loads when you first open it and again when you come back to it (at most every 20 seconds), when you switch projects, or on **⟳ Refresh**. A new run on an unchanged commit shows at once.
 
+## Safety switches
+
+Two office-wide switches in [⚙️ Settings › ✅ Verification](/lite?tab=settings&section=verification) decide whether the office does any of the background Testing work below. Both are **off by default**, so an office that updates stays quiet on the projects it already has. Only an admin changes them, and each change is recorded in the audit log as `settings.change` (`testing.judge`, `testing.autoScore`).
+
+| Switch | Default | Off | On |
+|---|---|---|---|
+| **Judge merged tasks against checks** | Off | No `gh` calls for the default branch's checks, no *Merged, not verified* or *Passed on PR head…* judging, no Needs you items from it (nor the [test-first](#test-first) prompt). Merged tasks stay *integrated*. The Verification panel shows the policy and *Judging is off (Settings › Verification)*. | Everything in [Verification](#verification), but only for pull requests merged **after** the switch was turned on (the office keeps that moment), so older merges never raise an item. |
+| **Score main automatically with mxcli** | Off | No automatic quality run, from the Testing page or from the Board's poll. The Quality card says *Automatic scoring is off*; an admin's **Score main now** still works. | A quality run for each new main commit, as in [Quality](#quality), but never while any agent on the project is working: it waits for the next look at a moment the floor is idle (or the next commit). |
+
 ## Verification
 
 The **Verification** panel, under the header, answers a different question from the rest of the page: did a merged task's required checks pass on the commit that actually landed on the default branch? A check that passed on the pull request's head proves nothing about the merge commit, so the two are kept apart.
@@ -76,6 +85,8 @@ A merged task is in one of three states:
 | **Done (verified)** | Every required check passed, or was waived, on the merge commit. Only this counts as delivered. |
 | **Merged, not verified** | A required check failed, is missing or was skipped on the merge commit. The office asks you once in [Needs you](command-center.md#needs-you), with what failed or is missing and the options. |
 | **Passed on PR head, integrated revision not checked** | The pull request's head passed, and the merge commit has no results yet. Never counted as verified; no Needs you item. |
+
+Everything in this section happens only while **Judge merged tasks against checks** is on (see [Safety switches](#safety-switches)), and only for pull requests merged after it was turned on.
 
 Where merge-commit results come from: on each look at the pull requests (the Board's poll, never more often), the office also reads the default branch's newest pr-checks runs and the check runs on its newest commit, with two `gh` calls started off the main thread. A merged pull request's merge commit comes from the same pull-request list. Nothing is ever written to GitHub. A test office never starts its own `gh` for this.
 
@@ -115,7 +126,7 @@ The **Quality** card, under the header, shows how the app scores on mxcli's own 
 
 How the scores are made:
 
-- The office works them out **once for each new main commit** (when the Testing page or the Board's poll sees main move), and again only for a different mxcli version: scoring the same commit with the same mxcli twice keeps one record. At most one quality run per project at a time. While the project's agents are working it waits, for up to 30 minutes.
+- When **Score main automatically with mxcli** is on (it's off by default, see [Safety switches](#safety-switches)), the office works them out **once for each new main commit** (when the Testing page or the Board's poll sees main move), and again only for a different mxcli version: scoring the same commit with the same mxcli twice keeps one record. At most one quality run per project at a time. It never runs while any of the project's agents is working: it waits for a look at a moment they're all idle.
 - An admin can also click **Score main now**.
 - Each run happens in the **office's own work folder** (`<data>/testing/work/<project>/quality`), a fresh copy of that commit made from the project's git objects, wiped before and after. It never runs in the project's checkout or an agent's worktree, because mxcli's catalog refresh rewrites `.ai-context/skills/widgets/` and creates `.claude/skills/widgets/` in the folder it runs in.
 - On travel-approval a run takes about 19 s: about 3 s for the copy, 14 s for `report` (it builds the catalog from scratch in the fresh folder), 1.2 s for `lint` and 0.6 s to read the catalog's schema.
@@ -123,7 +134,7 @@ How the scores are made:
 
 ## Microflow tests
 
-An admin can click **Run microflow tests on main** on the Quality card. The office then:
+An admin can click **Run microflow tests on main** on the Quality card (its tooltip says it needs a local Mendix runtime). The office then:
 
 1. makes a fresh copy of main's commit in its own work folder (`<data>/testing/work/<project>/tests`), never the project's checkout;
 2. runs `mxcli test <the .test.mdl and .test.md files> -p <app>.mpr --local --require-assertions --junit <file>` there, with a 15-minute timeout and one run at a time per project;
@@ -149,7 +160,7 @@ How results are read:
 
 Two light prompts, nothing blocks:
 
-- When the build plan (Stage 4) has passed and Stage 5 isn't confirmed yet, Needs you shows **N acceptance criteria have no linked test**. It's raised once and its count is kept up to date.
+- When the build plan (Stage 4) has passed and Stage 5 isn't confirmed yet, Needs you shows **N acceptance criteria have no linked test**. It's raised once and its count is kept up to date. Only while **Judge merged tasks against checks** is on (see [Safety switches](#safety-switches)).
 - The Playbooks ask the Tester Lead to write or extend a task's test first and name the criteria it covers, and developers to run the task's tests before opening a pull request and to put `Covers: AC-xx, BRyyy` in its description. The office reads that line as a **recorded** link.
 - New microflow tests are run with `mxcli test --require-assertions`, and whoever writes the model checks what uses an entity or microflow first (`mxcli refs`, `impact` or `context`, which only read the catalog) and keeps the widget docs that `lint`, `report` and `refresh catalog` rewrite out of commits.
 

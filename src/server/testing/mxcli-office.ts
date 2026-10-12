@@ -1,9 +1,11 @@
 // Testing release 1b's wiring into the office: the microflow test run an admin starts from the Testing
 // tab ("Run microflow tests on main"), and the quality scores (report + lint) worked out once per new
 // main commit, plus on asking. One run of each kind at a time per project; each in the office's own work
-// folder (workfolder.ts), never a floor checkout or an agent's worktree. A quality run for a new main
-// commit waits while the project's agents are working (a cheap look at the floor's workers), at most
-// DEFER_MAX_MS, so it never competes with them for the machine; each commit is tried once.
+// folder (workfolder.ts), never a floor checkout or an agent's worktree. The automatic quality run for a
+// new main commit happens only while "Score main automatically with mxcli" is on (switches.ts, off by
+// default), and never while any of the project's agents is working (a cheap look at the floor's
+// workers): it waits for the next look (a newer commit, or a moment the floor is idle), so it never
+// competes with them for the machine; each commit is tried once. An admin's "Score main now" always works.
 
 import path from 'node:path';
 import { buildQualityView, qualityKey, type MxcliRunState, type QualityPart } from '../../shared/testing/quality.js';
@@ -16,11 +18,10 @@ import { NoTestsError, runMicroflowTests, runQuality } from './mxcli-run.js';
 import { mxcliFor, type MxTool } from './mxcli-tool.js';
 import { QualityStore } from './quality-store.js';
 import { mainOf } from './repo.js';
+import { testingSwitches } from './switches.js';
 
 /** mxcli test's runtime timeout for the office's run. */
 export const TEST_TIMEOUT_MS = 15 * 60_000;
-/** How long a new main commit's quality run waits for busy agents at most. */
-export const DEFER_MAX_MS = 30 * 60_000;
 
 type FloorLike = Pick<Floor, 'id' | 'dir'> & { workers?: Pick<Floor['workers'], 'list'> };
 
@@ -32,7 +33,7 @@ interface RunSlot {
 }
 interface FloorRuns {
   tests: RunSlot;
-  quality: RunSlot & { deferredSince?: number; deferredFor?: string };
+  quality: RunSlot & { deferredFor?: string };
   /** Commits whose automatic quality run was tried (commit:version): once each. */
   tried: Set<string>;
 }
@@ -64,6 +65,8 @@ export const floorBusy = (floor: FloorLike) => !!floor.workers?.list().some((w) 
 export interface MxDeps {
   tool?: (dataDir: string, floorDir: string) => Promise<MxTool | { why: string }>;
   now?: () => number;
+  /** Whether automatic scoring is on (tests); the office's switch otherwise. */
+  auto?: boolean;
 }
 
 const toolOf = (deps: MxDeps) => deps.tool ?? ((d: string, f: string) => mxcliFor(d, f));
@@ -111,7 +114,6 @@ async function qualityOn(dataDir: string, floor: FloorLike, tool: MxTool, sha: s
   const slot = runsOf(floor.id).quality;
   const store = qualityStore(dataDir, floor.id);
   Object.assign(slot, { running: true, since: Date.now(), commit: sha });
-  slot.deferredSince = undefined;
   slot.deferredFor = undefined;
   try {
     const draft = await runQuality({ dataDir, floorId: floor.id, floorDir: floor.dir, bin: tool.bin, mxcliVersion: tool.version, sha, branch, trigger, ...(deps.now ? { now: deps.now } : {}) });
@@ -141,22 +143,23 @@ export async function startQuality(dataDir: string, floor: FloorLike, who: { nam
 
 /**
  * main's commit as the Testing view or the board's poll just read it: scored once per commit and mxcli
- * version, at most one run at a time, waiting while the agents work. Fire and forget; never throws.
+ * version, at most one run at a time, never while the agents work, and only while automatic scoring is
+ * on (`deps.auto`, else the office's switch). Fire and forget; never throws.
  * Gives back the run (its `done`) when one started; tests wait on it.
  */
 export async function qualityOnMain(dataDir: string, floor: FloorLike, main: { sha: string; branch: string } | undefined, deps: MxDeps = {}): Promise<{ done: Promise<string> } | undefined> {
   try {
-    if (!main) return undefined;
+    if (!main || !(deps.auto ?? testingSwitches().autoScore)) return undefined;
     const r = runsOf(floor.id);
     if (r.quality.running) return undefined;
     const tool = await toolOf(deps)(dataDir, floor.dir);
     if ('why' in tool) return undefined;
     const key = qualityKey(main.sha, tool.version);
     if (r.tried.has(key) || (await qualityStore(dataDir, floor.id).has(key))) return undefined;
-    const now = (deps.now ?? Date.now)();
+    // Never while an agent is working: the next look (a newer commit, or the floor idle) tries again.
     if (floorBusy(floor)) {
-      if (r.quality.deferredFor !== key) Object.assign(r.quality, { deferredFor: key, deferredSince: now });
-      if (now - (r.quality.deferredSince ?? now) < DEFER_MAX_MS) return undefined;
+      r.quality.deferredFor = key;
+      return undefined;
     }
     if (r.quality.running) return undefined;
     r.tried.add(key);
@@ -176,7 +179,7 @@ export async function runState(dataDir: string, floor: FloorLike, deps: MxDeps =
     available: !('why' in tool),
     ...('why' in tool ? { why: tool.why } : {}),
     tests: slot(r.tests),
-    quality: { ...slot(r.quality), ...(r.quality.deferredFor && !r.quality.running ? { deferred: 'Waiting for the agents to finish before scoring the new main commit' } : {}) },
+    quality: { ...slot(r.quality), ...(r.quality.deferredFor && !r.quality.running && (deps.auto ?? testingSwitches().autoScore) ? { deferred: 'Waiting for the agents to finish before scoring the new main commit' } : {}) },
   };
 }
 
@@ -186,5 +189,5 @@ export async function qualityPart(dataDir: string, floor: FloorLike, admin: bool
   // Started (not waited for) before the state is read, so the answer already says it's running.
   await qualityOnMain(dataDir, floor, main, deps);
   const [records, state] = await Promise.all([qualityStore(dataDir, floor.id).all(), runState(dataDir, floor, deps)]);
-  return { quality: buildQualityView(records, main?.sha), runs: state, admin, ...(main ? { main: main.sha } : {}) };
+  return { quality: buildQualityView(records, main?.sha), runs: state, admin, auto: deps.auto ?? testingSwitches().autoScore, ...(main ? { main: main.sha } : {}) };
 }

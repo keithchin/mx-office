@@ -152,6 +152,8 @@ export const routes: readonly Route[] = [
   testingRoutes.view,
   testingRoutes.change,
   testingRoutes.run,
+  testingRoutes.switches,
+  testingRoutes.setSwitches,
   wizardRoutes.wizard,
   toolkitRoutes.toolkit,
   connectionsRoutes.connections,

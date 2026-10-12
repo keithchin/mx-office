@@ -260,5 +260,7 @@ export interface QualityPart {
   runs: MxcliRunState;
   /** Whoever's looking may start a run (an admin). */
   admin: boolean;
+  /** Whether the office scores each new main commit by itself ("Score main automatically with mxcli", off by default). */
+  auto?: boolean;
   main?: string;
 }

@@ -12,11 +12,14 @@ import { ChatLog } from '../history.js';
 import type { Core, Ctx } from './context.js';
 import type { Client } from './client.js';
 import { startConnections } from '../connections/index.js';
+import { markOutcomesStart } from '../roster/closed-since.js';
 
 /** The first of the office: accounts and sign-in, the people in it, chat, and the building's floors. */
 export function createCore(ctx: Ctx, cfg: Config, publicDir: string): Core {
   // 🔌 Connections' saved credentials, before any worker is started or resumed (connections/).
   startConnections(cfg.dataDir);
+  // Task outcomes' start, stamped once: PRs closed before it raise no decision (roster/closed-since.ts).
+  markOutcomesStart();
   const accounts = new Accounts(cfg.dataDir);
   const auth = new Auth(cfg.verifier, cfg.salt, cfg.secret, accounts);
   const clients = new Map<string, Client>();
