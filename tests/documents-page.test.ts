@@ -10,7 +10,7 @@ import type { DeliverableItem, DeliverablesView } from '../src/shared/deliverabl
 import { cachedDocs, DOCS_FRESH_MS, loadDocs, setDocsFetcher } from '../src/client/ui/deliverables/store.js';
 import { filterItems } from '../src/client/ui/deliverables/page-logic.js';
 import { documentsHref } from '../src/client/ui/deliverables/open.js';
-import { groupOf, navItem, pageTitle } from '../src/client/ui/portal/nav-logic.js';
+import { asTab, groupOf, navItem, pageTitle } from '../src/client/ui/portal/nav-logic.js';
 
 const root = path.join(import.meta.dirname, '..');
 const read = (p: string) => readFileSync(path.join(root, p), 'utf8').replace(/\r\n/g, '\n');
@@ -91,7 +91,7 @@ test('Documents is a page of the 1D view: a tab in General, its header, its own 
   assert.equal(pageTitle('documents'), 'Documents');
   assert.match(navItem('documents')!.hint, /documents/i);
   const lite = read('src/client/lite.ts');
-  assert.match(lite, /t === 'deliverables' \? 'documents'/, 'an old ?tab=deliverables lands on Documents');
+  assert.equal(asTab('deliverables'), 'documents', 'an old ?tab=deliverables lands on Documents');
   assert.match(lite, /documentsOpener\(\(\) => showTab\('documents'\)\)/);
   assert.match(lite, /if \(t === 'documents'\) documents\.show\(\);\n\s*else documents\.hide\(\);/);
   assert.match(lite, /mountProgressBar\(\$\('progress-bar'\), \{ setup: .*, deliverables: openDocuments \}\);/);

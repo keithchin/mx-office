@@ -25,7 +25,7 @@ import {
   groupBadge,
   groupOpen,
   NAV_BOTTOM,
-  NAV_GROUPS,
+  navGroups,
   NAV_KEY,
   parseNavState,
   readBadge,
@@ -39,13 +39,13 @@ import {
   type NavBadge,
   type NavItem,
   type NavState,
-  type NavTab,
+  type TabId,
 } from './nav-logic';
 import './nav.css';
 
 export interface PortalNavDeps {
   /** Opens a tab (lite.ts's showTab). */
-  show(tab: NavTab): void;
+  show(tab: TabId): void;
   /** Does an action: the deliverables window, the live app, Studio Pro. */
   run(action: NavAction): void;
   /** Whether an action is offered now. */
@@ -124,7 +124,7 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
     return btn;
   };
   const groupsList = h('ul.pt-groups');
-  for (const g of NAV_GROUPS) {
+  for (const g of navGroups()) {
     const list = h('ul.pt-items', { id: `pt-g-${g.id}`, role: 'list' }, ...g.items.map((it) => h('li', { 'data-li': it.id }, itemButton(it))));
     const badge = badgeEl();
     const head = h(
@@ -179,14 +179,14 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
 
   function drawGroups() {
     const admin = store.me.admin;
-    for (const g of NAV_GROUPS) {
+    for (const g of navGroups()) {
       const els = groupEls.get(g.id)!;
       const open = groupOpen(state, g.id, current);
       els.li.classList.toggle('open', open);
       els.head.setAttribute('aria-expanded', String(open));
       els.list.hidden = !open;
       const shown = new Set(visibleItems(g, admin).map((i) => i.id));
-      for (const li of els.list.children) (li as HTMLElement).hidden = !shown.has((li as HTMLElement).dataset.li as NavTab);
+      for (const li of els.list.children) (li as HTMLElement).hidden = !shown.has((li as HTMLElement).dataset.li as TabId);
     }
     for (const it of NAV_BOTTOM) {
       const li = bottom.querySelector<HTMLElement>(`[data-li="${it.id}"]`)!;
@@ -219,7 +219,7 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
       if (on) el.setAttribute('aria-current', 'page');
       else el.removeAttribute('aria-current');
     }
-    for (const g of NAV_GROUPS) groupEls.get(g.id)!.li.classList.toggle('has-current', g.items.some((i) => i.id === current));
+    for (const g of navGroups()) groupEls.get(g.id)!.li.classList.toggle('has-current', g.items.some((i) => i.id === current));
   }
 
   // ---- Badges: the tab row's, mirrored ----------------------------------------------------------
@@ -249,7 +249,7 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
   }
   function drawGroupBadges() {
     const admin = store.me.admin;
-    for (const g of NAV_GROUPS) {
+    for (const g of navGroups()) {
       const els = groupEls.get(g.id)!;
       const closed = !groupOpen(state, g.id, current) || state.rail;
       paintBadge(els.badge, closed ? groupBadge(visibleItems(g, admin).map((i) => badges.get(i.id) ?? null)) : null);
@@ -289,7 +289,7 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
     }
   }
   function openFlyout(g: GroupId, head: HTMLElement, focus: boolean) {
-    const group = NAV_GROUPS.find((x) => x.id === g)!;
+    const group = navGroups().find((x) => x.id === g)!;
     const items = visibleItems(group, store.me.admin);
     flyout.replaceChildren(
       h('div.pt-fly-h', { 'aria-hidden': 'true' }, group.label),
@@ -358,7 +358,7 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
 
   function pick(it: NavItem) {
     if (mobile()) drawer(false);
-    if (it.kind === 'tab') deps.show(it.id as NavTab);
+    if (it.kind === 'tab') deps.show(it.id as TabId);
     else deps.run(it.id as NavAction);
   }
 
