@@ -1,4 +1,4 @@
-// The console's Chat view (ui/pm/console.ts): the worker's conversation as messages instead of its
+// The team-lead panel's Chat view (ui/lead-panel/panel.ts): the worker's conversation as messages instead of its
 // screen. What you sent on one side, its replies on the other with its icon and color, its tool calls
 // as compact rows (logic.ts folds runs of them), and what it's asking you as a highlighted card that
 // sends you to its terminal: a choice is never answered from here. Fed by the office reading its

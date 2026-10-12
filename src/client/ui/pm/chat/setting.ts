@@ -5,7 +5,7 @@
 import { h } from '../../dom';
 import { choiceRow } from '../../settings-rows';
 import { panelShown } from '../../lead-panel/logic';
-import { setPanelShown } from '../../lead-panel';
+import { setPanelShown } from '../../lead-panel/hooks';
 import { PMC_VIEW_LABEL, PMC_VIEWS, savePmcView, savedPmcView } from './pref';
 
 const storage = () => {

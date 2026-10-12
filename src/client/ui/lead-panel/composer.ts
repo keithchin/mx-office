@@ -46,6 +46,8 @@ export class Composer {
   /** The prompt ↑/↓ last put in the box. */
   private recalled: string | undefined;
   private view: ComposerView = { name: 'the lead', canPrompt: false, team: false };
+  /** What was in the box when it was last sized. */
+  private sized: string | undefined;
 
   constructor(private readonly deps: ComposerDeps) {
     this.chips = QUICK.map((q) =>
@@ -83,7 +85,12 @@ export class Composer {
     }
   }
 
+  /** What it last showed: the panel draws on every worker update, and only a change touches the page. */
+  private shown = '';
   show(v: ComposerView) {
+    const key = JSON.stringify(v);
+    if (key === this.shown) return;
+    this.shown = key;
     this.view = v;
     this.box.placeholder = `Ask ${v.name}…`;
     this.box.setAttribute('aria-label', `Message to ${v.name}`);
@@ -104,8 +111,12 @@ export class Composer {
     this.turn.hidden = !mid;
     if (mid) this.turnText.textContent = `⏳ ${midTurnText(this.view.name, this.view.midTurn!)}`;
     this.cbar.textContent = mid ? 'Enter sends after their turn · Shift+Enter for a new line' : 'Enter to send · Shift+Enter for a new line · ↑ for history';
-    this.box.style.height = 'auto';
-    if (this.box.scrollHeight) this.box.style.height = `${Math.min(this.box.scrollHeight, 140)}px`;
+    // The box grows with what's in it (measuring forces a layout: only when what's in it changed).
+    if (this.box.value !== this.sized) {
+      this.sized = this.box.value;
+      this.box.style.height = 'auto';
+      if (this.box.scrollHeight) this.box.style.height = `${Math.min(this.box.scrollHeight, 140)}px`;
+    }
     if (save) this.deps.draft(this.box.value);
   }
 

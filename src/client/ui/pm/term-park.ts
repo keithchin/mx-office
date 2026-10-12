@@ -1,4 +1,4 @@
-// When the PM console's terminal (term.ts) may draw. xterm's DOM renderer measures each character's
+// When the team-lead panel's terminal (term.ts) may draw. xterm's DOM renderer measures each character's
 // width by writing it into a hidden span and reading offsetWidth, and keeps a width only when it is
 // more than 0. Inside a box that isn't laid out (display: none: the console's Chat view, its
 // escalation cards in the screen's place) every width reads 0, so nothing is kept and every row it

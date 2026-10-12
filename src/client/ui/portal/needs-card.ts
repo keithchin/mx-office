@@ -17,7 +17,7 @@ import { setRoster } from '../teams/world';
 import { onNeeds, waitingCount, type NeedsSnapshot } from '../needsyou/feed';
 import type { NeedItem } from '../needsyou/logic';
 import { leadOf } from '../lead-panel/logic';
-import { askLead } from '../lead-panel';
+import { askLead } from '../lead-panel/hooks';
 import { answerFor, escalationModel, rowModel, verifyAnswer, type EscModel, type Tone } from './needs-logic';
 
 export interface NeedsCardDeps {

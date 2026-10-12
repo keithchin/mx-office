@@ -6,10 +6,10 @@
 //   Board:     Board                                     [Issues] [PRs] [Queue] [New task]
 //   Audit log: Audit log                           [Call an audit] [The Firm →] [New task]
 //   ▓▓ ⎇ main · repo · 👥 1 here · [$ budget] [● Running | Pause] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-//   ▓▓ [ the progress bar ]                                                         ▓▓
 //
 // Under it, on the Overview only, the band (.pt-band): the floor's line (branch, folder, who's here, the
-// budget chip and the run-state toggle, .bud-meta-row) and the progress bar together on a mid dark grey.
+// budget chip and the run-state toggle, .bud-meta-row) on a mid dark grey; the progress bar is the Overview's
+// Progress card under it (./overview.ts).
 // The other pages have their header alone, the same gap under it on each (pagehead.css); the budget is
 // on the Budget page and the top bar's office chip, Pause / Resume on the Overview, Home's cards and the
 // 2D Office view's toolbar. Nothing in either is new: they, the Firm's banner and the bottom bar's buttons (#btn-issues,

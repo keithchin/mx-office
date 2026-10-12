@@ -63,7 +63,7 @@ html:is([data-theme^='clean'], [data-theme^='portal']) .lp-face-i { display: inl
 .lp-wait b { font-weight: 600; }
 
 /* The conversation (ui/pm/chat/view.ts draws it): as tall as the panel leaves it. */
-.lp-chat > .pmc-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px 0; }
+.lp-chat > .pmc-chat { position: relative; inset: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px 0; border: 0; border-radius: 0; background: transparent; }
 .lp-chat .pmc-chat-list { flex: 1; min-height: 0; max-height: none; scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
 .lp-chat .pmc-fallback { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .lp-chat .pmc-plain { flex: 1; min-height: 0; max-height: none; }
@@ -116,6 +116,7 @@ html:is([data-theme^='clean'], [data-theme^='portal']) .lp-qi { display: none; }
 .lp-rail { position: fixed; top: var(--lp-top); right: 0; bottom: 0; z-index: 17; width: var(--lp-rail); display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 12px; border-left: 1px solid var(--line); background: var(--paper-2); }
 .lp-rail-btn { position: relative; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
 .lp-rail-btn .lp-face { --size: 36px; }
+.lp-badge[hidden] { display: none; }
 .lp-badge { position: absolute; top: -3px; right: -4px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 600; box-shadow: 0 0 0 2px var(--paper-2); }
 .lp-rail-dot { width: 9px; height: 9px; }
 .lp-vlabel { writing-mode: vertical-rl; max-height: 50vh; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; letter-spacing: .02em; color: var(--ink-2); }
@@ -135,11 +136,9 @@ html:is([data-theme^='clean'], [data-theme^='portal']) .lp-qi { display: none; }
   .lp-termlink[hidden] { display: none; }
   .lp-sheet-x { display: inline-grid; }
   .lp-name { white-space: normal; }
-  .lp-fab { display: grid; place-items: center; position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 40; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: var(--card); box-shadow: 0 8px 28px rgba(10, 19, 36, .2); cursor: pointer; }
+  .lp-fab { display: grid; place-items: center; position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(var(--tp-above, 0px) + 14px + env(safe-area-inset-bottom)); z-index: 40; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: var(--card); box-shadow: 0 8px 28px rgba(10, 19, 36, .2); cursor: pointer; }
   .lp-fab .lp-face { --size: 48px; }
   .lp-fab .lp-badge { top: -2px; right: -2px; box-shadow: 0 0 0 2px var(--card); }
-  /* The classic themes' bottom bar: the button sits above it. */
-  body.lite:not(.pt-has-nav) .lp-fab { bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 
 /* ---- The expanded terminal ------------------------------------------------------------------------- */
@@ -152,6 +151,13 @@ html:is([data-theme^='clean'], [data-theme^='portal']) .lp-qi { display: none; }
 
 /* Where "N waiting on you →" lands: a ring for a moment. */
 .lp-ring { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent) !important; border-color: var(--accent) !important; transition: box-shadow .2s; }
+
+/* Round whatever a theme does to buttons and spans (Clean and Portal square them off). */
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite :is(.lp-fab, .lp-rail-btn, .lp-face, .lp-badge, .lp-st i, .lp-rail-dot) { border-radius: 50% !important; }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lp-badge { border-radius: 9px !important; }
+/* The team phone's button (ui/phone/) moves out of the panel's way: beside it on a computer, left of the floating avatar on a phone. */
+body.lite.lp-on .tp-launch { right: calc(var(--lp-space) + 16px); }
+@media (max-width: 760px) { body.lite.lp-on .tp-launch { right: calc(max(16px, env(safe-area-inset-right)) + 68px); } }
 
 /* ---- The other themes ------------------------------------------------------------------------------- */
 html[data-theme='terminal'] :is(.lp-qchip, .lp-composer, .lp-box, .lp-send, .lp-turn, .lp-hint, .lp-face, .lp-badge, .lp-tab, .lp-iconbtn) { border-radius: 0; }

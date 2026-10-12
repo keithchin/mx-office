@@ -77,7 +77,7 @@ export function summarySig(floor: string, s: ProjectSummary): string {
 /**
  * Draws the panel for `floor` into `root`; call it again to refresh (it reuses a summary fetched moments ago). Never throws.
  * `middle` is a column of the caller's to keep between the details and the recent activity (the 1D view's
- * project manager console, ui/pm/console.ts): it's moved, never redrawn, so what's typed in it survives.
+ * Portal Overview's Needs you and brief cards, ui/portal/overview.ts): it's moved, never redrawn, so what's typed in it survives.
  * `after` is kept the same way, last (the 💬 Team chatter, ui/chatter/, or the Portal Overview's right
  * column, ui/portal/overview.ts), so its scroll stays put. Resolves with the summary it drew.
  *

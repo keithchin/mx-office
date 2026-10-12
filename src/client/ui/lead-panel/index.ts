@@ -20,6 +20,7 @@ import { onProjectTab } from '../../tabs/host';
 import { onPmcView } from '../pm/chat/pref';
 import { LeadPanel } from './panel';
 import { panelShown, PANEL_SHOW_KEY, readPanelState, writePanelState } from './logic';
+import { setLeadAsk, SHOW_EVENT } from './hooks';
 import './lead-panel.css';
 
 export interface LeadPanelDeps {
@@ -39,26 +40,6 @@ export interface LeadPanelHandle {
 }
 
 const PHONE = '(max-width: 760px)';
-const SHOW_EVENT = 'agent-office:lead-panel-show';
-
-let handle: LeadPanelHandle | undefined;
-
-/** Turns the panel on or off in this browser (⚙️ Settings › You). */
-export function setPanelShown(on: boolean) {
-  try {
-    localStorage.setItem(PANEL_SHOW_KEY, on ? '1' : '0');
-  } catch {
-    // Only this visit.
-  }
-  dispatchEvent(new Event(SHOW_EVENT));
-}
-
-/** "Ask <name>" from elsewhere on the page; false when there's no panel to ask in. */
-export function askLead(text: string): boolean {
-  if (!handle) return false;
-  handle.ask(text);
-  return true;
-}
 
 export function leadPanel(deps: LeadPanelDeps): LeadPanelHandle {
   const store = (() => {
@@ -242,14 +223,11 @@ export function leadPanel(deps: LeadPanelDeps): LeadPanelHandle {
   document.addEventListener('visibilitychange', () => panel.attach());
   apply();
 
-  handle = {
-    route: (msg) => panel.route(msg),
-    ask(text) {
-      if (mq.matches) setSheet(true, false);
-      else if (st.collapsed) setCollapsed(false, false);
-      if (!shown) return;
-      panel.ask(text);
-    },
+  const ask = (text: string) => {
+    if (mq.matches) setSheet(true, false);
+    else if (st.collapsed) setCollapsed(false, false);
+    if (shown) panel.ask(text);
   };
-  return handle;
+  setLeadAsk(ask);
+  return { route: (msg) => panel.route(msg), ask };
 }

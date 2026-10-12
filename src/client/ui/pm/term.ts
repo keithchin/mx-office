@@ -1,4 +1,4 @@
-// The project manager console's terminal (ui/pm/console.ts): the PM's screen, live and read-only, the
+// The team-lead panel's terminal (ui/lead-panel/panel.ts): the PM's screen, live and read-only, the
 // way a card's hover preview shows one (ui/kanban-preview.ts). It attaches as a viewer, draws the
 // snapshot and what follows into a small xterm at the PTY's own size, and scales that down to the
 // column's width with the newest lines at the box's foot. It never sends a resize: the PTY's size belongs to

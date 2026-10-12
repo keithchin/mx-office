@@ -1,5 +1,5 @@
-// The Portal Overview's dark band (ui/portal/pagehead.ts) is two rows: the floor's line (branch, folder,
-// who's here, the budget chip, Running | Pause) and under it the progress bar. Release 34 drew the progress
+// The Portal Overview's dark band (ui/portal/pagehead.ts) is the floor's line (branch, folder, who's here,
+// the budget chip, Running | Pause); the progress bar is in the Progress card under it (ui/portal/overview.ts). Release 34 drew the progress
 // bar ON the floor's line: the Model tab's Page view (ui/model/page.css) styled a class of its own name,
 // .pg-host, as position: absolute, and the progress bar's root (ui/progress) carries .pg-host too, so it
 // left the band's flow and lay over the first row. Here: no class is shared between the two stylesheets,
@@ -35,7 +35,7 @@ function sheets(dir: string): string[] {
   return out;
 }
 
-/** The band as the Overview has it: the page's own floor line and progress bar moved in. */
+/** The band as the Overview has it (the page's own floor line moved in), and the progress bar in the Progress card under it. */
 function page(theme: string, phases: number): string {
   const segs = Array.from({ length: phases }, (_, i) => `<button class="pg-seg${i < 3 ? ' done' : ''}"><span class="pg-seg-id">${i}</span><span class="pg-seg-t">Phase ${i}</span></button>`).join('');
   const bar = phases ? `<div class="pg-bar"><button class="pg-fold">▾</button><div class="pg-track">${segs}</div><button class="pg-label">Stage 3 · Architecture &amp; Design</button></div>` : '';
@@ -46,15 +46,14 @@ function page(theme: string, phases: number): string {
 <header class="pt-head pt-only pt-head-ov" id="pt-head"><div class="pt-head-id"><div class="pt-head-text"><h1 class="pt-head-title">Travel Approval</h1></div></div></header>
 <div class="pt-band pt-only">
   <div class="bud-meta-row"><p id="floor-meta">main · example-co/travel-approval · 2 here</p><button class="bud-chip" id="budget-chip"><span class="bud-chip-t">$48 today · $1,161 / $2,400</span></button><button class="pr-toggle">Running <span class="pr-tg-act">Pause</span></button></div>
-  <div id="progress-bar" class="pg-host">${bar}</div>
 </div>
-<div id="needs-you"><section class="ny">Needs you</section></div>
+<section class="pt-ov-card pt-prog pt-only" id="pt-progress"><h2>Progress</h2><div id="progress-bar" class="pg-host">${bar}</div></section>
 </main></body></html>`;
 }
 
 type Box = { top: number; bottom: number; height: number };
 const chrome = findChrome();
-test('the Overview band’s two rows: the floor’s line, then the progress bar, never on top of each other', { skip: chrome ? false : 'no Chromium here (npx playwright-core install chromium)' }, async () => {
+test('the Overview band (the floor’s line), then the Progress card with the progress bar, never on top of each other', { skip: chrome ? false : 'no Chromium here (npx playwright-core install chromium)' }, async () => {
   const browser = await chromium.launch({ headless: true, executablePath: chrome });
   try {
     for (const theme of ['portal-light', 'portal-dark']) {
@@ -66,7 +65,8 @@ test('the Overview band’s two rows: the floor’s line, then the progress bar,
           // A string, not a function: the test runner's transform adds helpers the page doesn't have.
           const m = (await p.evaluate(`(() => {
             const box = (s) => { const r = document.querySelector(s).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, height: r.height }; };
-            return { band: box('.pt-band'), row: box('.bud-meta-row'), bar: box('#progress-bar'), next: box('#needs-you'), pos: getComputedStyle(document.getElementById('progress-bar')).position };
+            const track = document.querySelector('.pg-track');
+            return { band: box('.pt-band'), row: box('.bud-meta-row'), bar: track ? box('.pg-track') : { top: 0, bottom: 0, height: 0 }, next: box('#pt-progress'), pos: getComputedStyle(document.getElementById('progress-bar')).position };
           })()`)) as { band: Box; row: Box; bar: Box; next: Box; pos: string };
           await p.close();
           assert.equal(m.pos, 'static', `${at}: the progress bar is in the band's flow`);
@@ -74,10 +74,10 @@ test('the Overview band’s two rows: the floor’s line, then the progress bar,
           assert.ok(m.row.top >= m.band.top + 8 && m.row.bottom <= m.band.bottom - 8, `${at}: the floor's line inside the band with its padding`);
           if (phases) {
             assert.ok(m.bar.height >= 20, `${at}: the progress bar is drawn (${m.bar.height} px)`);
-            assert.ok(m.bar.top >= m.row.bottom, `${at}: the progress bar (top ${m.bar.top}) starts below the floor's line (bottom ${m.row.bottom})`);
-            assert.ok(m.bar.bottom <= m.band.bottom - 8, `${at}: the progress bar inside the band with its padding`);
+            assert.ok(m.bar.top >= m.band.bottom, `${at}: the progress bar (top ${m.bar.top}) starts below the band (bottom ${m.band.bottom})`);
+            assert.ok(m.bar.top >= m.next.top && m.bar.bottom <= m.next.bottom, `${at}: the progress bar is inside its Progress card`);
           }
-          assert.ok(m.next.top >= m.band.bottom, `${at}: what follows starts below the band`);
+          assert.ok(m.next.top >= m.band.bottom, `${at}: the Progress card starts below the band`);
         }
       }
     }

@@ -1,5 +1,5 @@
 // The approvals queue: everything waiting on the Project Manager (you) at the floor's autonomy level —
-// escalations the team raised (the same cards as on the project console), proposals from the
+// escalations the team raised (the Overview's Needs you shows them as full cards too), proposals from the
 // standups, the team's pull requests when merges need the Project Manager, and a cost cap reached.
 // When Jeff ranked the escalations, they take their places in his order, each with its chip.
 

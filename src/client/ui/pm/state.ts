@@ -1,4 +1,4 @@
-// What the project console (ui/pm/console.ts) shows, worked out from the team's view of
+// What the team-lead panel (ui/lead-panel/, the project console before it) shows, worked out from the team's view of
 // the PM (GET /api/roster) and its worker as the page knows it right now. Pure: no DOM, so a test can
 // check every case. The roster is fetched now and then; the worker updates live, so where it's there
 // its status wins, and the roster's word covers the rest (not hired, benched, writing its handoff).

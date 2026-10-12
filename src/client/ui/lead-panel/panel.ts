@@ -24,6 +24,7 @@ import { shapeText } from '../roster/coverage';
 import { currentRoster, onRoster, setRoster } from '../teams/world';
 import { pmView, type PmView } from '../pm/state';
 import { PmTerminal } from '../pm/term';
+import { termTheme } from '../termtheme';
 import { ChatView } from '../pm/chat/view';
 import { onPmcView, PMC_VIEW_LABEL, PMC_VIEWS, savedPmcView, savePmcView, type PmcView } from '../pm/chat/pref';
 import { onNeeds, waitingCount } from '../needsyou/feed';
@@ -82,6 +83,8 @@ export class LeadPanel {
   private readonly tabRow: HTMLElement;
   /** What placed the terminal last: measuring its box forces a layout, so only a change does. */
   private placed = '';
+  /** What the connection badge and the note last said. */
+  private connKey = '';
   private convoFor: string | undefined;
   /** The project whose kept scroll position is still to be put back. */
   private restoreFor: string | undefined;
@@ -328,13 +331,20 @@ export class LeadPanel {
     });
     const id = want ? (this.view.workerId ?? null) : null;
     this.term.show(id);
+    // The box round the screen in the screen's own colour (the theme's terminal colours), not a strip of the page's.
+    if (id) this.termHost.style.background = termTheme().background ?? '';
     const w = this.worker();
     if (w && this.term.showing === w.id) this.term.sizeTo(w.cols, w.rows);
     // The conversation is watched whenever there's a lead to talk to: the unread badge counts it while collapsed.
     this.watch(this.lead?.kind === 'lead' && !document.hidden ? (this.view.workerId ?? null) : null);
-    this.conn.replaceChildren(id ? h('span.lp-conn-b', {}, h('i'), 'connected') : h('span.lp-conn-b.lp-conn-off', {}, h('i'), 'not connected'));
-    this.termNote.hidden = !!this.view.live;
-    this.termNote.textContent = this.view.state === 'asleep' ? `💤 ${this.lead && this.lead.kind !== 'none' ? this.lead.name : 'The lead'} is asleep` : 'Not at a desk on this floor';
+    const note = this.view.live ? '' : this.view.state === 'asleep' ? `💤 ${this.lead && this.lead.kind !== 'none' ? this.lead.name : 'The lead'} is asleep` : 'Not at a desk on this floor';
+    const shown = `${!!id}|${note}`;
+    if (shown !== this.connKey) {
+      this.connKey = shown;
+      this.conn.replaceChildren(id ? h('span.lp-conn-b', {}, h('i'), 'connected') : h('span.lp-conn-b.lp-conn-off', {}, h('i'), 'not connected'));
+      this.termNote.hidden = !note;
+      this.termNote.textContent = note;
+    }
     const key = `${this.term.showing}|${this.termPane.hidden}|${this.deps.open()}|${this.deps.expanded()}`;
     if (key !== this.placed) {
       this.placed = key;

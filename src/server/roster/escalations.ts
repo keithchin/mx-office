@@ -142,7 +142,7 @@ export class Escalations {
     const tag = e.fyi ? 'FYI' : e.urgency;
     floor.activity?.(`${URGENCY_ICON[e.urgency]} ${byOffice ? (source ?? `The office escalated to the Project Manager for ${who.by}, from its handoff note`) : `${who.by} escalated to the Project Manager`} (${tag}): ${e.title}`);
     if (byOffice && !e.fyi) floor.toast(`${URGENCY_ICON[e.urgency]} ${who.by} is waiting on you: ${e.title} — answer it in the approvals and the office brings ${who.by} back with your answer`, 'warn');
-    if (loud) floor.toast(`${URGENCY_ICON[e.urgency]} ${e.urgency === 'critical' ? 'Critical' : 'Urgent'} escalation from ${who.by}: ${e.title} — answer it on the project console (🎛️ Command Center)`, 'warn');
+    if (loud) floor.toast(`${URGENCY_ICON[e.urgency]} ${e.urgency === 'critical' ? 'Critical' : 'Urgent'} escalation from ${who.by}: ${e.title} — answer it in Needs you on the Overview`, 'warn');
     // The Coordinator relays and summarises: it isn't told about its own, or about FYIs (they're on the standup page).
     if (role !== managerRole(d) && !e.fyi) this.tellCoordinator(floor, e);
     this.roster.touch(floor);

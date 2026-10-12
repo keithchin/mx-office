@@ -1,5 +1,5 @@
 // The check before something you start reaches agents in the middle of a turn (shared/roster/interrupt.ts):
-// a standup, or a team question from the project console ("What's blocking?", "Plan next steps"). It lists
+// a standup, or a team question from the team-lead panel ("What's blocking?", "Plan next steps"). It lists
 // who is ready and who is working, on what and for how long, and for each busy one asks: interrupt now,
 // after their current turn (the default: the office holds it and types it when that turn ends), or for a
 // standup, skip them and read their journal. "Same for all" sets every row at once. Nobody busy: no window,
