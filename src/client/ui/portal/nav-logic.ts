@@ -2,11 +2,16 @@
 // draws it): its groups and their items, each item one of the 1D view's tabs (the ids lite.ts's showTab
 // and ?tab= know) or an action (the live app, Studio Pro); which group a tab is
 // in, the page's name for the bar and the header, which groups are open and whether the pane is folded
-// to its icon rail (kept per viewer in this browser), and what a closed group's badge says. Pure, so
-// tests/portal-nav.test.ts runs it.
+// to its icon rail (kept per viewer in this browser), and what a closed group's badge says. A feature's
+// own tab joins its group from the tab registry (src/client/tabs/registry.ts) rather than this list.
+// Pure, so tests/portal-nav.test.ts runs it.
 
-/** The 1D view's tabs (lite.ts's Tab type, the same ids). */
-export type NavTab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | 'model' | 'org' | 'standup' | 'approvals' | 'teams' | 'documents' | 'audit' | 'budget' | 'settings' | 'tests';
+import { registeredTabs, reserveTabIds, tabsVersion } from '../../tabs/registry';
+
+/** The 1D view's built-in tabs (lite.html's tab row and its views). */
+export type NavTab = 'command' | 'board' | 'workers' | 'analysis' | 'live' | 'git' | 'model' | 'org' | 'standup' | 'approvals' | 'teams' | 'documents' | 'audit' | 'budget' | 'settings';
+/** Any tab of the 1D view: a built-in one, or one a feature registered (lite.ts's Tab). */
+export type TabId = NavTab | (string & {});
 /** The items that do something rather than open a tab. */
 export type NavAction = 'view-app' | 'studio';
 
@@ -14,8 +19,8 @@ export type GroupId = 'general' | 'pm' | 'insights' | 'repo' | 'deploy' | 'monit
 export type GroupIcon = 'home' | 'kanban' | 'chart' | 'branch' | 'rocket' | 'pulse';
 
 export interface NavItem {
-  /** A tab's id, or an action's. */
-  id: NavTab | NavAction;
+  /** A tab's id (built-in or registered), or an action's. */
+  id: TabId | NavAction;
   label: string;
   /** For a tab: the page header's one line under its title. For an action: its tooltip. */
   hint: string;
@@ -31,11 +36,11 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-const tab = (id: NavTab, label: string, hint: string, extra: Partial<NavItem> = {}): NavItem => ({ id, label, hint, kind: 'tab', ...extra });
+const tab = (id: TabId, label: string, hint: string, extra: Partial<NavItem> = {}): NavItem => ({ id, label, hint, kind: 'tab', ...extra });
 const action = (id: NavAction, label: string, hint: string): NavItem => ({ id, label, hint, kind: 'action' });
 
-/** The groups, top to bottom, as the portal's app pane has them. Every tab is in exactly one (tests check). */
-export const NAV_GROUPS: readonly NavGroup[] = [
+/** The groups, top to bottom, as the portal's app pane has them, with their built-in items. */
+const BUILTIN_GROUPS: readonly NavGroup[] = [
   {
     id: 'general',
     label: 'General',
@@ -81,7 +86,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     id: 'monitor',
     label: 'Monitoring',
     icon: 'pulse',
-    items: [tab('workers', 'Agents', 'Every agent on the project and how it is doing, the ones waiting on someone first'), tab('tests', 'Tests', 'Test mode: the suites, their runs and results', { admin: true })],
+    // Tests (the test lab) joins from the tab registry: ui/testlab/tab.ts.
+    items: [tab('workers', 'Agents', 'Every agent on the project and how it is doing, the ones waiting on someone first')],
   },
 ];
 
@@ -92,18 +98,47 @@ export const NAV_BOTTOM: readonly NavItem[] = [
   action('studio', 'Edit in Studio Pro', 'Open the project in Studio Pro on the office’s computer'),
 ];
 
-const ALL: readonly NavItem[] = [...NAV_GROUPS.flatMap((g) => g.items), ...NAV_BOTTOM];
+reserveTabIds([...BUILTIN_GROUPS.flatMap((g) => g.items), ...NAV_BOTTOM].map((i) => i.id));
+
+let cache: { version: number; groups: readonly NavGroup[]; all: readonly NavItem[] } | undefined;
+function derived() {
+  if (cache?.version === tabsVersion()) return cache;
+  const groups = BUILTIN_GROUPS.map((g) => {
+    const placed = g.items.map((item, i) => ({ item, order: (i + 1) * 10 }));
+    for (const t of registeredTabs()) if (t.group === g.id) placed.push({ item: tab(t.id, t.label, t.tooltip, t.admin ? { admin: true } : {}), order: t.order ?? Infinity });
+    return { ...g, items: placed.sort((a, b) => a.order - b.order).map((p) => p.item) };
+  });
+  cache = { version: tabsVersion(), groups, all: [...groups.flatMap((g) => g.items), ...NAV_BOTTOM] };
+  return cache;
+}
+
+/**
+ * The groups, top to bottom, with their items: the built-in ones (at 10, 20, 30…) and the registered tabs
+ * (at their `order`, else after the built-in ones in the order they registered), sorted stably. Every
+ * tab is in exactly one (tests check). Worked out again only when a tab registers.
+ */
+export const navGroups = (): readonly NavGroup[] => derived().groups;
 
 /** The item for a tab or action id. */
-export const navItem = (id: string): NavItem | undefined => ALL.find((i) => i.id === id);
+export const navItem = (id: string): NavItem | undefined => derived().all.find((i) => i.id === id);
 
 /** The group a tab is in (undefined for Settings, under the rule). */
-export const groupOf = (id: string): NavGroup | undefined => NAV_GROUPS.find((g) => g.items.some((i) => i.id === id));
+export const groupOf = (id: string): NavGroup | undefined => navGroups().find((g) => g.items.some((i) => i.id === id));
+
+/** Whether `t` is a tab of the 1D view: a built-in one or a registered one. */
+export const isTab = (t: unknown): t is TabId => typeof t === 'string' && navItem(t)?.kind === 'tab';
+
+/**
+ * The tab a ?tab= (or the tab this browser tab last showed) asks for, or undefined for none or one that
+ * isn't there (the page then opens as if none were asked). Old names still work: team is the org chart,
+ * agents the Agents page (its own name for workers), deliverables Documents.
+ */
+export const asTab = (t: unknown): TabId | undefined => (t === 'team' ? 'org' : t === 'agents' ? 'workers' : t === 'deliverables' ? 'documents' : isTab(t) ? t : undefined);
 
 /** The page's name: "Overview" for the Command Center, the item's label for the rest. */
 export const pageTitle = (t: string): string => navItem(t)?.label ?? 'Overview';
 
-/** The groups' items a viewer sees: Tests only for an admin. */
+/** The groups' items a viewer sees: the admin-only ones (Tests) only for an admin. */
 export function visibleItems(g: NavGroup, admin: boolean): NavItem[] {
   return g.items.filter((i) => !i.admin || admin);
 }
@@ -119,7 +154,7 @@ export interface NavState {
 
 export const NAV_KEY = 'agent-office.portal-nav';
 
-const isGroup = (v: unknown): v is GroupId => NAV_GROUPS.some((g) => g.id === v);
+const isGroup = (v: unknown): v is GroupId => BUILTIN_GROUPS.some((g) => g.id === v);
 
 /** What was stored, made safe: anything odd is dropped rather than trusted. */
 export function parseNavState(raw: string | null): NavState {

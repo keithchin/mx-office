@@ -15,6 +15,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ### Changed
 
 - **Unfinished setups from an older version of the office keep their folder and repository on Cancel & undo.** They have only their log lines (*created … on GitHub*, *cloned into …*), not the new record, so the office no longer deletes on those. Cancel & undo still takes the project off the office and removes the setup. The dialog says *this setup's log says it created it, but the office didn't record proof, so delete it on GitHub yourself if you're sure*, with a link to the repository's settings.
+- **Project tabs plug in from a registry (internal).** A feature now adds a page of the project view (its navigation item, view and show/hide hooks) from a module of its own (`src/client/tabs/registry.ts`, see `docs/code-layout.md`) instead of editing `lite.ts`, `lite.html` and the navigation's list. 🧪 Tests is the first; nothing looks different, and it now loads the first time it is opened.
 
 ## 2026-10-11 · release 38 (`928af9b`)
 

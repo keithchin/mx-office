@@ -6,6 +6,18 @@ Where the code lives, and where a new feature's pieces go. The office used to gr
 
 There are three parts: `src/client` (the pages, built by Vite), `src/server` (Node) and `src/shared` (types and pure code both use, with no Node imports).
 
+## The registries
+
+| What | Where a feature adds itself | Its list |
+| --- | --- | --- |
+| HTTP routes | its routes in `src/server/http/routes/<name>.ts` | `http/routes/index.ts` |
+| WebSocket messages | a handler map in `src/server/ws/handlers/<domain>.ts` | `ws/handlers/index.ts` |
+| Page state | a slice in `src/client/state/slices/<name>.ts` | `SLICES` in `state/slices/index.ts` |
+| Settings sections | a row in `src/shared/settings-sections.ts` and its builder | `SECTION_BUILDERS` in `ui/settings/` |
+| Project tabs (the 1D view's pages) | a `registerTab` call in the feature's own tab module (`ui/<name>/tab.ts`) | `src/client/tabs/index.ts` |
+
+Each is explained where its code is described below; [Adding a project tab](#adding-a-project-tab) has the tabs'.
+
 ## Client
 
 Every page is an entry of its own in `vite.config.ts`, an HTML file with its script beside it in `src/client`: the 1D view (`lite.html`, `lite.ts`, at `/lite`: where every project opens, on its Command Center), the 2D Office view (`pixel.html`, `pixel.ts`, at `/pixel`, reached only by the 1D view's **Go to Office**), Home (`home.ts`), The Firm (`firm.ts`), the docs (`docs.ts`), the phone version (`m.ts`), first-run setup (`setup.ts`) and the sign-in pages (`login.ts`, `claim.ts`, `join.ts`). The 3D office that used to be at `/` (`main.ts`, three.js, and its `core/`, `features/`, `input/`, `world/`, `player/`, `sound/` and `models/` folders) is gone: `/` redirects to the 1D view (`server/http/routes/pages.ts`). `tests/client-structure.test.ts` checks it stays gone and that every module under `src/client` is loaded by one of the pages.
@@ -54,10 +66,33 @@ A new feature adds files of its own and one line in each list it joins. For some
 1. **Its messages** in a protocol domain file (`src/shared/protocol/<domain>.ts`). A new domain file also goes in `protocol.ts`: its `import type`, its `export *` and its members of the unions.
 2. **A server handler file**, `src/server/ws/handlers/<name>.ts`, and its line in `handlers` in `ws/handlers/index.ts`. If it keeps something per person, its `FeatureHooks` go in `features` there; if people arriving on a floor need its state, that's a field of `FloorView` (`protocol/floors.ts`) and its piece in `views`. What a floor keeps is a module of its own in `src/server/`, which `Floor` makes.
 3. **A state slice**, `src/client/state/slices/<name>.ts`, and its line at the end of `SLICES` in `state/slices/index.ts`.
-4. **Its window or panel** in `src/client/ui/<name>/` (or `ui/<name>.ts`), opened from the page that shows it: a tab of the 1D view (`lite.ts`), an item of the ☰ menu (`shared/flatmenu.ts`), or something to click in the 2D Office view (`pixel/hotspots.ts`).
+4. **Its window or panel** in `src/client/ui/<name>/` (or `ui/<name>.ts`), opened from the page that shows it: a tab of the 1D view (from the tab registry, see [Adding a project tab](#adding-a-project-tab)), an item of the ☰ menu (`shared/flatmenu.ts`), or something to click in the 2D Office view (`pixel/hotspots.ts`).
 5. **Its CSS** next to its ui module, imported from there, in the color tokens.
 
 Its HTTP routes, if it has any, go in `http/routes/`, and its tests in `tests/`.
+
+## Adding a project tab
+
+A page of the 1D view (a project tab, `/lite?tab=<id>`) is a module of the feature's own that calls `registerTab` (`src/client/tabs/registry.ts`), plus its import line in `src/client/tabs/index.ts`. Nothing in `lite.ts`, `lite.html` or the navigation's list (`ui/portal/nav-logic.ts`) changes. 🧪 Tests (`ui/testlab/tab.ts`) is one:
+
+```ts
+import { registerTab } from '../../tabs/registry';
+import { testlabView } from './index';
+
+registerTab({
+  id: 'tests', // ?tab=tests, its container #tests-view
+  group: 'monitor', // the navigation group it's in
+  label: 'Tests', // the item and the page header's title
+  tooltip: 'Test mode: the suites, their runs and results', // the header's line under the title
+  admin: true, // only admins see it in the navigation
+  mount: (container) => testlabView(container), // gives back { show?, hide?, refresh? }
+});
+```
+
+- **The navigation** (`navGroups()` in `nav-logic.ts`) puts it in its group: the built-in items are at 10, 20, 30… in their order, a tab with `order` goes where that puts it (15 is after the first), and one without goes after the built-in items, in the order the index registers them. `navItem`, `groupOf`, `pageTitle`, `visibleItems` (admin-only tabs for admins only), the search and the remembered open groups know it like any other.
+- **The address**: `asTab` takes `?tab=<id>` and the tab a reload keeps, so deep links work; an id that isn't a tab still opens the Command Center.
+- **The page** (`tabs/host.ts`, which `lite.ts` calls once) gives each registered tab an empty, hidden `#<id>-view` before the Agents' view at start and nothing more: `mount` runs the first time the tab shows. From then on every `showTab` calls its `show` when it's the tab asked for and its `hide` when it isn't, and `refresh` when the floor changes while it's showing. `tabRow: true` (with an `icon`) also gives it a button in the classic themes' tab row; without it the Portal navigation, links and the ☰ reach it.
+- An id must be lower case and not a built-in tab's or action's (`registerTab` throws).
 
 ## Adding an agent provider
 

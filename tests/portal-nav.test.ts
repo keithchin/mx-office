@@ -13,7 +13,7 @@ import {
   groupOf,
   groupOpen,
   NAV_BOTTOM,
-  NAV_GROUPS,
+  navGroups,
   navItem,
   pageTitle,
   parseNavState,
@@ -24,6 +24,8 @@ import {
   toggleGroup,
   visibleItems,
 } from '../src/client/ui/portal/nav-logic.js';
+// The tabs features register (Tests among them), as the page loads them (tabs/host.ts).
+import '../src/client/tabs/index.js';
 import { alertKey, budgetText, detailRows, faceDot, teamFaces, technicalContact } from '../src/client/ui/portal/overview-logic.js';
 import { KIND_ORDER, searchGroups } from '../src/client/ui/portal/search-logic.js';
 
@@ -37,13 +39,13 @@ function liteTabs(): string[] {
 }
 
 test('every tab of the 1D view is one item of the navigation, in one group or under the rule, with the same id', () => {
-  const items = [...NAV_GROUPS.flatMap((g) => g.items), ...NAV_BOTTOM].filter((i) => i.kind === 'tab').map((i) => i.id);
+  const items = [...navGroups().flatMap((g) => g.items), ...NAV_BOTTOM].filter((i) => i.kind === 'tab').map((i) => i.id);
   assert.deepEqual([...items].sort(), [...liteTabs()].sort());
   assert.equal(new Set(items).size, items.length, 'no tab twice');
   // The groups as the portal's app pane has them.
-  assert.deepEqual(NAV_GROUPS.map((g) => g.label), ['General', 'Project Management', 'App Insights', 'Repository', 'Deployment', 'Monitoring']);
-  assert.deepEqual(NAV_GROUPS[0].items.map((i) => i.label), ['Overview', 'Team', 'Team boards', 'Documents']);
-  assert.deepEqual(NAV_GROUPS[1].items.map((i) => i.id), ['board', 'approvals', 'standup']);
+  assert.deepEqual(navGroups().map((g) => g.label), ['General', 'Project Management', 'App Insights', 'Repository', 'Deployment', 'Monitoring']);
+  assert.deepEqual(navGroups()[0].items.map((i) => i.label), ['Overview', 'Team', 'Team boards', 'Documents']);
+  assert.deepEqual(navGroups()[1].items.map((i) => i.id), ['board', 'approvals', 'standup']);
   assert.deepEqual(NAV_BOTTOM.map((i) => i.label), ['Settings', 'View App', 'Edit in Studio Pro']);
   assert.equal(groupOf('model')?.id, 'repo');
   assert.equal(groupOf('settings'), undefined);
@@ -51,11 +53,11 @@ test('every tab of the 1D view is one item of the navigation, in one group or un
   assert.equal(pageTitle('workers'), 'Agents');
   assert.equal(pageTitle('nonsense'), 'Overview');
   assert.equal(navItem('studio')?.kind, 'action');
-  for (const i of [...NAV_GROUPS.flatMap((g) => g.items), ...NAV_BOTTOM]) assert.ok(i.hint.length > 10, `${i.id} has a line for the header`);
+  for (const i of [...navGroups().flatMap((g) => g.items), ...NAV_BOTTOM]) assert.ok(i.hint.length > 10, `${i.id} has a line for the header`);
 });
 
 test('Tests is only for admins', () => {
-  const monitor = NAV_GROUPS.find((g) => g.id === 'monitor')!;
+  const monitor = navGroups().find((g) => g.id === 'monitor')!;
   assert.deepEqual(visibleItems(monitor, false).map((i) => i.id), ['workers']);
   assert.deepEqual(visibleItems(monitor, true).map((i) => i.id), ['workers', 'tests']);
 });
@@ -111,7 +113,8 @@ test('the items mirror the tabs’ badges, and a closed group adds them up', () 
 test('deep links: showTab tells the navigation, ?tab= ids are unchanged and ?tab=agents means the Agents page', () => {
   const lite = read('src/client/lite.ts');
   assert.match(lite, /function showTab\(t: Tab\) \{[\s\S]*?portal\?\.selected\(t\);\n\}/);
-  assert.match(lite, /t === 'agents' \? 'workers'/);
+  assert.match(read('src/client/ui/portal/nav-logic.ts'), /t === 'agents' \? 'workers'/);
+  assert.match(lite, /import \{ asTab, type TabId \} from '\.\/ui\/portal\/nav-logic'/);
   assert.match(lite, /setAddress\(\{ tab: t,/);
   assert.match(lite, /portalLayout\(\{\n  show: showTab,/);
 });
