@@ -156,7 +156,7 @@ Needs you then says *Budget reached: project paused*, with **Raise budget** and 
 On the tab (admins; every change is in the audit log):
 
 - **This project**: the total budget (USD), the alert threshold and auto-pause.
-- **Budget level**: **Change level** shows the [new-project wizard's](../get-started/first-project.md#page-4-team-and-budget) cards again, priced for this project. Applying a level sets the budget and the team's models and settings.
+- **Budget level**: **Change level** shows the [new-project wizard's](../get-started/first-project.md#5-team--budget) cards again, priced for this project. Applying a level sets the budget and the team's models and settings.
 - **The office**: the default alert threshold, and the local currency.
 
 ### Budget levels

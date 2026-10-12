@@ -12,12 +12,12 @@ import type { LevelCard } from '../../../shared/budget/levels';
 import type { ShapeCard } from '../../../shared/budget/shape-cards';
 import { SHAPES, shapeForRoles, type TeamShape } from '../../../shared/roster/coverage';
 import { recommendShape } from '../../../shared/roster/recommend';
-import { PROJECT_ROLES } from '../../../shared/wizard';
+import { PROJECT_ROLES, type ProjectPlan } from '../../../shared/wizard';
 import type { PageCtx } from './forms';
 import './team-shape.css';
 
 type Level = LevelCard['id'];
-type WithShapes = Estimate & { shapes?: ShapeCard[] };
+export type WithShapes = Estimate & { shapes?: ShapeCard[] };
 
 const cache = new Map<string, WithShapes>();
 /** The level each card's switch shows, kept while the page is redrawn. */
@@ -25,7 +25,11 @@ const switches = new Map<TeamShape, Level>();
 
 /** Fills the plan from a shape card at a level: its roles, its budget and the level's settings. */
 function pick(c: PageCtx, e: WithShapes, card: ShapeCard, level: Level) {
-  const d = c.draft;
+  applyShape(c.draft, e, card, level);
+}
+
+/** The same on a plan (the New project flow's Team & budget card uses it too). */
+export function applyShape(d: ProjectPlan, e: WithShapes, card: ShapeCard, level: Level) {
   const l = card.levels.find((x) => x.id === level)!;
   d.shape = card.shape;
   d.customTeam = false;
@@ -77,7 +81,11 @@ function shapeCard(c: PageCtx, e: WithShapes, card: ShapeCard, recommended: bool
 
 /** The roles ticked by hand (Customize), as the wizard had them before shapes. */
 function rolesBox(c: PageCtx, redraw: () => void): HTMLElement {
-  const d = c.draft;
+  return rolesPicker(c.draft, redraw);
+}
+
+/** The roles ticked by hand on a plan (also the New project flow's Customize). */
+export function rolesPicker(d: ProjectPlan, redraw: () => void): HTMLElement {
   return h(
     'div.wz-roles',
     {},

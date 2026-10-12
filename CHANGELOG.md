@@ -6,7 +6,16 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+
+- **New project starts with a project brief, drafted with the Chief Analyst.** ✨ New project opens a page that asks *What would you like to build?*: pick how to start (Plan with the team, Change an existing app, Migrate an app, or Assurance only), describe the app in one box and attach documents (.pdf, .docx, .md, .txt, up to 5 MB each). **Draft project brief** has the Chief Analyst write the goal, success criteria, user roles, scope, constraints and open questions, each marked Answered, Assumed or Unverified with where it came from. You confirm or edit items, chat with the Chief Analyst to change the brief, pick the interview style, then **Approve scope**. The page says plainly which attachments were read and how.
+- **Approving the brief is recorded in the project.** The approved brief goes into intake.md (the goal, scope, constraints and open questions as answers, each item with its tag and source), PROJECT.md (the Stage 0 scope approval as CONFIRMED and every item still assumed as ASSUMED), a committed docs/project-brief.md, the project's sources/ folder (the attachments) and the Discovery issue, so the Chief Analyst starts Discovery from it.
+- **Functional domains after the approval.** The Chief Analyst groups the work into domains with user stories (VIS-1, …) and their acceptance criteria counts, shown as cards with a side panel each; they become the starting point for the BRDs and the build plan.
+- **Drafting is capped office spend.** Each draft costs about what the start page says (worked out from the configured model, Sonnet by default) and never more than its cap ($2 by default); calls are also limited per hour and to one at a time per person, and show in the office's spend. **Fill in the brief yourself** gives the same brief without AI, and is offered whenever the Chief Analyst can't draft. Test offices use a test planner and never call the real Claude.
+
+### Changed
+
+- **New project is one flow instead of six pages.** After the brief and the domains, one Team & budget card shows the recommended team and budget level with Change; the repository, Mendix version, client, Discovery and every other setting from the old form are under Advanced, with problems shown next to the field. The old form remains for editing a project's setup answers later. The wizard's code now loads only when it's opened.
 
 ## 2026-10-12 · release 39 (`d5a85e7`)
 

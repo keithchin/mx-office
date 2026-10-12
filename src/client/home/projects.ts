@@ -12,7 +12,7 @@ import { cloneLabel, floorPalette } from '../../shared/floors';
 import type { FloorInfo } from '../../shared/protocol';
 import { h } from '../ui/dom';
 import { openAddProject } from '../ui/add-project';
-import { openWizard } from '../ui/wizard';
+import { openWizard } from '../ui/wizard/open';
 import { unfinishedSection } from '../ui/wizard/unfinished';
 import { openConnections } from '../ui/connections';
 import { summaryLine } from '../ui/summary';

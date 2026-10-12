@@ -4,7 +4,7 @@ description: Solo, Startup or Enterprise - how many agents a project has, which 
 weight: 2
 ---
 
-A project's team has one of three **shapes**. The shape is the first of two dials the [new-project wizard](../get-started/first-project.md#page-4-team-and-budget) sets; the second is the [budget level](../using-the-office/budget.md#budget-levels) (Lean, Balanced or Fast).
+A project's team has one of three **shapes**. The shape is the first of two dials the [new-project wizard](../get-started/first-project.md#5-team--budget) sets; the second is the [budget level](../using-the-office/budget.md#budget-levels) (Lean, Balanced or Fast).
 
 | Shape | Who is hired | Who covers what |
 |---|---|---|

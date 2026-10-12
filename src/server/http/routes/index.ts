@@ -27,6 +27,7 @@ import { deliverableRoutes } from './deliverables.js';
 import { serviceRoutes } from './services.js';
 import { studioRoutes } from './studio.js';
 import { wizardRoutes } from './wizard.js';
+import { briefRoutes } from './brief.js';
 import { toolkitRoutes } from './toolkit.js';
 import { notifyTeamsRoutes } from './notify-teams.js';
 import { keepAwakeRoutes } from './keep-awake.js';
@@ -155,6 +156,7 @@ export const routes: readonly Route[] = [
   testingRoutes.switches,
   testingRoutes.setSwitches,
   wizardRoutes.wizard,
+  briefRoutes.brief,
   toolkitRoutes.toolkit,
   connectionsRoutes.connections,
   // 🚀 First-run setup: its page and its calls (first-run.ts).

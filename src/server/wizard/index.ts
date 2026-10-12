@@ -23,7 +23,8 @@ import { configProblems, mendixVersions, preferredMendix, projectOrg, toolkitEnv
 import { existingAnswers, parseIntakeTemplate } from './intake.js';
 import { JobBook, jobId, newJob, viewOf, type JobState } from './job.js';
 import { mprVersion } from './mendix-app.js';
-import { cleanPlan } from './plan.js';
+import { cleanPlan, cleanPlanBrief } from './plan.js';
+import { plannerOf } from './planner/index.js';
 import { setupView, setupViewOf } from './setup.js';
 import { GateSource, branchInfo } from './gate-source.js';
 import { withFloorToolkitEnv } from '../toolkit-env.js';
@@ -121,6 +122,11 @@ export class Wizard {
   start(raw: unknown, by: string, account?: string): JobView | string {
     const plan = cleanPlan(raw, mendixVersions(this.cfg.mendixDir), this.cfg.org);
     if (typeof plan === 'string') return plan;
+    // A brief from the New project flow is taken from its draft in the office (what was drafted, confirmed and approved there), not from the page's copy.
+    const draft = plan.brief?.draftId ? plannerOf(this.ctx).get(plan.brief.draftId, { id: account ?? 'shared', name: by }) : undefined;
+    if (plan.brief?.draftId && !draft) return 'That project brief isn’t in the office any more: start again from New project';
+    if (draft?.brief) plan.brief = cleanPlanBrief({ draftId: draft.id, brief: draft.brief, domains: draft.domains, approved: draft.approved, attachments: draft.attachments, manual: draft.manual });
+    if (plan.brief && !plan.brief.approved) return 'Approve the scope first';
     const id = jobId(plan.owner, plan.name);
     const had = this.book.get(id);
     if (had && had.status === 'done') return `${plan.owner}/${plan.name} was already set up — edit its answers from its floor's setup panel`;
@@ -130,6 +136,7 @@ export class Wizard {
     }
     const job = had ? Object.assign(had, { plan }) : newJob(plan, by, account);
     this.book.add(job);
+    if (draft) plannerOf(this.ctx).linkJob(draft.id, job.id);
     this.go(job);
     return viewOf(job);
   }
@@ -275,7 +282,10 @@ export class Wizard {
 
   private go(job: JobState) {
     void this.book.run(job, setupSteps(this.deps())).then(() => {
-      if (job.status === 'done') this.ctx.toastAll(`✨ ${job.plan.name}: the project setup finished`);
+      if (job.status !== 'done') return;
+      this.ctx.toastAll(`✨ ${job.plan.name}: the project setup finished`);
+      // The brief is in the project now (docs/project-brief.md, sources/): its draft and attached files go.
+      if (job.plan.brief?.draftId) plannerOf(this.ctx).drafts.remove(job.plan.brief.draftId);
     });
   }
 
@@ -284,6 +294,7 @@ export class Wizard {
     const ref = (f: Floor): FloorRef => ({ id: f.id, dir: f.dir });
     return {
       cfg: this.cfg,
+      attachments: (draftId) => plannerOf(ctx).attachmentFiles(draftId),
       // Phase B (the Mendix Projects API) reads the Mendix token here: the wizard only, never the workers.
       mendixToken: () => credential('mendix'),
       projectsDir: () => ctx.building.projectsDir,
