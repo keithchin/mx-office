@@ -15,12 +15,12 @@ import { DISCOVERY_TITLE, discoveryBrief, discoveryPrompt } from './brief.js';
 import { mendixVersions, mxbuildPath, toolkitEnv, type WizardConfig } from './config.js';
 import { writeIntakeAnswers } from './intake.js';
 import { writeBriefFiles } from './brief-files.js';
-import { briefDecisionRows, intakeFromBrief } from '../../shared/brief-map.js';
+import { briefAssumptions, briefDecisionRows, briefOpenQuestions, intakeFromBrief } from '../../shared/brief-map.js';
 import type { JobState, StepImpl, StepIO } from './job.js';
 import type { BudgetChoice } from '../../shared/budget/levels.js';
 import { SHAPES, shapeForRoles, type TeamShape } from '../../shared/roster/coverage.js';
 import { createApp, ignoreMendixOutput, mprVersion } from './mendix-app.js';
-import { recordDecisions } from './register.js';
+import { recordBriefRegister, recordDecisions } from './register.js';
 import { bashPath, runCommand } from './run.js';
 import { couldntCheck, lookupWithRun, recordFound } from './repo-lookup.js';
 import { folderRecord } from './ownership.js';
@@ -299,8 +299,9 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       const f = file(job, 'PROJECT.md');
       if (!existsSync(f)) throw new Error('PROJECT.md is missing: Retry from init');
       const md = readFileSync(f, 'utf8');
-      const { flat, rows } = decisionsOf(job);
-      const out = recordDecisions(md, flat, rows);
+      const { flat, rows, questions, assumptions } = decisionsOf(job);
+      // The brief's open questions and assumptions too, so the register's own sections agree with its Decisions rows.
+      const out = recordBriefRegister(recordDecisions(md, flat, rows), questions, assumptions);
       if (out === md) return { status: 'skipped', detail: 'already recorded' };
       writeFileSync(f, out);
       return { status: 'done', detail: rows.map((r) => r.decision).join(' · ') };
@@ -487,5 +488,5 @@ export function decisionsOf(job: JobState) {
   ];
   // The approved project brief: the Stage 0 scope approval (CONFIRMED) and each item still Assumed (ASSUMED).
   if (p.brief) rows.push(...briefDecisionRows(p.brief, today()));
-  return { flat, rows };
+  return { flat, rows, questions: p.brief ? briefOpenQuestions(p.brief) : [], assumptions: p.brief ? briefAssumptions(p.brief) : [] };
 }

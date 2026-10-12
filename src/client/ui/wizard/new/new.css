@@ -229,6 +229,8 @@ html.nw-open, html.nw-open body { overflow: hidden; }
 #modal-root .nw-role h4 { font-size: 14px; display: flex; align-items: center; gap: 8px; }
 #modal-root .nw-rd { margin-top: 4px; color: var(--ink-2, var(--ink)); font-size: 13px; }
 #modal-root .nw-when { margin-top: 8px; padding-left: 10px; border-left: 2px solid var(--line); color: var(--ink-2, var(--ink)); font-size: 13px; font-style: italic; }
+#modal-root .nw-drafted { margin-top: 4px; display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+#modal-root .nw-drafted .nw-ico { width: 12px; height: 12px; }
 #modal-root .nw-scope2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 #modal-root .nw-scope2 h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
 #modal-root .nw-scope2 .nw-link { margin-top: 8px; }

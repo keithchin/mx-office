@@ -3,7 +3,7 @@
 // a colour) and where it came from. Assumed items have Confirm and Edit, open questions Answer in chat,
 // and every section can be added to. While the Chief Analyst drafts, the sections wait under shimmering
 // lines; when the brief arrives they appear one by one, quickly. Once the scope is approved it folds away.
-import { SECTION_IDS, SECTION_INFO, sourceText, type BriefItem, type DraftView, type ItemOp, type SectionId } from '../../../../shared/brief';
+import { DRAFTED, SECTION_IDS, SECTION_INFO, sourceText, whenDrafted, type BriefItem, type DraftView, type ItemOp, type SectionId } from '../../../../shared/brief';
 import { h, toast } from '../../dom';
 import { briefApi } from './api';
 import { openDialog } from './dialog';
@@ -63,7 +63,7 @@ export function briefPanel(flow: Flow, ctx: BriefPanelCtx) {
       else if (it.tag === 'assumed') acts.append(h('button.btn.sm.nw-ghost', { type: 'button', 'aria-label': `Edit: ${it.name ?? it.text}`, onclick: () => ((editing = it.id), draw(s)) }, icon('pencil'), 'Edit'));
       else acts.append(h('button.nw-iconbtn.nw-quiet', { type: 'button', 'aria-label': `Edit: ${it.name ?? it.text}`, title: 'Edit', onclick: () => ((editing = it.id), draw(s)) }, icon('pencil')));
     }
-    return h('div.nw-imeta', {}, tagPill(it.tag), h('span.nw-src', {}, icon(srcIcon), it.tag === 'unverified' && !it.by ? 'open question' : src), acts);
+    return h('div.nw-imeta', {}, tagPill(it.tag), h('span.nw-src', {}, icon(srcIcon), src), acts);
   }
 
   function editor(it: BriefItem, s: SectionId): HTMLElement {
@@ -90,7 +90,9 @@ export function briefPanel(flow: Flow, ctx: BriefPanelCtx) {
   function itemEl(it: BriefItem, s: SectionId, i: number, locked: boolean): HTMLElement {
     const attrs = { class: `${it.tag}${s === 'roles' ? ' nw-role' : ''}`, style: `animation-delay:${i * 60}ms`, id: `nw-it-${it.id}`, 'data-item': it.id };
     if (editing === it.id && !locked) return h('div.nw-item', attrs, editor(it, s));
-    if (s === 'roles') return h('div.nw-item', attrs, h('h4', { tabindex: '-1' }, icon('user'), it.name ?? ''), h('p.nw-rd', {}, it.text), it.when ? h('p.nw-when', {}, it.when) : null, metaRow(it, s, locked));
+    // The statement is the Chief Analyst's wording unless someone said it: said so, and not covered by the role's tag.
+    const drafted = whenDrafted(it) ? h('p.nw-drafted', {}, icon('compass'), `Statement ${DRAFTED}`) : null;
+    if (s === 'roles') return h('div.nw-item', attrs, h('h4', { tabindex: '-1' }, icon('user'), it.name ?? ''), h('p.nw-rd', {}, it.text), it.when ? h('p.nw-when', {}, it.when) : null, drafted, metaRow(it, s, locked));
     return h('div.nw-item', attrs, h('p.nw-itxt', { tabindex: '-1' }, it.text), metaRow(it, s, locked));
   }
 

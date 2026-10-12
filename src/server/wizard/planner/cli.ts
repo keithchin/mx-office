@@ -10,6 +10,7 @@ import path from 'node:path';
 import { spawnOff, type OffChild } from '../../offloop/exec.js';
 import { meterCliResult, spendOfCliResult } from '../../budget/meter.js';
 import { officeCliRefused } from '../../testmode.js';
+import { resolvedModel } from '../../usage.js';
 
 export interface CliCall {
   model: string;
@@ -91,8 +92,8 @@ export async function runPlannerCall(claude: string, env: Record<string, string>
     const input = files.length ? `${c.input}\n\nThe attached PDF files are in your working folder: ${files.map((f) => f.name).join(', ')}. Read each one with the Read tool before you answer.` : c.input;
     const r = await run(claude, env, cliArgs(c, files.length > 0), input, sandbox, c.timeoutMs);
     if (r.timedOut) return { value: null, cost: 0, error: `The Chief Analyst took longer than ${Math.round(c.timeoutMs / 1000)} s and was stopped` };
-    meterCliResult(r.out || null, 'planner', c.model);
-    const cost = r.out ? (spendOfCliResult(r.out, c.model)?.usage.cost ?? 0) : 0;
+    meterCliResult(r.out || null, 'planner', resolvedModel(c.model));
+    const cost = r.out ? (spendOfCliResult(r.out, resolvedModel(c.model))?.usage.cost ?? 0) : 0;
     const parsed = parseAnswer(r.out);
     if (parsed.value) return { value: parsed.value, cost };
     return { value: null, cost, error: parsed.error ?? (r.code === 0 ? 'The Chief Analyst’s answer didn’t fit the brief’s shape' : `claude exited ${r.code ?? 'abnormally'}`), budgetHit: parsed.budgetHit };

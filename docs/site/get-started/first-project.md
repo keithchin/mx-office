@@ -40,7 +40,7 @@ Go to **🏠 Home → 🏢 Projects** and click **✨ New project**. It opens a 
 
 ### Drafting, and what it costs
 
-**Draft project brief** starts one planning call: the Chief Analyst, through the office's `claude` CLI, on **Sonnet** by default. The line under the box says about what a draft costs, worked out from the configured model's prices (the brief and the domains, more with large attachments), and the cap: *about $0.15 of office spend (capped at $2)*. Planning is office spend, booked as *New project planning (the Chief Analyst)* in the Budget pages and the **Office $ today** chip. The hard limits:
+**Draft project brief** starts one planning call: the Chief Analyst, through the office's `claude` CLI, on **Sonnet** by default. The line under the box says about what a draft costs, worked out from the prices the office books the model at (the brief, one chat message and the domains, more with large attachments; `sonnet` is priced as the model the CLI runs for it, Sonnet 5.5), and the cap: *about $0.15 of office spend (capped at $2)*. The first real draft (a one-page PDF, one chat message, the domains) cost $0.125. Planning is office spend, booked as *New project planning (the Chief Analyst)* in the Budget pages and the **Office $ today** chip. The hard limits:
 
 - **A cap per draft**, $2 by default: every call gets what the draft has left (`--max-budget-usd`); when it's used up, the brief so far is kept and the page says so, and you carry on by hand.
 - **A timeout per call** (4 minutes), **one request at a time per person**, **20 calls an hour** across the office, and a pause of a few minutes after three failures in a row.
@@ -56,15 +56,15 @@ The model, the cap and the limits are set with `AGENT_OFFICE_PLANNER_*` ([enviro
 
 ![The live brief with an item confirmed and a change from the chat](../images/new-project-brief.png)
 
-The brief is on the left, the Chief Analyst on the right (a sheet at the bottom on a phone: tap its header to open it). While it's drafting, the sections wait under shimmering lines; the Chief Analyst writes all six in one go, and when the brief arrives they appear one by one. The sections: **Goal**, **Success criteria**, **User roles** (each with a *When I…, I need to…* statement), **Scope** (in and out), **Constraints** and **Open questions**.
+The brief is on the left, the Chief Analyst on the right (a sheet at the bottom on a phone: tap its header to open it). While it's drafting, the sections wait under shimmering lines; the Chief Analyst writes all six in one go, and when the brief arrives they appear one by one. The sections: **Goal**, **Success criteria**, **User roles** (each with a *When I…, I need to…* statement), **Scope** (in and out), **Constraints** and **Open questions**. A role's tag and source are about the role; its statement is usually the Chief Analyst's own wording, and then says *Statement drafted by the Chief Analyst* until you edit or confirm the role.
 
 Every item has a tag, as a word and a colour, and says where it came from:
 
 - **Answered**: you said it, or a document says it (*from your description*, *from workshop.pdf p.2*).
-- **Assumed**: the Chief Analyst inferred it (*inferred from "hosts respond fast"*). Anything inferred stays Assumed until you confirm it. **Confirm** makes it Answered, *confirmed by you · 10:42*; **Edit** changes it in place (Answered, *edited by you*).
-- **Unverified**: an open question nobody could answer yet. **Answer in chat** puts it in the chat box.
+- **Assumed**: a concrete default the Chief Analyst chose (*inferred from "hosts respond fast"*). Anything inferred stays Assumed until you confirm it. **Confirm** makes it Answered, *confirmed by you · 10:42*; **Edit** changes it in place (Answered, *edited by you*).
+- **Unverified**: an open question nobody could answer yet, with the document that raised it when there is one (*open question (from workshop.pdf p.3)*). Something nobody stated is an open question, never an assumption. **Answer in chat** puts it in the chat box.
 
-Every section can be added to (**Add user role**, **Add to scope**…), and **Ask the Chief Analyst to refine** starts a chat message about it. A **chat message** is a planning call too: the Chief Analyst answers in a few sentences and updates the brief; what it changed is highlighted. It never undoes what you confirmed or edited, and what you tell it is recorded as yours (*from the chat with you*). The header shows **DRAFT v3 · Auto-saved** (the version goes up with every change) and *N assumptions · M open questions*; the pencil renames the project.
+Every section can be added to (**Add user role**, **Add to scope**…), and **Ask the Chief Analyst to refine** starts a chat message about it. A **chat message** is a planning call too: the Chief Analyst answers in a few sentences and updates the brief; what it changed is highlighted. It never undoes what you confirmed or edited, and what you tell it is recorded as yours (*from the chat with you*); an item that was already in the brief and that you confirm in the chat says *confirmed by you in the chat · 10:44*, is highlighted and counts as a change. The header shows **DRAFT v3 · Auto-saved** (the version goes up with every change) and *N assumptions · M open questions*; the pencil renames the project.
 
 **Interview style** (above the chat) is the toolkit's interview mode, written to `PROJECT.md` as `Interview mode:` and to intake Q9: **Steering** (every consequential question is asked and waited for; the default), **Assist** (questions batched at the gates, small ones assumed and reported) or **Auto** (nothing blocks; every position recorded as ASSUMED).
 
@@ -79,7 +79,7 @@ At setup, the brief goes into the project in the toolkit's own formats, every it
 | Where | What |
 |---|---|
 | `intake.md` | **Q2** the goal and the success criteria, **Q4** the scope in and out and the input documents, **Q5** the constraints, **Q8** the open questions (*Unverified — how to verify: ask the client…*). Each answer starts *Answered (CONFIRMED):*, *Assumed:* or *Unverified — how to verify:* (one Assumed item makes the answer Assumed) and lists each item with `[Answered, from …]` or `[ASSUMED, inferred from …]`. Q1, Q9 and Q11 come from your choices; Q3, Q6, Q7 and Q10 from Advanced, or the Chief Analyst asks them. |
-| `PROJECT.md` | Stage 0 rows in the Decisions table: *Scope: project brief approved (docs/project-brief.md)* `CONFIRMED <date>` (by whom, at what time); *Goal: …*; and one *Brief assumption …* row per item still Assumed, `ASSUMED <date>`. Nothing inferred is ever recorded as CONFIRMED. |
+| `PROJECT.md` | Stage 0 rows in the Decisions table: *Scope: project brief approved (docs/project-brief.md)* `CONFIRMED <date>` (by whom, at what time); *Goal: …*; and one *Brief assumption …* row per item still Assumed, `ASSUMED <date>`, each also listed under *Assumptions (ASSUMED, unresolved)*. The open questions go into the *Open questions* table (`OQ-01`…, *Raised at* the brief, `OPEN`), which the office's setup panel lists as questions still to answer. Nothing inferred is ever recorded as CONFIRMED. |
 | `docs/project-brief.md` | The whole brief with every tag and source, who approved it, the functional domains and how each attached document was read. Committed with the project. |
 | `sources/` | The attached documents. |
 | The Discovery issue | The goal, the roles, the scope, what is still ASSUMED (to confirm with the client first), the open questions and the domains. |

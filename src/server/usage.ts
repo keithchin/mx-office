@@ -46,6 +46,11 @@ const isZero = (u: Usage) => !u.input && !u.output && !u.cacheWrite && !u.cacheR
  * 2026-09-26. A 5-minute cache write costs 1.25x input, a 1-hour write 2x. First match wins, so
  * newer generations come before the family they belong to. A model not listed gets Opus rates:
  * a budget warning that comes early beats one that comes late.
+ *
+ * Cache reads, checked 2026-10-12: the `claude` CLI's own total_cost_usd prices Sonnet 5.5's cache
+ * reads at $0.10 per million, but the documented price for claude-sonnet-5-5 (and Sonnet 5) is $0.20,
+ * so the table keeps $0.20. The office's figure can come out a little above the CLI's (by $0.0003 on
+ * the planner's real brief call), never below.
  */
 const PRICES: [RegExp, [number, number, number]][] = [
   [/fable-5-1|mythos-5-1/, [10, 50, 0.25]],
@@ -61,6 +66,15 @@ const PRICES: [RegExp, [number, number, number]][] = [
 ];
 const OPUS: [number, number, number] = [5, 25, 0.5];
 const WEB_SEARCH_USD = 0.01;
+
+/**
+ * What the `claude` CLI runs for a bare alias, so a price asked for by alias (the planner's estimate) is
+ * the price the meter books afterwards (it prices the model named in the CLI's answer). Seen
+ * 2026-10-12: `--model sonnet` ran claude-sonnet-5-5. An alias not listed is priced by its family
+ * row, which errs high.
+ */
+const CLI_ALIASES: Record<string, string> = { sonnet: 'claude-sonnet-5-5' };
+export const resolvedModel = (model: string) => CLI_ALIASES[model.trim().toLowerCase()] ?? model;
 
 export function priceOf(model: string): [number, number, number] {
   const m = model.toLowerCase();
