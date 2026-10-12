@@ -51,15 +51,30 @@ export function recordDecisions(md: string, flat: [label: string, value: string]
     lines.splice(after + 1, 0, want);
   }
 
-  const head = lines.findIndex((l) => /^##\s*Decisions\s*$/i.test(l));
-  if (head < 0) {
-    lines.push('', '## Decisions', '', '| Stage | Decision | Status | Notes |', '|---|---|---|---|');
-    return finish(recordRows(lines, lines.length - 5, rows), crlf);
-  }
-  return finish(recordRows(lines, head, rows), crlf);
+  return finish(recordRows(lines, decisionsHead(lines), rows), crlf);
 }
 
-function recordRows(lines: string[], head: number, rows: DecisionRow[]): string[] {
+/**
+ * PROJECT.md with each row added at the end of its Decisions table, append-only: no flat line is set
+ * and no row is replaced or moved (an existing toolkit project's change request: its own decisions and
+ * its stage stay exactly as they are). A row already there word for word isn't added again.
+ */
+export function appendDecisionRows(md: string, rows: DecisionRow[]): string {
+  if (!rows.length) return md;
+  const crlf = md.includes('\r\n');
+  const lines = md.replace(/\r\n/g, '\n').split('\n');
+  return finish(recordRows(lines, decisionsHead(lines), rows, false), crlf);
+}
+
+/** The "## Decisions" heading's line, adding the section and its table header at the end when there is none. */
+function decisionsHead(lines: string[]): number {
+  const head = lines.findIndex((l) => /^##\s*Decisions\s*$/i.test(l));
+  if (head >= 0) return head;
+  lines.push('', '## Decisions', '', '| Stage | Decision | Status | Notes |', '|---|---|---|---|');
+  return lines.length - 4;
+}
+
+function recordRows(lines: string[], head: number, rows: DecisionRow[], replace = true): string[] {
   for (const r of rows) {
     let end = head + 1;
     while (end < lines.length && !/^##\s/.test(lines[end])) end++;
@@ -68,8 +83,9 @@ function recordRows(lines: string[], head: number, rows: DecisionRow[]): string[
     const text = `| ${cell(r.stage)} | ${cell(r.decision)} | ${cell(r.status)} | ${cell(r.notes)} |`;
     const same = tableRows.find((n) => {
       const c = lines[n].split(/(?<!\\)\|/).slice(1, -1).map((x) => x.trim());
-      return c.length >= 2 && c[0].toLowerCase() === r.stage.toLowerCase() && keyOf(c[1]) === keyOf(r.decision);
+      return c.length >= 2 && c[0].toLowerCase() === r.stage.toLowerCase() && (replace ? keyOf(c[1]) === keyOf(r.decision) : c[1] === cell(r.decision));
     });
+    if (same !== undefined && !replace) continue;
     if (same !== undefined) {
       lines[same] = text;
       continue;

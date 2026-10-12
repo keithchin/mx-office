@@ -3,7 +3,7 @@
 // attachments, the test planner, and test mode never calling the real CLI.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, utimesSync } from 'node:fs';
+import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { deflateRawSync } from 'node:zlib';
 import os from 'node:os';
 import path from 'node:path';
@@ -268,6 +268,16 @@ test('a planning call: print mode, the schema, the draft’s budget left, no too
   const late = await runPlannerCall('C:\\x\\claude.exe', {}, c, async () => ({ code: null, out: '', timedOut: true }));
   assert.match(late.error!, /longer than 1 s/);
   assert.match((await runPlannerCall('C:\\x\\claude.exe', {}, { ...c, budgetUsd: 0 })).error!, /used up/);
+  // A PDF is read whole: a `pages` range makes the Read tool render pages with pdftoppm, which the office's machine lacks.
+  const pdfDir = mkdtempSync(path.join(os.tmpdir(), 'ao-pdf-'));
+  try {
+    writeFileSync(path.join(pdfDir, 'scan.pdf'), '%PDF-1.4');
+    let said = '';
+    await runPlannerCall('C:\\x\\claude.exe', {}, { ...c, files: [{ name: 'scan.pdf', path: path.join(pdfDir, 'scan.pdf') }] }, async (_c, _e, _a, input) => ((said = input), { code: 0, out: '', timedOut: false }));
+    assert.match(said, /scan\.pdf\. Read each one whole with the Read tool.*WITHOUT the pages parameter/);
+  } finally {
+    rmSync(pdfDir, { recursive: true, force: true });
+  }
 });
 
 test('drafts outlive a restart; one that was drafting says so; old ones are pruned', async (t) => {
@@ -319,3 +329,57 @@ function zip(name: string, content: string): Buffer {
   eocd.writeUInt32LE(cdOffset, 16);
   return Buffer.concat([local, n, data, central, n, eocd]);
 }
+
+test('a PDF that comes back unread is retried once, naming it, within the draft’s cap and the hourly limit', async (t) => {
+  /** A Chief Analyst that reads the PDFs only when told it missed them (rehearsal 2: a `pages` read failed). */
+  const pdfShy = (cost: number, readOnRetry = true): PlannerEngine & { unread: (string[] | undefined)[] } => {
+    const e = paidEngine(cost);
+    const unread: (string[] | undefined)[] = [];
+    return Object.assign(e, {
+      unread,
+      async brief(req: Parameters<PlannerEngine['brief']>[0]) {
+        unread.push(req.unread);
+        const filesRead = req.unread && readOnRetry ? req.files.map((f) => f.name) : [];
+        return { value: { brief: fakeBrief([]).brief, filesRead }, cost };
+      },
+    });
+  };
+  const e = pdfShy(0.1);
+  const p = new Planner(tmp(t), { engine: e, config: cfg({ perHour: 3 }) });
+  const d = p.create(me, { prompt: 'Visitor sign-in' });
+  assert.equal(p.addFile(d, 'scan.pdf', Buffer.from('%PDF-1.4')), undefined);
+  assert.equal(d.attachments[0].read, 'given');
+  assert.equal(p.draft(d, me), undefined);
+  await settle(p, d.id);
+  assert.deepEqual(e.unread, [undefined, ['scan.pdf']], 'one retry, naming the unread PDF');
+  assert.equal(d.attachments[0].read, 'read');
+  assert.ok(Math.abs(d.spent - 0.2) < 1e-9, 'both calls are spent on the draft');
+  assert.equal(p.status().available, true);
+  // The retry counted against the hourly limit: 2 of 3 used, so the next draft gets no retry and says the PDF wasn't read.
+  const d2 = p.create(me, { prompt: 'Again' });
+  p.addFile(d2, 'scan.pdf', Buffer.from('%PDF-1.4'));
+  assert.equal(p.draft(d2, me), undefined);
+  await settle(p, d2.id);
+  assert.equal(e.unread.length, 3, 'no retry past the hourly limit');
+  assert.equal(d2.attachments[0].read, 'not-read');
+  assert.match(String(p.draft(p.create(me, { prompt: 'x' }), me)), /capped at 3 an hour/);
+  // Nor past the draft’s cap: a first call that used it up gets no retry.
+  const capped = pdfShy(0.6);
+  const q = new Planner(tmp(t), { engine: capped, config: cfg({ capUsd: 0.6 }) });
+  const d3 = q.create(me, { prompt: 'x' });
+  q.addFile(d3, 'scan.pdf', Buffer.from('%PDF-1.4'));
+  q.draft(d3, me);
+  await settle(q, d3.id);
+  assert.equal(capped.unread.length, 1);
+  assert.equal(d3.attachments[0].read, 'not-read');
+  // A retry that still reads nothing keeps the first brief, and the PDF says it wasn’t read.
+  const shy = pdfShy(0.1, false);
+  const r = new Planner(tmp(t), { engine: shy, config: cfg() });
+  const d4 = r.create(me, { prompt: 'x' });
+  r.addFile(d4, 'scan.pdf', Buffer.from('%PDF-1.4'));
+  r.draft(d4, me);
+  await settle(r, d4.id);
+  assert.deepEqual(shy.unread, [undefined, ['scan.pdf']]);
+  assert.equal(d4.attachments[0].read, 'not-read');
+  assert.equal(d4.status, 'ready');
+});

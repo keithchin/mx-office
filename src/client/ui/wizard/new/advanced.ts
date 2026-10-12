@@ -90,7 +90,7 @@ export function advancedPanel(flow: Flow, redraw: () => void) {
       parts.push(field('repo', 'The app’s repository', repo, h('datalist', { id: 'nw-a-repos' }, ...repos.map((r) => h('option', { value: r }))), err('repo')));
     }
     const ver = select(d.mendix, flow.info.mendixVersions.map((v) => [v, `${v}${v === flow.info.defaultMendix ? ' (default)' : ''}`] as [string, string]), (v) => (d.mendix = v));
-    const tierNote = flow.draft?.domains?.tier ? `The domains suggest ${flow.draft.domains.tier}${flow.draft.domains.tierWhy ? ` (${flow.draft.domains.tierWhy})` : ''}.` : 'Small: at most 1 module, 8 screens and 25 use cases.';
+    const tierNote = flow.draft?.domains?.tier ? `The domains suggest ${flow.draft.domains.tier}${flow.draft.domains.tierWhy ? ` (${flow.draft.domains.tierWhy.trim().replace(/[.\s]+$/, '')})` : ''}.` : 'Small: at most 1 module, 8 screens and 25 use cases.';
     parts.push(
       h(
         'div.nw-adv',

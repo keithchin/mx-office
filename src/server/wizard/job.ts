@@ -36,6 +36,12 @@ export interface JobState {
   /** The toolkit commit the project was set up on, and its pin folder (toolkit-pin/): init-project.sh and gate-check run from there. */
   toolkit?: { sha: string; dir: string; date?: string };
   /**
+   * "Change an existing app" on a repository that was already a toolkit project (its intake.md and PROJECT.md
+   * committed): decided once, by the init step, before the setup writes anything. Its answers, decisions and
+   * stage are never rewritten; the brief is recorded as a change request (steps.ts).
+   */
+  existingProject?: boolean;
+  /**
    * Proof of what the setup made itself (shared/setup-provenance.ts), written by the repo and clone steps
    * when they make something: what Cancel & undo may delete. A setup saved before it has none.
    */

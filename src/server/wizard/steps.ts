@@ -20,7 +20,7 @@ import type { JobState, StepImpl, StepIO } from './job.js';
 import type { BudgetChoice } from '../../shared/budget/levels.js';
 import { SHAPES, shapeForRoles, type TeamShape } from '../../shared/roster/coverage.js';
 import { createApp, ignoreMendixOutput, mprVersion } from './mendix-app.js';
-import { recordBriefRegister, recordDecisions } from './register.js';
+import { appendDecisionRows, recordBriefRegister, recordDecisions } from './register.js';
 import { bashPath, runCommand } from './run.js';
 import { couldntCheck, lookupWithRun, recordFound, refusedForSure } from './repo-lookup.js';
 import { OperationPendingError, OperationStore, type JobOps } from './operations.js';
@@ -88,8 +88,16 @@ const today = () => {
 const repoOf = (job: JobState) => `${job.plan.owner}/${job.plan.name}`;
 const said = (io: StepIO) => (line: string) => io.log(`  ${line}`);
 
-/** Marker files of a finished scaffold, machine-local ones included (a fresh clone of a scaffolded repo lacks those). */
-const SCAFFOLD = ['intake.md', 'PROJECT.md', 'CLAUDE.local.md', 'bin/install-project-hooks.sh', '.claude/settings.local.json', '.claude/.doctor-receipt'];
+/**
+ * Marker files of a finished scaffold: committed ones only. The machine-local ones (.claude/settings.local.json,
+ * .claude/.doctor-receipt) are git-ignored, so a fresh clone of a live toolkit project lacks them, and judging
+ * by those re-ran init-project.sh over it (rewriting its AGENTS.md, CLAUDE.md and CLAUDE.local.md).
+ */
+const SCAFFOLD = ['intake.md', 'PROJECT.md', 'bin/install-project-hooks.sh'];
+/** What makes a repository an existing toolkit project: its kickoff answers and its decision register. */
+const TOOLKIT_PROJECT = ['intake.md', 'PROJECT.md'];
+/** The change request's own rows and register lines go in as Stage 0b, appended (existing toolkit project). */
+const asChange = (job: JobState) => ({ change: !!job.existingProject });
 
 export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
   const { cfg } = deps;
@@ -327,6 +335,9 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
 
     async init(job, io) {
       const dir = dirOf(job);
+      // Decided once, before anything is written: a Retry after this step scaffolded a change repository mustn't read the scaffold as the project's own.
+      job.existingProject ??= job.plan.kind === 'change' && TOOLKIT_PROJECT.every((rel) => existsSync(path.join(dir, rel)));
+      if (job.existingProject) return { status: 'skipped', detail: 'existing toolkit project: its scaffold, answers and decisions stay as they are' };
       if (SCAFFOLD.every((rel) => existsSync(path.join(dir, rel)))) return { status: 'skipped', detail: 'already scaffolded' };
       // A new project starts on the fork's newest commit, as a pin of its own (toolkit-pin/): its wiring names the pin, so later toolkit commits never reach it mid-stage.
       const tk = job.toolkit ?? (await (deps.pinToolkit ?? pinForNew)(cfg.toolkitDir).catch((err: Error) => void io.log(`  couldn't pin the toolkit (${err.message}): using ${cfg.toolkitDir} as it is`)));
@@ -348,6 +359,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     async hooks(job, io) {
       const dir = dirOf(job);
       const script = path.join(dir, 'bin', 'install-project-hooks.sh');
+      if (!existsSync(script) && job.existingProject) return { status: 'skipped', detail: 'existing toolkit project without bin/install-project-hooks.sh' };
       if (!existsSync(script)) throw new Error("bin/install-project-hooks.sh isn't in the project: the scaffold didn't finish (Retry from init)");
       await bash(job, script, [], io, 2 * MIN);
       return { status: 'done', detail: existsSync(path.join(dir, '.git', 'hooks', 'pre-commit')) ? 'pre-commit hook in place' : 'ran' };
@@ -357,11 +369,13 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       const f = file(job, 'intake.md');
       if (!existsSync(f)) throw new Error('intake.md is missing: Retry from init');
       const md = readFileSync(f, 'utf8');
-      const answers = intakeAnswersOf(job);
-      const out = writeIntakeAnswers(md, answers);
       // The project brief (New project flow): docs/project-brief.md, and its attached documents into sources/.
       const draft = job.plan.brief?.draftId;
-      const brief = writeBriefFiles(dirOf(job), job.plan, draft ? (deps.attachments?.(draft) ?? []) : []);
+      const brief = writeBriefFiles(dirOf(job), job.plan, draft ? (deps.attachments?.(draft) ?? []) : [], asChange(job));
+      // An existing toolkit project's answers were confirmed long ago: never rewritten; the brief is its change request.
+      if (job.existingProject) return { status: brief.length ? 'done' : 'skipped', detail: ['intake.md kept as it is (existing toolkit project)', ...brief].join(' · ') };
+      const answers = intakeAnswersOf(job);
+      const out = writeIntakeAnswers(md, answers);
       if (out === md && !brief.length) return { status: 'skipped', detail: 'answers already in intake.md' };
       if (out !== md) writeFileSync(f, out);
       return { status: 'done', detail: [`${answers.filter((a) => a.text.trim()).length} answers written`, ...brief].join(' · ') };
@@ -373,7 +387,8 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       const md = readFileSync(f, 'utf8');
       const { flat, rows, questions, assumptions } = decisionsOf(job);
       // The brief's open questions and assumptions too, so the register's own sections agree with its Decisions rows.
-      const out = recordBriefRegister(recordDecisions(md, flat, rows), questions, assumptions);
+      // An existing toolkit project's register is only appended to: its flat lines, its rows and so its stage stay as they are.
+      const out = recordBriefRegister(job.existingProject ? appendDecisionRows(md, rows) : recordDecisions(md, flat, rows), questions, assumptions);
       if (out === md) return { status: 'skipped', detail: 'already recorded' };
       writeFileSync(f, out);
       return { status: 'done', detail: rows.map((r) => r.decision).join(' · ') };
@@ -399,6 +414,9 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     },
 
     async gates(job, io) {
+      // gate-check rewrites PROJECT.md's stage line and the dashboard from its verdicts, and on a fresh clone its
+      // staleness checks read checkout times (rehearsal 2: a live Stage 5 project read Stage 3), so a live project's are left as they are.
+      if (job.existingProject) return { status: 'skipped', detail: 'existing toolkit project: its stage and dashboard stay as committed (run gate-check on the floor to refresh them)' };
       const dir = dirOf(job);
       const tk = job.toolkit?.dir ?? (await toolkitDirFor(dir, cfg.toolkitDir)).dir;
       const r = await bash(job, path.join(tk, 'bin', 'gate-check.sh'), [bashPath(dir)], io, 10 * MIN, true);
@@ -414,7 +432,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         // core.safecrlf off: otherwise every scaffolded file logs a line-ending warning on Windows.
         await git(dir, ['-c', 'core.safecrlf=false', 'add', '-A'], io);
         const first = !(await git(dir, ['log', '--oneline', '-n', '50'], { log: () => undefined }, MIN, true)).stdout.includes('Toolkit scaffold');
-        const subject = first ? `Toolkit scaffold${job.plan.kind === 'new' ? ' and Mendix app' : ''} (mxcli-project-toolkit init-project via the agent-office new-project wizard)` : 'Kickoff answers updated in the agent-office new-project wizard';
+        const subject = job.existingProject ? 'Change request recorded in the agent-office new-project wizard (docs/project-brief.md, Stage 0b rows in PROJECT.md)' : first ? `Toolkit scaffold${job.plan.kind === 'new' ? ' and Mendix app' : ''} (mxcli-project-toolkit init-project via the agent-office new-project wizard)` : 'Kickoff answers updated in the agent-office new-project wizard';
         const body = decisionsOf(job).rows.map((r) => `- ${r.decision}`).join('\n');
         await git(dir, ['-c', 'core.safecrlf=false', 'commit', '-m', subject, '-m', body], io, 10 * MIN);
         made = 'committed';
@@ -527,7 +545,7 @@ export function intakeAnswersOf(job: JobState): IntakeAnswer[] {
   const p = job.plan;
   const typed = p.intake.filter((a) => ![1, 9, 11].includes(a.n));
   // The project brief's answers (Q2, Q4, Q5, Q8), for each question nothing was typed for.
-  const fromBrief = p.brief ? intakeFromBrief(p.brief).filter((b) => !typed.some((a) => a.n === b.n && a.text.trim())) : [];
+  const fromBrief = p.brief ? intakeFromBrief(p.brief, { entry: p.entry }).filter((b) => !typed.some((a) => a.n === b.n && a.text.trim())) : [];
   const own = [...typed.filter((a) => a.text.trim() || !fromBrief.some((b) => b.n === a.n)), ...fromBrief].sort((a, b) => a.n - b.n);
   const token = ENTRY_MODE_INFO[p.entry].token;
   return [
@@ -538,7 +556,7 @@ export function intakeAnswersOf(job: JobState): IntakeAnswer[] {
   ];
 }
 
-/** The kickoff decisions: flat lines gate-check reads, and the rows the Decisions table shows. */
+/** The kickoff decisions: flat lines gate-check reads, and the rows the Decisions table shows; for an existing toolkit project, only its change request's Stage 0b rows. */
 export function decisionsOf(job: JobState) {
   const p = job.plan;
   const info = ENTRY_MODE_INFO[p.entry];
@@ -552,6 +570,7 @@ export function decisionsOf(job: JobState) {
     ['Interview mode', p.interview],
     ['Exec approval', p.execApproval],
   ];
+  if (job.existingProject) return { flat: [] as [string, string][], rows: p.brief ? briefDecisionRows(p.brief, today(), asChange(job)) : [], questions: p.brief ? briefOpenQuestions(p.brief, asChange(job)) : [], assumptions: p.brief ? briefAssumptions(p.brief, asChange(job)) : [] };
   const rows = [
     { stage: 'P', decision: `Entry mode: ${info.label}`, status: when, notes: `${by}; stages that run: ${info.stages}` },
     { stage: 'P', decision: `Size tier: ${p.tier}`, status: when, notes: p.tier === 'small' ? `${by}; small-project-tier.md applies (at most ${SMALL_TIER_LIMITS}), counts confirmed at Stage 0` : by },

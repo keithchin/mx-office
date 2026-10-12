@@ -25,7 +25,7 @@ const cache = new Map<string, WithShapes>();
 /** The intake answers the recommendation reads: the brief's (Q2, Q4, Q5) and what was typed under Advanced (Q7). */
 export function answersFor(flow: Flow): IntakeAnswer[] {
   const d = flow.draft;
-  const fromBrief = d?.brief ? intakeFromBrief({ brief: d.brief, attachments: d.attachments }) : [];
+  const fromBrief = d?.brief ? intakeFromBrief({ brief: d.brief, attachments: d.attachments }, { entry: flow.plan.entry }) : [];
   return [...fromBrief, ...flow.plan.intake.filter((a) => a.text.trim() && !fromBrief.some((b) => b.n === a.n))];
 }
 

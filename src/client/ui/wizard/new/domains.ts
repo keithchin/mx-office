@@ -53,7 +53,7 @@ export function domainsPanel(flow: Flow) {
       card.addEventListener('click', () => open(dm, card));
       return card;
     });
-    body.replaceChildren(h('div.nw-domains', {}, ...cards), h('p.nw-note', {}, icon('info'), h('span', {}, `These become the BRD skeleton and the first build-plan items. Click a domain to see its stories.${d.domains.tier ? ` Suggested size tier: ${d.domains.tier}${d.domains.tierWhy ? ` (${d.domains.tierWhy})` : ''}.` : ''}`)));
+    body.replaceChildren(h('div.nw-domains', {}, ...cards), h('p.nw-note', {}, icon('info'), h('span', {}, `These become the BRD skeleton and the first build-plan items. Click a domain to see its stories.${d.domains.tier ? ` Suggested size tier: ${d.domains.tier}${d.domains.tierWhy ? ` (${d.domains.tierWhy.trim().replace(/[.\s]+$/, '')})` : ''}.` : ''}`)));
   }
 
   return { el, update, closeSide: () => side?.close() };
