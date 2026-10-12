@@ -21,7 +21,17 @@ export function openCancelDialog(id: string, repo: string, opts: { done?: () => 
   const el = h('div.modal.pd-modal', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'sc-title', 'data-mode': 'delete' }, h('header', {}, title), body);
   let open = true;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const modal = openModal(el, { onClose: () => ((open = false), clearTimeout(timer)), backdropCloses: false, doing: `cancelling the setup of ${repo}` });
+  // ✕ or Esc gives focus back to what opened it (the Cancel & undo button), when that's still there.
+  const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const modal = openModal(el, {
+    onClose: () => {
+      open = false;
+      clearTimeout(timer);
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    },
+    backdropCloses: false,
+    doing: `cancelling the setup of ${repo}`,
+  });
   const by = () => loadProfile()?.name;
 
   wizardApi.cancelPlan(id).then(
