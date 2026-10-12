@@ -41,7 +41,7 @@ When the office starts a project's ledger, it fills in what had already been spe
 
 ## How spend is counted
 
-- **Workers**: each worker's tokens come from its Claude Code transcript, subagents included, priced from the office's price list. The office's Ledger (the office total) and the project ledger book the same change, at the same moment, so the two never disagree. The project ledger also splits each change by agent (the worker, or a subagent type) and by model.
+- **Workers**: each worker's tokens come from its Claude Code transcript, subagents included, priced from the office's price list. Each API request is counted once, however many transcript lines Claude Code wrote for it and whether it appears in the session's transcript, a subagent's, or both. The office's Ledger (the office total) and the project ledger book the same change, at the same moment, so the two never disagree. The project ledger also splits each change by agent (the worker, or a subagent type) and by model.
 - **The office's background calls** are booked on the floor they served, and added to the office total. These are Jeff's Haiku fallback, the analyzer, task naming, the project summary and the Firm's reviewers. A call that served no floor (the office's own) goes on the office view. Jeff's calls to Jev aren't priced, so they show as not metered. Gate-check makes no model calls.
 - **Providers other than Claude** count their calls but no cost.
 
