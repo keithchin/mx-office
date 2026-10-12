@@ -9,7 +9,8 @@
 
 import { lstat, realpath } from 'node:fs/promises';
 import path from 'node:path';
-import { folderProof, repoProof, type FolderProvenance, type SetupProvenance } from '../../shared/setup-provenance.js';
+import type { FolderProvenance, SetupProvenance } from '../../shared/setup-provenance.js';
+import { folderCreateProof, repoCreateProof, type OperationRecord } from '../../shared/setup-operations.js';
 import { folderRefusal, type FolderRules } from '../project-delete/fsops.js';
 import type { Gh } from '../project-delete/repo.js';
 import { within } from '../worktree-sweep/sweep.js';
@@ -32,24 +33,29 @@ export async function folderRecord(prior: FolderProvenance | undefined, dir: str
   return { createdBySetup: false, preExisting: true, path: real, at };
 }
 
-export type RepoAuthority = { ok: true } | { ok: false; proof: 'pre-existing' | 'legacy' | 'none' | 'no-id' | 'unknown' | 'gone' | 'mismatch'; why: string };
+export type RepoAuthority =
+  | { ok: true; githubId: string; op?: string }
+  | { ok: false; proof: 'pre-existing' | 'legacy' | 'none' | 'no-id' | 'unknown' | 'gone' | 'mismatch' | 'unresolved' | 'adopted' | 'unverified'; why: string };
 
-/** Whether the setup's record proves it created `repo`, and GitHub shows that same repository there now. */
-export async function repoAuthority(gh: Gh, prov: SetupProvenance | undefined, repo: string, legacyCreated: boolean): Promise<RepoAuthority> {
-  const p = repoProof(prov, repo, legacyCreated);
+/**
+ * Whether the setup's records prove it created `repo` (a confirmed create by this operation, with GitHub's
+ * id; step 1's provenance for a setup with no records), and GitHub shows that same repository there now.
+ */
+export async function repoAuthority(gh: Gh, prov: SetupProvenance | undefined, repo: string, legacyCreated: boolean, ops: readonly OperationRecord[] = []): Promise<RepoAuthority> {
+  const p = repoCreateProof(ops, prov, repo, legacyCreated);
   if (p.proof !== 'recorded') return { ok: false, proof: p.proof, why: p.why };
   const now = await lookupWithGh(gh, repo);
   if (now.state === 'unknown') return { ok: false, proof: 'unknown', why: `couldn’t check which repository is at ${repo} on GitHub now (${now.reason}), so it isn’t deleted: check the office’s GitHub login in 🔌 Connections, then try again` };
   if (now.state === 'not-found') return { ok: false, proof: 'gone', why: `${repo} isn’t on GitHub any more (or the office’s login can’t see it)` };
   if (!now.githubId) return { ok: false, proof: 'unknown', why: `GitHub didn’t say which repository is at ${repo} now, so it isn’t deleted` };
   if (now.githubId !== p.githubId) return { ok: false, proof: 'mismatch', why: `the repository at ${repo} now isn’t the one this setup created (GitHub’s id for it is different), so the office won’t delete it` };
-  return { ok: true };
+  return { ok: true, githubId: p.githubId, ...(p.op ? { op: p.op } : {}) };
 }
 
-export type FolderAuthority = { ok: true } | { ok: false; proof: 'pre-existing' | 'legacy' | 'none' | 'moved' | 'link' | 'rules'; why: string };
+export type FolderAuthority = { ok: true; op?: string } | { ok: false; proof: 'pre-existing' | 'legacy' | 'none' | 'moved' | 'link' | 'rules' | 'unresolved' | 'adopted' | 'unverified' | 'no-id'; why: string };
 
 /** Whether the setup's record proves it cloned `dir`, `dir` really is that folder inside the projects folder, and the folder rules allow deleting it. */
-export async function folderAuthority(dir: string, prov: SetupProvenance | undefined, legacyCloned: boolean, rules: FolderRules, refusal?: string): Promise<FolderAuthority> {
+export async function folderAuthority(dir: string, prov: SetupProvenance | undefined, legacyCloned: boolean, rules: FolderRules, refusal?: string, ops: readonly OperationRecord[] = []): Promise<FolderAuthority> {
   const st = await lstat(dir).catch(() => undefined);
   // A junction or symbolic link (Node's lstat reports both as links): never followed, never deleted.
   if (st?.isSymbolicLink()) return { ok: false, proof: 'link', why: 'it’s a junction or symbolic link, not a folder of its own, so the office won’t delete it' };
@@ -59,9 +65,9 @@ export async function folderAuthority(dir: string, prov: SetupProvenance | undef
     if (!same(real, path.resolve(dir))) return { ok: false, proof: 'link', why: `it really is ${real} (a junction or link on the way there), so the office won’t delete it` };
     if (!within(home, real)) return { ok: false, proof: 'link', why: `it really is ${real}, outside the office’s projects folder (${rules.home})` };
   }
-  const p = folderProof(prov, real, legacyCloned, WIN);
+  const p = folderCreateProof(ops, prov, real, legacyCloned, WIN);
   if (p.proof !== 'recorded') return { ok: false, proof: p.proof, why: p.why };
   const why = refusal ?? (await folderRefusal(dir, rules));
   if (why) return { ok: false, proof: 'rules', why };
-  return { ok: true };
+  return { ok: true, ...(p.op ? { op: p.op } : {}) };
 }

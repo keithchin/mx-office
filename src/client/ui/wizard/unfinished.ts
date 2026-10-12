@@ -14,6 +14,7 @@ import { h, toast } from '../dom';
 import { startResume } from '../project-run/api';
 import { wizardApi, type CallError } from './api';
 import { openCancelDialog } from './cancel';
+import { operationBox } from './operation';
 
 export interface UnfinishedOptions {
   net: Net;
@@ -88,10 +89,12 @@ export function unfinishedSection(opts: UnfinishedOptions): { el: HTMLElement; r
       );
     });
     const cancelling = s.status === 'cancelling';
+    // An operation the office couldn't confirm: Check again (and Use this existing …) instead of Retry.
+    const op = !cancelling && s.status !== 'running' ? s.operation : undefined;
     const acts = h(
       'div.us-acts',
       {},
-      admin && !cancelling && s.status !== 'running' ? retry : null,
+      admin && !cancelling && s.status !== 'running' && !op ? retry : null,
       !(cancelling && !s.done) ? h('button.btn', { type: 'button', onclick: () => opts.carryOn(s.id) }, s.status === 'running' ? 'Show progress' : 'Show setup') : null,
       s.floor ? h('button.btn', { type: 'button', onclick: () => opts.go(s.floor!) }, 'Open project') : null,
       admin && s.status !== 'running'
@@ -104,7 +107,7 @@ export function unfinishedSection(opts: UnfinishedOptions): { el: HTMLElement; r
       { 'data-st': s.status, 'data-id': s.id },
       h('div.us-head', {}, h('span.us-name', {}, s.repo), h('span.us-badge', {}, STATUS[s.status])),
       s.step ? h('p.us-line', {}, `${s.status === 'running' ? 'On' : 'Stopped at'}: ${s.status !== 'cancelling' && groupNameOf(s.step) ? `${groupNameOf(s.step)} · ` : ''}${s.step}`) : null,
-      s.error ? h('p.us-line.us-muted', {}, plainError(s.error)) : null,
+      op ? operationBox(op, { id: s.id, admin, compact: true, changed: () => (refresh(), opts.changed?.()) }) : s.error ? h('p.us-line.us-muted', {}, plainError(s.error)) : null,
       cancelling && s.cancel?.error ? h('p.us-line.us-muted', {}, s.cancel.error) : null,
       h('div.us-bar', { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(s.total), 'aria-valuenow': String(s.done), 'aria-label': `${s.done} of ${s.total} steps done` }, h('span', { style: `width:${pct}%` })),
       h('p.us-line.us-muted', {}, `${s.done} of ${s.total} steps done · started by ${s.by}`),

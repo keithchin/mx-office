@@ -3,7 +3,7 @@
 // panel over a toolkit project's board. One per office, made on first use (like the analyzer), with
 // its setups run on the office's workflow engine (server/flow/).
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { sameRepo } from '../../shared/floors.js';
 import type { JobView, SetupView, StepId, WizardInfo } from '../../shared/wizard.js';
@@ -21,7 +21,7 @@ import { credential } from '../connections/resolve.js';
 import { officeSettings, toolkitDir } from '../connections/store.js';
 import { configProblems, mendixVersions, preferredMendix, projectOrg, toolkitEnv, wizardConfig, type WizardConfig } from './config.js';
 import { existingAnswers, parseIntakeTemplate } from './intake.js';
-import { JobBook, jobId, newJob, viewOf, type JobState } from './job.js';
+import { JobBook, jobId, newJob, type JobState } from './job.js';
 import { mprVersion } from './mendix-app.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
@@ -36,6 +36,10 @@ import { trustFloor } from '../claude-trust.js';
 import { childEnv } from '../workers/env.js';
 import { blockerOf } from './unfinished.js';
 import type { SetupBlocker } from '../../shared/setup-cancel.js';
+import { operationNotice } from '../../shared/setup-operations.js';
+import { OperationStore } from './operations.js';
+import { auditOperation, officeLookup, reconcileJob, reconcileOnStart } from './operations-office.js';
+import { adopt } from './reconcile.js';
 
 /** What an edit writes again: the answers and decisions, and the commit that carries them. */
 const EDIT_STEPS: StepId[] = ['intake', 'decisions', 'settings', 'commit'];
@@ -54,7 +58,11 @@ export class Wizard {
   constructor(private ctx: Ctx) {
     this.base = wizardConfig();
     // Its runs are on the office's workflow engine; <office data>/wizard/ holds the jobs saved before it, taken in on load.
-    this.book = new JobBook(path.join(ctx.cfg.dataDir, 'wizard'), redactor([]), flowsOf(ctx));
+    const dir = path.join(ctx.cfg.dataDir, 'wizard');
+    // The setups' operation records (operations.ts): critical writes, every change in the audit log.
+    this.book = new JobBook(dir, redactor([]), flowsOf(ctx), { ops: new OperationStore(path.join(dir, 'operations'), { onChange: auditOperation }) });
+    // A setup the office stopped in the middle of an operation is looked at once now (reconcile.ts).
+    setImmediate(() => void reconcileOnStart(this.book, this.lookup()));
     this.gates = new GateSource((tmp, floorDir) => this.gateCheck(tmp, floorDir, 5 * 60_000).then(() => undefined));
     // The worktree sweep leaves a floor's ao-gates-* copy alone while its gate-check is running.
     useGateLock((dir) => this.gates.busy(dir) || toolkitBusy(dir));
@@ -79,6 +87,49 @@ export class Wizard {
   syncWith(toolkit: string, dir: string, floorDir: string, onLine: (line: string) => void) {
     const env = { ...withFloorToolkitEnv(floorDir, toolkitEnv(this.cfg)), MXTK_SYNC_SKIP_CLONE_CHECK: '1' };
     return runCommand(this.cfg.bash, [bashPath(path.join(toolkit, 'bin', 'sync-project.sh')), bashPath(dir)], { cwd: dir, env, timeoutMs: 10 * 60_000, onLine, allowFail: true }).then(() => undefined);
+  }
+
+  /** GitHub looked at with the office's gh login, as the repo step does. */
+  private lookup() {
+    // From a folder that's there (a new office has no projects folder yet, and a missing one reads as "gh isn't installed").
+    return officeLookup(
+      () => (existsSync(this.ctx.building.projectsDir) ? this.ctx.building.projectsDir : this.ctx.cfg.dataDir),
+      () => toolkitEnv(this.cfg),
+    );
+  }
+
+  /** "Check GitHub again": looks again at the setup's unsettled operations (and those waiting to be adopted). */
+  async check(id: string): Promise<JobView | string> {
+    const job = this.book.get(id);
+    if (!job) return 'No such setup';
+    if (this.book.isRunning(id)) return 'That setup is running: wait for it to stop first';
+    try {
+      await reconcileJob(this.book, job, this.lookup(), true);
+    } catch (err) {
+      return `The office looked, but couldn't save what it found (${(err as Error).message}): the setup stays paused. Check the office's data folder can be written to, then try again`;
+    }
+    return this.book.view(job);
+  }
+
+  /**
+   * "Use this existing repository / folder": the found one adopted (never Cancel & undo's to delete), and
+   * setup carries on at once unless something else stops it (a paused project…: then Retry, once it's clear).
+   */
+  async adopt(id: string, op: string, by: { name: string; id?: string }): Promise<JobView | string> {
+    const job = this.book.get(id);
+    if (!job) return 'No such setup';
+    if (this.book.isRunning(id)) return 'That setup is running: wait for it to stop first';
+    try {
+      const r = await adopt(this.book.ops, job, op, by);
+      if (typeof r === 'string') return r;
+    } catch (err) {
+      return `The office couldn't save your choice (${(err as Error).message}): nothing changed. Try again`;
+    }
+    this.book.log(job, `✓ ${by.name} chose to use the existing one for ${job.plan.owner}/${job.plan.name} (Cancel & undo will never delete it)`);
+    for (const s of ['repo', 'clone'] as StepId[]) if (job.steps[s].status === 'failed') job.steps[s] = { status: 'failed', detail: 'You chose to use the existing one: Retry carries setup on from here' };
+    this.book.save(job);
+    if (!this.book.pendingOps(job).length && !this.retryBlocker(id)) this.go(job);
+    return this.book.view(job);
   }
 
   /** Where everything is: the toolkit folder looked up again each time, so a change in 🔌 Connections › Paths takes at once. */
@@ -115,7 +166,7 @@ export class Wizard {
 
   job(id: string): JobView | undefined {
     const j = this.book.get(id);
-    return j && viewOf(j);
+    return j && this.book.view(j);
   }
 
   /** Starts a new project's setup. A setup for the same repository that's still there is carried on rather than started again. */
@@ -130,7 +181,7 @@ export class Wizard {
     const id = jobId(plan.owner, plan.name);
     const had = this.book.get(id);
     if (had && had.status === 'done') return `${plan.owner}/${plan.name} was already set up — edit its answers from its floor's setup panel`;
-    if (had && this.book.isRunning(id)) return viewOf(had);
+    if (had && this.book.isRunning(id)) return this.book.view(had);
     if (plan.kind === 'new' && !plan.createdByHand && !this.cfg.offlineDir && !adminTokenConfigured(this.cfg.adminTokenFile)) {
       return "There's no admin token, so the office can't create the repository: create one (see the instructions), or create the repository on GitHub yourself and tick that box";
     }
@@ -138,7 +189,7 @@ export class Wizard {
     this.book.add(job);
     if (draft) plannerOf(this.ctx).linkJob(draft.id, job.id);
     this.go(job);
-    return viewOf(job);
+    return this.book.view(job);
   }
 
   /** What would stop the setup's Retry now (a paused project, a safe restart, Studio Pro open), said before it runs. */
@@ -147,13 +198,27 @@ export class Wizard {
     return job && !this.book.isRunning(id) ? blockerOf(this.ctx, job) : undefined;
   }
 
-  retry(id: string): JobView | string {
+  /**
+   * Carries the setup on: an operation whose outcome nobody confirmed is looked at first (reconcile.ts),
+   * and while one still is unsettled (or waits to be adopted) nothing runs: never a blind Retry.
+   */
+  async retry(id: string): Promise<JobView | string | { blocker: SetupBlocker }> {
     const job = this.book.get(id);
     if (!job) return 'No such setup';
+    if (this.book.isRunning(id)) return this.book.view(job);
+    if (this.book.pendingOps(job).length) {
+      try {
+        await reconcileJob(this.book, job, this.lookup());
+      } catch (err) {
+        return `The office couldn't save what it found (${(err as Error).message}): the setup stays paused`;
+      }
+    }
+    const notice = operationNotice(this.book.pendingOps(job));
+    if (notice) return { blocker: { kind: 'operation', text: `${notice.title}. ${notice.text}` } };
     const blocked = this.retryBlocker(id);
-    if (blocked) return blocked.text;
+    if (blocked) return { blocker: blocked };
     this.go(job);
-    return viewOf(job);
+    return this.book.view(job);
   }
 
   /** New answers for a setup that ran: written into the project again and committed. */
@@ -167,7 +232,7 @@ export class Wizard {
     // Roles ticked since the team step ran are hired too (JobBook.edit), and only those.
     this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
     this.go(job);
-    return viewOf(job);
+    return this.book.view(job);
   }
 
   /** The setup for a floor: the wizard's, or one made from the project's files to edit it (a project set up by hand). */

@@ -93,7 +93,8 @@ test('a draft with the test planner: draft, confirm, chat (a highlighted change)
   await settle(p, d.id);
   const reply = d.chat.at(-1)!;
   assert.match(reply.text, /Security officer/);
-  assert.equal(reply.changed!.length, 1);
+  assert.deepEqual(reply.changed, ['r5', 'i2'], 'the new role, and host approval confirmed in the chat');
+  assert.equal(d.brief!.sections.scope[1].by?.how, 'chat-confirmed');
   assert.equal(d.brief!.sections.roles.at(-1)!.by?.how, 'chat');
   assert.equal(p.approve(d, me), undefined);
   assert.equal(d.approved!.by, 'Alex Lee');

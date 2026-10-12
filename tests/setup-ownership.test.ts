@@ -139,7 +139,7 @@ test('a repository GitHub says isn\'t there is created, and the setup records it
   await book.run(job, only);
   assert.equal(job.steps.repo.status, 'done', job.steps.repo.detail);
   assert.equal(gh.created(), 1);
-  assert.deepEqual(gh.calls[0], ['repo', 'view', REPO, '--json', 'id,nameWithOwner']);
+  assert.deepEqual(gh.calls[0], ['repo', 'view', REPO, '--json', 'id,nameWithOwner,createdAt']);
   assert.equal(job.provenance?.v, PROVENANCE_VERSION);
   assert.deepEqual({ ...job.provenance?.repo, at: 0 }, { createdBySetup: true, nameWithOwner: REPO, githubId: 'R_kgDOnew', at: 0 });
   const again = new JobBook(path.join(root, 'jobs')).get(job.id) as JobState;

@@ -1,8 +1,9 @@
 // The test planner: a deterministic stand-in for the Chief Analyst's planning calls, with no model call at
 // all. Test offices (AGENT_OFFICE_PLANNER=fake) and the tests use it. It always drafts the same Visitor
 // Registration brief (the approved mockup's sample), whatever it's told, names the first attached document it
-// "read" as a source, adds a Security officer role on the first chat message and an open question on later
-// ones, and maps the same four functional domains. It costs nothing.
+// "read" as a source, adds a Security officer role on the first chat message (and, as the real one did,
+// re-sources an item already in the brief to the chat: the person confirming it) and an open question on
+// later ones, and maps the same four functional domains. It costs nothing.
 
 import type { Brief, ChatMsg, Domains } from '../../../shared/brief.js';
 import { cleanBrief, cleanDomains, emptyBrief } from '../../../shared/brief.js';
@@ -58,7 +59,9 @@ export function fakeChat(brief: Brief, _history: ChatMsg[], text: string): { bri
   const next = structuredClone(brief);
   if (!next.sections.roles.some((r) => r.name === 'Security officer')) {
     next.sections.roles.push({ id: '', name: 'Security officer', text: 'Watches who enters the building.', when: 'When a visitor is on the watch list, I need to be alerted before they get a badge.', tag: 'answered', source: 'from the chat' });
-    return { brief: cleanBrief(next) ?? brief, reply: 'Good point. I added a Security officer role under User roles, with a watch-list alert. Anything else I should know?' };
+    const approval = next.sections.scope.find((x) => x.id === 'i2' && !x.by);
+    if (approval) approval.source = `from the chat; ${approval.source}`;
+    return { brief: cleanBrief(next) ?? brief, reply: `Good point. I added a Security officer role under User roles, with a watch-list alert${approval ? ', and marked host approval as confirmed by you' : ''}. Anything else I should know?` };
   }
   next.sections.questions.push({ id: '', text: text.length > 120 ? `${text.slice(0, 117)}…` : text, tag: 'unverified', source: 'open question' });
   return { brief: cleanBrief(next) ?? brief, reply: 'I couldn’t settle that from your notes, so I added it to Open questions. It stays Unverified until someone answers it.' };

@@ -1,0 +1,47 @@
+/* An operation whose outcome isn't confirmed (ui/wizard/operation.ts): in the setup's group view and on
+   its unfinished card. Tokens only, so every theme colours it; a warning, not an error. */
+
+.op-box {
+  margin: 0 16px 16px 52px;
+  padding: 12px 14px;
+  border: 1px solid var(--warn);
+  border-left-width: 4px;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--warn-soft);
+  color: var(--ink);
+  font-size: 13px;
+}
+.op-box p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.op-box p + p {
+  margin-top: 6px;
+}
+.op-box .op-title {
+  color: var(--warn-ink);
+}
+.op-acts {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.op-acts small,
+.op-note {
+  color: var(--ink-2, var(--muted));
+  font-size: 12px;
+}
+.op-box.op-compact {
+  margin: 0;
+  font-size: 0.86rem;
+}
+@media (max-width: 520px) {
+  .op-box {
+    margin: 0 12px 12px 12px;
+  }
+  .op-acts .btn {
+    flex: 1 1 100%;
+  }
+}

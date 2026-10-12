@@ -82,6 +82,72 @@ function recordRows(lines: string[], head: number, rows: DecisionRow[]): string[
 
 const finish = (lines: string[], crlf: boolean) => (crlf ? lines.join('\r\n') : lines.join('\n'));
 
+export interface QuestionRow {
+  question: string;
+  /** Where it was raised: "Stage 0: project brief q3 (docs/project-brief.md)". */
+  raised: string;
+  /** OPEN until someone answers it. */
+  status: string;
+}
+
+/** The lines of a "## <title>" section (after the heading, up to the next "## "), or undefined when there is none. */
+function sectionRange(lines: string[], title: RegExp): [head: number, end: number] | undefined {
+  const head = lines.findIndex((l) => title.test(l));
+  if (head < 0) return undefined;
+  let end = head + 1;
+  while (end < lines.length && !/^##\s/.test(lines[end])) end++;
+  return [head, end];
+}
+
+/**
+ * PROJECT.md with the brief's open questions in "## Open questions" (the toolkit's table: # | Question |
+ * Raised at | Status, numbered OQ-01… so no row reads as a stage) and its assumptions in "## Assumptions
+ * (ASSUMED, unresolved)", replacing its "None yet.". A question or an assumption already there (the same
+ * words) isn't added again, so running it twice changes nothing; what anyone else wrote there stays.
+ */
+export function recordBriefRegister(md: string, questions: QuestionRow[], assumptions: string[]): string {
+  if (!questions.length && !assumptions.length) return md;
+  const crlf = md.includes('\r\n');
+  const lines = md.replace(/\r\n/g, '\n').split('\n');
+  if (questions.length) {
+    let r = sectionRange(lines, /^##\s*Open questions\s*$/i);
+    if (!r) {
+      const before = sectionRange(lines, /^##\s*Assumptions\b/i)?.[0] ?? lines.length;
+      lines.splice(before, 0, '## Open questions', '', '| # | Question | Raised at | Status |', '|---|---|---|---|', '');
+      r = sectionRange(lines, /^##\s*Open questions\s*$/i)!;
+    }
+    const [head, end] = r;
+    const rows: number[] = [];
+    for (let n = head + 1; n < end; n++) if (lines[n].trim().startsWith('|')) rows.push(n);
+    const cells = (n: number) => lines[n].split(/(?<!\\)\|/).slice(1, -1).map((c) => c.trim());
+    const have = new Set(rows.map((n) => (cells(n)[1] ?? '').toLowerCase()));
+    let num = Math.max(0, ...rows.map((n) => Number(/^OQ-(\d+)$/i.exec(cells(n)[0] ?? '')?.[1] ?? 0)));
+    const add = questions.filter((q) => !have.has(cell(q.question).toLowerCase())).map((q) => `| OQ-${String(++num).padStart(2, '0')} | ${cell(q.question)} | ${cell(q.raised)} | ${cell(q.status)} |`);
+    if (add.length) {
+      if (rows.length) lines.splice(rows[rows.length - 1] + 1, 0, ...add);
+      else lines.splice(head + 1, 0, '', '| # | Question | Raised at | Status |', '|---|---|---|---|', ...add);
+    }
+  }
+  if (assumptions.length) {
+    let r = sectionRange(lines, /^##\s*Assumptions\b/i);
+    if (!r) {
+      lines.push('', '## Assumptions (ASSUMED, unresolved)', '');
+      r = sectionRange(lines, /^##\s*Assumptions\b/i)!;
+    }
+    const [head, end] = r;
+    const body = lines.slice(head + 1, end);
+    const have = new Set(body.map((l) => l.trim()));
+    const add = assumptions.map((a) => a.replace(/\r?\n/g, ' ').trim()).filter((a) => !have.has(a));
+    if (add.length) {
+      const kept = body.filter((l) => !/^none yet\.?$/i.test(l.trim()));
+      while (kept.length && !kept[kept.length - 1].trim()) kept.pop();
+      while (kept.length && !kept[0].trim()) kept.shift();
+      lines.splice(head + 1, end - head - 1, '', ...kept, ...add, '');
+    }
+  }
+  return finish(lines, crlf);
+}
+
 /** A flat "Label: value" line's value, outside comments (as gate-check's reg_field reads it). */
 export function registerField(md: string, label: string): string | undefined {
   const lines = md.replace(/\r/g, '').split('\n');
