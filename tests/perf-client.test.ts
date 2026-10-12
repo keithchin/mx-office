@@ -173,7 +173,7 @@ test("a project switch's budget load is never dropped or postponed for ever (the
 
 test("the console's escalation faces are drawn a few a frame after the cards, not in the first draw", () => {
   const esc = src('ui/pm/escalations.ts');
-  const raised = esc.slice(esc.indexOf('function raisedBy('), esc.indexOf('export class EscalationList'));
+  const raised = esc.slice(esc.indexOf('function raisedBy('));
   assert.match(raised, /later\(\(\) => c\.getContext\('2d'\)!\.drawImage\(standing\(/);
   assert.match(esc, /const FACE_MS = 8;/);
 });

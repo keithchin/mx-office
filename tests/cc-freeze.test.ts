@@ -26,9 +26,11 @@ test('the PM terminal is never opened anywhere but place(), which asks termPlace
   assert.equal(opens.length, 1, 'term.open(host) appears once');
   const place = src.indexOf('  place() {');
   assert.ok(place > 0 && opens[0].index! > place && src.indexOf('termPlacement(', place) < opens[0].index!, 'and only inside place(), after termPlacement');
-  // The console places it each time it shows or hides the box.
-  const consoleSrc = readFileSync(new URL('../src/client/ui/pm/console.ts', import.meta.url), 'utf8');
-  assert.ok((consoleSrc.match(/placeTerm\(\);/g) ?? []).length >= 2, 'drawChat and drawEsc place the terminal');
+  // The team-lead panel (which took over from the project console) places it each time it shows, hides or moves the box.
+  const panelSrc = readFileSync(new URL('../src/client/ui/lead-panel/panel.ts', import.meta.url), 'utf8');
+  const attach = panelSrc.slice(panelSrc.indexOf('  attach() {'), panelSrc.indexOf('  private watch('));
+  assert.match(attach, /this\.term\.show\(id\);/, 'attach() attaches or lets go first');
+  assert.match(attach, /this\.term\.place\(\);/, 'then places it, before a frame can draw into a hidden box');
 });
 
 const convo = (n: number): Convo => ({ available: true, messages: Array.from({ length: n }, (_, i) => ({ kind: 'agent', id: `m${i}`, text: `hi ${i}` }) as Convo['messages'][number]) });
