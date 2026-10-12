@@ -16,7 +16,8 @@ weight: 9
 | **Board** | A floor's Kanban of issues, tasks, workers and PRs. |
 | **BRD** | Business requirements document, written by the Chief Analyst. |
 | **Building / office** | The whole Mx Office server, with all its floors. |
-| **Command Center** | The first tab of a project: Needs you, setup, summary, Coordinator console. |
+| **Command Center** | The first tab of a project (the Overview in Portal): Needs you, setup, progress, the team, the budget, recent activity. |
+| **Team-lead panel** | Docked on the right of every project tab: the agent who covers Management (Project Coordinator, Chief Analyst or Solo Lead), its chat or terminal, and a box to ask it things. |
 | **Cool-down** | How long a benched subagent sits out (24 hours by default). |
 | **Engagement** | One audit by The Firm: its configuration, reviewers, interviews, spend and report. |
 | **Engagement Partner** | The Firm's lead reviewer (Eleanor Vance), attached to the Project Coordinator; writes the final report. |
