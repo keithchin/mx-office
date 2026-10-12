@@ -15,6 +15,7 @@ import { collectNeeds, hereCount, type BudgetNeed, type NeedItem, type NeedKind,
 import { incidentBriefs, incidentFeedMessage, onIncidentsChanged } from '../incidents/feed';
 import { hasPhone, openPhone } from '../phone/api';
 import { batched } from '../batch';
+import { publishNeeds } from './feed';
 import '../pm/jeff-rank.css';
 import './needsyou.css';
 
@@ -120,11 +121,17 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
 
   /** What the strip last drew from, so a worker update that changes nothing it shows draws nothing. */
   let drawnKey = '';
+  /** The team the last snapshot was published with: a new one (an escalation's options, say) publishes again. */
+  let sentRoster: RosterView | undefined;
   function draw() {
     const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live(), firm: deps.firm?.(), studio: deps.studio?.(), incidents: incidentBriefs(), budget: deps.budget?.() });
     const n = hereCount(items);
     // The time ago on each item is part of what it shows: the half-minute timer moves it on.
     const key = JSON.stringify([all, hasPhone(), items.map((i) => [i.key, i.text, i.level, i.action, i.tag ?? '', i.rank?.chip ?? '', i.since ? timeAgo(i.since) : '', i.alt?.action ?? ''])]);
+    // The Overview's Needs you card and the team-lead panel's count hear it too (./feed.ts).
+    if (key === drawnKey && roster === sentRoster) return;
+    sentRoster = roster;
+    publishNeeds({ floor, items, roster, go: deps.go });
     if (key === drawnKey) return;
     drawnKey = key;
     badge.textContent = n ? String(n) : '';

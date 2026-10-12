@@ -3,11 +3,26 @@
 // in the classic themes' tab row (#tab-<id>); nothing else runs until a tab is first shown, when it's
 // mounted into its container. lite.ts's showTab hands every tab change to show(), which shows the one
 // asked for (and calls its show hook) and hides the others (calling the hide hook of each one mounted).
+// What isn't a tab but follows them (the team-lead panel docked beside every tab, ui/lead-panel/) hears
+// each change with onProjectTab, so it never needs a line in showTab.
 
 import './index';
 import { store } from '../state';
 import { h } from '../ui/dom';
 import { registeredTabs, type TabDef, type TabHooks } from './registry';
+
+const tabListeners = new Set<(id: string) => void>();
+let shownTab: string | undefined;
+
+/** Hears every tab the page shows (built-in or registered), and the one showing now, if it has shown one. */
+export function onProjectTab(fn: (id: string) => void): () => void {
+  tabListeners.add(fn);
+  if (shownTab !== undefined) fn(shownTab);
+  return () => tabListeners.delete(fn);
+}
+
+/** The tab the page is showing, once it has shown one. */
+export const currentProjectTab = (): string | undefined => shownTab;
 
 export interface ProjectTabs {
   /** The page is showing tab `id` (any tab, built-in or registered). */
@@ -42,6 +57,8 @@ export function projectTabs(before: Element, row: Element | null, open: (id: str
         if (on) (s.hooks ??= s.def.mount(s.view)).show?.();
         else s.hooks?.hide?.();
       }
+      shownTab = id;
+      for (const fn of tabListeners) fn(id);
     },
   };
 }
