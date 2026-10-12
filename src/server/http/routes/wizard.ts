@@ -67,11 +67,18 @@ export const wizardRoutes = {
         console.log(`  ${who} is cancelling the setup of ${r.repo} (Cancel & undo)`);
         return send(res, 202, r);
       }
-      // A Retry that would fail anyway (a paused project…) says so first, with what to do.
-      const blocker = p === '/api/wizard/retry' ? w.retryBlocker(id) : undefined;
-      if (blocker) return send(res, 409, { error: blocker.text, blocker });
-      const r =
-        p === '/api/wizard/start' ? w.start(body, who, session.account?.id) : p === '/api/wizard/retry' ? w.retry(id) : p === '/api/wizard/edit' ? w.edit(id, body) : undefined;
+      // An operation whose outcome isn't settled: look again ("Check GitHub again"), or use what was found.
+      if (p === '/api/wizard/check' || p === '/api/wizard/adopt') {
+        const op = typeof (body as { op?: unknown }).op === 'string' ? (body as { op: string }).op : '';
+        const r = p === '/api/wizard/check' ? await w.check(id) : await w.adopt(id, op, { name: who, id: session.account?.id });
+        if (typeof r === 'string') return send(res, 400, { error: r });
+        if (p === '/api/wizard/adopt') console.log(`  ${who} adopted the existing ${r.plan.owner}/${r.plan.name} for its setup`);
+        return send(res, 200, r);
+      }
+      // A Retry looks at an unsettled operation first, and one that would fail anyway (a paused project…) says so first, with what to do.
+      const tried = p === '/api/wizard/retry' ? await w.retry(id) : undefined;
+      if (tried && typeof tried === 'object' && 'blocker' in tried) return send(res, 409, { error: tried.blocker.text, blocker: tried.blocker });
+      const r = p === '/api/wizard/start' ? w.start(body, who, session.account?.id) : p === '/api/wizard/retry' ? tried : p === '/api/wizard/edit' ? w.edit(id, body) : undefined;
       if (r === undefined) return send(res, 404, { error: 'Not found' });
       if (typeof r === 'string') return send(res, 400, { error: r });
       if (p === '/api/wizard/start') console.log(`  ${who} started setting up ${r.plan.owner}/${r.plan.name} in the new-project wizard`);

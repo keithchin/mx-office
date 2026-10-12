@@ -15,6 +15,7 @@ import { projectUrl } from '../viewpick';
 import { wizardApi, type CallError } from './api';
 import { openCancelDialog } from './cancel';
 import { groupsView } from './groups';
+import { operationBox } from './operation';
 
 const POLL_MS = 1200;
 const COMPASS =
@@ -185,6 +186,9 @@ export function progressView(first: JobView, go: (floor: string) => void, admin:
     if (job.status === 'done') {
       titleText.textContent = `Here’s how I set up ${name()}`;
       lede.textContent = 'All five steps are done. Open any step to see what ran.';
+    } else if (job.operation && job.status !== 'running') {
+      titleText.textContent = 'Setup is paused';
+      lede.textContent = `Office isn’t sure whether one action for ${name()} finished. Nothing after it runs until that’s settled.`;
     } else if (job.status === 'failed') {
       titleText.textContent = 'Setup stopped at one step';
       lede.textContent = `One thing needs you before ${name()} can be set up. Nothing after this step has run.`;
@@ -193,10 +197,21 @@ export function progressView(first: JobView, go: (floor: string) => void, admin:
       lede.textContent = job.status === 'idle' ? 'Waiting to carry on: Retry starts it from the first step not done.' : 'Five steps, a few minutes in a real office. You can close this window: setup carries on.';
     }
     // The failure box, made once per failure so focus and the blocker stay put while it's showing.
-    const failKey = failedGroup?.failed ? `${failedGroup.id}:${failedGroup.failed.id}:${failedGroup.failed.detail ?? ''}` : undefined;
+    // An operation the office couldn't confirm takes the failure's place: Check again (and Use this existing …), never Retry.
+    const op = job.status !== 'running' ? job.operation : undefined;
+    const failKey = op
+      ? `op:${op.op}:${op.state}:${op.provenance}:${op.text}`
+      : failedGroup?.failed
+        ? `${failedGroup.id}:${failedGroup.failed.id}:${failedGroup.failed.detail ?? ''}`
+        : undefined;
     if (failKey !== shownFail) {
       for (const g of views) groups.slot(g.id).replaceChildren();
-      if (failedGroup?.failed) {
+      if (op) {
+        const at = failedGroup ?? views.find((g) => g.steps.some((s) => s.id === (op.kind === 'repo-create' ? 'repo' : 'clone'))) ?? views[0];
+        const box = operationBox(op, { id: job.id, admin, changed: (j) => ((job = j), render(), job.status === 'running' && void poll()) });
+        groups.slot(at.id).append(box);
+        setTimeout(() => box.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true }), 30);
+      } else if (failedGroup?.failed) {
         const box = failBox(failedGroup.failed.label, failedGroup.failed.detail);
         groups.slot(failedGroup.id).append(box.el);
         // Said by the box's role=alert; Retry takes focus when it fails in front of you.
