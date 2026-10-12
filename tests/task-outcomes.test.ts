@@ -15,6 +15,8 @@ import { outcomeOf, reviveAssignment, taskOutcome, type Assignment } from '../sr
 import { BACK_GRACE_MS } from '../src/server/roster/back-to-work.js';
 import { reviveRoster } from '../src/server/roster/store.js';
 import type { PullLook } from '../src/server/roster/task-outcome.js';
+import { markOutcomesStart, outcomesSince } from '../src/server/roster/closed-since.js';
+import { closeConnections } from '../src/server/connections/store.js';
 
 const task: Assignment = { text: 'build the Orders module (issue #5)', at: 0, by: 'Keith', issue: 5 };
 const pull = (number: number, state: string, headRefName = 'feat/orders', closes: number[] = []): PullLook => ({ number, state, headRefName, closes });
@@ -194,4 +196,45 @@ test('an issue closed as not planned cancels the task: finished, not delivered, 
   assert.equal(stop(), false);
   assert.deepEqual([outcomeOf(t()), t().doneWhy, t().closeReason], ['cancelled', 'issue #5 closed as not planned', 'NOT_PLANNED']);
   roster.stop();
+});
+
+// ---- Release 39: PRs closed before task outcomes started on this office raise nothing ----------------------
+
+test('a PR closed unmerged before the office started with outcomes is no decision; one closed after is', () => {
+  const since = Date.UTC(2026, 9, 13, 8);
+  const closed = (number: number, closedAt?: string): PullLook => ({ ...pull(number, 'CLOSED'), ...(closedAt ? { closedAt } : {}) });
+  const old = closed(9, '2026-09-30T10:00:00Z');
+  assert.equal(taskOutcome({ task, pr: { number: 9 }, pulls: [old], closedSince: since }), undefined, 'closed before: the task stays as it was (open)');
+  assert.equal(taskOutcome({ task, pr: { number: 9 }, pulls: [old], closedSince: since, lastWords: 'Task done.' })?.kind, 'claimed', 'a claim still counts');
+  assert.equal(taskOutcome({ task, pr: { number: 9 }, pulls: [closed(9)], closedSince: since }), undefined, 'no close time known: no card');
+  assert.equal(taskOutcome({ task, pr: { number: 9 }, pulls: [closed(9, '2026-10-13T09:00:00Z')], closedSince: since })?.kind, 'decision', 'closed after: the decision');
+  assert.equal(taskOutcome({ task, pr: { number: 9 }, pulls: [old] })?.kind, 'decision', 'no start known (unit seams): as before');
+  // Superseding is unchanged by it.
+  assert.equal(taskOutcome({ task, pr: { number: 9 }, pulls: [old, pull(12, 'OPEN')], closedSince: since })?.kind, 'superseded');
+});
+
+test('on a floor: an old closed-unmerged PR raises nothing and the task carries on; a newly closed one raises the decision once', async () => {
+  const start = markOutcomesStart(Date.UTC(2026, 9, 7, 5, 0));
+  try {
+    assert.equal(markOutcomesStart(Date.UTC(2027, 0, 1)), start, 'stamped once, never moved');
+    assert.equal(outcomesSince(), start);
+    const { floor, roster, w, stop, t } = await office();
+    w.pr = { number: 9, url: '' };
+    floor.list = [{ ...pull(9, 'CLOSED'), closedAt: '2026-10-01T12:00:00Z' }];
+    assert.equal(stop(), true, 'closed before the start: an open task, nudged as before');
+    assert.equal(outcomeOf(t()), 'open');
+    assert.equal(roster.data(floor.id).escalations.length, 0, 'no card for it');
+    // Her next PR is closed unmerged after the start: the decision, once.
+    w.pr = { number: 10, url: '' };
+    floor.list = [{ ...pull(9, 'CLOSED'), closedAt: '2026-10-01T12:00:00Z' }, { ...pull(10, 'CLOSED', 'feat/other'), closedAt: '2026-10-07T07:00:00Z' }];
+    assert.equal(stop(), false, 'awaiting the decision');
+    assert.equal(outcomeOf(t()), 'decision');
+    assert.equal(stop(), false);
+    const asks = roster.data(floor.id).escalations;
+    assert.equal(asks.length, 1, 'raised once');
+    assert.equal(asks[0].title, 'PR #10 was closed without merging: rework, cancel, or replaced?');
+    roster.stop();
+  } finally {
+    closeConnections();
+  }
 });

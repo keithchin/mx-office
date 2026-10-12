@@ -104,4 +104,6 @@ export interface VerificationView {
   waivers: Waiver[];
   /** Whoever's looking may change the policy and waive (an admin). */
   admin?: boolean;
+  /** "Judge merged tasks against checks" (shared/testing/switches.ts): false while it's off, and then nothing is judged. */
+  judging?: boolean;
 }

@@ -5,6 +5,8 @@
 // a waiver, from the office's own page (or a script sending JSON), each audited (server/testing/verify.ts).
 // Release 1b: `part=quality` is the Quality header (scores per commit, and the office's mxcli runs), and
 // POST /api/testing/run starts one of the office's own mxcli runs on main, admins only, one at a time.
+// Release 39: /api/testing/switches reads (signed-in users) and changes (admins, audited) the two
+// office-wide safety switches, judging merged tasks and scoring main automatically (testing/switches.ts).
 import type http from 'node:http';
 import type { Ctx } from '../../office/context.js';
 import { refuseStale } from '../../phone-access/reauth.js';
@@ -13,8 +15,10 @@ import { officeDeps, testingView, testPlanText } from '../../testing/index.js';
 import { setProjectPolicy, setTaskPolicy, verificationView, waive } from '../../testing/verify.js';
 import { reverify } from '../../testing/verify-office.js';
 import { qualityPart, startMicroflowTests, startQuality } from '../../testing/mxcli-office.js';
+import { setTestingSwitches, testingSwitches } from '../../testing/switches.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
+import type { SwitchesView } from '../../../shared/testing/switches.js';
 import { floorParam } from './files.js';
 
 const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
@@ -36,7 +40,7 @@ export const testingRoutes = {
         }
         if (part === 'verification') {
           const roster = floor.workers ? rosterOf(ctx) : undefined;
-          return send(res, 200, { ...(await verificationView(ctx.cfg.dataDir, roster, floor)), admin: ctx.meOf(session.account?.id).admin });
+          return send(res, 200, { ...(await verificationView(ctx.cfg.dataDir, roster, floor)), admin: ctx.meOf(session.account?.id).admin, judging: testingSwitches().judge });
         }
         if (part === 'quality') return send(res, 200, await qualityPart(ctx.cfg.dataDir, floor, ctx.meOf(session.account?.id).admin));
         return send(res, 200, await testingView(ctx.cfg.dataDir, floor, officeDeps(ctx)));
@@ -103,6 +107,35 @@ export const testingRoutes = {
       const r = body.what === 'tests' ? await startMicroflowTests(ctx.cfg.dataDir, floor, who) : await startQuality(ctx.cfg.dataDir, floor, who);
       if (typeof r === 'string') return send(res, 409, { error: r });
       return send(res, 202, { ok: true, commit: r.commit });
+    },
+  },
+  /** GET /api/testing/switches: the office-wide Testing switches, and whether you may change them. */
+  switches: {
+    method: 'GET',
+    path: '/api/testing/switches',
+    auth: 'session',
+    handle: (ctx, { res, session }) => send(res, 200, { switches: testingSwitches(), admin: ctx.meOf(session.account?.id).admin } satisfies SwitchesView),
+  },
+  /** POST /api/testing/switches {judge?: boolean, autoScore?: boolean}: admins only, each change audited. */
+  setSwitches: {
+    method: 'POST',
+    path: '/api/testing/switches',
+    auth: 'session',
+    async handle(ctx, { req, res, session }) {
+      if (!fromUs(req, ctx)) return send(res, 403, { error: 'Forbidden' });
+      if (!ctx.meOf(session.account?.id).admin) return send(res, 403, { error: 'Only an admin can change the Testing switches' });
+      let body: Record<string, unknown>;
+      try {
+        const v = JSON.parse((await readBody(req, 4 * 1024)) || '{}');
+        body = v && typeof v === 'object' ? v : {};
+      } catch {
+        return send(res, 400, { error: 'Send JSON' });
+      }
+      if (refuseStale(ctx, req, res)) return;
+      const name = session.account?.name ?? (typeof body.by === 'string' ? body.by.trim().slice(0, 80) : '');
+      const r = setTestingSwitches({ judge: body.judge, autoScore: body.autoScore }, { name: name || 'An admin', ...(session.account?.id ? { accountId: session.account.id } : {}) });
+      if (typeof r === 'string') return send(res, 400, { error: r });
+      return send(res, 200, { switches: r, admin: true } satisfies SwitchesView);
     },
   },
 } satisfies Record<string, Route>;

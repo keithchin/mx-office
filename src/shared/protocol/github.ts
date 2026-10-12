@@ -40,6 +40,9 @@ export interface GhPull {
   headRefOid?: string;
   /** A merged PR's merge commit on its base branch (the integrated revision, Testing release 2). */
   mergeCommit?: string;
+  /** When it merged, or (merged or not) closed, as GitHub says (ISO time). */
+  mergedAt?: string;
+  closedAt?: string;
   baseRefName: string;
   createdAt: string;
   updatedAt: string;

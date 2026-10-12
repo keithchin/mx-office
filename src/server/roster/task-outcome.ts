@@ -17,6 +17,8 @@ export interface PullLook {
   headRefName?: string;
   /** Issues it closes, as GitHub links them. */
   closes?: readonly number[];
+  /** When GitHub says it closed (ISO time); a closed-unmerged PR older than OutcomeLook.closedSince raises no decision. */
+  closedAt?: string;
 }
 
 /** Ends that finish the task for good (doneAt is set). */
@@ -49,6 +51,19 @@ export interface OutcomeLook {
   lastWords?: string;
   /** What marks a claim. */
   claim: RegExp;
+  /**
+   * When task outcomes started on this office (roster/closed-since.ts): a PR closed without merging
+   * before then (or with no known close time) is no decision, and the task reads as it did. Undefined:
+   * every closed PR counts.
+   */
+  closedSince?: number;
+}
+
+/** Whether a closed-unmerged PR closed late enough to ask for a decision on it. */
+export function closedRecently(pull: Pick<PullLook, 'closedAt'>, since: number | undefined): boolean {
+  if (since === undefined) return true;
+  const t = pull.closedAt ? Date.parse(pull.closedAt) : NaN;
+  return Number.isFinite(t) && t >= since;
 }
 
 /** How the task ended, or undefined while it's open. */
@@ -64,7 +79,8 @@ export function outcome(l: OutcomeLook): Outcome | undefined {
     const by = supersedingPull(pull, l);
     if (by?.state === 'MERGED') return { kind: 'integrated', why: `PR #${by.number} merged (it replaced PR #${pull.number}, closed unmerged)`, pr: by.number, supersedes: pull.number };
     if (by) return { kind: 'superseded', why: `PR #${pull.number} was closed unmerged; PR #${by.number} replaces it`, pr: pull.number, by: by.number };
-    return { kind: 'decision', why: `PR #${pull.number} was closed without merging`, pr: pull.number };
+    // Closed before outcomes started here: no decision card; the task stays as it was (a claim still counts).
+    if (closedRecently(pull, l.closedSince)) return { kind: 'decision', why: `PR #${pull.number} was closed without merging`, pr: pull.number };
   }
   if (l.lastWords && l.claim.test(l.lastWords.slice(-600))) return { kind: 'claimed', why: 'it said task done (pending verification)' };
   return undefined;

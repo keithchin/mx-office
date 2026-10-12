@@ -3,6 +3,7 @@
 // merged PR's merge commit), and the merged tasks that aren't verified ("Merged, not verified", "Passed
 // on PR head, integrated revision not checked"), with links. An admin can waive a check that didn't pass
 // on a revision, with a reason: recorded with their name and audited. Nothing here writes to GitHub.
+// While "Judge merged tasks against checks" is off (the default), only the policy and a note show.
 
 import { settingsHref } from '../../../shared/settings-sections';
 import { CHECK_LABEL, WAIVER_REASON_MIN, type CheckEval, type Waiver } from '../../../shared/testing/policy';
@@ -79,6 +80,15 @@ export function verificationPanel(v: VerificationView, send: Sender): HTMLElemen
         admin ? waiveForm(v.newest.revision, v.newest.eval.checks.filter((c) => c.state !== 'passed' && c.state !== 'waived').map((c) => c.key), `PR #${v.newest.pr}`, send) : null,
       )
     : h('p.tst-muted', {}, 'No merged pull request with a known merge commit yet.');
+  // Judging is off (the default, Settings › Verification): the policy, and nothing live.
+  if (v.judging === false)
+    return h(
+      'section.tst-card.tst-verify',
+      { 'aria-label': 'Verification' },
+      h('h3.tst-h', {}, 'Verification', h('span.tst-hsub', {}, 'required checks on the integrated revision (the merge commit), not the PR head')),
+      policy,
+      h('p.tst-muted.tst-judging-off', {}, 'Judging is off (', h('a', { href: settingsHref('verification', store.floor ?? undefined) }, 'Settings › Verification'), '): merged tasks stay “integrated”, and the office neither judges them nor fetches the default branch’s checks.'),
+    );
   const open = v.tasks.filter((t) => t.state !== 'integrated');
   const tasks = open.length ? h('ul.tst-vtasks', {}, ...open.map((t) => taskRow(t, admin, send))) : h('p.tst-muted', {}, 'No merged task is waiting on verification.');
   return h(

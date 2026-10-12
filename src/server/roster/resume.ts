@@ -20,6 +20,7 @@ import type { TeamFloor } from './types.js';
 import type { VerificationPolicy } from '../../shared/testing/policy.js';
 import type { TaskVerification } from '../../shared/testing/verify.js';
 import { reviveVerifyFields } from './task-verify.js';
+import { outcomesSince } from './closed-since.js';
 import { closedPrAsk, outcome, OUTCOME_V, type FinalOutcome, type Outcome, type PendingOutcome, type PullLook } from './task-outcome.js';
 
 export interface Assignment {
@@ -138,6 +139,8 @@ export interface FinishLook {
   closed?: ReadonlyMap<number, string>;
   /** What the agent said last. */
   lastWords?: string;
+  /** PRs closed unmerged before this raise no decision (task-outcome.ts OutcomeLook.closedSince). */
+  closedSince?: number;
 }
 
 /**
@@ -149,7 +152,7 @@ export interface FinishLook {
 export function taskOutcome(l: FinishLook): Outcome | undefined {
   const t = l.task;
   if (t.doneAt !== undefined) return { kind: t.outcome ?? 'delivered', why: t.doneWhy ?? 'finished' };
-  const o = outcome({ issue: t.issue, pr: l.pr?.number, pulls: l.pulls, branch: l.branch, closed: l.closed, lastWords: l.lastWords, claim: TASK_DONE });
+  const o = outcome({ issue: t.issue, pr: l.pr?.number, pulls: l.pulls, branch: l.branch, closed: l.closed, lastWords: l.lastWords, claim: TASK_DONE, closedSince: l.closedSince });
   if (o || !t.pending) return o;
   const open = !!l.pr && !!l.pulls?.some((p) => p.number === l.pr!.number && p.state === 'OPEN');
   if (t.pending.kind === 'decision' && open) return undefined;
@@ -213,6 +216,7 @@ export class Tasks {
       branch: w.worktree?.branch,
       closed: this.closed.get(floor.id),
       ...(words ? { lastWords: floor.lastWords?.(w) } : {}),
+      closedSince: outcomesSince(),
     };
   }
 
