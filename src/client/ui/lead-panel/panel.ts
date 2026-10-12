@@ -243,8 +243,9 @@ export class LeadPanel {
     if (this.avKey !== this.avatarKey()) ((this.avKey = this.avatarKey()), this.head.av.replaceChildren(this.avatarEl()));
     this.head.name.textContent = hd.name;
     this.head.role.textContent = this.lead?.kind === 'none' ? '' : ` · ${hd.role}`;
-    this.head.status.replaceChildren(h('span.lp-st', { class: `lp-st-${st.dot}` }, h('i', { 'aria-hidden': 'true' }), st.text));
-    this.head.status.title = facts ? `Team: ${facts}` : '';
+    this.head.status.replaceChildren(h('span.lp-st', { class: `lp-st-${st.dot}` }, h('i', { 'aria-hidden': 'true' }), h('span.lp-st-t', {}, st.text)));
+    // One line; the whole of it (and the team's shape) on hover.
+    this.head.status.title = `${st.text}${facts ? ` · Team: ${facts}` : ''}`;
     this.wakeBtn.hidden = !(this.view.canWake && this.member());
   }
 

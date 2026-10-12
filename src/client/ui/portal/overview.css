@@ -53,7 +53,8 @@ html[data-theme^='portal'] body.lite .pt-prog :is(#progress-bar, .pg-bar) { disp
 html[data-theme^='portal'] body.lite .pt-prog .pg-fold { display: none; }
 html[data-theme^='portal'] body.lite .pt-prog .pg-label { grid-column: 2; grid-row: 1; max-width: none; height: 20px; padding: 0 8px; border-radius: 10px; background: var(--accent-soft); color: var(--ink); font-size: 11.5px; font-weight: var(--fw-semi); }
 html[data-theme^='portal'] body.lite .pt-prog .pg-tk { grid-column: 4; grid-row: 1; }
-html[data-theme^='portal'] body.lite .pt-prog .pg-track { grid-column: 1 / -1; grid-row: 2; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; height: auto; }
+/* At least 112 px a stage, so a name like “3 · Architecture & Design” takes two lines at most: with the team-lead panel open the stages wrap onto a second row rather than squeezing their names. */
+html[data-theme^='portal'] body.lite .pt-prog .pg-track { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); grid-auto-flow: row; gap: 12px 6px; height: auto; }
 /* Each stage: its bar, then its name, then what was measured. The name wraps onto a second line rather than being cut off ("Require…"); the whole of it is in the tooltip on hover and focus. */
 html[data-theme^='portal'] body.lite .pt-prog .pg-seg {
   display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 6px auto auto; align-content: start; gap: 4px; height: auto; min-height: 0; padding: 0 0 2px; overflow: visible;
@@ -67,13 +68,13 @@ html[data-theme^='portal'] body.lite .pt-prog .pg-seg.waiting::before { backgrou
 html[data-theme^='portal'] body.lite .pt-prog .pg-seg.active::before { background: linear-gradient(90deg, var(--accent) 60%, var(--accent-soft) 60%); }
 html[data-theme^='portal'] body.lite .pt-prog .pg-seg.current { box-shadow: none; }
 html[data-theme^='portal'] body.lite .pt-prog .pg-seg:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-html[data-theme^='portal'] body.lite .pt-prog .pg-seg-n { grid-row: 2; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; min-width: 0; }
+html[data-theme^='portal'] body.lite .pt-prog .pg-seg-n { grid-row: 2; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: break-word; min-width: 0; }
 html[data-theme^='portal'] body.lite .pt-prog .pg-seg.active .pg-seg-n { color: var(--accent); }
 html[data-theme^='portal'] body.lite .pt-prog :is(.pg-seg.pending, .pg-seg.waived) .pg-seg-n { color: var(--muted); }
-html[data-theme^='portal'] body.lite .pt-prog .pg-seg-d { grid-row: 3; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; min-width: 0; color: var(--muted); font-size: 11.5px; font-weight: 400; overflow-wrap: anywhere; }
+html[data-theme^='portal'] body.lite .pt-prog .pg-seg-d { grid-row: 3; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; min-width: 0; color: var(--muted); font-size: 11.5px; font-weight: 400; overflow-wrap: break-word; }
 html[data-theme^='portal'] body.lite .pt-prog :is(.pg-seg-id, .pg-seg-t, .pg-marks, .pg-seg-tiny) { display: none; }
 @container ov (max-width: 560px) {
-  html[data-theme^='portal'] body.lite .pt-prog .pg-track { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 12px; }
+  html[data-theme^='portal'] body.lite .pt-prog .pg-track { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
 }
 
 /* ---- Needs you ---------------------------------------------------------------------------------------- */

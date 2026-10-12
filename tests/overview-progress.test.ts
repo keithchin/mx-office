@@ -1,8 +1,9 @@
 // The Overview's Progress card (Portal) with the team-lead panel open: the mockup cut the stage names off
 // ("Require…", "confirm…") at 1440 px with the panel open. Here, in headless Chromium with every client
 // stylesheet on the page, a toolkit project's nine stages at 1440 and 1920 px, panel open and collapsed,
-// in Portal Light and Dark: every stage's name and the line under it are shown whole (they wrap onto a
-// second line), and the segments' tooltip (on hover and focus) keeps the full text besides.
+// in Portal Light and Dark: every stage's name and the line under it are shown whole (a name wraps onto a
+// second line, and with the panel open the stages take a second row rather than squeezing it), and the
+// segments' tooltip (on hover and focus) keeps the full text besides.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -36,7 +37,9 @@ const STAGES: [string, string, string, string][] = [
 
 function page(theme: string, collapsed: boolean): string {
   const segs = STAGES.map(([id, t, st, d]) => `<button class="pg-seg ${st} k-stage" data-phase="${id}" aria-label="Stage ${id}, ${t}"><span class="pg-seg-id">${id}</span><span class="pg-seg-t">${t}</span><span class="pg-seg-n" aria-hidden="true">${id} · ${t}</span><span class="pg-seg-d" aria-hidden="true">${d}</span></button>`).join('');
-  const css = sheets('src/client').map((f) => read(f).replace(/@import[^;]+;/g, '')).join('\n');
+  // Every module's sheet and the 1D view's own page sheet, not the other pages' (login.css makes body a grid).
+  const other = (f: string) => path.dirname(f) === path.join('src', 'client') && path.basename(f) !== 'lite.css';
+  const css = sheets('src/client').filter((f) => !other(f)).map((f) => read(f).replace(/@import[^;]+;/g, '')).join('\n');
   return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><style>${css}</style></head>
 <body class="lite pt-has-nav lp-on${collapsed ? ' lp-collapsed' : ''}"><main class="lite-main on-command board">
 <section class="pt-ov-card pt-prog pt-only" id="pt-progress"><h2>Progress</h2><div id="progress-bar" class="pg-host"><div class="pg-bar"><button class="pg-fold">▾</button><div class="pg-track">${segs}</div><button class="pg-label">Stage 5 · Build</button></div></div></section>
@@ -53,12 +56,12 @@ test('with the panel open at 1440 px the stage names wrap, never cut off', { ski
           const at = `${theme} ${width}px, panel ${collapsed ? 'collapsed' : 'open'}`;
           const p = await browser.newPage({ viewport: { width, height: 900 } });
           await p.setContent(page(theme, collapsed));
-          const m = (await p.evaluate(`(() => [...document.querySelectorAll('.pg-seg-n, .pg-seg-d')].map((el) => ({ t: el.textContent, cut: el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1, h: el.clientHeight, shown: getComputedStyle(el).display !== 'none' })))()`)) as { t: string; cut: boolean; h: number; shown: boolean }[];
+          const m = (await p.evaluate(`(() => [...document.querySelectorAll('.pg-seg-n, .pg-seg-d')].map((el) => ({ t: el.textContent, cut: el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1, h: el.clientHeight, sh: el.scrollHeight, w: el.clientWidth, sw: el.scrollWidth, track: Math.round(document.querySelector('.pg-track').getBoundingClientRect().width), shown: getComputedStyle(el).display !== 'none' })))()`)) as { t: string; cut: boolean; h: number; shown: boolean }[];
           await p.close();
           assert.equal(m.length, STAGES.length * 2);
           for (const x of m) {
             assert.ok(x.shown, `${at}: "${x.t}" is shown`);
-            assert.ok(!x.cut, `${at}: "${x.t}" is cut off`);
+            assert.ok(!x.cut, `${at}: "${x.t}" is cut off (${JSON.stringify(x)})`);
           }
         }
   } finally {

@@ -46,7 +46,9 @@ test('the Progress card’s stage names wrap onto a second line instead of being
   const css = read('src/client/ui/portal/overview.css');
   const name = css.match(/\.pt-prog \.pg-seg-n \{([^}]*)\}/)?.[1] ?? '';
   assert.match(name, /-webkit-line-clamp: 2/);
-  assert.match(name, /overflow-wrap: anywhere/);
+  assert.match(name, /overflow-wrap: break-word/);
+  // Wide enough for two lines: the stages wrap onto another row before a name is squeezed.
+  assert.match(css, /\.pt-prog \.pg-track \{[^}]*grid-template-columns: repeat\(auto-fit, minmax\(112px, 1fr\)\);/);
   assert.doesNotMatch(name, /white-space: nowrap|text-overflow: ellipsis/);
   assert.match(css, /\.pt-prog \.pg-seg \{[^}]*white-space: normal;/);
   // The bar's tooltip (the segment's hover and focus) has the whole name and what was measured.

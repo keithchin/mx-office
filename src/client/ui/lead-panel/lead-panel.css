@@ -26,7 +26,9 @@ body.lp-collapsed .lp { transform: translateX(24px); opacity: 0; visibility: hid
 .lp-who { flex: 1; min-width: 0; }
 .lp-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lp-name-r { font-weight: 400; color: var(--ink-2); }
-.lp-status { min-height: 18px; margin-top: 1px; font-size: 12px; color: var(--ink-2); }
+.lp-status { min-height: 18px; margin-top: 1px; overflow: hidden; font-size: 12px; color: var(--ink-2); white-space: nowrap; text-overflow: ellipsis; }
+.lp-status .lp-st { display: flex; min-width: 0; }
+.lp-st-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lp-st { display: inline-flex; align-items: center; gap: 5px; }
 .lp-st i, .lp-rail-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
 .lp-st-work i, .lp-rail-dot.lp-st-work { background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); }
