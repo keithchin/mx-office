@@ -25,6 +25,10 @@ export const wizardApi = {
   job: (id: string) => call<JobView>('GET', `/api/wizard/job?id=${q(id)}`),
   start: (plan: ProjectPlan, by?: string) => call<JobView>('POST', '/api/wizard/start', { ...plan, by }),
   retry: (id: string) => call<JobView>('POST', `/api/wizard/retry?id=${q(id)}`, {}),
+  /** "Check GitHub again": the office looks at an operation whose outcome it couldn't confirm. */
+  check: (id: string) => call<JobView>('POST', `/api/wizard/check?id=${q(id)}`, {}),
+  /** "Use this existing repository / folder" (never Cancel & undo's to delete). */
+  adopt: (id: string, op: string) => call<JobView>('POST', `/api/wizard/adopt?id=${q(id)}`, { op }),
   edit: (id: string, plan: ProjectPlan) => call<JobView>('POST', `/api/wizard/edit?id=${q(id)}`, plan),
   setup: (floor: string) => call<SetupView>('GET', `/api/wizard/setup?floor=${q(floor)}`),
   answers: (floor: string) => call<{ repo?: string; answers: IntakeAnswer[] }>('GET', `/api/wizard/answers?floor=${q(floor)}`),

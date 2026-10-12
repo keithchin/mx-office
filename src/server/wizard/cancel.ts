@@ -10,6 +10,9 @@
 // The folder and the repository go only on the setup's recorded proof (ownership.ts), checked by the plan
 // and again by the steps themselves right before deleting: a request that asks for more is refused for
 // that item. The repository is never handed to Delete project's job, so its id is checked right before it goes.
+// The proof is the setup's operation records (shared/setup-operations.ts): only a confirmed create by this
+// operation counts (step 1's provenance for a setup with none), and each delete is an operation record of
+// its own, its intent saved before GitHub or the disk is asked, and settled by a look when its answer was lost.
 
 import { existsSync } from 'node:fs';
 import { readFile, readdir, rm } from 'node:fs/promises';
@@ -24,6 +27,10 @@ import { canDeleteRepo, deleteRepo, repoSettingsUrl, type Gh } from '../project-
 import type { JobState } from './job.js';
 import { readProvenance, type SetupProvenance } from '../../shared/setup-provenance.js';
 import { folderAuthority, repoAuthority, type FolderAuthority } from './ownership.js';
+import { effectiveProvenance, type OperationRecord } from '../../shared/setup-operations.js';
+import { OperationStore, type JobOps } from './operations.js';
+import { reconcile } from './reconcile.js';
+import { lookupWithGh, refusedForSure } from './repo-lookup.js';
 
 const DONE_KEEP_MS = 10 * 60_000;
 
@@ -35,8 +42,11 @@ export interface SetupSnapshot {
   floor?: string;
   dir: string;
   steps: { id: StepId; status: StepStatus; detail?: string }[];
-  /** The setup's proof of what it made (absent for a setup saved before it: nothing is then the setup's to delete). */
+  /** The setup's proof of what it made, its operation records folded in (absent for a setup saved before both: nothing is then the setup's to delete). */
   provenance?: SetupProvenance;
+  /** Which run of the setup (its startedAt), and its operation records when the snapshot was taken. */
+  startedAt?: number;
+  operations?: OperationRecord[];
 }
 
 interface CancelRecord extends CancelJobView {
@@ -76,13 +86,16 @@ export interface CancelDeps {
     job(floor: string): Promise<DeleteJobView | undefined>;
   };
   gh: Gh;
+  /** The setups' operation records (the job book's); kept in memory when not given (tests of older behaviour). */
+  operations?: OperationStore;
   testMode(): boolean;
   ghIsFake(): boolean;
   audit(s: SetupSnapshot, by: { name: string; id?: string }, job: CancelJobView): void;
   now(): number;
 }
 
-export function snapshotOf(job: JobState, dir: string): SetupSnapshot {
+export function snapshotOf(job: JobState, dir: string, ops: readonly OperationRecord[] = []): SetupSnapshot {
+  const prov = effectiveProvenance(ops, job.provenance);
   return {
     id: job.id,
     repo: `${job.plan.owner}/${job.plan.name}`,
@@ -90,7 +103,9 @@ export function snapshotOf(job: JobState, dir: string): SetupSnapshot {
     ...(job.floor ? { floor: job.floor } : {}),
     dir: job.dir ?? dir,
     steps: SETUP_STEPS.map((s) => ({ id: s.id, status: job.steps[s.id]?.status ?? 'pending', ...(job.steps[s.id]?.detail ? { detail: job.steps[s.id].detail } : {}) })),
-    ...(readProvenance(job.provenance) ? { provenance: readProvenance(job.provenance) } : {}),
+    ...(prov ? { provenance: prov } : {}),
+    startedAt: job.startedAt,
+    ...(ops.length ? { operations: [...ops] } : {}),
   };
 }
 
@@ -102,7 +117,36 @@ export class SetupCancels {
   private live = new Map<string, CancelRecord>();
   private finished = new Map<string, CancelRecord>();
 
-  constructor(private deps: CancelDeps) {}
+  private store: OperationStore;
+
+  constructor(private deps: CancelDeps) {
+    this.store = deps.operations ?? new OperationStore('', { memory: true });
+  }
+
+  /** The setup run's operation records now (the snapshot's copy when the store has none). */
+  private opsOf(s: SetupSnapshot): OperationRecord[] {
+    const live = s.startedAt !== undefined ? this.store.of(s.id, s.startedAt) : [];
+    return live.length ? live : (s.operations ?? []);
+  }
+
+  private opsFor(s: SetupSnapshot): JobOps {
+    return this.store.handle({ id: s.id, startedAt: s.startedAt ?? 0, floor: s.floor });
+  }
+
+  /** A folder delete as an operation record: intent saved first (or nothing happens), the outcome from whether the folder is still there. */
+  private async deleteFolderOp(s: SetupSnapshot, authorisedBy: string | undefined, act: () => Promise<void>): Promise<void> {
+    const h = this.opsFor(s);
+    const op = await h.dispatch(await h.prepare('folder-delete', path.resolve(s.dir), { provenance: 'created-by-this-operation', ...(authorisedBy ? { authorisedBy } : {}) }));
+    try {
+      await act();
+    } catch (err) {
+      const still = existsSync(s.dir);
+      await h.settle(op, still ? 'failed-confirmed' : 'succeeded', { detail: (err as Error).message.slice(0, 300) }).catch(() => undefined);
+      if (still) throw err;
+      return;
+    }
+    await h.settle(op, existsSync(s.dir) ? 'failed-confirmed' : 'succeeded', { detail: existsSync(s.dir) ? 'still there after the delete' : `deleted ${s.dir}` });
+  }
 
   private file(id: string) {
     return path.join(this.deps.dataDir, 'deleted', 'setup-cancels', `${id.replace(/[^A-Za-z0-9_.-]/g, '_')}.json`);
@@ -147,7 +191,7 @@ export class SetupCancels {
 
   private snapshot(id: string, old?: CancelRecord): SetupSnapshot | undefined {
     const job = this.deps.setup(id);
-    if (job) return snapshotOf(job, this.deps.defaultDir(job.plan.owner, job.plan.name));
+    if (job) return snapshotOf(job, this.deps.defaultDir(job.plan.owner, job.plan.name), this.store.of(job.id, job.startedAt));
     return old?.setup;
   }
 
@@ -157,12 +201,12 @@ export class SetupCancels {
 
   /** Whether the folder is the setup's to delete now (ownership.ts); `refusal` is Delete project's, while the floor is there. */
   private folderAuth(s: SetupSnapshot, refusal?: string): Promise<FolderAuthority> {
-    return folderAuthority(s.dir, readProvenance(s.provenance), madeBySetup(s.steps).legacyFolder, this.rules(s.dir), refusal);
+    return folderAuthority(s.dir, readProvenance(s.provenance), madeBySetup(s.steps).legacyFolder, this.rules(s.dir), refusal, this.opsOf(s));
   }
 
   /** Whether the repository is the setup's to delete now: its proof, and the same id on GitHub at that name. */
   private repoAuth(s: SetupSnapshot) {
-    return repoAuthority(this.deps.gh, readProvenance(s.provenance), normalizeRepo(s.repo) ?? s.repo, madeBySetup(s.steps).legacyRepo);
+    return repoAuthority(this.deps.gh, readProvenance(s.provenance), normalizeRepo(s.repo) ?? s.repo, madeBySetup(s.steps).legacyRepo, this.opsOf(s));
   }
 
   /** Why nothing may start now. */
@@ -326,17 +370,25 @@ export class SetupCancels {
         const plan = await d.deletes.plan(floor);
         if (typeof plan === 'string') throw new Error(plan);
         // The folder goes with the project only on the setup's proof, checked now; the repository never does (its step checks GitHub's id right before).
-        const folder = rec.deleteFolder && existsSync(s.dir) && (await this.folderAuth(s)).ok;
+        const fa = rec.deleteFolder && existsSync(s.dir) ? await this.folderAuth(s) : undefined;
+        const folder = !!fa?.ok;
         // A Delete project job an older office started for this cancel carries on with what it asked then: never one that would delete without proof.
         if (pending && pending.status !== 'done' && (pending.deleteRepo || (pending.deleteFolder && !folder)))
           throw new Error(
             `the Delete project job this cancel started earlier would also delete the ${pending.deleteRepo ? 'GitHub repository' : 'local folder'}, and the office no longer does that without proof the setup made it: carry it on from the project’s own Delete project, which asks again`,
           );
-        const started = await d.deletes.start(floor, { mode: folder ? 'delete' : 'remove', deleteFolder: folder, deleteRepo: false, discardWork: true, confirm: plan.confirm }, { name: rec.by, id: rec.byId });
-        if (typeof started === 'string') throw new Error(started);
-        await d.deletes.settled(floor);
-        const job = await d.deletes.job(floor);
-        if (!job || job.status !== 'done') throw new Error(job?.error ?? 'Delete project stopped part way: Retry carries it on');
+        let job: DeleteJobView | undefined;
+        const viaDelete = async () => {
+          const started = await d.deletes.start(floor, { mode: folder ? 'delete' : 'remove', deleteFolder: folder, deleteRepo: false, discardWork: true, confirm: plan.confirm }, { name: rec.by, id: rec.byId });
+          if (typeof started === 'string') throw new Error(started);
+          await d.deletes.settled(floor);
+          job = await d.deletes.job(floor);
+          if (!job || job.status !== 'done') throw new Error(job?.error ?? 'Delete project stopped part way: Retry carries it on');
+        };
+        // The folder's delete is an operation record of its own, whoever does it.
+        if (folder) await this.deleteFolderOp(s, fa?.ok ? fa.op : undefined, viaDelete);
+        else await viaDelete();
+        if (!job) throw new Error('Delete project stopped part way: Retry carries it on');
         rec.viaProject = true;
         rec.folderViaProject = job.deleteFolder;
         return { detail: `taken off the office as Delete project does${job.archiveDir ? `; office data archived to ${job.archiveDir}` : ''}` };
@@ -344,17 +396,23 @@ export class SetupCancels {
       case 'folder': {
         if (rec.deleteFolder && (rec.folderViaProject || legacyVia)) return { detail: `deleted ${s.dir} (with the project)` };
         if (!rec.deleteFolder) return { detail: `kept ${s.dir}`, skipped: true };
+        // An earlier try's delete whose end was lost: settled by looking at the folder.
+        await reconcile(this.store, { id: s.id, startedAt: s.startedAt ?? 0 }, { lookup: (r) => lookupWithGh(d.gh, r) }, { kinds: ['folder-delete'] });
         if (!existsSync(s.dir)) return { detail: `${s.dir} was already gone` };
         // Checked again here, whatever was asked: no proof, a link, or outside the projects folder keeps it.
         const auth = await this.folderAuth(s);
         if (!auth.ok) return { detail: `kept ${s.dir}: not deleted, because ${auth.why}`, skipped: true };
-        await removeTree(s.dir);
+        await this.deleteFolderOp(s, auth.op, () => removeTree(s.dir));
         return { detail: `deleted ${s.dir}` };
       }
       case 'repo': {
         if (rec.deleteRepo && legacyVia) return { detail: `deleted ${s.repo} (with the project)` };
         if (!rec.deleteRepo) return { detail: madeBySetup(s.steps).offline ? 'a local repository: nothing on GitHub' : `kept ${s.repo}`, skipped: true };
         if (d.testMode() && !d.ghIsFake()) throw new Error('test mode never deletes a real GitHub repository');
+        // A delete an earlier try sent whose answer was lost: settled by a look first, never sent twice on a guess.
+        const earlier = await reconcile(this.store, { id: s.id, startedAt: s.startedAt ?? 0 }, { lookup: (r) => lookupWithGh(d.gh, r) }, { kinds: ['repo-delete'] });
+        if (earlier.length) throw new Error(`an earlier try asked GitHub to delete ${s.repo}, and the office still can’t tell whether it happened (${earlier[0].detail ?? 'GitHub couldn’t say'}): check the office’s GitHub login in 🔌 Connections, then carry on cancelling`);
+        if (this.opsOf(s).some((o) => o.kind === 'repo-delete' && o.state === 'succeeded')) return { detail: `deleted ${s.repo}` };
         // Checked again right before deleting, whatever was asked: the setup's proof, and the same id at that name on GitHub now.
         const auth = await this.repoAuth(s);
         if (!auth.ok) {
@@ -365,13 +423,26 @@ export class SetupCancels {
         }
         const can = await canDeleteRepo(d.gh, s.repo);
         if (!can.possible) throw new Error(can.why ?? 'the token can’t delete it');
-        const r = await deleteRepo(d.gh, s.repo);
+        // The intent is saved before GitHub is asked: a save that fails throws here, and nothing is sent.
+        const h = this.opsFor(s);
+        const op = await h.dispatch(await h.prepare('repo-delete', s.repo, { provenance: 'created-by-this-operation', identity: { githubId: auth.githubId, nameWithOwner: s.repo }, ...(auth.op ? { authorisedBy: auth.op } : {}) }));
+        let r: 'deleted' | 'gone';
+        try {
+          r = await deleteRepo(d.gh, s.repo);
+        } catch (err) {
+          const msg = (err as Error).message.slice(0, 300);
+          await h.settle(op, refusedForSure(msg) ? 'failed-confirmed' : 'outcome-unknown', { detail: msg }).catch(() => undefined);
+          throw err;
+        }
+        await h.settle(op, 'succeeded', { detail: r === 'gone' ? 'already gone' : 'deleted' });
         return { detail: r === 'gone' ? `${s.repo} was already gone` : `deleted ${s.repo}` };
       }
       case 'record': {
         if (d.running(s.id)) throw new Error('the setup is running again: let it stop first');
-        if (!d.setup(s.id)) return { detail: 'removed (it went with the project’s office data)' };
+        if (!d.setup(s.id)) return this.store.retire(s.id), { detail: 'removed (it went with the project’s office data)' };
         if (!d.removeSetup(s.id)) throw new Error('couldn’t remove the setup’s record');
+        // Its operation records are kept beside, never read again (a later setup at the same name starts afresh).
+        this.store.retire(s.id);
         return { detail: 'removed' };
       }
     }

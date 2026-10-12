@@ -11,6 +11,8 @@ import { interviewModeOf, SETUP_STEPS, type JobView, type ProjectPlan, type Proj
 import { FileStore, FlowEngine, transientError, type RetryPolicy, type RunRecord, type RunStatus, type StepCtx } from '../flow/index.js';
 import { lostEnd, runningCommands } from './run.js';
 import { withProvenance, type SetupProvenance } from '../../shared/setup-provenance.js';
+import { needsAttention, operationNotice, type OperationRecord } from '../../shared/setup-operations.js';
+import { OPERATION_ERRORS, OperationPendingError, OperationStore, type JobOps } from './operations.js';
 
 export interface JobState {
   id: string;
@@ -52,9 +54,11 @@ export interface StepResult {
   provenance?: Partial<Pick<SetupProvenance, 'repo' | 'folder'>>;
 }
 
-/** What a step can do besides its own work: say things in the log. */
+/** What a step can do besides its own work: say things in the log, and keep its operation records (operations.ts). */
 export interface StepIO {
   log(line: string): void;
+  /** The setup run's operation records (the job book gives them; a step run on its own keeps them in memory). */
+  ops?: JobOps;
 }
 
 export type StepImpl = (job: JobState, io: StepIO) => Promise<StepResult>;
@@ -77,9 +81,9 @@ export function waitingOn(now: number, commands: Iterable<{ line: string; since:
 }
 
 /** The steps that talk to GitHub or download something: a dropped connection or a rate limit is tried again, twice. */
-const NETWORK: RetryPolicy = { maxAttempts: 3, baseMs: 3000, maxMs: 30_000, retryOn: (err) => transientError(err) || lostEnd(err) };
+const NETWORK: RetryPolicy = { maxAttempts: 3, baseMs: 3000, maxMs: 30_000, retryOn: (err) => !OPERATION_ERRORS.has(err.name) && (transientError(err) || lostEnd(err)) };
 /** Every other step: a command whose end was lost (run.ts LostEndError) is run once more by itself. */
-const LOST: RetryPolicy = { maxAttempts: 2, baseMs: 1000, maxMs: 1000, retryOn: lostEnd };
+const LOST: RetryPolicy = { maxAttempts: 2, baseMs: 1000, maxMs: 1000, retryOn: (err) => !OPERATION_ERRORS.has(err.name) && lostEnd(err) };
 const RETRIES: Partial<Record<StepId, RetryPolicy>> = { repo: NETWORK, clone: NETWORK, app: NETWORK, commit: NETWORK, issue: NETWORK };
 const retryFor = (id: StepId): RetryPolicy => RETRIES[id] ?? LOST;
 
@@ -94,7 +98,9 @@ export function newJob(plan: ProjectPlan, by: string, account?: string): JobStat
   return { id: jobId(plan.owner, plan.name), plan, steps, log: [], status: 'idle', by, account, startedAt: now, updatedAt: now };
 }
 
-export function viewOf(job: JobState): JobView {
+/** The page's view of a job; `ops` are its run's operation records (one that needs someone is said in `operation`). */
+export function viewOf(job: JobState, ops: readonly OperationRecord[] = []): JobView {
+  const operation = operationNotice(ops);
   return {
     id: job.id,
     plan: job.plan,
@@ -106,6 +112,7 @@ export function viewOf(job: JobState): JobView {
     by: job.by,
     startedAt: job.startedAt,
     updatedAt: job.updatedAt,
+    ...(operation ? { operation } : {}),
   };
 }
 
@@ -148,11 +155,16 @@ export class JobBook {
   /** How long a step may say nothing before it says what it waits on (STEP_QUIET_MS; the tests shorten it). */
   quietMs = STEP_QUIET_MS;
 
+  /** The setups' operation records (<dir>/operations/), written through the acknowledged critical write. */
+  readonly ops: OperationStore;
+
   constructor(
     private dir: string,
     private redact: (line: string) => string = (l) => l,
     engine?: FlowEngine,
+    opts: { ops?: OperationStore } = {},
   ) {
+    this.ops = opts.ops ?? new OperationStore(path.join(dir, 'operations'));
     this.engine = engine ?? new FlowEngine({ store: new FileStore(dir) });
     this.engine.register<JobState>({
       id: SETUP_FLOW,
@@ -205,6 +217,20 @@ export class JobBook {
 
   isRunning(id: string): boolean {
     return this.engine.isActive(id);
+  }
+
+  /** The operation records of the job's run. */
+  opsOf(job: JobState): OperationRecord[] {
+    return this.ops.of(job.id, job.startedAt);
+  }
+
+  /** The records that stop its next steps (an outcome nobody confirmed, or a create waiting to be adopted). */
+  pendingOps(job: JobState): OperationRecord[] {
+    return this.opsOf(job).filter(needsAttention);
+  }
+
+  view(job: JobState): JobView {
+    return viewOf(job, this.opsOf(job));
   }
 
   log(job: JobState, line: string) {
@@ -265,6 +291,14 @@ export class JobBook {
     const job = ctx.state;
     const impl = this.impls.get(job.id)?.[id];
     if (!impl) throw new Error(RESTARTED);
+    // No step runs while an operation's outcome is unsettled: it could create or remove the wrong thing (reconcile.ts).
+    const notice = operationNotice(this.pendingOps(job));
+    if (notice) {
+      const why = `${notice.title}. ${notice.text}`;
+      job.steps[id] = { status: 'failed', detail: why };
+      this.log(job, `⏸ ${label}: ${why}`);
+      throw new OperationPendingError(why);
+    }
     job.steps[id] = { status: 'running' };
     this.log(job, `▶ ${label}${ctx.attempt > 1 ? ` (try ${ctx.attempt} of ${ctx.maxAttempts})` : ''}`);
     this.save(job);
@@ -296,7 +330,7 @@ export class JobBook {
     };
     let r: StepResult;
     try {
-      r = await impl(job, io);
+      r = await impl(job, { ...io, ops: this.ops.handle(job, ctx.attempt) });
     } catch (err) {
       clearInterval(watch);
       const why = this.redact((err as Error).message || String(err));
@@ -307,6 +341,8 @@ export class JobBook {
       // A lost end stays recognisable, so the engine can tell it apart from other failures.
       const out = new Error(why);
       if (lost) out.name = 'LostEndError';
+      // An operation's record that couldn't be saved, or an outcome not settled, is never tried again by itself.
+      if (OPERATION_ERRORS.has((err as Error).name)) out.name = (err as Error).name;
       throw out;
     }
     clearInterval(watch);

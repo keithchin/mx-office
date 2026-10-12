@@ -22,7 +22,9 @@ import { SHAPES, shapeForRoles, type TeamShape } from '../../shared/roster/cover
 import { createApp, ignoreMendixOutput, mprVersion } from './mendix-app.js';
 import { recordDecisions } from './register.js';
 import { bashPath, runCommand } from './run.js';
-import { couldntCheck, lookupWithRun, recordFound } from './repo-lookup.js';
+import { couldntCheck, lookupWithRun, recordFound, refusedForSure } from './repo-lookup.js';
+import { OperationPendingError, OperationStore, type JobOps } from './operations.js';
+import { operationNotice } from '../../shared/setup-operations.js';
 import { folderRecord } from './ownership.js';
 import { withProvenance } from '../../shared/setup-provenance.js';
 import { LONGPATHS_CLONE_ARGS, ensureLongPaths } from '../longpaths.js';
@@ -105,6 +107,41 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
   };
   const file = (job: JobState, rel: string) => path.join(dirOf(job), rel);
   const quiet: StepIO = { log: () => undefined };
+  // The job book gives each step its run's operation records; a step run on its own (the tests) keeps them in memory.
+  const opsOf = (job: JobState, io: StepIO): JobOps => io.ops ?? new OperationStore('', { memory: true }).handle(job);
+  /** An outcome that may or may not have happened: saved as such (a save that fails leaves it in-flight, unsettled too), and the setup pauses. */
+  const uncertain = async (ops: JobOps, op: Awaited<ReturnType<JobOps['prepare']>>, detail: string): Promise<never> => {
+    const saved = await ops.settle(op, 'outcome-unknown', { detail }).catch(() => op);
+    const n = operationNotice([saved]);
+    throw new OperationPendingError(n ? `${n.title}. ${n.text}` : detail);
+  };
+  /**
+   * A folder the setup is about to make, as an operation record (intent saved before, outcome after):
+   * `act` makes it; a failure that left nothing there is failed-confirmed, one that left something is uncertain.
+   */
+  const folderOp = async <T>(job: JobState, io: StepIO, dest: string, act: () => Promise<T>): Promise<T> => {
+    const ops = opsOf(job, io);
+    const op = await ops.prepare('folder-create', path.resolve(dest), { before: 'absent' });
+    await ops.dispatch(op);
+    let r: T;
+    try {
+      r = await act();
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (existsSync(dest)) await uncertain(ops, op, msg.slice(0, 300));
+      await ops.settle(op, 'failed-confirmed', { detail: msg.slice(0, 300) }).catch(() => undefined);
+      throw err;
+    }
+    return r;
+  };
+  /** The folder's outcome, once it's there: the setup's own only when it wasn't there before (folderRecord). */
+  const folderDone = async (job: JobState, io: StepIO, dir: string) => {
+    const ops = opsOf(job, io);
+    const op = ops.list().filter((o) => o.kind === 'folder-create' && o.state === 'in-flight').at(-1);
+    const f = job.provenance?.folder;
+    if (!op || !f) return;
+    await ops.settle(op, 'succeeded', { provenance: f.createdBySetup ? 'created-by-this-operation' : 'pre-existing', identity: { realpath: f.path }, detail: f.createdBySetup ? `cloned into ${dir}` : `${dir} was there already` });
+  };
 
   /**
    * The toolkit's pre-commit hook refuses a model the mxbuild gate hasn't passed on this machine, so a
@@ -148,20 +185,40 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       }
       // Created only when GitHub says plainly it isn't there: a lookup that couldn't tell (a timeout, the login, a 403, GitHub down) stops here (repo-lookup.ts).
       const look = () => lookupWithRun((a) => (deps.run ?? runCommand)('gh', a, { cwd: deps.projectsDir(), env: env(), timeoutMs: MIN, allowFail: true }), repo);
+      // The intent is saved before gh is asked anything (operations.ts): a save that fails throws here, and nothing is sent.
+      // A create that turns out not to be needed (or can't be checked) never went out: failed-confirmed, it says nothing.
+      const ops = opsOf(job, io);
+      const op = job.plan.createdByHand ? undefined : await ops.prepare('repo-create', repo);
+      const notSent = (detail: string) => (op ? ops.settle(op, 'failed-confirmed', { detail }) : Promise.resolve(undefined));
       const seen = await look();
-      if (seen.state === 'found') return { status: 'skipped', detail: `${repo} is already on GitHub`, provenance: { repo: recordFound(job.provenance?.repo, repo, seen, Date.now()) } };
-      if (seen.state === 'unknown') throw new Error(couldntCheck(repo, seen.reason));
-      if (job.plan.createdByHand) throw new Error(`Couldn't find ${repo} on GitHub with the office's login. Create it there first (in ${job.plan.owner}, with a README), then Retry`);
+      if (seen.state === 'found') {
+        await notSent(`not needed: ${repo} is already on GitHub`);
+        return { status: 'skipped', detail: `${repo} is already on GitHub`, provenance: { repo: recordFound(job.provenance?.repo, repo, seen, Date.now()) } };
+      }
+      if (seen.state === 'unknown') {
+        await notSent(`not sent: couldn't check GitHub (${seen.reason.slice(0, 200)})`);
+        throw new Error(couldntCheck(repo, seen.reason));
+      }
+      if (job.plan.createdByHand || !op) throw new Error(`Couldn't find ${repo} on GitHub with the office's login. Create it there first (in ${job.plan.owner}, with a README), then Retry`);
       const token = readAdminToken(cfg.adminTokenFile);
-      if (!token) throw new Error(`No admin token in 🔌 Connections or ${cfg.adminTokenFile}. ${adminTokenHelp(cfg.adminTokenFile, job.plan.owner).join(' ')}`);
+      if (!token) {
+        await notSent('not sent: no admin token');
+        throw new Error(`No admin token in 🔌 Connections or ${cfg.adminTokenFile}. ${adminTokenHelp(cfg.adminTokenFile, job.plan.owner).join(' ')}`);
+      }
       const hide = redactor([token]);
       const args = ['repo', 'create', repo, job.plan.private ? '--private' : '--public', '--add-readme'];
       if (job.plan.description) args.push('--description', job.plan.description);
+      // In flight, saved right before the command: GitHub said plainly it isn't there.
+      const sent = await ops.dispatch({ ...op, before: 'absent' });
       try {
         // The admin token goes to this one child and nowhere else (see admin-token.ts).
         await (deps.run ?? runCommand)('gh', args, { cwd: deps.projectsDir(), env: adminGhEnv(deps.env ?? process.env, token), timeoutMs: 2 * MIN, onLine: (l) => io.log(`  ${hide(l)}`) });
       } catch (err) {
-        throw new Error(hide((err as Error).message));
+        const msg = hide((err as Error).message);
+        // A plain "no" from GitHub didn't create anything; a timeout, a lost answer or a 5xx may have.
+        if (!refusedForSure(msg)) await uncertain(ops, sent, msg.slice(0, 300));
+        await ops.settle(sent, 'failed-confirmed', { detail: msg.slice(0, 300) }).catch(() => undefined);
+        throw new Error(msg);
       }
       // Proof for Cancel & undo: GitHub's id for what was just made (a repository made later at this name has another).
       let made = await look();
@@ -169,6 +226,12 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       const githubId = made.state === 'found' ? made.githubId : undefined;
       if (!githubId) io.log(`  couldn't read GitHub's id for ${repo} (${made.state === 'unknown' ? made.reason : made.state}): Cancel & undo won't delete it, delete it on GitHub yourself if you need to`);
       const nameWithOwner = (made.state === 'found' && made.nameWithOwner) || repo;
+      // The outcome: a save that fails throws OutcomeUnsavedError, and the setup pauses for reconciliation.
+      await ops.settle(sent, 'succeeded', {
+        provenance: 'created-by-this-operation',
+        identity: { nameWithOwner, ...(githubId ? { githubId } : {}), ...(made.state === 'found' && made.createdAt ? { createdAt: made.createdAt } : {}) },
+        detail: `created ${repo} on GitHub${githubId ? '' : " (GitHub's id not read)"}`,
+      });
       return { status: 'done', detail: `created ${repo} on GitHub (${job.plan.private ? 'private' : 'public'})`, provenance: { repo: { createdBySetup: true, nameWithOwner, ...(githubId ? { githubId } : {}), at: Date.now() } } };
     },
 
@@ -202,8 +265,10 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         const existed = existsSync(dest);
         if (!existsSync(path.join(dest, '.git'))) {
           mkdirSync(path.dirname(dest), { recursive: true });
-          await git(path.dirname(dest), ['clone', ...LONGPATHS_CLONE_ARGS, bare(job), dest], io);
+          const clone = () => git(path.dirname(dest), ['clone', ...LONGPATHS_CLONE_ARGS, bare(job), dest], io);
+          await (existed ? clone() : folderOp(job, io, dest, clone));
           await own(dest, existed);
+          if (!existed) await folderDone(job, io, dest);
           // origin reads as GitHub (the office keys floors by it); pushes go to the local bare repository.
           await git(dest, ['remote', 'set-url', 'origin', `https://github.com/${repo}.git`], io);
           await git(dest, ['remote', 'set-url', '--push', 'origin', bare(job)], io);
@@ -212,9 +277,16 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       }
       io.log(`  cloning ${repo} with the office's gh login…`);
       // The building moves into a checkout already at its place rather than cloning (building.ts): that one is never the setup's.
-      const existed = existsSync(path.join(deps.projectsDir(), job.plan.owner, job.plan.name));
-      const added = await deps.addFloor(repo, job.by, job.account);
-      if (typeof added !== 'string') await own(added.dir, existed);
+      const dest = path.join(deps.projectsDir(), job.plan.owner, job.plan.name);
+      const existed = existsSync(dest);
+      const add = async () => {
+        const r = await deps.addFloor(repo, job.by, job.account);
+        if (typeof r === 'string') throw new Error(r);
+        return r;
+      };
+      const added = await (existed ? add() : folderOp(job, io, dest, add));
+      await own(added.dir, existed);
+      if (!existed) await folderDone(job, io, added.dir);
       return await floorReady(settle(added, `cloned into ${deps.projectsDir()}`));
     },
 

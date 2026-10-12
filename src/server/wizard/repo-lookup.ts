@@ -8,7 +8,7 @@ import type { Gh } from '../project-delete/repo.js';
 import type { RunResult } from './run.js';
 import type { RepoProvenance } from '../../shared/setup-provenance.js';
 
-export type RepoLookup = { state: 'found'; nameWithOwner?: string; githubId?: string } | { state: 'not-found' } | { state: 'unknown'; reason: string };
+export type RepoLookup = { state: 'found'; nameWithOwner?: string; githubId?: string; createdAt?: string } | { state: 'not-found' } | { state: 'unknown'; reason: string };
 
 /** Something that means gh couldn't tell (checked first: a 403 page can say "not found" too). */
 const UNKNOWN = /HTTP 40[13]\b|HTTP 429\b|HTTP 5\d\d\b|\b401\b|\b403\b|authenticat|auth login|not logged in|bad credentials|forbidden|rate limit|\bsaml\b|took longer|timed? ?out|etimedout|econnreset|econnrefused|enotfound|eai_again|could not connect|connection (?:refused|reset)|\bnetwork\b|\btls\b|certificate|sign-in stopped working|isn't signed in|not installed|ended \(process/i;
@@ -29,14 +29,14 @@ export function classifyLookupFailure(text: string, repo = ''): RepoLookup {
 /** A successful `gh repo view --json id,nameWithOwner`. */
 function foundOf(stdout: string): RepoLookup {
   try {
-    const j = JSON.parse(stdout) as { id?: unknown; nameWithOwner?: unknown };
-    return { state: 'found', ...(typeof j.nameWithOwner === 'string' ? { nameWithOwner: j.nameWithOwner } : {}), ...(typeof j.id === 'string' && j.id ? { githubId: j.id } : {}) };
+    const j = JSON.parse(stdout) as { id?: unknown; nameWithOwner?: unknown; createdAt?: unknown };
+    return { state: 'found', ...(typeof j.nameWithOwner === 'string' ? { nameWithOwner: j.nameWithOwner } : {}), ...(typeof j.id === 'string' && j.id ? { githubId: j.id } : {}), ...(typeof j.createdAt === 'string' && j.createdAt ? { createdAt: j.createdAt } : {}) };
   } catch {
     return { state: 'found' };
   }
 }
 
-export const LOOKUP_ARGS = (repo: string) => ['repo', 'view', repo, '--json', 'id,nameWithOwner'];
+export const LOOKUP_ARGS = (repo: string) => ['repo', 'view', repo, '--json', 'id,nameWithOwner,createdAt'];
 
 /** The setup's lookup, through runCommand (allowFail): its exit code and output, or the error it threw (a timeout, gh missing). */
 export async function lookupWithRun(run: (args: string[]) => Promise<Pick<RunResult, 'code' | 'tail' | 'stdout'>>, repo: string): Promise<RepoLookup> {
@@ -74,3 +74,14 @@ export function recordFound(prior: RepoProvenance | undefined, repo: string, loo
 /** The step's message when GitHub couldn't say. */
 export const couldntCheck = (repo: string, reason: string) =>
   `Couldn't check whether ${repo} exists on GitHub: ${reason}. Check the office's GitHub login in 🔌 Connections, then Retry`;
+
+/**
+ * Whether a failed create or delete was refused for sure, so its effect didn't happen: GitHub answered
+ * with a 4xx that means "no" (bad request, the login, no permission, not there, the name taken). A
+ * timeout, a lost answer, a 5xx, the network or silence may have happened anyway: outcome unknown.
+ */
+export function refusedForSure(text: string): boolean {
+  const t = text.replace(/\s+/g, ' ');
+  if (/took longer|timed? ?out|etimedout|econnreset|econnrefused|enotfound|eai_again|ended \(process|without word|lost|HTTP 5\d\d\b|HTTP 429\b|rate limit/i.test(t)) return false;
+  return /HTTP 4(?:00|01|03|04|22)\b|name already exists|already exists on this account|bad credentials|must have admin rights/i.test(t);
+}

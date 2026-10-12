@@ -9,10 +9,11 @@
 
 import type { StepView } from './wizard.js';
 import { readProvenance } from './setup-provenance.js';
+import type { OperationNotice } from './setup-operations.js';
 
 /** Why Retry would fail right now, said before it runs, with what to do about it. */
 export interface SetupBlocker {
-  kind: 'paused' | 'budget' | 'pause-run' | 'resume-run' | 'restart' | 'studio';
+  kind: 'paused' | 'budget' | 'pause-run' | 'resume-run' | 'restart' | 'studio' | 'operation';
   text: string;
   /** The floor a Resume button wakes (an admin's, shown with a paused project). */
   resume?: string;
@@ -35,6 +36,8 @@ export interface UnfinishedSetup {
   by: string;
   updatedAt: number;
   blocker?: SetupBlocker;
+  /** An operation whose outcome isn't settled, or waits to be adopted: the card offers Check again (and Use this existing …), never Retry. */
+  operation?: OperationNotice;
   /** A Cancel & undo of it that stopped part way (Retry carries it on), or is running. */
   cancel?: CancelJobView;
 }
