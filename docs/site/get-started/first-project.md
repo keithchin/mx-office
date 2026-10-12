@@ -99,7 +99,17 @@ When the setup reaches its **Hire the project team** step, it sets the floor's s
 
 ## Page 6: Review & create
 
-Check the summary and click **✨ Create project**. A progress list runs each step. Every step can be retried, and a step that is already done is skipped.
+Check the summary and click **✨ Create project**. The wizard says *Here's how I'll set up travel-approval* and shows the setup as five groups that tick in order: **Repository**, **Mendix app**, **Toolkit & gates**, **Save & publish** and **Team**. The group that's running opens by itself; click any group to see its real steps (the 14 below), each marked done, running, failed or skipped. A skipped step says why, in the step's own words: in an offline test office, for example, *skipped: offline test office: nobody is hired*. A done group with skipped steps says how many. Every step can be retried, and a step that is already done is skipped.
+
+| Group | Its steps |
+| --- | --- |
+| Repository | 1–2 |
+| Mendix app | 3–4 |
+| Toolkit & gates | 5–8 and 10 |
+| Save & publish | 9, 11 and 12 |
+| Team | 13–14 |
+
+![The setup progress: five groups, then the ready card](../images/setup-progress.png)
 
 1. Create the GitHub repository (`gh repo create`, private, with the admin token). It first asks GitHub whether the repository is there, and creates it only when GitHub says plainly that it isn't. A repository that's there already is used as it is and is never the setup's to delete. When GitHub can't say (a timeout, a login that doesn't work, no permission, GitHub down), the step stops with *Couldn't check whether owner/name exists on GitHub: …* rather than guessing: check the office's GitHub login in 🔌 Connections, then Retry. When it creates the repository, the setup records that it did, with GitHub's id for it; when step 2 clones the folder, it records that too. Cancel & undo relies on these records.
 2. Clone it as a floor. On Windows the clone gets `core.longpaths true` in its own config (a Mendix app's npm packages go past 260 characters inside a worker's worktree; the office's own git has long paths from its environment anyway), and the floor's folder is marked trusted in the office's Claude Code config, so the team's agents start without the *Do you trust the files in this folder?* prompt.
@@ -116,11 +126,13 @@ Check the summary and click **✨ Create project**. A progress list runs each st
 13. Hire the project team: set the floor's team shape, then hire its roles (or the ones you ticked under Customize), the roster's way (the same as **Hire** on the Team tab). A role already at work is not hired again.
 14. Queue the Discovery task for an agent (when you ticked it and whoever covers Analysis isn't on the team; otherwise that member already has it).
 
-If a step fails, fix the cause and click **🔁 Retry from the failed step**. **✏️ Edit answers** goes back to the form. When it's done, click **🗂️ Go to the floor**.
+If a step fails, its group turns red with *Setup stopped at one step*, the step's error in plain words (a command is named by its file; **View setup details** shows the full log), and two buttons: **Retry** carries on from the failed step once you've fixed the cause, and **Cancel & undo…** (admins) opens the dialog described under [Unfinished setups](#unfinished-setups). Cancel & undo only removes what this setup recorded creating. **✏️ Edit answers** goes back to the form.
+
+When it's done, the card says *travel-approval is ready*, with **Open project**, **Open in Studio Pro** (when the office can open the new project's `.mpr`: it opens the project page and asks there, as the page's own button does) and **View setup details** (every group open, and the log).
 
 ### Unfinished setups
 
-A setup that hasn't finished never takes over **✨ New project**: it always opens a fresh wizard. Unfinished setups are cards instead, at the top of the wizard's first page and on Home (Projects), each with where it stopped and why, how many of the 14 steps are done, and:
+A setup that hasn't finished never takes over **✨ New project**: it always opens a fresh wizard. Unfinished setups are cards instead, at the top of the wizard's first page and on Home (Projects), each with where it stopped (its group and step) and why, how many of the 14 steps are done, and:
 
 - **Retry** carries on from the step that stopped. It says first what would stop it right now, rather than failing again: *This project is paused (by Keith): resume it, then Retry* (a paused project takes no new agents, so the team can't be hired) with a **Resume project** button for admins; the same for a project paused because its budget is reached, a pause or resume under way, a safe restart, and Studio Pro open on the project when the steps left write in its folder.
 - **Show setup** opens the setup's progress in the wizard, to carry on with it there (Edit answers, Retry).

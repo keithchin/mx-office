@@ -9,6 +9,7 @@ import './unfinished.css';
  */
 import type { Net } from '../../net';
 import type { UnfinishedSetup } from '../../../shared/setup-cancel';
+import { groupNameOf, plainError } from '../../../shared/setup-groups';
 import { h, toast } from '../dom';
 import { startResume } from '../project-run/api';
 import { wizardApi, type CallError } from './api';
@@ -102,8 +103,8 @@ export function unfinishedSection(opts: UnfinishedOptions): { el: HTMLElement; r
       'li.us-card',
       { 'data-st': s.status, 'data-id': s.id },
       h('div.us-head', {}, h('span.us-name', {}, s.repo), h('span.us-badge', {}, STATUS[s.status])),
-      s.step ? h('p.us-line', {}, `${s.status === 'running' ? 'On' : 'Stopped at'}: ${s.step}`) : null,
-      s.error ? h('p.us-line.us-muted', {}, s.error) : null,
+      s.step ? h('p.us-line', {}, `${s.status === 'running' ? 'On' : 'Stopped at'}: ${s.status !== 'cancelling' && groupNameOf(s.step) ? `${groupNameOf(s.step)} · ` : ''}${s.step}`) : null,
+      s.error ? h('p.us-line.us-muted', {}, plainError(s.error)) : null,
       cancelling && s.cancel?.error ? h('p.us-line.us-muted', {}, s.cancel.error) : null,
       h('div.us-bar', { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(s.total), 'aria-valuenow': String(s.done), 'aria-label': `${s.done} of ${s.total} steps done` }, h('span', { style: `width:${pct}%` })),
       h('p.us-line.us-muted', {}, `${s.done} of ${s.total} steps done · started by ${s.by}`),

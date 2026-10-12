@@ -1,0 +1,98 @@
+/* The setup's five groups (ui/wizard/groups.ts) and the page round them (progress.ts): the approved
+   mockup's look (docs/mockups/wizard-maia-mockup.html, "setup"), in the color tokens so every theme
+   (Fun, Clean, Portal light and dark, Dark, Terminal) draws it in its own colors and borders. Status
+   changes only recolor fixed-size marks, so nothing moves while it ticks; opening a group is a ≤200 ms
+   grid-row transition. */
+.wizard .wz-page.sg-page, .sg-page { max-width: 720px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 0; }
+.sg-title { display: flex; align-items: center; gap: 12px; margin: 4px 0 0; font-size: 22px; line-height: 1.25; font-weight: var(--fw-title, 700); }
+.sg-ca { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%); color: var(--on-fill, #fff); }
+.sg-ca svg { width: 16px; height: 16px; }
+.sg-lede { margin: 6px 0 18px; color: var(--muted); font-size: 14px; }
+.sg-live, .sg-sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.sg-groups { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.sg-group { border: var(--bw-thin) solid var(--line); border-radius: var(--radius-sm); background: var(--card); box-shadow: var(--shadow-btn); transition: border-color .18s, background-color .18s, opacity .18s, box-shadow .18s; }
+.sg-group[data-s=pending] { opacity: .62; box-shadow: none; }
+.sg-group[data-s=failed] { border-color: var(--bad); background: color-mix(in srgb, var(--bad-soft) 35%, var(--card)); }
+.sg-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: var(--radius-sm); }
+.sg-head:focus-visible { outline: var(--focus-ring, 2px solid var(--focus)); outline-offset: -2px; }
+.sg-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sg-text b { font-size: 14.5px; font-weight: var(--fw-btn, 600); }
+.sg-text small { color: var(--muted); font-size: 12.5px; }
+.sg-meta { flex: none; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.sg-meta:empty { display: none; }
+.sg-chev { width: 16px; height: 16px; flex: none; color: var(--muted); transition: transform .18s; }
+.sg-head[aria-expanded=true] .sg-chev { transform: rotate(90deg); }
+
+.sg-state { width: 24px; height: 24px; flex: none; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--rule-strong); color: var(--on-fill, #fff); transition: background-color .18s, border-color .18s; }
+.sg-state svg { width: 14px; height: 14px; }
+.sg-group[data-s=running] .sg-state { border-color: color-mix(in srgb, var(--accent) 25%, transparent); border-top-color: var(--accent); animation: sg-spin .8s linear infinite; }
+.sg-group[data-s=done] .sg-state { background: var(--good-ink); border-color: var(--good-ink); animation: sg-pop .2s ease-out; }
+.sg-group[data-s=failed] .sg-state { background: var(--bad); border-color: var(--bad); }
+
+.sg-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .2s ease, opacity .2s; }
+.sg-body > div { min-height: 0; overflow: hidden; }
+.sg-body.shut { grid-template-rows: 0fr; opacity: 0; }
+.sg-steps { list-style: none; margin: 0; padding: 0 16px 14px 52px; display: grid; gap: 6px; }
+.sg-step { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--muted); }
+.sg-step-text { display: flex; flex-direction: column; min-width: 0; }
+.sg-step[data-s=done], .sg-step[data-s=running] { color: var(--ink); }
+.sg-step[data-s=failed] { color: var(--bad-ink); }
+.sg-note { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.sg-note:empty { display: none; }
+.sg-step[data-s=failed] .sg-note { color: var(--bad-ink); }
+.sg-dot { width: 14px; height: 14px; margin-top: 2px; flex: none; border-radius: 50%; border: 1.5px solid var(--rule-strong); display: grid; place-items: center; color: var(--on-fill, #fff); transition: background-color .18s, border-color .18s; }
+.sg-dot svg { width: 9px; height: 9px; }
+.sg-step[data-s=running] .sg-dot { border-color: color-mix(in srgb, var(--accent) 25%, transparent); border-top-color: var(--accent); animation: sg-spin .8s linear infinite; }
+.sg-step[data-s=done] .sg-dot { background: var(--good-ink); border-color: var(--good-ink); }
+.sg-step[data-s=skipped] .sg-dot { border-color: var(--muted); color: var(--muted); }
+.sg-step[data-s=failed] .sg-dot { background: var(--bad); border-color: var(--bad); }
+
+.sg-slot:empty { display: none; }
+.sg-fail { margin: 0 16px 16px 52px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--bad-soft); color: var(--bad-ink); font-size: 13px; animation: sg-rise .2s ease-out; }
+.sg-fail p { margin: 0; overflow-wrap: anywhere; }
+.sg-fail p + p { margin-top: 6px; }
+.sg-fail .sg-acts { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+.sg-fail small { color: var(--ink-2); font-size: 12px; }
+.sg-fail .us-blocker { margin-top: 10px; }
+
+.sg-ready { margin-top: 22px; padding: 22px; border: var(--bw-thin) solid var(--good-ink); border-radius: var(--radius-sm); background: linear-gradient(180deg, var(--good-soft), var(--card)); text-align: center; animation: sg-rise .2s ease-out; }
+.sg-ready h3 { margin: 10px 0 0; font-size: 21px; }
+.sg-ready .sg-sum { margin: 8px auto 0; max-width: 520px; color: var(--ink-2); font-size: 13.5px; overflow-wrap: anywhere; }
+.sg-ready .sg-acts { display: flex; justify-content: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.sg-big { width: 52px; height: 52px; margin: 0 auto; border-radius: 50%; background: var(--good-ink); color: var(--on-fill, #fff); display: grid; place-items: center; animation: sg-pop .2s ease-out; }
+.sg-big svg { width: 28px; height: 28px; }
+.sg-link { border: 0; background: none; padding: 2px 0; margin-top: 12px; color: var(--link); cursor: pointer; font: inherit; font-size: 13px; border-radius: 3px; }
+.sg-link:hover { text-decoration: underline; }
+.sg-link:focus-visible { outline: var(--focus-ring, 2px solid var(--focus)); outline-offset: 2px; }
+.sg-logwrap { margin-top: 14px; }
+.sg-logwrap.hidden { display: none; }
+.sg-tools { display: flex; justify-content: flex-end; margin-top: 6px; }
+
+@keyframes sg-spin { to { transform: rotate(360deg); } }
+@keyframes sg-pop { 0% { transform: scale(.6); } 70% { transform: scale(1.08); } 100% { transform: scale(1); } }
+@keyframes sg-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .sg-group, .sg-body, .sg-chev, .sg-state, .sg-dot { transition: none; }
+  .sg-ready, .sg-fail, .sg-big, .sg-group[data-s=done] .sg-state { animation: none; }
+  .sg-group[data-s=running] .sg-state, .sg-step[data-s=running] .sg-dot { animation-duration: 2.4s; }
+}
+@media (max-width: 520px) {
+  .sg-title { font-size: 19px; }
+  .sg-head { padding: 12px; gap: 10px; }
+  .sg-steps { padding: 0 12px 12px 46px; }
+  .sg-fail { margin: 0 12px 12px 12px; }
+  .sg-meta { display: none; }
+  .sg-ready { padding: 18px 14px; }
+  .sg-ready .sg-acts .btn { flex: 1 1 100%; }
+}
+/* Round in every theme: Clean and Portal square off everything else (theme-clean-parts.css). */
+:root body .sg-page :is(.sg-state, .sg-dot, .sg-big, .sg-ca) { border-radius: 50% !important; }
+/* The setup's footer on a phone: the note on a line of its own, the buttons wrapping under it. */
+@media (max-width: 640px) {
+  .modal.wizard > footer { flex-wrap: wrap; }
+  .modal.wizard > footer > .grow { flex: 1 1 100%; }
+  .modal.wizard > footer .wz-actions { flex-wrap: wrap; }
+}
+.sg-studio { display: contents; }
+.sg-ready a.btn { text-decoration: none; }
