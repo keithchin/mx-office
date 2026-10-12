@@ -123,6 +123,17 @@ const FOLDERS = [
 const TEST_FIRST = '- Test first: before a task is built, write or extend its test (a journey or unit test), and name the criteria it covers in it (`Covers: AC-04, BR012`).';
 const COVERS = '- Before opening a pull request, run the task’s tests; put `Covers: AC-xx, BRyyy` in its description (the criteria and rules it delivers).';
 
+/**
+ * Testing release 1b. Microflow tests: a test that asserts nothing must not pass (`--require-assertions`
+ * makes it an error), as the office's own run does. Impact first: `mxcli refs`, `impact` and `context`
+ * only read the catalog (checked on a disposable clone of the installed nightly: even a cold first build
+ * writes only `.mxcli/catalog.db`), but `lint`, `report` and `refresh catalog` rewrite the widget docs, so
+ * those changes are kept out of commits.
+ */
+const MF_TESTS = '- New microflow tests (`tests/*.test.mdl`) are run with `mxcli test <file> -p <app>.mpr --require-assertions`: a test that asserts nothing is an error, never a pass.';
+const IMPACT =
+  '- Before changing an entity or microflow, see what uses it: `mxcli refs`, `mxcli impact` or `mxcli context -p <app>.mpr <Module.Name>` (they read the catalog and write nothing to commit). `mxcli lint`, `report` and `refresh catalog` can rewrite `.ai-context/skills/widgets/` and create `.claude/skills/widgets/`: never commit those changes (`git checkout -- .ai-context/skills/widgets`, delete `.claude/skills/widgets/`).';
+
 const ONE_WRITER ='One writer per Mendix app: only the Lead Developer runs `mxcli exec` (or any MCP write) against the .mpr. Everyone else — every other Lead and every subagent — drafts, checks (`mxcli check`, `mxcli -c "SHOW …"`) and reviews, and hands the change to the Lead Developer to apply.';
 
 /** The one-writer rule for whoever covers Development: the Lead Developer on an Enterprise team. */
@@ -151,9 +162,9 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
     case 'lead-designer':
       return ['## Design', '- Every page follows the Atlas design system and the agreed wireframes. Review design changes and record approvals (or what must change) in `docs/team/design.md`.', '- Hand page specs to the Lead Developer; never build pages yourself.'];
     case 'lead-developer':
-      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', LAYOUT, FOLDERS, COVERS, '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
+      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', LAYOUT, FOLDERS, IMPACT, COVERS, '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
     case 'lead-tester':
-      return ['## Testing', '- Unit tests live in `tests/*.test.mdl`, Playwright e2e in `tests/e2e`; follow `.ai-context/skills/qa-tests` and the PR pipeline when the repo has them.', '- Approve test plans and results; when the framework is the bottleneck, improve it (and say so in the journal).', '- A failing test that shows the model is wrong is a finding for the Lead Developer, never a fix you make in MDL.', TEST_FIRST];
+      return ['## Testing', '- Unit tests live in `tests/*.test.mdl`, Playwright e2e in `tests/e2e`; follow `.ai-context/skills/qa-tests` and the PR pipeline when the repo has them.', '- Approve test plans and results; when the framework is the bottleneck, improve it (and say so in the journal).', '- A failing test that shows the model is wrong is a finding for the Lead Developer, never a fix you make in MDL.', TEST_FIRST, MF_TESTS];
     case 'solo-lead':
       return [
         '## Working alone',
@@ -161,7 +172,9 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         '- Dispatch a subagent for each draft or check (business-analyst, ui-ux-designer, developer, tester) and review every result before it lands.',
         LAYOUT,
         FOLDERS,
+        IMPACT,
         TEST_FIRST,
+        MF_TESTS,
         COVERS,
         `- The office asks you for a daily standup, then hands you the page (\`${standupPath('YYYY-MM-DD')}\`) to finish as your daily note: a **Summary** at the top, then commit and push.`,
         '- Nobody else relays to the Project Manager: escalate yourself whatever needs them.',

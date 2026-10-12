@@ -8,6 +8,8 @@ import { h } from '../dom';
 import { markdownFile } from '../markdown';
 import { domainsPanel, header, planPanel, runsPanel } from './render';
 import { verificationPanel } from './verification';
+import { qualityPanel } from './quality';
+import type { QualityPart } from '../../../shared/testing/quality';
 import type { VerificationView } from '../../../shared/testing/verify';
 import './testing.css';
 
@@ -32,6 +34,35 @@ export function testingTab(root: HTMLElement) {
   let asked = 0;
   /** The Verification panel (release 2): fetched on its own, so the release 1 panels draw as they did. */
   const vslot = h('div.tst-vslot');
+  /** The Quality header (release 1b): fetched on its own, and again every few seconds while one of the office's mxcli runs is under way. */
+  const qslot = h('div.tst-qslot');
+  let qtimer: ReturnType<typeof setTimeout> | undefined;
+  let wasRunning = false;
+  const askRun = async (what: 'tests' | 'quality'): Promise<string | undefined> => {
+    const f = floor;
+    const res = await fetch('/api/testing/run', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor: f, what, by: store.me.account?.name ?? store.profile.name }) }).catch(() => undefined);
+    const out = (await res?.json().catch(() => ({}))) as { error?: string } | undefined;
+    if (!res?.ok) return out?.error ?? 'the office could not be reached';
+    void loadQuality();
+    return undefined;
+  };
+  async function loadQuality() {
+    const f = floor;
+    if (!f) return;
+    clearTimeout(qtimer);
+    try {
+      const q = await get<QualityPart>(`/api/testing?floor=${encodeURIComponent(f)}&part=quality`);
+      if (f !== store.floor) return;
+      qslot.replaceChildren(qualityPanel(q, askRun));
+      const running = q.runs.tests.running || q.runs.quality.running;
+      // A run just ended: its record is in, so the rest of the page is read again.
+      if (wasRunning && !running) void load(true);
+      wasRunning = running;
+      if (running && root.isConnected) qtimer = setTimeout(() => void loadQuality(), 5000);
+    } catch (err) {
+      if (f === store.floor) qslot.replaceChildren(h('p.tst-muted', {}, `Couldn’t load the quality scores: ${(err as Error).message}`));
+    }
+  }
   const send = async (b: Record<string, unknown>): Promise<string | undefined> => {
     const f = floor;
     const res = await fetch('/api/testing/verification', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...b, floor: f, by: store.me.account?.name ?? store.profile.name }) }).catch(() => undefined);
@@ -55,7 +86,7 @@ export function testingTab(root: HTMLElement) {
     if (v.cacheKey === key && body.childElementCount) return;
     key = v.cacheKey;
     const f = floor;
-    body.replaceChildren(header(v), vslot, planPanel(v, () => get<{ markdown: string }>(`/api/testing?floor=${encodeURIComponent(f ?? '')}&part=plan`), markdownFile), domainsPanel(v), runsPanel(v));
+    body.replaceChildren(header(v), qslot, vslot, planPanel(v, () => get<{ markdown: string }>(`/api/testing?floor=${encodeURIComponent(f ?? '')}&part=plan`), markdownFile), domainsPanel(v), runsPanel(v));
   };
 
   async function load(force = false) {
@@ -69,6 +100,8 @@ export function testingTab(root: HTMLElement) {
       key = '';
       body.replaceChildren();
       vslot.replaceChildren();
+      qslot.replaceChildren();
+      wasRunning = false;
     }
     floor = f;
     const n = ++asked;
@@ -80,6 +113,7 @@ export function testingTab(root: HTMLElement) {
       status.textContent = '';
       draw(v);
       void loadVerification();
+      void loadQuality();
     } catch (err) {
       if (n !== asked) return;
       status.textContent = `Couldn’t load the testing view: ${(err as Error).message}`;
