@@ -11,7 +11,7 @@ import type { Usage } from '../../shared/protocol.js';
 import { usageOfMessage, zeroUsage, addUsage } from '../usage.js';
 
 /** Which background job a call is for. */
-export type BillingSource = 'jeff' | 'analyzer' | 'task-namer' | 'summary' | 'firm' | 'office';
+export type BillingSource = 'jeff' | 'analyzer' | 'task-namer' | 'summary' | 'firm' | 'planner' | 'office';
 
 export const SOURCE_LABEL: Record<BillingSource, string> = {
   jeff: 'Jeff (the Router)',
@@ -19,6 +19,7 @@ export const SOURCE_LABEL: Record<BillingSource, string> = {
   'task-namer': 'Task naming',
   summary: 'The project summary',
   firm: 'The Firm (audit reviewers)',
+  planner: 'New project planning (the Chief Analyst)',
   office: 'The office',
 };
 

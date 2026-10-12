@@ -4,6 +4,7 @@
 
 import { ENTRY_MODE_INFO, PROJECT_ROLES, type ProjectPlan } from '../../shared/wizard.js';
 import { SHAPES, shapeForRoles } from '../../shared/roster/coverage.js';
+import { briefForDiscovery } from '../../shared/brief-map.js';
 
 export const DISCOVERY_TITLE = 'Discovery: kickoff with the client (Stages P → 4)';
 
@@ -18,7 +19,7 @@ export function discoveryBrief(plan: ProjectPlan, toolkitDir: string, pinnedSha?
   const shape = plan.shape ?? shapeForRoles(plan.roles);
   const who = SHAPES[shape].coverage.analysis;
   const runner = who === 'chief-analyst' ? 'Chief Analyst (Consultant agent)' : (PROJECT_ROLES.find((r) => r.id === who)?.label.replace(/ \(.*\)$/, '') ?? 'Lead') + ', running discovery as the analyst';
-  const goal = plan.intake.find((a) => a.n === 2)?.text.trim() || plan.description || 'see intake.md';
+  const goal = plan.brief?.brief.sections.goal.map((g) => g.text).join(' ') || plan.intake.find((a) => a.n === 2)?.text.trim() || plan.description || 'see intake.md';
   return [
     `**Discovery for ${plan.name}.** You are the **${runner}**.`,
     '',
@@ -43,6 +44,8 @@ export function discoveryBrief(plan: ProjectPlan, toolkitDir: string, pinnedSha?
     '- Windows + Git Bash. Use `mxcli` on PATH (not `./mxcli`). Machine paths are in `.claude/toolkit.env` (git-ignored).',
     '- Commit your work at the end of each stage with a clear message (the pre-commit hook finishes in seconds).',
     '- Keep the conversation business-friendly: the client is not a developer.',
+    // The project brief drafted and approved in the New project flow: what Stage 0 starts from.
+    ...(plan.brief ? briefForDiscovery(plan.brief) : []),
   ]
     .filter((l, i, all) => l !== '' || all[i - 1] !== '')
     .join('\n');

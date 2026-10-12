@@ -14,6 +14,8 @@ import { adminGhEnv, adminTokenHelp, readAdminToken, redactor } from './admin-to
 import { DISCOVERY_TITLE, discoveryBrief, discoveryPrompt } from './brief.js';
 import { mendixVersions, mxbuildPath, toolkitEnv, type WizardConfig } from './config.js';
 import { writeIntakeAnswers } from './intake.js';
+import { writeBriefFiles } from './brief-files.js';
+import { briefDecisionRows, intakeFromBrief } from '../../shared/brief-map.js';
 import type { JobState, StepImpl, StepIO } from './job.js';
 import type { BudgetChoice } from '../../shared/budget/levels.js';
 import { SHAPES, shapeForRoles, type TeamShape } from '../../shared/roster/coverage.js';
@@ -69,6 +71,8 @@ export interface SetupDeps {
   run?: typeof runCommand;
   /** The pin a new project starts on (toolkit-pin/pins.ts pinForNew); tests can pass their own. */
   pinToolkit?(root: string): Promise<{ sha: string; dir: string; date?: string } | undefined>;
+  /** A New project draft's attached files (wizard/planner/), copied into the project's sources/ with its brief. */
+  attachments?(draftId: string): { name: string; path: string }[];
 }
 
 const MIN = 60_000;
@@ -283,9 +287,12 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       const md = readFileSync(f, 'utf8');
       const answers = intakeAnswersOf(job);
       const out = writeIntakeAnswers(md, answers);
-      if (out === md) return { status: 'skipped', detail: 'answers already in intake.md' };
-      writeFileSync(f, out);
-      return { status: 'done', detail: `${answers.filter((a) => a.text.trim()).length} answers written` };
+      // The project brief (New project flow): docs/project-brief.md, and its attached documents into sources/.
+      const draft = job.plan.brief?.draftId;
+      const brief = writeBriefFiles(dirOf(job), job.plan, draft ? (deps.attachments?.(draft) ?? []) : []);
+      if (out === md && !brief.length) return { status: 'skipped', detail: 'answers already in intake.md' };
+      if (out !== md) writeFileSync(f, out);
+      return { status: 'done', detail: [`${answers.filter((a) => a.text.trim()).length} answers written`, ...brief].join(' · ') };
     },
 
     async decisions(job) {
@@ -445,7 +452,10 @@ export function interviewAnswer(mode: JobState['plan']['interview']): string {
 /** The intake answers to write: the wizard's form, plus the three it decides itself (entry mode, interview mode, exec approval). */
 export function intakeAnswersOf(job: JobState): IntakeAnswer[] {
   const p = job.plan;
-  const own = p.intake.filter((a) => ![1, 9, 11].includes(a.n));
+  const typed = p.intake.filter((a) => ![1, 9, 11].includes(a.n));
+  // The project brief's answers (Q2, Q4, Q5, Q8), for each question nothing was typed for.
+  const fromBrief = p.brief ? intakeFromBrief(p.brief).filter((b) => !typed.some((a) => a.n === b.n && a.text.trim())) : [];
+  const own = [...typed.filter((a) => a.text.trim() || !fromBrief.some((b) => b.n === a.n)), ...fromBrief].sort((a, b) => a.n - b.n);
   const token = ENTRY_MODE_INFO[p.entry].token;
   return [
     ...(token ? [{ n: 1, kind: 'answered' as const, text: token }] : []),
@@ -475,5 +485,7 @@ export function decisionsOf(job: JobState) {
     { stage: 'P', decision: `Mendix version: ${p.mendix}`, status: when, notes: `${by}; Studio Pro on the office machine` },
     { stage: 'P', decision: `Interview mode: ${p.interview}`, status: when, notes: `${by}; ${INTERVIEW_MODE_INFO[p.interview].q9}: ${INTERVIEW_MODE_INFO[p.interview].does}` },
   ];
+  // The approved project brief: the Stage 0 scope approval (CONFIRMED) and each item still Assumed (ASSUMED).
+  if (p.brief) rows.push(...briefDecisionRows(p.brief, today()));
   return { flat, rows };
 }

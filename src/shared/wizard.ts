@@ -4,6 +4,7 @@
 
 import type { BudgetChoice } from './budget/levels.js';
 import type { TeamShape } from './roster/coverage.js';
+import type { PlanBrief } from './brief.js';
 
 /** How a project enters the toolkit's pipeline (the runbook's "Entry Modes"), plus the no-pipeline assurance shelf. */
 export const ENTRY_MODES = ['greenfield', 'requirements-driven', 'existing-app-change', 'migration', 'assurance'] as const;
@@ -164,6 +165,12 @@ export interface ProjectPlan {
   shape?: TeamShape;
   /** The page's shape cards were set aside for picking roles by hand (Customize). */
   customTeam?: boolean;
+  /**
+   * The project brief from the New project flow (shared/brief.ts), approved: written into intake.md (Q2, Q4, Q5,
+   * Q8), PROJECT.md (the Stage 0 rows), docs/project-brief.md and the Discovery issue at setup; its attached
+   * files are copied into the project's sources/.
+   */
+  brief?: PlanBrief;
 }
 
 /** The setup, a step at a time. Each step checks what's already done first, so running it again is safe. */
