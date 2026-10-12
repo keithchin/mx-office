@@ -1,57 +1,105 @@
 ---
 title: Create your first project
-description: Use the ✨ New project wizard to create a GitHub repo in AI-Taskforce-Labs, add it as a floor, create the Mendix app, set up the mxcli-project-toolkit and hire the project team.
+description: Use ✨ New project to describe the app, review the project brief the Chief Analyst drafts, approve the scope, and create the repository, the Mendix app, the toolkit setup and the team.
 weight: 3
 ---
 
-The **✨ New project** wizard on **/home** turns a few answers into a ready project: a private GitHub repository, a floor in the office, a blank Mendix app (`.mpr`), the toolkit's scaffold, recorded decisions, the project team at their desks and a Discovery issue for the Chief Analyst.
+**✨ New project** on **/home** turns a description of the app into a ready project. You describe it (and attach any documents), the **Chief Analyst** drafts a **project brief** with you, you approve the scope, look over the functional domains and the team and budget, and click **Create project**. Then the office makes a private GitHub repository, a floor, a blank Mendix app (`.mpr`), the toolkit's scaffold with your answers and decisions recorded, the project team at their desks and a Discovery issue for the Chief Analyst.
 
 > [!NOTE]
-> Only an admin (the Project Manager) can create a project. The wizard uses a separate **admin token** that can create repositories: `~/.agent-office-admin-gh-token`. The agents never see it. See [Security & tokens](../administration/security-and-tokens.md).
+> Only an admin (the Project Manager) can create a project. Creating the repository uses a separate **admin token** that can create repositories: `~/.agent-office-admin-gh-token`, or the one in 🔌 Connections. The agents never see it. See [Security & tokens](../administration/security-and-tokens.md).
 
-![The new-project wizard](../images/wizard.png)
+## Open New project
 
-## Open the wizard
+Go to **🏠 Home → 🏢 Projects** and click **✨ New project**. It opens a page over the office with a slim bar: **Office $… today** (what the office has spent today, planning included) and **✕**, which closes it. Your draft is kept in the office, so closing the page, a reload or another tab loses nothing: the start page offers **Continue** (or **Discard**) for it next time. Setups that didn't finish are cards at the top of the start page (see [Unfinished setups](#unfinished-setups)).
 
-Go to **🏠 Home → 🏢 Projects** and click **✨ New project**. This browser tab keeps your answers while you work, so a reload doesn't lose them.
+## 1. What would you like to build?
 
-## Page 1: Project
+![The start page: how to start, the description and an attached document](../images/new-project-start.png)
 
-- Choose **✨ A new project**, or **🛠️ Changes to an existing app** (then pick its repository).
-- **Name**: becomes the repository name, in lower case with dashes.
-- **Owner organization**: `AI-Taskforce-Labs` by default.
-- **Description**, **Private repository** (on by default), and the **Mendix (Studio Pro) version**: the versions installed on the office's machine, with the newest 11.12 (11.12.4) picked by default (11.6.4, mxcli's validated line, when no 11.12 is installed). A new project's Mendix app is created with it. For an existing app that is already a floor, the wizard picks the version its `.mpr` was last saved with.
-- Tick **I created this repository myself** if you made the repo by hand. The wizard then only checks that it exists.
+**How do you want to start?** Pick one card:
 
-## Page 2: Entry mode
+| Card | Entry mode | When |
+|---|---|---|
+| **Plan with the team** (recommended) | 🌱 Greenfield, or 📄 Requirements-driven as soon as a document is attached (the line under the box says which) | A new app, from an idea or from requirements. |
+| **Change an existing app** | 🛠️ Change an existing app | Changes to an app that exists: name its repository (`owner/name`) in the box that appears. |
+| **Migrate an app** | 🚚 Migration | Moving an app from another platform or an older version. |
+| More: **Assurance only** | 🔎 Assurance only | Review and test an app nobody is changing (it asks for the repository too). |
 
-Pick how the project starts. The toolkit adapts its stages to it.
+**Describe the app** in the big box: who uses it, what problem it solves, what success looks like. The **+** menu attaches documents (**Upload files…**); Confluence and SharePoint are listed as *coming later*.
 
-| Entry mode | When |
+### Attached documents
+
+`.pdf`, `.docx`, `.md` and `.txt`, at most 5 MB each and five files. They're kept with your draft in the office's data folder (`wizard-drafts/`), copied into the project's `sources/` (the toolkit's drop folder, git-ignored by default) at setup, and removed with the draft once the project is set up. The page says what happened to each one, plainly:
+
+| File | What the office does with it |
 |---|---|
-| 🌱 Greenfield | A new app from an idea. |
-| 📄 Requirements-driven | You already have requirements or a BRD. |
-| 🛠️ Change an existing app | Changes to an app that exists. |
-| 🚚 Migration | Moving an app from another platform. |
-| 🔎 Assurance only | Review and test an app; no building. |
+| `.md`, `.txt` | *read as text*: the first 60 KB of each (150 KB in all) go to the Chief Analyst; a longer file says how much was read. |
+| `.docx` | *text extracted (no images)*: its words, paragraph by paragraph; pictures, text boxes, headers and comments aren't read. |
+| `.pdf` | *handed to the Chief Analyst to read*: the planning call gets a copy in an empty temporary folder and only the Read tool, confined to that folder. Afterwards it says *read by the Chief Analyst*, or *not read* when the Chief Analyst didn't say it read it. |
 
-Then pick the **size tier**: 🐣 **Small** (at most 1 module, 8 screens and 25 use cases) or 🏗️ **Standard**.
+### Drafting, and what it costs
 
-## Page 3: Intake
+**Draft project brief** starts one planning call: the Chief Analyst, through the office's `claude` CLI, on **Sonnet** by default. The line under the box says about what a draft costs, worked out from the configured model's prices (the brief and the domains, more with large attachments), and the cap: *about $0.15 of office spend (capped at $2)*. Planning is office spend, booked as *New project planning (the Chief Analyst)* in the Budget pages and the **Office $ today** chip. The hard limits:
 
-The toolkit's kickoff questions, as a form. Mark each answer **Answered**, **Assumed** or **Unverified**. The wizard fills in three for you: Q1 (entry mode), Q9 (interview mode: **Steering**, every question asked and waited for, the default; **Assist**, questions batched at the gates and small ones assumed; or **Auto**, unattended: nothing blocks and every assumption is recorded. These are the toolkit's `interview-mode.sh` modes, written to `PROJECT.md` as `Interview mode:`) and Q11 (exec approval: auto or ask).
+- **A cap per draft**, $2 by default: every call gets what the draft has left (`--max-budget-usd`); when it's used up, the brief so far is kept and the page says so, and you carry on by hand.
+- **A timeout per call** (4 minutes), **one request at a time per person**, **20 calls an hour** across the office, and a pause of a few minutes after three failures in a row.
 
-## Page 4: Team and budget
+The model, the cap and the limits are set with `AGENT_OFFICE_PLANNER_*` ([environment variables](../reference/environment-variables.md#new-project-wizard)).
 
-The team and the budget come **after** the intake, so the office can recommend a shape and a level from what you said. There are two dials: the [team shape](../teams-and-agents/team-shapes.md) (Solo, Startup or Enterprise) and the budget level (Lean, Balanced or Fast).
+**Fill in the brief yourself** opens the same brief, empty, with no AI and nothing spent. It's also the way on whenever the Chief Analyst can't draft: no `claude` CLI on the office's machine, the hourly cap reached, paused after failures, switched off (`AGENT_OFFICE_PLANNER=off`), or a test office without the test planner. The line under the box says which.
 
-**The recommendation.** A box at the top names the recommended shape and level, with why, for example *★ Recommended: Solo · Lean — small tier, greenfield, you said: POC / demo, one module or feature, no integrations must stay, no SME needed*. It reads:
+> [!NOTE]
+> A test office never calls the real Claude. Started with `AGENT_OFFICE_PLANNER=fake`, it drafts with the **test planner**: the same sample *Visitor Registration* brief every time, no model call, nothing spent. Without it, briefs are filled in by hand there.
 
-- the **size tier** and the **entry mode**.
-- **Q2**, what drives the project: a POC or demo, a hard date (and whether it's soon), or open-ended.
-- **Q4**, how much it covers: one module, flow or feature, or the whole app (three or more modules).
-- **Q5**, what must stay as it is: nothing, or integrations (three or more is "several").
-- **Q7**, the SME: not needed, available, or slow to answer.
+## 2. The project brief
+
+![The live brief with an item confirmed and a change from the chat](../images/new-project-brief.png)
+
+The brief is on the left, the Chief Analyst on the right (a sheet at the bottom on a phone: tap its header to open it). While it's drafting, the sections wait under shimmering lines; the Chief Analyst writes all six in one go, and when the brief arrives they appear one by one. The sections: **Goal**, **Success criteria**, **User roles** (each with a *When I…, I need to…* statement), **Scope** (in and out), **Constraints** and **Open questions**.
+
+Every item has a tag, as a word and a colour, and says where it came from:
+
+- **Answered**: you said it, or a document says it (*from your description*, *from workshop.pdf p.2*).
+- **Assumed**: the Chief Analyst inferred it (*inferred from "hosts respond fast"*). Anything inferred stays Assumed until you confirm it. **Confirm** makes it Answered, *confirmed by you · 10:42*; **Edit** changes it in place (Answered, *edited by you*).
+- **Unverified**: an open question nobody could answer yet. **Answer in chat** puts it in the chat box.
+
+Every section can be added to (**Add user role**, **Add to scope**…), and **Ask the Chief Analyst to refine** starts a chat message about it. A **chat message** is a planning call too: the Chief Analyst answers in a few sentences and updates the brief; what it changed is highlighted. It never undoes what you confirmed or edited, and what you tell it is recorded as yours (*from the chat with you*). The header shows **DRAFT v3 · Auto-saved** (the version goes up with every change) and *N assumptions · M open questions*; the pencil renames the project.
+
+**Interview style** (above the chat) is the toolkit's interview mode, written to `PROJECT.md` as `Interview mode:` and to intake Q9: **Steering** (every consequential question is asked and waited for; the default), **Assist** (questions batched at the gates, small ones assumed and reported) or **Auto** (nothing blocks; every position recorded as ASSUMED).
+
+## 3. Approve scope
+
+**Approve scope** is the brief's one primary action: *Approving records the ✋ Stage 0 decision as CONFIRMED in PROJECT.md.* If items are still Assumed, it asks first: *2 items are still Assumed; they'll be recorded as ASSUMED. Approve anyway?* **Review them** takes you to the first one; **Approve anyway** goes on. Once approved, the brief folds away (*✋ Stage 0 · confirmed by you · 10:45 · 2 ASSUMED*) and can't be changed here: a message to the Chief Analyst after that is noted for Discovery.
+
+### What the approval records
+
+At setup, the brief goes into the project in the toolkit's own formats, every item keeping its tag and its source:
+
+| Where | What |
+|---|---|
+| `intake.md` | **Q2** the goal and the success criteria, **Q4** the scope in and out and the input documents, **Q5** the constraints, **Q8** the open questions (*Unverified — how to verify: ask the client…*). Each answer starts *Answered (CONFIRMED):*, *Assumed:* or *Unverified — how to verify:* (one Assumed item makes the answer Assumed) and lists each item with `[Answered, from …]` or `[ASSUMED, inferred from …]`. Q1, Q9 and Q11 come from your choices; Q3, Q6, Q7 and Q10 from Advanced, or the Chief Analyst asks them. |
+| `PROJECT.md` | Stage 0 rows in the Decisions table: *Scope: project brief approved (docs/project-brief.md)* `CONFIRMED <date>` (by whom, at what time); *Goal: …*; and one *Brief assumption …* row per item still Assumed, `ASSUMED <date>`. Nothing inferred is ever recorded as CONFIRMED. |
+| `docs/project-brief.md` | The whole brief with every tag and source, who approved it, the functional domains and how each attached document was read. Committed with the project. |
+| `sources/` | The attached documents. |
+| The Discovery issue | The goal, the roles, the scope, what is still ASSUMED (to confirm with the client first), the open questions and the domains. |
+
+> [!NOTE]
+> The toolkit's Stage 0 gate (`gate-check.sh`) passes on `triage.md`'s `## Sign-off`, not on a `PROJECT.md` row, and Stage 0 also wants its capability map (and, with documents, the inventory). So the approval is recorded as the Stage 0 scope decision, and Stage 0 still shows as pending until the Chief Analyst has built `triage.md` from the brief and the client has signed it off. The Discovery issue tells it exactly that: start from the approved brief, confirm the ASSUMED items, and don't redo the scope conversation from nothing.
+
+## 4. Functional domains
+
+![The functional domains drafted after the approval](../images/new-project-domains.png)
+
+After the approval the Chief Analyst groups the work into **functional domains** (a second planning call, under the same cap): a card per domain with its roles and stories. Click one for a side panel with each story (*As a …, I want …, so that …*), its id (VIS-1) and how many acceptance criteria it has. *These become the BRD skeleton and the first build-plan items*: they go into `docs/project-brief.md` and the Discovery issue, every story ASSUMED until the client confirms it. The domains also suggest a size tier (used for the team recommendation; change it under Advanced). No modules are suggested here: the Lead Developer picks them at ✋ Stage 3. The BRDs themselves (`analysis/knowledge-base/brd/*.brd.json`, with full use cases) are written in Discovery, not here. A brief filled in by hand gets no domains: they're left to the BRDs.
+
+## 5. Team & budget
+
+![Team & budget: the shapes and levels under Change, and Advanced](../images/new-project-team.png)
+
+One card: the recommended [team shape](../teams-and-agents/team-shapes.md) and budget level, with the budget for it and *auto-pause at 100%*, for example *Suggested team: Startup · Balanced, 2 agents (Analyst + developer) · budget $740*, the roles, and why. **Change** opens the three shapes (Solo, Startup, Enterprise), each priced at the level, and **Budget level**: Lean, Balanced or Fast.
+
+**The recommendation** reads the size tier, the entry mode and what the brief says: its goal as Q2 (what drives the project: a POC or demo, a hard date, open-ended), its scope as Q4 (one module, or the whole app), its constraints as Q5 (what must stay as it is), and Q7 (the SME) when you answer it under Advanced.
 
 An answer it can't read changes nothing. The rules:
 
@@ -92,14 +140,21 @@ The levels:
 
 When the setup reaches its **Hire the project team** step, it sets the floor's shape and coverage first, then saves the budget and applies the level's models and settings, then hires the shape's roles: the Solo Lead; or the Chief Analyst and the Lead Developer; or the full team. To change the level of a running project, use its [Budget tab](../using-the-office/budget.md#budget-levels).
 
-## Page 5: Client and Discovery
+### Advanced
 
-- **Client name(s)** and **Operator(s)**.
-- **Discovery**: open a *Discovery* issue for whoever covers Analysis: the Chief Analyst, or the Solo Lead (on by default). Tick **Hand it to the … now** and that member is hired with the issue as its first task, on the model you pick for Discovery (the level's Discovery model by default; its role's own model on the Team tab stays as it is for later hires). Without that member on the team, tick **Queue it now for an agent** and pick the agent's model.
+Collapsed under the card, with the defaults from the office's settings and the brief: everything else the wizard needs. A problem shows next to its field when you click **Create project**, and Advanced opens on it.
 
-## Page 6: Review & create
+- **The repository**: GitHub owner (your organization by default), repository name (from the brief's title: *Visitor Registration* → `visitor-registration`), visibility (**Private** by default) and description (the brief's one line). For **Change an existing app** and **Assurance only**: the app's repository. Without an admin token: paste one (saved in 🔌 Connections), or tick **I created this repository myself** and the setup only checks that it exists. An offline test office says it makes local bare repositories.
+- **Mendix version**: the Studio Pro versions installed on the office's machine, the newest 11.12 (11.12.4) by default (11.6.4, mxcli's validated line, when no 11.12 is installed). The new app is created with it.
+- **Size tier**: 🐣 **Small** (at most 1 module, 8 screens and 25 use cases) or 🏗️ **Standard**; the domains' suggestion by default.
+- **Exec approval** (Q11): auto or ask. **Interview mode** (Q9) is the Interview style in the chat.
+- **Client & Discovery**: client name(s) and operator(s); open a *Discovery* issue for whoever covers Analysis (on by default); **Hand it to the … now** hires that member with the issue as its first task, on the model you pick for Discovery (the level's Discovery model by default); without that member on the team, **Queue it now for an agent**.
+- **Kickoff questions the brief doesn't answer**: Q3 (fidelity), Q6 (licence and security), Q7 (the SME), Q10 (work done elsewhere), each **Answered**, **Assumed** or **Unverified**, or blank for the Chief Analyst to ask.
+- **Toolkit version**: the newest commit of the toolkit fork, pinned for the project when it's created ([Toolkit versions](../administration/toolkit-versions.md)).
 
-Check the summary and click **✨ Create project**. The wizard says *Here's how I'll set up travel-approval* and shows the setup as five groups that tick in order: **Repository**, **Mendix app**, **Toolkit & gates**, **Save & publish** and **Team**. The group that's running opens by itself; click any group to see its real steps (the 14 below), each marked done, running, failed or skipped. A skipped step says why, in the step's own words: in an offline test office, for example, *skipped: offline test office: nobody is hired*. A done group with skipped steps says how many. Every step can be retried, and a step that is already done is skipped.
+## 6. Create project
+
+Click **Create project** (the primary button once the team card shows). The page says *Here's how I'll set up travel-approval* and shows the setup as five groups that tick in order: **Repository**, **Mendix app**, **Toolkit & gates**, **Save & publish** and **Team**. The group that's running opens by itself; click any group to see its real steps (the 14 below), each marked done, running, failed or skipped. A skipped step says why, in the step's own words: in an offline test office, for example, *skipped: offline test office: nobody is hired*. A done group with skipped steps says how many. Every step can be retried, and a step that is already done is skipped.
 
 | Group | Its steps |
 | --- | --- |
@@ -117,16 +172,16 @@ Check the summary and click **✨ Create project**. The wizard says *Here's how 
 4. Create the Mendix app (new projects only): Studio Pro's own `mx create-project` makes a blank app named after the project (`travel-approval` → `TravelApproval.mpr`) at the repository's root, where the toolkit looks for it. Without `mx` in that Studio Pro it falls back to `mxcli new`. Mendix's generated files (`deployment/`, `.mendix-cache/`, `theme-cache/`, `*.mpr.lock` and so on) are added to `.gitignore`. An existing app is left alone; the step only reports which Studio Pro its `.mpr` was saved with.
 5. Run the toolkit's `init-project.sh` (after the app, so its `CLAUDE.local.md` names the `.mpr`), from a **pin** of the fork's newest commit: the project stays on that toolkit commit until you update it (see [Toolkit versions](../administration/toolkit-versions.md)), and its session-start ritual doesn't pull.
 6. Install the pre-commit hook.
-7. Write the intake answers to `intake.md`.
-8. Record decisions in `PROJECT.md`: entry mode, size tier, Mendix version and interview mode, each `CONFIRMED` with today's date.
+7. Write the intake answers to `intake.md` (the brief's, see [What the approval records](#what-the-approval-records), and any typed under Advanced), the brief to `docs/project-brief.md`, and the attached documents into `sources/`.
+8. Record decisions in `PROJECT.md`: entry mode, size tier, Mendix version and interview mode, each `CONFIRMED` with today's date; and the brief's ✋ Stage 0 rows: the scope approval `CONFIRMED`, the goal, and every item still Assumed as `ASSUMED`.
 9. Save the client, operator and role settings in `agent-office.project.json` at the project's root. It is committed with the project, so every office that opens it sees the same client and team.
 10. Refresh the gate dashboard (`gate-check.sh`).
 11. Commit and push: the scaffold and the app in one commit.
-12. Open the Discovery issue: *"Discovery: kickoff with the client (Stages P → 4)"*.
+12. Open the Discovery issue: *"Discovery: kickoff with the client (Stages P → 4)"*, with the approved brief in it: the goal, the roles, the scope, what is still ASSUMED, the open questions and the functional domains.
 13. Hire the project team: set the floor's team shape, then hire its roles (or the ones you ticked under Customize), the roster's way (the same as **Hire** on the Team tab). A role already at work is not hired again.
 14. Queue the Discovery task for an agent (when you ticked it and whoever covers Analysis isn't on the team; otherwise that member already has it).
 
-If a step fails, its group turns red with *Setup stopped at one step*, the step's error in plain words (a command is named by its file; **View setup details** shows the full log), and two buttons: **Retry** carries on from the failed step once you've fixed the cause, and **Cancel & undo…** (admins) opens the dialog described under [Unfinished setups](#unfinished-setups). Cancel & undo only removes what this setup recorded creating. **✏️ Edit answers** goes back to the form.
+If a step fails, its group turns red with *Setup stopped at one step*, the step's error in plain words (a command is named by its file; **View setup details** shows the full log), and two buttons: **Retry** carries on from the failed step once you've fixed the cause, and **Cancel & undo…** (admins) opens the dialog described under [Unfinished setups](#unfinished-setups). Cancel & undo only removes what this setup recorded creating. **Edit answers** opens the setup's answers in the classic form (see below).
 
 When it's done, the card says *travel-approval is ready*, with **Open project**, **Open in Studio Pro** (when the office can open the new project's `.mpr`: it opens the project page and asks there, as the page's own button does) and **View setup details** (every group open, and the log).
 
@@ -147,7 +202,7 @@ A setup that hasn't finished never takes over **✨ New project**: it always ope
 
   The Mendix app (`.mpr`) lives in the folder and the repository, so it goes with them. A Mendix Portal or Team Server app is never deleted automatically: remove it in the Portal yourself if there is one. Cancel & undo is refused while an agent is mid-turn on the project, a pause or resume of it is under way, or a safe restart is running. If a step fails (a locked file, GitHub down), it stops and says why; the card shows *Cancel & undo stopped* and **Carry on cancelling…** picks it up from that step. The audit log records `project.setup-cancel` (and Delete project's `project.delete`).
 
-Editing the answers later (from the floor's **🧰 Project setup** panel) writes the intake answers, decisions and settings again and commits them. A role you tick that wasn't ticked before is hired too, but never one the floor already has in any state: at work, benched, or sent home on purpose. Unticking a role sends no one home. The Discovery issue isn't handed out again.
+Editing the answers later (the floor's **🧰 Project setup** panel: **🧭 Entry mode**, **📝 Intake** and the rest, or **Edit answers** on a setup) opens them in the classic form, a page per subject; saving writes the intake answers, decisions and settings again and commits them. A project's brief stays as it was approved. A role you tick that wasn't ticked before is hired too, but never one the floor already has in any state: at work, benched, or sent home on purpose. Unticking a role sends no one home. The Discovery issue isn't handed out again.
 
 > [!NOTE]
 > Agents, queue workers, **🔄 Re-check gates** and the live app all run with the project's `.claude/toolkit.env` over the office's own environment, so an 11.12.4 project builds with 11.12.4's mxbuild even when the office was started with an `MXBUILD_PATH` for another Studio Pro.

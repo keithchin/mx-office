@@ -52,6 +52,12 @@ Set these before starting the office (the launcher sets the main ones). Values t
 | `AGENT_OFFICE_JQ_DIR` | WinGet's jq |
 | `AGENT_OFFICE_PYTHON` | The newest Python |
 | `AGENT_OFFICE_WIZARD_OFFLINE` | Unset. When set, uses local bare repositories and writes issues as files, and hires and queues nobody (for tests) |
+| `AGENT_OFFICE_PLANNER` | Unset: the Chief Analyst drafts New project briefs through the `claude` CLI. `fake`: the deterministic test planner (no model call; for test offices). `off`: never, briefs are filled in by hand |
+| `AGENT_OFFICE_PLANNER_MODEL` | `sonnet`. The model of the planning calls; the start page's estimate is priced from it |
+| `AGENT_OFFICE_PLANNER_CAP_USD` | `2`. The most one draft may spend on planning (each call gets what's left as `--max-budget-usd`) |
+| `AGENT_OFFICE_PLANNER_TIMEOUT_S` | `240`. Per planning call |
+| `AGENT_OFFICE_PLANNER_PER_HOUR` | `20`. Planning calls per hour, across the office |
+| `AGENT_OFFICE_FAKE_PLANNER_MS` | `1200`. How long each test-planner call takes, so a test office shows the drafting state |
 
 ## Live app
 

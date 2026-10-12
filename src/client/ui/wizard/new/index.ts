@@ -156,6 +156,7 @@ export async function openNewProject(opts: NewProjectOptions) {
       timer = undefined;
       views = {};
       progress?.stop();
+      // The setup's own progress view (progress.ts: the five groups, the failure box, the ready card) takes over.
       progress = progressView(job, (floor) => (flow.close(), opts.go(floor)), info.admin, () => (flow.close(), opts.edit(job.id)));
       section.textContent = 'Setting up';
       const another = h('button.btn', { type: 'button', title: 'Leave this setup to carry on, and start another project' }, '➕ Another project');
@@ -169,7 +170,7 @@ export async function openNewProject(opts: NewProjectOptions) {
         current = undefined;
         flow.show('start');
       });
-      const page = h('section.nw-view.nw-progress', { 'aria-label': 'Setting up the project' }, h('div.nw-progress-in', {}, h('h1', {}, `Setting up ${job.plan.owner}/${job.plan.name}`), h('p.nw-lede', {}, 'You can close this page: the setup carries on, and it stays under Unfinished setups (Home, and ✨ New project) until it’s done.'), progress.el, h('div.nw-progress-acts', {}, another, progress.actions)));
+      const page = h('section.nw-view.nw-progress', { 'aria-label': 'Setting up the project' }, h('div.nw-progress-in', {}, progress.el, h('div.nw-progress-acts', {}, another, progress.actions)));
       main.replaceChildren(page);
       requestAnimationFrame(() => page.classList.add('in'));
       flow.say('The project setup started');

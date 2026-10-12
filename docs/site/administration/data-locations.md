@@ -37,6 +37,7 @@ The office keeps its data in a `.agent-office` folder. On the office laptop the 
 | `flows/<workflow>/<run>.json`, `flows/_cache/` | [Workflow](../automation/workflows.md) runs, each checkpointed after every step (the new-project wizard's setups are `flows/new-project/`), and cached step results |
 | `toolkit-pins.json` | Which [toolkit commit](toolkit-versions.md) each floor is pinned to, and when the toolkit fork was last fetched (each project's committed `agent-office.project.json` has the same, with its history) |
 | `wizard/` | New-project wizard jobs saved before the workflow engine (taken in on first use and renamed `.json.migrated`) |
+| `wizard-drafts/<id>/` | New project briefs in progress: `draft.json` (the brief, the chat, the approval, the planning spend) and `files/` (the attached documents). Removed when the project's setup finishes, when it's discarded, or after two weeks unused |
 | `live/<floor>/`, `live/<floor>.log` | The live app's clone and log |
 | `live-app.json` | Live app settings (optional) |
 | `deleted/<floor>-<date-time>/`, `deleted/jobs/<floor>.json` | [Deleted or removed projects](../using-the-office/delete-project.md#whats-archived-and-where): the archive of each one's office data, and a deletion that stopped part way (to carry on) |

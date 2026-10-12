@@ -19,7 +19,7 @@ import { icon } from './parts';
 import type { Flow } from './index';
 
 type Level = LevelCard['id'];
-const LEVEL_WHY: Record<Level, string> = { lean: 'Cheaper models, fewer drafts, more waiting on you.', balanced: 'The default: good models, one early draft per deliverable.', fast: 'Stronger models and more agents at once; costs more.' };
+const LEVEL_WHY: Record<Level, string> = { lean: 'Cheaper models, fewer drafts, more waiting on you.', balanced: 'The default: good models, one early draft per document.', fast: 'Stronger models and more agents at once; costs more.' };
 const cache = new Map<string, WithShapes>();
 
 /** The intake answers the recommendation reads: the brief's (Q2, Q4, Q5) and what was typed under Advanced (Q7). */

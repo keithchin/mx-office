@@ -309,14 +309,7 @@ html.nw-open, html.nw-open body { overflow: hidden; }
 /* The setup's progress, in the flow's page */
 #modal-root .nw-progress { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, var(--paper)) 0%, var(--paper) 340px); }
 #modal-root .nw-progress-in { max-width: 820px; margin: 0 auto; padding: 40px 24px; display: grid; gap: 14px; }
-#modal-root .nw-progress-in h1 { font-size: 24px; }
 #modal-root .nw-progress-acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-#modal-root .nw-progress .wz-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
-#modal-root .nw-progress .wz-step { display: grid; grid-template-columns: 26px 1fr; gap: 0 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--nw-r); background: var(--card); font-size: 13px; }
-#modal-root .nw-progress .wz-step small { grid-column: 2; color: var(--muted); overflow-wrap: anywhere; }
-#modal-root .nw-progress .wz-step.done { background: var(--good-soft); }
-#modal-root .nw-progress .wz-step.failed { background: var(--bad-soft); border-color: var(--bad); }
-#modal-root .nw-progress .wz-step.running { background: var(--warn-soft); }
 #modal-root .nw-progress .wz-log { margin: 0; max-height: 300px; overflow: auto; padding: 10px 12px; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--line); border-radius: var(--nw-r); font: 12px/1.45 var(--font-mono, monospace); white-space: pre-wrap; overflow-wrap: anywhere; }
 #modal-root .nw-progress .wz-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 #modal-root .nw-progress .hidden { display: none !important; }
