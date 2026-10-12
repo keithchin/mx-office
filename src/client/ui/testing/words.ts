@@ -3,6 +3,8 @@
 
 import { shortRev, UNKNOWN, type Link, type Revision } from '../../../shared/testing/record';
 import type { Coverage, Freshness, ResultState, UcCoverage } from '../../../shared/testing/view';
+import type { CheckState } from '../../../shared/testing/policy';
+import type { VerifyState } from '../../../shared/testing/verify';
 
 export type Tone = 'good' | 'warn' | 'bad' | 'muted' | 'info';
 
@@ -60,3 +62,20 @@ export function when(iso: string | undefined): string {
   const d = new Date(t);
   return `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'short' })} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
+
+/** A required check's state on a revision (Testing release 2): missing and skipped are never good news. */
+export const CHECK_STATE: Record<CheckState, { word: string; tone: Tone }> = {
+  passed: { word: 'Passed', tone: 'good' },
+  failed: { word: 'Failed', tone: 'bad' },
+  missing: { word: 'Missing (never ran here)', tone: 'warn' },
+  skipped: { word: 'Skipped', tone: 'warn' },
+  waived: { word: 'Waived', tone: 'info' },
+};
+
+/** A merged task's verification. */
+export const VERIFY_STATE: Record<VerifyState | 'integrated', { word: string; tone: Tone }> = {
+  verified: { word: 'Done (verified)', tone: 'good' },
+  'not-verified': { word: 'Merged, not verified', tone: 'bad' },
+  'head-only': { word: 'Passed on PR head, integrated revision not checked', tone: 'warn' },
+  integrated: { word: 'Merged, not judged yet', tone: 'muted' },
+};

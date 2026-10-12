@@ -118,4 +118,5 @@ The records are kept in `<office data>/acceptance/<floor>.jsonl`:
 - One line per accept or reopen.
 - The file is append-only and hash-chained like the [Audit log](audit-log.md), so an edited or removed line shows. If the chain doesn't hold, the record view warns you.
 - Each accept and reopen is in the Audit log as `acceptance.accept` or `acceptance.reopen`, under the **Acceptance** filter.
+- The record also keeps the [Testing](testing.md#acceptance) summary at the accepted commit: the coverage, result and freshness counts and the verification policy's result there. Verification policy changes and waivers (`testing.policy`, `testing.waive`) are under the same filter.
 - The evidence trace (`/api/evidence/trace`) lists each record, with references to the documents and gate dashboard at the accepted commit.

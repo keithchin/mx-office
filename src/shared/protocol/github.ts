@@ -38,6 +38,8 @@ export interface GhPull {
   headRefName: string;
   /** The commit its branch is at on GitHub (for a merged PR, the last one merged). */
   headRefOid?: string;
+  /** A merged PR's merge commit on its base branch (the integrated revision, Testing release 2). */
+  mergeCommit?: string;
   baseRefName: string;
   createdAt: string;
   updatedAt: string;

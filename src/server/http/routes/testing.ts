@@ -1,29 +1,78 @@
 // App Insights › Testing (server/testing/): a floor's test-run records and what they say against the
 // files at main, read-only. Signed-in users, like the other App Insights pages. `part=plan` hands the
-// test plan's markdown, asked only when its panel opens.
+// test plan's markdown, asked only when its panel opens; `part=verification` the Verification panel's
+// data (release 2). Only an admin changes the verification policy (the project's or a task's) or gives
+// a waiver, from the office's own page (or a script sending JSON), each audited (server/testing/verify.ts).
+import type http from 'node:http';
+import type { Ctx } from '../../office/context.js';
+import { refuseStale } from '../../phone-access/reauth.js';
+import { rosterOf, teamFloor } from '../../roster/adapter.js';
 import { officeDeps, testingView, testPlanText } from '../../testing/index.js';
-import { send } from '../util.js';
+import { setProjectPolicy, setTaskPolicy, verificationView, waive } from '../../testing/verify.js';
+import { reverify } from '../../testing/verify-office.js';
+import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+
 export const testingRoutes = {
-  /** GET /api/testing?floor=<id>[&part=plan]: the TestingView (or the test plan's text). */
+  /** GET /api/testing?floor=<id>[&part=plan|verification]: the TestingView (or the test plan's text, or the Verification panel). */
   view: {
     method: 'GET',
     path: '/api/testing',
     auth: 'session',
-    async handle(ctx, { res, url }) {
+    async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
       if (!floor) return send(res, 404, { error: 'No such floor' });
       try {
-        if (url.searchParams.get('part') === 'plan') {
+        const part = url.searchParams.get('part');
+        if (part === 'plan') {
           const plan = await testPlanText(floor);
           return plan ? send(res, 200, plan) : send(res, 404, { error: 'No test plan at main' });
+        }
+        if (part === 'verification') {
+          const roster = floor.workers ? rosterOf(ctx) : undefined;
+          return send(res, 200, { ...(await verificationView(ctx.cfg.dataDir, roster, floor)), admin: ctx.meOf(session.account?.id).admin });
         }
         return send(res, 200, await testingView(ctx.cfg.dataDir, floor, officeDeps(ctx)));
       } catch (err) {
         return send(res, 500, { error: (err as Error).message });
       }
+    },
+  },
+  /** POST /api/testing/verification {floor, action: 'policy' | 'task-policy' | 'waive', …}: admins only, each audited. */
+  change: {
+    method: 'POST',
+    path: '/api/testing/verification',
+    auth: 'session',
+    async handle(ctx, { req, res, session }) {
+      if (!fromUs(req, ctx)) return send(res, 403, { error: 'Forbidden' });
+      if (!ctx.meOf(session.account?.id).admin) return send(res, 403, { error: 'Only an admin can change the verification policy or waive a check' });
+      let body: Record<string, unknown>;
+      try {
+        const v = JSON.parse((await readBody(req, 32 * 1024)) || '{}');
+        body = v && typeof v === 'object' ? v : {};
+      } catch {
+        return send(res, 400, { error: 'Send JSON' });
+      }
+      if (refuseStale(ctx, req, res)) return;
+      const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
+      if (!floor) return send(res, 404, { error: 'No such floor' });
+      // A named person: the signed-in account, else the name the page sends (an office with a shared password only).
+      const name = session.account?.name ?? (typeof body.by === 'string' ? body.by.trim().slice(0, 80) : '');
+      if (!name) return send(res, 400, { error: 'Say who you are (by): a waiver or a policy change is recorded with a name' });
+      const who = { name, ...(session.account?.id ? { accountId: session.account.id } : {}) };
+      let r: unknown;
+      if (body.action === 'policy') r = await setProjectPolicy(ctx.cfg.dataDir, floor.id, body.policy === null ? null : body.policy, who);
+      else if (body.action === 'task-policy') {
+        if (!floor.workers || typeof body.role !== 'string') return send(res, 400, { error: 'Say whose task (role)' });
+        r = setTaskPolicy(rosterOf(ctx), teamFloor(ctx, floor), body.role, body.policy === null ? null : body.policy, who);
+      } else if (body.action === 'waive') r = await waive(ctx.cfg.dataDir, floor.id, body, who);
+      else return send(res, 400, { error: 'action: policy, task-policy or waive' });
+      if (typeof r === 'string') return send(res, 400, { error: r });
+      await reverify(ctx, floor);
+      return send(res, 200, { ok: true, result: r });
     },
   },
 } satisfies Record<string, Route>;

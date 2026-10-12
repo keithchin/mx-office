@@ -117,6 +117,8 @@ export async function accept(ctx: Ctx, floor: Floor, body: Record<string, unknow
   if (typeof exceptions === 'string') return exceptions;
   const { draft: d, g } = await draftWith(ctx, floor, true);
   if (!d.source.commit) return 'The delivery commit could not be read. Commit the delivery and reopen the acceptance dialog';
+  // Testing release 2: the coverage summary and the policy's evaluation at the accepted commit (none when it can't be read).
+  const testing = await (await import('../testing/verify-office.js')).testingSummary(ctx, floor, d.source.commit);
   if (body.reviewToken !== d.reviewToken || g.current.commit !== d.source.commit || g.current.branch !== d.source.branch) return STALE_REVIEW;
   // No await between this check and append: another request may have accepted/reopened while Git ran.
   const latest = store.cycles().at(-1)!;
@@ -143,6 +145,7 @@ export async function accept(ctx: Ctx, floor: Floor, body: Record<string, unknow
     cost: d.cost,
     ...(g.deliverables ? { deliverablesDigest: deliverablesDigest(g.deliverables) } : {}),
     refs: refsOf(floor, projectId, d, now),
+    ...(testing ? { testing } : {}),
   };
   store.append({ op: 'accept', record });
   audit.record({

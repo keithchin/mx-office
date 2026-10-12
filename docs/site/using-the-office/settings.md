@@ -23,6 +23,7 @@ The sections are down the left; pick one and the address follows (`&section=work
 | 🎨 **Appearance** | [section=appearance](/lite?tab=settings&section=appearance) | Your color theme (Default, Dark, Terminal, Clean Light/Dark), the building's holiday theme and map |
 | 🛠️ **Advanced** | [section=advanced](/lite?tab=settings&section=advanced) | Workspace folder, the sky's clock, the office dog, where the settings files are |
 | 🧪 **Testing** | [section=testing](/lite?tab=settings&section=testing) | Admins only: whether this office is in test mode and why, and the way to the [Test Mode page](../administration/test-mode-page.md) |
+| ✅ **Verification** | [section=verification](/lite?tab=settings&section=verification) | Admins only, per project: the verification policy, the checks a merged task needs on its merge commit before it counts as delivered (see [Testing: verification policy and waivers](testing.md#verification-policy-and-waivers)). Each change is audited |
 | ⚠️ **Danger zone** | [section=danger](/lite?tab=settings&section=danger) | Admins only: Remove this project from the office, or delete it (its folder and GitHub repository too, if you tick them). See [Delete or remove a project](delete-project.md) |
 
 

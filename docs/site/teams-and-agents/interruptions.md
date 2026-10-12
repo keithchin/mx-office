@@ -18,12 +18,16 @@ An agent with no task is told *you have no task yet: tell the Coordinator what y
 
 How a task ends is worked out from GitHub's own lists, and only real delivery counts as delivered:
 
-- **Delivered**: its pull request was **merged**, or the issue it names was closed as *completed*.
+- **Delivered**: the issue it names was closed as *completed*, or its pull request was **merged** and verified on its merge commit (below).
+- **Merged**: its pull request was merged. It is finished, and then judged on the merge commit against the project's [verification policy](../using-the-office/testing.md#verification-policy-and-waivers):
+  - **Done (verified)**: every required check passed, or was waived, on the merge commit. Only this counts as delivered.
+  - **Merged, not verified**: a required check failed, is missing or was skipped there. The office asks you once in Needs you: re-run checks, waive (with a reason), or send it back for rework.
+  - **Passed on PR head, integrated revision not checked**: the pull request's head passed, and the merge commit has no results yet. Not counted as delivered.
 - **Cancelled**: the issue was closed as *not planned* (or as a duplicate). It's finished, but not delivered.
 - **Closed without merging**: its pull request was closed and not merged. That's never success. If the same agent opened a newer pull request from its branch for the same issue, the old one is just **replaced** and the work carries on. Otherwise the office asks you in [Needs you](../using-the-office/command-center.md#needs-you): *PR #9 was closed without merging: rework, cancel, or replaced?*
-- **Pending verification**: the agent ended a turn saying `task done`, but no pull request merged and no issue closed. The office takes it as a claim and notes it in the project's recent activity. It becomes delivered once the pull request merges or the issue closes.
+- **Pending verification**: the agent ended a turn saying `task done`, but no pull request merged and no issue closed. The office takes it as a claim and notes it in the project's recent activity. It moves on once the pull request merges (then judged as above) or the issue closes.
 
-A task waiting on your decision or pending verification gets no back-to-work nudges, the same as a finished one: it waits for you. Its resume line tells the agent not to carry on with that task until you answer. Tasks finished before this change keep the record they had.
+A task waiting on your decision or pending verification gets no back-to-work nudges, the same as a finished one: it waits for you. Its resume line tells the agent not to carry on with that task until you answer. A merged task is finished whatever its verification, so it gets no nudges either: "Merged, not verified" waits for your answer in Needs you. Tasks finished before these changes keep the record they had.
 
 ## The office never cuts into a turn under way
 

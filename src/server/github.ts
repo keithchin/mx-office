@@ -457,7 +457,7 @@ export class GitHub {
     this.onPulls(this.pulls);
     const asked = Date.now();
     try {
-      const fields = 'number,title,state,isDraft,url,author,labels,reviewDecision,headRefName,headRefOid,baseRefName,createdAt,updatedAt,additions,deletions,statusCheckRollup,body,closingIssuesReferences';
+      const fields = 'number,title,state,isDraft,url,author,labels,reviewDecision,headRefName,headRefOid,mergeCommit,baseRefName,createdAt,updatedAt,additions,deletions,statusCheckRollup,body,closingIssuesReferences';
       const [open, merged, closed] = await Promise.all([
         gh(['pr', 'list', '--state', 'open', '--limit', '150', '--json', fields], this.dir),
         gh(['pr', 'list', '--state', 'merged', '--limit', '30', '--json', fields], this.dir),
@@ -477,6 +477,7 @@ export class GitHub {
         reviewDecision: p.reviewDecision ?? '',
         headRefName: p.headRefName,
         headRefOid: typeof p.headRefOid === 'string' ? p.headRefOid : undefined,
+        ...(typeof p.mergeCommit?.oid === 'string' ? { mergeCommit: p.mergeCommit.oid } : {}),
         baseRefName: p.baseRefName,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,

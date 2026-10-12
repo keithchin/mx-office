@@ -16,6 +16,7 @@ import { incidentsOnWorker } from '../incidents/office.js';
 import { budgetOf } from '../budget/index.js';
 import { forgetWorker, noteWorkerStatus } from '../project-run/turns.js';
 import { ingestPulls } from '../testing/index.js';
+import { verifyOnPulls } from '../testing/verify-office.js';
 
 /**
  * Tells the project team about a worker, unless the floor is still being built. A floor restores its
@@ -164,6 +165,8 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
       auditGitHub(floor, 'pulls');
       // Each decided check rollup on a PR head becomes a test-run record (server/testing/).
       void ingestPulls(ctx.cfg.dataDir, floor);
+      // …and each merged task is judged on its merge commit, once per new PR list (server/testing/verify-office.ts).
+      void verifyOnPulls(ctx, floor);
       for (const f of floors.values()) if (f !== floor && worksIn(f, floor)) f.sendLandedHome();
     },
     issuesChanged: (floor) => {

@@ -83,7 +83,7 @@ export const AUDIT_GROUPS = {
   access: { label: 'Access', prefixes: ['login.', 'account.', 'audit.', 'access.', 'phone.'] },
   jeff: { label: 'Jeff', prefixes: ['judge.'] },
   firm: { label: 'The Firm', prefixes: ['firm.'] },
-  delivery: { label: 'Acceptance', prefixes: ['acceptance.'] },
+  delivery: { label: 'Acceptance', prefixes: ['acceptance.', 'testing.'] },
 } as const;
 export type AuditGroup = keyof typeof AUDIT_GROUPS;
 export const isAuditGroup = (g: unknown): g is AuditGroup => typeof g === 'string' && Object.hasOwn(AUDIT_GROUPS, g);

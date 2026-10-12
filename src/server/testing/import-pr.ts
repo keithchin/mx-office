@@ -6,7 +6,7 @@
 
 import type { PrChecks } from '../../shared/prshots.js';
 import type { GhPull } from '../../shared/protocol.js';
-import { inferredLinks } from '../../shared/testing/links.js';
+import { coversLinks, inferredLinks, mergeLinks } from '../../shared/testing/links.js';
 import { IMPORTER_VERSION, statusOf, type ResultStatus, type TestRunDraft } from '../../shared/testing/record.js';
 
 const SHA = /^[0-9a-f]{7,64}$/i;
@@ -29,7 +29,8 @@ export function draftFromPull(repo: string, p: GhPull): TestRunDraft | undefined
     pr: p.number,
     finishedAt: p.updatedAt,
     results: [{ name: 'All checks on the PR head', status, links: [] }],
-    links: inferredLinks(p.title, 'PR title', via),
+    // The description's "Covers: AC-04, BR012" line is a recorded link (the developers' Playbook asks for it).
+    links: mergeLinks(coversLinks(p.body, `PR #${p.number} description`), inferredLinks(p.title, 'PR title', via)),
     actor: { kind: 'ci', name: 'GitHub checks' },
     importer: IMPORTER_VERSION,
   };
@@ -41,7 +42,7 @@ function rowStatus(icon: string, result: string): ResultStatus {
 }
 
 /** The newest pr-checks run of a PR (or of a branch, main included), as prshots/ read it. */
-export function draftFromPrChecks(repo: string, c: PrChecks, opts: { branch?: string; title?: string } = {}): TestRunDraft | undefined {
+export function draftFromPrChecks(repo: string, c: PrChecks, opts: { branch?: string; title?: string; body?: string } = {}): TestRunDraft | undefined {
   const run = c.run;
   if (!run || String(run.status).toLowerCase() !== 'completed' || !SHA.test(run.sha ?? '')) return undefined;
   const results = c.rows.map((row) => ({ name: row.check, status: rowStatus(row.icon, row.result), detail: row.result || undefined, links: inferredLinks(row.check, 'test name', `pr-checks run ${run.id}`) }));
@@ -61,7 +62,8 @@ export function draftFromPrChecks(repo: string, c: PrChecks, opts: { branch?: st
     ...(c.pr ? { pr: c.pr } : {}),
     startedAt: run.createdAt,
     results,
-    links: opts.title ? inferredLinks(opts.title, 'PR title', `PR #${c.pr} title`) : [],
+    ...(statusOf(run.conclusion) ? { conclusion: statusOf(run.conclusion) } : {}),
+    links: mergeLinks(coversLinks(opts.body, `PR #${c.pr} description`), opts.title ? inferredLinks(opts.title, 'PR title', `PR #${c.pr} title`) : []),
     actor: { kind: 'ci', name: 'pr-checks' },
     importer: IMPORTER_VERSION,
   };

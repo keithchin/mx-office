@@ -115,6 +115,14 @@ const FOLDERS = [
   "Only for flows the team creates: never move documents a person organised, nor anything in Marketplace modules or System (`MOVE MICROFLOW Module.Name TO FOLDER 'Path';` is for the team's own). List every move in the pull request.",
 ].join('');
 
+/**
+ * Test first (Testing release 2): the Tester Lead writes or extends a task's test before the work, naming
+ * the acceptance criteria it covers, and developers run a task's tests before its pull request and say
+ * what it covers there, which the Testing tab reads as a recorded link. Prompts, never a block.
+ */
+const TEST_FIRST = '- Test first: before a task is built, write or extend its test (a journey or unit test), and name the criteria it covers in it (`Covers: AC-04, BR012`).';
+const COVERS = '- Before opening a pull request, run the task’s tests; put `Covers: AC-xx, BRyyy` in its description (the criteria and rules it delivers).';
+
 const ONE_WRITER ='One writer per Mendix app: only the Lead Developer runs `mxcli exec` (or any MCP write) against the .mpr. Everyone else — every other Lead and every subagent — drafts, checks (`mxcli check`, `mxcli -c "SHOW …"`) and reviews, and hands the change to the Lead Developer to apply.';
 
 /** The one-writer rule for whoever covers Development: the Lead Developer on an Enterprise team. */
@@ -143,9 +151,9 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
     case 'lead-designer':
       return ['## Design', '- Every page follows the Atlas design system and the agreed wireframes. Review design changes and record approvals (or what must change) in `docs/team/design.md`.', '- Hand page specs to the Lead Developer; never build pages yourself.'];
     case 'lead-developer':
-      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', LAYOUT, FOLDERS, '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
+      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', LAYOUT, FOLDERS, COVERS, '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
     case 'lead-tester':
-      return ['## Testing', '- Unit tests live in `tests/*.test.mdl`, Playwright e2e in `tests/e2e`; follow `.ai-context/skills/qa-tests` and the PR pipeline when the repo has them.', '- Approve test plans and results; when the framework is the bottleneck, improve it (and say so in the journal).', '- A failing test that shows the model is wrong is a finding for the Lead Developer, never a fix you make in MDL.'];
+      return ['## Testing', '- Unit tests live in `tests/*.test.mdl`, Playwright e2e in `tests/e2e`; follow `.ai-context/skills/qa-tests` and the PR pipeline when the repo has them.', '- Approve test plans and results; when the framework is the bottleneck, improve it (and say so in the journal).', '- A failing test that shows the model is wrong is a finding for the Lead Developer, never a fix you make in MDL.', TEST_FIRST];
     case 'solo-lead':
       return [
         '## Working alone',
@@ -153,6 +161,8 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         '- Dispatch a subagent for each draft or check (business-analyst, ui-ux-designer, developer, tester) and review every result before it lands.',
         LAYOUT,
         FOLDERS,
+        TEST_FIRST,
+        COVERS,
         `- The office asks you for a daily standup, then hands you the page (\`${standupPath('YYYY-MM-DD')}\`) to finish as your daily note: a **Summary** at the top, then commit and push.`,
         '- Nobody else relays to the Project Manager: escalate yourself whatever needs them.',
       ];

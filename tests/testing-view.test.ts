@@ -158,8 +158,12 @@ test('T11/T12: the feature does its file and git work asynchronously, and never 
   for (const f of readdirSync(dir)) {
     const src = readFileSync(path.join(dir, f), 'utf8');
     assert.doesNotMatch(src, /\b(readFileSync|writeFileSync|appendFileSync|statSync|existsSync|execFileSync|spawnSync|execSync)\b/, `${f} works off the main thread`);
-    assert.doesNotMatch(src, /from '\.\.\/github\.js'|'gh'|providers\/|claude/i, `${f} asks GitHub or an agent nothing`);
+    assert.doesNotMatch(src, /providers\/|claude/i, `${f} asks an agent nothing`);
+    // Release 2: only the bounded main-branch check fetch reads GitHub, and never in test mode (testing-verification.test.ts).
+    if (f === 'main-checks.ts') assert.match(src, /testModeOf\(dir\)\.on \? undefined/);
+    else assert.doesNotMatch(src, /from '\.\.\/github\.js'|'gh'/, `${f} asks GitHub nothing`);
   }
   assert.ok(routes.some((r) => 'path' in r && r.path === '/api/testing' && r.auth === 'session'));
   assert.ok(officeFiles('shop').includes('testing/shop.jsonl'), 'a deleted project takes its records to the archive');
+  assert.ok(officeFiles('shop').includes('testing/shop.verify.json'), 'and its verification policy and waivers');
 });
