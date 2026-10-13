@@ -173,9 +173,12 @@ export function questionCounts(qs: readonly Question[], answers: Readonly<Record
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
+/** " · 6 block work", or nothing when none do or every one does (then it narrows nothing down). */
+const blockWords = (blocking: number, of: number) => (blocking > 0 && blocking < of ? ` · ${blocking} block work` : '');
+
 /** "Questions · 9 of 24 answered · 6 block work". */
 export function headerWords(c: QuestionCounts): string {
-  return `Questions · ${c.answered} of ${c.total} answered${c.blocking ? ` · ${c.blocking} block work` : ''}`;
+  return `Questions · ${c.answered} of ${c.total} answered${blockWords(c.blocking, c.total)}`;
 }
 
 // ---- Needs you -----------------------------------------------------------------------------------------
@@ -193,7 +196,7 @@ export interface QuestionsNeed {
 }
 
 /** "24 questions for the client · 5 BRDs · 6 block work". */
-export const needsWords = (n: QuestionsNeed) => `${plural(n.waiting, 'question')} for the client · ${plural(n.brds, 'BRD')}${n.blocking ? ` · ${n.blocking} block work` : ''}`;
+export const needsWords = (n: QuestionsNeed) => `${plural(n.waiting, 'question')} for the client · ${plural(n.brds, 'BRD')}${blockWords(n.blocking, n.waiting)}`;
 
 /** The Needs-you row's parts (shared/needsyou.ts makes the item): one per project, keyed by its batch. */
 export function questionsNeedParts(n: QuestionsNeed | undefined): { key: string; text: string; since?: number; level: 'block' | 'warn' } | undefined {

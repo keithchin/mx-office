@@ -430,6 +430,9 @@ test('the page: filters (needs the client, you can decide, blocks work, answered
   const c = questionCounts(v.set!.questions, v.answers);
   const { headerWords } = await import('../src/shared/questions.js');
   assert.equal(headerWords(c), 'Questions · 3 of 5 answered · 2 block work');
+  // Every one blocking (or none) narrows nothing down: the count isn't said.
+  assert.equal(headerWords({ ...c, blocking: c.total }), 'Questions · 3 of 5 answered');
+  assert.equal(needsWords({ floor: 'f', waiting: 24, brds: 5, blocking: 24, batch: 1 }), '24 questions for the client · 5 BRDs');
 });
 
 // ---- helpers ----------------------------------------------------------------------------------------------
