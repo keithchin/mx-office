@@ -12,6 +12,7 @@ aliases: [/docs/jeff]
 | Judgement | Question | The office's own rule | When **On**, Jeff… |
 |---|---|---|---|
 | 🙋 **Waiting on you** | An agent just ended its turn. Is it waiting on the Project Manager? | It is *needs input*, or has an open escalation | raises the escalation the agent forgot (important, *blocked*), when he's sure (≥ 0.7), the rule says no and its message really asks you something (see [When he escalates](#when-he-escalates)) |
+| 💬 **The lead's chat** | The same, for whoever covers Management (the Coordinator, or the lead on a Solo or Startup team) | It filed an escalation in that turn | files the ask for it, titled *From the chat: …* (`question`, or `needs-human` for a hands-on action), when its last message really asks you something; the same ask once a day at most, and another open escalation doesn't hold it back |
 | 🏷️ **Issue triage** | A new issue appeared. Which team is it for? | Its `team:` label | labels an unlabelled issue when he's sure (≥ 0.75) |
 | 🧑‍⚖️ **Priority** | An escalation is open. How soon should the Project Manager resolve it? | Urgency, then age | puts the escalation lists in his order, with a chip (see below). Advisory only |
 
@@ -21,6 +22,7 @@ Set each judgement in [Settings](../using-the-office/settings.md) → **Jeff · 
 
 - **Off**: never asked.
 - **Shadow** (the default for Waiting on you and Triage): asked, and his verdict is logged next to the office's own rule. He never acts.
+- **The lead's chat** is **On** by default: the lead's asks used to reach the Project Manager only when they asked it, so its asks are filed straight away. Set it back to Shadow (or Off) in the same section. No extra model calls: he was already asked in Shadow.
 - **On**: he acts as above. **Priority** is Off or On only, and On by default: it only orders lists, so there is nothing to watch in shadow first.
 
 Watch the **Jeff · Router** section of the [Analysis](../using-the-office/model-analysis.md) tab. It shows how often he agrees with the rule and the recent disagreements. When he agrees with *you*, switch that judgement to On.

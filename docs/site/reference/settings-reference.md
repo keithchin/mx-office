@@ -15,7 +15,7 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 | `dryRunIssues` | boolean | `false` | Approved proposals are recorded but no GitHub issue is made. `AGENT_OFFICE_TEAMS_DRY_RUN=1` forces it on. |
 | `reviewNudge` | boolean | `true` | Prompt a Lead once to review a subagent's result. See [The review loop](../teams-and-agents/review-loop.md). |
 | `backToWork` | boolean | `true` | Nudge a member that stopped with its task open to carry on or escalate (twice per task an hour at most; never at level 1). See [Interruptions and back to work](../teams-and-agents/interruptions.md#back-to-work). |
-| `jeff` | `JeffSettings` | `{ waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree' }` | Per judgement: `'off'`, `'shadow'` or `'on'` (`priority`: `'off'` or `'on'`). See [Jeff · Router](../automation/jeff-router.md). |
+| `jeff` | `JeffSettings` | `{ waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree', waitingLead: 'on' }` | Per judgement: `'off'`, `'shadow'` or `'on'` (`priority`: `'off'` or `'on'`). See [Jeff · Router](../automation/jeff-router.md). |
 | `subagentCooldownHours` | number | `24` | Hours a benched subagent sits out before it's reinstated; 0 = only by hand. 0 to 720, in tenths. |
 | `autonomyByStage` | `AutonomyByStage` | `{ enabled: false, early: 2, build: 3 }` | Autonomy by pipeline stage. On, on a toolkit project, the office sets `autonomy` itself: `early` until the build plan's gate (Stage 4) passes, `build` from then on. See [Autonomy by pipeline stage](../teams-and-agents/autonomy.md#autonomy-by-pipeline-stage). |
 | `earlyDrafts` | boolean | `true` | While the Chief Analyst is on Stages 0–2, Design, Development and Testing make small drafts marked as such (`-draft` in the name, a `DRAFT — before Stage 3 gate` banner): low-fi wireframes, a draft domain model and architecture sketch, a test-plan outline. Off: they wait for their stage. Written into the Playbooks. See [Deliverables](../using-the-office/deliverables.md). |
@@ -46,6 +46,7 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 | `triage` | `off`, `shadow`, `on` | Which team does a new issue belong to? |
 | `priority` | `off`, `on` (default `on`) | How soon should the Project Manager resolve each open escalation? On: the escalation lists are in Jeff's order with a *#1 · resolve first* chip. It only orders lists, so it has no shadow mode. |
 | `waitingPolicy` | `agree`, `model` (default `agree`) | With `waiting` on, what it takes for Jeff to raise an escalation: `agree`, his verdict *and* a real ask at the end of the agent's message; `model`, his verdict alone. See [When he escalates](../automation/jeff-router.md#when-he-escalates). |
+| `waitingLead` | `off`, `shadow`, `on` (default `on`) | Waiting on you, for whoever covers Management: an ask in its last message that it didn't escalate in that turn is filed for it as *From the chat: …* (once a day per ask). See [Escalations](../teams-and-agents/escalations.md#escalations-the-office-files-for-an-agent). |
 
 ## Office-wide settings outside the team settings
 

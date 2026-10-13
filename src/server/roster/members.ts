@@ -3,7 +3,7 @@
 // hiring a benched one starts a fresh session primed with its latest handoff note, never a resume.
 
 import { latestEntry } from '../../shared/roster/journal.js';
-import { cleanName, journalPath, ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
+import { cleanName, ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { dayIn } from '../../shared/roster/schedule.js';
 import { awaitingAnswer, isAsleepStatus, mayBench } from './bench.js';
 import { awaitingAsk, awaitingItems, awaitingKey, entryTime, planAwaiting } from '../asks/awaiting.js';

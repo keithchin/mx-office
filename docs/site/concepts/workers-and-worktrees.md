@@ -50,3 +50,9 @@ A question or a permission prompt (🙋) always raises the flag, whoever started
 ## Restarts
 
 On Windows, workers are child processes of the office server. **Restarting the office stops every running worker.** Their sessions are saved. When the office comes back, only the agents it cut off **mid-turn** (working, or asking something) are resumed, carrying on where they were; they're told that what they escalated is still open (by title) so they don't raise it again. Everyone who was at rest, finished or already asleep stays 💤 asleep until someone (or the office, with an answer or a relay) prompts them; walking onto the floor no longer wakes them. Shells come back as before. See [Running the office](../administration/running-the-office.md#restarting).
+
+## Line endings: a project's `.gitattributes`
+
+A new project gets a `.gitattributes` committed with its scaffold: `* text=auto eol=lf` (LF in the repository and in every checkout, whatever `core.autocrlf` says), Windows scripts (`*.bat`, `*.cmd`, `*.ps1`) with CRLF, and the Mendix model (`*.mpr`, `*.mpk`, `*.mxunit`, `mprcontents/**`), images, fonts and office files as binary. Without it, on Windows (`core.autocrlf=true`) an agent's new worktree shows a couple of hundred modified files that are only line endings once the toolkit rewrites its skills.
+
+The office never adds it to an existing project by itself. To add it by hand: copy the lines from a new project's `.gitattributes` (or from `src/server/wizard/gitattributes.ts`) into the project's root, then run `git add --renormalize .` and commit the result in its own pull request. Agents' worktrees made after that merge check out cleanly.

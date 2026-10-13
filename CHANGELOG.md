@@ -6,7 +6,18 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### New
+
+- **Nothing waits on you unseen: answer everything from Needs you.** Agents' asks used to reach you only through channels the office didn't count (their chat, a journal's `AWAITING-PM:` line, an FYI escalation, a branch nobody merged), so you heard of them only by asking the Coordinator. Now an ask in the lead's chat that it didn't escalate is filed for it as *From the chat: …*; every item of an `AWAITING-PM` line, wherever the newest journal entry is (the project folder, an agent's worktree or its branch), becomes an escalation of its own on bench, on pause and every five minutes, and closes by itself when the line is gone; and FYI escalations show as low **FYI** rows instead of being hidden. The lead's chat judgement is **On** by default (⚙️ Settings › Jeff · Router › *The lead's chat*; set it back to Shadow there).
+- **New Needs-you rows from where the team's words are.** *N agent updates aren't on main* (journals, standups and handoffs on branches nobody merged, older than a day) with **Ask the lead to open a docs PR**; *N assumptions made without your consent* (PROJECT.md decisions `ASSUMED` with no consent recorded) with **Agree** and **Discuss**; the toolkit's gate advisories, which it printed only to an agent; and *Ready for your review: 5 BRDs, design system, 9 wireframes* with **Documents**. Info rows are shown but not counted in *N waiting on you*. The lead's newer standup still on its branch adds its *Blocked on you* to the standup page and the Management team page, labelled as not on main yet.
+- **Hands-on asks always reach you.** A new escalation trigger, `needs-human` (merge a PR, sign in, paste a key, install a tool, allow something, restart a preview), and `question` are never filed as FYI at any autonomy level. A standup proposal that is such an action becomes the new **human-action** kind and waits for you at every level, where an autonomous team used to approve it with nobody doing it.
+
+### Changed
+
+- **The Playbooks make every ask an escalation.** Where a toolkit skill says to ask in chat, an Mx Office agent files it with `office-workers escalate` (one per batch), never only in chat, a journal, a handoff or a standup page. Whoever covers Management ends a reply that asks you something with an escalation, lists only escalated items under *Blocked on you*, sweeps every place an ask hides (BRD open questions, `AWAITING-PM` lines, gate advisories, `blocked…` build-plan rows) and opens a docs-only PR with its journal and standups daily. Playbooks are rewritten as usual the next time a Lead is hired or the autonomy level changes.
+- **Stuck detection reads the toolkit's question states and blocked rows.** PROJECT.md open questions marked `RAISED` or `UNRAISED` count as open, and build-plan rows whose State starts with `blocked` become a 🧱 item per blocker; a row still blocked on a decision that's resolved says to update the build plan or name the real blocker.
+- **Every ✋ sign-off shows in Needs you, past Stage 4 too.** *Stage N waits for your sign-off* now comes from gate-check's verdicts for any stage it marks MANUAL, whether or not the setup panel shows.
+- **A new project gets a `.gitattributes`.** LF in every checkout whatever `core.autocrlf` says, and the `.mpr`, `mprcontents/` units, images and office files binary, committed with the scaffold: agents' worktrees no longer show a couple of hundred files changed only by line endings. Existing projects aren't changed; the docs page *Workers and worktrees* says how to add it by hand.
 
 ## 2026-10-13 · release 43 (`14054c8`)
 
