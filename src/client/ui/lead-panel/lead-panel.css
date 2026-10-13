@@ -160,6 +160,11 @@ html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .lp-badge { bor
 /* The team phone's button (ui/phone/) moves out of the panel's way: beside it on a computer, left of the floating avatar on a phone. */
 body.lite.lp-on .tp-launch { right: calc(var(--lp-space) + 16px); }
 @media (max-width: 760px) { body.lite.lp-on .tp-launch { right: calc(max(16px, env(safe-area-inset-right)) + 68px); } }
+/* Its window too: on a computer it opens left of the panel (or the collapsed rail) with the same gap, and narrows to fit what is left. */
+@media (min-width: 761px) {
+  body.lite.lp-on .tp-win { right: calc(var(--lp-space) + 16px); width: min(390px, calc(100vw - var(--lp-space) - 32px)); }
+  body.lite.lp-on .tp-win.tp-is-wide { width: min(820px, calc(100vw - var(--lp-space) - 32px)); }
+}
 
 /* ---- The other themes ------------------------------------------------------------------------------- */
 html[data-theme='terminal'] :is(.lp-qchip, .lp-composer, .lp-box, .lp-send, .lp-turn, .lp-hint, .lp-face, .lp-badge, .lp-tab, .lp-iconbtn) { border-radius: 0; }
