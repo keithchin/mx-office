@@ -25,6 +25,17 @@ export interface RunResult {
 
 const TAIL = 12;
 
+/** A line that says what went wrong ("ERROR: System.IO.PathTooLongException: …", "fatal: …"), as opposed to a stack frame under it. */
+const ERROR_LINE = /^\s*(?:error|fatal|unhandled exception)\b[:!]?|exception:/i;
+const FRAME = /^\s+at\s/;
+
+/** Why a command failed, in its own words: the last error line it said (its stack frames can push that out of the tail), else its last lines that aren't stack frames. */
+export function failureWords(tail: string[], errorLine?: string): string {
+  if (errorLine) return errorLine.trim().slice(0, 400);
+  const said = tail.filter((l) => !FRAME.test(l));
+  return (said.length ? said : tail).slice(-3).join(' ').slice(0, 400);
+}
+
 /** The commands running now, and since when: what a setup step that makes no progress is waiting on (job.ts). */
 export const runningCommands = new Map<number, { line: string; since: number; started: boolean }>();
 let nextRun = 1;
@@ -114,6 +125,7 @@ export function runCommand(cmd: string, args: string[], opts: RunOptions, hooks:
     }, hooks.checkMs);
     look.unref?.();
     const tail: string[] = [];
+    let errorLine: string | undefined;
     let stdout = '';
     const partial = { out: '', err: '' };
     const take = (which: 'out' | 'err', chunk: string) => {
@@ -125,6 +137,7 @@ export function runCommand(cmd: string, args: string[], opts: RunOptions, hooks:
     };
     const said = (line: string) => {
       if (!line.trim()) return;
+      if (ERROR_LINE.test(line) && !FRAME.test(line)) errorLine = line;
       tail.push(line);
       if (tail.length > TAIL) tail.shift();
       opts.onLine?.(line);
@@ -149,7 +162,7 @@ export function runCommand(cmd: string, args: string[], opts: RunOptions, hooks:
       said(partial.out);
       said(partial.err);
       if (timedOut) return reject(new Error(`${cmd} ${args[0] ?? ''} took longer than ${Math.round(opts.timeoutMs / 1000)}s and was stopped`));
-      if (code !== 0 && !opts.allowFail) return reject(new Error(`${cmd} ${args[0] ?? ''} failed (exit ${code}): ${tail.slice(-3).join(' ').slice(0, 400) || 'no output'}`));
+      if (code !== 0 && !opts.allowFail) return reject(new Error(`${cmd} ${args[0] ?? ''} failed (exit ${code}): ${failureWords(tail, errorLine) || 'no output'}`));
       resolve({ code, tail, stdout });
     });
   });

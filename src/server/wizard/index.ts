@@ -22,7 +22,7 @@ import { officeSettings, toolkitDir } from '../connections/store.js';
 import { configProblems, mendixVersions, preferredMendix, projectOrg, toolkitEnv, wizardConfig, type WizardConfig } from './config.js';
 import { existingAnswers, parseIntakeTemplate } from './intake.js';
 import { JobBook, jobId, newJob, type JobState } from './job.js';
-import { mprVersion } from './mendix-app.js';
+import { appDirTooLong, mprVersion } from './mendix-app.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
 import { setupView, setupViewOf } from './setup.js';
@@ -184,6 +184,10 @@ export class Wizard {
     if (had && this.book.isRunning(id)) return this.book.view(had);
     if (plan.kind === 'new' && !plan.createdByHand && !this.cfg.offlineDir && !adminTokenConfigured(this.cfg.adminTokenFile)) {
       return "There's no admin token, so the office can't create the repository: create one (see the instructions), or create the repository on GitHub yourself and tick that box";
+    }
+    if (plan.kind === 'new' && !had) {
+      const tooLong = appDirTooLong(path.join(this.ctx.building.projectsDir, plan.owner, plan.name), plan.name);
+      if (tooLong) return tooLong;
     }
     const job = had ? Object.assign(had, { plan }) : newJob(plan, by, account);
     this.book.add(job);
