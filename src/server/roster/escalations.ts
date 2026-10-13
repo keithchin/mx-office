@@ -216,6 +216,20 @@ export class Escalations {
     return undefined;
   }
 
+  /**
+   * Closes one the office filed from an agent's words once those words are gone (an AWAITING-PM item no
+   * newest entry lists any more, server/asks/): resolved as noted, nothing sent to the agent.
+   */
+  settle(floor: TeamFloor, id: string, why: string): boolean {
+    const e = this.roster.data(floor.id).escalations.find((x) => x.id === id);
+    if (!e || e.status !== 'open') return false;
+    e.status = 'resolved';
+    e.resolution = { verdict: 'dismiss', text: why, by: 'The office', at: this.roster.deps.now(), delivered: false };
+    audit.record({ floor: floor.id, actor: office(), action: 'escalation.answer', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `Closed by itself: ${why}: ${e.title}`, details: { verdict: 'dismiss', settled: true }, severity: 'info' });
+    this.roster.touch(floor);
+    return true;
+  }
+
   /** Roles the office is hiring back right now (floor:role), so answers in quick succession hire once. */
   private hiring = new Set<string>();
 

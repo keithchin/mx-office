@@ -132,6 +132,10 @@ const ROW_TAG: Record<NeedKind, string> = {
   budget: 'Budget',
   stuck: 'Stuck',
   fyi: 'FYI',
+  offmain: 'Not on main',
+  assumption: 'Consent',
+  advisory: 'Advisory',
+  review: 'Review',
 };
 
 export interface RowModel {

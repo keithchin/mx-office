@@ -16,6 +16,7 @@ import type { BudgetAlert } from './budget/types.js';
 import type { SettingsSectionId } from './settings-sections.js';
 import type { RoleId } from './roster/roles.js';
 import { STUCK_ICON, stuckTitle, type StuckView } from './stuck.js';
+import { askNeeds, type AskAct, type AskKind, type AsksNeed } from './asks.js';
 
 /** Where an item's button takes you. */
 export type NeedTarget =
@@ -36,9 +37,11 @@ export type NeedTarget =
   /** Nudges an idle team member back to its open task (the office's back-to-work prompt, as the Project Manager's). */
   | { to: 'nudge'; role: RoleId }
   /** A stuck item's card (ui/stuck/): what's stuck, the evidence and its buttons. */
-  | { to: 'stuck'; id: string };
+  | { to: 'stuck'; id: string }
+  /** A surfaced ask's button (server/asks/, shared/asks.ts): a message to the lead, your consent, the Documents page, or seen. */
+  | { to: 'ask'; id: string; act: AskAct };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'fyi';
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'fyi' | AskKind;
 
 /** How long a team member sits idle with an open task (nothing escalated) before Needs you says so. */
 export const IDLE_TASK_MS = 10 * 60_000;
@@ -101,6 +104,8 @@ export interface NeedsInput {
   budget?: BudgetNeed;
   /** Work the office found stuck (server/stuck/): a PR nobody touches, a decision waiting on you, a test red for days, the team going in circles. */
   stuck?: StuckNeed;
+  /** What the office surfaced from where the team's words are (server/asks/): work not on main, assumptions without consent, gate advisories, what's ready for review. */
+  asks?: AsksNeed;
   /** Now (ms), for how long someone has been idle: Date.now() unless a test says. */
   now?: number;
 }
@@ -170,6 +175,8 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     const action = s.kind === 'decision' ? 'Answer' : s.kind === 'stale-pr' ? `Ask ${lead}` : s.kind === 'circles' ? 'Ask for blockers' : 'Review';
     out.push({ key: `stuck-${s.id}`, kind: 'stuck', icon: STUCK_ICON[s.kind], tag: 'Stuck', text: stuckTitle(s, i.now ?? Date.now()), since: s.since, level: s.kind === 'decision' || s.kind === 'stale-pr' ? 'block' : 'warn', action, target: { to: 'stuck', id: s.id } });
   }
+  // Surfaced asks (server/asks/): assumptions without your consent and gate advisories (warn), work not on main and what's ready for review (info).
+  out.push(...askNeeds(i.asks, i.floor));
   // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold) not marked as seen.
   const b = i.budget && i.budget.floor === i.floor ? i.budget : undefined;
   if (b) {

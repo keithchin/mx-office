@@ -42,6 +42,7 @@ import { isSettingsSection, type SettingsSectionId } from '../shared/settings-se
 import { colorThemes } from './ui/colortheme';
 import { needsYouStrip } from './ui/needsyou';
 import { openStuck } from './ui/stuck/dialog';
+import { goAsk } from './ui/asks/feed';
 import { firmBanner } from './ui/firm/banner';
 import type { FirmFloorStatus } from '../shared/firm/engagement';
 import { gitView } from './ui/git';
@@ -406,6 +407,7 @@ function goToNeed(t: NeedTarget) {
   if (t.to === 'budget') return budget.go(t);
   if (t.to === 'nudge') return void nudgeMember(store.floor, t.role);
   if (t.to === 'stuck') return openStuck(t.id);
+  if (t.to === 'ask') return void goAsk(t);
   if (t.to === 'floor') {
     // Lands on that floor's Command Center, where its Needs you says who is waiting and why.
     showTab('command');
