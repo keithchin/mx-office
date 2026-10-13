@@ -93,3 +93,14 @@ test('in Clean the launcher’s own rule outranks the theme’s rule for every b
   // The emoji-blanking font never touches it: the icon is SVG, not a character.
   assert.doesNotMatch(frame.slice(frame.indexOf('const LINE_ICON'), frame.indexOf('const BATTERY')), /[\u{1F300}-\u{1FAFF}☀-➿]/u);
 });
+
+test("the team phone's window opens left of the team-lead panel (or its rail) with a gap, never over it; a phone keeps it full screen", () => {
+  const lp = read('src/client/ui/lead-panel/lead-panel.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const desk = lp.slice(lp.indexOf('@media (min-width: 761px)'));
+  assert.ok(lp.includes('@media (min-width: 761px)'), 'scoped to a computer, so the phone layout (full screen under 560 px) is untouched');
+  assert.match(desk, /body\.lite\.lp-on \.tp-win \{[^}]*right: calc\(var\(--lp-space\) \+ 16px\)/);
+  assert.match(desk, /body\.lite\.lp-on \.tp-win \{[^}]*width: min\(390px, calc\(100vw - var\(--lp-space\) - 32px\)\)/);
+  assert.match(desk, /body\.lite\.lp-on \.tp-win\.tp-is-wide \{[^}]*calc\(100vw - var\(--lp-space\) - 32px\)/);
+  // The launcher and the window share the same right edge.
+  assert.match(lp, /body\.lite\.lp-on \.tp-launch \{ right: calc\(var\(--lp-space\) \+ 16px\); \}/);
+});
