@@ -127,6 +127,8 @@ export function cleanSettings(v: unknown, base: RosterSettings = defaultSettings
       priority: isJeffPriorityMode(s.jeff?.priority) ? s.jeff.priority : (base.jeff?.priority ?? DEFAULT_JEFF.priority),
       // A roster saved before the policy existed gets the careful one: a real ask, not his say-so alone.
       waitingPolicy: isJeffWaitingPolicy(s.jeff?.waitingPolicy) ? s.jeff.waitingPolicy : (base.jeff?.waitingPolicy ?? DEFAULT_JEFF.waitingPolicy),
+      // A roster saved before it existed acts on the lead's chat asks, like a fresh one.
+      waitingLead: isJeffMode(s.jeff?.waitingLead) ? s.jeff.waitingLead : (base.jeff?.waitingLead ?? DEFAULT_JEFF.waitingLead),
     },
     // A roster saved before early drafts existed has them on, like a fresh one.
     earlyDrafts: typeof s.earlyDrafts === 'boolean' ? s.earlyDrafts : (base.earlyDrafts ?? true),

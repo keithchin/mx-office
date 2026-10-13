@@ -10,6 +10,10 @@
 //     if it has one. On: an unlabelled issue gets Jeff's team when he's confident.
 // Shadow logs both verdicts side by side (judge/<floor>.jsonl) and never acts, so the Project Manager
 // can see on the Analysis tab where Jeff agrees with the office before letting him act.
+// Whoever covers Management has a waiting mode of its own (waitingLead, On by default): its asks reached the
+// Project Manager only in chat, so a real ask in its last message that it didn't escalate in that turn is
+// filed for it "from the chat" (a question, or needs-human for a hands-on action), once a day per ask, and
+// another open escalation doesn't hold it back.
 
 import path from 'node:path';
 import type { GhIssue, WorkerInfo } from '../../shared/protocol.js';
@@ -20,7 +24,9 @@ import { coveredNote } from '../../shared/roster/coverage.js';
 import { JudgeLog } from '../judge/log.js';
 import { clipState, type Questions, type Verdict } from '../judge/pure.js';
 import type { Roster } from './index.js';
-import { realAsk, sameAsk, waitingCall } from './jeff-ask.js';
+import { CHAT_ASK_DEDUPE_MS, CHAT_PREFIX, chatAskTitle, realAsk, sameAsk, waitingCall } from './jeff-ask.js';
+import { isHandsOn } from '../../shared/roster/hands-on.js';
+import { managerRole } from './coverage.js';
 import { JeffPriority } from './jeff-priority.js';
 import type { TeamFloor } from './types.js';
 import { audit, jeff } from '../audit/index.js';
@@ -83,6 +89,8 @@ export class Jeff {
   /** Open issue numbers seen per floor; the first look is the baseline, judged never. */
   private seen = new Map<string, Set<number>>();
   private asking = new Set<string>();
+  /** When each worker's last turn ended (floor:worker): an escalation since then was filed in this turn. */
+  private turnEnds = new Map<string, number>();
 
   constructor(private roster: Roster) {
     this.log = new JudgeLog(path.join(roster.deps.dataDir, 'judge'));
@@ -106,12 +114,29 @@ export class Jeff {
     return this.roster.data(floor.id).escalations.some((e) => (e.workerId === w.id || !!e.also?.some((a) => a.workerId === w.id)) && (e.status === 'open' || (e.resolution?.at ?? e.at) >= since) && sameAsk(e.title, title));
   }
 
+  /** The lead filed an escalation in the turn that just ended (since its previous one ended, or the last hour). */
+  private filedThisTurn(floor: TeamFloor, w: WorkerInfo, since: number): boolean {
+    return this.roster.data(floor.id).escalations.some((e) => (e.workerId === w.id || !!e.also?.some((a) => a.workerId === w.id && a.at >= since)) && e.at >= since);
+  }
+
+  /** The same ask from its chat (or escalated by it) in the last day, open or answered: not filed again. */
+  private chatAskedAlready(floor: TeamFloor, w: WorkerInfo, role: string | undefined, ask: string): boolean {
+    const since = this.roster.deps.now() - CHAT_ASK_DEDUPE_MS;
+    return this.roster.data(floor.id).escalations.some((e) => (e.workerId === w.id || (!!role && e.role === role)) && (e.status === 'open' || e.at >= since) && sameAsk(e.title.replace(CHAT_PREFIX, ''), ask));
+  }
+
   /** An agent's turn just ended: is it waiting on the Project Manager? */
   async onTurnEnd(floor: TeamFloor, w: WorkerInfo): Promise<void> {
     const judge = this.roster.deps.judge;
-    const mode = this.mode(floor, 'waiting');
-    if (!judge || mode === 'off' || w.kind !== 'agent') return;
     const key = `${floor.id}:${w.id}`;
+    const ended = this.roster.deps.now();
+    const since = this.turnEnds.get(key) ?? ended - 3_600_000;
+    this.turnEnds.set(key, ended);
+    const d = this.roster.data(floor.id);
+    const role = this.roster.roleOf(floor, w.id);
+    const lead = !!role && role === managerRole(d);
+    const mode = lead ? (d.settings.jeff.waitingLead ?? 'on') : this.mode(floor, 'waiting');
+    if (!judge || mode === 'off' || w.kind !== 'agent') return;
     if (this.asking.has(key)) return;
     const text = floor.lastWords?.(w);
     if (!text?.trim()) return;
@@ -123,12 +148,19 @@ export class Jeff {
       const kind = v.answers.kind;
       const says = noul >= WAITING_AT && kind.choice !== 'none' && kind.choice !== 'fyi';
       const now = floor.worker(w.id) ?? w;
-      const rule = this.ruleWaiting(floor, now);
-      const title = questionLine(text) || `${now.name} is waiting on you`;
-      const call = waitingCall({ policy: this.roster.data(floor.id).settings.jeff.waitingPolicy ?? 'agree', says, rule, ask: realAsk(text), duplicate: this.raisedAlready(floor, now, title) });
+      const ask = realAsk(text);
+      // The lead: only an escalation it filed in this turn says it asked; the same ask within a day isn't filed again.
+      const rule = lead ? this.filedThisTurn(floor, now, since) : this.ruleWaiting(floor, now);
+      const title = lead ? chatAskTitle(ask ?? questionLine(text)) : questionLine(text) || `${now.name} is waiting on you`;
+      const duplicate = lead ? this.chatAskedAlready(floor, now, role, title.replace(CHAT_PREFIX, '')) : this.raisedAlready(floor, now, title);
+      const call = waitingCall({ policy: d.settings.jeff.waitingPolicy ?? 'agree', says, rule, ask, duplicate });
       let acted = false;
       // Only while its turn is still over: a person (or anything else) may have moved it on meanwhile.
-      if (mode === 'on' && call.escalate && (now.status === 'done' || now.status === 'idle')) {
+      if (mode === 'on' && call.escalate && lead && (now.status === 'done' || now.status === 'idle')) {
+        const details = [`${now.name} asked you this in its chat and didn't escalate it, so the office filed it from the chat (Jeff, ${kind.choice}, ${Math.round(noul * 100)}% sure). Answer here and it goes to ${now.name} as its next prompt.`, '', 'Its last message:', '', clipState(text, 2000)].join('\n');
+        this.roster.escalations.raiseFor(floor, { workerId: now.id, by: now.name, ...(role ? { role } : {}) }, { urgency: 'important', trigger: isHandsOn(`${title} ${ask ?? ''}`) ? 'needs-human' : 'question', title, details, options: [] }, `🧑‍⚖️ Jeff (Router) filed an ask from ${now.name}'s chat for you: it didn't escalate it`);
+        acted = true;
+      } else if (mode === 'on' && call.escalate && (now.status === 'done' || now.status === 'idle')) {
         const details = [`Jeff noticed ${now.name} ended its turn waiting on you (${kind.choice}, ${Math.round(noul * 100)}% sure). Answer here and it goes to ${now.name} as its next prompt.`, '', 'Its last message:', '', clipState(text, 2000)].join('\n');
         this.roster.escalations.raiseFor(
           floor,

@@ -76,7 +76,8 @@ function allSettings(v: RosterView, redraw: (v: RosterView) => void): HTMLElemen
     return h('label.ro-check', {}, i, ' ', label);
   };
   s.jeff ??= { ...DEFAULT_JEFF };
-  const mode = (label: string, kind: 'waiting' | 'triage') => {
+  s.jeff.waitingLead ??= DEFAULT_JEFF.waitingLead;
+  const mode = (label: string, kind: 'waiting' | 'triage' | 'waitingLead') => {
     const sel = h('select.ro-select', { disabled: off, 'aria-label': `Jeff: ${label}` }, ...JEFF_MODES.map((m) => h('option', { value: m, selected: s.jeff[kind] === m }, JEFF_MODE_LABEL[m])));
     sel.addEventListener('change', () => (s.jeff[kind] = sel.value as JeffMode));
     return h('label.ro-jeff-mode', {}, h('b', {}, label), sel);
@@ -141,6 +142,7 @@ function allSettings(v: RosterView, redraw: (v: RosterView) => void): HTMLElemen
     h('h4.ro-jeff-h', {}, jeffPortrait(22), ' Jeff · Router'),
     h('p.ro-sub', {}, 'Jeff is the office’s quick judge. In Shadow he is watching, not acting: he logs his verdict next to the office’s own rule, and the Analysis tab shows where you agree. Switch to On where he agrees with you.'),
     h('p.ro-row', {}, mode('Waiting on you', 'waiting'), ' When an agent ends its turn: is it waiting on you? On: he escalates it to you if it didn’t.'),
+    h('p.ro-row', {}, mode('The lead’s chat', 'waitingLead'), ' The same for whoever covers Management (the Coordinator, or the lead on a Solo or Startup team), On by default: an ask in its last message that it didn’t escalate becomes an escalation “from the chat”, once a day per ask.'),
     h('p.ro-row', {}, h('label.ro-jeff-mode', {}, h('b', {}, 'When to escalate'), policySel), ' Only a real ask: he raises it only when the end of its message asks you something (a question, a request or approval, an AWAITING-PM line); a progress report he thinks is waiting is logged as a disagreement. His say-so: his verdict alone is enough. He never raises what the agent already raised.'),
     h('p.ro-row', {}, mode('Triage', 'triage'), ' When a new issue appears: which team is it for? On: he labels unlabelled issues he’s sure about.'),
     h('p.ro-row', {}, h('label.ro-jeff-mode', {}, h('b', {}, 'Priority'), sortSel), ' When an escalation is raised: how soon should you resolve it? On: your escalations are listed in his order, #1 first.'),

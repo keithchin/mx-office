@@ -6,7 +6,7 @@
 // command's arguments, the MCP tool and the answer in words. Plain Node, no dependencies.
 
 export const URGENCIES = ['info', 'important', 'urgent', 'critical'];
-export const TRIGGERS = ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', 'security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path', 'needs-human'];
+export const TRIGGERS = ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', 'security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path', 'needs-human', 'question'];
 
 export const ESCALATE_USAGE = `  office-workers escalate --title "…" [--urgency info|important|urgent|critical]
         [--trigger <kind>] [--option "A"]... [--recommend "A"] <<'EOF'

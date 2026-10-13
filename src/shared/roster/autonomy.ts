@@ -96,8 +96,8 @@ export type EscalationTrigger =
   | 'plan' | 'scope' | 'design' | 'architecture'
   | 'revisions-exhausted' | 'blocked' | 'milestone' | 'repeated-failure' | 'budget-risk'
   | 'security' | 'data-loss' | 'client-milestone' | 'budget-overrun' | 'blocked-no-path'
-  | 'needs-human';
-export const ESCALATION_TRIGGERS: readonly EscalationTrigger[] = ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', 'security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path', 'needs-human'];
+  | 'needs-human' | 'question';
+export const ESCALATION_TRIGGERS: readonly EscalationTrigger[] = ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', 'security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path', 'needs-human', 'question'];
 export const isEscalationTrigger = (v: unknown): v is EscalationTrigger => typeof v === 'string' && (ESCALATION_TRIGGERS as readonly string[]).includes(v);
 
 export const TRIGGER_LABEL: Record<EscalationTrigger, string> = {
@@ -116,13 +116,15 @@ export const TRIGGER_LABEL: Record<EscalationTrigger, string> = {
   'budget-overrun': 'a budget overrun',
   'blocked-no-path': 'blocked with no path forward',
   'needs-human': 'a hands-on action only a person can do',
+  question: 'a question only the Project Manager can answer',
 };
 
 /**
- * Never FYI at any level, though no review policy lists it: a hands-on action (merge, sign in, paste a key,
- * install, allow, restart) is something only a person can do, so filing it quietly means nobody does it.
+ * Never FYI at any level: a hands-on action (merge, sign in, paste a key, install, allow, restart) is
+ * something only a person can do, and a question put to the Project Manager only they can answer, so
+ * filing either quietly means nobody does it (an ask the office files from an agent's chat is one of these).
  */
-export const HUMAN_TRIGGERS: readonly EscalationTrigger[] = ['needs-human'];
+export const HUMAN_TRIGGERS: readonly EscalationTrigger[] = ['needs-human', 'question'];
 
 /** Escalated at every level, Autonomous included: what no team should decide alone. */
 export const CRITICAL_TRIGGERS: readonly EscalationTrigger[] = ['security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path'];

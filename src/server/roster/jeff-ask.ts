@@ -123,3 +123,16 @@ export function sameAsk(a: string, b: string): boolean {
   for (const w of x) if (y.has(w)) shared++;
   return shared / (x.size + y.size - shared) >= 0.75;
 }
+
+// ---- Asks from the lead's chat (surface asks, S3) ----------------------------------------------------
+
+/** How long an ask filed from the lead's chat (or the same one it escalated) holds back filing it again. */
+export const CHAT_ASK_DEDUPE_MS = 24 * 3_600_000;
+/** What an ask filed from the chat is titled with, so the Project Manager sees where it came from. */
+export const CHAT_PREFIX = /^From the chat: /;
+
+/** The escalation's title for an ask found in the lead's chat: labelled, plain and short. */
+export function chatAskTitle(ask: string): string {
+  const what = ask.replace(/^AWAITING-PM:\s*/i, '').trim() || 'the lead is waiting on you';
+  return `From the chat: ${what.length > 140 ? `${what.slice(0, 139)}…` : what}`;
+}
