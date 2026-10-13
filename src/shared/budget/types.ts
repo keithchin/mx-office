@@ -183,6 +183,11 @@ export interface BudgetAlert {
   text: string;
   /** The budget it was raised against: raising the budget clears it. */
   budget: number;
+  /** Marked as seen (forecast and threshold only): out of Needs you, still on the Budget tab, dimmed. */
+  seenAt?: number;
+  seenBy?: string;
+  /** The forecast at completion when a forecast alert was marked as seen: past +10 % it's raised again. */
+  seenForecast?: number;
 }
 
 /** A cost driver or a suggestion (step 3's insights). */

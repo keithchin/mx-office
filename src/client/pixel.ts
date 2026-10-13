@@ -468,6 +468,7 @@ function goToNeed(t: NeedTarget) {
   }
   // Settings is the 1D view's tab, at the section the item is about.
   if (t.to === 'settings') return goToSettings(session, t.section ?? 'team');
+  if (t.to === 'budget' && t.seen) return budget.go(t);
   if (t.to === 'incident') return location.assign(`/lite?floor=${encodeURIComponent(store.floor ?? '')}&tab=audit&incident=${encodeURIComponent(t.id)}`);
   const tab = t.to === 'escalation' ? 'approvals' : t.to === 'setup' ? 'command' : t.to;
   location.assign(`/lite?floor=${encodeURIComponent(store.floor ?? '')}&tab=${tab}`);
