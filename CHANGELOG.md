@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-13 · release 43 (`14054c8`)
+
 ### New
 
 - **Mx Office analyses an incident when it's resolved.** **✅ Resolve…** no longer asks for the root cause: it says what will happen, takes an optional *Anything you already know?* note, and resolves the incident at once. In the background Mx Office drafts the root cause, the impact and 1 to 5 corrective actions (fix, prevent, detect) from the incident's own evidence (its record, the audit events it links and those around when it happened, your note), with secrets redacted, in one capped call with no tools ($0.30 per incident, 20 an hour across the office, metered in the budget as *Incident analysis*). The incident shows it as a draft to check: *Drafted by Mx Office from the incident's evidence: check it* on each field it wrote, its confidence, what supports it and *What the evidence can't tell*. It never overwrites what a person wrote (it shows beside it as a suggestion), and a field you edit is yours. If it doesn't finish, the incident stays resolved with *Analysis didn't finish: <reason>* and **Retry analysis**. A test office drafts it with a test analyser, never Claude.
