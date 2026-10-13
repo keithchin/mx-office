@@ -20,6 +20,7 @@ import type { JobState, StepImpl, StepIO } from './job.js';
 import type { BudgetChoice } from '../../shared/budget/levels.js';
 import { SHAPES, shapeForRoles, type TeamShape } from '../../shared/roster/coverage.js';
 import { createApp, ignoreMendixOutput, mprVersion } from './mendix-app.js';
+import { writeGitattributes } from './gitattributes.js';
 import { appendDecisionRows, recordBriefRegister, recordDecisions } from './register.js';
 import { bashPath, runCommand } from './run.js';
 import { couldntCheck, lookupWithRun, recordFound, refusedForSure } from './repo-lookup.js';
@@ -328,6 +329,8 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         return { status: 'skipped', detail: `existing app ${path.relative(dir, mpr)}${saved ? `, last saved with Studio Pro ${saved}` : ''}${off ? ` (not the ${job.plan.mendix} picked: edit the answers to change it)` : ''}` };
       }
       const ignored = ignoreMendixOutput(dir);
+      // LF everywhere and the model binary, committed with the scaffold (gitattributes.ts): a new project only.
+      writeGitattributes(dir);
       if (mpr) return { status: 'skipped', detail: `already there (${path.relative(dir, mpr)})${ignored ? '; .gitignore updated' : ''}` };
       io.log(`  creating the Mendix app with Studio Pro ${job.plan.mendix}…`);
       return { status: 'done', detail: await createApp(cfg, job.plan, dir, { run, env: env(), onLine: said(io) }) };

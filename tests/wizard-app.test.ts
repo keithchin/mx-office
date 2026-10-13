@@ -125,6 +125,9 @@ test("the app step makes the .mpr at the repository's root with Studio Pro's mx,
     assert.ok(existsSync(path.join(dir, 'TravelApproval.mpr')));
     assert.equal(readFileSync(path.join(dir, 'README.md'), 'utf8'), '# travel-approval\n');
     assert.match(readFileSync(path.join(dir, '.gitignore'), 'utf8'), /^\/deployment\/$/m);
+    // LF everywhere and the model binary, committed with the scaffold.
+    assert.match(readFileSync(path.join(dir, '.gitattributes'), 'utf8'), /^\* text=auto eol=lf$/m);
+    assert.match(readFileSync(path.join(dir, '.gitattributes'), 'utf8'), /^\*\.mpr binary$/m);
 
     // A retry finds the app and runs nothing.
     const again = await steps.app(job, io);
@@ -194,6 +197,7 @@ test("for an existing app the app step creates nothing: it reads the .mpr's Stud
     assert.match(r.detail ?? '', /Legacy\.mpr, last saved with Studio Pro 11\.6\.4 \(not the 11\.12\.4 picked/);
     assert.deepEqual(calls.map((c) => c.args[0]), ['show-version']);
     assert.ok(!existsSync(path.join(dir, '.gitignore')), "an existing app's .gitignore is left alone");
+    assert.ok(!existsSync(path.join(dir, '.gitattributes')), 'and it gets no .gitattributes by itself');
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
