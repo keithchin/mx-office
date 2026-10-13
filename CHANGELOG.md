@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Changed
+
+- **A finished agent idles instead of cheering forever on the Git page.** Its robot gives one cheer as it finishes, then bobs like an idle one; its ✓ still says it's done. (In the 2D Office a finished agent already sits like an idle one, with its tick.)
 
 ## 2026-10-13 · release 42 (`8223a6d`)
 

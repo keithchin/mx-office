@@ -132,7 +132,8 @@
   .gp-bot.st-working .gp-bob { animation: gp-type .5s steps(2) infinite; }
   .gp-bot.st-working .gp-fx { animation: gp-sparkle 1s ease-in-out infinite; }
   .gp-bot.st-needs_input .gp-fx { animation: gp-wave 1s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
-  .gp-bot.st-done .gp-bob { animation: gp-cheer 1.6s ease-out infinite; }
+  /* Done: one cheer as it finishes, then it idles like the rest (its ✓ says it is done). */
+  .gp-bot.st-done .gp-bob { animation: gp-cheer 1.6s ease-out 1, gp-bob 2.4s ease-in-out 1.6s infinite; }
   .gp-bot.st-offline .gp-bob, .gp-bot.st-exited .gp-bob { animation: none; }
   .gp-train { animation: gp-chug 1.2s steps(2) infinite; }
 }
