@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-13 · release 41 (`08d49c7`)
+
 ### New
 
 - **The team lead is docked beside every project tab.** A panel on the right of the Overview, the Board, Testing, Model and every other project page holds the agent who leads the team: the Project Coordinator, or the Chief Analyst on a Startup team and the Solo Lead on a Solo team, shown by its real name and role with a line saying what it's doing. **Chat** is its conversation; **Terminal** its live terminal, read-only, connected only while you can see it (**⤢ Expand** opens it wide; **Esc** brings you back). *N waiting on you →* counts everything in Needs you and takes you there. Ask it anything in the box (↑ recalls what you sent); while it's mid-turn you choose **Send now** or **After their turn**. **Status update**, **Run standup** and **What's blocked?** go through the usual *OK to interrupt?* check. It keeps its chat, scroll and what you're typing as you change tabs, and this browser remembers them. **»** collapses it to a slim rail with an unread badge; on a phone it's a round button that opens the chat as a bottom sheet. With nobody leading it offers to hire one; a benched lead shows its handoff note and **Hire again**.
