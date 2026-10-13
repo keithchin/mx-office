@@ -38,7 +38,7 @@ export type NeedTarget =
   /** A stuck item's card (ui/stuck/): what's stuck, the evidence and its buttons. */
   | { to: 'stuck'; id: string };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck';
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'fyi';
 
 /** How long a team member sits idle with an open task (nothing escalated) before Needs you says so. */
 export const IDLE_TASK_MS = 10 * 60_000;
@@ -59,8 +59,8 @@ export interface NeedItem {
   rank?: { n: number; chip: string; tip: string };
   /** Since when it has waited (ms), when known. */
   since?: number;
-  /** block: something is stopped until you act; warn: worth a look. */
-  level: 'block' | 'warn';
+  /** block: something is stopped until you act; warn: worth a look; info: shown, but not counted as waiting on you. */
+  level: 'block' | 'warn' | 'info';
   /** The button's words. */
   action: string;
   target: NeedTarget;
@@ -143,6 +143,10 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
       const loud = e.urgency === 'urgent' || e.urgency === 'critical';
       out.push({ key: `esc-${e.id}`, kind: 'escalation', icon: '🚩', tag: e.urgency.toUpperCase(), text: `${e.by} escalated: ${e.title}`, since: e.at, level: loud ? 'block' : 'warn', action: admin ? 'Answer' : 'View', target: { to: 'escalation', id: e.id }, ...(n !== undefined && e.jeffRank ? { rank: { n, chip: rankChip(n), tip: rankTip(e.jeffRank, n) } } : {}) });
     }
+    // 3b. FYI escalations: below the level's threshold, so no alert, but an ask hidden is an ask nobody answers. Shown low, not counted.
+    for (const e of r.escalations.filter((x) => x.status === 'open' && x.fyi).sort((a, b) => a.at - b.at)) {
+      out.push({ key: `fyi-${e.id}`, kind: 'fyi', icon: 'ℹ️', tag: 'FYI', text: `${e.by} escalated: ${e.title}`, since: e.at, level: 'info', action: admin ? 'Answer' : 'View', target: { to: 'escalation', id: e.id } });
+    }
     // 4. Proposals and merges waiting on you (escalations are above; the cap is the paused line below).
     for (const a of r.approvals) {
       if (a.kind === 'escalation' || (a.kind === 'cap' && r.paused)) continue;
@@ -209,5 +213,5 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
   return out;
 }
 
-/** How many are on this floor: the count on the 🎛️ Command Center tab. */
-export const hereCount = (items: readonly NeedItem[]) => items.filter((n) => n.kind !== 'floor').length;
+/** How many are on this floor: the count on the 🎛️ Command Center tab (info rows show, but aren't waiting on you). */
+export const hereCount = (items: readonly NeedItem[]) => items.filter((n) => n.kind !== 'floor' && n.level !== 'info').length;

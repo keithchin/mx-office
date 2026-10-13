@@ -63,15 +63,17 @@ const KIND_WORDS: Record<NeedKind, [string, string]> = {
   incident: ['incident', 'incidents'],
   budget: ['budget', 'budget'],
   stuck: ['stuck', 'stuck'],
+  fyi: ['FYI', 'FYI'],
 };
 
 /** The compact row: a count per kind, most urgent kind first, and the button to the phone's Needs you. */
 export function countsRow(items: readonly NeedItem[]): HTMLElement {
-  const kinds = new Map<NeedKind, { n: number; icon: string; block: boolean }>();
+  const kinds = new Map<NeedKind, { n: number; icon: string; block: boolean; info: boolean }>();
   for (const n of items) {
-    const k = kinds.get(n.kind) ?? { n: 0, icon: n.icon, block: false };
+    const k = kinds.get(n.kind) ?? { n: 0, icon: n.icon, block: false, info: true };
     k.n++;
     k.block ||= n.level === 'block';
+    k.info &&= n.level === 'info';
     kinds.set(n.kind, k);
   }
   const open = () => openPhone({ needs: true });
@@ -82,7 +84,7 @@ export function countsRow(items: readonly NeedItem[]): HTMLElement {
     h(
       'span.ny-counts',
       {},
-      ...[...kinds].map(([kind, k]) => h('button.ny-count', { type: 'button', class: k.block ? 'ny-block' : 'ny-warn', onclick: open, title: items.filter((n) => n.kind === kind).map((n) => n.text).join('\n') }, h('span', { 'aria-hidden': 'true' }, k.icon), ` ${k.n} ${KIND_WORDS[kind][k.n === 1 ? 0 : 1]}`)),
+      ...[...kinds].map(([kind, k]) => h('button.ny-count', { type: 'button', class: k.block ? 'ny-block' : k.info ? 'ny-info' : 'ny-warn', onclick: open, title: items.filter((n) => n.kind === kind).map((n) => n.text).join('\n') }, h('span', { 'aria-hidden': 'true' }, k.icon), ` ${k.n} ${KIND_WORDS[kind][k.n === 1 ? 0 : 1]}`)),
     ),
     h('button.btn.small.ny-open', { type: 'button', onclick: open }, 'Open in the team phone', h('span', { 'aria-hidden': 'true' }, ' →')),
   );

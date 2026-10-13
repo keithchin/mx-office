@@ -4,6 +4,7 @@
 // journals instead of asking agents, so a benched or sleeping Lead is summarised without waking it.
 
 import { isDecisionKind, type DecisionKind } from './autonomy.js';
+import { isHandsOn } from './hands-on.js';
 
 export interface JournalEntry {
   heading: string;
@@ -86,7 +87,10 @@ export function parseProposal(line: string): ParsedProposal | undefined {
   const split = /^(.*?)\s+(?:—|–|--)\s+(.*)$/.exec(rest) ?? /^([^:]{3,120}):\s+(.*)$/.exec(rest);
   const title = (split ? split[1] : rest).replace(/\*\*/g, '').trim().slice(0, 120);
   if (!title) return undefined;
-  return { kind, title, detail: (split ? split[2] : '').trim().slice(0, 1000) };
+  const detail = (split ? split[2] : '').trim().slice(0, 1000);
+  // A "task" only a person can do (merge, sign in, paste a key, install, allow, restart) waits for the Project Manager at every level.
+  if (kind === 'task' && isHandsOn(`${title} ${detail}`)) kind = 'human-action';
+  return { kind, title, detail };
 }
 
 export function parseStandup(body: string): StandupReport {
@@ -114,7 +118,7 @@ export function proposalIssue(p: { title: string; detail: string; kind: Decision
     body: [
       p.detail || '_No detail given._',
       '',
-      `Proposed by ${p.by} (${p.team} team) at the ${p.standup} standup, as ${p.kind === 'task' ? 'a task' : `a ${p.kind} change`}.`,
+      `Proposed by ${p.by} (${p.team} team) at the ${p.standup} standup, as ${p.kind === 'task' ? 'a task' : p.kind === 'human-action' ? 'a hands-on action for a person' : `a ${p.kind} change`}.`,
       `Approved by ${approvedBy} in Agent Office at autonomy level ${level}.${note ? `\n\nProject Manager's note: ${note}` : ''}`,
     ].join('\n'),
     labels: [`team:${p.team}`],

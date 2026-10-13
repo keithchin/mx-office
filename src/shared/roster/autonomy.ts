@@ -15,8 +15,9 @@ export const HUMAN = 'the Project Manager';
 export const HUMAN_FULL = 'the Project Manager (the human who owns the project)';
 
 /** What a Lead might want to do that could need the Project Manager. */
-export type DecisionKind = 'task' | 'scope' | 'design' | 'architecture' | 'peer-review' | 'merge' | 'milestone' | 'client-milestone' | 'budget';
-export const DECISION_KINDS: readonly DecisionKind[] = ['task', 'scope', 'design', 'architecture', 'peer-review', 'merge', 'milestone', 'client-milestone', 'budget'];
+/** `human-action`: a hands-on action only a person can do (merge, sign in, paste a key, install, allow, restart): it waits for the Project Manager at every level. */
+export type DecisionKind = 'task' | 'scope' | 'design' | 'architecture' | 'peer-review' | 'merge' | 'milestone' | 'client-milestone' | 'budget' | 'human-action';
+export const DECISION_KINDS: readonly DecisionKind[] = ['task', 'scope', 'design', 'architecture', 'peer-review', 'merge', 'milestone', 'client-milestone', 'budget', 'human-action'];
 export const isDecisionKind = (v: unknown): v is DecisionKind => typeof v === 'string' && (DECISION_KINDS as readonly string[]).includes(v);
 
 export const DECISION_LABEL: Record<DecisionKind, string> = {
@@ -29,6 +30,7 @@ export const DECISION_LABEL: Record<DecisionKind, string> = {
   milestone: 'closing a milestone',
   'client-milestone': 'a client-facing milestone',
   budget: 'spending past the budget',
+  'human-action': 'a hands-on action only a person can do',
 };
 
 export interface AutonomyDef {
@@ -42,9 +44,9 @@ export interface AutonomyDef {
 
 export const AUTONOMY: Record<AutonomyLevel, AutonomyDef> = {
   1: { level: 1, name: 'Directive', summary: 'Leads only propose; the Project Manager approves every task.', approves: DECISION_KINDS },
-  2: { level: 2, name: 'Guided', summary: 'Leads may create tasks within the approved scope; the Project Manager approves design and architecture changes and merges.', approves: ['scope', 'design', 'architecture', 'peer-review', 'merge', 'milestone', 'client-milestone', 'budget'] },
-  3: { level: 3, name: 'Delegated', summary: "Leads may approve each other's work within budget; the Project Manager approves milestones and merges.", approves: ['merge', 'milestone', 'client-milestone', 'budget'] },
-  4: { level: 4, name: 'Autonomous', summary: 'The Project Manager approves only client-facing milestones and the budget.', approves: ['client-milestone', 'budget'] },
+  2: { level: 2, name: 'Guided', summary: 'Leads may create tasks within the approved scope; the Project Manager approves design and architecture changes and merges.', approves: ['scope', 'design', 'architecture', 'peer-review', 'merge', 'milestone', 'client-milestone', 'budget', 'human-action'] },
+  3: { level: 3, name: 'Delegated', summary: "Leads may approve each other's work within budget; the Project Manager approves milestones and merges.", approves: ['merge', 'milestone', 'client-milestone', 'budget', 'human-action'] },
+  4: { level: 4, name: 'Autonomous', summary: 'The Project Manager approves only client-facing milestones and the budget.', approves: ['client-milestone', 'budget', 'human-action'] },
 };
 
 export const isAutonomyLevel = (v: unknown): v is AutonomyLevel => v === 1 || v === 2 || v === 3 || v === 4;
