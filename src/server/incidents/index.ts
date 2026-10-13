@@ -8,6 +8,7 @@ import { randomBytes } from 'node:crypto';
 import { OFFICE_FLOOR, type AuditActor } from '../../shared/audit.js';
 import { briefOf, incidentRef, needsAttention, type DetectedBy, type IncidentBrief, type Incident, type IncidentImpact, type IncidentRule, type IncidentSeverity, type IncidentWorker, type TimelineEntry } from '../../shared/incidents.js';
 import { audit } from '../audit/index.js';
+import type { DraftedField } from '../../shared/incident-analysis.js';
 import type { IncidentPatch } from './edit.js';
 import type { IncidentStore } from './store.js';
 
@@ -32,7 +33,8 @@ const pushTimeline = (i: Incident, e: TimelineEntry) => {
   i.timeline = [...i.timeline, e].slice(-TIMELINE_MAX);
 };
 
-function auditOf(i: Incident, actor: AuditActor, action: 'incident.created' | 'incident.updated' | 'incident.resolved', summary: string, details?: Record<string, unknown>) {
+/** An incident's change in the audit log (also what tells the pages to look again). */
+export function auditOf(i: Incident, actor: AuditActor, action: 'incident.created' | 'incident.updated' | 'incident.resolved' | 'incident.analysed', summary: string, details?: Record<string, unknown>) {
   audit.record({
     floor: i.floors[0] ?? OFFICE_FLOOR,
     actor,
@@ -134,6 +136,12 @@ export function updateIncident(id: string, p: IncidentPatch, actor: AuditActor):
     i.status = p.status;
     i.resolvedAt = resolved ? clock() : undefined;
     changed.push('status');
+  }
+  // A person who rewrites a field Mx Office's analysis drafted makes it theirs: its label goes (marking an action done doesn't count).
+  if (i.analysis?.drafted.length && actor.kind === 'human') {
+    const texts = (x: Incident) => JSON.stringify(x.actions.map((a) => a.text));
+    const mine = new Set<DraftedField>([...((was.rootCause ?? '') !== (i.rootCause ?? '') ? ['rootCause' as const] : []), ...((was.impact.text ?? '') !== (i.impact.text ?? '') ? ['impact' as const] : []), ...(texts(was) !== texts(i) ? ['actions' as const] : [])]);
+    if (mine.size) i.analysis = { ...i.analysis, drafted: i.analysis.drafted.filter((f) => !mine.has(f)) };
   }
   const quiet = changed.filter((c) => c !== 'severity' && c !== 'status');
   if (quiet.length) pushTimeline(i, entry(by, `Changed ${quiet.join(', ')}`, 'change'));

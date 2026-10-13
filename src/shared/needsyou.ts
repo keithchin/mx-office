@@ -31,8 +31,8 @@ export type NeedTarget =
   | { to: 'floor'; floor: string }
   | { to: 'firm'; url: string }
   | { to: 'incident'; id: string }
-  /** The 💰 Budget tab; `resume` takes the budget's pause off the project. */
-  | { to: 'budget'; resume?: boolean }
+  /** The 💰 Budget tab; `resume` takes the budget's pause off the project; `seen` marks that alert as seen (no tab). */
+  | { to: 'budget'; resume?: boolean; seen?: 'forecast' | 'threshold' }
   /** Nudges an idle team member back to its open task (the office's back-to-work prompt, as the Project Manager's). */
   | { to: 'nudge'; role: RoleId }
   /** A stuck item's card (ui/stuck/): what's stuck, the evidence and its buttons. */
@@ -166,12 +166,12 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     const action = s.kind === 'decision' ? 'Answer' : s.kind === 'stale-pr' ? `Ask ${lead}` : s.kind === 'circles' ? 'Ask for blockers' : 'Review';
     out.push({ key: `stuck-${s.id}`, kind: 'stuck', icon: STUCK_ICON[s.kind], tag: 'Stuck', text: stuckTitle(s, i.now ?? Date.now()), since: s.since, level: s.kind === 'decision' || s.kind === 'stale-pr' ? 'block' : 'warn', action, target: { to: 'stuck', id: s.id } });
   }
-  // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold).
+  // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold) not marked as seen.
   const b = i.budget && i.budget.floor === i.floor ? i.budget : undefined;
   if (b) {
-    const top = (['full', 'forecast', 'threshold'] as const).map((l) => b.alerts.find((a) => a.level === l && a.text)).find(Boolean);
+    const top = (['full', 'forecast', 'threshold'] as const).map((l) => b.alerts.find((a) => a.level === l && a.text && !a.seenAt)).find(Boolean);
     if (b.paused) out.push({ key: 'budget-paused', kind: 'budget', icon: '💸', text: 'Budget reached: project paused. No new hires and no office prompts; people’s messages still go through', since: b.alerts.find((a) => a.level === 'full')?.at, level: 'block', action: 'Raise budget', target: { to: 'budget' }, alt: { action: 'Resume', target: { to: 'budget', resume: true } } });
-    else if (top) out.push({ key: `budget-${top.level}`, kind: 'budget', icon: '💸', text: top.text, since: top.at, level: top.level === 'full' ? 'block' : 'warn', action: top.level === 'full' ? 'Raise budget' : 'Budget', target: { to: 'budget' } });
+    else if (top) out.push({ key: `budget-${top.level}`, kind: 'budget', icon: '💸', text: top.text, since: top.at, level: top.level === 'full' ? 'block' : 'warn', action: top.level === 'full' ? 'Raise budget' : 'Budget', target: { to: 'budget' }, ...(top.level === 'full' ? {} : { alt: { action: 'Mark as seen', target: { to: 'budget', seen: top.level } } }) });
   }
   // 6. Open, ready PRs whose checks fail.
   for (const p of i.pulls) {

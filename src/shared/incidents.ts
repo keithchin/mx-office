@@ -3,7 +3,9 @@
 // (server/incidents/: the store, the detection rules, the API) and the Incidents sub-tab of the Audit log
 // (ui/incidents/), and by Needs you (shared/needsyou.ts), which lists open sev1 and sev2 incidents.
 
-export type IncidentSeverity = 'sev1' | 'sev2' | 'sev3' | 'near-miss';
+import type { ActionKind, IncidentAnalysis } from './incident-analysis.js';
+
+export type IncidentSeverity ='sev1' | 'sev2' | 'sev3' | 'near-miss';
 export const INCIDENT_SEVERITIES: readonly IncidentSeverity[] = ['sev1', 'sev2', 'sev3', 'near-miss'];
 export const SEVERITY_LABEL: Record<IncidentSeverity, string> = { sev1: 'Sev 1 · critical', sev2: 'Sev 2 · major', sev3: 'Sev 3 · minor', 'near-miss': 'Near miss' };
 export const SEVERITY_SHORT: Record<IncidentSeverity, string> = { sev1: 'SEV1', sev2: 'SEV2', sev3: 'SEV3', 'near-miss': 'NEAR MISS' };
@@ -55,6 +57,9 @@ export interface CorrectiveAction {
   text: string;
   status: ActionStatus;
   link?: { kind: ActionLinkKind; ref: string };
+  /** From Mx Office's analysis: whether it fixes, prevents or detects, and who it suggests. */
+  kind?: ActionKind;
+  owner?: string;
 }
 
 export interface IncidentWorker {
@@ -92,6 +97,8 @@ export interface Incident {
   createdAt: number;
   updatedAt: number;
   resolvedAt?: number;
+  /** Mx Office's analysis once it's resolved (shared/incident-analysis.ts): drafted, never proof. */
+  analysis?: IncidentAnalysis;
 }
 
 /** What Needs you is given: open sev1 and sev2 incidents, and nothing else of them. */

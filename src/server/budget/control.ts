@@ -4,7 +4,7 @@
 // office's audit log, toasts and the team (for a level's models and settings).
 
 import type { BudgetAlert, BudgetPlan, BudgetSettings, CurvePoint, Forecast, StageVariance } from '../../shared/budget/types.js';
-import { afterBudgetChange, checkAlerts } from '../../shared/budget/alerts.js';
+import { afterBudgetChange, checkAlerts, markSeen } from '../../shared/budget/alerts.js';
 import { forecastOf, varianceOf } from '../../shared/budget/forecast.js';
 import { addWorkDays, curveOf, generatePlan, type HistoryRun } from '../../shared/budget/plan.js';
 import { usd } from '../../shared/budget/money.js';
@@ -89,7 +89,8 @@ export function checkFloor(b: BudgetService, floor: FloorRef, deps: ControlDeps)
   if (!f.settings.total) return;
   const n = numbersOf(b, floor);
   const { alerts, raised } = checkAlerts(f.settings, b.store.office().threshold, n.spent, n.forecast?.atCompletion, f.alerts, b.deps.now());
-  if (alerts.length === f.alerts.length) return;
+  // A seen forecast raised again replaces itself, so the count alone doesn't say something changed.
+  if (alerts.length === f.alerts.length && !raised.length) return;
   f.alerts = alerts;
   let paused = false;
   if (raised.some((a) => a.level === 'full') && f.settings.autoPause && !f.pausedAt && pauseFloorForBudget(floor.id)) {
@@ -129,6 +130,20 @@ export function resume(b: BudgetService, floor: FloorRef, by: string, deps: Cont
   return undefined;
 }
 
+/** Marks the forecast or threshold alert as seen (admins): out of Needs you, dimmed on the Budget tab. Never 100 % or the pause. */
+export function markAlertSeen(b: BudgetService, floor: FloorRef, level: unknown, by: string, deps: ControlDeps): string | undefined {
+  const f = b.file(floor);
+  const was = f.alerts.find((a) => a.level === level && a.text);
+  const forecast = level === 'forecast' ? numbersOf(b, floor).forecast?.atCompletion : undefined;
+  const next = markSeen(f.alerts, level, by, b.deps.now(), forecast);
+  if (typeof next === 'string') return next;
+  if (next === f.alerts || !was) return undefined;
+  f.alerts = next;
+  b.store.changed(floor.id);
+  deps.record(floor.id, by, 'budget.alert.seen', `Marked ${floor.name}'s budget ${level} alert as seen: ${was.text}`, { level, ...(forecast !== undefined ? { forecast: r2(forecast) } : {}) });
+  return undefined;
+}
+
 /** New budget settings from a request (admins). A raised budget clears the alerts and lifts the pause when it's no longer spent. */
 export function setSettings(b: BudgetService, floor: FloorRef, raw: unknown, by: string, deps: ControlDeps): string | undefined {
   if (!raw || typeof raw !== 'object') return 'Send the budget settings';
@@ -156,8 +171,7 @@ export function setSettings(b: BudgetService, floor: FloorRef, raw: unknown, by:
   next.updatedBy = by;
   next.updatedAt = b.deps.now();
   f.settings = next;
-  if ((next.total ?? 0) > (was.total ?? 0)) f.alerts = afterBudgetChange(f.alerts, next.total);
-  if (!next.total) f.alerts = [];
+  if (next.total !== was.total) f.alerts = afterBudgetChange(f.alerts, next.total);
   const spent = totalOf(f.ledger);
   if (f.pausedAt && (!next.total || spent < next.total || !next.autoPause)) {
     f.pausedAt = undefined;

@@ -140,6 +140,8 @@ Each alert is raised once per budget. Raising the budget clears all of them, so 
 - shows on **🚨 Needs you** on the Command Center (kind `budget`), which also feeds the [Teams cards](../integrations/teams-notifications.md) and the Team phone.
 - at 100 %, also sends a desktop notification.
 
+The **Alerts** card on the Budget tab lists the alerts standing. An admin can **Mark as seen** the forecast and threshold alerts, there or with the button beside **Budget** in Needs you. A seen alert leaves Needs you, its count, the phone and Teams, and stays on the Budget tab, dimmed, with *Seen by <name>, <date>* (in the audit log as `budget.alert.seen`). A seen **forecast** alert comes back, with its new numbers, when the forecast at completion grows by more than 10 % over what it was when it was seen. A seen **threshold** alert stays seen until the budget changes. The **100 %** alert and the budget's pause can't be marked as seen: they need a budget decision (raise it, or resume).
+
 ## Auto-pause at 100 %
 
 When spend reaches the budget and **Pause the project at 100 %** is on (the default), the office pauses the project with [⏸ Pause project](resume-and-pause.md), recorded as the budget's doing:

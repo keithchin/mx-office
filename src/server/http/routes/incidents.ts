@@ -1,10 +1,11 @@
 // The Incidents sub-tab of the 🧾 Audit log (server/incidents/): everyone signed in reads them; admins
-// open one (from scratch or from an audit event), change it, add timeline notes, resolve it with a root
-// cause and tune the detection rules. Test mode's state for the TEST MODE badge is here too.
+// open one (from scratch or from an audit event), change it, add timeline notes, resolve it (Mx Office
+// then analyses it in the background: incidents/analysis.ts), retry that analysis, and tune the detection rules. Test mode's state for the TEST MODE badge is here too.
 
 import { countIncidents, filterIncidents, isIncidentStatus, isSeverity, normalizeSettings, sortIncidents, type IncidentList } from '../../../shared/incidents.js';
 import { addNote, createIncident, incidentStore, updateIncident } from '../../incidents/index.js';
 import { cleanPatch } from '../../incidents/edit.js';
+import { incidentAnalyzer } from '../../incidents/analysis.js';
 import { audit, human } from '../../audit/index.js';
 import { testModeAnswer } from '../../testmode.js';
 import { refuseStale } from '../../phone-access/reauth.js';
@@ -82,8 +83,9 @@ export const incidentRoutes = {
     },
   },
   /**
-   * GET /api/incidents/<id>: one incident. POST /api/incidents/<id> {fields…}: changes it (resolving
-   * needs a root cause). POST /api/incidents/<id>/note {text}: a note on its timeline. Admins only.
+   * GET /api/incidents/<id>: one incident. POST /api/incidents/<id> {fields…, note?}: changes it; resolving
+   * starts Mx Office's analysis (note: what the person already knows). POST /api/incidents/<id>/note {text}:
+   * a note on its timeline. POST /api/incidents/<id>/analyse: retries the analysis. Admins only.
    */
   one: {
     prefix: '/api/incidents/',
@@ -102,13 +104,22 @@ export const incidentRoutes = {
         if (!text.trim()) return send(r.res, 400, { error: 'A note needs some words' });
         return send(r.res, 200, { incident: addNote(i.id, text, actorOf(r.session)) });
       }
+      if (sub === 'analyse') {
+        const a = incidentAnalyzer();
+        if (!a) return send(r.res, 503, { error: 'Incident analysis is off' });
+        const out = a.start(i.id, actorOf(r.session).name);
+        return send(r.res, out.error && !out.incident ? 400 : out.error ? 409 : 200, out);
+      }
       if (sub) return send(r.res, 404, { error: 'No such action' });
       const p = cleanPatch(body);
       if (typeof p === 'string') return send(r.res, 400, { error: p });
-      if (p.status === 'resolved' && i.status !== 'resolved' && !(p.rootCause ?? i.rootCause)?.trim()) return send(r.res, 400, { error: 'Say what the root cause was to resolve it' });
       // Through Phone access, resolving one needs the password again.
       if (p.status === 'resolved' && i.status !== 'resolved' && refuseStale(ctx, r.req, r.res)) return;
-      return send(r.res, 200, { incident: updateIncident(i.id, p, actorOf(r.session)) });
+      const resolving = p.status === 'resolved' && i.status !== 'resolved';
+      const changed = updateIncident(i.id, p, actorOf(r.session));
+      // Resolved: marked so at once, analysed in the background (its state is on the incident).
+      const started = resolving ? incidentAnalyzer()?.start(i.id, actorOf(r.session).name, typeof body.note === 'string' ? body.note : undefined) : undefined;
+      return send(r.res, 200, { incident: started?.incident ?? changed });
     },
   },
   /** GET /api/test-mode: whether the office runs in test mode, for the TEST MODE badge (left off for the docs screenshots). */

@@ -181,3 +181,12 @@ html[data-theme^='clean'] .bud-fields > .bud-check { min-height: 29px; }
   .lite-main > .bud-meta-row { margin-bottom: 8px; }
   .lite-main > .bud-meta-row > #floor-meta { margin: 0; padding-right: 0; }
 }
+
+/* ---- Alerts (./alerts.ts): a seen one dimmed, with who saw it ---- */
+.bud-alerts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.bud-alert { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 8px; border-radius: 6px; background: var(--warn-soft); font-size: 13px; color: var(--ink); }
+.bud-alert[data-level='full'] { background: var(--bad-soft); }
+.bud-alert[data-seen] { background: var(--sunken); opacity: .7; }
+.bud-alert-l { font-weight: 800; }
+.bud-alert-t { flex: 1 1 200px; }
+.bud-alert .btn { flex: none; }

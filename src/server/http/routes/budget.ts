@@ -3,7 +3,7 @@
 
 import { audit, human } from '../../audit/index.js';
 import { applyChoice, budgetOf, controlOf } from '../../budget/index.js';
-import { applyFirm, editPlan, numbersOf, regeneratePlan, resume, setSettings } from '../../budget/control.js';
+import { applyFirm, editPlan, markAlertSeen, numbersOf, regeneratePlan, resume, setSettings } from '../../budget/control.js';
 import { firmForecastOf, projectShape } from '../../budget/plan-source.js';
 import { firmIfMade } from '../../firm/adapter.js';
 import { spentOf } from '../../../shared/firm/engagement.js';
@@ -82,6 +82,7 @@ export const budgetRoutes = {
   /**
    * POST /api/budget/action {floor, action, ...}. Admins only. Actions: settings {total?, threshold?, autoPause?};
    * plan {lines: [{id, usd?, days?}]}; regenerate; firm (apply the latest audit's re-forecast); resume;
+   * seen {level: forecast|threshold} (marks that alert as seen; never 100 % or the pause);
    * level {choice: {level, total, threshold, autoPause, settings}}; officeThreshold {threshold}.
    */
   action: {
@@ -134,6 +135,9 @@ export const budgetRoutes = {
         }
         case 'resume':
           err = resume(b, floor, who, deps);
+          break;
+        case 'seen':
+          err = markAlertSeen(b, floor, body.level, who, deps);
           break;
         case 'level': {
           const c = cleanChoice(body.choice);

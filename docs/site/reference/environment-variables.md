@@ -57,6 +57,10 @@ Set these before starting the office (the launcher sets the main ones). Values t
 | `AGENT_OFFICE_PLANNER_CAP_USD` | `2`. The most one draft may spend on planning (each call gets what's left as `--max-budget-usd`) |
 | `AGENT_OFFICE_PLANNER_TIMEOUT_S` | `240`. Per planning call |
 | `AGENT_OFFICE_PLANNER_PER_HOUR` | `20`. Planning calls per hour, across the office |
+| `AGENT_OFFICE_INCIDENT_ANALYSIS` | `auto` (the default: the `claude` CLI, the test analyser in test mode), `fake` (always the test analyser) or `off`. Mx Office's analysis of a resolved incident |
+| `AGENT_OFFICE_INCIDENT_ANALYSIS_CAP_USD` | `0.30`. The most one incident's analyses may spend in all |
+| `AGENT_OFFICE_INCIDENT_ANALYSIS_PER_HOUR` | `20`. Incident analyses started per hour, across the office |
+| `AGENT_OFFICE_INCIDENT_ANALYSIS_TIMEOUT_S` | `120`. Per analysis call |
 | `AGENT_OFFICE_FAKE_PLANNER_MS` | `1200`. How long each test-planner call takes, so a test office shows the drafting state |
 
 ## Live app

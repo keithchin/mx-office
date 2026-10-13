@@ -11,10 +11,11 @@ import { budgetTab, type BudgetSection } from './tab';
 import { planSection, varianceSection } from './plan';
 import { pausedSection, settingsSection } from './settings';
 import { insightsSection, onInsightGo } from './insights';
+import { alertsSection, markAlertSeen } from './alerts';
 import type { Insight } from '../../../shared/budget/types';
 
 /** The sections between the headline and the breakdowns, in order (the plan, variance, settings, insights plug in here). */
-export const SECTIONS: BudgetSection[] = [pausedSection, insightsSection, varianceSection, settingsSection, planSection];
+export const SECTIONS: BudgetSection[] = [pausedSection, alertsSection, insightsSection, varianceSection, settingsSection, planSection];
 
 export interface BudgetUi {
   feed: BudgetFeed;
@@ -22,7 +23,7 @@ export interface BudgetUi {
   show(): void;
   /** What Needs you reads of the budget. */
   need(): BudgetNeed | undefined;
-  /** A Needs-you button: the tab, or Resume. */
+  /** A Needs-you button: the tab, Resume, or Mark as seen. */
   go(t: Extract<NeedTarget, { to: 'budget' }>): void;
 }
 
@@ -40,6 +41,12 @@ export function budgetUi(net: Net, opts: { root?: HTMLElement; visible?: () => b
       return v && v.settings.total ? { floor: v.floor, alerts: v.alerts ?? [], ...(v.paused ? { paused: v.paused } : {}) } : undefined;
     },
     go: (t) => {
+      // Mark as seen stays where you are: the item leaves Needs you once the budget is fetched again.
+      if (t.seen) {
+        const floor = feed.floor()?.floor ?? store.floor;
+        if (floor) void markAlertSeen(floor, t.seen).then((ok) => ok && feed.refresh());
+        return;
+      }
       opts.open();
       // Resume is the office's ▶ Resume project: its preview, who has work waiting and what's safe.
       if (t.resume && store.floor) void openResume(store.floor, () => feed.refresh());

@@ -123,3 +123,17 @@ code.inc-link { color: var(--code-ink); background: var(--code-bg); padding: 0 5
   .inc-action-edit { grid-template-columns: 1fr 1fr; }
   .inc-action-edit input[name='text'] { grid-column: 1 / -1; }
 }
+
+/* Mx Office's analysis (./analysis.ts): a draft, labelled so, with its confidence and what it can't tell. */
+.inc-analysis { display: flex; flex-direction: column; gap: 6px; }
+.inc-analysis > p { margin: 0; font-size: 13px; }
+.inc-analysis[data-state='pending'] .inc-an-line { color: var(--muted); font-style: italic; }
+.inc-analysis[data-state='failed'] .inc-an-line { color: var(--bad-ink); }
+.inc-conf { font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: var(--radius-pill); background: var(--neutral-soft); color: var(--ink); }
+.inc-conf[data-conf='low'] { background: var(--warn-soft); }
+.inc-conf[data-conf='high'] { background: var(--good-soft); }
+.inc-an-ev, .inc-an-unk { font-size: 13px; }
+.inc-an-ev ul, .inc-an-unk ul { margin: 2px 0 0; padding-left: 18px; }
+.inc-drafted { display: inline-block; margin-top: 4px; padding: 1px 7px; border-radius: var(--radius-pill); background: var(--info-soft); color: var(--ink-2); font-size: 11px; font-weight: 700; }
+.inc-suggest { margin: 6px 0 0; padding: 6px 8px; border-left: 3px solid var(--rule-strong); background: var(--sunken); font-size: 13px; }
+.inc-akind { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }

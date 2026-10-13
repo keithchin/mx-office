@@ -17,12 +17,12 @@ The **🚨 Incidents** sub-tab inside the **🧾 Audit log** tab, on a project's
 | Field | Meaning |
 |---|---|
 | Severity | **Sev 1** critical, **Sev 2** major, **Sev 3** minor, or **Near miss** (it nearly went wrong) |
-| Status | **Open**, **Mitigated** (the harm is stopped, follow-up still open), **Resolved** (with a root cause) |
+| Status | **Open**, **Mitigated** (the harm is stopped, follow-up still open), **Resolved** (Mx Office then analyses it) |
 | Detected | When, and by whom: an automatic rule, an agent or a person |
 | Where | The floors it's on, or the office as a whole |
 | Impact | Spend in dollars, agents affected, data touched, anything else |
 | Timeline | Detected, status and severity changes, notes, and each time its rule fired again |
-| Root cause | Why it happened; needed to resolve it |
+| Root cause | Why it happened: drafted by Mx Office's analysis when it's resolved, unless a person wrote it |
 | Corrective actions | Each with its status (open, done, won't do) and an optional link to a commit, PR, issue, setting or URL |
 | Linked audit events | Click one to open it on the Events sub-tab |
 
@@ -32,10 +32,27 @@ The list puts open before mitigated before resolved, the worst first. Filter by 
 
 - **+ New incident**: title, severity, summary, impact, root cause, floors and corrective actions.
 - From the Events sub-tab, expand a row: **🚨 Create incident from this event** (the event is linked, its summary and floor filled in), or **Link to incident…**.
-- On an incident: **✏️ Edit**, **Mark mitigated**, **✅ Resolve…** (asks for the root cause), **Reopen**, and **Add note** on the timeline. Through [📱 Phone access](../administration/phone-access.md), resolving one asks for your password again unless you signed in or typed it in the last 10 minutes.
+- On an incident: **✏️ Edit**, **Mark mitigated**, **✅ Resolve…** (no cause asked for: see [Mx Office's analysis](#mx-offices-analysis); an optional *Anything you already know?* note), **Retry analysis** when it didn't finish, **Reopen**, and **Add note** on the timeline. Through [📱 Phone access](../administration/phone-access.md), resolving one asks for your password again unless you signed in or typed it in the last 10 minutes.
 - **⚙️ Detection rules**: turn each rule on or off and set its thresholds.
 
-Every change is in the audit log as `incident.created`, `incident.updated` or `incident.resolved`.
+Every change is in the audit log as `incident.created`, `incident.updated`, `incident.resolved` or `incident.analysed`.
+
+## Mx Office's analysis
+
+When an incident is marked resolved, it's resolved at once, and Mx Office analyses it in the background: the **root cause**, the **impact** (who or what was affected, and for how long) and **1 to 5 corrective actions** (each a fix, a way to prevent it, or a way to detect it sooner), drafted from the incident's own evidence:
+
+- its record: title, severity, summary, the rule that detected it, impact, timeline, agents, floors and the links of its actions;
+- the audit events it links, and at most 40 audit events from its floors within 30 minutes of when it was detected and last seen;
+- your note, if you wrote one.
+
+Secrets are redacted first (the audit log's redactor) and the input is capped. The analysis is one `claude -p` call with no tools, no settings or MCP servers, in an empty temporary folder, with `--max-budget-usd` set to what the incident has left of its cap (**$0.30**, `AGENT_OFFICE_INCIDENT_ANALYSIS_CAP_USD`), at most 20 an hour across the office (`AGENT_OFFICE_INCIDENT_ANALYSIS_PER_HOUR`), on the New project planner's model. Its spend is in the [budget](budget.md) as **Incident analysis**, on the incident's project (or the office's own). A test office never calls Claude for it: a test analyser drafts the same shape from the evidence alone.
+
+It's an **AI draft, not proof**. On the incident:
+
+- **Root cause**, **Impact** and **Corrective actions** carry *Drafted by Mx Office from the incident's evidence: check it* where the analysis wrote them. It only fills fields a person hasn't written: where you wrote one, yours stays and the analysis shows beside it as a suggestion.
+- **Mx Office's analysis** says when and with what model it was drafted and what it cost, its **confidence** (low, medium or high; low means the evidence only hints at it), what supports it, **What the evidence can't tell**, and **Your note**.
+- **✏️ Edit** corrects any of it; a field you change is yours from then on.
+- While it runs: *Analysing…*. If it doesn't finish (a cap, the hourly limit, an error, or the office restarting mid-run), the incident stays resolved and says *Analysis didn't finish: <reason>* with **Retry analysis** for admins. One incident is never analysed twice at once.
 
 ## Automatic detection
 
