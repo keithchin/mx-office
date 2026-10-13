@@ -19,6 +19,17 @@ const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A Mendix Portal app id, cleaned: a GUID, or nothing. */
 export const cleanAppId = (v: unknown): string | undefined => (typeof v === 'string' && GUID.test(v.trim()) ? v.trim().toLowerCase() : undefined);
 
+/** The longest folder path Studio Pro's mx create-project can make an app in (78 and over: PathTooLongException while it extracts the Blank template; measured with Studio Pro 11.12, 2026-10-12). */
+export const APP_DIR_MAX = 77;
+
+/** Why a new app can't be made at `dir` (its path is too long for mx create-project), said before anything is created; undefined when it fits. */
+export function appDirTooLong(dir: string, name: string): string | undefined {
+  if (dir.length <= APP_DIR_MAX) return undefined;
+  const room = APP_DIR_MAX - (dir.length - name.length);
+  const fix = room >= 3 ? `use a repository name of at most ${room} characters` : 'move the office’s projects folder to a shorter path';
+  return `The project’s folder would be ${dir} (${dir.length} characters), and Studio Pro can’t create an app in a folder path longer than ${APP_DIR_MAX}: ${fix}`;
+}
+
 /** The app's name from the repository's: "travel-approval" → "TravelApproval" (an .mpr name Studio Pro shows as is). */
 export function appNameOf(slug: string): string {
   const name = slug

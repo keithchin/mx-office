@@ -6,7 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **A project name too long for Studio Pro is refused at Create, not halfway through setup.** Studio Pro's `mx create-project` can't make an app in a folder path longer than 77 characters (it stops with a PathTooLongException while it unpacks the Blank template). **Create** now says so before anything is made, with the folder it would have used, its length and the longest repository name that fits there (or, when none would, to move the office's projects folder to a shorter path).
+- **A failed setup step says what went wrong.** When a command fails, the step's error is the line where it said so (*ERROR: System.IO.PathTooLongException: The specified file name or path is too long…*), not the last lines of the stack trace under it; the full log still has everything.
 
 ## 2026-10-13 · release 41 (`08d49c7`)
 
