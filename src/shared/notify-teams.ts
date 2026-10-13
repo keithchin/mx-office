@@ -86,6 +86,8 @@ export function isRedNeed(n: Pick<NeedItem, 'kind' | 'key'>): boolean {
     case 'studio':
     // Stuck work (server/stuck/): raised once per round, so one buzz each.
     case 'stuck':
+    // The open questions for the client (server/questions/): keyed by batch, so one notification per batch.
+    case 'questions':
       return true;
     case 'setup':
       return n.key !== 'setup-stale';

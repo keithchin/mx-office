@@ -128,6 +128,6 @@ export function approvalRows(floor: string, roster: RosterView | undefined, stat
 /** Targets the phone can't open itself: they wait for a computer (the 1D view's tab for it, or its ⚙️ Settings section). */
 export function onComputer(t: NeedTarget, floor: string) {
   if (t.to === 'settings') return void toast(`That one is on a computer: ${settingsHref(t.section ?? 'team', floor)}`);
-  const tab = t.to === 'setup' ? 'command' : t.to === 'live' ? 'live' : t.to === 'git' ? 'git' : 'command';
+  const tab = t.to === 'setup' ? 'command' : t.to === 'live' ? 'live' : t.to === 'git' ? 'git' : t.to === 'questions' ? 'questions' : 'command';
   toast(`That one is on a computer: /lite?floor=${floor}&tab=${tab}`);
 }

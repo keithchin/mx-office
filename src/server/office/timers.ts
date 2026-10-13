@@ -11,6 +11,7 @@ import { startPhoneAccess } from '../phone-access/index.js';
 import { startWebPush } from '../webpush/index.js';
 import { startWarmup } from '../warmup.js';
 import { startStuckDetection } from '../stuck/index.js';
+import { startQuestions } from '../questions/index.js';
 import { startToolkitPins } from '../toolkit-pin/office.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
@@ -62,6 +63,8 @@ export function startTimers(ctx: Ctx): () => void {
   const stopWarmup = startWarmup(ctx);
   // Work that stopped moving (a PR nobody touches, a decision waiting on the PM, a test red for days, no progress) raised in Needs you (stuck/).
   const stopStuck = startStuckDetection(ctx);
+  // The analysts' open questions for the client, collected from the BRDs for the Questions page and Needs you (questions/).
+  const stopQuestions = startQuestions(ctx);
 
   return () => {
     stopRuns();
@@ -75,6 +78,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopPush();
     stopWarmup();
     stopStuck();
+    stopQuestions();
     clearInterval(heartbeat);
     clearInterval(resync);
   };
