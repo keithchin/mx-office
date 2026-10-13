@@ -52,7 +52,7 @@ It's an **AI draft, not proof**. On the incident:
 - **Root cause**, **Impact** and **Corrective actions** carry *Drafted by Mx Office from the incident's evidence: check it* where the analysis wrote them. It only fills fields a person hasn't written: where you wrote one, yours stays and the analysis shows beside it as a suggestion.
 - **Mx Office's analysis** says when and with what model it was drafted and what it cost, its **confidence** (low, medium or high; low means the evidence only hints at it), what supports it, **What the evidence can't tell**, and **Your note**.
 - **✏️ Edit** corrects any of it; a field you change is yours from then on.
-- While it runs: *Analysing…*. If it doesn't finish (a cap, the hourly limit, an error, or the office restarting mid-run), the incident stays resolved and says *Analysis didn't finish: <reason>* with **Retry analysis** for admins. One incident is never analysed twice at once.
+- While it runs: *Analysing…*. If it doesn't finish (a cap, the hourly limit, an error, or the office restarting mid-run), the incident stays resolved and says *Analysis didn't finish: &lt;reason&gt;* with **Retry analysis** for admins. One incident is never analysed twice at once.
 
 ## Automatic detection
 
