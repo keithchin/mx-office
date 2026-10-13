@@ -88,7 +88,10 @@ export function pinBlock(pin: string, sha: string, date?: string): string {
     "- A newer toolkit comes only through the office's 🧰 Update toolkit action (the setup panel's Toolkit line),",
     "  which moves the pin, runs the toolkit's sync over the project and records it here, in",
     "  `agent-office.project.json` and in `PROJECT.md`'s `Toolkit commit:` line. If the project needs a newer",
-    '  toolkit, say so in chat or in your journal.',
+    '  toolkit, raise it with `office-workers escalate` (only the Project Manager moves the pin).',
+    "- **Questions for the Project Manager:** where the toolkit says to ask the user in chat, in this Mx Office",
+    '  project file the question with `office-workers escalate` instead, one escalation per batch; never leave',
+    '  it only in chat, a journal, a handoff or a standup page.',
     BLOCK_END,
   ].join('\n');
 }

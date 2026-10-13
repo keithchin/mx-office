@@ -81,7 +81,7 @@ export function handoffPrompt(by: string, role: RoleId | undefined, stamp: strin
   const where = role ? `Append a handoff entry to \`${journalPath(ROLE_BY_ID.get(role)!.team)}\`, headed \`## ${stamp} — Handoff\`` : 'Write a short handoff note as your reply';
   return [
     `${by} is pausing the project (⏸ Pause project). Your session is kept, and you'll be woken with it later. Do only this:`,
-    `1. ${where}: what you were doing, the next step, and any open questions. If you are waiting on the Project Manager for something that isn't in an open escalation, end it with \`AWAITING-PM: <one line>\`.`,
+    `1. ${where}: what you were doing, the next step, and any open questions. If you are waiting on the Project Manager for something that isn't in an open escalation, raise it now with \`office-workers escalate\` (one escalation for the batch), then end the entry with \`AWAITING-PM: <one line>\`.`,
     '2. Commit what you have (unfinished work too) so nothing is lost; push if you normally would.',
     "Don't start anything new. When it's written, reply `handoff written` and stop.",
   ].join('\n');

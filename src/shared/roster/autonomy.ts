@@ -93,8 +93,9 @@ export const isUrgency = (v: unknown): v is Urgency => typeof v === 'string' && 
 export type EscalationTrigger =
   | 'plan' | 'scope' | 'design' | 'architecture'
   | 'revisions-exhausted' | 'blocked' | 'milestone' | 'repeated-failure' | 'budget-risk'
-  | 'security' | 'data-loss' | 'client-milestone' | 'budget-overrun' | 'blocked-no-path';
-export const ESCALATION_TRIGGERS: readonly EscalationTrigger[] = ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', 'security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path'];
+  | 'security' | 'data-loss' | 'client-milestone' | 'budget-overrun' | 'blocked-no-path'
+  | 'needs-human';
+export const ESCALATION_TRIGGERS: readonly EscalationTrigger[] = ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', 'security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path', 'needs-human'];
 export const isEscalationTrigger = (v: unknown): v is EscalationTrigger => typeof v === 'string' && (ESCALATION_TRIGGERS as readonly string[]).includes(v);
 
 export const TRIGGER_LABEL: Record<EscalationTrigger, string> = {
@@ -112,7 +113,14 @@ export const TRIGGER_LABEL: Record<EscalationTrigger, string> = {
   'client-milestone': 'a client-facing milestone',
   'budget-overrun': 'a budget overrun',
   'blocked-no-path': 'blocked with no path forward',
+  'needs-human': 'a hands-on action only a person can do',
 };
+
+/**
+ * Never FYI at any level, though no review policy lists it: a hands-on action (merge, sign in, paste a key,
+ * install, allow, restart) is something only a person can do, so filing it quietly means nobody does it.
+ */
+export const HUMAN_TRIGGERS: readonly EscalationTrigger[] = ['needs-human'];
 
 /** Escalated at every level, Autonomous included: what no team should decide alone. */
 export const CRITICAL_TRIGGERS: readonly EscalationTrigger[] = ['security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path'];
@@ -132,10 +140,10 @@ export interface ReviewPolicy {
 }
 
 export const REVIEW_POLICY: Record<AutonomyLevel, ReviewPolicy> = {
-  1: { level: 1, escalate: ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', ...CRITICAL_TRIGGERS], askBeforeNextStep: true, maxRevisions: 2, minUrgency: 'info', rule: 'Escalate every review outcome that changes scope, design or plan, and ask before dispatching the next step.' },
-  2: { level: 2, escalate: ['scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', ...CRITICAL_TRIGGERS], askBeforeNextStep: false, maxRevisions: 2, minUrgency: 'important', rule: 'Escalate design, architecture and scope changes, a review still failing after 2 revision rounds, and anything blocking.' },
-  3: { level: 3, escalate: ['milestone', 'repeated-failure', 'budget-risk', ...CRITICAL_TRIGGERS], askBeforeNextStep: false, maxRevisions: 3, minUrgency: 'urgent', rule: 'Escalate only milestone-level issues, repeated failures and budget risk.' },
-  4: { level: 4, escalate: [...CRITICAL_TRIGGERS], askBeforeNextStep: false, maxRevisions: 3, minUrgency: 'critical', rule: 'Escalate only critical issues: security, data loss, a client-facing milestone, a budget overrun, or blocked with no path.' },
+  1: { level: 1, escalate: ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', ...CRITICAL_TRIGGERS, ...HUMAN_TRIGGERS], askBeforeNextStep: true, maxRevisions: 2, minUrgency: 'info', rule: 'Escalate every review outcome that changes scope, design or plan, and ask before dispatching the next step.' },
+  2: { level: 2, escalate: ['scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', ...CRITICAL_TRIGGERS, ...HUMAN_TRIGGERS], askBeforeNextStep: false, maxRevisions: 2, minUrgency: 'important', rule: 'Escalate design, architecture and scope changes, a review still failing after 2 revision rounds, and anything blocking.' },
+  3: { level: 3, escalate: ['milestone', 'repeated-failure', 'budget-risk', ...CRITICAL_TRIGGERS, ...HUMAN_TRIGGERS], askBeforeNextStep: false, maxRevisions: 3, minUrgency: 'urgent', rule: 'Escalate only milestone-level issues, repeated failures and budget risk.' },
+  4: { level: 4, escalate: [...CRITICAL_TRIGGERS, ...HUMAN_TRIGGERS], askBeforeNextStep: false, maxRevisions: 3, minUrgency: 'critical', rule: 'Escalate only critical issues: security, data loss, a client-facing milestone, a budget overrun, or blocked with no path.' },
 };
 
 /** Whether a review that turned up `trigger` goes to the Project Manager at `level`. */
@@ -149,7 +157,7 @@ export function shouldEscalate(level: AutonomyLevel, trigger: EscalationTrigger)
  * its urgency is quieter than the level's. The office never refuses one: the Lead may know better.
  */
 export function isFyi(level: AutonomyLevel, urgency: Urgency, trigger?: EscalationTrigger): boolean {
-  if (urgency === 'critical' || (trigger && CRITICAL_TRIGGERS.includes(trigger))) return false;
+  if (urgency === 'critical' || (trigger && (CRITICAL_TRIGGERS.includes(trigger) || HUMAN_TRIGGERS.includes(trigger)))) return false;
   if (trigger) return !shouldEscalate(level, trigger);
   return URGENCIES.indexOf(urgency) < URGENCIES.indexOf(REVIEW_POLICY[level].minUrgency);
 }
@@ -181,6 +189,6 @@ export function reviewBrief(level: AutonomyLevel, journal: string): string {
     reviewTable(level),
     '',
     '`office-workers escalate --urgency <info|important|urgent|critical> --trigger <kind> --title "…" --option "A" --option "B" --recommend "A" <<\'EOF\'` … details … `EOF`',
-    `Urgency: \`critical\` for security, data loss, a client-facing milestone, a budget overrun or blocked with no path; \`urgent\` when work stops until they answer; \`important\` for a decision needed today; \`info\` to keep them informed. Triggers: ${ESCALATION_TRIGGERS.join(', ')}. Below this level's threshold the office files it as FYI instead of alerting ${HUMAN}.`,
+    `Urgency: \`critical\` for security, data loss, a client-facing milestone, a budget overrun or blocked with no path; \`urgent\` when work stops until they answer; \`important\` for a decision needed today; \`info\` to keep them informed. Triggers: ${ESCALATION_TRIGGERS.join(', ')}. Below this level's threshold the office files it as FYI instead of alerting ${HUMAN}; \`needs-human\` (a hands-on action only a person can do) always alerts them.`,
   ].join('\n');
 }

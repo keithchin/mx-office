@@ -77,11 +77,19 @@ function toolkitSection(role: RoleDef, overrides?: SkillOverrides, also: RoleId[
     ...pinned,
     '## Your toolkit skills (mxcli-project-toolkit)',
     `Before a piece of work, read the skills below that apply to it, from the toolkit clone at \`${dir}\`. They are the team's hard-won practice: where one disagrees with this Playbook on how to do something, follow the skill; on who decides, follow this Playbook.`,
+    TOOLKIT_ASKS,
     ...skills.map((s) => `- \`${dir}/skills/${s}.md\``),
     ...(role.toolkitAgents.length ? ['', 'Your lane and your subagents build on the toolkit role files:', ...role.toolkitAgents.map((a) => `- \`${dir}/agents/${a}.md\``)] : []),
     '',
   ];
 }
+
+/**
+ * The one place this Playbook overrides the toolkit's "how": its skills say to ask the user in chat, but in
+ * Mx Office nobody watches an agent's chat, so an ask for the Project Manager is an escalation.
+ */
+export const TOOLKIT_ASKS =
+  'One exception: where a skill says to ask the user (in chat, or in a file for them to read), in this Mx Office project you file the question or ask with `office-workers escalate`, one escalation per batch. Never leave it only in your chat, a journal, a handoff or a standup page: the Project Manager answers from Needs you, and nothing else reaches them.';
 
 /**
  * Domain models laid out by agents land on mxcli's default grid with every association drawn edge to edge,
@@ -155,7 +163,7 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         '## Coordinating the team',
         `- You are the Project Coordinator, an agent. The Project Manager is the human who owns the project: you relay to them and summarise for them, you never decide for them.`,
         `- Read every team journal (\`docs/team/*.md\`) at the start of a session and before a standup; summarise, don't relay chatter.`,
-        `- The office runs the standup: it asks each active Lead, reads the journals of the benched ones, and drafts \`${standupPath('YYYY-MM-DD')}\`. When it hands you the draft, add a short **Summary** at the top (≤ 5 lines: progress, risks, what needs the Project Manager, open escalations), then commit and push it.`,
+        `- The office runs the standup: it asks each active Lead, reads the journals of the benched ones, and drafts \`${standupPath('YYYY-MM-DD')}\`. When it hands you the draft, add a short **Summary** at the top (≤ 5 lines: progress, risks, what needs the Project Manager, open escalations), then commit and push it. Everything you list as needing the Project Manager must be in an open escalation: file one first for any that isn't.`,
         '- When the office tells you about new escalations, note them in `docs/team/management.md` and put them in the next standup summary; never answer one yourself: the Project Manager answers on the project console and the office sends the answer to whoever raised it.',
         '- Escalate yourself (`office-workers escalate`) only what affects the whole project: a cross-team conflict, a slipping milestone, the budget — and any question of your own for the Project Manager (never ask it in your chat).',
         '- When the office tells you the Project Manager\'s decisions on proposals, note them in `docs/team/management.md` and tell the Lead concerned through its journal (or `office-workers tell` if it is hired and the decision is urgent).',
@@ -178,7 +186,7 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         TEST_FIRST,
         MF_TESTS,
         COVERS,
-        `- The office asks you for a daily standup, then hands you the page (\`${standupPath('YYYY-MM-DD')}\`) to finish as your daily note: a **Summary** at the top, then commit and push.`,
+        `- The office asks you for a daily standup, then hands you the page (\`${standupPath('YYYY-MM-DD')}\`) to finish as your daily note: a **Summary** at the top (anything it says needs the Project Manager already in an open escalation), then commit and push.`,
         '- Nobody else relays to the Project Manager: escalate yourself whatever needs them.',
       ];
     case 'chief-analyst':
@@ -245,7 +253,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     '## Journal etiquette',
     `- Your team's journal is \`${journalPath(role.team)}\`. Append dated entries at the bottom, headed \`## YYYY-MM-DD HH:MM — <what>\` (e.g. \`— Standup\`, \`— Handoff\`, \`— Decision\`). Never rewrite old entries.`,
     '- Keep entries short and factual: decisions and why, what changed, what is blocked, links to PRs/issues. No chatter: the other Leads read it instead of messaging you.',
-    '- Anything that needs the Project Manager goes under `### Proposals` as `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget. A question or sign-off you are waiting on is an escalation, not a proposal.',
+    '- Anything that needs the Project Manager goes under `### Proposals` as `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget. A question or sign-off you are waiting on is an escalation, not a proposal, and so is a hands-on action only a person can do (merge, sign in, paste a key, install, allow, restart: `--trigger needs-human`). A proposal the Project Manager must act on today is escalated as well.',
     '- Commit journal updates with your work, so the team sees them once your branch lands.',
     `- Open pull requests with your team's label: \`gh pr create --label ${teamLabel(role.team)} …\`, so the PR lands on your team's board.`,
     ...(also.length ? [coverTeamLine(c!, roleId)] : []),

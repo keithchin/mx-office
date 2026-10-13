@@ -6,13 +6,15 @@
 // command's arguments, the MCP tool and the answer in words. Plain Node, no dependencies.
 
 export const URGENCIES = ['info', 'important', 'urgent', 'critical'];
-export const TRIGGERS = ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', 'security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path'];
+export const TRIGGERS = ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', 'security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path', 'needs-human'];
 
 export const ESCALATE_USAGE = `  office-workers escalate --title "…" [--urgency info|important|urgent|critical]
         [--trigger <kind>] [--option "A"]... [--recommend "A"] <<'EOF'
   …the details…                                 raise something to the Project Manager (the human);
   EOF                                           details on stdin or --details "…". The answer comes
-                                                back to you as a prompt`;
+                                                back to you as a prompt. --trigger needs-human for
+                                                a hands-on action only a person can do (merge, sign
+                                                in, paste a key, install, allow, restart): never FYI`;
 
 /**
  * The escalate command's arguments (the words after `escalate`). `--option` may be given several
@@ -67,7 +69,7 @@ export const ESCALATE_TOOL = {
     properties: {
       title: { type: 'string', description: 'One line: what needs the Project Manager.' },
       urgency: { type: 'string', enum: URGENCIES, description: 'critical: security, data loss, client-facing milestone, budget overrun, blocked with no path. urgent: work stops until answered. important (default): a decision needed today. info: for their information.' },
-      trigger: { type: 'string', enum: TRIGGERS, description: 'What the review turned up; the office judges it against the floor\'s autonomy level.' },
+      trigger: { type: 'string', enum: TRIGGERS, description: 'What the review turned up; the office judges it against the floor\'s autonomy level. needs-human: a hands-on action only a person can do (merge a PR, sign in, paste a key, install a tool, allow something, restart a preview), never filed as FYI.' },
       details: { type: 'string', description: 'What happened, what you checked, what it affects.' },
       options: { type: 'array', items: { type: 'string' }, description: 'The choices the Project Manager has, each a short line.' },
       recommendation: { type: 'string', description: 'Which option you recommend, and why, in a line.' },
