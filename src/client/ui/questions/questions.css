@@ -1,0 +1,71 @@
+/* Project Management › Questions (ui/questions/): cards grouped by BRD, in the office's tokens. A card's
+   status is a word in a pill; its tone only repeats it. Everything wraps, so a phone needs no sideways scroll. */
+.qs { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding-bottom: 8px; }
+.qs-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.qs-title { margin: 0; font-size: 18px; font-weight: 900; color: var(--ink); overflow-wrap: anywhere; }
+/* Portal's page header says "Questions": the heading keeps only the counts ("9 of 24 answered · 6 block work"). */
+html[data-theme^='portal'] body.lite.pt-has-nav .qs-title-name { display: none; }
+html[data-theme^='portal'] body.lite.pt-has-nav .qs-title { font-size: 15px; }
+.qs-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.qs-note { margin: 0; font-size: 12px; color: var(--muted); }
+.qs-note:empty, .qs-msg:empty { display: none; }
+.qs-note-warn { color: var(--warn-ink); font-weight: 700; }
+.qs-find { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.qs-filters { display: flex; flex-wrap: wrap; gap: 4px; }
+.qs-chip.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.qs-search { flex: 1 1 180px; min-width: 0; max-width: 320px; padding: 5px 8px; border: 1px solid var(--rule-strong); border-radius: var(--radius); background: var(--card); color: var(--ink); font: inherit; }
+.qs-msg { margin: 0; font-size: 12px; color: var(--ink-2); }
+.qs-empty { margin: 8px 0; font-size: 13px; color: var(--muted); }
+.qs-muted { font-size: 12px; color: var(--muted); }
+.qs-body { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.qs-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.qs-group-h { margin: 0; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--ink); overflow-wrap: anywhere; }
+.qs-group-h small { font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--muted); }
+
+.qs-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--card); border: 1px solid var(--rule-strong); border-left-width: 4px; border-radius: var(--radius); min-width: 0; overflow-wrap: anywhere; }
+.qs-card[data-tone='wait'] { border-left-color: var(--link); }
+.qs-card[data-tone='warn'] { border-left-color: var(--warn-ink); }
+.qs-card[data-tone='mine'], .qs-card[data-tone='sent'], .qs-card[data-tone='client'] { border-left-color: var(--muted); }
+.qs-card[data-tone='done'] { border-left-color: var(--good-ink); opacity: .85; }
+.qs-card-h { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.qs-id { font: 700 12px/1.3 var(--mono, ui-monospace, monospace); padding: 1px 6px; border-radius: 4px; background: var(--sunken); color: var(--ink); }
+.qs-kind, .qs-blocks-tag { font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--rule-strong); color: var(--ink-2); background: var(--paper); }
+.qs-blocks-tag { border-color: var(--bad-ink); color: var(--bad-ink); }
+.qs-status { margin-left: auto; font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--rule-strong); background: var(--sunken); color: var(--ink); }
+.qs-status[data-tone='wait'] { border-color: var(--link); color: var(--link); background: var(--card); }
+.qs-status[data-tone='warn'] { border-color: var(--warn-ink); color: var(--warn-ink); background: var(--warn-soft); }
+.qs-status[data-tone='done'] { border-color: var(--good-ink); color: var(--good-ink); background: var(--good-soft); }
+.qs-q { margin: 0; font-size: 14px; font-weight: 700; color: var(--ink); }
+.qs-line, .qs-yours, .qs-src, .qs-warn { margin: 0; font-size: 13px; color: var(--ink-2); }
+.qs-line b, .qs-yours b { color: var(--ink); }
+.qs-prop { padding: 4px 8px; border-radius: var(--radius); background: var(--sunken); }
+.qs-warn { padding: 4px 8px; border-radius: var(--radius); background: var(--warn-soft); color: var(--warn-ink); font-weight: 700; }
+.qs-src { font-size: 11px; color: var(--muted); }
+.qs-ev summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.qs-ev p { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
+.qs-ref code { font-size: 11px; }
+.qs-acts, .qs-form-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.qs-form-in { display: flex; flex-direction: column; gap: 6px; }
+.qs-text, .qs-opt { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--rule-strong); border-radius: var(--radius); background: var(--paper); color: var(--ink); font: inherit; font-size: 13px; }
+
+/* The sticky bar: your answers before sending. */
+.qs-bar { position: sticky; bottom: 0; z-index: 2; display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; background: var(--card); border: 1px solid var(--rule-strong); border-radius: var(--radius); box-shadow: 0 -2px 8px rgba(0, 0, 0, .08); }
+.qs-bar[hidden] { display: none; }
+.qs-bar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: var(--ink); }
+
+/* The windows. */
+.qs-modal { width: min(720px, calc(100vw - 24px)); }
+.qs-modal .body { display: flex; flex-direction: column; gap: 10px; }
+.qs-modal p { margin: 0; font-size: 13px; color: var(--ink-2); }
+.qs-preview { margin: 0; max-height: 45vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.45 var(--mono, ui-monospace, monospace); padding: 8px 10px; background: var(--sunken); border: 1px solid var(--rule); border-radius: var(--radius); color: var(--ink); }
+.qs-whens { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.qs-when.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.qs-which { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--rule); border-radius: var(--radius); padding: 6px 10px; }
+.qs-which legend { font-size: 12px; font-weight: 800; color: var(--ink); }
+.qs-radio, .qs-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink); }
+.qs-radio { flex-direction: row; align-items: center; gap: 4px; }
+
+@media (max-width: 560px) {
+  .qs-status { margin-left: 0; }
+  .qs-search { max-width: none; }
+}

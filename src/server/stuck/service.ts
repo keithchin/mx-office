@@ -14,6 +14,7 @@ import { StuckBook, reviveBook, type BookEvent } from './book.js';
 import { detectStuck, failingStreaks, type PullFacts, type RunLike } from './detect.js';
 import { currentStage, planRows } from './parse.js';
 import type { RepoRead } from './repo.js';
+import { sourcedDrafts } from './sources.js';
 
 /** How often each floor is looked at. */
 export const LOOK_MS = 5 * 60_000;
@@ -155,6 +156,8 @@ export class StuckService {
       ...(a.lastProgressAt !== undefined ? { activity: { lastProgressAt: a.lastProgressAt, ...(a.lastProgress ? { lastProgress: a.lastProgress } : {}), activeMs: a.activeMs, ...(spent ? { spend: spent.spend, currency: spent.currency } : {}) } } : {}),
       firstSeen: (id) => book.firstSeen(id, now),
     });
+    // What other features found waiting on the PM (sources.ts): the Questions page's blocking client questions.
+    drafts.push(...(await sourcedDrafts(floor, now)));
     const events = book.reconcile(drafts, now);
     for (const e of events) this.audit(floor, e, now);
     await this.save(floor.id, book);

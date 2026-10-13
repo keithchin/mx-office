@@ -60,6 +60,7 @@ The items, and their buttons in the list:
 | 💤 | *&lt;name&gt; is idle with an open task: …* (idle 10 minutes, nothing escalated) | **Nudge**: tells it to carry on, or escalate if it's blocked ([back to work](../teams-and-agents/interruptions.md#back-to-work)) |
 | 💸 | *Spend cap reached: office prompts paused; agents finish their current turn* (the daily cap is spent) | **Settings** |
 | ⏳ ❓ 🔴 🔁 | Work the office found stuck, tagged **Stuck**: a PR with no activity, a decision waiting on you, a test failing for days, the team going in circles ([Stuck detection](stuck-detection.md)) | **Ask &lt;lead&gt;**, **Answer**, **Ask for blockers** or **Review**: opens the item's card |
+| ❓ | *N questions for the client · N BRDs · N block work*: the analysts' open questions in the BRDs waiting on you, one row per project ([Questions](questions.md)) | **Answer**: opens the Questions page |
 | ❌ | *PR #n has failing checks* | **Open PR #n** |
 | ✋ | *Stage X waits for your sign-off* | **Sign off**: scrolls to the setup panel |
 | 🌿 | *This floor's folder is on &lt;branch&gt;, N commits behind main* (only past 10 commits; last of this floor's items) | **Setup** |

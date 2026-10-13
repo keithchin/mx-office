@@ -16,6 +16,7 @@ import type { BudgetAlert } from './budget/types.js';
 import type { SettingsSectionId } from './settings-sections.js';
 import type { RoleId } from './roster/roles.js';
 import { STUCK_ICON, stuckTitle, type StuckView } from './stuck.js';
+import { questionsNeedParts, type QuestionsNeed } from './questions.js';
 
 /** Where an item's button takes you. */
 export type NeedTarget =
@@ -36,9 +37,11 @@ export type NeedTarget =
   /** Nudges an idle team member back to its open task (the office's back-to-work prompt, as the Project Manager's). */
   | { to: 'nudge'; role: RoleId }
   /** A stuck item's card (ui/stuck/): what's stuck, the evidence and its buttons. */
-  | { to: 'stuck'; id: string };
+  | { to: 'stuck'; id: string }
+  /** The Questions page (ui/questions/): the analysts' open questions for the client. */
+  | { to: 'questions' };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck';
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions';
 
 /** How long a team member sits idle with an open task (nothing escalated) before Needs you says so. */
 export const IDLE_TASK_MS = 10 * 60_000;
@@ -101,6 +104,8 @@ export interface NeedsInput {
   budget?: BudgetNeed;
   /** Work the office found stuck (server/stuck/): a PR nobody touches, a decision waiting on you, a test red for days, the team going in circles. */
   stuck?: StuckNeed;
+  /** The open questions for the client waiting on you (server/questions/): one item per project. */
+  questions?: QuestionsNeed;
   /** Now (ms), for how long someone has been idle: Date.now() unless a test says. */
   now?: number;
 }
@@ -166,6 +171,9 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     const action = s.kind === 'decision' ? 'Answer' : s.kind === 'stale-pr' ? `Ask ${lead}` : s.kind === 'circles' ? 'Ask for blockers' : 'Review';
     out.push({ key: `stuck-${s.id}`, kind: 'stuck', icon: STUCK_ICON[s.kind], tag: 'Stuck', text: stuckTitle(s, i.now ?? Date.now()), since: s.since, level: s.kind === 'decision' || s.kind === 'stale-pr' ? 'block' : 'warn', action, target: { to: 'stuck', id: s.id } });
   }
+  // The analysts' open questions for the client waiting on you (server/questions/): one row for the batch.
+  const qn = questionsNeedParts(i.questions && i.questions.floor === i.floor ? i.questions : undefined);
+  if (qn) out.push({ key: qn.key, kind: 'questions', icon: '❓', text: qn.text, ...(qn.since !== undefined ? { since: qn.since } : {}), level: qn.level, action: 'Answer', target: { to: 'questions' } });
   // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold) not marked as seen.
   const b = i.budget && i.budget.floor === i.floor ? i.budget : undefined;
   if (b) {

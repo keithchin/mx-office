@@ -18,6 +18,7 @@ import { attentionBriefs } from '../incidents/index.js';
 import { officeLink, type RedItem } from './cards.js';
 import { budgetNeedOf } from '../budget/need.js';
 import { stuckNeedOf } from '../stuck/index.js';
+import { questionsNeedOf } from '../questions/index.js';
 import { settingsHref } from '../../shared/settings-sections.js';
 
 export interface FloorNeeds {
@@ -64,6 +65,7 @@ export async function floorNeeds(ctx: Ctx, floor: Floor, now = Date.now()): Prom
     incidents: attentionBriefs(),
     budget: budgetNeedOf(ctx, floor),
     stuck: await stuckNeedOf(ctx, floor),
+    questions: await questionsNeedOf(ctx, floor),
   };
   return { input, needs: collectNeeds(input) };
 }
@@ -92,6 +94,8 @@ function whoOf(n: NeedItem, workers: readonly WorkerInfo[], roster: RosterView |
       return 'Budget';
     case 'stuck':
       return 'Stuck detection';
+    case 'questions':
+      return 'Questions';
     default:
       return 'The office';
   }

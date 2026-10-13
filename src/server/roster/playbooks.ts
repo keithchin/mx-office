@@ -20,7 +20,7 @@ import { applyStanding, applyStandingAsync } from './subagent-files.js';
 import { deliverablesBrief } from './deliverables-brief.js';
 import { toolkitDir as officeToolkitDir } from '../connections/store.js';
 import { alsoCovers, covers, isIdentity, managerOf, subagentDefsOf, writerOf, type Coverage } from '../../shared/roster/coverage.js';
-import { coverLines, coverTeamLine } from './playbook-cover.js';
+import { coverLines, coverTeamLine, QUESTIONS_LINE } from './playbook-cover.js';
 import { blockerLines } from './playbook-blockers.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
@@ -178,6 +178,7 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         TEST_FIRST,
         MF_TESTS,
         COVERS,
+        QUESTIONS_LINE,
         `- The office asks you for a daily standup, then hands you the page (\`${standupPath('YYYY-MM-DD')}\`) to finish as your daily note: a **Summary** at the top, then commit and push.`,
         '- Nobody else relays to the Project Manager: escalate yourself whatever needs them.',
       ];
@@ -187,6 +188,7 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         '- Own the BRD (toolkit discovery: `brd-generation.md`, `brd-validation.md`) and keep requirements traceable.',
         '- Analyse each app\'s development cycle from the office\'s analyzer data (it is handed to you at standups: runs, scores, costs per model) and the repo history.',
         '- Write a **weekly insight memo** to `docs/insights/YYYY-Www.md`: what the numbers say, what to change, and one R&D idea for the project\'s business. Proposals from it go in your journal.',
+        QUESTIONS_LINE,
       ];
   }
 }
