@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-13 · release 42 (`8223a6d`)
+
 ### Fixed
 
 - **The team phone opens beside the team-lead panel, not over it.** On a computer its window now sits left of the panel (or of the collapsed rail) with a 16 px gap, lined up with its button, and narrows when the screen is tight; on a phone it still takes the whole screen.
