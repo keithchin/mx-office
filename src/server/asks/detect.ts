@@ -242,6 +242,8 @@ export function readyForReview(brds: readonly BrdText[], design: readonly string
 /** Everything the look found. */
 export function detectAsks(i: DetectInput): Detected {
   const items: AskItem[] = [];
+  const consent = assumptions(i.mainProject, i.reads);
+  if (consent) items.push(consent);
   const off = offMain(i.ahead ?? [], i.now, i.lead);
   if (off) items.push(off);
   return { items, ...(i.standup ? { standup: i.standup } : {}) };
