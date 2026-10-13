@@ -1,6 +1,7 @@
 // The Incidents sub-tab's windows, each with a ✕ in its top right and closed by Esc (openModal): an
 // incident's form (new, from an audit event, or editing one, corrective actions included), resolving
-// one with its root cause, and the detection rules' settings. Admins only; the server checks too.
+// one (Mx Office then analyses it; an optional note of what you already know), and the detection rules'
+// settings. Admins only; the server checks too.
 
 import {
   ACTION_LINK_KINDS,
@@ -53,7 +54,7 @@ const select = <T extends string>(name: string, values: readonly T[], labels: Re
 function actionRow(a: Partial<CorrectiveAction>, remove: (row: HTMLElement) => void): HTMLElement {
   const row: HTMLElement = h(
     'div.inc-action-edit',
-    { 'data-id': a.id ?? '' },
+    { 'data-id': a.id ?? '', 'data-kind': a.kind ?? '', 'data-owner': a.owner ?? '' },
     h('input', { name: 'text', value: a.text ?? '', placeholder: 'What will be done', 'aria-label': 'Corrective action' }),
     select('status', ACTION_STATUSES, { open: 'Open', done: 'Done', wontfix: "Won't do" }, a.status ?? 'open'),
     h('select', { name: 'linkKind', 'aria-label': 'Link kind' }, h('option', { value: '' }, 'No link'), ...ACTION_LINK_KINDS.map((k) => h('option', { value: k, selected: a.link?.kind === k }, k))),
@@ -68,7 +69,8 @@ function readActions(box: HTMLElement): CorrectiveAction[] {
     const v = (name: string) => (row.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLSelectElement).value.trim();
     const kind = v('linkKind');
     const ref = v('linkRef');
-    return { id: row.dataset.id || `a${Date.now().toString(36)}${n}`, text: v('text'), status: v('status') as CorrectiveAction['status'], ...(kind && ref ? { link: { kind: kind as NonNullable<CorrectiveAction['link']>['kind'], ref } } : {}) };
+    // An action Mx Office's analysis drafted keeps its kind and suggested owner.
+    return { id: row.dataset.id || `a${Date.now().toString(36)}${n}`, text: v('text'), status: v('status') as CorrectiveAction['status'], ...(kind && ref ? { link: { kind: kind as NonNullable<CorrectiveAction['link']>['kind'], ref } } : {}), ...(row.dataset.kind ? { kind: row.dataset.kind as CorrectiveAction['kind'] } : {}), ...(row.dataset.owner ? { owner: row.dataset.owner } : {}) };
   });
 }
 
@@ -79,7 +81,7 @@ export function incidentForm(id: string | undefined, d: IncidentDraft, floors: r
   const status = select('status', INCIDENT_STATUSES, STATUS_LABEL, d.status ?? 'open');
   const summary = h('textarea', { name: 'summary', rows: '3', placeholder: 'What happened' });
   summary.value = d.summary ?? '';
-  const rootCause = h('textarea', { name: 'rootCause', rows: '2', placeholder: 'Why it happened (needed to resolve it)' });
+  const rootCause = h('textarea', { name: 'rootCause', rows: '2', placeholder: 'Why it happened (Mx Office drafts it when it is resolved)' });
   rootCause.value = d.rootCause ?? '';
   const spend = h('input', { name: 'spendUsd', type: 'number', min: '0', step: '0.01', value: d.impact?.spendUsd ?? '', placeholder: '0.00' });
   const agents = h('input', { name: 'agents', type: 'number', min: '0', step: '1', value: d.impact?.agents ?? '' });
@@ -134,30 +136,35 @@ export function incidentForm(id: string | undefined, d: IncidentDraft, floors: r
   title.focus();
 }
 
-/** Resolving: the root cause is asked for (and kept if there already is one). */
+/** Resolving: no cause asked for. Mx Office analyses it from its evidence in the background; an optional note helps it. */
 export function resolveForm(i: Incident, saved: (i: Incident) => void) {
-  const cause = h('textarea', { name: 'rootCause', rows: '4', required: true, placeholder: 'What caused it' });
-  cause.value = i.rootCause ?? '';
+  const note = h('textarea', { name: 'note', rows: '3', maxlength: '2000', placeholder: 'Optional: what you already know about the cause or the impact' });
   const err = h('p.inc-err', { role: 'alert' });
+  const save = h('button.btn.primary', { type: 'submit' }, 'Resolve');
   const form = h(
     'form.inc-form',
     {
       onsubmit: async (e: Event) => {
         e.preventDefault();
-        if (!cause.value.trim()) return void (err.textContent = 'Say what the root cause was');
-        const r = await saveIncident(i.id, { status: 'resolved', rootCause: cause.value });
+        save.setAttribute('disabled', '');
+        const r = await saveIncident(i.id, { status: 'resolved', ...(note.value.trim() ? { note: note.value } : {}) });
+        save.removeAttribute('disabled');
         if (!r?.incident) return void (err.textContent = r?.error ?? "Couldn't reach the office");
         modal.close();
+        toast('Resolved: Mx Office is analysing it');
         saved(r.incident);
       },
     },
     h('header', {}, h('h2', {}, `Resolve INC-${i.number}`)),
-    field('Root cause', cause, 'Kept on the incident and in the audit log'),
+    h('p.inc-hint.inc-resolve-what', {}, 'Mx Office will analyse this incident (root cause, impact and corrective actions) from its evidence. You can correct the analysis afterwards.'),
+    field('Anything you already know?', note, 'Optional. Given to the analysis and kept on the incident as your note'),
     err,
-    h('div.inc-buttons', {}, h('button.btn.primary', { type: 'submit' }, 'Resolve')),
+    h('div.inc-buttons', {}, save),
   );
-  const modal = openModal(h('div.panel.inc-modal.inc-narrow', {}, form), { doing: 'resolving an incident' });
-  cause.focus();
+  // Closed by ✕ or Esc: back to the Resolve button it was opened from (after a save the page is redrawn).
+  const opener = document.activeElement as HTMLElement | null;
+  const modal = openModal(h('div.panel.inc-modal.inc-narrow', {}, form), { doing: 'resolving an incident', onClose: () => void (opener?.isConnected && opener.focus()) });
+  note.focus();
 }
 
 /** The detection rules: each on or off, with its thresholds. */

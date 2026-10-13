@@ -1,11 +1,14 @@
-// One incident in full: what happened and how bad, its impact, root cause and corrective actions, its
-// timeline (with a box for an admin's note), the audit events it links (each opens on the Events
-// sub-tab) and the workers it touched; admins edit, mitigate, resolve or reopen it from its head.
+// One incident in full: what happened and how bad, Mx Office's analysis once it's resolved (./analysis.ts),
+// its impact, root cause and corrective actions (the analysis's draft labelled "check it"), its timeline
+// (with a box for an admin's note), the audit events it links (each opens on the Events sub-tab) and the
+// workers it touched; admins edit, mitigate, resolve or reopen it from its head.
 
 import { SEVERITY_LABEL, SEVERITY_SHORT, STATUS_LABEL, incidentRef, type Incident } from '../../../shared/incidents';
 import { h, toast } from '../dom';
 import { actionHref, auditIdTime, fmtTime, fmtUsd } from './logic';
 import { incidentForm, noteIncident, resolveForm, saveIncident } from './form';
+import { analysisBox, fieldNote } from './analysis';
+import { analysisView } from './analysis-logic';
 import type { FloorInfo } from '../../../shared/protocol';
 
 export interface DetailOpts {
@@ -25,6 +28,8 @@ export const statusChip = (i: Pick<Incident, 'status'>) => h('span.inc-status', 
 const section = (title: string, ...body: (Node | string | null)[]) => h('section.inc-sec', {}, h('h3', {}, title), ...body);
 
 export function incidentDetail(i: Incident, o: DetailOpts): HTMLElement {
+  const an = analysisView(i);
+  const busy = an.state === 'pending';
   const where = i.floors.length ? i.floors.map(o.floorName).join(', ') : 'The office';
   const set = async (status: Incident['status']) => {
     const r = await saveIncident(i.id, { status });
@@ -49,7 +54,7 @@ export function incidentDetail(i: Incident, o: DetailOpts): HTMLElement {
   const actions = i.actions.map((a) => {
     const href = actionHref(a.link);
     const link = a.link ? (href ? h('a.inc-link', { href, target: '_blank', rel: 'noopener' }, `${a.link.kind}: ${a.link.ref}`) : h('code.inc-link', {}, `${a.link.kind}: ${a.link.ref}`)) : null;
-    return h('li.inc-action', { 'data-status': a.status }, h('span.inc-astatus', {}, a.status === 'done' ? 'Done' : a.status === 'wontfix' ? "Won't do" : 'Open'), h('span', {}, a.text), link);
+    return h('li.inc-action', { 'data-status': a.status }, h('span.inc-astatus', {}, a.status === 'done' ? 'Done' : a.status === 'wontfix' ? "Won't do" : 'Open'), a.kind ? h('span.inc-akind', {}, a.kind) : null, h('span', {}, a.text, a.owner ? h('small.inc-hint', {}, ` · ${a.owner}`) : null), link);
   });
   const note = h('textarea.inc-note', { rows: '2', placeholder: 'Add a note to the timeline…', 'aria-label': 'Note' });
   const addNote = async () => {
@@ -70,9 +75,10 @@ export function incidentDetail(i: Incident, o: DetailOpts): HTMLElement {
     h('header.inc-dhead', {}, h('div.inc-chips', {}, sevChip(i), statusChip(i), i.retrospective ? h('span.inc-retro', {}, 'Recorded retrospectively') : null, i.occurrences > 1 ? h('span.inc-occ', { title: 'Times its rule fired into it' }, `${i.occurrences}×`) : null), h('h2.inc-title', {}, h('span.inc-ref', {}, incidentRef(i)), ' ', i.title), buttons),
     h('p.inc-meta', {}, `Detected ${fmtTime(i.detectedAt)} by ${i.detectedBy.name}${i.detectedBy.kind === 'rule' ? ' (automatic rule)' : ''} · ${where}${i.resolvedAt ? ` · resolved ${fmtTime(i.resolvedAt)}` : ''}`),
     i.summary ? section('Summary', h('p.inc-text', {}, i.summary)) : null,
-    section('Impact', impact.length ? h('ul.inc-impact-list', {}, ...impact) : h('p.inc-none', {}, 'Not recorded')),
-    section('Root cause', i.rootCause ? h('p.inc-text', {}, i.rootCause) : h('p.inc-none', {}, i.status === 'resolved' ? 'Not recorded' : 'Not known yet')),
-    section('Corrective actions', actions.length ? h('ul.inc-actions', {}, ...actions) : h('p.inc-none', {}, 'None yet')),
+    analysisBox(i, o.admin, o.changed, an),
+    section('Impact', impact.length ? h('ul.inc-impact-list', {}, ...impact) : h('p.inc-none', {}, busy ? 'Analysing…' : 'Not recorded'), fieldNote(an, 'impact')),
+    section('Root cause', i.rootCause ? h('p.inc-text', {}, i.rootCause) : h('p.inc-none', {}, busy ? 'Analysing…' : i.status === 'resolved' ? 'Not recorded' : 'Not known yet'), fieldNote(an, 'rootCause')),
+    section('Corrective actions', actions.length ? h('ul.inc-actions', {}, ...actions) : h('p.inc-none', {}, busy ? 'Analysing…' : 'None yet'), fieldNote(an, 'actions')),
     section('Timeline', o.admin ? h('div.inc-noteline', {}, note, h('button.btn', { type: 'button', onclick: () => void addNote() }, 'Add note')) : null, h('ol.inc-timeline', {}, ...timeline)),
     i.workers.length ? section('Agents', h('ul.inc-workers', {}, ...i.workers.map((w) => h('li', {}, w.name, w.floor && i.floors.length !== 1 ? ` (${o.floorName(w.floor)})` : '')))) : null,
     section('Linked audit events', events.length ? h('ul.inc-events', {}, ...events) : h('p.inc-none', {}, 'None yet: expand a row on the Events tab and use “Link to incident…”')),

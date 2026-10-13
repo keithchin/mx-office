@@ -1,17 +1,18 @@
 // The office's own model calls, metered: Jeff's Haiku fallback, the analyzer's classifier, the task
-// namer, the project summary's narrator and the Firm's reviewers. Each runs `claude -p --output-format
-// json`, whose answer carries the call's tokens per model; they're priced here from the office's price
-// list (usage.ts PRICES) and handed to whoever listens (the Budget ledger, which books them on the floor
-// they served and into the office's Ledger). Which floor a call served comes from where it was asked:
-// `withBilling({ floor, source }, fn)` around the asking, carried through every await by an
-// AsyncLocalStorage, so the callers' signatures don't change. A call made outside any is the office's own.
+// namer, the project summary's narrator, the Firm's reviewers, the planner and the incident analysis.
+// Each runs `claude -p --output-format json`, whose answer carries the call's tokens per model; they're
+// priced here from the office's price list (usage.ts PRICES) and handed to whoever listens (the Budget
+// ledger, which books them on the floor they served and into the office's Ledger). Which floor a call
+// served comes from where it was asked: `withBilling({ floor, source }, fn)` around the asking, carried
+// through every await by an AsyncLocalStorage, so the callers' signatures don't change. A call made
+// outside any is the office's own.
 
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Usage } from '../../shared/protocol.js';
 import { usageOfMessage, zeroUsage, addUsage } from '../usage.js';
 
 /** Which background job a call is for. */
-export type BillingSource = 'jeff' | 'analyzer' | 'task-namer' | 'summary' | 'firm' | 'planner' | 'office';
+export type BillingSource = 'jeff' | 'analyzer' | 'task-namer' | 'summary' | 'firm' | 'planner' | 'incident' | 'office';
 
 export const SOURCE_LABEL: Record<BillingSource, string> = {
   jeff: 'Jeff (the Router)',
@@ -20,6 +21,7 @@ export const SOURCE_LABEL: Record<BillingSource, string> = {
   summary: 'The project summary',
   firm: 'The Firm (audit reviewers)',
   planner: 'New project planning (the Chief Analyst)',
+  incident: 'Incident analysis',
   office: 'The office',
 };
 

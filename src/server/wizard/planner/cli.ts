@@ -2,7 +2,8 @@
 // analysis/llm.ts): print mode, an answer that fits a JSON schema, no settings, hooks, MCP servers or
 // session, a timeout, and `--max-budget-usd` set to what the draft has left, so a call can never spend past
 // the draft's cap. Attached PDFs are the one thing it reads itself: copies in a fresh temporary folder, with
-// only the Read tool, confined to that folder (`--restricted`). Every answer is metered as office spend.
+// only the Read tool, confined to that folder (`--restricted`). Every answer is metered as office spend
+// (as `planner`, or under the caller's billing tag: the incident analysis, incidents/analysis.ts, uses it too).
 
 import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
@@ -11,6 +12,14 @@ import { spawnOff, type OffChild } from '../../offloop/exec.js';
 import { meterCliResult, spendOfCliResult } from '../../budget/meter.js';
 import { officeCliRefused } from '../../testmode.js';
 import { resolvedModel } from '../../usage.js';
+import { childEnv } from '../../workers/env.js';
+
+/** The environment of an office call: the workers' own, without GitHub tokens (no call of this kind needs GitHub). */
+export function officeCallEnv(): Record<string, string> {
+  const env = childEnv();
+  for (const k of ['GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN']) delete env[k];
+  return env;
+}
 
 export interface CliCall {
   model: string;
@@ -22,6 +31,8 @@ export interface CliCall {
   budgetUsd: number;
   /** Files it may read with the Read tool (copies are made in a sandbox folder). */
   files?: { name: string; path: string }[];
+  /** Who answers, in its messages (`The Chief Analyst` by default; the incident analysis is another caller). */
+  who?: string;
 }
 
 export interface CliResult {
@@ -95,31 +106,32 @@ export async function runPlannerCall(claude: string, env: Record<string, string>
     // Whole, without `pages`: a page range makes the Read tool render pages with pdftoppm, which isn't on the office's machine (rehearsal 2).
     const input = files.length ? `${c.input}\n\nThe attached PDF files are in your working folder: ${files.map((f) => f.name).join(', ')}. ${PDF_READ}` : c.input;
     const r = await run(claude, env, cliArgs(c, files.length > 0), input, sandbox, c.timeoutMs);
-    if (r.timedOut) return { value: null, cost: 0, error: `The Chief Analyst took longer than ${Math.round(c.timeoutMs / 1000)} s and was stopped` };
+    const who = c.who ?? 'The Chief Analyst';
+    if (r.timedOut) return { value: null, cost: 0, error: `${who} took longer than ${Math.round(c.timeoutMs / 1000)} s and was stopped` };
     meterCliResult(r.out || null, 'planner', resolvedModel(c.model));
     const cost = r.out ? (spendOfCliResult(r.out, resolvedModel(c.model))?.usage.cost ?? 0) : 0;
-    const parsed = parseAnswer(r.out);
+    const parsed = parseAnswer(r.out, who);
     if (parsed.value) return { value: parsed.value, cost };
-    return { value: null, cost, error: parsed.error ?? (r.code === 0 ? 'The Chief Analyst’s answer didn’t fit the brief’s shape' : `claude exited ${r.code ?? 'abnormally'}`), budgetHit: parsed.budgetHit };
+    return { value: null, cost, error: parsed.error ?? (r.code === 0 ? `${who}’s answer didn’t fit ${c.who ? 'its' : 'the brief’s'} shape` : `claude exited ${r.code ?? 'abnormally'}`), budgetHit: parsed.budgetHit };
   } finally {
     rmSync(sandbox, { recursive: true, force: true });
   }
 }
 
 /** The structured answer of a `claude -p --output-format json` result, or why there's none. */
-export function parseAnswer(out: string): { value?: any; error?: string; budgetHit?: boolean } {
+export function parseAnswer(out: string, who = 'The Chief Analyst'): { value?: any; error?: string; budgetHit?: boolean } {
   let res: any;
   try {
     res = JSON.parse(out);
   } catch {
-    return { error: out.trim() ? 'The Chief Analyst’s answer couldn’t be read' : undefined };
+    return { error: out.trim() ? `${who}’s answer couldn’t be read` : undefined };
   }
   const budgetHit = /budget/i.test(String(res?.subtype ?? '')) || /max.?budget/i.test(String(res?.result ?? ''));
-  if (res?.is_error || budgetHit) return { error: budgetHit ? 'The call reached the draft’s planning budget and stopped' : String(res?.result ?? 'The Chief Analyst reported an error').slice(0, 200), budgetHit };
+  if (res?.is_error || budgetHit) return { error: budgetHit ? `The call reached ${who === 'The Chief Analyst' ? 'the draft’s planning budget' : 'its budget'} and stopped` : String(res?.result ?? `${who} reported an error`).slice(0, 200), budgetHit };
   try {
     const v = res?.structured_output ?? (typeof res?.result === 'string' ? JSON.parse(res.result.replace(/^```(json)?|```$/g, '')) : null);
-    return v && typeof v === 'object' ? { value: v } : { error: 'The Chief Analyst sent no structured answer' };
+    return v && typeof v === 'object' ? { value: v } : { error: `${who} sent no structured answer` };
   } catch {
-    return { error: 'The Chief Analyst’s answer wasn’t JSON' };
+    return { error: `${who}’s answer wasn’t JSON` };
   }
 }

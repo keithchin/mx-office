@@ -2,7 +2,8 @@
 // 2026-10-06 applied once (seed.ts), and the detection rules (rules.ts) fed from the audit log, the
 // signals (signals.ts), every worker update (incidentsOnWorker, from office/floors.ts), the workers the
 // last office left mid-turn (read from each floor's workers.json before the floors open and restore
-// them) and a look at every floor once a minute. Installed by server.ts after the audit log.
+// them) and a look at every floor once a minute; and the analysis of a resolved incident (analysis.ts).
+// Installed by server.ts after the audit log.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -18,6 +19,7 @@ import { IncidentStore, raise, useIncidents } from './index.js';
 import { IncidentDetector, type FloorSnapshot } from './rules.js';
 import { onIncidentSignal } from './signals.js';
 import { applySeed, wantsSeed } from './seed.js';
+import { IncidentAnalyzer, useAnalyzer } from './analysis.js';
 
 const TICK_MS = 60_000;
 /** The restored workers are looked at once the floors are open and their names known. */
@@ -68,6 +70,10 @@ export function installIncidents(ctx: Ctx) {
     const n = applySeed();
     if (n) console.log(`  🚨 Recorded ${n} incidents of 2026-10-06 retrospectively (Audit log → Incidents)`);
   }
+  // Mx Office's analysis of a resolved incident (analysis.ts): one cut off by the last office's stop can be retried.
+  const analyzer = new IncidentAnalyzer({ floorName: (id) => ctx.floors.get(id)?.def.name ?? id });
+  useAnalyzer(analyzer);
+  analyzer.recover();
 
   const floorOfDir = (dir: string) => {
     const d = norm(dir);

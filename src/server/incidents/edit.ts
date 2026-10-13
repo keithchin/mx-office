@@ -14,6 +14,7 @@ import {
   type IncidentStatus,
   type IncidentWorker,
 } from '../../shared/incidents.js';
+import { ACTION_KINDS, type ActionKind } from '../../shared/incident-analysis.js';
 
 export interface IncidentPatch {
   title?: string;
@@ -61,7 +62,8 @@ function actionsOf(v: unknown): CorrectiveAction[] | undefined {
     const l = a.link as Record<string, unknown> | undefined;
     const ref = l && typeof l === 'object' ? str(l.ref, 300) : undefined;
     const kind = l && ACTION_LINK_KINDS.includes(l.kind as ActionLinkKind) ? (l.kind as ActionLinkKind) : undefined;
-    out.push({ id: str(a.id, 40) || `a${n + 1}`, text, status, ...(ref && kind ? { link: { kind, ref } } : {}) });
+    const owner = str(a.owner, 80);
+    out.push({ id: str(a.id, 40) || `a${n + 1}`, text, status, ...(ref && kind ? { link: { kind, ref } } : {}), ...(ACTION_KINDS.includes(a.kind as ActionKind) ? { kind: a.kind as ActionKind } : {}), ...(owner ? { owner } : {}) });
   }
   return out;
 }

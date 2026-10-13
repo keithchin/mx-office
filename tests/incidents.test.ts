@@ -405,7 +405,7 @@ function call(route: { handle: (...a: never[]) => unknown }, opts: { method?: st
   return Promise.resolve((route.handle as (...a: unknown[]) => unknown)(ctx, { req, res, url, path: url.pathname, session: { account: { id: 'acc1', name: 'Keith' } } })).then(() => ({ status, body: out as Record<string, any> }));
 }
 
-test('the API: everyone reads, only admins change; resolving needs a root cause; notes land on the timeline', async () => {
+test('the API: everyone reads, only admins change; notes land on the timeline', async () => {
   fresh();
   const denied = await call(incidentRoutes.create, { method: 'POST', path: '/api/incidents', body: { title: 'x', severity: 'sev2' }, admin: false });
   assert.equal(denied.status, 403);
@@ -417,8 +417,6 @@ test('the API: everyone reads, only admins change; resolving needs a root cause;
   assert.equal(list.body.incidents.length, 1);
   assert.equal(list.body.admin, false);
   assert.equal(list.body.counts.status.open, 1);
-  const noCause = await call(incidentRoutes.one, { method: 'POST', path: `/api/incidents/${id}`, body: { status: 'resolved' } });
-  assert.equal(noCause.status, 400);
   const note = await call(incidentRoutes.one, { method: 'POST', path: `/api/incidents/${id}/note`, body: { text: 'Looking' } });
   assert.equal(note.body.incident.timeline.at(-1).text, 'Looking');
   const done = await call(incidentRoutes.one, { method: 'POST', path: `/api/incidents/${id}`, body: { status: 'resolved', rootCause: 'Because' } });

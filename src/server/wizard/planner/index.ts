@@ -13,12 +13,12 @@ import { applyOp, attachProblem, changedIds, cleanBrief, counts, emptyBrief, mer
 import { interviewModeOf } from '../../../shared/wizard.js';
 import { priceOf, resolvedModel } from '../../usage.js';
 import { resolveCommand } from '../../workers/process.js';
-import { childEnv } from '../../workers/env.js';
 import { testModeOf } from '../../testmode.js';
 import type { Ctx } from '../../office/context.js';
 import { docxText } from './docx.js';
 import { DraftStore, type DraftState } from './drafts.js';
 import { cliEngine, type PlannerEngine, type PlannerFile } from './engine.js';
+import { officeCallEnv } from './cli.js';
 import { fakeEngine } from './fake.js';
 
 export interface PlannerConfig {
@@ -401,12 +401,10 @@ export class Planner {
 
 function defaultEngine(c: PlannerConfig): PlannerEngine {
   if (c.mode === 'fake') return fakeEngine();
-  const env = childEnv();
-  // The planner needs no GitHub at all.
-  for (const k of ['GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN']) delete env[k];
   return cliEngine({
     claude: resolveCommand('claude'),
-    env,
+    // The planner needs no GitHub at all.
+    env: officeCallEnv(),
     model: c.model,
     timeoutMs: c.timeoutMs,
     // A test office never calls the real Claude: only the test planner (AGENT_OFFICE_PLANNER=fake) drafts there.
