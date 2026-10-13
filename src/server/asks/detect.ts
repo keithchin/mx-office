@@ -244,8 +244,11 @@ export function detectAsks(i: DetectInput): Detected {
   const items: AskItem[] = [];
   const consent = assumptions(i.mainProject, i.reads);
   if (consent) items.push(consent);
+  items.push(...advisories(i.reads, i.lead));
   const off = offMain(i.ahead ?? [], i.now, i.lead);
   if (off) items.push(off);
+  const review = readyForReview(i.brds ?? [], i.design ?? []);
+  if (review) items.push(review);
   return { items, ...(i.standup ? { standup: i.standup } : {}) };
 }
 

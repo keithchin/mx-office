@@ -189,8 +189,8 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     if (p.state !== 'OPEN' || p.isDraft || p.checks !== 'fail') continue;
     out.push({ key: `pr-${p.number}`, kind: 'pr', icon: '❌', text: `PR #${p.number} has failing checks: ${p.title}`, since: Date.parse(p.updatedAt) || undefined, level: 'warn', action: `Open PR #${p.number}`, target: { to: 'pr', number: p.number } });
   }
-  // A toolkit stage at a ✋ gate, waiting for your sign-off (the setup panel below says which).
-  for (const s of i.setup?.show ? i.setup.stages : []) {
+  // A toolkit stage at a ✋ gate, waiting for your sign-off: any stage gate-check marks MANUAL (3, 4, 7, and 5–6 where it wants a person), from its verdicts whether or not the setup panel shows.
+  for (const s of i.setup?.verdicts?.length ? i.setup.verdicts : i.setup?.show ? i.setup.stages : []) {
     if (s.status !== 'MANUAL') continue;
     out.push({ key: `setup-${s.id}`, kind: 'setup', icon: '✋', text: `Stage ${s.id} (${s.title}) waits for your sign-off`, level: 'warn', action: 'Sign off', target: { to: 'setup' } });
   }

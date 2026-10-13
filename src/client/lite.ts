@@ -402,7 +402,8 @@ function goToNeed(t: NeedTarget) {
   if (t.to === 'approvals' || t.to === 'live' || t.to === 'git') return showTab(t.to);
   if (t.to === 'setup') {
     if (tab !== 'command') showTab('command');
-    return $('setup').scrollIntoView({ block: 'start', behavior: 'smooth' });
+    // Past Stage 4 the setup panel is gone: a later ✋ gate's sign-off is on the progress bar.
+    return ($('setup').childElementCount ? $('setup') : $('progress-bar')).scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
   if (t.to === 'budget') return budget.go(t);
   if (t.to === 'nudge') return void nudgeMember(store.floor, t.role);
