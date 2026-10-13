@@ -11,7 +11,7 @@ import { h, openModal } from '../dom';
 import { setStuckView, stuckView } from './feed';
 import './stuck.css';
 
-const KIND_TITLE: Record<StuckKind, string> = { 'stale-pr': 'Stuck: a pull request nobody is moving', decision: 'Decision waiting on you', failing: 'Failing for days', circles: 'Going in circles' };
+const KIND_TITLE: Record<StuckKind, string> = { 'stale-pr': 'Stuck: a pull request nobody is moving', decision: 'Decision waiting on you', failing: 'Failing for days', circles: 'Going in circles', 'blocked-row': 'Build-plan rows blocked' };
 
 /** What the card is worked out from, so the tests can check it without a page. */
 export interface CardModel {
