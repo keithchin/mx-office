@@ -10,6 +10,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 - **Mx Office analyses an incident when it's resolved.** **✅ Resolve…** no longer asks for the root cause: it says what will happen, takes an optional *Anything you already know?* note, and resolves the incident at once. In the background Mx Office drafts the root cause, the impact and 1 to 5 corrective actions (fix, prevent, detect) from the incident's own evidence (its record, the audit events it links and those around when it happened, your note), with secrets redacted, in one capped call with no tools ($0.30 per incident, 20 an hour across the office, metered in the budget as *Incident analysis*). The incident shows it as a draft to check: *Drafted by Mx Office from the incident's evidence: check it* on each field it wrote, its confidence, what supports it and *What the evidence can't tell*. It never overwrites what a person wrote (it shows beside it as a suggestion), and a field you edit is yours. If it doesn't finish, the incident stays resolved with *Analysis didn't finish: <reason>* and **Retry analysis**. A test office drafts it with a test analyser, never Claude.
 
+### Changed
+
+- **A finished agent idles instead of cheering forever on the Git page.** Its robot gives one cheer as it finishes, then bobs like an idle one; its ✓ still says it's done. (In the 2D Office a finished agent already sits like an idle one, with its tick.)
+
 ### Fixed
 
 - **A budget forecast or threshold warning can be marked as seen.** It used to stay in Needs you, with only a **Budget** button, until the budget was raised. Needs you now has **Mark as seen** beside it, and the Budget tab a new **Alerts** card listing every alert standing with the same button (admins). A seen alert leaves Needs you, its count, the phone and Teams, and stays on the Budget tab, dimmed, with who saw it and when. A seen forecast comes back if the forecast at completion grows by more than 10 %; a seen threshold when the budget changes. The 100 % alert and the budget's pause still need a budget decision.
