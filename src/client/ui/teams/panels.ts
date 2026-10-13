@@ -22,6 +22,11 @@ import { teamWorld } from './world';
 import { teamChatter } from '../chatter/compact';
 import { deliverablesList } from '../deliverables/panel';
 import { coverageOf, coverNote } from '../roster/coverage';
+import { branchLabel, type BranchStandup } from '../../../shared/asks';
+
+/** The lead's newer standup still on its branch: its date and its Blocked on you, labelled as not on main. */
+const branchStandupNote = (s: BranchStandup) =>
+  h('div.tm-dim', {}, h('p', {}, `Newer: ${s.file} (${branchLabel(s.who)})`), s.blocked.length ? h('ul', {}, ...s.blocked.map((b) => h('li', {}, `Blocked on you: ${b}`))) : null);
 
 export interface PanelDeps {
   openPull(p: GhPull): void;
@@ -171,6 +176,7 @@ function lanePanels(team: TeamId, v: RosterView | undefined, data: TeamPageData 
         ? h('p', {}, h('button.tm-link', { type: 'button', onclick: () => store.floor && void openStandupWindow(store.floor) }, `📋 ${last.date}`), ` · ${last.status === 'compiled' ? 'compiled' : 'collecting answers'} · by ${last.by}`)
         : empty('No standup yet: ▶️ Run standup on the 👥 Team tab.'),
       data?.standup ? h('p.tm-dim', {}, 'In the repo: ', h('button.tm-link', { type: 'button', onclick: () => void openDoc(data.standup!) }, data.standup)) : null,
+      data?.branchStandup ? branchStandupNote(data.branchStandup) : null,
     ),
     panel('✅ Approvals', h('p', {}, h('b.tm-big', {}, String(v?.approvals.length ?? 0)), ' waiting on the Project Manager '), h('button.btn.small', { type: 'button', onclick: deps.openApprovals }, 'Open the approvals →')),
   ];

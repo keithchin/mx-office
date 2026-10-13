@@ -22,6 +22,8 @@ import { actMessage, detectAsks, DETECT_FILES, type DetectInput } from './detect
 export const LOOK_MS = 5 * 60_000;
 /** A look asked for soon (a bench, a pause, a turn's end) waits this long, so a burst is one look. */
 export const SOON_MS = 20_000;
+/** And comes no sooner than this after the floor's last look: turns end every minute on a busy team. */
+export const SOON_GAP_MS = 2 * 60_000;
 
 export interface AsksFloor {
   id: string;
@@ -66,6 +68,7 @@ export class AsksService {
   private soonTimers = new Map<string, NodeJS.Timeout>();
   private stopped = false;
   private looking = new Set<string>();
+  private lastLook = new Map<string, number>();
 
   constructor(private readonly deps: AsksDeps) {}
 
@@ -118,11 +121,12 @@ export class AsksService {
   soon(floorId: string, why = 'soon after the turn') {
     if (this.stopped) return;
     clearTimeout(this.soonTimers.get(floorId));
+    const wait = Math.max(SOON_MS, (this.lastLook.get(floorId) ?? 0) + SOON_GAP_MS - this.deps.now());
     const t = setTimeout(() => {
       this.soonTimers.delete(floorId);
       const f = [...this.deps.floors()].find((x) => x.id === floorId);
       if (f) void this.look(f, why).catch((err: unknown) => console.error(`agent-office: asks: couldn't look at ${floorId}: ${(err as Error)?.message ?? err}`));
-    }, SOON_MS);
+    }, wait);
     t.unref?.();
     this.soonTimers.set(floorId, t);
   }
@@ -143,6 +147,7 @@ export class AsksService {
   async look(floor: AsksFloor, why: string): Promise<void> {
     if (this.stopped || this.looking.has(floor.id)) return;
     this.looking.add(floor.id);
+    this.lastLook.set(floor.id, this.deps.now());
     try {
       const people = floor.people();
       const places = await placesOf(floor.dir, people);
@@ -202,7 +207,7 @@ export class AsksService {
       }
       return undefined;
     }
-    const msg = actMessage(act, it, o.by);
+    const msg = actMessage(act, it, o.by, this.deps.now());
     if (!msg) return 'Nothing to send';
     const lead = this.deps.lead(floor);
     if (!lead) return 'This project has no team lead to ask';
