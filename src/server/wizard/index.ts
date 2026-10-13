@@ -23,6 +23,7 @@ import { configProblems, mendixVersions, preferredMendix, projectOrg, toolkitEnv
 import { existingAnswers, parseIntakeTemplate } from './intake.js';
 import { JobBook, jobId, newJob, type JobState } from './job.js';
 import { appDirTooLong, mprVersion } from './mendix-app.js';
+import { testModeOf } from '../testmode.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
 import { setupView, setupViewOf } from './setup.js';
@@ -185,7 +186,8 @@ export class Wizard {
     if (plan.kind === 'new' && !plan.createdByHand && !this.cfg.offlineDir && !adminTokenConfigured(this.cfg.adminTokenFile)) {
       return "There's no admin token, so the office can't create the repository: create one (see the instructions), or create the repository on GitHub yourself and tick that box";
     }
-    if (plan.kind === 'new' && !had) {
+    // A test office's Studio Pro is a stand-in whose folders are deep under scratch: only a real office is held to mx's limit.
+    if (plan.kind === 'new' && !had && !testModeOf().on) {
       const tooLong = appDirTooLong(path.join(this.ctx.building.projectsDir, plan.owner, plan.name), plan.name);
       if (tooLong) return tooLong;
     }
