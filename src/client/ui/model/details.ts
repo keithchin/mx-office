@@ -30,6 +30,8 @@ const KIND_LABEL: Record<string, string> = {
   parameter: 'Parameter',
   annotation: 'Annotation',
 };
+/** A tick box for an attribute, by its qualified name (change-here.ts: what Change this acts on). */
+export type Tick = (qn: string, label: string) => HTMLElement;
 const ENTITY_LABEL = { persistent: 'Persistable entity', nonpersistent: 'Non-persistable entity', view: 'View entity', external: 'External entity' };
 
 function kv(rows: [string, string | undefined | null][]): HTMLElement {
@@ -77,7 +79,7 @@ function flowDetails(doc: FlowDoc, id: string): HTMLElement[] {
   return [h('h3', {}, edge.annotation ? 'Annotation flow' : edge.error ? 'Error handler flow' : 'Sequence flow'), kv([['From', name(edge.from)], ['To', name(edge.to)], ['Outcome', edge.label]])];
 }
 
-function domainDetails(doc: DomainDoc, id: string): HTMLElement[] {
+function domainDetails(doc: DomainDoc, id: string, tick?: Tick): HTMLElement[] {
   const nameOf = (eid: string) => doc.entities.find((x) => x.id === eid)?.name ?? eid;
   const e = doc.entities.find((x) => x.id === id);
   if (e) {
@@ -94,7 +96,7 @@ function domainDetails(doc: DomainDoc, id: string): HTMLElement[] {
       e.doc ? h('p', {}, e.doc) : null,
       h('h4', {}, `Attributes (${e.attrs.length})`),
       e.attrs.length
-        ? h('ul', {}, ...e.attrs.map((a) => h('li', {}, `${a.name}: ${a.type}${a.def ? ` = ${a.def}` : ''}${a.calculated ? ' · calculated' : ''}${a.validation ? ' · validated' : ''}`)))
+        ? h('ul', {}, ...e.attrs.map((a) => h('li', {}, tick ? tick(`${doc.module}.${e.name}.${a.name}`, a.name) : null, `${a.name}: ${a.type}${a.def ? ` = ${a.def}` : ''}${a.calculated ? ' · calculated' : ''}${a.validation ? ' · validated' : ''}`)))
         : h('p', {}, 'None.'),
       assocs.length ? h('h4', {}, 'Associations') : null,
       assocs.length ? h('ul', {}, ...assocs.map((a) => h('li', {}, `${a.name} (${nameOf(a.parent)} → ${a.cross ? a.child : nameOf(a.child)})`))) : null,
@@ -168,8 +170,8 @@ export function widgetDetails(item: MdlItem, mdl: string): HTMLElement[] {
 }
 
 /** The panel's content for `id` in `doc` (or the document's summary when nothing is picked). */
-export function details(doc: ModelDoc, id: string | null, diff?: DocDiff): HTMLElement[] {
-  if (id && doc.kind === 'domainmodel') return domainDetails(doc, id);
+export function details(doc: ModelDoc, id: string | null, diff?: DocDiff, tick?: Tick): HTMLElement[] {
+  if (id && doc.kind === 'domainmodel') return domainDetails(doc, id, tick);
   if (id && (doc.kind === 'microflow' || doc.kind === 'nanoflow')) return flowDetails(doc, id);
   if (doc.kind === 'overview') return overviewDetails(doc, id);
   const out: HTMLElement[] = [];

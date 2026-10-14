@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+### New
+
+- **Change this, in the Model tab.** Pick an entity, attribute, association, enumeration or value, microflow, nanoflow, page, snippet or constant (or tick several attributes or values), press **✎ Change this** in the details or right-click it, and say what should change (quick chips per kind: *Rename*, *Add value*, *Make required*…). It goes to whoever covers Development, or Design for a page's look (any hired member can be picked), **after their current turn** unless you say **Now**, as a task naming the element(s), the branch and commit they were read at and your words, with the instructions to change it with mxcli on a branch, run `mx check`, open a PR naming the elements, and escalate first if it needs a decision. The element shows *Change requested · Ada · #123* until its PR merges, with **View change** opening the PR's branch with *Changes in this branch* on. Recorded as `model.change-requested`. The office still never writes the model itself.
+
 ### Changed
 
 - **A New project draft keeps the app's repository.** For **Change an existing app** and **Assurance only**, the repository is saved with the draft, so **Continue** on a resumed draft brings it back on the start page and under **Advanced** (it used to come back empty). A repository field marked as a problem clears as soon as it names a repository.

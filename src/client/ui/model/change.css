@@ -1,0 +1,33 @@
+/* "Change this" in the Model tab: the dialog (change-this.ts), and the button, badges, tick boxes, tree
+   marks and right-click menu (change-here.ts). */
+.mxc { width: min(520px, 94vw); }
+.mxc .body { display: flex; flex-direction: column; gap: 8px; max-height: 72vh; overflow-y: auto; }
+.mxc-els { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.mxc-els li { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.mxc-els code { font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.mxc-kind { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.mxc-at { margin: 0; font-size: 12px; color: var(--muted); }
+.mxc-label { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.mxc-text { width: 100%; box-sizing: border-box; font: inherit; padding: 8px; border: 2px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); resize: vertical; }
+.mxc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mxc-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mxc-row .mxc-label { min-width: 56px; }
+.mxc-who { flex: 1; min-width: 0; font: inherit; padding: 4px 6px; border: 2px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
+.mxc-whens { display: flex; flex-wrap: wrap; gap: 6px; }
+.mxc-when.on { background: var(--ink); color: var(--on-ink); }
+.mxc-note { margin: 0; font-size: 13px; color: var(--ink-2); }
+.mxc-status { margin: 0; font-size: 13px; color: var(--muted); min-height: 1em; }
+.mxc footer { display: flex; gap: 8px; justify-content: flex-end; }
+
+.mx-change { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 8px; }
+.mx-creqs { display: flex; flex-direction: column; gap: 4px; }
+.mx-creq { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; background: var(--info-soft); color: var(--ink); font-size: 12px; }
+.mx-creq-view { font-size: 12px; }
+.mx-tickw { display: inline-flex; align-items: center; gap: 2px; margin-right: 4px; vertical-align: middle; }
+.mx-tick { margin: 0; }
+.mx-creq-dot, .mx-treq { color: var(--link); font-size: 11px; font-weight: 700; }
+.mx-treq { margin-left: 4px; }
+.mx-enumvals { list-style: none; padding-left: 0; }
+.mx-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; min-width: 160px; padding: 4px; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--card); box-shadow: 0 6px 20px rgba(0, 0, 0, .18); }
+.mx-menu-item { text-align: left; padding: 6px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.mx-menu-item:hover, .mx-menu-item:focus-visible { background: var(--info-soft); outline: none; }

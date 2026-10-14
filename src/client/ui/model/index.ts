@@ -6,7 +6,7 @@
 //
 // It asks the server (api.ts) only while the tab is open: when it opens, when you pick a branch or a
 // document, and a few seconds after the workers or pull requests change (a merge moves main). No timer.
-// Read-only.
+// Read-only: "Change this" (change-here.ts) asks a team member to make a change, it never writes the model.
 //
 // A domain model shows "As in Studio Pro" (the developer's layout) or, chosen per viewer and
 // remembered in this browser, "Tidy layout": the entities rearranged for reading, for the view only.
@@ -30,6 +30,7 @@ import { sidePanel } from './side-panel';
 import { pathTo, targetOf, type Target } from './targets';
 import { Tree } from './tree';
 import { fullScreen } from './fullscreen';
+import { ChangeHere } from './change-here';
 import './model.css';
 import './page.css';
 
@@ -90,6 +91,8 @@ export function modelView(root: HTMLElement): ModelView {
   let changes: DocChange[] = [];
   let selected: string | null = null;
   let mainSha: string | undefined;
+  /** The commit the tree on show was read at (what a change request names). */
+  let treeSha: string | undefined;
   let seq = 0;
   let settle: ReturnType<typeof setTimeout> | undefined;
   /** &zoom=100 in the address: the first document opens at that zoom. */
@@ -135,7 +138,25 @@ export function modelView(root: HTMLElement): ModelView {
     },
   });
   canvasHost.append(text, ...views.hosts, msg);
-  const treeView = new Tree({ open: (n) => openNode(n) });
+  const treeView = new Tree({ open: (n) => openNode(n), menu: (e, n, row) => here.treeMenu(e, n, row) });
+  // "Change this": the button and badges in the details, the tree's ✎ marks, the right-click menu.
+  const here = new ChangeHere({
+    floor: () => floor,
+    ref: () => ref,
+    sha: () => treeSha ?? refs.find((r) => r.ref === ref)?.sha,
+    picked: () => ({ doc, open, selected }),
+    redraw: () => renderSide(),
+    viewBranch: (b) => viewBranch(b),
+    fallback: () => canvasHost.querySelector<HTMLElement>('svg[tabindex]') ?? treeView.el,
+    marks: (fn) => treeView.setRequested(fn),
+  });
+  canvasHost.addEventListener('contextmenu', (e) =>
+    here.canvasMenu(e, (id) => {
+      selected = id;
+      canvas.select(id);
+      renderSide();
+    }),
+  );
   // Full screen: the explorer, the diagram and the details fill the window (F, or the button; Esc leaves),
   // the drawing fitted again each way. Back in the page, the tab fits between the bars again.
   const full = fullScreen(root, () => {
@@ -230,7 +251,8 @@ export function modelView(root: HTMLElement): ModelView {
   }
 
   function renderSide() {
-    const parts: HTMLElement[] = doc ? (doc.kind === 'text' && widget && views.active === 'page' ? widgetDetails(widget, doc.mdl) : details(doc, selected, changesOn ? diff : undefined)) : [];
+    const parts: HTMLElement[] = doc ? [...here.panel(), ...(doc.kind === 'text' && widget && views.active === 'page' ? widgetDetails(widget, doc.mdl) : details(doc, selected, changesOn ? diff : undefined, (qn, l) => here.tick(qn, l)))] : [];
+    if (doc?.kind === 'text' && open?.type === 'enumeration') parts.push(...here.enumSection(open.qn, doc.mdl));
     if (doc?.kind === 'text' && open?.note) parts.push(h('p', {}, open.note));
     if (doc?.kind === 'text' && views.active === 'page' && !widget) parts.push(h('p.mx-kind', {}, 'Click a widget to see its properties and its MDL.'));
     if (changesOn && ref !== 'main') parts.push(changeList(changes, (c) => openDoc({ type: c.type, qn: c.qn })));
@@ -390,8 +412,10 @@ export function modelView(root: HTMLElement): ModelView {
       mainSha = refs.find((x) => x.kind === 'main')?.sha;
       renderRefs();
       if (r.problem) return say(r.problem);
+      void here.load();
       const t = await modelApi.tree(f, ref);
       if (mine !== seq || f !== floor) return;
+      treeSha = t.sha;
       tree = [{ label: `App '${store.project?.name ?? f}'`, type: 'app', children: t.nodes }];
       treeView.set(tree);
       if (t.stale) void freshTree(f, ref);
@@ -412,6 +436,7 @@ export function modelView(root: HTMLElement): ModelView {
     try {
       const t = await modelApi.tree(f, r, undefined, true);
       if (f !== floor || r !== ref) return;
+      treeSha = t.sha;
       tree = [{ label: `App '${store.project?.name ?? f}'`, type: 'app', children: t.nodes }];
       treeView.set(tree);
       if (open) treeView.reveal((n) => n.qn === open?.qn && n.type === open?.type);
@@ -420,8 +445,19 @@ export function modelView(root: HTMLElement): ModelView {
     }
   }
 
+  /** "View change" on a change request: its PR's branch, with Changes in this branch on. */
+  function viewBranch(branch: string) {
+    ref = branch;
+    treeSha = undefined;
+    changesOn = changesBox.checked = true;
+    renderRefs();
+    address();
+    void load();
+  }
+
   refPick.addEventListener('change', () => {
     ref = refPick.value || 'main';
+    treeSha = undefined;
     renderRefs();
     address();
     void load();
@@ -447,6 +483,8 @@ export function modelView(root: HTMLElement): ModelView {
     clearTimeout(settle);
     settle = setTimeout(async () => {
       if (!visible || !floor) return;
+      // A PR opened or merged moves a change request's badge (the floor's cached PR list, no polling).
+      void here.load();
       try {
         const r = await modelApi.refs(floor);
         const sha = r.refs.find((x) => x.kind === 'main')?.sha;
