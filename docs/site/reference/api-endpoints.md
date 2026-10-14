@@ -16,7 +16,7 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET / POST | `/api/claim` | Check / claim a generated password with its token |
 | POST | `/api/link` | One-time sign-in link key |
 | POST | `/api/logout` | Sign out |
-| any | `/api/health` | `{ ok: true, sha, release?, builtAt?, startedAt, newerBuild? }` when the office is up: the build it runs and since when, and a newer one built since ([Which version is running](../administration/running-the-office.md#which-version-is-running)) |
+| any | `/api/health` | `{ ok: true, sha, release?, ahead?, builtAt?, startedAt, newerBuild? }` when the office is up: the build it runs and since when, and a newer one built since ([Which version is running](../administration/running-the-office.md#which-version-is-running)) |
 | any | `/assets/*` | The client bundle's files |
 | any | `/login`, `/claim`, `/join`, `/favicon.svg` | Pages |
 | GET | `/manifest.webmanifest` | The [phone version](../using-the-office/phone-version.md)'s web app manifest |

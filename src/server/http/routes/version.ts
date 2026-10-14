@@ -42,6 +42,6 @@ export const versionRoutes = {
 export function healthBody(ctx: Ctx) {
   const b = buildOf(ctx);
   const ready = b.ready();
-  const { sha, release, builtAt, startedAt } = b.running;
-  return { ok: true, sha, ...(release ? { release } : {}), ...(builtAt ? { builtAt } : {}), startedAt, ...(ready ? { newerBuild: ready } : {}) };
+  const { sha, release, ahead, builtAt, startedAt } = b.running;
+  return { ok: true, sha, ...(release ? { release } : {}), ...(ahead ? { ahead } : {}), ...(builtAt ? { builtAt } : {}), startedAt, ...(ready ? { newerBuild: ready } : {}) };
 }

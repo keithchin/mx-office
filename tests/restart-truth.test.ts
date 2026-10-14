@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { buildLabel, countdown, newerBuild, pageVsServer, parseBuildInfo, releaseOf, runningLine, staleServerError, type OfficeVersionView } from '../src/shared/build-info.js';
+import { buildLabel, releaseInfo, countdown, newerBuild, pageVsServer, parseBuildInfo, releaseOf, runningLine, staleServerError, type OfficeVersionView } from '../src/shared/build-info.js';
 import { BuildWatch } from '../src/server/restart/build.js';
 import { audit } from '../src/server/audit/index.js';
 import { resumeAfterRestart, SafeRestart, SLEPT_GAP_MS, type Busy, type RestartDeps } from '../src/server/restart/index.js';
@@ -31,6 +31,11 @@ test('a build: its label, which is newer, the release a changelog is at, and wha
   assert.equal(pageVsServer(undefined, R45), 'same');
   assert.equal(releaseOf('# Changelog\r\n\r\n## Unreleased\r\n\r\nNothing.\r\n\r\n## 2026-10-14 · release 45 (`a`)\r\n\r\n## 2026-10-14 · release 44 (`b`)\r\n'), 45);
   assert.equal(releaseOf('## Unreleased'), undefined);
+  // Entries under Unreleased: past that release, and the label says so.
+  assert.deepEqual(releaseInfo('## Unreleased\r\n\r\nNothing waiting yet.\r\n\r\n## 2026-10-14 · release 45 (`a`)\r\n'), { release: 45 });
+  assert.deepEqual(releaseInfo('## Unreleased\r\n\r\n### Fixed\r\n\r\n- A fix.\r\n\r\n## 2026-10-14 · release 45 (`a`)\r\n'), { release: 45, ahead: true });
+  assert.equal(buildLabel({ sha: 'fc7a5a9', release: 45, ahead: true }), 'release 45+ (fc7a5a9)');
+  assert.deepEqual(parseBuildInfo({ sha: 'abc', release: 45, ahead: true }), { sha: 'abc', release: 45, ahead: true });
   assert.deepEqual(parseBuildInfo({ sha: 'abc', release: 3, builtAt: 5, junk: 1 }), { sha: 'abc', release: 3, builtAt: 5 });
   assert.equal(parseBuildInfo({ release: 3 }), undefined);
   assert.equal(runningLine({ ...R45, startedAt: 7 }, () => '08:32'), 'Running release 45 (aaf30a5), started 08:32');

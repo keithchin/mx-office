@@ -10,6 +10,8 @@
 export interface BuildInfo {
   sha: string;
   release?: number;
+  /** The changelog has entries under Unreleased: newer than that release ("release 45+"). */
+  ahead?: boolean;
   builtAt?: number;
 }
 
@@ -28,6 +30,7 @@ export function parseBuildInfo(x: unknown): BuildInfo | undefined {
   if (typeof o.sha !== 'string' || !o.sha) return undefined;
   const out: BuildInfo = { sha: o.sha.slice(0, 40) };
   if (typeof o.release === 'number' && Number.isInteger(o.release) && o.release > 0) out.release = o.release;
+  if (o.ahead === true) out.ahead = true;
   if (typeof o.builtAt === 'number' && Number.isFinite(o.builtAt) && o.builtAt > 0) out.builtAt = o.builtAt;
   return out;
 }
@@ -38,10 +41,23 @@ export function releaseOf(changelog: string): number | undefined {
   return m ? Number(m[1]) : undefined;
 }
 
-/** "release 45 (aaf30a5)", or the commit alone when the release isn't known. */
+/** Whether a CHANGELOG.md has entries waiting under "## Unreleased" (not "Nothing waiting yet."). */
+export function unreleasedIn(changelog: string): boolean {
+  const m = /^## Unreleased[ \t]*\n([\s\S]*?)^## /m.exec(changelog.replace(/\r\n/g, '\n'));
+  const body = (m?.[1] ?? '').trim();
+  return !!body && !/^Nothing waiting yet\.?$/.test(body);
+}
+
+/** What `npm run build` (vite.config.ts) and a checkout without a build (server/restart/build.ts) say of a changelog. */
+export const releaseInfo = (changelog: string): Pick<BuildInfo, 'release' | 'ahead'> => {
+  const release = releaseOf(changelog);
+  return release ? { release, ...(unreleasedIn(changelog) ? { ahead: true } : {}) } : {};
+};
+
+/** "release 45 (aaf30a5)", "release 45+ (fc7a5a9)" past it, or the commit alone when the release isn't known. */
 export function buildLabel(b: BuildInfo): string {
   const sha = b.sha.slice(0, 7);
-  return b.release ? `release ${b.release} (${sha})` : sha;
+  return b.release ? `release ${b.release}${b.ahead ? '+' : ''} (${sha})` : sha;
 }
 
 /** `a` was built after `than` (both with a build time, and not the same build). */

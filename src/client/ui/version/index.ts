@@ -41,6 +41,7 @@ let known: ServerKnown | undefined;
 let skew = 0;
 let restartedFrom: number | undefined;
 let el: HTMLElement | undefined;
+let shown: string | undefined;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let tick: ReturnType<typeof setInterval> | undefined;
 
@@ -74,11 +75,18 @@ async function look() {
 
 function draw() {
   const b = known && bannerFor(known, PAGE_BUILD, { clockSkew: skew, restartedFrom });
-  if (!b || session.get(CLOSED_KEY) === b.key) return void (el?.remove(), (el = undefined), clearInterval(tick));
+  if (!b || session.get(CLOSED_KEY) === b.key) return void (el?.remove(), (el = undefined), (shown = undefined), clearInterval(tick));
+  const same = `${b.key}|${b.tone}|${b.actions.join(',')}`;
+  if (el && shown === same) {
+    // Only the words moved (the countdown): keep the buttons, and the focus on one.
+    el.querySelector('.ao-ver-text')!.textContent = b.text;
+    return;
+  }
   const box = render(b);
   if (el) el.replaceWith(box);
   else document.body.append(box);
   el = box;
+  shown = same;
   // The countdown moves every second between looks.
   clearInterval(tick);
   if (b.kind === 'restart') tick = setInterval(() => draw(), 1000);
@@ -92,7 +100,7 @@ function render(b: Banner): HTMLElement {
     a === 'reload'
       ? h('button.btn.small', { type: 'button', onclick: () => location.reload() }, 'Reload')
       : a === 'settings'
-        ? h('a.btn.small', { href: `${settingsHref('workers')}#settings-restart` }, '🔁 Restart safely')
+        ? h('a.btn.small', { href: `${settingsHref('workers')}#settings-restart` }, known && 'view' in known && !known.view.loop ? 'Restart settings' : '🔁 Restart safely')
         : h('button.btn.small.danger', { type: 'button', onclick: () => void restartAction('anyway').then((v) => (v ? void look() : undefined)) }, 'Restart anyway'),
   );
   return h('div.ao-ver', { id: 'ao-version', role: b.tone === 'warn' ? 'alert' : 'status', 'data-kind': b.kind, 'data-tone': b.tone }, h('span.ao-ver-text', {}, b.text), ...acts, close);

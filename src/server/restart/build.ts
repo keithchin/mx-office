@@ -7,7 +7,7 @@
 
 import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { BUILD_INFO_FILE, newerBuild, parseBuildInfo, releaseOf, type BuildInfo, type RunningBuild } from '../../shared/build-info.js';
+import { BUILD_INFO_FILE, newerBuild, parseBuildInfo, releaseInfo, type BuildInfo, type RunningBuild } from '../../shared/build-info.js';
 import { appDir, headSha } from './checkout.js';
 
 export class BuildWatch {
@@ -54,22 +54,23 @@ export class BuildWatch {
 
 /** Without build-info.json: the checkout's commit and its changelog's newest release, no build time. */
 export function checkoutBuild(dir = appDir()): BuildInfo {
-  let release: number | undefined;
+  let release: Pick<BuildInfo, 'release' | 'ahead'> = {};
   try {
-    release = releaseOf(readFileSync(path.join(dir, 'CHANGELOG.md'), 'utf8'));
+    release = releaseInfo(readFileSync(path.join(dir, 'CHANGELOG.md'), 'utf8'));
   } catch {
     // no changelog
   }
-  return { sha: (headSha(dir) ?? 'unknown').slice(0, 7), ...(release ? { release } : {}) };
+  return { sha: (headSha(dir) ?? 'unknown').slice(0, 7), ...release };
 }
 
 const watches = new WeakMap<object, BuildWatch>();
 
 /** The office's build watch, made the first time (office/timers.ts asks as the office starts). */
-export function buildOf(ctx: { publicDir: string }): BuildWatch {
+export function buildOf(ctx: { publicDir?: string }): BuildWatch {
   let w = watches.get(ctx);
   if (!w) {
-    w = new BuildWatch(path.join(ctx.publicDir, BUILD_INFO_FILE), () => checkoutBuild());
+    // No page folder (a bare test context): the checkout stands in.
+    w = new BuildWatch(ctx.publicDir ? path.join(ctx.publicDir, BUILD_INFO_FILE) : '', () => checkoutBuild());
     watches.set(ctx, w);
   }
   return w;

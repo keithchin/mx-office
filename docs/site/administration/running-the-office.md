@@ -74,7 +74,7 @@ The audit log and Team chatter record `restart.requested`, `restart.waiting`, `r
 
 The office says which build it runs, so a restart that didn't happen can't go unnoticed:
 
-- **⚙️ Settings › 🤖 Workers › 🔁 Restart safely** starts with *Running release 45 (aaf30a5), started 08:32*. `npm run build` writes the commit, the release and the build time to `dist/public/build-info.json`; the office reads it as it starts.
+- **⚙️ Settings › 🤖 Workers › 🔁 Restart safely** starts with *Running release 45 (aaf30a5), started 08:32*. `npm run build` writes the commit, the release and the build time to `dist/public/build-info.json`; the office reads it as it starts. A build with changes past the last release (entries under *Unreleased* in the changelog, as on `staging/integration`) reads *release 45+*.
 - **`GET /api/health`** says it too, without a sign-in: `sha`, `release`, `builtAt` and `startedAt`, plus `newerBuild` when one is ready. After a release, check that `release` and `startedAt` changed.
 - **A newer build is ready.** When `npm run build` ran after the office started, admins see *A newer build is ready (release 46). Restart safely to use it.* on every page.
 - **A page newer than the office.** Pages load the newest build from disk at once, but the office runs what it started with until it restarts. A page from a newer build says so (*This page is from release 46, but the office server still runs release 45 (started 11:35): new actions fail until it restarts*), and a request the older office can't answer says why instead of *Unknown action*. A page older than the office (restarted, not reloaded) offers **Reload**.
