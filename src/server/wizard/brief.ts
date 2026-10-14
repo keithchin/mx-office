@@ -4,13 +4,14 @@
 
 import { ENTRY_MODE_INFO, PROJECT_ROLES, type ProjectPlan } from '../../shared/wizard.js';
 import { SHAPES, shapeForRoles } from '../../shared/roster/coverage.js';
-import { briefForDiscovery } from '../../shared/brief-map.js';
+import { briefForDiscovery, sourcesDirOf } from '../../shared/brief-map.js';
 
 export const DISCOVERY_TITLE = 'Discovery: kickoff with the client (Stages P → 4)';
 
 const list = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : (xs[0] ?? ''));
 
-export function discoveryBrief(plan: ProjectPlan, toolkitDir: string, pinnedSha?: string): string {
+/** `floorDir`: the project's checkout on the office's machine, where the attached documents are (sources/ is git-ignored, so a worktree doesn't have them). */
+export function discoveryBrief(plan: ProjectPlan, toolkitDir: string, pinnedSha?: string, floorDir?: string): string {
   const mode = ENTRY_MODE_INFO[plan.entry];
   const client = plan.clients.length ? list(plan.clients) : 'the client';
   const operator = plan.operators.length ? list(plan.operators) : 'the operator';
@@ -45,7 +46,7 @@ export function discoveryBrief(plan: ProjectPlan, toolkitDir: string, pinnedSha?
     '- Commit your work at the end of each stage with a clear message (the pre-commit hook finishes in seconds).',
     '- Keep the conversation business-friendly: the client is not a developer.',
     // The project brief drafted and approved in the New project flow: what Stage 0 starts from.
-    ...(plan.brief ? briefForDiscovery(plan.brief) : []),
+    ...(plan.brief ? briefForDiscovery(plan.brief, { sourcesDir: floorDir ? sourcesDirOf(floorDir) : undefined, toolkitDir }) : []),
   ]
     .filter((l, i, all) => l !== '' || all[i - 1] !== '')
     .join('\n');

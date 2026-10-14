@@ -183,7 +183,24 @@ export function briefMarkdown(pb: PlanBrief, meta: { repo: string; entry: string
 }
 
 /** The brief's part of the Discovery issue: what was approved, what's still assumed, the domains, and what Stage 0 still needs. */
-export function briefForDiscovery(pb: PlanBrief): string[] {
+/** The project's input documents folder on the office's machine, with forward slashes (what an agent in Git Bash types). */
+export const sourcesDirOf = (floorDir: string) => `${floorDir.replace(/\\/g, '/').replace(/\/+$/, '')}/sources`;
+
+/**
+ * Where the input documents are and how to inventory them, for whoever does the analysis: `sources/` is
+ * git-ignored (client documents stay on the office's machine), so a worktree doesn't have it, and the
+ * toolkit's source ledger fails while the files there have no inventory.
+ */
+export function sourcesLines(sourcesDir: string, toolkitDir?: string): string[] {
+  const bin = toolkitDir ? `${toolkitDir.replace(/\\/g, '/').replace(/\/+$/, '')}/bin/source-sufficiency.sh` : 'bin/source-sufficiency.sh';
+  return [
+    `- The input documents are in \`${sourcesDir}\`: the project's \`sources/\` folder, git-ignored, so only in the main checkout and never in your worktree. Read them from that path, and never copy them into the repository.`,
+    `- Before the triage, inventory them: \`${bin} init . --sources ${sourcesDir}\` from your working folder writes \`analysis/source-sufficiency.json\` (one row per file); fill each row as you read the file, then run \`report\` and commit the rubric. Without it the gates' source ledger fails.`,
+  ];
+}
+
+/** `sourcesDir`: the floor's sources/ on the office's machine, said in full (sourcesLines). */
+export function briefForDiscovery(pb: PlanBrief, where: { sourcesDir?: string; toolkitDir?: string } = {}): string[] {
   const b = pb.brief;
   const s = b.sections;
   const assumed = SECTION_IDS.flatMap((id) => s[id].filter((x) => x.tag === 'assumed'));
@@ -207,7 +224,10 @@ export function briefForDiscovery(pb: PlanBrief): string[] {
     '### Stage 0',
     '`PROJECT.md` already has the scope approval as a Stage 0 `CONFIRMED` row and every assumption as an `ASSUMED` row. The Stage 0 gate still needs `triage.md`: build its capability map from the brief and the domains, reflect the scope back to the client (don’t start the brainstorm from nothing), confirm or correct the ASSUMED items, and record the `## Sign-off` only when the client says so.',
   );
-  if (pb.attachments.length) out.push(`The attached documents are in \`sources/\`: ${pb.attachments.map((a) => `${a.name} (${READ_LABEL[a.read]})`).join(', ')}. Read every one yourself; the brief may have missed things.`);
+  if (pb.attachments.length) {
+    out.push(`The attached documents are in \`${where.sourcesDir ?? 'sources/'}\`: ${pb.attachments.map((a) => `${a.name} (${READ_LABEL[a.read]})`).join(', ')}. Read every one yourself; the brief may have missed things.`);
+    if (where.sourcesDir) out.push(...sourcesLines(where.sourcesDir, where.toolkitDir));
+  }
   return out;
 }
 

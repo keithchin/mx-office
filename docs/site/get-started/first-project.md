@@ -11,7 +11,7 @@ weight: 3
 
 ## Open New project
 
-Go to **🏠 Home → 🏢 Projects** and click **✨ New project**. It opens a page over the office with a slim bar: **Office $… today** (what the office has spent today, planning included) and **✕**, which closes it. Your draft is kept in the office, so closing the page, a reload or another tab loses nothing: the start page offers **Continue** (or **Discard**) for it next time. Setups that didn't finish are cards at the top of the start page (see [Unfinished setups](#unfinished-setups)).
+Go to **🏠 Home → 🏢 Projects** and click **✨ New project**. It opens a page over the office with a slim bar: **Office $… today** (what the office has spent today, planning included) and **✕**, which closes it. Your draft is kept in the office, so closing the page, a reload or another tab loses nothing: the start page offers **Continue** (or **Discard**) for it next time. Continue brings back the description, the way you started and, for a change or assurance, the app's repository. Setups that didn't finish are cards at the top of the start page (see [Unfinished setups](#unfinished-setups)).
 
 ## 1. What would you like to build?
 
@@ -22,7 +22,7 @@ Go to **🏠 Home → 🏢 Projects** and click **✨ New project**. It opens a 
 | Card | Entry mode | When |
 |---|---|---|
 | **Plan with the team** (recommended) | 🌱 Greenfield, or 📄 Requirements-driven as soon as a document is attached (the line under the box says which) | A new app, from an idea or from requirements. |
-| **Change an existing app** | 🛠️ Change an existing app | Changes to an app that exists: name its repository (`owner/name`) in the box that appears. |
+| **Change an existing app** | 🛠️ Change an existing app | Changes to an app that exists: name its repository (`owner/name`) in the box that appears. The brief is drafted from your description and documents: the Chief Analyst is told the repository's name (and its GitHub description, when the office's repository list already has it) but doesn't read the repository. The team reads the app after setup. |
 | **Migrate an app** | 🚚 Migration | Moving an app from another platform or an older version. |
 | More: **Assurance only** | 🔎 Assurance only | Review and test an app nobody is changing (it asks for the repository too). |
 
@@ -81,7 +81,7 @@ At setup, the brief goes into the project in the toolkit's own formats, every it
 | `intake.md` | **Q2** the goal and the success criteria, **Q4** the scope in and out and the input documents, **Q5** the constraints, **Q8** the open questions (*Unverified — how to verify: ask the client…*). Each answer starts *Answered (CONFIRMED):*, *Assumed:* or *Unverified — how to verify:* (one Assumed item makes the answer Assumed) and lists each item with `[Answered, from …]` or `[ASSUMED, inferred from …]`. Q1, Q9 and Q11 come from your choices; Q3, Q6, Q7 and Q10 from Advanced, or the Chief Analyst asks them. |
 | `PROJECT.md` | Stage 0 rows in the Decisions table: *Scope: project brief approved (docs/project-brief.md)* `CONFIRMED <date>` (by whom, at what time); *Goal: …*; and one *Brief assumption …* row per item still Assumed, `ASSUMED <date>`, each also listed under *Assumptions (ASSUMED, unresolved)*. The open questions go into the *Open questions* table (`OQ-01`…, *Raised at* the brief, `OPEN`), which the office's setup panel lists as questions still to answer. Nothing inferred is ever recorded as CONFIRMED. |
 | `docs/project-brief.md` | The whole brief with every tag and source, who approved it, the functional domains and how each attached document was read. Committed with the project. |
-| `sources/` | The attached documents. |
+| `sources/` | The attached documents. The folder is git-ignored, so it's only in the project's own folder, never in an agent's worktree: the Discovery issue and the analyst's Playbook give its full path and say to inventory it first (the toolkit's `bin/source-sufficiency.sh init . --sources` with that path), so the gates' source ledger has a row for each file. |
 | The Discovery issue | The goal, the roles, the scope, what is still ASSUMED (to confirm with the client first), the open questions and the domains. |
 
 > [!NOTE]
@@ -181,7 +181,7 @@ Click **Create project** (the primary button once the team card shows). The page
 13. Hire the project team: set the floor's team shape, then hire its roles (or the ones you ticked under Customize), the roster's way (the same as **Hire** on the Team tab). A role already at work is not hired again.
 14. Queue the Discovery task for an agent (when you ticked it and whoever covers Analysis isn't on the team; otherwise that member already has it).
 
-If a step fails, its group turns red with *Setup stopped at one step*, the step's error in plain words (a command is named by its file; **View setup details** shows the full log), and two buttons: **Retry** carries on from the failed step once you've fixed the cause, and **Cancel & undo…** (admins) opens the dialog described under [Unfinished setups](#unfinished-setups). Cancel & undo only removes what this setup recorded creating. **Edit answers** opens the setup's answers in the classic form (see below).
+If a step fails, its group turns red with *Setup stopped at one step*, the step's error in plain words (a command is named by its file; **View setup details** shows the log), and two buttons: **Retry** carries on from the failed step once you've fixed the cause, and **Cancel & undo…** (admins) opens the dialog described under [Unfinished setups](#unfinished-setups). Cancel & undo only removes what this setup recorded creating. **Edit answers** opens the setup's answers in the classic form (see below).
 
 ### When the office isn't sure what happened
 
@@ -224,7 +224,7 @@ Editing the answers later (the floor's **🧰 Project setup** panel: **🧭 Entr
 > [!NOTE]
 > Agents, queue workers, **🔄 Re-check gates** and the live app all run with the project's `.claude/toolkit.env` over the office's own environment, so an 11.12.4 project builds with 11.12.4's mxbuild even when the office was started with an `MXBUILD_PATH` for another Studio Pro.
 
-The setup is a [workflow](../automation/workflows.md): it is saved after every step, so an office restart halfway loses nothing (the step it was on shows as failed, and Retry carries on from it). The steps that talk to GitHub (create, clone, push, the issue) and creating the app try again by themselves, twice, when the connection drops or GitHub is busy; the log says *↻ … trying again in 3s*.
+The setup is a [workflow](../automation/workflows.md): it is saved after every step, so an office restart halfway loses nothing (the step it was on shows as failed, and Retry carries on from it). The steps that talk to GitHub (create, clone, push, the issue) and creating the app try again by themselves, twice, when the connection drops or GitHub is busy; the log says *↻ … trying again in 3s*. The setup keeps the first 300 lines of its log and the last 2,700, with *… N lines left out …* between them, so both the start and a failure near the end survive a long toolkit run; **View setup details** shows its last 400 lines.
 
 ## After the wizard
 

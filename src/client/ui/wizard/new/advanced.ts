@@ -10,6 +10,8 @@ import { store } from '../../../state';
 import { h, toast } from '../../dom';
 import { connectionsApi } from '../../connections/api';
 import { openConnections } from '../../connections';
+import { briefApi } from './api';
+import { repoFrom, repoText } from '../../../../shared/brief';
 import type { Flow } from './index';
 
 /** The intake questions the brief answers (shared/brief-map.ts) and the ones the flow decides itself. */
@@ -86,7 +88,14 @@ export function advancedPanel(flow: Flow, redraw: () => void) {
         const [o, n] = v.trim().split('/');
         d.owner = o ?? '';
         d.name = n ?? '';
+        flow.touched.add('name');
       }, { list: 'nw-a-repos', placeholder: 'owner/name' });
+      // Kept on the draft too, so a resumed draft still knows it.
+      repo.addEventListener('change', () => {
+        const id = flow.draft?.id;
+        const r = repoFrom(repo.value, store.repos.list);
+        if (id && r && repoText(flow.draft?.repo) !== repoText(r)) void briefApi.update(id, { repo: r }).then((x) => flow.setDraft(x), () => undefined);
+      });
       parts.push(field('repo', 'The app’s repository', repo, h('datalist', { id: 'nw-a-repos' }, ...repos.map((r) => h('option', { value: r }))), err('repo')));
     }
     const ver = select(d.mendix, flow.info.mendixVersions.map((v) => [v, `${v}${v === flow.info.defaultMendix ? ' (default)' : ''}`] as [string, string]), (v) => (d.mendix = v));
@@ -105,7 +114,20 @@ export function advancedPanel(flow: Flow, redraw: () => void) {
     parts.push(otherQuestions(flow, d));
     parts.push(h('div.nw-field', {}, h('span.nw-lbl', {}, 'Toolkit version'), h('span', {}, 'The newest commit of the toolkit fork, pinned for this project when it’s created (see Toolkit versions in the docs).')));
     if (flow.info.problems.length) parts.push(h('div.nw-warn', {}, h('strong', {}, '⚠️ The office’s machine is missing something the toolkit needs:'), h('ul', {}, ...flow.info.problems.map((p) => h('li', {}, p)))));
-    return h('div', {}, ...parts);
+    const root = h('div', {}, ...parts);
+    root.addEventListener('input', clearFixed);
+    root.addEventListener('change', clearFixed);
+    return root;
+  }
+
+  /** A problem already shown goes as soon as its field is fixed (new ones still wait for Create project). */
+  function clearFixed() {
+    const probs = planProblems(flow);
+    for (const [id, p] of errs) {
+      if (!p.textContent || probs[id]) continue;
+      p.textContent = '';
+      p.parentElement?.querySelector('input, select')?.removeAttribute('aria-invalid');
+    }
   }
 
   /** Shows each problem next to its field; true when there are none. */

@@ -447,7 +447,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     async issue(job, io) {
       if (!job.plan.discovery.issue) return { status: 'skipped', detail: 'not asked for' };
       if (job.issue) return { status: 'skipped', detail: `already #${job.issue}` };
-      const body = discoveryBrief(job.plan, job.toolkit?.dir ?? cfg.toolkitDir, job.toolkit?.sha);
+      const body = discoveryBrief(job.plan, job.toolkit?.dir ?? cfg.toolkitDir, job.toolkit?.sha, job.dir);
       if (cfg.offlineDir) {
         const dir = path.join(cfg.offlineDir, job.plan.owner, `${job.plan.name}.issues`);
         mkdirSync(dir, { recursive: true });

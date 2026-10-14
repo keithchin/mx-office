@@ -112,6 +112,8 @@ export function planView(flow: Flow) {
     if (p.kind !== e.kind) p.kind = e.kind;
     p.interview = d.interview;
     if (d.brief && p.kind === 'new' && !flow.touched.has('name')) p.name = slugify(titleOf(d.brief));
+    // A change keeps the repository the draft names (a resumed draft too) until it's picked by hand.
+    if (p.kind === 'change' && d.repo && !p.name && !flow.touched.has('name')) ((p.owner = d.repo.owner), (p.name = d.repo.name));
     if (d.brief && !flow.touched.has('description')) p.description = d.brief.description;
     if (!flow.touched.has('tier')) p.tier = d.domains?.tier ?? 'standard';
   }

@@ -9,7 +9,7 @@
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { applyOp, attachProblem, changedIds, cleanBrief, counts, emptyBrief, mergeTurn, safeFileName, ATTACH_MAX_BYTES, ATTACH_MAX_FILES, ATTACH_TYPES, START_MODES, type AttachmentNote, type ItemOp, type PlannerStatus, type StartMode } from '../../../shared/brief.js';
+import { applyOp, attachProblem, changedIds, cleanBrief, counts, draftRepoOf, emptyBrief, mergeTurn, safeFileName, ATTACH_MAX_BYTES, ATTACH_MAX_FILES, ATTACH_TYPES, START_MODES, type AttachmentNote, type ItemOp, type PlannerStatus, type StartMode } from '../../../shared/brief.js';
 import { interviewModeOf } from '../../../shared/wizard.js';
 import { priceOf, resolvedModel } from '../../usage.js';
 import { resolveCommand } from '../../workers/process.js';
@@ -33,6 +33,9 @@ export interface PlannerConfig {
   /** Planning calls per hour across the office (AGENT_OFFICE_PLANNER_PER_HOUR). */
   perHour: number;
 }
+
+/** A change or assurance draft's repository; the other modes name none. */
+const repoFor = (mode: StartMode, raw: unknown) => (mode === 'change' || mode === 'assurance' ? draftRepoOf(raw) : undefined);
 
 const num = (v: string | undefined, d: number, min: number, max: number) => {
   const n = Number(v);
@@ -128,6 +131,7 @@ export class Planner {
   create(who: Who, raw: Record<string, unknown>): DraftState {
     const mode = (START_MODES as readonly unknown[]).includes(raw.mode) ? (raw.mode as StartMode) : 'plan';
     const manual = raw.manual === true;
+    const repo = repoFor(mode, raw.repo);
     return this.drafts.create({
       owner: who.id,
       ownerName: who.name,
@@ -136,6 +140,7 @@ export class Planner {
       prompt: typeof raw.prompt === 'string' ? raw.prompt.replace(/\r/g, '').slice(0, 8000) : '',
       interview: interviewModeOf(raw.interview),
       attachments: [],
+      ...(repo ? { repo } : {}),
       status: manual ? 'ready' : 'new',
       ...(manual ? { brief: emptyBrief(typeof raw.title === 'string' ? raw.title.slice(0, 100) : '') } : {}),
       manual,
@@ -151,11 +156,15 @@ export class Planner {
     return d && d.owner === who.id ? d : undefined;
   }
 
-  /** The start page's fields changed (the description, the mode, the interview style). */
+  /** The start page's fields changed (the description, the mode, the interview style, the app's repository). */
   update(d: DraftState, raw: Record<string, unknown>) {
     if (typeof raw.prompt === 'string') d.prompt = raw.prompt.replace(/\r/g, '').slice(0, 8000);
     if ((START_MODES as readonly unknown[]).includes(raw.mode)) d.mode = raw.mode as StartMode;
     if (raw.interview !== undefined) d.interview = interviewModeOf(raw.interview);
+    // The app's repository, kept only while the draft is a change or assurance (null, or another mode, forgets it).
+    const repo = repoFor(d.mode, raw.repo === undefined ? d.repo : raw.repo);
+    if (repo) d.repo = repo;
+    else delete d.repo;
     this.drafts.save(d);
   }
 
@@ -265,7 +274,7 @@ export class Planner {
     d.chat = [...d.chat, { who: 'you', text: d.prompt.trim().slice(0, 600), at: iso(this.now()), ...(d.attachments.length ? { files: d.attachments.map((a) => a.name) } : {}) }];
     this.background(d, who, 'brief', async () => {
       const files = this.filesFor(d);
-      const req = { mode: d.mode, prompt: d.prompt, files };
+      const req = { mode: d.mode, prompt: d.prompt, files, repo: d.repo };
       let r = await this.engine.brief({ ...req, budgetUsd: d.cap - d.spent });
       d.spent += r.cost;
       // A PDF that came back unread (rehearsal 2: the model asked for page ranges and the page renderer failed): one
@@ -332,7 +341,7 @@ export class Planner {
     d.chat.push({ who: 'you', text, at: iso(this.now()) });
     this.background(d, who, 'chat', async () => {
       const before = d.brief!;
-      const r = await this.engine.chat({ mode: d.mode, brief: before, history, text, budgetUsd: d.cap - d.spent });
+      const r = await this.engine.chat({ mode: d.mode, repo: d.repo, brief: before, history, text, budgetUsd: d.cap - d.spent });
       d.spent += r.cost;
       this.settle(!!r.value);
       if (!r.value) {

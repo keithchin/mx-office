@@ -1,6 +1,6 @@
 // The New project flow's calls to the office (server/http/routes/brief.ts): the planner's status and a
 // person's draft. Plain fetches, polled while the Chief Analyst works, like the wizard's setup.
-import type { DraftView, ItemOp, PlannerStatus, StartMode } from '../../../../shared/brief';
+import type { DraftRepo, DraftView, ItemOp, PlannerStatus, StartMode } from '../../../../shared/brief';
 import type { InterviewMode } from '../../../../shared/wizard';
 
 export type BriefError = Error & { status?: number; draft?: DraftView };
@@ -28,8 +28,8 @@ export const briefApi = {
   status: () => call<PlannerStatus>('GET', '/api/brief/status'),
   latest: () => call<{ draft: DraftView | null }>('GET', '/api/brief/latest'),
   get: (id: string) => call<DraftView>('GET', `/api/brief/draft?id=${q(id)}`),
-  create: (body: { mode: StartMode; prompt: string; interview?: InterviewMode; manual?: boolean; title?: string }) => call<DraftView>('POST', '/api/brief/new', body),
-  update: (id: string, body: { prompt?: string; mode?: StartMode; interview?: InterviewMode }) => call<DraftView>('POST', `/api/brief/update?id=${q(id)}`, body),
+  create: (body: { mode: StartMode; prompt: string; interview?: InterviewMode; manual?: boolean; title?: string; repo?: DraftRepo }) => call<DraftView>('POST', '/api/brief/new', body),
+  update: (id: string, body: { prompt?: string; mode?: StartMode; interview?: InterviewMode; repo?: DraftRepo | null }) => call<DraftView>('POST', `/api/brief/update?id=${q(id)}`, body),
   attach: (id: string, file: File) => call<DraftView>('POST', `/api/brief/file?id=${q(id)}&name=${q(file.name)}`, undefined, file),
   unattach: (id: string, name: string) => call<DraftView>('POST', `/api/brief/unfile?id=${q(id)}`, { name }),
   draft: (id: string) => call<DraftView>('POST', `/api/brief/draft?id=${q(id)}`, {}),
