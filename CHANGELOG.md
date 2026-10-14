@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-14 · release 45 (`361b46b`)
+
 ### New
 
 - **Nothing waits on you unseen: answer everything from Needs you.** Agents' asks used to reach you only through channels the office didn't count (their chat, a journal's `AWAITING-PM:` line, an FYI escalation, a branch nobody merged), so you heard of them only by asking the Coordinator. Now an ask in the lead's chat that it didn't escalate is filed for it as *From the chat: …*; every item of an `AWAITING-PM` line, wherever the newest journal entry is (the project folder, an agent's worktree or its branch), becomes an escalation of its own on bench, on pause and every five minutes, and closes by itself when the line is gone; and FYI escalations show as low **FYI** rows instead of being hidden. The lead's chat judgement is **On** by default (⚙️ Settings › Jeff · Router › *The lead's chat*; set it back to Shadow there).
