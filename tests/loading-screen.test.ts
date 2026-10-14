@@ -34,7 +34,9 @@ for (const page of PAGES) {
     assert.match(html, /role="status" aria-live="polite"/);
     assert.match(html, /role="progressbar" aria-label="Loading Mx Office"/);
     assert.match(html, /Loading Mx Office… <span class="aob-pct">0<\/span> %/);
-    assert.match(html, /Mx Office is restarting… reconnecting/);
+    // A lost socket (the computer waking from sleep, say) is not a restart: the office says when it restarts (office-down).
+    assert.match(html, /Reconnecting to Mx Office…/);
+    assert.doesNotMatch(html, /is restarting/);
     for (const theme of ['dark', 'terminal', 'clean-light', 'clean-dark']) assert.ok(head.includes(`html[data-theme=${theme}] #ao-boot{`), `${theme} has its colors`);
     assert.match(head, /@media \(prefers-reduced-motion:reduce\)/);
     assert.doesNotMatch(block(html).body, /\p{Extended_Pictographic}/u, 'no emoji (the Clean themes have none)');

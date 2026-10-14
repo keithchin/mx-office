@@ -45,6 +45,7 @@ import { testingRoutes } from './testing.js';
 import { stuckRoutes } from './stuck.js';
 import { asksRoutes } from './asks.js';
 import { questionsRoutes } from './questions.js';
+import { versionRoutes } from './version.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -114,6 +115,7 @@ export const routes: readonly Route[] = [
   projectRunRoutes.act,
   projectRunRoutes.restartView,
   projectRunRoutes.restart,
+  versionRoutes.version,
   projectRoutes.project,
   budgetRoutes.view,
   budgetRoutes.office,

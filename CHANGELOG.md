@@ -6,7 +6,14 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **The office tells the truth about its version.** On 13 Oct, release 43 was built while the release 42 office kept running, and nothing said so: the pages loaded the new build at once, so *Mark as seen* failed with *Unknown action* and a Resolve failed silently against the old server, while a dropped connection (the laptop waking from sleep) put up *Mx Office is restarting… reconnecting* and looked like a restart. When Restart safely was pressed at last, the laptop went to sleep two minutes later and the restart sat frozen for 34 minutes. Now:
+  - **What runs:** ⚙️ Settings › Workers › Restart safely starts with *Running release 45 (aaf30a5), started 08:32*, and `GET /api/health` says the same without a sign-in (`sha`, `release`, `builtAt`, `startedAt`). `npm run build` writes them to `dist/public/build-info.json`, which the office reads as it starts.
+  - **A newer build:** admins see *A newer build is ready (release 46). Restart safely to use it.* on every page when `npm run build` ran after the office started. A page from a newer build than its server says so, and a request the older server can't answer says why instead of *Unknown action*; a page older than its server offers **Reload**.
+  - **A restart under way:** Settings lists whom it waits on, with a countdown to its time limit, and **Restart anyway** and **Cancel** are there the whole time, not only after the timeout. Every page shows the same to admins as a banner, so nobody needs Settings open. A computer asleep under the restart is noted (`restart.slept`, and Settings says when).
+  - **Never "restarted" too soon:** Settings says *Not restarted yet* until the office exits; the new office's pages say *Restarted: now running release 46 (b46b46b), started 20:25* once it answers, and `restart.exiting` and `restart.resumed` record the build left and the build now running. A lost connection now reads *Reconnecting to Mx Office…*; only the office says it is restarting.
+  - **No restart loop:** the button reads **⏸ Pause, wait, then stop the office**, and Settings says the office can't restart by itself and to start it again with start-office.ps1.
 
 ## 2026-10-14 · release 45 (`361b46b`)
 

@@ -16,7 +16,7 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET / POST | `/api/claim` | Check / claim a generated password with its token |
 | POST | `/api/link` | One-time sign-in link key |
 | POST | `/api/logout` | Sign out |
-| any | `/api/health` | `{ ok: true }` when the office is up |
+| any | `/api/health` | `{ ok: true, sha, release?, builtAt?, startedAt, newerBuild? }` when the office is up: the build it runs and since when, and a newer one built since ([Which version is running](../administration/running-the-office.md#which-version-is-running)) |
 | any | `/assets/*` | The client bundle's files |
 | any | `/login`, `/claim`, `/join`, `/favicon.svg` | Pages |
 | GET | `/manifest.webmanifest` | The [phone version](../using-the-office/phone-version.md)'s web app manifest |
@@ -128,7 +128,8 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/project-run` | `?floor=`: [Resume and pause](../using-the-office/resume-and-pause.md): the floor's pause (`by`, `at`, `why`, who's `waiting` on you), its latest resume or pause run with each agent's status, and its pacing |
 | GET | `/api/project-run/preview` | `?floor=`: ▶ Resume project's dry run: each asleep or benched agent's reasons, safety checks, default action and options in waking order; who's awake; `blocked` (the spend cap) and warnings (Studio mode). Wakes nobody |
 | POST | `/api/project-run` | `{ floor \| all: true, action: resume\|pause\|cancel\|hold\|continue\|pacing, choice?: { mode: work\|all\|pick, picks? }, pacing?: { concurrent, gapSec } }` (admin) |
-| GET | `/api/office/restart` | [🔁 Restart safely](../administration/running-the-office.md#releasing-and-restarting-safely): its phase, who it's waiting on, whether there's a restart loop and new commits to build, a failed build's log |
+| GET | `/api/office/restart` | [🔁 Restart safely](../administration/running-the-office.md#releasing-and-restarting-safely): its phase, who it's waiting on and its countdown (`deadline`, `now`), whether there's a restart loop and new commits to build, the build running and a newer one ready, a sleep under it, a failed build's log |
+| GET | `/api/office/version` | The pages' version banner: the build running (`running`: commit, release, build time, `startedAt`), a newer one built since (`ready`), a restart under way (`restart`: phase, who it waits on, `deadline`), `loop`, `admin` |
 | POST | `/api/office/restart` | `{ action?: start\|wait\|anyway\|cancel, build?, timeoutMin? }` (admin; a script may send JSON with its cookie and no Origin) |
 | GET | `/api/budget` | [Budget](../using-the-office/budget.md): `?floor=<id>`. Returns the project's spend, budget settings, breakdowns (stage, role, agent with nested subagents, model, day, top issues/PRs), the exchange rate and the top-bar colour |
 | GET | `/api/budget/office` | Returns the office-wide view: today's and all-time spend, the daily budget, every project's line with a 14-day sparkline, the background calls by source, the Firm, and the currency settings |

@@ -23,6 +23,7 @@ import { askNotifyPermission, DesktopNotifier, notifyPermission, waitingOnSomeon
 import { installReauth } from '../ui/reauth';
 import { bootDown, bootDrawn, bootStep } from '../ui/loading/boot';
 import { installOfficeDown } from '../ui/loading/office-down';
+import { installVersionWatch } from '../ui/version';
 
 export interface FlatSession {
   net: Net;
@@ -65,6 +66,8 @@ export function flatSession(page: '/home' | '/lite' | '/pixel' | '/m', openWorke
   net.onStatus((up) => (up ? bootStep('socket') : bootDown()));
   // The office gone for more than a blip: "Restarting… reconnecting" or "The office has stopped", then a reload once it's back.
   installOfficeDown(net);
+  // Which build the office runs against this page's, a restart under way and what it waits on, a newer build ready (ui/version/).
+  installVersionWatch((fn) => net.onStatus((up) => up && fn()));
   net.onMessage((msg) => {
     store.apply(msg);
     routeTerminalMessage(msg);

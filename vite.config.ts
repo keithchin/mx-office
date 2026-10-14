@@ -1,7 +1,9 @@
 import { defineConfig, type Plugin } from 'vite';
 import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { buildDocSite } from './src/server/docsite.ts';
+import { BUILD_INFO_FILE, releaseOf, type BuildInfo } from './src/shared/build-info.ts';
 
 // The whiteboard's fonts (Excalidraw's hand-drawn Virgil/Excalifont and friends), served by the
 // office itself rather than a CDN. Excalidraw looks for them under window.EXCALIDRAW_ASSET_PATH;
@@ -69,12 +71,44 @@ function docsSite(): Plugin {
   };
 }
 
+// Which build this is (shared/build-info.ts): the commit, the release the changelog is at and the time,
+// compiled into the pages (__BUILD_INFO__) and written beside them (build-info.json) for the server to
+// read as it starts and again when asked, so a rebuild under a running office shows.
+function buildInfo(): BuildInfo {
+  const root = import.meta.dirname;
+  let sha = '';
+  try {
+    sha = execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true }).trim();
+  } catch {
+    // not a git checkout: the package version stands in
+  }
+  let release: number | undefined;
+  try {
+    release = releaseOf(readFileSync(join(root, 'CHANGELOG.md'), 'utf8'));
+  } catch {
+    // no changelog: the commit alone
+  }
+  const version = (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version?: string }).version ?? '0.0.0';
+  return { sha: sha || version, ...(release ? { release } : {}), builtAt: Date.now() };
+}
+const BUILD = buildInfo();
+
+function buildInfoFile(): Plugin {
+  return {
+    name: 'build-info',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: BUILD_INFO_FILE, source: JSON.stringify(BUILD) });
+    },
+  };
+}
+
 export default defineConfig({
   root: resolve(import.meta.dirname, 'src/client'),
   publicDir: resolve(import.meta.dirname, 'src/client/public'),
-  plugins: [excalidrawFonts(), docsSite()],
+  plugins: [excalidrawFonts(), docsSite(), buildInfoFile()],
   define: {
     __EXCALIDRAW_ASSETS__: JSON.stringify(EXCALIDRAW_ASSETS),
+    __BUILD_INFO__: JSON.stringify(BUILD),
   },
   build: {
     outDir: resolve(import.meta.dirname, 'dist/public'),

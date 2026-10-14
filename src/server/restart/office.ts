@@ -3,12 +3,8 @@
 // and exitOffice (exit.ts, which cli.ts wires to a graceful shutdown). startSafeRestart (office/timers.ts)
 // also finishes a restart the last office started: it resumes the floors that restart paused.
 
-import { execFileSync, spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
 import { isAsleepStatus } from '../roster/bench.js';
-import { headSha } from '../gitfiles.js';
 import { noteChatter, OFFICE } from '../chatter/bus.js';
 import type { Ctx } from '../office/context.js';
 import { projectRunsOf } from '../project-run/adapter.js';
@@ -17,31 +13,12 @@ import { projectPause } from '../project-run/store.js';
 import { exitOffice, launcherLoops } from './exit.js';
 import { resumeAfterRestart, SafeRestart, type RestartDeps } from './index.js';
 import { helperNote, helpersOf, helperSource } from './helpers.js';
-
-/** The office's own checkout (the one `npm run build` builds). */
-function appDir(): string {
-  let dir = path.dirname(fileURLToPath(import.meta.url));
-  for (let i = 0; i < 6; i++, dir = path.dirname(dir)) {
-    try {
-      if (JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8')).name === 'agent-office') return dir;
-    } catch {
-      // keep looking
-    }
-  }
-  return process.cwd();
-}
+import { appDir, headSha } from './checkout.js';
+import { buildOf } from './build.js';
 
 const APP = appDir();
-// Asked on every look at the restart state: read from the checkout's files when they settle it (gitfiles.ts).
-const head = () => {
-  const fast = headSha(APP);
-  if (fast !== null) return fast;
-  try {
-    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: APP, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true }).trim();
-  } catch {
-    return undefined;
-  }
-};
+// Asked on every look at the restart state: read from the checkout's files when they settle it (checkout.ts).
+const head = () => headSha(APP);
 /** The commit the office started on: a different HEAD later means new commits to build. */
 const STARTED_ON = head();
 
@@ -93,6 +70,10 @@ export function safeRestartOf(ctx: Ctx): SafeRestart {
     loop: launcherLoops(),
     now: () => Date.now(),
     chatter,
+    builds: () => {
+      const b = buildOf(ctx);
+      return { running: b.running, ready: b.ready() };
+    },
   };
   current = new SafeRestart(deps);
   return current;
@@ -100,6 +81,8 @@ export function safeRestartOf(ctx: Ctx): SafeRestart {
 
 /** The restart's clock, and the end of the last office's restart: its floors resumed. Returns what stops it. */
 export function startSafeRestart(ctx: Ctx): () => void {
+  // The build this office runs, noted as it starts (build.ts): the restart's panel, the version banner and /api/health say it.
+  const builds = () => ({ running: buildOf(ctx).running });
   const r = safeRestartOf(ctx);
   const timer = setInterval(() => void r.tick().catch((err) => console.error(`agent-office: safe restart: ${(err as Error).message}`)), 1_000);
   timer.unref?.();
@@ -112,6 +95,7 @@ export function startSafeRestart(ctx: Ctx): () => void {
         pausedForRestart: (id) => projectPause(id)?.why === 'restart',
         resume: (id, by) => runs.resume(id, { mode: 'work' }, by, undefined, 'after a safe restart'),
         chatter: (floorId, text) => noteChatter(floorId, { kind: 'relay', from: OFFICE, to: { group: 'team' }, text }),
+        builds,
       }),
     8_000,
   );
