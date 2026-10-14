@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-14 · release 44 (`259bf59`)
+
 ### New
 
 - **Questions: the analysts' open questions for the client, in one place.** A new page, *Project Management › Questions*, shows every open question an analyst agent wrote into the BRDs (`openQuestions`), collected by the office from main and from every agent's working copy with the project's toolkit script (`bin/open-questions.sh`), grouped by BRD with each one's evidence, what it blocks, who can answer it, the proposed position and whose copy it came from. Accept a proposal, answer, mark it for the client or not relevant, then **Send to** the analyst: one message asks them to record your answers in the BRDs with the toolkit's vocabulary (after their current turn unless you interrupt). Each shows as recorded once the toolkit reads it so. **Export for the client** makes a CSV or a printable page with an empty Answer column, and **Import answers** takes the filled-in file (or pasted `OQ-05: answer` lines) back. Needs you has one row per project (*24 questions for the client · 5 BRDs · …*) with one notification per batch of new questions, a blocking client question waiting over a day becomes a stuck item, and the analysts' Playbooks now say to raise questions in the BRDs rather than only in chat.
