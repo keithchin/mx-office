@@ -4,7 +4,7 @@ description: The Mendix app as Studio Pro shows it - the App Explorer, domain mo
 weight: 9.5
 ---
 
-The **📐 Model** tab shows the floor's Mendix app the way Studio Pro does, without opening Studio Pro. You can look at `main`, or at any worker's branch or open pull request. It is read-only.
+The **📐 Model** tab shows the floor's Mendix app the way Studio Pro does, without opening Studio Pro. You can look at `main`, or at any worker's branch or open pull request. It is read-only: to change something, you ask the team with [Change this](#change-this).
 
 ## The layout
 
@@ -73,6 +73,37 @@ On a branch, tick **Changes in this branch** to see what the branch changed agai
 - **In the details panel:** the branch's changed documents are listed (click one to show it). The panel also names anything the branch removed from the document on show.
 
 A pull request's window has a **📐 View in Model** button that opens its branch here, with its changes marked.
+
+## Change this
+
+You never edit the model in the office. Pick what should change and say how, and the team does it.
+
+**What you can pick:** an entity, an attribute, an association, an enumeration or one of its values, a microflow, a nanoflow, a page, a snippet or a constant.
+- **In the details panel:** **✎ Change this** at the top acts on the element you clicked in the drawing, or on the document on show (a microflow, a page, an enumeration…).
+- **Several at once:** tick the attributes in an entity's details, or the values in an enumeration's, and the button becomes **✎ Change these 3**.
+- **Right-click** a row of the App Explorer, or an element in the drawing, for **✎ Change this…**.
+
+**The dialog** (✕ or **Esc** closes it and puts the focus back on the element):
+- what's selected, by qualified name (`Module.Entity.Attribute`) and kind, and the branch and commit it was read at;
+- **What should change?**, with quick chips for the kind (**Rename**, **Add value**, **Make required**, **Change default**, **Add attribute…**);
+- **Goes to:** whoever covers Development on the team, or whoever covers Design for a page's or snippet's look ("change the button style"). Any hired member can be picked instead. The line under it says whether they're ready or working, and on what;
+- **When:** **After their current turn** (the default: the office holds it and types it when the turn under way ends, as the team-lead panel does) or **Now**.
+
+**Send** gives the member a task, the same way a prompt from the Board's **✨ New task** does. Its text has a block with the request's id (`MCR-<n>`), the element(s) with their qualified names and kinds, the branch and commit SHA, and your words. It tells the member to:
+- make the change with mxcli on a branch, never on `main` directly, run `mx check`, and open a PR that names the element(s) and the request's id;
+- see what depends on the element(s) first, with the toolkit's impact skill or `mxcli refs` / `mxcli impact` (they only write the git-ignored catalog);
+- escalate before changing if the request is ambiguous or needs a decision: data loss, security, or a rename that breaks references.
+
+Each request is recorded in the [Audit log](audit-log.md) as `model.change-requested`.
+
+**Back in the Model tab:**
+- An element with an open request shows a badge in the details (*Change requested · Ada · MCR-3*), and its App Explorer row a **✎**.
+- Once there's a PR, the badge shows its number (*· #123*) and a **View change** link. It opens the PR's branch in this tab with **Changes in this branch** on.
+- When the PR merges, the badge goes away.
+
+The PR is found in the floor's list of pull requests the office already keeps: one whose title or description names the request's id, else the member's own PR opened since the request. Nothing new asks GitHub. The PR then goes through the usual review and verification; Needs you shows nothing new for it.
+
+The office itself never writes the `.mpr`, runs MDL or touches the repository for a change request. The requests are kept in `.agent-office/model-change/`.
 
 ## Where it comes from
 

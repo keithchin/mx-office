@@ -20,6 +20,8 @@ export interface Row {
 
 export interface TreeEvents {
   open(node: ModelTreeNode): void;
+  /** A right-click on a row (change-here.ts: Change this). */
+  menu?(e: MouseEvent, node: ModelTreeNode, row: HTMLElement): void;
 }
 
 /** The tree flattened to the rows on show: open nodes' children, or with a filter the matches and their way down. */
@@ -71,6 +73,8 @@ export class Tree {
   private current: ModelTreeNode | null = null;
   private marks = new Map<ModelTreeNode, ChangeStatus | 'inside'>();
   private frame = 0;
+  /** A row's ✎ mark: the open change request about it, in words (change-here.ts). */
+  private requested: (n: ModelTreeNode) => string | undefined = () => undefined;
 
   constructor(private on: TreeEvents) {
     this.filterInput = h('input.mx-filter', { type: 'search', placeholder: 'Filter (Ctrl+F)', 'aria-label': 'Filter the app explorer' });
@@ -103,6 +107,11 @@ export class Tree {
 
   setChanges(changes: Map<string, ChangeStatus>) {
     this.marks = changeMarks(this.roots, changes);
+    this.paint();
+  }
+
+  setRequested(fn: (n: ModelTreeNode) => string | undefined) {
+    this.requested = fn;
     this.paint();
   }
 
@@ -164,6 +173,7 @@ export class Tree {
 
   private rowEl(r: Row, i: number): HTMLElement {
     const mark = this.marks.get(r.node);
+    const req = this.requested(r.node);
     const twisty = r.node.children ? h('span.mx-twisty', { 'aria-hidden': 'true' }, r.open ? '▾' : '▸') : h('span.mx-twisty');
     const icon = h('span.mx-tico');
     icon.innerHTML = treeIcon(r.node.type);
@@ -181,6 +191,7 @@ export class Tree {
       icon,
       h('span.mx-tlabel', {}, r.node.label),
       mark ? h(`span.mx-tmark.mx-${mark}`, { title: mark === 'inside' ? 'Something in here changed on this branch' : `${mark[0].toUpperCase()}${mark.slice(1)} on this branch` }, mark === 'added' ? '+' : mark === 'removed' ? '−' : mark === 'changed' ? '●' : '•') : null,
+      req ? h('span.mx-treq', { title: req, 'aria-label': req }, '✎') : null,
     );
     if (i === this.active) row.classList.add('mx-active');
     if (r.node === this.current) row.classList.add('mx-current');
@@ -189,6 +200,10 @@ export class Tree {
       if ((e.target as HTMLElement).classList.contains('mx-twisty') || (r.node.children && !opens(r.node))) this.toggle(r);
       else this.choose(r);
       this.scroller.focus({ preventScroll: true });
+    });
+    row.addEventListener('contextmenu', (e) => {
+      this.active = i;
+      this.on.menu?.(e, r.node, this.scroller);
     });
     row.addEventListener('dblclick', () => r.node.children && this.toggle(r));
     return row;

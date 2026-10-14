@@ -15,6 +15,7 @@ import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
 import { gitRoutes } from './git.js';
 import { modelRoutes } from './model.js';
+import { modelChangeRoutes } from './model-change.js';
 import { githubRoutes } from './github.js';
 import { homeRoutes } from './home.js';
 import { pageRoutes } from './pages.js';
@@ -82,6 +83,8 @@ export const routes: readonly Route[] = [
   modelRoutes.doc,
   modelRoutes.mdl,
   modelRoutes.changes,
+  modelChangeRoutes.list,
+  modelChangeRoutes.create,
   analysisRoutes.report,
   analysisRoutes.backfill,
   analysisRoutes.summary,
