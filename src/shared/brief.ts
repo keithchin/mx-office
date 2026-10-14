@@ -120,6 +120,36 @@ export interface PlanBrief {
 export const START_MODES = ['plan', 'change', 'migrate', 'assurance'] as const;
 export type StartMode = (typeof START_MODES)[number];
 
+/** The existing app's repository a change or assurance draft names (owner/name), and its GitHub description when the office already had it. */
+export interface DraftRepo {
+  owner: string;
+  name: string;
+  description?: string;
+}
+
+/** The repository the start page sent, cleaned: undefined when it isn't a usable owner/name. */
+export function draftRepoOf(raw: unknown): DraftRepo | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  const owner = typeof r.owner === 'string' ? r.owner.trim() : '';
+  const name = typeof r.name === 'string' ? r.name.trim() : '';
+  if (!/^[A-Za-z0-9-]{1,39}$/.test(owner) || !/^[A-Za-z0-9._-]{1,100}$/.test(name)) return undefined;
+  const description = typeof r.description === 'string' ? r.description.replace(/\s+/g, ' ').trim().slice(0, 300) : '';
+  return { owner, name, ...(description ? { description } : {}) };
+}
+
+/** "owner/name", for the repository field. */
+export const repoText = (r: DraftRepo | undefined | null) => (r ? `${r.owner}/${r.name}` : '');
+
+/** The repository a field names, with its description when the office's repository list already has it (no new call); null when it isn't owner/name. */
+export function repoFrom(text: string, known: readonly { name: string; description?: string }[]): DraftRepo | null {
+  const v = text.trim();
+  const parts = v.split('/');
+  if (parts.length !== 2) return null;
+  const description = known.find((r) => r.name.toLowerCase() === v.toLowerCase())?.description;
+  return draftRepoOf({ owner: parts[0], name: parts[1], description }) ?? null;
+}
+
 export interface ChatMsg {
   who: 'you' | 'ca';
   text: string;
@@ -138,6 +168,8 @@ export interface DraftView {
   prompt: string;
   interview: InterviewMode;
   attachments: AttachmentNote[];
+  /** Change and assurance: the app's repository, so a resumed draft still knows it. */
+  repo?: DraftRepo;
   /** new: not drafted yet; drafting: the Chief Analyst is writing it; ready: there is a brief; failed: drafting stopped (see message). */
   status: 'new' | 'drafting' | 'ready' | 'failed';
   brief?: Brief;

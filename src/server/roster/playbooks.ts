@@ -22,6 +22,7 @@ import { toolkitDir as officeToolkitDir } from '../connections/store.js';
 import { alsoCovers, covers, isIdentity, managerOf, subagentDefsOf, writerOf, type Coverage } from '../../shared/roster/coverage.js';
 import { coverLines, coverTeamLine, QUESTIONS_LINE } from './playbook-cover.js';
 import { blockerLines } from './playbook-blockers.js';
+import { sourcesDirOf, sourcesLines } from '../../shared/brief-map.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
 export const FIELD_LESSONS = '.ai-context/skills/mxcli-field-lessons/SKILL.md';
@@ -50,7 +51,12 @@ export interface PlaybookContext {
   coverage?: Coverage;
   /** The project's toolkit folder: its pin (toolkit-pin/) and the commit, when it's pinned; else the shared clone. */
   toolkit?: { dir: string; sha?: string };
+  /** The floor's sources/ folder (the input documents, git-ignored) on the office's machine, when it has one: whoever does the analysis is told to read and inventory it there. */
+  sources?: string;
 }
+
+/** The project's sources/ folder for its Playbooks, when it has one (one stat, at a hire or a rewrite). */
+export const sourcesOf = (dir: string): Pick<PlaybookContext, 'sources'> => (existsSync(path.join(dir, 'sources')) ? { sources: sourcesDirOf(dir) } : {});
 
 /** Where the mxcli-project-toolkit clone is (the same setting the new-project wizard uses). */
 const toolkitDir = () => officeToolkitDir().replace(/\\/g, '/');
@@ -201,6 +207,12 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
   }
 }
 
+/** Where the input documents are, for whoever covers Analysis (the Chief Analyst, or the Solo Lead). */
+function inputDocs(roleId: RoleId, ctx: PlaybookContext): string[] {
+  if (!ctx.sources || (ctx.coverage?.analysis ?? 'chief-analyst') !== roleId) return [];
+  return ['## Input documents', ...sourcesLines(ctx.sources, ctx.toolkit?.dir ?? toolkitDir()), ''];
+}
+
 /** How a Lead uses its subagents' names: people's names in what it writes and says, the type in the Agent call. */
 export const NAMES_LINE = 'Call them by name in what you write and say ("delegated the e2e suite to Nia, my tester"); dispatch each by its type (`subagent_type`).';
 
@@ -265,6 +277,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     '',
     ...roleSpecific(role, ctx),
     '',
+    ...inputDocs(roleId, ctx),
     ...blockerLines(roleId, c, ctx.names),
     ...(also.length && !role.generalist ? coverLines(c!, roleId) : []),
     '',

@@ -3,7 +3,7 @@
 // to attach documents, and Draft project brief with what it costs. "Fill in the brief yourself" is the same
 // brief without the Chief Analyst, and the way on when it can't draft (its reason is said).
 import type { DraftView, StartMode } from '../../../../shared/brief';
-import { READ_LABEL, attachProblem } from '../../../../shared/brief';
+import { READ_LABEL, attachProblem, repoFrom, repoText } from '../../../../shared/brief';
 import { usdCents } from '../../../../shared/budget/money';
 import { store } from '../../../state';
 import { h, toast } from '../../dom';
@@ -16,7 +16,7 @@ import type { Flow } from './index';
 
 const MODES: { id: StartMode; title: string; icon: string; desc: string; go: string; rec?: boolean }[] = [
   { id: 'plan', title: 'Plan with the team', icon: 'spark', desc: 'A new app, from an idea or from requirements. The Chief Analyst drafts a brief from your description and documents, then the team plans and builds.', go: 'Greenfield or requirements-driven', rec: true },
-  { id: 'change', title: 'Change an existing app', icon: 'pencil', desc: 'Point at an app’s repository. The team reads it first, then plans the change with you.', go: 'Existing-app change' },
+  { id: 'change', title: 'Change an existing app', icon: 'pencil', desc: 'Point at an app’s repository and describe the change. The brief is drafted from your description; the team reads the app after setup.', go: 'Existing-app change' },
   { id: 'migrate', title: 'Migrate an app', icon: 'swap', desc: 'Move an app from another platform or an older version, with an inventory and a migration plan.', go: 'Migration' },
 ];
 
@@ -27,6 +27,7 @@ const COPY: Record<StartMode, [string, string]> = {
   assurance: ['Describe the app to assure', 'Which app (its repository) and what you want checked: tests, security, readiness.'],
 };
 
+const REPO_PROBLEM = 'Name the app’s repository as owner/name';
 const size = (n: number) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
 
 /** The plan's repository kind and entry mode for a start mode (and whether files are attached). */
@@ -63,6 +64,7 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
   const soon = (name: string) => h('button', { type: 'button', role: 'menuitem', 'aria-disabled': 'true', title: 'Coming later' }, icon('cloud'), `Add from ${name}`, h('span.nw-soon', {}, 'coming later'));
   const menu = h('div.nw-menu', { role: 'menu', 'aria-label': 'Add to the description', hidden: true }, upload, h('hr'), h('div.nw-mh', {}, 'Sources'), soon('Confluence'), soon('SharePoint'));
   const repo = h('input', { type: 'text', id: 'nw-start-repo', placeholder: 'owner/name', autocomplete: 'off', spellcheck: 'false', list: 'nw-start-repos' }) as HTMLInputElement;
+  repo.value = repoText(flow.draft?.repo);
   const repoList = h('datalist', { id: 'nw-start-repos' });
   const repoRow = h('div.nw-field.nw-start-repo', {}, h('label', { for: 'nw-start-repo' }, 'The app’s repository'), repo, h('span.nw-hint', {}, 'A repository that is already a floor is used where it is; any other is cloned as a new floor first.'), repoList);
   const foot = h('p.nw-footnote', {});
@@ -102,7 +104,12 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
     const drop = h('button.btn.nw-ghost', { type: 'button' }, 'Discard');
     const box = h('div.nw-resume', { role: 'region', 'aria-label': 'Your draft' }, h('span.nw-grow', {}, h('b', {}, d.brief?.title || 'Your draft'), h('span.nw-muted', {}, ` · ${d.brief ? `DRAFT v${d.version}` : 'not drafted yet'}${d.approved ? ' · scope approved' : ''}`)), go, drop);
     go.addEventListener('click', () => {
+      // The draft's description, way in and repository back on the page, and the repository on the plan.
+      ta.value = d.prompt;
+      repo.value = repoText(d.repo);
+      setMode(d.mode);
       flow.setDraft(d);
+      applyRepo();
       box.remove();
       if (d.brief || d.status === 'drafting') flow.show('plan');
     });
@@ -132,6 +139,12 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
   });
   assurance.addEventListener('click', () => setMode(mode === 'assurance' ? 'plan' : 'assurance'));
   ta.addEventListener('input', () => update());
+  // The repository's problem goes as soon as the field names one.
+  repo.addEventListener('input', () => {
+    if (repoProblem()) return;
+    repo.removeAttribute('aria-invalid');
+    if (problem.textContent === REPO_PROBLEM) problem.textContent = '';
+  });
 
   // ---- The + menu and the files dialog
   const closeMenu = (refocus: boolean) => {
@@ -163,11 +176,13 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
 
   /** A draft in the office to attach files to and draft from: made on first need. */
   async function ensureDraft(): Promise<DraftView> {
+    const r = repoRow.hidden ? null : repoFrom(repo.value, store.repos.list);
     if (flow.draft && !flow.draft.job) {
-      if (flow.draft.prompt !== ta.value || flow.draft.mode !== mode) flow.setDraft(await briefApi.update(flow.draft.id, { prompt: ta.value, mode }));
+      const d = flow.draft;
+      if (d.prompt !== ta.value || d.mode !== mode || JSON.stringify(d.repo ?? null) !== JSON.stringify(r)) flow.setDraft(await briefApi.update(d.id, { prompt: ta.value, mode, repo: r }));
       return flow.draft;
     }
-    const d = await briefApi.create({ mode, prompt: ta.value, interview: flow.plan.interview });
+    const d = await briefApi.create({ mode, prompt: ta.value, interview: flow.plan.interview, ...(r ? { repo: r } : {}) });
     flow.setDraft(d);
     return d;
   }
@@ -221,7 +236,8 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
   }
 
   // ---- Draft, or fill in by hand
-  const repoProblem = () => (repoRow.hidden ? undefined : /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(repo.value.trim()) ? undefined : 'Name the app’s repository as owner/name');
+  const repoProblem = () => (repoRow.hidden || repoFrom(repo.value, []) ? undefined : REPO_PROBLEM);
+  const refuse = (bad: string) => ((problem.textContent = bad), repo.setAttribute('aria-invalid', 'true'), repo.focus());
   const applyRepo = () => {
     const e = entryFor(mode, files().length);
     flow.plan.kind = e.kind;
@@ -235,7 +251,7 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
   };
   draftBtn.addEventListener('click', async () => {
     const bad = repoProblem();
-    if (bad) return ((problem.textContent = bad), repo.focus());
+    if (bad) return refuse(bad);
     draftBtn.disabled = true;
     problem.textContent = '';
     try {
@@ -251,7 +267,7 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
   });
   manualBtn.addEventListener('click', async () => {
     const bad = repoProblem();
-    if (bad) return ((problem.textContent = bad), repo.focus());
+    if (bad) return refuse(bad);
     try {
       const d = await ensureDraft();
       applyRepo();

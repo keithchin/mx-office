@@ -73,7 +73,31 @@ export type StepImpl = (job: JobState, io: StepIO) => Promise<StepResult>;
 export const SETUP_FLOW = 'new-project';
 const SETUP_FLOW_VERSION = 1;
 
-const LOG_KEPT = 1500;
+/**
+ * The setup's log keeps its head and its tail: the first LOG_HEAD lines (the clone, the plan), a "… N lines
+ * left out …" line, and the last LOG_TAIL (where a failure is). A plain cap of 1,500 lost the toolkit's output
+ * (rehearsal 1). At most 3,001 lines of at most 2,000 characters (a few hundred KB in a usual setup), kept with
+ * the job and saved at its step boundaries; the page is still sent only the last 400 (viewOf).
+ */
+export const LOG_HEAD = 300;
+export const LOG_TAIL = 2_700;
+const LEFT_OUT = /^… (\d+) lines? left out …$/;
+const leftOut = (n: number) => `… ${n} line${n === 1 ? '' : 's'} left out …`;
+
+/** Adds a line to a setup's log, keeping its head and its tail. */
+export function keepLine(log: string[], line: string, head = LOG_HEAD, tail = LOG_TAIL) {
+  log.push(line);
+  if (log.length <= head + 1 + tail) return;
+  const had = LEFT_OUT.exec(log[head] ?? '');
+  if (had) {
+    const k = log.length - head - 1 - tail;
+    log.splice(head, k + 1, leftOut(Number(had[1]) + k));
+  } else {
+    const k = log.length - head - tail;
+    log.splice(head, k, leftOut(k));
+  }
+}
+
 /**
  * A step that has said nothing for this long says where it is: the commands it has running and for how
  * long, or that none is (it waits on something in the office). A setup must never just sit there.
@@ -241,8 +265,7 @@ export class JobBook {
 
   log(job: JobState, line: string) {
     const clean = this.redact(line).slice(0, 2000);
-    job.log.push(clean);
-    if (job.log.length > LOG_KEPT) job.log.splice(0, job.log.length - LOG_KEPT);
+    keepLine(job.log, clean);
   }
 
   /**

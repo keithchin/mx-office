@@ -6,7 +6,12 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Changed
+
+- **A New project draft keeps the app's repository.** For **Change an existing app** and **Assurance only**, the repository is saved with the draft, so **Continue** on a resumed draft brings it back on the start page and under **Advanced** (it used to come back empty). A repository field marked as a problem clears as soon as it names a repository.
+- **The Chief Analyst is told which app a change is for, and says it hasn't read it.** In change and assurance mode the planning calls get the repository's name, and its GitHub description when the office's repository list already has it, as context only: the planner still has no access to the repository. The start card no longer says the team reads it first: *the brief is drafted from your description; the team reads the app after setup.*
+- **Discovery finds the attached documents.** `sources/` is git-ignored, so an agent's worktree doesn't have it: the Discovery issue and the analyst's Playbook now give the project folder's full `sources/` path, and say to inventory it first with the toolkit's `bin/source-sufficiency.sh init . --sources` (so the gates' source ledger stops failing with *files under sources/ and no inventory*). The documents aren't copied into worktrees.
+- **The setup log keeps its start and its end.** It keeps the first 300 lines and the last 2,700, with *… N lines left out …* between them, instead of only the last 1,500, so a long toolkit run no longer pushes out how the setup began.
 
 ## 2026-10-14 · release 45 (`361b46b`)
 

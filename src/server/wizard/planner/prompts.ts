@@ -1,9 +1,11 @@
 // What the Chief Analyst is told for each planning call: who it is, the honesty rules every item follows,
-// and what it gets (the description, the attached documents' text, the brief so far, the chat).
+// and what it gets (the description, the attached documents' text, the brief so far, the chat). A change or
+// assurance names its repository (and its GitHub description when the office already had it) as context
+// only: the planner never reads the repository (its sandbox is an empty folder), so it's told so.
 
 import { ENTRY_MODE_INFO } from '../../../shared/wizard.js';
 import { briefAsText } from '../../../shared/brief-map.js';
-import type { Brief, ChatMsg, StartMode } from '../../../shared/brief.js';
+import type { Brief, ChatMsg, DraftRepo, StartMode } from '../../../shared/brief.js';
 
 const MODE: Record<StartMode, string> = {
   plan: 'a new app, from an idea or from requirements (greenfield, or requirements-driven when documents are attached)',
@@ -33,9 +35,18 @@ export function briefSystem(mode: StartMode): string {
   ].join('\n\n');
 }
 
-export function briefInput(prompt: string, texts: { name: string; text: string; note?: string }[], pdfs: string[]): string {
+/** The existing app's repository, as context: its name and description only, never its contents. */
+export function repoContext(repo: DraftRepo | undefined): string {
+  if (!repo) return '';
+  return [
+    `The existing app's repository: ${repo.owner}/${repo.name}${repo.description ? ` (its GitHub description: "${repo.description}")` : ''}.`,
+    'You have not read this repository and cannot: the team reads the app after setup. Work from the description and the documents; anything about the app as it is now that they do not say is an open question, never an assumption.',
+  ].join('\n');
+}
+
+export function briefInput(prompt: string, texts: { name: string; text: string; note?: string }[], pdfs: string[], repo?: DraftRepo): string {
   const docs = texts.map((t) => `--- ${t.name}${t.note ? ` (${t.note})` : ''} ---\n${t.text}`).join('\n\n');
-  return [`The person's description:\n${prompt.trim() || '(none: work from the documents)'}`, docs ? `Attached documents (text):\n\n${docs}` : '', pdfs.length ? `Attached PDFs to read: ${pdfs.join(', ')}` : ''].filter(Boolean).join('\n\n');
+  return [repoContext(repo), `The person's description:\n${prompt.trim() || '(none: work from the documents)'}`, docs ? `Attached documents (text):\n\n${docs}` : '', pdfs.length ? `Attached PDFs to read: ${pdfs.join(', ')}` : ''].filter(Boolean).join('\n\n');
 }
 
 export function chatSystem(mode: StartMode): string {
@@ -49,12 +60,12 @@ export function chatSystem(mode: StartMode): string {
   ].join('\n\n');
 }
 
-export function chatInput(brief: Brief, history: ChatMsg[], text: string): string {
+export function chatInput(brief: Brief, history: ChatMsg[], text: string, repo?: DraftRepo): string {
   const past = history
     .slice(-8)
     .map((m) => `${m.who === 'you' ? 'Person' : 'You'}: ${m.text}`)
     .join('\n');
-  return [`The brief now:\n${briefAsText(brief)}`, past ? `The conversation so far:\n${past}` : '', `The person's message:\n${text.trim()}`].filter(Boolean).join('\n\n');
+  return [repoContext(repo), `The brief now:\n${briefAsText(brief)}`, past ? `The conversation so far:\n${past}` : '', `The person's message:\n${text.trim()}`].filter(Boolean).join('\n\n');
 }
 
 export function domainsSystem(): string {
