@@ -300,7 +300,7 @@ test('the waiting questions are the ones the spec names', () => {
 
 test('shadow (the default): a turn ending waiting is judged and logged, and nothing is raised', async () => {
   const { floor, roster, rows, settle } = setup(WAITING);
-  assert.deepEqual(roster.data(floor.id).settings.jeff, { waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree' });
+  assert.deepEqual(roster.data(floor.id).settings.jeff, { waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree', waitingLead: 'on' });
   floor.add('w1', 'Ada');
   floor.words.set('w1', 'I built the page.\n\nShould I deploy it to production?');
   floor.set('w1', 'working');
@@ -412,9 +412,9 @@ test('triage on: labels only an unlabelled issue, and only when confident', asyn
 
 test('old rosters revive with Jeff in shadow, and bad modes are ignored', async () => {
   const { reviveRoster, cleanSettings } = await import('../src/server/roster/store.js');
-  assert.deepEqual(reviveRoster({ settings: { autonomy: 2 } }).settings.jeff, { waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree' });
+  assert.deepEqual(reviveRoster({ settings: { autonomy: 2 } }).settings.jeff, { waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree', waitingLead: 'on' });
   const s = cleanSettings({ jeff: { waiting: 'on', triage: 'loud' } });
-  assert.deepEqual(s.jeff, { waiting: 'on', triage: 'shadow', priority: 'on', waitingPolicy: 'agree' });
+  assert.deepEqual(s.jeff, { waiting: 'on', triage: 'shadow', priority: 'on', waitingPolicy: 'agree', waitingLead: 'on' });
 });
 
 test("the 'model' policy is kept, and a bad one is ignored", async () => {

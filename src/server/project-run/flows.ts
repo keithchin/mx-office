@@ -27,6 +27,7 @@ import { noteResumed, noteSlept, projectPause, setPauseWaiting, setProjectPause 
 import { resumeWhy } from '../roster/awareness.js';
 import type { RunDeps, RunFloor } from './types.js';
 import type { Candidate } from './preview.js';
+import { asksSoon } from '../roster/asks-hook.js';
 
 export const RESUME_FLOW = 'project-resume';
 export const PAUSE_FLOW = 'project-pause';
@@ -399,6 +400,8 @@ function keepHandoff(deps: RunDeps, f: RunFloor, a: PauseAgent, w: WorkerInfo) {
   if (!note) return;
   deps.roster.data(f.team.id).members[a.role].handoff = { at: deps.now(), text: `${note.heading}\n\n${note.body}` };
   deps.roster.touch(f.team, true);
+  // Its AWAITING-PM items become escalations (server/asks/): a pause handoff is read like a bench one.
+  asksSoon(f.team.id, 'as the project was paused');
 }
 
 /** Every agent still being wound down is done, but those waiting on a person (they stay listed). */

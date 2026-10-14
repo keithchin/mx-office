@@ -63,3 +63,8 @@ The standup page gets a **Blocked on you** section above *Needs the Project Mana
 | Agents working with no progress | 48 h |
 
 Each change is in the audit log as `settings.change` (`stuck.on`, `stuck.prHours` …). With it off, nothing is raised and nothing shows. The settings are kept in the office's `office-settings.json` (`stuckDetection`), the items per project in `<office data>/stuck/<project>.json`. The office looks at each project every 5 minutes, and at once after a settings change.
+
+## Blocked build-plan rows, and the toolkit's question states
+
+- **Open questions** in PROJECT.md count as open when their Status is in the toolkit's own words too: `RAISED` (put to you, awaiting your reply) and `UNRAISED` (never put to you), as `bin/open-questions.sh` uses them.
+- **Build-plan rows whose State starts with `blocked`** (any `blocked…` prefix in `architecture/build-plan.md`) for longer than the decision threshold become a 🧱 item, one per blocker: *Build-plan rows 59–61 have been blocked for 3 days on: …*. When the row names a decision that's resolved, it says so: *Rows 59–61 say blocked on OW-1, which is resolved: update the build plan or name the real blocker*. Rows a pending decision already parks are that decision's item, and a row blocked on an open PR is the stale-PR item's. Its button asks the team lead.

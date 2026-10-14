@@ -12,6 +12,10 @@
 .ny-item + .ny-item { border-top: 2px solid var(--rule); }
 /* Blocking: something is stopped until you act. */
 .ny-item.ny-block { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad-soft) 55%, var(--card)); }
+/* Info: shown so nothing is hidden, but not waiting on you (an FYI escalation, work not on main yet). */
+.ny-item.ny-info { border-left-color: var(--rule-strong); }
+.ny-info .ny-text { font-weight: 600; color: var(--muted); }
+.ny-info .ny-tag { background: var(--paper-2); color: var(--ink); }
 .ny-ico { flex: none; font-size: 18px; line-height: 1; }
 .ny-text { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
 .ny-since { font-weight: 700; color: var(--muted); white-space: nowrap; }
@@ -42,4 +46,5 @@
 .ny-count { padding: 2px 10px; border: 2px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink); font: 800 12px/1.4 var(--font); cursor: pointer; }
 .ny-count.ny-block { background: var(--bad-soft); }
 .ny-count.ny-warn { background: var(--warn-soft); }
+.ny-count.ny-info { background: var(--paper-2); }
 .ny-count:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }

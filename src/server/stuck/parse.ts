@@ -265,7 +265,8 @@ export interface OpenQuestion {
   since?: number;
 }
 
-const OPEN = /\b(open|pending|decision needed|waiting|to decide|unanswered|asked)\b/i;
+// RAISED and UNRAISED are the toolkit's own words for a question put to the user, or never put (bin/open-questions.sh).
+const OPEN = /\b(open|pending|decision needed|waiting|to decide|unanswered|asked|raised|unraised)\b/i;
 const FOR_PM = /\b(PM|Project Manager|client|customer|sponsor)\b/i;
 
 /** PROJECT.md's Open questions (and the tables under that heading) still open and the PM's or the client's to answer. */

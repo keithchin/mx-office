@@ -541,7 +541,7 @@ test('an answer that arrives while a Lead writes its handoff brings it straight 
   assert.match(t.floor.hires.at(-1)!.prompt, /“Matrix\?”: REPLIED — B\./);
 });
 
-test('a handoff that ends AWAITING-PM raises an escalation on its behalf, unless one is open already', async () => {
+test('a handoff that ends AWAITING-PM raises an escalation on its behalf, unless the same is open already', async () => {
   const t = setup(3);
   const dev = await hireAt(t, 'lead-developer');
   await benchWithNote(t, dev, '**Open threads** CAC-1 batch put to the PM in chat, UNANSWERED.\n\nAWAITING-PM: Sign-off on CAC-1 questions B1–B7');

@@ -50,6 +50,8 @@ export interface Escalation {
    * second escalation, and told the answer too (roster/escalations.ts).
    */
   also?: { workerId: string; by: string; role?: RoleId; at: number; /** Answered while a dialog was up in its terminal: told once that's over. */ pending?: boolean }[];
+  /** Filed by the office from an agent's words (server/asks/): an AWAITING-PM item (keyed by role and text), resolved by itself once the line is gone. */
+  from?: { kind: 'awaiting'; key: string };
 }
 
 /** What an agent sends to raise one, before the office stamps it. */

@@ -3,9 +3,11 @@
 // hiring a benched one starts a fresh session primed with its latest handoff note, never a resume.
 
 import { latestEntry } from '../../shared/roster/journal.js';
-import { cleanName, journalPath, ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
+import { cleanName, ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { dayIn } from '../../shared/roster/schedule.js';
-import { awaitingAnswer, awaitingPmLine, isAsleepStatus, mayBench } from './bench.js';
+import { awaitingAnswer, isAsleepStatus, mayBench } from './bench.js';
+import { awaitingAsk, awaitingItems, awaitingKey, entryTime, planAwaiting } from '../asks/awaiting.js';
+import { asksSoon } from './asks-hook.js';
 import type { Roster } from './index.js';
 import { readJournal } from './journal-io.js';
 import { lessonsPathIn, writeRoleFiles, writeRoleFilesSoon, type PlaybookContext } from './playbooks.js';
@@ -161,33 +163,29 @@ export class Members {
     this.roster.touch(floor);
     floor.toast(fresh ? `🪑 ${m.name} is benched: handoff note kept, session cleared` : `🪑 ${m.name} is benched, but wrote no handoff note: the next hire starts from the Playbook and journal only`, fresh ? 'info' : 'warn');
     if (note && fresh) this.escalateAwaiting(floor, role, workerId, note.heading, note.body);
+    asksSoon(floor.id, 'as it was benched');
     if (w) await floor.stop(w.id);
     // Answers that came in while it wrote its handoff bring it straight back.
     this.roster.escalations.afterBench(floor, role);
   }
 
   /**
-   * The safety net for a question that never became an escalation: a handoff note that ends
-   * `AWAITING-PM: …` while the role has no open escalation gets one raised on its behalf, so the
-   * Project Manager sees it in their approvals and answering it brings the role back.
+   * The safety net for a question that never became an escalation: each item of a handoff note's
+   * `AWAITING-PM: …` line that isn't open already (in the same words) gets one raised on its behalf, so
+   * the Project Manager sees it in their approvals and answering it brings the role back. Another open
+   * escalation doesn't hold it back (server/asks/awaiting.ts; its regular look reads the same lines
+   * everywhere, on pause too, and closes them once they're gone).
    */
   private escalateAwaiting(floor: TeamFloor, role: RoleId, workerId: string, heading: string, body: string) {
-    const waiting = awaitingPmLine(body);
-    if (!waiting) return;
+    const team = ROLE_BY_ID.get(role)!.team;
+    const entry = { heading, date: /\d{4}-\d{2}-\d{2}/.exec(heading)?.[0] ?? '', body };
+    const waits = { team, entry, at: entryTime(entry), items: awaitingItems(body), where: 'its handoff note' };
     const d = this.roster.data(floor.id);
-    if (d.escalations.some((e) => e.status === 'open' && e.role === role)) return;
     const m = d.members[role];
-    const journal = journalPath(ROLE_BY_ID.get(role)!.team);
-    const details = [
-      `${m.name} was benched while waiting on the Project Manager, without having escalated it. The office raised this on its behalf from its handoff note (\`${journal}\`, “${heading.replace(/^#+\s*/, '')}”).`,
-      '',
-      `Waiting on: ${waiting}`,
-      '',
-      `Answer here (reply / approve / reject) and the office hires ${m.name} back with your answer. The handoff note:`,
-      '',
-      body.length > 3000 ? `${body.slice(0, 3000)}\n…(the rest is in the journal)` : body,
-    ].join('\n');
-    this.roster.escalations.raiseFor(floor, { workerId, by: m.name, role }, { urgency: 'important', trigger: 'blocked', title: waiting.slice(0, 160), details, options: [] });
+    for (const r of planAwaiting([waits], () => role, d.escalations).raise) {
+      const e = this.roster.escalations.raiseFor(floor, { workerId, by: m.name, role }, awaitingAsk(m.name, r.item, waits, 'as it was benched (answering hires it back)'));
+      e.from = { kind: 'awaiting', key: awaitingKey(role, r.item) };
+    }
   }
 
   rename(floor: TeamFloor, role: RoleId, raw: unknown): string | undefined {

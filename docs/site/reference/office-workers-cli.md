@@ -80,7 +80,7 @@ office-workers mcp                            serve these as MCP tools on stdio
 |---|---|
 | `--title` | Required, up to 160 characters |
 | `--urgency` | `info`, `important` (default), `urgent`, `critical` |
-| `--trigger` | `plan`, `scope`, `design`, `architecture`, `revisions-exhausted`, `blocked`, `milestone`, `repeated-failure`, `budget-risk`, `security`, `data-loss`, `client-milestone`, `budget-overrun`, `blocked-no-path` |
+| `--trigger` | `plan`, `scope`, `design`, `architecture`, `revisions-exhausted`, `blocked`, `milestone`, `repeated-failure`, `budget-risk`, `security`, `data-loss`, `client-milestone`, `budget-overrun`, `blocked-no-path`, `needs-human` (a hands-on action only a person can do: merge, sign in, paste a key, install, allow, restart), `question` (a question only the Project Manager can answer). The last two are never filed as FYI |
 | `--option` | Repeat up to 6 times |
 | `--recommend` | Your recommendation |
 | `--details` | Or the details on stdin |
@@ -96,6 +96,14 @@ EOF
 ```
 
 The answer comes back as a prompt: REPLIED, APPROVED, REJECTED or NOTED. See [Escalations](../teams-and-agents/escalations.md).
+
+A hands-on ask:
+
+```bash
+office-workers escalate --title "Merge PR #51 (green four days, blocks rows 27 and 41)" --trigger needs-human <<'EOF'
+Only a person can merge it at this autonomy level.
+EOF
+```
 
 ## subagent (Leads only)
 

@@ -55,19 +55,26 @@ The items, and their buttons in the list:
 |---|---|---|
 | 🙋 | *&lt;name&gt; is asking: …* (a question or a permission prompt) | **Answer**: opens its terminal |
 | ✅ | *&lt;name&gt; finished: &lt;summary&gt;, not looked at yet* (not for a [quiet turn](../concepts/workers-and-worktrees.md#quiet-turns): one the office started, or a team member's at autonomy 3 and up) | **Review**: opens its terminal |
-| 🚩 | An escalation, tagged CRITICAL, URGENT, IMPORTANT or INFO | **Answer** (admin) or **View**: jumps to the card |
+| 🚩 | An escalation, tagged CRITICAL, URGENT, IMPORTANT or INFO (one the office filed for an agent too: an ask *From the chat*, or an item of its journal's `AWAITING-PM` line) | **Answer** (admin) or **View**: jumps to the card |
+| ℹ️ | An escalation filed as FYI (below the autonomy level's threshold), tagged **FYI**: shown low and not counted, so nothing an agent asked is hidden | **Answer** or **View** |
 | 🔀 💸 🧰 📝 | An approval: a merge, a cost cap, a subagent action, a proposal | **Review**: opens Approvals |
 | 💤 | *&lt;name&gt; is idle with an open task: …* (idle 10 minutes, nothing escalated) | **Nudge**: tells it to carry on, or escalate if it's blocked ([back to work](../teams-and-agents/interruptions.md#back-to-work)) |
 | 💸 | *Spend cap reached: office prompts paused; agents finish their current turn* (the daily cap is spent) | **Settings** |
-| ⏳ ❓ 🔴 🔁 | Work the office found stuck, tagged **Stuck**: a PR with no activity, a decision waiting on you, a test failing for days, the team going in circles ([Stuck detection](stuck-detection.md)) | **Ask &lt;lead&gt;**, **Answer**, **Ask for blockers** or **Review**: opens the item's card |
+| ⏳ ❓ 🔴 🔁 🧱 | Work the office found stuck, tagged **Stuck**: a PR with no activity, a decision waiting on you, a test failing for days, the team going in circles, build-plan rows still blocked ([Stuck detection](stuck-detection.md)) | **Ask &lt;lead&gt;**, **Answer**, **Ask for blockers** or **Review**: opens the item's card |
+| 🤝 | *3 assumptions made without your consent: …*, tagged **Consent** (PROJECT.md decisions marked `ASSUMED` with no consent recorded) | **Agree** (your consent goes to the lead to record) or **Discuss** (the lead escalates them with options) |
+| ⚠️ | *Gate advisory in &lt;agent&gt;'s copy: …*, tagged **Advisory** (the toolkit's gate-check wrote it to `.claude/.gate-advisories` and printed it only to that agent) | **Ask &lt;lead&gt;** or **Mark as seen** |
+| 📤 | *N agent updates aren't on main (standups, journals, handoffs) · &lt;agent&gt;: M commits*, tagged **Not on main** (info: shown, not counted) | **Ask &lt;lead&gt; to open a docs PR** or **Hide** |
+| 👀 | *Ready for your review: 5 BRDs, design system, 9 wireframes*, tagged **Review** (info: shown, not counted) | **Documents** or **Mark as seen** (a new one shows it again) |
 | ❓ | *N questions for the client · N BRDs · N block work*: the analysts' open questions in the BRDs waiting on you, one row per project ([Questions](questions.md)) | **Answer**: opens the Questions page |
 | ❌ | *PR #n has failing checks* | **Open PR #n** |
-| ✋ | *Stage X waits for your sign-off* | **Sign off**: scrolls to the setup panel |
+| ✋ | *Stage X waits for your sign-off*: every ✋ stage gate-check marks MANUAL (3, 4, 7, and 5–6 where it wants a person), also after Stage 4 | **Sign off**: scrolls to the setup panel, or past Stage 4 to the progress bar |
 | 🌿 | *This floor's folder is on &lt;branch&gt;, N commits behind main* (only past 10 commits; last of this floor's items) | **Setup** |
 | 🌐 | *The live app failed* | **Live app** |
 | 🌿 | A worktree was deleted outside the office | **Fix** |
 | 🙋 | *N waiting on &lt;other floor&gt;* | **Go** |
 | 📑 | *Audit report ready from The Firm* (and The Firm's budget warnings) | **Read** |
+
+**Nothing waits on you unseen.** Agents' asks used to reach you only through channels the office didn't count: their chat, a journal's `AWAITING-PM:` line, an FYI escalation, a branch nobody merged. Now each comes here: an ask in the lead's chat that it didn't escalate is filed for it *From the chat*; every item of an `AWAITING-PM` line, in the newest entry of any team journal (the project folder, an agent's worktree or its branch; on bench, on pause and every five minutes), is an escalation of its own that closes by itself once the line is gone; FYI escalations show as info rows; and the rows below the stuck items say what's not on main, what was assumed without your consent, what the toolkit warned an agent about and what's ready for your review. Info rows (ℹ️ 📤 👀) are shown but not counted in *N waiting on you*. These come from the office's look at the project every five minutes (`GET /api/asks`), soon after a turn ends, a bench or a pause; their buttons go through `POST /api/asks/act`, and a message goes to whoever covers Management after their turn.
 
 **Finished, not looked at yet.** An agent that ended its turn and that nobody has opened since counts as waiting on you. Its worker card says *👀 Finished, not looked at yet: … open it to see*. Opening its terminal clears it.
 

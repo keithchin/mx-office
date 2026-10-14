@@ -11,6 +11,7 @@
 
 import type { FailingFact, StuckDraft, StuckEvidence, StuckSettings } from '../../shared/stuck.js';
 import { earliestDate, failingClaims, journeysOf, openQuestions, pendingDecisions, planRows, prRefs, projectFacts, rowOpen, rowsWords, shortQuestion } from './parse.js';
+import { blockedRows } from './blocked-rows.js';
 
 const H = 3_600_000;
 
@@ -157,6 +158,9 @@ export function detectStuck(i: DetectInput): StuckDraft[] {
     if (i.now - since < i.settings.decisionHours * H) continue;
     out.push({ id, kind: 'decision', since, blocks: [], evidence: [{ label: `${project!.file}:${q.line}`, file: project!.file, line: q.line }], decision: { id: q.id, question: shortQuestion(q.question), rows: '', journeys: [] } });
   }
+
+  // 2b. Build-plan rows blocked on something no pending decision names, or on one that's resolved (blocked-rows.ts).
+  if (plan) out.push(...blockedRows({ now: i.now, decisionHours: i.settings.decisionHours, plan, ...(project ? { project } : {}), openPrs: new Set(open.keys()), firstSeen: i.firstSeen }));
 
   // 4. Going in circles.
   const a = i.activity;

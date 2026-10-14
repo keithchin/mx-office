@@ -39,6 +39,7 @@ import { everHired, RosterFile, type MemberRecord, type RosterData } from './sto
 import type { RosterDeps, TeamFloor } from './types.js';
 import { alsoOf, managerRole } from './coverage.js';
 import { coveredBy, shownRoles } from '../../shared/roster/coverage.js';
+import { asksSoon } from './asks-hook.js';
 
 interface Seen {
   status: WorkerStatus;
@@ -203,6 +204,7 @@ export class Roster {
     this.seen.set(w.id, { status: w.status, idleSince: idle ? (prev?.idleSince ?? now) : undefined });
     const capChanged = this.noteSpend(floor, d, w, now);
     // A turn just ended: Jeff judges whether it's waiting on the Project Manager (any agent, not just the team's).
+    if (prev?.status === 'working' && (w.status === 'done' || w.status === 'idle')) asksSoon(floor.id, 'after a turn ended');
     if (prev?.status === 'working' && (w.status === 'done' || w.status === 'idle')) void this.jeff.onTurnEnd(floor, w).catch((err: unknown) => console.error(`agent-office: Jeff on ${floor.id}: ${(err as Error)?.message ?? err}`));
     // Between turns: the answers it's owed and the prompts held while a dialog was up go in.
     this.delivery.onWorker(floor, w);

@@ -8,6 +8,7 @@ import { rosterOf } from '../../roster/adapter.js';
 import { ensureTeamLabels } from '../../teams/labels.js';
 import { teamPageData } from '../../teams/page-data.js';
 import { deliverablesOf } from '../../deliverables/index.js';
+import { asksFloor, asksOf } from '../../asks/index.js';
 import { sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
@@ -23,8 +24,8 @@ export const teamRoutes = {
       if (!floor) return send(res, 404, { error: 'No such floor' });
       const team = url.searchParams.get('team');
       if (!isCardTeam(team) || team === 'unassigned') return send(res, 400, { error: 'Which team?' });
-      const [data, all] = await Promise.all([teamPageData(floor.id, floor.dir, team), deliverablesOf(ctx, floor)]);
-      return send(res, 200, { ...data, deliverables: { ...all, items: all.items.filter((i) => i.team === team) } });
+      const [data, all, asks] = await Promise.all([teamPageData(floor.id, floor.dir, team), deliverablesOf(ctx, floor), team === 'management' ? asksOf(ctx).view(asksFloor(ctx, floor), false).catch(() => undefined) : undefined]);
+      return send(res, 200, { ...data, ...(asks?.standup ? { branchStandup: asks.standup } : {}), deliverables: { ...all, items: all.items.filter((i) => i.team === team) } });
     },
   },
   /** POST /api/teams/labels?floor=<id>: makes the team labels the repo hasn't got, as the office's gh account. */

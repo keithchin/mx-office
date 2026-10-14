@@ -16,6 +16,7 @@ import type { BudgetAlert } from './budget/types.js';
 import type { SettingsSectionId } from './settings-sections.js';
 import type { RoleId } from './roster/roles.js';
 import { STUCK_ICON, stuckTitle, type StuckView } from './stuck.js';
+import { askNeeds, type AskAct, type AskKind, type AsksNeed } from './asks.js';
 import { questionsNeedParts, type QuestionsNeed } from './questions.js';
 
 /** Where an item's button takes you. */
@@ -38,10 +39,12 @@ export type NeedTarget =
   | { to: 'nudge'; role: RoleId }
   /** A stuck item's card (ui/stuck/): what's stuck, the evidence and its buttons. */
   | { to: 'stuck'; id: string }
+  /** A surfaced ask's button (server/asks/, shared/asks.ts): a message to the lead, your consent, the Documents page, or seen. */
+  | { to: 'ask'; id: string; act: AskAct }
   /** The Questions page (ui/questions/): the analysts' open questions for the client. */
   | { to: 'questions' };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions';
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | AskKind;
 
 /** How long a team member sits idle with an open task (nothing escalated) before Needs you says so. */
 export const IDLE_TASK_MS = 10 * 60_000;
@@ -62,8 +65,8 @@ export interface NeedItem {
   rank?: { n: number; chip: string; tip: string };
   /** Since when it has waited (ms), when known. */
   since?: number;
-  /** block: something is stopped until you act; warn: worth a look. */
-  level: 'block' | 'warn';
+  /** block: something is stopped until you act; warn: worth a look; info: shown, but not counted as waiting on you. */
+  level: 'block' | 'warn' | 'info';
   /** The button's words. */
   action: string;
   target: NeedTarget;
@@ -104,6 +107,8 @@ export interface NeedsInput {
   budget?: BudgetNeed;
   /** Work the office found stuck (server/stuck/): a PR nobody touches, a decision waiting on you, a test red for days, the team going in circles. */
   stuck?: StuckNeed;
+  /** What the office surfaced from where the team's words are (server/asks/): work not on main, assumptions without consent, gate advisories, what's ready for review. */
+  asks?: AsksNeed;
   /** The open questions for the client waiting on you (server/questions/): one item per project. */
   questions?: QuestionsNeed;
   /** Now (ms), for how long someone has been idle: Date.now() unless a test says. */
@@ -148,6 +153,10 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
       const loud = e.urgency === 'urgent' || e.urgency === 'critical';
       out.push({ key: `esc-${e.id}`, kind: 'escalation', icon: '🚩', tag: e.urgency.toUpperCase(), text: `${e.by} escalated: ${e.title}`, since: e.at, level: loud ? 'block' : 'warn', action: admin ? 'Answer' : 'View', target: { to: 'escalation', id: e.id }, ...(n !== undefined && e.jeffRank ? { rank: { n, chip: rankChip(n), tip: rankTip(e.jeffRank, n) } } : {}) });
     }
+    // 3b. FYI escalations: below the level's threshold, so no alert, but an ask hidden is an ask nobody answers. Shown low, not counted.
+    for (const e of r.escalations.filter((x) => x.status === 'open' && x.fyi).sort((a, b) => a.at - b.at)) {
+      out.push({ key: `fyi-${e.id}`, kind: 'fyi', icon: 'ℹ️', tag: 'FYI', text: `${e.by} escalated: ${e.title}`, since: e.at, level: 'info', action: admin ? 'Answer' : 'View', target: { to: 'escalation', id: e.id } });
+    }
     // 4. Proposals and merges waiting on you (escalations are above; the cap is the paused line below).
     for (const a of r.approvals) {
       if (a.kind === 'escalation' || (a.kind === 'cap' && r.paused)) continue;
@@ -174,6 +183,8 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
   // The analysts' open questions for the client waiting on you (server/questions/): one row for the batch.
   const qn = questionsNeedParts(i.questions && i.questions.floor === i.floor ? i.questions : undefined);
   if (qn) out.push({ key: qn.key, kind: 'questions', icon: '❓', text: qn.text, ...(qn.since !== undefined ? { since: qn.since } : {}), level: qn.level, action: 'Answer', target: { to: 'questions' } });
+  // Surfaced asks (server/asks/): assumptions without your consent and gate advisories (warn), work not on main and what's ready for review (info).
+  out.push(...askNeeds(i.asks, i.floor));
   // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold) not marked as seen.
   const b = i.budget && i.budget.floor === i.floor ? i.budget : undefined;
   if (b) {
@@ -186,8 +197,8 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     if (p.state !== 'OPEN' || p.isDraft || p.checks !== 'fail') continue;
     out.push({ key: `pr-${p.number}`, kind: 'pr', icon: '❌', text: `PR #${p.number} has failing checks: ${p.title}`, since: Date.parse(p.updatedAt) || undefined, level: 'warn', action: `Open PR #${p.number}`, target: { to: 'pr', number: p.number } });
   }
-  // A toolkit stage at a ✋ gate, waiting for your sign-off (the setup panel below says which).
-  for (const s of i.setup?.show ? i.setup.stages : []) {
+  // A toolkit stage at a ✋ gate, waiting for your sign-off: any stage gate-check marks MANUAL (3, 4, 7, and 5–6 where it wants a person), from its verdicts whether or not the setup panel shows.
+  for (const s of i.setup?.verdicts?.length ? i.setup.verdicts : i.setup?.show ? i.setup.stages : []) {
     if (s.status !== 'MANUAL') continue;
     out.push({ key: `setup-${s.id}`, kind: 'setup', icon: '✋', text: `Stage ${s.id} (${s.title}) waits for your sign-off`, level: 'warn', action: 'Sign off', target: { to: 'setup' } });
   }
@@ -217,5 +228,5 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
   return out;
 }
 
-/** How many are on this floor: the count on the 🎛️ Command Center tab. */
-export const hereCount = (items: readonly NeedItem[]) => items.filter((n) => n.kind !== 'floor').length;
+/** How many are on this floor: the count on the 🎛️ Command Center tab (info rows show, but aren't waiting on you). */
+export const hereCount = (items: readonly NeedItem[]) => items.filter((n) => n.kind !== 'floor' && n.level !== 'info').length;

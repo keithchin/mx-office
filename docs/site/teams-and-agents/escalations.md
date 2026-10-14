@@ -64,3 +64,16 @@ Your answer goes through even when the floor's daily cost cap is reached: the ca
 
 > [!NOTE]
 > A Lead waiting on an open escalation of its own is never benched for idling. It is waiting on you, not idle.
+
+## Asks that need a person: `needs-human` and `question`
+
+Two triggers are never filed as FYI, at any autonomy level: **`needs-human`**, a hands-on action only a person can do (merge a pull request, sign in such as `mxcli auth login`, paste a key, install a tool, allow something at the terminal, restart a preview), and **`question`**, a question only the Project Manager can answer. They toast, relay to the Coordinator and post to Teams like a blocking escalation. The Playbooks tell every Lead to raise hands-on asks with `office-workers escalate --trigger needs-human`, never as a `task` proposal; a standup proposal whose words are such an action becomes the **human-action** kind, which waits for the Project Manager at every level (a plain task is still the team's at level 4).
+
+## FYI escalations are shown, not hidden
+
+An escalation below the level's threshold is still filed as FYI (no toast, no Teams post), but Needs you lists it as a low **FYI** row, not counted in *N waiting on you*, so an ask filed quietly is still seen.
+
+## Escalations the office files for an agent
+
+- **From the chat.** Whoever covers Management (the Coordinator, or the lead on a Solo or Startup team) has Jeff's waiting judgement On by default (**The lead's chat** in Team settings, which can be set back to Shadow). When its last message really asks you something and it filed no escalation in that turn, the office files one for it, titled *From the chat: …*, as `question` or `needs-human`; the same ask isn't filed again within a day, and another open escalation doesn't hold it back.
+- **From an `AWAITING-PM` line.** Each item of the newest `AWAITING-PM:` line of a team journal (split on `;` and numbered parts) becomes an escalation of its own, read wherever the newest entry is: the project folder, an agent's worktree, its branch head (local git only). It happens on bench, on pause and in the office's five-minute look, once per entry, and the escalation closes by itself when the line is gone from the newest entry. An escalation the agent raised itself in the same words isn't doubled.

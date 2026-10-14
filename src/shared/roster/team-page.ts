@@ -4,6 +4,7 @@
 
 import type { DeliverablesView } from '../deliverables.js';
 import type { TeamId } from './roles.js';
+import type { BranchStandup } from '../asks.js';
 
 export interface TeamJournalEntry {
   heading: string;
@@ -24,6 +25,8 @@ export interface TeamPageData {
   design: string[];
   /** The newest standup page (docs/standups/<date>.md), for Management. */
   standup?: string;
+  /** A newer one on the lead's branch, not on main yet (server/asks/), for Management. */
+  branchStandup?: BranchStandup;
   /** The team's 📦 deliverables (server/deliverables/): main, its worktrees and the office branches. */
   deliverables?: DeliverablesView;
 }

@@ -17,6 +17,12 @@ export interface JeffSettings {
   priority: JeffPriorityMode;
   /** With waiting On, what it takes for him to raise an escalation the office's rule missed. */
   waitingPolicy: JeffWaitingPolicy;
+  /**
+   * Waiting on you, for whoever covers Management (the Coordinator, the Chief Analyst on a Startup team, the
+   * Solo Lead): On by default, so an ask in its chat becomes an escalation "from the chat" (roster/jeff.ts).
+   * Missing (a roster saved before it): On.
+   */
+  waitingLead?: JeffMode;
 }
 /** Jeff's priority sort is on or off: it only orders lists, so there's nothing to watch first. */
 export type JeffPriorityMode = 'off' | 'on';
@@ -29,7 +35,7 @@ export const isJeffPriorityMode = (v: unknown): v is JeffPriorityMode => v === '
 export type JeffWaitingPolicy = 'agree' | 'model';
 export const JEFF_WAITING_POLICIES: readonly JeffWaitingPolicy[] = ['agree', 'model'];
 export const isJeffWaitingPolicy = (v: unknown): v is JeffWaitingPolicy => v === 'agree' || v === 'model';
-export const DEFAULT_JEFF: JeffSettings = { waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree' };
+export const DEFAULT_JEFF: JeffSettings = { waiting: 'shadow', triage: 'shadow', priority: 'on', waitingPolicy: 'agree', waitingLead: 'on' };
 
 export type JudgeKind = 'waiting' | 'triage' | 'priority';
 export const JUDGE_KINDS: readonly JudgeKind[] = ['waiting', 'triage', 'priority'];

@@ -23,3 +23,14 @@ The Playbooks point at the toolkit's own skills in the toolkit clone (`AGENT_OFF
 
 > [!TIP]
 > Read a team's journal from the [Team boards](../using-the-office/team-boards.md) tab, or open any of these files from **☰ → 📚 Project docs**.
+
+## Every ask is an escalation
+
+The Playbooks and the office's prompts make sure nothing an agent needs from you sits where you don't look:
+
+- **The toolkit's "ask in chat" is overridden for the office.** Where a toolkit skill says to ask the user, an Mx Office agent files the question with `office-workers escalate`, one escalation per batch, never only in its chat, a journal, a handoff or a standup page. The same rule is in the pinned toolkit's block in the project's instructions.
+- **Hands-on asks** (merge a PR, sign in, paste a key, install a tool, allow something at the terminal, restart a preview) are `escalate --trigger needs-human`, never a `task` proposal.
+- **Whoever covers Management** ends any reply to you that asks for something by filing an escalation, lists only escalated items under **Blocked on you**, runs the blocker sweep over every place an ask hides (the build plan's pending decisions and `blocked…` rows, PROJECT.md's open questions, the BRDs' RAISED and UNRAISED `openQuestions`, `analysis/sme-questions.md`, every Lead's latest `AWAITING-PM` line, `.claude/.gate-advisories`, the open pull requests), raises asks that need a person's hands without waiting a day, and opens a docs-only pull request with its journal and standup pages at least daily, after the standup, so they reach main.
+- **The outlets stay, with the escalation as well:** the one-line "what I'll do next" of a fresh hire, the `AWAITING-PM:` line of a bench or pause handoff, the standup summary's "what needs the Project Manager" and the journal's `### Proposals` all ask for an escalation too when you must act.
+
+The office files what slips through anyway: see [Escalations the office files for an agent](escalations.md#escalations-the-office-files-for-an-agent).

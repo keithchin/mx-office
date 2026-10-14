@@ -50,7 +50,7 @@ test('most urgent first: asking, lost, escalations, approvals, paused, failing P
   assert.equal(hereCount(items), 6);
 });
 
-test('FYI and answered escalations are left out; the loudest and then the oldest come first', () => {
+test('answered escalations are left out, FYI ones come after the rest as info; the loudest and then the oldest come first', () => {
   const items = collectNeeds(
     input({
       roster: roster({
@@ -60,8 +60,9 @@ test('FYI and answered escalations are left out; the loudest and then the oldest
       }),
     }),
   );
-  assert.deepEqual(items.map((n) => n.key), ['esc-crit', 'esc-urg', 'esc-old']);
-  assert.deepEqual(items.map((n) => n.level), ['block', 'block', 'warn']);
+  assert.deepEqual(items.map((n) => n.key), ['esc-crit', 'esc-urg', 'esc-old', 'fyi-fyi']);
+  assert.deepEqual(items.map((n) => n.level), ['block', 'block', 'warn', 'info']);
+  assert.equal(hereCount(items), 3, 'the FYI row is not counted');
   assert.equal(items[0].tag, 'CRITICAL');
   assert.deepEqual(items[0].target, { to: 'escalation', id: 'crit' });
 });

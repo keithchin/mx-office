@@ -6,7 +6,7 @@
 // team lead. Pure: the page, the server and the tests import it.
 
 /** What is stuck: a PR nobody touches, a decision only the PM can make, a test red for days, or the team busy with nothing landing. */
-export type StuckKind = 'stale-pr' | 'decision' | 'failing' | 'circles';
+export type StuckKind = 'stale-pr' | 'decision' | 'failing' | 'circles' | 'blocked-row';
 
 export type StuckAction = 'ask-lead' | 'answer' | 'accept' | 'blockers' | 'snooze' | 'dismiss';
 
@@ -37,6 +37,8 @@ export interface StuckDraft {
   evidence: StuckEvidence[];
   pr?: { number: number; title: string; url?: string };
   decision?: { id: string; question: string; rows: string; journeys: string[]; workaround?: string; accepted?: string; brd?: string };
+  /** Build-plan rows whose State says blocked (stuck/blocked-rows.ts): which, on what, and the decision it names when that is resolved. */
+  row?: { rows: string; blocker: string; resolved?: string };
   /** Failing tests or journeys: the item's own (failing) or linked to a stale PR that causes them. */
   failing?: FailingFact[];
   /** The failing item's cause, when the build plan names a PR. */
@@ -139,6 +141,11 @@ export function stuckTitle(d: StuckDraft, now: number): string {
       const f = d.failing?.[0];
       return `${f?.name ?? 'A test'} has failed for ${age}${d.waitsOn ? `: waits on PR #${d.waitsOn}` : f?.detail ? ` with the same failure: ${f.detail}` : ''}`;
     }
+    case 'blocked-row': {
+      const r = d.row!;
+      const say = /^rows/.test(r.rows) ? 'say' : 'says';
+      return r.resolved ? `${r.rows[0].toUpperCase()}${r.rows.slice(1)} ${say} blocked on ${r.resolved}, which is resolved: update the build plan or name the real blocker` : `Build-plan ${r.rows} ${/^rows/.test(r.rows) ? 'have' : 'has'} been blocked for ${age} on: ${r.blocker || 'no blocker named'}`;
+    }
     case 'circles': {
       const c = d.circles!;
       return `The team has been working for ${ageWords(c.activeMs)} over ${age} with no progress: no merged PR, no stage change and no build-plan row change.`;
@@ -155,6 +162,8 @@ export function stuckConsequence(d: StuckDraft): string {
       return `Until you decide, ${d.decision!.rows ? `build-plan ${d.decision!.rows} stay parked` : 'the work it holds stays parked'}${d.decision!.journeys.length ? ` and ${d.decision!.journeys.join(', ')} can't be built or tested` : ''}.`;
     case 'failing':
       return 'A test that stays red stops proving anything, and new breaks hide behind it.';
+    case 'blocked-row':
+      return d.row!.resolved ? `The rows stay parked on a decision that was already made, so nobody builds them.` : `While it waits, build-plan ${d.row!.rows} stay parked.`;
     case 'circles':
       return 'Spend keeps going with nothing landing.';
   }
@@ -169,6 +178,8 @@ export function stuckNext(d: StuckDraft, lead = 'the team lead'): string {
       return d.decision!.workaround ? `Answer it, or accept ${d.decision!.workaround} for this slice.` : 'Answer it.';
     case 'failing':
       return d.waitsOn ? `Get PR #${d.waitsOn} merged or closed (ask ${lead}).` : `Ask ${lead} to fix it or say what it waits on.`;
+    case 'blocked-row':
+      return d.row!.resolved ? `Ask ${lead} to update the build plan, or name the real blocker.` : `Ask ${lead} what it waits on; if only you can clear it, it should be an escalation.`;
     case 'circles':
       return `Ask ${lead} for a blockers summary.`;
   }
@@ -179,6 +190,7 @@ export function stuckActions(d: StuckDraft): StuckAction[] {
   switch (d.kind) {
     case 'stale-pr':
     case 'failing':
+    case 'blocked-row':
       return ['ask-lead', 'snooze', 'dismiss'];
     case 'decision':
       return d.decision?.workaround ? ['answer', 'accept', 'snooze', 'dismiss'] : ['answer', 'snooze', 'dismiss'];
@@ -231,4 +243,4 @@ export function leadMessage(a: StuckAction, d: StuckDraft, now: number, answer =
   }
 }
 
-export const STUCK_ICON: Record<StuckKind, string> = { 'stale-pr': '⏳', decision: '❓', failing: '🔴', circles: '🔁' };
+export const STUCK_ICON: Record<StuckKind, string> = { 'stale-pr': '⏳', decision: '❓', failing: '🔴', circles: '🔁', 'blocked-row': '🧱' };

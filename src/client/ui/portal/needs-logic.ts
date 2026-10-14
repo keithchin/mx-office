@@ -131,6 +131,11 @@ const ROW_TAG: Record<NeedKind, string> = {
   incident: 'Incident',
   budget: 'Budget',
   stuck: 'Stuck',
+  fyi: 'FYI',
+  offmain: 'Not on main',
+  assumption: 'Consent',
+  advisory: 'Advisory',
+  review: 'Review',
   questions: 'Questions',
 };
 
@@ -144,5 +149,5 @@ export interface RowModel {
 /** An item that isn't an escalation, as a row: its tag (in words and colour) and its sentence. */
 export function rowModel(n: NeedItem): RowModel {
   const tag = n.kind === 'setup' && n.key.startsWith('setup-') && n.key !== 'setup-stale' ? '✋ Sign-off' : n.kind === 'incident' && n.tag ? `Incident ${n.tag}` : ROW_TAG[n.kind];
-  return { key: n.key, tag, tone: n.kind === 'floor' ? 'later' : n.level === 'block' ? 'block' : 'normal', text: n.text };
+  return { key: n.key, tag, tone: n.kind === 'floor' || n.level === 'info' ? 'later' : n.level === 'block' ? 'block' : 'normal', text: n.text };
 }

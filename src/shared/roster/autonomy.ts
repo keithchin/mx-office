@@ -15,8 +15,9 @@ export const HUMAN = 'the Project Manager';
 export const HUMAN_FULL = 'the Project Manager (the human who owns the project)';
 
 /** What a Lead might want to do that could need the Project Manager. */
-export type DecisionKind = 'task' | 'scope' | 'design' | 'architecture' | 'peer-review' | 'merge' | 'milestone' | 'client-milestone' | 'budget';
-export const DECISION_KINDS: readonly DecisionKind[] = ['task', 'scope', 'design', 'architecture', 'peer-review', 'merge', 'milestone', 'client-milestone', 'budget'];
+/** `human-action`: a hands-on action only a person can do (merge, sign in, paste a key, install, allow, restart): it waits for the Project Manager at every level. */
+export type DecisionKind = 'task' | 'scope' | 'design' | 'architecture' | 'peer-review' | 'merge' | 'milestone' | 'client-milestone' | 'budget' | 'human-action';
+export const DECISION_KINDS: readonly DecisionKind[] = ['task', 'scope', 'design', 'architecture', 'peer-review', 'merge', 'milestone', 'client-milestone', 'budget', 'human-action'];
 export const isDecisionKind = (v: unknown): v is DecisionKind => typeof v === 'string' && (DECISION_KINDS as readonly string[]).includes(v);
 
 export const DECISION_LABEL: Record<DecisionKind, string> = {
@@ -29,6 +30,7 @@ export const DECISION_LABEL: Record<DecisionKind, string> = {
   milestone: 'closing a milestone',
   'client-milestone': 'a client-facing milestone',
   budget: 'spending past the budget',
+  'human-action': 'a hands-on action only a person can do',
 };
 
 export interface AutonomyDef {
@@ -42,9 +44,9 @@ export interface AutonomyDef {
 
 export const AUTONOMY: Record<AutonomyLevel, AutonomyDef> = {
   1: { level: 1, name: 'Directive', summary: 'Leads only propose; the Project Manager approves every task.', approves: DECISION_KINDS },
-  2: { level: 2, name: 'Guided', summary: 'Leads may create tasks within the approved scope; the Project Manager approves design and architecture changes and merges.', approves: ['scope', 'design', 'architecture', 'peer-review', 'merge', 'milestone', 'client-milestone', 'budget'] },
-  3: { level: 3, name: 'Delegated', summary: "Leads may approve each other's work within budget; the Project Manager approves milestones and merges.", approves: ['merge', 'milestone', 'client-milestone', 'budget'] },
-  4: { level: 4, name: 'Autonomous', summary: 'The Project Manager approves only client-facing milestones and the budget.', approves: ['client-milestone', 'budget'] },
+  2: { level: 2, name: 'Guided', summary: 'Leads may create tasks within the approved scope; the Project Manager approves design and architecture changes and merges.', approves: ['scope', 'design', 'architecture', 'peer-review', 'merge', 'milestone', 'client-milestone', 'budget', 'human-action'] },
+  3: { level: 3, name: 'Delegated', summary: "Leads may approve each other's work within budget; the Project Manager approves milestones and merges.", approves: ['merge', 'milestone', 'client-milestone', 'budget', 'human-action'] },
+  4: { level: 4, name: 'Autonomous', summary: 'The Project Manager approves only client-facing milestones and the budget.', approves: ['client-milestone', 'budget', 'human-action'] },
 };
 
 export const isAutonomyLevel = (v: unknown): v is AutonomyLevel => v === 1 || v === 2 || v === 3 || v === 4;
@@ -93,8 +95,9 @@ export const isUrgency = (v: unknown): v is Urgency => typeof v === 'string' && 
 export type EscalationTrigger =
   | 'plan' | 'scope' | 'design' | 'architecture'
   | 'revisions-exhausted' | 'blocked' | 'milestone' | 'repeated-failure' | 'budget-risk'
-  | 'security' | 'data-loss' | 'client-milestone' | 'budget-overrun' | 'blocked-no-path';
-export const ESCALATION_TRIGGERS: readonly EscalationTrigger[] = ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', 'security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path'];
+  | 'security' | 'data-loss' | 'client-milestone' | 'budget-overrun' | 'blocked-no-path'
+  | 'needs-human' | 'question';
+export const ESCALATION_TRIGGERS: readonly EscalationTrigger[] = ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', 'security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path', 'needs-human', 'question'];
 export const isEscalationTrigger = (v: unknown): v is EscalationTrigger => typeof v === 'string' && (ESCALATION_TRIGGERS as readonly string[]).includes(v);
 
 export const TRIGGER_LABEL: Record<EscalationTrigger, string> = {
@@ -112,7 +115,16 @@ export const TRIGGER_LABEL: Record<EscalationTrigger, string> = {
   'client-milestone': 'a client-facing milestone',
   'budget-overrun': 'a budget overrun',
   'blocked-no-path': 'blocked with no path forward',
+  'needs-human': 'a hands-on action only a person can do',
+  question: 'a question only the Project Manager can answer',
 };
+
+/**
+ * Never FYI at any level: a hands-on action (merge, sign in, paste a key, install, allow, restart) is
+ * something only a person can do, and a question put to the Project Manager only they can answer, so
+ * filing either quietly means nobody does it (an ask the office files from an agent's chat is one of these).
+ */
+export const HUMAN_TRIGGERS: readonly EscalationTrigger[] = ['needs-human', 'question'];
 
 /** Escalated at every level, Autonomous included: what no team should decide alone. */
 export const CRITICAL_TRIGGERS: readonly EscalationTrigger[] = ['security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path'];
@@ -132,10 +144,10 @@ export interface ReviewPolicy {
 }
 
 export const REVIEW_POLICY: Record<AutonomyLevel, ReviewPolicy> = {
-  1: { level: 1, escalate: ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', ...CRITICAL_TRIGGERS], askBeforeNextStep: true, maxRevisions: 2, minUrgency: 'info', rule: 'Escalate every review outcome that changes scope, design or plan, and ask before dispatching the next step.' },
-  2: { level: 2, escalate: ['scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', ...CRITICAL_TRIGGERS], askBeforeNextStep: false, maxRevisions: 2, minUrgency: 'important', rule: 'Escalate design, architecture and scope changes, a review still failing after 2 revision rounds, and anything blocking.' },
-  3: { level: 3, escalate: ['milestone', 'repeated-failure', 'budget-risk', ...CRITICAL_TRIGGERS], askBeforeNextStep: false, maxRevisions: 3, minUrgency: 'urgent', rule: 'Escalate only milestone-level issues, repeated failures and budget risk.' },
-  4: { level: 4, escalate: [...CRITICAL_TRIGGERS], askBeforeNextStep: false, maxRevisions: 3, minUrgency: 'critical', rule: 'Escalate only critical issues: security, data loss, a client-facing milestone, a budget overrun, or blocked with no path.' },
+  1: { level: 1, escalate: ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', ...CRITICAL_TRIGGERS, ...HUMAN_TRIGGERS], askBeforeNextStep: true, maxRevisions: 2, minUrgency: 'info', rule: 'Escalate every review outcome that changes scope, design or plan, and ask before dispatching the next step.' },
+  2: { level: 2, escalate: ['scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', ...CRITICAL_TRIGGERS, ...HUMAN_TRIGGERS], askBeforeNextStep: false, maxRevisions: 2, minUrgency: 'important', rule: 'Escalate design, architecture and scope changes, a review still failing after 2 revision rounds, and anything blocking.' },
+  3: { level: 3, escalate: ['milestone', 'repeated-failure', 'budget-risk', ...CRITICAL_TRIGGERS, ...HUMAN_TRIGGERS], askBeforeNextStep: false, maxRevisions: 3, minUrgency: 'urgent', rule: 'Escalate only milestone-level issues, repeated failures and budget risk.' },
+  4: { level: 4, escalate: [...CRITICAL_TRIGGERS, ...HUMAN_TRIGGERS], askBeforeNextStep: false, maxRevisions: 3, minUrgency: 'critical', rule: 'Escalate only critical issues: security, data loss, a client-facing milestone, a budget overrun, or blocked with no path.' },
 };
 
 /** Whether a review that turned up `trigger` goes to the Project Manager at `level`. */
@@ -149,7 +161,7 @@ export function shouldEscalate(level: AutonomyLevel, trigger: EscalationTrigger)
  * its urgency is quieter than the level's. The office never refuses one: the Lead may know better.
  */
 export function isFyi(level: AutonomyLevel, urgency: Urgency, trigger?: EscalationTrigger): boolean {
-  if (urgency === 'critical' || (trigger && CRITICAL_TRIGGERS.includes(trigger))) return false;
+  if (urgency === 'critical' || (trigger && (CRITICAL_TRIGGERS.includes(trigger) || HUMAN_TRIGGERS.includes(trigger)))) return false;
   if (trigger) return !shouldEscalate(level, trigger);
   return URGENCIES.indexOf(urgency) < URGENCIES.indexOf(REVIEW_POLICY[level].minUrgency);
 }
@@ -181,6 +193,6 @@ export function reviewBrief(level: AutonomyLevel, journal: string): string {
     reviewTable(level),
     '',
     '`office-workers escalate --urgency <info|important|urgent|critical> --trigger <kind> --title "…" --option "A" --option "B" --recommend "A" <<\'EOF\'` … details … `EOF`',
-    `Urgency: \`critical\` for security, data loss, a client-facing milestone, a budget overrun or blocked with no path; \`urgent\` when work stops until they answer; \`important\` for a decision needed today; \`info\` to keep them informed. Triggers: ${ESCALATION_TRIGGERS.join(', ')}. Below this level's threshold the office files it as FYI instead of alerting ${HUMAN}.`,
+    `Urgency: \`critical\` for security, data loss, a client-facing milestone, a budget overrun or blocked with no path; \`urgent\` when work stops until they answer; \`important\` for a decision needed today; \`info\` to keep them informed. Triggers: ${ESCALATION_TRIGGERS.join(', ')}. Below this level's threshold the office files it as FYI instead of alerting ${HUMAN}; \`needs-human\` (a hands-on action only a person can do) always alerts them.`,
   ].join('\n');
 }

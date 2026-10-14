@@ -28,6 +28,7 @@ export const ASK_THE_PM = [
   '**Questions for the Project Manager go through `escalate`, never the chat.** The Project Manager does not watch your terminal: a question you write in your chat and then end your turn on is never seen, and an idle session may be benched. Whenever you need the Project Manager (or the client, through them) to answer, decide or sign something off:',
   '- raise it with `office-workers escalate` (or the `escalate` MCP tool). Batch related questions into one escalation: number them in the details, and give options and your recommendation where sensible;',
   '- then end your turn, or carry on with whatever it does not block. Never end a turn on a question that is not in an open escalation.',
+  '- this wins over any toolkit skill that says to ask the user in chat: never leave an ask only in your chat, a journal, a handoff or a standup page. A hands-on action only a person can do (merge a pull request, sign in, paste a key, install a tool, allow something at the terminal, restart a preview) is `escalate --trigger needs-human`.',
   'It shows in the Project Manager\'s approvals, and their answer comes back to you as a prompt. While it is open (unless the office files it as FYI) you are not benched for being idle; if you are benched meanwhile, the office hires you back with the answer.',
 ].join('\n');
 
@@ -50,7 +51,7 @@ export function primePrompt(roleId: RoleId, name: string, level: AutonomyLevel, 
       : 'This is your first session on the project: get your bearings, then write a short `— Kickoff` entry in your journal (what you found, what you plan).',
     ...(answers.length ? ['', 'While you were away, the Project Manager answered your escalations:', ...answers] : []),
     '',
-    task ? `Your task from the Project Manager: ${task}` : 'No task yet: once you have your bearings, say in one line what you will do next and wait for the Project Manager or the Project Coordinator.',
+    task ? `Your task from the Project Manager: ${task}` : 'No task yet: once you have your bearings, say in one line what you will do next and wait for the Project Manager or the Project Coordinator. If you need the Project Manager for it (an answer, a decision, a hands-on action), file that with `office-workers escalate` first: they never read this chat.',
   ].join('\n');
 }
 
@@ -61,7 +62,7 @@ export function benchPrompt(roleId: RoleId, lessons: string, stamp: string): str
     `The office is benching you to free resources: your session will be stopped and cleared once you've finished this turn, and your next hire starts fresh from your Playbook and the note you write now. Do only this:`,
     '',
     "1. First, if you are waiting on an answer, decision or sign-off from the Project Manager (or the client) that is not already in an open escalation — for instance a question you asked in your chat — raise it now with `office-workers escalate` (or the `escalate` MCP tool), all of them batched in one escalation with options where sensible. That puts it in the Project Manager's approvals, and their answer brings you back.",
-    `2. Append a handoff entry to \`${journalPath(role.team)}\`, headed \`## ${stamp} — Handoff\`, with: **What I know** (state of the work, where things are), **Decisions** (and why), **Open threads**, **Next steps**. Make it enough for a fresh session to carry on without asking. End it with one line \`AWAITING-PM: <what you are waiting on, in one line>\` if you are waiting on the Project Manager or the client, or \`AWAITING-PM: none\`.`,
+    `2. Append a handoff entry to \`${journalPath(role.team)}\`, headed \`## ${stamp} — Handoff\`, with: **What I know** (state of the work, where things are), **Decisions** (and why), **Open threads**, **Next steps**. Make it enough for a fresh session to carry on without asking. End it with one line \`AWAITING-PM: <what you are waiting on, in one line>\` if you are waiting on the Project Manager or the client (each item also in the escalation of step 1: the line alone is not an ask), or \`AWAITING-PM: none\`.`,
     `3. Append any durable lessons (gotchas, working recipes, mistakes not to repeat) to \`${lessons}\`, one dated bullet each. If \`mxcli brain capture\` is available, capture them there too.`,
     '4. Commit both files (with any finished work) and push your branch. Leave unfinished work committed on the branch, never lost.',
     '',
@@ -75,7 +76,8 @@ export function standupPrompt(roleId: RoleId, date: string, stamp: string, extra
   return [
     `Standup ${date}. Append a standup entry to \`${journalPath(role.team)}\` headed \`## ${stamp} — Standup\` with these sections, short bullets each (write "- none" for an empty one):`,
     '### Done', '### Next', '### Blockers', '### Proposals',
-    'Proposals are what needs the Project Manager (or what you suggest the project does): one per line, `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget. Each becomes an Approve / Reject / Change card for the Project Manager; approved ones become GitHub issues for your team.',
+    'Proposals are what needs the Project Manager (or what you suggest the project does): one per line, `- [kind] Title — why`, kind one of task, scope, design, architecture, peer-review, merge, milestone, client-milestone, budget, human-action. Each becomes an Approve / Reject / Change card for the Project Manager; approved ones become GitHub issues for your team.',
+    'A hands-on action only a person can do (merge a PR, sign in, paste a key, install a tool, allow something at the terminal, restart a preview) is `human-action`, never `task`, and escalate it too (`office-workers escalate --trigger needs-human`).',
     extra,
     "Don't start new work because of it, and don't end your turn on it: it's a pause in your task, not the end of it.",
   ].filter(Boolean).join('\n');
@@ -86,7 +88,7 @@ export function standupCompiledPrompt(date: string, pending: number, escalations
   const open = escalations.filter((e) => e.status === 'open');
   return [
     `The office compiled today's standup into \`${standupPath(date)}\` in your folder, from the Leads' answers and the journals of those not at their desks.`,
-    `Add a **Summary** at the top (≤ 5 lines: progress, risks, what needs the Project Manager${pending ? ` — ${pending} proposal${pending === 1 ? '' : 's'} await their decision` : ''}${open.length ? ` — ${open.length} open escalation${open.length === 1 ? '' : 's'}` : ''}), then commit and push it. Reply \`standup summarised\`.`,
+    `Add a **Summary** at the top (≤ 5 lines: progress, risks, what needs the Project Manager, each item already in an open escalation (file one first for any that isn't)${pending ? ` — ${pending} proposal${pending === 1 ? '' : 's'} await their decision` : ''}${open.length ? ` — ${open.length} open escalation${open.length === 1 ? '' : 's'}` : ''}), then commit and push it. Reply \`standup summarised\`.`,
     ...(open.length ? ['', 'Open escalations to the Project Manager (summarise them under **Escalations**; the Project Manager answers them on the project console, not you):', ...open.map(escalationLine)] : []),
   ].join('\n');
 }
