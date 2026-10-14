@@ -234,7 +234,7 @@ test('Playbooks: the Solo Lead owns every team’s deliverables and the .mpr; th
   assert.doesNotMatch(solo, /## Coordinating the team/, 'no Coordinator section');
   // One Playbook instead of five: at most a third more than a single Enterprise Lead's.
   const dev = playbook('lead-developer', ctx()).length;
-  assert.ok(solo.length < dev * 1.3, `the Solo Playbook stays short (${solo.length} chars against the Lead Developer's ${dev})`);
+  assert.ok(solo.length < (dev * 4) / 3, `the Solo Playbook stays short (${solo.length} chars against the Lead Developer's ${dev})`);
   const analyst = playbook('chief-analyst', ctx({ coverage: defaultCoverage('startup') }));
   assert.match(analyst, /## Teams you cover/);
   assert.match(analyst, /design\/brand\.md/);
