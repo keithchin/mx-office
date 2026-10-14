@@ -366,7 +366,8 @@ test('✨ New project opens a fresh wizard: unfinished setups are cards above it
   for (const label of ['Retry', 'Cancel & undo…', 'Open project', 'Resume project']) assert.ok(cards.includes(`'${label}'`), label);
 });
 
-test('test mode only lets a fake gh delete: the gh execFile really starts, never a .cmd shim ahead of a real gh.exe', (t) => {
+// Windows only: it lays out a Windows PATH (";"-separated, .cmd beside .exe) that path.win32 can only resolve on Windows.
+test('test mode only lets a fake gh delete: the gh execFile really starts, never a .cmd shim ahead of a real gh.exe', { skip: process.platform !== 'win32' }, (t) => {
   const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'gh-lookup-')));
   t.after(() => removeDir(root));
   const fake = path.join(root, 'test-office-x', 'bin');
