@@ -56,3 +56,11 @@ test('a hands-on proposal becomes human-action and waits for the PM at every lev
   const cards = toProposals(parsed, '2026-10-13', 'lead-developer', 'Dev', 4);
   assert.deepEqual(cards.map((c) => [c.kind, c.status]), [['human-action', 'pending'], ['task', 'auto']]);
 });
+
+test('with the Questions page merged: its row counts, the info rows (FYI, not on main) do not, and every row shows', () => {
+  const offmain = { id: 'o1', kind: 'offmain' as const, level: 'info' as const, text: "2 agent updates aren't on main", acts: [{ act: 'docs-pr' as const, label: 'Ask Ada to open a docs PR' }] };
+  const consent = { id: 'c1', kind: 'assumption' as const, level: 'warn' as const, text: '1 assumption made without your consent', acts: [{ act: 'agree' as const, label: 'Agree' }] };
+  const items = collectNeeds({ ...input([esc('f', { fyi: true })]), questions: { floor: 'f1', waiting: 3, brds: 1, blocking: 0, batch: 1 }, asks: { floor: 'f1', items: [offmain, consent] } });
+  assert.deepEqual(items.map((n) => n.kind).sort(), ['assumption', 'fyi', 'offmain', 'questions']);
+  assert.equal(hereCount(items), 2, 'questions and the consent row count; FYI and not-on-main are info');
+});

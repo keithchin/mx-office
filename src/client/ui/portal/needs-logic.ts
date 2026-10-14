@@ -136,6 +136,7 @@ const ROW_TAG: Record<NeedKind, string> = {
   assumption: 'Consent',
   advisory: 'Advisory',
   review: 'Review',
+  questions: 'Questions',
 };
 
 export interface RowModel {

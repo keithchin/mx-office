@@ -17,6 +17,7 @@ import { budgetOf } from '../budget/index.js';
 import { forgetWorker, noteWorkerStatus } from '../project-run/turns.js';
 import { ingestPulls } from '../testing/index.js';
 import { verifyOnPulls } from '../testing/verify-office.js';
+import { questionsOnWorker } from '../questions/index.js';
 
 /**
  * Tells the project team about a worker, unless the floor is still being built. A floor restores its
@@ -145,6 +146,8 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
         // The team phone: a reply it's waiting for may be in, now that a turn is over (server/phone/).
         team(ctx, floor, () => phoneOnWorker(ctx, floor, w));
       }
+      // A turn that ended may have written open questions: the Questions page collects again (questions/).
+      questionsOnWorker(ctx, floor, w);
       ctx.machine.workersChanged();
       ctx.floorsChanged();
     },

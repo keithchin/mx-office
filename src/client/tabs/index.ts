@@ -5,3 +5,4 @@
 
 import '../ui/testlab/tab';
 import '../ui/testing/tab';
+import '../ui/questions/tab';

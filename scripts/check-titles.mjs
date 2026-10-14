@@ -44,7 +44,7 @@ const WINDOW = 250;
 const lite = (tab, extra = '') => `/lite?floor=${encodeURIComponent(floor)}&tab=${tab}${extra}`;
 const LITE_HEAD = '#pt-head .pt-head-title';
 /** The 1D view's tabs, as the Portal navigation lists them (ui/portal/nav-logic.ts). */
-const TABS = ['command', 'org', 'teams', 'documents', 'board', 'approvals', 'standup', 'analysis', 'budget', 'audit', 'git', 'model', 'live', 'workers', 'settings', 'tests', 'testing'];
+const TABS = ['command', 'org', 'teams', 'documents', 'board', 'approvals', 'standup', 'analysis', 'budget', 'audit', 'git', 'model', 'live', 'workers', 'settings', 'tests', 'testing', 'questions'];
 const SETTINGS = ['you', 'workers', 'team', 'jeff', 'notify', 'budget', 'connections', 'deliverables', 'incidents', 'stuck', 'studio', 'appearance', 'advanced', 'testing', 'verification', 'danger'];
 const homeTab = (t) => async (page) => {
   const b = page.locator(`[data-tab="${t}"], .home-tabs button:has-text("${t}")`).first();

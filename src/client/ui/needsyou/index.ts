@@ -17,6 +17,7 @@ import { hasPhone, openPhone } from '../phone/api';
 import { batched } from '../batch';
 import { onStuckChanged, stuckFeedMessage, stuckNeed } from '../stuck/feed';
 import { asksFeedMessage, asksNeed, onAsksChanged } from '../asks/feed';
+import { onQuestionsChanged, questionsFeedMessage, questionsNeed } from '../questions/feed';
 import { publishNeeds } from './feed';
 import '../pm/jeff-rank.css';
 import './needsyou.css';
@@ -69,6 +70,7 @@ const KIND_WORDS: Record<NeedKind, [string, string]> = {
   assumption: ['without consent', 'without consent'],
   advisory: ['gate advisory', 'gate advisories'],
   review: ['to review', 'to review'],
+  questions: ['questions for the client', 'questions for the client'],
 };
 
 /** The compact row: a count per kind, most urgent kind first, and the button to the phone's Needs you. */
@@ -133,7 +135,7 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
   /** The team the last snapshot was published with: a new one (an escalation's options, say) publishes again. */
   let sentRoster: RosterView | undefined;
   function draw() {
-    const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live(), firm: deps.firm?.(), studio: deps.studio?.(), incidents: incidentBriefs(), budget: deps.budget?.(), stuck: stuckNeed(floor), asks: asksNeed(floor) });
+    const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live(), firm: deps.firm?.(), studio: deps.studio?.(), incidents: incidentBriefs(), budget: deps.budget?.(), stuck: stuckNeed(floor), asks: asksNeed(floor), questions: questionsNeed(floor) });
     const n = hereCount(items);
     // The time ago on each item is part of what it shows: the half-minute timer moves it on.
     const key = JSON.stringify([all, hasPhone(), items.map((i) => [i.key, i.text, i.level, i.action, i.tag ?? '', i.rank?.chip ?? '', i.since ? timeAgo(i.since) : '', i.alt?.action ?? ''])]);
@@ -180,6 +182,7 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
   onIncidentsChanged(draw);
   onStuckChanged(draw);
   onAsksChanged(draw);
+  onQuestionsChanged(draw);
   // "3m ago" moves on by itself.
   setInterval(draw, 30_000);
 
@@ -189,6 +192,7 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
       incidentFeedMessage(msg);
       stuckFeedMessage(msg);
       asksFeedMessage(msg);
+      questionsFeedMessage(msg);
       if (msg.t !== 'roster.changed' || msg.floor !== floor) return;
       // A burst of changes (a standup asking four Leads) fetches once.
       clearTimeout(timer);

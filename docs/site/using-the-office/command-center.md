@@ -65,6 +65,7 @@ The items, and their buttons in the list:
 | ⚠️ | *Gate advisory in &lt;agent&gt;'s copy: …*, tagged **Advisory** (the toolkit's gate-check wrote it to `.claude/.gate-advisories` and printed it only to that agent) | **Ask &lt;lead&gt;** or **Mark as seen** |
 | 📤 | *N agent updates aren't on main (standups, journals, handoffs) · &lt;agent&gt;: M commits*, tagged **Not on main** (info: shown, not counted) | **Ask &lt;lead&gt; to open a docs PR** or **Hide** |
 | 👀 | *Ready for your review: 5 BRDs, design system, 9 wireframes*, tagged **Review** (info: shown, not counted) | **Documents** or **Mark as seen** (a new one shows it again) |
+| ❓ | *N questions for the client · N BRDs · N block work*: the analysts' open questions in the BRDs waiting on you, one row per project ([Questions](questions.md)) | **Answer**: opens the Questions page |
 | ❌ | *PR #n has failing checks* | **Open PR #n** |
 | ✋ | *Stage X waits for your sign-off*: every ✋ stage gate-check marks MANUAL (3, 4, 7, and 5–6 where it wants a person), also after Stage 4 | **Sign off**: scrolls to the setup panel, or past Stage 4 to the progress bar |
 | 🌿 | *This floor's folder is on &lt;branch&gt;, N commits behind main* (only past 10 commits; last of this floor's items) | **Setup** |

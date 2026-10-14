@@ -36,7 +36,7 @@ export interface StuckDraft {
   blocks: string[];
   evidence: StuckEvidence[];
   pr?: { number: number; title: string; url?: string };
-  decision?: { id: string; question: string; rows: string; journeys: string[]; workaround?: string; accepted?: string };
+  decision?: { id: string; question: string; rows: string; journeys: string[]; workaround?: string; accepted?: string; brd?: string };
   /** Build-plan rows whose State says blocked (stuck/blocked-rows.ts): which, on what, and the decision it names when that is resolved. */
   row?: { rows: string; blocker: string; resolved?: string };
   /** Failing tests or journeys: the item's own (failing) or linked to a stale PR that causes them. */
@@ -132,6 +132,8 @@ export function stuckTitle(d: StuckDraft, now: number): string {
     }
     case 'decision': {
       const dec = d.decision!;
+      // A client question in a BRD (server/questions/): what it blocks is in its own words.
+      if (dec.brd) return `Client question waiting on you: ${dec.id} ${dec.question}${/[.…?!]$/.test(dec.question) ? '' : '.'}${d.blocks.length ? ` Blocks ${listWords(d.blocks)}.` : ''}`;
       const rows = dec.rows ? ` Blocks build-plan ${dec.rows}${dec.journeys.length ? ` (${dec.journeys.join(', ')})` : ''}.` : '';
       return `Decision waiting on you: ${dec.id} ${dec.question}${/[.…?!]$/.test(dec.question) ? '' : '.'}${rows}${dec.workaround ? ` Build continues on ${dec.workaround}.` : ''}`;
     }
@@ -225,6 +227,7 @@ export function leadMessage(a: StuckAction, d: StuckDraft, now: number, answer =
       return `The Project Manager asks: ${stuckTitle(d, now)}. Fix it, or tell me exactly what it waits on; if that is something only I can decide, escalate it (office-workers escalate) with options and a recommendation.`;
     case 'answer': {
       const dec = d.decision!;
+      if (dec.brd) return `The Project Manager answers open question ${dec.id} in ${dec.brd} (${dec.question}): "${answer.trim()}". Record it in that BRD's openQuestions entry ${dec.id}: status ANSWERED and this as its answer, then re-run bin/open-questions.sh.`;
       return `The Project Manager answers decision ${dec.id} (${dec.question}): "${answer.trim()}". Record it in PROJECT.md's Decisions as CONFIRMED by the Project Manager on ${date(now)}, mark ${dec.id} decided in the build plan's pending decisions${dec.rows ? `, and unblock ${dec.rows}` : ''}.`;
     }
     case 'accept': {

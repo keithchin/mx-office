@@ -15,7 +15,7 @@ import { teamLabel } from '../../shared/roster/card-team.js';
 export const BLOCKER_HEADING = '## Blockers only the Project Manager can clear';
 
 export const BLOCKER_SWEEP =
-  "- **Blocker sweep.** At every standup, and at least once a day while you are working, go through the build plan's pending decisions and rows whose state starts with `blocked`, PROJECT.md's open questions, the BRD's `openQuestions` that are RAISED or UNRAISED, `analysis/sme-questions.md`, every Lead's latest `AWAITING-PM` line, `.claude/.gate-advisories` and the open pull requests. Anything only the Project Manager or the client can resolve (a decision, a named owner, an access, a stale pull request that needs a person to review, merge or close) that has blocked work for more than a day must be raised with `office-workers escalate` (the `escalate` tool, trigger `blocked`), with the options and your recommendation. Don't just work around it silently: building on stubs or around an open pull request is fine only once the Project Manager has said so, and the escalation is how they find out. An ask that needs a person's hands is raised straight away, without waiting a day.";
+  "- **Blocker sweep.** At every standup, and at least once a day while you are working, go through the build plan's pending decisions and rows whose state starts with `blocked`, PROJECT.md's open questions, the BRD's `openQuestions` that are RAISED or UNRAISED, `analysis/sme-questions.md`, every Lead's latest `AWAITING-PM` line, `.claude/.gate-advisories` and the open pull requests. Anything only the Project Manager or the client can resolve (a decision, a named owner, an access, a stale pull request) that has blocked work for more than a day must be raised with `office-workers escalate` (trigger `blocked`), with the options and your recommendation. Don't just work around it silently: stubs or workarounds only once the Project Manager has said so. An ask that needs a person's hands is raised straight away, without waiting a day.";
 
 /** Hands-on asks (S1 of the surface-asks work): only a person can do them, so they're escalations, never task proposals. */
 export const HANDS_ON =
@@ -23,10 +23,10 @@ export const HANDS_ON =
 
 /** Whoever covers Management: an ask in a reply is an escalation too, and only escalated items are "Blocked on you". */
 export const REPLY_ASKS =
-  "- **Every ask is an escalation.** When a reply of yours to the Project Manager asks them for something, end that turn by filing it with `office-workers escalate` (one for the batch): a chat reply goes unseen.";
+  "- **Every ask is an escalation.** When a reply of yours to the Project Manager asks them for something, end that turn by filing it with `office-workers escalate` (one for the batch).";
 
 /** The journal and standup pages reach main: the office reads gates and stuck work from main only. */
-export const DOCS_PR = `- **Your pages reach main.** At least once a day, after the standup, open a docs-only pull request with your journal and the standup pages: \`gh pr create --label ${teamLabel('management')} …\` from a branch with only those files (or update the open one). Pages left on your branch are invisible to the office.`;
+export const DOCS_PR = `- **Your pages reach main.** At least once a day, after the standup, open a docs-only pull request with your journal and the standup pages: \`gh pr create --label ${teamLabel('management')} …\` from a branch with only those files. Pages left on your branch are invisible to the office.`;
 
 export const BLOCKED_ON_YOU = '- In the standup **Summary**, list what you raised under **Blocked on you**; the office adds what it found stuck itself. Only escalated items go there: escalate anything else first.';
 

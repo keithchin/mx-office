@@ -409,6 +409,7 @@ function goToNeed(t: NeedTarget) {
   if (t.to === 'nudge') return void nudgeMember(store.floor, t.role);
   if (t.to === 'stuck') return openStuck(t.id);
   if (t.to === 'ask') return void goAsk(t);
+  if (t.to === 'questions') return showTab('questions');
   if (t.to === 'floor') {
     // Lands on that floor's Command Center, where its Needs you says who is waiting and why.
     showTab('command');
