@@ -1,0 +1,9 @@
+/* The version banner (ui/version/index.ts): over the page's foot, in the color tokens. */
+.ao-ver { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 2147483000; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: min(760px, calc(100% - 32px)); box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); font-size: 13px; line-height: 1.4; }
+.ao-ver[data-tone='warn'] { background: var(--warn-soft); border-color: var(--warn); color: var(--warn-ink); }
+.ao-ver[data-tone='good'] { background: var(--good-soft); border-color: var(--good); color: var(--good-ink); }
+.ao-ver[data-tone='info'] { background: var(--info-soft); border-color: var(--info-line); }
+.ao-ver-text { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.ao-ver-x { margin-left: auto; border: 0; background: transparent; color: inherit; font-size: 14px; line-height: 1; padding: 4px 6px; cursor: pointer; border-radius: 6px; }
+.ao-ver-x:hover, .ao-ver-x:focus-visible { background: var(--neutral-soft); }
+html[data-theme='terminal'] .ao-ver { border-radius: 0; }

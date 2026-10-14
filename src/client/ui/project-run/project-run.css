@@ -59,3 +59,7 @@ html[data-theme='terminal'] .pr-toggle { border-radius: 0; }
 .pr-restart-choices { margin: 6px 0; flex-wrap: wrap; }
 .pr-log { max-height: 220px; overflow: auto; padding: 8px; border-radius: var(--radius-sm, 8px); background: var(--code-bg); color: var(--code-ink); font-size: 12px; white-space: pre-wrap; }
 .pr-log.hidden { display: none; }
+.pr-version { margin: 0 0 6px; font-weight: 600; }
+.pr-waiting { margin: 4px 0 6px; padding-left: 20px; }
+.pr-waiting.hidden, .pr-noloop.hidden { display: none; }
+.pr-noloop { margin: 6px 0; padding: 8px 10px; border-radius: var(--radius-sm, 8px); background: var(--warn-soft); color: var(--warn-ink); }

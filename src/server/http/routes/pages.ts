@@ -6,12 +6,14 @@ import { slugFromPath } from '../../../shared/docsite.js';
 import { legacyOfficeUrl } from '../../../shared/home.js';
 import type { Route, RouteRequest } from '../router.js';
 import type { Ctx } from '../../office/context.js';
+import { healthBody } from './version.js';
 
 /** One of the bundle's own pages, never cached, so a new version is picked up at once. */
 const page = (name: string) => (ctx: Ctx, { res }: RouteRequest) => serveFile(res, path.join(ctx.publicDir, name), false);
 
 export const pageRoutes = {
-  health: { path: '/api/health', auth: 'public', handle: (_ctx, { res }) => send(res, 200, { ok: true }) },
+  // Up, and which build since when (routes/version.ts): a script checks a restart really went through.
+  health: { path: '/api/health', auth: 'public', handle: (ctx, { res }) => send(res, 200, healthBody(ctx)) },
   assets: {
     prefix: '/assets/',
     auth: 'public',

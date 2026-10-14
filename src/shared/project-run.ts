@@ -5,6 +5,7 @@
 // floor until it's resumed. Pure types and a few helpers, no Node.
 
 import type { RoleId } from './roster/roles.js';
+import type { BuildInfo, RunningBuild } from './build-info.js';
 
 /** Why an agent has work waiting (the preview's reasons, in the order they're shown). */
 export type WorkKind = 'owed' | 'held' | 'outbox' | 'cut-off' | 'failing-pr' | 'issue' | 'standup';
@@ -181,6 +182,15 @@ export interface RestartView {
   log?: string;
   error?: string;
   admin: boolean;
+  /** The server's clock, for the countdown. */
+  now?: number;
+  /** While it waits: when the timeout asks what to do (it goes on by itself once nobody is busy, before or after). */
+  deadline?: number;
+  /** The longest the computer slept (or the office froze) under it: nothing moves then. */
+  slept?: { from: number; to: number };
+  /** The build the office runs ("Running release 45 (aaf30a5), started 08:32"), and a newer one built since. */
+  running?: RunningBuild;
+  ready?: BuildInfo;
 }
 
 /** The PowerShell launcher loop: run the office again while it exits asking to be restarted. */

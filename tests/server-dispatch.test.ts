@@ -167,7 +167,11 @@ after(() => {
 test('answers the open routes before anyone signs in', async () => {
   const health = await get('/api/health');
   assert.equal(health.status, 200);
-  assert.deepEqual(await health.json(), { ok: true });
+  // Up, and which build since when (routes/version.ts): a script can tell a restart really went through.
+  const up = (await health.json()) as { ok: boolean; sha: string; startedAt: number };
+  assert.equal(up.ok, true);
+  assert.equal(typeof up.sha, 'string');
+  assert.ok(up.startedAt > 0 && up.startedAt <= Date.now());
   assert.deepEqual(await (await get('/api/login')).json(), { accounts: false, shared: true });
   assert.deepEqual(await (await get('/api/claim')).json(), { claimable: false });
 
@@ -204,7 +208,7 @@ test('answers the open routes before anyone signs in', async () => {
   assert.equal((await get('/%zz')).status, 400);
   assert.match(await (await get('/claim')).text(), /<title>claim<\/title>/);
   assert.match(await (await get('/join.html')).text(), /<title>join<\/title>/);
-  assert.deepEqual(await (await fetch(base + '/api/health', { method: 'POST' })).json(), { ok: true });
+  assert.equal(((await (await fetch(base + '/api/health', { method: 'POST' })).json()) as { ok: boolean }).ok, true);
   // A route for another method is passed over, on to the sign-in check.
   const put = await fetch(base + '/api/login', { method: 'PUT' });
   assert.equal(put.status, 401);
@@ -231,6 +235,13 @@ test('signs in with the office password', async () => {
 test('answers the signed-in routes', async () => {
   const me = { cookie };
   assert.deepEqual(await (await get('/api/whoami', me)).json(), { ok: true, me: { admin: true } });
+  // Which build the office runs, since when, and no restart under way (the pages' version banner, ui/version/).
+  const ver = (await (await get('/api/office/version', me)).json()) as { running: { sha: string; startedAt: number }; admin: boolean; restart?: unknown };
+  assert.equal(typeof ver.running.sha, 'string');
+  assert.ok(ver.running.startedAt > 0);
+  assert.equal(ver.admin, true);
+  assert.equal(ver.restart, undefined);
+  assert.equal((await get('/api/office/version')).status, 401, 'signed in only');
   const old = await get('/?view=retro', me);
   assert.equal(old.status, 302);
   assert.equal(old.headers.get('location'), '/lite');

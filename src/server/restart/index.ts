@@ -4,12 +4,15 @@
 // <data>/restart-pending.json first; the next office resumes exactly those (▶ Resume project with the
 // preview's defaults) and deletes the file, so a floor a person had paused stays paused. A timeout
 // (10 min by default) asks: keep waiting, restart anyway (interrupting only those still working), or
-// cancel (resuming what it paused). Pure of the office: what it needs is RestartDeps.
+// cancel (resuming what it paused). It never says the office restarted: the new office says what it
+// runs (build.ts, the page's version banner). A computer asleep under it (13 Oct 2026: 34 minutes of
+// Modern Standby froze one) is noted, since nothing can move then. Pure of the office: RestartDeps.
 
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_RESTART_TIMEOUT_MIN, RESTART_EXIT_CODE, type RestartPhase, type RestartView } from '../../shared/project-run.js';
 import { audit, byWhom, office } from '../audit/index.js';
+import { buildLabel, type BuildInfo, type RunningBuild } from '../../shared/build-info.js';
 import { writeJsonAtomic } from '../flow/store.js';
 
 export interface Busy {
@@ -40,7 +43,12 @@ export interface RestartDeps {
   chatter?(floorId: string, text: string): void;
   /** Something to show changed. */
   changed?(): void;
+  /** The build the office runs, and a newer one built since (build.ts). */
+  builds?(): { running: RunningBuild; ready?: BuildInfo };
 }
+
+/** Ticks this far apart mean the computer slept (or the office froze) under the restart. */
+export const SLEPT_GAP_MS = 60_000;
 
 export interface Pending {
   floors: string[];
@@ -76,14 +84,25 @@ export class SafeRestart {
   log?: string;
   error?: string;
   waitingOn: string[] = [];
+  /** The longest the computer slept (or the office froze) while it waited. */
+  slept?: { from: number; to: number };
   private ticking = false;
+  private lastTick?: number;
   /** Floors this restart paused (the rest were paused by a person, or not at all). */
   ours: string[] = [];
 
   constructor(private deps: RestartDeps) {}
 
   view(admin: boolean): RestartView {
-    return { phase: this.phase, loop: this.deps.loop, newCommits: this.deps.newCommits(), by: this.by, startedAt: this.startedAt, waitingOn: this.waitingOn, timeoutMin: this.timeoutMin, build: this.build, log: this.log, error: this.error, admin };
+    const b = this.deps.builds?.();
+    const deadline = this.phase === 'waiting' || this.phase === 'timed-out' ? (this.waitStart ?? 0) + this.timeoutMin * 60_000 : undefined;
+    return { phase: this.phase, loop: this.deps.loop, newCommits: this.deps.newCommits(), by: this.by, startedAt: this.startedAt, waitingOn: this.waitingOn, timeoutMin: this.timeoutMin, build: this.build, log: this.log, error: this.error, admin, now: this.deps.now(), deadline, slept: this.slept, running: b?.running, ready: b?.ready };
+  }
+
+  /** "release 45 (aaf30a5)", for the record, when the office knows. */
+  private runningLabel(): string | undefined {
+    const b = this.deps.builds?.();
+    return b && buildLabel(b.running);
   }
 
   get active() {
@@ -94,7 +113,7 @@ export class SafeRestart {
   start(by: string, opts: { build?: boolean; timeoutMin?: number; byId?: string } = {}): string | undefined {
     if (this.active) return 'A safe restart is already under way';
     const now = this.deps.now();
-    Object.assign(this, { phase: 'pausing', by, byId: opts.byId, startedAt: now, waitStart: now, log: undefined, error: undefined, waitingOn: [] });
+    Object.assign(this, { phase: 'pausing', by, byId: opts.byId, startedAt: now, waitStart: now, log: undefined, error: undefined, waitingOn: [], slept: undefined, lastTick: now });
     this.build = !!opts.build && this.deps.newCommits();
     this.timeoutMin = Math.max(1, Math.min(120, Math.round(opts.timeoutMin ?? DEFAULT_RESTART_TIMEOUT_MIN)));
     this.ours = this.deps.floors().filter((id) => !this.deps.paused(id));
@@ -116,6 +135,7 @@ export class SafeRestart {
    */
   async tick(): Promise<void> {
     if ((this.phase !== 'waiting' && this.phase !== 'timed-out') || this.ticking) return;
+    this.noteGap(this.deps.now());
     this.ticking = true;
     let busy: Busy[];
     try {
@@ -135,6 +155,17 @@ export class SafeRestart {
       this.phase = 'timed-out';
       this.deps.changed?.();
     }
+  }
+
+  /** A long gap since the last tick: the computer slept, or the office froze, and the restart couldn't move. */
+  private noteGap(now: number) {
+    const last = this.lastTick;
+    this.lastTick = now;
+    if (last === undefined || now - last < SLEPT_GAP_MS) return;
+    if (!this.slept || now - last > this.slept.to - this.slept.from) this.slept = { from: last, to: now };
+    const min = Math.round((now - last) / 60_000);
+    audit.record({ actor: OFFICE_ACTOR, action: 'restart.slept', target: TARGET, summary: `The safe restart couldn't move for ${min} min: the computer slept or the office froze${this.waitingOn.length ? ` (waiting on ${this.waitingOn.join(', ')})` : ''}`, details: { from: last, to: now }, severity: 'notice' });
+    this.deps.changed?.();
   }
 
   /** The timeout's choice. Why not, if it can't. */
@@ -188,7 +219,7 @@ export class SafeRestart {
       }
     }
     this.phase = 'exiting';
-    audit.record({ actor: OFFICE_ACTOR, action: 'restart.exiting', target: TARGET, summary: this.deps.loop ? `Restarting the office${interrupting.length ? `, interrupting ${interrupting.map((b) => b.name).join(', ')}` : ''}` : 'Exiting the office: start it again to finish the restart', details: { interrupting, loop: this.deps.loop, build: this.build }, severity: interrupting.length ? 'warning' : 'notice' });
+    audit.record({ actor: OFFICE_ACTOR, action: 'restart.exiting', target: TARGET, summary: `${this.deps.loop ? `Restarting the office${interrupting.length ? `, interrupting ${interrupting.map((b) => b.name).join(', ')}` : ''}` : 'Exiting the office: start it again to finish the restart'}${this.runningLabel() ? ` (it ran ${this.runningLabel()})` : ''}`, details: { interrupting, loop: this.deps.loop, build: this.build }, severity: interrupting.length ? 'warning' : 'notice' });
     for (const id of this.ours) this.deps.chatter?.(id, '🔁 The office is restarting now; this project resumes when it’s back.');
     this.deps.changed?.();
     this.deps.exit(this.deps.loop ? RESTART_EXIT_CODE : 0);
@@ -200,16 +231,18 @@ export class SafeRestart {
  * resumed (▶ Resume project, the preview's defaults: those with work), and the file is deleted. A
  * floor a person paused since, or one that's gone, is left alone. The floors resumed.
  */
-export async function resumeAfterRestart(deps: Pick<RestartDeps, 'dataDir' | 'floors' | 'resume' | 'chatter'> & { pausedForRestart(floorId: string): boolean }): Promise<string[]> {
+export async function resumeAfterRestart(deps: Pick<RestartDeps, 'dataDir' | 'floors' | 'resume' | 'chatter' | 'builds'> & { pausedForRestart(floorId: string): boolean }): Promise<string[]> {
   const p = readPending(deps.dataDir);
   if (!p) return [];
   dropPending(deps.dataDir);
   const here = new Set(deps.floors());
   const floors = p.floors.filter((id) => here.has(id) && deps.pausedForRestart(id));
+  const b = deps.builds?.();
+  const now = b && buildLabel(b.running);
   for (const id of floors) {
     await deps.resume(id, p.by).catch((err: Error) => console.error(`agent-office: couldn't resume ${id} after the restart: ${err.message}`));
-    deps.chatter?.(id, '🔁 The office is back from its safe restart: resuming this project.');
+    deps.chatter?.(id, `🔁 The office is back from its safe restart${now ? `, on ${now}` : ''}: resuming this project.`);
   }
-  audit.record({ actor: OFFICE_ACTOR, action: 'restart.resumed', target: TARGET, summary: `Back from the safe restart: resumed ${floors.length} project${floors.length === 1 ? '' : 's'}`, details: { floors, skipped: p.floors.filter((id) => !floors.includes(id)) } });
+  audit.record({ actor: OFFICE_ACTOR, action: 'restart.resumed', target: TARGET, summary: `Back from the safe restart${now ? `, now running ${now}` : ''}: resumed ${floors.length} project${floors.length === 1 ? '' : 's'}`, details: { floors, skipped: p.floors.filter((id) => !floors.includes(id)), running: b?.running } });
   return floors;
 }
