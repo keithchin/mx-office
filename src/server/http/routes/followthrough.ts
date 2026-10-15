@@ -22,7 +22,7 @@ export const followThroughRoutes = {
     auth: 'session',
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, await followThroughOf(ctx).view(floor.id, ctx.meOf(session.account?.id).admin));
     },
   },
@@ -41,7 +41,7 @@ export const followThroughRoutes = {
         return send(res, 400, { error: 'Send JSON' });
       }
       const floor = ctx.floors.get(String(body.floor ?? ''));
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       if (!isFollowAction(body.action)) return send(res, 400, { error: `action is one of ${FOLLOW_ACTIONS.join(', ')}` });
       const decision = String(body.decision ?? '');
       if (!/^(esc|q):/.test(decision)) return send(res, 400, { error: 'decision is esc:<id> or q:<file>#<id>' });
