@@ -18,6 +18,7 @@ import { changedFiles, foldersOf, questionLocator } from '../src/server/question
 import { Dispatcher } from '../src/server/dispatch/service.js';
 import { FollowThrough } from '../src/server/followthrough/service.js';
 import { judgeQuestion } from '../src/server/followthrough/judge.js';
+import { withMarker } from '../src/shared/dispatch.js';
 import { git } from './followthrough-helpers.js';
 
 const KB = 'analysis/knowledge-base/brd';
@@ -72,7 +73,7 @@ async function harness() {
     decisionHours: () => 24,
     record: () => {},
   });
-  const ft = new FollowThrough({ dataDir: data, now: () => NOW, dispatcher, escalations: () => [], questions: () => ({ book: (id) => svc.book(id), commit: (id) => svc.commit(id) }), escTarget: () => 'n/a', qTarget: async () => 'Nobody is at work to record it', flush: async () => {}, record: () => {} });
+  const ft = new FollowThrough({ dataDir: data, now: () => NOW, dispatcher, escalations: () => [], questions: () => ({ book: (id) => svc.book(id), commit: (id) => svc.commit(id) }), escTarget: () => 'n/a', qTarget: async () => (text: string) => ({ channel: 'type' as const, workerId: 'w-tim', workerName: 'Tim', payload: (m: string) => withMarker(text, m), act: () => ({ state: 'submitted' as const }) }), flush: async () => {}, record: () => {} });
   const KEY = 'F001.brd.json#OQ-01';
   const record = (where: string, status: string, extra: Record<string, unknown>) => writeFileSync(path.join(where, KB, 'F001.brd.json'), brd([q('OQ-01', status, extra)]));
   const answer = async () => (await svc.view(floor, true)).answers[KEY];
@@ -169,4 +170,27 @@ test('a record matching an earlier revision is recorded for that revision', () =
   const j = judgeQuestion(qq, { answerRev: 2, expected: [{ rev: 1, state: 'ANSWERED', answer: 'Weekly' }, { rev: 2, state: 'ANSWERED', answer: 'Daily' }] });
   assert.deepEqual([j.outcome, j.rev], ['recorded-older-rev', 1]);
   assert.equal(judgeQuestion({ ...qq, state: 'RAISED' }, { answerRev: 2, expected: [{ rev: 2, state: 'ANSWERED', answer: 'Weekly' }] }).outcome, 'not-recorded-yet');
+});
+
+test('send-correction-dispatches (questions): a correction revision, its expectation carried over, and one dispatch to the analyst with the answer to record', async () => {
+  const h = await harness();
+  await h.svc.answer(h.floor, h.KEY, 'answer', { text: 'Weekly, on Mondays.', by: 'Keith' });
+  await h.svc.send(h.floor, 'Tim', { by: 'Keith', when: 'after' });
+  h.record(h.tim, 'ANSWERED', { answer: 'Monthly.' });
+  await h.svc.collect(h.floor);
+  assert.equal((await h.answer()).recording?.outcome, 'recorded-differently');
+  const r = await h.ft.act(h.floor.id, `q:${h.KEY}`, 'send-correction', { by: 'Keith', expectedRev: 1 });
+  assert.ok(r.ok, JSON.stringify(r));
+  const a = await h.answer();
+  assert.equal(a.answerRev, 2);
+  assert.deepEqual(a.expected?.map((x) => [x.rev, x.answer]), [[1, 'Weekly, on Mondays.'], [2, 'Weekly, on Mondays.']]);
+  const recs = h.dispatcher.store.list(h.floor.id);
+  assert.equal(recs.length, 1);
+  assert.equal(recs[0].answerRev, 2);
+  assert.match(recs[0].payload, /Correction: the BRD's record of OQ-01 differs/);
+  assert.match(recs[0].payload, /answer: "Weekly, on Mondays\."/);
+  assert.equal(a.dispatchId, recs[0].id);
+  // Still recorded differently until the analyst fixes it.
+  await h.svc.collect(h.floor);
+  assert.equal((await h.answer()).recording?.outcome, 'recorded-differently');
 });
