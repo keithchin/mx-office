@@ -1,6 +1,7 @@
 // A floor's "Needs you" as the server sees it: the same NeedsInput the Command Center's strip builds in
-// the browser (workers, the team, PRs, the setup panel, the Firm, Studio mode), run through the same
-// collectNeeds (shared/needsyou.ts), then the red ones made ready to post.
+// the browser (workers, the team, PRs, the setup panel, the Firm, Studio mode, incidents, the budget,
+// stuck items, surfaced asks, questions and the decision cards' Separate choices), through the same
+// builder (shared/decisions/input.ts) and collectNeeds (shared/needsyou.ts), then the red ones made ready to post.
 
 import { collectNeeds, type NeedItem, type NeedsInput } from '../../shared/needsyou.js';
 import { isRedNeed, notifyRows } from '../../shared/notify-teams.js';
@@ -20,6 +21,20 @@ import { budgetNeedOf } from '../budget/need.js';
 import { stuckNeedOf } from '../stuck/index.js';
 import { questionsNeedOf } from '../questions/index.js';
 import { settingsHref } from '../../shared/settings-sections.js';
+import { needsInputOf } from '../../shared/decisions/input.js';
+import { asksFloor, asksOf } from '../asks/index.js';
+import { decisionsOf } from '../decisions/index.js';
+import type { AsksNeed } from '../../shared/asks.js';
+
+/** The floor's surfaced asks as Needs you reads them (the same the browser's feed hands in). */
+async function asksNeedOf(ctx: Ctx, floor: Floor): Promise<AsksNeed | undefined> {
+  try {
+    const v = await asksOf(ctx).view(asksFloor(ctx, floor), true);
+    return v.items.length ? { floor: floor.id, items: v.items, ...(v.unreadAt ? { unreadAt: v.unreadAt } : {}) } : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export interface FloorNeeds {
   input: NeedsInput;
@@ -52,7 +67,7 @@ async function setupOf(ctx: Ctx, floor: Floor, now: number): Promise<SetupView |
 export async function floorNeeds(ctx: Ctx, floor: Floor, now = Date.now()): Promise<FloorNeeds> {
   const roster = teamOf(ctx, floor);
   const setup = await setupOf(ctx, floor, now);
-  const input: NeedsInput = {
+  const input: NeedsInput = needsInputOf({
     floor: floor.id,
     workers: floor.workers.list(),
     roster,
@@ -60,13 +75,16 @@ export async function floorNeeds(ctx: Ctx, floor: Floor, now = Date.now()): Prom
     floors: [],
     setup,
     // Its report-ready line comes from an audit this office ran, so a Firm nobody made has none.
+    live: undefined,
     firm: firmIfMade(ctx)?.floorStatus(floor.id),
     studio: studioStateOf(floor.id),
     incidents: attentionBriefs(),
     budget: budgetNeedOf(ctx, floor),
     stuck: await stuckNeedOf(ctx, floor),
+    asks: await asksNeedOf(ctx, floor),
     questions: await questionsNeedOf(ctx, floor),
-  };
+    splits: await decisionsOf(ctx).splits.get(floor.id).catch(() => []),
+  });
   return { input, needs: collectNeeds(input) };
 }
 

@@ -36,6 +36,7 @@ import { blockedOnYou } from './blocked-on-you.js';
 import type { TeamFloor } from './types.js';
 import { audit, byWhom } from '../audit/index.js';
 import { decisionsRelayed } from '../chatter/hooks.js';
+import { raiseHandsOn } from '../decisions/hands-on.js';
 
 /** How long the Leads asked live get to answer before the page is compiled without them. */
 export const COLLECT_MS = 20 * 60_000;
@@ -49,6 +50,8 @@ export class StandupRunner {
   private asks = new Map<string, { at: number; sawBusy: boolean }>();
   /** The Coordinator's debounce per floor; the decisions it's to hear are in the roster file's outbox. */
   private timers = new Map<string, NodeJS.Timeout>();
+  /** Proposals being approved right now (floor:id): a second approval while the issue is being made is refused, so there's one issue. */
+  private approving = new Set<string>();
   /** Lets go of a deleted project's floor (office/forget.ts). */
   private readonly forgetsFloor = forgetWith(this, (o, f) => (dropKeys(o.asks, f), dropKeys(o.timers, f)));
 
@@ -223,11 +226,21 @@ export class StandupRunner {
     if (p.status !== 'pending' && p.status !== 'change') return `Already ${p.status === 'auto' ? 'decided by the team' : p.status}`;
     const why = reason?.trim().slice(0, 1000) || undefined;
     if (decision !== 'approve' && !why) return decision === 'reject' ? 'Say why it is rejected' : 'Say what should change';
+    const key = `${floor.id}:${p.id}`;
+    if (this.approving.has(key)) return 'Already being approved';
     if (decision === 'approve') {
-      const issue = await this.makeIssue(floor, p, by, why, env);
-      if (issue.error) return `Couldn't make the issue: ${issue.error}`;
-      p.issue = issue;
-      p.status = 'approved';
+      // Claimed before the await: two approvals at once used to make two issues (the status check was before it).
+      this.approving.add(key);
+      try {
+        const issue = await this.makeIssue(floor, p, by, why, env);
+        if (issue.error) return `Couldn't make the issue: ${issue.error}`;
+        p.issue = issue;
+        p.status = 'approved';
+      } finally {
+        this.approving.delete(key);
+      }
+      // A hands-on action only a person can do: approving it also puts a hands-on card in Needs you, open until I've done it.
+      if (p.kind === 'human-action') raiseHandsOn(this.roster, floor, p, by);
     } else p.status = decision === 'reject' ? 'rejected' : 'change';
     p.reason = decision === 'approve' ? (why ?? p.reason) : why;
     p.decidedBy = by;

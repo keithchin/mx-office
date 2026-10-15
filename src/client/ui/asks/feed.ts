@@ -49,7 +49,7 @@ export function asksNeed(floor: string | null | undefined): AsksNeed | undefined
       setInterval(() => asked && void refresh(asked), POLL_MS);
     }
   }
-  return view && view.floor === floor && view.items.length ? { floor, items: view.items } : undefined;
+  return view && view.floor === floor && view.items.length ? { floor, items: view.items, ...(view.unreadAt ? { unreadAt: view.unreadAt } : {}) } : undefined;
 }
 
 export function onAsksChanged(fn: () => void): () => void {

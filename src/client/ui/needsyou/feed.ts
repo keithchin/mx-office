@@ -4,12 +4,15 @@
 // listen. No fetch or timer of its own: it's the strip's work, shared.
 
 import type { RosterView } from '../../../shared/roster/types';
+import type { DecisionCard } from '../../../shared/decisions/types';
 import { hereCount, type NeedItem, type NeedTarget } from './logic';
 
 export interface NeedsSnapshot {
   floor?: string;
-  /** Everything that needs you, most urgent first (collectNeeds). */
+  /** Everything that needs you, most urgent first (collectNeeds): each the compact row of a card. */
   items: readonly NeedItem[];
+  /** The same as decision cards (shared/decisions/), in the same order: `cards[i].need === items[i]`. */
+  cards?: readonly DecisionCard[];
   /** The floor's team the items were worked out from (its escalations in full), once fetched. */
   roster?: RosterView;
   /** Takes you to an item's fix, as the strip's own buttons do. */

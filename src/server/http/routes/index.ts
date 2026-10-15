@@ -46,6 +46,7 @@ import { firstRunFixRoutes } from './first-run-fix.js';
 import { testingRoutes } from './testing.js';
 import { stuckRoutes } from './stuck.js';
 import { asksRoutes } from './asks.js';
+import { decisionRoutes } from './decisions.js';
 import { questionsRoutes } from './questions.js';
 import { versionRoutes } from './version.js';
 
@@ -170,6 +171,8 @@ export const routes: readonly Route[] = [
   stuckRoutes.setSettings,
   asksRoutes.view,
   asksRoutes.act,
+  decisionRoutes.view,
+  decisionRoutes.act,
   questionsRoutes.view,
   questionsRoutes.refresh,
   questionsRoutes.answer,
