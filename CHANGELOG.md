@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Added
+
+- **Agents and Hire from your agents.** Every team member now has an agent profile: an id that never changes, a name you can edit (names are unique across the office) and the projects it worked on, with dates. Home has a **👥 Agents** tab with each agent's page: its projects, a track record that says *not measured yet*, and your notes (admins only, never given to an agent). On a project's Team tab, a free seat has **👥 From your agents**: pick an agent and it starts here in a fresh session with this project's Playbook; nothing from its earlier projects comes along. One that is working on another project is never hired twice: the office explains a **Move** (it writes its handoff note there, which stays there, and is benched; then it is hired here) and asks you to confirm. A move survives a restart, and if the hire here fails the agent stays benched where it was, with **Retry** and **Cancel move** on its page. Existing team members get a profile each the first time the office starts, never merged by name. See [Agents](docs/site/using-the-office/agents.md).
 
 ## 2026-10-15 · release 50 (`0d92abc`)
 

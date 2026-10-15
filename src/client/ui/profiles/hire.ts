@@ -13,7 +13,7 @@ import './profiles.css';
 
 export function hireFromAgents(opener: HTMLElement | null, floor: string, role: RoleId, done: () => void) {
   const status = h('p.pr-status', { role: 'status' }, 'Asking the office…');
-  const list = h('div.pr-pick', { role: 'listbox', 'aria-label': 'Your agents' });
+  const list = h('div.pr-pick', { role: 'group', 'aria-label': 'Your agents' });
   const task = h('textarea.pr-input', { rows: '2', maxlength: '4000', placeholder: 'A task to start on (optional)', 'aria-label': 'A task to start on (optional)' }) as HTMLTextAreaElement;
   const hire = h('button.btn.primary', { type: 'button', disabled: '' }, '🤝 Hire');
   const body = h('div.body', {}, h('p.pr-note', {}, PROFILE_HONESTY), list, h('label.pr-field', {}, h('span', {}, 'Task'), task), status);
@@ -67,7 +67,7 @@ export function hireFromAgents(opener: HTMLElement | null, floor: string, role: 
           const busy = !!p.move && p.move.state !== 'failed';
           const row = h(
             'button.pr-row',
-            { type: 'button', role: 'option', 'aria-selected': 'false', ...(busy ? { disabled: '' } : {}) },
+            { type: 'button', 'aria-pressed': 'false', ...(busy ? { disabled: '' } : {}) },
             h('span.pr-row-h', {}, h('b', {}, p.label), h('span.pr-where', { 'data-kind': p.where.kind }, whereText(p))),
             h('span.pr-row-l', {}, `Roles: ${rolesText(p)}`),
             h('span.pr-row-l', {}, `Projects: ${projectsText(p) || 'none'}`),
@@ -75,7 +75,7 @@ export function hireFromAgents(opener: HTMLElement | null, floor: string, role: 
           );
           row.onclick = () => {
             picked = p;
-            for (const x of list.querySelectorAll('.pr-row')) x.setAttribute('aria-selected', String(x === row));
+            for (const x of list.querySelectorAll('.pr-row')) x.setAttribute('aria-pressed', String(x === row));
             hire.textContent = p.where.kind === 'free' ? `🤝 Hire ${p.displayName}` : `🤝 Hire ${p.displayName}…`;
             hire.removeAttribute('disabled');
           };

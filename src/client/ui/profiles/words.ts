@@ -28,11 +28,14 @@ export function projectsText(p: ProfileView, names: (floor: string, fallback: st
   return [...p.assignments].reverse().map((a) => `${names(a.floor, a.project)} (${periodText(a)})`).join('; ');
 }
 
-/** The rows in the order shown: this role's agents first, then the rest; never the seat's own agent. */
+const FREE_FIRST: Record<ProfileView['where']['kind'], number> = { free: 0, benched: 1, working: 2, moving: 3 };
+
+/** The rows in the order shown: agents that held this role first, then those from other projects, the free ones before the busy; never the seat's own agent. */
 export function hireOrder(list: readonly ProfileView[], floor: string, role: RoleId): ProfileView[] {
   const others = list.filter((p) => !(p.where.kind !== 'free' && p.where.floor === floor && p.where.role === role));
   const held = (p: ProfileView) => (p.roles.includes(role) ? 0 : 1);
-  return [...others].sort((a, b) => held(a) - held(b) || a.label.localeCompare(b.label));
+  const here = (p: ProfileView) => (p.where.kind !== 'free' && p.where.floor === floor ? 1 : 0);
+  return [...others].sort((a, b) => held(a) - held(b) || here(a) - here(b) || FREE_FIRST[a.where.kind] - FREE_FIRST[b.where.kind] || a.label.localeCompare(b.label));
 }
 
 /** The Move confirmation's lines: the effect on the source project, then here. */
