@@ -68,6 +68,8 @@ export interface PrereqResult {
   path?: string;
   /** A one-click fix an admin may press (never done by itself): long paths in git's user config. */
   action?: PrereqAction;
+  /** Something the row offers once it is ok: gh signed in and the agents without a token, so save it from that sign-in. */
+  offer?: 'gh-token';
 }
 
 /** The one-click fixes a row can offer. */
@@ -106,7 +108,7 @@ export const PREREQ_META: Record<PrereqId, PrereqMeta> = {
   gh: { label: 'GitHub CLI (gh)', purpose: 'Lists your repositories, opens issues and pull requests for the agents.', required: true, link: 'https://cli.github.com', linkLabel: 'cli.github.com' },
   'gh-auth': { label: 'gh signed in', purpose: 'gh needs a GitHub sign-in (or the agents’ token, next step) to reach your repositories.', required: true, link: 'https://cli.github.com/manual/gh_auth_login', linkLabel: 'gh auth login' },
   claude: { label: 'Claude Code (claude)', purpose: 'Every agent is a Claude Code session.', required: true, link: 'https://docs.claude.com/en/docs/claude-code/setup', linkLabel: 'Install Claude Code' },
-  'claude-auth': { label: 'Claude Code signed in', purpose: 'Agents run on your Claude Code sign-in (or an API key).', required: true, link: 'https://docs.claude.com/en/docs/claude-code/setup', linkLabel: 'Sign in' },
+  'claude-auth': { label: 'Claude Code signed in', purpose: 'Agents run on your Claude Code sign-in, or an Anthropic API key saved in 🔌 Connections.', required: true, link: 'https://docs.claude.com/en/docs/claude-code/setup', linkLabel: 'Sign in' },
   studio: { label: 'Mendix Studio Pro', purpose: 'Builds and checks the Mendix apps (mxbuild, mx); new projects start on one of these versions.', required: true, link: 'https://marketplace.mendix.com/link/studiopro/', linkLabel: 'Mendix Marketplace' },
   mxcli: { label: 'mxcli', purpose: 'How agents read and change Mendix models, and runs the Live app.', required: true, link: 'https://github.com/mendixlabs/mxcli/releases', linkLabel: 'mxcli releases' },
   jq: { label: 'jq', purpose: 'The toolkit’s scripts read JSON with it.', required: true, link: 'https://jqlang.org/download/', linkLabel: 'jqlang.org', windowsOnly: true },

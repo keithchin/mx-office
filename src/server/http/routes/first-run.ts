@@ -13,7 +13,8 @@ import { setPath } from '../../connections/paths.js';
 import { updateOfficeSettings } from '../../connections/store.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import { cloneToolkit } from '../../first-run/clone.js';
-import { finishSetup, firstRunView, rerunSetup, runPrereqs, setDefaultMendix, setMxcli, setOrg, setStep, setupReasons, turnOnLongPaths } from '../../first-run/index.js';
+import { checkRows } from '../../first-run/fix-machine.js';
+import { finishSetup, firstRunView, rerunSetup, setDefaultMendix, setMxcli, setOrg, setStep, setupReasons, turnOnLongPaths } from '../../first-run/index.js';
 import { tildify } from '../../building.js';
 import type { CloneEvent } from '../../../shared/first-run.js';
 
@@ -31,7 +32,7 @@ export const firstRunRoutes = {
         if (p === '/api/setup') return send(res, 200, firstRunView(ctx, admin));
         // The home page's one look on load (client/first-run/gate.ts): cheap, nothing but whether to come here.
         if (p === '/api/setup/needed') return send(res, 200, { needed: setupReasons(ctx).length > 0, admin });
-        if (p === '/api/setup/checks') return admin ? send(res, 200, { rows: await runPrereqs(ctx) }) : send(res, 403, { error: ADMINS_ONLY });
+        if (p === '/api/setup/checks') return admin ? send(res, 200, { rows: await checkRows(ctx) }) : send(res, 403, { error: ADMINS_ONLY });
         return send(res, 404, { error: 'Not found' });
       }
       if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });

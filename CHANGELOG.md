@@ -6,7 +6,14 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Added
+
+- **One-click setup.** First-run setup's Prerequisites step has a **🔧 Fix** on each missing row and **⚡ Set up everything**, which runs every fix the check asks for in order and stops at the first that fails, saying why. Nothing runs until the admin says yes: a window first lists every command and where each program comes from, and the office refuses a run without the confirm it handed out. Progress streams live.
+  - **Installs:** winget on Windows for Git (with Git Bash), the GitHub CLI, Node.js LTS and jq, then the office reads PATH again from Windows so the new program counts without a restart. Without winget it shows the download links; on macOS and Linux the `brew` and `apt` lines. Claude Code comes from its official installer (npm when that can't run), mxcli is the newest release's binary in the office's `tools` folder, and the toolkit is cloned.
+  - **GitHub in one click:** `gh auth login --web` runs without a terminal and its one-time code is shown big with **📋 Copy** and a button to GitHub's page; then `gh auth setup-git`. The agents' GitHub token can be saved from the same sign-in, straight from `gh auth token` into 🔌 Connections, never shown, logged or audited by value. A gh that needs a terminal gets a window of its own.
+  - **Claude Code sign-in:** **Sign in with your Claude account** opens a terminal running `claude` (the office never sees the credentials) and waits for it; **Use an API key** saves an Anthropic API key in 🔌 Connections (a new card), given to workers as `ANTHROPIC_API_KEY` and never echoed.
+  - Admins only, audited, and a test office never runs any of it (`AGENT_OFFICE_FAKE_SETUP=1` runs scripted fakes there instead).
+- **Get Mx Office in one line.** The README's new **Get Mx Office** section: `irm …/scripts/get-mx-office.ps1 | iex` checks for Git and Node.js (offering winget), clones the office (or pulls it when it's there), runs `npm ci` and `npm run build`, and starts it on First-run setup.
 
 ## 2026-10-14 · release 46 (`363fe1e`)
 

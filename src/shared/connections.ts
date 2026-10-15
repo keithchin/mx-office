@@ -3,7 +3,7 @@
 // to make one, and the office's paths and worktree cleanup that sit on the same admin page.
 // Pure, no Node imports: the page and the server both use it.
 
-export const CREDENTIAL_IDS = ['github-agents', 'github-admin', 'mendix', 'jev', 'teams-webhook', 'web-push-key', 'password'] as const;
+export const CREDENTIAL_IDS = ['github-agents', 'github-admin', 'mendix', 'anthropic', 'jev', 'teams-webhook', 'web-push-key', 'password'] as const;
 export type CredentialId = (typeof CREDENTIAL_IDS)[number];
 export const isCredentialId = (v: unknown): v is CredentialId => CREDENTIAL_IDS.includes(v as CredentialId);
 
@@ -178,6 +178,18 @@ export const CREDENTIAL_META: Record<CredentialId, CredentialMeta> = {
     createUrl: () => 'https://user-settings.mendix.com/link/developersettings',
     createLabel: 'Open Mendix user settings',
     testable: true,
+  },
+  anthropic: {
+    icon: '✳️',
+    label: 'Anthropic API key (Claude Code)',
+    purpose: 'Only for an office whose agents run Claude Code on an API key instead of a Claude account sign-in: given to workers as ANTHROPIC_API_KEY, billed to that API account. Set it in first-run setup or here; leave it empty when you sign in to Claude Code with your account.',
+    scopes: ['An Anthropic Console API key (sk-ant-api…)'],
+    how: ['Open the Anthropic Console → API keys → Create key.', 'Copy it and paste it here. It is never shown again.'],
+    createUrl: () => 'https://console.anthropic.com/settings/keys',
+    createLabel: 'Anthropic Console',
+    testable: false,
+    shape: /^sk-ant-api\d*-[A-Za-z0-9_-]{20,}$/,
+    shapeHint: 'An Anthropic API key starts with sk-ant-api',
   },
   jev: {
     icon: '⚖️',

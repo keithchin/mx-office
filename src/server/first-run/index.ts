@@ -19,7 +19,7 @@ import { toolkitProblem } from '../connections/paths.js';
 import { credential } from '../connections/resolve.js';
 import { liveAppConfig } from '../liveapp/config.js';
 import { mendixVersions, preferredMendix, projectOrg, wizardConfig } from '../wizard/config.js';
-import { checkPrereqs, findOnPath, machineDeps, runOff } from './checks.js';
+import { checkPrereqs, findOnPath, machineDeps, runOff, type CheckDeps } from './checks.js';
 
 export type Who = { name: string; id?: string };
 
@@ -153,23 +153,31 @@ export async function turnOnLongPaths(who: Who, run: (file: string, args: string
 /** The step a finished-or-not setup is on (for tests and the page). */
 export const currentStep = (): FirstRunStep => setupRecord().step ?? 'welcome';
 
-/** The prerequisite check on this machine, with the office's own settings. */
-export function runPrereqs(ctx: Ctx) {
-  return checkPrereqs(
-    machineDeps({
-      mendix: () => {
-        const dir = wizardConfig().mendixDir;
-        return { dir, versions: mendixVersions(dir) };
-      },
-      mxcli: () => wizardConfig().mxcli,
-      bash: () => wizardConfig().bash,
-      jqDir: () => wizardConfig().jqDir,
-      toolkit: () => {
-        const dir = toolkitDirState().dir;
-        return { dir: tildify(dir), problem: toolkitProblem(dir) };
-      },
-      db: () => liveAppConfig(ctx.cfg.dataDir).db,
-      secrets: () => [credential('github-agents'), credential('github-admin'), process.env.GH_TOKEN, process.env.GITHUB_TOKEN],
-    }),
-  );
+/** The prerequisite check on this machine, with the office's own settings. gh signed in while the agents
+ * have no token: the row offers to save it from that sign-in. */
+export async function runPrereqs(ctx: Ctx) {
+  const rows = await checkPrereqs(prereqDeps(ctx));
+  const offer = !credential('github-agents');
+  return rows.map((r) => (r.id === 'gh-auth' && r.status === 'ok' && offer ? { ...r, offer: 'gh-token' as const } : r));
+}
+
+/** The checks' deps on this machine: an API key saved in 🔌 Connections signs Claude Code in as well. */
+export function prereqDeps(ctx: Ctx): CheckDeps {
+  const key = credential('anthropic');
+  const d = machineDeps({
+    mendix: () => {
+      const dir = wizardConfig().mendixDir;
+      return { dir, versions: mendixVersions(dir) };
+    },
+    mxcli: () => wizardConfig().mxcli,
+    bash: () => wizardConfig().bash,
+    jqDir: () => wizardConfig().jqDir,
+    toolkit: () => {
+      const dir = toolkitDirState().dir;
+      return { dir: tildify(dir), problem: toolkitProblem(dir) };
+    },
+    db: () => liveAppConfig(ctx.cfg.dataDir).db,
+    secrets: () => [credential('github-agents'), credential('github-admin'), credential('anthropic'), process.env.GH_TOKEN, process.env.GITHUB_TOKEN],
+  });
+  return key ? { ...d, env: { ...d.env, ANTHROPIC_API_KEY: key } } : d;
 }

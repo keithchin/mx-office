@@ -9,7 +9,7 @@ This page takes a Windows machine with nothing on it to a running office with it
 
 ## Before you begin
 
-Install these first. The setup screen checks each one again later and shows a green or red row for it, so you can also install a missing one then.
+You can install these yourself first, or let the setup screen do most of it: each missing row has a **🔧 Fix** button, and **⚡ Set up everything** runs them all (see [One-click setup](#one-click-setup)). Studio Pro and PostgreSQL are links only.
 
 | What | Why the office needs it | Get it |
 | --- | --- | --- |
@@ -26,6 +26,16 @@ You also need a GitHub account (or organization) for the projects, and a Mendix 
 
 > [!TIP]
 > After you install a program, open a **new** PowerShell window. A window that was open before doesn't see the program on its PATH yet.
+
+## Get it in one line
+
+In PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/keithchin/mx-office/main/scripts/get-mx-office.ps1 | iex
+```
+
+The script (`scripts/get-mx-office.ps1`) checks for Git and Node.js and offers to install them with winget (it asks first), clones the office into `%USERPROFILE%\mx-office-app` (set `$env:MX_OFFICE_DIR` for another folder), runs `npm ci` and `npm run build`, and starts it with `scripts\start-office.ps1`, which opens the first-run setup. Running it again is safe: an existing folder is updated with `git pull` instead of cloned. It replaces steps 1 and 2 below.
 
 ## Step 1: Clone, install and build
 
@@ -66,13 +76,31 @@ If PowerShell refuses to run the script ("running scripts is disabled on this sy
 A new office opens on **🚀 First-run setup** (`/setup`). It has six steps. Each step is saved as you go, so a reload or a restart opens on the same step.
 
 1. **Welcome.** Set the office password (at least 8 characters) and, if you like, your name. Anyone who signs in with the password is an admin. The office keeps only its hash.
-2. **Prerequisites.** A row for each program in the table above: green when it is there, red with a fix and an install link when it isn't. **Required** and **Optional** say which ones a project needs. Press **🔄 Re-check** after you install something (restart the office after installing a program, so it is on its PATH). If mxcli is somewhere the office doesn't look, give its path in the mxcli row.
+2. **Prerequisites.** A row for each program in the table above: green when it is there, red with a **🔧 Fix** button and an install link when it isn't. **Required** and **Optional** say which ones a project needs. **⚡ Set up everything** fixes them all in one go ([One-click setup](#one-click-setup)). Press **🔄 Re-check** after you install something yourself. If mxcli is somewhere the office doesn't look, give its path in the mxcli row.
 3. **GitHub.** The organization (or your user name) new projects are created in, and the two tokens: the **agents' token** for the projects' repositories, and the **admin token** that only creates new repositories. Each card explains the exact permissions, links to GitHub's form with them filled in, and has a **🧪 Test** button.
 4. **Mendix.** Your Mendix personal access token, and the Studio Pro version new projects start on.
 5. **Toolkit.** Pick the folder of an existing clone of the mxcli project toolkit, or clone it: the upstream is filled in, or type your organization's fork. The clone runs in the background and shows git's progress.
 6. **Done.** A summary, then **✨ Create your first project** (opens the [new-project wizard](first-project.md)) or **📚 Open docs**.
 
 Only admins can do the steps. Everything you set here can be changed later in **⚙️ Settings › 🔌 Connections**, which also has **🚀 Run setup again**.
+
+## One-click setup
+
+On the **Prerequisites** step, **🔧 Fix** on a row fixes that row, and **⚡ Set up everything** runs every fix the check asks for, in order, and stops at the first one that fails, saying why. Nothing runs until you say yes: the office first shows a window with every command it will run and where each program comes from, and only **Install and set up** starts it. The window then shows the progress as it happens. Closing it (✕ or Esc) stops the run.
+
+| Row | What Fix does |
+| --- | --- |
+| Node.js, Git (with Git Bash), GitHub CLI, jq | `winget install --id <package> --exact --source winget --accept-package-agreements --accept-source-agreements --silent` with `OpenJS.NodeJS.LTS`, `Git.Git`, `GitHub.cli` or `jqlang.jq`. Afterwards the office reads PATH again from Windows, so the new program counts without a restart (a new Node.js needs one: the office runs on the Node it started with). Without winget it shows the download links; on macOS and Linux it shows the `brew` and `apt` lines to type. |
+| Long paths for git | `git config --global core.longpaths true`. |
+| gh signed in | Runs `gh auth login --web` and shows GitHub's **one-time code** big, with **📋 Copy** and a button to `github.com/login/device`. Type the code there and approve: the window carries on by itself, then runs `gh auth setup-git` so git pushes with the same sign-in. If your gh can't sign in without a terminal, the office opens a terminal window running `gh auth login` instead, says so, and waits. |
+| The agents' GitHub token | **Save the agents' GitHub token from that sign-in** (on by default in the window, or **🔑 Save as the agents' GitHub token** on a signed-in row): `gh auth token` goes straight into 🔌 Connections. It is never shown, logged or sent to the page. It is your own sign-in's token, so agents act on GitHub as you; you can swap in a fine-grained token in Connections later. |
+| Claude Code | Claude Code's official installer for your user (`irm https://claude.ai/install.ps1 \| iex` on Windows, `install.sh` elsewhere), or `npm install -g @anthropic-ai/claude-code` when it can't run. |
+| Claude Code signed in | Two ways. **🔑 Sign in with your Claude account** opens a terminal window running `claude`, so its own sign-in runs there (the office never sees it) and the office waits for it. **Use an API key** saves an Anthropic API key into 🔌 Connections, never shown again; workers get it as `ANTHROPIC_API_KEY` and are billed to that API account. |
+| mxcli | Downloads the newest release for this machine from `github.com/mendixlabs/mxcli/releases/latest` into the office's `tools\mxcli` folder, checks it runs, and points the office at it. |
+| Toolkit | Clones the toolkit into `~/mendix-toolkit` (the clone the Toolkit step runs). |
+| Studio Pro, PostgreSQL | Links only. Pick Studio Pro 11.12 (or the version your projects use); PostgreSQL is optional, for the Live app, with the user `postgres`. |
+
+Only admins can run fixes, the office checks the confirm on its side (a run without it is refused), and every run, each step's result and the saved token (without its value) are in the audit log. A test office never runs any of it.
 
 ## Step 4: A desktop shortcut
 

@@ -72,6 +72,8 @@ export function dotFiles(home: string, env: NodeJS.ProcessEnv = process.env): Re
     jev: [line(jevSet ? path.resolve(jevSet) : path.join(home, '.agent-office-jev-key'))],
     // Only ever in Connections (the webhook used to be in notify-teams.json, moved here once).
     'teams-webhook': [],
+    // Only ever in Connections (or ANTHROPIC_API_KEY the office was started with).
+    anthropic: [],
     'web-push-key': [],
     password: [line(path.join(home, '.agent-office-password'))],
   };
@@ -113,6 +115,8 @@ export function resolveCredential(id: CredentialId, deps: ResolveDeps = defaults
       if (r.value && env.AGENT_OFFICE_JEV_KEY_FILE?.trim()) return { ...r, source: 'env', where: `AGENT_OFFICE_JEV_KEY_FILE → ${r.where}` };
       return fromEnv('TYPESAFE_API_KEY', env.TYPESAFE_API_KEY) ?? r;
     }
+    case 'anthropic':
+      return fromEnv('ANTHROPIC_API_KEY', deps.started.ANTHROPIC_API_KEY) ?? {};
     case 'teams-webhook':
     case 'web-push-key':
     case 'password':
