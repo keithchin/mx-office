@@ -16,16 +16,23 @@ import type { TeamFloor } from './types.js';
 
 /** A target that types `text` to `w` (or holds it, as delivery decides), with what delivery said. */
 export function typeTarget(roster: Roster, floor: TeamFloor, w: WorkerInfo, text: string, opts: SendOpts, extra: Partial<Pick<Target, 'covers' | 'supersedes'>> = {}): Target & { sent?: Sent } {
+  let typedNow = false;
   const t: Target & { sent?: Sent } = {
     channel: 'type',
     workerId: w.id,
     workerName: w.name,
     ...extra,
-    payload: (marker) => withMarker(text, marker),
+    // Typed now: the resume line goes inside the payload, so the marker is the message's own last line.
+    // Held: the text and its marker, a block of the message that goes in after the turn (its resume line after it).
+    payload: (marker) => {
+      typedNow = roster.delivery.typesNow(floor, w, opts);
+      return withMarker(typedNow ? roster.delivery.resumed(floor, w, text, opts) : text, marker);
+    },
     session: () => sessionAt(floor, w),
     act: async (r): Promise<Outcome> => {
       const now = floor.worker(w.id) ?? w;
-      const sent = roster.delivery.send(floor, now, text, { ...opts, dispatch: { id: r.id, marker: r.marker } });
+      // Exactly the recorded payload: typed now (never held, its resume line in it), or held as recorded.
+      const sent = roster.delivery.send(floor, now, text, { ...opts, ...(typedNow ? { hold: false, resume: false } : {}), dispatch: { id: r.id, marker: r.marker, payload: r.payload } });
       t.sent = sent;
       if (sent.status === 'refused') return { state: 'refused', note: sent.why };
       if (sent.status === 'held') {

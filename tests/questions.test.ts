@@ -463,3 +463,26 @@ function hasBash(): boolean {
     return false;
   }
 }
+
+test('durable dispatch: a question answer is a revision in the answer store (a stale one is a 409); a Send whose outcome is unknown stays pending with its dispatch id', async () => {
+  const { Dispatcher } = await import('../src/server/dispatch/service.js');
+  const { ready } = await import('../src/server/questions/book.js');
+  const h = harness();
+  const d = new Dispatcher({ dataDir: h.deps.dataDir, now: () => h.state.now });
+  h.deps.answer = (f, spec) => d.answer(f.id, spec);
+  h.deps.send = () => ({ dispatchId: 'dsp_01JB0000000000000000000000', unknown: true });
+  const svc = new QuestionsService(h.deps);
+  await svc.collect(h.floor);
+  const key = 'F001-registry.brd.json#OQ-03';
+  assert.equal(await svc.answer(h.floor, key, 'answer', { text: 'Weekly.', by: 'Keith', expectedRev: 0 }), undefined);
+  assert.equal((await d.answers.history(h.floor.id, `q:${key}`))[0].text, 'Weekly.');
+  const stale = await svc.answerResult(h.floor, key, 'answer', { text: 'Daily.', by: 'Sam', expectedRev: 0 });
+  assert.equal(stale?.status, 409);
+  assert.equal(d.answers.rev(h.floor.id, `q:${key}`), 1, 'nothing written for the stale one');
+  assert.equal((await svc.view(h.floor, true)).answers[key].answerRev, 1);
+  assert.match(String(await svc.send(h.floor, 'Tim', { by: 'Keith', when: 'after' })), /Couldn't confirm the answers were typed to Tim/);
+  const book = await svc.book(h.floor.id);
+  assert.equal(book.answers[key].status, 'pending', 'release 47 offers Send again, as today');
+  assert.equal(book.answers[key].dispatchId, 'dsp_01JB0000000000000000000000');
+  assert.ok(ready(book).some((a) => a.key === key));
+});

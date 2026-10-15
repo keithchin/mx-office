@@ -73,7 +73,7 @@ export interface SendOpts {
    * A person's answer as a durable dispatch (server/dispatch/): its id (the held prompt's id too) and its
    * marker line, typed as the text's own last line (a resume line or notes may go round it, never inside).
    */
-  dispatch?: { id: string; marker: string };
+  dispatch?: { id: string; marker: string; /** The exact block recorded before typing (dispatch-send.ts); else the text and the marker. */ payload?: string };
 }
 
 export type Sent = { status: 'sent' | 'woke' | 'held' } | { status: 'refused'; why: string };
@@ -102,7 +102,7 @@ export class Delivery {
   send(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts): Sent {
     if (w.kind !== 'agent') return { status: 'refused', why: `${w.name} is a shell, not an agent` };
     if (o.dispatch) {
-      text = withMarker(text, o.dispatch.marker);
+      text = o.dispatch.payload ?? withMarker(text, o.dispatch.marker);
       o = { ...o, id: o.dispatch.id };
     }
     // A person's prompt with no name is still theirs: the turn it starts flags when done (OFFICE_BY's wouldn't).
@@ -144,6 +144,24 @@ export class Delivery {
   }
 
   private resumes = (o: SendOpts) => o.resume ?? o.origin === 'office';
+
+  /**
+   * Whether send() would type (or wake with) a prompt now rather than hold or refuse it, as things are:
+   * a durable answer typed now carries its resume line inside its payload, so its marker is the typed
+   * message's own last line (dispatch-send.ts).
+   */
+  typesNow(floor: TeamFloor, w: WorkerInfo, o: SendOpts): boolean {
+    if (w.kind !== 'agent') return false;
+    if (o.origin !== 'person' && (this.roster.pauseOf(this.roster.data(floor.id)) || projectPauseOf(floor.id))) return false;
+    const held = o.origin === 'office' && !o.interrupt;
+    if (isAsleepStatus(w.status)) return !!o.wake;
+    return mayType(w.status) && !((o.between || held) && !between(w.status));
+  }
+
+  /** The resume line a prompt to `w` would end with now (resume.ts), when its options ask for one. */
+  resumed(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts): string {
+    return this.resumes(o) ? withResume(text, this.roster.tasks.line(floor, w)) : text;
+  }
 
   /**
    * What goes in before a message as it's typed (awareness.ts): the once-only "the project was resumed"
