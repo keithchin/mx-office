@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-15 · release 50 (`0d92abc`)
+
 ### Added
 
 - **Task ids.** Every new piece of work the office hands an agent now has a task id (`tsk_…`): a hire's task, a task you or the Coordinator give a team member, a model change request, a stuck item's or a decision card's ask to the lead, a queue task and a proposal's issue. The agent reads it as a *Task: tsk_…* line at the end of the task, the pull request the desk opens carries it, and the Playbooks ask agents to put it on their commits and pull requests. Handing the task to someone else, or restarting its worker, keeps the id; each attempt gets its own execution id. Both go on audit events and on budget rows where the office knows them, ready for tokens per task later.
