@@ -99,6 +99,7 @@ The acceptance record lists every version, newest first. Each one shows:
 - the commit;
 - the scope, tests, documents and exceptions;
 - the frozen spend.
+- the decision revisions it accepts as implemented as decided, when the acceptance names them (`decisions` on the record, set through `POST /api/acceptance`; the dialog has no picker for them yet). That is the only thing that makes a decision's task link read **Implemented as decided**: see [Task ids and linked work](../teams-and-agents/escalations.md#task-ids-and-linked-work).
 
 If the delivery branch has moved past the accepted commit, or the deliverables on main have changed, the record and the bar say **Changed since acceptance**. This is worked out each time you look. The record itself stays as it was.
 
