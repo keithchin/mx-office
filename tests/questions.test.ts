@@ -106,7 +106,7 @@ test('collection across main and two worktrees: the worktree copy wins over main
   const oq1 = m.get('F001-registry.brd.json#OQ-01')!;
   assert.equal(oq1.state, 'ANSWERED');
   assert.equal(oq1.reason, 'from the script');
-  assert.deepEqual(oq1.source, { where: 'worktree', agent: 'Tim', workerId: 'w-tim', worktree: 'tim-1', committed: false });
+  assert.deepEqual(oq1.source, { where: 'worktree', agent: 'Tim', workerId: 'w-tim', worktree: 'tim-1', committed: false, rel: 'analysis/visitor-desk/knowledge-base/brd/F001-registry.brd.json' });
   assert.equal(sourceWords(oq1.source), "Tim's working copy, not committed");
   assert.equal(m.get('F001-registry.brd.json#OQ-03')!.state, 'UNRAISED');
   // F002 only on main, committed.
@@ -266,7 +266,7 @@ test('Send builds ONE message with every answer for that analyst, delivered afte
   assert.equal(await h.svc.send(h.floor, 'Tim', { by: 'Keith', when: 'after' }), 'No answers are ready to send to them');
 });
 
-test('an answer is recorded only when a later collection shows ANSWERED, ASSUMED or MOOT for that id', async () => {
+test('legacy-items-unchanged: an answer with no answer revision is recorded when a later collection shows ANSWERED, ASSUMED or MOOT for that id, labelled legacy', async () => {
   const h = harness();
   await h.svc.collect(h.floor);
   await h.svc.answer(h.floor, 'F001-registry.brd.json#OQ-03', 'answer', { text: 'Weekly.', by: 'Keith' });
@@ -281,7 +281,8 @@ test('an answer is recorded only when a later collection shows ANSWERED, ASSUMED
   const a = v.answers['F001-registry.brd.json#OQ-03'];
   assert.equal(a.status, 'recorded');
   assert.equal(a.recordedState, 'ANSWERED');
-  assert.equal(cardStatus(byKey(v.set!.questions).get(a.key)!, a).text, 'Recorded (ANSWERED by Keith, 13 Oct)');
+  assert.equal(a.answerRev, undefined, 'the harness has no answer store: a legacy answer');
+  assert.equal(cardStatus(byKey(v.set!.questions).get(a.key)!, a).text, "Recorded (ANSWERED by Keith, 13 Oct) · legacy: by the toolkit's state");
   assert.ok(h.audits.some((x) => x.action === 'questions.recorded' && /OQ-03 \(ANSWERED\)/.test(x.summary)));
 });
 
