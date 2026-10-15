@@ -26,13 +26,15 @@ async function refresh(floor: string) {
 }
 
 function follow(floor: string | null | undefined) {
-  if (!floor || typeof fetch !== 'function' || floor === asked) return;
+  if (!floor || typeof fetch !== 'function' || typeof location === 'undefined' || floor === asked) return;
   asked = floor;
   view = undefined;
   void refresh(floor);
   if (!polling) {
     polling = true;
-    setInterval(() => asked && void refresh(asked), POLL_MS);
+    const t = setInterval(() => asked && void refresh(asked), POLL_MS);
+    // Never what keeps a process alive (a test's DOM in Node).
+    (t as { unref?: () => void }).unref?.();
   }
 }
 
