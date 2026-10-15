@@ -1,7 +1,8 @@
 // What 🔌 Connections adds to a worker's environment (workers/env.ts): the agents' GitHub token as
-// GH_TOKEN / GITHUB_TOKEN, the Mendix token only on a floor where an admin switched it on, and the
-// office's commit identity when one is set. The Mendix token is taken out everywhere else, even when
-// the office itself was started with it.
+// GH_TOKEN / GITHUB_TOKEN, the Mendix token on every project unless an admin switched it off there (as
+// MENDIX_TOKEN / MX_PAT, and MENDIX_PAT, the name mxcli reads for Marketplace installs), and the office's
+// commit identity when one is set. Where it's off, the Mendix token is taken out, even when the office
+// itself was started with it.
 
 import path from 'node:path';
 import { credential, resolveCredential } from './resolve.js';
@@ -10,12 +11,12 @@ import { credential, resolveCredential } from './resolve.js';
 const stored = (id: 'anthropic') => (resolveCredential(id).source === 'connections' ? credential(id) : undefined);
 import { officeSettings } from './store.js';
 
-export const MENDIX_VARS = ['MENDIX_TOKEN', 'MX_PAT'] as const;
+export const MENDIX_VARS = ['MENDIX_TOKEN', 'MX_PAT', 'MENDIX_PAT'] as const;
 
 const same = (a: string, b: string) => (process.platform === 'win32' ? path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase() : path.resolve(a) === path.resolve(b));
 
-/** Whether agents on the floor in `floorDir` get the Mendix token. */
-export const mendixOn = (floorDir: string | undefined): boolean => !!floorDir && (officeSettings().mendixFloors ?? []).some((d) => same(d, floorDir));
+/** Whether agents on the project in `floorDir` get the Mendix token: on everywhere unless switched off there. */
+export const mendixOn = (floorDir: string | undefined): boolean => !!floorDir && !(officeSettings().mendixOffFloors ?? []).some((d) => same(d, floorDir));
 
 export function withConnections(env: Record<string, string>, floorDir?: string): Record<string, string> {
   const gh = credential('github-agents');

@@ -156,7 +156,7 @@ test('Test on a Mendix token: 401 is invalid, 403 is a token without mx:deployme
   assert.ok(seen[0].endsWith('MxToken mx-pat'));
 });
 
-test('workers get the agents’ token, the Mendix token only on a floor where it’s switched on, and the office’s commit identity', async () => {
+test('workers get the agents’ token, the Mendix token on every project unless switched off there (also as MENDIX_PAT for mxcli), and the office’s commit identity', async () => {
   const data = tmp('cx-data-');
   const vault = openConnections(data, fileCipher);
   try {
@@ -166,16 +166,23 @@ test('workers get the agents’ token, the Mendix token only on a floor where it
     const env = withConnections({ MX_PAT: 'inherited', PATH: 'x' }, floorA);
     assert.equal(env.GH_TOKEN, FAKE_GH);
     assert.equal(env.GITHUB_TOKEN, FAKE_GH);
-    assert.equal(env.MX_PAT, undefined, 'never by default, even when the office has it');
-    updateOfficeSettings({ mendixFloors: [floorA], gitIdentity: { name: 'Agent Office', email: 'bots@example.com' } });
-    assert.ok(mendixOn(floorA.toUpperCase()) === (process.platform === 'win32'));
+    // On by default on every project, under every name agents and mxcli read.
+    assert.equal(env.MENDIX_TOKEN, 'mx-fake-pat-999999');
+    assert.equal(env.MX_PAT, 'mx-fake-pat-999999');
+    assert.equal(env.MENDIX_PAT, 'mx-fake-pat-999999', 'mxcli reads MENDIX_PAT for Marketplace installs');
+    assert.equal(withConnections({ MENDIX_PAT: 'inherited' }).MENDIX_PAT, undefined, 'no project: taken out');
+    // Switched off for project b only.
+    const floorB = path.join(data, 'b');
+    updateOfficeSettings({ mendixOffFloors: [floorB], gitIdentity: { name: 'Agent Office', email: 'bots@example.com' } });
+    assert.ok(mendixOn(floorB.toUpperCase()) === (process.platform !== 'win32'));
     const on = withConnections({}, floorA);
     assert.equal(on.MENDIX_TOKEN, 'mx-fake-pat-999999');
-    assert.equal(on.MX_PAT, 'mx-fake-pat-999999');
-    assert.equal(withConnections({}, path.join(data, 'b')).MX_PAT, undefined);
+    const off = withConnections({ MX_PAT: 'inherited', MENDIX_PAT: 'inherited' }, floorB);
+    assert.equal(off.MX_PAT, undefined, 'off: taken out even when the office has it');
+    assert.equal(off.MENDIX_PAT, undefined);
     assert.equal(on.GIT_AUTHOR_NAME, 'Agent Office');
     assert.equal(withConnections({ GIT_AUTHOR_NAME: 'Mine' }).GIT_AUTHOR_NAME, 'Mine', 'a worker’s own identity stays');
-    assert.deepEqual(JSON.parse(readFileSync(path.join(data, 'office-settings.json'), 'utf8')).mendixFloors, [floorA]);
+    assert.deepEqual(JSON.parse(readFileSync(path.join(data, 'office-settings.json'), 'utf8')).mendixOffFloors, [floorB]);
     // The wizard's admin token: Connections first, then the file.
     const file = path.join(data, 'admin-token');
     assert.equal(adminTokenConfigured(file), false);

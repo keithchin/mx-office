@@ -18,8 +18,10 @@ export interface OfficeSettings {
   toolkitDir?: string;
   /** The hourly worktree cleanup; on unless switched off. */
   sweep?: boolean;
-  /** Floor folders whose agents get the Mendix token (MENDIX_TOKEN / MX_PAT). */
+  /** Before the Mendix token went to every project: the folders it was switched on for (no longer read). */
   mendixFloors?: string[];
+  /** Project folders whose agents don't get the Mendix token (everyone else does). */
+  mendixOffFloors?: string[];
   /** The identity the workers' commits get when git has none (GIT_AUTHOR_* / GIT_COMMITTER_*). */
   gitIdentity?: { name: string; email: string };
   /** 📱 Phone access (phone-access/): on or off, the provider, the Dev Tunnel id, the Cloudflare tunnel and hostname. */
