@@ -177,7 +177,8 @@ export class PortfolioService {
       const f = this.floor(fid);
       if (f) results[fid] = await this.wireOne(this.store.get(id)!, f, by);
     }
-    return { read, results };
+    // Read again once wired: the toolkit's script adds each project to the brain's projects.tsv (dirty).
+    return { read: await this.reader.read(dir, true), results };
   }
 
   /** Disconnects: takes the pointer blocks out of every member project; manifests are kept. */

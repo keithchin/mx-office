@@ -16,7 +16,7 @@ import type { DuplicateGroup } from './duplicates.js';
  */
 export type DecisionKind = 'decision' | 'hands-on' | 'fyi' | 'status';
 
-export type SourceType = 'escalation' | 'question' | 'stuck' | 'ask' | 'approval' | 'signoff' | 'pr-check' | 'other';
+export type SourceType = 'escalation' | 'question' | 'stuck' | 'ask' | 'approval' | 'signoff' | 'pr-check' | 'brain' | 'other';
 
 /** One place a card's decision was found. */
 export interface DecisionSource {

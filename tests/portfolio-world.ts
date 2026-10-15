@@ -66,7 +66,8 @@ export class World {
     const dir = path.join(this.root, 'brains', name);
     for (const d of ['skills', 'inbox', 'handoffs', 'proposals', 'patches']) mkdirSync(path.join(dir, d), { recursive: true });
     writeFileSync(path.join(dir, 'README.md'), `# ${name}\n\nA synthetic company brain.\n`);
-    writeFileSync(path.join(dir, 'ROUTING.md'), ROUTING_HEAD + rows.map(([w, f]) => `| ${w} | \`${f}\` |`).join('\n') + '\n');
+    writeFileSync(path.join(dir, 'projects.tsv'), '# path\tname\tstatus\twired\n');
+    writeFileSync(path.join(dir, 'ROUTING.md'),ROUTING_HEAD + rows.map(([w, f]) => `| ${w} | \`${f}\` |`).join('\n') + '\n');
     for (const [rel, text] of Object.entries(files)) {
       mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
       writeFileSync(path.join(dir, rel), text);
