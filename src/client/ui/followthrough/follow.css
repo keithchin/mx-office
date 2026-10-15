@@ -1,0 +1,50 @@
+/* Answered decisions being followed through (card.ts), on the Overview's Needs you card and the Questions page, in the colour tokens. */
+.pt-ft-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+.pt-ft-list[hidden] {
+  display: none;
+}
+.pt-ft-h {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.pt-ft-items {
+  display: grid;
+  gap: 8px;
+}
+.pt-ft[data-level='warn'] {
+  border-left: 3px solid var(--warn-ink);
+  background: var(--warn-soft);
+}
+.pt-ft[data-level='status'] {
+  border-left: 3px solid var(--line);
+}
+.pt-ft-line {
+  margin: 4px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.pt-ft-both {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0;
+  font-size: 0.9rem;
+}
+.pt-ft-both p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.pt-ft-where {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-family: var(--mono, ui-monospace, monospace);
+}
+.pt-ft .pt-link-btn {
+  background: none;
+  border-color: transparent;
+}

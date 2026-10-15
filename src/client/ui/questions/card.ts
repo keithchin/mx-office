@@ -6,6 +6,9 @@
 
 import { ANSWER_LABEL, cardStatus, sourceWords, blocksWork, type AnswerKind, type PmAnswer, type Question } from '../../../shared/questions';
 import { h } from '../dom';
+import type { FollowItem } from '../../../shared/followthrough';
+import { followLevel, followLine } from '../../../shared/followthrough';
+import { bothTexts, followActs } from '../followthrough/card';
 
 export interface CardDeps {
   admin: boolean;
@@ -13,6 +16,9 @@ export interface CardDeps {
   to?: string;
   /** Saves (or with 'clear' takes back) the person's answer; resolves to the error, if any. */
   answer(q: Question, kind: AnswerKind | 'clear', text?: string, option?: string): Promise<string | undefined>;
+  /** Its follow-through (Recorded as given), when it's being followed: the line, both texts and the buttons. */
+  follow?: FollowItem;
+  floor?: string;
 }
 
 const KIND_WORDS: Record<string, string> = { 'user-only': 'Needs the client', choice: 'You can decide', gap: 'Gap', conflict: 'Conflict' };
@@ -75,6 +81,7 @@ export function questionCard(q: Question, a: PmAnswer | undefined, deps: CardDep
     q.evidence ? h('details.qs-ev', {}, h('summary', {}, 'Evidence'), h('p', {}, q.evidence), q.sourceRef ? h('p.qs-ref', {}, h('code', {}, q.sourceRef)) : null) : null,
     q.assumedNoConsent ? h('p.qs-warn', { role: 'note' }, `The analyst wrote ASSUMED without your consent${q.assumption ? `: ${q.assumption}` : ''}. The toolkit counts it as never raised (UNRAISED). Accept it or answer it.`) : null,
     yours,
+    deps.follow && deps.floor ? h('div.qs-follow.pt-ft', { 'data-level': followLevel(deps.follow.recording) }, h('p.pt-ft-line', {}, followLine(deps.follow)), bothTexts(deps.follow), followActs(deps.floor, deps.follow, deps.admin)) : null,
     h('p.qs-src', {}, `From ${sourceWords(q.source)} · ${q.file}${q.state !== 'RAISED' ? ` · ${q.state}` : ''}`),
     actions,
     form,
