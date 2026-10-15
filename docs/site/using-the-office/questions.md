@@ -73,6 +73,12 @@ An answer shows as **recorded** only when it's recorded as given at its current 
 
 Answers sent before Recorded as given came in have no stored expectation. They are **legacy**: recorded once a later collection reads ANSWERED, ASSUMED or MOOT, as before, and the card says *legacy: by the toolkit's state*.
 
+### Changing an answer
+
+A question whose answer was sent or recorded has **Change answer** on its card (admins only). The window shows your current answer (rev n) with who, when and how its record stands; the new answer in the same shape as the first (**Answer** with its option, **Accept proposal**, or **Not relevant** with the reason); the work that used rev n (an escalation whose `refs` name the question, as a **recorded link**; the question's free-text *blocks* and a model change request that names its key, as **inferred**; or *No linked work found. Task links arrive with task ids (1B-4)*); and **Send change**.
+
+Sending appends rev n+1 (replacing rev n) to the answer history and types one message to the analyst: *This replaces my answer rev 1 to question F001.brd.json#OQ-05: ASSUMED: Monthly …. Record it as rev 2 of F001.brd.json#OQ-05, exactly as below*, followed by the fields to write, as **Send** does. The answer is *sent* again at rev n+1 and followed through from there: until the BRD says the new answer, its record reads **Recorded for rev 1**. A page that saw an older revision is refused, with nothing written. **History (n revisions)** on the card lists every revision from the answer history, with its full text, how it was sent and what its record came to, even after the card's own short copy has rolled over.
+
 ## Export for the client, and their answers back
 
 **Export for the client** makes a file with the questions marked *Ask the client*, or those and every open `user-only` question: the id, the BRD, the question, its context in plain words, what it blocks, and an empty **Answer** column. It's a **CSV** (Excel opens it) or a **printable page**.

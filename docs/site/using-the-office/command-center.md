@@ -138,6 +138,8 @@ A record that differs from what you decided, or cites an older revision, is a wa
 - **Send correction** makes a new revision (*correction*) and types it to the agent, as a new attempt that replaces the last one, with the citation to use now (*Decided per ESC-… rev 2*).
 - Neither blocks any other work. *Recorded differently* never settles anything else by itself: a stuck decision that the register says is CONFIRMED stays open while your answer to it isn't recorded as given and merged.
 
+Every follow-through item also has **Change answer** and **History (n revisions)** (admins only). Change answer replaces the decision with a new revision and sends it, saying which revision it replaces and the citation to use now; the window lists the work that used the old revision, each marked **Recorded link** or **Inferred**, or *No linked work found. Task links arrive with task ids (1B-4)*. The history is read once, when you open it, from the answer history. See [Changing an answer](../teams-and-agents/escalations.md#changing-an-answer) and, for questions, [Questions](questions.md#changing-an-answer).
+
 Every action is an admin's, checked by the office (`POST /api/followthrough/action`), refused with *This decision changed since you opened it* when the decision has a newer revision, and audited as `followthrough.*`.
 
 **Answer → lands on the escalation in one step.** In Portal the Overview scrolls to its card in Needs you, the card is outlined and **Send answer** gets the focus; in the other themes it opens Approvals.
