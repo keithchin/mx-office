@@ -1,19 +1,20 @@
 // "Keep this project off GitHub" under Advanced (ProjectPlan.localOnly, server/wizard/local-only.ts): a new
-// project only. Offered and ticked by default for Migrate an app when a source folder is attached, because
-// the analysis will quote the client's code; a choice made by hand is kept from then on.
+// project only, and off by default: a private GitHub repository is the usual home even for a migration with a
+// source folder (sources/legacy/ is git-ignored, so the code itself is never pushed). A choice made by hand is kept.
 import type { DraftView } from '../../../../shared/brief';
 import type { ProjectPlan } from '../../../../shared/wizard';
 import { h } from '../../dom';
 
 const byHand = new WeakSet<ProjectPlan>();
 
-/** The default: on for a migration with a source folder attached, unless the person chose. */
+/** The default: off (a private GitHub repository), unless the person chose. A source folder makes the repository private. */
 export function defaultLocalOnly(plan: ProjectPlan, draft: DraftView | null | undefined) {
+  if (draft?.source) plan.private = true;
   if (byHand.has(plan)) return;
-  plan.localOnly = plan.kind === 'new' && plan.entry === 'migration' && !!draft?.source;
+  plan.localOnly = false;
 }
 
-export const LOCAL_ONLY_WHY = 'The analysis will quote the client’s source code: no GitHub repository, nothing pushed to GitHub, and the Discovery brief is a local file. The repository stays on this machine (add Team Server yourself later if you need it).';
+export const LOCAL_ONLY_WHY = 'Only when the client won’t allow a private GitHub repository. No GitHub repository, nothing pushed to GitHub, and the Discovery brief is a local file; pull requests, PR checks and PR-based task outcomes aren’t available, and the only copy is on this machine.';
 
 export function localOnlyField(plan: ProjectPlan, redraw: () => void): HTMLElement | null {
   if (plan.kind !== 'new') return null;

@@ -18,6 +18,7 @@ import { cleanPlan } from '../src/server/wizard/plan.js';
 import { DISCOVERY_FILE, discoveryTask, localBareOf, withRules, localOnlyRules } from '../src/server/wizard/local-only.js';
 import { LOCAL_ONLY_HIRE_LINE, LOCAL_ONLY_TEXT, forgetLocalOnly, localOnlyAt, withLocalOnlyLine } from '../src/server/local-only.js';
 import { gh } from '../src/server/github.js';
+import { defaultLocalOnly } from '../src/client/ui/wizard/new/local-only-field.js';
 import { detailRows, LOCAL_ONLY_LABEL } from '../src/client/ui/portal/overview-logic.js';
 import { runnable } from './support/winshim.js';
 import { madeBySetup } from '../src/shared/setup-cancel.js';
@@ -201,4 +202,14 @@ test('Cancel & undo never offers to delete a GitHub repository for a local-only 
   assert.equal(made.offline, true);
   assert.equal(made.repoByHand, false);
   assert.equal(made.repo, false);
+});
+
+test('a migration with a source folder defaults to a private GitHub repository: Keep off GitHub is unticked, and Public is never kept', () => {
+  const plan = { kind: 'new', entry: 'migration', private: false, localOnly: true } as never as Parameters<typeof defaultLocalOnly>[0];
+  defaultLocalOnly(plan, { source: { path: 'C:/src/shop-app', name: 'shop-app', files: 3, bytes: 300 } } as never);
+  assert.equal(plan.localOnly, false, 'off GitHub only when someone ticks it');
+  assert.equal(plan.private, true, 'a source folder always means a private repository');
+  const plain = { kind: 'new', entry: 'migration', private: false } as never as Parameters<typeof defaultLocalOnly>[0];
+  defaultLocalOnly(plain, null);
+  assert.equal(plain.private, false, 'without a source folder the visibility is the person’s');
 });

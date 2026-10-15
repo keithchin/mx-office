@@ -17,7 +17,7 @@ Then **+** › **Add a source folder…**: paste the folder's full path on the o
 
 ## 2. Keep it off GitHub
 
-Under **Team & budget** › **Advanced**, **Keep this project off GitHub (local / Team Server only)** is ticked for a migration with a source folder: the analysis documents the team writes will quote the client's code. With it ticked there is no GitHub repository, nothing is pushed to GitHub, and the Discovery brief is a file in the project. What that means, and exactly what doesn't work in a local-only project, is under [Local only (not on GitHub)](first-project.md#local-only-not-on-github). Untick it to have the usual private GitHub repository.
+A migration with a source folder gets the usual **private** GitHub repository (Public isn't offered, because the analysis documents the team writes will quote the client's code). The copied source itself is git-ignored and never pushed. If the client won't allow a private GitHub repository, tick **Keep this project off GitHub (local / Team Server only)** under **Team & budget** › **Advanced**: there is no GitHub repository, nothing is pushed to GitHub, and the Discovery brief is a file in the project. What that costs (no pull requests, PR checks or PR-based task outcomes, and the only copy is on this machine) is under [Local only (not on GitHub)](first-project.md#local-only-not-on-github).
 
 ## 3. Set a cap
 

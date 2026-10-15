@@ -78,7 +78,7 @@ export function advancedPanel(flow: Flow, redraw: () => void) {
           {},
           field('owner', 'GitHub owner', text(d.owner, (v) => (d.owner = v.trim())), err('owner')),
           field('name', 'Repository name', name, err('name')),
-          field('vis', 'Visibility', select(d.private ? 'private' : 'public', [['private', 'Private (recommended: project repositories hold client material)'], ['public', 'Public']], (v) => (d.private = v === 'private'))),
+          field('vis', 'Visibility', flow.draft?.source ? h('span.nw-hint', {}, 'Private: a project with a source folder always is') : select(d.private ? 'private' : 'public', [['private', 'Private (recommended: project repositories hold client material)'], ['public', 'Public']], (v) => (d.private = v === 'private'))),
           field('desc', 'Description', text(d.description, (v) => ((d.description = v), flow.touched.add('description')), { placeholder: 'One line about what it is for' })),
         ),
       );
