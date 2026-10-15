@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { writeFileSync } from 'node:fs';
 import { faithful, followLine, wordsMatch } from '../src/shared/followthrough.js';
-import { citations, judgeCitation } from '../src/server/followthrough/judge.js';
+import { citations, judgeCitation, recordedWordsOf } from '../src/server/followthrough/judge.js';
 import { escalationAnswerPrompt } from '../src/server/roster/prompts.js';
 import { detectStuck } from '../src/server/stuck/detect.js';
 import { STUCK_DEFAULTS } from '../src/shared/stuck.js';
@@ -34,6 +34,8 @@ test('matching rule: case, quotes, punctuation and spacing aside, the expected w
   assert.equal(c.length, 2);
   assert.equal(c[0].block, '| OW-1 | Decided per ESC-ab12 rev 2: Use SSO | CONFIRMED |');
   assert.equal(c[1].block, 'Decided per ESC-cd34 rev 1: magic links\nfor guests too.');
+  assert.equal(recordedWordsOf(c[0].block), 'OW-1 · Use SSO · CONFIRMED');
+  assert.equal(recordedWordsOf('- Decided per ESC-x rev 1: Zebra ZD421.'), 'Zebra ZD421.');
   const hist = [{ rev: 1, kind: 'reply' as const, text: 'Go with: Use SSO' }];
   assert.equal(judgeCitation({ rev: 1, block: 'Decided per ESC-x rev 1: Use SSO for staff' }, hist)?.outcome, 'recorded');
   assert.equal(judgeCitation({ rev: 3, block: 'Decided per ESC-x rev 3: Use SSO' }, hist), undefined, 'a revision that does not exist says nothing');

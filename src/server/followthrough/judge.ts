@@ -112,6 +112,10 @@ export function citations(text: string): Citation[] {
 export const recordedWordsOf = (block: string) =>
   block
     .replace(/Decided per ESC-[A-Za-z0-9_-]+ rev \d+\s*[:.\-–—]?\s*/gi, '')
+    // A list item's marker and a table row's pipes aren't words.
+    .replace(/^\s*(?:[-*+]|\d+[.)])\s+/, '')
+    .replace(/^\s*\|\s*|\s*\|\s*$/g, '')
+    .replace(/\s*\|\s*/g, ' · ')
     .replace(/\s+/g, ' ')
     .trim();
 

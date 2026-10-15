@@ -33,7 +33,11 @@ export function followActs(floor: string, it: FollowItem, admin: boolean): HTMLE
     warn ? btn('Accept as recorded', 'accept-as-recorded', '.primary', 'Makes the recorded words your decision (a new revision); nothing is sent') : null,
     warn ? btn('Send correction', 'send-correction', '', 'Tells the agent what you decided and the citation to use now (a new revision, sent)') : null,
     h('span.pt-grow'),
-    btn('Dismiss', 'dismiss', '.pt-link-btn', 'Stops following this revision through (it is not marked recorded)'),
+    h('button.pt-link.pt-ft-dismiss', { type: 'button', title: 'Stops following this revision through (it is not marked recorded)', onclick: (ev: Event) => {
+      const b = ev.currentTarget as HTMLButtonElement;
+      b.disabled = true;
+      void followAct(floor, it.decision, 'dismiss', it.rev).finally(() => (b.disabled = false));
+    } }, 'Dismiss'),
   );
 }
 

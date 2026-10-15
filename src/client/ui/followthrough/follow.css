@@ -44,7 +44,16 @@
   color: var(--muted);
   font-family: var(--mono, ui-monospace, monospace);
 }
-.pt-ft .pt-link-btn {
-  background: none;
-  border-color: transparent;
+.pt-ft-acts {
+  align-items: center;
+}
+html .pt-ft-list .pt-ft.pt-nitem,
+html .qs-card .qs-follow.pt-ft {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-top: 0;
+}
+.pt-ft-dismiss {
+  margin-right: 2px;
+  white-space: nowrap;
 }
