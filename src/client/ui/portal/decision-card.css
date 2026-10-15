@@ -56,11 +56,11 @@
   font-size: 0.9em;
 }
 .pt-dc-src li {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: baseline;
-  justify-content: space-between;
+  margin: 2px 0;
+}
+.pt-dc-sep {
+  margin-left: 6px;
+  font-size: 0.9em;
 }
 .pt-dc-one {
   color: var(--muted);
@@ -75,9 +75,4 @@
 .pt-needs-hidden ul {
   margin: 4px 0 0;
   padding-left: 18px;
-}
-@media (max-width: 480px) {
-  .pt-dc-src li {
-    flex-direction: column;
-  }
 }
