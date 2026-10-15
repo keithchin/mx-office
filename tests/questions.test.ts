@@ -13,7 +13,7 @@ import path from 'node:path';
 import type { WorkerInfo } from '../src/shared/protocol.js';
 import { answersMessage, cardStatus, needsWords, parsePastedAnswers, questionCounts, sourceWords, type Question, type QuestionsNeed, type Recipient } from '../src/shared/questions.js';
 import { collectNeeds } from '../src/shared/needsyou.js';
-import { isRedNeed } from '../src/shared/notify-teams.js';
+import { isRedNeed, notifyRows } from '../src/shared/notify-teams.js';
 import { Collector, FALLBACK_NOTE } from '../src/server/questions/collect.js';
 import { normalise } from '../src/server/questions/normalise.js';
 import { bashRunner, type ScriptOutcome, type ScriptRunner } from '../src/server/questions/script.js';
@@ -174,7 +174,7 @@ test('collection is cached: the script runs again only for a folder whose files 
 
 // ---- Counting, Needs you and notifications ----------------------------------------------------------------
 
-test('Needs you: one item per project, "N questions for the client · N BRDs · N block work", counted as waiting; answered ones drop out', async () => {
+test('Needs you: a decision card per question waiting on you (Slice 1A), each counted and opening the Questions page at it; notifications stay one per batch; answered ones drop out of the count', async () => {
   const h = harness();
   await h.svc.collect(h.floor);
   const need = (await h.svc.need(h.floor))!;
@@ -182,12 +182,15 @@ test('Needs you: one item per project, "N questions for the client · N BRDs · 
   assert.deepEqual({ waiting: need.waiting, brds: need.brds, blocking: need.blocking }, { waiting: 4, brds: 3, blocking: 3 });
   assert.equal(needsWords(need), '4 questions for the client · 3 BRDs · 3 block work');
   const items = collectNeeds({ floor: 'visitor', workers: [], pulls: [], floors: [], questions: need, now: NOW }).filter((n) => n.kind === 'questions');
-  assert.equal(items.length, 1);
+  // Was one batch row; decision cards (Slice 1A) give each waiting question its own card and compact row.
+  assert.equal(items.length, 4);
   assert.equal(items[0].action, 'Answer');
-  assert.deepEqual(items[0].target, { to: 'questions' });
+  assert.equal(items[0].target.to, 'questions');
+  assert.ok((items[0].target as { key?: string }).key, 'it opens the Questions page at its question');
   assert.ok(isRedNeed(items[0]));
+  assert.deepEqual(notifyRows(items).map((n) => n.text), ['4 questions for the client · 3 BRDs · 3 block work'], 'one notification row for the batch');
   const { waitingCount } = await import('../src/client/ui/needsyou/feed.js');
-  assert.equal(waitingCount(items), 1);
+  assert.equal(waitingCount(items), 4);
   await h.svc.answer(h.floor, 'F002-invites.brd.json#G1', 'answer', { text: 'Ten', by: 'Keith' });
   assert.equal((await h.svc.need(h.floor))!.waiting, 3);
 });

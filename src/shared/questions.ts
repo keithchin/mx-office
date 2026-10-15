@@ -193,6 +193,60 @@ export interface QuestionsNeed {
   batch: number;
   /** When the newest of them was first seen. */
   since?: number;
+  /**
+   * Each question waiting on you, and each you answered that the toolkit doesn't show recorded yet: one
+   * decision card per question (shared/decisions/). Missing from an older office's answer.
+   */
+  items?: QuestionBrief[];
+}
+
+/** One question as its decision card reads it. */
+export interface QuestionBrief {
+  key: string;
+  id: string;
+  file: string;
+  brd?: string;
+  brdTitle?: string;
+  question: string;
+  kind?: string;
+  state: QState;
+  blocks?: string;
+  options?: string[];
+  proposedPosition?: string;
+  evidence?: string;
+  since?: number;
+  /** Where it was read. */
+  where: string;
+  /** Your answer, when you gave one: ready to send (pending) or sent and not recorded yet. */
+  answered?: { status: 'pending' | 'sent'; to?: string; kind: AnswerKind };
+}
+
+/** The questions a decision card is made for: waiting on you, or answered by you and not recorded yet (newest last). */
+export function questionBriefs(qs: readonly Question[], answers: Readonly<Record<string, PmAnswer>>): QuestionBrief[] {
+  const out: QuestionBrief[] = [];
+  for (const q of qs) {
+    const a = answers[q.key];
+    if (!openState(q.state)) continue;
+    if (a && (a.status === 'recorded' || a.kind === 'ask-client')) continue;
+    out.push({
+      key: q.key,
+      id: q.id,
+      file: q.file,
+      ...(q.brd ? { brd: q.brd } : {}),
+      ...(q.brdTitle ? { brdTitle: q.brdTitle } : {}),
+      question: q.question.length > 300 ? `${q.question.slice(0, 299)}…` : q.question,
+      ...(q.kind ? { kind: q.kind } : {}),
+      state: q.state,
+      ...(q.blocks ? { blocks: q.blocks } : {}),
+      ...(q.options?.length ? { options: q.options.slice(0, 6) } : {}),
+      ...(q.proposedPosition ? { proposedPosition: q.proposedPosition.slice(0, 300) } : {}),
+      ...(q.evidence ? { evidence: q.evidence.slice(0, 200) } : {}),
+      ...(q.since !== undefined ? { since: q.since } : {}),
+      where: sourceWords(q.source),
+      ...(a ? { answered: { status: a.status === 'sent' ? 'sent' : 'pending', ...(a.sentTo ? { to: a.sentTo } : {}), kind: a.kind } } : {}),
+    });
+  }
+  return out;
 }
 
 /** "24 questions for the client · 5 BRDs · 6 block work". */
@@ -208,7 +262,8 @@ export function questionsNeedParts(n: QuestionsNeed | undefined): { key: string;
 export function needOf(floor: string, set: QuestionSet | undefined, answers: Readonly<Record<string, PmAnswer>>, batch: number, since?: number): QuestionsNeed | undefined {
   if (!set) return undefined;
   const c = questionCounts(set.questions, answers);
-  return c.waiting ? { floor, waiting: c.waiting, brds: c.brds, blocking: c.blocking, batch, ...(since !== undefined ? { since } : {}) } : undefined;
+  const items = questionBriefs(set.questions, answers);
+  return c.waiting || items.length ? { floor, waiting: c.waiting, brds: c.brds, blocking: c.blocking, batch, ...(since !== undefined ? { since } : {}), items } : undefined;
 }
 
 // ---- Each card's words ---------------------------------------------------------------------------------
@@ -278,6 +333,7 @@ export function answersMessage(answers: readonly PmAnswer[], questions: Readonly
     '',
     ...lines,
     '',
+    "Where PROJECT.md's Open questions (the register) lists the same id, mark that row answered too, with the same answer, so the register and the BRD agree.",
     'Then re-run `bin/open-questions.sh .` and check each of these now reads ANSWERED, ASSUMED or MOOT (fix any that reads UNRECOGNISED), and commit the BRD files. The office marks them recorded once the script says so.',
   ].join('\n');
 }

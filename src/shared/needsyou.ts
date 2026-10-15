@@ -6,7 +6,6 @@
 import type { FloorInfo, GhPull, LiveAppState, WorkerInfo } from './protocol.js';
 import type { FirmFloorStatus } from './firm/engagement.js';
 import type { Escalation } from './roster/escalation.js';
-import { jeffOrder, rankChip, rankOf, rankTip, sortedByJeff } from './roster/jeff-rank.js';
 import type { RosterView } from './roster/types.js';
 import type { StudioState } from './studio.js';
 import type { SetupView } from './wizard.js';
@@ -15,9 +14,12 @@ import { SEVERITY_SHORT, incidentRef, needsAttention, type IncidentBrief } from 
 import type { BudgetAlert } from './budget/types.js';
 import type { SettingsSectionId } from './settings-sections.js';
 import type { RoleId } from './roster/roles.js';
-import { STUCK_ICON, stuckTitle, type StuckView } from './stuck.js';
-import { askNeeds, type AskAct, type AskKind, type AsksNeed } from './asks.js';
-import { questionsNeedParts, type QuestionsNeed } from './questions.js';
+import type { StuckView } from './stuck.js';
+import type { AskAct, AskKind, AsksNeed } from './asks.js';
+import type { QuestionsNeed } from './questions.js';
+import { approvalCandidates, askCandidates, escalationCandidates, prCheckCandidates, questionCandidates, signoffCandidates, stuckCandidates, type Candidate } from './decisions/candidates.js';
+import { foldCards, type Entry } from './decisions/group.js';
+import type { DecisionCard, DecisionSplit } from './decisions/types.js';
 
 /** Where an item's button takes you. */
 export type NeedTarget =
@@ -41,8 +43,8 @@ export type NeedTarget =
   | { to: 'stuck'; id: string }
   /** A surfaced ask's button (server/asks/, shared/asks.ts): a message to the lead, your consent, the Documents page, or seen. */
   | { to: 'ask'; id: string; act: AskAct }
-  /** The Questions page (ui/questions/): the analysts' open questions for the client. */
-  | { to: 'questions' };
+  /** The Questions page (ui/questions/): the analysts' open questions for the client, at one question (`key`) when said. */
+  | { to: 'questions'; key?: string };
 
 export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | AskKind;
 
@@ -72,6 +74,12 @@ export interface NeedItem {
   target: NeedTarget;
   /** A second button (the budget's Resume beside Raise budget). */
   alt?: { action: string; target: NeedTarget };
+  /** The decision card it is the compact row of (shared/decisions/). */
+  card?: string;
+  /** How many sources that card folds, when more than one. */
+  sources?: number;
+  /** Notifications (Teams, phone pushes) post one row for every item sharing this key, with its words: a batch of questions is one buzz. */
+  notify?: { key: string; text: string };
 }
 
 /** What Needs you reads of a project's stuck items (GET /api/stuck, server/stuck/): the ones showing. */
@@ -111,18 +119,25 @@ export interface NeedsInput {
   asks?: AsksNeed;
   /** The open questions for the client waiting on you (server/questions/): one item per project. */
   questions?: QuestionsNeed;
+  /** The person's "Separate" choices for this floor's decision cards (server/decisions/). */
+  splits?: readonly DecisionSplit[];
   /** Now (ms), for how long someone has been idle: Date.now() unless a test says. */
   now?: number;
 }
 
-const URGENCY_RANK: Record<Escalation['urgency'], number> = { critical: 0, urgent: 1, important: 2, info: 3 };
+/** Everything that needs you, most urgent first: this floor's, then other floors where someone's waiting (the compact rows of collectDecisions). */
+export const collectNeeds = (i: NeedsInput): NeedItem[] => collectDecisions(i).needs;
 
-/** Everything that needs you, most urgent first: this floor's, then other floors where someone's waiting. */
-export function collectNeeds(i: NeedsInput): NeedItem[] {
-  const out: NeedItem[] = [];
+/**
+ * Everything that needs you as decision cards (shared/decisions/), most urgent first, and their compact rows:
+ * sources that share an explicit id fold into one card, unless the person separated them (`splits`).
+ */
+export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs: NeedItem[] } {
+  const entries: Entry[] = [];
+  const out = { push: (...xs: NeedItem[]) => void entries.push(...xs.map((need) => ({ need }))) };
+  const put = (cand: Candidate) => void entries.push({ need: cand.need, cand });
   const workers = [...i.workers];
   const r = i.roster?.floor === i.floor ? i.roster : undefined;
-  const admin = !!r?.admin;
 
   // 1. Agents stopped on a question or a permission prompt, longest first.
   for (const w of needingYou(workers)) {
@@ -145,25 +160,9 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     out.push({ key: `lost-${w.id}`, kind: 'lost', icon: '🌿', text: `${w.name}'s worktree was deleted outside agent-office`, level: 'block', action: 'Fix', target: { to: 'worker', id: w.id } });
   }
   if (r) {
-    // 3. Open escalations that aren't FYI: in Jeff's order when he ranked them, else loudest then oldest first.
-    const byJeff = sortedByJeff(r.escalations, r.settings?.jeff?.priority);
-    const open = jeffOrder(r.escalations.filter((e) => e.status === 'open' && !e.fyi), byJeff, (a, b) => URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency] || a.at - b.at);
-    for (const e of open) {
-      const n = byJeff ? rankOf(e) : undefined;
-      const loud = e.urgency === 'urgent' || e.urgency === 'critical';
-      out.push({ key: `esc-${e.id}`, kind: 'escalation', icon: '🚩', tag: e.urgency.toUpperCase(), text: `${e.by} escalated: ${e.title}`, since: e.at, level: loud ? 'block' : 'warn', action: admin ? 'Answer' : 'View', target: { to: 'escalation', id: e.id }, ...(n !== undefined && e.jeffRank ? { rank: { n, chip: rankChip(n), tip: rankTip(e.jeffRank, n) } } : {}) });
-    }
-    // 3b. FYI escalations: below the level's threshold, so no alert, but an ask hidden is an ask nobody answers. Shown low, not counted.
-    for (const e of r.escalations.filter((x) => x.status === 'open' && x.fyi).sort((a, b) => a.at - b.at)) {
-      out.push({ key: `fyi-${e.id}`, kind: 'fyi', icon: 'ℹ️', tag: 'FYI', text: `${e.by} escalated: ${e.title}`, since: e.at, level: 'info', action: admin ? 'Answer' : 'View', target: { to: 'escalation', id: e.id } });
-    }
-    // 4. Proposals and merges waiting on you (escalations are above; the cap is the paused line below).
-    for (const a of r.approvals) {
-      if (a.kind === 'escalation' || (a.kind === 'cap' && r.paused)) continue;
-      const icon = a.kind === 'merge' ? '🔀' : a.kind === 'cap' ? '💸' : a.kind === 'subagent' ? '🧰' : '📝';
-      const text = a.kind === 'proposal' ? `Proposal to approve: ${a.title}` : a.kind === 'subagent' ? `To approve: ${a.title}` : a.title;
-      out.push({ key: `appr-${a.id}`, kind: 'approval', icon, text, level: 'warn', action: admin ? 'Review' : 'View', target: { to: 'approvals' } });
-    }
+    // 3. Open escalations (not FYI, in Jeff's order; then the FYIs) and 4. proposals and merges waiting on you: decision-card sources (shared/decisions/).
+    for (const c of escalationCandidates(r)) put(c);
+    for (const c of approvalCandidates(r)) put(c);
     // 4b. Team members idle a while with a task still open and nothing escalated: one click nudges them back to it.
     const now = i.now ?? Date.now();
     for (const m of r.members ?? []) {
@@ -175,16 +174,11 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
   }
   // Work the office found stuck (server/stuck/): a decision or a PR waiting on a person blocks; a test red for days or the team going in circles is worth a look.
   const st = i.stuck && i.stuck.floor === i.floor ? i.stuck : undefined;
-  for (const s of st?.items ?? []) {
-    const lead = s.lead ?? 'the lead';
-    const action = s.kind === 'decision' ? 'Answer' : s.kind === 'stale-pr' ? `Ask ${lead}` : s.kind === 'circles' ? 'Ask for blockers' : 'Review';
-    out.push({ key: `stuck-${s.id}`, kind: 'stuck', icon: STUCK_ICON[s.kind], tag: 'Stuck', text: stuckTitle(s, i.now ?? Date.now()), since: s.since, level: s.kind === 'decision' || s.kind === 'stale-pr' ? 'block' : 'warn', action, target: { to: 'stuck', id: s.id } });
-  }
-  // The analysts' open questions for the client waiting on you (server/questions/): one row for the batch.
-  const qn = questionsNeedParts(i.questions && i.questions.floor === i.floor ? i.questions : undefined);
-  if (qn) out.push({ key: qn.key, kind: 'questions', icon: '❓', text: qn.text, ...(qn.since !== undefined ? { since: qn.since } : {}), level: qn.level, action: 'Answer', target: { to: 'questions' } });
+  for (const c of stuckCandidates(st?.items ?? [], i.now ?? Date.now())) put(c);
+  // The analysts' open questions for the client (server/questions/): a card per question waiting on you.
+  for (const c of questionCandidates(i.questions && i.questions.floor === i.floor ? i.questions : undefined)) put(c);
   // Surfaced asks (server/asks/): assumptions without your consent and gate advisories (warn), work not on main and what's ready for review (info).
-  out.push(...askNeeds(i.asks, i.floor));
+  for (const c of askCandidates(i.asks, i.floor)) put(c);
   // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold) not marked as seen.
   const b = i.budget && i.budget.floor === i.floor ? i.budget : undefined;
   if (b) {
@@ -193,15 +187,9 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     else if (top) out.push({ key: `budget-${top.level}`, kind: 'budget', icon: '💸', text: top.text, since: top.at, level: top.level === 'full' ? 'block' : 'warn', action: top.level === 'full' ? 'Raise budget' : 'Budget', target: { to: 'budget' }, ...(top.level === 'full' ? {} : { alt: { action: 'Mark as seen', target: { to: 'budget', seen: top.level } } }) });
   }
   // 6. Open, ready PRs whose checks fail.
-  for (const p of i.pulls) {
-    if (p.state !== 'OPEN' || p.isDraft || p.checks !== 'fail') continue;
-    out.push({ key: `pr-${p.number}`, kind: 'pr', icon: '❌', text: `PR #${p.number} has failing checks: ${p.title}`, since: Date.parse(p.updatedAt) || undefined, level: 'warn', action: `Open PR #${p.number}`, target: { to: 'pr', number: p.number } });
-  }
+  for (const c of prCheckCandidates(i.pulls)) put(c);
   // A toolkit stage at a ✋ gate, waiting for your sign-off: any stage gate-check marks MANUAL (3, 4, 7, and 5–6 where it wants a person), from its verdicts whether or not the setup panel shows.
-  for (const s of i.setup?.verdicts?.length ? i.setup.verdicts : i.setup?.show ? i.setup.stages : []) {
-    if (s.status !== 'MANUAL') continue;
-    out.push({ key: `setup-${s.id}`, kind: 'setup', icon: '✋', text: `Stage ${s.id} (${s.title}) waits for your sign-off`, level: 'warn', action: 'Sign off', target: { to: 'setup' } });
-  }
+  for (const c of signoffCandidates(i.setup)) put(c);
   // The floor's live app failed to start.
   if (i.live && i.live.floor === i.floor && i.live.status === 'failed') {
     out.push({ key: 'live', kind: 'live', icon: '🌐', text: `The live app failed${i.live.message ? `: ${i.live.message}` : ''}`, since: i.live.since, level: 'warn', action: 'Live app', target: { to: 'live' } });
@@ -225,7 +213,7 @@ export function collectNeeds(i: NeedsInput): NeedItem[] {
     if (f.id === i.floor || f.cloning || !(f.waiting > 0)) continue;
     out.push({ key: `floor-${f.id}`, kind: 'floor', icon: '🙋', text: `${f.waiting} waiting on ${f.name}`, level: 'block', action: 'Go', target: { to: 'floor', floor: f.id } });
   }
-  return out;
+  return foldCards(entries, i.splits && i.splits.length ? i.splits : []);
 }
 
 /** How many are on this floor: the count on the 🎛️ Command Center tab (info rows show, but aren't waiting on you). */

@@ -3,7 +3,7 @@
 // collectNeeds (shared/needsyou.ts), then the red ones made ready to post.
 
 import { collectNeeds, type NeedItem, type NeedsInput } from '../../shared/needsyou.js';
-import { isRedNeed } from '../../shared/notify-teams.js';
+import { isRedNeed, notifyRows } from '../../shared/notify-teams.js';
 import type { RosterView } from '../../shared/roster/types.js';
 import { capAt } from '../../shared/roster/autonomy.js';
 import type { WorkerInfo } from '../../shared/protocol.js';
@@ -119,7 +119,7 @@ export function pathOf(n: Pick<NeedItem, 'target'>, floor: string): string {
 export function redItems(floor: Floor, f: FloorNeeds, publicUrl: string | undefined): RedItem[] {
   const workers = [...f.input.workers];
   const out: RedItem[] = [];
-  for (const n of f.needs) {
+  for (const n of notifyRows(f.needs)) {
     if (!isRedNeed(n)) continue;
     const who = whoOf(n, workers, f.input.roster, f.input);
     out.push({

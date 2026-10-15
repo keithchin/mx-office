@@ -46,6 +46,8 @@ export interface AsksView {
   standup?: BranchStandup;
   /** When the office last looked (ms). */
   at?: number;
+  /** When a look last failed to read the team's files: the items are kept from the look before. */
+  unreadAt?: number;
   admin?: boolean;
 }
 
@@ -53,6 +55,8 @@ export interface AsksView {
 export interface AsksNeed {
   floor: string;
   items: readonly AskItem[];
+  /** The last look could not re-read the team's files: the items are as they were then (nothing settles on a failed read). */
+  unreadAt?: number;
 }
 
 export const ASK_ICON: Record<AskKind, string> = { offmain: '📤', assumption: '🤝', advisory: '⚠️', review: '👀' };
@@ -68,7 +72,7 @@ export function askNeeds(a: AsksNeed | undefined, floor: string | undefined): Ne
   return rows.map((it) => {
     const [first, second] = it.acts;
     return {
-      key: `ask-${it.id}`,
+      key: `asks-${it.id}`,
       kind: it.kind,
       icon: ASK_ICON[it.kind],
       tag: ASK_TAG[it.kind],

@@ -77,6 +77,27 @@ export function inQuietHours(q: QuietHours | undefined, minuteOfDay: number): bo
  * way, and nobody needs a phone buzz for one), a lost worktree, a proposal, the live app, a stale folder
  * or the Firm's budget warning: those wait for the Command Center.
  */
+/**
+ * The rows notifications post: every item sharing a `notify` key is one row under that key and its words
+ * (a batch of questions for the client is one buzz, whatever cards it has); the rest as they are.
+ */
+export function notifyRows(needs: readonly NeedItem[]): NeedItem[] {
+  const out: NeedItem[] = [];
+  const seen = new Set<string>();
+  for (const n of needs) {
+    if (!n.notify) {
+      out.push(n);
+      continue;
+    }
+    if (seen.has(n.notify.key)) continue;
+    seen.add(n.notify.key);
+    const all = needs.filter((x) => x.notify?.key === n.notify!.key);
+    const level = all.some((x) => x.level === 'block') ? 'block' : n.level;
+    out.push({ ...n, key: n.notify.key, text: n.notify.text, level, target: { to: 'questions' } });
+  }
+  return out;
+}
+
 export function isRedNeed(n: Pick<NeedItem, 'kind' | 'key'>): boolean {
   switch (n.kind) {
     case 'asking':
