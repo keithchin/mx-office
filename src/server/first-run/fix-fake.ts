@@ -42,13 +42,13 @@ function script(file: string, args: string[], holdMs: number): FixChild {
 /** The scripted office's machine: a fresh Windows laptop with Node and nothing else (a fix turns its rows green). */
 const FRESH: Partial<Record<PrereqId, Omit<PrereqResult, 'id'>>> = {
   git: { status: 'missing', text: 'git isn’t installed (or not on the office’s PATH)', fix: 'Press Fix to install it with winget.' },
-  gitbash: { status: 'missing', text: 'Git Bash isn’t at C:\Program Files\Git\bin\bash.exe', fix: 'It comes with Git for Windows: press Fix.' },
+  gitbash: { status: 'missing', text: 'Git Bash isn’t at C:\\Program Files\\Git\\bin\\bash.exe', fix: 'It comes with Git for Windows: press Fix.' },
   longpaths: { status: 'warn', text: 'Needs git first' },
   gh: { status: 'missing', text: 'gh (the GitHub CLI) isn’t installed (or not on the office’s PATH)', fix: 'Press Fix to install it with winget.' },
   'gh-auth': { status: 'missing', text: 'Needs gh first' },
   claude: { status: 'missing', text: 'Claude Code (claude) isn’t installed (or not on the office’s PATH)', fix: 'Press Fix to install it with its official installer.' },
   'claude-auth': { status: 'missing', text: 'No Claude Code sign-in found for this Windows user', fix: 'Sign in with your Claude account, or use an API key.' },
-  studio: { status: 'missing', text: 'No Studio Pro under C:\Program Files\Mendix', fix: 'Install Studio Pro 11.12 (see the link).' },
+  studio: { status: 'missing', text: 'No Studio Pro under C:\\Program Files\\Mendix', fix: 'Install Studio Pro 11.12 (see the link).' },
   mxcli: { status: 'missing', text: 'No mxcli found', fix: 'Press Fix to download the newest release, or give its path.' },
   jq: { status: 'missing', text: 'No jq found', fix: 'Press Fix to install it with winget.' },
   toolkit: { status: 'missing', text: 'No toolkit folder picked yet', fix: 'Press Fix to clone it, or pick its folder in the Toolkit step.' },

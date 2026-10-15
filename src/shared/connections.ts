@@ -188,7 +188,7 @@ export const CREDENTIAL_META: Record<CredentialId, CredentialMeta> = {
     createUrl: () => 'https://console.anthropic.com/settings/keys',
     createLabel: 'Anthropic Console',
     testable: false,
-    shape: /^sk-ant-apid*-[A-Za-z0-9_-]{20,}$/,
+    shape: /^sk-ant-api\d*-[A-Za-z0-9_-]{20,}$/,
     shapeHint: 'An Anthropic API key starts with sk-ant-api',
   },
   jev: {

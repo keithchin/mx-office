@@ -1,0 +1,33 @@
+/* 🚀 First-run setup's one-click fixes (fix.ts): the plan window, its live progress and gh's one-time
+   code. Theme tokens only. */
+.fx-modal { width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.fx-body { display: flex; flex-direction: column; gap: 10px; overflow: auto; font-size: 14px; color: var(--ink); }
+.fx-note { margin: 0; }
+.fx-note.bad { color: var(--bad-ink); font-weight: 700; }
+.fx-note.good { color: var(--good-ink); font-weight: 700; }
+.fx-note.warn { color: var(--warn-ink); font-weight: 700; }
+.fx-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.fx-step { display: flex; flex-direction: column; gap: 3px; }
+.fx-step.manual { list-style: disc; }
+.fx-step-head { display: flex; gap: 6px; align-items: center; }
+.fx-cmd { display: block; padding: 4px 8px; border-radius: var(--radius-sm, 6px); background: var(--code-bg); color: var(--code-ink); font: 12px/1.4 ui-monospace, Consolas, monospace; word-break: break-all; }
+.fx-src, .fx-step-note { margin: 0; font-size: 12.5px; color: var(--muted); }
+.fx-links { margin: 0; display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.fx-buttons { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.fx-progress { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.fx-progress li { display: flex; gap: 8px; color: var(--muted); }
+.fx-progress li.running { color: var(--ink); font-weight: 700; }
+.fx-progress li.ok { color: var(--good-ink); }
+.fx-progress li.bad { color: var(--bad-ink); font-weight: 700; }
+.fx-mark { width: 16px; flex: none; text-align: center; }
+.fx-log { max-height: 180px; }
+.fx-log:empty { display: none; }
+.fx-code { padding: 12px 14px; border: 2px solid var(--accent); border-radius: var(--radius-lg, 10px); background: var(--paper-2); display: flex; flex-direction: column; gap: 6px; }
+.fx-code p { margin: 0; }
+.fx-code-label { font-weight: 700; }
+.fx-code-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.fx-code-value { font: 800 34px/1.1 ui-monospace, Consolas, monospace; letter-spacing: .12em; color: var(--ink); user-select: all; }
+.fx-code-row .btn { text-decoration: none; }
+.fx-code-hint { font-size: 12.5px; color: var(--muted); }
+.fr-row .fx-key input { flex: 1 1 200px; }
+.fr-prereqs .fr-all { white-space: nowrap; }

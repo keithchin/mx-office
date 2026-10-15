@@ -47,6 +47,16 @@ Around the projects:
 - **📱 Phone version and Phone access**: the team phone full screen at `/m`, installable on an iPhone with push notifications for what needs you, and a private tunnel to it (Microsoft Dev Tunnels, or Cloudflare Tunnel with Access) switched on from 🔌 Connections. See the docs: *Phone version* and *Phone access*.
 - **🎨 Seven color themes**: Portal (Light) / Portal (Dark), the default, drawn like a low-code platform's web portal (navy top bar with a launcher and a search over projects, pages, agents, issues, pull requests and the docs; a project's pages in a left navigation of collapsible groups that folds to an icon rail, with a page header and an app-overview Overview; Home as a Projects card grid); Clean (Light) / Clean (Dark), which look like VS Code; both pairs show no emoji. And Fun, Fun (Dark) and Terminal.
 
+## Get Mx Office
+
+On Windows, in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/keithchin/mx-office/main/scripts/get-mx-office.ps1 | iex
+```
+
+[`scripts/get-mx-office.ps1`](scripts/get-mx-office.ps1) checks for Git and Node.js and offers to install them with winget, clones the office into `%USERPROFILE%\mx-office-app` (or pulls it when it's already there, so running it again updates it), runs `npm ci` and `npm run build`, and starts it with `scripts\start-office.ps1`. The office opens on **🚀 First-run setup**, where **⚡ Set up everything** installs what's missing (GitHub CLI, jq, Claude Code, mxcli, the toolkit), signs `gh` in with a one-time code, saves the agents' GitHub token from that sign-in, and signs Claude Code in: it shows what it will install, and from where, before anything runs.
+
 ## Quick start
 
 On a fresh Windows machine (Node.js 22.5+, Git, `gh`, Claude Code, Studio Pro and mxcli installed; the office checks each one for you):
@@ -60,7 +70,7 @@ npm run build
 ```
 
 1. **Start**: `scripts\start-office.ps1` keeps the office's data in `%USERPROFILE%\mx-office` (`-OfficeHome` for another folder, `-Port` for another port than 4600), builds it if `dist` is missing, opens it in your browser signed in, and restarts it after **🔁 Restart safely**. Keep its window open: closing it stops the office and its agents. `scripts\install-shortcut.ps1` adds a **Mx Office** shortcut to the desktop and Start menu.
-2. **Set it up**: a new office opens on **🚀 First-run setup** (`/setup`): the office password, a prerequisites check with install links, GitHub (the organization new projects go in, and the two tokens), Mendix (token and default Studio Pro), and the toolkit (pick a folder or clone it). Signing in with the office password makes you admin: the Project Manager. The full walkthrough: `/docs/get-started/new-machine` ([docs/site/get-started/new-machine.md](docs/site/get-started/new-machine.md)).
+2. **Set it up**: a new office opens on **🚀 First-run setup** (`/setup`): the office password, a prerequisites check with a 🔧 Fix on each missing row and ⚡ Set up everything, GitHub (the organization new projects go in, and the two tokens), Mendix (token and default Studio Pro), and the toolkit (pick a folder or clone it). Signing in with the office password makes you admin: the Project Manager. The full walkthrough: `/docs/get-started/new-machine` ([docs/site/get-started/new-machine.md](docs/site/get-started/new-machine.md)).
 3. On **🏠 Home**, open a project's **🗂️ Board**, or click **✨ New project**: describe the app (and attach documents), review the project brief the Chief Analyst drafts, approve the scope, and create the project ([Create your first project](docs/site/get-started/first-project.md)).
 4. In the project, **🏢 Org chart → 🤝 Hire** the Project Coordinator (Sonnet 5.5 is a good default), then the Leads you need.
 5. On **🎛️ Command Center** (the Overview), ask the team lead in the panel on the right for the first plan, and answer what shows up in **🚨 Needs you** (escalations are answered right there).

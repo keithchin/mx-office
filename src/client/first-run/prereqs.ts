@@ -4,6 +4,7 @@
 import { LONGPATHS_ACTION_LABEL, PREREQ_META, prereqsReady, type PrereqResult } from '../../shared/first-run';
 import { h, toast } from '../ui/dom';
 import { setupApi } from './api';
+import { claudeKeyForm, fixButton, setupEverything } from './fix';
 
 const ICON = { ok: '✅', missing: '❌', warn: '⚠️' } as const;
 
@@ -52,6 +53,8 @@ function row(r: PrereqResult, recheck: () => void): HTMLElement {
       r.status !== 'ok' && r.fix ? h('p.fr-row-fix', {}, r.fix) : null,
       r.id === 'mxcli' && r.status !== 'ok' ? mxcliForm(r, recheck) : null,
       r.status !== 'ok' ? actionButton(r, recheck) : null,
+      fixButton(r, recheck),
+      r.id === 'claude-auth' && r.status !== 'ok' ? claudeKeyForm(recheck) : null,
     ),
     r.status !== 'ok' && m.link ? h('a.btn.fr-row-link', { href: m.link, target: '_blank', rel: 'noopener noreferrer' }, `${m.linkLabel ?? 'Get it'} ↗`) : null,
   );
@@ -71,7 +74,7 @@ export function prereqsStep(ready: (ok: boolean, rows: PrereqResult[]) => void):
       .then(({ rows }) => {
         list.replaceChildren(...rows.map((r) => row(r, check)));
         const missing = rows.filter((r) => r.status === 'missing' && PREREQ_META[r.id].required);
-        summary.textContent = missing.length ? `${missing.length} required ${missing.length === 1 ? 'thing is' : 'things are'} missing. Install ${missing.length === 1 ? 'it' : 'them'}, then Re-check (restart the office after installing a program, so it’s on its PATH). You can carry on and come back.` : 'Everything required is here.';
+        summary.textContent = missing.length ? `${missing.length} required ${missing.length === 1 ? 'thing is' : 'things are'} missing. Press 🔧 Fix on a row, or ⚡ Set up everything (it shows what it will install, and from where, before anything runs). You can carry on and come back.` : 'Everything required is here.';
         summary.className = `fr-summary ${missing.length ? 'bad' : 'good'}`;
         ready(prereqsReady(rows), rows);
       })
@@ -88,5 +91,5 @@ export function prereqsStep(ready: (ok: boolean, rows: PrereqResult[]) => void):
   again.addEventListener('click', check);
   list.append(h('li.fr-row.loading', {}, 'Checking this machine…'));
   check();
-  return h('div.fr-prereqs', {}, h('div.fr-inline', {}, summary, again), list);
+  return h('div.fr-prereqs', {}, h('div.fr-inline', {}, summary, setupEverything(check), again), list);
 }

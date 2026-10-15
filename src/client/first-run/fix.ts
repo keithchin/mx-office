@@ -7,6 +7,7 @@
 import type { PrereqResult } from '../../shared/first-run';
 import { FIX_FOR, type FixEvent, type FixId, type FixManual, type FixPlan, type FixStep } from '../../shared/first-run-fix';
 import { h, openModal, toast } from '../ui/dom';
+import './fix.css';
 import { setupApi } from './api';
 
 /** Opens the plan for `ids` ('all': Set up everything), from `opener`; `after` runs once the window closes on a run that did something. */
@@ -48,7 +49,7 @@ export function openFix(ids: FixId[] | 'all', opener: HTMLElement | null, after:
 
   function confirmView(plan: FixPlan) {
     const skip = new Set<FixId>();
-    const parts: (HTMLElement | null)[] = [];
+    const parts: HTMLElement[] = [];
     if (plan.steps.length) parts.push(h('p.fx-note', {}, 'The office will run these, in this order, and stop at the first that fails:'), h('ol.fx-steps', {}, ...plan.steps.map((s) => stepItem(s, skip))));
     else parts.push(h('p.fx-note', {}, ids === 'all' ? 'Nothing the office can fix by itself is missing.' : 'The office can’t do this one by itself here.'));
     if (plan.manual.length) parts.push(h('p.fx-note', {}, 'These need you (the office can’t do them here):'), h('ul.fx-steps', {}, ...plan.manual.map(manualItem)));
@@ -86,7 +87,7 @@ export function openFix(ids: FixId[] | 'all', opener: HTMLElement | null, after:
     };
     const finish = (error?: string, restart?: string) => {
       title.textContent = error ? '⚠️ Setup stopped' : '✅ Done';
-      end.replaceChildren(h('p', { class: `fx-note ${error ? 'bad' : 'good'}` }, error ?? 'Everything in the plan worked.'), restart ? h('p.fx-note.warn', {}, `🔁 ${restart}`) : null);
+      end.replaceChildren(h('p', { class: `fx-note ${error ? 'bad' : 'good'}` }, error ?? 'Everything in the plan worked.'), ...(restart ? [h('p.fx-note.warn', {}, `🔁 ${restart}`)] : []));
       const close = h('button.btn.primary', { type: 'button', onclick: () => modal.close() }, '🔄 Close and re-check');
       stop.replaceWith(close);
       close.focus();
