@@ -190,3 +190,22 @@ test('X01: a hire on a portfolio project carries the one brain line and writes e
   assert.equal(floors[1].hires[0].prompt, primePrompt('lead-developer', d.members['lead-developer'].name, d.settings.autonomy, undefined, undefined, [], undefined));
   assert.doesNotMatch(floors[1].hires[0].prompt!, /Company brain/);
 });
+
+test('the wizard: a plan with a portfolio joins it after init and the pin instructions; a plan without one runs init exactly as before (P01)', async () => {
+  const { withPortfolio } = await import('../src/server/wizard/portfolio-step.js');
+  const { cleanPlan } = await import('../src/server/wizard/plan.js');
+  const calls: string[] = [];
+  const init = async () => (calls.push('init (scaffold + pin instructions)'), { status: 'done' as const, detail: 'scaffolded' });
+  const steps = withPortfolio({ joinPortfolio: async (f: string, p: string) => (calls.push(`join ${f} ${p}`), 'joined Acme') } as never, { init } as never);
+  const job = (portfolio?: string) => ({ plan: { portfolio }, floor: 'f1', by: 'Keith' }) as never;
+  const io = { log: () => undefined } as never;
+  assert.deepEqual(await steps.init(job(), io), { status: 'done', detail: 'scaffolded' });
+  assert.deepEqual(calls, ['init (scaffold + pin instructions)']);
+  const pid = 'pfl_01K7ZZZZZZZZZZZZZZZZZZZZZZ';
+  assert.deepEqual(await steps.init(job(pid), io), { status: 'done', detail: 'scaffolded · joined Acme' });
+  assert.deepEqual(calls.slice(1), ['init (scaffold + pin instructions)', `join f1 ${pid}`]);
+  const plan = (x: unknown) => cleanPlan({ name: 'app', entry: 'greenfield', mendix: '11.6.4', portfolio: x }, ['11.6.4'], 'org');
+  assert.equal((plan(pid) as { portfolio?: string }).portfolio, pid);
+  assert.equal((plan('../etc') as { portfolio?: string }).portfolio, undefined);
+  assert.equal('portfolio' in (plan(undefined) as object), false, 'no portfolio: the plan is as before');
+});

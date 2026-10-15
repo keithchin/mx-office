@@ -24,6 +24,7 @@ export const SETTINGS_SECTIONS = [
   { id: 'notify', icon: '🔔', label: 'Notifications', blurb: 'Desktop alerts, phone alerts, Slack / Discord, and Microsoft Teams.' },
   { id: 'budget', icon: '💰', label: 'Budget', blurb: 'This project’s budget, alert threshold and auto-pause, and the office’s default threshold and local currency.', floor: true },
   { id: 'connections', icon: '🔌', label: 'Connections', blurb: 'The tokens and password the office signs in with, git & gh, its folders, phone access and worktree cleanup. Admins only.', admin: true },
+  { id: 'portfolio', icon: '🗂️', label: 'Portfolio', blurb: 'The portfolio this project is in and its company brain, or Add to portfolio (after a review of what the project already has wired). Knowledge organisation, not access control.', floor: true },
   { id: 'deliverables', icon: '📄', label: 'Documents', blurb: 'What the teams make before their stage: early drafts while the Chief Analyst is on Stages 0–2.', floor: true },
   { id: 'incidents', icon: '🚨', label: 'Incidents', blurb: 'The detection rules that open an incident by themselves, and how long one counts again before a new one opens.' },
   { id: 'stuck', icon: '🧭', label: 'Stuck detection', blurb: 'Tells you through Needs you when work is stuck: a pull request nobody moves, a decision waiting on you, a test failing for days, agents busy with nothing landing. On by default; admins set the thresholds, each change audited.' },
