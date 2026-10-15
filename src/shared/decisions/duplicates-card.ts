@@ -12,9 +12,21 @@ import type { DecisionSplit } from './types.js';
 /** The card's id (and its compact row's key). */
 export const DUPLICATES_CARD = 'duplicates';
 
-/** The clean-up card, when there are likely duplicates on the floor. */
-export function duplicatesCandidate(r: RosterView, splits: readonly DecisionSplit[] = []): Candidate | undefined {
+// The grouping compares the same role's asks pairwise, and Needs you redraws often (every store change, every
+// project switch): it's worked out once per roster snapshot and set of Separate choices, and reused until either changes.
+const memo = new WeakMap<RosterView, { splits: readonly DecisionSplit[]; groups: ReturnType<typeof duplicateGroups> }>();
+
+function groupsOf(r: RosterView, splits: readonly DecisionSplit[]) {
+  const had = memo.get(r);
+  if (had && (had.splits === splits || (!had.splits.length && !splits.length))) return had.groups;
   const groups = duplicateGroups(r.escalations ?? [], r.proposals ?? [], splits);
+  memo.set(r, { splits, groups });
+  return groups;
+}
+
+/** The clean-up card, when there are likely duplicates in the project. */
+export function duplicatesCandidate(r: RosterView, splits: readonly DecisionSplit[] = []): Candidate | undefined {
+  const groups = groupsOf(r, splits);
   if (!groups.length) return undefined;
   const { title, lines } = duplicatesWords(groups);
   const need: NeedItem = { key: DUPLICATES_CARD, kind: 'approval', icon: '🧹', text: title, level: 'warn', action: 'Review', target: { to: 'approvals' } };
