@@ -12,7 +12,8 @@ import path from 'node:path';
 import type { AuditInput } from '../../shared/audit.js';
 import { answersMessage, blocksWork, needOf, needsClient, waitingOnYou, type AnswerKind, type PmAnswer, type Question, type QuestionsNeed, type QuestionsView, type Recipient } from '../../shared/questions.js';
 import type { StuckDraft } from '../../shared/stuck.js';
-import { emptyBook, markSent, ready, reviveBook, setAnswer, sinceOf, takeCollection, type BookData } from './book.js';
+import { emptyBook, markSent, ready, reviveBook, setAnswer, settleJudged, sinceOf, takeCollection, type BookData } from './book.js';
+import type { RecordedLocation } from '../../shared/followthrough.js';
 import type { Collector, Folder } from './collect.js';
 import { exportRows, type ExportRow, type ExportWhich } from './export.js';
 import type { AnswerResult, AnswerSpec } from '../dispatch/service.js';
@@ -48,6 +49,8 @@ export interface QuestionsDeps {
   send(floor: QFloor, workerId: string, text: string, by: string, when: 'now' | 'after', owner?: string, covers?: { decision: DecisionRef; answerRev: number }[]): QSendResult | Promise<QSendResult>;
   /** The durable answer path (server/dispatch/): the stale check, the claim and the answer store. Without it (a test), answers are kept as before. */
   answer?(floor: QFloor, spec: AnswerSpec): Promise<AnswerResult>;
+  /** Where a question's record is (Slice 1B-2): one per collection, its git cached for that collection. */
+  locator?(floor: QFloor): (q: Question) => Promise<RecordedLocation | undefined>;
   /** Hours a decision may wait before it's stuck (stuck detection's setting), and whether stuck detection is on. */
   decisionHours(): number | undefined;
   record(e: AuditInput): void;
@@ -134,13 +137,41 @@ export class QuestionsService {
     if (this.stopped) return;
     const d = await this.book(floor.id);
     const now = this.deps.now();
-    const { fresh, recorded } = takeCollection(d, set, mtimes, now);
+    const before = new Map(Object.values(d.answers).map((a) => [a.key, a.recording?.outcome]));
+    const { fresh, recorded, judged } = takeCollection(d, set, mtimes, now);
+    // Recorded as given (Slice 1B-2): where each found record is (git, off the event loop, once per collection), then only a faithful one is recorded.
+    if (judged.length) await this.locate(floor, judged);
+    recorded.push(...settleJudged(judged, now));
+    const differs = judged.filter(({ a }) => (a.recording?.outcome === 'recorded-differently' || a.recording?.outcome === 'recorded-older-rev') && before.get(a.key) !== a.recording.outcome);
+    if (differs.length) this.deps.record({ floor: floor.id, actor: ACTOR, action: 'questions.recorded-differently', target: { kind: 'questions', id: differs.map(({ a }) => a.id).join(','), label: `${differs.length} answer${differs.length === 1 ? '' : 's'}` }, summary: `Recorded differently from your answer: ${differs.map(({ a }) => `${a.id} (${a.recording?.outcome === 'recorded-older-rev' ? `for rev ${a.recording.rev}` : 'different words'})`).join(', ')}`, details: { ids: differs.map(({ a }) => a.id) }, severity: 'notice' });
     if (fresh.length) {
       const from = [...new Set(fresh.map((q) => (q.source.where === 'main' ? 'main' : (q.source.agent ?? q.source.worktree ?? 'a worktree'))))];
       this.deps.record({ floor: floor.id, actor: ACTOR, action: 'questions.new', target: { kind: 'questions', id: `batch-${d.batch}`, label: `${fresh.length} question${fresh.length === 1 ? '' : 's'}` }, summary: `${fresh.length} open question${fresh.length === 1 ? '' : 's'} for the client on the Questions page (from ${from.join(', ')})`, details: { ids: fresh.map((q) => q.id).slice(0, 50), via: set.via }, severity: 'notice' });
     }
     if (recorded.length) this.deps.record({ floor: floor.id, actor: ACTOR, action: 'questions.recorded', target: { kind: 'questions', id: recorded.map((a) => a.id).join(','), label: `${recorded.length} answer${recorded.length === 1 ? '' : 's'}` }, summary: `Recorded in the BRDs: ${recorded.map((a) => `${a.id} (${a.recordedState})`).join(', ')}`, details: { ids: recorded.map((a) => a.id) } });
     await this.save(floor.id, d);
+  }
+
+  /** Each judged answer's record located (skipped when nothing is recorded); a failure leaves it unlocated, never "merged". */
+  private async locate(floor: QFloor, judged: readonly { a: PmAnswer; q: Question }[]) {
+    const at = this.deps.locator?.(floor);
+    if (!at) return;
+    for (const { a, q } of judged) {
+      if (!a.recording || a.recording.outcome === 'not-recorded-yet') continue;
+      const l = await at(q).catch(() => undefined);
+      if (l) a.recording.location = l;
+    }
+  }
+
+  /** Who question `key`'s answer goes to now (a correction's recipient, server/followthrough/). */
+  async recipient(floor: QFloor, key: string): Promise<Recipient | undefined> {
+    const q = (await this.book(floor.id)).set?.questions.find((x) => x.key === key);
+    return q ? this.deps.recipientOf(floor, q) : undefined;
+  }
+
+  /** The floor's book saved after a change made outside this service (the follow-through actions, server/followthrough/). */
+  async commit(floorId: string): Promise<void> {
+    await this.save(floorId, await this.book(floorId));
   }
 
   /** An agent's turn just ended on the floor: collect again shortly (several ends at once are one collection). */

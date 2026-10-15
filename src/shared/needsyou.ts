@@ -19,6 +19,7 @@ import type { AskAct, AskKind, AsksNeed } from './asks.js';
 import type { QuestionsNeed } from './questions.js';
 import { approvalCandidates, askCandidates, escalationCandidates, prCheckCandidates, questionCandidates, signoffCandidates, stuckCandidates, type Candidate } from './decisions/candidates.js';
 import { foldCards, type Entry } from './decisions/group.js';
+import { duplicatesCandidate } from './decisions/duplicates-card.js';
 import type { DecisionCard, DecisionSplit } from './decisions/types.js';
 
 /** Where an item's button takes you. */
@@ -161,6 +162,9 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   }
   if (r) {
     // 3. Open escalations (not FYI, in Jeff's order; then the FYIs) and 4. proposals and merges waiting on you: decision-card sources (shared/decisions/).
+    // Likely duplicates among them (shared/decisions/duplicates.ts): one clean-up card, closed only when you confirm.
+    const dupes = duplicatesCandidate(r, i.splits ?? []);
+    if (dupes) put(dupes);
     for (const c of escalationCandidates(r)) put(c);
     for (const c of approvalCandidates(r)) put(c);
     // 4b. Team members idle a while with a task still open and nothing escalated: one click nudges them back to it.

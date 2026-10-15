@@ -58,7 +58,20 @@ If the analyst is working, it asks **OK to interrupt?**: **After their current t
 
 Each answer you give is kept in the project's answer history before the book changes, and **Send** is written down before it's typed, with a marker line at the end of the message. If the office stops while sending and can't confirm afterwards that the message reached the analyst, the answers stay **ready to send** and Needs you asks you to settle it (**Send again**, **It went through**, **Abandon**). What the office guarantees is **durable intent plus reconciliation, and no automatic replay of an ambiguous attempt**. It does not promise that an answer is delivered exactly once. An answer changed by someone else since you opened the page is refused, with nothing written.
 
-An answer shows as **recorded** only once a later collection reads its status as ANSWERED, ASSUMED or MOOT.
+### Recorded as given
+
+At **Send** the office keeps what the message asked the analyst to record for each answer: the status, and the `answer`, or the `decision` with `consentBy` and `consentAt`. On every collection it compares the BRD's fields with that. The toolkit's ANSWERED, ASSUMED or MOOT alone never counts: the words must match (case, quotes, punctuation and spacing aside; consent times to the minute).
+
+Each sent answer's card says how its record stands, and where:
+
+- **Recorded as given**, then **In a working copy, not committed**, **Committed on office/tim-1** or **Merged into main**. The location keeps the file's path, the commit and the file's blob in that commit as separate fields.
+- **Recorded differently**: the BRD says something else. The card shows *You decided: … · Recorded: …* with the location, and **Accept as recorded** (the BRD's words become a new revision of your answer; nothing is sent) or **Send correction** (a new revision, sent to the analyst as a new message that replaces the last one).
+- **Recorded for rev 1**: the record matches an earlier revision of your answer.
+- **Not recorded yet.**
+
+An answer shows as **recorded** only when it's recorded as given at its current revision and merged into main. Until then it stays a follow-through card in Needs you (not counted as waiting on you), unless you dismiss it.
+
+Answers sent before Recorded as given came in have no stored expectation. They are **legacy**: recorded once a later collection reads ANSWERED, ASSUMED or MOOT, as before, and the card says *legacy: by the toolkit's state*.
 
 ## Export for the client, and their answers back
 
@@ -68,7 +81,7 @@ An answer shows as **recorded** only once a later collection reads its status as
 
 ## Needs you and notifications
 
-Each question waiting on you is a [decision card](command-center.md#decision-cards) of its own in Needs you, grouped with the other sources of the same question: its stuck item, and `PROJECT.md`'s register row with the same id (OQ-07 in the register is F002's OQ-07 when only one BRD has that id). Its **Answer** opens this page at that question. Once you've answered, the card shows *Sent* until the toolkit reads it recorded, and if the register still lists the question as open it says so: the message **Send** types asks the analyst to mark the register row answered too, so both close. Each card counts in the Overview's and the team-lead panel's *N waiting on you*.
+Each question waiting on you is a [decision card](command-center.md#decision-cards) of its own in Needs you, grouped with the other sources of the same question: its stuck item, and `PROJECT.md`'s register row with the same id (OQ-07 in the register is F002's OQ-07 when only one BRD has that id). Its **Answer** opens this page at that question. Once you've answered, the card shows *Sent* until the toolkit reads it resolved, and the answer then follows through until it's [recorded as given](#recorded-as-given) and merged, and if the register still lists the question as open it says so: the message **Send** types asks the analyst to mark the register row answered too, so both close. Each card counts in the Overview's and the team-lead panel's *N waiting on you*.
 
 It's a red item, so it follows the usual rules for [phone pushes](phone-version.md) (Do not disturb and the digest apply) and [Teams cards](../integrations/teams-notifications.md): **one notification when new questions appear**, not one per question.
 

@@ -14,7 +14,7 @@ import { StuckBook, reviveBook, type BookEvent, type StuckRecord } from './book.
 import { detectStuck, failingStreaks, type PullFacts, type RunLike } from './detect.js';
 import { currentStage, planRows } from './parse.js';
 import type { RepoRead } from './repo.js';
-import { sourcedDrafts } from './sources.js';
+import { settledCheck, sourcedDrafts } from './sources.js';
 
 /** How often each floor is looked at. */
 export const LOOK_MS = 5 * 60_000;
@@ -157,9 +157,12 @@ export class StuckService {
     const a = book.track(now, floor.working(), { merged: merged ? `${merged.number}@${merged.mergedAt}` : undefined, rows, stage }, { merged: merged ? `PR #${merged.number} merged` : undefined }, 2 * LOOK_MS, first);
     const spent = a.lastProgressAt !== undefined ? this.deps.spendSince(floor, a.lastProgressAt) : undefined;
 
+    // Decisions answered with an answer revision settle only when recorded as given and merged (server/followthrough/).
+    const settled = await settledCheck(floor);
     const drafts = detectStuck({
       now,
       settings,
+      ...(settled ? { settled } : {}),
       pulls,
       ...(files ? { files } : {}),
       failing: failingStreaks(runs),

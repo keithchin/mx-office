@@ -17,6 +17,7 @@ import { journalPath, ROLES } from '../../shared/roster/roles.js';
 import { awaitingAsk, awaitingKey, newestWaits, planAwaiting } from './awaiting.js';
 import { anyFailed, placesOf, readEverywhere, type AskPerson, type Read } from './sources.js';
 import { actMessage, detectAsks, DETECT_FILES, type DetectInput } from './detect.js';
+import { runAsksReaders } from './readers.js';
 
 /** How often each floor is looked at. */
 export const LOOK_MS = 5 * 60_000;
@@ -42,6 +43,10 @@ export interface AsksDeps {
   escalations(floor: AsksFloor): readonly Escalation[];
   /** Files one on the member's behalf (never FYI), marked as from an AWAITING-PM item. */
   raise(floor: AsksFloor, role: RoleId, ask: EscalationAsk, key: string): void;
+  /** An item the role reworded: escalation `id` continues with the new words and key (its line back, its id kept). */
+  continueAsk(floor: AsksFloor, id: string, ask: EscalationAsk, key: string): void;
+  /** Pairs of escalations the person separated (decision cards' Separate): continuity never joins them. */
+  apart?(floor: AsksFloor): Promise<(a: string, b: string) => boolean>;
   /** Its AWAITING-PM line is gone (`what` says so), or back (undefined): never settled by itself. */
   markGone(floor: AsksFloor, id: string, what: string | undefined): void;
   /** What the rest of the detectors read of main and the floor (detect.ts). */
@@ -156,7 +161,9 @@ export class AsksService {
       const places = await placesOf(floor.dir, people);
       const journals = [...new Set(ROLES.map((r) => journalPath(r.team)))];
       const reads = await readEverywhere(floor.dir, places, [...journals, ...DETECT_FILES]);
-      this.awaiting(floor, reads, why);
+      this.awaiting(floor, reads, why, (await this.deps.apart?.(floor).catch(() => undefined)) ?? (() => false));
+      // The features that read the same words (readers.ts: Recorded as given's citations), on this look's reads.
+      await runAsksReaders(floor, reads);
       const s = await this.stateOf(floor.id);
       const now = this.deps.now();
       // A failed read keeps what the last look found, marked as not re-read (nothing settles on a failed read).
@@ -179,13 +186,17 @@ export class AsksService {
     }
   }
 
-  private awaiting(floor: AsksFloor, reads: readonly Read[], why: string) {
+  private awaiting(floor: AsksFloor, reads: readonly Read[], why: string, apart: (a: string, b: string) => boolean) {
     const waits = newestWaits(reads);
     const writer = (team: TeamId) => this.deps.writerOf(floor, team);
-    const plan = planAwaiting(waits, (team) => writer(team)?.role, this.deps.escalations(floor), reads);
+    const plan = planAwaiting(waits, (team) => writer(team)?.role, this.deps.escalations(floor), reads, apart);
     for (const r of plan.raise) {
       const name = writer(r.waits.team)?.name ?? r.role;
       this.deps.raise(floor, r.role, awaitingAsk(name, r.item, r.waits, why), awaitingKey(r.role, r.item));
+    }
+    for (const u of plan.update) {
+      const name = writer(u.waits.team)?.name ?? u.role;
+      this.deps.continueAsk(floor, u.escalation.id, awaitingAsk(name, u.item, u.waits, why), awaitingKey(u.role, u.item));
     }
     for (const e of plan.gone) this.deps.markGone(floor, e.id, `The AWAITING-PM line is gone from ${e.by}'s newest entry`);
     for (const e of plan.back) this.deps.markGone(floor, e.id, undefined);

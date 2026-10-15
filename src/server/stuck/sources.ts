@@ -37,3 +37,27 @@ export async function sourcedDrafts(floor: StuckFloor, now: number): Promise<Sou
   );
   return { status: failed ? 'failed' : 'ok', drafts: all.flat() };
 }
+
+/**
+ * Whether a register decision that reads CONFIRMED is settled, for decisions that carry an answer revision
+ * (Recorded as given, server/followthrough/): 'faithful' when the person's answer is recorded as given at its
+ * current revision and merged into main, 'pending' when it isn't (recorded differently never settles one by
+ * itself), undefined when the decision has no answer revision (legacy: CONFIRMED settles it, as before).
+ */
+export type SettledCheck = (id: string) => 'faithful' | 'pending' | undefined;
+export type SettledSource = (floor: StuckFloor) => Promise<SettledCheck | undefined>;
+
+let settledSource: SettledSource | undefined;
+
+/** Sets the one settled check (Recorded as given's); returns what takes it away again. */
+export function registerSettledSource(fn: SettledSource): () => void {
+  settledSource = fn;
+  return () => {
+    if (settledSource === fn) settledSource = undefined;
+  };
+}
+
+/** The floor's settled check; undefined (every decision legacy) when none is registered or it fails. */
+export async function settledCheck(floor: StuckFloor): Promise<SettledCheck | undefined> {
+  return settledSource ? settledSource(floor).catch(() => undefined) : undefined;
+}

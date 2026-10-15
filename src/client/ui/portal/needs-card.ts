@@ -30,6 +30,8 @@ import { decisionAct } from '../decisions/api';
 import { decisionCheck } from '../decisions/feed';
 import { stuckView } from '../stuck/feed';
 import { dispatchNotices } from '../dispatch/card';
+import { followNotices } from '../followthrough/card';
+import { duplicatesCard } from './duplicates-card';
 
 export interface NeedsCardDeps {
   /** Opens a tab (Waive is on the Testing tab). */
@@ -66,6 +68,8 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
   let showHidden = false;
   // Answers whose outcome the office couldn't establish (server/dispatch/): above the rest, until you settle each.
   const notices = dispatchNotices();
+  // Answered decisions still being followed through (server/followthrough/): status-level, after the rest, never counted.
+  const follow = followNotices();
   const el = h('section.pt-ov-card.pt-needs', { id: 'pt-needs', 'aria-labelledby': 'pt-needs-h' }, h('div.pt-ov-card-h', {}, heading, count), counts, notices.el, list);
   /** Each item's element by its key, with what it was drawn from. */
   let drawn = new Map<string, { sig: string; el: HTMLElement }>();
@@ -76,7 +80,7 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
   /** Every item, not just the first few (Show N more). */
   let all = false;
   const more = h('button.pt-link.pt-needs-more', { type: 'button', hidden: true, onclick: () => ((all = !all), snap && draw(snap)) }) as HTMLButtonElement;
-  el.append(more, hidden);
+  el.append(more, follow.el, hidden);
 
   function escCard(e: Escalation, r: RosterView, m: EscModel, card?: DecisionCard, x?: CardCtx): HTMLElement {
     const lead = leadOf(r);
@@ -193,6 +197,7 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
     }
     const r = s.roster?.floor === s.floor ? s.roster : undefined;
     notices.update(s.floor, !!r?.admin, s.go);
+    follow.update(s.floor, !!r?.admin, s.go);
     const lead = leadOf(r);
     const leadName = lead && lead.kind === 'lead' ? lead.name : undefined;
     const items = s.items.filter((n) => !(n.target.to === 'escalation' && answered.has(n.target.id)));
@@ -227,6 +232,15 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
       const card = cardOf.get(it.key);
       const cardSig = card ? JSON.stringify([card.kind, card.sources.map((x) => x.id + (x.note ?? '')), card.notes, card.gone ?? null, card.related.length, card.escalation ? (decisionCheck(card.escalation)?.at ?? 0) : 0, card.answered ?? null]) : '';
       if (card && answered.has(card.id)) continue;
+      // The clean-up card (shared/decisions/duplicates-card.ts): its groups, Close duplicates (confirmed in the card), Review one by one.
+      if (card?.duplicates) {
+        const sig = JSON.stringify(['dupes', !!r?.admin, card.duplicates]);
+        const had = drawn.get(it.key);
+        const d = had?.sig === sig ? had : { sig, el: duplicatesCard(card, ctx(r)) };
+        keep.set(it.key, d);
+        nodes.push(d.el);
+        continue;
+      }
       const e = it.target.to === 'escalation' ? r?.escalations.find((x) => x.id === (it.target as { id: string }).id) : undefined;
       if (e && r && card && (card.gone || card.kind === 'hands-on' || card.kind === 'fyi')) {
         const sig = JSON.stringify([e.status, r.admin, leadName, e.title, e.details, cardSig]);

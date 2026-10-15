@@ -23,6 +23,8 @@ An item is **raised once** under a stable id (`pr-51`, `decision-OW-1`, `failing
 
 A decision recorded in `PROJECT.md`'s Decisions as **CONFIRMED**, or CONFIRMED *for now* (accepted, parked on a workaround), or an open question marked *accepted for now*, is not waiting on you, and isn't raised again from its own evidence.
 
+That changes for a decision you answered through an escalation that names it (its title says OW-1, say) with an answer revision: the CONFIRMED row settles it only once your answer is [recorded as given](../teams-and-agents/escalations.md#recorded-as-given), at its current revision, and merged into main. Until then the item stays open, its first evidence line says so, and a record that says something different never settles it. Decisions with no answer revision (answered before Recorded as given, or not through an escalation) are **legacy** and keep the rule above.
+
 When the office **can't read** a source on a look (a git error reading main, Testing's records, a failing source), the items that came from it are kept as they were, marked *couldn't re-read the source at 14:02*; they never resolve on a failed read. Only a successful read that no longer finds an item resolves it.
 
 Every raise, update, resolve and action is in the [Audit log](audit-log.md) as `stuck.raised`, `stuck.updated`, `stuck.resolved`, `stuck.snoozed`, `stuck.dismissed`, `stuck.ask-lead`, `stuck.answer`, `stuck.accept` or `stuck.blockers` (the *Escalations & approvals* group).

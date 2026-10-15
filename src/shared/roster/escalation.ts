@@ -19,13 +19,14 @@ export const isEscalationVerdict = (v: unknown): v is EscalationVerdict => typeo
 
 /**
  * What the person's answer meant, beside the verdict (decision cards, shared/decisions/): `noted` an FYI
- * acknowledged, `done` a hands-on action the person says they did. The verdict next to it stays one an
- * older office knows (noted: dismiss; done: reply "Done"), so a rollback still shows it.
+ * acknowledged, `done` a hands-on action the person says they did, `superseded` a duplicate closed in
+ * favour of another (Needs you's clean-up card: nothing is sent). The verdict next to it stays one an older
+ * office knows (noted and superseded: dismiss; done: reply "Done"), so a rollback still shows it.
  */
-export type EscalationOutcome = 'noted' | 'done';
-export const isEscalationOutcome = (v: unknown): v is EscalationOutcome => v === 'noted' || v === 'done';
+export type EscalationOutcome = 'noted' | 'done' | 'superseded';
+export const isEscalationOutcome = (v: unknown): v is EscalationOutcome => v === 'noted' || v === 'done' || v === 'superseded';
 /** The legacy verdict and text written beside an outcome. */
-export const OUTCOME_VERDICT: Record<EscalationOutcome, { verdict: EscalationVerdict; text: string }> = { noted: { verdict: 'dismiss', text: '' }, done: { verdict: 'reply', text: 'Done' } };
+export const OUTCOME_VERDICT: Record<EscalationOutcome, { verdict: EscalationVerdict; text: string }> = { noted: { verdict: 'dismiss', text: '' }, done: { verdict: 'reply', text: 'Done' }, superseded: { verdict: 'dismiss', text: '' } };
 
 /** The explicit ids an escalation is about, for grouping it with the other sources of the same decision (shared/decisions/). */
 export interface EscalationRefs {
@@ -72,6 +73,8 @@ export interface Escalation {
     answerRev?: number;
     /** The dispatch that carried it to the raiser (server/dispatch/), when one did. */
     dispatchId?: string;
+    /** Closed as a duplicate of this escalation (outcome superseded). */
+    supersededBy?: string;
   };
   /** Jeff's rating of how soon to resolve it, and its rank among the floor's open ones (jeff-rank.ts). */
   jeffRank?: JeffRank;

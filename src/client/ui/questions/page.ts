@@ -8,6 +8,7 @@ import { headerWords, questionCounts, needsClient, isResolved, type AnswerKind, 
 import { store } from '../../state';
 import { h } from '../dom';
 import { questionCard } from './card';
+import { followView, onFollowChanged } from '../followthrough/feed';
 import { openExport, openImport, openSend } from './dialogs';
 import { followQuestions, onQuestionsChanged, questionsView, setQuestionsView } from './feed';
 import { emptyWords, FILTERS, groups, readyByRecipient, readyWords, type QFilter } from './logic';
@@ -120,6 +121,8 @@ export function questionsTab(root: HTMLElement) {
     const empty = emptyWords(v);
     if (empty) return void body.replaceChildren(h('p.qs-empty', {}, empty));
     const gs = groups(v, filter, search);
+    // The answered ones being followed through (Recorded as given): the floor's one feed, shared with Needs you.
+    const follow = followView(v.floor);
     if (!gs.length) return void body.replaceChildren(h('p.qs-empty', {}, 'Nothing matches.'));
     body.replaceChildren(
       ...gs.map((g) =>
@@ -127,7 +130,7 @@ export function questionsTab(root: HTMLElement) {
           'section.qs-group',
           { 'aria-label': g.title },
           h('h3.qs-group-h', {}, g.title, h('small', {}, ` · ${g.questions.length}`)),
-          ...g.questions.map((q) => questionCard(q, v.answers[q.key], { admin: v.admin, ...(v.routes[q.key] ? { to: v.routes[q.key] } : {}), answer })),
+          ...g.questions.map((q) => questionCard(q, v.answers[q.key], { admin: v.admin, ...(v.routes[q.key] ? { to: v.routes[q.key] } : {}), answer, ...(follow ? { follow: follow.items.find((i) => i.decision === `q:${q.key}`), floor: v.floor } : {}) })),
         ),
       ),
     );
@@ -135,6 +138,7 @@ export function questionsTab(root: HTMLElement) {
   }
 
   onQuestionsChanged(() => draw());
+  onFollowChanged(() => draw());
   return {
     show() {
       showing = true;

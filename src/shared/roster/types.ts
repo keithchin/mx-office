@@ -124,6 +124,10 @@ export interface Proposal {
   /** The answer store's revision of the approval, and the dispatch that made its issue (server/dispatch/). */
   answerRev?: number;
   dispatchId?: string;
+  /** When it was harvested (ms). Missing on proposals from before release 49: their standup's start stands in. */
+  at?: number;
+  /** Closed as a duplicate of this pending proposal (Needs you's clean-up card, server/decisions/duplicates.ts). */
+  supersededBy?: string;
 }
 
 export interface StandupReportView {
@@ -167,6 +171,8 @@ export interface ApprovalItem {
   /** A Lead's proposed subagent action (warn, bench, swap model, reinstate). */
   actionId?: string;
   url?: string;
+  /** Since when it has waited (ms), when known. */
+  at?: number;
 }
 
 export interface RosterView {

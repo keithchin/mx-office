@@ -96,6 +96,8 @@ The kind of card decides its buttons:
 
 **A missing source is not an answer.** When an `AWAITING-PM` line goes from the agent's newest entry, its escalation stays open and the card says *The AWAITING-PM line is gone from &lt;agent&gt;'s newest entry*, with **Resolved** and **Still needed: ask &lt;agent&gt;**. When the office can't read a source (a git error, an unreadable file), it keeps the item as it was and says *couldn't re-read at 14:02*: nothing resolves on a failed read.
 
+**Likely duplicates.** When the same ask was filed more than once (an agent reworded an `AWAITING-PM` item before the office kept one escalation per reworded item, or the same proposal was harvested twice), one card says so: *Likely duplicates: 9 asks repeat 5 others*, with a line per group (*GenAI key ×3 → keep the newest*). Escalations are grouped only within one role's `AWAITING-PM` asks, by the same rule as [reworded items](../teams-and-agents/escalations.md#escalations-the-office-files-for-an-agent), and only those whose line is gone are offered for closing; proposals only when the same role's wait on you with the same kind and the same words. Two you separated are never grouped. **Close duplicates** asks you to confirm in the card, then keeps the newest of each group and closes the rest as *superseded* by it: recorded in the [Audit log](audit-log.md) (`escalation.answer` with the successor's id, `proposal.superseded`, `decisions.close-duplicates`), nothing typed to any agent. **Review one by one** lists each duplicate with a link to its own card. The office never closes a duplicate without that confirmation. A new proposal with the same kind and words as one of the same role's already waiting isn't added again, and every proposal now shows when it was made.
+
 Escalations from before decision cards have no ids of their own: the card reads one from the title with the same rule (only when it names exactly one of a kind, nothing written back) and says *id read from the title*; one whose title names none, or two, shows on its own with a *recorded before decision cards* note. Nothing is grouped on a guess. Every action on a card is an admin's, checked by the office (`POST /api/decisions/action`).
 
 **Finished, not looked at yet.** An agent that ended its turn and that nobody has opened since counts as waiting on you. Its worker card says *👀 Finished, not looked at yet: … open it to see*. Opening its terminal clears it.
@@ -116,6 +118,27 @@ If the office stopped while it was sending, it looks when it starts again: in th
 A proposal's issue works the same way. The proposal is marked approved before the office asks GitHub to make the issue, and the issue body ends with *office-proposal: &lt;id&gt; rev &lt;n&gt;*. When the outcome is unclear (gh failed or timed out, or the office stopped), the card says *The issue may or may not have been created* with **Check GitHub** (one search for the marker: only a match settles it, because GitHub's search can lag minutes), **Create it** and **It exists: link #…**. The office never makes the issue again by itself.
 
 A decision that changed since you opened the card (someone else answered it) is refused with *This decision changed since you opened it*, and nothing is written or typed. Every one of these actions is an admin's, checked by the office (`POST /api/dispatch/action`), and audited as `dispatch.*`.
+
+### Following through
+
+An answered escalation or question stays on the Needs you card as a **follow-through** item until the agent's record of it is recorded as given and merged into main, or you **Dismiss** it. These are status cards after the rest: they never count in *N waiting on you*. Each says where the decision is:
+
+> ↻ **Following through** · ESC-3f9c2a1b7e Sign-in: SSO or magic links?
+> Decided (rev 1) · Sent (Typed (the office saw it go)) · Recorded as given · Committed on office/dev
+
+*Sent* uses the attempt's own state, so *You said it went through* stays yours, never the office's. The record is one of *Recorded as given*, *Recorded differently*, *Recorded for rev 1*, *Not recorded yet*, with where it is: *In a working copy, not committed*, *Committed on &lt;branch&gt;* or *Merged into main*. How the office finds and compares the record is in [Escalations](../teams-and-agents/escalations.md#recorded-as-given) and [Questions](questions.md#recorded-as-given).
+
+A record that differs from what you decided, or cites an older revision, is a warning card with both texts and where the record is:
+
+> ⚠ **Recorded differently** · ESC-3f9c2a1b7e Sign-in: SSO or magic links?
+> **You decided:** Go with: Use SSO · **Recorded:** use magic links for everyone · Committed on office/dev · docs/team/development.md @ 1a2b3c4 (blob 9f8e7d6)
+> **Accept as recorded** · **Send correction** · Dismiss
+
+- **Accept as recorded** makes the recorded words your decision: a new revision (*accept-as-recorded*) in the answer history, with the recorded text. Nothing is sent, because there's nothing to tell anyone.
+- **Send correction** makes a new revision (*correction*) and types it to the agent, as a new attempt that replaces the last one, with the citation to use now (*Decided per ESC-… rev 2*).
+- Neither blocks any other work. *Recorded differently* never settles anything else by itself: a stuck decision that the register says is CONFIRMED stays open while your answer to it isn't recorded as given and merged.
+
+Every action is an admin's, checked by the office (`POST /api/followthrough/action`), refused with *This decision changed since you opened it* when the decision has a newer revision, and audited as `followthrough.*`.
 
 **Answer → lands on the escalation in one step.** In Portal the Overview scrolls to its card in Needs you, the card is outlined and **Send answer** gets the focus; in the other themes it opens Approvals.
 

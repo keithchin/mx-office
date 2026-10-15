@@ -32,6 +32,7 @@ import { setFloorPause } from './pause.js';
 import { Relays } from './relays.js';
 import { applyStageAutonomy, stageOf } from './stage-autonomy.js';
 import { StandupRunner } from './standup-run.js';
+import { proposalAt } from './standup.js';
 import { Subagents } from './subagents.js';
 import { effectiveSkills } from '../../shared/roster/skills.js';
 import { OP_ASK, modelWord } from '../../shared/roster/subagents.js';
@@ -446,7 +447,7 @@ export class Roster {
       .map((e) => ({ id: `e-${e.id}`, kind: 'escalation', title: e.title, detail: `${e.by}${e.role ? ` (${ROLE_BY_ID.get(e.role)?.title})` : ''} · ${e.fyi ? 'FYI' : e.urgency}${e.trigger ? ` · ${e.trigger}` : ''}`, team: e.team, escalationId: e.id }));
     out.push(...d.proposals
       .filter((p) => p.status === 'pending')
-      .map((p) => ({ id: `p-${p.id}`, kind: 'proposal', title: p.title, detail: `${p.by} (${ROLE_BY_ID.get(p.role)?.title}) · ${p.kind} · standup ${p.standup}${p.detail ? ` — ${p.detail}` : ''}`, team: p.team, proposalId: p.id }) as ApprovalItem));
+      .map((p) => ({ id: `p-${p.id}`, kind: 'proposal', title: p.title, detail: `${p.by} (${ROLE_BY_ID.get(p.role)?.title}) · ${p.kind} · standup ${p.standup}${p.detail ? ` — ${p.detail}` : ''}`, team: p.team, proposalId: p.id, ...(proposalAt(p, d) ? { at: proposalAt(p, d) } : {}) }) as ApprovalItem));
     // Subagent actions a Lead proposed (its gate was propose); an ask is an escalation above.
     for (const a of d.subagentActions.filter((x) => x.status === 'pending' && x.gate === 'propose')) {
       const m = d.members[a.lead];
