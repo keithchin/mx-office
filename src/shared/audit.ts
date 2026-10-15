@@ -77,7 +77,7 @@ export const OFFICE_FLOOR = '_office';
 export const AUDIT_GROUPS = {
   team: { label: 'Team', prefixes: ['roster.', 'standup.', 'subagent.'] },
   workers: { label: 'Agents', prefixes: ['worker.', 'queue.', 'liveapp.', 'studio.', 'model.'] },
-  escalations: { label: 'Escalations & approvals', prefixes: ['escalation.', 'approval.', 'proposal.', 'stuck.', 'questions.'] },
+  escalations: { label: 'Escalations & approvals', prefixes: ['escalation.', 'approval.', 'proposal.', 'stuck.', 'questions.', 'decisions.'] },
   github: { label: 'GitHub', prefixes: ['pr.', 'issue.'] },
   settings: { label: 'Settings', prefixes: ['settings.', 'floor.'] },
   access: { label: 'Access', prefixes: ['login.', 'account.', 'audit.', 'access.', 'phone.'] },

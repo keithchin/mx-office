@@ -56,7 +56,7 @@ The items, and their buttons in the list:
 | 🙋 | *&lt;name&gt; is asking: …* (a question or a permission prompt) | **Answer**: opens its terminal |
 | ✅ | *&lt;name&gt; finished: &lt;summary&gt;, not looked at yet* (not for a [quiet turn](../concepts/workers-and-worktrees.md#quiet-turns): one the office started, or a team member's at autonomy 3 and up) | **Review**: opens its terminal |
 | 🚩 | An escalation, tagged CRITICAL, URGENT, IMPORTANT or INFO (one the office filed for an agent too: an ask *From the chat*, or an item of its journal's `AWAITING-PM` line) | **Answer** (admin) or **View**: jumps to the card |
-| ℹ️ | An escalation filed as FYI (below the autonomy level's threshold), tagged **FYI**: shown low and not counted, so nothing an agent asked is hidden | **Answer** or **View** |
+| ℹ️ | An escalation filed as FYI (below the autonomy level's threshold), tagged **FYI**: shown low and not counted, so nothing an agent asked is hidden. An FYI with options or a question is shown, and counted, as a decision, with a *filed as FYI* note | **Noted** (an FYI), or **Answer** |
 | 🔀 💸 🧰 📝 | An approval: a merge, a cost cap, a subagent action, a proposal | **Review**: opens Approvals |
 | 💤 | *&lt;name&gt; is idle with an open task: …* (idle 10 minutes, nothing escalated) | **Nudge**: tells it to carry on, or escalate if it's blocked ([back to work](../teams-and-agents/interruptions.md#back-to-work)) |
 | 💸 | *Spend cap reached: office prompts paused; agents finish their current turn* (the daily cap is spent) | **Settings** |
@@ -65,7 +65,7 @@ The items, and their buttons in the list:
 | ⚠️ | *Gate advisory in &lt;agent&gt;'s copy: …*, tagged **Advisory** (the toolkit's gate-check wrote it to `.claude/.gate-advisories` and printed it only to that agent) | **Ask &lt;lead&gt;** or **Mark as seen** |
 | 📤 | *N agent updates aren't on main (standups, journals, handoffs) · &lt;agent&gt;: M commits*, tagged **Not on main** (info: shown, not counted) | **Ask &lt;lead&gt; to open a docs PR** or **Hide** |
 | 👀 | *Ready for your review: 5 BRDs, design system, 9 wireframes*, tagged **Review** (info: shown, not counted) | **Documents** or **Mark as seen** (a new one shows it again) |
-| ❓ | *N questions for the client · N BRDs · N block work*: the analysts' open questions in the BRDs waiting on you, one row per project ([Questions](questions.md)) | **Answer**: opens the Questions page |
+| ❓ | *Question for the client: OQ-07 …*: each open question in the BRDs waiting on you, a card of its own ([Questions](questions.md)); a question you answered but the toolkit hasn't read recorded yet shows as info | **Answer**: opens the Questions page at that question |
 | ❌ | *PR #n has failing checks* | **Open PR #n** |
 | ✋ | *Stage X waits for your sign-off*: every ✋ stage gate-check marks MANUAL (3, 4, 7, and 5–6 where it wants a person), also after Stage 4 | **Sign off**: scrolls to the setup panel, or past Stage 4 to the progress bar |
 | 🌿 | *This floor's folder is on &lt;branch&gt;, N commits behind main* (only past 10 commits; last of this floor's items) | **Setup** |
@@ -74,7 +74,29 @@ The items, and their buttons in the list:
 | 🙋 | *N waiting on &lt;other floor&gt;* | **Go** |
 | 📑 | *Audit report ready from The Firm* (and The Firm's budget warnings) | **Read** |
 
-**Nothing waits on you unseen.** Agents' asks used to reach you only through channels the office didn't count: their chat, a journal's `AWAITING-PM:` line, an FYI escalation, a branch nobody merged. Now each comes here: an ask in the lead's chat that it didn't escalate is filed for it *From the chat*; every item of an `AWAITING-PM` line, in the newest entry of any team journal (the project folder, an agent's worktree or its branch; on bench, on pause and every five minutes), is an escalation of its own that closes by itself once the line is gone; FYI escalations show as info rows; and the rows below the stuck items say what's not on main, what was assumed without your consent, what the toolkit warned an agent about and what's ready for your review. Info rows (ℹ️ 📤 👀) are shown but not counted in *N waiting on you*. These come from the office's look at the project every five minutes (`GET /api/asks`), soon after a turn ends, a bench or a pause; their buttons go through `POST /api/asks/act`, and a message goes to whoever covers Management after their turn.
+**Nothing waits on you unseen.** Agents' asks used to reach you only through channels the office didn't count: their chat, a journal's `AWAITING-PM:` line, an FYI escalation, a branch nobody merged. Now each comes here: an ask in the lead's chat that it didn't escalate is filed for it *From the chat*; every item of an `AWAITING-PM` line, in the newest entry of any team journal (the project folder, an agent's worktree or its branch; on bench, on pause and every five minutes), is an escalation of its own (when the line goes from the newest entry, its card asks you whether it's resolved: a missing line isn't an answer); FYI escalations show as info rows; and the rows below the stuck items say what's not on main, what was assumed without your consent, what the toolkit warned an agent about and what's ready for your review. Info rows (ℹ️ 📤 👀) are shown but not counted in *N waiting on you*. These come from the office's look at the project every five minutes (`GET /api/asks`), soon after a turn ends, a bench or a pause; their buttons go through `POST /api/asks/act`, and a message goes to whoever covers Management after their turn.
+
+### Decision cards
+
+On the Overview, every item is a **decision card** that says what is asked and by whom, the options and the recommendation, the evidence, what it blocks, and what happens after you answer. The card's header counts what's waiting: *3 decisions · 2 actions for you · 4 FYIs*. Only decisions and actions count in *N waiting on you*.
+
+The kind of card decides its buttons:
+
+| Kind | What it is | Buttons | After you press |
+|---|---|---|---|
+| **Decision** | An escalation with a question or options, a client question, a proposal, a ✋ sign-off | The options, **Reply in my words**, **Ask &lt;lead&gt;** | *&lt;agent&gt; gets it after their current turn and records it. This card shows Sent until then.* |
+| **Action for you** | A hands-on action only a person can do (an escalation with trigger `needs-human`, or an approved `human-action` proposal) | **I've done it**, **Can't now: tell &lt;agent&gt;**, **Ask &lt;lead&gt;** | *&lt;agent&gt; is told and re-checks. Pressing it doesn't prove it worked.* |
+| **FYI** | An FYI that asks nothing | **Noted** | *Noting doesn't approve anything.* |
+
+- **I've done it** tells the agent *&lt;you&gt; says it's done: please re-check*, never *APPROVED*. Where a harmless read-only check exists, the office runs it afterwards and shows it on the card, labelled as a check, not proof: `gh auth status` for a GitHub sign-in, and `mxcli auth status` for a Marketplace sign-in when the office's mxcli has that command. In test mode the check is faked. **Can't now** tells the agent, after its turn, and keeps the card open.
+- **Noted** never resolves a decision, and **I've done it** never resolves anything as an approval: the office refuses both on the wrong kind of card.
+- The answers are recorded beside a verdict an older office knows (Noted as *dismiss*, I've done it as *reply "Done"*), so going back a release still shows them.
+
+**One card per decision.** Sources fold into one card only when they share an **explicit id**: a BRD question's key (`F002#OQ-07`), the same question id in `PROJECT.md`'s register (OQ-07 is the BRD's OQ-07 when only one BRD has that id), a register decision id (`OW-1`), a PR number (`#98`, across escalations, `AWAITING-PM` lines, asks *From the chat*, `human-action` proposals and stuck items), a stage id, or a journey or test id (`J-08`). Similar wording never merges anything; a free-text test name only shows *Possibly related*. The card lists every source (*Also found in: … one decision, 7 sources*), and **Separate** splits a source a card shouldn't have (kept for the project, and in the [Audit log](audit-log.md) as `decisions.separate`). Answering a card answers every escalation on it; the FYIs among them are noted.
+
+**A missing source is not an answer.** When an `AWAITING-PM` line goes from the agent's newest entry, its escalation stays open and the card says *The AWAITING-PM line is gone from &lt;agent&gt;'s newest entry*, with **Resolved** and **Still needed: ask &lt;agent&gt;**. When the office can't read a source (a git error, an unreadable file), it keeps the item as it was and says *couldn't re-read at 14:02*: nothing resolves on a failed read.
+
+Escalations from before decision cards show on their own, with a small *recorded before decision cards* note: nothing is grouped on a guess. Every action on a card is an admin's, checked by the office (`POST /api/decisions/action`).
 
 **Finished, not looked at yet.** An agent that ended its turn and that nobody has opened since counts as waiting on you. Its worker card says *👀 Finished, not looked at yet: … open it to see*. Opening its terminal clears it.
 
