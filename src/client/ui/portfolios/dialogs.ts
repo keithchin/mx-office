@@ -20,9 +20,9 @@ const note = () => h('p.pf-note', {}, h('strong', {}, `${NOT_ACCESS_CONTROL}. `)
 
 /** New portfolio: a name. */
 export function newPortfolioDialog(opener: HTMLElement | null, done: (r: ActResult) => void) {
-  const name = h('input.pf-input', { type: 'text', maxlength: '80', placeholder: 'Client or organisation, e.g. Acme', 'aria-label': 'Portfolio name' }) as HTMLInputElement;
-  const create = h('button.btn.primary', { type: 'button' }, 'Create portfolio');
-  const d = dialog('New portfolio', opener, [h('label.pf-field', {}, h('span', {}, 'Name'), name), h('p.pf-hint', {}, 'A portfolio groups projects for one client or organisation, so their agents are pointed at the same company brain. It can exist without a brain: connect one later.'), note()], [create]);
+  const name = h('input.pf-input', { type: 'text', maxlength: '80', placeholder: 'Company or organisation, e.g. Acme', 'aria-label': 'Client name' }) as HTMLInputElement;
+  const create = h('button.btn.primary', { type: 'button' }, 'Create client');
+  const d = dialog('New client', opener, [h('label.pf-field', {}, h('span', {}, 'Name'), name), h('p.pf-hint', {}, 'A client (the company or organisation you build for) groups its projects, so their agents are pointed at the same company brain. It can exist without a brain: connect one later.'), note()], [create]);
   const go = async () => {
     d.status.textContent = 'Creating…';
     const r = await portfolioAct({ action: 'create', label: name.value });
@@ -40,7 +40,7 @@ export function connectBrainDialog(opener: HTMLElement | null, p: PortfolioView,
   const connect = h('button.btn.primary', { type: 'button' }, 'Connect and wire');
   const d = dialog(`Connect a company brain to ${p.label}`, opener, [
     h('label.pf-field', {}, h('span', {}, 'Company brain folder on the office’s computer'), input),
-    h('ul.pf-hint', {}, h('li', {}, 'It needs README.md and ROUTING.md (the toolkit’s init-company-brain.sh makes one).'), h('li', {}, 'A git repository gives each session a snapshot (its commit). A plain folder is allowed but shown as not versioned.'), h('li', {}, `Each of the portfolio’s ${p.projects.length} project${p.projects.length === 1 ? '' : 's'} gets the toolkit’s short pointer block in its instruction files, checked by the office afterwards.`)),
+    h('ul.pf-hint', {}, h('li', {}, 'It needs README.md and ROUTING.md (the toolkit’s init-company-brain.sh makes one).'), h('li', {}, 'A git repository gives each session a snapshot (its commit). A plain folder is allowed but shown as not versioned.'), h('li', {}, `Each of the client’s ${p.projects.length} project${p.projects.length === 1 ? '' : 's'} gets the toolkit’s short pointer block in its instruction files, checked by the office afterwards.`)),
     note(),
   ], [connect]);
   const go = async () => {
@@ -87,24 +87,24 @@ export function contextLines(c: ExistingContext | undefined): (Node | string)[] 
 export function addToPortfolioDialog(opener: HTMLElement | null, view: PortfoliosView, at: { portfolio?: string; floor?: string }, done: (r: ActResult) => void) {
   const inOther = at.floor ? view.portfolios.find((p) => p.projectIds.includes(at.floor!)) : undefined;
   const picks = at.portfolio ? view.ungrouped.map((f) => [f.id, f.name] as const) : view.portfolios.map((p) => [p.id, p.label] as const);
-  const sel = h('select.pf-input', { 'aria-label': at.portfolio ? 'Project' : 'Portfolio' }, ...picks.map(([v, l]) => h('option', { value: v }, l))) as HTMLSelectElement;
+  const sel = h('select.pf-input', { 'aria-label': at.portfolio ? 'Project' : 'Client' }, ...picks.map(([v, l]) => h('option', { value: v }, l))) as HTMLSelectElement;
   const review = h('div.pf-review', {});
-  const add = h('button.btn.primary', { type: 'button' }, 'Add to portfolio');
+  const add = h('button.btn.primary', { type: 'button' }, 'Add to client');
   const floorOf = () => at.floor ?? sel.value;
   const showReview = async () => {
     review.replaceChildren(h('p.pf-hint', {}, 'Reading what the project already has…'));
     const c = await existingContext(floorOf());
     const target = at.portfolio ?? sel.value;
-    const blocked = c?.portfolio && c.portfolio.id !== target ? `Already in the portfolio ${c.portfolio.label}: moving a project between portfolios isn’t available.` : c?.consumed && c.consumed.portfolioId !== target ? 'It was offered another portfolio’s company brain before: moving it isn’t available, as what it was offered can’t be taken back.' : undefined;
+    const blocked = c?.portfolio && c.portfolio.id !== target ? `It already belongs to the client ${c.portfolio.label}: a project can belong to one client, and moving it between clients isn’t available.` : c?.consumed && c.consumed.portfolioId !== target ? 'It was offered another client’s company brain before: moving it isn’t available, as what it was offered can’t be taken back.' : undefined;
     review.replaceChildren(h('h3', {}, 'What the project already has'), ...contextLines(c), ...(blocked ? [h('p.pf-refused', { role: 'alert' }, blocked)] : []));
     add.toggleAttribute('disabled', !!blocked);
   };
   const body: (Node | string | null)[] = inOther
-    ? [h('p.pf-refused', { role: 'alert' }, `This project is in the portfolio ${inOther.label}. Moving a project between portfolios isn’t available in this version: it may already have used that portfolio’s company brain, and moving it can’t take that back.`)]
+    ? [h('p.pf-refused', { role: 'alert' }, `This project already belongs to the client ${inOther.label}, and a project can belong to one client. Moving a project between clients isn’t available in this version: it may already have used that client’s company brain, and moving it can’t take that back.`)]
     : !picks.length
-      ? [h('p', {}, at.portfolio ? 'Every project is in a portfolio already.' : 'There are no portfolios yet: make one on Home › Portfolios.')]
-      : [h('label.pf-field', {}, h('span', {}, at.portfolio ? 'Project (only ones in no portfolio)' : 'Portfolio'), sel), review, h('p.pf-hint', {}, 'If the portfolio has a company brain, the project is wired to it straight away and checked.'), note()];
-  const d = dialog('Add to portfolio', opener, body, inOther || !picks.length ? [] : [add]);
+      ? [h('p', {}, at.portfolio ? 'Every project belongs to a client already.' : 'There are no clients yet: make one on Home › Clients.')]
+      : [h('label.pf-field', {}, h('span', {}, at.portfolio ? 'Project (only ones without a client)' : 'Client'), sel), review, h('p.pf-hint', {}, 'If the client has a company brain, the project is wired to it straight away and checked.'), note()];
+  const d = dialog('Add to client', opener, body, inOther || !picks.length ? [] : [add]);
   if (inOther || !picks.length) return;
   sel.onchange = () => void showReview();
   void showReview();

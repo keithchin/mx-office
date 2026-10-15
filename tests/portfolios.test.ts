@@ -69,10 +69,10 @@ test('S03: one project in at most one portfolio; a cross-portfolio move is refus
   const b = await st.create('Beta', 'k');
   assert.ok(typeof a !== 'string' && typeof b !== 'string');
   if (typeof a === 'string' || typeof b === 'string') return;
-  assert.equal(await st.create('acme', 'k'), 'There is already a portfolio called acme');
+  assert.equal(await st.create('acme', 'k'), 'There is already a client called acme');
   assert.equal(await st.addProject(a.id, 'p1'), undefined);
   assert.equal(await st.addProject(a.id, 'p1'), undefined, 'again: a no-op');
-  assert.match((await st.addProject(b.id, 'p1')) ?? '', /already in the portfolio Acme\. Moving a project between portfolios isn't available/);
+  assert.match((await st.addProject(b.id, 'p1')) ?? '', /already belongs to the client Acme, and a project can belong to one client\. Moving a project between clients isn't available/);
   // Read back by another store: still only in Acme, even after a hand edit put it in both.
   const raw = JSON.parse(readFileSync(st.file, 'utf8'));
   raw.portfolios[1].projectIds.push('p1');
@@ -93,7 +93,7 @@ test('S03: an ungrouped project that already consumed another portfolio\'s brain
   await s.store.setBrain(a.id, { path: windowsForm(acme), connectedAt: 1, by: 'k' });
   await s.manifests.append({ projectId: 'prj_old', floor: 'old', role: 'pm', agentInstanceId: 'w1', preparedAt: 1, portfolioId: a.id, brain: { path: windowsForm(acme), snapshot: null, dirty: false, routed: [], excluded: [], status: 'unversioned' } });
   const r = await s.addProject(b.id, f.id, 'k');
-  assert.match(r.error ?? '', /already used another portfolio's company brain/);
+  assert.match(r.error ?? '', /already used another client's company brain/);
   const ctx = await s.existingContext(f.id);
   assert.equal(ctx?.manifests, 1);
   assert.deepEqual(ctx?.surfaces, ['CLAUDE.local.md', 'CLAUDE.md', 'AGENTS.md']);
@@ -110,7 +110,7 @@ test('the prime line: action-first, Windows-form path, ≤ 300 characters whatev
   assert.equal(primeLine('Acme', { status: 'ok', snapshot: 'f'.repeat(40), path: 'C:/' + 'x'.repeat(400) }), BRAIN_UNAVAILABLE_LINE, 'a path too long to fit is never cut');
   assert.equal(primeLine('Acme', { status: 'unavailable', snapshot: null, path: 'C:/gone' }), "Company brain unavailable this session: don't assume its conventions.");
   assert.ok(BRAIN_UNAVAILABLE_LINE.length <= PRIME_LINE_MAX);
-  assert.equal(NOT_ACCESS_CONTROL, 'Knowledge organisation, not access control');
+  assert.equal(NOT_ACCESS_CONTROL, 'Clients organise knowledge; they aren’t access control');
 });
 
 test('ROUTING.md: table rows name the routed files; the header, separator, absolute paths and .. are not routed', () => {

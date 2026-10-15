@@ -15,7 +15,7 @@ export function withPortfolio(deps: SetupDeps, steps: Record<StepId, StepImpl>):
     async init(job, io) {
       const r = await init(job, io);
       if (!job.plan.portfolio || !job.floor || !deps.joinPortfolio) return r;
-      io.log('  joining the portfolio (and wiring its company brain, if it has one)…');
+      io.log('  joining the client (and wiring its company brain, if it has one)…');
       const said = await deps.joinPortfolio(job.floor, job.plan.portfolio, job.by);
       return { ...r, detail: `${r.detail ? `${r.detail} · ` : ''}${said}` };
     },

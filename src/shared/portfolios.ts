@@ -1,4 +1,4 @@
-// Portfolios (docs/site/using-the-office/portfolios.md): an optional grouping of projects for one client
+// Portfolios, called clients on screen and in the docs (docs/site/using-the-office/clients.md): an optional grouping of projects for one client
 // or organisation, with at most one connected company brain (the toolkit's curated knowledge folder).
 // A portfolio organises knowledge; it is NOT access control: every agent on the office's machine can still
 // read every folder by path (portfolio-phase0-findings.md §2, §7). The office keeps only the grouping,
@@ -8,9 +8,9 @@
 import { ulid } from './evidence/ids.js';
 
 /** Said wherever portfolios are shown (S01/S03 and the probe: no boundary). */
-export const NOT_ACCESS_CONTROL = 'Knowledge organisation, not access control';
+export const NOT_ACCESS_CONTROL = 'Clients organise knowledge; they aren’t access control';
 export const NOT_ACCESS_CONTROL_LONG =
-  'A portfolio groups projects so their agents are pointed at the same company brain. It is not a client boundary: agents on this machine can still read any folder by path, including other portfolios’ brains and projects.';
+  'Each client (the company) groups its projects so their agents are pointed at the same company brain. It isn’t a boundary between clients: agents on this machine can still read any folder by path, including other clients’ brains and projects.';
 
 export interface PortfolioBrainRef {
   /** Windows form (C:/…) on Windows. */

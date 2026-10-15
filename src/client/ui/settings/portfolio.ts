@@ -25,10 +25,10 @@ export function portfolioPart(): Built {
       const c = brainChip(p);
       const w = p.projects.find((x) => x.id === floor)?.wiring;
       body.replaceChildren(...nodes(
-        h('p', {}, 'This project is in the portfolio ', h('a', { href: '/home?tab=portfolios' }, h('strong', {}, p.label)), '. ', h('span.pf-chip', { 'data-tone': c.tone }, c.text)),
+        h('p', {}, 'This project belongs to the client ', h('a', { href: '/home?tab=portfolios' }, h('strong', {}, p.label)), '. ', h('span.pf-chip', { 'data-tone': c.tone }, c.text)),
         w ? h('p', {}, w.ok ? '✅ Company brain wired in every instruction file (checked by the office).' : `⚠️ Wiring incomplete: ${w.problems.join('; ')}`) : null,
-        p.brain ? h('p.setting-note', {}, 'Each hire’s first message gets one line pointing at the brain’s ROUTING.md, and the office records what it was offered (a context manifest).') : h('p.setting-note', {}, 'The portfolio has no company brain yet: hires get no brain line.'),
-        h('p.setting-note', {}, 'Moving a project to another portfolio isn’t available in this version.'),
+        p.brain ? h('p.setting-note', {}, 'Each hire’s first message gets one line pointing at the brain’s ROUTING.md, and the office records what it was offered (a context manifest).') : h('p.setting-note', {}, 'The client has no company brain yet: hires get no brain line.'),
+        h('p.setting-note', {}, 'A project can belong to one client: moving it to another client isn’t available in this version.'),
         note,
       ));
       return;
@@ -36,14 +36,14 @@ export function portfolioPart(): Built {
     const ctx = await existingContext(floor);
     if (gone) return;
     const admin = v.admin && store.me.admin;
-    const add = h('button.btn.primary', { type: 'button', disabled: !admin || !v.portfolios.length }, '🗂️ Add to portfolio');
+    const add = h('button.btn.primary', { type: 'button', disabled: !admin || !v.portfolios.length }, '🗂️ Add to client');
     add.onclick = () => addToPortfolioDialog(add, v, { floor }, (r) => r.view && void draw(r.view));
     body.replaceChildren(...nodes(
-      h('p', {}, 'This project is in no portfolio: it works on its own, exactly as before portfolios.'),
+      h('p', {}, 'This project has no client: it works on its own, exactly as projects always have.'),
       h('div.pf-review', {}, h('h3', {}, 'What it already has'), ...contextLines(ctx)),
       add,
-      !v.portfolios.length ? h('p.setting-note', {}, 'There are no portfolios yet: make one on Home › 🗂️ Portfolios.') : null,
-      admin ? null : h('p.setting-note', {}, 'Only an admin can add a project to a portfolio.'),
+      !v.portfolios.length ? h('p.setting-note', {}, 'There are no clients yet: make one on Home › 🗂️ Clients.') : null,
+      admin ? null : h('p.setting-note', {}, 'Only an admin can add a project to a client.'),
       note,
     ));
   };

@@ -30,7 +30,7 @@ const chip = (p: PortfolioView) => {
 
 function brainPart(p: PortfolioView, admin: boolean, act: (fn: (opener: HTMLElement) => void) => (e: Event) => void): HTMLElement {
   if (!p.brain) {
-    return h('section.pf-part', {}, h('h3', {}, 'Company brain'), h('p', {}, 'No brain connected. The portfolio still groups its projects; their agents get no brain line until one is connected.'), admin ? h('button.btn.primary', { type: 'button', onclick: act((o) => connectBrainDialog(o, p, after)) }, '🧠 Connect a brain') : null);
+    return h('section.pf-part', {}, h('h3', {}, 'Company brain'), h('p', {}, 'No brain connected. The client still groups its projects; their agents get no brain line until one is connected.'), admin ? h('button.btn.primary', { type: 'button', onclick: act((o) => connectBrainDialog(o, p, after)) }, '🧠 Connect a brain') : null);
   }
   const r: BrainRead | undefined = p.read;
   const byReason = new Map<ExcludeReason, number>();
@@ -65,25 +65,25 @@ export function homePortfolios(root: HTMLElement) {
   function list(v: PortfoliosView): HTMLElement[] {
     const admin = v.admin && store.me.admin;
     return [
-      h('div.pf-head', {}, h('h2', {}, 'Portfolios'), admin ? h('button.btn.primary', { type: 'button', onclick: act((o) => newPortfolioDialog(o, after)) }, '＋ New portfolio') : null),
+      h('div.pf-head', {}, h('h2', {}, 'Clients'), admin ? h('button.btn.primary', { type: 'button', onclick: act((o) => newPortfolioDialog(o, after)) }, '＋ New client') : null),
       banner(),
       v.portfolios.length
         ? h(
             'ul.pf-list',
             {},
             ...v.portfolios.map((p) =>
-              h('li.pf-card', {}, h('button.pf-open', { type: 'button', onclick: () => ((open = p.id), render()), 'aria-label': `Open the portfolio ${p.label}` }, h('span.pf-name', {}, `🗂️ ${p.label}`), h('span.pf-meta', {}, `${p.projects.length} project${p.projects.length === 1 ? '' : 's'}`), chip(p))),
+              h('li.pf-card', {}, h('button.pf-open', { type: 'button', onclick: () => ((open = p.id), render()), 'aria-label': `Open the client ${p.label}` }, h('span.pf-name', {}, `🗂️ ${p.label}`), h('span.pf-meta', {}, `${p.projects.length} project${p.projects.length === 1 ? '' : 's'}`), chip(p))),
             ),
           )
-        : h('p.pf-empty', {}, 'No portfolios yet. Projects work on their own as always; a portfolio is only for pointing several projects of one client at the same company brain.'),
-      h('p.pf-hint', {}, `${v.ungrouped.length} project${v.ungrouped.length === 1 ? '' : 's'} in no portfolio.`),
+        : h('p.pf-empty', {}, 'No clients yet. Projects work on their own as always; a client is only for pointing several of one company’s projects at the same company brain.'),
+      h('p.pf-hint', {}, `${v.ungrouped.length} project${v.ungrouped.length === 1 ? '' : 's'} without a client.`),
     ];
   }
 
   function page(v: PortfoliosView, p: PortfolioView): HTMLElement[] {
     const admin = v.admin && store.me.admin;
     return [
-      h('p', {}, h('button.pt-link.pf-back', { type: 'button', onclick: () => ((open = undefined), render()) }, '← All portfolios')),
+      h('p', {}, h('button.pt-link.pf-back', { type: 'button', onclick: () => ((open = undefined), render()) }, '← All clients')),
       h('div.pf-head', {}, h('h2', {}, `🗂️ ${p.label}`), chip(p)),
       banner(),
       h(
