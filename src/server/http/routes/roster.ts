@@ -100,7 +100,7 @@ export const rosterRoutes = {
           break;
         case 'rename': {
           const was = roster.data(floor.id).members[role!].name;
-          error = roster.members.rename(team, role!, body.name);
+          error = roster.members.rename(team, role!, body.name, by);
           const now = roster.data(floor.id).members[role!].name;
           if (!error) audit.record({ floor: floor.id, actor: human(by, owner), action: 'roster.rename', target: { kind: 'role', id: role, label: now }, summary: `Renamed ${was} to ${now}`, details: { role, before: { name: was }, after: { name: now } } });
           break;

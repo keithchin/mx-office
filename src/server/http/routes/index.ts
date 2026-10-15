@@ -54,6 +54,7 @@ import { changeAnswerRoutes } from './change-answer.js';
 import { questionsRoutes } from './questions.js';
 import { versionRoutes } from './version.js';
 import { portfolioRoutes } from './portfolios.js';
+import { profileRoutes } from './profiles.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -197,6 +198,9 @@ export const routes: readonly Route[] = [
   portfolioRoutes.context,
   portfolioRoutes.changes,
   portfolioRoutes.card,
+  // Agent profiles and Hire from your agents (profiles/).
+  profileRoutes.view,
+  profileRoutes.act,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,

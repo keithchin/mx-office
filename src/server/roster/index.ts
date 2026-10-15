@@ -143,6 +143,8 @@ export class Roster {
   touch(floor: TeamFloor, quiet = false) {
     this.file(floor.id).save();
     if (!quiet) floor.changed();
+    // A move of an agent profile waiting on this floor's bench goes on (server/profiles/; nothing when none is open).
+    this.deps.profiles?.touched(floor.id);
   }
 
   /** The member a worker is, if it's one of the team. */
@@ -375,6 +377,7 @@ export class Roster {
     const now = this.deps.now();
     // The first look since the office started: Jeff ranks the open escalations already there.
     this.jeff.priority.firstLook(floor);
+    const profileId = (role: RoleId) => this.deps.profiles?.profileOf(floor.id, role);
     // The shape's roles, plus any other the floor has had: an Enterprise team shows its five as before.
     const members: MemberView[] = shownRoles(d.shape, (id) => everHired(d.members[id])).map((r) => {
       const m = d.members[r.id];
@@ -401,6 +404,8 @@ export class Roster {
         benchedAt: m.benchedAt,
         handoffAt: m.handoff?.at,
         covers: coveredBy(d.coverage, r.id),
+        // Its agent profile (server/profiles/), for the card's 👤 Profile.
+        ...(profileId(r.id) ? { profileId: profileId(r.id) } : {}),
         // What it's on and whether it waits on the Project Manager: Needs you's "idle with an open task".
         ...(w && this.tasks.current(floor, w) ? { task: this.tasks.current(floor, w) } : {}),
         ...(w && this.openAsks(floor.id, w.id).length ? { waitingOnPm: true } : {}),

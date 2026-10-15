@@ -28,6 +28,7 @@ import { OFFICE_BY } from '../workers/lifecycle.js';
 import { setupView } from '../wizard/setup.js';
 import type { PipelineStage } from '../../shared/roster/types.js';
 import { portfoliosOf } from '../portfolios/index.js';
+import { profileHooksOf } from '../profiles/index.js';
 import { withLocalOnlyLine } from '../local-only.js';
 import { studioStateOf } from '../studio/index.js';
 
@@ -156,6 +157,8 @@ export function rosterOf(ctx: Ctx): Roster {
       studioOpen: (id) => !!studioStateOf(id)?.open,
       // The portfolio's brain line, and a local-only project's rule (local-only.ts), in the hire's first message.
       hireContext: (id) => withLocalOnlyLine(portfoliosOf(ctx).hireContext(id), ctx.floors.get(id)?.dir),
+      // Agent profiles: office-wide identities for the seats, and the moves between projects (profiles/).
+      profiles: profileHooksOf(ctx),
     });
     // A Lead's subagent runs, from its hooks: the team's track record (roster/subagents.ts).
     onSubagentEvent((workerId, ev) => {
