@@ -33,7 +33,7 @@ export const tokensAllowed = (env: NodeJS.ProcessEnv = process.env): boolean => 
 export const credentialsDropped = (): boolean => dropped;
 
 /** What a test office never hands out: every token for an outside service (its password and web-push key are its own). */
-export const OUTSIDE_CREDENTIALS: ReadonlySet<CredentialId> = new Set<CredentialId>(['github-agents', 'github-admin', 'mendix', 'jev', 'teams-webhook']);
+export const OUTSIDE_CREDENTIALS: ReadonlySet<CredentialId> = new Set<CredentialId>(['github-agents', 'github-admin', 'mendix', 'anthropic', 'jev', 'teams-webhook']);
 
 /** Test mode: no outside tokens, from Connections, the environment or a dot-file, unless a test with a fake gh lets them through. */
 export const tokensWithheld = (): boolean => (dropped || testModeOf().on) && !tokensAllowed();

@@ -1,6 +1,7 @@
 // 🚀 First-run setup's calls to the office (server/http/routes/first-run.ts): plain fetches. The office
 // password goes up once, in a POST body; nothing secret ever comes back.
 import type { CloneEvent, FirstRunStep, FirstRunView, PrereqResult } from '../../shared/first-run';
+import type { FixEvent, FixId, FixPlan } from '../../shared/first-run-fix';
 import { loadProfile } from '../state/persist';
 
 async function call<T>(method: 'GET' | 'POST', path: string, body?: Record<string, unknown>): Promise<T> {
@@ -29,23 +30,32 @@ export const setupApi = {
   rerun: () => call<FirstRunView>('POST', '/api/setup/rerun', {}),
   /** The long-paths row's button: git config --global core.longpaths true (never the registry). */
   longpaths: () => call<FirstRunView>('POST', '/api/setup/longpaths', {}),
+  /** What a row's Fix (or Set up everything, 'all') would run, and the confirm token a run must carry. */
+  fixPlan: (ids: FixId[] | 'all') => call<FixPlan>('POST', '/api/setup/fix/plan', { ids }),
+  /** Runs a confirmed plan (less the optional steps in `skip`), telling `on` its progress. */
+  fixRun: (confirm: string, skip: FixId[], on: (e: FixEvent) => void, signal?: AbortSignal) => lines<FixEvent>('/api/setup/fix/run', { confirm, skip }, on, (error) => ({ t: 'done', ok: false, error }), signal),
+  /** Saves an Anthropic API key in 🔌 Connections; nothing of it comes back. */
+  claudeKey: (key: string) => call<{ saved: true }>('POST', '/api/setup/claude-key', { key }),
   /** Clones the toolkit, telling `on` each line git prints and how it ended. */
-  async clone(url: string, dir: string, on: (e: CloneEvent) => void): Promise<void> {
-    const res = await fetch('/api/setup/toolkit/clone', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url, dir, by: loadProfile()?.name }) });
-    if (!res.ok || !res.body) {
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      return on({ t: 'done', ok: false, error: data.error ?? `The office said ${res.status}` });
-    }
-    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
-    let buf = '';
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += value;
-      const lines = buf.split('\n');
-      buf = lines.pop() ?? '';
-      for (const l of lines) if (l.trim()) on(JSON.parse(l) as CloneEvent);
-    }
-    if (buf.trim()) on(JSON.parse(buf) as CloneEvent);
-  },
+  clone: (url: string, dir: string, on: (e: CloneEvent) => void) => lines<CloneEvent>('/api/setup/toolkit/clone', { url, dir }, on, (error) => ({ t: 'done', ok: false, error })),
 };
+
+/** A streamed answer (a JSON line each), handed to `on` as it comes; a refusal becomes `failed`'s event. */
+async function lines<E>(path: string, body: Record<string, unknown>, on: (e: E) => void, failed: (error: string) => E, signal?: AbortSignal): Promise<void> {
+  const res = await fetch(path, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...body, by: loadProfile()?.name }), signal });
+  if (!res.ok || !res.body) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    return on(failed(data.error ?? `The office said ${res.status}`));
+  }
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += value;
+    const parts = buf.split('\n');
+    buf = parts.pop() ?? '';
+    for (const l of parts) if (l.trim()) on(JSON.parse(l) as E);
+  }
+  if (buf.trim()) on(JSON.parse(buf) as E);
+}

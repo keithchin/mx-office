@@ -41,6 +41,7 @@ import { perfRoutes } from './perf.js';
 import { testlabRoutes } from './testlab.js';
 import { projectRoutes } from './projects.js';
 import { firstRunRoutes } from './first-run.js';
+import { firstRunFixRoutes } from './first-run-fix.js';
 import { testingRoutes } from './testing.js';
 import { stuckRoutes } from './stuck.js';
 import { asksRoutes } from './asks.js';
@@ -178,6 +179,7 @@ export const routes: readonly Route[] = [
   toolkitRoutes.toolkit,
   connectionsRoutes.connections,
   // 🚀 First-run setup: its page and its calls (first-run.ts).
+  firstRunFixRoutes.api,
   firstRunRoutes.api,
   firstRunRoutes.page,
   studioRoutes.info,

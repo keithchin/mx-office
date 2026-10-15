@@ -47,7 +47,7 @@ export interface OfficeSettings {
 }
 
 /** The GitHub variables as the office was started with them, before Connections laid its token over them. */
-export const STARTED_ENV: Readonly<Record<string, string | undefined>> = { GH_TOKEN: process.env.GH_TOKEN, GITHUB_TOKEN: process.env.GITHUB_TOKEN, AGENT_OFFICE_PASSWORD: process.env.AGENT_OFFICE_PASSWORD };
+export const STARTED_ENV: Readonly<Record<string, string | undefined>> = { GH_TOKEN: process.env.GH_TOKEN, GITHUB_TOKEN: process.env.GITHUB_TOKEN, AGENT_OFFICE_PASSWORD: process.env.AGENT_OFFICE_PASSWORD, ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY };
 
 let vault: Vault | undefined;
 let settingsFile: string | undefined;
