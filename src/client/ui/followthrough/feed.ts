@@ -94,7 +94,7 @@ export async function followAct(floor: string, decision: string, action: FollowA
   }
 }
 
-const WATCH = /^(followthrough\.|questions\.(sent|recorded|answer)|escalation\.answer|dispatch\.)/;
+const WATCH = /^(followthrough\.|answer\.change|questions\.(sent|recorded|answer)|escalation\.answer|dispatch\.)/;
 
 /** Every message from the office: fetched again when the audit log says something it shows changed. */
 export function followFeedMessage(msg: ServerMsg) {

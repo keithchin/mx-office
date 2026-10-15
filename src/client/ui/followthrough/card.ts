@@ -11,6 +11,7 @@ import { store } from '../../state';
 import { h } from '../dom';
 import { followAct, followView, onFollowChanged } from './feed';
 import './follow.css';
+import { answerControls } from '../change-answer/controls';
 
 /** The buttons of an item that differs (and Dismiss for any), shared with the Questions page. */
 export function followActs(floor: string, it: FollowItem, admin: boolean): HTMLElement {
@@ -59,6 +60,7 @@ function item(floor: string, it: FollowItem, admin: boolean, go: (t: NeedTarget)
     h('p.pt-ft-line', {}, followLine(it)),
     bothTexts(it),
     followActs(floor, it, admin),
+    answerControls(floor, it.decision, it.rev, admin),
   );
 }
 

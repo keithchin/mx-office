@@ -14,6 +14,7 @@ import { store } from '../../state';
 import { ZONE_BY_TEAM } from '../../../shared/zones';
 import { lookFor, standing, type Outfit } from '../../pixel/chars';
 import './escalations.css';
+import { answerControls } from '../change-answer/controls';
 
 const VERDICT_DONE: Record<EscalationVerdict, string> = { reply: '💬 Replied', approve: '✅ Approved', reject: '❌ Rejected', dismiss: '✓ Noted' };
 
@@ -83,6 +84,7 @@ export function escalationCard(floor: string, e: Escalation, admin: boolean, don
             ),
           )
         : h('p.esc-meta', {}, 'Only the Project Manager (an admin) can answer it.'),
+    resolved && e.resolution!.outcome !== 'superseded' ? answerControls(floor, `esc:${e.id}`, e.resolution!.answerRev, admin) : null,
   );
   // Who raised it, big enough to tell at a glance (the same character as in the 2D office), saying
   // what it needs in a speech bubble; the card's details sit under them.

@@ -11,6 +11,8 @@ import type { AnswerRevisionKind, DecisionRef, DispatchState } from './dispatch.
 import type { EscalationVerdict } from './roster/escalation.js';
 import { VERDICT_WORD } from './roster/escalation.js';
 import type { RecordedOutcome } from './followthrough.js';
+import { recordedWords } from './followthrough.js';
+import { stateWords } from './dispatch.js';
 
 /** How a linked piece of work is known: a field that points at the decision, or text the office read. */
 export type LinkStrength = 'recorded' | 'inferred';
@@ -113,3 +115,12 @@ export const escChangeLine = (escId: string, oldRev: number, newRev: number, wor
 
 /** The analogous line for a BRD question, with its key. */
 export const qChangeLine = (key: string, oldRev: number, newRev: number, words: string) => `This replaces my answer rev ${oldRev} to question ${key}: ${words.replace(/\s+/g, ' ').trim()}. Record it as rev ${newRev} of ${key}, exactly as below, in place of what rev ${oldRev} asked for.`;
+
+/** How a revision was handed on: each dispatch's state (a person's confirmation shown as such), or why none shows. */
+export function revDispatchWords(r: Pick<HistoryRev, 'dispatch' | 'kind'>): string {
+  if (!r.dispatch.length) return r.kind === 'accept-as-recorded' ? 'Nothing sent (accepted as recorded)' : r.kind === 'noted' || r.kind === 'moot' ? 'Nothing sent' : 'No dispatch record kept';
+  return r.dispatch.map((d) => `${stateWords(d)}${d.to ? ` to ${d.to}` : ''}`).join('; ');
+}
+
+/** What follow-through found for a revision ("Recorded for rev 1"), or that nothing was kept. */
+export const revOutcomeWords = (r: Pick<HistoryRev, 'outcome'>) => (r.outcome ? recordedWords(r.outcome) : 'No finding kept');
