@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-15 · release 48 (`2f43166`)
+
 ### Added
 
 - **Your answers are kept before they're sent, and never sent twice by a restart.** Every answer (a card, Approvals, the phone, a question's **Send**, a stuck item's answer, a model change request, a question to the lead, a proposal's approval) is written to disk in full before anything is typed, then the attempt to type it (who, which session, the exact text), and only after it went in does the escalation, question or proposal change. Typed answers end with a marker line, *[office answer dsp_… · ESC-3f9c2a1b7e rev 1]*. The office guarantees durable intent plus reconciliation, and no automatic replay of an ambiguous attempt; it does not promise exactly-once delivery.
