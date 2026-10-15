@@ -11,6 +11,7 @@ import { questionCard } from './card';
 import { openExport, openImport, openSend } from './dialogs';
 import { followQuestions, onQuestionsChanged, questionsView, setQuestionsView } from './feed';
 import { emptyWords, FILTERS, groups, readyByRecipient, readyWords, type QFilter } from './logic';
+import { questionWanted, takeWantedQuestion } from './focus';
 import './questions.css';
 
 export function questionsTab(root: HTMLElement) {
@@ -96,6 +97,12 @@ export function questionsTab(root: HTMLElement) {
     if (!showing) return;
     if (!force && [...body.querySelectorAll<HTMLTextAreaElement>('.qs-form textarea')].some((t) => t.value.trim())) return;
     const v = questionsView();
+    // Opened at one question (a decision card's Answer): every question shows, so no filter hides it.
+    if (questionWanted() && (filter !== 'all' || search)) {
+      filter = 'all';
+      search = '';
+      searchBox.value = '';
+    }
     drawChips();
     if (!v || v.floor !== floor()) {
       body.replaceChildren(h('p.qs-empty', {}, 'Loading…'));
@@ -124,6 +131,7 @@ export function questionsTab(root: HTMLElement) {
         ),
       ),
     );
+    takeWantedQuestion(body);
   }
 
   onQuestionsChanged(() => draw());

@@ -44,12 +44,15 @@ export function cardModel(d: StuckView, now: number): CardModel {
 /** Opens item `id` of the floor's stuck items, if it's still there. */
 export function openStuck(id: string): void {
   const v = stuckView();
-  const d = v?.items.find((x) => x.id === id);
+  // A dismissed one too (Needs you's "hidden (N)" opens it): hidden, still open.
+  const d = v ? [...v.items, ...(v.dismissed ?? [])].find((x) => x.id === id) : undefined;
   if (!v || !d) return;
   const back = document.activeElement as HTMLElement | null;
   const m = cardModel(d, Date.now());
   const status = h('p.stuckc-status', { role: 'status' });
-  const answer = d.kind === 'decision' ? (h('textarea.stuckc-answer', { rows: 3, placeholder: 'Your answer (sent to the team lead to record in PROJECT.md as CONFIRMED)', 'aria-label': 'Your answer' }) as HTMLTextAreaElement) : undefined;
+  // A client question in a BRD has one answer path, the Questions page: no answer box here.
+  const brd = d.kind === 'decision' && !!d.decision?.brd;
+  const answer = d.kind === 'decision' && !brd ? (h('textarea.stuckc-answer', { rows: 3, placeholder: 'Your answer (sent to the team lead to record in PROJECT.md as CONFIRMED)', 'aria-label': 'Your answer' }) as HTMLTextAreaElement) : undefined;
   let when: 'after' | 'now' = 'after';
   const choice = (v2: 'after' | 'now', label: string) => {
     const b = h('button.btn.small.stuckc-when', { type: 'button', role: 'radio', 'aria-checked': String(v2 === when), 'data-v': v2, onclick: () => ((when = v2), paint()) }, label);
@@ -105,6 +108,9 @@ export function openStuck(id: string): void {
       section('If it waits', h('p', {}, m.consequence)),
       section('Next safe step', h('p', {}, m.next)),
       answer ? section('Your answer', answer) : null,
+      brd ? section('Your answer', h('p', {}, 'Answer it on the Questions page: the analyst records it in the BRD. ', h('a', { href: `/lite?tab=questions&floor=${encodeURIComponent(v.floor)}` }, 'Open the Questions page'))) : null,
+      d.dismissedAt ? h('p.stuckc-note', {}, 'Dismissed: hidden from Needs you, but still open (dismissing resolves nothing).') : null,
+      d.unreadAt ? h('p.stuckc-note', {}, `The office couldn't re-read its source at ${new Date(d.unreadAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}: kept as it was, not resolved.`) : null,
       leadLine,
       v.admin ? null : h('p.stuckc-note', {}, 'Only an admin can act on this.'),
       status,
