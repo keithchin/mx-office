@@ -1,6 +1,6 @@
 ---
 title: Concepts
-description: The ideas behind the office - the building and its floors, workers and worktrees, the four views, and how work flows.
+description: The ideas behind the office - the building and its projects, workers and worktrees, the four views, and how work flows.
 weight: 20
 ---
 
@@ -9,7 +9,7 @@ Read these pages to understand how the office is put together. The task pages as
 | Idea | In one line |
 |---|---|
 | **Building / office** | The whole Mx Office: one server on `http://127.0.0.1:4600`, one password, all projects. |
-| **Floor** | One project: a GitHub repository cloned on this machine, with its own board, team, live app and settings. |
+| **Project** | A GitHub repository cloned on this machine, with its own board, team, live app and settings. |
 | **Worker / agent** | A Claude Code session at a desk, usually in its own git worktree. |
-| **Team** | The Project Coordinator and four Leads of a floor, each Lead with its subagents. |
-| **View** | Each project two ways: the 1D view (where it opens) and the 2D Office view (the floor from above). |
+| **Team** | The Project Coordinator and four Leads of a project, each Lead with its subagents. |
+| **View** | Each project two ways: the 1D view (where it opens) and the 2D Office view (the project from above). |

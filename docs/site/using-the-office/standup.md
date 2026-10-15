@@ -10,7 +10,7 @@ The **📋 Standup** tab shows the team's daily standup and the **proposals** in
 
 ## When it runs
 
-- By default on **weekdays at 09:00, Asia/Singapore time**, and only if there was activity on the floor since the last one. Change it in [Settings](settings.md).
+- By default on **weekdays at 09:00, Asia/Singapore time**, and only if there was activity on the project since the last one. Change it in [Settings](settings.md).
 - On demand: **▶️ Run standup** on this tab, or the **📋 Run standup** chip on the Command Center.
 - If the office was down at standup time for more than 12 hours, that standup is skipped.
 - A team hired **after** today's standup time gets no catch-up standup that day: its first is the next scheduled one.

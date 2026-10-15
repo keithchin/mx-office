@@ -10,12 +10,12 @@ weight: 9
 | **Agent** | See *Worker*. |
 | **App Factory** | What Mx Office is for: an office where agents build Mendix apps. |
 | **Approval** | Something waiting for the Project Manager's yes or no: a proposal, an escalation, a subagent action, a merge, a spent cap. |
-| **Audit log** | The append-only, hash-chained record of who did what and when, per floor and office-wide. A tab on each project and on /home. |
+| **Audit log** | The append-only, hash-chained record of who did what and when, per project and office-wide. A tab on each project and on /home. |
 | **Autonomy level** | How often agents need you: 1 Directive, 2 Guided, 3 Delegated, 4 Autonomous. |
 | **Bench** | Clear a team member's session after it wrote a handoff note. A benched Lead takes a break in the 2D view. |
-| **Board** | A floor's Kanban of issues, tasks, workers and PRs. |
+| **Board** | A project's Kanban of issues, tasks, workers and PRs. |
 | **BRD** | Business requirements document, written by the Chief Analyst. |
-| **Building / office** | The whole Mx Office server, with all its floors. |
+| **Building / office** | The whole Mx Office server, with all its projects. |
 | **Command Center** | The first tab of a project (the Overview in Portal): Needs you, setup, progress, the team, the budget, recent activity. |
 | **Team-lead panel** | Docked on the right of every project tab: the agent who covers Management (Project Coordinator, Chief Analyst or Solo Lead), its chat or terminal, and a box to ask it things. |
 | **Cool-down** | How long a benched subagent sits out (24 hours by default). |
@@ -23,7 +23,6 @@ weight: 9
 | **Engagement Partner** | The Firm's lead reviewer (Eleanor Vance), attached to the Project Coordinator; writes the final report. |
 | **Escalation** | A structured question from an agent to you, with urgency, options and a recommendation. |
 | **Firm, The** | Independent Reviewer Agents at /firm that audit a project from outside its team. |
-| **Floor** | A project: one repository, with its own team, board and live app. |
 | **FYI** | An escalation your autonomy level wouldn't stop for: shown, but no alert. |
 | **Gate (skill)** | How a skill is used: ask, propose, tell or FYI. |
 | **✋ Gate (toolkit)** | A toolkit stage (0, 3, 4) that needs a `CONFIRMED` decision. |
@@ -38,6 +37,7 @@ weight: 9
 | **Needs you** | The Command Center's list of everything waiting for a human. |
 | **Playbook** | A skill file with a role's or project's instructions. |
 | **Priority (Jeff)** | Jeff's ranking of open escalations; the lists show a *#1 · resolve first* chip. |
+| **Project** | One repository, with its own team, board and live app. |
 | **Project Coordinator** | The agent that coordinates the Leads and runs the standup (role id `pm`). |
 | **Project Manager** | You, the human. |
 | **Proposal** | A suggestion from the standup, for you to approve, reject or change. |

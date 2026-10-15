@@ -12,7 +12,7 @@ Find your symptom in the table, then follow the link.
 | Commits hang in a toolkit project | [Agents and GitHub](agents-and-github.md#commits-hang-in-a-toolkit-project) |
 | GitHub emails about failed runs | [Agents and GitHub](agents-and-github.md#github-emails-about-failed-runs) |
 | The live app won't start or shows an old build | [Live app](live-app.md) |
-| Can't sign in, pages look old, floors missing | [Office and browser](office-and-browser.md) |
+| Can't sign in, pages look old, projects missing | [Office and browser](office-and-browser.md) |
 | The 2D Office view is slow | [Office and browser](office-and-browser.md#the-2d-office-view-is-slow) |
 | Screenshots with Playwright fail | [Office and browser](office-and-browser.md#headless-edge-is-blocked) |
 

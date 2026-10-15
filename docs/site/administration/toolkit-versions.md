@@ -15,7 +15,7 @@ The toolkit's session-start ritual (written into every project's `CLAUDE.local.m
 - The team's Playbooks and the Discovery brief say the same, and point their toolkit skills at the pin.
 - Even an agent following old wording can't move it: a pull in a detached checkout fails.
 - The office's own gate-check runs (the setup panel's verdicts, **🔄 Re-check gates**, the wizard) run from the project's pin, with no fetch.
-- The floor's machine-local `.claude/toolkit.env` gets `MXTK_ROOT=<pin>`, which the toolkit's own scripts use to find the toolkit.
+- The project's machine-local `.claude/toolkit.env` gets `MXTK_ROOT=<pin>`, which the toolkit's own scripts use to find the toolkit.
 
 ## Where the version is recorded
 
@@ -23,7 +23,7 @@ The toolkit's session-start ritual (written into every project's `CLAUDE.local.m
 |---|---|---|
 | `agent-office.project.json` (committed) | `toolkit`: the commit, when and by whom, the fork's URL, and the history (create, pin, update, rollback) | Agents, any office that clones the project, Roll back |
 | `PROJECT.md` (committed) | `Toolkit commit: <sha>`, the toolkit's own acknowledgement line that gate-check's protocol-freshness check compares against | The toolkit |
-| `<office data>\toolkit-pins.json` | Floor → pin, and when the fork was last fetched | The office (no git needed) |
+| `<office data>\toolkit-pins.json` | Project → pin, and when the fork was last fetched | The office (no git needed) |
 
 ## The Toolkit line
 
@@ -41,7 +41,7 @@ A project made before pins shows **≈ &lt;sha&gt; · not pinned**: the office w
 
 From the Toolkit window:
 
-1. **⬆ Preview update to &lt;sha&gt;** (or **📌 Preview pinning at &lt;sha&gt;** for a project that isn't pinned yet, or **↩ Preview roll back to &lt;previous&gt;**). The office checks the project's default branch out twice in temporary folders. Over one it runs the toolkit's `gate-check.sh` from the toolkit the project runs now. The other it first makes what Confirm would leave (the steps below, the toolkit's `sync-project.sh` included), then runs `gate-check.sh` from the new commit. Nothing in the project or the floor's folder is written. It takes several minutes on Windows (the sync is the slow part). It shows:
+1. **⬆ Preview update to &lt;sha&gt;** (or **📌 Preview pinning at &lt;sha&gt;** for a project that isn't pinned yet, or **↩ Preview roll back to &lt;previous&gt;**). The office checks the project's default branch out twice in temporary folders. Over one it runs the toolkit's `gate-check.sh` from the toolkit the project runs now. The other it first makes what Confirm would leave (the steps below, the toolkit's `sync-project.sh` included), then runs `gate-check.sh` from the new commit. Nothing in the project or the project's folder is written. It takes several minutes on Windows (the sync is the slow part). It shows:
    - which stage verdicts would change, and why: *Stage 2 (Requirements) PASS → FAIL because BRD drift: rules unsynced*;
    - the commits in between, with their kinds;
    - a warning when the project's current stage is mid-way (its gate hasn't passed yet). Updating is allowed at any time, but the recommended moment is right after a stage passes.
@@ -52,7 +52,7 @@ From the Toolkit window:
    - sets `PROJECT.md`'s `Toolkit commit:` line and the record in `agent-office.project.json`;
    - commits **`chore(toolkit): update to <sha>`** (with the commits in its message) and pushes it to the default branch. If the branch is protected or has moved, it pushes `agent-office/toolkit-<sha>-…` instead and asks you to open a pull request.
 
-   Then the office moves the floor to the new pin, re-checks the gates, writes the hired team's Playbooks again, records `toolkit.update` in the [audit log](../using-the-office/audit-log.md) and removes pins no project uses any more.
+   Then the office moves the project to the new pin, re-checks the gates, writes the hired team's Playbooks again, records `toolkit.update` in the [audit log](../using-the-office/audit-log.md) and removes pins no project uses any more.
 
 **Roll back** is the same thing to the previous pin (kept in the record's history): **↩ Preview roll back**, then confirm. It's recorded as `toolkit.rollback`.
 

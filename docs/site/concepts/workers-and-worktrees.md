@@ -6,7 +6,7 @@ weight: 2
 
 ## A worker is a Claude Code session
 
-A **worker** (or *agent*) is a Claude Code session running at a desk on a floor. The office starts it, shows its live terminal, records its cost and tokens, and notices when it needs you. Every worker has:
+A **worker** (or *agent*) is a Claude Code session running at a desk on a project. The office starts it, shows its live terminal, records its cost and tokens, and notices when it needs you. Every worker has:
 
 - a **name** and, for team members, a **role**;
 - a **model**: Haiku 4.5, Sonnet 5.5, Opus 5.5 or Fable 5.1 (and a reasoning effort);
@@ -28,9 +28,9 @@ Team members (the Project Coordinator and the Leads) are workers too. Their **su
 
 ## Worktrees: one copy of the repo per worker
 
-Most workers get their own **git worktree**: a separate checkout of the repository on its own branch, under `<floor>/.agent-office/worktrees/`. Agents don't trip over each other's files, and each one's work becomes a branch and a pull request. An agent that makes a worktree of its own has to put it there too: `git worktree add` anywhere else (a temp folder, next to the project) is refused with the path to use, and merged ones nobody has any more are cleaned up every hour. See [Connections](../administration/connections.md#worktrees-stay-in-the-project).
+Most workers get their own **git worktree**: a separate checkout of the repository on its own branch, under `<project>/.agent-office/worktrees/`. Agents don't trip over each other's files, and each one's work becomes a branch and a pull request. An agent that makes a worktree of its own has to put it there too: `git worktree add` anywhere else (a temp folder, next to the project) is refused with the path to use, and merged ones nobody has any more are cleaned up every hour. See [Connections](../administration/connections.md#worktrees-stay-in-the-project).
 
-On Windows every git the office and its agents run has `core.longpaths=true` (handed to git through the environment, and also written into the project's own git config), so a Mendix app's deep `node_modules` paths check out. And before a Claude worker starts, the office marks the floor's folder trusted in the Claude Code config that worker uses (the office's own, or its account's), which covers every worktree under it: no *Do you trust the files in this folder?* on the floor's agents. Only folders of floors the office manages are ever trusted.
+On Windows every git the office and its agents run has `core.longpaths=true` (handed to git through the environment, and also written into the project's own git config), so a Mendix app's deep `node_modules` paths check out. And before a Claude worker starts, the office marks the project's folder trusted in the Claude Code config that worker uses (the office's own, or its account's), which covers every worktree under it: no *Do you trust the files in this folder?* on the project's agents. Only folders of projects the office manages are ever trusted.
 
 The **🌳 Git** tab draws every branch as a railway line, with the worker standing at its tip. See [Git tab](../using-the-office/git.md).
 
@@ -49,7 +49,7 @@ A question or a permission prompt (🙋) always raises the flag, whoever started
 
 ## Restarts
 
-On Windows, workers are child processes of the office server. **Restarting the office stops every running worker.** Their sessions are saved. When the office comes back, only the agents it cut off **mid-turn** (working, or asking something) are resumed, carrying on where they were; they're told that what they escalated is still open (by title) so they don't raise it again. Everyone who was at rest, finished or already asleep stays 💤 asleep until someone (or the office, with an answer or a relay) prompts them; walking onto the floor no longer wakes them. Shells come back as before. See [Running the office](../administration/running-the-office.md#restarting).
+On Windows, workers are child processes of the office server. **Restarting the office stops every running worker.** Their sessions are saved. When the office comes back, only the agents it cut off **mid-turn** (working, or asking something) are resumed, carrying on where they were; they're told that what they escalated is still open (by title) so they don't raise it again. Everyone who was at rest, finished or already asleep stays 💤 asleep until someone (or the office, with an answer or a relay) prompts them; opening the project no longer wakes them. Shells come back as before. See [Running the office](../administration/running-the-office.md#restarting).
 
 ## Line endings: a project's `.gitattributes`
 

@@ -5,7 +5,7 @@ weight: 10
 aliases: [/docs/team]
 ---
 
-The **🏢 Org chart** tab shows the floor's team: the **Project Coordinator** and **Jeff · Router** on top, the four **Leads** below.
+The **🏢 Org chart** tab shows the project's team: the **Project Coordinator** and **Jeff · Router** on top, the four **Leads** below.
 
 ![The org chart](../images/org-chart.png)
 

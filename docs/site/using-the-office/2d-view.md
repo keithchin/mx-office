@@ -1,10 +1,10 @@
 ---
 title: 2D Office view
-description: The floor from above in pixel art - reached by Go to Office, back with Return to Project; its top bar and toolbar, team zones, Jeff's glass room, clicking, keys and zoom.
+description: The project from above in pixel art - reached by Go to Office, back with Return to Project; its top bar and toolbar, team zones, Jeff's glass room, clicking, keys and zoom.
 weight: 14
 ---
 
-The **2D Office view** (`/pixel?floor=<id>`) draws the floor from above in pixel art, with every worker at its desk. You get there with **Go to Office** on the project's 1D view (Home and links always open the 1D view), and **Return to Project** in its top bar takes you back to the 1D view of the same project, on its Command Center.
+The **2D Office view** (`/pixel?floor=<id>`) draws the project from above in pixel art, with every worker at its desk. You get there with **Go to Office** on the project's 1D view (Home and links always open the 1D view), and **Return to Project** in its top bar takes you back to the 1D view of the same project, on its Command Center.
 
 ![The 2D Office view](../images/office-2d.png)
 
@@ -14,7 +14,7 @@ The top bar only says where you are and how to get back: **OFFICE · &lt;project
 
 Under the top bar is the project's [progress bar](progress-and-acceptance.md), as on the 1D view. Its setup stages open the 1D view's Command Center.
 
-The **📱 Team phone** sits at the bottom right: the floor's team chatter, messages to the agents and what needs you, as on the 1D view. See [Team phone](team-phone.md).
+The **📱 Team phone** sits at the bottom right: the project's team chatter, messages to the agents and what needs you, as on the 1D view. See [Team phone](team-phone.md).
 
 ## What's on the floor
 

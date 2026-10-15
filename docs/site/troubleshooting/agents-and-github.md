@@ -10,7 +10,7 @@ weight: 1
 
 **Fix:** open its terminal and answer the prompt once.
 
-The office trusts the projects it manages by itself, so this should be rare: when the new-project wizard clones a floor it marks the folder trusted in the office's own Claude Code config (`~/.claude.json`, or `<CLAUDE_CONFIG_DIR>/.claude.json` when the office runs with `CLAUDE_CONFIG_DIR`), and before every Claude worker starts it marks the floor trusted in the config that worker uses (the office's, or the hiring account's own under *Your sign-ins*). Claude Code looks a worktree's trust up by the project it belongs to, so the floor's folder covers every worker's worktree. Only the `hasTrustDialogAccepted` entry for that floor is written (nothing else in the file changes, and nothing is written when it's already there); a config file that isn't valid JSON is left alone, and the prompt shows as before. Test offices never touch a real config. If it still asks, the floor is outside what the office manages (a folder you opened by hand), or the config couldn't be read.
+The office trusts the projects it manages by itself, so this should be rare: when the new-project wizard clones a project it marks the folder trusted in the office's own Claude Code config (`~/.claude.json`, or `<CLAUDE_CONFIG_DIR>/.claude.json` when the office runs with `CLAUDE_CONFIG_DIR`), and before every Claude worker starts it marks the project trusted in the config that worker uses (the office's, or the hiring account's own under *Your sign-ins*). Claude Code looks a worktree's trust up by the project it belongs to, so the project's folder covers every worker's worktree. Only the `hasTrustDialogAccepted` entry for that project is written (nothing else in the file changes, and nothing is written when it's already there); a config file that isn't valid JSON is left alone, and the prompt shows as before. Test offices never touch a real config. If it still asks, the project is outside what the office manages (a folder you opened by hand), or the config couldn't be read.
 
 A Claude worker is only flagged when the prompt is actually on its screen. A project with a slow `SessionStart` hook (a toolkit project's `mxcli init --sync-skills` and `mxcli run --setup`) just shows the worker as starting for longer, up to 5 minutes before its desk is let go to idle; and once its session is up, the *Waiting on a setup prompt* line goes away. Other agents (Codex, Grok, Muse, Pi) can't be read like that, so they're still flagged when they haven't said they're up 12 seconds after starting.
 
@@ -18,11 +18,11 @@ A Claude worker is only flagged when the prompt is actually on its screen. A pro
 
 **Symptom:** hiring an agent (or the wizard's *Hire the project team* step) fails with `Could not create a git worktree: … Filename too long`.
 
-**Cause:** a Mendix app's `javascriptsource` holds npm packages with deep `node_modules` folders; inside a worker's worktree under `<floor>/.agent-office/worktrees/` those paths pass Windows' 260 characters.
+**Cause:** a Mendix app's `javascriptsource` holds npm packages with deep `node_modules` folders; inside a worker's worktree under `<project>/.agent-office/worktrees/` those paths pass Windows' 260 characters.
 
-**Fix:** none needed any more. On Windows every git the office starts (clones, worktrees, the floor sync's fast-forward, the toolkit pins, the wizard's steps) and every agent's own git gets `core.longpaths=true` through the environment (`GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0`), so no config file has to say it. The office also writes `core.longpaths true` into each project's own git config (when the wizard clones it, on the floor sync's first look, before a worktree), for git you run there yourself; if it can't, the audit log says so (*git.longpaths*).
+**Fix:** none needed any more. On Windows every git the office starts (clones, worktrees, the project sync's fast-forward, the toolkit pins, the wizard's steps) and every agent's own git gets `core.longpaths=true` through the environment (`GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0`), so no config file has to say it. The office also writes `core.longpaths true` into each project's own git config (when the wizard clones it, on the project sync's first look, before a worktree), for git you run there yourself; if it can't, the audit log says so (*git.longpaths*).
 
-Until October 2026 the office relied on that per-project setting alone. A floor cloned before release 21 never got it, and the one place that would have added it, the worker's worktree, came after the hire's pause check: a paused new project kept failing (equipment-rental, October 2026). On such an office, run `git config core.longpaths true` in the floor's folder once, or upgrade.
+Until October 2026 the office relied on that per-project setting alone. A project cloned before release 21 never got it, and the one place that would have added it, the worker's worktree, came after the hire's pause check: a paused new project kept failing (equipment-rental, October 2026). On such an office, run `git config core.longpaths true` in the project's folder once, or upgrade.
 
 For git you run by hand: first-run setup's *Long paths for git* row ([Setting up a new machine](../get-started/new-machine.md)) turns it on in your user config.
 
@@ -48,7 +48,7 @@ It may have asked in its last message without raising an escalation. Open its te
 
 ## Hiring is refused
 
-- **💸 Spend cap reached: office prompts paused**: the floor's daily cost cap is spent. No new hires, and no nudges, scheduled standups, relays or agent-to-agent tells until it lifts; your own answers and typing still go through. Raise it in Settings, or wait for midnight (Singapore time). See [Models and costs](../teams-and-agents/models-and-costs.md).
+- **💸 Spend cap reached: office prompts paused**: the project's daily cost cap is spent. No new hires, and no nudges, scheduled standups, relays or agent-to-agent tells until it lifts; your own answers and typing still go through. Raise it in Settings, or wait for midnight (Singapore time). See [Models and costs](../teams-and-agents/models-and-costs.md).
 - Only admins can hire team members.
 
 ## Commits hang in a toolkit project

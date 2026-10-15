@@ -68,7 +68,7 @@ Two office-wide switches in [⚙️ Settings › ✅ Verification](/lite?tab=set
 | Switch | Default | Off | On |
 |---|---|---|---|
 | **Judge merged tasks against checks** | Off | No `gh` calls for the default branch's checks, no *Merged, not verified* or *Passed on PR head…* judging, no Needs you items from it (nor the [test-first](#test-first) prompt). Merged tasks stay *integrated*. The Verification panel shows the policy and *Judging is off (Settings › Verification)*. | Everything in [Verification](#verification), but only for pull requests merged **after** the switch was turned on (the office keeps that moment), so older merges never raise an item. |
-| **Score main automatically with mxcli** | Off | No automatic quality run, from the Testing page or from the Board's poll. The Quality card says *Automatic scoring is off*; an admin's **Score main now** still works. | A quality run for each new main commit, as in [Quality](#quality), but never while any agent on the project is working: it waits for the next look at a moment the floor is idle (or the next commit). |
+| **Score main automatically with mxcli** | Off | No automatic quality run, from the Testing page or from the Board's poll. The Quality card says *Automatic scoring is off*; an admin's **Score main now** still works. | A quality run for each new main commit, as in [Quality](#quality), but never while any agent on the project is working: it waits for the next look at a moment the project is idle (or the next commit). |
 
 ## Verification
 

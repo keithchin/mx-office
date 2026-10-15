@@ -6,13 +6,13 @@ weight: 3.5
 
 Since release 6 a restart wakes only the agents that were cut off mid-turn. Everyone else stays asleep until something prompts them. **▶ Resume project** is the safe way to bring a project's team back. **⏸ Pause project** is the clean way to stop it, for example before a restart, a release or a migration.
 
-Both are one control beside the budget chip on the floor's line, above the tabs of the 1D view (so on the **🎛️ Command Center** and the team pages alike) and on the 2D view's bar. It shows the state: **▶ Running** with a green dot (*Running: 2 agents working, 3 asleep*), **⏸ Paused** (who paused it, when and why, and *· N waiting on you*), or, amber, **⏳ Pausing 1/3** / **Resuming 2/3** with a progress bar while a run is going. For an admin a click does what that state allows: running asks to **⏸ Pause project**, paused opens the **▶ Resume** preview, and a run going opens its progress (it starts nothing new). **/home** has one button for every project: **⏸ Pause all projects** while any is running, **▶ Resume all projects** once all are paused, and with a mix a **▶ Resume N paused** link for just the paused ones; while a run is going it shows its progress (*⏸ Pausing… 3 of 7*). Each project card there has a ⏸ / ▶ / ⏳ state icon, with who paused it, when and why in its tooltip (see [Home](home.md#projects)). Only admins (the Project Manager) can act on the control or the Home button. Everyone sees the floor's state, for example *⏸ Paused by Keith at 14:05 · 2 waiting on you* in the control's tooltip.
+Both are one control beside the budget chip on the project's line, above the tabs of the 1D view (so on the **🎛️ Command Center** and the team pages alike) and on the 2D view's bar. It shows the state: **▶ Running** with a green dot (*Running: 2 agents working, 3 asleep*), **⏸ Paused** (who paused it, when and why, and *· N waiting on you*), or, amber, **⏳ Pausing 1/3** / **Resuming 2/3** with a progress bar while a run is going. For an admin a click does what that state allows: running asks to **⏸ Pause project**, paused opens the **▶ Resume** preview, and a run going opens its progress (it starts nothing new). **/home** has one button for every project: **⏸ Pause all projects** while any is running, **▶ Resume all projects** once all are paused, and with a mix a **▶ Resume N paused** link for just the paused ones; while a run is going it shows its progress (*⏸ Pausing… 3 of 7*). Each project card there has a ⏸ / ▶ / ⏳ state icon, with who paused it, when and why in its tooltip (see [Home](home.md#projects)). Only admins (the Project Manager) can act on the control or the Home button. Everyone sees the project's state, for example *⏸ Paused by Keith at 14:05 · 2 waiting on you* in the control's tooltip.
 
 ## ▶ Resume project
 
 ### The preview
 
-Nothing is woken until you say so. Resume first opens a preview listing every agent on the floor that's asleep, plus every benched team member. For each one it shows whether it has **work waiting**, and why:
+Nothing is woken until you say so. Resume first opens a preview listing every agent on the project that's asleep, plus every benched team member. For each one it shows whether it has **work waiting**, and why:
 
 | Reason | Where it comes from |
 |---|---|
@@ -20,7 +20,7 @@ Nothing is woken until you say so. Resume first opens a preview listing every ag
 | *N prompts held for it* | Prompts the office's one delivery path is holding (typed once its turn is over). They're kept in the roster file, so a restart doesn't lose them; one still waiting after 24 hours is let go, with an Activity line and a `delivery.expired` audit event |
 | *N notes queued for it* | The office's outbox: relays for the Project Coordinator, the Project Manager's decisions for a Lead |
 | *Cut off mid-turn* | A restart or a crash stopped it mid-turn, and it hasn't carried on yet |
-| *Failing checks on PR #n* | Its open pull request is red on the floor's PR list |
+| *Failing checks on PR #n* | Its open pull request is red on the project's PR list |
 | *Open issue #n assigned*, *team issue #n with nobody assigned* | For a Lead, an open issue with its own team's label, whether someone is assigned to it or nobody is yet. Another team's issues never count. For a worker, an open issue its task names |
 | *Standup … page not handed over* | For the Project Coordinator, a compiled standup page it was asleep for |
 
@@ -40,7 +40,7 @@ The preview also runs safety checks:
 
 | Check | What happens |
 |---|---|
-| The floor's daily **spend cap** is reached | **Blocks.** Nothing can be woken until the cap lifts (raise it in the team settings). |
+| The project's daily **spend cap** is reached | **Blocks.** Nothing can be woken until the cap lifts (raise it in the team settings). |
 | **Studio mode** (Studio Pro has the project open) | A warning: agents wake, but their mxcli writes stay paused until Studio Pro closes. |
 | The agent's **worktree is gone** | A team member is re-hired fresh, primed with its handoff note. Any other worker is left asleep: rebuild its worktree from its card. |
 | Its **branch is already merged** into `origin/<default>` | **🏠 Send home** is offered instead of waking it. |
@@ -67,21 +67,21 @@ A woken agent doesn't get the generic "carry on" prompt. It gets a short brief, 
 
 Resume runs as a [workflow](../automation/workflows.md) on the office's engine (`project-resume`), with one step per agent. It's checkpointed after every step, so a run cut off by a restart carries on where it was when the office comes back, and nobody is woken twice. The preview window turns into the run's progress, with **⏸ Hold** (stop after the current step, then **▶ Carry on**) and **✕ Cancel run**. The audit log gets `resume.started`, `agent.woken` (once each session is live), `agent.skipped` (a wake that couldn't happen, and why), `agent.sent-home` and `resume.finished`.
 
-Starting a resume lifts the floor's pause.
+Starting a resume lifts the project's pause.
 
 ### After a resume: the Coordinator re-plans, and nobody believes "paused"
 
 A pause tells every awake agent the project is pausing, but a resume wakes only those with work. The rest would keep "the project is paused" as their latest context. So, after every resume (a person's, one after 🔁 Restart safely, or one after the budget's auto-pause):
 
-- **The Coordinator re-plans.** Whoever covers Management (the Project Coordinator, or a Solo team's Lead) always hears that the project resumed, who's awake and who's asleep. For example: *The project resumed at Sat 10 Oct 13:20 (after a safe restart). Awake now: Sophie (Lead Developer). Asleep: Max (Lead Tester), Lena (Lead Designer). Re-plan: hand out next steps to the Leads you need (wake them with office-workers / your tools), or tell the Project Manager what needs them.* If the resume woke the Coordinator for its own work, this goes at the end of its resume brief, so it still gets one message. Otherwise the office sends it after the wakes, as an office message: it wakes a sleeping Coordinator, waits for a busy one's turn to end, and isn't sent while the floor's spend cap is reached. The other Leads aren't woken automatically: the Coordinator decides who's needed. The audit log records it as `resume.coordinator`.
+- **The Coordinator re-plans.** Whoever covers Management (the Project Coordinator, or a Solo team's Lead) always hears that the project resumed, who's awake and who's asleep. For example: *The project resumed at Sat 10 Oct 13:20 (after a safe restart). Awake now: Sophie (Lead Developer). Asleep: Max (Lead Tester), Lena (Lead Designer). Re-plan: hand out next steps to the Leads you need (wake them with office-workers / your tools), or tell the Project Manager what needs them.* If the resume woke the Coordinator for its own work, this goes at the end of its resume brief, so it still gets one message. Otherwise the office sends it after the wakes, as an office message: it wakes a sleeping Coordinator, waits for a busy one's turn to end, and isn't sent while the project's spend cap is reached. The other Leads aren't woken automatically: the Coordinator decides who's needed. The audit log records it as `resume.coordinator`.
 - **Anyone who slept through the pause hears once that it's over.** When an agent the pause wound down is next woken or prompted (by you, the Coordinator's `office-workers tell`, a hire's wake, an escalation answer, a held message), its message starts with *Note from the office: the project was resumed on Sat 10 Oct 13:20 — you're running; carry on with &lt;its task&gt;.* It's said once per resume: the office keeps who still has to hear it in `project-run.json`, so a restart doesn't repeat it. Agents the resume woke learn it from their brief instead.
-- **Your questions to the Coordinator carry the real run state.** What you ask from the console, and its quick questions (📊 Status update, 🚧 What's blocking?, 🗺️ Plan next steps), goes in with a one-line fact block from the office: *[Office facts, Sun 11 Oct 09:12] Project: Running (last resumed Sat 10 Oct 13:20, after a safe restart). Agents working: Sophie (Lead Developer); awake and idle: Ada (you); asleep: Max (Lead Tester). Answer from these facts, not from older messages.* While the floor is paused it says *Paused by Keith since …*, *Paused for a safe restart since …* or *Budget-paused since … (its budget is reached)*. A question held for after the Coordinator's turn gets the facts as they are when it goes in. The console's Chat view shows only what you typed, without these notes.
+- **Your questions to the Coordinator carry the real run state.** What you ask from the console, and its quick questions (📊 Status update, 🚧 What's blocking?, 🗺️ Plan next steps), goes in with a one-line fact block from the office: *[Office facts, Sun 11 Oct 09:12] Project: Running (last resumed Sat 10 Oct 13:20, after a safe restart). Agents working: Sophie (Lead Developer); awake and idle: Ada (you); asleep: Max (Lead Tester). Answer from these facts, not from older messages.* While the project is paused it says *Paused by Keith since …*, *Paused for a safe restart since …* or *Budget-paused since … (its budget is reached)*. A question held for after the Coordinator's turn gets the facts as they are when it goes in. The console's Chat view shows only what you typed, without these notes.
 
 ## ⏸ Pause project
 
-1. The floor is paused straight away. The office stops sending its own prompts to this floor's agents: no nudges, standups, relays, review nudges or Firm interviews. The meeting room hands out no parts either: a meeting waits until the project is resumed. Messages a person sends still go through, and wake only the agent they're sent to.
+1. The project is paused straight away. The office stops sending its own prompts to this project's agents: no nudges, standups, relays, review nudges or Firm interviews. The meeting room hands out no parts either: a meeting waits until the project is resumed. Messages a person sends still go through, and wake only the agent they're sent to.
 
-   It also **hires nobody new** on the floor: the task queue holds its tasks, the meeting room won't seat a meeting, a desk won't take a new agent, and neither the Team tab, an answered escalation nor The Firm hires a team member. Each says *Project paused: no new agents until it's resumed*. A sleeping agent can still be woken, and in the Team tab the Project Manager can still hire a member after confirming **Hire anyway** (that one hire only, logged as `roster.hire-override`).
+   It also **hires nobody new** on the project: the task queue holds its tasks, the meeting room won't seat a meeting, a desk won't take a new agent, and neither the Team tab, an answered escalation nor The Firm hires a team member. Each says *Project paused: no new agents until it's resumed*. A sleeping agent can still be woken, and in the Team tab the Project Manager can still hire a member after confirming **Hire anyway** (that one hire only, logged as `roster.hire-override`).
 2. Each agent then winds down:
    - one **mid-turn** finishes its turn. It's never interrupted.
    - one **asking something in its terminal** (a question or a permission prompt) is left alone, and nothing is typed into it. It's listed as *waiting on you in its terminal*.
@@ -98,9 +98,9 @@ For a release or a restart, use **⚙️ Settings › 🤖 Workers › 🔁 Rest
 
 ## Who can use them
 
-Resume, Pause, Resume all, Pause all and Restart safely are for admins (the Project Manager) only. The office refuses anyone else on every route (`POST /api/project-run`, `POST /api/office/restart`), not just by hiding the buttons. Everyone can see a floor's pause, a run's progress and the preview.
+Resume, Pause, Resume all, Pause all and Restart safely are for admins (the Project Manager) only. The office refuses anyone else on every route (`POST /api/project-run`, `POST /api/office/restart`), not just by hiding the buttons. Everyone can see a project's pause, a run's progress and the preview.
 
 ## Limitations
 
-- The "while you slept" part only covers what the office can see: merges on the default branch, the floor's escalations and its Team chatter.
+- The "while you slept" part only covers what the office can see: merges on the default branch, the project's escalations and its Team chatter.
 - A worker that isn't on the team and whose worktree is gone isn't woken. Rebuild it from its card first.

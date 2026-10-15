@@ -34,5 +34,5 @@ If a Lead's turn ends right after one of its subagents came back, the office pro
 - It waits 15 seconds after the turn ends, and leaves at least 3 minutes between nudges.
 - It skips the Project Coordinator, a Lead that is asleep, busy, waiting on you, or answering a standup.
 - It stops after 3 nudges in a row when the Lead records no review verdict and nobody else prompts it, with one Activity line (*Stopped nudging …*). A verdict, or anyone else's prompt, lets it go on.
-- It isn't sent while the floor's daily cost cap is reached.
+- It isn't sent while the project's daily cost cap is reached.
 - Turn it off in [Settings](../using-the-office/settings.md) (**Review loop**). It's on by default.

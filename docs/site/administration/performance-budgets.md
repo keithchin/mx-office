@@ -15,12 +15,12 @@ Every main view is opened in a headless browser on a big test office, with six w
 | Longest task | 200 ms | No single piece of work on the page's main thread may run longer. Over this, clicks and typing visibly lag. |
 | Time to usable | 3 s | From opening the address until the view has drawn its content and answers. |
 | Heap growth | 25 % (and over 4 MB) | How much the page's memory may grow while it stays open on live events for 60 s. Steady growth means something piles up. |
-| Project switch | 1.5 s | From picking another project (the floor picker in the 1D and 2D views, or a card on Home) until its view is usable and drawn. |
+| Project switch | 1.5 s | From picking another project (the project picker in the 1D and 2D views, or a card on Home) until its view is usable and drawn. |
 | Server stall | 250 ms | No block of the office server's event loop while the journey makes a project (wizard, clone, hiring), nor while six workers are busy for minutes in the busy office. A test office records every block over 100 ms (`GET /api/perf/stalls`). |
 
 The numbers are named constants, `PERF_BUDGETS` in `src/shared/testlab.ts` (and `scripts/perf/budgets.mjs`, which a test keeps the same), so they can be tuned in one place.
 
-The views: the Command Center (Chat and Terminal), the Board, the team's org chart, standup and approvals, Team boards, Documents (opened, then Refresh: a fresh scan, with the office's own event-loop stalls meanwhile checked against the server budget), Workers, Budget, the Audit log and Incidents, Settings, Home (Projects, Overview, Budget), the 2D view, the Team phone open (and its floor channel), and the phone page (`/m`). Project switches are timed on the 1D Board, the 1D Command Center, the 2D view and Home → a project, with the office's own part (from asking for the floor to getting it), the fetches that follow and any `performance.mark` timings the page sets.
+The views: the Command Center (Chat and Terminal), the Board, the team's org chart, standup and approvals, Team boards, Documents (opened, then Refresh: a fresh scan, with the office's own event-loop stalls meanwhile checked against the server budget), Workers, Budget, the Audit log and Incidents, Settings, Home (Projects, Overview, Budget), the 2D view, the Team phone open (and its project channel), and the phone page (`/m`). Project switches are timed on the 1D Board, the 1D Command Center, the 2D view and Home → a project, with the office's own part (from asking for the project to getting it), the fetches that follow and any `performance.mark` timings the page sets.
 
 ## The big test office
 
@@ -60,7 +60,7 @@ The first run on the big office (2026-10-07) failed 10 of 18 views: the Workers 
 - Long lists drew every row (hundreds of gone-home workers, a thousand chat messages): now the first or newest rows, with Show more, and rows off screen skip layout and paint.
 - The board read its scroll positions from the layout before each redraw; the 2D sprites were read back from the GPU; the phone opened a sound device in the middle of a paint.
 - On the server, each Audit log page re-hashed the whole log, and the ranking was worked out for every look.
-- Switching projects fetched the same roster four times and ran git six times for the setup panel three times over, and now and then left the new floor's budget unloaded (the loading overlay waiting 15 s).
+- Switching projects fetched the same roster four times and ran git six times for the setup panel three times over, and now and then left the new project's budget unloaded (the loading overlay waiting 15 s).
 
 The run after the fixes (scale 10, six live workers, 60 s soak per view):
 
@@ -78,17 +78,17 @@ The run after the fixes (scale 10, six live workers, 60 s soak per view):
 | Settings | 236 ms | | 115 ms | 9 % |
 | Home: Projects / Overview / Budget | 188 / 213 / 163 ms | | 70 / 75 / 0 ms | under 12 % |
 | 2D view | 289 ms | | 127 ms | 18 % |
-| Team phone (open / floor channel) | 265 / 615 ms | | 94 / 173 ms | under 8 % |
+| Team phone (open / project channel) | 265 / 615 ms | | 94 / 173 ms | under 8 % |
 | Phone page (`/m`) | 181 ms | | 0 ms | 5 % |
 | Switch: 1D Board / 1D Command Center / 2D view / Home → project | | 1,113 / 535 / 169 / 337 ms | 58 to 115 ms | |
 | Switch 10× on the 1D Command Center | | p90 525 ms | 0 ms | |
 
 ### The second pass (2026-10-07)
 
-- **The server stalled 3 to 16 s during the wizard**, every journey, right after the clone step. A CPU profile of the office put it on programs started on the event loop: on Windows starting a program (CreateProcess) runs on the thread that asks, and a binary the virus scanner hasn't seen yet (gh, mx, claude) takes seconds there; around them git ran with `execFileSync` for every hire, floor opened and restart-state look. Programs now start from a thread of their own (`server/offloop/exec.ts`), branch, origin and HEAD are read from the checkout's files (`server/gitfiles.ts`), and hiring into a worktree runs git without blocking. Before: a 4.4 to 4.6 s block every run; after: no block over 100 ms (the journey now fails on one over 250 ms), wizard 11.2 → 7.6 s, hiring 9.7 → 4.6 s.
-- **The first Budget look and the setup panel's first look** waited 0.8 s and 3.5 to 4.5 s on a fresh big office (the Budget one blocking the server 840 ms): the analyzer rewrote its whole record file for every record it settled, the budget files were written and renamed on the event loop, and the benchmark scored every run again for every worker. Now: written once and in the background, scored once per record, the ranking and each floor's setup view worked out in the background after the office starts and when a floor is added, and both answer stale-while-revalidate. First Budget look 830 → 130 ms; after the warm-up both answer in about 20 ms.
+- **The server stalled 3 to 16 s during the wizard**, every journey, right after the clone step. A CPU profile of the office put it on programs started on the event loop: on Windows starting a program (CreateProcess) runs on the thread that asks, and a binary the virus scanner hasn't seen yet (gh, mx, claude) takes seconds there; around them git ran with `execFileSync` for every hire, project opened and restart-state look. Programs now start from a thread of their own (`server/offloop/exec.ts`), branch, origin and HEAD are read from the checkout's files (`server/gitfiles.ts`), and hiring into a worktree runs git without blocking. Before: a 4.4 to 4.6 s block every run; after: no block over 100 ms (the journey now fails on one over 250 ms), wizard 11.2 → 7.6 s, hiring 9.7 → 4.6 s.
+- **The first Budget look and the setup panel's first look** waited 0.8 s and 3.5 to 4.5 s on a fresh big office (the Budget one blocking the server 840 ms): the analyzer rewrote its whole record file for every record it settled, the budget files were written and renamed on the event loop, and the benchmark scored every run again for every worker. Now: written once and in the background, scored once per record, the ranking and each project's setup view worked out in the background after the office starts and when a project is added, and both answer stale-while-revalidate. First Budget look 830 → 130 ms; after the warm-up both answer in about 20 ms.
 - **⏸ Pause project waited three minutes** on an agent whose handoff turn was shorter than its two-second look. Every turn is counted as it starts now; the pause sees one that came and went between looks.
-- **On a scrubbed copy of this office's real data** (`scripts/perf/real-shape.mjs`: two floors, 13 worktrees) every view and project switch was within budget; Settings' first open was borderline once (202 and 221 ms, then 165 ms). Switches took 63 to 91 ms.
+- **On a scrubbed copy of this office's real data** (`scripts/perf/real-shape.mjs`: two projects, 13 worktrees) every view and project switch was within budget; Settings' first open was borderline once (202 and 221 ms, then 165 ms). Switches took 63 to 91 ms.
 - **The Command Center's terminal** draws with xterm's DOM renderer (its first draw 150 to 290 ms). xterm 6 has no canvas renderer any more, and its WebGL addon isn't installed (it isn't small, and a headless browser draws WebGL in software), so it stays as it is; the next thing to try is writing only the visible tail of the scrollback first.
 
 The quick check after this pass (`npm run test:perf:quick`, scale 10, 5 s soak):
@@ -123,7 +123,7 @@ The **busy office** (`scripts/perf/busy.mjs`, suite `busy`, part of `npm run tes
 
 After release 19 the live office still stalled whenever workers started: its own CPU profile put the longest block, 2,582 ms, in node-pty's `WindowsPtyAgent._completePtyConnection`, where the pseudo console starts the agent (CreateProcess of the 256 MB `claude.exe`, with the virus scanner reading it: 0.65 to 2.6 s each time, on the thread that asks). A safe restart that woke six agents stalled the server for 2.6 s twice.
 
-On Windows every worker's terminal now runs in the **terminal host**, a small node process of its own (`agent-office-ptys`, `src/server/ptyhost.ts`) that each floor's office starts once (from the process-starter thread) and talks to over a named pipe. node-pty's native calls (starting a terminal, writing, resizing, killing) happen there; the office's main thread only writes a line to the pipe. The host is tied to the office: it ends every terminal and exits as soon as the office's pipe closes or its process is gone (checked every 2 s as a backstop), and if the host itself dies its terminals end with it (their pseudo consoles close). The office then resumes those workers in a fresh host; a host that dies more than three times in ten minutes isn't started again and terminals run in the office, as before. What stays on the main thread: parsing the host's output lines (the same work the Unix host always had), and the one start of the host per floor. `AGENT_OFFICE_PTY_HOST=off` runs terminals in the office as release 19 did (for troubleshooting). Claude Code's sign-in (☰ → 🔐 Your sign-ins) starts in the host too.
+On Windows every worker's terminal now runs in the **terminal host**, a small node process of its own (`agent-office-ptys`, `src/server/ptyhost.ts`) that each project's office starts once (from the process-starter thread) and talks to over a named pipe. node-pty's native calls (starting a terminal, writing, resizing, killing) happen there; the office's main thread only writes a line to the pipe. The host is tied to the office: it ends every terminal and exits as soon as the office's pipe closes or its process is gone (checked every 2 s as a backstop), and if the host itself dies its terminals end with it (their pseudo consoles close). The office then resumes those workers in a fresh host; a host that dies more than three times in ten minutes isn't started again and terminals run in the office, as before. What stays on the main thread: parsing the host's output lines (the same work the Unix host always had), and the one start of the host per project. `AGENT_OFFICE_PTY_HOST=off` runs terminals in the office as release 19 did (for troubleshooting). Claude Code's sign-in (☰ → 🔐 Your sign-ins) starts in the host too.
 
 The busy office (`scripts/perf/busy.mjs`) now ends with a **wake burst**: six asleep workers are woken at once, right after a fresh agent binary went in (`scripts/perf/slowstart.mjs`: the tests' shim with 24 MB of random bytes after it, which the scanner reads through on its first start), and the server must stay under 250 ms while they start. With terminals in the office (release 19's way, `AGENT_OFFICE_PTY_HOST=off`) it fails: one block of 3.9 to 4.8 s. With the host: no block over 100 ms. `tests/ptys-host-win.test.ts` checks the host itself: output, multi-line input, resize, exit codes, kill, a failed start, the host dying under the office, the office dying under the host, and three fresh binaries starting with the event loop held under 250 ms.
 
@@ -140,7 +140,7 @@ The busy office and the journey passed on a quiet machine but failed on this lap
 | Looking for each session's transcript one folder at a time, then reading it with readSync | `analysis/transcript.ts` | 303 ms | fs/promises |
 | The Leads' transcripts every 10 s, the chatter's and the Team tab's journals | `roster/subagent-live.ts`, `roster/journal-io.ts` | 564 ms | fs/promises; a journal look answers from the last background read |
 | Every part of the office looking for `claude` on the PATH (an access call per folder and extension) | `workers/process.ts` | 203 ms | Cached; the warm-up looks the usual commands up in the background |
-| The wizard's clone step, its checkpoint and opening the new floor in one go; a hire writing a dozen Playbook files | `flow/engine.ts`, `roster/playbooks.ts` | 1,684 ms | A turn of the loop between steps, before opening the floor, and after each file |
+| The wizard's clone step, its checkpoint and opening the new project in one go; a hire writing a dozen Playbook files | `flow/engine.ts`, `roster/playbooks.ts` | 1,684 ms | A turn of the loop between steps, before opening the project, and after each file |
 | Every busy terminal's screen read in one flush | `workers/terminal.ts` | 201 ms | At most 20 ms per flush; the rest go in the next |
 
 Two of the blocks were the guard's own: starting the office's CPU profiler and saving its profile each held the loop 0.2 to 1.2 s on the loaded machine, inside the measured minute. The busy check and the journey now start the profile before the stretch they measure, and the journey's server check names what ran in a stall it finds.
@@ -154,7 +154,7 @@ Measured on this laptop (32 threads, the live office busy with its builds):
 | Before (release 22) | 3 builds, scanner busy | 13 blocks over 100 ms, longest 966 ms; 1.8 s in another run | one block of 412 to 789 ms |
 | With 6 disk hammers, before / after the hook-path fixes | 63 % CPU | 50 blocks, longest 2.4 s / 34 blocks, longest 1.2 s, all on trivial frames | |
 | After, quick check | 34 % CPU, 4 java, 3 mxbuild | 0 blocks over 100 ms | longest 203 ms: pass |
-| After, quick check | 59 % CPU, 4 java, 2 mxbuild | 0 blocks over 100 ms | 340 ms in opening the new floor (fixed since) |
+| After, quick check | 59 % CPU, 4 java, 2 mxbuild | 0 blocks over 100 ms | 340 ms in opening the new project (fixed since) |
 | After, quick check | 70 % CPU, 4 java, 2 mxbuild | 0 blocks over 100 ms | 5 blocks of 280 to 580 ms in wizard steps: still open |
 
 ### The Model tab (release 25)
@@ -181,7 +181,7 @@ Measured on a copy of travel-approval, from commit b6e589b to d00af53 (18 microf
 | Main moved: unchanged microflow / domain model / added microflow | 1,825 / 91 / 1,667 ms | 15 / 3 / 8 ms |
 | Longest event-loop delay during the run | 58 ms | 41 ms |
 
-In the browser, on a test office whose floor is that copy (the page's own timings of `/api/model/*`): a microflow or domain model opened again 5 to 7 ms; one never opened (read ahead) 6 ms; after main moved, the tree 10 ms (the last one, the new one fetched behind it), an unchanged microflow 6 ms, an added one 5 ms (read ahead after the move). Its MDL follows in 1.6 to 1.8 s. The first tree on an empty data folder is still mxcli's (16 s on this machine).
+In the browser, on a test office whose project is that copy (the page's own timings of `/api/model/*`): a microflow or domain model opened again 5 to 7 ms; one never opened (read ahead) 6 ms; after main moved, the tree 10 ms (the last one, the new one fetched behind it), an unchanged microflow 6 ms, an added one 5 ms (read ahead after the move). Its MDL follows in 1.6 to 1.8 s. The first tree on an empty data folder is still mxcli's (16 s on this machine).
 
 ## Live warnings in the real office
 

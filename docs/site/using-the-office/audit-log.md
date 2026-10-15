@@ -13,12 +13,12 @@ The **🧾 Audit log** records who did what, and when: people, agents, the offic
 
 Above the log is The Firm's strip: **📑 Call an audit** and **The Firm →**, or the audit running, or its report ready (in a Portal theme these are the page header's buttons). See [The Firm](the-firm.md).
 
-- On a project's 1D view: the **🧾 Audit log** tab (`?tab=audit`). It opens on **This floor**.
-- On [/home](home.md): the **🧾 Audit log** tab, across **Every floor**, with a floor column.
+- On a project's 1D view: the **🧾 Audit log** tab (`?tab=audit`). It opens on **This project**.
+- On [/home](home.md): the **🧾 Audit log** tab, across **Every project**, with a project column.
 
 ## Reading it
 
-- The header shows **🔒 Chain verified** when every line points at the one before it, or **⚠️ Chain broken at** *time (floor)* when a line was edited, removed or moved since it was written. Next to it, the number of events.
+- The header shows **🔒 Chain verified** when every line points at the one before it, or **⚠️ Chain broken at** *time (project)* when a line was edited, removed or moved since it was written. Next to it, the number of events.
 - Each row: **Time**, **Actor** (with an icon for Human, Agent, Office, Jeff or Reviewer), **Action** (a dotted verb such as `worker.hire`, `escalation.answer`, `roster.autonomy`, `settings.change`), **Target** and **Summary**. The colour bar on the left is the severity (info, notice, warning).
 - Click a row to expand its **details**. Settings changes show **before** and **after**.
 - New events appear as a **↑ N new events** pill instead of moving the table under you. Scroll down to load older ones, until *The start of this range*.
@@ -27,7 +27,7 @@ Above the log is The Firm's strip: **📑 Call an audit** and **The Firm →**, 
 
 | Filter | Choices |
 |---|---|
-| Scope | **This floor**, **Office-wide** (logins, settings, floors added and removed), **Every floor**; on /home, each floor by name |
+| Scope | **This project**, **Office-wide** (logins, settings, projects added and removed), **Every project**; on /home, each project by name |
 | Time | **Last hour**, **Today**, **7 days**, **30 days**, **Custom** (From … to …) |
 | Who | **Human**, **Agent**, **Office**, **Jeff**, **Reviewer**, each with a count |
 | Kind of action | Every action, Team, Agents, Escalations & approvals, GitHub, Settings, Access, Jeff, The Firm |
@@ -46,7 +46,7 @@ The **histogram** above the table shows events over time. Click a bar to zoom in
 
 ## Where it's kept
 
-`<office data>/audit/<floor>.jsonl`, one file per floor, and `audit/_office.jsonl` for the office's own events. Each line carries `prev` (the sha256 of the line before) and `hash`. Past a size cap the oldest lines move to `audit/archive/<floor>-<month>.jsonl`. See [Data locations](../administration/data-locations.md).
+`<office data>/audit/<project>.jsonl`, one file per project, and `audit/_office.jsonl` for the office's own events. Each line carries `prev` (the sha256 of the line before) and `hash`. Past a size cap the oldest lines move to `audit/archive/<project>-<month>.jsonl`. See [Data locations](../administration/data-locations.md).
 
 ## Related
 

@@ -51,7 +51,7 @@ Paths: `<spike>` is the `agent-spike` folder, `<home>` the office home (`agent-o
 - **Office uses very little of mxcli today.** It runs `project-tree`, `describe` (MDL and `--format elk`), `run --local`, `new` and `--version`. Agents are told to run `check`, `exec`, `lint` and `layout`, and to use `brain capture` "if available". The toolkit's `app-facts.sh` and `graph-sweep.sh` already read the catalog's `refs` table directly. Office itself reads no catalog, graph report or JUnit file.
 - **Session accounting:** Office's ledger is incremental, priced and attributed, and it should stay. mxcli's session-report (website only) has a stricter de-duplication rule that Office should adopt. `diag loop-report` is installed, works on an isolated log folder, and gives per-command mxcli call counts and times. **[local] [web]**
 - **Test outputs need an Office wrapper.** `mxcli test --junit` has names, files, assertion counts and pass/fail/error/skip. It has no timestamps, no revisions and no environment. List ids (`test_1…`) are positional. Exit code 1 means both "a test failed" and "the run broke". **[local] [source]**
-- **Project Brain** has sound ideas: content-hash ids, `rename` keeping anchors, derived progress. But its staged queue is **per checkout and git-ignored**. Agent captures in an Office worktree are lost if that worktree is removed before someone promotes them. None of the four floors has a `docs/brain/` store. **[local] [source]**
+- **Project Brain** has sound ideas: content-hash ids, `rename` keeping anchors, derived progress. But its staged queue is **per checkout and git-ignored**. Agent captures in an Office worktree are lost if that worktree is removed before someone promotes them. None of the four projects has a `docs/brain/` store. **[local] [source]**
 
 ## 2. Versions
 
@@ -66,8 +66,8 @@ Paths: `<spike>` is the `agent-spike` folder, `<home>` the office home (`agent-o
 | mxcli source read | Installed: `14a0a7c0ca4d7a8e2350b546b76ff9be8c00002a` (git worktree). Upstream `main` at the time of reading: `aa8c25be1e51…` (2026-10-12). The website matches `main`. | clone in `<spike>\scratch\mxcli-audit\` |
 | Catalog schema | Installed **15**; upstream `main` **23** | `catalog_meta.schema_version`; `mdl/catalog/tables.go` |
 | Toolkit (shared clone) | `mendix-toolkit` at `7b4b4cf13b9f…` (2026-10-08) | `git log -1` |
-| Toolkit per project | travel-approval `PROJECT.md`: **8abd614** (2026-09-30, 3 commits behind the clone); equipment-rental 7b4b4cf; equipment-loan-desk-test a877728. No pin book (`<home>/.agent-office/toolkit-pins.json`) and no `mendix-toolkit-pins/` folder exist yet, so the toolkit-pin feature (on main) hasn't pinned any floor on this machine. travel-approval has no `agent-office.project.json` (it predates it). | files listed |
-| Mendix version (travel-approval) | **11.12.2**, from the model (catalog `mendix_version`, connect log `mpr_format: 2`). Its floor `toolkit.env` still has `MXBUILD_PATH=…\11.6.4\…`, a mismatch. Whether a toolkit script on that floor currently uses it wasn't checked (read-only). New projects default to 11.12.4. | `show catalog status --json`; `toolkit.env` |
+| Toolkit per project | travel-approval `PROJECT.md`: **8abd614** (2026-09-30, 3 commits behind the clone); equipment-rental 7b4b4cf; equipment-loan-desk-test a877728. No pin book (`<home>/.agent-office/toolkit-pins.json`) and no `mendix-toolkit-pins/` folder exist yet, so the toolkit-pin feature (on main) hasn't pinned any project on this machine. travel-approval has no `agent-office.project.json` (it predates it). | files listed |
+| Mendix version (travel-approval) | **11.12.2**, from the model (catalog `mendix_version`, connect log `mpr_format: 2`). Its project `toolkit.env` still has `MXBUILD_PATH=…\11.6.4\…`, a mismatch. Whether a toolkit script on that project currently uses it wasn't checked (read-only). New projects default to 11.12.4. | `show catalog status --json`; `toolkit.env` |
 | Frozen snapshot | travel-approval `ff1c9d2d827a195a1635efcd06e7ad1991209176` (453 commits), cloned to `<copy>`, remote removed | `git log -1` |
 
 ### Documentation versus the installed binary
@@ -94,7 +94,7 @@ Where they differ, this review follows the installed help.
   2. It **created `.claude/skills/widgets/`** (untracked).
   3. It wrote `.mxcli/catalog.db` (4.6 MB, git-ignored) and `.mxcli/widgets/`.
 
-  The source is `RegenerateWidgetDocs` / `WidgetDocsDirs` (`mdl/executor/widget_defs.go:652-958`): it writes wherever `.ai-context/` or `.claude/` exists. **Consequence:** a "read-only" catalog refresh is not read-only for a checkout. Office must run it in its own work folder, never in a floor's checkout. Office's commit work folders (`src/server/model/workdir.ts`, `<data>/model/work/`) hold only the `.mpr` and `mprcontents/`, so these writes wouldn't happen there. The Studio guard rightly treats `refresh` as a model read (`bin/studio-guard.js:133`), since it doesn't touch the model.
+  The source is `RegenerateWidgetDocs` / `WidgetDocsDirs` (`mdl/executor/widget_defs.go:652-958`): it writes wherever `.ai-context/` or `.claude/` exists. **Consequence:** a "read-only" catalog refresh is not read-only for a checkout. Office must run it in its own work folder, never in a project's checkout. Office's commit work folders (`src/server/model/workdir.ts`, `<data>/model/work/`) hold only the `.mpr` and `mprcontents/`, so these writes wouldn't happen there. The Studio guard rightly treats `refresh` as a model read (`bin/studio-guard.js:133`), since it doesn't touch the model.
 - **Timings** are wall clock from Git Bash `time`, on the same frozen snapshot, with the live office (port 4600) running on the same 32-thread machine. Each run was single; noise of about ±0.1 s per query is likely.
 
 ## 4. A. Dependency graph and architecture analysis
@@ -224,7 +224,7 @@ Write commands were read in help and source only.
 - Promoted entries are in `docs/brain/` (committed, reviewed in PRs).
 - The **staged queue is `.mxcli/brain/staged.jsonl`, next to the `.mpr` of the checkout where the capture ran**, and git-ignored (`brain/staged.go:22`). In Office every agent works in its own worktree, so each worker has its own queue. A queue in a worktree that is swept or benched before promotion is lost.
 - Office's bench prompt already asks Leads to "capture there too" (`src/server/roster/prompts.ts:65`, `playbooks.ts:239`). Those captures go into exactly such queues.
-- On this machine, `mx-spike` has a 2-entry queue in its main checkout that was never promoted. No floor has `docs/brain/`.
+- On this machine, `mx-spike` has a 2-entry queue in its main checkout that was never promoted. No project has `docs/brain/`.
 
 **Human review without duplicating the store:**
 - Office can list the queues read-only, by running `brain staged --json` in each member worktree and the main checkout, and show them in Needs you as "knowledge waiting for review".
@@ -309,7 +309,7 @@ Office's ledger is `src/server/usage.ts` (tracker) plus `src/server/budget/` (pr
   What it could contribute: a ready **arm-A (single agent) runner** and a fixed brief (`BENCH-001`) for regression runs of mxcli and toolkit changes. Isolation it would need:
   - a test office or a separate OS user;
   - **no GitHub token**, per the test-office hard rule;
-  - a scratch folder outside every floor;
+  - a scratch folder outside every project;
   - an external budget ceiling;
   - an approved paid-run budget;
   - transcripts kept under the gap map's retention decision.
@@ -386,7 +386,7 @@ Note also: `--attach` tests run against the live app's database. The Docker path
 | Graph analysis (`communities`, cycles, layers, centrality) | Yes, separate pass | None | `CATALOG.graph_*` tables; `graphAnalysis` in status | Empty until the pass runs; betweenness skipped above about 6k nodes | **Wrap**: check status first; never show "none" without the pass | §4 before/after |
 | `search` (full-text) | Yes; MDL only after `full source` | None | `--json` | `--format names` puts progress on stdout | **Reuse directly** as the "textual mention" fallback for expression gaps | IsEscalated probe |
 | `report` / `lint` JSON | Yes | Agents only; benchmark discovery pinned the commands | `{projectName, date, overallScore, summary, categories, violations[{ruleId, …, documentId}]}` | — | **Reuse directly** as eval graders (already planned) | `report.json` |
-| Project Brain | Yes | A prompt line "capture if available"; no floor has a store | `staged`, `check`, `plan`, `brief --json` | Per-checkout, git-ignored queue; anchors by name; renames outside mxcli not followed | **Defer** UI adoption until queue survival is solved; set ownership rules now (§5) | §5; `staged.go:22` |
+| Project Brain | Yes | A prompt line "capture if available"; no project has a store | `staged`, `check`, `plan`, `brief --json` | Per-checkout, git-ignored queue; anchors by name; renames outside mxcli not followed | **Defer** UI adoption until queue survival is solved; set ownership rules now (§5) | §5; `staged.go:22` |
 | `diag loop-report` | Yes | None | `--json` (by verb) | No session or task id in the logs | **Wrap**: per-attempt `MXCLI_LOG_DIR`, or a time window | §6 local run |
 | `diag session-report` | **No** | — | `--json` (upstream) | Full re-parse; no cost | **Defer until a compatible version is evaluated**; then validator only. Adopt its de-dup rule now. | §6; `transcript.go` |
 | `eval check` / `list` | Yes | None | Reports to `--output` | Static presence only | **Reuse directly** as the structural grader in E4 | help |
@@ -505,7 +505,7 @@ Steps:
 4. Answer them from the export and from `refs`, `impact` and `callers --transitive` alone.
 5. Diff the two commits' edge sets.
 
-Nothing touches Office code or a live floor.
+Nothing touches Office code or a live project.
 
 **Prerequisites:** the frozen copy (exists), the installed nightly unchanged, and `node:sqlite` or plain JSON processing in a scratch script. No credentials and no paid calls.
 
@@ -541,7 +541,7 @@ Nothing touches Office code or a live floor.
 - `mxcli test` and `playwright verify` real runs, JUnit files from them, and the lint exit code with error-severity findings (also open in benchmark discovery).
 - Catalog cost on a large app (only 558 units measured), and the cost and benefit of upstream schema 23 (loop containment, commit ref kind, widget tree).
 - Whether `brain capture` has been used by any agent in a worktree (queues weren't searched across worktrees). Only the main checkouts were listed.
-- Whether travel-approval's floor scripts currently use the 11.6.4 `MXBUILD_PATH` in its `toolkit.env`.
+- Whether travel-approval's project scripts currently use the 11.6.4 `MXBUILD_PATH` in its `toolkit.env`.
 - The website's full print edition (about 820k characters) was not read page by page. The relevant pages were read from the docs source at the installed commit and at upstream `main`, and spot-checked on the site (`session-report.html` present, `tools/reference-tracking.html` 404).
 
 ## 13. Appendix: commands run

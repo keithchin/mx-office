@@ -1,14 +1,14 @@
 ---
 title: Board
-description: The floor's Kanban - columns from Backlog to Done, starting and queueing work, team filter chips and hover previews.
+description: The project's Kanban - columns from Backlog to Done, starting and queueing work, team filter chips and hover previews.
 weight: 4
 ---
 
-The **🗂 Board** tab is the floor's Kanban: GitHub issues, queued tasks, working agents and pull requests in one view.
+The **🗂 Board** tab is the project's Kanban: GitHub issues, queued tasks, working agents and pull requests in one view.
 
 ![The board](../images/board.png)
 
-The line on top sums it up: *🤖 N working · 🙋 N need a human · 🔀 N in review · 💰 $x on this floor's agents*.
+The line on top sums it up: *🤖 N working · 🙋 N need a human · 🔀 N in review · 💰 $x on this project's agents*.
 
 ## Columns
 

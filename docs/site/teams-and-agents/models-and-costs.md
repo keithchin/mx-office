@@ -30,18 +30,18 @@ The office leaves it out when `--agent-args` already set a mode of their own (`-
 ## Where cost shows up
 
 - Every worker card: **💵 cost** and tokens.
-- The board's summary line, and the Command Center: **💰 $x today · $y all told on this floor**.
+- The board's summary line, and the Command Center: **💰 $x today · $y all told on this project**.
 - **Home → 📊 Statistics**: spent today and all-time, per project.
 - **The Firm**: an audit's estimate before you call it, its spend against the budget cap while it runs, and its cost in the report. Reviewers default to Fable 5.1 ($10 / $50 per million input / output tokens). See [The Firm](../using-the-office/the-firm.md#budget-and-time).
 
 ## The daily cost cap
 
-In [Settings](../using-the-office/settings.md) you can set a **daily dollar cap for each autonomy level**. Only the cap for the floor's current level counts.
+In [Settings](../using-the-office/settings.md) you can set a **daily dollar cap for each autonomy level**. Only the cap for the project's current level counts.
 
-When the floor's spend for the day reaches it:
+When the project's spend for the day reaches it:
 
-- hiring stops on that floor, with *This floor's $X daily team cap (autonomy level N) is spent: no new hires, and the office sends no prompts of its own (nudges, standups, relays, wakes) until tomorrow*;
-- the office holds its own prompts to the floor's agents: review nudges, a scheduled standup (compiled from the journals instead), relays to the Project Coordinator, the autonomy and skill change notes, The Firm's interview questions and wakes, and one agent's `office-workers tell` to another (refused, with the reason). Relays wait and go out once the cap lifts;
+- hiring stops on that project, with *This project's $X daily team cap (autonomy level N) is spent: no new hires, and the office sends no prompts of its own (nudges, standups, relays, wakes) until tomorrow*;
+- the office holds its own prompts to the project's agents: review nudges, a scheduled standup (compiled from the journals instead), relays to the Project Coordinator, the autonomy and skill change notes, The Firm's interview questions and wakes, and one agent's `office-workers tell` to another (refused, with the reason). Relays wait and go out once the cap lifts;
 - **💸 Spend cap reached: office prompts paused; agents finish their current turn** shows in Needs you and in Approvals.
 
 What you send still goes through: your answers to escalations, your typing in a terminal, a standup you call, a wake from the Team tab. A turn already running is never stopped.

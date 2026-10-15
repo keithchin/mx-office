@@ -10,7 +10,7 @@ An **incident** is something that went wrong, or nearly did, and is worth a reco
 
 ## Where to find it
 
-The **🚨 Incidents** sub-tab inside the **🧾 Audit log** tab, on a project's 1D view (it opens on **This floor**) and on [/home](home.md) (every floor). The red count on the sub-tab is the open incidents. Open **sev1** and **sev2** incidents also appear in **Needs you** on the [Command Center](command-center.md), on the [📱 Team phone](team-phone.md) and in the [Teams notifications](../integrations/teams-notifications.md). A new **sev1** also alerts on the Team phone (a desktop notification and its sound), like its other red items: Do not disturb holds it, and it skips the digest because it's red.
+The **🚨 Incidents** sub-tab inside the **🧾 Audit log** tab, on a project's 1D view (it opens on **This project**) and on [/home](home.md) (every project). The red count on the sub-tab is the open incidents. Open **sev1** and **sev2** incidents also appear in **Needs you** on the [Command Center](command-center.md), on the [📱 Team phone](team-phone.md) and in the [Teams notifications](../integrations/teams-notifications.md). A new **sev1** also alerts on the Team phone (a desktop notification and its sound), like its other red items: Do not disturb holds it, and it skips the digest because it's red.
 
 ## Reading it
 
@@ -19,19 +19,19 @@ The **🚨 Incidents** sub-tab inside the **🧾 Audit log** tab, on a project's
 | Severity | **Sev 1** critical, **Sev 2** major, **Sev 3** minor, or **Near miss** (it nearly went wrong) |
 | Status | **Open**, **Mitigated** (the harm is stopped, follow-up still open), **Resolved** (Mx Office then analyses it) |
 | Detected | When, and by whom: an automatic rule, an agent or a person |
-| Where | The floors it's on, or the office as a whole |
+| Where | The projects it's on, or the office as a whole |
 | Impact | Spend in dollars, agents affected, data touched, anything else |
 | Timeline | Detected, status and severity changes, notes, and each time its rule fired again |
 | Root cause | Why it happened: drafted by Mx Office's analysis when it's resolved, unless a person wrote it |
 | Corrective actions | Each with its status (open, done, won't do) and an optional link to a commit, PR, issue, setting or URL |
 | Linked audit events | Click one to open it on the Events sub-tab |
 
-The list puts open before mitigated before resolved, the worst first. Filter by floor, status, severity, or search titles, summaries, causes and workers. The **🔒 History verified** badge means every change is still in the incidents file, each line pointing at the one before it (like the audit log's chain). Incidents **recorded retrospectively** carry a *retro* tag.
+The list puts open before mitigated before resolved, the worst first. Filter by project, status, severity, or search titles, summaries, causes and workers. The **🔒 History verified** badge means every change is still in the incidents file, each line pointing at the one before it (like the audit log's chain). Incidents **recorded retrospectively** carry a *retro* tag.
 
 ## For admins
 
-- **+ New incident**: title, severity, summary, impact, root cause, floors and corrective actions.
-- From the Events sub-tab, expand a row: **🚨 Create incident from this event** (the event is linked, its summary and floor filled in), or **Link to incident…**.
+- **+ New incident**: title, severity, summary, impact, root cause, projects and corrective actions.
+- From the Events sub-tab, expand a row: **🚨 Create incident from this event** (the event is linked, its summary and project filled in), or **Link to incident…**.
 - On an incident: **✏️ Edit**, **Mark mitigated**, **✅ Resolve…** (no cause asked for: see [Mx Office's analysis](#mx-offices-analysis); an optional *Anything you already know?* note), **Retry analysis** when it didn't finish, **Reopen**, and **Add note** on the timeline. Through [📱 Phone access](../administration/phone-access.md), resolving one asks for your password again unless you signed in or typed it in the last 10 minutes.
 - **⚙️ Detection rules**: turn each rule on or off and set its thresholds.
 
@@ -41,8 +41,8 @@ Every change is in the audit log as `incident.created`, `incident.updated`, `inc
 
 When an incident is marked resolved, it's resolved at once, and Mx Office analyses it in the background: the **root cause**, the **impact** (who or what was affected, and for how long) and **1 to 5 corrective actions** (each a fix, a way to prevent it, or a way to detect it sooner), drafted from the incident's own evidence:
 
-- its record: title, severity, summary, the rule that detected it, impact, timeline, agents, floors and the links of its actions;
-- the audit events it links, and at most 40 audit events from its floors within 30 minutes of when it was detected and last seen;
+- its record: title, severity, summary, the rule that detected it, impact, timeline, agents, projects and the links of its actions;
+- the audit events it links, and at most 40 audit events from its projects within 30 minutes of when it was detected and last seen;
 - your note, if you wrote one.
 
 Secrets are redacted first (the audit log's redactor) and the input is capped. The analysis is one `claude -p` call with no tools, no settings or MCP servers, in an empty temporary folder, with `--max-budget-usd` set to what the incident has left of its cap (**$0.30**, `AGENT_OFFICE_INCIDENT_ANALYSIS_CAP_USD`), at most 20 an hour across the office (`AGENT_OFFICE_INCIDENT_ANALYSIS_PER_HOUR`), on the New project planner's model. Its spend is in the [budget](budget.md) as **Incident analysis**, on the incident's project (or the office's own). A test office never calls Claude for it: a test analyser drafts the same shape from the evidence alone.
@@ -56,13 +56,13 @@ It's an **AI draft, not proof**. On the incident:
 
 ## Automatic detection
 
-Each rule opens an incident, or, if the same rule already has an open incident on the same floor from the last 24 hours (the *dedupe window*), counts into that one: its count goes up, the workers and events are added, its severity rises if this time is worse, and a line goes on its timeline. A counted rule fires once per burst, then counts again from zero.
+Each rule opens an incident, or, if the same rule already has an open incident on the same project from the last 24 hours (the *dedupe window*), counts into that one: its count goes up, the workers and events are added, its severity rises if this time is worse, and a line goes on its timeline. A counted rule fires once per burst, then counts again from zero.
 
 | Rule | Fires when | Severity | Default |
 |---|---|---|---|
 | Real agent launched in a test office | Test mode refused a real agent CLI (near miss), or one started anyway with `AGENT_OFFICE_ALLOW_REAL_AGENTS` (sev2) | near miss / sev2 | on |
-| Spend spike | A floor's spend in the last hour is past **$25**, or past **3×** its trailing hourly average (with 3+ hours of history) and at least **$5**; at most once an hour | sev2 / sev3 | on |
-| Spend cap reached | The floor's daily spend cap starts pausing the office's prompts; the budget module's alerts come in through the same rule | near miss | on |
+| Spend spike | A project's spend in the last hour is past **$25**, or past **3×** its trailing hourly average (with 3+ hours of history) and at least **$5**; at most once an hour | sev2 / sev3 | on |
+| Spend cap reached | The project's daily spend cap starts pausing the office's prompts; the budget module's alerts come in through the same rule | near miss | on |
 | Interrupted turns | The office stopped with workers mid-turn (counted from what the next start restored) | sev3 | on, 1 worker |
 | Escalation answer not delivered | An answer still hasn't reached its agent after **30** minutes | sev3 | on |
 | Worker crash loop | A worker exited abnormally **3** times in **15** minutes | sev3 | on |

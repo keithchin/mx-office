@@ -46,7 +46,7 @@ Each card under **Our people** shows the reviewer's portrait, what they check an
 
 | Section | What you choose |
 |---|---|
-| **Project** | The floor to audit. |
+| **Project** | The project to audit. |
 | **Teams to attach a reviewer to** | Design, Development, Testing, Analysis. |
 | **Reviewers & models** | Who goes (the Engagement Partner always does) and each one's model. |
 | **Test types** | Static review, mx check / lint, Unit tests, E2E (Playwright, live app), Security scan, Requirements traceability, Accessibility, Performance. |
@@ -65,7 +65,7 @@ The **Estimated cost** box on the right adds up each reviewer's model price × t
 1. **Requested**, then **Staffing**: the commit is pinned (the project branch on `origin`, else `HEAD`) and each reviewer gets its own folder.
 2. **Interviews & review** (fieldwork): every reviewer runs at the same time as a headless Claude Code session. They review the code and interview their Lead.
 3. **Partner consolidating**: the specialists' sections go to the Engagement Partner, who writes the report.
-4. **Report delivered**: the report is saved, a toast goes to the floor, Needs you says **📑 Audit report ready**, and every reviewer session stops.
+4. **Report delivered**: the report is saved, a toast goes to the project, Needs you says **📑 Audit report ready**, and every reviewer session stops.
 
 You can **cancel** at any time (no report). A restart of the office carries running reviewers on in fresh turns; an engagement caught while staffing fails and can be called again.
 
@@ -74,7 +74,7 @@ You can **cancel** at any time (no report). A restart of the office carries runn
 - Each reviewer works in a **local clone at the pinned commit**, detached, with **no remote** and no credential helper. It can't push.
 - The project's agent instructions (`CLAUDE.md`, `AGENTS.md`, `.claude/`, `.mcp.json` and the like) are **moved out** of the clone into its evidence, so the reviewer isn't steered by the team's own prompts. The team journals stay, as evidence.
 - Its environment has no GitHub tokens, SSH agent, credential manager or the office's worker tokens. Deny rules block `git push`, GitHub writes, `gh api`, and reading `~/.agent-office*` and `~/.ssh`.
-- No MCP servers and no web tools. A reviewer isn't a floor worker: no desk, not in `workers.json`, not in the Leads' `office-workers list`, never benched.
+- No MCP servers and no web tools. A reviewer isn't a project worker: no desk, not in `workers.json`, not in the Leads' `office-workers list`, never benched.
 
 > [!NOTE]
 > A reviewer still runs as your Windows user. The deny rules, not the operating system, keep it inside its folder, and your global Claude Code settings still apply.
@@ -88,7 +88,7 @@ You can **cancel** at any time (no report). A restart of the office carries runn
 
 ## Budget and time
 
-Every turn is priced from the office's price table and added to the office's spend. At **80 %** of the cap the floor is warned (a toast and a Needs-you item). At **100 %** every running turn is cut short and each reviewer is asked to send what it has; 6 minutes later, or at 115 % of the cap, everything stops and a **partial** report is delivered. **Max time** wraps up the same way.
+Every turn is priced from the office's price table and added to the office's spend. At **80 %** of the cap the project is warned (a toast and a Needs-you item). At **100 %** every running turn is cut short and each reviewer is asked to send what it has; 6 minutes later, or at 115 % of the cap, everything stops and a **partial** report is delivered. **Max time** wraps up the same way.
 
 ## The report
 

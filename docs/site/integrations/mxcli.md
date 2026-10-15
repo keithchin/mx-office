@@ -25,7 +25,7 @@ It's validated on Mendix **11.6.x**; earlier projects use **11.6.4**, and the ne
 
 ## One writer per Mendix app
 
-Only the **Lead Developer** applies changes to the `.mpr`. Developers draft MDL and check it; designers and testers review. This avoids two agents editing the binary model at once. To build two apps in parallel, use two floors.
+Only the **Lead Developer** applies changes to the `.mpr`. Developers draft MDL and check it; designers and testers review. This avoids two agents editing the binary model at once. To build two apps in parallel, use two projects.
 
 ## Lessons
 
