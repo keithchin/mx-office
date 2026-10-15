@@ -302,7 +302,7 @@ test('regression: agents mid-task get a standup, an autonomy change and approval
   const kat = floor.typed.filter((t) => t.id === ids['chief-analyst']);
   assert.equal(kat.length, 1);
   assert.match(kat[0].text, /^Standup /);
-  assert.match(kat[0].text, /changed this floor's autonomy level/);
+  assert.match(kat[0].text, /changed this project's autonomy level/);
   assert.match(kat[0].text, /When you've done this, carry on with: work on GitHub issue #1 \(Discovery\)\.$/);
   floor.react();
   assert.equal(floor.worker(ids['chief-analyst'])!.status, 'working', 'she carries on with issue #1');

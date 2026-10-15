@@ -51,7 +51,7 @@ test('a run is refused when it could touch the live office or a real floor, or o
   assert.match(refusalOf({ ...ok, root: '/s/scratch/runs' })!, /isn't a test office's folder/);
   assert.match(refusalOf({ ...ok, root: '/home/me/agent-office/.agent-office/test-offices' })!, /data folder/);
   assert.match(refusalOf({ ...ok, dataDir: '/s/scratch/test-offices/perf-guard/runs/x/.agent-office' })!, /data folder/, 'the office itself inside the root');
-  assert.match(refusalOf({ ...ok, floorDirs: ['/s/scratch/test-offices/perf-guard'] })!, /floor/);
+  assert.match(refusalOf({ ...ok, floorDirs: ['/s/scratch/test-offices/perf-guard'] })!, /overlaps a project of this office/);
   assert.match(refusalOf({ ...ok, runnerExists: false })!, /runner/);
   // The child never inherits the live office's own settings (its home, port, password, agent).
   const env = runEnv({ PATH: '/bin', AGENT_OFFICE_HOME: '/home/me/agent-office', AGENT_OFFICE_AGENT: 'claude', agent_office_password: 'x' });

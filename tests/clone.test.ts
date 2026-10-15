@@ -180,7 +180,7 @@ test('a clone can be stopped by an admin or whoever added it', async (t) => {
   await until(() => !alive(pid));
   assert.ok(!alive(pid));
   assert.deepEqual(building.list(), []);
-  assert.equal(building.cancel(id, 'again', () => true), 'No such floor');
+  assert.equal(building.cancel(id, 'again', () => true), 'No such project');
 });
 
 // A clone is only picked back up where it runs in its own process group (clone.ts GROUPS): not on Windows.

@@ -325,7 +325,7 @@ test('editing the answers hires only the roles ticked since, and never one the f
     refuse = undefined;
     const r = await steps.team(job, io);
     assert.equal(r.status, 'done');
-    assert.equal(r.detail, 'hired Chief Analyst / Consultant; already on the floor: Lead Designer, Lead Developer, Lead Tester');
+    assert.equal(r.detail, 'hired Chief Analyst / Consultant; already on the project: Lead Designer, Lead Developer, Lead Tester');
     assert.deepEqual(hires.map((h) => h.role), ['lead-developer', 'chief-analyst'], 'each once, nobody the floor had');
     assert.ok(hires.every((h) => h.task === undefined && h.model === undefined), "an edit doesn't hand the Discovery issue out again");
     assert.deepEqual(job.addRoles, []);

@@ -156,6 +156,6 @@ test('Needs you mentions a floor folder only when it is more than ten commits be
   const setup = (behind: number) => ({ show: true, stages: [], questions: [], checking: false, checkout: { branch: 'run4/discovery-p-4', behind, defaultBranch: 'main' } });
   const base = { floor: 'f1', workers: [], pulls: [], floors: [] };
   const far = collectNeeds({ ...base, setup: setup(STALE_COMMITS + 13) });
-  assert.deepEqual(far.map((n) => [n.key, n.level, n.text]), [['setup-stale', 'warn', "This floor's folder is on run4/discovery-p-4, 23 commits behind main"]]);
+  assert.deepEqual(far.map((n) => [n.key, n.level, n.text]), [['setup-stale', 'warn', "This project's folder is on run4/discovery-p-4, 23 commits behind main"]]);
   assert.deepEqual(collectNeeds({ ...base, setup: setup(3) }), []);
 });
