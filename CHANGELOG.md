@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Changed
+
+- Everywhere you read it, a floor is now called a project (the pages, Needs you, Teams and phone messages, the CLI's words and the docs). Nothing about your data or links changes.
 
 ## 2026-10-15 · release 48 (`2f43166`)
 
