@@ -14,7 +14,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   - **Proposal issues are made at most once by the office.** The proposal is marked approved before GitHub is asked, and the issue body ends with *office-proposal: &lt;id&gt; rev &lt;n&gt;*. When the outcome is unclear, the card offers **Check GitHub** (only a match settles it: GitHub's search lags), **Create it** and **It exists: link #…**.
   - **A stale answer is refused.** An answer to a decision someone else answered since you opened it gets *This decision changed since you opened it*, and nothing is written or typed; two answers at once, one wins.
   - **Held answers survive a restart.** An answer waiting for the agent's turn is on disk at once and goes in once, after the turn, with the same attempt.
-- **The rollback guard.** `node bin/agent-office.js dispatch status` lists the unsettled answer attempts and exits 1 while there is one; 🔁 Restart safely refuses to restart onto a build older than them while any is unsettled. The procedure is in [Running the office](docs/site/administration/running-the-office.md#rolling-back-to-an-older-build).
+- **The rollback guard.** `node bin/agent-office.js dispatch status` lists the unsettled answer attempts and exits 1 while there is one; 🔁 Restart safely refuses to restart onto a build older than them while any is unsettled. The procedure is in the docs: *Running the office › Rolling back to an older build*.
 
 ### To know
 
