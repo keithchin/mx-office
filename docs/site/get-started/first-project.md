@@ -23,10 +23,10 @@ Go to **🏠 Home → 🏢 Projects** and click **✨ New project**. It opens a 
 |---|---|---|
 | **Plan with the team** (recommended) | 🌱 Greenfield, or 📄 Requirements-driven as soon as a document is attached (the line under the box says which) | A new app, from an idea or from requirements. |
 | **Change an existing app** | 🛠️ Change an existing app | Changes to an app that exists: name its repository (`owner/name`) in the box that appears. The brief is drafted from your description and documents: the Chief Analyst is told the repository's name (and its GitHub description, when the office's repository list already has it) but doesn't read the repository. The team reads the app after setup. |
-| **Migrate an app** | 🚚 Migration | Moving an app from another platform or an older version. |
+| **Migrate an app** | 🚚 Migration | Moving an app from another platform or an older version. Attach its code with **Add a source folder…** (see [A source folder](#a-source-folder) and [Migrate an app](migrate-an-app.md)). |
 | More: **Assurance only** | 🔎 Assurance only | Review and test an app nobody is changing (it asks for the repository too). |
 
-**Describe the app** in the big box: who uses it, what problem it solves, what success looks like. The **+** menu attaches documents (**Upload files…**); Confluence and SharePoint are listed as *coming later*.
+**Describe the app** in the big box: who uses it, what problem it solves, what success looks like. The **+** menu attaches documents (**Upload files…**) and, for **Migrate an app** and **Change an existing app**, a local folder of the app's code (**Add a source folder…**); Confluence and SharePoint are listed as *coming later*.
 
 ### Attached documents
 
@@ -37,6 +37,15 @@ Go to **🏠 Home → 🏢 Projects** and click **✨ New project**. It opens a 
 | `.md`, `.txt` | *read as text*: the first 60 KB of each (150 KB in all) go to the Chief Analyst; a longer file says how much was read. |
 | `.docx` | *text extracted (no images)*: its words, paragraph by paragraph; pictures, text boxes, headers and comments aren't read. |
 | `.pdf` | *handed to the Chief Analyst to read*: the planning call gets a copy in an empty temporary folder and only the Read tool, confined to that folder. Afterwards it says *read by the Chief Analyst*, or *not read* when the Chief Analyst didn't say it read it. |
+
+### A source folder
+
+For **Migrate an app** and **Change an existing app**, **+** › **Add a source folder…** takes the full path of a folder on the office's machine (copy it from File Explorer's address bar) and **Check folder** looks at it before anything is copied:
+
+- It is refused when it isn't a full path, isn't there or isn't a folder, is a whole drive, your home folder (or the folder of home folders), a system folder (Windows, Program Files, ProgramData, AppData\Roaming), or inside or around the office's own code, its data folder or the projects home.
+- Otherwise the dialog says what will be copied, for example *212 files, 9 MB; skipped: node_modules, 2 secrets-like files*, with the first files of its index. Left out wherever they are: `node_modules`, `.git`, `.next`, `dist`, `build`, `coverage`, `.turbo` and `__pycache__` folders, any file over 5 MB, symbolic links, and secrets-like files (`.env` and `.env.*`, `*.pem`, `*.key`, `*.pfx`). A folder with more than 200 MB or 20,000 files after that is refused: pick the app's own folder.
+
+The folder shows as a chip under the description (its name, how many files, *confidential*) and is kept with your draft, so a draft you come back to still has it. **The folder never leaves the machine.** The Chief Analyst doesn't read it: the planning call gets only its **file index** (the paths and sizes of up to 150 files, shallowest first) and is told the team reads the code after setup. At setup it is copied into the project's `sources/legacy/<name>/` (git-ignored, so never committed or pushed), `docs/project-brief.md` and the Discovery brief mark it confidential, and the Discovery brief names its absolute path. Admins only, like the rest of the brief.
 
 ### Drafting, and what it costs
 
@@ -148,9 +157,14 @@ Collapsed under the card, with the defaults from the office's settings and the b
 - **Mendix version**: the Studio Pro versions installed on the office's machine, the newest 11.12 (11.12.4) by default (11.6.4, mxcli's validated line, when no 11.12 is installed). The new app is created with it.
 - **Size tier**: 🐣 **Small** (at most 1 module, 8 screens and 25 use cases) or 🏗️ **Standard**; the domains' suggestion by default.
 - **Exec approval** (Q11): auto or ask. **Interview mode** (Q9) is the Interview style in the chat.
+- **Keep this project off GitHub (local / Team Server only)**: new projects only; offered and ticked by default for **Migrate an app** when a source folder is attached, because the analysis will quote the client's code. See [Local only (not on GitHub)](#local-only-not-on-github). No admin token is needed then.
 - **Client & Discovery**: client name(s) and operator(s); open a *Discovery* issue for whoever covers Analysis (on by default); **Hand it to the … now** hires that member with the issue as its first task, on the model you pick for Discovery (the level's Discovery model by default); without that member on the team, **Queue it now for an agent**.
 - **Kickoff questions the brief doesn't answer**: Q3 (fidelity), Q6 (licence and security), Q7 (the SME), Q10 (work done elsewhere), each **Answered**, **Assumed** or **Unverified**, or blank for the Chief Analyst to ask.
 - **Toolkit version**: the newest commit of the toolkit fork, pinned for the project when it's created ([Toolkit versions](../administration/toolkit-versions.md)).
+
+### A migration's budget cap
+
+For **Migrate an app** the card also shows the planner's estimate with *Migrations have run over this estimate; set a cap*, and a **Budget cap (USD)** field filled in with the level's budget. The cap is the project's budget: auto-pause at 100% is on, and the level's models and settings stay as they are. Change it later on the 💰 Budget tab.
 
 ## 6. Create project
 
@@ -172,7 +186,7 @@ Click **Create project** (the primary button once the team card shows). The page
 4. Create the Mendix app (new projects only): Studio Pro's own `mx create-project` makes a blank app named after the project (`travel-approval` → `TravelApproval.mpr`) at the repository's root, where the toolkit looks for it. Without `mx` in that Studio Pro it falls back to `mxcli new`. Mendix's generated files (`deployment/`, `.mendix-cache/`, `theme-cache/`, `*.mpr.lock` and so on) are added to `.gitignore`. An existing app is left alone; the step only reports which Studio Pro its `.mpr` was saved with.
 5. Run the toolkit's `init-project.sh` (after the app, so its `CLAUDE.local.md` names the `.mpr`), from a **pin** of the fork's newest commit: the project stays on that toolkit commit until you update it (see [Toolkit versions](../administration/toolkit-versions.md)), and its session-start ritual doesn't pull.
 6. Install the pre-commit hook.
-7. Write the intake answers to `intake.md` (the brief's, see [What the approval records](#what-the-approval-records), and any typed under Advanced), the brief to `docs/project-brief.md`, and the attached documents into `sources/`.
+7. Write the intake answers to `intake.md` (the brief's, see [What the approval records](#what-the-approval-records), and any typed under Advanced), the brief to `docs/project-brief.md`, and the attached documents into `sources/`. A source folder is copied into `sources/legacy/<name>/` here, off the event loop, with the same rules as the check (a Retry keeps the files already there).
 8. Record decisions in `PROJECT.md`: entry mode, size tier, Mendix version and interview mode, each `CONFIRMED` with today's date; and the brief's ✋ Stage 0 rows: the scope approval `CONFIRMED`, the goal, and every item still Assumed as `ASSUMED`.
 9. Save the client, operator and role settings in `agent-office.project.json` at the project's root. It is committed with the project, so every office that opens it sees the same client and team.
 10. Refresh the gate dashboard (`gate-check.sh`).
@@ -225,6 +239,20 @@ Editing the answers later (the project's **🧰 Project setup** panel: **🧭 En
 > Agents, queue workers, **🔄 Re-check gates** and the live app all run with the project's `.claude/toolkit.env` over the office's own environment, so an 11.12.4 project builds with 11.12.4's mxbuild even when the office was started with an `MXBUILD_PATH` for another Studio Pro.
 
 The setup is a [workflow](../automation/workflows.md): it is saved after every step, so an office restart halfway loses nothing (the step it was on shows as failed, and Retry carries on from it). The steps that talk to GitHub (create, clone, push, the issue) and creating the app try again by themselves, twice, when the connection drops or GitHub is busy; the log says *↻ … trying again in 3s*. The setup keeps the first 300 lines of its log and the last 2,700, with *… N lines left out …* between them, so both the start and a failure near the end survive a long toolkit run; **View setup details** shows its last 400 lines.
+
+## Local only (not on GitHub)
+
+**Keep this project off GitHub** under Advanced makes a project that never reaches GitHub. What changes:
+
+| | Normally | Local only |
+|---|---|---|
+| Step 1 | `gh repo create` on GitHub | A bare git repository on this machine, `<projects home>/.local-git/<owner>/<name>.git`. No `gh` runs at all. |
+| Step 2 | Clone from GitHub | Clone from that bare repository: it is the project's `origin`, so pushes and the worktrees' `origin/main` stay on the machine. |
+| Step 9 | `agent-office.project.json` | Also `"localOnly": true`, and a *Local only* section in the project's `CLAUDE.md`: never push to GitHub or run `gh` commands that publish; local branches, the Lead merges into main locally. Every hire is told the same in one line. |
+| Step 12 | A GitHub issue | `docs/discovery-brief.md`, committed with the scaffold and handed to the Chief Analyst (or queued) as a file. |
+| Overview | The GitHub link | *Local only: not on GitHub*, with the project's folder. |
+
+**What doesn't work in a local-only project** (each says so rather than failing): the office asks GitHub nothing for it, and every GitHub call answers *Local only: not on GitHub, so issues, pull requests and PR checks are unavailable for this project*. So there are no GitHub issues or pull requests on its boards, no PR checks or main-branch checks on the Testing page, no merges, comments or labels from the office, no **Open PR** for a worker, no stale-PR rows in stuck detection, and no *integrated* or *verified* task outcomes (those come from merged PRs and closed issues: a task ends as the agent's *task done* claim, pending your check). Team Server isn't wired by the wizard: add it as a remote yourself if you need it. Cancel & undo removes the folder it made, but leaves the bare repository in `.local-git` (delete it by hand).
 
 ## After the wizard
 
