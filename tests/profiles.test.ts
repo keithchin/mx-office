@@ -173,3 +173,15 @@ test('removing a project keeps the profile, ends its assignment and lets go of t
   assert.equal(again.store.get(p.id)!.assignments[0].ended, 'project-removed');
   writeFileSync(path.join(w.dataDir, 'scratch.txt'), '');
 });
+
+test('the hire dialog lists this role’s agents first, never the seat’s own, and the Move says its effect on the source first', async () => {
+  const { hireOrder, moveLines } = await import('../src/client/ui/profiles/words.js');
+  const p = (id: string, label: string, roles: string[], where: object) => ({ id, label, displayName: label, roles, where, assignments: [], projects: 1, createdAt: 0, createdBy: 'hire' }) as never;
+  const list = [p('1', 'Bo', ['lead-tester'], { kind: 'free' }), p('2', 'Al', ['lead-developer'], { kind: 'free' }), p('3', 'Cy', ['lead-developer'], { kind: 'benched', floor: 'fb', role: 'lead-developer', project: 'B' })];
+  assert.deepEqual(hireOrder(list, 'fb', 'lead-developer').map((x: { label: string }) => x.label), ['Al', 'Bo']);
+  const lines = moveLines({ profile: 'x', name: 'Zelda', from: { floor: 'fa', role: 'lead-developer', project: 'Travel approval', status: 'active' }, to: { floor: 'fb', role: 'lead-tester', project: 'Welcome desk' } });
+  assert.match(lines[0], /On Travel approval, Zelda is asked to write a handoff note .* The note stays with Travel approval/);
+  assert.match(lines[1], /fresh session .* Nothing from Travel approval comes along/);
+  assert.match(lines.join(' '), /can’t work on both projects at once/);
+  assert.doesNotMatch(lines.join(' '), /on loan|train|skill|better|learn/i);
+});
