@@ -66,6 +66,7 @@ Before a release, a migration, or anything else that restarts the office, stop t
 2. **Waits** until every agent on every floor is idle, asleep or asking something in its terminal. Settings lists who it's still waiting on (for example *Anita: mid-turn*, *Hedy: handing off*) with a countdown to the time limit (10 minutes by default, 1 to 120), and **Restart anyway** (interrupts only the agents still working; the audit log names them) and **Cancel** (resumes the projects it paused) are there the whole time. Past the limit it also offers **Keep waiting**; if nobody chooses, it goes on by itself once nobody is busy. Every page shows the same as a banner to admins (*Restart under way, not done yet: waiting on 1: Dylan: mid-turn. It asks what to do in 6:05.*), so you see it without Settings open. If the computer sleeps under it (a closed lid), nothing moves; the restart notes it (`restart.slept`) and Settings says when.
 3. **Builds first, if asked.** When the office's own checkout has commits it isn't running yet, **Restart on the latest build** runs `npm run build`. If the build fails, the restart stops, the log is shown, and the office keeps running the version it has. **Cancel** then resumes the paused projects.
 4. **Restarts.** The office shuts down gracefully (workers' terminals are kept for the next office, as with a `SIGTERM`) and exits with code **75**. The launcher starts it again on that code.
+   Before it exits, it checks the build it will start: when that build is older than the office's answer dispatch records (it predates durable dispatch, like release 47) and some of them are unsettled, it stops with *The build on disk (release 47 (…)) predates durable dispatch … settle them in Needs you* and keeps running. See [Rolling back to an older build](#rolling-back-to-an-older-build).
 5. **On the next start**, the office runs ▶ Resume project for exactly the floors in `restart-pending.json`, with the preview's defaults (wake the agents with work, 2 at a time, about 45 seconds apart), then deletes the file. A floor a person paused stays paused.
 
 The audit log and Team chatter record `restart.requested`, `restart.waiting`, `restart.exiting` (with the build it left) and `restart.resumed` (with the build it runs now), plus `restart.slept`, `restart.cancelled` or `restart.failed` when the restart was held up or didn't go through.
@@ -97,6 +98,18 @@ do {
 ```
 
 Keep the rest of the launcher (the token, the password, `PATH`) above the loop, so a restart inherits it.
+
+## Rolling back to an older build
+
+Your answers and the attempts to send them are kept in `<office data>/answers/` and `<office data>/dispatch/`. A build from before them (release 47 and older) ignores those files, so going back while an attempt is unsettled could leave an answer's outcome unknown for good. What the office guarantees is **durable intent plus reconciliation, and no automatic replay of an ambiguous attempt**. It does not promise that an answer is delivered exactly once. Before you roll back:
+
+1. Run `node bin/agent-office.js dispatch status` in the office's folder (the one holding `.agent-office`; or pass it: `dispatch status <dir>`, `--json` for a script). It lists every unsettled attempt (prepared, in flight, held for an agent's turn, outcome unknown, a proposal's issue) and exits **1** while there is one, **0** when there is none.
+2. Settle each: let the office reconcile it (it does at start), or settle it in **Needs you** (**Send again**, **It went through**, **Abandon**; for an issue **Check GitHub**, **Create it**, **It exists**). A held answer settles once the agent's turn ends and it goes in.
+3. Run `dispatch status` again. Only when it exits 0, check out and build the older release, then restart.
+
+🔁 **Restart safely** makes the same check before it exits (see step 4 above): `npm run build` writes the dispatch schema the build knows into `build-info.json`, and a build on disk without it (or with an older one) is refused while anything is unsettled. Without a `build-info.json` (a dev checkout), the office can't tell and doesn't refuse: use `dispatch status`. The check can't stop a manual checkout and start of an old build, which is why the procedure above comes first.
+
+What the older build sees is still safe: an escalation is resolved only after its answer was typed, so it's either still open (safe to answer) or resolved as delivered, never marked *owed* for an attempt that may have gone in. A proposal whose issue is unclear is *approved* without an issue, so it isn't offered for approval again. A question **Send** whose outcome is unknown stays ready to send, as today. A held answer keeps the release 47 format (its dispatch id is an extra field release 47 ignores), so it's typed once there.
 
 ## Update
 

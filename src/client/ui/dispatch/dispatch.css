@@ -1,0 +1,27 @@
+/* Answers whose outcome is unknown, on the Overview's Needs you card (card.ts), in the colour tokens. */
+.pt-dsp-list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.pt-dsp-list[hidden] {
+  display: none;
+}
+.pt-dsp {
+  border-left: 3px solid var(--warn-ink);
+  background: var(--warn-soft);
+}
+.pt-dsp-text pre {
+  max-height: 12em;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 0.85em;
+}
+.pt-dsp-link {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.pt-dsp-num {
+  width: 6em;
+}

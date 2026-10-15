@@ -60,6 +60,8 @@ The answer goes to the agent as a prompt: *REPLIED*, *APPROVED*, *REJECTED* or *
 - If it's **asleep**, it's woken with your answer.
 - If it was **benched**, its role gets the answer: in its current session, or by re-hiring it with your answer in its first message (when hiring is open).
 
+Your answer is kept before it's sent: the office appends it, in full, to the project's answer history (`<office data>/answers/<floor>.jsonl`), writes down the attempt to type it, and only then types it, ending with a marker line such as *[office answer dsp_… · ESC-3f9c2a1b7e rev 1]*. The escalation is resolved only once the attempt settled. An answer that waits for the agent's turn (a dialog up) keeps the same attempt, and its prompt is on disk at once. If the office stops mid-way, it checks the agent's session when it starts again and never types the answer again by itself; an attempt it can't confirm shows in Needs you with **Send again**, **It went through** and **Abandon** (see [Answers whose outcome is unknown](../using-the-office/command-center.md#answers-whose-outcome-is-unknown)). What the office guarantees is **durable intent plus reconciliation, and no automatic replay of an ambiguous attempt**. It does not promise that an answer is delivered exactly once. An answer to an escalation someone answered meanwhile is refused (*This decision changed since you opened it*), with nothing sent.
+
 Your answer goes through even when the floor's daily cost cap is reached: the cap holds the office's own prompts, not yours. See [Models and costs](models-and-costs.md#the-daily-cost-cap).
 
 > [!NOTE]

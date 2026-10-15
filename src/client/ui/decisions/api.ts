@@ -14,6 +14,8 @@ export interface DecisionActBody {
   text?: string;
   cardId?: string;
   sourceId?: string;
+  /** The answer revision the card saw (0 for an open escalation): the office refuses a stale answer (a 409). */
+  expectedRev?: number;
 }
 
 /** Sends a card's button; true when the office did it (a refusal is toasted). */

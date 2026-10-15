@@ -25,6 +25,8 @@ The office keeps its data in a `.agent-office` folder. On the office laptop the 
 | `judge/<floor>.jsonl` | Jeff · Router's verdicts |
 | `chatter/<floor>.jsonl`, `chatter/<floor>.state.json` | [Team chatter](../using-the-office/command-center.md#team-chatter): the newest 1000 messages, and what the sources have already turned into messages |
 | `audit/<floor>.jsonl`, `audit/_office.jsonl`, `audit/archive/` | The [audit log](../using-the-office/audit-log.md): append-only, hash-chained; old lines archived by month |
+| `answers/<floor>.jsonl` | The answer history: every revision of every decision you answered (escalations, questions, stuck items, proposals, model change requests, tells), full text, hash-chained, each line fsync'd, never rewritten |
+| `dispatch/<floor>.json` | Each attempt to hand an answer on (typed, held for a turn, an issue): its exact text, worker, session and state, written before and after the attempt. `agent-office dispatch status` lists the unsettled ones (see [Rolling back](running-the-office.md#rolling-back-to-an-older-build)) |
 | `acceptance/<floor>.jsonl` | [Acceptance records](../using-the-office/progress-and-acceptance.md#acceptance): a hash-chained line per ✅ Accept or ↩ Reopen, never rewritten |
 | `incidents/incidents.jsonl`, `incidents/settings.json` | [Incidents](../using-the-office/incidents.md): a hash-chained line per change, and the detection rules' settings |
 | `firm/firm.json`, `firm/engagements/<id>/`, `firm/reports/<id>.json` and `.md` | [The Firm](../using-the-office/the-firm.md): reviewers' models, each audit with its reviewers' isolated folders, delivered reports |

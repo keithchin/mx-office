@@ -19,7 +19,8 @@ const VERDICT_DONE: Record<EscalationVerdict, string> = { reply: '💬 Replied',
 
 /** Answers an escalation; the team as it is afterwards, or undefined (act toasts why) when refused. */
 export function answer(floor: string, e: Escalation, verdict: EscalationVerdict, text: string): Promise<RosterView | undefined> {
-  return act(floor, 'escalation', { escalation: e.id, verdict, text });
+  // The answer revision the page saw (0 for an open one): answered meanwhile, the office says so (a 409) and nothing is sent.
+  return act(floor, 'escalation', { escalation: e.id, verdict, text, expectedRev: e.resolution?.answerRev ?? 0 });
 }
 
 /**

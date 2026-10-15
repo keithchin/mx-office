@@ -15,6 +15,7 @@ import { onStuckChanged, stuckFeedMessage, stuckNeed } from '../stuck/feed';
 import { asksFeedMessage, asksNeed, onAsksChanged } from '../asks/feed';
 import { onQuestionsChanged, questionsFeedMessage, questionsNeed } from '../questions/feed';
 import { decisionsFeedMessage, decisionSplits, onDecisionsChanged } from '../decisions/feed';
+import { dispatchFeedMessage } from '../dispatch/feed';
 
 /** What a page knows that the feeds don't. */
 export type PageNeeds = Partial<Pick<NeedsInput, 'setup' | 'live' | 'firm' | 'studio' | 'budget'>>;
@@ -56,4 +57,5 @@ export function needsFeedsMessage(msg: ServerMsg): void {
   asksFeedMessage(msg);
   questionsFeedMessage(msg);
   decisionsFeedMessage(msg);
+  dispatchFeedMessage(msg);
 }
