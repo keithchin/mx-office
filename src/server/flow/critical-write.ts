@@ -33,8 +33,12 @@ const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const BUSY = new Set(['EPERM', 'EBUSY', 'EACCES']);
 
 /** Writes `value` as JSON to `file`; resolves once it's there, rejects (and leaves the old file) when it isn't. */
-export async function writeJsonCritical(file: string, value: unknown, fs: CriticalFs = nodeFs as unknown as CriticalFs): Promise<void> {
-  const text = JSON.stringify(value, null, 2);
+export function writeJsonCritical(file: string, value: unknown, fs: CriticalFs = nodeFs as unknown as CriticalFs): Promise<void> {
+  return writeTextCritical(file, JSON.stringify(value, null, 2), fs);
+}
+
+/** The same for text already made (the roster file's critical flush, roster/store.ts). */
+export async function writeTextCritical(file: string, text: string, fs: CriticalFs = nodeFs as unknown as CriticalFs): Promise<void> {
   const dir = path.dirname(file);
   const tmp = `${file}.${process.pid}.${++seq}.tmp`;
   await fs.mkdir(dir, { recursive: true, mode: 0o700 });

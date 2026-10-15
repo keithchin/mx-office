@@ -72,7 +72,7 @@ function resultText(content: unknown): string {
 }
 
 /** The text a person typed in a user entry, or undefined for a tool result or Claude Code's own. */
-function typed(l: any): string | undefined {
+export function typed(l: any): string | undefined {
   if (l.isMeta || l.isCompactSummary) return undefined;
   const c = l.message?.content;
   const text = typeof c === 'string' ? c : Array.isArray(c) && !c.some((b: any) => b?.type === 'tool_result') ? c.filter((b: any) => b?.type === 'text').map((b: any) => b.text).join('\n') : undefined;

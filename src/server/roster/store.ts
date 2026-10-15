@@ -6,6 +6,7 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { BackgroundFile } from '../offloop/save.js';
+import { writeTextCritical } from '../flow/critical-write.js';
 import { DEFAULT_AUTONOMY, isAutonomyLevel, type AutonomyLevel } from '../../shared/roster/autonomy.js';
 import { cleanName, isRoleId, pickNames, ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { cleanSchedule, DEFAULT_SCHEDULE } from '../../shared/roster/schedule.js';
@@ -263,6 +264,17 @@ export class RosterFile {
     clearTimeout(this.timer);
     this.timer = undefined;
     return this.out.write(this.text());
+  }
+
+  /**
+   * The save now, with the acknowledged critical write (fsynced, then renamed): resolves once the file has
+   * it, rejects when it couldn't be written. For what must be on disk before the office acts on it: a held
+   * answer's prompt, a proposal approved before its issue is made, an escalation answered (dispatch/).
+   */
+  flushCritical(): Promise<void> {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    return this.out.critical(() => this.text(), (file, text) => writeTextCritical(file, text));
   }
 
   flush() {
