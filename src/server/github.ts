@@ -1,6 +1,7 @@
 import { execFileOff } from './offloop/exec.js';
 import type { GhCheck, GhCloseReason, GhComment, GhIssue, GhIssueDetail, GhLabel, GhMergeMethod, GhPull, GhPullDetail, GhRepoInfo, GhReviewComment, GhState } from '../shared/protocol.js';
 import type { GhAs } from './signins.js';
+import { LOCAL_ONLY_TEXT, localOnlyAt } from './local-only.js';
 
 const REFRESH_MS = 90_000;
 /** How long the repo's list of labels is kept before the label picker asks GitHub again. */
@@ -17,6 +18,8 @@ function friendly(raw: string): string {
 
 /** Runs gh as the office, or with `env` as someone signed in to their own GitHub (see signins.ts). */
 export function gh(args: string[], cwd: string, timeout = 30_000, env?: Record<string, string>): Promise<string> {
+  // A local-only project (local-only.ts) is never asked about on GitHub: one plain sentence instead of a failure.
+  if (localOnlyAt(cwd)) return Promise.reject(new Error(LOCAL_ONLY_TEXT));
   return new Promise((resolve, reject) => {
     // Started off the event loop (offloop/exec.ts): starting gh can take seconds on Windows.
     execFileOff('gh', args, { cwd, maxBuffer: 32 * 1024 * 1024, timeout, env }, (err, stdout, stderr) => {

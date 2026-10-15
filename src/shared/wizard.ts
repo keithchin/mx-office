@@ -182,6 +182,11 @@ export interface ProjectPlan {
    * copied into the project's sources/legacy/<name>/ at the intake step, confidential, never uploaded.
    */
   sourceFolder?: PlanSource;
+  /**
+   * Keep this project off GitHub (server/wizard/local-only.ts): no GitHub repository, no push, no Discovery
+   * issue (a local file and the team's queue instead). A new project only; recorded in agent-office.project.json.
+   */
+  localOnly?: boolean;
 }
 
 /** A plan's source folder: where it is on the office's machine and what the scan found. */
@@ -285,6 +290,8 @@ export interface SetupView {
   decisions?: { stage: string; decision: string; status: string }[];
   /** The delivery branch's head, when the stages were read from origin/<default>. */
   head?: { branch: string; sha: string };
+  /** Created with "Keep this project off GitHub" (agent-office.project.json): the Overview says "Local only: not on GitHub". */
+  localOnly?: boolean;
 }
 
 /** The floor's folder isn't on the default branch, or is behind it: what's shown comes from the default branch, and this says so. */

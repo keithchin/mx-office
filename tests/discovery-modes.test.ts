@@ -58,10 +58,12 @@ test('the slice is picked at CAC-1 when the person asked for one; otherwise CAC-
   assert.equal(asksForSlice(['sliced bread', 'all of it']), false);
 });
 
-test('a migration without a source folder asks for the source', () => {
+test('a migration without a source folder asks for the source, and a local-only one says so', () => {
   const b = discoveryBrief(discoveryPlan('migration'), TOOLKIT, SHA, FLOOR);
   assert.ok(b.includes("**The legacy source isn't in the project yet:**"));
   assert.ok(b.includes('--sources <the legacy source folder>'));
+  assert.ok(migration({ localOnly: true }).includes('**Local only: this project is not on GitHub.**'));
+  assert.doesNotMatch(migration(), /Local only/);
 });
 
 test('the committed project brief marks the legacy source confidential', () => {

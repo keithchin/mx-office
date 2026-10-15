@@ -329,12 +329,13 @@ export class Building {
     return def;
   }
 
-  /** Makes a checkout of `repo` already at `dir` a floor without asking GitHub (the new-project wizard's offline test mode). */
-  adopt(input: string, dir: string, by: string): FloorDef | string {
+  /** Makes a checkout of `repo` at `dir` a floor without asking GitHub (offline test mode; `local`: a local-only project, origin a bare repo here). */
+  adopt(input: string, dir: string, by: string, local = false): FloorDef | string {
     const repo = normalizeRepo(input);
     const known = repo && this.defs.find((d) => sameRepo(d.repo, repo));
     if (!repo || known) return known || 'Not a repository name';
-    if (checkoutAt(dir, repo, true) !== 'ok') return `${dir} isn't a checkout of ${repo}`;
+    const ok = local ? existsSync(path.join(dir, '.git')) && !originRepo(dir) : checkoutAt(dir, repo, true) === 'ok';
+    if (!ok) return `${dir} isn't a checkout of ${repo}`;
     const def = this.newDef(repo.split('/')[1], repo, dir, by);
     this.defs.push(def);
     this.save();

@@ -27,6 +27,7 @@ import { testModeOf } from '../testmode.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
 import { takesSource } from '../../shared/source-folder.js';
+import { localOnlyAt } from '../local-only.js';
 import { portfoliosOf } from '../portfolios/index.js';
 import { setupView, setupViewOf } from './setup.js';
 import { GateSource, branchInfo } from './gate-source.js';
@@ -187,7 +188,7 @@ export class Wizard {
     const had = this.book.get(id);
     if (had && had.status === 'done') return `${plan.owner}/${plan.name} was already set up — edit its answers from its project's setup panel`;
     if (had && this.book.isRunning(id)) return this.book.view(had);
-    if (plan.kind === 'new' && !plan.createdByHand && !this.cfg.offlineDir && !adminTokenConfigured(this.cfg.adminTokenFile)) {
+    if (plan.kind === 'new' && !plan.localOnly && !plan.createdByHand && !this.cfg.offlineDir && !adminTokenConfigured(this.cfg.adminTokenFile)) {
       return "There's no admin token, so the office can't create the repository: create one (see the instructions), or create the repository on GitHub yourself and tick that box";
     }
     // A test office's Studio Pro is a stand-in whose folders are deep under scratch: only a real office is held to mx's limit.
@@ -240,7 +241,7 @@ export class Wizard {
     if (typeof plan === 'string') return plan;
     const moved = plan.mendix !== job.plan.mendix;
     // Roles ticked since the team step ran are hired too (JobBook.edit), and only those.
-    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
+    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
     this.go(job);
     return this.book.view(job);
   }
@@ -280,6 +281,10 @@ export class Wizard {
   }
 
   private async freshSetup(floor: Floor): Promise<SetupView> {
+    return { ...(await this.freshSetupOf(floor)), ...(localOnlyAt(floor.dir) ? { localOnly: true } : {}) };
+  }
+
+  private async freshSetupOf(floor: Floor): Promise<SetupView> {
     const job = this.jobForFloor(floor)?.id;
     const g = await this.gates.read(floor.dir).catch(() => undefined);
     if (!g) return { ...setupView(floor.dir), job, checking: this.checking.has(floor.id), checkedAt: this.checkedAt.get(floor.id) };
@@ -387,8 +392,8 @@ export class Wizard {
       // The office's own Claude Code (CLAUDE_CONFIG_DIR in its environment, else ~/.claude.json), as signins.ts's base.
       trustFloor: (dir) => void trustFloor(dir, childEnv()),
       joinPortfolio: (floor, portfolio, by) => portfoliosOf(ctx).joinFromWizard(floor, portfolio, by),
-      adoptFloor: async (repo, dir, by) => {
-        const r = ctx.building.adopt(repo, dir, by);
+      adoptFloor: async (repo, dir, by, local) => {
+        const r = ctx.building.adopt(repo, dir, by, local);
         if (typeof r === 'string') return r;
         // Opening the floor is a block of its own (its worker manager writes each provider's files).
         await new Promise<void>((done) => setImmediate(done));

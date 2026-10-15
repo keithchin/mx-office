@@ -14,6 +14,7 @@ import { briefApi } from './api';
 import { repoFrom, repoText } from '../../../../shared/brief';
 import type { Flow } from './index';
 import { portfolioField } from './portfolio-field';
+import { localOnlyField } from './local-only-field';
 
 /** The intake questions the brief answers (shared/brief-map.ts) and the ones the flow decides itself. */
 export const FROM_BRIEF = [2, 4, 5, 8];
@@ -30,7 +31,7 @@ export function planProblems(flow: Flow): Partial<Record<FieldId, string>> {
     if (n) out.name = n;
     const o = ownerProblem(d.owner);
     if (o) out.owner = o;
-    if (!flow.info.offline && !flow.info.adminToken.configured && !d.createdByHand) out.byhand = 'No admin token: create the repository on GitHub yourself and tick this, or save a token';
+    if (!flow.info.offline && !flow.info.adminToken.configured && !d.createdByHand && !d.localOnly) out.byhand = 'No admin token: create the repository on GitHub yourself and tick this, or save a token';
   } else if (!d.name || !d.owner) out.repo = 'Pick the app’s repository (owner/name)';
   if (!d.mendix) out.mendix = flow.info.mendixVersions.length ? 'Pick a Studio Pro version' : 'No Studio Pro is installed on the office’s machine';
   return out;
@@ -81,8 +82,10 @@ export function advancedPanel(flow: Flow, redraw: () => void) {
           field('desc', 'Description', text(d.description, (v) => ((d.description = v), flow.touched.add('description')), { placeholder: 'One line about what it is for' })),
         ),
       );
+      // Off GitHub (local-only-field.ts): no repository there, so no admin token either.
+      parts.push(localOnlyField(d, redraw));
       if (flow.info.offline) parts.push(h('p.nw-note', {}, '🧪 Offline test office: the repository is made as a local bare git repository, and issues as files. Nothing reaches GitHub.'));
-      else if (!flow.info.adminToken.configured) parts.push(adminToken(flow, redraw, err('byhand')));
+      else if (!flow.info.adminToken.configured && !d.localOnly) parts.push(adminToken(flow, redraw, err('byhand')));
     } else {
       const repos = [...new Set([...store.floors.map((f) => f.repo).filter((r): r is string => !!r), ...store.repos.list.map((r) => r.name)])];
       const repo = text(d.name ? `${d.owner}/${d.name}` : '', (v) => {
@@ -192,7 +195,7 @@ function clientAndDiscovery(flow: Flow, d: ProjectPlan, redraw: () => void, text
     {},
     h('h4', {}, 'Client & Discovery'),
     h('div.nw-adv', {}, h('div.nw-field', {}, h('label', { for: 'nw-a-clients' }, 'Client name(s)'), clients, h('span.nw-hint', {}, 'Comma-separated; kept in agent-office.project.json for the client portal.')), h('div.nw-field', {}, h('label', { for: 'nw-a-ops' }, 'Operator(s)'), ops, h('span.nw-hint', {}, 'The people who speak for the client and answer the Chief Analyst.'))),
-    h('label.nw-check', {}, issue, h('span', {}, ` Open a “Discovery” issue for the ${title} (Stages P → 4, stopping at every ✋ gate)`)),
+    h('label.nw-check', {}, issue, h('span', {}, d.localOnly ? ` Write the Discovery brief for the ${title} (docs/discovery-brief.md: local only, no GitHub issue)` : ` Open a “Discovery” issue for the ${title} (Stages P → 4, stopping at every ✋ gate)`)),
     h('label.nw-check.nw-indent', {}, queue, h('span', {}, onTeam ? ` Hand it to the ${title} now, as its first task` : ' Queue it now for an agent')),
     h('div.nw-row.nw-indent', {}, h('span.nw-hint', {}, onTeam && d.discovery.queue ? `The ${title} is hired on this model for Discovery:` : 'Model for Discovery:'), model),
     flow.info.offline ? h('p.nw-hint', {}, '🧪 Offline test office: the issue is written to a file.') : null,

@@ -15,6 +15,8 @@ import { h } from '../../dom';
 import { fetchEstimate, levelPicker } from '../../budget/levels-ui';
 import { applyShape, rolesPicker, type WithShapes } from '../team-shape';
 import { advancedPanel } from './advanced';
+import { migrationCap } from './migration-cap';
+import { defaultLocalOnly } from './local-only-field';
 import { icon } from './parts';
 import type { Flow } from './index';
 
@@ -61,6 +63,8 @@ export function teamCard(flow: Flow) {
       if (est) cache.set(key, est);
     }
     if (!flow.plan.customTeam) pick(chosen?.shape ?? rec.shape, chosen?.level ?? rec.level);
+    // Off GitHub by default for a migration with a source folder (local-only-field.ts).
+    defaultLocalOnly(flow.plan, flow.draft);
     draw();
   }
 
@@ -96,7 +100,9 @@ export function teamCard(flow: Flow) {
     const advH = h('button.nw-adv-h', { type: 'button', 'aria-expanded': String(advOpen), 'aria-controls': 'nw-adv' }, icon('chev', 'nw-ico nw-chev'), 'Advanced ', h('span.nw-from', {}, '· repository, Mendix version, client, Discovery and the rest; defaults from Settings'));
     advH.addEventListener('click', () => ((advOpen = !advOpen), draw(), body.querySelector<HTMLElement>('.nw-adv-h')?.focus()));
     const advPanel = h('div.nw-collapse', { id: 'nw-adv', class: advOpen ? '' : 'shut' }, h('div', {}, advOpen ? adv.build() : ''));
-    body.replaceChildren(summary, changePanel, advH, advPanel, ...(est ? [] : [h('p.nw-hint', {}, 'The office couldn’t work out an estimate: the project is made without a budget (set one later on its 💰 Budget tab).')]));
+    // A migration's cap: the planner's estimate, the warning and the cap field (migration-cap.ts).
+    const cap = migrationCap(d, cardOf(shape)?.estimate, () => draw());
+    body.replaceChildren(summary, ...(cap ? [cap] : []), changePanel, advH, advPanel, ...(est ? [] : [h('p.nw-hint', {}, 'The office couldn’t work out an estimate: the project is made without a budget (set one later on its 💰 Budget tab).')]));
     if (advOpen) adv.showProblems();
   }
 

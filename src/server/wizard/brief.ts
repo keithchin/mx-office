@@ -51,6 +51,7 @@ export function discoveryBrief(plan: ProjectPlan, toolkitDir: string, pinnedSha?
     '- Windows + Git Bash. Use `mxcli` on PATH (not `./mxcli`). Machine paths are in `.claude/toolkit.env` (git-ignored).',
     '- Commit your work at the end of each stage with a clear message (the pre-commit hook finishes in seconds).',
     '- Keep the conversation business-friendly: the client is not a developer.',
+    ...(plan.localOnly ? ['- **Local only: this project is not on GitHub.** Commit locally and push only to `origin`, a bare repository on this machine; never add a GitHub remote or run `gh` commands that publish. This brief is `docs/discovery-brief.md`, not a GitHub issue.'] : []),
     // The project brief drafted and approved in the New project flow: what Stage 0 starts from.
     ...(plan.brief ? briefForDiscovery(plan.brief, { sourcesDir: floorDir ? sourcesDirOf(floorDir) : undefined, toolkitDir, legacy: !!legacyDir }) : []),
   ]

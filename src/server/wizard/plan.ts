@@ -68,6 +68,8 @@ export function cleanPlan(raw: unknown, versions: string[], org: string): Projec
     ...(r.customTeam === true ? { customTeam: true } : {}),
     ...(cleanPlanBrief(r.brief) ? { brief: cleanPlanBrief(r.brief) } : {}),
     ...(isPortfolioId(r.portfolio) ? { portfolio: r.portfolio } : {}),
+    // Off GitHub: a new repository only (a change's repository is on GitHub already). The source folder comes from the draft only (Wizard.start).
+    ...(kind === 'new' && r.localOnly === true ? { localOnly: true } : {}),
   };
 }
 

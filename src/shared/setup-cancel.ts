@@ -125,7 +125,8 @@ export function madeBySetup(
   const prov = readProvenance(provenance);
   const repo = stepOf(steps, 'repo');
   const clone = stepOf(steps, 'clone');
-  const offline = /^offline:/i.test(repo?.detail ?? '');
+  // A local-only project's bare repository (wizard/local-only.ts) is nothing on GitHub either.
+  const offline = /^(offline|local only, nothing on GitHub):/i.test(repo?.detail ?? '');
   const saysCreated = repo?.status === 'done' && /^created\s/i.test(repo.detail ?? '');
   const saysCloned = clone?.status === 'done' && /^(cloned into|offline floor at)\s/i.test(clone.detail ?? '');
   const made = !!prov?.repo?.createdBySetup;

@@ -28,6 +28,7 @@ import { OFFICE_BY } from '../workers/lifecycle.js';
 import { setupView } from '../wizard/setup.js';
 import type { PipelineStage } from '../../shared/roster/types.js';
 import { portfoliosOf } from '../portfolios/index.js';
+import { withLocalOnlyLine } from '../local-only.js';
 import { studioStateOf } from '../studio/index.js';
 
 const adapters = new WeakMap<Floor, TeamFloor>();
@@ -153,7 +154,8 @@ export function rosterOf(ctx: Ctx): Roster {
       judge: (text, questions, opts) => judgeOf(ctx).ask(text, questions, opts),
       pipelineStage,
       studioOpen: (id) => !!studioStateOf(id)?.open,
-      hireContext: (id) => portfoliosOf(ctx).hireContext(id),
+      // The portfolio's brain line, and a local-only project's rule (local-only.ts), in the hire's first message.
+      hireContext: (id) => withLocalOnlyLine(portfoliosOf(ctx).hireContext(id), ctx.floors.get(id)?.dir),
     });
     // A Lead's subagent runs, from its hooks: the team's track record (roster/subagents.ts).
     onSubagentEvent((workerId, ev) => {
