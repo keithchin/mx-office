@@ -2,9 +2,10 @@
 // needs-you.md): only ever asked of two items from the same role's journal (server/asks/awaiting.ts) or
 // two escalations the office filed from it (./duplicates.ts), never across roles or sources, because a
 // merge on a guess is worse than two cards. The rule, conservative on purpose:
-//   - Explicit ids (#98, PR 98, OW-1, OQ-07, J-08, ESC-4, an escalation id like a7ca4009c8): when both
-//     name ids, they are the same item only when they name exactly the same ids; different ids are
-//     different decisions whatever the words.
+//   - Explicit ids (#98, PR 98, OW-1, OQ-07, J-08, ESC-4): when both name ids, they are the same item only
+//     when they name exactly the same ids; different ids are different decisions whatever the words. An
+//     escalation id the agent quotes ("in escalation a7ca4009c8") is a pointer, not what the ask is about:
+//     it counts as neither an id nor a word.
 //   - Otherwise the words, normalised (lower case, parentheticals, backticks and punctuation out, ids out,
 //     stop words dropped): the same when they overlap highly (Jaccard >= 0.8), or when every word of the
 //     shorter (two words at least) is in the longer, unless the shorter is only one side of an "and" or
@@ -23,11 +24,10 @@ export const SAME_JACCARD = 0.8;
 /** An escalation id the office printed (randomBytes(5) hex): ten hex characters with a digit and a letter. */
 const ESC_HEX = /\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{10}\b/g;
 
-/** Every explicit id an item names, as one sorted list ("#98", "OW-1", "J-08", "esc:a7ca4009c8"). */
+/** Every explicit id an item names, as one sorted list ("#98", "OW-1", "J-08"). */
 export function itemIds(text: string): string[] {
   const x = explicitIds(text);
-  const hex = [...text.matchAll(ESC_HEX)].map((m) => `esc:${m[0]}`);
-  return [...new Set([...x.prs.map((n) => `#${n}`), ...x.ids, ...x.journeys, ...hex])].sort();
+  return [...new Set([...x.prs.map((n) => `#${n}`), ...x.ids, ...x.journeys])].sort();
 }
 
 /** Text with bracketed parts taken out (balanced, nested ones too). */
