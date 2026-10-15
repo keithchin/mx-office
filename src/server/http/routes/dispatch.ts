@@ -9,6 +9,7 @@ import { DISPATCH_PERSON_ACTIONS, isDispatchPersonAction, type DispatchView } fr
 import { rosterOf, teamFloor } from '../../roster/adapter.js';
 import { personAct } from '../../roster/dispatch-person.js';
 import { readBody, sameOrigin, send } from '../util.js';
+import { refuseStale } from '../../phone-access/reauth.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 
@@ -54,6 +55,8 @@ export const dispatchRoutes = {
       const floor = ctx.floors.get(String(body.floor ?? ''));
       if (!floor) return send(res, 404, { error: 'No such floor' });
       if (!isDispatchPersonAction(body.action)) return send(res, 400, { error: `action is one of ${DISPATCH_PERSON_ACTIONS.join(', ')}` });
+      // Through Phone access, what types an answer again or makes an issue needs the password again (phone-access/reauth.ts).
+      if (refuseStale(ctx, req, res, () => body.action === 'send-again' || body.action === 'create-issue')) return;
       const as = session.account?.id ? ctx.signins.ghAs(session.account.id) : undefined;
       const by = session.account?.name ?? 'The Project Manager';
       const issue = typeof body.issue === 'number' ? body.issue : typeof body.issue === 'string' && /^#?\d{1,9}$/.test(body.issue.trim()) ? Number(body.issue.trim().replace('#', '')) : undefined;
