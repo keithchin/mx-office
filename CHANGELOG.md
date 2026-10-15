@@ -22,6 +22,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 - **A changed answer or a correction moves on only once it's known to have been sent, even across a restart.** If the office can't confirm it was typed, the decision stays at the old revision until you settle it on its card in Needs you, after a restart too: **It went through** moves it to the new revision, **Abandon** leaves it where it was (the new revision stays in the history). A correction that couldn't be sent at all now says so and leaves the decision as it was.
 
+### Changed
+
+- **Agents get the Mendix token on every project, also as `MENDIX_PAT`.** mxcli reads `MENDIX_PAT` for Marketplace installs, and the office only handed the token out as `MENDIX_TOKEN` / `MX_PAT`, so agents kept asking you to run `mxcli auth login` even with the token switched on. ⚙️ Settings › 🔌 Connections › Mendix is now on for every project; untick a project to keep the token from its agents. Test offices still never get it.
+
 ## 2026-10-15 · release 49 (`4cea6e8`)
 
 ### Added

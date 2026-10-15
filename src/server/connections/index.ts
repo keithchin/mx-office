@@ -74,7 +74,7 @@ function importable(cfg: Ctx['cfg']): ConnectionsView['importable'] {
 export function connectionsView(ctx: Ctx): ConnectionsView {
   const vault = connectionsVault();
   const scheme = vault?.scheme ?? (process.platform === 'win32' ? 'dpapi' : 'file');
-  const mendixDirs = officeSettings().mendixFloors ?? [];
+  const mendixOff = officeSettings().mendixOffFloors ?? [];
   const same = (a: string, b: string) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
   return {
     storage: {
@@ -84,7 +84,7 @@ export function connectionsView(ctx: Ctx): ConnectionsView {
     },
     credentials: CREDENTIAL_IDS.filter((id) => !CREDENTIAL_META[id].hidden).map((id) => credentialView(ctx, id)),
     importable: importable(ctx.cfg),
-    mendixFloors: [...ctx.floors.values()].map((f) => ({ id: f.id, name: f.def.name, dir: f.dir, on: mendixDirs.some((d) => same(d, f.dir)) })),
+    mendixFloors: [...ctx.floors.values()].map((f) => ({ id: f.id, name: f.def.name, dir: f.dir, on: !mendixOff.some((d) => same(d, f.dir)) })),
     paths: pathsView(ctx),
     sweep: sweepView(),
     org: wizardConfig().org,
@@ -178,8 +178,8 @@ export async function importFromFiles(ctx: Ctx, who: { name: string; id?: string
 export function setMendixFloor(ctx: Ctx, floorId: string, on: boolean, who: { name: string; id?: string }): string | undefined {
   const floor = ctx.floors.get(floorId);
   if (!floor) return 'No such project';
-  const dirs = (officeSettings().mendixFloors ?? []).filter((d) => path.resolve(d).toLowerCase() !== path.resolve(floor.dir).toLowerCase());
-  updateOfficeSettings({ mendixFloors: on ? [...dirs, floor.dir] : dirs });
+  const dirs = (officeSettings().mendixOffFloors ?? []).filter((d) => path.resolve(d).toLowerCase() !== path.resolve(floor.dir).toLowerCase());
+  updateOfficeSettings({ mendixOffFloors: on ? dirs : [...dirs, floor.dir] });
   audit.record({ floor: floor.id, actor: human(who.name, who.id), action: 'settings.change', target: { kind: 'setting', id: 'mendixToken', label: 'Mendix token for agents' }, summary: `${on ? 'Gave' : 'Took'} the Mendix token ${on ? 'to' : 'from'} ${floor.def.name}'s agents (${who.name}); workers hired from now on`, details: { after: { on } }, severity: 'notice' });
   return undefined;
 }
