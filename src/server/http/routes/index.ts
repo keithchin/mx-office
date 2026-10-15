@@ -49,6 +49,7 @@ import { asksRoutes } from './asks.js';
 import { decisionRoutes } from './decisions.js';
 import { dispatchRoutes } from './dispatch.js';
 import { followThroughRoutes } from './followthrough.js';
+import { changeAnswerRoutes } from './change-answer.js';
 import { questionsRoutes } from './questions.js';
 import { versionRoutes } from './version.js';
 
@@ -179,6 +180,8 @@ export const routes: readonly Route[] = [
   dispatchRoutes.act,
   followThroughRoutes.view,
   followThroughRoutes.act,
+  changeAnswerRoutes.detail,
+  changeAnswerRoutes.change,
   questionsRoutes.view,
   questionsRoutes.refresh,
   questionsRoutes.answer,

@@ -14,6 +14,7 @@ import { startStuckDetection } from '../stuck/index.js';
 import { startAsks } from '../asks/index.js';
 import { startQuestions } from '../questions/index.js';
 import { startFollowThrough } from '../followthrough/index.js';
+import { startChangeAnswer } from '../change-answer/index.js';
 import { startToolkitPins } from '../toolkit-pin/office.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
@@ -71,6 +72,8 @@ export function startTimers(ctx: Ctx): () => void {
   const stopQuestions = startQuestions(ctx);
   // Recorded as given: each answered decision's record found and compared, on the asks look's reads (followthrough/).
   const stopFollow = startFollowThrough(ctx);
+  // Change answer: a change whose dispatch settles later moves its decision on then (change-answer/).
+  const stopChange = startChangeAnswer(ctx);
 
   return () => {
     stopRuns();
@@ -87,6 +90,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopAsks();
     stopQuestions();
     stopFollow();
+    stopChange();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

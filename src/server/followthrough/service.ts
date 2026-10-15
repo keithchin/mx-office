@@ -59,7 +59,7 @@ const ACTOR = { kind: 'office' as const, name: 'Recorded as given' };
 export class FollowThrough {
   readonly store: FollowStore;
 
-  constructor(private readonly deps: FollowDeps) {
+  constructor(readonly deps: FollowDeps) {
     this.store = new FollowStore(path.join(deps.dataDir, 'followthrough'));
   }
 
