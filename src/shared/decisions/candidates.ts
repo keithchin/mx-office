@@ -23,7 +23,7 @@ export interface Candidate {
   kind: DecisionKind;
   /** Which source leads a card when several fold (lower first): a question, then a decision escalation, a proposal, a sign-off, stuck, an ask, a PR check, an FYI. */
   prio: number;
-  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered'>> & { analyst?: string };
+  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates'>> & { analyst?: string };
   /** A free-text test name it is about: other cards naming it are "possibly related", never merged. */
   mentions?: string;
 }

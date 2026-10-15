@@ -73,7 +73,7 @@ function dropUnmatched(s: string): string {
 const COMMENT_TAIL = /,\s*(?:both|all|each|these|those|which|they|it)?\s*(?:are\s+|is\s+)?(?:already\s+|still\s+)?(?:in|raised\s+(?:as|in)|filed\s+(?:as|in)|tracked\s+in)\s+(?:an?\s+|the\s+)?(?:open\s+)?escalations?\b[^,;]*$/i;
 
 /** A short clause that only points back at the item before it ("Ada has it", "it is with the PM"). */
-const pointsBack = (p: string) => p.split(/\s+/).length <= 5 && /\b(?:it|this|that|these|those|both|them|same)\b/i.test(p) && !/[#]\d|\b[A-Z]{1,4}\d{0,2}-\d/.test(p);
+const pointsBack = (p: string) => !/[#]\d|\b[A-Z]{1,4}\d{0,2}-\d/.test(p) && ((p.split(/\s+/).length <= 5 && /\b(?:it|this|that|these|those|both|them|same)\b/i.test(p)) || (p.split(/\s+/).length <= 8 && /\buntil then\b|\bfor now\b|\bmeanwhile\b/i.test(p)));
 
 /** "merge #98 and run X (issue #91)": two asks with one different explicit id each. */
 function splitAnd(p: string): string[] {

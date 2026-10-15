@@ -44,7 +44,7 @@ export function proposalAt(p: Pick<Proposal, 'at' | 'standup'>, d: { standups: r
   if (p.at) return p.at;
   const s = d.standups.find((x) => x.id === p.standup);
   if (s?.startedAt) return s.startedAt;
-  const m = /^(d{4}-d{2}-d{2})/.exec(p.standup);
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(p.standup);
   return (m && Date.parse(`${m[1]}T00:00:00Z`)) || undefined;
 }
 

@@ -7,7 +7,7 @@ import { toast } from '../dom';
 import { setDecisionsView } from './feed';
 
 export interface DecisionActBody {
-  action: 'separate' | 'answer' | 'noted' | 'done' | 'cant-now' | 'resolved' | 'still-needed';
+  action: 'separate' | 'answer' | 'noted' | 'done' | 'cant-now' | 'resolved' | 'still-needed' | 'close-duplicates';
   escalation?: string;
   others?: string[];
   verdict?: 'reply' | 'approve' | 'reject';
@@ -16,6 +16,8 @@ export interface DecisionActBody {
   sourceId?: string;
   /** The answer revision the card saw (0 for an open escalation): the office refuses a stale answer (a 409). */
   expectedRev?: number;
+  /** Close duplicates: the groups the person confirmed (the clean-up card). */
+  groups?: { keep: string; close: string[] }[];
 }
 
 /** Sends a card's button; true when the office did it (a refusal is toasted). */
