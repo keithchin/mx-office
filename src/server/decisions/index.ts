@@ -12,6 +12,8 @@ import { escalationKind, doneMessage } from '../../shared/decisions/words.js';
 import type { DecisionsView, DecisionSplit } from '../../shared/decisions/types.js';
 import type { EscalationVerdict } from '../../shared/roster/escalation.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { answerGroup, type EscalationAnswer } from '../roster/escalation-answer.js';
+import type { AnswerResult } from '../dispatch/service.js';
 import { audit, human } from '../audit/index.js';
 import { SplitsStore } from './store.js';
 import { checkFor, runCheck, type CheckResult } from './check.js';
@@ -30,7 +32,13 @@ export interface DecisionAct {
   text?: string;
   cardId?: string;
   sourceId?: string;
+  /** The answer revision the page saw on the card's escalation (0 for an open one): a stale one is a 409. */
+  expectedRev?: number;
 }
+
+/** A card action's outcome: an error (with its HTTP status: 409 when the decision changed meanwhile), or nothing. */
+export type ActError = { error: string; status: number; current?: unknown } | undefined;
+const fail = (error: string | undefined): ActError => (error ? { error, status: 400 } : undefined);
 
 /** GET /api/decisions: the splits, and the status checks run after I've done it (by escalation id). */
 export interface DecisionsFullView extends DecisionsView {
@@ -60,9 +68,14 @@ export class DecisionsService {
 
   /** A card's button: the error, or undefined when it's done. `by`/`owner`: who pressed it. */
   async act(floor: Floor, a: DecisionAct, by: string, owner?: string): Promise<string | undefined> {
+    return (await this.actResult(floor, a, by, owner))?.error;
+  }
+
+  /** act, with the error's HTTP status (a 409 carries the decision's current state). */
+  async actResult(floor: Floor, a: DecisionAct, by: string, owner?: string): Promise<ActError> {
     const actor = human(by, owner);
     if (a.action === 'separate') {
-      if (!a.cardId || !a.sourceId || a.cardId === a.sourceId) return 'Which source, from which card?';
+      if (!a.cardId || !a.sourceId || a.cardId === a.sourceId) return fail('Which source, from which card?');
       const s: DecisionSplit = { cardId: a.cardId.slice(0, 300), sourceId: a.sourceId.slice(0, 300), by, at: Date.now() };
       if (await this.splits.add(floor.id, s)) audit.record({ floor: floor.id, actor, action: 'decisions.separate', target: { kind: 'decision', id: s.cardId, label: s.sourceId }, summary: `Separated ${s.sourceId} from the decision card ${s.cardId}: they show as two cards`, details: { cardId: s.cardId, sourceId: s.sourceId } });
       return undefined;
@@ -71,55 +84,45 @@ export class DecisionsService {
     const tf = teamFloor(this.ctx, floor);
     const all = roster.data(floor.id).escalations;
     const e = all.find((x) => x.id === a.escalation);
-    if (!e) return 'No such escalation';
-    if (e.status !== 'open') return `Already answered by ${e.resolution?.by ?? 'someone'}`;
+    if (!e) return fail('No such escalation');
+    // Answered meanwhile: a 409 with its state when the page said what it saw.
+    if (e.status !== 'open') return a.expectedRev !== undefined ? { error: 'This decision changed since you opened it', status: 409, current: { decision: `esc:${e.id}`, rev: e.resolution?.answerRev ?? 1, state: `answered by ${e.resolution?.by ?? 'someone'}` } } : fail(`Already answered by ${e.resolution?.by ?? 'someone'}`);
     const others = (a.others ?? []).map((id) => all.find((x) => x.id === id && x.status === 'open' && x.id !== e.id)).filter((x): x is NonNullable<typeof x> => !!x);
     const text = typeof a.text === 'string' ? a.text.slice(0, 4000) : '';
+    const answered = (r: AnswerResult): ActError => (r.ok ? undefined : { error: r.error, status: r.status, ...(r.current ? { current: r.current } : {}) });
+    const ans = (id: string, x: Omit<EscalationAnswer, 'by'>): { id: string } & EscalationAnswer => ({ id, by, ...x });
+    // An answer on a card answers every escalation it folds, as one group (a dispatch per member, roster/escalation-answer.ts).
     switch (a.action) {
-      case 'noted': {
-        const err = roster.escalations.resolve(tf, e.id, 'dismiss', '', by, 'noted');
-        if (err) return err;
-        for (const o of others) if (escalationKind(o).kind === 'fyi') roster.escalations.resolve(tf, o.id, 'dismiss', '', by, 'noted');
-        return undefined;
-      }
+      case 'noted':
+        return answered(await answerGroup(roster, tf, ans(e.id, { verdict: 'dismiss', raw: '', outcome: 'noted', expectedRev: a.expectedRev }), others.filter((o) => escalationKind(o).kind === 'fyi').map((o) => ans(o.id, { verdict: 'dismiss', raw: '', outcome: 'noted' }))));
       case 'done': {
-        const err = roster.escalations.resolve(tf, e.id, 'reply', text, by, 'done');
+        const err = answered(await answerGroup(roster, tf, ans(e.id, { verdict: 'reply', raw: text, outcome: 'done', expectedRev: a.expectedRev }), this.alsoAnswer(others, by, (k) => (k === 'hands-on' ? { verdict: 'reply', text, outcome: 'done' } : { verdict: 'reply', text: doneMessage(by) }))));
         if (err) return err;
-        this.alsoAnswer(tf, others, by, (k) => (k === 'hands-on' ? { verdict: 'reply', text, outcome: 'done' } : { verdict: 'reply', text: doneMessage(by) }));
         this.check(floor, e.id, `${e.title}\n${e.details}`);
         return undefined;
       }
-      case 'answer': {
-        if (!a.verdict) return 'reply, approve or reject';
-        const err = roster.escalations.resolve(tf, e.id, a.verdict, text, by);
-        if (err) return err;
-        this.alsoAnswer(tf, others, by, () => ({ verdict: a.verdict!, text }));
-        return undefined;
-      }
-      case 'resolved': {
-        if (!e.sourceGone) return 'Only for one whose AWAITING-PM line is gone';
-        return roster.escalations.resolve(tf, e.id, 'dismiss', `Resolved: ${e.sourceGone.what}`, by);
-      }
+      case 'answer':
+        if (!a.verdict) return { error: 'reply, approve or reject', status: 400 };
+        return answered(await answerGroup(roster, tf, ans(e.id, { verdict: a.verdict, raw: text, expectedRev: a.expectedRev }), this.alsoAnswer(others, by, () => ({ verdict: a.verdict!, text }))));
+      case 'resolved':
+        if (!e.sourceGone) return { error: 'Only for one whose AWAITING-PM line is gone', status: 400 };
+        return answered(await answerGroup(roster, tf, ans(e.id, { verdict: 'dismiss', raw: `Resolved: ${e.sourceGone.what}`, expectedRev: a.expectedRev }), []));
       case 'still-needed':
-        return roster.escalations.tell(tf, e.id, 'still needed', `${by} says this is still needed: “${e.title}”. It is gone from your newest journal entry's AWAITING-PM line; if it still waits on the Project Manager, put it back (or escalate it), else say what settled it.${text ? `\n\n${text}` : ''}`, by);
+        return fail(await roster.escalations.tell(tf, e.id, 'still needed', `${by} says this is still needed: “${e.title}”. It is gone from your newest journal entry's AWAITING-PM line; if it still waits on the Project Manager, put it back (or escalate it), else say what settled it.${text ? `\n\n${text}` : ''}`, by));
       case 'cant-now':
-        if (escalationKind(e).kind !== 'hands-on') return "Can't now is only for a hands-on action";
-        return roster.escalations.tell(tf, e.id, "can't now", `${by} can't do this now: “${e.title}”. Carry on with what doesn't need it, keep it in your AWAITING-PM line, and say what it still blocks.${text ? `\n\n${text}` : ''}`, by);
+        if (escalationKind(e).kind !== 'hands-on') return { error: "Can't now is only for a hands-on action", status: 400 };
+        return fail(await roster.escalations.tell(tf, e.id, "can't now", `${by} can't do this now: “${e.title}”. Carry on with what doesn't need it, keep it in your AWAITING-PM line, and say what it still blocks.${text ? `\n\n${text}` : ''}`, by));
     }
   }
 
-  /** The card's other open escalations, answered with it: FYIs among them noted, the rest as \`how\` says for their kind. */
-  private alsoAnswer(tf: ReturnType<typeof teamFloor>, others: readonly { id: string; trigger?: string; fyi: boolean; options: string[]; title: string; details: string; from?: { kind: string } }[], by: string, how: (kind: string) => { verdict: EscalationVerdict; text: string; outcome?: 'done' }) {
-    const roster = rosterOf(this.ctx);
-    for (const o of others) {
+  /** The card's other open escalations, answered with it: FYIs among them noted, the rest as `how` says for their kind. */
+  private alsoAnswer(others: readonly { id: string; trigger?: string; fyi: boolean; options: string[]; title: string; details: string; from?: { kind: string } }[], by: string, how: (kind: string) => { verdict: EscalationVerdict; text: string; outcome?: 'done' }): ({ id: string } & EscalationAnswer)[] {
+    return others.map((o) => {
       const { kind } = escalationKind(o as never);
-      if (kind === 'fyi') {
-        roster.escalations.resolve(tf, o.id, 'dismiss', '', by, 'noted');
-        continue;
-      }
+      if (kind === 'fyi') return { id: o.id, by, verdict: 'dismiss' as const, raw: '', outcome: 'noted' as const };
       const h = how(kind);
-      roster.escalations.resolve(tf, o.id, h.verdict, h.text || (h.verdict === 'reply' ? doneMessage(by) : ''), by, h.outcome);
-    }
+      return { id: o.id, by, verdict: h.verdict, raw: h.text || (h.verdict === 'reply' ? doneMessage(by) : ''), ...(h.outcome ? { outcome: h.outcome } : {}) };
+    });
   }
 
   /** The status check after I've done it, in the background: never blocks, never changes the card's state. */

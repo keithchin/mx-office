@@ -1,0 +1,66 @@
+// What the roster gives the dispatcher (server/dispatch/): step 8 for records settled after the answer
+// (reconcile found the typed message, a person said "It went through", Send again went), what reconcile
+// asks of the roster (is a held dispatch still in the held list, or still owed by its escalation?), and the
+// start's reconcile of every floor. Nothing here re-sends anything by itself: durable intent plus
+// reconciliation, and no automatic replay of an ambiguous attempt.
+
+import type { AnswerRevisionKind, DispatchRecord } from '../../shared/dispatch.js';
+import type { EscalationOutcome, EscalationVerdict } from '../../shared/roster/escalation.js';
+import type { AnswerLine } from '../answers/store.js';
+import { reconcileFloor, type Reconciled } from '../dispatch/reconcile.js';
+import { audit, office } from '../audit/index.js';
+import { stillOwed } from './escalation-answer.js';
+import type { Roster } from './index.js';
+
+const VERDICT_OF: Partial<Record<AnswerRevisionKind, { verdict: EscalationVerdict; outcome?: EscalationOutcome }>> = { approve: { verdict: 'approve' }, reject: { verdict: 'reject' }, reply: { verdict: 'reply' }, moot: { verdict: 'dismiss' }, noted: { verdict: 'dismiss', outcome: 'noted' }, done: { verdict: 'reply', outcome: 'done' } };
+
+/** An escalation's answer that reached its agent after all: resolved now, pointing at the revision and the dispatch. */
+async function applyEscalation(roster: Roster, floorId: string, r: DispatchRecord, line: AnswerLine | undefined) {
+  const d = roster.data(floorId);
+  const e = d.escalations.find((x) => `esc:${x.id}` === r.decision);
+  if (!e) return;
+  const also = e.also?.find((x) => x.dispatchId === r.id || (r.workerId && x.workerId === r.workerId));
+  if (e.status === 'open') {
+    const v = line && VERDICT_OF[line.kind];
+    if (!line || !v) return;
+    const raiser = !also;
+    e.status = 'resolved';
+    e.resolution = { verdict: v.verdict, text: line.text.slice(0, 4000), by: line.by, at: line.at, delivered: raiser, ...(v.outcome ? { outcome: v.outcome } : {}), answerRev: r.answerRev, ...(raiser ? { dispatchId: r.id } : {}) };
+    audit.record({ floor: floorId, actor: office('Dispatch'), action: 'escalation.answer', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `Resolved from its answer revision once the dispatch settled (${r.state === 'person-confirmed-sent' ? 'a person said it went through' : 'found as typed'}): ${e.title}`, details: { verdict: v.outcome ?? v.verdict, delivered: raiser, answerRev: r.answerRev, settledBy: r.confirmedBy ?? 'system' }, ids: { decision: r.decision, answerRev: r.answerRev, dispatchId: r.id } });
+  } else if (e.resolution?.dispatchId === r.id) e.resolution.delivered = true;
+  if (also && also.dispatchId === r.id) delete also.pending;
+  const floor = roster.deps.floors().find((f) => f.id === floorId);
+  if (floor) roster.touch(floor);
+  await roster
+    .file(floorId)
+    .flushCritical()
+    .catch(() => undefined);
+}
+
+/** The roster's appliers, and what reconcile asks of it. */
+export function hookDispatch(roster: Roster) {
+  roster.dispatch.appliers.set('esc', (floorId, r, line) => applyEscalation(roster, floorId, r, line));
+}
+
+/** Whether a held dispatch is still waiting: in the held list (its id), or owed by its escalation. */
+export function stillHeld(roster: Roster, floorId: string, r: DispatchRecord): boolean {
+  return roster.data(floorId).held.some((h) => h.dispatchId === r.id || h.id === r.id) || stillOwed(roster, floorId, r);
+}
+
+/** The start's reconcile, every floor one after another; what changed. Never throws. */
+export async function reconcileAll(roster: Roster): Promise<Reconciled[]> {
+  const out: Reconciled[] = [];
+  for (const f of roster.deps.floors()) {
+    try {
+      out.push(
+        ...(await reconcileFloor(roster.dispatch, f.id, {
+          stillHeld: (floorId, r) => stillHeld(roster, floorId, r),
+          findIssue: roster.deps.findIssue ? (floorId, r) => roster.deps.findIssue!(f.dir, r.marker) : undefined,
+        })),
+      );
+    } catch (err) {
+      console.error(`agent-office: dispatch: couldn't reconcile ${f.id}: ${(err as Error).message}`);
+    }
+  }
+  return out;
+}

@@ -62,7 +62,7 @@ export async function reconcileOne(d: Dispatcher, floorId: string, r: DispatchRe
 export async function reconcileFloor(d: Dispatcher, floorId: string, deps: ReconcileDeps): Promise<Reconciled[]> {
   await d.ready(floorId);
   const out: Reconciled[] = [];
-  const todo = d.unsettled(floorId).filter((r) => r.state === 'prepared' || r.state === 'in-flight' || r.state === 'held').slice(0, RECONCILE_MAX);
+  const todo = d.unsettled(floorId).filter((r) => (r.state === 'prepared' || r.state === 'in-flight' || r.state === 'held') && !d.mine.has(r.id)).slice(0, RECONCILE_MAX);
   for (const r of todo) {
     try {
       const next = await reconcileOne(d, floorId, r, deps);

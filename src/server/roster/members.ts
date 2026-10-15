@@ -93,6 +93,8 @@ export class Members {
     const paused = this.roster.pauseOf(d) ?? hireHoldOf(floor.id);
     if (paused) return paused;
     const owed = this.roster.escalations.owed(floor, role);
+    // Durable answers the hire carries: marked in flight before the hire types them (a new session: no transcript to prove it by yet).
+    if (owed.dispatchIds?.length) await this.roster.dispatch.beforeType(floor.id, owed.dispatchIds, {});
     const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task, owed.lines, teamLine(d, role)), owner, by, team: def.team });
     if (typeof r === 'string') return r;
     owed.mark();

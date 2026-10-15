@@ -109,6 +109,10 @@ export interface PmAnswer {
   recordedAt?: number;
   /** The toolkit's state when it was seen recorded. */
   recordedState?: QState;
+  /** The answer store's revision of this answer (server/answers/: the full history lives there; this entry is a bounded copy). */
+  answerRev?: number;
+  /** The dispatch that carried it (server/dispatch/). Pending with one: a Send whose outcome is unknown (release 47 ignores the field and offers Send again). */
+  dispatchId?: string;
 }
 
 /** Who Send goes to: the agent whose worktree the questions are in, or whoever covers Analysis. */

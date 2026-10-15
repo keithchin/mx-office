@@ -74,8 +74,10 @@ export const questionsRoutes = {
       if (!c) return;
       const kind = c.body.kind as AnswerKind | 'clear';
       if (kind !== 'clear' && !ANSWER_KINDS.includes(kind)) return send(res, 400, { error: `kind is one of ${ANSWER_KINDS.join(', ')} or clear` });
-      const err = await questionsOf(ctx).answer(c.floor, String(c.body.key ?? ''), kind, { by: c.by, ...(c.owner ? { owner: c.owner } : {}), ...(typeof c.body.text === 'string' ? { text: c.body.text.slice(0, 4000) } : {}), ...(typeof c.body.option === 'string' ? { option: c.body.option } : {}) });
-      if (err) return send(res, 400, { error: err });
+      // expectedRev, when the page sends it: a stale answer is a 409 with the current state (server/dispatch/).
+      const expectedRev = typeof c.body.expectedRev === 'number' && Number.isInteger(c.body.expectedRev) ? c.body.expectedRev : undefined;
+      const failed = await questionsOf(ctx).answerResult(c.floor, String(c.body.key ?? ''), kind, { by: c.by, ...(c.owner ? { owner: c.owner } : {}), ...(typeof c.body.text === 'string' ? { text: c.body.text.slice(0, 4000) } : {}), ...(typeof c.body.option === 'string' ? { option: c.body.option } : {}), ...(expectedRev !== undefined ? { expectedRev } : {}) });
+      if (failed) return send(res, failed.status, { error: failed.error, ...(failed.current ? { current: failed.current } : {}) });
       return send(res, 200, await questionsOf(ctx).view(c.floor, true));
     },
   },

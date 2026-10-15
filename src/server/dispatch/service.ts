@@ -55,12 +55,12 @@ export interface AnswerSpec {
   decision: DecisionRef;
   /** The revision the page saw; undefined skips the check (an older client, or the office's own path). */
   expectedRev?: number;
-  /** The revision the decision's own record points at now (0 when it was never applied). */
-  currentRev: number;
-  /** The decision's state for a 409, in a few words. */
-  state?: string;
-  /** Whether it takes an answer now; a string says why not (a 409 when expectedRev was given, else an error). */
-  open?: string;
+  /**
+   * Read at the claim (after the stores are loaded, before the first await of the answer): the revision
+   * the decision's own record points at now (0 when never applied), its state in a few words for a 409,
+   * and, when it takes no answer now, why (a 409 when expectedRev was given, else an error).
+   */
+  current(): { rev: number; state?: string; open?: string };
   /** The revision appended; omitted when an existing revision is dispatched (useRev). */
   revision?: { kind: AnswerRevisionKind; option?: string; text: string; by: string; supersedes?: number };
   useRev?: number;
@@ -71,7 +71,7 @@ export interface AnswerSpec {
   apply?(rev: number, records: DispatchRecord[]): void | Promise<void>;
 }
 
-export type AnswerResult = { ok: true; results: { decision: DecisionRef; rev: number; records: DispatchRecord[] }[] } | { ok: false; status: 400 | 409 | 500; error: string; current?: { decision: DecisionRef; rev: number; state?: string } };
+export type AnswerResult = { ok: true; results: { decision: DecisionRef; rev: number; records: DispatchRecord[]; /** A dispatch's outcome isn't settled: step 8 waits for reconcile or a person. */ pending?: boolean }[] } | { ok: false; status: 400 | 409 | 500; error: string; current?: { decision: DecisionRef; rev: number; state?: string } };
 
 /** Settles a record from what reconcile or a person found, for the decision's own record (escalation, book, proposal). */
 export type Applier = (floorId: string, r: DispatchRecord, line: AnswerLine | undefined) => void | Promise<void>;
@@ -92,6 +92,9 @@ export class Dispatcher {
   private claims = new Set<string>();
   /** Step 8 for records settled later (reconcile, a person, Send again), by decision kind (esc, q, proposal…). */
   readonly appliers = new Map<string, Applier>();
+
+  /** The records this process wrote: reconcile looks only at what an earlier run left (dispatch/reconcile.ts). */
+  readonly mine = new Set<string>();
 
   constructor(private deps: DispatcherDeps) {
     this.answers = new AnswerStore(path.join(deps.dataDir, 'answers'));
@@ -122,10 +125,11 @@ export class Dispatcher {
     await this.ready(floorId);
     // ---- 1 and 2: synchronous from here to the first await ----
     for (const s of specs) {
-      const conflict = (error: string): AnswerResult => ({ ok: false, status: 409, error, current: { decision: s.decision, rev: s.currentRev, ...(s.state ? { state: s.state } : {}) } });
-      if (s.expectedRev !== undefined && s.expectedRev !== s.currentRev) return conflict('This decision changed since you opened it');
+      const c = s.current();
+      const conflict = (error: string): AnswerResult => ({ ok: false, status: 409, error, current: { decision: s.decision, rev: c.rev, ...(c.state ? { state: c.state } : {}) } });
+      if (s.expectedRev !== undefined && s.expectedRev !== c.rev) return conflict('This decision changed since you opened it');
       if (this.claimed(floorId, s.decision)) return conflict('This decision is being answered right now');
-      if (s.open) return s.expectedRev !== undefined ? conflict(`This decision changed since you opened it: ${s.open}`) : { ok: false, status: 400, error: s.open };
+      if (c.open) return s.expectedRev !== undefined ? conflict(`This decision changed since you opened it: ${c.open}`) : { ok: false, status: 400, error: c.open };
     }
     const keys = specs.map((s) => `${floorId}|${s.decision}`);
     keys.forEach((k) => this.claims.add(k));
@@ -134,7 +138,7 @@ export class Dispatcher {
         const err = s.check?.();
         if (err) return { ok: false, status: 400, error: err };
       }
-      const results: { decision: DecisionRef; rev: number; records: DispatchRecord[] }[] = [];
+      const results: { decision: DecisionRef; rev: number; records: DispatchRecord[]; pending?: boolean }[] = [];
       for (const s of specs) {
         // ---- 3 ----
         let rev = s.useRev ?? 0;
@@ -153,9 +157,10 @@ export class Dispatcher {
           if (typeof r === 'string') return { ok: false, status: 500, error: r };
           records.push(r);
         }
-        // ---- 8 ----
-        await s.apply?.(rev, records);
-        results.push({ decision: s.decision, rev, records });
+        // ---- 8, only once every dispatch settled: an unclear one waits for reconcile or a person ----
+        const pending = records.some((r) => r.state === 'in-flight' || r.state === 'outcome-unknown' || r.state === 'prepared');
+        if (!pending) await s.apply?.(rev, records);
+        results.push({ decision: s.decision, rev, records, ...(pending ? { pending } : {}) });
       }
       return { ok: true, results };
     } finally {
@@ -227,6 +232,7 @@ export class Dispatcher {
   }
 
   private async put(floorId: string, r: DispatchRecord, actor?: AuditActor, by?: string): Promise<DispatchRecord> {
+    this.mine.add(r.id);
     await this.store.put(floorId, r);
     const word = AUDIT_WORD[r.state] ?? r.state;
     const note = r.history[r.history.length - 1]?.note;
@@ -270,7 +276,8 @@ export class Dispatcher {
     const ok = new Set<string>();
     for (const id of ids) {
       const r = this.store.get(floorId, id);
-      if (!r || r.state !== 'held') continue;
+      // Held, or marked before and not typed since (it is still in the held list, so it wasn't).
+      if (!r || (r.state !== 'held' && r.state !== 'in-flight')) continue;
       try {
         await this.put(floorId, this.advance(r, 'in-flight', { ...session, dispatchedAt: this.now(), note: 'typing the held answer' }));
         ok.add(id);

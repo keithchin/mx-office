@@ -33,6 +33,12 @@ export interface HeldPrompt {
   resume?: boolean;
   /** Typed with the run-state fact block before it, as it is then (awareness.ts): the Project Manager's question to the Coordinator. */
   facts?: boolean;
+  /**
+   * The durable dispatch it carries (server/dispatch/), when it's a person's answer: an extra field release 47
+   * ignores (its reviveHeld keeps only the fields it knows), so a held answer survives a rollback and is typed
+   * once there. The prompt's id is the dispatch id too.
+   */
+  dispatchId?: string;
 }
 
 /** The id a held prompt gets when its sender gave none: the same prompt to the same agent is the same one. */
@@ -58,7 +64,7 @@ export function reviveHeld(raw: unknown): HeldPrompt[] {
     const createdAt = typeof r.createdAt === 'number' ? r.createdAt : 0;
     const by = str(r.by, 200);
     ids.add(id);
-    out.push({ id, workerId, origin: r.origin as Origin, ...(by ? { by } : {}), text, createdAt, expiresAt: typeof r.expiresAt === 'number' ? r.expiresAt : createdAt + HELD_TTL_MS, ...(r.resume === true ? { resume: true } : {}), ...(r.facts === true ? { facts: true } : {}) });
+    out.push({ id, workerId, origin: r.origin as Origin, ...(by ? { by } : {}), text, createdAt, expiresAt: typeof r.expiresAt === 'number' ? r.expiresAt : createdAt + HELD_TTL_MS, ...(r.resume === true ? { resume: true } : {}), ...(r.facts === true ? { facts: true } : {}), ...(typeof r.dispatchId === 'string' && /^dsp_[0-9A-Z]{26}$/.test(r.dispatchId) ? { dispatchId: r.dispatchId } : {}) });
   }
   return out.slice(-HELD_KEPT);
 }

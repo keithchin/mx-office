@@ -68,6 +68,10 @@ export interface Escalation {
     delivered: boolean;
     /** What it meant (FYI noted, hands-on done), when it was one of those; `verdict` is the legacy word beside it. */
     outcome?: EscalationOutcome;
+    /** The answer store's revision this answer is (server/answers/: the full text lives there). */
+    answerRev?: number;
+    /** The dispatch that carried it to the raiser (server/dispatch/), when one did. */
+    dispatchId?: string;
   };
   /** Jeff's rating of how soon to resolve it, and its rank among the floor's open ones (jeff-rank.ts). */
   jeffRank?: JeffRank;
@@ -75,7 +79,7 @@ export interface Escalation {
    * Other agents that raised the same while it was open (a "+1"): merged into this one instead of a
    * second escalation, and told the answer too (roster/escalations.ts).
    */
-  also?: { workerId: string; by: string; role?: RoleId; at: number; /** Answered while a dialog was up in its terminal: told once that's over. */ pending?: boolean }[];
+  also?: { workerId: string; by: string; role?: RoleId; at: number; /** Answered while a dialog was up in its terminal: told once that's over. */ pending?: boolean; /** The dispatch carrying the answer to it. */ dispatchId?: string }[];
   /** Filed by the office from an agent's words (server/asks/): an AWAITING-PM item (keyed by role and text), resolved by itself once the line is gone. */
   from?: { kind: 'awaiting'; key: string } | { kind: 'proposal'; key: string };
   /** The explicit ids it is about. Missing on records from before decision cards (release 45): those show ungrouped. */

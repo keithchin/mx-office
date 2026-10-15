@@ -48,7 +48,7 @@ export interface AsksDeps {
   detectInput(floor: AsksFloor, reads: readonly Read[]): Promise<Omit<DetectInput, 'reads' | 'now'>>;
   /** Whoever covers Management, and the team's tell to them as the Project Manager (an error, or undefined once sent or held). */
   lead(floor: AsksFloor): { name: string } | undefined;
-  tell(floor: AsksFloor, text: string, by: string, owner?: string): string | undefined;
+  tell(floor: AsksFloor, text: string, by: string, owner?: string): string | undefined | Promise<string | undefined>;
   record(e: AuditInput): void;
 }
 
@@ -222,7 +222,7 @@ export class AsksService {
     if (!msg) return 'Nothing to send';
     const lead = this.deps.lead(floor);
     if (!lead) return 'This project has no team lead to ask';
-    const err = this.deps.tell(floor, msg, o.by, o.owner);
+    const err = await this.deps.tell(floor, msg, o.by, o.owner);
     if (err) return err;
     this.deps.record({ ...base, action: `asks.${act}`, summary: `Asked ${lead.name} (after their turn): ${it.text}`, details: { act, lead: lead.name } });
     if (act === 'agree' || act === 'docs-pr') s.seen[id] = this.deps.now();

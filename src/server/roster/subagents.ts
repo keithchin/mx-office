@@ -393,7 +393,8 @@ export class Subagents {
     floor.activity?.(`${approve ? '✅' : '❌'} ${by} ${approve ? 'approved' : 'rejected'} ${a.by}'s request to ${OP_ASK[a.op]} ${this.who(floor, a.lead, a.name)}`);
     // An ask's escalation is answered by this too; a proposal's Lead is told here, or as soon as it's
     // back between turns when it's asleep or asking someone now (relays.ts keeps the note).
-    if (a.escalationId) this.roster.escalations.resolve(floor, a.escalationId, approve ? 'approve' : 'reject', reason || (approve ? 'Approved: the office has done it.' : 'Rejected.'), by);
+    // A durable dispatch (escalation-answer.ts): its result comes later; a refusal is the answer's own toast.
+    if (a.escalationId) void this.roster.escalations.resolve(floor, a.escalationId, approve ? 'approve' : 'reject', reason || (approve ? 'Approved: the office has done it.' : 'Rejected.'), by).catch(() => undefined);
     else {
       const w = this.leadWorker(floor, a.lead);
       // The Project Manager's decision: held while the Lead is busy or a dialog is up, and told once its

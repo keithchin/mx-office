@@ -102,7 +102,7 @@ export class Phone {
     return { in: 'thread', thread: p.thread, agents: t ? threadAgents(t) : [], ...(esc ? { escalationId: esc } : {}) };
   }
 
-  send(ask: SendAsk): SendResult {
+  async send(ask: SendAsk): Promise<SendResult> {
     const floor = this.deps.floor(ask.floor);
     if (!floor) return { ok: false, why: 'No such floor', status: 404 };
     const place = this.place(floor, ask.place);
@@ -139,10 +139,10 @@ export class Phone {
   }
 
   /** An answer to an escalation through the roster's own resolve: the raiser is told, Needs you and the approvals follow. */
-  private resolve(floor: TeamFloor, id: string, verdict: EscalationVerdict, text: string, ask: SendAsk): SendResult {
+  private async resolve(floor: TeamFloor, id: string, verdict: EscalationVerdict, text: string, ask: SendAsk): Promise<SendResult> {
     if (!ask.admin) return { ok: false, why: 'Only the Project Manager (an admin) can answer escalations', status: 403 };
     const e = this.deps.roster.data(floor.id).escalations.find((x) => x.id === id);
-    const err = this.deps.roster.escalations.resolve(floor, id, verdict, text, ask.by);
+    const err = await this.deps.roster.escalations.resolve(floor, id, verdict, text, ask.by);
     if (err || !e) return { ok: false, why: err ?? 'No such escalation', status: 400 };
     // The answer is in the chatter at once (the roster source's answer message), not at its next look.
     this.deps.chatter.look(floor, false);

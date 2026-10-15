@@ -40,7 +40,7 @@ export interface StuckDeps {
   /** Whoever covers Management on the floor's team. */
   lead(floor: StuckFloor): { name: string; working: boolean; since?: number } | undefined;
   /** The team's tell to that lead, as the Project Manager: an error, or undefined when it went (or was held for after its turn). */
-  tell(floor: StuckFloor, text: string, by: string, when: 'now' | 'after', owner?: string): string | undefined;
+  tell(floor: StuckFloor, text: string, by: string, when: 'now' | 'after', owner?: string, decision?: string): string | undefined | Promise<string | undefined>;
   /** The floor's open escalations (kept for callers; an escalation about the same thing now groups with the item on its decision card, it no longer hides it). */
   openEscalations?(floor: StuckFloor): readonly { title: string; details: string }[];
   record(e: AuditInput): void;
@@ -242,7 +242,8 @@ export class StuckService {
       const lead = this.deps.lead(floor);
       if (!lead) return 'This project has no team lead to ask';
       const when = o.when ?? 'after';
-      const err = this.deps.tell(floor, msg, o.by, when, o.owner);
+      // A durable dispatch (roster/dispatch-send.ts): the answer revision of stuck:<id>, its intent on disk before typing.
+      const err = await this.deps.tell(floor, msg, o.by, when, o.owner, `stuck:${id}`);
       if (err) return err;
       if (action === 'accept') book.accept(id, now + ACCEPT_QUIET_MS);
       const verb = action === 'answer' ? 'Answered' : action === 'accept' ? 'Accepted the workaround for now' : 'Asked the team lead';

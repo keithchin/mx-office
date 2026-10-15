@@ -40,6 +40,10 @@ import type { RosterDeps, TeamFloor } from './types.js';
 import { alsoOf, managerRole } from './coverage.js';
 import { coveredBy, shownRoles } from '../../shared/roster/coverage.js';
 import { asksSoon } from './asks-hook.js';
+import { Dispatcher } from '../dispatch/service.js';
+import { hookDispatch, reconcileAll } from './dispatch-hooks.js';
+import { hookProposals } from './proposal-issue.js';
+import type { Reconciled } from '../dispatch/reconcile.js';
 
 interface Seen {
   status: WorkerStatus;
@@ -64,6 +68,8 @@ export class Roster {
   readonly jeff: Jeff;
   readonly subagents: Subagents;
   readonly relays: Relays;
+  /** The person's answers and their dispatches, durable before anything is typed (server/dispatch/, dispatch-hooks.ts). */
+  readonly dispatch: Dispatcher;
   /** Lead pull requests the office already labelled with their team (floor:number), so it asks GitHub once. */
   private labelled = new Set<string>();
   private files = new Map<string, RosterFile>();
@@ -94,6 +100,9 @@ export class Roster {
     this.jeff = new Jeff(this);
     this.subagents = new Subagents(this);
     this.relays = new Relays(this);
+    this.dispatch = new Dispatcher({ dataDir: deps.dataDir, now: () => deps.now() });
+    hookDispatch(this);
+    hookProposals(this);
     if (tickMs > 0) {
       this.timer = setInterval(() => this.tick(), tickMs);
       this.timer.unref?.();
@@ -104,6 +113,11 @@ export class Roster {
     this.stopped = true;
     clearInterval(this.timer);
     this.flush();
+  }
+
+  /** The start's reconcile of what a restart left unsettled (dispatch-hooks.ts): once, off the event loop. */
+  reconcile(): Promise<Reconciled[]> {
+    return reconcileAll(this);
   }
 
   /** Writes every floor's roster file now, rather than in the half second its saves wait. */

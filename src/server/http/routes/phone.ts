@@ -52,7 +52,7 @@ export const phoneRoutes = {
       if (!place) return send(res, 400, { error: 'Where was it written?' });
       if (body.verdict !== undefined && !isEscalationVerdict(body.verdict)) return send(res, 400, { error: 'reply, approve or reject' });
       const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The Project Manager');
-      const r = phoneOf(ctx).send({ floor: floor.id, text: typeof body.text === 'string' ? body.text : '', place, by, admin: ctx.meOf(session.account?.id).admin, ...(body.verdict ? { verdict: body.verdict as 'reply' } : {}) });
+      const r = await phoneOf(ctx).send({ floor: floor.id, text: typeof body.text === 'string' ? body.text : '', place, by, admin: ctx.meOf(session.account?.id).admin, ...(body.verdict ? { verdict: body.verdict as 'reply' } : {}) });
       return r.ok ? send(res, 200, r) : send(res, r.status, { error: r.why });
     },
   },

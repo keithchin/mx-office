@@ -35,3 +35,20 @@ export const ghIssueMaker: IssueMaker = async (dir, draft, env) => {
 };
 
 export const dryRunMaker: IssueMaker = async () => ({ dryRun: true });
+
+/**
+ * The issue whose body carries `marker` (a proposal's `office-proposal: <id> rev <n>`, dispatch/reconcile.ts),
+ * by one search through the office's gh (no loop: reconcile asks once at start, a person's Check GitHub once
+ * more). Only a match is conclusive: null when the search found nothing (GitHub's index can lag minutes),
+ * undefined when gh couldn't search.
+ */
+export const ghIssueFinder = async (dir: string, marker: string): Promise<{ number: number; url?: string } | null | undefined> => {
+  try {
+    const out = await gh(['issue', 'list', '--state', 'all', '--search', `"${marker}" in:body`, '--json', 'number,url,body', '--limit', '10'], dir, 30_000);
+    const list = JSON.parse(out) as { number: number; url?: string; body?: string }[];
+    const hit = list.find((i) => typeof i.body === 'string' && i.body.includes(marker));
+    return hit ? { number: hit.number, ...(hit.url ? { url: hit.url } : {}) } : null;
+  } catch {
+    return undefined;
+  }
+};
