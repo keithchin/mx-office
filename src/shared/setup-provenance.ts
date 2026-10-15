@@ -103,7 +103,7 @@ export function folderProof(p: SetupProvenance | undefined, real: string | undef
     if (real && normPath(real, win) === normPath(f.path, win)) return { proof: 'recorded' };
     return { proof: 'moved', why: `the setup cloned ${f.path}, but this folder really is ${real ?? 'somewhere else'}, so the office won’t delete it` };
   }
-  if (f?.preExisting) return { proof: 'pre-existing', why: 'it was there before the setup (a floor already), so the office never deletes it' };
+  if (f?.preExisting) return { proof: 'pre-existing', why: 'it was there before the setup (a project already), so the office never deletes it' };
   if (legacyCloned) return { proof: 'legacy', why: legacyHint('folder') };
   return { proof: 'none', why: 'this setup didn’t clone it' };
 }

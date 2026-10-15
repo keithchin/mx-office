@@ -18,6 +18,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 ### Changed
 
 - **Only a faithful record settles a decision by itself.** For decisions with an answer revision, a question is marked recorded, and a stuck decision that the register says is CONFIRMED is settled, only when your answer is recorded as given at its current revision and merged into main. *Recorded differently* never settles anything. Decisions answered before this release are *legacy* and keep the old rule.
+- Everywhere you read it, a floor is now called a project (the pages, Needs you, Teams and phone messages, the CLI's words and the docs). Nothing about your data or links changes.
 
 ### Fixed
 
@@ -27,7 +28,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ### To know
 
-- Merged means the commit is reachable from `origin/<default branch>`, by local git only: no fetch, no GitHub call. The record's path, commit and blob are kept apart. What the office found of each escalation is in `<office data>/followthrough/<floor>.json`.
+- Merged means the commit is reachable from `origin/<default branch>`, by local git only: no fetch, no GitHub call. The record's path, commit and blob are kept apart. What the office found of each escalation is in `<office data>/followthrough/<project>.json`.
 - The comparison is strict on purpose. Your option, or your words without *Go with:*, must appear in the record as complete words; case, quotes, punctuation and spacing may differ.
 - Every action is an admin's (`POST /api/followthrough/action`), refused when the decision changed since you opened it, and audited as `followthrough.*`.
 - A line that goes from an agent's newest entry still never closes its escalation by itself: the card asks you, as before.

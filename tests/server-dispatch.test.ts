@@ -278,9 +278,9 @@ test('answers the signed-in routes', async () => {
     assert.deepEqual(await res.json(), { error });
   };
   await bad(await get('/api/gh/pull?number=0', me), 400, 'Bad number');
-  await bad(await get('/api/gh/pull?number=3&floor=nope', me), 404, 'No such floor');
-  await bad(await get('/api/docs?floor=nope', me), 404, 'No such floor');
-  await bad(await get('/api/whiteboard/file?floor=nope', me), 404, 'No such floor');
+  await bad(await get('/api/gh/pull?number=3&floor=nope', me), 404, 'No such project');
+  await bad(await get('/api/docs?floor=nope', me), 404, 'No such project');
+  await bad(await get('/api/whiteboard/file?floor=nope', me), 404, 'No such project');
   await bad(await get(`/api/whiteboard/file?floor=${floor}&id=nope`, me), 404, 'No such picture');
   await bad(await get('/api/term/drop', me), 405, 'Method not allowed');
   await bad(await post('/api/term/drop', '', me), 403, 'Forbidden');
@@ -359,7 +359,7 @@ test('welcomes a browser and dispatches what it sends', async () => {
 
   // Only for Ada: a floor that isn't there, sign-ins on the shared password, and the accounts list.
   a.send({ t: 'floor.go', floor: 'nope' });
-  assert.deepEqual(await a.take('toast', (m) => m.level === 'warn'), { t: 'toast', text: 'No such floor', level: 'warn' });
+  assert.deepEqual(await a.take('toast', (m) => m.level === 'warn'), { t: 'toast', text: 'No such project', level: 'warn' });
   a.send({ t: 'signins.get' });
   assert.equal((await a.take('toast', (m) => m.level === 'warn')).text, "On the shared office password, workers run on the office's own sign-ins");
   a.send({ t: 'accounts.get' });

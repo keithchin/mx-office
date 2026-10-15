@@ -4,7 +4,7 @@ description: The Mendix app as Studio Pro shows it - the App Explorer, domain mo
 weight: 9.5
 ---
 
-The **📐 Model** tab shows the floor's Mendix app the way Studio Pro does, without opening Studio Pro. You can look at `main`, or at any worker's branch or open pull request. It is read-only: to change something, you ask the team with [Change this](#change-this).
+The **📐 Model** tab shows the project's Mendix app the way Studio Pro does, without opening Studio Pro. You can look at `main`, or at any worker's branch or open pull request. It is read-only: to change something, you ask the team with [Change this](#change-this).
 
 ## The layout
 
@@ -101,16 +101,16 @@ Each request is recorded in the [Audit log](audit-log.md) as `model.change-reque
 - Once there's a PR, the badge shows its number (*· #123*) and a **View change** link. It opens the PR's branch in this tab with **Changes in this branch** on.
 - When the PR merges, the badge goes away.
 
-The PR is found in the floor's list of pull requests the office already keeps: one whose title or description names the request's id, else the member's own PR opened since the request. Nothing new asks GitHub. The PR then goes through the usual review and verification; Needs you shows nothing new for it.
+The PR is found in the project's list of pull requests the office already keeps: one whose title or description names the request's id, else the member's own PR opened since the request. Nothing new asks GitHub. The PR then goes through the usual review and verification; Needs you shows nothing new for it.
 
 The office itself never writes the `.mpr`, runs MDL or touches the repository for a change request. The requests are kept in `.agent-office/model-change/`.
 
 ## Where it comes from
 
-The office reads the app straight from the floor's git history, never from Studio Pro. It reads only and never writes to the project.
+The office reads the app straight from the project's git history, never from Studio Pro. It reads only and never writes to the project.
 
 **What it reads:**
-- Each commit's model files come out of git one by one, as they're needed. The office never reads the floor's checkout, and it doesn't matter if Studio Pro has the project open.
+- Each commit's model files come out of git one by one, as they're needed. The office never reads the project's checkout, and it doesn't matter if Studio Pro has the project open.
 - Microflows, nanoflows and domain models are drawn from the model's own files, in milliseconds, without [mxcli](../integrations/mxcli.md). Positions and sizes come from the project itself, so diagrams keep the developer's layout. Only **Tidy layout** rearranges entities, and only in your view.
 - mxcli is used for the rest: the App Explorer tree, the MDL beside a diagram, documents shown as MDL (a page's Page view is drawn in your browser from that same MDL, in a millisecond or so, and only while the Page view is on screen), the System Overview, the Navigation and a module's security. The MDL panel fills in a moment after the diagram ("Reading the MDL…").
 

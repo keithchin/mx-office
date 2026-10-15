@@ -45,7 +45,7 @@ export const projectRunRoutes = {
     auth: 'session',
     handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, projectRunsOf(ctx).view(floor.id, ctx.meOf(session.account?.id).admin));
     },
   },
@@ -56,7 +56,7 @@ export const projectRunRoutes = {
     auth: 'session',
     async handle(ctx, { res, url }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const p = await projectRunsOf(ctx).preview(floor.id);
       return typeof p === 'string' ? send(res, 400, { error: p }) : send(res, 200, p);
     },
@@ -75,7 +75,7 @@ export const projectRunRoutes = {
       if ((b.action === 'resume' || b.action === 'pause' || b.action === 'continue') && refuseStale(ctx, req, res)) return;
       const who = whoOf(session.account?.name, b.by);
       const floors = b.all === true ? [...ctx.floors.keys()] : typeof b.floor === 'string' && ctx.floors.has(b.floor) ? [b.floor] : [];
-      if (!floors.length) return send(res, 404, { error: 'No such floor' });
+      if (!floors.length) return send(res, 404, { error: 'No such project' });
       const runs = projectRunsOf(ctx);
       const out: Record<string, unknown> = {};
       for (const id of floors) {

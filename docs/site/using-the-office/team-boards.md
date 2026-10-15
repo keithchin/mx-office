@@ -25,6 +25,6 @@ And panels for what each team cares about:
 | 🎨 Design | ✅ Design approvals (its artifacts are in 📄 Documents) |
 | 🛠️ Development | 🌐 Live app · 🔀 Development PRs |
 | 🧪 Testing | ❌ Failing · 🧪 CI scorecards |
-| 📈 Analysis | 📑 BRD & insight memos · 📊 Model ranking on this floor |
+| 📈 Analysis | 📑 BRD & insight memos · 📊 Model ranking on this project |
 
 A card belongs to a team through its `team:` label. Leads add `--label team:<team>` when they open a PR, and the office adds it to a Lead's PR that has none.

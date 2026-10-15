@@ -42,7 +42,7 @@ The JSON reports under `reports/testing/`, the toolkit's `docs/report.json` and 
 
 ## Where it looks
 
-- **Main**: the project's default branch on GitHub, `origin/<default>` (from `origin/HEAD`, else `main` or `master`), read with `git ls-tree` and `git cat-file` after a quiet fetch at most every 90 seconds, the same one the [setup panel](command-center.md#project-setup) uses. So *On main* means merged, whatever branch the floor's folder is on. When the folder is on another branch or behind, the panel says so at the top: *This folder is on run4/discovery-p-4, 23 commits behind main; "On main" below is read from main.* Only a project with no remote uses the folder itself (tracked files, or new and not ignored).
+- **Main**: the project's default branch on GitHub, `origin/<default>` (from `origin/HEAD`, else `main` or `master`), read with `git ls-tree` and `git cat-file` after a quiet fetch at most every 90 seconds, the same one the [setup panel](command-center.md#project-setup) uses. So *On main* means merged, whatever branch the project's folder is on. When the folder is on another branch or behind, the panel says so at the top: *This folder is on run4/discovery-p-4, 23 commits behind main; "On main" below is read from main.* Only a project with no remote uses the folder itself (tracked files, or new and not ignored).
 - **Each hired team member's worktree**, uncommitted work included.
 - **Every other `office/*` branch**, local or on GitHub, newest first (40 at most), with who it belongs to: the worker on it, else the team member whose name starts it (`office/barbara-stage1` is Barbara's).
 

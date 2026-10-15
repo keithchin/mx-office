@@ -199,7 +199,7 @@ export function workersRanking(d: RankingDeps) {
     return h(
       'div.rk-bar',
       {},
-      d.floor() ? seg('Scope', prefs.scope, [['floor', 'This floor'], ['all', 'All floors']], (v) => (prefs.scope = v)) : null,
+      d.floor() ? seg('Scope', prefs.scope, [['floor', 'This project'], ['all', 'All projects']], (v) => (prefs.scope = v)) : null,
       seg('Group by', prefs.group, [['none', 'No groups'], ['model', 'By model'], ['role', 'By role']], (v) => (prefs.group = v)),
       h('label.rk-label', {}, 'Sort ', select),
       h('label.rk-label.rk-check', {}, gone, ' Gone home'),

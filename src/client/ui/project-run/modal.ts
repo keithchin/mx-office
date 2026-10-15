@@ -133,7 +133,7 @@ export async function openResume(floor: string, after?: () => void) {
       p.blocked ? h('p.pr-blocked', { role: 'alert' }, `⛔ ${p.blocked}`) : '',
       ...p.warnings.map((w) => h('p.pr-warn', {}, `⚠️ ${w}`)),
       p.agents.length ? modes : '',
-      p.agents.length ? h('ol.pr-agents', {}, ...rows) : h('p.pr-dim', {}, 'Nobody on this floor is asleep.'),
+      p.agents.length ? h('ol.pr-agents', {}, ...rows) : h('p.pr-dim', {}, 'Nobody on this project is asleep.'),
       p.awake.length ? h('p.pr-dim', {}, `Already awake, left as they are: ${p.awake.join(', ')}`) : '',
       h('p.pr-dim', {}, 'Each is woken with a short brief (what happened while it slept, its open escalations, its branch state, what it’s owed) as your turn. The Coordinator goes first, then the Leads that block the most.'),
       estimate,
@@ -160,9 +160,9 @@ export function openPause(floor: string, name: string, awake: string[], after?: 
   const body = h(
     'div.body.pr-body',
     {},
-    h('p', {}, 'Every agent on this floor finishes the turn it’s on (never interrupted), writes a short handoff note, and goes to sleep with its session kept, so ▶ Resume project carries it on.'),
+    h('p', {}, 'Every agent on this project finishes the turn it’s on (never interrupted), writes a short handoff note, and goes to sleep with its session kept, so ▶ Resume project carries it on.'),
     h('p', {}, 'One waiting on a question in its terminal is left alone and listed as waiting on you: nothing is typed into it.'),
-    h('p', {}, 'While it’s paused the office sends this floor’s agents nothing of its own (nudges, standups, relays, review nudges, Firm interviews). What you send still goes through and wakes just that agent.'),
+    h('p', {}, 'While it’s paused the office sends this project’s agents nothing of its own (nudges, standups, relays, review nudges, Firm interviews). What you send still goes through and wakes just that agent.'),
     awake.length ? h('p.pr-dim', {}, `Awake now: ${awake.join(', ')}`) : h('p.pr-dim', {}, 'Nobody is awake: it only holds the office’s prompts.'),
     h('p.pr-dim', {}, 'It’s the clean way to stop before a restart, a release or a migration.'),
   );
@@ -201,7 +201,7 @@ export function confirmHireAnyway(): Promise<boolean> {
       'div.modal.pr-modal',
       { role: 'alertdialog', 'aria-label': 'Hire on a paused project' },
       h('header', {}, h('h2', {}, `⏸ ${PAUSED_HIRES}`)),
-      h('div.body.pr-body', {}, h('p', {}, 'This project is paused: the queue, meetings and the office hire nobody new until it’s resumed. Hire this one anyway? Only this hire goes ahead; the floor stays paused.')),
+      h('div.body.pr-body', {}, h('p', {}, 'This project is paused: the queue, meetings and the office hire nobody new until it’s resumed. Hire this one anyway? Only this hire goes ahead; the project stays paused.')),
       h('footer', {}, no, go),
     );
     const modal = openModal(el, { onClose: () => resolve(yes) });

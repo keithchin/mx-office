@@ -219,7 +219,7 @@ export function installPhone(deps: PhoneDeps): Phone {
     swap(list, [homeList(m, s, go)]);
     const quiet = dndLabel(alerts.settings());
     const busy = m.agents.filter((a) => a.status === 'working' || a.status === 'starting').length;
-    frame.sub.textContent = quiet || (s.s === 'floor' && s.floor === store.floor ? `${m.agents.length} agent${m.agents.length === 1 ? '' : 's'}${busy ? ` · ${busy} working` : ''}` : s.s === 'floor' ? 'Another floor' : (store.floors.find((f) => f.id === store.floor)?.name ?? ''));
+    frame.sub.textContent = quiet || (s.s === 'floor' && s.floor === store.floor ? `${m.agents.length} agent${m.agents.length === 1 ? '' : 's'}${busy ? ` · ${busy} working` : ''}` : s.s === 'floor' ? 'Another project' : (store.floors.find((f) => f.id === store.floor)?.name ?? ''));
     frame.back.hidden = screen.s === 'home';
     // The open log is drawn again only when what it's drawn from changed: building and comparing its
     // rows on every worker update (twice a second on a busy floor) cost a third of a second each time.
@@ -254,7 +254,7 @@ export function installPhone(deps: PhoneDeps): Phone {
       frame.title.textContent = a ? a.name : 'Direct message';
       rows = dmLog(m, s.workerId, rowActions);
       target = a && store.floor ? { floor: store.floor, place: { in: 'dm', workerId: a.workerId }, agents: ag } : undefined;
-      why = a ? undefined : 'That agent has left the floor';
+      why = a ? undefined : 'That agent has left the project';
       if (store.floor) mark(dmChannel(store.floor, s.workerId), dmMessages(messages(store.floor).list, s.workerId).slice(-1)[0]?.at);
     } else if (s.s === 'thread') {
       const esc = s.key.startsWith('esc:') ? s.key.slice(4) : undefined;

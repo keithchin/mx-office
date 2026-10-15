@@ -14,7 +14,7 @@ export const modelChangeRoutes = {
     auth: 'session',
     handle(ctx, { res, url }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, { requests: changeRequestsOf(ctx).list(floor.id, url.searchParams.get('all') === '1') });
     },
   },
@@ -32,7 +32,7 @@ export const modelChangeRoutes = {
         return send(res, 400, { error: 'Send JSON' });
       }
       const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The Project Manager');
       const r = await changeRequestsOf(ctx).request(floor.id, { elements: body.elements, ref: body.ref, sha: body.sha, request: body.request, role: body.role, when: body.when, by, ...(session.account?.id ? { owner: session.account.id } : {}) });
       if (typeof r === 'string') return send(res, 400, { error: r });

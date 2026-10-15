@@ -28,7 +28,7 @@ export function podium(r: RankingReport, pick: (key: string) => void): HTMLEleme
 
 export function table(r: RankingReport, pick: (key: string) => void): HTMLElement {
   const graded = r.workers.filter((w) => w.score !== undefined);
-  const head = ['#', 'Grade', 'Agent', 'Role', 'Model', ...(r.scope === 'all' ? ['Floor'] : []), 'Score', 'Trend', 'Tasks'];
+  const head = ['#', 'Grade', 'Agent', 'Role', 'Model', ...(r.scope === 'all' ? ['Project'] : []), 'Score', 'Trend', 'Tasks'];
   const row = (w: RankedWorker) =>
     h(
       `tr${w.gone ? '.gone' : ''}`,

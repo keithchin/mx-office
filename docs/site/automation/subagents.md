@@ -8,7 +8,7 @@ A Lead's team members are **Claude Code subagents**, running inside the Lead's s
 
 ## Names
 
-Each subagent (one per Lead and subagent type) gets a person's first name the first time the office sees it, like the Leads have: *Nia · Tester (Hedy's subagent)*. The name is kept in the floor's roster file and never changes by itself; no two on a floor share one, Leads included. A roster from before names gets them the next time the office starts, the same names every time. The name shows on the Workers tab, in the 2D view and the home page's Overview, in the Team chatter and the Team phone, in the activity and approvals, and on the Budget tab. Each Lead's Playbook names its subagents (*Nia, your Tester*), so the Lead calls them by name; it still dispatches each by its type, so `.claude/agents/<type>.md` and `office-workers subagent … <type>` are unchanged. The Project Manager can give one another name with **✏️ Rename** on its detail or the Org chart (recorded in the audit log as `subagent.rename`).
+Each subagent (one per Lead and subagent type) gets a person's first name the first time the office sees it, like the Leads have: *Nia · Tester (Hedy's subagent)*. The name is kept in the project's roster file and never changes by itself; no two on a project share one, Leads included. A roster from before names gets them the next time the office starts, the same names every time. The name shows on the Workers tab, in the 2D view and the home page's Overview, in the Team chatter and the Team phone, in the activity and approvals, and on the Budget tab. Each Lead's Playbook names its subagents (*Nia, your Tester*), so the Lead calls them by name; it still dispatches each by its type, so `.claude/agents/<type>.md` and `office-workers subagent … <type>` are unchanged. The Project Manager can give one another name with **✏️ Rename** on its detail or the Org chart (recorded in the audit log as `subagent.rename`).
 
 ## The track record
 
@@ -25,7 +25,7 @@ The office also follows each run live, from the moment the Lead's Agent call goe
 
 - **From the hooks**: the Agent tool's PreToolUse (the subagent, its task, its model) and PostToolUse (its answer, or, for a background run, its launch with Claude Code's agent id), and SubagentStart / SubagentStop. Several runs of the same subagent at once are each their own.
 - **From the Lead's transcript**, read every 10 seconds, for what no hook says: a background run finishing (its `<task-notification>`), or anything that happened while the office was down. The same run from both is counted once.
-- A floor keeps its **last 50 runs** in its roster file, each linked to the run record its Lead reviews, so a card shows the verdict. A run with no word of it for 6 hours is marked lost.
+- A project keeps its **last 50 runs** in its roster file, each linked to the run record its Lead reviews, so a card shows the verdict. A run with no word of it for 6 hours is marked lost.
 
 ## Actions
 

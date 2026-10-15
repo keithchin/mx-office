@@ -42,7 +42,7 @@ export class VerifyStore {
     readonly dir: string,
     readonly floorId: string,
   ) {
-    if (!FLOOR.test(floorId)) throw new Error(`not a floor id: ${floorId}`);
+    if (!FLOOR.test(floorId)) throw new Error(`not a project id: ${floorId}`);
     this.file = path.join(dir, `${floorId}.verify.json`);
   }
 

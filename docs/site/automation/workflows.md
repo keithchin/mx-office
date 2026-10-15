@@ -10,7 +10,7 @@ Some of the office's jobs are a list of steps that has to get to the end, even w
 
 A workflow is a set of named **steps** joined by **edges**. After a step, the run follows its edge to the next step. Most edges are fixed ("after clone, write the env file"). Some are **gates**: they look at what the run knows so far and pick where to go, so a review can send the work back to be done again.
 
-Each run has its own **state**: what it knows so far (the plan, the floor, the issue it opened). Each step reads it and adds to it.
+Each run has its own **state**: what it knows so far (the plan, the project, the issue it opened). Each step reads it and adds to it.
 
 ## Saved after every step
 
@@ -64,4 +64,4 @@ A step can also stop the run to **ask a question**. The run waits, saved, until 
 
 - The wizard's setup page shows its run's steps and log, as before.
 - The [Audit log](../using-the-office/audit-log.md) has each run's start, finish, failure, pause and cancel, by **Workflows** (`flow.start`, `flow.finish`, `flow.fail`, `flow.pause`, `flow.wait`, `flow.cancel`).
-- `GET /api/flows` lists the runs, newest first, with their status and step (`?floor=` for one floor's, `?workflow=` for one workflow's). It never includes a run's state.
+- `GET /api/flows` lists the runs, newest first, with their status and step (`?floor=` for one project's, `?workflow=` for one workflow's). It never includes a run's state.

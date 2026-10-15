@@ -33,7 +33,7 @@ export const rosterRoutes = {
     auth: 'session',
     handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       // With the project's budget level, for the "Solo · Lean" chip.
       const level = levelOf(ctx, floor.id);
       return send(res, 200, { ...rosterOf(ctx).view(teamFloor(ctx, floor), ctx.meOf(session.account?.id).admin), ...(level ? { level } : {}) });
@@ -46,7 +46,7 @@ export const rosterRoutes = {
     auth: 'session',
     handle(ctx, { res, url }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const all = rosterOf(ctx).data(floor.id).standups;
       const id = url.searchParams.get('id');
       const s = id ? all.find((x) => x.id === id) : all[all.length - 1];
@@ -67,7 +67,7 @@ export const rosterRoutes = {
         return send(res, 400, { error: 'Send JSON' });
       }
       const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const action = String(body.action ?? '');
       const me = ctx.meOf(session.account?.id);
       if (ADMIN_ONLY.has(action) && !me.admin) return send(res, 403, { error: 'Only the Project Manager (an admin) can do that' });

@@ -19,7 +19,7 @@ export function officeSubagent(ctx: Ctx, floor: Floor, me: WorkerInfo, body: unk
   const roster = rosterOf(ctx);
   const team = teamFloor(ctx, floor);
   const lead = roster.roleOf(team, me.id);
-  if (!lead || lead === 'pm') return send(res, 403, { error: "Only a Lead of this floor's team manages subagents (office-workers subagent): you aren't one" });
+  if (!lead || lead === 'pm') return send(res, 403, { error: "Only a Lead of this project's team manages subagents (office-workers subagent): you aren't one" });
   const op = String(b.op ?? '');
   if (op === 'list') return send(res, 200, { ok: true, text: roster.subagents.list(team, lead), subagents: roster.subagents.views(team).filter((v) => v.lead === lead) });
   if (op === 'review') {

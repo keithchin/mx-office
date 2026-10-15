@@ -33,7 +33,7 @@ function costLines(c: AcceptanceRecord['cost'], live = false): HTMLElement {
     {},
     h('h3', {}, live ? `💰 Spend as of ${when(c.at)} (the record freezes it when you confirm)` : `💰 Spend at acceptance, frozen ${when(c.at)}`),
     h('p', {}, `${usd(c.spent)}${fx} spent${c.estimated ? `, ${usd(c.estimated)} of it estimated from history` : ''}${c.budget ? ` · budget ${usd(c.budget)}` : ''}${c.planned ? ` · plan ${usd(c.planned)}` : ''}`),
-    c.unmeteredCalls ? h('p.acc-dim', {}, `⚠️ ${c.unmeteredCalls} calls the office couldn't price: the spend is a floor, not the whole cost.`) : null,
+    c.unmeteredCalls ? h('p.acc-dim', {}, `⚠️ ${c.unmeteredCalls} calls the office couldn't price: the spend is a lower bound, not the whole cost.`) : null,
     c.byStage.length ? h('ul.acc-lines', {}, ...c.byStage.map((s) => h('li', {}, h('span.acc-l', {}, s.label), h('small', {}, `${usd(s.actual)}${s.planned !== undefined ? ` of ${usd(s.planned)} planned` : ''}`)))) : null,
   );
 }

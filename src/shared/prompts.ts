@@ -183,11 +183,11 @@ const DEFS = {
   'worker.repos': {
     group: 'repos',
     label: '🗂️ Workspace brief',
-    used: "Written into the workspace of a worker hired across several floors' repositories, as its CLAUDE.md and AGENTS.md, which the agent reads when it starts.",
+    used: "Written into the workspace of a worker hired across several projects' repositories, as its CLAUDE.md and AGENTS.md, which the agent reads when it starts.",
     vars: {
       branch: 'The branch every worktree in the workspace is on',
       repos: "One line per repository: its folder in the workspace, its project and the branch it's cut from",
-      home: 'The project of the floor the worker was hired on (owner/name when it is on GitHub)',
+      home: 'The project the worker was hired on (owner/name when it is on GitHub)',
     },
     needs: ['repos'],
     text: [

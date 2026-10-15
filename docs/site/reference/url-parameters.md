@@ -1,6 +1,6 @@
 ---
 title: URL parameters
-description: Addresses you can bookmark or share - floors, tabs, teams, board filters, views and the docs.
+description: Addresses you can bookmark or share - projects, tabs, teams, board filters, views and the docs.
 weight: 8
 ---
 
@@ -10,7 +10,7 @@ The address always says where you are, so you can bookmark or share it.
 
 | Parameter | Values | Example |
 |---|---|---|
-| `floor` | A floor's id | `/lite?floor=travel-approval` |
+| `floor` | A project's id | `/lite?floor=travel-approval` |
 | `tab` | Without it a project opens on its Command Center (the Portal Overview), whichever tab you had last; a reload keeps the tab that browser tab showed. `command`, `board`, `teams`, `workers` (or `agents`), `analysis`, `live`, `git`, `model`, `org`, `standup`, `approvals`, `settings`, `tests` (the [Test Mode page](../administration/test-mode-page.md), admins; `&run=<id>` opens a run) (`team` is an old name for `org`) | `&tab=standup` |
 | `team` | With `tab=teams`: `management`, `design`, `development`, `testing`, `analysis` | `&tab=teams&team=testing` |
 | `teams` | With `tab=board`: the team filter | `&teams=design,testing` |

@@ -459,7 +459,7 @@ test("the wizard's network steps try again on a dropped connection, and say so i
     await book.run(job, impls);
     assert.equal(job.status, 'done', job.log.join('\n'));
     assert.equal(clock.slept.length, 1);
-    assert.ok(job.log.some((l) => l.startsWith('↻ Clone it as a floor failed (try 1 of 3)')));
+    assert.ok(job.log.some((l) => l.startsWith('↻ Clone it as a project failed (try 1 of 3)')));
     assert.ok(job.log.some((l) => l.includes('(try 2 of 3)')));
   } finally {
     rmSync(dir, { recursive: true, force: true });

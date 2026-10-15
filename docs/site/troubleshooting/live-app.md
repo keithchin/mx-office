@@ -4,7 +4,7 @@ description: The live app won't start, a port is taken, a stale build fails, sym
 weight: 2
 ---
 
-Open the **🌐 Live app** tab for its status and note. The full log is `<office data>/live/<floor>.log`.
+Open the **🌐 Live app** tab for its status and note. The full log is `<office data>/live/<project>.log`.
 
 ## "Address already in use"
 
@@ -34,7 +34,7 @@ Set `AGENT_OFFICE_LIVE_MXCLI` to mxcli's full path. The launcher sets it to `age
 
 ## The database can't be reached
 
-The live app uses the local PostgreSQL (`127.0.0.1:5432`, database `<floor>_live`). Check the PostgreSQL service is running. Change the host, user or password with `AGENT_OFFICE_LIVE_DB_*`.
+The live app uses the local PostgreSQL (`127.0.0.1:5432`, database `<project>_live`). Check the PostgreSQL service is running. Change the host, user or password with `AGENT_OFFICE_LIVE_DB_*`.
 
 ## It shows an old version
 

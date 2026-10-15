@@ -14,7 +14,7 @@ export const rankingRoutes = {
     handle(ctx, { res, url }) {
       const asked = url.searchParams.get('floor');
       const floor = asked && asked !== 'all' ? asked : undefined;
-      if (floor && !ctx.floors.has(floor) && !analysisOf(ctx).store.all().some((r) => r.floor === floor)) return send(res, 404, { error: 'No such floor' });
+      if (floor && !ctx.floors.has(floor) && !analysisOf(ctx).store.all().some((r) => r.floor === floor)) return send(res, 404, { error: 'No such project' });
       return send(res, 200, rankingReport(ctx, floor));
     },
   },

@@ -14,7 +14,7 @@ weight: 4
 
 ## 1. Work is a GitHub issue
 
-Every piece of work starts as an issue in the floor's repository. It lands in **📌 Backlog**. Each card carries a **team tag**, from its `team:` label: `team:design`, `team:development`, `team:testing`, `team:analysis` or `team:management`. Jeff · Router can suggest or set the team of an unlabelled issue. See [Jeff · Router](../automation/jeff-router.md).
+Every piece of work starts as an issue in the project's repository. It lands in **📌 Backlog**. Each card carries a **team tag**, from its `team:` label: `team:design`, `team:development`, `team:testing`, `team:analysis` or `team:management`. Jeff · Router can suggest or set the team of an unlabelled issue. See [Jeff · Router](../automation/jeff-router.md).
 
 ## 2. Someone starts it
 

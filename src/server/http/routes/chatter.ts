@@ -27,7 +27,7 @@ export const chatterRoutes = {
     auth: 'session',
     handle(ctx, { res, url }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const p = url.searchParams;
       return send(res, 200, chatterOf(ctx).page(floor.id, { since: num(p.get('since')), limit: num(p.get('limit')), cursor: p.get('cursor'), filter: chatterFilter(url) }));
     },

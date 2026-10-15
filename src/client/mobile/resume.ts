@@ -15,7 +15,7 @@ export async function pauseProject(p: Pick<ProjectStatus, 'floor' | 'name' | 'wo
   const busy = p.working + p.asking;
   const r = await act(
     { do: 'pause', floor: p.floor },
-    { title: `Pause ${p.name}?`, detail: `Every agent finishes its current turn, writes a handoff note and goes to sleep${busy ? ` (${busy} at work now)` : ''}. The office sends the floor none of its own prompts until you resume it. One asking you in its terminal is left waiting on you.`, label: `⏸ Pause ${p.name}` },
+    { title: `Pause ${p.name}?`, detail: `Every agent finishes its current turn, writes a handoff note and goes to sleep${busy ? ` (${busy} at work now)` : ''}. The office sends the project none of its own prompts until you resume it. One asking you in its terminal is left waiting on you.`, label: `⏸ Pause ${p.name}` },
   );
   return !!r;
 }
@@ -85,7 +85,7 @@ async function resumeSheet(p: Pick<ProjectStatus, 'floor' | 'name'>): Promise<bo
                 );
               }),
             )
-          : h('p.m-dim', {}, 'Nobody on this floor is asleep.'),
+          : h('p.m-dim', {}, 'Nobody on this project is asleep.'),
         preview.awake.length ? h('p.m-dim', {}, `Already awake, left as they are: ${preview.awake.join(', ')}.`) : '',
         h('p.m-dim', {}, 'To pick agents one by one, use the Resume preview on a computer.'),
       );

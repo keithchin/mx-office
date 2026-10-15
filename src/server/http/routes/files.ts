@@ -18,7 +18,7 @@ export const fileRoutes = {
     async handle(ctx, { req, res, url }) {
       const floor = floorParam(ctx, url);
       // Pictures on the whiteboard. Their ids are hashes of what's in them, so they never change.
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       if (req.method === 'GET') {
         const f = floor.whiteboard.file(url.searchParams.get('id') ?? '');
         if (!f) return send(res, 404, { error: 'No such picture' });
@@ -45,7 +45,7 @@ export const fileRoutes = {
       // A file dropped or pasted into a worker's terminal, kept on this machine for the terminal to type its path.
       if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
       if (!sameOrigin(req, ctx.cfg)) return send(res, 403, { error: 'Forbidden' });
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const workerId = str(url.searchParams.get('worker'), 32);
       if (!floor.workers.get(workerId)) return send(res, 404, { error: 'No such worker' });
       const tooBig = `That file is too big to drop into a terminal (${DROP_MAX_BYTES / 1024 / 1024} MB at most)`;
@@ -71,7 +71,7 @@ export const fileRoutes = {
       const file = str(url.searchParams.get('path'), 4096);
       const side = url.searchParams.get('side');
       if (!workerId || !file || (side !== 'old' && side !== 'new')) return send(res, 400, { error: 'Bad request' });
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       if (!floor.workers.get(workerId)) return send(res, 404, { error: 'No such worker' });
       const r = await floor.changes.file(workerId, file, side, repoOf(url.searchParams.get('repo')));
       if ('error' in r) return send(res, r.status, { error: r.error });
@@ -94,7 +94,7 @@ export const fileRoutes = {
     async handle(ctx, { res, url, path: p }) {
       const floor = floorParam(ctx, url);
       // The bookshelf: the project's Markdown files, one to read, and the pictures in it (see docs.ts).
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       if (p === '/api/docs') return send(res, 200, await floor.docs.list());
       const file = str(url.searchParams.get('path'), 4096);
       if (!file) return send(res, 400, { error: 'Bad request' });

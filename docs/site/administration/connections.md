@@ -76,11 +76,11 @@ If git has no identity, set one for the workers' commits there: it goes into the
 
 ## Worktrees stay in the project
 
-Agents used to make git worktrees in `AppData\Local\Temp\<name>` or next to the project (`agent-spike\leslie-brd`), where the office never saw or cleaned them. Now every Claude worker has a hook (`bin/worktree-guard.js`, beside Studio mode's guard) that refuses `git worktree add` anywhere but the floor's `.agent-office/worktrees/`, and tells the agent the exact path to use. The Playbooks say so too.
+Agents used to make git worktrees in `AppData\Local\Temp\<name>` or next to the project (`agent-spike\leslie-brd`), where the office never saw or cleaned them. Now every Claude worker has a hook (`bin/worktree-guard.js`, beside Studio mode's guard) that refuses `git worktree add` anywhere but the project's `.agent-office/worktrees/`, and tells the agent the exact path to use. The Playbooks say so too.
 
 ## Worktree cleanup
 
-Every hour (the first time ten minutes after the office starts), and on **▶ Run now**, the office looks at each floor's worktrees under `.agent-office/worktrees/` and removes the ones where:
+Every hour (the first time ten minutes after the office starts), and on **▶ Run now**, the office looks at each project's worktrees under `.agent-office/worktrees/` and removes the ones where:
 
 - no worker of the office has it any more (sent home, gone),
 - its branch is merged into origin's copy of the project's branch or origin's default branch (a merge, a fast-forward, or a squash or rebase merge: the content is there),
@@ -88,4 +88,4 @@ Every hour (the first time ten minutes after the office starts), and on **▶ Ru
 
 Its branch goes too, and each removal is in the audit log (`worktree.removed`). Before git deletes the folder, every symlink and junction inside it is unlinked without being followed, so a `node_modules` junction's target is never touched. Everything else is kept, with the reason on the page; worktrees made outside `.agent-office/worktrees/` are only listed. **🟢 On / ⚪ Off** switches it (on by default).
 
-The setup panel's gate-check runs in temporary detached worktrees (`ao-gates-*` in the system's temp folder). An office stopped mid-run leaves them behind, so shortly after start, and with every sweep (whether the cleanup is on or off), the office removes the ones made before it started or longer ago than any gate-check runs, never while a gate-check of that floor is running, and then runs `git worktree prune`.
+The setup panel's gate-check runs in temporary detached worktrees (`ao-gates-*` in the system's temp folder). An office stopped mid-run leaves them behind, so shortly after start, and with every sweep (whether the cleanup is on or off), the office removes the ones made before it started or longer ago than any gate-check runs, never while a gate-check of that project is running, and then runs `git worktree prune`.

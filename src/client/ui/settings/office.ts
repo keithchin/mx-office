@@ -39,7 +39,7 @@ export function incidentsPart(): Built {
   edit.addEventListener('click', () => rules && rulesForm(rules, () => void load()));
   void load();
   return {
-    nodes: [setting('Detection rules', 'office', list, h('div.seg', {}, edit), h('p.setting-note', {}, 'Each rule opens an incident by itself, or counts again into the open one from the same rule on the same floor. Incidents are on the 🧾 Audit log’s Incidents tab, and the serious ones (sev1, sev2) in Needs you.'))],
+    nodes: [setting('Detection rules', 'office', list, h('div.seg', {}, edit), h('p.setting-note', {}, 'Each rule opens an incident by itself, or counts again into the open one from the same rule on the same project. Incidents are on the 🧾 Audit log’s Incidents tab, and the serious ones (sev1, sev2) in Needs you.'))],
     off: () => (gone = true),
   };
 }

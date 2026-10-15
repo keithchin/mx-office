@@ -31,7 +31,7 @@ export const testingRoutes = {
     auth: 'session',
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       try {
         const part = url.searchParams.get('part');
         if (part === 'plan') {
@@ -66,7 +66,7 @@ export const testingRoutes = {
       }
       if (refuseStale(ctx, req, res)) return;
       const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       // A named person: the signed-in account, else the name the page sends (an office with a shared password only).
       const name = session.account?.name ?? (typeof body.by === 'string' ? body.by.trim().slice(0, 80) : '');
       if (!name) return send(res, 400, { error: 'Say who you are (by): a waiver or a policy change is recorded with a name' });
@@ -100,7 +100,7 @@ export const testingRoutes = {
       }
       if (refuseStale(ctx, req, res)) return;
       const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       if (body.what !== 'tests' && body.what !== 'quality') return send(res, 400, { error: 'what: tests or quality' });
       const name = session.account?.name ?? (typeof body.by === 'string' ? body.by.trim().slice(0, 80) : '');
       const who = { name: name || 'An admin', ...(session.account?.id ? { accountId: session.account.id } : {}) };

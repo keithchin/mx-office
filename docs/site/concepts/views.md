@@ -1,17 +1,17 @@
 ---
 title: The two views
-description: Every project as its 1D view (the Command Center, board and tabs) and its 2D Office view (the floor from above in pixel art) - what each is for and how to go between them.
+description: Every project as its 1D view (the Command Center, board and tabs) and its 2D Office view (the project from above in pixel art) - what each is for and how to go between them.
 weight: 3
 aliases:
   - using-the-office/3d-view
 ---
 
-Every project has two views. Both show the same floor, live.
+Every project has two views. Both show the same project, live.
 
 | View | Address | What it's for |
 |---|---|---|
 | 🗂️ **1D view** | `/lite?floor=<id>` | Where every project opens: the Command Center first, then the board, the agents, the team and the other tabs. Daily work. Works on a phone. |
-| 🗺️ **2D Office view** | `/pixel?floor=<id>` | The floor from above in pixel art: team zones, Jeff's glass room, benched Leads on their breaks, every agent at its desk. |
+| 🗺️ **2D Office view** | `/pixel?floor=<id>` | The project from above in pixel art: team zones, Jeff's glass room, benched Leads on their breaks, every agent at its desk. |
 
 ## Going between them
 

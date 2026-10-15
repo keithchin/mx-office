@@ -42,7 +42,7 @@ test("floors that aren't there can't be taken off", (t) => {
   const { root, dataDir } = office(t);
   const building = new Building(dataDir, root);
 
-  assert.equal(building.remove('nope'), 'No such floor');
+  assert.equal(building.remove('nope'), 'No such project');
   assert.deepEqual(saved(dataDir), ['api', 'web', 'docs']);
 });
 

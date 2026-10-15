@@ -117,7 +117,7 @@ Everything else reads those, and needs no change of its own:
 - The `AgentProvider` union and `isAgentProvider` are `AGENT_PROVIDERS`.
 - The persistence allowlist (`src/server/workers/persist.ts`), the executable, model and effort
   checks (`configuredProvider`, `validateWorkerModel` and `validateWorkerEffort` in
-  `src/server/agents.ts`, which the queue and meetings use too) and which providers a floor offers
+  `src/server/agents.ts`, which the queue and meetings use too) and which providers a project offers
   (`agentProviders`, in the same file) go by the table.
 - So do the client's labels, badges, usage states and notes (`src/client/ui/provider.ts`, which
   `terminal.ts`, `workers-panel.ts`, `queue.ts` and `usage.ts` beside it use), and the hire

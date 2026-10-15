@@ -106,7 +106,7 @@ export function restartSetting(frame: (body: Node[]) => HTMLElement): { section:
     log.textContent = v.log ?? '';
     log.classList.toggle('hidden', !v.log);
     note.replaceChildren(
-      h('p', {}, 'Pauses every project (agents finish their turn, hand off and sleep; one asking you something is left as it is), waits until no agent is mid-turn, then restarts the office. The floors it paused are resumed when it’s back; a floor you paused yourself stays paused. It says it restarted only once the new office answers, with the version it runs.'),
+      h('p', {}, 'Pauses every project (agents finish their turn, hand off and sleep; one asking you something is left as it is), waits until no agent is mid-turn, then restarts the office. The projects it paused are resumed when it’s back; a project you paused yourself stays paused. It says it restarted only once the new office answers, with the version it runs.'),
       v.loop
         ? h('p', {}, '✓ Started by a launcher that restarts it (exit code 75).')
         : h('div', {}, h('p', {}, h('strong', {}, 'start-office.ps1 needs the restart loop. '), 'Without it this only pauses, waits and exits; start the office again by hand. A launcher that loops:'), h('pre.pr-log', {}, LAUNCHER_SNIPPET)),

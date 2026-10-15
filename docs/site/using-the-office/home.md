@@ -1,12 +1,12 @@
 ---
 title: Home
-description: The /home page - every project as a card, the office's statistics, a 2D overview of every floor, and the audit log of the whole office.
+description: The /home page - every project as a card, the office's statistics, a 2D overview of every project, and the audit log of the whole office.
 weight: 2
 ---
 
 `/home` is where the office opens. It has four tabs. The last one you used is remembered, and a link can open one with `?tab=projects`, `?tab=stats`, `?tab=overview` or `?tab=audit`.
 
-The top bar has **🏠**, a **back link** to the floor you were last on (in the view you last used), **📑 The Firm** (opens [/firm](the-firm.md)), **📚 Docs**, **🎨** and **☰**.
+The top bar has **🏠**, a **back link** to the project you were last on (in the view you last used), **📑 The Firm** (opens [/firm](the-firm.md)), **📚 Docs**, **🎨** and **☰**.
 
 **Loading.** Home, the 1D and 2D views and the phone version open on **Mx Office**'s loading screen, drawn by the page itself so it's there at once: *Loading Mx Office… 60 %*, moving on as the page's code loads, your sign-in is checked, the connection comes up, the office's data arrives and the first view is drawn, then it fades. In the page's color theme, without emoji in the Clean themes, and without animation when your system asks for reduced motion. If the office can't be reached (it's restarting, down, or the computer just woke from sleep), it says *Reconnecting to Mx Office…*, keeps trying, and carries on once the office answers; a connection lost for more than 2 seconds later brings it back the same way. Only the office itself says it is restarting (**Restarting… reconnecting**, see [Running the office](../administration/running-the-office.md#which-version-is-running)).
 
@@ -16,8 +16,8 @@ The top bar has **🏠**, a **back link** to the floor you were last on (in the 
 
 - the page's title, **Projects**, with **Add project** and **New project** (the wizard) at its right, over Home's tabs (Projects, Statistics, 2D Overview, Audit log, Budget) drawn as underline tabs;
 - a filter row: **Search by project name** (the name or the repository), a status select (*All statuses*, *Needs you*, *Running*, *Paused*, *Being added*), the sort (*Pinned*, *Recent activity*, *Name*) with a button that turns the order round, and **Pause all projects** / **Resume all** and **Connections** (admins). The status and the sort are remembered in this browser;
-- a card per project: a tile with its letters in the floor's colour, its name (opens its board), `repo · ⎇ branch`, the one-line summary, the small progress bar, and at the bottom its status (*Running*, *Needs you*, *Paused*, *Being added*) and what it has spent against its budget;
-- at each card's top right: **👁 watch** (on by default; a project you stop watching no longer calls you over from another floor's pages or counts in the tab title), **pin** (pinned projects come first under *Pinned*), and **⋯**: *Open project*, *View live app*, *Edit in Studio Pro* (asks to open it from the project's page, admins) and, for admins, *Pause project* or *Resume project*.
+- a card per project: a tile with its letters in the project's colour, its name (opens its board), `repo · ⎇ branch`, the one-line summary, the small progress bar, and at the bottom its status (*Running*, *Needs you*, *Paused*, *Being added*) and what it has spent against its budget;
+- at each card's top right: **👁 watch** (on by default; a project you stop watching no longer calls you over from another project's pages or counts in the tab title), **pin** (pinned projects come first under *Pinned*), and **⋯**: *Open project*, *View live app*, *Edit in Studio Pro* (asks to open it from the project's page, admins) and, for admins, *Pause project* or *Resume project*.
 
 Pins and watches are kept per viewer, in this browser. The cards follow the office live; on a phone they're one a row.
 
@@ -25,7 +25,7 @@ In the other themes the tab is as below.
 
 ![Projects on the home page](../images/home-projects.png)
 
-One card per floor:
+One card per project:
 
 - its number, name and a *last visited* tag;
 - `repo · ⎇ branch`, or a progress bar while it clones;
@@ -63,17 +63,17 @@ Above the cards:
 
 ## 🗺️ 2D Overview
 
-![Every floor at once](../images/home-overview.png)
+![Every project at once](../images/home-overview.png)
 
-Every floor drawn in pixel art on one canvas, each under a banner with its name and numbers. It refreshes every 10 seconds.
+Every project drawn in pixel art on one canvas, each under a banner with its name and numbers. It refreshes every 10 seconds.
 
 - Hover a worker, or a benched Lead on a break, for details. A Lead's subagents are there as in the 2D view: on stools beside its desk while they work, about the office otherwise.
-- Click a banner (or double-click a floor) to open the project (its 1D view).
+- Click a banner (or double-click a project) to open the project (its 1D view).
 - Zoom with the wheel or pinch, drag to pan, **+ − 0** and the arrows work too.
 
 ## 🧾 Audit log
 
-The office's [audit log](audit-log.md) across **Every floor**, with a floor column and a floor picker (or **Office-wide** for sign-ins, settings and floors added and removed). Same filters, histogram, chain badge and, for admins, CSV / JSONL export as a project's tab.
+The office's [audit log](audit-log.md) across **Every project**, with a project column and a project picker (or **Office-wide** for sign-ins, settings and projects added and removed). Same filters, histogram, chain badge and, for admins, CSV / JSONL export as a project's tab.
 
 ## 💰 Budget
 

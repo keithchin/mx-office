@@ -38,16 +38,16 @@ export interface OverviewView {
 
 /** Draws the tab into `root`. `leaving` hears the page head off to a floor. */
 export function overviewView(root: HTMLElement, leaving: () => void): OverviewView {
-  const canvas = h('canvas.ov-canvas', { 'aria-label': 'Every floor from above: hover an agent for what it is on, click a floor’s name to open the project' });
+  const canvas = h('canvas.ov-canvas', { 'aria-label': 'Every project from above: hover an agent for what it is on, click a project’s name to open it' });
   const tip = h('div.ov-tip.px-panel.hidden', { role: 'tooltip' });
   const level = h('span', {}, 'Fit');
   const zoomBtn = (id: string, label: string, title: string, child: Node | string) => h('button.px-btn', { id, type: 'button', title, 'aria-label': label }, child);
   const out = zoomBtn('ov-zoom-out', 'Zoom out', 'Zoom out (−)', '−');
-  const fit = zoomBtn('ov-zoom-fit', 'Fit every floor', 'Fit every floor (0)', level);
+  const fit = zoomBtn('ov-zoom-fit', 'Fit every project', 'Fit every project (0)', level);
   fit.classList.add('px-zoom-level');
   const inn = zoomBtn('ov-zoom-in', 'Zoom in', 'Zoom in (+)', '+');
   const stage = h('div.ov-stage.px-game', {}, canvas, tip, h('div.px-panel.px-zoom', { role: 'group', 'aria-label': 'Zoom' }, out, fit, inn));
-  const note = h('p.ov-note', {}, 'Loading the floors…');
+  const note = h('p.ov-note', {}, 'Loading the projects…');
   root.replaceChildren(h('div.home-head', {}, h('h2', {}, '🗺️ 2D Overview'), note), stage);
 
   const g = canvas.getContext('2d')!;
@@ -88,7 +88,7 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
       a.update(f, theme);
       return a;
     });
-    note.textContent = o.floors.length ? `Every floor from above, live · click a floor's name (or double-click the floor) to open the project` : 'No projects yet: ➕ Add project on the Projects tab.';
+    note.textContent = o.floors.length ? `Every project from above, live · click a project's name (or double-click it) to open it` : 'No projects yet: ➕ Add project on the Projects tab.';
     layout();
   }
 
@@ -101,7 +101,7 @@ export function overviewView(root: HTMLElement, leaving: () => void): OverviewVi
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `HTTP ${res.status}`);
       take((await res.json()) as Overview);
     } catch (err) {
-      if (!data) note.textContent = `Couldn't load the floors: ${(err as Error).message}`;
+      if (!data) note.textContent = `Couldn't load the projects: ${(err as Error).message}`;
     } finally {
       fetching = false;
     }

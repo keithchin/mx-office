@@ -172,7 +172,7 @@ function repoPicker(c: PageCtx): HTMLElement {
     if (got.installed) d.mendix = got.installed;
     c.redraw();
   });
-  const note = store.repos.loading ? 'Asking GitHub for the repositories this office can see…' : store.repos.error ? `⚠️ ${store.repos.error}` : 'A repository that is already a floor is used where it is; any other is cloned as a new floor first.';
+  const note = store.repos.loading ? 'Asking GitHub for the repositories this office can see…' : store.repos.error ? `⚠️ ${store.repos.error}` : 'A repository that is already a project is used where it is; any other is cloned as a new project first.';
   return h('div', {}, field('Repository', input, note), list);
 }
 
@@ -281,7 +281,7 @@ export function teamPage(c: PageCtx): HTMLElement {
     {},
     field('Client name(s)', clients, 'Comma-separated. Kept in the project’s settings file (agent-office.project.json, committed with the project) for the client portal.'),
     field('Operator(s)', ops, 'The people who speak for the client in the office and answer the Chief Analyst.'),
-    h('p.setting-note', {}, `The team (${PROJECT_ROLES.filter((r) => d.roles.includes(r.id)).map((r) => r.label).join(', ') || 'nobody'}) is hired on the new floor once the scaffold is pushed, so it is at its desks when you arrive. Also saved in agent-office.project.json at the repository’s root.`),
+    h('p.setting-note', {}, `The team (${PROJECT_ROLES.filter((r) => d.roles.includes(r.id)).map((r) => r.label).join(', ') || 'nobody'}) is hired on the new project once the scaffold is pushed, so it is at its desks when you arrive. Also saved in agent-office.project.json at the repository’s root.`),
     h('h3.wz-h', {}, 'Discovery'),
     h('label.wz-check', {}, issue, ` Open a “Discovery” issue for the ${who} (Stages P → 4, stopping at every ✋ gate)`),
     h('div.wz-row.wz-indent', {}, h('label.wz-check', {}, queue, analyst ? ` Hand it to the ${who} now, as its first task` : ' Queue it now for an agent'), analyst ? null : model),

@@ -66,7 +66,7 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
   const repo = h('input', { type: 'text', id: 'nw-start-repo', placeholder: 'owner/name', autocomplete: 'off', spellcheck: 'false', list: 'nw-start-repos' }) as HTMLInputElement;
   repo.value = repoText(flow.draft?.repo);
   const repoList = h('datalist', { id: 'nw-start-repos' });
-  const repoRow = h('div.nw-field.nw-start-repo', {}, h('label', { for: 'nw-start-repo' }, 'The app’s repository'), repo, h('span.nw-hint', {}, 'A repository that is already a floor is used where it is; any other is cloned as a new floor first.'), repoList);
+  const repoRow = h('div.nw-field.nw-start-repo', {}, h('label', { for: 'nw-start-repo' }, 'The app’s repository'), repo, h('span.nw-hint', {}, 'A repository that is already a project is used where it is; any other is cloned as a new project first.'), repoList);
   const foot = h('p.nw-footnote', {});
   const manualBtn = h('button.nw-link', { type: 'button' }, icon('pencil'), 'Fill in the brief yourself');
   const problem = h('p.nw-problem', { role: 'alert' });

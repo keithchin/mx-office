@@ -122,9 +122,9 @@ export function gitView(root: HTMLElement, deps: GitViewDeps): GitView {
     if (!visible) return;
     tip.hide();
     const floor = store.floor;
-    if (!floor) return root.replaceChildren(empty('🗺️', 'No floor picked', 'Pick a floor up top and its branches grow here.'));
+    if (!floor) return root.replaceChildren(empty('🗺️', 'No project picked', 'Pick a project up top and its branches grow here.'));
     if (error && (!graph || graph.floor !== floor)) {
-      return root.replaceChildren(empty('🚧', 'The tracks are blocked', `Couldn't read this floor's branches: ${error}`, h('button.btn', { type: 'button', onclick: () => void refresh() }, '🔄 Try again')));
+      return root.replaceChildren(empty('🚧', 'The tracks are blocked', `Couldn't read this project's branches: ${error}`, h('button.btn', { type: 'button', onclick: () => void refresh() }, '🔄 Try again')));
     }
     if (!graph || graph.floor !== floor) return root.replaceChildren(empty('🚂', 'Laying the tracks…', 'Asking git about the branches.'));
     const g = withLive(graph, store.workers.values(), store.pulls.items);

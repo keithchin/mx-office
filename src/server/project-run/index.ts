@@ -32,14 +32,14 @@ export class ProjectRuns {
 
   async preview(floorId: string): Promise<ResumePreview | string> {
     const f = this.deps.floor(floorId);
-    if (!f) return 'No such floor';
+    if (!f) return 'No such project';
     return (await previewFloor(this.deps, f)).preview;
   }
 
   /** Starts a resume of the floor with what the person picked; the run, or why not. */
   async resume(floorId: string, choice: ResumeChoice, by: string, byId?: string, reason?: string): Promise<RunProgress | string> {
     const f = this.deps.floor(floorId);
-    if (!f) return 'No such floor';
+    if (!f) return 'No such project';
     const { preview, candidates } = await previewFloor(this.deps, f);
     if (preview.blocked) return preview.blocked;
     this.stopGoing(floorId);
@@ -56,7 +56,7 @@ export class ProjectRuns {
 
   /** Starts pausing the floor; the run, or why not. */
   pause(floorId: string, by: string, byId?: string, why: PauseWhy = 'person'): RunProgress | string {
-    if (!this.deps.floor(floorId)) return 'No such floor';
+    if (!this.deps.floor(floorId)) return 'No such project';
     this.stopGoing(floorId);
     const run = this.deps.engine.create<PauseRun>(PAUSE_FLOW, { floor: floorId, by, byId, why, agents: [] }, { floor: floorId, by });
     void this.deps.engine.start(run.runId).catch((err) => console.error(`agent-office: pause of ${floorId} failed: ${(err as Error).message}`));

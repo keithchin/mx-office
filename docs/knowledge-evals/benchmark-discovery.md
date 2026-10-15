@@ -139,7 +139,7 @@ mxcli run --local -p LeaveBaseline.mpr --mxbuild-path "C:\Program Files\Mendix\1
   --db-host 127.0.0.1:5432 --db-user postgres --db-password postgres --db-name bench_baseline_t1 --ensure-db
 ```
 
-The office passes `MXBUILD_PATH` through the floor's `toolkit.env` rather than `--mxbuild-path`. It puts PostgreSQL's `bin` on PATH, because `--ensure-db` calls `psql`/`createdb`. It treats any HTTP response below 500 on the app port as "up". [`scripts/benchmark/trial-app.sh`](../../scripts/benchmark/trial-app.sh) `start` does the same with pinned inputs.
+The office passes `MXBUILD_PATH` through the project's `toolkit.env` rather than `--mxbuild-path`. It puts PostgreSQL's `bin` on PATH, because `--ensure-db` calls `psql`/`createdb`. It treats any HTTP response below 500 on the app port as "up". [`scripts/benchmark/trial-app.sh`](../../scripts/benchmark/trial-app.sh) `start` does the same with pinned inputs.
 
 | Start | Time to HTTP 200 | Notes |
 |---|---|---|
@@ -151,7 +151,7 @@ The office passes `MXBUILD_PATH` through the floor's `toolkit.env` rather than `
 `mklink /J %USERPROFILE%\.mxcli\mxbuild\11.12.4\runtime %USERPROFILE%\.mxcli\runtime\11.12.4\runtime`.
 The 11.12.2 link from earlier today exists as a real symlink, so whatever made it ran with the privilege. E4's environment preflight must check for this link.
 
-**Blocker 2: ambient `MXBUILD_PATH`.** This machine's user environment has `MXBUILD_PATH=…\10.24.25.122571\modeler\mxbuild.exe`. Every trial process (agents included) must get 11.12.4's path explicitly, as `withFloorToolkitEnv` does for floors. Otherwise toolkit gates exit 2 and builds fail.
+**Blocker 2: ambient `MXBUILD_PATH`.** This machine's user environment has `MXBUILD_PATH=…\10.24.25.122571\modeler\mxbuild.exe`. Every trial process (agents included) must get 11.12.4's path explicitly, as `withFloorToolkitEnv` does for projects. Otherwise toolkit gates exit 2 and builds fail.
 
 **Runtime facts:**
 - The app writes its log to `<project>\.mxcli\runtime.log`.
@@ -173,7 +173,7 @@ UI selectors for the *agent's* screens can't be known in advance. That's why the
 
 ### (b) Reading persisted state
 
-- **Database:** PostgreSQL, one database per app (`--db-name`). The office keys it by floor: `databaseName(floorId)` gives `<floor>_live`.
+- **Database:** PostgreSQL, one database per app (`--db-name`). The office keys it by project: `databaseName(floorId)` gives `<floor>_live`.
 - **Schema naming:**
   - Tables are `public."<module>$<entity>"` in lowercase (`hr$employee`, `notices$notice`, `system$user`, `administration$account`).
   - Attributes are lowercase columns.
@@ -247,7 +247,7 @@ The names `Leave.LeaveRequest`, `StartDate`, `EndDate`, `Status`, `Reason`, `Dec
 
 ### Where the hidden fixtures live
 
-- Case revision: `<officeDir>/benchmarks/leave-approval/<rev>/`, which is outside `<data>/floors`, outside every floor checkout and outside the scratch trial folders. It contains:
+- Case revision: `<officeDir>/benchmarks/leave-approval/<rev>/`, which is outside `<data>/floors`, outside every project checkout and outside the scratch trial folders. It contains:
   - `case.json` (public prompt and verification interface, the 8 criteria, limits: $100 per arm and a wall-clock ceiling, environment pins from section 2);
   - `starting/baseline.bundle` plus its sha256;
   - `verifiers/` (`c1.mjs` … `c8.mjs`, the shared `lib/session.mjs` with login and `mx.data` helpers, `expected/security-baseline.json`);
@@ -260,8 +260,8 @@ The names `Leave.LeaveRequest`, `StartDate`, `EndDate`, `Status`, `Reason`, `Dec
 
 Measured with `scripts/benchmark/trial-app.sh`:
 
-1. **Fresh checkout:** `trial-app.sh reset <bundle> <trial-dir>` clones the bundle and removes origin (2 s). It then checks `HEAD == 1cd01e4…` (the case's base sha). In the office, the trial dir becomes a **new test-mode floor** (`src/server/testmode.ts`) with its own id, so its live-app database name `<floor>_live` is new by construction.
-2. **Pinned environment:** `MXBUILD_PATH` set to 11.12.4's mxbuild through the floor's `.claude/toolkit.env` (written by the harness, never inherited), `MXCLI_VERSION`, and the trial's config manifest (shape, models, effort, autonomy, budget cap of $100, toolkit commit, mxcli version, Library corpus hash).
+1. **Fresh checkout:** `trial-app.sh reset <bundle> <trial-dir>` clones the bundle and removes origin (2 s). It then checks `HEAD == 1cd01e4…` (the case's base sha). In the office, the trial dir becomes a **new test-mode project** (`src/server/testmode.ts`) with its own id, so its live-app database name `<floor>_live` is new by construction.
+2. **Pinned environment:** `MXBUILD_PATH` set to 11.12.4's mxbuild through the project's `.claude/toolkit.env` (written by the harness, never inherited), `MXCLI_VERSION`, and the trial's config manifest (shape, models, effort, autonomy, budget cap of $100, toolkit commit, mxcli version, Library corpus hash).
 3. **Fresh database:** refuse to start if the target database already exists (`trial-app.sh start` does). `--ensure-db` creates it. On startup the runtime syncs the schema and the after-startup microflow seeds it (about 10 s inside the start).
 4. **Fresh runtime state:** a new clone means no `deployment/` and no `.mxcli/`, so the first build is cold (105–250 s). Before grading, the verifier workspace gets its *own* fresh database (`<runId>_verify`). Grading never reuses the database the agents worked against, because agents may have left data in it.
 5. **Teardown:** `trial-app.sh stop <dir>` (kills the tree by the pid in `.mxcli/run-local.json`), `trial-app.sh drop <db>`, and archive or remove the trial folder after the freeze. No sessions are carried over: new worktrees, new PTYs, no resumed Claude sessions.
@@ -273,7 +273,7 @@ Expected overhead per trial, outside agent time: about 5 min for setup and about
 
 - **Where transcripts are:** `%USERPROFILE%\.claude\projects\<encoded cwd>\<sessionId>.jsonl`. The encoding is `path.resolve(dir).replace(/[^a-zA-Z0-9]/g, '-')` (`src/server/analysis/transcript.ts:31-32`). **Subagent transcripts are in `<encoded cwd>\<sessionId>\subagents\*.jsonl`** (seen in this session's own folder). `readSession()` reads only the main file, so an import that skips the subagent files would undercount tokens and cost.
 - **Procedure for arm A:**
-  1. Reset as in section 7, into a folder that isn't an office floor.
+  1. Reset as in section 7, into a folder that isn't an office project.
   2. Write the same pinned `toolkit.env`.
   3. Run `claude` there with the identical public prompt, the same tools and permissions, and the same $100 ceiling, enforced by the operator and by `cost-state` if present.
   4. Record the start and finish time and any interventions.
@@ -290,7 +290,7 @@ Expected overhead per trial, outside agent time: about 5 min for setup and about
    - **(c)** A human or LLM maps names after delivery. This adds grader subjectivity.
 
    **Recommendation: (a).** It's deterministic, it states no new business rules, and it costs every arm the same. It changes the prompt from the spec's verbatim text, so record that in `case.json`.
-2. **Starting bundle with or without the toolkit scaffold.** Office floors always have it; an external arm A doesn't need it. Recommendation: **with**, committed once at freeze (25 min, one-off), so every arm starts from the identical tree.
+2. **Starting bundle with or without the toolkit scaffold.** Office projects always have it; an external arm A doesn't need it. Recommendation: **with**, committed once at freeze (25 min, one-off), so every arm starts from the identical tree.
 3. **Trial-license runtime limit.** The runtime warns it will terminate after a maximum time. Measure it in E4. If it's shorter than a trial, the live app needs a restart policy, and grading always uses its own fresh start anyway.
 4. **Symlink privilege and junction.** This needs an E4 preflight check, and possibly a fix in mxcli (fall back to a junction on Windows).
 5. **`lint-gate.sh` exits 1 on a baseline with no `ACT_` microflows** (CONV020 "inspected nothing"). Either seed one `ACT_` microflow in the baseline or treat that line as advisory. Until then, criterion 8 uses the `mxcli lint` JSON summary (`errors`) plus "no rule rose".
@@ -300,7 +300,7 @@ Expected overhead per trial, outside agent time: about 5 min for setup and about
    - the `mxcli lint` exit code when there are error-severity findings;
    - memory use per live app, and how many trials fit in parallel;
    - the license time limit;
-   - whether the office's test mode can host a benchmark floor without GitHub. The wizard has an offline-floor path (`steps.ts:160-167`), which looks usable.
+   - whether the office's test mode can host a benchmark project without GitHub. The wizard has an offline-floor path (`steps.ts:160-167`), which looks usable.
 
 ## 10. E4 plan
 
@@ -308,7 +308,7 @@ Builds on E2 (eval runner, graders, `eval` billing source). Effort is about 6–
 
 1. **Case store** (`src/server/evals/bench/case-store.ts`): create a revision from `scripts/benchmark/baseline/build-baseline.sh` output plus the verifier folder. Compute `MANIFEST.sha256` and freeze on first use. `case.json` carries the pins from section 2 and the verification interface (decision 1). Tests: immutability; manifest mismatch → refusal.
 2. **Environment preflight** (`env.ts`): Studio Pro 11.12.4 `mx.exe` and mxbuild present; `mxcli --version` matches the pin; the runtime cache link exists (create the junction if it's missing, or report it); `psql` reachable; JDK 21; playwright-core and a Chromium present; the benchmark port range is free and away from 4600 and 8110–8199. Every failure is a harness fault before any spend.
-3. **Trial reset** (`trial.ts`): port `trial-app.sh` reset/start/stop/drop to TypeScript, reusing `liveapp/process.ts` (`startTree`, `stopTree`, `pgBinDir`) and `liveapp/ports.ts` (`pickPorts`). Create the trial as a test-mode floor with a written `toolkit.env`. Base-sha check. One trial at a time at first; parallelism behind a setting once memory is measured.
+3. **Trial reset** (`trial.ts`): port `trial-app.sh` reset/start/stop/drop to TypeScript, reusing `liveapp/process.ts` (`startTree`, `stopTree`, `pgBinDir`) and `liveapp/ports.ts` (`pickPorts`). Create the trial as a test-mode project with a written `toolkit.env`. Base-sha check. One trial at a time at first; parallelism behind a setting once memory is measured.
 4. **Freeze and verifier workspace** (`verify.ts`):
    1. take the clone of `finalSha` into `<data>/evals/verify/<runId>/`;
    2. copy the verifiers in and hash them before and after;

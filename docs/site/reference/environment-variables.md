@@ -11,7 +11,7 @@ Set these before starting the office (the launcher sets the main ones). Values t
 | Variable | Meaning |
 |---|---|
 | `AGENT_OFFICE_HOME` | Where the office keeps its data when no folder is given (default `~/agent-office`) |
-| `AGENT_OFFICE_PROJECTS` | Where new floors are cloned |
+| `AGENT_OFFICE_PROJECTS` | Where new projects are cloned |
 | `PORT` | Port (default 4600) |
 | `AGENT_OFFICE_PASSWORD` | The office password |
 | `AGENT_OFFICE_CLAIM_TOKEN` | Show a generated password once at `/claim` |
@@ -23,7 +23,7 @@ Set these before starting the office (the launcher sets the main ones). Values t
 | `AGENT_OFFICE_ALLOW_REAL_AGENTS` | `1`: let real agent CLIs start in test mode anyway (each one opens an incident) |
 | `AGENT_OFFICE_SEED_INCIDENTS` | `0`: skip the one-off import of the 2026-10-06 incidents; `1`: apply it to any office without incidents |
 | `AGENT_OFFICE_BUDGET`, `AGENT_OFFICE_BUDGET_PAUSE` | Office-wide daily budget for Claude Code spend, and stop hiring when it's spent |
-| `AGENT_OFFICE_MAX_WORKERS` | Most workers at once, across floors |
+| `AGENT_OFFICE_MAX_WORKERS` | Most workers at once, across projects |
 | `AGENT_OFFICE_WEBHOOK` | Slack or Discord webhook when a worker needs input or finishes |
 | `AGENT_OFFICE_TURN` | TURN servers for voice |
 | `AGENT_OFFICE_CITY`, `AGENT_OFFICE_WEATHER`, `AGENT_OFFICE_SKY_CLOCK` | The office's sky and weather (⚙️ Settings › Advanced › Outside) |
@@ -32,7 +32,7 @@ Set these before starting the office (the launcher sets the main ones). Values t
 
 | Variable | Meaning |
 |---|---|
-| `AGENT_OFFICE_TEAMS_DRY_RUN=1` | No GitHub issues from approved proposals, on every floor |
+| `AGENT_OFFICE_TEAMS_DRY_RUN=1` | No GitHub issues from approved proposals, on every project |
 | `AGENT_OFFICE_JEV_KEY_FILE` | Path of Jeff's Jev key file (the launcher points it at `~/.agent-office-jev-key`) |
 | `TYPESAFE_API_KEY` | The Jev key itself, instead of a file |
 | `AGENT_OFFICE_TOOLKIT_DIR` | The mxcli-project-toolkit clone (default `~/agent-spike/mxcli-project-toolkit`); the toolkit folder picked in [Connections](../administration/connections.md#folders) beats it |

@@ -23,7 +23,7 @@ export const progressRoutes = {
     auth: 'session',
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, await progressOf(ctx, floor, ctx.meOf(session.account?.id).admin, url.searchParams.get('mini') === '1'));
     },
   },
@@ -34,7 +34,7 @@ export const progressRoutes = {
     auth: 'session',
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, await acceptanceView(ctx, floor, ctx.meOf(session.account?.id).admin));
     },
   },
@@ -45,7 +45,7 @@ export const progressRoutes = {
     auth: 'session',
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, await acceptanceDraft(ctx, floor, ctx.meOf(session.account?.id).admin));
     },
   },
@@ -66,7 +66,7 @@ export const progressRoutes = {
       }
       if (refuseStale(ctx, req, res)) return;
       const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const who = { name: whoOf(session.account?.name, body.by), ...(session.account?.id ? { accountId: session.account.id } : {}) };
       if (body.action === 'accept') {
         if (body.confirm !== true) return send(res, 400, { error: 'Confirm the acceptance' });

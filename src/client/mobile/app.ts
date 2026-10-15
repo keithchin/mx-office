@@ -200,7 +200,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
       const id = sub.workerId;
       const a = m.agents.find((x) => x.workerId === id);
       title.textContent = a?.name ?? 'Direct message';
-      subline.textContent = a ? (a.status === 'working' ? 'working…' : a.status === 'needs_input' ? 'asking you' : a.status) : 'left the floor';
+      subline.textContent = a ? (a.status === 'working' ? 'working…' : a.status === 'needs_input' ? 'asking you' : a.status) : 'left the project';
       rows = dmLog(m, id, rowActions);
       rows.unshift(h('li.m-chatlink', {}, h('button.btn.small', { type: 'button', onclick: () => openChat(id) }, '🖥️ Terminal (read-only)')));
       target = a && store.floor ? { floor: store.floor, place: { in: 'dm', workerId: id }, agents: m.agents } : undefined;

@@ -36,7 +36,7 @@ export class FirmDesk {
     const ok = mayAsk(e, r.id, this.deps.now());
     if (ok !== true) return ok;
     const floor = this.deps.floor(e.floor);
-    if (!floor) return 'The project\'s floor is closed';
+    if (!floor) return 'The project is closed';
     // To whoever covers the team (its own Lead, or the member covering it on a Solo or Startup team).
     const forRole = floor.coverOf?.(team) ?? roleFor(team);
     const q: Question = { id: `Q${e.id.slice(-4)}-${e.questions.length + 1}`, reviewer: r.id, team, text, at: this.deps.now(), status: 'open' };
@@ -147,7 +147,7 @@ export class FirmDesk {
       return r.id === 'partner' ? s : { [`reviewer:${r.id}`]: s[`reviewer:${r.id}`] };
     }
     const floor = this.deps.floor(e.floor);
-    if (!floor) return 'The project\'s floor is closed';
+    if (!floor) return 'The project is closed';
     return (await floor.evidence())[name as string] ?? null;
   }
 

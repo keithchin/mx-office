@@ -30,12 +30,12 @@ export const evidenceRoutes = {
         // A deleted project's id is retired (server/project-delete/): say so, rather than "no such floor".
         const gone = projectIdsFor(ctx.cfg.dataDir).deletedFor(p.get('project') || id);
         if (gone?.deleted) return send(res, 410, { error: `${gone.deleted.name || id} was deleted on ${new Date(gone.deleted.at).toISOString().slice(0, 10)}`, projectId: gone.projectId, deleted: gone.deleted });
-        return send(res, 404, { error: 'No such floor' });
+        return send(res, 404, { error: 'No such project' });
       }
       const since = time(p.get('since'));
       if (p.get('since') && since === undefined) return send(res, 400, { error: 'since: milliseconds or a date' });
       const projectId = def.projectId ?? projectIdsFor(ctx.cfg.dataDir).byFloorId(id);
-      if (!projectId) return send(res, 409, { error: 'That floor has no project id yet' });
+      if (!projectId) return send(res, 409, { error: 'That project has no project id yet' });
       const limit = Math.min(TRACE_MAX, Number(p.get('limit')) || TRACE_MAX);
       return send(res, 200, buildTrace({ floorId: id, projectId, repo: def.repo, since, limit }, diskSources(ctx.cfg.dataDir, id, auditLog())));
     },

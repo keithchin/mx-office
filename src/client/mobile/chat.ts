@@ -10,7 +10,7 @@ import '../ui/pm/console.css';
 
 export function openReadOnlyChat(net: Net, workerId: string, dm: (id: string) => void) {
   const w = store.workers.get(workerId);
-  if (!w) return void toast('That agent isn’t on this floor', 'warn');
+  if (!w) return void toast('That agent isn’t on this project', 'warn');
   const view = new ChatView({ openTerminal: () => toast('The terminal is read-only on the phone: send the agent a message instead'), lines: () => [] });
   const draw = () => {
     const now = store.workers.get(workerId);

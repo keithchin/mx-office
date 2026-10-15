@@ -1,6 +1,6 @@
 ---
 title: FAQ
-description: Answers to the questions people actually ask - signing in, tokens, agents that stop, benched Leads, other floors, models, costs, restarts, the views, the live app, CI emails, Jeff, rankings and skills.
+description: Answers to the questions people actually ask - signing in, tokens, agents that stop, benched Leads, other projects, models, costs, restarts, the views, the live app, CI emails, Jeff, rankings and skills.
 weight: 95
 aliases: [/docs/questions]
 ---
@@ -54,7 +54,7 @@ The usual reasons:
 
 - **It finished its turn.** It shows as ✅ *finished, not looked at yet* in Needs you. Open it. (A turn the office started itself, or a team member's at autonomy 3 and up, finishes [quietly](concepts/workers-and-worktrees.md#quiet-turns): no Needs you item, just its card.)
 - **It's asking you something.** 🙋 in Needs you. Answer in its terminal.
-- **It's waiting on a setup prompt** (*trust this folder*). Open its terminal and accept once. The office marks the floors it manages trusted by itself, so a new project's agents shouldn't ask (see [Agents and GitHub](troubleshooting/agents-and-github.md#an-agent-waits-on-a-setup-prompt-trust--login)).
+- **It's waiting on a setup prompt** (*trust this folder*). Open its terminal and accept once. The office marks the projects it manages trusted by itself, so a new project's agents shouldn't ask (see [Agents and GitHub](troubleshooting/agents-and-github.md#an-agent-waits-on-a-setup-prompt-trust--login)).
 - **The office restarted.** On Windows that stops all agents. The ones cut off mid-turn resume when the office comes back; the rest stay asleep (💤) until prompted, or until you press **R** at their desk.
 - **It was benched.** Hire it again from the Org chart.
 
@@ -62,15 +62,15 @@ See [Agents and GitHub](troubleshooting/agents-and-github.md).
 
 ### Why is my Lead benched?
 
-Someone clicked **🪑 Bench**, or idle benching is turned on for the floor. Idle benching is **off by default** (0 minutes = only by hand). A benched Lead wrote a handoff note first. Click **🤝 Hire again** and it starts fresh from that note. See [Benching and handoffs](teams-and-agents/benching-and-handoffs.md).
+Someone clicked **🪑 Bench**, or idle benching is turned on for the project. Idle benching is **off by default** (0 minutes = only by hand). A benched Lead wrote a handoff note first. Click **🤝 Hire again** and it starts fresh from that note. See [Benching and handoffs](teams-and-agents/benching-and-handoffs.md).
 
 ### What is a benched Lead doing on the balcony?
 
 Taking a break. In the 2D view benched Leads rotate between the TV, a smoke on the balcony and coffee. Click one to go to the Org chart.
 
-### An agent says it's waiting on another floor. What does that mean?
+### An agent says it's waiting on another project. What does that mean? {#an-agent-says-its-waiting-on-another-floor-what-does-that-mean}
 
-The **🙋 N waiting on &lt;floor&gt; →** button means agents on another project need you. Click it to land on that floor's Command Center.
+The **🙋 N waiting on &lt;project&gt; →** button means agents on another project need you. Click it to land on that project's Command Center.
 
 ### How do I talk to an agent?
 
@@ -82,11 +82,11 @@ The **Project Manager** is you, the human. The **Project Coordinator** is an age
 
 ### How often will the agents interrupt me?
 
-That's the **autonomy level**, per floor, in Settings. **2 Guided** is the default. Critical things (security, data loss, client milestones, budget overruns, blocked with no way forward) always reach you. See [Autonomy levels](teams-and-agents/autonomy.md).
+That's the **autonomy level**, per project, in Settings. **2 Guided** is the default. Critical things (security, data loss, client milestones, budget overruns, blocked with no way forward) always reach you. See [Autonomy levels](teams-and-agents/autonomy.md).
 
 ### Can two agents edit the Mendix app at once?
 
-No. Only the **Lead Developer** applies changes to the model; the others draft and check MDL. For parallel work, use another floor.
+No. Only the **Lead Developer** applies changes to the model; the others draft and check MDL. For parallel work, use another project.
 
 ## Models and costs
 
@@ -100,7 +100,7 @@ On every worker card (💵), the board's summary line, the Command Center (*$x t
 
 ### Can I cap spending?
 
-Yes. In **⚙️ Settings › 👥 Team** (`/lite?tab=settings&section=team`), set a **daily cost cap** for each autonomy level. When the floor's day is spent, hiring pauses there until midnight (Singapore time).
+Yes. In **⚙️ Settings › 👥 Team** (`/lite?tab=settings&section=team`), set a **daily cost cap** for each autonomy level. When the project's day is spent, hiring pauses there until midnight (Singapore time).
 
 ## Running the office
 
@@ -114,13 +114,13 @@ Click the **Mx Office** icon on the desktop or Start menu, or ask Claude Code *"
 
 ### Can I try a change without risking the real office?
 
-Yes: a [test office](administration/test-offices.md) on another port with its own data and throwaway floor clones. Never point it at a real floor folder.
+Yes: a [test office](administration/test-offices.md) on another port with its own data and throwaway project clones. Never point it at a real project folder.
 
 ## Views and the browser
 
 ### Where did the 3D office go?
 
-The 3D and Retro views are removed. Every project opens on its **1D view**; **Go to Office** there shows the floor from above (the **2D Office view**), and **Return to Project** comes back. Old `/?view=3d` links open the 1D view. See [The two views](concepts/views.md).
+The 3D and Retro views are removed. Every project opens on its **1D view**; **Go to Office** there shows the project from above (the **2D Office view**), and **Return to Project** comes back. Old `/?view=3d` links open the 1D view. See [The two views](concepts/views.md).
 
 ### How do I switch to dark mode?
 

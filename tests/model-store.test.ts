@@ -176,7 +176,7 @@ test('routes: every Model route is for signed-in people, and a floor that isn\'t
   const ctx = { floors: new Map(), cfg: { dataDir: tmpdir() } };
   await (modelRoutes.tree.handle as (c: unknown, r: unknown) => Promise<void>)(ctx, { res, url: new URL('http://x/api/model/tree?floor=nope'), req: {}, path: '/api/model/tree', session: {} });
   assert.equal(status, 404);
-  assert.deepEqual(body, { error: 'No such floor' });
+  assert.deepEqual(body, { error: 'No such project' });
   const floor = { id: 'f', dir: tmpdir(), workers: { list: () => [] }, github: { pulls: { items: [] } } };
   await (modelRoutes.doc.handle as (c: unknown, r: unknown) => Promise<void>)({ ...ctx, floors: new Map([['f', floor]]) }, { res, url: new URL('http://x/api/model/doc?floor=f&type=micro flow&name=x'), req: {}, path: '/api/model/doc', session: {} });
   assert.equal(status, 502);

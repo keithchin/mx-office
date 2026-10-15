@@ -130,7 +130,7 @@ test('routing: a plain message goes to the Coordinator, @Name to that agent (the
   assert.deepEqual(team.ok && team.to.map((a) => a.name), ['Hedy', 'Anita', 'Ada']);
   assert.equal(teamWarning(cast), 'This wakes 3 agents (≈3 turns)');
   assert.equal(teamWarning([A('k', 'Keith', 'pm')]), undefined);
-  assert.deepEqual(routeMessage('@Nobody hi', { in: 'channel' }, cast), { ok: false, why: 'Nobody called @Nobody is on this floor' });
+  assert.deepEqual(routeMessage('@Nobody hi', { in: 'channel' }, cast), { ok: false, why: 'Nobody called @Nobody is on this project' });
   assert.deepEqual(routeMessage('@Hedy', { in: 'channel' }, cast), { ok: false, why: 'Write something after the @mention' });
   assert.equal(parseMention('@teamwork rocks', cast).mention, 'teamwork');
 });
@@ -138,7 +138,7 @@ test('routing: a plain message goes to the Coordinator, @Name to that agent (the
 test('routing: a DM goes to its agent, a thread to its agents, an escalation thread resolves it', () => {
   const dm = routeMessage('hi', { in: 'dm', workerId: 'a' }, cast);
   assert.deepEqual(dm.ok && dm.to.map((a) => a.name), ['Anita']);
-  assert.deepEqual(routeMessage('hi', { in: 'dm', workerId: 'gone' }, cast), { ok: false, why: "That agent isn't on this floor any more" });
+  assert.deepEqual(routeMessage('hi', { in: 'dm', workerId: 'gone' }, cast), { ok: false, why: "That agent isn't on this project any more" });
   const th = routeMessage('and then?', { in: 'thread', thread: 'th-1', agents: ['h', 'a', 'gone'] }, cast);
   assert.deepEqual(th.ok && th.to.map((a) => a.name), ['Hedy', 'Anita']);
   const esc = routeMessage('After the sprint', { in: 'thread', thread: 'esc:e1', agents: ['h'], escalationId: 'e1' }, cast);
@@ -156,7 +156,7 @@ test('no Coordinator on the floor: the Chief Analyst, else any Lead, else any ag
   assert.match(r.ok ? (r.note ?? '') : '', /no Project Coordinator at work, so it went to Ada/);
   assert.equal(defaultRecipient([A('h', 'Hedy', 'lead-developer'), A('x', 'Bob')]).to?.name, 'Hedy');
   assert.match(defaultRecipient([A('x', 'Bob')]).note ?? '', /no project team at work, so it went to Bob/);
-  assert.deepEqual(routeMessage('hi', { in: 'channel' }, []), { ok: false, why: 'There are no agents on this floor to message' });
+  assert.deepEqual(routeMessage('hi', { in: 'channel' }, []), { ok: false, why: 'There are no agents on this project to message' });
 });
 
 test('sending: held until the turn is over, by the person, recorded and kept as the person’s message', async () => {
@@ -196,7 +196,7 @@ test('sending goes through a reached spend cap (a person’s message), wakes an 
   assert.equal(t.floor.wakes.at(-1)?.by, 'Sam');
   const none = setup();
   const bad = await none.phone.send({ floor: none.floor.id, text: 'hello', place: { in: 'channel' }, by: 'Sam', admin: false });
-  assert.deepEqual(bad, { ok: false, why: 'There are no agents on this floor to message', status: 400 });
+  assert.deepEqual(bad, { ok: false, why: 'There are no agents on this project to message', status: 400 });
 });
 
 test('an escalation thread: answered through the roster’s resolve (admins only), its answer in the chatter, and the agent’s reply after', async () => {

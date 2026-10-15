@@ -93,9 +93,9 @@ export const SEED_INCIDENTS: Seed[] = [
     title: 'Setup panel showed Stage 0 FAIL from a stale checkout',
     severity: 'sev3',
     status: 'resolved',
-    summary: 'The travel-approval floor’s setup panel showed Stage 0 as FAIL because it read the floor’s checkout, 23 commits behind its default branch.',
+    summary: 'The travel-approval project’s setup panel showed Stage 0 as FAIL because it read the project’s checkout, 23 commits behind its default branch.',
     impact: { text: 'A false FAIL on the travel-approval setup panel' },
-    rootCause: 'The setup panel read the floor’s working folder, not the default branch.',
+    rootCause: 'The setup panel read the project’s working folder, not the default branch.',
     actions: [{ text: 'The setup panel reads origin/main (release 7)', status: 'done' }],
   },
 ];

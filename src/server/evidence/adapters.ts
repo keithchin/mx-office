@@ -26,7 +26,7 @@ export interface AdapterCtx {
 const NO_EXECUTION = 'no execution id is recorded before delivery attempts exist (gap map F2)';
 const NO_SESSION = 'this source does not record the provider session';
 
-const projectOf = (c: AdapterCtx, recordedId?: string): Found => firstFound(recorded(recordedId, ''), inferred(c.projectId, 'the floor has no project id yet'));
+const projectOf = (c: AdapterCtx, recordedId?: string): Found => firstFound(recorded(recordedId, ''), inferred(c.projectId, 'the project has no project id yet'));
 
 // ---- Audit ---------------------------------------------------------------------------------------
 

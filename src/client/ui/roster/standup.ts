@@ -18,7 +18,7 @@ export function standupView(v: RosterView, redraw: (v: RosterView) => void): HTM
   const root = h('section.ro-standup', { 'aria-label': 'Standup' });
   const sched = v.settings.schedule;
   const next = v.nextStandupAt
-    ? `Next: ${when(v.nextStandupAt)} (${sched.time} ${sched.timeZone})${v.activitySinceStandup ? '' : ' · skipped unless the floor gets busy first'}`
+    ? `Next: ${when(v.nextStandupAt)} (${sched.time} ${sched.timeZone})${v.activitySinceStandup ? '' : ' · skipped unless the project gets busy first'}`
     : 'The daily standup is off: turn it on in ⚙️ Settings › 👥 Team';
   const list = v.standups;
   if (!picked || !list.some((s) => s.id === picked)) picked = list[0]?.id;

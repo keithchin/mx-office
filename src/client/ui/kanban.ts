@@ -229,7 +229,7 @@ export function renderBoard(root: HTMLElement, a: KanbanActions, view: BoardView
   const summary = h(
     'p.kb-summary',
     {},
-    [`🤖 ${all.filter((c) => c.column === 'progress').length} working`, `🙋 ${all.filter((c) => c.column === 'human').length} need a human`, `🔀 ${all.filter((c) => c.column === 'review').length} in review`, spent ? `💰 ${usd(spent)} on this floor's agents` : ''].filter(Boolean).join(' · '),
+    [`🤖 ${all.filter((c) => c.column === 'progress').length} working`, `🙋 ${all.filter((c) => c.column === 'human').length} need a human`, `🔀 ${all.filter((c) => c.column === 'review').length} in review`, spent ? `💰 ${usd(spent)} on this project's agents` : ''].filter(Boolean).join(' · '),
   );
   const cols = COLUMNS.map((col) => column(col, all.filter((c) => c.column === col.id), a, view, every.filter((c) => c.column === col.id)));
   // Drawn again on every change (a preview opening attaches a terminal, which changes the workers), so

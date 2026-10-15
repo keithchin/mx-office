@@ -136,7 +136,7 @@ function leadLine(m: MemberView | undefined, team: MemberView['team']): string |
 function zoneLine(team: MemberView['team']): () => string {
   return () => {
     const m = leadOf(team);
-    if (!m) return "This floor has no project team yet: it's in the 1D view's 👥 Team tab";
+    if (!m) return "This project has no team yet: it's in the 1D view's 👥 Team tab";
     const hire = m.status === 'not-hired' || m.status === 'benched' ? ' · hire them from the 1D view’s 👥 Team tab' : '';
     return `${m.team !== team ? `Covered by ${m.title}` : m.title}: ${m.name} · ${MEMBER_STATUS[m.status]} · 🧠 ${m.model}${hire}`;
   };

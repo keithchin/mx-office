@@ -23,7 +23,7 @@ export class AcceptanceStore {
     readonly floorId: string,
     private now: () => number = Date.now,
   ) {
-    if (!FLOOR.test(floorId)) throw new Error(`not a floor id: ${floorId}`);
+    if (!FLOOR.test(floorId)) throw new Error(`not a project id: ${floorId}`);
     this.file = path.join(dir, `${floorId}.jsonl`);
   }
 

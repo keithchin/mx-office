@@ -4,7 +4,7 @@ description: Run the Mendix app from main on this laptop with mxcli run --local,
 weight: 8
 ---
 
-The **🌐 Live app** tab runs the floor's Mendix app from its `main` branch, on this laptop, and shows it in the page.
+The **🌐 Live app** tab runs the project's Mendix app from its `main` branch, on this laptop, and shows it in the page.
 
 ![The live app](../images/live-app.png)
 
@@ -24,11 +24,11 @@ Live apps don't start by themselves when the office starts. Open the tab and cli
 
 ## How it works
 
-- The office keeps a **separate clone** of the repository at `<office data>/live/<floor>`, always on `origin/main`. Agents' worktrees are never touched.
-- It runs `mxcli run --local` with three free ports from **8110–8199** (app, admin and serve) and a database named `<floor>_live` in the local PostgreSQL.
+- The office keeps a **separate clone** of the repository at `<office data>/live/<project>`, always on `origin/main`. Agents' worktrees are never touched.
+- It runs `mxcli run --local` with three free ports from **8110–8199** (app, admin and serve) and a database named `<project>_live` in the local PostgreSQL.
 - Once it's running, the office checks `main` every 60 seconds. When `main` moves (a merge), it **updates and restarts** the app by itself.
 - When `main` moved, or a first build failed, it clears the stale build folders under `deployment/` (keeping `deployment/data`) and retries once.
-- The log is `<office data>/live/<floor>.log`.
+- The log is `<office data>/live/<project>.log`.
 
 Settings such as the port range, the database and the mxcli path are environment variables `AGENT_OFFICE_LIVE_*`. See [Environment variables](../reference/environment-variables.md#live-app).
 

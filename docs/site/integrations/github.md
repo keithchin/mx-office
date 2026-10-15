@@ -32,7 +32,7 @@ Each card belongs to a team through its label: `team:design`, `team:development`
 
 ## Issues and pull requests in the office
 
-- The board reads the floor's issues and PRs with `gh`, and shows checks, reviews and the CI scorecard.
+- The board reads the project's issues and PRs with `gh`, and shows checks, reviews and the CI scorecard.
 - **☰ → 📌 Issues** and **🔀 Pull requests** open them in full in the office.
 - An issue moves to **In progress** the moment a worker has it.
 - A worker that opens its own PR shows it at its desk. When the office can't tell, an agent links it with `office-workers pr <number>`.

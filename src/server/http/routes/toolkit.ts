@@ -22,7 +22,7 @@ export const toolkitRoutes = {
         }
         if (p !== '/api/toolkit') return send(res, 404, { error: 'Not found' });
         const floor = floorParam(ctx, url);
-        if (!floor) return send(res, 404, { error: 'No such floor' });
+        if (!floor) return send(res, 404, { error: 'No such project' });
         const status = await svc.status(pinFloor(floor));
         const job = jobs.runningFor(floor.id);
         return send(res, 200, { ...status, fetching: svc.isFetching, admin, ...(job ? { job: { id: job.id, kind: job.kind, status: job.status } } : {}) });
@@ -30,7 +30,7 @@ export const toolkitRoutes = {
       if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
       if (!sameOrigin(req, ctx.cfg)) return send(res, 403, { error: 'Forbidden' });
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       if (p === '/api/toolkit/check') {
         void svc.fetch(true);
         return send(res, 202, { fetching: true });

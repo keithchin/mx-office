@@ -34,7 +34,7 @@ async function change(ctx: Ctx, req: http.IncomingMessage, res: http.ServerRespo
   if (!body) return void send(res, 400, { error: 'Send JSON' });
   if (refuseStale(ctx, req, res)) return undefined;
   const floor = ctx.floors.get(String(body.floor ?? ''));
-  if (!floor) return void send(res, 404, { error: 'No such floor' });
+  if (!floor) return void send(res, 404, { error: 'No such project' });
   return { body, floor: qFloor(floor), by: byOf(session, body), ...(session.account?.id ? { owner: session.account.id } : {}) };
 }
 
@@ -46,7 +46,7 @@ export const questionsRoutes = {
     auth: 'session',
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, await questionsOf(ctx).view(qFloor(floor), ctx.meOf(session.account?.id).admin));
     },
   },
@@ -59,7 +59,7 @@ export const questionsRoutes = {
       if (!fromUs(req, ctx)) return send(res, 403, { error: 'Forbidden' });
       const body = await jsonBody(req);
       const floor = body && ctx.floors.get(String(body.floor ?? ''));
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       await questionsOf(ctx).collect(qFloor(floor)).catch(() => undefined);
       return send(res, 200, await questionsOf(ctx).view(qFloor(floor), ctx.meOf(session.account?.id).admin));
     },
@@ -88,7 +88,7 @@ export const questionsRoutes = {
     auth: 'session',
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const d = await questionsOf(ctx).draft(qFloor(floor), url.searchParams.get('to') ?? '', session.account?.name ?? url.searchParams.get('by') ?? 'The Project Manager');
       return send(res, 200, { count: d.answers.length, recipient: d.recipient, text: d.text });
     },
@@ -129,7 +129,7 @@ export const questionsRoutes = {
     auth: 'session',
     async handle(ctx, { res, url }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const which: ExportWhich = url.searchParams.get('which') === 'user-only' ? 'user-only' : 'asked';
       const rows = await questionsOf(ctx).exportRows(qFloor(floor), which);
       const name = `questions-for-the-client-${floor.id.replace(/[^A-Za-z0-9_-]/g, '_')}-${new Date().toISOString().slice(0, 10)}`;

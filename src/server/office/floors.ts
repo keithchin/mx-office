@@ -79,7 +79,7 @@ export function floorHelpers(ctx: Ctx): FloorHelpers {
       if (c.peer.floor === floor.id || (!next && c.peer.floor === ROOF)) {
         if (next) ctx.goToFloor(c, next);
         else ctx.toLobby(c);
-        ctx.sendTo(c, { t: 'toast', text: next ? `🛗 ${who} took ${name} off the building, so you rode the elevator to ${next.def.name}` : `🛗 ${who} took ${name}, the last floor, off the building`, level: 'warn' });
+        ctx.sendTo(c, { t: 'toast', text: next ? `🛗 ${who} took ${name} off the building, so you rode the elevator to ${next.def.name}` : `🛗 ${who} took ${name}, the last project, off the building`, level: 'warn' });
       } else ctx.sendTo(c, { t: 'toast', text: `🛗 ${who} took ${name} off the building`, level: 'info' });
     }
     ctx.floors.delete(floor.id);
@@ -185,7 +185,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
   const worksIn = (from: Floor, on: Floor) => from.workers.list().some((w) => w.repos?.some((r) => r.floor === on.id));
   const openFloor = (def: FloorDef): Floor | undefined => {
     if (!existsSync(def.dir)) {
-      console.error(`agent-office: the ${def.name} floor's checkout is gone (${def.dir}) — it stays closed until it's back`);
+      console.error(`agent-office: the ${def.name} project's checkout is gone (${def.dir}) — it stays closed until it's back`);
       return undefined;
     }
     try {
@@ -193,7 +193,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
       floors.set(def.id, floor);
       return floor;
     } catch (err) {
-      console.error(`agent-office: couldn't open the ${def.name} floor: ${(err as Error).message}`);
+      console.error(`agent-office: couldn't open the ${def.name} project: ${(err as Error).message}`);
       return undefined;
     }
   };
@@ -209,8 +209,8 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
       return ctx.toastAll(`🛗 ${r}`, 'warn');
     }
     if (!openFloor(r)) return;
-    console.log(`  the ${r.name} floor's clone finished (${r.dir})`);
-    ctx.toastAll(`🛗 New floor: ${r.name}, added by ${r.addedBy}`);
+    console.log(`  the ${r.name} project's clone finished (${r.dir})`);
+    ctx.toastAll(`🛗 New project: ${r.name}, added by ${r.addedBy}`);
   });
   // Workers still running from the last office are back at their desks before anyone walks in.
   await Promise.all([...floors.values()].map((f) => f.ready));

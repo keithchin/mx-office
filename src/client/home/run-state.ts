@@ -83,7 +83,7 @@ function confirmResume(floors: { id: string; name: string }[], title: string) {
     btn.removeAttribute('disabled');
     const total = counts.reduce((n, [, c]) => n + c, 0);
     const all = floors.length === store.floors.filter((f) => !f.cloning).length;
-    confirmDialog(title, `${counts.map(([n, c]) => `${n}: ${c}`).join(', ')}. Wakes ${total} agent${total === 1 ? '' : 's'} with work waiting, a few at a time on each floor.`, all ? '▶ Resume all' : '▶ Resume', () => {
+    confirmDialog(title, `${counts.map(([n, c]) => `${n}: ${c}`).join(', ')}. Wakes ${total} agent${total === 1 ? '' : 's'} with work waiting, a few at a time on each project.`, all ? '▶ Resume all' : '▶ Resume', () => {
       const go = all ? allFloors('resume').then((r) => !!r) : Promise.all(floors.map((f) => startResume(f.id, { mode: 'work' }))).then((r) => r.some(Boolean));
       void go.then((ok) => ok && (toast(all ? '▶ Resuming every project' : `▶ Resuming ${floors.length} paused project${floors.length === 1 ? '' : 's'}`), soon()));
     });

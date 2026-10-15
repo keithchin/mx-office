@@ -31,7 +31,7 @@ export const stuckRoutes = {
     auth: 'session',
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, await stuckOf(ctx).view(stuckFloor(floor), ctx.meOf(session.account?.id).admin));
     },
   },
@@ -47,7 +47,7 @@ export const stuckRoutes = {
       if (!body) return send(res, 400, { error: 'Send JSON' });
       if (refuseStale(ctx, req, res)) return;
       const floor = ctx.floors.get(String(body.floor ?? ''));
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const action = body.action as StuckAction;
       if (!ACTIONS.includes(action)) return send(res, 400, { error: `action is one of ${ACTIONS.join(', ')}` });
       const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The Project Manager');

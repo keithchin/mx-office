@@ -37,11 +37,11 @@ With **Waiting on you** On, **When to escalate** (⚙️ Settings › ⚖️ Jef
 Either way he never raises what the agent already raised: an escalation of its own about the same (the same title, or nearly) that is open, or was answered in the last 6 hours, is *held: raised already*. When the rule already says it's waiting (it's *needs input*, or has an open escalation), there is nothing for him to raise.
 
 > [!NOTE]
-> Agents raising the same thing are merged too: an agent's `office-workers escalate` whose title matches an open escalation on the floor (nearly word for word) adds a **+1 from** *name* with its details to that one instead of opening a second, and the agent hears your answer as well. See [Escalations](../teams-and-agents/escalations.md).
+> Agents raising the same thing are merged too: an agent's `office-workers escalate` whose title matches an open escalation on the project (nearly word for word) adds a **+1 from** *name* with its details to that one instead of opening a second, and the agent hears your answer as well. See [Escalations](../teams-and-agents/escalations.md).
 
 ## The same ask in other words
 
-When an agent's new escalation matches no open one by title, and **Waiting on you** isn't Off (Shadow counts), Jeff is asked whether it asks you for the same thing as one of the floor's open ones: the same decision, the same action, the same missing secret or access, however it's worded. He reads the new title and the start of its details, and the newest 8 open escalations' titles and details, redacted like everything he reads. Only a pick he's at least **85%** sure of joins it as a +1; *none*, a lower confidence, no answer within 10 seconds or any failure raises it as its own. He's asked at most 30 times an hour per floor, and the Haiku fallback's own hourly cap applies too.
+When an agent's new escalation matches no open one by title, and **Waiting on you** isn't Off (Shadow counts), Jeff is asked whether it asks you for the same thing as one of the project's open ones: the same decision, the same action, the same missing secret or access, however it's worded. He reads the new title and the start of its details, and the newest 8 open escalations' titles and details, redacted like everything he reads. Only a pick he's at least **85%** sure of joins it as a +1; *none*, a lower confidence, no answer within 10 seconds or any failure raises it as its own. He's asked at most 30 times an hour per project, and the Haiku fallback's own hourly cap applies too.
 
 This is what would have turned mx-spike's nine escalations about two CI secrets (*Set repo secret …*, *One command to set the e2e secret …*, *Secret 404 …*) into what they were: two asks.
 
@@ -86,4 +86,4 @@ Without a key, the same text goes to Claude Haiku instead.
 
 ## Where his verdicts are kept
 
-`<office data>/judge/<floor>.jsonl`, one line per verdict: when, which judgement, the subject, Jev or Haiku, the model, how long it took, Jeff's verdict, the rule's, whether they agree, whether he acted, and the first 300 characters of the text. The file is trimmed past 5000 lines.
+`<office data>/judge/<project>.jsonl`, one line per verdict: when, which judgement, the subject, Jev or Haiku, the model, how long it took, Jeff's verdict, the rule's, whether they agree, whether he acted, and the first 300 characters of the text. The file is trimmed past 5000 lines.

@@ -69,7 +69,7 @@ export const SUBAGENT_TOOL = {
   name: 'subagent',
   title: 'Manage your subagents',
   description:
-    "For a Lead of the floor's team: your Claude Code subagents' track record and standing. op list shows each one's model, grade (A–F from your review verdicts over its last 5 runs), " +
+    "For a Lead of the project's team: your Claude Code subagents' track record and standing. op list shows each one's model, grade (A–F from your review verdicts over its last 5 runs), " +
     'runs, reworks and state, and your gates. op review records your verdict (accept or rework) on its latest result: do it after every review, it is its track record. ' +
     'warn (with a reason) adds a warning to its definition, bench (with a reason) takes it off your team until a cool-down ends, swap-model sets its model, reinstate brings it back. ' +
     'Those four go through your gate for each (your Playbook\'s "Your skills"): ask raises an escalation and the office does it if the Project Manager approves, propose files it in their approvals, tell and fyi do it at once.',

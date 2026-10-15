@@ -19,7 +19,7 @@ export function headerRow(o: Pick<RowOpts, 'showFloor'>): HTMLElement {
     'div.au-row.au-th',
     { role: 'row' },
     h('span.au-time', { role: 'columnheader' }, 'Time'),
-    o.showFloor ? h('span.au-floor', { role: 'columnheader' }, 'Floor') : null,
+    o.showFloor ? h('span.au-floor', { role: 'columnheader' }, 'Project') : null,
     h('span.au-actor', { role: 'columnheader' }, 'Actor'),
     h('span.au-act', { role: 'columnheader' }, 'Action'),
     h('span.au-target', { role: 'columnheader' }, 'Target'),

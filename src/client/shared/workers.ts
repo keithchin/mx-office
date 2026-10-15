@@ -91,7 +91,7 @@ export function workerActions(net: Net): WorkerActions {
   }
 
   function send(title: string, text: { context?: string; initial?: string } = {}, issue?: number, deskId?: string) {
-    if (!store.project) return toast('Pick a floor first', 'warn');
+    if (!store.project) return toast('Pick a project first', 'warn');
     // The back office's desks too, as far as the floor's built out (see WING).
     const desk = deskId && !store.workerAtDesk(deskId) ? deskId : nextFreeSeat((id) => !!store.workerAtDesk(id), store.floorPlan.wing)?.id;
     const awake = [...store.workers.values()].filter((w) => w.kind === 'agent' && !isAsleep(w.status));

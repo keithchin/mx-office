@@ -104,7 +104,7 @@ export function outcomesPrompt(decided: Proposal[]): string {
 
 /** To a Lead at work when the Project Manager changes the floor's autonomy level. */
 export function autonomyPrompt(level: AutonomyLevel): string {
-  return [`The Project Manager changed this floor's autonomy level. Your Playbook has been rewritten with it (autonomy and review protocol); from now on:`, '', autonomyBrief(level), '', `Escalate a review outcome when: ${REVIEW_POLICY[level].rule}`, '', 'No reply needed.'].join('\n');
+  return [`The Project Manager changed this project's autonomy level. Your Playbook has been rewritten with it (autonomy and review protocol); from now on:`, '', autonomyBrief(level), '', `Escalate a review outcome when: ${REVIEW_POLICY[level].rule}`, '', 'No reply needed.'].join('\n');
 }
 
 // ---- The review loop -----------------------------------------------------------------------------

@@ -57,7 +57,7 @@ export function diskSources(dataDir: string, floorId: string, live?: AuditLog): 
 
 const RETENTION: Record<'audit' | 'chatter' | 'analysis' | 'budget' | 'incidents' | 'delivery', { retention: RetentionClass; note: string }> = {
   audit: { retention: 'audit-90d', note: 'kept 90 days or the newest 50k events; older ones are archived' },
-  chatter: { retention: 'chatter-capped', note: 'a derived view, capped at 1000 messages per floor' },
+  chatter: { retention: 'chatter-capped', note: 'a derived view, capped at 1000 messages per project' },
   analysis: { retention: 'permanent', note: 'one record per worker task; cost is an estimate from the office price table' },
   budget: { retention: 'ledger-30d', note: 'detailed rows kept 30 days, at day precision' },
   incidents: { retention: 'permanent', note: 'hash-chained, one snapshot per change' },

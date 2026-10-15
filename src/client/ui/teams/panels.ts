@@ -112,7 +112,7 @@ async function ranking(root: HTMLElement) {
             {},
             ...rows.map((l) => h('li', {}, h('b', {}, l.label), ` · score ${Math.round(l.score)} · ${l.n} run${l.n === 1 ? '' : 's'} · $${l.avgCost.toFixed(2)}/run${l.lowConfidence ? ' · few runs' : ''}`)),
           )
-        : empty('No ranked runs on this floor yet: the 📊 Analysis tab fills in as agents finish work.'),
+        : empty('No ranked runs on this project yet: the 📊 Analysis tab fills in as agents finish work.'),
     );
   } catch (err) {
     root.replaceChildren(empty(`Couldn't load the analysis: ${(err as Error).message}`));
@@ -159,7 +159,7 @@ function lanePanels(team: TeamId, v: RosterView | undefined, data: TeamPageData 
   if (team === 'analysis') {
     const rank = h('div', {}, empty('Loading the ranking…'));
     void ranking(rank);
-    return [panel('📑 BRD & insight memos', data ? fileList(data.insights, 'No memos yet: the Chief Analyst writes docs/insights/YYYY-Www.md after a standup.') : empty('Loading…')), panel('📊 Model ranking on this floor', rank)];
+    return [panel('📑 BRD & insight memos', data ? fileList(data.insights, 'No memos yet: the Chief Analyst writes docs/insights/YYYY-Www.md after a standup.') : empty('Loading…')), panel('📊 Model ranking on this project', rank)];
   }
   if (team === 'design') {
     const approvals = (v?.approvals ?? []).filter((a) => a.team === 'design');

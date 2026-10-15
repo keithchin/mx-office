@@ -12,7 +12,7 @@ The **💰 Budget** tab shows what a project has spent in US dollars, and in a l
 
 Two chips sit in the top bar of the 1D and 2D views:
 
-- **Next to the floor's branch**: the project's spend, as `$42 today · $252 / $600 · 42 %`. With no budget set it reads `$42 today · $252 spent`. Hover for the same numbers in the local currency, and the rate's date.
+- **Next to the project's branch**: the project's spend, as `$42 today · $252 / $600 · 42 %`. With no budget set it reads `$42 today · $252 spent`. Hover for the same numbers in the local currency, and the rate's date.
 - **At the far right**: the whole office, as `Office $110 today`. This covers every project plus the office's own calls. If the office has a daily budget (`--budget`), it shows that too: `Office $110 / $150 today`.
 
 The project chip is **green** inside the budget, **amber** within 10 % of it and **red** over it. It goes by the forecast at completion when there is one, and by spend so far when there isn't. Click either chip to open the Budget tab. The 2D view's chips open the 1D view's tab. In the Clean themes the chips use line icons, not emoji.
@@ -28,7 +28,7 @@ The project chip is **green** inside the budget, **amber** within 10 % of it and
 
 Each table has a bar per row, the amount and its share of the whole:
 
-- **By stage**: the toolkit stage that was active when the money was spent (P to 7). The stage is read the way the setup panel reads it: from the project's default branch on origin (the floor's folder when there's no remote), checked again at most once a minute. Spend outside a pipeline, or from before the office kept a ledger, shows as *No stage*.
+- **By stage**: the toolkit stage that was active when the money was spent (P to 7). The stage is read the way the setup panel reads it: from the project's default branch on origin (the project's folder when there's no remote), checked again at most once a minute. Spend outside a pipeline, or from before the office kept a ledger, shows as *No stage*.
 - **By role**: the team's roles. Each Lead's subagents get a row of their own, and the office's background calls are under *Office background*.
 - **By agent**: every worker. A Lead's subagents are nested under it, by name (*Nia*, *Business Analyst · hired by Barbara*). The Lead's own row covers both its own session and its subagents.
 - **By model**: Opus, Sonnet, Haiku and so on.
@@ -42,7 +42,7 @@ When the office starts a project's ledger, it fills in what had already been spe
 ## How spend is counted
 
 - **Workers**: each worker's tokens come from its Claude Code transcript, subagents included, priced from the office's price list. Each API request is counted once, however many transcript lines Claude Code wrote for it and whether it appears in the session's transcript, a subagent's, or both. The office's Ledger (the office total) and the project ledger book the same change, at the same moment, so the two never disagree. The project ledger also splits each change by agent (the worker, or a subagent type) and by model.
-- **The office's background calls** are booked on the floor they served, and added to the office total. These are Jeff's Haiku fallback, the analyzer, task naming, the project summary and the Firm's reviewers. A call that served no floor (the office's own) goes on the office view. Jeff's calls to Jev aren't priced, so they show as not metered. Gate-check makes no model calls.
+- **The office's background calls** are booked on the project they served, and added to the office total. These are Jeff's Haiku fallback, the analyzer, task naming, the project summary and the Firm's reviewers. A call that served no project (the office's own) goes on the office view. Jeff's calls to Jev aren't priced, so they show as not metered. Gate-check makes no model calls.
 - **Providers other than Claude** count their calls but no cost.
 
 ## Insights
@@ -149,7 +149,7 @@ When spend reaches the budget and **Pause the project at 100 %** is on (the defa
 - agents finish the turn they're on, write a handoff note and go to sleep.
 - nobody new is hired, and the office sends no prompts of its own (nudges, standups, relays, wakes).
 - **people's messages still go through**.
-- the floor's pause line reads *⏸ Paused: budget reached*, and the pause survives a restart.
+- the project's pause line reads *⏸ Paused: budget reached*, and the pause survives a restart.
 
 Needs you then says *Budget reached: project paused*, with **Raise budget** and **Resume** buttons. **Resume** opens the ▶ Resume project preview (who has work waiting, and what's safe). Raising the budget above what's spent resumes the project the default way (*Those with work*). Either way the project won't pause again for the same budget. If a person resumes it from ▶ Resume project instead, the budget sees that too.
 
@@ -174,7 +174,7 @@ Dollars are always shown. Admins pick a second, local currency (**SGD** by defau
 
 ## Where it's kept
 
-Each project's ledger is in the office's data folder, at `budget/<floor>.json`. It holds:
+Each project's ledger is in the office's data folder, at `budget/<project>.json`. It holds:
 
 - a rollup for every day, kept forever: the total, plus splits by stage, role, model, agent and issue/PR.
 - detailed rows (day × agent × model × stage × issue) for the last 30 days.

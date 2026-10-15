@@ -25,7 +25,7 @@ export const deliverableRoutes = {
         return res.end(a.body);
       }
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       if (p === '/api/deliverables') {
         const view = await deliverablesOf(ctx, floor, url.searchParams.get('fresh') === '1');
         const team = url.searchParams.get('team');

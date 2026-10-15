@@ -87,7 +87,7 @@ export function incidentForm(id: string | undefined, d: IncidentDraft, floors: r
   const agents = h('input', { name: 'agents', type: 'number', min: '0', step: '1', value: d.impact?.agents ?? '' });
   const data = h('input', { name: 'data', value: d.impact?.data ?? '', placeholder: 'e.g. throwaway worktrees only' });
   const impactText = h('input', { name: 'impactText', value: d.impact?.text ?? '', placeholder: 'Anything else it affected' });
-  const floorBox = h('div.inc-floor-picks', { role: 'group', 'aria-label': 'Floors' }, ...floors.filter((f) => !f.cloning).map((f) => h('label.inc-pick', {}, h('input', { type: 'checkbox', value: f.id, checked: d.floors?.includes(f.id) }), ` ${f.name}`)));
+  const floorBox = h('div.inc-floor-picks', { role: 'group', 'aria-label': 'Projects' }, ...floors.filter((f) => !f.cloning).map((f) => h('label.inc-pick', {}, h('input', { type: 'checkbox', value: f.id, checked: d.floors?.includes(f.id) }), ` ${f.name}`)));
   const actions = h('div.inc-actions-edit');
   const remove = (row: HTMLElement) => row.remove();
   for (const a of d.actions ?? []) actions.append(actionRow(a, remove));
@@ -126,7 +126,7 @@ export function incidentForm(id: string | undefined, d: IncidentDraft, floors: r
     field('Summary', summary),
     h('fieldset.inc-impact', {}, h('legend', {}, 'Impact'), h('div.inc-row4', {}, field('Spend ($)', spend), field('Agents', agents), field('Data touched', data), field('Other', impactText))),
     field('Root cause', rootCause),
-    floors.length ? h('fieldset', {}, h('legend', {}, 'Floors'), floorBox, h('small.inc-hint', {}, 'None ticked: the office as a whole')) : null,
+    floors.length ? h('fieldset', {}, h('legend', {}, 'Projects'), floorBox, h('small.inc-hint', {}, 'None ticked: the office as a whole')) : null,
     h('fieldset', {}, h('legend', {}, 'Corrective actions'), actions, addAction),
     d.linkAudit?.length ? h('p.inc-hint', {}, `Links ${d.linkAudit.length} audit event${d.linkAudit.length === 1 ? '' : 's'}`) : null,
     err,
@@ -206,7 +206,7 @@ export function rulesForm(s: IncidentSettings, saved: (s: IncidentSettings) => v
       },
     },
     h('header', {}, h('h2', {}, 'Detection rules')),
-    h('p.inc-hint', {}, 'Each rule opens an incident, or counts again into the open one from the same rule on the same floor.'),
+    h('p.inc-hint', {}, 'Each rule opens an incident, or counts again into the open one from the same rule on the same project.'),
     ...rows,
     field('Same incident if seen again within (hours)', dedupe),
     err,

@@ -62,10 +62,10 @@ office-workers mcp                            serve these as MCP tools on stdio
 
 | Command | Does | Notes |
 |---|---|---|
-| `list` | Everyone at a desk on this floor | A merged PR means *free to go home* |
+| `list` | Everyone at a desk on this project | A merged PR means *free to go home* |
 | `hire` | Hire a worker at a free desk | `--provider`, `--model`, `--effort low\|medium\|high\|xhigh\|max`, `--desk`, `--issue`, `--no-worktree`; task on stdin or `--prompt` |
 | `home` | Send workers home | `--cleanup auto\|keep\|worktree\|all`; `--merged` for everyone whose PR merged |
-| `tell` | Type a prompt to a worker | Prompt on stdin or `--prompt`. Held until its turn is over when it has a question open in its terminal (kept across an office restart, let go after 24 hours); at most 5 to the same worker in 10 minutes; refused while the floor's cost cap is reached |
+| `tell` | Type a prompt to a worker | Prompt on stdin or `--prompt`. Held until its turn is over when it has a question open in its terminal (kept across an office restart, let go after 24 hours); at most 5 to the same worker in 10 minutes; refused while the project's cost cap is reached |
 | `pr` | Link a pull request to a worker (yours without `--worker`) | `--none` unlinks |
 | `escalate` | Raise something to the Project Manager | See below |
 | `subagent` | Manage your subagents (Leads only) | See below |
@@ -116,7 +116,7 @@ EOF
 | `subagent swap-model <name> --model haiku\|sonnet\|opus` | Change its model |
 | `subagent reinstate <name>` | Bring a benched one back |
 
-Warn, bench, swap-model and reinstate go through your gate for them. Anyone who isn't a Lead of this floor's team gets *Only a Lead of this floor's team manages subagents*. See [Subagents](../automation/subagents.md).
+Warn, bench, swap-model and reinstate go through your gate for them. Anyone who isn't a Lead of this project's team gets *Only a Lead of this project's team manages subagents*. See [Subagents](../automation/subagents.md).
 
 ## export-pdf and screenshot
 

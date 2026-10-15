@@ -17,13 +17,13 @@ agent-office accounts [list|invite|revoke|role|password] ...
 agent-office tunnel [office@address | url]
 ```
 
-Given a `[dir]`, the office keeps its data in `<dir>/.agent-office` and that project starts as a floor. The launcher runs it on the mx-spike folder this way.
+Given a `[dir]`, the office keeps its data in `<dir>/.agent-office` and that project is in it from the start. The launcher runs it on the mx-spike folder this way.
 
 ## Commands
 
 | Command | Does |
 |---|---|
-| `setup` | Pick the projects folder and clone projects as floors |
+| `setup` | Pick the projects folder and clone projects |
 | `prune` | Remove leftover worker worktrees and their `office/*` branches (keeps anything with unsaved work unless `--force`) |
 | `accounts` | Invite, list and revoke people's accounts; switch the shared password off or on |
 | `tunnel` | On your own computer, for an office elsewhere: open each worker's web server on the same port here |
@@ -33,7 +33,7 @@ Given a `[dir]`, the office keeps its data in `<dir>/.agent-office` and that pro
 | Option | Meaning |
 |---|---|
 | `--home <dir>` | Data folder when no `[dir]` is given (default `~/agent-office`) |
-| `--projects <dir>` | Where new floors are cloned |
+| `--projects <dir>` | Where new projects are cloned |
 | `-p, --port <n>` | Port (default 4600) |
 | `-H, --host <addr>` | Address to bind (default `127.0.0.1`: only this machine) |
 | `--password <pw>` | The office password |

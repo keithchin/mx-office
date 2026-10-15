@@ -28,7 +28,7 @@ The page is part of the 1D view.
   | Quick performance check | `npm run test:perf:quick`: the main views on the big fixture with a 5 s soak, three project switches, then the end-to-end journey, then a minute of the busy office (six fake workers busy on long sessions while pages poll: no server stall over 250 ms). A few minutes; what a build agent runs before committing a change to the pages or the server |
   | Page responsiveness | Every main view on a big fixture (about 10 times a real project) with live fake workers: no main-thread task over 200 ms, usable within 3 s, and heap growth under the limit over a minute of live events |
   | End-to-end journey | A project from the wizard to a deliverable with fake agents: hiring, an escalation answered from the Team phone, pause and resume, the budget, a restart, and clean incidents. It also fails when the office server's event loop is blocked for more than 250 ms while the project is made |
-  | Command Center check | The 1D Command Center stays responsive on a busy floor (the release 15 freeze) |
+  | Command Center check | The 1D Command Center stays responsive on a busy project (the release 15 freeze) |
 
 - **Running**: the run going, with a progress bar, its live log and **■ Stop**.
 - **Run details**: for a page responsiveness run, two charts (the longest task per view, and the time to usable, each against its budget line) and a table per view: time to usable, longest task, long tasks, heap before and after, heap growth and the result. A view that failed lists what failed, its longest tasks with the top stack frames, any page errors, and a screenshot you can open full size. A journey run lists its steps.
@@ -39,12 +39,12 @@ The page is part of the 1D view.
 
 Click **▶ Run** next to a suite. One run goes at a time.
 
-Each run starts a **throwaway test office of its own**, in test mode with a fake agent, under `scratch\test-offices\perf-guard\runs\<run id>` (the nearest `scratch\test-offices` above the office's checkout). Set `AGENT_OFFICE_TEST_OFFICES` to put them somewhere else. When there's no `scratch\test-offices`, they go under the system's temp folder, in `test-offices\agent-office-runs`. A run never uses this office, its data or its floors, and it spends nothing. The run gets none of this office's own `AGENT_OFFICE_*` settings, so it can't pick up its home folder, port or agent.
+Each run starts a **throwaway test office of its own**, in test mode with a fake agent, under `scratch\test-offices\perf-guard\runs\<run id>` (the nearest `scratch\test-offices` above the office's checkout). Set `AGENT_OFFICE_TEST_OFFICES` to put them somewhere else. When there's no `scratch\test-offices`, they go under the system's temp folder, in `test-offices\agent-office-runs`. A run never uses this office, its data or its projects, and it spends nothing. The run gets none of this office's own `AGENT_OFFICE_*` settings, so it can't pick up its home folder, port or agent.
 
 The page refuses to start a run, and says why, when:
 
 - the test offices' folder isn't a test office's folder (under `scratch\test-offices` or a `test-office…` folder);
-- the folder overlaps this office's data folder or one of its floors;
+- the folder overlaps this office's data folder or one of its projects;
 - the office's checkout has no `scripts\perf\run.mjs`;
 - a run is already going.
 

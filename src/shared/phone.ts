@@ -74,9 +74,9 @@ export function defaultRecipient(agents: readonly PhoneAgent[]): { to?: PhoneAge
   const pm = agents.find((a) => a.role === 'pm');
   if (pm) return { to: pm };
   const lead = agents.find((a) => a.role === 'chief-analyst') ?? leadsOf(agents)[0];
-  if (lead) return { to: lead, note: `This floor has no Project Coordinator at work, so it went to ${lead.name}` };
+  if (lead) return { to: lead, note: `This project has no Project Coordinator at work, so it went to ${lead.name}` };
   const any = agents[0];
-  if (any) return { to: any, note: `This floor has no project team at work, so it went to ${any.name}` };
+  if (any) return { to: any, note: `This project has no project team at work, so it went to ${any.name}` };
   return {};
 }
 
@@ -87,14 +87,14 @@ export function routeMessage(text: string, place: PhonePlace, agents: readonly P
   if (body.length > PHONE_TEXT_MAX) return { ok: false, why: `That's longer than ${PHONE_TEXT_MAX} characters` };
   if (mention === 'team') {
     const leads = leadsOf(agents);
-    return leads.length ? { ok: true, to: leads, group: 'team', body } : { ok: false, why: 'No Leads are at work on this floor' };
+    return leads.length ? { ok: true, to: leads, group: 'team', body } : { ok: false, why: 'No Leads are at work on this project' };
   }
-  if (typeof mention === 'string') return { ok: false, why: `Nobody called @${mention} is on this floor` };
+  if (typeof mention === 'string') return { ok: false, why: `Nobody called @${mention} is on this project` };
   if (mention) return { ok: true, to: [mention], body };
   const byId = (id: string) => agents.find((a) => a.workerId === id);
   if (place.in === 'dm') {
     const a = byId(place.workerId);
-    return a ? { ok: true, to: [a], body } : { ok: false, why: "That agent isn't on this floor any more" };
+    return a ? { ok: true, to: [a], body } : { ok: false, why: "That agent isn't on this project any more" };
   }
   if (place.in === 'thread') {
     const in_ = place.agents.map(byId).filter((a): a is PhoneAgent => !!a);
@@ -102,8 +102,8 @@ export function routeMessage(text: string, place: PhonePlace, agents: readonly P
     if (in_.length) return { ok: true, to: in_, body };
   }
   const d = defaultRecipient(agents);
-  if (!d.to) return { ok: false, why: 'There are no agents on this floor to message' };
-  const note = place.in === 'thread' ? `Nobody from that thread is on the floor now, so it went to ${d.to.name}` : d.note;
+  if (!d.to) return { ok: false, why: 'There are no agents on this project to message' };
+  const note = place.in === 'thread' ? `Nobody from that thread is on the project now, so it went to ${d.to.name}` : d.note;
   return { ok: true, to: [d.to], body, ...(note ? { note } : {}) };
 }
 

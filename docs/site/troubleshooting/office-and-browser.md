@@ -1,6 +1,6 @@
 ---
 title: Office and browser
-description: Signing in, old pages after an update, floors missing after a restart, the GPU, and screenshots with Playwright.
+description: Signing in, old pages after an update, projects missing after a restart, the GPU, and screenshots with Playwright.
 weight: 3
 ---
 
@@ -17,13 +17,13 @@ Check `http://127.0.0.1:4600/api/health`. If it doesn't answer, start the office
 
 Press **Ctrl+F5** to reload without the cache.
 
-## Floors are missing after a restart
+## Projects are missing after a restart {#floors-are-missing-after-a-restart}
 
-This was a bug (the team hook broke floor start-up) and is fixed. If it happens again, check the Mx Office window for errors, and that the floor folders still exist.
+This was a bug (the team hook broke project start-up) and is fixed. If it happens again, check the Mx Office window for errors, and that the project folders still exist.
 
 ## The 2D Office view is slow
 
-- Use the **1D** view for daily work; the 2D Office view is for looking at the floor.
+- Use the **1D** view for daily work; the 2D Office view is for looking at the project.
 - Make the browser use the fast GPU. On the office laptop, Edge is set to the NVIDIA GPU (Windows Settings → Display → Graphics).
 - The 3D and Retro views (and `?gfx=`) are gone: an old `/?view=3d` link opens the 1D view.
 

@@ -16,7 +16,7 @@ import { FIRM_USAGE, firmMain } from './office-firm.js';
 import { RENDER_USAGE, formatRendered, parseRender } from './office-render.js';
 
 const USAGE = `Usage:
-  office-workers list [--json]                  everyone at a desk on this floor: status, task,
+  office-workers list [--json]                  everyone at a desk on this project: status, task,
                                                 branch and pull request (merged = free to go home)
   office-workers hire [options] <<'EOF'         hire a worker at a free desk; its task on stdin
   …the task…                                    (or --prompt "…"). Options: --provider <name>
@@ -243,7 +243,7 @@ export function formatWorker(w) {
 /** Everyone on the floor, as the office lists them. */
 export function formatWorkers(view) {
   const workers = view?.workers ?? [];
-  const floor = view?.floor ? `${view.floor.name}${view.floor.repo ? ` (${view.floor.repo})` : ''}` : 'this floor';
+  const floor = view?.floor ? `${view.floor.name}${view.floor.repo ? ` (${view.floor.repo})` : ''}` : 'this project';
   const head = `${workers.length} worker${workers.length === 1 ? '' : 's'} on ${floor}` +
     `${view?.freeDesk ? '' : ' · no desk free'}${view?.hiringPaused ? ` · hiring paused: ${view.hiringPaused}` : ''}` +
     ` · go home once merged is ${view?.leaveOnMerge ? 'on' : 'off'}`;
@@ -282,7 +282,7 @@ export const TOOLS = [
     name: 'list_workers',
     title: 'List workers',
     description:
-      "Lists the coding agents (the office's workers) at the desks on this Agent Office floor, and shells: each one's id, name, status, desk, task, git worktree branch and pull request " +
+      "Lists the coding agents (the office's workers) at the desks on this Agent Office project, and shells: each one's id, name, status, desk, task, git worktree branch and pull request " +
       '(pr; a worker that opened one the office does not show here needs link_pr). ' +
       'merged: true means a pull request of its merged and none is open: its work landed and it can go home. staying says why the office would not send it home by itself yet ' +
       '(still working, someone has its terminal open, a board agent...). worktree.deleted: true means its folder was deleted outside the office, so it cannot start until a person rebuilds it at its desk. you: true is you.',
@@ -355,7 +355,7 @@ export const TOOLS = [
       "Says which pull request is a worker's, so its desk and list_workers show where its work stands (open, or merged: free to go home) instead of only ready or done. " +
       'The office knows a pull request by itself when it was opened from the desk, from the branch the office gave the worker, by a queue task, or by a Claude Code worker running gh pr create. ' +
       'Use this for the others: a worker in the main checkout that pushed a branch of its own, or an agent whose pull request list_workers does not show. Match a worker to its pull request by what it ' +
-      "was asked to do (its task, the issue it names) and gh pr list, and leave out one you can't match. The pull request must be open, or merged recently, in this floor's repository. " +
+      "was asked to do (its task, the issue it names) and gh pr list, and leave out one you can't match. The pull request must be open, or merged recently, in this project's repository. " +
       'With go home once merged on (leaveOnMerge), a worker whose linked pull request merged is sent home. unlink: true takes a wrong one off again. worker defaults to you. ' +
       WORKER_NOTE,
     inputSchema: {

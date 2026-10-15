@@ -166,12 +166,12 @@ export function auditView(root: HTMLElement, opts: AuditViewOpts) {
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
   function renderBar() {
     const scopes: [string, string][] = [
-      ...(opts.floor ? ([['floor', 'This floor']] as [string, string][]) : []),
+      ...(opts.floor ? ([['floor', 'This project']] as [string, string][]) : []),
       [OFFICE_FLOOR, 'Office-wide'],
-      ['all', 'Every floor'],
+      ['all', 'Every project'],
       ...(opts.floor ? [] : opts.floors().filter((f) => !f.cloning).map((f) => [f.id, f.name] as [string, string])),
     ];
-    const scopeSel = h('select.au-scope', { 'aria-label': 'Which floor', onchange: (e: Event) => ((scope = (e.target as HTMLSelectElement).value), changed()) }, ...scopes.map(([v, l]) => h('option', { value: v, selected: v === scope }, l)));
+    const scopeSel = h('select.au-scope', { 'aria-label': 'Which project', onchange: (e: Event) => ((scope = (e.target as HTMLSelectElement).value), changed()) }, ...scopes.map(([v, l]) => h('option', { value: v, selected: v === scope }, l)));
     const presets = h(
       'div.au-chips',
       { role: 'group', 'aria-label': 'Time range' },

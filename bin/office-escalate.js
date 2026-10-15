@@ -60,16 +60,16 @@ export const ESCALATE_TOOL = {
   title: 'Escalate to the Project Manager',
   description:
     'Raises something to the Project Manager: the human who owns the project (not the Project Coordinator agent). Use it when reviewing a subagent\'s work (or anything else) turns up ' +
-    "what your Playbook's review protocol says to escalate at the floor's autonomy level: Directive escalates every change to scope, design or plan; Guided design, architecture and scope changes, " +
+    "what your Playbook's review protocol says to escalate at the project's autonomy level: Directive escalates every change to scope, design or plan; Guided design, architecture and scope changes, " +
     'a review failing after 2 revision rounds, anything blocking; Delegated milestone-level issues, repeated failures, budget risk; Autonomous only critical issues (security, data loss, ' +
     'a client-facing milestone, a budget overrun, blocked with no path). It shows on the project console (the Command Center tab) with Reply / Approve / Reject; urgent and critical ones alert the human. ' +
-    "Below the floor's threshold it is filed as FYI. The answer comes back to you as your next prompt: don't wait for it, carry on with whatever it doesn't block. Subagents never escalate: their Lead does.",
+    "Below the project's threshold it is filed as FYI. The answer comes back to you as your next prompt: don't wait for it, carry on with whatever it doesn't block. Subagents never escalate: their Lead does.",
   inputSchema: {
     type: 'object',
     properties: {
       title: { type: 'string', description: 'One line: what needs the Project Manager.' },
       urgency: { type: 'string', enum: URGENCIES, description: 'critical: security, data loss, client-facing milestone, budget overrun, blocked with no path. urgent: work stops until answered. important (default): a decision needed today. info: for their information.' },
-      trigger: { type: 'string', enum: TRIGGERS, description: 'What the review turned up; the office judges it against the floor\'s autonomy level. needs-human: a hands-on action only a person can do (merge a PR, sign in, paste a key, install a tool, allow something, restart a preview), never filed as FYI.' },
+      trigger: { type: 'string', enum: TRIGGERS, description: 'What the review turned up; the office judges it against the project\'s autonomy level. needs-human: a hands-on action only a person can do (merge a PR, sign in, paste a key, install a tool, allow something, restart a preview), never filed as FYI.' },
       details: { type: 'string', description: 'What happened, what you checked, what it affects.' },
       options: { type: 'array', items: { type: 'string' }, description: 'The choices the Project Manager has, each a short line.' },
       recommendation: { type: 'string', description: 'Which option you recommend, and why, in a line.' },

@@ -4,7 +4,7 @@ description: Use ✨ New project to describe the app, review the project brief t
 weight: 3
 ---
 
-**✨ New project** on **/home** turns a description of the app into a ready project. You describe it (and attach any documents), the **Chief Analyst** drafts a **project brief** with you, you approve the scope, look over the functional domains and the team and budget, and click **Create project**. Then the office makes a private GitHub repository, a floor, a blank Mendix app (`.mpr`), the toolkit's scaffold with your answers and decisions recorded, the project team at their desks and a Discovery issue for the Chief Analyst.
+**✨ New project** on **/home** turns a description of the app into a ready project. You describe it (and attach any documents), the **Chief Analyst** drafts a **project brief** with you, you approve the scope, look over the functional domains and the team and budget, and click **Create project**. Then the office makes a private GitHub repository, a project, a blank Mendix app (`.mpr`), the toolkit's scaffold with your answers and decisions recorded, the project team at their desks and a Discovery issue for the Chief Analyst.
 
 > [!NOTE]
 > Only an admin (the Project Manager) can create a project. Creating the repository uses a separate **admin token** that can create repositories: `~/.agent-office-admin-gh-token`, or the one in 🔌 Connections. The agents never see it. See [Security & tokens](../administration/security-and-tokens.md).
@@ -138,7 +138,7 @@ The levels:
 
 **Customize** sets the cards aside: tick the roles to staff yourself (the five Enterprise roles and the Solo Lead) and use the full level picker, Manual included (type the budget and pick each setting), with the total, the alert threshold (80 % by default) and auto-pause at 100 %. The ticked roles decide the shape: the Solo Lead makes it Solo, only the Chief Analyst and the Lead Developer make it Startup, anything else Enterprise.
 
-When the setup reaches its **Hire the project team** step, it sets the floor's shape and coverage first, then saves the budget and applies the level's models and settings, then hires the shape's roles: the Solo Lead; or the Chief Analyst and the Lead Developer; or the full team. To change the level of a running project, use its [Budget tab](../using-the-office/budget.md#budget-levels).
+When the setup reaches its **Hire the project team** step, it sets the project's shape and coverage first, then saves the budget and applies the level's models and settings, then hires the shape's roles: the Solo Lead; or the Chief Analyst and the Lead Developer; or the full team. To change the level of a running project, use its [Budget tab](../using-the-office/budget.md#budget-levels).
 
 ### Advanced
 
@@ -167,7 +167,7 @@ Click **Create project** (the primary button once the team card shows). The page
 ![The setup progress: five groups, then the ready card](../images/setup-progress.png)
 
 1. Create the GitHub repository (`gh repo create`, private, with the admin token). It first asks GitHub whether the repository is there, and creates it only when GitHub says plainly that it isn't. A repository that's there already is used as it is and is never the setup's to delete. When GitHub can't say (a timeout, a login that doesn't work, no permission, GitHub down), the step stops with *Couldn't check whether owner/name exists on GitHub: …* rather than guessing: check the office's GitHub login in 🔌 Connections, then Retry. When it creates the repository, the setup records that it did, with GitHub's id for it; when step 2 clones the folder, it records that too. Cancel & undo relies on these records (see [When the office isn't sure what happened](#when-the-office-isnt-sure-what-happened)).
-2. Clone it as a floor. On Windows the clone gets `core.longpaths true` in its own config (a Mendix app's npm packages go past 260 characters inside a worker's worktree; the office's own git has long paths from its environment anyway), and the floor's folder is marked trusted in the office's Claude Code config, so the team's agents start without the *Do you trust the files in this folder?* prompt.
+2. Clone it as a project. On Windows the clone gets `core.longpaths true` in its own config (a Mendix app's npm packages go past 260 characters inside a worker's worktree; the office's own git has long paths from its environment anyway), and the project's folder is marked trusted in the office's Claude Code config, so the team's agents start without the *Do you trust the files in this folder?* prompt.
 3. Write `.claude/toolkit.env` (MXBUILD_PATH, mxcli nightly, Python).
 4. Create the Mendix app (new projects only): Studio Pro's own `mx create-project` makes a blank app named after the project (`travel-approval` → `TravelApproval.mpr`) at the repository's root, where the toolkit looks for it. Without `mx` in that Studio Pro it falls back to `mxcli new`. Mendix's generated files (`deployment/`, `.mendix-cache/`, `theme-cache/`, `*.mpr.lock` and so on) are added to `.gitignore`. An existing app is left alone; the step only reports which Studio Pro its `.mpr` was saved with.
 5. Run the toolkit's `init-project.sh` (after the app, so its `CLAUDE.local.md` names the `.mpr`), from a **pin** of the fork's newest commit: the project stays on that toolkit commit until you update it (see [Toolkit versions](../administration/toolkit-versions.md)), and its session-start ritual doesn't pull.
@@ -178,7 +178,7 @@ Click **Create project** (the primary button once the team card shows). The page
 10. Refresh the gate dashboard (`gate-check.sh`).
 11. Commit and push: the scaffold and the app in one commit.
 12. Open the Discovery issue: *"Discovery: kickoff with the client (Stages P → 4)"*, with the approved brief in it: the goal, the roles, the scope, what is still ASSUMED, the open questions and the functional domains.
-13. Hire the project team: set the floor's team shape, then hire its roles (or the ones you ticked under Customize), the roster's way (the same as **Hire** on the Team tab). A role already at work is not hired again.
+13. Hire the project team: set the project's team shape, then hire its roles (or the ones you ticked under Customize), the roster's way (the same as **Hire** on the Team tab). A role already at work is not hired again.
 14. Queue the Discovery task for an agent (when you ticked it and whoever covers Analysis isn't on the team; otherwise that member already has it).
 
 If a step fails, its group turns red with *Setup stopped at one step*, the step's error in plain words (a command is named by its file; **View setup details** shows the log), and two buttons: **Retry** carries on from the failed step once you've fixed the cause, and **Cancel & undo…** (admins) opens the dialog described under [Unfinished setups](#unfinished-setups). Cancel & undo only removes what this setup recorded creating. **Edit answers** opens the setup's answers in the classic form (see below).
@@ -208,10 +208,10 @@ A setup that hasn't finished never takes over **✨ New project**: it always ope
 
 - **Retry** carries on from the step that stopped. It says first what would stop it right now, rather than failing again: *This project is paused (by Keith): resume it, then Retry* (a paused project takes no new agents, so the team can't be hired) with a **Resume project** button for admins; the same for a project paused because its budget is reached, a pause or resume under way, a safe restart, and Studio Pro open on the project when the steps left write in its folder.
 - **Show setup** opens the setup's progress in the wizard, to carry on with it there (Edit answers, Retry).
-- **Open project**, once its floor is there.
+- **Open project**, once its project is there.
 - **Cancel & undo…** (admins) undoes what the setup did, in reverse. The dialog lists the steps that ran, says exactly what will happen, and asks you to type the repository's name (`owner/name`), as GitHub does:
-  1. The project comes off the office the way [Delete project](../using-the-office/delete-project.md) does it: agents stopped and sent home, worktrees removed, the office data archived and then removed, the floor taken off `floors.json`, its project id retired.
-  2. **Also delete the local folder**: offered (ticked) only when the setup recorded cloning it, and the folder is still that folder: inside the projects folder, not a junction or link pointing somewhere else. A folder that was a floor already is never offered.
+  1. The project comes off the office the way [Delete project](../using-the-office/delete-project.md) does it: agents stopped and sent home, worktrees removed, the office data archived and then removed, the project taken off `floors.json`, its project id retired.
+  2. **Also delete the local folder**: offered (ticked) only when the setup recorded cloning it, and the folder is still that folder: inside the projects folder, not a junction or link pointing somewhere else. A folder that was a project already is never offered.
   3. **Also delete the GitHub repository**: offered (ticked) only when the setup recorded creating it and GitHub still shows the same repository (the same id) under that name. It's never offered when you created it yourself (*I created this repository myself*), when it was there already, when you chose **Use this existing repository**, while the office isn't sure whether it created it, when a different repository now has that name, or when GitHub can't say right now. The delete itself is written down before it's sent, so a delete whose answer was lost is checked on GitHub when you carry on cancelling, never sent twice on a guess. It also needs a token with the `delete_repo` scope, as Delete project does. When the repository isn't offered, the dialog says why and links to its settings on GitHub.
 
   Setups started with an older version of the office have no such records, only their log lines (*created … on GitHub*, *cloned into …*). For those, Cancel & undo still takes the project off the office and removes the setup, but it keeps the folder and the repository. The dialog says: *this setup's log says it created it, but the office didn't record proof, so delete it on GitHub yourself if you're sure.* The office also checks all of this again on the server, right before deleting anything, so a request that asks for more than the dialog offered is refused for that item.
@@ -219,7 +219,7 @@ A setup that hasn't finished never takes over **✨ New project**: it always ope
 
   The Mendix app (`.mpr`) lives in the folder and the repository, so it goes with them. A Mendix Portal or Team Server app is never deleted automatically: remove it in the Portal yourself if there is one. Cancel & undo is refused while an agent is mid-turn on the project, a pause or resume of it is under way, or a safe restart is running. If a step fails (a locked file, GitHub down), it stops and says why; the card shows *Cancel & undo stopped* and **Carry on cancelling…** picks it up from that step. The audit log records `project.setup-cancel` (and Delete project's `project.delete`).
 
-Editing the answers later (the floor's **🧰 Project setup** panel: **🧭 Entry mode**, **📝 Intake** and the rest, or **Edit answers** on a setup) opens them in the classic form, a page per subject; saving writes the intake answers, decisions and settings again and commits them. A project's brief stays as it was approved. A role you tick that wasn't ticked before is hired too, but never one the floor already has in any state: at work, benched, or sent home on purpose. Unticking a role sends no one home. The Discovery issue isn't handed out again.
+Editing the answers later (the project's **🧰 Project setup** panel: **🧭 Entry mode**, **📝 Intake** and the rest, or **Edit answers** on a setup) opens them in the classic form, a page per subject; saving writes the intake answers, decisions and settings again and commits them. A project's brief stays as it was approved. A role you tick that wasn't ticked before is hired too, but never one the project already has in any state: at work, benched, or sent home on purpose. Unticking a role sends no one home. The Discovery issue isn't handed out again.
 
 > [!NOTE]
 > Agents, queue workers, **🔄 Re-check gates** and the live app all run with the project's `.claude/toolkit.env` over the office's own environment, so an 11.12.4 project builds with 11.12.4's mxbuild even when the office was started with an `MXBUILD_PATH` for another Studio Pro.
@@ -228,7 +228,7 @@ The setup is a [workflow](../automation/workflows.md): it is saved after every s
 
 ## After the wizard
 
-The new floor's Command Center shows a **🧰 Project setup** panel with the toolkit's stages **P** to **4**. Each one is ✅ PASS, ⏳ PENDING, ⚠️ FAIL, ↷ WAIVED or ✋ MANUAL, and a ✋ stage waits for your sign-off. The panel goes away once Stage 4 (the build plan) is confirmed. See [The toolkit](../integrations/toolkit.md).
+The new project's Command Center shows a **🧰 Project setup** panel with the toolkit's stages **P** to **4**. Each one is ✅ PASS, ⏳ PENDING, ⚠️ FAIL, ↷ WAIVED or ✋ MANUAL, and a ✋ stage waits for your sign-off. The panel goes away once Stage 4 (the build plan) is confirmed. See [The toolkit](../integrations/toolkit.md).
 
 ![The project setup panel](../images/setup-panel.png)
 
@@ -237,4 +237,4 @@ The new floor's Command Center shows a **🧰 Project setup** panel with the too
 
 ## Add an existing repository instead
 
-**➕ Add project** opens *Add a project*. Search your repositories or type `owner/name`. The office clones it with its own `gh` login and opens it as a floor. Admins can choose the folder with **📁 Change folder**.
+**➕ Add project** opens *Add a project*. Search your repositories or type `owner/name`. The office clones it with its own `gh` login and opens it as a project. Admins can choose the folder with **📁 Change folder**.

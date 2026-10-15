@@ -45,7 +45,7 @@ export function teamsSetting(frame: (body: Node[]) => HTMLElement): { section: H
   const test = h('button.btn', { type: 'button' }, '📨 Send a test card');
   const remove = h('button.btn.danger', { type: 'button' }, 'Remove');
   const urlActions = h('div.seg', { style: 'margin-top:8px' }, test, remove);
-  const floorsRow = h('div.seg.teams-floors', { role: 'group', 'aria-label': 'Floors that post' });
+  const floorsRow = h('div.seg.teams-floors', { role: 'group', 'aria-label': 'Projects that post' });
   const levelRow = h('div.seg', { role: 'radiogroup', 'aria-label': 'What is posted' });
   const quietOn = h('input', { type: 'checkbox', 'aria-label': 'Quiet hours' }) as HTMLInputElement;
   const quietStart = h('input', { type: 'time', value: '22:00', 'aria-label': 'Quiet from' }) as HTMLInputElement;
@@ -64,11 +64,11 @@ export function teamsSetting(frame: (body: Node[]) => HTMLElement): { section: H
   };
 
   more.append(
-    h('h5', {}, 'Floors that post'),
+    h('h5', {}, 'Projects that post'),
     floorsRow,
     h('h5', {}, 'What’s posted'),
     levelRow,
-    h('p.setting-note', {}, 'Red items are the same as the Command Center’s Needs you: an agent asking in its terminal, an escalation, the spend cap, failing PR checks, a Firm report, a gate to sign off, Studio Pro changes to commit. One card per item, never again after a restart; items raised within a minute share a card. The digest comes per floor after its morning standup (or half an hour after the standup time): yesterday’s merges, what needs you, spend against the cap, stage progress and the top three escalations by Jeff’s priority.'),
+    h('p.setting-note', {}, 'Red items are the same as the Command Center’s Needs you: an agent asking in its terminal, an escalation, the spend cap, failing PR checks, a Firm report, a gate to sign off, Studio Pro changes to commit. One card per item, never again after a restart; items raised within a minute share a card. The digest comes per project after its morning standup (or half an hour after the standup time): yesterday’s merges, what needs you, spend against the cap, stage progress and the top three escalations by Jeff’s priority.'),
     h('h5', {}, 'Quiet hours'),
     h('div.teams-quiet', {}, h('label', {}, quietOn, ' Hold cards from '), quietStart, h('span', {}, ' to '), quietEnd, quietSave),
     h('p.setting-note', {}, 'On the office computer’s clock. Held items go out as one catch-up card when quiet hours end (only the ones still open are listed).'),
@@ -76,7 +76,7 @@ export function teamsSetting(frame: (body: Node[]) => HTMLElement): { section: H
     pauseRow,
     h('h5', {}, 'Public office address'),
     h('div.webhook', {}, publicInput, publicSave),
-    h('p.setting-note', {}, 'Each card’s Open button goes here (the floor’s 1D view), so it works from your phone. Leave it empty while the office is only reachable on this network: cards then have no button. Phone access fills this in when it’s set up.'),
+    h('p.setting-note', {}, 'Each card’s Open button goes here (the project’s 1D view), so it works from your phone. Leave it empty while the office is only reachable on this network: cards then have no button. Phone access fills this in when it’s set up.'),
   );
 
   const section = frame([status, h('div.webhook', {}, urlInput, urlSave), urlActions, more, adminNote]);
@@ -101,7 +101,7 @@ export function teamsSetting(frame: (body: Node[]) => HTMLElement): { section: H
     const all = v.floors === 'all';
     const picked = new Set(all ? v.allFloors.map((f) => f.id) : (v.floors as string[]));
     floorsRow.replaceChildren(
-      radio('All floors', all, () => !all && void send({ floors: 'all' }), !admin),
+      radio('All projects', all, () => !all && void send({ floors: 'all' }), !admin),
       ...v.allFloors.map((f) =>
         h('label.teams-floor', { class: picked.has(f.id) && !all ? 'on' : '' }, h('input', { type: 'checkbox', checked: picked.has(f.id), disabled: !admin, onchange: (e: Event) => {
           const on = (e.target as HTMLInputElement).checked;

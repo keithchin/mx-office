@@ -100,7 +100,7 @@ export function hireSheet(floor: string, roster: RosterView) {
                 onclick: async () => {
                   modal.close();
                   const role = ROLE_BY_ID.get(m.role);
-                  await act({ do: 'hire', floor, role: m.role }, { title: `Hire the ${role?.title ?? m.title}?`, detail: `${m.name} starts work on this floor${m.status === 'benched' ? ' again, from its handoff note' : ''}: it takes turns, and they cost money.`, label: `Hire ${m.name}` });
+                  await act({ do: 'hire', floor, role: m.role }, { title: `Hire the ${role?.title ?? m.title}?`, detail: `${m.name} starts work on this project${m.status === 'benched' ? ' again, from its handoff note' : ''}: it takes turns, and they cost money.`, label: `Hire ${m.name}` });
                 },
               }, `${m.icon} ${m.title}`, h('small.m-dim', {}, ` ${m.status === 'benched' ? 'benched' : 'not hired'}`)),
             ),

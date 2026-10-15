@@ -89,8 +89,8 @@ export function incidentsView(root: HTMLElement, opts: IncidentsViewOpts) {
     );
   }
   function renderBar() {
-    const scopes: [string, string][] = [...(opts.floor ? ([['floor', 'This floor']] as [string, string][]) : []), [OFFICE_FLOOR, 'Office-wide'], ['all', 'Every floor'], ...(opts.floor ? [] : opts.floors().filter((f) => !f.cloning).map((f) => [f.id, f.name] as [string, string]))];
-    const scope = h('select.au-scope', { 'aria-label': 'Which floor', onchange: (e: Event) => ((filter.floor = (e.target as HTMLSelectElement).value), changed()) }, ...scopes.map(([v, l]) => h('option', { value: v, selected: v === filter.floor }, l)));
+    const scopes: [string, string][] = [...(opts.floor ? ([['floor', 'This project']] as [string, string][]) : []), [OFFICE_FLOOR, 'Office-wide'], ['all', 'Every project'], ...(opts.floor ? [] : opts.floors().filter((f) => !f.cloning).map((f) => [f.id, f.name] as [string, string]))];
+    const scope = h('select.au-scope', { 'aria-label': 'Which project', onchange: (e: Event) => ((filter.floor = (e.target as HTMLSelectElement).value), changed()) }, ...scopes.map(([v, l]) => h('option', { value: v, selected: v === filter.floor }, l)));
     const search = h('input.au-q', {
       type: 'search',
       placeholder: 'Search titles, summaries, causes, agents…',

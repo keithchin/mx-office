@@ -138,7 +138,7 @@ export class Firm {
   start(raw: unknown, by: string): Engagement | string {
     const floorId = raw && typeof raw === 'object' ? String((raw as Record<string, unknown>).floor ?? '') : '';
     const floor = this.deps.floor(floorId);
-    if (!floor) return 'No such floor';
+    if (!floor) return 'No such project';
     if (this.list().some((e) => e.floor === floorId && isActive(e.phase))) return 'The Firm is already auditing this project: cancel that engagement first';
     const config = cleanConfig(raw, this.defaults(floorId));
     if (typeof config === 'string') return config;
@@ -168,7 +168,7 @@ export class Firm {
 
   private async staff(e: Engagement) {
     const floor = this.deps.floor(e.floor);
-    if (!floor) return this.fail(e, 'The floor closed');
+    if (!floor) return this.fail(e, 'The project closed');
     this.move(e, 'staffing');
     e.startedAt = this.deps.now();
     e.commit = await this.deps.pin(floor);

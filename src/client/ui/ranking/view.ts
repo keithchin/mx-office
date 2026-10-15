@@ -55,7 +55,7 @@ export function rankChips(r: RankedWorker, scope: 'floor' | 'all'): HTMLElement 
   const k = r.rank;
   const chips = [
     scope === 'all' && k.global ? `${ord(k.global, k.of.global)} overall` : undefined,
-    k.floor ? `${ord(k.floor, k.of.floor)} on floor` : undefined,
+    k.floor ? `${ord(k.floor, k.of.floor)} on project` : undefined,
     k.model ? `${ord(k.model, k.of.model)} ${r.modelLabel}` : undefined,
     k.role ? `${ord(k.role, k.of.role)} ${r.role === 'worker' ? 'workers' : r.roleLabel}` : undefined,
   ].filter((v): v is string => !!v);

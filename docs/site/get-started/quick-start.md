@@ -34,7 +34,7 @@ More options are on [Running the office](../administration/running-the-office.md
 On **🏠 Home → 🏢 Projects** every project is a card.
 
 - **Open one:** click **🗂️ Board** on its card (the 1D view) or **🗺️ Office** (the 2D view).
-- **Start a new Mendix app:** click **✨ New project**. The wizard creates the GitHub repo in the organization picked in the first-run setup (⚙️ Settings › 🔌 Connections › Run setup again changes it), adds it as a floor and sets up the toolkit. See [Create your first project](first-project.md).
+- **Start a new Mendix app:** click **✨ New project**. The wizard creates the GitHub repo in the organization picked in the first-run setup (⚙️ Settings › 🔌 Connections › Run setup again changes it), adds it as a project and sets up the toolkit. See [Create your first project](first-project.md).
 - **Add an existing repo:** click **➕ Add project** and pick the repository.
 
 ## Step 4: Staff the team

@@ -13,11 +13,11 @@ export const gitRoutes = {
     auth: 'session',
     async handle(ctx, { res, url }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       try {
         return send(res, 200, await gitGraphsOf(ctx).graph(floor));
       } catch (err) {
-        return send(res, 500, { error: `git couldn't read this floor's branches: ${(err as Error).message}` });
+        return send(res, 500, { error: `git couldn't read this project's branches: ${(err as Error).message}` });
       }
     },
   },

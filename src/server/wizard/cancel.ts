@@ -366,7 +366,7 @@ export class SetupCancels {
       case 'project': {
         const floor = s.floor;
         const pending = floor ? await d.deletes.job(floor) : undefined;
-        if (!floor || (!d.hasFloor(floor) && (!pending || pending.status === 'done'))) return { detail: 'the setup never made a floor', skipped: true };
+        if (!floor || (!d.hasFloor(floor) && (!pending || pending.status === 'done'))) return { detail: 'the setup never made a project', skipped: true };
         const plan = await d.deletes.plan(floor);
         if (typeof plan === 'string') throw new Error(plan);
         // The folder goes with the project only on the setup's proof, checked now; the repository never does (its step checks GitHub's id right before).

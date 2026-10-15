@@ -1,10 +1,10 @@
 ---
 title: Settings reference
-description: Every field of a floor's team settings (RosterSettings) - type, default, limits and meaning - as stored in roster/<floor>.json, and the office's Teams notifications and keep-awake settings.
+description: Every field of a project's team settings (RosterSettings) - type, default, limits and meaning - as stored in roster/<project>.json, and the office's Teams notifications and keep-awake settings.
 weight: 4
 ---
 
-A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.ts`), kept in `<office data>/roster/<floor>.json` and edited on the [Settings](../using-the-office/settings.md) tab. A bad value keeps the previous one.
+A project's team settings are a `RosterSettings` object (`src/shared/roster/types.ts`), kept in `<office data>/roster/<project>.json` and edited on the [Settings](../using-the-office/settings.md) tab. A bad value keeps the previous one.
 
 | Field | Type | Default | Limits and meaning |
 |---|---|---|---|
@@ -56,21 +56,21 @@ A floor's team settings are a `RosterSettings` object (`src/shared/roster/types.
 | Connections: toolkit folder | Connections › Folders (admins); `<office data>/office-settings.json` (`toolkitDir`) | `AGENT_OFFICE_TOOLKIT_DIR`, else `~/agent-spike/mxcli-project-toolkit` | The mxcli-project-toolkit clone the wizard and the Playbooks use; must have `bin/init-project.sh`. The projects folder next to it is ⚙️ Settings › Building's *Workspace folder*. |
 | Connections: Mendix token per project | The Mendix card's ticks (admins); `office-settings.json` (`mendixFloors`) | off | That project's workers hired afterwards get `MENDIX_TOKEN` / `MX_PAT`. |
 | Connections: commit identity | git & gh › commit identity (admins); `office-settings.json` (`gitIdentity`) | none | `GIT_AUTHOR_*` / `GIT_COMMITTER_*` for the workers, when git has no identity of its own. |
-| Connections: worktree cleanup | Worktree cleanup › On / Off (admins); `office-settings.json` (`sweep`) | on | Hourly removal of merged worktrees no worker has, under each floor's `.agent-office/worktrees/`. |
+| Connections: worktree cleanup | Worktree cleanup › On / Off (admins); `office-settings.json` (`sweep`) | on | Hourly removal of merged worktrees no worker has, under each project's `.agent-office/worktrees/`. |
 | Audit: log prompt text | [Audit log](../using-the-office/audit-log.md) tab → **Log prompt text** (admins); `POST /api/audit/settings` | off | Keep the first 80 characters of every prompt a person sends a worker. Off: only its length is logged. |
 | Incidents: detection rules | Audit log → **🚨 Incidents** → **⚙️ Detection rules** (admins); `<office data>/incidents/settings.json`; `POST /api/incidents/settings` | all on; see [the defaults](../using-the-office/incidents.md#automatic-detection) | Each rule on or off, with its count, minutes or dollars. Changing them is logged (`settings.change`). |
 | Stuck detection | **⚙️ Settings › 🧭 Stuck detection** (admins); `office-settings.json` (`stuckDetection`); `POST /api/stuck/settings` | on; 24 h (PR, decision), 48 h (failing, no progress) | On or off, and the four thresholds in hours. Changing them is logged (`settings.change`). See [Stuck detection](../using-the-office/stuck-detection.md). |
-| Incidents: dedupe window | The same window, *Same incident if seen again within (hours)*; `settings.json` (`dedupeHours`) | 24 | A rule firing again on the same floor while its incident is still open, within this many hours, counts into that incident instead of opening a new one. |
+| Incidents: dedupe window | The same window, *Same incident if seen again within (hours)*; `settings.json` (`dedupeHours`) | 24 | A rule firing again on the same project while its incident is still open, within this many hours, counts into that incident instead of opening a new one. |
 | Test mode | `--test-mode` or `AGENT_OFFICE_TEST_MODE=1`; on by itself under `scratch/test-offices` or a folder named `test-office…` (not a plain `scratch`) | off | No real agent CLI starts, only a fake `--agent`. See [Test offices](../administration/test-offices.md#running-a-test-office-safely). |
 | Show the team-lead panel | ⚙️ Settings › 🧍 You (`/lite?tab=settings&section=you`); this browser's `localStorage` (`agent-office.lead-panel-show`) | on | `on` or `off`: whether the [team-lead panel](../using-the-office/command-center.md#the-team-lead-panel) is docked on the project tabs. Per browser. |
-| Team-lead panel view | ⚙️ Settings › 🧍 You (the 1D view's tab, `/lite?tab=settings&section=you`), or the panel's **Chat | Terminal** tabs; this browser's `localStorage` (`agent-office.pmc-view`) | `chat` | `chat` or `terminal`: how the [team-lead panel](../using-the-office/command-center.md#the-team-lead-panel) opens: its conversation or its terminal. Per browser, not per floor. |
+| Team-lead panel view | ⚙️ Settings › 🧍 You (the 1D view's tab, `/lite?tab=settings&section=you`), or the panel's **Chat | Terminal** tabs; this browser's `localStorage` (`agent-office.pmc-view`) | `chat` | `chat` or `terminal`: how the [team-lead panel](../using-the-office/command-center.md#the-team-lead-panel) opens: its conversation or its terminal. Per browser, not per project. |
 | Team phone: Do not disturb | The [📱 Team phone](../using-the-office/team-phone.md#phone-settings)'s ⚙ → *Do not disturb*; this browser's `localStorage` (`agent-office.phone.alerts`) | off | Off, until turned off, 1 hour, or until 9:00 tomorrow: no desktop alerts or sound meanwhile (the badge still counts). Quiets the workers' and escalations' alerts too, on the 1D and 2D views. |
 | Team phone: Digest | The phone's ⚙ → *Digest*; `agent-office.phone.alerts` | off | Bundle alerts that aren't urgent into one every 15, 30 or 60 minutes; urgent ones still come at once. |
 | Team phone: Sound | The phone's ⚙ → *Sound*; `agent-office.phone.alerts` | on | A short sound with an alert for something that needs you. |
 | Team phone: open, wide, last channel | The phone's button, **⤢**, the channel list; `agent-office.phone.open`, `.phone.wide`, `.phone.screen` | closed | Whether this browser had the phone open, widened, and on which channel. |
 | Team phone: what you've read | Opening a channel or DM; the office's `<office data>/phone/reads.json` (per account, or per browser on the shared password), mirrored in `agent-office.phone.reads` | — | The unread counts and the grey dot. |
 | Command Center: folded sections | A section heading in the summary, the setup panel's **Hide / Show**, the console's escalation bar (**Show ▾ / Back to the chat ▴**); `agent-office.cc-fold`, `agent-office.cc-setup`, `agent-office.pmc-escalations` | open (the setup panel folds once its gates are fine, or on a window under 820 px tall; the escalation cards stay behind their bar) | Which parts of the [Command Center](../using-the-office/command-center.md) this browser keeps folded. |
-| ▶ Resume project pacing | Team settings › **▶ Resume project** (admins); `<office data>/project-run.json` (`pacing.<floor>`) | 2 at once, 45 s apart | `concurrent` (1 to 6): most agents starting at once; `gapSec` (5 to 600): seconds between wakes. A wake counts once its session is up. See [Resume and pause](../using-the-office/resume-and-pause.md#order-and-pacing). |
+| ▶ Resume project pacing | Team settings › **▶ Resume project** (admins); `<office data>/project-run.json` (`pacing.<project>`) | 2 at once, 45 s apart | `concurrent` (1 to 6): most agents starting at once; `gapSec` (5 to 600): seconds between wakes. A wake counts once its session is up. See [Resume and pause](../using-the-office/resume-and-pause.md#order-and-pacing). |
 | 🔁 Restart safely | ⚙️ Settings › 🤖 Workers (admins); `POST /api/office/restart` | timeout 10 min | `build` (run `npm run build` first, offered when the office's checkout has new commits), `timeoutMin` (1 to 120). Needs `AGENT_OFFICE_LAUNCHER_LOOP=1` from a looping launcher to restart rather than only exit. See [Releasing and restarting safely](../administration/running-the-office.md#releasing-and-restarting-safely). |
 | The Firm: each reviewer's model | `/firm` → the model picker on each reviewer's card (admins); `<office data>/firm/firm.json` | Fable 5.1 | The model a Reviewer Agent runs on unless the audit wizard picks another. See [The Firm](../using-the-office/the-firm.md). |
 
@@ -108,14 +108,14 @@ Set in **⚙️ Settings** (the 1D view's tab: › 🔔 Notifications and › �
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `url` | string | none | The Teams Workflows webhook URL. https only (plain http only to this machine, for a stub). A secret: never sent to a browser (Settings shows a hint) nor written to the audit log. Only while Connections isn't open: otherwise it's in `credentials.json` (the `teams-webhook` credential, encrypted), moved there from this file once. |
-| `floors` | `'all' | string[]` | `'all'` | Which floors post (floor ids). |
-| `level` | `'needs' | 'digest'` | `'needs'` | Red items only, or those and a daily digest per floor. |
+| `floors` | `'all' | string[]` | `'all'` | Which projects post (project ids). |
+| `level` | `'needs' | 'digest'` | `'needs'` | Red items only, or those and a daily digest per project. |
 | `quiet` | `{ start: 'HH:MM', end: 'HH:MM' }` | none | Hold cards back between these times on the office computer's clock (may span midnight); one catch-up card follows. |
 | `pausedUntil` | ms | none | Hold cards back until then (the ⏸️ buttons: 1, 4 or 12 hours; at most a week). |
 | `publicUrl` | string | none | The office's address from outside: each card's Open button goes to `<publicUrl>/lite?floor=<id>`. Empty: no button. |
 | `by`, `at` | string, ms | | Who changed it last, and when. |
 
-What was posted is in `notify-teams-state.json` (posted item ids, items held back, each floor's last digest), so a restart posts nothing twice.
+What was posted is in `notify-teams-state.json` (posted item ids, items held back, each project's last digest), so a restart posts nothing twice.
 
 ### keep-awake.json ([keep-awake](../administration/running-the-office.md#keep-it-awake-and-the-lid))
 
@@ -136,9 +136,9 @@ The [Budget](../using-the-office/budget.md)'s office-wide settings live in `budg
 | `fx.manualRate` | number | none | Units of the currency per US dollar, used in manual mode. |
 | `fxLast` | object | none | The last rate fetched: `currency`, `rate`, `asOf` (the rate's day), `fetchedDay`, `error` if the last fetch failed. A failed fetch keeps the last good rate. |
 | `threshold` | number | `80` | The office default alert threshold, %, for projects that don't set their own. |
-| `ledger` | object | | Background calls that served no floor (the office's own). |
+| `ledger` | object | | Background calls that served no project (the office's own). |
 
-Each project's `budget/<floor>.json` holds:
+Each project's `budget/<project>.json` holds:
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|

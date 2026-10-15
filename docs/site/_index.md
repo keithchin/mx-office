@@ -5,8 +5,8 @@ description: Everything about Mx Office, an App Factory for Mendix where teams o
 
 Mx Office is a web app that runs on your laptop. **Claude Code agents** work at desks in it, on **GitHub repositories**, as an **App Factory for Mendix**:
 
-- every project (one Mendix app in its own repo) is a **floor** of the building;
-- every floor has a **team**: a Project Coordinator and four Leads, each with Claude Code subagents;
+- every **project** is one Mendix app in its own repo, and the office holds many;
+- every project has a **team**: a Project Coordinator and four Leads, each with Claude Code subagents;
 - the agents build the app with **mxcli** and follow the **mxcli-project-toolkit**;
 - **you are the Project Manager**: you approve what matters and answer escalations.
 
@@ -19,7 +19,7 @@ Mx Office is a web app that runs on your laptop. **Claude Code agents** work at 
 | Run the office and give a team its first task, in 15 minutes | [Quick start](get-started/quick-start.md) |
 | Create a new Mendix project with the wizard | [Create your first project](get-started/first-project.md) |
 | Learn your way around the screens | [A tour of the office](get-started/tour.md) |
-| Understand floors, workers, worktrees and views | [Concepts](concepts/_index.md) |
+| Understand projects, workers, worktrees and views | [Concepts](concepts/_index.md) |
 | Know who the agents are and when they need you | [Teams & Agents](teams-and-agents/_index.md) |
 | Look up a command, a setting or an API route | [Reference](reference/_index.md) |
 | Fix something that went wrong | [Troubleshooting](troubleshooting/_index.md) and the [FAQ](faq.md) |
@@ -27,7 +27,7 @@ Mx Office is a web app that runs on your laptop. **Claude Code agents** work at 
 ## What's in these docs
 
 - **Get Started**: the quick start, the new-project wizard, and a tour.
-- **Concepts**: the building, floors, workers, worktrees, the four views, and how work flows from an issue to a merged PR.
+- **Concepts**: the building, projects, workers, worktrees, the four views, and how work flows from an issue to a merged PR.
 - **Using the Office**: one page for every screen, from `/home` and the Command Center to the Git tab, Settings, the [Audit log](using-the-office/audit-log.md) with its [Incidents](using-the-office/incidents.md), and [The Firm](using-the-office/the-firm.md).
 - **Teams & Agents**: the team model, autonomy levels, escalations, the review loop, benching, Playbooks, models and costs.
 - **Automation**: Jeff · Router, skills and gates, and the subagent track record.

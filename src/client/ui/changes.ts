@@ -356,7 +356,7 @@ export function openChanges(net: Net, workerId: string, onTerminal?: () => void,
       ...[{ id: undefined as string | undefined, name: own, pr: w.pr }, ...repos.map((r) => ({ id: r.floor as string | undefined, name: r.name, pr: r.pr }))].map((t) =>
         h(
           'button.btn',
-          { type: 'button', role: 'tab', class: t.id === repo ? 'on' : '', 'aria-selected': t.id === repo ? 'true' : 'false', title: t.id ? `Its worktree of ${t.name}` : `Its worktree of this floor's project, ${t.name}`, onclick: () => show(t.id) },
+          { type: 'button', role: 'tab', class: t.id === repo ? 'on' : '', 'aria-selected': t.id === repo ? 'true' : 'false', title: t.id ? `Its worktree of ${t.name}` : `Its worktree of this project, ${t.name}`, onclick: () => show(t.id) },
           `📁 ${t.name}`,
           t.pr ? h('small', {}, ` · #${t.pr.number}`) : null,
         ),

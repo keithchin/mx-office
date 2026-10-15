@@ -340,7 +340,7 @@ export class LeadPanel {
     if (w && this.term.showing === w.id) this.term.sizeTo(w.cols, w.rows);
     // The conversation is watched whenever there's a lead to talk to: the unread badge counts it while collapsed.
     this.watch(this.lead?.kind === 'lead' && !document.hidden ? (this.view.workerId ?? null) : null);
-    const note = this.view.live ? '' : this.view.state === 'asleep' ? `💤 ${this.lead && this.lead.kind !== 'none' ? this.lead.name : 'The lead'} is asleep` : 'Not at a desk on this floor';
+    const note = this.view.live ? '' : this.view.state === 'asleep' ? `💤 ${this.lead && this.lead.kind !== 'none' ? this.lead.name : 'The lead'} is asleep` : 'Not at a desk on this project';
     const shown = `${!!id}|${note}`;
     if (shown !== this.connKey) {
       this.connKey = shown;

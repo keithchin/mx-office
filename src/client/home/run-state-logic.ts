@@ -93,12 +93,12 @@ export function toggleState(floors: Pick<FloorInfo, 'id' | 'cloning'>[], views: 
   }
   const paused = live.filter((f) => views.get(f.id)?.pause).map((f) => f.id);
   if (paused.length === live.length) {
-    return { action: 'resume', label: '▶ Resume all projects', title: 'Every project is paused. Wake, on every floor, the agents that have work waiting (each floor’s preview defaults)', admin };
+    return { action: 'resume', label: '▶ Resume all projects', title: 'Every project is paused. Wake, on every project, the agents that have work waiting (each project’s preview defaults)', admin };
   }
   return {
     action: 'pause',
     label: '⏸ Pause all projects',
-    title: paused.length ? `${paused.length} of ${live.length} projects are paused. Every other floor’s agents finish their turn, hand off and sleep` : 'Every floor’s agents finish their turn, hand off and sleep',
+    title: paused.length ? `${paused.length} of ${live.length} projects are paused. Every other project’s agents finish their turn, hand off and sleep` : 'Every project’s agents finish their turn, hand off and sleep',
     resumePaused: paused.length ? paused : undefined,
     admin,
   };

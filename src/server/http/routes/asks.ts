@@ -32,7 +32,7 @@ export const asksRoutes = {
     auth: 'session',
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, await asksOf(ctx).view(asksFloor(ctx, floor), ctx.meOf(session.account?.id).admin));
     },
   },
@@ -48,7 +48,7 @@ export const asksRoutes = {
       if (!body) return send(res, 400, { error: 'Send JSON' });
       if (refuseStale(ctx, req, res)) return;
       const floor = ctx.floors.get(String(body.floor ?? ''));
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       if (!isAskAct(body.act)) return send(res, 400, { error: 'Which action?' });
       const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The Project Manager');
       const f = asksFloor(ctx, floor);

@@ -70,7 +70,7 @@ test('on a toolkit project the level follows the build plan’s gate, through th
   // Turned on before Stage 4 passed: the early level at once, and the Lead at work told.
   assert.equal(t.roster.members.settings(t.floor, { autonomyByStage: { enabled: true, early: 2, build: 3 } }), undefined);
   assert.equal(t.d().settings.autonomy, 2);
-  assert.match(t.floor.prompts.at(-1)!.text, /changed this floor's autonomy level/);
+  assert.match(t.floor.prompts.at(-1)!.text, /changed this project's autonomy level/);
   assert.equal(t.roster.view(t.floor, true).byStage, 'early');
   // Nothing changes while the stage doesn't.
   const told = t.floor.prompts.length;

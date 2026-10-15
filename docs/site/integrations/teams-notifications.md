@@ -1,6 +1,6 @@
 ---
 title: Teams notifications
-description: Get an Adaptive Card in a Microsoft Teams channel when something needs you (an agent asking, an escalation, the spend cap, failing checks, a Firm report, a gate, Studio Pro changes), plus an optional daily digest per floor. One-way, through a Teams Workflows webhook, with no admin consent.
+description: Get an Adaptive Card in a Microsoft Teams channel when something needs you (an agent asking, an escalation, the spend cap, failing checks, a Firm report, a gate, Studio Pro changes), plus an optional daily digest per project. One-way, through a Teams Workflows webhook, with no admin consent.
 weight: 5
 ---
 
@@ -32,8 +32,8 @@ The workflow belongs to you, not to the channel. If you leave the company or the
 1. Open **☰ → ⚙️ Settings → 🔔 Notifications** on the 1D view (or go straight to `/lite?tab=settings&section=notify`). The **Microsoft Teams** card is under *Team notifications (Slack / Discord)*. *(An empty card with a URL box and an orange Save button.)*
 2. Paste the URL and click **Save** (admins only). It's kept encrypted in [🔌 Connections](../administration/connections.md) (the **💬 Microsoft Teams webhook** card, where you can also paste or remove it). The box is a password field, and once saved the URL is never shown again: the card says *Posting to Teams (prod-12.westeurope.logic.azure.com/…voke)*, who set it and when.
 3. Click **📨 Send a test card**. A card *"🔔 &lt;your name&gt; connected &lt;the office&gt; to this channel"* appears in the channel within a few seconds. If it doesn't, the card in Settings says why (for example *Teams answered 401*, or *Couldn't reach Teams*).
-4. Pick **which floors post** (all, or tick the ones you want), **what's posted** (*Needs you only*, or *Needs you + daily digest*), and optionally **quiet hours**.
-5. Fill in the **Public office address** if your phone can reach the office. [📱 Phone access](../administration/phone-access.md) fills it in by itself with its tunnel's address when the tunnel comes up (an address you typed yourself is left alone). Each card then gets an **Open** button to that floor's 1D view. Leave it empty while the office is only reachable on the laptop: cards then have no button.
+4. Pick **which projects post** (all, or tick the ones you want), **what's posted** (*Needs you only*, or *Needs you + daily digest*), and optionally **quiet hours**.
+5. Fill in the **Public office address** if your phone can reach the office. [📱 Phone access](../administration/phone-access.md) fills it in by itself with its tunnel's address when the tunnel comes up (an address you typed yourself is left alone). Each card then gets an **Open** button to that project's 1D view. Leave it empty while the office is only reachable on the laptop: cards then have no button.
 
 ## What's posted
 
@@ -45,13 +45,13 @@ The same rules as the Command Center's **Needs you** strip (`src/shared/needsyou
 |---|---|
 | 🙋 An agent asking | An agent stopped on a permission prompt or a question in its terminal. A new question from the same agent is a new card. |
 | 🚩 An escalation | An open escalation to the Project Manager that isn't FYI. |
-| 💸 The spend cap | A floor's daily team cap is spent: office prompts are paused. |
+| 💸 The spend cap | A project's daily team cap is spent: office prompts are paused. |
 | ❌ Failing checks | An open, ready pull request whose checks fail. |
-| 📑 A Firm report | The Firm's audit report on the floor is ready. |
+| 📑 A Firm report | The Firm's audit report on the project is ready. |
 | ✋ A gate | A toolkit stage waits for your sign-off. |
 | 🧱 Studio Pro changes | Studio Pro closed with model changes nobody committed. |
 
-Not posted: finished turns (the office's own quiet turns end the same way, so these stay on the Command Center), lost worktrees, proposals, the live app, a stale folder, other floors' counts and the Firm's budget warning.
+Not posted: finished turns (the office's own quiet turns end the same way, so these stay on the Command Center), lost worktrees, proposals, the live app, a stale folder, other projects' counts and the Firm's budget warning.
 
 Each item in a card shows the **project**, **who** (the agent, whoever escalated, the PR's author, *The Firm*…), a **one-line summary**, its **urgency**, how long it has **waited**, **Jeff's priority** rank when he ranked it, and an **Open** button when there's a public office address.
 
@@ -67,11 +67,11 @@ Each item in a card shows the **project**, **who** (the agent, whoever escalated
 
 ### Daily digest
 
-With **Needs you + daily digest**, each posting floor gets one summary a day, right after its morning standup is compiled (the standup schedule in the floor's Team settings), or 30 minutes after the standup time when no standup ran that day:
+With **Needs you + daily digest**, each posting project gets one summary a day, right after its morning standup is compiled (the standup schedule in the project's Team settings), or 30 minutes after the standup time when no standup ran that day:
 
 - PRs merged in the last 24 hours,
 - how many Needs you items are open (and how many are red),
-- spend today against the floor's cap,
+- spend today against the project's cap,
 - toolkit stage progress (gates passed, the next step, stages waiting for sign-off),
 - the top three open escalations in **Jeff's priority** order, and any other red items.
 
@@ -81,7 +81,7 @@ With **Needs you + daily digest**, each posting floor gets one summary a day, ri
 
 A post that fails with a dropped connection, a 429 or a 5xx is tried again up to four times with backoff (2 s, 4 s, 8 s, honouring Teams' `Retry-After`). A batch that still fails waits five minutes and tries again, without the items that were handled meanwhile. Posting never holds up the office.
 
-Every post is in the [Audit log](../using-the-office/audit-log.md) as `notify.teams.sent` or `notify.teams.failed`, with the kind of card, how many items, the floors, the tries and Teams' status code, never the URL or the card's text. Changing the settings is a `settings.change` (whether a webhook is set, not the URL).
+Every post is in the [Audit log](../using-the-office/audit-log.md) as `notify.teams.sent` or `notify.teams.failed`, with the kind of card, how many items, the projects, the tries and Teams' status code, never the URL or the card's text. Changing the settings is a `settings.change` (whether a webhook is set, not the URL).
 
 ## Limits
 

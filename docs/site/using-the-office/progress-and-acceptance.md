@@ -4,7 +4,7 @@ description: The thin line above the tabs that shows where a project is, measure
 weight: 2.5
 ---
 
-Every project has a **progress bar**: a thin line between the floor's top row (its branch, budget chip and ▶ / ⏸ state) and the tabs of the 1D view, and under the top bar of the [2D view](2d-view.md). It's the same on every tab. [Home](home.md)'s project cards show a small version of it.
+Every project has a **progress bar**: a thin line between the project's top row (its branch, budget chip and ▶ / ⏸ state) and the tabs of the 1D view, and under the top bar of the [2D view](2d-view.md). It's the same on every tab. [Home](home.md)'s project cards show a small version of it.
 
 ## What it shows
 
@@ -63,7 +63,7 @@ The **▾** at the left folds the bar into a thin coloured line, and **▸** ope
 
 The bar doesn't poll. It refreshes when you:
 
-- open a floor;
+- open a project;
 - see a pull request merge (main moved);
 - come back to the tab after a minute away;
 - accept or reopen a delivery.
@@ -113,7 +113,7 @@ If the delivery branch has moved past the accepted commit, or the deliverables o
 
 ### Where it's kept
 
-The records are kept in `<office data>/acceptance/<floor>.jsonl`:
+The records are kept in `<office data>/acceptance/<project>.jsonl`:
 
 - One line per accept or reopen.
 - The file is append-only and hash-chained like the [Audit log](audit-log.md), so an edited or removed line shows. If the chain doesn't hold, the record view warns you.

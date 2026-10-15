@@ -18,7 +18,7 @@ An **escalation** is a structured question from an agent to you, with an urgency
 
 ## The same ask, raised again
 
-An agent's escalation that asks for what's already open on the floor isn't opened a second time: it joins the open one as a **+1 from** *name*, its details are added, and that agent hears your answer too.
+An agent's escalation that asks for what's already open on the project isn't opened a second time: it joins the open one as a **+1 from** *name*, its details are added, and that agent hears your answer too.
 
 - **The same title, or nearly** (three quarters of the words shared): joined straight away.
 - **The same ask in other words** (*Set repo secret X*, *One command to set the e2e secret*, *Secret 404: set it in the web page instead*): when no title matches, [Jeff](../automation/jeff-router.md#the-same-ask-in-other-words) is asked whether it's the same ask as one of the open ones, and it's joined only when he's at least 85% sure. While his **Waiting on you** judgement is Off he isn't asked; when he doesn't answer within 10 seconds, or fails, it's raised as its own.
@@ -43,7 +43,7 @@ The office stamps who raised it (name, role, team) and the autonomy level at the
 - Every open, non-FYI escalation is in **🚨 Needs you** (in Portal, the Overview's Needs you card shows it in full: the question, the options with the recommendation marked, why, and **Send answer** / **Reply in my words** / **Ask &lt;lead&gt;**) and **✅ Approvals**.
 - An **urgent** or **critical** one also makes a toast and a desktop notification.
 - Jeff rates each open one and, with his **Priority** on (the default), the lists show them in his order with a **🧑‍⚖️ #1 · resolve first** chip. See [Jeff · Router](../automation/jeff-router.md#priority-which-escalation-first).
-- The Project Coordinator is told about the team's escalations (batched a minute after the last one), so it can summarise them for you. The relay says it needs no reply. While the Coordinator is benched or asking someone, or the floor's daily cost cap is reached, they wait for it, kept in the roster file so a restart doesn't lose them. An asleep Coordinator is woken with all its relays in one message, at most once a minute. A floor with no Coordinator at all skips them (they're on the Command Center and the next standup page anyway).
+- The Project Coordinator is told about the team's escalations (batched a minute after the last one), so it can summarise them for you. The relay says it needs no reply. While the Coordinator is benched or asking someone, or the project's daily cost cap is reached, they wait for it, kept in the roster file so a restart doesn't lose them. An asleep Coordinator is woken with all its relays in one message, at most once a minute. A project with no Coordinator at all skips them (they're on the Command Center and the next standup page anyway).
 
 ## Answering
 
@@ -60,7 +60,7 @@ The answer goes to the agent as a prompt: *REPLIED*, *APPROVED*, *REJECTED* or *
 - If it's **asleep**, it's woken with your answer.
 - If it was **benched**, its role gets the answer: in its current session, or by re-hiring it with your answer in its first message (when hiring is open).
 
-Your answer is kept before it's sent: the office appends it, in full, to the project's answer history (`<office data>/answers/<floor>.jsonl`), writes down the attempt to type it, and only then types it, ending with a marker line such as *[office answer dsp_… · ESC-3f9c2a1b7e rev 1]*. The escalation is resolved only once the attempt settled. An answer that waits for the agent's turn (a dialog up) keeps the same attempt, and its prompt is on disk at once. If the office stops mid-way, it checks the agent's session when it starts again and never types the answer again by itself; an attempt it can't confirm shows in Needs you with **Send again**, **It went through** and **Abandon** (see [Answers whose outcome is unknown](../using-the-office/command-center.md#answers-whose-outcome-is-unknown)). What the office guarantees is **durable intent plus reconciliation, and no automatic replay of an ambiguous attempt**. It does not promise that an answer is delivered exactly once. An answer to an escalation someone answered meanwhile is refused (*This decision changed since you opened it*), with nothing sent.
+Your answer is kept before it's sent: the office appends it, in full, to the project's answer history (`<office data>/answers/<project>.jsonl`), writes down the attempt to type it, and only then types it, ending with a marker line such as *[office answer dsp_… · ESC-3f9c2a1b7e rev 1]*. The escalation is resolved only once the attempt settled. An answer that waits for the agent's turn (a dialog up) keeps the same attempt, and its prompt is on disk at once. If the office stops mid-way, it checks the agent's session when it starts again and never types the answer again by itself; an attempt it can't confirm shows in Needs you with **Send again**, **It went through** and **Abandon** (see [Answers whose outcome is unknown](../using-the-office/command-center.md#answers-whose-outcome-is-unknown)). What the office guarantees is **durable intent plus reconciliation, and no automatic replay of an ambiguous attempt**. It does not promise that an answer is delivered exactly once. An answer to an escalation someone answered meanwhile is refused (*This decision changed since you opened it*), with nothing sent.
 
 ### Recorded as given
 
@@ -78,7 +78,7 @@ Where the record is, is kept as separate fields: the file's `path`, the `commitS
 
 Only **recorded as given, at the current revision, merged into main** takes the answer off the follow-through list by itself, and only that counts where something else waits on the decision (see [stuck detection](../using-the-office/stuck-detection.md)). *Recorded differently* never clears anything by itself. See [Following through](../using-the-office/command-center.md#following-through) for the cards and their buttons.
 
-Your answer goes through even when the floor's daily cost cap is reached: the cap holds the office's own prompts, not yours. See [Models and costs](models-and-costs.md#the-daily-cost-cap).
+Your answer goes through even when the project's daily cost cap is reached: the cap holds the office's own prompts, not yours. See [Models and costs](models-and-costs.md#the-daily-cost-cap).
 
 > [!NOTE]
 > A Lead waiting on an open escalation of its own is never benched for idling. It is waiting on you, not idle.
