@@ -4,6 +4,7 @@
 // and Update toolkit's preview (with a fake gate-check), update and roll back. Temp git repos only: a fake
 // toolkit with a bare origin, and a project with its own bare origin.
 import test from 'node:test';
+import { bashPath } from '../src/server/wizard/run.js';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -371,6 +372,7 @@ echo "# intake" > "$P/intake.md"
 printf '# P\n\nToolkit commit: %s\n\n## Decisions\n' "$(git -C "$T" rev-parse --short HEAD)" > "$P/PROJECT.md"
 printf '## Session-start ritual\n\n1. \`git -C %s pull --ff-only\`\n' "$T" > "$P/CLAUDE.local.md"
 : > "$P/bin/install-project-hooks.sh"; : > "$P/.claude/settings.local.json"; : > "$P/.claude/.doctor-receipt"
+printf '%s' "$MXTK_LEAKGUARD_DENYFILE" > "$P/.denyfile"
 `;
   w.put(w.toolkit, 'bin/init-project.sh', init);
   w.g(w.toolkit, 'add', '-A');
@@ -390,6 +392,8 @@ printf '## Session-start ritual\n\n1. \`git -C %s pull --ff-only\`\n' "$T" > "$P
   await steps.init(job, io);
   assert.equal(job.toolkit?.sha, tip);
   const pin = pinDir(w.toolkit, tip);
+  // The leak guard's deny list is the contributing clone's, never the read-only pin's.
+  assert.equal(readFileSync(path.join(dir, '.denyfile'), 'utf8'), bashPath(path.join(path.resolve(w.toolkit), '.leakguard-deny')));
   assert.equal(job.toolkit?.dir, pin);
   const local = readFileSync(path.join(dir, 'CLAUDE.local.md'), 'utf8');
   assert.ok(local.includes(bashForm(pin)), local);
