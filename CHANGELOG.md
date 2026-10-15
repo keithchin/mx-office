@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-15 · release 49 (`4cea6e8`)
+
 ### Added
 
 - **Recorded as given.** After you answer, the office checks the agent's record of your decision and compares the words with what you decided, instead of trusting a status. It shows where the record is: in a working copy, committed on a branch, or merged into main.
