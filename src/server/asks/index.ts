@@ -83,9 +83,9 @@ export function asksOf(ctx: Ctx): AsksService {
       e.from = { kind: 'awaiting', key };
       t.roster.touch(t.tf);
     },
-    settle(f, id, why) {
+    markGone(f, id, what) {
       const t = team(f);
-      if (t) t.roster.escalations.settle(t.tf, id, why);
+      if (t) t.roster.escalations.markGone(t.tf, id, what);
     },
     detectInput: (f, reads) => detectInputOf(ctx, f, reads),
     lead(f) {

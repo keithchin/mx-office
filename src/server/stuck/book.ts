@@ -18,6 +18,8 @@ export interface StuckRecord {
   dismissedAt?: number;
   /** The PM accepted the workaround: quiet until then. */
   acceptedUntil?: number;
+  /** Not found by a look whose read of its source failed: kept as it was since then (never resolved on a failed read). */
+  unreadAt?: number;
   draft: StuckDraft;
 }
 
@@ -60,8 +62,11 @@ export class StuckBook {
     return this.data.items[id]?.firstSeen ?? (this.data.seen[id] ??= now);
   }
 
-  /** This look's drafts against what's open: new ones raised, changed ones updated, missing ones resolved. */
-  reconcile(drafts: readonly StuckDraft[], now: number): BookEvent[] {
+  /**
+   * This look's drafts against what's open: new ones raised, changed ones updated, missing ones resolved,
+   * except those `unread` says this look couldn't re-read the source of: those stay open, marked unreadAt.
+   */
+  reconcile(drafts: readonly StuckDraft[], now: number, unread: (r: StuckRecord) => boolean = () => false): BookEvent[] {
     const events: BookEvent[] = [];
     const found = new Set<string>();
     for (const d of drafts) {
@@ -74,6 +79,7 @@ export class StuckBook {
         events.push({ action: 'raised', record: rec });
         continue;
       }
+      delete r.unreadAt;
       if (sig(r.draft) !== sig(d) || r.draft.since !== d.since) {
         const before = r.draft;
         r.draft = d;
@@ -82,6 +88,11 @@ export class StuckBook {
     }
     for (const r of Object.values(this.data.items)) {
       if (r.status !== 'open' || found.has(r.id)) continue;
+      if (unread(r)) {
+        r.unreadAt ??= now;
+        continue;
+      }
+      delete r.unreadAt;
       r.status = 'resolved';
       r.resolvedAt = now;
       delete r.snoozedUntil;
@@ -103,6 +114,11 @@ export class StuckBook {
 
   open(): StuckRecord[] {
     return Object.values(this.data.items).filter((r) => r.status === 'open');
+  }
+
+  /** Open and dismissed: hidden, not resolved (Needs you shows them as "hidden (N)"). */
+  dismissed(): StuckRecord[] {
+    return this.open().filter((r) => !!r.dismissedAt).sort((a, b) => a.draft.since - b.draft.since);
   }
 
   snooze(id: string, until: number): StuckRecord | undefined {

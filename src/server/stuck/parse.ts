@@ -287,7 +287,7 @@ export function openQuestions(text: string): OpenQuestion[] {
     if (status < 0 || q < 0) continue;
     for (const r of t.rows) {
       const st = r.cells[status] ?? '';
-      if (!OPEN.test(st) || DECIDED.test(st) || /\bdeferred\b/i.test(st)) continue;
+      if (!OPEN.test(st) || DECIDED.test(st) || /\b(deferred|accepted)\b/i.test(st)) continue;
       const who = owner >= 0 ? (r.cells[owner] ?? '') : '';
       if (owner >= 0 && who.trim() && !FOR_PM.test(`${who} ${st}`)) continue;
       const since = earliestDate(r.cells.join(' '));

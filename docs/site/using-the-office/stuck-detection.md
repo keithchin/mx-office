@@ -19,7 +19,11 @@ It needs no AI and makes no extra GitHub calls: it reads the board's existing pu
 
 A `user-only` client question in a BRD that blocks work and has waited on you for the decision threshold is a decision waiting on you too (*Client question waiting on you: …*, from the [Questions](questions.md) page's collection); it resolves once you answer it there.
 
-An item is **raised once** under a stable id (`pr-51`, `decision-OW-1`, `failing-J-08`, `circles`), **updated in place** when what it says changes (a new row waiting on the PR, say), and **resolved by itself** when the condition clears: the PR merged or closed, the decision recorded, the journey passing, progress made. Restarting the office raises nothing again. If an agent has already escalated the same thing (an open escalation naming the PR, the decision or the test), the item stays out of Needs you so it isn't there twice.
+An item is **raised once** under a stable id (`pr-51`, `decision-OW-1`, `failing-J-08`, `circles`), **updated in place** when what it says changes (a new row waiting on the PR, say), and **resolved by itself** when the condition clears: the PR merged or closed, the decision recorded, the journey passing, progress made. Restarting the office raises nothing again. If an agent has already escalated the same thing (an open escalation naming the PR, the decision or the journey), the item is no longer hidden: it shows as a source inside that escalation's [decision card](command-center.md#decision-cards), so it's there once and you can see both.
+
+A decision recorded in `PROJECT.md`'s Decisions as **CONFIRMED**, or CONFIRMED *for now* (accepted, parked on a workaround), or an open question marked *accepted for now*, is not waiting on you, and isn't raised again from its own evidence.
+
+When the office **can't read** a source on a look (a git error reading main, Testing's records, a failing source), the items that came from it are kept as they were, marked *couldn't re-read the source at 14:02*; they never resolve on a failed read. Only a successful read that no longer finds an item resolves it.
 
 Every raise, update, resolve and action is in the [Audit log](audit-log.md) as `stuck.raised`, `stuck.updated`, `stuck.resolved`, `stuck.snoozed`, `stuck.dismissed`, `stuck.ask-lead`, `stuck.answer`, `stuck.accept` or `stuck.blockers` (the *Escalations & approvals* group).
 
@@ -33,12 +37,13 @@ Its button (**Ask Ada**, **Answer**, **Ask for blockers** or **Review**) opens t
 |---|---|
 | Stale PR, failing for days | **Ask &lt;lead&gt; to rebase and merge, or close it** (or **to fix it**), **Snooze 1 day**, **Dismiss** |
 | Decision | **Answer** (a text box), **Accept the current workaround for now** (when the build plan says what the build proceeds on), **Snooze 1 day**, **Dismiss** |
+| Client question in a BRD | **Answer** opens the [Questions](questions.md) page at that question (its one answer path: never a message to the lead), **Snooze 1 day**, **Dismiss** |
 | Going in circles | **Ask &lt;lead&gt; for a blockers summary**, **Snooze 1 day**, **Dismiss** |
 
 - **Ask, Answer, Accept** send a message to whoever covers Management (the Project Coordinator, or the Lead on a Solo or Startup team) through the team's own tell, as yours. If the lead is working, the card asks **OK to interrupt?**: **After their current turn** (the default: the office holds it until the turn ends) or **Interrupt now**.
 - **Answer** asks the lead to record your answer in `PROJECT.md`'s Decisions as CONFIRMED by you, mark the decision decided in the build plan and unblock its rows. The item resolves once that's at main.
 - **Accept the current workaround for now** sends *PM accepts &lt;workaround&gt; for this slice; record as CONFIRMED* and keeps the item quiet for 7 days.
-- **Snooze 1 day** hides it for 24 hours. **Dismiss** hides it until it clears and comes back; neither resolves anything.
+- **Snooze 1 day** hides it for 24 hours. **Dismiss** hides it until it clears and comes back; neither resolves anything. Dismissed items show at the foot of the Overview's Needs you card as **Hidden (N)**, with a way to open each: *hidden, not resolved*.
 
 Only admins act on items; everyone sees them. On the [phone version](phone-version.md) the items show with the others and open on a computer.
 

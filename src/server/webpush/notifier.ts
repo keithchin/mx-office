@@ -7,7 +7,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { mobileItemUrl } from '../../shared/mobile.js';
 import type { NeedItem } from '../../shared/needsyou.js';
-import { isRedNeed } from '../../shared/notify-teams.js';
+import { isRedNeed, notifyRows } from '../../shared/notify-teams.js';
 import { alertPlan, digestDue } from '../../shared/phone.js';
 import { writeJsonAtomic } from '../flow/store.js';
 import type { PushPayload } from './sender.js';
@@ -25,7 +25,7 @@ export interface PushItem {
 /** A floor's Needs-you items that may buzz a phone: red, and not from a turn the office started. */
 export function pushItemsOf(floor: { id: string; name: string }, needs: readonly NeedItem[], officeTurn: (workerId: string) => boolean): PushItem[] {
   const out: PushItem[] = [];
-  for (const n of needs) {
+  for (const n of notifyRows(needs)) {
     if (!isRedNeed(n)) continue;
     if (n.kind === 'asking' && n.target.to === 'worker' && officeTurn(n.target.id)) continue;
     const id = `${floor.id}:${n.key}${n.kind === 'asking' && n.since ? `@${n.since}` : ''}`;

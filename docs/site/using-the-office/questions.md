@@ -66,11 +66,11 @@ An answer shows as **recorded** only once a later collection reads its status as
 
 ## Needs you and notifications
 
-While questions wait on you, [Needs you](command-center.md#needs-you) has one row for the project: *❓ 24 questions for the client · 5 BRDs · 6 block work*, with **Answer**, which opens this page. It counts in the Overview's and the team-lead panel's *N waiting on you*.
+Each question waiting on you is a [decision card](command-center.md#decision-cards) of its own in Needs you, grouped with the other sources of the same question: its stuck item, and `PROJECT.md`'s register row with the same id (OQ-07 in the register is F002's OQ-07 when only one BRD has that id). Its **Answer** opens this page at that question. Once you've answered, the card shows *Sent* until the toolkit reads it recorded, and if the register still lists the question as open it says so: the message **Send** types asks the analyst to mark the register row answered too, so both close. Each card counts in the Overview's and the team-lead panel's *N waiting on you*.
 
 It's a red item, so it follows the usual rules for [phone pushes](phone-version.md) (Do not disturb and the digest apply) and [Teams cards](../integrations/teams-notifications.md): **one notification when new questions appear**, not one per question.
 
-A `user-only` question that blocks work and has waited on you longer than the decision threshold (24 h by default) also becomes a [stuck item](stuck-detection.md) (*Client question waiting on you: …*), raised once and resolved by itself when you answer it. Its age is from the `raisedAtGate` date when the BRD has one, else from when the office first saw it or the file's time.
+A `user-only` question that blocks work and has waited on you longer than the decision threshold (24 h by default) also becomes a [stuck item](stuck-detection.md) (*Client question waiting on you: …*), raised once and resolved by itself when you answer it. It shows inside the question's card, not as a second item. Its age is from the `raisedAtGate` date when the BRD has one, else from when the office first saw it or the file's time.
 
 ## The Playbooks
 

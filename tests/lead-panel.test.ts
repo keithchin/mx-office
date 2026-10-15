@@ -88,7 +88,8 @@ test('"N waiting on you" counts every actionable item: escalations, a merged PR 
       esc(),
       esc({ id: 'e2', urgency: 'important', title: 'Cost limit?' }),
       esc({ id: 'e3', urgency: 'important', title: 'PR #79 merged, not verified: required checks didn’t pass on merge commit abc1234', options: ['Re-run checks', 'Waive (with a reason)', 'Send back for rework'], recommendation: undefined }),
-      esc({ id: 'e4', fyi: true, title: 'Just so you know' }),
+      // An FYI that asks nothing (an FYI with options is shown, and counted, as a decision: Slice 1A).
+      esc({ id: 'e4', fyi: true, title: 'Just so you know', options: [], recommendation: undefined }),
       esc({ id: 'e5', status: 'resolved', title: 'Done already' }),
     ],
   });

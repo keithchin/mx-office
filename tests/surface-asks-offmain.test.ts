@@ -98,7 +98,7 @@ test("the lead's newer standup on its branch: its Blocked on you, labelled as no
   assert.deepEqual(blockedOnYouOf('- **Blocked on you**\n  - OW-1 owner\n- **Next** x'), ['OW-1 owner']);
   // The standup page's "Blocked on you" gets the lines, labelled.
   const floor: AsksFloor = { id: 'f1', name: 'p', dir: r.dir, people: () => [] };
-  const deps: AsksDeps = { dataDir: mkdtempSync(path.join(os.tmpdir(), 'asks-d-')), floors: () => [floor], now: () => NOW, writerOf: () => undefined, escalations: () => [], raise: () => {}, settle: () => {}, detectInput: async () => ({ standup: s! }), lead: () => ({ name: 'Ada' }), tell: () => undefined, record: () => {} };
+  const deps: AsksDeps = { dataDir: mkdtempSync(path.join(os.tmpdir(), 'asks-d-')), floors: () => [floor], now: () => NOW, writerOf: () => undefined, escalations: () => [], raise: () => {}, markGone: () => {}, detectInput: async () => ({ standup: s! }), lead: () => ({ name: 'Ada' }), tell: () => undefined, record: () => {} };
   const svc = new AsksService(deps);
   await svc.look(floor, 'test');
   assert.deepEqual(await svc.blockedLines(floor), ["Merge PR #51 (escalated) (from Ada's branch, not on main yet)", "OW-1 SMTP owner (from Ada's branch, not on main yet)"]);

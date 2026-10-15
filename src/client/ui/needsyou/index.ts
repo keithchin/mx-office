@@ -11,14 +11,12 @@ import type { SetupView } from '../../../shared/wizard';
 import { store } from '../../state';
 import { h, timeAgo } from '../dom';
 import { fetchRoster } from '../roster/api';
-import { collectNeeds, hereCount, type BudgetNeed, type NeedItem, type NeedKind, type NeedTarget } from './logic';
-import { incidentBriefs, incidentFeedMessage, onIncidentsChanged } from '../incidents/feed';
+import { collectDecisions, hereCount, type BudgetNeed, type NeedItem, type NeedKind, type NeedTarget } from './logic';
 import { hasPhone, openPhone } from '../phone/api';
 import { batched } from '../batch';
-import { onStuckChanged, stuckFeedMessage, stuckNeed } from '../stuck/feed';
-import { asksFeedMessage, asksNeed, onAsksChanged } from '../asks/feed';
-import { onQuestionsChanged, questionsFeedMessage, questionsNeed } from '../questions/feed';
 import { publishNeeds } from './feed';
+import { needsFeedsMessage, onNeedsFeeds, pageNeedsInput } from './input';
+import type { DecisionCard } from '../../../shared/decisions/types';
 import '../pm/jeff-rank.css';
 import './needsyou.css';
 
@@ -45,6 +43,9 @@ export interface NeedsYou {
   /** Every server message: refetches the team on 'roster.changed' for this floor. */
   onMessage(msg: ServerMsg): void;
 }
+
+/** What a card shows besides its row: its sources, notes and state (a change redraws the Overview's card). */
+const cardsKey = (cards: readonly DecisionCard[]) => cards.map((c) => [c.id, c.kind, c.sources.map((s) => s.id + (s.note ?? '')).join(','), c.notes.join('|'), c.gone?.at ?? 0, c.answered?.status ?? '', c.related.length]);
 
 /** `root` is the strip, `badge` the count on the Command Center's tab button. */
 /** Each kind's words in the Needs-you row, for one and for several. */
@@ -135,14 +136,15 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
   /** The team the last snapshot was published with: a new one (an escalation's options, say) publishes again. */
   let sentRoster: RosterView | undefined;
   function draw() {
-    const items = collectNeeds({ floor, workers: store.workers.values(), roster, pulls: store.pulls.items, floors: store.floors, setup: deps.setup(), live: deps.live(), firm: deps.firm?.(), studio: deps.studio?.(), incidents: incidentBriefs(), budget: deps.budget?.(), stuck: stuckNeed(floor), asks: asksNeed(floor), questions: questionsNeed(floor) });
+    // The same input every surface builds (./input.ts), as decision cards and their compact rows (shared/decisions/).
+    const { cards, needs: items } = collectDecisions(pageNeedsInput(floor, roster, { setup: deps.setup(), live: deps.live(), firm: deps.firm?.(), studio: deps.studio?.(), budget: deps.budget?.() }));
     const n = hereCount(items);
     // The time ago on each item is part of what it shows: the half-minute timer moves it on.
-    const key = JSON.stringify([all, hasPhone(), items.map((i) => [i.key, i.text, i.level, i.action, i.tag ?? '', i.rank?.chip ?? '', i.since ? timeAgo(i.since) : '', i.alt?.action ?? ''])]);
+    const key = JSON.stringify([all, hasPhone(), items.map((i) => [i.key, i.text, i.level, i.action, i.tag ?? '', i.rank?.chip ?? '', i.since ? timeAgo(i.since) : '', i.alt?.action ?? '', i.sources ?? 0]), cardsKey(cards)]);
     // The Overview's Needs you card and the team-lead panel's count hear it too (./feed.ts).
     if (key === drawnKey && roster === sentRoster) return;
     sentRoster = roster;
-    publishNeeds({ floor, items, roster, go: deps.go });
+    publishNeeds({ floor, items, cards, roster, go: deps.go });
     if (key === drawnKey) return;
     drawnKey = key;
     badge.textContent = n ? String(n) : '';
@@ -179,20 +181,15 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
   // Every worker update of every live worker: worked out at most four times a second (ui/batch.ts).
   const refreshSoon = batched(refresh);
   for (const k of ['workers', 'pulls', 'floors', 'floor', 'studio'] as const) store.on(k, refreshSoon);
-  onIncidentsChanged(draw);
-  onStuckChanged(draw);
-  onAsksChanged(draw);
-  onQuestionsChanged(draw);
+  // Every feed Needs you reads (incidents, stuck, asks, questions, the decision cards' Separate choices).
+  onNeedsFeeds(draw);
   // "3m ago" moves on by itself.
   setInterval(draw, 30_000);
 
   return {
     refresh,
     onMessage(msg) {
-      incidentFeedMessage(msg);
-      stuckFeedMessage(msg);
-      asksFeedMessage(msg);
-      questionsFeedMessage(msg);
+      needsFeedsMessage(msg);
       if (msg.t !== 'roster.changed' || msg.floor !== floor) return;
       // A burst of changes (a standup asking four Leads) fetches once.
       clearTimeout(timer);

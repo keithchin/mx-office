@@ -44,6 +44,8 @@ export interface StuckDraft {
   /** The failing item's cause, when the build plan names a PR. */
   waitsOn?: number;
   circles?: { activeMs: number; spend?: number; currency?: string; lastProgress?: string; lastProgressAt?: number };
+  /** A client question's key in its BRD (`<file>#<id>`), for the decision card it groups under (server/questions/). */
+  questionKey?: string;
 }
 
 /** An item as Needs you and its dialog show it. */
@@ -52,6 +54,10 @@ export interface StuckView extends StuckDraft {
   raisedAt: number;
   /** Who covers Management (the Project Coordinator, or the Lead on a smaller team), when there's one. */
   lead?: string;
+  /** The last look couldn't re-read its source (a git error, a missing worktree): kept as it was since then, not resolved. */
+  unreadAt?: number;
+  /** Dismissed by the person: hidden, still open (dismissing never resolves anything). */
+  dismissedAt?: number;
 }
 
 /** GET /api/stuck?floor=: the visible items, the lead's state for the "OK to interrupt?" choice, and the settings. */
@@ -59,8 +65,10 @@ export interface StuckFloorView {
   floor: string;
   on: boolean;
   items: StuckView[];
-  /** Snoozed or dismissed, or covered by an open escalation about the same thing. */
+  /** Snoozed or dismissed: open, but not shown (an escalation about the same thing groups with it instead of hiding it). */
   hidden: number;
+  /** The dismissed ones, still open: Needs you shows them as "hidden (N)" with a way to see them. */
+  dismissed?: StuckView[];
   lead?: { name: string; working: boolean; since?: number };
   admin: boolean;
 }
@@ -193,6 +201,8 @@ export function stuckActions(d: StuckDraft): StuckAction[] {
     case 'blocked-row':
       return ['ask-lead', 'snooze', 'dismiss'];
     case 'decision':
+      // A client question in a BRD has one answer path: the Questions page (its card's Answer goes there), never a message to the lead.
+      if (d.decision?.brd) return ['snooze', 'dismiss'];
       return d.decision?.workaround ? ['answer', 'accept', 'snooze', 'dismiss'] : ['answer', 'snooze', 'dismiss'];
     case 'circles':
       return ['blockers', 'snooze', 'dismiss'];

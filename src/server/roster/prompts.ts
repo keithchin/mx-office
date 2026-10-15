@@ -172,7 +172,10 @@ export function escalationLine(e: Escalation): string {
 }
 
 /** The Project Manager's answer to an escalation, as a prompt to the agent that raised it. */
-export function escalationAnswerPrompt(e: Escalation, verdict: EscalationVerdict, text: string, by: string): string {
+export function escalationAnswerPrompt(e: Escalation, verdict: EscalationVerdict, text: string, by: string, outcome?: 'noted' | 'done'): string {
+  // I've done it (a hands-on card): never "APPROVED", and pressing it proves nothing, so the agent re-checks.
+  if (outcome === 'done')
+    return [`${by} says it's done: please re-check. (Your escalation “${e.title}”.)`, ...(text && text !== 'Done' ? ['', text] : []), '', 'Check it yourself before you rely on it (the Project Manager pressing a button proves nothing), record the result in your team journal, then carry on with the work it unblocks. If it is not done after all, escalate again with what you found.'].join('\n');
   return [
     `The Project Manager (${by}) answered your escalation “${e.title}”: ${VERDICT_WORD[verdict]}.`,
     ...(text ? ['', text] : []),

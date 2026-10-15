@@ -14,6 +14,19 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   - **Claude Code sign-in:** **Sign in with your Claude account** opens a terminal running `claude` (the office never sees the credentials) and waits for it; **Use an API key** saves an Anthropic API key in 🔌 Connections (a new card), given to workers as `ANTHROPIC_API_KEY` and never echoed.
   - Admins only, audited, and a test office never runs any of it (`AGENT_OFFICE_FAKE_SETUP=1` runs scripted fakes there instead).
 - **Get Mx Office in one line.** The README's new **Get Mx Office** section: `irm …/scripts/get-mx-office.ps1 | iex` checks for Git and Node.js (offering winget), clones the office (or pulls it when it's there), runs `npm ci` and `npm run build`, and starts it on First-run setup.
+- **Clear decisions in Needs you.** On the Overview, every item is a decision card: what is asked and by whom, the options and the recommendation, the evidence, what it blocks, and what happens after you answer. The header counts *3 decisions · 2 actions for you · 4 FYIs*; only decisions and actions count as waiting on you.
+  - **Three kinds, three sets of buttons:** a decision has its options, **Reply in my words** and **Ask &lt;lead&gt;**; a hands-on action has **I've done it**, **Can't now: tell &lt;agent&gt;** and **Ask**; an FYI has **Noted** (*Noting doesn't approve anything*). An FYI with options or a question shows as a decision, with a *filed as FYI* note.
+  - **I've done it** tells the agent *&lt;you&gt; says it's done: please re-check*, never APPROVED, then runs a harmless status check where one exists (`gh auth status`; `mxcli auth status` only when the office's mxcli has it), labelled as a check, not proof.
+  - **One card per decision:** sources fold only on an explicit id: a BRD question key, the same id in `PROJECT.md`'s register, a register decision id (OW-1), a PR number (#98, across escalations, `AWAITING-PM` lines, chat asks, proposals and stuck items), a stage, a journey id (J-08). PR #98's seven items are one card with seven sources. Similar wording never merges; **Separate** splits a card (kept, audited).
+  - **Approving a human-action proposal** makes one issue (two approvals at once used to make two) and puts a hands-on card in Needs you, open until **I've done it**.
+  - Every surface (the strip, the Overview, the lead panel, the team phone, the phone version, Teams) builds from the same input, so the phone version and Teams now show surfaced asks, the budget and incidents too. Every new action is admin-only, checked by the office.
+
+### Changed
+
+- **A missing source is not an answer.** When an `AWAITING-PM` line goes from an agent's newest entry, its escalation stays open and its card asks **Resolved** or **Still needed: ask &lt;agent&gt;** (it used to close by itself). When a read fails (a git error, an unreadable file), stuck items and surfaced asks stay as they were, marked *couldn't re-read at 14:02*, instead of resolving.
+- **Stuck detection doesn't re-raise answered decisions:** a register row CONFIRMED, or CONFIRMED *for now* (accepted, parked on a workaround), isn't waiting on you (OW-1 came back from its own evidence). An escalation about the same PR or decision no longer hides a stuck item: it shows inside the escalation's card. Dismissed items show as **Hidden (N)**: hidden, not resolved.
+- **One answer path per question:** each client question waiting on you is a card of its own, grouped with its stuck item and its register row; **Answer** opens the Questions page at that question, never a message to the lead. The answer message asks the analyst to mark the register row answered too. Phone pushes and Teams still post one notification per batch.
+- **Rollback-safe answers:** Noted and I've done it are kept beside a verdict release 46 knows (dismiss; reply "Done").
 
 ## 2026-10-14 · release 46 (`363fe1e`)
 

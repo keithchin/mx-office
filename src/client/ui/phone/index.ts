@@ -19,9 +19,7 @@ import { chatterActions } from '../chatter/panel';
 import { h, modalOpen, toast } from '../dom';
 import { batched } from '../batch';
 import { collectNeeds, type NeedItem, type NeedsInput, type NeedTarget } from '../needsyou/logic';
-import { incidentBriefs, incidentFeedMessage, onIncidentsChanged } from '../incidents/feed';
-import { onStuckChanged, stuckNeed } from '../stuck/feed';
-import { onQuestionsChanged, questionsNeed } from '../questions/feed';
+import { needsFeedsMessage, onNeedsFeeds, pageNeedsInput } from '../needsyou/input';
 import { currentRoster, onRoster, routeRosterMessage } from '../teams/world';
 import { wizardApi } from '../wizard/api';
 import { phoneAlerts } from './alerts';
@@ -130,7 +128,8 @@ export function installPhone(deps: PhoneDeps): Phone {
   function collect() {
     const extra = deps.needs?.() ?? { setup: setupNow() };
     const studio = store.studio?.floor === store.floor ? (store.studio ?? undefined) : undefined;
-    items = collectNeeds({ floor: store.floor ?? undefined, workers: store.workers.values(), roster: roster(), pulls: store.pulls.items, floors: store.floors, studio, incidents: incidentBriefs(), stuck: stuckNeed(store.floor), questions: questionsNeed(store.floor), ...extra });
+    // The same input as the strip (ui/needsyou/input.ts): every feed, so the phone counts what the strip counts.
+    items = collectNeeds(pageNeedsInput(store.floor ?? undefined, roster(), { studio, ...extra }));
     alerts.saw(store.floor ?? undefined, items);
   }
 
@@ -401,10 +400,8 @@ export function installPhone(deps: PhoneDeps): Phone {
 
   // ---- Keeping up ----------------------------------------------------------------------------------------
   for (const k of ['workers', 'pulls', 'floors', 'studio'] as const) store.on(k, draw);
-  onIncidentsChanged(draw); // open sev1/sev2 incidents (ui/incidents/feed.ts)
-  onStuckChanged(draw); // stuck items (ui/stuck/feed.ts)
-  onQuestionsChanged(draw); // open questions for the client (ui/questions/feed.ts)
-  deps.net.onMessage(incidentFeedMessage);
+  onNeedsFeeds(draw); // incidents, stuck items, surfaced asks, questions, the decision cards' Separate choices (ui/needsyou/input.ts)
+  deps.net.onMessage(needsFeedsMessage);
   let lastFloor = store.floor;
   store.on('floor', () => {
     pending = [];

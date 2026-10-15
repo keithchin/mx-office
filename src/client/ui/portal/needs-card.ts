@@ -5,6 +5,10 @@
 // (ui/pm/escalations.ts answer). A merged PR that isn't verified gets Re-run checks / Waive / Send back.
 // The rest (an agent asking, a ✋ sign-off, an approval…) are rows with their tag and their button.
 //
+// Each item is a decision card (shared/decisions/, ./decision-card.ts): the header counts decisions, actions
+// for you and FYIs; a hands-on action has I've done it / Can't now / Ask, an FYI has Noted, an AWAITING-PM
+// line that's gone has Resolved / Still needed, and every card lists the sources it folds, with Separate.
+//
 // It never redraws a card that shows the same: an escalation you're answering keeps its choice and what
 // you typed while the list round it changes.
 
@@ -19,6 +23,12 @@ import type { NeedItem } from '../needsyou/logic';
 import { leadOf } from '../lead-panel/logic';
 import { askLead } from '../lead-panel/hooks';
 import { answerFor, escalationModel, rowModel, verifyAnswer, type EscModel, type Tone } from './needs-logic';
+import type { DecisionCard } from '../../../shared/decisions/types';
+import { cardCounts, countsWords } from '../../../shared/decisions/words';
+import { cardExtras, fyiCard, genericCard, goneCard, handsOnCard, otherEscalations, type CardCtx } from './decision-card';
+import { decisionAct } from '../decisions/api';
+import { decisionCheck } from '../decisions/feed';
+import { stuckView } from '../stuck/feed';
 
 export interface NeedsCardDeps {
   /** Opens a tab (Waive is on the Testing tab). */
@@ -49,7 +59,11 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
   const heading = h('h2', { id: 'pt-needs-h', tabindex: '-1' }, 'Needs you');
   const count = h('span.pt-badge');
   const list = h('div.pt-needs-list');
-  const el = h('section.pt-ov-card.pt-needs', { id: 'pt-needs', 'aria-labelledby': 'pt-needs-h' }, h('div.pt-ov-card-h', {}, heading, count), list);
+  // "3 decisions · 2 actions for you · 4 FYIs": only decisions and actions count as waiting on you.
+  const counts = h('p.pt-needs-counts', { role: 'status' });
+  const hidden = h('div.pt-needs-hidden');
+  let showHidden = false;
+  const el = h('section.pt-ov-card.pt-needs', { id: 'pt-needs', 'aria-labelledby': 'pt-needs-h' }, h('div.pt-ov-card-h', {}, heading, count), counts, list);
   /** Each item's element by its key, with what it was drawn from. */
   let drawn = new Map<string, { sig: string; el: HTMLElement }>();
   /** Answered here, shown as done until the project changes. */
@@ -59,9 +73,9 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
   /** Every item, not just the first few (Show N more). */
   let all = false;
   const more = h('button.pt-link.pt-needs-more', { type: 'button', hidden: true, onclick: () => ((all = !all), snap && draw(snap)) }) as HTMLButtonElement;
-  el.append(more);
+  el.append(more, hidden);
 
-  function escCard(e: Escalation, r: RosterView, m: EscModel): HTMLElement {
+  function escCard(e: Escalation, r: RosterView, m: EscModel, card?: DecisionCard, x?: CardCtx): HTMLElement {
     const lead = leadOf(r);
     const leadName = lead && lead.kind === 'lead' ? lead.name : undefined;
     let pick = m.options.find((o) => o.recommended)?.key ?? m.options[0]?.key;
@@ -71,7 +85,9 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
     const send = async (a: { verdict: 'reply' | 'approve' | 'reject'; text: string } | undefined) => {
       if (!a || !floor) return void (note.hidden = false, note.focus(), toast('Write your answer first', 'warn'));
       buttons.forEach((b) => (b.disabled = true));
-      const v = await answer(floor, e, a.verdict, a.text);
+      // A card that folds other escalations answers them all (FYIs among them noted): server/decisions/.
+      const others = card ? otherEscalations(card) : [];
+      const v = others.length ? ((await decisionAct(floor, { action: 'answer', escalation: e.id, others, verdict: a.verdict, text: a.text })) ? r : undefined) : await answer(floor, e, a.verdict, a.text);
       buttons.forEach((b) => (b.disabled = false));
       if (!v) return;
       answered.set(e.id, { title: e.title, text: `${a.text.replace(/^Go with: /, '')} · sent to ${e.by}` });
@@ -134,8 +150,22 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
       m.question ? h('p.pt-esc-q', {}, m.question) : null,
       verify ? null : opts,
       m.why ? h('p.pt-esc-why', {}, h('b', {}, `${m.why.label} `), m.why.text) : null,
+      ...(card && x ? cardExtras(card, x) : []),
       note,
       acts,
+    );
+  }
+
+  /** The dismissed stuck items: hidden, still open ("hidden (N)"), with a way to see each. */
+  function drawHidden(go: NeedsSnapshot['go']) {
+    const v = stuckView();
+    const ds = v && v.floor === floor ? (v.dismissed ?? []) : [];
+    if (!ds.length) return void hidden.replaceChildren();
+    const toggle = h('button.pt-link', { type: 'button', 'aria-expanded': String(showHidden), onclick: () => ((showHidden = !showHidden), drawHidden(go)) }, `Hidden (${ds.length}) ${showHidden ? '▴' : '▾'}`);
+    hidden.replaceChildren(
+      toggle,
+      h('small.pt-dc-small', {}, ' Dismissed: hidden, not resolved.'),
+      ...(showHidden ? [h('ul', {}, ...ds.map((d) => h('li', {}, d.id, ' ', h('button.pt-link', { type: 'button', onclick: () => go({ to: 'stuck', id: d.id }) }, 'Open'))))] : []),
     );
   }
 
@@ -163,6 +193,11 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
     const leadName = lead && lead.kind === 'lead' ? lead.name : undefined;
     const items = s.items.filter((n) => !(n.target.to === 'escalation' && answered.has(n.target.id)));
     const n = waitingCount(items);
+    const cardOf = new Map((s.cards ?? []).map((c) => [c.need.key, c]));
+    const shownCards = items.map((it) => cardOf.get(it.key)).filter((c): c is DecisionCard => !!c);
+    counts.textContent = s.cards ? countsWords(cardCounts(shownCards)) : '';
+    counts.hidden = !s.cards || !items.length;
+    drawHidden(s.go);
     count.textContent = n ? `${n} now` : 'All clear';
     count.className = `pt-badge ${n ? 'pt-warn' : 'pt-ok'}`;
     const keep = new Map<string, { sig: string; el: HTMLElement }>();
@@ -179,23 +214,42 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
     more.hidden = shown.length === items.length && !(all && items.length > FOLD_AFTER + 1);
     more.textContent = shown.length < items.length ? `Show ${items.length - shown.length} more ▾` : 'Show fewer ▴';
     more.setAttribute('aria-expanded', String(all));
+    const ctx = (r?: RosterView): CardCtx => ({ floor: floor ?? '', admin: !!r?.admin || !!s.roster?.admin, leadName, go: s.go, ask, done: (c, what) => {
+      answered.set(c.escalation ?? c.id, { title: c.question, text: what });
+      if (snap) draw(snap);
+      heading.focus({ preventScroll: true });
+    } });
     for (const it of shown) {
+      const card = cardOf.get(it.key);
+      const cardSig = card ? JSON.stringify([card.kind, card.sources.map((x) => x.id + (x.note ?? '')), card.notes, card.gone ?? null, card.related.length, card.escalation ? (decisionCheck(card.escalation)?.at ?? 0) : 0, card.answered ?? null]) : '';
+      if (card && answered.has(card.id)) continue;
       const e = it.target.to === 'escalation' ? r?.escalations.find((x) => x.id === (it.target as { id: string }).id) : undefined;
+      if (e && r && card && (card.gone || card.kind === 'hands-on' || card.kind === 'fyi')) {
+        const sig = JSON.stringify([e.status, r.admin, leadName, e.title, e.details, cardSig]);
+        const had = drawn.get(it.key);
+        const make = card.gone ? goneCard : card.kind === 'hands-on' ? handsOnCard : fyiCard;
+        const d = had?.sig === sig ? had : { sig, el: make(card, ctx(r)) };
+        keep.set(it.key, d);
+        nodes.push(d.el);
+        continue;
+      }
       if (e && r) {
         const m = escalationModel(e, { leadName, ago: (at) => timeAgo(at) });
         // "18m ago" moves on by itself: the line is brought up to date in place, so the card (your pick, what you typed) stays.
-        const sig = JSON.stringify([e.status, r.admin, leadName, e.title, e.options, e.recommendation, e.details, e.urgency, e.trigger]);
+        const sig = JSON.stringify([e.status, r.admin, leadName, e.title, e.options, e.recommendation, e.details, e.urgency, e.trigger, cardSig]);
         const had = drawn.get(it.key);
-        const d = had?.sig === sig ? had : { sig, el: escCard(e, r, m) };
+        const d = had?.sig === sig ? had : { sig, el: escCard(e, r, m, card, card ? ctx(r) : undefined) };
         const meta = d.el.querySelector<HTMLElement>('.pt-esc-by');
         if (meta && meta.textContent !== m.meta) meta.textContent = m.meta;
         keep.set(it.key, d);
         nodes.push(d.el);
         continue;
       }
-      const sig = JSON.stringify([it.text, it.action, it.alt?.action ?? '', it.level, it.since ? timeAgo(it.since) : '']);
+      // A decision, or a card that folds sources or has evidence: a full card; the rest stay rows.
+      const full = !!card && it.kind !== 'asking' && it.kind !== 'floor' && it.level !== 'info' && (card.kind === 'decision' || card.sources.length > 1 || card.evidence.length > 0);
+      const sig = JSON.stringify([it.text, it.action, it.alt?.action ?? '', it.level, it.since ? timeAgo(it.since) : '', full, cardSig]);
       const had = drawn.get(it.key);
-      const d = had?.sig === sig ? had : { sig, el: row(it, s.go) };
+      const d = had?.sig === sig ? had : { sig, el: full ? genericCard(card!, ctx(r)) : row(it, s.go) };
       keep.set(it.key, d);
       nodes.push(d.el);
     }

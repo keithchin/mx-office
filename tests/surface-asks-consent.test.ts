@@ -76,7 +76,7 @@ test('Agree sends your consent to the lead to record (consentBy/consentAt); Disc
   const told: string[] = [];
   const audits: string[] = [];
   const floor: AsksFloor = { id: 'f1', name: 'p', dir: mkdtempSync(path.join(os.tmpdir(), 'asks-c-')), people: () => [] };
-  const deps: AsksDeps = { dataDir: mkdtempSync(path.join(os.tmpdir(), 'asks-cd-')), floors: () => [floor], now: () => Date.parse('2026-10-13T12:00:00Z'), writerOf: () => undefined, escalations: () => [], raise: () => {}, settle: () => {}, detectInput: async () => ({ mainProject: PROJECT }), lead: () => ({ name: 'Ada' }), tell: (_f, text) => (told.push(text), undefined), record: (e) => void audits.push(e.action) };
+  const deps: AsksDeps = { dataDir: mkdtempSync(path.join(os.tmpdir(), 'asks-cd-')), floors: () => [floor], now: () => Date.parse('2026-10-13T12:00:00Z'), writerOf: () => undefined, escalations: () => [], raise: () => {}, markGone: () => {}, detectInput: async () => ({ mainProject: PROJECT }), lead: () => ({ name: 'Ada' }), tell: (_f, text) => (told.push(text), undefined), record: (e) => void audits.push(e.action) };
   const svc = new AsksService(deps);
   await svc.look(floor, 'test');
   const v = await svc.view(floor, true);

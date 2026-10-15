@@ -1,0 +1,78 @@
+/* The Overview's decision cards (decision-card.ts): what they say under the question, in the colour tokens. */
+.pt-needs-counts {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.pt-dc-line,
+.pt-dc-after,
+.pt-dc-small,
+.pt-dc-gone,
+.pt-dc-check {
+  margin: 4px 0;
+  font-size: 0.92em;
+}
+.pt-dc-after {
+  color: var(--muted);
+}
+.pt-dc-small {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+.pt-dc-gone {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+}
+.pt-dc-check {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--neutral-soft);
+}
+.pt-dc-check.bad {
+  background: var(--bad-soft);
+  color: var(--bad-ink);
+}
+.pt-dc-ev {
+  margin: 4px 0;
+  font-size: 0.9em;
+}
+.pt-dc-ev summary {
+  cursor: pointer;
+  color: var(--link);
+}
+.pt-dc-ev ul,
+.pt-dc-src ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.pt-dc-src {
+  margin: 6px 0;
+  padding: 6px 8px;
+  border-left: 3px solid var(--info-line);
+  background: var(--info-soft);
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.pt-dc-src li {
+  margin: 2px 0;
+}
+.pt-dc-sep {
+  margin-left: 6px;
+  font-size: 0.9em;
+}
+.pt-dc-one {
+  color: var(--muted);
+}
+.pt-dc-note {
+  color: var(--warn-ink);
+}
+.pt-needs-hidden {
+  margin-top: 8px;
+  font-size: 0.9em;
+}
+.pt-needs-hidden ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}

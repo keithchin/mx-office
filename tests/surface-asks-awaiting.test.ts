@@ -1,6 +1,7 @@
 // Nothing waits on the PM unseen, S4: AWAITING-PM lines become escalations per item, wherever the newest
 // entry is (the floor's folder, an agent's worktree), on bench, on pause and in the regular look, deduped by
-// role and text, not held back by other open escalations, and closed by themselves once the line is gone.
+// role and text, not held back by other open escalations. A line that goes from the newest entry no longer
+// settles its escalation (decision cards, D02): it's marked "line gone" for the person to say.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -15,7 +16,7 @@ import type { Read } from '../src/server/asks/sources.js';
 const esc = (id: string, o: Partial<Escalation> = {}): Escalation => ({ id, at: 0, workerId: 'w', by: 'Dev', role: 'lead-developer', urgency: 'important', fyi: false, level: 2, title: `esc ${id}`, details: '', options: [], status: 'open', ...o }) as Escalation;
 const journal = (...entries: string[]) => `# Development team journal\n\n${entries.join('\n\n')}\n`;
 const HANDOFF = '## 2026-10-12 22:52 — Handoff\n**Next** carry on.\n\nAWAITING-PM: OK to install sqlite3 on this machine; merge PR #51 (1) the NFR answer';
-const read = (kind: 'checkout' | 'worktree', who: string, text: string): Read => ({ place: { kind, who, dir: '/x' }, files: new Map([['docs/team/development.md', text]]) });
+const read = (kind: 'checkout' | 'worktree', who: string, text: string): Read => ({ place: { kind, who, dir: '/x' }, files: new Map([['docs/team/development.md', text]]), outcome: new Map([['docs/team/development.md', 'ok']]) });
 
 test('an AWAITING-PM line is split into its items; none and N/A are nothing', () => {
   assert.deepEqual(awaitingItems('x\nAWAITING-PM: OK to install sqlite3; merge PR #51\n- **AWAITING-PM:** Which matrix?'), ['OK to install sqlite3', 'merge PR #51', 'Which matrix?']);
@@ -39,7 +40,7 @@ test("the newest copy wins: an agent's worktree ahead of the folder", () => {
   assert.deepEqual(w.items, ['OK to install sqlite3 on this machine', 'merge PR #51', 'the NFR answer']);
 });
 
-test('several items are several escalations; another open one does not hold them back; dedupe; gone means settled', () => {
+test('several items are several escalations; another open one does not hold them back; dedupe; gone is marked, never settled', () => {
   const waits = newestWaits([read('worktree', 'Dylan', journal(HANDOFF))]);
   const roleOf = () => 'lead-developer' as const;
   const unrelated = esc('u', { title: 'Who owns the HR integration?' });
@@ -53,16 +54,22 @@ test('several items are several escalations; another open one does not hold them
   // Answered after the entry was written: not filed again from the same entry.
   plan = planAwaiting(waits, roleOf, [{ ...filed, status: 'resolved' }]);
   assert.ok(!plan.raise.some((r) => r.item === 'merge PR #51'));
-  // The line is gone from the newest entry: the one the office filed is settled, the agent's own is left alone.
+  // The line is gone from the newest entry: the one the office filed is marked gone (was: settled), the agent's own is left alone.
   const later = newestWaits([read('worktree', 'Dylan', journal(HANDOFF, '## 2026-10-13 18:00 — Handoff\nAWAITING-PM: none'))]);
   plan = planAwaiting(later, roleOf, [unrelated, filed, own]);
-  assert.deepEqual(plan.settle.map((e) => e.id), ['a']);
+  assert.deepEqual(plan.gone.map((e) => e.id), ['a']);
   assert.equal(plan.raise.length, 0);
+  // Marked once; and a failed read of the journal can't say it's gone.
+  assert.deepEqual(planAwaiting(later, roleOf, [{ ...filed, sourceGone: { at: 1, what: 'gone' } }]).gone, []);
+  const failed: Read = { place: { kind: 'worktree', who: 'Bo', dir: '/y' }, files: new Map(), outcome: new Map([['docs/team/development.md', 'failed']]) };
+  assert.deepEqual(planAwaiting(later, roleOf, [filed], [failed]).gone, []);
+  // The line back: an ask like before.
+  assert.deepEqual(planAwaiting(waits, roleOf, [{ ...filed, sourceGone: { at: 1, what: 'gone' } }]).back.map((e) => e.id), ['a']);
 });
 
 function service(dir: string, wt: string) {
   const raised: { role: string; ask: EscalationAsk; key: string }[] = [];
-  const settled: string[] = [];
+  const gone: string[] = [];
   const escs: Escalation[] = [];
   const floor: AsksFloor = { id: 'f1', name: 'travel-approval', dir, people: () => [{ name: 'Dylan', role: 'lead-developer', dir: wt, branch: 'office/nibble-c955' }] };
   const deps: AsksDeps = {
@@ -75,20 +82,23 @@ function service(dir: string, wt: string) {
       raised.push({ role, ask, key });
       escs.push(esc(`e${escs.length}`, { title: ask.title, from: { kind: 'awaiting', key }, at: Date.UTC(2026, 9, 13, 12) }));
     },
-    settle(_f, id) {
-      settled.push(id);
+    markGone(_f, id, what) {
       const e = escs.find((x) => x.id === id);
-      if (e) e.status = 'resolved';
+      if (!e) return;
+      if (what) {
+        gone.push(id);
+        e.sourceGone = { at: 1, what };
+      } else delete e.sourceGone;
     },
     detectInput: async () => ({}),
     lead: () => ({ name: 'Ada' }),
     tell: () => undefined,
     record: () => {},
   };
-  return { s: new AsksService(deps), floor, raised, settled, escs };
+  return { s: new AsksService(deps), floor, raised, gone, escs };
 }
 
-test('the regular look and the pause path: a handoff in a worktree is filed per item, once, and closed when the line goes', async () => {
+test('the regular look and the pause path: a handoff in a worktree is filed per item, once, and marked "line gone" (still open) when the line goes', async () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'asks-floor-'));
   const wt = mkdtempSync(path.join(os.tmpdir(), 'asks-wt-'));
   mkdirSync(path.join(wt, 'docs/team'), { recursive: true });
@@ -102,9 +112,11 @@ test('the regular look and the pause path: a handoff in a worktree is filed per 
   // The next look: nothing new.
   await t.s.look(t.floor, 'in its regular look');
   assert.equal(t.raised.length, 2);
-  // The agent writes a newer handoff without the merge: that one closes by itself.
+  // The agent writes a newer handoff without the merge: that one is marked gone and stays open for the person (was: closed by itself).
   writeFileSync(path.join(wt, 'docs/team/development.md'), journal('## 2026-10-13 11:40 — Handoff\nAWAITING-PM: merge PR #51; paste the SMTP password into the test mailbox settings', '## 2026-10-13 15:00 — Handoff\nAWAITING-PM: paste the SMTP password into the test mailbox settings'));
   await t.s.look(t.floor, 'in its regular look');
-  assert.deepEqual(t.settled, ['e0']);
+  assert.deepEqual(t.gone, ['e0']);
+  assert.equal(t.escs[0].status, 'open');
+  assert.match(t.escs[0].sourceGone!.what, /The AWAITING-PM line is gone from Dev's newest entry/);
   assert.equal(t.raised.length, 2);
 });
