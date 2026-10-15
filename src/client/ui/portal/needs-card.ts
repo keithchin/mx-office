@@ -30,6 +30,7 @@ import { decisionAct } from '../decisions/api';
 import { decisionCheck } from '../decisions/feed';
 import { stuckView } from '../stuck/feed';
 import { dispatchNotices } from '../dispatch/card';
+import { duplicatesCard } from './duplicates-card';
 
 export interface NeedsCardDeps {
   /** Opens a tab (Waive is on the Testing tab). */
@@ -227,6 +228,15 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
       const card = cardOf.get(it.key);
       const cardSig = card ? JSON.stringify([card.kind, card.sources.map((x) => x.id + (x.note ?? '')), card.notes, card.gone ?? null, card.related.length, card.escalation ? (decisionCheck(card.escalation)?.at ?? 0) : 0, card.answered ?? null]) : '';
       if (card && answered.has(card.id)) continue;
+      // The clean-up card (shared/decisions/duplicates-card.ts): its groups, Close duplicates (confirmed in the card), Review one by one.
+      if (card?.duplicates) {
+        const sig = JSON.stringify(['dupes', !!r?.admin, card.duplicates]);
+        const had = drawn.get(it.key);
+        const d = had?.sig === sig ? had : { sig, el: duplicatesCard(card, ctx(r)) };
+        keep.set(it.key, d);
+        nodes.push(d.el);
+        continue;
+      }
       const e = it.target.to === 'escalation' ? r?.escalations.find((x) => x.id === (it.target as { id: string }).id) : undefined;
       if (e && r && card && (card.gone || card.kind === 'hands-on' || card.kind === 'fyi')) {
         const sig = JSON.stringify([e.status, r.admin, leadName, e.title, e.details, cardSig]);

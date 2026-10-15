@@ -10,6 +10,7 @@ import { isRisky } from '../../../shared/mobile.js';
 import { isEscalationVerdict } from '../../../shared/roster/escalation.js';
 import { rosterOf } from '../../roster/adapter.js';
 import { decisionsOf, isDecisionAction, DECISION_ACTIONS } from '../../decisions/index.js';
+import { readCloseRequest } from '../../decisions/duplicates.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
@@ -38,7 +39,7 @@ export const decisionRoutes = {
       return send(res, 200, await decisionsOf(ctx).view(floor, ctx.meOf(session.account?.id).admin));
     },
   },
-  /** POST /api/decisions/action {floor, action, escalation?, others?, verdict?, text?, cardId?, sourceId?, expectedRev?}: admins only, audited. */
+  /** POST /api/decisions/action {floor, action, escalation?, others?, verdict?, text?, cardId?, sourceId?, expectedRev?, groups?}: admins only, audited. */
   act: {
     method: 'POST',
     path: '/api/decisions/action',
@@ -61,7 +62,7 @@ export const decisionRoutes = {
       const expectedRev = typeof body.expectedRev === 'number' && Number.isInteger(body.expectedRev) ? body.expectedRev : undefined;
       const failed = await decisionsOf(ctx).actResult(
         floor,
-        { action: body.action, ...(esc ? { escalation: esc } : {}), others, ...(verdict ? { verdict } : {}), ...(typeof body.text === 'string' ? { text: body.text } : {}), ...(str(body.cardId) ? { cardId: str(body.cardId) } : {}), ...(str(body.sourceId) ? { sourceId: str(body.sourceId) } : {}), ...(expectedRev !== undefined ? { expectedRev } : {}) },
+        { action: body.action, ...(esc ? { escalation: esc } : {}), others, ...(verdict ? { verdict } : {}), ...(typeof body.text === 'string' ? { text: body.text } : {}), ...(str(body.cardId) ? { cardId: str(body.cardId) } : {}), ...(str(body.sourceId) ? { sourceId: str(body.sourceId) } : {}), ...(expectedRev !== undefined ? { expectedRev } : {}), ...(body.action === 'close-duplicates' ? { groups: readCloseRequest(body.groups) } : {}) },
         by,
         session.account?.id,
       );

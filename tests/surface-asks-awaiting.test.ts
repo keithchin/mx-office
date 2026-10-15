@@ -70,6 +70,7 @@ test('several items are several escalations; another open one does not hold them
 function service(dir: string, wt: string) {
   const raised: { role: string; ask: EscalationAsk; key: string }[] = [];
   const gone: string[] = [];
+  const continued: { id: string; title: string; key: string }[] = [];
   const escs: Escalation[] = [];
   const floor: AsksFloor = { id: 'f1', name: 'travel-approval', dir, people: () => [{ name: 'Dylan', role: 'lead-developer', dir: wt, branch: 'office/nibble-c955' }] };
   const deps: AsksDeps = {
@@ -81,6 +82,12 @@ function service(dir: string, wt: string) {
     raise(_f, role, ask, key) {
       raised.push({ role, ask, key });
       escs.push(esc(`e${escs.length}`, { title: ask.title, from: { kind: 'awaiting', key }, at: Date.UTC(2026, 9, 13, 12) }));
+    },
+    continueAsk(_f, id, ask, key) {
+      continued.push({ id, title: ask.title, key });
+      const e = escs.find((x) => x.id === id)!;
+      Object.assign(e, { title: ask.title, from: { kind: 'awaiting', key } });
+      delete e.sourceGone;
     },
     markGone(_f, id, what) {
       const e = escs.find((x) => x.id === id);
@@ -95,7 +102,7 @@ function service(dir: string, wt: string) {
     tell: () => undefined,
     record: () => {},
   };
-  return { s: new AsksService(deps), floor, raised, gone, escs };
+  return { s: new AsksService(deps), floor, raised, gone, escs, continued };
 }
 
 test('the regular look and the pause path: a handoff in a worktree is filed per item, once, and marked "line gone" (still open) when the line goes', async () => {
@@ -119,4 +126,22 @@ test('the regular look and the pause path: a handoff in a worktree is filed per 
   assert.equal(t.escs[0].status, 'open');
   assert.match(t.escs[0].sourceGone!.what, /The AWAITING-PM line is gone from Dev's newest entry/);
   assert.equal(t.raised.length, 2);
+});
+
+test('continuity in the look: the role rewords an item in a newer entry and the same escalation is updated, not a second one filed', async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'asks-floor-'));
+  const wt = mkdtempSync(path.join(os.tmpdir(), 'asks-wt-'));
+  mkdirSync(path.join(wt, 'docs/team'), { recursive: true });
+  const file = path.join(wt, 'docs/team/development.md');
+  const first = '## 2026-10-13 11:40 — Handoff\nAWAITING-PM: GenAI key; merge PR #51';
+  writeFileSync(file, journal(first));
+  const t = service(dir, wt);
+  await t.s.look(t.floor, 'in its regular look');
+  assert.deepEqual(t.raised.map((r) => r.ask.title), ['GenAI key', 'merge PR #51']);
+  writeFileSync(file, journal(first, '## 2026-10-13 15:00 — Handoff\nAWAITING-PM: GenAI Text Generation resource + key (pasted in when Dylan says ready); merge PR #51'));
+  await t.s.look(t.floor, 'in its regular look');
+  assert.equal(t.raised.length, 2);
+  assert.deepEqual(t.continued.map((c) => [c.id, c.title]), [['e0', 'GenAI Text Generation resource + key (pasted in when Dylan says ready)']]);
+  assert.deepEqual(t.gone, []);
+  assert.equal(t.escs.filter((e) => e.status === 'open').length, 2);
 });

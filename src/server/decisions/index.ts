@@ -17,9 +17,10 @@ import type { AnswerResult } from '../dispatch/service.js';
 import { audit, human } from '../audit/index.js';
 import { SplitsStore } from './store.js';
 import { checkFor, runCheck, type CheckResult } from './check.js';
+import { closeDuplicates, type CloseRequest } from './duplicates.js';
 
-export type DecisionAction = 'separate' | 'answer' | 'noted' | 'done' | 'cant-now' | 'resolved' | 'still-needed';
-export const DECISION_ACTIONS: readonly DecisionAction[] = ['separate', 'answer', 'noted', 'done', 'cant-now', 'resolved', 'still-needed'];
+export type DecisionAction = 'separate' | 'answer' | 'noted' | 'done' | 'cant-now' | 'resolved' | 'still-needed' | 'close-duplicates';
+export const DECISION_ACTIONS: readonly DecisionAction[] = ['separate', 'answer', 'noted', 'done', 'cant-now', 'resolved', 'still-needed', 'close-duplicates'];
 export const isDecisionAction = (v: unknown): v is DecisionAction => typeof v === 'string' && (DECISION_ACTIONS as readonly string[]).includes(v);
 
 export interface DecisionAct {
@@ -34,6 +35,8 @@ export interface DecisionAct {
   sourceId?: string;
   /** The answer revision the page saw on the card's escalation (0 for an open one): a stale one is a 409. */
   expectedRev?: number;
+  /** Close duplicates (the clean-up card, ./duplicates.ts): the groups the person confirmed. */
+  groups?: CloseRequest[];
 }
 
 /** A card action's outcome: an error (with its HTTP status: 409 when the decision changed meanwhile), or nothing. */
@@ -82,6 +85,10 @@ export class DecisionsService {
     }
     const roster = rosterOf(this.ctx);
     const tf = teamFloor(this.ctx, floor);
+    if (a.action === 'close-duplicates') {
+      const r = await closeDuplicates(roster, tf, a.groups ?? [], await this.splits.get(floor.id), by, owner);
+      return r.ok ? undefined : { error: r.error, status: r.status };
+    }
     const all = roster.data(floor.id).escalations;
     const e = all.find((x) => x.id === a.escalation);
     if (!e) return fail('No such escalation');

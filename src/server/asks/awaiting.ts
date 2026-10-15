@@ -2,30 +2,22 @@
 // only the bench path ever escalated it: one line, and not at all if the role had any open escalation, and
 // never for a pause handoff. Now the newest AWAITING-PM entry of every team journal is read wherever it is
 // (the floor's folder, each agent's worktree, the branch heads: sources.ts), on bench, on pause and every
-// few minutes; each item in it becomes an escalation of its own (deduped by role and text, filed once per
-// entry), and it's resolved by itself once the newest entry no longer lists it. Pure but for the roster.
+// few minutes; each item in it (split.ts) becomes an escalation of its own, filed once per entry. An item
+// the role reworded in a newer entry continues the escalation it already has (same role, same AWAITING-PM
+// source, the same item by shared/decisions/same-item.ts): updated in place, never a second one. One whose
+// line is gone is marked so for the person, never settled by itself (decision cards, D02). Pure.
 
 import type { Escalation } from '../../shared/roster/escalation.js';
 import { parseJournal, type JournalEntry } from '../../shared/roster/journal.js';
 import { journalPath, ROLE_BY_ID, ROLES, type RoleId, type TeamId } from '../../shared/roster/roles.js';
 import { isHandsOn } from '../../shared/roster/hands-on.js';
+import { sameItem } from '../../shared/decisions/same-item.js';
 import { sameAsk } from '../roster/jeff-ask.js';
 import { anyFailed, type Read } from './sources.js';
+import { awaitingItemsOf } from './split.js';
 
-/** `AWAITING-PM: <what>` lines, as bench.ts reads them. */
-const LINE = /^[\s>*_-]*AWAITING[- ]PM[*_]*\s*:[*_]*\s*(.*)$/gim;
-
-/** The items an entry's AWAITING-PM lines name: each line, split on "; " and numbered "(1) … (2) …" parts; none for "none". */
-export function awaitingItems(body: string): string[] {
-  const out: string[] = [];
-  for (const m of body.matchAll(LINE)) {
-    const line = m[1].replace(/[*_`]/g, '').trim();
-    if (!line || /^(?:none|n\/?a)\b/i.test(line)) continue;
-    const parts = line.split(/;\s+|\s+\(\d+\)\s+|^\(\d+\)\s+/).map((p) => p.replace(/^(?:and|also)\s+/i, '').replace(/[.;,\s]+$/, '').trim()).filter((p) => p.length > 2);
-    for (const p of parts) if (!out.some((o) => o.toLowerCase() === p.toLowerCase())) out.push(p);
-  }
-  return out;
-}
+/** The items an entry's AWAITING-PM lines name (./split.ts): clear list separators only; none for "none". */
+export const awaitingItems = (body: string): string[] => awaitingItemsOf(body);
 
 /** The entry a team's waits are read from: the newest that is a handoff or says AWAITING-PM (later notes don't clear it). */
 export function waitingEntry(entries: readonly JournalEntry[]): JournalEntry | undefined {
@@ -73,9 +65,17 @@ export function newestWaits(reads: readonly Read[]): Waits[] {
 /** The key an item's escalation carries: its role and its words, lower case. */
 export const awaitingKey = (role: string, item: string) => `${role}:${item.toLowerCase().replace(/\s+/g, ' ').trim()}`.slice(0, 300);
 
+/** Whether the person separated two escalations' cards (decision cards' Separate): continuity never joins them. */
+export type Apart = (a: string, b: string) => boolean;
+
 export interface AwaitingPlan {
   /** Items to file: role, the item, the waits it came from. */
   raise: { role: RoleId; item: string; waits: Waits }[];
+  /**
+   * Items the role reworded: the open escalation already filed for it (gone or not) continues with the new
+   * words (title, details, key), its line back, its id kept: no second escalation.
+   */
+  update: { escalation: Escalation; role: RoleId; item: string; waits: Waits }[];
   /**
    * Open escalations the office filed from a line that is gone now: marked "line gone" for the person to
    * say (Resolved, or Still needed), never settled. Not when a read of that team's journal failed.
@@ -86,13 +86,18 @@ export interface AwaitingPlan {
 }
 
 /**
- * What to do with the waits: each item not already open (as one the office filed from a line, or one the
- * role escalated itself with the same words) and not filed before from this entry is raised; an open one
- * filed from a line no newest entry lists any more is settled. Other open escalations hold nothing back.
+ * What to do with the waits: an item already open under its key (or escalated by the role itself in the
+ * same words), or filed before from this entry, is left alone; an item the role reworded continues the open
+ * escalation it matches (same role, from an AWAITING-PM line, not live under its own key, one item per
+ * escalation, never one the person separated from another the item also matches); the rest are raised. An
+ * open one filed from a line no newest entry lists any more is marked gone. Other open escalations hold
+ * nothing back.
  */
-export function planAwaiting(waits: readonly Waits[], roleOf: (team: TeamId) => RoleId | undefined, escalations: readonly Escalation[], reads: readonly Read[] = []): AwaitingPlan {
+export function planAwaiting(waits: readonly Waits[], roleOf: (team: TeamId) => RoleId | undefined, escalations: readonly Escalation[], reads: readonly Read[] = [], apart: Apart = () => false): AwaitingPlan {
   const raise: AwaitingPlan['raise'] = [];
+  const update: AwaitingPlan['update'] = [];
   const live = new Set<string>();
+  const fresh: { role: RoleId; item: string; waits: Waits }[] = [];
   for (const w of waits) {
     const role = roleOf(w.team);
     if (!role) continue;
@@ -102,18 +107,29 @@ export function planAwaiting(waits: readonly Waits[], roleOf: (team: TeamId) => 
       const mine = escalations.filter((e) => e.from?.kind === 'awaiting' && e.from.key === key);
       if (mine.some((e) => e.status === 'open' || e.at >= w.at)) continue;
       if (escalations.some((e) => e.status === 'open' && e.role === role && e.from?.kind !== 'awaiting' && sameAsk(e.title, item))) continue;
-      raise.push({ role, item, waits: w });
+      fresh.push({ role, item, waits: w });
     }
+  }
+  // Continuity: the same role's open AWAITING-PM escalations no item names by its key any more.
+  const claimed = new Set<string>();
+  for (const f of fresh) {
+    const pool = escalations.filter((e) => e.status === 'open' && e.from?.kind === 'awaiting' && e.role === f.role && !live.has(e.from.key) && !claimed.has(e.id) && sameItem(f.item, e.title));
+    // Newest first, one whose line is still there before one marked gone.
+    const best = [...pool].sort((a, b) => Number(!!a.sourceGone) - Number(!!b.sourceGone) || b.at - a.at)[0];
+    if (best && !pool.some((o) => o !== best && apart(best.id, o.id))) {
+      claimed.add(best.id);
+      update.push({ escalation: best, ...f });
+    } else raise.push(f);
   }
   // A journal that couldn't be read somewhere can't say a line is gone (decision cards, D02).
   const unread = (e: Escalation) => {
     const team = e.role ? ROLE_BY_ID.get(e.role)?.team : undefined;
     return team ? anyFailed(reads, [journalPath(team)]) : anyFailed(reads);
   };
-  const filed = escalations.filter((e) => e.status === 'open' && e.from?.kind === 'awaiting' && !!e.from.key);
+  const filed = escalations.filter((e) => e.status === 'open' && e.from?.kind === 'awaiting' && !!e.from.key && !claimed.has(e.id));
   const gone = filed.filter((e) => !live.has(e.from!.key) && !e.sourceGone && !unread(e));
   const back = filed.filter((e) => live.has(e.from!.key) && !!e.sourceGone);
-  return { raise, gone, back };
+  return { raise, update, gone, back };
 }
 
 /** The escalation for one item: titled with it, hands-on ones as needs-human, the entry as its details. */
