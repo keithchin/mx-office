@@ -16,6 +16,8 @@ import { setAsksSoon } from '../roster/asks-hook.js';
 import { ROLES, type RoleId, type TeamId } from '../../shared/roster/roles.js';
 import { AsksService, type AsksFloor } from './service.js';
 import { detectInputOf } from './main.js';
+import { decisionsOf } from '../decisions/index.js';
+import { escalationsApart } from '../../shared/decisions/duplicates.js';
 import type { AskPerson } from './sources.js';
 
 const services = new WeakMap<object, AsksService>();
@@ -83,6 +85,11 @@ export function asksOf(ctx: Ctx): AsksService {
       e.from = { kind: 'awaiting', key };
       t.roster.touch(t.tf);
     },
+    continueAsk(f, id, ask, key) {
+      const t = team(f);
+      if (t) t.roster.escalations.continueAwaiting(t.tf, id, ask, key);
+    },
+    apart: (f) => decisionsOf(ctx).splits.get(f.id).then(escalationsApart),
     markGone(f, id, what) {
       const t = team(f);
       if (t) t.roster.escalations.markGone(t.tf, id, what);

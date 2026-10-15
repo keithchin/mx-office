@@ -12,6 +12,7 @@ import { randomBytes } from 'node:crypto';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import { URGENCY_ICON, isAlarming, escalationOrder, makeEscalation, type Escalation, type EscalationAsk, type EscalationOutcome, type EscalationVerdict } from '../../shared/roster/escalation.js';
 import { answerMarker } from '../../shared/dispatch.js';
+import { refsFromTitle } from '../../shared/decisions/ids.js';
 import type { AnswerResult } from '../dispatch/service.js';
 import { answerEscalation, answerLineOf, type EscalationAnswer } from './escalation-answer.js';
 import { answerError, sendAsAnswer } from './dispatch-send.js';
@@ -227,6 +228,26 @@ export class Escalations {
     audit.record({ floor: floor.id, actor: byWhom(by), action: 'escalation.tell', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `Told ${e.by} (${what}), kept open: ${e.title}`, details: { what } });
     this.roster.touch(floor);
     return undefined;
+  }
+
+  /**
+   * An AWAITING-PM item the role reworded in a newer entry (server/asks/awaiting.ts, continuity): the open
+   * escalation filed for it takes the new words, details and key, and its line is back; its id stays, so
+   * nothing is filed twice. Audited (escalation.continued) with the words it had.
+   */
+  continueAwaiting(floor: TeamFloor, id: string, ask: EscalationAsk, key: string): boolean {
+    const e = this.roster.data(floor.id).escalations.find((x) => x.id === id);
+    if (!e || e.status !== 'open' || e.from?.kind !== 'awaiting') return false;
+    const was = e.title;
+    e.title = ask.title;
+    e.details = ask.details;
+    if (ask.trigger) e.trigger = ask.trigger;
+    e.from = { kind: 'awaiting', key };
+    e.refs = refsFromTitle(ask.title);
+    delete e.sourceGone;
+    if (was !== e.title) audit.record({ floor: floor.id, actor: office(), action: 'escalation.continued', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `${e.by} reworded an AWAITING-PM item: “${was}” is now “${e.title}”, the same escalation kept`, details: { was, key }, severity: 'info' });
+    this.roster.touch(floor);
+    return true;
   }
 
   /**

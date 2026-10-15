@@ -209,3 +209,19 @@ test('dismiss: the follow-through of this revision stops (a new revision shows a
   t.e.resolution!.answerRev = line.rev;
   assert.equal((await t.ft.view(t.floor.id, true)).items.length, 1);
 });
+
+test('a superseded escalation (a duplicate closed in favour of another) is never followed through: there is nothing to record', async () => {
+  const t = await team();
+  const ada = t.floor.worker('a1')!;
+  const dup = t.o.roster.escalations.raise(t.floor, ada, { urgency: 'important', title: 'Sign-in again: SSO or magic links?', details: '', options: [] });
+  const r = await t.o.roster.escalations.answer(t.floor, dup.id, { verdict: 'dismiss', raw: '', by: 'Keith', outcome: 'superseded', supersededBy: t.e.id });
+  assert.ok(r.ok, JSON.stringify(r));
+  const closed = t.o.roster.data(t.floor.id).escalations.find((x) => x.id === dup.id)!;
+  assert.equal(closed.resolution?.outcome, 'superseded');
+  let items = (await t.ft.view(t.floor.id, true)).items;
+  assert.deepEqual(items.map((i) => i.ref), [t.e.id], 'only the one kept');
+  // Even if its revision read like an answer, superseded is never a follow-through item.
+  await t.o.roster.dispatch.answers.append(t.floor.id, { decision: `esc:${dup.id}`, kind: 'reply', text: 'x', by: 'Keith', at: 3 });
+  items = (await t.ft.view(t.floor.id, true)).items;
+  assert.ok(!items.some((i) => i.ref === dup.id));
+});

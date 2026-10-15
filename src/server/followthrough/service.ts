@@ -67,7 +67,8 @@ export class FollowThrough {
   private escFollow(floorId: string): { e: Escalation; line: AnswerLine }[] {
     const out: { e: Escalation; line: AnswerLine }[] = [];
     for (const e of this.deps.escalations(floorId)) {
-      if (e.status !== 'resolved' || !e.resolution?.answerRev) continue;
+      // A duplicate closed as superseded asked nobody to record anything.
+      if (e.status !== 'resolved' || !e.resolution?.answerRev || e.resolution.outcome === 'superseded') continue;
       const line = this.deps.dispatcher.answers.latest(floorId, `esc:${e.id}`);
       if (line && FOLLOW_KINDS.has(line.kind)) out.push({ e, line });
     }

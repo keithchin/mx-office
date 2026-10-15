@@ -7,6 +7,7 @@
 // import it.
 
 import type { NeedItem, NeedTarget } from '../needsyou.js';
+import type { DuplicateGroup } from './duplicates.js';
 
 /**
  * decision: only you can choose (options, Reply in my words, Ask the lead). hands-on: something only a
@@ -82,6 +83,8 @@ export interface DecisionCard {
   gone?: { at: number; what: string; asked?: number };
   /** A question you answered, not recorded yet. */
   answered?: { status: 'pending' | 'sent'; to?: string };
+  /** The clean-up card's groups of likely duplicates (./duplicates-card.ts): Close duplicates / Review one by one. */
+  duplicates?: DuplicateGroup[];
   /** The compact row (NeedItem) for the strip, the phone and Teams. */
   need: NeedItem;
 }
