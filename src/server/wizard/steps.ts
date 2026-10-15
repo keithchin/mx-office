@@ -11,7 +11,9 @@ import { ENTRY_MODE_INFO, INTERVIEW_MODE_INFO, PROJECT_ROLES, SMALL_TIER_LIMITS,
 import { findMpr } from '../liveapp/checkout.js';
 import { withFloorToolkitEnv } from '../toolkit-env.js';
 import { adminGhEnv, adminTokenHelp, readAdminToken, redactor } from './admin-token.js';
-import { DISCOVERY_TITLE, discoveryBrief, discoveryPrompt } from './brief.js';
+import { DISCOVERY_TITLE, discoveryBrief } from './brief.js';
+import { discoveryTask, localBareOf, withLocalOnly } from './local-only.js';
+import { withSourceFolder } from './source-step.js';
 import { mendixVersions, mxbuildPath, toolkitEnv, type WizardConfig } from './config.js';
 import { writeIntakeAnswers } from './intake.js';
 import { writeBriefFiles } from './brief-files.js';
@@ -51,9 +53,9 @@ export interface SetupDeps {
   /** Clones `repo` with the office's gh login and opens it as a floor (the elevator's way). */
   addFloor(repo: string, by: string, account?: string): Promise<FloorRef | string>;
   /** Opens a checkout already on disk as `repo`'s floor (the offline test office's way). */
-  adoptFloor(repo: string, dir: string, by: string): FloorRef | string | Promise<FloorRef | string>;
+  adoptFloor(repo: string, dir: string, by: string, local?: boolean): FloorRef | string | Promise<FloorRef | string>;
   /** Puts a task on a floor's queue; why not, if it couldn't. */
-  queue(floor: string, prompt: string, title: string, issue: number, model: string, by: string, account?: string): string | undefined;
+  queue(floor: string, prompt: string, title: string, issue: number | undefined, model: string, by: string, account?: string): string | undefined;
   /** Whether a role of the project team is a worker on the floor already (hired, or writing its handoff). */
   hired(floor: string, role: ProjectRole): boolean;
   /** Whether the floor has had a role of the project team in any state: at work, writing its handoff, benched, or sent home. */
@@ -112,7 +114,9 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
   // before the env step has written it there.
   const bash = (job: JobState, script: string, args: string[], io: StepIO, timeoutMs: number, allowFail = false, extraEnv: Record<string, string> = {}) =>
     runCommand(cfg.bash, [bashPath(script), ...args], { cwd: dirOf(job), env: { ...withFloorToolkitEnv(dirOf(job), env()), MXBUILD_PATH: mxbuildPath(cfg, job.plan.mendix), ...extraEnv }, timeoutMs, onLine: said(io), allowFail });
-  const bare = (job: JobState) => path.join(cfg.offlineDir!, job.plan.owner, `${job.plan.name}.git`);
+  // The local bare repository: a test office's stand-in for GitHub, or a local-only project's own (local-only.ts).
+  const bare = (job: JobState) => (job.plan.localOnly ? localBareOf(deps.projectsDir(), job.plan.owner, job.plan.name) : path.join(cfg.offlineDir!, job.plan.owner, `${job.plan.name}.git`));
+  const where = (job: JobState) => (job.plan.localOnly ? 'local only, nothing on GitHub' : 'offline');
   const dirOf = (job: JobState) => {
     if (!job.dir || !existsSync(job.dir)) throw new Error("The project isn't there yet: Retry from the clone step");
     return job.dir;
@@ -173,13 +177,13 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     if (r.code !== 0) throw new Error(`bin/verify-model.sh exit ${r.code}, so the pre-commit hook would refuse the new app: ${r.tail.slice(-2).join(' ').slice(0, 300)}. Fix the cause and Retry`);
   };
 
-  return withPortfolio(deps, {
+  return withSourceFolder(withLocalOnly(deps, withPortfolio(deps, {
     async repo(job, io) {
       const repo = repoOf(job);
       if (job.plan.kind === 'change') return { status: 'skipped', detail: `existing repository ${repo}` };
-      if (cfg.offlineDir) {
+      if (cfg.offlineDir || job.plan.localOnly) {
         const at = bare(job);
-        if (existsSync(path.join(at, 'HEAD'))) return { status: 'skipped', detail: `already there (offline: ${at})` };
+        if (existsSync(path.join(at, 'HEAD'))) return { status: 'skipped', detail: `already there (${where(job)}: ${at})` };
         mkdirSync(path.dirname(at), { recursive: true });
         await git(path.dirname(at), ['init', '--bare', '-b', 'main', at], io);
         // Like `gh repo create --add-readme`: one commit, so the clone has something to check out.
@@ -193,7 +197,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         } finally {
           await rm(seed, { recursive: true, force: true }).catch(() => undefined);
         }
-        return { status: 'done', detail: `offline: a local bare repository at ${at}` };
+        return { status: 'done', detail: `${where(job)}: a local bare repository at ${at}` };
       }
       // Created only when GitHub says plainly it isn't there: a lookup that couldn't tell (a timeout, the login, a 403, GitHub down) stops here (repo-lookup.ts).
       const look = () => lookupWithRun((a) => (deps.run ?? runCommand)('gh', a, { cwd: deps.projectsDir(), env: env(), timeoutMs: MIN, allowFail: true }), repo);
@@ -272,7 +276,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         await own(known.dir, true);
         return await floorReady({ ...settle(known, ''), status: 'skipped', detail: `already a project (${known.dir})` });
       }
-      if (cfg.offlineDir) {
+      if (cfg.offlineDir || job.plan.localOnly) {
         const dest = path.join(deps.projectsDir(), job.plan.owner, job.plan.name);
         const existed = existsSync(dest);
         if (!existsSync(path.join(dest, '.git'))) {
@@ -281,11 +285,11 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
           await (existed ? clone() : folderOp(job, io, dest, clone));
           await own(dest, existed);
           if (!existed) await folderDone(job, io, dest);
-          // origin reads as GitHub (the office keys floors by it); pushes go to the local bare repository.
-          await git(dest, ['remote', 'set-url', 'origin', `https://github.com/${repo}.git`], io);
-          await git(dest, ['remote', 'set-url', '--push', 'origin', bare(job)], io);
+          // origin reads as GitHub (the office keys floors by it); pushes go to the local bare repository. A local-only project's origin is that repository.
+          if (!job.plan.localOnly) await git(dest, ['remote', 'set-url', 'origin', `https://github.com/${repo}.git`], io);
+          if (!job.plan.localOnly) await git(dest, ['remote', 'set-url', '--push', 'origin', bare(job)], io);
         } else await own(dest, true);
-        return await floorReady(settle(await deps.adoptFloor(repo, dest, job.by), `offline project at ${dest}`));
+        return await floorReady(settle(await deps.adoptFloor(repo, dest, job.by, job.plan.localOnly), `${where(job)} project at ${dest}`));
       }
       io.log(`  cloning ${repo} with the office's gh login…`);
       // The building moves into a checkout already at its place rather than cloning (building.ts): that one is never the setup's.
@@ -509,8 +513,8 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
           had.push(r.label);
           continue;
         }
-        const task = handOff && r.id === discoveryRole(job) ? discoveryPrompt(job.issue!) : undefined;
-        io.log(`  hiring the ${r.label}${task ? `, with Discovery #${job.issue} on ${model}` : ''}…`);
+        const task = handOff && r.id === discoveryRole(job) ? discoveryTask(job)?.prompt : undefined;
+        io.log(`  hiring the ${r.label}${task ? `, with Discovery ${job.discoveryFile ?? `#${job.issue}`} on ${model}` : ''}…`);
         const err = await deps.hire(floor, r.id, job.by, job.account, task, task ? model : undefined);
         if (err) throw new Error(`Couldn't hire the ${r.label}: ${err}${made.length ? ` (hired so far: ${made.join(', ')})` : ''}`);
         if (task) job.discoveryHired = true;
@@ -523,22 +527,23 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
 
     async queue(job) {
       if (!job.plan.discovery.queue) return { status: 'skipped', detail: 'not asked for' };
-      if (!job.issue) return { status: 'skipped', detail: 'no Discovery issue to queue' };
+      const task = discoveryTask(job);
+      if (!task) return { status: 'skipped', detail: 'no Discovery issue to queue' };
       if (cfg.offlineDir) return { status: 'skipped', detail: 'offline test office: no agent is queued' };
-      if (job.discoveryHired) return { status: 'skipped', detail: `#${job.issue} went to the Chief Analyst when it was hired` };
+      if (job.discoveryHired) return { status: 'skipped', detail: `${job.discoveryFile ?? `#${job.issue}`} went to the Chief Analyst when it was hired` };
       if (!job.floor) throw new Error("The project isn't there yet");
-      const err = deps.queue(job.floor, discoveryPrompt(job.issue), `Discovery #${job.issue} (${job.plan.discovery.model})`, job.issue, job.plan.discovery.model, job.by, job.account);
+      const err = deps.queue(job.floor, task.prompt, task.title, task.issue, job.plan.discovery.model, job.by, job.account);
       if (err && !/already on the queue/i.test(err)) throw new Error(err);
-      return { status: err ? 'skipped' : 'done', detail: err ?? `#${job.issue} on ${job.plan.discovery.model}` };
+      return { status: err ? 'skipped' : 'done', detail: err ?? `${job.discoveryFile ?? `#${job.issue}`} on ${job.plan.discovery.model}` };
     },
-  });
+  })));
 }
 
 /** Who works the Discovery issue: whoever covers Analysis on the plan's shape (the Chief Analyst, or the Solo Lead). */
 export const discoveryRole = (job: Pick<JobState, 'plan'>): ProjectRole => SHAPES[job.plan.shape ?? shapeForRoles(job.plan.roles)].coverage.analysis as ProjectRole;
 
 /** The Discovery issue goes to whoever covers Analysis as its first task, rather than to a worker off the queue: asked to be queued, and that member is on the team. */
-export const handsDiscoveryToAnalyst = (job: JobState) => job.plan.discovery.queue && !!job.issue && job.plan.roles.includes(discoveryRole(job));
+export const handsDiscoveryToAnalyst = (job: JobState) => job.plan.discovery.queue && !!discoveryTask(job) && job.plan.roles.includes(discoveryRole(job));
 
 /**
  * Intake Q9's answer: the question asks "attended or unattended", the register's `Interview mode:` line

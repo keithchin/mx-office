@@ -177,6 +177,26 @@ export interface ProjectPlan {
    * instructions it's added there and, when the portfolio has a company brain, wired to it and checked.
    */
   portfolio?: string;
+  /**
+   * A local folder of the legacy app's code (shared/source-folder.ts), from the draft (never from the page):
+   * copied into the project's sources/legacy/<name>/ at the intake step, confidential, never uploaded.
+   */
+  sourceFolder?: PlanSource;
+  /**
+   * Keep this project off GitHub (server/wizard/local-only.ts): no GitHub repository, no push, no Discovery
+   * issue (a local file and the team's queue instead). A new project only; recorded in agent-office.project.json.
+   */
+  localOnly?: boolean;
+  /** The person's own description asked for a slice first (from the draft): Discovery picks it at CAC-1. */
+  sliceAsked?: boolean;
+}
+
+/** A plan's source folder: where it is on the office's machine and what the scan found. */
+export interface PlanSource {
+  path: string;
+  name: string;
+  files: number;
+  bytes: number;
 }
 
 /** The setup, a step at a time. Each step checks what's already done first, so running it again is safe. */
@@ -272,6 +292,8 @@ export interface SetupView {
   decisions?: { stage: string; decision: string; status: string }[];
   /** The delivery branch's head, when the stages were read from origin/<default>. */
   head?: { branch: string; sha: string };
+  /** Created with "Keep this project off GitHub" (agent-office.project.json): the Overview says "Local only: not on GitHub". */
+  localOnly?: boolean;
 }
 
 /** The floor's folder isn't on the default branch, or is behind it: what's shown comes from the default branch, and this says so. */

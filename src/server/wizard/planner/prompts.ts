@@ -44,9 +44,9 @@ export function repoContext(repo: DraftRepo | undefined): string {
   ].join('\n');
 }
 
-export function briefInput(prompt: string, texts: { name: string; text: string; note?: string }[], pdfs: string[], repo?: DraftRepo): string {
+export function briefInput(prompt: string, texts: { name: string; text: string; note?: string }[], pdfs: string[], repo?: DraftRepo, sourceIndex?: string): string {
   const docs = texts.map((t) => `--- ${t.name}${t.note ? ` (${t.note})` : ''} ---\n${t.text}`).join('\n\n');
-  return [repoContext(repo), `The person's description:\n${prompt.trim() || '(none: work from the documents)'}`, docs ? `Attached documents (text):\n\n${docs}` : '', pdfs.length ? `Attached PDFs to read: ${pdfs.join(', ')}` : ''].filter(Boolean).join('\n\n');
+  return [repoContext(repo), sourceIndex ?? '', `The person's description:\n${prompt.trim() || '(none: work from the documents)'}`, docs ? `Attached documents (text):\n\n${docs}` : '', pdfs.length ? `Attached PDFs to read: ${pdfs.join(', ')}` : ''].filter(Boolean).join('\n\n');
 }
 
 export function chatSystem(mode: StartMode): string {

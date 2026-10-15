@@ -27,8 +27,8 @@ export interface PlannerEngine {
   model: string;
   /** Why it can't run now, or undefined when it can. */
   why(): string | undefined;
-  /** `unread`: the attached PDFs the first try came back without reading (the Planner retries once, naming them). `repo`: a change's repository, named as context only (the planner never reads it). */
-  brief(req: { mode: StartMode; prompt: string; files: PlannerFile[]; budgetUsd: number; unread?: string[]; repo?: DraftRepo }): Promise<Answer<{ brief: Brief; filesRead: string[] }>>;
+  /** `unread`: the attached PDFs the first try came back without reading (the Planner retries once, naming them). `repo`: a change's repository, named as context only (the planner never reads it). `sourceIndex`: an attached source folder's file index (paths and sizes, never contents). */
+  brief(req: { mode: StartMode; prompt: string; files: PlannerFile[]; budgetUsd: number; unread?: string[]; repo?: DraftRepo; sourceIndex?: string }): Promise<Answer<{ brief: Brief; filesRead: string[] }>>;
   chat(req: { mode: StartMode; repo?: DraftRepo; brief: Brief; history: ChatMsg[]; text: string; budgetUsd: number }): Promise<Answer<{ brief: Brief; reply: string }>>;
   domains(req: { brief: Brief; budgetUsd: number }): Promise<Answer<Domains>>;
 }
@@ -54,7 +54,7 @@ export function cliEngine(o: CliEngineOpts): PlannerEngine {
       const texts = req.files.filter((f) => f.text !== undefined).map((f) => ({ name: f.name, text: f.text!, note: f.note }));
       const pdfs = req.files.filter((f) => f.text === undefined);
       const again = req.unread?.length ? `\n\nYour last try came back without reading ${req.unread.join(', ')}. ${PDF_READ}` : '';
-      const r = await call(briefSystem(req.mode), briefInput(req.prompt, texts, pdfs.map((f) => f.name), req.repo) + again, BRIEF_SCHEMA, req.budgetUsd, pdfs);
+      const r = await call(briefSystem(req.mode), briefInput(req.prompt, texts, pdfs.map((f) => f.name), req.repo, req.sourceIndex) + again, BRIEF_SCHEMA, req.budgetUsd, pdfs);
       const brief = r.value ? cleanBrief(r.value) : undefined;
       const filesRead = Array.isArray(r.value?.filesRead) ? (r.value.filesRead as unknown[]).filter((x): x is string => typeof x === 'string') : [];
       return brief ? { value: { brief, filesRead }, cost: r.cost } : { value: null, cost: r.cost, error: r.error ?? 'The brief came back empty', budgetHit: r.budgetHit };

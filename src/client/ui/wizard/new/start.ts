@@ -12,6 +12,8 @@ import { unfinishedSection } from '../unfinished';
 import { briefApi } from './api';
 import { openDialog } from './dialog';
 import { caAvatar, icon } from './parts';
+import { sourceChip, sourceDialog } from './source-folder';
+import { takesSource } from '../../../../shared/source-folder';
 import type { Flow } from './index';
 
 const MODES: { id: StartMode; title: string; icon: string; desc: string; go: string; rec?: boolean }[] = [
@@ -62,7 +64,9 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
   const draftBtn = h('button.btn.primary.nw-primary', { type: 'button' }, icon('spark'), 'Draft project brief') as HTMLButtonElement;
   const upload = h('button', { type: 'button', role: 'menuitem' }, icon('upload'), 'Upload files…');
   const soon = (name: string) => h('button', { type: 'button', role: 'menuitem', 'aria-disabled': 'true', title: 'Coming later' }, icon('cloud'), `Add from ${name}`, h('span.nw-soon', {}, 'coming later'));
-  const menu = h('div.nw-menu', { role: 'menu', 'aria-label': 'Add to the description', hidden: true }, upload, h('hr'), h('div.nw-mh', {}, 'Sources'), soon('Confluence'), soon('SharePoint'));
+  // A local folder of the app's code (Migrate an app, Change an existing app): source-folder.ts.
+  const folderItem = h('button', { type: 'button', role: 'menuitem' }, icon('folder'), 'Add a source folder…');
+  const menu = h('div.nw-menu', { role: 'menu', 'aria-label': 'Add to the description', hidden: true }, upload, h('hr'), h('div.nw-mh', {}, 'Sources'), folderItem, soon('Confluence'), soon('SharePoint'));
   const repo = h('input', { type: 'text', id: 'nw-start-repo', placeholder: 'owner/name', autocomplete: 'off', spellcheck: 'false', list: 'nw-start-repos' }) as HTMLInputElement;
   repo.value = repoText(flow.draft?.repo);
   const repoList = h('datalist', { id: 'nw-start-repos' });
@@ -125,6 +129,7 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
     promptH.textContent = COPY[m][0];
     promptSub.textContent = COPY[m][1];
     repoRow.hidden = m !== 'change' && m !== 'assurance';
+    folderItem.hidden = !takesSource(m);
     if (!repoRow.hidden && !store.repos.at && !store.repos.loading) flow.net.send({ t: 'floor.repos' });
     update();
   };
@@ -161,7 +166,7 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
     setTimeout(() => upload.focus(), 10);
   });
   menu.addEventListener('keydown', (e) => {
-    const items = [...menu.querySelectorAll<HTMLElement>('[role=menuitem]')];
+    const items = [...menu.querySelectorAll<HTMLElement>('[role=menuitem]')].filter((i) => !i.hidden);
     const i = items.indexOf(document.activeElement as HTMLElement);
     if (e.key === 'ArrowDown') (e.preventDefault(), items[(i + 1) % items.length].focus());
     if (e.key === 'ArrowUp') (e.preventDefault(), items[(i + items.length - 1) % items.length].focus());
@@ -172,6 +177,11 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
   upload.addEventListener('click', () => {
     closeMenu(false);
     filesDialog();
+  });
+  const sourceHost = { host: el, draft: () => flow.draft, ensureDraft, setDraft: (d: DraftView) => (flow.setDraft(d), update()), say: (t: string) => flow.say(t) };
+  folderItem.addEventListener('click', () => {
+    closeMenu(false);
+    sourceDialog(sourceHost, plus);
   });
 
   /** A draft in the office to attach files to and draft from: made on first need. */
@@ -280,7 +290,8 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
 
   function update() {
     const att = files();
-    chips.replaceChildren(...att.map((a) => h('span.nw-chip', { title: `${READ_LABEL[a.read]}${a.note ? ` (${a.note})` : ''}` }, icon('file'), h('span.nw-fn', {}, a.name), h('span.nw-sz', {}, size(a.size)), removeBtn(a.name, () => undefined))));
+    const src = takesSource(mode) ? flow.draft?.source : undefined;
+    chips.replaceChildren(...(src ? [sourceChip(src, sourceHost)] : []), ...att.map((a) => h('span.nw-chip', { title: `${READ_LABEL[a.read]}${a.note ? ` (${a.note})` : ''}` }, icon('file'), h('span.nw-fn', {}, a.name), h('span.nw-sz', {}, size(a.size)), removeBtn(a.name, () => undefined))));
     if (mode === 'plan') detected.replaceChildren(icon('info'), ' Entry mode: ', h('b', {}, att.length ? 'Requirements-driven' : 'Greenfield'), att.length ? ', because you attached a document' : '. Attach a spec to make it requirements-driven');
     else detected.replaceChildren();
     const s = flow.status;
@@ -298,7 +309,7 @@ export function startView(flow: Flow, opts: { resume: DraftView | null }) {
             : `The Chief Analyst drafts with AI (${s.model}): about ${usdCents(about)} of office spend (capped at ${usdCents(s.capUsd)}). Nothing is created until you approve.`,
       ),
     );
-    draftBtn.disabled = !admin || !s.available || (!ta.value.trim() && !att.length) || flow.draft?.status === 'drafting';
+    draftBtn.disabled = !admin || !s.available || (!ta.value.trim() && !att.length && !src) || flow.draft?.status === 'drafting';
     manualBtn.disabled = !admin;
     if (repoList.childElementCount === 0 && store.floors.length) repoList.replaceChildren(...[...new Set([...store.floors.map((f) => f.repo).filter((r): r is string => !!r), ...store.repos.list.map((r) => r.name)])].map((r) => h('option', { value: r })));
   }

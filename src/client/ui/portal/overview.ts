@@ -44,7 +44,7 @@ export interface OverviewDeps {
   /** The Mendix version Studio Pro would open it in. */
   mendix(): string | undefined;
   /** The setup panel's view: whether it's a toolkit project, and the delivery branch's head. */
-  setup(): { toolkit?: boolean; head?: { branch: string; sha: string } } | undefined;
+  setup(): { toolkit?: boolean; head?: { branch: string; sha: string }; localOnly?: boolean } | undefined;
   /** View App and Open in Studio Pro, as the navigation does them; Studio's state (offered, or why not). */
   viewApp(): void;
   studio: { shown(): boolean; blocked(): string | undefined; open(): void };
@@ -209,13 +209,14 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
     const commit = lastCommit?.floor === store.floor ? lastCommit.v : undefined;
     const facts: DetailFacts = {
       repo: f?.repo,
-      dir: f?.repo ? undefined : (f?.dir ?? p?.dir),
+      dir: f?.repo && !deps.setup()?.localOnly ? undefined : (f?.dir ?? p?.dir),
       branch: p?.branch ?? f?.branch,
       mendix: deps.mendix(),
       toolkit: tk?.commit ? { sha: tk.commit.sha, date: tk.commit.date, state: tk.state } : undefined,
       lastCommit: commit ? { sha: commit.sha, branch: commit.branch, when: commitWhen(commit.date, navigator.language), subject: commit.subject } : head ? { sha: head.sha, branch: head.branch } : undefined,
       budget: b ? { spent: b.spent, total: b.settings.total, text: budgetText(b.spent, b.settings.total) } : undefined,
       live: deps.live(),
+      localOnly: deps.setup()?.localOnly,
     };
     const rows = detailRows(facts);
     const key = JSON.stringify(rows);

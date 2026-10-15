@@ -5,6 +5,7 @@
 // Assumed until a person confirms it, and an open question is always Unverified.
 
 import type { InterviewMode, SizeTier } from './wizard.js';
+import type { SourceFolder } from './source-folder.js';
 
 export const BRIEF_TAGS = ['answered', 'assumed', 'unverified'] as const;
 export type BriefTag = (typeof BRIEF_TAGS)[number];
@@ -170,6 +171,8 @@ export interface DraftView {
   attachments: AttachmentNote[];
   /** Change and assurance: the app's repository, so a resumed draft still knows it. */
   repo?: DraftRepo;
+  /** Migrate and change: a local source folder (shared/source-folder.ts), scanned, copied into sources/legacy/ at setup. */
+  source?: SourceFolder;
   /** new: not drafted yet; drafting: the Chief Analyst is writing it; ready: there is a brief; failed: drafting stopped (see message). */
   status: 'new' | 'drafting' | 'ready' | 'failed';
   brief?: Brief;

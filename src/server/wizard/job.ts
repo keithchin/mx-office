@@ -26,6 +26,8 @@ export interface JobState {
   issue?: number;
   /** The Discovery issue went to the Chief Analyst as its first task when the team step hired it (so the queue step doesn't queue it again). */
   discoveryHired?: boolean;
+  /** A local-only project's Discovery brief (wizard/local-only.ts): the file in the project, instead of a GitHub issue. */
+  discoveryFile?: string;
   /** The Budget step's level and budget were applied to the floor (once: a Retry doesn't apply it again). */
   budgetApplied?: boolean;
   /**

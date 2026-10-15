@@ -26,6 +26,9 @@ import { appDirTooLong, mprVersion } from './mendix-app.js';
 import { testModeOf } from '../testmode.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
+import { takesSource } from '../../shared/source-folder.js';
+import { asksForSlice } from '../../shared/discovery-migration.js';
+import { localOnlyAt } from '../local-only.js';
 import { portfoliosOf } from '../portfolios/index.js';
 import { setupView, setupViewOf } from './setup.js';
 import { GateSource, branchInfo } from './gate-source.js';
@@ -180,11 +183,14 @@ export class Wizard {
     if (plan.brief?.draftId && !draft) return 'That project brief isn’t in the office any more: start again from New project';
     if (draft?.brief) plan.brief = cleanPlanBrief({ draftId: draft.id, brief: draft.brief, domains: draft.domains, approved: draft.approved, attachments: draft.attachments, manual: draft.manual });
     if (plan.brief && !plan.brief.approved) return 'Approve the scope first';
+    // The source folder the draft checked and scanned (server/wizard/source-folder.ts), never a path from the page.
+    if (draft && plan.entry === 'migration' && asksForSlice([draft.prompt])) plan.sliceAsked = true;
+    if (draft?.source && takesSource(draft.mode)) plan.sourceFolder = { path: draft.source.path, name: draft.source.name, files: draft.source.files, bytes: draft.source.bytes };
     const id = jobId(plan.owner, plan.name);
     const had = this.book.get(id);
     if (had && had.status === 'done') return `${plan.owner}/${plan.name} was already set up — edit its answers from its project's setup panel`;
     if (had && this.book.isRunning(id)) return this.book.view(had);
-    if (plan.kind === 'new' && !plan.createdByHand && !this.cfg.offlineDir && !adminTokenConfigured(this.cfg.adminTokenFile)) {
+    if (plan.kind === 'new' && !plan.localOnly && !plan.createdByHand && !this.cfg.offlineDir && !adminTokenConfigured(this.cfg.adminTokenFile)) {
       return "There's no admin token, so the office can't create the repository: create one (see the instructions), or create the repository on GitHub yourself and tick that box";
     }
     // A test office's Studio Pro is a stand-in whose folders are deep under scratch: only a real office is held to mx's limit.
@@ -237,7 +243,7 @@ export class Wizard {
     if (typeof plan === 'string') return plan;
     const moved = plan.mendix !== job.plan.mendix;
     // Roles ticked since the team step ran are hired too (JobBook.edit), and only those.
-    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
+    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly, sliceAsked: job.plan.sliceAsked }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
     this.go(job);
     return this.book.view(job);
   }
@@ -257,6 +263,11 @@ export class Wizard {
    * team phone, Needs you): one answer is shared for a few seconds, and a re-check starts afresh.
    */
   setup(floor: Floor, now = Date.now()): Promise<SetupView> {
+    // Local only (local-only.ts) is read each time (a cheap, cached look at the project file), never from a view shared from before setup wrote it.
+    return this.sharedSetup(floor, now).then((v) => (localOnlyAt(floor.dir) ? { ...v, localOnly: true } : v));
+  }
+
+  private sharedSetup(floor: Floor, now: number): Promise<SetupView> {
     const had = this.setups.get(floor.id);
     if (had && now - had.at < SETUP_TTL_MS) return had.view;
     const view = this.freshSetup(floor);
@@ -384,8 +395,8 @@ export class Wizard {
       // The office's own Claude Code (CLAUDE_CONFIG_DIR in its environment, else ~/.claude.json), as signins.ts's base.
       trustFloor: (dir) => void trustFloor(dir, childEnv()),
       joinPortfolio: (floor, portfolio, by) => portfoliosOf(ctx).joinFromWizard(floor, portfolio, by),
-      adoptFloor: async (repo, dir, by) => {
-        const r = ctx.building.adopt(repo, dir, by);
+      adoptFloor: async (repo, dir, by, local) => {
+        const r = ctx.building.adopt(repo, dir, by, local);
         if (typeof r === 'string') return r;
         // Opening the floor is a block of its own (its worker manager writes each provider's files).
         await new Promise<void>((done) => setImmediate(done));

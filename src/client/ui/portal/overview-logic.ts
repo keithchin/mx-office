@@ -66,6 +66,8 @@ export interface DetailFacts {
   lastCommit?: { sha: string; branch?: string; when?: string; subject?: string };
   budget?: { spent: number; total?: number; text: string };
   live?: { status: string; url?: string };
+  /** Created with "Keep this project off GitHub": no GitHub link, and it says so. */
+  localOnly?: boolean;
 }
 
 export interface DetailRow {
@@ -85,9 +87,13 @@ export interface DetailRow {
 const short = (sha: string) => sha.slice(0, 7);
 
 /** The Details card's rows, in the portal's order, for what the office knows (a row it doesn't know is left out). */
+/** What the Overview says for a project kept off GitHub. */
+export const LOCAL_ONLY_LABEL = 'Local only: not on GitHub';
+
 export function detailRows(f: DetailFacts): DetailRow[] {
   const rows: DetailRow[] = [];
-  if (f.repo) rows.push({ label: 'Repository', value: f.repo, href: `https://github.com/${f.repo}`, external: true });
+  if (f.localOnly) rows.push({ label: 'Repository', value: LOCAL_ONLY_LABEL, sub: f.dir ?? f.repo });
+  else if (f.repo) rows.push({ label: 'Repository', value: f.repo, href: `https://github.com/${f.repo}`, external: true });
   else if (f.dir) rows.push({ label: 'Folder', value: f.dir, mono: true });
   if (f.branch) rows.push({ label: 'Branch', value: f.branch, mono: true, tab: 'git' });
   if (f.mendix) rows.push({ label: 'Mendix version', value: f.mendix, tab: 'model' });

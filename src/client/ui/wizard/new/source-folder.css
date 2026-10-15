@@ -1,0 +1,9 @@
+/* "Add a source folder" (source-folder.ts): the chip under the description and the dialog's summary. */
+#modal-root .nw-src-chip > .nw-ico { color: var(--accent, var(--ink)); }
+#modal-root .nw-src-result { margin-top: 10px; }
+#modal-root .nw-src-sum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 6px; }
+#modal-root .nw-src-sum .nw-ico,
+#modal-root .nw-src-result .nw-hint .nw-ico { width: 14px; height: 14px; vertical-align: -2px; }
+#modal-root .nw-src-index { margin: 6px 0 0; padding: 8px 10px; list-style: none; border: 1px solid var(--line); border-radius: var(--nw-r); background: var(--paper-2); font-size: 12px; max-height: 180px; overflow: auto; }
+#modal-root .nw-src-index code { word-break: break-all; }
+#modal-root .nw-row > #nw-src-path { flex: 1; min-width: 0; }
