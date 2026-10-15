@@ -172,7 +172,16 @@ export function escalationLine(e: Escalation): string {
 }
 
 /** The Project Manager's answer to an escalation, as a prompt to the agent that raised it. */
-export function escalationAnswerPrompt(e: Escalation, verdict: EscalationVerdict, text: string, by: string, outcome?: 'noted' | 'done'): string {
+/** The citation a recorded decision carries (Slice 1B-2): `Decided per ESC-<id> rev <n>`. */
+export const decisionCitation = (escId: string, rev: number) => `Decided per ESC-${escId} rev ${rev}`;
+
+/** How to record a decision so the office can find it and compare it with the answer. */
+export function citationRule(escId: string, rev: number | undefined): string {
+  const cite = rev ? `\`${decisionCitation(escId, rev)}: <the decision, worded as given>\`` : `\`Decided per ESC-${escId} rev <n>: <the decision, worded as given>\` (<n> from the [office answer …] line below)`;
+  return `Record the decision in your team journal entry (docs/team/*.md) or in PROJECT.md's Decisions row, on one line that starts ${cite}, then commit it. Use the answer's own words: the office compares what you write with the answer and shows the Project Manager any difference.`;
+}
+
+export function escalationAnswerPrompt(e: Escalation, verdict: EscalationVerdict, text: string, by: string, outcome?: 'noted' | 'done', rev?: number): string {
   // I've done it (a hands-on card): never "APPROVED", and pressing it proves nothing, so the agent re-checks.
   if (outcome === 'done')
     return [`${by} says it's done: please re-check. (Your escalation “${e.title}”.)`, ...(text && text !== 'Done' ? ['', text] : []), '', 'Check it yourself before you rely on it (the Project Manager pressing a button proves nothing), record the result in your team journal, then carry on with the work it unblocks. If it is not done after all, escalate again with what you found.'].join('\n');
@@ -180,9 +189,20 @@ export function escalationAnswerPrompt(e: Escalation, verdict: EscalationVerdict
     `The Project Manager (${by}) answered your escalation “${e.title}”: ${VERDICT_WORD[verdict]}.`,
     ...(text ? ['', text] : []),
     '',
-    verdict === 'reject'
-      ? "Don't go ahead with it. Record the answer in your team journal, adjust the plan, and carry on with the rest of your work."
-      : 'Record the answer in your team journal and act on it now: dispatch or continue the work it unblocks, per your review protocol.',
+    verdict === 'reject' ? "Don't go ahead with it. Adjust the plan, and carry on with the rest of your work." : 'Act on it now: dispatch or continue the work it unblocks, per your review protocol.',
+    citationRule(e.id, rev),
+  ].join('\n');
+}
+
+/** A correction of how a decision was recorded (Send correction, Slice 1B-2): what was decided, what is written, and the citation to use now. */
+export function correctionPrompt(o: { escId: string; title: string; by: string; rev: number; decided: string; recorded: string; where: string }): string {
+  return [
+    `The Project Manager (${o.by}) corrects how their decision on your escalation “${o.title}” was recorded.`,
+    '',
+    `They decided: ${o.decided}`,
+    `What is recorded${o.where ? ` (${o.where})` : ''}: ${o.recorded}`,
+    '',
+    `Change that record so it says what they decided, on one line that starts \`${decisionCitation(o.escId, o.rev)}: \` (this correction is revision ${o.rev}), then commit it. If you already acted on the recorded wording, put that right too.`,
   ].join('\n');
 }
 

@@ -22,14 +22,14 @@ import { isAsleepStatus } from './bench.js';
 import { mayType } from './deliver.js';
 import { owedTarget, typeTarget } from './dispatch-send.js';
 import type { Roster } from './index.js';
-import { escalationAnswerPrompt } from './prompts.js';
+import { decisionCitation, escalationAnswerPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
 
 type Resolution = NonNullable<Escalation['resolution']>;
 
 /** An answer as one line of the message that carries several. */
-export const answerLineOf = (e: Escalation, r: Pick<Resolution, 'outcome' | 'by' | 'verdict' | 'text'>) =>
-  `- “${e.title}”: ${r.outcome === 'done' ? `DONE (${r.by} says it's done: please re-check)` : VERDICT_WORD[r.verdict]}${r.text && r.outcome !== 'done' ? ` — ${r.text}` : ''} (${r.by})`;
+export const answerLineOf = (e: Escalation, r: Pick<Resolution, 'outcome' | 'by' | 'verdict' | 'text' | 'answerRev'>) =>
+  `- “${e.title}”: ${r.outcome === 'done' ? `DONE (${r.by} says it's done: please re-check)` : VERDICT_WORD[r.verdict]}${r.text && r.outcome !== 'done' ? ` — ${r.text}` : ''} (${r.by})${r.answerRev && r.outcome !== 'done' && r.outcome !== 'noted' ? `. Record it as \`${decisionCitation(e.id, r.answerRev)}: …\`` : ''}`;
 
 const kindOf = (verdict: EscalationVerdict, outcome?: EscalationOutcome): AnswerRevisionKind => (outcome === 'noted' ? 'noted' : outcome === 'done' ? 'done' : verdict === 'approve' ? 'approve' : verdict === 'reject' ? 'reject' : verdict === 'dismiss' ? 'moot' : 'reply');
 
@@ -72,13 +72,13 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
   const later: string[] = [];
   let rehire = false;
   const res = (): Pick<Resolution, 'outcome' | 'by' | 'verdict' | 'text'> => ({ verdict, text, by: a.by, ...(a.outcome ? { outcome: a.outcome } : {}) });
-  const owedRaiser = (w: WorkerInfo | undefined, why: string) => owedTarget({ workerId: w?.id, name: e.by }, answerLineOf(e, res()), why);
+  const owedRaiser = (w: WorkerInfo | undefined, why: string, rev: number) => owedTarget({ workerId: w?.id, name: e.by }, answerLineOf(e, { ...res(), answerRev: rev }), why);
   return {
     decision,
     expectedRev: a.expectedRev,
     current: () => ({ rev: e.resolution?.answerRev ?? (e.status === 'resolved' ? 1 : 0), state: e.status === 'resolved' ? `answered by ${e.resolution?.by ?? 'someone'}` : 'open', ...(e.status === 'resolved' ? { open: `Already answered by ${e.resolution?.by ?? 'someone'}` } : {}) }),
     revision: { kind: kindOf(verdict, a.outcome), text, by: a.by },
-    targets: () => {
+    targets: (rev) => {
       const out: Target[] = [];
       // A dismissed FYI doesn't spend a turn of the agent's; anything else is an answer it acts on.
       if (verdict === 'dismiss') return out;
@@ -87,7 +87,8 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
       // One writing its handoff is about to be stopped: the answer is kept, and finishBench brings it back with it.
       const leaving = !!w && !!member && member.phase === 'benching' && member.workerId === w.id;
       if (!w && e.role) rehire = true;
-      const prompt = escalationAnswerPrompt(e, verdict, text, a.by, a.outcome);
+      // The answer carries its citation (Slice 1B-2): Decided per ESC-<id> rev <n>, the revision just appended.
+      const prompt = escalationAnswerPrompt(e, verdict, text, a.by, a.outcome, rev);
       // A dialog may be up (a permission prompt, a question, booting): the answer stays owed and goes in once its turn is over.
       const busy = (x: WorkerInfo) => !mayType(x.status) && !isAsleepStatus(x.status);
       if (w && w.kind === 'agent' && !leaving && !busy(w)) {
@@ -96,7 +97,7 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
         roles.push({ raiser: true });
       } else if ((w && w.kind === 'agent') || rehire) {
         if (w && busy(w) && !leaving) later.push(e.by);
-        out.push(owedRaiser(w, rehire ? 'typed when it is hired back' : leaving ? 'its next hire carries it' : 'a question is open in its terminal: typed once its turn is over'));
+        out.push(owedRaiser(w, rehire ? 'typed when it is hired back' : leaving ? 'its next hire carries it' : 'a question is open in its terminal: typed once its turn is over', rev));
         roles.push({ raiser: true });
       }
       // Those that +1'd it hear the answer too, when they're still at their desks.
@@ -105,7 +106,7 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
         if (!other || other.kind !== 'agent' || other.id === w?.id) continue;
         if (busy(other)) {
           later.push(x.by);
-          out.push(owedTarget({ workerId: other.id, name: x.by }, answerLineOf(e, res()), 'a question is open in its terminal: typed once its turn is over'));
+          out.push(owedTarget({ workerId: other.id, name: x.by }, answerLineOf(e, { ...res(), answerRev: rev }), 'a question is open in its terminal: typed once its turn is over'));
         } else out.push(typeTarget(roster, floor, other, prompt, { origin: 'person', by: a.by, wake: true, resume: true }));
         roles.push({ also: x });
       }
@@ -126,7 +127,7 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
       // Refused now (it went asleep, the cap): owed like before, as a dispatch of its own.
       if (raiser?.state === 'refused') {
         floor.toast(`Couldn't send the answer to ${e.by}: ${raiser.history[raiser.history.length - 1]?.note ?? 'refused'}. It's kept for its next session.`, 'warn');
-        const again = await roster.dispatch.dispatch(floor.id, decision, rev, owedRaiser(floor.worker(e.workerId), 'refused when sent: typed once it can be'), groupId, a.by);
+        const again = await roster.dispatch.dispatch(floor.id, decision, rev, owedRaiser(floor.worker(e.workerId), 'refused when sent: typed once it can be', rev), groupId, a.by);
         if (typeof again !== 'string') raiser = again;
       }
       const delivered = !!raiser && raiser.channel === 'type' && (raiser.state === 'submitted' || raiser.state === 'held');

@@ -62,7 +62,7 @@ export interface AnswerSpec {
    */
   current(): { rev: number; state?: string; open?: string };
   /** The revision appended; omitted when an existing revision is dispatched (useRev). */
-  revision?: { kind: AnswerRevisionKind; option?: string; text: string; by: string; supersedes?: number };
+  revision?: { kind: AnswerRevisionKind; option?: string; text: string; by: string; supersedes?: number; basis?: 'recorded-differently' };
   useRev?: number;
   /** Checks once claimed, before anything is written: an error, or undefined. */
   check?(): string | undefined;
@@ -156,7 +156,7 @@ export class Dispatcher {
         let rev = s.useRev ?? 0;
         if (s.revision) {
           try {
-            const line = await this.answers.append(floorId, { decision: s.decision, kind: s.revision.kind, ...(s.revision.option ? { option: s.revision.option } : {}), text: s.revision.text, by: s.revision.by, at: this.now(), ...(s.revision.supersedes ? { supersedes: s.revision.supersedes } : {}) });
+            const line = await this.answers.append(floorId, { decision: s.decision, kind: s.revision.kind, ...(s.revision.option ? { option: s.revision.option } : {}), text: s.revision.text, by: s.revision.by, at: this.now(), ...(s.revision.supersedes ? { supersedes: s.revision.supersedes } : {}), ...(s.revision.basis ? { basis: s.revision.basis } : {}) });
             rev = line.rev;
           } catch (err) {
             return { ok: false, status: 500, error: `The office couldn't save your answer (${(err as Error).message}), so nothing was sent. Check the office's data folder can be written to, then answer again` };

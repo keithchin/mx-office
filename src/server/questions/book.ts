@@ -3,8 +3,10 @@
 // write-back status (pending → sent → recorded), when each question was first seen, and the batch count
 // Needs you keys its one notification on. The transitions are here and pure, so the tests drive them.
 
-import type { AnswerKind, PmAnswer, Question, QuestionSet, QState } from '../../shared/questions.js';
-import { isResolved, openState } from '../../shared/questions.js';
+import type { AnswerKind, PmAnswer, QExpected, Question, QuestionSet, QState } from '../../shared/questions.js';
+import { expectedOf, isResolved, openState } from '../../shared/questions.js';
+import { faithful } from '../../shared/followthrough.js';
+import { judgeQuestion } from '../followthrough/judge.js';
 
 export interface BookData {
   set?: QuestionSet;
@@ -37,8 +39,18 @@ export function reviveBook(v: unknown): BookData {
 export interface Taken {
   /** Questions that started waiting on the person since the last collection (a new batch when any). */
   fresh: Question[];
-  /** Answers the toolkit now shows recorded. */
+  /** Answers the toolkit now shows recorded (legacy answers, with no answer revision: by the toolkit's state, as before). */
   recorded: PmAnswer[];
+  /** Sent answers with an answer revision, compared with what was sent (Slice 1B-2): located next, then settleJudged. */
+  judged: { a: PmAnswer; q: Question }[];
+}
+
+/** How many sent revisions' expectations an answer keeps. */
+const EXPECTED_KEPT = 5;
+
+/** Keeps what revision `e.rev` asked to be recorded (replacing an earlier copy of the same revision). */
+export function pushExpected(a: PmAnswer, e: QExpected) {
+  a.expected = [...(a.expected ?? []).filter((x) => x.rev !== e.rev), e].slice(-EXPECTED_KEPT);
 }
 
 /** A new collection taken in: first-seen times, the batch, and sent answers the toolkit now shows ANSWERED, ASSUMED or MOOT. */
@@ -56,15 +68,38 @@ export function takeCollection(d: BookData, set: QuestionSet, mtimes: Record<str
     d.known = [...known];
   }
   const recorded: PmAnswer[] = [];
+  const judged: { a: PmAnswer; q: Question }[] = [];
   for (const q of set.questions) {
     const a = d.answers[q.key];
-    if (a?.status !== 'sent' || !isResolved(q.state)) continue;
+    if (a?.status !== 'sent') continue;
+    if (a.answerRev !== undefined && a.expected?.length) {
+      // Never the resolved state alone: what's written is compared with what was sent.
+      const j = judgeQuestion(q, a);
+      a.recording = { outcome: j.outcome, ...(j.rev !== undefined ? { rev: j.rev } : {}), ...(j.text ? { text: j.text } : {}), at: now };
+      judged.push({ a, q });
+      continue;
+    }
+    // Legacy (no answer revision): the toolkit's state, as before.
+    if (!isResolved(q.state)) continue;
     a.status = 'recorded';
     a.recordedAt = now;
     a.recordedState = q.state as QState;
     recorded.push(a);
   }
-  return { fresh, recorded };
+  return { fresh, recorded, judged };
+}
+
+/** The judged answers recorded faithfully (as given, at their current revision, merged into main) marked recorded. */
+export function settleJudged(judged: readonly { a: PmAnswer; q: Question }[], now: number): PmAnswer[] {
+  const out: PmAnswer[] = [];
+  for (const { a, q } of judged) {
+    if (a.status !== 'sent' || !faithful(a.recording, a.answerRev ?? -1)) continue;
+    a.status = 'recorded';
+    a.recordedAt = now;
+    a.recordedState = q.state as QState;
+    out.push(a);
+  }
+  return out;
 }
 
 /** When a question has waited since: the date it was raised, else the earlier of the office first seeing it and its file's time. */
@@ -117,10 +152,13 @@ export function setAnswer(d: BookData, q: Question, i: AnswerInput): string | un
 /** The answers ready to send (Ask the client stays for the export). */
 export const ready = (d: BookData) => Object.values(d.answers).filter((a) => a.status === 'pending' && a.kind !== 'ask-client');
 
-/** Marks answers sent to `to`. */
+/** Marks answers sent to `to`; each with an answer revision keeps what that revision asks to be recorded (Slice 1B-2). */
 export function markSent(d: BookData, keys: readonly string[], to: string, at: number) {
+  const qs = new Map((d.set?.questions ?? []).map((q) => [q.key, q]));
   for (const k of keys) {
     const a = d.answers[k];
-    if (a) Object.assign(a, { status: 'sent', sentAt: at, sentTo: to });
+    if (!a) continue;
+    Object.assign(a, { status: 'sent', sentAt: at, sentTo: to });
+    if (a.answerRev !== undefined && a.kind !== 'ask-client') pushExpected(a, expectedOf(a, qs.get(k), a.answerRev));
   }
 }

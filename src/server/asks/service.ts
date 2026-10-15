@@ -17,6 +17,7 @@ import { journalPath, ROLES } from '../../shared/roster/roles.js';
 import { awaitingAsk, awaitingKey, newestWaits, planAwaiting } from './awaiting.js';
 import { anyFailed, placesOf, readEverywhere, type AskPerson, type Read } from './sources.js';
 import { actMessage, detectAsks, DETECT_FILES, type DetectInput } from './detect.js';
+import { runAsksReaders } from './readers.js';
 
 /** How often each floor is looked at. */
 export const LOOK_MS = 5 * 60_000;
@@ -157,6 +158,8 @@ export class AsksService {
       const journals = [...new Set(ROLES.map((r) => journalPath(r.team)))];
       const reads = await readEverywhere(floor.dir, places, [...journals, ...DETECT_FILES]);
       this.awaiting(floor, reads, why);
+      // The features that read the same words (readers.ts: Recorded as given's citations), on this look's reads.
+      await runAsksReaders(floor, reads);
       const s = await this.stateOf(floor.id);
       const now = this.deps.now();
       // A failed read keeps what the last look found, marked as not re-read (nothing settles on a failed read).
