@@ -202,7 +202,7 @@ export function sourcesLines(sourcesDir: string, toolkitDir?: string): string[] 
 }
 
 /** `sourcesDir`: the floor's sources/ on the office's machine, said in full (sourcesLines). */
-export function briefForDiscovery(pb: PlanBrief, where: { sourcesDir?: string; toolkitDir?: string } = {}): string[] {
+export function briefForDiscovery(pb: PlanBrief, where: { sourcesDir?: string; toolkitDir?: string; legacy?: boolean } = {}): string[] {
   const b = pb.brief;
   const s = b.sections;
   const assumed = SECTION_IDS.flatMap((id) => s[id].filter((x) => x.tag === 'assumed'));
@@ -228,7 +228,8 @@ export function briefForDiscovery(pb: PlanBrief, where: { sourcesDir?: string; t
   );
   if (pb.attachments.length) {
     out.push(`The attached documents are in \`${where.sourcesDir ?? 'sources/'}\`: ${pb.attachments.map((a) => `${a.name} (${READ_LABEL[a.read]})`).join(', ')}. Read every one yourself; the brief may have missed things.`);
-    if (where.sourcesDir) out.push(...sourcesLines(where.sourcesDir, where.toolkitDir));
+    // A migration's legacy source carries the inventory (shared/discovery-migration.ts): its init isn't run twice.
+    if (where.sourcesDir) out.push(...sourcesLines(where.sourcesDir, where.toolkitDir).slice(0, where.legacy ? 1 : 2));
   }
   return out;
 }

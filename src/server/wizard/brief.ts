@@ -5,6 +5,8 @@
 import { ENTRY_MODE_INFO, PROJECT_ROLES, type ProjectPlan } from '../../shared/wizard.js';
 import { SHAPES, shapeForRoles } from '../../shared/roster/coverage.js';
 import { briefForDiscovery, sourcesDirOf } from '../../shared/brief-map.js';
+import { asksForSlice, migrationTrack } from '../../shared/discovery-migration.js';
+import { legacyRel } from '../../shared/source-folder.js';
 
 export const DISCOVERY_TITLE = 'Discovery: kickoff with the client (Stages P → 4)';
 
@@ -21,6 +23,10 @@ export function discoveryBrief(plan: ProjectPlan, toolkitDir: string, pinnedSha?
   const who = SHAPES[shape].coverage.analysis;
   const runner = who === 'chief-analyst' ? 'Chief Analyst (Consultant agent)' : (PROJECT_ROLES.find((r) => r.id === who)?.label.replace(/ \(.*\)$/, '') ?? 'Lead') + ', running discovery as the analyst';
   const goal = plan.brief?.brief.sections.goal.map((g) => g.text).join(' ') || plan.intake.find((a) => a.n === 2)?.text.trim() || plan.description || 'see intake.md';
+  // A migration runs the toolkit's migration track (shared/discovery-migration.ts) over the legacy source copied into sources/legacy/.
+  const legacyDir = floorDir && plan.sourceFolder ? `${sourcesDirOf(floorDir)}/${legacyRel(plan.sourceFolder.name).replace(/^sources\//, '')}` : undefined;
+  const sliceAsked = asksForSlice([plan.description, plan.brief?.brief.description ?? '', ...(plan.brief ? [...plan.brief.brief.sections.goal, ...plan.brief.brief.sections.scope].map((x) => x.text) : []), ...plan.intake.map((a) => a.text)]);
+  const stages = plan.entry === 'migration' ? migrationTrack({ toolkitDir, legacyDir, slice: sliceAsked }) : ['- Run **Stages P → 4**: intake, triage/scope, requirements, architecture & design, and the **build plan** (`architecture/build-plan.md`).'];
   return [
     `**Discovery for ${plan.name}.** You are the **${runner}**.`,
     '',
@@ -36,7 +42,7 @@ export function discoveryBrief(plan: ProjectPlan, toolkitDir: string, pinnedSha?
     `- **Mendix version:** ${plan.mendix}. **Interview mode:** ${plan.interview}.`,
     roles.length ? `- **The project team** (hired on this project by the wizard; see the Team tab): ${roles.join(', ')}.` : '',
     '- `intake.md` already carries the answers given in the wizard. Ask the questions still marked `_Not yet asked._`, and confirm the rest briefly rather than asking them again.',
-    '- Run **Stages P → 4**: intake, triage/scope, requirements, architecture & design, and the **build plan** (`architecture/build-plan.md`).',
+    ...stages,
     "- Ask the customer checkpoints (CAC-1 … CAC-5) in the toolkit's **2+1 format** (two predefined questions with options and a recommendation, plus one open question), **one checkpoint at a time**, and wait for the answer.",
     "- **Stop at every ✋ gate (0, 3, 4)** and ask the client to confirm; record `CONFIRMED <date>` rows in `PROJECT.md ## Decisions` only after they say so. Never record a decision they didn't make (use the toolkit's ASSUMED rules only if they delegate).",
     '- **Do not start Stage 5 (build).** When Stage 4 is CONFIRMED, run `bin/build-plan-status.sh --json` so `architecture/build-plan.json` exists, commit everything, and stop.',
@@ -46,7 +52,7 @@ export function discoveryBrief(plan: ProjectPlan, toolkitDir: string, pinnedSha?
     '- Commit your work at the end of each stage with a clear message (the pre-commit hook finishes in seconds).',
     '- Keep the conversation business-friendly: the client is not a developer.',
     // The project brief drafted and approved in the New project flow: what Stage 0 starts from.
-    ...(plan.brief ? briefForDiscovery(plan.brief, { sourcesDir: floorDir ? sourcesDirOf(floorDir) : undefined, toolkitDir }) : []),
+    ...(plan.brief ? briefForDiscovery(plan.brief, { sourcesDir: floorDir ? sourcesDirOf(floorDir) : undefined, toolkitDir, legacy: !!legacyDir }) : []),
   ]
     .filter((l, i, all) => l !== '' || all[i - 1] !== '')
     .join('\n');
