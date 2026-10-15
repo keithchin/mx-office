@@ -124,7 +124,7 @@ test('change mode: the planner is told the repository’s name and description, 
   assert.doesNotMatch(start, /reads it first/);
   assert.match(start, /The brief is drafted from your description; the team reads the app after setup\./);
   // The repository is only ever text in the prompt: the planning call's files are the attached PDFs alone.
-  assert.match(src('src/server/wizard/planner/engine.ts'), /briefInput\(req\.prompt, texts, pdfs\.map\(\(f\) => f\.name\), req\.repo\)[^\n]*, BRIEF_SCHEMA, req\.budgetUsd, pdfs\)/);
+  assert.match(src('src/server/wizard/planner/engine.ts'), /briefInput\(req\.prompt, texts, pdfs\.map\(\(f\) => f\.name\), req\.repo(, req\.sourceIndex)?\)[^\n]*, BRIEF_SCHEMA, req\.budgetUsd, pdfs\)/);
 });
 
 const pb = (): PlanBrief => ({ brief: fakeBrief([]).brief, attachments: [{ name: 'workshop.pdf', size: 99, read: 'read' }], approved: { by: 'Alex Lee', at: '2026-10-12T10:45:00.000Z', assumed: 0 } });
