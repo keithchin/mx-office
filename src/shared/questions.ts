@@ -5,6 +5,8 @@
 // the agent to record. This file is the part both sides read: the shapes, what "waiting on you" means,
 // the words each card and the Needs-you row say, and the one message Send builds. Pure.
 
+import { recordedWords, whereWords, type Recording } from './followthrough.js';
+
 /** The toolkit's six states (bin/open-questions.sh): UNRAISED and UNRECOGNISED block a gate. */
 export const Q_STATES = ['UNRAISED', 'RAISED', 'ANSWERED', 'ASSUMED', 'MOOT', 'UNRECOGNISED'] as const;
 export type QState = (typeof Q_STATES)[number];
@@ -24,6 +26,8 @@ export interface QuestionSource {
   worktree?: string;
   /** The file is committed as it is (false: new or changed in the working copy). */
   committed: boolean;
+  /** The file's path in that folder (analysis/F002.brd.json), for where a record is (Slice 1B-2). */
+  rel?: string;
 }
 
 export interface Question {
@@ -113,6 +117,22 @@ export interface PmAnswer {
   answerRev?: number;
   /** The dispatch that carried it (server/dispatch/). Pending with one: a Send whose outcome is unknown (release 47 ignores the field and offers Send again). */
   dispatchId?: string;
+  /** What each revision sent asked the analyst to record (Slice 1B-2), newest last, a few kept. */
+  expected?: QExpected[];
+  /** What the office found recorded for it, compared with `expected` (Slice 1B-2). */
+  recording?: Recording;
+}
+
+/** What a sent revision asked to be recorded: the status, and the answer or the decision with its consent. */
+export interface QExpected {
+  rev: number;
+  state: QState;
+  answer?: string;
+  decision?: string;
+  consentBy?: string;
+  consentAt?: string;
+  /** MOOT's reason (written in the status). */
+  reason?: string;
 }
 
 /** Who Send goes to: the agent whose worktree the questions are in, or whoever covers Analysis. */
@@ -285,11 +305,17 @@ export type CardTone = 'wait' | 'mine' | 'sent' | 'done' | 'warn' | 'client';
 
 /** The status line on a card. */
 export function cardStatus(q: Question, a: PmAnswer | undefined): { tone: CardTone; text: string } {
+  // Sent with an answer revision (Slice 1B-2): the toolkit's resolved state alone is never "recorded"; the comparison says.
+  if (a?.status === 'sent' && a.answerRev !== undefined && a.recording && (a.recording.outcome !== 'not-recorded-yet' || isResolved(q.state))) {
+    const r = a.recording;
+    return { tone: r.outcome === 'recorded' ? 'sent' : 'warn', text: [recordedWords(r), whereWords(r.location)].filter(Boolean).join(' · ') };
+  }
   if (isResolved(q.state)) {
     const by = q.consentBy || (a?.status === 'recorded' || a?.status === 'sent' ? a.by : '') || '';
     const when = q.consentAt || (a?.recordedAt ? day(a.recordedAt) : '');
     const detail = [by && `by ${by}`, when].filter(Boolean).join(', ');
-    return { tone: 'done', text: `Recorded (${q.state}${detail ? ` ${detail}` : ''})` };
+    const legacy = a && !a.expected?.length && a.kind !== 'ask-client' ? " · legacy: by the toolkit's state" : '';
+    return { tone: 'done', text: `Recorded (${q.state}${detail ? ` ${detail}` : ''})${legacy}` };
   }
   if (a?.kind === 'ask-client') return { tone: 'client', text: 'Asked the client: in the export for the client' };
   if (a?.status === 'sent') return { tone: 'sent', text: `Your answer: sent to ${a.sentTo ?? 'the analyst'}, not recorded yet` };
@@ -307,20 +333,35 @@ export const stamp = (ms: number) => `${new Date(ms).toISOString().slice(0, 16)}
 
 const quote = (s: string) => `"${s.replace(/\s+/g, ' ').trim()}"`;
 
+/**
+ * What the message asks the analyst to record for answer `a` at revision `rev`: answerLines writes these
+ * values, and the office stores them at Send to compare with what the BRD says afterwards (Slice 1B-2).
+ */
+export function expectedOf(a: Pick<PmAnswer, 'kind' | 'text' | 'option' | 'by' | 'at'>, q: Pick<Question, 'proposedPosition'> | undefined, rev: number): QExpected {
+  switch (a.kind) {
+    case 'accept':
+      return { rev, state: 'ASSUMED', decision: q?.proposedPosition ?? a.text ?? '', consentBy: a.by, consentAt: stamp(a.at) };
+    case 'moot':
+      return { rev, state: 'MOOT', reason: (a.text ?? '').trim() };
+    default:
+      return { rev, state: 'ANSWERED', answer: [a.option, a.text?.trim()].filter(Boolean).join(': ') };
+  }
+}
+
 /** One answer's lines in the message: the id, the file, the status to set and what to write with it. */
 function answerLines(n: number, a: PmAnswer, q: Question | undefined): string[] {
   const where = q?.brd ? `${a.file} (${q.brd}${q.brdTitle ? ` ${q.brdTitle}` : ''})` : a.file;
   const head = `${n}. ${a.id} in ${where}${q ? `: ${q.question.replace(/\s+/g, ' ').slice(0, 160)}` : ''}`;
   const md = a.file.endsWith('.md');
+  const x = expectedOf(a, q, a.answerRev ?? 0);
   switch (a.kind) {
     case 'accept':
-      return [head, `   status: ASSUMED`, `   decision: ${quote(q?.proposedPosition ?? a.text ?? '')} (the proposed position, accepted)`, `   consentBy: ${quote(a.by)}`, `   consentAt: ${quote(stamp(a.at))}`];
+      return [head, `   status: ASSUMED`, `   decision: ${quote(x.decision ?? '')} (the proposed position, accepted)`, `   consentBy: ${quote(x.consentBy ?? '')}`, `   consentAt: ${quote(x.consentAt ?? '')}`];
     case 'moot':
-      return [head, `   status: ${quote(`MOOT - ${(a.text ?? '').trim()}`)}${md ? ' (the Status cell)' : ''}`];
+      return [head, `   status: ${quote(`MOOT - ${x.reason ?? ''}`)}${md ? ' (the Status cell)' : ''}`];
     default: {
-      const said = [a.option, a.text?.trim()].filter(Boolean).join(': ');
       const from = a.fromClient ? ` (the client's answer, imported by ${a.fromClient.by})` : '';
-      return [head, `   status: ANSWERED`, `   answer: ${quote(said)}${from}`, ...(md ? ['   (in sme-questions.md: the Status cell ANSWERED and the answer in its Answer or Decision column)'] : [])];
+      return [head, `   status: ANSWERED`, `   answer: ${quote(x.answer ?? '')}${from}`, ...(md ? ['   (in sme-questions.md: the Status cell ANSWERED and the answer in its Answer or Decision column)'] : [])];
     }
   }
 }

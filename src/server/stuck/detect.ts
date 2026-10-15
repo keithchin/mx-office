@@ -60,9 +60,17 @@ export interface DetectInput {
   activity?: ActivityFacts;
   /** When the office first saw an id (for a fact with no date of its own). */
   firstSeen(id: string): number;
+  /**
+   * Whether a decision the register says is CONFIRMED is settled (sources.ts SettledCheck): 'pending' keeps it
+   * open (answered with an answer revision, not yet recorded as given and merged); undefined is legacy.
+   */
+  settled?(id: string): 'faithful' | 'pending' | undefined;
 }
 
 const ms = (iso: string | undefined) => (iso ? Date.parse(iso) : NaN);
+
+/** Why a CONFIRMED decision still shows: the person's answer isn't recorded as given and merged yet. */
+const notFaithful: StuckEvidence = { label: 'The register says CONFIRMED, but your answer is not recorded as given and merged into main yet (Recorded as given): it is not taken as settled' };
 
 /** file:line (a derived JSON file's lines mean nothing, so just the file). */
 const place = (file: string, line: number, extra = ''): StuckEvidence => (file.endsWith('.json') ? { label: `${file}${extra}`, file } : { label: `${file}:${line}${extra}`, file, line });
@@ -134,7 +142,9 @@ export function detectStuck(i: DetectInput): StuckDraft[] {
     if (ref) seen.add(ref);
     // Answered in the register (CONFIRMED), or accepted for now (a CONFIRMED row that defers it): not waiting
     // on you. OW-1 was re-raised from its own "accepted for now" evidence (slice 0 baseline, 13 Oct).
-    if (facts.confirmed || facts.accepted) continue;
+    // Answered with an answer revision (Slice 1B-2): only when recorded as given and merged into main.
+    const pend = i.settled?.(p.id) === 'pending' || (ref ? i.settled?.(ref) === 'pending' : false);
+    if ((facts.confirmed || facts.accepted) && !pend) continue;
     const id = `decision-${p.id}`;
     const since = earliestDate(p.raised) ?? facts.since ?? i.firstSeen(id);
     if (i.now - since < i.settings.decisionHours * H) continue;
@@ -146,6 +156,7 @@ export function detectStuck(i: DetectInput): StuckDraft[] {
       since,
       blocks: [words, ...journeys],
       evidence: [
+        ...(pend && (facts.confirmed || facts.accepted) ? [notFaithful] : []),
         place(plan!.file, p.line),
         ...waiting.slice(0, 2).flatMap((n) => (rows.get(n) ? [place(plan!.file, rows.get(n)!.line, ` (row ${n})`)] : [])),
       ],
@@ -156,11 +167,12 @@ export function detectStuck(i: DetectInput): StuckDraft[] {
     if (!q.id || seen.has(q.id)) continue;
     // The same id CONFIRMED or accepted for now in the Decisions register: answered, not waiting on you.
     const settled = projectFacts(project!.text, q.id);
-    if (settled.confirmed || settled.accepted) continue;
+    const pend = i.settled?.(q.id) === 'pending';
+    if ((settled.confirmed || settled.accepted) && !pend) continue;
     const id = `decision-${q.id}`;
     const since = q.since ?? i.firstSeen(id);
     if (i.now - since < i.settings.decisionHours * H) continue;
-    out.push({ id, kind: 'decision', since, blocks: [], evidence: [{ label: `${project!.file}:${q.line}`, file: project!.file, line: q.line }], decision: { id: q.id, question: shortQuestion(q.question), rows: '', journeys: [] } });
+    out.push({ id, kind: 'decision', since, blocks: [], evidence: [...(pend && (settled.confirmed || settled.accepted) ? [notFaithful] : []), { label: `${project!.file}:${q.line}`, file: project!.file, line: q.line }], decision: { id: q.id, question: shortQuestion(q.question), rows: '', journeys: [] } });
   }
 
   // 2b. Build-plan rows blocked on something no pending decision names, or on one that's resolved (blocked-rows.ts).

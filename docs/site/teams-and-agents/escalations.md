@@ -62,6 +62,22 @@ The answer goes to the agent as a prompt: *REPLIED*, *APPROVED*, *REJECTED* or *
 
 Your answer is kept before it's sent: the office appends it, in full, to the project's answer history (`<office data>/answers/<floor>.jsonl`), writes down the attempt to type it, and only then types it, ending with a marker line such as *[office answer dsp_… · ESC-3f9c2a1b7e rev 1]*. The escalation is resolved only once the attempt settled. An answer that waits for the agent's turn (a dialog up) keeps the same attempt, and its prompt is on disk at once. If the office stops mid-way, it checks the agent's session when it starts again and never types the answer again by itself; an attempt it can't confirm shows in Needs you with **Send again**, **It went through** and **Abandon** (see [Answers whose outcome is unknown](../using-the-office/command-center.md#answers-whose-outcome-is-unknown)). What the office guarantees is **durable intent plus reconciliation, and no automatic replay of an ambiguous attempt**. It does not promise that an answer is delivered exactly once. An answer to an escalation someone answered meanwhile is refused (*This decision changed since you opened it*), with nothing sent.
 
+### Recorded as given
+
+Your answer asks the agent to record the decision with a citation: one line in its team journal entry (`docs/team/*.md`) or in PROJECT.md's Decisions row that starts *Decided per ESC-3f9c2a1b7e rev 1:* followed by the decision in your answer's words. The id and the revision are the ones in the answer's marker line, and the [Playbooks](playbooks-and-journals.md) say the same.
+
+The office looks for the citation in the project folder, every agent's worktree and the branch heads, on the same look that finds `AWAITING-PM` lines (every few minutes, and soon after a turn ends: no polling of its own, local git only, never GitHub). Finding the citation only **locates** the record. The office then compares what's written there (the citation's line and the rest of its paragraph, or its table row) with your answer:
+
+- **The matching rule** is deliberately strict. Your chosen option, or your words without *Go with:* (and an option's letter), must appear in the record whole, as a run of complete words. Case, quotes, punctuation, markdown and spacing may differ; a changed, missing or added word inside your answer doesn't match. An approval or a rejection with no words matches *approved* or *rejected*.
+- **Recorded as given:** the words match, at the current revision.
+- **Recorded differently:** the citation is right, the words aren't. The record is kept as written, and the card shows both texts.
+- **Recorded for rev 1:** the record cites an older revision of your answer than the current one.
+- **Not recorded yet:** no citation found.
+
+Where the record is, is kept as separate fields: the file's `path`, the `commitSha` of the commit that holds it (none for a working copy), the file's `blobId` in that commit (`git rev-parse <commit>:<path>`, never the commit itself), and `where`: **in a working copy, not committed**, **committed on** a branch, or **merged into main**. Merged means the commit is reachable from `origin/<default branch>`, by local git only.
+
+Only **recorded as given, at the current revision, merged into main** takes the answer off the follow-through list by itself, and only that counts where something else waits on the decision (see [stuck detection](../using-the-office/stuck-detection.md)). *Recorded differently* never clears anything by itself. See [Following through](../using-the-office/command-center.md#following-through) for the cards and their buttons.
+
 Your answer goes through even when the floor's daily cost cap is reached: the cap holds the office's own prompts, not yours. See [Models and costs](models-and-costs.md#the-daily-cost-cap).
 
 > [!NOTE]

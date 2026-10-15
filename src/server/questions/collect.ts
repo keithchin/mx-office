@@ -108,6 +108,7 @@ export class Collector {
         ...(f.workerId ? { workerId: f.workerId } : {}),
         ...(f.worktree ? { worktree: f.worktree } : {}),
         committed: !!changed && !changed.has(rel),
+        rel,
       });
       for (const { q, mtime, brd, sig } of questionsOf(read, source)) {
         const had = merged.get(q.key);

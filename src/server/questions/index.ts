@@ -8,7 +8,9 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import type { WorkerInfo } from '../../shared/protocol.js';
-import type { QuestionsNeed, Recipient } from '../../shared/questions.js';
+import type { Question, QuestionsNeed, Recipient } from '../../shared/questions.js';
+import type { RecordedLocation } from '../../shared/followthrough.js';
+import { Locator } from '../followthrough/locate.js';
 import { coverOf } from '../../shared/roster/coverage.js';
 import { audit } from '../audit/index.js';
 import type { Floor } from '../floor.js';
@@ -85,6 +87,17 @@ export async function foldersOf(floor: { dir: string }, workers: readonly Worker
   return out;
 }
 
+/** Where each question's record is, for one collection (server/followthrough/locate.ts: its git cached for that collection). */
+export function questionLocator(floorDir: string): (q: Question) => Promise<RecordedLocation | undefined> {
+  const loc = new Locator(floorDir);
+  return async (q) => {
+    const s = q.source;
+    if (!s.rel) return undefined;
+    const dir = s.where === 'main' ? floorDir : path.join(floorDir, WORKTREES_DIR, s.worktree ?? '');
+    return loc.locateFile(dir, s.rel, s.committed, s.agent ?? (s.where === 'main' ? 'the project folder' : s.worktree));
+  };
+}
+
 /** The office's Questions service: made on first use, then the same one. */
 export function questionsOf(ctx: Ctx): QuestionsService {
   let s = services.get(ctx.cfg);
@@ -143,6 +156,7 @@ export function questionsOf(ctx: Ctx): QuestionsService {
       return { dispatchId: rec.id, ...(rec.state === 'submitted' || rec.state === 'held' ? {} : { unknown: true }) };
     },
     answer: (f, spec) => rosterOf(ctx).dispatch.answer(f.id, spec),
+    locator: (f) => questionLocator(f.dir),
     decisionHours: () => {
       const st = stuckSettings();
       return st.on ? st.decisionHours : undefined;
