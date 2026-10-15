@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-15 · release 47 (`3055d0e`)
+
 ### Added
 
 - **One-click setup.** First-run setup's Prerequisites step has a **🔧 Fix** on each missing row and **⚡ Set up everything**, which runs every fix the check asks for in order and stops at the first that fails, saying why. Nothing runs until the admin says yes: a window first lists every command and where each program comes from, and the office refuses a run without the confirm it handed out. Progress streams live.
