@@ -107,8 +107,8 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
   // The toolkit's scripts run with the project's toolkit.env over the office's environment, as everything
   // the office starts for a floor does (toolkit-env.ts), and with the picked Studio Pro's mxbuild even
   // before the env step has written it there.
-  const bash = (job: JobState, script: string, args: string[], io: StepIO, timeoutMs: number, allowFail = false) =>
-    runCommand(cfg.bash, [bashPath(script), ...args], { cwd: dirOf(job), env: { ...withFloorToolkitEnv(dirOf(job), env()), MXBUILD_PATH: mxbuildPath(cfg, job.plan.mendix) }, timeoutMs, onLine: said(io), allowFail });
+  const bash = (job: JobState, script: string, args: string[], io: StepIO, timeoutMs: number, allowFail = false, extraEnv: Record<string, string> = {}) =>
+    runCommand(cfg.bash, [bashPath(script), ...args], { cwd: dirOf(job), env: { ...withFloorToolkitEnv(dirOf(job), env()), MXBUILD_PATH: mxbuildPath(cfg, job.plan.mendix), ...extraEnv }, timeoutMs, onLine: said(io), allowFail });
   const bare = (job: JobState) => path.join(cfg.offlineDir!, job.plan.owner, `${job.plan.name}.git`);
   const dirOf = (job: JobState) => {
     if (!job.dir || !existsSync(job.dir)) throw new Error("The project's floor isn't there yet: Retry from the clone step");
@@ -349,7 +349,10 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         io.log(`  toolkit pinned at ${tk.sha.slice(0, 7)}${tk.date ? ` (${tk.date})` : ''}: ${tk.dir}`);
       }
       io.log('  (this takes a few minutes on Windows: the toolkit checks the machine and renders its dashboard)');
-      await bash(job, path.join(tk?.dir ?? cfg.toolkitDir, 'bin', 'init-project.sh'), [bashPath(dir), '--ignore-sources'], io, 25 * MIN);
+      // The toolkit's leak guard (check-no-client-data.sh) keeps client project names out of commits to the toolkit itself; init-project.sh
+      // adds this project's name to its deny list. That list belongs in the clone people contribute from, not in a read-only pin nobody commits from.
+      const denyFile = { MXTK_LEAKGUARD_DENYFILE: bashPath(path.join(path.resolve(cfg.toolkitDir), '.leakguard-deny')) };
+      await bash(job, path.join(tk?.dir ?? cfg.toolkitDir, 'bin', 'init-project.sh'), [bashPath(dir), '--ignore-sources'], io, 25 * MIN, false, denyFile);
       if (tk) {
         pinInstructions(dir, { pin: tk.dir, sha: tk.sha, date: tk.date, names: [path.basename(path.resolve(cfg.toolkitDir))] });
         writeToolkitEnv(dir, tk.dir);
