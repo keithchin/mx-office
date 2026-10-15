@@ -10,7 +10,7 @@
 /** Which decision a revision or a dispatch is about. */
 export type DecisionRef = string; // 'esc:<id>' | 'q:<file>#<qid>' | 'stuck:<id>' | 'proposal:<id>' | 'mcr:<id>' | 'tell:<id>'
 
-export const ANSWER_KINDS = ['answer', 'accept-proposal', 'moot', 'noted', 'done', 'approve', 'reject', 'reply', 'accept-as-recorded', 'correction'] as const;
+export const ANSWER_KINDS = ['answer', 'accept-proposal', 'moot', 'noted', 'done', 'approve', 'reject', 'reply', 'accept-as-recorded', 'correction', 'no-work-required'] as const;
 export type AnswerRevisionKind = (typeof ANSWER_KINDS)[number];
 
 /** The longest text a revision or a dispatch payload keeps (the answer store is the full history up to this). */
@@ -27,6 +27,8 @@ export interface AnswerRevision {
   at: number;
   supersedes?: number;
   basis?: 'recorded-differently';
+  /** no-work-required (Slice 1B-4): the person's reason, beside the answer the revision restates. */
+  note?: string;
 }
 
 export const DISPATCH_STATES = ['prepared', 'in-flight', 'submitted', 'held', 'refused', 'failed', 'not-sent', 'outcome-unknown', 'person-confirmed-sent', 'person-chose-resend', 'person-abandoned'] as const;
@@ -81,9 +83,23 @@ export interface DispatchRecord {
   issue?: { number?: number; url?: string };
   /** github-issue: the proposal and the repository folder, for reconcile and Create it. */
   proposalId?: string;
+  /**
+   * Slice 1B-4: the recipient's current task when the answer went, captured with the intent: the decision
+   * revision's candidate link (shared/task-links.ts), never proof. No taskId on a legacy task.
+   */
+  task?: DispatchTask;
   createdAt: number;
   updatedAt: number;
   history: DispatchHistory[];
+}
+
+/** The recipient's task as a dispatch captured it. */
+export interface DispatchTask {
+  taskId?: string;
+  executionId?: string;
+  text: string;
+  branch?: string;
+  pr?: number;
 }
 
 /** What GET /api/dispatch returns: the records that need a person, and whether you may act. */

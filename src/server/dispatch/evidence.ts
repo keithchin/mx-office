@@ -84,3 +84,70 @@ export async function transcriptEvidence(r: Pick<DispatchRecord, 'payload' | 'ma
     await h?.close().catch(() => undefined);
   }
 }
+
+/** The text of an assistant entry: its text blocks and its tool calls' input (an `office-workers escalate` reply included). */
+function assistantText(l: any): string {
+  const c = l?.message?.content;
+  if (typeof c === 'string') return c;
+  if (!Array.isArray(c)) return '';
+  return c.map((b: any) => (b?.type === 'text' ? String(b.text ?? '') : b?.type === 'tool_use' ? JSON.stringify(b.input ?? '') : '')).join('\n');
+}
+
+/**
+ * Acknowledged (Slice 1B-4): the dispatch's typed message is in its recorded session AND a later assistant
+ * turn in that same session cites `citation` (`ESC-<id> rev <n>`), in its words or in a tool call (its
+ * escalation reply). An assistant turn merely following the answer is not enough; another session, a
+ * sidechain, or the citation before the typed message proves nothing. Off the event loop, bounded like
+ * transcriptEvidence; a missing file is simply not acknowledged.
+ */
+export async function citedAfter(r: Pick<DispatchRecord, 'payload' | 'marker' | 'sessionId' | 'transcriptPath' | 'transcriptOffset'>, citation: string, max = EVIDENCE_MAX_BYTES): Promise<boolean> {
+  if (!r.transcriptPath || r.transcriptOffset === undefined || !citation) return false;
+  let h: fsp.FileHandle | undefined;
+  try {
+    h = await fsp.open(r.transcriptPath, 'r');
+    const size = (await h.stat()).size;
+    if (size < r.transcriptOffset) return false;
+    const len = Math.min(size - r.transcriptOffset, max);
+    const buf = Buffer.alloc(len);
+    let got = 0;
+    while (got < len) {
+      const { bytesRead } = await h.read(buf, got, len - got, r.transcriptOffset + got);
+      if (bytesRead <= 0) break;
+      got += bytesRead;
+    }
+    let typedSeen = false;
+    const needle = citation.toLowerCase();
+    for (const line of buf.subarray(0, got).toString('utf8').split('\n')) {
+      if (!line.trim()) continue;
+      if (!typedSeen) {
+        typedSeen = isTypedEvidence(line, r);
+        continue;
+      }
+      let l: any;
+      try {
+        l = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      if (!l || l.type !== 'assistant' || l.isSidechain) continue;
+      if (r.sessionId && typeof l.sessionId === 'string' && l.sessionId !== r.sessionId) continue;
+      if (citesExactly(assistantText(l).toLowerCase(), needle)) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  } finally {
+    await h?.close().catch(() => undefined);
+  }
+}
+
+/** Whether `text` holds `needle` with no digit straight after it ("rev 2" is not "rev 21"). */
+export function citesExactly(text: string, needle: string): boolean {
+  let from = 0;
+  for (;;) {
+    const i = text.indexOf(needle, from);
+    if (i < 0) return false;
+    if (!/[0-9]/.test(text[i + needle.length] ?? '')) return true;
+    from = i + 1;
+  }
+}

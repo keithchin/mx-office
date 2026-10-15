@@ -130,7 +130,7 @@ export const rosterRoutes = {
           if (!isEscalationVerdict(body.verdict)) return send(res, 400, { error: 'reply, approve, reject or dismiss' });
           // A durable dispatch (roster/escalation-answer.ts): expectedRev, when the page sends it, makes a stale answer a 409 with the current state.
           const expectedRev = typeof body.expectedRev === 'number' && Number.isInteger(body.expectedRev) ? body.expectedRev : undefined;
-          const r = await roster.escalations.answer(team, String(body.escalation ?? ''), { verdict: body.verdict, raw: body.text, by, expectedRev });
+          const r = await roster.escalations.answer(team, String(body.escalation ?? ''), { verdict: body.verdict, raw: body.text, by, expectedRev, ...(body.noWork === true ? { noWork: true } : {}) });
           if (!r.ok) return send(res, r.status, { error: r.error, ...(r.current ? { current: r.current } : {}) });
           break;
         }

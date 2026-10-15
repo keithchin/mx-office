@@ -4,7 +4,7 @@
 // start's reconcile of every floor. Nothing here re-sends anything by itself: durable intent plus
 // reconciliation, and no automatic replay of an ambiguous attempt.
 
-import type { AnswerRevisionKind, DispatchRecord } from '../../shared/dispatch.js';
+import type { AnswerRevisionKind, DispatchRecord, DispatchTask } from '../../shared/dispatch.js';
 import type { EscalationOutcome, EscalationVerdict } from '../../shared/roster/escalation.js';
 import type { AnswerLine } from '../answers/store.js';
 import { reconcileFloor, type Reconciled } from '../dispatch/reconcile.js';
@@ -40,6 +40,19 @@ async function applyEscalation(roster: Roster, floorId: string, r: DispatchRecor
 /** The roster's appliers, and what reconcile asks of it. */
 export function hookDispatch(roster: Roster) {
   roster.dispatch.appliers.set('esc', (floorId, r, line) => applyEscalation(roster, floorId, r, line));
+  // Slice 1B-4: each dispatch to a member captures the task it's on (a candidate link, legacy ones without an id).
+  roster.dispatch.taskAt = (floorId, workerId) => memberTaskAt(roster, floorId, workerId);
+}
+
+/** A member's open task as a dispatch captures it: its ids, first line, branch and PR. */
+export function memberTaskAt(roster: Roster, floorId: string, workerId: string): DispatchTask | undefined {
+  const floor = roster.deps.floors().find((f) => f.id === floorId);
+  if (!floor) return undefined;
+  const role = roster.roleOf(floor, workerId);
+  const t = role ? roster.data(floorId).members[role].task : undefined;
+  if (!t || t.doneAt !== undefined) return undefined;
+  const w = floor.worker(workerId);
+  return { ...(t.taskId ? { taskId: t.taskId } : {}), ...(t.executionId ? { executionId: t.executionId } : {}), text: t.text, ...(w?.worktree?.branch ? { branch: w.worktree.branch } : {}), ...(w?.pr?.number ? { pr: w.pr.number } : {}) };
 }
 
 /** Whether a held dispatch is still waiting: in the held list (its id), or owed by its escalation. */

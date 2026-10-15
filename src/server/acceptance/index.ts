@@ -9,6 +9,7 @@ import { onForgetFloor } from '../office/forget.js';
 import path from 'node:path';
 import { changedSince, cleanExceptions, suggestVersion, versionProblem, type AcceptanceDraft, type AcceptanceRecord, type AcceptanceView, type Cycle, type Reopen } from '../../shared/acceptance.js';
 import { ulid } from '../../shared/evidence/ids.js';
+import { cleanDecisionRevs } from '../../shared/task-links.js';
 import type { EvidenceRef } from '../../shared/evidence/types.js';
 import { audit, human } from '../audit/index.js';
 import { budgetOf } from '../budget/index.js';
@@ -115,6 +116,7 @@ export async function accept(ctx: Ctx, floor: Floor, body: Record<string, unknow
   if (bad) return bad;
   const exceptions = cleanExceptions(body.exceptions);
   if (typeof exceptions === 'string') return exceptions;
+  const decisions = cleanDecisionRevs(body.decisions);
   const { draft: d, g } = await draftWith(ctx, floor, true);
   if (!d.source.commit) return 'The delivery commit could not be read. Commit the delivery and reopen the acceptance dialog';
   // Testing release 2: the coverage summary and the policy's evaluation at the accepted commit (none when it can't be read).
@@ -146,6 +148,8 @@ export async function accept(ctx: Ctx, floor: Floor, body: Record<string, unknow
     ...(g.deliverables ? { deliverablesDigest: deliverablesDigest(g.deliverables) } : {}),
     refs: refsOf(floor, projectId, d, now),
     ...(testing ? { testing } : {}),
+    // Slice 1B-4: the decision revisions accepted as implemented as decided (the only evidence of that level).
+    ...(decisions.length ? { decisions } : {}),
   };
   store.append({ op: 'accept', record });
   audit.record({

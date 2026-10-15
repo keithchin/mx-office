@@ -13,6 +13,7 @@ import { VERDICT_WORD } from './roster/escalation.js';
 import type { RecordedOutcome } from './followthrough.js';
 import { recordedWords } from './followthrough.js';
 import { stateWords } from './dispatch.js';
+import type { DecisionLinks } from './task-links.js';
 
 /** How a linked piece of work is known: a field that points at the decision, or text the office read. */
 export type LinkStrength = 'recorded' | 'inferred';
@@ -69,6 +70,8 @@ export interface AnswerDetail {
   /** Every revision in the answer store, oldest first. */
   revs: HistoryRev[];
   links: LinkedWork[];
+  /** Slice 1B-4: the revision's task links with their strength and evidence (none when it couldn't be worked out). */
+  taskLinks?: DecisionLinks;
   /** What the new answer's input offers: an escalation's options and whether it's an FYI; a question's options and proposal. */
   input: { kind: 'esc'; options: string[]; recommendation?: string; fyi: boolean } | { kind: 'q'; options: string[]; proposedPosition?: string };
   /** Why it can't be changed now (still open, a duplicate closed, not sent yet), when it can't. */
@@ -84,6 +87,8 @@ export interface ChangeBody {
   kind?: QChangeKind;
   text?: string;
   option?: string;
+  /** Slice 1B-4: "No implementation work required": the answer as it stands, restated as a new revision of that kind, `text` its reason. */
+  noWork?: boolean;
 }
 
 /** "History (3 revisions)". */
@@ -101,6 +106,7 @@ export const KIND_WORDS: Record<AnswerRevisionKind, string> = {
   reply: 'Reply',
   'accept-as-recorded': 'Accepted as recorded',
   correction: 'Correction',
+  'no-work-required': 'No implementation work required',
 };
 
 /** What an escalation's answer says, as the agent reads it: "APPROVED — Use SSO", or the reply itself. */

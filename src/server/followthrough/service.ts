@@ -19,6 +19,7 @@ import { VERDICT_WORD, type Escalation } from '../../shared/roster/escalation.js
 import { faithful, followLevel, locationWords, whereWords, type FollowAction, type FollowItem, type FollowView, type Recording } from '../../shared/followthrough.js';
 import { answersMessage, type PmAnswer, type Question } from '../../shared/questions.js';
 import type { AnswerLine } from '../answers/store.js';
+import type { DecisionLinks } from '../../shared/task-links.js';
 import type { AnswerResult, Dispatcher, Target } from '../dispatch/service.js';
 import type { Read } from '../asks/sources.js';
 import { pushExpected, type BookData } from '../questions/book.js';
@@ -29,7 +30,7 @@ import { FollowStore } from './store.js';
 import { pendingFor, type PendingAnswers, type PendingEntry } from '../change-answer/pending.js';
 
 /** The revisions that ask an agent to record a decision (an FYI noted, a dismissal or "I've done it" don't). */
-const FOLLOW_KINDS: ReadonlySet<AnswerRevisionKind> = new Set(['answer', 'approve', 'reject', 'reply', 'accept-as-recorded', 'correction']);
+const FOLLOW_KINDS: ReadonlySet<AnswerRevisionKind> = new Set(['answer', 'approve', 'reject', 'reply', 'accept-as-recorded', 'correction', 'no-work-required']);
 /** The most items the feed carries. */
 const MAX_ITEMS = 60;
 
@@ -52,6 +53,8 @@ export interface FollowDeps {
   /** The roster written (critical) after an escalation's resolution changed. */
   flush(floorId: string): Promise<void>;
   record(e: AuditInput): void;
+  /** Slice 1B-4: the revision's task links as last worked out (never waited on), when there are any yet. */
+  taskLinks?(floorId: string, decision: DecisionRef, rev: number): DecisionLinks | undefined;
 }
 
 export type ActResult = { ok: true; note?: string } | { ok: false; status: number; error: string; current?: unknown };
@@ -111,6 +114,10 @@ export class FollowThrough {
       const x = a.expected.find((v) => v.rev === a.answerRev) ?? a.expected[a.expected.length - 1];
       items.push({ decision, kind: 'q', label: decisionLabel(decision), title: qs.get(a.key)?.question ?? `${a.id} in ${a.file}`, rev: a.answerRev, decided: expectedWords(x), sent: this.sentOf(floorId, a.dispatchId), recording: a.recording ?? notYet(), ref: a.key, at: a.sentAt ?? a.at });
     }
+    for (const it of items) {
+      const links = this.deps.taskLinks?.(floorId, it.decision, it.rev);
+      if (links) it.taskLinks = links;
+    }
     items.sort((a, b) => (followLevel(a.recording) === followLevel(b.recording) ? b.at - a.at : followLevel(a.recording) === 'warn' ? -1 : 1));
     return { floor: floorId, admin, items: items.slice(0, MAX_ITEMS).map(({ at: _at, ...i }) => i) };
   }
@@ -138,8 +145,10 @@ export class FollowThrough {
     const loc = new Locator(floor.dir);
     const now = this.deps.now();
     let changed = false;
-    for (const { e } of follow) {
+    for (const { e, line } of follow) {
       const decision = `esc:${e.id}`;
+      // The look's turn to refresh the item's task links (in the background, cached): the feed only peeks.
+      this.deps.taskLinks?.(floor.id, decision, line.rev);
       const history = await this.deps.dispatcher.answers.history(floor.id, decision);
       const had = st.recordings[decision];
       const found = hits.get(e.id) ?? [];

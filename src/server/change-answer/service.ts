@@ -18,6 +18,7 @@ import type { Escalation, EscalationVerdict } from '../../shared/roster/escalati
 import { isEscalationVerdict } from '../../shared/roster/escalation.js';
 import { answersMessage, expectedOf, type PmAnswer, type Question } from '../../shared/questions.js';
 import type { Recording } from '../../shared/followthrough.js';
+import { noWorkText, type DecisionLinks } from '../../shared/task-links.js';
 import { escAnswerWords, escChangeLine, qChangeLine, Q_CHANGE_KINDS, type AnswerDetail, type ChangeBody, type HistoryRev, type QChangeKind } from '../../shared/change-answer.js';
 import type { Dispatcher, Target } from '../dispatch/service.js';
 import type { FollowQuestions } from '../followthrough/service.js';
@@ -44,6 +45,8 @@ export interface ChangeDeps {
   /** The roster written (critical) and the team view told, after an escalation's resolution changed. */
   flush(floorId: string): Promise<void>;
   record(e: AuditInput): void;
+  /** Slice 1B-4: the revision's task links and their evidence (server/tasks/links.ts). */
+  taskLinks?(floorId: string, decision: DecisionRef, rev: number): Promise<DecisionLinks | undefined>;
 }
 
 export type ChangeResult = { ok: true; rev: number; note?: string } | { ok: false; status: number; error: string; current?: unknown };
@@ -150,7 +153,8 @@ export class ChangeAnswer {
         ...(outcome ? { outcome } : {}),
       };
     });
-    return { floor: floorId, decision, label: decisionLabel(decision), ...base, revs };
+    const taskLinks = base.rev && this.deps.taskLinks ? await this.deps.taskLinks(floorId, decision, base.rev).catch(() => undefined) : undefined;
+    return { floor: floorId, decision, label: decisionLabel(decision), ...base, revs, ...(taskLinks ? { taskLinks } : {}) };
   }
 
   /** The Project Manager's new answer (POST /api/answers/change). */
@@ -174,15 +178,18 @@ export class ChangeAnswer {
     const decision = `esc:${e.id}`;
     const blocked = this.escBlocked(e);
     if (blocked) return { ok: false, status: 409, error: blocked, current: { decision, rev: e.resolution?.answerRev ?? 0 } };
-    const verdict = b.verdict;
+    // Slice 1B-4: "No implementation work required" restates the answer as it stands, with the person's reason.
+    const noWork = b.noWork === true;
+    const verdict = noWork ? e.resolution!.verdict : b.verdict;
+    if (noWork && verdict === 'dismiss') return { ok: false, status: 400, error: 'A dismissed FYI asked for no work: there is nothing to state' };
     if (!isEscalationVerdict(verdict)) return { ok: false, status: 400, error: 'verdict is one of reply, approve, reject (dismiss for an FYI)' };
     if (verdict === 'dismiss' && !e.fyi) return { ok: false, status: 400, error: 'Noted is only for an FYI: this one asks something, so answer it' };
     if (i.option && !e.options.includes(i.option)) return { ok: false, status: 400, error: 'That is not one of its options' };
-    const text = i.text || (i.option ? `Go with: ${i.option}` : '');
-    if (verdict === 'reply' && !text) return { ok: false, status: 400, error: 'Write your new answer' };
-    if (verdict === 'reject' && !text) return { ok: false, status: 400, error: 'Say why it is rejected' };
+    const text = noWork ? (e.resolution!.text ?? '') : i.text || (i.option ? `Go with: ${i.option}` : '');
+    if (!noWork && verdict === 'reply' && !text) return { ok: false, status: 400, error: 'Write your new answer' };
+    if (!noWork && verdict === 'reject' && !text) return { ok: false, status: 400, error: 'Say why it is rejected' };
     const oldRev = e.resolution!.answerRev!;
-    const words = escAnswerWords(verdict, text);
+    const words = noWork ? `${noWorkText(i.text)} (the answer stands: ${escAnswerWords(verdict, text)})` : escAnswerWords(verdict, text);
     const make = verdict === 'dismiss' ? undefined : this.deps.escTarget(floorId, e, i.by);
     if (typeof make === 'string') return { ok: false, status: 400, error: make };
     const oldId = e.resolution!.dispatchId;
@@ -191,7 +198,7 @@ export class ChangeAnswer {
       decision,
       expectedRev: typeof b.expectedRev === 'number' ? b.expectedRev : -1,
       current: () => ({ rev: e.resolution?.answerRev ?? 0, state: `answered by ${e.resolution?.by ?? 'someone'}` }),
-      revision: { kind: kindOfVerdict(verdict), ...(i.option ? { option: i.option } : {}), text, by: i.by, supersedes: oldRev },
+      revision: { kind: noWork ? 'no-work-required' : kindOfVerdict(verdict), ...(i.option && !noWork ? { option: i.option } : {}), text, by: i.by, supersedes: oldRev, ...(noWork && i.text ? { note: i.text } : {}) },
       targets: (rev) => {
         if (!make) return [];
         const prompt = [`The Project Manager (${i.by}) changed their answer to your escalation “${e.title}”.`, '', escChangeLine(e.id, oldRev, rev, words), '', citationRule(e.id, rev), `Anything you did on the strength of rev ${oldRev} may need to change: check it against this answer, and note in your journal what you changed.`].join('\n');
@@ -232,30 +239,36 @@ export class ChangeAnswer {
     const decision = `q:${key}`;
     const blocked = this.qBlocked(a, q);
     if (blocked || !a || !q) return { ok: false, status: 409, error: blocked ?? 'That question is no longer there', current: { decision, rev: a?.answerRev ?? 0 } };
-    const kind = b.kind;
-    if (!kind || !Q_CHANGE_KINDS.includes(kind)) return { ok: false, status: 400, error: `kind is one of ${Q_CHANGE_KINDS.join(', ')}` };
-    if (kind === 'accept' && !q.proposedPosition) return { ok: false, status: 400, error: 'There is no proposed position to accept' };
-    if (kind === 'moot' && !i.text) return { ok: false, status: 400, error: 'Say why it is not relevant' };
-    if (kind === 'answer' && !i.text && !i.option) return { ok: false, status: 400, error: 'Write the answer first' };
-    if (i.option && (kind !== 'answer' || !q.options?.includes(i.option))) return { ok: false, status: 400, error: 'That is not one of its options' };
+    // Slice 1B-4: "No implementation work required" restates the answer as it stands, with the person's reason.
+    const noWork = b.noWork === true;
+    const kind = noWork && Q_CHANGE_KINDS.includes(a.kind as QChangeKind) ? (a.kind as QChangeKind) : b.kind;
+    if (!kind || !Q_CHANGE_KINDS.includes(kind)) return { ok: false, status: 400, error: noWork ? 'This answer can’t be restated as needing no work: change it instead' : `kind is one of ${Q_CHANGE_KINDS.join(', ')}` };
+    // With noWork the answer stands as it is (its own text and option): only the reason is new.
+    if (!noWork) {
+      if (kind === 'accept' && !q.proposedPosition) return { ok: false, status: 400, error: 'There is no proposed position to accept' };
+      if (kind === 'moot' && !i.text) return { ok: false, status: 400, error: 'Say why it is not relevant' };
+      if (kind === 'answer' && !i.text && !i.option) return { ok: false, status: 400, error: 'Write the answer first' };
+      if (i.option && (kind !== 'answer' || !q.options?.includes(i.option))) return { ok: false, status: 400, error: 'That is not one of its options' };
+    }
     const make = await this.deps.qTarget(floorId, key, i.by);
     if (typeof make === 'string') return { ok: false, status: 400, error: make };
     const oldRev = a.answerRev!;
     const oldId = a.dispatchId;
     const at = this.deps.now();
-    const text = kind === 'accept' ? '' : i.text;
-    const option = kind === 'answer' ? i.option : undefined;
+    const text = noWork ? (a.text ?? '') : kind === 'accept' ? '' : i.text;
+    const option = noWork ? a.option : kind === 'answer' ? i.option : undefined;
     const next = { kind, text, option, by: i.by, at };
     let words = '';
     const res = await this.deps.dispatcher.answer(floorId, {
       decision,
       expectedRev: typeof b.expectedRev === 'number' ? b.expectedRev : -1,
       current: () => ({ rev: a.answerRev ?? 0, state: a.status }),
-      revision: { kind: Q_REV_KIND[kind], ...(option ? { option } : {}), text, by: i.by, supersedes: oldRev },
+      revision: { kind: noWork ? 'no-work-required' : Q_REV_KIND[kind], ...(option ? { option } : {}), text, by: i.by, supersedes: oldRev, ...(noWork && i.text ? { note: i.text } : {}) },
       targets: (rev) => {
         const copy: PmAnswer = { ...a, ...next, ...(text ? { text } : { text: undefined }), ...(option ? { option } : { option: undefined }), answerRev: rev };
         delete copy.fromClient;
         words = expectedWords(expectedOf(copy, q, rev));
+        if (noWork) words = `${noWorkText(i.text)} (the answer stands: ${words})`;
         const input = { kind, text, ...(option ? { option } : {}), by: i.by, at, ...(oldId ? { oldId } : {}) };
         return [this.pending.guard(floorId, { ...make(`${qChangeLine(key, oldRev, rev, words)}\n\n${answersMessage([copy], new Map([[q.key, q]]), i.by)}`), ...(oldId ? { supersedes: oldId } : {}) }, { decision, fromRev: oldRev, toRev: rev, kind: 'change', at, input })];
       },
