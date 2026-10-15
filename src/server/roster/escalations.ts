@@ -173,7 +173,7 @@ export class Escalations {
       verdict = OUTCOME_VERDICT[outcome].verdict;
     }
     const own = typeof raw === 'string' ? raw.replace(/\r\n?/g, '\n').trim().slice(0, 4000) : '';
-    const text = outcome === 'done' ? own || OUTCOME_VERDICT.done.text : own;
+    const text = outcome === 'done' ? own || OUTCOME_VERDICT.done.text : outcome === 'noted' ? OUTCOME_VERDICT.noted.text : own;
     if (verdict === 'reply' && !text) return 'Write your reply';
     if (verdict === 'reject' && !text) return 'Say why it is rejected';
     let delivered = false;
