@@ -82,7 +82,7 @@ test('an escalation request is read and checked', () => {
   assert.deepEqual((readEscalationAsk({ title: 't', options: 'A | B' }) as { options: string[] }).options, ['A', 'B']);
 });
 
-test('escalations order loudest open first, FYI last among the open, then answered newest first', () => {
+test('escalations order loudest open first, FYI last among the open, then answered newest first', async () => {
   const mk = (id: string, urgency: 'info' | 'urgent' | 'critical', at: number, fyi = false, resolvedAt?: number): Escalation => ({ ...makeEscalation({ urgency, title: id, details: '', options: [] }, { workerId: 'w', by: 'Ada' }, 2, id, at), fyi, ...(resolvedAt ? { status: 'resolved' as const, resolution: { verdict: 'reply' as const, text: 'x', by: 'P', at: resolvedAt, delivered: true } } : {}) });
   const list = [mk('a', 'info', 1), mk('b', 'critical', 2), mk('c', 'urgent', 3, true), mk('d', 'urgent', 4), mk('e', 'urgent', 0, false, 10), mk('f', 'urgent', 0, false, 20)];
   assert.deepEqual(list.sort(escalationOrder).map((e) => e.id), ['b', 'd', 'a', 'c', 'f', 'e']);
@@ -183,15 +183,15 @@ test('an urgent escalation above the threshold is toasted, alerted, queued for a
   assert.equal(view.approvals[0].kind, 'escalation');
   assert.equal(view.approvals[0].escalationId, e.id);
 
-  assert.match(String(t.roster.escalations.resolve(t.floor, e.id, 'reply', '  ', 'Keith')), /Write your reply/);
-  assert.match(String(t.roster.escalations.resolve(t.floor, e.id, 'reject', '', 'Keith')), /why/);
-  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'reply', 'Split after the demo on Friday.', 'Keith'), undefined);
+  assert.match(String(await t.roster.escalations.resolve(t.floor, e.id, 'reply', '  ', 'Keith')), /Write your reply/);
+  assert.match(String(await t.roster.escalations.resolve(t.floor, e.id, 'reject', '', 'Keith')), /why/);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'reply', 'Split after the demo on Friday.', 'Keith'), undefined);
   const told = t.floor.prompts.find((p) => p.id === dev)!;
   assert.match(told.text, /The Project Manager \(Keith\) answered your escalation “Split Orders into its own module”: REPLIED/);
   assert.match(told.text, /Split after the demo on Friday\./);
   assert.equal(t.data().escalations[0].status, 'resolved');
   assert.equal(t.data().escalations[0].resolution?.delivered, true);
-  assert.match(String(t.roster.escalations.resolve(t.floor, e.id, 'approve', '', 'Keith')), /Already answered/);
+  assert.match(String(await t.roster.escalations.resolve(t.floor, e.id, 'approve', '', 'Keith')), /Already answered/);
   assert.equal(t.roster.view(t.floor, true).approvals.filter((a) => a.kind === 'escalation').length, 0);
 });
 
@@ -202,7 +202,7 @@ test('below the threshold it is filed as FYI: no toast, no alert, and "Noted" se
   assert.equal(e.fyi, true);
   assert.equal(t.floor.toasts.filter((x) => /escalation/i.test(x)).length, 0);
   assert.equal(t.floor.alerts.length, 0);
-  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'dismiss', '', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'dismiss', '', 'Keith'), undefined);
   assert.equal(t.floor.prompts.length, 0);
   // Critical still alerts at Autonomous.
   t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'important', trigger: 'data-loss', title: 'Migration drops Orders', details: '', options: [] });
@@ -211,9 +211,9 @@ test('below the threshold it is filed as FYI: no toast, no alert, and "Noted" se
   assert.equal(t.floor.alerts.length, 1);
 });
 
-/** Lets fire-and-forget hires finish. */
+/** Lets fire-and-forget hires finish (a hire carrying durable answers marks them in flight first: a disk write). */
 const settle = async () => {
-  for (let i = 0; i < 3; i++) await new Promise((r) => setImmediate(r));
+  for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
 };
 
 test('an asleep raiser wakes with the answer; one that went home is hired back with it', async () => {
@@ -222,10 +222,10 @@ test('an asleep raiser wakes with the answer; one that went home is hired back w
   const e1 = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'important', trigger: 'scope', title: 'Add CSV export?', details: '', options: [] });
   const e2 = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'important', trigger: 'scope', title: 'Add PDF export?', details: '', options: [] });
   t.floor.set(dev, 'exited');
-  assert.equal(t.roster.escalations.resolve(t.floor, e1.id, 'approve', 'Yes, CSV only.', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e1.id, 'approve', 'Yes, CSV only.', 'Keith'), undefined);
   assert.match(t.floor.wakes.at(-1)!.text!, /APPROVED[\s\S]*Yes, CSV only\./);
   await t.floor.stop(dev);
-  assert.equal(t.roster.escalations.resolve(t.floor, e2.id, 'reject', 'Not this release.', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e2.id, 'reject', 'Not this release.', 'Keith'), undefined);
   assert.equal(t.data().escalations.find((x) => x.id === e2.id)?.resolution?.delivered, false, 'not until the hire went through');
   await settle();
   assert.equal(t.floor.hires.length, 2, 'the office hired it back by itself');
@@ -451,7 +451,7 @@ test('a Lead waiting on the Project Manager in an open escalation is never bench
   // Benching it by hand is refused too, with the reason.
   assert.match(String(t.roster.members.bench(t.floor, 'lead-developer', 'Keith')), /waiting on a person: answer its escalation “Sign off CAC-1 B1–B7” first/);
   // Answered: it carries on, and once idle long enough it's benched as usual.
-  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'approve', '', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'approve', '', 'Keith'), undefined);
   t.floor.set(dev, 'working');
   t.floor.set(dev, 'done');
   t.clock.now += 30 * 60_000;
@@ -481,9 +481,9 @@ test("answering a benched Lead's escalation hires it back with the answer; not w
   });
   assert.equal(t.data().escalations.length, 2, 'no extra one from the office: it escalated itself');
   const hires = t.floor.hires.length;
-  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'reply', 'Use matrix B.', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'reply', 'Use matrix B.', 'Keith'), undefined);
   // A second answer right after, while the hire is under way: one hire, and it's told once its first turn is over.
-  assert.equal(t.roster.escalations.resolve(t.floor, e2.id, 'reply', 'Barbara.', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e2.id, 'reply', 'Barbara.', 'Keith'), undefined);
   await settle();
   assert.equal(t.floor.hires.length, hires + 1, 'one hire');
   const ask = t.floor.hires.at(-1)!;
@@ -498,6 +498,7 @@ test("answering a benched Lead's escalation hires it back with the answer; not w
   assert.equal(t.data().escalations.find((x) => x.id === e2.id)!.resolution!.delivered, false);
   t.floor.set(neu, 'working');
   t.floor.set(neu, 'done');
+  await settle();
   assert.match(t.floor.prompts.filter((p) => p.id === neu).at(-1)!.text, /not been told yet:\n- “Who signs off\?”: REPLIED — Barbara\./);
   assert.equal(t.data().escalations.find((x) => x.id === e2.id)!.resolution!.delivered, true);
 
@@ -509,7 +510,7 @@ test("answering a benched Lead's escalation hires it back with the answer; not w
   p.roster.members.settings(p.floor, { costCaps: { 2: 1 } });
   p.data().spend.usd = 5;
   const before = p.floor.hires.length;
-  assert.equal(p.roster.escalations.resolve(p.floor, pe.id, 'approve', '', 'Keith'), undefined);
+  assert.equal(await p.roster.escalations.resolve(p.floor, pe.id, 'approve', '', 'Keith'), undefined);
   await settle();
   assert.equal(p.floor.hires.length, before);
   assert.equal(p.data().escalations.find((x) => x.id === pe.id)!.resolution!.delivered, false);
@@ -521,7 +522,7 @@ test("answering a benched Lead's escalation hires it back with the answer; not w
   const fe = f.roster.escalations.raise(f.floor, f.floor.worker(fdev)!, { urgency: 'info', title: 'FYI', details: '', options: [] });
   await f.floor.stop(fdev);
   const fh = f.floor.hires.length;
-  assert.equal(f.roster.escalations.resolve(f.floor, fe.id, 'dismiss', '', 'Keith'), undefined);
+  assert.equal(await f.roster.escalations.resolve(f.floor, fe.id, 'dismiss', '', 'Keith'), undefined);
   await settle();
   assert.equal(f.floor.hires.length, fh);
 });
@@ -532,7 +533,7 @@ test('an answer that arrives while a Lead writes its handoff brings it straight 
   assert.equal(t.roster.members.bench(t.floor, 'lead-developer', 'Keith'), undefined);
   t.floor.set(dev, 'working');
   const e = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'urgent', trigger: 'blocked', title: 'Matrix?', details: '', options: [] });
-  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'reply', 'B.', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'reply', 'B.', 'Keith'), undefined);
   assert.equal(t.floor.prompts.filter((x) => /answered your escalation/.test(x.text)).length, 0, 'not typed into the session about to be cleared');
   t.floor.set(dev, 'done');
   await settle();
@@ -558,7 +559,7 @@ test('a handoff that ends AWAITING-PM raises an escalation on its behalf, unless
   assert.match(t.floor.toasts.join('\n'), /is waiting on you: Sign-off on CAC-1/);
   // Answering it brings the Lead back with the answer.
   const hires = t.floor.hires.length;
-  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'reply', 'B1–B7 approved as proposed.', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'reply', 'B1–B7 approved as proposed.', 'Keith'), undefined);
   await settle();
   assert.equal(t.floor.hires.length, hires + 1);
   assert.match(t.floor.hires.at(-1)!.prompt, /“Sign-off on CAC-1 questions B1–B7”: REPLIED — B1–B7 approved as proposed\./);

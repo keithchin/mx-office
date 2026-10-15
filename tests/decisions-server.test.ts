@@ -60,10 +60,10 @@ function setup(makeIssue: () => Promise<{ number?: number; dryRun?: boolean }> =
   return { floor, roster, raise, view };
 }
 
-test('decisions-done-message: I\'ve done it tells the agent "<person> says it\'s done: please re-check", never APPROVED; the audit says done', () => {
+test('decisions-done-message: I\'ve done it tells the agent "<person> says it\'s done: please re-check", never APPROVED; the audit says done', async () => {
   const t = setup();
   const e = t.raise('Sign in to the Marketplace: mxcli auth login', { trigger: 'needs-human' });
-  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'approve', '', 'Keith', 'done'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'approve', '', 'Keith', 'done'), undefined);
   const sent = t.floor.typed.at(-1)!.text;
   assert.match(sent, /Keith says it's done: please re-check/);
   assert.doesNotMatch(sent, /APPROVED/);
@@ -71,21 +71,21 @@ test('decisions-done-message: I\'ve done it tells the agent "<person> says it\'s
   assert.equal(a.details?.verdict, 'done');
 });
 
-test('decisions-rollback-verdicts: Noted writes verdict dismiss and done writes reply "Done", beside the new outcome; Noted never resolves a decision, done never an approval', () => {
+test('decisions-rollback-verdicts: Noted writes verdict dismiss and done writes reply "Done", beside the new outcome; Noted never resolves a decision, done never an approval', async () => {
   const t = setup();
   const hands = t.raise('Paste the SMTP password', { trigger: 'needs-human' });
-  t.roster.escalations.resolve(t.floor, hands.id, 'reply', '', 'Keith', 'done');
+  await t.roster.escalations.resolve(t.floor, hands.id, 'reply', '', 'Keith', 'done');
   assert.deepEqual({ v: hands.resolution!.verdict, t: hands.resolution!.text, o: hands.resolution!.outcome }, { v: 'reply', t: 'Done', o: 'done' });
   const fyi = t.roster.escalations.raiseFyi(t.floor, t.floor.map.get('w1')!, { urgency: 'info', title: 'Merged #97 after review', details: '', options: [] });
-  assert.equal(t.roster.escalations.resolve(t.floor, fyi.id, 'reply', 'x', 'Keith', 'noted'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, fyi.id, 'reply', 'x', 'Keith', 'noted'), undefined);
   assert.deepEqual({ v: fyi.resolution!.verdict, t: fyi.resolution!.text, o: fyi.resolution!.outcome }, { v: 'dismiss', t: '', o: 'noted' });
   const dec = t.raise('Which login screen?', { options: ['SSO', 'Local'] });
-  assert.match(t.roster.escalations.resolve(t.floor, dec.id, 'dismiss', '', 'Keith', 'noted')!, /only for an FYI/);
-  assert.match(t.roster.escalations.resolve(t.floor, dec.id, 'approve', '', 'Keith', 'done')!, /only for a hands-on action/);
+  assert.match(await t.roster.escalations.resolve(t.floor, dec.id, 'dismiss', '', 'Keith', 'noted')!, /only for an FYI/);
+  assert.match(await t.roster.escalations.resolve(t.floor, dec.id, 'approve', '', 'Keith', 'done')!, /only for a hands-on action/);
   assert.equal(dec.status, 'open');
 });
 
-test('decisions-source-gone: a gone AWAITING-PM line keeps the escalation open; its card offers Resolved / Still needed', () => {
+test('decisions-source-gone: a gone AWAITING-PM line keeps the escalation open; its card offers Resolved / Still needed', async () => {
   const t = setup();
   const e = t.raise('merge PR #51');
   e.from = { kind: 'awaiting', key: 'pm:merge pr #51' };
@@ -96,7 +96,7 @@ test('decisions-source-gone: a gone AWAITING-PM line keeps the escalation open; 
   assert.match(c.gone!.what, /The AWAITING-PM line is gone from Ada's newest entry/);
   assert.deepEqual(cardActs(c), ['resolved', 'still-needed']);
   // Still needed: Ada is asked, it stays open.
-  assert.equal(t.roster.escalations.tell(t.floor, e.id, 'still needed', 'Keith says this is still needed', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.tell(t.floor, e.id, 'still needed', 'Keith says this is still needed', 'Keith'), undefined);
   assert.equal(e.status, 'open');
   assert.ok(e.sourceGone!.asked);
   // The line back: an ask like before.
@@ -181,7 +181,7 @@ test('decisions-human-action-proposal: two approvals at once make one issue, and
   assert.deepEqual(cardActs(c), ['done', 'cant-now', 'ask']);
   // Approving again (already approved) changes nothing; I've done it closes it.
   assert.match((await t.roster.standups.decide(t.floor, 'px', 'approve', 'Keith'))!, /Already/);
-  t.roster.escalations.resolve(t.floor, hands[0].id, 'reply', '', 'Keith', 'done');
+  await t.roster.escalations.resolve(t.floor, hands[0].id, 'reply', '', 'Keith', 'done');
   assert.equal(hands[0].status, 'resolved');
 });
 

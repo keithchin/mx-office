@@ -164,7 +164,7 @@ test('sending: held until the turn is over, by the person, recorded and kept as 
   const pm = await hire(t, 'pm');
   t.floor.set(pm, 'working');
   const before = t.floor.prompts.length;
-  const r = t.phone.send({ floor: t.floor.id, text: 'What is blocking the demo?', place: { in: 'channel' }, by: 'Sam', admin: false });
+  const r = await t.phone.send({ floor: t.floor.id, text: 'What is blocking the demo?', place: { in: 'channel' }, by: 'Sam', admin: false });
   assert.ok(r.ok);
   assert.deepEqual(r.ok && r.to, [{ workerId: pm, name: 'Keith', status: 'held' }]);
   // Nothing typed into a turn under way.
@@ -191,11 +191,11 @@ test('sending goes through a reached spend cap (a person’s message), wakes an 
   t.d.spend = { day: t.d.spend.day, usd: 99, seen: {} };
   t.d.settings.costCaps = { 1: 1, 2: 1, 3: 1, 4: 1 } as never;
   t.floor.set(pm, 'offline');
-  const r = t.phone.send({ floor: t.floor.id, text: 'Wake up please', place: { in: 'channel' }, by: 'Sam', admin: false });
+  const r = await t.phone.send({ floor: t.floor.id, text: 'Wake up please', place: { in: 'channel' }, by: 'Sam', admin: false });
   assert.ok(r.ok && r.to[0].status === 'woke');
   assert.equal(t.floor.wakes.at(-1)?.by, 'Sam');
   const none = setup();
-  const bad = none.phone.send({ floor: none.floor.id, text: 'hello', place: { in: 'channel' }, by: 'Sam', admin: false });
+  const bad = await none.phone.send({ floor: none.floor.id, text: 'hello', place: { in: 'channel' }, by: 'Sam', admin: false });
   assert.deepEqual(bad, { ok: false, why: 'There are no agents on this floor to message', status: 400 });
 });
 
@@ -206,8 +206,8 @@ test('an escalation thread: answered through the roster’s resolve (admins only
   const e = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'important', trigger: 'scope', title: 'Add CSV export?', details: 'Asked twice.', options: [] });
   t.chatter.look(t.floor, false);
   const place = { in: 'thread' as const, thread: `esc:${e.id}`, agents: [] };
-  assert.deepEqual(t.phone.send({ floor: t.floor.id, text: 'Yes, in v2', place, by: 'Sam', admin: false }), { ok: false, why: 'Only the Project Manager (an admin) can answer escalations', status: 403 });
-  const r = t.phone.send({ floor: t.floor.id, text: 'Yes, in v2', place, by: 'Sam', admin: true });
+  assert.deepEqual(await t.phone.send({ floor: t.floor.id, text: 'Yes, in v2', place, by: 'Sam', admin: false }), { ok: false, why: 'Only the Project Manager (an admin) can answer escalations', status: 403 });
+  const r = await t.phone.send({ floor: t.floor.id, text: 'Yes, in v2', place, by: 'Sam', admin: true });
   assert.ok(r.ok && r.resolved === e.id);
   assert.equal(t.d.escalations.find((x) => x.id === e.id)?.status, 'resolved');
   assert.equal(t.d.escalations.find((x) => x.id === e.id)?.resolution?.text, 'Yes, in v2');
@@ -226,7 +226,7 @@ test('an escalation thread: answered through the roster’s resolve (admins only
   assert.equal(t.phone.pending.length, 0);
   // Approve from its button: no words needed.
   const e2 = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'important', title: 'Use Atlas cards?', details: '', options: [] });
-  const ok = t.phone.send({ floor: t.floor.id, text: '', place: { in: 'thread', thread: `esc:${e2.id}`, agents: [] }, by: 'Sam', admin: true, verdict: 'approve' });
+  const ok = await t.phone.send({ floor: t.floor.id, text: '', place: { in: 'thread', thread: `esc:${e2.id}`, agents: [] }, by: 'Sam', admin: true, verdict: 'approve' });
   assert.ok(ok.ok);
   assert.equal(t.d.escalations.find((x) => x.id === e2.id)?.resolution?.verdict, 'approve');
 });
@@ -244,7 +244,7 @@ test('reply capture: the agent’s text after the message, tool noise left out a
   const transcripts: Record<string, string> = {};
   const t = setup(transcripts);
   const pm = await hire(t, 'pm');
-  const r = t.phone.send({ floor: t.floor.id, text: 'Status?', place: { in: 'dm', workerId: pm }, by: 'Sam', admin: false });
+  const r = await t.phone.send({ floor: t.floor.id, text: 'Status?', place: { in: 'dm', workerId: pm }, by: 'Sam', admin: false });
   assert.ok(r.ok && r.thread === dmThread(pm));
   transcripts[pm] = transcript(t.floor.dir, t.floor.prompts.at(-1)!.text, ['All green.']);
   t.floor.set(pm, 'working', t.phone);
@@ -253,7 +253,7 @@ test('reply capture: the agent’s text after the message, tool noise left out a
   assert.deepEqual(dm.map((m) => [m.from.kind, m.text]), [['human', 'Status?'], ['agent', 'All green.']]);
 
   delete transcripts[pm];
-  t.phone.send({ floor: t.floor.id, text: 'And now?', place: { in: 'dm', workerId: pm }, by: 'Sam', admin: false });
+  await t.phone.send({ floor: t.floor.id, text: 'And now?', place: { in: 'dm', workerId: pm }, by: 'Sam', admin: false });
   t.floor.set(pm, 'working', t.phone);
   t.floor.set(pm, 'idle', t.phone);
   const note = t.chatter.file(t.floor.id).messages().at(-1)!;

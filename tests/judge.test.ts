@@ -471,7 +471,7 @@ test("on: Jeff doesn't raise again what the worker raised and was just answered"
   assert.equal(rows()[1].acted, false);
 });
 
-test('an agent raising what another already raised joins it as a +1, and hears the answer too', () => {
+test('an agent raising what another already raised joins it as a +1, and hears the answer too', async () => {
   const { floor, roster } = setup(WAITING);
   floor.add('w1', 'Anita');
   floor.add('w2', 'Hedy');
@@ -491,6 +491,6 @@ test('an agent raising what another already raised joins it as a +1, and hears t
   assert.equal(roster.jeff.ruleWaiting(floor, floor.worker('w2')!), true);
   // Something else is its own escalation.
   assert.equal(roster.escalations.raiseOrJoin(floor, floor.worker('w2')!, ask('Merge PR #46 (e2e spec fix)')).joined, false);
-  assert.equal(roster.escalations.resolve(floor, first.escalation.id, 'reply', 'Set it now.', 'pm'), undefined);
+  assert.equal(await roster.escalations.resolve(floor, first.escalation.id, 'reply', 'Set it now.', 'pm'), undefined);
   assert.deepEqual(prompted.sort(), ['w1', 'w2']);
 });

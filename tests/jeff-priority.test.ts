@@ -180,7 +180,7 @@ test('resolving one re-ranks the rest without asking again', async () => {
   await t.settle();
   assert.equal(t.asked.length, 3);
   t.tick(5 * 60_000);
-  assert.equal(t.roster.escalations.resolve(t.floor, stuck.id, 'reply', 'Restart it', 'You'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, stuck.id, 'reply', 'Restart it', 'You'), undefined);
   await t.settle();
   assert.equal(t.asked.length, 3);
   assert.deepEqual(t.ranks(), { 'Budget question': 1, 'Pick a colour': 2 });
@@ -211,7 +211,7 @@ test('Jeff is asked about an escalation at most once an hour (failures count too
   const extra = t.raise('Pick a colour');
   await t.settle();
   assert.equal(t.asked.length, 6);
-  t.roster.escalations.resolve(t.floor, extra.id, 'approve', '', 'You');
+  await t.roster.escalations.resolve(t.floor, extra.id, 'approve', '', 'You');
   await t.settle();
   assert.equal(t.asked.length, 6);
   // Its text changed: asked again straight away.

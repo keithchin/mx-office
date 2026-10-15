@@ -195,12 +195,12 @@ test('the answer to an escalation is typed as the person’s, so the turn acting
   const t = setup();
   const dev = await hireAt(t, 'lead-developer');
   const e = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'urgent', trigger: 'blocked', title: 'No test DB', details: '', options: [] });
-  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'reply', 'Use the staging DB', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'reply', 'Use the staging DB', 'Keith'), undefined);
   assert.equal(t.floor.prompts.at(-1)!.by, 'Keith');
   // Asleep: woken with it, as Keith's.
   const e2 = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, { urgency: 'urgent', trigger: 'blocked', title: 'Which SSO?', details: '', options: [] });
   t.floor.set(dev, 'offline');
-  assert.equal(t.roster.escalations.resolve(t.floor, e2.id, 'reply', 'Entra ID', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e2.id, 'reply', 'Entra ID', 'Keith'), undefined);
   assert.equal(t.floor.wakes.at(-1)!.by, 'Keith');
 });
 

@@ -64,7 +64,7 @@ test('an issue closed as not planned (or a duplicate) cancels the task; complete
   assert.deepEqual(taskOutcome({ task, closed: closed('') }), { kind: 'delivered', why: 'issue #5 closed', issue: 5 });
 });
 
-test('old task records load as they were: a doneAt with no outcome is legacy; the new fields survive a save', () => {
+test('old task records load as they were: a doneAt with no outcome is legacy; the new fields survive a save', async () => {
   const legacy = reviveAssignment({ text: 'issue #1', at: 1, by: 'K', issue: 1, doneAt: 2, doneWhy: 'PR #9 is no longer open' })!;
   assert.deepEqual(legacy, { text: 'issue #1', at: 1, by: 'K', issue: 1, doneAt: 2, doneWhy: 'PR #9 is no longer open' }, 'nothing added or rewritten');
   assert.equal(outcomeOf(legacy), 'legacy');
@@ -178,7 +178,7 @@ test('a PR closed unmerged raises one decision in Needs you, is never delivered,
   assert.equal(open[0].fyi, false, 'in Needs you, not filed as FYI');
   assert.equal(t().pending?.escalationId, open[0].id);
   // Answered: still no nudge loop, and no second escalation.
-  assert.equal(roster.escalations.resolve(floor, open[0].id, 'reply', 'Leave it for now', 'Keith'), undefined);
+  assert.equal(await roster.escalations.resolve(floor, open[0].id, 'reply', 'Leave it for now', 'Keith'), undefined);
   assert.equal(stop(), false, 'answered, still waiting on the person');
   assert.equal(roster.data(floor.id).escalations.length, 1, 'asked once');
   // She opens a new PR from her branch: superseded, and the task is open again.

@@ -66,10 +66,10 @@ test('the task text names the element(s) with qualified names and kinds, the bra
   assert.match(text, /impact skill, or `mxcli refs` \/ `mxcli impact` on `Travel\.Request\.StartDate`, `Travel\.Request\.EndDate` \(they write only the git-ignored catalog\)/);
 });
 
-test('the service types that text to the member: the selection and the commit it was read at', () => {
+test('the service types that text to the member: the selection and the commit it was read at', async () => {
   const h = harness();
   try {
-    const r = h.svc.request('f1', { elements: [{ kind: 'enumvalue', qn: 'Travel.Status.Draft' }], ref: 'main', sha: SHA, request: 'add a Cancelled value', role: 'lead-developer', by: 'Maurits' });
+    const r = await h.svc.request('f1', { elements: [{ kind: 'enumvalue', qn: 'Travel.Status.Draft' }], ref: 'main', sha: SHA, request: 'add a Cancelled value', role: 'lead-developer', by: 'Maurits' });
     assert.ok(typeof r !== 'string', String(r));
     assert.equal(r.id, 'MCR-1');
     assert.equal(h.sent.length, 1);
@@ -79,7 +79,7 @@ test('the service types that text to the member: the selection and the commit it
     assert.match(h.sent[0].text, /branch: main/);
     assert.match(h.sent[0].text, /add a Cancelled value/);
     // The next one is MCR-2, and both are kept in the office's data across a restart.
-    const again = h.svc.request('f1', { elements: [{ kind: 'page', qn: 'Travel.Request_Edit' }], ref: 'main', request: 'add a Notes field', role: 'lead-developer', by: 'Maurits' });
+    const again = await h.svc.request('f1', { elements: [{ kind: 'page', qn: 'Travel.Request_Edit' }], ref: 'main', request: 'add a Notes field', role: 'lead-developer', by: 'Maurits' });
     assert.ok(typeof again !== 'string' && again.id === 'MCR-2');
     const fresh = new ChangeRequests({ ...(h.svc as unknown as { deps: ChangeDeps }).deps });
     assert.deepEqual(fresh.list('f1').map((x) => x.id), ['MCR-2', 'MCR-1']);
@@ -88,16 +88,16 @@ test('the service types that text to the member: the selection and the commit it
   }
 });
 
-test('requests that make no sense are refused before anything is sent', () => {
+test('requests that make no sense are refused before anything is sent', async () => {
   const h = harness();
   try {
     const ask = { elements: [{ kind: 'entity', qn: 'Travel.Request' }], ref: 'main', request: 'rename to Trip', role: 'lead-developer', by: 'M' };
-    assert.match(String(h.svc.request('f1', { ...ask, request: '  ' })), /Say what should change/);
-    assert.match(String(h.svc.request('f1', { ...ask, elements: [] })), /Pick an element/);
-    assert.match(String(h.svc.request('f1', { ...ask, elements: [{ kind: 'domainmodel', qn: 'Travel' }] })), /qualified name/);
-    assert.match(String(h.svc.request('f1', { ...ask, role: 'lead-tester' })), /Tess isn't at work/);
-    assert.match(String(h.svc.request('f1', { ...ask, ref: '../../etc' })), /branch name looks wrong/);
-    assert.match(String(h.svc.request('f1', { ...ask, sha: 'not a sha' })), /commit looks wrong/);
+    assert.match(String(await h.svc.request('f1', { ...ask, request: '  ' })), /Say what should change/);
+    assert.match(String(await h.svc.request('f1', { ...ask, elements: [] })), /Pick an element/);
+    assert.match(String(await h.svc.request('f1', { ...ask, elements: [{ kind: 'domainmodel', qn: 'Travel' }] })), /qualified name/);
+    assert.match(String(await h.svc.request('f1', { ...ask, role: 'lead-tester' })), /Tess isn't at work/);
+    assert.match(String(await h.svc.request('f1', { ...ask, ref: '../../etc' })), /branch name looks wrong/);
+    assert.match(String(await h.svc.request('f1', { ...ask, sha: 'not a sha' })), /commit looks wrong/);
     assert.equal(h.sent.length, 0);
     assert.deepEqual(cleanElements([{ kind: 'attribute', qn: 'A.B.C' }, { kind: 'attribute', qn: 'A.B.C' }]), [{ kind: 'attribute', qn: 'A.B.C' }]);
   } finally {
@@ -129,7 +129,7 @@ test('routing follows coverage: development changes to whoever covers Developmen
   assert.ok(chipsFor(attr).includes('Make required') && chipsFor(attr).includes('Change default'));
 });
 
-test('the held delivery is the default: after their current turn unless the person says now', () => {
+test('the held delivery is the default: after their current turn unless the person says now', async () => {
   const after = deliveryOpts('after', 'Maurits', 'id1', () => {});
   assert.equal(after.origin, 'person');
   assert.equal(after.hold, true);
@@ -141,7 +141,7 @@ test('the held delivery is the default: after their current turn unless the pers
   assert.equal(now.hold, true, 'still held while a dialog is up');
   const h = harness();
   try {
-    const r = h.svc.request('f1', { elements: [{ kind: 'microflow', qn: 'Travel.ACT_Submit' }], ref: 'main', request: 'add a validation for the dates', role: 'lead-developer', by: 'M' });
+    const r = await h.svc.request('f1', { elements: [{ kind: 'microflow', qn: 'Travel.ACT_Submit' }], ref: 'main', request: 'add a validation for the dates', role: 'lead-developer', by: 'M' });
     assert.ok(typeof r !== 'string');
     assert.equal(h.sent[0].o.when, 'after', 'no "when" means after their turn');
     assert.equal(r.delivery, 'held');
@@ -149,17 +149,17 @@ test('the held delivery is the default: after their current turn unless the pers
     h.sent[0].o.onSent();
     assert.equal(h.svc.list('f1')[0].delivery, 'sent');
     // The wiring passes it through the roster's delivery with these options, and the dialog defaults to after.
-    assert.match(read('src/server/model-change/index.ts'), /roster\.delivery\.send\(tf, w, text, deliveryOpts\(o\.when, o\.by, o\.id, onSent\)\)/);
+    assert.match(read('src/server/model-change/index.ts'), /sendAsAnswer\(roster, tf, w, text, deliveryOpts\(o\.when, o\.by, o\.id, onSent\)/);
     assert.match(read('src/client/ui/model/change-this.ts'), /let when: ChangeWhen = 'after';/);
   } finally {
     h.done();
   }
 });
 
-test('audit: every request is recorded as model.change-requested, with the elements and the commit', () => {
+test('audit: every request is recorded as model.change-requested, with the elements and the commit', async () => {
   const h = harness();
   try {
-    h.svc.request('f1', { elements: [{ kind: 'entity', qn: 'Travel.Request' }], ref: 'office/ada-3', sha: SHA, request: 'rename to Trip', role: 'lead-developer', when: 'now', by: 'Maurits', owner: 'acc-1' });
+    await h.svc.request('f1', { elements: [{ kind: 'entity', qn: 'Travel.Request' }], ref: 'office/ada-3', sha: SHA, request: 'rename to Trip', role: 'lead-developer', when: 'now', by: 'Maurits', owner: 'acc-1' });
     assert.equal(h.audits.length, 1);
     const e = h.audits[0];
     assert.equal(e.action, 'model.change-requested');
@@ -173,7 +173,7 @@ test('audit: every request is recorded as model.change-requested, with the eleme
     // A refused one isn't recorded.
     const r = harness({ refuse: 'Spend cap reached' });
     try {
-      assert.equal(r.svc.request('f1', { elements: [{ kind: 'entity', qn: 'Travel.Request' }], ref: 'main', request: 'rename to Trip', role: 'lead-developer', by: 'M' }), 'Spend cap reached');
+      assert.equal(await r.svc.request('f1', { elements: [{ kind: 'entity', qn: 'Travel.Request' }], ref: 'main', request: 'rename to Trip', role: 'lead-developer', by: 'M' }), 'Spend cap reached');
       assert.equal(r.audits.length, 0);
     } finally {
       r.done();
@@ -183,10 +183,10 @@ test('audit: every request is recorded as model.change-requested, with the eleme
   }
 });
 
-test('the badge shows while a request is open, links its PR when there is one, and clears once that PR merged', () => {
+test('the badge shows while a request is open, links its PR when there is one, and clears once that PR merged', async () => {
   const h = harness();
   try {
-    const r = h.svc.request('f1', { elements: [{ kind: 'attribute', qn: 'Travel.Request.Title' }], ref: 'main', request: 'make it required', role: 'lead-developer', by: 'M' });
+    const r = await h.svc.request('f1', { elements: [{ kind: 'attribute', qn: 'Travel.Request.Title' }], ref: 'main', request: 'make it required', role: 'lead-developer', by: 'M' });
     assert.ok(typeof r !== 'string');
     let list = h.svc.list('f1');
     assert.equal(list.length, 1);
@@ -282,13 +282,13 @@ test('what Change this acts on: the element clicked, the ticked attributes or va
   assert.equal(nodeElement({ type: 'folder' }), null);
 });
 
-test('no office-side writes to the model or the repository: only the office’s own data folder', () => {
+test('no office-side writes to the model or the repository: only the office’s own data folder', async () => {
   const h = harness();
   const repo = mkdtempSync(path.join(tmpdir(), 'ao-mcr-repo-'));
   try {
     writeFileSync(path.join(repo, 'App.mpr'), 'model');
     const before = readdirSync(repo);
-    h.svc.request('f1', { elements: [{ kind: 'entity', qn: 'Travel.Request' }], ref: 'main', request: 'rename to Trip', role: 'lead-developer', by: 'M' });
+    await h.svc.request('f1', { elements: [{ kind: 'entity', qn: 'Travel.Request' }], ref: 'main', request: 'rename to Trip', role: 'lead-developer', by: 'M' });
     assert.deepEqual(readdirSync(repo), before);
     assert.equal(readFileSync(path.join(repo, 'App.mpr'), 'utf8'), 'model');
     assert.deepEqual(readdirSync(h.dataDir), ['model-change']);

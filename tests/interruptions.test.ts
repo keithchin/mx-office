@@ -341,7 +341,7 @@ test('regression: agents mid-task get a standup, an autonomy change and approval
   assert.equal(floor.worker(grace.id)!.status, 'done', `escalated: left to wait (${JSON.stringify(floor.typed.filter((t) => t.id === grace.id).map((t) => t.text.slice(0, 80)))})`);
   // The answer unblocks her: typed at once (she's between turns), with her task after it.
   const esc = d().escalations.find((e) => e.status === 'open')!;
-  assert.equal(roster.escalations.resolve(floor, esc.id, 'reply', '14 days', 'Keith'), undefined);
+  assert.equal(await roster.escalations.resolve(floor, esc.id, 'reply', '14 days', 'Keith'), undefined);
   const answer = floor.typed.at(-1)!;
   assert.equal(answer.id, grace.id);
   assert.match(answer.text, /14 days[\s\S]*carry on with: build the Orders module \(issue #5\)/);
@@ -430,13 +430,14 @@ test("the Project Manager's Nudge and their after-the-turn question; the Coordin
   floor.set(kat, 'working');
   assert.match(String(roster.backToWork.nudgeNow(floor, 'chief-analyst', 'Keith')), /working already/);
   // A team question after the Coordinator's turn, and its relay to busy Katherine after hers.
-  assert.equal(roster.interrupts.tell(floor, "What's blocking the team?", 'Keith', 'after', { 'chief-analyst': 'after' }), undefined);
+  assert.equal(await roster.interrupts.tell(floor, "What's blocking the team?", 'Keith', 'after', { 'chief-analyst': 'after' }), undefined);
   assert.equal(floor.typed.length, 0, 'held for its turn');
   assert.equal(d().members.pm.task, undefined, "a question isn't its task");
   floor.set(pm, 'done');
-  // With the run state as it is when it goes in (roster/awareness.ts), then the question.
+  for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+  // With the run state as it is when it goes in (roster/awareness.ts), then the question, then its dispatch marker (server/dispatch/).
   assert.match(floor.typed.at(-1)!.text, /^\[Office facts, [^\]]+\] Project: Running\. Agents working: [^;]*; awake and idle: \w+ \(you\);/);
-  assert.match(floor.typed.at(-1)!.text, /\n\nWhat's blocking the team\?$/);
+  assert.match(floor.typed.at(-1)!.text, /\n\nWhat's blocking the team\?\n\n\[office answer dsp_[0-9A-Z]{26} · TELL-lead rev \d+\]$/);
   const opts = roster.interrupts.tellOpts(floor, pm, kat);
   assert.deepEqual(opts, { hold: true, between: true });
   assert.equal(roster.delivery.send(floor, floor.worker(kat)!, 'Katherine: any blockers on issue #1?', { origin: 'agent', by: 'Niklaus', wake: true, hold: true, ...opts }).status, 'held');
