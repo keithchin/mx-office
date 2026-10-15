@@ -22,6 +22,8 @@ import type { TaskVerification } from '../../shared/testing/verify.js';
 import { reviveVerifyFields } from './task-verify.js';
 import { outcomesSince } from './closed-since.js';
 import { closedPrAsk, outcome, OUTCOME_V, type FinalOutcome, type Outcome, type PendingOutcome, type PullLook } from './task-outcome.js';
+import { cleanTaskRef, type TaskSource } from '../../shared/tasks.js';
+import { TaskIds } from './task-ids.js';
 
 export interface Assignment {
   /** What to carry on with, one line: "work on GitHub issue #1 (Discovery)". */
@@ -48,6 +50,9 @@ export interface Assignment {
   policy?: VerificationPolicy;
   /** Testing release 2: an integrated task judged on its merge commit (only "verified" is delivered). */
   verify?: TaskVerification;
+  /** Slice 1B-4: the durable task (server/tasks/) and this attempt at it. None on a legacy task: never made up. */
+  taskId?: string;
+  executionId?: string;
 }
 
 /** A task's provenance: open, pending, or how it finished ("legacy": finished before outcomes were kept). */
@@ -94,6 +99,7 @@ export function reviveAssignment(raw: unknown): Assignment | undefined {
     ...(typeof r.doneAt === 'number' ? { doneAt: r.doneAt, doneWhy: typeof r.doneWhy === 'string' ? r.doneWhy.slice(0, 120) : 'finished' } : {}),
     ...reviveOutcome(r),
     ...reviveVerifyFields(r),
+    ...cleanTaskRef(r),
   };
 }
 
@@ -184,7 +190,12 @@ export class Tasks {
   /** Each floor's closed issues, with GitHub's reason for closing each ('' when it gave none). */
   private closed = new Map<string, Map<number, string>>();
 
-  constructor(private roster: Roster) {}
+  /** Task identity (task-ids.ts): every new task's durable id and each attempt's execution id. */
+  readonly ids: TaskIds;
+
+  constructor(private roster: Roster) {
+    this.ids = new TaskIds(roster);
+  }
 
   /** The floor's issues came back from GitHub: the closed ones finish (or cancel) the tasks that name them. */
   onIssues(floorId: string, issues: readonly { number: number; state: string; stateReason?: string }[]) {
@@ -192,19 +203,38 @@ export class Tasks {
   }
 
   /** Records what a member was given to do; false when it isn't a member or it isn't a task. */
-  assign(floor: TeamFloor, workerId: string, raw: unknown, by: string): boolean {
+  assign(floor: TeamFloor, workerId: string, raw: unknown, by: string, source: TaskSource = 'console'): boolean {
     const mm = memberOf(this.roster, floor, workerId);
     const a = mm && assignmentFrom(raw, by, this.roster.deps.now());
     if (!mm || !a) return false;
+    this.ids.attach(floor, mm.role, workerId, String(raw), a, source);
+    this.ids.retire(floor, mm.m, a);
     mm.m.task = a;
     this.roster.touch(floor, true);
     return true;
   }
 
-  /** A role's task from its hire (members.ts), before its worker is known. */
-  assignRole(floor: TeamFloor, role: RoleId, raw: unknown, by: string) {
+  /** The text to type to a member for `raw`: a task gets its `Task: tsk_…` line (minted now), anything else goes as it was. */
+  prepare(floor: TeamFloor, workerId: string, raw: string, source: TaskSource): string {
+    const mm = memberOf(this.roster, floor, workerId);
+    const a = mm && assignmentFrom(raw, 'someone', this.roster.deps.now());
+    return a ? this.ids.prepare(floor, raw, a, source) : raw;
+  }
+
+  /** The same for a hire's task (which counts however short). */
+  prepareRole(floor: TeamFloor, raw: string, source: TaskSource = 'hire'): string {
+    const a = assignmentFrom(raw, 'someone', this.roster.deps.now(), true);
+    return a ? this.ids.prepare(floor, raw, a, source) : raw;
+  }
+
+  /** A role's task from its hire (members.ts), once its worker is in (or woken). */
+  assignRole(floor: TeamFloor, role: RoleId, raw: unknown, by: string, source: TaskSource = 'hire') {
     const a = assignmentFrom(raw, by, this.roster.deps.now(), true);
-    if (a) this.roster.data(floor.id).members[role].task = a;
+    if (!a) return;
+    const m = this.roster.data(floor.id).members[role];
+    if (m.workerId) this.ids.attach(floor, role, m.workerId, String(raw), a, source);
+    this.ids.retire(floor, m, a);
+    m.task = a;
   }
 
   private look(floor: TeamFloor, w: WorkerInfo, task: Assignment, words: boolean): FinishLook {
@@ -228,6 +258,7 @@ export class Tasks {
       Object.assign(t, { doneAt: now, doneWhy: o.why, outcome: o.kind, v: OUTCOME_V }, o.pr !== undefined ? { pr: o.pr } : {}, o.closeReason ? { closeReason: o.closeReason } : {});
       if (o.supersedes !== undefined && o.pr !== undefined) t.superseded = { pr: o.supersedes, by: o.pr };
       delete t.pending;
+      this.ids.ended(floor, t, o.kind === 'cancelled' ? 'cancelled' : 'completed', o.why);
       this.roster.touch(floor, true);
       return o;
     }

@@ -42,6 +42,8 @@ export interface SpendRow {
   stage: StageId;
   issue?: number;
   pr?: number;
+  /** Slice 1B-4: the durable task (`tsk_…`) the spend was on, when the office knew it at the time (tokens per task, later). */
+  taskId?: string;
   cost: number;
   calls: number;
   /** Estimated from history (back-filled when the ledger started), not booked as it happened. */

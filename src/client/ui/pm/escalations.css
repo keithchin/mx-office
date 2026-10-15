@@ -59,3 +59,10 @@ html[data-theme='terminal'] .esc-urgent .esc-tag, html[data-theme='terminal'] .e
 .esc-bubble::after { left: -8px; top: 20px; border-width: 5px 9px 5px 0; border-right-color: var(--card); }
 .esc-resolved .esc-bubble { color: var(--ink-2); }
 @media (max-width: 520px) { .esc-who { width: 56px; } .esc-face { width: 48px; height: 48px; } .esc-bubble { font-size: 12px; } }
+.esc-nowork {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}

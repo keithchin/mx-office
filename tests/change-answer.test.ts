@@ -157,7 +157,7 @@ test('change-linked-work: only explicit links, each labelled recorded or inferre
   const d = await c.detail(t.floor.id, `esc:${t.e.id}`);
   assert.ok(typeof d !== 'string');
   assert.deepEqual(d.links, []);
-  assert.equal(NO_LINKS, 'No linked work found. Task links arrive with task ids (1B-4)');
+  assert.equal(NO_LINKS, 'No links found: the office located no work that used this revision (that is not the same as no work being needed)');
   assert.doesNotMatch(NO_LINKS, /no impact/i);
 });
 

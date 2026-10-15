@@ -9,6 +9,7 @@
 
 import type { EvidenceRef } from './evidence/types.js';
 import type { TestingSummary } from './testing/verify.js';
+import type { DecisionRev } from './task-links.js';
 
 /** One fact the record cites: what it is, what the office found, and a gap's reason when it found nothing. */
 export interface EvidenceLine {
@@ -66,6 +67,11 @@ export interface AcceptanceRecord {
   refs: EvidenceRef[];
   /** Testing release 2: the Testing coverage summary and policy evaluation at the accepted commit (records before it have none). */
   testing?: TestingSummary;
+  /**
+   * Slice 1B-4: decision revisions the person accepted as implemented as decided, the only evidence that
+   * level reads (shared/task-links.ts). Records before it have none.
+   */
+  decisions?: DecisionRev[];
 }
 
 export interface Reopen {

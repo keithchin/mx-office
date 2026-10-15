@@ -13,6 +13,7 @@ import { changeRequestsOf } from '../model-change/index.js';
 import { ROLES } from '../../shared/roster/roles.js';
 import type { TaskLike } from './links.js';
 import { ChangeAnswer } from './service.js';
+import { taskLinksOf } from '../tasks/links.js';
 
 const services = new WeakMap<object, ChangeAnswer>();
 
@@ -69,6 +70,7 @@ export function changeAnswerOf(ctx: Ctx): ChangeAnswer {
         .catch((err: unknown) => console.error(`agent-office: change-answer: couldn't save the roster: ${(err as Error).message}`));
     },
     record: (e) => audit.record(e),
+    taskLinks: (floorId, decision, rev) => taskLinksOf(ctx).get(floorId, decision, rev),
   });
   services.set(ctx.cfg, s);
   return s;

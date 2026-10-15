@@ -100,7 +100,8 @@ test('proposal-issue-delayed-visibility: a crash after makeIssue, GitHub search 
   const err = await o.roster.standups.decide(floor, 'p-csv', 'approve', 'Keith');
   assert.match(String(err), /Couldn't confirm the issue was made/);
   assert.equal(o.issues.length, 1);
-  assert.match(o.issues[0].draft.body, /\n---\noffice-proposal: p-csv rev 1$/);
+  // Slice 1B-4: the proposal's task id just above the marker, which stays the last line.
+  assert.match(o.issues[0].draft.body, /\n---\nTask: tsk_[0-9A-Z]{26}\noffice-proposal: p-csv rev 1$/);
   // Approved, no issue, on disk before makeIssue ran: release 47 never offers it again.
   const saved = JSON.parse(readFileSync(path.join(o.dataDir, 'roster', `${floor.id}.json`), 'utf8'));
   assert.equal(saved.proposals[0].status, 'approved');

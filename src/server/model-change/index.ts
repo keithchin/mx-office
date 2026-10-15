@@ -38,9 +38,11 @@ export function changeRequestsOf(ctx: Ctx): ChangeRequests {
       const w = tf.worker(m.workerId);
       if (!w) return { status: 'refused', why: `${m.name} isn't at work` };
       // Once it's typed it's the member's task (roster/resume.ts), as a prompt from the Board's New task is.
-      const onSent = () => (o.onSent(), roster.tasks.assign(tf, w.id, text, o.by));
+      // Its task id goes in with it (Slice 1B-4), beside MCR-n.
+      const typed = roster.tasks.prepare(tf, w.id, text, 'mcr');
+      const onSent = () => (o.onSent(), roster.tasks.assign(tf, w.id, typed, o.by, 'mcr'));
       // A durable dispatch (roster/dispatch-send.ts): the request appended as mcr:<id>'s revision, the intent on disk before typing.
-      return sendAsAnswer(roster, tf, w, text, deliveryOpts(o.when, o.by, o.id, onSent), { decision: `mcr:${o.id.split(':').pop()}`, by: o.by, kind: 'answer' }).then(({ result, sent }): Delivered => {
+      return sendAsAnswer(roster, tf, w, typed, deliveryOpts(o.when, o.by, o.id, onSent), { decision: `mcr:${o.id.split(':').pop()}`, by: o.by, kind: 'answer' }).then(({ result, sent }): Delivered => {
         if (!result.ok) return { status: 'refused', why: result.error };
         const rec = result.results[0]?.records[0];
         if (!sent) return { status: 'refused', why: 'not sent' };

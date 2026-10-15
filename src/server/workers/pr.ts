@@ -12,6 +12,7 @@ import { run } from './process.js';
 import type { OpenedPr, Worker, WorkerContext } from './types.js';
 import { truncate } from './util.js';
 import { originRepo } from './worktree.js';
+import { taskIdIn, withTaskLine } from '../../shared/tasks.js';
 
 const PR_TITLE_MAX = 72;
 const PR_TASK_MAX = 2500;
@@ -77,7 +78,7 @@ export function withRelated(body: string, block: string): string {
  * `other`, it's for one of the other repositories of a worker across repositories: the issue is its
  * own floor's (`home`), so this one only mentions it.
  */
-function draftPr(info: WorkerInfo, commits: string[], by: string, other?: { home?: string }): { title: string; body: string } {
+export function draftPr(info: WorkerInfo, commits: string[], by: string, other?: { home?: string }): { title: string; body: string } {
   const task = (info.prompt ?? '').replace(/\r\n?/g, '\n').trim();
   const firstLine = task.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
   // The issues board hands work over as: Work on GitHub issue #12: "Title".
@@ -85,7 +86,8 @@ function draftPr(info: WorkerInfo, commits: string[], by: string, other?: { home
   const title = truncate(issue?.[2] || firstLine.replace(/[.:;,]+$/, '') || commits[0]?.replace(/^\S+\s+/, '') || info.worktree?.branch || info.name, PR_TITLE_MAX);
   const closes = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b[^\n]{0,40}?#(\d+)/i.exec(task)?.[1] ?? issue?.[1];
   const parts: string[] = [];
-  if (task) parts.push(`## Task\n\n${task.length > PR_TASK_MAX ? `${task.slice(0, PR_TASK_MAX)}…` : task}`);
+  // Its task id rides along (Slice 1B-4): kept as the section's last line even when the task is cut short.
+  if (task) parts.push(`## Task\n\n${withTaskLine(task.length > PR_TASK_MAX ? `${task.slice(0, PR_TASK_MAX)}…` : task, taskIdIn(task))}`);
   parts.push(`## Commits\n\n${commits.map((c) => `- \`${c.slice(0, c.indexOf(' '))}\` ${c.slice(c.indexOf(' ') + 1)}`).join('\n')}`);
   if (closes && !other) parts.push(`Closes #${closes}`);
   else if (closes && other?.home) parts.push(`Part of ${other.home}#${closes}`);

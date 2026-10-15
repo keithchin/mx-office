@@ -13,6 +13,7 @@ import { registerAsksReader } from '../asks/readers.js';
 import { registerSettledSource } from '../stuck/sources.js';
 import { questionsOf, qFloor, sendOpts } from '../questions/index.js';
 import { FollowThrough } from './service.js';
+import { taskLinksOf } from '../tasks/links.js';
 
 const services = new WeakMap<object, FollowThrough>();
 
@@ -63,6 +64,8 @@ export function followThroughOf(ctx: Ctx): FollowThrough {
         .flushCritical()
         .catch((err: unknown) => console.error(`agent-office: followthrough: couldn't save the roster: ${(err as Error).message}`)),
     record: (e) => audit.record(e),
+    // Slice 1B-4: each item's task links, peeked (never waited on): worked out in the background when old.
+    taskLinks: (floorId, decision, rev) => taskLinksOf(ctx).peek(floorId, decision, rev),
   });
   services.set(ctx.cfg, s);
   return s;

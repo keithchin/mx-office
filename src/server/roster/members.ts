@@ -84,9 +84,11 @@ export class Members {
       if (!isAsleepStatus(w.status)) return `${m.name} is already at work`;
       // Woken with a task after sleeping through a pause: it hears first that the project was resumed (awareness.ts).
       const note = task ? this.roster.awareness.noteFor(floor, w) : undefined;
-      const err = floor.wake(w.id, note ? `${note}\n\n${task}` : task);
+      // Its task id goes in with it (Slice 1B-4, roster/task-ids.ts).
+      const typed = task ? this.roster.tasks.prepareRole(floor, task) : task;
+      const err = floor.wake(w.id, note ? `${note}\n\n${typed}` : typed);
       if (!err && note) this.roster.awareness.ack(floor, w.id);
-      if (!err && task) this.roster.tasks.assignRole(floor, role, task, by);
+      if (!err && typed) this.roster.tasks.assignRole(floor, role, typed, by);
       if (!err) floor.toast(`${by} woke ${m.name}, the ${def.title}`);
       return err;
     }
@@ -97,20 +99,25 @@ export class Members {
     if (owed.dispatchIds?.length) await this.roster.dispatch.beforeType(floor.id, owed.dispatchIds, {});
     // A project in a portfolio with a company brain: one line pointing at its ROUTING.md (never its content); nothing for any other project.
     const brain = await this.roster.deps.hireContext?.(floor.id).catch(() => undefined);
-    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task, owed.lines, teamLine(d, role), brain?.line), owner, by, team: def.team });
+    const typed = task ? this.roster.tasks.prepareRole(floor, task) : task;
+    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, typed, owed.lines, teamLine(d, role), brain?.line), owner, by, team: def.team });
     if (typeof r === 'string') return r;
     // What this hire was offered, once per hire (server/portfolios/manifest.ts): offered, not obeyed.
     void brain?.record(role, r.id).catch(() => undefined);
     owed.mark();
+    const was = m.workerId;
     m.workerId = r.id;
     m.phase = 'active';
     m.hiredAt = this.roster.deps.now();
     m.benchAskedAt = undefined;
     m.benchSawBusy = undefined;
     // What it's to carry on with after the office's own messages (resume.ts); one brought back without a task keeps its last.
-    if (task) this.roster.tasks.assignRole(floor, role, task, by);
+    // A new task is a new attempt at a new (or named) task; one brought back with its open task keeps that task id, with a new execution id.
+    if (typed) this.roster.tasks.assignRole(floor, role, typed, by);
+    else this.roster.tasks.ids.reattempt(floor, role, r.id, was);
+    const ids = m.task && m.task.doneAt === undefined && m.task.taskId ? { taskId: m.task.taskId, ...(m.task.executionId ? { executionId: m.task.executionId } : {}) } : {};
     floor.toast(`${by} hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`);
-    audit.record({ floor: floor.id, actor: byWhom(by, owner), action: 'worker.hire', target: { kind: 'worker', id: r.id, label: m.name }, summary: `Hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`, details: { role, model: model || m.model, task: task ? { length: task.length } : undefined } });
+    audit.record({ floor: floor.id, actor: byWhom(by, owner), action: 'worker.hire', target: { kind: 'worker', id: r.id, label: m.name }, summary: `Hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`, details: { role, model: model || m.model, task: task ? { length: task.length } : undefined }, ids: { ...ids, roleId: role, agentInstanceId: r.id } });
     this.roster.touch(floor);
     // Then its Playbook, its team's subagents and the journals, in the folder it works in, before its
     // session has booted far enough to read them.

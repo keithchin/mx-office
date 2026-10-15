@@ -149,7 +149,7 @@ test('the held delivery is the default: after their current turn unless the pers
     h.sent[0].o.onSent();
     assert.equal(h.svc.list('f1')[0].delivery, 'sent');
     // The wiring passes it through the roster's delivery with these options, and the dialog defaults to after.
-    assert.match(read('src/server/model-change/index.ts'), /sendAsAnswer\(roster, tf, w, text, deliveryOpts\(o\.when, o\.by, o\.id, onSent\)/);
+    assert.match(read('src/server/model-change/index.ts'), /sendAsAnswer\(roster, tf, w, typed, deliveryOpts\(o\.when, o\.by, o\.id, onSent\)/);
     assert.match(read('src/client/ui/model/change-this.ts'), /let when: ChangeWhen = 'after';/);
   } finally {
     h.done();

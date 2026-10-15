@@ -12,6 +12,7 @@ import { h } from '../dom';
 import { followAct, followView, onFollowChanged } from './feed';
 import './follow.css';
 import { answerControls } from '../change-answer/controls';
+import { taskLinksList } from '../task-links/view';
 
 /** The buttons of an item that differs (and Dismiss for any), shared with the Questions page. */
 export function followActs(floor: string, it: FollowItem, admin: boolean): HTMLElement {
@@ -58,6 +59,8 @@ function item(floor: string, it: FollowItem, admin: boolean, go: (t: NeedTarget)
     { 'data-decision': it.decision, 'data-level': warn ? 'warn' : 'status', 'aria-label': `${it.label}: ${followLine(it)}` },
     h('div.pt-esc-h', {}, h('span.pt-tag', { class: warn ? 't-verify' : 't-later' }, h('span.pt-tag-i', { 'aria-hidden': 'true' }, warn ? '⚠' : '↻'), warn ? 'Recorded differently' : 'Following through'), h('b.pt-esc-t', {}, h('button.pt-link', { type: 'button', onclick: open }, it.label), ` ${it.title}`)),
     h('p.pt-ft-line', {}, followLine(it)),
+    // Slice 1B-4: the work linked to this revision, each with its strength and evidence (once worked out).
+    it.taskLinks ? taskLinksList(it.taskLinks, { max: 3 }) : null,
     bothTexts(it),
     followActs(floor, it, admin),
     answerControls(floor, it.decision, it.rev, admin),

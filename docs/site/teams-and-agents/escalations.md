@@ -83,8 +83,8 @@ Only **recorded as given, at the current revision, merged into main** takes the 
 An answered escalation has **Change answer** on its card in the Team tab's approvals and on its follow-through item in Needs you (admins only; the server checks). It opens a small window (✕ top right; ✕ or Esc puts you back where you were) with:
 
 - **Current answer (rev n)**: its words, who gave it and when, how it was sent, and its follow-through state.
-- **New answer**: the same choices as the first time: the escalation's options, your reply, and Reply, Approve or Reject (Noted for an FYI).
-- **Work that used rev n**: what the office knows used the answer. A **Recorded link** is a field that names the escalation: its `refs` (the BRD question, the decision id, the PR, the stage, the stuck item, the journey), a member's task waiting on it, or a task's verification raised as it. **Inferred** is text the office read: a model change request whose words name *ESC-&lt;id&gt;*, or the linked BRD question's free-text *blocks*. When there is none it says *No linked work found. Task links arrive with task ids (1B-4)*, never that nothing was affected.
+- **New answer**: the same choices as the first time: the escalation's options, your reply, and Reply, Approve or Reject (Noted for an FYI). Or tick **No implementation work required**: the answer stands as it is, and a new revision of that kind records your choice, with what you type as the reason. The agent is told to record it and start no work for it. The same box is on the escalation's card in the Team tab when you first answer it.
+- **Work that used rev n**: what the office knows used the answer. A **Recorded link** is a field that names the escalation: its `refs` (the BRD question, the decision id, the PR, the stage, the stuck item, the journey), a member's task waiting on it, or a task's verification raised as it. **Inferred** is text the office read: a model change request whose words name *ESC-&lt;id&gt;*, or the linked BRD question's free-text *blocks*. Below them are the **task links** (see [Task ids and linked work](#task-ids-and-linked-work)), each with how it was found and how far its evidence goes. When there is nothing it says *No links found* (the office located nothing, which is not the same as no work being needed), never that nothing was affected.
 - **Send change.**
 
 Sending appends revision n+1 to the answer history, marked as replacing rev n, and hands it to the agent that raised it through the same durable path as an answer (after its current turn). The message says plainly: *This replaces my answer rev 1 to ESC-3f9c2a1b7e: Go with: Use magic links. Record it as `Decided per ESC-3f9c2a1b7e rev 2`*, and asks the agent to check what it did on the strength of rev 1. If someone changed or answered it since you opened the window, it's refused (*This decision changed since you opened it*) with nothing written or sent, and the window shows the answer as it is now.
@@ -97,6 +97,25 @@ Your answer goes through even when the project's daily cost cap is reached: the 
 
 > [!NOTE]
 > A Lead waiting on an open escalation of its own is never benched for idling. It is waiting on you, not idle.
+
+## Task ids and linked work
+
+Every new piece of work the office hands an agent gets a **task id**, `tsk_<ulid>`: a hire's task, a prompt that gives a team member a task, a Coordinator's `office-workers tell`, a model change request, a stuck item's or a decision card's ask to the lead, a queue task (its old queue id kept beside it) and a proposal's GitHub issue. The task text the agent reads ends with a `Task: tsk_…` line, the desk-opened pull request's *Task* section ends with it, and the Playbooks ask agents to put it as a trailer on their commits and as a line in their pull requests, as they name `MCR-<n>` for a model change request. Handing the task to another agent, or restarting its worker, keeps the task id; each attempt (a hire, or the task handed to a worker's session) gets its own execution id, `exe_<ulid>`. Both go on the audit log's events and on the budget ledger's rows when the office knows them. Tasks from before task ids stay a **legacy task (no id)**: no id is ever made up for them. There is no task list page yet.
+
+When you answer, each dispatch records the task its recipient is on. **Work that used rev n** (in Change answer) and the follow-through item list each link with its **strength**:
+
+- **candidate**: the recipient's task when your answer went. Only a candidate, never proof.
+- **associated**: a commit, pull request or issue names *ESC-&lt;id&gt; rev &lt;n&gt;* or the task id (local git and the pull requests the office already fetched; nothing new is polled).
+- **inferred**: a build-plan row whose text names it, labelled as inferred.
+
+And with its **evidence**, always for that revision:
+
+- **acknowledged**: the office saw your answer typed, and a later turn of the agent in that same session cites *ESC-&lt;id&gt; rev &lt;n&gt;* (in its words or its escalation reply). A turn that merely follows isn't enough.
+- **associated change**: a commit after your answer, on the task's branch, citing the revision. It says the work changed, never that your answer was implemented.
+- **checks passed on the associated change**: checks that passed on the task's pull request at a revision containing that commit. A later passing check that doesn't contain it proves nothing.
+- **Implemented as decided**: only your acceptance, when the acceptance record names the decision revision.
+
+For example: *Task tsk_… "Visitor checkout" (Linus): candidate · acknowledged · associated change PR #98 · checks passed on the associated change @e77a0d3*. *No links found* (nothing located) and *No implementation work required* (your stated choice, kept as an answer revision) are never shown one for the other.
 
 ## Asks that need a person: `needs-human` and `question`
 

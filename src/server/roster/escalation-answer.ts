@@ -24,6 +24,7 @@ import { owedTarget, typeTarget } from './dispatch-send.js';
 import type { Roster } from './index.js';
 import { decisionCitation, escalationAnswerPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
+import { NO_WORK_REQUIRED } from '../../shared/task-links.js';
 
 type Resolution = NonNullable<Escalation['resolution']>;
 
@@ -41,6 +42,8 @@ export interface EscalationAnswer {
   expectedRev?: number;
   /** A duplicate closed in favour of this escalation (outcome superseded). */
   supersededBy?: string;
+  /** Slice 1B-4: the person states no implementation work is required (an answer revision of that kind). */
+  noWork?: boolean;
 }
 
 /** The checks before anything else: the verdict to use and the text, or why not. */
@@ -79,7 +82,7 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
     decision,
     expectedRev: a.expectedRev,
     current: () => ({ rev: e.resolution?.answerRev ?? (e.status === 'resolved' ? 1 : 0), state: e.status === 'resolved' ? `answered by ${e.resolution?.by ?? 'someone'}` : 'open', ...(e.status === 'resolved' ? { open: `Already answered by ${e.resolution?.by ?? 'someone'}` } : {}) }),
-    revision: { kind: kindOf(verdict, a.outcome), text, by: a.by },
+    revision: { kind: a.noWork && verdict !== 'dismiss' ? 'no-work-required' : kindOf(verdict, a.outcome), text, by: a.by },
     targets: (rev) => {
       const out: Target[] = [];
       // A dismissed FYI doesn't spend a turn of the agent's; anything else is an answer it acts on.
@@ -90,7 +93,8 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
       const leaving = !!w && !!member && member.phase === 'benching' && member.workerId === w.id;
       if (!w && e.role) rehire = true;
       // The answer carries its citation (Slice 1B-2): Decided per ESC-<id> rev <n>, the revision just appended.
-      const prompt = escalationAnswerPrompt(e, verdict, text, a.by, a.outcome === 'superseded' ? undefined : a.outcome, rev);
+      const said = escalationAnswerPrompt(e, verdict, text, a.by, a.outcome === 'superseded' ? undefined : a.outcome, rev);
+      const prompt = a.noWork ? `${said}\n\n${NO_WORK_REQUIRED} for this decision: record it, and don't start work for it.` : said;
       // A dialog may be up (a permission prompt, a question, booting): the answer stays owed and goes in once its turn is over.
       const busy = (x: WorkerInfo) => !mayType(x.status) && !isAsleepStatus(x.status);
       if (w && w.kind === 'agent' && !leaving && !busy(w)) {

@@ -17,6 +17,7 @@ import { checkFloor, type ControlDeps } from './control.js';
 import { onBackgroundSpend } from './meter.js';
 import { BudgetService } from './service.js';
 import { currentStage } from './stage.js';
+import { currentTaskIds } from '../tasks/index.js';
 import { rankingReport } from '../ranking/index.js';
 import { covers, subagentDefsOf } from '../../shared/roster/coverage.js';
 
@@ -49,6 +50,19 @@ export function budgetOf(ctx: Ctx): BudgetService {
     floorOfWorker: (id) => ctx.workerFloor(id)?.id,
     roleOf,
     taskIssue: (floorId, workerId) => ctx.floors.get(floorId)?.queue?.state().tasks.find((t) => t.workerId === workerId)?.issue,
+    // Slice 1B-4: a member's open task, else the queue task its worker sits for.
+    taskOf: (floorId, workerId) => {
+      try {
+        const roster = rosterOf(ctx);
+        const floor = ctx.floors.get(floorId);
+        const role = floor ? roster.roleOf(teamFloor(ctx, floor), workerId) : undefined;
+        const fromMember = role ? currentTaskIds(roster.data(floorId).members[role])?.taskId : undefined;
+        if (fromMember) return fromMember;
+      } catch {
+        // no team on it
+      }
+      return ctx.floors.get(floorId)?.queue?.state().tasks.find((t) => t.workerId === workerId && t.status === 'running')?.taskId;
+    },
     stageOf: currentStage,
     officeLedger: ctx.ledger,
     team: (floorId) => {

@@ -11,6 +11,7 @@
 
 import type { AnswerRevisionKind, DecisionRef, DispatchState } from './dispatch.js';
 import { stateWords } from './dispatch.js';
+import type { DecisionLinks } from './task-links.js';
 
 /** What the office found of a decision's record. */
 export type RecordedOutcome = 'recorded' | 'recorded-differently' | 'recorded-older-rev' | 'not-recorded-yet';
@@ -108,6 +109,8 @@ export interface FollowItem {
   recording: Recording;
   /** A question's key, an escalation's id: where its own page is. */
   ref: string;
+  /** Slice 1B-4: the revision's task links and their evidence, as last worked out. */
+  taskLinks?: DecisionLinks;
 }
 
 export interface FollowView {

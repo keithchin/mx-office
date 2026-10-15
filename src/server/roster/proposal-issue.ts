@@ -14,6 +14,7 @@ import type { Outcome, Target } from '../dispatch/service.js';
 import type { MadeIssue } from './issues.js';
 import type { Roster } from './index.js';
 import type { TeamFloor } from './types.js';
+import { taskLine } from '../../shared/tasks.js';
 
 /** The issue body with the proposal's marker as its last line. */
 export const withIssueMarker = (draft: IssueDraft, marker: string): IssueDraft => ({ ...draft, body: `${draft.body}\n\n---\n${marker}` });
@@ -37,14 +38,19 @@ export function issueTarget(roster: Roster, floor: TeamFloor, p: Proposal, by: s
         Object.assign(p, was);
         return { state: 'failed', note: `the approval couldn't be saved before making the issue (${(err as Error).message}), so no issue was made` };
       }
+      // Its work is a task from now on (Slice 1B-4): the task id rides in the issue body, under the marker.
+      const store = roster.tasks.ids.of(floor.id);
+      p.taskId ??= store.create(floor.id, { source: 'proposal', text: p.title }).id;
       let made: MadeIssue;
       try {
-        made = await make(r.marker);
+        // The marker stays the body's last line (reconcile and people look for it there), the task line just above it.
+        made = await make(`${taskLine(p.taskId)}\n${r.marker}`);
       } catch (err) {
         return { state: 'outcome-unknown', note: `gh failed (${(err as Error).message.slice(0, 160)}): the issue may or may not exist` };
       }
       if (made.error) return { state: 'outcome-unknown', note: `gh said: ${made.error.slice(0, 160)} (the issue may or may not exist)` };
       if (made.dryRun) return { state: 'submitted', note: 'dry run: no issue made' };
+      if (made.number) store.setIssue(floor.id, p.taskId, made.number);
       return { state: 'submitted', issue: { ...(made.number ? { number: made.number } : {}), ...(made.url ? { url: made.url } : {}) }, note: made.number ? `issue #${made.number}` : 'made' };
     },
   };
@@ -95,6 +101,7 @@ export function hookProposals(roster: Roster) {
     const p = roster.data(floorId).proposals.find((x) => `proposal:${x.id}` === r.decision);
     if (!p) return;
     applyIssue(p, r);
+    if (p.taskId && r.issue?.number) roster.tasks.ids.of(floorId).setIssue(floorId, p.taskId, r.issue.number);
     const floor = roster.deps.floors().find((f) => f.id === floorId);
     if (floor) roster.touch(floor);
     await roster

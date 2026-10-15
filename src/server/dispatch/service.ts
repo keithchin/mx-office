@@ -15,7 +15,7 @@
 // (Send again, It went through, Abandon). Never exactly-once.
 
 import path from 'node:path';
-import { answerMarker, decisionLabel, isUnsettled, issueMarker, type AnswerRevisionKind, type DecisionRef, type DispatchChannel, type DispatchRecord, type DispatchState } from '../../shared/dispatch.js';
+import { answerMarker, decisionLabel, isUnsettled, issueMarker, type AnswerRevisionKind, type DecisionRef, type DispatchChannel, type DispatchRecord, type DispatchState, type DispatchTask } from '../../shared/dispatch.js';
 import { ulid } from '../../shared/evidence/ids.js';
 import type { AuditActor } from '../../shared/audit.js';
 import { audit, human, office } from '../audit/index.js';
@@ -62,7 +62,7 @@ export interface AnswerSpec {
    */
   current(): { rev: number; state?: string; open?: string };
   /** The revision appended; omitted when an existing revision is dispatched (useRev). */
-  revision?: { kind: AnswerRevisionKind; option?: string; text: string; by: string; supersedes?: number; basis?: 'recorded-differently' };
+  revision?: { kind: AnswerRevisionKind; option?: string; text: string; by: string; supersedes?: number; basis?: 'recorded-differently'; note?: string };
   useRev?: number;
   /** Checks once claimed, before anything is written: an error, or undefined. */
   check?(): string | undefined;
@@ -80,6 +80,17 @@ export interface DispatcherDeps {
   dataDir: string;
   now(): number;
   fs?: CriticalFs;
+}
+
+/** The candidate task of a dispatch to a worker, when it has one (a failed lookup records none). */
+function taskOf(at: Dispatcher['taskAt'], floorId: string, workerId: string | undefined): { task?: DispatchTask } {
+  if (!at || !workerId) return {};
+  try {
+    const task = at(floorId, workerId);
+    return task ? { task } : {};
+  } catch {
+    return {};
+  }
 }
 
 export const mintDispatchId = (now: number) => `dsp_${ulid(now)}`;
@@ -100,6 +111,9 @@ export class Dispatcher {
 
   /** The records this process wrote: reconcile looks only at what an earlier run left (dispatch/reconcile.ts). */
   readonly mine = new Set<string>();
+
+  /** Slice 1B-4: the recipient's current task, captured on each dispatch to a worker (roster/dispatch-hooks.ts sets it). */
+  taskAt?: (floorId: string, workerId: string) => DispatchTask | undefined;
 
   constructor(private deps: DispatcherDeps) {
     this.answers = new AnswerStore(path.join(deps.dataDir, 'answers'));
@@ -161,7 +175,7 @@ export class Dispatcher {
         let rev = s.useRev ?? 0;
         if (s.revision) {
           try {
-            const line = await this.answers.append(floorId, { decision: s.decision, kind: s.revision.kind, ...(s.revision.option ? { option: s.revision.option } : {}), text: s.revision.text, by: s.revision.by, at: this.now(), ...(s.revision.supersedes ? { supersedes: s.revision.supersedes } : {}), ...(s.revision.basis ? { basis: s.revision.basis } : {}) });
+            const line = await this.answers.append(floorId, { decision: s.decision, kind: s.revision.kind, ...(s.revision.option ? { option: s.revision.option } : {}), text: s.revision.text, by: s.revision.by, at: this.now(), ...(s.revision.supersedes ? { supersedes: s.revision.supersedes } : {}), ...(s.revision.basis ? { basis: s.revision.basis } : {}), ...(s.revision.note ? { note: s.revision.note.slice(0, 2000) } : {}) });
             rev = line.rev;
           } catch (err) {
             return { ok: false, status: 500, error: `The office couldn't save your answer (${(err as Error).message}), so nothing was sent. Check the office's data folder can be written to, then answer again` };
@@ -204,6 +218,7 @@ export class Dispatcher {
       ...(groupId ? { groupId } : {}),
       ...(t.workerId ? { workerId: t.workerId } : {}),
       ...(t.workerName ? { workerName: t.workerName } : {}),
+      ...taskOf(this.taskAt, floorId, t.workerId),
       ...session,
       payload: t.payload(marker),
       marker,
