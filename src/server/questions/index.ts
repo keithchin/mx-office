@@ -151,6 +151,8 @@ export function questionsOf(ctx: Ctx): QuestionsService {
   });
   services.set(ctx.cfg, s);
   const made = s;
+  // A Send settled later (reconcile found it typed, a person said it went through, Send again went): the answers are sent.
+  rosterOf(ctx).dispatch.appliers.set('q', (floorId, r) => made.dispatched(floorId, r));
   registerStuckSource((f, now) => made.stuckDrafts({ id: f.id, name: f.name, dir: f.dir }, now));
   return s;
 }

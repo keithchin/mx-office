@@ -115,6 +115,18 @@ export class Dispatcher {
     return this.claims.has(`${floorId}|${decision}`);
   }
 
+  /** Runs `fn` holding the decision's claim (a person's choice on a dispatch); a second one at once is refused. */
+  async claimRun<T extends { error?: string }>(floorId: string, decision: DecisionRef, fn: () => Promise<T>): Promise<T | { error: string }> {
+    const key = `${floorId}|${decision}`;
+    if (this.claims.has(key)) return { error: 'This decision is being answered right now' };
+    this.claims.add(key);
+    try {
+      return await fn();
+    } finally {
+      this.claims.delete(key);
+    }
+  }
+
   /** One decision's answer, in the order above. */
   answer(floorId: string, spec: AnswerSpec, groupId?: string): Promise<AnswerResult> {
     return this.answerMany(floorId, [spec], groupId);

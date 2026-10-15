@@ -256,6 +256,16 @@ export class QuestionsService {
     return undefined;
   }
 
+  /** A Send's dispatch that settled after the fact: the answers it covers, still pending, are marked sent to it. */
+  async dispatched(floorId: string, r: { id: string; decision: DecisionRef; covers?: { decision: DecisionRef }[]; workerName?: string }): Promise<void> {
+    const d = await this.book(floorId);
+    const keys = (r.covers?.length ? r.covers.map((c) => c.decision) : [r.decision]).filter((x) => x.startsWith('q:')).map((x) => x.slice(2)).filter((k) => d.answers[k]?.status === 'pending');
+    if (!keys.length) return;
+    markSent(d, keys, r.workerName ?? 'the analyst', this.deps.now());
+    for (const k of keys) d.answers[k].dispatchId = r.id;
+    await this.save(floorId, d);
+  }
+
   /** The client's answers taken in (from the filled-in file or pasted lines), each ready to send. */
   async importAnswers(floor: QFloor, rows: readonly { id: string; answer: string; brd?: string }[], o: { by: string; owner?: string; how: 'file' | 'text' }): Promise<{ matched: string[]; unknown: string[]; skipped: string[] }> {
     const d = await this.book(floor.id);
