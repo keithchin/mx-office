@@ -13,6 +13,8 @@ export interface BuildInfo {
   /** The changelog has entries under Unreleased: newer than that release ("release 45+"). */
   ahead?: boolean;
   builtAt?: number;
+  /** The dispatch record schema it knows (shared/dispatch.ts DISPATCH_SCHEMA); missing on builds from before durable dispatch (release 47). */
+  dispatchSchema?: number;
 }
 
 /** The build the office runs, and since when it has been running it. */
@@ -32,6 +34,7 @@ export function parseBuildInfo(x: unknown): BuildInfo | undefined {
   if (typeof o.release === 'number' && Number.isInteger(o.release) && o.release > 0) out.release = o.release;
   if (o.ahead === true) out.ahead = true;
   if (typeof o.builtAt === 'number' && Number.isFinite(o.builtAt) && o.builtAt > 0) out.builtAt = o.builtAt;
+  if (typeof o.dispatchSchema === 'number' && Number.isInteger(o.dispatchSchema) && o.dispatchSchema > 0) out.dispatchSchema = o.dispatchSchema;
   return out;
 }
 

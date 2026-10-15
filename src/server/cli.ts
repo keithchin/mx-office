@@ -23,6 +23,10 @@ if (argv[0] === 'setup') {
   const { setupCommand } = await import('./setup.js');
   process.exit(await setupCommand(argv.slice(1)));
 }
+if (argv[0] === 'dispatch') {
+  const { dispatchCommand } = await import('./dispatch/guard.js');
+  process.exit(dispatchCommand(argv.slice(1)));
+}
 if (argv[0] === 'tunnel') {
   const { tunnelCommand } = await import('./tunnel/index.js');
   process.exit(await tunnelCommand(argv.slice(1)));

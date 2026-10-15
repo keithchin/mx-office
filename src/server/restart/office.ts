@@ -15,6 +15,8 @@ import { resumeAfterRestart, SafeRestart, type RestartDeps } from './index.js';
 import { helperNote, helpersOf, helperSource } from './helpers.js';
 import { appDir, headSha } from './checkout.js';
 import { buildOf } from './build.js';
+import { rollbackRefusal } from '../dispatch/guard.js';
+import { buildLabel } from '../../shared/build-info.js';
 
 const APP = appDir();
 // Asked on every look at the restart state: read from the checkout's files when they settle it (checkout.ts).
@@ -70,6 +72,11 @@ export function safeRestartOf(ctx: Ctx): SafeRestart {
     loop: launcherLoops(),
     now: () => Date.now(),
     chatter,
+    // The build on disk is what the restart starts: refused while it predates unsettled dispatch records (dispatch/guard.ts).
+    dispatchGuard: () => {
+      const disk = buildOf(ctx).onDisk();
+      return disk ? rollbackRefusal(ctx.cfg.dataDir, disk.dispatchSchema, `The build on disk (${buildLabel(disk)})`) : undefined;
+    },
     builds: () => {
       const b = buildOf(ctx);
       return { running: b.running, ready: b.ready() };
