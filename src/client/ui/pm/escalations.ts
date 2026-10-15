@@ -15,13 +15,15 @@ import { ZONE_BY_TEAM } from '../../../shared/zones';
 import { lookFor, standing, type Outfit } from '../../pixel/chars';
 import './escalations.css';
 import { answerControls } from '../change-answer/controls';
+import { NO_WORK_REQUIRED } from '../../../shared/task-links';
 
 const VERDICT_DONE: Record<EscalationVerdict, string> = { reply: '💬 Replied', approve: '✅ Approved', reject: '❌ Rejected', dismiss: '✓ Noted' };
 
 /** Answers an escalation; the team as it is afterwards, or undefined (act toasts why) when refused. */
-export function answer(floor: string, e: Escalation, verdict: EscalationVerdict, text: string): Promise<RosterView | undefined> {
+export function answer(floor: string, e: Escalation, verdict: EscalationVerdict, text: string, noWork = false): Promise<RosterView | undefined> {
   // The answer revision the page saw (0 for an open one): answered meanwhile, the office says so (a 409) and nothing is sent.
-  return act(floor, 'escalation', { escalation: e.id, verdict, text, expectedRev: e.resolution?.answerRev ?? 0 });
+  // noWork (Slice 1B-4): the person also states no implementation work is required (an answer revision of that kind).
+  return act(floor, 'escalation', { escalation: e.id, verdict, text, expectedRev: e.resolution?.answerRev ?? 0, ...(noWork ? { noWork: true } : {}) });
 }
 
 /**
@@ -34,6 +36,7 @@ export function escalationCard(floor: string, e: Escalation, admin: boolean, don
   const tag = e.fyi ? 'FYI' : e.urgency.toUpperCase();
   const meta = [`${role?.icon ?? '🤖'} ${e.by}${role ? ` · ${role.title}` : ''}`, timeAgo(e.at), e.trigger ? TRIGGER_LABEL[e.trigger] : null].filter(Boolean).join(' · ');
   const reply = h('textarea.esc-reply', { rows: 1, placeholder: e.options.length ? 'Your answer (or pick an option)…' : 'Your answer…', 'aria-label': `Your answer to “${e.title}”` }) as HTMLTextAreaElement;
+  const noWorkBox = h('input', { type: 'checkbox' }) as HTMLInputElement;
   const send = (verdict: EscalationVerdict) => {
     const text = reply.value.trim();
     if ((verdict === 'reply' || verdict === 'reject') && !text) {
@@ -42,7 +45,7 @@ export function escalationCard(floor: string, e: Escalation, admin: boolean, don
       return;
     }
     for (const b of card.querySelectorAll<HTMLButtonElement>('button')) b.disabled = true;
-    void answer(floor, e, verdict, text).then((v) => {
+    void answer(floor, e, verdict, text, verdict !== 'dismiss' && noWorkBox.checked).then((v) => {
       for (const b of card.querySelectorAll<HTMLButtonElement>('button')) b.disabled = false;
       if (!v) return;
       reply.value = '';
@@ -82,6 +85,7 @@ export function escalationCard(floor: string, e: Escalation, admin: boolean, don
               h('button.btn.small.esc-reject', { type: 'button', title: `Reject: ${e.by} doesn't go ahead (say why)`, onclick: () => send('reject') }, '❌ Reject'),
               e.fyi ? h('button.btn.small', { type: 'button', title: 'Noted: resolve it without sending anything', onclick: () => send('dismiss') }, '✓ Noted') : null,
             ),
+            e.fyi ? null : h('label.esc-nowork', { title: `With your answer, record that no implementation work is required for it (${e.by} records the decision and starts no work for it)` }, noWorkBox, ` ${NO_WORK_REQUIRED}`),
           )
         : h('p.esc-meta', {}, 'Only the Project Manager (an admin) can answer it.'),
     resolved && e.resolution!.outcome !== 'superseded' ? answerControls(floor, `esc:${e.id}`, e.resolution!.answerRev, admin) : null,

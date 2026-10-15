@@ -1,0 +1,45 @@
+/* A decision revision's task links (Slice 1B-4, view.ts): strength tag, then the words. */
+.tl-box {
+  display: grid;
+  gap: 4px;
+}
+.tl-links {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+.tl-link {
+  overflow-wrap: anywhere;
+}
+.tl-tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: var(--info-soft);
+}
+.tl-tag[data-strength='associated'] {
+  background: var(--good-soft);
+}
+.tl-tag[data-strength='inferred'] {
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+}
+.tl-more,
+.tl-none {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.tl-none[data-kind='no-work'] {
+  color: var(--ink);
+}
+.tl-implemented {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}

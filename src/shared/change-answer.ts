@@ -13,7 +13,7 @@ import { VERDICT_WORD } from './roster/escalation.js';
 import type { RecordedOutcome } from './followthrough.js';
 import { recordedWords } from './followthrough.js';
 import { stateWords } from './dispatch.js';
-import type { DecisionLinks } from './task-links.js';
+import { NO_LINKS_FOUND, type DecisionLinks } from './task-links.js';
 
 /** How a linked piece of work is known: a field that points at the decision, or text the office read. */
 export type LinkStrength = 'recorded' | 'inferred';
@@ -33,8 +33,8 @@ export interface LinkedWork {
 /** Words for a link's strength. */
 export const LINK_WORDS: Record<LinkStrength, string> = { recorded: 'Recorded link', inferred: 'Inferred' };
 
-/** What shows when nothing is linked: never "no impact". */
-export const NO_LINKS = 'No linked work found. Task links arrive with task ids (1B-4)';
+/** What shows when nothing is linked: never "no impact", never "no work needed" (Slice 1B-4 shared/task-links.ts). */
+export const NO_LINKS = NO_LINKS_FOUND;
 
 /** One revision as the history shows it: full text, who and when, how it was handed on and what came of it. */
 export interface HistoryRev {

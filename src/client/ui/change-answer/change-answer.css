@@ -147,3 +147,9 @@
   font-size: 0.85rem;
   color: var(--warn-ink);
 }
+.ca-nowork {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}

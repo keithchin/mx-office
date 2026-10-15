@@ -6,7 +6,9 @@
 // detail is fetched once when it opens (api.ts); a 409 says what changed and shows the new current answer.
 
 import type { AnswerDetail, LinkedWork, QChangeKind } from '../../../shared/change-answer';
-import { LINK_WORDS, NO_LINKS, revDispatchWords, revOutcomeWords } from '../../../shared/change-answer';
+import { LINK_WORDS, revDispatchWords, revOutcomeWords } from '../../../shared/change-answer';
+import { NO_WORK_REQUIRED } from '../../../shared/task-links';
+import { taskLinksList } from '../task-links/view';
 import type { EscalationVerdict } from '../../../shared/roster/escalation';
 import { h, openModal, timeAgo, toast } from '../dom';
 import { freshDetail, loadDetail, sendChange } from './api';
@@ -53,24 +55,30 @@ export function openChangeAnswer(floor: string, decision: string, rev: number, d
       cur ? h('p.ca-rev-meta', {}, `${cur.by} · ${timeAgo(cur.at)} · Sent: ${revDispatchWords(cur)} · Follow-through: ${revOutcomeWords(cur)}`) : null,
       d.revs.length > 1 ? h('details.ca-hist', {}, h('summary', {}, `History (${d.revs.length} revisions)`), historyList(d)) : null,
     );
-    const links = h('section.ca-sec', { 'aria-label': `Work that used rev ${d.rev}` }, h('h3', {}, `Work that used rev ${d.rev}`), d.links.length ? h('ul.ca-links', {}, ...d.links.map(linkRow)) : h('p.ca-none', {}, NO_LINKS));
+    // The explicit links (1B-3) and the task links with their strength and evidence (1B-4); when there are none,
+    // "No links found" or the person's stated "No implementation work required", never one for the other.
+    const links = h('section.ca-sec', { 'aria-label': `Work that used rev ${d.rev}` }, h('h3', {}, `Work that used rev ${d.rev}`), d.links.length ? h('ul.ca-links', {}, ...d.links.map(linkRow)) : null, taskLinksList(d.taskLinks, { others: d.links.length }));
     if (d.blocked) {
       body.replaceChildren(current, h('p.ca-blocked', { role: 'note' }, d.blocked), links);
       sendBtn.disabled = true;
       return;
     }
     const ta = h('textarea.ca-text', { rows: 3, maxlength: 4000, 'aria-label': 'Your new answer' }) as HTMLTextAreaElement;
+    // Slice 1B-4: "No implementation work required": the answer stands as it is, restated as a new revision of that kind with your reason.
+    const noWorkBox = h('input', { type: 'checkbox', class: 'ca-nowork-box' }) as HTMLInputElement;
+    const noWork = h('label.ca-nowork', { title: 'The answer stands as it is; this records your choice that no implementation work is needed for it (a new revision). The text above is your reason.' }, noWorkBox, ` ${NO_WORK_REQUIRED}`);
     let fresh: HTMLElement;
-    let read: () => { verdict?: EscalationVerdict; kind?: QChangeKind; text: string; option?: string } | string;
+    let read: () => { verdict?: EscalationVerdict; kind?: QChangeKind; text: string; option?: string; noWork?: boolean } | string;
     if (d.input.kind === 'esc') {
       const inp = d.input;
       ta.placeholder = inp.options.length ? 'Your new answer (or pick an option)…' : 'Your new answer…';
       const opts = inp.options.length ? h('div.ca-opts', { role: 'group', 'aria-label': 'Options' }, ...inp.options.map((o) => h('button.btn.small.ca-opt', { type: 'button', class: o === inp.recommendation ? 'rec' : '', title: 'Use this option as your answer', onclick: () => ((ta.value = `Go with: ${o}`), ta.focus()) }, o === inp.recommendation ? `⭐ ${o}` : o))) : null;
       const verdicts: EscalationVerdict[] = inp.fyi ? ['reply', 'approve', 'reject', 'dismiss'] : ['reply', 'approve', 'reject'];
       const v = choices('Your answer is', verdicts, VERDICT_LABEL, 'reply', () => {});
-      fresh = h('section.ca-sec', { 'aria-label': 'New answer' }, h('h3', {}, 'New answer'), opts, ta, v.el);
+      fresh = h('section.ca-sec', { 'aria-label': 'New answer' }, h('h3', {}, 'New answer'), opts, ta, v.el, inp.fyi ? null : noWork);
       read = () => {
         const text = ta.value.trim();
+        if (noWorkBox.checked) return { noWork: true, text };
         if (v.get() === 'reply' && !text) return 'Write your new answer';
         if (v.get() === 'reject' && !text) return 'Say why it is rejected';
         return { verdict: v.get(), text };
@@ -87,9 +95,10 @@ export function openChangeAnswer(floor: string, decision: string, rev: number, d
       };
       const k = choices('Your answer is', kinds, Q_LABEL, 'answer', paint);
       paint('answer');
-      fresh = h('section.ca-sec', { 'aria-label': 'New answer' }, h('h3', {}, 'New answer'), k.el, prop, sel ?? null, ta);
+      fresh = h('section.ca-sec', { 'aria-label': 'New answer' }, h('h3', {}, 'New answer'), k.el, prop, sel ?? null, ta, noWork);
       read = () => {
         const text = ta.value.trim();
+        if (noWorkBox.checked) return { noWork: true, text };
         const kind = k.get();
         if (kind === 'moot' && !text) return 'Say why it is not relevant';
         if (kind === 'answer' && !text && !sel?.value) return 'Write the answer first';

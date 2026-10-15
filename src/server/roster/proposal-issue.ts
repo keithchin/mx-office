@@ -14,7 +14,7 @@ import type { Outcome, Target } from '../dispatch/service.js';
 import type { MadeIssue } from './issues.js';
 import type { Roster } from './index.js';
 import type { TeamFloor } from './types.js';
-import { withTaskLine } from '../../shared/tasks.js';
+import { taskLine } from '../../shared/tasks.js';
 
 /** The issue body with the proposal's marker as its last line. */
 export const withIssueMarker = (draft: IssueDraft, marker: string): IssueDraft => ({ ...draft, body: `${draft.body}\n\n---\n${marker}` });
@@ -43,7 +43,8 @@ export function issueTarget(roster: Roster, floor: TeamFloor, p: Proposal, by: s
       p.taskId ??= store.create(floor.id, { source: 'proposal', text: p.title }).id;
       let made: MadeIssue;
       try {
-        made = await make(withTaskLine(r.marker, p.taskId));
+        // The marker stays the body's last line (reconcile and people look for it there), the task line just above it.
+        made = await make(`${taskLine(p.taskId)}\n${r.marker}`);
       } catch (err) {
         return { state: 'outcome-unknown', note: `gh failed (${(err as Error).message.slice(0, 160)}): the issue may or may not exist` };
       }
