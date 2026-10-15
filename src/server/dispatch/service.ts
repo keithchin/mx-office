@@ -92,6 +92,11 @@ export class Dispatcher {
   private claims = new Set<string>();
   /** Step 8 for records settled later (reconcile, a person, Send again), by decision kind (esc, q, proposal…). */
   readonly appliers = new Map<string, Applier>();
+  /**
+   * Who else hears a record settle: `apply` runs before the decision kind's applier (true: it was theirs, the applier
+   * is skipped), `settled` after every write of a record (change-answer/pending.ts keeps a pending change in step).
+   */
+  readonly hooks = new Set<{ apply?(floorId: string, r: DispatchRecord): Promise<boolean>; settled?(floorId: string, r: DispatchRecord): void | Promise<void> }>();
 
   /** The records this process wrote: reconcile looks only at what an earlier run left (dispatch/reconcile.ts). */
   readonly mine = new Set<string>();
@@ -246,6 +251,13 @@ export class Dispatcher {
   private async put(floorId: string, r: DispatchRecord, actor?: AuditActor, by?: string): Promise<DispatchRecord> {
     this.mine.add(r.id);
     await this.store.put(floorId, r);
+    for (const hk of this.hooks) {
+      try {
+        await hk.settled?.(floorId, r);
+      } catch (err) {
+        console.error(`agent-office: dispatch: a hook failed on ${r.id}: ${(err as Error).message}`);
+      }
+    }
     const word = AUDIT_WORD[r.state] ?? r.state;
     const note = r.history[r.history.length - 1]?.note;
     try {
@@ -278,6 +290,14 @@ export class Dispatcher {
 
   /** Runs the applier for a record's decision kind (step 8 after reconcile or a person's word). */
   async apply(floorId: string, r: DispatchRecord) {
+    for (const hk of this.hooks) {
+      try {
+        if (await hk.apply?.(floorId, r)) return;
+      } catch (err) {
+        console.error(`agent-office: dispatch: couldn't apply ${r.id}: ${(err as Error).message}`);
+        return;
+      }
+    }
     const kind = r.decision.split(':')[0];
     const fn = this.appliers.get(kind);
     if (!fn) return;

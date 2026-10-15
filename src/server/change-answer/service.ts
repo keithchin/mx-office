@@ -7,8 +7,9 @@
 //      saying "This replaces my answer rev n to ESC-<id>: … Record it as `Decided per ESC-<id> rev n+1`";
 //   8. only once it settled: the escalation or the book entry points at rev n+1 and its dispatch, the
 //      follow-through starts again on n+1, and rev n's finding is kept for the history (store.ts).
-// A dispatch whose outcome is unclear leaves the record on rev n until reconcile or a person settles it
-// (applyLater, wired as the dispatcher's applier in index.ts). Every action is an admin's (the route checks).
+// A dispatch whose outcome is unclear leaves the record on rev n until reconcile or a person settles it: the
+// pending change is on disk before anything is typed (pending.ts), so that survives a restart, and nothing
+// moves on an unknown outcome. Every action is an admin's (the route checks).
 
 import path from 'node:path';
 import type { AuditInput } from '../../shared/audit.js';
@@ -26,6 +27,7 @@ import { pushExpected } from '../questions/book.js';
 import { citationRule } from '../roster/prompts.js';
 import { escalationLinks, questionLinks, type LinkSources } from './links.js';
 import { ChangeStore, type KeptOutcome } from './store.js';
+import { pendingFor, type PendingAnswers, type PendingEntry } from './pending.js';
 
 export interface ChangeDeps {
   dataDir: string;
@@ -46,7 +48,7 @@ export interface ChangeDeps {
 
 export type ChangeResult = { ok: true; rev: number; note?: string } | { ok: false; status: number; error: string; current?: unknown };
 
-/** What a change asked for, kept until its dispatch settles (an unclear one settles later). */
+/** What a change asked for (the pending entry's input, on disk until its dispatch settles). */
 interface Asked {
   rev: number;
   verdict?: EscalationVerdict;
@@ -62,15 +64,21 @@ const LEGACY = 'Answered before answer revisions were kept, so it can’t be cha
 const notYet = (at: number): Recording => ({ outcome: 'not-recorded-yet', at });
 const kindOfVerdict = (v: EscalationVerdict): AnswerRevisionKind => (v === 'approve' ? 'approve' : v === 'reject' ? 'reject' : v === 'dismiss' ? 'moot' : 'reply');
 const Q_REV_KIND: Record<QChangeKind, AnswerRevisionKind> = { answer: 'answer', accept: 'accept-proposal', moot: 'moot' };
+/** A dispatch that went nowhere (refused, failed): the decision stays where it was. */
+const dropped = (r: DispatchRecord) => r.state === 'refused' || r.state === 'failed';
+const notSentResult = (r: DispatchRecord | undefined, oldRev: number): ChangeResult | undefined => (r && dropped(r) ? { ok: false, status: 502, error: `Not sent (${r.history[r.history.length - 1]?.note ?? r.state}): the answer stays at rev ${oldRev}` } : undefined);
 const kept = (r: Recording | undefined): KeptOutcome | undefined => (r ? { outcome: r.outcome, ...(r.rev !== undefined ? { rev: r.rev } : {}) } : undefined);
 
 export class ChangeAnswer {
   readonly store: ChangeStore;
-  /** Changes whose dispatch hasn't settled yet, by floor|decision (in memory: a restart's unclear one waits for a person). */
-  private asked = new Map<string, Asked>();
+  /** Changes whose dispatch hasn't settled yet, on disk (shared with Send correction). */
+  readonly pending: PendingAnswers;
 
   constructor(private readonly deps: ChangeDeps) {
     this.store = new ChangeStore(path.join(deps.dataDir, 'change-answer'));
+    this.pending = pendingFor(deps.dataDir, deps.dispatcher);
+    this.pending.record = deps.record;
+    this.pending.register('change', (f, e, r) => this.finish(f, e, r));
   }
 
   private esc(floorId: string, decision: DecisionRef) {
@@ -179,25 +187,28 @@ export class ChangeAnswer {
     if (typeof make === 'string') return { ok: false, status: 400, error: make };
     const oldId = e.resolution!.dispatchId;
     const at = this.deps.now();
-    const key = `${floorId}|${decision}`;
     const res = await this.deps.dispatcher.answer(floorId, {
       decision,
       expectedRev: typeof b.expectedRev === 'number' ? b.expectedRev : -1,
       current: () => ({ rev: e.resolution?.answerRev ?? 0, state: `answered by ${e.resolution?.by ?? 'someone'}` }),
       revision: { kind: kindOfVerdict(verdict), ...(i.option ? { option: i.option } : {}), text, by: i.by, supersedes: oldRev },
       targets: (rev) => {
-        this.asked.set(key, { rev, verdict, text, ...(i.option ? { option: i.option } : {}), by: i.by, at, ...(oldId ? { oldId } : {}) });
         if (!make) return [];
         const prompt = [`The Project Manager (${i.by}) changed their answer to your escalation “${e.title}”.`, '', escChangeLine(e.id, oldRev, rev, words), '', citationRule(e.id, rev), `Anything you did on the strength of rev ${oldRev} may need to change: check it against this answer, and note in your journal what you changed.`].join('\n');
-        return [{ ...make(prompt), ...(oldId ? { supersedes: oldId } : {}) }];
+        const input = { verdict, text, ...(i.option ? { option: i.option } : {}), by: i.by, at, ...(oldId ? { oldId } : {}) };
+        return [this.pending.guard(floorId, { ...make(prompt), ...(oldId ? { supersedes: oldId } : {}) }, { decision, fromRev: oldRev, toRev: rev, kind: 'change', at, input })];
       },
       apply: async (rev, records) => {
-        this.asked.delete(key);
-        await this.applyEscalation(floorId, e, { rev, verdict, text, by: i.by, at, ...(oldId ? { oldId } : {}) }, records[0]);
+        const rec = records[0];
+        if (rec && dropped(rec)) return;
+        await this.applyEscalation(floorId, e, { rev, verdict, text, by: i.by, at, ...(oldId ? { oldId } : {}) }, rec);
+        if (rec) await this.pending.clear(floorId, rec.id);
       },
     });
     if (!res.ok) return { ok: false, status: res.status, error: res.error, ...(res.current ? { current: res.current } : {}) };
     const r = res.results[0];
+    const notSent = notSentResult(r.records[0], oldRev);
+    if (notSent) return notSent;
     this.audit(floorId, { decision, kind: 'escalation', id: e.id, label: e.title, by: i.by, owner: i.owner, rev: r.rev, words, dispatchId: r.records[0]?.id });
     return { ok: true, rev: r.rev, ...(r.pending ? { note: "Couldn't confirm the change was typed: say what happened on its card in Needs you" } : {}) };
   }
@@ -235,7 +246,6 @@ export class ChangeAnswer {
     const text = kind === 'accept' ? '' : i.text;
     const option = kind === 'answer' ? i.option : undefined;
     const next = { kind, text, option, by: i.by, at };
-    const ck = `${floorId}|${decision}`;
     let words = '';
     const res = await this.deps.dispatcher.answer(floorId, {
       decision,
@@ -243,19 +253,23 @@ export class ChangeAnswer {
       current: () => ({ rev: a.answerRev ?? 0, state: a.status }),
       revision: { kind: Q_REV_KIND[kind], ...(option ? { option } : {}), text, by: i.by, supersedes: oldRev },
       targets: (rev) => {
-        this.asked.set(ck, { rev, kind, text, ...(option ? { option } : {}), by: i.by, at, ...(oldId ? { oldId } : {}) });
         const copy: PmAnswer = { ...a, ...next, ...(text ? { text } : { text: undefined }), ...(option ? { option } : { option: undefined }), answerRev: rev };
         delete copy.fromClient;
         words = expectedWords(expectedOf(copy, q, rev));
-        return [{ ...make(`${qChangeLine(key, oldRev, rev, words)}\n\n${answersMessage([copy], new Map([[q.key, q]]), i.by)}`), ...(oldId ? { supersedes: oldId } : {}) }];
+        const input = { kind, text, ...(option ? { option } : {}), by: i.by, at, ...(oldId ? { oldId } : {}) };
+        return [this.pending.guard(floorId, { ...make(`${qChangeLine(key, oldRev, rev, words)}\n\n${answersMessage([copy], new Map([[q.key, q]]), i.by)}`), ...(oldId ? { supersedes: oldId } : {}) }, { decision, fromRev: oldRev, toRev: rev, kind: 'change', at, input })];
       },
       apply: async (rev, records) => {
-        this.asked.delete(ck);
-        await this.applyQuestion(floorId, qx, { rev, kind, text, ...(option ? { option } : {}), by: i.by, at, ...(oldId ? { oldId } : {}) }, records[0]);
+        const rec = records[0];
+        if (rec && dropped(rec)) return;
+        await this.applyQuestion(floorId, qx, { rev, kind, text, ...(option ? { option } : {}), by: i.by, at, ...(oldId ? { oldId } : {}) }, rec);
+        if (rec) await this.pending.clear(floorId, rec.id);
       },
     });
     if (!res.ok) return { ok: false, status: res.status, error: res.error, ...(res.current ? { current: res.current } : {}) };
     const r = res.results[0];
+    const notSent = notSentResult(r.records[0], oldRev);
+    if (notSent) return notSent;
     this.audit(floorId, { decision, kind: 'question', id: key, label: q.id, by: i.by, owner: i.owner, rev: r.rev, words, dispatchId: r.records[0]?.id });
     return { ok: true, rev: r.rev, ...(r.pending ? { note: "Couldn't confirm the change was typed: say what happened on its card in Needs you" } : {}) };
   }
@@ -283,22 +297,19 @@ export class ChangeAnswer {
   }
 
   /**
-   * A change's dispatch that settled later (reconcile found it typed, a person said it went through): its
-   * decision moves to the new revision now. True when it was a change's (the usual applier then has nothing to do).
+   * A pending change whose dispatch settled as typed later (reconcile found it, a person said it went through,
+   * Send again went), now or after a restart (pending.ts): the decision moves to the new revision. A decision
+   * no longer at the revision it replaced is left as it is.
    */
-  async applyLater(floorId: string, r: DispatchRecord): Promise<boolean> {
-    const key = `${floorId}|${r.decision}`;
-    const x = this.asked.get(key);
-    if (!x || x.rev !== r.answerRev) return false;
-    if (r.state !== 'submitted' && r.state !== 'person-confirmed-sent' && r.state !== 'held') return false;
-    this.asked.delete(key);
-    const e = this.esc(floorId, r.decision);
-    if (e && x.verdict) await this.applyEscalation(floorId, e, { ...x, verdict: x.verdict }, r);
-    else if (x.kind) {
-      const qx = await this.question(floorId, r.decision);
-      if (qx) await this.applyQuestion(floorId, qx, { ...x, kind: x.kind }, r);
+  private async finish(floorId: string, p: PendingEntry, r: DispatchRecord): Promise<void> {
+    const x = { ...(p.input as Omit<Asked, 'rev'>), rev: p.toRev };
+    const e = this.esc(floorId, p.decision);
+    if (e) {
+      if (e.resolution?.answerRev === p.fromRev && x.verdict) await this.applyEscalation(floorId, e, { ...x, verdict: x.verdict }, r);
+      return;
     }
-    return true;
+    const qx = await this.question(floorId, p.decision);
+    if (qx?.a?.answerRev === p.fromRev && x.kind) await this.applyQuestion(floorId, qx, { ...x, kind: x.kind }, r);
   }
 
   /** The dispatch a change replaces, marked so (its state stays what it was). */

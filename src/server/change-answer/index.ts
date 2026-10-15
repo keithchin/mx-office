@@ -1,8 +1,8 @@
 // Change answer wired to the office (Slice 1B-3): the service (service.ts) made once per office from what
 // the office already keeps (the roster's escalations, members' tasks and dispatcher, Recorded as given's
 // findings and targets, the Questions page's book, the model change requests), read and acted on by
-// /api/answers/* (http/routes/change-answer.ts). At start it joins the dispatcher's appliers, so a change
-// whose dispatch settles later (reconcile, a person's "It went through") moves its decision on then.
+// /api/answers/* (http/routes/change-answer.ts). A change whose dispatch settles later (reconcile, a person's
+// "It went through"), even after a restart, moves its decision on then (pending.ts).
 
 import type { Ctx } from '../office/context.js';
 import { audit } from '../audit/index.js';
@@ -74,18 +74,21 @@ export function changeAnswerOf(ctx: Ctx): ChangeAnswer {
   return s;
 }
 
-/** Joins the dispatcher's appliers (before the start's reconcile runs); returns what takes it out again. */
+/** How long after start the pending changes are looked at: after the dispatcher's reconcile (roster/adapter.ts, 3 s). */
+const SWEEP_MS = 10_000;
+
+/**
+ * Makes the service (its pending changes join the dispatcher's hooks, Send correction's too) and, once the
+ * start's reconcile has run, settles what a restart left: a change typed meanwhile moves on, an abandoned one
+ * is cleared, an unknown one waits for a person. Returns what stops it.
+ */
 export function startChangeAnswer(ctx: Ctx): () => void {
   const s = changeAnswerOf(ctx);
-  questionsOf(ctx); // its applier first, so ours wraps it
-  const appliers = rosterOf(ctx).dispatch.appliers;
-  const before = new Map(['esc', 'q'].map((k) => [k, appliers.get(k)]));
-  for (const [k, prev] of before)
-    appliers.set(k, async (floorId, r, line) => {
-      if (await s.applyLater(floorId, r)) return;
-      await prev?.(floorId, r, line);
-    });
-  return () => {
-    for (const [k, prev] of before) if (prev) appliers.set(k, prev);
-  };
+  const t = setTimeout(() => {
+    void (async () => {
+      for (const f of ctx.floors.values()) await s.pending.sweep(f.id).catch((err: unknown) => console.error(`agent-office: change-answer: couldn't settle ${f.id}'s pending changes: ${(err as Error).message}`));
+    })();
+  }, SWEEP_MS);
+  (t as { unref?: () => void }).unref?.();
+  return () => clearTimeout(t);
 }
