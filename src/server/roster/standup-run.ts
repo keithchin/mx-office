@@ -28,6 +28,7 @@ import type { InterruptChoice } from '../../shared/roster/interrupt.js';
 
 import type { Roster } from './index.js';
 import { dryRunMaker, envDryRun } from './issues.js';
+import { approveWithIssue, withIssueMarker } from './proposal-issue.js';
 import { readJournal } from './journal-io.js';
 import { outcomesPrompt, standupCompiledPrompt, standupPrompt } from './prompts.js';
 import { coordinatorIs, queueOnce } from './relays.js';
@@ -208,10 +209,12 @@ export class StandupRunner {
     this.roster.touch(floor);
   }
 
-  private makeIssue(floor: TeamFloor, p: Proposal, by: string, note?: string, env?: Record<string, string>) {
+  /** `marker`: a person's approval's office-proposal line, put in the body (proposal-issue.ts). */
+  makeIssue(floor: TeamFloor, p: Proposal, by: string, note?: string, env?: Record<string, string>, marker?: string) {
     const d = this.roster.data(floor.id);
     const make = d.settings.dryRunIssues || envDryRun() ? dryRunMaker : this.roster.deps.makeIssue;
-    return make(floor.dir, proposalIssue(p, by, d.settings.autonomy, note), env);
+    const draft = proposalIssue(p, by, d.settings.autonomy, note);
+    return make(floor.dir, marker ? withIssueMarker(draft, marker) : draft, env);
   }
 
   /**
@@ -219,7 +222,7 @@ export class StandupRunner {
    * reject (with the reason) or change (what to change; the Lead can propose it again). The Project
    * Coordinator is told.
    */
-  async decide(floor: TeamFloor, id: string, decision: Decision, by: string, reason?: string, env?: Record<string, string>): Promise<string | undefined> {
+  async decide(floor: TeamFloor, id: string, decision: Decision, by: string, reason?: string, env?: Record<string, string>, expectedRev?: number): Promise<string | undefined> {
     const d = this.roster.data(floor.id);
     const p = d.proposals.find((x) => x.id === id);
     if (!p) return 'No such proposal';
@@ -230,12 +233,11 @@ export class StandupRunner {
     if (this.approving.has(key)) return 'Already being approved';
     if (decision === 'approve') {
       // Claimed before the await: two approvals at once used to make two issues (the status check was before it).
+      // A durable dispatch (proposal-issue.ts): approved-without-issue on disk before makeIssue, never retried by itself.
       this.approving.add(key);
       try {
-        const issue = await this.makeIssue(floor, p, by, why, env);
-        if (issue.error) return `Couldn't make the issue: ${issue.error}`;
-        p.issue = issue;
-        p.status = 'approved';
+        const err = await approveWithIssue(this.roster, floor, p, by, why, (marker) => this.makeIssue(floor, p, by, why, env, marker), expectedRev);
+        if (err) return err;
       } finally {
         this.approving.delete(key);
       }

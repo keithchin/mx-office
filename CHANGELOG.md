@@ -6,7 +6,21 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Added
+
+- **Your answers are kept before they're sent, and never sent twice by a restart.** Every answer (a card, Approvals, the phone, a question's **Send**, a stuck item's answer, a model change request, a question to the lead, a proposal's approval) is written to disk in full before anything is typed, then the attempt to type it (who, which session, the exact text), and only after it went in does the escalation, question or proposal change. Typed answers end with a marker line, *[office answer dsp_… · ESC-3f9c2a1b7e rev 1]*. The office guarantees durable intent plus reconciliation, and no automatic replay of an ambiguous attempt; it does not promise exactly-once delivery.
+  - **After a restart** the office checks each unfinished attempt in the agent's own session, from where it was when the answer went out: only the typed message carrying the marker counts, never the marker quoted in a reply, a tool's output or another session.
+  - **Couldn't confirm your answer was typed to Linus**: when it can't tell, Needs you says so, with **Open Linus's terminal**, **Send again** (a new attempt), **It went through** (recorded as your confirmation, never shown as the office's) and **Abandon**.
+  - **Proposal issues are made at most once by the office.** The proposal is marked approved before GitHub is asked, and the issue body ends with *office-proposal: &lt;id&gt; rev &lt;n&gt;*. When the outcome is unclear, the card offers **Check GitHub** (only a match settles it: GitHub's search lags), **Create it** and **It exists: link #…**.
+  - **A stale answer is refused.** An answer to a decision someone else answered since you opened it gets *This decision changed since you opened it*, and nothing is written or typed; two answers at once, one wins.
+  - **Held answers survive a restart.** An answer waiting for the agent's turn is on disk at once and goes in once, after the turn, with the same attempt.
+- **The rollback guard.** `node bin/agent-office.js dispatch status` lists the unsettled answer attempts and exits 1 while there is one; 🔁 Restart safely refuses to restart onto a build older than them while any is unsettled. The procedure is in the docs: *Running the office › Rolling back to an older build*.
+
+### To know
+
+- The answer history is `<office data>/answers/<floor>.jsonl` (full text, hash-chained, fsync'd); the attempts are `<office data>/dispatch/<floor>.json`. Each answer costs a few small fsync'd writes; nothing new polls.
+- Answers and tells typed to agents now end with the marker line. Owed answers (a dialog was up) are marked in flight before they go in.
+- Going back to release 47: run `dispatch status` and settle what it lists first. Release 47 then sees escalations open or delivered, never owed for an attempt that may have gone in, and a proposal with an unclear issue as approved without one.
 
 ## 2026-10-15 · release 47 (`3055d0e`)
 

@@ -34,7 +34,7 @@ export const modelChangeRoutes = {
       const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
       if (!floor) return send(res, 404, { error: 'No such floor' });
       const by = session.account?.name ?? (typeof body.by === 'string' && body.by.trim() ? body.by.trim().slice(0, 32) : 'The Project Manager');
-      const r = changeRequestsOf(ctx).request(floor.id, { elements: body.elements, ref: body.ref, sha: body.sha, request: body.request, role: body.role, when: body.when, by, ...(session.account?.id ? { owner: session.account.id } : {}) });
+      const r = await changeRequestsOf(ctx).request(floor.id, { elements: body.elements, ref: body.ref, sha: body.sha, request: body.request, role: body.role, when: body.when, by, ...(session.account?.id ? { owner: session.account.id } : {}) });
       if (typeof r === 'string') return send(res, 400, { error: r });
       return send(res, 200, { request: r });
     },

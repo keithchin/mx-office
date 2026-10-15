@@ -45,6 +45,11 @@ export interface RestartDeps {
   changed?(): void;
   /** The build the office runs, and a newer one built since (build.ts). */
   builds?(): { running: RunningBuild; ready?: BuildInfo };
+  /**
+   * Why the build the restart would start must not run yet (dispatch/guard.ts: it predates the dispatch
+   * records and some are unsettled), or undefined. Asked right before the office exits.
+   */
+  dispatchGuard?(): string | undefined;
 }
 
 /** Ticks this far apart mean the computer slept (or the office froze) under the restart. */
@@ -217,6 +222,15 @@ export class SafeRestart {
         this.deps.changed?.();
         return;
       }
+    }
+    // A build older than the dispatch records, with some unsettled: not restarted onto (the rollback guard).
+    const refused = this.deps.dispatchGuard?.();
+    if (refused) {
+      this.phase = 'failed';
+      this.error = `${refused}. Cancel resumes the projects it paused.`;
+      audit.record({ actor: OFFICE_ACTOR, action: 'restart.failed', target: TARGET, summary: 'The safe restart stopped: unsettled answer dispatches and an older build', details: { why: refused }, severity: 'warning' });
+      this.deps.changed?.();
+      return;
     }
     this.phase = 'exiting';
     audit.record({ actor: OFFICE_ACTOR, action: 'restart.exiting', target: TARGET, summary: `${this.deps.loop ? `Restarting the office${interrupting.length ? `, interrupting ${interrupting.map((b) => b.name).join(', ')}` : ''}` : 'Exiting the office: start it again to finish the restart'}${this.runningLabel() ? ` (it ran ${this.runningLabel()})` : ''}`, details: { interrupting, loop: this.deps.loop, build: this.build }, severity: interrupting.length ? 'warning' : 'notice' });

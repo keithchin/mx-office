@@ -66,6 +66,12 @@ export interface RosterDeps {
   dataDir: string;
   floors(): TeamFloor[];
   makeIssue: IssueMaker;
+  /**
+   * Searches the repository checked out at `dir` for the issue whose body has `marker` (a proposal's
+   * office-proposal line): the issue, null when none was found (not conclusive: GitHub's index lags),
+   * undefined when it couldn't search. Only the real office has it.
+   */
+  findIssue?: (dir: string, marker: string) => Promise<{ number: number; url?: string } | null | undefined>;
   /** A few lines of the analyzer's numbers for a floor, for the Chief Analyst's standup. */
   analysis(floorId: string): string;
   now(): number;

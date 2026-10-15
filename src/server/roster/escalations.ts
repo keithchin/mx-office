@@ -10,18 +10,20 @@
 import { dropKeys, forgetWith } from '../office/forget.js';
 import { randomBytes } from 'node:crypto';
 import type { WorkerInfo } from '../../shared/protocol.js';
-import { OUTCOME_VERDICT, URGENCY_ICON, VERDICT_WORD, isAlarming, escalationOrder, makeEscalation, type Escalation, type EscalationAsk, type EscalationOutcome, type EscalationVerdict } from '../../shared/roster/escalation.js';
-import { escalationKind } from '../../shared/decisions/words.js';
+import { URGENCY_ICON, isAlarming, escalationOrder, makeEscalation, type Escalation, type EscalationAsk, type EscalationOutcome, type EscalationVerdict } from '../../shared/roster/escalation.js';
+import { answerMarker } from '../../shared/dispatch.js';
+import type { AnswerResult } from '../dispatch/service.js';
+import { answerEscalation, answerLineOf, type EscalationAnswer } from './escalation-answer.js';
+import { answerError, sendAsAnswer } from './dispatch-send.js';
 import { ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
 import { URGENCIES, isFyi } from '../../shared/roster/autonomy.js';
 import { isAsleepStatus } from './bench.js';
-import { mayType } from './deliver.js';
 import { sameAsk } from './jeff-ask.js';
 import { coordinatorIs, queueOnce } from './relays.js';
 import { managerRole } from './coverage.js';
 import { SameAsk } from './jeff-same.js';
 import type { Roster } from './index.js';
-import { escalationAnswerPrompt, escalationsToCoordinatorPrompt } from './prompts.js';
+import { escalationsToCoordinatorPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
 import { audit, agent, byWhom, jeff, office } from '../audit/index.js';
 import { relayedToCoordinator } from '../chatter/hooks.js';
@@ -33,8 +35,18 @@ const RESOLVED_SHOWN = 10;
 /** An answer a worker (not a team member) couldn't be told when it came is typed to it within this long. */
 const OWED_MS = 24 * 3_600_000;
 
-/** An answer as one line of the message that carries several. */
-const answerLine = (e: Escalation) => `- “${e.title}”: ${e.resolution!.outcome === 'done' ? `DONE (${e.resolution!.by} says it's done: please re-check)` : VERDICT_WORD[e.resolution!.verdict]}${e.resolution!.text && e.resolution!.outcome !== 'done' ? ` — ${e.resolution!.text}` : ''} (${e.resolution!.by})`;
+/** An owed answer as a line of the message that carries several, with its dispatch's marker line after it when it has one. */
+const owedLine = (e: Escalation, dispatchId: string | undefined) => {
+  const line = answerLineOf(e, e.resolution!);
+  return dispatchId && e.resolution!.answerRev ? `${line}\n${answerMarker(dispatchId, `esc:${e.id}`, e.resolution!.answerRev)}` : line;
+};
+
+/** Answers owed to an agent: their lines, the durable dispatches among them, and `mark` once typed. */
+export interface Owed {
+  lines: string[];
+  dispatchIds?: string[];
+  mark(): void;
+}
 
 export class Escalations {
   /** The Coordinator's debounce per floor; what it's to hear is in the roster file's outbox. */
@@ -159,71 +171,19 @@ export class Escalations {
    * re-hires the role, and the answer is in its first message (Members.hire carries owed answers), so
    * the project picks up again without anyone hiring by hand. Not while hiring is paused by the cost
    * cap: then the answer waits for its next hire.
+   *
+   * A durable dispatch (escalation-answer.ts, server/dispatch/): the answer revision and each dispatch
+   * intent are on disk before anything is typed, and the escalation is resolved only once they settled.
+   * Durable intent plus reconciliation, and no automatic replay of an ambiguous attempt. The error, or
+   * undefined; answer() gives the full result (a 409 with the current state when expectedRev is stale).
    */
-  resolve(floor: TeamFloor, id: string, verdict: EscalationVerdict, raw: unknown, by: string, outcome?: EscalationOutcome): string | undefined {
-    const d = this.roster.data(floor.id);
-    const e = d.escalations.find((x) => x.id === id);
-    if (!e) return 'No such escalation';
-    if (e.status === 'resolved') return `Already answered by ${e.resolution?.by ?? 'someone'}`;
-    // Noted is an FYI's answer and never resolves a decision; I've done it is a hands-on action's, never an approval.
-    if (outcome) {
-      const { kind } = escalationKind(e);
-      if (outcome === 'noted' && kind !== 'fyi') return 'Noted is only for an FYI: this one asks something, so answer it';
-      if (outcome === 'done' && kind !== 'hands-on') return "I've done it is only for a hands-on action";
-      verdict = OUTCOME_VERDICT[outcome].verdict;
-    }
-    const own = typeof raw === 'string' ? raw.replace(/\r\n?/g, '\n').trim().slice(0, 4000) : '';
-    const text = outcome === 'done' ? own || OUTCOME_VERDICT.done.text : outcome === 'noted' ? OUTCOME_VERDICT.noted.text : own;
-    if (verdict === 'reply' && !text) return 'Write your reply';
-    if (verdict === 'reject' && !text) return 'Say why it is rejected';
-    let delivered = false;
-    let rehire = false;
-    /** Who'll be told once the question in their terminal is answered: never typed into a dialog, where Enter would pick an option. */
-    const later: string[] = [];
-    // A dismissed FYI doesn't spend a turn of the agent's; anything else is an answer it acts on.
-    if (verdict !== 'dismiss') {
-      const member = e.role ? d.members[e.role] : undefined;
-      const w = floor.worker(e.workerId) ?? (member ? this.roster.workerOf(floor, member) : undefined);
-      // One writing its handoff is about to be stopped: the answer is kept, and finishBench brings it back with it.
-      const leaving = !!w && !!member && member.phase === 'benching' && member.workerId === w.id;
-      if (!w && e.role) rehire = true;
-      const prompt = escalationAnswerPrompt(e, verdict, text, by, outcome);
-      // A dialog may be up (a permission prompt, a question, booting): the answer stays owed and goes in once its turn is over (Delivery.onWorker).
-      const busy = (x: WorkerInfo) => !mayType(x.status) && !isAsleepStatus(x.status);
-      if (w && w.kind === 'agent' && !leaving) {
-        if (busy(w)) later.push(e.by);
-        else {
-          // `by`: the turn acting on a person's answer is theirs, not the office's (it flags when it's done).
-          const r = this.roster.delivery.send(floor, w, prompt, { origin: 'person', by, wake: true, resume: true });
-          delivered = r.status !== 'refused';
-          if (r.status === 'refused') floor.toast(`Couldn't send the answer to ${e.by}: ${r.why}. It's kept for its next session.`, 'warn');
-        }
-      }
-      // Those that +1'd it (raiseOrJoin) hear the answer too, when they're still at their desks.
-      for (const a of e.also ?? []) {
-        const other = floor.worker(a.workerId);
-        if (!other || other.kind !== 'agent' || other.id === w?.id) continue;
-        if (busy(other)) {
-          a.pending = true;
-          later.push(a.by);
-          continue;
-        }
-        const r = this.roster.delivery.send(floor, other, prompt, { origin: 'person', by, wake: true, resume: true });
-        if (r.status === 'refused') floor.toast(`Couldn't send the answer to ${a.by}, who raised the same`, 'warn');
-      }
-    }
-    e.status = 'resolved';
-    e.resolution = { verdict, text, by, at: this.roster.deps.now(), delivered, ...(outcome ? { outcome } : {}) };
-    const said = outcome === 'done' ? "said it's done for" : outcome === 'noted' ? 'noted' : `answered (${verdict})`;
-    audit.record({ floor: floor.id, actor: byWhom(by), action: 'escalation.answer', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `${outcome === 'done' ? `Said it's done (${e.by} re-checks):` : outcome === 'noted' ? 'Noted the FYI:' : `Answered ${e.by}'s escalation (${verdict}):`} ${e.title}`, details: { verdict: outcome ?? verdict, ...(outcome ? { legacyVerdict: verdict } : {}), delivered, rehire, ...(later.length ? { later } : {}), reply: text ? { length: text.length } : undefined } });
-    floor.activity?.(`✅ ${by} ${said} ${e.by}'s escalation: ${e.title}`);
-    if (later.length) floor.activity?.(`⏳ ${later.join(', ')} ${later.length === 1 ? 'has' : 'have'} a question open in ${later.length === 1 ? 'its' : 'their'} terminal: the answer goes in once that's answered`);
-    // A Lead's `ask` to warn, bench, swap or reinstate a subagent: approving it does it.
-    this.roster.subagents.onEscalationResolved(floor, e.id, verdict, by);
-    this.roster.touch(floor);
-    this.roster.jeff.priority.kick(floor);
-    if (rehire && e.role) this.rehire(floor, e.role);
-    return undefined;
+  async resolve(floor: TeamFloor, id: string, verdict: EscalationVerdict, raw: unknown, by: string, outcome?: EscalationOutcome, expectedRev?: number): Promise<string | undefined> {
+    return answerError(await this.answer(floor, id, { verdict, raw, by, outcome, expectedRev }));
+  }
+
+  /** resolve, with the dispatcher's full result. */
+  answer(floor: TeamFloor, id: string, a: EscalationAnswer): Promise<AnswerResult> {
+    return answerEscalation(this.roster, floor, id, a);
   }
 
   /**
@@ -250,15 +210,18 @@ export class Escalations {
    * Tells the agent that raised one something without answering it (a hands-on card's Can't now, a gone
    * line's Still needed): typed after its turn; the escalation stays open.
    */
-  tell(floor: TeamFloor, id: string, what: string, text: string, by: string): string | undefined {
+  async tell(floor: TeamFloor, id: string, what: string, text: string, by: string): Promise<string | undefined> {
     const d = this.roster.data(floor.id);
     const e = d.escalations.find((x) => x.id === id);
     if (!e || e.status !== 'open') return 'That escalation is no longer open';
     const member = e.role ? d.members[e.role] : undefined;
     const w = floor.worker(e.workerId) ?? (member ? this.roster.workerOf(floor, member) : undefined);
     if (!w || w.kind !== 'agent') return `${e.by} isn't at work to tell`;
-    const r = this.roster.delivery.send(floor, w, text, { origin: 'person', by, wake: true, resume: true });
-    if (r.status === 'refused') return `Couldn't tell ${e.by}: ${r.why}`;
+    // A durable dispatch of its own (tell:esc-<id>): the escalation stays open, its answer revision untouched.
+    const { result, sent } = await sendAsAnswer(this.roster, floor, w, text, { origin: 'person', by, wake: true, resume: true }, { decision: `tell:esc-${e.id}`, by });
+    if (!result.ok) return result.error;
+    if (!sent || sent.status === 'refused') return `Couldn't tell ${e.by}: ${sent?.status === 'refused' ? sent.why : 'not sent'}`;
+    if (e.status !== 'open') return undefined;
     e.told = { at: this.roster.deps.now(), what, by };
     if (e.sourceGone && what === 'still needed') e.sourceGone.asked = e.told.at;
     audit.record({ floor: floor.id, actor: byWhom(by), action: 'escalation.tell', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `Told ${e.by} (${what}), kept open: ${e.title}`, details: { what } });
@@ -285,11 +248,11 @@ export class Escalations {
 
   /**
    * Brings a gone-home member back to act on the answers it's owed: a fresh hire primed with its
-   * handoff note and those answers. Fire and forget (resolve is synchronous); a failure is toasted and
+   * handoff note and those answers. Fire and forget (the answer is settled already); a failure is toasted and
    * the answers stay owed. Answers that arrive while the hire is under way are owed too, and reach it
    * once its first turn is over (owedTo, typed by Delivery.onWorker).
    */
-  private rehire(floor: TeamFloor, role: RoleId) {
+  rehireRole(floor: TeamFloor, role: RoleId) {
     const key = `${floor.id}:${role}`;
     if (this.hiring.has(key)) return;
     const d = this.roster.data(floor.id);
@@ -314,7 +277,7 @@ export class Escalations {
 
   /** A member was just benched: answered escalations it hasn't heard yet bring it straight back. */
   afterBench(floor: TeamFloor, role: RoleId) {
-    if (this.owed(floor, role).lines.length) this.rehire(floor, role);
+    if (this.owed(floor, role).lines.length) this.rehireRole(floor, role);
   }
 
   /**
@@ -324,23 +287,54 @@ export class Escalations {
    * ones it +1'd. `mark` once they're typed. None for a member that isn't at work (writing its handoff:
    * its next hire carries them).
    */
-  owedTo(floor: TeamFloor, w: WorkerInfo): { lines: string[]; mark(): void } {
+  owedTo(floor: TeamFloor, w: WorkerInfo, ok?: ReadonlySet<string>): Owed {
     const d = this.roster.data(floor.id);
     const role = this.roster.roleOf(floor, w.id);
     const m = role ? d.members[role] : undefined;
-    if (m && (m.phase !== 'active' || m.workerId !== w.id)) return { lines: [], mark() {} };
+    if (m && (m.phase !== 'active' || m.workerId !== w.id)) return { lines: [], dispatchIds: [], mark() {} };
     const since = this.roster.deps.now() - OWED_MS;
+    // A durable answer goes in only once its dispatch was marked in flight (`ok`, deliver.ts); without `ok`, every one is listed.
+    const may = (id: string | undefined) => !id || !ok || ok.has(id);
     const answered = d.escalations.filter((e) => e.status === 'resolved' && e.resolution && e.resolution.verdict !== 'dismiss');
-    const own = answered.filter((e) => !e.resolution!.delivered && ((!!role && e.role === role) || (e.workerId === w.id && e.resolution!.at >= since)));
-    const plus = answered.flatMap((e) => (e.also ?? []).filter((a) => a.pending && a.workerId === w.id).map((a) => ({ e, a })));
+    const own = answered.filter((e) => !e.resolution!.delivered && ((!!role && e.role === role) || (e.workerId === w.id && e.resolution!.at >= since)) && may(e.resolution!.dispatchId));
+    const plus = answered.flatMap((e) => (e.also ?? []).filter((a) => a.pending && a.workerId === w.id && may(a.dispatchId)).map((a) => ({ e, a })));
+    const ids = [...own.flatMap((e) => (e.resolution!.dispatchId ? [e.resolution!.dispatchId] : [])), ...plus.flatMap((p) => (p.a.dispatchId ? [p.a.dispatchId] : []))];
     return {
-      lines: [...own, ...plus.map((p) => p.e)].map(answerLine),
+      lines: [...own.map((e) => owedLine(e, e.resolution!.dispatchId)), ...plus.map((p) => owedLine(p.e, p.a.dispatchId))],
+      dispatchIds: ids,
       mark: () => {
         own.forEach((e) => (e.resolution!.delivered = true));
         plus.forEach((p) => delete p.a.pending);
         if (own.length || plus.length) this.roster.touch(floor, true);
+        if (ids.length) this.typedOwed(floor, ids);
       },
     };
+  }
+
+  /** Owed answers whose dispatch settled already (typed before a restart lost the roster's note): marked told, never typed again. */
+  owedSettled(floor: TeamFloor, ids: readonly string[]) {
+    let changed = false;
+    for (const e of this.roster.data(floor.id).escalations) {
+      if (e.resolution?.dispatchId && ids.includes(e.resolution.dispatchId) && !e.resolution.delivered) {
+        e.resolution.delivered = true;
+        changed = true;
+      }
+      for (const a of e.also ?? []) {
+        if (!a.pending || !a.dispatchId || !ids.includes(a.dispatchId)) continue;
+        delete a.pending;
+        changed = true;
+      }
+    }
+    if (changed) this.roster.touch(floor, true);
+  }
+
+  /** Owed durable answers typed: their dispatches settled, the roster's delivered flags on disk at once. */
+  private typedOwed(floor: TeamFloor, ids: string[]) {
+    void this.roster.dispatch.typed(floor.id, ids);
+    void this.roster
+      .file(floor.id)
+      .flushCritical()
+      .catch(() => undefined);
   }
 
   /** What the console and the approvals show: the open ones, loudest first, then the latest answered. */
@@ -354,11 +348,16 @@ export class Escalations {
    * Answers a role's next hire carries, for escalations answered while it was away: their lines, and
    * `mark` to call once the hire went through, so a failed hire doesn't lose them.
    */
-  owed(floor: TeamFloor, role: string): { lines: string[]; mark(): void } {
+  owed(floor: TeamFloor, role: string): Owed {
     const list = this.roster.data(floor.id).escalations.filter((e) => e.role === role && e.status === 'resolved' && e.resolution && !e.resolution.delivered && e.resolution.verdict !== 'dismiss');
+    const ids = list.flatMap((e) => (e.resolution!.dispatchId ? [e.resolution!.dispatchId] : []));
     return {
-      lines: list.map(answerLine),
-      mark: () => list.forEach((e) => (e.resolution!.delivered = true)),
+      lines: list.map((e) => owedLine(e, e.resolution!.dispatchId)),
+      dispatchIds: ids,
+      mark: () => {
+        list.forEach((e) => (e.resolution!.delivered = true));
+        if (ids.length) this.typedOwed(floor, ids);
+      },
     };
   }
 

@@ -29,6 +29,7 @@ import { cardExtras, fyiCard, genericCard, goneCard, handsOnCard, otherEscalatio
 import { decisionAct } from '../decisions/api';
 import { decisionCheck } from '../decisions/feed';
 import { stuckView } from '../stuck/feed';
+import { dispatchNotices } from '../dispatch/card';
 
 export interface NeedsCardDeps {
   /** Opens a tab (Waive is on the Testing tab). */
@@ -63,7 +64,9 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
   const counts = h('p.pt-needs-counts', { role: 'status' });
   const hidden = h('div.pt-needs-hidden');
   let showHidden = false;
-  const el = h('section.pt-ov-card.pt-needs', { id: 'pt-needs', 'aria-labelledby': 'pt-needs-h' }, h('div.pt-ov-card-h', {}, heading, count), counts, list);
+  // Answers whose outcome the office couldn't establish (server/dispatch/): above the rest, until you settle each.
+  const notices = dispatchNotices();
+  const el = h('section.pt-ov-card.pt-needs', { id: 'pt-needs', 'aria-labelledby': 'pt-needs-h' }, h('div.pt-ov-card-h', {}, heading, count), counts, notices.el, list);
   /** Each item's element by its key, with what it was drawn from. */
   let drawn = new Map<string, { sig: string; el: HTMLElement }>();
   /** Answered here, shown as done until the project changes. */
@@ -87,7 +90,7 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
       buttons.forEach((b) => (b.disabled = true));
       // A card that folds other escalations answers them all (FYIs among them noted): server/decisions/.
       const others = card ? otherEscalations(card) : [];
-      const v = others.length ? ((await decisionAct(floor, { action: 'answer', escalation: e.id, others, verdict: a.verdict, text: a.text })) ? r : undefined) : await answer(floor, e, a.verdict, a.text);
+      const v = others.length ? ((await decisionAct(floor, { action: 'answer', escalation: e.id, others, verdict: a.verdict, text: a.text, expectedRev: e.resolution?.answerRev ?? 0 })) ? r : undefined) : await answer(floor, e, a.verdict, a.text);
       buttons.forEach((b) => (b.disabled = false));
       if (!v) return;
       answered.set(e.id, { title: e.title, text: `${a.text.replace(/^Go with: /, '')} · sent to ${e.by}` });
@@ -189,6 +192,7 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
       list.replaceChildren();
     }
     const r = s.roster?.floor === s.floor ? s.roster : undefined;
+    notices.update(s.floor, !!r?.admin, s.go);
     const lead = leadOf(r);
     const leadName = lead && lead.kind === 'lead' ? lead.name : undefined;
     const items = s.items.filter((n) => !(n.target.to === 'escalation' && answered.has(n.target.id)));

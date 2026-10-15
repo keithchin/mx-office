@@ -112,7 +112,7 @@ test('V5: passed on the PR head, nothing on the merge commit: "passed on PR head
   assert.equal(verifyIntegrated({ policy: DEFAULT_POLICY, records: [...records, rec(MERGE, [{ name: 'pr-checks', status: 'failed' }])], head: HEAD, merge: MERGE }).state, 'not-verified');
 });
 
-test('"Covers:" in a PR description is a recorded link, read from the body the PR list already has', () => {
+test('"Covers:" in a PR description is a recorded link, read from the body the PR list already has', async () => {
   assert.deepEqual(coversLinks('Adds the approval step.\n\nCovers: AC-04, BR012, J-02\n', 'PR #3').map((l) => [l.target, l.basis]).sort(), [['AC-04', 'recorded'], ['BR012', 'recorded'], ['J-02', 'recorded']]);
   assert.deepEqual(coversLinks('**Covers:** AC-1', 'PR #3').map((l) => l.target), ['AC-1']);
   assert.deepEqual(coversLinks('No covers line, though AC-04 is mentioned', 'PR #3'), []);
@@ -318,7 +318,7 @@ test('test first: "N acceptance criteria have no linked test" is raised once (St
   assert.equal(await testFirst(dataDir, roster, floor, { stage4: true, stage5: false }, 1), 'updated');
   assert.equal(roster.data(floor.id).escalations.length, 1, 'updated, not raised again');
   assert.equal(roster.data(floor.id).escalations[0].title, '1 acceptance criterion has no linked test');
-  roster.escalations.resolve(floor, asks[0].id, 'dismiss', '', 'Ann');
+  await roster.escalations.resolve(floor, asks[0].id, 'dismiss', '', 'Ann');
   assert.equal(await testFirst(dataDir, roster, floor, { stage4: true, stage5: false }, 4), 'none', 'answered: never raised again');
   assert.deepEqual(floor.typed, [], 'nobody is prompted');
   assert.deepEqual(stageLookOf({ toolkit: true, show: false, stages: [{ id: '4' }], verdicts: [{ id: '5', status: 'PENDING' }], decisions: [] }), { stage4: true, stage5: false });

@@ -274,11 +274,13 @@ test("the Project Manager's quick questions carry the run state: Running with th
   await pauseAll(w);
   // Paused: a person's question still goes in (it wakes the Coordinator), and says so.
   const STATUS = "Give me a short status update on the project: what's done, what's in progress and who's on it, and anything that needs me.";
-  assert.equal(w.roster.interrupts.tell(w.floor, STATUS, 'Keith', 'now'), undefined);
+  assert.equal(await w.roster.interrupts.tell(w.floor, STATUS, 'Keith', 'now'), undefined);
   const asked = w.floor.wakes.at(-1)!;
   assert.equal(asked.id, ids.pm);
   assert.match(asked.text ?? '', /^\[Office facts, Sat 10 Oct \d\d:\d\d\] Project: Paused by Keith since Sat 10 Oct \d\d:\d\d\. Agents working: .*\(you\)/);
-  assert.ok((asked.text ?? '').endsWith(`\n\n${STATUS}`));
+  // The question, then its durable dispatch's marker line (server/dispatch/).
+  assert.ok((asked.text ?? '').includes(`\n\n${STATUS}\n\n[office answer dsp_`));
+  assert.match(asked.text ?? '', / · TELL-lead rev \d+\]$/);
   assert.match(asked.text ?? '', new RegExp(`asleep: [^.]*${dev} \\(Lead Developer\\)`));
   // Resumed: Running, since when and why. The Coordinator is idle; the developer is at work.
   w.floor.set(ids.pm, 'idle');
@@ -287,7 +289,7 @@ test("the Project Manager's quick questions carry the run state: Running with th
   w.floor.set(ids['lead-developer'], 'working');
   w.floor.set(ids.pm, 'idle');
   w.floor.prompts.length = 0;
-  assert.equal(w.roster.interrupts.tell(w.floor, "What's blocking the team right now?", 'Keith', 'now'), undefined);
+  assert.equal(await w.roster.interrupts.tell(w.floor, "What's blocking the team right now?", 'Keith', 'now'), undefined);
   const text = w.floor.prompts.at(-1)!.text;
   assert.match(text, /^\[Office facts, [^\]]+\] Project: Running \(last resumed Sat 10 Oct \d\d:\d\d, after a pause by Keith\)\. Agents working: /);
   assert.ok(text.includes(`working: ${dev} (Lead Developer)`), text);

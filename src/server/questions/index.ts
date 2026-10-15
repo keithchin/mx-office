@@ -16,6 +16,7 @@ import type { Ctx } from '../office/context.js';
 import { execFileOff } from '../offloop/exec.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import type { SendOpts } from '../roster/deliver.js';
+import { typeTarget } from '../roster/dispatch-send.js';
 import { stuckSettings } from '../stuck/settings.js';
 import { registerStuckSource } from '../stuck/sources.js';
 import { parseToolkitEnv, TOOLKIT_ENV_FILE } from '../toolkit-env.js';
@@ -125,14 +126,23 @@ export function questionsOf(ctx: Ctx): QuestionsService {
       const m = d.members[coverOf(d.coverage, 'analysis')];
       return m && m.phase === 'active' ? asRecipient(roster.workerOf(teamFloor(ctx, floor), m)) : undefined;
     },
-    send(f, workerId, text, by, when) {
+    async send(f, workerId, text, by, when, _owner, covers = []) {
       const floor = floorOf(f);
       const w = floor?.workers.get(workerId);
       if (!floor || !w) return 'That agent is no longer on the project';
-      // The team's one way of typing into an agent (roster/deliver.ts): held for the end of its turn unless now.
-      const r = rosterOf(ctx).delivery.send(teamFloor(ctx, floor), w, text, sendOpts(by, when));
-      return r.status === 'refused' ? r.why : undefined;
+      const roster = rosterOf(ctx);
+      const tf = teamFloor(ctx, floor);
+      const first = covers[0] ?? { decision: `q:send:${workerId}`, answerRev: 0 };
+      // A durable dispatch carrying every answer (covers), through the team's one way of typing into an agent
+      // (roster/deliver.ts): held for the end of its turn unless now. No new revision: each answer has its own.
+      const r = await roster.dispatch.answer(floor.id, { decision: first.decision, current: () => ({ rev: first.answerRev }), useRev: first.answerRev, targets: () => [typeTarget(roster, tf, w, text, sendOpts(by, when), { covers })] });
+      if (!r.ok) return r.error;
+      const rec = r.results[0]?.records[0];
+      if (!rec) return 'Not sent';
+      if (rec.state === 'refused' || rec.state === 'failed') return rec.history[rec.history.length - 1]?.note ?? 'Not sent';
+      return { dispatchId: rec.id, ...(rec.state === 'submitted' || rec.state === 'held' ? {} : { unknown: true }) };
     },
+    answer: (f, spec) => rosterOf(ctx).dispatch.answer(f.id, spec),
     decisionHours: () => {
       const st = stuckSettings();
       return st.on ? st.decisionHours : undefined;
@@ -141,6 +151,8 @@ export function questionsOf(ctx: Ctx): QuestionsService {
   });
   services.set(ctx.cfg, s);
   const made = s;
+  // A Send settled later (reconcile found it typed, a person said it went through, Send again went): the answers are sent.
+  rosterOf(ctx).dispatch.appliers.set('q', (floorId, r) => made.dispatched(floorId, r));
   registerStuckSource((f, now) => made.stuckDrafts({ id: f.id, name: f.name, dir: f.dir }, now));
   return s;
 }

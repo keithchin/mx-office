@@ -4,6 +4,7 @@ import { join, resolve, sep } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { buildDocSite } from './src/server/docsite.ts';
 import { BUILD_INFO_FILE, releaseInfo, type BuildInfo } from './src/shared/build-info.ts';
+import { DISPATCH_SCHEMA } from './src/shared/dispatch.ts';
 
 // The whiteboard's fonts (Excalidraw's hand-drawn Virgil/Excalifont and friends), served by the
 // office itself rather than a CDN. Excalidraw looks for them under window.EXCALIDRAW_ASSET_PATH;
@@ -89,7 +90,7 @@ function buildInfo(): BuildInfo {
     // no changelog: the commit alone
   }
   const version = (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version?: string }).version ?? '0.0.0';
-  return { sha: sha || version, ...release, builtAt: Date.now() };
+  return { sha: sha || version, ...release, builtAt: Date.now(), dispatchSchema: DISPATCH_SCHEMA };
 }
 const BUILD = buildInfo();
 

@@ -33,6 +33,8 @@ import { audit, office } from '../audit/index.js';
 import { HELD_TTL_MS, heldId, holdOnce, type HeldPrompt } from './held.js';
 import { withResume } from './resume.js';
 import type { TeamFloor } from './types.js';
+import { withMarker } from '../../shared/dispatch.js';
+import { sessionAt } from './dispatch-session.js';
 
 /** Who a prompt is from: a person, the office itself, or another agent (`office-workers tell`). */
 export type Origin = 'person' | 'office' | 'agent';
@@ -67,6 +69,11 @@ export interface SendOpts {
   note?: boolean;
   /** The run-state fact block before it, as things are when it's typed (awareness.ts): the Project Manager's questions to the Coordinator. */
   facts?: boolean;
+  /**
+   * A person's answer as a durable dispatch (server/dispatch/): its id (the held prompt's id too) and its
+   * marker line, typed as the text's own last line (a resume line or notes may go round it, never inside).
+   */
+  dispatch?: { id: string; marker: string; /** The exact block recorded before typing (dispatch-send.ts); else the text and the marker. */ payload?: string };
 }
 
 export type Sent = { status: 'sent' | 'woke' | 'held' } | { status: 'refused'; why: string };
@@ -94,6 +101,10 @@ export class Delivery {
   /** Types `text` into agent `w`, or wakes it with it, holds it, or says why not. */
   send(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts): Sent {
     if (w.kind !== 'agent') return { status: 'refused', why: `${w.name} is a shell, not an agent` };
+    if (o.dispatch) {
+      text = o.dispatch.payload ?? withMarker(text, o.dispatch.marker);
+      o = { ...o, id: o.dispatch.id };
+    }
     // A person's prompt with no name is still theirs: the turn it starts flags when done (OFFICE_BY's wouldn't).
     if (o.origin === 'person' && !o.by) o = { ...o, by: 'The Project Manager' };
     if (o.origin !== 'person') {
@@ -135,6 +146,24 @@ export class Delivery {
   private resumes = (o: SendOpts) => o.resume ?? o.origin === 'office';
 
   /**
+   * Whether send() would type (or wake with) a prompt now rather than hold or refuse it, as things are:
+   * a durable answer typed now carries its resume line inside its payload, so its marker is the typed
+   * message's own last line (dispatch-send.ts).
+   */
+  typesNow(floor: TeamFloor, w: WorkerInfo, o: SendOpts): boolean {
+    if (w.kind !== 'agent') return false;
+    if (o.origin !== 'person' && (this.roster.pauseOf(this.roster.data(floor.id)) || projectPauseOf(floor.id))) return false;
+    const held = o.origin === 'office' && !o.interrupt;
+    if (isAsleepStatus(w.status)) return !!o.wake;
+    return mayType(w.status) && !((o.between || held) && !between(w.status));
+  }
+
+  /** The resume line a prompt to `w` would end with now (resume.ts), when its options ask for one. */
+  resumed(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts): string {
+    return this.resumes(o) ? withResume(text, this.roster.tasks.line(floor, w)) : text;
+  }
+
+  /**
    * What goes in before a message as it's typed (awareness.ts): the once-only "the project was resumed"
    * note for an agent that slept through the pause, then, with `facts`, the run-state fact block.
    */
@@ -157,7 +186,7 @@ export class Delivery {
   private hold(floor: TeamFloor, w: WorkerInfo, text: string, o: SendOpts) {
     const now = this.roster.deps.now();
     const id = o.id ?? heldId(w.id, o.origin, text, o.by);
-    holdOnce(this.roster.data(floor.id).held, { id, workerId: w.id, origin: o.origin, ...(o.by ? { by: o.by } : {}), text, createdAt: now, expiresAt: now + (o.ttlMs ?? HELD_TTL_MS), ...(this.resumes(o) ? { resume: true } : {}), ...(o.facts ? { facts: true } : {}) });
+    holdOnce(this.roster.data(floor.id).held, { id, workerId: w.id, origin: o.origin, ...(o.by ? { by: o.by } : {}), text, createdAt: now, expiresAt: now + (o.ttlMs ?? HELD_TTL_MS), ...(this.resumes(o) ? { resume: true } : {}), ...(o.facts ? { facts: true } : {}), ...(o.dispatch ? { dispatchId: o.dispatch.id } : {}) });
     if (o.onSent) this.sentFns.set(id, [...(this.sentFns.get(id) ?? []), o.onSent]);
     this.roster.touch(floor, true);
   }
@@ -210,21 +239,66 @@ export class Delivery {
     return [...due];
   }
 
+  /** Workers (floor:worker) whose held answers are being marked in flight before they're typed. */
+  private marking = new Set<string>();
+
   /**
    * Every worker update: once its turn is over, the answers it's owed and the prompts held for it go
    * in, as one message. An agent that went to sleep with prompts held is woken with them. While the
-   * cap holds, only what people sent goes; the rest waits.
+   * cap holds, only what people sent goes; the rest waits. Durable answers among them (a dispatch id,
+   * server/dispatch/) are marked in flight first, with where to look for them, and typed only once that
+   * is on disk; the rest go in with them.
    */
   onWorker(floor: TeamFloor, w: WorkerInfo) {
     if (w.kind !== 'agent') return;
+    const key = `${floor.id}:${w.id}`;
+    if (this.marking.has(key)) return;
+    const due = this.due(floor, w);
+    if (!due) return;
+    if (!due.ids.length) return this.typeDue(floor, w, due, new Set());
+    this.marking.add(key);
+    void sessionAt(floor, w)
+      .then((at) => this.roster.dispatch.beforeType(floor.id, due.ids, at))
+      .catch(() => new Set<string>())
+      .then((ok) => {
+        this.marking.delete(key);
+        // Already settled (typed before a restart lost the roster's note of it): never typed again, only let go.
+        const done = due.ids.filter((id) => !ok.has(id) && this.roster.dispatch.isSettled(floor.id, id));
+        if (done.length) this.letGo(floor, w, done);
+        const now = floor.worker(w.id);
+        const again = now && this.due(floor, now);
+        if (now && again) this.typeDue(floor, now, again, ok);
+      });
+  }
+
+  /** Held prompts and owed answers whose dispatch already settled: off the list, the escalation's note made true. */
+  private letGo(floor: TeamFloor, w: WorkerInfo, ids: string[]) {
+    const held = this.heldOf(floor.id, w.id).filter((h) => h.dispatchId && ids.includes(h.dispatchId));
+    if (held.length) this.drop(floor, held.map((h) => h.id));
+    this.roster.escalations.owedSettled(floor, ids);
+  }
+
+  /** What would go in now, and the dispatch ids among it; undefined when nothing would. */
+  private due(floor: TeamFloor, w: WorkerInfo): { going: HeldPrompt[]; owed?: ReturnType<Roster['escalations']['owedTo']>; asleep: boolean; ids: string[] } | undefined {
+    if (w.kind !== 'agent') return undefined;
     const asleep = isAsleepStatus(w.status);
-    if (!between(w.status) && !asleep) return;
+    if (!between(w.status) && !asleep) return undefined;
     const paused = !!this.paused(floor);
     const now = this.roster.deps.now();
     const queued = this.heldOf(floor.id, w.id).filter((h) => h.expiresAt > now);
     const going = queued.filter((h) => !paused || h.origin === 'person');
     // An asleep one isn't woken for owed answers alone: its next hire or wake carries them.
     const owed = asleep ? undefined : this.roster.escalations.owedTo(floor, w);
+    if (!going.length && !owed?.lines.length) return undefined;
+    const ids = [...going.flatMap((h) => (h.dispatchId ? [h.dispatchId] : [])), ...(owed?.dispatchIds ?? [])];
+    return { going, owed, asleep, ids };
+  }
+
+  /** Types what's due, leaving out durable answers that weren't marked in flight (`ok`): they wait for the next turn's end. */
+  private typeDue(floor: TeamFloor, w: WorkerInfo, due: NonNullable<ReturnType<Delivery['due']>>, ok: ReadonlySet<string>) {
+    const { asleep } = due;
+    const going = due.going.filter((h) => !h.dispatchId || ok.has(h.dispatchId));
+    const owed = due.owed?.dispatchIds?.length ? this.roster.escalations.owedTo(floor, w, ok) : due.owed;
     if (!going.length && !owed?.lines.length) return;
     const joined = [...(owed?.lines.length ? [owedAnswersPrompt(owed.lines)] : []), ...going.map((h) => h.text)].join(JOIN);
     // One resume line at the end, for the office's words and the answers it's owed (resume.ts).
@@ -241,7 +315,14 @@ export class Delivery {
     owed?.mark();
     const fns = going.flatMap((h) => this.sentFns.get(h.id) ?? []);
     this.drop(floor, going.map((h) => h.id));
+    const typedIds = going.flatMap((h) => (h.dispatchId ? [h.dispatchId] : []));
+    if (typedIds.length) void this.roster.dispatch.typed(floor.id, typedIds);
     for (const fn of fns) fn();
+  }
+
+  /** Takes one held prompt back: its durable save failed, so it mustn't go in unrecorded (dispatch-send.ts). */
+  unhold(floor: TeamFloor, id: string) {
+    this.drop(floor, [id]);
   }
 
   /** A worker left the floor: what was held for it goes with it. */

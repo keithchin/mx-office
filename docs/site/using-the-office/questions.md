@@ -56,6 +56,8 @@ Answers wait in a bar at the bottom: *7 answers ready · Send to Tim*. **Send to
 
 If the analyst is working, it asks **OK to interrupt?**: **After their current turn** (the default: the office holds it until the turn ends) or **Interrupt now**, the same choice as the console's. The analyst goes back to its task afterwards.
 
+Each answer you give is kept in the project's answer history before the book changes, and **Send** is written down before it's typed, with a marker line at the end of the message. If the office stops while sending and can't confirm afterwards that the message reached the analyst, the answers stay **ready to send** and Needs you asks you to settle it (**Send again**, **It went through**, **Abandon**). What the office guarantees is **durable intent plus reconciliation, and no automatic replay of an ambiguous attempt**. It does not promise that an answer is delivered exactly once. An answer changed by someone else since you opened the page is refused, with nothing written.
+
 An answer shows as **recorded** only once a later collection reads its status as ANSWERED, ASSUMED or MOOT.
 
 ## Export for the client, and their answers back

@@ -114,9 +114,18 @@ export const ID_VALIDATORS: Record<IdField, (v: unknown) => boolean> = {
 };
 
 /** The ids an audit event (AuditInput.ids) or a new record may carry, all optional. */
-export type RecordedIds = Partial<Record<IdField, string>> & { spanId?: string; parentSpanId?: string };
+export type RecordedIds = Partial<Record<IdField, string>> & {
+  spanId?: string;
+  parentSpanId?: string;
+  /** Durable dispatch (shared/dispatch.ts): the attempt, the decision it carries and that decision's answer revision. */
+  dispatchId?: string;
+  decision?: string;
+  answerRev?: number;
+};
 
 const SPAN_RE = /^[A-Za-z0-9_.:-]{1,64}$/;
+const DISPATCH_RE = new RegExp(`^dsp_${ULID}$`);
+const DECISION_RE = /^(esc|q|stuck|proposal|mcr|tell):[^\n\r]{1,300}$/;
 
 /** `ids` with every field that isn't a valid id of its kind dropped; undefined when none is left. */
 export function cleanIds(ids: unknown): RecordedIds | undefined {
@@ -125,5 +134,8 @@ export function cleanIds(ids: unknown): RecordedIds | undefined {
   const out: RecordedIds = {};
   for (const f of ID_FIELDS) if (ID_VALIDATORS[f](src[f])) out[f] = src[f] as string;
   for (const f of ['spanId', 'parentSpanId'] as const) if (typeof src[f] === 'string' && SPAN_RE.test(src[f] as string)) out[f] = src[f] as string;
+  if (typeof src.dispatchId === 'string' && DISPATCH_RE.test(src.dispatchId)) out.dispatchId = src.dispatchId;
+  if (typeof src.decision === 'string' && DECISION_RE.test(src.decision)) out.decision = src.decision;
+  if (typeof src.answerRev === 'number' && Number.isInteger(src.answerRev) && src.answerRev >= 0) out.answerRev = src.answerRev;
   return Object.keys(out).length ? out : undefined;
 }

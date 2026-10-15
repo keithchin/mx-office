@@ -122,19 +122,22 @@ export const rosterRoutes = {
           if (!DECISIONS.has(decision)) return send(res, 400, { error: 'approve, reject or change' });
           const as = owner ? ctx.signins.ghAs(owner) : undefined;
           if (typeof as === 'string') return send(res, 400, { error: as });
-          error = await roster.standups.decide(team, String(body.proposal ?? ''), decision, by, typeof body.reason === 'string' ? body.reason : undefined, as?.env);
+          error = await roster.standups.decide(team, String(body.proposal ?? ''), decision, by, typeof body.reason === 'string' ? body.reason : undefined, as?.env, typeof body.expectedRev === 'number' && Number.isInteger(body.expectedRev) ? body.expectedRev : undefined);
           break;
         }
         case 'escalation': {
           // The Project Manager's answer to an escalation: back to the agent that raised it, and resolved.
           if (!isEscalationVerdict(body.verdict)) return send(res, 400, { error: 'reply, approve, reject or dismiss' });
-          error = roster.escalations.resolve(team, String(body.escalation ?? ''), body.verdict, body.text, by);
+          // A durable dispatch (roster/escalation-answer.ts): expectedRev, when the page sends it, makes a stale answer a 409 with the current state.
+          const expectedRev = typeof body.expectedRev === 'number' && Number.isInteger(body.expectedRev) ? body.expectedRev : undefined;
+          const r = await roster.escalations.answer(team, String(body.escalation ?? ''), { verdict: body.verdict, raw: body.text, by, expectedRev });
+          if (!r.ok) return send(res, r.status, { error: r.error, ...(r.current ? { current: r.current } : {}) });
           break;
         }
         case 'tell':
           // A question for the Coordinator from the console: now or after its current turn, and its relays to busy Leads as picked.
           if (typeof body.prompt !== 'string') return send(res, 400, { error: 'Say what to ask' });
-          error = roster.interrupts.tell(team, body.prompt, by, body.when === 'after' ? 'after' : 'now', cleanChoices(body.leads, 'ask'), owner);
+          error = await roster.interrupts.tell(team, body.prompt, by, body.when === 'after' ? 'after' : 'now', cleanChoices(body.leads, 'ask'), owner);
           break;
         case 'nudge':
           // Needs you's Nudge: an idle member with an open task, told to carry on or escalate.

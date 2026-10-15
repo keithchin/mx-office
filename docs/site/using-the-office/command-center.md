@@ -100,6 +100,23 @@ Escalations from before decision cards have no ids of their own: the card reads 
 
 **Finished, not looked at yet.** An agent that ended its turn and that nobody has opened since counts as waiting on you. Its worker card says *👀 Finished, not looked at yet: … open it to see*. Opening its terminal clears it.
 
+### Answers whose outcome is unknown
+
+Every answer you give (on a card, in Approvals, from the phone, a question's **Send**, a stuck item's answer, a model change request, a question to the lead) is written to disk before anything is typed: first your answer, in full, then the attempt to type it (who it's for, which session, the exact text). Only after it went in does the card change. What the office guarantees is **durable intent plus reconciliation, and no automatic replay of an ambiguous attempt**. It does not promise that an answer is delivered exactly once.
+
+If the office stopped while it was sending, it looks when it starts again: in the agent's own session, from where it was when the answer went out, for the typed message that carries the answer's marker line (*[office answer dsp_… · ESC-3f9c2a1b7e rev 1]*). Only that message counts: the marker quoted in the agent's reply, in a tool's output or in another session proves nothing. Found, the card settles as typed. Not found, or the session can't be read, the card in Needs you says so:
+
+> ⚠ **Couldn't confirm your answer was typed to Linus**
+> **Open Linus's terminal** · **Send again** · **It went through** · **Abandon**
+
+- **Send again** types it once more as a new attempt (a new marker), never the office on its own.
+- **It went through** records *your* confirmation. It is shown as yours (*You said it went through*), never as the office seeing it.
+- **Abandon** stops tracking the attempt; the decision stays as it was (an escalation stays open, so you can answer it again).
+
+A proposal's issue works the same way. The proposal is marked approved before the office asks GitHub to make the issue, and the issue body ends with *office-proposal: &lt;id&gt; rev &lt;n&gt;*. When the outcome is unclear (gh failed or timed out, or the office stopped), the card says *The issue may or may not have been created* with **Check GitHub** (one search for the marker: only a match settles it, because GitHub's search can lag minutes), **Create it** and **It exists: link #…**. The office never makes the issue again by itself.
+
+A decision that changed since you opened the card (someone else answered it) is refused with *This decision changed since you opened it*, and nothing is written or typed. Every one of these actions is an admin's, checked by the office (`POST /api/dispatch/action`), and audited as `dispatch.*`.
+
 **Answer → lands on the escalation in one step.** In Portal the Overview scrolls to its card in Needs you, the card is outlined and **Send answer** gets the focus; in the other themes it opens Approvals.
 
 ## 🧰 Project setup

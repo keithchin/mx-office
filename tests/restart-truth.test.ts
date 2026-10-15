@@ -193,3 +193,24 @@ test('the version banner: a restart under way first, then a page newer or older 
   assert.match(bannerFor({ view: view({ ready: R46, loop: false }) }, R45)?.text ?? '', /Restart the office to use it\./);
   assert.equal(bannerFor({ view: view() }, R45), undefined);
 });
+
+test('rollback-with-unresolved-operation (Restart safely): a build on disk older than unsettled dispatch records is not restarted onto', async () => {
+  assert.equal(parseBuildInfo({ sha: 'abc1234', dispatchSchema: 1 })?.dispatchSchema, 1);
+  assert.equal(parseBuildInfo({ sha: 'abc1234' })?.dispatchSchema, undefined, 'release 47 builds have none');
+  const record = audit.record;
+  audit.record = () => undefined;
+  try {
+    const { s, r } = stub({ dispatchGuard: () => 'The build on disk (release 47 (3055d0e)) predates durable dispatch (schema 0 < 1) and 2 answer dispatches are unsettled' });
+    r.start('Keith', { timeoutMin: 10 });
+    await r.tick();
+    assert.equal(r.phase, 'failed');
+    assert.deepEqual(s.exits, [], 'the office keeps running');
+    assert.match(r.view(true).error ?? '', /predates durable dispatch .* Cancel resumes the projects it paused/);
+    const ok = stub({ dispatchGuard: () => undefined });
+    ok.r.start('Keith', { timeoutMin: 10 });
+    await ok.r.tick();
+    assert.equal(ok.r.phase, 'exiting');
+  } finally {
+    audit.record = record;
+  }
+});

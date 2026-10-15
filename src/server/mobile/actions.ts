@@ -88,7 +88,7 @@ export async function runAction(ctx: Ctx, a: MobileAction, who: Actor, deps: Act
       case 'escalation': {
         if (!isEscalationVerdict(a.verdict)) return { ok: false, status: 400, error: 'approve, reject or reply' };
         if ((a.verdict === 'reject' || a.verdict === 'reply') && !a.text?.trim()) return { ok: false, status: 400, error: a.verdict === 'reject' ? 'Say why it is rejected: the agent is told' : 'Write a reply' };
-        const err = roster().escalations.resolve(team(), a.escalation, a.verdict, a.text ?? '', who.name);
+        const err = await roster().escalations.resolve(team(), a.escalation, a.verdict, a.text ?? '', who.name);
         if (err) return { ok: false, status: 400, error: err };
         const summary = `${a.verdict === 'approve' ? 'Approved' : a.verdict === 'reject' ? 'Rejected' : 'Answered'} ${esc!.by}'s escalation: ${esc!.title}`;
         record(summary, { escalation: a.escalation, verdict: a.verdict });

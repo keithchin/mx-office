@@ -73,9 +73,9 @@ export function stuckOf(ctx: Ctx): StuckService {
       const w = t.roster.workerOf(t.tf, m);
       return { name: m.name, working: w?.status === 'working' };
     },
-    tell(f, text, by, when, owner) {
+    tell(f, text, by, when, owner, decision) {
       const t = team(f);
-      return t ? t.roster.interrupts.tell(t.tf, text, by, when, {}, owner) : 'No such project';
+      return t ? t.roster.interrupts.tell(t.tf, text, by, when, {}, owner, decision) : 'No such project';
     },
     openEscalations(f) {
       const t = team(f);

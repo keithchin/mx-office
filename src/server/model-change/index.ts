@@ -6,7 +6,8 @@ import type { Ctx } from '../office/context.js';
 import { audit } from '../audit/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { ROLES } from '../../shared/roster/roles.js';
-import { ChangeRequests, deliveryOpts, type ChangeMember } from './service.js';
+import { ChangeRequests, deliveryOpts, type ChangeMember, type Delivered } from './service.js';
+import { sendAsAnswer } from '../roster/dispatch-send.js';
 
 const services = new WeakMap<object, ChangeRequests>();
 
@@ -38,7 +39,13 @@ export function changeRequestsOf(ctx: Ctx): ChangeRequests {
       if (!w) return { status: 'refused', why: `${m.name} isn't at work` };
       // Once it's typed it's the member's task (roster/resume.ts), as a prompt from the Board's New task is.
       const onSent = () => (o.onSent(), roster.tasks.assign(tf, w.id, text, o.by));
-      return roster.delivery.send(tf, w, text, deliveryOpts(o.when, o.by, o.id, onSent));
+      // A durable dispatch (roster/dispatch-send.ts): the request appended as mcr:<id>'s revision, the intent on disk before typing.
+      return sendAsAnswer(roster, tf, w, text, deliveryOpts(o.when, o.by, o.id, onSent), { decision: `mcr:${o.id.split(':').pop()}`, by: o.by, kind: 'answer' }).then(({ result, sent }): Delivered => {
+        if (!result.ok) return { status: 'refused', why: result.error };
+        const rec = result.results[0]?.records[0];
+        if (!sent) return { status: 'refused', why: 'not sent' };
+        return { ...sent, ...(rec ? { dispatchId: rec.id } : {}) };
+      });
     },
     pulls: (floorId) => floorOf(floorId)?.github.pulls.items ?? [],
     worker: (floorId, id) => floorOf(floorId)?.workers.get(id),

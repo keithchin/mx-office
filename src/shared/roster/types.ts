@@ -121,6 +121,9 @@ export interface Proposal {
   issue?: { number?: number; url?: string; dryRun?: boolean; error?: string };
   decidedBy?: string;
   decidedAt?: number;
+  /** The answer store's revision of the approval, and the dispatch that made its issue (server/dispatch/). */
+  answerRev?: number;
+  dispatchId?: string;
 }
 
 export interface StandupReportView {

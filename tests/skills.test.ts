@@ -90,7 +90,7 @@ test('the Playbook lists the enabled skills with their gate in plain words, and 
 const runs = (outcomes: string, model = 'sonnet', ci: ('pass' | 'fail' | undefined)[] = []): SubagentRun[] =>
   [...outcomes].map((c, i) => ({ id: `r${i}`, at: i + 1, model, outcome: c === 'a' ? 'accept' : c === 'r' ? 'rework' : c === 'f' ? 'failed' : 'pending', ...(ci[i] ? { ci: ci[i] } : {}) }) as SubagentRun);
 
-test('the scorer grades the last 5 reviewed runs per model, from 3, and flags underperformers', () => {
+test('the scorer grades the last 5 reviewed runs per model, from 3, and flags underperformers', async () => {
   assert.deepEqual([95, 90, 89, 80, 79, 70, 69, 60, 59, 0].map(gradeOf), ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D', 'F', 'F']);
   const two = scoreSubagent(runs('aa'), 'sonnet');
   assert.equal(two.grade, undefined, 'fewer than 3 reviewed runs: ungraded');
@@ -217,7 +217,7 @@ test('the gates: ask raises an escalation and approving it benches; propose wait
   const e = t.data().escalations.at(-1)!;
   assert.match(e.title, /asks to bench [A-Z][a-z]+ \(developer\)/);
   assert.equal(t.data().subagents['lead-developer/developer']?.state ?? 'active', 'active', 'nothing happens before the answer');
-  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'approve', '', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'approve', '', 'Keith'), undefined);
   assert.equal(t.data().subagents['lead-developer/developer'].state, 'benched');
   assert.ok(existsSync(path.join(cwd, '.claude/agents.benched/developer.md')));
   assert.equal(t.data().subagentActions.at(-1)!.status, 'approved');

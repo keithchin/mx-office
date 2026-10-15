@@ -19,7 +19,7 @@ import { envDryRun } from './issues.js';
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { Roster, rosterFor } from './index.js';
-import { ghIssueMaker } from './issues.js';
+import { ghIssueFinder, ghIssueMaker } from './issues.js';
 import type { HireAsk, TeamFloor } from './types.js';
 import { onSubagentEvent } from '../workers/subagents.js';
 import { notedTranscript } from '../convo/index.js';
@@ -146,6 +146,7 @@ export function rosterOf(ctx: Ctx): Roster {
       dataDir: ctx.cfg.dataDir,
       floors: () => [...ctx.floors.values()].map((f) => teamFloor(ctx, f)),
       makeIssue: ghIssueMaker,
+      findIssue: ghIssueFinder,
       analysis: (id) => analysisLines(ctx, id),
       now: () => Date.now(),
       judge: (text, questions, opts) => judgeOf(ctx).ask(text, questions, opts),
@@ -164,6 +165,9 @@ export function rosterOf(ctx: Ctx): Roster {
       for (const f of ctx.floors.values()) void roster.subagents.live.scanSoon(teamFloor(ctx, f)).catch(() => false);
     }, SCAN_MS);
     scan.unref?.();
+    // What a restart left unsettled: looked at once, a moment after start, off the event loop (dispatch/reconcile.ts).
+    const once = setTimeout(() => void roster.reconcile().catch(() => undefined), 3_000);
+    once.unref?.();
     return roster;
   });
 }

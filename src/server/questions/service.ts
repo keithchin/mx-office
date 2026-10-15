@@ -15,6 +15,13 @@ import type { StuckDraft } from '../../shared/stuck.js';
 import { emptyBook, markSent, ready, reviveBook, setAnswer, sinceOf, takeCollection, type BookData } from './book.js';
 import type { Collector, Folder } from './collect.js';
 import { exportRows, type ExportRow, type ExportWhich } from './export.js';
+import type { AnswerResult, AnswerSpec } from '../dispatch/service.js';
+import type { AnswerRevisionKind, DecisionRef } from '../../shared/dispatch.js';
+
+/** What a Send came to: an error, or the dispatch that carried it (`unknown`: its outcome couldn't be established). */
+export type QSendResult = string | undefined | { error?: string; dispatchId?: string; unknown?: boolean };
+
+const REV_KIND: Record<AnswerKind | 'clear', AnswerRevisionKind> = { answer: 'answer', accept: 'accept-proposal', moot: 'moot', 'ask-client': 'noted', clear: 'correction' };
 
 /** How often each floor is collected on its own. */
 export const COLLECT_MS = 5 * 60_000;
@@ -38,7 +45,9 @@ export interface QuestionsDeps {
   /** Who a question's answer goes to: its worktree's agent when it's at work on the floor, else whoever covers Analysis. */
   recipientOf(floor: QFloor, q: Question): Recipient | undefined;
   /** Types `text` into worker `workerId` as the person (after their turn unless `now`): an error, or undefined. */
-  send(floor: QFloor, workerId: string, text: string, by: string, when: 'now' | 'after', owner?: string): string | undefined;
+  send(floor: QFloor, workerId: string, text: string, by: string, when: 'now' | 'after', owner?: string, covers?: { decision: DecisionRef; answerRev: number }[]): QSendResult | Promise<QSendResult>;
+  /** The durable answer path (server/dispatch/): the stale check, the claim and the answer store. Without it (a test), answers are kept as before. */
+  answer?(floor: QFloor, spec: AnswerSpec): Promise<AnswerResult>;
   /** Hours a decision may wait before it's stuck (stuck detection's setting), and whether stuck detection is on. */
   decisionHours(): number | undefined;
   record(e: AuditInput): void;
@@ -169,12 +178,37 @@ export class QuestionsService {
   }
 
   /** The person's answer to one question (kind 'clear' takes it back): the error, or undefined. */
-  async answer(floor: QFloor, key: string, kind: AnswerKind | 'clear', o: { text?: string; option?: string; by: string; owner?: string }): Promise<string | undefined> {
+  async answer(floor: QFloor, key: string, kind: AnswerKind | 'clear', o: { text?: string; option?: string; by: string; owner?: string; expectedRev?: number }): Promise<string | undefined> {
+    return (await this.answerResult(floor, key, kind, o))?.error;
+  }
+
+  /**
+   * answer, with the error's status: a 409 (with the current revision) when `expectedRev` is stale. With the
+   * durable path, the revision is appended to the answer store (claim first, fsync'd) before the book changes.
+   */
+  async answerResult(floor: QFloor, key: string, kind: AnswerKind | 'clear', o: { text?: string; option?: string; by: string; owner?: string; expectedRev?: number }): Promise<{ error: string; status: number; current?: unknown } | undefined> {
     const d = await this.book(floor.id);
     const q = d.set?.questions.find((x) => x.key === key);
-    if (!q) return 'No such question (collect again?)';
-    const err = setAnswer(d, q, { kind, ...(o.text !== undefined ? { text: o.text } : {}), ...(o.option ? { option: o.option } : {}), by: o.by, at: this.deps.now() });
-    if (err) return err;
+    if (!q) return { error: 'No such question (collect again?)', status: 400 };
+    const input = { kind, ...(o.text !== undefined ? { text: o.text } : {}), ...(o.option ? { option: o.option } : {}), by: o.by, at: this.deps.now() };
+    if (this.deps.answer) {
+      const r = await this.deps.answer(floor, {
+        decision: `q:${key}`,
+        expectedRev: o.expectedRev,
+        current: () => ({ rev: d.answers[key]?.answerRev ?? 0, state: d.answers[key]?.status ?? 'unanswered' }),
+        // The checks setAnswer makes, on a copy: nothing is written when they fail.
+        check: () => setAnswer(structuredClone(d), q, input),
+        revision: { kind: REV_KIND[kind], ...(o.option ? { option: o.option } : {}), text: (o.text ?? '').trim(), by: o.by },
+        apply: (rev) => {
+          setAnswer(d, q, input);
+          if (d.answers[key]) d.answers[key].answerRev = rev;
+        },
+      });
+      if (!r.ok) return { error: r.error, status: r.status, ...(r.current ? { current: r.current } : {}) };
+    } else {
+      const err = setAnswer(d, q, input);
+      if (err) return { error: err, status: 400 };
+    }
     this.deps.record({ floor: floor.id, actor: { kind: 'human', name: o.by, ...(o.owner ? { id: o.owner } : {}) }, action: 'questions.answer', target: { kind: 'question', id: q.key, label: q.id }, summary: kind === 'clear' ? `Took back the answer to ${q.id}` : `${kind === 'accept' ? 'Accepted the proposal for' : kind === 'moot' ? 'Marked not relevant:' : kind === 'ask-client' ? 'To ask the client:' : 'Answered'} ${q.id} (${q.file})`, details: { kind, ...(o.text ? { text: o.text.slice(0, 500) } : {}) }, severity: 'info' });
     await this.save(floor.id, d);
     return undefined;
@@ -197,9 +231,18 @@ export class QuestionsService {
     const { answers, recipient, text } = await this.draft(floor, to, o.by);
     if (!answers.length) return 'No answers are ready to send to them';
     if (!recipient) return 'Nobody is at work to record them (no analyst on the team)';
-    const err = this.deps.send(floor, recipient.workerId, text, o.by, o.when, o.owner);
-    if (err) return err;
     const d = await this.book(floor.id);
+    // One dispatch carrying every answer ready (covers), each at the revision the person gave.
+    const covers = answers.map((a) => ({ decision: `q:${a.key}`, answerRev: d.answers[a.key]?.answerRev ?? 0 }));
+    const out = await this.deps.send(floor, recipient.workerId, text, o.by, o.when, o.owner, covers);
+    if (typeof out === 'string') return out;
+    if (out?.error) return out.error;
+    if (out?.unknown) {
+      // Its outcome couldn't be established: the answers stay pending (release 47 offers Send again), pointing at the dispatch; Needs you asks the person.
+      for (const a of answers) if (d.answers[a.key]) d.answers[a.key].dispatchId = out.dispatchId;
+      await this.save(floor.id, d);
+      return `Couldn't confirm the answers were typed to ${recipient.name}: say what happened on the card in Needs you`;
+    }
     const now = this.deps.now();
     markSent(
       d,
@@ -207,9 +250,20 @@ export class QuestionsService {
       recipient.name,
       now,
     );
+    if (out?.dispatchId) for (const a of answers) if (d.answers[a.key]) d.answers[a.key].dispatchId = out.dispatchId;
     this.deps.record({ floor: floor.id, actor: { kind: 'human', name: o.by, ...(o.owner ? { id: o.owner } : {}) }, action: 'questions.sent', target: { kind: 'worker', id: recipient.workerId, label: recipient.name }, summary: `Sent ${answers.length} answer${answers.length === 1 ? '' : 's'} to ${recipient.name} to record in the BRDs (${o.when === 'now' ? 'now' : 'after their turn'}): ${answers.map((a) => a.id).join(', ')}`, details: { when: o.when, ids: answers.map((a) => a.id), kinds: answers.map((a) => a.kind) }, severity: 'notice' });
     await this.save(floor.id, d);
     return undefined;
+  }
+
+  /** A Send's dispatch that settled after the fact: the answers it covers, still pending, are marked sent to it. */
+  async dispatched(floorId: string, r: { id: string; decision: DecisionRef; covers?: { decision: DecisionRef }[]; workerName?: string }): Promise<void> {
+    const d = await this.book(floorId);
+    const keys = (r.covers?.length ? r.covers.map((c) => c.decision) : [r.decision]).filter((x) => x.startsWith('q:')).map((x) => x.slice(2)).filter((k) => d.answers[k]?.status === 'pending');
+    if (!keys.length) return;
+    markSent(d, keys, r.workerName ?? 'the analyst', this.deps.now());
+    for (const k of keys) d.answers[k].dispatchId = r.id;
+    await this.save(floorId, d);
   }
 
   /** The client's answers taken in (from the filled-in file or pasted lines), each ready to send. */

@@ -58,6 +58,20 @@ export class BackgroundFile {
     this.syncs++;
   }
 
+  /**
+   * Writes what make() gives (called once the background writes still out have landed, so it is the newest)
+   * with an awaitable critical write; a background write from before it never lands over it. Rejects when
+   * the write failed. For the few changes that must be on disk before the office acts (roster/store.ts).
+   */
+  async critical(make: () => string, write: (file: string, text: string) => Promise<void>): Promise<void> {
+    await this.idle.catch(() => undefined);
+    this.due = undefined;
+    this.syncs++;
+    const text = make();
+    this.latest = text;
+    await write(this.file, text);
+  }
+
   /** Resolves once the background writes are done (tests). */
   settled(): Promise<void> {
     return this.idle;

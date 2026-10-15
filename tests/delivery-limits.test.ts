@@ -117,12 +117,17 @@ test('a prompt is never typed while a dialog may be up: asking a question, or bo
   for (const s of ['idle', 'done', 'working'] as WorkerStatus[]) assert.equal(mayType(s), true, s);
 });
 
+/** Owed durable answers are marked in flight (a disk write) before they're typed: lets that finish. */
+const settle = async () => {
+  for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+};
+
 test("an answer to a raiser with a permission dialog open waits, isn't marked delivered, and goes in once the turn is over", async () => {
   const t = setup(2);
   const dev = await hireAt(t, 'lead-developer');
   const e = t.roster.escalations.raise(t.floor, t.floor.worker(dev)!, ask('Approve the schema change?'));
   t.floor.set(dev, 'needs_input');
-  assert.equal(t.roster.escalations.resolve(t.floor, e.id, 'approve', 'Go ahead.', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'approve', 'Go ahead.', 'Keith'), undefined);
   assert.equal(t.floor.to(dev).length, 0, 'nothing typed into the dialog');
   assert.equal(t.data().escalations[0].resolution?.delivered, false);
   assert.match(t.floor.feed.at(-1)!, /question open in its terminal: the answer goes in once that's answered/);
@@ -130,11 +135,13 @@ test("an answer to a raiser with a permission dialog open waits, isn't marked de
   t.floor.set(dev, 'working');
   assert.equal(t.floor.to(dev).length, 0, 'not while it is working on the dialog');
   t.floor.set(dev, 'done');
+  await settle();
   assert.equal(t.floor.to(dev).length, 1);
   assert.match(t.floor.to(dev)[0].text, /“Approve the schema change\?”: APPROVED — Go ahead\./);
   assert.equal(t.data().escalations[0].resolution?.delivered, true);
   t.floor.set(dev, 'working');
   t.floor.set(dev, 'done');
+  await settle();
   assert.equal(t.floor.to(dev).length, 1, 'not again');
 });
 
@@ -146,14 +153,16 @@ test("a +1's raiser and an agent off the team, both in a dialog, hear the answer
   t.roster.escalations.raiseOrJoin(t.floor, t.floor.worker(bob)!, ask('Set repo secret E2E_PASSWORD.'));
   t.floor.set(ada, 'needs_input');
   t.floor.set(bob, 'starting');
-  assert.equal(t.roster.escalations.resolve(t.floor, first.escalation.id, 'reply', 'Done, re-run CI.', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, first.escalation.id, 'reply', 'Done, re-run CI.', 'Keith'), undefined);
   assert.equal(t.floor.prompts.length, 0);
   assert.equal(t.data().escalations[0].also?.[0].pending, true);
   t.floor.set(bob, 'idle');
+  await settle();
   assert.equal(t.floor.to(bob).length, 1);
   assert.match(t.floor.to(bob)[0].text, /Done, re-run CI\./);
   assert.equal(t.data().escalations[0].also?.[0].pending, undefined);
   t.floor.set(ada, 'done');
+  await settle();
   assert.equal(t.floor.to(ada).length, 1);
   assert.equal(t.data().escalations[0].resolution?.delivered, true);
 });
@@ -253,7 +262,7 @@ test('a subagent out of revision rounds: one revisions-exhausted escalation for 
   assert.equal(t.roster.nudges.check(t.floor, 'lead-developer'), false);
   review('rework');
   assert.equal(t.data().escalations.length, 1, 'raised once');
-  assert.equal(t.roster.escalations.resolve(t.floor, esc[0].id, 'reply', 'One more round, then take it over.', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(t.floor, esc[0].id, 'reply', 'One more round, then take it over.', 'Keith'), undefined);
   const rec = t.data().subagents['lead-developer/developer'];
   assert.equal(rec.exhaustedAt, undefined);
   assert.equal(rec.reworks, undefined);
@@ -345,7 +354,7 @@ test("past the spend cap the office's prompts are held and a person's go through
   assert.equal(tf.to(dev).length + tf.to(pm).length, 0, 'no office prompt reached anyone');
   // The person's answer goes through.
   const e = t.data().escalations[0];
-  assert.equal(t.roster.escalations.resolve(tf, e.id, 'reply', 'Do it.', 'Keith'), undefined);
+  assert.equal(await t.roster.escalations.resolve(tf, e.id, 'reply', 'Do it.', 'Keith'), undefined);
   assert.equal(tf.to(dev).length, 1);
   assert.equal(t.data().escalations[0].resolution?.delivered, true);
   assert.equal(t.roster.delivery.send(tf, tf.worker(x)!, 'From a person', { origin: 'person' }).status, 'sent');

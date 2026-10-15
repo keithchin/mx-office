@@ -23,14 +23,14 @@ export interface ChangeMember {
   atWork: boolean;
 }
 
-export type Delivered = { status: 'sent' | 'held' | 'woke' } | { status: 'refused'; why: string };
+export type Delivered = ({ status: 'sent' | 'held' | 'woke' } | { status: 'refused'; why: string }) & { dispatchId?: string };
 
 export interface ChangeDeps {
   dataDir: string;
   now(): number;
   members(floorId: string): ChangeMember[];
   /** Types the task to the member (the roster's delivery, as a person): held for after its turn with `when: 'after'`. `onSent` once it's typed. */
-  deliver(floorId: string, m: ChangeMember, text: string, o: { by: string; when: ChangeWhen; id: string; onSent: () => void }): Delivered;
+  deliver(floorId: string, m: ChangeMember, text: string, o: { by: string; when: ChangeWhen; id: string; onSent: () => void }): Delivered | Promise<Delivered>;
   pulls(floorId: string): readonly ChangePull[];
   worker(floorId: string, id: string): ChangeWorker | undefined;
   record(e: AuditInput): void;
@@ -107,7 +107,7 @@ export class ChangeRequests {
   }
 
   /** Makes the request and hands it to the member: the request as it's kept, or why not. */
-  request(floorId: string, ask: ChangeAsk): ChangeRequestView | string {
+  async request(floorId: string, ask: ChangeAsk): Promise<ChangeRequestView | string> {
     const elements = cleanElements(ask.elements);
     if (typeof elements === 'string') return elements;
     const request = str(ask.request, 4000);
@@ -121,14 +121,15 @@ export class ChangeRequests {
     if (!m || !m.atWork) return `${m?.name ?? 'That member'} isn't at work: hire them on the Team tab first, or pick someone else`;
     const when = cleanWhen(ask.when);
     const b = this.book(floorId);
-    const id = `MCR-${b.next}`;
+    // The number is taken before the dispatch's awaits, so two requests at once never share one.
+    const id = `MCR-${b.next++}`;
     const by = ask.by || 'The Project Manager';
     const text = changeTaskText({ id, elements, ref, ...(sha ? { sha } : {}), request, by });
     const r: ChangeRequest = { id, elements, ref, ...(sha ? { sha } : {}), request, role: m.role, member: m.name, ...(m.workerId ? { workerId: m.workerId } : {}), when, at: this.deps.now(), by, delivery: 'held' };
-    const sent = this.deliver(floorId, m, text, r);
+    const sent = await this.deliver(floorId, m, text, r);
     if (sent.status === 'refused') return sent.why;
     r.delivery = sent.status;
-    b.next++;
+    if (sent.dispatchId) r.dispatchId = sent.dispatchId;
     b.items.push(r);
     this.prune(b);
     this.save(floorId);
@@ -143,7 +144,7 @@ export class ChangeRequests {
     return this.view(floorId, r);
   }
 
-  private deliver(floorId: string, m: ChangeMember, text: string, r: ChangeRequest): Delivered {
+  private deliver(floorId: string, m: ChangeMember, text: string, r: ChangeRequest): Delivered | Promise<Delivered> {
     return this.deps.deliver(floorId, m, text, {
       by: r.by,
       when: r.when,

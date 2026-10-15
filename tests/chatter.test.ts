@@ -115,7 +115,7 @@ test('an agent escalation and the Project Manager’s answer: the person is a hu
 
   // Keith the person answers; Keith the Coordinator is an agent.
   t.clock.now += MIN;
-  t.roster.escalations.resolve(t.floor, e.id, 'approve', 'go for it', 'Keith');
+  await t.roster.escalations.resolve(t.floor, e.id, 'approve', 'go for it', 'Keith');
   t.chatter.look(t.floor);
   const ans = t.sent.find((m) => m.kind === 'answer')!;
   assert.deepEqual([ans.from.name, ans.from.kind, ans.from.role], ['Keith', 'human', 'Project Manager']);

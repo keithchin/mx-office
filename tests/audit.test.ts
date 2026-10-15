@@ -237,10 +237,11 @@ test('hiring, benching, a model change, the settings and an escalation and its a
   // Unchanged settings log nothing.
   roster.members.settings(floor, roster.data(floor.id).settings, 'Keith');
   const e = roster.escalations.raise(floor, w, { urgency: 'urgent', trigger: 'blocked', title: 'Need a decision on the DB', details: 'x', options: [] });
-  assert.equal(roster.escalations.resolve(floor, e.id, 'reply', 'Use Postgres', 'Keith'), undefined);
+  assert.equal(await roster.escalations.resolve(floor, e.id, 'reply', 'Use Postgres', 'Keith'), undefined);
 
   const page = readAudit({ floor: floor.id, limit: 100 });
-  const actions = page.events.map((x) => x.action).reverse();
+  // The answer's durable dispatch has events of its own (dispatch.*, server/dispatch/).
+  const actions = page.events.map((x) => x.action).filter((a) => !a.startsWith('dispatch.')).reverse();
   assert.deepEqual(actions, ['worker.hire', 'worker.model', 'worker.bench', 'roster.settings', 'roster.autonomy', 'escalation.raise', 'escalation.answer']);
   const by = (a: string) => page.events.find((x) => x.action === a)!;
   assert.deepEqual(by('worker.hire').actor, { kind: 'human', name: 'Keith', id: 'acct1' });

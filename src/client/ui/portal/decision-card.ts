@@ -120,7 +120,7 @@ export function handsOnCard(c: DecisionCard, x: CardCtx): HTMLElement {
     : h(
         'div.pt-esc-acts',
         {},
-        btn('.primary.pt-dc-done', "I've done it", (b) => void busy(b, decisionAct(x.floor, { action: 'done', escalation: c.escalation, others: otherEscalations(c) })).then((ok) => ok && (toast(`${owner} is told it's done and re-checks`), x.done(c, `Done · ${owner} re-checks`)))),
+        btn('.primary.pt-dc-done', "I've done it", (b) => void busy(b, decisionAct(x.floor, { action: 'done', escalation: c.escalation, others: otherEscalations(c), expectedRev: 0 })).then((ok) => ok && (toast(`${owner} is told it's done and re-checks`), x.done(c, `Done · ${owner} re-checks`)))),
         btn('.pt-dc-cant', `Can't now: tell ${owner}`, (b) => void busy(b, decisionAct(x.floor, { action: 'cant-now', escalation: c.escalation })).then((ok) => ok && toast(`${owner} is told you can't do it now`)), `${owner} hears it after their turn; the card stays open`),
         h('span.pt-grow'),
         x.leadName ? h('button.pt-link.pt-esc-ask', { type: 'button', onclick: () => x.ask(`About "${c.question.split(':')[0]}": `) }, `Ask ${x.leadName}`) : null,
@@ -130,7 +130,7 @@ export function handsOnCard(c: DecisionCard, x: CardCtx): HTMLElement {
 
 /** An FYI: Noted, which approves nothing. */
 export function fyiCard(c: DecisionCard, x: CardCtx): HTMLElement {
-  const acts = !x.admin ? notAdmin() : h('div.pt-esc-acts', {}, btn('.pt-dc-noted', 'Noted', (b) => void busy(b, decisionAct(x.floor, { action: 'noted', escalation: c.escalation, others: otherEscalations(c) })).then((ok) => ok && x.done(c, 'Noted'))), h('small.pt-dc-small', {}, " Noting doesn't approve anything."));
+  const acts = !x.admin ? notAdmin() : h('div.pt-esc-acts', {}, btn('.pt-dc-noted', 'Noted', (b) => void busy(b, decisionAct(x.floor, { action: 'noted', escalation: c.escalation, others: otherEscalations(c), expectedRev: 0 })).then((ok) => ok && x.done(c, 'Noted'))), h('small.pt-dc-small', {}, " Noting doesn't approve anything."));
   return shell(c, [c.detail ? h('p.pt-esc-q', {}, c.detail) : null, ...cardExtras(c, x).filter((e) => !e.classList.contains('pt-dc-after'))], acts);
 }
 
@@ -142,7 +142,7 @@ export function goneCard(c: DecisionCard, x: CardCtx): HTMLElement {
     : h(
         'div.pt-esc-acts',
         {},
-        btn('.pt-dc-resolved', 'Resolved', (b) => void busy(b, decisionAct(x.floor, { action: 'resolved', escalation: c.escalation })).then((ok) => ok && x.done(c, 'Resolved'))),
+        btn('.pt-dc-resolved', 'Resolved', (b) => void busy(b, decisionAct(x.floor, { action: 'resolved', escalation: c.escalation, expectedRev: 0 })).then((ok) => ok && x.done(c, 'Resolved'))),
         btn('.pt-dc-still', `Still needed: ask ${c.owner}`, (b) => void busy(b, decisionAct(x.floor, { action: 'still-needed', escalation: c.escalation })).then((ok) => ok && toast(`${c.owner} is asked, after their turn`))),
       );
   return shell(c, [h('p.pt-dc-gone', {}, h('i', {}, `${g.what}.`), g.asked ? h('small', {}, ` You said it's still needed ${timeAgo(g.asked)}.`) : null), ...cardExtras(c, x)], acts);

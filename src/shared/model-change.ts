@@ -94,6 +94,8 @@ export interface ChangeRequest {
   by: string;
   /** 'held' until the member's turn ends, then 'sent'. */
   delivery: 'sent' | 'held' | 'woke';
+  /** The durable dispatch that carried it (server/dispatch/). */
+  dispatchId?: string;
 }
 
 export type ChangeState = 'open' | 'merged' | 'closed';
