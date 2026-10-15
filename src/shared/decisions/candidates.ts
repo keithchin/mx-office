@@ -104,7 +104,7 @@ export function approvalCandidates(r: RosterView): Candidate[] {
     if (a.kind === 'escalation' || (a.kind === 'cap' && r.paused)) continue;
     const icon = a.kind === 'merge' ? '🔀' : a.kind === 'cap' ? '💸' : a.kind === 'subagent' ? '🧰' : '📝';
     const text = a.kind === 'proposal' ? `Proposal to approve: ${a.title}` : a.kind === 'subagent' ? `To approve: ${a.title}` : a.title;
-    const need: NeedItem = { key: `appr-${a.id}`, kind: 'approval', icon, text, level: 'warn', action: admin ? 'Review' : 'View', target: { to: 'approvals' } };
+    const need: NeedItem = { key: `appr-${a.id}`, kind: 'approval', icon, text, ...(a.at ? { since: a.at } : {}), level: 'warn', action: admin ? 'Review' : 'View', target: { to: 'approvals' } };
     const refs = refsFromTitle(a.title);
     const pr = a.kind === 'merge' ? Number(a.id.replace(/^m-/, '')) || refs.pr : refs.pr;
     const keys = [pr && `pr:${pr}`, refs.decisionId && `id:${refs.decisionId}`, refs.journeyId && `id:${refs.journeyId}`].filter((k): k is string => !!k);

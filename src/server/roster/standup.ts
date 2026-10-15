@@ -9,6 +9,7 @@ import { parseStandup } from '../../shared/roster/journal.js';
 import { ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
 import type { Proposal, Standup, StandupReportView } from '../../shared/roster/types.js';
 import { lastSlot, type StandupSchedule } from '../../shared/roster/schedule.js';
+import { proposalKey } from '../../shared/decisions/duplicates.js';
 
 /** A standup's id: its date, or date-2, date-3… for another one the same day. */
 export function standupId(date: string, taken: Iterable<string>): string {
@@ -38,13 +39,29 @@ export function reportFrom(role: RoleId, name: string, source: StandupReportView
   return { report: { role, name, source, heading: entry.heading, done, next: r.next, blockers: r.blockers }, proposals: r.proposals };
 }
 
+/** When a proposal was made: its own time, else (from before release 49) its standup's start, else its date; undefined when none is known. */
+export function proposalAt(p: Pick<Proposal, 'at' | 'standup'>, d: { standups: readonly Pick<Standup, 'id' | 'startedAt'>[] }): number | undefined {
+  if (p.at) return p.at;
+  const s = d.standups.find((x) => x.id === p.standup);
+  if (s?.startedAt) return s.startedAt;
+  const m = /^(d{4}-d{2}-d{2})/.exec(p.standup);
+  return (m && Date.parse(`${m[1]}T00:00:00Z`)) || undefined;
+}
+
 /**
  * Turns a Lead's proposals into cards. What needs the Project Manager at `level` waits as pending; the rest the
  * team may decide itself, so it's marked auto (and becomes an issue straight away).
  */
-export function toProposals(parsed: ParsedProposal[], standup: string, role: RoleId, by: string, level: AutonomyLevel): Proposal[] {
+export function toProposals(parsed: ParsedProposal[], standup: string, role: RoleId, by: string, level: AutonomyLevel, at?: number, existing: readonly Proposal[] = []): Proposal[] {
   const team = ROLE_BY_ID.get(role)!.team;
-  return parsed.map((p) => ({ id: randomBytes(5).toString('hex'), standup, role, team, by, kind: p.kind, title: p.title, detail: p.detail, status: needsApproval(level, p.kind) ? 'pending' : 'auto' }));
+  const out: Proposal[] = [];
+  for (const p of parsed) {
+    const status = needsApproval(level, p.kind) ? 'pending' : 'auto';
+    // One already waiting on the Project Manager with the same kind and words isn't asked twice (shared/decisions/duplicates.ts).
+    if (status === 'pending' && [...existing, ...out].some((x) => x.status === 'pending' && proposalKey(x) === proposalKey(p))) continue;
+    out.push({ id: randomBytes(5).toString('hex'), standup, role, team, by, kind: p.kind, title: p.title, detail: p.detail, status, ...(at !== undefined ? { at } : {}) });
+  }
+  return out;
 }
 
 const bullets = (xs: string[]) => (xs.length ? xs.map((x) => `- ${x}`).join('\n') : '- none');

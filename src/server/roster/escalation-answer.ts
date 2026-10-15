@@ -39,6 +39,8 @@ export interface EscalationAnswer {
   by: string;
   outcome?: EscalationOutcome;
   expectedRev?: number;
+  /** A duplicate closed in favour of this escalation (outcome superseded). */
+  supersededBy?: string;
 }
 
 /** The checks before anything else: the verdict to use and the text, or why not. */
@@ -87,7 +89,7 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
       // One writing its handoff is about to be stopped: the answer is kept, and finishBench brings it back with it.
       const leaving = !!w && !!member && member.phase === 'benching' && member.workerId === w.id;
       if (!w && e.role) rehire = true;
-      const prompt = escalationAnswerPrompt(e, verdict, text, a.by, a.outcome);
+      const prompt = escalationAnswerPrompt(e, verdict, text, a.by, a.outcome === 'superseded' ? undefined : a.outcome);
       // A dialog may be up (a permission prompt, a question, booting): the answer stays owed and goes in once its turn is over.
       const busy = (x: WorkerInfo) => !mayType(x.status) && !isAsleepStatus(x.status);
       if (w && w.kind === 'agent' && !leaving && !busy(w)) {
@@ -131,8 +133,8 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
       }
       const delivered = !!raiser && raiser.channel === 'type' && (raiser.state === 'submitted' || raiser.state === 'held');
       e.status = 'resolved';
-      e.resolution = { verdict, text, by: a.by, at: roster.deps.now(), delivered, ...(a.outcome ? { outcome: a.outcome } : {}), answerRev: rev, ...(raiser ? { dispatchId: raiser.id } : {}) };
-      afterResolve(roster, floor, e, { verdict, outcome: a.outcome, by: a.by, text, delivered, rehire, later, rev, dispatchId: raiser?.id, groupId });
+      e.resolution = { verdict, text, by: a.by, at: roster.deps.now(), delivered, ...(a.outcome ? { outcome: a.outcome } : {}), answerRev: rev, ...(raiser ? { dispatchId: raiser.id } : {}), ...(a.supersededBy ? { supersededBy: a.supersededBy } : {}) };
+      afterResolve(roster, floor, e, { verdict, outcome: a.outcome, by: a.by, text, delivered, rehire, later, rev, dispatchId: raiser?.id, groupId, supersededBy: a.supersededBy });
       // The escalation's new state on disk before the answer counts as given (an answered card must not come back open).
       await roster
         .file(floor.id)
@@ -144,15 +146,15 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
 }
 
 /** What follows an answer, as release 47 did it: the audit, the activity, a subagent ask done, the floor told. */
-function afterResolve(roster: Roster, floor: TeamFloor, e: Escalation, x: { verdict: EscalationVerdict; outcome?: EscalationOutcome; by: string; text: string; delivered: boolean; rehire: boolean; later: string[]; rev: number; dispatchId?: string; groupId?: string }) {
-  const said = x.outcome === 'done' ? "said it's done for" : x.outcome === 'noted' ? 'noted' : `answered (${x.verdict})`;
+function afterResolve(roster: Roster, floor: TeamFloor, e: Escalation, x: { verdict: EscalationVerdict; outcome?: EscalationOutcome; by: string; text: string; delivered: boolean; rehire: boolean; later: string[]; rev: number; dispatchId?: string; groupId?: string; supersededBy?: string }) {
+  const said = x.outcome === 'done' ? "said it's done for" : x.outcome === 'noted' ? 'noted' : x.outcome === 'superseded' ? `closed as a duplicate (superseded by ${x.supersededBy ?? 'another'})` : `answered (${x.verdict})`;
   audit.record({
     floor: floor.id,
     actor: byWhom(x.by),
     action: 'escalation.answer',
     target: { kind: 'escalation', id: e.id, label: e.title },
-    summary: `${x.outcome === 'done' ? `Said it's done (${e.by} re-checks):` : x.outcome === 'noted' ? 'Noted the FYI:' : `Answered ${e.by}'s escalation (${x.verdict}):`} ${e.title}`,
-    details: { verdict: x.outcome ?? x.verdict, ...(x.outcome ? { legacyVerdict: x.verdict } : {}), delivered: x.delivered, rehire: x.rehire, ...(x.later.length ? { later: x.later } : {}), reply: x.text ? { length: x.text.length } : undefined, answerRev: x.rev, ...(x.groupId ? { groupId: x.groupId } : {}) },
+    summary: `${x.outcome === 'done' ? `Said it's done (${e.by} re-checks):` : x.outcome === 'noted' ? 'Noted the FYI:' : x.outcome === 'superseded' ? `Closed as a duplicate, superseded by ${x.supersededBy ?? 'another'} (nothing sent):` : `Answered ${e.by}'s escalation (${x.verdict}):`} ${e.title}`,
+    details: { verdict: x.outcome ?? x.verdict, ...(x.outcome ? { legacyVerdict: x.verdict } : {}), ...(x.supersededBy ? { supersededBy: x.supersededBy } : {}), delivered: x.delivered, rehire: x.rehire, ...(x.later.length ? { later: x.later } : {}), reply: x.text ? { length: x.text.length } : undefined, answerRev: x.rev, ...(x.groupId ? { groupId: x.groupId } : {}) },
     ids: { decision: `esc:${e.id}`, answerRev: x.rev, ...(x.dispatchId ? { dispatchId: x.dispatchId } : {}) },
   });
   floor.activity?.(`✅ ${x.by} ${said} ${e.by}'s escalation: ${e.title}`);

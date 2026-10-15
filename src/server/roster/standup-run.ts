@@ -141,7 +141,7 @@ export class StandupRunner {
     const { report, proposals } = reportFrom(role, m.name, today ? 'live' : entry ? 'journal' : 'none', entry);
     const key = entry && `${entry.date}|${entry.heading}`;
     const seen = d.proposals.some((p) => p.role === role && p.standup === s.id) || (key !== undefined && d.harvested[role] === key);
-    const made = seen ? [] : toProposals(proposals, s.id, role, m.name, d.settings.autonomy);
+    const made = seen ? [] : toProposals(proposals, s.id, role, m.name, d.settings.autonomy, this.roster.deps.now(), d.proposals);
     if (key) d.harvested[role] = key;
     s.reports = [...s.reports.filter((r) => r.role !== role), report];
     d.proposals.push(...made);
