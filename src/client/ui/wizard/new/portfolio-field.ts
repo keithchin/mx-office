@@ -27,5 +27,5 @@ export function portfolioField(d: ProjectPlan, redraw: () => void): HTMLElement 
     if (sel.value) d.portfolio = sel.value;
     else delete d.portfolio;
   });
-  return h('div.nw-field', {}, h('label', { for: 'nw-a-portfolio' }, 'Portfolio'), sel, h('span.nw-hint', {}, `Optional. With a company brain, the project is wired to it right after the toolkit’s scaffold and checked. ${NOT_ACCESS_CONTROL}.`));
+  return h('div.nw-field', {}, h('label', { for: 'nw-a-portfolio' }, 'Client'), sel, h('span.nw-hint', {}, `Optional: the client (the company) this project is for. With a company brain, the project is wired to it right after the toolkit’s scaffold and checked. ${NOT_ACCESS_CONTROL}.`));
 }

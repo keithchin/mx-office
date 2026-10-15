@@ -77,9 +77,9 @@ export class PortfolioStore {
 
   async create(label: string, by: string): Promise<Portfolio | string> {
     const name = str(label, 80).replace(/[\r\n]+/g, ' ');
-    if (!name) return 'Give the portfolio a name';
+    if (!name) return 'Give the client a name';
     await this.load();
-    if (this.list.some((p) => p.label.toLowerCase() === name.toLowerCase())) return `There is already a portfolio called ${name}`;
+    if (this.list.some((p) => p.label.toLowerCase() === name.toLowerCase())) return `There is already a client called ${name}`;
     return this.change((list) => {
       const p: Portfolio = { id: mintPortfolioId(this.now()), label: name, projectIds: [], createdAt: this.now(), createdBy: str(by, 80) };
       list.push(p);
@@ -94,9 +94,9 @@ export class PortfolioStore {
   async addProject(id: string, floorId: string): Promise<string | undefined> {
     await this.load();
     const p = this.get(id);
-    if (!p) return 'No such portfolio';
+    if (!p) return 'No such client';
     const other = this.ofFloor(floorId);
-    if (other && other.id !== id) return `This project is already in the portfolio ${other.label}. Moving a project between portfolios isn't available: it may already have used that portfolio's company brain, and moving it can't take that back.`;
+    if (other && other.id !== id) return `This project already belongs to the client ${other.label}, and a project can belong to one client. Moving a project between clients isn't available: it may already have used that client's company brain, and moving it can't take that back.`;
     if (other) return undefined;
     await this.change(() => void p.projectIds.push(floorId));
     return undefined;
@@ -105,7 +105,7 @@ export class PortfolioStore {
   async setBrain(id: string, brain: PortfolioBrainRef | undefined): Promise<string | undefined> {
     await this.load();
     const p = this.get(id);
-    if (!p) return 'No such portfolio';
+    if (!p) return 'No such client';
     await this.change(() => {
       if (brain) p.brain = brain;
       else delete p.brain;

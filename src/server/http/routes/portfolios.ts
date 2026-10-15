@@ -15,7 +15,7 @@ import { floorParam } from './files.js';
 
 const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
 const str = (v: unknown, max = 300) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined);
-const ONLY_ADMINS = 'Only an admin can change portfolios';
+const ONLY_ADMINS = 'Only an admin can change clients';
 
 async function jsonBody(req: http.IncomingMessage): Promise<Record<string, unknown> | undefined> {
   try {
@@ -54,7 +54,7 @@ export const portfolioRoutes = {
         }
         case 'add': {
           const floor = str(body.floor, 200);
-          if (!pid || !floor) return send(res, 400, { error: 'Say which portfolio and which project' });
+          if (!pid || !floor) return send(res, 400, { error: 'Say which client and which project' });
           const r = await s.addProject(pid, floor, by);
           // S03: a cross-portfolio move is refused with a clear message (409: the project's state forbids it).
           if (r.error) return send(res, 409, { error: r.error });
@@ -62,14 +62,14 @@ export const portfolioRoutes = {
         }
         case 'connect': {
           const p = str(body.path, 1000);
-          if (!pid || !p) return send(res, 400, { error: 'Say which portfolio and the brain folder' });
+          if (!pid || !p) return send(res, 400, { error: 'Say which client and the brain folder' });
           const r = await s.connect(pid, p, by);
           if (r.error) return send(res, 400, { error: r.error });
           const partial = Object.entries(r.results ?? {}).filter(([, c]) => !c.ok);
           return send(res, 200, { ...r, ...(partial.length ? { warning: `Wiring is incomplete on ${partial.length} project${partial.length === 1 ? '' : 's'}: see Needs you on ${partial.length === 1 ? 'it' : 'each'}.` } : {}), view: await s.view(true) });
         }
         case 'disconnect': {
-          if (!pid) return send(res, 400, { error: 'Say which portfolio' });
+          if (!pid) return send(res, 400, { error: 'Say which client' });
           const r = await s.disconnect(pid, by);
           if (r.error) return send(res, 400, { error: r.error });
           return send(res, 200, { ...r, view: await s.view(true) });

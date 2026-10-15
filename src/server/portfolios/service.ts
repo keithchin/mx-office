@@ -1,4 +1,4 @@
-// Portfolios on the server (docs/site/using-the-office/portfolios.md): the grouping (./store.ts), connecting
+// Portfolios on the server (docs/site/using-the-office/clients.md): the grouping (./store.ts), connecting
 // and disconnecting a company brain (./wire.ts), what each hire is offered (the prime-prompt line and its
 // context manifest, ./manifest.ts) and noticing when the brain changed under a live session (one Needs-you
 // card per project: Rehire for a fresh session, or Dismiss). Every office dependency comes in through
@@ -127,7 +127,7 @@ export class PortfolioService {
 
   async create(label: string, by: string): Promise<Portfolio | string> {
     const p = await this.store.create(label, by);
-    if (typeof p !== 'string') this.deps.audit({ actor: { kind: 'human', name: by }, action: 'portfolio.create', target: { kind: 'portfolio', id: p.id, label: p.label }, summary: `Created the portfolio ${p.label}` });
+    if (typeof p !== 'string') this.deps.audit({ actor: { kind: 'human', name: by }, action: 'portfolio.create', target: { kind: 'portfolio', id: p.id, label: p.label }, summary: `Created the client ${p.label}` });
     return p;
   }
 
@@ -139,12 +139,12 @@ export class PortfolioService {
     await this.store.load();
     const p = this.store.get(id);
     const f = this.floor(floorId);
-    if (!p || !f) return { error: !p ? 'No such portfolio' : 'No such project' };
+    if (!p || !f) return { error: !p ? 'No such client' : 'No such project' };
     const ctx = await this.existingContext(floorId);
-    if (ctx?.consumed && ctx.consumed.portfolioId !== id) return { error: `This project already used another portfolio's company brain (${ctx.consumed.path}). Moving it isn't available: what it was offered can't be taken back.` };
+    if (ctx?.consumed && ctx.consumed.portfolioId !== id) return { error: `This project already used another client's company brain (${ctx.consumed.path}). Moving it isn't available: what it was offered can't be taken back.` };
     const err = await this.store.addProject(id, floorId);
     if (err) return { error: err };
-    this.deps.audit({ floor: floorId, actor: { kind: 'human', name: by }, action: 'portfolio.add', target: { kind: 'portfolio', id: p.id, label: p.label }, summary: `Added ${f.name} to the portfolio ${p.label}` });
+    this.deps.audit({ floor: floorId, actor: { kind: 'human', name: by }, action: 'portfolio.add', target: { kind: 'portfolio', id: p.id, label: p.label }, summary: `Added ${f.name} to the client ${p.label}` });
     if (!p.brain) return {};
     return { check: await this.wireOne(p, f, by) };
   }
@@ -154,7 +154,7 @@ export class PortfolioService {
     const r = await this.addProject(id, floorId, by);
     if (r.error) throw new Error(r.error);
     const p = this.store.get(id)!;
-    if (!r.check) return `joined the portfolio ${p.label} (no company brain connected)`;
+    if (!r.check) return `joined the client ${p.label} (no company brain connected)`;
     if (!r.check.ok) throw new Error(`Company brain wiring is incomplete: ${r.check.problems.join('; ')}`);
     return `joined ${p.label}, company brain wired in ${r.check.surfaces.length} instruction files`;
   }
@@ -163,12 +163,12 @@ export class PortfolioService {
   async connect(id: string, brainPath: string, by: string): Promise<{ error?: string; read?: BrainRead; results?: Record<string, WiringCheckView> }> {
     await this.store.load();
     const p = this.store.get(id);
-    if (!p) return { error: 'No such portfolio' };
+    if (!p) return { error: 'No such client' };
     const dir = windowsForm(brainPath.trim()).replace(/\/+$/, '');
     const bad = await brainProblem(dir);
     if (bad) return { error: bad };
     const other = this.store.all().find((x) => x.id !== id && x.brain && x.brain.path.toLowerCase() === dir.toLowerCase());
-    if (other) return { error: `That brain is already connected to the portfolio ${other.label}: one brain per portfolio` };
+    if (other) return { error: `That brain is already connected to the client ${other.label}: one brain per client` };
     await this.store.setBrain(id, { path: dir, connectedAt: this.deps.now(), by });
     const read = await this.reader.read(dir, true);
     this.deps.audit({ actor: { kind: 'human', name: by }, action: 'portfolio.connect', target: { kind: 'portfolio', id: p.id, label: p.label }, summary: `Connected the company brain ${dir} to ${p.label}${read.status === 'unversioned' ? ' (not versioned)' : ''}`, details: { status: read.status, snapshot: read.snapshot } });
@@ -185,7 +185,7 @@ export class PortfolioService {
   async disconnect(id: string, by: string): Promise<{ error?: string; removed?: Record<string, string[]> }> {
     await this.store.load();
     const p = this.store.get(id);
-    if (!p?.brain) return { error: p ? 'No brain is connected' : 'No such portfolio' };
+    if (!p?.brain) return { error: p ? 'No brain is connected' : 'No such client' };
     const removed: Record<string, string[]> = {};
     for (const fid of p.projectIds) {
       const f = this.floor(fid);
