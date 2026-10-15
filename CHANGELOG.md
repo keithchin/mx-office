@@ -6,7 +6,14 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Added
+
+- **Change answer.** An answered escalation (its card in the Team tab's approvals, its follow-through item in Needs you) and a question whose answer was sent or recorded (the Questions page) now have **Change answer**. A small window shows your current answer with who, when and how its record stands, the new answer in the same shape as the first, and the work that used the old answer, each marked *Recorded link* or *Inferred* (or *No linked work found. Task links arrive with task ids (1B-4)*). **Send change** keeps the new answer as the next revision, sends it once, saying which revision it replaces and the citation to use now, and follow-through moves to the new revision: a record of the old one reads *Recorded for rev 1*. If the answer changed since you opened the window, nothing is written or sent. Admins only.
+- **Answer history.** *History (n revisions)* on the same cards lists every revision of the answer with its full text, who and when, how it was sent (your *It went through* stays a person's confirmation) and what its record came to. It is read once, when you open it, from the project's answer history, so nothing is lost when the card's short copy rolls over.
+
+### To know
+
+- **A changed answer or a correction moves on only once it's known to have been sent, even across a restart.** If the office can't confirm it was typed, the decision stays at the old revision until you settle it on its card in Needs you, after a restart too: **It went through** moves it to the new revision, **Abandon** leaves it where it was (the new revision stays in the history). A correction that couldn't be sent at all now says so and leaves the decision as it was.
 
 ## 2026-10-15 · release 49 (`4cea6e8`)
 

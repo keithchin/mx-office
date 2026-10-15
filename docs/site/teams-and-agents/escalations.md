@@ -78,6 +78,21 @@ Where the record is, is kept as separate fields: the file's `path`, the `commitS
 
 Only **recorded as given, at the current revision, merged into main** takes the answer off the follow-through list by itself, and only that counts where something else waits on the decision (see [stuck detection](../using-the-office/stuck-detection.md)). *Recorded differently* never clears anything by itself. See [Following through](../using-the-office/command-center.md#following-through) for the cards and their buttons.
 
+### Changing an answer
+
+An answered escalation has **Change answer** on its card in the Team tab's approvals and on its follow-through item in Needs you (admins only; the server checks). It opens a small window (✕ top right; ✕ or Esc puts you back where you were) with:
+
+- **Current answer (rev n)**: its words, who gave it and when, how it was sent, and its follow-through state.
+- **New answer**: the same choices as the first time: the escalation's options, your reply, and Reply, Approve or Reject (Noted for an FYI).
+- **Work that used rev n**: what the office knows used the answer. A **Recorded link** is a field that names the escalation: its `refs` (the BRD question, the decision id, the PR, the stage, the stuck item, the journey), a member's task waiting on it, or a task's verification raised as it. **Inferred** is text the office read: a model change request whose words name *ESC-&lt;id&gt;*, or the linked BRD question's free-text *blocks*. When there is none it says *No linked work found. Task links arrive with task ids (1B-4)*, never that nothing was affected.
+- **Send change.**
+
+Sending appends revision n+1 to the answer history, marked as replacing rev n, and hands it to the agent that raised it through the same durable path as an answer (after its current turn). The message says plainly: *This replaces my answer rev 1 to ESC-3f9c2a1b7e: Go with: Use magic links. Record it as `Decided per ESC-3f9c2a1b7e rev 2`*, and asks the agent to check what it did on the strength of rev 1. If someone changed or answered it since you opened the window, it's refused (*This decision changed since you opened it*) with nothing written or sent, and the window shows the answer as it is now.
+
+Follow-through then tracks rev n+1. A record that still cites rev 1 reads **Recorded for rev 1** until the agent records the new answer; rev 1's own finding stays in the history. An escalation answered before answer revisions were kept, or closed as a duplicate, can't be changed here. If the office can't confirm the change was typed, nothing moves: the change is kept on disk before it's typed, and the card in Needs you asks you to settle it, after a restart too (**It went through** moves the escalation to the new revision, **Abandon** leaves it on the old one). Send correction works the same way.
+
+**History (3 revisions)** under the same card opens every revision from the answer history (never the shorter copy on the escalation): its number, kind, full text, who and when, how it was sent (*You said it went through* stays a person's confirmation), and what follow-through found for it. It's read once, when you open it.
+
 Your answer goes through even when the project's daily cost cap is reached: the cap holds the office's own prompts, not yours. See [Models and costs](models-and-costs.md#the-daily-cost-cap).
 
 > [!NOTE]

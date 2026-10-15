@@ -1,0 +1,149 @@
+/* Change answer (controls.ts, dialog.ts, history.ts): the button and history fold on a card, and the compact dialog, in the colour tokens. */
+.ca-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px 10px;
+  margin: 6px 0 0;
+}
+.ca-hist {
+  flex: 1 1 220px;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+.ca-hist > summary {
+  cursor: pointer;
+  color: var(--muted);
+  padding: 3px 0;
+}
+.ca-revs {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ca-rev {
+  border-left: 3px solid var(--rule-strong);
+  padding: 2px 0 2px 8px;
+}
+.ca-rev.ca-current {
+  border-left-color: var(--accent);
+}
+.ca-rev p {
+  margin: 0;
+}
+.ca-rev-h {
+  font-size: 0.85rem;
+}
+.ca-now {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  font-size: 0.75rem;
+}
+.ca-rev-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+  max-height: 12em;
+  overflow: auto;
+}
+.ca-rev-meta {
+  margin: 2px 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.ca-modal {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+.ca-body {
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+}
+.ca-sec h3 {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+}
+.ca-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ca-opts,
+.ca-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0;
+}
+.ca-choice.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.ca-opt.rec {
+  font-weight: 600;
+}
+.ca-text {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 4px 0;
+  font: inherit;
+}
+.ca-text[hidden],
+.ca-sel[hidden] {
+  display: none;
+}
+.ca-links {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+.ca-link {
+  overflow-wrap: anywhere;
+}
+.ca-link-tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: var(--info-soft);
+}
+.ca-link-tag[data-strength='inferred'] {
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+}
+.ca-link-src {
+  color: var(--muted);
+}
+.ca-none,
+.ca-blocked {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.ca-blocked {
+  color: var(--warn-ink);
+}
+.ca-modal footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.ca-msg {
+  flex: 1;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--warn-ink);
+}

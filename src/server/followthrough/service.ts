@@ -4,7 +4,9 @@
 //   - Accept as recorded: a new answer revision (kind accept-as-recorded, basis recorded-differently) with
 //     the recorded words, appended to the answer store. Nothing is sent: there's nothing to tell anyone.
 //   - Send correction: a new revision (kind correction) and a dispatch through the 1B-1 dispatcher that
-//     supersedes the one before, telling the agent what was decided and the citation to use now.
+//     supersedes the one before, telling the agent what was decided and the citation to use now. It is a
+//     pending change on disk before it is typed (change-answer/pending.ts): the decision moves to the new
+//     revision only once the dispatch settled, after a restart too, and never on an unknown outcome.
 //   - Dismiss: stop following this revision through (a new revision shows again).
 // Each is an admin's (the route checks), with the decision's expectedRev checked like any answer (a 409
 // when it changed). None of them blocks other work. Only recorded as given at the current revision,
@@ -24,6 +26,7 @@ import { correctionPrompt } from '../roster/prompts.js';
 import { citations, expectedFromRecord, expectedWords, judgeCitation, type Citation, type Judged } from './judge.js';
 import { Locator, type Where } from './locate.js';
 import { FollowStore } from './store.js';
+import { pendingFor, type PendingAnswers, type PendingEntry } from '../change-answer/pending.js';
 
 /** The revisions that ask an agent to record a decision (an FYI noted, a dismissal or "I've done it" don't). */
 const FOLLOW_KINDS: ReadonlySet<AnswerRevisionKind> = new Set(['answer', 'approve', 'reject', 'reply', 'accept-as-recorded', 'correction']);
@@ -53,14 +56,21 @@ export interface FollowDeps {
 
 export type ActResult = { ok: true; note?: string } | { ok: false; status: number; error: string; current?: unknown };
 
+const dropped = (r: DispatchRecord) => r.state === 'refused' || r.state === 'failed';
 const notYet = (at = 0): Recording => ({ outcome: 'not-recorded-yet', at });
 const ACTOR = { kind: 'office' as const, name: 'Recorded as given' };
 
 export class FollowThrough {
   readonly store: FollowStore;
 
-  constructor(private readonly deps: FollowDeps) {
+  /** Corrections whose dispatch hasn't settled yet, on disk (shared with Change answer). */
+  readonly pending: PendingAnswers;
+
+  constructor(readonly deps: FollowDeps) {
     this.store = new FollowStore(path.join(deps.dataDir, 'followthrough'));
+    this.pending = pendingFor(deps.dataDir, deps.dispatcher);
+    this.pending.record = deps.record;
+    this.pending.register('correction', (f, e, r) => this.finishCorrection(f, e, r));
   }
 
   /** The escalations followed through: answered with an answer revision that asks for a record, and that revision. */
@@ -205,6 +215,8 @@ export class FollowThrough {
 
   private result(r: AnswerResult): ActResult {
     if (!r.ok) return { ok: false, status: r.status, error: r.error, ...(r.current ? { current: r.current } : {}) };
+    const gone = r.results.flatMap((x) => x.records).find(dropped);
+    if (gone) return { ok: false, status: 502, error: `Not sent (${gone.history[gone.history.length - 1]?.note ?? gone.state}): the decision stays at its revision` };
     return r.results.some((x) => x.pending) ? { ok: true, note: "Couldn't confirm the correction was typed: say what happened on its card" } : { ok: true };
   }
 
@@ -236,13 +248,11 @@ export class FollowThrough {
       expectedRev: it.rev,
       current,
       revision: { kind: 'correction', text: it.decided, by: o.by, supersedes: it.rev },
-      targets: (rev) => [{ ...make(correctionPrompt({ escId: e.id, title: e.title, by: o.by, rev, decided: it.decided, recorded: it.recording.text ?? '', where: [whereWords(it.recording.location), locationWords(it.recording.location)].filter(Boolean).join(', ') })), ...(oldId ? { supersedes: oldId } : {}) }],
+      targets: (rev) => [this.pending.guard(floorId, { ...make(correctionPrompt({ escId: e.id, title: e.title, by: o.by, rev, decided: it.decided, recorded: it.recording.text ?? '', where: [whereWords(it.recording.location), locationWords(it.recording.location)].filter(Boolean).join(', ') })), ...(oldId ? { supersedes: oldId } : {}) }, { decision: it.decision, fromRev: it.rev, toRev: rev, kind: 'correction', at: this.deps.now(), input: { ...(oldId ? { oldId } : {}) } })],
       apply: async (rev, records) => {
-        e.resolution!.answerRev = rev;
-        if (records[0]) e.resolution!.dispatchId = records[0].id;
-        st.recordings[it.decision] = notYet(this.deps.now());
-        await this.supersede(floorId, oldId, records[0]);
-        await Promise.all([this.store.save(floorId), this.deps.flush(floorId)]);
+        if (records[0] && dropped(records[0])) return;
+        await this.moveEscalation(floorId, e, rev, records[0], oldId);
+        if (records[0]) await this.pending.clear(floorId, records[0].id);
       },
     });
     return this.result(res);
@@ -283,19 +293,49 @@ export class FollowThrough {
       targets: (rev) => {
         const copy: PmAnswer = { ...a, answerRev: rev };
         const text = `Correction: the BRD's record of ${a.id} differs from the Project Manager's answer (it says: ${it.recording.text ?? 'something else'}). Record it again exactly as below.\n\n${answersMessage([copy], new Map([[q.key, q]]), o.by)}`;
-        return [{ ...make(text), ...(oldId ? { supersedes: oldId } : {}) }];
+        return [this.pending.guard(floorId, { ...make(text), ...(oldId ? { supersedes: oldId } : {}) }, { decision: it.decision, fromRev: it.rev, toRev: rev, kind: 'correction', at: this.deps.now(), input: { ...(oldId ? { oldId } : {}) } })];
       },
       apply: async (rev, records) => {
-        const prev = a.expected?.find((x) => x.rev === a.answerRev);
-        a.answerRev = rev;
-        if (prev) pushExpected(a, { ...prev, rev });
-        if (records[0]) a.dispatchId = records[0].id;
-        a.recording = notYet(this.deps.now());
-        await this.supersede(floorId, oldId, records[0]);
-        await qs.commit(floorId);
+        if (records[0] && dropped(records[0])) return;
+        await this.moveQuestion(floorId, qs, a, rev, records[0], oldId);
+        if (records[0]) await this.pending.clear(floorId, records[0].id);
       },
     });
     return this.result(res);
+  }
+
+  /** A correction's escalation moved to rev `rev`, carried by `rec`: follow-through starts again. */
+  private async moveEscalation(floorId: string, e: Escalation, rev: number, rec: DispatchRecord | undefined, oldId: string | undefined) {
+    const st = await this.store.get(floorId);
+    e.resolution!.answerRev = rev;
+    if (rec) e.resolution!.dispatchId = rec.id;
+    st.recordings[`esc:${e.id}`] = notYet(this.deps.now());
+    await this.supersede(floorId, oldId, rec);
+    await Promise.all([this.store.save(floorId), this.deps.flush(floorId)]);
+  }
+
+  /** A correction's question moved to rev `rev`: what it asks to be recorded carried over, followed again. */
+  private async moveQuestion(floorId: string, qs: FollowQuestions, a: PmAnswer, rev: number, rec: DispatchRecord | undefined, oldId: string | undefined) {
+    const prev = a.expected?.find((x) => x.rev === a.answerRev);
+    a.answerRev = rev;
+    if (prev) pushExpected(a, { ...prev, rev });
+    if (rec) a.dispatchId = rec.id;
+    a.recording = notYet(this.deps.now());
+    await this.supersede(floorId, oldId, rec);
+    await qs.commit(floorId);
+  }
+
+  /** A pending correction whose dispatch settled as typed later, now or after a restart: the decision moves on (left alone when it's moved since). */
+  private async finishCorrection(floorId: string, p: PendingEntry, r: DispatchRecord): Promise<void> {
+    const oldId = typeof p.input.oldId === 'string' ? p.input.oldId : undefined;
+    if (p.decision.startsWith('esc:')) {
+      const e = this.deps.escalations(floorId).find((x) => `esc:${x.id}` === p.decision);
+      if (e?.resolution?.answerRev === p.fromRev) await this.moveEscalation(floorId, e, p.toRev, r, oldId);
+      return;
+    }
+    const qs = this.deps.questions?.();
+    const a = qs ? (await qs.book(floorId)).answers[p.decision.slice(2)] : undefined;
+    if (qs && a?.answerRev === p.fromRev) await this.moveQuestion(floorId, qs, a, p.toRev, r, oldId);
   }
 
   /** The dispatch a correction replaces, marked so (its state stays what it was). */

@@ -130,7 +130,7 @@ export function questionsTab(root: HTMLElement) {
           'section.qs-group',
           { 'aria-label': g.title },
           h('h3.qs-group-h', {}, g.title, h('small', {}, ` · ${g.questions.length}`)),
-          ...g.questions.map((q) => questionCard(q, v.answers[q.key], { admin: v.admin, ...(v.routes[q.key] ? { to: v.routes[q.key] } : {}), answer, ...(follow ? { follow: follow.items.find((i) => i.decision === `q:${q.key}`), floor: v.floor } : {}) })),
+          ...g.questions.map((q) => questionCard(q, v.answers[q.key], { admin: v.admin, ...(v.routes[q.key] ? { to: v.routes[q.key] } : {}), answer, floor: v.floor, ...(follow ? { follow: follow.items.find((i) => i.decision === `q:${q.key}`) } : {}) })),
         ),
       ),
     );

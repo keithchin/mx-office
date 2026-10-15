@@ -9,6 +9,8 @@ import { h } from '../dom';
 import type { FollowItem } from '../../../shared/followthrough';
 import { followLevel, followLine } from '../../../shared/followthrough';
 import { bothTexts, followActs } from '../followthrough/card';
+import { answerControls } from '../change-answer/controls';
+import { refreshQuestions } from './feed';
 
 export interface CardDeps {
   admin: boolean;
@@ -82,6 +84,7 @@ export function questionCard(q: Question, a: PmAnswer | undefined, deps: CardDep
     q.assumedNoConsent ? h('p.qs-warn', { role: 'note' }, `The analyst wrote ASSUMED without your consent${q.assumption ? `: ${q.assumption}` : ''}. The toolkit counts it as never raised (UNRAISED). Accept it or answer it.`) : null,
     yours,
     deps.follow && deps.floor ? h('div.qs-follow.pt-ft', { 'data-level': followLevel(deps.follow.recording) }, h('p.pt-ft-line', {}, followLine(deps.follow)), bothTexts(deps.follow), followActs(deps.floor, deps.follow, deps.admin)) : null,
+    a && (a.status === 'sent' || a.status === 'recorded') ? answerControls(deps.floor, `q:${q.key}`, a.answerRev, deps.admin, refreshQuestions) : null,
     h('p.qs-src', {}, `From ${sourceWords(q.source)} · ${q.file}${q.state !== 'RAISED' ? ` · ${q.state}` : ''}`),
     actions,
     form,
