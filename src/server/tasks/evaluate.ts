@@ -102,10 +102,15 @@ export async function evaluateLinks(i: EvalInput, io: EvalIo): Promise<DecisionL
     if (id) byTask.set(id, l);
   }
 
-  // ---- associated: commits after the answer that cite the revision, by their Task trailer ----
+  // The commits on each linked task's branch (one git log per branch, cached by the caller).
+  const onBranch = new Map<TaskLink, ReadonlySet<string> | undefined>();
+  for (const l of links) if (l.branch) onBranch.set(l, await io.onBranch(l.branch));
+  const known = (c: Commit) => [...onBranch.values()].some((s) => s?.has(c.sha));
+
+  // ---- associated: commits after the answer that cite the revision and belong to no linked task, by their Task trailer ----
   for (const c of citing) {
     const id = taskIdIn(c.message);
-    if (id && byTask.has(id)) continue;
+    if ((id && byTask.has(id)) || known(c)) continue;
     const l: TaskLink = { strength: 'associated', ...(id ? { taskId: id } : {}), title: subject(c.message), via: `commit ${c.sha.slice(0, 7)} names ${citation}`, evidence: { updated: { commit: c.sha, at: c.at } } };
     links.push(l);
     if (id) byTask.set(id, l);
@@ -114,7 +119,7 @@ export async function evaluateLinks(i: EvalInput, io: EvalIo): Promise<DecisionL
   // ---- updated: a citing commit after the answer, on the linked task's branch (or carrying its trailer) ----
   for (const l of links) {
     if (l.evidence.updated && l.strength === 'associated' && !l.branch) continue;
-    const branch = l.branch ? await io.onBranch(l.branch) : undefined;
+    const branch = onBranch.get(l);
     const mine = citing.filter((c) => (branch?.has(c.sha) ?? false) || (!!l.taskId && taskIdIn(c.message) === l.taskId));
     const newest = mine.sort((a, b) => b.at - a.at)[0];
     if (newest) l.evidence.updated = { commit: newest.sha, at: newest.at, ...(l.pr ? { pr: l.pr } : {}) };
