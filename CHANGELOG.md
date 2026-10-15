@@ -14,7 +14,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   - Each hire on a portfolio project gets **one line** in its first message (at most 300 characters): *Company brain Acme @a1b2c3d: before answering terminology or convention questions, read C:/…/ROUTING.md. Don't search other company folders.*, or *Company brain unavailable this session* when the brain can't be read. Never the brain's content.
   - A **context manifest** per hire records what the session was offered (the brain's snapshot, the routed files with their hashes, what was left out and why), not what it read.
   - When the brain changes under a live session, the project gets one Needs-you card, *Company brain changed: 1 corrected, 1 withdrawn since Ada's session was prepared*, with **Rehire for a fresh session** or **Dismiss**. Nothing restarts by itself.
-- Projects in no portfolio are unchanged: the same setup, Playbooks and first message, byte for byte. With no `portfolios.json` the office behaves exactly as before ([Portfolios › Rollback](docs/site/using-the-office/portfolios.md#rollback)).
+- Projects in no portfolio are unchanged: the same setup, Playbooks and first message, byte for byte. With no `portfolios.json` the office behaves exactly as before (see *Portfolios › Rollback* in the docs).
 
 ## 2026-10-15 · release 49 (`4cea6e8`)
 
