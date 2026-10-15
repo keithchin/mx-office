@@ -6,7 +6,23 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Added
+
+- **Recorded as given.** After you answer, the office checks the agent's record of your decision and compares the words with what you decided, instead of trusting a status. It shows where the record is: in a working copy, committed on a branch, or merged into main.
+  - **Escalations:** your answer asks the agent to record the decision on one line that starts *Decided per ESC-3f9c2a1b7e rev 1:* in its team journal or PROJECT.md's Decisions, and the Playbooks say the same. The office finds the citation in the project folder, the worktrees and the branch heads on the look it already makes, and compares the line and the rest of its paragraph (or its table row) with your option or words.
+  - **Questions:** at **Send** the office keeps what the message asked the analyst to record, and compares the BRD's answer, decision and consent with it on every collection. ANSWERED, ASSUMED or MOOT alone is no longer "recorded".
+  - **Each answered card** keeps a line until it's recorded as given and merged: *Decided (rev 1) · Sent (Typed) · Recorded as given · Committed on office/dev*. These are status cards after the rest of Needs you, never counted as waiting on you, and **Dismiss** stops one.
+- **Recorded differently.** When the record says something else, the card shows *You decided: … · Recorded: …* with where it is, and two buttons. **Accept as recorded** makes the recorded words a new revision of your decision, with nothing sent. **Send correction** sends a new revision to the agent with the citation to use now. A record that cites an older revision shows as *Recorded for rev 1*.
+
+### Changed
+
+- **Only a faithful record settles a decision by itself.** For decisions with an answer revision, a question is marked recorded, and a stuck decision that the register says is CONFIRMED is settled, only when your answer is recorded as given at its current revision and merged into main. *Recorded differently* never settles anything. Decisions answered before this release are *legacy* and keep the old rule.
+
+### To know
+
+- Merged means the commit is reachable from `origin/<default branch>`, by local git only: no fetch, no GitHub call. The record's path, commit and blob are kept apart. What the office found of each escalation is in `<office data>/followthrough/<floor>.json`.
+- The comparison is strict on purpose. Your option, or your words without *Go with:*, must appear in the record as complete words; case, quotes, punctuation and spacing may differ.
+- Every action is an admin's (`POST /api/followthrough/action`), refused when the decision changed since you opened it, and audited as `followthrough.*`.
 
 ## 2026-10-15 · release 48 (`2f43166`)
 

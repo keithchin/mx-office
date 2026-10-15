@@ -117,6 +117,27 @@ A proposal's issue works the same way. The proposal is marked approved before th
 
 A decision that changed since you opened the card (someone else answered it) is refused with *This decision changed since you opened it*, and nothing is written or typed. Every one of these actions is an admin's, checked by the office (`POST /api/dispatch/action`), and audited as `dispatch.*`.
 
+### Following through
+
+An answered escalation or question stays on the Needs you card as a **follow-through** item until the agent's record of it is recorded as given and merged into main, or you **Dismiss** it. These are status cards after the rest: they never count in *N waiting on you*. Each says where the decision is:
+
+> ↻ **Following through** · ESC-3f9c2a1b7e Sign-in: SSO or magic links?
+> Decided (rev 1) · Sent (Typed (the office saw it go)) · Recorded as given · Committed on office/dev
+
+*Sent* uses the attempt's own state, so *You said it went through* stays yours, never the office's. The record is one of *Recorded as given*, *Recorded differently*, *Recorded for rev 1*, *Not recorded yet*, with where it is: *In a working copy, not committed*, *Committed on &lt;branch&gt;* or *Merged into main*. How the office finds and compares the record is in [Escalations](../teams-and-agents/escalations.md#recorded-as-given) and [Questions](questions.md#recorded-as-given).
+
+A record that differs from what you decided, or cites an older revision, is a warning card with both texts and where the record is:
+
+> ⚠ **Recorded differently** · ESC-3f9c2a1b7e Sign-in: SSO or magic links?
+> **You decided:** Go with: Use SSO · **Recorded:** use magic links for everyone · Committed on office/dev · docs/team/development.md @ 1a2b3c4 (blob 9f8e7d6)
+> **Accept as recorded** · **Send correction** · Dismiss
+
+- **Accept as recorded** makes the recorded words your decision: a new revision (*accept-as-recorded*) in the answer history, with the recorded text. Nothing is sent, because there's nothing to tell anyone.
+- **Send correction** makes a new revision (*correction*) and types it to the agent, as a new attempt that replaces the last one, with the citation to use now (*Decided per ESC-… rev 2*).
+- Neither blocks any other work. *Recorded differently* never settles anything else by itself: a stuck decision that the register says is CONFIRMED stays open while your answer to it isn't recorded as given and merged.
+
+Every action is an admin's, checked by the office (`POST /api/followthrough/action`), refused with *This decision changed since you opened it* when the decision has a newer revision, and audited as `followthrough.*`.
+
 **Answer → lands on the escalation in one step.** In Portal the Overview scrolls to its card in Needs you, the card is outlined and **Send answer** gets the focus; in the other themes it opens Approvals.
 
 ## 🧰 Project setup
