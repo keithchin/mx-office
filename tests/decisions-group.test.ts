@@ -119,15 +119,38 @@ test('decisions-fyi-with-options-is-decision: an FYI with options or a question 
   assert.equal(countsWords(cardCounts(cards)), '2 decisions · 1 FYI');
 });
 
-test('decisions-legacy-records: a release-45 escalation (no refs) shows ungrouped with a legacy note; nothing is invented', () => {
-  const old = { ...esc('old', 'merge PR #98'), refs: undefined } as Escalation;
-  delete (old as { refs?: unknown }).refs;
+/** A release-45 record: no refs at all. */
+const legacy = (id: string, title: string, o: Partial<Escalation> = {}) => {
+  const e = { ...esc(id, title, o) } as Escalation;
+  delete (e as { refs?: unknown }).refs;
+  return e;
+};
+
+test('decisions-legacy-derived-refs: a legacy escalation naming one PR in its title groups (id read from the title, nothing written back); one naming two PRs does not', () => {
+  const old = legacy('old98', 'Please merge #98');
+  const two = legacy('two', 'Merge #98 and #99?');
+  const fresh = esc('new98', 'OK to merge #98 before the demo?');
+  const { cards } = collectDecisions(input({ roster: roster([old, two, fresh]), stuck: { floor: 'f1', items: [stuck('pr-98', { pr: { number: 98, title: 'x' } })] } }));
+  const c = cards.find((x) => x.sources.some((s) => s.id === 'stuck:pr-98'))!;
+  assert.deepEqual(c.sources.map((s) => s.id).sort(), ['esc:new98', 'esc:old98', 'stuck:pr-98']);
+  assert.equal(c.sources.find((s) => s.id === 'esc:old98')!.note, 'recorded before decision cards, id read from the title');
+  assert.equal(old.refs, undefined, 'nothing written back to the record');
+  const t = cards.find((x) => x.escalation === 'two')!;
+  assert.equal(t.sources.length, 1, 'two PRs in one title name neither');
+  assert.ok(t.notes.some((n) => /no id in its title/.test(n)));
+  // Separate still works on it.
+  const split = collectDecisions(input({ roster: roster([old, two, fresh]), stuck: { floor: 'f1', items: [stuck('pr-98', { pr: { number: 98, title: 'x' } })] }, splits: [{ cardId: c.id, sourceId: 'esc:old98' }] }));
+  assert.equal(split.cards.find((x) => x.escalation === 'old98')!.sources.length, 1);
+});
+
+test('decisions-legacy-records: a release-45 escalation (no refs) with no id in its title shows on its own with a legacy note; nothing is invented', () => {
+  const old = legacy('old', 'Can you look at the checkout flow');
   const answered = { ...esc('done', 'Old one'), status: 'resolved', resolution: { verdict: 'approve', text: '', by: 'Keith', at: NOW - H, delivered: true } } as Escalation;
   delete (answered as { refs?: unknown }).refs;
   const { cards } = collectDecisions(input({ roster: roster([old, answered]), stuck: { floor: 'f1', items: [stuck('pr-98', { pr: { number: 98, title: 'x' } })] } }));
-  assert.equal(cards.length, 2, 'not grouped with stuck pr-98');
+  assert.equal(cards.length, 2, 'not grouped with stuck pr-98: similar words never merge');
   const c = cards.find((x) => x.escalation === 'old')!;
-  assert.ok(c.notes.some((n) => /Recorded before decision cards/.test(n)));
+  assert.ok(c.notes.some((n) => /Recorded before decision cards: no id in its title/.test(n)));
   assert.equal(c.sources[0].note, 'recorded before decision cards');
   assert.equal(old.refs, undefined, 'no ids invented on the record');
   assert.equal(c.since, old.at, 'its own time, nothing invented');

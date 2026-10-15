@@ -36,10 +36,16 @@ const para = (s: string) => {
 };
 
 /** An escalation's grouping keys: only what it names explicitly (refs); a record from before refs groups on nothing. */
-export function escalationKeys(e: Pick<Escalation, 'refs'>): string[] {
-  const r = e.refs;
-  if (!r) return [];
+export function escalationKeys(e: Pick<Escalation, 'refs' | 'title'>): string[] {
+  // A record from before refs: read from its title with the same rule as at raise time (one id of a kind only), never written back.
+  const r = e.refs ?? refsFromTitle(e.title);
   return [r.questionKey && `q:${r.questionKey}`, r.decisionId && `id:${r.decisionId}`, r.pr && `pr:${r.pr}`, r.stageId && `stage:${r.stageId}`, r.stuckId && `stuck:${r.stuckId}`, r.journeyId && `id:${r.journeyId}`].filter((k): k is string => !!k);
+}
+
+/** A source's small print: filed as FYI, recorded before decision cards, and "id read from the title" when its refs were derived. */
+function sourceNote(e: Escalation, filedAsFyi: boolean): string | undefined {
+  const parts = [filedAsFyi ? 'filed as FYI' : '', !e.refs ? 'recorded before decision cards' : '', !e.refs && escalationKeys(e).length ? 'id read from the title' : ''].filter(Boolean);
+  return parts.length ? parts.join(', ') : undefined;
 }
 
 function escalationLabel(e: Escalation, fyi: boolean): string {
@@ -64,13 +70,13 @@ export function escalationCandidates(r: RosterView): Candidate[] {
       : { key: `esc-${e.id}`, kind: 'escalation', icon: '🚩', tag: e.urgency.toUpperCase(), text: `${e.by} escalated: ${e.title}`, since: e.at, level: isLoud ? 'block' : 'warn', action: admin ? 'Answer' : 'View', target: { to: 'escalation', id: e.id }, ...(n !== undefined && e.jeffRank ? { rank: { n, chip: rankChip(n), tip: rankTip(e.jeffRank, n) } } : {}) };
     const notes = [
       ...(filedAsFyi ? ['Filed as FYI, but it asks something: shown as a decision.'] : []),
-      ...(!e.refs ? ['Recorded before decision cards: shown on its own, not grouped.'] : []),
+      ...(!e.refs ? [escalationKeys(e).length ? 'Recorded before decision cards: its id was read from the title.' : 'Recorded before decision cards: no id in its title, so shown on its own.'] : []),
       ...(e.told ? [`${e.told.by} told ${e.by} at ${hhmm(e.told.at)}: ${e.told.what}`] : []),
     ];
     const label = escalationLabel(e, kind === 'fyi');
     return {
       need,
-      source: { id: `esc:${e.id}`, type: 'escalation', label, text: e.title, target: need.target, escalation: e.id, ...(kind === 'fyi' ? { fyi: true } : {}), ...(filedAsFyi ? { note: 'filed as FYI' } : !e.refs ? { note: 'recorded before decision cards' } : {}) },
+      source: { id: `esc:${e.id}`, type: 'escalation', label, text: e.title, target: need.target, escalation: e.id, ...(kind === 'fyi' ? { fyi: true } : {}), ...(sourceNote(e, filedAsFyi) ? { note: sourceNote(e, filedAsFyi) } : {}) },
       keys: escalationKeys(e),
       kind,
       prio: kind === 'fyi' ? 7 : 1,

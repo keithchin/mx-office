@@ -96,7 +96,7 @@ The kind of card decides its buttons:
 
 **A missing source is not an answer.** When an `AWAITING-PM` line goes from the agent's newest entry, its escalation stays open and the card says *The AWAITING-PM line is gone from &lt;agent&gt;'s newest entry*, with **Resolved** and **Still needed: ask &lt;agent&gt;**. When the office can't read a source (a git error, an unreadable file), it keeps the item as it was and says *couldn't re-read at 14:02*: nothing resolves on a failed read.
 
-Escalations from before decision cards show on their own, with a small *recorded before decision cards* note: nothing is grouped on a guess. Every action on a card is an admin's, checked by the office (`POST /api/decisions/action`).
+Escalations from before decision cards have no ids of their own: the card reads one from the title with the same rule (only when it names exactly one of a kind, nothing written back) and says *id read from the title*; one whose title names none, or two, shows on its own with a *recorded before decision cards* note. Nothing is grouped on a guess. Every action on a card is an admin's, checked by the office (`POST /api/decisions/action`).
 
 **Finished, not looked at yet.** An agent that ended its turn and that nobody has opened since counts as waiting on you. Its worker card says *👀 Finished, not looked at yet: … open it to see*. Opening its terminal clears it.
 
