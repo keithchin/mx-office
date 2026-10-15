@@ -26,6 +26,7 @@ import { appDirTooLong, mprVersion } from './mendix-app.js';
 import { testModeOf } from '../testmode.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
+import { portfoliosOf } from '../portfolios/index.js';
 import { setupView, setupViewOf } from './setup.js';
 import { GateSource, branchInfo } from './gate-source.js';
 import { withFloorToolkitEnv } from '../toolkit-env.js';
@@ -382,6 +383,7 @@ export class Wizard {
       },
       // The office's own Claude Code (CLAUDE_CONFIG_DIR in its environment, else ~/.claude.json), as signins.ts's base.
       trustFloor: (dir) => void trustFloor(dir, childEnv()),
+      joinPortfolio: (floor, portfolio, by) => portfoliosOf(ctx).joinFromWizard(floor, portfolio, by),
       adoptFloor: async (repo, dir, by) => {
         const r = ctx.building.adopt(repo, dir, by);
         if (typeof r === 'string') return r;

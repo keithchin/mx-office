@@ -95,8 +95,12 @@ export class Members {
     const owed = this.roster.escalations.owed(floor, role);
     // Durable answers the hire carries: marked in flight before the hire types them (a new session: no transcript to prove it by yet).
     if (owed.dispatchIds?.length) await this.roster.dispatch.beforeType(floor.id, owed.dispatchIds, {});
-    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task, owed.lines, teamLine(d, role)), owner, by, team: def.team });
+    // A project in a portfolio with a company brain: one line pointing at its ROUTING.md (never its content); nothing for any other project.
+    const brain = await this.roster.deps.hireContext?.(floor.id).catch(() => undefined);
+    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, task, owed.lines, teamLine(d, role), brain?.line), owner, by, team: def.team });
     if (typeof r === 'string') return r;
+    // What this hire was offered, once per hire (server/portfolios/manifest.ts): offered, not obeyed.
+    void brain?.record(role, r.id).catch(() => undefined);
     owed.mark();
     m.workerId = r.id;
     m.phase = 'active';

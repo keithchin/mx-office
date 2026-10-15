@@ -51,6 +51,7 @@ import { dispatchRoutes } from './dispatch.js';
 import { followThroughRoutes } from './followthrough.js';
 import { questionsRoutes } from './questions.js';
 import { versionRoutes } from './version.js';
+import { portfolioRoutes } from './portfolios.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -186,6 +187,12 @@ export const routes: readonly Route[] = [
   questionsRoutes.send,
   questionsRoutes.import,
   questionsRoutes.export,
+  // Portfolios and their company brains (portfolios/).
+  portfolioRoutes.view,
+  portfolioRoutes.act,
+  portfolioRoutes.context,
+  portfolioRoutes.changes,
+  portfolioRoutes.card,
   wizardRoutes.wizard,
   briefRoutes.brief,
   toolkitRoutes.toolkit,

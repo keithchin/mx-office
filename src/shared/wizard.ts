@@ -172,6 +172,11 @@ export interface ProjectPlan {
    * files are copied into the project's sources/.
    */
   brief?: PlanBrief;
+  /**
+   * The portfolio (pfl_<ulid>, server/portfolios/) the new project joins, if any: after init and the pin
+   * instructions it's added there and, when the portfolio has a company brain, wired to it and checked.
+   */
+  portfolio?: string;
 }
 
 /** The setup, a step at a time. Each step checks what's already done first, so running it again is safe. */

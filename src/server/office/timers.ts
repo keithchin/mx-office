@@ -12,6 +12,7 @@ import { startWebPush } from '../webpush/index.js';
 import { startWarmup } from '../warmup.js';
 import { startStuckDetection } from '../stuck/index.js';
 import { startAsks } from '../asks/index.js';
+import { startPortfolios } from '../portfolios/index.js';
 import { startQuestions } from '../questions/index.js';
 import { startFollowThrough } from '../followthrough/index.js';
 import { startToolkitPins } from '../toolkit-pin/office.js';
@@ -71,6 +72,8 @@ export function startTimers(ctx: Ctx): () => void {
   const stopQuestions = startQuestions(ctx);
   // Recorded as given: each answered decision's record found and compared, on the asks look's reads (followthrough/).
   const stopFollow = startFollowThrough(ctx);
+  // Each portfolio's company brain looked at every five minutes, off the loop: a change under a live session is a Needs-you card (portfolios/).
+  const stopPortfolios = startPortfolios(ctx);
 
   return () => {
     stopRuns();
@@ -87,6 +90,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopAsks();
     stopQuestions();
     stopFollow();
+    stopPortfolios();
     clearInterval(heartbeat);
     clearInterval(resync);
   };
