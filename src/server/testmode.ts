@@ -68,7 +68,7 @@ export function testModeOf(floorDir?: string): TestModeView {
   if (s.flag) return { on: true, why: 'started with --test-mode' };
   if (envOn()) return { on: true, why: 'AGENT_OFFICE_TEST_MODE is set' };
   if (isTestPath(s.officeDir)) return { on: true, why: `the office's folder is ${WHERE}` };
-  if (isTestPath(floorDir)) return { on: true, why: `the floor's folder is ${WHERE}` };
+  if (isTestPath(floorDir)) return { on: true, why: `the project's folder is ${WHERE}` };
   return { on: false };
 }
 

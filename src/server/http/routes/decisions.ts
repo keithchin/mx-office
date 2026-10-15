@@ -34,7 +34,7 @@ export const decisionRoutes = {
     auth: 'session',
     async handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, await decisionsOf(ctx).view(floor, ctx.meOf(session.account?.id).admin));
     },
   },
@@ -49,7 +49,7 @@ export const decisionRoutes = {
       const body = await jsonBody(req);
       if (!body) return send(res, 400, { error: 'Send JSON' });
       const floor = ctx.floors.get(String(body.floor ?? ''));
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       if (!isDecisionAction(body.action)) return send(res, 400, { error: `action is one of ${DECISION_ACTIONS.join(', ')}` });
       const verdict = isEscalationVerdict(body.verdict) ? body.verdict : undefined;
       const esc = str(body.escalation);

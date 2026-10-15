@@ -22,13 +22,13 @@ const SHOWN = 12;
 /** Folders people keep their code in, in the home folder: the first one that's there is the suggestion. */
 const CODE_FOLDERS = ['Workspace', 'workspace', 'Developer', 'code', 'Code', 'projects', 'Projects', 'repos', 'src', 'dev', 'git', 'GitHub', 'github'];
 
-const SETUP_HELP = `agent-office setup — pick where projects are cloned and which ones are floors
+const SETUP_HELP = `agent-office setup — pick where projects are cloned and which repositories they are
 
 Usage:
   agent-office setup [--projects <dir>] [--project <owner/repo>]... [--home <dir>]
 
 In a terminal it walks you through it: the workspace folder new projects are cloned
-into, signing the GitHub CLI in, and picking repositories to clone as floors. Given
+into, signing the GitHub CLI in, and picking repositories to clone as projects. Given
 --projects or --project it does just that and asks nothing, for scripts.
 
 A new office runs this by itself the first time it starts in a terminal. Run it
@@ -37,7 +37,7 @@ while the office is stopped; while it runs, use its elevator and ⚙️ Settings
 Options:
       --home <dir>        The office to set up (default ~/agent-office, env AGENT_OFFICE_HOME)
       --projects <dir>    Clone new projects into <dir>/<owner>/<repo> from now on
-      --project <repo>    Clone this repository (owner/name or a GitHub URL) as a floor.
+      --project <repo>    Clone this repository (owner/name or a GitHub URL) as a project.
                           Repeat it for more than one
   -h, --help              Show this help
 `;
@@ -64,7 +64,7 @@ export async function welcome(cfg: Config): Promise<void> {
   console.log(`
   👋 Welcome to Agent Office!
 
-  Every project is a floor of the building, and this one doesn't have any yet.
+  This office doesn't have any projects yet.
   Let's add your first: pick one of your GitHub repositories and the office
   clones it. Press Enter to skip any question and do it from the office's
   elevator instead.`);
@@ -137,8 +137,8 @@ export async function setupCommand(argv: string[]): Promise<number> {
   const floors = building.list();
   console.log(
     floors.length
-      ? `\n  🏢 The office in ${tildify(dir)} has ${floors.length} floor${floors.length === 1 ? '' : 's'}: ${floors.map((f) => f.name).join(', ')}.`
-      : `\n  🏢 The office in ${tildify(dir)} has no floors yet: every project is a floor of the building.`,
+      ? `\n  🏢 The office in ${tildify(dir)} has ${floors.length} project${floors.length === 1 ? '' : 's'}: ${floors.map((f) => f.name).join(', ')}.`
+      : `\n  🏢 The office in ${tildify(dir)} has no projects yet.`,
   );
   await walkthrough(building, dataDir, true);
   return 0;
@@ -275,7 +275,7 @@ async function addFloor(building: Building, repo: string, by: string): Promise<b
     console.log(`     ✗ ${r}`);
     return false;
   }
-  console.log(`     ✓ ${r.repo ?? r.name} is floor ${building.list().indexOf(r) + 1}`);
+  console.log(`     ✓ ${r.repo ?? r.name} is project ${building.list().indexOf(r) + 1}`);
   return true;
 }
 
@@ -284,7 +284,7 @@ function printRepos(list: RepoChoice[], building: Building) {
   const nameWidth = Math.min(40, Math.max(...list.map((r) => r.name.length)));
   const floors = building.list();
   list.forEach((r, i) => {
-    const note = floors.some((f) => sameRepo(f.repo, r.name)) ? '(a floor already)' : [r.private ? 'private' : '', r.description ?? ''].filter(Boolean).join(' · ');
+    const note = floors.some((f) => sameRepo(f.repo, r.name)) ? '(a project already)' : [r.private ? 'private' : '', r.description ?? ''].filter(Boolean).join(' · ');
     const line = `    ${String(i + 1).padStart(2)}. ${r.name.padEnd(nameWidth)}  ${note}`.trimEnd();
     console.log(line.length > width ? `${line.slice(0, width - 1)}…` : line);
   });

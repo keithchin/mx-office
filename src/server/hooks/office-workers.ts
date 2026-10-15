@@ -22,7 +22,7 @@ import { tellLimitOf } from './tell-limit.js';
  */
 async function pullOf(floor: Floor, n: number, repo?: string): Promise<{ number: number; url: string } | string> {
   const here = floor.def.repo;
-  if (repo && here && repo.toLowerCase() !== here.toLowerCase()) return `That pull request is in ${repo}, and this floor is ${here}`;
+  if (repo && here && repo.toLowerCase() !== here.toLowerCase()) return `That pull request is in ${repo}, and this project is ${here}`;
   const listed = floor.github.pulls.items.find((p) => p.number === n);
   let pr: { url: string; state: string } | undefined = listed;
   if (!pr) {
@@ -177,7 +177,7 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
   const worktree = ask.worktree ?? !!floor.project.branch;
   // Its worktree starts from what's on GitHub now, like one hired from a desk.
   if (worktree) await floor.workers.fetchBase();
-  if (!ctx.floors.has(floor.id)) return send(res, 410, { error: 'This floor closed' });
+  if (!ctx.floors.has(floor.id)) return send(res, 410, { error: 'This project closed' });
   // It runs as whoever the asking worker runs as.
   const owner = floor.workers.ownerOf(me.id);
   const r = await floor.workers.spawn(desk, who, ask.prompt, worktree, 'agent', provider, ask.model, ask.effort, undefined, owner);

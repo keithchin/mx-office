@@ -33,7 +33,7 @@ export const workerHandlers = {
     const repos: RepoSource[] = [];
     for (const id of Array.isArray(msg.repos) ? [...new Set(msg.repos.slice(0, MAX_REPOS + 1).map((x) => str(x, 64)))] : []) {
       const other = ctx.floors.get(id);
-      if (!other || other === floor) return ctx.warn(c, other ? "The worker's own floor's project is already in its workspace" : 'That project is no longer in the building');
+      if (!other || other === floor) return ctx.warn(c, other ? "The worker's own project is already in its workspace" : 'That project is no longer in the building');
       repos.push({ floor: other.id, name: other.def.name, repo: other.def.repo, dir: other.dir });
     }
     // A shell is theirs too: `claude auth login` or `gh auth login` typed there signs them in.

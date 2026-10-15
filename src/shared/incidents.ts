@@ -158,8 +158,8 @@ export const DEFAULT_INCIDENT_SETTINGS: IncidentSettings = {
 
 export const RULE_META: Record<IncidentRule, { label: string; what: string }> = {
   realLaunch: { label: 'Real agent launched in a test office', what: 'A worker started (or was about to start) a real agent CLI on a test office' },
-  spendSpike: { label: 'Spend spike', what: "A floor's spend in the last hour past N× its trailing hourly average, or past a set amount" },
-  spendCap: { label: 'Spend cap reached', what: "A floor's daily spend cap paused the office's prompts" },
+  spendSpike: { label: 'Spend spike', what: "A project's spend in the last hour past N× its trailing hourly average, or past a set amount" },
+  spendCap: { label: 'Spend cap reached', what: "A project's daily spend cap paused the office's prompts" },
   interrupted: { label: 'Interrupted turns', what: 'The office stopped with workers in the middle of a turn' },
   escalationUndelivered: { label: 'Escalation answer not delivered', what: 'An answer to an escalation still not delivered to its agent after this long' },
   crashLoop: { label: 'Worker crash loop', what: 'A worker exited abnormally this many times in this long' },

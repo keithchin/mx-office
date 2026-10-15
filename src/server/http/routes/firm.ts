@@ -54,7 +54,7 @@ export const firmRoutes = {
     auth: 'session',
     handle(ctx, { res, url }) {
       const floor = url.searchParams.get('floor') ?? '';
-      if (!ctx.floors.has(floor)) return send(res, 404, { error: 'No such floor' });
+      if (!ctx.floors.has(floor)) return send(res, 404, { error: 'No such project' });
       const firm = firmOf(ctx);
       const config = firm.defaults(floor);
       return send(res, 200, { config, estimate: firm.estimate(config) });
@@ -73,7 +73,7 @@ export const firmRoutes = {
         return send(res, 400, { error: 'Send JSON' });
       }
       const floor = String(body.floor ?? '');
-      if (!ctx.floors.has(floor)) return send(res, 404, { error: 'No such floor' });
+      if (!ctx.floors.has(floor)) return send(res, 404, { error: 'No such project' });
       const firm = firmOf(ctx);
       const config = cleanConfig(body, firm.defaults(floor));
       if (typeof config === 'string') return send(res, 400, { error: config });

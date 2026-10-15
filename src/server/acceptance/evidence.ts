@@ -69,7 +69,7 @@ function scopeOf(i: DraftInput): AcceptanceDraft['scope'] {
     for (const c of stageDeliverables(v).filter((x) => run.has(x.stage))) delivered.push({ label: `Stage ${c.stage} documents`, status: c.present === c.expected ? 'present' : c.present ? 'pending' : 'missing', detail: `${c.present} of ${c.expected} on main${c.branch ? `, ${c.branch} on a branch` : ''}${c.draft ? `, ${c.draft} draft` : ''}` });
   } else delivered.push({ label: 'Documents', status: 'unknown', detail: "the documents couldn't be scanned" });
   const merged = i.pulls.filter((p) => p.state === 'MERGED');
-  delivered.push(merged.length ? { label: 'Merged pull requests', status: 'present', detail: `${merged.length}${merged.length >= 40 ? '+' : ''} (the office keeps the latest 40)` } : { label: 'Merged pull requests', status: 'unknown', detail: 'none seen on this floor (GitHub not connected, or nothing merged)' });
+  delivered.push(merged.length ? { label: 'Merged pull requests', status: 'present', detail: `${merged.length}${merged.length >= 40 ? '+' : ''} (the office keeps the latest 40)` } : { label: 'Merged pull requests', status: 'unknown', detail: 'none seen on this project (GitHub not connected, or nothing merged)' });
   if (brds.length) delivered.push({ label: 'BRDs built', status: 'unknown', detail: "which BRDs are built isn't recorded: compare the agreed list with the merged work" });
   return { agreed, delivered };
 }
@@ -84,7 +84,7 @@ function testsOf(i: DraftInput): EvidenceLine[] {
   for (const g of verdicts) out.push({ label: `Gate ${g.id} · ${g.title}`, status: GATE[g.status.toUpperCase()] ?? 'unknown', detail: `${g.status}${g.status.toUpperCase() === 'WAIVED' ? ' (waived)' : ''}${g.detail ? `: ${g.detail}` : ''} · ${g.id === 'P' ? 'from the committed intake/dashboard' : when}`, locator: g.id !== 'P' && !i.setup?.checkedAt ? gitLoc(i.head.commit, 'index.html') : undefined });
   const merged = i.pulls.filter((p) => p.state === 'MERGED');
   const last = merged[0];
-  if (!i.pulls.length) out.push({ label: 'CI', status: 'unknown', detail: 'no pull requests seen on this floor, so no CI results' });
+  if (!i.pulls.length) out.push({ label: 'CI', status: 'unknown', detail: 'no pull requests seen on this project, so no CI results' });
   else if (last) out.push({ label: `CI on the last merged PR #${last.number}`, status: last.checks === 'none' ? 'unknown' : last.checks, detail: last.checks === 'none' ? 'no CI checks reported on it' : `${last.title}${last.headRefOid ? ` @ ${last.headRefOid.slice(0, 8)}` : ''}` });
   for (const p of i.pulls.filter((x) => x.state === 'OPEN' && (x.checks === 'fail' || x.checks === 'pending')).slice(0, 10)) out.push({ label: `CI on open PR #${p.number}`, status: p.checks === 'fail' ? 'fail' : 'pending', detail: p.title });
   for (const id of ['test-plan', 'journeys', 'ui-reviews', 'test-report']) {

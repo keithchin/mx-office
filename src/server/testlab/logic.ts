@@ -84,7 +84,7 @@ export function refusalOf(r: RefusalInput): string | undefined {
   if (!isTestPath(r.root)) return `Refused: the test offices' folder (${r.root}) isn't a test office's folder (under scratch/test-offices or a test-office… folder), so a run could touch real data. Set AGENT_OFFICE_TEST_OFFICES to one.`;
   if (inside(r.root, r.dataDir) || inside(r.dataDir, r.root)) return `Refused: the test offices' folder (${r.root}) overlaps this office's data folder (${r.dataDir}).`;
   const floor = r.floorDirs.find((d) => inside(r.root, d) || inside(d, r.root));
-  if (floor) return `Refused: the test offices' folder (${r.root}) overlaps a floor of this office (${floor}).`;
+  if (floor) return `Refused: the test offices' folder (${r.root}) overlaps a project of this office (${floor}).`;
   if (!r.runnerExists) return `The test runner isn't here (${r.runner}): the office's checkout has no scripts/perf/run.mjs.`;
   return undefined;
 }

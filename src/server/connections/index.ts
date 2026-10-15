@@ -177,7 +177,7 @@ export async function importFromFiles(ctx: Ctx, who: { name: string; id?: string
 /** Switches the Mendix token on or off for a floor's agents. */
 export function setMendixFloor(ctx: Ctx, floorId: string, on: boolean, who: { name: string; id?: string }): string | undefined {
   const floor = ctx.floors.get(floorId);
-  if (!floor) return 'No such floor';
+  if (!floor) return 'No such project';
   const dirs = (officeSettings().mendixFloors ?? []).filter((d) => path.resolve(d).toLowerCase() !== path.resolve(floor.dir).toLowerCase());
   updateOfficeSettings({ mendixFloors: on ? [...dirs, floor.dir] : dirs });
   audit.record({ floor: floor.id, actor: human(who.name, who.id), action: 'settings.change', target: { kind: 'setting', id: 'mendixToken', label: 'Mendix token for agents' }, summary: `${on ? 'Gave' : 'Took'} the Mendix token ${on ? 'to' : 'from'} ${floor.def.name}'s agents (${who.name}); workers hired from now on`, details: { after: { on } }, severity: 'notice' });

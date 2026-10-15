@@ -155,7 +155,7 @@ export const controlOf = (ctx: Ctx): ControlDeps => controls.get(budgetOf(ctx))!
  */
 export function applyLevelToTeam(ctx: Ctx, floorId: string, s: LevelSettings, by: string): string[] {
   const floor = ctx.floors.get(floorId);
-  if (!floor) return ['the floor is gone'];
+  if (!floor) return ['the project is gone'];
   const roster = rosterOf(ctx);
   const tf = teamFloor(ctx, floor);
   const problems: string[] = [];
@@ -181,7 +181,7 @@ export function applyLevelToTeam(ctx: Ctx, floorId: string, s: LevelSettings, by
 export function applyChoice(ctx: Ctx, floorId: string, c: BudgetChoice, by: string): string[] {
   const b = budgetOf(ctx);
   const floor = b.floorRef(floorId);
-  if (!floor) return ['the floor is gone'];
+  if (!floor) return ['the project is gone'];
   const f = b.file(floor);
   const was = { ...f.settings };
   f.settings = { ...f.settings, total: c.total, threshold: c.threshold, autoPause: c.autoPause, level: c.level, updatedBy: by, updatedAt: Date.now() };

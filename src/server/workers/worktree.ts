@@ -74,8 +74,8 @@ export class WorkerTrees {
     // A branch can only be checked out once per repository, and two floors can be checkouts of the same one.
     const seen = new Map<string, string>();
     const own = this.ctx.trees.commonDir();
-    if (!own) return "This floor's project isn't a git checkout";
-    seen.set(own, "this floor's project");
+    if (!own) return "This project isn't a git checkout";
+    seen.set(own, "this project");
     for (const r of repos) {
       const common = new Worktrees(r.dir).commonDir();
       if (!common) return `${r.name} isn't a git checkout`;
@@ -141,7 +141,7 @@ export class WorkerTrees {
     const brief = officePrompt(this.ctx.prompts, 'worker.repos', {
       branch: primary.branch,
       home,
-      repos: [line(path.basename(primary.path), home, primary.from, " (this floor's project)"), ...others.map((o) => line(o.name, o.project, o.from))].join('\n'),
+      repos: [line(path.basename(primary.path), home, primary.from, " (this project)"), ...others.map((o) => line(o.name, o.project, o.from))].join('\n'),
     });
     for (const file of WORKSPACE_FILES) writeFileSync(path.join(this.ctx.dir, path.dirname(primary.path), file), `${brief.trim()}\n`);
   }

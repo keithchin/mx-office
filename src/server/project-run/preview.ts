@@ -120,7 +120,7 @@ export async function previewFloor(deps: RunDeps, f: RunFloor): Promise<{ previe
   const warnings: string[] = [];
   if (f.studioOpen()) warnings.push('Studio Pro has this project open (Studio mode): agents wake, but their mxcli writes stay paused until it closes.');
   const pause = projectPause(team.id);
-  if (pause) warnings.push('This floor is paused: resuming lifts the pause, and the office’s own prompts (nudges, standups, relays) go to its agents again.');
+  if (pause) warnings.push('This project is paused: resuming lifts the pause, and the office’s own prompts (nudges, standups, relays) go to its agents again.');
   const preview: ResumePreview = {
     floor: team.id,
     floorName: team.name,

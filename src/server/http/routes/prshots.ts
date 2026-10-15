@@ -22,8 +22,8 @@ export const prShotRoutes = {
     async handle(ctx, { res, url }) {
       const floor = floorParam(ctx, url);
       const pr = prNumber(url);
-      if (!floor || !pr) return send(res, 404, { error: 'No such floor or pull request' });
-      if (!floor.def.repo) return send(res, 200, { pr, rows: [], shots: [], note: 'This floor has no GitHub repository' });
+      if (!floor || !pr) return send(res, 404, { error: 'No such project or pull request' });
+      if (!floor.def.repo) return send(res, 200, { pr, rows: [], shots: [], note: 'This project has no GitHub repository' });
       const head = floor.github.pulls.items.find((p) => p.number === pr)?.headRefName;
       try {
         const checks = await prShotsOf(ctx).checks(floor.def.repo, floor.dir, pr, head);

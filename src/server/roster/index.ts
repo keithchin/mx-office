@@ -350,7 +350,7 @@ export class Roster {
   pauseOf(d: RosterData): string | undefined {
     const cap = capAt(d.settings.costCaps, d.settings.autonomy);
     if (cap === undefined || d.spend.usd < cap) return undefined;
-    return `This floor's $${cap.toFixed(2)} daily team cap (autonomy level ${d.settings.autonomy}) is spent: no new hires, and the office sends no prompts of its own (nudges, standups, relays, wakes) until tomorrow`;
+    return `This project's $${cap.toFixed(2)} daily team cap (autonomy level ${d.settings.autonomy}) is spent: no new hires, and the office sends no prompts of its own (nudges, standups, relays, wakes) until tomorrow`;
   }
 
   /** Re-applies the cap after the settings changed. */

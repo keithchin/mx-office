@@ -47,7 +47,7 @@ export const phoneRoutes = {
       const body = await json(req);
       if (!body) return send(res, 400, { error: 'Send JSON' });
       const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const place = placeOf(body.place);
       if (!place) return send(res, 400, { error: 'Where was it written?' });
       if (body.verdict !== undefined && !isEscalationVerdict(body.verdict)) return send(res, 400, { error: 'reply, approve or reject' });
@@ -63,7 +63,7 @@ export const phoneRoutes = {
     auth: 'session',
     handle(ctx, { res, url }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, { floor: floor.id, pending: phoneOf(ctx).pendingOn(floor.id) });
     },
   },

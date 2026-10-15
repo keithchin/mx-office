@@ -77,7 +77,7 @@ export function deliverablesBrief(roleId: RoleId, earlyDrafts: boolean, also: re
   return [
     ...out,
     '',
-    '### Early drafts (on for this floor)',
+    '### Early drafts (on for this project)',
     `While the Chief Analyst is still on Stages 0–2, make ${draft}. Rules:`,
     `- Mark every draft: \`-draft\` in its file name, and \`${DRAFT_BANNER}\` as the first line (a heading or an HTML banner). The Documents page lists them as Draft.`,
     '- A draft never claims a gate: don\'t tick a stage, run its gate as done, or call it approved.',

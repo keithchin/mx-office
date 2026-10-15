@@ -124,7 +124,7 @@ export class ModelService {
     const g = await this.graphOf(floor);
     if (!ref || ref === 'main' || ref === g.defaultBranch) {
       const sha = g.history[0]?.sha;
-      if (!sha) throw new Error('the floor has no main branch yet');
+      if (!sha) throw new Error('the project has no main branch yet');
       this.sawMain(floor, sha);
       return { sha };
     }

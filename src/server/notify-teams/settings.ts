@@ -121,7 +121,7 @@ export class TeamsSettings {
     }
     if (p.floors !== undefined) {
       const f = cleanFloors(p.floors);
-      if (!f) return 'Pick all floors or a list of them';
+      if (!f) return 'Pick all projects or a list of them';
       next.floors = f;
     }
     if (p.level !== undefined) {

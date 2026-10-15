@@ -12,7 +12,7 @@ type Answer = (m: ModelService, floor: Floor, q: URLSearchParams) => Promise<unk
 function answer(fn: Answer) {
   return async (ctx: Ctx, { res, url }: RouteRequest) => {
     const floor = floorParam(ctx, url);
-    if (!floor) return send(res, 404, { error: 'No such floor' });
+    if (!floor) return send(res, 404, { error: 'No such project' });
     try {
       return send(res, 200, await fn(modelOf(ctx), floor, url.searchParams));
     } catch (err) {

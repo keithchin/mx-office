@@ -16,7 +16,7 @@ export function originNews(dir: string, news: OriginNews = 'fetched'): void {
     try {
       fn(dir, news);
     } catch (err) {
-      console.error('agent-office: a floor sync listener failed', err);
+      console.error('agent-office: a project sync listener failed', err);
     }
   }
 }

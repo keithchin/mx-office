@@ -211,7 +211,7 @@ export class IncidentDetector {
     const before = this.paused.get(f.id);
     this.paused.set(f.id, f.paused);
     if (!f.paused || before || !this.rule('spendCap').on) return;
-    this.d.raise({ rule: 'spendCap', floor: f.id, severity: 'near-miss', title: `Spend cap reached on ${this.d.floorName(f.id)}`, summary: `The floor's daily spend cap paused the office's prompts: ${f.paused}` });
+    this.d.raise({ rule: 'spendCap', floor: f.id, severity: 'near-miss', title: `Spend cap reached on ${this.d.floorName(f.id)}`, summary: `The project's daily spend cap paused the office's prompts: ${f.paused}` });
   }
 
   private undeliveredOf(f: FloorSnapshot, now: number) {

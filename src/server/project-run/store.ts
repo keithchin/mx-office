@@ -89,7 +89,7 @@ export const projectPause = (floorId: string): PauseInfo | undefined => data.pau
 export function projectPauseOf(floorId: string): string | undefined {
   const p = data.pauses[floorId];
   if (!p) return undefined;
-  return `This floor is paused (⏸ Pause project${p.why === 'restart' ? ', for a safe restart' : p.why === 'budget' ? ': its budget is reached' : ` by ${p.by}`}): the office sends its agents no prompts of its own until it's resumed`;
+  return `This project is paused (⏸ Pause project${p.why === 'restart' ? ', for a safe restart' : p.why === 'budget' ? ': its budget is reached' : ` by ${p.by}`}): the office sends its agents no prompts of its own until it's resumed`;
 }
 
 /** Floors a person is hiring on anyway, from the Team tab, after a confirm (overrideHold). */

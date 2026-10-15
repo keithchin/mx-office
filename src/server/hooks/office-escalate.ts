@@ -25,7 +25,7 @@ export async function officeEscalate(ctx: Ctx, floor: Floor, me: WorkerInfo, bod
     note: joined
       ? `Already open: ${e.by === me.name ? 'you' : e.by} raised the same (${e.id}, "${e.title}"). Your +1 and details are added to it, and the Project Manager's answer comes back to you as a prompt too; don't raise it again.`
       : e.fyi
-      ? `Filed as FYI: below this floor's escalation threshold at autonomy level ${e.level}. The Project Manager sees it on the project console without an alert; carry on.`
+      ? `Filed as FYI: below this project's escalation threshold at autonomy level ${e.level}. The Project Manager sees it on the project console without an alert; carry on.`
       : `Raised to the Project Manager on the project console${e.urgency === 'urgent' || e.urgency === 'critical' ? ' with an alert' : ''}. Their answer comes back to you as a prompt; carry on with whatever it doesn't block.`,
   });
 }

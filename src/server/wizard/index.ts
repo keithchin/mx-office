@@ -181,7 +181,7 @@ export class Wizard {
     if (plan.brief && !plan.brief.approved) return 'Approve the scope first';
     const id = jobId(plan.owner, plan.name);
     const had = this.book.get(id);
-    if (had && had.status === 'done') return `${plan.owner}/${plan.name} was already set up — edit its answers from its floor's setup panel`;
+    if (had && had.status === 'done') return `${plan.owner}/${plan.name} was already set up — edit its answers from its project's setup panel`;
     if (had && this.book.isRunning(id)) return this.book.view(had);
     if (plan.kind === 'new' && !plan.createdByHand && !this.cfg.offlineDir && !adminTokenConfigured(this.cfg.adminTokenFile)) {
       return "There's no admin token, so the office can't create the repository: create one (see the instructions), or create the repository on GitHub yourself and tick that box";
@@ -378,7 +378,7 @@ export class Wizard {
         ctx.floorsChanged();
         if (typeof r === 'string') return r;
         const floor = ctx.openFloor(r);
-        return floor ? ref(floor) : `Cloned ${repo}, but couldn't open its floor — see the office's log`;
+        return floor ? ref(floor) : `Cloned ${repo}, but couldn't open its project — see the office's log`;
       },
       // The office's own Claude Code (CLAUDE_CONFIG_DIR in its environment, else ~/.claude.json), as signins.ts's base.
       trustFloor: (dir) => void trustFloor(dir, childEnv()),
@@ -389,11 +389,11 @@ export class Wizard {
         await new Promise<void>((done) => setImmediate(done));
         const floor = ctx.floors.get(r.id) ?? ctx.openFloor(r);
         ctx.floorsChanged();
-        return floor ? ref(floor) : `Couldn't open the floor at ${dir} — see the office's log`;
+        return floor ? ref(floor) : `Couldn't open the project at ${dir} — see the office's log`;
       },
       queue: (floorId, prompt, title, issue, model, by, account) => {
         const floor = ctx.floors.get(floorId);
-        if (!floor) return 'No such floor';
+        if (!floor) return 'No such project';
         return floor.queue.add(prompt, by, title, issue, 'claude', model, 'medium', account);
       },
       hired: (floorId, role) => {
@@ -410,7 +410,7 @@ export class Wizard {
       // The Team tab's own hire: the role's fixed name, its Playbook, and the model the roster has for it (the role's default on a new floor), or `model` for this one hire.
       hire: async (floorId, role, by, account, task, model) => {
         const floor = ctx.floors.get(floorId);
-        if (!floor) return 'No such floor';
+        if (!floor) return 'No such project';
         return rosterOf(ctx).members.hire(teamFloor(ctx, floor), role, by, account, task, model);
       },
       applyBudget: (floorId, choice, by) => applyChoice(ctx, floorId, choice, by),

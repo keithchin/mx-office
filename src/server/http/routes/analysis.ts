@@ -16,7 +16,7 @@ export const analysisRoutes = {
     auth: 'session',
     handle(ctx, { res, url }) {
       const floorId = url.searchParams.get('floor');
-      if (floorId && url.searchParams.get('scope') !== 'global' && !ctx.floors.has(floorId) && !analysisOf(ctx).store.all().some((r) => r.floor === floorId)) return send(res, 404, { error: 'No such floor' });
+      if (floorId && url.searchParams.get('scope') !== 'global' && !ctx.floors.has(floorId) && !analysisOf(ctx).store.all().some((r) => r.floor === floorId)) return send(res, 404, { error: 'No such project' });
       const by: GroupBy = url.searchParams.get('by') === 'effort' ? 'effort' : 'model';
       const floor = url.searchParams.get('scope') === 'global' ? undefined : (floorId ?? undefined);
       return send(res, 200, analysisOf(ctx).report([...ctx.floors.values()], { floor, by }));
@@ -46,7 +46,7 @@ export const analysisRoutes = {
     auth: 'session',
     handle(ctx, { res, url }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, rosterOf(ctx).jeff.summary(floor.id, judgeOf(ctx).status()));
     },
   },
@@ -57,7 +57,7 @@ export const analysisRoutes = {
     auth: 'session',
     handle(ctx, { res, url }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, summaryOf(ctx).summary(floor));
     },
   },

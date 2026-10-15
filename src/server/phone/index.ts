@@ -104,7 +104,7 @@ export class Phone {
 
   async send(ask: SendAsk): Promise<SendResult> {
     const floor = this.deps.floor(ask.floor);
-    if (!floor) return { ok: false, why: 'No such floor', status: 404 };
+    if (!floor) return { ok: false, why: 'No such project', status: 404 };
     const place = this.place(floor, ask.place);
     const agents = this.agents(floor);
     // Approve and Reject from an escalation's buttons: an answer with no words needed for Approve.

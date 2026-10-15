@@ -43,7 +43,7 @@ export class AnswerStore {
   ) {}
 
   file(floorId: string) {
-    if (!FLOOR.test(floorId)) throw new Error(`not a floor id: ${floorId}`);
+    if (!FLOOR.test(floorId)) throw new Error(`not a project id: ${floorId}`);
     return path.join(this.dir, `${floorId}.jsonl`);
   }
 

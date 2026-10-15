@@ -47,7 +47,7 @@ function escalationPrecision(f: WorkerFacts): Measure | undefined {
   const fyi = resolved.filter((e) => e.fyi).length;
   return {
     score: ((resolved.length - dismissed) / resolved.length) * 100,
-    evidence: [`${plural(resolved.length, 'escalation')} answered: ${dismissed} dismissed as unneeded${fyi ? `, ${fyi} raised as FYI below the floor's threshold` : ''}`],
+    evidence: [`${plural(resolved.length, 'escalation')} answered: ${dismissed} dismissed as unneeded${fyi ? `, ${fyi} raised as FYI below the project's threshold` : ''}`],
     n: resolved.length,
   };
 }
@@ -77,7 +77,7 @@ function floorKind(f: WorkerFacts, kind: RunRecord['types'][number], what: strin
   const runs = (f.team?.floorRuns ?? []).filter((r) => r.types.includes(kind) && r.outcome !== 'running' && !r.excluded);
   if (!runs.length) return undefined;
   const merged = runs.filter((r) => r.outcome === 'merged').length;
-  return { score: (merged / runs.length) * 100, evidence: [`${merged} of ${plural(runs.length, what)} on the floor merged`], n: runs.length };
+  return { score: (merged / runs.length) * 100, evidence: [`${merged} of ${plural(runs.length, what)} on the project merged`], n: runs.length };
 }
 
 const NOT_TRACKED = (what: string) => `The office doesn't record ${what} yet`;

@@ -111,7 +111,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     runCommand(cfg.bash, [bashPath(script), ...args], { cwd: dirOf(job), env: { ...withFloorToolkitEnv(dirOf(job), env()), MXBUILD_PATH: mxbuildPath(cfg, job.plan.mendix) }, timeoutMs, onLine: said(io), allowFail });
   const bare = (job: JobState) => path.join(cfg.offlineDir!, job.plan.owner, `${job.plan.name}.git`);
   const dirOf = (job: JobState) => {
-    if (!job.dir || !existsSync(job.dir)) throw new Error("The project's floor isn't there yet: Retry from the clone step");
+    if (!job.dir || !existsSync(job.dir)) throw new Error("The project isn't there yet: Retry from the clone step");
     return job.dir;
   };
   const file = (job: JobState, rel: string) => path.join(dirOf(job), rel);
@@ -267,7 +267,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       };
       if (known) {
         await own(known.dir, true);
-        return await floorReady({ ...settle(known, ''), status: 'skipped', detail: `already a floor (${known.dir})` });
+        return await floorReady({ ...settle(known, ''), status: 'skipped', detail: `already a project (${known.dir})` });
       }
       if (cfg.offlineDir) {
         const dest = path.join(deps.projectsDir(), job.plan.owner, job.plan.name);
@@ -282,7 +282,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
           await git(dest, ['remote', 'set-url', 'origin', `https://github.com/${repo}.git`], io);
           await git(dest, ['remote', 'set-url', '--push', 'origin', bare(job)], io);
         } else await own(dest, true);
-        return await floorReady(settle(await deps.adoptFloor(repo, dest, job.by), `offline floor at ${dest}`));
+        return await floorReady(settle(await deps.adoptFloor(repo, dest, job.by), `offline project at ${dest}`));
       }
       io.log(`  cloning ${repo} with the office's gh login…`);
       // The building moves into a checkout already at its place rather than cloning (building.ts): that one is never the setup's.
@@ -419,7 +419,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     async gates(job, io) {
       // gate-check rewrites PROJECT.md's stage line and the dashboard from its verdicts, and on a fresh clone its
       // staleness checks read checkout times (rehearsal 2: a live Stage 5 project read Stage 3), so a live project's are left as they are.
-      if (job.existingProject) return { status: 'skipped', detail: 'existing toolkit project: its stage and dashboard stay as committed (run gate-check on the floor to refresh them)' };
+      if (job.existingProject) return { status: 'skipped', detail: 'existing toolkit project: its stage and dashboard stay as committed (run gate-check on the project to refresh them)' };
       const dir = dirOf(job);
       const tk = job.toolkit?.dir ?? (await toolkitDirFor(dir, cfg.toolkitDir)).dir;
       const r = await bash(job, path.join(tk, 'bin', 'gate-check.sh'), [bashPath(dir)], io, 10 * MIN, true);
@@ -491,7 +491,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       const roles = PROJECT_ROLES.filter((r) => job.plan.roles.includes(r.id) && (!adding || adding.includes(r.id)));
       if (!roles.length) return { status: 'skipped', detail: adding ? 'no roles added' : 'no roles ticked' };
       if (cfg.offlineDir) return { status: 'skipped', detail: 'offline test office: nobody is hired' };
-      if (!job.floor) throw new Error("The project's floor isn't there yet");
+      if (!job.floor) throw new Error("The project isn't there yet");
       const floor = job.floor;
       // The Discovery issue went to the queue (or the Chief Analyst) when the setup first ran: an edit doesn't hand it out again.
       const handOff = !adding && handsDiscoveryToAnalyst(job);
@@ -511,8 +511,8 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
         made.push(r.label);
       }
       if (adding) job.addRoles = [];
-      if (!made.length) return { status: 'skipped', detail: `${adding ? 'already on the floor' : 'already hired'}: ${had.join(', ')}` };
-      return { status: 'done', detail: `hired ${made.join(', ')}${had.length ? `; ${adding ? 'already on the floor' : 'already there'}: ${had.join(', ')}` : ''}` };
+      if (!made.length) return { status: 'skipped', detail: `${adding ? 'already on the project' : 'already hired'}: ${had.join(', ')}` };
+      return { status: 'done', detail: `hired ${made.join(', ')}${had.length ? `; ${adding ? 'already on the project' : 'already there'}: ${had.join(', ')}` : ''}` };
     },
 
     async queue(job) {
@@ -520,7 +520,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       if (!job.issue) return { status: 'skipped', detail: 'no Discovery issue to queue' };
       if (cfg.offlineDir) return { status: 'skipped', detail: 'offline test office: no agent is queued' };
       if (job.discoveryHired) return { status: 'skipped', detail: `#${job.issue} went to the Chief Analyst when it was hired` };
-      if (!job.floor) throw new Error("The project's floor isn't there yet");
+      if (!job.floor) throw new Error("The project isn't there yet");
       const err = deps.queue(job.floor, discoveryPrompt(job.issue), `Discovery #${job.issue} (${job.plan.discovery.model})`, job.issue, job.plan.discovery.model, job.by, job.account);
       if (err && !/already on the queue/i.test(err)) throw new Error(err);
       return { status: err ? 'skipped' : 'done', detail: err ?? `#${job.issue} on ${job.plan.discovery.model}` };

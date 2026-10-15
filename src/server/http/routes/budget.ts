@@ -30,7 +30,7 @@ export const budgetRoutes = {
     auth: 'session',
     handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const b = budgetOf(ctx);
       return send(res, 200, floorView(b, { id: floor.id, name: floor.def.name, dir: floor.dir }, ctx.meOf(session.account?.id).admin, firmFor(ctx, floor.id)));
     },
@@ -112,7 +112,7 @@ export const budgetRoutes = {
         return send(res, 200, { ok: true });
       }
       const fl = ctx.floors.get(typeof body.floor === 'string' ? body.floor : '');
-      if (!fl) return send(res, 404, { error: 'No such floor' });
+      if (!fl) return send(res, 404, { error: 'No such project' });
       const floor = { id: fl.id, name: fl.def.name, dir: fl.dir };
       // Through Phone access, raising the budget needs the password again (phone-access/reauth.ts).
       if (refuseStale(ctx, req, res, () => raisesBudget(body, b.file(floor).settings))) return;

@@ -79,7 +79,7 @@ export const auditRoutes = {
       if (!isAdmin(ctx, session)) return send(res, 403, { error: 'Only admins can export the audit log' });
       const format = url.searchParams.get('format') === 'jsonl' ? 'jsonl' : 'csv';
       const q = auditQuery(url);
-      audit.record({ actor: human(session.account?.name ?? 'An admin', session.account?.id), action: 'audit.export', target: { kind: 'audit', id: q.floor, label: q.floor === 'all' ? 'every floor' : q.floor }, summary: `Exported the audit log as ${format.toUpperCase()}`, details: { format, ...q, cursor: undefined, limit: undefined } });
+      audit.record({ actor: human(session.account?.name ?? 'An admin', session.account?.id), action: 'audit.export', target: { kind: 'audit', id: q.floor, label: q.floor === 'all' ? 'every project' : q.floor }, summary: `Exported the audit log as ${format.toUpperCase()}`, details: { format, ...q, cursor: undefined, limit: undefined } });
       return exportTo(res, q, format);
     },
   },

@@ -7,7 +7,7 @@ import { str } from '../../office/input.js';
 /** The floor `c` is on, or a note to them that they have to be on one. */
 export const here = (ctx: Ctx, c: Client): Floor | undefined => {
   const f = ctx.floorOf(c);
-  if (!f) ctx.warn(c, 'Take the elevator to a floor first');
+  if (!f) ctx.warn(c, 'Pick a project first');
   return f;
 };
 

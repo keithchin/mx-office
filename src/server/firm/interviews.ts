@@ -24,5 +24,5 @@ export function routeQuestion(lead: LeadState, coordinator: LeadState, allowRehi
   // Being benched or benched: it's writing its handoff, or gone.
   if (allowRehire && lead.state === 'benched' && lead.role !== 'pm') return { kind: 'rehire', role: lead.role };
   if (lead.role !== 'pm' && reachable(coordinator)) return { kind: 'relay', to: coordinator, forRole: lead.role };
-  return { kind: 'none', why: lead.role === 'pm' ? 'the Project Coordinator is benched' : `${lead.name} is benched and the Project Coordinator isn't on the floor either` };
+  return { kind: 'none', why: lead.role === 'pm' ? 'the Project Coordinator is benched' : `${lead.name} is benched and the Project Coordinator isn't on the project either` };
 }

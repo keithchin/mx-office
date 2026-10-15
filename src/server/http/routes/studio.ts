@@ -29,7 +29,7 @@ export const studioRoutes = {
     auth: 'session',
     handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       return send(res, 200, studioInfo(floor, ctx.meOf(session.account?.id).admin, undefined, floorSyncOf(floor.id)));
     },
   },
@@ -49,7 +49,7 @@ export const studioRoutes = {
         return send(res, 400, { error: 'Send JSON' });
       }
       const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const sync = await syncFloorNow(floor, { fetch: true });
       const info = studioInfo(floor, admin, undefined, sync);
       if (!info.hasMpr) info.error = whyNoMpr(floor.dir, sync);
@@ -72,7 +72,7 @@ export const studioRoutes = {
         return send(res, 400, { error: 'Send JSON' });
       }
       const floor = typeof body.floor === 'string' ? ctx.floors.get(body.floor) : undefined;
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       // Who it's by: the account, or on the shared password the name on the page's profile (only ever shown).
       const named = typeof body.by === 'string' ? body.by.replace(/[^\p{L}\p{N} ._'-]/gu, '').trim().slice(0, 60) : '';
       const by = session.account?.name ?? (named || 'An admin');

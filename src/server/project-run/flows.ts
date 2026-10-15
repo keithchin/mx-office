@@ -84,7 +84,7 @@ const busy = (s: WorkerStatus) => s === 'working' || s === 'starting';
 
 function floorOf(deps: RunDeps, id: string): RunFloor {
   const f = deps.floor(id);
-  if (!f) throw new Error(`The floor ${id} is gone`);
+  if (!f) throw new Error(`The project ${id} is gone`);
   return f;
 }
 
@@ -111,7 +111,7 @@ function settle(deps: RunDeps, f: RunFloor, s: ResumeRun, now: number, bootMs: n
       audit.record({ floor: f.team.id, actor: office('Resume project'), action: 'agent.woken', target: { kind: 'worker', id: w!.id, label: a.name }, summary: `${a.name} is back at work (resumed by ${s.by})`, details: { action: a.action } });
     } else if (!w || now - (a.startedAt ?? now) >= bootMs) {
       a.status = 'failed';
-      a.note = w ? 'Its session never came up' : 'It left the floor';
+      a.note = w ? 'Its session never came up' : 'It left the project';
       changed = true;
     }
   }
@@ -199,7 +199,7 @@ async function act(deps: RunDeps, f: RunFloor, s: ResumeRun, a: ResumeAgent): Pr
   } else {
     if (!w) {
       a.status = 'failed';
-      a.note = 'It left the floor';
+      a.note = 'It left the project';
       return;
     }
     const r = deps.roster.delivery.send(f.team, w, brief.text, { origin: 'person', by, wake: true, note: false });
@@ -348,7 +348,7 @@ function windDown(deps: RunDeps, f: RunFloor, s: PauseRun, now: number): boolean
     if (a.status === 'asleep' || a.status === 'skipped' || a.status === 'failed') continue;
     const w = f.team.worker(a.workerId ?? '');
     if (!w) {
-      set(a, 'skipped', 'It left the floor');
+      set(a, 'skipped', 'It left the project');
       continue;
     }
     if (isAsleepStatus(w.status)) {

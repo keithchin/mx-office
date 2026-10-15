@@ -223,7 +223,7 @@ function notOurs(op: OperationRecord, what: 'repo' | 'folder'): { proof: OpProof
   if (unsettled(op)) return { proof: 'unresolved', why: `the office isn’t sure yet whether this setup created the ${thing} (its outcome is unknown), so it won’t delete it: check ${what === 'repo' ? 'GitHub' : 'the folder'} again from the setup first` };
   if (op.provenance === 'unverified') return { proof: 'unverified', why: `the office couldn’t prove this setup created the ${thing}, so it won’t delete it: delete it ${where}yourself if you’re sure` };
   if (op.provenance === 'adopted') return { proof: 'adopted', why: `you chose to use this existing ${thing} in setup, so the office never deletes it` };
-  return { proof: 'pre-existing', why: what === 'repo' ? 'it was on GitHub already when the setup looked (you created it, or it was there), so the office never deletes it' : 'it was there before the setup (a floor already), so the office never deletes it' };
+  return { proof: 'pre-existing', why: what === 'repo' ? 'it was on GitHub already when the setup looked (you created it, or it was there), so the office never deletes it' : 'it was there before the setup (a project already), so the office never deletes it' };
 }
 
 /**

@@ -21,7 +21,7 @@ export const teamRoutes = {
     auth: 'session',
     async handle(ctx, { res, url }) {
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       const team = url.searchParams.get('team');
       if (!isCardTeam(team) || team === 'unassigned') return send(res, 400, { error: 'Which team?' });
       const [data, all, asks] = await Promise.all([teamPageData(floor.id, floor.dir, team), deliverablesOf(ctx, floor), team === 'management' ? asksOf(ctx).view(asksFloor(ctx, floor), false).catch(() => undefined) : undefined]);
@@ -36,7 +36,7 @@ export const teamRoutes = {
     async handle(ctx, { req, res, url, session }) {
       if (!sameOrigin(req, ctx.cfg)) return send(res, 403, { error: 'Forbidden' });
       const floor = floorParam(ctx, url);
-      if (!floor) return send(res, 404, { error: 'No such floor' });
+      if (!floor) return send(res, 404, { error: 'No such project' });
       if (!ctx.meOf(session.account?.id).admin) return send(res, 403, { error: 'Only the Project Manager (an admin) can tag cards with a team' });
       const dryRun = envDryRun() || rosterOf(ctx).data(floor.id).settings.dryRunIssues;
       const r = await ensureTeamLabels(floor, dryRun);

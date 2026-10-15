@@ -129,7 +129,7 @@ export function delivery(f: WorkerFacts): Criterion {
     parts.push({ value: mean(q.map((x) => x.q)), weight: 0.2, line: `Quality scorecard ${(mean(q.map((x) => x.q)) * 100).toFixed(0)}/100 over ${plural(q.length, 'PR')}${self ? ' (partly self-reported)' : ''}` });
   }
   const missing = done.length ? 'Its tasks had no pull request of its own: its delivery is in its specialist ranking' : f.runs.length ? 'Still on its first task' : 'No recorded task yet';
-  return criterion('delivery', label, w, parts, confidenceOf(mine.length, 2, 4), missing, f.autonomy !== undefined ? [`Floor autonomy level L${f.autonomy}`] : []);
+  return criterion('delivery', label, w, parts, confidenceOf(mine.length, 2, 4), missing, f.autonomy !== undefined ? [`Project autonomy level L${f.autonomy}`] : []);
 }
 
 /** 3. How far it got on its own: people stepping in per task, escalations that were warranted, its proposals taken up. */

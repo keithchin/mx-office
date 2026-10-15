@@ -31,7 +31,7 @@ export function sameState(ask: Pick<EscalationAsk, 'title' | 'details'>, open: r
     'An agent wants to raise a new escalation to the Project Manager (the human):',
     `New: ${oneLine(ask.title)}${ask.details ? ` — ${oneLine(ask.details).slice(0, DETAILS_MAX)}` : ''}`,
     '',
-    'Escalations already open on this floor:',
+    'Escalations already open on this project:',
     ...open.map((e, i) => `open-${i + 1}: ${oneLine(e.title)} (raised by ${e.by})${e.details ? ` — ${oneLine(e.details).slice(0, DETAILS_MAX)}` : ''}`),
   ].join('\n');
 }

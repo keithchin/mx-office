@@ -207,7 +207,7 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   }
   // The floor's folder far behind (low priority, so last of this floor's) its default branch: the setup panel reads main, but agents and the live app use the folder.
   const stale = i.setup?.show ? i.setup.checkout : undefined;
-  if (stale && stale.behind > STALE_COMMITS) out.push({ key: 'setup-stale', kind: 'setup', icon: '🌿', text: `This floor's folder is on ${stale.branch}, ${stale.behind} commits behind ${stale.defaultBranch}`, level: 'warn', action: 'Setup', target: { to: 'setup' } });
+  if (stale && stale.behind > STALE_COMMITS) out.push({ key: 'setup-stale', kind: 'setup', icon: '🌿', text: `This project's folder is on ${stale.branch}, ${stale.behind} commits behind ${stale.defaultBranch}`, level: 'warn', action: 'Setup', target: { to: 'setup' } });
   // 7. Other floors where someone is waiting.
   for (const f of i.floors) {
     if (f.id === i.floor || f.cloning || !(f.waiting > 0)) continue;

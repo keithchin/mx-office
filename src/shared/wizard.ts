@@ -177,7 +177,7 @@ export interface ProjectPlan {
 /** The setup, a step at a time. Each step checks what's already done first, so running it again is safe. */
 export const SETUP_STEPS = [
   { id: 'repo', label: 'Create the GitHub repository' },
-  { id: 'clone', label: 'Clone it as a floor' },
+  { id: 'clone', label: 'Clone it as a project' },
   { id: 'env', label: 'Write .claude/toolkit.env' },
   { id: 'app', label: 'Create the Mendix app (.mpr)' },
   { id: 'init', label: 'Run the toolkit’s init-project.sh' },
