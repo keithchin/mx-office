@@ -66,7 +66,8 @@ export function fakeFixDeps(o: { holdMs?: number; checks?: Partial<Record<Prereq
     spawn: (file, args) => script(file, args, holdMs),
     // A made-up token for `gh auth token` (the fake saveAgentToken keeps nothing).
     run: async (file, args) => ({ code: 0, out: args[0] === '--version' ? 'mxcli v0.26.0 (test office)' : args[1] === 'token' ? `gho_${'F'.repeat(36)}` : 'ok (test office)' }),
-    openTerminal: async () => undefined,
+    // The person signs in in the window that opened: the scripted office says so straight away.
+    openTerminal: async () => void (o.checks || fakeState.set('claude-auth', { status: 'ok', text: 'Signed in (test office: nothing was signed in)' })),
     refreshPath: async () => ['C:\\fake\\new-program'],
     download: async (url, dest, line) => (line(`(test office) would download ${url} to ${dest}`), undefined),
     check: async (id) => {
@@ -84,6 +85,6 @@ export function fakeFixDeps(o: { holdMs?: number; checks?: Partial<Record<Prereq
     toolkit: () => ({ url: 'https://github.com/MendixMau/mxcli-project-toolkit.git', dir: 'C:\\Users\\you\\mendix-toolkit' }),
     cloneToolkit: async (line) => (line('Cloning into … (test office: nothing is cloned)'), undefined),
     sleep: (ms) => new Promise((r) => setTimeout(r, Math.min(ms, 50))),
-    waitMs: 60_000,
+    waitMs: holdMs + 60_000,
   };
 }

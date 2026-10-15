@@ -1,7 +1,7 @@
 /* 🚀 First-run setup's one-click fixes (fix.ts): the plan window, its live progress and gh's one-time
    code. Theme tokens only. */
 .fx-modal { width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
-.fx-body { display: flex; flex-direction: column; gap: 10px; overflow: auto; font-size: 14px; color: var(--ink); }
+.fx-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; overflow: auto; font-size: 14px; color: var(--ink); }
 .fx-note { margin: 0; }
 .fx-note.bad { color: var(--bad-ink); font-weight: 700; }
 .fx-note.good { color: var(--good-ink); font-weight: 700; }
@@ -31,3 +31,4 @@
 .fx-code-hint { font-size: 12.5px; color: var(--muted); }
 .fr-row .fx-key input { flex: 1 1 200px; }
 .fr-prereqs .fr-all { white-space: nowrap; }
+.fr-row-body > .fr-row-action { align-self: flex-start; margin-top: 6px; }
