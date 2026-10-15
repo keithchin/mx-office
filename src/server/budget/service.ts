@@ -32,6 +32,8 @@ export interface BudgetDeps {
   roleOf(floorId: string, workerId: string, name: string): string | undefined;
   /** The issue on a worker's queue task, if it has one. */
   taskIssue(floorId: string, workerId: string): number | undefined;
+  /** The durable task id the worker is on (a member's open task, a queue task's), when it has one (Slice 1B-4). */
+  taskOf?(floorId: string, workerId: string): string | undefined;
   stageOf(dir: string): StageId;
   /** The office's own Ledger: background calls go into it too. */
   officeLedger: { add(u: Usage): void; state(): UsageState };
@@ -126,9 +128,10 @@ export class BudgetService {
     const stage = this.stageNow(floor, d);
     const issue = issueOf(this.deps.taskIssue(floorId, w.id), w.prompt);
     const day = this.today;
+    const taskId = this.deps.taskOf?.(floorId, w.id);
     for (const p of pieces) {
       const agent = this.agentFor(w, p.sub, role, floorId);
-      book(d, { day, agent: agent.key, model: p.model, stage, cost: unmetered ? 0 : p.cost, calls: p.calls, ...(unmetered ? { unmetered: true } : {}), ...(issue !== undefined ? { issue } : {}), ...(w.pr ? { pr: w.pr.number } : {}) }, agent);
+      book(d, { day, agent: agent.key, model: p.model, stage, cost: unmetered ? 0 : p.cost, calls: p.calls, ...(unmetered ? { unmetered: true } : {}), ...(issue !== undefined ? { issue } : {}), ...(w.pr ? { pr: w.pr.number } : {}), ...(taskId ? { taskId } : {}) }, agent);
     }
     d.seen[w.id] = seenOf(w.usage);
     prune(d, day);

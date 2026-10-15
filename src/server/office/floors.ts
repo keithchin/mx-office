@@ -18,6 +18,8 @@ import { forgetWorker, noteWorkerStatus } from '../project-run/turns.js';
 import { ingestPulls } from '../testing/index.js';
 import { verifyOnPulls } from '../testing/verify-office.js';
 import { questionsOnWorker } from '../questions/index.js';
+import { taskStoreAt } from '../tasks/index.js';
+import { queueTaskIds } from '../tasks/queue.js';
 
 /**
  * Tells the project team about a worker, unless the floor is still being built. A floor restores its
@@ -106,6 +108,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
     ledger: ctx.ledger,
     capacity: ctx.machine,
     prompts: ctx.prompts,
+    taskIds: (floorId) => queueTaskIds(taskStoreAt(cfg.dataDir), floorId),
     emit: ctx.toFloor,
     toast: ctx.toastFloor,
     termData: (workerId, data, viewers) => {

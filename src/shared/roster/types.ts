@@ -126,6 +126,8 @@ export interface Proposal {
   dispatchId?: string;
   /** When it was harvested (ms). Missing on proposals from before release 49: their standup's start stands in. */
   at?: number;
+  /** Slice 1B-4: the task its approval made (its issue's work); none on proposals approved before task ids. */
+  taskId?: string;
   /** Closed as a duplicate of this pending proposal (Needs you's clean-up card, server/decisions/duplicates.ts). */
   supersededBy?: string;
 }

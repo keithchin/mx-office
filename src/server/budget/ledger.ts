@@ -54,7 +54,7 @@ export function modelLabel(model: string): string {
 export function book(d: LedgerData, row: SpendRow, agent: AgentInfo) {
   if (!row.cost && !row.calls) return;
   d.agents[agent.key] = { ...d.agents[agent.key], ...agent };
-  const same = d.rows.find((r) => r.day === row.day && r.agent === row.agent && r.model === row.model && r.stage === row.stage && r.issue === row.issue && r.pr === row.pr && !!r.est === !!row.est && !!r.unmetered === !!row.unmetered);
+  const same = d.rows.find((r) => r.day === row.day && r.agent === row.agent && r.model === row.model && r.stage === row.stage && r.issue === row.issue && r.pr === row.pr && r.taskId === row.taskId && !!r.est === !!row.est && !!r.unmetered === !!row.unmetered);
   if (same) {
     same.cost = round(same.cost + row.cost);
     same.calls += row.calls;

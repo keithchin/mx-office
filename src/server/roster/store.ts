@@ -21,6 +21,7 @@ import { emptyOutbox, reviveOutbox, type Outbox } from './relays.js';
 import { reviveHeld, type HeldPrompt } from './held.js';
 import { ensureSubagentNames } from './subagent-names.js';
 import { reviveAssignment, type Assignment } from './resume.js';
+import { PREV_TASKS_KEPT } from '../../shared/tasks.js';
 import { alsoCovers, cleanCoverage, cleanShape, defaultCoverage, type Coverage, type TeamShape } from '../../shared/roster/coverage.js';
 
 /** Where a member is in its life: never hired, a worker now, writing its handoff, or benched. */
@@ -43,6 +44,8 @@ export interface MemberRecord {
   skills?: SkillOverrides;
   /** What it was last given to do, for the resume line and the back-to-work nudge (resume.ts). */
   task?: Assignment;
+  /** Its last few tasks before this one, newest last: a cache only (the task record, server/tasks/, is the history). */
+  prevTasks?: Assignment[];
 }
 
 /**
@@ -167,8 +170,10 @@ export function reviveRoster(raw: unknown, rng: () => number = Math.random): Ros
     const phase: Phase = ['none', 'active', 'benching', 'benched'].includes(m.phase) ? m.phase : 'none';
     const skills = cleanOverrides(id, m.skills, alsoCovers(coverage, id));
     const task = reviveAssignment(m.task);
-    members[id] = { ...m, name: cleanName(m.name) ?? fresh.members[id].name, model: typeof m.model === 'string' && m.model ? m.model : fresh.members[id].model, phase, skills, task };
+    const prevTasks = Array.isArray(m.prevTasks) ? m.prevTasks.map(reviveAssignment).filter((t): t is Assignment => !!t).slice(-PREV_TASKS_KEPT) : [];
+    members[id] = { ...m, name: cleanName(m.name) ?? fresh.members[id].name, model: typeof m.model === 'string' && m.model ? m.model : fresh.members[id].model, phase, skills, task, prevTasks };
     if (!task) delete members[id].task;
+    if (!prevTasks.length) delete members[id].prevTasks;
   }
   const out: RosterData = {
     settings: cleanSettings(r.settings),

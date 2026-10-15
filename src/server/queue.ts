@@ -7,6 +7,8 @@ import { validateWorkerEffort, validateWorkerModel } from './agents.js';
 import { savedEffort, savedModel, takesEffort, takesModel } from '../shared/providers.js';
 import { PROMPTS } from '../shared/prompts.js';
 import { writeJsonAtomic } from './flow/store.js';
+import { withTaskLine } from '../shared/tasks.js';
+import type { QueueTaskIds } from './tasks/queue.js';
 
 /** What the queue needs from the worker manager. Narrow on purpose, so a smoke test can fake it. */
 export interface QueueWorkers {
@@ -46,6 +48,8 @@ export interface QueueEvents {
    * task carries on, same attempt (`resumed`), or it didn't and the task stopped (`abandoned`).
    */
   reconciled?(task: QueueTask, result: 'resumed' | 'abandoned', why: string): void;
+  /** Task identity (Slice 1B-4, server/tasks/queue.ts): a task id per task, an execution id per seating. */
+  taskIds?: QueueTaskIds;
 }
 
 export interface QueueOptions {
@@ -135,6 +139,8 @@ export class TaskQueue {
       addedAt: Date.now(),
       status: 'queued',
     };
+    const taskId = this.events.taskIds?.create(task);
+    if (taskId) task.taskId = taskId;
     this.tasks.push(task);
     this.changed();
     this.pump();
@@ -180,7 +186,7 @@ export class TaskQueue {
     if (t.status !== 'done') return 'That task is still on the queue';
     if (t.issue !== undefined && this.tasks.some((x) => x !== t && x.issue === t.issue && x.status !== 'done')) return `Issue #${t.issue} is already on the queue`;
     this.tasks.splice(this.tasks.indexOf(t), 1);
-    const fresh: QueueTask = { id: t.id, provider: t.provider, model: t.model, effort: t.effort, issue: t.issue, title: t.title, prompt: t.prompt, addedBy: t.addedBy, owner: t.owner, addedAt: Date.now(), status: 'queued' };
+    const fresh: QueueTask = { id: t.id, provider: t.provider, model: t.model, effort: t.effort, issue: t.issue, title: t.title, prompt: t.prompt, addedBy: t.addedBy, owner: t.owner, addedAt: Date.now(), status: 'queued', ...(t.taskId ? { taskId: t.taskId } : {}) };
     this.tasks.push(fresh);
     this.changed();
     this.pump();
@@ -400,7 +406,7 @@ export class TaskQueue {
       const desk = free ?? this.recycleDesk();
       if (!desk) break;
       const note = this.useWorktree ? this.events.worktreeNote?.() ?? PROMPTS['queue.worktree'].text : '';
-      const r = this.workers.spawn(desk, `${t.addedBy} (queue)`, note ? `${t.prompt}\n\n${note}` : t.prompt, this.useWorktree, 'agent', t.provider ?? this.workers.defaultProvider, t.model, t.effort, undefined, t.owner);
+      const r = this.workers.spawn(desk, `${t.addedBy} (queue)`, withTaskLine(note ? `${t.prompt}\n\n${note}` : t.prompt, t.taskId), this.useWorktree, 'agent', t.provider ?? this.workers.defaultProvider, t.model, t.effort, undefined, t.owner);
       if (r instanceof Promise) {
         // The office's workers start off the event loop (a worktree's git can take seconds): the task
         // holds its place, and counts as running, until its worker is in.
@@ -441,6 +447,8 @@ export class TaskQueue {
     }
     t.status = 'running';
     t.attemptId = newId();
+    const exe = this.events.taskIds?.attempt(t, r);
+    if (exe) t.executionId = exe;
     t.workerId = r.id;
     t.workerName = r.name;
     t.branch = r.worktree?.branch;

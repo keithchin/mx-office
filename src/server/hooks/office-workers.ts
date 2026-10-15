@@ -144,11 +144,13 @@ export async function officeWorkers(ctx: Ctx, req: http.IncomingMessage, res: ht
     // A Coordinator relaying the Project Manager's question to a Lead they said not to interrupt: held for its turn's end (roster/interrupts.ts).
     const roster = rosterOf(ctx);
     const team = teamFloor(ctx, floor);
-    const sent = roster.delivery.send(team, w, text, { origin: 'agent', by: who, wake: true, hold: true, ...roster.interrupts.tellOpts(team, me.id, w.id) });
+    // A task told to a team member carries its task id (Slice 1B-4, roster/task-ids.ts).
+    const typed = roster.tasks.prepare(team, w.id, text, 'tell');
+    const sent = roster.delivery.send(team, w, typed, { origin: 'agent', by: who, wake: true, hold: true, ...roster.interrupts.tellOpts(team, me.id, w.id) });
     if (sent.status === 'refused') return send(res, sent.why.startsWith('Spend cap') ? 409 : 400, { error: sent.why });
     agentTold(floor.id, me, w, text);
     // What a member was told to do is its task (roster/resume.ts): the office's messages end by sending it back to it.
-    roster.tasks.assign(team, w.id, text, who);
+    roster.tasks.assign(team, w.id, typed, who, 'tell');
     return send(res, 200, { ok: true, worker: row(w.id), ...(sent.status === 'held' ? { held: true, note: `${w.name} is ${w.status === 'needs_input' ? 'answering a question in its terminal' : 'mid-turn'}: your message goes in once its turn is over. Don't send it again.` } : {}) });
   }
 

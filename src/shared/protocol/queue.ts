@@ -23,6 +23,9 @@ export interface QueueTask {
   status: TaskStatus;
   /** The current attempt: one seating of a worker for it, minted when it's seated and kept through a restart its worker survives. */
   attemptId?: string;
+  /** Slice 1B-4: its durable task (`tsk_…`, kept by a retry) and this seating's execution id (`exe_…`). None on a task queued before task ids. */
+  taskId?: string;
+  executionId?: string;
   /** The office just restarted and is still finding out whether its worker survived: it counts as running, and nobody else is seated for it meanwhile. */
   reconciling?: boolean;
   /** The worker seated for it (it may have gone home since). */

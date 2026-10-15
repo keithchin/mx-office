@@ -120,7 +120,9 @@ export const workerHandlers = {
   'worker.prompt'(ctx, c, msg) {
     const who = c.peer.name;
     const w = workerOf(ctx, msg.workerId);
-    const text = str(msg.prompt, 20000);
+    const said = str(msg.prompt, 20000);
+    // A task given to a team member carries its task id (Slice 1B-4, roster/task-ids.ts); a reply goes as it was.
+    const text = w?.info.kind === 'agent' ? rosterOf(ctx).tasks.prepare(teamFloor(ctx, w.floor), w.wid, said, 'console') : said;
     // An agent that slept through a pause hears it was resumed, and the Coordinator gets the run state (roster/awareness.ts).
     const dressed = w?.info.kind === 'agent' ? rosterOf(ctx).awareness.dress(teamFloor(ctx, w.floor), w.info, text) : undefined;
     const err = w ? w.floor.workers.prompt(w.wid, dressed?.text ?? text, who) : 'No such worker';
@@ -129,7 +131,7 @@ export const workerHandlers = {
     // That someone prompted it, never what they said (its start only when an admin turned that on).
     if (w && !err) audit.record({ floor: w.floor.id, actor: human(who, c.accountId), action: 'worker.prompt', target: { kind: 'worker', id: w.wid, label: w.info.name }, summary: `Prompted ${w.info.name}`, details: promptDetails(text) });
     // What a person gives a team member to do is its task (roster/resume.ts); a reply or a question isn't.
-    if (w && !err && w.info.kind === 'agent') rosterOf(ctx).tasks.assign(teamFloor(ctx, w.floor), w.wid, text, who);
+    if (w && !err && w.info.kind === 'agent') rosterOf(ctx).tasks.assign(teamFloor(ctx, w.floor), w.wid, text, who, 'console');
     const issue = w?.info.kind === 'agent' ? issueNumber(msg.issue) : undefined;
     if (w && !err && issue) {
       ctx.toastFloor(w.floor, `${who} handed issue #${issue} to ${w.info.name}`);

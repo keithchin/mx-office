@@ -103,7 +103,7 @@ export function asksOf(ctx: Ctx): AsksService {
     },
     tell(f, text, by, owner) {
       const t = team(f);
-      return t ? t.roster.interrupts.tell(t.tf, text, by, 'after', {}, owner) : 'No such project';
+      return t ? t.roster.interrupts.tell(t.tf, text, by, 'after', {}, owner, undefined, 'decision') : 'No such project';
     },
     record: (e) => audit.record(e),
   });

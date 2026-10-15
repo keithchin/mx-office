@@ -29,6 +29,7 @@ import { officePrompt, type PromptSource } from './prompts.js';
 import { floorLedger } from './roster/pause.js';
 import { projectPauseOf } from './project-run/store.js';
 import { audit } from './audit/index.js';
+import type { QueueTaskIds } from './tasks/queue.js';
 
 type ToastLevel = 'info' | 'warn' | 'error';
 
@@ -45,6 +46,8 @@ export interface FloorContext {
   capacity: Capacity;
   /** The office's prompts and the worker everyone starts on, as set in ⚙️ Settings. */
   prompts: PromptSource;
+  /** Task identity for the queue (Slice 1B-4, server/tasks/queue.ts), when the office keeps task records. */
+  taskIds?(floorId: string): QueueTaskIds;
   /** Workers hired by an account run on its own sign-ins (see signins.ts). */
   runAs?: RunAs;
   /** How to run gh as an account: its own sign-in, the office's (undefined), or why it can't. */
@@ -260,7 +263,8 @@ export class Floor {
         ctx.emit(this, { t: 'gong', why: 'queue' });
       },
       worktreeNote: () => officePrompt(ctx.prompts, 'queue.worktree'),
-      started: (t, w) => audit.record({ floor: this.id, actor: { kind: 'office', name: 'The queue' }, action: 'queue.start', target: { kind: 'worker', id: w.id, label: w.name }, summary: `${w.name} started on ${t.issue !== undefined ? `issue #${t.issue}` : `“${t.title}”`} from the queue`, details: { task: t.id, attempt: t.attemptId, queuedBy: t.addedBy, issue: t.issue } }),
+      ...(ctx.taskIds ? { taskIds: ctx.taskIds(def.id) } : {}),
+      started: (t, w) => audit.record({ floor: this.id, actor: { kind: 'office', name: 'The queue' }, action: 'queue.start', target: { kind: 'worker', id: w.id, label: w.name }, summary: `${w.name} started on ${t.issue !== undefined ? `issue #${t.issue}` : `“${t.title}”`} from the queue`, details: { task: t.id, attempt: t.attemptId, queuedBy: t.addedBy, issue: t.issue }, ids: { ...(t.taskId ? { taskId: t.taskId } : {}), ...(t.executionId ? { executionId: t.executionId } : {}), agentInstanceId: w.id } }),
       reconciled: (t, result, why) => audit.record({ floor: this.id, actor: { kind: 'office', name: 'The queue' }, action: result === 'resumed' ? 'queue.reconciled' : 'queue.abandoned', target: t.workerId ? { kind: 'worker', id: t.workerId, label: t.workerName } : undefined, summary: `${why}: ${t.issue !== undefined ? `issue #${t.issue}` : `“${t.title}”`} ${result === 'resumed' ? 'carries on' : 'stopped'}`, details: { task: t.id, attempt: t.attemptId, issue: t.issue }, severity: result === 'resumed' ? 'info' : 'notice' }),
     });
 
