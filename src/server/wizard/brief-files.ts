@@ -14,7 +14,7 @@ export function writeBriefFiles(dir: string, plan: ProjectPlan, files: { name: s
   if (!plan.brief) return [];
   const did: string[] = [];
   const f = path.join(dir, ...BRIEF_FILE.split('/'));
-  const md = briefMarkdown(plan.brief, { repo: `${plan.owner}/${plan.name}`, entry: ENTRY_MODE_INFO[plan.entry].label, change: opts.change });
+  const md = briefMarkdown(plan.brief, { repo: `${plan.owner}/${plan.name}`, entry: ENTRY_MODE_INFO[plan.entry].label, change: opts.change, source: plan.sourceFolder });
   let had = '';
   try {
     had = readFileSync(f, 'utf8');

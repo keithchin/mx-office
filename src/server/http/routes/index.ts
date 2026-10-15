@@ -29,6 +29,7 @@ import { serviceRoutes } from './services.js';
 import { studioRoutes } from './studio.js';
 import { wizardRoutes } from './wizard.js';
 import { briefRoutes } from './brief.js';
+import { sourceFolderRoutes } from './source-folder.js';
 import { toolkitRoutes } from './toolkit.js';
 import { notifyTeamsRoutes } from './notify-teams.js';
 import { keepAwakeRoutes } from './keep-awake.js';
@@ -198,6 +199,7 @@ export const routes: readonly Route[] = [
   portfolioRoutes.card,
   wizardRoutes.wizard,
   briefRoutes.brief,
+  sourceFolderRoutes.sourceFolder,
   toolkitRoutes.toolkit,
   connectionsRoutes.connections,
   // 🚀 First-run setup: its page and its calls (first-run.ts).

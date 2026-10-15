@@ -6,6 +6,7 @@
 
 import { DRAFTED, READ_LABEL, SECTION_IDS, SECTION_INFO, sourceText, whenDrafted, type Brief, type BriefItem, type BriefTag, type PlanBrief, type SectionId } from './brief.js';
 import type { IntakeAnswer } from './wizard.js';
+import { bytesText, legacyRel } from './source-folder.js';
 
 const TAG_WORD: Record<BriefTag, string> = { answered: 'Answered', assumed: 'ASSUMED', unverified: 'Unverified' };
 /** Where an item came from, for a file: who settled it is named, never "you". */
@@ -154,7 +155,7 @@ export function briefOpenQuestions(pb: PlanBrief, opts: { change?: boolean } = {
 const tagCell = (it: BriefItem) => `${TAG_WORD[it.tag]} · ${src(it)}`;
 
 /** docs/project-brief.md: the approved brief and its functional domains, committed with the project. */
-export function briefMarkdown(pb: PlanBrief, meta: { repo: string; entry: string; change?: boolean }): string {
+export function briefMarkdown(pb: PlanBrief, meta: { repo: string; entry: string; change?: boolean; source?: { name: string; files: number; bytes: number } }): string {
   const b = pb.brief;
   const s = b.sections;
   const out: string[] = [`# Project brief: ${b.title || meta.repo}`, ''];
@@ -175,6 +176,7 @@ export function briefMarkdown(pb: PlanBrief, meta: { repo: string; entry: string
     }
     if (pb.domains.tier) out.push('', `Suggested size tier: **${pb.domains.tier}**${pb.domains.tierWhy ? ` (${bare(pb.domains.tierWhy)})` : ''}.`);
   }
+  if (meta.source) out.push('', '## Legacy source (confidential)', '', `The legacy app's source folder **${meta.source.name}** (${meta.source.files} files, ${bytesText(meta.source.bytes)}) is copied into \`${legacyRel(meta.source.name)}/\`, git-ignored: it stays on the office's machine and is never committed, pushed or uploaded. Dependencies, build output and secrets-like files were left out. Quote it in analysis only as far as the client allows.`);
   if (pb.attachments.length) {
     out.push('', '## Input documents', '', 'Copied into `sources/` (the toolkit’s drop folder, git-ignored by default).', '');
     for (const a of pb.attachments) out.push(`- ${a.name}: ${READ_LABEL[a.read]}${a.note ? ` (${a.note})` : ''}`);

@@ -177,6 +177,19 @@ export interface ProjectPlan {
    * instructions it's added there and, when the portfolio has a company brain, wired to it and checked.
    */
   portfolio?: string;
+  /**
+   * A local folder of the legacy app's code (shared/source-folder.ts), from the draft (never from the page):
+   * copied into the project's sources/legacy/<name>/ at the intake step, confidential, never uploaded.
+   */
+  sourceFolder?: PlanSource;
+}
+
+/** A plan's source folder: where it is on the office's machine and what the scan found. */
+export interface PlanSource {
+  path: string;
+  name: string;
+  files: number;
+  bytes: number;
 }
 
 /** The setup, a step at a time. Each step checks what's already done first, so running it again is safe. */

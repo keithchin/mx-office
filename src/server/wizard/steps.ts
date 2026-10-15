@@ -15,6 +15,7 @@ import { DISCOVERY_TITLE, discoveryBrief, discoveryPrompt } from './brief.js';
 import { mendixVersions, mxbuildPath, toolkitEnv, type WizardConfig } from './config.js';
 import { writeIntakeAnswers } from './intake.js';
 import { writeBriefFiles } from './brief-files.js';
+import { withSourceFolder } from './source-step.js';
 import { briefAssumptions, briefDecisionRows, briefOpenQuestions, intakeFromBrief } from '../../shared/brief-map.js';
 import type { JobState, StepImpl, StepIO } from './job.js';
 import type { BudgetChoice } from '../../shared/budget/levels.js';
@@ -173,7 +174,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
     if (r.code !== 0) throw new Error(`bin/verify-model.sh exit ${r.code}, so the pre-commit hook would refuse the new app: ${r.tail.slice(-2).join(' ').slice(0, 300)}. Fix the cause and Retry`);
   };
 
-  return withPortfolio(deps, {
+  return withSourceFolder(withPortfolio(deps, {
     async repo(job, io) {
       const repo = repoOf(job);
       if (job.plan.kind === 'change') return { status: 'skipped', detail: `existing repository ${repo}` };
@@ -531,7 +532,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       if (err && !/already on the queue/i.test(err)) throw new Error(err);
       return { status: err ? 'skipped' : 'done', detail: err ?? `#${job.issue} on ${job.plan.discovery.model}` };
     },
-  });
+  }));
 }
 
 /** Who works the Discovery issue: whoever covers Analysis on the plan's shape (the Chief Analyst, or the Solo Lead). */

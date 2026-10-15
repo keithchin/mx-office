@@ -26,6 +26,7 @@ import { appDirTooLong, mprVersion } from './mendix-app.js';
 import { testModeOf } from '../testmode.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
+import { takesSource } from '../../shared/source-folder.js';
 import { portfoliosOf } from '../portfolios/index.js';
 import { setupView, setupViewOf } from './setup.js';
 import { GateSource, branchInfo } from './gate-source.js';
@@ -180,6 +181,8 @@ export class Wizard {
     if (plan.brief?.draftId && !draft) return 'That project brief isn’t in the office any more: start again from New project';
     if (draft?.brief) plan.brief = cleanPlanBrief({ draftId: draft.id, brief: draft.brief, domains: draft.domains, approved: draft.approved, attachments: draft.attachments, manual: draft.manual });
     if (plan.brief && !plan.brief.approved) return 'Approve the scope first';
+    // The source folder the draft checked and scanned (server/wizard/source-folder.ts), never a path from the page.
+    if (draft?.source && takesSource(draft.mode)) plan.sourceFolder = { path: draft.source.path, name: draft.source.name, files: draft.source.files, bytes: draft.source.bytes };
     const id = jobId(plan.owner, plan.name);
     const had = this.book.get(id);
     if (had && had.status === 'done') return `${plan.owner}/${plan.name} was already set up — edit its answers from its project's setup panel`;
@@ -237,7 +240,7 @@ export class Wizard {
     if (typeof plan === 'string') return plan;
     const moved = plan.mendix !== job.plan.mendix;
     // Roles ticked since the team step ran are hired too (JobBook.edit), and only those.
-    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
+    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
     this.go(job);
     return this.book.view(job);
   }

@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { applyOp, attachProblem, changedIds, cleanBrief, counts, draftRepoOf, emptyBrief, mergeTurn, safeFileName, ATTACH_MAX_BYTES, ATTACH_MAX_FILES, ATTACH_TYPES, START_MODES, type AttachmentNote, type ItemOp, type PlannerStatus, type StartMode } from '../../../shared/brief.js';
 import { interviewModeOf } from '../../../shared/wizard.js';
+import { fileIndexText, takesSource, type SourceFolder } from '../../../shared/source-folder.js';
 import { priceOf, resolvedModel } from '../../usage.js';
 import { resolveCommand } from '../../workers/process.js';
 import { testModeOf } from '../../testmode.js';
@@ -165,6 +166,22 @@ export class Planner {
     const repo = repoFor(d.mode, raw.repo === undefined ? d.repo : raw.repo);
     if (repo) d.repo = repo;
     else delete d.repo;
+    // The source folder, kept only while the draft is a migration or a change.
+    if (!takesSource(d.mode)) delete d.source;
+    this.drafts.save(d);
+  }
+
+  /** The source folder, scanned (server/wizard/source-folder.ts); why not, when it can't be kept. */
+  setSource(d: DraftState, folder: SourceFolder): string | undefined {
+    if (d.status === 'drafting') return 'Wait for the draft to finish';
+    if (!takesSource(d.mode)) return 'A source folder is for Migrate an app and Change an existing app';
+    d.source = folder;
+    this.drafts.save(d);
+    return undefined;
+  }
+
+  clearSource(d: DraftState) {
+    delete d.source;
     this.drafts.save(d);
   }
 
@@ -265,7 +282,7 @@ export class Planner {
 
   /** Starts drafting the brief from the description and the files; why not, when it can't. */
   draft(d: DraftState, who: Who): string | undefined {
-    if (!d.prompt.trim() && !d.attachments.length) return 'Describe the app first, or attach a document';
+    if (!d.prompt.trim() && !d.attachments.length && !d.source) return 'Describe the app first, or attach a document';
     const bad = this.gate(d, who);
     if (bad) return bad;
     d.status = 'drafting';
@@ -274,7 +291,8 @@ export class Planner {
     d.chat = [...d.chat, { who: 'you', text: d.prompt.trim().slice(0, 600), at: iso(this.now()), ...(d.attachments.length ? { files: d.attachments.map((a) => a.name) } : {}) }];
     this.background(d, who, 'brief', async () => {
       const files = this.filesFor(d);
-      const req = { mode: d.mode, prompt: d.prompt, files, repo: d.repo };
+      // A source folder goes in as its file index only: the planner never reads the tree (its sandbox is an empty folder).
+      const req = { mode: d.mode, prompt: d.prompt, files, repo: d.repo, ...(d.source && takesSource(d.mode) ? { sourceIndex: fileIndexText(d.source) } : {}) };
       let r = await this.engine.brief({ ...req, budgetUsd: d.cap - d.spent });
       d.spent += r.cost;
       // A PDF that came back unread (rehearsal 2: the model asked for page ranges and the page renderer failed): one

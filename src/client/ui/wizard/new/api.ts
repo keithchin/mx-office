@@ -38,6 +38,9 @@ export const briefApi = {
   chat: (id: string, text: string) => call<DraftView>('POST', `/api/brief/chat?id=${q(id)}`, { text }),
   approve: (id: string) => call<DraftView>('POST', `/api/brief/approve?id=${q(id)}`, {}),
   discard: (id: string) => call<{ ok: boolean }>('POST', `/api/brief/discard?id=${q(id)}`, {}),
+  // A source folder (server/http/routes/source-folder.ts): checked, scanned and kept on the draft; or forgotten.
+  source: (id: string, path: string) => call<DraftView>('POST', `/api/source-folder/scan?id=${q(id)}`, { path }),
+  unsource: (id: string) => call<DraftView>('POST', `/api/source-folder/clear?id=${q(id)}`, {}),
 };
 
 /** The office's spend today, for the bar's "Office $ today" chip (GET /api/budget/office). */

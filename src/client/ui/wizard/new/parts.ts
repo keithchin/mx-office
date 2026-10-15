@@ -14,6 +14,7 @@ const PATHS: Record<string, string> = {
   arrow: 'M5 12h14M13 6l6 6-6 6',
   chev: 'M9 6l6 6-6 6',
   file: 'M6 3h8l4 4v14H6zM14 3v4h4',
+  folder: 'M3 6h6l2 2h10v11H3z',
   upload: 'M12 16V4M7 9l5-5 5 5M4 16v4h16v-4',
   cloud: 'M7 18a4 4 0 0 1-.5-8 6 6 0 0 1 11.5 1.5A3.5 3.5 0 0 1 17.5 18z',
   send: 'M12 19V5M6 11l6-6 6 6',
