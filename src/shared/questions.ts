@@ -314,7 +314,7 @@ export function cardStatus(q: Question, a: PmAnswer | undefined): { tone: CardTo
     const by = q.consentBy || (a?.status === 'recorded' || a?.status === 'sent' ? a.by : '') || '';
     const when = q.consentAt || (a?.recordedAt ? day(a.recordedAt) : '');
     const detail = [by && `by ${by}`, when].filter(Boolean).join(', ');
-    const legacy = a && a.answerRev === undefined && a.kind !== 'ask-client' ? " · legacy: by the toolkit's state" : '';
+    const legacy = a && !a.expected?.length && a.kind !== 'ask-client' ? " · legacy: by the toolkit's state" : '';
     return { tone: 'done', text: `Recorded (${q.state}${detail ? ` ${detail}` : ''})${legacy}` };
   }
   if (a?.kind === 'ask-client') return { tone: 'client', text: 'Asked the client: in the export for the client' };
