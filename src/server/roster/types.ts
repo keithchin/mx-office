@@ -84,4 +84,10 @@ export interface RosterDeps {
   judge?: (text: string, questions: Questions, opts?: AskOpts) => Promise<Verdict | undefined>;
   /** Whether Studio Pro has the floor's project open (Studio mode holds the agents' writes): no back-to-work nudge then. */
   studioOpen?: (floorId: string) => boolean;
+  /**
+   * A project in a portfolio with a company brain (server/portfolios/): the one line its hire's first message
+   * gets, and how to record what the hire was offered (its context manifest) once it's hired. Undefined for
+   * every other project, whose first message stays exactly as it was.
+   */
+  hireContext?: (floorId: string) => Promise<{ line: string; record(role: string, workerId: string, sessionId?: string): Promise<void> } | undefined>;
 }

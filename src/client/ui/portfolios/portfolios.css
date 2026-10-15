@@ -1,0 +1,41 @@
+/* Portfolios (home/portfolios.ts, ui/portfolios/dialogs.ts, ui/settings/portfolio.ts): in the color tokens. */
+.pf-wrap { display: flex; flex-direction: column; gap: 14px; max-width: 980px; margin: 0 auto; padding: 4px 0 24px; }
+.pf-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pf-head h2 { margin: 0; font-size: 20px; }
+.pf-head .btn.primary { margin-left: auto; }
+.pf-banner { padding: 10px 14px; border-radius: 10px; background: var(--info-soft); border: 1px solid var(--info-line); color: var(--ink); font-size: 14px; line-height: 1.45; }
+.pf-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.pf-card { margin: 0; }
+.pf-open { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; cursor: pointer; box-shadow: 0 1px 0 var(--edge); }
+.pf-open:hover, .pf-open:focus-visible { background: var(--hover-light); }
+.pf-name { font-weight: 700; font-size: 16px; }
+.pf-meta { color: var(--muted); font-size: 13px; }
+.pf-chip { display: inline-block; align-self: flex-start; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--neutral-soft); color: var(--ink-2); }
+.pf-chip[data-tone='good'] { background: var(--good-soft); color: var(--good-ink); }
+.pf-chip[data-tone='warn'] { background: var(--warn-soft); color: var(--warn-ink); }
+.pf-chip[data-tone='bad'] { background: var(--bad-soft); color: var(--bad-ink); }
+.pf-part { padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; gap: 8px; }
+.pf-part h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.pf-part p { margin: 0; }
+.pf-part > .btn, .pf-acts { align-self: flex-start; }
+.pf-projects, .pf-files { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.pf-projects li { display: flex; gap: 8px; align-items: center; }
+.pf-files code, .pf-dl code { font-size: 12px; overflow-wrap: anywhere; }
+.pf-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: 14px; }
+.pf-dl dt { color: var(--muted); }
+.pf-dl dd { margin: 0; }
+.pf-hint, .pf-empty { margin: 0; color: var(--ink-2); font-size: 13px; }
+ul.pf-hint { padding-left: 18px; }
+.pf-warn { color: var(--warn-ink); font-size: 13px; }
+.pf-refused { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--bad-soft); color: var(--bad-ink); font-size: 14px; }
+.pf-note { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--info-soft); font-size: 13px; }
+.pf-dialog { width: min(600px, 94vw); }
+.pf-dialog .body { display: flex; flex-direction: column; gap: 10px; max-height: 70vh; overflow-y: auto; }
+.pf-dialog footer { display: flex; gap: 8px; justify-content: flex-end; }
+.pf-field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.pf-input { font: inherit; padding: 8px; border: 2px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
+.pf-review { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 8px; background: var(--sunken); font-size: 14px; }
+.pf-review h3 { margin: 0; font-size: 12px; text-transform: uppercase; color: var(--muted); }
+.pf-review p { margin: 0; }
+.pf-status { margin: 0; font-size: 13px; color: var(--muted); min-height: 1em; }
+.pf-set { display: flex; flex-direction: column; gap: 10px; }

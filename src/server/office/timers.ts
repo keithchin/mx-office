@@ -12,6 +12,7 @@ import { startWebPush } from '../webpush/index.js';
 import { startWarmup } from '../warmup.js';
 import { startStuckDetection } from '../stuck/index.js';
 import { startAsks } from '../asks/index.js';
+import { startPortfolios } from '../portfolios/index.js';
 import { startQuestions } from '../questions/index.js';
 import { startFollowThrough } from '../followthrough/index.js';
 import { startChangeAnswer } from '../change-answer/index.js';
@@ -74,6 +75,8 @@ export function startTimers(ctx: Ctx): () => void {
   const stopFollow = startFollowThrough(ctx);
   // Change answer: a change whose dispatch settles later moves its decision on then (change-answer/).
   const stopChange = startChangeAnswer(ctx);
+  // Each portfolio's company brain looked at every five minutes, off the loop: a change under a live session is a Needs-you card (portfolios/).
+  const stopPortfolios = startPortfolios(ctx);
 
   return () => {
     stopRuns();
@@ -91,6 +94,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopQuestions();
     stopFollow();
     stopChange();
+    stopPortfolios();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

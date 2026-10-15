@@ -17,6 +17,7 @@ The sections are down the left; pick one and the address follows (`&section=work
 | 🔔 **Notifications** | [section=notify](/lite?tab=settings&section=notify) | Desktop notifications, phone alerts, Slack / Discord, Microsoft Teams |
 | 💰 **Budget** | [section=budget](/lite?tab=settings&section=budget) | This project's budget, alert threshold, auto-pause and level; the office's default threshold and local currency (FX) |
 | 🔌 **Connections** | [section=connections](/lite?tab=settings&section=connections) | Tokens, password, git & gh, phone access, folders, worktree cleanup (admins; also ☰ → 🔌 Connections) |
+| 🗂️ **Portfolio** | [section=portfolio](/lite?tab=settings&section=portfolio) | The [portfolio](portfolios.md) this project is in and its company brain's state, or **Add to portfolio** (admins; only a project in no portfolio, after a review of what it already has wired). Knowledge organisation, not access control |
 | 📄 **Documents** | [section=deliverables](/lite?tab=settings&section=deliverables) | Early drafts |
 | 🚨 **Incidents** | [section=incidents](/lite?tab=settings&section=incidents) | The detection rules and the dedupe window (admins edit them) |
 | 🧭 **Stuck detection** | [section=stuck](/lite?tab=settings&section=stuck) | On or off and the four thresholds of [stuck detection](stuck-detection.md) (admins edit them) |

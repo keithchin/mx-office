@@ -19,6 +19,7 @@ import { overviewView } from './home/overview';
 import { homeAudit } from './home/audit';
 import { testModeBadge } from './ui/testmode';
 import { homeBudget } from './home/budget';
+import { homePortfolios } from './home/portfolios';
 import { goToSettings } from './ui/settings/flat';
 import { testsHref } from '../shared/testlab';
 import { portalBar } from './ui/portal/topbar';
@@ -71,7 +72,7 @@ store.on('floors', renderBack);
 
 // ---- The tabs ---------------------------------------------------------------------------------
 const TAB_KEY = 'agent-office.home-tab';
-const TABS = ['projects', 'stats', 'overview', 'audit', 'budget'] as const;
+const TABS = ['projects', 'stats', 'overview', 'audit', 'budget', 'portfolios'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (t: unknown): t is Tab => TABS.includes(t as Tab);
 let tab: Tab = 'projects';
@@ -89,6 +90,8 @@ const overview = overviewView($('overview-view'), () => (leaving = true));
 const audit = homeAudit($('audit-view'));
 // 💰 Every project's spend against its budget (home/budget.ts).
 const budget = homeBudget($('budget-view'), () => (leaving = true));
+// 🗂️ Portfolios and their company brains (home/portfolios.ts).
+const portfolios = homePortfolios($('portfolios-view'));
 
 function showTab(t: Tab) {
   tab = t;
@@ -109,6 +112,8 @@ function showTab(t: Tab) {
   else audit.hide();
   if (t === 'budget') budget.show();
   else budget.hide();
+  if (t === 'portfolios') portfolios.show();
+  else portfolios.hide();
   if (t === 'projects') projects.render();
   else if (t === 'stats') void stats.render();
 }
@@ -149,4 +154,4 @@ firstRunGate(() => projects.newProject()); // 🚀 a new office's setup (first-r
 showTab(tab);
 
 // Debug handle for quick checks from the console / headless screenshots.
-(window as any).__home = { store, net, showTab };
+(window as any).__home = { store, net, showTab, portfolios };

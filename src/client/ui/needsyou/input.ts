@@ -17,6 +17,7 @@ import { onQuestionsChanged, questionsFeedMessage, questionsNeed } from '../ques
 import { decisionsFeedMessage, decisionSplits, onDecisionsChanged } from '../decisions/feed';
 import { dispatchFeedMessage } from '../dispatch/feed';
 import { followFeedMessage } from '../followthrough/feed';
+import { brainFeedMessage, brainNeed, onBrainChanged } from '../portfolios/feed';
 
 /** What a page knows that the feeds don't. */
 export type PageNeeds = Partial<Pick<NeedsInput, 'setup' | 'live' | 'firm' | 'studio' | 'budget'>>;
@@ -39,6 +40,7 @@ export function pageNeedsInput(floor: string | undefined, roster: RosterView | u
     asks: asksNeed(floor),
     questions: questionsNeed(floor),
     splits: decisionSplits(floor),
+    brain: brainNeed(floor),
   });
 }
 
@@ -49,6 +51,7 @@ export function onNeedsFeeds(fn: () => void): void {
   onAsksChanged(fn);
   onQuestionsChanged(fn);
   onDecisionsChanged(fn);
+  onBrainChanged(fn);
 }
 
 /** Hands every message from the office to each feed (they fetch again when the audit log says theirs changed). */
@@ -60,4 +63,5 @@ export function needsFeedsMessage(msg: ServerMsg): void {
   decisionsFeedMessage(msg);
   dispatchFeedMessage(msg);
   followFeedMessage(msg);
+  brainFeedMessage(msg);
 }

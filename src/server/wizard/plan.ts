@@ -3,6 +3,7 @@
 
 import { ENTRY_MODES, interviewModeOf, ownerProblem, PROJECT_ROLES, slugProblem, type AnswerKind, type EntryMode, type IntakeAnswer, type ProjectPlan, type ProjectRole } from '../../shared/wizard.js';
 import { cleanAppId } from './mendix-app.js';
+import { isPortfolioId } from '../../shared/portfolios.js';
 import { cleanChoice } from '../../shared/budget/levels.js';
 import { isTeamShape, shapeForRoles } from '../../shared/roster/coverage.js';
 import { cleanBrief, cleanDomains, counts, safeFileName, type PlanBrief, type ReadState } from '../../shared/brief.js';
@@ -66,6 +67,7 @@ export function cleanPlan(raw: unknown, versions: string[], org: string): Projec
     shape: isTeamShape(r.shape) ? r.shape : shapeForRoles([...new Set(roles)]),
     ...(r.customTeam === true ? { customTeam: true } : {}),
     ...(cleanPlanBrief(r.brief) ? { brief: cleanPlanBrief(r.brief) } : {}),
+    ...(isPortfolioId(r.portfolio) ? { portfolio: r.portfolio } : {}),
   };
 }
 

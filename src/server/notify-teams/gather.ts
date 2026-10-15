@@ -24,6 +24,7 @@ import { settingsHref } from '../../shared/settings-sections.js';
 import { needsInputOf } from '../../shared/decisions/input.js';
 import { asksFloor, asksOf } from '../asks/index.js';
 import { decisionsOf } from '../decisions/index.js';
+import { portfoliosOf } from '../portfolios/index.js';
 import type { AsksNeed } from '../../shared/asks.js';
 
 /** The floor's surfaced asks as Needs you reads them (the same the browser's feed hands in). */
@@ -84,6 +85,7 @@ export async function floorNeeds(ctx: Ctx, floor: Floor, now = Date.now()): Prom
     asks: await asksNeedOf(ctx, floor),
     questions: await questionsNeedOf(ctx, floor),
     splits: await decisionsOf(ctx).splits.get(floor.id).catch(() => []),
+    brain: portfoliosOf(ctx).changeView(floor.id, true),
   });
   return { input, needs: collectNeeds(input) };
 }

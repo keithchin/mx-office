@@ -21,6 +21,8 @@ import { approvalCandidates, askCandidates, escalationCandidates, prCheckCandida
 import { foldCards, type Entry } from './decisions/group.js';
 import { duplicatesCandidate } from './decisions/duplicates-card.js';
 import type { DecisionCard, DecisionSplit } from './decisions/types.js';
+import { brainCandidates } from './decisions/brain.js';
+import type { BrainAct, BrainChangeView } from './portfolios.js';
 
 /** Where an item's button takes you. */
 export type NeedTarget =
@@ -45,9 +47,11 @@ export type NeedTarget =
   /** A surfaced ask's button (server/asks/, shared/asks.ts): a message to the lead, your consent, the Documents page, or seen. */
   | { to: 'ask'; id: string; act: AskAct }
   /** The Questions page (ui/questions/): the analysts' open questions for the client, at one question (`key`) when said. */
-  | { to: 'questions'; key?: string };
+  | { to: 'questions'; key?: string }
+  /** A company brain card's button (server/portfolios/, shared/decisions/brain.ts): Rehire, Dismiss, Wire again. */
+  | { to: 'brain'; floor: string; act: BrainAct };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | AskKind;
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | 'brain' | AskKind;
 
 /** How long a team member sits idle with an open task (nothing escalated) before Needs you says so. */
 export const IDLE_TASK_MS = 10 * 60_000;
@@ -122,6 +126,8 @@ export interface NeedsInput {
   questions?: QuestionsNeed;
   /** The person's "Separate" choices for this floor's decision cards (server/decisions/). */
   splits?: readonly DecisionSplit[];
+  /** The project's company brain cards (server/portfolios/): a brain change under a live session, incomplete wiring. */
+  brain?: BrainChangeView;
   /** Now (ms), for how long someone has been idle: Date.now() unless a test says. */
   now?: number;
 }
@@ -183,6 +189,8 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   for (const c of questionCandidates(i.questions && i.questions.floor === i.floor ? i.questions : undefined)) put(c);
   // Surfaced asks (server/asks/): assumptions without your consent and gate advisories (warn), work not on main and what's ready for review (info).
   for (const c of askCandidates(i.asks, i.floor)) put(c);
+  // The company brain changed under a live session, or its wiring is incomplete (server/portfolios/): one card each per project.
+  for (const c of brainCandidates(i.brain, i.floor)) put(c);
   // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold) not marked as seen.
   const b = i.budget && i.budget.floor === i.floor ? i.budget : undefined;
   if (b) {

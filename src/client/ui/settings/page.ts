@@ -18,6 +18,7 @@ import { advancedPart, appearancePart, incidentsPart } from './office';
 import { testingPart } from './testing';
 import { verificationPart } from './verification';
 import { stuckPart } from './stuck';
+import { portfolioPart } from './portfolio';
 import { dangerPart } from '../project-delete/danger';
 import { rerunSetupSetting } from '../../first-run/rerun';
 
@@ -47,6 +48,7 @@ export const SECTION_BUILDERS: Record<SettingsSectionId, (d: SettingsDeps) => Bu
   deliverables: () => rosterPart('deliverables'),
   incidents: () => incidentsPart(),
   stuck: () => stuckPart(),
+  portfolio: () => portfolioPart(),
   studio: () => studioPart(),
   appearance: (d) => appearancePart(d),
   advanced: (d) => advancedPart(d),
