@@ -57,8 +57,8 @@ export function toProposals(parsed: ParsedProposal[], standup: string, role: Rol
   const out: Proposal[] = [];
   for (const p of parsed) {
     const status = needsApproval(level, p.kind) ? 'pending' : 'auto';
-    // One already waiting on the Project Manager with the same kind and words isn't asked twice (shared/decisions/duplicates.ts).
-    if (status === 'pending' && [...existing, ...out].some((x) => x.status === 'pending' && proposalKey(x) === proposalKey(p))) continue;
+    // One of this role's already waiting on the Project Manager with the same kind and words isn't asked twice (shared/decisions/duplicates.ts).
+    if (status === 'pending' && [...existing, ...out].some((x) => x.status === 'pending' && proposalKey(x) === proposalKey({ ...p, role }))) continue;
     out.push({ id: randomBytes(5).toString('hex'), standup, role, team, by, kind: p.kind, title: p.title, detail: p.detail, status, ...(at !== undefined ? { at } : {}) });
   }
   return out;

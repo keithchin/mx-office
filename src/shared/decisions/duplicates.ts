@@ -5,8 +5,8 @@
 //   - escalations: open ones filed from an AWAITING-PM line, the same role, the same item by the continuity
 //     rule (./same-item.ts). The newest whose line is still there is kept (else the newest); only ones
 //     whose line is gone are offered for closing, each as superseded by the one kept.
-//   - proposals: pending ones of the same kind with the same words (lower case, punctuation aside); the
-//     newest is kept.
+//   - proposals: pending ones from the same role, of the same kind, with the same words (lower case,
+//     punctuation aside); the newest is kept.
 // Never across roles or sources, and never two the person separated (decision cards' Separate). Pure: the
 // page builds the card from what it already has, the server checks the same groups before closing.
 
@@ -69,8 +69,8 @@ export function escalationDuplicates(escalations: readonly Escalation[], apart: 
 /** A proposal's words as compared: lower case, punctuation and spacing aside. */
 export const proposalWords = (title: string) => title.toLowerCase().replace(/[^\p{L}\p{N}#]+/gu, ' ').trim();
 
-/** The key two pending proposals are the same on: their kind and their words. */
-export const proposalKey = (p: Pick<Proposal, 'kind' | 'title'>) => `${p.kind}:${proposalWords(p.title)}`;
+/** The key two pending proposals are the same on: the same role's, of the same kind, in the same words. */
+export const proposalKey = (p: Pick<Proposal, 'role' | 'kind' | 'title'>) => `${p.role}:${p.kind}:${proposalWords(p.title)}`;
 
 /** Pending proposals that repeat another one (the newest is kept; later in the list is newer when `at` is missing). */
 export function proposalDuplicates(proposals: readonly Proposal[], apart: Apart = () => false): DuplicateGroup[] {

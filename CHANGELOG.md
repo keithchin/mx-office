@@ -10,7 +10,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 - **The same ask no longer piles up in Needs you.** When an agent rewrites an item of its `AWAITING-PM` line in other words (*GenAI key*, then *GenAI Text Generation resource + key*), the escalation it already has is updated instead of a new one being filed. Only for the same role and the same `AWAITING-PM` source, and only when it's clearly the same item: the same ids (`#98`, `OW-1`), or the same words once brackets and small words are set aside. Never across roles, never two you separated.
 - **`AWAITING-PM` lines are split into whole items.** Only list separators split a line (`;`, ` · `, numbered or bulleted lists), never a comma or a semicolon inside brackets, so there are no more items like *Ada has it* or *shared GitHub account)*. *merge #98 and run the LF conversion (issue #91)* is two items.
-- **A proposal waiting on you isn't added twice**, and every proposal shows when it was made (older ones show their standup's time instead of a blank date).
+- **A proposal waiting on you isn't added twice** (the same role's, same kind, same words), and every proposal shows when it was made (older ones show their standup's time instead of a blank date).
 
 ### Added
 
