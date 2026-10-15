@@ -30,6 +30,7 @@ export function brainCandidates(v: BrainChangeView | undefined, floor: string | 
         evidence: files.slice(0, 8).map((label) => ({ label, where: `${c.label}'s brain at ${c.key.startsWith('content:') ? 'not versioned' : c.key.slice(0, 7)}` })),
         blocks: [],
         owner: who,
+        after: 'After you choose: Rehire benches each session above (it writes its handoff note first) and hires it again fresh; Dismiss leaves them as they are. Nothing is sent to the agents until you press one.',
         notes: ['The context manifest records what each session was offered, not what it read.', ...(c.rehiring?.length ? [`Benching ${c.rehiring.join(', ')} first; each is hired again once benched.`] : [])],
       },
     });

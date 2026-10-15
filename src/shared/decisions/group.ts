@@ -106,7 +106,7 @@ export function foldCards(entries: readonly Entry[], splits: readonly DecisionSp
       kind: c.kind,
       ...c.body,
       sources,
-      after: afterWords(c.kind, { owner: c.body.owner, question: !!c.body.questionKey && c.kind === 'decision', ...(c.body.analyst ? { analyst: c.body.analyst } : {}) }),
+      after: c.body.after ?? afterWords(c.kind, { owner: c.body.owner, question: !!c.body.questionKey && c.kind === 'decision', ...(c.body.analyst ? { analyst: c.body.analyst } : {}) }),
       ...(since !== undefined ? { since } : {}),
       level: lvl,
       notes: [

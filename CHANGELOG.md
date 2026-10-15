@@ -6,7 +6,15 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Added
+
+- **Portfolios (optional).** Home has a **🗂️ Portfolios** tab: group a client's projects in a portfolio and connect the client's curated **company brain** (the toolkit's folder of accepted conventions). A portfolio is **knowledge organisation, not access control**: agents can still read any folder by path, and the office says so wherever portfolios are shown.
+  - **Connect a brain** checks the folder (README.md and ROUTING.md; a git repository gives snapshots, a plain folder is shown as *not versioned*), wires each project with the toolkit's `wire-company-brain.sh` after init, in Windows-form paths, and checks the result itself: one block per instruction file, naming a ROUTING.md that exists. Incomplete wiring is an error and a Needs-you card (**Wire again**).
+  - **Add to portfolio** (on the portfolio's page, or the project's **⚙️ Settings › 🗂️ Portfolio**) shows what the project already has wired first; moving a project between portfolios isn't available. ✨ New project can put a new project in a portfolio (*Advanced › Portfolio*).
+  - Each hire on a portfolio project gets **one line** in its first message (at most 300 characters): *Company brain Acme @a1b2c3d: before answering terminology or convention questions, read C:/…/ROUTING.md. Don't search other company folders.*, or *Company brain unavailable this session* when the brain can't be read. Never the brain's content.
+  - A **context manifest** per hire records what the session was offered (the brain's snapshot, the routed files with their hashes, what was left out and why), not what it read.
+  - When the brain changes under a live session, the project gets one Needs-you card, *Company brain changed: 1 corrected, 1 withdrawn since Ada's session was prepared*, with **Rehire for a fresh session** or **Dismiss**. Nothing restarts by itself.
+- Projects in no portfolio are unchanged: the same setup, Playbooks and first message, byte for byte. With no `portfolios.json` the office behaves exactly as before ([Portfolios › Rollback](docs/site/using-the-office/portfolios.md#rollback)).
 
 ## 2026-10-15 · release 49 (`4cea6e8`)
 
