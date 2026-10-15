@@ -54,6 +54,7 @@ test('the slice is picked at CAC-1 when the person asked for one; otherwise CAC-
   const whole = migration({ description: 'Rebuild the whole shop' });
   assert.ok(whole.includes('**Close Stage 0 with CAC-1** (`skills/checkpoints/checkpoint-scope.md`)'));
   assert.doesNotMatch(whole, /asked for a slice/);
+  assert.ok(migration({ sliceAsked: true }).includes('The client asked for a slice'), 'from the draft’s own description');
   assert.equal(asksForSlice(['a vertical slice of orders']), true);
   assert.equal(asksForSlice(['sliced bread', 'all of it']), false);
 });

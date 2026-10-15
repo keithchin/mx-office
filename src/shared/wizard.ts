@@ -187,6 +187,8 @@ export interface ProjectPlan {
    * issue (a local file and the team's queue instead). A new project only; recorded in agent-office.project.json.
    */
   localOnly?: boolean;
+  /** The person's own description asked for a slice first (from the draft): Discovery picks it at CAC-1. */
+  sliceAsked?: boolean;
 }
 
 /** A plan's source folder: where it is on the office's machine and what the scan found. */

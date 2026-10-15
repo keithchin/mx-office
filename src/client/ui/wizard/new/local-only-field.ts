@@ -23,5 +23,5 @@ export function localOnlyField(plan: ProjectPlan, redraw: () => void): HTMLEleme
     plan.localOnly = box.checked;
     redraw();
   });
-  return h('div.nw-field.nw-local-only', {}, h('label.nw-check', { for: 'nw-a-local' }, box, h('span', {}, ' Keep this project off GitHub (local / Team Server only)')), h('span.nw-hint', {}, LOCAL_ONLY_WHY));
+  return h('div.nw-adv-group.nw-local-only', {}, h('label.nw-check', { for: 'nw-a-local' }, box, h('span', {}, ' Keep this project off GitHub (local / Team Server only)')), h('span.nw-hint', {}, LOCAL_ONLY_WHY));
 }

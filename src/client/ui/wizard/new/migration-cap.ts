@@ -4,6 +4,7 @@
 import type { ProjectPlan } from '../../../../shared/wizard';
 import { usd } from '../../../../shared/budget/money';
 import { h } from '../../dom';
+import './migration-cap.css';
 
 /** A cap typed by hand, kept when the card is drawn again (a new level's preset doesn't undo it). */
 const capped = new WeakMap<ProjectPlan, number>();

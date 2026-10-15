@@ -27,6 +27,7 @@ import { testModeOf } from '../testmode.js';
 import { cleanPlan, cleanPlanBrief } from './plan.js';
 import { plannerOf } from './planner/index.js';
 import { takesSource } from '../../shared/source-folder.js';
+import { asksForSlice } from '../../shared/discovery-migration.js';
 import { localOnlyAt } from '../local-only.js';
 import { portfoliosOf } from '../portfolios/index.js';
 import { setupView, setupViewOf } from './setup.js';
@@ -183,6 +184,7 @@ export class Wizard {
     if (draft?.brief) plan.brief = cleanPlanBrief({ draftId: draft.id, brief: draft.brief, domains: draft.domains, approved: draft.approved, attachments: draft.attachments, manual: draft.manual });
     if (plan.brief && !plan.brief.approved) return 'Approve the scope first';
     // The source folder the draft checked and scanned (server/wizard/source-folder.ts), never a path from the page.
+    if (draft && plan.entry === 'migration' && asksForSlice([draft.prompt])) plan.sliceAsked = true;
     if (draft?.source && takesSource(draft.mode)) plan.sourceFolder = { path: draft.source.path, name: draft.source.name, files: draft.source.files, bytes: draft.source.bytes };
     const id = jobId(plan.owner, plan.name);
     const had = this.book.get(id);
@@ -241,7 +243,7 @@ export class Wizard {
     if (typeof plan === 'string') return plan;
     const moved = plan.mendix !== job.plan.mendix;
     // Roles ticked since the team step ran are hired too (JobBook.edit), and only those.
-    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
+    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly, sliceAsked: job.plan.sliceAsked }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
     this.go(job);
     return this.book.view(job);
   }
@@ -261,6 +263,11 @@ export class Wizard {
    * team phone, Needs you): one answer is shared for a few seconds, and a re-check starts afresh.
    */
   setup(floor: Floor, now = Date.now()): Promise<SetupView> {
+    // Local only (local-only.ts) is read each time (a cheap, cached look at the project file), never from a view shared from before setup wrote it.
+    return this.sharedSetup(floor, now).then((v) => (localOnlyAt(floor.dir) ? { ...v, localOnly: true } : v));
+  }
+
+  private sharedSetup(floor: Floor, now: number): Promise<SetupView> {
     const had = this.setups.get(floor.id);
     if (had && now - had.at < SETUP_TTL_MS) return had.view;
     const view = this.freshSetup(floor);
@@ -281,10 +288,6 @@ export class Wizard {
   }
 
   private async freshSetup(floor: Floor): Promise<SetupView> {
-    return { ...(await this.freshSetupOf(floor)), ...(localOnlyAt(floor.dir) ? { localOnly: true } : {}) };
-  }
-
-  private async freshSetupOf(floor: Floor): Promise<SetupView> {
     const job = this.jobForFloor(floor)?.id;
     const g = await this.gates.read(floor.dir).catch(() => undefined);
     if (!g) return { ...setupView(floor.dir), job, checking: this.checking.has(floor.id), checkedAt: this.checkedAt.get(floor.id) };

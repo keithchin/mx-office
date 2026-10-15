@@ -56,6 +56,7 @@ export function sourceDialog(o: SourceHost, opener: HTMLElement) {
         : []),
     );
   show(had);
+  const done = h('button.btn.primary', { type: 'button' }, 'Done');
   const run = async () => {
     err.textContent = '';
     check.disabled = true;
@@ -66,9 +67,14 @@ export function sourceDialog(o: SourceHost, opener: HTMLElement) {
       o.setDraft(next);
       show(next.source);
       o.say(next.source ? `Source folder checked: ${summaryText(next.source)}` : 'Source folder checked');
+      check.disabled = false;
+      // The button was disabled while checking, which drops focus: it goes on, so Esc and Tab still work in the dialog.
+      done.focus();
     } catch (e) {
       err.textContent = (e as Error).message;
       input.setAttribute('aria-invalid', 'true');
+      check.disabled = false;
+      input.focus();
     } finally {
       check.disabled = false;
       check.textContent = 'Check folder';
@@ -82,7 +88,6 @@ export function sourceDialog(o: SourceHost, opener: HTMLElement) {
     err,
     result,
   ];
-  const done = h('button.btn.primary', { type: 'button' }, 'Done');
   const dlg = openDialog(o.host, 'Add a source folder', body, { opener, foot: [done] });
   done.addEventListener('click', () => dlg.close());
 }

@@ -25,7 +25,7 @@ export function discoveryBrief(plan: ProjectPlan, toolkitDir: string, pinnedSha?
   const goal = plan.brief?.brief.sections.goal.map((g) => g.text).join(' ') || plan.intake.find((a) => a.n === 2)?.text.trim() || plan.description || 'see intake.md';
   // A migration runs the toolkit's migration track (shared/discovery-migration.ts) over the legacy source copied into sources/legacy/.
   const legacyDir = floorDir && plan.sourceFolder ? `${sourcesDirOf(floorDir)}/${legacyRel(plan.sourceFolder.name).replace(/^sources\//, '')}` : undefined;
-  const sliceAsked = asksForSlice([plan.description, plan.brief?.brief.description ?? '', ...(plan.brief ? [...plan.brief.brief.sections.goal, ...plan.brief.brief.sections.scope].map((x) => x.text) : []), ...plan.intake.map((a) => a.text)]);
+  const sliceAsked = !!plan.sliceAsked || asksForSlice([plan.description, plan.brief?.brief.description ?? '', ...(plan.brief ? [...plan.brief.brief.sections.goal, ...plan.brief.brief.sections.scope].map((x) => x.text) : []), ...plan.intake.map((a) => a.text)]);
   const stages = plan.entry === 'migration' ? migrationTrack({ toolkitDir, legacyDir, slice: sliceAsked }) : ['- Run **Stages P → 4**: intake, triage/scope, requirements, architecture & design, and the **build plan** (`architecture/build-plan.md`).'];
   return [
     `**Discovery for ${plan.name}.** You are the **${runner}**.`,

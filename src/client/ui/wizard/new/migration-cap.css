@@ -1,0 +1,3 @@
+/* A migration's cap (migration-cap.ts): a short number field. */
+#modal-root .nw-cap input[type=number] { max-width: 180px; }
+#modal-root .nw-cap p { margin: 0 0 8px; }
