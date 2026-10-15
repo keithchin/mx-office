@@ -262,10 +262,20 @@ export class Delivery {
       .catch(() => new Set<string>())
       .then((ok) => {
         this.marking.delete(key);
+        // Already settled (typed before a restart lost the roster's note of it): never typed again, only let go.
+        const done = due.ids.filter((id) => !ok.has(id) && this.roster.dispatch.isSettled(floor.id, id));
+        if (done.length) this.letGo(floor, w, done);
         const now = floor.worker(w.id);
         const again = now && this.due(floor, now);
         if (now && again) this.typeDue(floor, now, again, ok);
       });
+  }
+
+  /** Held prompts and owed answers whose dispatch already settled: off the list, the escalation's note made true. */
+  private letGo(floor: TeamFloor, w: WorkerInfo, ids: string[]) {
+    const held = this.heldOf(floor.id, w.id).filter((h) => h.dispatchId && ids.includes(h.dispatchId));
+    if (held.length) this.drop(floor, held.map((h) => h.id));
+    this.roster.escalations.owedSettled(floor, ids);
   }
 
   /** What would go in now, and the dispatch ids among it; undefined when nothing would. */

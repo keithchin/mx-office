@@ -248,7 +248,7 @@ export class Escalations {
 
   /**
    * Brings a gone-home member back to act on the answers it's owed: a fresh hire primed with its
-   * handoff note and those answers. Fire and forget (resolve is synchronous); a failure is toasted and
+   * handoff note and those answers. Fire and forget (the answer is settled already); a failure is toasted and
    * the answers stay owed. Answers that arrive while the hire is under way are owed too, and reach it
    * once its first turn is over (owedTo, typed by Delivery.onWorker).
    */
@@ -309,6 +309,23 @@ export class Escalations {
         if (ids.length) this.typedOwed(floor, ids);
       },
     };
+  }
+
+  /** Owed answers whose dispatch settled already (typed before a restart lost the roster's note): marked told, never typed again. */
+  owedSettled(floor: TeamFloor, ids: readonly string[]) {
+    let changed = false;
+    for (const e of this.roster.data(floor.id).escalations) {
+      if (e.resolution?.dispatchId && ids.includes(e.resolution.dispatchId) && !e.resolution.delivered) {
+        e.resolution.delivered = true;
+        changed = true;
+      }
+      for (const a of e.also ?? []) {
+        if (!a.pending || !a.dispatchId || !ids.includes(a.dispatchId)) continue;
+        delete a.pending;
+        changed = true;
+      }
+    }
+    if (changed) this.roster.touch(floor, true);
   }
 
   /** Owed durable answers typed: their dispatches settled, the roster's delivered flags on disk at once. */

@@ -257,3 +257,25 @@ test('answer-store-complete-history: every revision’s full text is in the answ
   (await import('node:fs')).writeFileSync(file, raw);
   assert.equal((await new AnswerStore(dir).verify('f1')).ok, false);
 });
+
+test('a held answer typed just before a crash that lost the roster’s note of it is let go after the restart, never typed again', async () => {
+  const floor = new FakeFloor();
+  const o = office(floor);
+  const pm = floor.add('p1', 'Niklaus', 'working');
+  const d = o.roster.data(floor.id);
+  d.members.pm = { ...d.members.pm, phase: 'active', workerId: pm };
+  await o.roster.interrupts.tell(floor, 'Status?', 'Keith', 'after');
+  floor.set(pm, 'idle');
+  await settle();
+  assert.equal(floor.prompts.length, 1);
+  assert.equal(records(o, floor)[0].state, 'submitted');
+  // The roster's save of the dropped held prompt never happened: on disk it is still held.
+  const o2 = crashAndRestart(floor, o);
+  assert.equal(o2.roster.data(floor.id).held.length, 1);
+  await o2.roster.reconcile();
+  floor.set(pm, 'working');
+  floor.set(pm, 'idle');
+  await settle();
+  assert.equal(floor.prompts.length, 1, 'not typed again');
+  assert.equal(o2.roster.data(floor.id).held.length, 0, 'let go');
+});

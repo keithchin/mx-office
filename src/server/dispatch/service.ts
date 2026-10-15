@@ -265,6 +265,12 @@ export class Dispatcher {
     return r;
   }
 
+  /** Whether a record exists and is past held / in flight (typed, refused, settled by a person…). */
+  isSettled(floorId: string, id: string): boolean {
+    const r = this.store.get(floorId, id);
+    return !!r && r.state !== 'held' && r.state !== 'in-flight' && r.state !== 'prepared';
+  }
+
   /** The floor's records that need the office or a person (the card, the rollback guard). */
   unsettled(floorId: string): DispatchRecord[] {
     return this.store.list(floorId).filter((r) => isUnsettled(r.state));
