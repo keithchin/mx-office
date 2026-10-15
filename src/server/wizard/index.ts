@@ -186,6 +186,8 @@ export class Wizard {
     // The source folder the draft checked and scanned (server/wizard/source-folder.ts), never a path from the page.
     if (draft && plan.entry === 'migration' && asksForSlice([draft.prompt])) plan.sliceAsked = true;
     if (draft?.source && takesSource(draft.mode)) plan.sourceFolder = { path: draft.source.path, name: draft.source.name, files: draft.source.files, bytes: draft.source.bytes };
+    // The team's analysis quotes the client's code, so a project with a source folder is never a public repository.
+    if (plan.sourceFolder) plan.private = true;
     const id = jobId(plan.owner, plan.name);
     const had = this.book.get(id);
     if (had && had.status === 'done') return `${plan.owner}/${plan.name} was already set up — edit its answers from its project's setup panel`;
