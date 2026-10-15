@@ -208,7 +208,7 @@ export class ChangeAnswer {
     const oldRev = res.answerRev ?? 0;
     const follow = await this.deps.follow.get(floorId);
     const decision = `esc:${e.id}`;
-    await this.store.keep(floorId, decision, oldRev, kept(follow.recordings[decision]));
+    await this.store.keep(floorId, decision, oldRev, kept(follow.recordings[decision] ?? notYet(this.deps.now())));
     const { outcome: _o, ...rest } = res;
     e.resolution = { ...rest, verdict: x.verdict, text: x.text, by: x.by, at: x.at, answerRev: x.rev, ...(rec ? { dispatchId: rec.id, delivered: true } : {}) };
     follow.recordings[decision] = notYet(this.deps.now());
@@ -266,7 +266,7 @@ export class ChangeAnswer {
     if (!a || !q) return;
     const decision = `q:${qx.key}`;
     const was = a.recording ?? (a.status === 'recorded' ? { outcome: 'recorded' as const, rev: a.answerRev, at: 0 } : undefined);
-    await this.store.keep(floorId, decision, a.answerRev ?? 0, kept(was));
+    await this.store.keep(floorId, decision, a.answerRev ?? 0, kept(was ?? notYet(this.deps.now())));
     a.kind = x.kind;
     if (x.text) a.text = x.text;
     else delete a.text;
