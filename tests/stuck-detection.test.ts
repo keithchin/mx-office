@@ -85,7 +85,14 @@ Stage 5 (build), slice 1.
 | OI-7 | Seed data names | Decision needed (deferred by the PM, 2026-09-30; stubs remain) | PM at Stage 5 seeding |
 `;
 
-const files = (plan = PLAN, project = PROJECT): RepoRead => ({ sha: 'abc', plan: { file: 'architecture/build-plan.md', text: plan }, project: { file: 'PROJECT.md', text: project }, reports: [], planChangedAt: '2026-10-01T08:00:00Z' });
+/**
+ * The register with OW-1 still pending. In PROJECT, OW-1's row is CONFIRMED "for now" (parked on stubs):
+ * since decision cards (the OW-1 bug, slice 0 baseline) that is accepted, not waiting on you, so the tests
+ * that need OW-1 waiting use this one.
+ */
+const OPEN_PROJECT = PROJECT.replace('stay parked on stubs until then | CONFIRMED |', 'stay parked on stubs until then | PROPOSED |');
+
+const files = (plan = PLAN, project = OPEN_PROJECT): RepoRead => ({ sha: 'abc', plan: { file: 'architecture/build-plan.md', text: plan }, project: { file: 'PROJECT.md', text: project }, reports: [], planChangedAt: '2026-10-01T08:00:00Z' });
 
 const pr51 = (over: Partial<PullFacts> = {}): PullFacts => ({ number: 51, title: 'Fix: Team_Claims errors for every manager (scoped Responsibility read)', state: 'OPEN', isDraft: false, url: 'https://github.example/acme/expense-claims/pull/51', createdAt: '2026-09-30T09:28:00Z', updatedAt: '2026-09-30T09:28:00Z', ...over });
 
@@ -97,7 +104,7 @@ const detect = (o: { pulls?: PullFacts[]; plan?: string; project?: string; s?: P
 // ---- A fake office for the service -----------------------------------------------------------------
 
 function harness(o: { pulls?: PullFacts[]; plan?: string; project?: string; working?: boolean; s?: Partial<StuckSettings>; dir?: string } = {}) {
-  const state = { now: NOW, pulls: o.pulls ?? [pr51()], plan: o.plan ?? PLAN, project: o.project ?? PROJECT, working: o.working ?? false, s: settings(o.s), leadWorking: true };
+  const state = { now: NOW, pulls: o.pulls ?? [pr51()], plan: o.plan ?? PLAN, project: o.project ?? OPEN_PROJECT, working: o.working ?? false, s: settings(o.s), leadWorking: true };
   const audits: AuditInput[] = [];
   const told: { text: string; when: string; by: string }[] = [];
   const floor: StuckFloor = { id: 'expense', name: 'expense-claims', dir: '/nowhere', pulls: () => state.pulls, working: () => state.working };
@@ -206,9 +213,8 @@ test('a pending decision that blocks rows 59–62 and proceeds on stubs raises o
   assert.deepEqual(d.decision?.journeys, ['J-09']);
   assert.equal(d.decision?.workaround, 'stubs');
   assert.equal(stuckTitle(d, NOW), 'Decision waiting on you: OW-1 Named owners, not yet named: the SSO IdP registration and test tenant, and the SMTP host and account. Blocks build-plan rows 59–62 (J-09). Build continues on stubs.');
-  // Raised from PROJECT.md OI-1's date (2026-09-27), and the "for now" CONFIRMED row is evidence, not an answer.
+  // Raised from PROJECT.md OI-1's date (2026-09-27).
   assert.equal(d.since, Date.parse('2026-09-27T00:00:00Z'));
-  assert.ok(d.evidence.some((e) => /PROJECT\.md:\d+: accepted for now on 2026-09-30/.test(e.label)));
 });
 
 test('recording the decision in PROJECT.md as CONFIRMED resolves it', async () => {
@@ -221,9 +227,23 @@ test('recording the decision in PROJECT.md as CONFIRMED resolves it', async () =
   assert.ok(events.some((e) => e.action === 'resolved' && e.record.id === 'decision-OW-1'));
 });
 
+test('stuck-no-reraise-confirmed: a register row CONFIRMED "for now" (accepted) or CONFIRMED is not waiting on you (the OW-1 bug)', () => {
+  // OW-1 on Travel Approval: PROJECT.md's row is CONFIRMED with "parked on stubs until then" (accepted for now 2026-09-30).
+  assert.ok(projectFacts(PROJECT, 'OW-1').accepted);
+  assert.equal(detect({ project: PROJECT }).some((d) => d.id === 'decision-OW-1'), false, 'accepted for now: not re-raised from its own evidence');
+  const answered = OPEN_PROJECT.replace('| 4 | Integration owners (OW-1): named when known', '| 5 | Integration owners (OW-1): SSO = Grace Hopper | CONFIRMED | PM, 2026-10-04 |\n| 4 | Integration owners (OW-1): named when known');
+  assert.equal(detect({ project: answered }).some((d) => d.id === 'decision-OW-1'), false, 'CONFIRMED');
+  assert.ok(detect().some((d) => d.id === 'decision-OW-1'), 'still pending: raised');
+  // An open question in the register answered in the Decisions table, or marked "accepted for now", isn't either.
+  const oq = OPEN_PROJECT.replace('| OQ-9 | Which cost centres can claim travel? | Stage 3 gate 2026-09-29 | Open, waiting on the client |', '| OQ-9 | Which cost centres can claim travel? | Stage 3 gate 2026-09-29 | Open, accepted for now 2026-10-01 |');
+  assert.equal(detect({ project: oq }).some((d) => d.id === 'decision-OQ-9'), false);
+  const oq2 = OPEN_PROJECT.replace('| 3 | Role model', '| 4 | Cost centres (OQ-9): all of them | CONFIRMED | PM, 2026-10-02 |\n| 3 | Role model');
+  assert.equal(detect({ project: oq2 }).some((d) => d.id === 'decision-OQ-9'), false);
+});
+
 test('a decision under its threshold, or with every blocked row built, raises nothing', () => {
   const young = PLAN.replace('| PROJECT.md OI-1 |', '| Stage 4 gate 2026-10-04 |');
-  assert.equal(detect({ plan: young, project: PROJECT.replace(/OW-1/g, 'XX-9') }).some((d) => d.id === 'decision-OW-1'), false);
+  assert.equal(detect({ plan: young, project: OPEN_PROJECT.replace(/OW-1/g, 'XX-9') }).some((d) => d.id === 'decision-OW-1'), false);
   const built = PLAN.replace(/\| blocked - OW-1[^|]*\|/g, '| built - done |');
   assert.equal(detect({ plan: built }).some((d) => d.id === 'decision-OW-1'), false);
 });
@@ -340,12 +360,13 @@ test('detection OFF raises nothing and shows nothing', async () => {
   assert.deepEqual(cleanStuckSettings({ on: false, prHours: 0, failingHours: 72 }), { on: false, prHours: 24, decisionHours: 24, failingHours: 72, circlesHours: 48 });
 });
 
-test("an open escalation about the same thing covers the item, so Needs you doesn't show it twice", async () => {
+test('an open escalation about the same thing no longer hides the item: it is listed, and groups with it on one decision card (Slice 1A)', async () => {
   const h = harness();
   h.deps.openEscalations = () => [{ title: 'PR #51 needs your review', details: 'Team_Claims' }];
   await h.svc.look(h.floor);
   const v = await h.svc.view(h.floor, true);
-  assert.equal(v.items.some((i) => i.id === 'pr-51'), false);
+  // Was hidden ("covered"); now shown, so the card can list it as a source.
+  assert.equal(v.items.some((i) => i.id === 'pr-51'), true);
   assert.ok(v.items.some((i) => i.id === 'decision-OW-1'));
 });
 

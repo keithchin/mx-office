@@ -260,6 +260,8 @@ export class QuestionsService {
         blocks: [q.blocks!],
         evidence: [{ label: `${q.file}: openQuestions ${q.id} (${q.state}, ${q.source.where === 'main' ? 'main' : `${q.source.agent ?? q.source.worktree}'s worktree`})` }],
         decision: { id: q.id, question: q.question.length > 140 ? `${q.question.slice(0, 139)}…` : q.question, rows: '', journeys: [], brd: q.file },
+        // Its decision card is the question's: one answer path, the Questions page (shared/decisions/).
+        questionKey: q.key,
       });
     }
     return out;

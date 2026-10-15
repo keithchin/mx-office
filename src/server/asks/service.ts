@@ -15,7 +15,7 @@ import type { Escalation, EscalationAsk } from '../../shared/roster/escalation.j
 import type { RoleId, TeamId } from '../../shared/roster/roles.js';
 import { journalPath, ROLES } from '../../shared/roster/roles.js';
 import { awaitingAsk, awaitingKey, newestWaits, planAwaiting } from './awaiting.js';
-import { placesOf, readEverywhere, type AskPerson, type Read } from './sources.js';
+import { anyFailed, placesOf, readEverywhere, type AskPerson, type Read } from './sources.js';
 import { actMessage, detectAsks, DETECT_FILES, type DetectInput } from './detect.js';
 
 /** How often each floor is looked at. */
@@ -42,7 +42,8 @@ export interface AsksDeps {
   escalations(floor: AsksFloor): readonly Escalation[];
   /** Files one on the member's behalf (never FYI), marked as from an AWAITING-PM item. */
   raise(floor: AsksFloor, role: RoleId, ask: EscalationAsk, key: string): void;
-  settle(floor: AsksFloor, id: string, why: string): void;
+  /** Its AWAITING-PM line is gone (`what` says so), or back (undefined): never settled by itself. */
+  markGone(floor: AsksFloor, id: string, what: string | undefined): void;
   /** What the rest of the detectors read of main and the floor (detect.ts). */
   detectInput(floor: AsksFloor, reads: readonly Read[]): Promise<Omit<DetectInput, 'reads' | 'now'>>;
   /** Whoever covers Management, and the team's tell to them as the Project Manager (an error, or undefined once sent or held). */
@@ -57,6 +58,8 @@ interface FloorState {
   at?: number;
   /** Items marked seen: id → when. */
   seen: Record<string, number>;
+  /** When the last look couldn't read the team's files: the items are kept from the look before. */
+  unreadAt?: number;
 }
 
 const ACTOR = { kind: 'office' as const, name: 'Surfaced asks' };
@@ -156,6 +159,13 @@ export class AsksService {
       this.awaiting(floor, reads, why);
       const s = await this.stateOf(floor.id);
       const now = this.deps.now();
+      // A failed read keeps what the last look found, marked as not re-read (nothing settles on a failed read).
+      if (anyFailed(reads, DETECT_FILES)) {
+        s.unreadAt = now;
+        s.at = now;
+        return;
+      }
+      delete s.unreadAt;
       const found = detectAsks({ ...(await this.deps.detectInput(floor, reads)), reads, now });
       s.items = found.items;
       s.standup = found.standup;
@@ -172,18 +182,19 @@ export class AsksService {
   private awaiting(floor: AsksFloor, reads: readonly Read[], why: string) {
     const waits = newestWaits(reads);
     const writer = (team: TeamId) => this.deps.writerOf(floor, team);
-    const plan = planAwaiting(waits, (team) => writer(team)?.role, this.deps.escalations(floor));
+    const plan = planAwaiting(waits, (team) => writer(team)?.role, this.deps.escalations(floor), reads);
     for (const r of plan.raise) {
       const name = writer(r.waits.team)?.name ?? r.role;
       this.deps.raise(floor, r.role, awaitingAsk(name, r.item, r.waits, why), awaitingKey(r.role, r.item));
     }
-    for (const e of plan.settle) this.deps.settle(floor, e.id, `the AWAITING-PM line is gone from ${e.by}'s newest entry`);
+    for (const e of plan.gone) this.deps.markGone(floor, e.id, `The AWAITING-PM line is gone from ${e.by}'s newest entry`);
+    for (const e of plan.back) this.deps.markGone(floor, e.id, undefined);
   }
 
   /** What Needs you shows: the items not marked seen. */
   async view(floor: AsksFloor, admin: boolean): Promise<AsksView> {
     const s = await this.stateOf(floor.id);
-    return { floor: floor.id, items: s.items.filter((i) => !s.seen[i.id]), ...(s.standup ? { standup: s.standup } : {}), ...(s.at ? { at: s.at } : {}), admin };
+    return { floor: floor.id, items: s.items.filter((i) => !s.seen[i.id]), ...(s.standup ? { standup: s.standup } : {}), ...(s.at ? { at: s.at } : {}), ...(s.unreadAt ? { unreadAt: s.unreadAt } : {}), admin };
   }
 
   /** The newest standup's "Blocked on you" off the lead's branch, labelled, for the standup page. */

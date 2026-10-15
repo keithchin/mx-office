@@ -10,7 +10,8 @@
 import { dropKeys, forgetWith } from '../office/forget.js';
 import { randomBytes } from 'node:crypto';
 import type { WorkerInfo } from '../../shared/protocol.js';
-import { URGENCY_ICON, VERDICT_WORD, isAlarming, escalationOrder, makeEscalation, type Escalation, type EscalationAsk, type EscalationVerdict } from '../../shared/roster/escalation.js';
+import { OUTCOME_VERDICT, URGENCY_ICON, VERDICT_WORD, isAlarming, escalationOrder, makeEscalation, type Escalation, type EscalationAsk, type EscalationOutcome, type EscalationVerdict } from '../../shared/roster/escalation.js';
+import { escalationKind } from '../../shared/decisions/words.js';
 import { ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
 import { URGENCIES, isFyi } from '../../shared/roster/autonomy.js';
 import { isAsleepStatus } from './bench.js';
@@ -33,7 +34,7 @@ const RESOLVED_SHOWN = 10;
 const OWED_MS = 24 * 3_600_000;
 
 /** An answer as one line of the message that carries several. */
-const answerLine = (e: Escalation) => `- “${e.title}”: ${VERDICT_WORD[e.resolution!.verdict]}${e.resolution!.text ? ` — ${e.resolution!.text}` : ''} (${e.resolution!.by})`;
+const answerLine = (e: Escalation) => `- “${e.title}”: ${e.resolution!.outcome === 'done' ? `DONE (${e.resolution!.by} says it's done: please re-check)` : VERDICT_WORD[e.resolution!.verdict]}${e.resolution!.text && e.resolution!.outcome !== 'done' ? ` — ${e.resolution!.text}` : ''} (${e.resolution!.by})`;
 
 export class Escalations {
   /** The Coordinator's debounce per floor; what it's to hear is in the roster file's outbox. */
@@ -159,12 +160,20 @@ export class Escalations {
    * the project picks up again without anyone hiring by hand. Not while hiring is paused by the cost
    * cap: then the answer waits for its next hire.
    */
-  resolve(floor: TeamFloor, id: string, verdict: EscalationVerdict, raw: unknown, by: string): string | undefined {
+  resolve(floor: TeamFloor, id: string, verdict: EscalationVerdict, raw: unknown, by: string, outcome?: EscalationOutcome): string | undefined {
     const d = this.roster.data(floor.id);
     const e = d.escalations.find((x) => x.id === id);
     if (!e) return 'No such escalation';
     if (e.status === 'resolved') return `Already answered by ${e.resolution?.by ?? 'someone'}`;
-    const text = typeof raw === 'string' ? raw.replace(/\r\n?/g, '\n').trim().slice(0, 4000) : '';
+    // Noted is an FYI's answer and never resolves a decision; I've done it is a hands-on action's, never an approval.
+    if (outcome) {
+      const { kind } = escalationKind(e);
+      if (outcome === 'noted' && kind !== 'fyi') return 'Noted is only for an FYI: this one asks something, so answer it';
+      if (outcome === 'done' && kind !== 'hands-on') return "I've done it is only for a hands-on action";
+      verdict = OUTCOME_VERDICT[outcome].verdict;
+    }
+    const own = typeof raw === 'string' ? raw.replace(/\r\n?/g, '\n').trim().slice(0, 4000) : '';
+    const text = outcome === 'done' ? own || OUTCOME_VERDICT.done.text : own;
     if (verdict === 'reply' && !text) return 'Write your reply';
     if (verdict === 'reject' && !text) return 'Say why it is rejected';
     let delivered = false;
@@ -178,7 +187,7 @@ export class Escalations {
       // One writing its handoff is about to be stopped: the answer is kept, and finishBench brings it back with it.
       const leaving = !!w && !!member && member.phase === 'benching' && member.workerId === w.id;
       if (!w && e.role) rehire = true;
-      const prompt = escalationAnswerPrompt(e, verdict, text, by);
+      const prompt = escalationAnswerPrompt(e, verdict, text, by, outcome);
       // A dialog may be up (a permission prompt, a question, booting): the answer stays owed and goes in once its turn is over (Delivery.onWorker).
       const busy = (x: WorkerInfo) => !mayType(x.status) && !isAsleepStatus(x.status);
       if (w && w.kind === 'agent' && !leaving) {
@@ -204,9 +213,10 @@ export class Escalations {
       }
     }
     e.status = 'resolved';
-    e.resolution = { verdict, text, by, at: this.roster.deps.now(), delivered };
-    audit.record({ floor: floor.id, actor: byWhom(by), action: 'escalation.answer', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `Answered ${e.by}'s escalation (${verdict}): ${e.title}`, details: { verdict, delivered, rehire, ...(later.length ? { later } : {}), reply: text ? { length: text.length } : undefined } });
-    floor.activity?.(`✅ ${by} answered ${e.by}'s escalation (${verdict}): ${e.title}`);
+    e.resolution = { verdict, text, by, at: this.roster.deps.now(), delivered, ...(outcome ? { outcome } : {}) };
+    const said = outcome === 'done' ? "said it's done for" : outcome === 'noted' ? 'noted' : `answered (${verdict})`;
+    audit.record({ floor: floor.id, actor: byWhom(by), action: 'escalation.answer', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `${outcome === 'done' ? `Said it's done (${e.by} re-checks):` : outcome === 'noted' ? 'Noted the FYI:' : `Answered ${e.by}'s escalation (${verdict}):`} ${e.title}`, details: { verdict: outcome ?? verdict, ...(outcome ? { legacyVerdict: verdict } : {}), delivered, rehire, ...(later.length ? { later } : {}), reply: text ? { length: text.length } : undefined } });
+    floor.activity?.(`✅ ${by} ${said} ${e.by}'s escalation: ${e.title}`);
     if (later.length) floor.activity?.(`⏳ ${later.join(', ')} ${later.length === 1 ? 'has' : 'have'} a question open in ${later.length === 1 ? 'its' : 'their'} terminal: the answer goes in once that's answered`);
     // A Lead's `ask` to warn, bench, swap or reinstate a subagent: approving it does it.
     this.roster.subagents.onEscalationResolved(floor, e.id, verdict, by);
@@ -217,8 +227,48 @@ export class Escalations {
   }
 
   /**
-   * Closes one the office filed from an agent's words once those words are gone (an AWAITING-PM item no
-   * newest entry lists any more, server/asks/): resolved as noted, nothing sent to the agent.
+   * The AWAITING-PM line one was filed from is gone from the newest entry (server/asks/): not settled (a
+   * missing line isn't an answer). Its card says so and asks the person: Resolved, or Still needed.
+   * `what` undefined: the line is back, so it's an ask like before.
+   */
+  markGone(floor: TeamFloor, id: string, what: string | undefined): boolean {
+    const e = this.roster.data(floor.id).escalations.find((x) => x.id === id);
+    if (!e || e.status !== 'open') return false;
+    if (what === undefined) {
+      if (!e.sourceGone) return false;
+      delete e.sourceGone;
+    } else {
+      if (e.sourceGone) return false;
+      e.sourceGone = { at: this.roster.deps.now(), what };
+      audit.record({ floor: floor.id, actor: office(), action: 'escalation.source-gone', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `${what}: kept open for the Project Manager to say (Resolved, or Still needed): ${e.title}`, details: { what }, severity: 'info' });
+    }
+    this.roster.touch(floor);
+    return true;
+  }
+
+  /**
+   * Tells the agent that raised one something without answering it (a hands-on card's Can't now, a gone
+   * line's Still needed): typed after its turn; the escalation stays open.
+   */
+  tell(floor: TeamFloor, id: string, what: string, text: string, by: string): string | undefined {
+    const d = this.roster.data(floor.id);
+    const e = d.escalations.find((x) => x.id === id);
+    if (!e || e.status !== 'open') return 'That escalation is no longer open';
+    const member = e.role ? d.members[e.role] : undefined;
+    const w = floor.worker(e.workerId) ?? (member ? this.roster.workerOf(floor, member) : undefined);
+    if (!w || w.kind !== 'agent') return `${e.by} isn't at work to tell`;
+    const r = this.roster.delivery.send(floor, w, text, { origin: 'person', by, wake: true, resume: true });
+    if (r.status === 'refused') return `Couldn't tell ${e.by}: ${r.why}`;
+    e.told = { at: this.roster.deps.now(), what, by };
+    if (e.sourceGone && what === 'still needed') e.sourceGone.asked = e.told.at;
+    audit.record({ floor: floor.id, actor: byWhom(by), action: 'escalation.tell', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `Told ${e.by} (${what}), kept open: ${e.title}`, details: { what } });
+    this.roster.touch(floor);
+    return undefined;
+  }
+
+  /**
+   * Closes one the office filed from an agent's words (records from before decision cards; AWAITING-PM now
+   * marks the line gone instead, markGone): resolved as noted, nothing sent to the agent.
    */
   settle(floor: TeamFloor, id: string, why: string): boolean {
     const e = this.roster.data(floor.id).escalations.find((x) => x.id === id);

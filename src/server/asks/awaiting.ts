@@ -7,10 +7,10 @@
 
 import type { Escalation } from '../../shared/roster/escalation.js';
 import { parseJournal, type JournalEntry } from '../../shared/roster/journal.js';
-import { journalPath, ROLES, type RoleId, type TeamId } from '../../shared/roster/roles.js';
+import { journalPath, ROLE_BY_ID, ROLES, type RoleId, type TeamId } from '../../shared/roster/roles.js';
 import { isHandsOn } from '../../shared/roster/hands-on.js';
 import { sameAsk } from '../roster/jeff-ask.js';
-import type { Read } from './sources.js';
+import { anyFailed, type Read } from './sources.js';
 
 /** `AWAITING-PM: <what>` lines, as bench.ts reads them. */
 const LINE = /^[\s>*_-]*AWAITING[- ]PM[*_]*\s*:[*_]*\s*(.*)$/gim;
@@ -76,8 +76,13 @@ export const awaitingKey = (role: string, item: string) => `${role}:${item.toLow
 export interface AwaitingPlan {
   /** Items to file: role, the item, the waits it came from. */
   raise: { role: RoleId; item: string; waits: Waits }[];
-  /** Open escalations the office filed from a line that is gone now: resolve them. */
-  settle: Escalation[];
+  /**
+   * Open escalations the office filed from a line that is gone now: marked "line gone" for the person to
+   * say (Resolved, or Still needed), never settled. Not when a read of that team's journal failed.
+   */
+  gone: Escalation[];
+  /** Ones marked gone whose line is back: an ask like before. */
+  back: Escalation[];
 }
 
 /**
@@ -85,7 +90,7 @@ export interface AwaitingPlan {
  * role escalated itself with the same words) and not filed before from this entry is raised; an open one
  * filed from a line no newest entry lists any more is settled. Other open escalations hold nothing back.
  */
-export function planAwaiting(waits: readonly Waits[], roleOf: (team: TeamId) => RoleId | undefined, escalations: readonly Escalation[]): AwaitingPlan {
+export function planAwaiting(waits: readonly Waits[], roleOf: (team: TeamId) => RoleId | undefined, escalations: readonly Escalation[], reads: readonly Read[] = []): AwaitingPlan {
   const raise: AwaitingPlan['raise'] = [];
   const live = new Set<string>();
   for (const w of waits) {
@@ -100,8 +105,15 @@ export function planAwaiting(waits: readonly Waits[], roleOf: (team: TeamId) => 
       raise.push({ role, item, waits: w });
     }
   }
-  const settle = escalations.filter((e) => e.status === 'open' && e.from?.kind === 'awaiting' && !!e.from.key && !live.has(e.from.key));
-  return { raise, settle };
+  // A journal that couldn't be read somewhere can't say a line is gone (decision cards, D02).
+  const unread = (e: Escalation) => {
+    const team = e.role ? ROLE_BY_ID.get(e.role)?.team : undefined;
+    return team ? anyFailed(reads, [journalPath(team)]) : anyFailed(reads);
+  };
+  const filed = escalations.filter((e) => e.status === 'open' && e.from?.kind === 'awaiting' && !!e.from.key);
+  const gone = filed.filter((e) => !live.has(e.from!.key) && !e.sourceGone && !unread(e));
+  const back = filed.filter((e) => live.has(e.from!.key) && !!e.sourceGone);
+  return { raise, gone, back };
 }
 
 /** The escalation for one item: titled with it, hands-on ones as needs-human, the entry as its details. */
@@ -111,7 +123,7 @@ export function awaitingAsk(name: string, item: string, w: Waits, why: string): 
     urgency: 'important',
     trigger: isHandsOn(item) ? 'needs-human' : 'blocked',
     title: item.slice(0, 160),
-    details: [`${name}'s newest entry in \`${journalPath(w.team)}\` (${w.where}, “${w.entry.heading}”) says it is waiting on you, and it wasn't escalated. The office raised it on its behalf ${why}.`, '', `Waiting on: ${item}`, '', `Answer here and the answer goes to ${name}. It closes by itself once the line is gone from ${name}'s newest entry. The entry:`, '', body].join('\n'),
+    details: [`${name}'s newest entry in \`${journalPath(w.team)}\` (${w.where}, “${w.entry.heading}”) says it is waiting on you, and it wasn't escalated. The office raised it on its behalf ${why}.`, '', `Waiting on: ${item}`, '', `Answer here and the answer goes to ${name}. If the line goes from ${name}'s newest entry, the card asks you whether it's resolved. The entry:`, '', body].join('\n'),
     options: [],
   };
 }

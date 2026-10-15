@@ -132,7 +132,9 @@ export function detectStuck(i: DetectInput): StuckDraft[] {
     seen.add(p.id);
     const ref = /PROJECT\.md\s+([A-Z]{1,4}-\d+)/.exec(p.raised)?.[1];
     if (ref) seen.add(ref);
-    if (facts.confirmed) continue;
+    // Answered in the register (CONFIRMED), or accepted for now (a CONFIRMED row that defers it): not waiting
+    // on you. OW-1 was re-raised from its own "accepted for now" evidence (slice 0 baseline, 13 Oct).
+    if (facts.confirmed || facts.accepted) continue;
     const id = `decision-${p.id}`;
     const since = earliestDate(p.raised) ?? facts.since ?? i.firstSeen(id);
     if (i.now - since < i.settings.decisionHours * H) continue;
@@ -146,13 +148,15 @@ export function detectStuck(i: DetectInput): StuckDraft[] {
       evidence: [
         place(plan!.file, p.line),
         ...waiting.slice(0, 2).flatMap((n) => (rows.get(n) ? [place(plan!.file, rows.get(n)!.line, ` (row ${n})`)] : [])),
-        ...(facts.accepted && project ? [{ label: `${project.file}:${facts.accepted.line}: accepted for now${facts.accepted.at ? ` on ${new Date(facts.accepted.at).toISOString().slice(0, 10)}` : ''}`, file: project.file, line: facts.accepted.line }] : []),
       ],
-      decision: { id: p.id, question: shortQuestion(p.question), rows: words, journeys, ...(p.workaround ? { workaround: p.workaround } : {}), ...(facts.accepted ? { accepted: facts.accepted.text } : {}) },
+      decision: { id: p.id, question: shortQuestion(p.question), rows: words, journeys, ...(p.workaround ? { workaround: p.workaround } : {}) },
     });
   }
   for (const q of project ? openQuestions(project.text) : []) {
     if (!q.id || seen.has(q.id)) continue;
+    // The same id CONFIRMED or accepted for now in the Decisions register: answered, not waiting on you.
+    const settled = projectFacts(project!.text, q.id);
+    if (settled.confirmed || settled.accepted) continue;
     const id = `decision-${q.id}`;
     const since = q.since ?? i.firstSeen(id);
     if (i.now - since < i.settings.decisionHours * H) continue;

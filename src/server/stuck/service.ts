@@ -10,7 +10,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AuditInput } from '../../shared/audit.js';
 import { ACCEPT_QUIET_MS, SNOOZE_MS, stuckActions, leadMessage, stuckTitle, type StuckAction, type StuckDraft, type StuckFloorView, type StuckSettings, type StuckView } from '../../shared/stuck.js';
-import { StuckBook, reviveBook, type BookEvent } from './book.js';
+import { StuckBook, reviveBook, type BookEvent, type StuckRecord } from './book.js';
 import { detectStuck, failingStreaks, type PullFacts, type RunLike } from './detect.js';
 import { currentStage, planRows } from './parse.js';
 import type { RepoRead } from './repo.js';
@@ -41,8 +41,8 @@ export interface StuckDeps {
   lead(floor: StuckFloor): { name: string; working: boolean; since?: number } | undefined;
   /** The team's tell to that lead, as the Project Manager: an error, or undefined when it went (or was held for after its turn). */
   tell(floor: StuckFloor, text: string, by: string, when: 'now' | 'after', owner?: string): string | undefined;
-  /** The floor's open escalations: an item they already cover isn't shown twice. */
-  openEscalations(floor: StuckFloor): readonly { title: string; details: string }[];
+  /** The floor's open escalations (kept for callers; an escalation about the same thing now groups with the item on its decision card, it no longer hides it). */
+  openEscalations?(floor: StuckFloor): readonly { title: string; details: string }[];
   record(e: AuditInput): void;
 }
 
@@ -53,7 +53,10 @@ const hash = (s: string) => {
   return (h >>> 0).toString(36);
 };
 
-/** Whether an open escalation already says the same: it names the PR, the decision or the test. */
+/**
+ * Whether an open escalation already says the same: it names the PR, the decision or the test. No longer
+ * used to hide an item (decision cards group on explicit ids instead, shared/decisions/); kept for its tests.
+ */
 export function coveredBy(d: StuckDraft, escs: readonly { title: string; details: string }[]): boolean {
   const key = d.pr ? new RegExp(`#${d.pr.number}(?!\\d)`) : d.decision ? new RegExp(`(?:^|[^\\w-])${d.decision.id}(?![\\w-]*\\d)`) : d.failing?.[0] ? new RegExp(`(?:^|[^\\w-])${d.failing[0].name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\d.])`) : undefined;
   return !!key && escs.some((e) => key.test(`${e.title}\n${e.details}`));
@@ -135,7 +138,14 @@ export class StuckService {
     if (!settings.on) return [];
     const now = this.deps.now();
     const book = await this.book(floor.id);
-    const [files, runs] = await Promise.all([this.deps.readRepo(floor.dir).catch(() => undefined), this.deps.runs(floor.id).catch(() => [])]);
+    let runsFailed = false;
+    const [files, runs] = await Promise.all([
+      this.deps.readRepo(floor.dir).catch(() => undefined),
+      this.deps.runs(floor.id).catch(() => {
+        runsFailed = true;
+        return [] as RunLike[];
+      }),
+    ]);
     const pulls = floor.pulls();
 
     // What progress is measured by: the newest merge, the build plan's row states, the current stage.
@@ -157,8 +167,18 @@ export class StuckService {
       firstSeen: (id) => book.firstSeen(id, now),
     });
     // What other features found waiting on the PM (sources.ts): the Questions page's blocking client questions.
-    drafts.push(...(await sourcedDrafts(floor, now)));
-    const events = book.reconcile(drafts, now);
+    const sourced = await sourcedDrafts(floor, now);
+    drafts.push(...sourced.drafts);
+    // A read that failed keeps what it found before as it was (marked unreadAt), never resolves it (decision cards, D02).
+    const repoFailed = !files;
+    const unread = (r: { draft: StuckDraft }) => {
+      const d = r.draft;
+      if (d.kind === 'decision') return d.decision?.brd ? sourced.status === 'failed' : repoFailed;
+      if (d.kind === 'blocked-row') return repoFailed;
+      if (d.kind === 'failing') return runsFailed || (repoFailed && d.waitsOn !== undefined);
+      return false;
+    };
+    const events = book.reconcile(drafts, now, unread);
     for (const e of events) this.audit(floor, e, now);
     await this.save(floor.id, book);
     return events;
@@ -178,17 +198,20 @@ export class StuckService {
     });
   }
 
-  /** What Needs you shows: the visible items, minus any an open escalation already covers. */
+  /**
+   * What Needs you shows: the visible items (an open escalation about the same thing no longer hides one:
+   * they group on one decision card), and the dismissed ones apart, still open ("hidden (N)").
+   */
   async view(floor: StuckFloor, admin: boolean): Promise<StuckFloorView> {
     const settings = this.deps.settings();
     const now = this.deps.now();
     const book = await this.book(floor.id);
     const lead = this.deps.lead(floor);
-    const escs = this.deps.openEscalations(floor);
     const open = settings.on ? book.open() : [];
-    const shown = settings.on ? book.visible(now).filter((r) => !coveredBy(r.draft, escs)) : [];
-    const items: StuckView[] = shown.map((r) => ({ ...r.draft, raisedAt: r.raisedAt, ...(lead ? { lead: lead.name } : {}) }));
-    return { floor: floor.id, on: settings.on, items, hidden: open.length - shown.length, ...(lead ? { lead } : {}), admin };
+    const shown = settings.on ? book.visible(now) : [];
+    const asView = (r: StuckRecord): StuckView => ({ ...r.draft, raisedAt: r.raisedAt, ...(lead ? { lead: lead.name } : {}), ...(r.unreadAt ? { unreadAt: r.unreadAt } : {}), ...(r.dismissedAt ? { dismissedAt: r.dismissedAt } : {}) });
+    const dismissed = settings.on ? book.dismissed().map(asView) : [];
+    return { floor: floor.id, on: settings.on, items: shown.map(asView), hidden: open.length - shown.length, ...(dismissed.length ? { dismissed } : {}), ...(lead ? { lead } : {}), admin };
   }
 
   /** One line per visible item, for the standup page's "Blocked on you". */

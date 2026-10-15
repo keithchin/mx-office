@@ -42,11 +42,19 @@ export interface Place {
   at?: number;
 }
 
+/** How reading one file went: there (ok), not there (missing: a negative read), or couldn't tell (failed: a git error, an unreadable file). */
+export type ReadOutcome = 'ok' | 'missing' | 'failed';
+
 export interface Read {
   place: Place;
   /** Path → text, for the files asked for that are there. */
   files: Map<string, string>;
+  /** Each file asked for: ok, missing or failed. A failed read is never taken as "not there" (decision cards, D02). */
+  outcome: Map<string, ReadOutcome>;
 }
+
+/** Whether any read of `files` (all of them when not given) failed. */
+export const anyFailed = (reads: readonly Read[], files?: readonly string[]) => reads.some((r) => [...(r.outcome ?? [])].some(([f, o]) => o === 'failed' && (!files || files.includes(f))));
 
 /** The places to read on a floor: its folder, its people's worktrees, and the local branch heads nobody has checked out. */
 export async function placesOf(floorDir: string, people: readonly AskPerson[]): Promise<Place[]> {
@@ -77,41 +85,60 @@ export async function readEverywhere(floorDir: string, places: readonly Place[],
   const out: Read[] = [];
   const ask: { place: Place; file: string }[] = [];
   const reads = new Map<Place, Map<string, string>>();
+  const outcomes = new Map<Place, Map<string, ReadOutcome>>();
   for (const place of places) {
     const got = new Map<string, string>();
+    const how = new Map<string, ReadOutcome>();
     reads.set(place, got);
+    outcomes.set(place, how);
     if (place.dir) {
       await Promise.all(files.map(async (f) => {
-        const t = await readFile(path.join(place.dir!, f), 'utf8').catch(() => undefined);
-        if (t !== undefined) got.set(f, t);
+        try {
+          got.set(f, await readFile(path.join(place.dir!, f), 'utf8'));
+          how.set(f, 'ok');
+        } catch (err) {
+          // Not there (the file, or a worktree that's gone: the lost-worktree row says so) is a negative read; anything else is a failed one.
+          const code = (err as NodeJS.ErrnoException)?.code;
+          how.set(f, code === 'ENOENT' || code === 'ENOTDIR' ? 'missing' : 'failed');
+        }
       }));
     } else if (place.sha) {
       for (const f of files) {
         const hit = branchReads.get(`${place.sha}:${f}`);
-        if (hit) for (const [k, v] of hit) got.set(k, v);
-        else ask.push({ place, file: f });
+        if (hit) {
+          for (const [k, v] of hit) got.set(k, v);
+          how.set(f, hit.has(f) ? 'ok' : 'missing');
+        } else ask.push({ place, file: f });
       }
     }
   }
   if (ask.length) {
-    const texts = await catFiles(floorDir, ask.map((a) => `${a.place.sha}:${a.file}`));
+    const texts = await catFilesRead(floorDir, ask.map((a) => `${a.place.sha}:${a.file}`));
     ask.forEach((a, i) => {
-      const t = texts[i];
+      const t = texts ? texts[i] : undefined;
+      if (!texts) return void outcomes.get(a.place)!.set(a.file, 'failed');
       const m = new Map<string, string>(t !== undefined ? [[a.file, t]] : []);
       branchReads.set(`${a.place.sha}:${a.file}`, m);
+      outcomes.get(a.place)!.set(a.file, t !== undefined ? 'ok' : 'missing');
       if (t !== undefined) reads.get(a.place)!.set(a.file, t);
     });
     while (branchReads.size > KEPT) branchReads.delete(branchReads.keys().next().value!);
   }
-  for (const place of places) out.push({ place, files: reads.get(place)! });
+  for (const place of places) out.push({ place, files: reads.get(place)!, outcome: outcomes.get(place)! });
   return out;
 }
 
 /** Each `<rev>:<path>` as text (undefined when missing or over 2 MB), in one cat-file --batch. */
 export async function catFiles(dir: string, specs: readonly string[], maxBytes = 2 * 1024 * 1024): Promise<(string | undefined)[]> {
+  return (await catFilesRead(dir, specs, maxBytes)) ?? specs.map(() => undefined);
+}
+
+/** catFiles, or undefined when git itself failed (so nothing it was asked for can be called missing). */
+export async function catFilesRead(dir: string, specs: readonly string[], maxBytes = 2 * 1024 * 1024): Promise<(string | undefined)[] | undefined> {
   const res: (string | undefined)[] = specs.map(() => undefined);
   if (!specs.length) return res;
   const outText = await git(['cat-file', '--batch'], dir, specs.join('\n') + '\n');
+  if (outText === undefined) return undefined;
   if (!outText) return res;
   const buf = Buffer.from(outText, 'utf8');
   let at = 0;
