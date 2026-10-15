@@ -60,7 +60,7 @@ const KIND_WORDS: Record<NeedKind, [string, string]> = {
   pr: ['failing PR', 'failing PRs'],
   setup: ['setup', 'setup'],
   live: ['live app', 'live app'],
-  floor: ['floor waiting', 'floors waiting'],
+  floor: ['project waiting', 'projects waiting'],
   audit: ['audit', 'audit'],
   studio: ['Studio Pro', 'Studio Pro'],
   incident: ['incident', 'incidents'],
@@ -148,7 +148,7 @@ export function needsYouStrip(root: HTMLElement, badge: HTMLElement, deps: Needs
     if (key === drawnKey) return;
     drawnKey = key;
     badge.textContent = n ? String(n) : '';
-    badge.title = n ? `${n} thing${n === 1 ? '' : 's'} on this floor need${n === 1 ? 's' : ''} you` : '';
+    badge.title = n ? `${n} thing${n === 1 ? '' : 's'} on this project need${n === 1 ? 's' : ''} you` : '';
     root.classList.toggle('ny-calm', !items.length);
     if (!items.length) return void root.replaceChildren(h('p.ny-empty', { role: 'status' }, '✅ Nothing needs you right now.'));
     // With the team phone on the page, one row of counts that opens its Needs you section (the full list is there).

@@ -33,7 +33,7 @@ export function floorList(m: PhoneModel, open: (floor: string) => void): HTMLEle
 const DOING: Record<string, string> = { working: 'working…', starting: 'starting…', needs_input: 'asking you', done: 'finished its turn', idle: 'idle', exited: 'asleep', offline: 'asleep' };
 
 export function agentList(m: PhoneModel, open: (workerId: string) => void, terminal: (workerId: string) => void): HTMLElement {
-  if (!m.agents.length) return h('p.m-empty', {}, 'No agents on this floor yet.');
+  if (!m.agents.length) return h('p.m-empty', {}, 'No agents on this project yet.');
   return h(
     'ul.m-list',
     { 'aria-label': 'Direct messages' },

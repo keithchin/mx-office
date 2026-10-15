@@ -110,7 +110,7 @@ export function openPromptEditor(net: Net, first: PromptId = PROMPT_IDS[0]) {
     undo.classList.toggle('hidden', !admin || !dirty(current));
     save.classList.toggle('hidden', !admin);
     save.toggleAttribute('disabled', !dirty(current));
-    note.textContent = admin ? 'For the whole office, on every floor. A rewritten prompt is used from the next time it’s sent.' : 'Only admins can change the office’s prompts. This is what they say now.';
+    note.textContent = admin ? 'For the whole office, on every project. A rewritten prompt is used from the next time it’s sent.' : 'Only admins can change the office’s prompts. This is what they say now.';
     paintItems();
     paintWarnings();
   };

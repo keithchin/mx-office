@@ -43,7 +43,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
   const frameBox = h('div.la-framebox', { hidden: true }, frame);
   /** What the frame was last pointed at: a new start (or commit) loads the app again. */
   let loaded = '';
-  const chip = h('button.la-chip', { type: 'button', title: "The floor's app, running from main: open the 🌐 Live app tab", onclick: openTab });
+  const chip = h('button.la-chip', { type: 'button', title: "The project's app, running from main: open the 🌐 Live app tab", onclick: openTab });
 
   const ask = () => net.send({ t: 'liveapp.status' });
 
@@ -97,7 +97,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
       frame.removeAttribute('src');
     }
     const mixed = url && location.protocol === 'https:' ? h('p.la-note', {}, 'This page is on HTTPS and the app on plain HTTP, so the browser may not show it here: use Open in new tab.') : null;
-    const empty = url || up || s.status === 'failed' ? null : h('p.la-empty', {}, "The app isn't running. ▶ Start builds the floor's main branch and runs it here; it follows main as PRs merge.");
+    const empty = url || up || s.status === 'failed' ? null : h('p.la-empty', {}, "The app isn't running. ▶ Start builds the project's main branch and runs it here; it follows main as PRs merge.");
     top.replaceChildren(bar, ...([note, hint, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
     frameBox.hidden = !url;
     if (log) log.scrollTop = log.scrollHeight;

@@ -205,7 +205,7 @@ function progress(s: ProjectSummary): HTMLElement {
     bar('Issues', p.issuesClosed, p.issuesClosed + p.issuesOpen, `${closed} closed · ${p.issuesOpen} open`),
     bar('Pull requests', p.prsMerged, p.prsMerged + p.prsOpen, `${merged} merged · ${p.prsOpen} open`),
     bar('Queue', p.done, p.done + p.running + p.queued, `${p.done} done · ${p.running} running · ${p.queued} queued`),
-    h('div.sm-spend', {}, `💰 ${usd(s.spend.today)} today · ${usd(s.spend.total)} all told on this floor`),
+    h('div.sm-spend', {}, `💰 ${usd(s.spend.today)} today · ${usd(s.spend.total)} all told on this project`),
   );
   return fold('progress', h('span.sm-sub', {}, 'Progress', h('small.sm-fold-note', {}, ` · ${usd(s.spend.today)} today`)), [bars]);
 }
@@ -231,7 +231,7 @@ function agents(list: SummaryAgent[]): HTMLElement {
         ),
         sorted.length > shown.length ? h('li.sm-more', {}, `+ ${sorted.length - shown.length} more`) : null,
       )
-    : h('p.sm-none', {}, 'No agents on this floor.');
+    : h('p.sm-none', {}, 'No agents on this project.');
   return fold('agents', h('span.sm-sub', {}, `Agents (${list.length})`), [rows], 'sm-agents');
 }
 

@@ -110,7 +110,7 @@ const ranking = workersRanking({
   floor: () => store.floor ?? undefined,
   card: workerCard,
   visible: () => tab === 'workers',
-  emptyText: () => (store.project ? 'Nobody is working on this floor. ✨ New task hires someone.' : 'No agents here.'),
+  emptyText: () => (store.project ? 'Nobody is working on this project. ✨ New task hires someone.' : 'No agents here.'),
   // The Leads' subagents, each after its Lead (ui/subagents/).
   subagents: floorSubagents((id) => openWorker(id)),
 });

@@ -49,7 +49,7 @@ const COLUMNS: Column[] = [
   {
     key: 'name',
     label: 'Project',
-    title: 'The project (its floor): open its board',
+    title: 'The project: open its board',
     sort: (f) => f.name.toLowerCase(),
     cell: (f, leaving) => h('a.hs-name', { href: floorUrl(f.id), onclick: (e: Event) => (e.preventDefault(), openFloor(f.id, leaving)) }, f.name),
   },
@@ -198,7 +198,7 @@ export function statsView(root: HTMLElement, leaving: () => void): StatsView {
       tiles(stats),
       h('div.hs-head', {}, h('h2', {}, 'Projects side by side'), h('span.hs-note', {}, `Updated ${timeAgo(stats.generatedAt)} · click a column to sort`)),
       stats.floors.length ? table(stats) : h('p.hs-note', {}, 'No projects yet: ➕ Add project on the Projects tab.'),
-      h('div.hs-head', {}, h('h2', {}, '🏆 Model ranking'), h('span.hs-note', {}, ranking ? `All projects · ${ranking.leaderboard.reduce((n, x) => n + x.n, 0)} ranked runs · a floor's 📊 Analysis tab has the details` : '')),
+      h('div.hs-head', {}, h('h2', {}, '🏆 Model ranking'), h('span.hs-note', {}, ranking ? `All projects · ${ranking.leaderboard.reduce((n, x) => n + x.n, 0)} ranked runs · a project's 📊 Analysis tab has the details` : '')),
       rankingTable(ranking),
     );
   };

@@ -113,7 +113,7 @@ export function studioTitle(): string {
     ? `Open ${here.mpr}${here.version ? ` (Mendix ${here.version})` : ''} in Studio Pro on the office's computer`
     : here && !here.hasMpr
       ? "No .mpr in the project folder yet: clicking brings the folder up to date with GitHub first, then opens it in Studio Pro on the office's computer"
-      : "Open the floor's Mendix project in Studio Pro on the office's computer";
+      : "Open the project in Studio Pro on the office's computer";
   const note = here?.sync?.state === 'refused' ? here.sync.message : undefined;
   return note ? `${base}. ${note}` : base;
 }
@@ -234,8 +234,8 @@ function confirmOpen(floor: string, s: StudioInfo, behind?: string) {
   const no = h('button.btn', { type: 'button' }, 'Never mind');
   const remote = !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   const busy = s.busy.length
-    ? h('div.st-busy', {}, h('p', {}, `Busy on this floor right now (${s.busy.length}):`), h('ul', {}, ...s.busy.map((n) => h('li', {}, n))), h('p', {}, 'Let them finish their turn before you change anything in Studio Pro.'))
-    : h('p.st-calm', {}, 'No agent on this floor is in the middle of a turn.');
+    ? h('div.st-busy', {}, h('p', {}, `Busy on this project right now (${s.busy.length}):`), h('ul', {}, ...s.busy.map((n) => h('li', {}, n))), h('p', {}, 'Let them finish their turn before you change anything in Studio Pro.'))
+    : h('p.st-calm', {}, 'No agent on this project is in the middle of a turn.');
   const el = h(
     'div.modal.st-modal',
     { role: 'alertdialog', 'aria-label': 'Open in Studio Pro' },

@@ -66,7 +66,7 @@ export function homeList(m: PhoneModel, on: Screen, go: (s: Screen) => void): HT
       'ul.tp-chans',
       {},
       chan({ s: 'needs' }, 'needs', [h('span.tp-chan-ico.tp-needs-ico', { 'aria-hidden': 'true' }, '!'), h('span.tp-chan-name', {}, 'Needs you')], count(badgeOf(m.red, 0), 'need you'), 'Everything waiting on you, with what to press'),
-      chan({ s: 'all' }, 'all', [h('span.tp-chan-ico', { 'aria-hidden': 'true' }, '∗'), h('span.tp-chan-name', {}, 'All projects')], count(badgeOf(0, allUnread), 'unread'), 'Every floor’s chatter in one stream'),
+      chan({ s: 'all' }, 'all', [h('span.tp-chan-ico', { 'aria-hidden': 'true' }, '∗'), h('span.tp-chan-name', {}, 'All projects')], count(badgeOf(0, allUnread), 'unread'), 'Every project’s chatter in one stream'),
     ),
     h('h3.tp-sect', {}, 'Channels'),
     h(
@@ -94,7 +94,7 @@ export function homeList(m: PhoneModel, on: Screen, go: (s: Screen) => void): HT
             ),
           ),
         )
-      : h('p.tp-dim.tp-pad', {}, 'No agents on this floor yet.'),
+      : h('p.tp-dim.tp-pad', {}, 'No agents on this project yet.'),
   );
 }
 
@@ -153,7 +153,7 @@ export function allLog(m: PhoneModel, act: RowActions): HTMLElement[] {
     for (const t of channelView(m.feed(f.id).list.filter(keep(m)))) items.push({ at: t.root.at, el: () => messageRow(t.root, act, { thread: t, floor: true }) });
   }
   const out = stream(items);
-  return out.length ? out : [h('li.tp-empty', {}, 'Nothing on any floor yet.')];
+  return out.length ? out : [h('li.tp-empty', {}, 'Nothing on any project yet.')];
 }
 
 export function dmLog(m: PhoneModel, workerId: string, act: RowActions): HTMLElement[] {

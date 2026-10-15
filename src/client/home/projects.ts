@@ -98,7 +98,7 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
   const render = () => {
     fresh();
     if (isPortal()) return portal.render();
-    const add = h('button.btn.home-add', { type: 'button', title: "Clone one of the repositories this office's gh login can see, as a new floor" }, '➕ Add project');
+    const add = h('button.btn.home-add', { type: 'button', title: "Clone one of the repositories this office's gh login can see, as a new project" }, '➕ Add project');
     add.addEventListener('click', addProject);
     const wizard = h('button.btn.primary.home-add', { type: 'button', title: 'Create a new project repository and set it up with the mxcli project toolkit, a step at a time', onclick: newProject }, '✨ New project');
     // The office's tokens and folders, for admins: what a new project needs before it starts (ui/connections/).
@@ -106,7 +106,7 @@ export function projectsView(root: HTMLElement, net: Net, last: string | null, l
     root.replaceChildren(
       h('div.home-head', {}, h('h2', {}, '🏢 Projects'), h('span.seg', {}, wizard, add, connections), homeRunToggle()),
       unfinished.el,
-      h('p.home-intro', {}, store.floors.length ? 'Every project is a floor of this building. Open one for its Command Center, board and agents.' : "This building has no floors yet. ➕ Add project clones one of your repositories, and it becomes the first floor."),
+      h('p.home-intro', {}, store.floors.length ? 'Every project in the building. Open one for its Command Center, board and agents.' : "This building has no projects yet. ➕ Add project clones one of your repositories, and it becomes the first project."),
       h('ul.home-floors', {}, ...store.floors.map(card)),
     );
   };

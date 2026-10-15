@@ -39,7 +39,7 @@ let redrawBoard = () => {};
 export function openWhiteboard(net: Net) {
   if (open) return;
   const floor = store.floor;
-  if (!floor) return toast('Take the elevator to a floor first', 'warn');
+  if (!floor) return toast('Pick a project first', 'warn');
   const people = h('div.wb-people');
   const close = h('button.btn.close', { 'aria-label': 'Close', title: 'Close (Esc)' }, '✕');
   const host = h('div.wb-host', {}, h('div.wb-loading', {}, '✏️ Getting the markers out…'));
@@ -91,7 +91,7 @@ function renderPeople() {
   open.people.replaceChildren(
     ...(others.length
       ? [h('span.wb-live', {}, 'LIVE'), ...others.map((p) => h('span.wb-person', { title: `${p.name} is drawing` }, h('span.dot', { style: `background:${p.color}` }), p.name))]
-      : [h('span.wb-alone', {}, 'Just you for now. Anyone on this floor can join in.')]),
+      : [h('span.wb-alone', {}, 'Just you for now. Anyone on this project can join in.')]),
   );
 }
 

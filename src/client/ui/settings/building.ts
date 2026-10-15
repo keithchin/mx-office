@@ -65,7 +65,7 @@ export function mapSetting({ net }: SettingsDeps): Built {
       ),
     );
     const now = choices.find((m) => m.id === pick) ?? choices[0];
-    note.textContent = `${now.description} It’s the same on every floor, for everyone in the building${by ? `, picked by ${by}${at ? ` ${timeAgo(at)}` : ''}` : ''}. Maps of your own go in the office’s .agent-office/maps/ folder as JSON (see docs/maps.md).`;
+    note.textContent = `${now.description} It’s the same on every project, for everyone in the building${by ? `, picked by ${by}${at ? ` ${timeAgo(at)}` : ''}` : ''}. Maps of your own go in the office’s .agent-office/maps/ folder as JSON (see docs/maps.md).`;
     const broken = choices.filter((m) => m.error);
     bad.textContent = broken.map((m) => `⚠️ ${m.id} won't load: ${m.error}`).join('\n');
     bad.hidden = !broken.length;
@@ -103,7 +103,7 @@ export function workspaceSetting({ net }: SettingsDeps): Built {
     note.textContent =
       `New projects from the elevator are cloned into ${dir}/<owner>/<repo> on the office’s machine.` +
       (custom && by && at ? ` Set by ${by} ${timeAgo(at)}.` : '') +
-      (admin ? ' A checkout of the same repository that’s already there is used as it is. Floors you already have stay where they are.' : ' An admin can move it.');
+      (admin ? ' A checkout of the same repository that’s already there is used as it is. Projects you already have stay where they are.' : ' An admin can move it.');
   };
   paint();
   const send = () => {

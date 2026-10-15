@@ -47,7 +47,7 @@ const tone = (v: number | undefined) => (v === undefined ? 'none' : v >= 0.85 ? 
 
 /** The Analysis tab's Jeff section for a floor: filled in once GET /api/judge answers; never throws. */
 export function jeffSection(floor: string | undefined): HTMLElement {
-  const el = h('section.an-card.jf', { id: 'jeff', 'aria-label': 'Jeff, the Router' }, h('p.an-empty', {}, floor ? 'Asking Jeff…' : 'Jeff works per project: open a floor to see his judgements.'));
+  const el = h('section.an-card.jf', { id: 'jeff', 'aria-label': 'Jeff, the Router' }, h('p.an-empty', {}, floor ? 'Asking Jeff…' : 'Jeff works per project: open a project to see his judgements.'));
   if (floor)
     void fetchJudge(floor)
       .then((s) => el.replaceChildren(...jeffBody(s)))
@@ -57,7 +57,7 @@ export function jeffSection(floor: string | undefined): HTMLElement {
 
 function jeffBody(s: JudgeSummary): Node[] {
   const modes = s.kinds.map((k) => k.mode);
-  const lead = modes.includes('shadow') ? 'Jeff is watching, not acting. Switch to On where he agrees with you.' : modes.every((m) => m === 'off') ? 'Jeff is off on this floor: turn him on in ⚙️ Settings › ⚖️ Jeff · Router.' : 'Jeff is acting on his verdicts.';
+  const lead = modes.includes('shadow') ? 'Jeff is watching, not acting. Switch to On where he agrees with you.' : modes.every((m) => m === 'off') ? 'Jeff is off on this project: turn him on in ⚙️ Settings › ⚖️ Jeff · Router.' : 'Jeff is acting on his verdicts.';
   const disagreements = s.rows.filter((r) => r.agree === false);
   return [
     h(

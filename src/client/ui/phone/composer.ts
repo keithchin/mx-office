@@ -90,7 +90,7 @@ export function composer(onSent: (r: SendReply, t: ComposeTarget) => void): Comp
     }
     const { mention } = parseMention(text, tgt.agents);
     if (!tgt.agents.length && tgt.place.in === 'channel' && !mention) {
-      hint.textContent = "Goes to that floor's Project Coordinator";
+      hint.textContent = "Goes to that project's Project Coordinator";
       return;
     }
     const r = routeMessage(text, tgt.place, tgt.agents);

@@ -11,7 +11,7 @@ import { h } from '../dom';
 export type Scope = 'you' | 'floor' | 'office';
 const SCOPE: Record<Scope, [label: string, title: string]> = {
   you: ['Just you', 'Only for you, kept in this browser'],
-  floor: ['This floor', 'The same for everyone on this floor'],
+  floor: ['This project', 'The same for everyone on this project'],
   office: ['Everyone', 'The same for everyone in the building'],
 };
 

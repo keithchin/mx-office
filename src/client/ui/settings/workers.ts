@@ -84,8 +84,8 @@ export function limitSetting({ net }: SettingsDeps): Built {
     clear.classList.toggle('hidden', !m.set);
     const now =
       m.limit === undefined
-        ? `No limit: the office hires an agent for every free seat. ${m.workers} ${m.workers === 1 ? 'is' : 'are'} here now, across every floor.`
-        : `At most ${m.limit} agent${m.limit === 1 ? '' : 's'} at once, across every floor (${m.workers} now), shells and board agents too. Hiring past that is refused.`;
+        ? `No limit: the office hires an agent for every free seat. ${m.workers} ${m.workers === 1 ? 'is' : 'are'} here now, across every project.`
+        : `At most ${m.limit} agent${m.limit === 1 ? '' : 's'} at once, across every project (${m.workers} now), shells and board agents too. Hiring past that is refused.`;
     const from = m.set ? ` Set by ${m.set.by} ${timeAgo(m.set.at)}.` : '';
     const cap = m.ceiling ? ` The office was started with --max-workers ${m.ceiling}, so it can't go any higher.` : '';
     note.textContent = now + from + cap + (admin ? '' : ' Admins can change it.');

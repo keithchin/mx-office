@@ -26,13 +26,13 @@ export function floorPicker(net: Net, opts: { onGo?: () => void } = {}) {
   const select = $('floor') as HTMLSelectElement;
   const render = () => {
     const options = store.floors.map((f) => h('option', { value: f.id, disabled: !!f.cloning }, floorLabel(f)));
-    if (!store.floors.length) options.push(h('option', { value: '' }, 'No floors yet'));
+    if (!store.floors.length) options.push(h('option', { value: '' }, 'No projects yet'));
     select.replaceChildren(...options);
     select.value = store.floor ?? '';
     select.disabled = store.floors.length < 2;
     const p = store.project;
     const f = store.currentFloor();
-    $('floor-meta').textContent = p ? [p.branch && `⎇ ${p.branch}`, f?.repo ?? p.dir, f && `👥 ${f.people} here`].filter(Boolean).join(' · ') : store.floors.length ? '' : 'No floors yet: 🏠 Home adds a project.';
+    $('floor-meta').textContent = p ? [p.branch && `⎇ ${p.branch}`, f?.repo ?? p.dir, f && `👥 ${f.people} here`].filter(Boolean).join(' · ') : store.floors.length ? '' : 'No projects yet: 🏠 Home adds a project.';
     const box = document.getElementById('elsewhere');
     if (box) {
       const elsewhere = store.floors.filter((o) => o.id !== store.floor && o.waiting > 0 && !o.cloning && isWatched(o.id));
