@@ -55,6 +55,7 @@ import { questionsRoutes } from './questions.js';
 import { versionRoutes } from './version.js';
 import { portfolioRoutes } from './portfolios.js';
 import { profileRoutes } from './profiles.js';
+import { teamSourceRoutes } from './team-sources.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -201,6 +202,7 @@ export const routes: readonly Route[] = [
   // Agent profiles and Hire from your agents (profiles/).
   profileRoutes.view,
   profileRoutes.act,
+  teamSourceRoutes.list,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,

@@ -64,6 +64,7 @@ function cleanMove(m: unknown): MoveOp | undefined {
     by: str(r.by, 80),
     ...(r.owner ? { owner: str(r.owner, 80) } : {}),
     ...(r.task ? { task: String(r.task).slice(0, 4000) } : {}),
+    ...(typeof r.model === 'string' && /^[A-Za-z0-9][A-Za-z0-9._\-[\]]{0,63}$/.test(r.model) ? { model: r.model } : {}),
     ...(prev && prev.name ? { prevDest: prev } : {}),
   };
 }

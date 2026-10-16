@@ -42,9 +42,9 @@ export function rosterProfileDeps(o: { dataDir: string; roster: () => Roster; fl
       const f = floor(id);
       return f ? o.roster().members.bench(f, role, by) : 'No such project';
     },
-    hire: async (id, role, by, owner, task) => {
+    hire: async (id, role, by, owner, task, model) => {
       const f = floor(id);
-      return f ? o.roster().members.hire(f, role, by, owner, task) : 'No such project';
+      return f ? o.roster().members.hire(f, role, by, owner, task, model) : 'No such project';
     },
     hireHeld: (id) => o.roster().pauseOf(o.roster().data(id)) ?? hireHoldOf(id),
     toast: (id, text, level) => floor(id)?.toast(text, level),
