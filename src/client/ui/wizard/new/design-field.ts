@@ -47,15 +47,13 @@ export function designField(d: ProjectPlan, redraw: () => void): HTMLElement | n
   const keep = h('button.btn.ph-outline', { type: 'button', 'aria-pressed': pressed(d.design.choice === 'keep') }, KEEP_WORDS) as HTMLButtonElement;
   keep.onclick = () => ((d.design = { choice: 'keep' }), redraw());
   const others = choices.filter((c) => c !== rec);
-  const other = others.length
-    ? (h(
-        'select',
-        { 'aria-label': 'Choose another version', id: 'nw-a-design-other' },
-        h('option', { value: '', selected: !(chosen && chosen !== rec) }, 'Choose another…'),
-        ...others.map((c) => h('option', { value: `${c.systemId}|${c.n}`, selected: chosen === c }, `${label(c)} (${c.status})`)),
-      ) as HTMLSelectElement)
-    : null;
-  other?.addEventListener('change', () => {
+  const other = h(
+    'select',
+    { 'aria-label': 'Choose another version', id: 'nw-a-design-other', disabled: !others.length, title: others.length ? 'Another approved version of this client’s design system' : 'The client has no other approved version' },
+    h('option', { value: '', selected: !(chosen && chosen !== rec) }, others.length ? 'Choose another…' : 'Choose another (none)'),
+    ...others.map((c) => h('option', { value: `${c.systemId}|${c.n}`, selected: chosen === c }, `${label(c)} (${c.status})`)),
+  ) as HTMLSelectElement;
+  other.addEventListener('change', () => {
     const [systemId, n] = other.value.split('|');
     if (systemId && n) d.design = { choice: 'use', systemId, n: Number(n) };
     redraw();

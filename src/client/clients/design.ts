@@ -84,7 +84,7 @@ export function designPart(client: string, admin: boolean): HTMLElement {
       parts.push(h('div.ds-modes', { role: 'radiogroup', 'aria-label': 'Design system for this client' }, pick('none', 'None', 'Today’s behaviour: each project keeps its own styling.'), pick('atlas', 'Atlas defaults', 'Atlas as it ships, plus the administration patterns.'), pick('branded', 'Branded Atlas', 'The client’s colours, type, density and shape.')));
     } else if (s) parts.push(h('p', {}, h('strong', {}, s.name), ` · ${s.kind === 'branded' ? 'Branded Atlas' : 'Atlas defaults'} · administration preset`));
     if (mode === 'none' && !s) parts.push(h('p.pf-hint', {}, 'No design system: new projects of this client are set up exactly as today.'));
-    if (mode && mode !== 'none' && admin) {
+    if (mode && mode !== 'none' && admin && (!view.versions.length || s?.draft)) {
       const start: DesignInput = { ...DEFAULT_INPUT, ...(s?.draft ?? view.latest ?? {}), name: s?.draft?.name || s?.name || `${view.label} Design System` };
       if (mode === 'branded') {
         form = brandForm(start, () => ((dirty = true), (publish.disabled = true)));
@@ -97,6 +97,7 @@ export function designPart(client: string, admin: boolean): HTMLElement {
       publish.onclick = () => (dirty ? toast('Save the draft first', 'warn') : act(publish, { action: 'publish', system: s!.id }, `Published v${next}`));
       parts.push(h('div.pf-acts.ds-bar', {}, save, publish, s?.draft ? h('small.pf-hint', {}, 'A draft is waiting to be published.') : null));
     }
+    if (s && view.versions.length && !s.draft && admin) parts.push(h('p.pf-hint', {}, 'To change it, press Edit as new draft on a version: the form opens with that version’s values, and publishing makes the next version.'));
     if (s && view.versions.length) {
       parts.push(
         h('table.ds-versions', { 'aria-label': 'Published versions' }, h('thead', {}, h('tr', {}, ...['Version', 'Status', 'Digest', 'Published', 'Made with', 'Used by', ''].map((t) => h('th', {}, t)))), h('tbody', {}, ...view.versions.map(versionRow))),

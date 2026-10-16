@@ -14,6 +14,9 @@ import { h, toast } from '../dom';
 import { designApi } from './api';
 import './design.css';
 
+/** Text with `code` spans as <code>. */
+const rich = (s: string): (string | HTMLElement)[] => s.split('`').map((part, i) => (i % 2 ? h('code', {}, part) : part));
+
 export function designTab(container: HTMLElement): TabHooks {
   const root = h('div.dg-page');
   container.replaceChildren(root);
@@ -75,13 +78,13 @@ export function designTab(container: HTMLElement): TabHooks {
   }
 
   function patternCard(v: ProjectDesignView, p: Pattern): HTMLElement {
-    const how = h('p.dg-how', {}, p.states[0].how);
+    const how = h('p.dg-how', {}, ...rich(p.states[0].how));
     const pills = p.states.map((s, i) => {
       const b = h('button.dg-state', { type: 'button', 'aria-pressed': i === 0 ? 'true' : 'false' }, s.label) as HTMLButtonElement;
       b.onclick = () => {
         for (const x of pills) x.setAttribute('aria-pressed', 'false');
         b.setAttribute('aria-pressed', 'true');
-        how.textContent = s.how;
+        how.replaceChildren(...rich(s.how));
       };
       return b;
     });
@@ -105,7 +108,7 @@ export function designTab(container: HTMLElement): TabHooks {
       h('p', {}, p.whenToUse),
       h('div.dg-states', { role: 'group', 'aria-label': 'States' }, ...pills),
       how,
-      h('details', {}, h('summary', {}, 'Constraints and Mendix reference'), h('ul', {}, ...p.constraints.map((c) => h('li', {}, c))), h('p.pf-hint', {}, `Atlas: ${p.atlas.join(', ')}`), h('pre', {}, p.mdl), h('p.pf-hint', {}, PATTERN_VERIFIED)),
+      h('details', {}, h('summary', {}, 'Constraints and Mendix reference'), h('ul', {}, ...p.constraints.map((c) => h('li', {}, ...rich(c)))), h('p.pf-hint', {}, `Atlas: ${p.atlas.join(', ')}`), h('pre', {}, p.mdl), h('p.pf-hint', {}, PATTERN_VERIFIED)),
       used.length ? h('p.dg-used', {}, `Used here: ${used.join(', ')}`) : null,
       use,
     );
@@ -119,10 +122,10 @@ export function designTab(container: HTMLElement): TabHooks {
       'section.dg-sec',
       {},
       h('h3', {}, 'Runtime screenshots'),
-      h('div.ds-bar', {}, cap, h('small.pf-hint', {}, v.live.running ? 'The live app is running.' : `The live app is ${v.live.status}: the screenshots below are history.`)),
+      h('div.ds-bar', {}, cap, h('small.pf-hint', {}, v.live.running ? 'The live app is running.' : v.captures.length ? `The live app is ${v.live.status}: the screenshots below are history.` : `The live app is ${v.live.status}.`)),
       v.captures.length
         ? h('div.dg-shots', {}, ...v.captures.slice(0, 12).map((c) => h('figure.dg-shot', { 'data-old': String(!v.live.running || c.design !== now) }, h('img', { src: designApi.captureUrl(v.floor, c.id), alt: `The app, ${c.scheme}, ${c.viewport.width} px`, loading: 'lazy' }), h('figcaption', {}, `${new Date(c.at).toLocaleString()} · ${c.viewport.width}×${c.viewport.height} ${c.scheme}${c.appSha ? ` · ${c.appSha.slice(0, 7)}` : ''} · ${c.design === 'none' ? 'no design system' : c.design}${!v.live.running || c.design !== now ? ' · history' : ''}`))))
-        : h('p.pf-hint', {}, 'No screenshots yet.'),
+        : h('p.pf-hint', {}, v.live.running ? 'No screenshots yet: Capture now takes the first.' : 'No screenshots yet. Start the live app (Live app tab), then Capture now.'),
     );
   }
 
