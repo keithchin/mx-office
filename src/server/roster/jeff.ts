@@ -29,6 +29,7 @@ import { isHandsOn } from '../../shared/roster/hands-on.js';
 import { fyiNow } from '../../shared/roster/escalation.js';
 import { managerRole } from './coverage.js';
 import { JeffPriority } from './jeff-priority.js';
+import { foldOfficeAsk } from './escalation-fold.js';
 import type { TeamFloor } from './types.js';
 import { audit, jeff } from '../audit/index.js';
 
@@ -156,12 +157,16 @@ export class Jeff {
       const duplicate = lead ? this.chatAskedAlready(floor, now, role, title.replace(CHAT_PREFIX, '')) : this.raisedAlready(floor, now, title);
       const call = waitingCall({ policy: d.settings.jeff.waitingPolicy ?? 'agree', says, rule, ask, duplicate });
       let acted = false;
+      const over = now.status === 'done' || now.status === 'idle';
+      // An ask naming an open or answered escalation (ESC-<id>, its decision id, the same denied command) isn't filed again (escalation-fold.ts).
+      const folded = mode === 'on' && call.escalate && over && foldOfficeAsk(this.roster, floor, { workerId: now.id, by: now.name, ...(role ? { role } : {}) }, { urgency: 'important', title, details: '', options: [] }, `chat:${role ?? now.id}:${title.toLowerCase().replace(/\s+/g, ' ').trim()}`.slice(0, 300));
       // Only while its turn is still over: a person (or anything else) may have moved it on meanwhile.
-      if (mode === 'on' && call.escalate && lead && (now.status === 'done' || now.status === 'idle')) {
+      if (folded) acted = false;
+      else if (mode === 'on' && call.escalate && lead && over) {
         const details = [`${now.name} asked you this in its chat and didn't escalate it, so the office filed it from the chat (Jeff, ${kind.choice}, ${Math.round(noul * 100)}% sure). Answer here and it goes to ${now.name} as its next prompt.`, '', 'Its last message:', '', clipState(text, 2000)].join('\n');
         this.roster.escalations.raiseFor(floor, { workerId: now.id, by: now.name, ...(role ? { role } : {}) }, { urgency: 'important', trigger: isHandsOn(`${title} ${ask ?? ''}`) ? 'needs-human' : 'question', title, details, options: [] }, `🧑‍⚖️ Jeff (Router) filed an ask from ${now.name}'s chat for you: it didn't escalate it`);
         acted = true;
-      } else if (mode === 'on' && call.escalate && (now.status === 'done' || now.status === 'idle')) {
+      } else if (mode === 'on' && call.escalate && over) {
         const details = [`Jeff noticed ${now.name} ended its turn waiting on you (${kind.choice}, ${Math.round(noul * 100)}% sure). Answer here and it goes to ${now.name} as its next prompt.`, '', 'Its last message:', '', clipState(text, 2000)].join('\n');
         this.roster.escalations.raiseFor(
           floor,
@@ -181,7 +186,7 @@ export class Jeff {
         acted,
         ...(call.held ? { held: call.held } : {}),
         text: clipState(text, TEXT_LOGGED),
-        verdict: call.held ? (call.held === 'no-ask' ? 'no ask: held' : 'raised already') : says ? '→ PM' : 'carry on',
+        verdict: folded ? 'folded into the escalation it names' : call.held ? (call.held === 'no-ask' ? 'no ask: held' : 'raised already') : says ? '→ PM' : 'carry on',
       });
     } finally {
       this.asking.delete(key);

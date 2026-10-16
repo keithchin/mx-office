@@ -56,6 +56,9 @@ export interface EscalationAnswer {
 
 /** The checks before anything else: the verdict to use and the text, or why not. */
 function readAnswer(e: Escalation, a: EscalationAnswer): { verdict: EscalationVerdict; text: string } | string {
+  // A permission denial (escalation-fold.ts): an Approve changes no Claude Code setting, so only Keep blocked
+  // (a reject) or closing it as a duplicate answers it; Allow writes the rule, and a seen run closes it.
+  if (e.permission && a.verdict !== 'reject' && a.outcome !== 'superseded') return `This is a permission block, not a decision: approving it in the office doesn't change Claude Code's permission settings, so ${e.by} would stay blocked. Use "Allow this command" on its card in Needs you (or Keep blocked); it closes once the office sees \`${e.permission.command}\` run.`;
   let verdict = a.verdict;
   if (a.outcome) {
     const { kind } = escalationKind(e);

@@ -23,6 +23,8 @@ import { ghIssueFinder, ghIssueMaker } from './issues.js';
 import type { HireAsk, TeamFloor } from './types.js';
 import { subagentBusyMoved } from './subagent-busy.js';
 import { onSubagentEvent } from '../workers/subagents.js';
+import { onCommandRun } from '../workers/tool-runs.js';
+import { sawCommandRun } from './escalation-fold.js';
 import { notedTranscript } from '../convo/index.js';
 import { SCAN_MS } from './subagent-live.js';
 import { OFFICE_BY } from '../workers/lifecycle.js';
@@ -174,6 +176,11 @@ export function rosterOf(ctx: Ctx): Roster {
     onSubagentEvent((workerId, ev) => {
       const floor = ctx.workerFloor(workerId);
       if (floor) roster.subagents.onEvent(teamFloor(ctx, floor), workerId, ev);
+    });
+    // A command a worker ran closes the permission card that waited for it (escalation-fold.ts).
+    onCommandRun((workerId, command) => {
+      const floor = ctx.workerFloor(workerId);
+      if (floor) sawCommandRun(roster, teamFloor(ctx, floor), workerId, command);
     });
     // …and from the Leads' transcripts, for what no hook says: a background run finishing, or
     // anything while the office was down (roster/subagent-live.ts).

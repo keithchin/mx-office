@@ -25,7 +25,7 @@ import { askLead } from '../lead-panel/hooks';
 import { answerFor, escalationModel, rowModel, verifyAnswer, type EscModel, type Tone } from './needs-logic';
 import type { DecisionCard } from '../../../shared/decisions/types';
 import { cardCounts, countsWords } from '../../../shared/decisions/words';
-import { cardExtras, fyiCard, genericCard, goneCard, handsOnCard, otherEscalations, type CardCtx } from './decision-card';
+import { cardExtras, fyiCard, genericCard, goneCard, handsOnCard, otherEscalations, permissionCard, type CardCtx } from './decision-card';
 import { decisionAct } from '../decisions/api';
 import { decisionCheck } from '../decisions/feed';
 import { stuckView } from '../stuck/feed';
@@ -243,9 +243,9 @@ export function needsCard(deps: NeedsCardDeps): NeedsCard {
       }
       const e = it.target.to === 'escalation' ? r?.escalations.find((x) => x.id === (it.target as { id: string }).id) : undefined;
       if (e && r && card && (card.gone || card.kind === 'hands-on' || card.kind === 'fyi')) {
-        const sig = JSON.stringify([e.status, r.admin, leadName, e.title, e.details, cardSig]);
+        const sig = JSON.stringify([e.status, r.admin, leadName, e.title, e.details, e.permission, cardSig]);
         const had = drawn.get(it.key);
-        const make = card.gone ? goneCard : card.kind === 'hands-on' ? handsOnCard : fyiCard;
+        const make = card.permission ? permissionCard : card.gone ? goneCard : card.kind === 'hands-on' ? handsOnCard : fyiCard;
         const d = had?.sig === sig ? had : { sig, el: make(card, ctx(r)) };
         keep.set(it.key, d);
         nodes.push(d.el);

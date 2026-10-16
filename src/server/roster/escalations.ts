@@ -23,6 +23,7 @@ import { sameAsk } from './jeff-ask.js';
 import { coordinatorIs, queueOnce } from './relays.js';
 import { managerRole } from './coverage.js';
 import { SameAsk } from './jeff-same.js';
+import { foldAgentAsk, joinsFyi, markPermission } from './escalation-fold.js';
 import type { Roster } from './index.js';
 import { escalationsToCoordinatorPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
@@ -71,7 +72,10 @@ export class Escalations {
    * the floor (sameAsk: the same title, or nearly), it joins that one as a "+1" instead of raising a
    * second (the same CI secret was once raised nine times), and gets the answer too.
    */
-  raiseOrJoin(floor: TeamFloor, w: WorkerInfo, ask: EscalationAsk): { escalation: Escalation; joined: boolean } {
+  raiseOrJoin(floor: TeamFloor, w: WorkerInfo, ask: EscalationAsk): { escalation: Escalation; joined: boolean; answered?: true } {
+    // One it names (ESC-<id>, its decision id, the same denied command) takes it, or says it's answered (escalation-fold.ts).
+    const folded = foldAgentAsk(this.roster, floor, w, ask, joinsFyi(this.askIsFyi(floor, ask)));
+    if (folded) return folded;
     const same = this.joinable(floor, ask).find((e) => sameAsk(e.title, ask.title));
     if (!same) return { escalation: this.raise(floor, w, ask), joined: false };
     return { escalation: this.join(floor, w, ask, same), joined: true };
@@ -83,7 +87,9 @@ export class Escalations {
    * asked only while his waiting judgement isn't off, and only a confident yes joins; no answer in time,
    * or any failure, raises it as before.
    */
-  async raiseOrJoinJudged(floor: TeamFloor, w: WorkerInfo, ask: EscalationAsk): Promise<{ escalation: Escalation; joined: boolean; byJeff?: boolean }> {
+  async raiseOrJoinJudged(floor: TeamFloor, w: WorkerInfo, ask: EscalationAsk): Promise<{ escalation: Escalation; joined: boolean; byJeff?: boolean; answered?: true }> {
+    const folded = foldAgentAsk(this.roster, floor, w, ask, joinsFyi(this.askIsFyi(floor, ask)));
+    if (folded) return folded;
     const open = this.joinable(floor, ask);
     const judge = this.roster.deps.judge;
     if (judge && open.length && this.roster.data(floor.id).settings.jeff.waiting !== 'off' && !open.some((e) => sameAsk(e.title, ask.title))) {
@@ -96,13 +102,17 @@ export class Escalations {
 
   /** The open ones a new ask could join: a loud one doesn't hide inside an FYI, which only another FYI joins. */
   private joinable(floor: TeamFloor, ask: EscalationAsk): Escalation[] {
-    const d = this.roster.data(floor.id);
-    const fyi = isFyi(d.settings.autonomy, ask.urgency, ask.trigger) && !decisionReason(ask);
-    return d.escalations.filter((e) => e.status === 'open' && (!fyiNow(e) || fyi));
+    const fyi = this.askIsFyi(floor, ask);
+    return this.roster.data(floor.id).escalations.filter((e) => e.status === 'open' && (!fyiNow(e) || fyi));
+  }
+
+  /** Whether an ask would be filed as FYI on the floor. */
+  private askIsFyi(floor: TeamFloor, ask: EscalationAsk): boolean {
+    return isFyi(this.roster.data(floor.id).settings.autonomy, ask.urgency, ask.trigger) && !decisionReason(ask);
   }
 
   /** Worker `w`'s ask added to `same` as a +1: its details, a louder urgency, and it hears the answer too. */
-  private join(floor: TeamFloor, w: WorkerInfo, ask: EscalationAsk, same: Escalation, byJeff = false): Escalation {
+  join(floor: TeamFloor, w: WorkerInfo, ask: EscalationAsk, same: Escalation, byJeff = false): Escalation {
     if (w.id !== same.workerId && !same.also?.some((a) => a.workerId === w.id)) {
       const role = this.roster.roleOf(floor, w.id);
       (same.also ??= []).push({ workerId: w.id, by: w.name, ...(role ? { role } : {}), at: this.roster.deps.now() });
@@ -150,6 +160,8 @@ export class Escalations {
     const e = makeEscalation(ask, { workerId: who.workerId, by: who.by, ...(role ? { role } : {}), ...(team ? { team } : {}) }, d.settings.autonomy, randomBytes(5).toString('hex'), this.roster.deps.now());
     if (byOffice && fyi === false) e.fyi = false;
     if (fyi === true) e.fyi = true;
+    // A tool call Claude Code's permission layer denied: a settings card, never an approval (escalation-fold.ts).
+    markPermission(e, role ? `${who.by} (${ROLE_BY_ID.get(role)!.title})` : who.by, e.at, byOffice);
     // FYI is information only: an agent's that asks for a decision is filed as one. One the office files as FYI itself stays FYI.
     if (e.fyi && (fyi === true || (byOffice && fyi === 'level'))) e.fyiKept = true;
     const reason = e.fyi && !e.fyiKept ? decisionReason(e) : undefined;

@@ -7,6 +7,10 @@
 //   - a closing note in brackets after the last full stop ("… #91. (#98 is escalation …, separate.)") and
 //     a trailing ", both already in open escalations" are the agent's commentary, not items;
 //   - a short clause that only points back ("Ada has it", "it is with the PM") stays with the item before;
+//   - a qualifier or a remark after a semicolon is no ask of its own: "ESC-04e8b0c899 (…); not blocking rows
+//     15-20" is one item (the office once filed "not blocking rows 15-20" as an escalation, and it was
+//     APPROVED). A part that starts with "not blocking", "no rush", "meanwhile", "but", "which", "until"…
+//     or only says what it blocks stays with the item before;
 //   - "merge #98 and run the LF conversion (issue #91)": two asks naming one different id each, split;
 //   - brackets left unbalanced are dropped, and a part under three characters is nothing.
 // Pure.
@@ -75,6 +79,13 @@ const COMMENT_TAIL = /,\s*(?:both|all|each|these|those|which|they|it)?\s*(?:are\
 /** A short clause that only points back at the item before it ("Ada has it", "it is with the PM"). */
 const pointsBack = (p: string) => !/[#]\d|\b[A-Z]{1,4}\d{0,2}-\d/.test(p) && ((p.split(/\s+/).length <= 5 && /\b(?:it|this|that|these|those|both|them|same)\b/i.test(p)) || (p.split(/\s+/).length <= 8 && /\buntil then\b|\bfor now\b|\bmeanwhile\b/i.test(p)));
 
+/**
+ * A part that qualifies the item before it rather than asking anything: how urgent it is or what it blocks
+ * ("not blocking rows 15-20", "no rush", "blocks row 3"), or a clause that carries on the sentence ("but …",
+ * "which …", "until …", "otherwise …").
+ */
+const QUALIFIER = /^(?:(?:is\s+|it'?s\s+)?(?:not|non)[- ]?(?:blocking|urgent|critical)\b|(?:doesn'?t|does not|won'?t|will not)\s+block\b|(?:blocks?|blocking|unblocks?)\s|no rush\b|low[- ]priority\b|nice[- ]to[- ]have\b|optional\b|when(?:ever)? you can\b|if possible\b|meanwhile\b|in the meantime\b|otherwise\b|but\b|so\b|because\b|since\b|though\b|although\b|while\b|which\b|until\b|unless\b|nothing else\b|everything else\b|the rest\b)/i;
+
 /** "merge #98 and run X (issue #91)": two asks with one different explicit id each. */
 function splitAnd(p: string): string[] {
   let depth = 0;
@@ -114,7 +125,7 @@ export function splitAwaitingLine(raw: string): string[] {
     let p = tidy(piece.replace(COMMENT_TAIL, ''));
     if (!p) continue;
     if (!balanced(p)) p = tidy(dropUnmatched(p));
-    if (parts.length && pointsBack(p)) {
+    if (parts.length && (pointsBack(p) || QUALIFIER.test(p))) {
       parts[parts.length - 1] = `${parts[parts.length - 1]}; ${p}`;
       continue;
     }

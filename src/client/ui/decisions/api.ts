@@ -1,5 +1,5 @@
 // A decision card's buttons (server/decisions/, POST /api/decisions/action): Separate, Noted, I've done it,
-// Can't now, Resolved, Still needed, and an answer that answers every escalation the card folds. Admins
+// Can't now, Resolved, Still needed, a permission card's Allow this command / Keep blocked, and an answer that answers every escalation the card folds. Admins
 // only (the server checks); what comes back is the floor's decision view, handed to the feed.
 
 import { store } from '../../state';
@@ -7,7 +7,7 @@ import { toast } from '../dom';
 import { setDecisionsView } from './feed';
 
 export interface DecisionActBody {
-  action: 'separate' | 'answer' | 'noted' | 'done' | 'cant-now' | 'resolved' | 'still-needed' | 'close-duplicates';
+  action: 'separate' | 'answer' | 'noted' | 'done' | 'cant-now' | 'resolved' | 'still-needed' | 'close-duplicates' | 'allow-command' | 'keep-blocked';
   escalation?: string;
   others?: string[];
   verdict?: 'reply' | 'approve' | 'reject';
