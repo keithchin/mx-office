@@ -190,3 +190,10 @@ html[data-theme^='clean'] .bud-fields > .bud-check { min-height: 29px; }
 .bud-alert-l { font-weight: 800; }
 .bud-alert-t { flex: 1 1 200px; }
 .bud-alert .btn { flex: none; }
+
+/* ---- Stages against plan (./stages.ts): × column, warned rows, missing data in words ---- */
+.bud-stages tr[data-warn] th, .bud-stages tr[data-warn] td { background: var(--warn-soft); }
+.bud-missing { color: var(--muted); font-style: italic; font-weight: 600; }
+.bud-warned { color: var(--bad-ink); }
+.bud-st { min-width: 0; }
+.bud-alert[data-level='stage'] .bud-actions, .bud-alert[data-level='pace'] .bud-actions { display: flex; flex-wrap: wrap; gap: 6px; }

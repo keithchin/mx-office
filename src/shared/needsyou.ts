@@ -13,6 +13,8 @@ import { needingYou, waitingInOrder } from './waiting.js';
 import { SEVERITY_SHORT, incidentRef, needsAttention, type IncidentBrief } from './incidents.js';
 import type { BudgetAlert, PriceListView } from './budget/types.js';
 import { unpricedNeed } from './budget/prices.js';
+import type { PaceView, StageWarnView } from './budget/stage-warn.js';
+import { stageNeeds } from './budget/stage-need.js';
 import type { SettingsSectionId } from './settings-sections.js';
 import type { RoleId } from './roster/roles.js';
 import type { StuckView } from './stuck.js';
@@ -43,8 +45,8 @@ export type NeedTarget =
   | { to: 'floor'; floor: string }
   | { to: 'firm'; url: string }
   | { to: 'incident'; id: string }
-  /** The 💰 Budget tab; `resume` takes the budget's pause off the project; `seen` marks that alert as seen (no tab). */
-  | { to: 'budget'; resume?: boolean; seen?: 'forecast' | 'threshold' }
+  /** The 💰 Budget tab (at `section`); `resume` takes the budget's pause off the project; `seen` marks that alert as seen, `dismissStage` a stage's overspend warning (until its next level), `dismissPace` the pace warning for today (no tab). */
+  | { to: 'budget'; resume?: boolean; seen?: 'forecast' | 'threshold'; section?: 'settings' | 'stages'; dismissStage?: string; dismissPace?: boolean }
   /** Nudges an idle team member back to its open task (the office's back-to-work prompt, as the Project Manager's). */
   | { to: 'nudge'; role: RoleId }
   /** A stuck item's card (ui/stuck/): what's stuck, the evidence and its buttons. */
@@ -107,6 +109,10 @@ export interface BudgetNeed {
   paused?: string;
   /** The price list, when it priced some model by its fallback (shared/budget/prices.ts). */
   prices?: PriceListView;
+  /** Stages past their plan line, not dismissed (shared/budget/stage-warn.ts). */
+  stageWarnings?: readonly StageWarnView[];
+  /** The budget runs out before the plan's end (or milestone), not dismissed today. */
+  pace?: PaceView;
 }
 
 export interface NeedsInput {
@@ -215,6 +221,8 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   // A model priced at Opus rates because it isn't on the price list: shown, not waiting on you.
   const unpriced = unpricedNeed(b);
   if (unpriced) out.push(unpriced);
+  // A stage past its plan line, or the budget running out before the plan's end (shared/budget/stage-need.ts).
+  out.push(...stageNeeds(b));
   // 6. Open, ready PRs whose checks fail.
   for (const c of prCheckCandidates(i.pulls)) put(c);
   // A toolkit stage at a ✋ gate, waiting for your sign-off: a MANUAL stage only once it is the stage in play (shared/gate-play.ts), from its verdicts whether or not the setup panel shows.

@@ -1,4 +1,4 @@
-// The Budget tab's settings (admins): the project's total, alert threshold and auto-pause, Resume when the
+// The Budget tab's settings (admins): the project's total, alert threshold, auto-pause and milestone, Resume when the
 // budget paused it, Change level (the wizard's cards again, applied from the team's next hire or Playbook
 // rewrite), and the office's own: the default alert threshold and the local currency.
 
@@ -30,13 +30,15 @@ function projectForm(v: BudgetView, refresh: () => void): HTMLElement {
   const total = h('input.bud-in', { id: 'bud-total', type: 'number', min: '0', step: '10', value: v.settings.total ? String(v.settings.total) : '', placeholder: 'No budget', 'aria-label': 'Total budget, USD' });
   const th = h('input.bud-in.bud-in-days', { type: 'number', min: '1', max: '99', value: v.settings.threshold ? String(v.settings.threshold) : '', placeholder: String(v.officeThreshold), 'aria-label': 'Alert threshold, percent' });
   const ap = h('input', { type: 'checkbox', checked: v.settings.autoPause });
-  const save = () => void act(v, { action: 'settings', total: total.value === '' ? null : Number(total.value), threshold: th.value === '' ? null : Number(th.value), autoPause: ap.checked }, refresh, 'Budget saved');
+  const ms = h('input.bud-in', { type: 'date', value: v.settings.milestone ?? '', 'aria-label': 'Milestone date: the pace warning compares the run-out estimate with it' });
+  const save = () => void act(v, { action: 'settings', total: total.value === '' ? null : Number(total.value), threshold: th.value === '' ? null : Number(th.value), autoPause: ap.checked, milestone: ms.value || null }, refresh, 'Budget saved');
   return h(
     'div.bud-fields',
     {},
     h('label.bud-field', {}, h('span', {}, 'Total budget (USD)'), h('span.bud-row', {}, '$', total)),
     h('label.bud-field', {}, h('span', {}, `Alert at (office default ${v.officeThreshold} %)`), h('span.bud-row', {}, th, '%')),
     h('label.bud-check', {}, ap, ' Pause the project at 100 %'),
+    h('label.bud-field', {}, h('span', {}, 'Milestone (optional)'), h('span.bud-row', {}, ms)),
     h('button.btn.small.primary', { type: 'button', onclick: save }, 'Save'),
     v.settings.updatedBy ? h('small.bud-hint', {}, `Last changed by ${v.settings.updatedBy}${v.settings.updatedAt ? ` on ${new Date(v.settings.updatedAt).toLocaleDateString()}` : ''}`) : null,
   );

@@ -1,9 +1,9 @@
-// The Budget tab's plan sections: the variance chart and the per-stage table (planned, actual,
-// difference), then the expected plan line by line, which admins edit in place (each edit records who),
+// The Budget tab's plan sections: the variance chart and the forecast (the per-stage table is the stage
+// section's, ./stages.ts), then the expected plan line by line, which admins edit in place (each edit records who),
 // make again from the project, or re-forecast from a Firm audit with one click.
 
 import type { BudgetView, PlanLine } from '../../../shared/budget/types';
-import { both, usd, usdCents } from '../../../shared/budget/money';
+import { both, usd } from '../../../shared/budget/money';
 import { h, toast } from '../dom';
 import type { BudgetSection } from './tab';
 import { varianceChart } from './chart';
@@ -19,29 +19,16 @@ export async function act(v: BudgetView, body: Record<string, unknown>, refresh:
   return !!r;
 }
 
-/** Planned against actual: the chart and the per-stage table. */
+/** Planned against actual: the chart and the forecast. */
 export const varianceSection: BudgetSection = (v) => {
   if (!v.plan || !v.variance) return null;
   const f = v.forecast;
-  const rows = v.variance.map((s) =>
-    h(
-      'tr',
-      {},
-      h('th', { scope: 'row' }, s.label, s.done ? h('small.bud-hint', {}, 'done') : null),
-      h('td.bud-num', {}, usdCents(s.planned)),
-      h('td.bud-num', {}, usdCents(s.actual)),
-      h('td.bud-num', { class: s.diff > 0.005 ? 'bud-over' : s.diff < -0.005 ? 'bud-under' : '' }, `${s.diff > 0 ? '+' : ''}${usdCents(s.diff)}`),
-    ),
-  );
-  const sumP = v.variance.reduce((n, s) => n + s.planned, 0);
-  const sumA = v.variance.reduce((n, s) => n + s.actual, 0);
   return h(
     'section.bud-card',
     {},
     h('h3.bud-h', {}, 'Plan against actual', h('small.bud-hsub', {}, `expected end ${v.plan.end}`)),
     varianceChart(v),
     f ? h('p.bud-note', {}, `Forecast at completion ${both(f.atCompletion, v.fx)} = spent ${usd(v.spent)} + ${usd(f.remainingPlan)} of plan left × ${f.factor.toFixed(2)} (how the finished stages went against their plan, kept between 0.5 and 2).${f.over ? ` That's ${usd(f.over)} over the budget.` : ''}`) : null,
-    h('table.bud-table.bud-var', {}, h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Stage'), h('th', { scope: 'col', class: 'bud-num' }, 'Planned'), h('th', { scope: 'col', class: 'bud-num' }, 'Actual'), h('th', { scope: 'col', class: 'bud-num' }, 'Difference'))), h('tbody', {}, ...rows), h('tfoot', {}, h('tr', {}, h('th', { scope: 'row' }, 'In the plan’s stages'), h('td.bud-num', {}, usdCents(sumP)), h('td.bud-num', {}, usdCents(sumA)), h('td.bud-num', {}, `${sumA - sumP > 0 ? '+' : ''}${usdCents(sumA - sumP)}`)))),
   );
 };
 

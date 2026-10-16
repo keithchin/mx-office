@@ -13,7 +13,8 @@ import { audit, byWhom } from '../audit/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { subagentFirstName } from '../roster/subagent-names.js';
 import { cleanSubName } from '../roster/subagent-store.js';
-import { checkFloor, type ControlDeps } from './control.js';
+import { checkFloor, numbersOf, type ControlDeps } from './control.js';
+import { checkStages } from './stage-warn.js';
 import { onBackgroundSpend } from './meter.js';
 import { BudgetService } from './service.js';
 import { currentStage } from './stage.js';
@@ -127,6 +128,15 @@ export function budgetOf(ctx: Ctx): BudgetService {
       }
     },
     record: (floorId, by, action, summary, details) => audit.record({ floor: floorId, actor: byWhom(by), action, target: { kind: 'budget', id: floorId, label: 'Budget' }, summary, ...(details ? { details } : {}), severity: 'notice' }),
+    // A stage past its plan line, or the budget running out before the plan's end (stage-warn.ts): never a pause, never a desktop notification.
+    warn: (floorId, w) => {
+      const floor = ctx.floors.get(floorId);
+      audit.record({ floor: floorId, actor: { kind: 'office', name: 'The budget' }, action: `budget.${w.kind}`, target: { kind: 'budget', id: floorId, label: 'Budget' }, summary: w.text, details: { key: w.key }, severity: 'notice' });
+      if (floor) {
+        ctx.toastFloor(floor, `${w.kind === 'stage' ? '📈' : '⏳'} ${w.text}`, 'warn');
+        ctx.toFloor(floor, { t: 'roster.changed', floor: floorId });
+      }
+    },
   };
   controls.set(b, deps);
   const last = new Map<string, number>();
@@ -137,7 +147,9 @@ export function budgetOf(ctx: Ctx): BudgetService {
       last.set(floor.id, Date.now());
       timers.delete(floor.id);
       try {
-        checkFloor(budget, floor, deps);
+        const n = numbersOf(budget, floor);
+        checkFloor(budget, floor, deps, n);
+        checkStages(budget, floor, deps, n);
       } catch (err) {
         console.error(`agent-office: budget check on ${floor.id}: ${(err as Error).message}`);
       }

@@ -8,6 +8,7 @@ import { toneOf } from '../../shared/budget/money.js';
 import { breakdowns, recentDays, totalOf, type LedgerData } from './ledger.js';
 import type { BudgetService, FloorRef } from './service.js';
 import { priceListView } from '../prices.js';
+import { stagePlanOf } from './stage-warn.js';
 
 /** Days of the "by day" table and chart. */
 const DAY_ROWS = 30;
@@ -57,6 +58,7 @@ export function floorView(b: BudgetService, floor: FloorRef, admin: boolean, fir
     insights: insights({ rows: d.rows, agents: d.agents, today, stage: b.deps.stageOf(floor.dir), team: b.deps.team?.(floor.id), efficiency: b.deps.efficiency?.(floor.id) }),
     admin,
     prices: priceListView(),
+    stagePlan: stagePlanOf(b, floor, n),
   };
 }
 

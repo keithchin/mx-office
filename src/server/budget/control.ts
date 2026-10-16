@@ -18,6 +18,8 @@ export interface ControlDeps {
   alert(floorId: string, a: BudgetAlert, paused: boolean): void;
   /** A change to record in the audit log. */
   record(floorId: string, by: string, action: string, summary: string, details?: Record<string, unknown>): void;
+  /** A stage overspend or pace warning was raised (stage-warn.ts): the audit log, a toast, the Needs-you strip. */
+  warn?(floorId: string, w: { kind: 'stage' | 'pace'; key: string; text: string }): void;
 }
 
 export interface Numbers {
@@ -84,10 +86,10 @@ export function numbersOf(b: BudgetService, floor: FloorRef): Numbers {
 }
 
 /** After spend: raises the alerts that are due, and pauses the project at 100 % when auto-pause is on. */
-export function checkFloor(b: BudgetService, floor: FloorRef, deps: ControlDeps) {
+export function checkFloor(b: BudgetService, floor: FloorRef, deps: ControlDeps, numbers?: Numbers) {
   const f = b.file(floor);
   if (!f.settings.total) return;
-  const n = numbersOf(b, floor);
+  const n = numbers ?? numbersOf(b, floor);
   const { alerts, raised } = checkAlerts(f.settings, b.store.office().threshold, n.spent, n.forecast?.atCompletion, f.alerts, b.deps.now());
   // A seen forecast raised again replaces itself, so the count alone doesn't say something changed.
   if (alerts.length === f.alerts.length && !raised.length) return;
@@ -168,6 +170,11 @@ export function setSettings(b: BudgetService, floor: FloorRef, raw: unknown, by:
     }
   }
   if (typeof r.autoPause === 'boolean') next.autoPause = r.autoPause;
+  if ('milestone' in r) {
+    if (r.milestone === null || r.milestone === '') delete next.milestone;
+    else if (typeof r.milestone !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(r.milestone) || Number.isNaN(Date.parse(`${r.milestone}T00:00:00Z`))) return 'The milestone is a date (YYYY-MM-DD)';
+    else next.milestone = r.milestone;
+  }
   next.updatedBy = by;
   next.updatedAt = b.deps.now();
   f.settings = next;
@@ -178,12 +185,12 @@ export function setSettings(b: BudgetService, floor: FloorRef, raw: unknown, by:
     resumeFloorFromBudget(floor.id, by);
   }
   b.store.changed(floor.id);
-  const changes = (['total', 'threshold', 'autoPause'] as const).filter((k) => was[k] !== next[k]);
+  const changes = (['total', 'threshold', 'autoPause', 'milestone'] as const).filter((k) => was[k] !== next[k]);
   if (changes.length) deps.record(floor.id, by, 'budget.settings', `Changed ${floor.name}'s budget: ${changes.map((k) => `${k} ${String(was[k] ?? '—')} → ${String(next[k] ?? '—')}`).join(', ')}`, { before: pick(was), after: pick(next) });
   return undefined;
 }
 
-const pick = (s: BudgetSettings) => ({ total: s.total, threshold: s.threshold, autoPause: s.autoPause, level: s.level });
+const pick = (s: BudgetSettings) => ({ total: s.total, threshold: s.threshold, autoPause: s.autoPause, level: s.level, milestone: s.milestone });
 
 /** Edits plan lines (`[{ id, usd?, days? }]`), each marked as edited by `by`. */
 export function editPlan(b: BudgetService, floor: FloorRef, raw: unknown, by: string, deps: ControlDeps): string | undefined {

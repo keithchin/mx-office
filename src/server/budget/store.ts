@@ -8,6 +8,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { BudgetAlert, BudgetPlan, BudgetSettings, FxSettings } from '../../shared/budget/types.js';
+import type { PaceRecord, StageWarnRecord } from '../../shared/budget/stage-warn.js';
 import { DEFAULT_FX, type FxLast } from './fx.js';
 import { emptyLedger, type LedgerData } from './ledger.js';
 
@@ -21,6 +22,10 @@ export interface FloorFile {
   alerts: BudgetAlert[];
   /** Paused by the budget, and when. */
   pausedAt?: number;
+  /** The stage overspend warnings raised (one per stage, at its highest level; shared/budget/stage-warn.ts). */
+  stageWarns?: StageWarnRecord[];
+  /** The pace warning, raised once a day at most. */
+  pace?: PaceRecord;
 }
 
 export interface OfficeFile {
@@ -71,6 +76,8 @@ export class BudgetStore {
       ...(saved?.plan ? { plan: saved.plan } : {}),
       alerts: Array.isArray(saved?.alerts) ? saved.alerts : [],
       ...(typeof saved?.pausedAt === 'number' ? { pausedAt: saved.pausedAt } : {}),
+      ...(Array.isArray(saved?.stageWarns) ? { stageWarns: saved.stageWarns } : {}),
+      ...(saved?.pace && typeof saved.pace.day === 'string' ? { pace: saved.pace } : {}),
     };
     this.floors.set(id, f);
     return f;
