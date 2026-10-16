@@ -85,6 +85,19 @@ The step-by-step version, with screenshots: `/docs/get-started/quick-start`.
 >
 > **Away from the laptop**: the office keeps Windows awake while agents work (set *When I close the lid* to *Do nothing* when plugged in to close the lid; `/docs/administration/running-the-office`), and can post what needs you to a **Microsoft Teams** channel through a Workflows webhook (⚙️ Settings › Notifications, `/lite?tab=settings&section=notify`; `/docs/integrations/teams-notifications`).
 
+## Desktop app (preview)
+
+Mx Office in a window of its own, with a tray icon that counts what needs you, a Windows notification for each new item, and restarts the app manages. It runs the office exactly as `npm start` does, from this checkout and build with your own Node.js, and keeps its data where it always is; Electron lives only in `desktop/`, so the office's own install and build don't change.
+
+```powershell
+npm --prefix desktop install   # once: Electron, into desktop
+ode_modules
+npm run desktop:dev            # start it (options after --, e.g. -- --port 4610)
+npm run desktop:pack           # desktopoutMx Office-win32-x64mx-office.exe, an unpacked build
+```
+
+When an office already runs on the port, the app opens that one instead of starting a second. **Restart office…** in the tray runs 🔁 Restart safely; quitting stops the office cleanly (it asks first while agents are working). Not there yet: an installer, auto-update and code signing (a Siemens certificate or IT approval). Everything else, including running it against a test office: `/docs/administration/desktop-app` ([docs/site/administration/desktop-app.md](docs/site/administration/desktop-app.md)).
+
 ## Where to read more
 
 | You want… | In `/docs` |
