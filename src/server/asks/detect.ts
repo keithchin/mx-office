@@ -5,6 +5,7 @@
 //   - assumption (S7): PROJECT.md decisions ASSUMED without the Project Manager's (or client's) consent.
 //   - advisory (S8): the toolkit's gate advisories (.claude/.gate-advisories), printed only to an agent.
 //   - review (S8): BRDs whose review status is draft or pending, and design artifacts, ready for review.
+//   - gate: the review gate's cards (server/review-gate/), worked out by main.ts and passed through.
 
 import type { AskAct, AskItem, BranchStandup } from '../../shared/asks.js';
 import type { Read } from './sources.js';
@@ -48,6 +49,8 @@ export interface DetectInput {
   /** BRDs on main and in the worktrees, and the design artifacts there (paths). */
   brds?: readonly BrdText[];
   design?: readonly string[];
+  /** The review gate's info cards (server/review-gate/): PRs that skipped review, direct and force pushes, baseline resets and waivers. */
+  gate?: readonly AskItem[];
 }
 
 export interface Detected {
@@ -249,6 +252,7 @@ export function detectAsks(i: DetectInput): Detected {
   if (off) items.push(off);
   const review = readyForReview(i.brds ?? [], i.design ?? []);
   if (review) items.push(review);
+  items.push(...(i.gate ?? []));
   return { items, ...(i.standup ? { standup: i.standup } : {}) };
 }
 
@@ -264,6 +268,9 @@ export function actMessage(act: AskAct, it: AskItem, by: string, now = Date.now(
     case 'discuss':
       return `The Project Manager (${by}) wants to discuss these assumptions before agreeing:\n${list}\nRaise them with office-workers escalate: one escalation, each assumption a numbered question with the options, the risk if it's wrong and your recommendation.`;
     case 'ask-lead':
+      if (it.kind === 'gate') return `The Project Manager asks about this (the office's review gate): ${it.text}.
+${list}
+Find out what happened and answer in one line what you'll do about it: have it reviewed now by another Lead (a "Review:" comment on the PR listing the checks run with their results and the files read), or escalate (office-workers escalate) what only I can decide. From now on follow the Playbook's review rule.`;
       return `The Project Manager asks about this: ${it.text}. The toolkit's gate-check printed it only to the agent that ran it. Deal with it, or if only I can clear it, escalate it (office-workers escalate) with options and a recommendation.`;
     default:
       return undefined;

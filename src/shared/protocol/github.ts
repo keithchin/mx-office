@@ -52,6 +52,23 @@ export interface GhPull {
   body: string;
   /** Issues it closes ("closes #12" in its description), as GitHub links them. */
   closes: number[];
+  /** Merged PRs only (the review gate, server/review-gate/): the GitHub login that merged it. */
+  mergedBy?: string;
+  /** Merged PRs only: its comments and reviews that start "Review:" or "Approved", and approving reviews. */
+  reviewNotes?: GhReviewNote[];
+  /** Merged PRs only: its commit titles that say "(reviewed)". */
+  claims?: string[];
+  /** Merged PRs only: the names its commits are authored by. */
+  commitAuthors?: string[];
+}
+
+/** A comment or review on a merged PR that could be a review or an approval (GhPull.reviewNotes). */
+export interface GhReviewNote {
+  kind: 'comment' | 'review';
+  author: string;
+  body: string;
+  at: string;
+  state?: string;
 }
 
 export interface GhState<T> {

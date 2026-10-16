@@ -7,6 +7,7 @@ import type { Pty } from '../ptys.js';
 import type { UsageTracker } from '../usage.js';
 import type { Worktrees } from '../worktrees.js';
 import type { HeadlessTerminal } from './terminal.js';
+import type { AgentSeat } from './git-identity.js';
 
 export type Worktree = NonNullable<WorkerInfo['worktree']>;
 
@@ -121,6 +122,8 @@ export interface Worker {
 export interface TeamHooks {
   quietDone(info: WorkerInfo): boolean;
   openAsks(workerId: string): string[];
+  /** The team seat a worker holds (or is being hired into), for its commits' author (git-identity.ts). */
+  gitAs?(info: WorkerInfo): AgentSeat | undefined;
 }
 
 export const NO_TEAM: TeamHooks = { quietDone: () => false, openAsks: () => [] };

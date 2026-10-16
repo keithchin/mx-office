@@ -2,6 +2,7 @@ import { execFileOff } from './offloop/exec.js';
 import type { GhCheck, GhCloseReason, GhComment, GhIssue, GhIssueDetail, GhLabel, GhMergeMethod, GhPull, GhPullDetail, GhRepoInfo, GhReviewComment, GhState } from '../shared/protocol.js';
 import type { GhAs } from './signins.js';
 import { LOCAL_ONLY_TEXT, localOnlyAt } from './local-only.js';
+import { GATE_FIELDS, gateFieldsOf } from './review-gate/fields.js';
 
 const REFRESH_MS = 90_000;
 /** How long the repo's list of labels is kept before the label picker asks GitHub again. */
@@ -463,7 +464,7 @@ export class GitHub {
       const fields = 'number,title,state,isDraft,url,author,labels,reviewDecision,headRefName,headRefOid,mergeCommit,mergedAt,closedAt,baseRefName,createdAt,updatedAt,additions,deletions,statusCheckRollup,body,closingIssuesReferences';
       const [open, merged, closed] = await Promise.all([
         gh(['pr', 'list', '--state', 'open', '--limit', '150', '--json', fields], this.dir),
-        gh(['pr', 'list', '--state', 'merged', '--limit', '30', '--json', fields], this.dir),
+        gh(['pr', 'list', '--state', 'merged', '--limit', '30', '--json', `${fields},${GATE_FIELDS}`], this.dir),
         gh(['pr', 'list', '--state', 'closed', '--limit', '40', '--json', fields], this.dir),
       ]);
       // `--state closed` includes merged PRs; keep only the ones closed without merging.
@@ -491,6 +492,7 @@ export class GitHub {
         checks: checksOf(p.statusCheckRollup),
         body: String(p.body ?? '').slice(0, 4000),
         closes: (p.closingIssuesReferences ?? []).map((r: any) => Number(r.number)).filter((n: number) => Number.isInteger(n) && n > 0),
+        ...gateFieldsOf(p),
       }));
       const items = this.relabel('pull', fetched, asked);
       this.pulls = { items, fetchedAt: Date.now(), loading: false };

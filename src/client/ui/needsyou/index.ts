@@ -71,6 +71,7 @@ const KIND_WORDS: Record<NeedKind, [string, string]> = {
   assumption: ['without consent', 'without consent'],
   advisory: ['gate advisory', 'gate advisories'],
   review: ['to review', 'to review'],
+  gate: ['skipped review', 'skipped reviews'],
   questions: ['questions for the client', 'questions for the client'],
   brain: ['company brain', 'company brain'],
   design: ['design system', 'design systems'],

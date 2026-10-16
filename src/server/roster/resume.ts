@@ -50,6 +50,8 @@ export interface Assignment {
   policy?: VerificationPolicy;
   /** Testing release 2: an integrated task judged on its merge commit (only "verified" is delivered). */
   verify?: TaskVerification;
+  /** Its PR merged without a review that counts (server/review-gate/): integrated (unreviewed), never verified. */
+  unreviewed?: { pr: number; why: string; at: number };
   /** Slice 1B-4: the durable task (server/tasks/) and this attempt at it. None on a legacy task: never made up. */
   taskId?: string;
   executionId?: string;

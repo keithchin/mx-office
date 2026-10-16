@@ -111,7 +111,7 @@ export class Members {
     const brain = await this.roster.deps.hireContext?.(floor.id).catch(() => undefined);
     // The brain's pointer and, for a profile that worked on other projects, one line saying nothing from them comes along (a count only).
     const lines = [brain?.line, profile?.line].filter(Boolean).join('\n\n') || undefined;
-    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, typed, owed.lines, teamLine(d, role), lines), owner, by, team: def.team });
+    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, typed, owed.lines, teamLine(d, role), lines), owner, by, team: def.team, role });
     if (typeof r === 'string') return r;
     this.roster.deps.profiles?.hired(floor.id, role, r.id);
     // What this hire was offered, once per hire (server/portfolios/manifest.ts): offered, not obeyed.
