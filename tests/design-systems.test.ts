@@ -215,3 +215,16 @@ test('the line provider: only bound projects get a line; the guidance file and t
   assert.ok(existsSync(path.dirname(rec[0].guidance)));
   assert.match(guidanceText(b, 'C:/p', []), /`admin\.details@1`/);
 });
+
+test('the Playbook rule: only on a bound project, for the Lead Designer, the Lead Developer and the Solo Lead', async () => {
+  const { playbook } = await import('../src/server/roster/playbooks.js');
+  const { ROLES } = await import('../src/shared/roster/roles.js');
+  const names = Object.fromEntries(ROLES.map((r) => [r.id, r.id.toUpperCase()])) as never;
+  const base = { project: 'p', name: 'Dee', level: 2 as const, lessons: 'L.md', names };
+  const RULE = 'When a task has a `Design:` line';
+  for (const role of ['lead-designer', 'lead-developer', 'solo-lead'] as const) {
+    assert.ok(!playbook(role, base).includes(RULE), `${role}: no binding, no rule (the Playbook is as before)`);
+    assert.ok(playbook(role, { ...base, designBound: true }).includes(RULE), `${role}: bound, the rule`);
+  }
+  assert.ok(!playbook('lead-tester', { ...base, designBound: true }).includes(RULE));
+});

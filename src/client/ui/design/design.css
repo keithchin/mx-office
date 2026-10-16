@@ -48,6 +48,8 @@
 .dg-page { display: flex; flex-direction: column; gap: 16px; padding: 4px 0 40px; max-width: 1200px; }
 .dg-head { display: flex; flex-direction: column; gap: 6px; }
 .dg-head h2 { margin: 0; font-size: 20px; }
+/* Portal's page header already says Design gallery: the tab's own heading goes, its binding line stays. */
+html[data-theme^='portal'] body.lite.pt-has-nav #design-view .dg-head > h2 { display: none; }
 .dg-sec { display: flex; flex-direction: column; gap: 10px; }
 .dg-sec h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 .dg-patterns { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }

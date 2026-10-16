@@ -11,6 +11,7 @@ import { portfoliosOf } from '../portfolios/index.js';
 import { addTaskLineHook } from '../tasks/lines.js';
 import { wizardConfig } from '../wizard/config.js';
 import { DesignService } from './service.js';
+import { useDesignBound } from './bound.js';
 
 const services = new WeakMap<object, DesignService>();
 
@@ -46,9 +47,11 @@ export function startDesignSystems(ctx: Ctx): () => void {
   const s = designOf(ctx);
   void s.ready().catch((err: Error) => console.warn(`agent-office: design systems: ${err.message}`));
   const offLine = addTaskLineHook((t) => s.lines.line(t));
+  useDesignBound((floor) => !!s.projects.binding(floor));
   const offForget = onForgetFloor((f) => void s.forget(f.id).catch(() => undefined));
   return () => {
     offLine();
+    useDesignBound(() => false);
     offForget();
   };
 }
