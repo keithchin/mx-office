@@ -1,0 +1,15 @@
+/* The Clients page (clients/view.ts): the Projects page's grid and cards (home/portal.css), plus a client card's project tiles and a client page's crumb and title. */
+body.clients-page .home-main { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+body.clients-page .pf-banner { margin-bottom: 4px; }
+.cl-grid .ph-line { -webkit-line-clamp: 2; }
+.cl-tiles { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 2px; }
+.cl-mini { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 4px !important; background: color-mix(in srgb, var(--tile, var(--accent)) 16%, var(--card)); color: color-mix(in srgb, var(--tile, var(--accent)) 62%, var(--ink)); font-size: 11px; font-weight: 600; }
+.cl-more { align-self: center; font-size: 12px; color: var(--muted); }
+.cl-card .ph-foot .pf-chip { align-self: center; }
+.cl-crumb { margin: 22px 0 -12px; }
+.cl-back { color: var(--accent); text-decoration: none; font-size: 14px; }
+.cl-back:hover { text-decoration: underline; }
+.cl-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.cl-title .ph-title { overflow-wrap: anywhere; }
+.cl-h { margin: 28px 0 12px; font-size: 18px; font-weight: 600; }
+body.clients-page .pf-part { margin-top: 24px; }

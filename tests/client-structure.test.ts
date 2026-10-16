@@ -43,7 +43,7 @@ function graph(entry: string): Set<string> {
 // The pages the browser loads (each an entry in vite.config.ts) and what they load. The 3D office (its
 // page at /, main.ts, three.js and the core/, features/, input/, world/, player/ and models/ folders) is
 // gone: / opens the 1D view now (server/http/routes/pages.ts), so nothing here may bring it back.
-const ENTRIES = ['lite.ts', 'pixel.ts', 'home.ts', 'firm.ts', 'docs.ts', 'm.ts', 'setup.ts', 'login.ts', 'claim.ts', 'join.ts'];
+const ENTRIES = ['lite.ts', 'pixel.ts', 'home.ts', 'clients.ts', 'firm.ts', 'docs.ts', 'm.ts', 'setup.ts', 'login.ts', 'claim.ts', 'join.ts'];
 
 test('the 3D office is gone: no page, no three.js, none of its folders', () => {
   for (const f of ['main.ts', 'index.html', 'style.css', 'graphics.ts', 'core', 'features', 'input', 'world', 'player', 'models', 'lab', 'sound']) assert.ok(!existsSync(path.join(client, f)), `src/client/${f} is gone`);
@@ -75,7 +75,7 @@ test('every client module is loaded by one of the pages: nothing is left over', 
 
 // The 1D view (lite.ts, at /lite), the 2D Office view (pixel.ts, at /pixel), the home page (home.ts, at
 // /home), The Firm (firm.ts, at /firm), the docs (docs.ts, at /docs) and the phone version (m.ts, at /m).
-for (const entry of ['lite.ts', 'pixel.ts', 'home.ts', 'firm.ts', 'docs.ts', 'm.ts']) {
+for (const entry of ['lite.ts', 'pixel.ts', 'home.ts', 'clients.ts', 'firm.ts', 'docs.ts', 'm.ts']) {
   test(`${entry} loads only modules that are there`, () => {
     const page = graph(path.join(client, entry));
     assert.ok(page.size > 1, `${entry} loads something`);

@@ -1,4 +1,4 @@
-/* Portfolios (home/portfolios.ts, ui/portfolios/dialogs.ts, ui/settings/portfolio.ts): in the color tokens. */
+/* Portfolios (clients/view.ts, ui/portfolios/dialogs.ts, ui/settings/portfolio.ts): in the color tokens. */
 .pf-wrap { display: flex; flex-direction: column; gap: 14px; max-width: 980px; margin: 0 auto; padding: 4px 0 24px; }
 .pf-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .pf-head h2 { margin: 0; font-size: 20px; }

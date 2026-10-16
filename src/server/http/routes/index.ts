@@ -210,6 +210,7 @@ export const routes: readonly Route[] = [
   studioRoutes.open,
   pageRoutes.office,
   pageRoutes.home,
+  pageRoutes.clients,
   pageRoutes.firm,
   pageRoutes.lite,
   pageRoutes.pixel,

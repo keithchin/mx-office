@@ -19,7 +19,6 @@ import { overviewView } from './home/overview';
 import { homeAudit } from './home/audit';
 import { testModeBadge } from './ui/testmode';
 import { homeBudget } from './home/budget';
-import { homePortfolios } from './home/portfolios';
 import { goToSettings } from './ui/settings/flat';
 import { testsHref } from '../shared/testlab';
 import { portalBar } from './ui/portal/topbar';
@@ -30,6 +29,8 @@ import './shared/perfwatch-on';
 
 /** The tab a link asked for (?tab= or a bare #), read before the address is tidied. */
 const asked = new URLSearchParams(location.search).get('tab') ?? location.hash.slice(1);
+// Clients was a Home tab (?tab=portfolios): it's a page of its own now (clients.ts), and old links go there.
+if (asked === 'portfolios') location.replace('/clients');
 // One address, with nothing after it: an old link with ?floor= or the like still lands here, tidied.
 if (location.pathname !== '/home' || location.search || location.hash) history.replaceState(null, '', '/home');
 
@@ -72,7 +73,7 @@ store.on('floors', renderBack);
 
 // ---- The tabs ---------------------------------------------------------------------------------
 const TAB_KEY = 'agent-office.home-tab';
-const TABS = ['projects', 'stats', 'overview', 'audit', 'budget', 'portfolios'] as const;
+const TABS = ['projects', 'stats', 'overview', 'audit', 'budget'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (t: unknown): t is Tab => TABS.includes(t as Tab);
 let tab: Tab = 'projects';
@@ -90,8 +91,6 @@ const overview = overviewView($('overview-view'), () => (leaving = true));
 const audit = homeAudit($('audit-view'));
 // 💰 Every project's spend against its budget (home/budget.ts).
 const budget = homeBudget($('budget-view'), () => (leaving = true));
-// 🗂️ Portfolios and their company brains (home/portfolios.ts).
-const portfolios = homePortfolios($('portfolios-view'));
 
 function showTab(t: Tab) {
   tab = t;
@@ -112,8 +111,6 @@ function showTab(t: Tab) {
   else audit.hide();
   if (t === 'budget') budget.show();
   else budget.hide();
-  if (t === 'portfolios') portfolios.show();
-  else portfolios.hide();
   if (t === 'projects') projects.render();
   else if (t === 'stats') void stats.render();
 }
@@ -154,4 +151,4 @@ firstRunGate(() => projects.newProject()); // 🚀 a new office's setup (first-r
 showTab(tab);
 
 // Debug handle for quick checks from the console / headless screenshots.
-(window as any).__home = { store, net, showTab, portfolios };
+(window as any).__home = { store, net, showTab };
