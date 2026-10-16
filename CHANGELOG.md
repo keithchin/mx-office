@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-16 · release 51 (`768e4c0`)
+
 ### Fixed
 
 - **No more false *Stage 5 (Build) waits for your sign-off* on a new project, and Sign off now signs off.** gate-check reports Stage 5 (Build) as MANUAL from a project's very first run, and the office turned every MANUAL stage into a decision whose **Sign off** only scrolled the page, so the card could never be cleared. A MANUAL stage now waits on you only once it's the stage in play: every stage before it passed or waived and nothing after it started. Before that the progress bar shows it *not started* (checked by hand later), and Needs you, the Teams digest, the phone's stage line and the setup panel agree. In play, **Sign off** opens a dialog that says what signing off the stage means and the exact row the toolkit reads; **Sign off Stage N** tells the team lead *Signed off: Stage N* with the CONFIRMED row to add to PROJECT.md's Decisions, after their turn (the office never edits PROJECT.md), and **Not yet** closes it. The card then says it waits for the lead and goes once the row is there. A sign-off card can no longer be answered through an escalation's reply: an escalation about the same stage is answered with the same *Signed off* words, never with the card's title.
