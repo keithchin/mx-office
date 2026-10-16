@@ -43,6 +43,7 @@ import { colorThemes } from './ui/colortheme';
 import { needsYouStrip } from './ui/needsyou';
 import { openStuck } from './ui/stuck/dialog';
 import { goAsk } from './ui/asks/feed';
+import { goSignoff } from './ui/signoff/dialog';
 import { goBrain } from './ui/portfolios/go';
 import { wantQuestion } from './ui/questions/focus';
 import { firmBanner } from './ui/firm/banner';
@@ -411,6 +412,7 @@ function goToNeed(t: NeedTarget) {
   if (t.to === 'nudge') return void nudgeMember(store.floor, t.role);
   if (t.to === 'stuck') return openStuck(t.id);
   if (t.to === 'ask') return void goAsk(t);
+  if (t.to === 'signoff') return void goSignoff(t, () => void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) }, true).then(() => needs.refresh()));
   if (t.to === 'questions') return (wantQuestion(t.key), showTab('questions'));
   if (t.to === 'brain') return void goBrain(t);
   if (t.to === 'floor') {

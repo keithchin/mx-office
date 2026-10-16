@@ -1,6 +1,6 @@
 // Nothing waits on the PM unseen, S8: the toolkit's gate advisories (written to .claude/.gate-advisories,
-// otherwise printed only to an agent's stderr) as warn rows naming whose copy; every ✋ stage gate-check
-// marks MANUAL as "waits for your sign-off", whether or not the setup panel shows; and one info row for
+// otherwise printed only to an agent's stderr) as warn rows naming whose copy; a ✋ stage gate-check marks
+// MANUAL "waits for your sign-off" once it is in play, whether or not the setup panel shows; and one info row for
 // what's ready for your review (BRDs with reviewStatus draft or pending, the design system, wireframes).
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,7 +30,7 @@ test("gate advisories: one warn row per advisory and copy, in words, with Ask th
 
 const setup = (o: Partial<SetupView>): SetupView => ({ show: false, stages: [], questions: [], checking: false, ...o });
 
-test('every ✋ stage at MANUAL waits for your sign-off, past Stage 4 too (from the verdicts)', () => {
+test('a ✋ MANUAL stage waits for your sign-off once it is in play, past Stage 4 too (from the verdicts); a later one does not yet', () => {
   const verdicts = [
     { id: '4', title: 'Build plan', status: 'PASS' },
     { id: '5', title: 'Build', status: 'MANUAL' },
@@ -38,7 +38,8 @@ test('every ✋ stage at MANUAL waits for your sign-off, past Stage 4 too (from 
     { id: '6', title: 'Test', status: 'PENDING' },
   ];
   const needs = collectNeeds({ floor: 'f1', workers: [], pulls: [], floors: [], setup: setup({ verdicts }) });
-  assert.deepEqual(needs.map((n) => [n.key, n.text]), [['setup-5', 'Stage 5 (Build) waits for your sign-off'], ['setup-7', 'Stage 7 (Acceptance) waits for your sign-off']]);
+  // Stage 7 is MANUAL too, but Stage 6 before it hasn't passed: not in play yet (shared/gate-play.ts).
+  assert.deepEqual(needs.map((n) => [n.key, n.text]), [['setup-5', 'Stage 5 (Build) waits for your sign-off']]);
   // No verdicts yet: the panel's stages, as before, only while it shows.
   assert.equal(collectNeeds({ floor: 'f1', workers: [], pulls: [], floors: [], setup: setup({ stages: [{ id: '3', title: 'Design', status: 'MANUAL' }] }) }).length, 0);
   assert.equal(collectNeeds({ floor: 'f1', workers: [], pulls: [], floors: [], setup: setup({ show: true, stages: [{ id: '3', title: 'Design', status: 'MANUAL' }] }) }).length, 1);

@@ -34,6 +34,8 @@ export type NeedTarget =
   | { to: 'settings'; section?: SettingsSectionId }
   | { to: 'pr'; number: number }
   | { to: 'setup' }
+  /** A ✋ MANUAL stage in play (shared/gate-play.ts): the sign-off dialog (ui/signoff/), which tells the lead "Signed off" with the toolkit's CONFIRMED row. */
+  | { to: 'signoff'; stage: string; title: string }
   | { to: 'live' }
   | { to: 'git' }
   | { to: 'floor'; floor: string }
@@ -206,7 +208,7 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   if (unpriced) out.push(unpriced);
   // 6. Open, ready PRs whose checks fail.
   for (const c of prCheckCandidates(i.pulls)) put(c);
-  // A toolkit stage at a ✋ gate, waiting for your sign-off: any stage gate-check marks MANUAL (3, 4, 7, and 5–6 where it wants a person), from its verdicts whether or not the setup panel shows.
+  // A toolkit stage at a ✋ gate, waiting for your sign-off: a MANUAL stage only once it is the stage in play (shared/gate-play.ts), from its verdicts whether or not the setup panel shows.
   for (const c of signoffCandidates(i.setup)) put(c);
   // The floor's live app failed to start.
   if (i.live && i.live.floor === i.floor && i.live.status === 'failed') {

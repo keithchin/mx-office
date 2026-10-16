@@ -8,6 +8,7 @@ import { isRedNeed } from '../../shared/notify-teams.js';
 import { lastSlot, type StandupSchedule } from '../../shared/roster/schedule.js';
 import type { SetupView } from '../../shared/wizard.js';
 import type { DigestData } from './cards.js';
+import { manualWaiting } from '../../shared/gate-play.js';
 
 /** With no standup compiled, the digest goes this long after the slot. */
 export const DIGEST_FALLBACK_MS = 30 * 60_000;
@@ -54,7 +55,8 @@ export function buildDigest(i: DigestInput): DigestData {
     ? {
         passed: st.filter((s) => s.status === 'PASS' || s.status === 'WAIVED').length,
         total: st.length,
-        waiting: st.filter((s) => s.status === 'MANUAL').map((s) => `Stage ${s.id}`),
+        // A MANUAL stage waits on you only once it's in play (Stage 5 is MANUAL from a project's first run): shared/gate-play.ts.
+        waiting: st.filter((s) => manualWaiting(i.setup?.verdicts?.length ? i.setup.verdicts : st, s, i.setup?.decisions)).map((s) => `Stage ${s.id}`),
         ...(i.setup?.next ? { next: i.setup.next } : {}),
       }
     : undefined;
