@@ -37,6 +37,8 @@ import { toolkitBusy, toolkitDirFor } from '../toolkit-pin/index.js';
 import { useGateLock } from '../worktree-sweep/index.js';
 import { bashPath, runCommand } from './run.js';
 import { setupSteps, type FloorRef, type SetupDeps } from './steps.js';
+import { withDesign } from './design-step.js';
+import { designOf } from '../design/index.js';
 import { trustFloor } from '../claude-trust.js';
 import { childEnv } from '../workers/env.js';
 import { blockerOf } from './unfinished.js';
@@ -366,7 +368,7 @@ export class Wizard {
   }
 
   private go(job: JobState) {
-    void this.book.run(job, setupSteps(this.deps())).then(() => {
+    void this.book.run(job, withDesign(designOf(this.ctx), setupSteps(this.deps()))).then(() => {
       if (job.status !== 'done') return;
       this.ctx.toastAll(`✨ ${job.plan.name}: the project setup finished`);
       // The brief is in the project now (docs/project-brief.md, sources/): its draft and attached files go.

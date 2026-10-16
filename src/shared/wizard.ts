@@ -189,6 +189,18 @@ export interface ProjectPlan {
   localOnly?: boolean;
   /** The person's own description asked for a slice first (from the draft): Discovery picks it at CAC-1. */
   sliceAsked?: boolean;
+  /**
+   * The design system (server/design/): use one exact published version, or keep the app's design. Missing:
+   * today's flow. A new app gets it applied after the app step; an existing app gets a ✋ card, never an apply.
+   */
+  design?: PlanDesign;
+}
+
+/** A plan's design choice (shared/design/): an exact version, never "the latest". */
+export interface PlanDesign {
+  choice: 'use' | 'keep';
+  systemId?: string;
+  n?: number;
 }
 
 /** A plan's source folder: where it is on the office's machine and what the scan found. */

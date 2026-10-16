@@ -14,6 +14,7 @@ import { startStuckDetection } from '../stuck/index.js';
 import { startAsks } from '../asks/index.js';
 import { startPortfolios } from '../portfolios/index.js';
 import { startProfiles } from '../profiles/index.js';
+import { startDesignSystems } from '../design/index.js';
 import { startQuestions } from '../questions/index.js';
 import { startFollowThrough } from '../followthrough/index.js';
 import { startChangeAnswer } from '../change-answer/index.js';
@@ -80,6 +81,8 @@ export function startTimers(ctx: Ctx): () => void {
   const stopPortfolios = startPortfolios(ctx);
   // Agent profiles: the existing team members given profiles once, and a move a restart left reconciled (profiles/).
   const stopProfiles = startProfiles(ctx);
+  // Design systems: their files loaded, and a bound project's pointer line added under each new task (design/).
+  const stopDesign = startDesignSystems(ctx);
 
   return () => {
     stopRuns();
@@ -99,6 +102,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopChange();
     stopPortfolios();
     stopProfiles();
+    stopDesign();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

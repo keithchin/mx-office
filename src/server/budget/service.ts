@@ -14,6 +14,8 @@ import { fetchFx, fxDue, fxView } from './fx.js';
 import { book, noteStage, prune, type LedgerData } from './ledger.js';
 import { SOURCE_LABEL, type BackgroundSpend } from './meter.js';
 import { BudgetStore, type FloorFile } from './store.js';
+import { splitTokens } from './tokens.js';
+import { taskKindOf } from '../../shared/design/context.js';
 
 export interface FloorRef {
   id: string;
@@ -34,6 +36,8 @@ export interface BudgetDeps {
   taskIssue(floorId: string, workerId: string): number | undefined;
   /** The durable task id the worker is on (a member's open task, a queue task's), when it has one (Slice 1B-4). */
   taskOf?(floorId: string, workerId: string): string | undefined;
+  /** What the worker is on, for the row's kind and design pointer: its task's words, its role id, the floor's design binding (`<id>@v<n>#<digest7>` or 'none'). */
+  workOf?(floorId: string, workerId: string): { text?: string; role?: string; design?: string } | undefined;
   stageOf(dir: string): StageId;
   /** The office's own Ledger: background calls go into it too. */
   officeLedger: { add(u: Usage): void; state(): UsageState };
@@ -129,10 +133,15 @@ export class BudgetService {
     const issue = issueOf(this.deps.taskIssue(floorId, w.id), w.prompt);
     const day = this.today;
     const taskId = this.deps.taskOf?.(floorId, w.id);
-    for (const p of pieces) {
+    // Design systems' measurement (./tokens.ts): the four token categories per row, the task's kind and the design pointer.
+    const toks = splitTokens(seen?.tok, !seen, w.usage, pieces);
+    const work = this.deps.workOf?.(floorId, w.id);
+    pieces.forEach((p, i) => {
       const agent = this.agentFor(w, p.sub, role, floorId);
-      book(d, { day, agent: agent.key, model: p.model, stage, cost: unmetered ? 0 : p.cost, calls: p.calls, ...(unmetered ? { unmetered: true } : {}), ...(issue !== undefined ? { issue } : {}), ...(w.pr ? { pr: w.pr.number } : {}), ...(taskId ? { taskId } : {}) }, agent);
-    }
+      const t = toks[i];
+      const kind = work ? taskKindOf(work.text, work.role, p.sub) : undefined;
+      book(d, { day, agent: agent.key, model: p.model, stage, cost: unmetered ? 0 : p.cost, calls: p.calls, ...(unmetered ? { unmetered: true } : {}), ...(issue !== undefined ? { issue } : {}), ...(w.pr ? { pr: w.pr.number } : {}), ...(taskId ? { taskId } : {}), ...(kind ? { kind } : {}), ...(work?.design ? { design: work.design } : {}), ...(t.tokens ? { tokens: t.tokens } : {}), usage: t.usage }, agent);
+    });
     d.seen[w.id] = seenOf(w.usage);
     prune(d, day);
     this.store.changed(floorId);

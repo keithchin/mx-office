@@ -5,6 +5,7 @@
 
 import { taskIdIn, withTaskLine, type TaskRef, type TaskSource } from '../../shared/tasks.js';
 import type { TaskStore } from './store.js';
+import { withExtraLines } from './lines.js';
 
 export interface Identify {
   store: TaskStore;
@@ -43,5 +44,6 @@ export function identify(i: Identify): Required<TaskRef> {
  */
 export function prepareText(i: Omit<Identify, 'worker' | 'role'>): string {
   const id = existing(i) ?? i.store.create(i.floorId, { source: i.source, text: i.text, ...(i.issue !== undefined ? { issue: i.issue } : {}) }).id;
-  return withTaskLine(i.raw, id);
+  // Feature lines under it (./lines.ts: a bound design system's pointer), each at most one short line.
+  return withExtraLines(withTaskLine(i.raw, id), { floorId: i.floorId, taskId: id, text: i.text, ...(i.issue !== undefined ? { issue: i.issue } : {}) });
 }

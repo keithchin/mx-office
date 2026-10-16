@@ -55,6 +55,7 @@ import { questionsRoutes } from './questions.js';
 import { versionRoutes } from './version.js';
 import { portfolioRoutes } from './portfolios.js';
 import { profileRoutes } from './profiles.js';
+import { designRoutes } from './design.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -201,6 +202,12 @@ export const routes: readonly Route[] = [
   // Agent profiles and Hire from your agents (profiles/).
   profileRoutes.view,
   profileRoutes.act,
+  // Client design systems: versions, project bindings, the Design gallery and its ✋ card (design/).
+  designRoutes.view,
+  designRoutes.choices,
+  designRoutes.needs,
+  designRoutes.file,
+  designRoutes.act,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,

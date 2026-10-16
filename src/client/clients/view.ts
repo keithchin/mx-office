@@ -19,6 +19,7 @@ import { tileLetters } from '../home/portal-logic';
 import { onHomeRunState } from '../home/run-state';
 import { onProjectPrefs } from '../shared/project-prefs';
 import { brainButton, brainPart, chip } from './brain';
+import { designPart } from './design';
 import { clientHref, clientMatches, paletteOf, sortedClients } from './logic';
 import '../ui/portfolios/portfolios.css';
 import './clients.css';
@@ -132,6 +133,7 @@ export function clientsView(root: HTMLElement, deps: ClientsDeps) {
       gone.length ? h('p.pf-hint', {}, `Not in the office now: ${gone.map((x) => x.name).join(', ')}.`) : null,
       ...wiring.map((x) => h('p.pf-warn', {}, `⚠️ ${x.name}: company brain wiring incomplete (${x.wiring!.problems.join('; ')}). See Needs you on the project.`)),
       brainPart(p),
+      designPart(p.id, a),
     ];
   }
 

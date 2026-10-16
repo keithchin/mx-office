@@ -5,6 +5,7 @@
 import type { AgentInfo, BreakdownRow, DayRollup, SpendRow, StageId } from '../../shared/budget/types.js';
 import { STAGE_IDS, STAGE_TITLE } from '../../shared/budget/types.js';
 import { roleWord } from '../../shared/roster/subagent-names.js';
+import { addTokens, worseFlag, type TokenSeen } from './tokens.js';
 
 /** Days of detailed rows kept; the daily rollups are kept forever. */
 export const DETAIL_DAYS = 30;
@@ -14,6 +15,8 @@ export interface Seen {
   cost: number;
   calls: number;
   parts?: Record<string, { cost: number; calls: number }>;
+  /** The token counts then (./tokens.ts): missing on a record from before they were kept. */
+  tok?: TokenSeen;
 }
 
 export interface LedgerData {
@@ -54,10 +57,14 @@ export function modelLabel(model: string): string {
 export function book(d: LedgerData, row: SpendRow, agent: AgentInfo) {
   if (!row.cost && !row.calls) return;
   d.agents[agent.key] = { ...d.agents[agent.key], ...agent };
-  const same = d.rows.find((r) => r.day === row.day && r.agent === row.agent && r.model === row.model && r.stage === row.stage && r.issue === row.issue && r.pr === row.pr && r.taskId === row.taskId && !!r.est === !!row.est && !!r.unmetered === !!row.unmetered);
+  const same = d.rows.find((r) => r.day === row.day && r.agent === row.agent && r.model === row.model && r.stage === row.stage && r.issue === row.issue && r.pr === row.pr && r.taskId === row.taskId && !!r.est === !!row.est && !!r.unmetered === !!row.unmetered && r.kind === row.kind && r.design === row.design);
   if (same) {
     same.cost = round(same.cost + row.cost);
     same.calls += row.calls;
+    const tokens = addTokens(same.tokens, row.tokens);
+    if (tokens) same.tokens = tokens;
+    const flag = worseFlag(same.usage, row.usage);
+    if (flag) same.usage = flag;
   } else d.rows.push({ ...row, cost: round(row.cost) });
   const day = (d.days[row.day] ??= emptyDay());
   day.cost = round(day.cost + row.cost);
