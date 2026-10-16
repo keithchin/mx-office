@@ -60,7 +60,9 @@ export const pageRoutes = {
   bundle: {
     prefix: '/',
     auth: 'session',
-    handle(ctx, { res, path: p }) {
+    handle(ctx, { req, res, path: p }) {
+      // A call no route answers: JSON with what it was, so the page can say so (never a bare "Not found" it can't read).
+      if (p.startsWith('/api/')) return send(res, 404, { error: `The office has no ${req.method ?? 'GET'} ${p}: it may be running an older build than this page (restart it), or the address is wrong` });
       const file = publicFile(ctx.publicDir, p);
       if (file) return serveFile(res, file, false);
       res.writeHead(404, { 'content-type': 'text/plain' }).end('Not found');

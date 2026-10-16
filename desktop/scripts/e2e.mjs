@@ -13,7 +13,8 @@
 //             and "Keep running in the tray" keeps it all running; killing the office shows the crash
 //             page and Restart brings it back without notifying again; Quit stops the office it started.
 //   attached  an office started outside the app is attached to without a second office starting; signed
-//             out it says so; the office disappearing makes it "disconnected" with its counts marked
+//             out it says so; Edit in Studio Pro on a synthetic Mendix project gets a JSON sync answer, its
+//             confirm, and an open that test mode's stand-in records (Studio Pro never starts); the office disappearing makes it "disconnected" with its counts marked
 //             stale, and the app starts nothing; the office coming back recovers without notifying
 //             again; Quit leaves that office running.
 //
@@ -162,6 +163,29 @@ function fixture(dir) {
 }
 const officeKey = (home, port) => `${path.resolve(home).toLowerCase()}|${port}`;
 
+// Edit in Studio Pro's project: the fixture's small project made a Mendix one (an .mpr) with a local bare
+// origin one commit ahead, so the sync has something to fast-forward. Test mode never starts Studio Pro.
+const STUDIO_FLOOR = 'small-app';
+function studioProject(f) {
+  const dir = f.floors.find((x) => x.id === STUDIO_FLOOR).dir;
+  const origin = path.join(root, 'small-app-origin.git');
+  const other = path.join(root, 'small-app-other');
+  const git = (cwd, ...args) => execFileSync('git', ['-c', 'user.name=E2E', '-c', 'user.email=e2e@example.invalid', '-c', 'commit.gpgsign=false', ...args], { cwd, env, stdio: 'ignore', windowsHide: true });
+  fs.writeFileSync(path.join(dir, 'SmallApp.mpr'), 'not a real Mendix project');
+  git(dir, 'add', 'SmallApp.mpr');
+  git(dir, 'commit', '-qm', 'Add the Mendix project');
+  git(root, 'clone', '-q', '--bare', dir, origin);
+  git(dir, 'remote', 'add', 'origin', origin);
+  git(dir, 'fetch', '-q', 'origin');
+  git(dir, 'remote', 'set-head', 'origin', 'main');
+  git(dir, 'branch', '-q', '--set-upstream-to', 'origin/main');
+  git(root, 'clone', '-q', origin, other);
+  fs.writeFileSync(path.join(other, 'merged.md'), 'merged on GitHub\n');
+  git(other, 'add', 'merged.md');
+  git(other, 'commit', '-qm', 'A pull request merged');
+  git(other, 'push', '-q', 'origin', 'main');
+}
+
 async function owned(home) {
   const port = await freePort();
   const userData = path.join(root, 'app-owned');
@@ -289,6 +313,27 @@ async function attached(home) {
     notesBefore = (await hook(app, () => globalThis.__mxDesktop.notes())).length;
     assert(notesBefore === 1, `the first look makes one summary: ${notesBefore}`);
   });
+  await check('attached: Edit in Studio Pro (the sync answers JSON, the open uses test mode’s stand-in, never Studio Pro)', async () => {
+    const w = (js) => hook(app, (_electron, code) => globalThis.__mxDesktop.win().webContents.executeJavaScript(code), js);
+    // Every answer to the Studio Pro calls, as the window's own session saw it.
+    await hook(app, () => {
+      globalThis.__studio = [];
+      globalThis.__mxDesktop.win().webContents.session.webRequest.onCompleted({ urls: ['*://*/api/studio*'] }, (d) => globalThis.__studio.push({ method: d.method, url: d.url, status: d.statusCode, type: String(d.responseHeaders?.['content-type'] ?? d.responseHeaders?.['Content-Type'] ?? '') }));
+    });
+    await w(`localStorage.setItem('agent-office.profile', JSON.stringify({ name: 'Desktop e2e', color: '#00a6a6', skin: 0, hair: 0, style: 0 })); true`);
+    await hook(app, (_electron, u) => globalThis.__mxDesktop.win().loadURL(u), `http://localhost:${port}/lite?floor=${STUDIO_FLOOR}&open=studio`);
+    const shown = await until('the Open in Studio Pro confirm (or a toast saying why not)', () => w(`(() => { const m = document.querySelector('.st-modal'); if (m) return 'modal'; const t = [...document.querySelectorAll('.toast.error, .toast.warn')].map((e) => e.textContent).join(' | '); return t || ''; })()`), 90_000);
+    const calls = await hook(app, () => globalThis.__studio);
+    const sync = calls.find((c) => c.method === 'POST' && c.url.endsWith('/api/studio/sync'));
+    assert(sync && sync.status === 200 && sync.type.includes('application/json'), `the sync answered ${JSON.stringify(sync)} (all: ${JSON.stringify(calls)})`);
+    assert(shown === 'modal', `no confirm: ${shown}`);
+    await w(`document.querySelector('.st-modal .btn.primary').click(); true`);
+    await until('the open answered', async () => (await hook(app, () => globalThis.__studio)).some((c) => c.method === 'POST' && c.url.endsWith('/api/studio/open')), 60_000);
+    const open = (await hook(app, () => globalThis.__studio)).find((c) => c.method === 'POST' && c.url.endsWith('/api/studio/open'));
+    assert(open.status === 200 && open.type.includes('application/json'), `the open answered ${JSON.stringify(open)}`);
+    await until('the stand-in in the office log', () => /test mode: Studio Pro not started \(it would have run VersionSelector\.exe \/file:/.test(fs.readFileSync(officeLog, 'utf8')), 15_000);
+    log('  Edit in Studio Pro: sync 200 JSON, confirm shown, open 200 JSON, Studio Pro not started (test mode)');
+  });
   await check('attached: the office disappearing is "disconnected", counts stale, nothing started', async () => {
     // Its process only (office.stop() also ends every process naming the home, the app among them).
     killTree(office.proc.pid);
@@ -342,6 +387,7 @@ try {
   log(`fixture: ${JSON.stringify(f.counts)}`);
   await owned(home);
   killProcessesUnder(root);
+  studioProject(f);
   await attached(home);
 } catch (e) {
   code = 1;

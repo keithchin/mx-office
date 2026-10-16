@@ -179,6 +179,8 @@ For a project with a Mendix project, **Open in Studio Pro** in the summary's hea
 - It goes through Mendix's **Version Selector**, which starts the Studio Pro version the project was saved in (*Opening in Studio Pro 11.6.4…*). Without the Version Selector, the `studiopro.exe` of that version under `C:\Program Files\Mendix` (never another version: it would offer to convert the project).
 - Opening it is written in the [Audit log](audit-log.md) (`studio.open`, under *Workers*), said in Team chatter, and toasted to everyone on the project.
 - It can't open when the office isn't on Windows, runs without a desktop (over SSH, in CI, headless), or Studio Pro isn't installed: the button is greyed out and says why.
+- **When something goes wrong it says what.** A failure on the way shows as a red toast with the real reason: the git error, a time-out (the page waits up to 4 minutes for the folder), Studio Pro already open, not an admin, a request from another address, or an error in the office. When the request never reaches the office, the toast says so with the browser's error (*The request didn't reach the office (TypeError: Failed to fetch)*).
+- **In a test office** (test mode) it goes all the way to the confirm and the open, but never starts Studio Pro: the office's log says what it would have run (*test mode: Studio Pro not started (it would have run VersionSelector.exe /file:…)*).
 
 ## The project folder stays current
 

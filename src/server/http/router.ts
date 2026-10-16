@@ -75,7 +75,7 @@ export function requestHandler(ctx: Ctx, routes: readonly Route[]) {
       for (const route of signedIn) if (route.auth === 'session' && matches(route, req.method, p)) return await route.handle(ctx, { ...r, session });
     } catch (err) {
       console.error(err);
-      if (!res.headersSent) send(res, 500, { error: 'Internal error' });
+      if (!res.headersSent) send(res, 500, { error: `The office hit an error answering this: ${(err as Error)?.message || String(err)}` });
     }
   };
 }

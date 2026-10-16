@@ -22,13 +22,13 @@ Object.defineProperty(globalThis, 'fetch', {
   value: async (url: string) => {
     const floor = new URL(url, 'http://office.test').searchParams.get('floor') ?? '';
     asked.push(floor);
-    return { ok: true, json: async () => answer(floor) };
+    return { ok: true, status: 200, statusText: 'OK', json: async () => answer(floor), text: async () => JSON.stringify(answer(floor)) };
   },
 });
 
 const { store } = await import('../src/client/state/index.js');
 const studio = await import('../src/client/ui/studio/index.js');
-const { afterSync, stopBeforeSync, syncLine } = await import('../src/client/ui/studio/logic.js');
+const { afterSync, answerOf, askOffice, isFailed, stopBeforeSync, syncLine, unreachedText } = await import('../src/client/ui/studio/logic.js');
 
 const root = path.join(import.meta.dirname, '..');
 const read = (p: string) => readFileSync(path.join(root, p), 'utf8').replace(/\r\n/g, '\n');
@@ -87,6 +87,7 @@ test('the Portal navigation keeps the item, greys it with the reason, and redraw
 
 test('what the open flow says before the folder is brought up to date', () => {
   assert.match(stopBeforeSync(null) ?? '', /Couldn't ask the office/);
+  assert.equal(stopBeforeSync({ failed: 'Not logged in' }), "Couldn't ask the office about the project: Not logged in");
   assert.match(stopBeforeSync(info({ state: { floor: 'f', open: true, since: 1 } })) ?? '', /already has the project open/);
   assert.match(stopBeforeSync(info({ admin: false })) ?? '', /Only admins/);
   assert.match(stopBeforeSync(info({ available: false, problem: 'not-installed', error: "Studio Pro 11.6.4 isn't installed" })) ?? '', /11\.6\.4 isn't installed/);
@@ -96,7 +97,9 @@ test('what the open flow says before the folder is brought up to date', () => {
 });
 
 test('what the open flow says after: the reason with every stop, and a note when it opens the folder as it is', () => {
-  assert.match('stop' in afterSync(null) ? afterSync(null).stop : '', /Couldn't reach the office/);
+  const failed = afterSync({ failed: 'The office has no POST /api/studio/sync: it may be running an older build than this page (restart it), or the address is wrong' });
+  assert.ok('stop' in failed && failed.failed);
+  assert.equal(failed.stop, "Couldn't bring the project folder up to date: The office has no POST /api/studio/sync: it may be running an older build than this page (restart it), or the address is wrong");
   const dirty = { floor: 'f', state: 'refused', reason: 'dirty', behind: 386, message: 'Your project folder is 386 commits behind GitHub and has local changes in README.md — commit or stash them, then try again', at: 1 } as const;
   const noMpr: StudioSyncResult = { sync: dirty, info: info({ hasMpr: false, mpr: undefined, available: false, problem: 'no-mpr', error: "No Mendix project (.mpr) in the project folder yet, and the office couldn't bring it up to date with GitHub. Your project folder is 386 commits behind GitHub and has local changes in README.md — commit or stash them, then try again" }) };
   const a = afterSync(noMpr);
@@ -113,4 +116,43 @@ test('what the open flow says after: the reason with every stop, and a note when
   assert.match(syncLine({ floor: 'f', state: 'moved', branch: 'main', behind: 0, commits: 386, at: 1 }) ?? '', /Brought the project folder up to date with GitHub \(386 commits from origin\/main\)/);
   assert.match('stop' in afterSync({ info: info({ state: { floor: 'f', open: true, since: 1 } }) }) ? (afterSync({ info: info({ state: { floor: 'f', open: true, since: 1 } }) }) as { stop: string }).stop : '', /already has the project open/);
   assert.equal(syncLine({ floor: 'f', state: 'current', behind: 0, at: 1 }), undefined);
+});
+
+test('a failed call always says why: the office’s reason, what came back, or how the request failed', async () => {
+  // The office's reason, from its JSON (a refusal, a throw turned into JSON by the route).
+  assert.deepEqual(answerOf(403, 'Forbidden', JSON.stringify({ error: 'Only admins can open the project in Studio Pro' })), { failed: 'Only admins can open the project in Studio Pro' });
+  assert.deepEqual(answerOf(500, '', JSON.stringify({ ok: false, error: "Couldn't bring the project folder up to date: spawn git ENOENT" })), { failed: "Couldn't bring the project folder up to date: spawn git ENOENT" });
+  // No reason: what came back (the unregistered sync answered a bare "Not found", 2026-10-16).
+  assert.deepEqual(answerOf(404, 'Not Found', 'Not found'), { failed: 'The office answered HTTP 404 Not Found without a reason (Not found)' });
+  assert.deepEqual(answerOf(502, 'Bad Gateway', ''), { failed: 'The office answered HTTP 502 Bad Gateway without a reason' });
+  assert.match((answerOf(200, 'OK', '<html>') as { failed: string }).failed, /wasn't readable \(HTTP 200 OK: <html>\)/);
+  assert.deepEqual(answerOf(200, 'OK', '{"hasMpr":true}'), { hasMpr: true });
+  // Never reached: the error's name and message.
+  assert.equal(unreachedText(new TypeError('Failed to fetch')), "The request didn't reach the office (TypeError: Failed to fetch)");
+  assert.equal(unreachedText(new DOMException('signal timed out', 'TimeoutError')), "The office didn't answer in time (TimeoutError: signal timed out)");
+
+  const was = globalThis.fetch;
+  try {
+    const seen: RequestInit[] = [];
+    globalThis.fetch = (async (_u: string, init: RequestInit) => {
+      seen.push(init);
+      throw new TypeError('Failed to fetch');
+    }) as typeof fetch;
+    const r = await askOffice('/api/studio/sync', { method: 'POST' }, 1000);
+    assert.ok(isFailed(r));
+    assert.equal(r.failed, "The request didn't reach the office (TypeError: Failed to fetch)");
+    assert.ok(seen[0].signal, 'a time limit');
+    assert.equal(seen[0].credentials, 'same-origin');
+    globalThis.fetch = (async () => ({ ok: false, status: 404, statusText: 'Not Found', text: async () => 'Not found' })) as unknown as typeof fetch;
+    const a = afterSync(await askOffice('/api/studio/sync', { method: 'POST' }));
+    assert.ok('stop' in a && a.failed);
+    assert.equal(a.stop, "Couldn't bring the project folder up to date: The office answered HTTP 404 Not Found without a reason (Not found)");
+  } finally {
+    globalThis.fetch = was;
+  }
+  // The page shows that reason as an error toast, for the sync and the open, never the generic line alone.
+  const page = read('src/client/ui/studio/index.ts');
+  assert.match(page, /if \('stop' in next\) return void toast\(next\.stop, next\.failed \? 'error' : 'warn'\);/);
+  assert.match(page, /toast\(`Couldn't open the project in Studio Pro: \$\{r\.failed\}`, 'error'\)/);
+  assert.doesNotMatch(page, /Couldn't reach the office/);
 });

@@ -12,7 +12,7 @@
 // (server/floor-sync/), and says why when it isn't (local changes, another branch, Studio Pro open).
 
 import type { StudioInfo, StudioOpenResult, StudioState, StudioSyncResult } from '../../../shared/studio';
-import { ADMINS_ONLY_TEXT, afterSync, stopBeforeSync, syncLine } from './logic';
+import { ADMINS_ONLY_TEXT, SYNC_WAIT_MS, afterSync, askOffice, isFailed, stopBeforeSync, syncLine } from './logic';
 import { store } from '../../state';
 import { h, openModal, toast } from '../dom';
 import { oneAtATime } from '../once';
@@ -44,13 +44,12 @@ function myName(): string | undefined {
   }
 }
 
+/** What the office says about the floor's project, or why it couldn't say. */
+const askInfo = (floor: string) => askOffice<StudioInfo>(`/api/studio?floor=${encodeURIComponent(floor)}`);
+
 async function fetchInfo(floor: string): Promise<StudioInfo | null> {
-  try {
-    const res = await fetch(`/api/studio?floor=${encodeURIComponent(floor)}`, { credentials: 'same-origin' });
-    return res.ok ? ((await res.json()) as StudioInfo) : null;
-  } catch {
-    return null;
-  }
+  const r = await askInfo(floor);
+  return isFailed(r) ? null : r;
 }
 
 /** Studio mode on the floor you're on: what the office last pushed, else what it answered when asked. */
@@ -190,44 +189,34 @@ export const openStudio = oneAtATime(openStudioNow);
 async function openStudioNow() {
   const floor = store.floor;
   if (!floor) return;
-  const now = await fetchInfo(floor);
+  const now = await askInfo(floor);
   if (store.floor !== floor) return;
-  if (now) {
-    info = now;
-    infoFor = floor;
-    draw();
-  }
+  if (isFailed(now)) return void toast(stopBeforeSync(now)!, 'error');
+  info = now;
+  infoFor = floor;
+  draw();
   const stop = stopBeforeSync(now);
   if (stop) return void toast(stop, 'warn');
   // The folder brought up to date with GitHub first, when that's safe: what main has is what opens.
-  const busy = toast(now?.hasMpr ? 'Checking the project folder is up to date with GitHub…' : 'No .mpr in the project folder yet: bringing it up to date with GitHub…');
+  const busy = toast(now.hasMpr ? 'Checking the project folder is up to date with GitHub…' : 'No .mpr in the project folder yet: bringing it up to date with GitHub…');
   const r = await syncNow(floor);
   busy.remove();
   if (store.floor !== floor) return;
-  if (r) {
+  if (!isFailed(r)) {
     info = r.info;
     infoFor = floor;
     draw();
   }
   const next = afterSync(r);
-  if ('stop' in next) return void toast(next.stop, 'warn');
+  if ('stop' in next) return void toast(next.stop, next.failed ? 'error' : 'warn');
+  if (isFailed(r)) return;
   if (next.moved && next.note) toast(next.note);
-  confirmOpen(floor, r!.info, next.moved ? undefined : next.note);
+  confirmOpen(floor, r.info, next.moved ? undefined : next.note);
 }
 
-async function syncNow(floor: string): Promise<StudioSyncResult | null> {
-  try {
-    const res = await fetch('/api/studio/sync', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor }) });
-    if (!res.ok) {
-      const e = (await res.json().catch(() => null)) as { error?: string } | null;
-      if (e?.error) toast(e.error, 'warn');
-      return null;
-    }
-    return (await res.json()) as StudioSyncResult;
-  } catch {
-    return null;
-  }
-}
+/** The folder brought up to date (or why not), or why the office couldn't answer: the reason always comes back. */
+const syncNow = (floor: string) =>
+  askOffice<StudioSyncResult>('/api/studio/sync', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor }) }, SYNC_WAIT_MS);
 
 function confirmOpen(floor: string, s: StudioInfo, behind?: string) {
   const yes = h('button.btn.primary', { type: 'button' }, 'Open in Studio Pro');
@@ -265,18 +254,9 @@ function confirmOpen(floor: string, s: StudioInfo, behind?: string) {
 
 async function post(floor: string, s: StudioInfo) {
   toast(`Opening in Studio Pro${s.version ? ` ${s.version}` : ''}…`);
-  try {
-    const res = await fetch('/api/studio/open', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ floor, by: myName() }),
-    });
-    const r = (await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }))) as StudioOpenResult;
-    if (!r.ok) toast(r.error, 'warn');
-    else if (r.sync?.state === 'moved') toast(syncLine(r.sync)!);
-  } catch {
-    toast("Couldn't reach the office", 'warn');
-  }
+  const r = await askOffice<StudioOpenResult>('/api/studio/open', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor, by: myName() }) }, SYNC_WAIT_MS);
+  if (isFailed(r)) toast(`Couldn't open the project in Studio Pro: ${r.failed}`, 'error');
+  else if (!r.ok) toast(r.error, 'error');
+  else if (r.sync?.state === 'moved') toast(syncLine(r.sync)!);
   if (store.floor === floor) void refresh();
 }
