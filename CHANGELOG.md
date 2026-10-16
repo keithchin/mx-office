@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-16 · release 55 (`6e86bbe`)
+
 ### Added
 
 - **The desktop app is checked on Windows in CI, as the packaged app.** Every change to `desktop/` (its source, scripts, `package.json` and lockfile) now runs the release workflow, whose new **desktop** job installs the pinned dependencies (Electron 44.4.5 from the lockfile, its download cached), packages the app with `npm run desktop:pack` and drives the packaged `mx-office.exe` against throwaway test offices with fake agents (`desktop/scripts/e2e.mjs`, which also runs on your own Windows machine): startup and sign-in, attaching to an office started elsewhere without starting a second one, which office Quit stops and which it leaves running, quitting while agents work, crash recovery, a notification's click opening its item, and the tray when an attached office disappears and comes back. Its logs are uploaded when it fails. The release job's typecheck, tests, start check and launcher check now each run and report even when one before them failed (the run still fails).
