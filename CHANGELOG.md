@@ -14,6 +14,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
   - **Project Management › Design gallery**: the adopted version, the five administration patterns (list with search, details, validated form, approval and status, empty/loading/error states) with their states, constraints and a Mendix reference, **Use for** an issue or a page (recorded only, no model call), and **Capture now** screenshots of the running live app, kept as history when it stops.
   - **Agents** on a bound project get one `Design:` line under each task's `Task:` line (at most 300 characters) pointing at a small guidance file: use the bound package and patterns, propose an exception instead of new variants, at most two automated design-correction attempts, then escalate. What each task was given is recorded, never that it was read. Budget ledger rows now also keep the task's kind (design, design correction, other), the design version and the four token categories (input, output, cache read, cache write), marked observed, estimated or missing (never 0).
 
+### Fixed
+
+- **Subagents at work show under their member, so the team never looks idle while one runs.** The Overview's Team card (and the Team tab's Org chart) lists each member's live subagents under it, with name and type, task, minutes at it and a working animation; a finished run says *done · 4 min* for a minute, then folds into *N subagent runs today*. A member waiting on its subagent reads **Working (via subagent)**, the home page's *working* counts include it, and the Coordinator's fact block names it (*Katherine (you) — 1 subagent working: Elsa (business analyst)*) instead of *Agents working: nobody*. The Project Coordinator's own subagents are now followed live too (no track record). No new polling.
+
 ## 2026-10-16 · release 51 (`768e4c0`)
 
 ### Fixed

@@ -9,6 +9,7 @@ import { SLOW_CLIENT_BYTES, type Client } from './client.js';
 import { analysisOf } from '../analysis/index.js';
 import { summaryOf } from '../summary/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { subagentBusy } from '../roster/subagent-busy.js';
 import { phoneOnWorker } from '../phone/office.js';
 import { auditGitHub } from '../audit/office.js';
 import { chatterOf } from '../chatter/office.js';
@@ -165,6 +166,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
       member: (floor, id) => rosterOf(ctx).isMember(floor.id, id),
       quietDone: (floor, info) => rosterOf(ctx).routineTurn(floor.id, info.id),
       openAsks: (floor, id) => rosterOf(ctx).openAsks(floor.id, id),
+      subagentBusy: (floor) => subagentBusy(rosterOf(ctx).data(floor.id)),
     },
     floor: (id) => floors.get(id),
     pullsChanged: (floor) => {

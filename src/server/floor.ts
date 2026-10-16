@@ -86,6 +86,8 @@ export interface FloorTeam {
   member(floor: Floor, workerId: string): boolean;
   quietDone(floor: Floor, info: WorkerInfo): boolean;
   openAsks(floor: Floor, workerId: string): string[];
+  /** The workers whose subagents are at work now: they count as working (roster/subagent-busy.ts). */
+  subagentBusy?(floor: Floor): ReadonlySet<string>;
 }
 
 /** The open pull request on a floor's board whose head is `branch`. */
@@ -420,6 +422,8 @@ export class Floor {
 
   info(): FloorInfo {
     const ws = this.workers.list();
+    // A Lead idle while its subagent works is working too (roster/subagent-busy.ts).
+    const via = this.ctx.team?.subagentBusy?.(this);
     return {
       id: this.id,
       name: this.def.name,
@@ -430,7 +434,7 @@ export class Floor {
       addedBy: this.def.addedBy,
       addedAt: this.def.addedAt,
       workers: ws.filter((w) => !DESK_BY_ID.get(w.deskId)?.station).length,
-      busy: ws.filter((w) => w.status === 'working').length,
+      busy: ws.filter((w) => w.status === 'working' || via?.has(w.id)).length,
       waiting: ws.filter((w) => w.kind === 'agent' && (w.status === 'needs_input' || (w.status === 'done' && !w.acked))).length,
       people: this.ctx.people(this),
       wing: this.plan.wing,
