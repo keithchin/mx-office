@@ -16,7 +16,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { REPO, assertTestDir, startTestOffice, killRealAgentsUnder, cleanupTestDir, PASSWORD } from './office.mjs';
+import { REPO, assertTestDir, startTestOffice, killRealAgentsUnder, killProcessesUnder, cleanupTestDir, PASSWORD } from './office.mjs';
 import { PERF_BUDGETS } from './budgets.mjs';
 
 const arg = (n, d) => {
@@ -61,10 +61,12 @@ function node(args, { env = {}, quiet = false, timeoutMs = 30 * 60 * 1000 } = {}
   });
 }
 
+/** KB of session output each live worker's terminal starts with (--flood, 0 for none): more than its scrollback holds. */
+const TERMINAL_FLOOD_KB = 2048;
 const VALID = ['unit', 'pages', 'journey', 'command-center', 'perf-quick', 'busy'];
 const quick = process.argv.includes('--quick') || suite === 'perf-quick';
 /** The views a quick run opens: one of each kind of page, and the ones that were slowest before. */
-const QUICK_VIEWS = ['cc-chat', 'board', 'org', 'workers', 'budget', 'documents', 'audit', 'home-projects', 'pixel', 'phone', 'switch-1d-board', 'switch-1d-command'];
+const QUICK_VIEWS = ['cc-chat', 'cc-terminal', 'cc-fullterm', 'board', 'org', 'workers', 'budget', 'documents', 'audit', 'home-projects', 'pixel', 'phone', 'switch-1d-board', 'switch-1d-command'];
 if (!VALID.includes(suite)) {
   console.error(`usage: run.mjs --suite ${VALID.join('|')} --root <test-offices dir> --out <dir> --id <id>`);
   process.exit(2);
@@ -98,7 +100,11 @@ function prepared(dir) {
 async function withOffice(scale, fn) {
   const { home, floor, other } = arg('from') ? prepared(arg('from')) : await fixture(scale);
   progress({ done: 0, of: 1, label: 'Starting the test office' });
-  const office = await startTestOffice({ home, env: { FAKE_RATE_MS: arg('rate', '400') } });
+  // The live workers' terminals start with a long session's worth of wide, coloured output and get
+  // another burst every few seconds (fakebin/flood.mjs), so the Command Center's terminal attaches
+  // to a full scrollback, as on a busy real project (the terminal-freeze pass, 2026-10-16).
+  const flood = arg('flood', String(TERMINAL_FLOOD_KB));
+  const office = await startTestOffice({ home, env: { FAKE_RATE_MS: arg('rate', '400'), FAKE_FLOOD: flood, FAKE_FLOOD_MS: flood === '0' ? '0' : '3000', FAKE_FLOOD_BURST: '48' } });
   console.log(`test office up at ${office.base} (floor ${floor}, ${home})`);
   try {
     return await fn(office, floor, home, other);
@@ -161,6 +167,7 @@ async function runSuite() {
       // Then the busy office, a minute of live workers, in one more of its own.
       const { runBusy, busySummary } = await import('./busy.mjs');
       const b = await runBusy({ root: `${officeRoot}-busy`, outDir, seconds: Number(arg('seconds', '60')), onProgress: progress });
+      if (fs.existsSync(`${officeRoot}-busy`)) killProcessesUnder(`${officeRoot}-busy`);
       if (fs.existsSync(`${officeRoot}-busy`) && !keep) await cleanupTestDir(`${officeRoot}-busy`);
       const failures = [...(pages.failures ?? []), ...(j.steps ?? []).filter((s) => !s.ok).map((s) => `${s.name}: ${s.detail ?? ''}`), ...(j.error ? [`journey: ${j.error}`] : []), ...(b.failures ?? []).map((x) => `busy office: ${x}`)];
       return { ...pages, steps: j.steps, busy: b, ok: pages.ok && j.ok && b.ok, failures, summary: `${pages.summary}\n${journeySummary(j)}\n${busySummary(b)}` };
@@ -201,6 +208,8 @@ try {
 } finally {
   if (officeRoot) {
     const real = killRealAgentsUnder(officeRoot);
+    // Fake agents run from the fixture's floors (<run>/floors), beside the office's folder that its stop sweeps: none may outlive the run.
+    for (const dir of [officeRoot, `${officeRoot}-journey`, `${officeRoot}-busy`]) if (fs.existsSync(dir)) killProcessesUnder(dir);
     if (real.length) {
       result = { ...(result ?? {}), ok: false, error: `real agent CLIs ran under the test office and were killed: ${real.join('; ')}` };
       code = 2;

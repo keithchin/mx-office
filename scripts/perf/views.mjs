@@ -20,6 +20,9 @@ export function views(f, other) {
   return [
     { id: 'cc-chat', name: 'Command Center (Chat)', path: lite('command'), storage: { 'agent-office.pmc-view': 'chat' }, ready: overview() },
     { id: 'cc-terminal', name: 'Command Center (Terminal)', path: lite('command'), storage: { 'agent-office.pmc-view': 'terminal' }, ready: overview() },
+    // A worker's full terminal window opened from the Command Center: its snapshot (a long session's
+    // scrollback, run.mjs --flood) parsed, fitted to the window and drawn (the terminal-freeze pass, 2026-10-16).
+    { id: 'cc-fullterm', name: "Command Center: a worker's full terminal", path: lite('command'), storage: { 'agent-office.pmc-view': 'chat' }, ready: overview(), steps: [{ click: 'button[aria-label$="open its terminal"]', ready: shown('.modal.term .xterm-rows', 5) }] },
     { id: 'board', name: 'Board', path: lite('board'), ready: shown('#board', 10) },
     { id: 'org', name: 'Team: org chart', path: lite('org'), ready: shown('#team-view', 10) },
     { id: 'standup', name: 'Team: standup', path: lite('standup'), ready: shown('#team-view', 5) },

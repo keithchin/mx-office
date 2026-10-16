@@ -342,6 +342,6 @@ test('in Portal the Model tab fills the page edge to edge under its header, down
   const index = readFileSync(path.join(import.meta.dirname, '../src/client/ui/model/index.ts'), 'utf8');
   assert.ok(css.includes("html[data-theme^='portal'] body.lite.pt-has-nav #model-view.mxv:not(.mx-full) { --mx-flush: 1; margin-left: -32px; margin-right: -32px; border-width: 1px 0 0; border-radius: 0 !important; }"), 'the page padding taken back, no frame');
   assert.ok(css.includes("html[data-theme^='portal'] body.lite.pt-has-nav #model-view.mxv:not(.mx-full) { margin-left: -16px; margin-right: -16px; }"), 'a phone: its 16px too');
-  assert.ok(css.includes("pt-has-nav:has(#model-view:not(.hidden)) .lite-main { padding-bottom: 0; }"), 'no gap under it');
+  assert.ok(css.includes("pt-has-nav:has(> .lite-main > #model-view:not(.hidden)) .lite-main { padding-bottom: 0; }"), 'no gap under it');
   assert.ok(index.includes("getPropertyValue('--mx-flush').trim() === '1'") && index.includes('window.innerHeight - top - below)}px'), 'the rest of the window, to the bottom');
 });

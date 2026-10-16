@@ -28,7 +28,7 @@
  */
 @media (min-width: 1024px) and (min-height: 560px) {
   /* The bits above the summary, a little tighter, so the summary has the room. */
-  body:has(.lite-main.on-command) .lite-main { padding-bottom: var(--tp-above, 72px); }
+  body:has(> .lite-main.on-command) .lite-main { padding-bottom: var(--tp-above, 72px); }
   /* The floor's line is laid out the same on every tab, not just here: the tab bar and each tab's content
      then start where the Command Center's do (scripts/check-tab-alignment.mjs). The Firm's banner is on
      the Audit log page, below the tabs. */
@@ -41,21 +41,18 @@
   .lite-main.on-command > #needs-you { grid-column: 1; }
   .lite-main.on-command > #setup:not(:empty):not(:has(.setup-panel:not(.cc-folded))) { grid-column: 2; }
   .lite-main.on-command > #needs-you:has(+ #setup:empty), .lite-main.on-command > #needs-you:has(+ #setup .setup-panel:not(.cc-folded)) { grid-column: 1 / -1; }
-  body:has(.lite-main.on-command) #needs-you .ny, body:has(.lite-main.on-command) #needs-you .ny-empty { margin-bottom: 8px; }
-  body:has(.lite-main.on-command) #needs-you .ny-row { min-height: 44px; }
-  body:has(.lite-main.on-command) #setup .setup-panel { margin-bottom: 8px; }
-  body:has(.lite-main.on-command) #setup .setup-panel.cc-folded { min-height: 44px; padding: 4px 10px; justify-content: center; }
+  body:has(> .lite-main.on-command) #needs-you .ny, body:has(> .lite-main.on-command) #needs-you .ny-empty { margin-bottom: 8px; }
+  body:has(> .lite-main.on-command) #needs-you .ny-row { min-height: 44px; }
+  body:has(> .lite-main.on-command) #setup .setup-panel { margin-bottom: 8px; }
+  body:has(> .lite-main.on-command) #setup .setup-panel.cc-folded { min-height: 44px; padding: 4px 10px; justify-content: center; }
   /* Opened by hand on a short window: the panel's own frame scrolls, the page doesn't. */
-  body:has(.lite-main.on-command) #setup .setup-panel:not(.cc-folded) { max-height: 26vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+  body:has(> .lite-main.on-command) #setup .setup-panel:not(.cc-folded) { max-height: 26vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
 
-  .lite-main.on-command #summary.sm:has(> .pmc) {
-    grid-template-columns: minmax(260px, 1fr) minmax(400px, 1.5fr) minmax(240px, .9fr);
-    grid-template-rows: minmax(0, 1fr);
-    height: max(180px, calc(100dvh - var(--cc-top, 320px) - var(--tp-above, 72px) - 8px));
-    margin-bottom: 8px;
-  }
-  /* No column scrolls: each is a frame its cards share. */
-  .lite-main.on-command #summary.sm:has(> .pmc) > * { min-height: 0; overflow: hidden; }
+  /* (The three-column frame once kept for the project console in the summary's middle, `#summary.sm:has(> .pmc)`
+     and `… > *`, is gone with the console, which the team-lead panel replaced: it never matched any more, and
+     a universal `> *` after `:has()` made Chrome restyle the whole page for every change anywhere in it, so
+     each glyph the lead panel's terminal measured cost a full restyle and the Command Center froze for
+     seconds (the terminal-freeze pass, 2026-10-16; tests/terminal-freeze.test.ts keeps it out). */
 
   /* The project column. */
   .lite-main.on-command #summary > .sm-main { display: flex; flex-direction: column; gap: 8px; }

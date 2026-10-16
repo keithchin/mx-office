@@ -9,6 +9,8 @@ import { h } from './dom';
 import { openTerminalFor } from './terminal';
 import { termTheme } from './termtheme';
 import { terminalHeld } from './term-holds';
+import { keepWidths, reuseWidths } from './term-widths';
+import { writeInSlices } from './term-write';
 import './kanban-preview.css';
 
 export interface Preview {
@@ -53,8 +55,8 @@ export function routePreviewMessage(msg: ServerMsg) {
   if (msg.t === 'term.snapshot') {
     term.reset();
     term.resize(msg.cols, msg.rows);
-    term.write(msg.data, fit);
-  } else if (msg.t === 'term.data') term.write(msg.data);
+    writeInSlices(term, msg.data, fit);
+  } else if (msg.t === 'term.data') writeInSlices(term, msg.data);
 }
 
 /**
@@ -142,6 +144,7 @@ function clipText(s: string) {
 function watchTerminal(workerId: string, host: HTMLElement) {
   const term = new Terminal({ disableStdin: true, cursorBlink: false, fontSize: 11, scrollback: 0, theme: termTheme(), allowProposedApi: false });
   term.open(host);
+  reuseWidths(term);
   live = { workerId, term, host, attached: false };
   if (!net) return;
   // The full terminal may be open on the same worker: it's attached already, and stays so.
@@ -165,6 +168,7 @@ function dropTerminal() {
   if (!live) return;
   // Left attached while the full window or the project manager console (ui/term-holds.ts) shows it.
   if (live.attached && net && openTerminalFor() !== live.workerId && !terminalHeld(live.workerId)) net.send({ t: 'worker.detach', workerId: live.workerId });
+  keepWidths(live.term);
   live.term.dispose();
   live = null;
 }

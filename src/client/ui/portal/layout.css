@@ -12,7 +12,7 @@ html[data-theme^='portal'] body.lite.pt-has-nav.pt-rail { --pt-nav-w: 56px; }
 html[data-theme^='portal'] body.lite.pt-has-nav { overflow: visible; }
 /* (The bar itself is fixed at the top in every Portal page: ui/portal/topbar.css.) */
 /* Something scrolled into view (a search result, a deep link) lands under the bar, not behind it. */
-html[data-theme^='portal']:has(body.lite.pt-has-nav) { scroll-padding-top: calc(var(--pt-h) + 9px); }
+html[data-theme^='portal']:has(> body.lite.pt-has-nav) { scroll-padding-top: calc(var(--pt-h) + 9px); }
 /* What sticks in the page's own flow sticks under the bar now, not behind it (the audit log's new-entries pill). */
 html[data-theme^='portal'] body.lite.pt-has-nav .au-new { top: calc(var(--pt-top) + 8px); }
 
@@ -21,7 +21,7 @@ html[data-theme^='portal'] body.lite.pt-has-nav .lite-main {
   width: auto; max-width: none; margin: 0 0 0 var(--pt-nav-w); padding: 0 32px 40px; transition: margin-left .18s ease;
 }
 /* The fitted Command Center's bottom padding (room for the bottom bar) isn't needed: there's no bar. */
-html[data-theme^='portal'] body.lite.pt-has-nav:has(.lite-main.on-command) .lite-main { padding-bottom: 40px; }
+html[data-theme^='portal'] body.lite.pt-has-nav:has(> .lite-main.on-command) .lite-main { padding-bottom: 40px; }
 /* What the navigation and the header took over. */
 html[data-theme^='portal'] body.lite.pt-has-nav :is(.lite-tabs, .lite-nav) { display: none; }
 /* The other floors waiting on someone: a quiet line under the header (Needs you lists them on the Overview). */

@@ -16,6 +16,8 @@ import { naturalKey } from './termkeys';
 import { termTabs } from './termtabs';
 import { dictateField, dictation } from './dictate';
 import { terminalHeld } from './term-holds';
+import { keepWidths, reuseWidths } from './term-widths';
+import { writeInSlices } from './term-write';
 
 /** A line to scroll to once the terminal has loaded: a search hit (see search.ts). */
 export interface TerminalFind {
@@ -307,7 +309,7 @@ export function openTerminal(net: Net, workerId: string, onChanges?: () => void,
   let pendingFind = find;
 
   const onMsg = (msg: ServerMsg) => {
-    if (msg.t === 'term.data' && msg.workerId === workerId) term.write(msg.data);
+    if (msg.t === 'term.data' && msg.workerId === workerId) writeInSlices(term, msg.data);
     else if (msg.t === 'term.typing' && msg.workerId === workerId) {
       typing.set(msg.id, Date.now() + TYPING_SHOWS_MS);
       const w = store.workers.get(workerId);
@@ -315,14 +317,20 @@ export function openTerminal(net: Net, workerId: string, onChanges?: () => void,
     } else if (msg.t === 'term.snapshot' && msg.workerId === workerId) {
       term.reset();
       term.resize(msg.cols, msg.rows);
-      term.write(msg.data, () => {
-        ready = true;
-        sendSize();
-        term.scrollToBottom();
-        refresh();
-        if (pendingFind) jumpTo(pendingFind);
-        pendingFind = undefined;
-      });
+      // In slices (term-write.ts), and fitted to the window in a task of its own after the last one: a long
+      // session's snapshot, then the reflow to this window's width, in one task froze the page for seconds.
+      writeInSlices(term, msg.data, () =>
+        setTimeout(() => {
+          if (current?.modal !== modal) return;
+          ready = true;
+          sendSize();
+          term.scrollToBottom();
+          refresh();
+          if (pendingFind) jumpTo(pendingFind);
+          pendingFind = undefined;
+          keepWidths(term);
+        }, 0),
+      );
     }
   };
   listeners.add(onMsg);
@@ -348,6 +356,7 @@ export function openTerminal(net: Net, workerId: string, onChanges?: () => void,
       mic.drop();
       // The board's project manager console may still be showing this terminal (ui/term-holds.ts).
       if (!terminalHeld(workerId)) net.send({ t: 'worker.detach', workerId });
+      keepWidths(term);
       term.dispose();
       if (current?.modal === modal) current = null;
     },
@@ -367,6 +376,7 @@ export function openTerminal(net: Net, workerId: string, onChanges?: () => void,
   });
 
   term.open(host);
+  reuseWidths(term);
   const sendEsc = () => {
     sendSize(true);
     sayTyping();

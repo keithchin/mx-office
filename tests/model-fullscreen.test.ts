@@ -195,7 +195,7 @@ test('the Model tab has the button and the keys, leaves full screen when the tab
   // Not under any theme: the five themes all get it.
   assert.match(css, /^\.mxv\.mx-full \{ position: fixed; inset: 0; z-index: 1000; width: auto !important; height: auto !important;/m);
   assert.match(css, /^\.mxv:fullscreen \{ width: 100% !important; height: 100% !important; \}/m);
-  assert.match(css, /^html:has\(body\.mx-full-open\) \{ overflow: hidden; \}/m);
+  assert.match(css, /^html:has\(> body\.mx-full-open\) \{ overflow: hidden; \}/m);
   // Esc on a picked element lets go of it first.
   assert.match(read('src/client/ui/model/canvas.ts'), /if \(this\.selected\) e\.preventDefault\(\);\n\s+this\.select\(null\);/);
 });
