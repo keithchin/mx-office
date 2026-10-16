@@ -1,0 +1,18 @@
+/* The overlay over the project brief while a chat answer is folded in (brief-overlay.ts): the brief dimmed,
+   softly blurred and inert underneath, the drafting card kept in view (sticky, so the panel clips without
+   being a scroll box), a fade in and out; the changed items' pulse after; the "No changes" note. The
+   reduced-motion rule in new.css stops the card's motion and the fades. */
+#modal-root .nw-panel { position: relative; }
+#modal-root .nw-panel.nw-updating { overflow: clip; }
+#modal-root .nw-panel .nw-collapse { transition: grid-template-rows .2s var(--nw-ease), opacity .2s, filter .2s; }
+#modal-root .nw-panel.nw-updating .nw-collapse { opacity: .45; filter: blur(1.5px) saturate(.85); pointer-events: none; user-select: none; }
+#modal-root .nw-upd { position: absolute; inset: 0; z-index: 3; display: flex; justify-content: center; align-items: flex-start; padding: 56px 20px 20px; background: color-mix(in srgb, var(--card) 30%, transparent); opacity: 0; transition: opacity .22s var(--nw-ease); }
+#modal-root .nw-upd.on { opacity: 1; }
+#modal-root .nw-upd[hidden] { display: none; }
+#modal-root .nw-upd-card { position: sticky; top: var(--nw-upd-top, 96px); width: min(460px, 100%); padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--nw-rl); background: var(--card); box-shadow: var(--nw-pop); transform: translateY(6px) scale(.98); transition: transform .26s var(--nw-ease); }
+#modal-root .nw-upd.on .nw-upd-card { transform: none; }
+#modal-root .nw-panel.nw-settle .nw-item:not(.flash, .nw-changed) { animation: none; }
+#modal-root .nw-item.nw-changed { animation: nw-changed 1.6s var(--nw-ease); }
+#modal-root .nw-upd-note { position: absolute; top: 14px; right: 20px; z-index: 3; padding: 4px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--paper-2); color: var(--ink-2, var(--ink)); font-size: 12.5px; animation: nw-pop var(--nw-t) var(--nw-ease); }
+#modal-root .nw-upd-note[hidden] { display: none; }
+@keyframes nw-changed { 12%, 55% { background: var(--accent-soft); border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); } }
