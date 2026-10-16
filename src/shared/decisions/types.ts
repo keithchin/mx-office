@@ -85,6 +85,11 @@ export interface DecisionCard {
   gone?: { at: number; what: string; asked?: number };
   /** A question you answered, not recorded yet. */
   answered?: { status: 'pending' | 'sent'; to?: string };
+  /**
+   * A tool call Claude Code's permission layer denied (shared/roster/permission-denial.ts): a settings action,
+   * Allow this command / Keep blocked, open until the command is seen to run.
+   */
+  permission?: { command: string; rule: string; suggested?: string; count: number; who: string; allowed?: { at: number; by: string; file: string } };
   /** The clean-up card's groups of likely duplicates (./duplicates-card.ts): Close duplicates / Review one by one. */
   duplicates?: DuplicateGroup[];
   /** The compact row (NeedItem) for the strip, the phone and Teams. */

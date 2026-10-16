@@ -55,7 +55,8 @@ export const decisionRoutes = {
       const verdict = isEscalationVerdict(body.verdict) ? body.verdict : undefined;
       const esc = str(body.escalation);
       // An approval through Phone access needs the password again, as on the escalation route.
-      const risky = () => body.action === 'answer' && !!verdict && isRisky({ do: 'escalation', verdict }, rosterOf(ctx).data(floor.id).escalations.find((e) => e.id === esc));
+      // …and so does allowing a command Claude Code denied (it loosens the project's permission settings).
+      const risky = () => body.action === 'allow-command' || (body.action === 'answer' && !!verdict && isRisky({ do: 'escalation', verdict }, rosterOf(ctx).data(floor.id).escalations.find((e) => e.id === esc)));
       if (refuseStale(ctx, req, res, risky)) return;
       const by = session.account?.name ?? (str(body.by, 32) ?? 'The Project Manager');
       const others = Array.isArray(body.others) ? body.others.map((x) => str(x, 40)).filter((x): x is string => !!x).slice(0, 20) : [];

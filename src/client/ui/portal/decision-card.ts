@@ -130,6 +130,41 @@ export function handsOnCard(c: DecisionCard, x: CardCtx): HTMLElement {
   return shell(c, [c.detail ? h('p.pt-esc-q', {}, c.detail) : null, ...cardExtras(c, x), check ? h('p.pt-dc-check', { class: check.ok ? 'ok' : 'bad' }, h('b', {}, `${check.label} (a check, not proof): `), check.text) : null], acts);
 }
 
+/**
+ * A permission block (shared/roster/permission-denial.ts): the exact command Claude Code denied, the rule
+ * Allow writes, how often it was asked; Allow this command / Keep blocked. Never an Approve: it stays open
+ * until the office sees the command run.
+ */
+export function permissionCard(c: DecisionCard, x: CardCtx): HTMLElement {
+  const p = c.permission!;
+  const acts = !x.admin
+    ? notAdmin()
+    : h(
+        'div.pt-esc-acts',
+        {},
+        p.allowed
+          ? h('span.pt-dc-small', {}, `Allowed by ${p.allowed.by} ${timeAgo(p.allowed.at)}: waiting for the command to run.`)
+          : btn('.primary.pt-dc-allow', `Allow this command for ${p.who} on this project`, (b) => void busy(b, decisionAct(x.floor, { action: 'allow-command', escalation: c.escalation })).then((ok) => ok && (toast(`Allowed: ${c.owner} is told to run it again`), x.done(c, 'Allowed · waiting for it to run'))), `Writes ${p.rule} to ${SETTINGS_HINT} in ${c.owner}'s folder; nothing else is allowed`),
+        btn('.pt-dc-keep', 'Keep blocked', (b) => void busy(b, decisionAct(x.floor, { action: 'keep-blocked', escalation: c.escalation, expectedRev: 0 })).then((ok) => ok && x.done(c, 'Kept blocked'))),
+        h('span.pt-grow'),
+        x.leadName ? h('button.pt-link.pt-esc-ask', { type: 'button', onclick: () => x.ask(`About "${c.question.split(':')[0]}": `) }, `Ask ${x.leadName}`) : null,
+      );
+  return shell(
+    c,
+    [
+      h('p.pt-dc-line', {}, h('b', {}, 'Denied by Claude Code: '), h('code', {}, p.command)),
+      h('p.pt-dc-line', {}, h('b', {}, 'Allow writes: '), h('code', {}, p.rule), h('small', {}, ` in ${SETTINGS_HINT} (${p.allowed ? p.allowed.file : `${c.owner}'s folder`})`)),
+      p.suggested ? h('p.pt-dc-small', {}, `${c.owner} suggested a wider rule, not written: `, h('code', {}, p.suggested)) : null,
+      p.count > 1 ? h('p.pt-dc-small', {}, `Asked ${p.count} times: one card.`) : null,
+      c.detail ? h('p.pt-esc-q', {}, c.detail) : null,
+      ...cardExtras(c, x),
+    ],
+    acts,
+  );
+}
+
+const SETTINGS_HINT = '.claude/settings.local.json';
+
 /** An FYI: Noted, which approves nothing. */
 export function fyiCard(c: DecisionCard, x: CardCtx): HTMLElement {
   const acts = !x.admin ? notAdmin() : h('div.pt-esc-acts', {}, btn('.pt-dc-noted', 'Noted', (b) => void busy(b, decisionAct(x.floor, { action: 'noted', escalation: c.escalation, others: otherEscalations(c), expectedRev: 0 })).then((ok) => ok && x.done(c, 'Noted'))), h('small.pt-dc-small', {}, " Noting doesn't approve anything."));

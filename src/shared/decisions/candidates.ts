@@ -25,7 +25,7 @@ export interface Candidate {
   kind: DecisionKind;
   /** Which source leads a card when several fold (lower first): a question, a toolkit sign-off (SIGNOFF_PRIO: its own dialog, never an escalation answer), then a decision escalation, a proposal, stuck, an ask, a PR check, an FYI. */
   prio: number;
-  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'tried' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates' | 'after'>> & { analyst?: string };
+  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'tried' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates' | 'after' | 'permission'>> & { analyst?: string };
   /** A free-text test name it is about: other cards naming it are "possibly related", never merged. */
   mentions?: string;
 }
@@ -96,6 +96,7 @@ export function escalationCandidates(r: RosterView): Candidate[] {
         notes,
         escalation: e.id,
         ...(e.sourceGone ? { gone: e.sourceGone } : {}),
+        ...(e.permission ? { permission: { command: e.permission.command, rule: e.permission.rule, ...(e.permission.suggested ? { suggested: e.permission.suggested } : {}), count: e.permission.count, who: e.permission.who ?? e.by, ...(e.permission.allowed ? { allowed: e.permission.allowed } : {}) }, after: e.permission.allowed ? `After you allowed it: ${e.by} is told to run it again. This card closes by itself once the office sees the command run; if Claude Code still denies it, the session may need a restart to read the rule.` : `Approving in the office doesn't change Claude Code's permission settings. Allow writes exactly this rule for ${e.by} on this project; the card stays open until the office sees the command run.` } : {}),
       },
     } satisfies Candidate;
   });
