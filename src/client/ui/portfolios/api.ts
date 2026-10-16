@@ -5,6 +5,7 @@ import type { BrainRead, ExistingContext, PortfoliosView, WiringCheckView } from
 
 export interface ActResult {
   error?: string;
+  portfolio?: { id: string; label: string };
   warning?: string;
   view?: PortfoliosView;
   read?: BrainRead;
@@ -19,7 +20,7 @@ export async function portfoliosView(): Promise<PortfoliosView> {
   return (await res.json()) as PortfoliosView;
 }
 
-export async function portfolioAct(body: { action: 'create' | 'add' | 'connect' | 'disconnect'; portfolio?: string; label?: string; floor?: string; path?: string }): Promise<ActResult> {
+export async function portfolioAct(body: { action: 'create' | 'rename' | 'add' | 'connect' | 'disconnect'; portfolio?: string; label?: string; floor?: string; path?: string }): Promise<ActResult> {
   try {
     const res = await fetch('/api/portfolios/action', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const out = (await res.json().catch(() => ({}))) as ActResult;

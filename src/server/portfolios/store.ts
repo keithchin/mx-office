@@ -63,27 +63,68 @@ export class PortfolioStore {
     return this.list.find((p) => p.projectIds.includes(floorId));
   }
 
-  /** Runs `fn` on the loaded list, then saves it, one change at a time. */
-  private change<T>(fn: (list: Portfolio[]) => T): Promise<T> {
+  /** Runs `fn` once the list is loaded, one change at a time (it saves, if it changes anything). */
+  private serial<T>(fn: () => Promise<T>): Promise<T> {
     const run = this.chain.then(async () => {
       await this.load();
-      const out = fn(this.list);
-      await writeJsonCritical(this.file, { version: 1, portfolios: this.list });
-      return out;
+      return fn();
     });
     this.chain = run.catch(() => undefined);
     return run;
   }
 
+  private save(): Promise<void> {
+    return writeJsonCritical(this.file, { version: 1, portfolios: this.list });
+  }
+
+  /** Runs `fn` on the loaded list, then saves it, one change at a time. */
+  private change<T>(fn: (list: Portfolio[]) => T): Promise<T> {
+    return this.serial(async () => {
+      const out = fn(this.list);
+      await this.save();
+      return out;
+    });
+  }
+
+  /**
+   * A client's name as typed, made safe, or why it can't be one: trimmed, at most 80 characters, newlines
+   * folded to spaces, not empty, and no other client (`except` aside) with the same name in any case.
+   */
+  private nameFor(label: unknown, except?: string): string | { error: string } {
+    const name = str(label, 80).replace(/\s*[\r\n]+\s*/g, ' ').trim();
+    if (!name) return { error: 'Give the client a name' };
+    if (this.list.some((p) => p.id !== except && p.label.toLowerCase() === name.toLowerCase())) return { error: `There is already a client called ${name}` };
+    return name;
+  }
+
+  /**
+   * A new client. The name is checked inside the one-at-a-time chain, so two creates sent together (a
+   * double Enter) can't both pass the check and make two clients of one name; nothing is written when
+   * it's refused.
+   */
   async create(label: string, by: string): Promise<Portfolio | string> {
-    const name = str(label, 80).replace(/[\r\n]+/g, ' ');
-    if (!name) return 'Give the client a name';
-    await this.load();
-    if (this.list.some((p) => p.label.toLowerCase() === name.toLowerCase())) return `There is already a client called ${name}`;
-    return this.change((list) => {
+    return this.serial(async () => {
+      const name = this.nameFor(label);
+      if (typeof name !== 'string') return name.error;
       const p: Portfolio = { id: mintPortfolioId(this.now()), label: name, projectIds: [], createdAt: this.now(), createdBy: str(by, 80) };
-      list.push(p);
+      this.list.push(p);
+      await this.save();
       return p;
+    });
+  }
+
+  /** A new name for a client: same rules as create. Its id never changes. Gives back the old and new names. */
+  async rename(id: string, label: string): Promise<{ before: string; after: string } | string> {
+    return this.serial(async () => {
+      const p = this.get(id);
+      if (!p) return 'No such client';
+      const name = this.nameFor(label, id);
+      if (typeof name !== 'string') return name.error;
+      const before = p.label;
+      if (before === name) return { before, after: name };
+      p.label = name;
+      await this.save();
+      return { before, after: name };
     });
   }
 

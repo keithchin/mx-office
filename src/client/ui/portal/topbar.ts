@@ -5,7 +5,7 @@
 //
 //   ⋮⋮⋮ launcher · "Mx Office" | SECTION · [ search ] · (the page's action) · bell · help · dark mode · 🎨 · avatar (☰)
 //
-// - The launcher opens a menu of where to go: Home's projects, every project, The Firm, the docs and
+// - The launcher opens a menu of where to go: Home's projects, the clients, every project, The Firm, the docs and
 //   Settings.
 // - The wordmark goes Home; the section is the page's name in capitals (PROJECTS on Home), or the floor
 //   picker on the 2D Office view, drawn as a capitalised title after OFFICE · (on the 1D view the page's name: the floor picker
@@ -62,6 +62,7 @@ export function initials(name: string): string {
 function pages(opts: PortalBarOpts): { label: string; hint: string; href: string; run?: () => void }[] {
   const all = [
     { label: 'Projects', hint: 'Home: every project', href: '/home', run: location.pathname === '/home' ? opts.onHome : undefined },
+    { label: 'Clients', hint: 'Every client and its projects', href: '/clients' },
     { label: 'The Firm', hint: 'Independent Reviewer Agents', href: '/firm' },
     { label: 'Documentation', hint: 'Guides, reference and FAQ', href: '/docs' },
     { label: 'Settings', hint: 'You, the agents, the team, the look', href: settingsHref(undefined, store.floor ?? undefined), run: opts.settings },

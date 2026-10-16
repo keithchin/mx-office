@@ -129,6 +129,7 @@ export default defineConfig({
         pixel: resolve(import.meta.dirname, 'src/client/pixel.html'),
         home: resolve(import.meta.dirname, 'src/client/home.html'),
         firm: resolve(import.meta.dirname, 'src/client/firm.html'),
+        clients: resolve(import.meta.dirname, 'src/client/clients.html'),
         login: resolve(import.meta.dirname, 'src/client/login.html'),
         claim: resolve(import.meta.dirname, 'src/client/claim.html'),
         join: resolve(import.meta.dirname, 'src/client/join.html'),

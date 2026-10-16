@@ -1,6 +1,6 @@
 // A company brain card's button (shared/decisions/brain.ts), from any page that shows Needs you: an admin's
 // Rehire for a fresh session, Dismiss or Wire again goes to the office (ui/portfolios/feed.ts); anyone else
-// is taken to Home › Portfolios to see the portfolio.
+// is taken to the Clients page to see the client.
 
 import type { NeedTarget } from '../../../shared/needsyou';
 import { store } from '../../state';
@@ -15,7 +15,7 @@ const DONE: Record<Extract<NeedTarget, { to: 'brain' }>['act'], string> = {
 };
 
 export async function goBrain(t: Extract<NeedTarget, { to: 'brain' }>): Promise<void> {
-  if (!store.me.admin) return location.assign('/home?tab=portfolios');
+  if (!store.me.admin) return location.assign('/clients');
   const err = await brainAct(t.floor, t.act);
   toast(err ? `Couldn't: ${err}` : DONE[t.act], err ? 'warn' : 'info');
 }

@@ -9,15 +9,21 @@ A **client** (the company or organisation you build for, not a browser or an API
 
 > **Clients organise knowledge; they aren't access control.** A client isn't a boundary between companies. Agents on the office's computer can still read any folder by path, including other clients' brains, other projects and their `sources/` folders. The office points each project's agents at its own client's brain and records what it offered them; it does not stop an agent from reading anything else. The office says so wherever clients are shown.
 
-## Home › 🗂️ Clients
+## The Clients page
 
-Home's **🗂️ Clients** tab (`/home?tab=portfolios`) lists every client with its projects and its brain's state: *No brain connected*, *Connected @a1b2c3d*, *Connected · not versioned*, or *Brain unavailable*. Admins make one with **＋ New client**: a name is enough. A client can exist without a brain and get one later.
+**Clients** is a page of its own at `/clients`, next to Projects: in the top bar's launcher (⋮⋮⋮ › **Clients**), in the search, and as **🗂️ Clients** on Home's bar in the other looks. Old links to Home's former Clients tab (`/home?tab=portfolios`) open it.
 
-Open a client for its page:
+It shows every client as a card in the same grid as the Projects page: its letters, its name, how many projects it has and which, and its brain's state (*No brain connected*, *Connected @a1b2c3d*, *Connected · not versioned*, or *Brain unavailable*). **Search by client name** finds a client by its name or one of its projects' names. Admins make one with **＋ New client**: a name is enough (at most 80 characters, not the same as another client's in any case). A client can exist without a brain and get one later.
 
-- **Projects**, each with the office's wiring check (*wired* or *wiring incomplete*), and **＋ Add a project** (only projects without a client are offered).
+Click a client's card (or its ⋯ › **Open client**) for its page, `/clients?client=<id>`:
+
+- its name with **Rename**, **＋ Add project** (only projects without a client are offered) and **🧠 Connect a brain** or **Disconnect brain** (admins);
+- **Projects**: the client's projects drawn with the Projects page's own cards (progress, status, spend, 👁, pin and ⋯), with a warning for any project whose wiring is incomplete;
 - **Company brain**: its folder, its snapshot (the brain's git commit), when and by whom it was connected, the files its `ROUTING.md` routes to (by path and size: the office keeps hashes, never the brain's text), what's left out and why, and a warning when `ROUTING.md` has more than 40 rows or is over 8 KB (it's read before every terminology or convention answer, so keep it short).
-- **🧠 Connect a brain** or **Disconnect** (admins).
+
+## Rename a client
+
+**Rename** on a client's page (or ⋯ › **Rename…** on its card) opens a small dialog with the current name. Change it and press **Enter** or **Rename**; a refusal (no name, a name another client has) is said in the dialog. Only the name changes: the client's id, its projects, its company brain and the projects' wiring stay as they are, so links keep working. Hires from then on get the new name in their brain line. The rename is in the audit log as `portfolio.rename`, with the old and the new name.
 
 ## Connect a brain
 
@@ -34,12 +40,12 @@ The pointer is in the project's folder. Agents working in a worktree see it once
 
 ## Add a project to a client
 
-From the client page (**＋ Add a project**) or the project's **⚙️ Settings › 🗂️ Client** (**Add to client**). Before anything is added, the office shows what the project already has: its instruction files, any company brain block already in them (and the brain it names), and whether it was offered a brain before (its context manifests).
+From the client page (**＋ Add project**) or the project's **⚙️ Settings › 🗂️ Client** (**Add to client**). From a project, the dialog also has **＋ New client**: name a client that doesn't exist yet, and it's made and picked for you (with no client yet, the button reads **Add to a new client**). Before anything is added, the office shows what the project already has: its instruction files, any company brain block already in them (and the brain it names), and whether it was offered a brain before (its context manifests).
 
 - A project can belong to one client, and only projects **without** a client can be added. A project that belongs to another client is refused: *moving a project between clients isn't available*. So is a project that was offered another client's brain before: what it was offered can't be taken back.
 - If the client has a brain, the project is wired straight away and checked.
 
-A **new project** can join a client from ✨ New project (*Advanced › Client*). The setup adds it after the toolkit's `init-project.sh` and the pin instructions, then wires and checks it; it never uses `init-project.sh --company`, which wires before `CLAUDE.md` and `AGENTS.md` exist. Incomplete wiring stops the step with the problems listed; **Retry** wires again.
+A **new project** can join a client from ✨ New project (*Advanced › Client*; admins see it even before the first client, with **＋ New client…** at the end of the list to name one there). The setup adds it after the toolkit's `init-project.sh` and the pin instructions, then wires and checks it; it never uses `init-project.sh --company`, which wires before `CLAUDE.md` and `AGENTS.md` exist. Incomplete wiring stops the step with the problems listed; **Retry** wires again.
 
 ## What each hire is told
 
@@ -78,4 +84,4 @@ Clients live in one file, `<data>/portfolios.json` (its name from the feature's 
 
 ## Who can do what
 
-Everyone signed in can see clients. Only an admin can create one, add a project, connect or disconnect a brain, or press a brain card's buttons; the office checks this itself, and every change is in the [Audit log](audit-log.md). Its action names keep the feature's first name, `portfolio`: `portfolio.create`, `portfolio.add`, `portfolio.connect`, `portfolio.wire`, `portfolio.wire-incomplete`, `portfolio.disconnect`, `portfolio.brain-changed`, `portfolio.rehire`, `portfolio.dismiss`.
+Everyone signed in can see clients. Only an admin can create or rename one, add a project, connect or disconnect a brain, or press a brain card's buttons; the office checks this itself, and every change is in the [Audit log](audit-log.md). Its action names keep the feature's first name, `portfolio`: `portfolio.create`, `portfolio.rename`, `portfolio.add`, `portfolio.connect`, `portfolio.wire`, `portfolio.wire-incomplete`, `portfolio.disconnect`, `portfolio.brain-changed`, `portfolio.rehire`, `portfolio.dismiss`.

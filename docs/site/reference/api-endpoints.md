@@ -105,7 +105,7 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/stuck/settings` | `{settings: {on, prHours, decisionHours, failingHours, circlesHours}, admin}` |
 | POST | `/api/stuck/settings` | Admins only, JSON with any of those fields (hours 1–720), each change audited (`settings.change`, `stuck.<field>`) |
 | GET | `/api/portfolios` | `{portfolios, ungrouped, admin}`: every [client](../using-the-office/clients.md) (the company, called a portfolio in the API) with its projects (and the office's wiring check of each), its brain reference and the brain as last read (status, snapshot, routed files with hashes, exclusions, warnings), and the projects without a client |
-| POST | `/api/portfolios/action` | Admins only, JSON `{action, portfolio?, label?, floor?, path?}`, audited as `portfolio.<action>`: `create` (`label`), `add` (`portfolio`, `floor`; 409 for a project that belongs to another client or was offered another client's brain), `connect` (`portfolio`, `path`: validated, then each project wired and checked) or `disconnect` (the pointer blocks removed, manifests kept) |
+| POST | `/api/portfolios/action` | Admins only, JSON `{action, portfolio?, label?, floor?, path?}`, audited as `portfolio.<action>`: `create` (`label`: non-empty, at most 80 characters, newlines folded, not another client's name in any case; one at a time, so a double send makes one), `rename` (`portfolio`, `label`: the same rules; only the name changes, 404 for an unknown client, audited with the old and the new name), `add` (`portfolio`, `floor`; 409 for a project that belongs to another client or was offered another client's brain), `connect` (`portfolio`, `path`: validated, then each project wired and checked) or `disconnect` (the pointer blocks removed, manifests kept) |
 | GET | `/api/portfolios/context?floor=<id>` | What the project already has wired: its instruction files, any company brain block and the brain it names, its context manifests and the brain it was offered before |
 | GET | `/api/profiles` | `{profiles, admin}`: every [agent profile](../using-the-office/agents.md): id, display name (and its disambiguated label), roles, assignments (project, role, start, end, how it started and ended, worker ids), where it is now, an open move, and (admins only) your notes |
 | POST | `/api/profiles/action` | Admins only, JSON `{action, …}`, audited as `profile.*`: `hire` (`profile`, `floor`, `role`, `task?`, `move?`: 409 with `needsMove` for a profile linked to a seat elsewhere until `move: true`; never a concurrent hire), `rename` (`profile`, `name`), `notes` (`profile`, `text`), `retry` or `cancel` (`move_id`). Through Phone access, `hire` and `retry` need a fresh sign-in |
@@ -180,6 +180,7 @@ Actions: `hire`, `bench`, `rename`, `model`, `settings`, `standup`, `decide`, `e
 | `/home` | Home |
 | `/lite` | The 1D view |
 | `/pixel` | The 2D view |
+| `/clients` | The Clients page: every client's card (`?client=<id>` opens a client's page; `/home?tab=portfolios` comes here) |
 | `/firm` | The Firm (`?report=<id>` opens a report) |
 | `/setup` | 🚀 [First-run setup](../get-started/new-machine.md#step-3-the-first-run-setup) |
 | `/docs`, `/docs/*` | These docs; `/docs/site.json` is their bundle, `/docs/images/*` their pictures |

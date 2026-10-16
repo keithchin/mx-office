@@ -131,6 +131,14 @@ export class PortfolioService {
     return p;
   }
 
+  /** A client's new name (its id, membership and brain stay), audited with the old and the new name. */
+  async rename(id: string, label: string, by: string): Promise<string | undefined> {
+    const r = await this.store.rename(id, label);
+    if (typeof r === 'string') return r;
+    if (r.before !== r.after) this.deps.audit({ actor: { kind: 'human', name: by }, action: 'portfolio.rename', target: { kind: 'portfolio', id, label: r.after }, summary: `Renamed the client ${r.before} to ${r.after}`, details: { before: r.before, after: r.after } });
+    return undefined;
+  }
+
   /**
    * Adds an ungrouped project. Refused when it's in another portfolio, or when it already consumed a
    * different brain (its manifests say so): S03, no cross-portfolio moves in this phase.
