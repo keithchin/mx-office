@@ -39,6 +39,7 @@ import './mobile.css';
 import { batched } from '../ui/batch';
 import { needsFeedsMessage, onNeedsFeeds, pageNeedsInput } from '../ui/needsyou/input';
 import { budgetFeed } from '../ui/budget/feed';
+import { budgetNeedOfView } from '../../shared/budget/prices';
 
 export interface MobileDeps {
   net: Net;
@@ -168,10 +169,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
   onNeedsFeeds(() => drawLater());
   const budget = budgetFeed(net);
   budget.on(() => drawLater());
-  const budgetNeed = () => {
-    const v = budget.floor();
-    return v && v.settings.total ? { floor: v.floor, alerts: v.alerts ?? [], ...(v.paused ? { paused: v.paused } : {}) } : undefined;
-  };
+  const budgetNeed = () => budgetNeedOfView(budget.floor());
 
   function paint() {
     items = collectNeeds(pageNeedsInput(store.floor ?? undefined, roster(), { studio: store.studio?.floor === store.floor ? (store.studio ?? undefined) : undefined, budget: budgetNeed() }));

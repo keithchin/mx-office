@@ -147,6 +147,8 @@ test('Claude models go by the name of the model, not only its family', () => {
   assert.equal(claudeModelName('claude-opus-5-5'), 'Opus 5.5');
   assert.equal(claudeModelName('claude-fable-5-1'), 'Fable 5.1');
   assert.equal(claudeModelName('claude-haiku-4-5-20251001'), 'Haiku 4.5');
+  assert.equal(claudeModelName('claude-haiku-5-5'), 'Haiku 5.5');
+  assert.deepEqual(CLAUDE_MODEL_NAMES, { fable: 'Fable 5.1', opus: 'Opus 5.5', sonnet: 'Sonnet 5.5', haiku: 'Haiku 5.5' });
   assert.equal(claudeModelName('claude-sonnet-5'), 'Sonnet 5');
   assert.equal(claudeModelName('claude-sonnet-4-20250514'), 'Sonnet 4');
   assert.equal(claudeModelName('claude-opus-4-1-20250805'), 'Opus 4.1');

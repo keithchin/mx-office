@@ -6,6 +6,7 @@
 
 import type { BreakdownRow, BudgetView, OfficeBudgetView } from '../../../shared/budget/types';
 import { both, local, pctOf, rateLine, TONE_WORD, usd, usdCents } from '../../../shared/budget/money';
+import { priceCheckedLine, unpricedNote } from '../../../shared/budget/prices';
 import { h } from '../dom';
 import type { BudgetFeed } from './feed';
 import { tooltip } from './tooltip';
@@ -109,6 +110,8 @@ function notes(v: BudgetView): HTMLElement | null {
   const items = [
     v.unmetered.calls ? h('p.bud-note', {}, `${v.unmetered.calls} call${v.unmetered.calls === 1 ? '' : 's'} not metered (${v.unmetered.agents.join(', ')}): providers the office can't price, counted but not costed.`) : null,
     rateLine(v.fx) ? h('p.bud-note.bud-fx', {}, rateLine(v.fx)!) : null,
+    unpricedNote(v.prices) ? h('p.bud-note.bud-unpriced', {}, unpricedNote(v.prices)!) : null,
+    v.prices ? h('p.bud-note.bud-prices', {}, `${priceCheckedLine(v.prices)} (Anthropic's pricing page): Claude costs are priced from it.`) : null,
   ].filter(Boolean) as HTMLElement[];
   return items.length ? h('div.bud-notes', {}, ...items) : null;
 }

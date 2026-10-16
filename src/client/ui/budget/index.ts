@@ -13,6 +13,7 @@ import { pausedSection, settingsSection } from './settings';
 import { insightsSection, onInsightGo } from './insights';
 import { alertsSection, markAlertSeen } from './alerts';
 import type { Insight } from '../../../shared/budget/types';
+import { budgetNeedOfView } from '../../../shared/budget/prices';
 
 /** The sections between the headline and the breakdowns, in order (the plan, variance, settings, insights plug in here). */
 export const SECTIONS: BudgetSection[] = [pausedSection, alertsSection, insightsSection, varianceSection, settingsSection, planSection];
@@ -36,10 +37,7 @@ export function budgetUi(net: Net, opts: { root?: HTMLElement; visible?: () => b
   return {
     feed,
     show: () => tab?.render(),
-    need: () => {
-      const v = feed.floor();
-      return v && v.settings.total ? { floor: v.floor, alerts: v.alerts ?? [], ...(v.paused ? { paused: v.paused } : {}) } : undefined;
-    },
+    need: () => budgetNeedOfView(feed.floor()),
     go: (t) => {
       // Mark as seen stays where you are: the item leaves Needs you once the budget is fetched again.
       if (t.seen) {

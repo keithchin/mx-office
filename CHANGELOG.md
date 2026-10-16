@@ -8,6 +8,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ### Fixed
 
+- **Claude prices brought up to date, and a model the office can't price is named.** Haiku 5.5 is on the price list (with its dearer rate for prompts over 100,000 tokens), and Sonnet 5.5's cache reads are $0.10 per million as Anthropic's pricing page now says; before, Haiku 5.5 was priced as the old Claude 3 Haiku. Each row now matches one model id, so a new model is no longer priced as an older one of its family: it gets Opus rates, and the Budget tab says *Priced at Opus rates* with its name (also an info row in Needs you), under a new *Price list checked on* line. The `haiku` model is called Haiku 5.5 in the hire window and the Team tab. See Budget › The price list in the docs.
 - **Naming a new client.** Wherever a project picks its client, a new one can now be named on the spot: **＋ New client** in a project's ⚙️ Settings › Client (which read *There are no clients yet* with its button greyed out until a client existed) and in the Add to client dialog, and **＋ New client…** at the end of the New project wizard's *Advanced › Client* list (the field wasn't there at all before the first client). The New client dialog also sends a name once: a double Enter used to be able to make two clients of the same name.
 
 ### Added

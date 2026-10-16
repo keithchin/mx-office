@@ -11,7 +11,8 @@ import type { StudioState } from './studio.js';
 import type { SetupView } from './wizard.js';
 import { needingYou, waitingInOrder } from './waiting.js';
 import { SEVERITY_SHORT, incidentRef, needsAttention, type IncidentBrief } from './incidents.js';
-import type { BudgetAlert } from './budget/types.js';
+import type { BudgetAlert, PriceListView } from './budget/types.js';
+import { unpricedNeed } from './budget/prices.js';
 import type { SettingsSectionId } from './settings-sections.js';
 import type { RoleId } from './roster/roles.js';
 import type { StuckView } from './stuck.js';
@@ -98,6 +99,8 @@ export interface BudgetNeed {
   floor: string;
   alerts: readonly BudgetAlert[];
   paused?: string;
+  /** The price list, when it priced some model by its fallback (shared/budget/prices.ts). */
+  prices?: PriceListView;
 }
 
 export interface NeedsInput {
@@ -198,6 +201,9 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
     if (b.paused) out.push({ key: 'budget-paused', kind: 'budget', icon: '💸', text: 'Budget reached: project paused. No new hires and no office prompts; people’s messages still go through', since: b.alerts.find((a) => a.level === 'full')?.at, level: 'block', action: 'Raise budget', target: { to: 'budget' }, alt: { action: 'Resume', target: { to: 'budget', resume: true } } });
     else if (top) out.push({ key: `budget-${top.level}`, kind: 'budget', icon: '💸', text: top.text, since: top.at, level: top.level === 'full' ? 'block' : 'warn', action: top.level === 'full' ? 'Raise budget' : 'Budget', target: { to: 'budget' }, ...(top.level === 'full' ? {} : { alt: { action: 'Mark as seen', target: { to: 'budget', seen: top.level } } }) });
   }
+  // A model priced at Opus rates because it isn't on the price list: shown, not waiting on you.
+  const unpriced = unpricedNeed(b);
+  if (unpriced) out.push(unpriced);
   // 6. Open, ready PRs whose checks fail.
   for (const c of prCheckCandidates(i.pulls)) put(c);
   // A toolkit stage at a ✋ gate, waiting for your sign-off: any stage gate-check marks MANUAL (3, 4, 7, and 5–6 where it wants a person), from its verdicts whether or not the setup panel shows.

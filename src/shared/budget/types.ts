@@ -212,6 +212,14 @@ export interface FirmForecast {
   end?: string;
 }
 
+/** The office's price list for Claude models (server/prices.ts): when it was checked, and the model ids it priced by its fallback (Opus rates). */
+export interface PriceListView {
+  /** YYYY-MM-DD. */
+  checked: string;
+  /** Each id once, with when the office first saw it (ms). */
+  unpriced: { model: string; since: number }[];
+}
+
 export interface BudgetView {
   floor: string;
   name: string;
@@ -246,6 +254,8 @@ export interface BudgetView {
   firm?: FirmForecast;
   insights?: Insight[];
   admin: boolean;
+  /** The price list the costs come from. */
+  prices?: PriceListView;
 }
 
 export interface OfficeFloorBudget {
