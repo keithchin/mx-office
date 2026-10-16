@@ -37,6 +37,11 @@ span.pg-seg { cursor: default; padding: 0; }
 .pg-label { flex: 0 1 auto; max-width: 28%; min-width: 0; height: 24px; padding: 0 8px; overflow: hidden; border: 0; border-radius: 6px; background: transparent; color: var(--ink); font: inherit; font-size: 12px; font-weight: 800; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
 .pg-label:hover { background: var(--hover); }
 .pg-bar.changed .pg-label { color: var(--warn-ink); }
+/* How fresh the office's stage is, and what doesn't add up (bar.ts stageNotes). */
+.pg-notes { display: flex; flex-direction: column; gap: 2px; margin: 2px 0 0 32px; }
+.pg-fresh, .pg-flag { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.pg-fresh.stale { color: var(--warn-ink); }
+.pg-flag { color: var(--ink); }
 .pg-tip { position: fixed; z-index: 60; padding: 10px 12px; border: 2px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); box-shadow: var(--shadow-pop); font-size: 12px; line-height: 1.4; pointer-events: none; }
 .pg-tip[hidden] { display: none; }
 .pg-tip-h { display: block; margin-bottom: 4px; }

@@ -45,7 +45,18 @@ export interface ProjectSummary {
   goal?: string;
   goalFrom?: string;
   /** Where it stands: a toolkit project's current stage and its stage verdicts and decisions. */
-  phase?: { label: string; from: string; stages: StageVerdict[]; decisions: { stage: string; decision: string; status: string }[] };
+  phase?: {
+    label: string;
+    from: string;
+    stages: StageVerdict[];
+    decisions: { stage: string; decision: string; status: string }[];
+    /** How fresh the office's own check is ("checked on main @abc1234, 3 min ago"), when the label is the office's derivation. */
+    fresh?: string;
+    /** PROJECT.md's own "Current stage" line, as written. */
+    line?: string;
+    /** What doesn't add up between the register and gate-check (shared/stage-derive.ts). */
+    flags?: string[];
+  };
   progress: {
     issuesOpen: number;
     /** Closed lately (GitHub's list the board keeps is the latest 40), so "40+" when it's full. */

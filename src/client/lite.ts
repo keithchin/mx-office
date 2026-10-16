@@ -53,6 +53,7 @@ import { gitView } from './ui/git';
 import { modelView } from './ui/model';
 import type { NeedTarget } from './ui/needsyou/logic';
 import { nudgeMember } from './ui/roster/api';
+import { goStageFix } from './ui/stage/fix';
 import { goToOfficeButton } from './ui/viewpick';
 import { flatMenu } from './shared/flatmenu';
 import { tabBadges } from './ui/badge';
@@ -411,6 +412,7 @@ function goToNeed(t: NeedTarget) {
   }
   if (t.to === 'budget') return budget.go(t);
   if (t.to === 'nudge') return void nudgeMember(store.floor, t.role);
+  if (t.to === 'stage-fix') return void goStageFix(t.floor, () => needs.refresh());
   if (t.to === 'stuck') return openStuck(t.id);
   if (t.to === 'ask') return void goAsk(t);
   if (t.to === 'signoff') return void goSignoff(t, () => void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) }, true).then(() => needs.refresh()));

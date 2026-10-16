@@ -9,6 +9,7 @@ import './setup-panel.css';
 import type { Net } from '../net';
 import { staleText, type SetupView } from '../../shared/wizard';
 import { waitsOnPerson } from '../../shared/progress';
+import { freshnessText, stageLabel } from '../../shared/stage-derive';
 import { h } from './dom';
 import { wizardApi } from './wizard/api';
 import { openWizard } from './wizard/open';
@@ -81,6 +82,19 @@ function staleCheckout(v: SetupView): HTMLElement | null {
   return v.checkout ? h('p.setup-stale', { role: 'note' }, '⚠️ ', staleText(v.checkout, 'the stages below are')) : null;
 }
 
+/** Where the office says the project is, from its own gate-check, how fresh that is, and what doesn't add up (shared/stage-derive.ts). */
+function stageFresh(v: SetupView): HTMLElement | null {
+  const e = v.stage;
+  if (!e) return null;
+  const bad = !!e.check.error || !!e.check.stale || e.check.source === 'committed';
+  return h(
+    'div.setup-fresh',
+    {},
+    h('p', { class: bad ? 'stale' : '' }, h('strong', {}, e.stage ? stageLabel(e.stage) : 'Stage unknown'), ` · ${freshnessText(e.check, Date.now())}`),
+    ...e.flags.map((f) => h('p.setup-flag', { role: 'note' }, `ℹ️ ${f.text}`)),
+  );
+}
+
 function panel(el: HTMLElement, floor: string, v: SetupView, deps: SetupPanelDeps): HTMLElement {
   const recheck = h('button.btn', { type: 'button', disabled: v.checking, title: "Admins: runs the toolkit's gate-check.sh over this project (about a minute) so these verdicts are fresh" }, v.checking ? '⏳ Checking gates…' : '🔄 Re-check gates');
   recheck.addEventListener('click', async () => {
@@ -112,6 +126,7 @@ function panel(el: HTMLElement, floor: string, v: SetupView, deps: SetupPanelDep
       v.admin ? recheck : null,
     ),
     staleCheckout(v),
+    stageFresh(v),
     toolkitRow(floor, () => void renderSetup(el, floor, deps, true)),
     h(
       'ol.setup-stages',
@@ -138,6 +153,6 @@ function panel(el: HTMLElement, floor: string, v: SetupView, deps: SetupPanelDep
           : "The stage verdicts above come from the project's gate dashboard (index.html), which the toolkit's gate-check.sh writes whenever an agent runs it. Re-check gates runs gate-check.sh now, on the office's machine, over this project's checkout. It takes about a minute, rewrites index.html and the 'Current stage' line in PROJECT.md (left uncommitted, for the next commit), and the panel then shows the fresh verdicts. It doesn't change answers or decisions, start agents, or push anything. Admins only, because it runs a script and writes files in the project.",
       ),
     ),
-    h('p.setup-foot', {}, `This panel goes away once Stage 4 (the build plan) is confirmed.${v.checkedAt ? ` Gates last checked ${new Date(v.checkedAt).toLocaleTimeString()}.` : ''}`),
+    h('p.setup-foot', {}, `This panel goes away once Stage 4 (the build plan) is confirmed.${v.checkedAt ? ` Gates last checked by the office ${new Date(v.checkedAt).toLocaleTimeString()}.` : ''}`),
   );
 }

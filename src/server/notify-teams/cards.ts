@@ -36,6 +36,8 @@ export interface DigestData {
   cap?: number;
   /** Toolkit stages by status, when the floor is a toolkit project. */
   stages?: { passed: number; total: number; waiting: string[]; next?: string };
+  /** "Stage 5 · Build · checked on main @abc1234, 3 min ago": the office's own derivation (shared/stage-derive.ts). */
+  stage?: string;
   /** The three open escalations Jeff would have resolved first (or the loudest, oldest, unranked). */
   topEscalations: { title: string; urgency: string; rank?: number }[];
   link?: string;
@@ -149,6 +151,7 @@ export function digestCard(d: DigestData): TeamsMessage {
     { title: 'Needs you now', value: d.openNeeds ? `${d.openNeeds} (${d.redCount} red)` : 'nothing' },
   ];
   if (d.spent !== undefined) facts.push({ title: 'Spend today', value: d.cap !== undefined ? `${money(d.spent)} of ${money(d.cap)} cap` : money(d.spent) });
+  if (d.stage) facts.push({ title: 'Stage', value: plain(d.stage) });
   if (d.stages) facts.push({ title: 'Stages (gates)', value: `${d.stages.passed} of ${d.stages.total} passed${d.stages.next ? ` · next: ${d.stages.next}` : ''}` });
   const body: unknown[] = [text(plain(`📋 Daily digest: ${d.project}`), { size: 'Large', weight: 'Bolder' }), { type: 'FactSet', facts }];
   if (d.merges.length) body.push(text('**Merged**', { separator: true }), text(d.merges.slice(0, 8).map((m) => `- #${m.number} ${plain(oneLine(m.title, 90))}`).join('\n')));

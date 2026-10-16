@@ -9,6 +9,7 @@ import { lastSlot, type StandupSchedule } from '../../shared/roster/schedule.js'
 import type { SetupView } from '../../shared/wizard.js';
 import type { DigestData } from './cards.js';
 import { manualWaiting } from '../../shared/gate-play.js';
+import { stageHeadline } from '../../shared/stage-derive.js';
 
 /** With no standup compiled, the digest goes this long after the slot. */
 export const DIGEST_FALLBACK_MS = 30 * 60_000;
@@ -75,6 +76,8 @@ export function buildDigest(i: DigestInput): DigestData {
     ...(i.spent !== undefined ? { spent: i.spent } : {}),
     ...(i.cap !== undefined ? { cap: i.cap } : {}),
     ...(stages ? { stages } : {}),
+    // Where the project is as the office derived it, and how fresh that is (shared/stage-derive.ts).
+    ...(i.setup?.stage ? { stage: stageHeadline(i.setup.stage, i.now) } : {}),
     topEscalations,
     ...(i.link ? { link: i.link } : {}),
   };
