@@ -1,7 +1,7 @@
 // Portfolios' routes (server/portfolios/). Reading is for anyone signed in; every change is an admin's
 // (checked here, on the server), from the office's own page, and audited:
 //   GET  /api/portfolios                 every portfolio, its projects, its brain as last read; the ungrouped projects
-//   POST /api/portfolios/action          {action: create|add|connect|disconnect, portfolio?, label?, floor?, path?}
+//   POST /api/portfolios/action          {action: create|rename|add|connect|disconnect, portfolio?, label?, floor?, path?}
 //   GET  /api/portfolios/context?floor=  what a project already has wired (shown before Add to portfolio)
 //   GET  /api/portfolios/changes?floor=  the project's brain-change and wiring cards, for Needs you
 //   POST /api/portfolios/card            {floor, act: rehire|dismiss|rewire|dismiss-wiring}: a card's button
@@ -52,6 +52,13 @@ export const portfolioRoutes = {
           const p = await s.create(str(body.label, 80) ?? '', by);
           return typeof p === 'string' ? send(res, 400, { error: p }) : send(res, 200, { portfolio: p, view: await s.view(true) });
         }
+        case 'rename': {
+          // A new name for a client (same rules as create); its id never changes.
+          if (!pid) return send(res, 400, { error: 'Say which client' });
+          const err = await s.rename(pid, typeof body.label === 'string' ? body.label : '', by);
+          if (err) return send(res, err === 'No such client' ? 404 : 400, { error: err });
+          return send(res, 200, { view: await s.view(true) });
+        }
         case 'add': {
           const floor = str(body.floor, 200);
           if (!pid || !floor) return send(res, 400, { error: 'Say which client and which project' });
@@ -75,7 +82,7 @@ export const portfolioRoutes = {
           return send(res, 200, { ...r, view: await s.view(true) });
         }
         default:
-          return send(res, 400, { error: 'action is one of create, add, connect, disconnect' });
+          return send(res, 400, { error: 'action is one of create, rename, add, connect, disconnect' });
       }
     },
   },
