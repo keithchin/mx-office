@@ -100,12 +100,14 @@ test('the stage is the one active when the spend happened', (t) => {
   assert.deepEqual(v.byStage.map((r) => [r.key, r.cost]), [['3', 1], ['4', 2]]);
 });
 
-test('the split always adds up to the manager\'s own delta, even when Claude Code\'s tally corrects it', () => {
+test('the split always adds up to the manager\'s own delta, and a total that went down books nothing', () => {
   const pieces = splitDelta({ cost: 1, calls: 2, parts: { '|opus': { cost: 1, calls: 2 } } }, u(2.5, 4, { model: 'opus', parts: { '|opus': { cost: 1.5, calls: 3 }, 'tester|haiku': { cost: 0.5, calls: 1 } } }), 'opus');
   assert.equal(Math.round(pieces.reduce((n, p) => n + p.cost, 0) * 1e9) / 1e9, 1.5);
   assert.equal(pieces.reduce((n, p) => n + p.calls, 0), 2);
-  // A correction downwards (the end-of-session tally) goes to the session's own model.
-  assert.deepEqual(splitDelta({ cost: 3, calls: 4 }, u(2.8, 4, { model: 'opus' }), 'sonnet'), [{ sub: '', model: 'opus', cost: 2.8 - 3, calls: 0 }]);
+  // A total that went down (the usage tracker never lowers it itself) books nothing: a ledger day is never negative.
+  assert.deepEqual(splitDelta({ cost: 3, calls: 4 }, u(2.8, 4, { model: 'opus' }), 'sonnet'), []);
+  // A raise from the end-of-session tally, with no parts to split by, goes to the session's own model.
+  assert.deepEqual(splitDelta({ cost: 3, calls: 4 }, u(3.5, 4, { model: 'opus' }), 'sonnet'), [{ sub: '', model: 'opus', cost: 0.5, calls: 0 }]);
 });
 
 test('the transcript tracker keeps the parts by subagent type and model', (t) => {

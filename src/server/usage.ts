@@ -13,8 +13,11 @@ import { priceOf } from './prices.js';
  * `usage` (input, output, cache write, cache read) and the model, so tokens are exact and the cost
  * is priced here from PRICES. Subagents (the Agent tool) log to <session>/subagents/*.jsonl next to
  * it; those are read too. When a session ends, Claude Code appends a `cost-state` line with its own
- * tally — that also covers calls that never reach the transcript (titles, summaries) — and the
- * worker's figures snap to it; anything logged after (a resume) is estimated on top again.
+ * tally — that also covers calls that never reach the transcript (titles, summaries). The tally is read
+ * per run: what it grew by since its previous line, or all of it when it went down (a session resumed in a
+ * new process starts its tally again), and each run books the larger of that and the office's own
+ * estimate of the run. So the figure never goes down and a resumed session keeps its earlier runs' cost;
+ * anything logged after (a resume) is estimated on top again.
  *
  * Each API request is counted once per worker. Claude Code writes a response as several lines, one
  * per content block, sharing the message id (and request id) and usage; those lines need not be next
@@ -80,8 +83,10 @@ export interface UsageTracker {
   files: Record<string, FileCursor>;
   /** The requests counted so far, across all of the worker's files (see SeenIds); made on first use. */
   seen?: SeenIds;
-  /** Claude Code's own tally from the end of a session; `at` is the transcript time it covers up to. */
+  /** What the runs up to Claude Code's last tally booked (see the cost-state line); `at` is the transcript time it covers up to. */
   base?: Usage & { at: number };
+  /** Claude Code's own tally as its last cost-state line gave it, to read the next one against. */
+  cli?: Usage;
   /** Estimated from the messages logged after `base`. */
   since: Usage;
   /** Latest transcript timestamp seen. */
@@ -132,6 +137,9 @@ export function restoreTracker(saved: any): UsageTracker {
   }
   const base = asUsage(saved.base);
   if (base) t.base = { ...base, at: num(saved.base.at) };
+  // Saved before `cli` was kept: the base was then Claude Code's last tally itself.
+  const cli = asUsage(saved.cli) ?? (t.base ? { ...t.base, calls: 0 } : undefined);
+  if (cli) t.cli = { input: cli.input, output: cli.output, cacheWrite: cli.cacheWrite, cacheRead: cli.cacheRead, cost: cli.cost, calls: 0 };
   t.since = asUsage(saved.since) ?? zeroUsage();
   if (num(saved.at)) t.at = saved.at;
   if (isModelId(saved.model)) t.model = saved.model;
@@ -248,17 +256,24 @@ export function applyLine(t: UsageTracker, cur: FileCursor, line: any, main: boo
     return true;
   }
   if (line.type === 'cost-state' && typeof line.totalCostUSD === 'number' && line.modelUsage && typeof line.modelUsage === 'object' && !line.hasUnknownModelCost) {
-    const base = zeroUsage();
+    const cli = zeroUsage();
     for (const m of Object.values<any>(line.modelUsage)) {
       if (!m || typeof m !== 'object') continue;
-      base.input += num(m.inputTokens);
-      base.output += num(m.outputTokens);
-      base.cacheWrite += num(m.cacheCreationInputTokens);
-      base.cacheRead += num(m.cacheReadInputTokens);
+      cli.input += num(m.inputTokens);
+      cli.output += num(m.outputTokens);
+      cli.cacheWrite += num(m.cacheCreationInputTokens);
+      cli.cacheRead += num(m.cacheReadInputTokens);
     }
-    base.cost = num(line.totalCostUSD);
-    base.calls = trackerUsage(t).calls;
-    t.base = { ...base, at: t.at ?? 0 };
+    cli.cost = num(line.totalCostUSD);
+    // This run, as Claude Code counts it: what its tally grew by, or all of it when the tally started again
+    // (a resume in a new process; seen in the office's own transcripts, a cost-state far below the messages
+    // before it). Booked at the larger of that and the office's estimate of the run, field by field: Claude
+    // Code's figure has the calls that never reach the transcript, the estimate has the runs it doesn't.
+    const run = t.cli && cli.cost >= t.cli.cost ? growth(t.cli, cli) : cli;
+    const booked = maxUsage(t.since, { ...run, calls: 0 });
+    const calls = trackerUsage(t).calls;
+    t.base = { ...addUsage(t.base ?? zeroUsage(), booked), calls, at: t.at ?? 0 };
+    t.cli = cli;
     t.since = zeroUsage();
     return true;
   }
