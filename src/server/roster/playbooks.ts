@@ -22,6 +22,7 @@ import { toolkitDir as officeToolkitDir } from '../connections/store.js';
 import { alsoCovers, covers, isIdentity, managerOf, subagentDefsOf, writerOf, type Coverage } from '../../shared/roster/coverage.js';
 import { coverLines, coverTeamLine, QUESTIONS_LINE } from './playbook-cover.js';
 import { blockerLines } from './playbook-blockers.js';
+import { CORRECTION_LIMIT } from '../../shared/design/context.js';
 import { sourcesDirOf, sourcesLines } from '../../shared/brief-map.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
@@ -53,6 +54,8 @@ export interface PlaybookContext {
   toolkit?: { dir: string; sha?: string };
   /** The floor's sources/ folder (the input documents, git-ignored) on the office's machine, when it has one: whoever does the analysis is told to read and inventory it there. */
   sources?: string;
+  /** The floor has a design-system binding (server/design/): the design roles' Playbooks get its one rule. */
+  designBound?: boolean;
 }
 
 /** The project's sources/ folder for its Playbooks, when it has one (one stat, at a hire or a rewrite). */
@@ -137,6 +140,8 @@ const FOLDERS = [
  * what it covers there, which the Testing tab reads as a recorded link. Prompts, never a block.
  */
 const TEST_FIRST = '- Test first: before a task is built, write or extend its test (a journey or unit test), and name the criteria it covers in it (`Covers: AC-04, BR012`).';
+/** A bound design system (server/design/): a task carrying a `Design:` line gets its package and patterns. */
+const DESIGN_BOUND = '- When a task has a `Design:` line, use that design system’s package and patterns (its guidance file says how); propose an exception by escalating rather than inventing variants, and stop after ' + CORRECTION_LIMIT + ' automated design-correction attempts on one unresolved issue, then escalate.';
 const COVERS = '- Before opening a pull request, run the task’s tests; put `Covers: AC-xx, BRyyy` in its description (the criteria and rules it delivers).';
 
 /**
@@ -176,9 +181,9 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         '- Hiring: Leads are hired from the office\'s Team tab with their fixed names. Do not hire extra workers for a Lead\'s job; a Lead may hire one only for real parallel work (e.g. two test suites).',
       ];
     case 'lead-designer':
-      return ['## Design', '- Every page follows the Atlas design system and the agreed wireframes. Review design changes and record approvals (or what must change) in `docs/team/design.md`.', '- Hand page specs to the Lead Developer; never build pages yourself.'];
+      return ['## Design', '- Every page follows the Atlas design system and the agreed wireframes. Review design changes and record approvals (or what must change) in `docs/team/design.md`.', ...(ctx.designBound ? [DESIGN_BOUND] : []), '- Hand page specs to the Lead Developer; never build pages yourself.'];
     case 'lead-developer':
-      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', LAYOUT, FOLDERS, IMPACT, COVERS, '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
+      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', LAYOUT, FOLDERS, IMPACT, COVERS, ...(ctx.designBound ? [DESIGN_BOUND] : []), '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
     case 'lead-tester':
       return ['## Testing', '- Unit tests live in `tests/*.test.mdl`, Playwright e2e in `tests/e2e`; follow `.ai-context/skills/qa-tests` and the PR pipeline when the repo has them.', '- Approve test plans and results; when the framework is the bottleneck, improve it (and say so in the journal).', '- A failing test that shows the model is wrong is a finding for the Lead Developer, never a fix you make in MDL.', TEST_FIRST, MF_TESTS];
     case 'solo-lead':
@@ -192,6 +197,7 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         TEST_FIRST,
         MF_TESTS,
         COVERS,
+        ...(ctx.designBound ? [DESIGN_BOUND] : []),
         QUESTIONS_LINE,
         `- The office asks you for a daily standup, then hands you the page (\`${standupPath('YYYY-MM-DD')}\`) to finish as your daily note: a **Summary** at the top (anything it says needs the Project Manager already in an open escalation), then commit and push.`,
         '- Nobody else relays to the Project Manager: escalate yourself whatever needs them.',

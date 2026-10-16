@@ -8,6 +8,7 @@
 
 import type { Usage } from '../../shared/protocol.js';
 import type { Seen } from './ledger.js';
+import { tokensOfUsage } from './tokens.js';
 
 export interface Piece {
   /** The subagent type, or '' for the session itself. */
@@ -62,7 +63,7 @@ export function splitDelta(seen: Seen | undefined, usage: Usage, fallbackModel: 
 }
 
 /** What to remember of the usage for the next delta. */
-export const seenOf = (u: Usage): Seen => ({ cost: u.cost, calls: u.calls, ...(u.parts ? { parts: structuredClone(u.parts) } : {}) });
+export const seenOf = (u: Usage): Seen => ({ cost: u.cost, calls: u.calls, ...(u.parts ? { parts: structuredClone(u.parts) } : {}), tok: tokensOfUsage(u) });
 
 /** The issue a worker is on: its queue task's, else the one its prompt names ("Work on GitHub issue #4"). */
 export function issueOf(taskIssue: number | undefined, prompt: string | undefined): number | undefined {

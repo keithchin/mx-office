@@ -15,6 +15,7 @@ import { repoFrom, repoText } from '../../../../shared/brief';
 import type { Flow } from './index';
 import { portfolioField } from './portfolio-field';
 import { localOnlyField } from './local-only-field';
+import { designField } from './design-field';
 
 /** The intake questions the brief answers (shared/brief-map.ts) and the ones the flow decides itself. */
 export const FROM_BRIEF = [2, 4, 5, 8];
@@ -116,7 +117,7 @@ export function advancedPanel(flow: Flow, redraw: () => void) {
     );
     parts.push(clientAndDiscovery(flow, d, redraw, text));
     parts.push(otherQuestions(flow, d));
-    parts.push(portfolioField(d, redraw));
+    parts.push(portfolioField(d, redraw), designField(d, redraw));
     parts.push(h('div.nw-field', {}, h('span.nw-lbl', {}, 'Toolkit version'), h('span', {}, 'The newest commit of the toolkit fork, pinned for this project when it’s created (see Toolkit versions in the docs).')));
     if (flow.info.problems.length) parts.push(h('div.nw-warn', {}, h('strong', {}, '⚠️ The office’s machine is missing something the toolkit needs:'), h('ul', {}, ...flow.info.problems.map((p) => h('li', {}, p)))));
     const root = h('div', {}, ...parts);

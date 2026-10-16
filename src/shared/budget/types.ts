@@ -50,7 +50,24 @@ export interface SpendRow {
   est?: boolean;
   /** A provider the office can't price (Codex, OpenCode, Jev…): calls are counted, cost is not. */
   unmetered?: boolean;
+  /** What the task was, as the office knew at dispatch (its role or subagent and its words): design, design correction or other. */
+  kind?: 'design' | 'design-correction' | 'other';
+  /** The project's design system binding the work ran under (`<id>@v<n>#<digest7>`), or 'none'. */
+  design?: string;
+  /** The four token categories, each on its own (never summed into one figure); absent when `usage` is missing. */
+  tokens?: RowTokens;
+  /** observed: the worker's own counts; estimated: shared out between the session and its subagents by cost; missing: no baseline (never booked as 0). */
+  usage?: UsageFlag;
 }
+
+export interface RowTokens {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+export type UsageFlag = 'observed' | 'estimated' | 'missing';
 
 /** A day of the ledger, kept forever: the total and its splits. */
 export interface DayRollup {

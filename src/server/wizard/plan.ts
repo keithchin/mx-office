@@ -4,6 +4,7 @@
 import { ENTRY_MODES, interviewModeOf, ownerProblem, PROJECT_ROLES, slugProblem, type AnswerKind, type EntryMode, type IntakeAnswer, type ProjectPlan, type ProjectRole } from '../../shared/wizard.js';
 import { cleanAppId } from './mendix-app.js';
 import { isPortfolioId } from '../../shared/portfolios.js';
+import { cleanPlanDesign } from './design-step.js';
 import { cleanChoice } from '../../shared/budget/levels.js';
 import { isTeamShape, shapeForRoles } from '../../shared/roster/coverage.js';
 import { checkTeamFrom, cleanTeamFrom, type KnownSource } from '../../shared/team-from.js';
@@ -76,6 +77,7 @@ export function cleanPlan(raw: unknown, versions: string[], org: string, teams?:
     ...(r.customTeam === true ? { customTeam: true } : {}),
     ...(cleanPlanBrief(r.brief) ? { brief: cleanPlanBrief(r.brief) } : {}),
     ...(isPortfolioId(r.portfolio) ? { portfolio: r.portfolio } : {}),
+    ...(cleanPlanDesign(r.design) ? { design: cleanPlanDesign(r.design) } : {}),
     // Off GitHub: a new repository only (a change's repository is on GitHub already). The source folder comes from the draft only (Wizard.start).
     ...(kind === 'new' && r.localOnly === true ? { localOnly: true } : {}),
     ...(teamFrom ? { teamFrom } : {}),

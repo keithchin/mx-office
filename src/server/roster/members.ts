@@ -21,6 +21,7 @@ import { audit, byWhom } from '../audit/index.js';
 import { hireHoldOf } from '../project-run/store.js';
 import { coveredBy, isIdentity, managerOf } from '../../shared/roster/coverage.js';
 import type { RosterData } from './store.js';
+import { designBound } from '../design/bound.js';
 
 /** What a hire on a Solo or Startup team is told of the team (undefined on an Enterprise one: its first message is as before). */
 function teamLine(d: RosterData, role: RoleId): string | undefined {
@@ -41,7 +42,7 @@ export class Members {
     if (ensureSubagentNames(d)) this.roster.file(floor.id).save();
     const names = Object.fromEntries(ROLES.map((r) => [r.id, d.members[r.id].name])) as PlaybookContext['names'];
     const m = d.members[role];
-    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role), subagentNames: namesOf(d, role), earlyDrafts: d.settings.earlyDrafts, maxSubagents: d.settings.maxSubagents, coverage: d.coverage, toolkit: toolkitOf(floor.dir), ...sourcesOf(floor.dir) };
+    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role), subagentNames: namesOf(d, role), earlyDrafts: d.settings.earlyDrafts, maxSubagents: d.settings.maxSubagents, coverage: d.coverage, toolkit: toolkitOf(floor.dir), ...sourcesOf(floor.dir), ...(designBound(floor.id) ? { designBound: true } : {}) };
   }
 
   /**

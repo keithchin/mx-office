@@ -57,6 +57,7 @@ import { versionRoutes } from './version.js';
 import { portfolioRoutes } from './portfolios.js';
 import { profileRoutes } from './profiles.js';
 import { teamSourceRoutes } from './team-sources.js';
+import { designRoutes } from './design.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -205,6 +206,12 @@ export const routes: readonly Route[] = [
   profileRoutes.view,
   profileRoutes.act,
   teamSourceRoutes.list,
+  // Client design systems: versions, project bindings, the Design gallery and its ✋ card (design/).
+  designRoutes.view,
+  designRoutes.choices,
+  designRoutes.needs,
+  designRoutes.file,
+  designRoutes.act,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,

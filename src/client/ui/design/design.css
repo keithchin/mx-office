@@ -1,0 +1,74 @@
+/* Design systems (server/design/): the client's Design system part (clients/design.ts), the Branded Atlas form (form.ts), the wizard's design line and the Design gallery tab (page.ts). The page's own tokens; the preview's colours are the client's. */
+.ds-part { gap: 12px; }
+.ds-modes { display: flex; flex-wrap: wrap; gap: 8px; }
+.ds-mode { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; flex: 1 1 200px; min-width: 0; }
+.ds-mode:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.ds-mode span { display: flex; flex-direction: column; gap: 2px; }
+.ds-mode small { color: var(--ink-2); font-size: 12px; }
+.ds-form { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .ds-form { grid-template-columns: minmax(0, 1fr); } }
+.ds-fields { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ds-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; min-width: 0; }
+.ds-field > span:first-child { color: var(--ink-2); }
+.ds-field input[type='text'], .ds-field select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); min-width: 0; }
+.ds-colours { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.ds-colour-in { display: flex; gap: 6px; align-items: center; }
+.ds-colour-in input[type='color'] { width: 34px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; flex: none; }
+.ds-colour-in .ds-hex { width: 100%; font-family: ui-monospace, Consolas, monospace; font-size: 12px; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); min-width: 0; }
+.ds-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ds-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ds-preview { padding: 0 0 12px; overflow: hidden; border: 1px solid var(--line); }
+.ds-pv-bar { padding: 8px 12px; font-weight: 600; font-size: 12px; }
+.ds-pv-card { margin: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.ds-pv-label { padding: 2px 8px; font-size: 12px; font-weight: 600; }
+.ds-pv-input { display: flex; align-items: center; padding: 0 8px; width: 100%; box-sizing: border-box; background: transparent; }
+.ds-pv-btns { display: flex; gap: 8px; }
+.ds-pv-btn { display: inline-flex; align-items: center; padding: 0 14px; font-weight: 600; }
+.ds-checks { list-style: none; margin: 0; padding: 0; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
+.ds-checks li[data-ok='false'] { color: var(--warn-ink); }
+.ds-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ds-versions { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ds-versions th { text-align: left; font-weight: 600; color: var(--ink-2); font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.ds-versions td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.ds-versions td .pf-chip { margin-left: 6px; }
+.ds-acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 760px) {
+  .ds-versions thead { display: none; }
+  .ds-versions tr { display: grid; grid-template-columns: 1fr 1fr; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .ds-versions td { border: none; padding: 2px 4px; }
+}
+
+/* The wizard's design line (ui/wizard/new/design-field.ts). */
+.nw-design { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.nw-design-rec { font-weight: 600; }
+.nw-design-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.nw-design-acts .btn[aria-pressed='true'] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+
+/* The Design gallery tab (ui/design/page.ts). */
+.dg-page { display: flex; flex-direction: column; gap: 16px; padding: 4px 0 40px; max-width: 1200px; }
+.dg-head { display: flex; flex-direction: column; gap: 6px; }
+.dg-head h2 { margin: 0; font-size: 20px; }
+/* Portal's page header already says Design gallery: the tab's own heading goes, its binding line stays. */
+html[data-theme^='portal'] body.lite.pt-has-nav #design-view .dg-head > h2 { display: none; }
+.dg-sec { display: flex; flex-direction: column; gap: 10px; }
+.dg-sec h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.dg-patterns { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.dg-pattern { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dg-pattern h4 { margin: 0; font-size: 15px; }
+.dg-pattern code { font-size: 12px; }
+.dg-states { display: flex; flex-wrap: wrap; gap: 4px; }
+.dg-state { padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; background: none; color: var(--ink); cursor: pointer; }
+.dg-state[aria-pressed='true'] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.dg-how { margin: 0; font-size: 13px; color: var(--ink-2); min-height: 2.6em; }
+.dg-pattern ul { margin: 0; padding-left: 18px; font-size: 13px; }
+.dg-pattern details pre { margin: 6px 0 0; padding: 8px; overflow-x: auto; font-size: 11.5px; background: color-mix(in srgb, var(--ink) 5%, transparent); border-radius: 6px; max-height: 260px; }
+.dg-use { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+.dg-use input[type='text'] { width: 140px; font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); }
+.dg-used { font-size: 12px; color: var(--ink-2); }
+.dg-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.dg-shot { margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-2); }
+.dg-shot img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.dg-shot[data-old='true'] img { opacity: 0.85; }
+.dg-card { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); display: flex; flex-direction: column; gap: 8px; }
+.dg-card[data-tone='warn'] { border-color: color-mix(in srgb, var(--warn-ink) 50%, var(--line)); }
+.dg-card ul { margin: 0; padding-left: 18px; font-size: 13px; }

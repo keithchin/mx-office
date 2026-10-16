@@ -18,6 +18,8 @@ import { onBackgroundSpend } from './meter.js';
 import { BudgetService } from './service.js';
 import { currentStage } from './stage.js';
 import { currentTaskIds } from '../tasks/index.js';
+import { designOf } from '../design/index.js';
+import { pointerOf } from '../../shared/design/types.js';
 import { rankingReport } from '../ranking/index.js';
 import { covers, subagentDefsOf } from '../../shared/roster/coverage.js';
 
@@ -62,6 +64,25 @@ export function budgetOf(ctx: Ctx): BudgetService {
         // no team on it
       }
       return ctx.floors.get(floorId)?.queue?.state().tasks.find((t) => t.workerId === workerId && t.status === 'running')?.taskId;
+    },
+    // Design systems' measurement: the task's words and role (its kind) and the floor's binding (server/design/).
+    workOf: (floorId, workerId) => {
+      let design = 'none';
+      try {
+        const b = designOf(ctx).projects.binding(floorId);
+        if (b) design = pointerOf(b);
+      } catch {
+        // no design systems in this office's context
+      }
+      try {
+        const roster = rosterOf(ctx);
+        const floor = ctx.floors.get(floorId);
+        const role = floor ? roster.roleOf(teamFloor(ctx, floor), workerId) : undefined;
+        const text = role ? roster.data(floorId).members[role].task?.text : ctx.floors.get(floorId)?.queue?.state().tasks.find((t) => t.workerId === workerId)?.prompt;
+        return { design, ...(role ? { role } : {}), ...(text ? { text } : {}) };
+      } catch {
+        return { design };
+      }
     },
     stageOf: currentStage,
     officeLedger: ctx.ledger,

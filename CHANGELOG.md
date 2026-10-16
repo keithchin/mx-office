@@ -6,7 +6,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Added
+
+- **Design systems (Increment 1).** A client's page has a **Design system** part: None (today's behaviour), Atlas defaults, or **Branded Atlas**, a short form (name, primary and status colours, background, cards and text, a font with its fallback, density and corners) from which the office sets all 40 of mxcli's theme tokens, light and dark, with a live contrast check. **Publish** freezes an immutable version in the office's data folder with its digest and the mxcli version it was made with; **Approve**, **Make default** and **Edit as new draft** follow. Changing the default never changes a project that already adopted a version. Branded Atlas covers colours, type, density and shape: logo, fonts, layouts and the toolkit's extra components are separate work. The docs have it under Using the Office › Design systems.
+  - **New projects**: ✨ New project › Advanced shows the client's recommended version with **Use this version**, **Choose another** and **Keep the app's design**. With Use, the setup applies it right after the app is created (`mxcli theme create` + `apply`, off the event loop) and checks it itself: a `skipped` block is a failure, the fenced blocks must name the package, and the `.mpr` and Atlas core must be unchanged. A Retry or a restart never applies it twice; a failure never stops the project being created and becomes a ✋ card.
+  - **Existing apps** are never changed automatically: the office scans their styling (Atlas variables that would be overridden, custom rules, theme modules) and Needs you asks **Adopt … in this project?** with **Keep existing design** as the default. Adopt applies it on a branch of its own (`agent-office/design-…`) to be merged like any other change.
+  - **Project Management › Design gallery**: the adopted version, the five administration patterns (list with search, details, validated form, approval and status, empty/loading/error states) with their states, constraints and a Mendix reference, **Use for** an issue or a page (recorded only, no model call), and **Capture now** screenshots of the running live app, kept as history when it stops.
+  - **Agents** on a bound project get one `Design:` line under each task's `Task:` line (at most 300 characters) pointing at a small guidance file: use the bound package and patterns, propose an exception instead of new variants, at most two automated design-correction attempts, then escalate. What each task was given is recorded, never that it was read. Budget ledger rows now also keep the task's kind (design, design correction, other), the design version and the four token categories (input, output, cache read, cache write), marked observed, estimated or missing (never 0).
 
 ## 2026-10-16 · release 51 (`768e4c0`)
 

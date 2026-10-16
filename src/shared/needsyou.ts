@@ -23,6 +23,8 @@ import { foldCards, type Entry } from './decisions/group.js';
 import { duplicatesCandidate } from './decisions/duplicates-card.js';
 import type { DecisionCard, DecisionSplit } from './decisions/types.js';
 import { brainCandidates } from './decisions/brain.js';
+import { designCandidates } from './decisions/design.js';
+import type { DesignNeedView } from './design/views.js';
 import type { BrainAct, BrainChangeView } from './portfolios.js';
 
 /** Where an item's button takes you. */
@@ -52,9 +54,11 @@ export type NeedTarget =
   /** The Questions page (ui/questions/): the analysts' open questions for the client, at one question (`key`) when said. */
   | { to: 'questions'; key?: string }
   /** A company brain card's button (server/portfolios/, shared/decisions/brain.ts): Rehire, Dismiss, Wire again. */
-  | { to: 'brain'; floor: string; act: BrainAct };
+  | { to: 'brain'; floor: string; act: BrainAct }
+  /** The design system's ✋ card (server/design/, shared/decisions/design.ts): Adopt, Keep existing design, or open the Design gallery. */
+  | { to: 'design'; floor: string; act: 'adopt' | 'keep' | 'open' };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | 'brain' | AskKind;
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | 'brain' | 'design' | AskKind;
 
 /** How long a team member sits idle with an open task (nothing escalated) before Needs you says so. */
 export const IDLE_TASK_MS = 10 * 60_000;
@@ -133,6 +137,8 @@ export interface NeedsInput {
   splits?: readonly DecisionSplit[];
   /** The project's company brain cards (server/portfolios/): a brain change under a live session, incomplete wiring. */
   brain?: BrainChangeView;
+  /** The project's design-system adoption waiting on you (server/design/): one ✋ card. */
+  design?: DesignNeedView;
   /** Now (ms), for how long someone has been idle: Date.now() unless a test says. */
   now?: number;
 }
@@ -197,6 +203,8 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   for (const c of askCandidates(i.asks, i.floor)) put(c);
   // The company brain changed under a live session, or its wiring is incomplete (server/portfolios/): one card each per project.
   for (const c of brainCandidates(i.brain, i.floor)) put(c);
+  // A design system proposed for this project (server/design/): Adopt or Keep existing design.
+  for (const c of designCandidates(i.design, i.floor)) put(c);
   // The budget: paused at 100 %, or its loudest standing alert (100 %, the forecast over, the threshold) not marked as seen.
   const b = i.budget && i.budget.floor === i.floor ? i.budget : undefined;
   if (b) {

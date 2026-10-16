@@ -45,6 +45,7 @@ import { openStuck } from './ui/stuck/dialog';
 import { goAsk } from './ui/asks/feed';
 import { goSignoff } from './ui/signoff/dialog';
 import { goBrain } from './ui/portfolios/go';
+import { goDesign } from './ui/design/go';
 import { wantQuestion } from './ui/questions/focus';
 import { firmBanner } from './ui/firm/banner';
 import type { FirmFloorStatus } from '../shared/firm/engagement';
@@ -415,6 +416,7 @@ function goToNeed(t: NeedTarget) {
   if (t.to === 'signoff') return void goSignoff(t, () => void renderSetup($('setup'), store.floor ?? undefined, { net, go: (id) => net.send({ t: 'floor.go', floor: id }) }, true).then(() => needs.refresh()));
   if (t.to === 'questions') return (wantQuestion(t.key), showTab('questions'));
   if (t.to === 'brain') return void goBrain(t);
+  if (t.to === 'design') return void goDesign(t);
   if (t.to === 'floor') {
     // Lands on that floor's Command Center, where its Needs you says who is waiting and why.
     showTab('command');
