@@ -149,7 +149,7 @@ export class ChangeAnswer {
         at: l.at,
         ...(l.supersedes ? { supersedes: l.supersedes } : {}),
         ...(l.basis ? { basis: l.basis } : {}),
-        dispatch: records.filter((r) => revOf(r) === l.rev).map((r) => ({ state: r.state, ...(r.confirmedBy ? { confirmedBy: r.confirmedBy } : {}), ...(r.workerName ? { to: r.workerName } : {}) })),
+        dispatch: records.filter((r) => revOf(r) === l.rev).map((r) => ({ state: r.state, ...(r.confirmedBy ? { confirmedBy: r.confirmedBy } : {}), ...(r.workerName ? { to: r.workerName } : {}), ...(r.typedAt !== undefined ? { typedAt: r.typedAt } : {}) })),
         ...(outcome ? { outcome } : {}),
       };
     });

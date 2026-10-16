@@ -71,10 +71,21 @@ export interface DispatchRecord {
   marker: string;
   channel: DispatchChannel;
   state: DispatchState;
-  /** `system`: the office saw it go (typed, or transcript evidence). `person`: someone said "It went through". */
+  /**
+   * `system`: the office saw it arrive (the typed message in the agent's own session, an issue found by its
+   * marker). `person`: someone said "It went through". None on a `submitted` typed to an agent that keeps no
+   * transcript: typed, with nothing to confirm it by.
+   */
   confirmedBy?: 'system' | 'person';
   /** When it was marked in flight (just before the attempt). */
   dispatchedAt?: number;
+  /**
+   * When it was typed into the agent's terminal. Typing is not delivery: the record stays `in-flight` (typed,
+   * not received yet) until the agent's session shows the typed message with its marker (dispatch/typed-watch.ts).
+   */
+  typedAt?: number;
+  /** When the office pressed Enter once more, the text still sitting in the agent's input box (never twice). */
+  enterAt?: number;
   /** The dispatch this one replaces (Send again). */
   supersedes?: string;
   /** The dispatch that replaced this one. */
@@ -138,19 +149,25 @@ export const issueMarker = (proposalId: string, rev: number) => `office-proposal
 /** A typed block: the text and its marker as its own last line. */
 export const withMarker = (text: string, marker: string) => `${text.replace(/\s+$/, '')}\n\n${marker}`;
 
+/** Typed into the agent's terminal, its session not showing it yet: neither delivered nor lost. */
+export const isTypedUnconfirmed = (r: Pick<DispatchRecord, 'state' | 'typedAt'>) => r.state === 'in-flight' && r.typedAt !== undefined;
+
 /** The card's line for a record that needs a person. */
-export function unknownLine(r: Pick<DispatchRecord, 'channel' | 'workerName' | 'state'>): string {
+export function unknownLine(r: Pick<DispatchRecord, 'channel' | 'workerName' | 'state'> & { typedAt?: number }): string {
   if (r.channel === 'github-issue') return 'The issue may or may not have been created.';
   const who = r.workerName ?? 'the agent';
   if (r.state === 'held') return `Your answer is held for ${who}: it goes in once, after their turn.`;
+  if (r.typedAt !== undefined) return `Typed into ${who}'s terminal but not received: check ${who}'s terminal, or Send again.`;
   return `Couldn't confirm your answer was typed to ${who}.`;
 }
 
-/** How a settled state reads: a person's confirmation is never shown as the system's. */
-export function stateWords(r: Pick<DispatchRecord, 'state' | 'confirmedBy'>): string {
+/** How a state reads: a person's confirmation is never shown as the system's, typing never as delivery. */
+export function stateWords(r: Pick<DispatchRecord, 'state' | 'confirmedBy'> & { typedAt?: number }): string {
   switch (r.state) {
     case 'submitted':
-      return 'Typed (the office saw it go)';
+      return r.confirmedBy === 'system' ? 'Received (the office saw it arrive)' : 'Typed (this agent keeps no transcript to confirm it)';
+    case 'in-flight':
+      return r.typedAt !== undefined ? 'Typed, not received yet' : 'Being sent';
     case 'person-confirmed-sent':
       return 'You said it went through (a person’s confirmation, not the office’s)';
     case 'person-chose-resend':
@@ -158,7 +175,7 @@ export function stateWords(r: Pick<DispatchRecord, 'state' | 'confirmedBy'>): st
     case 'person-abandoned':
       return 'Abandoned';
     case 'outcome-unknown':
-      return 'Outcome unknown';
+      return r.typedAt !== undefined ? 'Typed but not received (outcome unknown)' : 'Outcome unknown';
     case 'held':
       return 'Held for after the agent’s turn';
     case 'not-sent':

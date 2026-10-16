@@ -15,7 +15,7 @@ import { randomBytes } from 'node:crypto';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import { OUTCOME_VERDICT, VERDICT_WORD, type Escalation, type EscalationOutcome, type EscalationVerdict } from '../../shared/roster/escalation.js';
 import { escalationKind } from '../../shared/decisions/words.js';
-import type { AnswerRevisionKind, DispatchRecord } from '../../shared/dispatch.js';
+import { isTypedUnconfirmed, type AnswerRevisionKind, type DispatchRecord } from '../../shared/dispatch.js';
 import type { AnswerResult, AnswerSpec, Target } from '../dispatch/service.js';
 import { audit, byWhom } from '../audit/index.js';
 import { isAsleepStatus } from './bench.js';
@@ -144,9 +144,12 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
         const again = await roster.dispatch.dispatch(floor.id, decision, rev, owedRaiser(floor.worker(e.workerId), 'refused when sent: typed once it can be', rev), groupId, a.by);
         if (typeof again !== 'string') raiser = again;
       }
-      const delivered = !!raiser && raiser.channel === 'type' && (raiser.state === 'submitted' || raiser.state === 'held');
+      // Typed, its session not showing it yet: told (delivered: never owed again, never typed twice), and flagged
+      // `typed` until the session shows it (dispatch-hooks.ts applyEscalation); the dispatch record has the truth.
+      const typed = !!raiser && isTypedUnconfirmed(raiser);
+      const delivered = !!raiser && raiser.channel === 'type' && (raiser.state === 'submitted' || raiser.state === 'held' || typed);
       e.status = 'resolved';
-      e.resolution = { verdict, text, by: a.by, at: roster.deps.now(), delivered, ...(a.outcome ? { outcome: a.outcome } : {}), answerRev: rev, ...(raiser ? { dispatchId: raiser.id } : {}), ...(a.supersededBy ? { supersededBy: a.supersededBy } : {}) };
+      e.resolution = { verdict, text, by: a.by, at: roster.deps.now(), delivered, ...(typed ? { typed } : {}), ...(a.outcome ? { outcome: a.outcome } : {}), answerRev: rev, ...(raiser ? { dispatchId: raiser.id } : {}), ...(a.supersededBy ? { supersededBy: a.supersededBy } : {}) };
       afterResolve(roster, floor, e, { verdict, outcome: a.outcome, by: a.by, text, delivered, rehire, later, rev, dispatchId: raiser?.id, groupId, supersededBy: a.supersededBy });
       // The escalation's new state on disk before the answer counts as given (an answered card must not come back open).
       await roster

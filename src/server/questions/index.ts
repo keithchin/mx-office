@@ -10,6 +10,7 @@ import path from 'node:path';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import type { Question, QuestionsNeed, Recipient } from '../../shared/questions.js';
 import type { RecordedLocation } from '../../shared/followthrough.js';
+import { isTypedUnconfirmed } from '../../shared/dispatch.js';
 import { Locator } from '../followthrough/locate.js';
 import { coverOf } from '../../shared/roster/coverage.js';
 import { audit } from '../audit/index.js';
@@ -153,7 +154,8 @@ export function questionsOf(ctx: Ctx): QuestionsService {
       const rec = r.results[0]?.records[0];
       if (!rec) return 'Not sent';
       if (rec.state === 'refused' || rec.state === 'failed') return rec.history[rec.history.length - 1]?.note ?? 'Not sent';
-      return { dispatchId: rec.id, ...(rec.state === 'submitted' || rec.state === 'held' ? {} : { unknown: true }) };
+      // Typed and waiting for the analyst's session to show it counts like held: the dispatch record (and Needs you, if it never shows) has the truth.
+      return { dispatchId: rec.id, ...(rec.state === 'submitted' || rec.state === 'held' || isTypedUnconfirmed(rec) ? {} : { unknown: true }) };
     },
     answer: (f, spec) => rosterOf(ctx).dispatch.answer(f.id, spec),
     locator: (f) => questionLocator(f.dir),

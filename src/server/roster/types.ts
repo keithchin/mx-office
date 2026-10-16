@@ -57,6 +57,10 @@ export interface TeamFloor {
   lastWords?(w: WorkerInfo): string | undefined;
   /** A worker's Claude Code transcript (its session's .jsonl), for the subagent runs no hook told of (subagent-live.ts). */
   transcript?(w: WorkerInfo): string | undefined;
+  /** The text on a worker's terminal screen now (the office's mirror of it), for what sits in its input box. */
+  screen?(id: string): string | undefined;
+  /** Presses Enter once in a worker's terminal, as the office: why not, when it couldn't. */
+  enter?(id: string): string | undefined;
   /** Tells the floor's browsers Jeff just judged something (his room in the 2D view reacts). */
   judged?(made: JudgeMade): void;
 }

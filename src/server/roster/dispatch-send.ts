@@ -44,7 +44,8 @@ export function typeTarget(roster: Roster, floor: TeamFloor, w: WorkerInfo, text
         }
         return { state: 'held', note: 'held for after its turn' };
       }
-      return { state: 'submitted', note: sent.status === 'woke' ? 'woke the agent with it' : 'typed' };
+      // Typed (or woken with) is not received: the dispatcher waits for the agent's session to show it.
+      return { state: 'submitted', typed: true, note: sent.status === 'woke' ? 'woke the agent with it' : 'typed' };
     },
   };
   return t;

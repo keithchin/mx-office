@@ -47,7 +47,7 @@ export interface HistoryRev {
   supersedes?: number;
   basis?: 'recorded-differently';
   /** The dispatches that carried it (a person's confirmation shown as such). */
-  dispatch: { state: DispatchState; confirmedBy?: 'system' | 'person'; to?: string }[];
+  dispatch: { state: DispatchState; confirmedBy?: 'system' | 'person'; to?: string; typedAt?: number }[];
   /** What follow-through found for it: the current revision's finding, an older one's as it was when replaced. */
   outcome?: { outcome: RecordedOutcome; rev?: number };
 }

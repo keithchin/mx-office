@@ -4,7 +4,10 @@
 // start's reconcile of every floor. Nothing here re-sends anything by itself: durable intent plus
 // reconciliation, and no automatic replay of an ambiguous attempt.
 
-import type { AnswerRevisionKind, DispatchRecord, DispatchTask } from '../../shared/dispatch.js';
+import { unknownLine, type AnswerRevisionKind, type DispatchRecord, type DispatchTask } from '../../shared/dispatch.js';
+import { TypedWatch } from '../dispatch/typed-watch.js';
+import { inputBoxHolds } from '../dispatch/input-box.js';
+import { mayType } from './deliver.js';
 import { taskIdIn } from '../../shared/tasks.js';
 import type { EscalationOutcome, EscalationVerdict } from '../../shared/roster/escalation.js';
 import type { AnswerLine } from '../answers/store.js';
@@ -28,7 +31,11 @@ async function applyEscalation(roster: Roster, floorId: string, r: DispatchRecor
     e.status = 'resolved';
     e.resolution = { verdict: v.verdict, text: line.text.slice(0, 4000), by: line.by, at: line.at, delivered: raiser, ...(v.outcome ? { outcome: v.outcome } : {}), answerRev: r.answerRev, ...(raiser ? { dispatchId: r.id } : {}) };
     audit.record({ floor: floorId, actor: office('Dispatch'), action: 'escalation.answer', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `Resolved from its answer revision once the dispatch settled (${r.state === 'person-confirmed-sent' ? 'a person said it went through' : 'found as typed'}): ${e.title}`, details: { verdict: v.outcome ?? v.verdict, delivered: raiser, answerRev: r.answerRev, settledBy: r.confirmedBy ?? 'system' }, ids: { decision: r.decision, answerRev: r.answerRev, dispatchId: r.id } });
-  } else if (e.resolution?.dispatchId === r.id) e.resolution.delivered = true;
+  } else if (e.resolution?.dispatchId && (e.resolution.dispatchId === r.id || (e.resolution.dispatchId === r.supersedes && r.state !== 'held'))) {
+    e.resolution.delivered = true;
+    // Seen in its session (or a person's word): no longer "typed, not received yet".
+    delete e.resolution.typed;
+  }
   if (also && also.dispatchId === r.id) delete also.pending;
   const floor = roster.deps.floors().find((f) => f.id === floorId);
   if (floor) roster.touch(floor);
@@ -38,8 +45,45 @@ async function applyEscalation(roster: Roster, floorId: string, r: DispatchRecor
     .catch(() => undefined);
 }
 
+/** Each roster's typed-evidence watch (the tests reach it to drive its clock). */
+const watches = new WeakMap<Roster, TypedWatch>();
+export const typedWatchOf = (roster: Roster) => watches.get(roster);
+
+/** The typed-evidence watch on the roster's floors: their workers' screens, one Enter, and the person told. */
+function typedWatch(roster: Roster): TypedWatch {
+  const at = (floorId: string, r: DispatchRecord) => {
+    const floor = roster.deps.floors().find((f) => f.id === floorId);
+    const w = floor && r.workerId ? floor.worker(r.workerId) : undefined;
+    return { floor, w };
+  };
+  return new TypedWatch(roster.dispatch, {
+    // Only when the agent may be typed into now (no dialog up, not booting): an Enter then never picks a dialog's option.
+    inputHolds: (floorId, r) => {
+      const { floor, w } = at(floorId, r);
+      return floor?.screen && w && mayType(w.status) ? inputBoxHolds(floor.screen(w.id), r) : undefined;
+    },
+    pressEnter: (floorId, r) => {
+      const { floor, w } = at(floorId, r);
+      if (!floor?.enter || !w) return `${r.workerName ?? 'the agent'} isn't at work`;
+      if (!mayType(w.status)) return `${w.name} is waiting on an answer in its terminal`;
+      return floor.enter(w.id);
+    },
+    starting: (floorId, r) => at(floorId, r).w?.status === 'starting',
+    lost: (floorId, r) => {
+      const { floor } = at(floorId, r);
+      if (!floor) return;
+      floor.activity?.(`⚠️ ${unknownLine(r)}`);
+      floor.toast(unknownLine(r), 'warn');
+      floor.changed();
+    },
+  });
+}
+
 /** The roster's appliers, and what reconcile asks of it. */
 export function hookDispatch(roster: Roster) {
+  const watch = typedWatch(roster);
+  watches.set(roster, watch);
+  roster.dispatch.watch = (floorId, r) => watch.watch(floorId, r);
   roster.dispatch.appliers.set('esc', (floorId, r, line) => applyEscalation(roster, floorId, r, line));
   // Slice 1B-4: each dispatch to a member captures the task it's on (a candidate link, legacy ones without an id).
   roster.dispatch.taskAt = (floorId, workerId) => memberTaskAt(roster, floorId, workerId);

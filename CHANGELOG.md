@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **An answer typed into an agent's terminal is no longer reported as sent until the agent actually has it.** On 16 Oct two answers to Sophie (a *Can't now* with a relayed task, then the escalation's answer) were recorded as submitted, confirmed by the office, the moment they were typed, while the text sat unsent in her input box for 20 minutes. Now a typed answer counts as received only when the agent's own session shows the typed message with its marker line (or, typed while the agent was mid-turn, Claude Code handing it to the agent inside that turn); until then it reads *Typed, not received yet* on the follow-through, history and escalation cards, never *Sent*. An agent that is mid-turn queues typed text, so the office waits for its turn to end. If nothing shows within about 30 seconds and the agent's input box still holds the text, the office presses Enter once, never twice; otherwise Needs you says *Typed into Sophie's terminal but not received: check Sophie's terminal, or Send again*, and the office never types it again by itself. One that turns up later is settled as received then. An agent with no transcript to check (not Claude Code) reads *Typed (this agent keeps no transcript to confirm it)*. Records already kept are left as they are.
 
 ## 2026-10-16 · release 55 (`6e86bbe`)
 

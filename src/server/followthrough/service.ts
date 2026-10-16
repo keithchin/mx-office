@@ -91,7 +91,7 @@ export class FollowThrough {
 
   private sentOf(floorId: string, id: string | undefined): FollowItem['sent'] {
     const r = id ? this.deps.dispatcher.store.get(floorId, id) : undefined;
-    return r ? { state: r.state, ...(r.confirmedBy ? { confirmedBy: r.confirmedBy } : {}), ...(r.workerName ? { to: r.workerName } : {}) } : undefined;
+    return r ? { state: r.state, ...(r.confirmedBy ? { confirmedBy: r.confirmedBy } : {}), ...(r.workerName ? { to: r.workerName } : {}), ...(r.typedAt !== undefined ? { typedAt: r.typedAt } : {}) } : undefined;
   }
 
   /** What the feed shows: each answered decision not yet recorded as given and merged (nor dismissed), the warnings first. */
