@@ -72,7 +72,8 @@ export function ghEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return out;
 }
 
-const show = (file: string, args: string[]) => [path.basename(file).replace(/\.(exe|cmd)$/i, ''), ...args.map((a) => (/[\s|"]/.test(a) ? `"${a}"` : a))].join(' ');
+/** The command as the PM reads it. The program's name is cut from its path with the target platform's rules, not the host's: a Windows path (C:\…\powershell.exe) planned on Linux (CI, tests) keeps no folder. */
+const show = (platform: NodeJS.Platform, file: string, args: string[]) => [(platform === 'win32' ? path.win32 : path.posix).basename(file).replace(/\.(exe|cmd)$/i, ''), ...args.map((a) => (/[\s|"]/.test(a) ? `"${a}"` : a))].join(' ');
 
 /** How Claude Code is installed here: its official installer, or npm when that can't run. */
 async function claudeInstaller(d: FixDeps): Promise<{ file: string; args: string[]; source: string } | undefined> {
@@ -122,7 +123,7 @@ export async function planFix(id: FixId, d: FixDeps): Promise<FixStep | FixManua
     case 'claude': {
       const how = await claudeInstaller(d);
       if (!how) return manual('Neither Claude Code’s installer nor npm can run here: install it from the docs.', [CLAUDE_INSTALL.docs]);
-      return { id, title, commands: [show(how.file, how.args)], sources: [how.source], note: 'Claude Code’s official installer (code.claude.com/docs/en/setup), for your user only.' };
+      return { id, title, commands: [show(d.platform, how.file, how.args)], sources: [how.source], note: 'Claude Code’s official installer (code.claude.com/docs/en/setup), for your user only.' };
     }
     case 'claude-auth':
       if (d.platform === 'linux') return manual('Open a terminal and run claude there: it signs you in.', [CLAUDE_INSTALL.docs], ['claude']);

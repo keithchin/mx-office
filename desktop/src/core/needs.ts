@@ -95,12 +95,13 @@ export function notesFor(d: Diff): NoteSpec[] {
 /** "1 needs you", "3 need you". */
 export const needYouText = (n: number) => `${n} ${n === 1 ? 'needs' : 'need'} you`;
 
-export type TrayState = 'starting' | 'running' | 'restarting' | 'stopped' | 'crashed' | 'signed-out';
+export type TrayState = 'starting' | 'running' | 'restarting' | 'stopped' | 'crashed' | 'signed-out' | 'disconnected' | 'unknown';
 
-/** The tray's tooltip: the app, what needs you (or why it can't say), and the build. */
-export function tooltipFor(t: { state: TrayState; count?: number; build?: string; attached?: boolean }): string {
+/** The tray's tooltip: the app, what needs you (or why it can't say: `line`, connection.ts countLine), and the build. */
+export function tooltipFor(t: { state: TrayState; count?: number; build?: string; attached?: boolean; line?: string }): string {
   const what =
-    t.state === 'starting'
+    t.line ??
+    (t.state === 'starting'
       ? 'starting…'
       : t.state === 'restarting'
         ? 'restarting…'
@@ -110,9 +111,13 @@ export function tooltipFor(t: { state: TrayState; count?: number; build?: string
             ? 'the office stopped unexpectedly'
             : t.state === 'signed-out'
               ? 'sign in to see what needs you'
-              : t.count
-                ? needYouText(t.count)
-                : 'nothing needs you';
+              : t.state === 'disconnected'
+                ? 'office not answering'
+                : t.state === 'unknown'
+                  ? 'checking what needs you…'
+                  : t.count
+                    ? needYouText(t.count)
+                    : 'nothing needs you');
   // Windows cuts a tray tooltip at 127 characters.
   return [`Mx Office: ${what}`, t.build ? `${t.attached ? 'attached, ' : ''}${t.build}` : undefined].filter(Boolean).join('\n').slice(0, 127);
 }

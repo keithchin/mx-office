@@ -4,7 +4,12 @@ name: Release
 # way the launcher starts it (node bin/agent-office.js, in test mode, on a throwaway office home) to
 # check that it really starts; the launcher's own plan (scripts/start-office.ps1 -DryRun) is checked
 # under pwsh too. Nothing is published: Mx Office installs by cloning and building, and releases are
-# made by hand (see CHANGELOG.md). Pull requests get the same run.
+# made by hand (see CHANGELOG.md). Pull requests get the same run. Once the install and build work, the
+# typecheck, the tests, the start check and the launcher check each run and report even when one before
+# them failed; the job still fails if any did.
+#
+# The desktop job packages the desktop app (desktop/) on Windows and drives the packaged app against
+# throwaway test offices with fake agents (desktop/scripts/e2e.mjs); its logs are uploaded when it fails.
 #
 # The perf job runs the performance guard's quick check (npm run test:perf:quick: the main views on a
 # big test office in headless Chromium, the journey, a minute of the busy office; fake agents only)
@@ -24,6 +29,7 @@ on:
       - 'package-lock.json'
       - 'tsconfig*.json'
       - 'vite.config.ts'
+      - 'desktop/**'
       - '.github/workflows/release.yml'
   pull_request:
     paths:
@@ -35,6 +41,7 @@ on:
       - 'package-lock.json'
       - 'tsconfig*.json'
       - 'vite.config.ts'
+      - 'desktop/**'
       - '.github/workflows/release.yml'
   workflow_dispatch:
 
@@ -59,13 +66,21 @@ jobs:
           cache: npm
 
       - name: Install and build
+        id: install
         run: npm ci # its prepare script builds the client and the server
 
-      - run: npm run typecheck
+      # Each check below runs once the install and build worked, whatever the ones before it did, so one
+      # failure doesn't hide another; any of them failing still fails the job.
+      - name: Typecheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run typecheck
 
-      - run: npm test
+      - name: Tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm test
 
       - name: Start the built office and check it answers
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
           AGENT_OFFICE_HOME: ${{ runner.temp }}/office
         run: |
@@ -92,6 +107,7 @@ jobs:
           echo "the built office answered 200 on /login.html"
 
       - name: Check the launcher's plan (start-office.ps1 -DryRun)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         shell: pwsh
         run: |
           $out = ./scripts/start-office.ps1 -DryRun -NoBrowser -OfficeHome "$env:RUNNER_TEMP/launcher-home" -Port 4701 | Out-String
@@ -173,3 +189,67 @@ jobs:
             ${{ runner.temp }}/test-offices/results/**/*.png
           if-no-files-found: warn
           retention-days: 30
+
+  desktop:
+    # The desktop app (desktop/) on Windows, the platform it ships for: its pinned dependencies (Electron
+    # 44.4.5 from desktop/package-lock.json), compiled and packaged as `npm run desktop:pack` makes it, then
+    # the packaged mx-office.exe driven against throwaway test offices with fake agents
+    # (desktop/scripts/e2e.mjs: startup and health, attach without a second office, who stops what on
+    # quit, quitting while an agent works, crash recovery, notification clicks, disconnected / signed out).
+    # The desktop core's unit tests run in the release job's npm test; they don't count as this check.
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+
+      - name: Cache Electron's download
+        # Where @electron/get keeps it on Windows (electron's install and the packager both read it).
+        uses: actions/cache@v6
+        with:
+          path: ~\AppData\Local\electron\Cache
+          key: electron-${{ runner.os }}-${{ hashFiles('desktop/package-lock.json') }}
+
+      - name: Install and build the office
+        run: npm ci # its prepare script builds the client and the server
+
+      - name: Install the desktop app's pinned dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Check Electron is the lockfile's
+        working-directory: desktop
+        run: |
+          node -e "const want = require('./package-lock.json').packages['node_modules/electron'].version; const got = require('electron/package.json').version; console.log('Electron', got, '(lockfile:', want + ')'); if (got !== want) process.exit(1); require('node:fs').accessSync(require('electron'));"
+
+      - name: Desktop core unit tests (Windows paths)
+        run: node --import tsx --test tests/desktop-core.test.ts tests/desktop-connection.test.ts
+
+      - name: Compile and package (npm run desktop:pack)
+        run: npm run desktop:pack
+
+      - name: The packaged app against test offices (fake agents only)
+        shell: pwsh
+        env:
+          # Test offices never get GitHub tokens (the script takes them out of the environment too).
+          GH_TOKEN: ''
+          GITHUB_TOKEN: ''
+        run: node desktop/scripts/e2e.mjs --root "$env:RUNNER_TEMP\test-offices\desktop-e2e" --logs "$env:RUNNER_TEMP\desktop-e2e-logs"
+
+      - name: Upload the desktop check's logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-e2e-logs
+          path: |
+            ${{ runner.temp }}/desktop-e2e-logs/**
+            ${{ runner.temp }}/test-offices/desktop-e2e/**/*.log
+          if-no-files-found: warn
+          retention-days: 14

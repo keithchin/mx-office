@@ -10,9 +10,10 @@ import { closeSync, existsSync, writeSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dataDirOf, officeArgv, officeEnv, officeUrl, parseOptions, probeUrl } from './core/options.js';
+import { DEFAULT_PORT, dataDirOf, officeArgv, officeEnv, officeUrl, parseOptions, probeUrl } from './core/options.js';
 import { decideStart, fetchHealth, healthLabel, waitForHealth, type FetchLike, type Health } from './core/health.js';
-import { diffNeeds, emptySeen, needYouText, notesFor, parseStatus, tooltipFor, type OfficeStatus, type TrayState } from './core/needs.js';
+import { emptySeen, needYouText, parseStatus, tooltipFor, type TrayState } from './core/needs.js';
+import { afterLook, countLine, decideStartHere, freshStatus, initialConn, lookOf, nextConn, type ConnState, type Look } from './core/connection.js';
 import { OfficeSupervisor, type ChildLike } from './core/supervisor.js';
 import { atLeast, findOfficeDir, findOnPath, isBuilt, logFileOf, nodeVersion, officeEntry, openLog, portOpen, tailOf, type Problem } from './core/system.js';
 import { badgeBitmap, dataUrl, fitBounds, pageHtml, type PageSpec } from './core/window.js';
@@ -22,9 +23,12 @@ import { DesktopStore, officeKey } from './core/store.js';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
 const POLL_MS = 30_000;
-// Automated checks (MX_OFFICE_DESKTOP_TEST=1): the window opens off-screen without taking focus, and notifications are recorded, not shown.
+// Automated checks (MX_OFFICE_DESKTOP_TEST=1, desktop/scripts/e2e.mjs): the window opens off-screen without taking focus,
+// notifications are recorded (with a click to simulate), and questions are answered from a queue, never shown.
 const TEST = process.env.MX_OFFICE_DESKTOP_TEST === '1';
-const testNotes: { title: string; body: string }[] = [];
+const testNotes: { title: string; body: string; path: string; click: () => void }[] = [];
+const testAsked: { message: string; buttons: string[]; answer: number }[] = [];
+const testAnswers: number[] = [];
 
 const opts = parseOptions(process.argv.slice(app.isPackaged ? 1 : 2), process.env, os.homedir());
 if (opts.userData) app.setPath('userData', opts.userData);
@@ -44,8 +48,8 @@ let tray: Tray | undefined;
 let sup: OfficeSupervisor | undefined;
 let mode: 'none' | 'owned' | 'attached' = 'none';
 let health: Health | undefined;
-let status: OfficeStatus | undefined;
-let signedOut = false;
+/** Whether the office answers and how fresh the counts are (core/connection.ts). */
+let conn: ConnState = initialConn();
 let quitting = false;
 let asking = false;
 let pollTimer: ReturnType<typeof setInterval> | undefined;
@@ -140,6 +144,18 @@ function showWindow() {
   win.focus();
 }
 
+type Question = { type: 'question' | 'warning' | 'info'; buttons?: string[]; defaultId?: number; cancelId?: number; title?: string; message: string; detail?: string };
+
+/** A question in a dialog: its button's index. In test mode answered from the queue (else its cancel button) and recorded. */
+async function ask(o: Question): Promise<number> {
+  if (TEST) {
+    const answer = testAnswers.length ? testAnswers.shift()! : (o.cancelId ?? 0);
+    testAsked.push({ message: o.message, buttons: o.buttons ?? ['OK'], answer });
+    return answer;
+  }
+  return (await dialog.showMessageBox(win!, o)).response;
+}
+
 const onOfficePage = () => !!win && sameOffice(win.webContents.getURL());
 
 async function onAction(a: string) {
@@ -176,6 +192,8 @@ async function onAction(a: string) {
 // ---- starting, attaching
 
 async function boot() {
+  // Automated checks never touch the real office's port.
+  if (TEST && opts.port === DEFAULT_PORT) return showPage({ title: 'Refused in test mode', lines: [`MX_OFFICE_DESKTOP_TEST=1 never uses port ${DEFAULT_PORT} (the real office's): give --port.`] });
   showPage(startingPage({ url: URL_BASE }));
   const h = await fetchHealth(fetchImpl, PROBE);
   const d = decideStart({ health: h, portOpen: h ? true : await portOpen(opts.port), attach: opts.attach });
@@ -185,7 +203,7 @@ async function boot() {
     return showPage(refusedPage(URL_BASE));
   }
   if (d.kind === 'ask') {
-    const r = await dialog.showMessageBox(win!, {
+    const r = await ask({
       type: 'question',
       buttons: ['Open it here', 'Quit'],
       defaultId: 0,
@@ -193,7 +211,7 @@ async function boot() {
       message: `An office is already running at ${URL_BASE}`,
       detail: `${healthLabel(d.health)}. The app opens that office instead of starting a second one on the same data. It won't stop or restart it when you quit.`,
     });
-    if (r.response !== 0) return finalQuit();
+    if (r !== 0) return finalQuit();
     return attach(d.health);
   }
   if (d.kind === 'attach') return attach(d.health);
@@ -203,6 +221,7 @@ async function boot() {
 function attach(h: Health) {
   mode = 'attached';
   health = h;
+  conn = initialConn();
   showOffice('home');
   startPolling();
   refreshTray();
@@ -252,6 +271,8 @@ async function startOwned() {
       logTail: () => tailOf(LOG_FILE, 40),
     });
     sup.on('state', (s) => {
+      // Restarting, stopped or crashed: the counts the tray holds are no longer confirmed.
+      if (s !== 'running' && s !== 'starting') conn = nextConn(conn, { kind: 'down' }, Date.now());
       refreshTray();
       if (s === 'restarting' && !onOfficePage()) showPage(startingPage({ url: URL_BASE, restarting: true }));
     });
@@ -261,7 +282,7 @@ async function startOwned() {
       if (!info.restarted && info.signIn) void win?.loadURL(URL_BASE + info.signIn);
       else if (!onOfficePage()) showOffice('home');
       startPolling();
-      refreshTray();
+      void poll();
     });
     sup.on('crashed', (crash) => {
       stopPolling();
@@ -295,29 +316,37 @@ async function officeFetch(p: string, init: { method?: string; body?: string; ti
 
 const running = () => mode === 'attached' || sup?.state === 'running';
 
-async function poll() {
-  if (!running()) return;
+/** One look: /api/health, then the status with the window's sign-in. A failure never keeps the old answer as the new one. */
+async function look(): Promise<Look> {
+  const h = await fetchHealth(fetchImpl, PROBE);
+  if (h) health = h;
+  let code: number | undefined;
+  let body: unknown;
   try {
-    if (mode === 'attached') health = (await fetchHealth(fetchImpl, PROBE)) ?? health;
-    const r = await officeFetch('/api/desktop/status');
-    if (r.status === 401) {
-      signedOut = true;
-      status = undefined;
-    } else if (r.ok) {
-      const s = parseStatus(await r.json());
-      if (s) {
-        signedOut = false;
-        status = s;
-        const d = diffNeeds(store.data.seen?.[KEY] ?? emptySeen(), s.needs, Date.now());
-        store.update((f) => (f.seen = { ...(f.seen ?? {}), [KEY]: d.seen }));
-        if (!store.data.muted) for (const n of notesFor(d)) notify({ title: n.title, body: n.body, onClick: () => (showWindow(), showOffice(n.path)) });
-      }
-    }
+    const r = await officeFetch('/api/desktop/status', { timeoutMs: h ? 15_000 : 4000 });
+    code = r.status;
+    if (r.ok) body = await r.json().catch(() => undefined);
   } catch {
-    // the office is busy or restarting: the next look tries again
+    // nothing answered (refused, timed out)
   }
-  setBadge(status?.needs.length ?? 0);
-  refreshTray();
+  return lookOf({ healthy: !!h, code, status: body === undefined ? undefined : parseStatus(body) });
+}
+
+let looking: Promise<void> | undefined;
+
+async function poll(): Promise<void> {
+  if (!running()) return;
+  if (looking) return looking;
+  looking = (async () => {
+    // Notifications only from a confirmed look, against what was seen (kept across failures, restarts and reconnections).
+    const r = afterLook({ conn, seen: store.data.seen?.[KEY] ?? emptySeen(), muted: store.data.muted }, await look(), Date.now());
+    conn = r.conn;
+    if (r.seen) store.update((f) => (f.seen = { ...(f.seen ?? {}), [KEY]: r.seen! }));
+    for (const n of r.notes) notify({ title: n.title, body: n.body, path: n.path, onClick: () => (showWindow(), showOffice(n.path)) });
+    setBadge(freshStatus(conn)?.needs.length ?? 0);
+    refreshTray();
+  })().finally(() => (looking = undefined));
+  return looking;
 }
 
 function startPolling() {
@@ -331,8 +360,8 @@ function stopPolling() {
   pollTimer = undefined;
 }
 
-function notify(n: { title: string; body: string; onClick: () => void }) {
-  if (TEST) return void testNotes.push({ title: n.title, body: n.body });
+function notify(n: { title: string; body: string; path?: string; onClick: () => void }) {
+  if (TEST) return void testNotes.push({ title: n.title, body: n.body, path: n.path ?? '', click: n.onClick });
   if (!Notification.isSupported()) return;
   const note = new Notification({ title: n.title, body: n.body, icon: icon(64) });
   note.on('click', n.onClick);
@@ -351,10 +380,10 @@ function setBadge(n: number) {
 // ---- the tray
 
 function trayState(): TrayState {
-  if (mode === 'attached') return signedOut ? 'signed-out' : 'running';
+  if (mode === 'attached') return conn.conn;
   switch (sup?.state) {
     case 'running':
-      return signedOut ? 'signed-out' : 'running';
+      return conn.conn;
     case 'restarting':
       return 'restarting';
     case 'crashed':
@@ -370,15 +399,20 @@ function trayState(): TrayState {
 function refreshTray() {
   if (!tray) return;
   const state = trayState();
-  const count = status?.needs.length ?? 0;
-  trayTip = tooltipFor({ state, count, build: health ? healthLabel(health) : undefined, attached: mode === 'attached' });
+  const connected = state === 'running' || state === 'signed-out' || state === 'disconnected' || state === 'unknown';
+  // What needs you, and how fresh that is: counts the last look couldn't confirm say when they're from.
+  const line = connected ? countLine(conn) : tooltipFor({ state }).replace('Mx Office: ', '');
+  const build = health ? `${healthLabel(health)}${state === 'disconnected' ? ', not answering' : ''}` : undefined;
+  trayTip = tooltipFor({ state, line, build, attached: mode === 'attached' });
   tray.setToolTip(trayTip);
-  const line = state === 'running' ? (count ? needYouText(count) : 'Nothing needs you') : tooltipFor({ state }).replace('Mx Office: ', '');
+  // An office started elsewhere that stopped answering: the app never stops or restarts it, but can start one here if nothing answers.
+  const here: MenuItemConstructorOptions[] = mode === 'attached' && state === 'disconnected' ? [{ label: 'Start the office here…', click: () => void startHere() }] : [];
   const template: MenuItemConstructorOptions[] = [
     { label: 'Open Mx Office', click: () => showWindow() },
     { type: 'separator' },
     { label: line.charAt(0).toUpperCase() + line.slice(1), enabled: false },
-    ...(health ? [{ label: `${mode === 'attached' ? 'Attached: ' : ''}${healthLabel(health)}`, enabled: false }] : []),
+    ...(build ? [{ label: `${mode === 'attached' ? 'Attached: ' : ''}${build}`, enabled: false }] : []),
+    ...here,
     { type: 'separator' },
     { label: 'Mute notifications', type: 'checkbox', checked: !!store.data.muted, click: (i) => store.update((d) => (d.muted = i.checked)) },
     { label: 'Restart office…', enabled: running(), click: () => void restartOffice() },
@@ -418,13 +452,14 @@ function appMenu() {
 
 async function about() {
   const started = health?.startedAt ? new Date(health.startedAt).toLocaleString() : 'unknown';
-  await dialog.showMessageBox(win!, {
+  await ask({
     type: 'info',
     title: 'About Mx Office',
     message: 'Mx Office (desktop preview)',
     detail: [
       `Office: ${healthLabel(health)}${mode === 'attached' ? ' (attached: started elsewhere)' : ''}`,
       `Running since: ${started}`,
+      `Status: ${countLine(conn)}${conn.checkedAt ? ` (last confirmed ${new Date(conn.checkedAt).toLocaleString()})` : ''}`,
       `Address: ${URL_BASE}`,
       `Office folder: ${officeDir ?? store.data.officeDir ?? 'unknown'}`,
       `Data: ${DATA_DIR}`,
@@ -450,10 +485,10 @@ async function restartOffice() {
     err = `The office didn't answer (${(e as Error).message}).`;
   }
   if (mode !== 'owned' || !sup?.owned) {
-    await dialog.showMessageBox(win!, { type: 'warning', message: "The office couldn't start a safe restart", detail: `${err}\n\nThis office was started outside the app, so the app doesn't restart it itself.` });
+    await ask({ type: 'warning', message: "The office couldn't start a safe restart", detail: `${err}\n\nThis office was started outside the app, so the app doesn't restart it itself.` });
     return;
   }
-  const c = await dialog.showMessageBox(win!, {
+  const c = await ask({
     type: 'question',
     buttons: ['Restart now', 'Cancel'],
     defaultId: 1,
@@ -461,17 +496,42 @@ async function restartOffice() {
     message: "The office couldn't start a safe restart",
     detail: `${err}\n\nRestart it now? Agents that are mid-turn are cut off; their sessions are saved and they carry on when the office is back.`,
   });
-  if (c.response === 0) await sup.restartNow();
+  if (c === 0) await sup.restartNow();
 }
 
+/** How many agents are mid-turn now; undefined when the office can't say (then quitting asks). Never the last look's count. */
 async function workingNow(): Promise<number | undefined> {
   try {
     const r = await officeFetch('/api/desktop/status', { timeoutMs: 4000 });
     if (r.ok) return parseStatus(await r.json())?.working;
   } catch {
-    // fall back on the last look
+    // not answering
   }
-  return signedOut ? undefined : status?.working;
+  return undefined;
+}
+
+/**
+ * "Start the office here", after an office started elsewhere stopped answering: only when the user asks,
+ * and only on a port nothing answers on (one answering again is attached to again). The other office's
+ * process is never stopped or restarted by the app.
+ */
+async function startHere() {
+  const c = await ask({
+    type: 'question',
+    buttons: ['Start the office here', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    message: `The office at ${URL_BASE} isn't answering`,
+    detail: "It was started outside the app, so the app doesn't stop or restart it. Start an office here from your checkout instead? The app checks first that nothing answers on the port, so there are never two offices on the same data.",
+  });
+  if (c !== 0) return;
+  const h = await fetchHealth(fetchImpl, PROBE);
+  const d = decideStartHere({ health: h, portOpen: h ? true : await portOpen(opts.port) });
+  if (d.kind === 'attach') return attach(d.health);
+  if (d.kind === 'busy') return showPage(busyPortPage(opts.port));
+  mode = 'none';
+  conn = initialConn();
+  await startOwned();
 }
 
 async function requestQuit() {
@@ -481,7 +541,7 @@ async function requestQuit() {
     if (mode !== 'owned' || !sup?.owned) return finalQuit();
     const working = await workingNow();
     if (working !== 0) {
-      const c = await dialog.showMessageBox(win!, {
+      const c = await ask({
         type: 'warning',
         buttons: ['Stop the office and quit', 'Keep running in the tray', 'Cancel'],
         defaultId: 1,
@@ -489,8 +549,8 @@ async function requestQuit() {
         message: working === undefined ? 'Stop the office and quit?' : `${working} agent${working === 1 ? ' is' : 's are'} working. Stop the office and quit?`,
         detail: 'Stopping the office stops its agents: their sessions are saved, but work mid-turn is cut off. Keep it running in the tray to let them finish.',
       });
-      if (c.response === 1) return void win?.hide();
-      if (c.response === 2) return;
+      if (c === 1) return void win?.hide();
+      if (c === 2) return;
     }
     stopPolling();
     showPage({ busy: true, title: 'Stopping Mx Office…', lines: ['Saving what the office holds and stopping its agents.'] });
@@ -528,7 +588,10 @@ if (!app.requestSingleInstanceLock()) {
     createWindow();
     createTray();
     // Screenshots and checks drive the app from outside (Playwright's electron.evaluate): only on request.
-    if (TEST) Object.assign(globalThis, { __mxDesktop: { tray: () => tray, win: () => win, sup: () => sup, poll, restartOffice, requestQuit, officeFetch, status: () => status, notes: () => testNotes, badge: (n: number) => nativeImage.createFromBitmap(badgeBitmap(n), { width: 32, height: 32, scaleFactor: 2 }).toPNG().toString('base64'), menu: () => trayLabels, tooltip: () => trayTip } });
+    if (TEST) {
+      const hooks = { tray: () => tray, win: () => win, sup: () => sup, mode: () => mode, poll, restartOffice, requestQuit, startHere, onAction, officeFetch, status: () => freshStatus(conn), conn: () => conn, notes: () => testNotes.map(({ click: _, ...n }) => n), clickNote: (i: number) => testNotes[i]?.click(), answer: (...a: number[]) => testAnswers.push(...a), asked: () => testAsked };
+      Object.assign(globalThis, { __mxDesktop: { ...hooks, badge: (n: number) => nativeImage.createFromBitmap(badgeBitmap(n), { width: 32, height: 32, scaleFactor: 2 }).toPNG().toString('base64'), menu: () => trayLabels, tooltip: () => trayTip } });
+    }
     void boot();
   });
 }
