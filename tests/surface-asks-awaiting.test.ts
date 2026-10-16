@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { awaitingItems, awaitingKey, newestWaits, planAwaiting, waitingEntry } from '../src/server/asks/awaiting.js';
+import { awaitingItems, awaitingKey, entryTime, newestWaits, planAwaiting, waitingEntry } from '../src/server/asks/awaiting.js';
 import { AsksService, type AsksDeps, type AsksFloor } from '../src/server/asks/service.js';
 import { parseJournal } from '../src/shared/roster/journal.js';
 import type { Escalation, EscalationAsk } from '../src/shared/roster/escalation.js';
@@ -144,4 +144,19 @@ test('continuity in the look: the role rewords an item in a newer entry and the 
   assert.deepEqual(t.continued.map((c) => [c.id, c.title]), [['e0', 'GenAI Text Generation resource + key (pasted in when Dylan says ready)']]);
   assert.deepEqual(t.gone, []);
   assert.equal(t.escs.filter((e) => e.status === 'open').length, 2);
+});
+
+test('an item answered after its entry is not filed again: the heading is local time, as agents write it', () => {
+  // Katherine's "2026-10-16 12:48 — Handoff" (local), answered at 12:50 local; the look runs again at 12:51.
+  const entry = { heading: '2026-10-16 12:48 — Handoff', date: '2026-10-16', body: 'AWAITING-PM: CAC-3 sign-off of BRD F001' };
+  const at = new Date(2026, 9, 16, 12, 48).getTime();
+  const waits = [{ team: 'analysis' as const, entry, at: entryTime(entry), items: ['CAC-3 sign-off of BRD F001'], where: 'its journal' }];
+  assert.equal(waits[0].at, at, 'the heading is read in local time');
+  const key = awaitingKey('chief-analyst', 'CAC-3 sign-off of BRD F001');
+  const answered = esc('a1', { role: 'chief-analyst', status: 'resolved', from: { kind: 'awaiting', key }, at: new Date(2026, 9, 16, 12, 48, 55).getTime() });
+  const plan = planAwaiting(waits, () => 'chief-analyst', [answered]);
+  assert.equal(plan.raise.length, 0, 'answered once is enough');
+  // A newer entry that still waits on it is a new ask.
+  const later = { ...entry, heading: '2026-10-16 14:05 — Handoff' };
+  assert.equal(planAwaiting([{ ...waits[0], entry: later, at: entryTime(later) }], () => 'chief-analyst', [answered]).raise.length, 1);
 });

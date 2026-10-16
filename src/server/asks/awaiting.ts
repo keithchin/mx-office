@@ -28,10 +28,14 @@ export function waitingEntry(entries: readonly JournalEntry[]): JournalEntry | u
   return undefined;
 }
 
-/** When an entry was written, from its heading ("2026-10-12 22:52 — Handoff"; the date alone at midnight UTC). */
+/**
+ * When an entry was written, from its heading ("2026-10-12 22:52 — Handoff"; the date alone at midnight), in the
+ * office machine's local time: agents write their headings with `date` on this machine. Read as UTC, a heading east
+ * of Greenwich looked hours newer than the escalation filed from it, so an answered item was filed again and again.
+ */
 export function entryTime(e: JournalEntry): number {
   const m = /(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(e.heading);
-  return m ? Date.parse(`${m[1]}T${m[2] ?? '00'}:${m[3] ?? '00'}:00Z`) || 0 : 0;
+  return m ? Date.parse(`${m[1]}T${m[2] ?? '00'}:${m[3] ?? '00'}:00`) || 0 : 0;
 }
 
 /** One team's waits as the newest copy says, and whose copy that was. */
