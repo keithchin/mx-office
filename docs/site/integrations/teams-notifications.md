@@ -48,7 +48,7 @@ The same rules as the Command Center's **Needs you** strip (`src/shared/needsyou
 | 💸 The spend cap | A project's daily team cap is spent: office prompts are paused. |
 | ❌ Failing checks | An open, ready pull request whose checks fail. |
 | 📑 A Firm report | The Firm's audit report on the project is ready. |
-| ✋ A gate | A toolkit stage waits for your sign-off. |
+| ✋ A gate | A toolkit stage in play waits for your sign-off (a MANUAL stage counts only once every stage before it passed). |
 | 🧱 Studio Pro changes | Studio Pro closed with model changes nobody committed. |
 
 Not posted: finished turns (the office's own quiet turns end the same way, so these stay on the Command Center), lost worktrees, proposals, the live app, a stale folder, other projects' counts and the Firm's budget warning.

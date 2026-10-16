@@ -67,7 +67,7 @@ The items, and their buttons in the list:
 | 👀 | *Ready for your review: 5 BRDs, design system, 9 wireframes*, tagged **Review** (info: shown, not counted) | **Documents** or **Mark as seen** (a new one shows it again) |
 | ❓ | *Question for the client: OQ-07 …*: each open question in the BRDs waiting on you, a card of its own ([Questions](questions.md)); a question you answered but the toolkit hasn't read recorded yet shows as info | **Answer**: opens the Questions page at that question |
 | ❌ | *PR #n has failing checks* | **Open PR #n** |
-| ✋ | *Stage X waits for your sign-off*: every ✋ stage gate-check marks MANUAL (3, 4, 7, and 5–6 where it wants a person), also after Stage 4 | **Sign off**: scrolls to the setup panel, or past Stage 4 to the progress bar |
+| ✋ | *Stage X waits for your sign-off*: a stage gate-check marks MANUAL, **once it's the stage in play**: every stage before it PASS or WAIVED and nothing after it started (gate-check's own rule). gate-check reports Stage 5 (Build) MANUAL from a project's first day, so a new project has no such card: the progress bar shows Stage 5 as *not started*, checked by hand later. Once you've signed it off it turns into *signed off by you: waiting for &lt;lead&gt; to record it in PROJECT.md* (shown, not counted), and it goes once PROJECT.md's Decisions has the CONFIRMED row | **Sign off**: a dialog says what signing off the stage means and the exact Decisions row; **Sign off Stage X** tells the team lead *Signed off: Stage X* with that row, after their current turn (the office never edits PROJECT.md), **Not yet** closes it |
 | 🌿 | *This project's folder is on &lt;branch&gt;, N commits behind main* (only past 10 commits; last of this project's items) | **Setup** |
 | 🌐 | *The live app failed* | **Live app** |
 | 🌿 | A worktree was deleted outside the office | **Fix** |
@@ -84,7 +84,7 @@ The kind of card decides its buttons:
 
 | Kind | What it is | Buttons | After you press |
 |---|---|---|---|
-| **Decision** | An escalation with a question or options, a client question, a proposal, a ✋ sign-off | The options, **Reply in my words**, **Ask &lt;lead&gt;** | *&lt;agent&gt; gets it after their current turn and records it. This card shows Sent until then.* |
+| **Decision** | An escalation with a question or options, a client question, a proposal, a ✋ sign-off | The options, **Reply in my words**, **Ask &lt;lead&gt;**; a ✋ sign-off has only **Sign off** (its dialog) and **Not yet**, never a free-text answer: it leads any card it shares a stage with, and an escalation about the same stage is answered with the same *Signed off* words | *&lt;agent&gt; gets it after their current turn and records it. This card shows Sent until then.* |
 | **Action for you** | A hands-on action only a person can do (an escalation with trigger `needs-human`, or an approved `human-action` proposal) | **I've done it**, **Can't now: tell &lt;agent&gt;**, **Ask &lt;lead&gt;** | *&lt;agent&gt; is told and re-checks. Pressing it doesn't prove it worked.* |
 | **FYI** | An FYI that asks nothing | **Noted** | *Noting doesn't approve anything.* |
 
@@ -146,7 +146,7 @@ Every action is an admin's, checked by the office (`POST /api/followthrough/acti
 
 ## 🧰 Project setup
 
-Shown for toolkit projects until the build plan is confirmed. **Once its gates are fine** (no stage failing or waiting for a sign-off, the folder not behind main) it **folds to one line**: *🧰 Project setup · 3 passed · 3 pending · next: stage 3* with **Show ▾**. **Hide ▴** folds it whatever the gates say; this browser remembers your choice.
+Shown for toolkit projects until the build plan is confirmed. **Once its gates are fine** (no stage failing or waiting for a sign-off, the folder not behind main; a MANUAL stage that isn't in play yet doesn't count) it **folds to one line**: *🧰 Project setup · 3 passed · 3 pending · next: stage 3* with **Show ▾**. **Hide ▴** folds it whatever the gates say; this browser remembers your choice.
 
 - Chips for the entry mode (🧭) and the size tier (📏).
 - Buttons **🧭 Entry mode**, **📝 Intake** and **👥 Team** reopen the wizard at that page.
