@@ -16,6 +16,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ### Fixed
 
+- **An answered "waiting on you" line is no longer raised again and again.** When an agent's newest journal entry says it is waiting on you, the office raises it as an escalation once per entry. The entry's time was read as UTC while agents write local time, so east of Greenwich every regular look took the entry for a newer one and raised the same item again after you had answered it (CAC-3 on packtrack came back twice). Entry times are now read in the office machine's local time.
 - **Subagents at work show under their member, so the team never looks idle while one runs.** The Overview's Team card (and the Team tab's Org chart) lists each member's live subagents under it, with name and type, task, minutes at it and a working animation; a finished run says *done · 4 min* for a minute, then folds into *N subagent runs today*. A member waiting on its subagent reads **Working (via subagent)**, the home page's *working* counts include it, and the Coordinator's fact block names it (*Katherine (you) — 1 subagent working: Elsa (business analyst)*) instead of *Agents working: nobody*. The Project Coordinator's own subagents are now followed live too (no track record). No new polling.
 
 ## 2026-10-16 · release 51 (`768e4c0`)
