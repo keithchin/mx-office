@@ -17,7 +17,7 @@ import { decisionLabel, type AnswerRevisionKind, type DecisionRef, type Dispatch
 import type { Escalation, EscalationVerdict } from '../../shared/roster/escalation.js';
 import { fyiNow, isEscalationVerdict } from '../../shared/roster/escalation.js';
 import { answersMessage, expectedOf, type PmAnswer, type Question } from '../../shared/questions.js';
-import type { Recording } from '../../shared/followthrough.js';
+import { primaryAnswer, type Recording } from '../../shared/followthrough.js';
 import { noWorkText, type DecisionLinks } from '../../shared/task-links.js';
 import { escAnswerWords, escChangeLine, qChangeLine, Q_CHANGE_KINDS, type AnswerDetail, type ChangeBody, type HistoryRev, type QChangeKind } from '../../shared/change-answer.js';
 import type { Dispatcher, Target } from '../dispatch/service.js';
@@ -201,7 +201,7 @@ export class ChangeAnswer {
       revision: { kind: noWork ? 'no-work-required' : kindOfVerdict(verdict), ...(i.option && !noWork ? { option: i.option } : {}), text, by: i.by, supersedes: oldRev, ...(noWork && i.text ? { note: i.text } : {}) },
       targets: (rev) => {
         if (!make) return [];
-        const prompt = [`The Project Manager (${i.by}) changed their answer to your escalation “${e.title}”.`, '', escChangeLine(e.id, oldRev, rev, words), '', citationRule(e.id, rev), `Anything you did on the strength of rev ${oldRev} may need to change: check it against this answer, and note in your journal what you changed.`].join('\n');
+        const prompt = [`The Project Manager (${i.by}) changed their answer to your escalation “${e.title}”.`, '', escChangeLine(e.id, oldRev, rev, words), '', citationRule(e.id, rev, primaryAnswer({ text, kind: kindOfVerdict(verdict), ...(i.option && !noWork ? { option: i.option } : {}) })), `Anything you did on the strength of rev ${oldRev} may need to change: check it against this answer, and note in your journal what you changed.`].join('\n');
         const input = { verdict, text, ...(i.option ? { option: i.option } : {}), by: i.by, at, ...(oldId ? { oldId } : {}) };
         return [this.pending.guard(floorId, { ...make(prompt), ...(oldId ? { supersedes: oldId } : {}) }, { decision, fromRev: oldRev, toRev: rev, kind: 'change', at, input })];
       },

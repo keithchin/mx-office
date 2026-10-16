@@ -8,6 +8,8 @@ import { autonomyBrief, DECISION_LABEL, HUMAN_FULL, REVIEW_POLICY, TRIGGER_LABEL
 import { VERDICT_WORD, fyiNow, type Escalation, type EscalationVerdict } from '../../shared/roster/escalation.js';
 import { journalPath, playbookPath, ROLE_BY_ID, standupPath, type RoleId } from '../../shared/roster/roles.js';
 import type { Proposal } from '../../shared/roster/types.js';
+import { primaryAnswer } from '../../shared/followthrough.js';
+import { recordLine } from '../../shared/recorded-answer.js';
 import type { SubagentResult } from '../workers/subagents.js';
 
 /** How much of a handoff note goes into a hire's first message: the rest is in the journal. */
@@ -178,10 +180,16 @@ export function escalationLine(e: Escalation): string {
 /** The citation a recorded decision carries (Slice 1B-2): `Decided per ESC-<id> rev <n>`. */
 export const decisionCitation = (escId: string, rev: number) => `Decided per ESC-${escId} rev ${rev}`;
 
-/** How to record a decision so the office can find it and compare it with the answer. */
-export function citationRule(escId: string, rev: number | undefined): string {
-  const cite = rev ? `\`${decisionCitation(escId, rev)}: <the decision, worded as given>\`` : `\`Decided per ESC-${escId} rev <n>: <the decision, worded as given>\` (<n> from the [office answer …] line below)`;
-  return `Record the decision in your team journal entry (docs/team/*.md) or in PROJECT.md's Decisions row, on one line that starts ${cite}, then commit it. Use the answer's own words: the office compares what you write with the answer and shows the Project Manager any difference.`;
+/**
+ * How to record a decision so the office can find it and compare it (shared/recorded-answer.ts): the
+ * citation, a colon, then the answer value exactly as given and nothing else on that line; commentary on the
+ * next line (or in another cell). With the revision and its answer known, the exact line to write.
+ */
+export function citationRule(escId: string, rev: number | undefined, answer?: string): string {
+  const line = rev && answer ? recordLine(escId, rev, answer) : undefined;
+  const where = "Record the decision in your team journal entry (docs/team/*.md) or in PROJECT.md's Decisions row";
+  const how = line ? `${where}, on a line of its own that reads exactly:\n\n    ${line}\n\n` : `${where}, on a line of its own: \`${rev ? decisionCitation(escId, rev) : `Decided per ESC-${escId} rev <n>`}: <the answer, exactly as given>\`${rev ? '' : ' (<n> from the [office answer …] line below)'}, `;
+  return `${how}${line ? 'Then' : 'then'} commit it. After the colon write only the answer, exactly as given: no rationale, conditions or commentary on that line. Put those on the next line (in a Decisions table, in another cell). The office compares the answer after the colon with the decision exactly (spacing, letter case and curly quotes aside) and shows the Project Manager anything else as needing review.`;
 }
 
 export function escalationAnswerPrompt(e: Escalation, verdict: EscalationVerdict, text: string, by: string, outcome?: 'noted' | 'done', rev?: number): string {
@@ -193,7 +201,7 @@ export function escalationAnswerPrompt(e: Escalation, verdict: EscalationVerdict
     ...(text ? ['', text] : []),
     '',
     verdict === 'reject' ? "Don't go ahead with it. Adjust the plan, and carry on with the rest of your work." : 'Act on it now: dispatch or continue the work it unblocks, per your review protocol.',
-    citationRule(e.id, rev),
+    citationRule(e.id, rev, primaryAnswer({ text, kind: verdict === 'approve' || verdict === 'reject' ? verdict : 'reply' })),
   ].join('\n');
 }
 
@@ -205,7 +213,8 @@ export function correctionPrompt(o: { escId: string; title: string; by: string; 
     `They decided: ${o.decided}`,
     `What is recorded${o.where ? ` (${o.where})` : ''}: ${o.recorded}`,
     '',
-    `Change that record so it says what they decided, on one line that starts \`${decisionCitation(o.escId, o.rev)}: \` (this correction is revision ${o.rev}), then commit it. If you already acted on the recorded wording, put that right too.`,
+    `Change that record so it says what they decided (this correction is revision ${o.rev}). If you already acted on the recorded wording, put that right too.`,
+    citationRule(o.escId, o.rev, primaryAnswer({ text: o.decided, kind: 'correction' })),
   ].join('\n');
 }
 
