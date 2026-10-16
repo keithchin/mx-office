@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-16 · release 53 (`4b9a120`)
+
 ### Added
 
 - **Desktop app (preview).** Mx Office can run in a window of its own: `npm --prefix desktop install` once, then `npm run desktop:dev` (or `npm run desktop:pack` for a folder with `mx-office.exe`). It starts the office from your checkout with your Node.js (or opens the office already running on the port, never a second one), opens it signed in, and keeps a tray icon with how many things need you, a red badge on the taskbar and a Windows notification for each new item (once each, also across restarts; **Mute notifications** in the tray). **Restart office…** runs 🔁 Restart safely and starts the office again; Quit stops it cleanly and asks first while agents are working, with **Keep running in the tray**. If the office stops unexpectedly the window shows the last lines of its log and **Restart the office**. Still to come: an installer, auto-update and code signing (`/docs/administration/desktop-app`).
