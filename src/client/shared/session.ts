@@ -8,7 +8,7 @@ import { AVATAR_COLORS, loadProfile, loadSettings, saveProfile, store, type Sett
 import { randomLook } from '../../shared/avatar';
 import { ROOF } from '../../shared/rooftop';
 import type { ServerMsg } from '../../shared/protocol';
-import { $, doingNow, h, onDoingChange, onModalChange, openModal, readingNow, toast } from '../ui/dom';
+import { $, doingNow, h, onDoingChange, onModalChange, readingNow, toast } from '../ui/dom';
 import { openTerminalFor, routeTerminalMessage } from '../ui/terminal';
 import { openChangesFor, routeChangesMessage } from '../ui/changes';
 import { routeWorktreeMessage } from '../ui/prompt';
@@ -21,6 +21,7 @@ import { routeTeamMessage } from '../ui/team';
 import { routeAccountsMessage } from '../ui/accounts';
 import { askNotifyPermission, DesktopNotifier, notifyPermission, waitingOnSomeone } from '../notify';
 import { installReauth } from '../ui/reauth';
+import { askName } from './ask-name';
 import { bootDown, bootDrawn, bootStep } from '../ui/loading/boot';
 import { installOfficeDown } from '../ui/loading/office-down';
 import { installVersionWatch } from '../ui/version';
@@ -162,27 +163,6 @@ export function flatSession(page: '/home' | '/clients' | '/lite' | '/pixel' | '/
       el.before(bell);
     },
   };
-}
-
-/** Your name, the first time this browser comes in on the shared password. */
-function askName(done: (name: string) => void) {
-  const input = h('input', { type: 'text', maxlength: 24, placeholder: 'Your name', 'aria-label': 'Your name', autocomplete: 'nickname' }) as HTMLInputElement;
-  const form = h(
-    'form.modal.lite-name',
-    {},
-    h('header', {}, h('h2', {}, '👋 Who is it?')),
-    h('div.body', {}, h('p', {}, 'Your teammates see this name on what you type and send.'), input),
-    h('footer', {}, h('button.btn.primary', { type: 'submit' }, 'Come on in')),
-  );
-  const modal = openModal(form, { escCloses: false, backdropCloses: false });
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = input.value.trim();
-    if (!name) return input.focus();
-    modal.close();
-    done(name);
-  });
-  setTimeout(() => input.focus(), 30);
 }
 
 async function signIn(page: string, hasProfile: boolean, net: Net) {

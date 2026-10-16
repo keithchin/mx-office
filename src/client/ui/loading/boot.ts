@@ -11,6 +11,7 @@ export type BootStep = 'bundle' | 'session' | 'socket' | 'data' | 'view';
 interface BootApi {
   step(s: BootStep): void;
   down(): void;
+  wait?(on: boolean): void;
 }
 
 const api = (): BootApi | undefined => (window as unknown as { __aoBoot?: BootApi }).__aoBoot;
@@ -30,6 +31,13 @@ export function bootStep(s: BootStep) {
 
 /** The connection went: the screen comes back (after a moment), reconnecting. */
 export const bootDown = () => api()?.down();
+
+/**
+ * The page waits on the person (the name prompt on a first visit): the screen steps aside so the
+ * prompt is seen and typed into (it sat on top of it at 40 % for good, 16 Oct 2026), and comes back
+ * for the rest of the load once they answer. Waiting for someone is not loading.
+ */
+export const bootWait = (on: boolean) => api()?.wait?.(on);
 
 /** The view drawn: two frames after the office's data came in. */
 export const bootDrawn = () => requestAnimationFrame(() => requestAnimationFrame(() => bootStep('view')));
