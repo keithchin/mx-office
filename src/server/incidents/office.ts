@@ -66,6 +66,9 @@ export function installIncidents(ctx: Ctx) {
   useTestMode({ flag: cfg.testMode, officeDir: cfg.dir, agentCmd: cfg.agentCmd, agentExplicit: cfg.agentExplicit });
   const store = new IncidentStore(path.join(cfg.dataDir, 'incidents'));
   useIncidents(store);
+  // Read once now, and its hash chain verified in the background (store.ts), so no page load pays for either.
+  store.list();
+  void store.verified().catch((e) => console.warn(`agent-office: incidents: couldn't verify the history: ${(e as Error).message}`));
   if (!store.exists() && wantsSeed(auditTimes())) {
     const n = applySeed();
     if (n) console.log(`  🚨 Recorded ${n} incidents of 2026-10-06 retrospectively (Audit log → Incidents)`);

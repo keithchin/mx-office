@@ -14,6 +14,7 @@ import type { NeedItem } from '../needsyou.js';
 import { isJourneyId, refsFromTitle } from './ids.js';
 import type { DecisionCard, DecisionKind, DecisionSource } from './types.js';
 import { escalationKind } from './words.js';
+import { manualInPlay, signoffMeaning, signoffState } from '../gate-play.js';
 
 export interface Candidate {
   need: NeedItem;
@@ -21,7 +22,7 @@ export interface Candidate {
   /** Explicit ids it groups on: q:<key>, id:<ID>, pr:<n>, stage:<id>, stuck:<id>. */
   keys: string[];
   kind: DecisionKind;
-  /** Which source leads a card when several fold (lower first): a question, then a decision escalation, a proposal, a sign-off, stuck, an ask, a PR check, an FYI. */
+  /** Which source leads a card when several fold (lower first): a question, a toolkit sign-off (SIGNOFF_PRIO: its own dialog, never an escalation answer), then a decision escalation, a proposal, stuck, an ask, a PR check, an FYI. */
   prio: number;
   body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates' | 'after'>> & { analyst?: string };
   /** A free-text test name it is about: other cards naming it are "possibly related", never merged. */
@@ -215,13 +216,35 @@ export function prCheckCandidates(pulls: readonly GhPull[]): Candidate[] {
     });
 }
 
-/** Toolkit stages at a ✋ gate, waiting for your sign-off. */
+/**
+ * The toolkit stage at a ✋ gate waiting for your sign-off: a MANUAL stage only when it's the one in play
+ * (every earlier stage passed or waived: shared/gate-play.ts). gate-check reports Stage 5 (Build) MANUAL
+ * from a project's first run, and that is a stage not started, not a decision. Its Sign off opens the
+ * sign-off dialog (ui/signoff/), which asks the lead to record the toolkit's CONFIRMED Decisions row.
+ * It never goes through an escalation's answer: it leads any card it folds into (SIGNOFF_PRIO), so the
+ * card's only buttons are Sign off (confirmed in the dialog) and Not yet. Once signed off in the office
+ * it is a status line until the register has the row; once the row is there it is gone.
+ */
 export function signoffCandidates(setup: SetupView | undefined): Candidate[] {
   const out: Candidate[] = [];
-  for (const s of setup?.verdicts?.length ? setup.verdicts : setup?.show ? setup.stages : []) {
-    if (s.status !== 'MANUAL') continue;
-    const need: NeedItem = { key: `setup-${s.id}`, kind: 'setup', icon: '✋', text: `Stage ${s.id} (${s.title}) waits for your sign-off`, level: 'warn', action: 'Sign off', target: { to: 'setup' } };
-    out.push({ need, source: { id: `stage:${s.id}`, type: 'signoff', label: 'the toolkit’s gate check', text: need.text, target: need.target }, keys: [`stage:${s.id}`], kind: 'decision', prio: 3, body: { question: need.text, evidence: [], blocks: [], owner: 'the toolkit', notes: [] } });
+  const all = setup?.verdicts?.length ? setup.verdicts : setup?.show ? setup.stages : [];
+  for (const s of all) {
+    if (!manualInPlay(all, s.id)) continue;
+    const st = signoffState(setup, s.id);
+    if (st.state === 'recorded') continue;
+    const target = { to: 'signoff', stage: s.id, title: s.title } as const;
+    const evidence = [{ label: `gate-check: Stage ${s.id} MANUAL${s.detail ? ` (${s.detail})` : ''}` }];
+    if (st.state === 'requested') {
+      const lead = st.req.lead ?? 'the lead';
+      const need: NeedItem = { key: `setup-${s.id}`, kind: 'setup', icon: '✋', text: `Stage ${s.id} (${s.title}) signed off by ${st.req.by}: waiting for ${lead} to record it in PROJECT.md`, since: st.req.at, level: 'info', action: 'View', target };
+      out.push({ need, source: { id: `stage:${s.id}`, type: 'signoff', label: 'the toolkit’s gate check', text: need.text, target }, keys: [`stage:${s.id}`], kind: 'status', prio: SIGNOFF_PRIO, body: { question: need.text, detail: signoffMeaning(s.id, s.title), evidence, blocks: [], owner: lead, notes: [`It goes once PROJECT.md’s Decisions has a CONFIRMED row for Stage ${s.id}.`], after: `Nothing more to do: ${lead} records it and the card goes once the register says so.` } });
+      continue;
+    }
+    const need: NeedItem = { key: `setup-${s.id}`, kind: 'setup', icon: '✋', text: `Stage ${s.id} (${s.title}) waits for your sign-off`, level: 'warn', action: 'Sign off', target };
+    out.push({ need, source: { id: `stage:${s.id}`, type: 'signoff', label: 'the toolkit’s gate check', text: need.text, target }, keys: [`stage:${s.id}`], kind: 'decision', prio: SIGNOFF_PRIO, body: { question: need.text, detail: signoffMeaning(s.id, s.title), evidence, blocks: [], owner: 'the toolkit', notes: ['Sign off asks the team lead to add the CONFIRMED row to PROJECT.md’s Decisions, after their turn. Nothing is sent until you confirm it.'], after: 'After you sign off: the lead is told “Signed off” with the exact Decisions row to add, after their current turn. This card then says it waits for them to record it.' } });
   }
   return out;
 }
+
+/** A sign-off leads any card it folds into (after a client question): its answer path is the sign-off dialog, never an escalation's free-text answer. */
+export const SIGNOFF_PRIO = 0.5;

@@ -22,7 +22,7 @@ The colour of a segment comes from what the office measured:
 |---|---|
 | Green | Passed: gate-check says PASS |
 | Grey | Waived (by the entry mode, or by hand with a reason) |
-| Amber | Waiting on someone: a ✋ gate has its work done but no CONFIRMED decision yet, or a MANUAL check wants evidence |
+| Amber | Waiting on someone: a ✋ gate has its work done but no CONFIRMED decision yet, or a MANUAL stage that is in play (every stage before it passed) wants your sign-off. A MANUAL stage that isn't in play yet (Stage 5 on a new project) is grey, *not started*: the toolkit checks it by hand once the stages before it have passed. A CONFIRMED Decisions row for it shows it done |
 | Red | Failing: gate-check found something wrong |
 | Blue | In progress: no verdict yet, but some of the stage's deliverables exist |
 | Dashed | Not started |

@@ -115,9 +115,10 @@ export function incidentsView(root: HTMLElement, opts: IncidentsViewOpts) {
     counts.textContent = c ? `${c.open} open · ${c.mitigated} mitigated · ${c.resolved} resolved` : '';
     opts.counted?.(c?.open ?? 0);
     const chain = data?.chain;
-    badge.className = `au-badge ${!chain ? '' : chain.ok ? 'ok' : 'bad'}`;
-    badge.textContent = !chain ? '' : chain.ok ? '🔒 History verified' : '⚠️ History edited';
-    badge.title = chain?.ok ? 'Every change to an incident is kept, each line pointing at the one before' : 'A line of the incidents file was edited or taken out since it was written';
+    // The chain as the office last verified it, in the background (server/incidents/store.ts): `checking` until that's done.
+    badge.className = `au-badge ${!chain || (chain.checking && chain.ok) ? '' : chain.ok ? 'ok' : 'bad'}`;
+    badge.textContent = !chain ? '' : !chain.ok ? '⚠️ History edited' : chain.checking ? '⏳ Checking the history…' : '🔒 History verified';
+    badge.title = chain?.checking && chain.ok ? 'The office is checking the incidents file line by line, in the background: look again in a moment' : chain?.ok ? 'Every change to an incident is kept, each line pointing at the one before' : 'A line of the incidents file was edited or taken out since it was written';
     tools.replaceChildren(
       ...(data?.admin
         ? [
@@ -148,7 +149,7 @@ export function incidentsView(root: HTMLElement, opts: IncidentsViewOpts) {
       },
       h('span.inc-c-sev', { role: 'cell' }, sevChip(i)),
       h('span.inc-c-main', { role: 'cell' }, h('span.inc-rowtitle', {}, h('span.inc-ref', {}, incidentRef(i)), ' ', i.title), h('span.inc-rowsum', {}, i.summary)),
-      h('span.inc-c-where', { role: 'cell' }, i.floors.length ? i.floors.map(floorName).join(', ') : 'Office'),
+      h('span.inc-c-where', { role: 'cell', ...(i.floors.length ? {} : { title: 'About the office as a whole, not one project: shown on every project' }) }, i.floors.length ? i.floors.map(floorName).join(', ') : 'Office-wide'),
       h('span.inc-c-status', { role: 'cell' }, statusChip(i), i.retrospective ? h('span.inc-retro', { title: 'Recorded retrospectively' }, 'retro') : null, i.occurrences > 1 ? h('span.inc-occ', {}, `${i.occurrences}×`) : null),
       h('span.inc-c-impact', { role: 'cell' }, [i.impact.spendUsd !== undefined ? fmtUsd(i.impact.spendUsd) : '', i.impact.agents !== undefined ? `${i.impact.agents} agent${i.impact.agents === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · ')),
       h('span.inc-c-time', { role: 'cell', title: new Date(i.detectedAt).toISOString() }, fmtTime(i.detectedAt)),

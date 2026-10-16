@@ -59,7 +59,16 @@ export async function archiveProject(a: ArchiveInput): Promise<number> {
   const projectData = path.join(a.dir, '.agent-office');
   if (!within(projectData, a.dataDir) && path.resolve(projectData) !== path.resolve(a.dataDir)) files += await copyTree(projectData, path.join(a.to, 'project-agent-office'), [path.join(a.dir, WORKTREES_DIR)]);
   const incidents = await readFile(path.join(a.dataDir, 'incidents', 'incidents.jsonl'), 'utf8').catch(() => '');
-  const mine = incidents.split('\n').filter((l) => l.includes(`"${a.floor}"`) && floorsOf(l).includes(a.floor));
+  // Its incidents' lines, and the small 'recur' lines (a rule firing again: incidents/recur.ts) of those incidents, which carry no floors.
+  const ids = new Set<string>();
+  const mine = incidents.split('\n').filter((l) => {
+    if (l.includes(`"${a.floor}"`) && floorsOf(l).includes(a.floor)) {
+      const id = incidentIdOf(l);
+      if (id) ids.add(id);
+      return true;
+    }
+    return l.includes('"op":"recur"') && ids.has(incidentIdOf(l) ?? '');
+  });
   if (mine.length) await writeFile(path.join(a.to, 'incidents.jsonl'), `${mine.join('\n')}\n`);
   if (a.pin) await writeFile(path.join(a.to, 'toolkit-pin.json'), `${JSON.stringify(a.pin, null, 2)}\n`);
   await writeFile(path.join(a.to, 'floor.json'), `${JSON.stringify(a.def, null, 2)}\n`);
@@ -96,3 +105,14 @@ export async function removeLiveData(dataDir: string, floor: string, dir: string
   if (keepProjectData || within(projectData, dataDir) || path.resolve(projectData) === path.resolve(dataDir)) return;
   await removeTree(projectData);
 }
+
+/** The incident a line of incidents.jsonl is about: its incident's id, or a 'recur' line's. */
+const incidentIdOf = (line: string): string | undefined => {
+  try {
+    const v = JSON.parse(line) as { id?: unknown; incident?: { id?: unknown } };
+    const id = v.incident?.id ?? v.id;
+    return typeof id === 'string' ? id : undefined;
+  } catch {
+    return undefined;
+  }
+};

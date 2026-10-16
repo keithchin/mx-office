@@ -94,9 +94,9 @@ export function foldCards(entries: readonly Entry[], splits: readonly DecisionSp
     const c = p.cand!;
     const members = g.map((j) => entries[j]);
     const level = members.map((m) => m.need.level).sort((a, b) => LEVEL_RANK[a] - LEVEL_RANK[b])[0];
-    // A decision is never shown as info: an FYI folded into one counts with it.
+    // A decision (or a hands-on action) is never shown as info: an FYI folded into one counts with it. A status line keeps its own level.
     // A question you answered isn't waiting on you, whatever still lists it.
-    const lvl = c.body.answered ? 'info' : c.kind !== 'fyi' && level === 'info' ? 'warn' : level;
+    const lvl = c.body.answered ? 'info' : (c.kind === 'decision' || c.kind === 'hands-on') && level === 'info' ? 'warn' : level;
     const sinces = members.map((m) => m.need.since).filter((x): x is number => x !== undefined);
     const since = sinces.length ? Math.min(...sinces) : undefined;
     const sources = [c.source, ...members.filter((m) => m !== p).map((m) => m.cand?.source ?? { id: m.need.key, type: 'other' as const, label: 'Needs you', target: m.need.target })];

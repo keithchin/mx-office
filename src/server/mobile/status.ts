@@ -29,7 +29,7 @@ export async function projectStatuses(ctx: Ctx): Promise<ProjectStatus[]> {
     try {
       // The setup panel's stages, read from git at most every couple of minutes (notify-teams' cache).
       const setup = (await floorNeeds(ctx, floor)).input.setup;
-      stage = setup?.show ? stageLine(setup.stages) : undefined;
+      stage = setup?.show ? stageLine(setup.stages, setup.decisions) : undefined;
     } catch {
       // no stage line, then
     }

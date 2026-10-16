@@ -43,7 +43,7 @@ function fresh() {
 
 const actions = () => readAudit({ limit: 500 }).events.map((e) => e.action);
 
-test('incidents are made, changed, noted and resolved by hand, each change audited, the file hash-chained', () => {
+test('incidents are made, changed, noted and resolved by hand, each change audited, the file hash-chained', async () => {
   const { store } = fresh();
   const i = createIncident({ title: 'Real agents in a test office', severity: 'sev2', summary: 'Four sessions', floors: ['alpha'], auditIds: ['evt1'] }, ME)!;
   assert.equal(i.number, 1);
@@ -70,10 +70,15 @@ test('incidents are made, changed, noted and resolved by hand, each change audit
   assert.equal(created.target?.id, i.id);
   assert.equal(created.severity, 'warning');
   // The history: each line points at the one before; read back fresh it's the same incident.
+  // Verified in the background (store.ts), never on the request: then kept.
+  assert.deepEqual(await store.verified(), { ok: true });
   assert.deepEqual(store.verify(), { ok: true });
   assert.equal(new IncidentStore(store.dir).get(i.id)?.status, 'resolved');
   const text = readFileSync(store.file, 'utf8').replace('Fake not honoured', 'Nothing to see');
   writeFileSync(store.file, text);
+  // Changed outside the office: the kept answer says it's being checked again, and the check finds the edit.
+  assert.equal(store.verify().checking, true);
+  assert.equal((await store.verified()).ok, false);
   assert.equal(store.verify().ok, false);
 });
 

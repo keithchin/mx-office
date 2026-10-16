@@ -1,0 +1,30 @@
+/* The sign-off dialog (dialog.ts). */
+.so-modal {
+  width: min(560px, calc(100vw - 32px));
+}
+.so-modal .body p {
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+.so-row {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  margin: 0 0 10px;
+}
+.so-small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.so-msg:empty {
+  display: none;
+}
+.so-modal footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

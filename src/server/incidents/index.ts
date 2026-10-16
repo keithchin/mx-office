@@ -11,6 +11,7 @@ import { audit } from '../audit/index.js';
 import type { DraftedField } from '../../shared/incident-analysis.js';
 import type { IncidentPatch } from './edit.js';
 import type { IncidentStore } from './store.js';
+import { trimTimeline, type RecurDelta } from './recur.js';
 
 export { IncidentStore } from './store.js';
 
@@ -23,14 +24,13 @@ export function useIncidents(store: IncidentStore | undefined, now: () => number
 }
 export const incidentStore = () => current;
 
-const TIMELINE_MAX = 200;
 const SEV_RANK: Record<IncidentSeverity, number> = { sev1: 0, sev2: 1, sev3: 2, 'near-miss': 3 };
 const worse = (a: IncidentSeverity, b: IncidentSeverity) => (SEV_RANK[a] <= SEV_RANK[b] ? a : b);
 
 const newId = () => `inc-${clock().toString(36)}${randomBytes(3).toString('hex')}`;
 const entry = (by: string, text: string, kind: TimelineEntry['kind'], at = clock()): TimelineEntry => ({ at, by, text: text.slice(0, 1000), kind });
 const pushTimeline = (i: Incident, e: TimelineEntry) => {
-  i.timeline = [...i.timeline, e].slice(-TIMELINE_MAX);
+  i.timeline = trimTimeline([...i.timeline, e]);
 };
 
 /** An incident's change in the audit log (also what tells the pages to look again). */
@@ -189,7 +189,8 @@ const RULE_ACTOR: AuditActor = { kind: 'office', name: 'Incident rules' };
 /**
  * A rule fired: a new incident, or, when the same rule already has one open on the same floor that it
  * fired into within the dedupe window, that one again (counted, its workers and events added, its
- * severity raised if this is worse). Nothing when the rule is switched off.
+ * severity raised if this is worse), written as a small 'recur' line with only what changed (recur.ts),
+ * never a full copy of the incident. Nothing when the rule is switched off.
  */
 export function raise(d: Detection): Incident | undefined {
   const store = current;
@@ -205,22 +206,25 @@ export function raise(d: Detection): Incident | undefined {
       RULE_ACTOR,
     );
   }
-  const i: Incident = structuredClone(open);
-  i.occurrences++;
-  i.lastSeenAt = now;
-  i.updatedAt = clock();
-  const seen = new Set(i.workers.map((w) => w.id ?? w.name));
-  for (const w of d.workers ?? []) if (!seen.has(w.id ?? w.name)) i.workers.push(w);
-  i.auditIds = [...new Set([...i.auditIds, ...(d.auditIds ?? [])])].slice(0, 200);
-  if (d.impact?.spendUsd !== undefined) i.impact = { ...i.impact, spendUsd: Math.max(i.impact.spendUsd ?? 0, d.impact.spendUsd) };
-  if (i.workers.length) i.impact = { ...i.impact, agents: Math.max(i.impact.agents ?? 0, i.workers.length) };
-  const raised = worse(d.severity, i.severity) !== i.severity;
-  if (raised) {
-    pushTimeline(i, entry('Incident rules', `Severity ${i.severity} → ${d.severity}`, 'status', now));
-    i.severity = d.severity;
-  }
-  pushTimeline(i, entry('Incident rules', d.again ?? `Seen again: ${d.summary}`, 'recurrence', now));
-  store.put(i, 'update', RULE_ACTOR.name);
+  const seen = new Set(open.workers.map((w) => w.id ?? w.name));
+  const workers = (d.workers ?? []).filter((w, n, all) => !seen.has(w.id ?? w.name) && all.findIndex((x) => (x.id ?? x.name) === (w.id ?? w.name)) === n);
+  const auditIds = (d.auditIds ?? []).filter((x) => !open.auditIds.includes(x));
+  let impact = open.impact;
+  if (d.impact?.spendUsd !== undefined) impact = { ...impact, spendUsd: Math.max(impact.spendUsd ?? 0, d.impact.spendUsd) };
+  const agents = open.workers.length + workers.length;
+  if (agents) impact = { ...impact, agents: Math.max(impact.agents ?? 0, agents) };
+  const raised = worse(d.severity, open.severity) !== open.severity;
+  const delta: RecurDelta = {
+    occurrences: open.occurrences + 1,
+    lastSeenAt: now,
+    updatedAt: clock(),
+    ...(raised ? { severity: d.severity } : {}),
+    ...(workers.length ? { workers } : {}),
+    ...(auditIds.length ? { auditIds } : {}),
+    ...(JSON.stringify(impact) !== JSON.stringify(open.impact) ? { impact } : {}),
+    timeline: [...(raised ? [entry('Incident rules', `Severity ${open.severity} → ${d.severity}`, 'status', now)] : []), entry('Incident rules', d.again ?? `Seen again: ${d.summary}`, 'recurrence', now)],
+  };
+  const i = store.recur(open.id, delta, RULE_ACTOR.name)!;
   auditOf(i, RULE_ACTOR, 'incident.updated', `${incidentRef(i)} seen again (${i.occurrences}×): ${d.summary}`, { changed: raised ? ['occurrences', 'severity'] : ['occurrences'], rule: d.rule });
   return i;
 }

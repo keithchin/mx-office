@@ -7,6 +7,7 @@ import type { Escalation } from './roster/escalation.js';
 import type { RoleId } from './roster/roles.js';
 import type { WorkerStatus } from './protocol.js';
 import type { PauseInfo, ResumeChoice, RestartPhase, RunProgress } from './project-run.js';
+import { manualWaiting } from './gate-play.js';
 
 export type MobileTab = 'needs' | 'projects' | 'dms' | 'activity' | 'status';
 export const MOBILE_TABS: readonly { id: MobileTab; label: string; icon: string }[] = [
@@ -133,11 +134,12 @@ export function countStatuses(statuses: readonly WorkerStatus[]): Pick<ProjectSt
 }
 
 /** The stage a toolkit project is at, in a few words: the first one that isn't passed. */
-export function stageLine(stages: readonly { id: string; title: string; status: string }[] | undefined): string | undefined {
+export function stageLine(stages: readonly { id: string; title: string; status: string }[] | undefined, decisions?: readonly { stage: string; status: string }[]): string | undefined {
   if (!stages?.length) return undefined;
   const at = stages.find((s) => s.status !== 'PASS' && s.status !== 'WAIVED');
   if (!at) return 'All stages passed';
-  return `Stage ${at.id} · ${at.title}${at.status === 'MANUAL' ? ' ✋ waiting for your sign-off' : at.status === 'FAIL' ? ' ❌ gate failing' : ''}`;
+  // MANUAL waits on you only while it's the stage in play and not signed off in the register (shared/gate-play.ts).
+  return `Stage ${at.id} · ${at.title}${manualWaiting(stages, at, decisions) ? ' ✋ waiting for your sign-off' : at.status === 'FAIL' ? ' ❌ gate failing' : ''}`;
 }
 
 /** The words of a status line: "2 working · 1 asking · 3 asleep". */

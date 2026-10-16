@@ -196,8 +196,8 @@ export function normalizeSettings(raw: unknown): IncidentSettings {
 export interface IncidentList {
   incidents: Incident[];
   counts: { status: Record<IncidentStatus, number>; severity: Record<IncidentSeverity, number> };
-  /** Whether the incidents file's hash chain holds. */
-  chain: { ok: boolean; brokenAt?: number };
+  /** Whether the incidents file's hash chain holds, as last verified (`checking` while a verification runs). */
+  chain: { ok: boolean; brokenAt?: number; checking?: boolean };
   admin: boolean;
   settings: IncidentSettings;
 }

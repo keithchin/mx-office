@@ -7,6 +7,7 @@ import type { TeamShape } from './roster/coverage.js';
 import type { PlanBrief } from './brief.js';
 import type { OperationNotice } from './setup-operations.js';
 import type { PlanTeamFrom } from './team-from.js';
+import type { SignoffRequest } from './gate-play.js';
 
 /** How a project enters the toolkit's pipeline (the runbook's "Entry Modes"), plus the no-pipeline assurance shelf. */
 export const ENTRY_MODES = ['greenfield', 'requirements-driven', 'existing-app-change', 'migration', 'assurance'] as const;
@@ -294,6 +295,8 @@ export interface SetupView {
   toolkit?: boolean;
   /** For the progress bar (server/progress/): every stage gate-check's dashboard has, P to 7, Stage P worked out as above. */
   verdicts?: { id: string; title: string; status: string; detail?: string }[];
+  /** Sign-offs of a ✋ MANUAL stage given in the office and sent to the lead, not yet recorded in the register (server/signoff/). */
+  signoffs?: SignoffRequest[];
   /** The register's decision rows. */
   decisions?: { stage: string; decision: string; status: string }[];
   /** The delivery branch's head, when the stages were read from origin/<default>. */

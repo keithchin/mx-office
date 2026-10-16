@@ -34,6 +34,8 @@ export type NeedTarget =
   | { to: 'settings'; section?: SettingsSectionId }
   | { to: 'pr'; number: number }
   | { to: 'setup' }
+  /** A ✋ MANUAL stage in play (shared/gate-play.ts): the sign-off dialog (ui/signoff/), which tells the lead "Signed off" with the toolkit's CONFIRMED row. */
+  | { to: 'signoff'; stage: string; title: string }
   | { to: 'live' }
   | { to: 'git' }
   | { to: 'floor'; floor: string }
@@ -163,7 +165,8 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   // Open sev1 and sev2 incidents on this floor or the whole office, the worst and then the oldest first.
   const incidents = (i.incidents ?? []).filter((x) => needsAttention(x) && (!x.floors.length || (!!i.floor && x.floors.includes(i.floor))));
   for (const x of [...incidents].sort((a, b) => a.severity.localeCompare(b.severity) || a.detectedAt - b.detectedAt)) {
-    out.push({ key: `incident-${x.id}`, kind: 'incident', icon: '🚨', tag: SEVERITY_SHORT[x.severity], text: `Incident ${incidentRef(x)}: ${x.title}`, since: x.detectedAt, level: x.severity === 'sev1' ? 'block' : 'warn', action: 'Review', target: { to: 'incident', id: x.id } });
+    // An office-wide one (no project) shows on every project, so it says so: a new project's Needs you makes sense.
+    out.push({ key: `incident-${x.id}`, kind: 'incident', icon: '🚨', tag: SEVERITY_SHORT[x.severity], text: `${x.floors.length ? 'Incident' : 'Office-wide incident'} ${incidentRef(x)}: ${x.title}`, since: x.detectedAt, level: x.severity === 'sev1' ? 'block' : 'warn', action: 'Review', target: { to: 'incident', id: x.id } });
   }
   // 2. Workers whose worktree was deleted outside agent-office.
   for (const w of workers.filter((x) => x.lost).sort((a, b) => a.createdAt - b.createdAt)) {
@@ -206,7 +209,7 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   if (unpriced) out.push(unpriced);
   // 6. Open, ready PRs whose checks fail.
   for (const c of prCheckCandidates(i.pulls)) put(c);
-  // A toolkit stage at a ✋ gate, waiting for your sign-off: any stage gate-check marks MANUAL (3, 4, 7, and 5–6 where it wants a person), from its verdicts whether or not the setup panel shows.
+  // A toolkit stage at a ✋ gate, waiting for your sign-off: a MANUAL stage only once it is the stage in play (shared/gate-play.ts), from its verdicts whether or not the setup panel shows.
   for (const c of signoffCandidates(i.setup)) put(c);
   // The floor's live app failed to start.
   if (i.live && i.live.floor === i.floor && i.live.status === 'failed') {

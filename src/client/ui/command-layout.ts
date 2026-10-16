@@ -7,6 +7,7 @@
 // decorates them as they're drawn.
 
 import { h } from './dom';
+import { manualInPlay } from '../../shared/gate-play';
 import './command-layout.css';
 
 const SETUP_KEY = 'agent-office.cc-setup';
@@ -24,14 +25,17 @@ function setupChoice(): boolean | undefined {
 }
 
 /** Whether the setup panel's gates are fine: no stage failing or waiting for a sign-off, no stale folder. */
-export function setupFine(stages: readonly { status: string }[], stale: boolean): boolean {
-  return !stale && !stages.some((s) => s.status === 'FAIL' || s.status === 'MANUAL');
+export function setupFine(stages: readonly { id?: string; status: string }[], stale: boolean): boolean {
+  // A MANUAL stage counts only once it's in play (shared/gate-play.ts): Stage 5 is MANUAL from a project's first run.
+  const all = stages.map((s) => ({ id: s.id ?? '', status: s.status }));
+  return !stale && !all.some((s) => s.status === 'FAIL' || manualInPlay(all, s.id));
 }
 
 /** The one line a folded setup panel says: where it stands, in words. */
 export function setupLine(stages: readonly { id: string; status: string }[]): string {
   const n = (st: string) => stages.filter((s) => s.status === st).length;
-  const bits = [n('PASS') && `${n('PASS')} passed`, n('FAIL') && `${n('FAIL')} failing`, n('MANUAL') && `${n('MANUAL')} to sign off`, n('PENDING') && `${n('PENDING')} pending`].filter(Boolean);
+  const sign = stages.filter((s) => manualInPlay(stages, s.id)).length;
+  const bits = [n('PASS') && `${n('PASS')} passed`, n('FAIL') && `${n('FAIL')} failing`, sign && `${sign} to sign off`, n('PENDING') && `${n('PENDING')} pending`].filter(Boolean);
   const next = stages.find((s) => s.status !== 'PASS' && s.status !== 'WAIVED');
   return `${bits.join(' · ')}${next ? ` · next: stage ${next.id}` : ''}`;
 }

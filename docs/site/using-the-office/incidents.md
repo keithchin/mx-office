@@ -19,14 +19,14 @@ The **🚨 Incidents** sub-tab inside the **🧾 Audit log** tab, on a project's
 | Severity | **Sev 1** critical, **Sev 2** major, **Sev 3** minor, or **Near miss** (it nearly went wrong) |
 | Status | **Open**, **Mitigated** (the harm is stopped, follow-up still open), **Resolved** (Mx Office then analyses it) |
 | Detected | When, and by whom: an automatic rule, an agent or a person |
-| Where | The projects it's on, or the office as a whole |
+| Where | The projects it's on, or **Office-wide**: the office as a whole (a server stall, failed sign-ins). An office-wide incident shows on every project, a new one included, and says *Office-wide* there so it's clear it isn't about that project |
 | Impact | Spend in dollars, agents affected, data touched, anything else |
-| Timeline | Detected, status and severity changes, notes, and each time its rule fired again |
+| Timeline | Detected, status and severity changes, notes, and its rule firing again: the first 5 and the last 20 of those (the count on the incident says how many there were in all); every note stays |
 | Root cause | Why it happened: drafted by Mx Office's analysis when it's resolved, unless a person wrote it |
 | Corrective actions | Each with its status (open, done, won't do) and an optional link to a commit, PR, issue, setting or URL |
 | Linked audit events | Click one to open it on the Events sub-tab |
 
-The list puts open before mitigated before resolved, the worst first. Filter by project, status, severity, or search titles, summaries, causes and workers. The **🔒 History verified** badge means every change is still in the incidents file, each line pointing at the one before it (like the audit log's chain). Incidents **recorded retrospectively** carry a *retro* tag.
+The list puts open before mitigated before resolved, the worst first. Filter by project, status, severity, or search titles, summaries, causes and workers. The **🔒 History verified** badge means every change is still in the incidents file, each line pointing at the one before it (like the audit log's chain). The office checks that in the background, once when it starts and again only when the file changed outside it; until a check is done the badge says **⏳ Checking the history…**, and **⚠️ History edited** if a line was changed or taken out. Opening the list never reads the whole file. Incidents **recorded retrospectively** carry a *retro* tag.
 
 ## For admins
 
@@ -71,7 +71,7 @@ Each rule opens an incident, or, if the same rule already has an open incident o
 | Worktree cleanup errors | **3** failures in **6** hours | sev3 | on |
 | Failed sign-ins | **5** in **10** minutes | sev2 | on |
 
-The settings are in `<office data>/incidents/settings.json`; the incidents in `<office data>/incidents/incidents.jsonl` (append only, a line per change). See the [settings reference](../reference/settings-reference.md) and the [API](../reference/api-endpoints.md).
+The settings are in `<office data>/incidents/settings.json`; the incidents in `<office data>/incidents/incidents.jsonl` (append only: a line with the whole incident per change, and a small *recur* line with only what changed each time a rule fires into an open incident again, so an incident that recurs all day doesn't copy itself each time). Files written before *recur* lines read and verify as they are; nothing is rewritten. See the [settings reference](../reference/settings-reference.md) and the [API](../reference/api-endpoints.md).
 
 ## The incidents of 2026-10-06
 

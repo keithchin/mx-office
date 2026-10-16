@@ -7,6 +7,7 @@
 // server (server/progress/) both import it, and derivePhases is what the tests pin.
 
 import type { EntryMode } from './wizard.js';
+import { MANUAL_LATER_TEXT, manualInPlay, signedOffIn } from './gate-play.js';
 
 export interface ToolkitStage {
   id: string;
@@ -170,14 +171,15 @@ export function waitsOnPerson(detail: string | undefined): boolean {
   return /✋|placeholder|Confirmed by|CONFIRMED decision|sign-?off/i.test(detail ?? '');
 }
 
-function statusOf(v: VerdictIn | undefined, d: StageDeliverablesIn | undefined): PhaseStatus {
+function statusOf(v: VerdictIn | undefined, d: StageDeliverablesIn | undefined, manual: 'waiting' | 'later' | 'signed' = 'waiting'): PhaseStatus {
   if (!v) return 'unknown';
   const s = v.status.toUpperCase();
   if (s === 'PASS') return 'done';
   if (s === 'WAIVED') return 'waived';
   // A ✋ gate with artifacts and no sign-off is waiting on a person, not broken.
   if (s === 'FAIL') return waitsOnPerson(v.detail) ? 'waiting' : 'failed';
-  if (s === 'MANUAL') return 'waiting';
+  // A MANUAL stage waits on you only once it's in play (shared/gate-play.ts); before that it's not started, and a CONFIRMED row signs it off.
+  if (s === 'MANUAL') return manual === 'signed' ? 'done' : manual === 'later' ? 'pending' : 'waiting';
   if (s === 'PENDING') return d && d.present + d.branch + d.draft > 0 ? 'active' : 'pending';
   return 'unknown';
 }
@@ -218,7 +220,8 @@ export function derivePhases(input: ProgressInput): Phase[] {
     const d = input.deliverables?.find((x) => x.stage === st.id);
     const rows = input.decisions.filter((r) => r.stage.replace(/^stage\s*/i, '').trim().toUpperCase() === st.id);
     const measures: string[] = [];
-    measures.push(v ? `Gate: ${v.status.toUpperCase()}${v.detail ? ` (${v.detail})` : ''}` : 'Gate: unknown (gate-check has not rendered this stage)');
+    const manual = v?.status.toUpperCase() === 'MANUAL' ? (signedOffIn(input.decisions, st.id) ? 'signed' : manualInPlay(input.verdicts, st.id) ? 'waiting' : 'later') : undefined;
+    measures.push(v ? `Gate: ${v.status.toUpperCase()}${manual === 'later' ? ` (${MANUAL_LATER_TEXT})` : manual === 'signed' ? ' (signed off: a CONFIRMED row in PROJECT.md’s Decisions)' : v.detail ? ` (${v.detail})` : ''}` : 'Gate: unknown (gate-check has not rendered this stage)');
     if (d) {
       const extra = [d.branch && `${d.branch} on a branch`, d.draft && `${d.draft} draft`].filter(Boolean).join(', ');
       measures.push(`${d.present} of ${d.expected} document${d.expected === 1 ? '' : 's'} on main${extra ? ` (+${extra})` : ''}`);
@@ -230,7 +233,7 @@ export function derivePhases(input: ProgressInput): Phase[] {
       id: st.id,
       title: st.title,
       kind: 'stage',
-      status: statusOf(v, d),
+      status: statusOf(v, d, manual),
       ...(v ? { verdict: v.status.toUpperCase() } : {}),
       measures,
       ...(d ? { deliverables: { expected: d.expected, present: d.present, branch: d.branch, draft: d.draft, missing: d.missing, items: d.items } } : {}),

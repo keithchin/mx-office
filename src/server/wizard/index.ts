@@ -29,6 +29,7 @@ import { plannerOf } from './planner/index.js';
 import { takesSource } from '../../shared/source-folder.js';
 import { asksForSlice } from '../../shared/discovery-migration.js';
 import { localOnlyAt } from '../local-only.js';
+import { withSignoffs } from '../signoff/index.js';
 import { portfoliosOf } from '../portfolios/index.js';
 import { setupView, setupViewOf } from './setup.js';
 import { GateSource, branchInfo } from './gate-source.js';
@@ -272,7 +273,8 @@ export class Wizard {
    */
   setup(floor: Floor, now = Date.now()): Promise<SetupView> {
     // Local only (local-only.ts) is read each time (a cheap, cached look at the project file), never from a view shared from before setup wrote it.
-    return this.sharedSetup(floor, now).then((v) => (localOnlyAt(floor.dir) ? { ...v, localOnly: true } : v));
+    // So are the sign-offs given in the office and not yet recorded (server/signoff/): a small file kept in memory.
+    return this.sharedSetup(floor, now).then((v) => withSignoffs(this.ctx.cfg.dataDir, floor.id, localOnlyAt(floor.dir) ? { ...v, localOnly: true } : v));
   }
 
   private sharedSetup(floor: Floor, now: number): Promise<SetupView> {
