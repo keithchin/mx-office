@@ -177,16 +177,26 @@ export class IncidentStore {
       return { ok: true };
     }
     if (this.chain && !this.verifying && st.size === this.verifiedSize && st.mtimeMs === this.verifiedMtime) return { ...this.chain };
-    void this.verified();
+    void this.verified().catch(() => undefined);
     return { ...(this.chain ?? { ok: true }), checking: true };
   }
 
   /** The chain verified against the file as it is now (one verification at a time; a fresh one when the file changed under it). */
   verified(): Promise<ChainState> {
     if (this.verifying) return this.verifying;
-    const run = this.verifyFile().finally(() => {
-      if (this.verifying === run) this.verifying = undefined;
-    });
+    // A file taken away mid-read (a test office deleted) is no file: nothing to verify, never an unhandled rejection.
+    const run = this.verifyFile()
+      .catch((e: NodeJS.ErrnoException) => {
+        if (e?.code !== 'ENOENT') throw e;
+        this.chain = { ok: true };
+        this.verifiedSize = 0;
+        this.verifiedMtime = -1;
+        this.verifiedLast = '';
+        return { ok: true };
+      })
+      .finally(() => {
+        if (this.verifying === run) this.verifying = undefined;
+      });
     this.verifying = run;
     return run;
   }

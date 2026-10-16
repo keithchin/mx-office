@@ -48,7 +48,7 @@ export function buildDigest(i: DigestInput): DigestData {
     .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
     .map((p) => ({ number: p.number, title: p.title }));
   const here = i.needs.filter((n) => n.kind !== 'floor');
-  const redItems = here.filter(isRedNeed);
+  const redItems = here.filter((n) => isRedNeed(n) && !(n.kind === 'setup' && n.level === 'info'));
   const red = redItems.filter((n) => n.kind !== 'escalation').map((n) => n.text);
   const st = i.setup?.show ? i.setup.stages : undefined;
   const stages = st?.length

@@ -140,7 +140,8 @@ export function redItems(floor: Floor, f: FloorNeeds, publicUrl: string | undefi
   const workers = [...f.input.workers];
   const out: RedItem[] = [];
   for (const n of notifyRows(f.needs)) {
-    if (!isRedNeed(n)) continue;
+    // A sign-off already given, waiting for the lead to record it, is shown, not waiting on you: no post.
+    if (!isRedNeed(n) || (n.kind === 'setup' && n.level === 'info')) continue;
     const who = whoOf(n, workers, f.input.roster, f.input);
     out.push({
       id: `${floor.id}:${n.key}${n.kind === 'asking' && n.since ? `@${n.since}` : ''}`,

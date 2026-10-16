@@ -91,6 +91,9 @@ test('signed off in the office: a status line waiting for the lead; once PROJECT
   assert.equal(asked.kind, 'status');
   assert.equal(asked.level, 'info');
   assert.match(asked.question, /signed off by Keith: waiting for Ada to record it in PROJECT\.md/);
+  // Not red for Teams: nothing waits on you.
+  const askedSetup = setup({ verdicts: AT_BUILD, signoffs: [req] });
+  assert.deepEqual(buildDigest({ floor: 'f1', project: 'P', now: NOW, pulls: [], needs: collectNeeds(input({ setup: askedSetup })), setup: askedSetup }).red, []);
   const decisions = [{ stage: '5', decision: 'Stage 5 (Build) signed off by the Project Manager', status: 'CONFIRMED 2026-10-16' }];
   assert.deepEqual(signoffState({ decisions, signoffs: [req] }, '5'), { state: 'recorded' });
   assert.equal(collectNeeds(input({ setup: setup({ verdicts: AT_BUILD, signoffs: [req], decisions }) })).filter((n) => n.kind === 'setup').length, 0);
