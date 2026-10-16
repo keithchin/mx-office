@@ -17,6 +17,7 @@
 
 import { promises as nodeFs } from 'node:fs';
 import path from 'node:path';
+import { assertWritable } from '../durable/health.js';
 
 /** The few file operations the write uses: node:fs/promises, or a test's (to make one fail with EACCES or ENOSPC). */
 export interface CriticalFs {
@@ -39,6 +40,8 @@ export function writeJsonCritical(file: string, value: unknown, fs: CriticalFs =
 
 /** The same for text already made (the roster file's critical flush, roster/store.ts). */
 export async function writeTextCritical(file: string, text: string, fs: CriticalFs = nodeFs as unknown as CriticalFs): Promise<void> {
+  // A file the office couldn't read is never written over (durable/health.ts).
+  assertWritable(file);
   const dir = path.dirname(file);
   const tmp = `${file}.${process.pid}.${++seq}.tmp`;
   await fs.mkdir(dir, { recursive: true, mode: 0o700 });

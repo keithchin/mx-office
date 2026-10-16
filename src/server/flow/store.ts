@@ -8,6 +8,7 @@ import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 
 import path from 'node:path';
 import type { RunRecord } from './types.js';
 import { BackgroundFile } from '../offloop/save.js';
+import { assertWritable } from '../durable/health.js';
 
 export interface CachedResult {
   key: string;
@@ -36,6 +37,7 @@ const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(
  * a few times, a few milliseconds apart.
  */
 export function writeJsonAtomic(file: string, value: unknown) {
+  assertWritable(file); // never over a file the office couldn't read (durable/health.ts)
   const text = JSON.stringify(value, null, 2);
   // The folder is made when the write finds it missing, not looked at first: each call costs on a loaded
   // Windows machine (the journey's project making, 2026-10-08).

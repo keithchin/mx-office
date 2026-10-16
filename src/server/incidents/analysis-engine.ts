@@ -63,6 +63,7 @@ const PREVENT: Record<string, string> = {
   loginFailed: 'Check who is signing in and whether the password needs changing',
   pageStall: 'Profile the view that froze and move its heavy work off the page’s main thread',
   serverStall: 'Find the blocking call in the office server and move it off the event loop',
+  storeUnreadable: 'Find what holds the data file (a virus scanner, the search indexer, a sync tool) and exclude the office’s data folder from it',
 };
 
 /**
