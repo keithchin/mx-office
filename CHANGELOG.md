@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-16 · release 52 (`87ab10b`)
+
 ### Added
 
 - **Design systems (Increment 1).** A client's page has a **Design system** part: None (today's behaviour), Atlas defaults, or **Branded Atlas**, a short form (name, primary and status colours, background, cards and text, a font with its fallback, density and corners) from which the office sets all 40 of mxcli's theme tokens, light and dark, with a live contrast check. **Publish** freezes an immutable version in the office's data folder with its digest and the mxcli version it was made with; **Approve**, **Make default** and **Edit as new draft** follow. Changing the default never changes a project that already adopted a version. Branded Atlas covers colours, type, density and shape: logo, fonts, layouts and the toolkit's extra components are separate work. The docs have it under Using the Office › Design systems.
