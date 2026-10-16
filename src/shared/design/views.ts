@@ -1,7 +1,7 @@
 // What the design-system routes answer (server/design/, http/routes/design.ts). Pure types.
 
 import type { ApplyState } from './words.js';
-import type { CaptureRecord, DesignDefault, DesignProposal, DesignSystem, PackageManifest, PatternSelection, ProjectDesignBinding } from './types.js';
+import type { CaptureRecord, DesignDefault, DesignInput, DesignProposal, DesignSystem, PackageManifest, PatternSelection, ProjectDesignBinding } from './types.js';
 
 /** A published version as the pages show it. */
 export interface VersionView {
@@ -25,6 +25,8 @@ export interface ClientDesignView {
   system?: Omit<DesignSystem, 'versions'>;
   versions: VersionView[];
   default?: DesignDefault;
+  /** The newest published version's form: where the next draft starts when there's none. */
+  latest?: DesignInput;
   admin: boolean;
 }
 

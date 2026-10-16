@@ -85,7 +85,7 @@ export function designPart(client: string, admin: boolean): HTMLElement {
     } else if (s) parts.push(h('p', {}, h('strong', {}, s.name), ` · ${s.kind === 'branded' ? 'Branded Atlas' : 'Atlas defaults'} · administration preset`));
     if (mode === 'none' && !s) parts.push(h('p.pf-hint', {}, 'No design system: new projects of this client are set up exactly as today.'));
     if (mode && mode !== 'none' && admin) {
-      const start: DesignInput = { ...DEFAULT_INPUT, ...(s?.draft ?? {}), name: s?.draft?.name || s?.name || `${view.label} Design System` };
+      const start: DesignInput = { ...DEFAULT_INPUT, ...(s?.draft ?? view.latest ?? {}), name: s?.draft?.name || s?.name || `${view.label} Design System` };
       if (mode === 'branded') {
         form = brandForm(start, () => ((dirty = true), (publish.disabled = true)));
         parts.push(form.el);

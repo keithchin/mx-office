@@ -45,7 +45,11 @@ export function designOf(ctx: Ctx): DesignService {
 
 export function startDesignSystems(ctx: Ctx): () => void {
   const s = designOf(ctx);
-  void s.ready().catch((err: Error) => console.warn(`agent-office: design systems: ${err.message}`));
+  // Loaded once, in the background; each bound project's selections and guidance read ahead of its first task.
+  void s
+    .ready()
+    .then(() => Promise.all(Object.keys(s.projects.bindings()).map((f) => s.lines.prepare(f))))
+    .catch((err: Error) => console.warn(`agent-office: design systems: ${err.message}`));
   const offLine = addTaskLineHook((t) => s.lines.line(t));
   useDesignBound((floor) => !!s.projects.binding(floor));
   const offForget = onForgetFloor((f) => void s.forget(f.id).catch(() => undefined));

@@ -193,6 +193,12 @@ export class DesignStore {
     });
   }
 
+  /** A published version's form (its input.json), when it's there. */
+  async inputOf(id: string, n: number): Promise<DesignInput | undefined> {
+    const raw = await readFile(path.join(this.packageDir(id, n), 'input.json'), 'utf8').catch(() => '');
+    return raw ? cleanInput(JSON.parse(raw)) : undefined;
+  }
+
   /** Starts a draft from a published version's form (editing a published version never changes it). */
   editFrom(id: string, n: number): Promise<DesignSystem | string> {
     return this.serial(async () => {

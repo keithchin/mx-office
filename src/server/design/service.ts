@@ -88,7 +88,9 @@ export class DesignService {
     await this.ready();
     const s = this.store.ofOwner({ client });
     const { versions: _v, ...system } = s ?? ({} as never);
-    return { client, label: this.deps.clientLabel(client) ?? client, ...(s ? { system } : {}), versions: s ? await this.versions(s.id) : [], ...(this.store.defaultOf(client) ? { default: this.store.defaultOf(client) } : {}), admin };
+    const top = s?.versions.at(-1);
+    const latest = top ? await this.store.inputOf(s!.id, top.n) : undefined;
+    return { client, label: this.deps.clientLabel(client) ?? client, ...(s ? { system } : {}), versions: s ? await this.versions(s.id) : [], ...(this.store.defaultOf(client) ? { default: this.store.defaultOf(client) } : {}), ...(latest ? { latest } : {}), admin };
   }
 
   /** What a new project of `client` may adopt: the approved versions of its design system, its default first. */
