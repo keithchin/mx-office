@@ -171,7 +171,6 @@ test('removing a project keeps the profile, ends its assignment and lets go of t
   const again = w.restart();
   await again.store.load();
   assert.equal(again.store.get(p.id)!.assignments[0].ended, 'project-removed');
-  writeFileSync(path.join(w.dataDir, 'scratch.txt'), '');
 });
 
 test('the hire dialog lists this role’s agents first, never the seat’s own, and the Move says its effect on the source first', async () => {
@@ -184,4 +183,12 @@ test('the hire dialog lists this role’s agents first, never the seat’s own, 
   assert.match(lines[1], /fresh session .* Nothing from Travel approval comes along/);
   assert.match(lines.join(' '), /can’t work on both projects at once/);
   assert.doesNotMatch(lines.join(' '), /on loan|train|skill|better|learn/i);
+});
+
+test('an unreadable profiles.json is kept beside it before the office starts profiles over', async () => {
+  const w = world();
+  writeFileSync(path.join(w.dataDir, 'profiles.json'), '{ not json');
+  await w.svc.store.load();
+  assert.equal(w.svc.store.data.profiles.length, 0);
+  assert.ok(readdirSync(w.dataDir).some((f) => f.startsWith('profiles.json.unreadable-')));
 });

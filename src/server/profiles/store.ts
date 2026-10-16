@@ -4,7 +4,7 @@
 // rollback. Read once (asynchronously), written with the acknowledged critical write
 // (flow/critical-write.ts), changes serialised on one chain.
 
-import { readFile } from 'node:fs/promises';
+import { copyFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { writeJsonCritical } from '../flow/critical-write.js';
 import { isRoleId } from '../../shared/roster/roles.js';
@@ -113,7 +113,16 @@ export class ProfileStore {
   /** The file (empty, and nothing written, when profiles.json doesn't exist). */
   load(): Promise<ProfilesFile> {
     this.loaded ??= readFile(this.file, 'utf8').then(
-      (t) => this.set(cleanFile(JSON.parse(t))),
+      async (t) => {
+        try {
+          return this.set(cleanFile(JSON.parse(t)));
+        } catch {
+          // Unreadable: kept beside it (the next write would replace it), and the office carries on as if it were new.
+          await copyFile(this.file, `${this.file}.unreadable-${Date.now()}`).catch(() => undefined);
+          console.error(`agent-office: couldn't read ${this.file}; kept a copy beside it and started agent profiles over`);
+          return this.set(cleanFile(undefined));
+        }
+      },
       () => this.set(cleanFile(undefined)),
     );
     return this.loaded;
