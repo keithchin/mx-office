@@ -30,7 +30,7 @@ const section = (title: string, ...body: (Node | string | null)[]) => h('section
 export function incidentDetail(i: Incident, o: DetailOpts): HTMLElement {
   const an = analysisView(i);
   const busy = an.state === 'pending';
-  const where = i.floors.length ? i.floors.map(o.floorName).join(', ') : 'The office';
+  const where = i.floors.length ? i.floors.map(o.floorName).join(', ') : 'Office-wide (the office as a whole, not one project)';
   const set = async (status: Incident['status']) => {
     const r = await saveIncident(i.id, { status });
     if (r?.incident) o.changed(r.incident);

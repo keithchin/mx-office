@@ -47,6 +47,7 @@ export const incidentRoutes = {
       const all = store?.list() ?? [];
       const p = url.searchParams;
       const shown = filterIncidents(all, { floor: p.get('floor') ?? undefined, status: list(p.get('status')).filter(isIncidentStatus), severity: list(p.get('severity')).filter(isSeverity), q: p.get('q')?.slice(0, 200) });
+      // The chain as the store last verified it (store.ts): never hashed here, so a page load can't stall the office.
       const body: IncidentList = { incidents: sortIncidents(shown), counts: countIncidents(filterIncidents(all, { floor: p.get('floor') ?? undefined })), chain: store?.verify() ?? { ok: true }, admin: isAdmin(ctx, session), settings: store?.settings() ?? normalizeSettings(undefined) };
       return send(res, 200, body);
     },

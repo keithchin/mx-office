@@ -165,7 +165,8 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   // Open sev1 and sev2 incidents on this floor or the whole office, the worst and then the oldest first.
   const incidents = (i.incidents ?? []).filter((x) => needsAttention(x) && (!x.floors.length || (!!i.floor && x.floors.includes(i.floor))));
   for (const x of [...incidents].sort((a, b) => a.severity.localeCompare(b.severity) || a.detectedAt - b.detectedAt)) {
-    out.push({ key: `incident-${x.id}`, kind: 'incident', icon: '🚨', tag: SEVERITY_SHORT[x.severity], text: `Incident ${incidentRef(x)}: ${x.title}`, since: x.detectedAt, level: x.severity === 'sev1' ? 'block' : 'warn', action: 'Review', target: { to: 'incident', id: x.id } });
+    // An office-wide one (no project) shows on every project, so it says so: a new project's Needs you makes sense.
+    out.push({ key: `incident-${x.id}`, kind: 'incident', icon: '🚨', tag: SEVERITY_SHORT[x.severity], text: `${x.floors.length ? 'Incident' : 'Office-wide incident'} ${incidentRef(x)}: ${x.title}`, since: x.detectedAt, level: x.severity === 'sev1' ? 'block' : 'warn', action: 'Review', target: { to: 'incident', id: x.id } });
   }
   // 2. Workers whose worktree was deleted outside agent-office.
   for (const w of workers.filter((x) => x.lost).sort((a, b) => a.createdAt - b.createdAt)) {
