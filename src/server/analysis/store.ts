@@ -5,9 +5,9 @@
 // ranking looks at) are written once, after them, off the event loop: each put wrote the whole file
 // and renamed it, 400 times on the big test office's first ranking (360 ms of renames on Windows).
 
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { assertWritable, readJsonlStoreSync, writeTextDurableSync } from '../durable/index.js';
 import type { RunRecord } from '../../shared/analysis.js';
 
 export class RunStore {
@@ -22,8 +22,9 @@ export class RunStore {
     this.dir = path.join(dataDir, 'analysis');
     this.file = path.join(this.dir, 'runs.jsonl');
     try {
-      for (const line of readFileSync(this.file, 'utf8').split('\n')) {
-        if (!line.trim()) continue;
+      // Only a missing file is "no runs": a locked one blocks the rewrites below (which would keep only the
+      // runs in memory), a torn tail is kept aside and cut off (durable/jsonl.ts).
+      for (const line of readJsonlStoreSync(this.file).lines) {
         try {
           const r = JSON.parse(line) as RunRecord;
           if (r && typeof r.id === 'string' && typeof r.floor === 'string') this.runs.set(r.id, r);
@@ -32,7 +33,7 @@ export class RunStore {
         }
       }
     } catch {
-      // no runs recorded yet
+      // couldn't read it: durable/health.ts raised it, and the rewrites are refused
     }
   }
 
@@ -83,6 +84,7 @@ export class RunStore {
       if (!this.due) return;
       this.due = false;
       try {
+        assertWritable(this.file);
         await mkdir(this.dir, { recursive: true, mode: 0o700 });
         const tmp = `${this.file}.tmp`;
         await writeFile(tmp, this.text(), { mode: 0o600 });
@@ -103,10 +105,7 @@ export class RunStore {
 
   private write() {
     try {
-      mkdirSync(this.dir, { recursive: true, mode: 0o700 });
-      const tmp = `${this.file}.tmp`;
-      writeFileSync(tmp, this.text(), { mode: 0o600 });
-      renameSync(tmp, this.file);
+      writeTextDurableSync(this.file, this.text());
     } catch {
       // disk issues shouldn't take the office down
     }
