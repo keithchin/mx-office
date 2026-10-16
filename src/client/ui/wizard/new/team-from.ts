@@ -152,7 +152,7 @@ export function teamFromPanel(flow: Flow, hooks: TeamFromHooks) {
         'div.nw-tf-sum',
         {},
         h('div.nw-tf-sumh', {}, h('h3', { tabindex: '-1' }, `Copies the setup of ${picked.project}${picked.client ? ` (${picked.client})` : ''}`), stop),
-        h('ul.nw-tf-ul', {}, ...copiedLines(picked, copyTeam(picked), title).map((l) => h('li', {}, l))),
+        h('ul.nw-tf-ul', {}, ...copiedLines(picked, { ...copyTeam(picked), models: t.models }, title).map((l) => h('li', {}, l))),
         note ? h('p.nw-hint', {}, note) : null,
         h('p.nw-hint', {}, `${COPY_HONESTY} Change the shape, the roles or the level below as usual.`),
         h('div.nw-tf-not', {}, h('b', {}, 'Not copied'), h('ul.nw-tf-ul', {}, ...NOT_COPIED.map((l) => h('li', {}, l)))),

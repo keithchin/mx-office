@@ -103,7 +103,7 @@ export function copiedLines(src: Pick<TeamSource, 'project' | 'roles'>, copy: Te
   return [
     `Team shape: ${s.icon} ${s.label}${copy.customTeam ? ' (roles picked by hand)' : ''}`,
     `Roles: ${copy.roles.map(roleTitle).join(', ') || 'none'}`,
-    `Models: ${models.join(', ') || 'each role’s default'}`,
+    `Models: ${models.join(', ') || 'as the budget level sets them'}`,
     copy.level ? `Budget level: ${copy.level[0].toUpperCase()}${copy.level.slice(1)} (the amount is this project’s own estimate)` : 'Budget level: not copied (that project has no level), so this project keeps its suggested one',
   ];
 }
