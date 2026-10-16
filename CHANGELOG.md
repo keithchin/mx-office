@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-16 · release 54 (`62707f9`)
+
 ### Added
 
 - **Resolve old incidents… on the Incidents page.** Admins can resolve, in one go, every incident in the list's scope that is mitigated or hasn't been seen for more than 7 days. A window lists exactly which ones first (number, title, project or *Office-wide*, status, last seen), each ticked, with a short resolution note that's required and starts as *Bulk-resolved: mitigated or not seen for 7+ days*; ✕ or Esc goes back to the button. Each is resolved the normal way (one change in the incidents file and one `incident.resolved` event each, with the note) plus one `incident.bulk-resolve` event with how many and which, and the counts and Needs you follow at once. An open incident seen in the last 7 days is never resolved this way (the office checks each again), pressing it twice resolves nothing more, and through Phone access it asks for your password again like resolving one. Mx Office's analysis isn't started for these; **Retry analysis** on any of them asks for one.
