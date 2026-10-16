@@ -1,0 +1,42 @@
+/* Agent profiles (home/agents.ts, ui/profiles/hire.ts): in the color tokens. */
+.pr-wrap { display: flex; flex-direction: column; gap: 14px; max-width: 980px; margin: 0 auto; padding: 4px 0 24px; }
+.pr-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pr-head h2 { margin: 0; font-size: 20px; }
+.pr-note { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--info-soft); border: 1px solid var(--info-line); color: var(--ink); font-size: 14px; line-height: 1.45; }
+.pr-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.pr-list li { margin: 0; }
+.pr-open, .pr-row { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; cursor: pointer; box-shadow: 0 1px 0 var(--edge); }
+.pr-open:hover, .pr-open:focus-visible, .pr-row:hover, .pr-row:focus-visible { background: var(--hover-light); }
+.pr-row[aria-pressed='true'] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--info-line); }
+.pr-row[disabled] { opacity: 0.6; cursor: not-allowed; }
+.pr-name { font-weight: 700; font-size: 16px; }
+.pr-row-h { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; justify-content: space-between; }
+.pr-row-l, .pr-meta { font-size: 13px; color: var(--ink-2); }
+.pr-dim { color: var(--muted); }
+.pr-where { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--neutral-soft); color: var(--ink-2); }
+.pr-where[data-kind='working'] { background: var(--good-soft); color: var(--good-ink); }
+.pr-where[data-kind='moving'] { background: var(--warn-soft); color: var(--warn-ink); }
+.pr-part { padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; gap: 8px; }
+.pr-part h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.pr-part p { margin: 0; }
+.pr-part > .btn { align-self: flex-start; }
+.pr-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: 14px; }
+.pr-dl dt { color: var(--muted); }
+.pr-dl dd { margin: 0; overflow-wrap: anywhere; }
+.pr-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.pr-table th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line); }
+.pr-table td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.pr-move-card { border-color: var(--line); background: var(--warn-soft); }
+.pr-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.pr-dialog { width: min(640px, 94vw); }
+.pr-dialog .body { display: flex; flex-direction: column; gap: 10px; max-height: 70vh; overflow-y: auto; }
+.pr-dialog footer { display: flex; gap: 8px; justify-content: flex-end; }
+.pr-dialog .pr-pick { display: flex; flex-direction: column; gap: 8px; margin: 0; width: auto; }
+.pr-field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.pr-input { font: inherit; padding: 8px; border: 2px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); resize: vertical; }
+.pr-move { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; }
+.pr-status { margin: 0; font-size: 13px; color: var(--muted); min-height: 1em; }
+.pr-hint { margin: 0; color: var(--ink-2); font-size: 13px; }
+@media (max-width: 600px) {
+  .pr-table th:nth-child(3), .pr-table td:nth-child(3) { display: none; }
+}

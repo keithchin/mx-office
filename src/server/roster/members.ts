@@ -79,6 +79,9 @@ export class Members {
     const m = d.members[role];
     const def = ROLE_BY_ID.get(role)!;
     const w = this.roster.workerOf(floor, m);
+    // Agent profiles (server/profiles/): a seat a move holds is hired by that move only; a seat about to get a new profile may be renamed first.
+    const profile = await this.roster.deps.profiles?.beforeHire(floor.id, role).catch(() => undefined);
+    if (profile?.refuse) return profile.refuse;
     if (w) {
       if (m.phase === 'benching') return `${m.name} is writing a handoff note before being benched`;
       if (!isAsleepStatus(w.status)) return `${m.name} is already at work`;
@@ -100,8 +103,11 @@ export class Members {
     // A project in a portfolio with a company brain: one line pointing at its ROUTING.md (never its content); nothing for any other project.
     const brain = await this.roster.deps.hireContext?.(floor.id).catch(() => undefined);
     const typed = task ? this.roster.tasks.prepareRole(floor, task) : task;
-    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, typed, owed.lines, teamLine(d, role), brain?.line), owner, by, team: def.team });
+    // The brain's pointer and, for a profile that worked on other projects, one line saying nothing from them comes along (a count only).
+    const lines = [brain?.line, profile?.line].filter(Boolean).join('\n\n') || undefined;
+    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, typed, owed.lines, teamLine(d, role), lines), owner, by, team: def.team });
     if (typeof r === 'string') return r;
+    this.roster.deps.profiles?.hired(floor.id, role, r.id);
     // What this hire was offered, once per hire (server/portfolios/manifest.ts): offered, not obeyed.
     void brain?.record(role, r.id).catch(() => undefined);
     owed.mark();
@@ -117,7 +123,7 @@ export class Members {
     else this.roster.tasks.ids.reattempt(floor, role, r.id, was);
     const ids = m.task && m.task.doneAt === undefined && m.task.taskId ? { taskId: m.task.taskId, ...(m.task.executionId ? { executionId: m.task.executionId } : {}) } : {};
     floor.toast(`${by} hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`);
-    audit.record({ floor: floor.id, actor: byWhom(by, owner), action: 'worker.hire', target: { kind: 'worker', id: r.id, label: m.name }, summary: `Hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`, details: { role, model: model || m.model, task: task ? { length: task.length } : undefined }, ids: { ...ids, roleId: role, agentInstanceId: r.id } });
+    audit.record({ floor: floor.id, actor: byWhom(by, owner), action: 'worker.hire', target: { kind: 'worker', id: r.id, label: m.name }, summary: `Hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`, details: { role, model: model || m.model, task: task ? { length: task.length } : undefined, profileId: this.roster.deps.profiles?.profileOf(floor.id, role) }, ids: { ...ids, roleId: role, agentInstanceId: r.id } });
     this.roster.touch(floor);
     // Then its Playbook, its team's subagents and the journals, in the folder it works in, before its
     // session has booted far enough to read them.
@@ -201,19 +207,28 @@ export class Members {
     }
   }
 
-  rename(floor: TeamFloor, role: RoleId, raw: unknown): string | undefined {
+  rename(floor: TeamFloor, role: RoleId, raw: unknown, by?: string): string | undefined {
     const name = cleanName(raw);
     if (!name) return 'Give it a name (up to 24 characters)';
     const d = this.roster.data(floor.id);
     if (ROLES.some((r) => r.id !== role && d.members[r.id].name.toLowerCase() === name.toLowerCase())) return `${name} is already on the team`;
     // Nor a subagent's: names are one per floor (subagent-names.ts).
     if (Object.values(d.subagentNames).some((n) => n.toLowerCase() === name.toLowerCase())) return `${name} is already a subagent's name on the team`;
-    const m = d.members[role];
+    // Nor another agent profile's, office-wide (server/profiles/).
+    const taken = this.roster.deps.profiles?.renaming(floor.id, role, name);
+    if (taken) return taken;
+    this.setName(floor, role, name);
+    this.roster.deps.profiles?.renamed(floor.id, role, name, by);
+    return undefined;
+  }
+
+  /** Sets a seat's name and its live worker's, without the checks (agent profiles' moves pick names that are free). */
+  setName(floor: TeamFloor, role: RoleId, name: string) {
+    const m = this.roster.data(floor.id).members[role];
     m.name = name;
     const w = this.roster.workerOf(floor, m);
     if (w) floor.rename(w.id, name);
     this.roster.touch(floor);
-    return undefined;
   }
 
   /** A new model for a role: from its next hire (a running session keeps the one it started on). */

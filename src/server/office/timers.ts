@@ -13,6 +13,7 @@ import { startWarmup } from '../warmup.js';
 import { startStuckDetection } from '../stuck/index.js';
 import { startAsks } from '../asks/index.js';
 import { startPortfolios } from '../portfolios/index.js';
+import { startProfiles } from '../profiles/index.js';
 import { startQuestions } from '../questions/index.js';
 import { startFollowThrough } from '../followthrough/index.js';
 import { startChangeAnswer } from '../change-answer/index.js';
@@ -77,6 +78,8 @@ export function startTimers(ctx: Ctx): () => void {
   const stopChange = startChangeAnswer(ctx);
   // Each portfolio's company brain looked at every five minutes, off the loop: a change under a live session is a Needs-you card (portfolios/).
   const stopPortfolios = startPortfolios(ctx);
+  // Agent profiles: the existing team members given profiles once, and a move a restart left reconciled (profiles/).
+  const stopProfiles = startProfiles(ctx);
 
   return () => {
     stopRuns();
@@ -95,6 +98,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopFollow();
     stopChange();
     stopPortfolios();
+    stopProfiles();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

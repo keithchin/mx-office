@@ -100,6 +100,8 @@ export interface MemberView {
   task?: string;
   /** It has an escalation open to the Project Manager (an FYI too): idle because the next move may be theirs. */
   waitingOnPm?: boolean;
+  /** Its agent profile's id (shared/profiles.ts), once it has one. */
+  profileId?: string;
 }
 
 export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'change' | 'auto';

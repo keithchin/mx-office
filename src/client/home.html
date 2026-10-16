@@ -69,6 +69,7 @@
         <button id="tab-overview" class="btn" type="button" role="tab">🗺️ 2D Overview</button>
         <button id="tab-audit" class="btn" type="button" role="tab">🧾 Audit log</button>
         <button id="tab-budget" class="btn" type="button" role="tab">💰 Budget</button>
+        <button id="tab-agents" class="btn" type="button" role="tab">👥 Agents</button>
       </div>
       <!-- A card for every floor, to go into on the board or in the office, and adding one (home/projects.ts). -->
       <section id="projects-view" role="tabpanel" aria-labelledby="tab-projects"></section>
@@ -80,6 +81,8 @@
       <section id="audit-view" class="hidden" role="tabpanel" aria-labelledby="tab-audit"></section>
       <!-- Every project's spend against its budget (home/budget.ts). -->
       <section id="budget-view" class="hidden" role="tabpanel" aria-labelledby="tab-budget"></section>
+      <!-- Agent profiles: a name and a history each, every project a fresh session (home/agents.ts). -->
+      <section id="agents-view" class="hidden" role="tabpanel" aria-labelledby="tab-agents"></section>
     </main>
     <div id="toasts"></div>
     <div id="conn" class="conn hidden">Reconnecting…</div>

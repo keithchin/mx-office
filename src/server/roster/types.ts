@@ -3,7 +3,7 @@
 // cost money). adapter.ts makes one from a real Floor.
 
 import type { RosterAlert, WorkerInfo } from '../../shared/protocol.js';
-import type { TeamId } from '../../shared/roster/roles.js';
+import type { RoleId, TeamId } from '../../shared/roster/roles.js';
 import type { IssueMaker } from './issues.js';
 import type { JudgeMade } from '../../shared/judge.js';
 import type { PipelineStage } from '../../shared/roster/types.js';
@@ -90,4 +90,19 @@ export interface RosterDeps {
    * every other project, whose first message stays exactly as it was.
    */
   hireContext?: (floorId: string) => Promise<{ line: string; record(role: string, workerId: string, sessionId?: string): Promise<void> } | undefined>;
+  /** Agent profiles (server/profiles/): office-wide identities for the seats. Without it the team works as before. */
+  profiles?: ProfileHooks;
+}
+
+/** What the roster tells agent profiles, and asks of them (server/profiles/service.ts). */
+export interface ProfileHooks {
+  /** Before a hire: why it's refused (a move holds the seat), else the one line its first message may get. May rename a seat about to mint a profile. */
+  beforeHire(floorId: string, role: RoleId): Promise<{ refuse?: string; line?: string }>;
+  hired(floorId: string, role: RoleId, workerId: string): void;
+  /** Why a rename is refused (another agent in the office has the name), else undefined. */
+  renaming(floorId: string, role: RoleId, name: string): string | undefined;
+  renamed(floorId: string, role: RoleId, name: string, by?: string): void;
+  profileOf(floorId: string, role: RoleId): string | undefined;
+  /** The roster saved the floor (cheap: returns at once with no move open). */
+  touched(floorId: string): void;
 }

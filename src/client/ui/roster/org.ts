@@ -7,7 +7,9 @@ import { ROLE_BY_ID } from '../../../shared/roster/roles';
 import type { MemberStatus, MemberView, RosterView } from '../../../shared/roster/types';
 import { h, timeAgo } from '../dom';
 import { jeffCard } from '../jeff';
-import { act } from './api';
+import { act, fetchRoster } from './api';
+import { hireFromAgents } from '../profiles/hire';
+import { profileHref } from '../profiles/api';
 import { askText } from './ask';
 import { openSkills } from './skills';
 import { subagentList } from './subagents';
@@ -92,6 +94,9 @@ export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLEle
                   ),
           }, m.status === 'asleep' ? '⏰ Wake' : '🤝 Hire')
         : null,
+      // Agent profiles (ui/profiles/): another of the office's agents into this free seat, and this one's profile page.
+      !hired && v.admin ? h('button.btn.small', { type: 'button', title: 'Hire one of the office’s agents into this seat: a fresh session here, nothing carried over', onclick: (e: Event) => hireFromAgents(e.currentTarget as HTMLElement, v.floor, m.role, () => void fetchRoster(v.floor).then(deps.redraw, () => undefined)) }, '👥 From your agents') : null,
+      m.profileId ? h('a.btn.small', { href: profileHref(m.profileId), title: `${m.name}'s profile: its projects and dates` }, '👤 Profile') : null,
       hired ? h('button.btn.small', { type: 'button', title: `Open ${m.name}'s terminal`, onclick: () => deps.openWorker(m.workerId!) }, '🖥️ Terminal') : null,
       h('button.btn.small.ro-skills', { type: 'button', title: `${m.name}'s skills and their gates${v.admin ? '' : ' (read-only)'}`, onclick: () => openSkills(v, m, deps.redraw) }, '🧰 Skills'),
       canBench && v.admin ? h('button.btn.small', { type: 'button', title: `Ask ${m.name} for a handoff note and lessons, then stop it and clear its session`, onclick: () => run('bench') }, '🪑 Bench') : null,
