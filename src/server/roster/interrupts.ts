@@ -14,6 +14,7 @@ import type { SendOpts } from './deliver.js';
 import type { TeamFloor } from './types.js';
 import { sendAsAnswer } from './dispatch-send.js';
 import type { TaskSource } from '../../shared/tasks.js';
+import { dispatchTaskOf, type Prepared } from './task-ids.js';
 
 /** How long after the Project Manager's question the Coordinator's relays of it follow their choices. */
 export const FANOUT_MS = 30 * 60_000;
@@ -37,14 +38,18 @@ export class Interrupts {
     // Work asked for is a task with its id (Slice 1B-4): a stuck item's ask, a decision card's. The lead panel's
     // quick questions ("a short status update") stay what they were: never the Coordinator's task.
     const from: TaskSource | undefined = source ?? (decision.startsWith('stuck:') ? 'stuck' : undefined);
-    const prompt = from ? this.roster.tasks.prepare(floor, w.id, said, from) : said;
+    // Its record on disk first (task-ids.ts): when it can't be written, nothing is sent or appended.
+    const prep: Prepared = from ? await this.roster.tasks.prepare(floor, w.id, said, from) : { text: said };
+    if (prep.error !== undefined) return prep.error;
+    const prompt = prep.text;
+    const task = dispatchTaskOf(prep.task);
     // With the run state before it as it is when it's typed (awareness.ts): answered from that, never from an old "paused".
-    // A durable dispatch (dispatch-send.ts): the words appended to the answer store under `decision`, the intent on disk before typing.
-    const { result, sent } = await sendAsAnswer(this.roster, floor, w, prompt, { origin: 'person', by, wake: true, hold: true, facts: true, ...(when === 'after' ? { between: true } : {}) }, { decision, by });
+    // A durable dispatch (dispatch-send.ts): the words appended to the answer store under `decision`, the intent (with the task's ids) on disk before typing.
+    const { result, sent } = await sendAsAnswer(this.roster, floor, w, prompt, { origin: 'person', by, wake: true, hold: true, facts: true, ...(when === 'after' ? { between: true } : {}) }, { decision, by, ...(task ? { task } : {}) });
     if (!result.ok) return result.error;
     const r = sent ?? { status: 'refused' as const, why: 'not sent' };
     if (r.status === 'refused') return r.why;
-    if (from) this.roster.tasks.assign(floor, w.id, prompt, by, from);
+    if (from) this.roster.tasks.assign(floor, w.id, prompt, by, from, prep.task?.executionId);
     if (Object.keys(leads).length) this.fanout.set(floor.id, { until: this.roster.deps.now() + FANOUT_MS, choices: leads });
     else this.fanout.delete(floor.id);
     // The same record a prompt typed on the console makes (ws/handlers/workers.ts).

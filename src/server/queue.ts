@@ -7,7 +7,7 @@ import { validateWorkerEffort, validateWorkerModel } from './agents.js';
 import { savedEffort, savedModel, takesEffort, takesModel } from '../shared/providers.js';
 import { PROMPTS } from '../shared/prompts.js';
 import { writeJsonAtomic } from './flow/store.js';
-import { withTaskLine } from '../shared/tasks.js';
+import { cleanTaskRef, withTaskLine } from '../shared/tasks.js';
 import type { QueueTaskIds } from './tasks/queue.js';
 
 /** What the queue needs from the worker manager. Narrow on purpose, so a smoke test can fake it. */
@@ -80,6 +80,8 @@ export class TaskQueue {
   private pumping = false;
   /** Tasks whose worker is starting (see seat). */
   private seating = new Set<string>();
+  /** New tasks waiting for their task record to be on disk before they may start. */
+  private confirming = new Set<string>();
   private again = false;
   /** Set on shutdown: the workers' exit events must not seat anyone into a dying office. */
   private stopped = false;
@@ -141,10 +143,30 @@ export class TaskQueue {
     };
     const taskId = this.events.taskIds?.create(task);
     if (taskId) task.taskId = taskId;
+    if (taskId) this.confirm(task, taskId);
     this.tasks.push(task);
     this.changed();
     this.pump();
     return undefined;
+  }
+
+  /**
+   * Holds a new task off the desks until its task record is on disk (tasks/queue.ts durable): it then starts as
+   * usual; when it couldn't be written it's marked failed with why, never started with an id nothing has.
+   */
+  private confirm(t: QueueTask, taskId: string) {
+    const durable = this.events.taskIds?.durable?.(taskId);
+    if (!durable) return;
+    this.confirming.add(t.id);
+    void durable.then((err) => {
+      this.confirming.delete(t.id);
+      if (err && t.status === 'queued' && this.tasks.includes(t)) {
+        Object.assign(t, { status: 'done', outcome: 'failed', error: `its task record couldn't be saved (${err.slice(0, 160)}), so it wasn't started`, finishedAt: Date.now() });
+        this.events.toast(`📋 Couldn't start ${label(t)}: the office couldn't save its task record, so it wasn't started. Check the data folder can be written to, then retry it`, 'error');
+        this.changed();
+      }
+      this.pump();
+    });
   }
 
   remove(taskId: string): string | undefined {
@@ -386,7 +408,7 @@ export class TaskQueue {
   private seat() {
     let changed = false;
     for (const t of this.tasks) {
-      if (t.status !== 'queued' || this.seating.has(t.id)) continue;
+      if (t.status !== 'queued' || this.seating.has(t.id) || this.confirming.has(t.id)) continue;
       if (this.busy() >= this.maxWorkers) break;
       // A spent budget holds the queue instead of failing every task; the pump seats them once hiring resumes.
       if (this.events.hiringPaused()) break;
@@ -507,6 +529,8 @@ export class TaskQueue {
           outcome: s.outcome,
           error: s.error,
           pr: s.pr,
+          // Its task's ids, as saved (a restart keeps the task and its attempt; a retry is the same task again).
+          ...cleanTaskRef(s),
         };
         // Its worker's terminal may have outlived the old office (ptyhost.ts) and be adopted shortly, or
         // not: it stays running, holding its slot, until afterRestart finds out.

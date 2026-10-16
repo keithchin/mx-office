@@ -123,7 +123,8 @@ test('tsk-minted-and-propagated: a hire and a console task carry Task: tsk_ in t
   assert.deepEqual(cleanIds(hire.ids), hire.ids);
   assert.ok(events.some((e) => e.action === 'task.assign' && e.ids?.taskId === t.taskId));
   // A console task: prepared (minted before typing), then assigned with the same id.
-  const typed = roster.tasks.prepare(floor, m.workerId!, 'Add the payment step to checkout, with tests', 'console');
+  const prep = await roster.tasks.prepare(floor, m.workerId!, 'Add the payment step to checkout, with tests', 'console');
+  const typed = prep.text!;
   const id2 = taskIdIn(typed)!;
   assert.match(id2, TSK);
   assert.notEqual(id2, t.taskId);
@@ -132,7 +133,7 @@ test('tsk-minted-and-propagated: a hire and a console task carry Task: tsk_ in t
   assert.equal(m.prevTasks?.[0]?.taskId, t.taskId, 'the earlier task is cached');
   assert.deepEqual(store.get(floor.id, t.taskId!)?.events.map((e) => e.type), ['assigned', 'superseded']);
   // A reply isn't a task: typed as it was, no id.
-  assert.equal(roster.tasks.prepare(floor, m.workerId!, 'yes, go ahead', 'console'), 'yes, go ahead');
+  assert.deepEqual(await roster.tasks.prepare(floor, m.workerId!, 'yes, go ahead', 'console'), { text: 'yes, go ahead' });
   // The desk-opened PR body's Task section ends with the task line, even when the task is cut short.
   const long = `${'x'.repeat(5000)}\n\n${taskLine(id2)}`;
   const body = draftPr({ prompt: long, name: 'Linus', deskId: 'd' } as unknown as WorkerInfo, ['abc1234 add checkout'], 'Keith').body;

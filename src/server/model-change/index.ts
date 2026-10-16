@@ -8,6 +8,7 @@ import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { ROLES } from '../../shared/roster/roles.js';
 import { ChangeRequests, deliveryOpts, type ChangeMember, type Delivered } from './service.js';
 import { sendAsAnswer } from '../roster/dispatch-send.js';
+import { dispatchTaskOf } from '../roster/task-ids.js';
 
 const services = new WeakMap<object, ChangeRequests>();
 
@@ -39,10 +40,15 @@ export function changeRequestsOf(ctx: Ctx): ChangeRequests {
       if (!w) return { status: 'refused', why: `${m.name} isn't at work` };
       // Once it's typed it's the member's task (roster/resume.ts), as a prompt from the Board's New task is.
       // Its task id goes in with it (Slice 1B-4), beside MCR-n.
-      const typed = roster.tasks.prepare(tf, w.id, text, 'mcr');
-      const onSent = () => (o.onSent(), roster.tasks.assign(tf, w.id, typed, o.by, 'mcr'));
-      // A durable dispatch (roster/dispatch-send.ts): the request appended as mcr:<id>'s revision, the intent on disk before typing.
-      return sendAsAnswer(roster, tf, w, typed, deliveryOpts(o.when, o.by, o.id, onSent), { decision: `mcr:${o.id.split(':').pop()}`, by: o.by, kind: 'answer' }).then(({ result, sent }): Delivered => {
+      // Its record on disk first (roster/task-ids.ts): when it can't be written, nothing is appended or typed.
+      return roster.tasks.prepare(tf, w.id, text, 'mcr').then(async (prep): Promise<Delivered> => {
+        if (prep.error !== undefined) return { status: 'refused', why: prep.error };
+        const typed = prep.text;
+        const exe = prep.task?.executionId;
+        const onSent = () => (o.onSent(), roster.tasks.assign(tf, w.id, typed, o.by, 'mcr', exe));
+        const task = dispatchTaskOf(prep.task);
+        // A durable dispatch (roster/dispatch-send.ts): the request appended as mcr:<id>'s revision, the intent (with the task's ids) on disk before typing.
+        const { result, sent } = await sendAsAnswer(roster, tf, w, typed, deliveryOpts(o.when, o.by, o.id, onSent), { decision: `mcr:${o.id.split(':').pop()}`, by: o.by, kind: 'answer', ...(task ? { task } : {}) });
         if (!result.ok) return { status: 'refused', why: result.error };
         const rec = result.results[0]?.records[0];
         if (!sent) return { status: 'refused', why: 'not sent' };
