@@ -226,7 +226,9 @@ async function copyOne(root: string, rel: string, to: string, opts: SnapshotOpti
     if (!b) throw new SnapshotError(`${rel} disappeared while the folder was being copied: stop whatever is changing the source folder, then Retry`);
     if (!b.isFile()) throw new SnapshotError(`${rel} is no longer a plain file (a link or a folder took its place): links are never followed. Fix the source folder, then Retry`);
     // A folder on its way swapped for a link or junction since the walk: never read through it.
-    if (!samePath(await realpath(abs), abs)) throw new SnapshotError(`${rel} is now reached through a link or junction: links are never followed. Fix the source folder, then Retry`);
+    const real = await realpath(abs).catch(() => undefined);
+    if (real === undefined) throw new SnapshotError(`${rel} disappeared while the folder was being copied: stop whatever is changing the source folder, then Retry`);
+    if (!samePath(real, abs)) throw new SnapshotError(`${rel} is now reached through a link or junction: links are never followed. Fix the source folder, then Retry`);
     await opts.at?.('copy', rel);
     const h = createHash('sha256');
     let size = 0;
@@ -237,7 +239,13 @@ async function copyOne(root: string, rel: string, to: string, opts: SnapshotOpti
         cb(null, chunk);
       },
     });
-    await pipeline(createReadStream(abs, { flags: 'r' }), tap, createWriteStream(to));
+    try {
+      await pipeline(createReadStream(abs, { flags: 'r' }), tap, createWriteStream(to));
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code ?? '';
+      if (!['ENOENT', 'EBUSY', 'EPERM', 'EACCES'].includes(code)) throw err;
+      throw new SnapshotError(`${rel} couldn’t be read (${code}): another program may have it locked or be changing it. Close it, then Retry`);
+    }
     await opts.at?.('copied', rel);
     const a = await lstat(abs).catch(() => undefined);
     if (a?.isFile() && a.size === b.size && a.mtimeMs === b.mtimeMs && size === b.size) return { path: rel, size, sha256: h.digest('hex'), mtimeMs: b.mtimeMs };
@@ -386,7 +394,13 @@ export async function importSnapshot(src: string, dest: string, opts: SnapshotOp
     await opts.at?.('publish');
     const replaced = await exists(p.dir);
     await writeJsonCritical(p.op, { ...record, phase: 'publishing' });
-    await publish(p, opts.at);
+    try {
+      await publish(p, opts.at);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (!code || !BUSY.has(code)) throw err;
+      throw new Error(`The checked copy couldn’t be swapped into ${path.basename(dest)}/ (${code}): a program may have a file in it open (an editor, a terminal, the virus scanner). Close it, then Retry: the checked copy is kept and swapped in first`);
+    }
     return { files: entries.length, bytes, skipped: first.skipped, manifest, replaced, ...(recovered ? { recovered } : {}) };
   } catch (err) {
     // A problem the person can act on clears the partial copy now; anything else (a crash) is left for recoverSnapshot.
