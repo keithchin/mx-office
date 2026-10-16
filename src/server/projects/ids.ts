@@ -9,7 +9,7 @@
 //     repository) gets the same id back.
 // The floor id stays the routing key everywhere; only the Evals and Library work translates.
 
-import { readFileSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
 import path from 'node:path';
 import { isProjectId, mintProjectId, type ProjectId } from '../../shared/evidence/ids.js';
 import { normalizeRepo, sameRepo } from '../../shared/floors.js';
@@ -150,7 +150,7 @@ export class ProjectIds {
   private load() {
     let raw: Partial<RegistryFile>;
     try {
-      raw = JSON.parse(readFileSync(this.file, 'utf8')) as Partial<RegistryFile>;
+      raw = parseStoreSync(this.file) as Partial<RegistryFile>;
     } catch {
       return; // none yet: every floor's id is minted (or adopted from floors.json) as it's seen
     }

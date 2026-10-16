@@ -5,7 +5,7 @@
 // office send requests anywhere else.
 
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
 import { cleanAlerts, storedAlerts, type AlertSettings } from '../../shared/phone.js';
 import { writeJsonAtomic } from '../flow/store.js';
 
@@ -141,9 +141,9 @@ export class PushSubscriptions {
   }
 
   private restore() {
-    if (!this.file || !existsSync(this.file)) return;
+    if (!this.file) return;
     try {
-      const raw = JSON.parse(readFileSync(this.file, 'utf8')) as unknown[];
+      const raw = parseStoreSync(this.file) as unknown[];
       for (const r of Array.isArray(raw) ? raw : []) {
         const s = r as Partial<PushSub>;
         const c = cleanSubscription(s);

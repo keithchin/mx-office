@@ -1,4 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
 import path from 'node:path';
 import { DESK_BY_ID, FLOOR, KIOSK, type DeskDef } from '../shared/layout.js';
 import { DOG_BREEDS, DOG_COATS, cleanDogName, dogAt, dogDefaults, legSeconds, type DogAct, type DogBreed, type DogState } from '../shared/dog.js';
@@ -177,7 +179,7 @@ export class Dog {
 
   private save() {
     try {
-      writeFileSync(this.file, JSON.stringify({ name: this.name, breed: this.breed, coat: this.coat }, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.file, { name: this.name, breed: this.breed, coat: this.coat });
     } catch (err) {
       console.error(`agent-office: couldn't save the dog's name: ${(err as Error).message}`);
     }
@@ -191,7 +193,7 @@ export class Dog {
   private load(): { name?: string; breed?: DogBreed; coat?: number } {
     if (!existsSync(this.file)) return {};
     try {
-      const saved = JSON.parse(readFileSync(this.file, 'utf8')) as { name?: unknown; breed?: unknown; coat?: unknown };
+      const saved = parseStoreSync(this.file) as { name?: unknown; breed?: unknown; coat?: unknown };
       return {
         name: typeof saved.name === 'string' ? cleanDogName(saved.name) || undefined : undefined,
         breed: DOG_BREEDS.find((b) => b === saved.breed),

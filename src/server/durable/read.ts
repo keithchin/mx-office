@@ -258,5 +258,18 @@ export function loadJson<T>(file: string, revive: (v: unknown) => T, forget?: ()
   );
 }
 
+/**
+ * A drop-in for `JSON.parse(readFileSync(file, 'utf8'))` in a store whose catch starts it with its defaults:
+ * the value (or the one recovered beside a corrupt file, which was moved aside); otherwise it throws, an
+ * ENOENT error when there's nothing (the catch's "none yet"), StoreUnavailableError when the file couldn't
+ * be read (the catch starts with the defaults, but its writes are refused, so they can't replace the file).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function parseStoreSync(file: string): any {
+  const r = readJsonStoreSync(file);
+  if (r.state === 'ok') return r.value;
+  throw Object.assign(new Error(`ENOENT: no such file or directory, open '${file}'`), { code: 'ENOENT' });
+}
+
 /** The value read, or `fallback` when the file is missing (a corrupt one already moved aside). */
 export const valueOr = <T>(r: JsonRead, fallback: T): unknown => (r.state === 'ok' ? r.value : fallback);

@@ -5,7 +5,10 @@
 // shared password stop working, accounts' sessions don't.
 
 import { scryptSync } from 'node:crypto';
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
+import { writeJsonDurableSync } from '../durable/write.js';
+import { StoreUnavailableError } from '../durable/health.js';
 import path from 'node:path';
 import type { Auth } from '../auth.js';
 import type { Config } from '../config.js';
@@ -26,7 +29,18 @@ interface StoredConfig {
   passwordSetAt?: number;
 }
 
+/** config.json; only a missing one is {}: a locked one throws (StoreUnavailableError) rather than have the write drop its secret and salt. */
 const read = (cfg: Pick<Config, 'dataDir'>): StoredConfig => {
+  try {
+    return parseStoreSync(path.join(cfg.dataDir, 'config.json')) as StoredConfig;
+  } catch (err) {
+    if (err instanceof StoreUnavailableError) throw err;
+    return {};
+  }
+};
+
+/** The same for showing it: anything unreadable shows as nothing set, and nothing is retried or moved. */
+const peek = (cfg: Pick<Config, 'dataDir'>): StoredConfig => {
   try {
     return JSON.parse(readFileSync(path.join(cfg.dataDir, 'config.json'), 'utf8')) as StoredConfig;
   } catch {
@@ -35,9 +49,7 @@ const read = (cfg: Pick<Config, 'dataDir'>): StoredConfig => {
 };
 
 function write(cfg: Pick<Config, 'dataDir'>, stored: StoredConfig) {
-  const file = path.join(cfg.dataDir, 'config.json');
-  writeFileSync(`${file}.tmp`, JSON.stringify(stored, null, 2), { mode: 0o600 });
-  renameSync(`${file}.tmp`, file);
+  writeJsonDurableSync(path.join(cfg.dataDir, 'config.json'), stored);
 }
 
 export function passwordProblem(pw: string): string | undefined {
@@ -84,7 +96,7 @@ export function releasePassword(cfg: Config, auth: Pick<Auth, 'setVerifier'>): v
 
 /** What the page shows for the password. */
 export function passwordView(cfg: Config, launcherFile: string | undefined): CredentialView {
-  const stored = read(cfg);
+  const stored = peek(cfg);
   if (stored.verifierFrom === 'connections') {
     return { id: 'password', status: 'connected', source: 'connections', savedAt: stored.passwordSetAt, savedBy: stored.passwordSetBy, warning: launcherFile && existsSync(launcherFile) ? `${launcherFile} is still there but no longer used: you can delete it.` : undefined };
   }

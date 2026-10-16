@@ -4,7 +4,8 @@
 // screen may still turn off. On by default; set in ⚙️ Settings → Workers (.agent-office/keep-awake.json).
 // Started by office/timers.ts; its stop lets go at once.
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
 import path from 'node:path';
 import { IDLE_DEFAULT, IDLE_MAX, IDLE_MIN, type AwakeActivity, type KeepAwakeView } from '../../shared/keep-awake.js';
 import { writeJsonAtomic } from '../flow/store.js';
@@ -116,7 +117,7 @@ export class OfficeKeepAwake {
   private restore() {
     if (!existsSync(this.file)) return;
     try {
-      const s = JSON.parse(readFileSync(this.file, 'utf8')) as Partial<Saved>;
+      const s = parseStoreSync(this.file) as Partial<Saved>;
       this.saved = { on: s.on !== false, idleMinutes: cleanIdle(s.idleMinutes) ?? IDLE_DEFAULT, ...(typeof s.by === 'string' ? { by: s.by } : {}), ...(typeof s.at === 'number' ? { at: s.at } : {}) };
     } catch {
       // a broken file is the defaults

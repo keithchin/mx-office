@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { FloorPlanStore } from '../src/server/floorplan.js';
@@ -79,7 +79,10 @@ test('a broken or tampered plan file comes back as what is valid of it', () => {
     assert.equal(plan.labels['desk-1'].color, SIGN_COLORS[0].color);
     writeFileSync(path.join(dir, 'floorplan.json'), '{nope');
     assert.deepEqual(new FloorPlanStore(dir).state(), cleanPlan(undefined));
-    assert.ok(readFileSync(path.join(dir, 'floorplan.json'), 'utf8'));
+    // Kept aside, never deleted (durable/read.ts).
+    const aside = readdirSync(dir).find((f) => f.startsWith('floorplan.json.corrupt-'));
+    assert.ok(aside);
+    assert.equal(readFileSync(path.join(dir, aside), 'utf8'), '{nope');
   });
 });
 

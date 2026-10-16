@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
 import path from 'node:path';
 import type { GhPull, LeaveOnMergeState, QueueTask, WorkerInfo } from '../shared/protocol.js';
 import { DESK_BY_ID } from '../shared/layout.js';
@@ -36,7 +37,7 @@ export class LeaveOnMerge {
 
   private restore() {
     try {
-      const s = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<LeaveOnMergeState>;
+      const s = parseStoreSync(this.path) as Partial<LeaveOnMergeState>;
       if (typeof s.on === 'boolean') this.saved = { on: s.on, by: typeof s.by === 'string' ? s.by : 'someone', at: typeof s.at === 'number' ? s.at : 0 };
     } catch {
       // never set: workers wait to be sent home
@@ -45,7 +46,7 @@ export class LeaveOnMerge {
 
   private persist() {
     try {
-      writeFileSync(this.path, JSON.stringify(this.saved ?? {}, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.path, this.saved ?? {});
     } catch {
       // disk issues shouldn't take the office down
     }

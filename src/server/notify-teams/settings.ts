@@ -2,7 +2,7 @@
 // the level, quiet hours, a pause, the office's public address, and (until Connections keeps it) the
 // webhook URL. Changed by admins from ⚙️ Settings → Notifications (http/routes/notify-teams.ts).
 
-import { existsSync, readFileSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
 import path from 'node:path';
 import { writeJsonAtomic } from '../flow/store.js';
 import { isHhmm, type QuietHours, type TeamsLevel, type TeamsSettingsPatch } from '../../shared/notify-teams.js';
@@ -171,9 +171,8 @@ export class TeamsSettings {
   }
 
   private restore() {
-    if (!existsSync(this.file)) return;
     try {
-      const s = JSON.parse(readFileSync(this.file, 'utf8')) as Partial<TeamsSaved>;
+      const s = parseStoreSync(this.file) as Partial<TeamsSaved>;
       this.saved = {
         ...DEFAULTS,
         ...(typeof s.url === 'string' && !checkWebhookUrl(s.url) ? { url: s.url } : {}),

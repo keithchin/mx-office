@@ -1,4 +1,6 @@
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
 import path from 'node:path';
 import type { MapState } from '../shared/protocol.js';
 import { OFFICE_MAP, checkCustomMaps, isMapChoice, planOf, type CustomMap, type MapPlan } from '../shared/maps/index.js';
@@ -103,7 +105,7 @@ export class Maps {
 
   private restore() {
     try {
-      const s = JSON.parse(readFileSync(this.file, 'utf8')) as Partial<Saved>;
+      const s = parseStoreSync(this.file) as Partial<Saved>;
       if (typeof s.pick === 'string') this.saved = { pick: s.pick, by: typeof s.by === 'string' ? s.by : 'someone', at: typeof s.at === 'number' ? s.at : 0 };
     } catch {
       // never set: the office
@@ -112,7 +114,7 @@ export class Maps {
 
   private persist() {
     try {
-      writeFileSync(this.file, JSON.stringify(this.saved ?? {}, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.file, this.saved ?? {});
     } catch {
       // disk issues shouldn't take the office down
     }

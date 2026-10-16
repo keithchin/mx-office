@@ -7,7 +7,8 @@
 //
 // The seams (deps) are what index.ts wires to the real office, so the tests drive it with fakes.
 
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
+import { writeTextDurableSync } from '../durable/write.js';
 import path from 'node:path';
 import { changeTaskText, cleanWhen, isChangeKind, requestView, type ChangeElement, type ChangePull, type ChangeRequest, type ChangeRequestView, type ChangeWhen, type ChangeWorker } from '../../shared/model-change.js';
 import { isRoleId, type RoleId } from '../../shared/roster/roles.js';
@@ -85,7 +86,7 @@ export class ChangeRequests {
     let b = this.books.get(floorId);
     if (b) return b;
     try {
-      const v = JSON.parse(readFileSync(this.file(floorId), 'utf8')) as Partial<Book>;
+      const v = parseStoreSync(this.file(floorId)) as Partial<Book>;
       b = v?.version === 1 && Array.isArray(v.items) && typeof v.next === 'number' ? { version: 1, next: v.next, items: v.items } : undefined;
     } catch {
       b = undefined;
@@ -98,9 +99,7 @@ export class ChangeRequests {
   private save(floorId: string) {
     const f = this.file(floorId);
     try {
-      mkdirSync(path.dirname(f), { recursive: true });
-      writeFileSync(`${f}.tmp`, JSON.stringify(this.book(floorId)));
-      renameSync(`${f}.tmp`, f);
+      writeTextDurableSync(f, JSON.stringify(this.book(floorId)));
     } catch (err) {
       console.error(`agent-office: model change requests: couldn't save ${floorId}: ${(err as Error).message}`);
     }

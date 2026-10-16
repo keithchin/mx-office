@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
 import path from 'node:path';
 import type { ThemePick, ThemeState } from '../shared/protocol.js';
 import { activeTheme, isThemePick } from '../shared/theme.js';
@@ -64,7 +65,7 @@ export class Themes {
 
   private restore() {
     try {
-      const s = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<Saved>;
+      const s = parseStoreSync(this.path) as Partial<Saved>;
       if (isThemePick(s.pick)) this.saved = { pick: s.pick, by: typeof s.by === 'string' ? s.by : 'someone', at: typeof s.at === 'number' ? s.at : 0 };
     } catch {
       // never set: it follows the calendar
@@ -73,7 +74,7 @@ export class Themes {
 
   private persist() {
     try {
-      writeFileSync(this.path, JSON.stringify(this.saved ?? {}, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.path, this.saved ?? {});
     } catch {
       // disk issues shouldn't take the office down
     }

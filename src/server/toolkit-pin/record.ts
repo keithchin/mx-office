@@ -7,7 +7,9 @@
 // gate-check's protocol-freshness check reads), which the Update toolkit action moves along with the pin.
 
 import { dropKeys, onForgetFloor } from '../office/forget.js';
-import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
+import { writeTextDurableSync } from '../durable/write.js';
 import path from 'node:path';
 import type { ToolkitHistoryEntry, ToolkitPinRecord } from '../../shared/toolkit.js';
 
@@ -80,7 +82,7 @@ export class PinBook {
   constructor(private file?: string) {
     if (!file) return;
     try {
-      const d = JSON.parse(readFileSync(file, 'utf8')) as Partial<BookFile>;
+      const d = parseStoreSync(file) as Partial<BookFile>;
       this.data = { floors: d.floors && typeof d.floors === 'object' ? d.floors : {}, fetchedAt: typeof d.fetchedAt === 'number' ? d.fetchedAt : undefined };
     } catch {
       // first time
@@ -127,10 +129,7 @@ export class PinBook {
   private save() {
     if (!this.file) return;
     try {
-      mkdirSync(path.dirname(this.file), { recursive: true });
-      const tmp = `${this.file}.tmp`;
-      writeFileSync(tmp, `${JSON.stringify(this.data, null, 2)}\n`);
-      renameSync(tmp, this.file);
+      writeTextDurableSync(this.file, `${JSON.stringify(this.data, null, 2)}\n`);
     } catch (err) {
       console.warn(`agent-office: couldn't save ${this.file}: ${(err as Error).message}`);
     }

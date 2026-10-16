@@ -1,4 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
 import path from 'node:path';
 import { JUKEBOX_TUNES, STREAM, checkStreamUrl, trackTitle, tuneById, type JukeboxState } from '../shared/jukebox.js';
 
@@ -71,7 +73,7 @@ export class Jukebox {
   private load() {
     if (!existsSync(this.file)) return;
     try {
-      const s = JSON.parse(readFileSync(this.file, 'utf8')) as Partial<Saved>;
+      const s = parseStoreSync(this.file) as Partial<Saved>;
       const url = s.track === STREAM ? checkStreamUrl(s.url) : undefined;
       if (s.track === STREAM ? !url || 'error' in url : typeof s.track !== 'string' || !tuneById(s.track)) return;
       this.s = {
@@ -88,7 +90,7 @@ export class Jukebox {
 
   private save() {
     try {
-      writeFileSync(this.file, JSON.stringify(this.s, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.file, this.s);
     } catch {
       // disk issues shouldn't take the office down
     }

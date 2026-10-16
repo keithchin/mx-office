@@ -3,7 +3,8 @@
 // Needs you item it raised. Every change to it is audited by whoever made it (server/testing/verify.ts);
 // the file is written whole, to a temporary file first and then renamed, one write at a time.
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { readJsonStore } from '../durable/read.js';
+import { writeTextDurable } from '../durable/write.js';
 import path from 'node:path';
 import { cleanPolicy, LINKED, isCheckKey, type VerificationPolicy, type Waiver } from '../../shared/testing/policy.js';
 
@@ -54,14 +55,10 @@ export class VerifyStore {
 
   private async load(): Promise<VerifyFile> {
     if (this.cached) return this.cached;
-    const text = await readFile(this.file, 'utf8').catch(() => '');
-    let raw: unknown = {};
-    try {
-      raw = text ? JSON.parse(text) : {};
-    } catch {
-      raw = {};
-    }
-    this.cached = revive(raw);
+    // Only a missing file is the default policy: a locked one rejects (and isn't written over), a corrupt one
+    // is moved aside (durable/read.ts). Before, any error read as {} and the next change wiped the waivers.
+    const r = await readJsonStore(this.file);
+    this.cached = revive(r.state === 'ok' ? r.value : {});
     return this.cached;
   }
 
@@ -75,10 +72,7 @@ export class VerifyStore {
       const f = await this.load();
       const out = fn(f);
       f.waivers = f.waivers.slice(-WAIVERS_KEPT);
-      await mkdir(this.dir, { recursive: true, mode: 0o700 });
-      const tmp = `${this.file}.${process.pid}.tmp`;
-      await writeFile(tmp, `${JSON.stringify(f, null, 1)}\n`, { mode: 0o600 });
-      await rename(tmp, this.file);
+      await writeTextDurable(this.file, `${JSON.stringify(f, null, 1)}\n`);
       return out;
     });
   }

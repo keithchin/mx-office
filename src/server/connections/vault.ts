@@ -9,7 +9,9 @@
 
 import { execFile, execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
+import { writeJsonDurableSync } from '../durable/write.js';
 import path from 'node:path';
 import { isCredentialId, maskTail, type CredentialCheck, type CredentialId } from '../../shared/connections.js';
 
@@ -125,9 +127,9 @@ export class Vault {
   load(): this {
     let raw: Partial<VaultFile> = {};
     try {
-      raw = JSON.parse(readFileSync(this.file, 'utf8'));
+      raw = parseStoreSync(this.file);
     } catch {
-      // none yet
+      // none yet; or locked (durable/read.ts), when nothing is saved over it until it can be read
     }
     const entries: VaultFile['entries'] = {};
     for (const [id, e] of Object.entries(raw.entries ?? {})) {
@@ -193,9 +195,7 @@ export class Vault {
 
   private save() {
     mkdirSync(path.dirname(this.file), { recursive: true, mode: 0o700 });
-    const tmp = `${this.file}.tmp`;
-    writeFileSync(tmp, JSON.stringify(this.data, null, 2), { mode: 0o600 });
-    renameSync(tmp, this.file);
+    writeJsonDurableSync(this.file, this.data);
     try {
       chmodSync(this.file, 0o600);
     } catch {

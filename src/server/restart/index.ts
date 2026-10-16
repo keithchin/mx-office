@@ -8,7 +8,8 @@
 // runs (build.ts, the page's version banner). A computer asleep under it (13 Oct 2026: 34 minutes of
 // Modern Standby froze one) is noted, since nothing can move then. Pure of the office: RestartDeps.
 
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
 import path from 'node:path';
 import { DEFAULT_RESTART_TIMEOUT_MIN, RESTART_EXIT_CODE, type RestartPhase, type RestartView } from '../../shared/project-run.js';
 import { audit, byWhom, office } from '../audit/index.js';
@@ -67,7 +68,7 @@ export function readPending(dataDir: string): Pending | undefined {
   const file = pendingFile(dataDir);
   if (!existsSync(file)) return undefined;
   try {
-    const p = JSON.parse(readFileSync(file, 'utf8')) as Partial<Pending>;
+    const p = parseStoreSync(file) as Partial<Pending>;
     return { floors: Array.isArray(p.floors) ? p.floors.filter((x): x is string => typeof x === 'string') : [], by: typeof p.by === 'string' ? p.by : 'Someone', at: typeof p.at === 'number' ? p.at : 0 };
   } catch {
     return { floors: [], by: 'Someone', at: 0 };

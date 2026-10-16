@@ -1,4 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
 import path from 'node:path';
 import { canLabel, cleanLabel, cleanPlan, rowDesks, signColor, type DeskLabel, type FloorPlan } from '../shared/floorplan.js';
 import { DESK_BY_ID, WING } from '../shared/layout.js';
@@ -63,7 +65,7 @@ export class FloorPlanStore {
   private load(): FloorPlan {
     if (!existsSync(this.file)) return cleanPlan(undefined);
     try {
-      return cleanPlan(JSON.parse(readFileSync(this.file, 'utf8')));
+      return cleanPlan(parseStoreSync(this.file));
     } catch {
       // a broken file just means the office as it comes
       return cleanPlan(undefined);
@@ -72,7 +74,7 @@ export class FloorPlanStore {
 
   private save() {
     try {
-      writeFileSync(this.file, JSON.stringify(this.plan, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.file, this.plan);
     } catch {
       // disk issues shouldn't take the office down
     }

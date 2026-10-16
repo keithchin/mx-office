@@ -1,4 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeTextDurableSync } from './durable/write.js';
 import path from 'node:path';
 import { WB_MAX_BYTES, WB_MAX_ELEMENTS, WB_MAX_ELEMENT_BYTES, WB_MAX_FILES_BYTES, byIndex, checkElement, checkFile, newer, type WbElement, type WbFile } from '../shared/whiteboard.js';
 
@@ -160,8 +162,7 @@ export class Whiteboard {
       mkdirSync(this.dir, { recursive: true, mode: 0o700 });
       // Written aside and moved into place, so a crash mid-write can't leave half a drawing.
       const file = path.join(this.dir, 'elements.json');
-      writeFileSync(`${file}.tmp`, JSON.stringify(this.scene()), { mode: 0o600 });
-      renameSync(`${file}.tmp`, file);
+      writeTextDurableSync(file, JSON.stringify(this.scene()));
     } catch {
       // disk issues shouldn't take the office down
     }
@@ -171,7 +172,7 @@ export class Whiteboard {
     const file = path.join(this.dir, 'elements.json');
     if (existsSync(file)) {
       try {
-        const saved = JSON.parse(readFileSync(file, 'utf8')) as unknown;
+        const saved = parseStoreSync(file) as unknown;
         const now = Date.now();
         for (const item of Array.isArray(saved) ? saved : []) {
           const el = checkElement(item);

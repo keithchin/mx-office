@@ -5,7 +5,7 @@
 // data dir (until then, and in tests that don't, it lives in memory only).
 
 import { onForgetFloor } from '../office/forget.js';
-import { existsSync, readFileSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
 import path from 'node:path';
 import { cleanPacing, DEFAULT_PACING, PAUSED_HIRES, type Pacing, type PauseInfo } from '../../shared/project-run.js';
 import { writeJsonAtomic } from '../flow/store.js';
@@ -66,9 +66,9 @@ function revive(raw: unknown): Saved {
 export function useProjectRunFile(dir: string | undefined) {
   file = dir ? path.join(dir, 'project-run.json') : undefined;
   data = empty();
-  if (!file || !existsSync(file)) return;
+  if (!file) return;
   try {
-    data = revive(JSON.parse(readFileSync(file, 'utf8')));
+    data = revive(parseStoreSync(file));
   } catch {
     // a broken file: nothing paused
   }

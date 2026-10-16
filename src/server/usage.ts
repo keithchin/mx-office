@@ -1,4 +1,5 @@
-import { closeSync, existsSync, fstatSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs';
+import { closeSync, fstatSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
 import path from 'node:path';
 import type { Usage, UsageState } from '../shared/protocol.js';
 import { BackgroundFile } from './offloop/save.js';
@@ -474,9 +475,8 @@ export class Ledger {
   }
 
   private load() {
-    if (!existsSync(this.file)) return;
     try {
-      const saved = JSON.parse(readFileSync(this.file, 'utf8'));
+      const saved = parseStoreSync(this.file);
       this.total = asUsage(saved?.total) ?? zeroUsage();
       if (saved?.days && typeof saved.days === 'object') {
         for (const [day, u] of Object.entries(saved.days)) {
