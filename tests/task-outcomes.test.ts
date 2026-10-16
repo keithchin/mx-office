@@ -20,6 +20,12 @@ import { closeConnections } from '../src/server/connections/store.js';
 
 const task: Assignment = { text: 'build the Orders module (issue #5)', at: 0, by: 'Keith', issue: 5 };
 const pull = (number: number, state: string, headRefName = 'feat/orders', closes: number[] = []): PullLook => ({ number, state, headRefName, closes });
+// A merge counts only after the task and carrying its id (task-outcome.ts): tests/task-outcome-truth.test.ts walks that rule.
+const ID = 'tsk_01M526SK6TXBBJ53EAPEDG0FQQ';
+const owned: Assignment = { ...task, taskId: ID };
+const merged = (number: number, headRefName = 'feat/orders', closes: number[] = [], id = ID): PullLook => ({ ...pull(number, 'MERGED', headRefName, closes), mergedAt: '2026-10-16T12:00:00Z', body: `Work.
+
+Task: ${id}` });
 
 // ---- The rules, pure ----------------------------------------------------------------------------------------
 
@@ -31,9 +37,9 @@ test('T1: a PR closed without merging is never success: replaced by a newer PR f
   assert.equal(open?.kind, 'superseded');
   assert.deepEqual(open && 'by' in open ? [open.pr, open.by] : [], [9, 12]);
   // A newer merged one from the worker's own branch: integrated, by that PR.
-  const merged = taskOutcome({ task, pr: { number: 9 }, branch: 'feat/orders-2', pulls: [pull(9, 'CLOSED'), pull(14, 'MERGED', 'feat/orders-2', [5])] });
-  assert.equal(merged?.kind, 'integrated');
-  assert.equal(merged?.why, 'PR #14 merged (it replaced PR #9, closed unmerged)');
+  const replaced = taskOutcome({ task: owned, pr: { number: 9 }, branch: 'feat/orders-2', pulls: [pull(9, 'CLOSED'), merged(14, 'feat/orders-2', [5])] });
+  assert.equal(replaced?.kind, 'integrated');
+  assert.equal(replaced?.why, 'PR #14 merged (it replaced PR #9, closed unmerged)');
   // Not a replacement: someone else's branch, an older PR, or one for another issue.
   for (const other of [pull(12, 'OPEN', 'feat/someone-else'), pull(7, 'MERGED'), pull(12, 'OPEN', 'feat/orders', [8])]) {
     assert.equal(taskOutcome({ task, pr: { number: 9 }, pulls: [pull(9, 'CLOSED'), other] })?.kind, 'decision', JSON.stringify(other));
@@ -45,11 +51,11 @@ test('T1: a PR closed without merging is never success: replaced by a newer PR f
 test('T2: an agent saying task done alone is a claim pending verification; a merged PR is integrated', () => {
   assert.deepEqual(taskOutcome({ task, lastWords: 'Task done: Orders is on the branch.' }), { kind: 'claimed', why: 'it said task done (pending verification)' });
   assert.equal(taskOutcome({ task, pr: { number: 9 }, pulls: [pull(9, 'OPEN')], lastWords: 'Task done.' })?.kind, 'claimed', 'an open PR verifies nothing');
-  assert.deepEqual(taskOutcome({ task, pr: { number: 9 }, pulls: [pull(9, 'MERGED')] }), { kind: 'integrated', why: 'PR #9 merged', pr: 9 });
+  assert.deepEqual(taskOutcome({ task: owned, pr: { number: 9 }, pulls: [merged(9)] }), { kind: 'integrated', why: 'PR #9 merged', pr: 9 });
   // A claim stands until something stronger: a merge then integrates it.
-  const claimed: Assignment = { ...task, pending: { kind: 'claimed', at: 1, why: 'it said task done (pending verification)' } };
+  const claimed: Assignment = { ...owned, pending: { kind: 'claimed', at: 1, why: 'it said task done (pending verification)' } };
   assert.equal(taskOutcome({ task: claimed, lastWords: 'Working on tests' })?.kind, 'claimed');
-  assert.equal(taskOutcome({ task: claimed, pr: { number: 9 }, pulls: [pull(9, 'MERGED')] })?.kind, 'integrated');
+  assert.equal(taskOutcome({ task: claimed, pr: { number: 9 }, pulls: [merged(9)] })?.kind, 'integrated');
   // A decision stands while the PR stays closed, or falls out of the list; it reopens when the PR is open again.
   const deciding: Assignment = { ...task, pending: { kind: 'decision', at: 1, why: 'PR #9 was closed without merging', pr: 9 } };
   assert.equal(taskOutcome({ task: deciding, pr: { number: 9 }, pulls: [] })?.kind, 'decision');
@@ -159,7 +165,7 @@ test('a claim pending verification gets no keep-working nudge, and a merge later
   assert.match(roster.tasks.line(floor, w), /waits on the Project Manager \(it said task done \(pending verification\)\), so don't carry on with it/);
   // The PR merges: integrated, from the PR list alone (no agent words needed).
   w.pr = { number: 21, url: '' };
-  floor.list = [pull(21, 'MERGED')];
+  floor.list = [merged(21, 'feat/orders', [], t().taskId)];
   assert.equal(roster.tasks.current(floor, w), undefined);
   assert.deepEqual([outcomeOf(t()), t().doneWhy, t().pr, t().v], ['integrated', 'PR #21 merged', 21, 2]);
   roster.stop();

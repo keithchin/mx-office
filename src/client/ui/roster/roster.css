@@ -34,6 +34,7 @@ body.lite .lite-tabs { flex-wrap: wrap; }
 .ro-pill-benched { background: color-mix(in srgb, var(--muted) 20%, var(--paper)); }
 .ro-activity, .ro-facts, .ro-subs { margin: 0; font-size: 12px; font-weight: 700; }
 .ro-activity { color: var(--ink); }
+.ro-task-note { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); }
 .ro-facts, .ro-subs { color: var(--muted); }
 .ro-journal { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border-radius: 10px; background: var(--paper); font-size: 12px; }
 .ro-journal-h { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }

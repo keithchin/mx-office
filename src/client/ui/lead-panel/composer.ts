@@ -8,6 +8,7 @@
 import { h } from '../dom';
 import { PromptHistory } from '../pm/state';
 import { midTurnText, QUICK, sendPlan, type SendPlan } from './logic';
+import { isEmptyTell } from '../../../shared/tell-text';
 
 export interface ComposerDeps {
   /** Sends `text` by `plan`; resolves whether it went (the box clears then). */
@@ -105,7 +106,8 @@ export class Composer {
 
   /** The mid-turn note and the send button follow what's in the box. */
   private typed(save = true) {
-    const filled = !!this.box.value.trim();
+    // An untouched "About …:" prefill (a card's Ask button) is nothing to send yet (shared/tell-text.ts).
+    const filled = !isEmptyTell(this.box.value);
     this.sendBtn.disabled = !filled || !this.view.canPrompt;
     const mid = filled && !!this.view.midTurn && this.view.canPrompt;
     this.turn.hidden = !mid;
@@ -122,7 +124,7 @@ export class Composer {
 
   private async submit(choice: 'now' | 'after' | 'enter') {
     const text = this.box.value.trim();
-    if (!text || !this.view.canPrompt) return;
+    if (isEmptyTell(text) || !this.view.canPrompt) return;
     const ok = await this.deps.send(text, sendPlan(!!this.view.midTurn, choice));
     if (!ok) return;
     this.history.add(text);

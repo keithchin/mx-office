@@ -65,7 +65,10 @@ test('a task stops being nudged when its issue closed, its PR merged or closed, 
   assert.equal(finishedWhy({ task }), undefined);
   assert.equal(finishedWhy({ task, closed: new Map([[1, 'COMPLETED']]) }), 'issue #1 closed');
   assert.equal(finishedWhy({ task, closed: new Map([[2, '']]) }), undefined);
-  assert.equal(finishedWhy({ task, pr: { number: 9 }, pulls: [{ number: 9, state: 'MERGED' }] }), 'PR #9 merged');
+  // A merge counts only after the task and carrying its Task line (task-outcome-truth.test.ts).
+  assert.equal(finishedWhy({ task, pr: { number: 9 }, pulls: [{ number: 9, state: 'MERGED' }] }), undefined);
+  const owned = { ...task, taskId: 'tsk_01M526SK6TXBBJ53EAPEDG0FQQ' };
+  assert.equal(finishedWhy({ task: owned, pr: { number: 9 }, pulls: [{ number: 9, state: 'MERGED', mergedAt: '2026-10-16T12:00:00Z', body: 'Task: tsk_01M526SK6TXBBJ53EAPEDG0FQQ' }] }), 'PR #9 merged');
   assert.equal(finishedWhy({ task, pr: { number: 9 }, pulls: [{ number: 9, state: 'CLOSED' }] }), 'PR #9 was closed without merging');
   assert.equal(finishedWhy({ task, pr: { number: 9 }, pulls: [] }), undefined, "the list isn't loaded: not a reason");
   assert.equal(finishedWhy({ task, lastWords: 'Task done: the BRD is in docs/brd.md.' }), 'it said task done (pending verification)');

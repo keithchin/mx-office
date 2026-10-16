@@ -79,6 +79,7 @@ On the card, as admin:
 The answer goes to the agent as a prompt: *REPLIED*, *APPROVED*, *REJECTED* or *NOTED*.
 
 - If it's **asking something in its terminal** (a permission prompt or a question, or it's still starting up), the answer isn't typed there, where Enter would pick one of the dialog's options and the answer would be lost. It waits, and goes in once that turn is over, with any other answers it's owed, in one message. The Activity says *… has a question open in its terminal: the answer goes in once that's answered*, and the answer counts as not delivered until then.
+- If the office **holds it for after the agent's turn**, the answer shows *held for … not delivered yet, it goes in when their turn ends*, and counts as delivered only once the agent's session shows it.
 - If it's **asleep**, it's woken with your answer.
 - If it was **benched**, its role gets the answer: in its current session, or by re-hiring it with your answer in its first message (when hiring is open).
 

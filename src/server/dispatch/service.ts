@@ -361,7 +361,9 @@ export class Dispatcher {
       for (const id of ids) {
         const r = this.store.get(floorId, id);
         if (!r || (r.state !== 'in-flight' && r.state !== 'held') || r.typedAt !== undefined) continue;
-        await this.afterTyped(floorId, r, 'typed the held answer').catch(() => undefined);
+        const next = await this.afterTyped(floorId, r, 'typed the held answer').catch(() => undefined);
+        // Received at once (or no transcript to wait on): the decision's apply runs now, as the typed watch's does later.
+        if (next?.state === 'submitted') await this.apply(floorId, next);
       }
     })();
   }

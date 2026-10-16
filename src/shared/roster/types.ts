@@ -98,6 +98,8 @@ export interface MemberView {
   covers?: TeamId[];
   /** What it was last given to do (its hire's task, the Project Manager's or the Coordinator's prompt), while that's open (server/roster/resume.ts). */
   task?: string;
+  /** About that task: a merged PR that doesn't carry its id (associated, unconfirmed), or an earlier end taken back ("earlier shown as done by PR #3 — that PR predates the task"). */
+  taskNote?: string;
   /** It has an escalation open to the Project Manager (an FYI too): idle because the next move may be theirs. */
   waitingOnPm?: boolean;
   /** Its agent profile's id (shared/profiles.ts), once it has one. */

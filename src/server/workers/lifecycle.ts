@@ -4,7 +4,7 @@
 // following its tool calls one by one; Claude Code's own hook is built from the same steps (see
 // providers/claude.ts). OpenCode's plugin reports statuses instead (see providers/opencode.ts).
 import { toolAction } from '../../shared/actions.js';
-import type { WorkerStatus } from '../../shared/protocol.js';
+import type { StopKind, WorkerStatus } from '../../shared/protocol.js';
 import type { SomeAdapter } from '../providers/types.js';
 import type { Worker, WorkerHandle } from './types.js';
 import { truncate } from './util.js';
@@ -92,6 +92,9 @@ export interface LifecycleReport {
   notificationType?: string;
 }
 
+/** The turn-ending events, each as how the turn ended (WorkerInfo.lastStop). */
+export const STOP_KIND: Record<string, StopKind> = { Stop: 'stop', StopFailure: 'error', StopCancelled: 'cancelled', Interrupt: 'interrupted' };
+
 /**
  * Tool calls followed one by one, for a provider whose hooks never say a question was answered
  * (Codex): a call that asked the person something, or wanted permission, keeps the worker needing
@@ -175,6 +178,7 @@ export function reduceLifecycle(h: WorkerHandle, report: LifecycleReport, o: Lif
     case 'UserPromptSubmit':
       tools?.clear();
       info.action = undefined;
+      info.lastStop = undefined;
       if (report.prompt) {
         info.activity = truncate(report.prompt, 80);
         h.notePrompt(report.prompt);
@@ -211,6 +215,8 @@ export function reduceLifecycle(h: WorkerHandle, report: LifecycleReport, o: Lif
     case 'StopCancelled':
     case 'Interrupt':
       tools?.clear();
+      // Which way the turn ended, before the status moves: an API error or an Esc is not the agent finishing.
+      info.lastStop = { kind: STOP_KIND[report.event], at: Date.now() };
       h.setStatus('done');
       break;
   }
