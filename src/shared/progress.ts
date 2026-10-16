@@ -8,6 +8,7 @@
 
 import type { EntryMode } from './wizard.js';
 import { MANUAL_LATER_TEXT, manualInPlay, signedOffIn } from './gate-play.js';
+import type { StageEvidence } from './stage-derive.js';
 
 export interface ToolkitStage {
   id: string;
@@ -114,6 +115,8 @@ export interface ProjectProgress {
   mini?: boolean;
   generatedAt: number;
   admin: boolean;
+  /** Where the project is as the office derived it from its own gate-check, how fresh that is, and what doesn't add up (shared/stage-derive.ts). */
+  stage?: StageEvidence;
 }
 
 // ---- Deriving the phases (pure) ---------------------------------------------------------------------
@@ -146,6 +149,11 @@ export interface ProgressInput {
   acceptance: ProgressAcceptance;
   /** The setup panel is showing (until Stage 4 is signed off): its stages open it, else the deliverables. */
   setupShown?: boolean;
+  /**
+   * The stage the office derived (shared/stage-derive.ts: past the latest stage passed or signed off), made
+   * the current phase; without it the first phase not settled is. Earlier phases keep their own status.
+   */
+  stage?: string;
 }
 
 const SETTLED: readonly PhaseStatus[] = ['done', 'waived'];
@@ -262,7 +270,9 @@ export function derivePhases(input: ProgressInput): Phase[] {
     milestones: a.accepted ? [{ kind: 'acceptance', label: `${a.version} accepted`, status: a.changed?.length ? 'waiting' : 'passed', at: new Date(a.accepted.at).toISOString().slice(0, 10), detail: a.changed?.length ? 'changed since acceptance' : `by ${a.accepted.by}` }] : [],
     open: 'acceptance',
   });
-  const cur = phases.find((p) => !SETTLED.includes(p.status) && p.kind !== 'handover');
+  // The office's derived stage, when it has one; past every stage (all passed), the first later phase not settled.
+  const derived = input.stage === 'all' ? phases.find((p) => p.kind !== 'stage' && p.kind !== 'handover' && !SETTLED.includes(p.status)) : input.stage ? phases.find((p) => p.kind === 'stage' && p.id === input.stage) : undefined;
+  const cur = derived ?? phases.find((p) => !SETTLED.includes(p.status) && p.kind !== 'handover');
   if (cur) cur.current = true;
   return phases;
 }

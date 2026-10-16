@@ -4,6 +4,7 @@
 // missing one is asked for (`mini=1`: no deliverables scan) when a card is drawn, never on a timer.
 
 import { progressLabel, type ProjectProgress } from '../../../shared/progress';
+import { freshnessText } from '../../../shared/stage-derive';
 import { getProgress } from './api';
 import { segments } from './bar';
 import './progress.css';
@@ -21,7 +22,7 @@ function fill(el: HTMLElement, p: ProjectProgress | undefined) {
   track.setAttribute('aria-hidden', 'true');
   track.append(...segments(p, false));
   el.replaceChildren(track, line);
-  el.title = `${progressLabel(p)}${p.note ? ` — ${p.note}` : ''}`;
+  el.title = `${progressLabel(p)}${p.stage ? ` · ${freshnessText(p.stage.check, Date.now())}` : ''}${p.note ? ` — ${p.note}` : ''}`;
 }
 
 /** The mini bar for `floor`'s card: drawn now from what's kept, and again when a fresh answer comes. */

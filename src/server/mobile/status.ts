@@ -4,6 +4,8 @@
 // 🔁 safe restart while one is going (read-only: no restart from the phone).
 
 import { countStatuses, restartShown, stageLine, type ProjectStatus, type StatusView } from '../../shared/mobile.js';
+import { stageHeadline } from '../../shared/stage-derive.js';
+import { manualWaiting } from '../../shared/gate-play.js';
 import { projectRunsOf } from '../project-run/adapter.js';
 import { safeRestartOf } from '../restart/office.js';
 import { capAt } from '../../shared/roster/autonomy.js';
@@ -30,7 +32,10 @@ export async function projectStatuses(ctx: Ctx): Promise<ProjectStatus[]> {
     try {
       // The setup panel's stages, read from git at most every couple of minutes (notify-teams' cache).
       const setup = (await floorNeeds(ctx, floor)).input.setup;
-      stage = setup?.show ? stageLine(setup.stages, setup.decisions) : undefined;
+      // The office's own derivation and how fresh it is (shared/stage-derive.ts), past Stage 4 too; the setup panel's stages before it has one.
+      const ev = setup?.stage;
+      const v = ev?.stage && setup?.verdicts?.find((x) => x.id === ev.stage!.id);
+      stage = ev?.stage ? `${stageHeadline(ev, Date.now())}${v && manualWaiting(setup!.verdicts!, v, setup!.decisions) ? ' ✋ waiting for your sign-off' : ''}` : setup?.show ? stageLine(setup.stages, setup.decisions) : undefined;
     } catch {
       // no stage line, then
     }

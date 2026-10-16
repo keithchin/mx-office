@@ -28,9 +28,31 @@ The colour of a segment comes from what the office measured:
 | Dashed | Not started |
 | Striped | Unknown: gate-check hasn't written a verdict for it |
 
-The segment with the orange outline is the current phase: the first one that hasn't passed or been waived. The line on the right says where the project is, for example "Stage 3 · Architecture & Design · waiting on someone". After acceptance it says "v1 accepted · 2026-10-08".
+The segment with the orange outline is the current phase: where the work is. That is the first stage after the latest one that passed, was waived or is signed off in `PROJECT.md` (a CONFIRMED Decisions row that says it was signed off). A paperwork gap in an early stage doesn't pull a project whose build plan is signed off back to Kickoff: that gap keeps its own colour, and the office says it doesn't add up (see below). The line on the right says where the project is, for example "Stage 5 · Build". After acceptance it says "v1 accepted · 2026-10-08".
 
 The bar never shows a percentage or a count that nobody measured. If the office doesn't know something, it says *unknown*.
+
+### Where the stage comes from
+
+The stage is the office's own, never just what a file says. `PROJECT.md`'s **Current stage** line and the committed gate dashboard (`index.html`) are written only when someone runs the toolkit's gate-check, so they go out of date as soon as a later sign-off merges. Instead, whenever the project's default branch moves (the office fetches it every minute and a half or so), the office runs the project's pinned toolkit gate-check itself, on a temporary checkout of that branch that it deletes afterwards. It never writes to the project's folder or the agents' worktrees, and never commits. It keeps the result for that commit, so nothing runs again until the branch moves (or an admin presses **🔄 Re-check gates**). At most one check runs per project, a couple across the office, and each is given up on after five minutes.
+
+Under the bar, a line says how fresh that is:
+
+- *checked on main @abc1234, 3 min ago*: the office's check of the branch's latest commit;
+- *checking…*: a check is running now (the bar looks again shortly);
+- *couldn't check at 14:02: …*: the check failed. The office says why, keeps showing the last good check, marks it *stale* with its time, and tries again ten minutes later;
+- *from the dashboard committed on main @abc1234; the office hasn't checked it yet*: just after the office starts, before its first check is back.
+
+The same line, with the stage, is on the Overview's summary, the setup panel, the phone's project status and the Teams daily digest.
+
+### When the register and gate-check disagree
+
+The office also says when things don't add up, as an ℹ️ note under the bar and an info card in Needs you (shown, not counted as waiting on you):
+
+- **Signed off, but gate-check still fails an earlier stage.** For example: *Stage 3 and 4 are signed off in PROJECT.md, but gate-check still reports Stage 0 failing: 'Confirmed by:' still holds the shipped placeholder*. This is usually paperwork: unanswered intake sections, the triage sign-off line. The card's **Ask the lead to fix the paperwork** tells the team lead (after their current turn, through the team's usual durable message) what gate-check reports, and asks them to fix the files, re-run gate-check and commit.
+- **The stage line is out of date.** For example: *PROJECT.md's stage line is out of date: it says Stage 2; gate-check on main says Stage 5*. The office doesn't edit the project. It suggests that the lead re-runs gate-check and commits the line it rewrites.
+
+The office raises these only from a check of the branch's latest commit, never from an old or committed dashboard. How the toolkit decides a gate doesn't change, and a MANUAL stage still asks for your sign-off only once every stage before it has passed.
 
 ### Milestones
 
@@ -66,7 +88,8 @@ The bar doesn't poll. It refreshes when you:
 - open a project;
 - see a pull request merge (main moved);
 - come back to the tab after a minute away;
-- accept or reopen a delivery.
+- accept or reopen a delivery;
+- (while the office's gate-check runs) once more, twenty seconds later.
 
 ## Acceptance
 

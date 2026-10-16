@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **The stage the office shows is its own check of main, and it says how fresh it is.** A migration project showed *Stage 2 Requirements* all afternoon while its main had Stages 3 and 4 signed off and the build under way: the stage came from PROJECT.md's *Current stage* line and the committed gate dashboard, which only change when someone re-runs gate-check, and the office's own background check fell back to the committed dashboard without a word when it failed (or found it already in its checkout). Now, whenever main moves, the office runs the project's pinned gate-check on a temporary checkout (never the project folder or an agent's worktree, never a commit), keeps its verdicts per commit, and the progress bar, the Overview, the setup panel, the phone and the Teams digest all say where the work is with when and where it was checked: *Stage 5 · Build · checked on main @abc1234, 3 min ago*, *checking…*, or *couldn't check: …* with the last good result marked stale. When PROJECT.md says a stage is signed off but gate-check still fails an earlier one (unanswered intake sections, the triage *Confirmed by* placeholder), or its stage line is out of date, an info card says so, with **Ask the lead to fix the paperwork**. How the toolkit decides a gate doesn't change. The docs' *Progress bar and acceptance* page says how.
 
 ## 2026-10-16 · release 55 (`6e86bbe`)
 

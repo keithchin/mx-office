@@ -8,6 +8,7 @@ import type { PlanBrief } from './brief.js';
 import type { OperationNotice } from './setup-operations.js';
 import type { PlanTeamFrom } from './team-from.js';
 import type { SignoffRequest } from './gate-play.js';
+import type { StageEvidence } from './stage-derive.js';
 
 /** How a project enters the toolkit's pipeline (the runbook's "Entry Modes"), plus the no-pipeline assurance shelf. */
 export const ENTRY_MODES = ['greenfield', 'requirements-driven', 'existing-app-change', 'migration', 'assurance'] as const;
@@ -316,6 +317,8 @@ export interface SetupView {
   head?: { branch: string; sha: string };
   /** Created with "Keep this project off GitHub" (agent-office.project.json): the Overview says "Local only: not on GitHub". */
   localOnly?: boolean;
+  /** Where the project is, as the office derived it from its own gate-check, how fresh that is, and what doesn't add up (shared/stage-derive.ts). */
+  stage?: StageEvidence;
 }
 
 /** The floor's folder isn't on the default branch, or is behind it: what's shown comes from the default branch, and this says so. */

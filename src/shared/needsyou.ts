@@ -19,6 +19,7 @@ import type { StuckView } from './stuck.js';
 import type { AskAct, AskKind, AsksNeed } from './asks.js';
 import type { QuestionsNeed } from './questions.js';
 import { approvalCandidates, askCandidates, escalationCandidates, prCheckCandidates, questionCandidates, signoffCandidates, stuckCandidates, type Candidate } from './decisions/candidates.js';
+import { stageFlagCandidates } from './decisions/stage-flags.js';
 import { foldCards, type Entry } from './decisions/group.js';
 import { duplicatesCandidate } from './decisions/duplicates-card.js';
 import type { DecisionCard, DecisionSplit } from './decisions/types.js';
@@ -56,7 +57,9 @@ export type NeedTarget =
   /** A company brain card's button (server/portfolios/, shared/decisions/brain.ts): Rehire, Dismiss, Wire again. */
   | { to: 'brain'; floor: string; act: BrainAct }
   /** The design system's ✋ card (server/design/, shared/decisions/design.ts): Adopt, Keep existing design, or open the Design gallery. */
-  | { to: 'design'; floor: string; act: 'adopt' | 'keep' | 'open' };
+  | { to: 'design'; floor: string; act: 'adopt' | 'keep' | 'open' }
+  /** What doesn't add up about the stage (shared/decisions/stage-flags.ts): asks the lead to fix the paperwork and re-run gate-check (ui/stage/fix.ts). */
+  | { to: 'stage-fix'; floor: string };
 
 export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | 'brain' | 'design' | AskKind;
 
@@ -219,6 +222,8 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   for (const c of prCheckCandidates(i.pulls)) put(c);
   // A toolkit stage at a ✋ gate, waiting for your sign-off: a MANUAL stage only once it is the stage in play (shared/gate-play.ts), from its verdicts whether or not the setup panel shows.
   for (const c of signoffCandidates(i.setup)) put(c);
+  // What doesn't add up between the register and the office's own gate-check (shared/decisions/stage-flags.ts): info only.
+  for (const c of stageFlagCandidates(i.setup, i.floor)) put(c);
   // The floor's live app failed to start.
   if (i.live && i.live.floor === i.floor && i.live.status === 'failed') {
     out.push({ key: 'live', kind: 'live', icon: '🌐', text: `The live app failed${i.live.message ? `: ${i.live.message}` : ''}`, since: i.live.since, level: 'warn', action: 'Live app', target: { to: 'live' } });

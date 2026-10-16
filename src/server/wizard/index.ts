@@ -33,6 +33,7 @@ import { withSignoffs } from '../signoff/index.js';
 import { portfoliosOf } from '../portfolios/index.js';
 import { setupView, setupViewOf } from './setup.js';
 import { GateSource, branchInfo } from './gate-source.js';
+import { rememberEvidence, stageEvidence } from './stage-evidence.js';
 import { withFloorToolkitEnv } from '../toolkit-env.js';
 import { toolkitBusy, toolkitDirFor } from '../toolkit-pin/index.js';
 import { useGateLock } from '../worktree-sweep/index.js';
@@ -73,7 +74,7 @@ export class Wizard {
     this.book = new JobBook(dir, redactor([]), flowsOf(ctx), { ops: new OperationStore(path.join(dir, 'operations'), { onChange: auditOperation }) });
     // A setup the office stopped in the middle of an operation is looked at once now (reconcile.ts).
     setImmediate(() => void reconcileOnStart(this.book, this.lookup()));
-    this.gates = new GateSource((tmp, floorDir) => this.gateCheck(tmp, floorDir, 5 * 60_000).then(() => undefined));
+    this.gates = new GateSource((tmp, floorDir) => this.gateCheck(tmp, floorDir, 5 * 60_000).then((r) => r.stdout));
     // The worktree sweep leaves a floor's ao-gates-* copy alone while its gate-check is running.
     useGateLock((dir) => this.gates.busy(dir) || toolkitBusy(dir));
   }
@@ -302,11 +303,22 @@ export class Wizard {
   private async freshSetup(floor: Floor): Promise<SetupView> {
     const job = this.jobForFloor(floor)?.id;
     const g = await this.gates.read(floor.dir).catch(() => undefined);
-    if (!g) return { ...setupView(floor.dir), job, checking: this.checking.has(floor.id), checkedAt: this.checkedAt.get(floor.id) };
+    if (!g) {
+      const local = setupView(floor.dir);
+      const at = this.checkedAt.get(floor.id);
+      const stage = stageEvidence(local, undefined, { source: 'folder', running: this.checking.has(floor.id), ...(at ? { at } : {}) });
+      rememberEvidence(floor.dir, stage, local.verdicts);
+      return { ...local, job, checking: this.checking.has(floor.id), checkedAt: at, ...(stage ? { stage } : {}) };
+    }
     const { info } = g;
     const off = info.branch !== info.def || info.behind > 0;
+    const view = setupViewOf(g.files);
+    // The stage as the office derived it from its own check, how fresh that is, and what doesn't add up (stage-evidence.ts).
+    const stage = stageEvidence(view, g.files['PROJECT.md'], g.check);
+    rememberEvidence(floor.dir, stage, view.verdicts);
     return {
-      ...setupViewOf(g.files),
+      ...view,
+      ...(stage ? { stage } : {}),
       job,
       checking: g.regenerating,
       checkedAt: g.renderedAt,

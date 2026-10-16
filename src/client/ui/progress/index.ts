@@ -11,7 +11,7 @@ import './progress.css';
 import type { Phase, PhaseOpen, ProjectProgress } from '../../../shared/progress';
 import { store } from '../../state';
 import { getProgress } from './api';
-import { barRow, tipContent } from './bar';
+import { barRow, stageNotes, tipContent } from './bar';
 import { openAcceptance } from './acceptance';
 import { toolkitChip } from '../toolkit/line';
 import { onThemeChange } from '../colortheme';
@@ -19,6 +19,8 @@ import { onThemeChange } from '../colortheme';
 const FOLD_KEY = 'agent-office.progress-folded';
 /** Coming back to a hidden tab asks again only when the answer is older than this. */
 const STALE_MS = 60_000;
+/** While the office's gate-check runs, asked again after this. */
+const CHECKING_MS = 20_000;
 
 const folded = (): boolean => {
   try {
@@ -46,6 +48,8 @@ export function mountProgressBar(root: HTMLElement, deps: ProgressDeps): Progres
   let at = 0;
   let busy = false;
   let again = false;
+  /** While the office's gate-check runs, one look again shortly after (no timer otherwise). */
+  let follow: ReturnType<typeof setTimeout> | undefined;
   let collapsed = folded();
   /** The merged pull requests last heard of (undefined: none heard yet on this floor). */
   let mergedSig: string | undefined;
@@ -97,7 +101,7 @@ export function mountProgressBar(root: HTMLElement, deps: ProgressDeps): Progres
     });
     // The project's toolkit commit at the end (ui/toolkit/), when it's a toolkit project.
     if (data.toolkit && store.floor) row.append(toolkitChip(store.floor, () => void load()));
-    root.replaceChildren(row, tip);
+    root.replaceChildren(row, ...(fold ? [] : [stageNotes(data)].filter((x): x is HTMLElement => !!x)), tip);
   }
   /** Before the first answer: the bar's height, empty, so nothing below it moves when it comes. */
   const h0 = () => {
@@ -128,6 +132,8 @@ export function mountProgressBar(root: HTMLElement, deps: ProgressDeps): Progres
       data = p;
       at = Date.now();
       draw();
+      clearTimeout(follow);
+      if (p.stage?.check.running) follow = setTimeout(() => void load(), CHECKING_MS);
     }
     if (again || floor !== store.floor) {
       again = false;

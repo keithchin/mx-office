@@ -19,6 +19,7 @@ import { collectNeeds, type NeedItem } from '../ui/needsyou/logic';
 import { phoneAlerts } from '../ui/phone/alerts';
 import { pendingOn, type PendingReply } from '../ui/phone/api';
 import { nudgeMember } from '../ui/roster/api';
+import { goStageFix } from '../ui/stage/fix';
 import { composer, type ComposeTarget } from '../ui/phone/composer';
 import { notesOf, redCount, type NoteAction, type PhoneNote } from '../ui/phone/notes';
 import { readState } from '../ui/phone/reads';
@@ -150,6 +151,7 @@ export function installMobile(deps: MobileDeps): MobileApp {
     if (t.to === 'settings') return void raiseCap({ floor, name: store.currentFloor()?.name ?? floor, spend: statuses?.find((s) => s.floor === floor)?.spend ?? { usd: roster()?.spentToday ?? 0, ...(roster()?.cap ? { cap: roster()!.cap } : {}) } });
     if (t.to === 'approvals') return main.querySelector('.m-appr')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     if (t.to === 'nudge') return void nudgeMember(floor, t.role);
+    if (t.to === 'stage-fix') return void goStageFix(t.floor);
     onComputer(t, floor);
   }
 
