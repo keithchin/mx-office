@@ -250,11 +250,13 @@ export interface DesignContextRecord {
   n: number;
   digest: string;
   patternIds: string[];
-  /** The guidance file's path (none for a candidate). */
+  /** The guidance file's path: only when it was written before the line was given. */
   guidance?: string;
   line: string;
-  /** supplied: a guidance file was given; candidate: a design waiting on its branch (no guidance). Older lines have none (supplied). */
-  status?: 'supplied' | 'candidate';
+  /** supplied: the file was written before the task got its line; unavailable: it couldn't be prepared (no path given); candidate: a design waiting on its branch (no guidance). Older lines have none (supplied). */
+  status?: 'supplied' | 'unavailable' | 'candidate';
+  /** Why the guidance is unavailable. */
+  reason?: string;
   /** The guidance file's size in characters; tokens ≈ chars / 4 (an estimate, labelled so). */
   guidanceChars: number;
   at: number;

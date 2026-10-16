@@ -190,6 +190,7 @@ test('the line provider: only bound projects get a line; the guidance file and t
   const b: ProjectDesignBinding = { systemId: 'dsg_01JA0000000000000000000000', name: 'Acme', n: 1, digest: 'a'.repeat(64), kind: 'branded', themeName: 'acme-aaaaaaaa', preset: 'administration', approval: { kind: 'wizard', by: 'Ada', at: 1 }, exceptions: [] };
   await projects.bind('f1', undefined, b);
   await projects.select('f1', { patternId: 'forms.validated', version: 1, scope: { issue: 7 }, by: 'Ada', at: 2 });
+  await lines.prepare('f1');
   const line = lines.line({ floorId: 'f1', taskId: 'tsk_X', text: 'Build the form', issue: 7 })!;
   assert.match(line, /Patterns: forms\.validated\./);
   assert.equal(lines.line({ floorId: 'f2', taskId: 'tsk_Y', text: 'x' }), undefined, 'another project, no line');

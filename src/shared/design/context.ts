@@ -7,7 +7,7 @@ import { patternById, patternMarkdown, PATTERNS } from './patterns.js';
 import { BRANDED_SCOPE, PRESET, type PackageManifest, type PatternSelection, type ProjectDesignBinding } from './types.js';
 
 export const DESIGN_LINE_MAX = 300;
-/** The bounded-correction policy (brief §8G): automated design-correction attempts per unresolved issue. */
+/** The bounded-correction policy (brief §8G): an instruction to agents (guidance and Playbooks), not counted or enforced by the office. */
 export const CORRECTION_LIMIT = 2;
 
 /** The pattern ids a task gets: those selected for its issue, else the project-wide ones; never another issue's or page's. */
@@ -45,6 +45,11 @@ export function designLine(b: Pick<ProjectDesignBinding, 'name' | 'n' | 'digest'
 }
 
 const short = (b: Pick<ProjectDesignBinding, 'name' | 'n' | 'digest'>) => `${clean(b.name).slice(0, 40) || 'design'}@v${b.n} #${b.digest.slice(0, 7)}`;
+
+/** A bound project whose guidance file couldn't be prepared before the task went: said so, with no path (none was supplied). */
+export function unavailableLine(b: Pick<ProjectDesignBinding, 'name' | 'n' | 'digest' | 'kind'>): string {
+  return `Design: ${short(b)} (${b.kind === 'branded' ? 'Branded Atlas' : 'Atlas defaults'}) is bound, but its guidance file couldn't be prepared for this task: use stock Atlas classes and the applied theme, and escalate design questions instead of inventing variants.`.slice(0, DESIGN_LINE_MAX);
+}
 
 /** A version committed on its own branch and not merged yet: the agent's revision doesn't have it. */
 export function candidateLine(c: Pick<ProjectDesignBinding, 'name' | 'n' | 'digest'>, branch: string): string {

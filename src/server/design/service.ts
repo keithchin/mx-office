@@ -13,7 +13,7 @@ import { mxcliVersion, type Run } from './apply.js';
 import { applyInPlace } from './adopt.js';
 import { checkMerge, discardAdoption, reconcileAdoption, runAdoption, settled, type AdoptionEnv, type AdoptionPoint } from './adoption.js';
 import { Captures, type Shooter } from './capture.js';
-import { DesignLines } from './line.js';
+import { DesignLines, type GuidanceWriter } from './line.js';
 import { DesignProjects } from './projects.js';
 import { scanTheme, scanWords } from './scan.js';
 import { stageWords } from '../../shared/design/words.js';
@@ -41,6 +41,8 @@ export interface DesignDeps {
   shooter?: Shooter;
   /** Tests: stop an adoption at a point as if the office had been killed there. */
   checkpoint?(point: AdoptionPoint): Promise<void>;
+  /** Tests: the guidance files' writer (slow or failing). */
+  guidanceWriter?: GuidanceWriter;
 }
 
 export const STUDIO_PRO = '11.12.4';
@@ -59,7 +61,7 @@ export class DesignService {
   constructor(private deps: DesignDeps) {
     this.store = new DesignStore(deps.dataDir, deps.now);
     this.projects = new DesignProjects(this.store.root);
-    this.lines = new DesignLines(this.store.root, deps.dataDir, this.projects, (id, n) => this.store.packageDir(id, n), deps.now);
+    this.lines = new DesignLines(this.store.root, deps.dataDir, this.projects, (id, n) => this.store.packageDir(id, n), deps.now, deps.guidanceWriter);
     this.captures = new Captures(this.store.root, deps.shooter, deps.now);
   }
 
@@ -255,7 +257,7 @@ export class DesignService {
       return { ok: true, detail: r.detail };
     }
     this.audited(floorId, by, m, r.ok, r.detail);
-    if (r.ok) void this.lines.prepare(floorId).catch(() => undefined);
+    if (r.ok) await this.lines.prepare(floorId).catch((err: Error) => console.warn(`agent-office: design guidance for ${floorId}: ${err.message}`));
     return r;
   }
 
@@ -337,7 +339,7 @@ export class DesignService {
     await this.projects.select(floorId, sel);
     const where = 'issue' in scope ? `issue #${scope.issue}` : 'page' in scope ? `page ${scope.page}` : 'the whole project';
     this.deps.audit({ floor: floorId, actor: human(by), action: 'design.select', target: { kind: 'pattern', id: `${patternId}@${p.version}`, label: p.title }, summary: `Chose ${p.title} (${patternId}@${p.version}) for ${where}${onBehalfOfClient ? ', recorded on behalf of the client' : ''}` });
-    void this.lines.prepare(floorId).catch(() => undefined);
+    await this.lines.prepare(floorId).catch((err: Error) => console.warn(`agent-office: design guidance for ${floorId}: ${err.message}`));
     return undefined;
   }
 

@@ -48,7 +48,7 @@ export function startDesignSystems(ctx: Ctx): () => void {
   // Loaded once, in the background; each bound project's selections and guidance read ahead of its first task.
   void s
     .ready()
-    .then(() => Promise.all(Object.keys(s.projects.bindings()).map((f) => s.lines.prepare(f))))
+    .then(() => Promise.all(Object.keys(s.projects.bindings()).map((f) => s.lines.prepare(f).catch((err: Error) => console.warn(`agent-office: design guidance for ${f}: ${err.message}`)))))
     .catch((err: Error) => console.warn(`agent-office: design systems: ${err.message}`));
   const offLine = addTaskLineHook((t) => s.lines.line(t));
   useDesignBound((floor) => !!s.projects.binding(floor));
