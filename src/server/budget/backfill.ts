@@ -7,7 +7,7 @@
 import type { RunRecord } from '../../shared/analysis.js';
 import type { WorkerInfo } from '../../shared/protocol.js';
 import type { AgentInfo, SpendRow } from '../../shared/budget/types.js';
-import { splitDelta } from './attribute.js';
+import { seenOf, splitDelta } from './attribute.js';
 import { addDays, book, daysBetween, stageAt, type LedgerData } from './ledger.js';
 
 /** At most this many days back a back-filled worker's spend is spread over. */
@@ -50,7 +50,7 @@ export function backfill(d: LedgerData, live: WorkerInfo[], runs: RunRecord[], d
       spread(d, { agent: agent.key, model: p.model, stage: '—', cost: unmetered ? 0 : p.cost, calls: p.calls, est: true, ...(unmetered ? { unmetered: true } : {}), ...(w.pr ? { pr: w.pr.number } : {}) }, agent, from, deps.today, dayStart);
       if (!unmetered) booked += p.cost;
     }
-    d.seen[w.id] = { cost: w.usage.cost, calls: w.usage.calls, ...(w.usage.parts ? { parts: structuredClone(w.usage.parts) } : {}) };
+    d.seen[w.id] = seenOf(w.usage);
   }
   for (const r of runs) {
     if (liveIds.has(r.workerId) || d.seen[r.workerId] || !(r.cost ?? 0)) continue;

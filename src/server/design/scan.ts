@@ -109,9 +109,11 @@ export async function scanTheme(appDir: string): Promise<ThemeScan & { fences: R
     const s = scanScss(await readFile(path.join(web, f), 'utf8').catch(() => ''));
     s.fenced.forEach((x) => fenced.add(x));
     for (const [name, digest] of Object.entries(s.fences)) (fences[name] ??= {})[`theme/web/${f}`] = digest;
+    // Atlas's own partials (_theme-dark, _theme-neutral, exclusion-variables) are its stock text, long and
+    // version-specific: only their fences count. A client's overrides and rules live in these two.
+    if (f !== 'custom-variables.scss' && f !== 'main.scss') continue;
     overrides.push(...s.overrides.map((o) => ({ file: `theme/web/${f}`, ...o })));
-    // Atlas's own partials are compared by their fences only: their stock text is long and version-specific.
-    if (s.custom && (f === 'custom-variables.scss' || f === 'main.scss')) custom.push(`theme/web/${f}`);
+    if (s.custom) custom.push(`theme/web/${f}`);
   }
   const modules: string[] = [];
   for (const m of await readdir(path.join(appDir, 'themesource')).catch(() => [] as string[])) {
