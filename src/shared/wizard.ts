@@ -181,7 +181,8 @@ export interface ProjectPlan {
   portfolio?: string;
   /**
    * A local folder of the legacy app's code (shared/source-folder.ts), from the draft (never from the page):
-   * copied into the project's sources/legacy/<name>/ at the intake step, confidential, never uploaded.
+   * imported into the project's sources/legacy/<name>/ at the intake step (wizard/source-snapshot.ts, with a
+   * manifest beside it), confidential: stored on this machine and git-ignored, never pushed to GitHub.
    */
   sourceFolder?: PlanSource;
   /**

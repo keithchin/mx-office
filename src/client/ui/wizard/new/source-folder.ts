@@ -1,8 +1,9 @@
 // "Add a source folder" on the New project start page (Migrate an app, Change an existing app): the person
 // types or pastes a local folder's path, the office checks and scans it (POST /api/source-folder/scan) and
 // the dialog shows what will be copied before anything is ("212 files, 9 MB; skipped: node_modules, 2 .env
-// files"). The folder is copied into the project's sources/legacy/<name>/ at setup and never uploaded; the
-// Chief Analyst sees only its file index. The draft keeps it, so a resumed draft still has it.
+// files"). The folder is imported into the project's sources/legacy/<name>/ at setup (stored on this machine,
+// git-ignored, never pushed to GitHub; the team's agents send what they read of it to the hosted model to
+// work on it); the Chief Analyst sees only its file index. The draft keeps it, so a resumed draft still has it.
 import type { DraftView } from '../../../../shared/brief';
 import { bytesText, legacyRel, summaryText, type SourceFolder } from '../../../../shared/source-folder';
 import { h, toast } from '../../dom';
@@ -23,7 +24,7 @@ export interface SourceHost {
 
 /** The summary and the confidentiality line, for the dialog and the chip's title. */
 export function sourceLines(s: SourceFolder): string[] {
-  return [summaryText(s), `Copied into ${legacyRel(s.name)}/ at setup, on this machine only. Marked confidential in the brief and the Discovery task; never uploaded.`];
+  return [summaryText(s), `Imported into ${legacyRel(s.name)}/ at setup: stored on this machine and git-ignored, so never pushed to GitHub. Marked confidential in the brief and the Discovery task. The team’s agents read it and send what they read to Claude (Anthropic’s API) to work on it.`];
 }
 
 /** The chip under the description: the folder's name, its summary, and ✕ to forget it. */

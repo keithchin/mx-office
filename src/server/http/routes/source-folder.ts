@@ -2,7 +2,7 @@
 // the folder's path checks it (refused: the office's own folders, the projects home, system folders),
 // scans it off the event loop for the summary, and keeps it on the draft; /clear forgets it. Like the
 // rest of the brief, for admins only, from the office's own pages, and each draft is its owner's. The
-// folder stays on the office's machine: it is only read here, and copied at setup.
+// folder is only read here (never uploaded by this route), and imported at setup (wizard/source-snapshot.ts).
 
 import type { Route } from '../router.js';
 import { readBody, sameOrigin, send } from '../util.js';
