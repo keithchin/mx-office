@@ -6,11 +6,17 @@
 // toolkit's resolved state alone never counts: the words are compared.
 //
 // An escalation: every `Decided per ESC-<id> rev <n>` line in the texts read (journals, PROJECT.md). The
-// citation only locates the evidence: the recorded text is that line plus the rest of its paragraph (or its
-// table row), and it's compared with the revision's option or words (shared/followthrough.ts wordsMatch:
-// the expected words appear whole, case, quotes, punctuation and spacing aside).
+// citation only locates the evidence and never establishes agreement: what is compared is the line's answer
+// part (shared/recorded-answer.ts answerPart: after the citation's colon, to the end of the line or the
+// table cell), exactly, with the revision's option or words (sameAnswer). The rest of the paragraph or row
+// is kept as the recorded text, to show, and is never read as the answer.
+//
+// Both: exact is "recorded"; not exact but mentioning the expected words somewhere (a negation, a
+// condition, a quotation, a paraphrase with commentary, a legacy line) is "needs-review"; anything else is
+// "recorded differently". Neither of the last two settles anything.
 
-import { escalationExpected, normText, RECORDED_TEXT_MAX, wordsMatch, type RecordedOutcome } from '../../shared/followthrough.js';
+import { escalationExpected, RECORDED_TEXT_MAX, type RecordedOutcome } from '../../shared/followthrough.js';
+import { answerPart, CITE_RE, mentions, normText, sameAnswer } from '../../shared/recorded-answer.js';
 import type { AnswerRevision } from '../../shared/dispatch.js';
 import type { PmAnswer, QExpected, Question } from '../../shared/questions.js';
 import { isResolved, openState } from '../../shared/questions.js';
@@ -19,6 +25,8 @@ export interface Judged {
   outcome: RecordedOutcome;
   rev?: number;
   text?: string;
+  /** The answer value compared (an escalation citation's answer part). */
+  answer?: string;
 }
 
 const cut = (s: string) => (s.length > RECORDED_TEXT_MAX ? `${s.slice(0, RECORDED_TEXT_MAX - 1)}…` : s);
@@ -52,13 +60,21 @@ export function expectedWords(e: QExpected | undefined): string {
   return `${e.state}: ${e.answer ?? ''}`;
 }
 
-/** Whether the question's record is what `e` asked for. */
+/** Whether the question's record is exactly what `e` asked for: its answer / decision field is the answer value (MOOT's status is `MOOT - <reason>`). */
 export function matchesExpected(q: Question, e: QExpected): boolean {
   if (q.state !== e.state) return false;
-  if (e.state === 'ANSWERED') return wordsMatch(q.answer ?? q.assumption ?? '', e.answer ?? '');
-  if (e.state === 'ASSUMED') return wordsMatch(q.assumption ?? '', e.decision ?? '') && normText(q.consentBy ?? '') === normText(e.consentBy ?? '') && sameMinute(q.consentAt, e.consentAt);
-  if (e.state === 'MOOT') return !e.reason || wordsMatch(q.rawStatus, e.reason);
+  if (e.state === 'ANSWERED') return sameAnswer(q.answer ?? q.assumption, e.answer);
+  if (e.state === 'ASSUMED') return sameAnswer(q.assumption, e.decision) && normText(q.consentBy ?? '') === normText(e.consentBy ?? '') && sameMinute(q.consentAt, e.consentAt);
+  if (e.state === 'MOOT') return !e.reason || sameAnswer(q.rawStatus, `MOOT - ${e.reason}`) || sameAnswer(q.rawStatus, e.reason);
   return false;
+}
+
+/** Whether the record mentions what `e` asked for without being it: needs a person's review, never recorded. */
+function mentionsExpected(q: Question, e: QExpected): boolean {
+  if (q.state !== e.state) return false;
+  const want = e.state === 'ANSWERED' ? e.answer : e.state === 'ASSUMED' ? e.decision : e.reason;
+  const got = e.state === 'MOOT' ? q.rawStatus : e.state === 'ASSUMED' ? q.assumption : (q.answer ?? q.assumption);
+  return !!want && !!got && mentions(got, want);
 }
 
 /** A sent answer's record: as given for the current revision, an earlier revision's, different, or not yet. */
@@ -69,19 +85,21 @@ export function judgeQuestion(q: Question, a: Pick<PmAnswer, 'answerRev' | 'expe
   if (current && matchesExpected(q, current)) return { outcome: 'recorded', rev: current.rev, text: recordedOf(q) };
   const older = [...all].reverse().find((e) => e !== current && e.rev < (current?.rev ?? Infinity) && matchesExpected(q, e));
   if (older) return { outcome: 'recorded-older-rev', rev: older.rev, text: recordedOf(q) };
-  return { outcome: 'recorded-differently', rev: current?.rev, text: recordedOf(q) };
+  return { outcome: current && mentionsExpected(q, current) ? 'needs-review' : 'recorded-differently', rev: current?.rev, text: recordedOf(q) };
 }
 
 // ---- Escalation citations --------------------------------------------------------------------------------
 
-/** `Decided per ESC-<id> rev <n>` (any case, the id as the marker writes it). */
-const CITE = /Decided per ESC-([A-Za-z0-9][A-Za-z0-9_-]*) rev (\d+)/gi;
+/** `Decided per ESC-<id> rev <n>` (shared/recorded-answer.ts). */
+const CITE = CITE_RE;
 
 export interface Citation {
   id: string;
   rev: number;
   /** The citation's line and the rest of its paragraph, or its table row, exactly as written (\n line ends). */
   block: string;
+  /** The answer part of the citation's line (recorded-answer.ts answerPart); undefined when no colon follows the citation. */
+  answer?: string;
   /** 1-based. */
   line: number;
 }
@@ -97,8 +115,11 @@ export function citations(text: string): Citation[] {
     const l = lines[i];
     CITE.lastIndex = 0;
     let m: RegExpExecArray | null;
-    const found: { id: string; rev: number }[] = [];
-    while ((m = CITE.exec(l))) found.push({ id: m[1], rev: Number(m[2]) });
+    const found: { id: string; rev: number; answer?: string }[] = [];
+    while ((m = CITE.exec(l))) {
+      const answer = answerPart(l, m.index, m.index + m[0].length);
+      found.push({ id: m[1], rev: Number(m[2]), ...(answer !== undefined ? { answer } : {}) });
+    }
     if (!found.length) continue;
     let block = l;
     // A table row is its own record; a paragraph or a list item runs on to the next break.
@@ -121,19 +142,24 @@ export const recordedWordsOf = (block: string) =>
 
 /**
  * One citation of an escalation judged against its revisions: older than `current` (and not the revision an
- * accept-as-recorded took over) is "recorded for rev n"; the current one as given when the words match the
- * revision's option or text, else recorded differently. A citation of a revision that doesn't exist says nothing.
+ * accept-as-recorded took over) is "recorded for rev n"; the current one as given only when its answer part
+ * is exactly the revision's option or words (an accept-as-recorded revision: also the very words the person
+ * accepted, the whole record as it was shown to them); needs review when the record only mentions them;
+ * else recorded differently. A citation of a revision that doesn't exist says nothing.
  */
-export function judgeCitation(c: Pick<Citation, 'rev' | 'block'>, history: readonly Pick<AnswerRevision, 'rev' | 'kind' | 'text' | 'option' | 'supersedes' | 'basis'>[]): Judged | undefined {
+export function judgeCitation(c: Pick<Citation, 'rev' | 'block' | 'answer'>, history: readonly Pick<AnswerRevision, 'rev' | 'kind' | 'text' | 'option' | 'supersedes' | 'basis'>[]): Judged | undefined {
   const current = history[history.length - 1];
   if (!current) return undefined;
   const text = cut(recordedWordsOf(c.block));
   // Accepting a record as it was written makes a new revision of the words that cite the one before.
   const covers = new Set([current.rev, ...(current.kind === 'accept-as-recorded' && current.supersedes ? [current.supersedes] : [])]);
+  const answer = c.answer !== undefined ? { answer: cut(c.answer) } : {};
   if (!covers.has(c.rev)) {
-    if (c.rev < current.rev && history.some((h) => h.rev === c.rev)) return { outcome: 'recorded-older-rev', rev: c.rev, text };
+    if (c.rev < current.rev && history.some((h) => h.rev === c.rev)) return { outcome: 'recorded-older-rev', rev: c.rev, text, ...answer };
     return undefined;
   }
-  const ok = escalationExpected(current).some((e) => wordsMatch(text, e));
-  return { outcome: ok ? 'recorded' : 'recorded-differently', rev: current.rev, text };
+  const expected = escalationExpected(current);
+  const exact = expected.some((e) => sameAnswer(c.answer, e)) || (current.kind === 'accept-as-recorded' && sameAnswer(text, current.text));
+  if (exact) return { outcome: 'recorded', rev: current.rev, text, ...answer };
+  return { outcome: expected.some((e) => mentions(text, e)) ? 'needs-review' : 'recorded-differently', rev: current.rev, text, ...answer };
 }

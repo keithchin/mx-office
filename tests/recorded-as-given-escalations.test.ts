@@ -1,13 +1,14 @@
 // Recorded as given, escalations (Slice 1B-2, server/followthrough/): the answer carries the citation
 // `Decided per ESC-<id> rev <n>`; the office finds it on the asks look's reads (the project folder, the
 // agents' worktrees, the branch heads), compares the words with the revision, and keeps where it is (working
-// copy, committed on a branch, merged into main: path, commit and blob apart). Real git in throwaway repos
+// copy, committed on a branch, merged into main: path, commit and blob apart). The exact-answer rule's own
+// acceptance tests are tests/recorded-exact.test.ts. Real git in throwaway repos
 // with a bare origin; no office, no Claude, no GitHub.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { writeFileSync } from 'node:fs';
-import { faithful, followLine, wordsMatch } from '../src/shared/followthrough.js';
+import { faithful, followLine } from '../src/shared/followthrough.js';
 import { citations, judgeCitation, recordedWordsOf } from '../src/server/followthrough/judge.js';
 import { escalationAnswerPrompt } from '../src/server/roster/prompts.js';
 import { detectStuck } from '../src/server/stuck/detect.js';
@@ -18,26 +19,24 @@ import { settle } from './dispatch-helpers.js';
 test('the answer prompt and its marker carry the citation Decided per ESC-<id> rev <n>', async () => {
   const t = await team();
   const typed = t.floor.prompts.map((p) => p.text).join('\n');
-  assert.match(typed, new RegExp(`Decided per ESC-${t.e.id} rev 1: <the decision, worded as given>`));
+  // The exact line to write: the citation, a colon, the answer value (the option, without "Go with:"), nothing else.
+  assert.ok(typed.includes(`\n    Decided per ESC-${t.e.id} rev 1: Use SSO\n`), typed);
+  assert.match(typed, /no rationale, conditions or commentary on that line/);
   assert.match(typed, new RegExp(`\\[office answer dsp_\\w+ · ESC-${t.e.id} rev 1\\]`));
   assert.match(escalationAnswerPrompt(t.e, 'approve', '', 'Keith', undefined, 3), /Decided per ESC-\w+ rev 3/);
 });
 
-test('matching rule: case, quotes, punctuation and spacing aside, the expected words appear whole', () => {
-  assert.ok(wordsMatch('Decided per ESC-x rev 1: we’ll **use SSO** (Entra), per Keith.', 'Use SSO'));
-  assert.ok(wordsMatch('“USE   SSO.”', 'Use SSO'));
-  assert.ok(!wordsMatch('use SSO-lite', 'Use SSO lite please'));
-  assert.ok(!wordsMatch('use ssoish', 'use sso'), 'whole words only');
-  assert.ok(!wordsMatch('anything', ''), 'an empty expectation never matches');
-  // The citation only locates: its words are taken out before comparing; a table row is its own record.
+test('citations: the citation only locates; a table row is its own record, and its answer part is its cell', () => {
   const c = citations('| OW-1 | Decided per ESC-ab12 rev 2: Use SSO | CONFIRMED |\n| OW-2 | other | x |\n\nDecided per ESC-cd34 rev 1: magic links\nfor guests too.\n\nNext paragraph.');
   assert.equal(c.length, 2);
   assert.equal(c[0].block, '| OW-1 | Decided per ESC-ab12 rev 2: Use SSO | CONFIRMED |');
   assert.equal(c[1].block, 'Decided per ESC-cd34 rev 1: magic links\nfor guests too.');
+  assert.deepEqual([c[0].answer, c[1].answer], ['Use SSO', 'magic links']);
   assert.equal(recordedWordsOf(c[0].block), 'OW-1 · Use SSO · CONFIRMED');
   assert.equal(recordedWordsOf('- Decided per ESC-x rev 1: Zebra ZD421.'), 'Zebra ZD421.');
   const hist = [{ rev: 1, kind: 'reply' as const, text: 'Go with: Use SSO' }];
-  assert.equal(judgeCitation({ rev: 1, block: 'Decided per ESC-x rev 1: Use SSO for staff' }, hist)?.outcome, 'recorded');
+  assert.equal(judgeCitation({ rev: 1, block: 'Decided per ESC-x rev 1: Use SSO', answer: 'Use SSO' }, hist)?.outcome, 'recorded');
+  assert.equal(judgeCitation({ rev: 1, block: 'Decided per ESC-x rev 1: Use SSO for staff', answer: 'Use SSO for staff' }, hist)?.outcome, 'needs-review', 'added words are not the answer');
   assert.equal(judgeCitation({ rev: 3, block: 'Decided per ESC-x rev 3: Use SSO' }, hist), undefined, 'a revision that does not exist says nothing');
 });
 

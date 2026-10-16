@@ -10,13 +10,14 @@
 //   - Dismiss: stop following this revision through (a new revision shows again).
 // Each is an admin's (the route checks), with the decision's expectedRev checked like any answer (a 409
 // when it changed). None of them blocks other work. Only recorded as given at the current revision,
-// merged into main, takes an item off by itself (shared/followthrough.ts faithful).
+// merged into main, takes an item off by itself (shared/followthrough.ts faithful): a citation that only
+// locates a record whose answer isn't exactly the decision needs review (judge.ts), and stays on.
 
 import path from 'node:path';
 import type { AuditInput } from '../../shared/audit.js';
 import { decisionLabel, type AnswerRevisionKind, type DecisionRef, type DispatchRecord } from '../../shared/dispatch.js';
 import { VERDICT_WORD, type Escalation } from '../../shared/roster/escalation.js';
-import { faithful, followLevel, locationWords, whereWords, type FollowAction, type FollowItem, type FollowView, type Recording } from '../../shared/followthrough.js';
+import { faithful, followLevel, locationWords, recordedWords, reviewable, whereWords, type FollowAction, type FollowItem, type FollowView, type Recording } from '../../shared/followthrough.js';
 import { answersMessage, type PmAnswer, type Question } from '../../shared/questions.js';
 import type { AnswerLine } from '../answers/store.js';
 import type { DecisionLinks } from '../../shared/task-links.js';
@@ -159,7 +160,7 @@ export class FollowThrough {
       if (!had || had.outcome !== rec.outcome || had.rev !== rec.rev || had.location?.where !== rec.location?.where || had.location?.commitSha !== rec.location?.commitSha) {
         changed = true;
         if (rec.outcome !== 'not-recorded-yet' || had)
-          this.deps.record({ floor: floor.id, actor: ACTOR, action: 'followthrough.recorded', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `${decisionLabel(decision)} rev ${history[history.length - 1]?.rev ?? '?'}: ${rec.outcome === 'recorded' ? 'recorded as given' : rec.outcome === 'recorded-differently' ? 'recorded differently' : rec.outcome === 'recorded-older-rev' ? `recorded for rev ${rec.rev}` : 'not recorded yet'}${rec.location ? ` (${whereWords(rec.location)}, ${locationWords(rec.location)})` : ''}`, details: { outcome: rec.outcome, ...(rec.location ? { location: rec.location } : {}) }, ids: { decision }, severity: followLevel(rec) === 'warn' ? 'notice' : 'info' });
+          this.deps.record({ floor: floor.id, actor: ACTOR, action: 'followthrough.recorded', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `${decisionLabel(decision)} rev ${history[history.length - 1]?.rev ?? '?'}: ${recordedWords(rec).toLowerCase()}${rec.location ? ` (${whereWords(rec.location)}, ${locationWords(rec.location)})` : ''}`, details: { outcome: rec.outcome, ...(rec.location ? { location: rec.location } : {}) }, ids: { decision }, severity: followLevel(rec) === 'warn' ? 'notice' : 'info' });
       }
     }
     if (changed) await this.store.save(floor.id);
@@ -179,7 +180,7 @@ export class FollowThrough {
       if (seen.has(key)) continue;
       seen.add(key);
       const location = await loc.locateBlock(h.where, h.file, h.c.block);
-      const rec: Recording = { outcome: j.outcome, ...(j.rev !== undefined ? { rev: j.rev } : {}), ...(j.text ? { text: j.text } : {}), location, at: now };
+      const rec: Recording = { outcome: j.outcome, ...(j.rev !== undefined ? { rev: j.rev } : {}), ...(j.text ? { text: j.text } : {}), ...(j.answer !== undefined ? { answer: j.answer } : {}), location, at: now };
       const score = (r: Recording) => RANK[r.location!.where] * 2 + (r.outcome === 'recorded' ? 1 : 0);
       if (!best || score(rec) > score(best)) best = rec;
     }
@@ -214,7 +215,7 @@ export class FollowThrough {
       return { ok: true };
     }
     const r = it.recording;
-    if (r.outcome !== 'recorded-differently' && r.outcome !== 'recorded-older-rev') return { ok: false, status: 400, error: 'Only a decision recorded differently can be accepted as recorded or corrected' };
+    if (!reviewable(r)) return { ok: false, status: 400, error: 'Only a decision that needs review or is recorded differently can be accepted as recorded or corrected' };
     if (action === 'accept-as-recorded' && !r.text) return { ok: false, status: 400, error: 'There is no recorded text to accept' };
     const out = it.kind === 'esc' ? await this.actEscalation(floorId, it, action, o) : await this.actQuestion(floorId, it, action, o);
     if (!out.ok) return out;
