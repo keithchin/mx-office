@@ -146,11 +146,14 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
       }
       // Typed, its session not showing it yet: told (delivered: never owed again, never typed twice), and flagged
       // `typed` until the session shows it (dispatch-hooks.ts applyEscalation); the dispatch record has the truth.
+      // Held (the raiser mid-turn: Delivery's held list types it once its turn ends): not delivered, and flagged
+      // `held` so it isn't owed (typed twice) meanwhile; delivered once its dispatch is received.
       const typed = !!raiser && isTypedUnconfirmed(raiser);
-      const delivered = !!raiser && raiser.channel === 'type' && (raiser.state === 'submitted' || raiser.state === 'held' || typed);
+      const held = !!raiser && raiser.channel === 'type' && raiser.state === 'held';
+      const delivered = !!raiser && raiser.channel === 'type' && (raiser.state === 'submitted' || typed);
       e.status = 'resolved';
-      e.resolution = { verdict, text, by: a.by, at: roster.deps.now(), delivered, ...(typed ? { typed } : {}), ...(a.outcome ? { outcome: a.outcome } : {}), answerRev: rev, ...(raiser ? { dispatchId: raiser.id } : {}), ...(a.supersededBy ? { supersededBy: a.supersededBy } : {}) };
-      afterResolve(roster, floor, e, { verdict, outcome: a.outcome, by: a.by, text, delivered, rehire, later, rev, dispatchId: raiser?.id, groupId, supersededBy: a.supersededBy });
+      e.resolution = { verdict, text, by: a.by, at: roster.deps.now(), delivered, ...(typed ? { typed } : {}), ...(held ? { held } : {}), ...(a.outcome ? { outcome: a.outcome } : {}), answerRev: rev, ...(raiser ? { dispatchId: raiser.id } : {}), ...(a.supersededBy ? { supersededBy: a.supersededBy } : {}) };
+      afterResolve(roster, floor, e, { verdict, outcome: a.outcome, by: a.by, text, delivered, held, rehire, later, rev, dispatchId: raiser?.id, groupId, supersededBy: a.supersededBy });
       // The escalation's new state on disk before the answer counts as given (an answered card must not come back open).
       await roster
         .file(floor.id)
@@ -162,7 +165,7 @@ export function escalationSpec(roster: Roster, floor: TeamFloor, id: string, a: 
 }
 
 /** What follows an answer, as release 47 did it: the audit, the activity, a subagent ask done, the floor told. */
-function afterResolve(roster: Roster, floor: TeamFloor, e: Escalation, x: { verdict: EscalationVerdict; outcome?: EscalationOutcome; by: string; text: string; delivered: boolean; rehire: boolean; later: string[]; rev: number; dispatchId?: string; groupId?: string; supersededBy?: string }) {
+function afterResolve(roster: Roster, floor: TeamFloor, e: Escalation, x: { verdict: EscalationVerdict; outcome?: EscalationOutcome; by: string; text: string; delivered: boolean; held?: boolean; rehire: boolean; later: string[]; rev: number; dispatchId?: string; groupId?: string; supersededBy?: string }) {
   const said = x.outcome === 'done' ? "said it's done for" : x.outcome === 'noted' ? 'noted' : x.outcome === 'superseded' ? `closed as a duplicate (superseded by ${x.supersededBy ?? 'another'})` : `answered (${x.verdict})`;
   audit.record({
     floor: floor.id,
@@ -170,10 +173,10 @@ function afterResolve(roster: Roster, floor: TeamFloor, e: Escalation, x: { verd
     action: 'escalation.answer',
     target: { kind: 'escalation', id: e.id, label: e.title },
     summary: `${x.outcome === 'done' ? `Said it's done (${e.by} re-checks):` : x.outcome === 'noted' ? 'Noted the FYI:' : x.outcome === 'superseded' ? `Closed as a duplicate, superseded by ${x.supersededBy ?? 'another'} (nothing sent):` : `Answered ${e.by}'s escalation (${x.verdict}):`} ${e.title}`,
-    details: { verdict: x.outcome ?? x.verdict, ...(x.outcome ? { legacyVerdict: x.verdict } : {}), ...(x.supersededBy ? { supersededBy: x.supersededBy } : {}), delivered: x.delivered, rehire: x.rehire, ...(x.later.length ? { later: x.later } : {}), reply: x.text ? { length: x.text.length } : undefined, answerRev: x.rev, ...(x.groupId ? { groupId: x.groupId } : {}) },
+    details: { verdict: x.outcome ?? x.verdict, ...(x.outcome ? { legacyVerdict: x.verdict } : {}), ...(x.supersededBy ? { supersededBy: x.supersededBy } : {}), delivered: x.delivered, ...(x.held ? { held: true } : {}), rehire: x.rehire, ...(x.later.length ? { later: x.later } : {}), reply: x.text ? { length: x.text.length } : undefined, answerRev: x.rev, ...(x.groupId ? { groupId: x.groupId } : {}) },
     ids: { decision: `esc:${e.id}`, answerRev: x.rev, ...(x.dispatchId ? { dispatchId: x.dispatchId } : {}) },
   });
-  floor.activity?.(`✅ ${x.by} ${said} ${e.by}'s escalation: ${e.title}`);
+  floor.activity?.(`✅ ${x.by} ${said} ${e.by}'s escalation: ${e.title}${x.held ? ` (held for ${e.by}: not delivered yet, it goes in when their turn ends)` : ''}`);
   if (x.later.length) floor.activity?.(`⏳ ${x.later.join(', ')} ${x.later.length === 1 ? 'has' : 'have'} a question open in ${x.later.length === 1 ? 'its' : 'their'} terminal: the answer goes in once that's answered`);
   // A Lead's `ask` to warn, bench, swap or reinstate a subagent: approving it does it.
   roster.subagents.onEscalationResolved(floor, e.id, x.verdict, x.by);
@@ -206,6 +209,6 @@ export function stillOwed(roster: Roster, floorId: string, r: DispatchRecord): b
   if (!r.decision.startsWith('esc:')) return false;
   const e = roster.data(floorId).escalations.find((x) => `esc:${x.id}` === r.decision);
   if (!e || e.status !== 'resolved' || !e.resolution) return false;
-  if (e.resolution.dispatchId === r.id && !e.resolution.delivered) return true;
+  if (e.resolution.dispatchId === r.id && !e.resolution.delivered && !e.resolution.held) return true;
   return !!e.also?.some((x) => x.dispatchId === r.id && x.pending);
 }

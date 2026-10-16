@@ -325,7 +325,7 @@ export class Escalations {
     // A durable answer goes in only once its dispatch was marked in flight (`ok`, deliver.ts); without `ok`, every one is listed.
     const may = (id: string | undefined) => !id || !ok || ok.has(id);
     const answered = d.escalations.filter((e) => e.status === 'resolved' && e.resolution && e.resolution.verdict !== 'dismiss');
-    const own = answered.filter((e) => !e.resolution!.delivered && ((!!role && e.role === role) || (e.workerId === w.id && e.resolution!.at >= since)) && may(e.resolution!.dispatchId));
+    const own = answered.filter((e) => !e.resolution!.delivered && !e.resolution!.held && ((!!role && e.role === role) || (e.workerId === w.id && e.resolution!.at >= since)) && may(e.resolution!.dispatchId));
     const plus = answered.flatMap((e) => (e.also ?? []).filter((a) => a.pending && a.workerId === w.id && may(a.dispatchId)).map((a) => ({ e, a })));
     const ids = [...own.flatMap((e) => (e.resolution!.dispatchId ? [e.resolution!.dispatchId] : [])), ...plus.flatMap((p) => (p.a.dispatchId ? [p.a.dispatchId] : []))];
     return {
@@ -346,6 +346,7 @@ export class Escalations {
     for (const e of this.roster.data(floor.id).escalations) {
       if (e.resolution?.dispatchId && ids.includes(e.resolution.dispatchId) && !e.resolution.delivered) {
         e.resolution.delivered = true;
+        delete e.resolution.held;
         changed = true;
       }
       for (const a of e.also ?? []) {
@@ -378,7 +379,7 @@ export class Escalations {
    * `mark` to call once the hire went through, so a failed hire doesn't lose them.
    */
   owed(floor: TeamFloor, role: string): Owed {
-    const list = this.roster.data(floor.id).escalations.filter((e) => e.role === role && e.status === 'resolved' && e.resolution && !e.resolution.delivered && e.resolution.verdict !== 'dismiss');
+    const list = this.roster.data(floor.id).escalations.filter((e) => e.role === role && e.status === 'resolved' && e.resolution && !e.resolution.delivered && !e.resolution.held && e.resolution.verdict !== 'dismiss');
     const ids = list.flatMap((e) => (e.resolution!.dispatchId ? [e.resolution!.dispatchId] : []));
     return {
       lines: list.map((e) => owedLine(e, e.resolution!.dispatchId)),

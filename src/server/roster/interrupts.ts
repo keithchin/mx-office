@@ -15,6 +15,7 @@ import type { TeamFloor } from './types.js';
 import { sendAsAnswer } from './dispatch-send.js';
 import type { TaskSource } from '../../shared/tasks.js';
 import { dispatchTaskOf, type Prepared } from './task-ids.js';
+import { EMPTY_TELL, isEmptyTell } from '../../shared/tell-text.js';
 
 /** How long after the Project Manager's question the Coordinator's relays of it follow their choices. */
 export const FANOUT_MS = 30 * 60_000;
@@ -30,7 +31,7 @@ export class Interrupts {
    */
   async tell(floor: TeamFloor, text: string, by: string, when: 'now' | 'after', leads: Partial<Record<RoleId, InterruptChoice>> = {}, owner?: string, decision = 'tell:lead', source?: TaskSource): Promise<string | undefined> {
     const said = text.replace(/\r\n?/g, '\n').trim().slice(0, 20_000);
-    if (!said) return 'Say what to ask';
+    if (isEmptyTell(said)) return EMPTY_TELL;
     const d = this.roster.data(floor.id);
     const m = d.members[managerRole(d)];
     const w = this.roster.workerOf(floor, m);

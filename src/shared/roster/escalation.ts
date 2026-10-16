@@ -73,6 +73,8 @@ export interface Escalation {
     delivered: boolean;
     /** Typed into its terminal (delivered: never owed again), its session not showing it yet (dispatch/typed-watch.ts). */
     typed?: boolean;
+    /** Held for the raiser (mid-turn: Delivery's held list types it once its turn ends): not delivered yet, and not owed meanwhile. */
+    held?: boolean;
     /** What it meant (FYI noted, hands-on done), when it was one of those; `verdict` is the legacy word beside it. */
     outcome?: EscalationOutcome;
     /** The answer store's revision this answer is (server/answers/: the full text lives there). */
