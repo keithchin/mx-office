@@ -8,7 +8,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { Readable } from 'node:stream';
 import os from 'node:os';
 import path from 'node:path';
-import { checkSourcePath, copySourceFolder, scanSourceFolder } from '../src/server/wizard/source-folder.js';
+import { checkSourcePath, scanSourceFolder } from '../src/server/wizard/source-folder.js';
+import { copySourceFolder } from '../src/server/wizard/source-snapshot.js';
 import { bytesText, fileIndexText, summaryText, type SourceFolder } from '../src/shared/source-folder.js';
 import { Planner, plannerConfig } from '../src/server/wizard/planner/index.js';
 import { fakeEngine } from '../src/server/wizard/planner/fake.js';
@@ -49,18 +50,21 @@ test('the scan skips dependency and build folders, secrets-like files and files 
   }
 });
 
-test('the copy leaves out everything the scan does, never copies a secret, and a Retry keeps what is there', async () => {
+test('the copy leaves out everything the scan does, never copies a secret, and a Retry imports it afresh', async () => {
   const root = tmp('copy');
   try {
     const src = fakeNextTree(path.join(root, 'shop-app'));
     const dest = path.join(root, 'project', 'sources', 'legacy', 'shop-app');
     const c = await copySourceFolder(src, dest);
-    assert.equal(c.copied, KEPT.length);
+    assert.equal(c.files, KEPT.length);
+    assert.equal(c.replaced, false);
     assert.deepEqual(listAll(dest).sort(), [...KEPT].sort());
     for (const bad of ['.env', '.env.local', 'certs/server.pem', 'certs/app.key', 'certs/client.pfx', 'node_modules/react/index.js', 'public/demo-video.mp4']) assert.equal(existsSync(path.join(dest, bad)), false, bad);
     const again = await copySourceFolder(src, dest);
-    assert.equal(again.copied, 0);
-    assert.equal(again.kept, KEPT.length);
+    assert.equal(again.files, KEPT.length);
+    assert.equal(again.replaced, true, 'a Retry replaces the snapshot with a fresh one');
+    assert.equal(again.manifest.sha256, c.manifest.sha256, 'the same source gives the same snapshot');
+    assert.deepEqual(listAll(dest).sort(), [...KEPT].sort());
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -77,6 +81,7 @@ test('the size and file-count caps refuse a folder, and a folder over a cap copi
     const dest = path.join(root, 'out');
     await assert.rejects(copySourceFolder(src, dest, { maxFiles: 5, maxBytes: 1e9, fileMaxBytes: 5 * 1024 * 1024 }));
     assert.equal(existsSync(dest), false, 'nothing copied');
+    assert.deepEqual(readdirSync(root), ['shop-app'], 'no staging folder, manifest or operation record either');
     const empty = path.join(root, 'only-secrets');
     mkdirSync(path.join(empty, 'node_modules'), { recursive: true });
     writeFileSync(path.join(empty, '.env'), 'X=1');
