@@ -14,6 +14,7 @@ import path from 'node:path';
 import { mintExecutionId, mintTaskId } from '../../shared/evidence/ids.js';
 import type { TaskEvent, TaskLine, TaskRecord, TaskSource } from '../../shared/tasks.js';
 import { sha256 } from '../audit/log.js';
+import { readJsonlStore } from '../durable/jsonl.js';
 
 const FLOOR = /^[A-Za-z0-9_.-]{1,64}$/;
 const TEXT_MAX = 160;
@@ -85,12 +86,8 @@ export class TaskStore {
   }
 
   private async read(floorId: string, f: FloorTasks): Promise<void> {
-    let text = '';
-    try {
-      text = String(await this.fs.readFile(this.file(floorId), 'utf8'));
-    } catch {
-      // none yet
-    }
+    // Only a missing file is "none yet": a locked one rejects (the next load tries again), a torn tail is kept aside and cut off.
+    const text = (await readJsonlStore(this.file(floorId))).lines.join('\n');
     const disk = new Map<string, TaskRecord>();
     let last = '';
     for (const line of text.split('\n')) {
