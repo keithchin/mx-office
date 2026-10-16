@@ -3,7 +3,7 @@
 // (./ids.ts) and what its card says when it's the card's primary. Pure.
 
 import type { GhPull } from '../protocol.js';
-import type { Escalation } from '../roster/escalation.js';
+import { fyiNow, type Escalation } from '../roster/escalation.js';
 import { jeffOrder, rankChip, rankOf, rankTip, sortedByJeff } from '../roster/jeff-rank.js';
 import type { RosterView } from '../roster/types.js';
 import type { SetupView } from '../wizard.js';
@@ -60,17 +60,19 @@ function escalationLabel(e: Escalation, fyi: boolean): string {
 export function escalationCandidates(r: RosterView): Candidate[] {
   const admin = !!r.admin;
   const byJeff = sortedByJeff(r.escalations, r.settings?.jeff?.priority);
-  const loud = jeffOrder(r.escalations.filter((e) => e.status === 'open' && !e.fyi), byJeff, (a, b) => URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency] || a.at - b.at);
-  const fyis = r.escalations.filter((x) => x.status === 'open' && x.fyi).sort((a, b) => a.at - b.at);
+  const loud = jeffOrder(r.escalations.filter((e) => e.status === 'open' && !fyiNow(e)), byJeff, (a, b) => URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency] || a.at - b.at);
+  const fyis = r.escalations.filter((x) => x.status === 'open' && fyiNow(x)).sort((a, b) => a.at - b.at);
   return [...loud, ...fyis].map((e) => {
     const { kind, filedAsFyi } = escalationKind(e);
-    const n = byJeff && !e.fyi ? rankOf(e) : undefined;
+    const fyi = fyiNow(e);
+    const n = byJeff && !fyi ? rankOf(e) : undefined;
     const isLoud = e.urgency === 'urgent' || e.urgency === 'critical';
-    const need: NeedItem = e.fyi
+    const need: NeedItem = fyi
       ? { key: `fyi-${e.id}`, kind: kind === 'fyi' ? 'fyi' : 'escalation', icon: kind === 'fyi' ? 'ℹ️' : '🚩', tag: 'FYI', text: `${e.by} escalated: ${e.title}`, since: e.at, level: kind === 'fyi' ? 'info' : 'warn', action: admin ? 'Answer' : 'View', target: { to: 'escalation', id: e.id } }
       : { key: `esc-${e.id}`, kind: 'escalation', icon: '🚩', tag: e.urgency.toUpperCase(), text: `${e.by} escalated: ${e.title}`, since: e.at, level: isLoud ? 'block' : 'warn', action: admin ? 'Answer' : 'View', target: { to: 'escalation', id: e.id }, ...(n !== undefined && e.jeffRank ? { rank: { n, chip: rankChip(n), tip: rankTip(e.jeffRank, n) } } : {}) };
     const notes = [
       ...(filedAsFyi ? ['Filed as FYI, but it asks something: shown as a decision.'] : []),
+      ...(e.fyiCorrected ? [`Filed as a decision, not FYI: ${e.fyiCorrected}.`] : []),
       ...(!e.refs ? [escalationKeys(e).length ? 'Recorded before decision cards: its id was read from the title.' : 'Recorded before decision cards: no id in its title, so shown on its own.'] : []),
       ...(e.told ? [`${e.told.by} told ${e.by} at ${hhmm(e.told.at)}: ${e.told.what}`] : []),
     ];

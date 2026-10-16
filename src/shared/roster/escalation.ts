@@ -51,8 +51,12 @@ export interface Escalation {
   team?: TeamId;
   urgency: Urgency;
   trigger?: EscalationTrigger;
-  /** Below the floor's threshold at its autonomy level when raised: shown, but no toast or alert. */
+  /** Below the floor's threshold at its autonomy level when raised: shown, but no toast or alert. Read it through fyiNow. */
   fyi: boolean;
+  /** It would have been FYI, but it asks for a decision (decisionReason), so the office filed it as one: why. */
+  fyiCorrected?: string;
+  /** The office itself filed it as FYI (by the level, for something it noticed; or a subagent gate that's FYI): kept FYI whatever it offers. */
+  fyiKept?: true;
   /** The autonomy level it was judged against. */
   level: AutonomyLevel;
   title: string;
@@ -122,6 +126,37 @@ export function readEscalationAsk(body: unknown): EscalationAsk | string {
   return { urgency, ...(isEscalationTrigger(b.trigger) ? { trigger: b.trigger } : {}), title, details: text(b.details, 6000), options, ...(recommendation ? { recommendation } : {}) };
 }
 
+/** A customer checkpoint named in a title (CAC-3): the toolkit's checkpoints always ask the customer. */
+const CHECKPOINT = /(?<![\w-])CAC-\d+[a-z]?(?![\w-])/i;
+/** A gate or a stage named in a title. */
+const GATE = /\b(gate|stage)\s+[P0-7]\b/i;
+/** Words that make a title naming a register id, a gate or a stage a decision ("sign off OW-1", "approve Stage 2"). */
+const DECIDE_WORDS = /\b(sign[- ]?off|approve|decide|choose|confirm)\b/i;
+const asksQuestion = (e: Pick<Escalation, 'title' | 'details'>) => /\?/.test(`${e.title}\n${e.details}`.replace(/https?:\/\/\S+/g, ' '));
+
+/**
+ * Why an escalation is a decision whatever its FYI flag (FYI is information only): it has answer options,
+ * a recommendation and a question, or its title names a customer checkpoint (CAC-3) or asks to sign off,
+ * approve or decide a register id, a gate or a stage ("sign off OW-1", "approve Stage 2"). Undefined:
+ * nothing in it needs an answer.
+ */
+export function decisionReason(e: Pick<Escalation, 'options' | 'recommendation' | 'title' | 'details'> & { refs?: EscalationRefs }): string | undefined {
+  if (e.options.length) return 'it has answer options';
+  if (e.recommendation && asksQuestion(e)) return 'it has a recommendation and asks a question';
+  const id = CHECKPOINT.exec(e.title)?.[0];
+  if (id) return `it names a sign-off (${id})`;
+  if (!DECIDE_WORDS.test(e.title)) return undefined;
+  const ref = e.refs?.decisionId ?? refsFromTitle(e.title).decisionId ?? GATE.exec(e.title)?.[0];
+  return ref ? `it asks for a decision on ${ref}` : undefined;
+}
+
+/**
+ * Whether it is FYI now: an open one stored as FYI (before the office corrected that at raise time) is
+ * read as a decision when it asks for one (decisionReason), without rewriting it. A resolved one keeps its flag.
+ */
+export const fyiNow = (e: Pick<Escalation, 'fyi' | 'status'> & Partial<Pick<Escalation, 'options' | 'recommendation' | 'title' | 'details' | 'refs' | 'fyiKept'>>) =>
+  e.fyi && (!!e.fyiKept || !(e.status === 'open' && decisionReason({ options: e.options ?? [], title: e.title ?? '', details: e.details ?? '', recommendation: e.recommendation, refs: e.refs })));
+
 /** Whether it should get the Project Manager's attention now: open, not FYI, urgent or critical. */
 export const isAlarming = (e: Pick<Escalation, 'status' | 'fyi' | 'urgency'>) => e.status === 'open' && !e.fyi && (e.urgency === 'urgent' || e.urgency === 'critical');
 
@@ -136,7 +171,7 @@ export function makeEscalation(ask: EscalationAsk, who: { workerId: string; by: 
 export function escalationOrder(a: Escalation, b: Escalation): number {
   if (a.status !== b.status) return a.status === 'open' ? -1 : 1;
   if (a.status === 'open') {
-    const loud = (e: Escalation) => (e.fyi ? -1 : ['info', 'important', 'urgent', 'critical'].indexOf(e.urgency));
+    const loud = (e: Escalation) => (fyiNow(e) ? -1 : ['info', 'important', 'urgent', 'critical'].indexOf(e.urgency));
     if (loud(a) !== loud(b)) return loud(b) - loud(a);
     return b.at - a.at;
   }

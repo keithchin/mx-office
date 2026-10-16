@@ -10,6 +10,7 @@ import { dropKeys, forgetWith } from '../office/forget.js';
 import path from 'node:path';
 import type { WorkerInfo, WorkerStatus } from '../../shared/protocol.js';
 import { AUTONOMY, capAt, needsApproval } from '../../shared/roster/autonomy.js';
+import { fyiNow } from '../../shared/roster/escalation.js';
 import { latestEntry } from '../../shared/roster/journal.js';
 import { teamFromLabels } from '../../shared/roster/card-team.js';
 import { LEADS, ROLE_BY_ID, ROLES, type RoleId } from '../../shared/roster/roles.js';
@@ -449,7 +450,7 @@ export class Roster {
     const out: ApprovalItem[] = this.escalations
       .view(floor)
       .filter((e) => e.status === 'open')
-      .map((e) => ({ id: `e-${e.id}`, kind: 'escalation', title: e.title, detail: `${e.by}${e.role ? ` (${ROLE_BY_ID.get(e.role)?.title})` : ''} · ${e.fyi ? 'FYI' : e.urgency}${e.trigger ? ` · ${e.trigger}` : ''}`, team: e.team, escalationId: e.id }));
+      .map((e) => ({ id: `e-${e.id}`, kind: 'escalation', title: e.title, detail: `${e.by}${e.role ? ` (${ROLE_BY_ID.get(e.role)?.title})` : ''} · ${fyiNow(e) ? 'FYI' : e.urgency}${e.trigger ? ` · ${e.trigger}` : ''}`, team: e.team, escalationId: e.id }));
     out.push(...d.proposals
       .filter((p) => p.status === 'pending')
       .map((p) => ({ id: `p-${p.id}`, kind: 'proposal', title: p.title, detail: `${p.by} (${ROLE_BY_ID.get(p.role)?.title}) · ${p.kind} · standup ${p.standup}${p.detail ? ` — ${p.detail}` : ''}`, team: p.team, proposalId: p.id, ...(proposalAt(p, d) ? { at: proposalAt(p, d) } : {}) }) as ApprovalItem));

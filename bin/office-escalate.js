@@ -63,7 +63,7 @@ export const ESCALATE_TOOL = {
     "what your Playbook's review protocol says to escalate at the project's autonomy level: Directive escalates every change to scope, design or plan; Guided design, architecture and scope changes, " +
     'a review failing after 2 revision rounds, anything blocking; Delegated milestone-level issues, repeated failures, budget risk; Autonomous only critical issues (security, data loss, ' +
     'a client-facing milestone, a budget overrun, blocked with no path). It shows on the project console (the Command Center tab) with Reply / Approve / Reject; urgent and critical ones alert the human. ' +
-    "Below the project's threshold it is filed as FYI. The answer comes back to you as your next prompt: don't wait for it, carry on with whatever it doesn't block. Subagents never escalate: their Lead does.",
+    "Below the project's threshold it is filed as FYI. FYI is information only; anything with options or that needs an answer is a decision, and the office files it as one. The answer comes back to you as your next prompt: don't wait for it, carry on with whatever it doesn't block. Subagents never escalate: their Lead does.",
   inputSchema: {
     type: 'object',
     properties: {

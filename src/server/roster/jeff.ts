@@ -26,6 +26,7 @@ import { clipState, type Questions, type Verdict } from '../judge/pure.js';
 import type { Roster } from './index.js';
 import { CHAT_ASK_DEDUPE_MS, CHAT_PREFIX, chatAskTitle, realAsk, sameAsk, waitingCall } from './jeff-ask.js';
 import { isHandsOn } from '../../shared/roster/hands-on.js';
+import { fyiNow } from '../../shared/roster/escalation.js';
 import { managerRole } from './coverage.js';
 import { JeffPriority } from './jeff-priority.js';
 import type { TeamFloor } from './types.js';
@@ -105,7 +106,7 @@ export class Jeff {
   ruleWaiting(floor: TeamFloor, w: WorkerInfo): boolean {
     if (w.status === 'needs_input') return true;
     const role = this.roster.roleOf(floor, w.id);
-    return this.roster.data(floor.id).escalations.some((e) => e.status === 'open' && !e.fyi && (e.workerId === w.id || (!!role && e.role === role) || !!e.also?.some((a) => a.workerId === w.id)));
+    return this.roster.data(floor.id).escalations.some((e) => e.status === 'open' && !fyiNow(e) && (e.workerId === w.id || (!!role && e.role === role) || !!e.also?.some((a) => a.workerId === w.id)));
   }
 
   /** The worker already raised this (open, an FYI too, or answered in the last few hours): not again. */

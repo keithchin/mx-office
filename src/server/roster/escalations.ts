@@ -10,7 +10,7 @@
 import { dropKeys, forgetWith } from '../office/forget.js';
 import { randomBytes } from 'node:crypto';
 import type { WorkerInfo } from '../../shared/protocol.js';
-import { URGENCY_ICON, isAlarming, escalationOrder, makeEscalation, type Escalation, type EscalationAsk, type EscalationOutcome, type EscalationVerdict } from '../../shared/roster/escalation.js';
+import { URGENCY_ICON, decisionReason, fyiNow, isAlarming, escalationOrder, makeEscalation, type Escalation, type EscalationAsk, type EscalationOutcome, type EscalationVerdict } from '../../shared/roster/escalation.js';
 import { answerMarker } from '../../shared/dispatch.js';
 import { refsFromTitle } from '../../shared/decisions/ids.js';
 import type { AnswerResult } from '../dispatch/service.js';
@@ -97,8 +97,8 @@ export class Escalations {
   /** The open ones a new ask could join: a loud one doesn't hide inside an FYI, which only another FYI joins. */
   private joinable(floor: TeamFloor, ask: EscalationAsk): Escalation[] {
     const d = this.roster.data(floor.id);
-    const fyi = isFyi(d.settings.autonomy, ask.urgency, ask.trigger);
-    return d.escalations.filter((e) => e.status === 'open' && (!e.fyi || fyi));
+    const fyi = isFyi(d.settings.autonomy, ask.urgency, ask.trigger) && !decisionReason(ask);
+    return d.escalations.filter((e) => e.status === 'open' && (!fyiNow(e) || fyi));
   }
 
   /** Worker `w`'s ask added to `same` as a +1: its details, a louder urgency, and it hears the answer too. */
@@ -150,8 +150,16 @@ export class Escalations {
     const e = makeEscalation(ask, { workerId: who.workerId, by: who.by, ...(role ? { role } : {}), ...(team ? { team } : {}) }, d.settings.autonomy, randomBytes(5).toString('hex'), this.roster.deps.now());
     if (byOffice && fyi === false) e.fyi = false;
     if (fyi === true) e.fyi = true;
+    // FYI is information only: an agent's that asks for a decision is filed as one. One the office files as FYI itself stays FYI.
+    if (e.fyi && (fyi === true || (byOffice && fyi === 'level'))) e.fyiKept = true;
+    const reason = e.fyi && !e.fyiKept ? decisionReason(e) : undefined;
+    if (reason) {
+      e.fyi = false;
+      e.fyiCorrected = reason;
+    }
     d.escalations.push(e);
     audit.record({ floor: floor.id, actor: byOffice ? (source?.includes('Jeff') ? jeff() : office()) : agent(who.by, who.workerId), action: 'escalation.raise', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `${byOffice ? `Escalated for ${who.by}` : 'Escalated to the Project Manager'} (${e.fyi ? 'FYI' : e.urgency}): ${e.title}`, details: { urgency: e.urgency, fyi: e.fyi, trigger: ask.trigger, role, worker: who.workerId }, severity: isAlarming(e) ? 'warning' : 'notice' });
+    if (reason) audit.record({ floor: floor.id, actor: office(), action: 'escalation.fyi-corrected', target: { kind: 'escalation', id: e.id, label: e.title }, summary: `Filed as a decision, not FYI: ${reason}`, details: { reason, urgency: e.urgency, level: e.level, worker: who.workerId }, severity: 'info' });
     const loud = isAlarming(e);
     const tag = e.fyi ? 'FYI' : e.urgency;
     floor.activity?.(`${URGENCY_ICON[e.urgency]} ${byOffice ? (source ?? `The office escalated to the Project Manager for ${who.by}, from its handoff note`) : `${who.by} escalated to the Project Manager`} (${tag}): ${e.title}`);

@@ -7,6 +7,7 @@ import { countStatuses, restartShown, stageLine, type ProjectStatus, type Status
 import { projectRunsOf } from '../project-run/adapter.js';
 import { safeRestartOf } from '../restart/office.js';
 import { capAt } from '../../shared/roster/autonomy.js';
+import { fyiNow } from '../../shared/roster/escalation.js';
 import type { Ctx } from '../office/context.js';
 import { floorNeeds } from '../notify-teams/gather.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
@@ -45,7 +46,7 @@ export async function projectStatuses(ctx: Ctx): Promise<ProjectStatus[]> {
       ...(stage ? { stage } : {}),
       ...(paused ? { paused } : {}),
       spend: { usd: d.spend.usd, ...(capAt(d.settings.costCaps, d.settings.autonomy) !== undefined ? { cap: capAt(d.settings.costCaps, d.settings.autonomy) } : {}) },
-      escalations: roster.escalations.view(teamFloor(ctx, floor)).filter((e) => e.status === 'open' && !e.fyi).length,
+      escalations: roster.escalations.view(teamFloor(ctx, floor)).filter((e) => e.status === 'open' && !fyiNow(e)).length,
     });
   }
   return out;

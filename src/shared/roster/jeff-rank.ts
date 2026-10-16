@@ -5,7 +5,7 @@
 // Advisory only: the lists show his order with a "#1 · resolve first" chip, and nothing else changes.
 // Pure: the browser, the server and the tests import it.
 
-import type { Escalation } from './escalation.js';
+import { fyiNow, type Escalation } from './escalation.js';
 
 /** What Jeff said about one escalation, and where it stands among the floor's open ones. */
 export interface JeffRank {
@@ -66,7 +66,7 @@ export function rankSig(e: Pick<Escalation, 'title' | 'details' | 'options' | 'r
 }
 
 /** The ones Jeff ranks: open and not FYI. */
-export const rankable = (e: Escalation) => e.status === 'open' && !e.fyi;
+export const rankable = (e: Escalation) => e.status === 'open' && !fyiNow(e);
 
 /**
  * Re-ranks the open, non-FYI escalations that have Jeff's rating: score again with their age at
