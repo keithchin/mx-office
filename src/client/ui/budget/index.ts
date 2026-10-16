@@ -9,6 +9,7 @@ import { budgetChips } from './chips';
 import { budgetFeed, type BudgetFeed } from './feed';
 import { budgetTab, type BudgetSection } from './tab';
 import { planSection, varianceSection } from './plan';
+import { dismissPace, dismissStage, goSection, stagesSection } from './stages';
 import { pausedSection, settingsSection } from './settings';
 import { insightsSection, onInsightGo } from './insights';
 import { alertsSection, markAlertSeen } from './alerts';
@@ -16,7 +17,7 @@ import type { Insight } from '../../../shared/budget/types';
 import { budgetNeedOfView } from '../../../shared/budget/prices';
 
 /** The sections between the headline and the breakdowns, in order (the plan, variance, settings, insights plug in here). */
-export const SECTIONS: BudgetSection[] = [pausedSection, alertsSection, insightsSection, varianceSection, settingsSection, planSection];
+export const SECTIONS: BudgetSection[] = [pausedSection, alertsSection, stagesSection, insightsSection, varianceSection, settingsSection, planSection];
 
 export interface BudgetUi {
   feed: BudgetFeed;
@@ -24,7 +25,7 @@ export interface BudgetUi {
   show(): void;
   /** What Needs you reads of the budget. */
   need(): BudgetNeed | undefined;
-  /** A Needs-you button: the tab, Resume, or Mark as seen. */
+  /** A Needs-you button: the tab (at a section), Resume, Mark as seen, or Dismiss a stage or pace warning. */
   go(t: Extract<NeedTarget, { to: 'budget' }>): void;
 }
 
@@ -45,7 +46,14 @@ export function budgetUi(net: Net, opts: { root?: HTMLElement; visible?: () => b
         if (floor) void markAlertSeen(floor, t.seen).then((ok) => ok && feed.refresh());
         return;
       }
+      // Dismiss a stage's overspend warning (until its next level) or today's pace warning: stays where you are too.
+      if (t.dismissStage || t.dismissPace) {
+        const floor = feed.floor()?.floor ?? store.floor;
+        if (floor) void (t.dismissStage ? dismissStage(floor, t.dismissStage) : dismissPace(floor)).then((ok) => ok && feed.refresh());
+        return;
+      }
       opts.open();
+      if (t.section) goSection(t.section);
       // Resume is the office's ▶ Resume project: its preview, who has work waiting and what's safe.
       if (t.resume && store.floor) void openResume(store.floor, () => feed.refresh());
     },

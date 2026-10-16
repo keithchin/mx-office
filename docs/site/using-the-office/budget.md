@@ -120,7 +120,7 @@ Each line's cost is spread evenly over its working days, Monday to Friday, which
 
 ## Plan against actual, and the forecast
 
-**Plan against actual** shows the expected cumulative spend (orange) against the actual (blue). The budget is drawn as a line, and the forecast at completion as the end point. Hover anywhere on the chart for that day's plan, actual and difference, or open **Table view** for every value. Below the chart, a table shows each stage's planned and actual cost and the difference. A stage counts as **done** once the project has moved past it.
+**Plan against actual** shows the expected cumulative spend (orange) against the actual (blue). The budget is drawn as a line, and the forecast at completion as the end point. Hover anywhere on the chart for that day's plan, actual and difference, or open **Table view** for every value. Each stage's plan and spend are in the **Stages against plan** table (below). A stage counts as **done** once the project has moved past it.
 
 The **forecast at completion** works like this:
 
@@ -131,6 +131,21 @@ The **forecast at completion** works like this:
 - **The forecast** never drops below what has already been spent.
 
 The forecast appears in the headline and sets the colour of the top bar's chip.
+
+## Stages against plan
+
+The **Stages against plan** card has a row for each stage, showing its plan line (the office's estimate unless a person set it), what has been spent on it, and **×** (spent ÷ plan). Missing data is labelled as missing, never shown as $0:
+
+- a stage with spend but no plan line reads *not in the plan*, and its × is *—*.
+- spend booked to no stage (before the stage was known, or outside the pipeline) is not put in any row. A note gives the amount.
+- a project without the toolkit's pipeline gets a note that its spend can't be split by stage, and no stage warnings are raised.
+- spend is booked to the stage the project was in at the time, read from its gate files. Work done before a gate was recorded counts towards the earlier stage.
+
+**Stage overspend warnings.** When a stage's spend passes its plan line, the office raises a warning once at each of **1×, 2×, 5× and 10×**, for example: *Stage 5 Build has spent $61.70 against its plan of $6.86 (9×). At this rate the project budget ($500) runs out around 20 Oct (estimate), before the plan's end (5 Nov).* A jump past several levels at once raises only the highest. Each warning goes to the audit log (`budget.stage`) and appears as a toast. It also shows on **🚨 Needs you** with **Raise the budget…** (the Settings below, with the total focused) and **Dismiss for this stage**. On the card itself, **Review the plan** is there too. A dismissed warning stays off Needs you until that stage reaches its next level. If someone raises the stage's plan line so the stage is back within it, the warning goes, and passing the new line counts as news.
+
+**The run-out estimate** is what's left of the budget divided by the average spend a day over the last 7 calendar days (fewer if the ledger is younger), counting weekends, because agents spend then too. It's always labelled as an estimate.
+
+**Pace warning.** If the run-out estimate falls before the plan's end, or before the project's **milestone** when that comes earlier (Settings), Needs you says so at most once a day, with **Review the plan** and **Dismiss for today** (audit log `budget.pace`). The pace warning isn't shown alongside a stage warning, which already gives the run-out date. It also isn't raised once spend has reached the alert threshold, because the threshold alert below already covers that. Neither warning changes the budget's alerts or its auto-pause, and both leave Needs you while the budget has the project paused.
 
 ## Alerts
 
@@ -163,7 +178,7 @@ Needs you then says *Budget reached: project paused*, with **Raise budget** and 
 
 On the tab (admins; every change is in the audit log):
 
-- **This project**: the total budget (USD), the alert threshold and auto-pause.
+- **This project**: the total budget (USD), the alert threshold, auto-pause and an optional **milestone** date for the pace warning to use.
 - **Budget level**: **Change level** shows the [new-project wizard's](../get-started/first-project.md#5-team--budget) cards again, priced for this project. Applying a level sets the budget and the team's models and settings.
 - **The office**: the default alert threshold, and the local currency.
 

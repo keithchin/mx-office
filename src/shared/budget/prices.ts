@@ -4,6 +4,7 @@
 
 import type { BudgetAlert, BudgetView, PriceListView } from './types.js';
 import type { BudgetNeed, NeedItem } from '../needsyou.js';
+import { stageNeedOfView } from './stage-need.js';
 
 const list = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
 
@@ -22,9 +23,10 @@ export function unpricedNote(p: PriceListView | undefined): string | undefined {
 export function budgetNeedOfView(v: BudgetView | undefined): BudgetNeed | undefined {
   if (!v) return undefined;
   const prices = v.prices?.unpriced.length ? v.prices : undefined;
-  if (!v.settings.total && !prices) return undefined;
+  const stages = stageNeedOfView(v);
+  if (!v.settings.total && !prices && !stages.stageWarnings) return undefined;
   const alerts: readonly BudgetAlert[] = v.settings.total ? (v.alerts ?? []) : [];
-  return { floor: v.floor, alerts, ...(v.settings.total && v.paused ? { paused: v.paused } : {}), ...(prices ? { prices } : {}) };
+  return { floor: v.floor, alerts, ...(v.settings.total && v.paused ? { paused: v.paused } : {}), ...(prices ? { prices } : {}), ...stages };
 }
 
 /** Needs you's row for models priced by the fallback, when there are any. */

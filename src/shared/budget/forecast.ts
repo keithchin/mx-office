@@ -5,6 +5,7 @@
 
 import type { BudgetPlan, Forecast, StageId, StageVariance } from './types.js';
 import { STAGE_IDS, STAGE_TITLE } from './types.js';
+import { addDaysUtc } from './days.js';
 
 export const FACTOR_MIN = 0.5;
 export const FACTOR_MAX = 2;
@@ -39,4 +40,37 @@ export function forecastOf(variance: StageVariance[], spent: number, budget?: nu
   const remainingPlan = r2(variance.filter((v) => !v.done).reduce((n, v) => n + Math.max(0, v.planned - v.actual), 0));
   const atCompletion = r2(Math.max(spent, spent + remainingPlan * factor));
   return { atCompletion, factor: Math.round(factor * 1000) / 1000, remainingPlan, ...(budget && atCompletion > budget ? { over: r2(atCompletion - budget) } : {}) };
+}
+
+/** When the budget runs out at the recent pace: an estimate, never a promise. */
+export interface RunOut {
+  /** The day the budget is spent, YYYY-MM-DD (calendar days: agents spend at weekends too). */
+  date: string;
+  /** The recent spend per day it's worked out from. */
+  perDay: number;
+  /** How many days that average is over. */
+  days: number;
+  remaining: number;
+}
+
+/** Days of recent spend the pace is averaged over (fewer when the ledger is younger). */
+export const PACE_DAYS = 7;
+
+/**
+ * The run-out estimate: what's left of the budget ÷ the average spend a day over the last PACE_DAYS
+ * calendar days (from the ledger's first day when it's younger, today counted in full). None with no
+ * budget, nothing left, or no recent spend.
+ */
+export function runOutOf(byDay: Readonly<Record<string, number>>, today: string, total: number | undefined, spent: number): RunOut | undefined {
+  if (!total || spent >= total) return undefined;
+  const days = Object.keys(byDay).filter((d) => d <= today).sort();
+  if (!days.length) return undefined;
+  const from = addDaysUtc(today, -(PACE_DAYS - 1));
+  const start = days[0] > from ? days[0] : from;
+  const n = Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000) + 1;
+  const recent = days.filter((d) => d >= start).reduce((s, d) => s + (byDay[d] ?? 0), 0);
+  const perDay = recent / n;
+  if (!(perDay > 0)) return undefined;
+  const remaining = total - spent;
+  return { date: addDaysUtc(today, Math.ceil(remaining / perDay)), perDay: r2(perDay), days: n, remaining: r2(remaining) };
 }

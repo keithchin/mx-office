@@ -8,14 +8,20 @@ import { budgetOf } from './index.js';
 import { budgetPaused, pauseWhy } from './control.js';
 import { totalOf } from './ledger.js';
 import { priceListView } from '../prices.js';
+import type { BudgetView } from '../../shared/budget/types.js';
+import { stageNeedOfView } from '../../shared/budget/stage-need.js';
+import { stagePlanOf } from './stage-warn.js';
 
 export function budgetNeedOf(ctx: Ctx, floor: Floor): BudgetNeed | undefined {
   try {
-    const f = budgetOf(ctx).file({ id: floor.id, name: floor.def.name, dir: floor.dir });
+    const ref = { id: floor.id, name: floor.def.name, dir: floor.dir };
+    const f = budgetOf(ctx).file(ref);
     const p = priceListView();
     const prices = p.unpriced.length ? { prices: p } : {};
-    if (!f.settings.total) return p.unpriced.length ? { floor: floor.id, alerts: [], ...prices } : undefined;
-    return { floor: floor.id, alerts: f.alerts.filter((a) => a.text), ...(budgetPaused(budgetOf(ctx), { id: floor.id, name: floor.def.name, dir: floor.dir }) ? { paused: pauseWhy(f.settings.total, totalOf(f.ledger)) } : {}), ...prices };
+    // Stages past their plan line and the pace (stage-warn.ts), only once one was raised: no plan read otherwise.
+    const stages = f.stageWarns?.length || f.pace ? stageNeedOfView({ stagePlan: stagePlanOf(budgetOf(ctx), ref) } as BudgetView) : {};
+    if (!f.settings.total) return p.unpriced.length || stages.stageWarnings ? { floor: floor.id, alerts: [], ...prices, ...stages } : undefined;
+    return { floor: floor.id, alerts: f.alerts.filter((a) => a.text), ...(budgetPaused(budgetOf(ctx), ref) ? { paused: pauseWhy(f.settings.total, totalOf(f.ledger)) } : {}), ...prices, ...stages };
   } catch {
     return undefined;
   }

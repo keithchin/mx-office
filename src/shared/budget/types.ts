@@ -2,6 +2,8 @@
 // (GET /api/budget?floor=, GET /api/budget/office; see server/budget/). Pure types and no Node imports,
 // so the browser and the server agree on them.
 
+import type { StagePlanView } from './stage-warn.js';
+
 /** A toolkit stage (P, 0-7), or "—" for spend outside any pipeline (or before the stage was known). */
 export type StageId = 'P' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '—';
 export const STAGE_IDS: readonly StageId[] = ['P', '0', '1', '2', '3', '4', '5', '6', '7', '—'];
@@ -133,6 +135,8 @@ export interface BudgetSettings {
   autoPause: boolean;
   /** The budget level the project runs at (shared/budget/levels.ts). */
   level?: LevelId;
+  /** A date the project must be done by (YYYY-MM-DD): the pace warning compares the run-out with it when it's before the plan's end. */
+  milestone?: string;
   updatedBy?: string;
   updatedAt?: number;
 }
@@ -273,6 +277,8 @@ export interface BudgetView {
   admin: boolean;
   /** The price list the costs come from. */
   prices?: PriceListView;
+  /** Each stage's plan against its spend, and the stage overspend and pace warnings (shared/budget/stage-warn.ts). */
+  stagePlan?: StagePlanView;
 }
 
 export interface OfficeFloorBudget {
