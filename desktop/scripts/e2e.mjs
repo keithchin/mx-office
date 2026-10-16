@@ -101,9 +101,13 @@ function officesOn(home, port) {
 
 const env = { ...process.env };
 for (const k of ['GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN', 'AGENT_OFFICE_PASSWORD', 'ANTHROPIC_API_KEY', 'ELECTRON_RUN_AS_NODE']) delete env[k];
+// Windows names it Path, not PATH: find the real key, keep one, and put the fake bin in front of it.
+const pathKey = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') ?? 'PATH';
+const basePath = env[pathKey] ?? '';
+for (const k of Object.keys(env)) if (k.toUpperCase() === 'PATH') delete env[k];
 const fakeEnv = { FAKE_MODE: 'live', FAKE_RATE_MS: '1500', FAKE_DIR: path.join(root, 'fake-transcripts') };
 Object.assign(env, fakeEnv, {
-  PATH: `${FAKEBIN}${path.delimiter}${env.PATH}`,
+  [pathKey]: `${FAKEBIN}${path.delimiter}${basePath}`,
   AGENT_OFFICE_TEST_MODE: '1',
   AGENT_OFFICE_AGENT: FAKE_AGENT,
   AGENT_OFFICE_ALLOW_REAL_AGENTS: '',
