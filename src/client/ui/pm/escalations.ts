@@ -74,7 +74,7 @@ export function escalationCard(floor: string, e: Escalation, admin: boolean, don
       : null,
     e.recommendation ? h('p.esc-rec', {}, h('b', {}, 'Recommends: '), e.recommendation) : null,
     resolved
-      ? h('p.esc-answer', {}, h('b', {}, `${VERDICT_DONE[e.resolution!.verdict]} by ${e.resolution!.by}`), ` · ${timeAgo(e.resolution!.at)}`, e.resolution!.text ? ` — ${e.resolution!.text}` : '', e.resolution!.delivered || e.resolution!.verdict === 'dismiss' ? '' : ` (kept for ${e.by}'s next session)`)
+      ? h('p.esc-answer', {}, h('b', {}, `${VERDICT_DONE[e.resolution!.verdict]} by ${e.resolution!.by}`), ` · ${timeAgo(e.resolution!.at)}`, e.resolution!.text ? ` — ${e.resolution!.text}` : '', e.resolution!.typed ? ` (typed into ${e.by}'s terminal, not received yet)` : e.resolution!.delivered || e.resolution!.verdict === 'dismiss' ? '' : ` (kept for ${e.by}'s next session)`)
       : admin
         ? h(
             'div.esc-act',

@@ -100,7 +100,7 @@ export interface FollowItem {
   rev: number;
   decided: string;
   /** The dispatch that carried it (server/dispatch/). */
-  sent?: { state: DispatchState; confirmedBy?: 'system' | 'person'; to?: string };
+  sent?: { state: DispatchState; confirmedBy?: 'system' | 'person'; to?: string; /** Typed into the terminal (dispatch record's typedAt). */ typedAt?: number };
   recording: Recording;
   /** A question's key, an escalation's id: where its own page is. */
   ref: string;
@@ -142,10 +142,14 @@ export function whereWords(l: RecordedLocation | undefined): string {
   return 'Merged into main';
 }
 
-/** "Sent (Typed (the office saw it go))", a person's confirmation shown as such. */
+/**
+ * "Sent (Received (the office saw it arrive))", a person's confirmation shown as such; what hasn't arrived (typed,
+ * not received yet; held; outcome unknown) is never called sent.
+ */
 export function sentWords(s: FollowItem['sent']): string {
   if (!s) return 'Sent';
-  return `Sent (${stateWords(s)})`;
+  if (s.state === 'submitted' || s.state === 'person-confirmed-sent') return `Sent (${stateWords(s)})`;
+  return stateWords(s);
 }
 
 /** The plan's line: Decided (rev n) · Sent (…) · Recorded … · where. */

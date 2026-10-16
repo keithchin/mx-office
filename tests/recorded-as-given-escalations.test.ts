@@ -51,7 +51,7 @@ test('citation-wrong-answer: the correct citation with different content is reco
   const v = await t.ft.view(t.floor.id, true);
   const it = v.items.find((i) => i.decision === `esc:${t.e.id}`)!;
   assert.equal(it.decided, 'Go with: Use SSO');
-  assert.match(followLine(it), /^Decided \(rev 1\) · Sent \(Typed \(the office saw it go\)\) · Recorded differently · In a working copy, not committed/);
+  assert.match(followLine(it), /^Decided \(rev 1\) · Sent \(Received \(the office saw it arrive\)\) · Recorded differently · In a working copy, not committed/);
   assert.ok(t.audits.some((a) => a.action === 'followthrough.recorded' && /recorded differently/.test(a.summary)));
 });
 

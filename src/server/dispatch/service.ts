@@ -21,6 +21,7 @@ import type { AuditActor } from '../../shared/audit.js';
 import { audit, human, office } from '../audit/index.js';
 import { AnswerStore, type AnswerLine } from '../answers/store.js';
 import { DispatchStore } from './store.js';
+import { transcriptEvidence } from './evidence.js';
 import type { CriticalFs } from '../flow/critical-write.js';
 
 /** What an act came to. */
@@ -28,6 +29,11 @@ export interface Outcome {
   state: Extract<DispatchState, 'submitted' | 'held' | 'refused' | 'failed' | 'outcome-unknown'>;
   note?: string;
   issue?: { number?: number; url?: string };
+  /**
+   * Typed into the agent's terminal (with `submitted`): not delivered until its session shows it. The record stays
+   * in flight, typed, until then (typed-watch.ts); with no transcript to look in it is submitted unconfirmed.
+   */
+  typed?: boolean;
 }
 
 /** Where to look for evidence, captured before the act. */
@@ -194,7 +200,8 @@ export class Dispatcher {
           records.push(r);
         }
         // ---- 8, only once every dispatch settled: an unclear one waits for reconcile or a person ----
-        const pending = records.some((r) => r.state === 'in-flight' || r.state === 'outcome-unknown' || r.state === 'prepared');
+        // Typed and waiting for its session to show it counts as handed over, like held: the record says it isn't received.
+        const pending = records.some((r) => (r.state === 'in-flight' && r.typedAt === undefined) || r.state === 'outcome-unknown' || r.state === 'prepared');
         if (!pending) await s.apply?.(rev, records);
         results.push({ decision: s.decision, rev, records, ...(pending ? { pending } : {}) });
       }
@@ -249,6 +256,7 @@ export class Dispatcher {
       o = { state: 'outcome-unknown', note: (err as Error).message?.slice(0, 200) };
     }
     try {
+      if (o.state === 'submitted' && o.typed) return await this.afterTyped(floorId, r, o.note ?? 'typed', by);
       return await this.settle(floorId, r, o.state, { note: o.note, ...(o.issue ? { issue: o.issue } : {}), ...(o.state === 'submitted' ? { confirmedBy: 'system' as const } : {}) }, by);
     } catch {
       // The act happened, its outcome isn't on disk: the record stays in-flight and reconcile looks at the next start.
@@ -335,7 +343,8 @@ export class Dispatcher {
     for (const id of ids) {
       const r = this.store.get(floorId, id);
       // Held, or marked before and not typed since (it is still in the held list, so it wasn't).
-      if (!r || (r.state !== 'held' && r.state !== 'in-flight')) continue;
+      // Typed already (waiting for its session to show it): never typed twice.
+      if (!r || (r.state !== 'held' && r.state !== 'in-flight') || r.typedAt !== undefined) continue;
       try {
         await this.put(floorId, this.advance(r, 'in-flight', { ...session, dispatchedAt: this.now(), note: 'typing the held answer' }));
         ok.add(id);
@@ -346,14 +355,32 @@ export class Dispatcher {
     return ok;
   }
 
-  /** Typed (held, owed or carried by a hire): settled submitted, by the office. Never throws. */
+  /** Typed (held, owed or carried by a hire): typed, not received yet, until its session shows it. Never throws. */
   typed(floorId: string, ids: readonly string[]): Promise<void> {
     return (async () => {
       for (const id of ids) {
         const r = this.store.get(floorId, id);
-        if (!r || (r.state !== 'in-flight' && r.state !== 'held')) continue;
-        await this.settle(floorId, r, 'submitted', { confirmedBy: 'system', note: 'typed' }).catch(() => undefined);
+        if (!r || (r.state !== 'in-flight' && r.state !== 'held') || r.typedAt !== undefined) continue;
+        await this.afterTyped(floorId, r, 'typed the held answer').catch(() => undefined);
       }
     })();
+  }
+
+  /** Watches typed records for their evidence (typed-watch.ts; the roster sets it). */
+  watch?: (floorId: string, r: DispatchRecord) => void;
+
+  /**
+   * Typed into the agent's terminal, which is not delivery: submitted (confirmed by the system) only once the
+   * agent's recorded session shows the typed message with its marker. Looked for once now, else the record stays
+   * in flight with typedAt (typed, not received yet) and the watch looks on. An agent with no transcript to look
+   * in (another provider): submitted with no confirmation, and said so wherever it shows.
+   */
+  async afterTyped(floorId: string, r: DispatchRecord, note: string, by?: string): Promise<DispatchRecord> {
+    if (!r.transcriptPath) return this.settle(floorId, r, 'submitted', { note: `${note}; this agent keeps no transcript to confirm it` }, by);
+    const ev = await transcriptEvidence(r);
+    if (ev.found) return this.settle(floorId, r, 'submitted', { confirmedBy: 'system', note: `${note}; seen in the agent’s session` }, by);
+    const next = await this.settle(floorId, r, 'in-flight', { typedAt: this.now(), note: `${note}; not in the agent’s session yet` }, by);
+    this.watch?.(floorId, next);
+    return next;
   }
 }

@@ -972,9 +972,9 @@ export class WorkerManager {
   }
 
   /** Full screens for every running worker — sent to people as they walk in. */
-  fullScreens() {
-    return fullScreens(this.workers.values());
-  }
+  fullScreens() { return fullScreens(this.workers.values()); } // prettier-ignore
+  /** The text on a worker's screen now (what sits in its input box: dispatch/input-box.ts). */
+  screenOf(id: string): string | undefined { const t = this.workers.get(id)?.term; return t ? screenText(t) : undefined; } // prettier-ignore
 
   /**
    * An agent can sit at its prompt without being usable: Claude stuck on a first-run screen, or not

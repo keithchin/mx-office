@@ -71,6 +71,8 @@ export interface Escalation {
     at: number;
     /** Whether the answer reached the agent that raised it (it may have gone home meanwhile). */
     delivered: boolean;
+    /** Typed into its terminal (delivered: never owed again), its session not showing it yet (dispatch/typed-watch.ts). */
+    typed?: boolean;
     /** What it meant (FYI noted, hands-on done), when it was one of those; `verdict` is the legacy word beside it. */
     outcome?: EscalationOutcome;
     /** The answer store's revision this answer is (server/answers/: the full text lives there). */

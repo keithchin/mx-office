@@ -34,6 +34,8 @@ import { withLocalOnlyLine } from '../local-only.js';
 import { studioStateOf } from '../studio/index.js';
 
 const adapters = new WeakMap<Floor, TeamFloor>();
+/** The key a terminal's Enter sends. */
+const ENTER = String.fromCharCode(13);
 /** A transcript looked up by session id and not found is looked for again after this long (it reads a folder listing). */
 const MISS_MS = 60_000;
 
@@ -58,6 +60,9 @@ export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
     prompt: (id, text, by) => floor.workers.prompt(id, text, by ?? OFFICE_BY),
     wake: (id, prompt, by) => floor.workers.resume(id, prompt, !!prompt && (by ?? OFFICE_BY) === OFFICE_BY),
     rename: (id, name) => floor.workers.rename(id, name),
+    screen: (id) => floor.workers.screenOf(id),
+    // One Enter, as the office (the typed-evidence watch, dispatch/typed-watch.ts): never more than that.
+    enter: (id) => (floor.workers.get(id) ? (floor.workers.write(id, ENTER, OFFICE_BY), undefined) : 'No such worker'),
     cwdOf: (w: WorkerInfo) => (w.worktree ? path.resolve(floor.dir, w.worktree.path) : floor.dir),
     openPulls: () => floor.github.pulls.items.filter((p) => p.state === 'OPEN'),
     pulls: () => floor.github.pulls.items,

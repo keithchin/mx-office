@@ -61,10 +61,10 @@ function notice(floor: string, r: DispatchRecord, admin: boolean, go: (t: NeedTa
   return h(
     'article.pt-nitem.pt-esc.pt-dsp',
     { 'data-dispatch': r.id, 'aria-label': unknownLine(r) },
-    h('div.pt-esc-h', {}, h('span.pt-tag.t-block', {}, h('span.pt-tag-i', { 'aria-hidden': 'true' }, '⚠'), 'Unconfirmed'), h('b.pt-esc-t', {}, issue ? unknownLine(r) : `Couldn't confirm your answer was typed to ${who}`)),
+    h('div.pt-esc-h', {}, h('span.pt-tag.t-block', {}, h('span.pt-tag-i', { 'aria-hidden': 'true' }, '⚠'), 'Unconfirmed'), h('b.pt-esc-t', {}, issue || r.typedAt !== undefined ? unknownLine(r) : `Couldn't confirm your answer was typed to ${who}`)),
     h('p.pt-esc-meta', {}, [`${decisionLabel(r.decision)} rev ${r.answerRev}`, timeAgo(r.updatedAt), why].filter(Boolean).join(' · ')),
     admin && r.payload ? h('details.pt-dsp-text', {}, h('summary', {}, issue ? 'What was asked' : 'What was sent'), h('pre', {}, r.payload.slice(0, 2000))) : null,
-    h('p.pt-dc-small', {}, issue ? "The office never makes it again by itself: GitHub's search can lag, so an empty search proves nothing." : 'The office restarted while sending. It never sends an answer again by itself.'),
+    h('p.pt-dc-small', {}, issue ? "The office never makes it again by itself: GitHub's search can lag, so an empty search proves nothing." : r.typedAt !== undefined ? `It was typed into ${who}'s terminal, but ${who}'s session never showed it arrive: it may still be sitting in the input box. The office never sends an answer again by itself.` : 'The office restarted while sending. It never sends an answer again by itself.'),
     acts,
   );
 }

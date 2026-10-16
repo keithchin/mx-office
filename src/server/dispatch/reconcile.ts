@@ -4,7 +4,8 @@
 //   - held → still in the roster's held list (or still owed by its escalation): left held, typed once on the
 //     agent's next turn with the same dispatch id; gone from it → the transcript decides;
 //   - in-flight (typed) → the transcript decides: the typed message in the recorded session is proof
-//     (submitted, confirmed by the system); anything else → outcome-unknown;
+//     (submitted, confirmed by the system); one typed but not seen yet goes back to the typed-evidence watch
+//     (typed-watch.ts: it may still be queued); anything else → outcome-unknown;
 //   - in-flight (an issue) → the issue search: only a positive match is conclusive; no match, a search that
 //     isn't available, or an inconclusive answer → outcome-unknown. Never recreated because a search came
 //     back empty (GitHub's index lags).
@@ -55,6 +56,11 @@ export async function reconcileOne(d: Dispatcher, floorId: string, r: DispatchRe
   } else if (r.state !== 'in-flight') return undefined;
   const ev = await transcriptEvidence(r);
   if (ev.found) return d.settle(floorId, r, 'submitted', { confirmedBy: 'system', note: 'found as typed in the agent’s session' });
+  // Typed before the restart, not in the session yet: the typed-evidence watch takes it on (it may still be queued).
+  if (r.state === 'in-flight' && r.typedAt !== undefined && ev.why === 'no-match' && d.watch) {
+    d.watch(floorId, r);
+    return undefined;
+  }
   return d.settle(floorId, r, 'outcome-unknown', { note: ev.note });
 }
 
