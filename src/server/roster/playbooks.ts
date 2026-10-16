@@ -25,6 +25,7 @@ import { blockerLines } from './playbook-blockers.js';
 import { TRY_FIRST, workaroundFiles } from './playbook-workarounds.js';
 import { CORRECTION_LIMIT } from '../../shared/design/context.js';
 import { sourcesDirOf, sourcesLines } from '../../shared/brief-map.js';
+import { reviewRule } from '../../shared/review-gate.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
 export const FIELD_LESSONS = '.ai-context/skills/mxcli-field-lessons/SKILL.md';
@@ -280,6 +281,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     "- Every task the office gives you ends with a `Task: tsk_…` line: that is the task's id, and it stays the same if the task is handed to someone else or you restart. Put it as a trailer on each commit for that task (a last line `Task: tsk_…` in the commit message) and as its own line in the pull request's description, as you name `MCR-<n>` for a model change request. When a commit acts on an answer, cite it there too (`Decided per ESC-<id> rev <n>`). That is how the office links the work to the task and to the decision; without it the work reads as not linked, never as done. To hand a task on, include its `Task:` line in what you tell the other agent.",
     '- Commit journal updates with your work, so the team sees them once your branch lands.',
     `- Open pull requests with your team's label: \`gh pr create --label ${teamLabel(role.team)} …\`, so the PR lands on your team's board.`,
+    reviewRule(ctx.name, role.title),
     ...(also.length ? [coverTeamLine(c!, roleId)] : []),
     '',
     '## Lessons',

@@ -18,6 +18,8 @@ export interface HireAsk {
   by: string;
   /** The role's team: it sits at a free desk in that team's patch of the floor first (shared/zones.ts). */
   team?: TeamId;
+  /** The role it's hired into: its commits name it from its first launch (roster/git-identity.ts). */
+  role?: RoleId;
 }
 
 export interface TeamFloor {

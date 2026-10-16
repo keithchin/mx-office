@@ -2,7 +2,8 @@
 // PR list, which holds open, merged and closed-unmerged ones), the floor's closed issues with why GitHub
 // says they closed, and what the agent said last. Pure, so the tests walk every case.
 //
-// Only a merged PR or an issue closed as completed is delivery. A PR closed without merging is never
+// Only a merged PR or an issue closed as completed is delivery (the issue only when the task's own PR, if
+// it has one, isn't left unmerged). A PR closed without merging is never
 // success: a newer PR from the same worker supersedes it, otherwise the Project Manager decides (rework,
 // cancel, or replaced?). An issue closed as not planned (or a duplicate) cancels the task. An agent that
 // says `task done` with neither is a claim, pending verification. Both of those stop the back-to-work
@@ -73,7 +74,8 @@ export function outcome(l: OutcomeLook): Outcome | undefined {
   if (l.issue !== undefined && l.closed?.has(l.issue)) {
     const reason = l.closed.get(l.issue) || undefined;
     if (dropped(reason)) return { kind: 'cancelled', why: `issue #${l.issue} closed as ${reason === 'DUPLICATE' ? 'a duplicate' : 'not planned'}`, issue: l.issue, closeReason: reason };
-    return { kind: 'delivered', why: `issue #${l.issue} closed`, issue: l.issue, ...(reason ? { closeReason: reason } : {}) };
+    // A closed issue isn't delivery while the task's own PR is unmerged (open, or closed without merging): that PR decides.
+    if (!pull) return { kind: 'delivered', why: `issue #${l.issue} closed`, issue: l.issue, ...(reason ? { closeReason: reason } : {}) };
   }
   if (pull?.state === 'CLOSED') {
     const by = supersedingPull(pull, l);

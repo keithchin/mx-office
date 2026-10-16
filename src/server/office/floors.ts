@@ -10,6 +10,8 @@ import { analysisOf } from '../analysis/index.js';
 import { summaryOf } from '../summary/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { subagentBusy } from '../roster/subagent-busy.js';
+import { rosterSeat } from '../roster/git-identity.js';
+import { markUnreviewed } from '../review-gate/index.js';
 import { phoneOnWorker } from '../phone/office.js';
 import { auditGitHub } from '../audit/office.js';
 import { chatterOf } from '../chatter/office.js';
@@ -166,6 +168,7 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
       member: (floor, id) => rosterOf(ctx).isMember(floor.id, id),
       quietDone: (floor, info) => rosterOf(ctx).routineTurn(floor.id, info.id),
       openAsks: (floor, id) => rosterOf(ctx).openAsks(floor.id, id),
+      gitAs: (floor, info) => rosterSeat(rosterOf(ctx), floor.id, info),
       subagentBusy: (floor) => subagentBusy(rosterOf(ctx).data(floor.id)),
     },
     floor: (id) => floors.get(id),
@@ -173,6 +176,8 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
       auditGitHub(floor, 'pulls');
       // Each decided check rollup on a PR head becomes a test-run record (server/testing/).
       void ingestPulls(ctx.cfg.dataDir, floor);
+      // A task whose PR merged without a review that counts stays integrated (unreviewed), never verified (server/review-gate/).
+      markUnreviewed(ctx, floor);
       // …and each merged task is judged on its merge commit, once per new PR list (server/testing/verify-office.ts).
       void verifyOnPulls(ctx, floor);
       for (const f of floors.values()) if (f !== floor && worksIn(f, floor)) f.sendLandedHome();

@@ -136,6 +136,7 @@ const ROW_TAG: Record<NeedKind, string> = {
   assumption: 'Consent',
   advisory: 'Advisory',
   review: 'Review',
+  gate: 'Review gate',
   questions: 'Questions',
   brain: 'Company brain',
   design: 'Design system',

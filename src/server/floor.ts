@@ -30,6 +30,7 @@ import { floorLedger } from './roster/pause.js';
 import { projectPauseOf } from './project-run/store.js';
 import { audit } from './audit/index.js';
 import type { QueueTaskIds } from './tasks/queue.js';
+import type { AgentSeat } from './workers/git-identity.js';
 
 type ToastLevel = 'info' | 'warn' | 'error';
 
@@ -86,6 +87,8 @@ export interface FloorTeam {
   member(floor: Floor, workerId: string): boolean;
   quietDone(floor: Floor, info: WorkerInfo): boolean;
   openAsks(floor: Floor, workerId: string): string[];
+  /** The seat a worker holds (or is being hired into), for its commits' author (roster/git-identity.ts). */
+  gitAs?(floor: Floor, info: WorkerInfo): AgentSeat | undefined;
   /** The workers whose subagents are at work now: they count as working (roster/subagent-busy.ts). */
   subagentBusy?(floor: Floor): ReadonlySet<string>;
 }
@@ -223,7 +226,7 @@ export class Floor {
     );
     this.workers.wing = () => this.plan.wing;
     const team = ctx.team;
-    if (team) this.workers.team = { quietDone: (info) => team.quietDone(this, info), openAsks: (id) => team.openAsks(this, id) };
+    if (team) this.workers.team = { quietDone: (info) => team.quietDone(this, info), openAsks: (id) => team.openAsks(this, id), gitAs: (info) => team.gitAs?.(this, info) };
 
     this.github = new GitHub(
       def.dir,

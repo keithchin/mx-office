@@ -13,13 +13,13 @@ import type { Roster } from './index.js';
 import type { Assignment } from './resume.js';
 import type { TeamFloor } from './types.js';
 
-export type TaskState = 'open' | 'claimed' | 'decision' | 'cancelled' | 'delivered' | 'legacy' | 'integrated' | VerifyState;
+export type TaskState = 'open' | 'claimed' | 'decision' | 'cancelled' | 'delivered' | 'legacy' | 'integrated' | 'unreviewed' | VerifyState;
 
-/** Where a task stands, release 2 included: an integrated task by its verification, once judged. */
+/** Where a task stands, release 2 included: an integrated task by its verification, once judged; one the review gate flagged stays unreviewed. */
 export function taskStateOf(t: Assignment): TaskState {
   if (t.doneAt === undefined) return t.pending?.kind ?? 'open';
   if (!t.outcome) return 'legacy';
-  if (t.outcome === 'integrated') return t.verify?.state ?? 'integrated';
+  if (t.outcome === 'integrated') return t.unreviewed ? 'unreviewed' : (t.verify?.state ?? 'integrated');
   return t.outcome;
 }
 
@@ -38,6 +38,8 @@ export function reviveVerifyFields(r: Partial<Assignment>): Partial<Assignment> 
   const out: Partial<Assignment> = {};
   const policy = cleanPolicy(r.policy);
   if (policy) out.policy = policy;
+  const u = r.unreviewed;
+  if (u && typeof u === 'object' && int(u.pr) && typeof u.at === 'number') out.unreviewed = { pr: u.pr, why: typeof u.why === 'string' ? u.why.slice(0, 200) : 'merged without a review', at: u.at };
   const v = r.verify;
   if (v && typeof v === 'object' && STATES.includes(v.state) && int(v.pr) && typeof v.at === 'number') {
     out.verify = {

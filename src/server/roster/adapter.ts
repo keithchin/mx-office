@@ -22,6 +22,7 @@ import { Roster, rosterFor } from './index.js';
 import { ghIssueFinder, ghIssueMaker } from './issues.js';
 import type { HireAsk, TeamFloor } from './types.js';
 import { subagentBusyMoved } from './subagent-busy.js';
+import { holdSeat, seatOf } from './git-identity.js';
 import { onSubagentEvent } from '../workers/subagents.js';
 import { notedTranscript } from '../convo/index.js';
 import { SCAN_MS } from './subagent-live.js';
@@ -121,7 +122,9 @@ async function hire(ctx: Ctx, floor: Floor, ask: HireAsk): Promise<WorkerInfo | 
   const worktree = !!floor.project.branch;
   if (worktree) await floor.workers.fetchBase();
   if (!ctx.floors.has(floor.id)) return 'This project closed';
-  const r = await floor.workers.spawn(desk, ask.by, ask.prompt, worktree, 'agent', 'claude', ask.model, undefined, undefined, ask.owner);
+  // Its seat is held at its desk while it starts, so its first commits already name it (git-identity.ts).
+  const release = holdSeat(floor.id, desk, ask.role ? seatOf(rosterOf(ctx), floor.id, ask.role, ask.name) : undefined);
+  const r = await floor.workers.spawn(desk, ask.by, ask.prompt, worktree, 'agent', 'claude', ask.model, undefined, undefined, ask.owner).finally(release);
   if (typeof r === 'string') return r;
   floor.workers.rename(r.id, ask.name);
   return floor.workers.get(r.id) ?? r;

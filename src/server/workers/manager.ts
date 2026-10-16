@@ -19,7 +19,7 @@ import type { Capacity } from '../machine.js';
 import { PROVIDERS, providerAdapter, titleNoise, type LaunchPlan, type ProviderFloor } from '../providers/index.js';
 import { launchAcp } from './acp.js';
 import { clockWork } from './clock.js';
-import { childEnv } from './env.js';
+import { agentGitEnv, childEnv } from './env.js';
 import { dozesOnStart, midTurn, notePromptBy, watchBoot } from './lifecycle.js';
 import { restoreWorkers, workersJson, WorkersSaver } from './persist.js';
 import { WorkerPrs } from './pr.js';
@@ -654,7 +654,7 @@ export class WorkerManager {
     const plan: LaunchPlan = adapter ? adapter.launch({ h: this.handleOf(w), args: base, prompt, resumeSessionId, station: DESK_BY_ID.get(info.deskId)?.station, cwd, setup: this.setups[adapter.id] }) : { args: base };
     const { args } = plan;
     if (plan.rotateToken) w.hookToken = randomBytes(16).toString('hex');
-    const env = childEnv(this.dir); // with the floor's .claude/toolkit.env over it (toolkit-env.ts)
+    const env = { ...childEnv(this.dir), ...agentGitEnv(info, this.team.gitAs?.(info)) }; // the floor's toolkit.env over it (toolkit-env.ts), then its own commit identity (git-identity.ts)
     Object.assign(env, {
       TERM: 'xterm-256color',
       COLORTERM: 'truecolor',
