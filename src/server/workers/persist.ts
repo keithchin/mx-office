@@ -1,6 +1,8 @@
 // workers.json: every worker as the office last saw it, to pick them all back up after a restart.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { rename, writeFile } from 'node:fs/promises';
+import { open, rename } from 'node:fs/promises';
+import { assertWritable } from '../durable/health.js';
+import { readJsonStoreSync, valueOr } from '../durable/read.js';
+import { writeTextDurableSync } from '../durable/write.js';
 import type { AgentProvider, WorkerInfo, WorkerStatus, WorkerTask } from '../../shared/protocol.js';
 import { DESK_BY_ID } from '../../shared/layout.js';
 import { isAgentProvider, savedEffort, savedModel } from '../../shared/providers.js';
@@ -56,9 +58,10 @@ export function workersJson(workers: Iterable<Worker>, stopping: boolean): strin
 /** Saves every worker now, on the event loop. */
 export function saveWorkers(file: string, workers: Iterable<Worker>, stopping: boolean) {
   try {
-    writeFileSync(file, workersJson(workers, stopping), { mode: 0o600 });
-  } catch {
-    // disk issues shouldn't take the office down
+    writeTextDurableSync(file, workersJson(workers, stopping));
+  } catch (err) {
+    // disk issues shouldn't take the office down (nor does a workers.json it couldn't read get written over: durable/health.ts)
+    console.error(`agent-office: couldn't save ${file}: ${(err as Error).message}`);
   }
 }
 
@@ -96,9 +99,9 @@ export class WorkersSaver {
     if (this.timer) clearTimeout(this.timer);
     this.timer = undefined;
     try {
-      writeFileSync(this.file, this.json(), { mode: 0o600 });
-    } catch {
-      // disk issues shouldn't take the office down
+      writeTextDurableSync(this.file, this.json());
+    } catch (err) {
+      console.error(`agent-office: couldn't save ${this.file}: ${(err as Error).message}`);
     }
   }
 
@@ -111,7 +114,14 @@ export class WorkersSaver {
     const gen = this.gen;
     const tmp = `${this.file}.tmp`;
     try {
-      await writeFile(tmp, this.json(), { mode: 0o600 });
+      assertWritable(this.file);
+      const h = await open(tmp, 'w', 0o600);
+      try {
+        await h.writeFile(this.json());
+        await h.sync();
+      } finally {
+        await h.close();
+      }
       if (gen === this.gen) await rename(tmp, this.file);
     } catch {
       // disk issues shouldn't take the office down; the next change writes it again
@@ -127,9 +137,10 @@ export class WorkersSaver {
 
 /** Takes back the workers saved in `file` into `workers`, each at its desk (while it is free), all of them offline. */
 export function restoreWorkers(file: string, workers: Map<string, Worker>, defaultProvider: AgentProvider, deskOccupied: (deskId: string) => boolean) {
-  if (!existsSync(file)) return;
   try {
-    const saved = JSON.parse(readFileSync(file, 'utf8')) as (Partial<WorkerInfo> & { owner?: unknown; tracker?: unknown; hookToken?: unknown; pty?: any; midTurn?: unknown } & Record<string, unknown>)[];
+    // Only a missing file is "nobody": a locked one throws (and isn't written over), a corrupt one is kept aside (durable/read.ts).
+    const read = valueOr(readJsonStoreSync(file), []);
+    const saved = (Array.isArray(read) ? read : []) as (Partial<WorkerInfo> & { owner?: unknown; tracker?: unknown; hookToken?: unknown; pty?: any; midTurn?: unknown } & Record<string, unknown>)[];
     for (const s of saved) {
       if (!s.id || !s.deskId || !DESK_BY_ID.has(s.deskId) || deskOccupied(s.deskId)) continue;
       const tracker = restoreTracker(s.tracker);
@@ -187,7 +198,7 @@ export function restoreWorkers(file: string, workers: Map<string, Worker>, defau
       workers.set(info.id, w);
     }
   } catch {
-    // corrupt state file: start fresh
+    // unreadable (durable/health.ts raised it, and blocks the writes) or a bad entry: what was restored so far
   }
 }
 
