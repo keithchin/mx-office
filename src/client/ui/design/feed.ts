@@ -30,7 +30,7 @@ export function designNeed(floor: string | null | undefined): DesignNeedView | u
     view = undefined;
     void refresh(floor);
   }
-  return view && view.floor === floor && view.proposal ? view : undefined;
+  return view && view.floor === floor && (view.proposal || view.adoption) ? view : undefined;
 }
 
 export function onDesignChanged(fn: () => void): () => void {

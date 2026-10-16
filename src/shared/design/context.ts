@@ -44,6 +44,13 @@ export function designLine(b: Pick<ProjectDesignBinding, 'name' | 'n' | 'digest'
   return line.length <= DESIGN_LINE_MAX ? line : `Design system bound: read ${guidancePath}`.slice(0, DESIGN_LINE_MAX);
 }
 
+const short = (b: Pick<ProjectDesignBinding, 'name' | 'n' | 'digest'>) => `${clean(b.name).slice(0, 40) || 'design'}@v${b.n} #${b.digest.slice(0, 7)}`;
+
+/** A version committed on its own branch and not merged yet: the agent's revision doesn't have it. */
+export function candidateLine(c: Pick<ProjectDesignBinding, 'name' | 'n' | 'digest'>, branch: string): string {
+  return `Design: ${short(c)} is only a candidate, on the branch ${branch.slice(0, 80)}, not merged: your revision keeps the app's current styling; don't apply its tokens by hand.`.slice(0, DESIGN_LINE_MAX);
+}
+
 /** The per-task guidance file: the binding, the rules, and the selected patterns in full (the rest by path). */
 export function guidanceText(b: ProjectDesignBinding, packageDir: string, patternIds: readonly string[]): string {
   const dir = packageDir.replace(/\\/g, '/').replace(/\/+$/, '');
@@ -56,7 +63,7 @@ export function guidanceText(b: ProjectDesignBinding, packageDir: string, patter
     '',
     '## Rules',
     '- Use the bound package and these patterns. Do not invent new component variants, colours or spacing.',
-    '- The theme is already applied: do NOT map tokens to Atlas variables by hand and skip the toolkit design-artifacts token→Atlas mapping step; do not edit the `mxcli:theme` fenced blocks in theme/web/*.scss.',
+    `- The theme is already applied${b.applied?.branch ? ` (merged into the default branch from \`${b.applied.branch}\`; on an older branch, merge the default branch in first)` : ''}: do NOT map tokens to Atlas variables by hand and skip the toolkit design-artifacts token→Atlas mapping step; do not edit the \`mxcli:theme\` fenced blocks in theme/web/*.scss.`,
     '- Use stock Atlas classes, button styles and design properties. A need the package does not cover is an exception: escalate it (`office-workers escalate`) with the page and the reason, instead of styling around it.',
     `- At most ${CORRECTION_LIMIT} automated design-correction attempts per unresolved issue; then summarise the evidence and escalate for a decision.`,
     '- A hidden button is not security: entity access and microflow checks still decide.',

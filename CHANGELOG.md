@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **Adopting a design system in an existing app no longer says it's adopted before it is.** A failing commit (a pre-commit hook, say) used to still bind the project, mark the apply done, remove the ✋ card and delete the branch. Adopt now goes step by step (applied, committed, pushed, merged), each step recorded before it runs and checked against git after a restart, and the project is bound only once the branch is merged into the default branch: until then the Design gallery, the card and the agents' Design line say it's a candidate on its branch. A failed step leaves the card as *Adoption failed at …* with **Retry** and **Discard**; a failed push says *committed locally, not pushed* and keeps the commit. Retry carries on on the same branch and keeps the commits already on it; the office never deletes or force-pushes a branch with commits it didn't make, and two Adopts at once make one adoption. The project file's other settings are kept, and a broken one is never overwritten.
 
 ## 2026-10-16 · release 54 (`62707f9`)
 

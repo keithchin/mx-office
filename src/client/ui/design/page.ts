@@ -6,7 +6,7 @@
 
 import { PATTERNS, PATTERN_VERIFIED, type Pattern } from '../../../shared/design/patterns';
 import { pointerOf } from '../../../shared/design/types';
-import { bindingWords, KEEP_WORDS, startWords } from '../../../shared/design/words';
+import { adoptionWords, bindingWords, KEEP_WORDS, startWords } from '../../../shared/design/words';
 import type { ProjectDesignView } from '../../../shared/design/views';
 import type { TabHooks } from '../../tabs/registry';
 import { store } from '../../state';
@@ -44,14 +44,30 @@ export function designTab(container: HTMLElement): TabHooks {
     const lines: (HTMLElement | null)[] = [h('h2', {}, 'Design gallery')];
     if (b) {
       lines.push(h('p', {}, h('strong', {}, bindingWords(b)), ` · ${b.preset} preset · adopted ${new Date(b.approval.at).toLocaleDateString()} by ${b.approval.by} (${b.approval.kind === 'wizard' ? 'at setup' : 'on the decision card'})`));
-      lines.push(h('p.pf-hint', {}, `Started from ${startWords(b.start)}.${b.applied ? ` Theme ${b.themeName} applied with mxcli ${b.applied.mxcli ?? ''}${b.applied.branch ? ` on the branch ${b.applied.branch}: merge it to adopt it on main` : ''}.` : b.kind === 'atlas' ? ' Atlas defaults: no theme change.' : ''} Agents get one Design line and a guidance file with each task.`));
+      lines.push(h('p.pf-hint', {}, `Started from ${startWords(b.start)}.${b.applied ? ` Theme ${b.themeName} applied with mxcli ${b.applied.mxcli ?? ''}${b.applied.branch ? ` on the branch ${b.applied.branch}, merged` : ''}.` : b.kind === 'atlas' ? ' Atlas defaults: no theme change.' : ''} Agents get one Design line and a guidance file with each task.`));
       for (const w of b.warnings ?? []) lines.push(h('p.pf-warn', {}, `⚠️ ${w}`));
     } else if (!v.proposal) lines.push(h('p.pf-hint', {}, 'No design system adopted: the project keeps its own styling, as before.'));
+    else if (v.adoption) lines.push(h('p.pf-hint', {}, 'No design system adopted yet: agents keep the app’s current styling until the candidate below is merged.'));
     if (v.apply?.state === 'failed') lines.push(h('p.pf-warn', { role: 'alert' }, `⚠️ The last apply failed: ${v.apply.detail ?? ''}`));
     return h('div.dg-head', {}, ...lines.filter((x): x is HTMLElement => !!x));
   }
 
+  /** An adoption that ran: failed at a stage (Retry / Discard) or a candidate on its branch, not merged yet. */
+  function adoption(v: ProjectDesignView): HTMLElement | null {
+    const a = v.adoption;
+    if (!a) return null;
+    const failed = a.status === 'failed';
+    return h(
+      'section.dg-card',
+      { 'data-tone': failed ? 'warn' : '', 'data-adoption': a.status },
+      h(failed ? 'p.pf-warn' : 'p', failed ? { role: 'alert' } : {}, `${failed ? '⚠️ ' : ''}${adoptionWords(a)}`),
+      a.commit ? h('p.pf-hint', {}, `Candidate commit ${a.commit.slice(0, 7)} on ${a.branch}.${a.preserved ? ` The branch had ${a.preserved} commit${a.preserved === 1 ? '' : 's'} of its own: kept.` : ''}`) : null,
+      admin() && a.status !== 'running' ? h('div.pf-acts.ds-bar', {}, failed ? button('Retry', 'primary', { action: 'adopt' }, 'Retried: see where it got to') : null, button('Discard', 'ph-outline', { action: 'keep' }, 'Discarded: the project’s design is as it was')) : null,
+    );
+  }
+
   function proposal(v: ProjectDesignView): HTMLElement | null {
+    if (v.adoption && v.adoption.status !== 'running') return adoption(v);
     const p = v.proposal;
     if (p) {
       const s = p.scan;
@@ -62,8 +78,8 @@ export function designTab(container: HTMLElement): TabHooks {
         h('strong', {}, `✋ Adopt ${p.name} v${p.n} in ${v.name}?`),
         h('p', {}, `The app starts from ${startWords(s.start)}.${items.length ? ' What would change:' : ' Nothing of its own would be overridden.'}`),
         items.length ? h('ul', {}, ...items.slice(0, 12).map((t) => h('li', {}, t))) : null,
-        h('p.pf-hint', {}, 'Adopt applies the package with mxcli theme on a branch of its own and records the binding; Keep existing design changes nothing.'),
-        admin() ? h('div.pf-acts.ds-bar', {}, button(`Adopt ${p.name} v${p.n}`, 'primary', { action: 'adopt' }, 'Adopted: the theme is on its own branch, merge it to adopt it on main'), button('Keep existing design', 'ph-outline', { action: 'keep' }, 'Kept: nothing changed')) : null,
+        h('p.pf-hint', {}, 'Adopt applies the package with mxcli theme on a branch of its own and commits it there; the project is bound to it once that branch is merged. Keep existing design changes nothing.'),
+        admin() ? h('div.pf-acts.ds-bar', {}, button(`Adopt ${p.name} v${p.n}`, 'primary', { action: 'adopt' }, 'Committed on its own branch: a candidate until it’s merged'), button('Keep existing design', 'ph-outline', { action: 'keep' }, 'Kept: nothing changed')) : null,
       );
     }
     const a = v.available;

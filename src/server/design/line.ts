@@ -2,13 +2,14 @@
 // selections already in memory, never waiting. The guidance file it names is generated deterministically
 // (its name is a hash of the digest, the task's patterns and the exceptions, so the same inputs always name
 // the same file) and written in the background if it isn't there yet; the project-wide one is written ahead,
-// when the binding or the selections change. What was supplied goes on one line of
+// when the binding or the selections change. A version that is only a candidate on its branch (./adoption.ts)
+// gets a line saying so, never one that says it is applied. What was supplied goes on one line of
 // <data>/context-manifests/<floor>.design.jsonl: supplied, never "read".
 
 import { createHash } from 'node:crypto';
 import { appendFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { designLine, guidanceText, patternsForTask } from '../../shared/design/context.js';
+import { candidateLine, designLine, guidanceText, patternsForTask } from '../../shared/design/context.js';
 import type { DesignContextRecord, ProjectDesignBinding } from '../../shared/design/types.js';
 import { windowsForm } from '../../shared/portfolios.js';
 import type { TaskLineAsk } from '../tasks/lines.js';
@@ -54,17 +55,30 @@ export class DesignLines {
     await this.ensure(this.guidance(floor, b, patternsForTask(sel, undefined)));
   }
 
-  /** The hook: one line for a bound project's task, nothing for any other. */
+  /** The hook: one line for a bound project's task (or a candidate's), nothing for any other. */
   line(t: TaskLineAsk): string | undefined {
     const b = this.projects.binding(t.floorId);
-    if (!b) return undefined;
+    if (!b) return this.candidate(t);
     const patternIds = patternsForTask(this.projects.selectionsNow(t.floorId), t.issue);
     const g = this.guidance(t.floorId, b, patternIds);
     const file = windowsForm(g.file);
     const line = designLine(b, patternIds, file);
-    const rec: DesignContextRecord = { floor: t.floorId, taskId: t.taskId, systemId: b.systemId, n: b.n, digest: b.digest, patternIds, guidance: file, line, guidanceChars: g.text.length, at: this.now() };
+    const rec: DesignContextRecord = { floor: t.floorId, taskId: t.taskId, systemId: b.systemId, n: b.n, digest: b.digest, patternIds, guidance: file, line, status: 'supplied', guidanceChars: g.text.length, at: this.now() };
     this.later(t.floorId, async () => {
       await this.ensure(g);
+      await mkdir(path.dirname(this.manifestFile(t.floorId)), { recursive: true });
+      await appendFile(this.manifestFile(t.floorId), `${JSON.stringify(rec)}\n`);
+    });
+    return line;
+  }
+
+  /** No binding, but a version committed on its branch and not merged: said as a candidate, nothing more. */
+  private candidate(t: TaskLineAsk): string | undefined {
+    const a = this.projects.adoption(t.floorId);
+    if (!a?.commit || !a.branch || a.status === 'active' || a.status === 'discarded') return undefined;
+    const line = candidateLine(a, a.branch);
+    const rec: DesignContextRecord = { floor: t.floorId, taskId: t.taskId, systemId: a.systemId, n: a.n, digest: a.digest, patternIds: [], line, status: 'candidate', guidanceChars: 0, at: this.now() };
+    this.later(t.floorId, async () => {
       await mkdir(path.dirname(this.manifestFile(t.floorId)), { recursive: true });
       await appendFile(this.manifestFile(t.floorId), `${JSON.stringify(rec)}\n`);
     });
