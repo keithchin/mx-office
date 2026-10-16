@@ -228,3 +228,13 @@ test('the Playbook rule: only on a bound project, for the Lead Designer, the Lea
   }
   assert.ok(!playbook('lead-tester', { ...base, designBound: true }).includes(RULE));
 });
+
+test('Capture now finds the newest installed Chromium when playwright-core expects a build that isn’t there', async (t) => {
+  const { installedChromium } = await import('../src/server/design/capture.js');
+  const root = tmp(t);
+  mkdirSync(path.join(root, 'chromium_headless_shell-1243'), { recursive: true });
+  mkdirSync(path.join(root, 'chromium-1248', 'chrome-win64'), { recursive: true });
+  writeFileSync(path.join(root, 'chromium-1248', 'chrome-win64', 'chrome.exe'), '');
+  assert.equal(await installedChromium({ PLAYWRIGHT_BROWSERS_PATH: root }), path.join(root, 'chromium-1248', 'chrome-win64', 'chrome.exe'));
+  assert.equal(await installedChromium({ PLAYWRIGHT_BROWSERS_PATH: path.join(root, 'none') }), undefined);
+});
