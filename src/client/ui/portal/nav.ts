@@ -155,6 +155,7 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
     'ul.pt-goto',
     {},
     h('li', {}, h('a.pt-item', { href: '/home' }, icon('launcher', 'pt-item-ico'), h('span.pt-item-l', {}, 'All projects'))),
+    h('li', {}, h('a.pt-item', { href: '/clients' }, icon('users', 'pt-item-ico'), h('span.pt-item-l', {}, 'Clients'))),
     h('li', {}, h('a.pt-item', { href: '/firm' }, icon('audit', 'pt-item-ico'), h('span.pt-item-l', {}, 'The Firm'))),
     h('li', {}, h('a.pt-item', { href: '/docs' }, icon('help', 'pt-item-ico'), h('span.pt-item-l', {}, 'Documentation'))),
   );

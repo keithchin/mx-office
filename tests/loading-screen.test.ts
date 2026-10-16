@@ -10,7 +10,7 @@ import path from 'node:path';
 
 const client = path.join(import.meta.dirname, '../src/client');
 const read = (f: string) => readFileSync(path.join(client, f), 'utf8').replace(/\r\n/g, '\n');
-const PAGES = ['lite.html', 'pixel.html', 'home.html', 'm.html'];
+const PAGES = ['lite.html', 'pixel.html', 'home.html', 'clients.html', 'm.html'];
 
 /** The block's two parts: its style (in <head>) and its markup and script (first in <body>). */
 function block(html: string) {

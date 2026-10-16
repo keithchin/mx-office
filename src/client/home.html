@@ -54,6 +54,7 @@
         <h1>Mx Office</h1>
       </div>
       <a id="to-floor" class="btn home-back hidden" href="/lite" title="Back to the project you were last on"></a>
+      <a id="to-clients" class="btn" href="/clients" title="Clients: every client (company) and its projects" aria-label="Clients">🗂️<span class="home-firm-label"> Clients</span></a>
       <a id="to-firm" class="btn" href="/firm" title="The Firm: independent Reviewer Agents that audit a project" aria-label="The Firm">📑<span class="home-firm-label"> The Firm</span></a>
       <a id="to-docs" class="btn home-docs" href="/docs" title="The documentation: guides, reference and FAQ" aria-label="Documentation">📚<span class="home-docs-label"> Docs</span></a>
       <a id="to-tests" class="btn hidden" href="/lite?tab=tests" title="Test mode: run the performance and journey suites against a throwaway test office, and see the results (admins)" aria-label="Test mode">🧪<span class="home-docs-label"> Tests</span></a>
@@ -68,7 +69,6 @@
         <button id="tab-overview" class="btn" type="button" role="tab">🗺️ 2D Overview</button>
         <button id="tab-audit" class="btn" type="button" role="tab">🧾 Audit log</button>
         <button id="tab-budget" class="btn" type="button" role="tab">💰 Budget</button>
-        <button id="tab-portfolios" class="btn" type="button" role="tab">🗂️ Clients</button>
       </div>
       <!-- A card for every floor, to go into on the board or in the office, and adding one (home/projects.ts). -->
       <section id="projects-view" role="tabpanel" aria-labelledby="tab-projects"></section>
@@ -80,8 +80,6 @@
       <section id="audit-view" class="hidden" role="tabpanel" aria-labelledby="tab-audit"></section>
       <!-- Every project's spend against its budget (home/budget.ts). -->
       <section id="budget-view" class="hidden" role="tabpanel" aria-labelledby="tab-budget"></section>
-      <!-- Portfolios and their company brains: knowledge organisation, not access control (home/portfolios.ts). -->
-      <section id="portfolios-view" class="hidden" role="tabpanel" aria-labelledby="tab-portfolios"></section>
     </main>
     <div id="toasts"></div>
     <div id="conn" class="conn hidden">Reconnecting…</div>

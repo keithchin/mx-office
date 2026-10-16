@@ -32,6 +32,8 @@ export const pageRoutes = {
   office: { path: ['/', '/index.html'], auth: 'public', handle: (_ctx, { res, url }) => void res.writeHead(302, { location: legacyOfficeUrl(url.search), 'cache-control': 'no-store' }).end() },
   // The home page: every project's card, and the office's statistics (home.ts).
   home: { path: ['/home', '/home.html'], auth: 'session', handle: page('home.html') },
+  // Clients: every client's card, a client's page with its projects and company brain (clients.ts).
+  clients: { path: ['/clients', '/clients.html'], auth: 'session', handle: page('clients.html') },
   // The Firm: the office's Reviewer Agents, their engagements and reports (firm.ts).
   firm: { path: ['/firm', '/firm.html'], auth: 'session', handle: page('firm.html') },
   // The 1D view: where every project opens, on its Command Center (lite.ts).
