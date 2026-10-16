@@ -7,6 +7,7 @@
 import { TRIGGER_LABEL } from '../../../shared/roster/autonomy';
 import { URGENCY_ICON, fyiNow, type Escalation, type EscalationVerdict } from '../../../shared/roster/escalation';
 import { ROLE_BY_ID } from '../../../shared/roster/roles';
+import { triedItems } from '../../../shared/roster/handadd';
 import type { RosterView } from '../../../shared/roster/types';
 import { h, timeAgo, toast } from '../dom';
 import { act } from '../roster/api';
@@ -60,6 +61,7 @@ export function escalationCard(floor: string, e: Escalation, admin: boolean, don
     { class: `esc-${level}${resolved ? ' esc-resolved' : ''}`, 'data-id': e.id, 'aria-label': `${tag} escalation from ${e.by}: ${e.title}` },
     h('header.esc-h', {}, h('span.esc-tag', {}, `${URGENCY_ICON[e.urgency]} ${tag}`), h('b.esc-title', {}, e.title)),
     h('p.esc-meta', {}, meta),
+    triedList(e.details),
     e.details ? h('details.esc-details', {}, h('summary', {}, 'Details'), h('p', {}, e.details)) : null,
     e.options.length
       ? h(
@@ -169,4 +171,10 @@ function raisedBy(e: Escalation): HTMLElement {
   // first time) held up the console's first draw by a quarter of a second (the performance guard).
   later(() => c.getContext('2d')!.drawImage(standing(lookFor(e.workerId, color, (e.role && OUTFIT[e.role]) || 'plain'), 'front', false, 0), 0, 0, 24, 24, 0, 0, 24, 24));
   return h('figure.esc-who', { title: `Raised by ${e.by}${role ? ` (${role.title})` : ''}` }, c, h('figcaption', {}, e.by), role ? h('small', {}, role.title) : null);
+}
+
+/** An escalation's `Tried:` section, shown open above its details (shared/roster/handadd.ts). */
+function triedList(details: string): HTMLElement | null {
+  const tried = triedItems(details);
+  return tried.length ? h('div.esc-tried', {}, h('b', {}, `Tried (${tried.length}):`), h('ul', {}, ...tried.map((t) => h('li', {}, t)))) : null;
 }

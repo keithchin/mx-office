@@ -105,6 +105,21 @@ Only a person can merge it at this autonomy level.
 EOF
 ```
 
+A Studio Pro hand-add (or "mxcli can't …") needs a `Tried:` section, or the office answers *Escalation not raised: Before this reaches the Project Manager: …* and keeps nothing (see [Studio Pro hand-adds](../teams-and-agents/escalations.md#studio-pro-hand-adds-tried-first)):
+
+```bash
+office-workers escalate --title "Studio Pro hand-add needed: photo upload on Sheet_NewEdit" --trigger needs-human <<'EOF'
+The page needs a photo upload control.
+
+Tried:
+- mxcli syntax widget: no upload widget listed
+- mxcli widget list -p App.mpr: no imageuploader or fileuploader
+- imageuploader in MDL: MDL-WIDGET25 not a widget in this project
+- mxcli marketplace search "file uploader": found 235351, install refused (no MENDIX_PAT)
+- .ai-context/office/mendix-workarounds.md: the File Uploader entry, blocked on the install
+EOF
+```
+
 ## subagent (Leads only)
 
 | Subcommand | Does |

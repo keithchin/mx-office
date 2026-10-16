@@ -6,7 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Added
+
+- **A Studio Pro hand-add reaches you only with what the agent tried first.** An escalation that asks for a Studio Pro hand-add, or says mxcli can't do something, now needs a `Tried:` section listing the standard alternatives (`mxcli syntax`, `widget list` / `describe`, a Marketplace search for a pluggable widget or module, `--engine legacy`, the workarounds list), each with its exact error. Without one the office hands it back to the agent in the escalate tool's reply, unraised and not waiting on you, and the Audit log records `escalation.handadd-returned`; with one, its card shows **Tried (n):** first. The patterns are a fixed list (no model judges it), and escalations the office files itself or that were already open are not affected. The Lead Developer's, Lead Designer's and Solo Lead's Playbooks say to try these first.
+- **A workarounds list for what mxcli can't do directly.** `docs/mendix-workarounds.md` ships with the office and is copied into each project as `.ai-context/office/mendix-workarounds.md`, beside the project's own `mendix-workarounds.local.md` that its agents add to. The first entry: image or file upload on a page with Mendix's pluggable File Uploader widget (Marketplace 235351), install verified on PackTrack, MDL placement not yet verified by the office.
 
 ## 2026-10-16 · release 55 (`6e86bbe`)
 

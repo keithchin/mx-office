@@ -4,6 +4,7 @@
 
 import type { GhPull } from '../protocol.js';
 import { fyiNow, type Escalation } from '../roster/escalation.js';
+import { triedItems } from '../roster/handadd.js';
 import { jeffOrder, rankChip, rankOf, rankTip, sortedByJeff } from '../roster/jeff-rank.js';
 import type { RosterView } from '../roster/types.js';
 import type { SetupView } from '../wizard.js';
@@ -24,7 +25,7 @@ export interface Candidate {
   kind: DecisionKind;
   /** Which source leads a card when several fold (lower first): a question, a toolkit sign-off (SIGNOFF_PRIO: its own dialog, never an escalation answer), then a decision escalation, a proposal, stuck, an ask, a PR check, an FYI. */
   prio: number;
-  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates' | 'after'>> & { analyst?: string };
+  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'tried' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates' | 'after'>> & { analyst?: string };
   /** A free-text test name it is about: other cards naming it are "possibly related", never merged. */
   mentions?: string;
 }
@@ -86,6 +87,7 @@ export function escalationCandidates(r: RosterView): Candidate[] {
       body: {
         question: e.title,
         ...(para(e.details) ? { detail: para(e.details) } : {}),
+        ...(triedItems(e.details).length ? { tried: triedItems(e.details) } : {}),
         ...(e.options.length ? { options: e.options } : {}),
         ...(e.recommendation ? { recommendation: e.recommendation } : {}),
         evidence: e.from?.kind === 'awaiting' ? [{ label: `The AWAITING-PM line in ${e.by}'s newest journal entry`, where: 'its details' }] : [],
