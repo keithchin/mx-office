@@ -6,7 +6,14 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **Naming a new client.** Wherever a project picks its client, a new one can now be named on the spot: **＋ New client** in a project's ⚙️ Settings › Client (which read *There are no clients yet* with its button greyed out until a client existed) and in the Add to client dialog, and **＋ New client…** at the end of the New project wizard's *Advanced › Client* list (the field wasn't there at all before the first client). The New client dialog also sends a name once: a double Enter used to be able to make two clients of the same name.
+
+### Added
+
+- **Clients page.** Clients is a page of its own at `/clients`, next to Projects (the launcher, the phone drawer, Home's bar): a card per client in the Projects page's grid (its projects and its company brain's state) with **＋ New client**, and a client's page with its projects drawn as the Projects page's cards. Home's Clients tab is gone; old links to it open the page.
+- **Rename a client.** **Rename** on a client's page (or ⋯ › Rename… on its card): only the name changes, its projects, brain and links stay. A taken or empty name is refused in the dialog. Admins only; in the audit log as `portfolio.rename` with the old and new name.
 
 ## 2026-10-15 · release 50 (`0d92abc`)
 

@@ -4,7 +4,7 @@ description: The /home page - every project as a card, the office's statistics, 
 weight: 2
 ---
 
-`/home` is where the office opens. It has six tabs. The last one you used is remembered, and a link can open one with `?tab=projects`, `?tab=stats`, `?tab=overview`, `?tab=audit`, `?tab=budget` or `?tab=portfolios` (the Clients tab).
+`/home` is where the office opens. It has five tabs. The last one you used is remembered, and a link can open one with `?tab=projects`, `?tab=stats`, `?tab=overview`, `?tab=audit` or `?tab=budget`. Clients, once a sixth tab, is a page of its own: `?tab=portfolios` opens [the Clients page](clients.md).
 
 The top bar has **🏠**, a **back link** to the project you were last on (in the view you last used), **📑 The Firm** (opens [/firm](the-firm.md)), **📚 Docs**, **🎨** and **☰**.
 
@@ -14,7 +14,7 @@ The top bar has **🏠**, a **back link** to the project you were last on (in th
 
 **In the Portal themes** (the default) this tab is a **Projects** page, like a low-code platform's portal:
 
-- the page's title, **Projects**, with **Add project** and **New project** (the wizard) at its right, over Home's tabs (Projects, Statistics, 2D Overview, Audit log, Budget, Clients) drawn as underline tabs;
+- the page's title, **Projects**, with **Add project** and **New project** (the wizard) at its right, over Home's tabs (Projects, Statistics, 2D Overview, Audit log, Budget) drawn as underline tabs;
 - a filter row: **Search by project name** (the name or the repository), a status select (*All statuses*, *Needs you*, *Running*, *Paused*, *Being added*), the sort (*Pinned*, *Recent activity*, *Name*) with a button that turns the order round, and **Pause all projects** / **Resume all** and **Connections** (admins). The status and the sort are remembered in this browser;
 - a card per project: a tile with its letters in the project's colour, its name (opens its board), `repo · ⎇ branch`, the one-line summary, the small progress bar, and at the bottom its status (*Running*, *Needs you*, *Paused*, *Being added*) and what it has spent against its budget;
 - at each card's top right: **👁 watch** (on by default; a project you stop watching no longer calls you over from another project's pages or counts in the tab title), **pin** (pinned projects come first under *Pinned*), and **⋯**: *Open project*, *View live app*, *Edit in Studio Pro* (asks to open it from the project's page, admins) and, for admins, *Pause project* or *Resume project*.
@@ -93,4 +93,4 @@ The tiles across the top give today's spend for the whole office, the all-time t
 
 ## 🗂️ Clients
 
-Every client (the company you build for, with its projects pointed at the same company brain), with its projects and its brain's state; **＋ New client** for admins; and each client page, with **Connect a brain**, **Disconnect** and **＋ Add a project**. Clients organise knowledge; they aren't access control. See [Clients](clients.md).
+Clients (the companies you build for, each with its projects pointed at the same company brain) have their own page, `/clients`, next to Projects in the launcher and as **🗂️ Clients** on Home's bar: a card per client in the Projects page's grid, **＋ New client**, and each client's page with **Rename**, its brain and its projects as Projects cards. Clients organise knowledge; they aren't access control. See [Clients](clients.md).
