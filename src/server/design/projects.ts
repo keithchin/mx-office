@@ -8,6 +8,7 @@
 
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { loadJson } from '../durable/read.js';
 import { writeJsonCritical, writeTextCritical } from '../flow/critical-write.js';
 import type { DesignAdoption, DesignProposal, PatternSelection, ProjectDesignBinding } from '../../shared/design/types.js';
 
@@ -44,12 +45,14 @@ export class DesignProjects {
   }
 
   load(): Promise<void> {
-    this.loaded ??= readFile(this.file, 'utf8').then(
-      (t) => {
-        const r = JSON.parse(t) as Partial<ProjectsFile>;
+    this.loaded ??= loadJson(
+      this.file,
+      (v) => {
+        if (v === undefined) return;
+        const r = v as Partial<ProjectsFile>;
         this.data = { version: 1, bindings: r.bindings ?? {}, applies: r.applies ?? {}, proposals: r.proposals ?? {}, adoptions: r.adoptions ?? {} };
       },
-      () => undefined,
+      () => (this.loaded = undefined),
     );
     return this.loaded;
   }

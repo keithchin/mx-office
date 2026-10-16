@@ -3,7 +3,8 @@
 // the follow-throughs the person dismissed, each at the revision it was dismissed at (a new revision shows
 // again). A finding the office can work out again on the next look, so a background write is enough.
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { loadJson } from '../durable/read.js';
+import { writeTextDurable } from '../durable/write.js';
 import path from 'node:path';
 import type { DecisionRef } from '../../shared/dispatch.js';
 import type { Recording } from '../../shared/followthrough.js';
@@ -30,12 +31,15 @@ export class FollowStore {
   get(floorId: string): Promise<FollowData> {
     let p = this.floors.get(floorId);
     if (!p) {
-      p = readFile(this.file(floorId), 'utf8').then(
-        (t) => {
-          const o = JSON.parse(t) as Partial<FollowData>;
+      // Only a missing file is empty; a locked one rejects and is read again next time (durable/read.ts).
+      p = loadJson(
+        this.file(floorId),
+        (v) => {
+          if (v === undefined) return empty();
+          const o = v as Partial<FollowData>;
           return { recordings: o.recordings && typeof o.recordings === 'object' ? o.recordings : {}, dismissed: o.dismissed && typeof o.dismissed === 'object' ? o.dismissed : {} };
         },
-        () => empty(),
+        () => this.floors.delete(floorId),
       ).then((d) => (this.loaded.set(floorId, d), d));
       this.floors.set(floorId, p);
     }
@@ -54,9 +58,7 @@ export class FollowStore {
       const d = await this.get(floorId);
       const f = this.file(floorId);
       try {
-        await mkdir(this.dir, { recursive: true });
-        await writeFile(`${f}.tmp`, JSON.stringify(d));
-        await rename(`${f}.tmp`, f);
+        await writeTextDurable(f, JSON.stringify(d));
       } catch (err) {
         console.error(`agent-office: followthrough: couldn't save ${floorId}: ${(err as Error).message}`);
       }

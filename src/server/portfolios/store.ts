@@ -5,7 +5,7 @@
 // written once someone creates a portfolio. Read once (asynchronously), written with the acknowledged
 // critical write (flow/critical-write.ts), changes serialised.
 
-import { readFile } from 'node:fs/promises';
+import { loadJson } from '../durable/read.js';
 import path from 'node:path';
 import { writeJsonCritical } from '../flow/critical-write.js';
 import { isPortfolioId, mintPortfolioId, type Portfolio, type PortfolioBrainRef } from '../../shared/portfolios.js';
@@ -42,10 +42,8 @@ export class PortfolioStore {
 
   /** Every portfolio (none, and nothing written, when portfolios.json doesn't exist). */
   load(): Promise<Portfolio[]> {
-    this.loaded ??= readFile(this.file, 'utf8').then(
-      (t) => (this.list = clean(JSON.parse(t))),
-      () => (this.list = []),
-    );
+    // Only a missing file is "none"; a locked one rejects and is read again next time (durable/read.ts).
+    this.loaded ??= loadJson(this.file, (v) => (this.list = v === undefined ? [] : clean(v)), () => (this.loaded = undefined));
     return this.loaded;
   }
 

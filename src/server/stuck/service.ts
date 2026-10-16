@@ -6,7 +6,8 @@
 // turn unless they say now), a snooze, a dismissal, or the workaround accepted. The office never writes
 // to GitHub and never makes a gh call of its own: the PR list is the board's existing poll.
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { loadJson } from '../durable/read.js';
+import { writeTextDurable } from '../durable/write.js';
 import path from 'node:path';
 import type { AuditInput } from '../../shared/audit.js';
 import { ACCEPT_QUIET_MS, SNOOZE_MS, stuckActions, leadMessage, stuckTitle, type StuckAction, type StuckDraft, type StuckFloorView, type StuckSettings, type StuckView } from '../../shared/stuck.js';
@@ -94,10 +95,7 @@ export class StuckService {
   book(floorId: string): Promise<StuckBook> {
     let p = this.books.get(floorId);
     if (!p) {
-      p = readFile(this.file(floorId), 'utf8').then(
-        (t) => new StuckBook(reviveBook(JSON.parse(t))),
-        () => new StuckBook(),
-      );
+      p = loadJson(this.file(floorId), (v) => (v === undefined ? new StuckBook() : new StuckBook(reviveBook(v))), () => this.books.delete(floorId));
       this.books.set(floorId, p);
     }
     return p;
@@ -107,9 +105,7 @@ export class StuckService {
     if (this.stopped) return;
     const f = this.file(floorId);
     try {
-      await mkdir(path.dirname(f), { recursive: true });
-      await writeFile(`${f}.tmp`, JSON.stringify(book.data));
-      await rename(`${f}.tmp`, f);
+      await writeTextDurable(f, JSON.stringify(book.data));
     } catch (err) {
       console.error(`agent-office: stuck: couldn't save ${floorId}: ${(err as Error).message}`);
     }

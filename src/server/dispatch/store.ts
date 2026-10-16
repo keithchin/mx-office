@@ -8,10 +8,10 @@
 // the person's card need every one).
 
 import { readFileSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { DISPATCH_SCHEMA, DISPATCH_STATES, isUnsettled, type DispatchRecord } from '../../shared/dispatch.js';
 import { writeJsonCritical, type CriticalFs } from '../flow/critical-write.js';
+import { loadJson } from '../durable/read.js';
 
 const KEPT = 500;
 const FLOOR = /^[A-Za-z0-9_.-]{1,64}$/;
@@ -63,12 +63,15 @@ export class DispatchStore {
     if (had) return had;
     let p = this.loading.get(floorId);
     if (!p) {
-      p = readFile(this.file(floorId), 'utf8').then(
-        (t) => {
-          const j = JSON.parse(t) as Partial<DispatchFile>;
+      // Only a missing file is "no records": a locked one rejects (and is never written over, durable/health.ts),
+      // a corrupt one is kept aside (durable/read.ts). Before, any error read as none, and the next put wiped the history.
+      p = loadJson(
+        this.file(floorId),
+        (v) => {
+          const j = (v ?? {}) as Partial<DispatchFile>;
           return Array.isArray(j.records) ? j.records.map(readRecord).filter((r): r is DispatchRecord => !!r) : [];
         },
-        () => [] as DispatchRecord[],
+        () => this.loading.delete(floorId),
       );
       this.loading.set(floorId, p);
     }

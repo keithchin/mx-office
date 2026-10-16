@@ -7,7 +7,8 @@
 // (or whoever covers Analysis), through the team's delivery, after their turn unless they say now. The
 // office never edits a BRD itself and makes no GitHub call.
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { loadJson } from '../durable/read.js';
+import { writeTextDurable } from '../durable/write.js';
 import path from 'node:path';
 import type { AuditInput } from '../../shared/audit.js';
 import { answersMessage, blocksWork, needOf, needsClient, waitingOnYou, type AnswerKind, type PmAnswer, type Question, type QuestionsNeed, type QuestionsView, type Recipient } from '../../shared/questions.js';
@@ -90,10 +91,7 @@ export class QuestionsService {
   book(floorId: string): Promise<BookData> {
     let p = this.books.get(floorId);
     if (!p) {
-      p = readFile(this.file(floorId), 'utf8').then(
-        (t) => reviveBook(JSON.parse(t)),
-        () => emptyBook(),
-      );
+      p = loadJson(this.file(floorId), (v) => (v === undefined ? emptyBook() : reviveBook(v)), () => this.books.delete(floorId));
       this.books.set(floorId, p);
     }
     return p;
@@ -103,9 +101,7 @@ export class QuestionsService {
     if (this.stopped) return;
     const f = this.file(floorId);
     try {
-      await mkdir(path.dirname(f), { recursive: true });
-      await writeFile(`${f}.tmp`, JSON.stringify(d));
-      await rename(`${f}.tmp`, f);
+      await writeTextDurable(f, JSON.stringify(d));
     } catch (err) {
       console.error(`agent-office: questions: couldn't save ${floorId}: ${(err as Error).message}`);
     }

@@ -3,7 +3,7 @@
 // this module, and tests/profiles.test.ts checks that a planted note never reaches a hire's first message.
 // Read once (asynchronously), written with the acknowledged critical write, changes serialised.
 
-import { readFile } from 'node:fs/promises';
+import { loadJson } from '../durable/read.js';
 import path from 'node:path';
 import { writeJsonCritical } from '../flow/critical-write.js';
 import { isProfileId } from '../../shared/profiles.js';
@@ -27,13 +27,14 @@ export class ProfileNotes {
   }
 
   load(): Promise<Record<string, ProfileNote>> {
-    this.loaded ??= readFile(this.file, 'utf8').then(
-      (t) => {
-        const raw = (JSON.parse(t) as { notes?: Record<string, ProfileNote> })?.notes ?? {};
+    this.loaded ??= loadJson(
+      this.file,
+      (v) => {
+        const raw = (v as { notes?: Record<string, ProfileNote> } | undefined)?.notes ?? {};
         for (const [k, v] of Object.entries(raw)) if (isProfileId(k) && v && typeof v.text === 'string') this.notes[k] = { text: v.text.slice(0, NOTE_MAX), at: Number(v.at) || 0, by: String(v.by ?? '').slice(0, 80) };
         return this.notes;
       },
-      () => this.notes,
+      () => (this.loaded = undefined),
     );
     return this.loaded;
   }

@@ -2,7 +2,8 @@
 // loop): each replaced revision's follow-through finding as it was when the answer changed, so the history
 // shows what came of rev n after rev n+1 took over. The answers themselves live in the answer store.
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { loadJson } from '../durable/read.js';
+import { writeTextDurable } from '../durable/write.js';
 import path from 'node:path';
 import type { DecisionRef } from '../../shared/dispatch.js';
 import type { RecordedOutcome } from '../../shared/followthrough.js';
@@ -30,12 +31,13 @@ export class ChangeStore {
   get(floorId: string): Promise<ChangeData> {
     let p = this.floors.get(floorId);
     if (!p) {
-      p = readFile(this.file(floorId), 'utf8').then(
-        (t) => {
-          const o = JSON.parse(t) as Partial<ChangeData>;
+      p = loadJson(
+        this.file(floorId),
+        (v) => {
+          const o = (v ?? {}) as Partial<ChangeData>;
           return { outcomes: o.outcomes && typeof o.outcomes === 'object' ? o.outcomes : {} };
         },
-        () => ({ outcomes: {} }),
+        () => this.floors.delete(floorId),
       );
       this.floors.set(floorId, p);
     }
@@ -57,9 +59,7 @@ export class ChangeStore {
       const d = await this.get(floorId);
       const f = this.file(floorId);
       try {
-        await mkdir(this.dir, { recursive: true });
-        await writeFile(`${f}.tmp`, JSON.stringify(d));
-        await rename(`${f}.tmp`, f);
+        await writeTextDurable(f, JSON.stringify(d));
       } catch (err) {
         console.error(`agent-office: change-answer: couldn't save ${floorId}: ${(err as Error).message}`);
       }
