@@ -149,6 +149,10 @@ html[data-theme^='portal'] .pt-team b { display: block; font-size: 13.5px; font-
 html[data-theme^='portal'] .pt-team small { display: block; overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 html[data-theme^='portal'] .pt-team > li.pt-missing { opacity: .85; }
 html[data-theme^='portal'] .pt-team-more { justify-content: flex-start; }
+/* A member's live subagents under its row (ui/subagents/member-subs.ts), lined up under its name. */
+html[data-theme^='portal'] .pt-team > li.pt-team-subs { display: block; padding: 0 0 8px 15px; border-top: 0; margin-top: -4px; }
+html[data-theme^='portal'] .pt-team .ms-who b { font-size: 12.5px; }
+html[data-theme^='portal'] .pt-team .ms-who small { font-size: 11.5px; }
 html[data-theme^='portal'] .pt-st { display: inline-flex; flex: none; align-items: center; gap: 5px; font-size: 12px; white-space: nowrap; }
 html[data-theme^='portal'] .pt-st i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
 html[data-theme^='portal'] .pt-st-work i { background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); }

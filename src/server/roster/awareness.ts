@@ -15,6 +15,7 @@
 
 import type { WorkerInfo } from '../../shared/protocol.js';
 import { ROLE_BY_ID } from '../../shared/roster/roles.js';
+import { factsSubagents } from '../../shared/roster/member-subagents.js';
 import { ackResume, lastResume, projectPause, resumeOwed } from '../project-run/store.js';
 import { isAsleepStatus } from './bench.js';
 import { managerRole } from './coverage.js';
@@ -119,12 +120,18 @@ export class Awareness {
     return cap ? `${s}; the daily spend cap is reached, so the office starts no turns of its own` : s;
   }
 
-  /** The one-line fact block: run state, who's working, waiting, idle and asleep. `me`: marked "you". */
+  /**
+   * The one-line fact block: run state, who's working, waiting, idle and asleep. `me`: marked "you". An
+   * agent whose subagents are at work counts as working, and says which ("Katherine (you) — 1 subagent
+   * working: Elsa (business analyst)"): the office said "nobody" while one ran.
+   */
   facts(floor: TeamFloor, me?: string): string {
     const groups: Record<'working' | 'waiting' | 'idle' | 'asleep', string[]> = { working: [], waiting: [], idle: [], asleep: [] };
+    const d = this.roster.data(floor.id);
     for (const w of this.agents(floor)) {
-      const name = w.id === me ? `${w.name} (you)` : this.label(floor, w);
-      const g = isAsleepStatus(w.status) ? 'asleep' : w.status === 'needs_input' ? 'waiting' : w.status === 'working' || w.status === 'starting' ? 'working' : 'idle';
+      const subs = factsSubagents(d.subagentRuns, d.subagentNames, w.id);
+      const name = `${w.id === me ? `${w.name} (you)` : this.label(floor, w)}${subs ? ` — ${subs}` : ''}`;
+      const g = isAsleepStatus(w.status) && !subs ? 'asleep' : w.status === 'needs_input' ? 'waiting' : w.status === 'working' || w.status === 'starting' || subs ? 'working' : 'idle';
       groups[g].push(name);
     }
     const who = [`working: ${names(groups.working)}`, ...(groups.waiting.length ? [`waiting on a person: ${names(groups.waiting)}`] : []), `awake and idle: ${names(groups.idle)}`, `asleep: ${names(groups.asleep)}`];

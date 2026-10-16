@@ -30,6 +30,8 @@ import { portalSlot } from './slot';
 import { budgetFacts, budgetText, commitWhen, detailRows, teamRows, type DetailFacts } from './overview-logic';
 import { needsCard } from './needs-card';
 import { briefCard } from './brief-card';
+import { nextTick, subsByRole, subsKey, subsList, watchShown, workingIn } from '../subagents/member-subs';
+import { openSubagentDetail } from '../subagents/detail';
 import type { GitGraph } from '../../../shared/gitgraph';
 import './overview.css';
 
@@ -97,31 +99,47 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
   );
   document.getElementById('summary')?.after(side);
 
+  // Each member's live subagents under it (../subagents/member-subs.ts): drawn again by the clock only
+  // while the card is on screen, and at most once a minute.
+  let subsAt = Date.now();
+  let subsNow = subsByRole(undefined, subsAt);
+  const armSubs = watchShown(team, () => refresh(), (now) => nextTick(subsNow, now));
+  const openSub = (row: { key: string }, lead?: string) => {
+    const r = currentRoster();
+    if (r && openSubagentDetail(r, row.key, { openWorker: deps.openWorker })) return;
+    if (lead) deps.openWorker(lead);
+  };
+
   let teamKey = '';
   function drawTeam() {
     const r = currentRoster();
     const lead = managerOf(r?.coverage ?? TEAM_OWNER);
-    const rows = r ? teamRows(r.members, lead, (id) => store.workers.get(id)) : [];
+    subsAt = Date.now();
+    subsNow = subsByRole(r, subsAt);
+    const rows = r ? teamRows(r.members, lead, (id) => store.workers.get(id), (role) => workingIn(subsNow, role)) : [];
     const others = [...store.workers.values()].filter((w) => (w.kind === undefined || w.kind === 'agent') && !r?.members.some((m) => m.workerId === w.id)).length;
     const colors = rows.map((x) => (x.workerId ? store.workers.get(x.workerId)?.color : undefined));
-    const key = JSON.stringify([rows, others, colors, r ? shapeText(r) : '']);
+    const key = JSON.stringify([rows, others, colors, r ? shapeText(r) : '', subsKey(subsNow, subsAt)]);
+    armSubs();
     if (key === teamKey) return;
     teamKey = key;
     shapeEl.textContent = r ? shapeText(r) : '';
     if (!r) return void team.replaceChildren(h('li.pt-card-none', {}, 'Loading the team…'));
     team.replaceChildren(
-      ...rows.map((x, i) => {
+      ...rows.flatMap((x, i) => {
         const w = x.workerId ? store.workers.get(x.workerId) : undefined;
         const face = w
           ? h('button.pt-face', { type: 'button', title: `${x.name}: open its terminal`, 'aria-label': `${x.name}, ${x.title}: open its terminal`, style: `--face:${colors[i]}`, onclick: () => deps.openWorker(w.id) }, h('span.pt-face-i', { 'aria-hidden': 'true' }, initials(x.name)), agentFace(w, r.members))
           : h('span.pt-face.pt-face-off', { 'aria-hidden': 'true' }, initials(x.name));
-        return h(
+        const subs = subsList(subsNow.get(x.role), subsAt, { open: (row) => openSub(row, x.workerId), runs: () => deps.show('workers') });
+        const row = h(
           'li',
           { class: x.missing ? 'pt-missing' : '' },
           face,
           h('div.pt-grow', {}, h('b', {}, x.missing ? x.title : x.lead ? `${x.name} · ${x.title}` : x.name), h('small', {}, x.missing ? x.what : [x.lead ? '' : x.title, x.what].filter(Boolean).join(' · '))),
           x.missing ? link('Hire', () => deps.show('org')) : h('span.pt-st', { class: `pt-st-${x.dot}` }, h('i', { 'aria-hidden': 'true' }), x.status),
         );
+        return subs ? [row, h('li.pt-team-subs', {}, subs)] : [row];
       }),
       ...(rows.length ? [] : [h('li.pt-card-none', {}, 'No one hired yet: Open team hires the team.')]),
       ...(others ? [h('li.pt-team-more', {}, link(`+ ${others} other agent${others === 1 ? '' : 's'} on the Agents page`, () => deps.show('workers')))] : []),

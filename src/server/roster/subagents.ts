@@ -115,11 +115,15 @@ export class Subagents {
 
   // ---- Runs, from the hooks ---------------------------------------------------------------------
 
-  /** A Lead's subagent began, ended, or its Agent call came back. Other workers' subagents aren't the team's. */
+  /**
+   * A Lead's subagent began, ended, or its Agent call came back. Other workers' subagents aren't the team's.
+   * The Coordinator's are only shown at work (the Overview's Team card, the fact block): no track record.
+   */
   onEvent(floor: TeamFloor, workerId: string, ev: SubagentEvent) {
     const lead = this.roster.roleOf(floor, workerId);
-    if (!lead || lead === 'pm') return;
+    if (!lead) return;
     this.live.onEvent(floor, lead, workerId, ev);
+    if (lead === 'pm') return;
     if (ev.kind === 'dispatch') return;
     const name = cleanSubName(ev.agent) ?? (ev.kind === 'result' ? 'general-purpose' : undefined);
     if (ev.kind === 'start') {
@@ -173,6 +177,7 @@ export class Subagents {
    * this run). Not when the hooks already recorded it.
    */
   recordFinished(floor: TeamFloor, live: LiveRun) {
+    if (live.lead === 'pm') return;
     const rec = this.record(floor, live.lead, live.name);
     const id = live.agentId ?? live.toolUseId ?? live.id;
     const ended = live.endedAt ?? this.roster.deps.now();

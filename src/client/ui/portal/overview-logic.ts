@@ -4,6 +4,8 @@
 // Lead on a Solo team), the Details rows (only those the office knows), and the key a dismissed
 // Needs-you alert is remembered under. Pure, so tests/portal-nav.test.ts runs it.
 
+import { VIA_SUBAGENT } from '../../../shared/roster/member-subagents';
+
 export interface TeamFace {
   id: string;
   name: string;
@@ -163,9 +165,10 @@ export interface TeamRowView {
 /**
  * The Team card: every hired member, the lead (whoever covers Management) first, each with a dot and its
  * status in words; the lead's row says it isn't hired when it isn't. `live` is the member's worker as the
- * page has it (its status wins over the roster's, which is fetched now and then).
+ * page has it (its status wins over the roster's, which is fetched now and then). `subs`: how many of a
+ * member's subagents are at work now; one idle or asleep while a subagent of its works reads as working.
  */
-export function teamRows(members: readonly TeamMemberLike[], leadRole: string, live: (id: string) => { status: string; activity?: string } | undefined): TeamRowView[] {
+export function teamRows(members: readonly TeamMemberLike[], leadRole: string, live: (id: string) => { status: string; activity?: string } | undefined, subs: (role: string) => number = () => 0): TeamRowView[] {
   const rows: TeamRowView[] = [];
   for (const m of members) {
     if (m.status === 'not-hired') {
@@ -182,8 +185,11 @@ export function teamRows(members: readonly TeamMemberLike[], leadRole: string, l
       : s === 'exited' || s === 'offline' || m.status === 'asleep' ? ['off', 'Asleep']
       : m.waitingOnPm ? ['wait', 'Waiting on you']
       : ['idle', 'Ready'];
-    const what = (dot === 'off' && m.status === 'benched' ? 'Session cleared to save money' : (w?.activity ?? m.activity ?? m.task ?? (dot === 'idle' ? 'Waiting for work' : ''))).replace(/\s+/g, ' ').trim();
-    rows.push({ role: m.role, name: m.name, title: m.title, what, dot, status, workerId: m.workerId, lead: m.role === leadRole });
+    // Its turn is over but a subagent it sent off is still at it: working, not idle.
+    const via = subs(m.role) > 0 && (dot === 'idle' || (dot === 'off' && m.status !== 'benched'));
+    const [shownDot, shownStatus]: [TeamDot, string] = via ? ['work', VIA_SUBAGENT] : [dot, status];
+    const what = (dot === 'off' && m.status === 'benched' ? 'Session cleared to save money' : via ? 'Waiting on its subagent' : (w?.activity ?? m.activity ?? m.task ?? (dot === 'idle' ? 'Waiting for work' : ''))).replace(/\s+/g, ' ').trim();
+    rows.push({ role: m.role, name: m.name, title: m.title, what, dot: shownDot, status: shownStatus, workerId: m.workerId, lead: m.role === leadRole });
   }
   return rows.sort((a, b) => Number(b.lead) - Number(a.lead));
 }

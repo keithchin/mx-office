@@ -27,6 +27,8 @@ The office also follows each run live, from the moment the Lead's Agent call goe
 - **From the Lead's transcript**, read every 10 seconds, for what no hook says: a background run finishing (its `<task-notification>`), or anything that happened while the office was down. The same run from both is counted once.
 - A project keeps its **last 50 runs** in its roster file, each linked to the run record its Lead reviews, so a card shows the verdict. A run with no word of it for 6 hours is marked lost.
 
+**Under each member, wherever the team is listed.** The Overview's Team card and the Org chart show each member's subagents at work under it: name and type (*Elsa · Business Analyst*), its task, how long it has been at it (to the minute) and a working animation. A member whose own turn is over while its subagent works reads **Working (via subagent)**, never idle. A finished run says *done · 4 min* for a minute, then folds into a line like *2 subagent runs today* (on the Overview it opens the Workers tab's subagents); clicking a run opens its subagent's detail. The Project Coordinator's own subagents show here too, at work only: they keep no track record. The home page's *working* counts and the office's fact block for the Coordinator (*Katherine (you) — 1 subagent working: Elsa (business analyst)*) count a member at work through its subagents. All of it comes from the roster the page already has, with nothing polled; the Overview redraws a run's minutes only while its card is on screen.
+
 ## Actions
 
 | Action | Does |

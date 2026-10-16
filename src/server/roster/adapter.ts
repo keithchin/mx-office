@@ -21,6 +21,7 @@ import type { Ctx } from '../office/context.js';
 import { Roster, rosterFor } from './index.js';
 import { ghIssueFinder, ghIssueMaker } from './issues.js';
 import type { HireAsk, TeamFloor } from './types.js';
+import { subagentBusyMoved } from './subagent-busy.js';
 import { onSubagentEvent } from '../workers/subagents.js';
 import { notedTranscript } from '../convo/index.js';
 import { SCAN_MS } from './subagent-live.js';
@@ -61,7 +62,11 @@ export function teamFloor(ctx: Ctx, floor: Floor): TeamFloor {
     openPulls: () => floor.github.pulls.items.filter((p) => p.state === 'OPEN'),
     pulls: () => floor.github.pulls.items,
     toast: (text, level) => ctx.toastFloor(floor, text, level),
-    changed: (alert) => ctx.toFloor(floor, { t: 'roster.changed', floor: floor.id, ...(alert ? { alert } : {}) }),
+    changed: (alert) => {
+      ctx.toFloor(floor, { t: 'roster.changed', floor: floor.id, ...(alert ? { alert } : {}) });
+      // A subagent began or ended: the floors' working counts (subagent-busy.ts).
+      if (subagentBusyMoved(floor.id, rosterOf(ctx).data(floor.id))) ctx.floorsChanged();
+    },
     activity: (text) => summaryOf(ctx).noteTeam(floor.id, text),
     labelPr: async (n, team) => {
       // Dry run (the team setting, or the whole office): GitHub is left alone.

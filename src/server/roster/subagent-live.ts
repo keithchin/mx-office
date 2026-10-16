@@ -9,7 +9,7 @@
 import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
 import { open, type FileHandle } from 'node:fs/promises';
 import type { WorkerInfo } from '../../shared/protocol.js';
-import { LEADS, type RoleId } from '../../shared/roster/roles.js';
+import { ROLES, type RoleId } from '../../shared/roster/roles.js';
 import { LIVE_STALE_MS, type LiveRun, type LiveRunView } from '../../shared/roster/subagent-live.js';
 import type { SubagentEvent } from '../workers/subagents.js';
 import type { Roster } from './index.js';
@@ -118,11 +118,11 @@ export class SubagentLive {
     }
   }
 
-  /** Each Lead at its desk with a transcript to read. */
+  /** Each Lead (and the Coordinator, whose runs are only shown live) at its desk with a transcript to read. */
   private leadsOf(floor: TeamFloor): { lead: RoleId; w: WorkerInfo; file: string }[] {
     const d = this.roster.data(floor.id);
     const out: { lead: RoleId; w: WorkerInfo; file: string }[] = [];
-    for (const lead of LEADS) {
+    for (const lead of ROLES) {
       const m = d.members[lead.id];
       const w = m.workerId ? floor.worker(m.workerId) : undefined;
       const file = w && floor.transcript?.(w);
