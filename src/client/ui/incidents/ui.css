@@ -137,3 +137,8 @@ code.inc-link { color: var(--code-ink); background: var(--code-bg); padding: 0 5
 .inc-drafted { display: inline-block; margin-top: 4px; padding: 1px 7px; border-radius: var(--radius-pill); background: var(--info-soft); color: var(--ink-2); font-size: 11px; font-weight: 700; }
 .inc-suggest { margin: 6px 0 0; padding: 6px 8px; border-left: 3px solid var(--rule-strong); background: var(--sunken); font-size: 13px; }
 .inc-akind { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+/* Resolve old incidents… (bulk.ts): the ones it would resolve, each ticked, scrolling in their own frame. */
+.inc-bulk-list { max-height: 46vh; overflow: auto; margin: 8px 0 12px; border: 1px solid var(--rule-strong); border-radius: 8px; }
+.inc-bulk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.inc-bulk-table th, .inc-bulk-table td { padding: 5px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); }
+.inc-bulk-table th { position: sticky; top: 0; background: var(--paper-2); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }

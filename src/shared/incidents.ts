@@ -87,8 +87,12 @@ export interface Incident {
   /** Audit events it's about. */
   auditIds: string[];
   workers: IncidentWorker[];
-  /** What an automatic one is deduped by: rule:floor. */
+  /** What an automatic one is deduped by: rule:floor (a page freeze: pageStall:floor:view, server/perfwatch). */
   dedupeKey?: string;
+  /** How many times its rule brought it back after it was resolved (server/incidents/index.ts raise). */
+  reopens?: number;
+  /** The resolved incident of the same rule and place this one came after, once that one was too old to reopen. */
+  follows?: { id: string; number: number };
   /** How many times its rule fired into it. */
   occurrences: number;
   lastSeenAt: number;

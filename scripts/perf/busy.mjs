@@ -233,6 +233,11 @@ export async function runBusy({ root, outDir, seconds = 90, onProgress = () => {
       res.ok = false;
       (res.failures ??= []).push(String(e.message));
     });
+    // The office's stop sweeps its own folder (root/office), but the slow-start agent (root/agent, fake-claude.exe)
+    // and the fixture's floors (root/floors) are beside it, and a worker the wake burst was still starting can
+    // outlive its terminal host: those fake agents were left running after every run. Sweep the whole run, twice.
+    res.leftovers = killProcessesUnder(root) + (await new Promise((r) => setTimeout(r, 1500)), killProcessesUnder(root));
+    if (res.leftovers) log(`     stopped ${res.leftovers} fake agent process(es) the office left under the busy office`);
   }
   onProgress({ done: 3, of: 3, label: 'done' });
   return res;

@@ -284,11 +284,11 @@
 .mx-pill.mx-removed { background: var(--bad-soft); color: var(--bad-ink); }
 .mx-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; color: var(--muted); }
 
-body:has(#model-view:not(.hidden)) .lite-main { padding-bottom: 0; }
+body:has(> .lite-main > #model-view:not(.hidden)) .lite-main { padding-bottom: 0; }
 /* Portal: the tab fills the page edge to edge under its header: flush with the left navigation and the window's
    right edge, down to the bottom of the window (index.ts fitHeight reads --mx-flush), no rounded frame around it.
    The page's side padding (ui/portal/layout.css: 32px, 16px on a phone) is taken back with negative margins. */
-html[data-theme^='portal'] body.lite.pt-has-nav:has(#model-view:not(.hidden)) .lite-main { padding-bottom: 0; }
+html[data-theme^='portal'] body.lite.pt-has-nav:has(> .lite-main > #model-view:not(.hidden)) .lite-main { padding-bottom: 0; }
 html[data-theme^='portal'] body.lite.pt-has-nav #model-view.mxv:not(.mx-full) { --mx-flush: 1; margin-left: -32px; margin-right: -32px; border-width: 1px 0 0; border-radius: 0 !important; }
 @media (max-width: 760px) {
   html[data-theme^='portal'] body.lite.pt-has-nav #model-view.mxv:not(.mx-full) { margin-left: -16px; margin-right: -16px; }
@@ -298,7 +298,7 @@ html[data-theme^='portal'] body.lite.pt-has-nav #model-view.mxv:not(.mx-full) { 
 .mxv.mx-full { position: fixed; inset: 0; z-index: 1000; width: auto !important; height: auto !important; min-height: 0; max-width: none; margin: 0 !important; border: 0; border-radius: 0; }
 .mxv:fullscreen { width: 100% !important; height: 100% !important; }
 .mxv::backdrop { background: var(--paper, #000); }
-html:has(body.mx-full-open) { overflow: hidden; }
+html:has(> body.mx-full-open) { overflow: hidden; }
 .mxv .mx-full-btn[aria-pressed='true'] { background: var(--accent-soft); }
 
 /* A phone: the explorer is a drawer, the details a sheet under the diagram. */

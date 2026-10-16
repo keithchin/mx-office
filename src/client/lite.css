@@ -56,7 +56,7 @@ body.lite { min-height: 100dvh; background: var(--paper); -webkit-tap-highlight-
    (.lite-main.board, see ui/kanban.css) take the whole width, and the home page sets its own. The bars
    pad in by the same amount, so their buttons start and end where the content does. */
 .lite-bar, .lite-nav { padding-left: max(12px, calc((100% - var(--lite-col)) / 2 + 12px)); padding-right: max(12px, calc((100% - var(--lite-col)) / 2 + 12px)); }
-body:has(.lite-main.board) { --lite-col: 100%; }
+body:has(> .lite-main.board) { --lite-col: 100%; }
 
 /* The page scrolls here, so what floats over it stays put on the screen. */
 #toasts { position: fixed; top: 84px; z-index: 60; width: calc(100% - 24px); }

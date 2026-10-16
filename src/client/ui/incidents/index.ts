@@ -10,6 +10,7 @@ import type { FloorInfo, ServerMsg } from '../../../shared/protocol';
 import { h, toast } from '../dom';
 import { incidentDetail, sevChip, statusChip } from './detail';
 import { incidentForm, rulesForm, saveIncident } from './form';
+import { bulkResolveDialog } from './bulk';
 import { draftFromEvent, fmtTime, fmtUsd, incQuery, type IncFilter } from './logic';
 import './ui.css';
 
@@ -124,6 +125,7 @@ export function incidentsView(root: HTMLElement, opts: IncidentsViewOpts) {
         ? [
             h('button.btn', { type: 'button', onclick: () => incidentForm(undefined, { floors: filter.floor !== 'all' && filter.floor !== OFFICE_FLOOR ? [floorOf()] : [] }, opts.floors(), (i) => opened(i)) }, '+ New incident'),
             h('button.btn', { type: 'button', onclick: () => data && rulesForm(data.settings, () => void fetchList()) }, '⚙️ Detection rules'),
+            h('button.btn', { type: 'button', title: 'Resolve every incident here that is mitigated or not seen for 7+ days (you pick which)', onclick: (e: Event) => void bulkResolveDialog(e.currentTarget as HTMLElement, { scope: floorOf(), floorName, done: () => void fetchList() }) }, 'Resolve old incidents…'),
           ]
         : []),
     );

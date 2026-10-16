@@ -14,6 +14,8 @@ import { openTerminalFor } from '../terminal';
 import { termTheme } from '../termtheme';
 import { holdTerminal } from '../term-holds';
 import { termPlacement } from './term-park';
+import { keepWidths, reuseWidths } from '../term-widths';
+import { writeInSlices } from '../term-write';
 
 /** The narrowest it's scaled for, in columns, and the smallest scale (about 7.5px type at 12px). */
 const MIN_COLS = 60;
@@ -26,6 +28,8 @@ export class PmTerminal {
   private workerId: string | null = null;
   private release: (() => void) | null = null;
   private fitFrame = 0;
+  /** When it last kept the widths its renderer measured (term-widths.ts). */
+  private keptAt = 0;
   /** Whether `term` has been opened in the box (has a renderer); a parked one hasn't. */
   private opened = false;
   /** An open is waiting for the page to paint first (place()). */
@@ -88,6 +92,8 @@ export class PmTerminal {
           if (this.term !== term || this.opened) return;
           if (termPlacement(false, { width: this.host.clientWidth, height: this.host.clientHeight }) !== 'open') return;
           term.open(this.host);
+          // The widths a terminal before it measured: its first frame doesn't measure them all again (term-widths.ts).
+          reuseWidths(term);
           this.opened = true;
           this.fitSoon();
         }, 0),
@@ -95,6 +101,7 @@ export class PmTerminal {
     } else if (todo === 'park') {
       // An opened xterm can't give its renderer back: a fresh, unopened one takes over, and a new
       // snapshot fills it (the Chat view's fallback reads its lines).
+      keepWidths(this.term);
       this.term.dispose();
       this.host.replaceChildren();
       this.term = this.make();
@@ -121,8 +128,9 @@ export class PmTerminal {
     if (msg.t === 'term.snapshot') {
       this.term.reset();
       this.term.resize(msg.cols, msg.rows);
-      this.term.write(msg.data, () => (this.fit(), this.onWrite?.()));
-    } else if (msg.t === 'term.data') this.term.write(msg.data, () => (this.fitSoon(), this.onWrite?.()));
+      // In slices, so a long session's snapshot isn't parsed in one task (term-write.ts).
+      writeInSlices(this.term, msg.data, () => (this.fit(), this.onWrite?.()));
+    } else if (msg.t === 'term.data') writeInSlices(this.term, msg.data, () => (this.fitSoon(), this.onWrite?.()));
   }
 
   /** Hears each write once it's on the screen (the Chat view's fallback reads the text again). */
@@ -158,6 +166,7 @@ export class PmTerminal {
     this.release?.();
     this.release = null;
     if (id && openTerminalFor() !== id) this.net.send({ t: 'worker.detach', workerId: id });
+    keepWidths(this.term);
     this.term?.dispose();
     this.term = null;
     this.opened = false;
@@ -175,6 +184,8 @@ export class PmTerminal {
     const screen = this.host.querySelector<HTMLElement>('.xterm-screen');
     const inner = this.host.firstElementChild as HTMLElement | null;
     if (!term || !this.opened || !screen || !inner || !screen.offsetWidth) return;
+    // What it has measured by now, for the next terminal (a switch, the box shown again, the next visit).
+    if (Date.now() - this.keptAt > 2000) ((this.keptAt = Date.now()), keepWidths(term));
     const buf = term.buffer.active;
     let last = buf.cursorY;
     let used = MIN_COLS;

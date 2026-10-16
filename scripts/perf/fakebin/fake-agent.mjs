@@ -16,6 +16,8 @@
 // FAKE_ESCALATE  raise an escalation to the Project Manager once, this many ms after starting.
 // FAKE_TURN_MS   the least time a turn takes (default 0: a few hundred ms).
 // FAKE_SLOW_MS   how long a prompt with "slow" in it keeps its turn going (default 60000).
+// FAKE_FLOOD     KB of wide, coloured session output (flood.mjs) written to its terminal as it starts, the way a
+//                long session's scrollback piles up; FAKE_FLOOD_MS: another FAKE_FLOOD_BURST KB (default 64) that often.
 // FAKE_GH_DIR    the fake gh's folder (scripts/perf/journey/fake-gh.mjs): "pr" adds a pull request there.
 // Prompts typed into its terminal (one line each) become a user line and a short reply; a prompt with
 // "please escalate" at its start (or after a note the office put first) raises an escalation; one with "permission" in it stops at a permission
@@ -196,6 +198,15 @@ async function turn(prompt) {
 }
 
 out(`fake agent (test office) ${me ?? '?'} session ${sid} mode ${mode}\n`);
+if (+process.env.FAKE_FLOOD > 0) {
+  // Only when asked: the journey runs a copy of this file from a folder of its own (journey/stubs.mjs), without flood.mjs beside it.
+  const { floodText } = await import('./flood.mjs');
+  // In 16 KB writes, as a real TUI's output arrives, not one giant one.
+  const text = floodText(+process.env.FAKE_FLOOD);
+  for (let i = 0; i < text.length; i += 16384) process.stdout.write(text.slice(i, i + 16384));
+  let k = 0;
+  if (+process.env.FAKE_FLOOD_MS > 0) setInterval(() => process.stdout.write(floodText(+(process.env.FAKE_FLOOD_BURST || 64), ++k * 1000)), +process.env.FAKE_FLOOD_MS);
+}
 await hook('SessionStart', { source: at('--resume', '-r') ? 'resume' : 'startup' });
 if (mode === 'live') {
   setTimeout(() => hook('UserPromptSubmit', { prompt: 'carry on (fake)' }), 300);

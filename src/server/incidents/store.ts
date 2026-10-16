@@ -24,7 +24,8 @@ import { foldRecur, type RecurDelta } from './recur.js';
 
 export interface IncidentLine {
   at: number;
-  op: 'create' | 'update' | 'resolve' | 'seed' | 'recur';
+  /** 'reopen': a rule brought a resolved incident back (index.ts raise), a full copy like 'update', which an office from before it reads as one. */
+  op: 'create' | 'update' | 'resolve' | 'seed' | 'recur' | 'reopen';
   by: string;
   /** Every op but 'recur': the incident as it became. */
   incident?: Incident;

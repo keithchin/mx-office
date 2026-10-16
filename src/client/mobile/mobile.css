@@ -2,7 +2,7 @@
    composer and the tab bar at the bottom, clear of the notch and the home indicator. In the theme's tokens
    (styles/base.css), over the team phone's rows (ui/phone/phone.css). */
 
-html:has(body.m-body), body.m-body { height: 100%; overflow: hidden; }
+html:has(> body.m-body), body.m-body { height: 100%; overflow: hidden; }
 body.m-body { min-height: 0; background: var(--paper); overscroll-behavior: none; }
 .m-app { position: fixed; inset: 0; display: flex; flex-direction: column; }
 .m-hidden { display: none; }

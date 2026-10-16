@@ -8,6 +8,7 @@ import { firmRoutes } from './firm.js';
 import { flowRoutes } from './flows.js';
 import { auditRoutes } from './audit.js';
 import { incidentRoutes } from './incidents.js';
+import { incidentBulkRoutes } from './incidents-bulk.js';
 import { chatterRoutes } from './chatter.js';
 import { connectionsRoutes } from './connections.js';
 import { phoneRoutes } from './phone.js';
@@ -108,6 +109,8 @@ export const routes: readonly Route[] = [
   incidentRoutes.list,
   incidentRoutes.create,
   incidentRoutes.settings,
+  // Before incidentRoutes.one, whose prefix would take it.
+  incidentBulkRoutes.resolve,
   incidentRoutes.one,
   incidentRoutes.testMode,
   testlabRoutes.view,

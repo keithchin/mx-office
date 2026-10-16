@@ -20,13 +20,13 @@ Every main view is opened in a headless browser on a big test office, with six w
 
 The numbers are named constants, `PERF_BUDGETS` in `src/shared/testlab.ts` (and `scripts/perf/budgets.mjs`, which a test keeps the same), so they can be tuned in one place.
 
-The views: the Command Center (Chat and Terminal), the Board, the team's org chart, standup and approvals, Team boards, Documents (opened, then Refresh: a fresh scan, with the office's own event-loop stalls meanwhile checked against the server budget), Workers, Budget, the Audit log and Incidents, Settings, Home (Projects, Overview, Budget), the 2D view, the Team phone open (and its project channel), and the phone page (`/m`). Project switches are timed on the 1D Board, the 1D Command Center, the 2D view and Home → a project, with the office's own part (from asking for the project to getting it), the fetches that follow and any `performance.mark` timings the page sets.
+The views: the Command Center (Chat and Terminal, and a worker's full terminal opened from it), the Board, the team's org chart, standup and approvals, Team boards, Documents (opened, then Refresh: a fresh scan, with the office's own event-loop stalls meanwhile checked against the server budget), Workers, Budget, the Audit log and Incidents, Settings, Home (Projects, Overview, Budget), the 2D view, the Team phone open (and its project channel), and the phone page (`/m`). Project switches are timed on the 1D Board, the 1D Command Center, the 2D view and Home → a project, with the office's own part (from asking for the project to getting it), the fetches that follow and any `performance.mark` timings the page sets.
 
 ## The big test office
 
 `scripts/perf/fixture.ts` writes a whole office from a seed, with nothing real in it: a roster filled to every limit the office keeps (300 proposals, 200 escalations, 200 held messages, 2,000 subagent runs), 30,000 lines of chatter, 20,000 audit lines, 2,500 budget rows, 400 analysis runs, 100 incidents, 30 workers (six of them live) with their transcripts, and 200 queued tasks. A test loads every part through the office's own loaders, so the fixture always matches what the office really reads.
 
-The live workers run the fake agent (`scripts/perf/fakebin/fake-agent.mjs`): it never calls a model, and sends tool events and transcript lines the way Claude Code does.
+The live workers run the fake agent (`scripts/perf/fakebin/fake-agent.mjs`): it never calls a model, and sends tool events and transcript lines the way Claude Code does. In the page checks each one's terminal also starts with 2 MB of a long session's output and gets another 48 KB every 3 s (`FAKE_FLOOD`, `scripts/perf/fakebin/flood.mjs`: lines past 200 columns, truecolor and background runs, bold and italic, the TUI's own glyphs), more than the terminal's scrollback holds, so the terminals open on a full one (`run.mjs --flood <KB>`, 0 for none).
 
 ## Running it
 
@@ -183,9 +183,27 @@ Measured on a copy of travel-approval, from commit b6e589b to d00af53 (18 microf
 
 In the browser, on a test office whose project is that copy (the page's own timings of `/api/model/*`): a microflow or domain model opened again 5 to 7 ms; one never opened (read ahead) 6 ms; after main moved, the tree 10 ms (the last one, the new one fetched behind it), an unchanged microflow 6 ms, an added one 5 ms (read ahead after the move). Its MDL follows in 1.6 to 1.8 s. The first tree on an empty data folder is still mxcli's (16 s on this machine).
 
+### The sixth pass: terminals (2026-10-16)
+
+The live office kept opening *A page froze for 766–1789 ms (lite › command)* on its two busiest projects. The page's own reports named two xterm.js scripts: a frame redrawing the team lead's terminal (`SelectionService.refresh` → `DomRenderer.renderRows` → `WidthCache._measure`) and a write (`WriteBuffer._innerWrite`: a worker's full terminal parsing its snapshot, then fitting and redrawing itself in the write's callback). The DOM renderer measures each new character in each variant by writing it into a hidden span and reading its width; every read made Chrome restyle the page, and on this page a restyle took 7 to 20 ms because of `:has()` rules on `<html>` and `<body>` that look through the whole page (`body:has(.lite-main.on-command) …`) and one with a universal `> *` after it (`#summary.sm:has(> .pmc) > *`, left from the old project console and never matching): over a hundred measurements made a 1.2 to 1.4 s frame. Now:
+
+- those rules look only at direct children (`body:has(> .lite-main.on-command)`), and the leftover is gone (`tests/terminal-freeze.test.ts` keeps both kinds out of every stylesheet);
+- a terminal is fed in 32 KB slices (`src/client/ui/term-write.ts`), and the full terminal fits itself to the window in a task of its own after the snapshot;
+- the widths a terminal measured are handed to the next one with the same font, and kept in the browser (`src/client/ui/term-widths.ts`); in a monospace font the rest of ASCII takes the width of a W and an i. The team-lead panel makes a fresh terminal on every project switch and every time its box is shown again, which no longer measures anything it measured before.
+
+On a scale-10 test office whose live workers' terminals hold a full scrollback of that session (`--only cc-chat,cc-terminal,cc-fullterm,switch-1d-command --soak 5`):
+
+| View | Before (longest task) | After |
+|---|---|---|
+| Command Center (Terminal) | 1,233 ms, then 844 ms | 121–176 ms |
+| A worker's full terminal from the Command Center | 3,484 ms, then 2,748 ms | 141–190 ms |
+| Command Center (Chat), switch to the Command Center | 132–411 ms | 133–279 ms (the page's own start-up, not a terminal) |
+
+The whole quick check afterwards (`npm run test:perf:quick`, with the terminals flooded): every view within budget but one project switch from the Board at 238 ms, which was the page's own start-up script, as before this pass; the journey and the busy office passed.
+
 ## Live warnings in the real office
 
-- **A page froze**: every flat view and the home page watch their own long tasks. One over 500 ms is reported (at most once a minute per view, never from a hidden tab) and opens an incident naming the view and the scripts that took the time.
+- **A page froze**: every flat view and the home page watch their own long tasks. One over 500 ms is reported (at most once a minute per view, never from a hidden tab) and opens an incident naming the view and the scripts that took the time: one incident per view per project, a freeze of the same view counting into it. If it was resolved less than 24 hours before, it comes back (reopened) rather than a new number.
 - **The server stalled**: the server reads its event-loop delay every 5 s. A block over 1 s opens an incident. A gap of a minute or more during which the process used almost no CPU (under a fifth of the gap), or the wall clock ran ahead of the monotonic one, is the computer sleeping: it is logged as a notice and opens no incident.
 - **The office profiles itself when a stall comes back.** A second stall within 30 minutes of the first starts a CPU profile of the office's own main thread (in-process, through `node:inspector`: nothing to attach, nothing running until then), at most once an hour. It runs until the next stall is caught (or 5 minutes) and goes on the stall's incident timeline: where the `.cpuprofile` was saved, what ran in the longest block and which office functions called it, and the top 10 functions by self time. The last 10 profiles are kept in `.agent-office/perf/profiles`.
 - **Record one by hand**: the [Test Mode page](test-mode-page.md)'s *This office's server* part has ⏺ Record 60 s CPU profile (admins only; `POST /api/perf/profile {seconds}`, 5 to 300). It shows the same summary and links the file; `GET /api/perf/profiles` lists them and `GET /api/perf/profiles/<file>` downloads one for Chrome DevTools (Performance › Load profile) or VS Code.
@@ -198,3 +216,5 @@ Both are incident rules (**A page froze**, **The server stalled**) that can be s
 - Batch and debounce updates: many events in a second draw once.
 - Never redraw a whole view for one new message: skip the redraw when nothing it shows changed.
 - Don't read layout (sizes, positions) in the middle of writing the page.
+- No `:has()` on `<html>` or `<body>` that looks past their direct children, and no universal selector after a `:has()`: each makes every restyle of the page slow.
+- Feed a terminal big output in slices (`writeInSlices`), and reuse the widths measured before (`reuseWidths` right after `open()`, `keepWidths` before `dispose()`).
