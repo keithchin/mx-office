@@ -114,6 +114,7 @@ async function main() {
     check(!/\$420/.test(team), 'the budget amount is this project’s own, not the source’s $420');
     await page.click('.nw-tf-bring input');
     await page.waitForSelector('.nw-tf-agents ul');
+    await page.locator('.nw-tf-agents').evaluate((el) => el.scrollIntoView({ block: 'center' }));
     await page.waitForTimeout(200);
     await shot('03-same-agents');
     // Create project: the Move confirmation first.
