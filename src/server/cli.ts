@@ -9,6 +9,7 @@ import { openBrowser } from './browser.js';
 import { onOfficeExit } from './restart/exit.js';
 import { RESTART_EXIT_CODE } from '../shared/project-run.js';
 import { dropTestCredentials } from './testcreds.js';
+import { wireDesktop } from './desktop/ipc.js';
 
 const argv = process.argv.slice(2);
 if (argv[0] === 'prune') {
@@ -128,3 +129,5 @@ onOfficeExit((code) => {
 process.on('unhandledRejection', (err) => console.error('agent-office: unhandled rejection', err));
 process.on('SIGINT', stop);
 process.on('SIGTERM', stop);
+// Started by the desktop app (desktop/): its window signs in with a one-time link, and it stops the office over its channel.
+wireDesktop({ signIn: office.accounts.sharedPassword && !cfg.claimToken ? () => office.signInLink() : undefined, stop: () => stop('SIGINT') });

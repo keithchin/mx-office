@@ -24,6 +24,8 @@
     "build:server": "tsc -p tsconfig.server.json",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
     "start": "node bin/agent-office.js",
+    "desktop:dev": "npm --prefix desktop run dev --",
+    "desktop:pack": "npm --prefix desktop run pack",
     "prepare": "npm run build"
   },
   "engines": {

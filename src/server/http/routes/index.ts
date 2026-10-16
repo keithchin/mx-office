@@ -18,6 +18,7 @@ import { modelRoutes } from './model.js';
 import { modelChangeRoutes } from './model-change.js';
 import { githubRoutes } from './github.js';
 import { homeRoutes } from './home.js';
+import { desktopRoutes } from './desktop.js';
 import { pageRoutes } from './pages.js';
 import { prShotRoutes } from './prshots.js';
 import { rankingRoutes } from './ranking.js';
@@ -156,6 +157,7 @@ export const routes: readonly Route[] = [
   mobileRoutes.reauth,
   mobileRoutes.act,
   mobileRoutes.status,
+  desktopRoutes.status,
   mobileRoutes.push,
   mobileRoutes.phones,
   phoneAccessRoutes.view,
