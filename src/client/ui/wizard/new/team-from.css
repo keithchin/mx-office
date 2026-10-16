@@ -1,0 +1,19 @@
+/* Start from a team (team-from.ts): the opener and its list, the copied summary with "Not copied", the agents. */
+#modal-root .nw-tf { margin: 14px 0 4px; }
+#modal-root .nw-tf-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#modal-root .nw-tf-open .nw-ico { width: 16px; height: 16px; }
+#modal-root .nw-tf-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin-top: 10px; }
+#modal-root .nw-tf-row { text-align: left; display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--nw-r); background: var(--card); color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; transition: border-color var(--nw-t), background var(--nw-t); }
+#modal-root .nw-tf-row:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); background: var(--nw-sel); }
+#modal-root .nw-tf-client { align-self: flex-start; padding: 0 6px; border-radius: 3px; background: var(--paper-2); color: var(--muted); font-size: 11px; }
+#modal-root .nw-tf-meta { color: var(--muted); font-size: 12px; }
+#modal-root .nw-tf-sum { padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: var(--nw-r); background: var(--nw-sel); font-size: 13px; }
+#modal-root .nw-tf-sumh { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between; }
+#modal-root .nw-tf-sumh h3 { margin: 0; font-size: 14px; }
+#modal-root .nw-tf-sumh h3:focus { outline: none; }
+#modal-root .nw-tf-ul { margin: 6px 0; padding-left: 18px; }
+#modal-root .nw-tf-ul li { margin: 2px 0; }
+#modal-root .nw-tf-not { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+#modal-root .nw-tf-review { margin: 6px 0 0; color: var(--muted); }
+#modal-root .nw-tf-agents { margin-top: 4px; }
+#modal-root .nw-tf-moves li { margin: 6px 0; }

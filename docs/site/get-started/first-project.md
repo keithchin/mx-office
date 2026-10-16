@@ -149,6 +149,21 @@ The levels:
 
 When the setup reaches its **Hire the project team** step, it sets the project's shape and coverage first, then saves the budget and applies the level's models and settings, then hires the shape's roles: the Solo Lead; or the Chief Analyst and the Lead Developer; or the full team. To change the level of a running project, use its [Budget tab](../using-the-office/budget.md#budget-levels).
 
+### Start from a team
+
+![Start from a team: the copied summary, with what isn't copied](../images/new-project-team-from.png)
+
+**Start from a team** (under the team line) lists the projects in the office that have had a team: each with its client, if it has one, its shape, how many members it has had, its budget level and its agents. Pick one and the card says *Copies the setup of travel-approval*, line by line:
+
+- **Copied**: the team shape, which roles it has, each role's model as that project has it now, and the budget level (Lean, Balanced or Fast). A project on a manual budget has no level to copy, so the suggested one stays. Roles that make none of the three shapes exactly are copied as a customised team.
+- **Not copied**: the permission settings (the new project starts on its own defaults: the card shows them, change them under Advanced), connections and tokens, the budget amount (the new project's own estimate prices the level, so the same level can cost a different amount) and anything from that project's work: transcripts, handoffs, journals, documents, its brief and lessons.
+
+It copies a setup only; it doesn't make the new team work better. Everything stays editable as usual: **Change** the shape or the level, or **Customize** the roles. Picking another level lets the copied models go (each role's model follows the level you picked); dropping a role drops its model. **Don't start from a team** puts the suggestion back.
+
+**Also bring the same agents** (a separate tick) picks that project's [agent profiles](../using-the-office/agents.md) for the new project's seats, one per role you kept. An agent on no project is hired with the team. One that is working on a project (or benched there) needs a **Move**, as with [Hire from your agents](../using-the-office/agents.md#hire-from-your-agents): **Create project** first lists each one and what happens there (a handoff note, which stays with that project, then a fresh session here; its seat there is then open), and nothing starts until you confirm. At the **Hire the project team** step the agents are brought through the same Move as the Team tab's (recorded before each step, so a restart carries it on and never hires anyone twice; a move that stops shows Retry and Cancel on Home › Agents), and the rest of the team is hired as usual. An agent's Discovery task, if it has one, runs on the Discovery model.
+
+The setup records where the team came from: in the plan, in the audit log (`wizard.team-from`, with the source, what was copied and the agents) and in the project's `agent-office.project.json` (`teamFrom`; when the source is another client's project, only *another client*, never its name).
+
 ### Advanced
 
 Collapsed under the card, with the defaults from the office's settings and the brief: everything else the wizard needs. A problem shows next to its field when you click **Create project**, and Advanced opens on it.

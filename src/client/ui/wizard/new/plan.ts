@@ -123,6 +123,8 @@ export function planView(flow: Flow) {
     if (!d?.brief || creating) return;
     defaults(d);
     if (!team.validate()) return flow.say('Some fields need attention: see Advanced');
+    // Agents brought from another project: their Move is confirmed before anything starts (team-from.ts).
+    if (!(await team.confirm(btn))) return flow.say('Not created: the agents stay where they are');
     creating = true;
     btn.disabled = true;
     const p = flow.plan;
