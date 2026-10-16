@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **Edit in Studio Pro works again, and says why whenever it can't.** Since release 37 it always stopped at *Couldn't reach the office to bring the project folder up to date*, in the browser and in the desktop app: the call that brings the project folder up to date first (`POST /api/studio/sync`) was never added to the office's list of routes, so it answered a plain-text *Not found* the page couldn't read. It's served now. Every failure on the way now comes back with its real reason, shown as a red toast: a git error, a time-out, Studio Pro already open, not an admin, a request from another address (its Origin and the office's address), or an error in the office itself, instead of a bare error page; when a request never reaches the office the toast names the browser's error (*The request didn't reach the office (TypeError: Failed to fetch)*). A call to an address the office doesn't have (`/api/…`) now answers JSON saying so, and the page waits at most 4 minutes for the folder to be brought up to date. **In test mode** (a test office) Edit in Studio Pro goes all the way to the confirm and the open but never starts Studio Pro: the office logs what it would have run.
 
 ## 2026-10-16 · release 55 (`6e86bbe`)
 

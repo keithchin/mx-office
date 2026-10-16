@@ -288,10 +288,14 @@ test('answers the signed-in routes', async () => {
   await bad(await get(`/api/docs/file?floor=${floor}`, me), 400, 'Bad request');
   await bad(await get(`/api/docs/other?floor=${floor}&path=x`, me), 404, 'Not found');
   assert.deepEqual(await (await fetch(base + '/api/whoami', { method: 'POST', headers: me })).json(), { ok: true, me: { admin: true } });
-  for (const [method, p] of [['GET', '/nothing-here.txt'], ['PUT', '/api/login'], ['POST', '/api/docs'], ['POST', '/api/search']]) {
+  const page = await get('/nothing-here.txt', me);
+  assert.equal(page.status, 404);
+  assert.equal(await page.text(), 'Not found');
+  // A call no route answers is JSON saying what it was, so the page can show it (Edit in Studio Pro's unregistered sync, 2026-10-16).
+  for (const [method, p] of [['PUT', '/api/login'], ['POST', '/api/docs'], ['POST', '/api/search']]) {
     const missing = await fetch(base + p, { method, headers: me });
     assert.equal(missing.status, 404, `${method} ${p}`);
-    assert.equal(await missing.text(), 'Not found');
+    assert.ok(((await missing.json()) as { error: string }).error.startsWith(`The office has no ${method} ${p}:`), `${method} ${p}`);
   }
 
   const out = await post('/api/logout', {}, me);

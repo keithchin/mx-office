@@ -10,6 +10,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { onDesktop } from '../browser.js';
+import { testModeOf } from '../testmode.js';
 import { findMpr as findMprIn } from '../liveapp/checkout.js';
 import type { StudioProblem } from '../../shared/studio.js';
 
@@ -138,8 +139,40 @@ export function mprVersion(mpr: string): string | undefined {
   }
 }
 
-/** This machine. */
+/** Where the test-mode stand-in pretends Mendix is installed (nothing is ever there). */
+export const FAKE_MENDIX_ROOT = 'C:\\MxOfficeTestMode\\Program Files';
+
+/** What test mode's stand-in "opened" since the office started (newest last): nothing was started. */
+const fakeOpens: { cmd: string; args: string[]; at: number }[] = [];
+export const fakeStudioOpens = (): readonly { cmd: string; args: string[]; at: number }[] => fakeOpens;
+
+/**
+ * Test mode's machine (testmode.ts): the real project files (its .mpr, its version), but a Studio Pro
+ * that is never started. It says it can open anything (a desktop, Windows, a Version Selector), and
+ * opening only records the command and logs it, so a test office's Edit in Studio Pro goes all the way
+ * without ever launching the Studio Pro installed on the machine running the tests.
+ */
+export function fakeMachine(): StudioDeps {
+  const selector = path.win32.join(mendixDir({ ProgramFiles: FAKE_MENDIX_ROOT }), 'Version Selector', 'VersionSelector.exe');
+  return {
+    platform: 'win32',
+    env: { ProgramFiles: FAKE_MENDIX_ROOT },
+    exists: (p) => p === selector,
+    readdir: () => [],
+    findMpr: findMprIn,
+    readVersion: mprVersion,
+    spawn: (cmd, args) => {
+      fakeOpens.push({ cmd, args, at: Date.now() });
+      if (fakeOpens.length > 50) fakeOpens.shift();
+      console.log(`  test mode: Studio Pro not started (it would have run ${path.win32.basename(cmd)} ${args.join(' ')})`);
+      return { on: () => undefined, unref: () => undefined };
+    },
+  };
+}
+
+/** This machine; in test mode, the stand-in that never starts Studio Pro (fakeMachine). */
 export function machine(): StudioDeps {
+  if (testModeOf().on) return fakeMachine();
   return {
     platform: process.platform,
     env: process.env,

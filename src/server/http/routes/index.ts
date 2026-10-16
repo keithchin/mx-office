@@ -227,6 +227,7 @@ export const routes: readonly Route[] = [
   firstRunRoutes.api,
   firstRunRoutes.page,
   studioRoutes.info,
+  studioRoutes.sync,
   studioRoutes.open,
   pageRoutes.office,
   pageRoutes.home,

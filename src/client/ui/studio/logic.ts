@@ -11,8 +11,55 @@ export const ADMINS_ONLY_TEXT = 'Only admins can open the project in Studio Pro'
 /** "386 commits". */
 export const commits = (n: number) => `${n} commit${n === 1 ? '' : 's'}`;
 
+/** A call to the office that didn't bring what it asked for, and the real reason why (never only "couldn't reach the office"). */
+export interface Failed {
+  failed: string;
+}
+
+export const isFailed = (x: unknown): x is Failed => !!x && typeof (x as Failed).failed === 'string';
+
+/** How long the page waits for the folder to be brought up to date (a long fast-forward on Windows is minutes, not more). */
+export const SYNC_WAIT_MS = 4 * 60_000;
+
+/** A request that never got an answer: what the browser said, by its error's name (TypeError, AbortError, TimeoutError…). */
+export function unreachedText(err: unknown): string {
+  const e = err as { name?: unknown; message?: unknown } | null;
+  const name = typeof e?.name === 'string' && e.name ? e.name : 'Error';
+  const message = typeof e?.message === 'string' ? e.message : String(err);
+  if (name === 'TimeoutError') return `The office didn't answer in time (${name}: ${message})`;
+  return `The request didn't reach the office (${name}${message ? `: ${message}` : ''})`;
+}
+
+/** What an answer means: its JSON when it's a success, else the reason the office gave (or what came back, when it gave none). */
+export function answerOf<T>(status: number, statusText: string, text: string): T | Failed {
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = undefined;
+  }
+  const error = (body as { error?: unknown } | undefined)?.error;
+  const ok = status >= 200 && status < 300;
+  if (ok && body !== undefined && !(typeof error === 'string' && (body as { ok?: unknown }).ok === false)) return body as T;
+  if (typeof error === 'string' && error) return { failed: error };
+  const said = text.trim().replace(/\s+/g, ' ').slice(0, 160);
+  const code = `HTTP ${status}${statusText ? ` ${statusText}` : ''}`;
+  return { failed: ok ? `The office's answer wasn't readable (${code}${said ? `: ${said}` : ''})` : `The office answered ${code} without a reason${said ? ` (${said})` : ''}` };
+}
+
+/** A call to the office: its JSON answer, or why there isn't one. Never throws. */
+export async function askOffice<T>(url: string, init: RequestInit = {}, timeoutMs?: number): Promise<T | Failed> {
+  try {
+    const res = await fetch(url, { credentials: 'same-origin', ...init, ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}) });
+    return answerOf<T>(res.status, res.statusText, await res.text());
+  } catch (err) {
+    return { failed: unreachedText(err) };
+  }
+}
+
 /** Why it stops before asking the office to bring the folder up to date, if it does. */
-export function stopBeforeSync(i: StudioInfo | null): string | undefined {
+export function stopBeforeSync(i: StudioInfo | Failed | null): string | undefined {
+  if (isFailed(i)) return `Couldn't ask the office about the project: ${i.failed}`;
   if (!i) return "Couldn't ask the office about the project";
   if (i.state?.open) return STUDIO_OPEN_TEXT;
   if (!i.admin) return ADMINS_ONLY_TEXT;
@@ -31,8 +78,8 @@ export function syncLine(s: FloorSyncState | undefined): string | undefined {
 }
 
 /** After the office looked: stop (and why), or go on to the confirm with what to tell. */
-export function afterSync(r: StudioSyncResult | null): { stop: string } | { note?: string; moved: boolean } {
-  if (!r) return { stop: "Couldn't reach the office to bring the project folder up to date" };
+export function afterSync(r: StudioSyncResult | Failed): { stop: string; failed?: true } | { note?: string; moved: boolean } {
+  if (isFailed(r)) return { stop: `Couldn't bring the project folder up to date: ${r.failed}`, failed: true };
   const i = r.info;
   if (!i.hasMpr) return { stop: i.error ?? (r.sync?.state === 'refused' ? `No Mendix project (.mpr) in the project folder yet. ${r.sync.message}` : 'No Mendix project (.mpr) in the project folder, on GitHub either') };
   if (i.state?.open) return { stop: STUDIO_OPEN_TEXT };
