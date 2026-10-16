@@ -48,7 +48,8 @@ export async function desktopStatus(ctx: Ctx, now = Date.now()): Promise<Desktop
     try {
       const f = await floorNeeds(ctx, floor, now);
       for (const r of redItems(floor, f, BASE)) needs.push(desktopNeedOf(r));
-    } catch {
+    } catch (err) {
+      console.error(`agent-office: desktop status: couldn't read ${floor.id}: ${(err as Error).message}`);
       unread.push(floor.id);
     }
   }

@@ -38,6 +38,8 @@ const paths = await packager({
   executableName: 'mx-office',
   appBundleId: 'com.mxoffice.desktop',
   icon: process.platform === 'win32' ? icoFile : undefined,
+  // A network that cuts long downloads: ELECTRON_ZIP_DIR names a folder with electron-v<version>-<platform>-<arch>.zip.
+  ...(process.env.ELECTRON_ZIP_DIR ? { electronZipDir: process.env.ELECTRON_ZIP_DIR } : {}),
   asar: true,
   prune: true,
   ignore: [/^\/src($|\/)/, /^\/out($|\/)/, /^\/scripts($|\/)/, /^\/tsconfig\.json$/, /^\/\.gitignore$/],

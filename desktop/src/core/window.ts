@@ -117,11 +117,11 @@ export function pageHtml(p: PageSpec): string {
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 "Segoe UI",system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center}
 main{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:28px 32px;max-width:760px;width:calc(100% - 64px);box-sizing:border-box}
 h1{font-size:20px;margin:0 0 12px}p{margin:8px 0;color:var(--muted)}
-pre{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px;max-height:300px;overflow:auto;font:12px/1.4 Consolas,monospace;white-space:pre-wrap;word-break:break-all}
+.log{display:flex;flex-direction:column-reverse;background:var(--bg);border:1px solid var(--line);border-radius:6px;max-height:300px;overflow:auto}pre{margin:0;padding:10px;font:12px/1.4 Consolas,monospace;white-space:pre-wrap;word-break:break-all}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.btn{padding:7px 16px;border-radius:6px;border:1px solid var(--line);color:var(--fg);text-decoration:none}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .spin{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:s 1s linear infinite;margin-bottom:12px}@keyframes s{to{transform:rotate(360deg)}}
-</style></head><body><main>${p.busy ? '<div class="spin"></div>' : ''}<h1>${esc(p.title)}</h1>${p.lines.map((l) => `<p>${esc(l)}</p>`).join('')}${p.log ? `<pre>${esc(p.log)}</pre>` : ''}${actions ? `<div class="row">${actions}</div>` : ''}</main></body></html>`;
+</style></head><body><main>${p.busy ? '<div class="spin"></div>' : ''}<h1>${esc(p.title)}</h1>${p.lines.map((l) => `<p>${esc(l)}</p>`).join('')}${p.log ? `<div class="log"><pre>${esc(p.log)}</pre></div>` : ''}${actions ? `<div class="row">${actions}</div>` : ''}</main></body></html>`;
 }
 
 export const dataUrl = (html: string) => `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;

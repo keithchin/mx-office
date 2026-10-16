@@ -13,7 +13,7 @@ The office itself is unchanged. The app runs it the way `npm start` does, from *
 You need what the office needs anyway (Node.js 22.5 or newer, the checkout, `npm install` and `npm run build` done: [Set up on a new machine](../get-started/new-machine.md)). Then, once, in the office's folder:
 
 ```powershell
-npm --prefix desktop install     # Electron itself, into desktop\node_modules (about 120 MB)
+npm --prefix desktop install     # Electron itself, into desktop\node_modules (about 160 MB to download)
 ```
 
 and to start it:
@@ -27,6 +27,8 @@ For a folder you can start without a terminal:
 ```powershell
 npm run desktop:pack             # desktop\out\Mx Office-win32-x64\mx-office.exe
 ```
+
+On a network that cuts long downloads, `npm --prefix desktop install` and the pack can fail fetching Electron (about 160 MB from GitHub). Download `electron-v44.4.5-win32-x64.zip` another way, check it against the release's `SHASUMS256.txt`, and set `ELECTRON_ZIP_DIR` to its folder for `npm run desktop:pack`; for `desktop:dev`, unzip it into `desktop/node_modules/electron/dist` and write `electron.exe` into `desktop/node_modules/electron/path.txt`.
 
 Keep that folder where it is (inside the checkout), or start `mx-office.exe` with `--office-dir <checkout>`: the app looks for the office above its own folder, then asks for it (**Choose the office folder…**) and remembers your choice.
 
@@ -42,6 +44,7 @@ Anything after `npm run desktop:dev --`, or after `mx-office.exe`:
 | `--node <node.exe>` | `MX_OFFICE_NODE` | The Node.js to run it with (default: the one on `PATH`) |
 | `--attach ask\|always\|never` | | When an office already answers on the port: ask (default), open it, or refuse |
 | `--user-data <folder>` | `MX_OFFICE_DESKTOP_DATA` | Where the app keeps its own files (window, notifications seen, cookies) |
+| | `MX_OFFICE_DESKTOP_TEST=1` | For automated checks: the window opens off-screen without taking focus, and notifications are recorded instead of shown |
 | `-- <office options>` | | Passed to the office as they are, such as `-- --city Berlin` |
 
 A [test office](test-offices.md) in the app, never touching the real one:

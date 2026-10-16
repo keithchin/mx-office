@@ -22,6 +22,9 @@ import { DesktopStore, officeKey } from './core/store.js';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
 const POLL_MS = 30_000;
+// Automated checks (MX_OFFICE_DESKTOP_TEST=1): the window opens off-screen without taking focus, and notifications are recorded, not shown.
+const TEST = process.env.MX_OFFICE_DESKTOP_TEST === '1';
+const testNotes: { title: string; body: string }[] = [];
 
 const opts = parseOptions(process.argv.slice(app.isPackaged ? 1 : 2), process.env, os.homedir());
 if (opts.userData) app.setPath('userData', opts.userData);
@@ -48,6 +51,8 @@ let asking = false;
 let pollTimer: ReturnType<typeof setInterval> | undefined;
 let officeDir: string | undefined;
 const shownNotes: Notification[] = [];
+let trayLabels: string[] = [];
+let trayTip = '';
 
 function icon(size?: number): NativeImage {
   const img = nativeImage.createFromPath(path.join(APP_ROOT, 'assets', 'icon.png'));
@@ -66,7 +71,7 @@ const sameOffice = (u: string) => {
 // ---- the window
 
 function createWindow() {
-  const fit = fitBounds(store.data.window, screen.getAllDisplays().map((d) => d.workArea));
+  const fit = TEST ? { bounds: { x: -5000, y: 0, width: 1400, height: 900 }, maximized: false } : fitBounds(store.data.window, screen.getAllDisplays().map((d) => d.workArea));
   win = new BrowserWindow({
     ...fit.bounds,
     show: false,
@@ -77,14 +82,14 @@ function createWindow() {
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   if (fit.maximized) win.maximize();
-  win.once('ready-to-show', () => win?.show());
+  win.once('ready-to-show', () => (TEST ? win?.showInactive() : win?.show()));
   guard(win);
   win.webContents.on('did-navigate', (_e, u) => {
     if (sameOffice(u)) setTimeout(() => void poll(), 1500);
   });
   win.webContents.on('did-create-window', (child) => guard(child));
   const remember = () => {
-    if (!win || win.isMinimized()) return;
+    if (!win || win.isMinimized() || TEST) return;
     const max = win.isMaximized();
     const b = max ? (store.data.window ?? win.getNormalBounds()) : win.getBounds();
     store.data.window = { ...b, maximized: max };
@@ -129,7 +134,7 @@ function showOffice(p = 'home') {
 }
 
 function showWindow() {
-  if (!win) return;
+  if (!win || TEST) return;
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
@@ -327,6 +332,7 @@ function stopPolling() {
 }
 
 function notify(n: { title: string; body: string; onClick: () => void }) {
+  if (TEST) return void testNotes.push({ title: n.title, body: n.body });
   if (!Notification.isSupported()) return;
   const note = new Notification({ title: n.title, body: n.body, icon: icon(64) });
   note.on('click', n.onClick);
@@ -365,7 +371,8 @@ function refreshTray() {
   if (!tray) return;
   const state = trayState();
   const count = status?.needs.length ?? 0;
-  tray.setToolTip(tooltipFor({ state, count, build: health ? healthLabel(health) : undefined, attached: mode === 'attached' }));
+  trayTip = tooltipFor({ state, count, build: health ? healthLabel(health) : undefined, attached: mode === 'attached' });
+  tray.setToolTip(trayTip);
   const line = state === 'running' ? (count ? needYouText(count) : 'Nothing needs you') : tooltipFor({ state }).replace('Mx Office: ', '');
   const template: MenuItemConstructorOptions[] = [
     { label: 'Open Mx Office', click: () => showWindow() },
@@ -380,6 +387,7 @@ function refreshTray() {
     { type: 'separator' },
     { label: 'Quit Mx Office', click: () => void requestQuit() },
   ];
+  trayLabels = template.map((t) => (t.type === 'separator' ? '---' : `${t.type === 'checkbox' ? (t.checked ? '[x] ' : '[ ] ') : ''}${t.label}${t.enabled === false ? ' (disabled)' : ''}`));
   tray.setContextMenu(Menu.buildFromTemplate(template));
 }
 
@@ -519,6 +527,8 @@ if (!app.requestSingleInstanceLock()) {
     appMenu();
     createWindow();
     createTray();
+    // Screenshots and checks drive the app from outside (Playwright's electron.evaluate): only on request.
+    if (TEST) Object.assign(globalThis, { __mxDesktop: { tray: () => tray, win: () => win, sup: () => sup, poll, restartOffice, requestQuit, officeFetch, status: () => status, notes: () => testNotes, badge: (n: number) => nativeImage.createFromBitmap(badgeBitmap(n), { width: 32, height: 32, scaleFactor: 2 }).toPNG().toString('base64'), menu: () => trayLabels, tooltip: () => trayTip } });
     void boot();
   });
 }
