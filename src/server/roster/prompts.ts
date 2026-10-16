@@ -5,7 +5,7 @@
 // project; the coordinating agent is "the Project Coordinator" (role id `pm`).
 
 import { autonomyBrief, DECISION_LABEL, HUMAN_FULL, REVIEW_POLICY, TRIGGER_LABEL, type AutonomyLevel } from '../../shared/roster/autonomy.js';
-import { VERDICT_WORD, type Escalation, type EscalationVerdict } from '../../shared/roster/escalation.js';
+import { VERDICT_WORD, fyiNow, type Escalation, type EscalationVerdict } from '../../shared/roster/escalation.js';
 import { journalPath, playbookPath, ROLE_BY_ID, standupPath, type RoleId } from '../../shared/roster/roles.js';
 import type { Proposal } from '../../shared/roster/types.js';
 import type { SubagentResult } from '../workers/subagents.js';
@@ -27,6 +27,7 @@ const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}\n…(th
 export const ASK_THE_PM = [
   '**Questions for the Project Manager go through `escalate`, never the chat.** The Project Manager does not watch your terminal: a question you write in your chat and then end your turn on is never seen, and an idle session may be benched. Whenever you need the Project Manager (or the client, through them) to answer, decide or sign something off:',
   '- raise it with `office-workers escalate` (or the `escalate` MCP tool). Batch related questions into one escalation: number them in the details, and give options and your recommendation where sensible;',
+  '- FYI is information only; anything with options or that needs an answer is a decision.',
   '- then end your turn, or carry on with whatever it does not block. Never end a turn on a question that is not in an open escalation.',
   '- this wins over any toolkit skill that says to ask the user in chat: never leave an ask only in your chat, a journal, a handoff or a standup page. A hands-on action only a person can do (merge a pull request, sign in, paste a key, install a tool, allow something at the terminal, restart a preview) is `escalate --trigger needs-human`.',
   'It shows in the Project Manager\'s approvals, and their answer comes back to you as a prompt. While it is open (unless the office files it as FYI) you are not benched for being idle; if you are benched meanwhile, the office hires you back with the answer.',
@@ -170,7 +171,7 @@ export function leadNotesPrompt(lines: string[]): string {
 
 /** One escalation in a line, for the Coordinator and the standup. */
 export function escalationLine(e: Escalation): string {
-  return `- [${e.fyi ? 'FYI' : e.urgency}] ${e.by}${e.team ? ` (${e.team})` : ''}: “${e.title}”${e.trigger ? ` — ${TRIGGER_LABEL[e.trigger]}` : ''}${e.recommendation ? ` · recommends: ${e.recommendation}` : ''}`;
+  return `- [${fyiNow(e) ? 'FYI' : e.urgency}] ${e.by}${e.team ? ` (${e.team})` : ''}: “${e.title}”${e.trigger ? ` — ${TRIGGER_LABEL[e.trigger]}` : ''}${e.recommendation ? ` · recommends: ${e.recommendation}` : ''}`;
 }
 
 /** The Project Manager's answer to an escalation, as a prompt to the agent that raised it. */

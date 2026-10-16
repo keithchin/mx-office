@@ -15,7 +15,7 @@ import path from 'node:path';
 import type { AuditInput } from '../../shared/audit.js';
 import { decisionLabel, type AnswerRevisionKind, type DecisionRef, type DispatchRecord } from '../../shared/dispatch.js';
 import type { Escalation, EscalationVerdict } from '../../shared/roster/escalation.js';
-import { isEscalationVerdict } from '../../shared/roster/escalation.js';
+import { fyiNow, isEscalationVerdict } from '../../shared/roster/escalation.js';
 import { answersMessage, expectedOf, type PmAnswer, type Question } from '../../shared/questions.js';
 import type { Recording } from '../../shared/followthrough.js';
 import { noWorkText, type DecisionLinks } from '../../shared/task-links.js';
@@ -132,7 +132,7 @@ export class ChangeAnswer {
     if (e) {
       current = (await this.deps.follow.get(floorId)).recordings[decision];
       const blocked = this.escBlocked(e);
-      base = { title: e.title, rev: e.resolution?.answerRev ?? 0, links: escalationLinks(e, sources), input: { kind: 'esc', options: e.options, ...(e.recommendation ? { recommendation: e.recommendation } : {}), fyi: e.fyi }, ...(blocked ? { blocked } : {}) };
+      base = { title: e.title, rev: e.resolution?.answerRev ?? 0, links: escalationLinks(e, sources), input: { kind: 'esc', options: e.options, ...(e.recommendation ? { recommendation: e.recommendation } : {}), fyi: fyiNow(e) }, ...(blocked ? { blocked } : {}) };
     } else if (qx?.q || qx?.a) {
       current = qx.a?.recording ?? (qx.a?.status === 'recorded' ? { outcome: 'recorded', rev: qx.a.answerRev, at: qx.a.recordedAt ?? 0 } : undefined);
       const blocked = this.qBlocked(qx.a, qx.q);
@@ -183,7 +183,7 @@ export class ChangeAnswer {
     const verdict = noWork ? e.resolution!.verdict : b.verdict;
     if (noWork && verdict === 'dismiss') return { ok: false, status: 400, error: 'A dismissed FYI asked for no work: there is nothing to state' };
     if (!isEscalationVerdict(verdict)) return { ok: false, status: 400, error: 'verdict is one of reply, approve, reject (dismiss for an FYI)' };
-    if (verdict === 'dismiss' && !e.fyi) return { ok: false, status: 400, error: 'Noted is only for an FYI: this one asks something, so answer it' };
+    if (verdict === 'dismiss' && !fyiNow(e)) return { ok: false, status: 400, error: 'Noted is only for an FYI: this one asks something, so answer it' };
     if (i.option && !e.options.includes(i.option)) return { ok: false, status: 400, error: 'That is not one of its options' };
     const text = noWork ? (e.resolution!.text ?? '') : i.text || (i.option ? `Go with: ${i.option}` : '');
     if (!noWork && verdict === 'reply' && !text) return { ok: false, status: 400, error: 'Write your new answer' };

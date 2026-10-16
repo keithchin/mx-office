@@ -5,7 +5,7 @@
 // the floor's threshold at its autonomy level) are dimmed and get a plain "Noted".
 
 import { TRIGGER_LABEL } from '../../../shared/roster/autonomy';
-import { URGENCY_ICON, type Escalation, type EscalationVerdict } from '../../../shared/roster/escalation';
+import { URGENCY_ICON, fyiNow, type Escalation, type EscalationVerdict } from '../../../shared/roster/escalation';
 import { ROLE_BY_ID } from '../../../shared/roster/roles';
 import type { RosterView } from '../../../shared/roster/types';
 import { h, timeAgo, toast } from '../dom';
@@ -32,8 +32,9 @@ export function answer(floor: string, e: Escalation, verdict: EscalationVerdict,
  */
 export function escalationCard(floor: string, e: Escalation, admin: boolean, done: (v: RosterView) => void): HTMLElement {
   const role = e.role ? ROLE_BY_ID.get(e.role) : undefined;
-  const level = e.fyi ? 'fyi' : e.urgency;
-  const tag = e.fyi ? 'FYI' : e.urgency.toUpperCase();
+  const fyi = fyiNow(e);
+  const level = fyi ? 'fyi' : e.urgency;
+  const tag = fyi ? 'FYI' : e.urgency.toUpperCase();
   const meta = [`${role?.icon ?? '🤖'} ${e.by}${role ? ` · ${role.title}` : ''}`, timeAgo(e.at), e.trigger ? TRIGGER_LABEL[e.trigger] : null].filter(Boolean).join(' · ');
   const reply = h('textarea.esc-reply', { rows: 1, placeholder: e.options.length ? 'Your answer (or pick an option)…' : 'Your answer…', 'aria-label': `Your answer to “${e.title}”` }) as HTMLTextAreaElement;
   const noWorkBox = h('input', { type: 'checkbox' }) as HTMLInputElement;
@@ -83,9 +84,9 @@ export function escalationCard(floor: string, e: Escalation, admin: boolean, don
               h('button.btn.small.esc-reply-btn', { type: 'button', title: `Send your answer to ${e.by} as its next prompt`, onclick: () => send('reply') }, '💬 Reply'),
               h('button.btn.small.ro-approve', { type: 'button', title: `Approve: ${e.by} goes ahead (your note goes with it)`, onclick: () => send('approve') }, '✅ Approve'),
               h('button.btn.small.esc-reject', { type: 'button', title: `Reject: ${e.by} doesn't go ahead (say why)`, onclick: () => send('reject') }, '❌ Reject'),
-              e.fyi ? h('button.btn.small', { type: 'button', title: 'Noted: resolve it without sending anything', onclick: () => send('dismiss') }, '✓ Noted') : null,
+              fyi ? h('button.btn.small', { type: 'button', title: 'Noted: resolve it without sending anything', onclick: () => send('dismiss') }, '✓ Noted') : null,
             ),
-            e.fyi ? null : h('label.esc-nowork', { title: `With your answer, record that no implementation work is required for it (${e.by} records the decision and starts no work for it)` }, noWorkBox, ` ${NO_WORK_REQUIRED}`),
+            fyi ? null : h('label.esc-nowork', { title: `With your answer, record that no implementation work is required for it (${e.by} records the decision and starts no work for it)` }, noWorkBox, ` ${NO_WORK_REQUIRED}`),
           )
         : h('p.esc-meta', {}, 'Only the Project Manager (an admin) can answer it.'),
     resolved && e.resolution!.outcome !== 'superseded' ? answerControls(floor, `esc:${e.id}`, e.resolution!.answerRev, admin) : null,
@@ -116,7 +117,7 @@ function saying(e: Escalation): string {
     if (r.verdict === 'dismiss') return `Cool, noted. Back to work ✌️`;
     return `Thanks, that answers it. On it now 🙌`;
   }
-  if (e.fyi) return `Just so you know: ${what} Nothing needed from you 🙂`;
+  if (fyiNow(e)) return `Just so you know: ${what} Nothing needed from you 🙂`;
   const pick = e.options.length ? (e.recommendation ? ` I'd go with “${gist(e.recommendation)}”, but your call.` : ' Which one should I go with?') : '';
   switch (e.trigger) {
     case 'blocked':

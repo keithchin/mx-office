@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **An escalation with answer options is a decision, even when it would be FYI.** The Chief Analyst on packtrack filed *CAC-3: sign off BRD F001 and answer 8 open points* with three options and a recommendation, at an urgency the project files as FYI, so it didn't wait on you as a decision. FYI is information only: an agent's escalation with options, a recommendation and a question, or a sign-off it names (CAC-3) is now filed as a decision, the agent is told *Filed as a decision, not FYI: it has answer options*, and the Audit log records `escalation.fyi-corrected`. Open ones already filed as FYI with options are read as decisions (Needs you, the phone, Jeff's order, benching) without rewriting them; answered ones are unchanged. The agents' instructions and the `escalate` tool say so too.
 
 ## 2026-10-16 · release 52 (`87ab10b`)
 

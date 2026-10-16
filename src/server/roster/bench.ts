@@ -5,6 +5,7 @@
 // person, is never idle and never stopped — it is only ever benched from a finished turn.
 
 import type { WorkerStatus } from '../../shared/protocol.js';
+import { fyiNow } from '../../shared/roster/escalation.js';
 
 /** Statuses of an agent in the middle of something: booting, working, or asking a person. */
 const BUSY = new Set<WorkerStatus>(['starting', 'working', 'needs_input']);
@@ -73,7 +74,7 @@ export interface EscalationLook {
  * on the human is never benched for being idle: its turn is over because the next move is theirs.
  */
 export function awaitingAnswer<E extends EscalationLook>(escalations: readonly E[], role: string): E | undefined {
-  return escalations.find((e) => e.status === 'open' && !e.fyi && e.role === role);
+  return escalations.find((e) => e.status === 'open' && !fyiNow(e) && e.role === role);
 }
 
 /**
