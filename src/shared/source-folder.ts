@@ -1,5 +1,6 @@
 // A source folder attached to a New project draft (Migrate an app, Change an existing app): a local folder
-// of legacy code the setup copies into the project's sources/legacy/<name>/, never uploaded anywhere. What
+// of legacy code the setup imports into the project's sources/legacy/<name>/ (stored on this machine, git-ignored,
+// never pushed to GitHub; the team's agents send what they read of it to the hosted model to work on it). What
 // is skipped (dependency and build folders, secrets-like files, large files), the caps, the summary the
 // page shows before anything is copied, and the short file index the Chief Analyst's planning call gets
 // instead of the tree. Pure: the walking and copying is server/wizard/source-folder.ts.
@@ -78,7 +79,7 @@ export function summaryText(s: Pick<SourceFolder, 'files' | 'bytes' | 'skipped'>
 export function fileIndexText(s: SourceFolder, max = INDEX_MAX): string {
   const shown = s.index.slice(0, max);
   return [
-    `The legacy source folder "${s.name}" is attached (${summaryText(s)}). It is confidential and stays on the office's machine.`,
+    `The legacy source folder "${s.name}" is attached (${summaryText(s)}). It is confidential: stored on the office's machine and kept out of git.`,
     `You have not read it and cannot: the team reads the code after setup. Here is only its file index (${shown.length} of ${s.files} files, shallowest first, path and size):`,
     ...shown.map((f) => `- ${f.path} (${bytesText(f.size)})`),
     'Use the index only to see what kind of app it is (its stack, its main areas). Anything about its behaviour that the description and documents do not say is an open question, never an assumption.',

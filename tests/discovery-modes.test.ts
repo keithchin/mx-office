@@ -42,6 +42,8 @@ test('a migration’s Discovery names the runbook’s migration track, its steps
   assert.ok(b.includes('**CAC-1b** (`skills/checkpoints/checkpoint-extraction.md`)'));
   assert.ok(b.includes(`\`${TOOLKIT}/bin/source-ledger.sh check .\``));
   assert.ok(b.includes(`**The legacy source (confidential)** is in \`${LEGACY}\``));
+  assert.ok(b.includes(`\`${LEGACY}.manifest.json\` lists exactly the files imported`));
+  assert.ok(b.includes('reading it in your session sends what you read to the model') && !b.includes('never send it anywhere'), 'honest about the hosted model');
   // The gates and the stop stay.
   assert.ok(b.includes('**Stop at every ✋ gate (0, 3, 4)**'));
   assert.ok(b.includes('**Do not start Stage 5 (build).**'));
@@ -71,6 +73,9 @@ test('the committed project brief marks the legacy source confidential', () => {
   const pb = discoveryPlan('migration').brief!;
   const md = briefMarkdown(pb, { repo: 'Test-Org/pack-track', entry: 'Migration', source: { name: 'shop-app', files: 12, bytes: 3000 } });
   assert.match(md, /## Legacy source \(confidential\)/);
-  assert.match(md, /`sources\/legacy\/shop-app\/`, git-ignored: it stays on the office's machine/);
+  assert.match(md, /`sources\/legacy\/shop-app\/`, git-ignored: it is stored on the office's machine and never committed or pushed to GitHub/);
+  assert.match(md, /not kept from the hosted model: the team's agents read it and send what they read to Claude/, 'no claim the code never leaves the machine');
+  assert.match(md, /`sources\/legacy\/shop-app\.manifest\.json` beside it lists exactly what was imported/);
+  assert.doesNotMatch(md, /never committed, pushed or uploaded/);
   assert.doesNotMatch(briefMarkdown(pb, { repo: 'Test-Org/pack-track', entry: 'Migration' }), /Legacy source/);
 });

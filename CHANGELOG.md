@@ -6,7 +6,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **A Retry of the setup step now imports the source folder as it is, not what was copied before.** A migration's source folder used to be copied into `sources/legacy/<name>/` file by file, and a Retry kept any file already there with the same size: an edit that kept a file's length was never imported, and a file deleted from the source stayed in the copy. Each import is now a fresh copy made in a staging folder, hashed as it is copied, checked against the source again and against its new manifest, `sources/legacy/<name>.manifest.json` (every file's path, size and sha256; git-ignored with the snapshot), and only then swapped in, so the snapshot holds exactly the manifest's files. A file that changes while it's copied is copied again; a folder that keeps changing stops the step with the paths that changed. An import the office was stopped in the middle of is never published half-done: the next run throws the partial copy away, or finishes swapping in one that was complete and checked. Exclusions, caps, refused paths and the link and junction protections are unchanged, and the source folder is still only read. **A project imported before this has no manifest: Retry its setup step, or re-import, if you need to know exactly what it holds.**
+
+### Changed
+
+- **Correction: the source folder is stored locally and never published to GitHub, but it does reach the hosted model.** Earlier release notes, the docs and the New project dialog said an attached source folder *never leaves the machine*, is *never uploaded* or *stays on the office's machine*. That was true of the office itself (the copy is in the project folder, git-ignored, never committed or pushed, and the Chief Analyst's planning call gets only its file index), but after setup the team's agents read the code and send what they read to Claude, through Anthropic's API, to work on it. The dialog, the project brief's *Legacy source (confidential)* section, the Discovery brief and the docs ([Migrate an app](docs/site/get-started/migrate-an-app.md), [A source folder](docs/site/get-started/first-project.md#a-source-folder)) now say so. If a client doesn't allow its code to be processed by a hosted model, don't attach its folder.
 
 ## 2026-10-16 · release 54 (`62707f9`)
 

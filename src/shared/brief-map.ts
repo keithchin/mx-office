@@ -176,7 +176,7 @@ export function briefMarkdown(pb: PlanBrief, meta: { repo: string; entry: string
     }
     if (pb.domains.tier) out.push('', `Suggested size tier: **${pb.domains.tier}**${pb.domains.tierWhy ? ` (${bare(pb.domains.tierWhy)})` : ''}.`);
   }
-  if (meta.source) out.push('', '## Legacy source (confidential)', '', `The legacy app's source folder **${meta.source.name}** (${meta.source.files} files, ${bytesText(meta.source.bytes)}) is copied into \`${legacyRel(meta.source.name)}/\`, git-ignored: it stays on the office's machine and is never committed, pushed or uploaded. Dependencies, build output and secrets-like files were left out. Quote it in analysis only as far as the client allows.`);
+  if (meta.source) out.push('', '## Legacy source (confidential)', '', `The legacy app's source folder **${meta.source.name}** (${meta.source.files} files, ${bytesText(meta.source.bytes)}) is imported into \`${legacyRel(meta.source.name)}/\`, git-ignored: it is stored on the office's machine and never committed or pushed to GitHub. It is not kept from the hosted model: the team's agents read it and send what they read to Claude (through Anthropic's API) to work on it. \`${legacyRel(meta.source.name)}.manifest.json\` beside it lists exactly what was imported (paths, sizes, sha256). Dependencies, build output and secrets-like files were left out. Quote it in analysis only as far as the client allows.`);
   if (pb.attachments.length) {
     out.push('', '## Input documents', '', 'Copied into `sources/` (the toolkit’s drop folder, git-ignored by default).', '');
     for (const a of pb.attachments) out.push(`- ${a.name}: ${READ_LABEL[a.read]}${a.note ? ` (${a.note})` : ''}`);
