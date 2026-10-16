@@ -60,11 +60,12 @@ Each answer you give is kept in the project's answer history before the book cha
 
 ### Recorded as given
 
-At **Send** the office keeps what the message asked the analyst to record for each answer: the status, and the `answer`, or the `decision` with `consentBy` and `consentAt`. On every collection it compares the BRD's fields with that. The toolkit's ANSWERED, ASSUMED or MOOT alone never counts: the words must match (case, quotes, punctuation and spacing aside; consent times to the minute).
+At **Send** the office keeps what the message asked the analyst to record for each answer: the status, and the `answer`, or the `decision` with `consentBy` and `consentAt`. On every collection it compares the BRD's fields with that. The toolkit's ANSWERED, ASSUMED or MOOT alone never counts: the BRD's `answer` (or `decision`) must be exactly the answer sent, by the same exact-answer rule as escalations (only spacing, curly quotes and dashes, letter case, quotes around the whole value and a final full stop are ignored; see [Recorded as given](../teams-and-agents/escalations.md#recorded-as-given)); a MOOT's status must read `MOOT - <your reason>`; consent times to the minute.
 
 Each sent answer's card says how its record stands, and where:
 
 - **Recorded as given**, then **In a working copy, not committed**, **Committed on office/tim-1** or **Merged into main**. The location keeps the file's path, the commit and the file's blob in that commit as separate fields.
+- **Needs review: not worded exactly as given**: the BRD's field mentions your answer but isn't exactly it (*Not approved* for *Approved*, *5* for *-5*, added conditions). Same card and buttons as below; it never marks the answer recorded.
 - **Recorded differently**: the BRD says something else. The card shows *You decided: … · Recorded: …* with the location, and **Accept as recorded** (the BRD's words become a new revision of your answer; nothing is sent) or **Send correction** (a new revision, sent to the analyst as a new message that replaces the last one).
 - **Recorded for rev 1**: the record matches an earlier revision of your answer.
 - **Not recorded yet.**

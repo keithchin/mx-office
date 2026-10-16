@@ -126,9 +126,9 @@ An answered escalation or question stays on the Needs you card as a **follow-thr
 > ↻ **Following through** · ESC-3f9c2a1b7e Sign-in: SSO or magic links?
 > Decided (rev 1) · Sent (Typed (the office saw it go)) · Recorded as given · Committed on office/dev
 
-*Sent* uses the attempt's own state, so *You said it went through* stays yours, never the office's. The record is one of *Recorded as given*, *Recorded differently*, *Recorded for rev 1*, *Not recorded yet*, with where it is: *In a working copy, not committed*, *Committed on &lt;branch&gt;* or *Merged into main*. How the office finds and compares the record is in [Escalations](../teams-and-agents/escalations.md#recorded-as-given) and [Questions](questions.md#recorded-as-given).
+*Sent* uses the attempt's own state, so *You said it went through* stays yours, never the office's. The record is one of *Recorded as given*, *Needs review: not worded exactly as given*, *Recorded differently*, *Recorded for rev 1*, *Not recorded yet*, with where it is: *In a working copy, not committed*, *Committed on &lt;branch&gt;* or *Merged into main*. How the office finds and compares the record is in [Escalations](../teams-and-agents/escalations.md#recorded-as-given) and [Questions](questions.md#recorded-as-given).
 
-A record that differs from what you decided, or cites an older revision, is a warning card with both texts and where the record is:
+A record that needs review (it cites your answer but doesn't state it exactly), differs from what you decided, or cites an older revision, is a warning card with both texts, the answer read from the citation's line when that isn't the whole record, and where the record is:
 
 > ⚠ **Recorded differently** · ESC-3f9c2a1b7e Sign-in: SSO or magic links?
 > **You decided:** Go with: Use SSO · **Recorded:** use magic links for everyone · Committed on office/dev · docs/team/development.md @ 1a2b3c4 (blob 9f8e7d6)
@@ -136,7 +136,7 @@ A record that differs from what you decided, or cites an older revision, is a wa
 
 - **Accept as recorded** makes the recorded words your decision: a new revision (*accept-as-recorded*) in the answer history, with the recorded text. Nothing is sent, because there's nothing to tell anyone.
 - **Send correction** makes a new revision (*correction*) and types it to the agent, as a new attempt that replaces the last one, with the citation to use now (*Decided per ESC-… rev 2*).
-- Neither blocks any other work. *Recorded differently* never settles anything else by itself: a stuck decision that the register says is CONFIRMED stays open while your answer to it isn't recorded as given and merged.
+- Neither blocks any other work. *Needs review* and *Recorded differently* never settle anything else by themselves: a stuck decision that the register says is CONFIRMED stays open while your answer to it isn't recorded as given and merged.
 
 Every follow-through item also has **Change answer** and **History (n revisions)** (admins only). Change answer replaces the decision with a new revision and sends it, saying which revision it replaces and the citation to use now; the window lists the work that used the old revision, each marked **Recorded link** or **Inferred**, then the task links with their strength and evidence (*candidate · acknowledged · associated change PR #98 · checks passed on the associated change*), or *No links found*, or your stated *No implementation work required*. The follow-through item shows its task links too, once the office has worked them out. See [Task ids and linked work](../teams-and-agents/escalations.md#task-ids-and-linked-work). The history is read once, when you open it, from the answer history. See [Changing an answer](../teams-and-agents/escalations.md#changing-an-answer) and, for questions, [Questions](questions.md#changing-an-answer).
 
