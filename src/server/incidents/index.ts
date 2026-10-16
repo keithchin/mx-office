@@ -2,7 +2,9 @@
 // POST /api/incidents) or by a detection rule (rules.ts, through raise), changed, noted and resolved
 // here, every change in the audit log as incident.created, incident.updated or incident.resolved (whose
 // {t:'audit.new'} is also what tells the pages to look again). Before office.ts installs a store, and in
-// tests that don't, nothing is kept.
+// tests that don't, nothing is kept. A rule firing again folds into its open incident; within the dedupe
+// window after someone resolved it, it reopens that one ("came back after … resolved it") rather than
+// opening a new number, and a new one opened later says which it follows.
 
 import { randomBytes } from 'node:crypto';
 import { OFFICE_FLOOR, type AuditActor } from '../../shared/audit.js';
@@ -11,7 +13,7 @@ import { audit } from '../audit/index.js';
 import type { DraftedField } from '../../shared/incident-analysis.js';
 import type { IncidentPatch } from './edit.js';
 import type { IncidentStore } from './store.js';
-import { trimTimeline, type RecurDelta } from './recur.js';
+import { AUDIT_IDS_MAX, trimTimeline, type RecurDelta } from './recur.js';
 
 export { IncidentStore } from './store.js';
 
@@ -62,6 +64,7 @@ export interface NewIncident {
   retrospective?: boolean;
   status?: Incident['status'];
   timeline?: TimelineEntry[];
+  follows?: Incident['follows'];
 }
 
 /** Makes an incident: by a person, an agent or a rule (detectedBy says which). */
@@ -81,7 +84,8 @@ export function createIncident(n: NewIncident, actor: AuditActor, op: 'create' |
     floors: n.floors ?? [],
     summary: n.summary ?? '',
     impact: n.impact ?? {},
-    timeline: n.timeline ?? [entry(detectedBy.name, n.retrospective ? 'Recorded retrospectively' : detectedBy.kind === 'rule' ? `Detected: ${n.summary ?? n.title}` : 'Opened', 'detected', n.detectedAt ?? now)],
+    timeline: n.timeline ?? [entry(detectedBy.name, n.retrospective ? 'Recorded retrospectively' : detectedBy.kind === 'rule' ? `Detected: ${n.summary ?? n.title}` : 'Opened', 'detected', n.detectedAt ?? now), ...(n.follows ? [entry(detectedBy.name, `Seen before as INC-${n.follows.number}, resolved longer ago than the dedupe window`, 'note', n.detectedAt ?? now)] : [])],
+    ...(n.follows ? { follows: n.follows } : {}),
     ...(n.rootCause ? { rootCause: n.rootCause } : {}),
     actions: n.actions ?? [],
     auditIds: n.auditIds ?? [],
@@ -99,8 +103,12 @@ export function createIncident(n: NewIncident, actor: AuditActor, op: 'create' |
   return i;
 }
 
-/** Changes an incident; undefined when there's no such incident (or nothing is kept). Notes what changed on its timeline. */
-export function updateIncident(id: string, p: IncidentPatch, actor: AuditActor): Incident | undefined {
+/**
+ * Changes an incident; undefined when there's no such incident (or nothing is kept). Notes what changed on
+ * its timeline. `extra.note` goes on the timeline in the same line (the bulk resolve's note, bulk.ts) and
+ * `extra.details` into its audit event.
+ */
+export function updateIncident(id: string, p: IncidentPatch, actor: AuditActor, extra: { note?: string; details?: Record<string, unknown> } = {}): Incident | undefined {
   const store = current;
   const was = store?.get(id);
   if (!store || !was) return undefined;
@@ -146,10 +154,12 @@ export function updateIncident(id: string, p: IncidentPatch, actor: AuditActor):
   const quiet = changed.filter((c) => c !== 'severity' && c !== 'status');
   if (quiet.length) pushTimeline(i, entry(by, `Changed ${quiet.join(', ')}`, 'change'));
   if (!changed.length) return was;
+  const note = extra.note?.trim().slice(0, 1000);
+  if (note) pushTimeline(i, entry(by, note, 'note'));
   i.updatedAt = clock();
   store.put(i, resolved ? 'resolve' : 'update', by);
-  if (resolved) auditOf(i, actor, 'incident.resolved', `Resolved ${incidentRef(i)}: ${i.title}${i.rootCause ? ` — cause: ${i.rootCause}` : ''}`, { rootCause: i.rootCause ? { length: i.rootCause.length } : undefined });
-  else auditOf(i, actor, 'incident.updated', `Changed ${changed.join(', ')} of ${incidentRef(i)}: ${i.title}`, { changed });
+  if (resolved) auditOf(i, actor, 'incident.resolved', `Resolved ${incidentRef(i)}: ${i.title}${i.rootCause ? ` — cause: ${i.rootCause}` : ''}`, { rootCause: i.rootCause ? { length: i.rootCause.length } : undefined, ...(note ? { note } : {}), ...extra.details });
+  else auditOf(i, actor, 'incident.updated', `Changed ${changed.join(', ')} of ${incidentRef(i)}: ${i.title}`, { changed, ...extra.details });
   return i;
 }
 
@@ -173,6 +183,8 @@ export interface Detection {
   rule: IncidentRule;
   /** Its floor's id, or none for the office as a whole. */
   floor?: string;
+  /** Where on the floor, when one rule keeps an incident per place (a page freeze: the view). Part of its dedupe key. */
+  place?: string;
   severity: IncidentSeverity;
   title: string;
   summary: string;
@@ -186,11 +198,46 @@ export interface Detection {
 
 const RULE_ACTOR: AuditActor = { kind: 'office', name: 'Incident rules' };
 
+/** An incident's dedupe key: rule and floor, and the place on it when the rule keeps one per place. */
+export const dedupeKeyOf = (d: Pick<Detection, 'rule' | 'floor' | 'place'>) => `${d.rule}:${d.floor ?? OFFICE_FLOOR}${d.place ? `:${d.place}` : ''}`;
+
 /**
- * A rule fired: a new incident, or, when the same rule already has one open on the same floor that it
- * fired into within the dedupe window, that one again (counted, its workers and events added, its
+ * Whether `i` is the incident `d` belongs to. One kept before the rule had places (a page freeze's
+ * `pageStall:floor`, before release 54) still is: open, it takes every place's recurrences until it's
+ * resolved; resolved, only its own place's (the place its title ends with).
+ */
+export function sameIncident(i: Pick<Incident, 'dedupeKey' | 'status' | 'title'>, d: Pick<Detection, 'rule' | 'floor' | 'place'>): boolean {
+  if (i.dedupeKey === dedupeKeyOf(d)) return true;
+  if (!d.place || i.dedupeKey !== dedupeKeyOf({ ...d, place: undefined })) return false;
+  return i.status !== 'resolved' || i.title.endsWith(`(${d.place})`);
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** "16 Oct 08:07" (the office's own clock), for a timeline line. */
+const when = (at: number) => {
+  const d = new Date(at);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+/** What a detection adds to `i`: workers and events not on it yet, and the impact as it becomes. */
+function merged(i: Incident, d: Detection) {
+  const seen = new Set(i.workers.map((w) => w.id ?? w.name));
+  const workers = (d.workers ?? []).filter((w, n, all) => !seen.has(w.id ?? w.name) && all.findIndex((x) => (x.id ?? x.name) === (w.id ?? w.name)) === n);
+  const auditIds = (d.auditIds ?? []).filter((x) => !i.auditIds.includes(x));
+  let impact = i.impact;
+  if (d.impact?.spendUsd !== undefined) impact = { ...impact, spendUsd: Math.max(impact.spendUsd ?? 0, d.impact.spendUsd) };
+  const agents = i.workers.length + workers.length;
+  if (agents) impact = { ...impact, agents: Math.max(impact.agents ?? 0, agents) };
+  return { workers, auditIds, impact };
+}
+
+/**
+ * A rule fired: a new incident, or, when the same rule already has one open on the same floor (and place)
+ * that it fired into within the dedupe window, that one again (counted, its workers and events added, its
  * severity raised if this is worse), written as a small 'recur' line with only what changed (recur.ts),
- * never a full copy of the incident. Nothing when the rule is switched off.
+ * never a full copy of the incident. When the one it would have folded into was resolved within the window,
+ * it comes back: reopened, its number kept, a line saying who resolved it when (a 'reopen' line). Resolved
+ * longer ago, the new incident says which one it follows. Nothing when the rule is switched off.
  */
 export function raise(d: Detection): Incident | undefined {
   const store = current;
@@ -198,21 +245,20 @@ export function raise(d: Detection): Incident | undefined {
   const settings = store.settings();
   if (!settings.rules[d.rule].on) return undefined;
   const now = d.at ?? clock();
-  const key = `${d.rule}:${d.floor ?? OFFICE_FLOOR}`;
-  const open = store.list().find((i) => i.dedupeKey === key && i.status !== 'resolved' && now - i.lastSeenAt < settings.dedupeHours * 3_600_000);
-  if (!open) {
-    return createIncident(
-      { title: d.title, severity: d.severity, summary: d.summary, floors: d.floor ? [d.floor] : [], impact: d.impact, workers: d.workers, auditIds: d.auditIds, detectedAt: now, dedupeKey: key, detectedBy: { kind: 'rule', name: 'Incident rules', rule: d.rule } },
-      RULE_ACTOR,
-    );
-  }
-  const seen = new Set(open.workers.map((w) => w.id ?? w.name));
-  const workers = (d.workers ?? []).filter((w, n, all) => !seen.has(w.id ?? w.name) && all.findIndex((x) => (x.id ?? x.name) === (w.id ?? w.name)) === n);
-  const auditIds = (d.auditIds ?? []).filter((x) => !open.auditIds.includes(x));
-  let impact = open.impact;
-  if (d.impact?.spendUsd !== undefined) impact = { ...impact, spendUsd: Math.max(impact.spendUsd ?? 0, d.impact.spendUsd) };
-  const agents = open.workers.length + workers.length;
-  if (agents) impact = { ...impact, agents: Math.max(impact.agents ?? 0, agents) };
+  const windowMs = settings.dedupeHours * 3_600_000;
+  const mine = store.list().filter((i) => sameIncident(i, d));
+  const open = mine.find((i) => i.status !== 'resolved' && now - i.lastSeenAt < windowMs);
+  if (open) return recurInto(store, open, d, now);
+  const resolved = mine.filter((i) => i.status === 'resolved').sort((x, y) => (y.resolvedAt ?? y.updatedAt) - (x.resolvedAt ?? x.updatedAt))[0];
+  if (resolved && now - (resolved.resolvedAt ?? resolved.updatedAt) < windowMs) return reopen(store, resolved, d, now);
+  return createIncident(
+    { title: d.title, severity: d.severity, summary: d.summary, floors: d.floor ? [d.floor] : [], impact: d.impact, workers: d.workers, auditIds: d.auditIds, detectedAt: now, dedupeKey: dedupeKeyOf(d), detectedBy: { kind: 'rule', name: 'Incident rules', rule: d.rule }, ...(resolved ? { follows: { id: resolved.id, number: resolved.number } } : {}) },
+    RULE_ACTOR,
+  );
+}
+
+function recurInto(store: IncidentStore, open: Incident, d: Detection, now: number): Incident {
+  const { workers, auditIds, impact } = merged(open, d);
   const raised = worse(d.severity, open.severity) !== open.severity;
   const delta: RecurDelta = {
     occurrences: open.occurrences + 1,
@@ -226,6 +272,23 @@ export function raise(d: Detection): Incident | undefined {
   };
   const i = store.recur(open.id, delta, RULE_ACTOR.name)!;
   auditOf(i, RULE_ACTOR, 'incident.updated', `${incidentRef(i)} seen again (${i.occurrences}×): ${d.summary}`, { changed: raised ? ['occurrences', 'severity'] : ['occurrences'], rule: d.rule });
+  return i;
+}
+
+/** A resolved incident its rule fired into again within the window: open again, with who resolved it when. */
+function reopen(store: IncidentStore, was: Incident, d: Detection, now: number): Incident {
+  const i: Incident = structuredClone(was);
+  const { workers, auditIds, impact } = merged(was, d);
+  const resolvedAt = was.resolvedAt ?? was.updatedAt;
+  const resolver = [...was.timeline].reverse().find((e) => e.kind === 'status' && e.text.endsWith('→ resolved'))?.by;
+  const severity = worse(d.severity, was.severity);
+  pushTimeline(i, entry(RULE_ACTOR.name, 'Status resolved → open', 'status', now));
+  if (severity !== was.severity) pushTimeline(i, entry(RULE_ACTOR.name, `Severity ${was.severity} → ${severity}`, 'status', now));
+  pushTimeline(i, entry(RULE_ACTOR.name, `Came back after ${resolver ? `${resolver} resolved it` : 'it was resolved'} at ${when(resolvedAt)}: ${d.again ?? d.summary}`, 'recurrence', now));
+  Object.assign(i, { status: 'open', severity, occurrences: was.occurrences + 1, lastSeenAt: now, updatedAt: clock(), reopens: (was.reopens ?? 0) + 1, workers: [...was.workers, ...workers], auditIds: [...was.auditIds, ...auditIds].slice(0, AUDIT_IDS_MAX), impact });
+  delete i.resolvedAt;
+  store.put(i, 'reopen', RULE_ACTOR.name);
+  auditOf(i, RULE_ACTOR, 'incident.updated', `${incidentRef(i)} came back after it was resolved (${i.reopens}× now): ${d.summary}`, { changed: ['status', 'occurrences'], rule: d.rule, reopened: true, resolvedAt });
   return i;
 }
 

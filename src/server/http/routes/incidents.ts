@@ -15,7 +15,7 @@ import type { Ctx } from '../../office/context.js';
 import type { Session } from '../../auth.js';
 
 const isAdmin = (ctx: Ctx, session: Session) => ctx.meOf(session.account?.id).admin;
-const actorOf = (session: Session) => human(session.account?.name ?? 'An admin', session.account?.id);
+export const actorOf = (session: Session) => human(session.account?.name ?? 'An admin', session.account?.id);
 const list = (v: string | null) =>
   (v ?? '')
     .split(',')
@@ -23,7 +23,7 @@ const list = (v: string | null) =>
     .filter(Boolean);
 
 /** A POST an admin may make: same origin, an admin, a store, and its JSON body; or the answer already sent. */
-async function adminBody(ctx: Ctx, r: RouteRequest & { session: Session }): Promise<Record<string, unknown> | undefined> {
+export async function adminBody(ctx: Ctx, r: RouteRequest & { session: Session }): Promise<Record<string, unknown> | undefined> {
   if (!sameOrigin(r.req, ctx.cfg)) return void send(r.res, 403, { error: 'Forbidden' });
   if (!isAdmin(ctx, r.session)) return void send(r.res, 403, { error: 'Only admins can change incidents' });
   if (!incidentStore()) return void send(r.res, 503, { error: 'Incidents are off' });

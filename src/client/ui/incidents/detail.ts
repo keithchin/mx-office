@@ -73,7 +73,7 @@ export function incidentDetail(i: Incident, o: DetailOpts): HTMLElement {
     { 'data-sev': i.severity },
     h('button.btn.inc-back', { type: 'button', onclick: () => o.back() }, '← All incidents'),
     h('header.inc-dhead', {}, h('div.inc-chips', {}, sevChip(i), statusChip(i), i.retrospective ? h('span.inc-retro', {}, 'Recorded retrospectively') : null, i.occurrences > 1 ? h('span.inc-occ', { title: 'Times its rule fired into it' }, `${i.occurrences}×`) : null), h('h2.inc-title', {}, h('span.inc-ref', {}, incidentRef(i)), ' ', i.title), buttons),
-    h('p.inc-meta', {}, `Detected ${fmtTime(i.detectedAt)} by ${i.detectedBy.name}${i.detectedBy.kind === 'rule' ? ' (automatic rule)' : ''} · ${where}${i.resolvedAt ? ` · resolved ${fmtTime(i.resolvedAt)}` : ''}`),
+    h('p.inc-meta', {}, `Detected ${fmtTime(i.detectedAt)} by ${i.detectedBy.name}${i.detectedBy.kind === 'rule' ? ' (automatic rule)' : ''} · ${where}${i.resolvedAt ? ` · resolved ${fmtTime(i.resolvedAt)}` : ''}${i.reopens ? ` · came back ${i.reopens}× after it was resolved` : ''}${i.follows ? ` · follows INC-${i.follows.number}` : ''}`),
     i.summary ? section('Summary', h('p.inc-text', {}, i.summary)) : null,
     analysisBox(i, o.admin, o.changed, an),
     section('Impact', impact.length ? h('ul.inc-impact-list', {}, ...impact) : h('p.inc-none', {}, busy ? 'Analysing…' : 'Not recorded'), fieldNote(an, 'impact')),

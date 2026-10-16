@@ -53,12 +53,17 @@ export function throttle(ms: number, now: () => number = Date.now) {
   };
 }
 
-/** The incident a page report raises. `floorKnown` says whether its floor is one of the office's. */
+/**
+ * The incident a page report raises. `floorKnown` says whether its floor is one of the office's. One per
+ * view per project (its place): a freeze of the same view folds into it, and comes back into it after it
+ * was resolved (incidents/index.ts raise).
+ */
 export function pageDetection(r: PageReport, who: string, floorKnown: boolean): Detection {
   const where = r.stack.length ? `\n\nWhere the time went:\n${r.stack.map((s) => `- ${s}`).join('\n')}` : '';
   return {
     rule: 'pageStall',
     ...(floorKnown && r.floor ? { floor: r.floor } : {}),
+    place: r.view,
     severity: r.ms >= 5000 ? 'sev2' : 'sev3',
     title: `A page froze for ${r.ms} ms (${r.view})`,
     summary: `${who}'s ${r.view} page ran one task for ${r.ms} ms${r.url ? ` at ${r.url}` : ''}.${where}`,

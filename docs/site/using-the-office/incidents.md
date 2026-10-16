@@ -34,8 +34,9 @@ The list puts open before mitigated before resolved, the worst first. Filter by 
 - From the Events sub-tab, expand a row: **🚨 Create incident from this event** (the event is linked, its summary and project filled in), or **Link to incident…**.
 - On an incident: **✏️ Edit**, **Mark mitigated**, **✅ Resolve…** (no cause asked for: see [Mx Office's analysis](#mx-offices-analysis); an optional *Anything you already know?* note), **Retry analysis** when it didn't finish, **Reopen**, and **Add note** on the timeline. Through [📱 Phone access](../administration/phone-access.md), resolving one asks for your password again unless you signed in or typed it in the last 10 minutes.
 - **⚙️ Detection rules**: turn each rule on or off and set its thresholds.
+- **Resolve old incidents…**: resolves, in one go, every incident in the list's scope (this project, office-wide or every project) that is **mitigated** or **hasn't been seen for more than 7 days**. It first lists exactly which ones (number, title, project or *Office-wide*, status, last seen), each ticked; untick any to keep it open. A short resolution note is required (it starts as *Bulk-resolved: mitigated or not seen for 7+ days*) and goes on each incident's timeline. Each is resolved the normal way (one change in the incidents file and one `incident.resolved` audit event each, with the note), plus one `incident.bulk-resolve` event with how many and which. An open incident seen in the last 7 days is never resolved this way, even if the office's clock and yours disagree: the office checks each again. Pressing it twice resolves nothing more. Mx Office's analysis isn't started for these (it would run once per incident); **Retry analysis** on any of them asks for one. Through Phone access it asks for your password again, like resolving one. ✕ or Esc closes it and puts you back on the button.
 
-Every change is in the audit log as `incident.created`, `incident.updated`, `incident.resolved` or `incident.analysed`.
+Every change is in the audit log as `incident.created`, `incident.updated`, `incident.resolved`, `incident.bulk-resolve` or `incident.analysed`.
 
 ## Mx Office's analysis
 
@@ -58,6 +59,8 @@ It's an **AI draft, not proof**. On the incident:
 
 Each rule opens an incident, or, if the same rule already has an open incident on the same project from the last 24 hours (the *dedupe window*), counts into that one: its count goes up, the workers and events are added, its severity rises if this time is worse, and a line goes on its timeline. A counted rule fires once per burst, then counts again from zero.
 
+If you resolved that incident less than 24 hours ago, it **comes back** instead of a new number: reopened, with *Came back after &lt;you&gt; resolved it at &lt;time&gt;* on its timeline and *came back N× after it was resolved* on it. Resolved longer ago, the new incident says which one it **follows** (*follows INC-27*). A **page that froze** keeps one incident per view per project (*lite › command*, *lite › questions*…): a freeze of the same view counts into it, another view gets its own. An open page-freeze incident from before release 54 (one per project) keeps taking every view's freezes until it's resolved.
+
 | Rule | Fires when | Severity | Default |
 |---|---|---|---|
 | Real agent launched in a test office | Test mode refused a real agent CLI (near miss), or one started anyway with `AGENT_OFFICE_ALLOW_REAL_AGENTS` (sev2) | near miss / sev2 | on |
@@ -71,7 +74,7 @@ Each rule opens an incident, or, if the same rule already has an open incident o
 | Worktree cleanup errors | **3** failures in **6** hours | sev3 | on |
 | Failed sign-ins | **5** in **10** minutes | sev2 | on |
 
-The settings are in `<office data>/incidents/settings.json`; the incidents in `<office data>/incidents/incidents.jsonl` (append only: a line with the whole incident per change, and a small *recur* line with only what changed each time a rule fires into an open incident again, so an incident that recurs all day doesn't copy itself each time). Files written before *recur* lines read and verify as they are; nothing is rewritten. See the [settings reference](../reference/settings-reference.md) and the [API](../reference/api-endpoints.md).
+The settings are in `<office data>/incidents/settings.json`; the incidents in `<office data>/incidents/incidents.jsonl` (append only: a line with the whole incident per change, a *reopen* line with the whole incident when one comes back, and a small *recur* line with only what changed each time a rule fires into an open incident again, so an incident that recurs all day doesn't copy itself each time). Files written before *recur* lines read and verify as they are; nothing is rewritten. See the [settings reference](../reference/settings-reference.md) and the [API](../reference/api-endpoints.md).
 
 ## The incidents of 2026-10-06
 

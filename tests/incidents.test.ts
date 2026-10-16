@@ -98,7 +98,7 @@ test('what a person sends is checked: titles, enums, numbers and links', () => {
 
 const det = (over: Partial<Detection> = {}): Detection => ({ rule: 'crashLoop', floor: 'alpha', severity: 'sev3', title: 'Crash loop', summary: 'Ada crashed 3 times', ...over });
 
-test('a rule firing again dedupes into its open incident on the same floor, within the window; not across floors, once resolved, or when off', () => {
+test('a rule firing again dedupes into its open incident on the same floor, within the window; not across floors, past the window, or when off', () => {
   const { store, clock } = fresh();
   const a = raise(det({ workers: [{ id: 'w1', name: 'Ada' }] }))!;
   clock.t += 10 * MIN;
@@ -110,10 +110,12 @@ test('a rule firing again dedupes into its open incident on the same floor, with
   assert.ok(again.timeline.some((t) => t.kind === 'recurrence' && t.text === 'Bo too'));
   assert.notEqual(raise(det({ floor: 'beta' }))!.id, a.id, 'another floor');
   updateIncident(a.id, { status: 'resolved', rootCause: 'x' }, ME);
-  const after = raise(det())!;
-  assert.notEqual(after.id, a.id, 'resolved: a new one');
+  const back = raise(det())!;
+  assert.equal(back.id, a.id, 'resolved within the window: the same one comes back (tests/incidents-reopen.test.ts)');
+  assert.equal(back.status, 'open');
   clock.t += 25 * 60 * MIN;
-  assert.notEqual(raise(det())!.id, after.id, 'past the dedupe window: a new one');
+  const after = raise(det())!;
+  assert.notEqual(after.id, a.id, 'past the dedupe window: a new one');
   store.setSettings({ rules: { crashLoop: { on: false } } });
   const before = store.list().length;
   assert.equal(raise(det()), undefined);
