@@ -1,11 +1,11 @@
 // Answered decisions still being followed through, on the Overview's Needs you card (server/followthrough/):
 // each answered escalation or question until its record is as given and merged into main, or you dismiss
-// it. Status-level, never counted in "waiting on you"; a record that differs, or cites an older revision,
-// is a warning with both texts (You decided · Recorded, and where) and Accept as recorded / Send correction.
+// it. Status-level, never counted in "waiting on you"; a record that needs review (not worded exactly as
+// given), differs, or cites an older revision, is a warning with both texts (You decided · Recorded, and where) and Accept as recorded / Send correction.
 // Nothing here blocks other work. Only an admin can act (the server checks too). No modal.
 
 import type { FollowAction, FollowItem } from '../../../shared/followthrough';
-import { followLevel, followLine, locationWords, whereWords } from '../../../shared/followthrough';
+import { followLevel, followLine, locationWords, reviewable, whereWords } from '../../../shared/followthrough';
 import type { NeedTarget } from '../../../shared/needsyou';
 import { store } from '../../state';
 import { h } from '../dom';
@@ -46,9 +46,11 @@ export function followActs(floor: string, it: FollowItem, admin: boolean): HTMLE
 /** "You decided: … · Recorded: …", and where. */
 export function bothTexts(it: FollowItem): HTMLElement | null {
   const r = it.recording;
-  if (r.outcome !== 'recorded-differently' && r.outcome !== 'recorded-older-rev') return null;
+  if (!reviewable(r)) return null;
   const where = [whereWords(r.location), locationWords(r.location)].filter(Boolean).join(' · ');
-  return h('div.pt-ft-both', {}, h('p', {}, h('b', {}, 'You decided: '), it.decided), h('p', {}, h('b', {}, r.outcome === 'recorded-older-rev' ? `Recorded (for rev ${r.rev}): ` : 'Recorded: '), r.text ?? '—'), where ? h('p.pt-ft-where', {}, where) : null);
+  // The answer value read from the citation's line (what was compared), when it isn't the whole record.
+  const answer = r.answer !== undefined && r.answer !== r.text ? h('p', {}, h('b', {}, 'Answer on the citation line: '), r.answer || '(none)') : null;
+  return h('div.pt-ft-both', {}, h('p', {}, h('b', {}, 'You decided: '), it.decided), h('p', {}, h('b', {}, r.outcome === 'recorded-older-rev' ? `Recorded (for rev ${r.rev}): ` : 'Recorded: '), r.text ?? '—'), answer, where ? h('p.pt-ft-where', {}, where) : null);
 }
 
 function item(floor: string, it: FollowItem, admin: boolean, go: (t: NeedTarget) => void): HTMLElement {
@@ -57,7 +59,7 @@ function item(floor: string, it: FollowItem, admin: boolean, go: (t: NeedTarget)
   return h(
     'article.pt-nitem.pt-esc.pt-ft',
     { 'data-decision': it.decision, 'data-level': warn ? 'warn' : 'status', 'aria-label': `${it.label}: ${followLine(it)}` },
-    h('div.pt-esc-h', {}, h('span.pt-tag', { class: warn ? 't-verify' : 't-later' }, h('span.pt-tag-i', { 'aria-hidden': 'true' }, warn ? '⚠' : '↻'), warn ? 'Recorded differently' : 'Following through'), h('b.pt-esc-t', {}, h('button.pt-link', { type: 'button', onclick: open }, it.label), ` ${it.title}`)),
+    h('div.pt-esc-h', {}, h('span.pt-tag', { class: warn ? 't-verify' : 't-later' }, h('span.pt-tag-i', { 'aria-hidden': 'true' }, warn ? '⚠' : '↻'), warn ? (it.recording.outcome === 'needs-review' ? 'Needs review' : 'Recorded differently') : 'Following through'), h('b.pt-esc-t', {}, h('button.pt-link', { type: 'button', onclick: open }, it.label), ` ${it.title}`)),
     h('p.pt-ft-line', {}, followLine(it)),
     // Slice 1B-4: the work linked to this revision, each with its strength and evidence (once worked out).
     it.taskLinks ? taskLinksList(it.taskLinks, { max: 3 }) : null,

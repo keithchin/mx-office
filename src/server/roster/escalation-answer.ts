@@ -25,12 +25,20 @@ import type { Roster } from './index.js';
 import { decisionCitation, escalationAnswerPrompt } from './prompts.js';
 import type { TeamFloor } from './types.js';
 import { NO_WORK_REQUIRED } from '../../shared/task-links.js';
+import { primaryAnswer } from '../../shared/followthrough.js';
+import { recordLine } from '../../shared/recorded-answer.js';
 
 type Resolution = NonNullable<Escalation['resolution']>;
 
 /** An answer as one line of the message that carries several. */
 export const answerLineOf = (e: Escalation, r: Pick<Resolution, 'outcome' | 'by' | 'verdict' | 'text' | 'answerRev'>) =>
-  `- “${e.title}”: ${r.outcome === 'done' ? `DONE (${r.by} says it's done: please re-check)` : VERDICT_WORD[r.verdict]}${r.text && r.outcome !== 'done' ? ` — ${r.text}` : ''} (${r.by})${r.answerRev && r.outcome !== 'done' && r.outcome !== 'noted' && r.outcome !== 'superseded' ? `. Record it as \`${decisionCitation(e.id, r.answerRev)}: …\`` : ''}`;
+  `- “${e.title}”: ${r.outcome === 'done' ? `DONE (${r.by} says it's done: please re-check)` : VERDICT_WORD[r.verdict]}${r.text && r.outcome !== 'done' ? ` — ${r.text}` : ''} (${r.by})${r.answerRev && r.outcome !== 'done' && r.outcome !== 'noted' && r.outcome !== 'superseded' ? `. Record it on a line of its own as \`${owedRecordLine(e.id, r.answerRev, r)}\` (commentary on the next line)` : ''}`;
+
+/** The exact record line an owed answer asks for (shared/recorded-answer.ts), the answer's placeholder when it has no words. */
+function owedRecordLine(escId: string, rev: number, r: Pick<Resolution, 'verdict' | 'text'>): string {
+  const answer = primaryAnswer({ text: r.text ?? '', kind: r.verdict === 'approve' || r.verdict === 'reject' ? r.verdict : 'reply' });
+  return answer ? recordLine(escId, rev, answer) : `${decisionCitation(escId, rev)}: <the answer, exactly as given>`;
+}
 
 const kindOf = (verdict: EscalationVerdict, outcome?: EscalationOutcome): AnswerRevisionKind => (outcome === 'noted' ? 'noted' : outcome === 'done' ? 'done' : verdict === 'approve' ? 'approve' : verdict === 'reject' ? 'reject' : verdict === 'dismiss' ? 'moot' : 'reply');
 

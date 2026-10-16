@@ -1,21 +1,26 @@
 // Recorded as given (Slice 1B-2, docs/site/using-the-office/needs-you.md): after the person decides and the
 // office hands the answer on (server/dispatch/), it looks for the agent's record of it and compares what is
 // written there with what was decided. A BRD question's record is its fields (answer / decision, consentBy,
-// consentAt); an escalation's is the line that cites it, `Decided per ESC-<id> rev <n>`, with the rest of
-// its paragraph or table row, in a team journal or PROJECT.md's Decisions. Finding the citation only
-// locates the evidence: the words are compared before anything reads "Recorded as given". Where it was
-// found is kept apart: a working copy, a commit on a branch, or merged into main.
+// consentAt); an escalation's is the line that cites it, `Decided per ESC-<id> rev <n>: <answer>`, in a team
+// journal or PROJECT.md's Decisions. Finding the citation only locates the evidence: the answer value is
+// compared exactly (shared/recorded-answer.ts) before anything reads "Recorded as given"; a record that
+// mentions the decision without stating it exactly needs review. Where it was found is kept apart: a
+// working copy, a commit on a branch, or merged into main.
 //
 // Faithful recording (what may clear a dependent item by itself) is recorded as given, at the current
-// revision, merged into main. Recorded differently never is. Pure: the browser imports the words.
+// revision, merged into main. Needs review and recorded differently never are. Pure: the browser imports
+// the words.
 
 import type { AnswerRevisionKind, DecisionRef, DispatchState } from './dispatch.js';
 import { stateWords } from './dispatch.js';
 import type { DecisionLinks } from './task-links.js';
 
 /** What the office found of a decision's record. */
-export type RecordedOutcome = 'recorded' | 'recorded-differently' | 'recorded-older-rev' | 'not-recorded-yet';
-export const RECORDED_OUTCOMES: readonly RecordedOutcome[] = ['recorded', 'recorded-differently', 'recorded-older-rev', 'not-recorded-yet'];
+export type RecordedOutcome = 'recorded' | 'needs-review' | 'recorded-differently' | 'recorded-older-rev' | 'not-recorded-yet';
+export const RECORDED_OUTCOMES: readonly RecordedOutcome[] = ['recorded', 'needs-review', 'recorded-differently', 'recorded-older-rev', 'not-recorded-yet'];
+
+/** A finding the person may look at and act on (Accept as recorded, Send correction): anything written that isn't as given. */
+export const reviewable = (r: Pick<Recording, 'outcome'>) => r.outcome === 'needs-review' || r.outcome === 'recorded-differently' || r.outcome === 'recorded-older-rev';
 
 export type RecordedWhere = 'working-copy' | 'committed-on-branch' | 'merged-into-main';
 
@@ -41,6 +46,8 @@ export interface Recording {
   rev?: number;
   /** What is written there, as found (the citation's paragraph or row; the BRD's fields), at most 2,000 characters. */
   text?: string;
+  /** The answer value read from the citation's line (what was compared), when the line has one. */
+  answer?: string;
   location?: RecordedLocation;
   /** When the office worked this out. */
   at: number;
@@ -51,34 +58,13 @@ export const RECORDED_TEXT_MAX = 2000;
 /** Recorded as given, at the current revision, merged into main: the only finding that may clear a dependent item by itself. */
 export const faithful = (r: Recording | undefined, currentRev: number) => !!r && r.outcome === 'recorded' && r.rev === currentRev && r.location?.where === 'merged-into-main';
 
-// ---- Comparing words -------------------------------------------------------------------------------------
+// ---- What an answer may be recorded as (each compared exactly: shared/recorded-answer.ts sameAnswer) --------
 
 /**
- * Text as the comparison reads it: Unicode-normalised, lowercased, apostrophes dropped, and every run of
- * anything that isn't a letter or a digit (spaces, quotes, markdown, punctuation, dashes) one space.
+ * The answer values an escalation's revision may be recorded as: its option, its text as sent, its text
+ * without the office's own "Go with:" prefix and without an option key such as "(A) ", or the verdict word
+ * when it has no text. Each is a whole answer, never a fragment to look for inside a record.
  */
-export function normText(s: string): string {
-  return s
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/['’‘`´]/g, '')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
-}
-
-/**
- * The matching rule (conservative, documented in docs/site/teams-and-agents/escalations.md): the expected
- * words, normalised, appear whole in the recorded text, normalised, as a run of complete words. Case,
- * quotes, punctuation and spacing may differ; a changed, dropped or added word inside the expected text
- * doesn't match. An empty expectation never matches.
- */
-export function wordsMatch(recorded: string, expected: string): boolean {
-  const e = normText(expected);
-  if (!e) return false;
-  return ` ${normText(recorded)} `.includes(` ${e} `);
-}
-
-/** What an escalation's revision may be recorded as: its option, its text without "Go with:" (and an option key), or the verdict word when it has no text. */
 export function escalationExpected(r: { text: string; kind: AnswerRevisionKind; option?: string }): string[] {
   const out: string[] = [];
   const t = r.text.trim();
@@ -87,9 +73,18 @@ export function escalationExpected(r: { text: string; kind: AnswerRevisionKind; 
   if (core) out.push(core);
   const keyless = core.replace(/^\(?[A-Za-z0-9]\)?[.):]\s+/, '').trim();
   if (keyless && keyless !== core) out.push(keyless);
+  if (t && t !== core) out.push(t);
   if (!t && r.kind === 'approve') out.push('approved', 'approve');
   if (!t && r.kind === 'reject') out.push('rejected', 'reject');
   return out;
+}
+
+/** The one answer value the office asks an agent to write for a revision: its option, its words without "Go with:", or the verdict word. */
+export function primaryAnswer(r: { text: string; kind: AnswerRevisionKind; option?: string }): string {
+  if (r.option) return r.option;
+  const core = r.text.replace(/^go with:\s*/i, '').replace(/\s+/g, ' ').trim();
+  if (core) return core;
+  return r.kind === 'approve' ? 'APPROVED' : r.kind === 'reject' ? 'REJECTED' : '';
 }
 
 // ---- The follow-through feed -----------------------------------------------------------------------------
@@ -123,11 +118,13 @@ export type FollowAction = 'accept-as-recorded' | 'send-correction' | 'dismiss';
 export const FOLLOW_ACTIONS: readonly FollowAction[] = ['accept-as-recorded', 'send-correction', 'dismiss'];
 export const isFollowAction = (v: unknown): v is FollowAction => typeof v === 'string' && (FOLLOW_ACTIONS as readonly string[]).includes(v);
 
-/** "Recorded as given" / "Recorded differently" / "Recorded for rev 1" / "Not recorded yet". */
+/** "Recorded as given" / "Needs review: not worded exactly as given" / "Recorded differently" / "Recorded for rev 1" / "Not recorded yet". */
 export function recordedWords(r: Pick<Recording, 'outcome' | 'rev'>): string {
   switch (r.outcome) {
     case 'recorded':
       return 'Recorded as given';
+    case 'needs-review':
+      return 'Needs review: not worded exactly as given';
     case 'recorded-differently':
       return 'Recorded differently';
     case 'recorded-older-rev':
@@ -156,8 +153,8 @@ export function followLine(i: Pick<FollowItem, 'rev' | 'sent' | 'recording'>): s
   return [`Decided (rev ${i.rev})`, sentWords(i.sent), recordedWords(i.recording), whereWords(i.recording.location)].filter(Boolean).join(' · ');
 }
 
-/** Status-level, never counted as waiting on you; warn when the record differs or cites an older revision. */
-export const followLevel = (r: Pick<Recording, 'outcome'>): 'warn' | 'status' => (r.outcome === 'recorded-differently' || r.outcome === 'recorded-older-rev' ? 'warn' : 'status');
+/** Status-level, never counted as waiting on you; warn when the record needs review, differs or cites an older revision. */
+export const followLevel = (r: Pick<Recording, 'outcome'>): 'warn' | 'status' => (reviewable(r) ? 'warn' : 'status');
 
 /** "docs/team/development.md @ 1a2b3c4 (blob 9f8e7d6)". */
 export function locationWords(l: RecordedLocation | undefined): string {

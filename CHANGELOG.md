@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **Follow-through no longer says *Recorded as given* when the record only contains your words.** An agent's line *Decided per ESC-… rev 1: Do not merge now* used to count as recording *Merge now*, *Not approved* as *Approved*, and *5* as *-5*, and such a record, once merged, could settle a decision that other work waited on. Now the citation only finds the record: the answer after its colon, to the end of that line (or table cell), must be exactly your option or words. Only spacing, curly quotes and dashes, letter case, quotes around the whole answer and a final full stop are ignored. A BRD question's `answer` field is compared the same way. A record that mentions your answer without stating it exactly (a negation, a condition, a quotation, commentary on the answer line, or an older line) shows as **Needs review: not worded exactly as given**, with **Accept as recorded** and **Send correction**, and never settles anything by itself. Agents are now given the exact line to write, with any rationale on the next line. Findings already kept are re-checked on the next look; nothing in the history is rewritten, and answers you accepted as recorded stay accepted.
 
 ## 2026-10-16 · release 54 (`62707f9`)
 

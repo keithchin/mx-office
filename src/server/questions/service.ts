@@ -13,7 +13,7 @@ import type { AuditInput } from '../../shared/audit.js';
 import { answersMessage, blocksWork, needOf, needsClient, waitingOnYou, type AnswerKind, type PmAnswer, type Question, type QuestionsNeed, type QuestionsView, type Recipient } from '../../shared/questions.js';
 import type { StuckDraft } from '../../shared/stuck.js';
 import { emptyBook, markSent, ready, reviveBook, setAnswer, settleJudged, sinceOf, takeCollection, type BookData } from './book.js';
-import type { RecordedLocation } from '../../shared/followthrough.js';
+import { reviewable, type RecordedLocation } from '../../shared/followthrough.js';
 import type { Collector, Folder } from './collect.js';
 import { exportRows, type ExportRow, type ExportWhich } from './export.js';
 import type { AnswerResult, AnswerSpec } from '../dispatch/service.js';
@@ -142,8 +142,8 @@ export class QuestionsService {
     // Recorded as given (Slice 1B-2): where each found record is (git, off the event loop, once per collection), then only a faithful one is recorded.
     if (judged.length) await this.locate(floor, judged);
     recorded.push(...settleJudged(judged, now));
-    const differs = judged.filter(({ a }) => (a.recording?.outcome === 'recorded-differently' || a.recording?.outcome === 'recorded-older-rev') && before.get(a.key) !== a.recording.outcome);
-    if (differs.length) this.deps.record({ floor: floor.id, actor: ACTOR, action: 'questions.recorded-differently', target: { kind: 'questions', id: differs.map(({ a }) => a.id).join(','), label: `${differs.length} answer${differs.length === 1 ? '' : 's'}` }, summary: `Recorded differently from your answer: ${differs.map(({ a }) => `${a.id} (${a.recording?.outcome === 'recorded-older-rev' ? `for rev ${a.recording.rev}` : 'different words'})`).join(', ')}`, details: { ids: differs.map(({ a }) => a.id) }, severity: 'notice' });
+    const differs = judged.filter(({ a }) => a.recording && reviewable(a.recording) && before.get(a.key) !== a.recording.outcome);
+    if (differs.length) this.deps.record({ floor: floor.id, actor: ACTOR, action: 'questions.recorded-differently', target: { kind: 'questions', id: differs.map(({ a }) => a.id).join(','), label: `${differs.length} answer${differs.length === 1 ? '' : 's'}` }, summary: `Recorded differently from your answer: ${differs.map(({ a }) => `${a.id} (${a.recording?.outcome === 'recorded-older-rev' ? `for rev ${a.recording.rev}` : a.recording?.outcome === 'needs-review' ? 'needs review: not worded exactly as given' : 'different words'})`).join(', ')}`, details: { ids: differs.map(({ a }) => a.id) }, severity: 'notice' });
     if (fresh.length) {
       const from = [...new Set(fresh.map((q) => (q.source.where === 'main' ? 'main' : (q.source.agent ?? q.source.worktree ?? 'a worktree'))))];
       this.deps.record({ floor: floor.id, actor: ACTOR, action: 'questions.new', target: { kind: 'questions', id: `batch-${d.batch}`, label: `${fresh.length} question${fresh.length === 1 ? '' : 's'}` }, summary: `${fresh.length} open question${fresh.length === 1 ? '' : 's'} for the client on the Questions page (from ${from.join(', ')})`, details: { ids: fresh.map((q) => q.id).slice(0, 50), via: set.via }, severity: 'notice' });

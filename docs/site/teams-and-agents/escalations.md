@@ -64,19 +64,26 @@ Your answer is kept before it's sent: the office appends it, in full, to the pro
 
 ### Recorded as given
 
-Your answer asks the agent to record the decision with a citation: one line in its team journal entry (`docs/team/*.md`) or in PROJECT.md's Decisions row that starts *Decided per ESC-3f9c2a1b7e rev 1:* followed by the decision in your answer's words. The id and the revision are the ones in the answer's marker line, and the [Playbooks](playbooks-and-journals.md) say the same.
+Your answer asks the agent to record the decision with a citation, on a line of its own in its team journal entry (`docs/team/*.md`) or in PROJECT.md's Decisions row, and gives it the exact line to write:
 
-The office looks for the citation in the project folder, every agent's worktree and the branch heads, on the same look that finds `AWAITING-PM` lines (every few minutes, and soon after a turn ends: no polling of its own, local git only, never GitHub). Finding the citation only **locates** the record. The office then compares what's written there (the citation's line and the rest of its paragraph, or its table row) with your answer:
+```
+Decided per ESC-3f9c2a1b7e rev 1: Use SSO
+```
 
-- **The matching rule** is deliberately strict. Your chosen option, or your words without *Go with:* (and an option's letter), must appear in the record whole, as a run of complete words. Case, quotes, punctuation, markdown and spacing may differ; a changed, missing or added word inside your answer doesn't match. An approval or a rejection with no words matches *approved* or *rejected*.
-- **Recorded as given:** the words match, at the current revision.
-- **Recorded differently:** the citation is right, the words aren't. The record is kept as written, and the card shows both texts.
+The citation, a colon, then the answer exactly as given and nothing else on that line. Rationale, conditions and commentary go on the next line (in a Decisions table, in another cell). The id and the revision are the ones in the answer's marker line, and the [Playbooks](playbooks-and-journals.md) say the same.
+
+The office looks for the citation in the project folder, every agent's worktree and the branch heads, on the same look that finds `AWAITING-PM` lines (every few minutes, and soon after a turn ends: no polling of its own, local git only, never GitHub). Finding the citation only **locates** the record: it never shows that the record agrees with you. The office then compares the record's **answer**, the text after the citation's colon to the end of that line (in a table row, to the end of its cell), with your answer:
+
+- **The exact-answer rule.** The answer must be exactly your chosen option, or your words (also without *Go with:* and without an option's letter), or, for an approval or a rejection with no words, *APPROVED* or *REJECTED*. The comparison ignores only: runs of spaces and line breaks, curly quotes and Unicode dashes or minus signs (read as `'`, `"` and `-`), letter case, one pair of quotes or backticks around the whole answer, and one full stop at its end. Nothing else is ignored: *-5* is not *5*, *Do not merge now* is not *Merge now*, *If CI passes, merge now* is not *Merge now*, and *"Merge now" was rejected* is not *Merge now*. There is no list of negative words and no AI judging the wording: anything that isn't exactly the answer is for you to review. The rest of the paragraph or row is kept and shown, never read as the answer.
+- **Recorded as given:** the answer is exact, at the current revision.
+- **Needs review: not worded exactly as given:** the record mentions your answer but doesn't state it exactly (a negation, a condition, a quotation, added words or commentary on the answer line, or an older line written before this rule). The card shows your answer, the record and the answer read from its line.
+- **Recorded differently:** the citation is right, the answer is something else. The record is kept as written, and the card shows both texts.
 - **Recorded for rev 1:** the record cites an older revision of your answer than the current one.
 - **Not recorded yet:** no citation found.
 
 Where the record is, is kept as separate fields: the file's `path`, the `commitSha` of the commit that holds it (none for a working copy), the file's `blobId` in that commit (`git rev-parse <commit>:<path>`, never the commit itself), and `where`: **in a working copy, not committed**, **committed on** a branch, or **merged into main**. Merged means the commit is reachable from `origin/<default branch>`, by local git only.
 
-Only **recorded as given, at the current revision, merged into main** takes the answer off the follow-through list by itself, and only that counts where something else waits on the decision (see [stuck detection](../using-the-office/stuck-detection.md)). *Recorded differently* never clears anything by itself. See [Following through](../using-the-office/command-center.md#following-through) for the cards and their buttons.
+Only **recorded as given, at the current revision, merged into main** takes the answer off the follow-through list by itself, and only that counts where something else waits on the decision (see [stuck detection](../using-the-office/stuck-detection.md)). *Needs review* and *Recorded differently* never clear anything by themselves; **Accept as recorded** (your choice, a new revision) makes the record's words your decision. See [Following through](../using-the-office/command-center.md#following-through) for the cards and their buttons.
 
 ### Changing an answer
 
