@@ -18,6 +18,7 @@ import { advancedPanel } from './advanced';
 import { migrationCap } from './migration-cap';
 import { defaultLocalOnly } from './local-only-field';
 import { icon } from './parts';
+import { teamFromPanel } from './team-from';
 import type { Flow } from './index';
 
 type Level = LevelCard['id'];
@@ -42,6 +43,23 @@ export function teamCard(flow: Flow) {
   /** The shape and level picked by hand (else the recommendation). */
   let chosen: { shape: TeamShape; level: Level } | undefined;
   const adv = advancedPanel(flow, () => draw());
+  // Start from a team (team-from.ts): a copy sets the shape, the roles and the level the way Change does.
+  const fromTeam = teamFromPanel(flow, {
+    apply(copy) {
+      flow.plan.customTeam = false;
+      chosen = { shape: copy.shape, level: copy.level ?? levelOf() };
+      pick(chosen.shape, chosen.level);
+      if (copy.customTeam) ((flow.plan.customTeam = true), (flow.plan.roles = [...copy.roles]), (flow.plan.shape = copy.shape));
+      draw();
+    },
+    clear() {
+      chosen = undefined;
+      flow.plan.customTeam = false;
+      if (rec) pick(rec.shape, rec.level);
+      draw();
+    },
+    redraw: () => draw(),
+  });
 
   const levelOf = (): Level => { const l = flow.plan.budget?.level; return l === 'lean' || l === 'balanced' || l === 'fast' ? l : (rec?.level ?? 'balanced'); };
   /** The level as the summary says it (Manual under Customize). */
@@ -102,7 +120,8 @@ export function teamCard(flow: Flow) {
     const advPanel = h('div.nw-collapse', { id: 'nw-adv', class: advOpen ? '' : 'shut' }, h('div', {}, advOpen ? adv.build() : ''));
     // A migration's cap: the planner's estimate, the warning and the cap field (migration-cap.ts).
     const cap = migrationCap(d, cardOf(shape)?.estimate, () => draw());
-    body.replaceChildren(summary, ...(cap ? [cap] : []), changePanel, advH, advPanel, ...(est ? [] : [h('p.nw-hint', {}, 'The office couldn’t work out an estimate: the project is made without a budget (set one later on its 💰 Budget tab).')]));
+    fromTeam.draw();
+    body.replaceChildren(summary, fromTeam.el, ...(cap ? [cap] : []), changePanel, advH, advPanel, ...(est ? [] : [h('p.nw-hint', {}, 'The office couldn’t work out an estimate: the project is made without a budget (set one later on its 💰 Budget tab).')]));
     if (advOpen) adv.showProblems();
   }
 
@@ -171,8 +190,10 @@ export function teamCard(flow: Flow) {
       const d = flow.draft;
       const ready = !!d?.approved && d.domainsStatus !== 'mapping' && d.busy !== 'domains';
       el.hidden = !ready;
-      if (ready) void load();
+      if (ready) (fromTeam.load(), void load());
     },
+    /** Before Create project: the Move list for agents brought from another project, confirmed (or not). */
+    confirm: (opener: HTMLElement) => fromTeam.confirm(opener),
     /** Inline problems; Advanced opens on the first one. True when the plan can be created. */
     validate(): boolean {
       if (adv.showProblems()) return true;

@@ -37,7 +37,7 @@ export interface ProfileDeps {
   bench(floor: string, role: RoleId, by: string): string | undefined;
   /** Why the project hires nobody now (its spend cap, or it's paused), checked before a move benches anyone. */
   hireHeld?(floor: string): string | undefined;
-  hire(floor: string, role: RoleId, by: string, owner?: string, task?: string): Promise<string | undefined>;
+  hire(floor: string, role: RoleId, by: string, owner?: string, task?: string, model?: string): Promise<string | undefined>;
   toast?(floor: string, text: string, level?: 'info' | 'warn'): void;
   audit(e: AuditInput): void;
   now(): number;

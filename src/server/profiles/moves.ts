@@ -20,6 +20,8 @@ export interface HireAsk {
   by: string;
   owner?: string;
   task?: string;
+  /** The model for this one hire (the seat keeps its own): the wizard's Discovery task on its Discovery model. */
+  model?: string;
   /** The person confirmed the Move (the profile is linked to a seat elsewhere). */
   move?: boolean;
 }
@@ -89,7 +91,7 @@ export class Moves {
     const from = this.store.seatOf(p.id);
     // Already this seat's agent: a plain hire.
     if (same(from, to)) {
-      const err = await this.deps.hire(to.floor, to.role, ask.by, ask.owner, ask.task);
+      const err = await this.deps.hire(to.floor, to.role, ask.by, ask.owner, ask.task, ask.model);
       return err ? { error: err, status: 409 } : {};
     }
     if (seatBusy(dest)) return { error: `This project's ${to.role} seat is taken by ${dest.name}: bench them first`, status: 409 };
@@ -105,7 +107,7 @@ export class Moves {
     }
     const now = this.deps.now();
     const prevId = this.store.data.seats[seatKey(to.floor, to.role)] ?? null;
-    const op: MoveOp = { id: mintMoveId(now), profileId: p.id, ...(from ? { from } : {}), to, state: active ? 'source-benching' : 'dest-hiring', at: now, updatedAt: now, by: ask.by, ...(ask.owner ? { owner: ask.owner } : {}), ...(ask.task ? { task: ask.task } : {}), prevDest: { name: dest.name, profileId: prevId } };
+    const op: MoveOp = { id: mintMoveId(now), profileId: p.id, ...(from ? { from } : {}), to, state: active ? 'source-benching' : 'dest-hiring', at: now, updatedAt: now, by: ask.by, ...(ask.owner ? { owner: ask.owner } : {}), ...(ask.task ? { task: ask.task } : {}), ...(ask.model ? { model: ask.model } : {}), prevDest: { name: dest.name, profileId: prevId } };
     // The intent on disk before anything is asked of either project.
     await this.store.change((f) => void f.moves.push(op));
     if (from) this.audit(op, 'profile.move-started', `Started moving ${p.displayName} from ${this.where(from)} to ${this.where(to)}${active ? ': handoff note there first' : ''}`);
@@ -149,7 +151,7 @@ export class Moves {
         f.seats[key] = p.id;
       });
       this.deps.nameSeat(op.to.floor, op.to.role, p.displayName);
-      const err = await this.deps.hire(op.to.floor, op.to.role, op.by, op.owner, op.task);
+      const err = await this.deps.hire(op.to.floor, op.to.role, op.by, op.owner, op.task, op.model);
       if (err) {
         await this.fail(op, 'dest', err);
         return { error: `${p.displayName} wasn't hired on ${this.s.projectName(op.to.floor)}: ${err}`, status: 409, op };

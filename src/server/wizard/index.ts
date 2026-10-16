@@ -45,6 +45,8 @@ import { operationNotice } from '../../shared/setup-operations.js';
 import { OperationStore } from './operations.js';
 import { auditOperation, officeLookup, reconcileJob, reconcileOnStart } from './operations-office.js';
 import { adopt } from './reconcile.js';
+import { auditTeamFrom, officeTeamFromDeps } from './team-from-office.js';
+import type { KnownSource } from '../../shared/team-from.js';
 
 /** What an edit writes again: the answers and decisions, and the commit that carries them. */
 const EDIT_STEPS: StepId[] = ['intake', 'decisions', 'settings', 'commit'];
@@ -174,9 +176,12 @@ export class Wizard {
     return j && this.book.view(j);
   }
 
-  /** Starts a new project's setup. A setup for the same repository that's still there is carried on rather than started again. */
-  start(raw: unknown, by: string, account?: string): JobView | string {
-    const plan = cleanPlan(raw, mendixVersions(this.cfg.mendixDir), this.cfg.org);
+  /**
+   * Starts a new project's setup. A setup for the same repository that's still there is carried on rather than started again.
+   * `teams`: the projects whose team can be copied (team-from-office.ts teamsFor), when the plan starts from one.
+   */
+  start(raw: unknown, by: string, account?: string, teams?: ReadonlyMap<string, KnownSource>): JobView | string {
+    const plan = cleanPlan(raw, mendixVersions(this.cfg.mendixDir), this.cfg.org, teams);
     if (typeof plan === 'string') return plan;
     // A brief from the New project flow is taken from its draft in the office (what was drafted, confirmed and approved there), not from the page's copy.
     const draft = plan.brief?.draftId ? plannerOf(this.ctx).get(plan.brief.draftId, { id: account ?? 'shared', name: by }) : undefined;
@@ -203,6 +208,7 @@ export class Wizard {
     const job = had ? Object.assign(had, { plan }) : newJob(plan, by, account);
     this.book.add(job);
     if (draft) plannerOf(this.ctx).linkJob(draft.id, job.id);
+    if (!had) auditTeamFrom(plan, by, account);
     this.go(job);
     return this.book.view(job);
   }
@@ -245,7 +251,7 @@ export class Wizard {
     if (typeof plan === 'string') return plan;
     const moved = plan.mendix !== job.plan.mendix;
     // Roles ticked since the team step ran are hired too (JobBook.edit), and only those.
-    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly, sliceAsked: job.plan.sliceAsked }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
+    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly, sliceAsked: job.plan.sliceAsked, teamFrom: job.plan.teamFrom }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
     this.go(job);
     return this.book.view(job);
   }
@@ -378,6 +384,8 @@ export class Wizard {
     const { ctx } = this;
     const ref = (f: Floor): FloorRef => ({ id: f.id, dir: f.dir });
     return {
+      // Start from a team: the team step's hooks over agent profiles (team-from.ts).
+      ...officeTeamFromDeps(ctx),
       cfg: this.cfg,
       attachments: (draftId) => plannerOf(ctx).attachmentFiles(draftId),
       // Phase B (the Mendix Projects API) reads the Mendix token here: the wizard only, never the workers.

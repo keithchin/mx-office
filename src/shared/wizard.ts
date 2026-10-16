@@ -6,6 +6,7 @@ import type { BudgetChoice } from './budget/levels.js';
 import type { TeamShape } from './roster/coverage.js';
 import type { PlanBrief } from './brief.js';
 import type { OperationNotice } from './setup-operations.js';
+import type { PlanTeamFrom } from './team-from.js';
 
 /** How a project enters the toolkit's pipeline (the runbook's "Entry Modes"), plus the no-pipeline assurance shelf. */
 export const ENTRY_MODES = ['greenfield', 'requirements-driven', 'existing-app-change', 'migration', 'assurance'] as const;
@@ -189,6 +190,11 @@ export interface ProjectPlan {
   localOnly?: boolean;
   /** The person's own description asked for a slice first (from the draft): Discovery picks it at CAC-1. */
   sliceAsked?: boolean;
+  /**
+   * Start from a team (shared/team-from.ts): the project in the office whose team setup was copied (shape, roles,
+   * models, budget level), and the agents brought along, if ticked. Checked against the office at start.
+   */
+  teamFrom?: PlanTeamFrom;
 }
 
 /** A plan's source folder: where it is on the office's machine and what the scan found. */

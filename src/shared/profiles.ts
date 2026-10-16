@@ -58,6 +58,8 @@ export interface MoveOp {
   by: string;
   owner?: string;
   task?: string;
+  /** The model for the destination's first hire, when not the seat's own (the wizard's Discovery task). */
+  model?: string;
   /** The destination seat's name and profile before it was reserved, put back if the hire fails. */
   prevDest?: { name: string; profileId: string | null };
 }

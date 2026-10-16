@@ -38,6 +38,8 @@ On a project's Team tab, a seat with no session (not hired, or benched) has **ðŸ
 
   If it's in the middle of something there (or waiting on your answer), the bench is refused and nothing changes. There is no way to have the same agent on two projects at once.
 
+**From the New project wizard.** *Start from a team* with **Also bring the same agents** ticked brings a project's agents onto a new project's seats in the same way: the wizard lists every Move before setup starts and waits for your confirmation, then its team step hires each one through Hire from your agents (see [Your first project](../get-started/first-project.md#start-from-a-team)).
+
 What a reused agent is told: its first message is the usual one for the seat (this project's Playbook, journal and, if the seat had one, *this project's* last handoff note), plus at most one line: *Your profile in this office has worked on 2 other projects before. Nothing from them comes with you (no session, handoff, journal or notes): work from this project's Playbook, journal and handoff.* No project or client names, and never your notes.
 
 ## When a move is interrupted
@@ -62,4 +64,4 @@ Profiles live in `<data>/profiles.json` (profiles, which seat each is on, and th
 
 ## Who can do what
 
-Everyone signed in can see the Agents tab. Only an admin can hire from your agents, confirm a move, retry or cancel one, rename an agent or see and write notes; the office checks this itself. Not in this version: lending an agent to two projects at once, reusing a whole team, and measured track records.
+Everyone signed in can see the Agents tab. Only an admin can hire from your agents, confirm a move, retry or cancel one, rename an agent or see and write notes; the office checks this itself. Not in this version: lending an agent to two projects at once and measured track records. A whole team's setup is reused with the wizard's *Start from a team*.

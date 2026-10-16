@@ -6,6 +6,7 @@ import { cleanAppId } from './mendix-app.js';
 import { isPortfolioId } from '../../shared/portfolios.js';
 import { cleanChoice } from '../../shared/budget/levels.js';
 import { isTeamShape, shapeForRoles } from '../../shared/roster/coverage.js';
+import { checkTeamFrom, cleanTeamFrom, type KnownSource } from '../../shared/team-from.js';
 import { cleanBrief, cleanDomains, counts, safeFileName, type PlanBrief, type ReadState } from '../../shared/brief.js';
 
 export const DISCOVERY_MODELS = ['opus', 'sonnet', 'haiku'] as const;
@@ -17,8 +18,12 @@ const names = (v: unknown) =>
     .filter(Boolean)
     .slice(0, 12);
 
-/** The plan, cleaned; or why it can't be used. `versions` are the Studio Pro versions on the machine. */
-export function cleanPlan(raw: unknown, versions: string[], org: string): ProjectPlan | string {
+/**
+ * The plan, cleaned; or why it can't be used. `versions` are the Studio Pro versions on the machine. `teams`, the
+ * projects whose team can be copied (server/wizard/team-from-office.ts): a plan's Start from a team is checked
+ * against them (an unknown project or profile refused); without it, the plan's team source is dropped.
+ */
+export function cleanPlan(raw: unknown, versions: string[], org: string, teams?: ReadonlyMap<string, KnownSource>): ProjectPlan | string {
   if (!raw || typeof raw !== 'object') return 'Bad request';
   const r = raw as Record<string, unknown>;
   const kind = r.kind === 'change' ? 'change' : 'new';
@@ -44,6 +49,9 @@ export function cleanPlan(raw: unknown, versions: string[], org: string): Projec
   const roles = (Array.isArray(r.roles) ? r.roles : []).filter((x): x is ProjectRole => PROJECT_ROLES.some((p) => p.id === x));
   const d = (r.discovery ?? {}) as Record<string, unknown>;
   const model = (DISCOVERY_MODELS as readonly string[]).includes(d.model as string) ? (d.model as string) : 'opus';
+  const asked = teams ? cleanTeamFrom(r.teamFrom, [...new Set(roles)]) : undefined;
+  const teamFrom = asked && teams ? checkTeamFrom(asked, teams, isPortfolioId(r.portfolio) ? r.portfolio : undefined) : undefined;
+  if (typeof teamFrom === 'string') return teamFrom;
   return {
     kind,
     owner,
@@ -70,6 +78,7 @@ export function cleanPlan(raw: unknown, versions: string[], org: string): Projec
     ...(isPortfolioId(r.portfolio) ? { portfolio: r.portfolio } : {}),
     // Off GitHub: a new repository only (a change's repository is on GitHub already). The source folder comes from the draft only (Wizard.start).
     ...(kind === 'new' && r.localOnly === true ? { localOnly: true } : {}),
+    ...(teamFrom ? { teamFrom } : {}),
   };
 }
 

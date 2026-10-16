@@ -8,6 +8,7 @@ import { readBody, sameOrigin, send } from '../util.js';
 import { wizardOf } from '../../wizard/index.js';
 import { floorParam } from './files.js';
 import { setupCancelsOf, unfinishedSetups } from '../../wizard/unfinished.js';
+import { teamsFor } from '../../wizard/team-from-office.js';
 
 export const wizardRoutes = {
   wizard: {
@@ -78,7 +79,7 @@ export const wizardRoutes = {
       // A Retry looks at an unsettled operation first, and one that would fail anyway (a paused project…) says so first, with what to do.
       const tried = p === '/api/wizard/retry' ? await w.retry(id) : undefined;
       if (tried && typeof tried === 'object' && 'blocker' in tried) return send(res, 409, { error: tried.blocker.text, blocker: tried.blocker });
-      const r = p === '/api/wizard/start' ? w.start(body, who, session.account?.id) : p === '/api/wizard/retry' ? tried : p === '/api/wizard/edit' ? w.edit(id, body) : undefined;
+      const r = p === '/api/wizard/start' ? w.start(body, who, session.account?.id, await teamsFor(ctx, body)) : p === '/api/wizard/retry' ? tried : p === '/api/wizard/edit' ? w.edit(id, body) : undefined;
       if (r === undefined) return send(res, 404, { error: 'Not found' });
       if (typeof r === 'string') return send(res, 400, { error: r });
       if (p === '/api/wizard/start') console.log(`  ${who} started setting up ${r.plan.owner}/${r.plan.name} in the new-project wizard`);
