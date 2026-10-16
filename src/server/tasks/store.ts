@@ -5,7 +5,9 @@
 // It's independent of the agents: a member's task and its prevTasks cache on the roster, and a queue task,
 // only hold the ids. Minting is synchronous (the id has to be in the text before it's typed): the record is
 // in memory at once and its line goes to disk in order behind the floor's earlier ones, one fsync'd append
-// at a time, off the event loop. A failed write is logged, never thrown at the caller that typed the task.
+// at a time, off the event loop. Whatever types a new task waits for its line first (createDurable, durable):
+// a failed create rejects there, so nothing is sent with an id the record doesn't have, and the record is
+// dropped from memory. Events stay fire-and-forget (logged); flushed() says whether any line was lost.
 
 import { promises as fsp } from 'node:fs';
 import path from 'node:path';
@@ -33,6 +35,9 @@ interface FloorTasks {
   early: { task: string; event: TaskEvent }[];
 }
 
+/** What flushed() found: every line queued so far on disk, or how many weren't (and the last reason). */
+export type TaskFlush = { ok: true } | { ok: false; failed: number; error: string };
+
 export interface NewTask {
   source: TaskSource;
   text: string;
@@ -44,6 +49,11 @@ export class TaskStore {
   private floors = new Map<string, FloorTasks>();
   private loading = new Map<string, Promise<void>>();
   private chains = new Map<string, Promise<unknown>>();
+  /** Each floor's lines that couldn't be written (sticky: a lost line stays lost). */
+  private failures = new Map<string, { failed: number; error: string }>();
+  /** Creates whose line isn't settled yet, and those whose line was lost: what durable() answers from. */
+  private pending = new Map<string, Promise<Error | undefined>>();
+  private lost = new Map<string, string>();
 
   constructor(
     readonly dir: string,
@@ -101,13 +111,44 @@ export class TaskStore {
     f.loaded = true;
   }
 
-  /** A task made now: its id at once, its line on disk soon (in order). */
+  /**
+   * A task made now: its id at once, its line on disk soon (in order). Anything that sends the id waits for
+   * durable() (or uses createDurable) first. A create whose line fails is taken out of memory again.
+   */
   create(floorId: string, t: NewTask): TaskRecord {
     const rec: TaskRecord = { id: mintTaskId(this.now()), createdAt: this.now(), source: t.source, text: t.text.replace(/\s+/g, ' ').trim().slice(0, TEXT_MAX), ...(t.issue !== undefined ? { issue: t.issue } : {}), ...(t.legacyId ? { legacyId: t.legacyId } : {}), events: [] };
     this.mem(floorId).byId.set(rec.id, rec);
     const { events: _e, ...task } = rec;
-    this.write(floorId, { op: 'create', task });
+    const key = `${floorId}\0${rec.id}`;
+    const done = this.write(floorId, { op: 'create', task }).then((err) => {
+      this.pending.delete(key);
+      if (err) {
+        this.lost.set(key, err.message);
+        const f = this.floors.get(floorId);
+        if (f?.byId.get(rec.id) === rec) f.byId.delete(rec.id);
+      }
+      return err;
+    });
+    this.pending.set(key, done);
     return rec;
+  }
+
+  /** A task made now whose line is on disk: rejects (and nothing knows the id) when it couldn't be written. */
+  async createDurable(floorId: string, t: NewTask): Promise<TaskRecord> {
+    const rec = this.create(floorId, t);
+    await this.durable(floorId, rec.id);
+    return rec;
+  }
+
+  /**
+   * Resolves once task `id`'s create line is on disk; rejects when it couldn't be written. An id this process
+   * didn't make (read from the file, or from before a restart) resolves at once.
+   */
+  async durable(floorId: string, id: string): Promise<void> {
+    const key = `${floorId}\0${id}`;
+    const err = await this.pending.get(key);
+    const why = err?.message ?? this.lost.get(key);
+    if (why) throw new Error(why);
   }
 
   /** An event on a task, kept in memory at once and appended in order. */
@@ -126,10 +167,15 @@ export class TaskStore {
     this.write(floorId, { op: 'issue', task: taskId, issue });
   }
 
-  /** A new attempt at a task on `worker`: its execution id, `assigned` the first time and `reassigned` after. */
-  attempt(floorId: string, taskId: string, a: { worker: string; role?: string; from?: string }): string {
-    const executionId = mintExecutionId(this.now());
+  /**
+   * A new attempt at a task on `worker`: its execution id, `assigned` the first time and `reassigned` after.
+   * `executionId`, when given, was minted before the send (it's in the dispatch record): an attempt already on
+   * the record with it isn't written twice.
+   */
+  attempt(floorId: string, taskId: string, a: { worker: string; role?: string; from?: string; executionId?: string }): string {
     const t = this.mem(floorId).byId.get(taskId);
+    if (a.executionId && t?.events.some((e) => (e.type === 'assigned' || e.type === 'reassigned') && e.executionId === a.executionId)) return a.executionId;
+    const executionId = a.executionId ?? mintExecutionId(this.now());
     const before = t ? t.events.some((e) => e.type === 'assigned' || e.type === 'reassigned') : !!a.from;
     const at = this.now();
     this.event(floorId, taskId, before ? { type: 'reassigned', at, worker: a.worker, ...(a.role ? { role: a.role } : {}), executionId, ...(a.from ? { from: a.from } : {}) } : { type: 'assigned', at, worker: a.worker, ...(a.role ? { role: a.role } : {}), executionId });
@@ -162,17 +208,17 @@ export class TaskStore {
     return [...this.mem(floorId).byId.values()].sort((a, b) => a.createdAt - b.createdAt);
   }
 
-  /** Resolves once every line queued so far is on disk (or failed). */
-  flushed(floorId: string): Promise<void> {
-    return (this.chains.get(floorId) ?? Promise.resolve()).then(
-      () => undefined,
-      () => undefined,
-    );
+  /** Resolves once every line queued so far is settled: ok, or how many of the floor's lines were lost (sticky). */
+  async flushed(floorId: string): Promise<TaskFlush> {
+    await (this.chains.get(floorId) ?? Promise.resolve()).catch(() => undefined);
+    const f = this.failures.get(floorId);
+    return f ? { ok: false, ...f } : { ok: true };
   }
 
-  private write(floorId: string, l: TaskLine) {
+  /** Queues a line behind the floor's earlier ones: resolves to the error when it couldn't be written (never rejects). */
+  private write(floorId: string, l: TaskLine): Promise<Error | undefined> {
     const prev = this.chains.get(floorId) ?? Promise.resolve();
-    const next = prev
+    const next: Promise<Error | undefined> = prev
       .catch(() => undefined)
       .then(async () => {
         await this.load(floorId);
@@ -188,9 +234,17 @@ export class TaskStore {
           await h.close();
         }
         f.last = line;
+        return undefined;
       })
-      .catch((err: unknown) => console.error(`agent-office: tasks: couldn't save a task line for ${floorId}: ${(err as Error).message}`));
+      .catch((err: unknown) => {
+        const e = err instanceof Error ? err : new Error(String(err));
+        const had = this.failures.get(floorId);
+        this.failures.set(floorId, { failed: (had?.failed ?? 0) + 1, error: e.message });
+        console.error(`agent-office: tasks: couldn't save a task line for ${floorId}: ${e.message}`);
+        return e;
+      });
     this.chains.set(floorId, next);
+    return next;
   }
 
   /** Whether every line fits its own hash and points at the one before it. */

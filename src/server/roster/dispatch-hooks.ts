@@ -5,6 +5,7 @@
 // reconciliation, and no automatic replay of an ambiguous attempt.
 
 import type { AnswerRevisionKind, DispatchRecord, DispatchTask } from '../../shared/dispatch.js';
+import { taskIdIn } from '../../shared/tasks.js';
 import type { EscalationOutcome, EscalationVerdict } from '../../shared/roster/escalation.js';
 import type { AnswerLine } from '../answers/store.js';
 import { reconcileFloor, type Reconciled } from '../dispatch/reconcile.js';
@@ -42,6 +43,28 @@ export function hookDispatch(roster: Roster) {
   roster.dispatch.appliers.set('esc', (floorId, r, line) => applyEscalation(roster, floorId, r, line));
   // Slice 1B-4: each dispatch to a member captures the task it's on (a candidate link, legacy ones without an id).
   roster.dispatch.taskAt = (floorId, workerId) => memberTaskAt(roster, floorId, workerId);
+  roster.dispatch.hooks.add({ settled: (floorId, r) => attemptFromDispatch(roster, floorId, r) });
+}
+
+/** The states in which a dispatch is known to have reached its agent (typed, or a person said so). */
+const REACHED = new Set<DispatchRecord['state']>(['submitted', 'person-confirmed-sent']);
+
+/**
+ * A dispatch that handed over a task (its ids in the record, written before typing) and is now known to have
+ * reached its agent: the attempt is on the task's record with the execution id the record carries. Usually it's
+ * there already (the sender assigned it); after a restart, or "It went through" on an unclear one, this is
+ * what puts it there. Never types anything; an unclear dispatch stays unclear until a person settles it.
+ */
+export async function attemptFromDispatch(roster: Roster, floorId: string, r: DispatchRecord): Promise<void> {
+  const t = r.task;
+  // Only one that handed the task over (its Task: line in what was typed), not one that captured the recipient's task.
+  if (r.channel !== 'type' || !REACHED.has(r.state) || !t?.taskId || !t.executionId || !r.workerId || taskIdIn(r.payload) !== t.taskId) return;
+  const store = roster.tasks.ids.of(floorId);
+  await store.load(floorId);
+  if (!store.has(floorId, t.taskId)) return;
+  const floor = roster.deps.floors().find((f) => f.id === floorId);
+  const role = floor ? roster.roleOf(floor, r.workerId) : undefined;
+  store.attempt(floorId, t.taskId, { worker: r.workerId, ...(role ? { role } : {}), executionId: t.executionId });
 }
 
 /** A member's open task as a dispatch captures it: its ids, first line, branch and PR. */
@@ -74,6 +97,9 @@ export async function reconcileAll(roster: Roster): Promise<Reconciled[]> {
     } catch (err) {
       console.error(`agent-office: dispatch: couldn't reconcile ${f.id}: ${(err as Error).message}`);
     }
+    // A task handed over by a dispatch that reached its agent before the restart, its attempt not on the task's
+    // record (the process stopped first): put there from the dispatch record, which had the ids before typing.
+    for (const r of roster.dispatch.store.list(f.id)) await attemptFromDispatch(roster, f.id, r).catch(() => undefined);
   }
   return out;
 }

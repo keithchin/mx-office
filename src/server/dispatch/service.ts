@@ -45,6 +45,11 @@ export interface Target {
   covers?: { decision: DecisionRef; answerRev: number }[];
   proposalId?: string;
   supersedes?: string;
+  /**
+   * The task this dispatch hands over, when it is one (a model change request, a stuck item's ask): its ids are
+   * in the record before anything is typed. Otherwise the record captures the recipient's current task.
+   */
+  task?: DispatchTask;
   /** The exact text it types (or the issue body), given its marker line. */
   payload(marker: string): string;
   session?(): Promise<SessionAt>;
@@ -218,7 +223,7 @@ export class Dispatcher {
       ...(groupId ? { groupId } : {}),
       ...(t.workerId ? { workerId: t.workerId } : {}),
       ...(t.workerName ? { workerName: t.workerName } : {}),
-      ...taskOf(this.taskAt, floorId, t.workerId),
+      ...(t.task ? { task: t.task } : taskOf(this.taskAt, floorId, t.workerId)),
       ...session,
       payload: t.payload(marker),
       marker,

@@ -32,15 +32,25 @@ export function issueTarget(roster: Roster, floor: TeamFloor, p: Proposal, by: s
       p.status = 'approved';
       delete p.issue;
       p.dispatchId = r.id;
+      // Its work is a task from now on (Slice 1B-4): the task id rides in the issue body, under the marker. The
+      // task's record and the proposal pointing at it are both on disk before the issue is made.
+      const store = roster.tasks.ids.of(floor.id);
+      const hadTask = p.taskId;
+      try {
+        p.taskId ??= (await store.createDurable(floor.id, { source: 'proposal', text: p.title })).id;
+        await store.durable(floor.id, p.taskId);
+      } catch (err) {
+        Object.assign(p, was);
+        if (hadTask) p.taskId = hadTask;
+        else delete p.taskId;
+        return { state: 'failed', note: `the task's record couldn't be saved before making the issue (${(err as Error).message}), so no issue was made` };
+      }
       try {
         await roster.file(floor.id).flushCritical();
       } catch (err) {
         Object.assign(p, was);
         return { state: 'failed', note: `the approval couldn't be saved before making the issue (${(err as Error).message}), so no issue was made` };
       }
-      // Its work is a task from now on (Slice 1B-4): the task id rides in the issue body, under the marker.
-      const store = roster.tasks.ids.of(floor.id);
-      p.taskId ??= store.create(floor.id, { source: 'proposal', text: p.title }).id;
       let made: MadeIssue;
       try {
         // The marker stays the body's last line (reconcile and people look for it there), the task line just above it.

@@ -6,6 +6,7 @@
 import { taskIdIn, withTaskLine, type TaskRef, type TaskSource } from '../../shared/tasks.js';
 import type { TaskStore } from './store.js';
 import { withExtraLines } from './lines.js';
+import { mintExecutionId } from '../../shared/evidence/ids.js';
 
 export interface Identify {
   store: TaskStore;
@@ -30,20 +31,35 @@ function existing(i: Pick<Identify, 'store' | 'floorId' | 'raw' | 'issue' | 'kno
   return undefined;
 }
 
-/** The task and this attempt's execution id, minting the task when it's new. */
-export function identify(i: Identify): Required<TaskRef> {
+/** The task and this attempt's execution id, minting the task when it's new (`executionId`: one minted before the send). */
+export function identify(i: Identify & { executionId?: string }): Required<TaskRef> {
   const id = existing(i) ?? i.store.create(i.floorId, { source: i.source, text: i.text, ...(i.issue !== undefined ? { issue: i.issue } : {}) }).id;
   const was = i.known.get(id)?.worker;
-  const executionId = i.store.attempt(i.floorId, id, { worker: i.worker, ...(i.role ? { role: i.role } : {}), ...(was && was !== i.worker ? { from: was } : {}) });
+  const executionId = i.store.attempt(i.floorId, id, { worker: i.worker, ...(i.role ? { role: i.role } : {}), ...(was && was !== i.worker ? { from: was } : {}), ...(i.executionId ? { executionId: i.executionId } : {}) });
   return { taskId: id, executionId };
+}
+
+/** A new task ready to type: the text with its task line, and the ids it goes with (the execution id not on the record yet). */
+export interface PreparedTask {
+  text: string;
+  taskId: string;
+  executionId: string;
+  /** The assignment's own reading of it (its first line), as a dispatch record keeps it. */
+  first: string;
 }
 
 /**
  * The text to type for a new task: with its `Task: tsk_…` line, the task made now (or the existing one it
- * names) so the id is in what the agent reads. A reply or a question (not a task) goes as it was.
+ * names) so the id is in what the agent reads. Resolves only once the task's create line is on disk (the
+ * floor's file read first, so an issue's task from before a restart is found); rejects when it couldn't be
+ * written, and then nothing may be typed. The execution id is minted here, unrecorded, so a dispatch can
+ * carry it; the attempt is written when the task is assigned (identify with it).
  */
-export function prepareText(i: Omit<Identify, 'worker' | 'role'>): string {
+export async function prepareTask(i: Omit<Identify, 'worker' | 'role'>): Promise<PreparedTask> {
+  await i.store.load(i.floorId);
   const id = existing(i) ?? i.store.create(i.floorId, { source: i.source, text: i.text, ...(i.issue !== undefined ? { issue: i.issue } : {}) }).id;
+  await i.store.durable(i.floorId, id);
   // Feature lines under it (./lines.ts: a bound design system's pointer), each at most one short line.
-  return withExtraLines(withTaskLine(i.raw, id), { floorId: i.floorId, taskId: id, text: i.text, ...(i.issue !== undefined ? { issue: i.issue } : {}) });
+  const text = withExtraLines(withTaskLine(i.raw, id), { floorId: i.floorId, taskId: id, text: i.text, ...(i.issue !== undefined ? { issue: i.issue } : {}) });
+  return { text, taskId: id, executionId: mintExecutionId(Date.now()), first: i.text.slice(0, 200) };
 }

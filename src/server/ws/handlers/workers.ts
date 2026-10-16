@@ -7,6 +7,8 @@ import { issueNumber, num, str } from '../../office/input.js';
 import { here, workerOf } from './common.js';
 import { audit, human, promptDetails } from '../../audit/index.js';
 import type { FeatureHooks, HandlerMap, ViewPieces } from './types.js';
+import type { Ctx } from '../../office/context.js';
+import type { Client } from '../../office/client.js';
 import { rosterOf, teamFloor } from '../../roster/adapter.js';
 
 const CLEANUPS = new Set(['keep', 'worktree', 'all']);
@@ -121,22 +123,19 @@ export const workerHandlers = {
     const who = c.peer.name;
     const w = workerOf(ctx, msg.workerId);
     const said = str(msg.prompt, 20000);
-    // A task given to a team member carries its task id (Slice 1B-4, roster/task-ids.ts); a reply goes as it was.
-    const text = w?.info.kind === 'agent' ? rosterOf(ctx).tasks.prepare(teamFloor(ctx, w.floor), w.wid, said, 'console') : said;
-    // An agent that slept through a pause hears it was resumed, and the Coordinator gets the run state (roster/awareness.ts).
-    const dressed = w?.info.kind === 'agent' ? rosterOf(ctx).awareness.dress(teamFloor(ctx, w.floor), w.info, text) : undefined;
-    const err = w ? w.floor.workers.prompt(w.wid, dressed?.text ?? text, who) : 'No such worker';
-    if (!err) dressed?.sent();
-    ctx.warn(c, err);
-    // That someone prompted it, never what they said (its start only when an admin turned that on).
-    if (w && !err) audit.record({ floor: w.floor.id, actor: human(who, c.accountId), action: 'worker.prompt', target: { kind: 'worker', id: w.wid, label: w.info.name }, summary: `Prompted ${w.info.name}`, details: promptDetails(text) });
-    // What a person gives a team member to do is its task (roster/resume.ts); a reply or a question isn't.
-    if (w && !err && w.info.kind === 'agent') rosterOf(ctx).tasks.assign(teamFloor(ctx, w.floor), w.wid, text, who, 'console');
-    const issue = w?.info.kind === 'agent' ? issueNumber(msg.issue) : undefined;
-    if (w && !err && issue) {
-      ctx.toastFloor(w.floor, `${who} handed issue #${issue} to ${w.info.name}`);
-      ctx.takeIssue(c, w.floor, issue);
-    }
+    // A task given to a team member carries its task id (Slice 1B-4, roster/task-ids.ts), its record on disk
+    // before it's typed (nothing typed when that fails); a reply goes as it was, at once.
+    // One worker's prompts still go in the order they were sent (a reply never overtakes a task waiting for its record).
+    if (!w || w.info.kind !== 'agent') return promptNow(ctx, c, msg, w, said);
+    const prev = promptChains.get(w.wid) ?? Promise.resolve();
+    const next = prev
+      .then(() => rosterOf(ctx).tasks.prepare(teamFloor(ctx, w.floor), w.wid, said, 'console'))
+      .then((prep) => (prep.error !== undefined ? ctx.warn(c, prep.error) : promptNow(ctx, c, msg, w, prep.text, prep.task?.executionId)))
+      .catch((err: unknown) => ctx.warn(c, `Not sent: ${(err as Error).message}`))
+      .finally(() => {
+        if (promptChains.get(w.wid) === next) promptChains.delete(w.wid);
+      });
+    promptChains.set(w.wid, next);
   },
   'station.prompt'(ctx, c, msg) {
     const who = c.peer.name;
@@ -210,3 +209,25 @@ export const workerHooks: FeatureHooks = {
   },
   closedOn: (_ctx, c, floor) => floor.workers.detachAll(c.id),
 };
+
+/** Each worker's console prompts in flight, so they go in the order they were sent. */
+const promptChains = new Map<string, Promise<unknown>>();
+
+/** A console prompt typed (a task already with its line and its record on disk; `executionId`: the one prepared with it). */
+function promptNow(ctx: Ctx, c: Client, msg: { issue?: unknown }, w: ReturnType<typeof workerOf>, text: string, executionId?: string) {
+  const who = c.peer.name;
+  // An agent that slept through a pause hears it was resumed, and the Coordinator gets the run state (roster/awareness.ts).
+  const dressed = w?.info.kind === 'agent' ? rosterOf(ctx).awareness.dress(teamFloor(ctx, w.floor), w.info, text) : undefined;
+  const err = w ? w.floor.workers.prompt(w.wid, dressed?.text ?? text, who) : 'No such worker';
+  if (!err) dressed?.sent();
+  ctx.warn(c, err);
+  // That someone prompted it, never what they said (its start only when an admin turned that on).
+  if (w && !err) audit.record({ floor: w.floor.id, actor: human(who, c.accountId), action: 'worker.prompt', target: { kind: 'worker', id: w.wid, label: w.info.name }, summary: `Prompted ${w.info.name}`, details: promptDetails(text) });
+  // What a person gives a team member to do is its task (roster/resume.ts); a reply or a question isn't.
+  if (w && !err && w.info.kind === 'agent') rosterOf(ctx).tasks.assign(teamFloor(ctx, w.floor), w.wid, text, who, 'console', executionId);
+  const issue = w?.info.kind === 'agent' ? issueNumber(msg.issue) : undefined;
+  if (w && !err && issue) {
+    ctx.toastFloor(w.floor, `${who} handed issue #${issue} to ${w.info.name}`);
+    ctx.takeIssue(c, w.floor, issue);
+  }
+}

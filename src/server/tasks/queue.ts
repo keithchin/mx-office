@@ -1,7 +1,8 @@
 // The queue's side of task identity (Slice 1B-4): a queued task is a durable task from when it's added
 // (its hex queue id kept as legacyId), and each seating of a worker for it is an attempt with its own
 // execution id. A retry is the same task again, so it keeps the task id; a queue task from before task ids
-// has none and gets none.
+// has none and gets none. A task isn't seated until its record has it on disk (durable): the queue's own
+// file keeps the ids too, and reads them back after a restart.
 
 import type { QueueTask, WorkerInfo } from '../../shared/protocol.js';
 import type { TaskStore } from './store.js';
@@ -9,6 +10,8 @@ import type { TaskStore } from './store.js';
 export interface QueueTaskIds {
   /** The task id for a task just added. */
   create(t: Pick<QueueTask, 'id' | 'title' | 'issue'>): string;
+  /** Resolves once the task's record has it on disk: undefined, or why it couldn't be written (then it mustn't start). */
+  durable?(taskId: string): Promise<string | undefined>;
   /** The execution id of a seating, on the task's record (`assigned` the first time, `reassigned` after). */
   attempt(t: Pick<QueueTask, 'taskId' | 'workerId'>, w: Pick<WorkerInfo, 'id'>): string | undefined;
 }
@@ -21,6 +24,10 @@ export function queueTaskIds(store: TaskStore, floorId: string): QueueTaskIds {
       const had = t.issue !== undefined ? store.byIssue(floorId, t.issue) : undefined;
       return had?.id ?? store.create(floorId, { source: 'queue', text: t.title, ...(t.issue !== undefined ? { issue: t.issue } : {}), legacyId: t.id }).id;
     },
+    durable: (taskId) => store.durable(floorId, taskId).then(
+      () => undefined,
+      (err: Error) => err.message,
+    ),
     attempt: (t, w) => (t.taskId ? store.attempt(floorId, t.taskId, { worker: w.id, ...(t.workerId && t.workerId !== w.id ? { from: t.workerId } : {}) }) : undefined),
   };
 }

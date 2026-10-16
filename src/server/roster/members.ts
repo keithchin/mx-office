@@ -88,22 +88,27 @@ export class Members {
       if (!isAsleepStatus(w.status)) return `${m.name} is already at work`;
       // Woken with a task after sleeping through a pause: it hears first that the project was resumed (awareness.ts).
       const note = task ? this.roster.awareness.noteFor(floor, w) : undefined;
-      // Its task id goes in with it (Slice 1B-4, roster/task-ids.ts).
-      const typed = task ? this.roster.tasks.prepareRole(floor, task) : task;
+      // Its task id goes in with it (Slice 1B-4, roster/task-ids.ts), its record on disk first: not woken when that fails.
+      const prep = task ? await this.roster.tasks.prepareRole(floor, task) : undefined;
+      if (prep?.error !== undefined) return prep.error;
+      const typed = prep?.text;
       const err = floor.wake(w.id, note ? `${note}\n\n${typed}` : typed);
       if (!err && note) this.roster.awareness.ack(floor, w.id);
-      if (!err && typed) this.roster.tasks.assignRole(floor, role, typed, by);
+      if (!err && typed) this.roster.tasks.assignRole(floor, role, typed, by, 'hire', prep?.task?.executionId);
       if (!err) floor.toast(`${by} woke ${m.name}, the ${def.title}`);
       return err;
     }
     const paused = this.roster.pauseOf(d) ?? hireHoldOf(floor.id);
     if (paused) return paused;
+    // Its task's record on disk before anything is typed or marked in flight: not hired when that fails.
+    const prep = task ? await this.roster.tasks.prepareRole(floor, task) : undefined;
+    if (prep?.error !== undefined) return prep.error;
+    const typed = prep?.text;
     const owed = this.roster.escalations.owed(floor, role);
     // Durable answers the hire carries: marked in flight before the hire types them (a new session: no transcript to prove it by yet).
     if (owed.dispatchIds?.length) await this.roster.dispatch.beforeType(floor.id, owed.dispatchIds, {});
     // A project in a portfolio with a company brain: one line pointing at its ROUTING.md (never its content); nothing for any other project.
     const brain = await this.roster.deps.hireContext?.(floor.id).catch(() => undefined);
-    const typed = task ? this.roster.tasks.prepareRole(floor, task) : task;
     // The brain's pointer and, for a profile that worked on other projects, one line saying nothing from them comes along (a count only).
     const lines = [brain?.line, profile?.line].filter(Boolean).join('\n\n') || undefined;
     const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, typed, owed.lines, teamLine(d, role), lines), owner, by, team: def.team });
@@ -120,7 +125,7 @@ export class Members {
     m.benchSawBusy = undefined;
     // What it's to carry on with after the office's own messages (resume.ts); one brought back without a task keeps its last.
     // A new task is a new attempt at a new (or named) task; one brought back with its open task keeps that task id, with a new execution id.
-    if (typed) this.roster.tasks.assignRole(floor, role, typed, by);
+    if (typed) this.roster.tasks.assignRole(floor, role, typed, by, 'hire', prep?.task?.executionId);
     else this.roster.tasks.ids.reattempt(floor, role, r.id, was);
     const ids = m.task && m.task.doneAt === undefined && m.task.taskId ? { taskId: m.task.taskId, ...(m.task.executionId ? { executionId: m.task.executionId } : {}) } : {};
     floor.toast(`${by} hired ${m.name}, the ${def.title}${m.handoff ? ', fresh from its handoff note' : ''}`);
