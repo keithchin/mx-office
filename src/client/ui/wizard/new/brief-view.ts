@@ -2,10 +2,14 @@
 // Constraints and Open questions, each item with its tag (Answered, Assumed, Unverified: a word as well as
 // a colour) and where it came from. Assumed items have Confirm and Edit, open questions Answer in chat,
 // and every section can be added to. While the Chief Analyst drafts, the sections wait under shimmering
-// lines; when the brief arrives they appear one by one, quickly. Once the scope is approved it folds away.
-import { DRAFTED, SECTION_IDS, SECTION_INFO, sourceText, whenDrafted, type BriefItem, type DraftView, type ItemOp, type SectionId } from '../../../../shared/brief';
+// lines; when the brief arrives they appear one by one, quickly. While it folds a chat answer in, the brief
+// waits under an overlay and isn't redrawn until it's done (brief-overlay.ts, brief-update.ts). Once the
+// scope is approved it folds away.
+import { DRAFTED, SECTION_IDS, SECTION_INFO, sourceText, whenDrafted, type Brief, type BriefItem, type DraftView, type ItemOp, type SectionId } from '../../../../shared/brief';
 import { h, toast } from '../../dom';
 import { briefApi } from './api';
+import { briefOverlay } from './brief-overlay';
+import { settledChanges, updateStep } from './brief-update';
 import { openDialog } from './dialog';
 import { draftingCard, hhmm, icon, skeleton, tagPill } from './parts';
 import type { Flow } from './index';
@@ -34,6 +38,11 @@ export function briefPanel(flow: Flow, ctx: BriefPanelCtx) {
   let now: SectionId | undefined;
   /** The item being edited inline, kept across redraws. */
   let editing: string | undefined;
+  const overlay = briefOverlay(el, collapse);
+  /** An update (a chat answer being folded in) showing now, over the brief as it was drawn last. */
+  let updating = false;
+  let drawnBrief: Brief | undefined;
+  let lockedDrawn = false;
 
   head.addEventListener('click', () => {
     const open = head.getAttribute('aria-expanded') !== 'true';
@@ -199,16 +208,34 @@ export function briefPanel(flow: Flow, ctx: BriefPanelCtx) {
   function update(prev?: DraftView) {
     const d = flow.draft;
     if (!d) return;
+    const step = updateStep(updating, d, lockedDrawn);
+    // While the Chief Analyst folds a chat answer in, the brief as it was stays put under the overlay: polls draw nothing.
+    if (step === 'hold') return;
+    if (step === 'start') {
+      updating = true;
+      overlay.show();
+      // A page opened mid-update draws the brief once, under the overlay.
+      if (drawnBrief) return;
+    }
     const arrived = prev?.status === 'drafting' && d.status === 'ready' && !!d.brief;
+    const last = d.chat[d.chat.length - 1];
     if (arrived && !revealing) {
       reveal();
     } else if (!revealing) {
       if (d.brief && d.status !== 'drafting') shown = new Set(SECTION_IDS);
+      // Settling an update: one redraw without the items' rise, the overlay fades, what changed pulses.
+      el.classList.toggle('nw-settle', step === 'settle');
       SECTION_IDS.forEach(draw);
     }
-    // The last chat turn's changes, highlighted once.
-    const last = d.chat[d.chat.length - 1];
-    if (last?.changed?.length && prev && prev.chat.length < d.chat.length) setTimeout(() => flash(last.changed!), 30);
+    if (step === 'settle') {
+      updating = false;
+      overlay.hide();
+      const ids = settledChanges(drawnBrief, d.brief, last?.who === 'ca' ? last.changed : undefined);
+      if (ids.length) setTimeout(() => overlay.pulse(ids), 30);
+      else (overlay.note('No changes to the brief'), flow.say('No changes to the brief'));
+    } else if (last?.changed?.length && prev && prev.chat.length < d.chat.length) setTimeout(() => flash(last.changed!), 30);
+    drawnBrief = d.brief;
+    lockedDrawn = !!d.approved && !revealing;
     const approved = !!d.approved;
     badge.className = approved ? 'nw-badge ok' : 'nw-badge draft';
     badge.textContent = approved ? 'APPROVED' : 'DRAFT';
