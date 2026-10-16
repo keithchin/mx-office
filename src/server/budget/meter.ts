@@ -88,15 +88,22 @@ export function spendOfCliResult(out: string, fallbackModel = 'haiku'): { model:
     let total = zeroUsage();
     let model = '';
     let top = -1;
+    // The answer sums every request of the call, so a model priced by prompt length (Haiku 5.5) is priced at the average request's.
+    const turns = Math.max(1, num(res.num_turns));
     for (const [m, v] of mu) {
-      const u = usageOfMessage(m, { input_tokens: num(v?.inputTokens), output_tokens: num(v?.outputTokens), cache_creation_input_tokens: num(v?.cacheCreationInputTokens), cache_read_input_tokens: num(v?.cacheReadInputTokens), server_tool_use: { web_search_requests: num(v?.webSearchRequests) } });
+      const prompt = (num(v?.inputTokens) + num(v?.cacheCreationInputTokens) + num(v?.cacheReadInputTokens)) / turns;
+      const u = usageOfMessage(m, { input_tokens: num(v?.inputTokens), output_tokens: num(v?.outputTokens), cache_creation_input_tokens: num(v?.cacheCreationInputTokens), cache_read_input_tokens: num(v?.cacheReadInputTokens), server_tool_use: { web_search_requests: num(v?.webSearchRequests) } }, prompt);
       total = addUsage(total, u);
       if (u.cost > top) ((top = u.cost), (model = m));
     }
     total.calls = Math.max(1, num(res.num_turns) || mu.length);
     return { model, usage: total };
   }
-  if (res.usage && typeof res.usage === 'object') return { model: fallbackModel, usage: usageOfMessage(fallbackModel, res.usage) };
+  if (res.usage && typeof res.usage === 'object') {
+    const u = res.usage;
+    const prompt = (num(u.input_tokens) + num(u.cache_creation_input_tokens) + num(u.cache_read_input_tokens)) / Math.max(1, num(res.num_turns));
+    return { model: fallbackModel, usage: usageOfMessage(fallbackModel, u, prompt) };
+  }
   return undefined;
 }
 

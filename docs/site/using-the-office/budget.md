@@ -23,6 +23,8 @@ The project chip is **green** inside the budget, **amber** within 10 % of it and
 
 - calls that are **not metered**: providers the office can't price, like Codex or OpenCode. They're counted but not costed.
 - the exchange rate in use.
+- **Price list checked on** a date: when the office's Claude prices were last checked against Anthropic's pricing page.
+- **Priced at Opus rates**, when a worker or a background call ran on a model the price list doesn't have (a model newer than the list, say): its cost is priced at Opus rates until the list is updated, so treat it as an estimate. The same line shows in Needs you as an info row (worth knowing, not waiting on you). Each model is named once, from when the office first saw it since it started.
 
 ## Where the money went
 
@@ -41,9 +43,13 @@ When the office starts a project's ledger, it fills in what had already been spe
 
 ## How spend is counted
 
-- **Workers**: each worker's tokens come from its Claude Code transcript, subagents included, priced from the office's price list. Each API request is counted once, however many transcript lines Claude Code wrote for it and whether it appears in the session's transcript, a subagent's, or both. The office's Ledger (the office total) and the project ledger book the same change, at the same moment, so the two never disagree. The project ledger also splits each change by agent (the worker, or a subagent type) and by model.
+- **Workers**: each worker's tokens come from its Claude Code transcript, subagents included, priced from the office's price list. Each API request is counted once, however many transcript lines Claude Code wrote for it and whether it appears in the session's transcript, a subagent's, or both. The office's Ledger (the office total) and the project ledger book the same change, at the same moment, so the two never disagree. The project ledger also splits each change by agent (the worker, or a subagent type) and by model. When a session ends, Claude Code writes its own tally, which also covers calls that never reach the transcript (titles, summaries). The office reads it run by run (a resumed session in a new process starts its tally again) and books each run at the larger of Claude Code's figure and its own estimate, so a worker's spend never goes down and no ledger day is negative.
 - **The office's background calls** are booked on the project they served, and added to the office total. These are Jeff's Haiku fallback, the analyzer, task naming, the project summary and the Firm's reviewers. A call that served no project (the office's own) goes on the office view. Jeff's calls to Jev aren't priced, so they show as not metered. Gate-check makes no model calls.
 - **Providers other than Claude** count their calls but no cost.
+
+### The price list
+
+Claude costs are priced per model from the office's price list (`src/server/prices.ts`), with the date it was checked against [Anthropic's pricing page](https://platform.claude.com/docs/en/about-claude/pricing). Each row matches one model id exactly, whatever a cloud adds around it (`us.anthropic.…-v1:0`, `@…`, a dated snapshot, `[1m]`), and the `fable`, `opus`, `sonnet` and `haiku` aliases are priced as the model Claude Code runs for them. A model with no row is priced at Opus rates ($5 / $25 per million input / output tokens; Fable rates for an unknown Fable or Mythos model), and the Budget tab says which. Haiku 5.5 costs more for a request whose prompt is over 100,000 tokens, and the office prices each request that way.
 
 ## Insights
 

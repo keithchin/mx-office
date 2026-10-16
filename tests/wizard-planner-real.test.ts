@@ -185,7 +185,7 @@ test('the estimate is priced as the meter books the call: sonnet runs claude-son
   const dir = mkdtempSync(path.join(os.tmpdir(), 'ao-planner-est-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   assert.equal(resolvedModel('sonnet'), 'claude-sonnet-5-5');
-  assert.deepEqual(priceOf(resolvedModel('sonnet')), [2, 10, 0.2], 'the documented price, cache reads included');
+  assert.deepEqual(priceOf(resolvedModel('sonnet')), [2, 10, 0.1], 'the documented price (checked 2026-10-16), cache reads included');
   const engine = { kind: 'cli', model: 'sonnet', why: () => undefined } as unknown as PlannerEngine;
   const s = new Planner(dir, { engine, config: { mode: 'auto', model: 'sonnet', capUsd: 2, timeoutMs: 1000, perHour: 20 } }).status();
   const real = 0.049 + 0.047 + 0.029; // brief (with the 0.056 MB PDF), one chat turn, the domains

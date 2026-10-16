@@ -2,8 +2,9 @@
 // subagents) and on which model. The total is the worker manager's own delta, the very one it books into
 // the office's Ledger, so the project ledger never counts a cent the office ledger doesn't; the split
 // follows the transcript's per-message estimate (Usage.parts). When there's nothing to split by (Claude
-// Code's end-of-session tally corrected the total, or a session from before parts were kept), it all goes
-// to the session's own model.
+// Code's end-of-session tally raised the total, or a session from before parts were kept), it all goes
+// to the session's own model. A total that went down books nothing: what was booked was spent (the usage
+// tracker never lowers a worker's figure itself; a ledger day must never go negative).
 
 import type { Usage } from '../../shared/protocol.js';
 import type { Seen } from './ledger.js';
@@ -40,9 +41,9 @@ const keyOf = (k: string) => {
  * model when the usage doesn't (the model it was hired on).
  */
 export function splitDelta(seen: Seen | undefined, usage: Usage, fallbackModel: string): Piece[] {
-  const cost = usage.cost - (seen?.cost ?? 0);
-  const calls = usage.calls - (seen?.calls ?? 0);
-  if (Math.abs(cost) < 1e-9 && calls === 0) return [];
+  const cost = Math.max(0, usage.cost - (seen?.cost ?? 0));
+  const calls = Math.max(0, usage.calls - (seen?.calls ?? 0));
+  if (cost < 1e-9 && calls === 0) return [];
   const main = usage.model ?? fallbackModel;
   const parts = partsDelta(seen?.parts, usage.parts);
   const partCost = parts.reduce((n, [, v]) => n + v.cost, 0);

@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Usage, UsageState } from '../shared/protocol.js';
 import { BackgroundFile } from './offloop/save.js';
 import { growth, maxUsage, SeenIds } from './usage-seen.js';
+import { priceOf } from './prices.js';
 
 /*
  * Where a worker's numbers come from
@@ -12,8 +13,11 @@ import { growth, maxUsage, SeenIds } from './usage-seen.js';
  * `usage` (input, output, cache write, cache read) and the model, so tokens are exact and the cost
  * is priced here from PRICES. Subagents (the Agent tool) log to <session>/subagents/*.jsonl next to
  * it; those are read too. When a session ends, Claude Code appends a `cost-state` line with its own
- * tally — that also covers calls that never reach the transcript (titles, summaries) — and the
- * worker's figures snap to it; anything logged after (a resume) is estimated on top again.
+ * tally — that also covers calls that never reach the transcript (titles, summaries). The tally is read
+ * per run: what it grew by since its previous line, or all of it when it went down (a session resumed in a
+ * new process starts its tally again), and each run books the larger of that and the office's own
+ * estimate of the run. So the figure never goes down and a resumed session keeps its earlier runs' cost;
+ * anything logged after (a resume) is estimated on top again.
  *
  * Each API request is counted once per worker. Claude Code writes a response as several lines, one
  * per content block, sharing the message id (and request id) and usage; those lines need not be next
@@ -41,56 +45,24 @@ export function addUsage(a: Usage, b: Usage, sign = 1): Usage {
 
 const isZero = (u: Usage) => !u.input && !u.output && !u.cacheWrite && !u.cacheRead && !u.cost && !u.calls;
 
-/**
- * USD per million tokens — [input, output, cache read] — from the Claude pricing page, checked
- * 2026-09-26. A 5-minute cache write costs 1.25x input, a 1-hour write 2x. First match wins, so
- * newer generations come before the family they belong to. A model not listed gets Opus rates:
- * a budget warning that comes early beats one that comes late.
- *
- * Cache reads, checked 2026-10-12: the `claude` CLI's own total_cost_usd prices Sonnet 5.5's cache
- * reads at $0.10 per million, but the documented price for claude-sonnet-5-5 (and Sonnet 5) is $0.20,
- * so the table keeps $0.20. The office's figure can come out a little above the CLI's (by $0.0003 on
- * the planner's real brief call), never below.
- */
-const PRICES: [RegExp, [number, number, number]][] = [
-  [/fable-5-1|mythos-5-1/, [10, 50, 0.25]],
-  [/fable|mythos/, [10, 50, 1]],
-  [/opus-5-5/, [4, 20, 0.2]],
-  [/opus-(5|4-[5-8])/, [5, 25, 0.5]],
-  [/opus/, [15, 75, 1.5]],
-  [/sonnet-5/, [2, 10, 0.2]],
-  [/sonnet/, [3, 15, 0.3]],
-  [/haiku-4/, [1, 5, 0.1]],
-  [/haiku-3-5/, [0.8, 4, 0.08]],
-  [/haiku/, [0.25, 1.25, 0.03]],
-];
-const OPUS: [number, number, number] = [5, 25, 0.5];
+// The price list (and the models it had to guess for) is prices.ts; re-exported for the modules that import it from here.
+export { priceOf, resolvedModel } from './prices.js';
 const WEB_SEARCH_USD = 0.01;
-
-/**
- * What the `claude` CLI runs for a bare alias, so a price asked for by alias (the planner's estimate) is
- * the price the meter books afterwards (it prices the model named in the CLI's answer). Seen
- * 2026-10-12: `--model sonnet` ran claude-sonnet-5-5. An alias not listed is priced by its family
- * row, which errs high.
- */
-const CLI_ALIASES: Record<string, string> = { sonnet: 'claude-sonnet-5-5' };
-export const resolvedModel = (model: string) => CLI_ALIASES[model.trim().toLowerCase()] ?? model;
-
-export function priceOf(model: string): [number, number, number] {
-  const m = model.toLowerCase();
-  return PRICES.find(([re]) => re.test(m))?.[1] ?? OPUS;
-}
 
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
 
-/** One assistant message's tokens, priced. */
-export function usageOfMessage(model: string, u: any): Usage {
+/**
+ * One assistant message's tokens, priced. `prompt` is the request's prompt length, for a model priced by
+ * it (Haiku 5.5): by default this message's own input, cache writes and cache reads; a caller that sums
+ * many requests into one `u` passes their average.
+ */
+export function usageOfMessage(model: string, u: any, prompt?: number): Usage {
   const input = num(u?.input_tokens);
   const output = num(u?.output_tokens);
   const cacheWrite = num(u?.cache_creation_input_tokens);
   const hour = Math.min(cacheWrite, num(u?.cache_creation?.ephemeral_1h_input_tokens));
   const cacheRead = num(u?.cache_read_input_tokens);
-  const [pin, pout, pread] = priceOf(model);
+  const [pin, pout, pread] = priceOf(model, prompt ?? input + cacheWrite + cacheRead);
   const cost = (input * pin + output * pout + (cacheWrite - hour) * pin * 1.25 + hour * pin * 2 + cacheRead * pread) / 1e6 + num(u?.server_tool_use?.web_search_requests) * WEB_SEARCH_USD;
   return { input, output, cacheWrite, cacheRead, cost, calls: 1 };
 }
@@ -111,8 +83,10 @@ export interface UsageTracker {
   files: Record<string, FileCursor>;
   /** The requests counted so far, across all of the worker's files (see SeenIds); made on first use. */
   seen?: SeenIds;
-  /** Claude Code's own tally from the end of a session; `at` is the transcript time it covers up to. */
+  /** What the runs up to Claude Code's last tally booked (see the cost-state line); `at` is the transcript time it covers up to. */
   base?: Usage & { at: number };
+  /** Claude Code's own tally as its last cost-state line gave it, to read the next one against. */
+  cli?: Usage;
   /** Estimated from the messages logged after `base`. */
   since: Usage;
   /** Latest transcript timestamp seen. */
@@ -163,6 +137,9 @@ export function restoreTracker(saved: any): UsageTracker {
   }
   const base = asUsage(saved.base);
   if (base) t.base = { ...base, at: num(saved.base.at) };
+  // Saved before `cli` was kept: the base was then Claude Code's last tally itself.
+  const cli = asUsage(saved.cli) ?? (t.base ? { ...t.base, calls: 0 } : undefined);
+  if (cli) t.cli = { input: cli.input, output: cli.output, cacheWrite: cli.cacheWrite, cacheRead: cli.cacheRead, cost: cli.cost, calls: 0 };
   t.since = asUsage(saved.since) ?? zeroUsage();
   if (num(saved.at)) t.at = saved.at;
   if (isModelId(saved.model)) t.model = saved.model;
@@ -279,17 +256,24 @@ export function applyLine(t: UsageTracker, cur: FileCursor, line: any, main: boo
     return true;
   }
   if (line.type === 'cost-state' && typeof line.totalCostUSD === 'number' && line.modelUsage && typeof line.modelUsage === 'object' && !line.hasUnknownModelCost) {
-    const base = zeroUsage();
+    const cli = zeroUsage();
     for (const m of Object.values<any>(line.modelUsage)) {
       if (!m || typeof m !== 'object') continue;
-      base.input += num(m.inputTokens);
-      base.output += num(m.outputTokens);
-      base.cacheWrite += num(m.cacheCreationInputTokens);
-      base.cacheRead += num(m.cacheReadInputTokens);
+      cli.input += num(m.inputTokens);
+      cli.output += num(m.outputTokens);
+      cli.cacheWrite += num(m.cacheCreationInputTokens);
+      cli.cacheRead += num(m.cacheReadInputTokens);
     }
-    base.cost = num(line.totalCostUSD);
-    base.calls = trackerUsage(t).calls;
-    t.base = { ...base, at: t.at ?? 0 };
+    cli.cost = num(line.totalCostUSD);
+    // This run, as Claude Code counts it: what its tally grew by, or all of it when the tally started again
+    // (a resume in a new process; seen in the office's own transcripts, a cost-state far below the messages
+    // before it). Booked at the larger of that and the office's estimate of the run, field by field: Claude
+    // Code's figure has the calls that never reach the transcript, the estimate has the runs it doesn't.
+    const run = t.cli && cli.cost >= t.cli.cost ? growth(t.cli, cli) : cli;
+    const booked = maxUsage(t.since, { ...run, calls: 0 });
+    const calls = trackerUsage(t).calls;
+    t.base = { ...addUsage(t.base ?? zeroUsage(), booked), calls, at: t.at ?? 0 };
+    t.cli = cli;
     t.since = zeroUsage();
     return true;
   }

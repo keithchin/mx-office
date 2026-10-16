@@ -9,7 +9,7 @@ weight: 2
 A **worker** (or *agent*) is a Claude Code session running at a desk on a project. The office starts it, shows its live terminal, records its cost and tokens, and notices when it needs you. Every worker has:
 
 - a **name** and, for team members, a **role**;
-- a **model**: Haiku 4.5, Sonnet 5.5, Opus 5.5 or Fable 5.1 (and a reasoning effort);
+- a **model**: Haiku 5.5, Sonnet 5.5, Opus 5.5 or Fable 5.1 (and a reasoning effort);
 - a **status** and a **cost**.
 
 Team members (the Project Coordinator and the Leads) are workers too. Their **subagents** are not: they run inside the Lead's session. See [The team model](../teams-and-agents/team-model.md).

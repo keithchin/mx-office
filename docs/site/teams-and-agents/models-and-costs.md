@@ -17,13 +17,13 @@ You choose the model:
 | **Sonnet 5.5** | The best value. The default for every role. |
 | **Opus 5.5** | The highest quality. Good for architecture, discovery and hard bugs. |
 | **Fable 5.1** | The newest; available in the hire dropdown. |
-| **Haiku 4.5** | Cheap and quick, but struggled with Mendix work. Fine for the Data Analyst. |
+| **Haiku 5.5** | The cheapest by far. Not yet tried on Mendix work in our runs (Haiku 4.5, before it, struggled). Fine for the Data Analyst. |
 
 The [Analysis](../using-the-office/model-analysis.md) tab and **Home → 📊 Statistics** show how each model actually does on your projects.
 
 ### Haiku runs in "accept edits" mode
 
-Claude Code's *auto* permission mode isn't available for Haiku, so a Haiku worker would otherwise stop at a permission prompt for every file it writes. The office starts it with `--permission-mode acceptEdits`: file edits in its worktree go ahead without asking. Shell commands (`git`, `gh`, builds) still follow the project's own Claude Code permission settings, so it may still ask for those. The hire window says so under the model, and the Team tab's model picker lists it as *Haiku 4.5 (accept edits)*.
+Claude Code's *auto* permission mode isn't available for Haiku, so a Haiku worker would otherwise stop at a permission prompt for every file it writes. The office starts it with `--permission-mode acceptEdits`: file edits in its worktree go ahead without asking. Shell commands (`git`, `gh`, builds) still follow the project's own Claude Code permission settings, so it may still ask for those. The hire window says so under the model, and the Team tab's model picker lists it as *Haiku 5.5 (accept edits)*.
 
 The office leaves it out when `--agent-args` already set a mode of their own (`--permission-mode …` or `--dangerously-skip-permissions`): set one there to override it for every worker. Which models this applies to is the `CLAUDE_NO_AUTO_MODE` table in `src/shared/providers.ts`.
 
