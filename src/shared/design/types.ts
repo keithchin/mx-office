@@ -195,6 +195,53 @@ export interface CaptureRecord {
   by: string;
 }
 
+/** An existing app's adoption stage (server/design/adoption.ts), in order: apply → commit → push → merge → activate. */
+export type AdoptionStageId = 'apply' | 'commit' | 'push' | 'merge' | 'activate';
+export const ADOPTION_STAGES: readonly AdoptionStageId[] = ['apply', 'commit', 'push', 'merge', 'activate'];
+
+export interface AdoptionStage {
+  state: 'pending' | 'started' | 'done' | 'failed' | 'skipped';
+  at?: number;
+  detail?: string;
+}
+
+/**
+ * One existing app's adoption of one version (<data>/design-systems/projects.json `adoptions`, one per project),
+ * written before each consequential step and reconciled with git after a restart. The project's active binding
+ * changes only when the candidate commit is on the default branch (`activate`); until then it is a candidate,
+ * on its branch.
+ */
+export interface DesignAdoption {
+  id: string;
+  /** `<floor>|<digest>`. */
+  key: string;
+  floor: string;
+  systemId: string;
+  name: string;
+  n: number;
+  digest: string;
+  by: string;
+  since: number;
+  updatedAt: number;
+  status: 'running' | 'failed' | 'candidate' | 'active' | 'discarded';
+  stages: Record<AdoptionStageId, AdoptionStage>;
+  branch?: string;
+  /** The commit it was built on. */
+  base?: string;
+  /** The temporary worktree while a step runs (removed after it; a restart removes a leftover). */
+  worktree?: string;
+  /** The candidate commit on `branch`. */
+  commit?: string;
+  remote?: 'pushed' | 'no-remote' | 'failed';
+  /** The default branch the candidate was found merged into. */
+  into?: string;
+  /** Commits on the reused branch the office didn't make (kept, never rewritten). */
+  preserved?: number;
+  /** What the binding becomes once merged (`applied.branch` set). */
+  binding?: ProjectDesignBinding;
+  failed?: { stage: AdoptionStageId; detail: string; at: number };
+}
+
 /** One line of <data>/context-manifests/<floor>.design.jsonl: what a task was SUPPLIED, never that it was read. */
 export interface DesignContextRecord {
   floor: string;
@@ -203,8 +250,13 @@ export interface DesignContextRecord {
   n: number;
   digest: string;
   patternIds: string[];
-  guidance: string;
+  /** The guidance file's path: only when it was written before the line was given. */
+  guidance?: string;
   line: string;
+  /** supplied: the file was written before the task got its line; unavailable: it couldn't be prepared (no path given); candidate: a design waiting on its branch (no guidance). Older lines have none (supplied). */
+  status?: 'supplied' | 'unavailable' | 'candidate';
+  /** Why the guidance is unavailable. */
+  reason?: string;
   /** The guidance file's size in characters; tokens ≈ chars / 4 (an estimate, labelled so). */
   guidanceChars: number;
   at: number;

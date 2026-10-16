@@ -1,7 +1,7 @@
 // What the design-system routes answer (server/design/, http/routes/design.ts). Pure types.
 
 import type { ApplyState } from './words.js';
-import type { CaptureRecord, DesignDefault, DesignInput, DesignProposal, DesignSystem, PackageManifest, PatternSelection, ProjectDesignBinding } from './types.js';
+import type { AdoptionStageId, CaptureRecord, DesignAdoption, DesignDefault, DesignInput, DesignProposal, DesignSystem, PackageManifest, PatternSelection, ProjectDesignBinding } from './types.js';
 
 /** A published version as the pages show it. */
 export interface VersionView {
@@ -53,8 +53,11 @@ export interface ProjectDesignView {
   floor: string;
   name: string;
   client?: { id: string; label: string };
+  /** The active binding: applied in place at setup, or an adoption whose candidate is merged into the default branch. */
   binding?: ProjectDesignBinding;
   proposal?: DesignProposal;
+  /** An existing app's adoption while it's open: running, failed (at a stage), or a candidate on its branch, not merged. */
+  adoption?: DesignAdoption;
   apply?: { state: ApplyState; at: number; detail?: string };
   /** The client's default, when it's not what the project is bound to (an available version, never applied by itself). */
   available?: DesignChoice;
@@ -70,6 +73,7 @@ export interface ProjectDesignView {
 export interface DesignNeedView {
   floor: string;
   proposal?: DesignProposal;
-  failed?: { detail: string; at: number };
+  adoption?: DesignAdoption;
+  failed?: { detail: string; at: number; stage?: AdoptionStageId };
   admin: boolean;
 }

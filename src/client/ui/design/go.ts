@@ -13,5 +13,5 @@ export async function goDesign(t: Extract<NeedTarget, { to: 'design' }>): Promis
   const r = await designApi.act({ action: t.act, floor: t.floor });
   designNeedChanged();
   if (r.error) return void toast(`Couldn’t: ${r.error}`, 'warn');
-  toast(t.act === 'adopt' ? 'Adopted: the theme is on its own branch (agent-office/design-…); merge it to adopt it on main.' : 'Kept: nothing changed.');
+  toast(t.act === 'adopt' ? 'Committed on its own branch (agent-office/design-…): a candidate until that branch is merged into the default branch.' : 'Kept: the project’s design is as it was.');
 }

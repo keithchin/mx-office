@@ -174,12 +174,21 @@ test('styling of its own, or an existing app: a ✋ card, no file changed, until
   // Adopt: applied in a temporary worktree on its own branch; the project folder is untouched.
   assert.equal(await s.adopt('f2', 'Ada'), undefined);
   assert.equal(readFileSync(path.join(dir, 'theme', 'web', 'main.scss'), 'utf8'), before, 'the folder people work in is unchanged');
-  const b = s.projects.binding('f2')!;
+  // A candidate until it's merged (design-adoption.test.ts): the binding doesn't change yet.
+  assert.equal(s.projects.binding('f2'), undefined, 'not bound before the merge');
+  const a = s.projects.adoption('f2')!;
+  assert.equal(a.status, 'candidate');
+  const b = a.binding!;
   assert.equal(b.approval.kind, 'decision');
   assert.match(b.applied!.branch!, /^agent-office\/design-acme-design-system-[0-9a-f]{8}$/);
   const onBranch = execFileSync('git', ['show', `${b.applied!.branch}:main.scss`.replace('main.scss', 'theme/web/main.scss')], { cwd: dir, encoding: 'utf8' });
   assert.match(onBranch, /mxcli:theme:begin acme-design-system-/);
   assert.match(onBranch, /\.legacy \{ color: red; \}/, 'its own rules kept');
+  assert.ok(s.needView('f2', true).proposal, 'the card stays until it is merged');
+  // Merged into main (no remote: the local main): the binding is the project's, and the card goes.
+  execFileSync('git', ['merge', '-q', '--ff-only', b.applied!.branch!], { cwd: dir });
+  assert.equal(await s.adopt('f2', 'Ada'), undefined, 'Adopt again only looks');
+  assert.equal(s.projects.binding('f2')!.digest, v.digest);
   assert.equal(s.needView('f2', true).proposal, undefined, 'the card is gone');
   assert.equal(execFileSync('git', ['worktree', 'list'], { cwd: dir, encoding: 'utf8' }).trim().split('\n').length, 1, 'no worktree left behind');
 });

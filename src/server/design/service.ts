@@ -7,14 +7,16 @@
 
 import type { AuditInput } from '../../shared/audit.js';
 import { patternById } from '../../shared/design/patterns.js';
-import { pointerOf, type DesignInput, type DesignKind, type DesignOwner, type PackageManifest, type PatternSelection, type SelectionScope } from '../../shared/design/types.js';
+import { pointerOf, type DesignAdoption, type DesignInput, type DesignKind, type DesignOwner, type PackageManifest, type PatternSelection, type SelectionScope } from '../../shared/design/types.js';
 import type { ClientDesignView, DesignChoice, DesignChoicesView, DesignNeedView, ProjectDesignView, VersionView } from '../../shared/design/views.js';
 import { mxcliVersion, type Run } from './apply.js';
-import { applyInPlace, applyOnBranch, type AdoptEnv } from './adopt.js';
+import { applyInPlace } from './adopt.js';
+import { checkMerge, discardAdoption, reconcileAdoption, runAdoption, settled, type AdoptionEnv, type AdoptionPoint } from './adoption.js';
 import { Captures, type Shooter } from './capture.js';
-import { DesignLines } from './line.js';
+import { DesignLines, type GuidanceWriter } from './line.js';
 import { DesignProjects } from './projects.js';
 import { scanTheme, scanWords } from './scan.js';
+import { stageWords } from '../../shared/design/words.js';
 import { DesignStore } from './store.js';
 import { findMpr } from '../liveapp/checkout.js';
 import path from 'node:path';
@@ -37,6 +39,10 @@ export interface DesignDeps {
   now(): number;
   run?: Run;
   shooter?: Shooter;
+  /** Tests: stop an adoption at a point as if the office had been killed there. */
+  checkpoint?(point: AdoptionPoint): Promise<void>;
+  /** Tests: the guidance files' writer (slow or failing). */
+  guidanceWriter?: GuidanceWriter;
 }
 
 export const STUDIO_PRO = '11.12.4';
@@ -49,24 +55,63 @@ export class DesignService {
   readonly lines: DesignLines;
   readonly captures: Captures;
   private busy = new Set<string>();
+  private loaded?: Promise<unknown>;
+  private checked = new Map<string, number>();
 
   constructor(private deps: DesignDeps) {
     this.store = new DesignStore(deps.dataDir, deps.now);
     this.projects = new DesignProjects(this.store.root);
-    this.lines = new DesignLines(this.store.root, deps.dataDir, this.projects, (id, n) => this.store.packageDir(id, n), deps.now);
+    this.lines = new DesignLines(this.store.root, deps.dataDir, this.projects, (id, n) => this.store.packageDir(id, n), deps.now, deps.guidanceWriter);
     this.captures = new Captures(this.store.root, deps.shooter, deps.now);
   }
 
+  /** Loaded, and each open adoption put right with git once (after a restart: ./adoption.ts). */
   ready(): Promise<unknown> {
-    return Promise.all([this.store.load(), this.projects.load()]);
+    this.loaded ??= Promise.all([this.store.load(), this.projects.load()]).then(() => Promise.all(this.projects.adoptionFloors().map((f) => this.reconcile(f))));
+    return this.loaded;
+  }
+
+  /** An open adoption checked against git now (never while this office is running it). */
+  private async reconcile(floorId: string): Promise<DesignAdoption | undefined> {
+    const f = this.floor(floorId);
+    if (!f || this.busy.has(floorId)) return this.projects.adoption(floorId);
+    const before = this.projects.adoption(floorId);
+    try {
+      const a = await reconcileAdoption(this.env(), floorId, f.dir);
+      if (a?.status === 'active' && before?.status !== 'active') await this.activated(floorId, a);
+      return a;
+    } catch (err) {
+      console.warn(`agent-office: design adoption on ${floorId}: ${(err as Error).message}`);
+      return before;
+    }
+  }
+
+  /** A candidate waiting to be merged: looked at again when its page asks, at most once a minute. */
+  private async refresh(floorId: string): Promise<void> {
+    const a = this.projects.adoption(floorId);
+    const f = this.floor(floorId);
+    if (!a || settled(a) || !f || this.busy.has(floorId)) return;
+    // Running, but not here: left by an office that stopped (put right with git now).
+    if (a.status === 'running') return void (await this.reconcile(floorId));
+    if (!a.commit) return;
+    if (this.deps.now() - (this.checked.get(floorId) ?? -Infinity) < 60_000) return;
+    this.checked.set(floorId, this.deps.now());
+    const next = await checkMerge(this.env(), a, f.dir).catch(() => a);
+    if (next.status === 'active') await this.activated(floorId, next);
+  }
+
+  /** Merged: the binding is the project's now (said once in the audit log), and its guidance is written. */
+  private async activated(floorId: string, a: DesignAdoption): Promise<void> {
+    this.deps.audit({ floor: floorId, actor: { kind: 'office', name: 'Mx Office' }, action: 'design.apply', target: { kind: 'design-system', id: a.systemId, label: `${a.name} v${a.n}` }, summary: `Adopted ${a.name} v${a.n}: ${a.commit?.slice(0, 7) ?? 'the decision'} is on ${a.into ?? 'the default branch'}`.slice(0, 240), details: { digest: a.digest } });
+    await this.lines.prepare(floorId).catch((err: Error) => console.warn(`agent-office: design guidance for ${floorId}: ${err.message}`));
   }
 
   private floor(id: string) {
     return this.deps.floors().find((f) => f.id === id);
   }
 
-  private env(log?: (l: string) => void): AdoptEnv {
-    return { projects: this.projects, packageDir: (id, n) => this.store.packageDir(id, n), mxcli: this.deps.mxcli, run: this.deps.run, now: this.deps.now, log };
+  private env(log?: (l: string) => void): AdoptionEnv {
+    return { projects: this.projects, packageDir: (id, n) => this.store.packageDir(id, n), mxcli: this.deps.mxcli, run: this.deps.run, now: this.deps.now, log, ...(this.deps.checkpoint ? { checkpoint: this.deps.checkpoint } : {}) };
   }
 
   private async versions(id: string): Promise<VersionView[]> {
@@ -110,6 +155,7 @@ export class DesignService {
     await this.ready();
     const f = this.floor(floorId);
     if (!f) return undefined;
+    await this.refresh(floorId);
     const client = this.deps.clientOf(floorId);
     const binding = this.projects.binding(floorId);
     const ap = this.projects.apply(floorId);
@@ -120,12 +166,14 @@ export class DesignService {
     const own = this.store.ofOwner({ floor: floorId });
     const live = this.deps.live(floorId);
     const proposal = this.projects.proposal(floorId);
+    const adoption = this.openAdoption(floorId);
     return {
       floor: floorId,
       name: f.name,
       ...(client ? { client } : {}),
       ...(binding ? { binding } : {}),
       ...(proposal ? { proposal } : {}),
+      ...(adoption ? { adoption } : {}),
       ...(ap ? { apply: { state: ap.state, at: ap.at, ...(ap.detail ? { detail: ap.detail } : {}) } } : {}),
       ...(available ? { available } : {}),
       ...(own ? { own: { ...own, versions: await this.versions(own.id) } } : {}),
@@ -136,10 +184,21 @@ export class DesignService {
     };
   }
 
+  /** The project's adoption while it's open (running, failed or a candidate on its branch), as the pages show it. */
+  private openAdoption(floorId: string): DesignAdoption | undefined {
+    const a = this.projects.adoption(floorId);
+    if (!a || settled(a)) return undefined;
+    delete a.worktree;
+    return a;
+  }
+
   needView(floorId: string, admin: boolean): DesignNeedView {
+    void this.refresh(floorId).catch(() => undefined);
     const p = this.projects.proposal(floorId);
     const ap = this.projects.apply(floorId);
-    return { floor: floorId, ...(p ? { proposal: p } : {}), ...(ap?.state === 'failed' && p ? { failed: { detail: ap.detail ?? 'the apply failed', at: ap.at } } : {}), admin };
+    const a = this.openAdoption(floorId);
+    const failed = a?.failed ? { detail: `${stageWords(a.failed.stage)} failed: ${a.failed.detail}`, at: a.failed.at, stage: a.failed.stage } : ap?.state === 'failed' && p ? { detail: ap.detail ?? 'the apply failed', at: ap.at } : undefined;
+    return { floor: floorId, ...(p ? { proposal: p } : {}), ...(a ? { adoption: a } : {}), ...(failed ? { failed } : {}), admin };
   }
 
   // ---- The client's design system ------------------------------------------------------------------
@@ -198,7 +257,7 @@ export class DesignService {
       return { ok: true, detail: r.detail };
     }
     this.audited(floorId, by, m, r.ok, r.detail);
-    if (r.ok) void this.lines.prepare(floorId).catch(() => undefined);
+    if (r.ok) await this.lines.prepare(floorId).catch((err: Error) => console.warn(`agent-office: design guidance for ${floorId}: ${err.message}`));
     return r;
   }
 
@@ -221,6 +280,8 @@ export class DesignService {
     const s = this.store.get(systemId);
     const v = s?.versions.find((x) => x.n === n);
     if (!f || !s || !v) return 'No such project or version';
+    const open = this.openAdoption(floorId);
+    if (open && open.digest !== v.digest) return `${open.name} v${open.n}'s adoption is still open on this project: merge or discard it first`;
     const mpr = findMpr(f.dir);
     const scan = mpr ? await scanTheme(path.dirname(mpr)) : { start: 'unknown' as const, fenced: [], overrides: [], custom: [], modules: [], noTheme: true };
     await this.projects.propose({ floor: floorId, systemId, name: s.name, n, digest: v.digest, scan, since: this.deps.now(), by });
@@ -228,32 +289,43 @@ export class DesignService {
     return undefined;
   }
 
-  /** Adopt on the card: applied on a branch of its own, and the binding recorded. */
+  /**
+   * Adopt (or Retry) on the card: ./adoption.ts, apply → commit → push on a branch of its own; the binding
+   * changes only once that candidate is merged into the default branch. One adoption per project at a time.
+   */
   async adopt(floorId: string, by: string): Promise<string | undefined> {
-    await this.ready();
-    const p = this.projects.proposal(floorId);
-    const f = this.floor(floorId);
-    if (!p || !f) return 'Nothing is waiting to be adopted on this project';
     if (this.busy.has(floorId)) return 'Already adopting: wait for it to finish';
     this.busy.add(floorId);
     try {
+      await this.ready();
+      const p = this.projects.proposal(floorId);
+      const f = this.floor(floorId);
+      if (!p || !f) return 'Nothing is waiting to be adopted on this project';
       const m = await this.verified(p.systemId, p.n);
       if (typeof m === 'string') return m;
-      const r = await applyOnBranch(this.env(), floorId, f.dir, m, { kind: 'decision', by, at: this.deps.now(), ref: `design:${floorId}:${p.digest.slice(0, 12)}` });
-      this.audited(floorId, by, m, r.ok, r.detail);
-      if (!r.ok) return r.detail;
-      void this.lines.prepare(floorId).catch(() => undefined);
-      return undefined;
+      // An adoption left running by an office that stopped is put right first, then carried on.
+      if (this.projects.adoption(floorId)?.status === 'running') await reconcileAdoption(this.env(), floorId, f.dir);
+      const r = await runAdoption(this.env(), floorId, f.dir, m, { kind: 'decision', by, at: this.deps.now(), ref: `design:${floorId}:${p.digest.slice(0, 12)}` });
+      const a = r.adoption;
+      if (a?.status === 'active') await this.activated(floorId, a);
+      else this.deps.audit({ floor: floorId, actor: human(by), action: r.ok ? 'design.adopt' : 'design.adopt-failed', target: { kind: 'design-system', id: m.id, label: `${m.name} v${m.version}` }, summary: `${r.ok ? 'Committed' : 'Couldn’t adopt'} ${m.name} v${m.version}: ${r.detail}`.slice(0, 240), severity: r.ok ? 'info' : 'warning', details: { digest: m.digest, ...(a?.branch ? { branch: a.branch } : {}), ...(a?.commit ? { commit: a.commit } : {}), ...(a?.failed ? { stage: a.failed.stage } : {}) } });
+      return r.ok ? undefined : r.detail;
     } finally {
       this.busy.delete(floorId);
     }
   }
 
-  /** Keep existing design on the card: the proposal goes, nothing changes. */
+  /** Keep existing design (or Discard a failed or waiting adoption): the card goes, the binding stays as it was. */
   async keep(floorId: string, by: string): Promise<string | undefined> {
+    if (this.busy.has(floorId)) return 'Adopting right now: wait for it to finish';
+    await this.ready();
+    const f = this.floor(floorId);
+    const open = this.openAdoption(floorId);
+    const d = open && f ? await discardAdoption(this.env(), floorId, f.dir) : {};
     const p = await this.projects.dropProposal(floorId);
-    if (!p) return 'Nothing is waiting on this project';
-    this.deps.audit({ floor: floorId, actor: human(by), action: 'design.keep', target: { kind: 'design-system', id: p.systemId, label: `${p.name} v${p.n}` }, summary: `Kept the app's existing design instead of ${p.name} v${p.n}` });
+    if (!p && !d.adoption) return 'Nothing is waiting on this project';
+    const what = p ?? d.adoption!;
+    this.deps.audit({ floor: floorId, actor: human(by), action: 'design.keep', target: { kind: 'design-system', id: what.systemId, label: `${what.name} v${what.n}` }, summary: `Kept the app's existing design instead of ${what.name} v${what.n}${d.adoption ? `; the adoption was discarded${d.branchKept ? ` and the branch ${d.branchKept} left as it is` : ''}` : ''}` });
     return undefined;
   }
 
@@ -267,7 +339,7 @@ export class DesignService {
     await this.projects.select(floorId, sel);
     const where = 'issue' in scope ? `issue #${scope.issue}` : 'page' in scope ? `page ${scope.page}` : 'the whole project';
     this.deps.audit({ floor: floorId, actor: human(by), action: 'design.select', target: { kind: 'pattern', id: `${patternId}@${p.version}`, label: p.title }, summary: `Chose ${p.title} (${patternId}@${p.version}) for ${where}${onBehalfOfClient ? ', recorded on behalf of the client' : ''}` });
-    void this.lines.prepare(floorId).catch(() => undefined);
+    await this.lines.prepare(floorId).catch((err: Error) => console.warn(`agent-office: design guidance for ${floorId}: ${err.message}`));
     return undefined;
   }
 

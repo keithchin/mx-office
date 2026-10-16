@@ -1,14 +1,15 @@
 // The projects' side of design systems, in <data>/design-systems/projects.json: each floor's binding (the
 // exact version it adopted), its apply step record (started → done | failed, written before mxcli runs, so a
-// restart or a Retry never applies twice) and its pending existing-app proposal (one ✋ card). The binding
+// restart or a Retry never applies twice), its pending existing-app proposal (one ✋ card) and that adoption's
+// operation record (./adoption.ts: one per project, written before each consequential step). The binding
 // is also committed as `design` in the project's agent-office.project.json, beside the toolkit pin (survives
 // clones; agents can read it). Pattern selections are append-only lines in selections/<floor>.jsonl.
 // Everything here is read once and kept in memory, so the agent-context line can ask without waiting.
 
-import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { writeJsonCritical } from '../flow/critical-write.js';
-import type { DesignProposal, PatternSelection, ProjectDesignBinding } from '../../shared/design/types.js';
+import { writeJsonCritical, writeTextCritical } from '../flow/critical-write.js';
+import type { DesignAdoption, DesignProposal, PatternSelection, ProjectDesignBinding } from '../../shared/design/types.js';
 
 export const PROJECT_FILE = 'agent-office.project.json';
 
@@ -25,12 +26,13 @@ interface ProjectsFile {
   bindings: Record<string, ProjectDesignBinding>;
   applies: Record<string, ApplyRecord>;
   proposals: Record<string, DesignProposal>;
+  adoptions: Record<string, DesignAdoption>;
 }
 
 const safe = (floor: string) => floor.replace(/[^A-Za-z0-9_-]/g, '_');
 
 export class DesignProjects {
-  private data: ProjectsFile = { version: 1, bindings: {}, applies: {}, proposals: {} };
+  private data: ProjectsFile = { version: 1, bindings: {}, applies: {}, proposals: {}, adoptions: {} };
   private loaded?: Promise<void>;
   private chain: Promise<unknown> = Promise.resolve();
   private selections = new Map<string, PatternSelection[]>();
@@ -45,7 +47,7 @@ export class DesignProjects {
     this.loaded ??= readFile(this.file, 'utf8').then(
       (t) => {
         const r = JSON.parse(t) as Partial<ProjectsFile>;
-        this.data = { version: 1, bindings: r.bindings ?? {}, applies: r.applies ?? {}, proposals: r.proposals ?? {} };
+        this.data = { version: 1, bindings: r.bindings ?? {}, applies: r.applies ?? {}, proposals: r.proposals ?? {}, adoptions: r.adoptions ?? {} };
       },
       () => undefined,
     );
@@ -64,6 +66,14 @@ export class DesignProjects {
   }
   bindings(): Readonly<Record<string, ProjectDesignBinding>> {
     return this.data.bindings;
+  }
+  /** The project's existing-app adoption record (a copy: change it through setAdoption). */
+  adoption(floor: string): DesignAdoption | undefined {
+    const a = this.data.adoptions[floor];
+    return a ? structuredClone(a) : undefined;
+  }
+  adoptionFloors(): string[] {
+    return Object.keys(this.data.adoptions);
   }
 
   private change<T>(fn: (d: ProjectsFile) => T): Promise<T> {
@@ -90,6 +100,22 @@ export class DesignProjects {
     return this.change((d) => void (d.applies[floor] = r));
   }
 
+  /** Writes the adoption record (durably: resolves once it's on disk). */
+  setAdoption(a: DesignAdoption): Promise<void> {
+    const copy = structuredClone(a);
+    return this.change((d) => void (d.adoptions[a.floor] = copy));
+  }
+
+  /** The adoption's candidate became the project's binding (merged): binding, record and card in one write. */
+  activate(a: DesignAdoption, b: ProjectDesignBinding): Promise<void> {
+    const copy = structuredClone(a);
+    return this.change((d) => {
+      d.bindings[a.floor] = b;
+      d.adoptions[a.floor] = copy;
+      delete d.proposals[a.floor];
+    });
+  }
+
   propose(p: DesignProposal): Promise<void> {
     return this.change((d) => void (d.proposals[p.floor] = p));
   }
@@ -108,6 +134,7 @@ export class DesignProjects {
       delete d.bindings[floor];
       delete d.applies[floor];
       delete d.proposals[floor];
+      delete d.adoptions[floor];
     });
   }
 
@@ -149,17 +176,25 @@ export class DesignProjects {
   }
 }
 
-/** The committed record: `design` in agent-office.project.json, the file's other settings kept as they are. */
+/**
+ * The committed record: `design` in agent-office.project.json, the file's other settings kept as they are. A file
+ * that is there but isn't valid JSON is never overwritten (it throws: nothing is changed).
+ */
 export async function writeProjectRecord(dir: string, b: ProjectDesignBinding): Promise<void> {
   const f = path.join(dir, PROJECT_FILE);
   let obj: Record<string, unknown> = {};
-  try {
-    obj = JSON.parse(await readFile(f, 'utf8')) as Record<string, unknown>;
-  } catch {
-    // no file yet (or a broken one): written afresh with the record
+  const was = await readFile(f, 'utf8').catch(() => undefined);
+  if (was !== undefined) {
+    try {
+      const v = JSON.parse(was) as unknown;
+      if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('not an object');
+      obj = v as Record<string, unknown>;
+    } catch {
+      throw new Error(`${PROJECT_FILE} isn't valid JSON: left as it is (fix it, then Retry)`);
+    }
   }
   const { systemId, name, n, digest, kind, themeName, preset, approval, exceptions, start } = b;
-  await writeFile(f, `${JSON.stringify({ ...obj, design: { systemId, name, version: n, digest, kind, ...(themeName ? { themeName } : {}), preset, approval, exceptions, ...(start ? { start } : {}) } }, null, 2)}\n`);
+  await writeTextCritical(f, `${JSON.stringify({ ...obj, design: { systemId, name, version: n, digest, kind, ...(themeName ? { themeName } : {}), preset, approval, exceptions, ...(start ? { start } : {}) } }, null, 2)}\n`);
 }
 
 /** The `design` record in a project folder's agent-office.project.json, when it has one. */

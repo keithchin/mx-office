@@ -7,7 +7,7 @@ import { patternById, patternMarkdown, PATTERNS } from './patterns.js';
 import { BRANDED_SCOPE, PRESET, type PackageManifest, type PatternSelection, type ProjectDesignBinding } from './types.js';
 
 export const DESIGN_LINE_MAX = 300;
-/** The bounded-correction policy (brief §8G): automated design-correction attempts per unresolved issue. */
+/** The bounded-correction policy (brief §8G): an instruction to agents (guidance and Playbooks), not counted or enforced by the office. */
 export const CORRECTION_LIMIT = 2;
 
 /** The pattern ids a task gets: those selected for its issue, else the project-wide ones; never another issue's or page's. */
@@ -44,6 +44,18 @@ export function designLine(b: Pick<ProjectDesignBinding, 'name' | 'n' | 'digest'
   return line.length <= DESIGN_LINE_MAX ? line : `Design system bound: read ${guidancePath}`.slice(0, DESIGN_LINE_MAX);
 }
 
+const short = (b: Pick<ProjectDesignBinding, 'name' | 'n' | 'digest'>) => `${clean(b.name).slice(0, 40) || 'design'}@v${b.n} #${b.digest.slice(0, 7)}`;
+
+/** A bound project whose guidance file couldn't be prepared before the task went: said so, with no path (none was supplied). */
+export function unavailableLine(b: Pick<ProjectDesignBinding, 'name' | 'n' | 'digest' | 'kind'>): string {
+  return `Design: ${short(b)} (${b.kind === 'branded' ? 'Branded Atlas' : 'Atlas defaults'}) is bound, but its guidance file couldn't be prepared for this task: use stock Atlas classes and the applied theme, and escalate design questions instead of inventing variants.`.slice(0, DESIGN_LINE_MAX);
+}
+
+/** A version committed on its own branch and not merged yet: the agent's revision doesn't have it. */
+export function candidateLine(c: Pick<ProjectDesignBinding, 'name' | 'n' | 'digest'>, branch: string): string {
+  return `Design: ${short(c)} is only a candidate, on the branch ${branch.slice(0, 80)}, not merged: your revision keeps the app's current styling; don't apply its tokens by hand.`.slice(0, DESIGN_LINE_MAX);
+}
+
 /** The per-task guidance file: the binding, the rules, and the selected patterns in full (the rest by path). */
 export function guidanceText(b: ProjectDesignBinding, packageDir: string, patternIds: readonly string[]): string {
   const dir = packageDir.replace(/\\/g, '/').replace(/\/+$/, '');
@@ -56,7 +68,7 @@ export function guidanceText(b: ProjectDesignBinding, packageDir: string, patter
     '',
     '## Rules',
     '- Use the bound package and these patterns. Do not invent new component variants, colours or spacing.',
-    '- The theme is already applied: do NOT map tokens to Atlas variables by hand and skip the toolkit design-artifacts token→Atlas mapping step; do not edit the `mxcli:theme` fenced blocks in theme/web/*.scss.',
+    `- The theme is already applied${b.applied?.branch ? ` (merged into the default branch from \`${b.applied.branch}\`; on an older branch, merge the default branch in first)` : ''}: do NOT map tokens to Atlas variables by hand and skip the toolkit design-artifacts token→Atlas mapping step; do not edit the \`mxcli:theme\` fenced blocks in theme/web/*.scss.`,
     '- Use stock Atlas classes, button styles and design properties. A need the package does not cover is an exception: escalate it (`office-workers escalate`) with the page and the reason, instead of styling around it.',
     `- At most ${CORRECTION_LIMIT} automated design-correction attempts per unresolved issue; then summarise the evidence and escalate for a decision.`,
     '- A hidden button is not security: entity access and microflow checks still decide.',
