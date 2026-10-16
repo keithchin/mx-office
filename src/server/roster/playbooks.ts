@@ -22,6 +22,7 @@ import { toolkitDir as officeToolkitDir } from '../connections/store.js';
 import { alsoCovers, covers, isIdentity, managerOf, subagentDefsOf, writerOf, type Coverage } from '../../shared/roster/coverage.js';
 import { coverLines, coverTeamLine, QUESTIONS_LINE } from './playbook-cover.js';
 import { blockerLines } from './playbook-blockers.js';
+import { TRY_FIRST, workaroundFiles } from './playbook-workarounds.js';
 import { CORRECTION_LIMIT } from '../../shared/design/context.js';
 import { sourcesDirOf, sourcesLines } from '../../shared/brief-map.js';
 
@@ -181,9 +182,9 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         '- Hiring: Leads are hired from the office\'s Team tab with their fixed names. Do not hire extra workers for a Lead\'s job; a Lead may hire one only for real parallel work (e.g. two test suites).',
       ];
     case 'lead-designer':
-      return ['## Design', '- Every page follows the Atlas design system and the agreed wireframes. Review design changes and record approvals (or what must change) in `docs/team/design.md`.', ...(ctx.designBound ? [DESIGN_BOUND] : []), '- Hand page specs to the Lead Developer; never build pages yourself.'];
+      return ['## Design', '- Every page follows the Atlas design system and the agreed wireframes. Review design changes and record approvals (or what must change) in `docs/team/design.md`.', ...(ctx.designBound ? [DESIGN_BOUND] : []), '- Hand page specs to the Lead Developer; never build pages yourself.', TRY_FIRST];
     case 'lead-developer':
-      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', LAYOUT, FOLDERS, IMPACT, COVERS, ...(ctx.designBound ? [DESIGN_BOUND] : []), '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
+      return ['## Development', '- Developers (subagents) draft MDL and run `mxcli check`; you review and apply it with `mxcli exec`, one script at a time, then run the project\'s gates.', LAYOUT, FOLDERS, IMPACT, COVERS, ...(ctx.designBound ? [DESIGN_BOUND] : []), TRY_FIRST, '- Open a pull request for each coherent change; merging follows the autonomy level below.'];
     case 'lead-tester':
       return ['## Testing', '- Unit tests live in `tests/*.test.mdl`, Playwright e2e in `tests/e2e`; follow `.ai-context/skills/qa-tests` and the PR pipeline when the repo has them.', '- Approve test plans and results; when the framework is the bottleneck, improve it (and say so in the journal).', '- A failing test that shows the model is wrong is a finding for the Lead Developer, never a fix you make in MDL.', TEST_FIRST, MF_TESTS];
     case 'solo-lead':
@@ -198,6 +199,7 @@ function roleSpecific(role: RoleDef, ctx: PlaybookContext): string[] {
         MF_TESTS,
         COVERS,
         ...(ctx.designBound ? [DESIGN_BOUND] : []),
+        TRY_FIRST,
         QUESTIONS_LINE,
         `- The office asks you for a daily standup, then hands you the page (\`${standupPath('YYYY-MM-DD')}\`) to finish as your daily note: a **Summary** at the top (anything it says needs the Project Manager already in an open escalation), then commit and push.`,
         '- Nobody else relays to the Project Manager: escalate yourself whatever needs them.',
@@ -399,4 +401,6 @@ function* roleFileSteps(roleId: RoleId, ctx: PlaybookContext): Generator<RoleFil
   }
   yield { kind: 'put', rel: journalPath(role.team), text: journalSeed(role.team), keep: true };
   yield { kind: 'put', rel: ctx.lessons, text: lessonsSeed(ctx.project), keep: true };
+  // The workarounds list its Playbook points to, for the roles that build (playbook-workarounds.ts).
+  for (const w of workaroundFiles(roleId)) yield { kind: 'put', ...w };
 }

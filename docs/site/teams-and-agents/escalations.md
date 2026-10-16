@@ -128,6 +128,21 @@ For example: *Task tsk_… "Visitor checkout" (Linus): candidate · acknowledged
 
 Two triggers are never filed as FYI, at any autonomy level: **`needs-human`**, a hands-on action only a person can do (merge a pull request, sign in such as `mxcli auth login`, paste a key, install a tool, allow something at the terminal, restart a preview), and **`question`**, a question only the Project Manager can answer. They toast, relay to the Coordinator and post to Teams like a blocking escalation. The Playbooks tell every Lead to raise hands-on asks with `office-workers escalate --trigger needs-human`, never as a `task` proposal; a standup proposal whose words are such an action becomes the **human-action** kind, which waits for the Project Manager at every level (a plain task is still the team's at level 4).
 
+## Studio Pro hand-adds: tried first
+
+An agent that asks you for a Studio Pro hand-add, or says mxcli can't do something, must first try the standard alternatives: `mxcli syntax <topic>`, `mxcli widget list` / `widget describe`, `mxcli marketplace search "<what>"` (a pluggable widget or module that does it), `--engine legacy` for a write the default engine refuses, `mxcli check -p` with the attempt, and the [workarounds list](#the-workarounds-list). Its escalation then carries a **`Tried:`** section in the details: a line starting with `Tried:` and at least one attempt, each with its exact error (on that line, or as `- ` lines under it).
+
+- **Without one, it doesn't reach you.** The office hands it back in the escalate tool's reply (*Before this reaches the Project Manager: list what you tried …, then escalate again*). Nothing is stored, nothing waits on you, and the [Audit log](../using-the-office/audit-log.md) records `escalation.handadd-returned` with the patterns it matched; the recent activity notes it.
+- **With one, it's raised as usual**, and its card in Needs you (and in the Team tab's approvals) shows **Tried (n):** with each attempt, above the rest.
+- **What counts as a hand-add ask** is a fixed list of patterns in `src/shared/roster/handadd.ts` (no model judges it): *Studio Pro hand-add / hand-off*, *hand-add*, *Studio Pro needed / required / only*, *only in Studio Pro*, *needs Studio Pro*, *manually … in Studio Pro*, *mxcli can't / doesn't support / cannot place …*, *not supported by mxcli*, *MDL can't*. Studio Pro named in passing (*Studio Pro version check passed*, *open it in Studio Pro to review*) isn't one.
+- Escalations the office files itself (from a handoff note, an `AWAITING-PM` line, a review loop out of rounds, a subagent gate) and ones already open are not affected.
+
+### The workarounds list
+
+`docs/mendix-workarounds.md` in the office repo lists what mxcli can't do directly and the standard way around it, one entry per problem: **Problem** · **Why mxcli can't do it directly** · **Workaround** (exact commands and MDL) · **Verified with** (mxcli version, Mendix version, date, and what is verified and what not yet) · **Source** (a project or escalation id, no customer content). The first entry is image or file upload on a page: Mendix's pluggable **File Uploader** widget from the Marketplace (content 235351) instead of Studio Pro's built-in Image uploader.
+
+The office copies it into each project with the Playbooks, as `.ai-context/office/mendix-workarounds.md` (re-written when the office's list changes: don't edit that copy), for the Lead Developer, the Lead Designer and the Solo Lead, whose Playbooks point to it. A project's own entries go in `.ai-context/office/mendix-workarounds.local.md`, seeded once and never overwritten: the agents add an entry there when a workaround worked. An entry that holds beyond one project goes into the office's list by a pull request to the office repo.
+
 ## FYI escalations are shown, not hidden
 
 An escalation below the level's threshold is still filed as FYI (no toast, no Teams post), but Needs you lists it as a low **FYI** card with **Noted**, not counted in *N waiting on you*, so an ask filed quietly is still seen. An FYI that has options or asks a question is shown, and counted, as a decision, with a *filed as FYI* note.

@@ -12,10 +12,14 @@ import type { Floor } from '../floor.js';
 import { send } from '../http/util.js';
 import type { Ctx } from '../office/context.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { handAddReturned } from '../roster/handadd-gate.js';
 
 export async function officeEscalate(ctx: Ctx, floor: Floor, me: WorkerInfo, body: unknown, res: http.ServerResponse) {
   const ask = readEscalationAsk(body);
   if (typeof ask === 'string') return send(res, 400, { error: ask });
+  // A Studio Pro hand-add with no `Tried:` section goes back to the agent, unraised (shared/roster/handadd.ts).
+  const back = handAddReturned(teamFloor(ctx, floor), me, ask);
+  if (back) return send(res, 200, { ok: true, returned: true, note: back });
   // The same ask already open (its title, or in other words in Jeff's judgement) is joined as a +1.
   const { escalation: e, joined } = await rosterOf(ctx).escalations.raiseOrJoinJudged(teamFloor(ctx, floor), me, ask);
   return send(res, 200, {

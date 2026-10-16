@@ -76,3 +76,16 @@
   margin: 4px 0 0;
   padding-left: 18px;
 }
+/* What the agent tried before asking (a Studio Pro hand-add needs it): open, above the rest. */
+.pt-dc-tried {
+  margin: 6px 0;
+  padding: 6px 8px;
+  border-left: 3px solid var(--info-line);
+  background: var(--info-soft);
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.pt-dc-tried ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}

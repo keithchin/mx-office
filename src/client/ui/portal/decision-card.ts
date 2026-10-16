@@ -34,6 +34,8 @@ export const otherEscalations = (c: DecisionCard) => c.sources.slice(1).flatMap(
 /** What blocks, evidence, sources, notes, related and the after line say, under a card's question. */
 export function cardExtras(c: DecisionCard, x: CardCtx): HTMLElement[] {
   const out: HTMLElement[] = [];
+  // What the agent tried before asking (a Studio Pro hand-add needs it: shared/roster/handadd.ts), first and open.
+  if (c.tried?.length) out.push(h('div.pt-dc-tried', {}, h('b', {}, `Tried (${c.tried.length}):`), h('ul', {}, ...c.tried.map((t) => h('li', {}, t)))));
   if (c.blocks.length) out.push(h('p.pt-dc-line', {}, h('b', {}, 'Blocks: '), c.blocks.map((b) => b.label).join(' · ')));
   if (c.evidence.length)
     out.push(
