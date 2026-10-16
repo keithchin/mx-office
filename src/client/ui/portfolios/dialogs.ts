@@ -1,4 +1,4 @@
-// Portfolios' dialogs, from Home › Portfolios and a project's ⚙️ Settings › Portfolio: New portfolio, Connect a
+// Portfolios' dialogs (Clients on screen), from the Clients page and a project's ⚙️ Settings › Client: New client, Rename, Connect a
 // brain (its path, checked by the office: README.md and ROUTING.md, a git repository or "not versioned"),
 // Disconnect, and Add to portfolio (only ungrouped projects, after a review of what the project already has
 // wired). Each has a ✕; ✕ and Esc give focus back to the button that opened it.
@@ -18,20 +18,54 @@ function dialog(title: string, opener: HTMLElement | null, body: (Node | string 
 
 const note = () => h('p.pf-note', {}, h('strong', {}, `${NOT_ACCESS_CONTROL}. `), NOT_ACCESS_CONTROL_LONG);
 
-/** New portfolio: a name. */
-export function newPortfolioDialog(opener: HTMLElement | null, done: (r: ActResult) => void) {
-  const name = h('input.pf-input', { type: 'text', maxlength: '80', placeholder: 'Company or organisation, e.g. Acme', 'aria-label': 'Client name' }) as HTMLInputElement;
-  const create = h('button.btn.primary', { type: 'button' }, 'Create client');
-  const d = dialog('New client', opener, [h('label.pf-field', {}, h('span', {}, 'Name'), name), h('p.pf-hint', {}, 'A client (the company or organisation you build for) groups its projects, so their agents are pointed at the same company brain. It can exist without a brain: connect one later.'), note()], [create]);
+/**
+ * A client's name, sent once: the button is off while it's being sent (a second Enter or click waits for
+ * the first answer), and a refusal (no name, a name taken) is said in the dialog, the name kept to fix.
+ */
+function nameDialog(opts: { title: string; opener: HTMLElement | null; value?: string; button: string; hint: string; send: (label: string) => Promise<ActResult>; done: (r: ActResult) => void }) {
+  const name = h('input.pf-input', { type: 'text', maxlength: '80', placeholder: 'Company or organisation, e.g. Acme', 'aria-label': 'Client name', autocomplete: 'off', value: opts.value ?? '' }) as HTMLInputElement;
+  const ok = h('button.btn.primary', { type: 'button' }, opts.button) as HTMLButtonElement;
+  const d = dialog(opts.title, opts.opener, [h('label.pf-field', {}, h('span', {}, 'Name'), name), h('p.pf-hint', {}, opts.hint), note()], [ok]);
+  d.status.setAttribute('aria-live', 'polite');
+  let busy = false;
   const go = async () => {
-    d.status.textContent = 'Creating…';
-    const r = await portfolioAct({ action: 'create', label: name.value });
-    if (r.error) return void (d.status.textContent = r.error);
+    if (busy) return;
+    if (!name.value.trim()) {
+      d.status.textContent = 'Give the client a name';
+      return name.focus();
+    }
+    busy = true;
+    ok.disabled = true;
+    d.status.textContent = 'Saving…';
+    const r = await opts.send(name.value);
+    busy = false;
+    ok.disabled = false;
+    if (r.error) {
+      d.status.textContent = r.error;
+      return name.focus();
+    }
     d.modal.close();
-    done(r);
+    opts.done(r);
   };
-  create.onclick = () => void go();
-  name.onkeydown = (e) => e.key === 'Enter' && void go();
+  ok.onclick = () => void go();
+  name.oninput = () => !busy && (d.status.textContent = '');
+  name.onkeydown = (e) => {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    e.preventDefault();
+    void go();
+  };
+  setTimeout(() => name.select(), 0);
+  return d;
+}
+
+/** New client: a name. */
+export function newPortfolioDialog(opener: HTMLElement | null, done: (r: ActResult) => void) {
+  nameDialog({ title: 'New client', opener, button: 'Create client', hint: 'A client (the company or organisation you build for) groups its projects, so their agents are pointed at the same company brain. It can exist without a brain: connect one later.', send: (label) => portfolioAct({ action: 'create', label }), done });
+}
+
+/** Rename a client: the name only; its projects, its brain and its id stay as they are. */
+export function renameClientDialog(opener: HTMLElement | null, p: Pick<PortfolioView, 'id' | 'label'>, done: (r: ActResult) => void) {
+  nameDialog({ title: `Rename ${p.label}`, opener, value: p.label, button: 'Rename', hint: 'Only the name changes: its projects, its company brain and the agents’ wiring stay as they are. The change is in the audit log.', send: (label) => portfolioAct({ action: 'rename', portfolio: p.id, label }), done });
 }
 
 /** Connect a brain: the folder's path; the office validates it and wires every project in the portfolio. */
@@ -84,7 +118,7 @@ export function contextLines(c: ExistingContext | undefined): (Node | string)[] 
  * Add to portfolio, from a portfolio (pick an ungrouped project) or from a project (pick a portfolio). The
  * project's existing context is shown first; a project in another portfolio is refused (S03).
  */
-export function addToPortfolioDialog(opener: HTMLElement | null, view: PortfoliosView, at: { portfolio?: string; floor?: string }, done: (r: ActResult) => void) {
+export function addToPortfolioDialog(opener: HTMLElement | null, view: PortfoliosView, at: { portfolio?: string; floor?: string }, done: (r: ActResult) => void, pick?: string) {
   const inOther = at.floor ? view.portfolios.find((p) => p.projectIds.includes(at.floor!)) : undefined;
   const picks = at.portfolio ? view.ungrouped.map((f) => [f.id, f.name] as const) : view.portfolios.map((p) => [p.id, p.label] as const);
   const sel = h('select.pf-input', { 'aria-label': at.portfolio ? 'Project' : 'Client' }, ...picks.map(([v, l]) => h('option', { value: v }, l))) as HTMLSelectElement;
@@ -102,10 +136,14 @@ export function addToPortfolioDialog(opener: HTMLElement | null, view: Portfolio
   const body: (Node | string | null)[] = inOther
     ? [h('p.pf-refused', { role: 'alert' }, `This project already belongs to the client ${inOther.label}, and a project can belong to one client. Moving a project between clients isn’t available in this version: it may already have used that client’s company brain, and moving it can’t take that back.`)]
     : !picks.length
-      ? [h('p', {}, at.portfolio ? 'Every project belongs to a client already.' : 'There are no clients yet: make one on Home › Clients.')]
+      ? [h('p', {}, at.portfolio ? 'Every project belongs to a client already.' : 'There are no clients yet. Make one here (＋ New client) or on the Clients page, then add the project to it.')]
       : [h('label.pf-field', {}, h('span', {}, at.portfolio ? 'Project (only ones without a client)' : 'Client'), sel), review, h('p.pf-hint', {}, 'If the client has a company brain, the project is wired to it straight away and checked.'), note()];
-  const d = dialog('Add to client', opener, body, inOther || !picks.length ? [] : [add]);
+  // From a project: a client that doesn't exist yet can be made here, then picked (S01: an admin's action).
+  const fresh = at.floor && !inOther && view.admin ? (h('button.btn', { type: 'button' }, '＋ New client') as HTMLButtonElement) : null;
+  const d = dialog('Add to client', opener, body, [...(fresh ? [fresh] : []), ...(inOther || !picks.length ? [] : [add])]);
+  if (fresh) fresh.onclick = () => (d.modal.close(), newPortfolioDialog(opener, (r) => r.view && addToPortfolioDialog(opener, r.view, at, done, r.portfolio?.id)));
   if (inOther || !picks.length) return;
+  if (pick && picks.some(([v]) => v === pick)) sel.value = pick;
   sel.onchange = () => void showReview();
   void showReview();
   add.onclick = async () => {
