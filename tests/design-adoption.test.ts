@@ -27,7 +27,7 @@ async function world(t: { after(fn: () => void): void }, opts: { remote?: boolea
   return { ...w, v, dir, origin: origin!, clock };
 }
 
-const failingHook = (dir: string) => writeFileSync(path.join(dir, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\necho "blocked by the hook" >&2\nexit 1\n');
+const failingHook = (dir: string) => writeFileSync(path.join(dir, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\necho "blocked by the hook" >&2\nexit 1\n', { mode: 0o755 }); // executable: git on Linux skips a hook that isn't
 const ask = (s: DesignService, issue?: number) => s.lines.line({ floorId: 'f1', taskId: 'tsk_T', text: 'Build the page', ...(issue ? { issue } : {}) });
 const worktrees = (dir: string) => sh(dir, 'worktree', 'list').split('\n').length;
 
