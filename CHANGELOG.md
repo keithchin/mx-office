@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **The "Who is it?" name prompt is no longer hidden behind the loading screen on a first visit.** A browser that had not been told your name yet (a colleague opening Mx Office for the first time, or a fresh browser profile) asked for it under the loading screen, so the page sat at *Loading Mx Office… 40 %* for good, waiting for a name nobody could see. The loading screen now steps aside while the page waits on you: the prompt is in view with its field focused, Enter sends it, and the loading screen comes back for the rest of the load. Waiting for your answer no longer counts as loading. Every page with the loading screen had it: Home (with the New project wizard), Clients, the 1D and 2D views and the phone page.
 
 ## 2026-10-16 · release 52 (`87ab10b`)
 
