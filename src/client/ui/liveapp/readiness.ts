@@ -21,7 +21,7 @@ export function readinessCard(s: LiveAppState): HTMLElement | null {
     ? h(
         'ul.lr-list',
         {},
-        ...phases.map((m) => h('li', { class: `lr-m ${m.state}`, title: WORD[m.state] }, h('span.lr-tag', {}, TAG[m.state]), h('span.lr-line', {}, m.line.replace(/^Ready: /, '')))),
+        ...phases.map((m) => h('li', { class: `lr-m ${m.state}`, title: WORD[m.state] }, h('span.lr-tag', {}, m.state === 'refresh' && !r.sha ? 'On main' : TAG[m.state]), h('span.lr-line', {}, m.line.replace(/^Ready: /, '')))),
       )
     : null;
   const where = [r.plan ? `${r.plan} at main @${r.main?.slice(0, 7) ?? '?'}` : '', 'row evidence from commit subjects and BUILD-LOG notes (not the plan’s State column)', 'journeys from the test runs of this exact build'].filter(Boolean).join('; ');
