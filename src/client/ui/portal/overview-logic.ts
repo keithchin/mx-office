@@ -5,6 +5,7 @@
 // Needs-you alert is remembered under. Pure, so tests/portal-nav.test.ts runs it.
 
 import { VIA_SUBAGENT } from '../../../shared/roster/member-subagents';
+import { WAITING_BG } from '../../../shared/roster/background-work';
 
 export interface TeamFace {
   id: string;
@@ -167,8 +168,10 @@ export interface TeamRowView {
  * status in words; the lead's row says it isn't hired when it isn't. `live` is the member's worker as the
  * page has it (its status wins over the roster's, which is fetched now and then). `subs`: how many of a
  * member's subagents are at work now; one idle or asleep while a subagent of its works reads as working.
+ * `bg`: how many of its Monitors and background commands run now; one idle while they do reads "Waiting
+ * on background work" (shared/roster/background-work.ts), never idle.
  */
-export function teamRows(members: readonly TeamMemberLike[], leadRole: string, live: (id: string) => { status: string; activity?: string } | undefined, subs: (role: string) => number = () => 0): TeamRowView[] {
+export function teamRows(members: readonly TeamMemberLike[], leadRole: string, live: (id: string) => { status: string; activity?: string } | undefined, subs: (role: string) => number = () => 0, bg: (role: string) => number = () => 0): TeamRowView[] {
   const rows: TeamRowView[] = [];
   for (const m of members) {
     if (m.status === 'not-hired') {
@@ -186,9 +189,12 @@ export function teamRows(members: readonly TeamMemberLike[], leadRole: string, l
       : m.waitingOnPm ? ['wait', 'Waiting on you']
       : ['idle', 'Ready'];
     // Its turn is over but a subagent it sent off is still at it: working, not idle.
-    const via = subs(m.role) > 0 && (dot === 'idle' || (dot === 'off' && m.status !== 'benched'));
-    const [shownDot, shownStatus]: [TeamDot, string] = via ? ['work', VIA_SUBAGENT] : [dot, status];
-    const what = (dot === 'off' && m.status === 'benched' ? 'Session cleared to save money' : via ? 'Waiting on its subagent' : (w?.activity ?? m.activity ?? m.task ?? (dot === 'idle' ? 'Waiting for work' : ''))).replace(/\s+/g, ' ').trim();
+    const free = dot === 'idle' || (dot === 'off' && m.status !== 'benched');
+    // …or a Monitor or a background command it left running. Asleep, its session (and what ran in it) is over.
+    const waits = bg(m.role) > 0 && dot === 'idle';
+    const via = !waits && subs(m.role) > 0 && free;
+    const [shownDot, shownStatus]: [TeamDot, string] = waits ? ['work', WAITING_BG] : via ? ['work', VIA_SUBAGENT] : [dot, status];
+    const what = (dot === 'off' && m.status === 'benched' ? 'Session cleared to save money' : waits ? 'Its turn is over; Claude Code wakes it when its background work reports' : via ? 'Waiting on its subagent' : (w?.activity ?? m.activity ?? m.task ?? (dot === 'idle' ? 'Waiting for work' : ''))).replace(/\s+/g, ' ').trim();
     rows.push({ role: m.role, name: m.name, title: m.title, what, dot: shownDot, status: shownStatus, workerId: m.workerId, lead: m.role === leadRole });
   }
   return rows.sort((a, b) => Number(b.lead) - Number(a.lead));

@@ -30,7 +30,7 @@ import { portalSlot } from './slot';
 import { budgetFacts, budgetText, commitWhen, detailRows, teamRows, type DetailFacts } from './overview-logic';
 import { needsCard } from './needs-card';
 import { briefCard } from './brief-card';
-import { nextTick, subsByRole, subsKey, subsList, watchShown, workingIn } from '../subagents/member-subs';
+import { bgOpenIn, nextTick, subsByRole, subsKey, subsList, watchShown, workingIn } from '../subagents/member-subs';
 import { openSubagentDetail } from '../subagents/detail';
 import type { GitGraph } from '../../../shared/gitgraph';
 import './overview.css';
@@ -116,7 +116,7 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
     const lead = managerOf(r?.coverage ?? TEAM_OWNER);
     subsAt = Date.now();
     subsNow = subsByRole(r, subsAt);
-    const rows = r ? teamRows(r.members, lead, (id) => store.workers.get(id), (role) => workingIn(subsNow, role)) : [];
+    const rows = r ? teamRows(r.members, lead, (id) => store.workers.get(id), (role) => workingIn(subsNow, role), (role) => bgOpenIn(subsNow, role, subsAt)) : [];
     const others = [...store.workers.values()].filter((w) => (w.kind === undefined || w.kind === 'agent') && !r?.members.some((m) => m.workerId === w.id)).length;
     const colors = rows.map((x) => (x.workerId ? store.workers.get(x.workerId)?.color : undefined));
     const key = JSON.stringify([rows, others, colors, r ? shapeText(r) : '', subsKey(subsNow, subsAt)]);

@@ -16,6 +16,9 @@
 import type { WorkerInfo } from '../../shared/protocol.js';
 import { ROLE_BY_ID } from '../../shared/roster/roles.js';
 import { factsSubagents } from '../../shared/roster/member-subagents.js';
+import { factsBackground, openBg } from '../../shared/roster/background-work.js';
+import { firstNameIn } from '../../shared/roster/subagent-names.js';
+import { backgroundOf } from '../workers/background-work.js';
 import { ackResume, lastResume, projectPause, resumeOwed } from '../project-run/store.js';
 import { isAsleepStatus } from './bench.js';
 import { managerRole } from './coverage.js';
@@ -123,15 +126,25 @@ export class Awareness {
   /**
    * The one-line fact block: run state, who's working, waiting, idle and asleep. `me`: marked "you". An
    * agent whose subagents are at work counts as working, and says which ("Katherine (you) — 1 subagent
-   * working: Elsa (business analyst)"): the office said "nobody" while one ran.
+   * working: Elsa (business analyst)"): the office said "nobody" while one ran. So does one waiting on its own
+   * background work, saying what ("Sophie (you) — waiting on background work: monitor, 1 subagent (Maya)");
+   * work of unknown status is said as such and counts for nothing.
    */
   facts(floor: TeamFloor, me?: string): string {
     const groups: Record<'working' | 'waiting' | 'idle' | 'asleep', string[]> = { working: [], waiting: [], idle: [], asleep: [] };
     const d = this.roster.data(floor.id);
+    const now = this.roster.deps.now();
     for (const w of this.agents(floor)) {
       const subs = factsSubagents(d.subagentRuns, d.subagentNames, w.id);
-      const name = `${w.id === me ? `${w.name} (you)` : this.label(floor, w)}${subs ? ` — ${subs}` : ''}`;
-      const g = isAsleepStatus(w.status) && !subs ? 'asleep' : w.status === 'needs_input' ? 'waiting' : w.status === 'working' || w.status === 'starting' || subs ? 'working' : 'idle';
+      const working = w.status === 'working' || w.status === 'starting';
+      const items = isAsleepStatus(w.status) ? [] : backgroundOf(w.id, now);
+      const runs = d.subagentRuns.filter((r) => r.workerId === w.id && r.status === 'working');
+      const bg = factsBackground(items, now, working, { count: runs.length, who: runs.map((r) => firstNameIn(d.subagentNames, `${r.lead}/${r.name}`)).join(', ') });
+      const open = openBg(items, now).length > 0;
+      // Running background work names its subagents too; work of unknown status only adds a note.
+      const said = open ? bg : [subs, bg].filter(Boolean).join('; ');
+      const name = `${w.id === me ? `${w.name} (you)` : this.label(floor, w)}${said ? ` — ${said}` : ''}`;
+      const g = isAsleepStatus(w.status) && !subs && !open ? 'asleep' : w.status === 'needs_input' ? 'waiting' : working || subs || open ? 'working' : 'idle';
       groups[g].push(name);
     }
     const who = [`working: ${names(groups.working)}`, ...(groups.waiting.length ? [`waiting on a person: ${names(groups.waiting)}`] : []), `awake and idle: ${names(groups.idle)}`, `asleep: ${names(groups.asleep)}`];

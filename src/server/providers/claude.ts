@@ -11,6 +11,7 @@ import { answered, notified, wantsPermission } from '../workers/lifecycle.js';
 import { shq } from '../workers/process.js';
 import { noteSubagentDispatch, noteSubagentHook, noteSubagentLifecycle } from '../workers/subagents.js';
 import { noteCommandRun } from '../workers/tool-runs.js';
+import { noteBackgroundHook } from '../workers/background-work.js';
 import { noteDispatch } from '../chatter/bus.js';
 import { noteTranscript } from '../convo/index.js';
 import { studioGuardHook } from '../studio/guard.js';
@@ -160,6 +161,8 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
   h.scheduleScan();
   switch (event) {
     case 'SessionStart':
+      // A fresh start or a resume: nothing of the old session runs in the background (workers/background-work.ts).
+      noteBackgroundHook(info.id, event, payload, now);
       if (payload?.source === 'clear') {
         h.clearTask();
         h.failStreak = 0;
@@ -197,6 +200,8 @@ function claudeHook(h: WorkerHandle, event: string, payload: any): boolean {
       noteSubagentHook(info.id, payload, event === 'PostToolUseFailure', now);
       // A command that ran closes a permission card waiting for it (workers/tool-runs.ts).
       if (event === 'PostToolUse') noteCommandRun(info.id, payload);
+      // A Monitor or a command left running in the background: the agent waits on it after its turn (workers/background-work.ts).
+      noteBackgroundHook(info.id, event, payload, now);
       // It opened a pull request itself (`gh pr create`): that one is its own.
       h.notePr(payload?.tool_input?.command, toolOutput(payload));
       answered(h, now);

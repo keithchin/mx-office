@@ -16,6 +16,8 @@ import type { Roster } from './index.js';
 import { applyLive, expireLive, trimLive, type LiveSignal, type LiveWho } from './subagent-runs.js';
 import { cleanSubName, subKey } from './subagent-store.js';
 import { SubagentTranscript } from './subagent-transcript.js';
+import { BackgroundTranscript } from './background-transcript.js';
+import { applyBackground, resetBackground, tickBackground } from '../workers/background-work.js';
 import type { TeamFloor } from './types.js';
 
 /** The first look at a transcript takes only its end; each look after, at most this much that's new. */
@@ -40,6 +42,9 @@ interface Tail {
   offset?: number;
   midLine: boolean;
   parser: SubagentTranscript;
+  /** The same reads, for the worker's Monitors and background commands (background-transcript.ts). */
+  bg: BackgroundTranscript;
+  workerId: string;
   /** Made for this look (a transcript not read before): only its recent calls count. */
   firstLook?: boolean;
 }
@@ -146,8 +151,10 @@ export class SubagentLive {
       had.firstLook = false;
       return had;
     }
-    const t: Tail = { file, midLine: false, parser: new SubagentTranscript(), firstLook: true };
+    const t: Tail = { file, midLine: false, parser: new SubagentTranscript(), bg: new BackgroundTranscript(), workerId: w.id, firstLook: true };
     this.tails.set(w.id, t);
+    // A new transcript is a new session (or the office's first look since it started): its background work is read afresh.
+    resetBackground(w.id);
     return t;
   }
 
@@ -156,6 +163,7 @@ export class SubagentLive {
     if (t.offset !== undefined && size < t.offset) {
       t.offset = undefined;
       t.parser.reset();
+      t.bg.reset();
     }
     const start = t.offset ?? Math.max(0, size - FIRST_BYTES);
     const midLine = t.midLine || (t.offset === undefined && start > 0);
@@ -175,7 +183,9 @@ export class SubagentLive {
     }
     t.midLine = false;
     t.offset = start + end;
-    return t.parser.feed(bytes.subarray(from, end).toString('utf8'));
+    const text = bytes.subarray(from, end).toString('utf8');
+    applyBackground(t.workerId, t.bg.feed(text));
+    return t.parser.feed(text);
   }
 
   /** What's new in `file` since the last look, as signals (undefined when it can't be read). */
@@ -232,6 +242,8 @@ export class SubagentLive {
   /** The minute look: runs not heard of for hours are lost. */
   tick(floor: TeamFloor, now: number) {
     if (expireLive(this.runs(floor), now)) this.roster.touch(floor);
+    // Background work past its stated life turns unknown, then goes (shared/roster/background-work.ts).
+    tickBackground(this.leadsOf(floor).map((x) => x.w.id), now);
   }
 
   /** The floor's runs, newest first, each with its Lead's verdict when its record has one. */

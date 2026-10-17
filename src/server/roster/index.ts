@@ -18,6 +18,7 @@ import { dayIn, nextSlot } from '../../shared/roster/schedule.js';
 import type { ApprovalItem, MemberStatus, MemberView, RosterView } from '../../shared/roster/types.js';
 import { awaitingAnswer, benchStep, dueForBench, isAsleepStatus, isBusyStatus } from './bench.js';
 import { forgetSubagents } from '../workers/subagents.js';
+import { backgroundOf, backgroundOpen, forgetBackground, resetBackground } from '../workers/background-work.js';
 import { forgetLastWords } from '../judge/turns.js';
 import { Delivery } from './deliver.js';
 import { Escalations } from './escalations.js';
@@ -220,6 +221,8 @@ export class Roster {
     if (w.status === 'working' && prev?.status !== 'working') d.lastActivityAt = now;
     const idle = (w.status === 'idle' || w.status === 'done') && w.viewers.length === 0;
     this.seen.set(w.id, { status: w.status, idleSince: idle ? (prev?.idleSince ?? now) : undefined });
+    // Its session ended (asleep, exited): what it ran in the background ended with it.
+    if (isAsleepStatus(w.status) && !isAsleepStatus(prev?.status ?? 'idle')) resetBackground(w.id, now);
     const capChanged = this.noteSpend(floor, d, w, now);
     // A turn just ended: Jeff judges whether it's waiting on the Project Manager (any agent, not just the team's).
     if (prev?.status === 'working' && (w.status === 'done' || w.status === 'idle')) asksSoon(floor.id, 'after a turn ended');
@@ -258,6 +261,7 @@ export class Roster {
     this.echoes.delete(workerId);
     this.delivery.forget(floor, workerId);
     forgetSubagents(workerId);
+    forgetBackground(workerId);
     this.subagents.live.forget(workerId);
     forgetLastWords(workerId);
     const role = this.roleOf(floor, workerId);
@@ -300,7 +304,8 @@ export class Roster {
         const m = d.members[r.id];
         const w = this.workerOf(floor, m);
         // One waiting on the Project Manager's answer to its escalation stays: its turn is over because the next move is theirs.
-        if (m.phase === 'active' && w && dueForBench({ status: w.status, viewers: w.viewers.length }, this.idleSince(w.id), now, d.settings.idleMinutes) && !awaitingAnswer(d.escalations, r.id)) {
+        // Nor one waiting on its own background work: benching would end the session it runs in.
+        if (m.phase === 'active' && w && dueForBench({ status: w.status, viewers: w.viewers.length }, this.idleSince(w.id), now, d.settings.idleMinutes) && !awaitingAnswer(d.escalations, r.id) && !backgroundOpen(w.id, now)) {
           this.members.bench(floor, r.id, 'idle');
         } else if (m.phase === 'benching' && benchStep(w?.status, !!m.benchSawBusy, m.benchAskedAt ?? now, now) === 'finish') {
           void this.members.finishBench(floor, r.id);
@@ -388,6 +393,7 @@ export class Roster {
       // From what was last read in the background (the chatter and the ranking read the same files): a look never waits on the disk.
       const last = latestEntry(readJournalSoon(floor, w, r.team)) ?? kept;
       const status = this.statusOf(m, w);
+      const bg = w && status !== 'asleep' ? backgroundOf(w.id, now) : [];
       return {
         role: r.id,
         title: r.title,
@@ -412,6 +418,8 @@ export class Roster {
         // A merge that doesn't carry it, or an earlier end taken back (resume.ts Tasks.note): shown, never counted.
         ...(w && this.tasks.note(floor, w) ? { taskNote: this.tasks.note(floor, w) } : {}),
         ...(w && this.openAsks(floor.id, w.id).length ? { waitingOnPm: true } : {}),
+        // What it left running after its turn (a Monitor, a background command): "Waiting on background work".
+        ...(bg.length ? { background: bg } : {}),
       };
     });
     const cap = capAt(d.settings.costCaps, d.settings.autonomy);
