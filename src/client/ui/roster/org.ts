@@ -17,7 +17,8 @@ import { coverageOf, coverageTable, managerIn } from './coverage';
 import { subagentDefsOf } from '../../../shared/roster/coverage';
 import { TEAM_META } from '../../../shared/roster/card-team';
 import { memberSubagents, VIA_SUBAGENT } from '../../../shared/roster/member-subagents';
-import { subsList } from '../subagents/member-subs';
+import { subsList, type MemberWork } from '../subagents/member-subs';
+import { bgRows, openBg, WAITING_BG } from '../../../shared/roster/background-work';
 import { openSubagentDetail } from '../subagents/detail';
 
 export const STATUS_TEXT: Record<MemberStatus, string> = {
@@ -62,8 +63,11 @@ export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLEle
   ].filter(Boolean);
   // Its subagents at work now (and just finished) under it; idle or asleep while one works, it reads as working.
   const now = Date.now();
-  const live = memberSubagents(v.subagentRuns, v.subagentNames, m.role, now);
-  const via = live.rows.some((r) => r.state === 'working') && (m.status === 'idle' || m.status === 'asleep');
+  // …and its background work first (a Monitor, a background command): idle while that runs, it's waiting on it, not idle.
+  const bg = bgRows(m.background, now);
+  const live: MemberWork = { ...memberSubagents(v.subagentRuns, v.subagentNames, m.role, now), ...(bg.length ? { bgItems: m.background, bg } : {}) };
+  const waits = m.status === 'idle' && openBg(m.background, now).length > 0;
+  const via = !waits && live.rows.some((r) => r.state === 'working') && (m.status === 'idle' || m.status === 'asleep');
   const subsEl = subsList(live, now, { open: (r) => void (openSubagentDetail(v, r.key, { openWorker: deps.openWorker, onRoster: deps.redraw }) ?? (m.workerId && deps.openWorker(m.workerId))) });
   return h(
     'article.ro-card',
@@ -73,7 +77,7 @@ export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLEle
       {},
       h('span.ro-icon', { 'aria-hidden': 'true' }, m.icon),
       h('span.ro-who', {}, h('span.ro-name', {}, m.name), h('span.ro-title', {}, m.title)),
-      h('span.ro-pill', { class: `ro-pill-${via ? 'working' : m.status}` }, via ? VIA_SUBAGENT : STATUS_TEXT[m.status]),
+      h('span.ro-pill', { class: `ro-pill-${via || waits ? 'working' : m.status}` }, waits ? WAITING_BG : via ? VIA_SUBAGENT : STATUS_TEXT[m.status]),
     ),
     also.length ? h('p.ro-covers', {}, '🧩 Also covers ', also.map((t) => `${TEAM_META[t].icon} ${TEAM_META[t].name}`).join(', ')) : null,
     m.activity ? h('p.ro-activity', {}, m.activity) : null,

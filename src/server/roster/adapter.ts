@@ -25,6 +25,7 @@ import { subagentBusyMoved } from './subagent-busy.js';
 import { holdSeat, seatOf } from './git-identity.js';
 import { onSubagentEvent } from '../workers/subagents.js';
 import { onCommandRun } from '../workers/tool-runs.js';
+import { onBackgroundChange } from '../workers/background-work.js';
 import { sawCommandRun } from './escalation-fold.js';
 import { notedTranscript } from '../convo/index.js';
 import { SCAN_MS } from './subagent-live.js';
@@ -179,6 +180,12 @@ export function rosterOf(ctx: Ctx): Roster {
     onSubagentEvent((workerId, ev) => {
       const floor = ctx.workerFloor(workerId);
       if (floor) roster.subagents.onEvent(teamFloor(ctx, floor), workerId, ev);
+    });
+    // A worker's background work began, ended or went unknown: the browsers fetch the roster again, and the
+    // floors' working counts move when that changed who's busy (workers/background-work.ts).
+    onBackgroundChange((workerId) => {
+      const floor = ctx.workerFloor(workerId);
+      if (floor) teamFloor(ctx, floor).changed();
     });
     // A command a worker ran closes the permission card that waited for it (escalation-fold.ts).
     onCommandRun((workerId, command) => {

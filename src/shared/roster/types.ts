@@ -9,6 +9,7 @@ import type { JeffSettings } from '../judge.js';
 import type { SkillView } from './skills.js';
 import type { SubagentAction, SubagentView } from './subagents.js';
 import type { LiveRunView } from './subagent-live.js';
+import type { BgItem } from './background-work.js';
 import type { Coverage, TeamShape } from './coverage.js';
 import type { LevelId } from '../budget/types.js';
 
@@ -100,6 +101,8 @@ export interface MemberView {
   task?: string;
   /** It has an escalation open to the Project Manager (an FYI too): idle because the next move may be theirs. */
   waitingOnPm?: boolean;
+  /** Its background work still shown: Monitors and background commands, running or of unknown status (shared/roster/background-work.ts). */
+  background?: BgItem[];
   /** Its agent profile's id (shared/profiles.ts), once it has one. */
   profileId?: string;
 }

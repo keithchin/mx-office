@@ -25,3 +25,8 @@
   .ms-working .ms-face, .ms-dots i { animation: none; }
   .ms-dots i { opacity: .8; }
 }
+/* Background work (a Monitor, a background command) on the same list: not a button, a quieter face. */
+.ms-bg .ms-who { cursor: default; }
+.ms-bg-open .ms-face { background: var(--good-soft); color: var(--good-ink); }
+.ms-bg-unknown { opacity: .8; }
+.ms-bg-unknown .ms-st { color: var(--warn-ink, var(--muted)); }
