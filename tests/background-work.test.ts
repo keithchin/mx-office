@@ -70,6 +70,7 @@ test('a monitor is open from its launch: "12 min left", as of when it was last h
   assert.equal(applyBg(items, { kind: 'launched', at: T0 + 100, tool: 'monitor', taskId: 'bt1', toolUseId: 'toolu_m1', label: 'app start', timeoutMs: 15 * MIN }), false, 'the same launch from the other source changes nothing');
   const rows = bgRows(items, T0 + 3 * MIN);
   assert.deepEqual(rows.map((r) => [r.state, r.line, r.label, r.asOf]), [['open', 'monitor · 12 min left', 'app start', 'as of 00:27']]);
+  assert.deepEqual([rows[0].head, rows[0].when], ['Monitor', '12 min left'], 'the two parts a narrow row shows');
   assert.equal(bgNextTick(items, T0 + 3 * MIN), MIN + 50, 'drawn again in a minute');
   // An event: still running, heard of later.
   assert.equal(applyBg(items, { kind: 'event', at: T0 + 4 * MIN, taskIds: ['bt1'] }), true);
@@ -87,6 +88,7 @@ test('past its expiry a monitor is "status unknown since", never running; then i
   const later = T0 + 15 * MIN + GRACE_MS + 1;
   assert.equal(bgState(items[0], later), 'unknown');
   assert.equal(bgRows(items, later)[0].line, 'background work (status unknown since 00:42)');
+  assert.deepEqual([bgRows(items, later)[0].head, bgRows(items, later)[0].when], ['Background work', 'status unknown since 00:42']);
   assert.equal(factsBackground(items, later, false), 'background work of unknown status since 00:42');
   assert.equal(bgState(items[0], T0 + 15 * MIN + GRACE_MS + UNKNOWN_SHOWN_MS), 'gone');
   // No timeout named: Claude Code's default of 5 minutes.

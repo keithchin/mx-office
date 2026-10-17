@@ -90,7 +90,7 @@ function bgEl(b: BgRow): HTMLElement {
     'li.ms-row.ms-bg',
     { class: `ms-bg-${b.state}`, 'data-background-task': b.id },
     h('span.ms-face', { 'aria-hidden': 'true' }, BG_FACE[b.kind]),
-    h('span.ms-who', { title: `${what}: ${b.line} (${b.asOf})` }, h('b', {}, b.line), h('small', {}, `${what} · ${b.asOf}`)),
+    h('span.ms-who', { title: `${what}: ${b.line} (${b.asOf})` }, h('b', {}, b.head), h('small', {}, [b.when, b.asOf, b.label].filter(Boolean).join(' · '))),
     b.state === 'open' ? h('span.ms-st', {}, h('span.ms-dots', { role: 'img', 'aria-label': 'running' }, h('i'), h('i'), h('i'))) : h('span.ms-st', { title: 'No word of it since then' }, '?'),
   );
 }

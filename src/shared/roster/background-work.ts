@@ -158,6 +158,9 @@ export interface BgRow {
   state: 'open' | 'unknown';
   /** "monitor · 12 min left", "background command · started 3 min ago", "background work (status unknown since 14:05)". */
   line: string;
+  /** The line in two parts, for a narrow row: "Monitor" and "12 min left" ("Background work", "status unknown since 14:05"). */
+  head: string;
+  when: string;
   /** What it is: the Monitor's description, the command. */
   label?: string;
   /** "as of 00:27": the office's last word of it. */
@@ -180,7 +183,11 @@ export function bgLine(i: BgItem, now: number): string {
 export function bgRows(items: readonly BgItem[] | undefined, now: number): BgRow[] {
   const shown = (items ?? []).map((i) => ({ i, state: bgState(i, now) })).filter((x): x is { i: BgItem; state: 'open' | 'unknown' } => x.state !== 'gone');
   shown.sort((a, b) => Number(a.state !== 'open') - Number(b.state !== 'open') || a.i.startedAt - b.i.startedAt);
-  return shown.map(({ i, state }) => ({ id: i.id, kind: i.kind, state, line: bgLine(i, now), ...(i.label ? { label: i.label } : {}), asOf: `as of ${clockOf(i.seenAt)}` }));
+  return shown.map(({ i, state }) => {
+    const line = bgLine(i, now);
+    const [word, rest] = state === 'open' ? line.split(' · ') : ['background work', line.slice('background work ('.length, -1)];
+    return { id: i.id, kind: i.kind, state, line, head: word.charAt(0).toUpperCase() + word.slice(1), when: rest, ...(i.label ? { label: i.label } : {}), asOf: `as of ${clockOf(i.seenAt)}` };
+  });
 }
 
 /** In how many ms the rows change by the clock alone (a minute more, an expiry, a fold); undefined when they won't. */
