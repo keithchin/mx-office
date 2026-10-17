@@ -211,9 +211,23 @@ test('below the threshold it is filed as FYI: no toast, no alert, and "Noted" se
   assert.equal(t.floor.alerts.length, 1);
 });
 
-/** Lets fire-and-forget hires finish (a hire carrying durable answers marks them in flight first: a disk write). */
+/**
+ * Lets fire-and-forget work run a moment, for checks that something did NOT happen. What must happen is
+ * waited for with `until`: a hire, or a held answer typed at a turn's end, waits on fsynced critical writes
+ * first (the dispatch record marked in flight, flow/critical-write.ts: on Linux the folder is synced too),
+ * which on a busy CI runner take longer than any fixed sleep.
+ */
 const settle = async () => {
   for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+};
+
+/** Waits until `ok()` holds (the event the office's async work ends in), failing with `what` after `ms`. */
+const until = async (ok: () => boolean, what: string, ms = 10_000) => {
+  const end = Date.now() + ms;
+  while (!ok()) {
+    if (Date.now() > end) assert.fail(`timed out waiting for ${what}`);
+    await new Promise((r) => setTimeout(r, 5));
+  }
 };
 
 test('an asleep raiser wakes with the answer; one that went home is hired back with it', async () => {
@@ -227,6 +241,7 @@ test('an asleep raiser wakes with the answer; one that went home is hired back w
   await t.floor.stop(dev);
   assert.equal(await t.roster.escalations.resolve(t.floor, e2.id, 'reject', 'Not this release.', 'Keith'), undefined);
   assert.equal(t.data().escalations.find((x) => x.id === e2.id)?.resolution?.delivered, false, 'not until the hire went through');
+  await until(() => t.data().escalations.find((x) => x.id === e2.id)?.resolution?.delivered === true, 'the hire carrying the answer');
   await settle();
   assert.equal(t.floor.hires.length, 2, 'the office hired it back by itself');
   assert.equal(t.floor.hires[1].by, 'The office');
@@ -432,7 +447,7 @@ async function benchWithNote(t: ReturnType<typeof setup>, dev: string, note: str
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, `# Development\n\n## 2026-10-05 09:20 — Handoff\n${note}\n`);
   t.floor.set(dev, 'done');
-  await settle();
+  await until(() => t.data().members['lead-developer'].phase === 'benched', 'the bench');
   assert.equal(t.data().members['lead-developer'].phase, 'benched');
 }
 
@@ -484,6 +499,7 @@ test("answering a benched Lead's escalation hires it back with the answer; not w
   assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'reply', 'Use matrix B.', 'Keith'), undefined);
   // A second answer right after, while the hire is under way: one hire, and it's told once its first turn is over.
   assert.equal(await t.roster.escalations.resolve(t.floor, e2.id, 'reply', 'Barbara.', 'Keith'), undefined);
+  await until(() => t.data().escalations.find((x) => x.id === e.id)!.resolution!.delivered === true, 'the hire carrying the first answer');
   await settle();
   assert.equal(t.floor.hires.length, hires + 1, 'one hire');
   const ask = t.floor.hires.at(-1)!;
@@ -498,7 +514,8 @@ test("answering a benched Lead's escalation hires it back with the answer; not w
   assert.equal(t.data().escalations.find((x) => x.id === e2.id)!.resolution!.delivered, false);
   t.floor.set(neu, 'working');
   t.floor.set(neu, 'done');
-  await settle();
+  // Typed once its dispatch is marked in flight on disk (deliver.ts onWorker): wait for that, not a sleep.
+  await until(() => t.floor.prompts.some((p) => p.id === neu), 'the held answer typed at the turn end');
   assert.match(t.floor.prompts.filter((p) => p.id === neu).at(-1)!.text, /not been told yet:\n- “Who signs off\?”: REPLIED — Barbara\./);
   assert.equal(t.data().escalations.find((x) => x.id === e2.id)!.resolution!.delivered, true);
 
@@ -536,7 +553,7 @@ test('an answer that arrives while a Lead writes its handoff brings it straight 
   assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'reply', 'B.', 'Keith'), undefined);
   assert.equal(t.floor.prompts.filter((x) => /answered your escalation/.test(x.text)).length, 0, 'not typed into the session about to be cleared');
   t.floor.set(dev, 'done');
-  await settle();
+  await until(() => t.data().members['lead-developer'].phase === 'active', 'the hire back');
   assert.equal(t.data().members['lead-developer'].phase, 'active');
   assert.equal(t.floor.hires.at(-1)!.by, 'The office');
   assert.match(t.floor.hires.at(-1)!.prompt, /“Matrix\?”: REPLIED — B\./);
@@ -560,6 +577,7 @@ test('a handoff that ends AWAITING-PM raises an escalation on its behalf, unless
   // Answering it brings the Lead back with the answer.
   const hires = t.floor.hires.length;
   assert.equal(await t.roster.escalations.resolve(t.floor, e.id, 'reply', 'B1–B7 approved as proposed.', 'Keith'), undefined);
+  await until(() => t.floor.hires.length > hires, 'the hire back');
   await settle();
   assert.equal(t.floor.hires.length, hires + 1);
   assert.match(t.floor.hires.at(-1)!.prompt, /“Sign-off on CAC-1 questions B1–B7”: REPLIED — B1–B7 approved as proposed\./);
