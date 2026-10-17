@@ -8,7 +8,10 @@
 .ny-h { display: flex; align-items: center; gap: 8px; padding: 7px 12px; background: var(--bad-soft); border-bottom: 3px solid var(--line); font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
 
 .ny-list { list-style: none; margin: 0; padding: 0; }
-.ny-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 12px; border-left: 6px solid var(--warn); }
+/* The sentence has the whole width beside its icon; the buttons go under it, at the bottom right (the
+   ::before is a line break between them, so a wide emoji never pushes the sentence onto a line of its own). */
+.ny-item { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 10px; padding: 8px 10px 8px 12px; border-left: 6px solid var(--warn); }
+.ny-item::before { content: ''; order: 2; flex: 0 0 100%; height: 0; }
 .ny-item + .ny-item { border-top: 2px solid var(--rule); }
 /* Blocking: something is stopped until you act. */
 .ny-item.ny-block { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad-soft) 55%, var(--card)); }
@@ -17,11 +20,13 @@
 .ny-info .ny-text { font-weight: 600; color: var(--muted); }
 .ny-info .ny-tag { background: var(--paper-2); color: var(--ink); }
 .ny-ico { flex: none; font-size: 18px; line-height: 1; }
-.ny-text { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.ny-text { flex: 1 1 0; min-width: 0; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
 .ny-since { font-weight: 700; color: var(--muted); white-space: nowrap; }
 .ny-tag { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 999px; background: var(--warn); color: var(--on-warn); font-size: 11px; font-weight: 900; letter-spacing: .03em; vertical-align: 1px; }
 .ny-block .ny-tag { background: var(--bad); color: var(--on-fill); }
 .ny-go { flex: none; min-height: 36px; padding: 4px 10px; font-size: 13px; background: var(--bad-soft); }
+.ny-item .ny-go { order: 3; margin-top: 6px; }
+.ny-text + .ny-go { margin-left: auto; }
 .ny-go:hover { background: var(--bad-soft-2); }
 .ny-item:not(.ny-block) .ny-go { background: var(--card); }
 .ny-item:not(.ny-block) .ny-go:hover { background: var(--paper-2); }
@@ -29,11 +34,12 @@
 .ny-more { display: block; width: 100%; padding: 7px 12px; border: 0; border-top: 2px solid var(--rule); background: var(--paper-2); color: var(--ink); font: inherit; font-size: 13px; font-weight: 800; text-align: left; cursor: pointer; }
 .ny-more:hover { background: var(--bad-soft); }
 
-/* A phone: tighter, the sentence wraps beside its button. */
+/* A phone: tighter; the buttons stay under the sentence, big enough to tap. */
 @media (max-width: 520px) {
-  .ny-item { gap: 8px; padding: 7px 8px 7px 9px; }
+  .ny-item { gap: 0 8px; padding: 7px 8px 7px 9px; }
   .ny-text { font-size: 13px; }
   .ny-go { padding: 4px 8px; font-size: 12px; }
+  html[data-theme] body.lite.lite .ny-item .ny-go { min-height: 40px; }
 }
 
 /* The Command Center already lists the other floors where someone's waiting, so the line above the tabs steps aside there. */

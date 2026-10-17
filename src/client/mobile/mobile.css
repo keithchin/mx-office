@@ -36,7 +36,8 @@ body.m-body { min-height: 0; background: var(--paper); overscroll-behavior: none
 .m-log .tp-note { margin: 6px 0; padding: 10px; border: 2px solid var(--line); border-radius: var(--radius, 12px); background: var(--card); box-shadow: 0 3px 0 var(--edge); }
 .m-log .tp-note-block { border-left: 8px solid var(--bad); }
 .m-log .tp-note-warn { border-left: 8px solid var(--warn); }
-.m-log .tp-act { min-height: 36px; padding: 0 12px; }
+.m-log .tp-act { padding: 0 12px; }
+html[data-theme] body.lite.lite .m-log .tp-act, html[data-theme] body.lite.lite .m-appr > .btn { min-height: 40px; }
 .m-flash { animation: m-flash 2.4s ease-out; }
 @keyframes m-flash { 0%, 40% { background: var(--flash, #ffe8a3); } 100% { background: var(--card); } }
 .m-older { display: block; margin: 0 auto 8px; }
@@ -70,6 +71,10 @@ body.m-body { min-height: 0; background: var(--paper); overscroll-behavior: none
 .m-row-ico { flex: none; font-size: 20px; }
 .m-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .m-row-main small { font-size: 12px; }
+/* A merge or the cap in Needs you: its words the whole width, its button under them at the right. */
+.m-appr { flex-wrap: wrap; align-items: flex-start; }
+.m-appr .m-row-main { flex: 1 1 calc(100% - 40px); overflow-wrap: anywhere; }
+.m-appr > .btn { margin-left: auto; }
 
 /* ---- Status ----------------------------------------------------------------------------------------- */
 .m-cards { display: flex; flex-direction: column; gap: 10px; }
