@@ -74,6 +74,8 @@ On a branch, tick **Changes in this branch** to see what the branch changed agai
 
 A pull request's window has a **📐 View in Model** button that opens its branch here, with its changes marked.
 
+While `main` is on show, a banner says when the work is somewhere else: an agent's branch or an open pull request with commits `main` hasn't that change the model (*main is 75 commits behind Sophie's branch, which has model changes (PR #6, open, not reviewed)*). **View Sophie's branch** switches the picker to it; **Ask Katherine to review** (admins) tells the team lead, after their turn, to have it reviewed per the [review gate](review-gate.md). It's hidden when nothing with model changes is ahead. The [Live app](live-app.md#main-behind-the-work) tab shows the same banner.
+
 ## Change this
 
 You never edit the model in the office. Pick what should change and say how, and the team does it.

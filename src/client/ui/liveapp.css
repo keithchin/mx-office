@@ -5,7 +5,7 @@
 .la-pill.running { background: var(--good); color: var(--on-fill); }
 .la-pill.failed { background: var(--bad); color: var(--on-fill); }
 .la-pill.starting, .la-pill.updating, .la-pill.stopping { background: var(--warn); color: var(--on-warn); }
-.la-commit { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; font-size: 13px; font-weight: 700; }
+.la-commit { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px; min-width: 0; font-size: 13px; font-weight: 700; }
 .la-commit code { font-weight: 900; }
 .la-subject { max-width: 42ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .la-open { margin-left: auto; text-decoration: none; }
@@ -21,3 +21,6 @@
 .la-chip.failed { background: var(--bad); color: var(--on-fill); }
 .la-chip.starting, .la-chip.updating, .la-chip.stopping { background: var(--warn); color: var(--on-warn); }
 .la-chip:hover { filter: brightness(.95); }
+/* A crash or a failed build: when, on which commit, why, and Restart above it. */
+.la-failed { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 2px solid var(--bad); border-radius: 10px; background: var(--card); }
+.la-chip.idle { color: var(--muted); }

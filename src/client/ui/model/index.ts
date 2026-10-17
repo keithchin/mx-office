@@ -33,6 +33,7 @@ import { fullScreen } from './fullscreen';
 import { ChangeHere } from './change-here';
 import './model.css';
 import './page.css';
+import { aheadBanner } from '../branch-ahead/banner';
 
 const DARK = new Set(['dark', 'terminal', 'clean-dark', 'portal-dark']);
 const TYPE_LABEL: Record<string, string> = { domainmodel: 'Domain model', systemoverview: 'System Overview', modulesecurity: 'Module security', navprofile: 'Navigation profile', projectsecurity: 'Project security' };
@@ -192,7 +193,9 @@ export function modelView(root: HTMLElement): ModelView {
     ),
     fullBtn,
   );
-  root.replaceChildren(bar, body);
+  // "main is behind the work": an agent's branch ahead with model changes (ui/branch-ahead/), shown while main is.
+  const ahead = aheadBanner('model', { view: (b) => pickRef(b), shown: () => ref === 'main' });
+  root.replaceChildren(bar, ahead.el, body);
   explorerBtn.addEventListener('click', () => root.classList.toggle('mx-drawer'));
   new MutationObserver(() => (zoomPct.textContent = `${canvasHost.dataset.zoom ?? 100}%`)).observe(canvasHost, { attributes: true, attributeFilter: ['data-zoom'] });
 
@@ -406,6 +409,7 @@ export function modelView(root: HTMLElement): ModelView {
     const f = floor;
     say('Reading the app… (the first time takes a little while)');
     try {
+      ahead.refresh();
       const r = await modelApi.refs(f);
       if (mine !== seq || f !== floor) return;
       refs = r.refs;
@@ -455,13 +459,14 @@ export function modelView(root: HTMLElement): ModelView {
     void load();
   }
 
-  refPick.addEventListener('change', () => {
-    ref = refPick.value || 'main';
+  function pickRef(to: string) {
+    ref = to || 'main';
     treeSha = undefined;
     renderRefs();
     address();
     void load();
-  });
+  }
+  refPick.addEventListener('change', () => pickRef(refPick.value));
   changesBox.addEventListener('change', () => {
     changesOn = changesBox.checked;
     address();

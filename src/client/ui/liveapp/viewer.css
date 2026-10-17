@@ -1,0 +1,35 @@
+/* The live app viewer (ui/liveapp/viewer.ts): a browser's toolbar over the running app's frame. */
+.lv { display: flex; flex-direction: column; gap: 6px; }
+.lv[hidden] { display: none; }
+.lv-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.lv-btn { min-width: 34px; padding: 4px 9px; font-size: 13px; }
+.lv-btn[disabled] { opacity: .45; cursor: default; }
+.lv-address { flex: 1 1 220px; min-width: 140px; padding: 5px 10px; border: 2px solid var(--line); border-radius: 999px; background: var(--card); color: inherit; font: 600 13px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.lv-address:focus { outline: 2px solid var(--accent, #0b6bcb); outline-offset: 1px; }
+.lv-address[aria-invalid='true'] { border-color: var(--bad); }
+.lv-wandered .lv-address { color: var(--muted); font-style: italic; }
+.lv-group { display: inline-flex; }
+.lv-seg { padding: 4px 9px; font-size: 12px; border-radius: 0; margin-left: -2px; }
+.lv-group .lv-seg:first-child { border-radius: 999px 0 0 999px; margin-left: 0; }
+.lv-group .lv-seg:last-child { border-radius: 0 999px 999px 0; }
+.lv-seg[aria-pressed='true'], .lv-btn[aria-pressed='true'] { background: var(--accent-soft, var(--paper)); }
+.lv .la-open { margin-left: 0; }
+.lv-sub { min-height: 16px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.lv-loading .lv-sub::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border: 2px solid var(--line); border-top-color: var(--muted); border-radius: 50%; vertical-align: -1px; animation: lv-spin .9s linear infinite; }
+@keyframes lv-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .lv-loading .lv-sub::before { animation: none; } }
+.lv-stage { display: flex; justify-content: center; height: max(480px, calc(100vh - 290px)); overflow: hidden; border-radius: 12px; }
+.lv-stage.lv-scroll { justify-content: flex-start; overflow-x: auto; }
+.lv-stage .la-frame { flex: none; width: 100%; height: 100%; }
+.lv-stage:not([data-device='desktop']) { background: var(--paper); }
+.lv-loading .la-frame { opacity: .65; }
+/* Full screen: the browser's own, or the viewer laid over the window. */
+.lv:fullscreen { padding: 10px; background: var(--paper); }
+.lv:fullscreen .lv-stage, .lv.lv-full .lv-stage { height: auto; flex: 1 1 auto; min-height: 0; }
+.lv.lv-full { position: fixed; inset: 0; z-index: 1000; padding: 10px; background: var(--paper); }
+.lv:fullscreen, .lv.lv-full { display: flex; }
+html:has(> body.lv-full-open) { overflow: hidden; }
+@media (max-width: 640px) {
+  .lv-address { flex-basis: 100%; order: 10; }
+  .lv-stage { height: max(380px, calc(100vh - 340px)); }
+}

@@ -29,6 +29,7 @@ import { brainCandidates } from './decisions/brain.js';
 import { designCandidates } from './decisions/design.js';
 import type { DesignNeedView } from './design/views.js';
 import type { BrainAct, BrainChangeView } from './portfolios.js';
+import { liveNeeds } from './liveapp/status.js';
 
 /** Where an item's button takes you. */
 export type NeedTarget =
@@ -232,10 +233,8 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
   for (const c of signoffCandidates(i.setup)) put(c);
   // What doesn't add up between the register and the office's own gate-check (shared/decisions/stage-flags.ts): info only.
   for (const c of stageFlagCandidates(i.setup, i.floor)) put(c);
-  // The floor's live app failed to start.
-  if (i.live && i.live.floor === i.floor && i.live.status === 'failed') {
-    out.push({ key: 'live', kind: 'live', icon: '🌐', text: `The live app failed${i.live.message ? `: ${i.live.message}` : ''}`, since: i.live.since, level: 'warn', action: 'Live app', target: { to: 'live' } });
-  }
+  // The floor's live app: a failed build or a crash, a refresh that can't reach main, a milestone ready in it (shared/liveapp/status.ts).
+  out.push(...liveNeeds(i.live, i.floor));
   // Studio Pro closed with model changes in the checkout: the agents build on main, so they need committing.
   if (i.studio && i.studio.floor === i.floor && !i.studio.open && i.studio.uncommitted) {
     const n = i.studio.uncommitted.files;

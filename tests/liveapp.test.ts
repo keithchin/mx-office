@@ -150,7 +150,6 @@ test('live app: start, auto-refresh when main moves, stop frees the port', { tim
       mxcli: process.execPath,
       floorId: 'demo',
       floorDir,
-      remote: origin,
       liveDir: path.join(dir, 'live'),
       taken: () => new Set(),
       changed: (s) => states.push(s),

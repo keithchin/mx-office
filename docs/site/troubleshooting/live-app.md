@@ -38,7 +38,21 @@ The live app uses the local PostgreSQL (`127.0.0.1:5432`, database `<project>_li
 
 ## It shows an old version
 
-It updates within about a minute of a merge to `main`. If it doesn't, click **⟳ Restart**. Auto-update can be turned off with `AGENT_OFFICE_LIVE_POLL_SECONDS=0`.
+It updates within about a minute of a merge to `main`. The commit line says how far behind it is (*2 commits behind main @f790bed*); click **⟳ Restart** to catch up at once. Auto-update can be turned off with `AGENT_OFFICE_LIVE_POLL_SECONDS=0`.
+
+It runs `main` only: work still in an open PR isn't in it (the readiness card and the *main is behind the work* banner say which).
+
+## "Live app can't check for updates: …"
+
+**Cause:** the project's folder couldn't fetch `main` from GitHub (the reason is git's own: no credentials, no network). The app keeps running the commit named.
+
+**Fix:** make sure the office's git can reach the repository (`gh auth setup-git` on the office's machine, so a fetch in the project's folder works), then **⟳ Restart**.
+
+## "stopped (crashed at 10:27)"
+
+**Cause:** the Mendix runtime stopped under a running app, and mxcli exited rather than stay up over a dead app. The note shows mxcli's last lines; the full log is `<office data>/live/<project>.log`, the runtime's own `.mxcli/runtime.log` in the live clone.
+
+**Fix:** **⟳ Restart** (admin).
 
 ## It didn't start after a restart of the office
 

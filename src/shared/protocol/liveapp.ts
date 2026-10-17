@@ -2,6 +2,8 @@
 // machine (server/liveapp/), so people can click through what the agents are building while they
 // build it. Browsers only ever ask for start, stop or restart: what runs, where, is the office's.
 
+import type { LiveReadiness } from '../liveapp/readiness.js';
+
 /**
  * Where a floor's live app is. `updating` is a restart because main moved; `failed` keeps the last
  * lines of the log so the page can say why.
@@ -28,6 +30,44 @@ export interface LiveAppState {
   log: string[];
   /** Whether mxcli was found on the office's machine; without it nothing can start. */
   available: boolean;
+  /** Whether anyone started it since the office started (else it's "not started", not "stopped"). */
+  started?: boolean;
+  /** When the commit it runs was made (ms). */
+  commitAt?: number;
+  /** When the build it runs came up (ms). */
+  builtAt?: number;
+  /** Why it isn't running when it should be: a build that failed, or an app that stopped by itself. */
+  failure?: LiveAppFailure;
+  /** The last look for a newer main (fetching the project's folder, then the live checkout from it). */
+  refresh?: LiveAppRefresh;
+  /** Where the project's main is, against what runs. */
+  main?: LiveAppMain;
+  /** What the running build has of the plan, milestone by milestone (shared/liveapp/readiness.ts). */
+  readiness?: LiveReadiness;
+}
+
+export interface LiveAppFailure {
+  /** build: it never came up; crash: it was running and stopped by itself; timeout: it never answered. */
+  kind: 'build' | 'crash' | 'timeout';
+  at: number;
+  why: string;
+  /** The log's last lines when it happened. */
+  lines: string[];
+  /** The commit it was running or building. */
+  sha?: string;
+}
+
+export interface LiveAppRefresh {
+  ok: boolean;
+  at: number;
+  error?: string;
+}
+
+export interface LiveAppMain {
+  sha: string;
+  at?: number;
+  /** Commits main has that the running build hasn't. */
+  behind: number;
 }
 
 export type LiveAppClientMsg =
