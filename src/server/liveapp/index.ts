@@ -40,6 +40,10 @@ interface Extra {
   timer?: NodeJS.Timeout;
   reading?: Promise<void>;
   again?: boolean;
+  /** Read again even when main and the running build are where they were (test evidence landed). */
+  force?: boolean;
+  /** What the last reading was of: main's commit, the running commit, whether it ran. */
+  key?: string;
   news?: ReadyNews;
 }
 
@@ -77,7 +81,8 @@ export class LiveApps {
           if (path.resolve(floor.dir) !== path.resolve(dir) || !this.extras.has(floor.id)) continue;
           const app = this.apps.get(floor.id);
           if (app?.status === 'running' && app.state.branch) void floorRef(floor.dir, app.state.branch).then((h) => app.follow(h?.sha)).catch(() => undefined);
-          this.schedule(floor.id);
+          // A fetch that moved nothing reads nothing (it lands every minute and a half).
+          this.schedule(floor.id, false);
         }
       }),
       onTestRuns((floorId) => this.extras.has(floorId) && this.schedule(floorId)),
@@ -143,9 +148,10 @@ export class LiveApps {
   }
 
   /** Reads what the floor's app has, soon (one reading at a time per floor; news meanwhile reads once more after). */
-  schedule(floorId: string) {
+  schedule(floorId: string, force = true) {
     const e = this.extras.get(floorId) ?? {};
     this.extras.set(floorId, e);
+    if (force) e.force = true;
     if (e.reading) {
       e.again = true;
       return;
@@ -182,6 +188,11 @@ export class LiveApps {
     const app = this.apps.get(floorId);
     const s = app?.state;
     const running = s?.status === 'running';
+    const head = s?.branch ? (await floorRef(floor.dir, s.branch).catch(() => undefined))?.sha : undefined;
+    const key = `${head ?? '?'}|${s?.sha ?? ''}|${s?.status ?? 'stopped'}`;
+    if (!e.force && head && key === e.key) return;
+    e.force = false;
+    e.key = key;
     const got = await readReadiness({ dataDir: this.ctx.cfg.dataDir, floorId, floorDir: floor.dir, ...(s?.sha ? { live: s.sha } : {}), running, pulls: floor.github?.pulls?.items ?? [] });
     if (this.extras.get(floorId) !== e) return;
     e.main = got.main;
