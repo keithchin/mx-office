@@ -24,6 +24,7 @@ import { TELL_MAX, TELL_WINDOW_MS, TellLimit } from '../src/server/hooks/tell-li
 import { Judge } from '../src/server/judge/index.js';
 import type { Questions, Verdict } from '../src/server/judge/pure.js';
 import { forgetSubagents, noteSubagentHook } from '../src/server/workers/subagents.js';
+import { until } from './wait.js';
 
 class FakeFloor implements TeamFloor {
   id = 'f1';
@@ -117,7 +118,7 @@ test('a prompt is never typed while a dialog may be up: asking a question, or bo
   for (const s of ['idle', 'done', 'working'] as WorkerStatus[]) assert.equal(mayType(s), true, s);
 });
 
-/** Owed durable answers are marked in flight (a disk write) before they're typed: lets that finish. */
+/** Lets fire-and-forget work run a moment, for checks that something did NOT happen (what must happen: `until`, tests/wait.ts). */
 const settle = async () => {
   for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
 };
@@ -135,6 +136,7 @@ test("an answer to a raiser with a permission dialog open waits, isn't marked de
   t.floor.set(dev, 'working');
   assert.equal(t.floor.to(dev).length, 0, 'not while it is working on the dialog');
   t.floor.set(dev, 'done');
+  await until(() => t.floor.to(dev).length > 0, 'the owed answer typed at the turn end');
   await settle();
   assert.equal(t.floor.to(dev).length, 1);
   assert.match(t.floor.to(dev)[0].text, /“Approve the schema change\?”: APPROVED — Go ahead\./);
@@ -157,11 +159,13 @@ test("a +1's raiser and an agent off the team, both in a dialog, hear the answer
   assert.equal(t.floor.prompts.length, 0);
   assert.equal(t.data().escalations[0].also?.[0].pending, true);
   t.floor.set(bob, 'idle');
+  await until(() => t.floor.to(bob).length > 0, "the +1's answer typed");
   await settle();
   assert.equal(t.floor.to(bob).length, 1);
   assert.match(t.floor.to(bob)[0].text, /Done, re-run CI\./);
   assert.equal(t.data().escalations[0].also?.[0].pending, undefined);
   t.floor.set(ada, 'done');
+  await until(() => t.floor.to(ada).length > 0, "the raiser's answer typed at the turn end");
   await settle();
   assert.equal(t.floor.to(ada).length, 1);
   assert.equal(t.data().escalations[0].resolution?.delivered, true);
