@@ -28,7 +28,7 @@ const WAIVED_REGISTER = /\bWaived (stage|source|obligation)\b/i;
 const SAYS_WAIVED = /\bwaive[ds]?\b/i;
 
 /** The git log arguments (after `log`) the look runs. */
-export const waiverLogArgs = (now: number) => [`--since=${new Date(now - GATE_DAYS * 86_400_000).toISOString()}`, '--branches', '--remotes=origin', '--no-merges', '--format=%x01%H%x00%an%x00%ct%x00%s%x00%b%x02', '-p', '--unified=0', '--no-renames', '--no-color', '--', LINT_BASELINE, BUILD_LOG, REGISTER];
+export const waiverLogArgs = (now: number) => [`--since=${new Date(now - GATE_DAYS * 86_400_000).toISOString()}`, '--branches', '--remotes=origin', '--no-merges', '--date-order', '--format=%x01%H%x00%an%x00%ct%x00%s%x00%b%x02', '-p', '--unified=0', '--no-renames', '--no-color', '--', LINT_BASELINE, BUILD_LOG, REGISTER];
 
 /** The commits in `git log` output (waiverLogArgs) that reset the baseline or waived something without a decision. */
 export function waiverHits(out: string): WaiverHit[] {
@@ -54,7 +54,9 @@ export function waiverHits(out: string): WaiverHit[] {
     if (!waivers && SAYS_WAIVED.test(subject ?? '')) waivers = 1;
     if (baseline || waivers) hits.push({ sha: sha.trim(), author: author ?? '', at: Number(ct) * 1000, subject: subject ?? '', baseline, waivers });
   }
-  return hits.sort((a, b) => a.at - b.at);
+  // git log (--date-order) lists newest first, never a parent before its children, and commit times are whole
+  // seconds: so reversed, then sorted by time, same-second commits stay in the order they were made.
+  return hits.reverse().sort((a, b) => a.at - b.at);
 }
 
 /** The week's resets and waivers without a decision, from every local branch and origin's. */
