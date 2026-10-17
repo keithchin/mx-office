@@ -6,9 +6,20 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+### Added
+
+- **Connections says where the agents' Claude credentials come from, and lets you choose.** A new **🔑 Claude for agents** card: *Claude login (no key passed)*, *API key saved in Connections*, *a gateway saved in Connections* (its base URL with its key, kept encrypted) or *ANTHROPIC_API_KEY from the office's environment (started with it — e.g. a Windows user variable)*, with a warning for the last. Keys are never shown, at most their last four characters. Admins only, every change audited (`claude-auth.change`). With a key in the environment there's also the switch **Don't pass the environment's ANTHROPIC_API_KEY to agents (use their Claude login)**.
+- **A red alert when Claude rejects the agents' credentials.** When an agent's turn ends with Claude Code's authentication failure (*Invalid API key · Fix external API key*), Needs you shows one office-wide item naming the source and the likely cause (*a key from the office's environment was passed without a base URL; it may be a gateway key*), with **Use the agents' Claude login instead** (then **Restart affected agents**) and **How to fix**, plus one incident for the office. The next turn that works clears both. Teams posts it once.
+
 ### Changed
 
 - **The desktop app has the Mx Office icon.** The exe, its taskbar button, the window and the tray now show the office's Mx mark (the browser tab's icon) instead of Electron's, sharp at every size from the 16 px tray to a 256 px Explorer tile. A taskbar pin made before this may keep the old icon: unpin it and pin the app again.
+- **A key the office inherited is no longer passed to agents unless it belongs.** A key and its base URL are one set: `ANTHROPIC_API_KEY` without `ANTHROPIC_BASE_URL` in the office's environment isn't given to agents (they use their Claude login) until you confirm it; with its base URL (or Bedrock / Vertex) it keeps working as before. The first start with such a key shows a one-time decision in Needs you: **Keep using it** or **Use the agents' Claude login instead**. People on their own Claude sign-in never get the office's `ANTHROPIC_BASE_URL` either.
+- **The desktop app leaves the Claude key to the office.** It doesn't pass `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_BASE_URL` on to the office it starts unless Connections say to use the office's environment, and its log says which applies (names only, never a value).
+
+### Fixed
+
+- **PackTrack's agents failed with *Invalid API key* after the desktop app started the office, and nothing said why.** The office handed every agent the `ANTHROPIC_API_KEY` from the Windows user environment (a gateway's key, without the gateway's address), so Claude Code sent it to api.anthropic.com instead of using the agents' Claude login. The docs’ Troubleshooting › *Agents fail with "Invalid API key"* says how to fix it.
 
 ## 2026-10-17 · release 57 (`f950aa0`)
 

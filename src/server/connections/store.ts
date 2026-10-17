@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { CredentialId } from '../../shared/connections.js';
 import type { SetupRecord } from '../../shared/first-run.js';
+import type { ClaudeAuthSetting } from '../../shared/claude-auth.js';
 import { Vault, defaultCipher, type Cipher } from './vault.js';
 import { withheld } from '../testcreds.js';
 
@@ -48,6 +49,8 @@ export interface OfficeSettings {
   stuckDetection?: unknown;
   /** When an office with task outcomes (release 39) first started: PRs closed before it never raise the closed-PR decision (roster/closed-since.ts). */
   outcomesSince?: number;
+  /** Where the agents' Claude Code gets its credentials (claude-auth/, shared/claude-auth.ts): the admin's choice and the gateway's address. */
+  claudeAuth?: ClaudeAuthSetting;
 }
 
 /** The GitHub variables as the office was started with them, before Connections laid its token over them. */

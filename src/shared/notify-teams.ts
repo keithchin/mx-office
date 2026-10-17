@@ -113,6 +113,9 @@ export function isRedNeed(n: Pick<NeedItem, 'kind' | 'key'>): boolean {
       return true;
     case 'setup':
       return n.key !== 'setup-stale';
+    // Claude rejected the agents' credentials (server/claude-auth/): one alert for the office, not its one-time decision.
+    case 'claude':
+      return n.key === 'claude-auth-failed';
     case 'audit':
       return !n.key.startsWith('audit-budget-');
     case 'budget':

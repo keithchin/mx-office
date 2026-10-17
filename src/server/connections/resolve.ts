@@ -74,6 +74,8 @@ export function dotFiles(home: string, env: NodeJS.ProcessEnv = process.env): Re
     'teams-webhook': [],
     // Only ever in Connections (or ANTHROPIC_API_KEY the office was started with).
     anthropic: [],
+    // Only ever in Connections (Claude for agents' gateway, claude-auth/).
+    'claude-gateway': [],
     'web-push-key': [],
     password: [line(path.join(home, '.agent-office-password'))],
   };
@@ -117,6 +119,7 @@ export function resolveCredential(id: CredentialId, deps: ResolveDeps = defaults
     }
     case 'anthropic':
       return fromEnv('ANTHROPIC_API_KEY', deps.started.ANTHROPIC_API_KEY) ?? {};
+    case 'claude-gateway':
     case 'teams-webhook':
     case 'web-push-key':
     case 'password':

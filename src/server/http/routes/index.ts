@@ -11,6 +11,7 @@ import { incidentRoutes } from './incidents.js';
 import { incidentBulkRoutes } from './incidents-bulk.js';
 import { chatterRoutes } from './chatter.js';
 import { connectionsRoutes } from './connections.js';
+import { claudeAuthRoutes } from './claude-auth.js';
 import { phoneRoutes } from './phone.js';
 import { authRoutes } from './auth.js';
 import { fileRoutes } from './files.js';
@@ -227,6 +228,9 @@ export const routes: readonly Route[] = [
   sourceFolderRoutes.sourceFolder,
   toolkitRoutes.toolkit,
   connectionsRoutes.connections,
+  // 🔑 Claude for agents (claude-auth.ts): read by Needs you, changed from Connections.
+  claudeAuthRoutes.view,
+  claudeAuthRoutes.change,
   // 🚀 First-run setup: its page and its calls (first-run.ts).
   firstRunFixRoutes.api,
   firstRunRoutes.api,
