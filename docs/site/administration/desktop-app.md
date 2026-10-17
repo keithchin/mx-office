@@ -30,6 +30,8 @@ npm run desktop:pack             # desktop\out\Mx Office-win32-x64\mx-office.exe
 
 On a network that cuts long downloads, `npm --prefix desktop install` and the pack can fail fetching Electron (about 160 MB from GitHub). Download `electron-v44.4.5-win32-x64.zip` another way, check it against the release's `SHASUMS256.txt`, and set `ELECTRON_ZIP_DIR` to its folder for `npm run desktop:pack`; for `desktop:dev`, unzip it into `desktop/node_modules/electron/dist` and write `electron.exe` into `desktop/node_modules/electron/path.txt`.
 
+The exe, its taskbar button, the window and the tray show the office's Mx mark (the same tile as the browser tab's icon), from `desktop/assets/`: `icon.ico` with every Windows size, `icon.png` at 512 px, and `tray.png`/`tray@2x.png` at the tray's own sizes. They're committed, so packing needs nothing extra; when the mark (`src/client/public/favicon.svg`) changes, run `node desktop/scripts/make-icons.mjs` and commit what it writes. The app identifies itself to Windows as `com.mxoffice.desktop`, so its taskbar button and notifications group together; a shortcut pinned before the icon changed may keep the old one until you unpin it and pin the app again.
+
 Keep that folder where it is (inside the checkout), or start `mx-office.exe` with `--office-dir <checkout>`: the app looks for the office above its own folder, then asks for it (**Choose the office folder…**) and remembers your choice.
 
 ### Options

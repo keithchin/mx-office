@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Changed
+
+- **The desktop app has the Mx Office icon.** The exe, its taskbar button, the window and the tray now show the office's Mx mark (the browser tab's icon) instead of Electron's, sharp at every size from the 16 px tray to a 256 px Explorer tile. A taskbar pin made before this may keep the old icon: unpin it and pin the app again.
 
 ## 2026-10-17 · release 57 (`f950aa0`)
 

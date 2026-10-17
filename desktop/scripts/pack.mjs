@@ -4,7 +4,7 @@
 // The app still runs the office from your checkout with the system Node: keep the folder inside the
 // checkout (out/ is) or start it with --office-dir, or it asks for the folder the first time.
 import { packager } from '@electron/packager';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,21 +12,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const out = path.join(root, 'out');
 mkdirSync(out, { recursive: true });
 
-// A Windows icon: an .ico holding the PNG as it is (Windows Vista and later read those).
-const png = readFileSync(path.join(root, 'assets', 'icon.png'));
-const ico = Buffer.alloc(22);
-ico.writeUInt16LE(0, 0);
-ico.writeUInt16LE(1, 2);
-ico.writeUInt16LE(1, 4);
-const side = png.readUInt32BE(16);
-ico.writeUInt8(side >= 256 ? 0 : side, 6);
-ico.writeUInt8(side >= 256 ? 0 : side, 7);
-ico.writeUInt16LE(1, 10);
-ico.writeUInt16LE(32, 12);
-ico.writeUInt32LE(png.length, 14);
-ico.writeUInt32LE(22, 18);
-const icoFile = path.join(out, 'icon.ico');
-writeFileSync(icoFile, Buffer.concat([ico, png]));
+// The Windows icon (exe, taskbar): desktop/assets/icon.ico, several sizes of the office's Mx mark, made by
+// scripts/make-icons.mjs and committed, so packing needs nothing extra.
+const icoFile = path.join(root, 'assets', 'icon.ico');
 
 const paths = await packager({
   dir: root,
