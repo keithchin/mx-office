@@ -16,6 +16,7 @@ import { answerGroup } from '../src/server/roster/escalation-answer.js';
 import { personAct } from '../src/server/roster/dispatch-person.js';
 import { AnswerStore } from '../src/server/answers/store.js';
 import { FakeFloor, ask, crashAndRestart, failWritesFrom, office, records, settle } from './dispatch-helpers.js';
+import { until } from './wait.js';
 
 const MARKER = /\[office answer dsp_[0-9A-Z]{26} · ESC-[0-9a-f]+ rev (\d+)\]/;
 
@@ -139,6 +140,8 @@ test('dispatch-held-survives-restart: held on disk at once (critical flush), typ
   await o2.roster.reconcile();
   assert.equal(records(o2, floor)[0].state, 'held', 'still in the held list: left held');
   floor.set(pm, 'idle');
+  // Marked in flight on disk, typed, then received (its session shows it): wait for that, not a sleep.
+  await until(() => records(o2, floor)[0].state === 'submitted', 'the held tell typed and received after the restart');
   await settle();
   assert.equal(floor.prompts.length, 1);
   assert.ok(floor.prompts[0].text.includes(rec.payload));
@@ -160,6 +163,7 @@ test('an owed answer (a dialog up) keeps its dispatch id and is marked in flight
   assert.deepEqual([rec.channel, rec.state], ['hold', 'held']);
   assert.equal(esc(o, floor, e.id).resolution?.delivered, false, 'owed: truly not typed yet');
   floor.set(ada, 'done');
+  await until(() => records(o, floor)[0].state === 'submitted', 'the owed answer typed and received');
   await settle();
   assert.equal(floor.prompts.length, 1);
   assert.ok(floor.prompts[0].text.includes(rec.payload));
@@ -266,6 +270,7 @@ test('a held answer typed just before a crash that lost the roster’s note of i
   d.members.pm = { ...d.members.pm, phase: 'active', workerId: pm };
   await o.roster.interrupts.tell(floor, 'Status?', 'Keith', 'after');
   floor.set(pm, 'idle');
+  await until(() => records(o, floor)[0].state === 'submitted', 'the held tell typed and received');
   await settle();
   assert.equal(floor.prompts.length, 1);
   assert.equal(records(o, floor)[0].state, 'submitted');
@@ -275,6 +280,7 @@ test('a held answer typed just before a crash that lost the roster’s note of i
   await o2.roster.reconcile();
   floor.set(pm, 'working');
   floor.set(pm, 'idle');
+  await until(() => o2.roster.data(floor.id).held.length === 0, 'the settled held tell let go');
   await settle();
   assert.equal(floor.prompts.length, 1, 'not typed again');
   assert.equal(o2.roster.data(floor.id).held.length, 0, 'let go');
