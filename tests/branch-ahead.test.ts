@@ -30,6 +30,8 @@ test('review state by the review gate: a complete Review: by someone other than 
   const full = (who: string) => `Review: ${who}\nChecks:\n- mx check: pass\nFiles read:\n- mdlsource/3-sheet/08.mdl`;
   assert.deepEqual(reviewOf(undefined, 'Sophie'), { state: 'no-pr' });
   assert.deepEqual(reviewOf(pr([]), 'Sophie'), { state: 'not-reviewed' });
+  assert.deepEqual(reviewOf({ number: 6 } as GhPull, 'Sophie'), { state: 'unknown' }, 'comments never read: not "not reviewed"');
+  assert.match(aheadLine({ main: 'main', branches: [{ ...sophie, review: { state: 'unknown' } }] }), /\(PR #6, open, review not checked yet\)$/);
   assert.deepEqual(reviewOf(pr([full('Sophie')]), 'Sophie'), { state: 'not-reviewed' }, 'its own opener does not count');
   assert.deepEqual(reviewOf(pr(['Review: Katherine\nlooks fine']), 'Sophie'), { state: 'not-reviewed' }, 'no checks and files: not a review');
   assert.deepEqual(reviewOf(pr([full('Katherine')]), 'Sophie'), { state: 'reviewed', by: ['Katherine'] });

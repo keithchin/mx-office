@@ -14,8 +14,11 @@ export interface AheadBranch {
   /** Model files it changes against where it left main (.mpr, mprcontents/, mdlsource/). */
   modelFiles: number;
   pr?: { number: number; url?: string; draft?: boolean };
-  /** The review gate's view of its PR: reviewed by these, or not reviewed (no PR: nothing to review yet). */
-  review: { state: 'reviewed' | 'not-reviewed' | 'no-pr'; by?: string[] };
+  /**
+   * The review gate's view of its PR: reviewed by these, or not reviewed (no PR: nothing to review yet);
+   * unknown when the office hasn't read the PR's comments (the board reads them for merged PRs only).
+   */
+  review: { state: 'reviewed' | 'not-reviewed' | 'unknown' | 'no-pr'; by?: string[] };
 }
 
 export interface AheadView {
@@ -28,7 +31,9 @@ export interface AheadView {
   at: number;
 }
 
-const prWords = (b: AheadBranch) => (b.pr ? `PR #${b.pr.number}, ${b.pr.draft ? 'draft' : 'open'}, ${b.review.state === 'reviewed' ? `reviewed by ${(b.review.by ?? []).join(', ')}` : 'not reviewed'}` : 'no PR yet');
+/** The review state in words. */
+export const reviewWords = (r: AheadBranch['review']) => (r.state === 'reviewed' ? `reviewed by ${(r.by ?? []).join(', ')}` : r.state === 'unknown' ? 'review not checked yet' : r.state === 'no-pr' ? 'no PR yet' : 'not reviewed');
+const prWords = (b: AheadBranch) => (b.pr ? `PR #${b.pr.number}, ${b.pr.draft ? 'draft' : 'open'}, ${reviewWords(b.review)}` : 'no PR yet');
 const whose = (b: AheadBranch) => (b.owner ? `${b.owner}'s branch` : `branch ${b.branch}`);
 
 /** The banner's sentence: "main is 75 commits behind Sophie's branch, which has model changes (PR #6, open, not reviewed)". */

@@ -39,6 +39,8 @@ function modelFiles(dir: string, fork: string, tip: string): Promise<number> {
 /** The review gate's rule on an open PR: a complete `Review:` by someone other than its opener. */
 export function reviewOf(p: GhPull | undefined, opener: string | undefined): AheadBranch['review'] {
   if (!p) return { state: 'no-pr' };
+  // The board asks GitHub for review comments on merged PRs only: an open PR's are unread, not absent.
+  if (!p.reviewNotes) return { state: 'unknown' };
   const by = new Set<string>();
   for (const n of p.reviewNotes ?? []) {
     const r = parseReview(n.body);

@@ -6,7 +6,7 @@
 // Asked when the tab shows or main moves, never on a timer; hidden when nothing relevant is ahead.
 
 import type { AheadBranch, AheadView } from '../../../shared/branch-ahead';
-import { aheadLine } from '../../../shared/branch-ahead';
+import { aheadLine, reviewWords } from '../../../shared/branch-ahead';
 import { store } from '../../state';
 import { h, toast } from '../dom';
 import './banner.css';
@@ -55,7 +55,7 @@ export function aheadBanner(where: 'model' | 'live', o: AheadOptions): AheadBann
         : null;
     askBtn?.addEventListener('click', () => void ask(b, askBtn));
     const pr = b.pr?.url ? h('a.ba-pr', { href: b.pr.url, target: '_blank', rel: 'noopener noreferrer' }, `PR #${b.pr.number} ↗`) : null;
-    const review = h('span', { class: `ba-review ${b.review.state}` }, b.review.state === 'reviewed' ? `reviewed by ${(b.review.by ?? []).join(', ')}` : b.review.state === 'no-pr' ? 'no PR yet' : 'not reviewed');
+    const review = h('span', { class: `ba-review ${b.review.state}`, title: b.review.state === 'unknown' ? 'The office reads review comments on merged PRs only, so it can’t say yet whether this open PR has a Review: comment' : '' }, reviewWords(b.review));
     return h('div.ba-row', {}, h('b', {}, label), h('small', {}, ` ${b.ahead} ahead · ${b.modelFiles} model file${b.modelFiles === 1 ? '' : 's'}`), pr, review, viewBtn, askBtn);
   }
 
