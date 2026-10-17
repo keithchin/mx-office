@@ -68,14 +68,33 @@ export function claudeAuthState(d: SourceDeps = sourceDeps()): ClaudeAuthState {
 /** A worker's environment with the agents' Claude credentials as they should be (changed in place, and returned). */
 export function withClaudeAuth(env: Record<string, string>, d: SourceDeps = sourceDeps()): Record<string, string> {
   const s = claudeAuthState(d);
-  if (s.mode === 'env' && !d.testMode()) return env;
   for (const k of CLAUDE_SET_VARS) delete env[k];
+  // The office's own set as it was started (so an environment built earlier, then changed, comes out right too).
+  if (s.mode === 'env') {
+    if (!d.testMode()) for (const k of CLAUDE_SET_VARS) if (d.started[k] !== undefined) env[k] = d.started[k]!;
+    return env;
+  }
   if (s.mode === 'key' && s.key) env.ANTHROPIC_API_KEY = s.key;
   if (s.mode === 'gateway' && s.gatewayKey && s.setting?.baseUrl) {
     env[CLAUDE_BASE_VAR] = s.setting.baseUrl;
     env.ANTHROPIC_API_KEY = s.gatewayKey;
   }
   return env;
+}
+
+/**
+ * The key withClaudeAuth put in `env` from Connections (the saved API key, or the gateway's), if that's what
+ * it has. Claude Code's interactive screen ignores an ANTHROPIC_API_KEY nobody approved in its config (its
+ * customApiKeyResponses: then it says "Not logged in · Run /login"), so the office approves its own
+ * (claude-trust.ts approveApiKey) before a worker starts with it.
+ */
+export function officeClaudeKey(env: Record<string, string | undefined>, d: SourceDeps = sourceDeps()): string | undefined {
+  const key = env.ANTHROPIC_API_KEY;
+  if (!key || d.testMode()) return undefined;
+  const s = claudeAuthState(d);
+  if (s.mode === 'key' && key === s.key) return key;
+  if (s.mode === 'gateway' && key === s.gatewayKey && env[CLAUDE_BASE_VAR] === s.setting?.baseUrl) return key;
+  return undefined;
 }
 
 /** One line for the office's log at start: names only, never a value or a tail. */

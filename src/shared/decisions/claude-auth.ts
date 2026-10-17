@@ -23,7 +23,7 @@ export function claudeAuthNeeds(v: ClaudeAuthView | undefined): NeedItem[] {
       text: `${f.text}${who}`,
       since: f.at,
       level: 'block',
-      ...(v.admin ? (switched ? { action: 'Restart affected agents', target: { to: 'claude-auth', act: 'restart' }, alt: help } : { action: 'Use the agents’ Claude login instead', target: { to: 'claude-auth', act: 'login' }, alt: help }) : help),
+      ...(v.admin ? (switched ? { action: 'Restart all agents', target: { to: 'claude-auth', act: 'restart' }, alt: help } : { action: 'Use the agents’ Claude login instead', target: { to: 'claude-auth', act: 'login' }, alt: help }) : help),
     });
   }
   if (v.decision && !f) {

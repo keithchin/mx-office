@@ -18,7 +18,8 @@ import { studioGuardHook } from '../studio/guard.js';
 import { worktreeGuardHook } from '../worktree-guard.js';
 import type { WorkerHandle } from '../workers/types.js';
 import { truncate } from '../workers/util.js';
-import { trustFloor } from '../claude-trust.js';
+import { approveApiKey, claudeConfigFile, trustFloor } from '../claude-trust.js';
+import { officeClaudeKey } from '../claude-auth/source.js';
 import type { ProviderAdapter } from './types.js';
 
 /**
@@ -280,7 +281,15 @@ export const claude: ProviderAdapter<undefined, ClaudeSetup> = {
     if (prompt) args.push('--', prompt);
     // No "Do you trust the files in this folder?" on the floor's agents: the office manages this floor, so it
     // marks it trusted in the config this one starts with (the office's, or its account's), which covers its worktrees.
-    return { args, finishEnv: (env) => void trustFloor(setup.floorDir, env) };
+    return {
+      args,
+      finishEnv: (env) => {
+        trustFloor(setup.floorDir, env);
+        // The key 🔑 Claude for agents passes, approved where this Claude reads it: else its screen ignores it and asks for /login.
+        const key = officeClaudeKey(env);
+        if (key) approveApiKey(claudeConfigFile(env), key);
+      },
+    };
   },
   signIn: 'claude',
   // SessionStart fires as soon as Claude can take input (after the project's own SessionStart hooks,

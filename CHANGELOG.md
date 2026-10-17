@@ -6,7 +6,12 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **Claude for agents: a gateway (or API key) saved in Connections works in agents’ terminals.** Claude Code’s interactive screen ignores an `ANTHROPIC_API_KEY` that was never approved in its own config and asks for `/login` instead; the office now approves the key it passes (only its last 20 characters, as Claude Code does) in the Claude config each agent reads, before the agent starts. The office’s one-off Claude calls (task names, analysis) also pick up a change without an office restart.
+- **Claude for agents card: no more accidental switch to the office’s environment.** The “Don’t pass the environment’s ANTHROPIC_API_KEY” switch only shows while the office’s environment is the source; for a gateway or a saved key it was ticked and unticking it quietly switched agents to the environment’s key. In environment mode with a key but no `ANTHROPIC_BASE_URL`, the card warns that agents send the key to Anthropic directly and suggests a gateway.
+- **🔁 Restart all agents** replaces “Restart affected agents”: after a confirm it restarts every agent on the office’s Claude credentials (not only the ones Claude refused), it’s offered after each change, and it’s disabled while a choice is unsaved or saving.
+- **🧪 Test the gateway** on the card: one request to the gateway’s models list with its key (no model call), only when pressed; says reachable, key refused, or what came back.
 
 ## 2026-10-17 · release 58 (`69e40d1`)
 

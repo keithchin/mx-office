@@ -27,10 +27,10 @@ A Claude worker is only flagged when the prompt is actually on its screen. A pro
 
 **Fix:**
 
-1. Click **Use the agents' Claude login instead** on the alert (admins). Agents then get no key: the office takes `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_BASE_URL` out of their environment. It offers to restart the agents that failed, so they start with that and carry on.
+1. Click **Use the agents' Claude login instead** on the alert (admins). Agents then get no key: the office takes `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_BASE_URL` out of their environment. It offers to restart all agents (after a confirm), so they start with that and carry on.
 2. Or, in [🔌 Connections → Claude for agents](../administration/connections.md#claude-for-agents), pick the right source: an Anthropic API key saved there, or **A gateway** with its base URL and key together.
 3. If the variable shouldn't be there at all, remove it: **Windows Settings → System → About → Advanced system settings → Environment Variables…**, select `ANTHROPIC_API_KEY` under *User variables* and **Delete**. Programs started afterwards (and the office, after a restart from a fresh terminal or the desktop app) no longer see it.
-4. For a login that expired, open any agent's terminal and type `/login`, then **Restart affected agents**.
+4. For a login that expired, open any agent's terminal and type `/login`, then **🔁 Restart all agents**.
 
 The desktop app doesn't pass `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_BASE_URL` on to the office it starts unless Connections say to use the office's environment; its log (**Open office log**) says which applies, by name, never the value.
 
