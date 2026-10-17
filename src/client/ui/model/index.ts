@@ -193,9 +193,11 @@ export function modelView(root: HTMLElement): ModelView {
     ),
     fullBtn,
   );
-  // "main is behind the work": an agent's branch ahead with model changes (ui/branch-ahead/), shown while main is.
-  const ahead = aheadBanner('model', { view: (b) => pickRef(b), shown: () => ref === 'main' });
-  root.replaceChildren(bar, ahead.el, body);
+  root.replaceChildren(bar, body);
+  // "main is behind the work": an agent's branch ahead with model changes (ui/branch-ahead/), shown while main is;
+  // View it opens the branch with its changes marked.
+  const ahead = aheadBanner('model', { view: (b) => viewBranch(b), shown: () => ref === 'main' });
+  root.insertBefore(ahead.el, body);
   explorerBtn.addEventListener('click', () => root.classList.toggle('mx-drawer'));
   new MutationObserver(() => (zoomPct.textContent = `${canvasHost.dataset.zoom ?? 100}%`)).observe(canvasHost, { attributes: true, attributeFilter: ['data-zoom'] });
 
@@ -459,14 +461,13 @@ export function modelView(root: HTMLElement): ModelView {
     void load();
   }
 
-  function pickRef(to: string) {
-    ref = to || 'main';
+  refPick.addEventListener('change', () => {
+    ref = refPick.value || 'main';
     treeSha = undefined;
     renderRefs();
     address();
     void load();
-  }
-  refPick.addEventListener('change', () => pickRef(refPick.value));
+  });
   changesBox.addEventListener('change', () => {
     changesOn = changesBox.checked;
     address();
