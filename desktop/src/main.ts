@@ -58,10 +58,16 @@ const shownNotes: Notification[] = [];
 let trayLabels: string[] = [];
 let trayTip = '';
 
+// The office's Mx mark in desktop/assets/ (scripts/make-icons.mjs): icon.ico holds every Windows size for the
+// window and taskbar, icon.png (512 px) is for notifications and other platforms, tray.png with tray@2x.png
+// (picked on a 200% display) is drawn at the tray's own size rather than scaled down.
+const ASSETS = path.join(APP_ROOT, 'assets');
 function icon(size?: number): NativeImage {
-  const img = nativeImage.createFromPath(path.join(APP_ROOT, 'assets', 'icon.png'));
+  const img = nativeImage.createFromPath(path.join(ASSETS, 'icon.png'));
   return size ? img.resize({ width: size, height: size }) : img;
 }
+const windowIcon = () => (process.platform === 'win32' ? nativeImage.createFromPath(path.join(ASSETS, 'icon.ico')) : icon());
+const trayIcon = () => nativeImage.createFromPath(path.join(ASSETS, 'tray.png'));
 
 const sameOffice = (u: string) => {
   try {
@@ -80,7 +86,7 @@ function createWindow() {
     ...fit.bounds,
     show: false,
     title: 'Mx Office',
-    icon: icon(),
+    icon: windowIcon(),
     autoHideMenuBar: true,
     backgroundColor: '#14171c',
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
@@ -426,7 +432,7 @@ function refreshTray() {
 }
 
 function createTray() {
-  tray = new Tray(icon(16));
+  tray = new Tray(trayIcon());
   tray.on('click', () => showWindow());
   refreshTray();
 }

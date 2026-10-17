@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { officeArgv, officeEnv, parseOptions } from '../desktop/src/core/options.ts';
@@ -316,4 +316,24 @@ test('screens: the app\'s pages escape what they show, and their buttons are act
   assert.equal(actionOf('https://example.com/action/restart'), undefined);
   assert.match(pageHtml(problemPage({ kind: 'not-built', dir: 'C:\\o' })), /npm run build/);
   assert.match(pageHtml(problemPage({ kind: 'no-node' })), /new-machine\.md/);
+});
+
+test('icons: the Mx mark is in desktop/assets, and the packager, the window and the tray use it', () => {
+  const desktop = path.join(import.meta.dirname, '..', 'desktop');
+  const assets = path.join(desktop, 'assets');
+  for (const f of ['icon.ico', 'icon.png', 'tray.png', 'tray@2x.png']) assert.ok(existsSync(path.join(assets, f)), f);
+  // The .ico holds every Windows size (16 to 256; 0 in the directory means 256).
+  const ico = readFileSync(path.join(assets, 'icon.ico'));
+  assert.equal(ico.readUInt16LE(2), 1);
+  const sizes = Array.from({ length: ico.readUInt16LE(4) }, (_, k) => ico.readUInt8(6 + 16 * k) || 256);
+  assert.deepEqual(sizes, [16, 24, 32, 48, 64, 128, 256]);
+  const side = (f: string) => readFileSync(path.join(assets, f)).readUInt32BE(16);
+  assert.deepEqual([side('icon.png'), side('tray.png'), side('tray@2x.png')], [512, 16, 32]);
+  // The exe and taskbar (packager), the window and the tray, and one app id for taskbar grouping and notifications.
+  const has = (file: string, bits: string[]) => {
+    const text = readFileSync(path.join(desktop, file), 'utf8');
+    for (const b of bits) assert.ok(text.includes(b), `${file} has ${b}`);
+  };
+  has('scripts/pack.mjs', ["path.join(root, 'assets', 'icon.ico')", "icon: process.platform === 'win32' ? icoFile", "appBundleId: 'com.mxoffice.desktop'"]);
+  has('src/main.ts', ["'icon.ico'", "'tray.png'", 'icon: windowIcon()', 'new Tray(trayIcon())', "app.setAppUserModelId('com.mxoffice.desktop')"]);
 });
