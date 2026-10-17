@@ -12,6 +12,7 @@ import { connectionsApi, type ImportResult } from './api';
 import { credentialCard, type Run } from './cards';
 import { pathsSection, sweepSection, toolsSection } from './extras';
 import { phoneAccessSection } from '../phone-access';
+import { claudeAuthSection } from '../claude-auth/section';
 
 export interface ConnectionsPanel {
   el: HTMLElement;
@@ -57,6 +58,8 @@ export function connectionsPanel(focus?: CredentialId | 'paths' | 'tools'): Conn
   const tools = toolsSection((what, done) => run(what, done));
   // 📱 Phone access keeps its own state (ui/phone-access/): made once, so a repaint doesn't reload it.
   const phone = phoneAccessSection();
+  // 🔑 Claude for agents keeps its own state too (ui/claude-auth/).
+  const claude = claudeAuthSection();
   const paint = () => {
     if (!view) return;
     const v = view;
@@ -67,6 +70,7 @@ export function connectionsPanel(focus?: CredentialId | 'paths' | 'tools'): Conn
       v.storage.warning ? h('p.cx-warn', {}, `⚠️ ${v.storage.warning}`) : '',
       importBanner(v, run, result) ?? '',
       h('h3.cx-h', {}, '🔑 Credentials'),
+      claude,
       ...v.credentials.map((c) => credentialCard(c, v, run, focus)),
       h('h3.cx-h', {}, '🧰 Setup'),
       tools,

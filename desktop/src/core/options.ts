@@ -88,15 +88,42 @@ export function officeArgv(o: Pick<DesktopOptions, 'port' | 'officeArgs'>): stri
   return ['--port', String(o.port), ...rest];
 }
 
-/** The office child's environment: the launcher's loop (so 🔁 Restart safely is offered), no terminal welcome, no browser. */
-export function officeEnv(base: Record<string, string | undefined>, o: Pick<DesktopOptions, 'home'>): Record<string, string> {
+/**
+ * Claude's credential set (the office's shared/claude-auth.ts): a key and the base URL it belongs to. The office
+ * decides whether agents get it (🔌 Connections → Claude for agents), so the app passes it on only when that says
+ * so; a Windows user variable left over (or a gateway's key without its address) never reaches the agents unasked.
+ */
+export const CLAUDE_SET = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL'] as const;
+
+/** Whether the office's settings (office-settings.json's text) say to keep the environment's Claude credentials. */
+export function keepsClaudeEnv(settingsText: string | undefined): boolean {
+  try {
+    return JSON.parse(settingsText ?? '')?.claudeAuth?.mode === 'env';
+  } catch {
+    return false;
+  }
+}
+
+/** The log's line about it: names only, never a value. */
+export function claudeEnvLine(base: Record<string, string | undefined>, keep: boolean): string {
+  const names = CLAUDE_SET.filter((k) => base[k]);
+  if (!names.length) return 'Claude for agents: no Claude key in the environment; agents use their Claude login unless Connections says otherwise';
+  return keep ? `Claude for agents: passing ${names.join(', ')} to the office (Connections says to use the office’s environment)` : `Claude for agents: not passing ${names.join(', ')} to the office (Connections decides; agents use their Claude login unless it says otherwise)`;
+}
+
+/** The office child's environment: the launcher's loop (so 🔁 Restart safely is offered), no terminal welcome, no browser; Claude's set only with `keepClaude`. */
+export function officeEnv(base: Record<string, string | undefined>, o: Pick<DesktopOptions, 'home'>, keepClaude = false): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(base)) if (v !== undefined) env[k] = v;
   // Electron's own variables must not reach a plain Node.
   delete env.ELECTRON_RUN_AS_NODE;
   delete env.ELECTRON_NO_ATTACH_CONSOLE;
+  const withheld = keepClaude ? [] : CLAUDE_SET.filter((k) => env[k]);
+  for (const k of CLAUDE_SET) if (!keepClaude) delete env[k];
   return {
     ...env,
+    // Names only, so the office can say what the app held back.
+    ...(withheld.length ? { AGENT_OFFICE_CLAUDE_WITHHELD: withheld.join(',') } : {}),
     AGENT_OFFICE_HOME: o.home,
     AGENT_OFFICE_DESKTOP: '1',
     AGENT_OFFICE_LAUNCHER_LOOP: '1',

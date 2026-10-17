@@ -140,6 +140,7 @@ const ROW_TAG: Record<NeedKind, string> = {
   questions: 'Questions',
   brain: 'Company brain',
   design: 'Design system',
+  claude: 'Claude sign-in',
 };
 
 export interface RowModel {

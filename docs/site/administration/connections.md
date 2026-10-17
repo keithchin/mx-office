@@ -13,7 +13,7 @@ weight: 2
 | 🤖 **GitHub token for agents** | git and gh for the office and every worker (`GH_TOKEN` / `GITHUB_TOKEN`) | Fine-grained, owner your organization, **All repositories**, **Contents**, **Issues**, **Pull requests**: read and write |
 | 🛡️ **GitHub admin token** | Creating project repositories from the ✨ New project wizard, nothing else | Fine-grained, owner your organization, **All repositories**, **Administration** and **Contents**: read and write |
 | 🧱 **Mendix personal access token** | The Mendix platform: creating the app (`mx:app:create`), later Team Server and deploys | Scopes `mx:app:create`; `mx:deployment:read` lets **Test** list your apps |
-| ✳️ **Anthropic API key (Claude Code)** | Only when the agents run Claude Code on an API key instead of a Claude account sign-in: workers get it as `ANTHROPIC_API_KEY`, billed to that API account (first-run setup's **Use an API key** saves it here). Leave it empty when you sign in with your account | An Anthropic Console API key (`sk-ant-api…`) |
+| ✳️ **Anthropic API key (Claude Code)** | Only when the agents run Claude Code on an API key instead of a Claude account sign-in: workers get it as `ANTHROPIC_API_KEY`, billed to that API account (first-run setup's **Use an API key** saves it here). Leave it empty when you sign in with your account. [Claude for agents](#claude-for-agents) says which source agents use | An Anthropic Console API key (`sk-ant-api…`) |
 | ⚖️ **Jev key** | Jeff · Router asks Jev by TypeSafe AI instead of Haiku | A TypeSafe AI API key |
 | 💬 **Microsoft Teams webhook** | Where the office posts its [Teams cards](../integrations/teams-notifications.md) | The workflow's HTTP POST URL (saving it in ⚙️ Settings → Notifications puts it here too) |
 | 🔒 **Office password** | The shared password (it signs people in as admins) | At least 8 characters |
@@ -26,6 +26,21 @@ Each card shows:
 - **➕ Add / ♻️ Replace / Remove**, and **What it's for and how to make one**: the exact permissions and a **Create on GitHub** link with the form filled in (name, owner, expiry, permissions; you still pick *All repositories*).
 
 The Mendix card also has **Give agents the Mendix token**, one tick per project, **off by default**: only that project's workers hired afterwards get `MENDIX_TOKEN` and `MX_PAT`. Everywhere else the office takes both variables out of the workers' environment, even if it was started with them. The wizard can always read it (for the Mendix Projects API).
+
+## 🔑 Claude for agents
+
+The first card under 🔑 Credentials says where the agents' Claude Code gets its credentials, and lets an admin choose (every change is in the audit log as `claude-auth.change`; keys are never shown, at most their last four characters):
+
+| Choice | What agents get |
+|---|---|
+| **Their Claude login (no key passed)**, the default | No key: `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_BASE_URL` are taken out of their environment, so Claude Code uses the Claude account it's signed in with |
+| **An Anthropic API key saved here** | That key as `ANTHROPIC_API_KEY`, sent to Anthropic's API (first-run setup's **Use an API key** saves it here; the ✳️ card below shows it) |
+| **A gateway** | A company LLM gateway: its base URL as `ANTHROPIC_BASE_URL` with its key as `ANTHROPIC_API_KEY`, always together. The key is kept encrypted like the other credentials |
+| **The office's environment** | Whatever the office was started with (a Windows user variable, a launcher), as it is. Offered only when the environment has something |
+
+A key and the base URL it belongs to are one set: **a key the office inherited without `ANTHROPIC_BASE_URL` is not passed to agents** unless you confirm it (it may be a gateway's key, which api.anthropic.com refuses). With `ANTHROPIC_BASE_URL` (or a Bedrock / Vertex / Foundry switch) beside it, an office that relied on it keeps working as it did. Either way, the first time the office starts with a key in its environment that nobody chose about, Needs you shows a one-time decision: **Keep using it** or **Use the agents' Claude login instead**. When the environment has a key, the card also has the switch **Don't pass the environment's ANTHROPIC_API_KEY to agents (use their Claude login)**. A choice applies to agents started from then on; restart the others (the alert's **Restart affected agents** does it for the ones Claude refused). People who run on their own Claude sign-in (*Your sign-ins*) are never given the office's set.
+
+When Claude refuses the agents' credentials, the card shows ⛔ *Refused* and Needs you a red alert naming the source; see [Agents fail with "Invalid API key"](../troubleshooting/agents-and-github.md#agents-fail-with-invalid-api-key). The office's log says at start which source applies (names only), and the desktop app passes the environment's set on to the office only when **The office's environment** is chosen.
 
 ## 📱 Phone access
 

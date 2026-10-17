@@ -14,6 +14,26 @@ The office trusts the projects it manages by itself, so this should be rare: whe
 
 A Claude worker is only flagged when the prompt is actually on its screen. A project with a slow `SessionStart` hook (a toolkit project's `mxcli init --sync-skills` and `mxcli run --setup`) just shows the worker as starting for longer, up to 5 minutes before its desk is let go to idle; and once its session is up, the *Waiting on a setup prompt* line goes away. Other agents (Codex, Grok, Muse, Pi) can't be read like that, so they're still flagged when they haven't said they're up 12 seconds after starting.
 
+## Agents fail with "Invalid API key"
+
+**Symptom:** agents stop right after a prompt, their terminal says **Invalid API key · Fix external API key**, and Needs you shows a red 🔑 *Claude rejected the API key agents use (source: …)*, with an office-wide incident beside it.
+
+**Why:** Claude Code uses an API key when it finds one in its environment, instead of the Claude account it's signed in with. The office checks every few seconds how each Claude agent's last turn ended (Claude Code writes the authentication failure into its transcript) and raises one alert for the whole office, however many agents hit it; the next turn that works clears it and resolves the incident. The *source* in the alert says where the key came from:
+
+- **ANTHROPIC_API_KEY from the office's environment**: the office was started with that variable, most often a Windows **user** environment variable left over from something else, or a company LLM gateway's key. A gateway key is only valid together with the gateway's address (`ANTHROPIC_BASE_URL`); sent to api.anthropic.com without it, it's refused. When the key came without a base URL, the alert says so.
+- **The API key saved in Connections**: the key in 🔌 Connections is wrong, revoked or out of credit.
+- **The gateway saved in Connections**: its key or address is wrong.
+- **Their Claude login**: the Claude Code sign-in on the office's machine expired or was signed out.
+
+**Fix:**
+
+1. Click **Use the agents' Claude login instead** on the alert (admins). Agents then get no key: the office takes `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_BASE_URL` out of their environment. It offers to restart the agents that failed, so they start with that and carry on.
+2. Or, in [🔌 Connections → Claude for agents](../administration/connections.md#claude-for-agents), pick the right source: an Anthropic API key saved there, or **A gateway** with its base URL and key together.
+3. If the variable shouldn't be there at all, remove it: **Windows Settings → System → About → Advanced system settings → Environment Variables…**, select `ANTHROPIC_API_KEY` under *User variables* and **Delete**. Programs started afterwards (and the office, after a restart from a fresh terminal or the desktop app) no longer see it.
+4. For a login that expired, open any agent's terminal and type `/login`, then **Restart affected agents**.
+
+The desktop app doesn't pass `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_BASE_URL` on to the office it starts unless Connections say to use the office's environment; its log (**Open office log**) says which applies, by name, never the value.
+
 ## Hiring fails with "Filename too long"
 
 **Symptom:** hiring an agent (or the wizard's *Hire the project team* step) fails with `Could not create a git worktree: … Filename too long`.

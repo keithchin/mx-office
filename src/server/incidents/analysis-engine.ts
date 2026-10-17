@@ -64,6 +64,7 @@ const PREVENT: Record<string, string> = {
   pageStall: 'Profile the view that froze and move its heavy work off the page’s main thread',
   serverStall: 'Find the blocking call in the office server and move it off the event loop',
   storeUnreadable: 'Find what holds the data file (a virus scanner, the search indexer, a sync tool) and exclude the office’s data folder from it',
+  claudeAuth: 'Check where the agents’ Claude credentials come from (🔌 Connections → Claude for agents): remove a stale ANTHROPIC_API_KEY user variable, or set the gateway’s base URL with its key',
 };
 
 /**

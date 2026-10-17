@@ -75,6 +75,7 @@ const KIND_WORDS: Record<NeedKind, [string, string]> = {
   questions: ['questions for the client', 'questions for the client'],
   brain: ['company brain', 'company brain'],
   design: ['design system', 'design systems'],
+  claude: ['Claude sign-in', 'Claude sign-in'],
 };
 
 /** The compact row: a count per kind, most urgent kind first, and the button to the phone's Needs you. */

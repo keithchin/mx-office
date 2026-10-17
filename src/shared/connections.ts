@@ -3,7 +3,7 @@
 // to make one, and the office's paths and worktree cleanup that sit on the same admin page.
 // Pure, no Node imports: the page and the server both use it.
 
-export const CREDENTIAL_IDS = ['github-agents', 'github-admin', 'mendix', 'anthropic', 'jev', 'teams-webhook', 'web-push-key', 'password'] as const;
+export const CREDENTIAL_IDS = ['github-agents', 'github-admin', 'mendix', 'anthropic', 'claude-gateway', 'jev', 'teams-webhook', 'web-push-key', 'password'] as const;
 export type CredentialId = (typeof CREDENTIAL_IDS)[number];
 export const isCredentialId = (v: unknown): v is CredentialId => CREDENTIAL_IDS.includes(v as CredentialId);
 
@@ -190,6 +190,16 @@ export const CREDENTIAL_META: Record<CredentialId, CredentialMeta> = {
     testable: false,
     shape: /^sk-ant-api\d*-[A-Za-z0-9_-]{20,}$/,
     shapeHint: 'An Anthropic API key starts with sk-ant-api',
+  },
+  'claude-gateway': {
+    icon: '🛰️',
+    label: 'Claude gateway key',
+    purpose: 'The key of an LLM gateway the agents’ Claude Code goes through, given with the gateway’s base URL (ANTHROPIC_API_KEY with ANTHROPIC_BASE_URL). Set in Connections → Claude for agents.',
+    scopes: ['The key your gateway issued'],
+    how: ['Pick “A gateway” under Claude for agents, fill in its base URL and paste its key.'],
+    testable: false,
+    // Saved from the Claude for agents section (server/claude-auth/), not a card of its own.
+    hidden: true,
   },
   jev: {
     icon: '⚖️',

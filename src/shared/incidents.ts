@@ -18,7 +18,7 @@ export const isSeverity = (v: unknown): v is IncidentSeverity => INCIDENT_SEVERI
 export const isIncidentStatus = (v: unknown): v is IncidentStatus => INCIDENT_STATUSES.includes(v as IncidentStatus);
 
 /** The automatic detection rules (server/incidents/rules.ts), each one a setting of its own. */
-export const INCIDENT_RULES = ['realLaunch', 'spendSpike', 'spendCap', 'interrupted', 'escalationUndelivered', 'crashLoop', 'studioDenied', 'flowFailed', 'sweepErrors', 'loginFailed', 'pageStall', 'serverStall', 'storeUnreadable'] as const;
+export const INCIDENT_RULES = ['realLaunch', 'spendSpike', 'spendCap', 'interrupted', 'escalationUndelivered', 'crashLoop', 'studioDenied', 'flowFailed', 'sweepErrors', 'loginFailed', 'pageStall', 'serverStall', 'storeUnreadable', 'claudeAuth'] as const;
 export type IncidentRule = (typeof INCIDENT_RULES)[number];
 export const isIncidentRule = (v: unknown): v is IncidentRule => INCIDENT_RULES.includes(v as IncidentRule);
 
@@ -158,6 +158,7 @@ export const DEFAULT_INCIDENT_SETTINGS: IncidentSettings = {
     pageStall: { on: true },
     serverStall: { on: true },
     storeUnreadable: { on: true },
+    claudeAuth: { on: true },
   },
 };
 
@@ -175,6 +176,7 @@ export const RULE_META: Record<IncidentRule, { label: string; what: string }> = 
   pageStall: { label: 'A page froze', what: "A browser's page ran one task for longer than half a second (the view and where the time went are in the incident)" },
   serverStall: { label: 'The server stalled', what: "The office server's event loop was blocked for longer than a second" },
   storeUnreadable: { label: "A data file couldn't be read", what: "One of the office's data files was locked, refused or corrupt: it isn't written until it can be read, and a corrupt one is kept aside" },
+  claudeAuth: { label: 'Claude rejected the agents’ credentials', what: 'An agent’s turn ended with Claude Code’s authentication failure (an invalid API key, or a sign-in that expired): one incident for the office, resolved by the next turn that works' },
 };
 
 /** Settings as stored, made whole: unknown rules dropped, missing fields from the defaults, numbers kept sane. */

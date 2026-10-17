@@ -17,6 +17,7 @@ import { officeSettings, toolkitDirState, updateOfficeSettings } from '../connec
 import { passwordView } from '../connections/password.js';
 import { toolkitProblem } from '../connections/paths.js';
 import { credential } from '../connections/resolve.js';
+import { withClaudeAuth } from '../claude-auth/source.js';
 import { liveAppConfig } from '../liveapp/config.js';
 import { mendixVersions, preferredMendix, projectOrg, wizardConfig } from '../wizard/config.js';
 import { checkPrereqs, findOnPath, machineDeps, runOff, type CheckDeps } from './checks.js';
@@ -163,7 +164,6 @@ export async function runPrereqs(ctx: Ctx) {
 
 /** The checks' deps on this machine: an API key saved in 🔌 Connections signs Claude Code in as well. */
 export function prereqDeps(ctx: Ctx): CheckDeps {
-  const key = credential('anthropic');
   const d = machineDeps({
     mendix: () => {
       const dir = wizardConfig().mendixDir;
@@ -179,5 +179,8 @@ export function prereqDeps(ctx: Ctx): CheckDeps {
     db: () => liveAppConfig(ctx.cfg.dataDir).db,
     secrets: () => [credential('github-agents'), credential('github-admin'), credential('anthropic'), process.env.GH_TOKEN, process.env.GITHUB_TOKEN],
   });
-  return key ? { ...d, env: { ...d.env, ANTHROPIC_API_KEY: key } } : d;
+  // The Claude sign-in row looks at what the agents get (claude-auth/): an inherited key only when Connections pass it on.
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(d.env)) if (v !== undefined) env[k] = v;
+  return { ...d, env: withClaudeAuth(env) };
 }

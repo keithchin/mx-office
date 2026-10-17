@@ -28,6 +28,8 @@ import type { DecisionCard, DecisionSplit } from './decisions/types.js';
 import { brainCandidates } from './decisions/brain.js';
 import { designCandidates } from './decisions/design.js';
 import type { DesignNeedView } from './design/views.js';
+import type { ClaudeAuthView } from './claude-auth.js';
+import { claudeAuthNeeds } from './decisions/claude-auth.js';
 import type { BrainAct, BrainChangeView } from './portfolios.js';
 import { liveNeeds } from './liveapp/status.js';
 
@@ -62,9 +64,11 @@ export type NeedTarget =
   /** The design system's ✋ card (server/design/, shared/decisions/design.ts): Adopt, Keep existing design, or open the Design gallery. */
   | { to: 'design'; floor: string; act: 'adopt' | 'keep' | 'open' }
   /** What doesn't add up about the stage (shared/decisions/stage-flags.ts): asks the lead to fix the paperwork and re-run gate-check (ui/stage/fix.ts). */
-  | { to: 'stage-fix'; floor: string };
+  | { to: 'stage-fix'; floor: string }
+  /** 🔑 Claude for agents (server/claude-auth/, ui/claude-auth/): keep the environment's key, use the agents' Claude login, restart the agents Claude refused, or how to fix it. */
+  | { to: 'claude-auth'; act: 'keep' | 'login' | 'restart' | 'help' };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | 'brain' | 'design' | AskKind;
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | 'brain' | 'design' | 'claude' | AskKind;
 
 /** How long a team member sits idle with an open task (nothing escalated) before Needs you says so. */
 export const IDLE_TASK_MS = 10 * 60_000;
@@ -149,6 +153,8 @@ export interface NeedsInput {
   brain?: BrainChangeView;
   /** The project's design-system adoption waiting on you (server/design/): one ✋ card. */
   design?: DesignNeedView;
+  /** Where the agents' Claude credentials come from (server/claude-auth/): its office-wide alert and one-time decision. */
+  claude?: ClaudeAuthView;
   /** Now (ms), for how long someone has been idle: Date.now() unless a test says. */
   now?: number;
 }
@@ -178,6 +184,8 @@ export function collectDecisions(i: NeedsInput): { cards: DecisionCard[]; needs:
     const what = w.task?.summary ?? w.task?.name ?? w.title;
     out.push({ key: `done-${w.id}`, kind: 'finished', icon: '✅', text: `${w.name} finished${what ? `: ${what}` : ' its turn'} — not looked at yet`, since: w.waitingSince, level: 'warn', action: 'Review', target: { to: 'worker', id: w.id } });
   }
+  // Claude rejected the agents' credentials (red: no agent can work), or a key from the office's environment nobody confirmed (server/claude-auth/).
+  out.push(...claudeAuthNeeds(i.claude));
   // Open sev1 and sev2 incidents on this floor or the whole office, the worst and then the oldest first.
   const incidents = (i.incidents ?? []).filter((x) => needsAttention(x) && (!x.floors.length || (!!i.floor && x.floors.includes(i.floor))));
   for (const x of [...incidents].sort((a, b) => a.severity.localeCompare(b.severity) || a.detectedAt - b.detectedAt)) {

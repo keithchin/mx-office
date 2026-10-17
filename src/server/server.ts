@@ -19,6 +19,7 @@ import { acceptWebSockets } from './ws/upgrade.js';
 import { stopLiveApps } from './liveapp/index.js';
 import { installAudit } from './audit/office.js';
 import { installIncidents } from './incidents/office.js';
+import { installClaudeAuth } from './claude-auth/index.js';
 import { installPerfWatch } from './perfwatch/office.js';
 import { flushRoster } from './roster/index.js';
 import { closeCodeFor, type OfficeClosing } from '../shared/office-down.js';
@@ -40,6 +41,7 @@ export async function startServer(cfg: Config, opts: StartOptions = {}) {
   Object.assign(ctx, createServices(ctx));
   installAudit(ctx);
   installIncidents(ctx);
+  const stopClaudeAuth = installClaudeAuth(ctx); // 🔑 Claude for agents: the start-up line and the auth-failure watch (claude-auth/)
   const stopPerfWatch = installPerfWatch(ctx);
   Object.assign(ctx, await openFloors(ctx, hookPort));
   Object.assign(ctx, createLateServices(ctx));
@@ -67,6 +69,7 @@ export async function startServer(cfg: Config, opts: StartOptions = {}) {
   const shutdown = (keep = false, why?: OfficeClosing) => {
     stopTimers();
     stopPerfWatch();
+    stopClaudeAuth();
     void stopLiveApps(ctx);
     ctx.cancelFloorsChanged();
     services.stop();

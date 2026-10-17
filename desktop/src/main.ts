@@ -6,11 +6,11 @@
 
 import { app, BrowserWindow, Menu, Notification, Tray, dialog, nativeImage, screen, shell, type MenuItemConstructorOptions, type NativeImage } from 'electron';
 import { spawn, execFileSync } from 'node:child_process';
-import { closeSync, existsSync, writeSync } from 'node:fs';
+import { closeSync, existsSync, readFileSync, writeSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_PORT, dataDirOf, officeArgv, officeEnv, officeUrl, parseOptions, probeUrl } from './core/options.js';
+import { DEFAULT_PORT, claudeEnvLine, dataDirOf, keepsClaudeEnv, officeArgv, officeEnv, officeUrl, parseOptions, probeUrl } from './core/options.js';
 import { decideStart, fetchHealth, healthLabel, waitForHealth, type FetchLike, type Health } from './core/health.js';
 import { emptySeen, needYouText, parseStatus, tooltipFor, type TrayState } from './core/needs.js';
 import { afterLook, countLine, decideStartHere, freshStatus, initialConn, lookOf, nextConn, type ConnState, type Look } from './core/connection.js';
@@ -259,9 +259,11 @@ async function startOwned() {
     sup = new OfficeSupervisor({
       spawn() {
         const fd = openLog(LOG_FILE);
-        writeSync(fd, `\n==== ${new Date().toISOString()} desktop app: starting the office from ${c.dir} with ${c.node} (port ${opts.port}, home ${opts.home})\n`);
+        // The office's Connections decide whether the environment's Claude key goes on to it (read at every start; names only in the log).
+        const keepClaude = keepsClaudeEnv(existsSync(path.join(opts.home, '.agent-office', 'office-settings.json')) ? readFileSync(path.join(opts.home, '.agent-office', 'office-settings.json'), 'utf8') : undefined);
+        writeSync(fd, `\n==== ${new Date().toISOString()} desktop app: starting the office from ${c.dir} with ${c.node} (port ${opts.port}, home ${opts.home})\n${claudeEnvLine(process.env, keepClaude)}\n`);
         try {
-          return spawn(c.node, [officeEntry(c.dir), ...officeArgv(opts)], { cwd: c.dir, env: officeEnv(process.env, opts), stdio: ['ignore', fd, fd, 'ipc'], windowsHide: true });
+          return spawn(c.node, [officeEntry(c.dir), ...officeArgv(opts)], { cwd: c.dir, env: officeEnv(process.env, opts, keepClaude), stdio: ['ignore', fd, fd, 'ipc'], windowsHide: true });
         } finally {
           closeSync(fd);
         }

@@ -61,6 +61,7 @@ import { floorLoading } from './ui/loading/floor';
 import { goToSettings } from './ui/settings/flat';
 import { mountProgressBar } from './ui/progress';
 import { openDocuments } from './ui/deliverables/open';
+import { goClaudeAuth } from './ui/claude-auth/go';
 import './shared/perfwatch-on';
 
 // No floor to open (or an old ?home link): the home page, where you pick one.
@@ -461,6 +462,7 @@ session.bellBefore($('to-home'));
 function goToNeed(t: NeedTarget) {
   if (t.to === 'worker') return workers.open(t.id);
   if (t.to === 'firm') return location.assign(t.url);
+  if (t.to === 'claude-auth') return void goClaudeAuth(t); // office-wide: done from here (ui/claude-auth/)
   if (t.to === 'floor') return net.send({ t: 'floor.go', floor: t.floor });
   if (t.to === 'pr') {
     const it = store.pulls.items.find((p) => p.number === t.number);

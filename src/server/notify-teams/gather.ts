@@ -26,6 +26,7 @@ import { asksFloor, asksOf } from '../asks/index.js';
 import { decisionsOf } from '../decisions/index.js';
 import { portfoliosOf } from '../portfolios/index.js';
 import { designOf } from '../design/index.js';
+import { claudeAuthView } from '../claude-auth/index.js';
 import { liveAppsIfMade } from '../liveapp/index.js';
 import type { AsksNeed } from '../../shared/asks.js';
 
@@ -90,6 +91,8 @@ export async function floorNeeds(ctx: Ctx, floor: Floor, now = Date.now()): Prom
     splits: await decisionsOf(ctx).splits.get(floor.id).catch(() => []),
     brain: portfoliosOf(ctx).changeView(floor.id, true),
     design: designOf(ctx).needView(floor.id, true),
+    // Office-wide: posted with the first project only, so one alert is one post.
+    claude: ctx.floors.values().next().value === floor ? claudeAuthView(false) : undefined,
   });
   return { input, needs: collectNeeds(input) };
 }

@@ -5,11 +5,9 @@
 // itself was started with it.
 
 import path from 'node:path';
-import { credential, resolveCredential } from './resolve.js';
-
-/** A credential saved in Connections itself (not one the office was started with: that's in the environment already). */
-const stored = (id: 'anthropic') => (resolveCredential(id).source === 'connections' ? credential(id) : undefined);
+import { credential } from './resolve.js';
 import { officeSettings } from './store.js';
+import { withClaudeAuth } from '../claude-auth/source.js';
 
 export const MENDIX_VARS = ['MENDIX_TOKEN', 'MX_PAT', 'MENDIX_PAT'] as const;
 
@@ -24,9 +22,9 @@ export function withConnections(env: Record<string, string>, floorDir?: string):
     env.GH_TOKEN = gh;
     env.GITHUB_TOKEN = gh;
   }
-  // An Anthropic API key saved in Connections (first-run setup's other way to sign Claude Code in).
-  const key = stored('anthropic');
-  if (key) env.ANTHROPIC_API_KEY = key;
+  // The agents' Claude credentials (claude-auth/): their Claude login, unless Connections or a confirmed
+  // environment says otherwise; a key never goes without the base URL it belongs to.
+  withClaudeAuth(env);
   for (const k of MENDIX_VARS) delete env[k];
   if (mendixOn(floorDir)) {
     const mx = credential('mendix');
