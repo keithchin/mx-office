@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-17 · release 58 (`69e40d1`)
+
 ### Added
 
 - **Connections says where the agents' Claude credentials come from, and lets you choose.** A new **🔑 Claude for agents** card: *Claude login (no key passed)*, *API key saved in Connections*, *a gateway saved in Connections* (its base URL with its key, kept encrypted) or *ANTHROPIC_API_KEY from the office's environment (started with it — e.g. a Windows user variable)*, with a warning for the last. Keys are never shown, at most their last four characters. Admins only, every change audited (`claude-auth.change`). With a key in the environment there's also the switch **Don't pass the environment's ANTHROPIC_API_KEY to agents (use their Claude login)**.
