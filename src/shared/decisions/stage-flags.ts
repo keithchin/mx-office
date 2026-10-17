@@ -17,6 +17,13 @@ export function stageFixMessage(flags: readonly StageFlag[], where: string): str
     if (f.kind === 'paperwork') {
       lines.push(`- Stage ${f.signed.join(', ')} ${f.signed.length === 1 ? 'is' : 'are'} signed off, but gate-check still reports:`);
       for (const x of f.failing) lines.push(`  - Stage ${x.id} (${x.title})${x.detail ? `: ${x.detail}` : ''}`);
+    } else if (f.kind === 'brd-path') {
+      lines.push(
+        `- ${f.text}. gate-check's Stage 2 reads BRDs only from ${f.expected} (the one knowledge base it resolves); the toolkit's other scripts (open-questions.sh, facts-lock.sh, brd-report.sh) read every knowledge base, so they found ${f.actual.length === 1 ? 'it' : 'them'}.`,
+        `  Either put the BRD where gate-check reads it (git mv to ${f.expected}, content unchanged, and update the paths that cite it), or, if the signed file must stay where it is, say so in your journal and in PROJECT.md's Decisions notes so the PENDING is read as paperwork. Don't edit the toolkit.`,
+      );
+    } else if (f.kind === 'build-plan') {
+      lines.push(`- ${f.text}. Mark each row's State in architecture/build-plan.md (built / partial / not built / blocked, brd-to-build-plan.md's row schema) as the build stands on main, in your next docs pull request; don't mark a row built that isn't.`);
     } else lines.push(`- ${f.text}.`);
   }
   lines.push(
@@ -32,7 +39,7 @@ export const checkedWhere = (c: StageCheck) => `${c.branch ?? 'main'}${c.sha ? `
 export function stageFlagCandidates(setup: SetupView | undefined, floor: string | undefined): Candidate[] {
   const e = setup?.stage;
   if (!e || !floor || !e.flags.length) return [];
-  const paperwork = e.flags.find((f) => f.kind === 'paperwork');
+  const paperwork = e.flags.find((f) => f.kind === 'paperwork' || f.kind === 'brd-path' || f.kind === 'build-plan');
   const text = e.flags.map((f) => f.text).join('. ');
   const target = { to: 'stage-fix', floor } as const;
   const need: NeedItem = { key: `stage-flags-${floor}`, kind: 'setup', icon: 'ℹ️', text, level: 'info', action: paperwork ? 'Ask the lead to fix the paperwork' : 'Ask the lead to re-run gate-check', target };
@@ -47,7 +54,9 @@ export function stageFlagCandidates(setup: SetupView | undefined, floor: string 
       body: {
         question: text,
         detail: `From the toolkit's gate-check, run by the office on a temporary checkout of ${where}. The office doesn't change the project: the lead fixes the files the gates name and re-runs gate-check.`,
-        evidence: e.flags.flatMap((f) => (f.kind === 'paperwork' ? f.failing.map((x) => ({ label: `gate-check: Stage ${x.id} (${x.title})${x.detail ? `: ${x.detail}` : ''}` })) : [{ label: `PROJECT.md says: ${e.line ?? `Stage ${f.says}`}` }])),
+        evidence: e.flags.flatMap((f) =>
+          f.kind === 'paperwork' ? f.failing.map((x) => ({ label: `gate-check: Stage ${x.id} (${x.title})${x.detail ? `: ${x.detail}` : ''}` })) : f.kind === 'brd-path' ? f.actual.slice(0, 5).map((a) => ({ label: `BRD on main: ${a} (gate-check looked in ${f.expected})` })) : f.kind === 'build-plan' ? [{ label: f.text }] : [{ label: `PROJECT.md says: ${e.line ?? `Stage ${f.says}`}` }],
+        ),
         blocks: [],
         owner: 'the lead',
         notes: ['Shown for information: it isn’t counted as waiting on you.'],

@@ -11,7 +11,7 @@ import { asksSoon } from './asks-hook.js';
 import { foldOfficeAsk } from './escalation-fold.js';
 import type { Roster } from './index.js';
 import { readJournal } from './journal-io.js';
-import { lessonsPathIn, sourcesOf, writeRoleFiles, writeRoleFilesSoon, type PlaybookContext } from './playbooks.js';
+import { entryOfProject, lessonsPathIn, sourcesOf, writeRoleFiles, writeRoleFilesSoon, type PlaybookContext } from './playbooks.js';
 import { toolkitOf } from '../toolkit-pin/index.js';
 import { autonomyPrompt, benchPrompt, primePrompt } from './prompts.js';
 import { stageLevel, stageOf } from './stage-autonomy.js';
@@ -43,7 +43,7 @@ export class Members {
     if (ensureSubagentNames(d)) this.roster.file(floor.id).save();
     const names = Object.fromEntries(ROLES.map((r) => [r.id, d.members[r.id].name])) as PlaybookContext['names'];
     const m = d.members[role];
-    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role), subagentNames: namesOf(d, role), earlyDrafts: d.settings.earlyDrafts, maxSubagents: d.settings.maxSubagents, coverage: d.coverage, toolkit: toolkitOf(floor.dir), ...sourcesOf(floor.dir), ...(designBound(floor.id) ? { designBound: true } : {}) };
+    return { project: floor.name, name: m.name, level: d.settings.autonomy, lessons: lessonsPathIn(floor.dir), names, skills: m.skills, subagents: Object.values(d.subagents).filter((s) => s.lead === role), subagentNames: namesOf(d, role), earlyDrafts: d.settings.earlyDrafts, maxSubagents: d.settings.maxSubagents, coverage: d.coverage, toolkit: toolkitOf(floor.dir), ...sourcesOf(floor.dir), ...(designBound(floor.id) ? { designBound: true } : {}), ...entryOfProject(floor.dir) };
   }
 
   /**

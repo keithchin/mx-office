@@ -26,6 +26,8 @@ import { TRY_FIRST, workaroundFiles } from './playbook-workarounds.js';
 import { CORRECTION_LIMIT } from '../../shared/design/context.js';
 import { sourcesDirOf, sourcesLines } from '../../shared/brief-map.js';
 import { reviewRule } from '../../shared/review-gate.js';
+import type { EntryMode } from '../../shared/wizard.js';
+import { projectShape } from '../budget/plan-source.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
 export const FIELD_LESSONS = '.ai-context/skills/mxcli-field-lessons/SKILL.md';
@@ -58,10 +60,18 @@ export interface PlaybookContext {
   sources?: string;
   /** The floor has a design-system binding (server/design/): the design roles' Playbooks get its one rule. */
   designBound?: boolean;
+  /** The project's entry mode, when it's recorded (agent-office.project.json or PROJECT.md): where the knowledge base and the BRDs go (deliverables-brief.ts). */
+  entry?: EntryMode;
 }
 
 /** The project's sources/ folder for its Playbooks, when it has one (one stat, at a hire or a rewrite). */
 export const sourcesOf = (dir: string): Pick<PlaybookContext, 'sources'> => (existsSync(path.join(dir, 'sources')) ? { sources: sourcesDirOf(dir) } : {});
+
+/** The project's entry mode for its Playbooks, when it's recorded (a couple of small reads, at a hire or a rewrite). */
+export const entryOfProject = (dir: string): Pick<PlaybookContext, 'entry'> => {
+  const s = projectShape(dir);
+  return s.known ? { entry: s.entry } : {};
+};
 
 /** Where the mxcli-project-toolkit clone is (the same setting the new-project wizard uses). */
 const toolkitDir = () => officeToolkitDir().replace(/\\/g, '/');
@@ -293,7 +303,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     ...blockerLines(roleId, c, ctx.names),
     ...(also.length && !role.generalist ? coverLines(c!, roleId) : []),
     '',
-    ...deliverablesBrief(roleId, ctx.earlyDrafts ?? true, also),
+    ...deliverablesBrief(roleId, ctx.earlyDrafts ?? true, also, ctx.entry),
     ...(ctx.maxSubagents && subs.length ? ['## Parallel work', `Run at most ${ctx.maxSubagents} subagent${ctx.maxSubagents === 1 ? '' : 's'} at once (the project's budget level). Wait for one to finish before dispatching another.`, ''] : []),
   ].join('\n');
 }

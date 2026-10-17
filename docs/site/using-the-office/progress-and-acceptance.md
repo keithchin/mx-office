@@ -20,17 +20,27 @@ The colour of a segment comes from what the office measured:
 
 | Colour | Meaning |
 |---|---|
-| Green | Passed: gate-check says PASS |
+| Green | Passed: gate-check says PASS, or signed off in `PROJECT.md` while gate-check still says PENDING (its segment reads *signed off*, and the tooltip keeps gate-check's words: *Signed off (gate-check says PENDING: no brd/*.brd.json scaffolds yet)*) |
 | Grey | Waived (by the entry mode, or by hand with a reason) |
-| Amber | Waiting on someone: a ✋ gate has its work done but no CONFIRMED decision yet, or a MANUAL stage that is in play (every stage before it passed) wants your sign-off. A MANUAL stage that isn't in play yet (Stage 5 on a new project) is grey, *not started*: the toolkit checks it by hand once the stages before it have passed. A CONFIRMED Decisions row for it shows it done |
+| Amber | Waiting on someone: a ✋ gate has its work done but no CONFIRMED decision yet, or a MANUAL stage that is in play (every stage before it passed, was waived or is signed off) wants your sign-off. A MANUAL stage that isn't in play yet (Stage 5 on a new project) is grey, *not started*: the toolkit checks it by hand once the stages before it have passed. A CONFIRMED Decisions row for it shows it done |
 | Red | Failing: gate-check found something wrong |
-| Blue | In progress: no verdict yet, but some of the stage's deliverables exist |
+| Blue | In progress: no verdict yet, but some of the stage's deliverables exist; or Build (Stage 5, MANUAL) with build work the office can see (see below) |
 | Dashed | Not started |
 | Striped | Unknown: gate-check hasn't written a verdict for it |
 
 The segment with the orange outline is the current phase: where the work is. That is the first stage after the latest one that passed, was waived or is signed off in `PROJECT.md` (a CONFIRMED Decisions row that says it was signed off). A paperwork gap in an early stage doesn't pull a project whose build plan is signed off back to Kickoff: that gap keeps its own colour, and the office says it doesn't add up (see below). The line on the right says where the project is, for example "Stage 5 · Build". After acceptance it says "v1 accepted · 2026-10-08".
 
 The bar never shows a percentage or a count that nobody measured. If the office doesn't know something, it says *unknown*.
+
+### Build in progress
+
+gate-check reports Build (Stage 5) as MANUAL on every run (*not file-existence-checkable*), so on its own it can't say a build has started. The office looks for itself, on the commit it checked and the team's pushed branches, read with git only:
+
+- **rows with build evidence**: a commit whose subject names the build-plan row (*Row 16: sheet form page applied*, *Rows 19-21: …*) and that changed build files (`mdlsource/`, the `.mpr` and `mprcontents/`, `widgets/`, `javascriptsource/`, `javasource/`, `themesource/`) or says applied, proven, done or PASS; a `### <date> — Row N` note in `docs/BUILD-LOG.md`; the rows a merged build pull request's title names (*rows 4-14*). A row is **on main** when that is reachable from the default branch, **on a branch** when only an unmerged branch has it, and **only mentioned** when all there is is a *Draft row 16* commit or a journal line;
+- pull requests merged into the default branch that changed build files, and branches ahead of it that change build files, with their open pull request when the office's GitHub list has one;
+- the build plan's own **State** column (`built` / `partial` / `not built` / `blocked`, the toolkit's row schema), the gated rows in `docs/BUILD-LOG.md`, and the MDL scripts under `mdlsource/`.
+
+With any of these, Build is blue, *in progress*, and a 🔨 line under the bar says what was seen, for example *Build · in progress · 11 of 33 build-plan rows with build evidence on main (rows 4–14), 9 more on office/pixel-b1e9 (PR #6, open) · gate-check: MANUAL · checked on main @68cc068*. The count is the plan's State column when the plan is kept up to date (it marks at least as many rows built as the evidence shows), else the rows with build evidence against the plan's row total; with neither, the line names what merged and what is open. It is never a percentage. When the plan's State column calls rows *not built* that have build evidence on main, an ℹ️ note says so (*The build plan says 0 of 33 rows built; commits on main show build evidence for rows 4–14*), with **Ask the lead to fix the paperwork**. The tooltip lists each merged and open pull request, the plan's counts, the last BUILD-LOG entry, and gate-check's MANUAL verdict. Build is **done** only by its gate: your sign-off (a CONFIRMED Decisions row for Stage 5) or gate-check's PASS, never by evidence alone. While it's in progress the sign-off card in Needs you is an info card, *Stage 5 (Build) is in progress (…): sign it off once the build is complete*, and the phone doesn't say it waits for you.
 
 ### Where the stage comes from
 
@@ -50,9 +60,10 @@ The same line, with the stage, is on the Overview's summary, the setup panel, th
 The office also says when things don't add up, as an ℹ️ note under the bar and an info card in Needs you (shown, not counted as waiting on you):
 
 - **Signed off, but gate-check still fails an earlier stage.** For example: *Stage 3 and 4 are signed off in PROJECT.md, but gate-check still reports Stage 0 failing: 'Confirmed by:' still holds the shipped placeholder*. This is usually paperwork: unanswered intake sections, the triage sign-off line. The card's **Ask the lead to fix the paperwork** tells the team lead (after their current turn, through the team's usual durable message) what gate-check reports, and asks them to fix the files, re-run gate-check and commit.
+- **gate-check didn't find the BRD.** For example: *gate-check didn't find the BRD at analysis/legacy/knowledge-base/brd/; it's at analysis/knowledge-base/brd/F001-line7-check-sheet.brd.json*. The toolkit's gate-check reads BRDs from one knowledge base only: the `analysis/<source>/knowledge-base/` a migration's extraction writes, when there is one, else `analysis/knowledge-base/`. Its other scripts (open-questions, facts-lock, brd-report) read them everywhere. A signed BRD gate-check misses still counts as signed off for the bar (the stage reads *signed off*), and **Ask the lead to fix the paperwork** tells the lead where gate-check looks and asks them to put the BRD there or record why not. The office never moves the file. Earlier the Chief Analyst's Playbook named `analysis/knowledge-base/brd/` for every project; it now names the per-source knowledge base for a migration.
 - **The stage line is out of date.** For example: *PROJECT.md's stage line is out of date: it says Stage 2; gate-check on main says Stage 5*. The office doesn't edit the project. It suggests that the lead re-runs gate-check and commits the line it rewrites.
 
-The office raises these only from a check of the branch's latest commit, never from an old or committed dashboard. How the toolkit decides a gate doesn't change, and a MANUAL stage still asks for your sign-off only once every stage before it has passed.
+The office raises these only from a check of the branch's latest commit, never from an old or committed dashboard. How the toolkit decides a gate doesn't change, and a MANUAL stage still asks for your sign-off only once every stage before it has passed or been signed off.
 
 ### Milestones
 

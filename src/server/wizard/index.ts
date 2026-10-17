@@ -34,6 +34,7 @@ import { portfoliosOf } from '../portfolios/index.js';
 import { setupView, setupViewOf } from './setup.js';
 import { GateSource, branchInfo } from './gate-source.js';
 import { rememberEvidence, stageEvidence } from './stage-evidence.js';
+import { evidenceFor } from './build-evidence.js';
 import { withFloorToolkitEnv } from '../toolkit-env.js';
 import { toolkitBusy, toolkitDirFor } from '../toolkit-pin/index.js';
 import { useGateLock } from '../worktree-sweep/index.js';
@@ -313,8 +314,10 @@ export class Wizard {
     const { info } = g;
     const off = info.branch !== info.def || info.behind > 0;
     const view = setupViewOf(g.files);
+    // What the office sees of the build and the BRDs on the checked commit and the team's branches (build-evidence.ts).
+    const seen = view.toolkit && g.check.sha ? await evidenceFor(floor.dir, info.def, g.check.sha, floor.github?.pulls.items ?? []) : undefined;
     // The stage as the office derived it from its own check, how fresh that is, and what doesn't add up (stage-evidence.ts).
-    const stage = stageEvidence(view, g.files['PROJECT.md'], g.check);
+    const stage = stageEvidence(view, g.files['PROJECT.md'], g.check, seen);
     rememberEvidence(floor.dir, stage, view.verdicts);
     return {
       ...view,

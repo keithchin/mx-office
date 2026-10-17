@@ -70,7 +70,7 @@ export async function signOff(deps: SignoffDeps, floor: Floor, stage: string, by
   const setup = await deps.setup(floor);
   const verdicts = setup?.verdicts?.length ? setup.verdicts : (setup?.stages ?? []);
   const v = verdicts.find((x) => x.id.toUpperCase() === stage.toUpperCase());
-  if (!v || !manualInPlay(verdicts, v.id)) return { ok: false, status: 409, error: `Stage ${stage} isn't waiting for a sign-off: the stages before it haven't all passed, or gate-check has moved on` };
+  if (!v || !manualInPlay(verdicts, v.id, setup?.decisions)) return { ok: false, status: 409, error: `Stage ${stage} isn't waiting for a sign-off: the stages before it haven't all passed, or gate-check has moved on` };
   const st = signoffState(setup, v.id);
   if (st.state === 'recorded') return { ok: false, status: 409, error: `Stage ${v.id} is already signed off in PROJECT.md` };
   const lead = deps.lead(floor);

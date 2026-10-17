@@ -7,7 +7,8 @@
 // server (server/progress/) both import it, and derivePhases is what the tests pin.
 
 import type { EntryMode } from './wizard.js';
-import { MANUAL_LATER_TEXT, manualInPlay, signedOffIn } from './gate-play.js';
+import { MANUAL_LATER_TEXT, manualInPlay, signedOff, signedOffIn } from './gate-play.js';
+import { buildMeasures, buildSummary, buildUnderWay, type BuildEvidence } from './build-progress.js';
 import type { StageEvidence } from './stage-derive.js';
 
 export interface ToolkitStage {
@@ -79,6 +80,8 @@ export interface Phase {
   current?: boolean;
   /** gate-check's verdict, as written (PASS, FAIL…). */
   verdict?: string;
+  /** Settled by a sign-off in the register while gate-check still says PENDING or FAIL (the verdict stays in its measures). */
+  signedOff?: boolean;
   /** What was measured, a line each ("Gate: PASS", "3 of 5 deliverables on main"). */
   measures: string[];
   deliverables?: PhaseDeliverables;
@@ -154,6 +157,8 @@ export interface ProgressInput {
    * the current phase; without it the first phase not settled is. Earlier phases keep their own status.
    */
   stage?: string;
+  /** What the office sees of the build (shared/build-progress.ts): a MANUAL Build with some shows in progress, never done. */
+  build?: BuildEvidence;
 }
 
 const SETTLED: readonly PhaseStatus[] = ['done', 'waived'];
@@ -179,15 +184,20 @@ export function waitsOnPerson(detail: string | undefined): boolean {
   return /✋|placeholder|Confirmed by|CONFIRMED decision|sign-?off/i.test(detail ?? '');
 }
 
-function statusOf(v: VerdictIn | undefined, d: StageDeliverablesIn | undefined, manual: 'waiting' | 'later' | 'signed' = 'waiting'): PhaseStatus {
+type ManualState = 'waiting' | 'later' | 'signed' | 'building';
+
+function statusOf(v: VerdictIn | undefined, d: StageDeliverablesIn | undefined, manual: ManualState = 'waiting', signed = false): PhaseStatus {
   if (!v) return 'unknown';
   const s = v.status.toUpperCase();
   if (s === 'PASS') return 'done';
   if (s === 'WAIVED') return 'waived';
+  // Signed off in the register while gate-check says PENDING or FAIL (a BRD it didn't find): settled, its verdict kept in the measures and flagged (shared/stage-derive.ts).
+  if (signed && (s === 'PENDING' || s === 'FAIL')) return 'done';
   // A ✋ gate with artifacts and no sign-off is waiting on a person, not broken.
   if (s === 'FAIL') return waitsOnPerson(v.detail) ? 'waiting' : 'failed';
   // A MANUAL stage waits on you only once it's in play (shared/gate-play.ts); before that it's not started, and a CONFIRMED row signs it off.
-  if (s === 'MANUAL') return manual === 'signed' ? 'done' : manual === 'later' ? 'pending' : 'waiting';
+  // Build with work the office can see is in progress; only its gate (the CONFIRMED row) makes it done.
+  if (s === 'MANUAL') return manual === 'signed' ? 'done' : manual === 'building' ? 'active' : manual === 'later' ? 'pending' : 'waiting';
   if (s === 'PENDING') return d && d.present + d.branch + d.draft > 0 ? 'active' : 'pending';
   return 'unknown';
 }
@@ -228,8 +238,16 @@ export function derivePhases(input: ProgressInput): Phase[] {
     const d = input.deliverables?.find((x) => x.stage === st.id);
     const rows = input.decisions.filter((r) => r.stage.replace(/^stage\s*/i, '').trim().toUpperCase() === st.id);
     const measures: string[] = [];
-    const manual = v?.status.toUpperCase() === 'MANUAL' ? (signedOffIn(input.decisions, st.id) ? 'signed' : manualInPlay(input.verdicts, st.id) ? 'waiting' : 'later') : undefined;
-    measures.push(v ? `Gate: ${v.status.toUpperCase()}${manual === 'later' ? ` (${MANUAL_LATER_TEXT})` : manual === 'signed' ? ' (signed off: a CONFIRMED row in PROJECT.md’s Decisions)' : v.detail ? ` (${v.detail})` : ''}` : 'Gate: unknown (gate-check has not rendered this stage)');
+    const building = st.id === '5' && buildUnderWay(input.build);
+    const manual: ManualState | undefined =
+      v?.status.toUpperCase() === 'MANUAL' ? (signedOffIn(input.decisions, st.id) ? 'signed' : building ? 'building' : manualInPlay(input.verdicts, st.id, input.decisions) ? 'waiting' : 'later') : undefined;
+    const signed = !!v && /^(PENDING|FAIL)$/i.test(v.status) && signedOff(input.decisions, st.id);
+    // The build's progress leads (the Overview card's line under the stage is measures[0]); gate-check's MANUAL stays visible after it.
+    if (manual === 'building') measures.push(`In progress: ${buildSummary(input.build!)}`);
+    if (signed) measures.push(`Signed off (gate-check says ${v!.status.toUpperCase()}${v!.detail ? `: ${v!.detail}` : ''})`);
+    const gateNote = manual === 'later' ? ` (${MANUAL_LATER_TEXT})` : manual === 'signed' ? ' (signed off: a CONFIRMED row in PROJECT.md’s Decisions)' : manual === 'building' ? ' (the toolkit’s verdict; Build is done only once signed off: a CONFIRMED row in PROJECT.md’s Decisions)' : v?.detail ? ` (${v.detail})` : '';
+    measures.push(v ? `Gate: ${v.status.toUpperCase()}${gateNote}` : 'Gate: unknown (gate-check has not rendered this stage)');
+    if (manual === 'building') measures.push(...buildMeasures(input.build!));
     if (d) {
       const extra = [d.branch && `${d.branch} on a branch`, d.draft && `${d.draft} draft`].filter(Boolean).join(', ');
       measures.push(`${d.present} of ${d.expected} document${d.expected === 1 ? '' : 's'} on main${extra ? ` (+${extra})` : ''}`);
@@ -241,8 +259,9 @@ export function derivePhases(input: ProgressInput): Phase[] {
       id: st.id,
       title: st.title,
       kind: 'stage',
-      status: statusOf(v, d, manual),
+      status: statusOf(v, d, manual, signed),
       ...(v ? { verdict: v.status.toUpperCase() } : {}),
+      ...(signed ? { signedOff: true } : {}),
       measures,
       ...(d ? { deliverables: { expected: d.expected, present: d.present, branch: d.branch, draft: d.draft, missing: d.missing, items: d.items } } : {}),
       milestones,
@@ -292,6 +311,6 @@ export function progressLabel(p: Pick<ProjectProgress, 'phases' | 'acceptance'>)
   const prefix = a.cycle > 1 ? `${a.version} · ` : '';
   if (!cur) return `${prefix}every phase settled`;
   if (cur.kind === 'accepted') return `${a.version} ready for acceptance`;
-  const how = cur.status === 'waiting' ? ' · waiting on someone' : cur.status === 'failed' ? ' · failing' : '';
+  const how = cur.status === 'waiting' ? ' · waiting on someone' : cur.status === 'failed' ? ' · failing' : cur.status === 'active' && cur.verdict === 'MANUAL' ? ' · in progress' : '';
   return `${prefix}${cur.kind === 'stage' ? `Stage ${cur.id} · ${cur.title}` : cur.title}${how}`;
 }

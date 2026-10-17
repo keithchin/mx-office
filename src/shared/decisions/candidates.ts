@@ -16,6 +16,7 @@ import { isJourneyId, refsFromTitle } from './ids.js';
 import type { DecisionCard, DecisionKind, DecisionSource } from './types.js';
 import { escalationKind } from './words.js';
 import { manualInPlay, signoffMeaning, signoffState } from '../gate-play.js';
+import { buildSummary, buildUnderWay } from '../build-progress.js';
 
 export interface Candidate {
   need: NeedItem;
@@ -234,7 +235,7 @@ export function signoffCandidates(setup: SetupView | undefined): Candidate[] {
   const out: Candidate[] = [];
   const all = setup?.verdicts?.length ? setup.verdicts : setup?.show ? setup.stages : [];
   for (const s of all) {
-    if (!manualInPlay(all, s.id)) continue;
+    if (!manualInPlay(all, s.id, setup?.decisions)) continue;
     const st = signoffState(setup, s.id);
     if (st.state === 'recorded') continue;
     const target = { to: 'signoff', stage: s.id, title: s.title } as const;
@@ -245,7 +246,10 @@ export function signoffCandidates(setup: SetupView | undefined): Candidate[] {
       out.push({ need, source: { id: `stage:${s.id}`, type: 'signoff', label: 'the toolkit’s gate check', text: need.text, target }, keys: [`stage:${s.id}`], kind: 'status', prio: SIGNOFF_PRIO, body: { question: need.text, detail: signoffMeaning(s.id, s.title), evidence, blocks: [], owner: lead, notes: [`It goes once PROJECT.md’s Decisions has a CONFIRMED row for Stage ${s.id}.`], after: `Nothing more to do: ${lead} records it and the card goes once the register says so.` } });
       continue;
     }
-    const need: NeedItem = { key: `setup-${s.id}`, kind: 'setup', icon: '✋', text: `Stage ${s.id} (${s.title}) waits for your sign-off`, level: 'warn', action: 'Sign off', target };
+    // The build under way (shared/build-progress.ts): its sign-off is for when it's complete, so the card says where it is instead of nagging.
+    const building = s.id === '5' && buildUnderWay(setup?.stage?.build);
+    const text = building ? `Stage ${s.id} (${s.title}) is in progress (${buildSummary(setup!.stage!.build!)}): sign it off once the build is complete` : `Stage ${s.id} (${s.title}) waits for your sign-off`;
+    const need: NeedItem = { key: `setup-${s.id}`, kind: 'setup', icon: '✋', text, level: building ? 'info' : 'warn', action: 'Sign off', target };
     out.push({ need, source: { id: `stage:${s.id}`, type: 'signoff', label: 'the toolkit’s gate check', text: need.text, target }, keys: [`stage:${s.id}`], kind: 'decision', prio: SIGNOFF_PRIO, body: { question: need.text, detail: signoffMeaning(s.id, s.title), evidence, blocks: [], owner: 'the toolkit', notes: ['Sign off asks the team lead to add the CONFIRMED row to PROJECT.md’s Decisions, after their turn. Nothing is sent until you confirm it.'], after: 'After you sign off: the lead is told “Signed off” with the exact Decisions row to add, after their current turn. This card then says it waits for them to record it.' } });
   }
   return out;

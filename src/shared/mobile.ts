@@ -134,7 +134,7 @@ export function countStatuses(statuses: readonly WorkerStatus[]): Pick<ProjectSt
 }
 
 /** The stage a toolkit project is at, in a few words: the first one that isn't passed. */
-export function stageLine(stages: readonly { id: string; title: string; status: string }[] | undefined, decisions?: readonly { stage: string; status: string }[]): string | undefined {
+export function stageLine(stages: readonly { id: string; title: string; status: string }[] | undefined, decisions?: readonly { stage: string; decision: string; status: string }[]): string | undefined {
   if (!stages?.length) return undefined;
   const at = stages.find((s) => s.status !== 'PASS' && s.status !== 'WAIVED');
   if (!at) return 'All stages passed';
