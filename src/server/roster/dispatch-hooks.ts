@@ -35,6 +35,7 @@ async function applyEscalation(roster: Roster, floorId: string, r: DispatchRecor
     e.resolution.delivered = true;
     // Seen in its session (or a person's word): no longer "typed, not received yet".
     delete e.resolution.typed;
+    delete e.resolution.held;
   }
   if (also && also.dispatchId === r.id) delete also.pending;
   const floor = roster.deps.floors().find((f) => f.id === floorId);
@@ -119,7 +120,11 @@ export function memberTaskAt(roster: Roster, floorId: string, workerId: string):
   const t = role ? roster.data(floorId).members[role].task : undefined;
   if (!t || t.doneAt !== undefined) return undefined;
   const w = floor.worker(workerId);
-  return { ...(t.taskId ? { taskId: t.taskId } : {}), ...(t.executionId ? { executionId: t.executionId } : {}), text: t.text, ...(w?.worktree?.branch ? { branch: w.worktree.branch } : {}), ...(w?.pr?.number ? { pr: w.pr.number } : {}) };
+  // The worker's PR is this task's only if it was still open when the task was given (task-outcome.ts).
+  const pull = w?.pr?.number ? floor.pulls?.().find((p) => p.number === w.pr!.number) : undefined;
+  const ended = pull && pull.state !== 'OPEN' ? Date.parse(pull.mergedAt ?? pull.closedAt ?? '') : NaN;
+  const pr = w?.pr?.number && !(Number.isFinite(ended) && ended < t.at) ? w.pr.number : undefined;
+  return { ...(t.taskId ? { taskId: t.taskId } : {}), ...(t.executionId ? { executionId: t.executionId } : {}), text: t.text, ...(w?.worktree?.branch ? { branch: w.worktree.branch } : {}), ...(pr ? { pr } : {}) };
 }
 
 /** Whether a held dispatch is still waiting: in the held list (its id), or owed by its escalation. */

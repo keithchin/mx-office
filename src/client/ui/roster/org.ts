@@ -81,6 +81,7 @@ export function memberCard(v: RosterView, m: MemberView, deps: OrgDeps): HTMLEle
     ),
     also.length ? h('p.ro-covers', {}, '🧩 Also covers ', also.map((t) => `${TEAM_META[t].icon} ${TEAM_META[t].name}`).join(', ')) : null,
     m.activity ? h('p.ro-activity', {}, m.activity) : null,
+    m.taskNote ? h('p.ro-task-note', { title: m.task ?? '' }, '🔎 ', m.taskNote) : null,
     subsEl ? h('div.ro-live-subs', {}, subsEl) : null,
     h('p.ro-facts', {}, facts.join(' · ')),
     subs.length ? (subagentList(v, m.role, deps.redraw) ?? h('p.ro-subs', {}, '👥 ', subs.map((s) => s.title + 's').join(', '))) : h('p.ro-subs', {}, '👥 Coordinates the Leads'),

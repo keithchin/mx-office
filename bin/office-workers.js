@@ -336,7 +336,10 @@ export const TOOLS = [
   {
     name: 'tell_worker',
     title: 'Tell a worker',
-    description: "Types a message into another agent's (worker's) terminal as its next prompt; one that stopped starts again with it. " + WORKER_NOTE,
+    description:
+      "Types a message into another agent's (worker's) terminal as its next prompt; one that stopped starts again with it. " +
+      'The reply says only what the office knows: queued (the worker is mid-turn; it goes in when that turn ends), typed (in its terminal, not confirmed received yet) or received. Never send the same message again because it is only queued or typed. An empty message is refused. ' +
+      WORKER_NOTE,
     inputSchema: {
       type: 'object',
       properties: {
@@ -381,6 +384,11 @@ const INSTRUCTIONS =
   "worker's when list_workers does not show it, escalate raises something to the Project Manager (the human who owns the project), and subagent is a Lead's track record and standing of its own subagents. Everyone in the office sees who did what. " +
   'The office-workers command on your PATH does the same from a shell.';
 
+/** What a tell's answer says happened (the office's own words); never "told" without the office saying it was received. */
+function tellNote(answer, worker) {
+  return answer.note ?? `Handed to the office for ${answer.worker?.name ?? worker}; not confirmed received yet.`;
+}
+
 /** Runs a tool; resolves to its text, and whether nothing it was asked came off, or throws with why it failed. */
 async function runTool(name, args, io) {
   const a = args && typeof args === 'object' ? args : {};
@@ -397,7 +405,7 @@ async function runTool(name, args, io) {
   }
   if (name === 'tell_worker') {
     const answer = await call('tell', a, io);
-    return { text: answer.note ?? `Told ${answer.worker?.name ?? a.worker}.` };
+    return { text: tellNote(answer, a.worker) };
   }
   if (name === 'link_pr') return { text: formatLinked(await call('pr', a, io)) };
   if (name === 'escalate') return { text: formatEscalated(await call('escalate', a, io)) };
@@ -524,9 +532,9 @@ export async function main(argv, io = {}) {
     }
     if (cmd.cmd === 'tell') {
       const text = (await prompt()).trim();
-      if (!text) throw new UsageError('The prompt is empty');
+      if (!text) throw new UsageError('Nothing to send: the message was empty');
       const answer = await call('tell', { worker: cmd.worker, prompt: text }, ctx);
-      err(answer.note ?? `Told ${answer.worker?.name ?? cmd.worker}.`);
+      err(tellNote(answer, cmd.worker));
       return 0;
     }
     if (cmd.cmd === 'escalate') {

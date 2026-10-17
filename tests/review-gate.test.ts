@@ -245,7 +245,10 @@ test('a closed issue is not delivery while the task’s own PR is unmerged', () 
   const base = { issue: 12, pr: 7, closed, claim: /task done/i };
   assert.equal(outcome({ ...base, pulls: [{ number: 7, state: 'OPEN' }] }), undefined, 'its PR is still open');
   assert.equal(outcome({ ...base, pulls: [{ number: 7, state: 'CLOSED', closedAt: '2026-10-16T10:00:00Z' }] })?.kind, 'decision', 'its PR was closed unmerged: the PM decides');
-  assert.equal(outcome({ ...base, pulls: [{ number: 7, state: 'MERGED' }] })?.kind, 'integrated');
+  // A merged PR counts only with evidence it carries the task (task-outcome-truth): merged after the task, Task: line.
+  const carried = { ...base, taskId: 'tsk_X', since: Date.parse('2026-10-16T09:00:00Z') };
+  assert.equal(outcome({ ...carried, pulls: [{ number: 7, state: 'MERGED', mergedAt: '2026-10-16T11:00:00Z', body: 'Task: tsk_X' }] })?.kind, 'integrated');
+  assert.notEqual(outcome({ ...carried, pulls: [{ number: 7, state: 'MERGED', mergedAt: '2026-10-16T11:00:00Z' }] })?.kind, 'integrated', 'merged without the Task: line: not integrated');
   assert.equal(outcome({ issue: 12, closed, claim: /task done/i })?.kind, 'delivered', 'no PR of its own: the issue decides, as before');
   assert.equal(outcome({ ...base, closed: new Map([[12, 'NOT_PLANNED']]), pulls: [{ number: 7, state: 'OPEN' }] })?.kind, 'cancelled', 'dropped is still dropped');
 });

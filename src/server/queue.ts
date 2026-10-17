@@ -9,6 +9,7 @@ import { PROMPTS } from '../shared/prompts.js';
 import { writeJsonAtomic } from './flow/store.js';
 import { cleanTaskRef, withTaskLine } from '../shared/tasks.js';
 import type { QueueTaskIds } from './tasks/queue.js';
+import { finishedEvidence, stoppedToast, turnEnd, turnEndedToast } from './queue-finish.js';
 
 /** What the queue needs from the worker manager. Narrow on purpose, so a smoke test can fake it. */
 export interface QueueWorkers {
@@ -259,8 +260,11 @@ export class TaskQueue {
       if (!match) continue;
       const pr = { number: match.number, url: match.url, state: match.isDraft ? 'DRAFT' : match.state, title: match.title };
       if (t.pr && t.pr.number === pr.number && t.pr.state === pr.state && t.pr.title === pr.title) continue;
+      const was = finishedEvidence(t);
       t.pr = pr;
       changed = true;
+      // The evidence a task whose turn ended is finished: its PR merged.
+      if (t.status === 'done' && t.outcome === 'done' && !was && finishedEvidence(t)) this.events.toast(`📋 ${label(t)} finished: PR #${pr.number} merged`, 'info');
     }
     if (changed) this.changed();
   }
@@ -340,7 +344,11 @@ export class TaskQueue {
       if (t.status !== 'running' || !t.workerId || t.reconciling) continue;
       const w = byId.get(t.workerId);
       if (!w) this.finish(t, 'killed');
-      else if (FINISHED.has(w.status)) done = this.finish(t, w.status === 'done' ? 'done' : 'exited') || done;
+      else if (FINISHED.has(w.status)) {
+        // An API error, a cancel or an Esc ends the turn too: that's stopping short, not finishing (queue-finish.ts).
+        const end = turnEnd(w);
+        done = this.finish(t, end.outcome, end.error) || done;
+      }
       else continue;
       changed = true;
     }
@@ -351,16 +359,18 @@ export class TaskQueue {
   }
 
   /** Returns whether the task got done (rather than stopping short). */
-  private finish(t: QueueTask, outcome: NonNullable<QueueTask['outcome']>): boolean {
+  private finish(t: QueueTask, outcome: NonNullable<QueueTask['outcome']>, error?: string): boolean {
     t.status = 'done';
     t.outcome = outcome;
     t.finishedAt = Date.now();
+    if (error) t.error = error;
     const who = t.workerName ?? 'Its worker';
     if (outcome === 'done') {
-      this.events.toast(`📋 ${who} finished ${label(t)}`, 'info');
+      // Its turn ended: "finished" only with the evidence (its PR merged); onPulls says so when that comes.
+      this.events.toast(turnEndedToast(who, label(t), t), 'info');
       // The worker most likely just opened the PR; go and link it.
       this.events.refreshGitHub();
-    } else if (outcome === 'exited') this.events.toast(`📋 ${who} stopped before finishing ${label(t)} — requeue it from the queue board`, 'warn');
+    } else if (outcome === 'exited') this.events.toast(stoppedToast(who, label(t), error), 'warn');
     return outcome === 'done';
   }
 

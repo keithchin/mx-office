@@ -13,6 +13,7 @@ import type { SendOpts, Sent } from './deliver.js';
 import { sessionAt } from './dispatch-session.js';
 import type { Roster } from './index.js';
 import type { TeamFloor } from './types.js';
+import { EMPTY_TELL, isEmptyTell } from '../../shared/tell-text.js';
 
 /** A target that types `text` to `w` (or holds it, as delivery decides), with what delivery said. */
 export function typeTarget(roster: Roster, floor: TeamFloor, w: WorkerInfo, text: string, opts: SendOpts, extra: Partial<Pick<Target, 'covers' | 'supersedes' | 'task'>> = {}): Target & { sent?: Sent } {
@@ -71,6 +72,8 @@ export const answerError = (r: AnswerResult): string | undefined => (r.ok ? unde
  * `task`: the new task it hands over (its ids go in the dispatch record, written before typing).
  */
 export async function sendAsAnswer(roster: Roster, floor: TeamFloor, w: WorkerInfo, text: string, opts: SendOpts, a: { decision: DecisionRef; by: string; expectedRev?: number; currentRev?: number; kind?: 'reply' | 'answer'; task?: DispatchTask; apply?: (sent: Sent | undefined) => void | Promise<void> }): Promise<{ result: AnswerResult; sent?: Sent }> {
+  // A person's tell with nothing in it (empty, or only an untouched "About …:" prefill): never recorded or typed (shared/tell-text.ts).
+  if (a.decision.startsWith('tell:') && isEmptyTell(text)) return { result: { ok: false, status: 400, error: EMPTY_TELL } };
   let target: (Target & { sent?: Sent }) | undefined;
   const result = await roster.dispatch.answer(floor.id, {
     decision: a.decision,

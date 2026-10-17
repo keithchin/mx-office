@@ -10,6 +10,13 @@
 // nudge and wait for the person, as a finished task does; a later merge or close upgrades them.
 //
 // Records saved before this (a doneAt with no outcome) are left as they are: "legacy" in outcomeOf.
+//
+// A merged PR is this task's delivery only with evidence that it is (packtrack audit, 16 Oct: six tasks
+// read "PR #3 merged" though PR #3 merged before any of them existed): it merged after the task was given
+// (Assignment.at, this attempt), and it carries the task's id, a `Task: tsk_…` line in its body (a PR
+// opened from the desk writes one) or in one of its commits (pr-task-ids.ts). A worker's PR that merged
+// before the task is not this task's at all; one merged after it without the id is only "associated
+// (unconfirmed)": the task stays open, and the agent is nudged as for any open task.
 
 /** A pull request as the floor's list has it: OPEN, MERGED or CLOSED (closed without merging). */
 export interface PullLook {
@@ -20,6 +27,12 @@ export interface PullLook {
   closes?: readonly number[];
   /** When GitHub says it closed (ISO time); a closed-unmerged PR older than OutcomeLook.closedSince raises no decision. */
   closedAt?: string;
+  /** When it merged (ISO time): a merge from before the task can't be the task's. */
+  mergedAt?: string;
+  /** Its description: a `Task: tsk_…` line there says which task it delivers. */
+  body?: string;
+  headRefOid?: string;
+  mergeCommit?: string;
 }
 
 /** Ends that finish the task for good (doneAt is set). */
@@ -31,7 +44,9 @@ export type Outcome =
   | { kind: FinalOutcome; why: string; pr?: number; issue?: number; closeReason?: string; supersedes?: number }
   | { kind: PendingOutcome; why: string; pr?: number }
   /** Its PR was closed unmerged, but a newer open one from the same worker carries the work: still open. */
-  | { kind: 'superseded'; why: string; pr: number; by: number };
+  | { kind: 'superseded'; why: string; pr: number; by: number }
+  /** A PR merged after the task without carrying its id: shown, never counted; the task stays open. */
+  | { kind: 'associated'; why: string; pr: number };
 
 /** The version of the outcome fields on an Assignment (resume.ts). */
 export const OUTCOME_V = 2;
@@ -58,7 +73,30 @@ export interface OutcomeLook {
    * every closed PR counts.
    */
   closedSince?: number;
+  /** When this attempt at the task was given (ms): only a PR merged (or closed) after it can be its end. */
+  since?: number;
+  /** The task's durable id: a merged PR must carry it to count. None (a legacy task): no merge counts. */
+  taskId?: string;
+  /** The task ids a PR's commits carry, or undefined while that isn't known (pr-task-ids.ts). */
+  carries?: (p: PullLook) => ReadonlySet<string> | undefined;
 }
+
+/** How a merged PR stands to a task: its delivery, merged before the task, or merged after it without its id. */
+export type PullEvidence = 'confirmed' | 'predates' | 'unconfirmed';
+
+const TASK_LINE = (id: string) => new RegExp(`^\\s*Task:\\s*${id}\\s*$`, 'im');
+
+/** Whether a merged PR is evidence for the task (see the head of this file). */
+export function pullEvidence(p: PullLook, l: Pick<OutcomeLook, 'since' | 'taskId' | 'carries'>): PullEvidence {
+  const merged = p.mergedAt ? Date.parse(p.mergedAt) : NaN;
+  if (l.since !== undefined && Number.isFinite(merged) && merged < l.since) return 'predates';
+  if (!Number.isFinite(merged) || !l.taskId) return 'unconfirmed';
+  if (p.body && TASK_LINE(l.taskId).test(p.body)) return 'confirmed';
+  return l.carries?.(p)?.has(l.taskId) ? 'confirmed' : 'unconfirmed';
+}
+
+const unconfirmedWhy = (p: PullLook, l: Pick<OutcomeLook, 'taskId'>) =>
+  `PR #${p.number} merged, associated (unconfirmed): ${l.taskId ? `it doesn't carry Task: ${l.taskId}` : 'the task has no id to carry'}`;
 
 /** Whether a closed-unmerged PR closed late enough to ask for a decision on it. */
 export function closedRecently(pull: Pick<PullLook, 'closedAt'>, since: number | undefined): boolean {
@@ -67,10 +105,30 @@ export function closedRecently(pull: Pick<PullLook, 'closedAt'>, since: number |
   return Number.isFinite(t) && t >= since;
 }
 
+/** Whether a closed PR closed after the task was given (no known time: it may have). */
+const closedAfter = (p: PullLook, since: number | undefined) => {
+  const t = p.closedAt ? Date.parse(p.closedAt) : NaN;
+  return since === undefined || !Number.isFinite(t) || t >= since;
+};
+
 /** How the task ended, or undefined while it's open. */
 export function outcome(l: OutcomeLook): Outcome | undefined {
-  const pull = l.pr !== undefined ? l.pulls?.find((p) => p.number === l.pr) : undefined;
-  if (pull?.state === 'MERGED') return { kind: 'integrated', why: `PR #${pull.number} merged`, pr: pull.number };
+  let pull = l.pr !== undefined ? l.pulls?.find((p) => p.number === l.pr) : undefined;
+  let associated: Outcome | undefined;
+  if (pull?.state === 'MERGED') {
+    const e = pullEvidence(pull, l);
+    if (e === 'confirmed') return { kind: 'integrated', why: `PR #${pull.number} merged`, pr: pull.number };
+    if (e === 'unconfirmed') associated = { kind: 'associated', why: unconfirmedWhy(pull, l), pr: pull.number };
+    // Merged before the task: not this task's PR at all.
+    pull = undefined;
+  } else if (pull?.state === 'CLOSED' && !closedAfter(pull, l.since)) pull = undefined;
+  // A closed one replaced by a newer PR from the same worker: that one's merge counts as above.
+  const by = pull?.state === 'CLOSED' ? supersedingPull(pull, l) : undefined;
+  const byEvidence = by?.state === 'MERGED' ? pullEvidence(by, l) : undefined;
+  if (pull && by && byEvidence === 'confirmed') return { kind: 'integrated', why: `PR #${by.number} merged (it replaced PR #${pull.number}, closed unmerged)`, pr: by.number, supersedes: pull.number };
+  // Another merged PR that names the task in its description (opened from the desk, or by hand).
+  const named = l.taskId ? l.pulls?.find((p) => p.state === 'MERGED' && p.number !== l.pr && pullEvidence(p, { since: l.since, taskId: l.taskId }) === 'confirmed') : undefined;
+  if (named) return { kind: 'integrated', why: `PR #${named.number} merged`, pr: named.number };
   if (l.issue !== undefined && l.closed?.has(l.issue)) {
     const reason = l.closed.get(l.issue) || undefined;
     if (dropped(reason)) return { kind: 'cancelled', why: `issue #${l.issue} closed as ${reason === 'DUPLICATE' ? 'a duplicate' : 'not planned'}`, issue: l.issue, closeReason: reason };
@@ -78,14 +136,15 @@ export function outcome(l: OutcomeLook): Outcome | undefined {
     if (!pull) return { kind: 'delivered', why: `issue #${l.issue} closed`, issue: l.issue, ...(reason ? { closeReason: reason } : {}) };
   }
   if (pull?.state === 'CLOSED') {
-    const by = supersedingPull(pull, l);
-    if (by?.state === 'MERGED') return { kind: 'integrated', why: `PR #${by.number} merged (it replaced PR #${pull.number}, closed unmerged)`, pr: by.number, supersedes: pull.number };
-    if (by) return { kind: 'superseded', why: `PR #${pull.number} was closed unmerged; PR #${by.number} replaces it`, pr: pull.number, by: by.number };
+    const e = byEvidence;
+    // Replaced by a merge that doesn't carry the task: no decision to ask for, and not delivered either.
+    if (by && e === 'unconfirmed') associated ??= { kind: 'associated', why: unconfirmedWhy(by, l), pr: by.number };
+    else if (by && !e) return { kind: 'superseded', why: `PR #${pull.number} was closed unmerged; PR #${by.number} replaces it`, pr: pull.number, by: by.number };
     // Closed before outcomes started here: no decision card; the task stays as it was (a claim still counts).
-    if (closedRecently(pull, l.closedSince)) return { kind: 'decision', why: `PR #${pull.number} was closed without merging`, pr: pull.number };
+    else if (closedRecently(pull, l.closedSince)) return { kind: 'decision', why: `PR #${pull.number} was closed without merging`, pr: pull.number };
   }
   if (l.lastWords && l.claim.test(l.lastWords.slice(-600))) return { kind: 'claimed', why: 'it said task done (pending verification)' };
-  return undefined;
+  return associated;
 }
 
 /** A newer open or merged PR from the same worker, for the same issue, that replaces a closed one. */

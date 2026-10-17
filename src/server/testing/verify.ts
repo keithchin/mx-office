@@ -13,6 +13,7 @@ import type { RoleId } from '../../shared/roster/roles.js';
 import { audit, human } from '../audit/index.js';
 import type { Roster } from '../roster/index.js';
 import { applyVerification } from '../roster/task-verify.js';
+import { staleDone } from '../roster/task-reopen.js';
 import type { TeamFloor } from '../roster/types.js';
 import path from 'node:path';
 import { testingStore } from './index.js';
@@ -51,7 +52,7 @@ export function criteriaOf(pull: Pick<GhPull, 'body' | 'number'> | undefined, jo
  */
 export async function verifyTasks(dataDir: string, roster: Roster, team: TeamFloor, floor: PullsLike, journeys?: ReadonlyMap<string, string[]>, since?: number): Promise<number> {
   const d = roster.data(floor.id);
-  const work = Object.entries(d.members).filter(([, m]) => m.task?.outcome === 'integrated' && m.task.doneAt !== undefined && m.task.pr !== undefined);
+  const work = Object.entries(d.members).filter(([, m]) => m.task?.outcome === 'integrated' && m.task.doneAt !== undefined && m.task.pr !== undefined && !staleDone(m.task, { pulls: floor.github.pulls.items }));
   if (!work.length) return 0;
   const [file, records] = await Promise.all([verifyStore(dataDir, floor.id).read(), testingStore(dataDir, floor.id).all()]);
   let n = 0;

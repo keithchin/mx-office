@@ -98,9 +98,18 @@ export interface WorkerInfo {
    */
   workedMs?: number;
   workingSince?: number;
+  /**
+   * How its last turn ended (status 'done' alone doesn't say): the agent stopped by itself ('stop'), an API
+   * error ended it ('error'), it was cancelled ('cancelled') or interrupted (Esc: 'interrupted'). Cleared when
+   * a new turn starts. A turn that ended is never by itself a finished task (server/queue.ts).
+   */
+  lastStop?: { kind: StopKind; at: number };
   /** Sent out by a map's herald (the castle's Hand of the King), so every browser has it run to its seat from beside them. */
   via?: 'herald';
 }
+
+/** How a turn ended (WorkerInfo.lastStop). */
+export type StopKind = 'stop' | 'error' | 'cancelled' | 'interrupted';
 
 /** Where the branch of a worker whose worktree was deleted still is (see WorkerInfo.lost). */
 export type LostBranch = 'here' | 'origin' | 'gone';
