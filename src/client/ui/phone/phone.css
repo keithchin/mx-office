@@ -138,7 +138,7 @@ html[data-theme^='portal'] .tp-badge-count { line-height: 20px; }
 .tp-note:hover { background: var(--card); }
 .tp-note-block { border-left: 6px solid var(--bad); }
 .tp-note-warn { border-left: 6px solid var(--warn); }
-.tp-note-acts { gap: 6px; margin-top: 6px; }
+.tp-note-acts { justify-content: flex-end; gap: 6px; margin-top: 6px; }
 .tp-act-approve { background: var(--good-soft); }
 .tp-act-reject { background: var(--bad-soft); }
 .tp-esc-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; padding: 8px; border: 2px dashed var(--rule-strong); border-radius: 10px; }

@@ -99,13 +99,15 @@ html[data-theme^='portal'] .pt-opt input { margin: 3px 0 0; accent-color: var(--
 html[data-theme^='portal'] .pt-esc-why { margin: 8px 0 0; color: var(--ink-2); font-size: 12.5px; }
 html[data-theme^='portal'] .pt-esc-note { display: block; width: 100%; min-height: 56px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--rule-strong); border-radius: 4px; background: var(--card); color: var(--ink); font: 400 13px/1.45 var(--font); resize: vertical; }
 html[data-theme^='portal'] .pt-esc-note[hidden] { display: none; }
-html[data-theme^='portal'] .pt-esc-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+/* Every item's buttons on their own line under its text, at the bottom right, so the text keeps the whole width. */
+html[data-theme^='portal'] .pt-esc-acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+html[data-theme^='portal'] .pt-esc-acts > .pt-grow { display: none; }
 html[data-theme^='portal'] .pt-esc { transition: box-shadow .4s ease; }
 html[data-theme^='portal'] .pt-esc.pt-flash { box-shadow: 0 0 0 3px var(--accent-soft); }
 html[data-theme^='portal'] .pt-nrow { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; font-size: 13.5px; }
 html[data-theme^='portal'] .pt-nrow small, html[data-theme^='portal'] .pt-done small { color: var(--muted); font-size: 12px; }
 html[data-theme^='portal'] .pt-nrow-t { overflow-wrap: anywhere; }
-html[data-theme^='portal'] .pt-nrow-b { display: flex; flex-wrap: wrap; gap: 6px; }
+html[data-theme^='portal'] .pt-nrow-b { display: flex; flex: 1 0 100%; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 html[data-theme^='portal'] .pt-done { display: flex; align-items: flex-start; gap: 8px; color: var(--ink-2); font-size: 13px; }
 html[data-theme^='portal'] .pt-done small { display: block; }
 html[data-theme^='portal'] .pt-calm { color: var(--good-ink); }
@@ -205,5 +207,6 @@ html[data-theme^='portal'] .pt-details-sub { display: block; margin-top: 2px; fo
 /* ---- A phone ---------------------------------------------------------------------------------------------- */
 @media (max-width: 760px) {
   html[data-theme^='portal'] .pt-esc-acts .btn { flex: 1 1 auto; }
+  html[data-theme^='portal'] body.lite.lite :is(.pt-esc-acts, .pt-nrow-b) .btn { min-height: 40px; }
   html[data-theme^='portal'] .pt-ov-card { padding: 12px 14px; }
 }

@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Changed
+
+- **Needs you's buttons sit at the bottom right of each item, so its words keep the whole width.** On the Overview's cards and rows (decisions, permission and review-gate cards, stage flags, budget warnings, incidents), the Command Center's Needs-you strip and the phone, the action buttons now go on their own line under the text, right-aligned, wrapping when there are many; the text is no longer squeezed into a narrow column beside them. On a phone the buttons are at least 40 px tall.
 
 ## 2026-10-17 · release 56 (`e2836b9`)
 
