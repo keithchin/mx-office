@@ -21,7 +21,7 @@ const TOOLING = [
  * resolves ONE knowledge base (analysis/<name>/knowledge-base when there is one, else analysis/knowledge-base)
  * and its Stage 2 reads only that one's brd/; a migration's extraction writes analysis/<source>/knowledge-base/
  * (skills/migration-pipeline.md), so a BRD put in analysis/knowledge-base/brd/ is read by every script but
- * gate-check (PackTrack, release 56: Stage 2 PENDING over a signed BRD; shared/brd-path.ts flags it).
+ * gate-check (a migration project, release 56: Stage 2 PENDING over a signed BRD; shared/brd-path.ts flags it).
  */
 const KB_LINE = '{{kb}}';
 const BRD_LINE = '{{brd}}';

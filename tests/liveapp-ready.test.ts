@@ -15,7 +15,7 @@ import { PLAN } from './fixtures/liveapp/plan.js';
 
 test('the plan: phases with their numbered rows, the goal from its title, BUILD rows as what the app needs', () => {
   const p = parsePlan(PLAN);
-  assert.equal(p.goal, 'PackTrack Line 7 demo (Checksheet)');
+  assert.equal(p.goal, 'Sample check-sheet demo (Checksheet)');
   assert.deepEqual(
     p.phases.map((x) => [x.id, x.title, x.rows.map((r) => r.n)]),
     [
@@ -69,7 +69,7 @@ test('readiness: what is in the running build, what is only in an open PR, what 
   assert.equal(by['phase-4'].state, 'branch');
   assert.match(by['phase-4'].line, /row 23 in PR #6.*row 24 not built/);
   assert.equal(r.ready, false);
-  assert.match(r.headline, /^Live app: not ready for PackTrack Line 7 demo \(Checksheet\)\. Has: Prerequisites, Frame, domain and skeleton \(not yet verified\) \(rows 4, 6–8\)\. Missing: Save, submit and My check sheets \(PR #6, open, not merged\); Approval, history and demo data \(PR #6, open, not merged; row 24 not built\)\.$/);
+  assert.match(r.headline, /^Live app: not ready for Sample check-sheet demo \(Checksheet\)\. Has: Prerequisites, Frame, domain and skeleton \(not yet verified\) \(rows 4, 6–8\)\. Missing: Save, submit and My check sheets \(PR #6, open, not merged\); Approval, history and demo data \(PR #6, open, not merged; row 24 not built\)\.$/);
 });
 
 test('readiness: merged to main but not in the running build says restart, not ready', () => {
@@ -92,7 +92,7 @@ test('readiness: ready only once the journey passed against this very build; not
   const all = new Set([1, 3, 4, 6, 7, 8, 10, 19, 20, 21, 23, 24]);
   const done = computeReadiness(base({ live: { sha: 'abc1234', rows: all }, main: { sha: 'abc1234', branch: 'main', rows: all }, branches: [], journeys: [journey, fillSubmit], results: [{ journey: 'skeleton', status: 'passed' }, { journey: 'op-fill-submit', status: 'passed' }] }));
   assert.equal(done.ready, true);
-  assert.match(done.headline, /^Live app: ready for PackTrack Line 7 demo/);
+  assert.match(done.headline, /^Live app: ready for Sample check-sheet demo/);
   const unverified = computeReadiness(base({ live: { sha: 'abc1234', rows: all }, main: { sha: 'abc1234', branch: 'main', rows: all }, branches: [], journeys: [journey, fillSubmit], results: [{ journey: 'skeleton', status: 'passed' }] }));
   assert.equal(unverified.ready, false, 'a journey that has not passed keeps it from ready');
   assert.match(unverified.headline, /built into the running app, not yet verified \(1 of 2 journeys/);

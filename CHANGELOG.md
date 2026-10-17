@@ -13,6 +13,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ### Changed
 
+- **Examples in code, tests and docs no longer use a real client's names.** Comments, test fixtures and docs now use neutral examples, and a test fails if a known client name comes back.
 - **The desktop app has the Mx Office icon.** The exe, its taskbar button, the window and the tray now show the office's Mx mark (the browser tab's icon) instead of Electron's, sharp at every size from the 16 px tray to a 256 px Explorer tile. A taskbar pin made before this may keep the old icon: unpin it and pin the app again.
 - **A key the office inherited is no longer passed to agents unless it belongs.** A key and its base URL are one set: `ANTHROPIC_API_KEY` without `ANTHROPIC_BASE_URL` in the office's environment isn't given to agents (they use their Claude login) until you confirm it; with its base URL (or Bedrock / Vertex) it keeps working as before. The first start with such a key shows a one-time decision in Needs you: **Keep using it** or **Use the agents' Claude login instead**. People on their own Claude sign-in never get the office's `ANTHROPIC_BASE_URL` either.
 - **The desktop app leaves the Claude key to the office.** It doesn't pass `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_BASE_URL` on to the office it starts unless Connections say to use the office's environment, and its log says which applies (names only, never a value).

@@ -29,7 +29,7 @@ Every Lead's (and the Project Coordinator's) Playbook says:
   - npm test → 42 passed
   - mxcli check -p App.mpr → 0 errors
   Files read:
-  - docs/scg/handover.md
+  - docs/client/handover.md
   - docs/team/analysis.md
   Verdict: approve
   ```

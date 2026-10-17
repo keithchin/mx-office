@@ -1,4 +1,4 @@
-// The Studio Pro hand-add gate (PackTrack, 2026-10-16): the Lead Developer escalated "Studio Pro hand-add
+// The Studio Pro hand-add gate (a migration project, 2026-10-16): the Lead Developer escalated "Studio Pro hand-add
 // needed: photo upload control" because mxcli can't place Studio Pro's built-in Image uploader, while the
 // Marketplace's pluggable File Uploader widget did it, found in one search once the agent was told. So an
 // agent's escalation that asks for a Studio Pro hand-add, or says mxcli can't do something, reaches the

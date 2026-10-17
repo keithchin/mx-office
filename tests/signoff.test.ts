@@ -22,7 +22,7 @@ import type { Floor } from '../src/server/floor.js';
 
 const NOW = Date.parse('2026-10-16T09:00:00Z');
 const v = (id: string, title: string, status: string, detail?: string) => ({ id, title, status, ...(detail ? { detail } : {}) });
-/** The live packtrack project's dashboard on day one (the rows that aren't stages included). */
+/** A live project's dashboard on day one (the rows that aren't stages included). */
 const FRESH = [
   v('⟳', 'Protocol freshness', 'PASS'),
   v('?', 'Open questions raised', 'MANUAL'),
@@ -62,7 +62,7 @@ test('a brand-new project (P/0 FAIL, 1–4 PENDING, 5 MANUAL): no sign-off card,
   assert.equal(cards.filter((c) => c.sources.some((x) => x.type === 'signoff')).length, 0);
   // The panel's stages (P to 4, shown) with 5 MANUAL as gate-check has it: not waiting.
   const shown = setup({ show: true, stages: FRESH.filter((x) => /^[P0-5]$/.test(x.id)), verdicts: FRESH });
-  const digest = buildDigest({ floor: 'f1', project: 'PackTrack', now: NOW, pulls: [], needs: collectNeeds(input({ setup: shown })), setup: shown });
+  const digest = buildDigest({ floor: 'f1', project: 'Sample Project', now: NOW, pulls: [], needs: collectNeeds(input({ setup: shown })), setup: shown });
   assert.deepEqual(digest.stages?.waiting, []);
   assert.equal(stageLine(shown.stages), 'Stage P · Kickoff ❌ gate failing');
 });
@@ -81,7 +81,7 @@ test('every earlier stage passed: the card is there, its Sign off opens the sign
   assert.equal(c.escalation, undefined);
   // The digest and the phone line agree.
   const shown = setup({ show: true, stages: AT_BUILD.filter((x) => /^[P0-5]$/.test(x.id)), verdicts: AT_BUILD });
-  assert.deepEqual(buildDigest({ floor: 'f1', project: 'PackTrack', now: NOW, pulls: [], needs: [], setup: shown }).stages?.waiting, ['Stage 5']);
+  assert.deepEqual(buildDigest({ floor: 'f1', project: 'Sample Project', now: NOW, pulls: [], needs: [], setup: shown }).stages?.waiting, ['Stage 5']);
   assert.match(stageLine(shown.stages) ?? '', /Stage 5 · Build ✋ waiting for your sign-off/);
 });
 

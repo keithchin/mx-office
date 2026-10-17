@@ -28,7 +28,7 @@ Live apps don't start by themselves when the office starts. Open the tab and cli
 
 Under the buttons, a card says whether the app is ready, from evidence only:
 
-> **Live app: not ready for PackTrack Line 7 demo (Checksheet).** Has: Prerequisites, Frame, domain and skeleton (not yet verified) (rows 4, 6–8). Missing: Save, submit and My check sheets (PR #6, open, not merged); Approval, history and demo data (PR #6, open, not merged; row 24 not built).
+> **Live app: not ready for Sample check-sheet demo (Checksheet).** Has: Prerequisites, Frame, domain and skeleton (not yet verified) (rows 4, 6–8). Missing: Save, submit and My check sheets (PR #6, open, not merged); Approval, history and demo data (PR #6, open, not merged; row 24 not built).
 
 Then one line per milestone, tagged **Ready**, **Not verified**, **Restart**, **In a PR**, **Partly** or **Not built**.
 

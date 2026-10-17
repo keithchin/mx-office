@@ -1,4 +1,4 @@
-// Tell honesty (the packtrack audit of 16 Oct, findings 4 and 5): an agent's `office-workers tell` / tell_worker
+// Tell honesty (the project audit of 16 Oct, findings 4 and 5): an agent's `office-workers tell` / tell_worker
 // says only what the office has evidence for (queued, typed, received; never "Told" before the session shows it),
 // and a message with nothing in it (empty, whitespace, only a marker or only the "About …:" prefill an Ask button
 // puts in the box) is refused before anything is recorded or typed. Fake floors only.

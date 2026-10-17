@@ -1,7 +1,7 @@
-// A PackTrack-shaped build plan for the live app readiness tests (tests/liveapp-*.test.ts).
+// A build plan shaped like a real migration project's for the live app readiness tests (tests/liveapp-*.test.ts).
 
-/** A PackTrack-shaped build plan: phases of numbered rows, every State "not built" (as the agents leave it). */
-export const PLAN = `# Build plan — PackTrack Line 7 demo (Checksheet)
+/** A build plan shaped like a real migration project's: phases of numbered rows, every State "not built" (as the agents leave it). */
+export const PLAN = `# Build plan — Sample check-sheet demo (Checksheet)
 
 Stage 4, small tier.
 

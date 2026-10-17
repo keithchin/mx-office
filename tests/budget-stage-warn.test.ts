@@ -3,7 +3,7 @@
 // line warns once at each of 1×, 2×, 5×, 10×; Dismiss for this stage holds until the next level; the pace
 // warning (run-out before the plan's end or a milestone) at most once a day; nothing within plan; spend with
 // no stage, and a project without the pipeline, said honestly; the budget's own alerts and pause untouched.
-// Shaped on packtrack's ledger of 16 Oct (Stage 5 at $61.70 against a $6.86 plan line, $500 budget).
+// Shaped on a migration project's ledger of 16 Oct (Stage 5 at $61.70 against a $6.86 plan line, $500 budget).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -73,7 +73,7 @@ test('spend with no stage and stages without a plan line never warn; nor does a 
 });
 
 test('the run-out estimate: what is left ÷ the recent pace, calendar days, none without a budget or recent spend', () => {
-  // packtrack: $111.51 on its first and only day, $500 budget: $388.49 left at $111.51 a day → 4 days.
+  // The sample project: $111.51 on its first and only day, $500 budget: $388.49 left at $111.51 a day → 4 days.
   const r = runOutOf({ [DAY]: 111.51 }, DAY, 500, 111.51)!;
   assert.deepEqual(r, { date: '2026-10-20', perDay: 111.51, days: 1, remaining: 388.49 });
   // Averaged over the last 7 days once the ledger is older (quiet days count).
@@ -126,7 +126,7 @@ const PLAN: BudgetPlan = {
   ],
   start: DAY,
   end: '2026-11-05',
-  basis: 'packtrack-like',
+  basis: 'project-like',
   generatedAt: NOW,
 };
 
@@ -137,7 +137,7 @@ function service(t: { after(fn: () => void): void }, stage: StageId = '5') {
   const b = new BudgetService({
     dataDir: dir,
     now: () => now,
-    floors: () => [{ id: 'p', name: 'packtrack', dir }],
+    floors: () => [{ id: 'p', name: 'sample-checksheet-demo', dir }],
     workers: () => [],
     floorOfWorker: () => 'p',
     roleOf: () => undefined,
@@ -146,7 +146,7 @@ function service(t: { after(fn: () => void): void }, stage: StageId = '5') {
     officeLedger: { add: () => {}, state: () => ({ total: zeroUsage(), today: zeroUsage(), day: localDay(NOW), pauseHiring: false }) as UsageState },
     runs: () => [],
   });
-  const floor = { id: 'p', name: 'packtrack', dir };
+  const floor = { id: 'p', name: 'sample-checksheet-demo', dir };
   const f = b.file(floor);
   f.ledger.backfilled = true;
   f.plan = structuredClone(PLAN);
@@ -163,7 +163,7 @@ function service(t: { after(fn: () => void): void }, stage: StageId = '5') {
   return { b, f, floor, deps, warned, alerts, records, spend, check, at: (ms: number) => (now = ms) };
 }
 
-test('packtrack: Stage 5 at 9× its plan warns with the run-out estimate; the 80 % alert and auto-pause are untouched', (t) => {
+test('a migration project: Stage 5 at 9× its plan warns with the run-out estimate; the 80 % alert and auto-pause are untouched', (t) => {
   const s = service(t);
   setSettings(s.b, s.floor, { total: 500 }, 'Keith', s.deps);
   s.spend('P', 44.71);

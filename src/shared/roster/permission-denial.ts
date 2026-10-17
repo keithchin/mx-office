@@ -1,4 +1,4 @@
-// An escalation about a permission denial (packtrack audit, 16 Oct 2026, finding 2): the agent's tool call
+// An escalation about a permission denial (project audit, 16 Oct 2026, finding 2): the agent's tool call
 // was denied by Claude Code's permission layer (its mode or rules), so an Approve in the office changes
 // nothing: the PM "approved" one scratch-copy `mxcli exec` five times while the terminal kept denying it.
 // Such an escalation is a settings action: the exact command, the allow rule for exactly it, and the card

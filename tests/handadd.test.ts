@@ -1,4 +1,4 @@
-// The Studio Pro hand-add gate (PackTrack, 2026-10-16): an agent's escalation asking for a Studio Pro
+// The Studio Pro hand-add gate (a migration project, 2026-10-16): an agent's escalation asking for a Studio Pro
 // hand-add, or saying mxcli can't do something, with no `Tried:` section goes back to the agent through the
 // escalate tool's reply, audited (escalation.handadd-returned) and not stored, so nothing waits on the
 // Project Manager. With a `Tried:` section it's raised as usual and its card shows the section first. Ones

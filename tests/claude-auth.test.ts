@@ -149,8 +149,8 @@ test('the watch reads a transcript only when it changed, and reports failures an
   const now = Date.parse('2026-10-17T20:30:00Z');
   const watch = new AuthWatch({
     workers: () => [
-      { id: 'w1', name: 'Sophie', floor: 'packtrack', transcript: 't1.jsonl' },
-      { id: 'w2', name: 'Leslie', floor: 'packtrack' },
+      { id: 'w1', name: 'Sophie', floor: 'sample-checksheet-demo', transcript: 't1.jsonl' },
+      { id: 'w2', name: 'Leslie', floor: 'sample-checksheet-demo' },
     ],
     onFail: (w) => fails.push(w.name),
     onOk: (w) => oks.push(w.name),
@@ -179,8 +179,8 @@ test('an authentication failure is one red item and one incident for the office,
     const d = deps({ ANTHROPIC_API_KEY: FAKE_KEY });
     updateOfficeSettings({ claudeAuth: { mode: 'env' } });
     const T = Date.parse('2026-10-17T20:23:00Z');
-    noteAuthFailure({ id: 'w1', name: 'Sophie', floor: 'packtrack' }, T, d);
-    noteAuthFailure({ id: 'w1', name: 'Sophie', floor: 'packtrack' }, T, d);
+    noteAuthFailure({ id: 'w1', name: 'Sophie', floor: 'sample-checksheet-demo' }, T, d);
+    noteAuthFailure({ id: 'w1', name: 'Sophie', floor: 'sample-checksheet-demo' }, T, d);
     noteAuthFailure({ id: 'w2', name: 'Leslie', floor: 'other' }, T + 1000, d);
     const v = claudeAuthView(true, d);
     assert.equal(v.failure?.workers.length, 2);
@@ -217,7 +217,7 @@ test('“Use the agents’ Claude login instead” switches (admin, audited), th
   try {
     const d: SourceDeps = { started: { ANTHROPIC_API_KEY: FAKE_KEY, ANTHROPIC_BASE_URL: 'https://gw.example' }, setting: () => officeSettings().claudeAuth, stored: (id) => vault.get(id), testMode: () => false };
     assert.equal(claudeAuthView(true, d).mode, 'env');
-    noteAuthFailure({ id: 'w1', name: 'Sophie', floor: 'packtrack' }, Date.now(), d);
+    noteAuthFailure({ id: 'w1', name: 'Sophie', floor: 'sample-checksheet-demo' }, Date.now(), d);
     assert.equal(await setClaudeAuth({ mode: 'login' }, { name: 'Keith' }, d), undefined);
     const v = claudeAuthView(true, d);
     assert.deepEqual([v.mode, v.chosen], ['login', true]);
@@ -237,7 +237,7 @@ test('“Use the agents’ Claude login instead” switches (admin, audited), th
     // Restart: the refused agent is put to sleep and resumed with a note.
     const calls: string[] = [];
     let status = 'working';
-    const floors = new Map([['packtrack', { workers: { list: () => [{ id: 'w1', status }], sleep: (id: string) => (calls.push(`sleep ${id}`), (status = 'exited'), undefined), resume: (id: string, prompt?: string) => (calls.push(`resume ${id} ${/authentication/.test(prompt ?? '')}`), undefined) } }]]);
+    const floors = new Map([['sample-checksheet-demo', { workers: { list: () => [{ id: 'w1', status }], sleep: (id: string) => (calls.push(`sleep ${id}`), (status = 'exited'), undefined), resume: (id: string, prompt?: string) => (calls.push(`resume ${id} ${/authentication/.test(prompt ?? '')}`), undefined) } }]]);
     assert.equal(await restartAffected({ floors } as never, { name: 'Keith' }), 1);
     assert.deepEqual(calls, ['sleep w1', 'resume w1 true']);
   } finally {

@@ -1,5 +1,5 @@
 // Build (Stage 5) shows its progress, and a signed-off stage gate-check still calls PENDING doesn't hide it
-// (PackTrack, release 56: "Build · not started" over a build half merged, because gate-check's Stage 2
+// (a migration project, release 56: "Build · not started" over a build half merged, because gate-check's Stage 2
 // looked for the signed BRD in analysis/legacy/knowledge-base/brd/ while the Playbook had put it in
 // analysis/knowledge-base/brd/). Pure checks, then a synthetic project (a bare origin, a floor clone, a
 // merged build PR, a branch ahead with an open PR) read through the office's own gate-check with the fake
@@ -31,7 +31,7 @@ import type { SetupView } from '../src/shared/wizard.js';
 const FAKE = path.join(import.meta.dirname, 'fixtures', 'stage-derive', 'fake-gate-check.mjs');
 test.after(() => stopExecWorker());
 
-// PackTrack's gate-check on main @68cc068, as committed in reports/management/gate-check-main-2026-10-16.md.
+// A migration project's gate-check on main @68cc068, as committed in reports/management/gate-check-main-2026-10-16.md.
 const VERDICTS = [
   { id: 'P', title: 'Kickoff', status: 'PASS' },
   { id: '0', title: 'Triage', status: 'PASS' },
@@ -56,7 +56,7 @@ const EVIDENCE: BuildEvidence = {
   sha: '68cc0680000000000000000000000000000000000',
   plan: { total: 33, built: 0, partial: 0, blocked: 0, states: Object.fromEntries(Array.from({ length: 33 }, (_, i) => [String(i + 1), 'not built'])) },
   merged: [{ number: 3, title: 'Stage 5 build: frame, domain, stubs/nav, theme, skeleton, seed (rows 4-14)', files: 63, rows: rowsIn('rows 4-14') }],
-  // PackTrack's rows named in commits (the coordinator's read): main 3,4,6–11,13,14 (3 only in a journal line); Sophie's branch 15–17,19–21,23–25,27,32 (21 check-only, 32 a recorded rule).
+  // The project's rows named in commits (the coordinator's read): main 3,4,6–11,13,14 (3 only in a journal line); Sophie's branch 15–17,19–21,23–25,27,32 (21 check-only, 32 a recorded rule).
   open: [{ branch: 'office/pixel-b1e9', ahead: 75, files: 120, pr: { number: 6, title: 'Stage 5 build: sheet core, form, save/submit, pages, photo upload' }, rows: [15, 16, 17, 19, 20, 23, 24, 25, 27] }],
   rows: { main: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], branch: [15, 16, 17, 19, 20, 23, 24, 25, 27], mentioned: [3, 21, 32] },
   log: { entries: 12, last: { at: '2026-10-16 18:29', what: '04-rebuild.mdl ⚠️ applied, LINT ROSE' } },
@@ -99,12 +99,12 @@ test("the build plan's State column, a PR title's rows and BUILD-LOG's build row
 
 test("each row's evidence comes from the commits naming it, BUILD-LOG notes and merged PR titles: on main, on a branch, or only mentioned", () => {
   const c = (subject: string, files: string[] = []) => ({ subject, files });
-  // PackTrack's own subjects.
+  // The project's own subjects.
   const main = [
     c('Row 14: seed proven by OQL read-back and second startup'),
     c('Row 13: seed definition applied; lint re-baselined (ACT_/ASu_ names per brief)', ['mdlsource/2-form/04-seed-definition.mdl']),
     c('Draft row 13 seed definition (generated)', ['mdlsource/2-form/04-seed-definition.mdl']),
-    c('Row 4: bilingual Line 7 definition labels file', ['mdlsource/seed/line7-definition-labels.json']),
+    c('Row 4: bilingual definition labels file', ['mdlsource/seed/definition-labels.json']),
     c('Row 11: design-reaches-app counts read by hand', ['docs/BUILD-LOG.md']),
     c('Lint baseline after rows 6-7', ['lint-baseline.json']),
     c('Journal: row 3 probe check results, exec blocked', ['docs/team/development.md']),
@@ -202,9 +202,9 @@ test('the stage line, the sign-off card and the phone say Build is in progress r
 });
 
 test("gate-check's Stage 2 missing a BRD that sits in another knowledge base is flagged, with the paths, and asks the lead to fix the paperwork", () => {
-  const kb = { nested: ['analysis/legacy/knowledge-base'], flat: true, root: false, brds: { 'analysis/knowledge-base': ['analysis/knowledge-base/brd/F001-line7-check-sheet.brd.json'] } };
+  const kb = { nested: ['analysis/legacy/knowledge-base'], flat: true, root: false, brds: { 'analysis/knowledge-base': ['analysis/knowledge-base/brd/F001-check-sheet.brd.json'] } };
   assert.equal(gateCheckKb(kb), 'analysis/legacy/knowledge-base', 'the per-source knowledge base wins');
-  assert.equal(brdPathFlag(kb)?.text, "gate-check didn't find the BRD at analysis/legacy/knowledge-base/brd/; it's at analysis/knowledge-base/brd/F001-line7-check-sheet.brd.json");
+  assert.equal(brdPathFlag(kb)?.text, "gate-check didn't find the BRD at analysis/legacy/knowledge-base/brd/; it's at analysis/knowledge-base/brd/F001-check-sheet.brd.json");
   assert.equal(brdPathFlag({ ...kb, nested: [] }), undefined, 'no per-source knowledge base: gate-check reads analysis/knowledge-base and finds it');
   assert.equal(brdPathFlag({ ...kb, nested: ['analysis/a/knowledge-base', 'analysis/b/knowledge-base'] }), undefined, 'two workstreams: gate-check refuses, nothing to say about one');
   assert.equal(brdPathFlag({ ...kb, brds: { ...kb.brds, 'analysis/legacy/knowledge-base': ['analysis/legacy/knowledge-base/brd/F001.brd.json'] } }), undefined);
@@ -213,12 +213,12 @@ test("gate-check's Stage 2 missing a BRD that sits in another knowledge base is 
   assert.equal(flags[0].text, 'Stage 2 is signed off in PROJECT.md, but gate-check still reports Stage 2 pending: no brd/*.brd.json scaffolds yet');
   assert.equal(stageFlags(VERDICTS.map((v) => (v.id === '2' ? { ...v, status: 'PASS' } : v)), DECISIONS, undefined, kb).length, 0, 'Stage 2 passing: nothing to flag');
   const msg = stageFixMessage(flags, 'main @68cc068');
-  assert.match(msg, /gate-check didn't find the BRD at analysis\/legacy\/knowledge-base\/brd\/; it's at analysis\/knowledge-base\/brd\/F001-line7-check-sheet\.brd\.json\. gate-check's Stage 2 reads BRDs only from analysis\/legacy\/knowledge-base\/brd\//);
+  assert.match(msg, /gate-check didn't find the BRD at analysis\/legacy\/knowledge-base\/brd\/; it's at analysis\/knowledge-base\/brd\/F001-check-sheet\.brd\.json\. gate-check's Stage 2 reads BRDs only from analysis\/legacy\/knowledge-base\/brd\//);
   assert.match(msg, /Don't edit the toolkit/);
   const setup = { toolkit: true, stage: { stage: { id: '5', title: 'Build', status: 'MANUAL' }, check: { source: 'office', branch: 'main', sha: 'abc1234def' }, flags: [flags[1]] } } as unknown as SetupView;
   const [card] = stageFlagCandidates(setup, 'f1');
   assert.equal(card.need.action, 'Ask the lead to fix the paperwork');
-  assert.equal(card.body.evidence[0].label, 'BRD on main: analysis/knowledge-base/brd/F001-line7-check-sheet.brd.json (gate-check looked in analysis/legacy/knowledge-base/brd/)');
+  assert.equal(card.body.evidence[0].label, 'BRD on main: analysis/knowledge-base/brd/F001-check-sheet.brd.json (gate-check looked in analysis/legacy/knowledge-base/brd/)');
 });
 
 test("the Playbook and the Discovery brief put a migration's BRDs where the toolkit's gate-check reads them", () => {
@@ -246,7 +246,7 @@ test("the Playbook and the Discovery brief put a migration's BRDs where the tool
 
 const PLAN = ['# Build plan', '', '| # | Kind | Step | Produces / Proves | Depends on | Skills | State |', '|---|---|---|---|---|---|---|', ...Array.from({ length: 33 }, (_, i) => `| ${i + 1} | BUILD | step ${i + 1} | x | — | none | not built |`), ''].join('\n');
 const REGISTER = [
-  '# PROJECT.md — packtrack-like Decision Register',
+  '# PROJECT.md — project-like Decision Register',
   '',
   '## Current stage',
   '',
@@ -282,7 +282,7 @@ function project(t: { after(fn: () => void): void }) {
   put(seed, 'triage.md', '# Triage\n\n## Sign-off\n\nConfirmed by: Keith (Project Manager) on 2026-10-16\n');
   put(seed, 'analysis/kb/README.md', 'kb');
   put(seed, 'analysis/legacy/knowledge-base/KB.md', 'the extraction');
-  put(seed, 'analysis/knowledge-base/brd/F001-line7-check-sheet.brd.json', '{"id":"F001"}');
+  put(seed, 'analysis/knowledge-base/brd/F001-check-sheet.brd.json', '{"id":"F001"}');
   put(seed, 'architecture/fit-gap.md', 'fit-gap');
   put(seed, 'architecture/build-plan.md', PLAN);
   put(seed, 'docs/BUILD-LOG.md', '2026-10-16T03:44:32Z  SOURCE-WAIVED legacy/x reason: lockfile\n');
@@ -359,7 +359,7 @@ test('a synthetic migration project: the signed BRD gate-check misses is flagged
   const ev = stageEvidence(view, r.files['PROJECT.md'], r.check, seen)!;
   assert.equal(ev.stage?.id, '5');
   const brd = ev.flags.find((f) => f.kind === 'brd-path');
-  assert.equal(brd?.text, "gate-check didn't find the BRD at analysis/legacy/knowledge-base/brd/; it's at analysis/knowledge-base/brd/F001-line7-check-sheet.brd.json");
+  assert.equal(brd?.text, "gate-check didn't find the BRD at analysis/legacy/knowledge-base/brd/; it's at analysis/knowledge-base/brd/F001-check-sheet.brd.json");
   const ps = derivePhases({ toolkit: true, entry: 'migration', verdicts: view.verdicts ?? [], decisions: view.decisions ?? [], acceptance: ACCEPTANCE, stage: ev.stage!.id, build: ev.build });
   assert.equal(phase(ps, '2').measures[0], 'Signed off (gate-check says PENDING: no brd/*.brd.json scaffolds yet)');
   assert.equal(phase(ps, '5').status, 'active');

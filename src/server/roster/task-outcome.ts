@@ -11,7 +11,7 @@
 //
 // Records saved before this (a doneAt with no outcome) are left as they are: "legacy" in outcomeOf.
 //
-// A merged PR is this task's delivery only with evidence that it is (packtrack audit, 16 Oct: six tasks
+// A merged PR is this task's delivery only with evidence that it is (project audit, 16 Oct: six tasks
 // read "PR #3 merged" though PR #3 merged before any of them existed): it merged after the task was given
 // (Assignment.at, this attempt), and it carries the task's id, a `Task: tsk_…` line in its body (a PR
 // opened from the desk writes one) or in one of its commits (pr-task-ids.ts). A worker's PR that merged

@@ -1,4 +1,4 @@
-// Escalation hygiene (packtrack audit 16 Oct 2026, findings 2 and 3; shapes from its roster, synthetic text):
+// Escalation hygiene (project audit 16 Oct 2026, findings 2 and 3; shapes from its roster, synthetic text):
 // an ask naming an open escalation (ESC-<id>, `escalation <id>`) or the same decision id folds into it; one
 // naming an answered escalation tells the agent the answer and raises nothing; an AWAITING-PM qualifier
 // ("not blocking rows 15-20") is not an item; chat lines that only report a state are not asks; a denial by

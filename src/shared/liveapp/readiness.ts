@@ -1,6 +1,6 @@
 // Whether the live app is ready, milestone by milestone, from evidence only. A milestone is a phase of the
 // build plan (./plan.ts) with the BUILD rows it needs, and the whole plan is the last one (its goal: "the
-// PackTrack Line 7 demo"). For the commit the live app runs, each milestone is:
+// Sample check-sheet demo"). For the commit the live app runs, each milestone is:
 //   ready        every BUILD row has evidence in that commit (./rows.ts, commits that are its ancestors)
 //                and every journey tied to it passed against that very build (a test-run record whose
 //                tested revision is the live commit);

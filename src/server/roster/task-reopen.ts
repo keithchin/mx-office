@@ -1,6 +1,6 @@
 // Tasks recorded as done by a PR that can't be theirs (task-outcome.ts: a merge counts only after the task
 // was given, and only with its id). Before that rule the office closed every new task of a worker whose
-// old PR had merged: on packtrack six of Sophie's tasks read "PR #3 merged", though PR #3 merged at 11:01Z
+// old PR had merged: on a migration project six of Sophie's tasks read "PR #3 merged", though PR #3 merged at 11:01Z
 // and they were given from 11:15Z on. Each time a member's task is read, a recorded end like that is taken
 // back: the task is open again (or, among the earlier ones, was open when it was replaced), with a note of
 // what it said. The durable task record (server/tasks/, append only) is never rewritten; the roster's own

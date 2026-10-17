@@ -1,4 +1,4 @@
-// Who an agent's commits say made them (2026-10-16 packtrack audit: every commit read "Keith Chin", the
+// Who an agent's commits say made them (2026-10-16 project audit: every commit read "Keith Chin", the
 // person whose git config the workers inherited, so the history said the PM wrote code he never saw).
 // Each agent worker commits as itself: author "<Name> (Mx Office <role>)" with a stable address per
 // profile (or role, or worker) under agents.mx-office.local, never a real mailbox; committer the office's

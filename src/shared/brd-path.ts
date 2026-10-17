@@ -7,7 +7,7 @@
 // Stage 2 reads only `<KB_DIR>/brd/`. A migration's extraction writes analysis/<source>/knowledge-base/, so a
 // BRD written to analysis/knowledge-base/brd/ (what the office's Playbook said for every mode before this) is read by
 // every script but gate-check, which reports Stage 2 PENDING "no brd/*.brd.json scaffolds yet" over a
-// signed BRD (PackTrack, release 56). The office doesn't move files: it says where gate-check looked and
+// signed BRD (a migration project, release 56). The office doesn't move files: it says where gate-check looked and
 // where the BRD is, and the stage card asks the lead to fix it. Pure.
 
 export interface BrdLayout {

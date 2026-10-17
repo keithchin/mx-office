@@ -1,7 +1,7 @@
 // The live app's milestones, from the project's own plan: the toolkit build plan's phases
 // (architecture/build-plan.md: "### Phase 3 — Save, submit and My check sheets" over a table of
 // "| # | Kind | Step | Produces / Proves | Depends on | Skills | State |" rows) and the plan's goal (its
-// title, "# Build plan — PackTrack Line 7 demo (Checksheet)"); and the test journeys
+// title, "# Build plan — Sample check-sheet demo (Checksheet)"); and the test journeys
 // (tests/e2e/*.journey.json) with the rows and use cases they say they prove. The State column is read
 // by nothing here: row evidence comes from commits (./rows.ts). Pure.
 
@@ -23,7 +23,7 @@ export interface PlanPhase {
 }
 
 export interface ParsedPlan {
-  /** What the whole plan builds, from its title ("PackTrack Line 7 demo (Checksheet)"). */
+  /** What the whole plan builds, from its title ("Sample check-sheet demo (Checksheet)"). */
   goal?: string;
   phases: PlanPhase[];
 }

@@ -1,10 +1,10 @@
 // The review gate and the agents' own commit identity (server/review-gate/, workers/git-identity.ts,
-// roster/git-identity.ts; packtrack audit 2026-10-16 findings 6 and 8 and "gate erosion"): each agent
+// roster/git-identity.ts; project audit 2026-10-16 findings 6 and 8 and "gate erosion"): each agent
 // commits as itself with the office as committer; an agent's PR merged fast, without a review by another
 // agent recorded on it, reviewed only by itself, or called "(reviewed)" with nothing behind it, is
 // flagged and its task never reads as verified; a qualifying review by another lead is fine; pushes
 // straight to the default branch, force pushes, and lint-baseline resets or waivers without a decision
-// are flagged too. Synthetic data shaped like packtrack's PR list; local temp git repos only.
+// are flagged too. Synthetic data shaped like a real project's PR list; local temp git repos only.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -81,7 +81,7 @@ test('the identity in the worker env wins over the person’s git config: a real
   gitIn(dir, ['config', 'user.name', 'Keith Chin']);
   gitIn(dir, ['config', 'user.email', 'keith@example.test']);
   const env = agentGitEnv(worker(), { name: 'Katherine', role: 'Chief Analyst', key: 'chief-analyst' }, OFFICE);
-  commit(dir, 'docs/x.md', 'x', 'SCG handover draft', env);
+  commit(dir, 'docs/x.md', 'x', 'Client handover draft', env);
   assert.equal(gitIn(dir, ['log', '-1', '--format=%an <%ae>|%cn <%ce>']), 'Katherine (Mx Office Chief Analyst) <chief-analyst@agents.mx-office.local>|Mx Office Bot <office@example.test>');
   assert.equal(agentFromAuthor(gitIn(dir, ['log', '-1', '--format=%an'])), 'Katherine', 'the gate reads the agent back off the author');
 });
@@ -100,21 +100,21 @@ test('a hire holds its seat at its desk while the worker starts, so even its fir
 
 // ---- 2. The review rule ------------------------------------------------------------------------------
 
-const REVIEW = ['Review: Sophie (Lead Developer)', 'Checks:', '- npm test → 42 passed', '- mxcli check -p App.mpr → 0 errors', 'Files read:', '- docs/scg/handover.md', '- docs/team/analysis.md', 'Verdict: approve'].join('\n');
+const REVIEW = ['Review: Sophie (Lead Developer)', 'Checks:', '- npm test → 42 passed', '- mxcli check -p App.mpr → 0 errors', 'Files read:', '- docs/client/handover.md', '- docs/team/analysis.md', 'Verdict: approve'].join('\n');
 
 test('a Review comment is parsed for its reviewer, the checks with their results and the files read; a skim is not one', () => {
   const r = parseReview(REVIEW)!;
   assert.equal(r.reviewer, 'Sophie');
   assert.equal(r.role, 'Lead Developer');
   assert.deepEqual(r.checks, ['npm test → 42 passed', 'mxcli check -p App.mpr → 0 errors']);
-  assert.deepEqual(r.files, ['docs/scg/handover.md', 'docs/team/analysis.md']);
+  assert.deepEqual(r.files, ['docs/client/handover.md', 'docs/team/analysis.md']);
   assert.ok(reviewComplete(r));
   assert.ok(reviewComplete(parseReview('**Review:** Maya (Lead Tester)\nChecks: npm test -> pass; lint -> 0 new\nFiles read: tests/a.test.ts')));
   assert.equal(reviewComplete(parseReview('Review: Sophie (Lead Developer)\nI read it end to end; it matches the journals.')), false, 'no checks, no files');
   assert.equal(reviewComplete(parseReview('Review: Sophie\nChecks:\n- looked at it\nFiles read:\n- all')), false, 'a check with no result');
   assert.equal(parseReview('LGTM'), undefined);
   assert.equal(openerFromBody('Opened by Katherine (Chief Analyst) via Mx Office\n\nDocs only.'), 'Katherine');
-  assert.ok(claimsReviewed('SCG handover draft (reviewed, internal)'));
+  assert.ok(claimsReviewed('Client handover draft (reviewed, internal)'));
   assert.equal(claimsReviewed('Review protocol docs'), false);
 });
 
@@ -127,11 +127,11 @@ test('the Playbook rule names the agent’s own opener line, the Review comment,
   assert.match(rule, /Decided per ESC-<id> rev <n>/);
 });
 
-/** Packtrack's PR #5 as the office's PR list has it (synthetic copy of the shape). */
+/** A project's PR #5 as the office's PR list has it (synthetic copy of the shape). */
 function pr5(over: Partial<GhPull> = {}): GhPull {
   return {
     number: 5,
-    title: 'SCG handover draft, journals',
+    title: 'Client handover draft, journals',
     state: 'MERGED',
     isDraft: false,
     url: 'https://github.com/acme/demo/pull/5',
@@ -147,11 +147,11 @@ function pr5(over: Partial<GhPull> = {}): GhPull {
     additions: 10,
     deletions: 0,
     checks: 'none',
-    body: 'Docs only: internal SCG handover draft (UNVERIFIED statuses marked), journals.\n\nTask: tsk_01M52NFYRXYKYZA1ZEGD3KMHZV',
+    body: 'Docs only: internal client handover draft (UNVERIFIED statuses marked), journals.\n\nTask: tsk_01M52NFYRXYKYZA1ZEGD3KMHZV',
     closes: [],
     mergedBy: 'keithchin',
     reviewNotes: [],
-    claims: ['SCG handover draft (reviewed, internal)'],
+    claims: ['Client handover draft (reviewed, internal)'],
     commitAuthors: ['Keith Chin'],
     ...over,
   };
@@ -182,7 +182,7 @@ test('reviewed only by its own author (a self-review) is flagged as that, and st
 });
 
 test('a qualifying Review by another lead, before the merge and 10+ minutes after opening: nothing flagged, the "(reviewed)" title is fine', () => {
-  const p = pr5({ createdAt: '2026-10-16T12:40:00Z', reviewNotes: [note(REVIEW, '2026-10-16T13:05:00Z')], title: 'SCG handover (reviewed)' });
+  const p = pr5({ createdAt: '2026-10-16T12:40:00Z', reviewNotes: [note(REVIEW, '2026-10-16T13:05:00Z')], title: 'Client handover (reviewed)' });
   const j = judgePull(p, LOOK)!;
   assert.deepEqual(j.flags, []);
   assert.deepEqual(j.reviewers, ['Sophie']);
@@ -221,7 +221,7 @@ test('only agents’ PRs, and only the last week’s merges, are judged', () => 
 });
 
 test('the task a flagged PR delivered stays integrated (unreviewed), never verified, whatever its checks say; a reviewed one is untouched', () => {
-  const task = (over: Partial<Assignment> = {}): Assignment => ({ text: 'Draft the SCG handover', at: 1, by: 'Keith', doneAt: 2, doneWhy: 'PR #5 merged', outcome: 'integrated', v: 2, pr: 5, verify: { v: 1, state: 'verified', pr: 5, at: 3, checks: [] }, ...over });
+  const task = (over: Partial<Assignment> = {}): Assignment => ({ text: 'Draft the client handover', at: 1, by: 'Keith', doneAt: 2, doneWhy: 'PR #5 merged', outcome: 'integrated', v: 2, pr: 5, verify: { v: 1, state: 'verified', pr: 5, at: 3, checks: [] }, ...over });
   const flagged = flaggedPulls([pr5()], LOOK, NOW);
   const t = task();
   assert.equal(markTasks([t, undefined], flagged, NOW), true);
@@ -259,12 +259,12 @@ test('the merged-PR list keeps mergedBy, the Review/Approved notes only, the "(r
     mergedBy: { login: 'keithchin' },
     comments: [{ author: { login: 'keithchin' }, body: 'Nice', createdAt: 'x' }, { author: { login: 'keithchin' }, body: REVIEW, createdAt: '2026-10-16T13:05:00Z' }],
     reviews: [{ author: { login: 'maya' }, body: '', submittedAt: '2026-10-16T13:06:00Z', state: 'APPROVED' }],
-    commits: [{ messageHeadline: 'SCG handover draft (reviewed, internal)', authors: [{ name: 'Keith Chin' }] }, { messageHeadline: 'Journals', authors: [{ name: 'Katherine (Mx Office Chief Analyst)' }] }],
+    commits: [{ messageHeadline: 'Client handover draft (reviewed, internal)', authors: [{ name: 'Keith Chin' }] }, { messageHeadline: 'Journals', authors: [{ name: 'Katherine (Mx Office Chief Analyst)' }] }],
   };
   const f = gateFieldsOf(gh);
   assert.equal(f.mergedBy, 'keithchin');
   assert.deepEqual(f.reviewNotes!.map((n) => [n.kind, n.author]), [['comment', 'keithchin'], ['review', 'maya']]);
-  assert.deepEqual(f.claims, ['SCG handover draft (reviewed, internal)']);
+  assert.deepEqual(f.claims, ['Client handover draft (reviewed, internal)']);
   assert.deepEqual(f.commitAuthors, ['Keith Chin', 'Katherine (Mx Office Chief Analyst)']);
   assert.deepEqual(gateFieldsOf({ ...gh, state: 'OPEN' }), {}, 'open PRs carry none of it');
 });

@@ -1,4 +1,4 @@
-// The live app's readiness card on the 🌐 Live app tab: "Live app: not ready for the PackTrack Line 7 demo.
+// The live app's readiness card on the 🌐 Live app tab: "Live app: not ready for the Sample check-sheet demo.
 // Has: … Missing: …", then each milestone of the build plan with where its rows are (in the running build,
 // merged but not in it yet, in an open PR, not built) and whether its journeys passed against this build.
 // Everything comes from the office (server/liveapp/readiness.ts); this only draws it.

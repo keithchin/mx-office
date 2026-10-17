@@ -21,15 +21,15 @@ const T0 = new Date(2026, 9, 16, 10, 0).getTime();
 const MIN = 60_000;
 const NAMES = { 'chief-analyst/business-analyst': 'Elsa' };
 
-const run = (over: Partial<LiveRun>): LiveRun => ({ id: 'toolu_1', lead: 'chief-analyst', workerId: 'w-kath', name: 'business-analyst', task: 'Draft the BRD for PackTrack', status: 'working', startedAt: T0, seenAt: T0, source: 'hooks', ...over });
+const run = (over: Partial<LiveRun>): LiveRun => ({ id: 'toolu_1', lead: 'chief-analyst', workerId: 'w-kath', name: 'business-analyst', task: 'Draft the BRD for the check-sheet app', status: 'working', startedAt: T0, seenAt: T0, source: 'hooks', ...over });
 
 test('a running subagent shows under its member: name, type, task and how long, to the minute', () => {
   const s = memberSubagents([run({})], NAMES, 'chief-analyst', T0 + 3 * MIN);
   assert.equal(s.rows.length, 1);
   const [r] = s.rows;
   assert.deepEqual([r.first, r.role, r.type, r.state, r.key], ['Elsa', 'Business Analyst', 'business-analyst', 'working', 'chief-analyst/business-analyst']);
-  assert.equal(subRowLine(r, T0 + 3 * MIN), 'Draft the BRD for PackTrack · 3 min');
-  assert.equal(subRowLine(r, T0 + 20_000), 'Draft the BRD for PackTrack · just started');
+  assert.equal(subRowLine(r, T0 + 3 * MIN), 'Draft the BRD for the check-sheet app · 3 min');
+  assert.equal(subRowLine(r, T0 + 20_000), 'Draft the BRD for the check-sheet app · just started');
   assert.equal(memberSubagents([run({})], NAMES, 'lead-tester', T0).rows.length, 0, "another member's run isn't under this one");
 });
 
@@ -79,7 +79,7 @@ test('the fact block line and the busy set name only runs at work', () => {
 
 class FakeFloor implements TeamFloor {
   id = `f${Math.random().toString(36).slice(2, 8)}`;
-  name = 'PackTrack';
+  name = 'Sample Project';
   dir = mkdtempSync(path.join(os.tmpdir(), 'subs-ov-floor-'));
   map = new Map<string, WorkerInfo>();
   workers = () => [...this.map.values()];
