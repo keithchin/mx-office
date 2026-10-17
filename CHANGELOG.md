@@ -19,7 +19,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ### Fixed
 
-- **PackTrack's agents failed with *Invalid API key* after the desktop app started the office, and nothing said why.** The office handed every agent the `ANTHROPIC_API_KEY` from the Windows user environment (a gateway's key, without the gateway's address), so Claude Code sent it to api.anthropic.com instead of using the agents' Claude login. The docs’ Troubleshooting › *Agents fail with "Invalid API key"* says how to fix it.
+- **Agents failed with *Invalid API key* after the desktop app started the office, and nothing said why.** The office handed every agent the `ANTHROPIC_API_KEY` from the Windows user environment (a gateway's key, without the gateway's address), so Claude Code sent it to api.anthropic.com instead of using the agents' Claude login. The docs’ Troubleshooting › *Agents fail with "Invalid API key"* says how to fix it.
 
 ## 2026-10-17 · release 57 (`f950aa0`)
 
