@@ -20,6 +20,7 @@ import { reviveRoster } from '../src/server/roster/store.js';
 import type { HireAsk, TeamFloor } from '../src/server/roster/types.js';
 import { forgetSubagents, noteSubagentHook } from '../src/server/workers/subagents.js';
 import { handleMcp, parseArgs } from '../bin/office-workers.js';
+import { until } from './wait.js';
 
 const LEVELS: AutonomyLevel[] = [1, 2, 3, 4];
 
@@ -211,23 +212,9 @@ test('below the threshold it is filed as FYI: no toast, no alert, and "Noted" se
   assert.equal(t.floor.alerts.length, 1);
 });
 
-/**
- * Lets fire-and-forget work run a moment, for checks that something did NOT happen. What must happen is
- * waited for with `until`: a hire, or a held answer typed at a turn's end, waits on fsynced critical writes
- * first (the dispatch record marked in flight, flow/critical-write.ts: on Linux the folder is synced too),
- * which on a busy CI runner take longer than any fixed sleep.
- */
+/** Lets fire-and-forget work run a moment, for checks that something did NOT happen (what must happen: `until`, tests/wait.ts). */
 const settle = async () => {
   for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
-};
-
-/** Waits until `ok()` holds (the event the office's async work ends in), failing with `what` after `ms`. */
-const until = async (ok: () => boolean, what: string, ms = 10_000) => {
-  const end = Date.now() + ms;
-  while (!ok()) {
-    if (Date.now() > end) assert.fail(`timed out waiting for ${what}`);
-    await new Promise((r) => setTimeout(r, 5));
-  }
 };
 
 test('an asleep raiser wakes with the answer; one that went home is hired back with it', async () => {

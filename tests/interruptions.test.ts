@@ -26,6 +26,7 @@ import { DEFAULT_SCHEDULE } from '../src/shared/roster/schedule.js';
 import { cleanChoices, choicesFor, resolveChoices, teamRows, workingFor } from '../src/shared/roster/interrupt.js';
 import { collectNeeds, IDLE_TASK_MS } from '../src/shared/needsyou.js';
 import type { RosterView } from '../src/shared/roster/types.js';
+import { until } from './wait.js';
 
 const MIN = 60_000;
 const H = 60 * MIN;
@@ -437,7 +438,8 @@ test("the Project Manager's Nudge and their after-the-turn question; the Coordin
   assert.equal(floor.typed.length, 0, 'held for its turn');
   assert.equal(d().members.pm.task, undefined, "a question isn't its task");
   floor.set(pm, 'done');
-  for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+  // Typed once its dispatch is marked in flight on disk (deliver.ts onWorker): wait for that, not a sleep.
+  await until(() => floor.typed.some((x) => /What's blocking the team\?/.test(x.text)), "the Coordinator's held question typed");
   // With the run state as it is when it goes in (roster/awareness.ts), then the question, then its dispatch marker (server/dispatch/).
   assert.match(floor.typed.at(-1)!.text, /^\[Office facts, [^\]]+\] Project: Running\. Agents working: [^;]*; awake and idle: \w+ \(you\);/);
   assert.match(floor.typed.at(-1)!.text, /\n\nWhat's blocking the team\?\n\n\[office answer dsp_[0-9A-Z]{26} · TELL-lead rev \d+\]$/);

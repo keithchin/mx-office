@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeFloor, ask, office, records, settle } from './dispatch-helpers.js';
 import { stillOwed } from '../src/server/roster/escalation-answer.js';
+import { until } from './wait.js';
 
 test('a held answer is held, not delivered, until its dispatch is received; typed once', async () => {
   const floor = new FakeFloor();
@@ -31,6 +32,8 @@ test('a held answer is held, not delivered, until its dispatch is received; type
   assert.equal(stillOwed(o.roster, floor.id, rec), false, 'reconcile asks the held list, not the escalation');
   assert.equal(floor.prompts.length, 0);
   floor.set(ada, 'done');
+  // Typed once its dispatch is marked in flight on disk, delivered once that's received: wait for that.
+  await until(() => x().resolution!.delivered === true, 'the held answer typed and received');
   await settle();
   assert.equal(floor.prompts.length, 1, 'typed once, when the turn ended');
   assert.equal(records(o, floor)[0].state, 'submitted');

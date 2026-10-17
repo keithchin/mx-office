@@ -14,6 +14,7 @@ import { GRACE_MS, QUEUED_MAX_MS } from '../src/server/dispatch/typed-watch.js';
 import { inputBoxHolds, inputBoxText } from '../src/server/dispatch/input-box.js';
 import { isTypedEnqueue, isTypedEvidence } from '../src/server/dispatch/evidence.js';
 import { FakeFloor, ask, clock, crashAndRestart, office, records, settle, userEntry } from './dispatch-helpers.js';
+import { until } from './wait.js';
 
 /** A fake floor whose agents' terminals have a screen (an input box) and an Enter key. */
 class ScreenFloor extends FakeFloor {
@@ -270,7 +271,7 @@ test('a held answer typed at the turn’s end: typed-not-received until the sess
     assert.equal(records(o, floor)[0].state, 'held');
     floor.unrecorded = true;
     floor.set(pm, 'idle');
-    await settle();
+    await until(() => records(o, floor)[0].typedAt !== undefined, 'the held tell typed at the turn end');
     floor.unrecorded = false;
     assert.equal(floor.prompts.length, 1);
     assert.equal(records(o, floor)[0].state, 'in-flight');
