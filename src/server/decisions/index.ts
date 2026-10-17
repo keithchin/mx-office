@@ -18,9 +18,10 @@ import { audit, human } from '../audit/index.js';
 import { SplitsStore } from './store.js';
 import { checkFor, runCheck, type CheckResult } from './check.js';
 import { closeDuplicates, type CloseRequest } from './duplicates.js';
+import { allowCommand, keepBlocked } from './permission.js';
 
-export type DecisionAction = 'separate' | 'answer' | 'noted' | 'done' | 'cant-now' | 'resolved' | 'still-needed' | 'close-duplicates';
-export const DECISION_ACTIONS: readonly DecisionAction[] = ['separate', 'answer', 'noted', 'done', 'cant-now', 'resolved', 'still-needed', 'close-duplicates'];
+export type DecisionAction = 'separate' | 'answer' | 'noted' | 'done' | 'cant-now' | 'resolved' | 'still-needed' | 'close-duplicates' | 'allow-command' | 'keep-blocked';
+export const DECISION_ACTIONS: readonly DecisionAction[] = ['separate', 'answer', 'noted', 'done', 'cant-now', 'resolved', 'still-needed', 'close-duplicates', 'allow-command', 'keep-blocked'];
 export const isDecisionAction = (v: unknown): v is DecisionAction => typeof v === 'string' && (DECISION_ACTIONS as readonly string[]).includes(v);
 
 export interface DecisionAct {
@@ -99,7 +100,13 @@ export class DecisionsService {
     const answered = (r: AnswerResult): ActError => (r.ok ? undefined : { error: r.error, status: r.status, ...(r.current ? { current: r.current } : {}) });
     const ans = (id: string, x: Omit<EscalationAnswer, 'by'>): { id: string } & EscalationAnswer => ({ id, by, ...x });
     // An answer on a card answers every escalation it folds, as one group (a dispatch per member, roster/escalation-answer.ts).
+    // A permission card (./permission.ts): Allow writes the rule and keeps it open until a run is seen; Keep blocked rejects it.
+    if ((a.action === 'allow-command' || a.action === 'keep-blocked') && !e.permission) return { error: 'Only for a permission card', status: 400 };
     switch (a.action) {
+      case 'allow-command':
+        return fail(await allowCommand(roster, tf, e, by, owner));
+      case 'keep-blocked':
+        return answered(await keepBlocked(roster, tf, e, by, text, a.expectedRev));
       case 'noted':
         return answered(await answerGroup(roster, tf, ans(e.id, { verdict: 'dismiss', raw: '', outcome: 'noted', expectedRev: a.expectedRev }), others.filter((o) => escalationKind(o).kind === 'fyi').map((o) => ans(o.id, { verdict: 'dismiss', raw: '', outcome: 'noted' }))));
       case 'done': {

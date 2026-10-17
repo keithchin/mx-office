@@ -1,12 +1,13 @@
 // What the office surfaces for the Project Manager from where the team's words are (server/asks/): work
 // that never reached main, assumptions made without their consent, the toolkit's gate advisories that only
-// ever went to an agent's stderr, and what is ready for their review. Each becomes a Needs-you row with
-// its buttons; the AWAITING-PM items become escalations instead (they're answered like any other).
+// ever went to an agent's stderr, what is ready for their review, and what skipped the review gate
+// (server/review-gate/). Each becomes a Needs-you row with its buttons; the AWAITING-PM items become
+// escalations instead (they're answered like any other).
 // Pure: the browser imports it too.
 
 import type { NeedItem } from './needsyou.js';
 
-export type AskKind = 'offmain' | 'assumption' | 'advisory' | 'review';
+export type AskKind = 'offmain' | 'assumption' | 'advisory' | 'review' | 'gate';
 
 /**
  * A button on an item. docs-pr: ask whoever covers Management to open a docs PR; agree: record your
@@ -59,8 +60,8 @@ export interface AsksNeed {
   unreadAt?: number;
 }
 
-export const ASK_ICON: Record<AskKind, string> = { offmain: '📤', assumption: '🤝', advisory: '⚠️', review: '👀' };
-const ASK_TAG: Record<AskKind, string> = { offmain: 'Not on main', assumption: 'Consent', advisory: 'Advisory', review: 'Review' };
+export const ASK_ICON: Record<AskKind, string> = { offmain: '📤', assumption: '🤝', advisory: '⚠️', review: '👀', gate: '🚦' };
+const ASK_TAG: Record<AskKind, string> = { offmain: 'Not on main', assumption: 'Consent', advisory: 'Advisory', review: 'Review', gate: 'Review gate' };
 
 /** The label "from Ada's branch, not on main yet" a standup line read off a branch carries. */
 export const branchLabel = (who: string) => `from ${who}'s branch, not on main yet`;

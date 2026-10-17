@@ -23,7 +23,8 @@ function taskTitle(t: QueueTask): HTMLElement {
 function outcome(t: QueueTask): string {
   switch (t.outcome) {
     case 'done':
-      return t.pr ? 'finished' : 'finished, no PR found yet';
+      // Its turn ended: finished only with the evidence (its PR merged), never said before it (server/queue-finish.ts).
+      return t.pr?.state === 'MERGED' ? `finished: PR #${t.pr.number} merged` : t.pr ? `turn ended, not confirmed finished: PR #${t.pr.number} not merged yet` : 'turn ended, not confirmed finished: no PR found yet';
     case 'exited':
       return t.error ? `stopped: ${t.error}` : 'stopped before finishing';
     case 'killed':

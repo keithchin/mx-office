@@ -13,6 +13,7 @@ import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { everHired } from '../roster/store.js';
 import { addBlockedOnYou } from '../roster/blocked-on-you.js';
 import { setAsksSoon } from '../roster/asks-hook.js';
+import { foldOfficeAsk } from '../roster/escalation-fold.js';
 import { ROLES, type RoleId, type TeamId } from '../../shared/roster/roles.js';
 import { AsksService, type AsksFloor } from './service.js';
 import { detectInputOf } from './main.js';
@@ -81,6 +82,8 @@ export function asksOf(ctx: Ctx): AsksService {
       const t = team(f);
       if (!t) return;
       const m = t.d.members[role];
+      // An item naming an open or answered escalation (ESC-<id>, its decision id, the same denied command) isn't filed again.
+      if (foldOfficeAsk(t.roster, t.tf, { workerId: m.workerId ?? `benched-${role}`, by: m.name, role }, ask, key)) return;
       const e = t.roster.escalations.raiseFor(t.tf, { workerId: m.workerId ?? `benched-${role}`, by: m.name, role }, ask, `📌 ${m.name} is waiting on you (its journal's AWAITING-PM line): ${ask.title}`);
       e.from = { kind: 'awaiting', key };
       t.roster.touch(t.tf);

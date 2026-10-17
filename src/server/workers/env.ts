@@ -3,6 +3,8 @@ import { PROVIDERS } from '../providers/index.js';
 import { withFloorToolkitEnv } from '../toolkit-env.js';
 import { withConnections } from '../connections/env.js';
 import { withGitLongPaths } from '../gitenv.js';
+// Each agent's own commit identity (git-identity.ts), laid over this environment at its launch.
+export { agentGitEnv } from './git-identity.js';
 
 // Env vars from a parent agent session (e.g. starting the office from inside Claude Code) that
 // would make a worker think it is a child session — that silently turns off transcript saving,

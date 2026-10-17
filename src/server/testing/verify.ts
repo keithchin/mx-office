@@ -13,6 +13,7 @@ import type { RoleId } from '../../shared/roster/roles.js';
 import { audit, human } from '../audit/index.js';
 import type { Roster } from '../roster/index.js';
 import { applyVerification } from '../roster/task-verify.js';
+import { staleDone } from '../roster/task-reopen.js';
 import type { TeamFloor } from '../roster/types.js';
 import path from 'node:path';
 import { testingStore } from './index.js';
@@ -51,7 +52,7 @@ export function criteriaOf(pull: Pick<GhPull, 'body' | 'number'> | undefined, jo
  */
 export async function verifyTasks(dataDir: string, roster: Roster, team: TeamFloor, floor: PullsLike, journeys?: ReadonlyMap<string, string[]>, since?: number): Promise<number> {
   const d = roster.data(floor.id);
-  const work = Object.entries(d.members).filter(([, m]) => m.task?.outcome === 'integrated' && m.task.doneAt !== undefined && m.task.pr !== undefined);
+  const work = Object.entries(d.members).filter(([, m]) => m.task?.outcome === 'integrated' && m.task.doneAt !== undefined && m.task.pr !== undefined && !staleDone(m.task, { pulls: floor.github.pulls.items }));
   if (!work.length) return 0;
   const [file, records] = await Promise.all([verifyStore(dataDir, floor.id).read(), testingStore(dataDir, floor.id).all()]);
   let n = 0;
@@ -160,7 +161,7 @@ export async function verificationView(dataDir: string, roster: Roster | undefin
     for (const [role, m] of Object.entries(roster.data(floor.id).members)) {
       const t = m.task;
       if (!t || t.outcome !== 'integrated' || t.pr === undefined) continue;
-      const state = t.verify?.state ?? 'integrated';
+      const state = t.unreviewed ? 'unreviewed' : (t.verify?.state ?? 'integrated');
       if (state === 'verified') continue;
       const pull = floor.github.pulls.items.find((x) => x.number === t.pr);
       tasks.push({ role, name: m.name, task: t.text, pr: t.pr, ...(pull ? { url: pull.url } : {}), state, ...(t.verify?.revision ? { revision: t.verify.revision } : {}), ...(t.verify?.head ? { head: t.verify.head } : {}), checks: t.verify?.checks ?? [] });

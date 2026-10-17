@@ -8,6 +8,7 @@ import { dayIn } from '../../shared/roster/schedule.js';
 import { awaitingAnswer, isAsleepStatus, mayBench } from './bench.js';
 import { awaitingAsk, awaitingItems, awaitingKey, entryTime, planAwaiting } from '../asks/awaiting.js';
 import { asksSoon } from './asks-hook.js';
+import { foldOfficeAsk } from './escalation-fold.js';
 import type { Roster } from './index.js';
 import { readJournal } from './journal-io.js';
 import { lessonsPathIn, sourcesOf, writeRoleFiles, writeRoleFilesSoon, type PlaybookContext } from './playbooks.js';
@@ -111,7 +112,7 @@ export class Members {
     const brain = await this.roster.deps.hireContext?.(floor.id).catch(() => undefined);
     // The brain's pointer and, for a profile that worked on other projects, one line saying nothing from them comes along (a count only).
     const lines = [brain?.line, profile?.line].filter(Boolean).join('\n\n') || undefined;
-    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, typed, owed.lines, teamLine(d, role), lines), owner, by, team: def.team });
+    const r = await floor.hire({ name: m.name, model: model || m.model, prompt: primePrompt(role, m.name, d.settings.autonomy, m.handoff, typed, owed.lines, teamLine(d, role), lines), owner, by, team: def.team, role });
     if (typeof r === 'string') return r;
     this.roster.deps.profiles?.hired(floor.id, role, r.id);
     // What this hire was offered, once per hire (server/portfolios/manifest.ts): offered, not obeyed.
@@ -208,8 +209,12 @@ export class Members {
     const d = this.roster.data(floor.id);
     const m = d.members[role];
     for (const r of planAwaiting([waits], () => role, d.escalations).raise) {
-      const e = this.roster.escalations.raiseFor(floor, { workerId, by: m.name, role }, awaitingAsk(m.name, r.item, waits, 'as it was benched (answering hires it back)'));
-      e.from = { kind: 'awaiting', key: awaitingKey(role, r.item) };
+      const ask = awaitingAsk(m.name, r.item, waits, 'as it was benched (answering hires it back)');
+      const key = awaitingKey(role, r.item);
+      // One naming an open or answered escalation isn't filed again (escalation-fold.ts).
+      if (foldOfficeAsk(this.roster, floor, { workerId, by: m.name, role }, ask, key)) continue;
+      const e = this.roster.escalations.raiseFor(floor, { workerId, by: m.name, role }, ask);
+      e.from = { kind: 'awaiting', key };
     }
   }
 

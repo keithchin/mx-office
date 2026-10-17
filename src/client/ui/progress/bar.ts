@@ -4,6 +4,7 @@
 // element the bar keeps. The mini version on Home's cards is the same segments without words.
 
 import { progressLabel, spendText, type Milestone, type Phase, type ProjectProgress } from '../../../shared/progress';
+import { freshnessText } from '../../../shared/stage-derive';
 import { h } from '../dom';
 
 /** At most this many marks drawn on one segment (the tooltip lists them all, up to its own cap). */
@@ -93,6 +94,23 @@ export function tipContent(ph: Phase): HTMLElement {
     dates ? h('p.pg-tip-p', {}, dates) : null,
     spend ? h('p.pg-tip-p', {}, `💰 ${spend}`) : ph.kind === 'stage' ? h('p.pg-tip-p', {}, '💰 no spend booked to this stage') : null,
     h('p.pg-tip-foot', {}, `Click: opens ${OPEN_WORD[ph.open]}`),
+  );
+}
+
+/**
+ * Under the bar: how fresh the office's stage is ("checked on main @abc1234, 3 min ago", "checking…",
+ * "couldn't check: …") and what doesn't add up (shared/stage-derive.ts). Null for a project without stages.
+ */
+export function stageNotes(p: ProjectProgress, now = Date.now()): HTMLElement | null {
+  const e = p.stage;
+  if (!e) return null;
+  const fresh = freshnessText(e.check, now);
+  const bad = !!e.check.error || !!e.check.stale || e.check.source !== 'office';
+  return h(
+    'div.pg-notes',
+    {},
+    fresh ? h('p.pg-fresh', { class: bad ? 'stale' : '', title: 'Where the stage comes from: the toolkit’s gate-check, run by the office on a temporary checkout of the default branch' }, `🧭 ${fresh}`) : null,
+    ...e.flags.map((f) => h('p.pg-flag', { role: 'note' }, `ℹ️ ${f.text}`)),
   );
 }
 

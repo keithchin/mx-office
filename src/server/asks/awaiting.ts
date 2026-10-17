@@ -110,6 +110,8 @@ export function planAwaiting(waits: readonly Waits[], roleOf: (team: TeamId) => 
       live.add(key);
       const mine = escalations.filter((e) => e.from?.kind === 'awaiting' && e.from.key === key);
       if (mine.some((e) => e.status === 'open' || e.at >= w.at)) continue;
+      // Folded into the escalation it names (roster/escalation-fold.ts): linked or answered there, never filed.
+      if (escalations.some((e) => e.foldedKeys?.includes(key))) continue;
       if (escalations.some((e) => e.status === 'open' && e.role === role && e.from?.kind !== 'awaiting' && sameAsk(e.title, item))) continue;
       fresh.push({ role, item, waits: w });
     }

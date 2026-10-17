@@ -18,6 +18,8 @@ export interface HireAsk {
   by: string;
   /** The role's team: it sits at a free desk in that team's patch of the floor first (shared/zones.ts). */
   team?: TeamId;
+  /** The role it's hired into: its commits name it from its first launch (roster/git-identity.ts). */
+  role?: RoleId;
 }
 
 export interface TeamFloor {
@@ -40,7 +42,7 @@ export interface TeamFloor {
   cwdOf(w: WorkerInfo): string;
   openPulls(): { number: number; title: string; url: string; headRefName: string; labels?: { name: string }[] }[];
   /** The floor's whole PR list as GitHub gave it (open, merged and closed unmerged), so a task can tell a merge from a closed PR. */
-  pulls?(): { number: number; state: string; headRefName?: string; closes?: readonly number[] }[];
+  pulls?(): { number: number; state: string; headRefName?: string; closes?: readonly number[]; mergedAt?: string; closedAt?: string; body?: string; headRefOid?: string; mergeCommit?: string }[];
   toast(text: string, level?: 'info' | 'warn'): void;
   /** Tells the floor's browsers to fetch the Team tab again; with `alert`, an urgent escalation to notify about. */
   changed(alert?: RosterAlert): void;

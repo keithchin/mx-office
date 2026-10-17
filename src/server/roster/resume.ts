@@ -24,6 +24,8 @@ import { outcomesSince } from './closed-since.js';
 import { closedPrAsk, outcome, OUTCOME_V, type FinalOutcome, type Outcome, type PendingOutcome, type PullLook } from './task-outcome.js';
 import { cleanTaskRef, type TaskSource } from '../../shared/tasks.js';
 import { TaskIds, type Prepared } from './task-ids.js';
+import { PrTaskIds } from './pr-task-ids.js';
+import { reopenStale } from './task-reopen.js';
 
 export interface Assignment {
   /** What to carry on with, one line: "work on GitHub issue #1 (Discovery)". */
@@ -50,9 +52,13 @@ export interface Assignment {
   policy?: VerificationPolicy;
   /** Testing release 2: an integrated task judged on its merge commit (only "verified" is delivered). */
   verify?: TaskVerification;
+  /** Its PR merged without a review that counts (server/review-gate/): integrated (unreviewed), never verified. */
+  unreviewed?: { pr: number; why: string; at: number };
   /** Slice 1B-4: the durable task (server/tasks/) and this attempt at it. None on a legacy task: never made up. */
   taskId?: string;
   executionId?: string;
+  /** An end recorded before the evidence rule that didn't stand (task-reopen.ts): what it said, and why it was taken back. */
+  shownDone?: { at: number; why: string; pr: number; note: string };
 }
 
 /** A task's provenance: open, pending, or how it finished ("legacy": finished before outcomes were kept). */
@@ -118,6 +124,8 @@ function reviveOutcome(r: Partial<Assignment>): Partial<Assignment> {
   }
   const s = r.superseded;
   if (s && int(s.pr) && int(s.by)) out.superseded = { pr: s.pr, by: s.by };
+  const d = r.shownDone;
+  if (d && typeof d.at === 'number' && int(d.pr) && typeof d.note === 'string') out.shownDone = { at: d.at, why: typeof d.why === 'string' ? d.why.slice(0, 120) : 'finished', pr: d.pr, note: d.note.slice(0, 160) };
   return out;
 }
 
@@ -147,6 +155,8 @@ export interface FinishLook {
   lastWords?: string;
   /** PRs closed unmerged before this raise no decision (task-outcome.ts OutcomeLook.closedSince). */
   closedSince?: number;
+  /** The task ids a merged PR's commits carry, or undefined while not known (pr-task-ids.ts). */
+  carries?: (p: PullLook) => ReadonlySet<string> | undefined;
 }
 
 /**
@@ -158,21 +168,25 @@ export interface FinishLook {
 export function taskOutcome(l: FinishLook): Outcome | undefined {
   const t = l.task;
   if (t.doneAt !== undefined) return { kind: t.outcome ?? 'delivered', why: t.doneWhy ?? 'finished' };
-  const o = outcome({ issue: t.issue, pr: l.pr?.number, pulls: l.pulls, branch: l.branch, closed: l.closed, lastWords: l.lastWords, claim: TASK_DONE, closedSince: l.closedSince });
-  if (o || !t.pending) return o;
+  const o = outcome({ issue: t.issue, pr: l.pr?.number, pulls: l.pulls, branch: l.branch, closed: l.closed, lastWords: l.lastWords, claim: TASK_DONE, closedSince: l.closedSince, since: t.at, ...(t.taskId ? { taskId: t.taskId } : {}), ...(l.carries ? { carries: l.carries } : {}) });
+  // A merge that doesn't carry the task (associated, unconfirmed) never replaces a claim or a decision.
+  if ((o && o.kind !== 'associated') || !t.pending) return o;
   const open = !!l.pr && !!l.pulls?.some((p) => p.number === l.pr!.number && p.state === 'OPEN');
   if (t.pending.kind === 'decision' && open) return undefined;
   return { kind: t.pending.kind, why: t.pending.why, ...(t.pending.pr !== undefined ? { pr: t.pending.pr } : {}) };
 }
 
+/** Whether an outcome leaves the task open: a newer PR carries on a closed one, or a merge doesn't carry the task. */
+export const stillOpen = (o: Outcome | undefined) => !o || o.kind === 'superseded' || o.kind === 'associated';
+
 /**
  * Why the task needs no nudge back to it: finished (delivered, cancelled), or waiting on the person (a
- * claim pending verification, a closed PR awaiting a decision). Undefined while it's open, or while a
- * newer PR carries on the work of one closed unmerged.
+ * claim pending verification, a closed PR awaiting a decision). Undefined while it's open, while a
+ * newer PR carries on the work of one closed unmerged, or while the only merge doesn't carry the task.
  */
 export function finishedWhy(l: FinishLook): string | undefined {
   const o = taskOutcome(l);
-  return o && o.kind !== 'superseded' ? o.why : undefined;
+  return stillOpen(o) ? undefined : o!.why;
 }
 
 /** The member a worker is, and its task record. */
@@ -192,6 +206,8 @@ export class Tasks {
 
   /** Task identity (task-ids.ts): every new task's durable id and each attempt's execution id. */
   readonly ids: TaskIds;
+  /** The task ids merged PRs' commits carry (local git, kept for good). */
+  readonly prIds = new PrTaskIds();
 
   constructor(private roster: Roster) {
     this.ids = new TaskIds(roster);
@@ -240,12 +256,52 @@ export class Tasks {
     m.task = a;
   }
 
+  private pullsOf(floor: TeamFloor): readonly PullLook[] {
+    // A floor without the full list (an older seam) knows only the open ones: a closed PR is then just unknown.
+    // Some seams (tests' floors) carry neither as a function: then nothing is known.
+    if (typeof floor.pulls === 'function') return floor.pulls();
+    return typeof floor.openPulls === 'function' ? floor.openPulls().map((p) => ({ ...p, state: 'OPEN' })) : [];
+  }
+
+  private carries(floor: TeamFloor) {
+    return (p: PullLook) => this.prIds.peek(floor.dir, p);
+  }
+
+  /**
+   * Takes back the member's recorded ends that a PR can't have made (task-reopen.ts): its task and the
+   * earlier ones it keeps. The note stays on the task (shownDone); true when anything changed.
+   */
+  recheck(floor: TeamFloor, workerId: string): boolean {
+    const mm = memberOf(this.roster, floor, workerId);
+    if (!mm) return false;
+    const look = { pulls: this.pullsOf(floor), carries: this.carries(floor) };
+    let changed = false;
+    for (const t of [...(mm.m.prevTasks ?? []), mm.m.task]) if (reopenStale(t, look)) changed = true;
+    if (changed) {
+      const t = mm.m.task?.shownDone ? mm.m.task : undefined;
+      if (t) floor.activity?.(`🔎 ${floor.worker(workerId)?.name ?? 'A member'}'s task is open again (${t.text}): ${t.shownDone!.note}`);
+      this.roster.touch(floor, true);
+    }
+    return changed;
+  }
+
+  /**
+   * The note on the member's open task: a merge that doesn't carry it ("PR #6 merged, associated
+   * (unconfirmed): …"), or an earlier end taken back ("earlier shown as done by PR #3 — …").
+   */
+  note(floor: TeamFloor, w: WorkerInfo): string | undefined {
+    const t = memberOf(this.roster, floor, w.id)?.m.task;
+    if (!t || t.doneAt !== undefined) return undefined;
+    const o = taskOutcome(this.look(floor, w, t, false));
+    return o?.kind === 'associated' ? o.why : t.shownDone?.note;
+  }
+
   private look(floor: TeamFloor, w: WorkerInfo, task: Assignment, words: boolean): FinishLook {
     return {
       task,
       pr: w.pr && { number: w.pr.number },
-      // A floor without the full list (an older seam) knows only the open ones: a closed PR is then just unknown.
-      pulls: floor.pulls?.() ?? floor.openPulls().map((p) => ({ ...p, state: 'OPEN' })),
+      pulls: this.pullsOf(floor),
+      carries: this.carries(floor),
       branch: w.worktree?.branch,
       closed: this.closed.get(floor.id),
       ...(words ? { lastWords: floor.lastWords?.(w) } : {}),
@@ -290,6 +346,7 @@ export class Tasks {
 
   /** How the member's task ended (writing it down), or undefined while it's open (or it has none). */
   outcome(floor: TeamFloor, w: WorkerInfo): Outcome | undefined {
+    this.recheck(floor, w.id);
     const t = memberOf(this.roster, floor, w.id)?.m.task;
     return t && this.settle(floor, w, t, taskOutcome(this.look(floor, w, t, true)));
   }
@@ -297,7 +354,7 @@ export class Tasks {
   /** Why the member's task needs no nudge back to it (finished, or waiting on the person), or undefined while it's open. */
   finished(floor: TeamFloor, w: WorkerInfo): string | undefined {
     const o = this.outcome(floor, w);
-    return o && o.kind !== 'superseded' ? o.why : undefined;
+    return stillOpen(o) ? undefined : o!.why;
   }
 
   /**
@@ -308,11 +365,12 @@ export class Tasks {
   current(floor: TeamFloor, w: WorkerInfo): string | undefined {
     const mm = memberOf(this.roster, floor, w.id);
     if (!mm) return w.task?.name;
+    this.recheck(floor, w.id);
     const t = mm.m.task;
     if (!t || t.doneAt !== undefined) return undefined;
     if (t.pending) {
       const o = this.settle(floor, w, t, taskOutcome(this.look(floor, w, t, false)));
-      if (o && o.kind !== 'superseded') return undefined;
+      if (!stillOpen(o)) return undefined;
     }
     return t.text;
   }
@@ -324,6 +382,9 @@ export class Tasks {
     const task = this.current(floor, w);
     const held = !task && role ? this.roster.data(floor.id).members[role].task?.pending : undefined;
     if (held) return `${RESUME_HEAD}: your last task waits on the Project Manager (${held.why}), so don't carry on with it until they answer. ${coordinates ? 'Say in one line what you will do next.' : 'Tell the Coordinator what you will do next, or wait.'}`;
-    return resumeLine(task, coordinates);
+    const t = task && role ? this.roster.data(floor.id).members[role].task : undefined;
+    // A merge that doesn't carry the task: the office can't count it, so say how it would.
+    const unconfirmed = t?.taskId && this.note(floor, w)?.includes('associated (unconfirmed)') ? ` If a merged PR already delivered it, its description or one of its commits must carry the line "Task: ${t.taskId}" for the office to count it.` : '';
+    return resumeLine(task, coordinates) + unconfirmed;
   }
 }

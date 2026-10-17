@@ -15,6 +15,8 @@ import { gh } from '../github.js';
 import type { Haiku } from '../analysis/llm.js';
 import { Narrator } from './narrate.js';
 import { projectFacts } from './project.js';
+import { latestEvidence } from '../wizard/stage-evidence.js';
+import { freshnessText, stageLabel } from '../../shared/stage-derive.js';
 import { waitsOnPerson } from '../../shared/progress.js';
 
 /** Waiting on a person longer than this is a risk, not just a wait. */
@@ -119,6 +121,12 @@ export class Summaries {
     for (const a of agents) if (a.quietMs !== undefined && a.quietMs > STALL_RISK_MS) risks.push({ level: 'warn', text: `${a.name} has shown no progress for ${mins(a.quietMs)}` });
     if (this.ledger.overBudget) risks.push({ level: 'bad', text: "Today's budget is spent" });
     const facts = { ...projectFacts(floor.dir) };
+    // Where it stands as the office derived it from its own gate-check (wizard/stage-evidence.ts), not PROJECT.md's readout line.
+    const ev = latestEvidence(floor.dir);
+    if (ev?.evidence.stage) {
+      const e = ev.evidence;
+      facts.phase = { label: stageLabel(e.stage!), from: `gate-check run by the office (${freshnessText(e.check, now)})`, stages: ev.verdicts, decisions: facts.phase?.decisions ?? [], fresh: freshnessText(e.check, now), ...(e.line ? { line: e.line } : {}), ...(e.flags.length ? { flags: e.flags.map((f) => f.text) } : {}) };
+    } else if (facts.phase) facts.phase = { ...facts.phase, from: "PROJECT.md's Current stage line (the office hasn't checked this project's gates yet)" };
     // No README or intake to say what it's for: the GitHub repository's own description, once gh has said it.
     if (!facts.goal) {
       const about = this.about(floor.dir);

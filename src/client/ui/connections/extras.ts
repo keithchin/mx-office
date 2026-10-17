@@ -19,7 +19,7 @@ export function toolsSection(run: Run): HTMLElement {
     body.replaceChildren(
       h('ul.cx-toollist', {}, row('git', t.git), row('gh', t.gh), row('gh with the agents’ token', t.ghAuth), row('Commit identity', t.identity)),
       !t.identity.ok || t.officeIdentity
-        ? h('div.cx-form', {}, h('p.cx-sub', {}, 'The agents’ commits (GIT_AUTHOR_* / GIT_COMMITTER_* in their environment; git’s own settings stay as they are):'), h('div.cx-two', {}, name, email), h('div.cx-actions', {}, set, clear))
+        ? h('div.cx-form', {}, h('p.cx-sub', {}, 'The office’s commit identity: the committer of the agents’ commits (each agent is their author, as itself, never you), and a shell worker’s identity when git has none (GIT_AUTHOR_* / GIT_COMMITTER_* in their environment; git’s own settings stay as they are):'), h('div.cx-two', {}, name, email), h('div.cx-actions', {}, set, clear))
         : '',
     );
   };

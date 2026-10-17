@@ -10,6 +10,7 @@ import type { FeatureHooks, HandlerMap, ViewPieces } from './types.js';
 import type { Ctx } from '../../office/context.js';
 import type { Client } from '../../office/client.js';
 import { rosterOf, teamFloor } from '../../roster/adapter.js';
+import { EMPTY_TELL, isEmptyTell } from '../../../shared/tell-text.js';
 
 const CLEANUPS = new Set(['keep', 'worktree', 'all']);
 
@@ -127,6 +128,8 @@ export const workerHandlers = {
     // before it's typed (nothing typed when that fails); a reply goes as it was, at once.
     // One worker's prompts still go in the order they were sent (a reply never overtakes a task waiting for its record).
     if (!w || w.info.kind !== 'agent') return promptNow(ctx, c, msg, w, said);
+    // Nothing in it (empty, or only an untouched "About …:" prefill): never typed into an agent (shared/tell-text.ts).
+    if (isEmptyTell(said)) return ctx.warn(c, EMPTY_TELL);
     const prev = promptChains.get(w.wid) ?? Promise.resolve();
     const next = prev
       .then(() => rosterOf(ctx).tasks.prepare(teamFloor(ctx, w.floor), w.wid, said, 'console'))

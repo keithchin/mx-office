@@ -409,6 +409,8 @@ export class Roster {
         ...(profileId(r.id) ? { profileId: profileId(r.id) } : {}),
         // What it's on and whether it waits on the Project Manager: Needs you's "idle with an open task".
         ...(w && this.tasks.current(floor, w) ? { task: this.tasks.current(floor, w) } : {}),
+        // A merge that doesn't carry it, or an earlier end taken back (resume.ts Tasks.note): shown, never counted.
+        ...(w && this.tasks.note(floor, w) ? { taskNote: this.tasks.note(floor, w) } : {}),
         ...(w && this.openAsks(floor.id, w.id).length ? { waitingOnPm: true } : {}),
       };
     });

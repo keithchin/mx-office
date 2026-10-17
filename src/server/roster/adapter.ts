@@ -22,7 +22,10 @@ import { Roster, rosterFor } from './index.js';
 import { ghIssueFinder, ghIssueMaker } from './issues.js';
 import type { HireAsk, TeamFloor } from './types.js';
 import { subagentBusyMoved } from './subagent-busy.js';
+import { holdSeat, seatOf } from './git-identity.js';
 import { onSubagentEvent } from '../workers/subagents.js';
+import { onCommandRun } from '../workers/tool-runs.js';
+import { sawCommandRun } from './escalation-fold.js';
 import { notedTranscript } from '../convo/index.js';
 import { SCAN_MS } from './subagent-live.js';
 import { OFFICE_BY } from '../workers/lifecycle.js';
@@ -121,7 +124,9 @@ async function hire(ctx: Ctx, floor: Floor, ask: HireAsk): Promise<WorkerInfo | 
   const worktree = !!floor.project.branch;
   if (worktree) await floor.workers.fetchBase();
   if (!ctx.floors.has(floor.id)) return 'This project closed';
-  const r = await floor.workers.spawn(desk, ask.by, ask.prompt, worktree, 'agent', 'claude', ask.model, undefined, undefined, ask.owner);
+  // Its seat is held at its desk while it starts, so its first commits already name it (git-identity.ts).
+  const release = holdSeat(floor.id, desk, ask.role ? seatOf(rosterOf(ctx), floor.id, ask.role, ask.name) : undefined);
+  const r = await floor.workers.spawn(desk, ask.by, ask.prompt, worktree, 'agent', 'claude', ask.model, undefined, undefined, ask.owner).finally(release);
   if (typeof r === 'string') return r;
   floor.workers.rename(r.id, ask.name);
   return floor.workers.get(r.id) ?? r;
@@ -174,6 +179,11 @@ export function rosterOf(ctx: Ctx): Roster {
     onSubagentEvent((workerId, ev) => {
       const floor = ctx.workerFloor(workerId);
       if (floor) roster.subagents.onEvent(teamFloor(ctx, floor), workerId, ev);
+    });
+    // A command a worker ran closes the permission card that waited for it (escalation-fold.ts).
+    onCommandRun((workerId, command) => {
+      const floor = ctx.workerFloor(workerId);
+      if (floor) sawCommandRun(roster, teamFloor(ctx, floor), workerId, command);
     });
     // …and from the Leads' transcripts, for what no hook says: a background run finishing, or
     // anything while the office was down (roster/subagent-live.ts).

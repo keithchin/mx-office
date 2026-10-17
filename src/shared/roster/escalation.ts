@@ -73,6 +73,8 @@ export interface Escalation {
     delivered: boolean;
     /** Typed into its terminal (delivered: never owed again), its session not showing it yet (dispatch/typed-watch.ts). */
     typed?: boolean;
+    /** Held for the raiser (mid-turn: Delivery's held list types it once its turn ends): not delivered yet, and not owed meanwhile. */
+    held?: boolean;
     /** What it meant (FYI noted, hands-on done), when it was one of those; `verdict` is the legacy word beside it. */
     outcome?: EscalationOutcome;
     /** The answer store's revision this answer is (server/answers/: the full text lives there). */
@@ -97,6 +99,34 @@ export interface Escalation {
   sourceGone?: { at: number; what: string; /** When the person said it's still needed and the agent was asked. */ asked?: number };
   /** The person told the agent something without answering it (Can't now, Still needed): the last time. */
   told?: { at: number; what: string; by: string };
+  /**
+   * A tool call Claude Code's permission layer denied (./permission-denial.ts): a settings action, never
+   * resolved by an Approve. Open until the office sees the command run, or the person keeps it blocked.
+   */
+  permission?: EscalationPermission;
+  /** Asks folded into this one instead of being filed again (roster/escalation-fold.ts): their keys, so a look doesn't fold them twice. */
+  foldedKeys?: string[];
+}
+
+/** A permission denial's card: the command denied, the allow rule for exactly it, and what happened since. */
+export interface EscalationPermission {
+  /** The command as the agent quoted it. */
+  command: string;
+  /** The Claude Code allow rule for exactly that command: `Bash(<command>)`. */
+  rule: string;
+  /** Who it would be allowed for: "Sophie (Lead Developer)". */
+  who?: string;
+  /** A rule the agent suggested instead: shown, never written. */
+  suggested?: string;
+  /** How many times it was asked for (this escalation and every one folded into it). */
+  count: number;
+  lastAt: number;
+  /** The person allowed it: the rule written to the role's folder's .claude/settings.local.json. */
+  allowed?: { at: number; by: string; file: string };
+  /** The person kept it blocked (the escalation is resolved as rejected). */
+  kept?: { at: number; by: string };
+  /** The office saw the command run (the escalation is resolved then). */
+  ranAt?: number;
 }
 
 /** What an agent sends to raise one, before the office stamps it. */

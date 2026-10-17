@@ -25,7 +25,6 @@ const REQUEST = new RegExp(
     String.raw`\blet me know\b`,
     String.raw`\btell me (which|whether|what|how)\b`,
     String.raw`\bneeds? your (approval|decision|answer|sign-?off|go-ahead|ok|okay|confirmation|input|review|call)\b`,
-    String.raw`\b(awaiting|waiting (on|for)) (you|your|the PM|the Project Manager)\b`,
     String.raw`\buntil you (answer|decide|approve|confirm|reply|say)\b`,
     String.raw`\bfor you to (decide|approve|merge|answer|confirm|review|set|sign)\b`,
     String.raw`\b(decision|question) for you\b`,
@@ -36,6 +35,18 @@ const REQUEST = new RegExp(
   ].join('|'),
   'i',
 );
+/**
+ * "Waiting on you" is a state, so it counts only when it's the agent's own wait and not denied: "I'm waiting
+ * on your merge", "Waiting on the PM: …", never "none of mine is waiting on you" (packtrack audit, 16 Oct:
+ * that sentence was filed as an escalation, d12213cfb0).
+ */
+const WAITING = /\b(awaiting|waiting (on|for)) (you|your|the PM|the Project Manager)\b/i;
+const NEGATED = /\b(none|nothing|no one|nobody|not|never|no longer)\b|n't\b/i;
+/**
+ * Someone else's ask passed on ("I'm still waiting on your decision on Sophie's code request"): that one
+ * has its own escalation, so the relay isn't filed again (packtrack, 60646a6a5e). A question still counts.
+ */
+const RELAYED = /\b[A-Z][a-z]+['’]s\b[^.?!]{0,80}\b(request|escalation|ask|question|proposal)\b/;
 /** A sentence that only says what happens if or when something else does. */
 const CONDITIONAL = /^\W*(if|when|once|after|as soon as|whenever)\b/i;
 const FUTURE = /\b(will|would|'ll) (need|want|ask)\b/i;
@@ -77,7 +88,10 @@ export function realAsk(text: string): string | undefined {
   const tail = paragraphs.slice(-TAIL_PARAGRAPHS).join('\n');
   for (const s of sentences(tail)) {
     if (/\?\W*$/.test(s) && !REPORTED.test(s)) return s.slice(0, 160);
-    if (REQUEST.test(s) && !CONDITIONAL.test(s) && !FUTURE.test(s)) return s.slice(0, 160);
+    if (CONDITIONAL.test(s) || FUTURE.test(s) || RELAYED.test(s)) continue;
+    if (REQUEST.test(s)) return s.slice(0, 160);
+    const wait = WAITING.exec(s);
+    if (wait && !NEGATED.test(s.slice(0, wait.index))) return s.slice(0, 160);
   }
   return undefined;
 }

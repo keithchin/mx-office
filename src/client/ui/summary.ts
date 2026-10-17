@@ -164,7 +164,10 @@ function phase(p: NonNullable<ProjectSummary['phase']>): HTMLElement {
   return h(
     'div.sm-phase',
     {},
-    h('span.sm-phase-label', { title: `From ${p.from}` }, `🧭 ${label}`),
+    h('span.sm-phase-label', { title: `From ${p.from}${p.line ? `
+PROJECT.md says: ${p.line}` : ''}` }, `🧭 ${label}`),
+    p.fresh ? h('span.sm-phase-fresh', {}, p.fresh) : null,
+    ...(p.flags ?? []).map((f) => h('span.sm-phase-flag', { role: 'note' }, `ℹ️ ${f}`)),
     p.stages.length
       ? h('span.sm-stages', {}, ...p.stages.filter((st) => /^[P0-9]$/.test(st.id)).map((st) => h(`span.sm-stage.${st.status.toLowerCase()}`, { title: `${st.title}: ${st.status}${st.detail ? ` — ${st.detail}` : ''}` }, st.id)))
       : null,

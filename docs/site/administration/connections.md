@@ -67,7 +67,7 @@ At the top of this section in ⚙️ Settings, **🚀 Run setup again** opens th
 
 **🔍 Check git & gh** looks at the office's machine: whether git and gh are installed (with the `winget` command if not), whether gh signs in with the agents' token, and whether git has a name and email for commits. gh runs with the token in its own environment and an empty, throwaway `GH_CONFIG_DIR`, so your own gh login is never read or changed; git's global config is only read.
 
-If git has no identity, set one for the workers' commits there: it goes into their environment as `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` / `GIT_COMMITTER_NAME` / `GIT_COMMITTER_EMAIL`, and git's own settings stay as they are.
+Set the office's commit identity there: it goes into the workers' environment as `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` / `GIT_COMMITTER_NAME` / `GIT_COMMITTER_EMAIL`, and git's own settings stay as they are. An agent worker's commits are then authored as the agent itself (*Sophie (Mx Office Lead Developer)* at an `@agents.mx-office.local` address) with this identity as the committer, or *Mx Office* when none is set: never your name, unless you commit yourself ([Review gate](../using-the-office/review-gate.md#each-agent-commits-as-itself)).
 
 ## Folders
 

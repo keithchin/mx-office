@@ -43,7 +43,7 @@ export class GitHubWatch {
       const details = { author: p.author, branch: p.headRefName, base: p.baseRefName };
       if (p.state === 'OPEN' && was === undefined) out.push({ floor, actor, action: 'pr.open', target, summary: `PR #${p.number} was opened: ${p.title}`, details: { ...details, additions: p.additions, deletions: p.deletions } });
       // Only what happened since the baseline: an old one coming into the list isn't news.
-      else if (p.state === 'MERGED' && (was !== undefined || ts(p.updatedAt) >= seen.at)) out.push({ floor, actor: { kind: 'office', name: 'GitHub' }, action: 'pr.merge', target, summary: `PR #${p.number} was merged: ${p.title}`, details, severity: 'notice' });
+      else if (p.state === 'MERGED' && (was !== undefined || ts(p.updatedAt) >= seen.at)) out.push({ floor, actor: { kind: 'office', name: 'GitHub' }, action: 'pr.merge', target, summary: `PR #${p.number} was merged${p.mergedBy ? ` as ${p.mergedBy} on GitHub` : ''}${actor.kind === 'agent' ? ` (${actor.name}'s branch)` : ''}: ${p.title}`, details: { ...details, ...(p.mergedBy ? { mergedBy: p.mergedBy } : {}) }, severity: 'notice' });
       else if (p.state === 'CLOSED' && (was !== undefined || ts(p.updatedAt) >= seen.at)) out.push({ floor, actor: { kind: 'office', name: 'GitHub' }, action: 'pr.close', target, summary: `PR #${p.number} was closed without merging: ${p.title}`, details });
     }
     return out;
