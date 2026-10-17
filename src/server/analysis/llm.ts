@@ -7,6 +7,7 @@ import { spawnOff, type OffChild } from '../offloop/exec.js';
 import os from 'node:os';
 import { meterCliResult } from '../budget/meter.js';
 import { officeCliRefused } from '../testmode.js';
+import { withClaudeAuth } from '../claude-auth/source.js';
 
 const TIMEOUT_MS = 60_000;
 const FAILS_BEFORE_BACKOFF = 3;
@@ -43,7 +44,8 @@ export class Haiku {
     this.recent = this.recent.filter((t) => now - t < 3_600_000);
     if (this.recent.length >= MAX_PER_HOUR) return null;
     this.recent.push(now);
-    const out = await run(this.claude!, this.env, system, input, JSON.stringify(schema));
+    // The agents' Claude credentials as they are now (claude-auth/), not as they were when the office started.
+    const out = await run(this.claude!, withClaudeAuth({ ...this.env }), system, input, JSON.stringify(schema));
     // Priced and booked on the floor it served (budget/meter.ts): the analyzer's, Jeff's or the summary's.
     meterCliResult(out, 'analyzer');
     const v = out === null ? null : parse(out);

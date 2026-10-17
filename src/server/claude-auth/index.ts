@@ -13,6 +13,7 @@ import { connectionsVault, updateOfficeSettings } from '../connections/store.js'
 import { notedTranscript } from '../convo/index.js';
 import { raise, updateIncident, incidentStore } from '../incidents/index.js';
 import type { Ctx } from '../office/context.js';
+import type { Floor } from '../floor.js';
 import { claudeAuthState, sourceDeps, sourceLogLine, type SourceDeps } from './source.js';
 import { AuthWatch, POLL_MS, type WatchedWorker } from './watch.js';
 
@@ -135,25 +136,72 @@ export async function setClaudeAuth(change: ClaudeAuthChange, who: { name: strin
   return undefined;
 }
 
-/** The agents the alert names, stopped and started again with the environment as it is now: how many. */
-export async function restartAffected(ctx: Pick<Ctx, 'floors'>, who: { name: string; id?: string }, waitMs = 10_000): Promise<number> {
-  const ids = [...(failure?.workers.values() ?? [])];
-  let n = 0;
-  for (const w of ids) {
-    const floor = w.floor ? ctx.floors.get(w.floor) : [...ctx.floors.values()].find((f) => f.workers.list().some((x) => x.id === w.id));
-    const m = floor?.workers;
-    const info = m?.list().find((x) => x.id === w.id);
-    if (!m || !info) continue;
-    if (info.status !== 'exited') {
-      m.sleep(w.id);
-      const until = Date.now() + waitMs;
-      while (m.list().find((x) => x.id === w.id)?.status !== 'exited' && Date.now() < until) await new Promise((r) => setTimeout(r, 200));
+/**
+ * Every agent on the office's Claude credentials, stopped and started again with them as they are now (after a
+ * change, so none keeps what it started with): Claude agents that are running, and the ones the alert names
+ * whatever they're doing. Not a worker run as someone on their own Claude sign-in (signins.ts), nor one asleep
+ * or exited (its next start gets the new credentials anyway). Returns how many.
+ */
+export async function restartAgents(ctx: Pick<Ctx, 'floors'>, who: { name: string; id?: string }, waitMs = 10_000): Promise<{ restarted: number; names: string[] }> {
+  const refused = new Set(failure?.workers.keys() ?? []);
+  const picked: { m: Floor['workers']; id: string; name: string; refused: boolean }[] = [];
+  for (const f of ctx.floors.values()) {
+    const m = f.workers;
+    for (const w of m.list()) {
+      if (w.kind !== 'agent' || (w.provider ?? m.defaultProvider) !== 'claude' || m.ownerOf(w.id)) continue;
+      const live = w.status !== 'exited' && w.status !== 'offline';
+      if (live || refused.has(w.id)) picked.push({ m, id: w.id, name: w.name, refused: refused.has(w.id) });
     }
-    const err = m.resume(w.id, 'The office fixed how you sign in to Claude (your last turn failed with an authentication error before it could start). Carry on with your task from where you were.', true);
-    if (!err) n++;
   }
-  audit.record({ actor: human(who.name, who.id), action: 'claude-auth.restart', target, summary: `${who.name} restarted ${n} agent${n === 1 ? '' : 's'} Claude had refused, with the agents’ Claude credentials as they are now`, details: { workers: ids.map((w) => w.name) }, severity: 'notice' });
-  return n;
+  // Stopped all at once, then each started again once it's down.
+  for (const p of picked) if (p.m.list().find((x) => x.id === p.id)?.status !== 'exited') p.m.sleep(p.id);
+  const until = Date.now() + waitMs;
+  let n = 0;
+  const names: string[] = [];
+  for (const p of picked) {
+    while (p.m.list().find((x) => x.id === p.id)?.status !== 'exited' && Date.now() < until) await new Promise((r) => setTimeout(r, 200));
+    const err = p.m.resume(p.id, p.refused ? 'The office fixed how you sign in to Claude (your last turn failed with an authentication error before it could start). Carry on with your task from where you were.' : 'The office restarted you after a change to how agents sign in to Claude. Carry on with your task from where you were.', true);
+    if (!err) {
+      n++;
+      names.push(p.name);
+    }
+  }
+  audit.record({ actor: human(who.name, who.id), action: 'claude-auth.restart', target, summary: `${who.name} restarted ${n} agent${n === 1 ? '' : 's'} with the agents’ Claude credentials as they are now (${LABEL[claudeAuthState().mode]})`, details: { workers: names, refused: picked.filter((p) => p.refused).map((p) => p.name) }, severity: 'notice' });
+  return { restarted: n, names };
+}
+
+/** Back compat for callers that only knew the refused ones: the same restart of every agent. */
+export const restartAffected = async (ctx: Pick<Ctx, 'floors'>, who: { name: string; id?: string }, waitMs = 10_000): Promise<number> => (await restartAgents(ctx, who, waitMs)).restarted;
+
+export type GatewayCheck = { ok: boolean; status?: number; text: string };
+
+/**
+ * 🧪 Test the gateway (an admin's button, never on its own): one GET of the gateway's models list
+ * (<base URL>/v1/models) with its key, no model call. Reachable, the key refused, or what else came back.
+ * Never says the key. `fetchImpl` is the tests' fake.
+ */
+export async function testGateway(d: SourceDeps = sourceDeps(), fetchImpl: typeof fetch = fetch, timeoutMs = 10_000): Promise<GatewayCheck> {
+  const s = claudeAuthState(d);
+  const base = s.setting?.baseUrl;
+  if (!base || !s.gatewayKey) return { ok: false, text: 'Save the gateway’s base URL and key first' };
+  if (d.testMode()) return { ok: false, text: 'A test office never reaches a gateway' };
+  const url = `${base.replace(/\/+$/, '')}/v1/models`;
+  try {
+    const res = await fetchImpl(url, {
+      method: 'GET',
+      headers: { 'x-api-key': s.gatewayKey, authorization: `Bearer ${s.gatewayKey}`, 'anthropic-version': '2023-06-01' },
+      signal: AbortSignal.timeout(timeoutMs),
+      redirect: 'manual',
+    });
+    void res.body?.cancel().catch(() => undefined);
+    if (res.ok) return { ok: true, status: res.status, text: `Reachable: ${base} answered ${res.status} and took the key` };
+    if (res.status === 401 || res.status === 403) return { ok: false, status: res.status, text: `${base} refused the key (${res.status}): check it, or paste it again` };
+    if (res.status === 404) return { ok: false, status: res.status, text: `${base} is there, but has no /v1/models (404): the key wasn’t checked; agents may still work if it serves /v1/messages` };
+    return { ok: false, status: res.status, text: `${base} answered ${res.status}` };
+  } catch (err) {
+    const e = err as Error;
+    return { ok: false, text: `Couldn’t reach ${base}: ${e.name === 'TimeoutError' ? 'no answer in time' : e.message}` };
+  }
 }
 
 /** At start (server.ts): the log line, and the watch on the agents' transcripts. Returns its stop. */

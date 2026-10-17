@@ -94,6 +94,26 @@ export function forgetTrust() {
 }
 
 function writeTrust(file: string, want: string[], platform: NodeJS.Platform): TrustResult {
+  const r = editClaudeConfig(file, `mark ${want.join(', ')} trusted`, (config) => {
+    const keys = want.map((d) => trustKey(d, platform)).filter((k) => config.projects?.[k]?.hasTrustDialogAccepted !== true);
+    if (!keys.length) return 'already';
+    if (config.projects !== undefined && (typeof config.projects !== 'object' || config.projects === null || Array.isArray(config.projects))) return 'unreadable';
+    config.projects ??= {};
+    for (const k of keys) {
+      const was = config.projects[k];
+      config.projects[k] = { ...(was && typeof was === 'object' ? was : {}), hasTrustDialogAccepted: true };
+    }
+    return 'changed';
+  });
+  return r === 'changed' ? 'trusted' : r;
+}
+
+/**
+ * Changes Claude Code's config `file` with `change` (which says whether it did): read, change, written to a
+ * temporary file renamed over it, back to back. A missing file is made; one that isn't a JSON object is left
+ * alone ('unreadable'). Never throws.
+ */
+export function editClaudeConfig(file: string, what: string, change: (config: any) => 'changed' | 'already' | 'unreadable'): 'changed' | 'already' | 'unreadable' | 'failed' {
   let text: string | undefined;
   try {
     text = readFileSync(file, 'utf8');
@@ -109,14 +129,8 @@ function writeTrust(file: string, want: string[], platform: NodeJS.Platform): Tr
     }
     if (!config || typeof config !== 'object' || Array.isArray(config)) return 'unreadable';
   }
-  const keys = want.map((d) => trustKey(d, platform)).filter((k) => config.projects?.[k]?.hasTrustDialogAccepted !== true);
-  if (!keys.length) return 'already';
-  if (config.projects !== undefined && (typeof config.projects !== 'object' || config.projects === null || Array.isArray(config.projects))) return 'unreadable';
-  config.projects ??= {};
-  for (const k of keys) {
-    const was = config.projects[k];
-    config.projects[k] = { ...(was && typeof was === 'object' ? was : {}), hasTrustDialogAccepted: true };
-  }
+  const r = change(config);
+  if (r !== 'changed') return r;
   const tmp = `${file}.${process.pid}.${Date.now()}.agent-office.tmp`;
   try {
     writeFileSync(tmp, JSON.stringify(config, null, 2), { mode: 0o600 });
@@ -127,12 +141,36 @@ function writeTrust(file: string, want: string[], platform: NodeJS.Platform): Tr
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
       renameSync(tmp, file);
     }
-    return 'trusted';
+    return 'changed';
   } catch (err) {
     rmSync(tmp, { force: true });
-    console.warn(`agent-office: couldn't mark ${keys.join(', ')} trusted in ${file}: ${(err as Error).message}`);
+    console.warn(`agent-office: couldn't ${what} in ${file}: ${(err as Error).message}`);
     return 'failed';
   }
+}
+
+/** How Claude Code keys an approved API key in customApiKeyResponses: its last 20 characters. */
+export const apiKeyTail = (key: string) => key.trim().slice(-20);
+
+/**
+ * Approves `key` in Claude Code's config `file` (customApiKeyResponses.approved, and out of rejected): Claude
+ * Code's interactive screen uses an ANTHROPIC_API_KEY from its environment only once it's approved there, and
+ * otherwise says "Not logged in · Run /login". Only for the key the office itself passes (claude-auth/), and
+ * only its tail is written, as Claude Code does. Under the test runner a real config is never written.
+ */
+export function approveApiKey(file: string, key: string): 'approved' | 'already' | 'unreadable' | 'failed' | 'skipped' {
+  if (!key.trim() || (process.env.NODE_TEST_CONTEXT && !throwaway(file))) return 'skipped';
+  const tail = apiKeyTail(key);
+  const r = editClaudeConfig(file, 'approve the agents’ API key', (config) => {
+    const was = config.customApiKeyResponses;
+    if (was !== undefined && (typeof was !== 'object' || was === null || Array.isArray(was))) return 'unreadable';
+    const approved: unknown[] = Array.isArray(was?.approved) ? was.approved : [];
+    const rejected: unknown[] = Array.isArray(was?.rejected) ? was.rejected : [];
+    if (approved.includes(tail) && !rejected.includes(tail)) return 'already';
+    config.customApiKeyResponses = { ...(was ?? {}), approved: approved.includes(tail) ? approved : [...approved, tail], rejected: rejected.filter((t) => t !== tail) };
+    return 'changed';
+  });
+  return r === 'changed' ? 'approved' : r;
 }
 
 /** Marks a floor the office manages trusted for the Claude that starts with `env` (the office's own, or an account's). */

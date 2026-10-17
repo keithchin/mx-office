@@ -237,7 +237,7 @@ test('“Use the agents’ Claude login instead” switches (admin, audited), th
     // Restart: the refused agent is put to sleep and resumed with a note.
     const calls: string[] = [];
     let status = 'working';
-    const floors = new Map([['sample-checksheet-demo', { workers: { list: () => [{ id: 'w1', status }], sleep: (id: string) => (calls.push(`sleep ${id}`), (status = 'exited'), undefined), resume: (id: string, prompt?: string) => (calls.push(`resume ${id} ${/authentication/.test(prompt ?? '')}`), undefined) } }]]);
+    const floors = new Map([['sample-checksheet-demo', { workers: { defaultProvider: 'claude', ownerOf: () => undefined, list: () => [{ id: 'w1', name: 'Sophie', kind: 'agent', status }], sleep: (id: string) => (calls.push(`sleep ${id}`), (status = 'exited'), undefined), resume: (id: string, prompt?: string) => (calls.push(`resume ${id} ${/authentication/.test(prompt ?? '')}`), undefined) } }]]);
     assert.equal(await restartAffected({ floors } as never, { name: 'Keith' }), 1);
     assert.deepEqual(calls, ['sleep w1', 'resume w1 true']);
   } finally {

@@ -3,10 +3,11 @@
 // own page, and audited. A key comes in once, in a POST body, and never goes back out.
 //   GET  /api/claude-auth           the view (an admin's with the keys' last 4)
 //   POST /api/claude-auth           {mode: login|key|gateway|env, baseUrl?, key?}
-//   POST /api/claude-auth/restart   restarts the agents Claude refused, with the credentials as they are now
+//   POST /api/claude-auth/restart   restarts every agent on the office's Claude credentials, with them as they are now
+//   POST /api/claude-auth/test      🧪 Test the gateway: one GET of its models list with its key (never a model call)
 import type { Route } from '../router.js';
 import { readBody, sameOrigin, send } from '../util.js';
-import { claudeAuthView, restartAffected, setClaudeAuth } from '../../claude-auth/index.js';
+import { claudeAuthView, restartAgents, setClaudeAuth, testGateway } from '../../claude-auth/index.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 
 const NO_STORE = { 'cache-control': 'no-store' };
@@ -40,9 +41,10 @@ export const claudeAuthRoutes = {
       const named = str(body.by, 60).replace(/[^\p{L}\p{N} ._'-]/gu, '').trim();
       const who = { name: session.account?.name ?? (named || 'an admin'), id: session.account?.id };
       if (p === '/api/claude-auth/restart') {
-        const restarted = await restartAffected(ctx, who);
-        return send(res, 200, { ...claudeAuthView(true), restarted }, NO_STORE);
+        const { restarted, names } = await restartAgents(ctx, who);
+        return send(res, 200, { ...claudeAuthView(true), restarted, names }, NO_STORE);
       }
+      if (p === '/api/claude-auth/test') return send(res, 200, { ...claudeAuthView(true), check: await testGateway() }, NO_STORE);
       if (p !== '/api/claude-auth') return send(res, 404, { error: 'Not found' });
       const err = await setClaudeAuth({ mode: body.mode, baseUrl: body.baseUrl, key: body.key }, who);
       return err ? send(res, 400, { error: err }) : send(res, 200, claudeAuthView(true), NO_STORE);

@@ -6,12 +6,15 @@ import type { ClaudeAuthMode, ClaudeAuthView } from '../../../shared/claude-auth
 import type { ServerMsg } from '../../../shared/protocol';
 import { loadProfile } from '../../state/persist';
 
+/** A call's answer: the view, and what a restart or a gateway test did. */
+export type ClaudeAuthResult = ClaudeAuthView & { restarted?: number; names?: string[]; check?: { ok: boolean; status?: number; text: string } };
+
 let view: ClaudeAuthView | undefined;
 let started = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
 const subs = new Set<() => void>();
 
-async function call(method: 'GET' | 'POST', path: string, body?: Record<string, unknown>): Promise<ClaudeAuthView & { restarted?: number }> {
+async function call(method: 'GET' | 'POST', path: string, body?: Record<string, unknown>): Promise<ClaudeAuthResult> {
   const res = await fetch(path, {
     method,
     credentials: 'same-origin',
@@ -19,7 +22,7 @@ async function call(method: 'GET' | 'POST', path: string, body?: Record<string, 
     headers: body === undefined ? {} : { 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify({ ...body, by: loadProfile()?.name }),
   });
-  const data = (await res.json().catch(() => ({}))) as ClaudeAuthView & { error?: string; restarted?: number };
+  const data = (await res.json().catch(() => ({}))) as ClaudeAuthResult & { error?: string };
   if (!res.ok) throw new Error(data.error ?? `The office said ${res.status}`);
   return data;
 }
@@ -42,6 +45,8 @@ export const claudeAuthApi = {
   view: () => call('GET', '/api/claude-auth').then((v) => (take(v), v)),
   set: (mode: ClaudeAuthMode, extra: { baseUrl?: string; key?: string } = {}) => call('POST', '/api/claude-auth', { mode, ...extra }).then((v) => (take(v), v)),
   restart: () => call('POST', '/api/claude-auth/restart', {}).then((v) => (take(v), v)),
+  /** 🧪 Test the gateway: one request through it, an admin's button only. */
+  test: () => call('POST', '/api/claude-auth/test', {}).then((v) => (take(v), v)),
 };
 
 /** The view as last fetched (the first call starts fetching). */

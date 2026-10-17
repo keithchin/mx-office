@@ -102,6 +102,7 @@ export function sourceWords(mode: ClaudeAuthMode, chosen: boolean, env: ClaudeEn
       if (!hasKey && held) return { source: `${keyNames(env)} from the office’s environment — held back by the desktop app until the office restarts.`, warning: 'Restart the office (🔁 Restart safely) so the desktop app passes it on.' };
       const base = env.baseUrl ? ` with ${CLAUDE_BASE_VAR}` : ' without a base URL';
       const source = `${keyNames(env)}${base} from the office’s environment (started with it — e.g. a Windows user variable).`;
+      if (!env.baseUrl) return { source, warning: `The office’s environment has ${keyNames(env)} but no ${CLAUDE_BASE_VAR}: agents will send this key to Anthropic directly (api.anthropic.com). If it’s a gateway’s key, every agent fails with “Invalid API key” — choose A gateway instead and save its base URL with the key.` };
       return { source, warning: `Agents use a key the office inherited from its environment${env.baseUrl ? '' : ', sent to api.anthropic.com'}. If it’s wrong, or belongs to a gateway whose address isn’t set, every agent fails with “Invalid API key”.` };
     }
   }

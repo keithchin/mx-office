@@ -8,6 +8,7 @@ import { meterCliResult, withBilling } from './budget/meter.js';
 import os from 'node:os';
 import type { WorkerTask } from '../shared/protocol.js';
 import { officeCliRefused } from './testmode.js';
+import { withClaudeAuth } from './claude-auth/source.js';
 
 /** What a worker has been asked and has been doing lately. */
 export interface TaskContext {
@@ -102,7 +103,8 @@ export class TaskNamer {
 
   private async generate(ctx: TaskContext): Promise<WorkerTask | null> {
     if (!this.enabled) return null;
-    const out = await run(this.claude!, this.env, this.system(), describe(ctx));
+    // The agents' Claude credentials as they are now (claude-auth/), not as they were when the office started.
+    const out = await run(this.claude!, withClaudeAuth({ ...this.env }), this.system(), describe(ctx));
     meterCliResult(out, 'task-namer');
     const task = out === null ? null : parse(out);
     if (task) this.fails = 0;
