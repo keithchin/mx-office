@@ -115,7 +115,11 @@ export function failWritesFrom(o: Office, n: number): () => void {
   return () => void (store.put = put);
 }
 
-/** Lets the async parts (marking held answers in flight, critical writes) finish. */
+/**
+ * Lets the async parts run a moment, for checks that something did NOT happen (typed once, not again). What
+ * must happen (a held answer marked in flight on disk, typed, received) is waited for with `until`
+ * (tests/wait.ts): fsynced critical writes can take longer on a busy CI runner than this sleep.
+ */
 export const settle = async () => {
   for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
 };
