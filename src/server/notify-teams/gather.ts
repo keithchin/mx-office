@@ -26,6 +26,7 @@ import { asksFloor, asksOf } from '../asks/index.js';
 import { decisionsOf } from '../decisions/index.js';
 import { portfoliosOf } from '../portfolios/index.js';
 import { designOf } from '../design/index.js';
+import { liveAppsIfMade } from '../liveapp/index.js';
 import type { AsksNeed } from '../../shared/asks.js';
 
 /** The floor's surfaced asks as Needs you reads them (the same the browser's feed hands in). */
@@ -76,8 +77,9 @@ export async function floorNeeds(ctx: Ctx, floor: Floor, now = Date.now()): Prom
     pulls: floor.github.pulls.items,
     floors: [],
     setup,
+    // A crash or a milestone ready in it (shared/liveapp/status.ts liveNotifies); none when nobody ever opened a live app.
+    live: liveAppsIfMade(ctx)?.peek(floor.id),
     // Its report-ready line comes from an audit this office ran, so a Firm nobody made has none.
-    live: undefined,
     firm: firmIfMade(ctx)?.floorStatus(floor.id),
     studio: studioStateOf(floor.id),
     incidents: attentionBriefs(),

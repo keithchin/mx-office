@@ -68,7 +68,7 @@ export interface DetailFacts {
   /** The newest commit on the default branch (the Git tab's graph), or the delivery branch's head; when and what, when known. */
   lastCommit?: { sha: string; branch?: string; when?: string; subject?: string };
   budget?: { spent: number; total?: number; text: string };
-  live?: { status: string; url?: string };
+  live?: { status: string; url?: string; word?: string; ready?: boolean };
   /** Created with "Keep this project off GitHub": no GitHub link, and it says so. */
   localOnly?: boolean;
 }
@@ -106,7 +106,10 @@ export function detailRows(f: DetailFacts): DetailRow[] {
     rows.push({ label: 'Last commit', value: `${short(f.lastCommit.sha)}${f.lastCommit.branch ? ` on ${f.lastCommit.branch}` : ''}`, mono: true, tab: 'git', ...(sub ? { sub } : {}) });
   }
   if (f.budget) rows.push({ label: 'Budget', value: f.budget.text, tab: 'budget' });
-  if (f.live) rows.push(f.live.url && f.live.status === 'running' ? { label: 'Live app', value: f.live.url.replace(/^https?:\/\//, '').replace(/\/$/, ''), href: f.live.url, external: true } : { label: 'Live app', value: f.live.status, tab: 'live' });
+  if (f.live) {
+    const ready = f.live.ready === undefined ? undefined : f.live.ready ? 'ready' : 'not ready yet';
+    rows.push(f.live.url && f.live.status === 'running' ? { label: 'Live app', value: f.live.url.replace(/^https?:\/\//, '').replace(/\/$/, ''), href: f.live.url, external: true, ...(ready ? { sub: ready } : {}) } : { label: 'Live app', value: f.live.word ?? f.live.status, tab: 'live' });
+  }
   return rows;
 }
 

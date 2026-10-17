@@ -68,7 +68,7 @@ import { portalDeepLinks } from './ui/portal/deeplink';
 import { portalLayout, type PortalLayout } from './ui/portal/layout';
 import { asTab, type TabId } from './ui/portal/nav-logic';
 import { projectTabs } from './tabs/host';
-import { appUrl } from './ui/liveapp';
+import { liveSummary } from './ui/liveapp';
 import { budgetUi } from './ui/budget';
 import './shared/perfwatch-on';
 import { batched } from './ui/batch';
@@ -521,7 +521,7 @@ portal = portalLayout({
   openWorker,
   openIssue: kanban.openIssue,
   openPull: kanban.openPull,
-  live: () => ((s) => (s ? { status: s.status, url: appUrl(s) } : undefined))(live.current()),
+  live: () => liveSummary(live.current()),
   budget: () => budget.feed.floor(),
   setup: () => cachedSetup(store.floor ?? undefined),
 });

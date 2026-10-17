@@ -10,6 +10,7 @@ import path from 'node:path';
 import { ulid } from '../../shared/evidence/ids.js';
 import type { TestRunDraft, TestRunRecord } from '../../shared/testing/record.js';
 import { sha256 } from '../audit/log.js';
+import { testRunsLanded } from './news.js';
 
 export type TestRunLine = TestRunRecord & { prev: string; hash: string };
 
@@ -102,6 +103,7 @@ export class TestRunStore {
       await mkdir(this.dir, { recursive: true, mode: 0o700 });
       await appendFile(this.file, out, { mode: 0o600 });
       this.size += Buffer.byteLength(out);
+      testRunsLanded(this.floorId);
       return added;
     });
   }

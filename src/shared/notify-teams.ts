@@ -3,6 +3,7 @@
 // same rules as the strip on the Command Center, so the two never disagree.
 
 import type { NeedItem } from './needsyou.js';
+import { liveNotifies } from './liveapp/status.js';
 
 /** Only the red items, or those and a daily digest per floor after its standup. */
 export type TeamsLevel = 'needs' | 'digest';
@@ -116,6 +117,9 @@ export function isRedNeed(n: Pick<NeedItem, 'kind' | 'key'>): boolean {
       return !n.key.startsWith('audit-budget-');
     case 'budget':
       return n.key === 'budget-paused' || n.key === 'budget-full';
+    // The live app crashed, or a milestone became ready (or stopped being ready) in it: once each (shared/liveapp/status.ts).
+    case 'live':
+      return liveNotifies(n.key);
     default:
       return false;
   }

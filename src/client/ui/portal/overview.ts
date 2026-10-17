@@ -40,7 +40,7 @@ export interface OverviewDeps {
   show(tab: string): void;
   openWorker(id: string): void;
   /** The live app's state and address, when the office has said. */
-  live(): { status: string; url?: string } | undefined;
+  live(): { status: string; url?: string; word?: string; ready?: boolean } | undefined;
   /** The project's budget, from the budget feed. */
   budget(): BudgetView | undefined;
   /** The Mendix version Studio Pro would open it in. */
@@ -172,14 +172,15 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
     const running = live?.status === 'running' && !!live.url;
     const shown = deps.studio.shown();
     const blocked = deps.studio.blocked();
-    const key = JSON.stringify([running, live?.url, live?.status, shown, blocked]);
+    const key = JSON.stringify([running, live?.url, live?.status, live?.word, live?.ready, shown, blocked]);
     if (key === linksKey) return;
     linksKey = key;
     studioBtn.hidden = !shown;
     studioBtn.disabled = !!blocked;
     studioBtn.title = blocked ?? 'Open the app’s .mpr in Studio Pro';
-    appBtn.title = running ? `Open ${live!.url}` : 'The live app isn’t running: the Live app page';
-    why.textContent = running ? `View App: the live app at ${live!.url!.replace(/^https?:\/\//, '').replace(/\/$/, '')}.` : `View App: the live app is ${live?.status ?? 'not started'}; opens the Live app page.${blocked ? ` Studio Pro: ${blocked}` : ''}`;
+    const readyWord = live?.ready === undefined ? '' : live.ready ? ' (ready)' : ' (not ready yet: see the Live app page)';
+    appBtn.title = running ? `Open ${live!.url}${readyWord}` : `The live app is ${live?.word ?? 'not started'}: the Live app page`;
+    why.textContent = running ? `View App: the live app at ${live!.url!.replace(/^https?:\/\//, '').replace(/\/$/, '')}${readyWord}.` : `View App: the live app is ${live?.word ?? live?.status ?? 'not started'}; opens the Live app page.${blocked ? ` Studio Pro: ${blocked}` : ''}`;
   }
 
   // The toolkit pin: asked once per project, only for a toolkit project.

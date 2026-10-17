@@ -1,0 +1,14 @@
+/* The "main is behind the work" banner (ui/branch-ahead/banner.ts) on the Model and Live app tabs. */
+.ba { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; border: 2px solid var(--warn); border-radius: 10px; background: var(--card); font-size: 13px; }
+.ba[hidden] { display: none; }
+.mxv > .ba { margin: 6px 8px 0; border-radius: 8px; }
+.ba-line { margin: 0; font-weight: 800; line-height: 1.4; }
+.ba-icon { margin-right: 6px; }
+.ba-note { margin: 0; color: var(--muted); font-weight: 700; }
+.ba-rows { display: flex; flex-direction: column; gap: 4px; }
+.ba-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ba-row small { color: var(--muted); font-weight: 700; }
+.ba-review { padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 800; border: 1px solid var(--line); }
+.ba-review.not-reviewed, .ba-review.no-pr { color: var(--bad-ink, var(--bad)); }
+.ba-review.reviewed { color: var(--good); }
+.ba-row .btn { padding: 3px 10px; font-size: 12px; }

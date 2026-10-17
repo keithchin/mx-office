@@ -33,6 +33,7 @@ import { fullScreen } from './fullscreen';
 import { ChangeHere } from './change-here';
 import './model.css';
 import './page.css';
+import { aheadBanner } from '../branch-ahead/banner';
 
 const DARK = new Set(['dark', 'terminal', 'clean-dark', 'portal-dark']);
 const TYPE_LABEL: Record<string, string> = { domainmodel: 'Domain model', systemoverview: 'System Overview', modulesecurity: 'Module security', navprofile: 'Navigation profile', projectsecurity: 'Project security' };
@@ -193,6 +194,10 @@ export function modelView(root: HTMLElement): ModelView {
     fullBtn,
   );
   root.replaceChildren(bar, body);
+  // "main is behind the work": an agent's branch ahead with model changes (ui/branch-ahead/), shown while main is;
+  // View it opens the branch with its changes marked.
+  const ahead = aheadBanner('model', { view: (b) => viewBranch(b), shown: () => ref === 'main' });
+  root.insertBefore(ahead.el, body);
   explorerBtn.addEventListener('click', () => root.classList.toggle('mx-drawer'));
   new MutationObserver(() => (zoomPct.textContent = `${canvasHost.dataset.zoom ?? 100}%`)).observe(canvasHost, { attributes: true, attributeFilter: ['data-zoom'] });
 
@@ -406,6 +411,7 @@ export function modelView(root: HTMLElement): ModelView {
     const f = floor;
     say('Reading the app… (the first time takes a little while)');
     try {
+      ahead.refresh();
       const r = await modelApi.refs(f);
       if (mine !== seq || f !== floor) return;
       refs = r.refs;

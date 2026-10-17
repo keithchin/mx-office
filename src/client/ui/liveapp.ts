@@ -1,21 +1,18 @@
 // The 🌐 Live app tab of the 1D view: the floor's Mendix app, built from main and run on the office's
-// machine (server/liveapp/), with ▶ / ⟳ / ■, the commit it runs, and the app itself in a frame. And
-// the small chip in the project summary that says how it is and leads here.
+// machine (server/liveapp/), with ▶ / ⟳ / ■, the honest status (running, building, stopped: crashed at
+// 10:27, not started), the commit it runs against main, whether it's ready by milestone
+// (ui/liveapp/readiness.ts), and the app itself in a small browser (ui/liveapp/viewer.ts). And the chip
+// in the project summary that says how it is and leads here.
 
 import type { Net } from '../net';
-import type { LiveAppState, LiveAppStatus, ServerMsg } from '../../shared/protocol';
+import type { LiveAppState, ServerMsg } from '../../shared/protocol';
+import { builtLine, commitLine, liveStatus, stamp } from '../../shared/liveapp/status';
 import { store } from '../state';
 import { h, timeAgo } from './dom';
+import { readinessCard } from './liveapp/readiness';
+import { liveViewer } from './liveapp/viewer';
+import { aheadBanner } from './branch-ahead/banner';
 import './liveapp.css';
-
-const WORD: Record<LiveAppStatus, string> = {
-  stopped: 'stopped',
-  starting: 'starting…',
-  running: 'running',
-  updating: 'updating…',
-  stopping: 'stopping…',
-  failed: 'failed',
-};
 
 export interface LiveAppView {
   /** Every server message: the floor's app changed, or you came onto a floor (then it asks). */
@@ -33,25 +30,31 @@ const short = (sha?: string) => sha?.slice(0, 7) ?? '';
 /** The app's address as this browser reaches the office's machine: its port there, over plain HTTP (mxcli serves no TLS). */
 export const appUrl = (s: LiveAppState) => (s.appPort ? `http://${location.hostname}:${s.appPort}/` : '');
 
+/** What the Overview and View App say about it: the status word, the address when it runs, whether it's ready. */
+export function liveSummary(s: LiveAppState | null): { status: string; word: string; url?: string; ready?: boolean } | undefined {
+  if (!s) return undefined;
+  return { status: s.status, word: liveStatus(s).word, ...(s.status === 'running' && appUrl(s) ? { url: appUrl(s) } : {}), ...(s.readiness ? { ready: s.readiness.ready } : {}) };
+}
+
 /** `openTab` shows the 🌐 Live app tab (the chip's click); `visible` says whether it's the tab showing now. */
 export function liveAppView(net: Net, openTab: () => void, visible: () => boolean): LiveAppView {
   let state: LiveAppState | null = null;
   let root: HTMLElement | null = null;
-  const frame = h('iframe.la-frame', { title: 'The live app', referrerpolicy: 'no-referrer' }) as HTMLIFrameElement;
-  // Taking a frame out of the page reloads it, so it stays put and only what's above it is redrawn.
+  // Taking a frame out of the page reloads it, so the viewer stays put and only what's above it is redrawn.
   const top = h('div.la-top');
-  const frameBox = h('div.la-framebox', { hidden: true }, frame);
-  /** What the frame was last pointed at: a new start (or commit) loads the app again. */
-  let loaded = '';
+  const viewer = liveViewer();
+  const banner = aheadBanner('live', { openModel: () => document.getElementById('tab-model')?.click() });
   const chip = h('button.la-chip', { type: 'button', title: "The project's app, running from main: open the 🌐 Live app tab", onclick: openTab });
 
   const ask = () => net.send({ t: 'liveapp.status' });
 
   function drawChip() {
     const s = state;
-    chip.className = `la-chip ${s?.status ?? 'stopped'}`;
-    const what = !s ? '…' : s.status === 'running' ? `running · ${short(s.sha)}` : s.status === 'updating' ? `updating to ${short(s.sha)}…` : WORD[s.status];
+    const st = liveStatus(s);
+    chip.className = `la-chip ${s?.status ?? 'stopped'} ${st.tone}`;
+    const what = s?.status === 'running' ? `running · ${short(s.sha)}${s.readiness ? (s.readiness.ready ? ' · ready' : ' · not ready') : ''}` : st.word;
     chip.textContent = `🌐 Live app: ${what}`;
+    chip.title = s?.readiness?.headline ?? "The project's app, running from main: open the 🌐 Live app tab";
   }
 
   function draw() {
@@ -59,7 +62,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     if (!root || !visible()) return;
     const s = state;
     if (!s) {
-      frameBox.hidden = true;
+      viewer.hide();
       return void top.replaceChildren(h('p.la-empty', {}, 'Asking the office about the live app…'));
     }
     const up = s.status === 'starting' || s.status === 'updating' || s.status === 'running';
@@ -68,38 +71,38 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     // Only admins run it (it starts processes on the office's machine); everyone else watches.
     const admin = store.me.admin;
     const url = s.status === 'running' ? appUrl(s) : '';
+    const st = liveStatus(s);
+    const crashed = s.status === 'failed';
+    const line = commitLine(s);
     const commit = s.sha
-      ? h('span.la-commit', { title: s.subject ?? '' }, '📦 ', h('code', {}, short(s.sha)), ' ', h('span.la-subject', {}, s.subject ?? ''), s.branch ? h('small', {}, ` on ${s.branch}`) : null)
+      ? h('span.la-commit', { title: s.subject ?? '' }, '📦 ', h('code', {}, line || short(s.sha)), ' ', h('span.la-subject', {}, s.subject ?? ''), builtLine(s) ? h('small', {}, ` · ${builtLine(s)}`) : null)
       : null;
     const bar = h(
       'div.la-bar',
       {},
-      h('span', { class: `pill la-pill ${s.status}` }, WORD[s.status]),
-      !admin || up || busy ? null : h('button.btn.primary', { type: 'button', disabled: !s.available, onclick: send('liveapp.start'), title: 'Build main and run it on the office' }, '▶ Start'),
+      h('span', { class: `pill la-pill ${s.status} ${st.tone}` }, st.word),
+      !admin || up || busy ? null : h('button.btn.primary', { type: 'button', disabled: !s.available, onclick: send(crashed ? 'liveapp.restart' : 'liveapp.start'), title: crashed ? 'Start it again on the newest main' : 'Build main and run it on the office' }, crashed ? '⟳ Restart' : '▶ Start'),
       admin && up ? h('button.btn', { type: 'button', onclick: send('liveapp.restart'), title: 'Stop it and start it again on the newest main' }, '⟳ Restart') : null,
       admin && up ? h('button.btn', { type: 'button', onclick: send('liveapp.stop'), title: 'Stop the app and free its ports' }, '■ Stop') : null,
       admin ? null : h('small.la-note', {}, 'Only admins start or stop the live app'),
       commit,
-      url ? h('a.btn.la-open', { href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Open in new tab ↗') : null,
     );
-    const said = [s.message, s.by && s.since ? `${s.by} · ${timeAgo(s.since)}` : s.by].filter(Boolean).join(' — ');
+    const said = crashed ? '' : [s.message, s.by && s.since ? `${s.by} · ${timeAgo(s.since)}` : s.by].filter(Boolean).join(' — ');
     const note = said ? h('p.la-note', {}, said) : null;
+    const f = s.failure;
+    const failed = crashed
+      ? h('div.la-failed', { role: 'alert' }, h('p.la-note.bad', {}, f ? `${f.kind === 'crash' ? `The app stopped by itself at ${stamp(f.at)}` : f.kind === 'timeout' ? `It didn't come up; gave up at ${stamp(f.at)}` : `The build failed at ${stamp(f.at)}`}${f.sha ? ` (${s.branch ?? 'main'} @${short(f.sha)})` : ''}: ${f.why}` : (s.message ?? 'It failed.')), admin ? null : h('p.la-note', {}, 'An admin can restart it.'))
+      : null;
+    const refresh = s.refresh && !s.refresh.ok && (up || crashed) ? h('p.la-note.bad', {}, `Live app can't check for updates: ${s.refresh.error ?? 'unknown error'}${s.sha ? `. Running ${commitLine({ ...s, main: undefined })}` : ''}.`) : null;
     const hint = !s.available ? h('p.la-note.bad', {}, "mxcli isn't installed where the office runs, so it can't run the app (AGENT_OFFICE_LIVE_MXCLI).") : null;
-    const log = s.status !== 'running' && s.log.length ? h('pre.la-log', {}, s.log.join('\n')) : null;
-    if (url) {
-      const key = `${url}@${s.sha}@${s.since}`;
-      if (key !== loaded) {
-        loaded = key;
-        frame.src = url;
-      }
-    } else if (loaded) {
-      loaded = '';
-      frame.removeAttribute('src');
-    }
-    const mixed = url && location.protocol === 'https:' ? h('p.la-note', {}, 'This page is on HTTPS and the app on plain HTTP, so the browser may not show it here: use Open in new tab.') : null;
-    const empty = url || up || s.status === 'failed' ? null : h('p.la-empty', {}, "The app isn't running. ▶ Start builds the project's main branch and runs it here; it follows main as PRs merge.");
-    top.replaceChildren(bar, ...([note, hint, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
-    frameBox.hidden = !url;
+    const lines = crashed && f?.lines.length ? f.lines : s.log;
+    const log = s.status !== 'running' && lines.length ? h('pre.la-log', {}, lines.join('\n')) : null;
+    if (url) viewer.show(url, `${s.sha}@${s.since}`);
+    else viewer.hide();
+    const mixed = url && location.protocol === 'https:' ? h('p.la-note', {}, 'This page is on HTTPS and the app on plain HTTP, so the browser may not show it here: use Open ↗.') : null;
+    const empty = url || up || crashed ? null : h('p.la-empty', {}, s.started ? 'The app is stopped. ▶ Start builds the project’s main branch and runs it here; it follows main as PRs merge.' : "The app isn't started. ▶ Start builds the project's main branch and runs it here; it follows main as PRs merge.");
+    const card = readinessCard(s);
+    top.replaceChildren(bar, ...([failed, refresh, note, hint, banner.el, card, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
     if (log) log.scrollTop = log.scrollHeight;
   }
 
@@ -109,16 +112,19 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
         state = null;
         draw();
         ask();
+        banner.refresh();
       } else if (msg.t === 'liveapp.state' && msg.state.floor === store.floor) {
+        const moved = msg.state.main?.sha !== state?.main?.sha;
         state = msg.state;
         draw();
+        if (moved) banner.refresh();
       }
     },
     render(el) {
       if (root !== el) {
         root = el;
         root.classList.add('la');
-        root.replaceChildren(top, frameBox);
+        root.replaceChildren(top, viewer.el);
       }
       if (!state) ask();
       draw();

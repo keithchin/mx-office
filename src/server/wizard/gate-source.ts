@@ -100,6 +100,16 @@ const DEFAULTS: GateSourceOptions = { throttleMs: 3 * 60_000, failMs: 10 * 60_00
 
 const fetchedAt = new Map<string, number>();
 const fetching = new Map<string, Promise<void>>();
+const outcomes = new Map<string, { ok: boolean; at: number; error?: string }>();
+
+/** git's own reason, from what it printed: its first fatal/error line, else its last line. */
+export function gitSaid(text: string): string {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  return (lines.find((l) => /^(fatal|error):/i.test(l)) ?? lines.at(-1) ?? 'git failed').slice(0, 300);
+}
+
+/** How the folder's last fetch of origin/<default> went (the live app says when it can't reach main). */
+export const fetchOutcome = (dir: string) => outcomes.get(dir);
 
 /**
  * A quiet fetch of origin/<default> into `dir`, at most every `everyMs` per folder, shared by everything
@@ -110,7 +120,12 @@ export function fetchDefault(dir: string, def: string, everyMs = DEFAULTS.fetchM
   const going = fetching.get(dir);
   if (going) return going;
   if (now - (fetchedAt.get(dir) ?? -Infinity) < everyMs) return Promise.resolve();
-  const p = git(['fetch', '--quiet', '--no-tags', 'origin', `+refs/heads/${def}:refs/remotes/origin/${def}`], dir, 60_000).then((out) => {
+  const p = new Promise<string | undefined>((resolve) => {
+    execFileOff('git', ['fetch', '--quiet', '--no-tags', 'origin', `+refs/heads/${def}:refs/remotes/origin/${def}`], { cwd: dir, timeout: 60_000, env: ENV, windowsHide: true }, (err, out, stderr) => {
+      outcomes.set(dir, err ? { ok: false, at: Date.now(), error: gitSaid(stderr || (err.killed ? 'timed out after 60 s' : err.message)) } : { ok: true, at: Date.now() });
+      resolve(err ? undefined : out);
+    });
+  }).then((out) => {
     fetchedAt.set(dir, Date.now());
     fetching.delete(dir);
     // The floor sync looks whether the folder can follow (floor-sync/); the gate source re-derives the stage.

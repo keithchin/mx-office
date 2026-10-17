@@ -6,17 +6,18 @@ import type { ChildProcess } from 'node:child_process';
 import { appendFileSync, mkdirSync, statSync, truncateSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import type { LiveAppState, LiveAppStatus } from '../../shared/protocol.js';
-import { cleanBuild, defaultBranch, ensureCheckout, findMpr, pullBranch, remoteHead } from './checkout.js';
+import type { LiveAppFailure, LiveAppState, LiveAppStatus } from '../../shared/protocol.js';
+import { cleanBuild, defaultBranch, ensureCheckout, findMpr, lookAtFloor, pullBranch, type FloorLook } from './checkout.js';
 import { databaseName, type LiveAppConfig } from './config.js';
 import { isUp, nextStatus, type LiveAppEvent } from './machine.js';
 import { pickPorts } from './ports.js';
 import { pgBinDir, startTree, stopTree } from './process.js';
 import { floorToolkitEnv } from '../toolkit-env.js';
-import { originNews } from '../floor-sync/bus.js';
 
 /** Lines of the log kept for the page. */
 const TAIL = 30;
+/** Lines of the log kept with a failure (what it said as it stopped). */
+const FAIL_LINES = 8;
 /** The log file starts over past this size. */
 const LOG_MAX_BYTES = 5 * 1024 * 1024;
 const READY_POLL_MS = 2_000;
@@ -26,10 +27,8 @@ export interface LiveAppDeps {
   /** The resolved mxcli, or null when there's none on this machine. */
   mxcli: string | null;
   floorId: string;
-  /** The floor's own checkout, cloned from the first time. */
+  /** The floor's own checkout: the live checkout is cloned from it and fetches from it. */
   floorDir: string;
-  /** The floor's GitHub remote, which the live checkout follows. */
-  remote?: string;
   /** Where the checkout and the log go: <dir>/<floor> and <dir>/<floor>.log. */
   liveDir: string;
   /** Ports other floors' apps hold. */
@@ -86,18 +85,22 @@ export class LiveApp {
     });
   }
 
-  /** Auto-refresh: whether main moved past what runs, and if so, restart on it. */
+  /**
+   * Auto-refresh (every pollMs while it runs): has the floor's folder fetch main from GitHub (the office's own fetch and credentials),
+   * says how that went (a failure is on the page and in Needs you, never only in the log), and restarts
+   * on a newer main.
+   */
   async poll(): Promise<void> {
-    if (this.s.status !== 'running' || !this.s.branch || !this.s.sha) return;
-    let head: string | undefined;
-    try {
-      head = await remoteHead(this.checkout, this.s.branch);
-    } catch (err) {
-      return this.note(`auto-refresh: couldn't ask the remote about ${this.s.branch}: ${(err as Error).message}`);
-    }
+    const branch = this.s.branch;
+    if (this.s.status !== 'running' || !branch || !this.s.sha) return;
+    const look: FloorLook = await lookAtFloor(this.d.floorDir, branch, 0).catch((err) => ({ ok: false, at: Date.now(), error: (err as Error).message }));
+    this.noteRefresh(branch, look);
+    await this.follow(look.head);
+  }
+
+  /** Main is at `head` in the floor's folder (a fetch just landed): restart on it when it moved past what runs. */
+  async follow(head: string | undefined): Promise<void> {
     if (!head || head === this.s.sha || this.s.status !== 'running') return;
-    // Main moved on GitHub: the floor's own folder may follow it too (floor-sync/).
-    originNews(this.d.floorDir, 'stale');
     await this.act('update', 'auto-refresh', () => this.launch(true), `Updating to ${head.slice(0, 7)}…`);
   }
 
@@ -123,7 +126,7 @@ export class LiveApp {
     }
     const gen = ++this.gen;
     this.retried = false;
-    this.set({ status: to, by, message: message ?? (event === 'restart' ? 'Restarting…' : 'Getting main…'), since: Date.now(), log: [] });
+    this.set({ status: to, by, message: message ?? (event === 'restart' ? 'Restarting…' : 'Getting main…'), since: Date.now(), log: [], started: true, failure: undefined });
     return this.enqueue(async () => {
       await this.kill();
       if (gen !== this.gen) return;
@@ -145,15 +148,15 @@ export class LiveApp {
     const gen = this.gen;
     mkdirSync(this.d.liveDir, { recursive: true });
     this.rotateLog();
-    await ensureCheckout(this.checkout, this.d.floorDir, this.d.remote);
-    const branch = this.s.branch ?? (await defaultBranch(this.checkout));
-    const co = await pullBranch(this.checkout, branch);
+    await ensureCheckout(this.checkout, this.d.floorDir);
+    const branch = this.s.branch ?? (await defaultBranch(this.d.floorDir));
+    const co = await pullBranch(this.checkout, this.d.floorDir, branch);
     if (gen !== this.gen) return;
     const mpr = findMpr(this.checkout);
     if (!mpr) throw new Error(`No Mendix project (.mpr) in ${branch} at ${co.sha.slice(0, 7)}`);
     // A newer main over an older build trips mxbuild up (see BUILD_LEFTOVERS).
     if (co.moved && cleanBuild(path.dirname(mpr))) this.note('main moved: cleared the last build');
-    this.set({ branch, sha: co.sha, subject: co.subject, message: update ? `Updating to ${co.sha.slice(0, 7)}: building…` : `Building ${co.sha.slice(0, 7)}… (a cold start takes a minute or two)` });
+    this.set({ branch, sha: co.sha, subject: co.subject, commitAt: co.at, builtAt: undefined, message: update ? `Updating to ${co.sha.slice(0, 7)}: building…` : `Building ${co.sha.slice(0, 7)}… (a cold start takes a minute or two)` });
     await this.spawnApp(mpr, gen);
   }
 
@@ -195,7 +198,9 @@ export class LiveApp {
         );
         return;
       }
-      this.fail(`mxcli exited (code ${code ?? '?'})`);
+      // It was running and stopped by itself: mxcli says why ("the app stopped: the Mendix runtime is no longer running").
+      const said = [...this.s.log].reverse().find((l) => /the app stopped|no longer running|^error\b|exception/i.test(l));
+      this.fail(said ? `${said.replace(/^error:\s*/i, '')} (mxcli exited, code ${code ?? '?'})` : `mxcli exited (code ${code ?? '?'})`);
     });
     void this.waitReady(app, gen);
   }
@@ -206,11 +211,11 @@ export class LiveApp {
     while (gen === this.gen && isUp(this.s.status) && this.s.status !== 'running') {
       if (await answers(port)) {
         if (gen !== this.gen || !isUp(this.s.status)) return;
-        this.set({ status: nextStatus(this.s.status, 'ready') ?? 'running', message: undefined, since: Date.now() });
+        this.set({ status: nextStatus(this.s.status, 'ready') ?? 'running', message: undefined, since: Date.now(), builtAt: Date.now() });
         return;
       }
       if (Date.now() > deadline) {
-        this.fail(`The app didn't answer on port ${port} within ${Math.round(this.d.cfg.readyTimeoutMs / 60_000)} min`);
+        this.fail(`The app didn't answer on port ${port} within ${Math.round(this.d.cfg.readyTimeoutMs / 60_000)} min`, 'timeout');
         void this.enqueue(() => this.kill());
         return;
       }
@@ -225,11 +230,26 @@ export class LiveApp {
     this.ports = [];
   }
 
-  private fail(why: string) {
+  /** It stopped without being asked: a crash when it was running, else its build or start failed (or `kind`). */
+  private fail(why: string, kind?: LiveAppFailure['kind']) {
     const to = nextStatus(this.s.status, 'crash');
     if (!to) return;
+    const k = kind ?? (this.s.status === 'running' ? 'crash' : 'build');
     this.note(`✖ ${why}`);
-    this.set({ status: to, message: to === 'failed' ? why : undefined, appPort: to === 'failed' ? undefined : this.s.appPort });
+    const failure: LiveAppFailure | undefined = to === 'failed' ? { kind: k, at: Date.now(), why, lines: this.s.log.slice(-FAIL_LINES), ...(this.s.sha ? { sha: this.s.sha } : {}) } : undefined;
+    this.set({ status: to, message: to === 'failed' ? (k === 'crash' ? `The app stopped by itself: ${why}` : why) : undefined, appPort: to === 'failed' ? undefined : this.s.appPort, failure });
+  }
+
+  /** How the last look for a newer main went: said in the log and to the page when it changes, not every minute. */
+  private noteRefresh(branch: string, look: FloorLook) {
+    const was = this.s.refresh;
+    const refresh = { ok: look.ok, at: look.at, ...(look.error ? { error: look.error } : {}) };
+    if (was && was.ok === look.ok && was.error === look.error) {
+      this.s.refresh = refresh;
+      return;
+    }
+    if (!look.ok) this.note(`auto-refresh: couldn't fetch ${branch} into the project's folder: ${look.error ?? '?'}`);
+    this.set({ refresh });
   }
 
   /** A line in the log file, and in the page's tail while it's starting or has failed. */
