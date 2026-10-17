@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-17 · release 57 (`f950aa0`)
+
 ### Added
 
 - **Is the live app ready? The Live app tab now says, milestone by milestone.** A readiness card reads the project's own plan: each phase of the toolkit build plan (`architecture/build-plan.md`) is a milestone with the BUILD rows it needs, and the whole plan is the last one (*the PackTrack Line 7 demo*). For the commit the live app runs, it says which milestones are in it, which are merged to main but not in it yet (Restart picks them up), and which are only on a branch, with its PR (*Save, submit and My check sheets: rows 19–20 in PR #6, open, not merged*), and leads with one line: *Live app: not ready for PackTrack Line 7 demo. Has: Prerequisites, Frame, domain and skeleton (rows 4, 6–8). Missing: …*. Row evidence comes from commit subjects and `docs/BUILD-LOG.md` notes (*Row 14: seed proven …*), never the plan's State column, which agents don't update. A milestone is **Ready** only when its rows are in the running build and every journey tied to it (a `tests/e2e/*.journey.json` whose requirement names its rows; the whole plan takes them all) passed against that exact build in the Testing records; otherwise it is *built, not yet verified*. Read again when the app starts, stops or crashes, when a fetch lands in the project's folder, or when test evidence lands; never on a timer.
