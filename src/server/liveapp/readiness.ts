@@ -9,7 +9,7 @@ import { git, listFiles, readFiles } from '../testing/repo.js';
 import { testingStore } from '../testing/index.js';
 import { computeReadiness, type LiveReadiness } from '../../shared/liveapp/readiness.js';
 import { parseJourney, parsePlan, type JourneyDef } from '../../shared/liveapp/plan.js';
-import { buildLogRows, commitRows, rowsIn } from '../../shared/liveapp/rows.js';
+import { buildLogRows, commitRows, prTitleRows } from '../../shared/liveapp/rows.js';
 import { sameRevision, statusOf } from '../../shared/testing/record.js';
 import type { GhPull, LiveAppMain } from '../../shared/protocol.js';
 import { commitTime, commitsBetween, defaultBranch, floorRef } from './checkout.js';
@@ -38,7 +38,7 @@ function rowsOf(dir: string, range: string, tip: string): Promise<Set<number>> {
       if (!subject) continue;
       // A merged pull request's merge commit: its title is the body's first line ("Rows 4-14: domain and seed").
       if (/^Merge pull request #\d+/.test(subject)) {
-        for (const r of rowsIn(body.split('\n')[0] ?? '')) rows.add(r);
+        for (const r of prTitleRows(body.split('\n')[0] ?? '')) rows.add(r);
         continue;
       }
       const files = names.split('\n').map((f) => f.trim()).filter(Boolean);
