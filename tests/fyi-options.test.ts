@@ -1,6 +1,6 @@
 // FYI is information only: an agent's escalation that would be filed as FYI but has answer options (or a
 // recommendation and a question, or names a sign-off such as CAC-3) is stored as a decision, audited as
-// escalation.fyi-corrected, and the agent is told so. An open one stored as FYI before that (PackTrack's
+// escalation.fyi-corrected, and the agent is told so. An open one stored as FYI before that (a migration project's
 // ESC fb67d63102) is read as a decision card with its options, without rewriting it; a resolved one and an
 // FYI the office filed itself stay FYI. Synthetic data only.
 import test from 'node:test';

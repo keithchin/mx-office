@@ -3,7 +3,7 @@
 // says applied / proven / done / PASS, never a "Draft row 16" or "Journal: row 3"; "### <date> — Row N"
 // notes in docs/BUILD-LOG.md), applied one history at a time, since the live app needs to know which
 // commits are in the running build. The plan's own State column is never trusted for this: agents don't
-// update it (PackTrack, release 56: all 33 rows "not built" while main had rows 3–14 merged). Pure.
+// update it (a migration project, release 56: all 33 rows "not built" while main had rows 3–14 merged). Pure.
 
 import { buildLog, rowEvidence, rowRanges, rowsIn, type CommitLine } from '../build-progress.js';
 

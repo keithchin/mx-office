@@ -1,11 +1,11 @@
 // What the office can see of a toolkit project's build (Stage 5), for the progress bar and the stage line.
 // gate-check reports Build as MANUAL on every run ("not file-existence-checkable — fill in status
-// manually"), so on its own the bar showed "Build · not started" over a build half merged (PackTrack,
+// manually"), so on its own the bar showed "Build · not started" over a build half merged (a migration project,
 // release 56: PR #3 merged with rows 4–14, PR #6 open, BUILD-LOG entries). Everything here is read
 // deterministically from origin/<default> and the team's pushed branches (server/wizard/build-evidence.ts).
 //
 // The build plan's own State column (brd-to-build-plan.md's row schema: built / partial / not built /
-// blocked) is read but not trusted alone: on PackTrack it said "not built" for all 33 rows on main and on
+// blocked) is read but not trusted alone: on a migration project it said "not built" for all 33 rows on main and on
 // the build branch while the commits said "Row 14: seed proven by OQL read-back". So each row's evidence
 // comes from what the team wrote as it worked: commit subjects naming the row ("Row 16: sheet form page
 // applied", "Rows 19-21: …") on a commit that changed build files or says applied / proven / done / PASS

@@ -1,5 +1,5 @@
 // The live app follows main through the project's own folder, never by asking GitHub itself (a private
-// repo gave the live clone no credentials, and it silently never updated: PackTrack, release 56); a
+// repo gave the live clone no credentials, and it silently never updated: a migration project, release 56); a
 // refresh that can't fetch is said on the state and in Needs you; an app that stops by itself is a crash
 // with its time and last lines; and the office's live apps read what the running build has (milestones,
 // main ahead of it), event-driven, and tell a milestone ready once. Synthetic repos and a fake mxcli.
@@ -133,7 +133,7 @@ test('readiness at git level: rows in the running commit, merged to main, only o
   const { origin, floorDir } = repos(dir);
   try {
     commit(origin, 'architecture/build-plan.md', PLAN, 'Stage 4: build plan');
-    commit(origin, 'mdlsource/seed/labels.json', '{}', 'Row 4: bilingual Line 7 definition labels file');
+    commit(origin, 'mdlsource/seed/labels.json', '{}', 'Row 4: bilingual definition labels file');
     const live = commit(origin, 'mdlsource/1-frame/01-frame.mdl', 'x', 'Rows 6-8: frame, domain and stubs applied');
     commit(origin, 'mdlsource/3-sheet/07.mdl', 'x', 'Row 19: save/submit microflows applied');
     commit(origin, 'docs/journal.md', 'x', 'Journal: row 20 next');

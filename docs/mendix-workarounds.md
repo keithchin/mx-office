@@ -36,7 +36,7 @@ One entry per problem, in this format (no customer content: a project or escalat
      `System.FileDocument` (files).
   5. `mxcli check -p <app>.mpr`, then apply as usual (the one writer, `mxcli exec`).
 - **Verified with:** the `MDL-WIDGET25` error: mxcli v0.21.0 and nightly-20261003, Mendix 11.12.4,
-  16 Oct 2026. The install: verified on PackTrack 16 Oct 2026 (agent-reported). MDL placement of
+  16 Oct 2026. The install: verified on a migration project 16 Oct 2026 (agent-reported). MDL placement of
   `fileuploader`: not yet verified by the office.
-- **Source:** PackTrack, the Lead Developer's "Studio Pro hand-add needed: photo upload control" escalation
+- **Source:** A migration project, the Lead Developer's "Studio Pro hand-add needed: photo upload control" escalation
   (16 Oct 2026).

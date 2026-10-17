@@ -1,0 +1,4 @@
+{
+  "why": "Names from real client projects that must never appear in this public repo (tests/no-customer-names.test.ts). Case-insensitive regular expressions.",
+  "terms": ["packtrack", "siam cement", "rayong", "tpc packing", "\\bscg\\b"]
+}

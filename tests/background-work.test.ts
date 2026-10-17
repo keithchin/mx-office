@@ -147,7 +147,7 @@ test('the once-a-minute look tells when a monitor turns unknown and when it goes
 
 class FakeFloor implements TeamFloor {
   id = `f${Math.random().toString(36).slice(2, 8)}`;
-  name = 'PackTrack';
+  name = 'Sample Project';
   dir = mkdtempSync(path.join(os.tmpdir(), 'bg-floor-'));
   map = new Map<string, WorkerInfo>();
   file?: string;

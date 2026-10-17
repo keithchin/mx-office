@@ -32,7 +32,7 @@ const lines = (store: IncidentStore) =>
     .split('\n')
     .map((l) => JSON.parse(l) as { op: string; incident?: { id: string; status: string } });
 
-const freeze = (view: string, ms = 900, floor = 'packtrack'): Detection => pageDetection({ view, ms, floor, stack: ['1243 ms FrameRequestCallback perfwatch-on.js@365576'], url: `/lite?floor=${floor}&tab=command` }, 'Someone', true);
+const freeze = (view: string, ms = 900, floor = 'sample-checksheet-demo'): Detection => pageDetection({ view, ms, floor, stack: ['1243 ms FrameRequestCallback perfwatch-on.js@365576'], url: `/lite?floor=${floor}&tab=command` }, 'Someone', true);
 
 test('a freeze after the person resolved it reopens the same incident, says who resolved it when, and keeps the chain', async () => {
   const { clock, store } = fresh();
@@ -82,7 +82,7 @@ test('past the window after the resolve a new incident opens, and it says which 
 test('page freezes: one open incident per view per project; the same view folds into it', () => {
   const { store } = fresh();
   const cmd = raise(freeze('lite › command'))!;
-  assert.equal(cmd.dedupeKey, 'pageStall:packtrack:lite › command');
+  assert.equal(cmd.dedupeKey, 'pageStall:sample-checksheet-demo:lite › command');
   assert.equal(raise(freeze('lite › command', 1500))!.id, cmd.id);
   const q = raise(freeze('lite › questions'))!;
   assert.notEqual(q.id, cmd.id, 'another view: its own incident');
@@ -94,13 +94,13 @@ test('page freezes: one open incident per view per project; the same view folds 
 test('an incident kept before views were in the key: open, it takes every view; resolved, only its own', () => {
   const { store } = fresh();
   // As release 53 kept it: pageStall:<floor>.
-  const old = createIncident({ title: 'A page froze for 766 ms (lite › command)', severity: 'sev3', floors: ['packtrack'], dedupeKey: 'pageStall:packtrack', detectedBy: { kind: 'rule', name: 'Incident rules', rule: 'pageStall' } }, { kind: 'office', name: 'Incident rules' })!;
+  const old = createIncident({ title: 'A page froze for 766 ms (lite › command)', severity: 'sev3', floors: ['sample-checksheet-demo'], dedupeKey: 'pageStall:sample-checksheet-demo', detectedBy: { kind: 'rule', name: 'Incident rules', rule: 'pageStall' } }, { kind: 'office', name: 'Incident rules' })!;
   assert.equal(raise(freeze('lite › teams'))!.id, old.id, 'open: folds in');
   updateIncident(old.id, { status: 'resolved' }, ME);
   assert.equal(raise(freeze('lite › command'))!.id, old.id, 'resolved: its own view brings it back');
   updateIncident(old.id, { status: 'resolved' }, ME);
   assert.notEqual(raise(freeze('lite › questions'))!.id, old.id, "resolved: another view's freeze is a new one");
   assert.equal(store.list().length, 2);
-  assert.equal(sameIncident({ dedupeKey: 'pageStall:packtrack', status: 'resolved', title: 'A page froze for 1 ms (lite › board)' }, { rule: 'pageStall', floor: 'packtrack', place: 'lite › board' }), true);
+  assert.equal(sameIncident({ dedupeKey: 'pageStall:sample-checksheet-demo', status: 'resolved', title: 'A page froze for 1 ms (lite › board)' }, { rule: 'pageStall', floor: 'sample-checksheet-demo', place: 'lite › board' }), true);
   assert.equal(dedupeKeyOf({ rule: 'crashLoop', floor: 'alpha' }), 'crashLoop:alpha', 'a rule without places keeps its key');
 });

@@ -1,5 +1,5 @@
 // "main is behind the work": the Model tab and the Live app tab both show main, while the build may be on
-// an agent's branch far ahead of it with model changes, in a PR nobody reviewed (PackTrack, release 56:
+// an agent's branch far ahead of it with model changes, in a PR nobody reviewed (a migration project, release 56:
 // main had build rows 3–14 with stub pages, Sophie's branch was 75 commits ahead in PR #6, open and
 // unreviewed). The banner says so: whose branch, how far ahead, its PR and its review state from the
 // review gate (a `Review:` comment by someone other than the opener, with checks and files). Pure.

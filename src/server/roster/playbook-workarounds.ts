@@ -1,4 +1,4 @@
-// "Try these first" (PackTrack, 2026-10-16): the Playbook line for whoever builds pages and the model, and
+// "Try these first" (a migration project, 2026-10-16): the Playbook line for whoever builds pages and the model, and
 // the office-wide workarounds list it points to. The list is the office's own `docs/mendix-workarounds.md`,
 // copied into each project at WORKAROUNDS_PATH with the Playbooks (re-written whenever it changed), so an
 // agent reads it inside its project without reaching outside its sandbox; the project's own entries go in

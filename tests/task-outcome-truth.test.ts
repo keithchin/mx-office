@@ -1,4 +1,4 @@
-// A merged PR is a task's outcome only with evidence (roster/task-outcome.ts, packtrack audit 16 Oct, finding 1):
+// A merged PR is a task's outcome only with evidence (roster/task-outcome.ts, project audit 16 Oct, finding 1):
 // it merged after the task was given, and it carries the task's id (a `Task: tsk_…` line in its description or
 // in one of its commits). One that only matches by worker, branch or time is "associated (unconfirmed)", never
 // integrated. Ends recorded before the rule that don't stand are taken back when the task is read

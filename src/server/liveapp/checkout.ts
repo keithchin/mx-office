@@ -3,7 +3,7 @@
 // floor's checkout (quick, and it shares its objects) and follows it: every fetch is from the floor's
 // folder, never from GitHub. The floor's folder is what the office keeps current with its own fetches
 // (wizard/gate-source.ts fetchDefault, with the office's git credentials); the live clone asking GitHub
-// itself had no credentials for a private repo and never updated (PackTrack, release 56: "couldn't ask
+// itself had no credentials for a private repo and never updated (a migration project, release 56: "couldn't ask
 // the remote about main" in the log, the app on PR #7 for a day). All git here runs off the event loop.
 
 import { execFileOff } from '../offloop/exec.js';

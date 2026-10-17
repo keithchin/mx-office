@@ -1,4 +1,4 @@
-// Lint baseline resets and waivers without the Project Manager's decision (the review gate; the packtrack
+// Lint baseline resets and waivers without the Project Manager's decision (the review gate; the project
 // audit's "gate erosion": the baseline re-set 8+ times in a day "by my call", each with self-waivers).
 // The toolkit's lint gate ratchets against .claude/lint-baseline.json (project-bin/lint-gate.sh
 // --update-baseline rewrites it), and gate-check --waive records a waiver as a "…-WAIVED" line in

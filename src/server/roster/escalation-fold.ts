@@ -1,4 +1,4 @@
-// One decision, one card (packtrack audit, 16 Oct 2026, finding 3): CAC-3 was filed four times there (the
+// One decision, one card (project audit, 16 Oct 2026, finding 3): CAC-3 was filed four times there (the
 // agent's own escalation, then three times from its AWAITING-PM line naming "escalation fb67d63102"), and
 // the scratch-copy exec five times. Before an escalation is filed, from an agent or by the office from an
 // agent's words (an AWAITING-PM item, a chat line), it is folded into the one it names instead:
