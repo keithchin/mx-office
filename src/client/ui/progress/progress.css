@@ -39,9 +39,9 @@ span.pg-seg { cursor: default; padding: 0; }
 .pg-bar.changed .pg-label { color: var(--warn-ink); }
 /* How fresh the office's stage is, and what doesn't add up (bar.ts stageNotes). */
 .pg-notes { display: flex; flex-direction: column; gap: 2px; margin: 2px 0 0 32px; }
-.pg-fresh, .pg-flag { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.pg-fresh, .pg-flag, .pg-build { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.35; }
 .pg-fresh.stale { color: var(--warn-ink); }
-.pg-flag { color: var(--ink); }
+.pg-flag, .pg-build { color: var(--ink); }
 .pg-tip { position: fixed; z-index: 60; padding: 10px 12px; border: 2px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); box-shadow: var(--shadow-pop); font-size: 12px; line-height: 1.4; pointer-events: none; }
 .pg-tip[hidden] { display: none; }
 .pg-tip-h { display: block; margin-bottom: 4px; }

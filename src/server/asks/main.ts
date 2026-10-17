@@ -20,7 +20,12 @@ import { gateItemsOf } from '../review-gate/index.js';
 
 /** Paths that are the team's own updates: journals (handoffs are entries in them), standups, handoff notes. */
 export const isDocsPath = (f: string) => /^docs\/(team|standups)\//.test(f) || /handoff/i.test(f);
-const BRD_DIRS = ['analysis/knowledge-base/brd', 'analysis/brd'];
+const BRD_DIRS = ['analysis/knowledge-base/brd', 'analysis/brd', 'knowledge-base/brd'];
+/** Every knowledge base's brd/ the toolkit reads (bin/lib/discover-brds.sh): each analysis/<source>/knowledge-base (a migration's), then the fixed ones. */
+const brdDirsOf = (analysisChildren: readonly string[]) => [
+  ...analysisChildren.filter((n) => n && n !== 'knowledge-base' && n !== 'brd' && !n.includes('.')).map((n) => `analysis/${n}/knowledge-base/brd`),
+  ...BRD_DIRS,
+];
 const DESIGN = ['design/design-system.html', 'design/prototype.html'];
 const WIREFRAMES = 'design/wireframes';
 
@@ -99,14 +104,15 @@ export async function leadStandup(dir: string, main: string, lead: Place | undef
 
 /** The BRDs and design artifacts on main and in the worktrees. */
 export async function reviewFiles(dir: string, main: string, worktrees: readonly Place[]): Promise<{ brds: BrdText[]; design: string[] }> {
-  const atMain = await listFiles(dir, main, [...BRD_DIRS, 'design']);
+  const children = (await listFiles(dir, main, ['analysis/'], false)).map((p) => p.slice('analysis/'.length));
+  const atMain = await listFiles(dir, main, [...brdDirsOf(children), 'design']);
   const brdFiles = atMain.filter((f) => f.endsWith('.brd.json'));
   const texts = await readFiles(dir, main, brdFiles, 4 * 1024 * 1024);
   const brds: BrdText[] = brdFiles.flatMap((f) => (texts.has(f) ? [{ file: f, text: texts.get(f)! }] : []));
   const design = atMain.filter((f) => DESIGN.includes(f) || (f.startsWith(`${WIREFRAMES}/`) && f.endsWith('.html')));
   for (const w of worktrees) {
     if (!w.dir) continue;
-    for (const d of BRD_DIRS) {
+    for (const d of brdDirsOf(await readdir(path.join(w.dir, 'analysis')).catch(() => [] as string[]))) {
       for (const n of await readdir(path.join(w.dir, d)).catch(() => [] as string[])) {
         if (!n.endsWith('.brd.json')) continue;
         const t = await readFile(path.join(w.dir, d, n), 'utf8').catch(() => undefined);

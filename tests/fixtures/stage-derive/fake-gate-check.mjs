@@ -2,9 +2,11 @@
 // A stand-in for the toolkit's bin/gate-check.sh (tests/stage-derive.test.ts): the same output lines
 // ("Stage 0 (Triage): FAIL — why"), the same dashboard table (index.html with the generator's sentinel)
 // and the same "Current stage" rewrite in PROJECT.md, over the project folder it's given. A few file
-// checks stand in for the real ones. FAKE_GC_FAIL=1: dies before writing anything. FAKE_GC_NO_HTML=1:
+// checks stand in for the real ones; Stage 2 resolves its one knowledge base the way the real one does
+// (KB_DIR: the only analysis/<name>/knowledge-base, else analysis/knowledge-base, else knowledge-base) and
+// reads brd/*.brd.json there only (tests/build-progress.test.ts). FAKE_GC_FAIL=1: dies before writing anything. FAKE_GC_NO_HTML=1:
 // prints its verdicts but writes no dashboard.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const dir = path.resolve(process.argv[2] ?? '.');
@@ -30,7 +32,10 @@ v.P = open.length ? ['FAIL', `unanswered section(s) in ${dir}/intake.md: ${open.
 const triage = read('triage.md');
 v[0] = !triage ? ['PENDING', 'triage.md not found'] : /Confirmed by:\s*"?\[user\]/.test(triage) ? ['FAIL', `'Confirmed by:' still holds the shipped placeholder: "[user] on [date]" (${dir}/triage.md, ## Sign-off)`] : ['PASS', 'triage signed off'];
 v[1] = has('analysis/kb') ? ['PASS', 'knowledge base present'] : ['PENDING', 'no knowledge-base directory yet'];
-v[2] = has('docs/brd.json') ? ['PASS', 'BRD present'] : ['PENDING', 'no knowledge-base directory yet — Stage 1 has not produced one'];
+const nested = has('analysis') ? readdirSync(path.join(dir, 'analysis'), { withFileTypes: true }).filter((e) => e.isDirectory() && has(`analysis/${e.name}/knowledge-base`)).map((e) => `analysis/${e.name}/knowledge-base`) : [];
+const kb = nested.length === 1 ? nested[0] : nested.length ? undefined : ['analysis/knowledge-base', 'knowledge-base'].find(has);
+const brds = kb && has(`${kb}/brd`) ? readdirSync(path.join(dir, kb, 'brd')).filter((f) => f.endsWith('.brd.json')) : [];
+v[2] = has('docs/brd.json') ? ['PASS', 'BRD present'] : kb ? (brds.length ? ['PASS', 'brd/*.brd.json present'] : ['PENDING', 'no brd/*.brd.json scaffolds yet']) : ['PENDING', 'no knowledge-base directory yet — Stage 1 has not produced one'];
 v[3] = !has('architecture/fit-gap.md') ? ['PENDING', 'missing: architecture/fit-gap.md'] : confirmed('3') ? ['PASS', 'fit-gap present and a Stage-3 CONFIRMED decision is in PROJECT.md'] : ['FAIL', 'artifacts exist but PROJECT.md has no Stage-3 CONFIRMED decision — ✋ gate'];
 v[4] = !has('architecture/build-plan.md') ? ['PENDING', 'architecture/build-plan.md not written yet'] : confirmed('4') ? ['PASS', 'build-plan.md present and a Stage-4 CONFIRMED decision is in PROJECT.md'] : ['FAIL', 'build-plan.md exists but PROJECT.md has no Stage-4 CONFIRMED decision — ✋ gate'];
 v[5] = ['MANUAL', 'not file-existence-checkable — fill in status manually'];

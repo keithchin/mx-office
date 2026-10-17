@@ -57,6 +57,8 @@ async function compute(ctx: Ctx, floor: Floor, mini: boolean): Promise<Omit<Proj
     ...(g.setup ? { setupShown: g.setup.show } : {}),
     // Where the work is, as the office derived it from its own gate-check (shared/stage-derive.ts).
     ...(g.setup?.stage?.stage ? { stage: g.setup.stage.stage.id } : {}),
+    // What the office sees of the build on the same commit and the team's branches (wizard/build-evidence.ts).
+    ...(g.setup?.stage?.build ? { build: g.setup.stage.build } : {}),
   });
   const note = toolkit && !entry ? 'The entry mode isn’t recorded, so every stage is shown' : cycles.length > 1 && !cur.record ? `${cur.version} under way since ${new Date(cur.opened!.at).toISOString().slice(0, 10)}; ${lastAccepted(cycles)} stays accepted` : undefined;
   return { floor: floor.id, toolkit, ...(g.setup?.entry ? { entry: g.setup.entry } : {}), phases, acceptance, ...(note ? { note } : {}), ...(mini ? { mini: true } : {}), ...(g.setup?.stage ? { stage: g.setup.stage } : {}), generatedAt: Date.now() };

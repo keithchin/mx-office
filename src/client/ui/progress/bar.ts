@@ -5,6 +5,7 @@
 
 import { progressLabel, spendText, type Milestone, type Phase, type ProjectProgress } from '../../../shared/progress';
 import { freshnessText } from '../../../shared/stage-derive';
+import { buildSummary, buildUnderWay } from '../../../shared/build-progress';
 import { h } from '../dom';
 
 /** At most this many marks drawn on one segment (the tooltip lists them all, up to its own cap). */
@@ -16,10 +17,12 @@ const MARK_ICON: Record<Milestone['status'], string> = { passed: '✓', waived: 
 const OPEN_WORD: Record<Phase['open'], string> = { setup: 'the setup panel', deliverables: 'the Documents page', acceptance: 'the acceptance record' };
 
 const short = (p: Phase) => (p.kind === 'stage' ? p.id : p.title);
+/** A phase's status in words: "signed off" for one the register settled while gate-check still says PENDING. */
+const statusWord = (p: Phase) => (p.signedOff ? 'signed off' : STATUS_WORD[p.status]);
 
 /** A segment's accessible name: what it is and what was measured, in a sentence. */
 export function segmentLabel(p: Phase): string {
-  return `${p.kind === 'stage' ? `Stage ${p.id}, ${p.title}` : p.title}: ${STATUS_WORD[p.status]}${p.current ? ' (current)' : ''}. ${p.measures[0] ?? ''}`;
+  return `${p.kind === 'stage' ? `Stage ${p.id}, ${p.title}` : p.title}: ${statusWord(p)}${p.current ? ' (current)' : ''}. ${p.measures[0] ?? ''}`;
 }
 
 function marks(p: Phase): HTMLElement | null {
@@ -43,6 +46,7 @@ export function segmentDetail(ph: Phase, next = false): string {
   if (gate?.status === 'passed') return `✋ confirmed${gate.at ? ` ${shortDay(gate.at)}` : ''}`;
   if (gate?.status === 'waiting') return '✋ needs your sign-off';
   if (gate?.status === 'failed') return '✋ failing';
+  if (ph.signedOff) return 'signed off';
   if (ph.status === 'done') return 'done';
   if (ph.status === 'waived') return 'waived';
   if (ph.status === 'failed') return 'failing';
@@ -83,7 +87,7 @@ export function tipContent(ph: Phase): HTMLElement {
   return h(
     'div.pg-tip-body',
     {},
-    h('strong.pg-tip-h', {}, `${ph.kind === 'stage' ? `Stage ${ph.id} · ${ph.title}` : ph.title} — ${STATUS_WORD[ph.status]}${ph.current ? ' (now)' : ''}`),
+    h('strong.pg-tip-h', {}, `${ph.kind === 'stage' ? `Stage ${ph.id} · ${ph.title}` : ph.title} — ${statusWord(ph)}${ph.current ? ' (now)' : ''}`),
     h('ul.pg-tip-list', {}, ...ph.measures.slice(0, TIP_LIST_MAX).map((m) => h('li', {}, m))),
     ph.deliverables?.items.length
       ? h('div.pg-tip-sec', {}, h('b', {}, 'Documents'), h('ul.pg-tip-list', {}, ...ph.deliverables.items.slice(0, TIP_LIST_MAX).map((i) => h('li', { class: `dv-${i.status}` }, `${i.title}: ${i.status === 'present' ? 'on main' : i.status}`))))
@@ -106,9 +110,13 @@ export function stageNotes(p: ProjectProgress, now = Date.now()): HTMLElement | 
   if (!e) return null;
   const fresh = freshnessText(e.check, now);
   const bad = !!e.check.error || !!e.check.stale || e.check.source !== 'office';
+  // Build (MANUAL) with work the office can see: what it sees, and the toolkit's verdict kept beside it.
+  const build = p.phases.find((x) => x.kind === 'stage' && x.id === '5' && x.status === 'active' && x.verdict === 'MANUAL');
+  const where = e.build?.sha ? ` · checked on ${e.build.branch ?? 'main'} @${e.build.sha.slice(0, 7)}` : '';
   return h(
     'div.pg-notes',
     {},
+    build && e.build && buildUnderWay(e.build) ? h('p.pg-build', { title: build.measures.join(' · ') }, `🔨 Build · in progress · ${buildSummary(e.build)} · gate-check: MANUAL${where}`) : null,
     fresh ? h('p.pg-fresh', { class: bad ? 'stale' : '', title: 'Where the stage comes from: the toolkit’s gate-check, run by the office on a temporary checkout of the default branch' }, `🧭 ${fresh}`) : null,
     ...e.flags.map((f) => h('p.pg-flag', { role: 'note' }, `ℹ️ ${f.text}`)),
   );

@@ -8,7 +8,9 @@
 // the phone all read it here. It never changes how the toolkit decides a gate (gate-play.ts's rules
 // stay: a MANUAL stage waits on you only when every earlier stage passed).
 
-import { STAGE_ORDER, type VerdictLike } from './gate-play.js';
+import { signedOff, STAGE_ORDER, type VerdictLike } from './gate-play.js';
+import { brdPathFlag, type BrdLayout } from './brd-path.js';
+import { buildSummary, buildUnderWay, planBehind, rowRanges, type BuildEvidence } from './build-progress.js';
 
 /** gate-check's stage titles (its own words), for a stage the verdicts don't name. */
 export const STAGE_TITLES: Readonly<Record<string, string>> = { P: 'Kickoff', '0': 'Triage', '1': 'Analysis', '2': 'Requirements', '3': 'Architecture & Design', '4': 'Build Plan', '5': 'Build', '6': 'Test', '7': 'Cutover' };
@@ -59,7 +61,11 @@ export interface DerivedStage {
 /** Something the office's own check says doesn't add up: shown as an info card, never a wait. */
 export type StageFlag =
   | { kind: 'paperwork'; signed: string[]; failing: { id: string; title: string; detail?: string }[]; text: string }
-  | { kind: 'line'; says: string; derived: string; text: string };
+  | { kind: 'line'; says: string; derived: string; text: string }
+  /** gate-check's Stage 2 looked for the BRDs in one knowledge base; they are in another (shared/brd-path.ts). */
+  | { kind: 'brd-path'; expected: string; actual: string[]; text: string }
+  /** The build plan's State column calls rows not built that have build evidence on main (shared/build-progress.ts). */
+  | { kind: 'build-plan'; rows: number[]; built: number; total: number; text: string };
 
 /** What every stage line in the office is made from. */
 export interface StageEvidence {
@@ -68,6 +74,8 @@ export interface StageEvidence {
   /** PROJECT.md's "Current stage" line on the same commit, as written (the toolkit's readout). */
   line?: string;
   flags: StageFlag[];
+  /** What the office can see of the build on the same commit and the team's branches (shared/build-progress.ts): Build (MANUAL) shows in progress from it, never done. */
+  build?: BuildEvidence;
 }
 
 const norm = (id: string) => id.trim().toUpperCase().replace(/^STAGE\s*/, '');
@@ -90,12 +98,7 @@ export function verdictsFromOutput(text: string): VerdictRow[] {
  * signed off as the Stage 2 baseline"). Any other CONFIRMED row (a scope answer at Stage 0) isn't a sign-off.
  */
 export function signedOffStages(decisions: readonly DecisionRow[] | undefined): string[] {
-  const out = new Set<string>();
-  for (const r of decisions ?? []) {
-    const id = norm(r.stage);
-    if (isStage(id) && /^confirmed\b/i.test(r.status.trim()) && /\bsign(?:ed)?[- ]?off\b/i.test(r.decision)) out.add(id);
-  }
-  return STAGE_ORDER.filter((s) => out.has(s));
+  return STAGE_ORDER.filter((s) => signedOff(decisions, s));
 }
 
 /** The stage PROJECT.md's "Current stage" line names: an id, `all`, or undefined when it names none. */
@@ -165,24 +168,31 @@ const stageName = (id: string) => (id === 'all' ? 'all gates passed' : `Stage ${
 
 /**
  * What doesn't add up, from the office's own check of one commit: stages signed off in PROJECT.md while
- * gate-check still fails (or hasn't started) an earlier one, and a "Current stage" line that isn't what
- * gate-check would write from the same commit now.
+ * gate-check still fails (or hasn't started) them or an earlier one, a "Current stage" line that isn't what
+ * gate-check would write from the same commit now, and BRDs gate-check's Stage 2 didn't find because
+ * they sit in another knowledge base than the one it reads (`kb`: the commit's layout, shared/brd-path.ts), and
+ * a build plan whose State column calls rows not built that have build evidence on main (`build`).
  */
-export function stageFlags(verdicts: readonly VerdictRow[], decisions: readonly DecisionRow[] | undefined, projectMd: string | undefined): StageFlag[] {
+export function stageFlags(verdicts: readonly VerdictRow[], decisions: readonly DecisionRow[] | undefined, projectMd: string | undefined, kb?: BrdLayout, build?: BuildEvidence): StageFlag[] {
   const flags: StageFlag[] = [];
   const rows = stageRows(verdicts);
   if (!rows.length) return flags;
   const signed = signedOffStages(decisions);
   const top = signed.length ? STAGE_ORDER.indexOf(signed[signed.length - 1] as (typeof STAGE_ORDER)[number]) : -1;
   const failing = rows
-    .filter((v) => STAGE_ORDER.indexOf(norm(v.id) as (typeof STAGE_ORDER)[number]) < top && /^(FAIL|PENDING)$/i.test(v.status))
+    .filter((v) => (STAGE_ORDER.indexOf(norm(v.id) as (typeof STAGE_ORDER)[number]) < top || signed.includes(norm(v.id))) && /^(FAIL|PENDING)$/i.test(v.status))
     .map((v) => ({ id: norm(v.id), title: titleOf(verdicts, norm(v.id)), ...(v.detail ? { detail: v.detail } : {}) }));
   if (failing.length) {
     const first = STAGE_ORDER.indexOf(failing[0].id as (typeof STAGE_ORDER)[number]);
-    const later = signed.filter((s) => STAGE_ORDER.indexOf(s as (typeof STAGE_ORDER)[number]) > first);
+    const later = signed.filter((s) => STAGE_ORDER.indexOf(s as (typeof STAGE_ORDER)[number]) >= first);
     const why = failing.map((f) => `Stage ${f.id} ${/^PENDING$/i.test(rows.find((r) => norm(r.id) === f.id)?.status ?? '') ? 'pending' : 'failing'}${f.detail ? `: ${clip(f.detail, 160)}` : ''}`).join('; ');
     flags.push({ kind: 'paperwork', signed: later, failing, text: `Stage ${listIds(later)} ${later.length === 1 ? 'is' : 'are'} signed off in PROJECT.md, but gate-check still reports ${why}` });
   }
+  const req = rows.find((v) => norm(v.id) === '2');
+  const brd = kb && req && !settled(req.status) ? brdPathFlag(kb) : undefined;
+  if (brd) flags.push({ kind: 'brd-path', ...brd });
+  const behind = planBehind(build);
+  if (behind.length && build?.plan) flags.push({ kind: 'build-plan', rows: behind, built: build.plan.built, total: build.plan.total, text: `The build plan says ${build.plan.built} of ${build.plan.total} rows built; commits on ${build.branch ?? 'main'} show build evidence for rows ${rowRanges(behind)}` });
   const says = lineStage(projectMd);
   const pos = toolkitPosition(verdicts);
   if (says && pos && says !== pos.id) flags.push({ kind: 'line', says, derived: pos.id, text: `PROJECT.md's stage line is out of date: it says ${stageName(says)}; gate-check on main says ${stageName(pos.id)}` });
@@ -223,8 +233,12 @@ export function stageLabel(s: DerivedStage): string {
   return s.id === 'all' ? 'All gates passed' : `Stage ${s.id} · ${s.title}`;
 }
 
-/** The one line every stage display shows: "Stage 5 · Build · checked on main @abc1234, 3 min ago". */
+/**
+ * The one line every stage display shows: "Stage 5 · Build · checked on main @abc1234, 3 min ago", with
+ * "in progress · <what the office sees>" while Build (MANUAL, not done) has evidence (shared/build-progress.ts).
+ */
 export function stageHeadline(e: StageEvidence, now: number): string {
   const fresh = freshnessText(e.check, now);
-  return [e.stage ? stageLabel(e.stage) : 'Stage unknown', fresh].filter(Boolean).join(' · ');
+  const building = e.stage?.id === '5' && e.stage.status === 'MANUAL' && e.build && buildUnderWay(e.build) ? `in progress · ${buildSummary(e.build)}` : undefined;
+  return [e.stage ? stageLabel(e.stage) : 'Stage unknown', building, fresh].filter(Boolean).join(' · ');
 }

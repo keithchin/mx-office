@@ -8,6 +8,7 @@
 import { DRAFT_BANNER } from '../../shared/deliverables.js';
 import { teamLabel } from '../../shared/roster/card-team.js';
 import { ROLE_BY_ID, type RoleId } from '../../shared/roster/roles.js';
+import type { EntryMode } from '../../shared/wizard.js';
 
 /** What every Lead can use to make its files, on the office's machine. */
 const TOOLING = [
@@ -15,11 +16,35 @@ const TOOLING = [
   '- Python is `py` (openpyxl, pandas, matplotlib, pypdf, PIL); not python-docx or python-pptx, and `python` is the Store stub. Diagrams are Mermaid blocks in Markdown (no mmdc here).',
 ];
 
+/**
+ * Where the knowledge base and the BRDs go, per entry mode, as the pinned toolkit has it. bin/gate-check.sh
+ * resolves ONE knowledge base (analysis/<name>/knowledge-base when there is one, else analysis/knowledge-base)
+ * and its Stage 2 reads only that one's brd/; a migration's extraction writes analysis/<source>/knowledge-base/
+ * (skills/migration-pipeline.md), so a BRD put in analysis/knowledge-base/brd/ is read by every script but
+ * gate-check (PackTrack, release 56: Stage 2 PENDING over a signed BRD; shared/brd-path.ts flags it).
+ */
+const KB_LINE = '{{kb}}';
+const BRD_LINE = '{{brd}}';
+const BRD_TAIL = "(`brd-generation.md`, validated per `brd-validation.md`) and `analysis/brd-report.html` (the toolkit's `bin/brd-report.sh <project>`)";
+
+/** The Chief Analyst's Stage 1 and Stage 2 lines for an entry mode (undefined: not recorded). */
+export function kbLines(entry: EntryMode | undefined): { kb: string; brd: string } {
+  if (entry === 'migration')
+    return {
+      kb: '- Stage 1: `analysis/source-ledger.html` (`bin/source-ledger.sh report`), the knowledge base the extraction writes under `analysis/<source>/knowledge-base/` (one folder per legacy source, named after it; never a second `analysis/knowledge-base/` beside it) with `extraction-report.html` (`bin/extraction-report.sh`).',
+      brd: `- Stage 2: \`analysis/<source>/knowledge-base/brd/F{NNN}-<feature>.brd.json\`, in that same knowledge base: gate-check's Stage 2 reads BRDs only from the knowledge base it resolves, which is the per-source one, so a BRD in \`analysis/knowledge-base/brd/\` reads as Stage 2 PENDING ${BRD_TAIL}.`,
+    };
+  return {
+    kb: '- Stage 1: `analysis/source-ledger.html` (`bin/source-ledger.sh report`), the knowledge base under `analysis/<source>/knowledge-base/` (or `analysis/knowledge-base/` for a docs-ready corpus converted with `bin/html-to-md.sh`) with `extraction-report.html` (`bin/extraction-report.sh`).',
+    brd: `- Stage 2: \`brd/F{NNN}-<feature>.brd.json\` inside that same knowledge base (\`analysis/<source>/knowledge-base/brd/\`, or \`analysis/knowledge-base/brd/\` only when there is no per-source one: gate-check's Stage 2 reads only the knowledge base it resolves, and a per-source one wins) ${BRD_TAIL}.`,
+  };
+}
+
 const LISTS: Partial<Record<RoleId, string[]>> = {
   'chief-analyst': [
     '- Stage 0: `triage.md` (project root) + `analysis/triage.html` (`bin/triage-report.sh`), `analysis/source-sufficiency.html`; `assessment.md` when the runbook asks for it.',
-    '- Stage 1: `analysis/source-ledger.html` (`bin/source-ledger.sh report`), the knowledge base under `analysis/knowledge-base/` with `extraction-report.html` (`bin/extraction-report.sh`).',
-    '- Stage 2: `analysis/knowledge-base/brd/F{NNN}-<feature>.brd.json` (`brd-generation.md`, validated per `brd-validation.md`) and `analysis/brd-report.html` (the toolkit\'s `bin/brd-report.sh <project>`).',
+    KB_LINE,
+    BRD_LINE,
     '- For the client, once a BRD is confirmed: `docs/requirements/BRD-<feature>.pdf` (`office-workers export-pdf analysis/brd-report.html docs/requirements/BRD-<feature>.pdf`), `docs/requirements/use-cases.xlsx` (a short `py` + openpyxl script over the BRD JSON: one row per use case with id, actor, steps, rules, sourceRef) and `docs/requirements/process-flow.md` (the main flow as a Mermaid `flowchart`).',
     '- Weekly: `docs/insights/YYYY-Www.md`, with charts as PNGs next to it made with `py` + matplotlib.',
     '- Reports: the toolkit\'s own (`reports/validation-report.md` from `brd-validation.md`, `reports/summary.md`, `reports/gaps-report.md`) stay where the toolkit writes them; any other report of yours goes in `reports/analysis/`.',
@@ -53,11 +78,14 @@ const DRAFTS: Partial<Record<RoleId, string>> = {
 /**
  * The Playbook's "Your deliverables" section for `roleId`; `earlyDrafts` adds the early-drafts rule for Design,
  * Development and Testing. `also`: the roles whose teams it covers besides its own (shared/roster/coverage.ts),
- * whose deliverables are its too, each under its team's heading.
+ * whose deliverables are its too, each under its team's heading. `entry`: the project's entry mode, when it's
+ * recorded (where the knowledge base and the BRDs go differs: kbLines).
  */
-export function deliverablesBrief(roleId: RoleId, earlyDrafts: boolean, also: readonly RoleId[] = []): string[] {
+export function deliverablesBrief(roleId: RoleId, earlyDrafts: boolean, also: readonly RoleId[] = [], entry?: EntryMode): string[] {
   const role = ROLE_BY_ID.get(roleId)!;
-  const own = LISTS[roleId] ?? [];
+  const where = kbLines(entry);
+  const listOf = (r: RoleId) => (LISTS[r] ?? []).map((l) => (l === KB_LINE ? where.kb : l === BRD_LINE ? where.brd : l));
+  const own = listOf(roleId);
   const out = [
     '## Your deliverables',
     'The office\'s 📄 Documents page (and your team\'s page) checks these paths per stage, so write them exactly there. Keep them on your branch and open a pull request for them ' +
@@ -66,7 +94,7 @@ export function deliverablesBrief(roleId: RoleId, earlyDrafts: boolean, also: re
     ...also.flatMap((r) => {
       const team = ROLE_BY_ID.get(r)!.team;
       // Its files only: where its other reports go is said in the heading, to keep the Playbook short.
-      const files = (LISTS[r] ?? []).filter((l) => !/^- (Any other report|Your other reports|Reports:)/.test(l));
+      const files = listOf(r).filter((l) => !/^- (Any other report|Your other reports|Reports:)/.test(l));
       return [`- **${team[0].toUpperCase()}${team.slice(1)}** (you cover it; PRs \`--label ${teamLabel(team)}\`, other reports in \`reports/${team}/\`):`, ...files.map((l) => `  ${l}`)];
     }),
     ...TOOLING,

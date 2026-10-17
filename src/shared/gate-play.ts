@@ -27,21 +27,39 @@ export interface SignoffRequest {
   lead?: string;
 }
 
-const norm = (id: string) => id.trim().toUpperCase();
+const norm = (id: string) => id.trim().toUpperCase().replace(/^STAGE\s*/, '');
 const settled = (s: string | undefined) => /^(PASS|WAIVED)$/i.test(s ?? '');
 const empty = (s: string | undefined) => s === undefined || /^(PENDING|MANUAL)$/i.test(s);
 
+/** A Decisions row as the gates read it. */
+export interface SignoffRow {
+  stage: string;
+  decision: string;
+  status: string;
+}
+
+/**
+ * Whether the register records stage `id` as signed off: a CONFIRMED row for the stage whose decision says
+ * it was signed off (the toolkit's has_confirmed_decision for a ✋ stage, the office's own sign-off row,
+ * "BRD F001 signed off as the Stage 2 baseline"). Any other CONFIRMED row (a scope answer at Stage 0) isn't.
+ */
+export function signedOff(decisions: readonly SignoffRow[] | undefined, id: string): boolean {
+  return (decisions ?? []).some((r) => norm(r.stage) === norm(id) && /^confirmed\b/i.test(r.status.trim()) && /\bsign(?:ed)?[- ]?off\b/i.test(r.decision));
+}
+
 /**
  * Whether stage `id`'s MANUAL verdict is the one in play: it is MANUAL, every earlier stage on the
- * dashboard is PASS or WAIVED, and every later one is still PENDING (or MANUAL, or not there). An
+ * dashboard is PASS or WAIVED or signed off in the register (`decisions`: a Stage 2 whose BRD is signed
+ * off while gate-check still says PENDING doesn't hold the build back; that mismatch is a flag of its
+ * own, shared/stage-derive.ts), and every later one is still PENDING (or MANUAL, or not there). An
  * earlier stage the dashboard doesn't list at all (a mode that never runs it) doesn't hold it back.
  */
-export function manualInPlay(verdicts: readonly VerdictLike[], id: string): boolean {
+export function manualInPlay(verdicts: readonly VerdictLike[], id: string, decisions?: readonly SignoffRow[]): boolean {
   const at = STAGE_ORDER.indexOf(norm(id) as (typeof STAGE_ORDER)[number]);
   if (at < 0) return false;
   const by = new Map(verdicts.map((v) => [norm(v.id), v.status.toUpperCase()]));
   if (by.get(STAGE_ORDER[at]) !== 'MANUAL') return false;
-  for (const s of STAGE_ORDER.slice(0, at)) if (by.has(s) && !settled(by.get(s))) return false;
+  for (const s of STAGE_ORDER.slice(0, at)) if (by.has(s) && !settled(by.get(s)) && !signedOff(decisions, s)) return false;
   for (const s of STAGE_ORDER.slice(at + 1)) if (!empty(by.get(s))) return false;
   return true;
 }
@@ -71,7 +89,7 @@ export function manualWaiting(verdicts: readonly VerdictLike[], v: VerdictLike, 
 }
 
 /** What a MANUAL stage that isn't in play yet says, on the bar and the setup panel. */
-export const MANUAL_LATER_TEXT = 'Not started: the toolkit checks this stage by hand, once the stages before it have passed';
+export const MANUAL_LATER_TEXT = 'Not started: the toolkit checks this stage by hand, once the stages before it have passed or are signed off';
 
 /** What signing off a stage means, for the sign-off dialog and the card. */
 export function signoffMeaning(id: string, title: string): string {
