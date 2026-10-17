@@ -8,6 +8,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { loadJson } from '../durable/read.js';
 import { writeJsonCritical } from '../flow/critical-write.js';
 import { cleanInput, tokensCss } from '../../shared/design/tokens.js';
 import { PATTERNS, patternMarkdown } from '../../shared/design/patterns.js';
@@ -72,10 +73,8 @@ export class DesignStore {
   }
 
   load(): Promise<IndexFile> {
-    this.loaded ??= readFile(this.file, 'utf8').then(
-      (t) => (this.data = cleanIndex(JSON.parse(t))),
-      () => this.data,
-    );
+    // Only a missing file is "none"; a locked one rejects and is read again next time (durable/read.ts).
+    this.loaded ??= loadJson(this.file, (v) => (v === undefined ? this.data : (this.data = cleanIndex(v))), () => (this.loaded = undefined));
     return this.loaded;
   }
 

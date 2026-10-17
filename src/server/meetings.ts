@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { closeSync, cpSync, existsSync, mkdirSync, openSync, readFileSync, readSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { parseStoreSync, writeJsonDurableSync } from './durable/index.js';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { MEETING_SEATS } from '../shared/layout.js';
@@ -689,22 +690,21 @@ export class MeetingRoom {
 
   private persist() {
     try {
-      writeFileSync(this.statePath, JSON.stringify({ current: this.current, past: this.past }, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.statePath, { current: this.current, past: this.past });
     } catch {
       // disk issues shouldn't take the office down
     }
   }
 
   private restore() {
-    if (!existsSync(this.statePath)) return;
     try {
-      const saved = JSON.parse(readFileSync(this.statePath, 'utf8')) as Partial<MeetingState>;
+      const saved = parseStoreSync(this.statePath) as Partial<MeetingState>;
       if (Array.isArray(saved.past)) this.past = saved.past.filter((r) => r && typeof r.id === 'string' && typeof r.summary === 'string').slice(0, PAST_MAX);
       const m = saved.current;
       // The workers at the table outlive a restart of the office, so a meeting carries on where it was.
       if (m && typeof m.id === 'string' && isMeetingPattern(m.pattern) && Array.isArray(m.seats) && Array.isArray(m.turns)) this.current = m;
     } catch {
-      // corrupt state file: an empty room
+      // none, or locked (no writes over it until it can be read; a corrupt one was kept aside: durable/read.ts): an empty room
     }
   }
 }

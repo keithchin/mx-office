@@ -13,7 +13,7 @@
 // once the start's reconcile has run. One per dispatcher (pendingFor), shared by Change answer and Send correction.
 
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { loadJson } from '../durable/read.js';
 import type { AuditInput } from '../../shared/audit.js';
 import { decisionLabel, type DecisionRef, type DispatchRecord, type DispatchState } from '../../shared/dispatch.js';
 import type { Dispatcher, Outcome, Target } from '../dispatch/service.js';
@@ -65,12 +65,11 @@ export class PendingAnswers {
   list(floorId: string): Promise<PendingEntry[]> {
     let p = this.floors.get(floorId);
     if (!p) {
-      p = readFile(this.file(floorId), 'utf8').then(
-        (t) => {
-          const v = JSON.parse(t) as unknown;
-          return Array.isArray(v) ? (v as PendingEntry[]).filter((x) => x && typeof x.dispatchId === 'string' && typeof x.decision === 'string') : [];
-        },
-        () => [],
+      // Only a missing file is empty; a locked one rejects and is read again next time (durable/read.ts).
+      p = loadJson(
+        this.file(floorId),
+        (v) => (Array.isArray(v) ? (v as PendingEntry[]).filter((x) => x && typeof x.dispatchId === 'string' && typeof x.decision === 'string') : []),
+        () => this.floors.delete(floorId),
       );
       this.floors.set(floorId, p);
     }

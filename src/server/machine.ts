@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
 import os from 'node:os';
 import path from 'node:path';
 import type { MachineState } from '../shared/protocol.js';
@@ -185,7 +186,7 @@ export class Machine implements Capacity {
 
   private restore() {
     try {
-      const s = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<Saved>;
+      const s = parseStoreSync(this.path) as Partial<Saved>;
       const limit = parseWorkerLimit(s.limit);
       if (limit !== undefined) this.saved = { limit, by: typeof s.by === 'string' ? s.by : 'someone', at: typeof s.at === 'number' ? s.at : 0 };
     } catch {
@@ -195,7 +196,7 @@ export class Machine implements Capacity {
 
   private persist() {
     try {
-      writeFileSync(this.path, JSON.stringify(this.saved ?? {}, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.path, this.saved ?? {});
     } catch {
       // disk issues shouldn't take the office down
     }

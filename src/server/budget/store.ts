@@ -4,7 +4,10 @@
 // Written a second after a change, through a temporary file, so a crash never leaves half a file.
 
 import { dropKeys, forgetWith } from '../office/forget.js';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
+import { writeTextDurableSync } from '../durable/write.js';
+import { assertWritable } from '../durable/health.js';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { BudgetAlert, BudgetPlan, BudgetSettings, FxSettings } from '../../shared/budget/types.js';
@@ -131,6 +134,7 @@ export class BudgetStore {
         const file = path.join(this.dir, `${id}.json`);
         try {
           const gen = this.syncs;
+          assertWritable(file); // never over a file it couldn't read (durable/health.ts)
           await writeFile(`${file}.tmp-bg`, JSON.stringify(data), { mode: 0o600 });
           if (gen === this.syncs) await rename(`${file}.tmp-bg`, file);
         } catch {
@@ -160,8 +164,7 @@ export class BudgetStore {
       if (!data || (id !== 'office' && !SAFE.test(id))) continue;
       const file = path.join(this.dir, `${id}.json`);
       try {
-        writeFileSync(`${file}.tmp`, JSON.stringify(data), { mode: 0o600 });
-        renameSync(`${file}.tmp`, file);
+        writeTextDurableSync(file, JSON.stringify(data));
       } catch {
         // disk trouble shouldn't take the office down; tried again on the next change
         continue;
@@ -172,7 +175,7 @@ export class BudgetStore {
 
   private read(name: string): any {
     try {
-      const v = JSON.parse(readFileSync(path.join(this.dir, name), 'utf8'));
+      const v = parseStoreSync(path.join(this.dir, name));
       return v && typeof v === 'object' ? v : undefined;
     } catch {
       return undefined;

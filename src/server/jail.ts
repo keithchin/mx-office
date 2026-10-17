@@ -1,4 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
 import path from 'node:path';
 import type { JailState, Prisoner, WorkerInfo } from '../shared/protocol.js';
 
@@ -44,7 +46,7 @@ export class Jail {
   private load() {
     if (!existsSync(this.file)) return;
     try {
-      const s = JSON.parse(readFileSync(this.file, 'utf8')) as Partial<JailState>;
+      const s = parseStoreSync(this.file) as Partial<JailState>;
       const ok = (p: unknown): p is Prisoner => {
         const q = p as Prisoner;
         return !!q && typeof q.id === 'string' && typeof q.name === 'string' && typeof q.color === 'string' && typeof q.at === 'number' && Number.isFinite(q.at);
@@ -64,7 +66,7 @@ export class Jail {
 
   private save() {
     try {
-      writeFileSync(this.file, JSON.stringify({ prisoners: this.prisoners, bones: this.bones }, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.file, { prisoners: this.prisoners, bones: this.bones });
     } catch {
       // disk issues shouldn't take the office down
     }

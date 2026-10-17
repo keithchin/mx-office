@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { PROMPTS, PROMPT_IDS, PROMPT_MAX, fillPrompt, placeholders, promptText } from '../src/shared/prompts.js';
@@ -101,7 +101,10 @@ test('the default worker is checked before it is kept, and one the office can no
   // A broken file is the defaults.
   writeFileSync(file, '{nope');
   assert.deepEqual(new OfficePrompts(dir, { list: ['claude'], configured: 'claude' }, () => {}).state(), { custom: {} });
-  assert.ok(readFileSync(file, 'utf8'));
+  // Kept aside, never deleted (durable/read.ts).
+  const aside = readdirSync(dir).find((f) => f.startsWith('prompts.json.corrupt-'));
+  assert.ok(aside);
+  assert.equal(readFileSync(path.join(dir, aside), 'utf8'), '{nope');
 });
 
 test('a board agent is told its rewritten brief', () => {

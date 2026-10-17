@@ -1,7 +1,10 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { accessSync, constants, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { readJsonStoreSync, valueOr } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
+import { StoreUnavailableError, writeBlocked } from './durable/health.js';
 import { FLOOR_PALETTES, MAX_FLOORS, normalizeRepo, sameRepo } from '../shared/floors.js';
 import type { CloneProgress, ProjectsDirState, RepoChoice } from '../shared/protocol.js';
 import { CloneRun, dropLog, whyCloneFailed, type CloneEnd, type CloneRunOptions } from './clone.js';
@@ -105,8 +108,8 @@ export class Building {
     this.localFile = path.join(dataDir, 'local-floor.json');
     this.load();
     if (opts.projectIds && this.defs.some((d) => !d.projectId)) this.save();
-    this.loadPicked();
-    this.loadLocalOff();
+    this.picked = this.loadDir(this.pickedFile);
+    this.localOff = this.loadDir(this.localFile);
   }
 
   /** Where new floors are cloned. Floors already there stay where they are when it moves. */
@@ -136,7 +139,7 @@ export class Building {
     }
     this.picked = dir === this.defaultProjectsDir ? undefined : { dir, by, at: Date.now() };
     try {
-      writeFileSync(this.pickedFile, JSON.stringify(this.picked ?? {}, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.pickedFile, this.picked ?? {});
     } catch (err) {
       console.error(`agent-office: couldn't save the projects folder: ${(err as Error).message}`);
     }
@@ -263,6 +266,7 @@ export class Building {
    * in). Returns the floor, or why it can't.
    */
   remove(id: string, by = '?'): FloorDef | string {
+    if (this.refused()) return this.refused()!;
     const def = this.defs.find((d) => d.id === id);
     if (!def) return this.pendingFloor(id) ? "That project is still being cloned — stop it, or take it off once it's there" : 'No such project';
     this.defs = this.defs.filter((d) => d !== def);
@@ -283,6 +287,7 @@ export class Building {
   async add(input: string, by: string, started: (def: FloorDef) => void, account?: string): Promise<FloorDef | string> {
     const wanted = normalizeRepo(input);
     if (!wanted) return 'Pick a repository, or type it as owner/name';
+    if (this.refused()) return this.refused()!;
     if (this.defs.some((d) => sameRepo(d.repo, wanted))) return `${wanted} already has a project`;
     if (this.cloning.has(wanted.toLowerCase())) return `${wanted} is already being cloned`;
     if (this.defs.length + this.cloning.size >= MAX_FLOORS) return `The building is full (${MAX_FLOORS} projects)`;
@@ -334,6 +339,7 @@ export class Building {
     const repo = normalizeRepo(input);
     const known = repo && this.defs.find((d) => sameRepo(d.repo, repo));
     if (!repo || known) return known || 'Not a repository name';
+    if (this.refused()) return this.refused()!;
     const ok = local ? existsSync(path.join(dir, '.git')) && !originRepo(dir) : checkoutAt(dir, repo, true) === 'ok';
     if (!ok) return `${dir} isn't a checkout of ${repo}`;
     const def = this.newDef(repo.split('/')[1], repo, dir, by);
@@ -406,10 +412,15 @@ export class Building {
     return { id, name, repo, dir, palette, addedBy: by, addedAt: Date.now() };
   }
 
+  /** Why the list can't change now: floors.json couldn't be read, so nothing is saved over it (durable/health.ts). */
+  private refused(): string | undefined {
+    const b = writeBlocked(this.file);
+    return b && new StoreUnavailableError(this.file, b.error).message;
+  }
+
   private load() {
-    if (!existsSync(this.file)) return;
     try {
-      const saved = JSON.parse(readFileSync(this.file, 'utf8')) as Partial<FloorDef>[];
+      const saved = valueOr(readJsonStoreSync(this.file), []) as Partial<FloorDef>[];
       const ids = new Set<string>();
       for (const s of Array.isArray(saved) ? saved : []) {
         if (typeof s.id !== 'string' || !/^[a-z0-9-]{1,40}$/.test(s.id) || ids.has(s.id) || typeof s.dir !== 'string' || !path.isAbsolute(s.dir)) continue;
@@ -425,37 +436,26 @@ export class Building {
           addedAt: typeof s.addedAt === 'number' ? s.addedAt : Date.now(),
         });
       }
-    } catch (err) {
-      console.error(`agent-office: ${this.file} couldn't be read, so the building starts empty: ${(err as Error).message}`);
+    } catch {
+      // Locked or refused: empty, and nothing saved over it (durable/health.ts). Corrupt: kept aside, its backup used (durable/read.ts).
     }
   }
 
-  private loadPicked() {
+  /** projects-folder.json or local-floor.json: undefined when never picked (or taken off), or unreadable. */
+  private loadDir(file: string): PickedDir | undefined {
     try {
-      const saved = JSON.parse(readFileSync(this.pickedFile, 'utf8')) as Partial<PickedDir>;
-      if (typeof saved.dir === 'string' && path.isAbsolute(saved.dir)) {
-        this.picked = { dir: saved.dir, by: typeof saved.by === 'string' ? saved.by : '?', at: typeof saved.at === 'number' ? saved.at : Date.now() };
-      }
+      const saved = valueOr(readJsonStoreSync(file), {}) as Partial<PickedDir>;
+      if (typeof saved.dir === 'string' && path.isAbsolute(saved.dir)) return { dir: saved.dir, by: typeof saved.by === 'string' ? saved.by : '?', at: typeof saved.at === 'number' ? saved.at : Date.now() };
     } catch {
-      // never picked: the default
+      // locked: the default, and not saved over (durable/health.ts)
     }
-  }
-
-  private loadLocalOff() {
-    try {
-      const saved = JSON.parse(readFileSync(this.localFile, 'utf8')) as Partial<PickedDir>;
-      if (typeof saved.dir === 'string' && path.isAbsolute(saved.dir)) {
-        this.localOff = { dir: saved.dir, by: typeof saved.by === 'string' ? saved.by : '?', at: typeof saved.at === 'number' ? saved.at : Date.now() };
-      }
-    } catch {
-      // never taken off
-    }
+    return undefined;
   }
 
   private setLocalOff(off: PickedDir | undefined) {
     this.localOff = off;
     try {
-      if (off) writeFileSync(this.localFile, JSON.stringify(off, null, 2), { mode: 0o600 });
+      if (off) writeJsonDurableSync(this.localFile, off);
       else rmSync(this.localFile, { force: true });
     } catch (err) {
       console.error(`agent-office: couldn't save ${this.localFile}: ${(err as Error).message}`);
@@ -465,7 +465,7 @@ export class Building {
   private save() {
     try {
       for (const d of this.defs) if (this.opts.projectIds) d.projectId = this.opts.projectIds.ensure(d);
-      writeFileSync(this.file, JSON.stringify(this.defs, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.file, this.defs, { bak: true });
     } catch (err) {
       console.error(`agent-office: couldn't save the projects: ${(err as Error).message}`);
     }
@@ -473,7 +473,7 @@ export class Building {
 
   private loadClones(): SavedClone[] {
     try {
-      const saved = JSON.parse(readFileSync(this.clonesFile, 'utf8')) as Partial<SavedClone>[];
+      const saved = valueOr(readJsonStoreSync(this.clonesFile), []) as Partial<SavedClone>[];
       return (Array.isArray(saved) ? saved : []).filter(
         // Its log is one of ours (it gets deleted), in .agent-office/clones.
         (s): s is SavedClone =>
@@ -488,7 +488,7 @@ export class Building {
   private saveClones() {
     const saved: SavedClone[] = [...this.cloning.values()].flatMap((p) => (p.run ? [{ ...p.def, pid: p.run.pid, log: p.run.log, owner: p.owner, empty: p.empty }] : []));
     try {
-      if (saved.length) writeFileSync(this.clonesFile, JSON.stringify(saved, null, 2), { mode: 0o600 });
+      if (saved.length) writeJsonDurableSync(this.clonesFile, saved);
       else rmSync(this.clonesFile, { force: true });
     } catch (err) {
       console.error(`agent-office: couldn't save ${this.clonesFile}: ${(err as Error).message}`);

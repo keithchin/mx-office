@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
 import path from 'node:path';
 import { isAgentProvider, type AgentChoice, type AgentEffort, type AgentProvider, type GhPull, type QueueState, type QueueTask, type WorkerInfo, type WorkerStatus } from '../shared/protocol.js';
 import { DESK_BY_ID, SEATS, nextFreeSeat } from '../shared/layout.js';
@@ -511,9 +511,8 @@ export class TaskQueue {
   }
 
   private restore() {
-    if (!existsSync(this.statePath)) return;
     try {
-      const saved = JSON.parse(readFileSync(this.statePath, 'utf8')) as { maxWorkers?: number; tasks?: Partial<QueueTask>[] };
+      const saved = parseStoreSync(this.statePath) as { maxWorkers?: number; tasks?: Partial<QueueTask>[] };
       if (typeof saved.maxWorkers === 'number' && Number.isFinite(saved.maxWorkers)) this.maxWorkers = Math.max(0, Math.min(SEATS.length, Math.floor(saved.maxWorkers)));
       for (const s of saved.tasks ?? []) {
         if (typeof s.id !== 'string' || typeof s.prompt !== 'string' || typeof s.title !== 'string') continue;

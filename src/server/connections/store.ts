@@ -4,7 +4,9 @@
 // (tests, `agent-office prune`…) nothing is stored, so every credential falls back to its environment
 // variable and dot-file as it always has.
 
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
+import { writeJsonDurableSync } from '../durable/write.js';
 import os from 'node:os';
 import path from 'node:path';
 import type { CredentialId } from '../../shared/connections.js';
@@ -60,7 +62,7 @@ export function openConnections(dataDir: string, cipher: Cipher = defaultCipher(
   vault = new Vault(path.join(dataDir, 'credentials.json'), cipher).load();
   settingsFile = path.join(dataDir, 'office-settings.json');
   try {
-    settings = JSON.parse(readFileSync(settingsFile, 'utf8')) as OfficeSettings;
+    settings = parseStoreSync(settingsFile) as OfficeSettings;
   } catch {
     settings = {};
   }
@@ -89,9 +91,7 @@ export function updateOfficeSettings(patch: Partial<OfficeSettings>): OfficeSett
   settings = { ...settings, ...patch };
   for (const k of Object.keys(settings) as (keyof OfficeSettings)[]) if (settings[k] === undefined) delete settings[k];
   if (settingsFile) {
-    const tmp = `${settingsFile}.tmp`;
-    writeFileSync(tmp, JSON.stringify(settings, null, 2), { mode: 0o600 });
-    renameSync(tmp, settingsFile);
+    writeJsonDurableSync(settingsFile, settings);
   }
   return settings;
 }

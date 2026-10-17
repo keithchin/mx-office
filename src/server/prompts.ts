@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
 import path from 'node:path';
 import { isAgentEffort, isAgentProvider, type AgentChoice, type AgentProvider, type PromptsState } from '../shared/protocol.js';
 import { PROMPTS, PROMPT_MAX, fillPrompt, isPromptId, promptText, type PromptId, type PromptVars } from '../shared/prompts.js';
@@ -89,7 +90,7 @@ export class OfficePrompts implements PromptSource {
   private restore() {
     let raw: Partial<PromptsState>;
     try {
-      raw = JSON.parse(readFileSync(this.path, 'utf8'));
+      raw = parseStoreSync(this.path);
     } catch {
       return; // never changed: the defaults
     }
@@ -107,7 +108,7 @@ export class OfficePrompts implements PromptSource {
 
   private persist() {
     try {
-      writeFileSync(this.path, JSON.stringify(this.saved, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.path, this.saved);
     } catch {
       // disk issues shouldn't take the office down
     }

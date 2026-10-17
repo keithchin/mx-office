@@ -7,7 +7,8 @@
 // turn), or "seen", which hides an item until it changes. Never a write to the repo, never a fetch, never
 // a GitHub call.
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { loadJson } from '../durable/read.js';
+import { writeTextDurable } from '../durable/write.js';
 import path from 'node:path';
 import type { AuditInput } from '../../shared/audit.js';
 import type { AskAct, AskItem, AsksView, BranchStandup } from '../../shared/asks.js';
@@ -104,10 +105,7 @@ export class AsksService {
   private stateOf(floorId: string): Promise<FloorState> {
     let p = this.state.get(floorId);
     if (!p) {
-      p = readFile(this.file(floorId), 'utf8').then(
-        (t) => ({ items: [], seen: (JSON.parse(t) as { seen?: Record<string, number> }).seen ?? {} }),
-        () => ({ items: [], seen: {} }),
-      );
+      p = loadJson(this.file(floorId), (v) => ({ items: [], seen: (v as { seen?: Record<string, number> } | undefined)?.seen ?? {} }), () => this.state.delete(floorId));
       this.state.set(floorId, p);
     }
     return p;
@@ -117,9 +115,7 @@ export class AsksService {
     if (this.stopped) return;
     const f = this.file(floorId);
     try {
-      await mkdir(path.dirname(f), { recursive: true });
-      await writeFile(`${f}.tmp`, JSON.stringify({ seen: s.seen }));
-      await rename(`${f}.tmp`, f);
+      await writeTextDurable(f, JSON.stringify({ seen: s.seen }));
     } catch (err) {
       console.error(`agent-office: asks: couldn't save ${floorId}: ${(err as Error).message}`);
     }

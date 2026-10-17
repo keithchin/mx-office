@@ -1,4 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
 import path from 'node:path';
 import type { NotifyState, WebhookKind, WorkerInfo, WorkerStatus } from '../shared/protocol.js';
 import { alertDetail } from '../shared/status.js';
@@ -206,7 +208,7 @@ export class Webhook {
 
   private persist() {
     try {
-      writeFileSync(this.path, JSON.stringify(this.saved ?? {}, null, 2), { mode: 0o600 });
+      writeJsonDurableSync(this.path, this.saved ?? {});
     } catch {
       // disk issues shouldn't take the office down
     }
@@ -215,7 +217,7 @@ export class Webhook {
   private restore() {
     if (!existsSync(this.path)) return;
     try {
-      const s = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<Saved>;
+      const s = parseStoreSync(this.path) as Partial<Saved>;
       if (typeof s.url === 'string' && URL.canParse(s.url)) this.saved = { url: s.url, by: typeof s.by === 'string' ? s.by : '?', at: typeof s.at === 'number' ? s.at : Date.now() };
     } catch {
       // a broken file just means no webhook

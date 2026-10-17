@@ -1,5 +1,8 @@
 import { randomBytes, scryptSync } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+import { parseStoreSync } from './durable/read.js';
+import { writeJsonDurableSync } from './durable/write.js';
+import { StoreUnavailableError } from './durable/health.js';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -385,11 +388,17 @@ export function loadConfig(argv: string[]): Config {
   const cfgPath = path.join(dataDir, 'config.json');
   let stored: { password?: string; verifier?: string; salt?: string; secret?: string; claimedAt?: number; verifierFrom?: string } = {};
   try {
-    stored = JSON.parse(readFileSync(cfgPath, 'utf8'));
-  } catch {
-    // first run
+    // A corrupt file is moved aside and its backup used (durable/read.ts); only a missing one is a first run.
+    stored = parseStoreSync(cfgPath);
+  } catch (err) {
+    if (err instanceof StoreUnavailableError) {
+      // Locked or refused: starting would make a new secret and password over the real ones.
+      console.error(`agent-office: ${err.message}. Not starting, so its password and secret aren't replaced: close what holds it and start again.`);
+      process.exit(1);
+    }
   }
-  const save = () => writeFileSync(cfgPath, JSON.stringify(stored, null, 2), { mode: 0o600 });
+  // No .bak: an old secret or password shouldn't linger beside it.
+  const save = () => writeJsonDurableSync(cfgPath, stored);
   if (!stored.secret) stored.secret = randomBytes(32).toString('hex');
   if (!stored.salt) stored.salt = randomBytes(16).toString('hex');
   const salt = Buffer.from(stored.salt, 'hex');

@@ -20,6 +20,7 @@ import { IncidentDetector, type FloorSnapshot } from './rules.js';
 import { onIncidentSignal } from './signals.js';
 import { applySeed, wantsSeed } from './seed.js';
 import { IncidentAnalyzer, useAnalyzer } from './analysis.js';
+import { raiseStoreProblems } from './store-health.js';
 
 const TICK_MS = 60_000;
 /** The restored workers are looked at once the floors are open and their names known. */
@@ -73,6 +74,8 @@ export function installIncidents(ctx: Ctx) {
     const n = applySeed();
     if (n) console.log(`  🚨 Recorded ${n} incidents of 2026-10-06 retrospectively (Audit log → Incidents)`);
   }
+  // Data files the office couldn't read, from start-up on (store-health.ts).
+  raiseStoreProblems(raise);
   // Mx Office's analysis of a resolved incident (analysis.ts): one cut off by the last office's stop can be retried.
   const analyzer = new IncidentAnalyzer({ floorName: (id) => ctx.floors.get(id)?.def.name ?? id });
   useAnalyzer(analyzer);

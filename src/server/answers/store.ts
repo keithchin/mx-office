@@ -13,6 +13,7 @@ import { promises as fsp } from 'node:fs';
 import path from 'node:path';
 import { ANSWER_TEXT_MAX, type AnswerRevision, type DecisionRef } from '../../shared/dispatch.js';
 import { sha256 } from '../audit/log.js';
+import { readJsonlStore } from '../durable/jsonl.js';
 
 export type AnswerLine = AnswerRevision & { prev: string; hash: string };
 
@@ -52,11 +53,18 @@ export class AnswerStore {
     if (this.floors.has(floorId)) return Promise.resolve();
     let p = this.loading.get(floorId);
     if (!p) {
-      p = this.read(floorId).then((f) => {
-        this.floors.set(floorId, f);
-        this.loading.delete(floorId);
-        return f;
-      });
+      p = this.read(floorId).then(
+        (f) => {
+          this.floors.set(floorId, f);
+          this.loading.delete(floorId);
+          return f;
+        },
+        (err) => {
+          // Couldn't read it (durable/health.ts raised it): the next load tries again, nothing is appended meanwhile.
+          this.loading.delete(floorId);
+          throw err;
+        },
+      );
       this.loading.set(floorId, p);
     }
     return p.then(() => undefined);
@@ -64,14 +72,9 @@ export class AnswerStore {
 
   private async read(floorId: string): Promise<FloorAnswers> {
     const out: FloorAnswers = { lines: [], last: '', latest: new Map() };
-    let text = '';
-    try {
-      text = String(await this.fs.readFile(this.file(floorId), 'utf8'));
-    } catch {
-      return out;
-    }
-    for (const line of text.split('\n')) {
-      if (!line.trim()) continue;
+    // Only a missing file is "no answers": a locked one rejects, a torn tail is kept aside and cut off (durable/jsonl.ts).
+    const { lines } = await readJsonlStore(this.file(floorId));
+    for (const line of lines) {
       try {
         const l = JSON.parse(line) as AnswerLine;
         if (typeof l.decision !== 'string' || typeof l.rev !== 'number') continue;
@@ -80,7 +83,7 @@ export class AnswerStore {
         const had = out.latest.get(l.decision);
         if (!had || had.rev < l.rev) out.latest.set(l.decision, l);
       } catch {
-        // A torn last line (a crash mid-append): verify says so; reading skips it.
+        // Not a revision.
       }
     }
     return out;

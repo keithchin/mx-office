@@ -3,7 +3,8 @@
 // a register: the cards themselves are built afresh from their sources every time. Read once per floor
 // (asynchronously), written atomically (a temp file, then a rename), off the event loop's hot path.
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { loadJson } from '../durable/read.js';
+import { writeTextDurable } from '../durable/write.js';
 import path from 'node:path';
 import type { DecisionSplit } from '../../shared/decisions/types.js';
 
@@ -30,10 +31,7 @@ export class SplitsStore {
   get(floorId: string): Promise<DecisionSplit[]> {
     let p = this.floors.get(floorId);
     if (!p) {
-      p = readFile(this.file(floorId), 'utf8').then(
-        (t) => clean(JSON.parse(t)),
-        () => [],
-      );
+      p = loadJson(this.file(floorId), (v) => (v === undefined ? [] : clean(v)), () => this.floors.delete(floorId));
       this.floors.set(floorId, p);
     }
     return p;
@@ -46,9 +44,7 @@ export class SplitsStore {
     list.push(s);
     while (list.length > KEPT) list.shift();
     const f = this.file(floorId);
-    await mkdir(path.dirname(f), { recursive: true });
-    await writeFile(`${f}.tmp`, JSON.stringify({ splits: list }));
-    await rename(`${f}.tmp`, f);
+    await writeTextDurable(f, JSON.stringify({ splits: list }));
     return true;
   }
 }

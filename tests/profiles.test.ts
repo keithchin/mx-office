@@ -185,10 +185,10 @@ test('the hire dialog lists this role’s agents first, never the seat’s own, 
   assert.doesNotMatch(lines.join(' '), /on loan|train|skill|better|learn/i);
 });
 
-test('an unreadable profiles.json is kept beside it before the office starts profiles over', async () => {
+test('a corrupt profiles.json is moved aside (never deleted) before the office starts profiles over', async () => {
   const w = world();
   writeFileSync(path.join(w.dataDir, 'profiles.json'), '{ not json');
   await w.svc.store.load();
   assert.equal(w.svc.store.data.profiles.length, 0);
-  assert.ok(readdirSync(w.dataDir).some((f) => f.startsWith('profiles.json.unreadable-')));
+  assert.ok(readdirSync(w.dataDir).some((f) => f.startsWith('profiles.json.corrupt-')));
 });

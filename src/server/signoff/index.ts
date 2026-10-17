@@ -8,7 +8,8 @@
 // once the row is there the card is gone. Escalations the sign-off card folded (the lead asking for the
 // same sign-off) are answered with the same explicit words, never with the card's title.
 
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
+import { writeJsonDurableSync } from '../durable/write.js';
 import path from 'node:path';
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
@@ -27,7 +28,7 @@ export function signoffRequests(dataDir: string, floorId: string): SignoffReques
   let list = cache.get(file);
   if (!list) {
     try {
-      const v = JSON.parse(readFileSync(file, 'utf8')) as { requests?: SignoffRequest[] };
+      const v = parseStoreSync(file) as { requests?: SignoffRequest[] };
       list = Array.isArray(v.requests) ? v.requests.filter((r) => r && typeof r.stage === 'string' && typeof r.by === 'string' && typeof r.at === 'number') : [];
     } catch {
       list = [];
@@ -39,9 +40,7 @@ export function signoffRequests(dataDir: string, floorId: string): SignoffReques
 
 function save(dataDir: string, floorId: string, list: SignoffRequest[]) {
   const file = fileOf(dataDir, floorId);
-  mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(`${file}.tmp`, JSON.stringify({ requests: list }, null, 2), { mode: 0o600 });
-  renameSync(`${file}.tmp`, file);
+  writeJsonDurableSync(file, { requests: list });
   cache.set(file, list);
 }
 

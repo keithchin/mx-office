@@ -6,9 +6,14 @@
 // writes what's still due at once, synchronously, for the office's exit and the tests, and a background
 // write from before it never lands over it.
 
-import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
-import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { closeSync, fsyncSync, mkdirSync, openSync, renameSync, writeSync } from 'node:fs';
+import { mkdir, open, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
+import { assertWritable } from '../durable/health.js';
+
+// Store safety (2026-10-17): every write is fsynced before its rename, so a power cut leaves the old file or
+// the new, and none is written while the office couldn't read the file (durable/health.ts: the store started
+// without its data, and writing would make that permanent); onError hears StoreUnavailableError then.
 
 export class BackgroundFile {
   private due: string | undefined;
@@ -38,8 +43,15 @@ export class BackgroundFile {
     this.syncs++;
     if (t === undefined) return;
     try {
+      assertWritable(this.file);
       if (this.opts.mkdir) mkdirSync(path.dirname(this.file), { recursive: true, mode: 0o700 });
-      writeFileSync(`${this.file}.tmp`, t, { mode: this.opts.mode ?? 0o600 });
+      const fd = openSync(`${this.file}.tmp`, 'w', this.opts.mode ?? 0o600);
+      try {
+        writeSync(fd, t);
+        fsyncSync(fd);
+      } finally {
+        closeSync(fd);
+      }
       renameSync(`${this.file}.tmp`, this.file);
     } catch (err) {
       this.opts.onError?.(err); // disk issues shouldn't take the office down
@@ -65,6 +77,7 @@ export class BackgroundFile {
    */
   async critical(make: () => string, write: (file: string, text: string) => Promise<void>): Promise<void> {
     await this.idle.catch(() => undefined);
+    assertWritable(this.file);
     this.due = undefined;
     this.syncs++;
     const text = make();
@@ -86,8 +99,15 @@ export class BackgroundFile {
         const gen = this.syncs;
         const tmp = `${this.file}.tmp-bg`;
         try {
+          assertWritable(this.file);
           if (this.opts.mkdir) await mkdir(path.dirname(this.file), { recursive: true, mode: 0o700 });
-          await writeFile(tmp, text, { mode: this.opts.mode ?? 0o600 });
+          const h = await open(tmp, 'w', this.opts.mode ?? 0o600);
+          try {
+            await h.writeFile(text);
+            await h.sync();
+          } finally {
+            await h.close();
+          }
           // Flushed or cancelled meanwhile: what's there is newer, or is to go.
           if (gen === this.syncs) await renameRetrying(tmp, this.file);
           else await rm(tmp, { force: true });

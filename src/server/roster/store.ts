@@ -3,7 +3,8 @@
 // the standups and their proposals, the escalations raised to the Project Manager, and the floor's spend today for the cost cap. Saved a moment
 // after each change, so a burst of worker updates writes once.
 
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
+import { readJsonStoreSync, valueOr } from '../durable/read.js';
 import path from 'node:path';
 import { BackgroundFile } from '../offloop/save.js';
 import { writeTextCritical } from '../flow/critical-write.js';
@@ -228,13 +229,16 @@ export class RosterFile {
     this.file = path.join(dir, `${floorId.replace(/[^A-Za-z0-9._-]/g, '_')}.json`);
     this.out = new BackgroundFile(this.file, { onError: (err) => console.error(`agent-office: couldn't save ${this.file}`, err) });
     let raw: unknown;
+    let unreadable = false;
     try {
-      raw = existsSync(this.file) ? JSON.parse(readFileSync(this.file, 'utf8')) : undefined;
-    } catch (err) {
-      console.error(`agent-office: couldn't read ${this.file}, starting the team over`, err);
+      // Only a missing file is a new team; a corrupt one is kept aside and its backup used (durable/read.ts).
+      raw = valueOr(readJsonStoreSync(this.file), undefined);
+    } catch {
+      // Locked or refused: the team starts empty in memory, and nothing is saved over the file (durable/health.ts).
+      unreadable = true;
     }
     this.data = reviveRoster(raw);
-    if (raw === undefined || namesAdded(raw, this.data)) this.save();
+    if (!unreadable && (raw === undefined || namesAdded(raw, this.data))) this.save();
   }
 
   /** Drops what was waiting to be written (its project was deleted: the file is archived and gone). */

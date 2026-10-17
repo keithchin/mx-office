@@ -1,10 +1,11 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import type headless from '@xterm/headless';
 import type serialize from '@xterm/addon-serialize';
 import type { ChatLine } from '../shared/protocol.js';
 import { logicalLines, searchKey, snippet } from '../shared/search.js';
 import { BackgroundFile } from './offloop/save.js';
+import { readJsonlStoreSync, writeTextDurableSync } from './durable/index.js';
 
 type HeadlessTerminal = InstanceType<typeof headless.Terminal>;
 type Serializer = InstanceType<typeof serialize.SerializeAddon>;
@@ -53,10 +54,10 @@ export class ChatLog {
   }
 
   private load() {
-    if (!existsSync(this.file)) return;
     let raw: string[];
     try {
-      raw = readFileSync(this.file, 'utf8').split('\n').filter(Boolean);
+      // Only a missing file is no chat: a locked one blocks the rewrite (which keeps only what's in memory), a torn tail is kept aside (durable/jsonl.ts).
+      raw = readJsonlStoreSync(this.file).lines;
     } catch {
       return;
     }
@@ -78,7 +79,7 @@ export class ChatLog {
 
   private rewrite() {
     try {
-      writeFileSync(this.file, this.lines.map((l) => `${JSON.stringify(l)}\n`).join(''), { mode: 0o600 });
+      writeTextDurableSync(this.file, this.lines.map((l) => `${JSON.stringify(l)}\n`).join(''));
       this.fileLines = this.lines.length;
     } catch {
       // disk issues shouldn't take the office down

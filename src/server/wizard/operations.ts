@@ -5,7 +5,8 @@
 // write that fails rejects to the caller, who then doesn't send the command (intent) or stops the setup
 // for reconciliation (outcome). Each change is told to `onChange` (the office's audit log).
 
-import { readFileSync, renameSync } from 'node:fs';
+import { renameSync } from 'node:fs';
+import { parseStoreSync } from '../durable/read.js';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { advance, opsOfRun, readOperation, OPERATION_VERSION, type OperationKind, type OperationRecord, type OperationState } from '../../shared/setup-operations.js';
@@ -76,7 +77,7 @@ export class OperationStore {
     list = [];
     if (!this.opts.memory) {
       try {
-        const j = JSON.parse(readFileSync(this.file(setup), 'utf8')) as { v?: unknown; ops?: unknown[] };
+        const j = parseStoreSync(this.file(setup)) as { v?: unknown; ops?: unknown[] };
         if (j?.v === OPERATION_VERSION && Array.isArray(j.ops)) list = j.ops.map(readOperation).filter((o): o is OperationRecord => !!o && o.setup === setup);
       } catch {
         // none yet (or not readable: no records, so nothing gives authority)
