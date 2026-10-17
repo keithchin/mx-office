@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-17 · release 56 (`e2836b9`)
+
 ### Added
 
 - **An agent waiting on its own background work no longer looks idle.** When an agent ends its turn with a Monitor, a background command or an async subagent still running, Claude Code wakes it when that work reports; the office now shows it as **Waiting on background work** on the Overview's Team card and the Org chart, with each item under it (*monitor · 12 min left*, *background command · started 3 min ago*, *as of 00:27*), counts it as working on the home page, names it in the Coordinator's fact block (*Sophie (you) — waiting on background work: monitor, 1 subagent (Maya)*) and never benches it for being idle. Read from the PostToolUse hook and the transcript's task notifications, nothing polled; past its stated expiry an item reads *background work (status unknown since 14:05)* and no longer counts.
