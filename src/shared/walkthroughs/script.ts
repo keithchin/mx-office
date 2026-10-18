@@ -3,8 +3,10 @@
 // vocabulary: nav, click, fill, combobox, dismissModal, wait), and what must be true after. Both shapes the
 // toolkit ships are read: `steps[].actions[]` with `do`, and the simple `click` / `page` / `expectText` steps.
 // Seeds with a literal `value` are filled in; a seed only a database query gives (`sql`) isn't guessed: a
-// step that needs it is blocked and fails honestly. Pure.
+// step that needs it is blocked and fails honestly. Who runs it (./identity.ts) and the `$comment` lines worth
+// showing when it fails (a time window, the start state it needs) come along. Pure.
 
+import { hintOf, journeyNotes } from './identity.js';
 import { slugOf, type WalkAction, type WalkChecks, type WalkScript, type WalkStep } from './types.js';
 
 type Json = Record<string, unknown>;
@@ -111,12 +113,15 @@ export function scriptOf(file: string, text: string): WalkScript | string {
   const steps = j.steps.filter((x): x is Json => !!x && typeof x === 'object').map((x, i) => stepOf(x, i + 1, seeds));
   if (!steps.length) return `${file} has no steps`;
   const persona = str(j.persona) ?? str(j.role);
+  const notes = journeyNotes(j);
   return {
     journey,
     title: str(j.title) ?? str(j.name) ?? str(j.goal) ?? journey,
     file,
     requirement: strs(j.requirement),
     ...(persona ? { persona } : {}),
+    identity: hintOf(j),
+    ...(notes.length ? { notes } : {}),
     steps,
   };
 }

@@ -19,6 +19,7 @@ import { startQuestions } from '../questions/index.js';
 import { startFollowThrough } from '../followthrough/index.js';
 import { startChangeAnswer } from '../change-answer/index.js';
 import { startToolkitPins } from '../toolkit-pin/office.js';
+import { startWalkthroughs } from '../walkthroughs/office.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
@@ -83,6 +84,8 @@ export function startTimers(ctx: Ctx): () => void {
   const stopProfiles = startProfiles(ctx);
   // Design systems: their files loaded, and a bound project's pointer line added under each new task (design/).
   const stopDesign = startDesignSystems(ctx);
+  // Walkthrough videos recorded by themselves when a build on main passes its journeys, against the office's own copy of the app (walkthroughs/).
+  const stopWalks = startWalkthroughs(ctx);
 
   return () => {
     stopRuns();
@@ -103,6 +106,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopPortfolios();
     stopProfiles();
     stopDesign();
+    stopWalks();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

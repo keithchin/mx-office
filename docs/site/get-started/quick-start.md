@@ -69,7 +69,7 @@ Escalation cards show who raised them, their options and their recommendation. C
 ## Step 7: See the result
 
 - Pull requests appear in **🔀 In review** on the board. Hover a card to see its CI **scorecard**. See [CI pipeline](../integrations/ci-pipeline.md).
-- After a merge, the **🌐 Live app** tab runs the app from `main`. The first time, click **▶ Start** (admin). See [Live app](../using-the-office/live-app.md).
+- After a merge, the **🌐 Live app** tab runs the app from `main`. The first time, click **▶ Start** (admin). See [Live app](../using-the-office/live-app.md). Videos of each workflow appear on the **🎬 Walkthroughs** page by themselves once a build on main passes its journeys; see [Walkthroughs](../using-the-office/walkthroughs.md).
 
 ## Next steps
 

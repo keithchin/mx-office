@@ -95,7 +95,7 @@ export async function saveToRepo(i: SaveInput): Promise<SavedToRepo> {
     const passed = m.steps.filter((s) => s.status === 'passed').length;
     const pack = /size-pack:\s*(.+)/.exec((await git(['count-objects', '-vH'], tmp)) ?? '')?.[1]?.trim();
     const body = [
-      `${m.kind === 'tour' ? 'Guided tour' : `Walkthrough of **${m.journey.title}** (journey \`${m.journey.id}\`, ${m.journey.file})`}, recorded by Mx Office against the live app at commit \`${m.app.commit}\`${m.milestone ? ` when milestone “${m.milestone.title}” became ready` : ''}.`,
+      `${m.kind === 'tour' ? 'Guided tour' : `Walkthrough of **${m.journey.title}** (journey \`${m.journey.id}\`, ${m.journey.file})`}, recorded by Mx Office against its own copy of the app at commit \`${m.app.commit}\`${m.milestone ? ` when milestone “${m.milestone.title}” became ready` : ''}.`,
       '',
       m.kind === 'tour' ? `- ${m.parts?.length ?? 0} workflows: ${(m.parts ?? []).map((p) => p.title).join(', ')}` : `- Steps: ${passed} of ${m.steps.length} passed`,
       m.journey.requirement.length ? `- Shows: ${m.journey.requirement.join(', ')}` : '',

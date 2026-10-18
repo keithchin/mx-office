@@ -1,5 +1,5 @@
 // One workflow recording from start to finish: the narration first (so each step can stay on screen as long
-// as its line), the recorder (./recorder.ts), a check that the live app still runs the same commit, the MP4
+// as its line), the recorder (./recorder.ts), a check that the app still runs the same commit, the MP4
 // with the voice (or the WebM as recorded, without ffmpeg), the captions and chapters, the manifest. A
 // recording whose app moved to another commit meanwhile is an error, never evidence for either commit.
 
@@ -15,7 +15,7 @@ import type { Voice } from './tts.js';
 export interface RunDeps {
   tool: Tool;
   voice?: Voice;
-  /** The commit the live app runs now (undefined: it doesn't run). */
+  /** The commit the recording app runs now (undefined: it stopped). */
   commitNow(): string | undefined;
   launch?(): Promise<Browser>;
   cardMs?: number;
@@ -75,7 +75,7 @@ export async function runRecording(d: RunDeps, i: RunInput): Promise<WalkManifes
   if (res.failure) m.failure = res.failure;
   if (m.status !== 'cancelled' && d.commitNow() !== m.app.commit) {
     m.status = 'error';
-    m.failure = { why: `the live app ${d.commitNow() ? `moved to ${d.commitNow()!.slice(0, 7)}` : 'stopped'} during the recording: it isn't evidence for either build` };
+    m.failure = { why: `the app ${d.commitNow() ? `moved to ${d.commitNow()!.slice(0, 7)}` : 'stopped'} during the recording: it isn't evidence for either build` };
   }
   if (res.video) {
     if (d.tool.ffmpeg) {

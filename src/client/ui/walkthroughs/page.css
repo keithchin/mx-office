@@ -1,0 +1,47 @@
+/* 🎬 Walkthroughs (ui/walkthroughs/page.ts): the batch's progress, the controls, the cards. */
+.wtp { display: flex; flex-direction: column; gap: 10px; max-width: 1400px; padding-bottom: 24px; }
+.wtp p { margin: 0; }
+.wt-lead { font-size: 14px; line-height: 1.5; color: var(--ink, inherit); max-width: 90ch; }
+.wt-small { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.wt-note { font-size: 13px; color: var(--muted); padding: 6px 10px; border-left: 3px solid var(--warn); background: var(--warn-soft, transparent); border-radius: 4px; }
+.wt-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border: var(--bw, 1px) solid var(--line); border-radius: var(--radius, 10px); background: var(--card); }
+.wt-sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 4px; }
+.wt-pick { max-width: 100%; min-width: 0; flex: 1 1 240px; padding: 4px 6px; }
+.wt-check { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; }
+.wt-auto { font-weight: 700; }
+.wt-batches { display: flex; flex-direction: column; gap: 6px; }
+.wt-batch { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; border: var(--bw, 1px) solid var(--line); border-left: 4px solid var(--warn); border-radius: var(--radius, 10px); background: var(--card); font-size: 13px; }
+.wt-batch.queued { border-left-color: var(--line); }
+.wt-btext { flex: 1 1 280px; min-width: 0; }
+.wt-btext small { color: var(--muted); }
+.wt-bar { flex: 0 1 160px; height: 8px; accent-color: var(--accent); }
+.wt-tours, .wt-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); gap: 10px; }
+.wt-card { display: flex; gap: 12px; padding: 10px; border: var(--bw, 1px) solid var(--line); border-radius: var(--radius, 10px); background: var(--card); min-width: 0; }
+.wt-card.tour { border-color: var(--accent); }
+.wt-card.failed, .wt-card.error { border-left: 5px solid var(--bad); }
+.wt-card.passed { border-left: 5px solid var(--good); }
+.wt-thumb { flex: none; width: 144px; height: 81px; padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--paper-2, #0f172a); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.wt-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wt-thumb.empty { cursor: default; }
+.wt-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.wt-body h4 { margin: 0; font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.wt-tags { font-size: 12px; }
+.wt-cnotes { margin: 2px 0; padding-left: 16px; font-size: 12px; color: var(--muted); }
+.wt-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; align-items: center; }
+.wt-actions .btn { font-size: 12px; padding: 2px 10px; }
+.wt-empty { padding: 24px; border: var(--bw, 1px) dashed var(--line); border-radius: var(--radius, 10px); background: var(--card); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; max-width: 720px; }
+.wt-empty h3 { margin: 0; font-size: 16px; }
+span.wt-pill { font-size: 11px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+.wtp .wt-pill.passed { background: var(--good); border-color: var(--good); color: var(--on-fill, #fff); }
+.wtp .wt-pill.failed, .wtp .wt-pill.error { background: var(--bad); border-color: var(--bad); color: var(--on-fill, #fff); }
+.wtp .wt-pill.recording, .wtp .wt-pill.queued { background: var(--warn); border-color: var(--warn); color: var(--on-warn, #000); }
+/* The Clean and Portal themes draw pills soft, like their own status pills. */
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .wtp .pill.wt-pill.passed { background: var(--good-soft); color: var(--good-ink); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .wtp .pill.wt-pill:is(.failed, .error) { background: var(--bad-soft); color: var(--bad-ink, var(--bad)); }
+html:is([data-theme^='clean'], [data-theme^='portal']) body.lite .wtp .pill.wt-pill:is(.recording, .queued) { background: var(--warn-soft); color: var(--warn-ink); }
+.wt-link { background: none; border: none; padding: 0; color: var(--link, var(--accent, #2563eb)); cursor: pointer; font: inherit; text-decoration: underline; }
+.wt-saved { font-size: 12px; }
+@media (max-width: 760px) {
+  .wt-thumb { width: 96px; height: 54px; }
+  .wt-sep { display: none; }
+}

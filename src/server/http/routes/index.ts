@@ -228,7 +228,7 @@ export const routes: readonly Route[] = [
   designRoutes.needs,
   designRoutes.file,
   designRoutes.act,
-  // Walkthrough videos of each app’s workflows, on the Live app tab (walkthroughs/).
+  // Walkthrough videos of each app’s workflows, on the Walkthroughs page (walkthroughs/).
   walkthroughRoutes.view,
   walkthroughRoutes.file,
   walkthroughRoutes.act,

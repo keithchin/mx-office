@@ -1,5 +1,5 @@
 // A tiny stand-in for a Mendix live app, for the walkthrough tests: a sign-in page (#usernameInput,
-// #passwordInput, #loginButton) for the demo user, then a page with a navigation tree, a request list, a
+// #passwordInput, #loginButton; optionally drawn late, as the Mendix client does) for the demo user, then a page with a navigation tree, a request list, a
 // New request button and a form, marked up with the .mx-name-* classes a journey names. Neutral sample
 // data only. It also asks for a picture from `other` (another origin) to prove the recorder refuses it.
 import http from 'node:http';
@@ -7,8 +7,10 @@ import type { AddressInfo } from 'node:net';
 
 export const DEMO = { user: 'demo_test_user', password: 'Demo2025!' };
 
-const login = `<!doctype html><html><head><title>Sign in</title><style>body{font-family:sans-serif;background:#eef2f7;display:flex;justify-content:center;padding-top:120px}form{background:#fff;padding:32px;border-radius:8px;display:grid;gap:12px;width:300px}</style></head><body>
-<form method="post" action="/login"><h2>Sample app</h2><input id="usernameInput" name="u" type="text" placeholder="User name"><input id="passwordInput" name="p" type="password" placeholder="Password"><button id="loginButton" type="submit">Sign in</button></form></body></html>`;
+const FORM = `<form method="post" action="/login"><h2>Sample app</h2><input id="usernameInput" name="u" type="text" placeholder="User name"><input id="passwordInput" name="p" type="password" placeholder="Password"><button id="loginButton" type="submit">Sign in</button></form>`;
+/** The sign-in page; with `lateMs` the form comes a moment after the page loads, as the Mendix client renders it. */
+const login = (lateMs = 0) => `<!doctype html><html><head><title>Sign in</title><style>body{font-family:sans-serif;background:#eef2f7;display:flex;justify-content:center;padding-top:120px}form{background:#fff;padding:32px;border-radius:8px;display:grid;gap:12px;width:300px}</style></head><body>
+${lateMs ? `<div id="boot">Loading…</div><script>setTimeout(() => { document.getElementById("boot").outerHTML = ${JSON.stringify(FORM)}; }, ${lateMs});</script>` : FORM}</body></html>`;
 
 const page = (other: string) => `<!doctype html><html><head><title>Sample requests</title><style>
 [hidden]{display:none!important}
@@ -43,7 +45,7 @@ export interface FakeApp {
   otherHits(): number;
 }
 
-export async function fakeApp(): Promise<FakeApp> {
+export async function fakeApp(o: { lateFormMs?: number } = {}): Promise<FakeApp> {
   let hits = 0;
   const other = http.createServer((_req, res) => {
     hits++;
@@ -66,7 +68,7 @@ export async function fakeApp(): Promise<FakeApp> {
       return;
     }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(signedIn && req.url !== '/login.html' ? page(otherUrl) : login);
+    res.end(signedIn && req.url !== '/login.html' ? page(otherUrl) : login(o.lateFormMs));
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
   return {
@@ -99,6 +101,7 @@ export const PASSING = {
 export const FAILING = {
   id: 'approve-request',
   title: 'Approve a request',
+  $comment: ['Approve the first request.', 'START STATE: run directly after new-request (its request is the one approved).'],
   requirement: ['UC-02'],
   steps: [
     { name: 'Open the request list', actions: [{ do: 'nav', item: 'Requests' }], ui: { ready: '.mx-name-dgRequests' } },

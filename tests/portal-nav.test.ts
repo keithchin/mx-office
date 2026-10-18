@@ -35,7 +35,7 @@ const read = (p: string) => readFileSync(path.join(root, p), 'utf8').replace(/\r
 /** The 1D view's tabs: its tab row's buttons, and the registered ones (the test lab, Testing, Questions, Design gallery). */
 function liteTabs(): string[] {
   const ids = [...read('src/client/lite.html').matchAll(/id="tab-([a-z]+)"/g)].map((m) => m[1]);
-  return [...ids, 'tests', 'testing', 'questions', 'design'];
+  return [...ids, 'tests', 'testing', 'questions', 'design', 'walkthroughs'];
 }
 
 test('every tab of the 1D view is one item of the navigation, in one group or under the rule, with the same id', () => {
@@ -368,6 +368,8 @@ const REPEATS: Record<string, string[]> = {
   questions: [],
   // The Design gallery's heading is hidden by its own stylesheet in Portal (ui/design/design.css), its binding line kept.
   design: [],
+  // 🎬 Walkthroughs has no heading of its own: it starts with its lead line (ui/walkthroughs/page.ts).
+  walkthroughs: [],
 };
 
 test('in Portal no tab of the 1D view shows its title twice: each repeating heading is hidden, what was beside it kept', () => {

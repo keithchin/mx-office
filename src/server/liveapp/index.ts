@@ -30,6 +30,7 @@ import { readReadiness } from './readiness.js';
 import { findMpr } from './checkout.js';
 import { LiveConsoles } from './console/index.js';
 import { emitLiveReady } from './ready-bus.js';
+import { instancePorts } from '../app-instance/index.js';
 
 type Deps = Pick<Ctx, 'cfg' | 'floors' | 'toFloor'> & Partial<Pick<Ctx, 'toastFloor'>>;
 
@@ -135,12 +136,17 @@ export class LiveApps {
         floorId: floor.id,
         floorDir: floor.dir,
         liveDir: this.liveDir,
-        taken: () => new Set([...[...this.apps.values()].flatMap((a) => a.ports), ...this.consoles.ports()]),
+        taken: () => this.takenPorts(),
         changed: (state) => this.changed(state),
       });
       this.apps.set(floor.id, app);
     }
     return app;
+  }
+
+  /** Every port the live apps, their consoles and the office's own app instances (app-instance/) hold. */
+  takenPorts(): Set<number> {
+    return new Set([...[...this.apps.values()].flatMap((a) => a.ports), ...this.consoles.ports(), ...instancePorts()]);
   }
 
   /** What a floor's app is doing, with what it has, without making one; asks for a first reading. */

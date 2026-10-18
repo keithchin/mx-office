@@ -17,7 +17,7 @@ import { desktopEmbed, liveEmbed } from './liveapp/embed';
 import { liveConsole } from './liveapp/console';
 import { liveUrl, openPanel } from './liveapp/open';
 import { aheadBanner } from './branch-ahead/banner';
-import { walkthroughsSection } from './liveapp/walkthroughs';
+import { walkLinks } from './walkthroughs/links';
 import './liveapp.css';
 
 export interface LiveAppView {
@@ -53,8 +53,8 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
   const viewer = bridge ? liveEmbed(bridge, () => store.floor ?? '') : liveViewer();
   const opener = openPanel(!!bridge);
   const panel = liveConsole(net);
-  // Walkthrough videos of the app's workflows (ui/liveapp/walkthroughs.ts); the readiness card links to them.
-  const walks = walkthroughsSection();
+  // The way to 🎬 Walkthroughs (ui/walkthroughs/), and the readiness card's link to a ready milestone's video.
+  const walks = walkLinks();
   walks.onChange = () => draw();
   opener.onPreview = () => draw();
   const banner = aheadBanner('live', { openModel: () => document.getElementById('tab-model')?.click() });
@@ -74,7 +74,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
   function draw() {
     drawChip();
     panel.setShown(!!root && visible() && !root.classList.contains('hidden') && !!state);
-    if (!root || !visible()) return walks.update(state, false);
+    if (!root || !visible()) return;
     const s = state;
     if (!s) {
       viewer.hide();
@@ -120,9 +120,9 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     else viewer.hide();
     const mixed = url && opener.previewing() && location.protocol === 'https:' ? h('p.la-note', {}, 'This page is on HTTPS and the app on plain HTTP, so the browser may not show the preview: use Open live app.') : null;
     const empty = url || up || crashed ? null : h('p.la-empty', {}, s.started ? 'The app is stopped. ▶ Start builds the project’s main branch and runs it here; it follows main as PRs merge.' : "The app isn't started. ▶ Start builds the project's main branch and runs it here; it follows main as PRs merge.");
-    walks.update(s, true);
-    const card = readinessCard(s, (m) => walks.linkFor(m, s.readiness?.sha));
-    top.replaceChildren(bar, ...([failed, refresh, note, hint, opener.el, banner.el, card, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
+    walks.update(s.floor, s.readiness?.sha ?? s.sha, true);
+    const card = readinessCard(s, (m) => walks.linkFor(m, s.readiness?.sha, s.readiness?.milestones.find((x) => x.id === m)?.journeys.map((j) => j.id)));
+    top.replaceChildren(bar, ...([failed, refresh, note, hint, opener.el, banner.el, card, walks.el, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
     if (log) log.scrollTop = log.scrollHeight;
   }
 
@@ -145,7 +145,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
       if (root !== el) {
         root = el;
         root.classList.add('la');
-        root.replaceChildren(top, walks.el, viewer.el, panel.el);
+        root.replaceChildren(top, viewer.el, panel.el);
         // The tab hidden (another tab picked): the Console stops streaming.
         new MutationObserver(() => panel.setShown(!!state && visible() && !el.classList.contains('hidden'))).observe(el, { attributes: true, attributeFilter: ['class'] });
       }
