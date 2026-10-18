@@ -7,7 +7,7 @@
 
 import type { NeedItem } from './needsyou.js';
 
-export type AskKind = 'offmain' | 'assumption' | 'advisory' | 'review' | 'gate';
+export type AskKind = 'offmain' | 'assumption' | 'advisory' | 'review' | 'gate' | 'claims';
 
 /**
  * A button on an item. docs-pr: ask whoever covers Management to open a docs PR; agree: record your
@@ -27,6 +27,8 @@ export interface AskItem {
   since?: number;
   /** What it lists, one line each (per agent, each assumption). */
   lines?: string[];
+  /** What backs it, a line each with its link (the claims check: the commit, branch, PR and result file), for its decision card. */
+  evidence?: { label: string; where?: string; revision?: string }[];
   /** Its buttons, the first one the row's. */
   acts: { act: AskAct; label: string }[];
 }
@@ -60,8 +62,8 @@ export interface AsksNeed {
   unreadAt?: number;
 }
 
-export const ASK_ICON: Record<AskKind, string> = { offmain: '📤', assumption: '🤝', advisory: '⚠️', review: '👀', gate: '🚦' };
-const ASK_TAG: Record<AskKind, string> = { offmain: 'Not on main', assumption: 'Consent', advisory: 'Advisory', review: 'Review', gate: 'Review gate' };
+export const ASK_ICON: Record<AskKind, string> = { offmain: '📤', assumption: '🤝', advisory: '⚠️', review: '👀', gate: '🚦', claims: '🚦' };
+const ASK_TAG: Record<AskKind, string> = { offmain: 'Not on main', assumption: 'Consent', advisory: 'Advisory', review: 'Review', gate: 'Review gate', claims: 'Claims check' };
 
 /** The label "from Ada's branch, not on main yet" a standup line read off a branch carries. */
 export const branchLabel = (who: string) => `from ${who}'s branch, not on main yet`;

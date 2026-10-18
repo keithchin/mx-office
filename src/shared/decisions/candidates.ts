@@ -203,13 +203,14 @@ export function questionCandidates(qn: QuestionsNeed | undefined): Candidate[] {
 /** Surfaced asks (server/asks/): consent is a decision, the rest status; kept as they were when the last read failed. */
 export function askCandidates(asks: (AsksNeed & { unreadAt?: number }) | undefined, floor: string | undefined): Candidate[] {
   const unread = asks?.unreadAt ? `couldn't re-read at ${hhmm(asks.unreadAt)}` : undefined;
+  const evidenceOf = (need: NeedItem) => (need.target.to === 'ask' ? [...(asks?.items.find((i) => i.id === (need.target as { id: string }).id)?.evidence ?? [])] : []);
   return askNeeds(asks, floor).map((need) => ({
     need,
     source: { id: `ask:${need.key.replace(/^asks-/, '')}`, type: 'ask', label: 'surfaced from the team’s files', text: need.text, target: need.target, ...(unread ? { note: unread } : {}) },
     keys: [],
     kind: need.kind === 'assumption' ? 'decision' : need.level === 'info' ? 'fyi' : 'status',
     prio: 5,
-    body: { question: need.text, evidence: [], blocks: [], owner: 'the lead', notes: unread ? [`Kept as it was: ${unread}.`] : [] },
+    body: { question: need.text, evidence: evidenceOf(need), blocks: [], owner: 'the lead', notes: unread ? [`Kept as it was: ${unread}.`] : [] },
   }));
 }
 

@@ -13,13 +13,15 @@ import type { Roster } from './index.js';
 import type { Assignment } from './resume.js';
 import type { TeamFloor } from './types.js';
 
-export type TaskState = 'open' | 'claimed' | 'decision' | 'cancelled' | 'delivered' | 'legacy' | 'integrated' | 'unreviewed' | VerifyState;
+export type TaskState = 'open' | 'claimed' | 'decision' | 'cancelled' | 'delivered' | 'legacy' | 'integrated' | 'unreviewed' | 'claim-unverified' | VerifyState;
 
-/** Where a task stands, release 2 included: an integrated task by its verification, once judged; one the review gate flagged stays unreviewed. */
+/** Where a task stands, release 2 included: an integrated task by its verification, once judged; one the review gate flagged stays unreviewed; one closed on a claim git doesn't back (server/claims/) stays claimed (unverified). */
 export function taskStateOf(t: Assignment): TaskState {
   if (t.doneAt === undefined) return t.pending?.kind ?? 'open';
   if (!t.outcome) return 'legacy';
-  if (t.outcome === 'integrated') return t.unreviewed ? 'unreviewed' : (t.verify?.state ?? 'integrated');
+  if (t.outcome === 'integrated' && t.unreviewed) return 'unreviewed';
+  if (t.claimUnverified && t.outcome !== 'cancelled') return 'claim-unverified';
+  if (t.outcome === 'integrated') return t.verify?.state ?? 'integrated';
   return t.outcome;
 }
 
@@ -40,6 +42,8 @@ export function reviveVerifyFields(r: Partial<Assignment>): Partial<Assignment> 
   if (policy) out.policy = policy;
   const u = r.unreviewed;
   if (u && typeof u === 'object' && int(u.pr) && typeof u.at === 'number') out.unreviewed = { pr: u.pr, why: typeof u.why === 'string' ? u.why.slice(0, 200) : 'merged without a review', at: u.at };
+  const c = r.claimUnverified;
+  if (c && typeof c === 'object' && rev(c.commit) && typeof c.at === 'number') out.claimUnverified = { commit: c.commit, why: typeof c.why === 'string' ? c.why.slice(0, 200) : 'closed on a claim git does not back', at: c.at };
   const v = r.verify;
   if (v && typeof v === 'object' && STATES.includes(v.state) && int(v.pr) && typeof v.at === 'number') {
     out.verify = {

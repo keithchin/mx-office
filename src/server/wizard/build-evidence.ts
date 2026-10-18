@@ -9,7 +9,9 @@
 // Kept per floor for a minute while the commit is the same (each branch's reading per commit pair for longer).
 
 import { execFileOff } from '../offloop/exec.js';
-import { buildLog, isBuildPath, planRows, rowsByPlace, rowsIn, type BuildBranch, type BuildEvidence, type BuildLogInfo, type BuildPr, type CommitLine } from '../../shared/build-progress.js';
+import { claimsCheck } from '../claims/check.js';
+import { claimedRows } from '../../shared/claims.js';
+import { buildLog, isBuildPath, planRows, rowsByPlace, rowsIn, withClaimed, type BuildBranch, type BuildEvidence, type BuildLogInfo, type BuildPr, type CommitLine } from '../../shared/build-progress.js';
 import type { BrdLayout } from '../../shared/brd-path.js';
 import type { GhPull } from '../../shared/protocol/github.js';
 import { dropKeys, onForgetFloor } from '../office/forget.js';
@@ -150,9 +152,11 @@ export async function readEvidence(dir: string, def: string, sha: string, pulls:
   const l = buildLog(log);
   const n = (scripts ?? '').split('\n').filter((f) => /\.mdl$/i.test(f.trim()) && !/\.test\.mdl$/i.test(f.trim())).length;
   const rows = rowsByPlace({ commits: commitsOf(history), log: l, merged }, open.map((b) => ({ commits: b.read?.commits ?? [], log: b.read?.log, prRows: b.prRows })), p?.total);
+  // Rows a claim calls applied that git doesn't back on the default branch (server/claims/): claimed, not evidenced.
+  const claimed = claimedRows((await claimsCheck(dir, { branch: def, sha }, pulls).catch(() => undefined)) ?? []);
   const branches: BuildBranch[] = open.map(({ read: _read, prRows: _rows, ...b }, i) => ({ ...b, ...(rows.perBranch[i].length ? { rows: rows.perBranch[i] } : {}) }));
   return {
-    build: { branch: def, sha, ...(p ? { plan: p } : {}), merged, open: branches, ...(l ? { log: l } : {}), ...(n ? { scripts: n } : {}), rows: { main: rows.main, branch: rows.branch, mentioned: rows.mentioned } },
+    build: { branch: def, sha, ...(p ? { plan: p } : {}), merged, open: branches, ...(l ? { log: l } : {}), ...(n ? { scripts: n } : {}), rows: withClaimed({ main: rows.main, branch: rows.branch, mentioned: rows.mentioned }, claimed) },
     kb,
   };
 }

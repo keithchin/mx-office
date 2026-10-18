@@ -73,10 +73,11 @@ export const CHECK_STATE: Record<CheckState, { word: string; tone: Tone }> = {
 };
 
 /** A merged task's verification. */
-export const VERIFY_STATE: Record<VerifyState | 'integrated' | 'unreviewed', { word: string; tone: Tone }> = {
+export const VERIFY_STATE: Record<VerifyState | 'integrated' | 'unreviewed' | 'claim-unverified', { word: string; tone: Tone }> = {
   verified: { word: 'Done (verified)', tone: 'good' },
   'not-verified': { word: 'Merged, not verified', tone: 'bad' },
   'head-only': { word: 'Passed on PR head, integrated revision not checked', tone: 'warn' },
   integrated: { word: 'Merged, not judged yet', tone: 'muted' },
   unreviewed: { word: 'Integrated (unreviewed)', tone: 'warn' },
+  'claim-unverified': { word: 'Claimed (unverified)', tone: 'warn' },
 };

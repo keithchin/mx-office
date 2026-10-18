@@ -161,7 +161,7 @@ export async function verificationView(dataDir: string, roster: Roster | undefin
     for (const [role, m] of Object.entries(roster.data(floor.id).members)) {
       const t = m.task;
       if (!t || t.outcome !== 'integrated' || t.pr === undefined) continue;
-      const state = t.unreviewed ? 'unreviewed' : (t.verify?.state ?? 'integrated');
+      const state = t.unreviewed ? 'unreviewed' : t.claimUnverified ? 'claim-unverified' : (t.verify?.state ?? 'integrated');
       if (state === 'verified') continue;
       const pull = floor.github.pulls.items.find((x) => x.number === t.pr);
       tasks.push({ role, name: m.name, task: t.text, pr: t.pr, ...(pull ? { url: pull.url } : {}), state, ...(t.verify?.revision ? { revision: t.verify.revision } : {}), ...(t.verify?.head ? { head: t.verify.head } : {}), checks: t.verify?.checks ?? [] });

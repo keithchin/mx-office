@@ -64,6 +64,16 @@ export interface BuildRows {
   branch: number[];
   /** Rows only mentioned (a draft, a journal line), with no build evidence anywhere. */
   mentioned: number[];
+  /** Rows a claim calls applied or passing on the default branch that git doesn't back (server/claims/): claimed, not evidenced, never counted as built on main. */
+  claimed?: number[];
+}
+
+/** The rows with a claim git doesn't back moved off "on main" into "claimed, not evidenced". */
+export function withClaimed(rows: BuildRows, claimed: readonly number[]): BuildRows {
+  const c = new Set(claimed);
+  if (!c.size) return rows;
+  const out = [...c].sort((a, b) => a - b);
+  return { ...rows, main: rows.main.filter((r) => !c.has(r)), claimed: out };
 }
 
 export interface BuildEvidence {
@@ -246,6 +256,8 @@ export function buildSummary(e: BuildEvidence): string {
   }
   if (branch.length) parts.push(`${branch.length}${parts.length ? ' more' : ` build-plan ${rowsWord(branch.length)} with build evidence`} on ${branchWhere(e)}`);
   else if (e.open.length) parts.push(`work on ${branchWhere(e)}`);
+  const claimed = e.rows?.claimed ?? [];
+  if (claimed.length) parts.push(`${claimed.length} claimed, not evidenced (${rowsWord(claimed.length)} ${rowRanges(claimed)})`);
   if (!parts.length && e.log?.last) parts.push(`last BUILD-LOG entry ${e.log.last.at}: ${e.log.last.what}`);
   if (!parts.length && e.scripts) parts.push(`${e.scripts} MDL script${e.scripts === 1 ? '' : 's'} on ${e.branch ?? 'main'}`);
   return parts.join(', ');
@@ -265,6 +277,7 @@ export function buildMeasures(e: BuildEvidence): string[] {
   if (e.rows?.main.length) out.push(`Rows with build evidence on ${main}: ${rowRanges(e.rows.main)} (commits naming the row, BUILD-LOG notes, merged PR titles)`);
   for (const b of e.open.filter((x) => x.rows?.length).slice(0, 3)) out.push(`Rows with build evidence on ${b.branch} only: ${rowRanges(b.rows!)}`);
   if (e.rows?.mentioned.length) out.push(`Rows only mentioned (a draft or a journal line): ${rowRanges(e.rows.mentioned)}`);
+  if (e.rows?.claimed?.length) out.push(`Rows claimed, not evidenced on ${main} (the claims check): ${rowRanges(e.rows.claimed)}`);
   for (const p of e.merged.slice(0, 4)) out.push(`Merged: PR #${p.number} ${p.title}, ${p.files} build file${p.files === 1 ? '' : 's'}`);
   if (e.merged.length > 4) out.push(`… and ${e.merged.length - 4} more merged build ${prWord(e.merged.length - 4)}`);
   for (const b of e.open.slice(0, 3)) {
