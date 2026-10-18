@@ -4,7 +4,7 @@ description: Run the Mendix app from main on this laptop with mxcli run --local,
 weight: 8
 ---
 
-The **🌐 Live app** tab runs the project's Mendix app from its `main` branch, on this laptop, and shows it in the page.
+The **🌐 Live app** tab runs the project's Mendix app from its `main` branch, on this laptop. **Open live app** shows it in a window of its own, and the tab's **Console** shows the runtime's log and the requests the app makes, like Studio Pro's Console.
 
 ![The live app](../images/live-app.png)
 
@@ -48,26 +48,41 @@ The card is read again when the app starts, stops or crashes, when a fetch lands
 
 When an agent's branch or an open PR has commits main hasn't and changes the model (`.mpr`, `mprcontents/`, `mdlsource/`), this tab and the [Model](model.md) tab show a banner: *main is 75 commits behind Sophie's branch, which has model changes (PR #6, open, not reviewed)*. The live app runs main, so it shows none of that until it merges. **View it in the Model tab** opens the Model tab, which can show the branch; **Ask Katherine to review** (admins) tells the team lead, after their turn, to have the PR reviewed per the [review gate](review-gate.md). The review state is the gate's: *reviewed by X* once a complete `Review:` by someone other than the opener is on the PR; *review not checked yet* while the office hasn't read the PR's comments, which the board reads for merged PRs only.
 
-## The viewer
+## Open live app
 
-The app runs in a small browser in the page:
+When the app runs, **↗ Open live app** opens it in a window of its own: a browser window (or tab), or in the [desktop app](../administration/desktop-app.md) a separate *Live app* window. There the app is the page itself, so every widget works. **Copy link** copies its address.
 
-| Control | Does |
-|---|---|
-| **←** / **→** | Back and forward through the addresses opened here (Alt+← / Alt+→) |
-| **⟳** | Reload (F5 or Ctrl+R); Shift+click or Shift+F5 reloads past the browser cache |
-| **⌂** | The app's home page |
-| Address | The page within the app: type a path such as `/p/approvals` and press Enter. Only the app's own address is allowed |
-| **Desktop / Tablet / Phone** | The frame's width (full, 820 or 390 px), shrunk to fit or at **100%** |
-| **Copy link**, **Open ↗** | The page's address, to share or to open in a browser tab |
-| **⛶ Full screen** | The viewer fills the screen (F11); Esc or **✕ Exit full screen** leaves. Where the browser refuses, it covers the window instead |
+Why not in the tab itself: inside the office's page the app would be a frame on another origin (its own port), and Mendix's pluggable widgets, such as Data grid 2, read the top window, which the browser refuses across origins. Those pages fail to load (*An error occurred while loading page …*). **Preview here** still shows the app in a frame on the tab, with that warning; use it for a quick look, not to judge whether a page works.
 
-The app is on another port, so another origin: the office can't read where the frame is after you click inside the app, nor drive its history. Back and Forward step through the addresses the viewer opened; a click that loads a new page shows *moved inside the app*, and the app's own page changes (most of a Mendix app's) aren't visible to the office at all. **Open ↗** gives you the browser's own Back and Forward.
+The window opens through the office's **recording proxy** for the app, so the Console sees its requests. To the app, that address is simply where it lives: its login and cookies work as usual. The office's own sign-in is never passed to the app (see [How it works](#how-it-works)).
+
+In the desktop app the Live app window's menu is its toolbar: **Back** (Alt+←), **Forward** (Alt+→), **Reload** (F5), **Hard reload** (Shift+F5), **Home**, **Copy address**, **Open in browser** and **Developer tools** (F12). It has its own browser session, so it shares no cookies with the office window. In a browser you use the browser's own Back, Forward and Reload.
+
+## Console
+
+Under the app's status, the **Console** has two tabs. It streams only while the Live app tab is in view.
+
+**Runtime log**: the Mendix runtime's log (`.mxcli/runtime.log` in the live checkout), newest at the bottom.
+
+- Each entry shows its time, level, who logged it (*Client*, *Core*, *ConnectionBus*, *M2EE*…) and the message. Errors from the app's web client, such as a page that failed to load in the browser, are logged by *Client* and marked.
+- A stack trace or *Caused by* is folded under its entry: **▸** shows it, **▾** folds it. **⧉** copies the whole entry.
+- **Error** / **Warning** / **Info** / **Debug** show or hide each level, with the error and warning counts (Debug is off at first). The search box also searches the stack traces.
+- **⏸ Pause** holds new entries back while you read; **▶ Resume (n new)** shows them. **⤓ Auto-scroll** keeps the newest entry in view; scrolling up turns it off. **⌫ Clear** clears the view only, not the log.
+- The tab's red badge counts the errors since the last Clear.
+
+**Network**: the requests the app made through the recording proxy (the last 500), newest at the bottom.
+
+- Each row shows the method, status, name, type, size and time. Mendix `xas/` calls are named by their action, such as *xas · retrieve_by_xpath Orders.Order* or *xas · executeaction Orders.ACT_Save*. Requests with no answer or a 4xx/5xx status are red and counted on the tab's badge.
+- Click a row to open it: the address, status and timing, the request and response headers, and the first 8 KB of the bodies, with JSON laid out. Bodies are kept for the app's own calls and for errors; images and other binary content, and the app's static files, are only noted.
+- **All** / **XHR** (the app's own calls: `xas/`, fetch, WebSockets) / **Errors**, a filter box, **⏸ Pause** and **⌫ Clear** (view only).
+- Cookie values, `Authorization` and CSRF tokens are redacted, and password and token fields in bodies are masked. Requests are kept in the office's memory only, never written to disk, and are gone when the app stops.
 
 ## How it works
 
 - The office keeps a **separate clone** of the repository at `<office data>/live/<project>`, always on main. It is cloned from the project's folder and fetches from it, never from GitHub itself: the project's folder fetches main with the office's own git setup, so a private repository works. Agents' worktrees are never touched.
 - It runs `mxcli run --local` with three free ports from **8110–8199** (app, admin and serve) and a database named `<project>_live` in the local PostgreSQL.
+- While the app runs, the office runs its **recording proxy** on a fourth port from the same range, on the office's own bind address (never the office's port). It passes every request and WebSocket on to the app's port on this machine and to nothing else, and records them for the Console. The browser sends the office's session cookie to every port of the same host (cookies ignore ports), so the proxy removes it from every request before passing it on, and drops any cookie the app tries to set under the office's name: the app can neither read nor replace your office sign-in. **Open live app** and the Overview's **View App** use the proxy's address; the app's own port still answers too, unrecorded.
+- The Console reads the runtime log only while someone has it open, from where it stopped (a first read takes the last 256 KB).
 - Once it's running, the office has the project's folder fetch `main` every 60 seconds (and follows any other fetch that lands there). When `main` moves (a merge), it **updates and restarts** the app by itself. When the fetch fails, the tab and Needs you say *Live app can't check for updates: (git's reason) (running main @dd960bd from 16 Oct 23:36)*.
 - When `main` moved, or a first build failed, it clears the stale build folders under `deployment/` (keeping `deployment/data`) and retries once.
 - The log is `<office data>/live/<project>.log`.

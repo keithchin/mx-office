@@ -8,7 +8,17 @@ Open the **🌐 Live app** tab for its status and note. The full log is `<office
 
 ## "Address already in use"
 
-Another process holds a port. The office picks three free ports from **8110–8199** for each app; click **⟳ Restart** and it picks again. If you need other ports, set `AGENT_OFFICE_LIVE_PORTS`.
+Another process holds a port. The office picks three free ports from **8110–8199** for each app, and a fourth for the Console's recording proxy while it runs; click **⟳ Restart** and it picks again. If you need other ports, set `AGENT_OFFICE_LIVE_PORTS`.
+
+## "An error occurred while loading page … broken widget" / "Blocked a frame … cross-origin frame"
+
+**Cause:** the app was shown in a frame inside another page (the tab's **Preview here**, or an older office's built-in viewer). Mendix's pluggable widgets, such as Data grid 2, read the top window, which the browser refuses across origins, so the page fails to load. The Console's Runtime log shows it as a *Client* error.
+
+**Fix:** use **↗ Open live app**, which shows the app in a window of its own. The app itself is fine.
+
+## The Console's Network is empty
+
+Requests are recorded only when the app is opened with **↗ Open live app** (or the Overview's **View App**), which go through the office's recording proxy. A tab opened on the app's own port, or a link copied before the proxy was up, isn't recorded. If the note under **Open live app** says the proxy isn't up, **⟳ Restart** the app.
 
 ## "initial build failed: Object reference not set…" after an update
 

@@ -1,8 +1,10 @@
 // The 🌐 Live app tab of the 1D view: the floor's Mendix app, built from main and run on the office's
 // machine (server/liveapp/), with ▶ / ⟳ / ■, the honest status (running, building, stopped: crashed at
 // 10:27, not started), the commit it runs against main, whether it's ready by milestone
-// (ui/liveapp/readiness.ts), and the app itself in a small browser (ui/liveapp/viewer.ts). And the chip
-// in the project summary that says how it is and leads here.
+// (ui/liveapp/readiness.ts), Open live app (ui/liveapp/open.ts: the app top-level in a window of its own,
+// through the office's recording proxy; the frame of ui/liveapp/viewer.ts only as a preview, when asked
+// for), and the Console (ui/liveapp/console.ts: the runtime log and the app's requests). And the chip in
+// the project summary that says how it is and leads here.
 
 import type { Net } from '../net';
 import type { LiveAppState, ServerMsg } from '../../shared/protocol';
@@ -11,6 +13,8 @@ import { store } from '../state';
 import { h, timeAgo } from './dom';
 import { readinessCard } from './liveapp/readiness';
 import { liveViewer } from './liveapp/viewer';
+import { liveConsole } from './liveapp/console';
+import { liveUrl, openPanel } from './liveapp/open';
 import { aheadBanner } from './branch-ahead/banner';
 import './liveapp.css';
 
@@ -27,8 +31,8 @@ export interface LiveAppView {
 
 const short = (sha?: string) => sha?.slice(0, 7) ?? '';
 
-/** The app's address as this browser reaches the office's machine: its port there, over plain HTTP (mxcli serves no TLS). */
-export const appUrl = (s: LiveAppState) => (s.appPort ? `http://${location.hostname}:${s.appPort}/` : '');
+/** The app's address as this browser reaches the office's machine (through the recording proxy when it's up: ui/liveapp/open.ts). */
+export const appUrl = (s: LiveAppState) => liveUrl(s, location.hostname);
 
 /** What the Overview and View App say about it: the status word, the address when it runs, whether it's ready. */
 export function liveSummary(s: LiveAppState | null): { status: string; word: string; url?: string; ready?: boolean } | undefined {
@@ -43,6 +47,9 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
   // Taking a frame out of the page reloads it, so the viewer stays put and only what's above it is redrawn.
   const top = h('div.la-top');
   const viewer = liveViewer();
+  const opener = openPanel();
+  const panel = liveConsole(net);
+  opener.onPreview = () => draw();
   const banner = aheadBanner('live', { openModel: () => document.getElementById('tab-model')?.click() });
   const chip = h('button.la-chip', { type: 'button', title: "The project's app, running from main: open the 🌐 Live app tab", onclick: openTab });
 
@@ -59,10 +66,12 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
 
   function draw() {
     drawChip();
+    panel.setShown(!!root && visible() && !root.classList.contains('hidden') && !!state);
     if (!root || !visible()) return;
     const s = state;
     if (!s) {
       viewer.hide();
+      opener.hide();
       return void top.replaceChildren(h('p.la-empty', {}, 'Asking the office about the live app…'));
     }
     const up = s.status === 'starting' || s.status === 'updating' || s.status === 'running';
@@ -97,17 +106,21 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     const hint = !s.available ? h('p.la-note.bad', {}, "mxcli isn't installed where the office runs, so it can't run the app (AGENT_OFFICE_LIVE_MXCLI).") : null;
     const lines = crashed && f?.lines.length ? f.lines : s.log;
     const log = s.status !== 'running' && lines.length ? h('pre.la-log', {}, lines.join('\n')) : null;
-    if (url) viewer.show(url, `${s.sha}@${s.since}`);
+    if (url) opener.show(url, s.floor, !!s.viewPort);
+    else opener.hide();
+    panel.setRecording(url && s.viewPort ? url : null);
+    if (url && opener.previewing()) viewer.show(url, `${s.sha}@${s.since}`);
     else viewer.hide();
-    const mixed = url && location.protocol === 'https:' ? h('p.la-note', {}, 'This page is on HTTPS and the app on plain HTTP, so the browser may not show it here: use Open ↗.') : null;
+    const mixed = url && opener.previewing() && location.protocol === 'https:' ? h('p.la-note', {}, 'This page is on HTTPS and the app on plain HTTP, so the browser may not show the preview: use Open live app.') : null;
     const empty = url || up || crashed ? null : h('p.la-empty', {}, s.started ? 'The app is stopped. ▶ Start builds the project’s main branch and runs it here; it follows main as PRs merge.' : "The app isn't started. ▶ Start builds the project's main branch and runs it here; it follows main as PRs merge.");
     const card = readinessCard(s);
-    top.replaceChildren(bar, ...([failed, refresh, note, hint, banner.el, card, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
+    top.replaceChildren(bar, ...([failed, refresh, note, hint, opener.el, banner.el, card, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
     if (log) log.scrollTop = log.scrollHeight;
   }
 
   return {
     route(msg) {
+      panel.route(msg, store.floor);
       if (msg.t === 'welcome' || msg.t === 'floor.enter') {
         state = null;
         draw();
@@ -124,7 +137,9 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
       if (root !== el) {
         root = el;
         root.classList.add('la');
-        root.replaceChildren(top, viewer.el);
+        root.replaceChildren(top, viewer.el, panel.el);
+        // The tab hidden (another tab picked): the Console stops streaming.
+        new MutationObserver(() => panel.setShown(!!state && visible() && !el.classList.contains('hidden'))).observe(el, { attributes: true, attributeFilter: ['class'] });
       }
       if (!state) ask();
       draw();

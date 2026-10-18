@@ -181,6 +181,10 @@ test('the office’s live apps: event-driven readings, ready only after the jour
   try {
     await app.start('Probe');
     await until('running', () => app.status === 'running');
+    // The Console's recording proxy: up with the app, on a port of its own, said in the state (viewPort).
+    await until('the proxy', () => !!apps.peek('demo')?.viewPort);
+    assert.notEqual(apps.peek('demo')!.viewPort, app.state.appPort);
+    assert.ok(sent.some((s) => s.viewPort === apps.peek('demo')!.viewPort), 'the floor was told where it is');
     await until('read', () => !!apps.peek('demo')?.readiness?.sha);
     await apps.settled('demo');
     let r = apps.peek('demo')!.readiness!;

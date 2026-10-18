@@ -61,11 +61,18 @@ export class LiveApp {
   private soon: NodeJS.Timeout | undefined;
   /** The mxbuild the last start picked, and whether mxcli could be told it. */
   private mxbuild?: { pick: MxbuildPick; flag?: boolean };
+  /** The folder of the .mpr the last start ran (mxcli's working folder: its .mxcli/runtime.log is there). */
+  projectDir: string | undefined;
 
   constructor(private d: LiveAppDeps) {
     this.checkout = path.join(d.liveDir, d.floorId);
     this.logFile = path.join(d.liveDir, `${d.floorId}.log`);
     this.s = { floor: d.floorId, status: 'stopped', log: [], available: !!d.mxcli };
+  }
+
+  /** The live checkout (<live dir>/<floor>). */
+  get checkoutDir(): string {
+    return this.checkout;
   }
 
   get state(): LiveAppState {
@@ -167,6 +174,7 @@ export class LiveApp {
     if (gen !== this.gen) return;
     const mpr = findMpr(this.checkout);
     if (!mpr) throw new Error(`No Mendix project (.mpr) in ${branch} at ${co.sha.slice(0, 7)}`);
+    this.projectDir = path.dirname(mpr);
     // A newer main over an older build trips mxbuild up (see BUILD_LEFTOVERS).
     if (co.moved && cleanBuild(path.dirname(mpr))) this.note('main moved: cleared the last build');
     this.set({ branch, sha: co.sha, subject: co.subject, commitAt: co.at, builtAt: undefined, message: update ? `Updating to ${co.sha.slice(0, 7)}: building…` : `Building ${co.sha.slice(0, 7)}… (a cold start takes a minute or two)` });

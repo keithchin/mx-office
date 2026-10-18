@@ -3,6 +3,7 @@
 // build it. Browsers only ever ask for start, stop or restart: what runs, where, is the office's.
 
 import type { LiveReadiness } from '../liveapp/readiness.js';
+import type { LiveLogEntry, LiveNetEntry } from '../liveapp/console.js';
 
 /**
  * Where a floor's live app is. `updating` is a restart because main moved; `failed` keeps the last
@@ -22,6 +23,11 @@ export interface LiveAppState {
   branch?: string;
   /** Where the app answers on the office's machine; the page builds its URL from its own host name. */
   appPort?: number;
+  /**
+   * Where the office's recording proxy for the app answers (a port of its own, never the office's): the
+   * page opens the app through it, so the Console's Network sees its requests (server/liveapp/console/).
+   */
+  viewPort?: number;
   /** When it last became running, or started starting. */
   since?: number;
   /** Who last started, restarted or stopped it ("auto-refresh" when main moved). */
@@ -77,8 +83,15 @@ export type LiveAppClientMsg =
   | { t: 'liveapp.start' }
   /** Stop it and start it again, on the newest main. */
   | { t: 'liveapp.restart' }
-  | { t: 'liveapp.stop' };
+  | { t: 'liveapp.stop' }
+  /** The Console is showing (on) or not: the runtime log and the requests are streamed only while it is. */
+  | { t: 'liveapp.console'; on: boolean };
 
 export type LiveAppServerMsg =
   /** A floor's live app changed, to everyone on that floor (and to whoever asked). */
-  { t: 'liveapp.state'; state: LiveAppState };
+  | { t: 'liveapp.state'; state: LiveAppState }
+  /**
+   * The Console's news, to whoever has it showing: new or grown log entries and requests (by id: one
+   * sent again replaces the one before). `reset` starts over (the first answer, or a log that began again).
+   */
+  | { t: 'liveapp.console'; floor: string; reset?: boolean; log?: LiveLogEntry[]; net?: LiveNetEntry[]; logMissing?: boolean };

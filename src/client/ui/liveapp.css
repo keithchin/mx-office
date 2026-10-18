@@ -24,3 +24,10 @@
 /* A crash or a failed build: when, on which commit, why, and Restart above it. */
 .la-failed { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 2px solid var(--bad); border-radius: 10px; background: var(--card); }
 .la-chip.idle { color: var(--muted); }
+/* Open live app (ui/liveapp/open.ts): the app in a window of its own; the frame only as a preview. */
+.la-openbox { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; background: var(--card); }
+.la-openbox[hidden] { display: none; }
+.la-openrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.la-go { text-decoration: none; }
+.la-preview-note[hidden] { display: none; }
+.la-preview-note { color: var(--warn-ink, var(--muted)); }

@@ -17,7 +17,7 @@ Mx Office is a web app (a Node server on your machine, your browser as the scree
 - Every project has a **team** in one of three shapes: **Enterprise**, a **Project Coordinator** and four **Leads** (Design, Development, Testing, Analysis), each with its own Claude Code subagents; **Startup**, a Chief Analyst and a Lead Developer; or **Solo**, one Solo Lead covering every team. New project recommends a shape and a budget level from the approved brief.
 - The agents change the app with **mxcli** and follow the **mxcli-project-toolkit**, stages P (kickoff) to 7 (cutover), with ✋ gates that need a `CONFIRMED` decision.
 - **You are the Project Manager**: you approve what matters and answer escalations. The **autonomy level** (1 Directive … 4 Autonomous) sets how often agents need you.
-- Every pull request gets CI (consistency check, lint, best-practice score, unit and Playwright tests, screenshots), and the **live app** runs from `main` on your machine, so you don't have to open Studio Pro to see it running; it says which milestones of the build plan are in it, verified by a journey run against that build, and tells you once when one is ready.
+- Every pull request gets CI (consistency check, lint, best-practice score, unit and Playwright tests, screenshots), and the **live app** runs from `main` on your machine, so you don't have to open Studio Pro to see it running (in a window of its own, with a Console of the runtime's log and the app's requests, like Studio Pro's); it says which milestones of the build plan are in it, verified by a journey run against that build, and tells you once when one is ready.
 
 What a project gives you:
 
