@@ -9,7 +9,7 @@ import type { WalkManifest, WalkScript } from '../../shared/walkthroughs/types.j
 import { narrationOf } from '../../shared/walkthroughs/script.js';
 import { captionsOf, chaptersOf } from '../../shared/walkthroughs/vtt.js';
 import { fileBytes, makeMp4, wavMs, type Tool } from './media.js';
-import { record, type Browser } from './recorder.js';
+import { record, type AppSessions, type Browser } from './recorder.js';
 import type { Voice } from './tts.js';
 
 export interface RunDeps {
@@ -28,6 +28,8 @@ export interface RunInput {
   url: string;
   script: WalkScript;
   login: { user: string; password: string };
+  /** The batch's sign-ins (one session per account). */
+  sessions?: AppSessions;
   narrate: boolean;
   signal: AbortSignal;
   progress(line: string): void;
@@ -62,6 +64,7 @@ export async function runRecording(d: RunDeps, i: RunInput): Promise<WalkManifes
     script: i.script,
     outDir: i.dir,
     login: i.login,
+    ...(i.sessions ? { sessions: i.sessions } : {}),
     holdMs: (s) => (lines.get(s.n)?.ms ?? 0) + 300,
     signal: i.signal,
     progress: i.progress,

@@ -11,7 +11,7 @@ import { findFfmpeg } from '../../../src/server/walkthroughs/media.js';
 import { launchChromium } from '../../../src/server/walkthroughs/recorder.js';
 import { fakeVoice } from '../../../src/server/walkthroughs/tts.js';
 import { removeDir } from '../../support/cleanup.js';
-import { DEMO, FAILING, PASSING, fakeApp, type FakeApp } from './app.js';
+import { DEMO, FAILING, PASSING, fakeApp, type FakeApp, type FakeAppOptions } from './app.js';
 
 export const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
@@ -36,7 +36,7 @@ export interface Rig {
   bootError?: string;
 }
 
-export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: number } = {}): Promise<Rig> {
+export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: number; app?: FakeAppOptions } = {}): Promise<Rig> {
   const root = mkdtempSync(path.join(tmpdir(), 'walk-rec-'));
   const origin = path.join(root, 'origin.git');
   const repo = path.join(root, 'project');
@@ -54,7 +54,7 @@ export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: n
   g(repo, 'push', '-q', '-u', 'origin', 'main');
   g(repo, 'fetch', '-q', 'origin');
   const sha = g(repo, 'rev-parse', 'HEAD');
-  const app = await fakeApp({ lateFormMs: o.lateFormMs ?? 0 });
+  const app = await fakeApp({ lateFormMs: o.lateFormMs ?? 0, ...o.app });
   const gh: string[][] = [];
   const r = { root, repo, origin, sha, app, gh, boots: [] as string[], stops: 0, passed: [] as string[] } as Rig;
   r.w = new Walkthroughs({
@@ -64,7 +64,7 @@ export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: n
       r.boots.push(commit);
       if (r.bootError) throw new Error(r.bootError);
       let up = true;
-      return { url: app.url, commit, alive: () => up, stop: async () => void ((up = false), r.stops++) };
+      return { url: app.url, commit, ...(o.app?.runtimeLog ? { runtimeLog: o.app.runtimeLog } : {}), alive: () => up, stop: async () => void ((up = false), r.stops++) };
     },
     passedAt: async (_f, sha, ids) => (sha === r.sha ? ids.filter((i) => r.passed.includes(i)) : []),
     gh: async (args) => {

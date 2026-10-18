@@ -16,6 +16,12 @@ Another process holds a port. The office picks three free ports from **8110–81
 
 **Fix:** use **↗ Open live app**, which shows the app in a window of its own, or in the desktop app **Show here**, which shows it top-level in the tab. The app itself is fine.
 
+## "The current license does not allow more users to sign in." / "Sign in failed."
+
+**Cause:** the live app runs without a Mendix licence, and an unlicensed Mendix app keeps only **6 sessions** open at once. It counts sessions, not people: every sign-in holds one (the same account signed in twice holds two), and in an app with guest access every window that opens the app holds an anonymous one too. Closing a window doesn't end its session: it ends when someone signs out, about 15 minutes after its window was closed (the 10-minute session timeout, then the runtime's cleanup), or when the app restarts. Each browser holds its own (the desktop app's Live app window and **Show here** share one). The Mendix client says *The current license does not allow more users to sign in.*; Mendix's own sign-in page (`login.html`) says only *Sign in failed.* Either way the Runtime log says *Maximum number of sessions exceeded! (You are currently using a trial license)*, and the Live app tab shows a hint saying so.
+
+**Fix:** sign out in windows of the app you don't need, or wait a few minutes, or **⟳ Restart** (a restart ends every session). There is no runtime setting that lifts the cap for a local run: only a Mendix licence does.
+
 ## The Console's Network is empty
 
 Requests are recorded only when the app is opened with **↗ Open live app** (or the Overview's **View App**), which go through the office's recording proxy. A tab opened on the app's own port, or a link copied before the proxy was up, isn't recorded. If the note under **Open live app** says the proxy isn't up, **⟳ Restart** the app.

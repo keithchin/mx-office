@@ -99,6 +99,10 @@ Under the app's status, the **Console** has two tabs. It streams only while the 
 
 Settings such as the port range, the database and the mxcli path are environment variables `AGENT_OFFICE_LIVE_*`. See [Environment variables](../reference/environment-variables.md#live-app).
 
+## Signing in
+
+Without a Mendix licence the app keeps only 6 sessions open at once, and a closed window keeps its session for about 15 minutes. When the app refuses one (*The current license does not allow more users to sign in.*), the tab says why and what to do: sign out in windows you don't need, wait, or **⟳ Restart**. See [Live app problems](../troubleshooting/live-app.md#the-current-license-does-not-allow-more-users-to-sign-in--sign-in-failed). The office itself holds none: its checks that the app is up are plain requests, and a Design gallery capture ends the session its page opened.
+
 ## When it fails
 
 The tab shows *build failed at …* or *stopped (crashed at …)* with the reason and the log's last lines, the **🌐** item appears in Needs you, and the tab gets a `!` badge. See [Live app problems](../troubleshooting/live-app.md).
