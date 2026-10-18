@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Fixed
+
+- **A status reply that lists things only you can do now reaches Needs you.** Asked for a status update, a lead answered in chat with a numbered list (“items 1 to 3 need your hands, 4 and 5 can be skipped”) and nothing showed in Needs you: the chat-ask check only took one sentence asking you something, and only when Jeff agreed. Now, without a model, each item a turn-ending reply marks as yours (“need your hands”, “needs you”, “for you to do”, “your action”, “only you can”, or an item like “Tell me once …”) becomes its own card, titled with the item and carrying the agent’s words and where it said them (the team chat message, when it replied on the phone). Items it says can be skipped (or FYI, no action needed) are not filed or counted; they are named in the filed cards. Nothing is filed twice: an item the agent already escalated, or one naming an open escalation or decision id, is folded into it, and the same item from the next status reply isn’t filed again for a day. Negated, conditional and future lists, relays of someone else’s ask and plain progress reports file nothing. Deploying, cloud settings and credentials are marked needs a person, outside the office: no automatic action. The Playbook now tells agents to escalate each such item themselves.
 
 ## 2026-10-18 · release 59 (`ca35113`)
 

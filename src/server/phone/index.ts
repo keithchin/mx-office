@@ -20,6 +20,7 @@ import type { Roster } from '../roster/index.js';
 import type { TeamFloor } from '../roster/types.js';
 import { phonePrompt, phoneTag } from './prompt.js';
 import { replyFromFile } from './reply.js';
+import { fileReplyAsks } from '../roster/reply-asks.js';
 
 /** A reply not seen this long after the message is given up on. */
 export const PENDING_MS = 12 * 3_600_000;
@@ -199,7 +200,15 @@ export class Phone {
       if (p.typedAt === undefined) return;
       note(`${w.name} replied in its terminal → Open it to read the answer.`);
     } else if (!said) note(`${w.name} finished the turn without writing a reply → Open its terminal to see what it did.`);
-    else this.deps.chatter.add(floor.id, { kind: 'message', from: workerParty(w), to: human(p.by), text: said, ref, long: true });
+    else {
+      const m = this.deps.chatter.add(floor.id, { kind: 'message', from: workerParty(w), to: human(p.by), text: said, ref, long: true });
+      // A list in it that it marks as the person's to do: filed (or, filed at the turn's end, linked to this message).
+      try {
+        fileReplyAsks(this.deps.roster, floor, w, said, { ...(m?.id ? { message: m.id } : {}), thread: p.thread });
+      } catch (err) {
+        console.error(`agent-office: reply asks on ${floor.id}: ${(err as Error)?.message ?? err}`);
+      }
+    }
     this.drop(p);
   }
 }

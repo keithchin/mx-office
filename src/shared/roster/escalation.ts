@@ -91,8 +91,11 @@ export interface Escalation {
    * second escalation, and told the answer too (roster/escalations.ts).
    */
   also?: { workerId: string; by: string; role?: RoleId; at: number; /** Answered while a dialog was up in its terminal: told once that's over. */ pending?: boolean; /** The dispatch carrying the answer to it. */ dispatchId?: string }[];
-  /** Filed by the office from an agent's words (server/asks/): an AWAITING-PM item (keyed by role and text), resolved by itself once the line is gone. */
-  from?: { kind: 'awaiting'; key: string } | { kind: 'proposal'; key: string };
+  /**
+   * Filed by the office from an agent's words (server/asks/): an AWAITING-PM item (keyed by role and text), resolved by itself once the line is gone;
+   * or an item a reply listed as needing the Project Manager (roster/reply-asks.ts), with the team chat's message it was read from when there is one.
+   */
+  from?: { kind: 'awaiting'; key: string } | { kind: 'proposal'; key: string } | { kind: 'reply-ask'; key: string; message?: string; thread?: string };
   /** The explicit ids it is about. Missing on records from before decision cards (release 45): those show ungrouped. */
   refs?: EscalationRefs;
   /** The AWAITING-PM line it was filed from is gone from the newest entry: not settled; the person says (decision cards). */

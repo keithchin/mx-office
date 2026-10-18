@@ -26,6 +26,7 @@ Anything that needs the Project Manager (the human who owns the project) goes un
 - FYI is information only; anything with options or that needs an answer is a decision.
 - then end your turn, or carry on with whatever it does not block. Never end a turn on a question that is not in an open escalation.
 - this wins over any toolkit skill that says to ask the user in chat: never leave an ask only in your chat, a journal, a handoff or a standup page. A hands-on action only a person can do (merge a pull request, sign in, paste a key, install a tool, allow something at the terminal, restart a preview) is `escalate --trigger needs-human`.
+- a status update or any reply that lists things only the Project Manager can do (merge a PR, deploy, sign off, get someone to check something): escalate each of them with `office-workers escalate` before you end the turn, and say which can wait. A list left only in the chat is filed by the office one item at a time, without your options or recommendation.
 It shows in the Project Manager's approvals, and their answer comes back to you as a prompt. While it is open (unless the office files it as FYI) you are not benched for being idle; if you are benched meanwhile, the office hires you back with the answer.
 
 ## Your skills

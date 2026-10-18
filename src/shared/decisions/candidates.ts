@@ -54,6 +54,7 @@ function sourceNote(e: Escalation, filedAsFyi: boolean): string | undefined {
 function escalationLabel(e: Escalation, fyi: boolean): string {
   if (e.from?.kind === 'awaiting') return `AWAITING-PM in ${e.by}'s journal`;
   if (e.from?.kind === 'proposal') return `${e.by}'s approved hands-on proposal`;
+  if (e.from?.kind === 'reply-ask') return `${e.by}'s reply, listed as needing you`;
   if (/^From the chat: /.test(e.title)) return `${e.by}'s chat (filed by Jeff)`;
   return fyi ? `FYI from ${e.by}` : `${e.by}'s escalation`;
 }
@@ -91,7 +92,7 @@ export function escalationCandidates(r: RosterView): Candidate[] {
         ...(triedItems(e.details).length ? { tried: triedItems(e.details) } : {}),
         ...(e.options.length ? { options: e.options } : {}),
         ...(e.recommendation ? { recommendation: e.recommendation } : {}),
-        evidence: e.from?.kind === 'awaiting' ? [{ label: `The AWAITING-PM line in ${e.by}'s newest journal entry`, where: 'its details' }] : [],
+        evidence: e.from?.kind === 'awaiting' ? [{ label: `The AWAITING-PM line in ${e.by}'s newest journal entry`, where: 'its details' }] : e.from?.kind === 'reply-ask' ? [{ label: `${e.by}'s reply`, where: e.from.message ? `team chat, message ${e.from.message}` : 'its terminal (its last message)' }] : [],
         blocks: [],
         owner: e.by,
         notes,

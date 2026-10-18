@@ -41,15 +41,15 @@ const REQUEST = new RegExp(
  * that sentence was filed as an escalation, d12213cfb0).
  */
 const WAITING = /\b(awaiting|waiting (on|for)) (you|your|the PM|the Project Manager)\b/i;
-const NEGATED = /\b(none|nothing|no one|nobody|not|never|no longer)\b|n't\b/i;
+export const NEGATED = /\b(none|nothing|no one|nobody|not|never|no longer)\b|n't\b/i;
 /**
  * Someone else's ask passed on ("I'm still waiting on your decision on Sophie's code request"): that one
  * has its own escalation, so the relay isn't filed again (a migration project, 60646a6a5e). A question still counts.
  */
-const RELAYED = /\b[A-Z][a-z]+['’]s\b[^.?!]{0,80}\b(request|escalation|ask|question|proposal)\b/;
+export const RELAYED = /\b[A-Z][a-z]+['’]s\b[^.?!]{0,80}\b(request|escalation|ask|question|proposal)\b/;
 /** A sentence that only says what happens if or when something else does. */
-const CONDITIONAL = /^\W*(if|when|once|after|as soon as|whenever)\b/i;
-const FUTURE = /\b(will|would|'ll) (need|want|ask)\b/i;
+export const CONDITIONAL = /^\W*(if|when|once|after|as soon as|whenever)\b/i;
+export const FUTURE = /\b(will|would|'ll) (need|want|ask)\b/i;
 /** Someone else's question reported, not one put to the Project Manager. */
 const REPORTED = /\b(asked|asks|asking|wondered|told)\b/i;
 
