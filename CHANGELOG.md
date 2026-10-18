@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-18 · release 60 (`1b97e62`)
+
 ### Added
 
 - **Live app Console, like Studio Pro’s.** The 🌐 Live app tab has a Console with two tabs. **Runtime log**: the Mendix runtime’s log as entries (time, level, who logged it, the message), stack traces and “Caused by” folded under their entry (▸ / ▾), Error / Warning / Info / Debug filters with counts, a search, Pause, Auto-scroll, Clear (the view only) and Copy per entry; the app’s web-client errors (“Client”) are marked, and the tab’s badge counts the errors. **Network**: the requests the app made (the last 500, in memory only), with method, status, name, type, size and time; Mendix `xas/` calls named by their action (*xas · retrieve_by_xpath Orders.Order*); a row opens to its headers and the first 8 KB of its bodies, JSON laid out; All / XHR / Errors, a filter, Pause and Clear. Cookie values, `Authorization` and CSRF tokens are redacted and password fields masked. It streams only while the tab is in view; the log is read on from where it stopped, never again from the start.
