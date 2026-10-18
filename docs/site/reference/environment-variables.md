@@ -77,6 +77,15 @@ These can also go in `<office data>/live-app.json`; the environment wins.
 | `AGENT_OFFICE_LIVE_READY_SECONDS` | `480` |
 | `AGENT_OFFICE_LIVE_PG_BIN` | The newest `C:\Program Files\PostgreSQL\<v>\bin` |
 
+### Walkthrough videos
+
+| Variable | Default |
+|---|---|
+| `AGENT_OFFICE_FFMPEG` | `ffmpeg` on `PATH` (`off`: none, so videos stay WebM, without voice) |
+| `AGENT_OFFICE_KOKORO_PYTHON` | `py -3`, `python` or `python3`, whichever can `import kokoro` (none: captions only) |
+| `AGENT_OFFICE_KOKORO_VOICE` | `am_echo` |
+| `AGENT_OFFICE_KOKORO` | Not set (`off` turns narration off) |
+
 ## Studio mode
 
 | Variable | Default |

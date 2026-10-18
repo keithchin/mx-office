@@ -63,6 +63,7 @@ import { portfolioRoutes } from './portfolios.js';
 import { profileRoutes } from './profiles.js';
 import { teamSourceRoutes } from './team-sources.js';
 import { designRoutes } from './design.js';
+import { walkthroughRoutes } from './walkthroughs.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -224,6 +225,10 @@ export const routes: readonly Route[] = [
   designRoutes.needs,
   designRoutes.file,
   designRoutes.act,
+  // Walkthrough videos of each app’s workflows, on the Live app tab (walkthroughs/).
+  walkthroughRoutes.view,
+  walkthroughRoutes.file,
+  walkthroughRoutes.act,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,

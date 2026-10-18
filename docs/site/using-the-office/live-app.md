@@ -44,6 +44,27 @@ When a milestone becomes ready in the running app you get a toast, an FYI row in
 
 The card is read again when the app starts, stops or crashes, when a fetch lands in the project's folder, and when test evidence lands; never on a timer of its own.
 
+## Walkthroughs
+
+Under the readiness card, **Walkthroughs** has short videos of the app's workflows. Each one plays a test journey of the running build (`tests/e2e/*.journey.json`) against the live app as the project's demo user, and films it. They serve as demo videos, as acceptance evidence for the exact build they recorded, and as handover docs once they're in the project's repo.
+
+- **● Record** (admins) picks a journey of the running build. The video shows each step's words in a caption bar, a step counter, a box around what is about to be clicked or typed into, and a title card with the use cases the journey names (`UC-01`). Each step is screenshotted.
+- **Narrate** adds a voice that reads each step, made on this machine with Kokoro (a local text-to-speech model). Nothing is sent anywhere. Without Kokoro the videos have captions only, and the section says so.
+- A **failed step stops the recording**. The failure is captioned on screen, the card says *Failed at step 2* with the reason, and the steps after it are *not run*. A failed or cancelled recording is never evidence, and can't be saved to the repo.
+- A video is **evidence only for the commit it recorded** (`@abc1234` on the card and in its `manifest.json`). If the app moves to another commit during a recording, it's marked as not finished.
+- **Auto-record when a milestone becomes ready** (on by default, one switch per project): when a milestone becomes ready, each of its journeys that passed against that build is recorded by itself, labelled *Auto ·* and the milestone's name. A milestone that is only built (*not yet verified*) records nothing.
+- **Make guided tour** joins the newest passing video of each workflow of the running build into one longer video, with an intro card, a title card per workflow, an outro card and chapter markers.
+- **▶ Watch** opens the player: the video with its captions, the steps (click one to jump there), the step screenshots and the evidence line. **Download** saves the video. On the readiness card, a ready milestone with a video has a **▶ Walkthrough** link.
+- **Save to repo** opens a pull request that adds the walkthrough to the project's repository, in `docs/walkthroughs/<workflow>/` (the video, `captions.vtt`, `chapters.vtt`, `steps/NN.png` and `manifest.json`), and rewrites `docs/walkthroughs/index.md`. It goes on a branch of its own, never straight to `main`, and someone merges it after review. When the repository sends `*.mp4` to git LFS, the video goes that way. Otherwise videos stay compressed (about 1–3 MB a minute), a video over 20 MB is flagged in the pull request, and one over 95 MB is refused.
+
+How it works:
+
+- The recorder is the office's headless Chromium. It opens the app only through its recording proxy and refuses every request to anywhere else. It signs in as the project's demo user (`demo_test_user` unless set otherwise, never `MxAdmin`) in a fresh browser profile that never has your office session. Use demo users and demo data only.
+- One recording runs at a time and the others wait in line. **Cancel** stops one, and a recording stops by itself after 3 minutes. ffmpeg makes the MP4 and adds the voice. Without ffmpeg the video is the WebM as recorded, without voice.
+- Working copies are kept in `<office data>/walkthroughs/<project>/` until they're saved to the repo. The office keeps the newest three automatic recordings per workflow, none older than 14 days, within 2 GB in all. Your own recordings stay until you delete them.
+- Nothing here calls an AI model.
+- Settings are environment variables. See [Environment variables](../reference/environment-variables.md#walkthrough-videos).
+
 ## Main behind the work
 
 When an agent's branch or an open PR has commits main hasn't and changes the model (`.mpr`, `mprcontents/`, `mdlsource/`), this tab and the [Model](model.md) tab show a banner: *main is 75 commits behind Sophie's branch, which has model changes (PR #6, open, not reviewed)*. The live app runs main, so it shows none of that until it merges. **View it in the Model tab** opens the Model tab, which can show the branch; **Ask Katherine to review** (admins) tells the team lead, after their turn, to have the PR reviewed per the [review gate](review-gate.md). The review state is the gate's: *reviewed by X* once a complete `Review:` by someone other than the opener is on the PR; *review not checked yet* while the office hasn't read the PR's comments, which the board reads for merged PRs only.
