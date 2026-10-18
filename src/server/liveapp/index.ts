@@ -29,6 +29,7 @@ import { ReadyNews } from './news.js';
 import { readReadiness } from './readiness.js';
 import { findMpr } from './checkout.js';
 import { LiveConsoles } from './console/index.js';
+import { emitLiveReady } from './ready-bus.js';
 
 type Deps = Pick<Ctx, 'cfg' | 'floors' | 'toFloor'> & Partial<Pick<Ctx, 'toastFloor'>>;
 
@@ -237,7 +238,10 @@ export class LiveApps {
     e.readiness = got.readiness;
     if (got.readiness) {
       e.news ??= new ReadyNews(this.liveDir, floorId);
-      for (const n of e.news.take(got.readiness, running)) this.tell(floor, n.kind, n.title, n.sha);
+      for (const n of e.news.take(got.readiness, running)) {
+        this.tell(floor, n.kind, n.title, n.sha);
+        emitLiveReady(this.ctx, floorId, n, got.readiness);
+      }
     }
     this.ctx.toFloor(floor, { t: 'liveapp.state', state: this.withExtra(s ?? { floor: floorId, status: 'stopped', log: [], available: !!this.mxcli, started: false }) });
   }

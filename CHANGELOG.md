@@ -6,7 +6,9 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+### Added
+
+- **Walkthrough videos of each app's workflows.** The 🌐 Live app tab has a **Walkthroughs** section: **● Record** plays one of the running build's test journeys (`tests/e2e/*.journey.json`) against the live app as the project's demo user and films it, with each step's words in a caption bar, a step counter, a box around what is about to be clicked or typed into, and a title card with the use cases the journey names. Each step is screenshotted, and a manifest ties the video to the exact commit it recorded. **Narrate** adds a voice made on the office's machine with Kokoro (nothing is sent anywhere; without it, captions only). A failed step stops the recording and the card says *Failed at step 2* with the reason; failed recordings are never evidence. With **Auto-record when a milestone becomes ready** (on by default, per project), each journey of a milestone that passed against the build is recorded by itself. **Make guided tour** joins the newest passing videos into one longer video with an intro, chapters and an outro. **▶ Watch** opens a player with captions, steps and screenshots, and the readiness card links a ready milestone to its video. **Save to repo** opens a pull request that adds the walkthrough to the project's `docs/walkthroughs/` (with an `index.md`), never straight to `main`; big videos go through git LFS when the repository uses it, and otherwise are flagged over 20 MB and refused over 95 MB. One recording runs at a time, in headless Chromium through the app's recording proxy only. Working copies stay in `<office data>/walkthroughs/`, with old automatic ones cleaned up within 2 GB. ffmpeg makes the MP4 (without it, the WebM as recorded, without voice). No AI model is called.
 
 ## 2026-10-18 · release 60 (`1b97e62`)
 
