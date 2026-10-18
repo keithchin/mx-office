@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-18 · release 63 (`6f22875`)
+
 ### Fixed
 
 - **🎬 Walkthroughs no longer run out of sessions on an unlicensed app.** An unlicensed Mendix app keeps only 6 sessions open at once (guests' included, and a closed browser keeps its session for about 15 minutes), and recordings used to sign in again for every journey without ever signing out, so a batch could end with *The current license does not allow more users to sign in.* Now a batch signs each account in once, on Mendix's own sign-in page, films every journey of that account on that one session and signs out when it's done. A sign-in the app refuses says what the app said and what it means. The **🌐 Live app** tab explains the same refusal when you hit it in the app (sign out in windows you don't need, wait, or ⟳ Restart), and a Design gallery capture ends the session its page opened.
