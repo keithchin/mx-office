@@ -206,7 +206,7 @@ async function owned(home) {
     assert(pid, 'no office process');
     running.offices.push(pid);
     // Signed in, the window lands on Home (the sign-in link, then the flat view handing over to Home): settled there.
-    await until('the window on Home, signed in', async () => (await winUrl(app)) === `http://localhost:${port}/home` && (await sleep(2000), (await winUrl(app)) === `http://localhost:${port}/home`), 60_000);
+    await until('the window on Home, signed in', async () => (await winUrl(app)) === `http://localhost:${port}/start` && (await sleep(2000), (await winUrl(app)) === `http://localhost:${port}/start`), 60_000);
   });
   let note;
   await check('owned: notification navigation (a seeded Needs-you item notifies; its click opens the item)', async () => {
