@@ -55,3 +55,5 @@ A review **counts** when it starts `Review:`, names an agent of the project (or 
 The office remembers where the default branch was in `<data>/review-gate/<project>.json`; its first look only records that, so older history isn't flagged. Pushes are read from the office's own copy of the project (it never fetches for this), and pull requests from the board's existing pull-request poll (merged ones now also bring who merged them, their `Review:` and approval comments, and their commit titles and authors).
 
 Related: a GitHub issue closed as completed no longer counts as delivering a task while that task's own pull request is still open or was closed without merging; the pull request decides.
+
+Its sibling, the [claims check](claims-check.md), compares what agents *say* they did ("✅ applied", "PASS 35/0") with what git holds: a model change only on an unmerged branch, a committed result that shows failures, evidence only in a git-ignored folder.

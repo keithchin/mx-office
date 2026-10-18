@@ -54,6 +54,8 @@ export interface Assignment {
   verify?: TaskVerification;
   /** Its PR merged without a review that counts (server/review-gate/): integrated (unreviewed), never verified. */
   unreviewed?: { pr: number; why: string; at: number };
+  /** Closed on a claim git doesn't back (server/claims/): claimed (unverified), never delivered, until the evidence is there. */
+  claimUnverified?: { commit: string; why: string; at: number };
   /** Slice 1B-4: the durable task (server/tasks/) and this attempt at it. None on a legacy task: never made up. */
   taskId?: string;
   executionId?: string;

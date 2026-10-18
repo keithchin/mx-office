@@ -6,8 +6,10 @@
 //   - advisory (S8): the toolkit's gate advisories (.claude/.gate-advisories), printed only to an agent.
 //   - review (S8): BRDs whose review status is draft or pending, and design artifacts, ready for review.
 //   - gate: the review gate's cards (server/review-gate/), worked out by main.ts and passed through.
+//   - claims: the claims check's card (server/claims/), worked out by main.ts and passed through.
 
 import type { AskAct, AskItem, BranchStandup } from '../../shared/asks.js';
+import { askedOf, claimsTell } from '../../shared/claims.js';
 import type { Read } from './sources.js';
 
 export const ADVISORIES = '.claude/.gate-advisories';
@@ -51,6 +53,8 @@ export interface DetectInput {
   design?: readonly string[];
   /** The review gate's info cards (server/review-gate/): PRs that skipped review, direct and force pushes, baseline resets and waivers. */
   gate?: readonly AskItem[];
+  /** The claims check's card (server/claims/): claims of applied model changes or passing tests that git doesn't back. */
+  claims?: readonly AskItem[];
 }
 
 export interface Detected {
@@ -253,6 +257,7 @@ export function detectAsks(i: DetectInput): Detected {
   const review = readyForReview(i.brds ?? [], i.design ?? []);
   if (review) items.push(review);
   items.push(...(i.gate ?? []));
+  items.push(...(i.claims ?? []));
   return { items, ...(i.standup ? { standup: i.standup } : {}) };
 }
 
@@ -268,6 +273,7 @@ export function actMessage(act: AskAct, it: AskItem, by: string, now = Date.now(
     case 'discuss':
       return `The Project Manager (${by}) wants to discuss these assumptions before agreeing:\n${list}\nRaise them with office-workers escalate: one escalation, each assumption a numbered question with the options, the risk if it's wrong and your recommendation.`;
     case 'ask-lead':
+      if (it.kind === 'claims') return claimsTell(askedOf(it.acts.find((a) => a.act === 'ask-lead')?.label), it.lines ?? [it.text]);
       if (it.kind === 'gate') return `The Project Manager asks about this (the office's review gate): ${it.text}.
 ${list}
 Find out what happened and answer in one line what you'll do about it: have it reviewed now by another Lead (a "Review:" comment on the PR listing the checks run with their results and the files read), or escalate (office-workers escalate) what only I can decide. From now on follow the Playbook's review rule.`;

@@ -86,7 +86,7 @@ export interface VerificationTask {
   pr: number;
   url?: string;
   /** 'unreviewed': its PR merged without a review that counts (server/review-gate/), so never verified. */
-  state: VerifyState | 'integrated' | 'unreviewed';
+  state: VerifyState | 'integrated' | 'unreviewed' | 'claim-unverified';
   revision?: string;
   head?: string;
   checks: { key: string; state: CheckState; waivedBy?: string }[];

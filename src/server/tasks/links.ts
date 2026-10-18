@@ -70,7 +70,7 @@ export class TaskLinks {
       const d = roster.data(floorId);
       for (const r of ROLES) {
         const m = d.members[r.id];
-        for (const t of [...(m.prevTasks ?? []), m.task]) if (t?.taskId && t.verify) verifications.push({ taskId: t.taskId, pr: t.verify.pr, ...(t.verify.revision ? { revision: t.verify.revision } : {}), state: t.unreviewed ? 'unreviewed' : t.verify.state });
+        for (const t of [...(m.prevTasks ?? []), m.task]) if (t?.taskId && t.verify) verifications.push({ taskId: t.taskId, pr: t.verify.pr, ...(t.verify.revision ? { revision: t.verify.revision } : {}), state: t.unreviewed ? 'unreviewed' : t.claimUnverified ? 'claim-unverified' : t.verify.state });
       }
     } catch {
       // no team on it
