@@ -1,0 +1,5 @@
+/* The Live app tab's links to 🎬 Walkthroughs (ui/walkthroughs/links.ts). */
+.wt-golink { margin: 8px 0; font-size: 13px; }
+.wt-golink .wt-count { color: var(--muted); }
+.wt-golink .wt-link, .lr-m .wt-link { background: none; border: none; padding: 0; color: var(--link, var(--accent, #2563eb)); cursor: pointer; font: inherit; text-decoration: underline; }
+.lr-m .wt-link { margin-left: 6px; font-size: 12px; white-space: nowrap; }

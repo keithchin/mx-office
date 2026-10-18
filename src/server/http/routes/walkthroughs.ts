@@ -1,9 +1,9 @@
 // Walkthrough videos' routes (server/walkthroughs/). Watching is for anyone signed in on the office; every
 // change (Record, Cancel, Save to repo, the switch, Delete) is an admin's, checked here, from the office's own
 // page, and audited. Nothing here calls a model.
-//   GET  /api/walkthroughs?floor=                 the project's Walkthroughs section
+//   GET  /api/walkthroughs?floor=                 the project's Walkthroughs page
 //   GET  /api/walkthroughs/file?floor=&id=&name=  a recording's file (video with ranges, VTT, PNG, manifest)
-//   POST /api/walkthroughs/action                 {action: record|tour|cancel|save|settings|delete, floor, …}
+//   POST /api/walkthroughs/action                 {action: record (journey or all)|tour|cancel (batch)|save|settings|delete, floor, …}
 import type http from 'node:http';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -86,18 +86,22 @@ export const walkthroughRoutes = {
       try {
         switch (b.action) {
           case 'record': {
-            if (typeof b.journey !== 'string' || !b.journey) return send(res, 400, { error: 'Say which journey' });
-            const job = await w.record(floor.id, b.journey, { by, ...(typeof b.narrate === 'boolean' ? { narrate: b.narrate } : {}) });
-            log('record', `Started recording the walkthrough of ${b.journey}`, { journey: b.journey });
-            return send(res, 200, { ok: true, job });
+            // One journey, or every journey of main's newest commit (Re-record all, Record now).
+            const all = b.all === true;
+            if (!all && (typeof b.journey !== 'string' || !b.journey)) return send(res, 400, { error: 'Say which journey' });
+            const batch = await w.record(floor.id, { by, ...(all ? {} : { journeys: [b.journey as string] }), ...(typeof b.narrate === 'boolean' ? { narrate: b.narrate } : {}) });
+            log('record', all ? 'Started recording every walkthrough of main' : `Started recording the walkthrough of ${b.journey}`, { ...(all ? { all: true } : { journey: b.journey }), batch });
+            return send(res, 200, { ok: true, batch });
           }
           case 'tour': {
-            const job = await w.tour(floor.id, by);
+            const batch = await w.tour(floor.id, by);
             log('tour', 'Started making the guided tour');
-            return send(res, 200, { ok: true, job });
+            return send(res, 200, { ok: true, batch });
           }
           case 'cancel':
-            return typeof b.job === 'string' && w.cancel(floor.id, b.job) ? send(res, 200, { ok: true }) : send(res, 404, { error: 'No such recording running' });
+            if (!(typeof b.batch === 'string' && w.cancel(floor.id, b.batch))) return send(res, 404, { error: 'No such recording queued or running' });
+            log('cancel', 'Cancelled a walkthrough recording', { batch: b.batch });
+            return send(res, 200, { ok: true });
           case 'save': {
             if (!id) return send(res, 400, { error: 'Say which recording' });
             const m = await w.save(floor.id, id, by);

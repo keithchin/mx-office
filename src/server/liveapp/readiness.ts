@@ -83,8 +83,8 @@ async function branchesOf(dir: string, def: string, main: string): Promise<{ bra
   return all.slice(0, MAX_BRANCHES);
 }
 
-/** The newest decided result of each journey among test runs of exactly `sha`. */
-async function journeyResults(dataDir: string, floorId: string, sha: string, ids: readonly string[]): Promise<{ journey: string; status: 'passed' | 'failed' }[]> {
+/** The newest decided result of each journey among test runs of exactly `sha` (walkthroughs/ asks it too). */
+export async function journeyResults(dataDir: string, floorId: string, sha: string, ids: readonly string[]): Promise<{ journey: string; status: 'passed' | 'failed' }[]> {
   if (!ids.length) return [];
   const records = [...(await testingStore(dataDir, floorId).all().catch(() => []))].filter((r) => sameRevision(r.testedRevision, sha)).sort((a, b) => b.ingestedAt - a.ingestedAt);
   const out: { journey: string; status: 'passed' | 'failed' }[] = [];

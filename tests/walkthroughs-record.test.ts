@@ -1,89 +1,23 @@
-// Walkthrough videos end to end, against a fake live app (tests/fixtures/walkthroughs/app.ts) and a fake
-// journey in a throwaway git repo: a passing journey makes a video, step screenshots, captions and a
-// manifest tied to the commit; a failing step stops the recording and marks it failed; the annotations are
-// in the page; nothing but the app's origin is reached; auto-record runs only on ready with the switch on;
-// Save to repo opens a pull request through a fake gh (a branch on a local bare "origin", never main); a
-// guided tour chains the passing videos. Headless Chromium; skipped where it can't start. Fake voice only.
+// Walkthrough videos end to end, against a fake app (tests/fixtures/walkthroughs/app.ts) standing in for the
+// office's own recording copy (the boot dep; app-instance.test.ts covers the real one), and fake journeys in
+// a throwaway git repo (./fixtures/walkthroughs/rig.ts): a passing journey makes a video, step screenshots,
+// captions and a manifest tied to the commit, recorded in a batch that boots the app once and stops it after;
+// a failing step stops the recording and marks it failed; the annotations are in the page; nothing but the
+// app's origin is reached; Save to repo opens a pull request through a fake gh (a branch on a local bare
+// "origin", never main); a guided tour chains the passing videos. Headless Chromium; skipped where it can't
+// start. Fake voice only. Auto-record and the sign-in are walkthroughs-auto.test.ts.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { Walkthroughs } from '../src/server/walkthroughs/index.js';
 import { findFfmpeg, runTool } from '../src/server/walkthroughs/media.js';
 import { launchChromium } from '../src/server/walkthroughs/recorder.js';
 import { OVERLAY_HOST, OVERLAY_SCRIPT } from '../src/server/walkthroughs/overlay.js';
-import { fakeVoice } from '../src/server/walkthroughs/tts.js';
-import type { LiveReadiness } from '../src/shared/liveapp/readiness.js';
-import { removeDir } from './support/cleanup.js';
-import { DEMO, FAILING, PASSING, fakeApp, type FakeApp } from './fixtures/walkthroughs/app.js';
-
-const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-
-let chromiumOk = true;
-const browserCheck = launchChromium().then(
-  (b) => b.close(),
-  () => (chromiumOk = false),
-);
-
-interface Rig {
-  root: string;
-  repo: string;
-  origin: string;
-  sha: string;
-  app: FakeApp;
-  gh: string[][];
-  w: Walkthroughs;
-  live: { running: boolean; commit?: string; url?: string };
-}
-
-async function rig(o: { ffmpeg?: boolean } = {}): Promise<Rig> {
-  const root = mkdtempSync(path.join(tmpdir(), 'walk-rec-'));
-  const origin = path.join(root, 'origin.git');
-  const repo = path.join(root, 'project');
-  mkdirSync(repo);
-  execFileSync('git', ['init', '-q', '--bare', '-b', 'main', origin]);
-  g(repo, 'init', '-q', '-b', 'main');
-  mkdirSync(path.join(repo, 'tests', 'e2e'), { recursive: true });
-  writeFileSync(path.join(repo, 'tests', 'e2e', 'new-request.journey.json'), JSON.stringify(PASSING, null, 2));
-  writeFileSync(path.join(repo, 'tests', 'e2e', 'approve-request.journey.json'), JSON.stringify(FAILING, null, 2));
-  writeFileSync(path.join(repo, 'README.md'), '# Sample app\n');
-  g(repo, 'add', '-A');
-  g(repo, 'commit', '-q', '-m', 'Sample app with two journeys');
-  g(repo, 'remote', 'add', 'origin', origin);
-  g(repo, 'push', '-q', '-u', 'origin', 'main');
-  g(repo, 'fetch', '-q', 'origin');
-  const sha = g(repo, 'rev-parse', 'HEAD');
-  const app = await fakeApp();
-  const gh: string[][] = [];
-  const live = { running: true, commit: sha, url: app.url };
-  const w = new Walkthroughs({
-    dataDir: path.join(root, 'data'),
-    floorDir: (id) => (id === 'demo' ? repo : undefined),
-    live: () => live,
-    gh: async (args) => {
-      gh.push(args);
-      return 'https://github.com/example/sample-app/pull/7\n';
-    },
-    tool: o.ffmpeg ? findFfmpeg() : {},
-    voice: fakeVoice,
-    cardMs: 300,
-    stepMs: 300,
-  });
-  await w.store.setSettings('demo', { autoRecord: true, narrate: false, demoUser: DEMO.user, demoPassword: DEMO.password });
-  return { root, repo, origin, sha, app, gh, w, live };
-}
-
-async function done(r: Rig) {
-  await r.w.idle();
-  await r.app.close();
-  removeDir(r.root);
-}
+import { DEMO } from './fixtures/walkthroughs/app.js';
+import { browserCheck, done, g, only, rig } from './fixtures/walkthroughs/rig.js';
 
 test('the annotations: caption bar, step counter, chapter card and highlight, in a shadow root the text checks never read', async (t) => {
-  await browserCheck;
-  if (!chromiumOk) return t.skip('no headless Chromium here');
+  if (!(await browserCheck)) return t.skip('no headless Chromium here');
   const b = await launchChromium();
   try {
     const ctx = await b.newContext({ viewport: { width: 800, height: 600 } });
@@ -100,15 +34,19 @@ test('the annotations: caption bar, step counter, chapter card and highlight, in
 });
 
 test('a passing journey: video, step screenshots, captions and a manifest tied to the commit; nothing else reached; Save to repo opens a PR', async (t) => {
-  await browserCheck;
-  if (!chromiumOk) return t.skip('no headless Chromium here');
+  if (!(await browserCheck)) return t.skip('no headless Chromium here');
   const r = await rig({ ffmpeg: false });
   try {
     const view = await r.w.view('demo', true);
     assert.deepEqual(view.journeys.map((j) => j.id).sort(), ['approve-request', 'new-request']);
-    const id = await r.w.record('demo', 'new-request', { by: 'Pat' });
+    assert.equal(view.main?.commit, r.sha, 'Record records main’s newest commit');
+    await r.w.record('demo', { by: 'Pat', journeys: ['new-request'] });
     await r.w.idle();
+    const id = await only(r, 'new-request');
     const m = (await r.w.store.read('demo', id))!;
+    assert.deepEqual([r.boots, r.stops], [[r.sha], 1], 'one recording app for the batch, stopped after');
+    assert.equal(m.app.instance, true);
+    assert.equal(m.app.userFrom, 'setting', 'no journey-runner config in this project: the setting');
     assert.equal(m.status, 'passed', JSON.stringify(m.failure));
     assert.equal(m.app.commit, r.sha);
     assert.equal(m.app.user, DEMO.user);
@@ -143,15 +81,16 @@ test('a passing journey: video, step screenshots, captions and a manifest tied t
 });
 
 test('a failing step stops the recording honestly: marked failed, the rest not run, never saved as evidence', async (t) => {
-  await browserCheck;
-  if (!chromiumOk) return t.skip('no headless Chromium here');
+  if (!(await browserCheck)) return t.skip('no headless Chromium here');
   const r = await rig();
   try {
-    const id = await r.w.record('demo', 'approve-request', { by: 'Pat' });
+    await r.w.record('demo', { by: 'Pat', journeys: ['approve-request'] });
     await r.w.idle();
+    const id = await only(r, 'approve-request');
     const m = (await r.w.store.read('demo', id))!;
     assert.equal(m.status, 'failed');
     assert.equal(m.failure?.step, 2);
+    assert.deepEqual(m.journey.notes, ['START STATE: run directly after new-request (its request is the one approved).'], 'what the journey says it needs comes along to the card');
     assert.match(m.failure?.why ?? '', /btnApprove/);
     assert.deepEqual(m.steps.map((s) => s.status), ['passed', 'failed', 'not-run']);
     assert.ok(existsSync(path.join(r.w.store.recDir('demo', id), 'steps', '02.png')), 'the failure is on screen and screenshotted');
@@ -163,45 +102,14 @@ test('a failing step stops the recording honestly: marked failed, the rest not r
   }
 });
 
-const ready = (sha: string, result: 'passed' | 'failed'): LiveReadiness => ({ sha, goal: 'Sample app', ready: true, headline: '', at: 1, milestones: [{ id: 'phase-1', title: 'Requests', rows: [2], inLive: [2], onMain: [], onBranch: [], missing: [], journeys: [{ id: 'new-request', result }], state: result === 'passed' ? 'ready' : 'unverified', line: '' }] });
-
-test('auto-record: a milestone ready with its journey passed records it; switched off or failed records nothing; cancel works', async (t) => {
-  await browserCheck;
-  if (!chromiumOk) return t.skip('no headless Chromium here');
-  const r = await rig();
-  try {
-    const news = { key: 'k', kind: 'ready' as const, milestone: 'phase-1', title: 'Requests', at: 1, sha: r.sha };
-    assert.deepEqual(await r.w.onReady('demo', news, ready(r.sha, 'failed')), [], 'not verified: nothing');
-    await r.w.setSettings('demo', { autoRecord: false });
-    assert.deepEqual(await r.w.onReady('demo', news, ready(r.sha, 'passed')), [], 'switched off: nothing');
-    await r.w.setSettings('demo', { autoRecord: true });
-    const [id] = await r.w.onReady('demo', news, ready(r.sha, 'passed'));
-    assert.ok(id);
-    assert.deepEqual(await r.w.onReady('demo', news, ready(r.sha, 'passed')), [], 'queued once');
-    await r.w.idle();
-    const m = (await r.w.store.read('demo', id))!;
-    assert.equal(m.trigger, 'auto');
-    assert.deepEqual(m.milestone, { id: 'phase-1', title: 'Requests' });
-    assert.equal(m.status, 'passed');
-    // Cancel a running one.
-    const c = await r.w.record('demo', 'new-request', { by: 'Pat' });
-    while (!(await r.w.view('demo', true)).jobs.some((j) => j.id === c && j.status === 'running' && j.line?.startsWith('Step'))) await new Promise((x) => setTimeout(x, 50));
-    assert.equal(r.w.cancel('demo', c), true);
-    await r.w.idle();
-    assert.equal((await r.w.store.read('demo', c))!.status, 'cancelled');
-  } finally {
-    await done(r);
-  }
-});
-
 test('with ffmpeg: an MP4 with the (fake) narration voice, then a guided tour with chapters', async (t) => {
-  await browserCheck;
   const tool = findFfmpeg();
-  if (!chromiumOk || !tool.ffmpeg || !tool.ffprobe) return t.skip('needs headless Chromium and ffmpeg');
+  if (!(await browserCheck) || !tool.ffmpeg || !tool.ffprobe) return t.skip('needs headless Chromium and ffmpeg');
   const r = await rig({ ffmpeg: true });
   try {
-    const id = await r.w.record('demo', 'new-request', { by: 'Pat', narrate: true });
+    await r.w.record('demo', { by: 'Pat', journeys: ['new-request'], narrate: true });
     await r.w.idle();
+    const id = await only(r, 'new-request');
     const m = (await r.w.store.read('demo', id))!;
     assert.equal(m.status, 'passed', JSON.stringify(m));
     assert.equal(m.outputs.format, 'mp4');
@@ -209,15 +117,15 @@ test('with ffmpeg: an MP4 with the (fake) narration voice, then a guided tour wi
     const mp4 = path.join(r.w.store.recDir('demo', id), 'walkthrough.mp4');
     const streams = await runTool(tool.ffprobe, ['-v', 'error', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', mp4]);
     assert.deepEqual(streams.trim().split(/\r?\n/).sort(), ['audio', 'video']);
-    const tid = await r.w.tour('demo', 'Pat');
+    await r.w.tour('demo', 'Pat');
     await r.w.idle();
-    const tour = (await r.w.store.read('demo', tid))!;
+    const tour = (await r.w.store.list('demo')).find((x) => x.kind === 'tour')!;
     assert.equal(tour.status, 'passed', JSON.stringify(tour.failure));
     assert.equal(tour.kind, 'tour');
     assert.deepEqual(tour.parts?.map((p) => p.title), ['Introduction', 'Submit a new request', 'End of the tour']);
     assert.ok(tour.durationMs! > m.durationMs!);
-    assert.match(readFileSync(path.join(r.w.store.recDir('demo', tid), 'chapters.vtt'), 'utf8'), /Submit a new request/);
-    assert.ok(existsSync(path.join(r.w.store.recDir('demo', tid), 'cards', 'intro.png')));
+    assert.match(readFileSync(path.join(r.w.store.recDir('demo', tour.id), 'chapters.vtt'), 'utf8'), /Submit a new request/);
+    assert.ok(existsSync(path.join(r.w.store.recDir('demo', tour.id), 'cards', 'intro.png')));
   } finally {
     await done(r);
   }

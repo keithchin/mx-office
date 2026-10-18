@@ -1,7 +1,10 @@
-// The recorder: one walkthrough script played against the live app through its recording proxy, in the
-// office's headless Chromium (playwright-core; the browser is a child process), filmed with recordVideo.
-// It signs in with the project's demo user in a context that isn't filmed, then films a fresh context that
-// starts signed in: a chapter card, then each step with its caption, a step counter and a highlight box
+// The recorder: one walkthrough script played against the office's own recording copy of the app
+// (app-instance/), in the office's headless Chromium (playwright-core; the browser is a child process),
+// filmed with recordVideo. It signs in as the journey's identity (shared/walkthroughs/identity.ts, the same
+// one the toolkit's journey runner uses) on the app's login form, in a context that isn't filmed, the way
+// the runner's helpers.login does: wait for the form (the Mendix client renders it late), fill it, submit,
+// wait to land in the app shell. Still on the sign-in page after that is a sign-in failure with that reason,
+// never a failed first step. Then it films a fresh context that starts signed in: a chapter card, then each step with its caption, a step counter and a highlight box
 // around what it's about to click or type into (./overlay.ts), a screenshot at the end of each step.
 //
 // Honest by construction: the first step that fails (an action that can't be done, a check that doesn't
@@ -14,19 +17,21 @@ import path from 'node:path';
 import { installedChromium } from '../design/capture.js';
 import { OVERLAY_SCRIPT } from './overlay.js';
 import { RECORDING_CAP_MS, type ManifestStep, type WalkAction, type WalkScript, type WalkStep } from '../../shared/walkthroughs/types.js';
+import { ADMIN_USER } from '../../shared/walkthroughs/identity.js';
 
+export { ADMIN_USER };
 export const VIEWPORT = { width: 1280, height: 720 } as const;
-/** Account names the recorder never signs in as: walkthroughs show what a demo user sees. */
-export const ADMIN_USER = /^(mxadmin|admin|administrator|root)$/i;
 
 /* The bits of playwright-core used here. */
 interface Box { x: number; y: number; width: number; height: number }
 interface Loc {
   first(): Loc;
+  innerText(o?: { timeout?: number }): Promise<string>;
   waitFor(o: { state: 'visible' | 'attached'; timeout: number }): Promise<void>;
   isVisible(o?: { timeout?: number }): Promise<boolean>;
   boundingBox(): Promise<Box | null>;
-  click(o?: { timeout?: number }): Promise<void>;
+  click(o?: { timeout?: number; noWaitAfter?: boolean }): Promise<void>;
+  press(key: string, o?: { timeout?: number }): Promise<void>;
   fill(v: string, o?: { timeout?: number }): Promise<void>;
   pressSequentially(v: string, o?: { delay?: number }): Promise<void>;
   inputValue(): Promise<string>;
@@ -64,7 +69,7 @@ export async function launchChromium(): Promise<Browser> {
 }
 
 export interface RecordInput {
-  /** The live app through its recording proxy: http://127.0.0.1:<proxy>/. */
+  /** The office's recording copy of the app: http://127.0.0.1:<port>/ (the only origin it may reach). */
   url: string;
   script: WalkScript;
   /** Where raw.webm and steps/NN.png go. */
@@ -94,22 +99,55 @@ class StepFailed extends Error {}
 const short = (e: unknown) => String((e as Error)?.message ?? e).split('\n')[0].replace(/\s+/g, ' ').slice(0, 220);
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** Signs in on the app's login page (when it has one); throws when the demo user isn't let in. */
-async function signIn(page: Page, url: string, login: RecordInput['login']) {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  const pw = page.locator('#passwordInput, input[type=password]').first();
-  if (!(await pw.isVisible({ timeout: 4000 }).catch(() => false))) return;
-  if (!login?.user) throw new Error('the app asks for a sign-in and no demo user is set (Walkthroughs › demo user)');
-  if (ADMIN_USER.test(login.user)) throw new Error(`walkthroughs never sign in as ${login.user}: set a demo user`);
-  await page.locator('#usernameInput, input[type=text]').first().fill(login.user);
-  await pw.fill(login.password);
-  const btn = page.locator('#loginButton, button[type=submit]').first();
-  await btn.click({ timeout: 5000 });
-  const inApp = await page
-    .waitForFunction(() => !/login\.html|\/login(\b|\/|$)/.test(location.href) && !document.querySelector('#passwordInput, input[type=password]'), undefined, { timeout: 15_000 })
+/** The sign-in didn't let the account in: the recording ends with this reason, not with a failed step. */
+export class SignInFailed extends Error {}
+
+const PASSWORD = '#passwordInput, input[type=password]';
+/** Inside the app: the app shell or any page content (with no password field and off the login address). */
+const IN_APP = '.mx-page, .mx-navigationtree, .mx-navbar, .mx-scrollcontainer';
+
+/** Whether `sel` becomes visible within `ms` (Playwright's isVisible never waits, whatever its timeout says). */
+const shows = (page: Page, sel: string, ms: number) =>
+  page
+    .locator(sel)
+    .first()
+    .waitFor({ state: 'visible', timeout: ms })
     .then(() => true)
     .catch(() => false);
-  if (!inApp) throw new Error(`the demo user ${login.user} couldn't sign in`);
+
+/** On the sign-in page now: a login address, or a password field on screen. */
+const onSignIn = (page: Page) =>
+  page.evaluate((pw) => /login\.html|\/login(\b|\/|$)/.test(location.href) || [...document.querySelectorAll<HTMLElement>(pw)].some((e) => e.offsetParent !== null), PASSWORD).catch(() => false);
+
+/**
+ * Signs in on the app's login form, as the toolkit's journey runner does: waits for the form or the app,
+ * fills it, submits, waits to land in the app. Throws SignInFailed when the account isn't let in.
+ */
+export async function signIn(page: Page, url: string, login: RecordInput['login']) {
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  // The Mendix client renders the form (or routes straight into the app) a moment after the page loads.
+  await page.waitForFunction((a) => !!document.querySelector(a.pw) || !!document.querySelector(a.app), { pw: PASSWORD, app: IN_APP }, { timeout: 20_000 }).catch(() => undefined);
+  if (!(await shows(page, PASSWORD, 1500))) {
+    if (await onSignIn(page)) throw new SignInFailed(`couldn't sign in as ${login?.user ?? 'the demo user'}: the sign-in page never showed its form`);
+    return;
+  }
+  if (!login?.user) throw new SignInFailed('the app asks for a sign-in and no demo user is known (tests/e2e/project.config.js, or Walkthroughs › demo user)');
+  if (ADMIN_USER.test(login.user)) throw new SignInFailed(`walkthroughs never sign in as ${login.user}: set a demo user`);
+  await page.waitForTimeout(400);
+  await page.locator('#usernameInput, input[type=text]').first().fill(login.user);
+  const pw = page.locator(PASSWORD).first();
+  await pw.fill(login.password);
+  const btn = page.locator('#loginButton, button[type=submit]').first();
+  if (await shows(page, '#loginButton, button[type=submit]', 1500)) await btn.click({ timeout: 5000, noWaitAfter: true }).catch(() => pw.press('Enter').catch(() => undefined));
+  else await pw.press('Enter').catch(() => undefined);
+  const inApp = await page
+    .waitForFunction((a) => !/login\.html|\/login(\b|\/|$)/.test(location.href) && !document.querySelector(a.pw) && !!document.querySelector(a.app), { pw: PASSWORD, app: IN_APP }, { timeout: 15_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (inApp) return;
+  // What the app said, never what was typed.
+  const said = (await page.locator('.login-message, .alert-danger, #loginMessage').first().innerText({ timeout: 1000 }).catch(() => '')).trim().replace(/\s+/g, ' ').slice(0, 160);
+  throw new SignInFailed(`couldn't sign in as ${login.user}: still on the sign-in page${said ? ` (“${said}”)` : ''}`);
 }
 
 async function boxOf(page: Page, sel: string): Promise<Box | null> {
@@ -121,7 +159,7 @@ async function boxOf(page: Page, sel: string): Promise<Box | null> {
 /** Shows the highlight around `sel` for a moment, so the viewer sees where the click lands. */
 async function point(page: Page, sel: string) {
   const el = page.locator(sel).first();
-  if (!(await el.isVisible({ timeout: 6000 }).catch(() => false))) throw new StepFailed(`${sel} isn't on the screen`);
+  if (!(await shows(page, sel, 6000))) throw new StepFailed(`${sel} isn't on the screen`);
   const box = await boxOf(page, sel);
   await page.evaluate((b) => (window as unknown as { __wt: { highlight(b: unknown): void } }).__wt.highlight(b), box);
   await page.waitForTimeout(550);
@@ -157,7 +195,7 @@ async function act(page: Page, a: WalkAction, origin: string) {
       await point(page, a.selector);
       await page.locator(a.selector).first().click({ timeout: 6000 });
       const opt = page.locator(`[role="option"]:has-text("${a.match.replace(/"/g, '\\"')}")`).first();
-      if (!(await opt.isVisible({ timeout: 5000 }).catch(() => false))) throw new StepFailed(`no option “${a.match}” in ${a.selector}`);
+      if (!(await opt.waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false))) throw new StepFailed(`no option “${a.match}” in ${a.selector}`);
       await opt.click({ timeout: 5000 });
       const val = await page.locator(`${a.selector} input`).first().inputValue().catch(() => '');
       if (val && !val.includes(a.match)) throw new StepFailed(`${a.selector} took “${val}”, not “${a.match}”`);
@@ -165,7 +203,7 @@ async function act(page: Page, a: WalkAction, origin: string) {
     }
     case 'dismissModal': {
       const btn = page.locator('.mx-dialog-footer button, .mx-name-closeButton').first();
-      if (await btn.isVisible({ timeout: 800 }).catch(() => false)) await btn.click({ timeout: 3000 });
+      if (await btn.waitFor({ state: 'visible', timeout: 800 }).then(() => true, () => false)) await btn.click({ timeout: 3000 });
       return;
     }
     case 'wait':
@@ -223,7 +261,7 @@ export async function record(i: RecordInput): Promise<RecordResult> {
         }
         return ok ? r.continue() : r.abort();
       });
-    i.progress?.('Signing in as the demo user…');
+    i.progress?.(`Signing in as ${i.login?.user ?? 'the demo user'}…`);
     const pre = await browser.newContext({ viewport: VIEWPORT, serviceWorkers: 'block' });
     await lock(pre);
     await signIn(await pre.newPage(), i.url, i.login);
@@ -236,6 +274,8 @@ export async function record(i: RecordInput): Promise<RecordResult> {
     t0 = Date.now();
     await page.goto(i.url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
     await page.waitForTimeout(600);
+    // The session didn't carry over to the filmed context: the same sign-in failure, said as one.
+    if (await shows(page, PASSWORD, 2500)) throw new SignInFailed(`couldn't sign in as ${i.login?.user ?? 'the demo user'}: still on the sign-in page`);
     await wt(page, 'chapter', i.script.title, i.script.requirement.length ? `Shows ${i.script.requirement.slice(0, 4).join(', ')}` : `${i.script.steps.length} steps`);
     await page.waitForTimeout(card);
     const total = i.script.steps.length;
@@ -291,6 +331,9 @@ export async function record(i: RecordInput): Promise<RecordResult> {
     if (i.signal.aborted) {
       res.status = 'cancelled';
       res.failure = { why: typeof i.signal.reason === 'string' ? i.signal.reason : 'cancelled' };
+    } else if (err instanceof SignInFailed) {
+      res.status = 'error';
+      res.failure = { why: err.message };
     } else {
       res.status = 'error';
       res.failure = { why: short(err) };

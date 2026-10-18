@@ -1,7 +1,8 @@
 // Walkthrough videos, the pure parts (shared/walkthroughs/, server/walkthroughs/store.ts): a test journey
 // as a script (both toolkit shapes, seeds, honest blocks), the captions, chapters and index.md, which
-// journeys record by themselves when a milestone is ready, the working copies' cleanup and quota, and the
-// little helpers (WAV lengths, the proxy's host).
+// journeys record by themselves when a milestone is ready, the working copies' cleanup and quota, who a
+// recording signs in as (the journey runner's identity, read from a sandboxed project.config.js), and the
+// little helpers (WAV lengths).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';
@@ -14,7 +15,8 @@ import type { WalkManifest, WalkScript } from '../src/shared/walkthroughs/types.
 import type { LiveReadiness } from '../src/shared/liveapp/readiness.js';
 import { WalkStore } from '../src/server/walkthroughs/store.js';
 import { toneWav, wavMs } from '../src/server/walkthroughs/media.js';
-import { proxyHost } from '../src/server/walkthroughs/office.js';
+import { hintOf, journeyNotes, resolveIdentity, type RunnerConfig } from '../src/shared/walkthroughs/identity.js';
+import { evaluateConfig, parseConfig } from '../src/server/walkthroughs/identity.js';
 
 const RUNNER = JSON.stringify({
   id: 'J-PR-01',
@@ -148,13 +150,9 @@ test('the working copies: files only from inside a recording, old auto-recording
   }
 });
 
-test('helpers: a WAV length from its header; the proxy is reached on loopback when the office binds everywhere', () => {
+test('helpers: a WAV length from its header', () => {
   assert.equal(wavMs(toneWav(1500)), 1500);
   assert.equal(wavMs(Buffer.from('nope')), 0);
-  assert.equal(proxyHost('0.0.0.0'), '127.0.0.1');
-  assert.equal(proxyHost(''), '127.0.0.1');
-  assert.equal(proxyHost('192.168.1.5'), '192.168.1.5');
-  assert.equal(proxyHost('::1'), '[::1]');
 });
 
 test('a milestone ready in the live app reaches the office’s walkthroughs (liveapp/ready-bus.ts)', async () => {
@@ -170,6 +168,95 @@ test('a milestone ready in the live app reaches the office’s walkthroughs (liv
     w.onReady = async (floor, news) => (got.push(`${floor}:${news.milestone}@${news.sha}`), []);
     emitLiveReady(ctx, 'demo', { key: 'k', kind: 'ready', milestone: 'phase-1', title: 'Requests', at: 1, sha: 'abc' }, readiness('ready'));
     assert.deepEqual(got, ['demo:phase-1@abc']);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/** A journey-runner config in the toolkit template's shape, neutral accounts only. */
+const CONFIG = `'use strict';
+const fs = require('fs');
+const path = require('path');
+const ROOT = path.resolve(__dirname, '..', '..');
+const DESIGN = path.join(ROOT, '..', 'design', 'ds.css');
+const DS_CSS = fs.existsSync(DESIGN) ? DESIGN : null;
+const DEFAULT_USER = 'demo_clerk';
+const DEFAULT_PASS = 'Sample2025!';
+function credentials() {
+  return { user: process.env.TEST_USER || process.env.APP_USER || DEFAULT_USER, pass: process.env.TEST_PASS || DEFAULT_PASS, fallbackUser: process.env.FALLBACK_USER ?? 'MxAdmin', fallbackPass: 'x' };
+}
+const ROLES = {
+  requester: {
+    label: 'Requester',
+    user: process.env.ROLE_REQUESTER_USER || 'demo_requester',
+    pass: process.env.ROLE_REQUESTER_PASS || 'Request2025!',
+  },
+  approver: {
+    label: 'Approver',
+    user: process.env.ROLE_APPROVER_USER || 'demo_approver',
+    pass: process.env.ROLE_APPROVER_PASS || 'Approve2025!',
+  },
+};
+module.exports = { root: ROOT, dsCss: DS_CSS, credentials, roles: ROLES };
+`;
+
+test('the journey runner’s config: evaluated in a sandbox with a clean environment, or read off its text; the same answer', async () => {
+  const want: RunnerConfig = { user: 'demo_clerk', pass: 'Sample2025!', roles: [{ key: 'requester', user: 'demo_requester', pass: 'Request2025!', label: 'Requester' }, { key: 'approver', user: 'demo_approver', pass: 'Approve2025!', label: 'Approver' }] };
+  assert.deepEqual(parseConfig(CONFIG), want);
+  // The office's own TEST_USER never reaches the child: the defaults come out.
+  process.env.TEST_USER = 'someone_else';
+  try {
+    const got = await evaluateConfig(CONFIG);
+    if (process.allowedNodeEnvironmentFlags.has('--permission')) assert.deepEqual(got, want);
+    else assert.equal(got, undefined, 'no permission model here: the text is read instead');
+  } finally {
+    delete process.env.TEST_USER;
+  }
+  // It can't write anything, start anything or read outside its copy.
+  const evil = `require('fs').writeFileSync(require('path').join(__dirname, 'x.txt'), 'x'); module.exports = { credentials: () => ({ user: 'demo_x', pass: 'p' }) };`;
+  assert.equal(await evaluateConfig(evil), undefined, 'a write is refused, so nothing comes back');
+  assert.equal(await evaluateConfig(`require('child_process').execSync('echo hi'); module.exports = {};`), undefined);
+  assert.equal(parseConfig('module.exports = {};'), undefined);
+});
+
+test('who a recording signs in as: the journey’s TEST_USER line, a role it names, the runner’s default, then the setting; never an admin', () => {
+  const cfg: RunnerConfig = { user: 'demo_clerk', pass: 'Sample2025!', roles: [{ key: 'approver', user: 'demo_approver', pass: 'Approve2025!', label: 'Approver' }] };
+  const setting = { user: 'demo_test_user', password: 'Demo2025!' };
+  const byComment = hintOf({ $comment: ['Approve a request.', 'Run as the Approver: TEST_USER=demo_approver TEST_PASS from tests/e2e/project.config.js.'] });
+  assert.deepEqual(byComment, { user: 'demo_approver', names: [] });
+  assert.deepEqual(resolveIdentity(byComment, cfg, setting), { user: 'demo_approver', password: 'Approve2025!', from: 'journey' });
+  assert.deepEqual(resolveIdentity(hintOf({ role: 'Approver' }), cfg, setting), { user: 'demo_approver', password: 'Approve2025!', from: 'journey' });
+  assert.deepEqual(resolveIdentity(hintOf({ persona: 'demo_clerk' }), cfg, setting), { user: 'demo_clerk', password: 'Sample2025!', from: 'journey' });
+  assert.deepEqual(resolveIdentity(hintOf({ role: 'a clerk in the back office' }), cfg, setting), { user: 'demo_clerk', password: 'Sample2025!', from: 'project-config' });
+  // An account the config doesn't list: the demo seed's usual password, honestly tried.
+  assert.deepEqual(resolveIdentity(hintOf({ $comment: 'TEST_USER=demo_viewer' }), cfg, setting), { user: 'demo_viewer', password: 'Sample2025!', from: 'journey' });
+  assert.deepEqual(resolveIdentity({ names: [] }, undefined, setting), { user: 'demo_test_user', password: 'Demo2025!', from: 'setting' });
+  const admin = resolveIdentity(hintOf({ $comment: 'TEST_USER=MxAdmin' }), { user: 'MxAdmin', pass: 'x', roles: [] }, setting);
+  assert.equal(admin.user, 'demo_test_user');
+  assert.equal(admin.from, 'setting');
+  assert.match(admin.note ?? '', /never sign in as an admin/);
+  // The lines worth showing when it fails: time windows and start states, never a password.
+  assert.deepEqual(journeyNotes({ $comment: ['Submit a request.', 'Time dependent: do not run between 07:30 and 08:00.', 'START STATE: fresh DB with the demo seed only. NOT re-runnable.', 'Credentials: TEST_PASS=Secret1 password in the config.', 'Environment: ADMIN_PASS=hunter2 must be running on a fresh DB'] }), ['Time dependent: do not run between 07:30 and 08:00.', 'START STATE: fresh DB with the demo seed only. NOT re-runnable.', 'Environment: ADMIN_PASS=*** must be running on a fresh DB']);
+  const s = scriptOf('tests/e2e/x.journey.json', JSON.stringify({ $comment: ['Run as: TEST_USER=demo_approver', 'Do not run before the request journey.'], steps: [{ name: 'Open', actions: [{ do: 'nav', item: 'Requests' }] }] })) as WalkScript;
+  assert.deepEqual(s.identity, { user: 'demo_approver', names: [] });
+  assert.deepEqual(s.notes, ['Do not run before the request journey.']);
+});
+
+test('new test evidence reaches the office’s walkthroughs without a live app (testing/news.ts → startWalkthroughs)', async () => {
+  process.env.AGENT_OFFICE_KOKORO = 'off';
+  const { testRunsLanded } = await import('../src/server/testing/news.js');
+  const { startWalkthroughs, walkthroughsOf } = await import('../src/server/walkthroughs/office.js');
+  const dir = mkdtempSync(path.join(tmpdir(), 'walk-runs-'));
+  try {
+    const ctx = { cfg: { dataDir: dir, host: '127.0.0.1' }, floors: new Map([['demo', { id: 'demo', dir }]]), toFloor: () => undefined } as unknown as Parameters<typeof walkthroughsOf>[0];
+    const stop = startWalkthroughs(ctx);
+    const got: string[] = [];
+    walkthroughsOf(ctx).onTestRuns = async (floor) => (got.push(floor), []);
+    testRunsLanded('demo');
+    testRunsLanded('nope');
+    stop();
+    testRunsLanded('demo');
+    assert.deepEqual(got, ['demo'], 'only a project of this office, and nothing once stopped');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

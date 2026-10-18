@@ -3,6 +3,8 @@
 // ties it to the exact build it recorded. Evidence for that commit only; a failed step is a failed video.
 // Pure types (no Node imports): the page reads them too.
 
+import type { IdentityHint, IdentitySource } from './identity.js';
+
 /** One thing the recorder does in a step (the toolkit journey-runner's vocabulary). */
 export type WalkAction =
   | { do: 'nav'; group?: string; item: string; caption: string }
@@ -40,6 +42,10 @@ export interface WalkScript {
   /** Use cases and rows it proves (UC-01, F101#/useCases/0/mainFlow/0, "build-plan row 10"). */
   requirement: string[];
   persona?: string;
+  /** Who the journey says runs it (./identity.ts). */
+  identity?: IdentityHint;
+  /** Its `$comment` lines about time windows and start states, shown when a recording of it fails. */
+  notes?: string[];
   steps: WalkStep[];
 }
 
@@ -74,13 +80,15 @@ export interface WalkManifest {
   id: string;
   floor: string;
   kind: 'workflow' | 'tour';
-  journey: { id: string; title: string; file: string; requirement: string[] };
+  journey: { id: string; title: string; file: string; requirement: string[]; notes?: string[] };
+  /** The batch it was recorded in (one recording app, one fresh database). */
+  batch?: string;
   /** The milestone an auto-recording was made for. */
   milestone?: { id: string; title: string };
   trigger: RecordingTrigger;
   by: string;
   /** The build it recorded: a video is evidence for this commit only. */
-  app: { commit: string; origin: string; user?: string };
+  app: { commit: string; origin: string; user?: string; userFrom?: IdentitySource; instance?: boolean };
   startedAt: number;
   finishedAt?: number;
   durationMs?: number;
@@ -104,11 +112,11 @@ export interface WalkManifest {
 
 /** The per-project settings. */
 export interface WalkSettings {
-  /** Record each passing journey of a milestone when it becomes ready in the live app. */
+  /** Record the journeys that passed against a commit on main (a passing build, a milestone ready), once per commit. */
   autoRecord: boolean;
   /** Narrate (local TTS) when it's available. */
   narrate: boolean;
-  /** The demo account the recorder signs in with (never an admin). */
+  /** The demo account the recorder signs in with when the project has no journey-runner config (never an admin). */
   demoUser: string;
   demoPassword: string;
 }
@@ -123,13 +131,26 @@ export interface WalkAvailability {
   notes: string[];
 }
 
-export interface WalkJob {
+/** Where a batch is: waiting its turn, starting its own copy of the app, recording, putting the videos together. */
+export type BatchPhase = 'queued' | 'booting' | 'recording' | 'finishing';
+
+/**
+ * One go of recording: the journeys of one commit, played one after another against the office's own
+ * throwaway copy of the app at that commit (a fresh database), stopped when the last one is done. A guided
+ * tour is a batch too (no app: it joins videos). One batch at a time per office.
+ */
+export interface WalkBatch {
   id: string;
   floor: string;
-  journey: string;
-  kind: 'workflow' | 'tour';
+  kind: 'workflows' | 'tour';
+  commit: string;
   trigger: RecordingTrigger;
-  status: 'queued' | 'running';
+  milestone?: { id: string; title: string };
+  by: string;
+  journeys: { id: string; title: string; rec?: string }[];
+  phase: BatchPhase;
+  /** The journey being recorded (1-based; 0 before the first). */
+  n: number;
   /** "Step 2 of 5: Click New request", "Making the MP4…". */
   line?: string;
   at: number;
@@ -142,11 +163,16 @@ export interface WalkView {
   floor: string;
   settings: Omit<WalkSettings, 'demoPassword'>;
   available: WalkAvailability;
-  /** The running build, when the app runs through its proxy. */
-  live?: { commit: string; running: boolean };
-  /** The journeys of the running build (what Record offers). */
+  /** Main's newest commit in the project's folder: what Record and Re-record all record. */
+  main?: { commit: string };
+  /** The journeys at that commit (what Record offers). */
   journeys: { id: string; title: string; file: string; requirement: string[] }[];
-  jobs: WalkJob[];
+  /** Who recordings sign in as by default, and where that came from (never a password). */
+  identity?: { user: string; from: IdentitySource };
+  /** This project's batches: the running one first, then the queued ones in order. */
+  batches: WalkBatch[];
+  /** Batches of other projects ahead in the office's one queue. */
+  ahead: number;
   /** Newest first. */
   recordings: WalkCardRecording[];
   /** Working copies' disk use and the office's quota. */
