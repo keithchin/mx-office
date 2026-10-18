@@ -13,6 +13,7 @@ import { isUp, nextStatus, type LiveAppEvent } from './machine.js';
 import { pickPorts } from './ports.js';
 import { pgBinDir, startTree, stopTree } from './process.js';
 import { floorToolkitEnv } from '../toolkit-env.js';
+import { linuxMxbuildIn, linuxMxbuildMessage, pickMxbuild, supportsMxbuildPath, type MxbuildPick } from './mxbuild.js';
 
 /** Lines of the log kept for the page. */
 const TAIL = 30;
@@ -21,6 +22,11 @@ const FAIL_LINES = 8;
 /** The log file starts over past this size. */
 const LOG_MAX_BYTES = 5 * 1024 * 1024;
 const READY_POLL_MS = 2_000;
+const MXBUILD_FROM: Record<NonNullable<MxbuildPick['source']>, string> = {
+  'toolkit.env': "MXBUILD_PATH in the project's .claude/toolkit.env",
+  office: "the office's MXBUILD_PATH",
+  'studio-pro': 'the installed Studio Pro of the project’s version',
+};
 
 export interface LiveAppDeps {
   cfg: LiveAppConfig;
@@ -34,6 +40,11 @@ export interface LiveAppDeps {
   /** Ports other floors' apps hold. */
   taken(): Set<number>;
   changed(state: LiveAppState): void;
+  /** Which mxbuild to build with, and whether this mxcli takes --mxbuild-path (mxbuild.ts; tests stand in for them). */
+  mxbuild?: {
+    pick(mpr: string, floorEnv: Record<string, string>): MxbuildPick;
+    supportsFlag(mxcli: string): Promise<boolean>;
+  };
 }
 
 export class LiveApp {
@@ -48,6 +59,8 @@ export class LiveApp {
   /** Whether this start already cleaned the build and tried again once. */
   private retried = false;
   private soon: NodeJS.Timeout | undefined;
+  /** The mxbuild the last start picked, and whether mxcli could be told it. */
+  private mxbuild?: { pick: MxbuildPick; flag?: boolean };
 
   constructor(private d: LiveAppDeps) {
     this.checkout = path.join(d.liveDir, d.floorId);
@@ -169,9 +182,24 @@ export class LiveApp {
     const [app, admin, serve] = ports;
     const args = ['run', '--local', '-p', path.basename(mpr), '--app-port', String(app), '--admin-port', String(admin), '--serve-port', String(serve)];
     args.push('--db-host', `${cfg.db.host.includes(':') ? `[${cfg.db.host}]` : cfg.db.host}:${cfg.db.port}`, '--db-user', cfg.db.user, '--db-password', cfg.db.password, '--db-name', databaseName(this.d.floorId), '--ensure-db');
-    this.note(`$ mxcli ${args.map((a, i) => (args[i - 1] === '--db-password' ? '***' : a)).join(' ')}`);
     // The floor's toolkit.env (its MXBUILD_PATH) over the office's own, as for its workers.
-    const child = startTree(this.d.mxcli!, args, path.dirname(mpr), { ...floorToolkitEnv(this.d.floorDir), PGPASSWORD: cfg.db.password }, pgBinDir());
+    const floorEnv = floorToolkitEnv(this.d.floorDir);
+    // The mxbuild, told to mxcli rather than left to its resolution (a cached Linux download can't run on Windows).
+    const pick = (this.d.mxbuild?.pick ?? pickMxbuild)(mpr, floorEnv);
+    let flag: boolean | undefined;
+    const extra: Record<string, string> = {};
+    if (pick.path) {
+      flag = await (this.d.mxbuild?.supportsFlag ?? supportsMxbuildPath)(this.d.mxcli!);
+      if (gen !== this.gen) return;
+      if (flag) args.push('--mxbuild-path', pick.path);
+      extra.MXBUILD_PATH = pick.path;
+    }
+    this.mxbuild = { pick, flag };
+    for (const s of pick.skipped) this.note(`mxbuild: ${s}`);
+    if (pick.path) this.note(`mxbuild: ${pick.path} (${MXBUILD_FROM[pick.source!]})${flag ? '' : ': this mxcli has no --mxbuild-path, so it only gets MXBUILD_PATH'}`);
+    else if (pick.expected) this.note(`mxbuild: Studio Pro ${pick.version} isn't installed (no ${pick.expected}); mxcli picks one itself`);
+    this.note(`$ mxcli ${args.map((a, i) => (args[i - 1] === '--db-password' ? '***' : a)).join(' ')}`);
+    const child = startTree(this.d.mxcli!, args, path.dirname(mpr), { ...floorEnv, ...extra, PGPASSWORD: cfg.db.password }, pgBinDir());
     this.child = child;
     this.set({ appPort: app });
     let partial = '';
@@ -186,6 +214,12 @@ export class LiveApp {
     child.once('exit', (code) => {
       if (this.child === child) this.child = null;
       if (gen !== this.gen || !isUp(this.s.status)) return;
+      // mxcli picked a Linux mxbuild on Windows: no retry fixes that, so say why and how to fix it.
+      const linux = this.s.status !== 'running' ? linuxMxbuildIn(this.s.log) : undefined;
+      if (linux) {
+        this.fail(linuxMxbuildMessage(linux, this.mxbuild?.pick ?? { skipped: [] }, this.mxbuild?.flag, this.d.mxcli!));
+        return;
+      }
       // A first build that fails is often the last build's leftovers: clean and try once more.
       if (this.s.status !== 'running' && !this.retried) {
         this.retried = true;

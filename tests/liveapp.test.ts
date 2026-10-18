@@ -56,9 +56,10 @@ test('state machine: start once, stop wins, update only when running', () => {
 test('config: defaults, then live-app.json, then the environment', () => {
   const dir = tmp();
   try {
-    assert.deepEqual(liveAppConfig(dir, {}), LIVE_APP_DEFAULTS);
+    // A home with no workspace mxcli: the bare default (desktop-env.test.ts covers the workspace one).
+    assert.deepEqual(liveAppConfig(dir, {}, dir), LIVE_APP_DEFAULTS);
     writeFileSync(path.join(dir, 'live-app.json'), JSON.stringify({ ports: '9000-9010', dbUser: 'mendix', pollSeconds: 30, mxcli: 'C:/bin/mxcli.exe' }));
-    const fromFile = liveAppConfig(dir, {});
+    const fromFile = liveAppConfig(dir, {}, dir);
     assert.deepEqual(fromFile.ports, { from: 9000, to: 9010 });
     assert.equal(fromFile.db.user, 'mendix');
     assert.equal(fromFile.pollMs, 30_000);

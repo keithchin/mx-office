@@ -8,7 +8,9 @@ weight: 2
 
 ## Where it is
 
-`C:\Users\<you>\agent-spike\tools\mxcli\mxcli.exe` (`agent-spike\bin\mxcli.exe` before the layout change). The launcher puts it on `PATH` and sets `AGENT_OFFICE_LIVE_MXCLI` to it for the live app. The wizard uses `AGENT_OFFICE_MXCLI`.
+`C:\Users\<you>\agent-spike\tools\mxcli\mxcli.exe` (`agent-spike\bin\mxcli.exe` before the layout change). The office picks one mxcli for everything, however it was started (the launcher, the [desktop app](../administration/desktop-app.md) or `npm start`): the one chosen in 🚀 First-run setup, else `AGENT_OFFICE_MXCLI`, else that workspace one, and only then an `mxcli` on `PATH`. The live app, the Model tab, Testing and the wizard run it, and its folder goes first on the agents' `PATH`. `AGENT_OFFICE_LIVE_MXCLI` (or `mxcli` in `live-app.json`) still overrides it for the live app. The office prints the one it uses at start (`mxcli:`).
+
+The live app tells mxcli which mxbuild to build with (`--mxbuild-path`): `MXBUILD_PATH` in the project's `.claude/toolkit.env`, else the office's `MXBUILD_PATH`, else, on Windows, the installed Studio Pro of the project's Mendix version (`C:\Program Files\Mendix\<version>\modeler\mxbuild.exe`), before any download mxcli cached. The Mendix CDN only publishes Linux mxbuild, so a cached one can't run on Windows; when mxcli still picks one, the live app says so and how to fix it (install that Studio Pro, or set the mxbuild path). An mxcli too old for `--mxbuild-path` only gets `MXBUILD_PATH` in its environment.
 
 It's validated on Mendix **11.6.x**; earlier projects use **11.6.4**, and the new-project wizard now starts new ones on the newest **11.12** installed (11.12.4).
 
