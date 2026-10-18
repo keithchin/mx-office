@@ -66,7 +66,7 @@ const TERMINAL_FLOOD_KB = 2048;
 const VALID = ['unit', 'pages', 'journey', 'command-center', 'perf-quick', 'busy'];
 const quick = process.argv.includes('--quick') || suite === 'perf-quick';
 /** The views a quick run opens: one of each kind of page, and the ones that were slowest before. */
-const QUICK_VIEWS = ['cc-chat', 'cc-terminal', 'cc-fullterm', 'board', 'org', 'workers', 'budget', 'documents', 'audit', 'home-projects', 'pixel', 'phone', 'switch-1d-board', 'switch-1d-command'];
+const QUICK_VIEWS = ['cc-chat', 'cc-terminal', 'cc-fullterm', 'board', 'org', 'workers', 'budget', 'documents', 'audit', 'home', 'home-projects', 'pixel', 'phone', 'switch-1d-board', 'switch-1d-command'];
 if (!VALID.includes(suite)) {
   console.error(`usage: run.mjs --suite ${VALID.join('|')} --root <test-offices dir> --out <dir> --id <id>`);
   process.exit(2);

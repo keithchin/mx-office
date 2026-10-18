@@ -1,0 +1,106 @@
+/* Home (start/view.ts): the title with the quick actions, the health strip, then two columns of cards
+   (Needs you and the active projects; the clients and the recent milestones), one column on a narrow
+   window. In the color tokens, so every theme draws it; the Portal themes add the office's left
+   navigation (start/nav.ts, the 1D view's item look from ui/portal/nav.css). */
+
+body.start-page .home-main { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+
+/* ---- The Portal left navigation: the office's pages, Home picked ------------------------------------- */
+html[data-theme^='portal'] body.start-page { --pt-nav-w: 228px; --pt-top: calc(var(--pt-h) + 1px + env(safe-area-inset-top)); }
+html[data-theme^='portal'] body.start-page.st-has-nav .lite-main { width: auto; max-width: none; margin: 0 0 0 var(--pt-nav-w); padding: 0 32px 40px; }
+html[data-theme^='portal'] .st-nav .pt-bottom { padding-top: 8px; }
+@media (max-width: 760px) {
+  /* A phone: the bar's launcher goes to the office's pages; the page has the whole width. */
+  html[data-theme^='portal'] .st-nav { display: none; }
+  html[data-theme^='portal'] body.start-page.st-has-nav .lite-main { margin-left: 0; padding: 0 16px 40px; }
+}
+
+/* ---- The title and the health strip ------------------------------------------------------------------- */
+.st-head { padding-bottom: 12px; }
+.st-quick { flex-wrap: wrap; }
+.st-health {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 0 0 20px; padding: 8px 12px;
+  border-radius: 4px; color: var(--muted); font-size: 13px; background: transparent; border: 1px solid var(--rule);
+}
+.st-health.warn { border-color: var(--warn); background: var(--warn-soft); color: var(--ink); }
+.st-health-word { font-weight: 600; color: var(--ink-2); }
+.st-health.warn .st-health-word { color: var(--warn-ink); }
+.st-hi { color: inherit; }
+.st-hi.warn { color: var(--warn-ink); font-weight: 600; }
+a.st-hi { text-decoration: underline; }
+
+/* ---- The two columns of cards ------------------------------------------------------------------------- */
+.st-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; align-items: start; }
+.st-grid[hidden] { display: none; }
+.st-col { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+@media (max-width: 1000px) { .st-grid { grid-template-columns: minmax(0, 1fr); } }
+.st-card { min-width: 0; padding: 16px; background: var(--card); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 4px; }
+html[data-theme^='portal'] .st-card { border-color: var(--line); box-shadow: 0 1px 3px rgba(10, 19, 36, .14); }
+html[data-theme='portal-dark'] .st-card { box-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+.st-card-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+body.lite .st-h { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; }
+.st-more { font-size: 13px; color: var(--link); white-space: nowrap; }
+.st-note { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.st-note[hidden] { display: none; }
+.st-note.bad { color: var(--bad-ink); }
+.st-note.calm { color: var(--good-ink); }
+
+/* ---- Needs you: an item's tags over its line, its buttons at the bottom right ------------------------- */
+.st-needs, .st-rows, .st-clients, .st-acts-list { list-style: none; margin: 0; padding: 0; }
+.st-need { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; margin-bottom: 8px; border: 1px solid var(--rule); border-left: 3px solid var(--warn); border-radius: 4px; background: var(--card); }
+.st-need[data-level='block'] { border-left-color: var(--bad); }
+.st-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-tag { display: inline-block; max-width: 100%; padding: 1px 8px; border-radius: 10px; background: var(--sunken); color: var(--ink-2); font-size: 12px; line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-tag-client { font-weight: 600; }
+.st-urg.block { background: var(--bad-soft); color: var(--bad-ink); }
+.st-urg.warn { background: var(--warn-soft); color: var(--warn-ink); }
+.st-need-t { margin: 0; font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
+.st-need-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.st-who { color: var(--muted); font-size: 12px; }
+.st-acts { display: flex; gap: 8px; margin-left: auto; }
+.st-seeall { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.st-seeall a { color: var(--link); }
+
+/* ---- Active projects: one compact row each, red when something is stuck or failing --------------------- */
+.st-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 8px; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.st-row:last-child { border-bottom: 0; }
+.st-row:hover { background: var(--hover); }
+.st-row.red { box-shadow: inset 3px 0 0 var(--bad); background: color-mix(in srgb, var(--bad-soft) 45%, transparent); }
+.st-tile { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 4px; background: color-mix(in srgb, var(--tile, var(--accent)) 16%, var(--card)); color: color-mix(in srgb, var(--tile, var(--accent)) 62%, var(--ink)); font-size: 12px; font-weight: 600; }
+.st-row-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.st-row-top { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+body.lite a.st-row-name { font-weight: 600; color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.lite a.st-row-name:hover { text-decoration: underline; }
+.st-row-client { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-row-line { margin: 0; color: var(--muted); font-size: 12px; }
+.st-row .pg-mini { max-width: 420px; }
+.st-row-facts { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 12px; color: var(--muted); text-align: right; }
+.st-live.good { color: var(--good-ink); }
+.st-live.bad, .st-red { color: var(--bad-ink); font-weight: 600; }
+@media (max-width: 560px) {
+  .st-row { grid-template-columns: 32px minmax(0, 1fr); }
+  .st-row-facts { grid-column: 2; flex-direction: row; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; text-align: left; }
+}
+
+/* ---- Clients: small cards ------------------------------------------------------------------------------ */
+.st-clients { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+body.lite a.st-client-a { display: flex; flex-direction: column; gap: 2px; height: 100%; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 4px; color: var(--ink); text-decoration: none; }
+body.lite a.st-client-a:hover { background: var(--hover); }
+body.lite a.st-client-a:hover .st-client-n { text-decoration: underline; }
+.st-client-n { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-client-l { color: var(--muted); font-size: 12px; }
+.st-brain.on { color: var(--good-ink); }
+
+/* ---- Recent activity ----------------------------------------------------------------------------------- */
+.st-act { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--rule); font-size: 13px; }
+.st-act:last-child { border-bottom: 0; }
+.st-act-k { color: var(--muted); font-size: 12px; }
+.st-act[data-kind='accepted'] .st-act-k, .st-act[data-kind='live-ready'] .st-act-k { color: var(--good-ink); }
+.st-act-t { overflow-wrap: anywhere; }
+.st-act-t a { color: var(--link); }
+.st-act-at { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+/* ---- No projects yet ----------------------------------------------------------------------------------- */
+.st-empty { max-width: 640px; padding: 24px; margin: 8px 0; background: var(--card); border: 1px solid var(--rule-strong); border-radius: 4px; }
+.st-empty[hidden] { display: none; }
+.st-empty p { color: var(--ink-2); line-height: 1.5; }

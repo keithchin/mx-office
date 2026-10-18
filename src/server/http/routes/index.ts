@@ -21,6 +21,7 @@ import { modelChangeRoutes } from './model-change.js';
 import { githubRoutes } from './github.js';
 import { homeRoutes } from './home.js';
 import { desktopRoutes } from './desktop.js';
+import { startRoutes } from './start.js';
 import { pageRoutes } from './pages.js';
 import { prShotRoutes } from './prshots.js';
 import { rankingRoutes } from './ranking.js';
@@ -168,6 +169,8 @@ export const routes: readonly Route[] = [
   mobileRoutes.status,
   desktopRoutes.status,
   desktopRoutes.liveapp,
+  // Home (start.ts): every project at a glance.
+  startRoutes.view,
   mobileRoutes.push,
   mobileRoutes.phones,
   phoneAccessRoutes.view,
@@ -245,6 +248,7 @@ export const routes: readonly Route[] = [
   studioRoutes.sync,
   studioRoutes.open,
   pageRoutes.office,
+  startRoutes.page,
   pageRoutes.home,
   pageRoutes.clients,
   pageRoutes.firm,

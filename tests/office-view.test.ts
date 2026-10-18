@@ -13,8 +13,9 @@ import { startTab } from '../src/client/shared/start-tab.js';
 const root = path.join(import.meta.dirname, '..');
 const read = (f: string) => readFileSync(path.join(root, f), 'utf8');
 
-test('every old address of the 3D office opens the 1D view, of the floor the link named', () => {
-  for (const q of ['', '?view=3d', '?view=retro', '?3d=1&view=3d', '?3d=1&view=retro', '?gfx=low', '?view=2d']) assert.equal(legacyOfficeUrl(q), '/lite', q || '(nothing)');
+test('a bare / opens Home; every old address of the 3D office opens the 1D view, of the floor the link named', () => {
+  assert.equal(legacyOfficeUrl(''), '/start', 'nothing after it: Home');
+  for (const q of ['?view=3d', '?view=retro', '?3d=1&view=3d', '?3d=1&view=retro', '?gfx=low', '?view=2d']) assert.equal(legacyOfficeUrl(q), '/lite', q || '(nothing)');
   assert.equal(legacyOfficeUrl('?floor=mx-spike'), '/lite?floor=mx-spike');
   assert.equal(legacyOfficeUrl('?3d=1&view=retro&floor=travel%20app'), '/lite?floor=travel%20app');
   assert.equal(legacyOfficeUrl('?floor='), '/lite');
@@ -24,7 +25,7 @@ test('/ and /index.html answer with a redirect, signed in or not, never a 404 or
   const route = pageRoutes.office;
   assert.deepEqual(route.path, ['/', '/index.html']);
   assert.equal(route.auth, 'public', 'the 1D view asks for the sign-in itself, so the redirect needs none');
-  for (const [search, location] of [['', '/lite'], ['?view=3d&floor=f1', '/lite?floor=f1'], ['?3d=1&view=retro', '/lite']] as const) {
+  for (const [search, location] of [['', '/start'], ['?view=3d&floor=f1', '/lite?floor=f1'], ['?3d=1&view=retro', '/lite']] as const) {
     let status = 0;
     let headers: Record<string, string> = {};
     const res = { writeHead: (s: number, h: Record<string, string>) => ((status = s), (headers = h), res), end: () => res };

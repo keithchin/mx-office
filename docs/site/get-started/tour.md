@@ -10,7 +10,8 @@ This page shows where everything is. Each screen has its own page under [Using t
 
 | Address | What it is |
 |---|---|
-| `/home` | Every project as a card, office-wide **📊 Statistics**, a **🗺️ 2D Overview** of all projects, and the **🧾 Audit log** of the whole office. See [Home](../using-the-office/home.md). |
+| `/start` | **Home**: what needs you across every project (top 5, each with its client and project), the active projects with their progress, team and live app, the clients' spend, recent milestones and the office's health. Where the wordmark and a bare `/` go. See [Home](../using-the-office/home.md#home-start). |
+| `/home` | The **Projects** page: every project as a card, office-wide **📊 Statistics**, a **🗺️ 2D Overview** of all projects, and the **🧾 Audit log** of the whole office. See [Home](../using-the-office/home.md). |
 | `/lite?floor=<id>` | The **1D view** of one project, with a tab for everything. The default and most useful view. |
 | `/pixel?floor=<id>` | The **2D Office view**: the project from above in pixel art, opened from the 1D view's **Go to Office**. See [2D Office view](../using-the-office/2d-view.md). |
 | `/firm` | **🏛️ The Firm**: independent Reviewer Agents that audit a project and report to you. See [The Firm](../using-the-office/the-firm.md). |

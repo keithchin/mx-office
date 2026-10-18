@@ -127,6 +127,7 @@ export default defineConfig({
       input: {
         lite: resolve(import.meta.dirname, 'src/client/lite.html'),
         pixel: resolve(import.meta.dirname, 'src/client/pixel.html'),
+        start: resolve(import.meta.dirname, 'src/client/start.html'),
         home: resolve(import.meta.dirname, 'src/client/home.html'),
         firm: resolve(import.meta.dirname, 'src/client/firm.html'),
         clients: resolve(import.meta.dirname, 'src/client/clients.html'),

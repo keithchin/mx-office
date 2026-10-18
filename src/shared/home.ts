@@ -1,12 +1,15 @@
 // The home page (/home): where it sits among the office's pages, when the flat views send you there,
 // and the numbers its 📊 Statistics tab shows (GET /api/home/stats, see server/home-stats.ts). Pure
-// code, no DOM or Node, so the server, the pages and the tests all read the same rules.
+// code, no DOM or Node, so the server, the pages and the tests all read the same rules. Home itself, the
+// office's landing page, is /start (shared/start.ts); this page is the Projects page.
+
+import { HOME_PAGE } from './start.js';
 
 /**
  * The pages that sign-in sends you back to (`/login?next=`), so signing in from one of them lands
  * on it again. Anything else goes to `/` (which opens the 1D view), never an open redirect.
  */
-export const RETURN_PAGES = ['/home', '/lite', '/pixel', '/docs', '/m'] as const;
+export const RETURN_PAGES = ['/start', '/home', '/lite', '/pixel', '/docs', '/m'] as const;
 export type ReturnPage = (typeof RETURN_PAGES)[number] | `/docs/${string}`;
 /** A page of the docs (/docs/get-started/quick-start): lower-case words, dashes and slashes only. */
 const DOC_PAGE = /^\/docs(\/[a-z0-9][a-z0-9-]*)+$/;
@@ -25,13 +28,16 @@ export function flatViewGoesHome(search: string, remembered: string | null): boo
 }
 
 /**
- * Where an address of the old 3D office goes now: `/` and `/index.html` (with `?view=3d`, `?view=retro`,
+ * Where `/` and `/index.html` go: a bare one to Home (/start). An address of the old 3D office (with `?view=3d`, `?view=retro`,
  * `?3d=1`, `?gfx=…` or anything else) open the 1D view, of the floor the link named when it named one
  * (`?floor=`); the 1D view itself hands over to Home when there's no floor to open (flatViewGoesHome).
  */
 export function legacyOfficeUrl(search: string): string {
-  const floor = new URLSearchParams(search).get('floor');
-  return floor ? `/lite?floor=${encodeURIComponent(floor)}` : '/lite';
+  const q = new URLSearchParams(search);
+  const floor = q.get('floor');
+  if (floor) return `/lite?floor=${encodeURIComponent(floor)}`;
+  // A bare / (nothing after it): Home, the office's landing page.
+  return [...q.keys()].length ? '/lite' : HOME_PAGE;
 }
 
 /** One project's row in the Statistics tab's comparison table. */

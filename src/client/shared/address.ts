@@ -5,6 +5,7 @@
 import { store } from '../state';
 import { lastFloor, rememberFloor } from '../state/persist';
 import { flatViewGoesHome } from '../../shared/home';
+import { HOME_PAGE } from '../../shared/start';
 
 const params = () => new URLSearchParams(location.search);
 
@@ -48,6 +49,6 @@ export function followFloor() {
  */
 export function leaveForHome(): boolean {
   if (!flatViewGoesHome(location.search, lastFloor())) return false;
-  location.replace('/home');
+  location.replace(HOME_PAGE);
   return true;
 }

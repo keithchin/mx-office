@@ -59,7 +59,7 @@ export const MENU = {
   connections: { id: 'connections', icon: '🔌', label: 'Connections', section: 'Office', shown: () => store.me.admin, title: () => 'The office’s GitHub and Mendix tokens, Jev key and password, git & gh, its folders and worktree cleanup' },
   // The office’s own manual, its own page (/docs): how everything here works.
   guide: { id: 'guide', icon: '📖', label: 'Documentation', section: 'Office', title: () => 'How the office works: guides, reference and FAQ (its own page, /docs)' },
-  home: { id: 'home', icon: '🏠', label: 'Home', section: 'Office', title: () => 'Every project in the building, and the office in numbers (its own page, /home)' },
+  home: { id: 'home', icon: '🏠', label: 'Home', section: 'Office', title: () => 'What needs you, and how every project is going, across every client (its own page, /start)' },
   // While workers wait on someone (N does the same).
   waiting: {
     id: 'waiting',

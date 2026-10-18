@@ -2,6 +2,7 @@
 // a pane down the left like a low-code platform's app pane, only in a Portal theme (.pt-only; the other
 // themes keep the tab row exactly as it was).
 //
+//   ⌂ Home                        Home (/start): what needs you across every project
 //   [tile] Project name ⌄        the floor picker (#floor), moved here from the top bar (./slot.ts)
 //   General ⌃                     groups that open and close, remembered per viewer in this browser
 //     Overview            (8)     the picked page in the portal's grey pill, the tabs' badges mirrored
@@ -17,6 +18,7 @@
 
 import { store } from '../../state';
 import { floorPalette } from '../../../shared/floors';
+import { HOME_PAGE } from '../../../shared/start';
 import { tileLetters } from '../../home/portal-logic';
 import { h } from '../dom';
 import { icon, type PortalIcon } from './icons';
@@ -166,7 +168,9 @@ export function portalNav(deps: PortalNavDeps): PortalNav {
     closeFlyout();
     drawRail();
   });
-  const pane = h('nav.pt-nav.pt-only', { id: 'pt-nav', 'aria-label': 'Project navigation' }, h('div.pt-nav-in', {}, card, groupsList, h('hr.pt-nav-rule'), bottom, goTo), fold);
+  // Home, on top of everything: the office's landing page (start/), whose own navigation has it picked.
+  const home = h('a.pt-item.pt-home-item', { href: HOME_PAGE, title: 'Home: what needs you, and how every project is going' }, icon('home', 'pt-item-ico'), h('span.pt-item-l', {}, 'Home'));
+  const pane = h('nav.pt-nav.pt-only', { id: 'pt-nav', 'aria-label': 'Project navigation' }, h('div.pt-nav-in', {}, home, card, groupsList, h('hr.pt-nav-rule'), bottom, goTo), fold);
   const scrim = h('div.pt-scrim.pt-only', { 'aria-hidden': 'true' });
   scrim.addEventListener('click', () => drawer(false));
   const main = document.querySelector('.lite-main');

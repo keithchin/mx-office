@@ -35,6 +35,8 @@ export function views(f, other) {
     { id: 'audit', name: 'Audit log', path: lite('audit'), storage: { 'agent-office.audit-lite.sub': 'events' }, ready: shown('#audit-view', 10) },
     { id: 'incidents', name: 'Incidents', path: lite('audit'), storage: { 'agent-office.audit-lite.sub': 'incidents' }, ready: shown('#audit-view', 10) },
     { id: 'settings', name: 'Settings', path: lite('settings'), ready: shown('#settings-view', 10) },
+    // Home (/start), the landing page: usable once its project rows and its Needs you (read from every project) are drawn.
+    { id: 'home', name: 'Home', path: '/start', ready: `(${shown('#st-projects .st-rows', 3)} && !!document.querySelector('#st-needs .st-needs, #st-needs .st-note.calm'))` },
     { id: 'home-projects', name: 'Home: Projects', path: '/home?tab=projects', ready: shown('#projects-view', 5) },
     { id: 'home-overview', name: 'Home: Overview', path: '/home?tab=overview', ready: shown('#overview-view', 5) },
     { id: 'home-budget', name: 'Home: Budget', path: '/home?tab=budget', ready: shown('#budget-view', 5) },
