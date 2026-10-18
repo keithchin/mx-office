@@ -21,7 +21,7 @@ import { RECORDING_CAP_MS, type RecordingTrigger, type WalkAvailability, type Wa
 import { listFiles, mainOf, readFiles } from '../testing/repo.js';
 import { runnerConfigAt } from './identity.js';
 import { findFfmpeg, type Tool } from './media.js';
-import type { Browser } from './recorder.js';
+import { AppSessions, type Browser } from './recorder.js';
 import { runRecording } from './run.js';
 import { saveToRepo, type Gh } from './save.js';
 import { WalkStore } from './store.js';
@@ -32,6 +32,8 @@ import { findKokoro, kokoroVoice, type Voice } from './tts.js';
 export interface RecordingApp {
   url: string;
   commit: string;
+  /** Its Mendix runtime log, when there is one (a refused session shows there). */
+  runtimeLog?: string;
   alive(): boolean;
   stop(): Promise<void>;
 }
@@ -271,6 +273,7 @@ export class Walkthroughs {
   /** One batch: the app at its commit, each journey recorded against it in turn, the app stopped. */
   private async runWorkflows(b: Batch, scripts: WalkScript[], s: WalkSettings, narrate: boolean): Promise<void> {
     let app: RecordingApp | undefined;
+    let sessions: AppSessions | undefined;
     try {
       b.phase = 'booting';
       this.say(b, `Starting the recording app at @${b.commit.slice(0, 7)} on a fresh database…`);
@@ -282,17 +285,21 @@ export class Walkthroughs {
         return;
       }
       b.phase = 'recording';
+      // One session per account for the whole batch (an unlicensed app keeps only 6 open), signed out at the end.
+      sessions = new AppSessions({ url: app.url, ...(app.runtimeLog ? { runtimeLog: app.runtimeLog } : {}), ...(this.d.launch ? { launch: this.d.launch } : {}) });
       const cfg = await this.runnerConfig(b.floor, b.commit);
       if (narrate && this.voice === undefined) await this.voiceLook;
       for (const [k, sc] of scripts.entries()) {
         if (b.ctl.signal.aborted) break;
         b.n = k + 1;
         this.say(b, `Recording ${k + 1} of ${scripts.length}: ${sc.title}`);
-        const m = await this.recordOne(b, sc, app, s, cfg, narrate);
+        const m = await this.recordOne(b, sc, app, sessions, s, cfg, narrate);
         this.d.changed?.(b.floor, m);
       }
     } finally {
       b.phase = 'finishing';
+      if (sessions) this.say(b, 'Signing out…');
+      await sessions?.close().catch(() => undefined);
       this.say(b, 'Stopping the recording app…');
       await app?.stop().catch(() => undefined);
     }
@@ -328,7 +335,7 @@ export class Walkthroughs {
     this.d.changed?.(b.floor, m);
   }
 
-  private async recordOne(b: Batch, sc: WalkScript, app: RecordingApp, s: WalkSettings, cfg: RunnerConfig | undefined, narrate: boolean): Promise<WalkManifest> {
+  private async recordOne(b: Batch, sc: WalkScript, app: RecordingApp, sessions: AppSessions, s: WalkSettings, cfg: RunnerConfig | undefined, narrate: boolean): Promise<WalkManifest> {
     const who = resolveIdentity(sc.identity ?? { names: [] }, cfg, { user: s.demoUser, password: s.demoPassword });
     const m = this.manifestOf(b, sc, new URL(app.url).origin, who.user, who.from);
     if (who.note) m.outputs.notes.push(`Sign-in: ${who.note}.`);
@@ -343,7 +350,7 @@ export class Walkthroughs {
       await this.store.write(m);
       return await runRecording(
         { tool: this.tool, ...(this.voice ? { voice: this.voice } : {}), commitNow: () => (app.alive() ? b.commit : undefined), ...(this.d.launch ? { launch: this.d.launch } : {}), ...(this.d.cardMs !== undefined ? { cardMs: this.d.cardMs } : {}), ...(this.d.stepMs !== undefined ? { stepMs: this.d.stepMs } : {}) },
-        { m, dir, url: app.url, script: sc, login: { user: who.user, password: who.password }, narrate, signal: one.signal, progress: (l) => this.say(b, `Recording ${b.n} of ${b.journeys.length}: ${l}`), save: (x) => this.store.write(x) },
+        { m, dir, url: app.url, script: sc, login: { user: who.user, password: who.password }, sessions, narrate, signal: one.signal, progress: (l) => this.say(b, `Recording ${b.n} of ${b.journeys.length}: ${l}`), save: (x) => this.store.write(x) },
       );
     } catch (err) {
       Object.assign(m, { status: one.signal.aborted ? 'cancelled' : 'error', failure: { why: (err as Error).message.slice(0, 300) }, finishedAt: Date.now() });

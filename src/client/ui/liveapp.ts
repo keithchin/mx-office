@@ -15,6 +15,7 @@ import { readinessCard } from './liveapp/readiness';
 import { liveViewer } from './liveapp/viewer';
 import { desktopEmbed, liveEmbed } from './liveapp/embed';
 import { liveConsole } from './liveapp/console';
+import { sessionCapHint } from './liveapp/session-cap';
 import { liveUrl, openPanel } from './liveapp/open';
 import { aheadBanner } from './branch-ahead/banner';
 import { walkLinks } from './walkthroughs/links';
@@ -53,6 +54,8 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
   const viewer = bridge ? liveEmbed(bridge, () => store.floor ?? '') : liveViewer();
   const opener = openPanel(!!bridge);
   const panel = liveConsole(net);
+  // The app refused a session (an unlicensed app keeps only 6): said here, from what the Console streams.
+  const cap = sessionCapHint();
   // The way to 🎬 Walkthroughs (ui/walkthroughs/), and the readiness card's link to a ready milestone's video.
   const walks = walkLinks();
   walks.onChange = () => draw();
@@ -122,13 +125,14 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     const empty = url || up || crashed ? null : h('p.la-empty', {}, s.started ? 'The app is stopped. ▶ Start builds the project’s main branch and runs it here; it follows main as PRs merge.' : "The app isn't started. ▶ Start builds the project's main branch and runs it here; it follows main as PRs merge.");
     walks.update(s.floor, s.readiness?.sha ?? s.sha, true);
     const card = readinessCard(s, (m) => walks.linkFor(m, s.readiness?.sha, s.readiness?.milestones.find((x) => x.id === m)?.journeys.map((j) => j.id)));
-    top.replaceChildren(bar, ...([failed, refresh, note, hint, opener.el, banner.el, card, walks.el, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
+    top.replaceChildren(bar, ...([failed, refresh, note, hint, opener.el, url ? cap.el : null, banner.el, card, walks.el, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
     if (log) log.scrollTop = log.scrollHeight;
   }
 
   return {
     route(msg) {
       panel.route(msg, store.floor);
+      cap.route(msg, store.floor);
       if (msg.t === 'welcome' || msg.t === 'floor.enter') {
         state = null;
         draw();

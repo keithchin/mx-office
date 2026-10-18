@@ -8,6 +8,7 @@ import { appendFile, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/p
 import path from 'node:path';
 import { ulid } from '../../shared/evidence/ids.js';
 import type { CaptureRecord } from '../../shared/design/types.js';
+import { endMendixSession } from '../../shared/liveapp/session-cap.js';
 
 export const CAPTURE_LIMIT_MS = 45_000;
 export const VIEWPORTS = [{ width: 1440, height: 900 }] as const;
@@ -26,6 +27,7 @@ interface PwPage {
   goto(url: string, o: { waitUntil: 'load'; timeout: number }): Promise<unknown>;
   waitForTimeout(ms: number): Promise<void>;
   screenshot(o: { type: 'png'; fullPage: boolean }): Promise<Buffer>;
+  evaluate<R>(fn: () => Promise<R>): Promise<R>;
 }
 interface PwBrowser {
   newContext(o: { viewport: { width: number; height: number }; colorScheme: 'light' | 'dark'; serviceWorkers: 'block' }): Promise<{ newPage(): Promise<PwPage> }>;
@@ -59,7 +61,10 @@ export const playwrightShooter: Shooter = async (s) => {
     const page = await ctx.newPage();
     await page.goto(s.url, { waitUntil: 'load', timeout: 30_000 });
     await page.waitForTimeout(1500);
-    return await page.screenshot({ type: 'png', fullPage: false });
+    const png = await page.screenshot({ type: 'png', fullPage: false });
+    // An app with guest access opened an anonymous session for this page: end it, as an unlicensed app keeps only 6 (shared/liveapp/session-cap.ts).
+    await page.evaluate(endMendixSession).catch(() => false);
+    return png;
   } finally {
     clearTimeout(timer);
     await browser.close().catch(() => undefined);

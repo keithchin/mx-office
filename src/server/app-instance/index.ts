@@ -54,6 +54,8 @@ export interface AppInstance {
   dbName: string;
   /** Its log file (passwords masked); it outlives the instance. */
   logFile: string;
+  /** The Mendix runtime's own log (mxcli's <project>/.mxcli/runtime.log), while it runs: where the runtime says why it refused something. */
+  runtimeLog: string;
   /** Still running. */
   alive(): boolean;
   stop(): Promise<void>;
@@ -191,6 +193,7 @@ export async function startAppInstance(spec: InstanceSpec): Promise<AppInstance>
       commit: wf.commit,
       dbName,
       logFile,
+      runtimeLog: path.join(path.dirname(mpr), '.mxcli', 'runtime.log'),
       alive: () => !stopped && !!child && child.exitCode === null,
       stop,
     };

@@ -2,6 +2,12 @@
 // #passwordInput, #loginButton; optionally drawn late, as the Mendix client does) for the demo user, then a page with a navigation tree, a request list, a
 // New request button and a form, marked up with the .mx-name-* classes a journey names. Neutral sample
 // data only. It also asks for a picture from `other` (another origin) to prove the recorder refuses it.
+// Like an unlicensed Mendix runtime it keeps sessions, at most `cap` at once (anonymous ones too: with
+// `guest` access every page load without a session opens one): a sign-in over the cap gets the Mendix
+// client's error dialog, and the client's `logout` xas action (with the session's CSRF token, which the
+// page exposes as mx.session.sessionData.csrftoken) ends one. It counts sign-ins, logouts and sessions.
+import { randomBytes } from 'node:crypto';
+import { appendFileSync } from 'node:fs';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 
@@ -12,7 +18,7 @@ const FORM = `<form method="post" action="/login"><h2>Sample app</h2><input id="
 const login = (lateMs = 0) => `<!doctype html><html><head><title>Sign in</title><style>body{font-family:sans-serif;background:#eef2f7;display:flex;justify-content:center;padding-top:120px}form{background:#fff;padding:32px;border-radius:8px;display:grid;gap:12px;width:300px}</style></head><body>
 ${lateMs ? `<div id="boot">Loading…</div><script>setTimeout(() => { document.getElementById("boot").outerHTML = ${JSON.stringify(FORM)}; }, ${lateMs});</script>` : FORM}</body></html>`;
 
-const page = (other: string) => `<!doctype html><html><head><title>Sample requests</title><style>
+const page = (other: string, token: string) => `<!doctype html><html><head><title>Sample requests</title><style>
 [hidden]{display:none!important}
 body{margin:0;font-family:"Segoe UI",sans-serif;display:flex;height:100vh;background:#f5f7fa}
 .mx-navigationtree{width:200px;background:#1e293b;padding:16px}.mx-navigationtree a{display:block;color:#e2e8f0;padding:8px;text-decoration:none}
@@ -28,6 +34,7 @@ body{margin:0;font-family:"Segoe UI",sans-serif;display:flex;height:100vh;backgr
 <img src="${other}/tracker.png" width="1" height="1" alt="">
 </div>
 <script>
+window.mx = { session: { sessionData: { csrftoken: ${JSON.stringify(token)} } } };
 const $ = (s) => document.querySelector(s);
 $('#navRequests').onclick = (e) => { e.preventDefault(); $('#heading').textContent = 'Requests'; $('#list').hidden = false; };
 $('.mx-name-btnNew').onclick = () => { $('.mx-name-dvForm').hidden = false; };
@@ -38,15 +45,60 @@ $('.mx-name-btnSubmit').onclick = () => {
 };
 </script></body></html>`;
 
+/** What the Mendix client shows when the runtime refuses a session (HTTP 402). */
+export const CAP_TEXT = 'The current license does not allow more users to sign in.';
+const refused = () => `<!doctype html><html><head><title>Sample app</title></head><body><div class="modal-dialog mx-dialog-error mx-dialog" role="dialog"><div class="modal-header mx-dialog-header"><h4 class="mx-dialog-caption">Error</h4></div><div class="modal-body mx-dialog-body"><p>${CAP_TEXT}</p></div><div class="mx-dialog-footer"><button>OK</button></div></div></body></html>`;
+
 export interface FakeApp {
   url: string;
   close(): Promise<void>;
   /** Requests the other origin got (should stay 0). */
   otherHits(): number;
+  /** Each sign-in that got a session: who. */
+  signIns(): string[];
+  /** Each session signed out: who ('' for an anonymous one). */
+  logouts(): string[];
+  /** Sessions open now. */
+  open(): number;
+  /** How many anonymous sessions were ever opened. */
+  anonymous(): number;
+  /** Sessions refused over the cap. */
+  refusals(): number;
+  /** Opens `n` sessions somewhere else (other windows of the app). */
+  hold(n: number): void;
 }
 
-export async function fakeApp(o: { lateFormMs?: number } = {}): Promise<FakeApp> {
+export interface FakeAppOptions {
+  lateFormMs?: number;
+  /** The most sessions at once (an unlicensed Mendix runtime: 6). */
+  cap?: number;
+  /** Guest access: the app's address shows the app to anyone, opening an anonymous session; the sign-in page is /login.html. */
+  guest?: boolean;
+  /** Sign in as Mendix's login.html does (a refused session only says "Sign in failed."), with the runtime's line in this log. */
+  runtimeLog?: string;
+}
+
+export async function fakeApp(o: FakeAppOptions = {}): Promise<FakeApp> {
   let hits = 0;
+  const cap = o.cap ?? Infinity;
+  const sessions = new Map<string, { user: string | null; token: string }>();
+  const ins: string[] = [];
+  const outs: string[] = [];
+  let anon = 0;
+  let refusals = 0;
+  const id = () => randomBytes(8).toString('hex');
+  /** A new session, or undefined over the cap. */
+  const open = (user: string | null) => {
+    if (sessions.size >= cap) {
+      refusals++;
+      return undefined;
+    }
+    const sid = id();
+    sessions.set(sid, { user, token: id() });
+    if (user) ins.push(user);
+    else anon++;
+    return sid;
+  };
   const other = http.createServer((_req, res) => {
     hits++;
     res.writeHead(200, { 'content-type': 'image/png' });
@@ -55,25 +107,76 @@ export async function fakeApp(o: { lateFormMs?: number } = {}): Promise<FakeApp>
   await new Promise<void>((r) => other.listen(0, '127.0.0.1', r));
   const otherUrl = `http://127.0.0.1:${(other.address() as AddressInfo).port}`;
   const server = http.createServer((req, res) => {
-    const signedIn = /(?:^|;\s*)sess=ok/.test(req.headers.cookie ?? '');
+    const sid = /(?:^|;\s*)sess=([0-9a-f]+)/.exec(req.headers.cookie ?? '')?.[1];
+    const mine = sid ? sessions.get(sid) : undefined;
+    const body = (then: (b: string) => void) => {
+      let b = '';
+      req.on('data', (d) => (b += d));
+      req.on('end', () => then(b));
+    };
+    const html = (t: string, status = 200, cookie?: string) => {
+      res.writeHead(status, { 'content-type': 'text/html; charset=utf-8', ...(cookie ? { 'set-cookie': cookie } : {}) });
+      res.end(t);
+    };
     if (req.method === 'POST' && req.url === '/login') {
-      let body = '';
-      req.on('data', (d) => (body += d));
-      req.on('end', () => {
-        const q = new URLSearchParams(body);
-        const ok = q.get('u') === DEMO.user && q.get('p') === DEMO.password;
-        res.writeHead(302, { location: ok ? '/' : '/login.html', ...(ok ? { 'set-cookie': 'sess=ok; Path=/; HttpOnly' } : {}) });
+      body((b) => {
+        const q = new URLSearchParams(b);
+        if (q.get('u') !== DEMO.user || q.get('p') !== DEMO.password) {
+          res.writeHead(302, { location: '/login.html' });
+          return res.end();
+        }
+        // Signing in from an anonymous session replaces it, as the runtime does.
+        if (sid && mine && !mine.user) sessions.delete(sid);
+        const made = open(DEMO.user);
+        if (!made && o.runtimeLog) {
+          appendFileSync(o.runtimeLog, `2026-10-18 21:57:08.295 WARNING - Core: Maximum number of sessions exceeded! (You are currently using a trial license)\n`);
+          return html(login(0).replace('</form>', '<p id="loginMessage">Sign in failed.</p></form>'), 200);
+        }
+        if (!made) return html(refused(), 402);
+        res.writeHead(302, { location: '/', 'set-cookie': `sess=${made}; Path=/; HttpOnly` });
         res.end();
       });
       return;
     }
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(signedIn && req.url !== '/login.html' ? page(otherUrl) : login(o.lateFormMs));
+    if (req.method === 'POST' && req.url === '/xas/') {
+      body((b) => {
+        let action = '';
+        try {
+          action = (JSON.parse(b) as { action?: string }).action ?? '';
+        } catch {
+          action = '';
+        }
+        if (action !== 'logout' || !sid || !mine || req.headers['x-csrf-token'] !== mine.token) {
+          res.writeHead(403);
+          return res.end();
+        }
+        sessions.delete(sid);
+        outs.push(mine.user ?? '');
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end('{}');
+      });
+      return;
+    }
+    if (req.url === '/login.html') return html(login(o.lateFormMs));
+    if (mine) return html(page(otherUrl, mine.token));
+    if (!o.guest) return html(login(o.lateFormMs));
+    // Guest access: the app, for an anonymous session the page load opens (or the refusal over the cap).
+    const made = open(null);
+    if (!made) return html(refused(), 402);
+    html(page(otherUrl, sessions.get(made)!.token), 200, `sess=${made}; Path=/; HttpOnly`);
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
   return {
     url: `http://127.0.0.1:${(server.address() as AddressInfo).port}/`,
     otherHits: () => hits,
+    signIns: () => [...ins],
+    logouts: () => [...outs],
+    open: () => sessions.size,
+    anonymous: () => anon,
+    refusals: () => refusals,
+    hold: (n) => {
+      for (let k = 0; k < n; k++) sessions.set(id(), { user: 'someone_else', token: id() });
+    },
     close: async () => {
       server.closeAllConnections();
       other.closeAllConnections();

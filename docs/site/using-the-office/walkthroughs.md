@@ -38,7 +38,9 @@ A recording signs in the way the toolkit's journey runner does, as the identity 
 
 The office reads `project.config.js` at the recorded commit without loading it into itself: a copy is loaded in a separate Node process with nothing of the office's environment, with Node's permission model allowing it to read only that copy (no writes, no programs), for ten seconds at most. Where that can't run it reads the file's defaults off its text. An admin account (`MxAdmin`, `admin`…) is never used.
 
-The page says who recordings sign in as by default. Each recording's evidence line says who it signed in as and why. If the app doesn't let the account in, the recording fails with that reason (*couldn't sign in as demo_clerk: still on the sign-in page*), not as a failed first step.
+The page says who recordings sign in as by default. Each recording's evidence line says who it signed in as and why. If the app doesn't let the account in, the recording fails with that reason and what the app said (*couldn't sign in as demo_clerk: still on the sign-in page ("The username or password you entered is incorrect.")*), not as a failed first step.
+
+An unlicensed Mendix app keeps only 6 sessions open at once, guests' included, and a closed browser doesn't end one. So a batch signs each account in once, on Mendix's own sign-in page (`login.html`, which opens no session of its own), films every journey of that account on that one session, never loads the app anywhere else, and signs each account out when the batch is done. When the app refuses a session anyway the card says so: *couldn't sign in as demo_clerk: the app says "The current license does not allow more users to sign in." (an unlicensed Mendix app keeps only 6 sessions open at once, signed-in and guest)*, or, where the sign-in page only says *Sign in failed.*, what the recording app's runtime log says.
 
 ## Honest by construction
 
