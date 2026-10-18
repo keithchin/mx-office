@@ -54,6 +54,9 @@ html[data-theme^='portal'] .pt-item.on { background: var(--pt-selected); font-we
 /* An action that can't work right now (Edit in Studio Pro with no Studio Pro here): there, greyed, its reason as the tooltip. */
 html[data-theme^='portal'] .pt-item.pt-blocked { opacity: 0.55; cursor: not-allowed; }
 html[data-theme^='portal'] .pt-item-ico { flex: none; width: 18px; height: 18px; color: var(--ink-2); }
+/* Home, above the project card (and on Home's own navigation, picked there: start/nav.ts). */
+html[data-theme^='portal'] body.pt-rail .pt-home-item { justify-content: center; padding: 8px 0; }
+html[data-theme^='portal'] body.pt-rail .pt-home-item .pt-item-l { display: none; }
 html[data-theme^='portal'] .pt-nav-rule { height: 1px; margin: 16px 0; border: 0; background: var(--line); }
 html[data-theme^='portal'] .pt-goto { display: none; }
 

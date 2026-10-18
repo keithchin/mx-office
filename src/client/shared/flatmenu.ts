@@ -81,7 +81,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
     { ...MENU.docs, shown: () => !!store.floor, run: openDocs },
     { ...MENU.studio, run: () => void openStudio() },
     // Every floor's card, with how many wait on someone, is the home page (its Projects tab, from there).
-    { ...MENU.elevator, run: () => (d.home ? (document.getElementById('tab-projects')?.click(), scrollTo({ top: 0 })) : location.assign('/home')) },
+    { ...MENU.elevator, run: () => (document.getElementById('tab-projects') ? (document.getElementById('tab-projects')!.click(), scrollTo({ top: 0 })) : location.assign('/home')) },
     { ...MENU.team, run: () => openTeam(net) },
     { ...MENU.accounts, run: () => openAccounts(net) },
     { ...MENU.signins, run: () => openSignIns(net) },
@@ -89,7 +89,7 @@ export function flatMenu(button: HTMLElement, d: FlatMenuDeps) {
     { ...MENU.connections, run: () => openConnections() },
     // 🧪 Test mode (ui/testlab/): the 1D view's page; admins only.
     { id: 'tests', icon: '🧪', label: 'Test mode', section: 'Office', shown: () => store.me.admin, title: () => 'Test mode and the performance guard: run the page, journey and unit suites against a throwaway test office, and see the results', run: () => (d.tests ? d.tests() : location.assign(testsHref(store.floor ?? store.floors[0]?.id))) },
-    { ...MENU.home, shown: () => !d.home, run: () => location.assign('/home') },
+    { ...MENU.home, shown: () => location.pathname !== '/start', run: () => location.assign('/start') },
     { ...MENU.guide, run: () => location.assign('/docs') },
   ];
   const actions = d.home ? all.filter((a) => !FLOOR_ONLY.has(a.id)) : all;

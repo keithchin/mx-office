@@ -81,6 +81,15 @@ export const SHOTS = [
     ready: (page, { timeout = 30000 } = {}) => readyOrSay(page, projectsLoaded, timeout, 'the Projects cards never showed their spend (.ph-card .ph-spend with a $ amount): the budget feed did not answer'),
     settle: 4000,
   },
+  {
+    name: 'home-start',
+    what: 'Home (Portal theme): Needs you across every project, the active projects, the clients, recent activity and the health strip',
+    url: '/start',
+    theme: 'portal-light',
+    // Its project rows and its Needs you (read from every project) drawn.
+    ready: (page, { timeout = 30000 } = {}) => readyOrSay(page, () => document.querySelectorAll('#st-projects .st-row').length >= 2 && !!document.querySelector('#st-needs .st-needs, #st-needs .st-note.calm'), timeout, 'Home never drew its project rows and Needs you'),
+    settle: 4000,
+  },
 ];
 
 /** Whether the Projects page has drawn two cards or more, each with its spend (runs in the page). */

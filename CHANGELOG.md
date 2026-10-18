@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **Home** (`/start`): the Mx Office wordmark, the 🏠, a bare `/` and a new **Home** item at the top of every left navigation now open a Home page that says what needs you and how everything is going across every client: the five most urgent Needs-you items of every project (each tagged with its client and project, **See all** by project), the active projects (progress, team, live app; red when work is stuck or a PR is failing), the clients (projects, spend against budget, company brain), the latest recorded milestones (PRs merged, live-app milestones ready, deliveries accepted), quick actions (New project, New client, Open live app) and an office health strip that stays quiet when all is well. An empty office shows Create your first project. The Projects (`/home`) and Clients pages are unchanged.
 
 ## 2026-10-18 · release 60 (`1b97e62`)
 

@@ -83,6 +83,7 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | POST | `/api/m/reauth` | `{ password }`: the password typed again for risky actions (10 minutes; rate-limited like sign-in). The desktop pages use it too: through Phone access's tunnel, the risky desktop routes (`/api/roster/action` hire, cap raise and risky escalation approvals, `/api/budget/action` raises, `/api/project-run` resume / pause / continue, `/api/office/restart` start / anyway, `/api/connections/*` changes, `/api/claude-auth` changes, `/api/phone-access`, `/api/notify/teams`, `/api/studio/open`, resolving `/api/incidents/<id>` or in bulk (`/api/incidents/bulk-resolve`), signing off a stage (`/api/signoff`), starting or stopping a test run and opening an incident from it under `/api/testlab/runs`) answer 401 `{ reauth: true }` without a fresh sign-in |
 | POST | `/api/m/act` | `{ do, floor, … }`: an action from the phone: `escalation` (approve / reject / reply), `raise-cap`, `hire`, `merge` (answers the PR's URL), `pause`, `resume` (`choice`: `{ mode: 'work' | 'all' }`; both through [Pause / Resume project](../using-the-office/resume-and-pause.md), answering the run's progress). Risky ones answer 401 `{ reauth: true }` without a fresh sign-in; each is `phone.*` in the audit log |
 | GET | `/api/m/status` | Each project's status line (working, asleep, asking, stage, spend, escalations, its pause and latest resume or pause run), and a safe restart while one is going (`restart`) |
+| GET | `/api/start` | [Home](../using-the-office/home.md#home-start): every project's red Needs-you items (as `/api/desktop/status`), per project its stuck and failing-PR counts and its live app (none when nobody opened it), the recorded milestones (PRs merged, live-app milestones ready, deliveries accepted) and the health (`claude`: `ok`, `failing` or `decision`; `update` when a newer build is ready). Kept 10 seconds |
 | GET | `/api/desktop/status` | The [desktop app](../administration/desktop-app.md)'s tray: every project's red Needs-you items (the ones Teams notifications post), each with its stable `id` and the office `path` it opens, and `working`: the agents mid-turn |
 | POST | `/api/m/push/key`, `/api/m/push/subscribe`, `/api/m/push/unsubscribe`, `/api/m/push/alerts`, `/api/m/push/test` | This phone's Web Push: the VAPID public key (made once), its subscription, its Do not disturb and digest, a test |
 | GET | `/api/m/push` | This person's phones (`?all=1`: everyone's, admins) |
@@ -189,8 +190,9 @@ Actions: `hire`, `bench`, `rename`, `model`, `settings`, `standup`, `decide`, `e
 
 | Path | Page |
 |---|---|
-| `/`, `/index.html` | Redirect to the 1D view (`/lite`, keeping `?floor=`): the 3D office was here |
-| `/home` | Home |
+| `/`, `/index.html` | Redirect to Home (`/start`); an old 3D office link (`?view=3d`, `?floor=`…) to the 1D view (`/lite`, keeping `?floor=`) |
+| `/start` | [Home](../using-the-office/home.md#home-start): what needs you and how every project is going |
+| `/home` | The Projects page |
 | `/lite` | The 1D view |
 | `/pixel` | The 2D view |
 | `/clients` | The Clients page: every client's card (`?client=<id>` opens a client's page; `/home?tab=portfolios` comes here) |

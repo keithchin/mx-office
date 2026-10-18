@@ -120,12 +120,6 @@ function showTab(t: Tab) {
   else if (t === 'stats') void stats.render();
 }
 for (const id of TABS) $(`tab-${id}`).addEventListener('click', () => showTab(id));
-// 🏠 here is the page you're on: back to the top of the projects rather than a reload.
-$('to-home').addEventListener('click', (e) => {
-  e.preventDefault();
-  showTab('projects');
-  scrollTo({ top: 0 });
-});
 
 for (const t of ['floors', 'peers', 'me'] as const) store.on(t, () => tab === 'projects' && projects.render());
 // The numbers move on by themselves while they're on screen.

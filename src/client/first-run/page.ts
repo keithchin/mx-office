@@ -83,7 +83,7 @@ export function setupPage(root: HTMLElement) {
     paintNav();
     const head = h('header.fr-head', {}, h('p.fr-kicker', {}, `Step ${FIRST_RUN_STEPS.indexOf(step) + 1} of ${FIRST_RUN_STEPS.length}`), h('h2', {}, TITLE[step]));
     if (!view.admin) {
-      body.replaceChildren(head, h('div.fr-step-body', {}, h('p', {}, 'This office is still being set up. Setting it up is for an admin: ask whoever runs this office to sign in with the office password and finish it.'), h('a.btn', { href: '/home' }, 'Back to Home')));
+      body.replaceChildren(head, h('div.fr-step-body', {}, h('p', {}, 'This office is still being set up. Setting it up is for an admin: ask whoever runs this office to sign in with the office password and finish it.'), h('a.btn', { href: '/start' }, 'Back to Home')));
       return;
     }
     const c = ctx();

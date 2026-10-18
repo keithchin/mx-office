@@ -214,7 +214,7 @@ export function doneStep(c: StepCtx, prereqsOk: boolean | undefined): HTMLElemen
   const create = h('button.btn.primary', { type: 'button' }, '✨ Create your first project');
   create.addEventListener('click', () => void setupApi.finish().then(() => location.assign('/home?new=1'), (e: Error) => toast(e.message, 'error')));
   const home = h('button.btn', { type: 'button' }, 'Finish');
-  home.addEventListener('click', () => void setupApi.finish().then(() => location.assign('/home'), (e: Error) => toast(e.message, 'error')));
+  home.addEventListener('click', () => void setupApi.finish().then(() => location.assign('/start'), (e: Error) => toast(e.message, 'error')));
   return h(
     'div.fr-step-body',
     {},

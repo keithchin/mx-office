@@ -1,10 +1,27 @@
 ---
 title: Home
-description: The /home page - every project as a card, the office's statistics, a 2D overview of every project, and the audit log of the whole office.
+description: Home (/start) - what needs you and how every project is going, across every client - and the Projects page (/home) - every project as a card, the office's statistics, a 2D overview of every project, and the audit log of the whole office.
 weight: 2
 ---
 
-`/home` is where the office opens. It has six tabs. The last one you used is remembered, and a link can open one with `?tab=projects`, `?tab=stats`, `?tab=overview`, `?tab=audit`, `?tab=budget` or `?tab=agents` (add `&profile=prf_…` for one agent's page). Clients, once a tab, is a page of its own: `?tab=portfolios` opens [the Clients page](clients.md).
+## Home (`/start`)
+
+**Home** is where the office opens: the **Mx Office** wordmark at the top left, the **🏠** in the other looks, a bare `/` and the end of sign-in all go there, and it's the first item of every left navigation (above the project card on a project's pages, picked on Home itself). It answers *what needs me, and how is everything going?* across every client and project, as a summary with links to the page that has the whole of it:
+
+![Home (Portal Light)](../images/home-start.png)
+
+- **Needs you, across everything**: the five most urgent red items of every project (blocking ones first), the same ones the desktop tray, Teams and the phone's push notifications get, each tagged with its client and its project and with its **Open** at the bottom right. **See all** lists each project with items and how many, each to its Overview's Needs you card. A project whose items couldn't be read is named, never left out silently.
+- **Active projects**: the most recently active eight (the Projects page's *Recent activity* order), one row each: the client, the project's small [progress bar](progress-and-acceptance.md) and where it is (the same measured phases as the project's own bar: no made-up percentage), the team (*2 working · 1 asking · 3 idle*) and the live app (*ready*, *starting*, *failed*, *stopped*, or *unknown* when nobody opened it since the office started). A project with stuck work ([stuck detection](stuck-detection.md)) or a PR with failing checks is red and says how many. Click a row to open the project; **All projects** goes to the Projects page.
+- **Clients**: a small card per client with its project count, what its projects spent against their budgets (a budget total only when every project has one; otherwise how many have none) and whether a company brain is connected. Click one for its page.
+- **Recent activity**: the latest milestones the office recorded: pull requests merged (with GitHub's merge time), live-app milestones told ready and deliveries accepted. Nothing else is guessed at.
+- **Quick actions** beside the title: **New project**, **New client** (admins) and **Open live app · *project*** for the most recently active project, only while its live app is ready.
+- **The health strip** under the title: agents working, today's spend (against the office's daily budget when one is set), the agents' Claude credentials and a newer build ready to restart into. It's quiet when all is well and turns amber with what to look at.
+
+An office with no projects shows **Create your first project** (**New project**, **Add project**) instead of empty sections; a new office's admin is still sent to 🚀 first-run setup first. Home reads three things when it opens (`GET /api/start`, the budget and the clients) and again only when a project's waiting count or team changes, at most every 15 seconds and never while the tab is hidden; the projects follow the office live over its connection.
+
+## Projects (`/home`)
+
+`/home` is the **Projects** page (its 🏠 goes to Home). It has six tabs. The last one you used is remembered, and a link can open one with `?tab=projects`, `?tab=stats`, `?tab=overview`, `?tab=audit`, `?tab=budget` or `?tab=agents` (add `&profile=prf_…` for one agent's page). Clients, once a tab, is a page of its own: `?tab=portfolios` opens [the Clients page](clients.md).
 
 The top bar has **🏠**, a **back link** to the project you were last on (in the view you last used), **📑 The Firm** (opens [/firm](the-firm.md)), **📚 Docs**, **🎨** and **☰**.
 

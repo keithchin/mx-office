@@ -7,7 +7,7 @@
 //
 // - The launcher opens a menu of where to go: Home's projects, the clients, every project, The Firm, the docs and
 //   Settings.
-// - The wordmark goes Home; the section is the page's name in capitals (PROJECTS on Home), or the floor
+// - The wordmark goes Home (/start, what needs you across every project); the section is the page’s name in capitals (HOME, PROJECTS), or the floor
 //   picker on the 2D Office view, drawn as a capitalised title after OFFICE · (on the 1D view the page's name: the floor picker
 //   is in the left navigation's project card there, ./layout.ts).
 // - The search (./search.ts) finds a project, a page of this project (or a tab of this page), its agents,
@@ -21,6 +21,7 @@
 import { store } from '../../state';
 import { rememberFloor } from '../../state/persist';
 import { settingsHref } from '../../../shared/settings-sections';
+import { HOME_PAGE } from '../../../shared/start';
 import { h } from '../dom';
 import { currentTheme, DARK_TWIN, isDarkTheme, onThemeChange, pickTheme } from '../colortheme';
 import { icon } from './icons';
@@ -32,7 +33,7 @@ import './topbar.css';
 export interface PortalBarOpts {
   /** The page's name for the bar, in capitals (Home: "Projects"). Left out on a floor's pages, whose floor picker is the section. */
   section?: string;
-  /** The wordmark clicked on the page it leads to (Home: back to the projects, rather than a reload). */
+  /** On Home, the wordmark clicked (back to the top, rather than a reload); on the Projects page, its Projects item (back to the cards). */
   onHome?: () => void;
   /** Settings, as the page opens it (the 1D view's tab; elsewhere its address). */
   settings?: () => void;
@@ -61,13 +62,14 @@ export function initials(name: string): string {
 /** The office's pages, for the launcher and the search. */
 function pages(opts: PortalBarOpts): { label: string; hint: string; href: string; run?: () => void }[] {
   const all = [
-    { label: 'Projects', hint: 'Home: every project', href: '/home', run: location.pathname === '/home' ? opts.onHome : undefined },
+    { label: 'Home', hint: 'What needs you, and how every project is going', href: HOME_PAGE, run: location.pathname === HOME_PAGE ? opts.onHome : undefined },
+    { label: 'Projects', hint: 'Every project’s card', href: '/home', run: location.pathname === '/home' ? opts.onHome : undefined },
     { label: 'Clients', hint: 'Every client and its projects', href: '/clients' },
     { label: 'The Firm', hint: 'Independent Reviewer Agents', href: '/firm' },
     { label: 'Documentation', hint: 'Guides, reference and FAQ', href: '/docs' },
     { label: 'Settings', hint: 'You, the agents, the team, the look', href: settingsHref(undefined, store.floor ?? undefined), run: opts.settings },
   ];
-  return opts.minimal ? all.filter((p) => p.href === '/home' || p.href === '/docs') : all;
+  return opts.minimal ? all.filter((p) => p.href === HOME_PAGE || p.href === '/docs') : all;
 }
 
 /** Adds the Portal pieces to the page's `.lite-bar` (once). */
@@ -88,8 +90,8 @@ export function portalBar(opts: PortalBarOpts = {}) {
     }
     openPop(launch, items, { label: 'Go to', cls: 'pt-launcher' });
   });
-  const brand = h('a.pt-brand.pt-only', { href: '/home', title: 'Mx Office: every project', 'aria-label': 'Mx Office: home' }, h('span.pt-wordmark', {}, 'Mx', h('b', {}, 'Office')));
-  if (opts.onHome) {
+  const brand = h('a.pt-brand.pt-only', { href: HOME_PAGE, title: 'Mx Office: Home, what needs you across every project', 'aria-label': 'Mx Office: home' }, h('span.pt-wordmark', {}, 'Mx', h('b', {}, 'Office')));
+  if (opts.onHome && location.pathname === HOME_PAGE) {
     const home = opts.onHome;
     brand.addEventListener('click', (e) => {
       e.preventDefault();
@@ -169,7 +171,7 @@ function searchSources(opts: PortalBarOpts): SearchItem[] {
     .map((f): SearchItem => ({ kind: 'project', label: f.name, hint: f.repo ?? undefined, also: `${f.repo ?? ''} ${f.id}`, go: () => goFloor(f.id) }));
   const pageItems = pages(opts).map((p): SearchItem => ({ kind: 'page', label: p.label, hint: p.hint, go: () => (p.run ? p.run() : location.assign(p.href)) }));
   if (opts.search) return [...projects, ...opts.search(), ...pageItems];
-  const where = location.pathname === '/home' ? 'Home' : store.floors.find((f) => f.id === store.floor)?.name;
+  const where = location.pathname === '/home' ? 'Projects' : store.floors.find((f) => f.id === store.floor)?.name;
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('.lite-tabs [role=tab], .home-tabs [role=tab]')]
     .filter((b) => !b.hidden && !b.classList.contains('hidden'))
     .map((b): SearchItem => ({ kind: 'tab', label: tabLabel(ownText(b)), hint: where, go: () => b.click() }))

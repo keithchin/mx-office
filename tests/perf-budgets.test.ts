@@ -25,7 +25,7 @@ test('the harness budgets are the ones the Test Mode page shows', () => {
 
 test('the harness covers every main view', () => {
   const ids = views('f').map((v: { id: string }) => v.id);
-  for (const want of ['cc-chat', 'cc-terminal', 'board', 'org', 'workers', 'budget', 'teams', 'documents', 'audit', 'incidents', 'settings', 'home-projects', 'home-overview', 'home-budget', 'pixel', 'phone', 'mobile']) assert.ok(ids.includes(want), want);
+  for (const want of ['cc-chat', 'cc-terminal', 'board', 'org', 'workers', 'budget', 'teams', 'documents', 'audit', 'incidents', 'settings', 'home', 'home-projects', 'home-overview', 'home-budget', 'pixel', 'phone', 'mobile']) assert.ok(ids.includes(want), want);
   assert.equal(new Set(ids).size, ids.length, 'ids are unique');
 });
 

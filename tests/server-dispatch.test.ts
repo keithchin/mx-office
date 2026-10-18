@@ -186,10 +186,10 @@ test('answers the open routes before anyone signs in', async () => {
   assert.equal(asset.headers.get('cache-control'), 'public, max-age=31536000, immutable');
   assert.equal((await get('/assets/missing.js')).status, 404);
 
-  // The old 3D office's address sends you on to the 1D view (which asks for the sign-in), never a 404.
+  // A bare / sends you on to Home, and the old 3D office's addresses to the 1D view (which asks for the sign-in), never a 404.
   const old = await get('/');
   assert.equal(old.status, 302);
-  assert.equal(old.headers.get('location'), '/lite');
+  assert.equal(old.headers.get('location'), '/start');
   assert.equal((await get('/?view=3d&floor=f1')).headers.get('location'), '/lite?floor=f1');
   assert.equal((await get('/index.html?3d=1&view=retro')).headers.get('location'), '/lite');
   // Everything else waits for a session.
