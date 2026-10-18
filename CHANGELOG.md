@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-18 · release 59 (`ca35113`)
+
 ### Fixed
 
 - **Claude for agents: a gateway (or API key) saved in Connections works in agents’ terminals.** Claude Code’s interactive screen ignores an `ANTHROPIC_API_KEY` that was never approved in its own config and asks for `/login` instead; the office now approves the key it passes (only its last 20 characters, as Claude Code does) in the Claude config each agent reads, before the agent starts. The office’s one-off Claude calls (task names, analysis) also pick up a change without an office restart.
