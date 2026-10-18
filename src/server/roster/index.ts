@@ -43,6 +43,7 @@ import type { RosterDeps, TeamFloor } from './types.js';
 import { alsoOf, managerRole } from './coverage.js';
 import { coveredBy, shownRoles } from '../../shared/roster/coverage.js';
 import { asksSoon } from './asks-hook.js';
+import { onReplyTurnEnd } from './reply-asks.js';
 import { Dispatcher } from '../dispatch/service.js';
 import { hookDispatch, reconcileAll } from './dispatch-hooks.js';
 import { hookProposals } from './proposal-issue.js';
@@ -226,6 +227,8 @@ export class Roster {
     const capChanged = this.noteSpend(floor, d, w, now);
     // A turn just ended: Jeff judges whether it's waiting on the Project Manager (any agent, not just the team's).
     if (prev?.status === 'working' && (w.status === 'done' || w.status === 'idle')) asksSoon(floor.id, 'after a turn ended');
+    // A list in its reply that it marks as the Project Manager's to do: each item filed (reply-asks.ts), before Jeff looks.
+    if (prev?.status === 'working' && (w.status === 'done' || w.status === 'idle')) onReplyTurnEnd(this, floor, w);
     if (prev?.status === 'working' && (w.status === 'done' || w.status === 'idle')) void this.jeff.onTurnEnd(floor, w).catch((err: unknown) => console.error(`agent-office: Jeff on ${floor.id}: ${(err as Error)?.message ?? err}`));
     // Between turns: the answers it's owed and the prompts held while a dialog was up go in.
     this.delivery.onWorker(floor, w);
