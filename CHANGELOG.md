@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-18 · release 62 (`4e59596`)
+
 ### Changed
 
 - **🎬 Walkthroughs record themselves, on a page of their own.** Videos of the app's workflows are now made by the office without you starting the live app or pressing Record: when a build on main passes its journeys, or a milestone becomes ready, each journey that passed is recorded once per commit, against the office's own throwaway copy of the app at that commit (its own work folder, ports and a fresh database, `<project>_rec_…`, dropped afterwards; your live app and its database are never touched). They're on **Deployment › 🎬 Walkthroughs**: the guided tour, one card per workflow (status, commit, when, auto or manual, Watch, Download, Save to repo / In PR #N), the batch in progress (*Starting the app*, *Recording 2 of 5*) with Cancel, the switch, **● Record**, **⟳ Re-record all** and, with nothing yet, **● Record now**. The Live app tab keeps a **🎬 Walkthroughs →** link and the milestone's **▶ Walkthrough**. Recordings now sign in as the journey runner does, as the identity the journey was written for (its `TEST_USER=` line, a role from `tests/e2e/project.config.js`, else that file's default user, read in a sandboxed process), and wait for a login form the app draws late: the two recordings that failed at step 1 on the sign-in page were signing in as the wrong user before the form was there. An account the app doesn't let in now fails as *couldn't sign in as … : still on the sign-in page*, and a failed card shows what its journey says it needs (a time window, a start state). The player is wide, with the video large on the left and the steps on the right (the step playing highlighted, a failed one red with its reason, its screenshot on hover), stacked on a narrow screen. Needs mxcli and the live apps' PostgreSQL on the office's machine.
