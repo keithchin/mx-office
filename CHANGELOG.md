@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-18 · release 61 (`fd1b41b`)
+
 ### Added
 
 - **Show here, in the desktop app.** On the 🌐 Live app tab the desktop app shows the running app inside the office window, top-level (a view of its own laid over the tab, not a frame), so Data grid 2 and the other widgets that read the top window work there. The tab’s toolbar drives it: real **Back** and **Forward**, the address the app is really on, Reload, Home, device widths, Copy link, Open ↗, **🛠 Tools** (its developer tools, only on request) and Full screen; the Console still lists its requests. It has the Live app window’s own session (no office cookies), runs sandboxed without Node, opens only the project’s recording-proxy address (asked of the office, `GET /api/desktop/liveapp`) and sends other links to your browser. Since a native view sits above the page, it steps aside while an office dialog, menu or toast is over it, on another tab or scrolled away, and closes when you leave the project. In a browser nothing changes: Open live app and Preview here as before.
