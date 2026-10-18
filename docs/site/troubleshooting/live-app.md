@@ -14,7 +14,7 @@ Another process holds a port. The office picks three free ports from **8110–81
 
 **Cause:** the app was shown in a frame inside another page (the tab's **Preview here**, or an older office's built-in viewer). Mendix's pluggable widgets, such as Data grid 2, read the top window, which the browser refuses across origins, so the page fails to load. The Console's Runtime log shows it as a *Client* error.
 
-**Fix:** use **↗ Open live app**, which shows the app in a window of its own. The app itself is fine.
+**Fix:** use **↗ Open live app**, which shows the app in a window of its own, or in the desktop app **Show here**, which shows it top-level in the tab. The app itself is fine.
 
 ## The Console's Network is empty
 

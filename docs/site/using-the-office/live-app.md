@@ -58,6 +58,12 @@ The window opens through the office's **recording proxy** for the app, so the Co
 
 In the desktop app the Live app window's menu is its toolbar: **Back** (Alt+←), **Forward** (Alt+→), **Reload** (F5), **Hard reload** (Shift+F5), **Home**, **Copy address**, **Open in browser** and **Developer tools** (F12). It has its own browser session, so it shares no cookies with the office window. In a browser you use the browser's own Back, Forward and Reload.
 
+### Show here (desktop app)
+
+In the [desktop app](../administration/desktop-app.md#what-it-does) the tab's button is **Show here** instead of Preview here: the app appears in the tab itself, but top-level (the desktop app lays its own view over the tab, not a frame), so every widget works there too. The toolbar above it is the app's: **Back** and **Forward** step through the app's real history, the address shows the page the app is on (Enter goes to another page of the app), **Reload** (Shift: hard reload), **Home**, **Desktop / Tablet / Phone** and **Fit / 100%**, **Copy link**, **Open ↗** (your browser), **🛠 Tools** (the app's developer tools) and **Full screen**. Its requests go through the recording proxy, so the Console lists them.
+
+It needs the proxy: when the note under Open live app says the proxy isn't up, Show here says it can't show the app; use **↗ Open live app**. The view steps aside (the placeholder shows instead) while anything of the office is over it (a dialog, a menu, a toast), when another tab shows or it's scrolled out of view, and it closes when you leave the project or the app stops.
+
 ## Console
 
 Under the app's status, the **Console** has two tabs. It streams only while the Live app tab is in view.

@@ -7,7 +7,7 @@
 // the developer tools. It has a session of its own (partition), so the office's cookies are never in it,
 // it's sandboxed without Node, and it stays on the app's origin: other addresses open in the default browser.
 
-import { BrowserWindow, Menu, clipboard, shell, type NativeImage } from 'electron';
+import { BrowserWindow, Menu, clipboard, shell, type NativeImage, type WebContents } from 'electron';
 import { onOrigin, type LiveWindowRequest } from './core/liveapp.js';
 
 /** The Live app windows' own session: none of the office's cookies or storage. */
@@ -20,7 +20,23 @@ export function liveWindows(): { key: string; url: string; partition: string; wi
   return [...windows].map(([key, w]) => ({ key, url: w.win.webContents.getURL(), partition: LIVE_PARTITION, win: w.win }));
 }
 
-const PREFS = { contextIsolation: true, nodeIntegration: false, sandbox: true, partition: LIVE_PARTITION } as const;
+/** The live app's web preferences: this window, its pop-ups, and the office's Show here view (embed.ts). */
+export const LIVE_PREFS = { contextIsolation: true, nodeIntegration: false, sandbox: true, partition: LIVE_PARTITION } as const;
+const PREFS = LIVE_PREFS;
+
+/** Keeps `wc` on the app's origin: its own pop-ups stay with it (a file download, a report); other addresses open in the default browser. */
+export function keepOnOrigin(wc: WebContents, origin: () => string) {
+  wc.setWindowOpenHandler(({ url }) => {
+    if (onOrigin(url, origin())) return { action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true, webPreferences: { ...PREFS } } };
+    if (/^https?:/i.test(url)) void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  wc.on('will-navigate', (e, url) => {
+    if (onOrigin(url, origin())) return;
+    e.preventDefault();
+    if (/^(https?|mailto):/i.test(url)) void shell.openExternal(url);
+  });
+}
 
 export function openLiveWindow(req: LiveWindowRequest, o: { icon: NativeImage; test: boolean }): BrowserWindow {
   const had = windows.get(req.key);
@@ -75,17 +91,7 @@ export function openLiveWindow(req: LiveWindowRequest, o: { icon: NativeImage; t
       { label: 'View', submenu: [{ role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, { label: 'Developer tools', accelerator: 'F12', click: () => wc.toggleDevTools() }] },
     ]),
   );
-  wc.setWindowOpenHandler(({ url }) => {
-    // The app's own pop-ups (a file download, a report) stay with it; anything else is the browser's.
-    if (onOrigin(url, entry.origin)) return { action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true, webPreferences: { ...PREFS } } };
-    if (/^https?:/i.test(url)) void shell.openExternal(url);
-    return { action: 'deny' };
-  });
-  wc.on('will-navigate', (e, url) => {
-    if (onOrigin(url, entry.origin)) return;
-    e.preventDefault();
-    if (/^(https?|mailto):/i.test(url)) void shell.openExternal(url);
-  });
+  keepOnOrigin(wc, () => entry.origin);
   win.on('page-title-updated', (e, title) => {
     e.preventDefault();
     win.setTitle(title ? `${title} · Live app` : 'Live app');

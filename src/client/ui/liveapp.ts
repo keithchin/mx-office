@@ -13,6 +13,7 @@ import { store } from '../state';
 import { h, timeAgo } from './dom';
 import { readinessCard } from './liveapp/readiness';
 import { liveViewer } from './liveapp/viewer';
+import { desktopEmbed, liveEmbed } from './liveapp/embed';
 import { liveConsole } from './liveapp/console';
 import { liveUrl, openPanel } from './liveapp/open';
 import { aheadBanner } from './branch-ahead/banner';
@@ -46,8 +47,10 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
   let root: HTMLElement | null = null;
   // Taking a frame out of the page reloads it, so the viewer stays put and only what's above it is redrawn.
   const top = h('div.la-top');
-  const viewer = liveViewer();
-  const opener = openPanel();
+  // In the desktop app, Show here: the app top-level in a native view over the tab (ui/liveapp/embed.ts); in a browser, the preview frame.
+  const bridge = desktopEmbed();
+  const viewer = bridge ? liveEmbed(bridge, () => store.floor ?? '') : liveViewer();
+  const opener = openPanel(!!bridge);
   const panel = liveConsole(net);
   opener.onPreview = () => draw();
   const banner = aheadBanner('live', { openModel: () => document.getElementById('tab-model')?.click() });

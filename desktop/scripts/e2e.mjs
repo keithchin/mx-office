@@ -15,7 +15,9 @@
 //   attached  an office started outside the app is attached to without a second office starting; signed
 //             out it says so; Edit in Studio Pro on a synthetic Mendix project gets a JSON sync answer, its
 //             confirm, and an open that test mode's stand-in records (Studio Pro never starts); an Open live app link
-//             opens one Live app window of its own (own session, sandboxed, no office cookie); the office disappearing makes it "disconnected" with its counts marked
+//             opens one Live app window of its own (own session, sandboxed, no office cookie); Show here puts a
+//             stand-in app top-level in the office window (window.top is the app, real Back/Forward, hidden under a
+//             dialog and another tab, refused for an address the office doesn't name); the office disappearing makes it "disconnected" with its counts marked
 //             stale, and the app starts nothing; the office coming back recovers without notifying
 //             again; Quit leaves that office running.
 //
@@ -365,6 +367,91 @@ async function attached(home) {
       await until('the Live app window closed', async () => (await hook(app, () => globalThis.__mxDesktop.liveWindows().length)) === 0, 10_000);
       log(`  Live app window: own session, sandboxed, "${info.title}", no office cookie, reused`);
     } finally {
+      fake.closeAllConnections();
+      await new Promise((r) => fake.close(r));
+    }
+  });
+  await check('attached: Show here puts the live app top-level in the office window (window.top is the app; real Back and Forward; it steps aside for a dialog and another tab)', async () => {
+    // A stand-in for the project's live app proxy: two pages that read window.top the way Mendix's pluggable widgets do.
+    const cookies = [];
+    const page = (title, next) =>
+      `<!doctype html><title>${title}</title><h1>${title}</h1>${next ? `<a id="next" href="${next}">Next</a>` : ''}<script>let r; try { r = (window.top === window ? 'top:' : 'framed:') + window.top.location.href; } catch (e) { r = 'error:' + e.name; } window.__topCheck = r;</script>`;
+    const fake = http.createServer((req, res) => {
+      cookies.push(req.headers.cookie ?? '');
+      res.writeHead(200, { 'content-type': 'text/html' });
+      res.end(req.url === '/two' ? page('Order list', '') : page('Order desk', '/two'));
+    });
+    const appPort = await freePort();
+    await new Promise((r) => fake.listen(appPort, '127.0.0.1', r));
+    const w = (js) => hook(app, (_electron, code) => globalThis.__mxDesktop.win().webContents.executeJavaScript(code, true), js);
+    const info = () => hook(app, () => globalThis.__mxDesktop.embed()?.info() ?? null);
+    const inView = (js) => hook(app, (_electron, code) => globalThis.__mxDesktop.embed().view().webContents.executeJavaScript(code, true), js);
+    const viewUrl = async () => (await info())?.url ?? '';
+    try {
+      await hook(app, (_electron, u) => globalThis.__mxDesktop.win().loadURL(u), `http://localhost:${port}/lite?floor=${STUDIO_FLOOR}`);
+      await until('the project page with the bridge', () => w(`!!(window.__lite?.store?.floor === '${STUDIO_FLOOR}' && window.mxOfficeDesktop?.embed)`), 60_000);
+      const bridgeKeys = await w(`Object.keys(window.mxOfficeDesktop.embed).sort().join(',')`);
+      assert(!(await w(`typeof require !== 'undefined' || typeof process !== 'undefined'`)), 'Node reached the office page');
+      log(`  bridge: ${bridgeKeys}`);
+      // No live app runs in a test office: the tab is told one does, at the stand-in's address, and the office's own word (stopped) is held back.
+      await w(`window.__lite.net.handlers = window.__lite.net.handlers.map((h) => (m) => (m.t === 'liveapp.state' && !m.e2e ? undefined : h(m))); true`);
+      await w(`document.getElementById('tab-live').click(); true`);
+      await sleep(1500);
+      const running = `window.__lite.net.handlers.forEach((h) => h({ t: 'liveapp.state', e2e: true, state: { floor: '${STUDIO_FLOOR}', status: 'running', appPort: ${appPort}, viewPort: ${appPort}, log: [], available: true, started: true, sha: 'abc1234def', since: 1 } })); true`;
+      await w(running);
+      const showBtn = `[...document.querySelectorAll('.la-openbox button')].find((b) => /Show here|Hide/.test(b.textContent))`;
+      assert((await w(`${showBtn}?.textContent ?? ''`)) === 'Show here', `no Show here button: ${await w(`document.querySelector('.la-openbox')?.textContent ?? ''`)}`);
+      // The office says no app runs on that project: the desktop app refuses the address.
+      await w(`${showBtn}.click(); true`);
+      const refused = await until('the refusal', async () => { const r = await w(`(() => { const e = document.querySelector('.lv-native'); return { failed: !!e?.classList.contains('lv-failed'), hidden: e?.hidden, note: e?.querySelector('.lv-place-note')?.textContent ?? '', pill: document.querySelector('.la-pill')?.textContent ?? '' }; })()`); return r.failed ? r.note : ""; }, 15_000);
+      assert(/isn.t running through the office.s proxy/.test(refused) && !(await info()), `not refused: ${refused}`);
+      // Now as if the office named the stand-in as the project's proxy.
+      await hook(app, (_electron, [f, p]) => globalThis.__mxDesktop.viewPorts.set(f, p), [STUDIO_FLOOR, appPort]);
+      await w(`${showBtn}.click(); true`);
+      await w(`${showBtn}.click(); true`);
+      await until('the view shown on the app', async () => {
+        const i = await info();
+        return i?.visible && i.url === `http://localhost:${appPort}/`;
+      }, 30_000);
+      const top = await until('the page read window.top', () => inView('window.__topCheck'), 15_000);
+      assert(top === `top:http://localhost:${appPort}/`, `window.top in the view: ${top}`);
+      const iso = await hook(app, () => {
+        const v = globalThis.__mxDesktop.embed().view();
+        const p = v.webContents.getLastWebPreferences();
+        return { own: v.webContents.session !== globalThis.__mxDesktop.win().webContents.session, sandbox: p.sandbox, node: p.nodeIntegration, iso: p.contextIsolation, devtools: v.webContents.isDevToolsOpened() };
+      });
+      assert(iso.own && iso.sandbox && !iso.node && iso.iso && !iso.devtools, `the view: ${JSON.stringify(iso)}`);
+      assert(cookies.length > 0 && cookies.every((c) => !/ao_session/.test(c)), `the office's cookie reached the app: ${JSON.stringify(cookies)}`);
+      // Placed over the placeholder (window DIPs = CSS px × the office's zoom).
+      const place = await w(`(() => { const r = document.querySelector('.lv-native .lv-place').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; })()`);
+      const z = await hook(app, () => globalThis.__mxDesktop.win().webContents.getZoomFactor());
+      const b = (await info()).bounds;
+      assert(Math.abs(b.x - place.x * z) <= 2 && Math.abs(b.width - place.width * z) <= 2 && b.height > 40, `bounds ${JSON.stringify(b)} vs the placeholder ${JSON.stringify(place)} × ${z}`);
+      // Real history: a click inside the app, then the office toolbar's Back and Forward.
+      await inView(`document.getElementById('next').click(); true`);
+      await until('the app on its second page', async () => (await viewUrl()) === `http://localhost:${appPort}/two`, 15_000);
+      await until('the address field following', async () => (await w(`document.querySelector('.lv-native .lv-address').value`)) === '/two', 10_000);
+      await w(`document.querySelector('.lv-native [aria-label="Back"]').click(); true`);
+      await until('Back', async () => (await viewUrl()) === `http://localhost:${appPort}/`, 15_000);
+      await until('Forward enabled', () => w(`!document.querySelector('.lv-native [aria-label="Forward"]').disabled`), 10_000);
+      await w(`document.querySelector('.lv-native [aria-label="Forward"]').click(); true`);
+      await until('Forward', async () => (await viewUrl()) === `http://localhost:${appPort}/two`, 15_000);
+      // An office dialog over it: the native view steps aside, and comes back when it closes.
+      await w(`(() => { const d = document.createElement('div'); d.className = 'backdrop e2e-modal'; d.style.cssText = 'position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.4)'; document.body.append(d); return true; })()`);
+      await until('the view hidden under the dialog', async () => (await info())?.visible === false, 10_000);
+      await w(`document.querySelector('.e2e-modal').remove(); true`);
+      await until('the view back', async () => (await info())?.visible === true, 10_000);
+      // Another tab: hidden; the Live app tab again: back where it was, not reloaded.
+      await w(`document.getElementById('tab-command')?.click(); true`);
+      await until('the view hidden with the tab', async () => (await info())?.visible === false, 10_000);
+      await w(`document.getElementById('tab-live').click(); true`);
+      await until('the view back with the tab', async () => (await info())?.visible === true && (await viewUrl()) === `http://localhost:${appPort}/two`, 10_000);
+      // Leaving the project page: the view is destroyed.
+      await hook(app, (_electron, u) => globalThis.__mxDesktop.win().loadURL(u), `http://localhost:${port}/home`);
+      await until('the view gone', async () => (await info()) === null, 15_000);
+      log(`  Show here: window.top is the app (${top}), own session, sandboxed, real Back/Forward, hidden under a dialog and another tab, gone with the page`);
+    } finally {
+      await hook(app, () => globalThis.__mxDesktop.embed()?.close()).catch(() => {});
       fake.closeAllConnections();
       await new Promise((r) => fake.close(r));
     }
