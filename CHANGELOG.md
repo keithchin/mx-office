@@ -6,9 +6,19 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+### Added
+
+- **Live app Console, like Studio Pro’s.** The 🌐 Live app tab has a Console with two tabs. **Runtime log**: the Mendix runtime’s log as entries (time, level, who logged it, the message), stack traces and “Caused by” folded under their entry (▸ / ▾), Error / Warning / Info / Debug filters with counts, a search, Pause, Auto-scroll, Clear (the view only) and Copy per entry; the app’s web-client errors (“Client”) are marked, and the tab’s badge counts the errors. **Network**: the requests the app made (the last 500, in memory only), with method, status, name, type, size and time; Mendix `xas/` calls named by their action (*xas · retrieve_by_xpath Orders.Order*); a row opens to its headers and the first 8 KB of its bodies, JSON laid out; All / XHR / Errors, a filter, Pause and Clear. Cookie values, `Authorization` and CSRF tokens are redacted and password fields masked. It streams only while the tab is in view; the log is read on from where it stopped, never again from the start.
+- **↗ Open live app**: the live app in a window of its own (a browser window, or a separate Live app window in the desktop app, with Back, Forward, Reload, Hard reload, Home, Copy address, Open in browser and Developer tools in its menu, and a browser session of its own).
+
 ### Fixed
 
 - **A status reply that lists things only you can do now reaches Needs you.** Asked for a status update, a lead answered in chat with a numbered list (“items 1 to 3 need your hands, 4 and 5 can be skipped”) and nothing showed in Needs you: the chat-ask check only took one sentence asking you something, and only when Jeff agreed. Now, without a model, each item a turn-ending reply marks as yours (“need your hands”, “needs you”, “for you to do”, “your action”, “only you can”, or an item like “Tell me once …”) becomes its own card, titled with the item and carrying the agent’s words and where it said them (the team chat message, when it replied on the phone). Items it says can be skipped (or FYI, no action needed) are not filed or counted; they are named in the filed cards. Nothing is filed twice: an item the agent already escalated, or one naming an open escalation or decision id, is folded into it, and the same item from the next status reply isn’t filed again for a day. Negated, conditional and future lists, relays of someone else’s ask and plain progress reports file nothing. Deploying, cloud settings and credentials are marked needs a person, outside the office: no automatic action. The Playbook now tells agents to escalate each such item themselves.
+- **Live app pages with Data grid 2 (and other pluggable widgets) failed to load in the tab** (“An error occurred while loading page … Blocked a frame … from accessing a cross-origin frame”). The tab showed the app in a frame on another origin, and those widgets read the top window, which browsers refuse across origins. The tab no longer embeds it: **↗ Open live app** shows it top-level, where it works as in a browser tab; **Preview here** keeps the frame for a quick look, with a note that some widgets don’t work there.
+
+### Security
+
+- The live app opens through a small recording proxy the office runs per app on a port of its own (from the live apps’ range, never the office’s port). It passes requests and WebSockets on to the app’s port on this machine only; it removes the office’s session cookie (which the browser sends to every port of the host) from every request and drops any cookie the app tries to set under the office’s name, so the app can neither read nor replace your office sign-in. The app is never served from the office’s own origin.
 
 ## 2026-10-18 · release 59 (`ca35113`)
 

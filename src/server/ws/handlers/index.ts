@@ -9,6 +9,7 @@ import { floorHandlers, projectView } from './floors.js';
 import { githubHandlers, issuesView, pullsView } from './github.js';
 import { jukeboxHandlers, jukeboxView } from './jukebox.js';
 import { liveAppHandlers } from './liveapp.js';
+import { liveAppConsoleHandlers, liveAppConsoleHooks } from './liveapp-console.js';
 import { meetingHandlers, meetingView } from './meetings.js';
 import { planHandlers, planView } from './plan.js';
 import { presenceHandlers } from './presence.js';
@@ -31,6 +32,7 @@ export const handlers: HandlerMap<ClientMsg> = {
   ...githubHandlers,
   ...jukeboxHandlers,
   ...liveAppHandlers,
+  ...liveAppConsoleHandlers,
   ...meetingHandlers,
   ...planHandlers,
   ...presenceHandlers,
@@ -47,7 +49,7 @@ export const handlers: HandlerMap<ClientMsg> = {
  * The features that keep something per person on a floor, in the order they let go of it when
  * someone leaves the floor or the office (see FeatureHooks): the order the office has always done it in.
  */
-export const features: readonly FeatureHooks[] = [workerHooks, changesHooks, whiteboardHooks, convoHooks];
+export const features: readonly FeatureHooks[] = [workerHooks, changesHooks, whiteboardHooks, convoHooks, liveAppConsoleHooks];
 
 /** What someone arriving on a floor is sent (see office/views.ts): a piece from each feature, in the order it has always gone out. */
 export const views: ViewPieces = {

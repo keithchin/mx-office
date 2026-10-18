@@ -19,6 +19,8 @@ import { atLeast, findOfficeDir, findOnPath, isBuilt, logFileOf, nodeVersion, of
 import { badgeBitmap, dataUrl, fitBounds, pageHtml, type PageSpec } from './core/window.js';
 import { DESKTOP_DOCS, actionOf, busyPortPage, crashPage, problemPage, refusedPage, startingPage } from './core/screens.js';
 import { DesktopStore, officeKey } from './core/store.js';
+import { liveWindowRequest } from './core/liveapp.js';
+import { liveWindows, openLiveWindow } from './liveapp.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -117,8 +119,14 @@ function createWindow() {
 
 /** Office pages stay in the app; every other address opens in the default browser; the app's own buttons act. */
 function guard(w: BrowserWindow) {
-  w.webContents.setWindowOpenHandler(({ url }) => {
+  w.webContents.setWindowOpenHandler(({ url, frameName }) => {
     if (sameOffice(url)) return { action: 'allow' };
+    // Open live app: the app top-level in a window of its own (liveapp.ts).
+    const live = liveWindowRequest(url, frameName, opts.port);
+    if (live) {
+      openLiveWindow(live, { icon: windowIcon(), test: TEST });
+      return { action: 'deny' };
+    }
     if (/^https?:/i.test(url) && !actionOf(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
@@ -597,7 +605,7 @@ if (!app.requestSingleInstanceLock()) {
     createTray();
     // Screenshots and checks drive the app from outside (Playwright's electron.evaluate): only on request.
     if (TEST) {
-      const hooks = { tray: () => tray, win: () => win, sup: () => sup, mode: () => mode, poll, restartOffice, requestQuit, startHere, onAction, officeFetch, status: () => freshStatus(conn), conn: () => conn, notes: () => testNotes.map(({ click: _, ...n }) => n), clickNote: (i: number) => testNotes[i]?.click(), answer: (...a: number[]) => testAnswers.push(...a), asked: () => testAsked };
+      const hooks = { tray: () => tray, win: () => win, sup: () => sup, mode: () => mode, poll, restartOffice, requestQuit, startHere, onAction, officeFetch, status: () => freshStatus(conn), conn: () => conn, notes: () => testNotes.map(({ click: _, ...n }) => n), clickNote: (i: number) => testNotes[i]?.click(), answer: (...a: number[]) => testAnswers.push(...a), asked: () => testAsked, liveWindows };
       Object.assign(globalThis, { __mxDesktop: { ...hooks, badge: (n: number) => nativeImage.createFromBitmap(badgeBitmap(n), { width: 32, height: 32, scaleFactor: 2 }).toPNG().toString('base64'), menu: () => trayLabels, tooltip: () => trayTip } });
     }
     void boot();

@@ -1,5 +1,6 @@
 // The live app viewer on the 🌐 Live app tab: the running app in a frame, with a small browser's toolbar
-// over it. Back, Forward, Reload (Shift: hard reload), Home, the address within the app (Enter goes there,
+// over it. It's only the tab's "Preview here" now (ui/liveapp/open.ts): in a frame on another origin some
+// Mendix widgets fail (they read the top window), so Open live app shows the app top-level instead. Back, Forward, Reload (Shift: hard reload), Home, the address within the app (Enter goes there,
 // on the app's own origin only), the device width (Desktop / Tablet / Phone) and zoom (fit / 100%), Copy
 // link, Open in a new tab, and Full screen (the browser's Fullscreen API on the viewer, or the viewer laid
 // over the window when that's refused; Esc or the button leaves).

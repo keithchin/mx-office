@@ -27,8 +27,26 @@ import { liveAppConfig, type LiveAppConfig } from './config.js';
 import { killTreeNow } from './process.js';
 import { ReadyNews } from './news.js';
 import { readReadiness } from './readiness.js';
+import { findMpr } from './checkout.js';
+import { LiveConsoles } from './console/index.js';
 
 type Deps = Pick<Ctx, 'cfg' | 'floors' | 'toFloor'> & Partial<Pick<Ctx, 'toastFloor'>>;
+
+/** <live checkout>/.mxcli/runtime.log, in mxcli's working folder (the .mpr's). */
+export function runtimeLogOf(projectDir: string | undefined, checkout: string): string {
+  let dir = projectDir;
+  if (!dir) {
+    // No checkout yet (never started here) has no .mpr: the log would be at the checkout's root.
+    let mpr: string | undefined;
+    try {
+      mpr = findMpr(checkout);
+    } catch {
+      mpr = undefined;
+    }
+    dir = mpr ? path.dirname(mpr) : checkout;
+  }
+  return path.join(dir, '.mxcli', 'runtime.log');
+}
 
 /** A reading waits this long for more news before it starts (a merge is a fetch, then a sync, then a build). */
 const SETTLE_MS = 400;
@@ -56,6 +74,7 @@ export class LiveApps {
     const app = o.apps.get(f.id);
     clearTimeout(o.extras.get(f.id)?.timer);
     o.extras.delete(f.id);
+    void o.consoles.forget(f.id);
     if (!app) return;
     o.apps.delete(f.id);
     void app.shutdown().catch(() => undefined);
@@ -64,11 +83,27 @@ export class LiveApps {
   private mxcli: string | null;
   private readonly unsubs: (() => void)[] = [];
   private readonly liveDir: string;
+  /** Each floor's Console: the runtime log and the app's requests (./console/). */
+  readonly consoles: LiveConsoles;
 
   constructor(private ctx: Deps) {
     this.cfg = liveAppConfig(ctx.cfg.dataDir);
     this.mxcli = resolveCommand(this.cfg.mxcli);
     this.liveDir = path.join(ctx.cfg.dataDir, 'live');
+    this.consoles = new LiveConsoles({
+      host: ctx.cfg.host || '127.0.0.1',
+      ports: this.cfg.ports,
+      taken: () => new Set([...this.apps.values()].flatMap((a) => a.ports)),
+      logFile: (floorId) => {
+        const app = this.apps.get(floorId);
+        return runtimeLogOf(app?.projectDir, app?.checkoutDir ?? path.join(this.liveDir, floorId));
+      },
+      portChanged: (floorId) => {
+        const floor = this.ctx.floors.get(floorId);
+        const app = this.apps.get(floorId);
+        if (floor && app) this.ctx.toFloor(floor, { t: 'liveapp.state', state: this.withExtra(app.state) });
+      },
+    });
     // Should the office's process end without its shutdown (a crash), the apps' processes go with it.
     process.once('exit', () => {
       for (const a of this.apps.values()) if (a.pid) killTreeNow(a.pid);
@@ -99,7 +134,7 @@ export class LiveApps {
         floorId: floor.id,
         floorDir: floor.dir,
         liveDir: this.liveDir,
-        taken: () => new Set([...this.apps.values()].flatMap((a) => a.ports)),
+        taken: () => new Set([...[...this.apps.values()].flatMap((a) => a.ports), ...this.consoles.ports()]),
         changed: (state) => this.changed(state),
       });
       this.apps.set(floor.id, app);
@@ -122,13 +157,16 @@ export class LiveApps {
 
   private withExtra(s: LiveAppState): LiveAppState {
     const e = this.extras.get(s.floor);
-    return e ? { ...s, ...(e.main ? { main: e.main } : {}), ...(e.readiness ? { readiness: e.readiness } : {}) } : s;
+    const view = this.consoles.portOf(s.floor);
+    const out = view && s.appPort ? { ...s, viewPort: view } : s;
+    return e ? { ...out, ...(e.main ? { main: e.main } : {}), ...(e.readiness ? { readiness: e.readiness } : {}) } : out;
   }
 
   private last = new Map<string, Pick<LiveAppState, 'status' | 'sha'>>();
 
   /** Told to everyone on the floor; a start, a stop, a crash or a new commit reads what it has again. */
   private changed(state: LiveAppState) {
+    this.consoles.sync(state);
     const floor = this.ctx.floors.get(state.floor);
     if (floor) this.ctx.toFloor(floor, { t: 'liveapp.state', state: this.withExtra(state) });
     const was = this.last.get(state.floor);
@@ -221,6 +259,7 @@ export class LiveApps {
     for (const e of this.extras.values()) clearTimeout(e.timer);
     for (const u of this.unsubs.splice(0)) u();
     await Promise.all([...this.apps.values()].map((a) => a.shutdown()));
+    await this.consoles.shutdown();
   }
 }
 

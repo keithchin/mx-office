@@ -70,7 +70,7 @@ These can also go in `<office data>/live-app.json`; the environment wins.
 | Variable | Default |
 |---|---|
 | `AGENT_OFFICE_LIVE_MXCLI` | The office's own mxcli (as for `AGENT_OFFICE_MXCLI`), else `mxcli` on `PATH` |
-| `AGENT_OFFICE_LIVE_PORTS` | `8110-8199` |
+| `AGENT_OFFICE_LIVE_PORTS` | `8110-8199` (each app takes three, and one more for its Console's recording proxy while it runs) |
 | `AGENT_OFFICE_LIVE_DB_HOST` | `127.0.0.1:5432` |
 | `AGENT_OFFICE_LIVE_DB_USER`, `AGENT_OFFICE_LIVE_DB_PASSWORD` | `postgres` / `postgres` |
 | `AGENT_OFFICE_LIVE_POLL_SECONDS` | `60` (0 turns the auto-update off) |

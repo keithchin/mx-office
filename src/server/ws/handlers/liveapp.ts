@@ -41,4 +41,4 @@ export const liveAppHandlers = {
     void liveAppsOf(ctx).of(floor).stop(c.peer.name);
     audit.record({ floor: floor.id, actor: human(c.peer.name, c.accountId), action: 'liveapp.stop', target: { kind: 'liveapp', id: floor.id, label: 'Live app' }, summary: 'Stopped the live app' });
   },
-} satisfies HandlerMap<LiveAppClientMsg>;
+} satisfies HandlerMap<Exclude<LiveAppClientMsg, { t: 'liveapp.console' }>>;

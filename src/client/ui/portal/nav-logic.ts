@@ -81,7 +81,7 @@ const BUILTIN_GROUPS: readonly NavGroup[] = [
       tab('model', 'Model', 'The app as Studio Pro shows it: the App Explorer, domain models and microflows, on main or any branch'),
     ],
   },
-  { id: 'deploy', label: 'Deployment', icon: 'rocket', items: [tab('live', 'Live app', 'The project’s app, running from main, in a frame')] },
+  { id: 'deploy', label: 'Deployment', icon: 'rocket', items: [tab('live', 'Live app', 'The project’s app, running from main: open it, with its Console')] },
   {
     id: 'monitor',
     label: 'Monitoring',

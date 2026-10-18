@@ -14,13 +14,15 @@
 //             page and Restart brings it back without notifying again; Quit stops the office it started.
 //   attached  an office started outside the app is attached to without a second office starting; signed
 //             out it says so; Edit in Studio Pro on a synthetic Mendix project gets a JSON sync answer, its
-//             confirm, and an open that test mode's stand-in records (Studio Pro never starts); the office disappearing makes it "disconnected" with its counts marked
+//             confirm, and an open that test mode's stand-in records (Studio Pro never starts); an Open live app link
+//             opens one Live app window of its own (own session, sandboxed, no office cookie); the office disappearing makes it "disconnected" with its counts marked
 //             stale, and the app starts nothing; the office coming back recovers without notifying
 //             again; Quit leaves that office running.
 //
 // Logs (this run's output, the app's output, the offices' logs) go to --logs (default <root>/../desktop-e2e-logs).
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -333,6 +335,39 @@ async function attached(home) {
     assert(open.status === 200 && open.type.includes('application/json'), `the open answered ${JSON.stringify(open)}`);
     await until('the stand-in in the office log', () => /test mode: Studio Pro not started \(it would have run VersionSelector\.exe \/file:/.test(fs.readFileSync(officeLog, 'utf8')), 15_000);
     log('  Edit in Studio Pro: sync 200 JSON, confirm shown, open 200 JSON, Studio Pro not started (test mode)');
+  });
+  await check('attached: Open live app opens a Live app window of its own (own session, no office cookie), once per project', async () => {
+    // A stand-in for the live app's address (the office's recording proxy in real use): records the cookies it gets.
+    const cookies = [];
+    const fake = http.createServer((req, res) => {
+      cookies.push(req.headers.cookie ?? '');
+      res.writeHead(200, { 'content-type': 'text/html' });
+      res.end('<!doctype html><title>Order desk</title><h1>Order desk</h1>');
+    });
+    const appPort = await freePort();
+    await new Promise((r) => fake.listen(appPort, '127.0.0.1', r));
+    try {
+      const w = (js) => hook(app, (_electron, code) => globalThis.__mxDesktop.win().webContents.executeJavaScript(code, true), js);
+      const click = `(() => { const a = document.createElement('a'); a.href = 'http://localhost:${appPort}/'; a.target = 'mxoffice-liveapp-small-app'; a.rel = 'noopener'; document.body.append(a); a.click(); a.remove(); return true; })()`;
+      await w(click);
+      await until('the Live app window on the app', async () => (await hook(app, () => globalThis.__mxDesktop.liveWindows().map((x) => x.url))).some((u) => u === `http://localhost:${appPort}/`), 30_000);
+      const info = await hook(app, () => {
+        const [lw] = globalThis.__mxDesktop.liveWindows();
+        return { n: globalThis.__mxDesktop.liveWindows().length, own: lw.win.webContents.session !== globalThis.__mxDesktop.win().webContents.session, sandboxed: lw.win.webContents.getLastWebPreferences().sandbox, title: lw.win.getTitle() };
+      });
+      assert(info.n === 1 && info.own && info.sandboxed, `the Live app window: ${JSON.stringify(info)}`);
+      assert(cookies.length > 0 && cookies.every((c) => !/ao_session/.test(c)), `the office's cookie reached the app: ${JSON.stringify(cookies)}`);
+      await w(click);
+      await sleep(1500);
+      assert((await hook(app, () => globalThis.__mxDesktop.liveWindows().length)) === 1, 'opening again reuses the window');
+      assert(/^http:\/\/localhost:\d+\//.test(await winUrl(app)), 'the office window stayed on the office');
+      await hook(app, () => globalThis.__mxDesktop.liveWindows().forEach((x) => x.win.close()));
+      await until('the Live app window closed', async () => (await hook(app, () => globalThis.__mxDesktop.liveWindows().length)) === 0, 10_000);
+      log(`  Live app window: own session, sandboxed, "${info.title}", no office cookie, reused`);
+    } finally {
+      fake.closeAllConnections();
+      await new Promise((r) => fake.close(r));
+    }
   });
   await check('attached: the office disappearing is "disconnected", counts stale, nothing started', async () => {
     // Its process only (office.stop() also ends every process naming the home, the app among them).
