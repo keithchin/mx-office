@@ -166,6 +166,7 @@ export const routes: readonly Route[] = [
   mobileRoutes.act,
   mobileRoutes.status,
   desktopRoutes.status,
+  desktopRoutes.liveapp,
   mobileRoutes.push,
   mobileRoutes.phones,
   phoneAccessRoutes.view,

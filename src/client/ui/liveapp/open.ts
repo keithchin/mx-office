@@ -7,7 +7,8 @@
 // The window opens through the office's recording proxy (server/liveapp/console/proxy.ts), so the
 // Console's Network lists what it asks the runtime. It's one named window per project (opening again
 // brings the same window to the address), without an opener (the app can't reach back into this page).
-// The desktop app opens it as a separate window of its own with a small menu of its own (desktop/src/liveapp.ts).
+// The desktop app opens it as a separate window of its own with a small menu of its own (desktop/src/liveapp.ts),
+// and its "Show here" is the app top-level inside the office window (ui/liveapp/embed.ts), not the frame.
 
 import { h } from '../dom';
 import type { LiveAppState } from '../../../shared/protocol';
@@ -32,10 +33,11 @@ export const liveUrl = (s: Pick<LiveAppState, 'viewPort' | 'appPort'>, host: str
 /** The window's name: one per project, so Open again goes to the same window. */
 export const liveWindowName = (floor: string) => `mxoffice-liveapp-${floor.replace(/[^\w-]/g, '_')}`;
 
-export function openPanel(): OpenPanel {
+/** `desktop`: in the desktop app, where the button is Show here (every widget works) rather than the preview frame. */
+export function openPanel(desktop = false): OpenPanel {
   const link = h('a.btn.primary.la-go', { target: '_blank', rel: 'noopener', title: 'Open the app in a window of its own, where every widget works' }, '↗ Open live app') as HTMLAnchorElement;
   const copyBtn = h('button.btn', { type: 'button', title: 'Copy the address of the live app' }, 'Copy link') as HTMLButtonElement;
-  const previewBtn = h('button.btn', { type: 'button', 'aria-pressed': 'false', title: 'Show the app in a frame here: a preview, where some widgets don’t work' }, 'Preview here') as HTMLButtonElement;
+  const previewBtn = h('button.btn', { type: 'button', 'aria-pressed': 'false', title: desktop ? 'Show the app here, top-level in the desktop app: every widget works' : 'Show the app in a frame here: a preview, where some widgets don’t work' }, desktop ? 'Show here' : 'Preview here') as HTMLButtonElement;
   const note = h('small.la-note', {});
   const said = h('span.la-note', { role: 'status', 'aria-live': 'polite' });
   const warn = h('p.la-note.la-preview-note', { hidden: true }, 'Preview: the app in a frame inside the office’s page. Some widgets don’t work here (Data grid 2 and others that read the top window are refused across origins, so their pages fail to load). Open live app shows it as it really is.');
@@ -60,8 +62,8 @@ export function openPanel(): OpenPanel {
 
   function paint() {
     previewBtn.setAttribute('aria-pressed', String(preview));
-    previewBtn.textContent = preview ? 'Hide preview' : 'Preview here';
-    warn.hidden = !preview;
+    previewBtn.textContent = preview ? (desktop ? 'Hide' : 'Hide preview') : desktop ? 'Show here' : 'Preview here';
+    warn.hidden = !preview || desktop;
   }
 
   const panel: OpenPanel = {

@@ -21,6 +21,8 @@ import { DESKTOP_DOCS, actionOf, busyPortPage, crashPage, problemPage, refusedPa
 import { DesktopStore, officeKey } from './core/store.js';
 import { liveWindowRequest } from './core/liveapp.js';
 import { liveWindows, openLiveWindow } from './liveapp.js';
+import { attachEmbed } from './embed.js';
+import type { EmbedController } from './core/embed.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -56,6 +58,10 @@ let quitting = false;
 let asking = false;
 let pollTimer: ReturnType<typeof setInterval> | undefined;
 let officeDir: string | undefined;
+/** Show here: the live app as a native view in the window (embed.ts). */
+let embed: EmbedController | undefined;
+/** Test mode only: proxy ports to take as the office's answer, per project (the checks have no running app). */
+const testViewPorts = new Map<string, number>();
 const shownNotes: Notification[] = [];
 let trayLabels: string[] = [];
 let trayTip = '';
@@ -82,6 +88,15 @@ const sameOffice = (u: string) => {
 
 // ---- the window
 
+/** A project's live app proxy port, as the office tells the window's signed-in person (GET /api/desktop/liveapp). */
+async function viewPortOf(floor: string): Promise<number | undefined> {
+  if (TEST && testViewPorts.has(floor)) return testViewPorts.get(floor);
+  const r = await officeFetch(`/api/desktop/liveapp?floor=${encodeURIComponent(floor)}`, { timeoutMs: 5000 });
+  if (!r.ok) return undefined;
+  const b = (await r.json().catch(() => ({}))) as { viewPort?: unknown };
+  return typeof b.viewPort === 'number' && Number.isInteger(b.viewPort) ? b.viewPort : undefined;
+}
+
 function createWindow() {
   const fit = TEST ? { bounds: { x: -5000, y: 0, width: 1400, height: 900 }, maximized: false } : fitBounds(store.data.window, screen.getAllDisplays().map((d) => d.workArea));
   win = new BrowserWindow({
@@ -91,9 +106,11 @@ function createWindow() {
     icon: windowIcon(),
     autoHideMenuBar: true,
     backgroundColor: '#14171c',
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+    // The preload only adds the Live app tab's Show here bridge (preload.cts); the page stays sandboxed without Node.
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, preload: path.join(HERE, 'preload.cjs') },
   });
   if (fit.maximized) win.maximize();
+  embed = attachEmbed({ win, officePort: opts.port, isOffice: sameOffice, viewPortOf });
   win.once('ready-to-show', () => (TEST ? win?.showInactive() : win?.show()));
   guard(win);
   win.webContents.on('did-navigate', (_e, u) => {
@@ -605,7 +622,7 @@ if (!app.requestSingleInstanceLock()) {
     createTray();
     // Screenshots and checks drive the app from outside (Playwright's electron.evaluate): only on request.
     if (TEST) {
-      const hooks = { tray: () => tray, win: () => win, sup: () => sup, mode: () => mode, poll, restartOffice, requestQuit, startHere, onAction, officeFetch, status: () => freshStatus(conn), conn: () => conn, notes: () => testNotes.map(({ click: _, ...n }) => n), clickNote: (i: number) => testNotes[i]?.click(), answer: (...a: number[]) => testAnswers.push(...a), asked: () => testAsked, liveWindows };
+      const hooks = { tray: () => tray, win: () => win, sup: () => sup, mode: () => mode, poll, restartOffice, requestQuit, startHere, onAction, officeFetch, status: () => freshStatus(conn), conn: () => conn, notes: () => testNotes.map(({ click: _, ...n }) => n), clickNote: (i: number) => testNotes[i]?.click(), answer: (...a: number[]) => testAnswers.push(...a), asked: () => testAsked, liveWindows, embed: () => embed, viewPorts: testViewPorts };
       Object.assign(globalThis, { __mxDesktop: { ...hooks, badge: (n: number) => nativeImage.createFromBitmap(badgeBitmap(n), { width: 32, height: 32, scaleFactor: 2 }).toPNG().toString('base64'), menu: () => trayLabels, tooltip: () => trayTip } });
     }
     void boot();
