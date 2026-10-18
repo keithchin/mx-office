@@ -3,10 +3,12 @@
 // over the defaults, so a laptop needs nothing set and a server can be told everything once.
 
 import { readFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { officeMxcli } from '../wizard/config.js';
 
 export interface LiveAppConfig {
-  /** The mxcli to run (a name on PATH, or a path). */
+  /** The mxcli to run (a name on PATH, or a path): AGENT_OFFICE_LIVE_MXCLI, live-app.json, else the office's own (wizard/config.ts officeMxcli), else `mxcli` on PATH. */
   mxcli: string;
   /** The ports apps may take, both ends included. Each app needs three: the app's, its admin API's and mxbuild's. */
   ports: { from: number; to: number };
@@ -43,8 +45,10 @@ const text = (v: unknown): string | undefined => (typeof v === 'string' && v ? v
 /**
  * The live apps' settings: AGENT_OFFICE_LIVE_* from `env`, then `live-app.json` in the office's data
  * folder ({ "mxcli", "ports": "8110-8199", "dbHost": "127.0.0.1:5432", "dbUser", "dbPassword", "pollSeconds" }).
+ * With no mxcli named there, the office's own (first-run setup's, AGENT_OFFICE_MXCLI, the workspace's under `home`)
+ * before a bare `mxcli` on PATH, so how the office was started never changes which mxcli runs the apps.
  */
-export function liveAppConfig(dataDir: string, env: NodeJS.ProcessEnv = process.env): LiveAppConfig {
+export function liveAppConfig(dataDir: string, env: NodeJS.ProcessEnv = process.env, home = os.homedir()): LiveAppConfig {
   let file: Record<string, unknown> = {};
   try {
     file = JSON.parse(readFileSync(path.join(dataDir, 'live-app.json'), 'utf8')) ?? {};
@@ -56,7 +60,7 @@ export function liveAppConfig(dataDir: string, env: NodeJS.ProcessEnv = process.
   const [host, port] = splitHost(hostPort, d.db.port);
   const pollS = num(env.AGENT_OFFICE_LIVE_POLL_SECONDS) ?? num(file.pollSeconds);
   return {
-    mxcli: text(env.AGENT_OFFICE_LIVE_MXCLI) ?? text(file.mxcli) ?? d.mxcli,
+    mxcli: text(env.AGENT_OFFICE_LIVE_MXCLI) ?? text(file.mxcli) ?? officeMxcli(env, home)?.path ?? d.mxcli,
     ports: parseRange(env.AGENT_OFFICE_LIVE_PORTS) ?? parseRange(text(file.ports)) ?? d.ports,
     db: {
       host,

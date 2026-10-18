@@ -10,6 +10,7 @@ import { onOfficeExit } from './restart/exit.js';
 import { RESTART_EXIT_CODE } from '../shared/project-run.js';
 import { dropTestCredentials } from './testcreds.js';
 import { wireDesktop } from './desktop/ipc.js';
+import { findMxcli } from './model/mxcli.js';
 
 const argv = process.argv.slice(2);
 if (argv[0] === 'prune') {
@@ -73,9 +74,15 @@ function floorsLine() {
   return `🛗 ${floors.length} project${floors.length === 1 ? '' : 's'}: ${floors.map((f) => f.def.name).join(', ')} (${where})`;
 }
 
+/** The mxcli the live apps, the Model tab and Testing run, the same however the office was started (desktop app or launcher). */
+function mxcliLine() {
+  const bin = findMxcli(cfg.dataDir);
+  return bin ? tildify(bin) : 'none found (pick one in ☰ → 🚀 First-run setup, or set AGENT_OFFICE_MXCLI)';
+}
+
 function passwordLine() {
   if (!office.accounts.sharedPassword) return 'off — everyone signs in with their own account (agent-office accounts)';
-  if (!cfg.passwordGenerated) return '(from --password / AGENT_OFFICE_PASSWORD)';
+  if (!cfg.passwordGenerated) return '(from --password / AGENT_OFFICE_PASSWORD / ~/.agent-office-password)';
   if (cfg.claimToken && !cfg.claimed) return 'shown exactly once to whoever opens the claim link (/claim?t=…)';
   if (cfg.claimed || !cfg.password) return '(already claimed — never shown again; reset with --reset-password)';
   return cfg.password;
@@ -102,6 +109,7 @@ console.log(`
 ${signIn ? `\n  sign in: ${signIn}\n           ${opened ? 'opened in your browser; ' : ''}the link works once\n` : ''}
   password: ${passwordLine()}
   default agent: ${[agent ?? `${cfg.agentCmd} (via login shell)`, ...cfg.agentArgs].join(' ')}
+  mxcli: ${mxcliLine()}
   choose a provider (including Pi and Cursor) when hiring or queueing a task
 ${cfg.tls || loopback ? '' : '\n  tip: voice & screen share need https off localhost — use a reverse proxy or --self-signed\n'}`);
 

@@ -48,18 +48,33 @@ function firstDir(parent: string, match: RegExp): string | undefined {
   }
 }
 
+export type MxcliSource = 'settings' | 'env' | 'workspace';
+
+/**
+ * The office's own mxcli, however the office was started: the one picked in first-run setup, else
+ * AGENT_OFFICE_MXCLI, else the workspace's (<home>/agent-spike/tools/mxcli, or bin/ before the layout
+ * change), the one scripts/start-office.ps1 puts first on PATH. So an office the desktop app starts (no
+ * launcher, none of its variables) runs the same mxcli as one the launcher starts, and never an older
+ * `mxcli` that happens to be on PATH while the workspace has its own.
+ */
+export function officeMxcli(env: NodeJS.ProcessEnv = process.env, home = os.homedir()): { path: string; source: MxcliSource } | undefined {
+  const saved = officeSettings().mxcliPath;
+  if (saved) return { path: saved, source: 'settings' };
+  if (env.AGENT_OFFICE_MXCLI) return { path: env.AGENT_OFFICE_MXCLI, source: 'env' };
+  const exe = isWin ? 'mxcli.exe' : 'mxcli';
+  const ours = firstExisting([path.join(home, 'agent-spike', 'tools', 'mxcli', exe), path.join(home, 'agent-spike', 'bin', exe)]);
+  return existsSync(ours) ? { path: ours, source: 'workspace' } : undefined;
+}
+
 export function wizardConfig(env: NodeJS.ProcessEnv = process.env): WizardConfig {
   const home = os.homedir();
   const local = env.LOCALAPPDATA ?? path.join(home, 'AppData', 'Local');
   const gitBash = 'C:\\Program Files\\Git\\bin\\bash.exe';
-  // The workspace's mxcli: tools/mxcli, or bin/ before the layout change.
-  const exe = isWin ? 'mxcli.exe' : 'mxcli';
-  const ourMxcli = firstExisting([path.join(home, 'agent-spike', 'tools', 'mxcli', exe), path.join(home, 'agent-spike', 'bin', exe)]);
   const pyDir = firstDir(path.join(local, 'Python'), /^pythoncore-/);
   return {
     toolkitDir: toolkitDir(env),
     bash: env.AGENT_OFFICE_BASH || (isWin && existsSync(gitBash) ? gitBash : 'bash'),
-    mxcli: officeSettings().mxcliPath || env.AGENT_OFFICE_MXCLI || (existsSync(ourMxcli) ? ourMxcli : undefined),
+    mxcli: officeMxcli(env, home)?.path,
     jqDir: env.AGENT_OFFICE_JQ_DIR || (isWin ? firstDir(path.join(local, 'Microsoft', 'WinGet', 'Packages'), /^jqlang\.jq/) : undefined),
     python: env.AGENT_OFFICE_PYTHON || (pyDir && existsSync(path.join(pyDir, 'python.exe')) ? path.join(pyDir, 'python.exe') : undefined),
     mendixDir: env.AGENT_OFFICE_MENDIX_DIR || (isWin ? 'C:\\Program Files\\Mendix' : '/opt/mendix'),

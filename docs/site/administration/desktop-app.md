@@ -55,6 +55,21 @@ A [test office](test-offices.md) in the app, never touching the real one:
 npm run desktop:dev -- --port 4791 --home C:\Users\<you>\agent-spike\scratch\test-offices\desktop --user-data C:\Users\<you>\agent-spike\scratch\test-offices\desktop\app -- --test-mode --password test-only-123 --agent C:\path\fake-agent.cmd
 ```
 
+## Same office as the launcher
+
+The app starts `bin\agent-office.js` directly, without `start-office.ps1`, and sets none of the launcher's variables. It doesn't need to: the office makes those choices itself, so an office the app starts behaves exactly like one the launcher starts.
+
+| The launcher used to set | What the office does without it |
+| --- | --- |
+| `PATH` with `agent-spike\tools\mxcli` first, `AGENT_OFFICE_LIVE_MXCLI`, `AGENT_OFFICE_MXCLI` | Uses the mxcli picked in 🚀 First-run setup, else the workspace's `tools\mxcli\mxcli.exe`, before any `mxcli` on `PATH`, for the live app, the Model tab, Testing and the wizard, and puts its folder first on the agents' `PATH` ([mxcli](../integrations/mxcli.md)) |
+| `AGENT_OFFICE_TOOLKIT_DIR` | The toolkit picked in 🔌 Connections › Paths, else `mendix-toolkit` (or `agent-spike\mendix-toolkit`) in your home folder |
+| `AGENT_OFFICE_HOME`, `AGENT_OFFICE_PROJECTS` | The app's `--home` (default `%USERPROFILE%\agent-office`); new projects go in the home |
+| `GH_TOKEN` / `GITHUB_TOKEN` from `~/.agent-office-gh-token`, `AGENT_OFFICE_JEV_KEY_FILE` | [🔌 Connections](connections.md), else the same dot-files, read by the office itself |
+| `AGENT_OFFICE_PASSWORD` from `~/.agent-office-password` | 🔌 Connections, else that file's first line, read by the office itself (never in test mode) |
+| `AGENT_OFFICE_LAUNCHER_LOOP` | Set by the app, so 🔁 Restart safely is offered |
+
+A variable you set yourself still wins, as with the launcher. The office prints the mxcli it uses at start (`mxcli:` in `desktop-office.log`); no secret is ever logged.
+
 ## What it does
 
 - **Starts the office, or opens the one already running.** When nothing answers on the port, the app starts the office as its child, waits for `/api/health`, and opens the window **signed in** (a one-time link the office hands the app over a private channel, like the link a terminal start opens). A new office opens on its [first-run setup](../get-started/new-machine.md#step-3-the-first-run-setup). When an office **already answers** on the port (started with the launcher, say), the app asks and opens that one instead: it **never starts a second office** beside it on the same data, and it won't stop or restart an office it didn't start. A port held by another program is reported.

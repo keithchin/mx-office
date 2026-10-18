@@ -10,6 +10,7 @@ import { commonDirOf, orGit } from './gitfiles.js';
 import { WEATHERS, type Weather } from '../shared/protocol.js';
 import { AGENT_PROVIDERS, PROVIDER_META } from '../shared/providers.js';
 import { MAX_WORKER_LIMIT, parseWorkerLimit } from './machine.js';
+import { isTestPath } from './testmode.js';
 
 export interface Config {
   /** The office's own folder: the building's data lives in its .agent-office. */
@@ -223,6 +224,25 @@ export function excludeFromGit(dir: string, entry = '.agent-office/') {
   }
 }
 
+/** The launcher's password file, in the home folder (or AGENT_OFFICE_SECRETS_HOME). */
+export const LAUNCHER_PASSWORD_FILE = '.agent-office-password';
+
+/**
+ * The password scripts/start-office.ps1 hands the office as AGENT_OFFICE_PASSWORD (the first line of
+ * ~/.agent-office-password), read by the office itself when it was started without it (by the desktop
+ * app, or npm start), so how the office is started never changes its password. Never in test mode: a test
+ * office's password is its own. Empty when there's no such file. The value is never logged.
+ */
+export function launcherPassword(env: NodeJS.ProcessEnv = process.env, testMode = false, read: (file: string) => string = (f) => readFileSync(f, 'utf8')): string {
+  if (testMode) return '';
+  const home = env.AGENT_OFFICE_SECRETS_HOME ? path.resolve(env.AGENT_OFFICE_SECRETS_HOME) : os.homedir();
+  try {
+    return read(path.join(home, LAUNCHER_PASSWORD_FILE)).split(/\r?\n/)[0]?.trim() ?? '';
+  } catch {
+    return '';
+  }
+}
+
 export function loadConfig(argv: string[]): Config {
   let project = '';
   let home = officeHome();
@@ -412,6 +432,9 @@ export function loadConfig(argv: string[]): Config {
     console.log('agent-office: password forgotten — a new one is generated on the next start');
     process.exit(0);
   }
+
+  // No --password or AGENT_OFFICE_PASSWORD: the launcher's file, as the launcher would have passed it.
+  if (!password && stored.verifierFrom !== 'connections') password = launcherPassword(process.env, testMode || isTestPath(dir));
 
   let verifier: Buffer;
   let passwordGenerated = false;

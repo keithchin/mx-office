@@ -111,6 +111,13 @@ export function claudeEnvLine(base: Record<string, string | undefined>, keep: bo
   return keep ? `Claude for agents: passing ${names.join(', ')} to the office (Connections says to use the office’s environment)` : `Claude for agents: not passing ${names.join(', ')} to the office (Connections decides; agents use their Claude login unless it says otherwise)`;
 }
 
+// None of scripts/start-office.ps1's other variables (PATH with the workspace's mxcli first,
+// AGENT_OFFICE_LIVE_MXCLI / AGENT_OFFICE_MXCLI, AGENT_OFFICE_TOOLKIT_DIR, AGENT_OFFICE_PROJECTS, the token,
+// password and Jev key files) are set here, on purpose: the office makes those choices itself (first-run
+// setup and 🔌 Connections, else the workspace's tools/mxcli and the same dot-files), so an office the app
+// starts is the office the launcher starts (tests/desktop-env.test.ts checks it), and no secret passes
+// through the app.
+
 /** The office child's environment: the launcher's loop (so 🔁 Restart safely is offered), no terminal welcome, no browser; Claude's set only with `keepClaude`. */
 export function officeEnv(base: Record<string, string | undefined>, o: Pick<DesktopOptions, 'home'>, keepClaude = false): Record<string, string> {
   const env: Record<string, string> = {};

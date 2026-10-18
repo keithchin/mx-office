@@ -8,6 +8,7 @@ import path from 'node:path';
 import { credential } from './resolve.js';
 import { officeSettings } from './store.js';
 import { withClaudeAuth } from '../claude-auth/source.js';
+import { officeMxcli } from '../wizard/config.js';
 
 export const MENDIX_VARS = ['MENDIX_TOKEN', 'MX_PAT', 'MENDIX_PAT'] as const;
 
@@ -30,9 +31,11 @@ export function withConnections(env: Record<string, string>, floorDir?: string):
     const mx = credential('mendix');
     if (mx) for (const k of MENDIX_VARS) env[k] = mx;
   }
-  // The mxcli picked in first-run setup: its folder first on PATH, so agents' `mxcli` is that one.
-  const mxcli = officeSettings().mxcliPath;
-  if (mxcli) {
+  // The office's mxcli (first-run setup's, AGENT_OFFICE_MXCLI, else the workspace's tools/mxcli): its folder
+  // first on PATH, so agents' `mxcli` is that one however the office was started (the launcher used to
+  // put tools/mxcli first itself; the desktop app starts the office without it).
+  const mxcli = officeMxcli()?.path;
+  if (mxcli && path.isAbsolute(mxcli)) {
     const key = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') ?? 'PATH';
     const dir = path.dirname(mxcli);
     if (!(env[key] ?? '').split(path.delimiter).some((d) => same(d || '.', dir))) env[key] = [dir, env[key]].filter(Boolean).join(path.delimiter);

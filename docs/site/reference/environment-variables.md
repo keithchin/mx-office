@@ -46,7 +46,7 @@ Set these before starting the office (the launcher sets the main ones). Values t
 |---|---|
 | `AGENT_OFFICE_ADMIN_GH_TOKEN_FILE` | `~/.agent-office-admin-gh-token` |
 | `AGENT_OFFICE_PROJECT_ORG` | `AI-Taskforce-Labs` |
-| `AGENT_OFFICE_MXCLI` | `~/agent-spike/bin/mxcli.exe` |
+| `AGENT_OFFICE_MXCLI` | First-run setup's pick wins over it; unset: `~/agent-spike/tools/mxcli/mxcli.exe` (`bin/` before the layout change) when it's there |
 | `AGENT_OFFICE_MENDIX_DIR` | `C:\Program Files\Mendix` |
 | `AGENT_OFFICE_BASH` | Git Bash |
 | `AGENT_OFFICE_JQ_DIR` | WinGet's jq |
@@ -69,7 +69,7 @@ These can also go in `<office data>/live-app.json`; the environment wins.
 
 | Variable | Default |
 |---|---|
-| `AGENT_OFFICE_LIVE_MXCLI` | `mxcli` (the launcher sets `agent-spike\bin\mxcli.exe`) |
+| `AGENT_OFFICE_LIVE_MXCLI` | The office's own mxcli (as for `AGENT_OFFICE_MXCLI`), else `mxcli` on `PATH` |
 | `AGENT_OFFICE_LIVE_PORTS` | `8110-8199` |
 | `AGENT_OFFICE_LIVE_DB_HOST` | `127.0.0.1:5432` |
 | `AGENT_OFFICE_LIVE_DB_USER`, `AGENT_OFFICE_LIVE_DB_PASSWORD` | `postgres` / `postgres` |
