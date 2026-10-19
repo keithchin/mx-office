@@ -8,7 +8,8 @@
 //   * its database is a fresh one per run (./db.ts: `<project>_<purpose>_<random>`), dropped when it stops,
 //     with leftovers of an earlier run of the same purpose dropped before it starts;
 //   * it lives only as long as its caller needs it: start() resolves once the app answers, stop() ends the
-//     process tree, drops the database and wipes the folder. An office that exits takes the processes along.
+//     process tree, drops the database and wipes the folder, and freshDatabase() starts the same build again
+//     on a new database (a caller that needs several clean starts). An office that exits takes them along.
 // mxcli, mxbuild and the runtime are child processes; the office only coordinates. Whoever starts one gets
 // its address; the credentials stay here.
 
@@ -58,6 +59,12 @@ export interface AppInstance {
   runtimeLog: string;
   /** Still running. */
   alive(): boolean;
+  /**
+   * The same build on a new, fresh database: the runtime stops, its database is dropped, and it starts again
+   * in the same work folder on the same ports with a database of its own (no new copy of the commit). For a
+   * caller that needs several clean starts (a walkthrough batch's groups). Resolves once the app answers.
+   */
+  freshDatabase(signal?: AbortSignal, progress?: (line: string) => void): Promise<void>;
   stop(): Promise<void>;
 }
 
@@ -147,9 +154,68 @@ export async function startAppInstance(spec: InstanceSpec): Promise<AppInstance>
       extra.MXBUILD_PATH = pick.path;
     }
     aborted();
+    const mxcli = spec.mxcli;
+    const env = { ...floorEnv, ...extra, PGPASSWORD: db.password };
+    await launch(mxcli, args, path.dirname(mpr), env, pick, flag, app, spec.progress);
+    note(`answering on ${app} (${dbName})`);
+    let current = args;
+    return {
+      url: `http://127.0.0.1:${app}/`,
+      appPort: app,
+      commit: wf.commit,
+      get dbName() {
+        return dbName;
+      },
+      logFile,
+      runtimeLog: path.join(path.dirname(mpr), '.mxcli', 'runtime.log'),
+      alive: () => !stopped && !!child && child.exitCode === null,
+      freshDatabase: async (signal, progress) => {
+        if (stopped) throw new Error('the app instance is stopped');
+        const was = dbName;
+        if (child) {
+          const c = child;
+          child = null;
+          await stopTree(c);
+          running.delete(c);
+        }
+        if (dbMade) await dropDb(psql, db, was).catch((err: Error) => note(`couldn't drop ${was}: ${err.message}`));
+        dbMade = false;
+        dbName = instanceDbName(spec.floorId, spec.purpose);
+        note(`=== fresh database: ${was} dropped, ${dbName} next`);
+        const next = [...current];
+        next[next.indexOf('--db-name') + 1] = dbName;
+        current = next;
+        const onCancel = () => void stop();
+        signal?.addEventListener('abort', onCancel, { once: true });
+        try {
+          if (signal?.aborted) throw new Error(typeof signal.reason === 'string' ? signal.reason : 'cancelled');
+          await launch(mxcli, next, path.dirname(mpr), env, pick, flag, app, progress, signal, 'Starting the same build again on a fresh database…');
+          note(`answering on ${app} (${dbName})`);
+        } catch (err) {
+          note(`✖ ${(err as Error).message}`);
+          await stop();
+          throw err;
+        } finally {
+          signal?.removeEventListener('abort', onCancel);
+        }
+      },
+      stop,
+    };
+  } catch (err) {
+    note(`✖ ${(err as Error).message}`);
+    await stop();
+    throw err;
+  }
+
+  /** Runs mxcli with `args` and waits until the app answers on `app` (or says why it didn't start). */
+  async function launch(mxcli: string, args: string[], cwd: string, env: Record<string, string>, pick: MxbuildPick, flag: boolean | undefined, app: number, progress?: (line: string) => void, signal = spec.signal, say?: string): Promise<void> {
+    const aborted = () => {
+      if (signal?.aborted) throw new Error(typeof signal.reason === 'string' ? signal.reason : 'cancelled');
+    };
     note(`$ mxcli ${args.map((a, i) => (args[i - 1] === '--db-password' ? '***' : a)).join(' ')}`);
-    spec.progress?.(`Building @${spec.commit.slice(0, 7)} and starting it on a fresh database (a cold start takes a minute or two)…`);
-    const c = startTree(spec.mxcli, args, path.dirname(mpr), { ...floorEnv, ...extra, PGPASSWORD: db.password }, pgBinDir());
+    progress?.(say ?? `Building @${spec.commit.slice(0, 7)} and starting it on a fresh database (a cold start takes a minute or two)…`);
+    lines.length = 0;
+    const c = startTree(mxcli, args, cwd, env, pgBinDir());
     child = c;
     dbMade = true;
     running.add(c);
@@ -180,27 +246,12 @@ export async function startAppInstance(spec: InstanceSpec): Promise<AppInstance>
       if (st.exited) {
         const linux = linuxMxbuildIn(lines);
         const said = [...lines].reverse().find((l) => /error|exception|failed/i.test(l));
-        throw new Error(linux ? linuxMxbuildMessage(linux, pick, flag, spec.mxcli) : `the app didn't start: ${said ? `${said.replace(/^error:\s*/i, '')} (${st.exited})` : st.exited}`);
+        throw new Error(linux ? linuxMxbuildMessage(linux, pick, flag, mxcli) : `the app didn't start: ${said ? `${said.replace(/^error:\s*/i, '')} (${st.exited})` : st.exited}`);
       }
       if (await answers(app)) break;
       if (Date.now() > deadline) throw new Error(`the app didn't answer on port ${app} within ${Math.round(cfg.readyTimeoutMs / 60_000)} min`);
       await new Promise((r) => setTimeout(r, POLL_MS));
     }
-    note(`answering on ${app} (${dbName})`);
-    return {
-      url: `http://127.0.0.1:${app}/`,
-      appPort: app,
-      commit: wf.commit,
-      dbName,
-      logFile,
-      runtimeLog: path.join(path.dirname(mpr), '.mxcli', 'runtime.log'),
-      alive: () => !stopped && !!child && child.exitCode === null,
-      stop,
-    };
-  } catch (err) {
-    note(`✖ ${(err as Error).message}`);
-    await stop();
-    throw err;
   }
 }
 

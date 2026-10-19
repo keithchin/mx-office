@@ -45,7 +45,7 @@ test('auto-record without a live app: test evidence for main records its passing
       if (b) playing = { n: b.n, ids: b.journeys.map((j) => j.id) };
       else await new Promise((x) => setTimeout(x, 30));
     }
-    assert.deepEqual(playing.ids, ['approve-request', 'new-request'], 'a batch plays its journeys in file order');
+    assert.deepEqual(playing.ids, ['new-request', 'approve-request'], 'a batch plays its journeys by its plan: approve-request runs directly after new-request, not in file order');
     assert.equal(r.w.cancel('demo', c), true);
     await r.w.idle();
     const after = new Map((await r.w.store.list('demo')).filter((x) => x.batch === c).map((x) => [x.journey.id, x.status]));

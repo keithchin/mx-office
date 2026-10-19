@@ -16,16 +16,62 @@ You don't have to start anything. The office records them by itself, against **i
 
 ## How a recording runs
 
-A **batch** is the journeys of one commit. For each batch the office:
+A **batch** is the journeys of one commit, played by a **plan** (see [Start states](#start-states) below): groups of journeys, each group on a fresh database, in the order the journeys' start states need. For each batch the office:
 
 1. copies that commit into its own work folder (`<office data>/testing/work/<project>/instance-rec`, from the project's git objects; nothing in the project's folder changes);
-2. starts the app there with `mxcli run --local`, as the live app does (the same mxcli and PostgreSQL settings, three free ports from the live apps' range), on a **fresh database of its own** (`<project>_rec_<random>`), never the live app's `<project>_live`. Journeys that need a clean database, or can't be run twice, work;
-3. plays the journeys one after another, in file order, on that one database;
+2. starts the app there with `mxcli run --local`, as the live app does (the same mxcli and PostgreSQL settings, three free ports from the live apps' range), on a **fresh database of its own** (`<project>_rec_<random>`), never the live app's `<project>_live`;
+3. plays the first group's journeys one after another on that database, then signs out. For each next group it stops the runtime, drops that database and starts the same build again in the same folder on a new one (no new copy of the commit). That costs one runtime start per group; each recording's `manifest.json` says how its database was made and how long that took (`start.db`, `start.dbMs`);
 4. stops the app, drops its database and wipes the folder. A database an earlier run left behind (the office stopped mid-way) is dropped before the next batch.
 
-One batch runs at a time in the office; the others wait in line. The page shows where it is: *Queued*, *Starting the app* (a cold build takes a minute or two), *Recording 2 of 5* with the step it's on, *Finishing*. **Cancel** (admins) stops a batch, and the app with it. A recording stops by itself after 3 minutes.
+One batch runs at a time in the office; the others wait in line. The page shows where it is: *Queued*, *Starting the app* (a cold build takes a minute or two), *Group 2 of 4 · starting a fresh database…*, *Setting up* (a journey played first, not filmed), *Recording 2 of 5* with the step it's on, *Finishing*. Under it, **This batch's plan** lists the groups, their order, which journeys are only set-up plays, and what isn't recorded and why. **Cancel** (admins) stops a batch, and the app with it. A recording stops by itself after 3 minutes.
 
 The app, mxbuild, the browser, ffmpeg and the voice are processes of their own; the office only coordinates. The database password is given to mxcli as the live app gives it and never written to a log, a manifest or the page.
+
+## Start states
+
+A journey is written for a start state: a database with only the demo seed, or the data another journey leaves behind. Played in the wrong order on one shared database, a journey fails at a step that isn't its fault. So the office reads each journey's start state and plans the batch:
+
+- a journey that **runs after** another plays in that one's group, right after it (a chain);
+- a chain whose first journey needs a **fresh database** is a group of its own;
+- journeys that need **nothing in particular** share one group, ordered by their *run before* lines. A fresh-database chain that must run before one of them heads that group instead (it gets the fresh database either way, without an extra start);
+- a journey that **leaves data behind** goes last in its group; one that **isn't re-runnable** is never played twice on one database;
+- when you **● Record** one journey whose prerequisite you didn't pick, the prerequisite chain is played first, **not filmed**, in the same group, and the card says *Played "Submit a new request" first (not filmed) to set up its start state.*;
+- a chain that goes round in a circle, or *run before* lines that contradict each other, aren't recorded: their cards say *Skipped* with the reason;
+- a journey that says it must not run in a **time window** (*Do not run between 07:30-08:00 … Europe/Amsterdam*, read in the zone it names, else on the office's clock): when the batch reaches its group inside that window (or 5 minutes before it), the group moves to the end of the batch; if the window still holds then, its journeys are *Skipped* with the reason, never a silent failure;
+- **templates** aren't workflows and are never recorded: the toolkit's `example` and `skeleton*` journeys, anything marked broken (a control that must fail), and a journey with `"template": true`. The plan lists them as *template — not recorded*.
+
+Each group has one session per account, signed out at the end of the group (an unlicensed Mendix app keeps only 6 sessions). When a journey in a group doesn't pass, the journeys that run after it in its chain aren't played (their start state isn't there), and their cards say so. A journey whose own steps fail stays an honest failed recording. Folded on the page, **Recording plan (Re-record all)** shows the plan for main's newest commit before anything runs.
+
+### Saying it in the journey
+
+The recommended form is a structured field at the journey's top level:
+
+```json
+"startState": {
+  "freshDb": true,
+  "after": "submit-request",
+  "before": ["reject-request"],
+  "rerunnable": false,
+  "leavesData": true,
+  "notRunBetween": ["07:30-08:00"],
+  "timeZone": "Europe/Amsterdam"
+}
+```
+
+Every key is optional. `after` and `before` name journeys of the same commit by `id` (or the file name without `.journey.json`). When the field is there, it is what counts (a time window in the comment still applies when the field names none).
+
+Without it, the office reads the journey's `$comment`, conservatively:
+
+| The comment says | Read as |
+| --- | --- |
+| `START STATE: fresh DB with the demo seed only…` | needs a fresh database (what the START STATE line says first: *any DB with…* is no such need) |
+| `run directly after <id>`, `run after <id>` | runs after that journey |
+| `Run BEFORE <id>` | runs before it, when they share a database |
+| `NOT re-runnable` | never twice on one database |
+| `leaves … behind` (not *leaves no state behind*) | last in its group |
+| `Do not run between 07:30-08:00 … Europe/Amsterdam` | its time window |
+
+Only the START STATE line counts for the database and the order when there is one; without one, the whole comment does. A name that is no journey of that commit is ignored, with a note. A journey that says nothing shares a database.
 
 ## Who it signs in as
 
@@ -44,6 +90,7 @@ An unlicensed Mendix app keeps only 6 sessions open at once, guests' included, a
 
 ## Honest by construction
 
+- A **planner's fault is never a journey's**. A journey played without the start state it says it needs would fail for the wrong reason: the plan above prevents that, and the office's tests keep it so.
 - A **failed step stops the recording**. The failure is captioned on screen, the card says *Failed at step 2* with the reason, and the steps after it are *not run*. When it fails, the card also shows what the journey's `$comment` says it needs (a time window, the start state, which journey runs before it).
 - A video is **evidence only for the commit it recorded** (`@abc1234` on the card and in its `manifest.json`). A failed, cancelled or unfinished recording is never evidence, and can't be saved to the repo.
 - The browser is the office's headless Chromium, in a fresh profile that never has your office session. It may reach only the recording app's address and refuses every other request.

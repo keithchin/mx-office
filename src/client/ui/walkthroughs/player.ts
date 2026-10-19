@@ -29,6 +29,8 @@ export function evidenceLine(r: WalkCardRecording): string {
       return `Failed at step ${r.failure?.step ?? '?'} against @${sha}${as}: ${r.failure?.why ?? ''}. The steps after it didn't run.`;
     case 'cancelled':
       return `Cancelled (${r.failure?.why ?? 'by a person'}): not evidence.`;
+    case 'skipped':
+      return `${((w) => w.charAt(0).toUpperCase() + w.slice(1))(r.failure?.why ?? 'skipped by the batch’s plan')}. Not evidence.`;
     case 'error':
       return `Didn't finish: ${r.failure?.why ?? 'unknown error'}. Not evidence.`;
     default:

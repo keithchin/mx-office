@@ -1,6 +1,6 @@
 // The 🎬 Walkthroughs page and its player on the page (src/client/ui/walkthroughs/), in headless Chromium with
 // every client stylesheet: one card per workflow with its status, the commit it's evidence for, when, auto or
-// manual; the guided tour on top; the batch in progress with Cancel; Save to repo only on a passing one; a
+// manual; the guided tour on top; the batch in progress with Cancel and its plan (groups, the one playing, setup plays, templates); Save to repo only on a passing one; a
 // failed card shows what its journey says it needs; the empty state with Record now. The player is wide (about
 // 90% of the window) with the video on the left and the steps on the right, stacks on a narrow screen, seeks
 // on a step, shows a failed step in red with its reason and its screenshot, and ✕ or Esc gives focus back to
@@ -34,6 +34,8 @@ function sheets(dir: string): string[] {
 const SHA = 'abc1234def5678abc1234def5678abc1234def56';
 const step = (n: number, status: 'passed' | 'failed' | 'not-run', caption: string, why?: string) => ({ n, caption, status, ...(status !== 'not-run' ? { startMs: n * 2000, endMs: n * 2000 + 1800, screenshot: `steps/0${n}.png` } : {}), ...(why ? { why } : {}) });
 const J = (id: string, title: string, requirement: string[], notes?: string[]) => ({ id, title, file: `tests/e2e/${id}.journey.json`, requirement, ...(notes ? { notes } : {}) });
+/** A batch's plan: two groups (a fresh database each), a setup play, a template not recorded. */
+const PLAN = { groups: [{ n: 1, why: '“Submit a new request” needs a fresh database', steps: [{ id: 'new-request', title: 'Submit a new request' }] }, { n: 2, why: '“Reset the list” needs a fresh database', steps: [{ id: 'reset', title: 'Reset the list', setup: true }, { id: 'approve-request', title: 'Approve a request', after: 'reset' }] }], skipped: [{ id: 'skeleton', title: 'Walking skeleton', kind: 'template' as const, why: 'a template, not a workflow: the walking-skeleton template' }], notes: [] };
 const VIEW: WalkView = {
   floor: 'demo',
   settings: { autoRecord: true, narrate: true, demoUser: 'demo_test_user' },
@@ -41,7 +43,7 @@ const VIEW: WalkView = {
   main: { commit: SHA },
   journeys: [J('new-request', 'Submit a new request', ['UC-01']), J('approve-request', 'Approve a request', ['UC-02'])],
   identity: { user: 'demo_clerk', from: 'project-config' },
-  batches: [{ id: 'wb_01JCCCCCCCCCCCCCCCCCCCCCCC', floor: 'demo', kind: 'workflows', commit: SHA, trigger: 'auto', by: 'Mx Office (build on main passed)', journeys: [{ id: 'new-request', title: 'Submit a new request', rec: 'wt_01JAAAAAAAAAAAAAAAAAAAAAA1' }, { id: 'approve-request', title: 'Approve a request' }], phase: 'recording', n: 2, line: 'Recording 2 of 2: Step 1 of 3: Open the request list', at: 1 }],
+  batches: [{ id: 'wb_01JCCCCCCCCCCCCCCCCCCCCCCC', floor: 'demo', kind: 'workflows', commit: SHA, trigger: 'auto', by: 'Mx Office (build on main passed)', journeys: [{ id: 'new-request', title: 'Submit a new request', rec: 'wt_01JAAAAAAAAAAAAAAAAAAAAAA1' }, { id: 'approve-request', title: 'Approve a request' }], phase: 'recording', n: 2, line: 'Recording 2 of 2: Step 1 of 3: Open the request list', at: 1, group: { n: 2, of: 2 }, plan: PLAN }],
   ahead: 0,
   recordings: [
     { id: 'wt_01JAAAAAAAAAAAAAAAAAAAAAA1', kind: 'workflow', journey: J('new-request', 'Submit a new request', ['UC-01']), milestone: { id: 'phase-1', title: 'Requests' }, trigger: 'auto', by: 'Mx Office (milestone ready)', app: { commit: SHA, origin: 'http://127.0.0.1:9', user: 'demo_clerk', userFrom: 'project-config', instance: true }, startedAt: Date.now() - 5 * 60_000, durationMs: 21000, status: 'passed', steps: [step(1, 'passed', 'Open the request list'), step(2, 'passed', 'Start a new request')], outputs: { video: 'walkthrough.mp4', format: 'mp4', captions: 'captions.vtt', chapters: 'chapters.vtt', narration: 'kokoro', notes: [] } },
@@ -110,7 +112,13 @@ test('in a browser: the page, the batch, the cards, the empty state; the wide tw
     await page.waitForSelector('.wt-card');
     // The batch in progress, with Cancel.
     const batch = await T<string>(`document.querySelector('.wt-batch').textContent`);
-    assert.match(batch, /Recording 2 of 2: Approve a request · Step 1 of 3: Open the request list · auto/);
+    assert.match(batch, /Group 2 of 2 · Recording 2 of 2: Approve a request · Step 1 of 3: Open the request list · auto/);
+    // Its plan: the groups, the group playing now, the unfilmed setup play, the template and why.
+    const plan = await T<string>(`document.querySelector('.wt-batch .wt-plan').textContent`);
+    assert.match(plan, /This batch’s plan · 2 groups \(a fresh database each\) · 2 filmed · 1 played first to set up · 1 not recorded/);
+    assert.match(plan, /Reset the listsetup · not filmed/);
+    assert.match(plan, /Walking skeletontemplate — not recorded/);
+    assert.equal(await T<string>(`document.querySelector('.wt-pgroup.now strong').textContent`), 'Group 2');
     assert.equal(await T<string>(`document.querySelector('.wt-batch progress').getAttribute('value')`), '1');
     await page.click('.wt-batch >> text=Cancel');
     await page.waitForTimeout(150);

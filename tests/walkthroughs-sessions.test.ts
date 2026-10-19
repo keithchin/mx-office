@@ -57,12 +57,16 @@ test('the app refuses the session (its cap is taken): a sign-in failure with the
     r.app.hold(TRIAL_SESSIONS);
     await r.w.record('demo', { by: 'Pat' });
     await r.w.idle();
-    for (const j of ['new-request', 'approve-request']) {
-      const m = (await r.w.store.read('demo', await only(r, j)))!;
-      assert.equal(m.status, 'error');
-      assert.equal(m.failure?.step, undefined, 'no step is blamed for it');
-      assert.equal(m.failure?.why, `couldn't sign in as ${DEMO.user}: the app says “${CAP_TEXT}” (an unlicensed Mendix app keeps only ${TRIAL_SESSIONS} sessions open at once, signed-in and guest)`);
-    }
+    const said = `couldn't sign in as ${DEMO.user}: the app says “${CAP_TEXT}” (an unlicensed Mendix app keeps only ${TRIAL_SESSIONS} sessions open at once, signed-in and guest)`;
+    const first = (await r.w.store.read('demo', await only(r, 'new-request')))!;
+    assert.equal(first.status, 'error');
+    assert.equal(first.failure?.step, undefined, 'no step is blamed for it');
+    assert.equal(first.failure?.why, said);
+    // approve-request runs after new-request (its start state): not played, and its card says why.
+    const next = (await r.w.store.read('demo', await only(r, 'approve-request')))!;
+    assert.equal(next.status, 'error');
+    assert.equal(next.failure?.step, undefined);
+    assert.equal(next.failure?.why, `not recorded: “Submit a new request”, which sets up its start state, didn’t pass (${said})`);
     assert.equal(r.app.refusals(), 1, 'one try for the account in the batch: every try can cost a session');
     assert.deepEqual(r.app.signIns(), []);
   } finally {
