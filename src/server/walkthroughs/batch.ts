@@ -9,6 +9,7 @@
 // failed recording.
 
 import { mkdir } from 'node:fs/promises';
+import type { BootPhase, BootTiming } from '../../shared/app-instance.js';
 import { ulid } from '../../shared/evidence/ids.js';
 import { resolveIdentity, type RunnerConfig } from '../../shared/walkthroughs/identity.js';
 import { chainAbove, type PlanGroup } from '../../shared/walkthroughs/plan.js';
@@ -27,13 +28,17 @@ export interface RecordingApp {
   /** Its Mendix runtime log, when there is one (a refused session shows there). */
   runtimeLog?: string;
   alive(): boolean;
+  /** What its last start (or fresh database) took, phase by phase, and whether it was tried once more. */
+  timing?: BootTiming;
   /** The same build on a new, fresh database (app-instance/: no new copy, same ports), when the instance can. */
-  freshDatabase?(signal: AbortSignal, progress: (line: string) => void): Promise<void>;
+  freshDatabase?(signal: AbortSignal, progress: (line: string) => void, onPhase?: (phase: BootPhase, at: number) => void): Promise<void>;
   stop(): Promise<void>;
 }
 
 export interface BatchRun extends WalkBatch {
   ctl: AbortController;
+  /** While the recording app starts: its phase and when that phase and the start began (the page gets the elapsed times). */
+  booting?: { phase: BootPhase; phaseAt: number; at: number };
 }
 
 /** What a batch needs of the Walkthroughs service. */
@@ -42,7 +47,7 @@ export interface BatchHost {
   tool: Tool;
   voice(): Voice | null | undefined;
   voiceReady(): Promise<void>;
-  boot(signal: AbortSignal, progress: (line: string) => void): Promise<RecordingApp>;
+  boot(signal: AbortSignal, progress: (line: string) => void, onPhase?: (phase: BootPhase, at: number) => void): Promise<RecordingApp>;
   runnerConfig(): Promise<RunnerConfig | undefined>;
   say(line: string): void;
   changed(m?: WalkManifest): void;
@@ -131,29 +136,38 @@ export async function runPlan(h: BatchHost, b: BatchRun, scripts: Map<string, Wa
       const t0 = Date.now();
       let how: 'boot' | 'fresh-db' | 'new-instance' = 'boot';
       b.phase = 'booting';
+      // Each boot phase as it starts: the page shows it with the time it has taken.
+      const onPhase = (phase: BootPhase, at: number) => {
+        b.booting = { phase, phaseAt: at, at: b.booting?.at ?? t0 };
+        h.changed();
+      };
       try {
         if (!app) {
           h.say(`Group ${done} of ${ofN} · starting the recording app at @${b.commit.slice(0, 7)} on a fresh database…`);
-          app = await h.boot(sig, (l) => h.say(`Group ${done} of ${ofN} · ${l}`));
+          app = await h.boot(sig, (l) => h.say(`Group ${done} of ${ofN} · ${l}`), onPhase);
         } else if (app.freshDatabase) {
           how = 'fresh-db';
           h.say(`Group ${done} of ${ofN} · starting a fresh database…`);
-          await app.freshDatabase(sig, (l) => h.say(`Group ${done} of ${ofN} · ${l}`));
+          await app.freshDatabase(sig, (l) => h.say(`Group ${done} of ${ofN} · ${l}`), onPhase);
         } else {
           how = 'new-instance';
           h.say(`Group ${done} of ${ofN} · starting a fresh database (a new copy of the app)…`);
           await app.stop().catch(() => undefined);
           app = undefined;
-          app = await h.boot(sig, (l) => h.say(`Group ${done} of ${ofN} · ${l}`));
+          app = await h.boot(sig, (l) => h.say(`Group ${done} of ${ofN} · ${l}`), onPhase);
         }
       } catch (err) {
         app = undefined;
-        const why = sig.aborted ? 'cancelled before the recording app was up' : `the recording app didn’t start: ${(err as Error).message.slice(0, 260)}`;
+        b.booting = undefined;
+        const why = sig.aborted ? 'cancelled before the recording app was up' : `the recording app didn’t start: ${(err as Error).message.slice(0, 700)}`;
         // Nothing after this would start either: every journey left says so.
         for (const rest of queue.slice(gi)) for (const sc of filmedOf(rest)) await writeUnrun(h, b, sc, sig.aborted ? 'cancelled' : 'error', why);
         return;
       }
       const dbMs = Date.now() - t0;
+      const boot = app.timing;
+      b.booting = undefined;
+      if (boot) console.log(`agent-office: walkthroughs: group ${done} of ${ofN}: the recording app came up in ${secs(boot.ms)} (${how}${boot.workspace ? `, workspace ${boot.workspace}` : ''}${boot.bundleMs !== undefined ? `, bundle ${secs(boot.bundleMs)}` : ''}${boot.retried ? `, retried once: ${boot.retried}` : ''})`);
       b.phase = 'recording';
       // One session per account for the group (an unlicensed app keeps only 6 open), signed out at its end.
       sessions = new AppSessions({ url: app.url, ...(app.runtimeLog ? { runtimeLog: app.runtimeLog } : {}), ...(h.launch ? { launch: h.launch } : {}) });
@@ -164,7 +178,7 @@ export async function runPlan(h: BatchHost, b: BatchRun, scripts: Map<string, Wa
         if (!sc) continue;
         const above = chainAbove(g, step.id);
         const setupTitles = above.filter((id) => g.steps.find((x) => x.id === id)?.setup).reverse().map((id) => scripts.get(id)?.title ?? id);
-        const start: WalkManifest['start'] = { group: done, groups: ofN, ...(setupTitles.length ? { setup: setupTitles } : {}), db: how, dbMs };
+        const start: WalkManifest['start'] = { group: done, groups: ofN, ...(setupTitles.length ? { setup: setupTitles } : {}), db: how, dbMs, ...(boot ? { boot } : {}) };
         const broke = above.find((id) => failed.has(id));
         if (broke) {
           failed.set(step.id, 'its start state isn’t there');
@@ -220,6 +234,7 @@ async function recordOne(h: BatchHost, b: BatchRun, sc: WalkScript, app: Recordi
   const m = manifestOf(b, sc, new URL(app.url).origin, who.user, who.from);
   if (start) m.start = start;
   if (who.note) m.outputs.notes.push(`Sign-in: ${who.note}.`);
+  if (start?.boot?.retried) m.outputs.notes.push(`The recording app failed to start once (${start.boot.retried}); retried.`);
   if (start?.setup?.length) m.outputs.notes.push(`Played ${start.setup.map((t) => `“${t}”`).join(', then ')} first (not filmed) to set up its start state.`);
   const dir = h.store.recDir(b.floor, m.id);
   // Each recording has its own time limit inside the batch; Cancel stops the batch.

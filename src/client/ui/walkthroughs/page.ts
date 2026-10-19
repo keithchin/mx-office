@@ -9,6 +9,7 @@
 
 import type { WalkBatch, WalkCardRecording, WalkView } from '../../../shared/walkthroughs/types';
 import { SOURCE_WORDS } from '../../../shared/walkthroughs/identity';
+import { bootProgress } from '../../../shared/app-instance';
 import { store } from '../../state';
 import type { TabHooks } from '../../tabs/registry';
 import { h, timeAgo, toast } from '../dom';
@@ -35,6 +36,8 @@ export function batchWords(b: WalkBatch, ahead: number): { pill: string; text: s
     case 'booting': {
       // "Group 2 of 4 · starting a fresh database…" once a batch has more than one group.
       const line = (b.line ?? '').replace(GROUP, '');
+      // Its boot phase with the time it has taken: "Bundling the web client · 1 min 12 s (2 min 40 s in all)".
+      if (b.boot) return { pill: 'Starting the app', text: `${g || `Recording app at @${short(b.commit)} · `}${bootProgress(b.boot, line)}`, done: g ? Math.max(0, b.n) : 0 };
       if (g && line) return { pill: 'Starting the app', text: `${g}${line}`, done: Math.max(0, b.n) };
       return { pill: 'Starting the app', text: `Starting the recording app at @${short(b.commit)} on a fresh database${line && !/^Starting the recording app/i.test(line) ? ` · ${line}` : '…'}`, done: 0 };
     }

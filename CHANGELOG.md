@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **🎬 The walkthroughs’ recording app starts reliably, and warm.** Two "Re-record all" batches produced no videos because the office's recording copy of the app didn't start: once mxcli's web client bundle ran past its 5-minute limit (a cold copy, bundled while the live app was building too), once the runtime found its port taken (*No Runtime Jetty server available*). The copy is now a recording workspace kept between batches and updated in place to each new commit, so mxcli's build and bundle stay warm (a fresh copy every batch made every bundle cold). A batch waits while a live app is building (*Waiting for the project's live app to finish building*, at most 12 minutes), tries once more after those two transient failures (other ports, a fresh database, a note on the card) and never after any other, gives a newer mxcli 15 minutes for the bundle (`--web-client-timeout`), and no longer gives up in the middle of a bundle mxcli still has time for. The page shows the boot phase with its elapsed time (*Bundling the web client · 1 min 12 s (2 min 40 s in all)*); a failure says which phase, after how long, why and what to do; each recording's manifest keeps what the start took (`start.boot`: phases, bundle, workspace, retry). Docs: Walkthroughs › How a recording runs, and Troubleshooting › Live app.
 
 ## 2026-10-19 · release 64 (`a546233`)
 
