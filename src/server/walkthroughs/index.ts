@@ -12,6 +12,7 @@
 
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import type { BootPhase } from '../../shared/app-instance.js';
 import { ulid } from '../../shared/evidence/ids.js';
 import type { LiveReadiness, ReadinessNews } from '../../shared/liveapp/readiness.js';
 import { autoJourneys } from '../../shared/walkthroughs/auto.js';
@@ -39,7 +40,7 @@ export interface WalkDeps {
   /** Main's newest commit in the project's folder (default: testing/repo.ts mainOf). */
   mainCommit?(floor: string): Promise<string | undefined>;
   /** Starts the office's own copy of the app at `commit`, on a fresh database; resolves once it answers. */
-  boot(floor: string, commit: string, signal: AbortSignal, progress: (line: string) => void): Promise<RecordingApp>;
+  boot(floor: string, commit: string, signal: AbortSignal, progress: (line: string) => void, onPhase?: (phase: BootPhase, at: number) => void): Promise<RecordingApp>;
   /** Why recordings can't start the app on this machine (no mxcli), or undefined. */
   bootBlocked?(): string | undefined;
   /** Why nothing is recorded by itself for this project (a test office), or undefined. */
@@ -68,7 +69,11 @@ interface Batch extends BatchRun {
   run(b: Batch): Promise<void>;
 }
 
-const strip = ({ ctl: _c, run: _r, ...b }: Batch): WalkBatch => ({ ...b, journeys: b.journeys.map((j) => ({ ...j })) });
+const strip = ({ ctl: _c, run: _r, booting, ...b }: Batch, now = Date.now()): WalkBatch => ({
+  ...b,
+  journeys: b.journeys.map((j) => ({ ...j })),
+  ...(booting && b.phase === 'booting' ? { boot: { phase: booting.phase, phaseMs: now - booting.phaseAt, ms: now - booting.at } } : {}),
+});
 /** The journeys that are workflows (templates are listed, never recorded). */
 const workflows = (all: WalkScript[]) => all.filter((s) => !s.start?.template && s.steps.length);
 
@@ -173,7 +178,7 @@ export class Walkthroughs {
       journeys,
       ...(all.length ? { plan: planBatch(all) } : {}),
       identity: { user: who.user, from: who.from },
-      batches: mine.map(strip),
+      batches: mine.map((x) => strip(x)),
       ahead: first < 0 ? this.batches.length : first,
       recordings,
       disk: { bytes: await this.store.used(), quota: this.store.quota },
@@ -288,7 +293,7 @@ export class Walkthroughs {
         tool: this.tool,
         voice: () => this.voice,
         voiceReady: () => this.voiceLook ?? Promise.resolve(),
-        boot: (signal, progress) => d.boot(b.floor, b.commit, signal, progress),
+        boot: (signal, progress, onPhase) => d.boot(b.floor, b.commit, signal, progress, onPhase),
         runnerConfig: () => this.runnerConfig(b.floor, b.commit),
         say: (l) => this.say(b, l),
         changed: (m) => d.changed?.(b.floor, m),

@@ -15,6 +15,7 @@ import { resolveCommand } from '../workers/process.js';
 import { startAppInstance } from '../app-instance/index.js';
 import { audit } from '../audit/index.js';
 import { testModeOf } from '../testmode.js';
+import { liveAppBuilding } from './busy.js';
 import { Walkthroughs } from './index.js';
 
 type Deps = ReadyCtx;
@@ -29,11 +30,16 @@ export function walkthroughsOf(ctx: Deps): Walkthroughs {
     w = new Walkthroughs({
       dataDir,
       floorDir: (id) => ctx.floors.get(id)?.dir,
-      boot: async (id, commit, signal, progress) => {
+      boot: async (id, commit, signal, progress, onPhase) => {
         const floor = ctx.floors.get(id);
         if (!floor) throw new Error('no such project');
         const c = cfg();
-        return startAppInstance({ floorId: id, floorDir: floor.dir, commit, purpose: 'rec', dataDir, cfg: c, mxcli: resolveCommand(c.mxcli), taken: () => liveAppsIfMade(ctx)?.takenPorts() ?? [], signal, progress });
+        // A live app building now goes first (./busy.ts).
+        const busy = () => {
+          const apps = liveAppsIfMade(ctx);
+          return apps ? liveAppBuilding(ctx.floors.values(), (f) => apps.peek(f)?.status, id) : undefined;
+        };
+        return startAppInstance({ floorId: id, floorDir: floor.dir, commit, purpose: 'rec', dataDir, cfg: c, mxcli: resolveCommand(c.mxcli), taken: () => liveAppsIfMade(ctx)?.takenPorts() ?? [], busy, signal, progress, ...(onPhase ? { onPhase } : {}) });
       },
       bootBlocked: () => {
         const c = cfg();

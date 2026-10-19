@@ -1,6 +1,6 @@
 ---
 title: Live app problems
-description: The live app won't start, a port is taken, a stale build fails, symlink privileges on Windows, or mxcli can't be found.
+description: The live app (or the walkthroughs' recording app) won't start, a port is taken, a stale build fails, symlink privileges on Windows, or mxcli can't be found.
 weight: 2
 ---
 
@@ -73,3 +73,12 @@ It runs `main` only: work still in an open PR isn't in it (the readiness card an
 ## It didn't start after a restart of the office
 
 That's by design: live apps don't start by themselves. Click **▶ Start** (admin).
+
+## Walkthroughs: "the recording app didn't start"
+
+The [Walkthroughs](../using-the-office/walkthroughs.md) page records against the office's own copy of the app, started the way the live app is. Every card of the batch says which phase failed, after how long, why, and what to do; the full output is `<office data>/testing/work/<project>/instance-rec.log`.
+
+- **"bundling the web client timed out after 5m0s"**: a cold web client bundle on a busy machine, most often while a live app was building at the same moment. The office already waits for a building live app and tries once more by itself; when the card says it failed twice, record again once the machine is quieter. The workspace is kept between batches, so the next start is warm (seconds, not minutes). A newer mxcli that takes `--web-client-timeout` is given 15 minutes.
+- **"port 8110 was taken by something else on this machine"** (the runtime's *No Runtime Jetty server available. Please call update_appcontainer_configuration*): something bound the app's port between the office picking it and the runtime starting. The office tries once more on other ports; if that fails too, find what listens there (`netstat -ano | findstr :8110`) and stop it.
+- **"the app didn't answer on port … within 8 min"**: mxcli was still working when the office gave up (it waits longer while mxcli is bundling). Raise the limit with `AGENT_OFFICE_LIVE_READY_SECONDS` if the machine is always this slow.
+- **A build error** (*initial build failed: …*): the model doesn't build at that commit; it isn't tried again. The next start clears the workspace's build first.

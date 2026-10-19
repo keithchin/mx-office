@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import type { BootPhase, BootTiming } from '../../../src/shared/app-instance.js';
 import { Walkthroughs } from '../../../src/server/walkthroughs/index.js';
 import { findFfmpeg } from '../../../src/server/walkthroughs/media.js';
 import { launchChromium } from '../../../src/server/walkthroughs/recorder.js';
@@ -38,7 +39,14 @@ export interface Rig {
   bootError?: string;
 }
 
-export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: number; app?: FakeAppOptions; journeys?: Record<string, unknown>; now?: () => Date } = {}): Promise<Rig> {
+/** How the fake recording app starts: the boot phases it goes through (told to the batch), a gate it waits at after them, and the timing it leaves. */
+export interface FakeBoot {
+  phases?: BootPhase[];
+  gate?: Promise<void>;
+  timing?: BootTiming;
+}
+
+export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: number; app?: FakeAppOptions; journeys?: Record<string, unknown>; now?: () => Date; boot?: FakeBoot } = {}): Promise<Rig> {
   const root = mkdtempSync(path.join(tmpdir(), 'walk-rec-'));
   const origin = path.join(root, 'origin.git');
   const repo = path.join(root, 'project');
@@ -61,8 +69,10 @@ export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: n
   r.w = new Walkthroughs({
     dataDir: path.join(root, 'data'),
     floorDir: (id) => (id === 'demo' ? repo : undefined),
-    boot: async (_floor, commit) => {
+    boot: async (_floor, commit, _signal, _progress, onPhase) => {
       r.boots.push(commit);
+      for (const p of o.boot?.phases ?? []) onPhase?.(p, Date.now());
+      await o.boot?.gate;
       if (r.bootError) throw new Error(r.bootError);
       // A new instance starts on a fresh database; so does the same one given a new database.
       app.reset();
@@ -72,6 +82,7 @@ export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: n
         commit,
         ...(o.app?.runtimeLog ? { runtimeLog: o.app.runtimeLog } : {}),
         alive: () => up,
+        ...(o.boot?.timing ? { timing: o.boot.timing } : {}),
         freshDatabase: async () => void (r.freshDbs++, app.reset()),
         stop: async () => void ((up = false), r.stops++),
       };

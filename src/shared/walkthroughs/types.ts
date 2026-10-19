@@ -3,6 +3,7 @@
 // ties it to the exact build it recorded. Evidence for that commit only; a failed step is a failed video.
 // Pure types (no Node imports): the page reads them too.
 
+import type { BootPhase, BootTiming } from '../app-instance.js';
 import type { IdentityHint, IdentitySource } from './identity.js';
 import type { WalkPlan } from './plan.js';
 import type { StartState } from './start-state.js';
@@ -103,7 +104,7 @@ export interface WalkManifest {
    * Where it played in its batch's plan (shared/walkthroughs/plan.ts): its group (one fresh database each),
    * the journeys played first, unfilmed, to set up its start state, and how its database was made fresh.
    */
-  start?: { group: number; groups: number; setup?: string[]; db?: 'boot' | 'fresh-db' | 'new-instance'; dbMs?: number };
+  start?: { group: number; groups: number; setup?: string[]; db?: 'boot' | 'fresh-db' | 'new-instance'; dbMs?: number; boot?: BootTiming };
   steps: ManifestStep[];
   outputs: {
     video?: string;
@@ -168,6 +169,8 @@ export interface WalkBatch {
   plan?: WalkPlan;
   /** The group playing now (1-based), of how many. */
   group?: { n: number; of: number };
+  /** While the recording app starts: its boot phase, how long that phase and the whole start have taken (ms, the office's clock). */
+  boot?: { phase: BootPhase; phaseMs: number; ms: number };
 }
 
 /** A recording as the page lists it (the manifest without what only the files need). */
