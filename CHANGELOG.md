@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-18 · release 64 (`a546233`)
+
 - **🎬 Walkthroughs play each journey on the start state it needs.** A batch used to play its journeys in file order on one shared database, so a journey written to run after another could be filmed first, on a database without the other’s data, and fail at step 2 for a reason that wasn’t its own. Now the office reads each journey’s start state (the new `startState` field, or the toolkit’s `START STATE:` lines in `$comment`: fresh database, run directly after, run before, not re-runnable, leaves data behind, “do not run between” times) and plans the batch: groups of journeys, each on a fresh database of the same recording app (the same build started again on a new database, no new copy), chains in order, and one session per account per group, signed out at the end of the group. **● Record** of one journey that needs another first plays that one first, not filmed, and its card says so. Journeys whose order can’t hold, or that are inside their time window when their group comes (moved to the end of the batch first), are skipped with the reason; templates (`example`, `skeleton*`, broken controls, `"template": true`) are listed as not recorded. The page shows the plan (groups, order, setup plays, what’s skipped and why) and “Group 2 of 4 · starting a fresh database…” while it runs.
 
 ## 2026-10-18 · release 63 (`6f22875`)
