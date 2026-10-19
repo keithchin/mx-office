@@ -7,6 +7,7 @@
 // showing when it fails (a time window, the start state it needs) come along. Pure.
 
 import { hintOf, journeyNotes } from './identity.js';
+import { readStartState, templateWhy } from './start-state.js';
 import { slugOf, type WalkAction, type WalkChecks, type WalkScript, type WalkStep } from './types.js';
 
 type Json = Record<string, unknown>;
@@ -107,11 +108,12 @@ export function scriptOf(file: string, text: string): WalkScript | string {
   } catch {
     return `${file} isn't valid JSON`;
   }
-  if (!j || typeof j !== 'object' || !Array.isArray(j.steps)) return `${file} has no steps`;
+  if (!j || typeof j !== 'object') return `${file} has no steps`;
   const journey = str(j.id) ?? file.split('/').pop()!.replace(/\.journey\.json$/i, '');
   const seeds = seedsOf(j);
-  const steps = j.steps.filter((x): x is Json => !!x && typeof x === 'object').map((x, i) => stepOf(x, i + 1, seeds));
-  if (!steps.length) return `${file} has no steps`;
+  const steps = (Array.isArray(j.steps) ? j.steps : []).filter((x): x is Json => !!x && typeof x === 'object').map((x, i) => stepOf(x, i + 1, seeds));
+  // A template is listed (as one, never recorded) even when it has no steps to walk.
+  if (!steps.length && !templateWhy(journey, file, j)) return `${file} has no steps`;
   const persona = str(j.persona) ?? str(j.role);
   const notes = journeyNotes(j);
   return {
@@ -122,6 +124,7 @@ export function scriptOf(file: string, text: string): WalkScript | string {
     ...(persona ? { persona } : {}),
     identity: hintOf(j),
     ...(notes.length ? { notes } : {}),
+    start: readStartState(journey, file, j),
     steps,
   };
 }

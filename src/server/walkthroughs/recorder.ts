@@ -12,6 +12,7 @@
 // hold, a step the script can't walk) is captioned as failed, kept on screen, screenshotted, and ends the
 // recording as failed; the steps after it are "not run". Every request to anywhere but the proxy's origin
 // is refused, so the recording can only ever see the app. Cancel (the signal) closes the filmed context.
+// With film: false it plays a journey only to set up a later one's start state: no video, cards or pauses.
 
 import { mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
@@ -42,6 +43,8 @@ export interface RecordInput {
   cardMs?: number;
   /** The least time a step stays on screen without narration. */
   stepMs?: number;
+  /** false: played only to set up another journey's start state (no video, no cards, no screenshots, no pauses). */
+  film?: boolean;
 }
 
 export interface RecordResult {
@@ -144,10 +147,11 @@ const wt = <A extends unknown[]>(page: Page, fn: string, ...args: A) => page.eva
 /** Films the script. Never throws: what went wrong is in the result. */
 export async function record(i: RecordInput): Promise<RecordResult> {
   const origin = new URL(i.url).origin;
-  const card = i.cardMs ?? 2500;
-  const stepMin = i.stepMs ?? 1400;
+  const film = i.film !== false;
+  const card = film ? (i.cardMs ?? 2500) : 0;
+  const stepMin = film ? (i.stepMs ?? 1400) : 0;
   const steps: ManifestStep[] = i.script.steps.map((s) => ({ n: s.n, caption: s.caption, status: 'not-run' }));
-  await mkdir(path.join(i.outDir, 'steps'), { recursive: true });
+  if (film) await mkdir(path.join(i.outDir, 'steps'), { recursive: true });
   // The batch's sign-ins, or (alone) one of its own that signs out when this recording is done.
   const own = !i.sessions;
   const sessions = i.sessions ?? new AppSessions({ url: i.url, ...(i.launch ? { launch: i.launch } : {}) });
@@ -166,7 +170,7 @@ export async function record(i: RecordInput): Promise<RecordResult> {
     if (i.signal.aborted) throw new Error('cancelled');
     const browser = await sessions.browserNow();
     // The filmed context starts with the account's cookies, so the app resumes that session: no new one.
-    ctx = await browser.newContext({ viewport: VIEWPORT, serviceWorkers: 'block', storageState, recordVideo: { dir: path.join(i.outDir, 'video-tmp'), size: VIEWPORT } });
+    ctx = await browser.newContext({ viewport: VIEWPORT, serviceWorkers: 'block', storageState, ...(film ? { recordVideo: { dir: path.join(i.outDir, 'video-tmp'), size: VIEWPORT } } : {}) });
     await lockTo(origin)(ctx);
     await ctx.addInitScript({ content: OVERLAY_SCRIPT });
     page = await ctx.newPage();
@@ -202,10 +206,12 @@ export async function record(i: RecordInput): Promise<RecordResult> {
         await check(page, s);
         await wt(page, 'step', s.n, total, s.caption, false);
         const held = Date.now() - t0 - out.startMs;
-        const want = Math.max(stepMin, i.holdMs?.(s) ?? 0);
+        const want = film ? Math.max(stepMin, i.holdMs?.(s) ?? 0) : 0;
         if (held < want) await page.waitForTimeout(want - held);
-        out.screenshot = `steps/${pad(s.n)}.png`;
-        await page.screenshot({ path: path.join(i.outDir, out.screenshot), type: 'png' });
+        if (film) {
+          out.screenshot = `steps/${pad(s.n)}.png`;
+          await page.screenshot({ path: path.join(i.outDir, out.screenshot), type: 'png' });
+        }
         out.status = 'passed';
         out.endMs = Date.now() - t0;
       } catch (err) {
@@ -215,16 +221,18 @@ export async function record(i: RecordInput): Promise<RecordResult> {
         out.why = why;
         await wt(page, 'highlight', null);
         await wt(page, 'step', s.n, total, `Step ${s.n} failed: ${why}`, true);
-        await page.waitForTimeout(2000);
-        out.screenshot = `steps/${pad(s.n)}.png`;
-        await page.screenshot({ path: path.join(i.outDir, out.screenshot), type: 'png' }).catch(() => undefined);
+        if (film) {
+          await page.waitForTimeout(2000);
+          out.screenshot = `steps/${pad(s.n)}.png`;
+          await page.screenshot({ path: path.join(i.outDir, out.screenshot), type: 'png' }).catch(() => undefined);
+        }
         out.endMs = Date.now() - t0;
         res.status = 'failed';
         res.failure = { step: s.n, why };
         break;
       }
     }
-    if (res.status === 'passed') {
+    if (res.status === 'passed' && film) {
       await wt(page, 'chapter', 'Walkthrough complete', `${total} of ${total} steps passed`);
       await page.waitForTimeout(Math.min(card, 1500));
     }

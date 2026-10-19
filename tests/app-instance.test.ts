@@ -129,3 +129,34 @@ test('a start that fails says why and leaves nothing behind; no mxcli is said pl
     removeDir(p.root);
   }
 });
+
+test('a fresh database for the same instance: the old one dropped, a new name, the same folder and port, no new copy', { timeout: 90_000 }, async () => {
+  const p = project();
+  const { sql, psql } = fakePsql();
+  try {
+    const one = await startAppInstance({ floorId: 'demo', floorDir: p.repo, commit: p.sha, purpose: 'rec', dataDir: p.data, cfg, mxcli: process.execPath, psql, mxbuild });
+    try {
+      const first = one.dbName;
+      const lines: string[] = [];
+      const t0 = Date.now();
+      await one.freshDatabase(new AbortController().signal, (l) => lines.push(l));
+      const ms = Date.now() - t0;
+      assert.notEqual(one.dbName, first);
+      assert.match(one.dbName, /^demo_rec_[a-z0-9]{6}$/);
+      assert.ok(sql.includes(`DROP DATABASE IF EXISTS "${first}" WITH (FORCE)`), 'the first database is dropped');
+      const seen = JSON.parse(await get(one.appPort)) as { args: string[]; cwd: string };
+      assert.equal(seen.args[seen.args.indexOf('--db-name') + 1], one.dbName, 'the runtime runs on the new one');
+      assert.ok(path.resolve(seen.cwd).startsWith(path.resolve(instanceDir(p.data, 'demo', 'rec'))));
+      assert.equal(one.alive(), true);
+      assert.match(lines.join('\n'), /same build again on a fresh database/);
+      assert.ok(!readFileSync(one.logFile, 'utf8').includes(PASSWORD));
+      assert.ok(ms < 30_000, `a fresh database took ${ms} ms`);
+    } finally {
+      await one.stop();
+    }
+    assert.ok(sql.some((q) => q.includes(one.dbName) && q.startsWith('DROP')), 'stop drops the second one');
+    assert.equal(existsSync(instanceDir(p.data, 'demo', 'rec')), false);
+  } finally {
+    removeDir(p.root);
+  }
+});

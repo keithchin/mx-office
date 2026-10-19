@@ -14,26 +14,35 @@ import type { TabHooks } from '../../tabs/registry';
 import { h, timeAgo, toast } from '../dom';
 import { act, fileUrl, loadView, takePending } from './api';
 import { evidenceLine, openPlayer } from './player';
+import { planView } from './plan-view';
 import './page.css';
 
 const BUSY_MS = 2000;
 const IDLE_MS = 20_000;
-const STATUS: Record<WalkCardRecording['status'], string> = { queued: 'Queued', recording: 'Recording', passed: 'Passed', failed: 'Failed', cancelled: 'Cancelled', error: 'Didn’t finish' };
+const STATUS: Record<WalkCardRecording['status'], string> = { queued: 'Queued', recording: 'Recording', passed: 'Passed', failed: 'Failed', cancelled: 'Cancelled', error: 'Didn’t finish', skipped: 'Skipped' };
 const secs = (ms?: number) => (ms === undefined ? '' : ms < 60_000 ? `${Math.round(ms / 1000)} s` : `${Math.floor(ms / 60_000)} min ${Math.round((ms % 60_000) / 1000)} s`);
 const short = (sha: string) => sha.slice(0, 7);
+const GROUP = /^Group \d+ of \d+ · /;
 
 /** A batch's place, in words: what the progress panel says. */
 export function batchWords(b: WalkBatch, ahead: number): { pill: string; text: string; done: number } {
   const of = b.journeys.length;
   const now = b.journeys[b.n - 1];
+  const g = b.group && b.group.of > 1 ? `Group ${b.group.n} of ${b.group.of} · ` : '';
   switch (b.phase) {
     case 'queued':
       return { pill: 'Queued', text: `${b.kind === 'tour' ? 'Guided tour' : `${of} workflow${of === 1 ? '' : 's'}`} of @${short(b.commit)}${ahead ? `, after ${ahead} other recording${ahead === 1 ? '' : 's'} in the office` : ''}`, done: 0 };
-    case 'booting':
-      return { pill: 'Starting the app', text: `Starting the recording app at @${short(b.commit)} on a fresh database${b.line && !/^Starting the recording app/.test(b.line) ? ` · ${b.line}` : '…'}`, done: 0 };
+    case 'booting': {
+      // "Group 2 of 4 · starting a fresh database…" once a batch has more than one group.
+      const line = (b.line ?? '').replace(GROUP, '');
+      if (g && line) return { pill: 'Starting the app', text: `${g}${line}`, done: Math.max(0, b.n) };
+      return { pill: 'Starting the app', text: `Starting the recording app at @${short(b.commit)} on a fresh database${line && !/^Starting the recording app/i.test(line) ? ` · ${line}` : '…'}`, done: 0 };
+    }
     case 'recording': {
-      const rest = (b.line ?? '').replace(/^Recording \d+ of \d+: /, '');
-      return { pill: 'Recording', text: `Recording ${b.n} of ${of}: ${now?.title ?? ''}${rest && rest !== now?.title ? ` · ${rest}` : ''}`, done: Math.max(0, b.n - 1) };
+      const line = (b.line ?? '').replace(GROUP, '');
+      if (/^setting up/i.test(line)) return { pill: 'Setting up', text: `${g}${line}`, done: Math.max(0, b.n) };
+      const rest = line.replace(/^Recording \d+ of \d+: /, '');
+      return { pill: 'Recording', text: `${g}Recording ${b.n} of ${of}: ${now?.title ?? ''}${rest && rest !== now?.title ? ` · ${rest}` : ''}`, done: Math.max(0, b.n - 1) };
     }
     default:
       return { pill: b.kind === 'tour' ? 'Making the tour' : 'Finishing', text: b.kind === 'tour' ? `Making the guided tour of @${short(b.commit)}${b.line ? ` · ${b.line}` : '…'}` : `Done recording; stopping the recording app…`, done: b.kind === 'tour' ? 0 : of };
@@ -110,6 +119,7 @@ export function walkthroughsPage(container: HTMLElement, floorOf: () => string =
         h('h4', {}, r.journey.title, ' ', h('span', { class: `pill wt-pill ${r.status}` }, r.status === 'failed' && r.failure?.step ? `Failed at step ${r.failure.step}` : STATUS[r.status])),
         h('p.wt-tags', {}, tags.join(' · ')),
         h('p.wt-small', {}, evidenceLine(r)),
+        r.start?.setup?.length ? h('p.wt-small.wt-setup', {}, `Played ${r.start.setup.map((t) => `“${t}”`).join(', then ')} first (not filmed) to set up its start state.`) : null,
         notes,
         h(
           'div.wt-actions',
@@ -140,6 +150,7 @@ export function walkthroughsPage(container: HTMLElement, floorOf: () => string =
           h('span.wt-btext', {}, w.text, b.trigger === 'auto' ? h('small', {}, ` · auto${b.milestone ? `, ${b.milestone.title}` : ''}`) : h('small', {}, ` · by ${b.by}`)),
           b.phase !== 'queued' ? h('progress.wt-bar', { max: String(of), value: String(w.done), 'aria-label': `${w.done} of ${of} done` }) : null,
           v.admin ? h('button.btn', { type: 'button', onclick: () => after(act({ action: 'cancel', floor, batch: b.id })) }, 'Cancel') : null,
+          b.plan && (b.plan.groups.length > 1 || b.plan.skipped.length || b.plan.groups.some((g) => g.steps.some((x) => x.setup))) ? planView(b.plan, { now: b.phase === 'queued' ? undefined : b.group?.n, title: 'This batch’s plan', open: true }) : null,
         );
       }),
     );
@@ -199,6 +210,7 @@ export function walkthroughsPage(container: HTMLElement, floorOf: () => string =
       controls(v),
       who,
       progress(v),
+      v.plan && !v.batches.some((b) => b.kind === 'workflows') && (v.plan.groups.length || v.plan.skipped.length) ? planView(v.plan, { title: 'Recording plan (Re-record all)', open: false }) : null,
       tours.length ? h('div.wt-tours', {}, ...tours) : null,
       flows.length ? h('div.wt-cards', {}, ...flows) : null,
       empty,

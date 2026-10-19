@@ -32,11 +32,13 @@ export interface Rig {
   /** Each boot of the recording app: its commit; and how many were stopped. */
   boots: string[];
   stops: number;
+  /** Each fresh database a running app was given (a later group of a batch). */
+  freshDbs: number;
   passed: string[];
   bootError?: string;
 }
 
-export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: number; app?: FakeAppOptions } = {}): Promise<Rig> {
+export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: number; app?: FakeAppOptions; journeys?: Record<string, unknown>; now?: () => Date } = {}): Promise<Rig> {
   const root = mkdtempSync(path.join(tmpdir(), 'walk-rec-'));
   const origin = path.join(root, 'origin.git');
   const repo = path.join(root, 'project');
@@ -44,8 +46,7 @@ export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: n
   execFileSync('git', ['init', '-q', '--bare', '-b', 'main', origin]);
   g(repo, 'init', '-q', '-b', 'main');
   mkdirSync(path.join(repo, 'tests', 'e2e'), { recursive: true });
-  writeFileSync(path.join(repo, 'tests', 'e2e', 'new-request.journey.json'), JSON.stringify(PASSING, null, 2));
-  writeFileSync(path.join(repo, 'tests', 'e2e', 'approve-request.journey.json'), JSON.stringify(FAILING, null, 2));
+  for (const [name, j] of Object.entries(o.journeys ?? { 'new-request': PASSING, 'approve-request': FAILING })) writeFileSync(path.join(repo, 'tests', 'e2e', `${name}.journey.json`), JSON.stringify(j, null, 2));
   writeFileSync(path.join(repo, 'README.md'), '# Sample app\n');
   if (o.config) writeFileSync(path.join(repo, 'tests', 'e2e', 'project.config.js'), o.config);
   g(repo, 'add', '-A');
@@ -56,15 +57,24 @@ export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: n
   const sha = g(repo, 'rev-parse', 'HEAD');
   const app = await fakeApp({ lateFormMs: o.lateFormMs ?? 0, ...o.app });
   const gh: string[][] = [];
-  const r = { root, repo, origin, sha, app, gh, boots: [] as string[], stops: 0, passed: [] as string[] } as Rig;
+  const r = { root, repo, origin, sha, app, gh, boots: [] as string[], stops: 0, freshDbs: 0, passed: [] as string[] } as Rig;
   r.w = new Walkthroughs({
     dataDir: path.join(root, 'data'),
     floorDir: (id) => (id === 'demo' ? repo : undefined),
     boot: async (_floor, commit) => {
       r.boots.push(commit);
       if (r.bootError) throw new Error(r.bootError);
+      // A new instance starts on a fresh database; so does the same one given a new database.
+      app.reset();
       let up = true;
-      return { url: app.url, commit, ...(o.app?.runtimeLog ? { runtimeLog: o.app.runtimeLog } : {}), alive: () => up, stop: async () => void ((up = false), r.stops++) };
+      return {
+        url: app.url,
+        commit,
+        ...(o.app?.runtimeLog ? { runtimeLog: o.app.runtimeLog } : {}),
+        alive: () => up,
+        freshDatabase: async () => void (r.freshDbs++, app.reset()),
+        stop: async () => void ((up = false), r.stops++),
+      };
     },
     passedAt: async (_f, sha, ids) => (sha === r.sha ? ids.filter((i) => r.passed.includes(i)) : []),
     gh: async (args) => {
@@ -75,6 +85,7 @@ export async function rig(o: { ffmpeg?: boolean; config?: string; lateFormMs?: n
     voice: fakeVoice,
     cardMs: 300,
     stepMs: 300,
+    ...(o.now ? { now: o.now } : {}),
   });
   await r.w.store.setSettings('demo', { autoRecord: true, narrate: false, demoUser: DEMO.user, demoPassword: DEMO.password });
   return r;

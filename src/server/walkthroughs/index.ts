@@ -2,9 +2,10 @@
 // journeys that passed against it (a build on main passed, a milestone became ready in the live app), each
 // of those journeys is recorded once per commit, behind a per-project switch (on by default); admins can
 // also Record one journey, or Re-record all, of main's newest commit. A batch is the journeys of one commit,
-// played one after another against the office's own throwaway copy of the app at that commit (app-instance/:
-// its own folder, ports and fresh database, never the person's live app), which is stopped when the batch
-// is done. One batch at a time per office, queued, cancellable; the app, the browser, ffmpeg and the voice
+// played by a plan (shared/walkthroughs/plan.ts: groups on fresh databases, in the order the journeys' start
+// states need, prerequisites played first unfilmed, templates skipped) against the office's own throwaway
+// copy of the app at that commit (app-instance/: its own folder, ports and database, never the person's live
+// app; ./batch.ts plays it), which is stopped when the batch is done. One batch at a time per office, queued, cancellable; the app, the browser, ffmpeg and the voice
 // are child processes, so the office only coordinates. Each journey signs in as the identity the toolkit's
 // journey runner uses for it (./identity.ts). Working copies live in <data>/walkthroughs/ (./store.ts);
 // their home is the project's private repo (Save to repo, a pull request: ./save.ts). Nothing calls a model.
@@ -12,31 +13,23 @@
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { ulid } from '../../shared/evidence/ids.js';
-import { parseJourney } from '../../shared/liveapp/plan.js';
 import type { LiveReadiness, ReadinessNews } from '../../shared/liveapp/readiness.js';
 import { autoJourneys } from '../../shared/walkthroughs/auto.js';
 import { resolveIdentity, type RunnerConfig } from '../../shared/walkthroughs/identity.js';
+import { planBatch } from '../../shared/walkthroughs/plan.js';
 import { scriptOf } from '../../shared/walkthroughs/script.js';
-import { RECORDING_CAP_MS, type RecordingTrigger, type WalkAvailability, type WalkBatch, type WalkManifest, type WalkScript, type WalkSettings, type WalkView } from '../../shared/walkthroughs/types.js';
+import { type RecordingTrigger, type WalkAvailability, type WalkBatch, type WalkManifest, type WalkScript, type WalkSettings, type WalkView } from '../../shared/walkthroughs/types.js';
 import { listFiles, mainOf, readFiles } from '../testing/repo.js';
 import { runnerConfigAt } from './identity.js';
 import { findFfmpeg, type Tool } from './media.js';
-import { AppSessions, type Browser } from './recorder.js';
-import { runRecording } from './run.js';
+import type { Browser } from './recorder.js';
+import { runPlan, type BatchRun, type RecordingApp } from './batch.js';
 import { saveToRepo, type Gh } from './save.js';
 import { WalkStore } from './store.js';
 import { makeGuidedTour, tourParts } from './tour.js';
 import { findKokoro, kokoroVoice, type Voice } from './tts.js';
 
-/** The office's own copy of the app a batch records against (app-instance/). */
-export interface RecordingApp {
-  url: string;
-  commit: string;
-  /** Its Mendix runtime log, when there is one (a refused session shows there). */
-  runtimeLog?: string;
-  alive(): boolean;
-  stop(): Promise<void>;
-}
+export type { RecordingApp } from './batch.js';
 
 /** What the service needs to know about a project. */
 export interface WalkDeps {
@@ -67,14 +60,17 @@ export interface WalkDeps {
   quota?: number;
   cardMs?: number;
   stepMs?: number;
+  /** The clock, for journeys' time windows (tests set it). */
+  now?(): Date;
 }
 
-interface Batch extends WalkBatch {
-  ctl: AbortController;
+interface Batch extends BatchRun {
   run(b: Batch): Promise<void>;
 }
 
 const strip = ({ ctl: _c, run: _r, ...b }: Batch): WalkBatch => ({ ...b, journeys: b.journeys.map((j) => ({ ...j })) });
+/** The journeys that are workflows (templates are listed, never recorded). */
+const workflows = (all: WalkScript[]) => all.filter((s) => !s.start?.template && s.steps.length);
 
 export class Walkthroughs {
   readonly store: WalkStore;
@@ -125,7 +121,7 @@ export class Walkthroughs {
     return (this.d.runnerConfig ?? runnerConfigAt)(dir, commit).catch(() => undefined);
   }
 
-  /** The journeys of a commit of the project, as walkthrough scripts (broken controls left out). */
+  /** The journeys of a commit of the project, as walkthrough scripts (templates too: start.template says so). */
   scriptsAt(floor: string, commit: string): Promise<WalkScript[]> {
     const dir = this.d.floorDir(floor);
     if (!dir) return Promise.resolve([]);
@@ -136,9 +132,7 @@ export class Walkthroughs {
         const files = (await listFiles(dir, commit, ['tests'])).filter((f) => /\.journey\.json$/i.test(f)).slice(0, 200);
         const texts = await readFiles(dir, commit, files, 512 * 1024);
         return files.flatMap((f) => {
-          const t = texts.get(f) ?? '';
-          if (!parseJourney(f, t)) return [];
-          const s = scriptOf(f, t);
+          const s = scriptOf(f, texts.get(f) ?? '');
           return typeof s === 'string' ? [] : [s];
         });
       })();
@@ -152,7 +146,8 @@ export class Walkthroughs {
   async view(floor: string, admin: boolean): Promise<WalkView> {
     const s = await this.store.settings(floor);
     const commit = await this.mainOf(floor);
-    const scripts = commit ? await this.scriptsAt(floor, commit).catch(() => []) : [];
+    const all = commit ? await this.scriptsAt(floor, commit).catch(() => []) : [];
+    const scripts = workflows(all);
     const journeys = scripts.map((j) => ({ id: j.journey, title: j.title, file: j.file, requirement: j.requirement }));
     const cfg = commit ? await this.runnerConfig(floor, commit) : undefined;
     const who = resolveIdentity({ names: [] }, cfg, { user: s.demoUser, password: s.demoPassword });
@@ -176,6 +171,7 @@ export class Walkthroughs {
       })(this.availability()),
       ...(commit ? { main: { commit } } : {}),
       journeys,
+      ...(all.length ? { plan: planBatch(all) } : {}),
       identity: { user: who.user, from: who.from },
       batches: mine.map(strip),
       ahead: first < 0 ? this.batches.length : first,
@@ -194,11 +190,23 @@ export class Walkthroughs {
     if (blocked) throw new Error(`recordings can’t start the app here: ${blocked}`);
     const commit = o.commit ?? (await this.mainOf(floor));
     if (!commit) throw new Error('the project has no main branch to record yet');
-    const scripts = await this.scriptsAt(floor, commit);
-    if (o.journeys) for (const j of o.journeys) if (!scripts.some((s) => s.journey === j)) throw new Error(`no journey ${j} at @${commit.slice(0, 7)}`);
+    const all = await this.scriptsAt(floor, commit);
+    const scripts = workflows(all);
+    if (o.journeys) {
+      for (const j of o.journeys) {
+        const s = all.find((x) => x.journey === j);
+        if (!s) throw new Error(`no journey ${j} at @${commit.slice(0, 7)}`);
+        if (!scripts.includes(s)) throw new Error(`${j} is a template (${s.start?.templateWhy ?? 'no steps'}): it isn’t recorded`);
+      }
+    }
     const queued = new Set(this.batches.filter((b) => b.floor === floor && b.kind === 'workflows' && b.commit === commit).flatMap((b) => b.journeys.map((j) => j.id)));
     const want = scripts.filter((s) => (!o.journeys || o.journeys.includes(s.journey)) && !queued.has(s.journey));
     if (!want.length) throw new Error(scripts.length ? `already queued for @${commit.slice(0, 7)}` : `no test journeys (tests/e2e/*.journey.json) at @${commit.slice(0, 7)}`);
+    // The plan: groups on fresh databases, chains in order, prerequisites played first unfilmed (cheap, pure).
+    const plan = planBatch(all, o.journeys ? want.map((s) => s.journey) : undefined);
+    const byId = new Map(all.map((s) => [s.journey, s]));
+    const filmed = plan.groups.flatMap((g) => g.steps.filter((x) => !x.setup)).map((x) => byId.get(x.id)!);
+    const unplayed = plan.skipped.filter((k) => k.kind !== 'template').map((k) => byId.get(k.id)!);
     const settings = await this.store.settings(floor);
     const narrate = (o.narrate ?? settings.narrate) && !!this.tool.ffmpeg;
     const b: Batch = {
@@ -209,12 +217,13 @@ export class Walkthroughs {
       trigger: o.trigger ?? 'manual',
       ...(o.milestone ? { milestone: o.milestone } : {}),
       by: o.by,
-      journeys: want.map((s) => ({ id: s.journey, title: s.title })),
+      journeys: [...filmed, ...unplayed].map((s) => ({ id: s.journey, title: s.title })),
       phase: 'queued',
       n: 0,
       at: Date.now(),
+      plan,
       ctl: new AbortController(),
-      run: (x) => this.runWorkflows(x, want, settings, narrate),
+      run: (x) => this.runWorkflows(x, byId, settings, narrate),
     };
     this.enqueue(b);
     return b.id;
@@ -270,96 +279,29 @@ export class Walkthroughs {
     this.d.changed?.(b.floor);
   }
 
-  /** One batch: the app at its commit, each journey recorded against it in turn, the app stopped. */
-  private async runWorkflows(b: Batch, scripts: WalkScript[], s: WalkSettings, narrate: boolean): Promise<void> {
-    let app: RecordingApp | undefined;
-    let sessions: AppSessions | undefined;
-    try {
-      b.phase = 'booting';
-      this.say(b, `Starting the recording app at @${b.commit.slice(0, 7)} on a fresh database…`);
-      try {
-        app = await this.d.boot(b.floor, b.commit, b.ctl.signal, (l) => this.say(b, l));
-      } catch (err) {
-        const why = b.ctl.signal.aborted ? 'cancelled before the recording app was up' : `the recording app didn’t start: ${(err as Error).message.slice(0, 260)}`;
-        for (const sc of scripts) await this.writeUnrun(b, sc, b.ctl.signal.aborted ? 'cancelled' : 'error', why);
-        return;
-      }
-      b.phase = 'recording';
-      // One session per account for the whole batch (an unlicensed app keeps only 6 open), signed out at the end.
-      sessions = new AppSessions({ url: app.url, ...(app.runtimeLog ? { runtimeLog: app.runtimeLog } : {}), ...(this.d.launch ? { launch: this.d.launch } : {}) });
-      const cfg = await this.runnerConfig(b.floor, b.commit);
-      if (narrate && this.voice === undefined) await this.voiceLook;
-      for (const [k, sc] of scripts.entries()) {
-        if (b.ctl.signal.aborted) break;
-        b.n = k + 1;
-        this.say(b, `Recording ${k + 1} of ${scripts.length}: ${sc.title}`);
-        const m = await this.recordOne(b, sc, app, sessions, s, cfg, narrate);
-        this.d.changed?.(b.floor, m);
-      }
-    } finally {
-      b.phase = 'finishing';
-      if (sessions) this.say(b, 'Signing out…');
-      await sessions?.close().catch(() => undefined);
-      this.say(b, 'Stopping the recording app…');
-      await app?.stop().catch(() => undefined);
-    }
-  }
-
-  private manifestOf(b: Batch, sc: WalkScript, origin: string, user: string | undefined, from?: WalkManifest['app']['userFrom']): WalkManifest {
-    const id = `wt_${ulid()}`;
-    const j = b.journeys.find((x) => x.id === sc.journey);
-    if (j) j.rec = id;
-    return {
-      schema: 1,
-      id,
-      floor: b.floor,
-      kind: 'workflow',
-      journey: { id: sc.journey, title: sc.title, file: sc.file, requirement: sc.requirement, ...(sc.notes?.length ? { notes: sc.notes } : {}) },
-      batch: b.id,
-      ...(b.milestone ? { milestone: b.milestone } : {}),
-      trigger: b.trigger,
-      by: b.by,
-      app: { commit: b.commit, origin, ...(user ? { user } : {}), ...(from ? { userFrom: from } : {}), instance: true },
-      startedAt: Date.now(),
-      status: 'recording',
-      steps: sc.steps.map((x) => ({ n: x.n, caption: x.caption, status: 'not-run' as const })),
-      outputs: { narration: 'none', notes: [] },
-    };
-  }
-
-  /** A journey the batch never got to play (the app didn't start, or it was cancelled first): said on its card. */
-  private async writeUnrun(b: Batch, sc: WalkScript, status: 'error' | 'cancelled', why: string) {
-    const m = this.manifestOf(b, sc, '', undefined);
-    Object.assign(m, { status, failure: { why }, finishedAt: Date.now() });
-    await this.store.write(m).catch(() => undefined);
-    this.d.changed?.(b.floor, m);
-  }
-
-  private async recordOne(b: Batch, sc: WalkScript, app: RecordingApp, sessions: AppSessions, s: WalkSettings, cfg: RunnerConfig | undefined, narrate: boolean): Promise<WalkManifest> {
-    const who = resolveIdentity(sc.identity ?? { names: [] }, cfg, { user: s.demoUser, password: s.demoPassword });
-    const m = this.manifestOf(b, sc, new URL(app.url).origin, who.user, who.from);
-    if (who.note) m.outputs.notes.push(`Sign-in: ${who.note}.`);
-    const dir = this.store.recDir(b.floor, m.id);
-    // Each recording has its own time limit inside the batch; Cancel stops the batch.
-    const one = new AbortController();
-    const cap = setTimeout(() => one.abort(`stopped after ${RECORDING_CAP_MS / 60_000 + 2} minutes`), RECORDING_CAP_MS + 2 * 60_000);
-    const follow = () => one.abort(typeof b.ctl.signal.reason === 'string' ? b.ctl.signal.reason : 'cancelled');
-    b.ctl.signal.addEventListener('abort', follow, { once: true });
-    try {
-      await mkdir(dir, { recursive: true });
-      await this.store.write(m);
-      return await runRecording(
-        { tool: this.tool, ...(this.voice ? { voice: this.voice } : {}), commitNow: () => (app.alive() ? b.commit : undefined), ...(this.d.launch ? { launch: this.d.launch } : {}), ...(this.d.cardMs !== undefined ? { cardMs: this.d.cardMs } : {}), ...(this.d.stepMs !== undefined ? { stepMs: this.d.stepMs } : {}) },
-        { m, dir, url: app.url, script: sc, login: { user: who.user, password: who.password }, sessions, narrate, signal: one.signal, progress: (l) => this.say(b, `Recording ${b.n} of ${b.journeys.length}: ${l}`), save: (x) => this.store.write(x) },
-      );
-    } catch (err) {
-      Object.assign(m, { status: one.signal.aborted ? 'cancelled' : 'error', failure: { why: (err as Error).message.slice(0, 300) }, finishedAt: Date.now() });
-      await this.store.write(m).catch(() => undefined);
-      return m;
-    } finally {
-      clearTimeout(cap);
-      b.ctl.signal.removeEventListener('abort', follow);
-    }
+  /** One batch: its plan's groups, each on a fresh database of the office's own copy of the app (./batch.ts). */
+  private runWorkflows(b: Batch, scripts: Map<string, WalkScript>, s: WalkSettings, narrate: boolean): Promise<void> {
+    const d = this.d;
+    return runPlan(
+      {
+        store: this.store,
+        tool: this.tool,
+        voice: () => this.voice,
+        voiceReady: () => this.voiceLook ?? Promise.resolve(),
+        boot: (signal, progress) => d.boot(b.floor, b.commit, signal, progress),
+        runnerConfig: () => this.runnerConfig(b.floor, b.commit),
+        say: (l) => this.say(b, l),
+        changed: (m) => d.changed?.(b.floor, m),
+        ...(d.launch ? { launch: d.launch } : {}),
+        ...(d.cardMs !== undefined ? { cardMs: d.cardMs } : {}),
+        ...(d.stepMs !== undefined ? { stepMs: d.stepMs } : {}),
+        ...(d.now ? { now: d.now } : {}),
+      },
+      b,
+      scripts,
+      s,
+      narrate,
+    );
   }
 
   /** Runs the queue, one batch at a time. */
@@ -429,7 +371,7 @@ export class Walkthroughs {
     if (!this.d.passedAt || !(await this.store.settings(floor)).autoRecord || this.d.bootBlocked?.() || this.d.autoBlocked?.(floor)) return [];
     const commit = await this.mainOf(floor);
     if (!commit) return [];
-    const scripts = await this.scriptsAt(floor, commit).catch(() => []);
+    const scripts = workflows(await this.scriptsAt(floor, commit).catch(() => []));
     if (!scripts.length) return [];
     const done = await this.autoDone(floor, commit);
     const passed = (await this.d.passedAt(floor, commit, scripts.map((s) => s.journey)).catch(() => [])).filter((j) => !done.has(j));

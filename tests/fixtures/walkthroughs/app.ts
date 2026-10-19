@@ -18,7 +18,7 @@ const FORM = `<form method="post" action="/login"><h2>Sample app</h2><input id="
 const login = (lateMs = 0) => `<!doctype html><html><head><title>Sign in</title><style>body{font-family:sans-serif;background:#eef2f7;display:flex;justify-content:center;padding-top:120px}form{background:#fff;padding:32px;border-radius:8px;display:grid;gap:12px;width:300px}</style></head><body>
 ${lateMs ? `<div id="boot">Loading…</div><script>setTimeout(() => { document.getElementById("boot").outerHTML = ${JSON.stringify(FORM)}; }, ${lateMs});</script>` : FORM}</body></html>`;
 
-const page = (other: string, token: string) => `<!doctype html><html><head><title>Sample requests</title><style>
+const page = (other: string, token: string, saved: string[] = []) => `<!doctype html><html><head><title>Sample requests</title><style>
 [hidden]{display:none!important}
 body{margin:0;font-family:"Segoe UI",sans-serif;display:flex;height:100vh;background:#f5f7fa}
 .mx-navigationtree{width:200px;background:#1e293b;padding:16px}.mx-navigationtree a{display:block;color:#e2e8f0;padding:8px;text-decoration:none}
@@ -28,7 +28,7 @@ body{margin:0;font-family:"Segoe UI",sans-serif;display:flex;height:100vh;backgr
 </style></head><body>
 <nav class="mx-navigationtree"><a href="#" title="Home">Home</a><a href="#" title="Requests" id="navRequests">Requests</a></nav>
 <div class="mx-page"><h1 id="heading">Welcome</h1>
-<div id="list" hidden><div class="mx-name-dgRequests"><div class="row">Sample request A</div><div class="row">Sample request B</div></div>
+<div id="list" hidden><div class="mx-name-dgRequests">${saved.map((t) => `<div class="row">${t}</div>`).join('')}<div class="row">Sample request A</div><div class="row">Sample request B</div></div>
 <button class="mx-name-btnNew">New request</button></div>
 <div class="mx-name-dvForm" hidden><div class="mx-name-tbTitle"><input placeholder="Title"></div><button class="mx-name-btnSubmit">Submit</button></div>
 <img src="${other}/tracker.png" width="1" height="1" alt="">
@@ -40,6 +40,7 @@ $('#navRequests').onclick = (e) => { e.preventDefault(); $('#heading').textConte
 $('.mx-name-btnNew').onclick = () => { $('.mx-name-dvForm').hidden = false; };
 $('.mx-name-btnSubmit').onclick = () => {
   const t = $('.mx-name-tbTitle input').value;
+  fetch('/api/submit', { method: 'POST', body: t });
   const r = document.createElement('div'); r.className = 'row'; r.textContent = t; $('.mx-name-dgRequests').prepend(r);
   $('.mx-name-dvForm').hidden = true; $('#heading').textContent = 'Request submitted';
 };
@@ -64,6 +65,10 @@ export interface FakeApp {
   anonymous(): number;
   /** Sessions refused over the cap. */
   refusals(): number;
+  /** What was submitted on the current "database" (newest first). */
+  saved(): string[];
+  /** A fresh database: nothing submitted (sessions are left alone: the tests hold some on purpose). */
+  reset(): void;
   /** Opens `n` sessions somewhere else (other windows of the app). */
   hold(n: number): void;
 }
@@ -85,6 +90,7 @@ export async function fakeApp(o: FakeAppOptions = {}): Promise<FakeApp> {
   const ins: string[] = [];
   const outs: string[] = [];
   let anon = 0;
+  const saved: string[] = [];
   let refusals = 0;
   const id = () => randomBytes(8).toString('hex');
   /** A new session, or undefined over the cap. */
@@ -158,7 +164,16 @@ export async function fakeApp(o: FakeAppOptions = {}): Promise<FakeApp> {
       return;
     }
     if (req.url === '/login.html') return html(login(o.lateFormMs));
-    if (mine) return html(page(otherUrl, mine.token));
+    if (req.method === 'POST' && req.url === '/api/submit') {
+      // The app's "database": what was submitted stays until reset() (a fresh database).
+      body((b) => {
+        if (mine) saved.unshift(b.slice(0, 80));
+        res.writeHead(mine ? 200 : 403);
+        res.end();
+      });
+      return;
+    }
+    if (mine) return html(page(otherUrl, mine.token, saved));
     if (!o.guest) return html(login(o.lateFormMs));
     // Guest access: the app, for an anonymous session the page load opens (or the refusal over the cap).
     const made = open(null);
@@ -174,6 +189,10 @@ export async function fakeApp(o: FakeAppOptions = {}): Promise<FakeApp> {
     open: () => sessions.size,
     anonymous: () => anon,
     refusals: () => refusals,
+    saved: () => [...saved],
+    reset: () => {
+      saved.length = 0;
+    },
     hold: (n) => {
       for (let k = 0; k < n; k++) sessions.set(id(), { user: 'someone_else', token: id() });
     },

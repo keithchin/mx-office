@@ -4,6 +4,8 @@
 // Pure types (no Node imports): the page reads them too.
 
 import type { IdentityHint, IdentitySource } from './identity.js';
+import type { WalkPlan } from './plan.js';
+import type { StartState } from './start-state.js';
 
 /** One thing the recorder does in a step (the toolkit journey-runner's vocabulary). */
 export type WalkAction =
@@ -46,10 +48,13 @@ export interface WalkScript {
   identity?: IdentityHint;
   /** Its `$comment` lines about time windows and start states, shown when a recording of it fails. */
   notes?: string[];
+  /** What it needs from the database before it starts (./start-state.ts), as the file says it. */
+  start?: StartState;
   steps: WalkStep[];
 }
 
-export type RecordingStatus = 'queued' | 'recording' | 'passed' | 'failed' | 'cancelled' | 'error';
+/** skipped: the batch's plan didn't play it (its time window, an order that can't hold), with the reason. */
+export type RecordingStatus = 'queued' | 'recording' | 'passed' | 'failed' | 'cancelled' | 'error' | 'skipped';
 export type RecordingTrigger = 'manual' | 'auto';
 
 export interface ManifestStep {
@@ -94,6 +99,11 @@ export interface WalkManifest {
   durationMs?: number;
   status: RecordingStatus;
   failure?: { step?: number; why: string };
+  /**
+   * Where it played in its batch's plan (shared/walkthroughs/plan.ts): its group (one fresh database each),
+   * the journeys played first, unfilmed, to set up its start state, and how its database was made fresh.
+   */
+  start?: { group: number; groups: number; setup?: string[]; db?: 'boot' | 'fresh-db' | 'new-instance'; dbMs?: number };
   steps: ManifestStep[];
   outputs: {
     video?: string;
@@ -154,10 +164,14 @@ export interface WalkBatch {
   /** "Step 2 of 5: Click New request", "Making the MP4…". */
   line?: string;
   at: number;
+  /** Its plan: groups (each on a fresh database), their order, the unfilmed setup plays, what it skips. */
+  plan?: WalkPlan;
+  /** The group playing now (1-based), of how many. */
+  group?: { n: number; of: number };
 }
 
 /** A recording as the page lists it (the manifest without what only the files need). */
-export type WalkCardRecording = Pick<WalkManifest, 'id' | 'kind' | 'journey' | 'milestone' | 'trigger' | 'by' | 'app' | 'startedAt' | 'durationMs' | 'status' | 'failure' | 'steps' | 'outputs' | 'saved' | 'parts'>;
+export type WalkCardRecording = Pick<WalkManifest, 'id' | 'kind' | 'journey' | 'milestone' | 'trigger' | 'by' | 'app' | 'startedAt' | 'durationMs' | 'status' | 'failure' | 'start' | 'steps' | 'outputs' | 'saved' | 'parts'>;
 
 export interface WalkView {
   floor: string;
@@ -165,8 +179,10 @@ export interface WalkView {
   available: WalkAvailability;
   /** Main's newest commit in the project's folder: what Record and Re-record all record. */
   main?: { commit: string };
-  /** The journeys at that commit (what Record offers). */
+  /** The journeys at that commit (what Record offers; templates aren't among them). */
   journeys: { id: string; title: string; file: string; requirement: string[] }[];
+  /** What Re-record all would do at that commit: groups, order, setup plays, skipped templates and why. */
+  plan?: WalkPlan;
   /** Who recordings sign in as by default, and where that came from (never a password). */
   identity?: { user: string; from: IdentitySource };
   /** This project's batches: the running one first, then the queued ones in order. */
