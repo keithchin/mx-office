@@ -29,7 +29,9 @@ export function afterWords(kind: DecisionKind, o: { owner: string; question?: bo
   if (o.question) return `After you answer: send it from the Questions page and ${o.analyst ?? 'the analyst'} records it in the BRD. This card shows Sent until the toolkit reads it recorded.`;
   switch (kind) {
     case 'decision':
-      return `After you answer: ${o.owner} gets it after their current turn and records it. This card shows Sent until then.`;
+      // Typed at once, even mid-turn (roster/escalation-answer.ts): Claude Code takes it in at its next step. Only a
+      // question or permission prompt open in its terminal holds it until that turn is over.
+      return `After you answer: it's typed to ${o.owner} now, even mid-turn (taken in at its next step; held only while a question is open in its terminal), and ${o.owner} records it. This card shows Sent until then.`;
     case 'hands-on':
       return `After you do it: press I've done it. ${o.owner} is told and re-checks. Pressing it doesn't prove it worked.`;
     case 'fyi':

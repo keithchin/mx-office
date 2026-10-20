@@ -85,7 +85,7 @@ The kind of card decides its buttons:
 
 | Kind | What it is | Buttons | After you press |
 |---|---|---|---|
-| **Decision** | An escalation with a question or options, a client question, a proposal, a ✋ sign-off | The options, **Reply in my words**, **Ask &lt;lead&gt;**; a ✋ sign-off has only **Sign off** (its dialog) and **Not yet**, never a free-text answer: it leads any card it shares a stage with, and an escalation about the same stage is answered with the same *Signed off* words | *&lt;agent&gt; gets it after their current turn and records it. This card shows Sent until then.* |
+| **Decision** | An escalation with a question or options, a client question, a proposal, a ✋ sign-off | The options, **Reply in my words**, **Ask &lt;lead&gt;**; a ✋ sign-off has only **Sign off** (its dialog) and **Not yet**, never a free-text answer: it leads any card it shares a stage with, and an escalation about the same stage is answered with the same *Signed off* words | *It's typed to &lt;agent&gt; now, even mid-turn (taken in at its next step; held only while a question is open in its terminal), and &lt;agent&gt; records it. This card shows Sent until then.* |
 | **Action for you** | A hands-on action only a person can do (an escalation with trigger `needs-human`, or an approved `human-action` proposal) | **I've done it**, **Can't now: tell &lt;agent&gt;**, **Ask &lt;lead&gt;** | *&lt;agent&gt; is told and re-checks. Pressing it doesn't prove it worked.* |
 | **FYI** | An FYI that asks nothing | **Noted** | *Noting doesn't approve anything.* |
 

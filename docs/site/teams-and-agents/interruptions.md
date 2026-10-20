@@ -38,7 +38,7 @@ Messages the office starts by itself wait until the agent's turn is over, and ar
 - **autonomy and skills notices**, **relays** and **notes** (a decision on a proposal) go in when the turn ends;
 - a team hired **after today's standup time** gets no catch-up standup that day: its first is the next scheduled one.
 
-A decision an agent was **waiting on** goes in at once: your answer to its escalation, or your decision on its proposal (within ten seconds, so a few approved in a row arrive as one message; an asleep Lead is woken for it).
+A decision an agent was **waiting on** goes in at once: your answer to its escalation, or your decision on its proposal (within ten seconds, so a few approved in a row arrive as one message; an asleep Lead is woken for it). It's typed even while the agent is working, without asking you first: Claude Code takes it in at its next step, not after the turn. Only a question or permission prompt open in its terminal holds it until that turn is over.
 
 ## Back to work
 
