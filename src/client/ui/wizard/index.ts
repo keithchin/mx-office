@@ -26,6 +26,8 @@ export interface WizardOptions {
   floor?: string;
   /** Go to a floor once it's there. */
   go(floor: string): void;
+  /** ✨ New project from a client's page: the project is made for this client (preset, and shown). */
+  client?: { id: string; label: string };
 }
 
 const DRAFT_KEY = 'agent-office.wizard-draft';
@@ -75,7 +77,7 @@ export async function openWizard(opts: WizardOptions) {
   // domains, team & budget. This form stays as the editor of a setup's answers (the setup panel's buttons).
   if (!opts.job && !opts.floor) {
     const { openNewProject } = await import('./new');
-    return openNewProject({ net: opts.net, go: opts.go, edit: (job) => void openWizard({ ...opts, job, page: 2 }) });
+    return openNewProject({ net: opts.net, go: opts.go, ...(opts.client ? { client: opts.client } : {}), edit: (job) => void openWizard({ ...opts, job, page: 2 }) });
   }
   let info: WizardInfo;
   let editing: JobView | undefined;

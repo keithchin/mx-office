@@ -5,6 +5,7 @@ import { ENTRY_MODES, interviewModeOf, ownerProblem, PROJECT_ROLES, slugProblem,
 import { cleanAppId } from './mendix-app.js';
 import { isPortfolioId } from '../../shared/portfolios.js';
 import { cleanPlanDesign } from './design-step.js';
+import { cleanPlanAdopt } from '../../shared/adopt-from.js';
 import { cleanChoice } from '../../shared/budget/levels.js';
 import { isTeamShape, shapeForRoles } from '../../shared/roster/coverage.js';
 import { checkTeamFrom, cleanTeamFrom, type KnownSource } from '../../shared/team-from.js';
@@ -78,6 +79,8 @@ export function cleanPlan(raw: unknown, versions: string[], org: string, teams?:
     ...(cleanPlanBrief(r.brief) ? { brief: cleanPlanBrief(r.brief) } : {}),
     ...(isPortfolioId(r.portfolio) ? { portfolio: r.portfolio } : {}),
     ...(cleanPlanDesign(r.design) ? { design: cleanPlanDesign(r.design) } : {}),
+    // Start from another app: the source and the choices only, never what they mean (adopt-from/resolve.ts works that out at start). Needs a client.
+    ...(isPortfolioId(r.portfolio) && cleanPlanAdopt(r.adopt) ? { adopt: cleanPlanAdopt(r.adopt) } : {}),
     // Off GitHub: a new repository only (a change's repository is on GitHub already). The source folder comes from the draft only (Wizard.start).
     ...(kind === 'new' && r.localOnly === true ? { localOnly: true } : {}),
     ...(teamFrom ? { teamFrom } : {}),

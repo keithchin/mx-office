@@ -14,6 +14,7 @@ import { openDialog } from './dialog';
 import { domainsPanel } from './domains';
 import { entryFor } from './start';
 import { teamCard } from './team-card';
+import { adoptCard } from './adopt-card';
 import { caAvatar, icon } from './parts';
 import type { Flow } from './index';
 
@@ -22,6 +23,8 @@ export function planView(flow: Flow) {
   const brief = briefPanel(flow, { prefill: (t) => chat.prefill(t) });
   const domains = domainsPanel(flow);
   const team = teamCard(flow);
+  // Start from another app (adopt-card.ts): above Team & budget, once the project has a client.
+  const adopt = adoptCard(flow);
 
   const state = h('span.nw-badge.draft', {}, 'DRAFT');
   const ver = h('span', {}, '');
@@ -33,7 +36,7 @@ export function planView(flow: Flow) {
   const initials = flow.me.split(/s+/).filter(Boolean).map((w) => [...w][0]).slice(0, 2).join('').toUpperCase() || '?';
   const people = h('div.nw-people', { 'aria-label': 'On this plan: you and the Chief Analyst', role: 'img' }, h('span.nw-av.me', {}, initials), caAvatar());
   const head = h('div.nw-dochead', {}, h('div.nw-grow', {}, h('div.nw-meta', {}, state, ver), h('div.nw-title-row', {}, title, rename)), counter, people, primaryWrap);
-  const docIn = h('div.nw-doc-in', {}, problem, brief.el, domains.el, team.el);
+  const docIn = h('div.nw-doc-in', {}, problem, brief.el, domains.el, adopt.el, team.el);
   const doc = h('div.nw-doc', {}, head, docIn);
   const el = h('section.nw-view.nw-plan', { 'aria-label': 'Project plan' }, doc, chat.el);
   let stage: 'approve' | 'mapping' | 'create' | undefined;
@@ -174,6 +177,7 @@ export function planView(flow: Flow) {
     brief.update(prev);
     chat.update();
     domains.update();
+    adopt.update();
     team.update();
   }
 

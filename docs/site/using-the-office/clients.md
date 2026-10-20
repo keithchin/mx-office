@@ -17,9 +17,32 @@ It shows every client as a card in the same grid as the Projects page: its lette
 
 Click a client's card (or its ⋯ › **Open client**) for its page, `/clients?client=<id>`:
 
-- its name with **Rename**, **＋ Add project** (only projects without a client are offered) and **🧠 Connect a brain** or **Disconnect brain** (admins);
+- its name with **＋ New project** (see [Start from another app](#start-from-another-app)), **Rename**, **＋ Add project** (only projects without a client are offered) and **🧠 Connect a brain** or **Disconnect brain** (admins);
 - **Projects**: the client's projects drawn with the Projects page's own cards (progress, status, spend, 👁, pin and ⋯), with a warning for any project whose wiring is incomplete;
 - **Company brain**: its folder, its snapshot (the brain's git commit), when and by whom it was connected, the files its `ROUTING.md` routes to (by path and size: the office keeps hashes, never the brain's text), what's left out and why, and a warning when `ROUTING.md` has more than 40 rows or is over 8 KB (it's read before every terminology or convention answer, so keep it short).
+
+## Start from another app
+
+**＋ New project** on a client's page (or ⋯ › **New project…** on its card) opens [✨ New project](../get-started/first-project.md) made for that client: the bar says *Client: Acme Logistics* and Advanced › Client is preset, so the project is created under the client and wired to its brain like any other of its projects. Whoever can create projects (admins) sees the button.
+
+Once the scope is approved, the plan has a **Start from another app** card above Team & budget (it's there in the plain ✨ New project too, as soon as Advanced › Client names a client). Pick one of the client's apps under **Start from** and choose what the new project takes from it. Each choice uses the office's own mechanism; nothing is copied from the source's repository:
+
+| Choice | What it shows | How it's carried out |
+| --- | --- | --- |
+| **Design system** | The source's bound [design system](design-systems.md) and its exact version (*Acme Design System v2*), its status, what it was made with (Studio Pro, mxcli), whether its files still match its digest, what tokens can't express, and a preview (the newest runtime capture of the source on that version, or its colours) | The new project is bound to that same version: the wizard's own design step applies it after the app is created and checks it, as *Use this version* does. A version whose files no longer match its digest can't be picked. An existing app (Change an existing app) gets the ✋ card instead |
+| **Company brain** | The client's brain (*Acme Logistics brain connected*), or that it has none | Comes with the client: the setup wires the project with the toolkit's `wire-company-brain.sh` and checks it, exactly as Connect a brain does. Another client's brain is never offered: a project is wired to its own client's brain only |
+| **Toolkit** | *Same toolkit version as Fleet Tracker (abcdef1)* or *Newest toolkit (default)*; an app with no pin says so | The project starts on that pinned commit ([Toolkit versions](../administration/toolkit-versions.md)) instead of the newest one. A pin that can't be made falls back to the newest, and the setup log says so |
+| **Role skills** | How many of each role's skills the Project Manager changed on the source (permissions, their approval rules and the toolkit skills each Playbook lists) | Set on the new project's team before it's hired (as the Team tab's 🧰 Skills would), so each Playbook is written with them. An app on the defaults has nothing to copy |
+
+**Copy approved company skills only** is how it always works: reviewed, reusable material (the client's brain, a published design system version, the role skill selections) comes along; the source's **project knowledge** (its `PROJECT.md` decisions, its lessons, journals and handoffs) never does. An unreviewed project lesson is shared by drafting it into the company brain's `inbox/` (the toolkit's `harvest-learnings.sh <project> --to <brain>/inbox`), where it's reviewed and, once approved, routed from `ROUTING.md` like every other company skill.
+
+Before **Create project** the card sums it up: *This project will start with: Design system Acme Design System v2 (from Fleet Tracker) · Acme Logistics brain connected · Toolkit pin same as Fleet Tracker · Role skills from Fleet Tracker*. A client with no apps yet says *Nothing to adopt yet* and asks nothing; an app without a design system, a pin or changed skills says so on that line.
+
+Admins can tick **Show other clients' apps too** to start from another client's app (its design system version, its pin and its role skills; never its brain). The office checks that on the server: anyone else is refused.
+
+What the plan names is worked out again on the source when **Create project** starts the setup (its binding, its pin and its skills as they are then, never the page's copy), and what was adopted is recorded in `<data>/adopt-from/<project>.json` and the audit log (`floor.adopt-from`). The project's **⚙️ Settings › 🗂️ Client** shows it: *Adopted from Fleet Tracker (Acme Logistics) on 20 Oct 2026*, each item marked available to agents or not, and why (a pin that couldn't be made, wiring that's incomplete, a design system waiting on its ✋ card). Adopted material is **available to agents**; like the brain's pointer, it doesn't prove they read or use it. Deleting `<data>/adopt-from/` removes the record only: the binding, the pin and the role skills stay with the modules that own them.
+
+![Start from another app: the source, what it offers, and the summary](../images/new-project-adopt.png)
 
 ## Rename a client
 

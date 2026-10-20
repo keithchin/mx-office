@@ -31,6 +31,8 @@ Packages live in the office's data folder, not in the company brain. Deleting `<
 
 In ✨ **New project** › Advanced, once you pick a client that has an approved design system, a **Design system** line shows its recommendation: *Acme Design System v1 — recommended for this client*, with **Use this version**, **Choose another** (the client's other approved versions) and **Keep the app's design**. A new app starts on the recommendation; nothing is shown for a client without one.
 
+A new project can also take the exact version **another app of the client** is bound to: [Start from another app](clients.md#start-from-another-app) on the plan (or ＋ New project on the client's page) shows the source's design system, its version and status, what it was made with, the digest check and a preview, and binds the new project to that same version through the steps below. Advanced › Design then says the version comes from that app instead of offering the client's list. The source keeps its own binding; nothing is copied between the two projects' folders.
+
 With **Use this version**, right after the Mendix app is created the setup:
 
 1. checks the app's starting point: plain Atlas (what `mx create-project` makes), an mxcli theme (what `mxcli new` makes: *signal*), or styling of its own;

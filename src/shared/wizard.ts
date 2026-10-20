@@ -7,6 +7,7 @@ import type { TeamShape } from './roster/coverage.js';
 import type { PlanBrief } from './brief.js';
 import type { OperationNotice } from './setup-operations.js';
 import type { PlanTeamFrom } from './team-from.js';
+import type { PlanAdopt } from './adopt-from.js';
 import type { SignoffRequest } from './gate-play.js';
 import type { StageEvidence } from './stage-derive.js';
 
@@ -203,6 +204,11 @@ export interface ProjectPlan {
    * today's flow. A new app gets it applied after the app step; an existing app gets a ✋ card, never an apply.
    */
   design?: PlanDesign;
+  /**
+   * Start from another app (shared/adopt-from.ts): the client's existing app this project takes its design system
+   * version, toolkit pin and role skill selections from, each through the office's own mechanism. Checked at start.
+   */
+  adopt?: PlanAdopt;
 }
 
 /** A plan's design choice (shared/design/): an exact version, never "the latest". */
