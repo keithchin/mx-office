@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-21 · release 67 (`7756ed6`)
+
 - **Docs: Architectural Concepts section.** A new section of the documentation (`/docs/architecture`) explains how the office is built, for product and R&D readers and for engineers, with paths into the code: what the office owns and what agent runtimes, the toolkit, mxcli, GitHub and people own; its components and processes; one request from intake to acceptance, including failure, restart and unknown outcomes; sources of truth and what survives a crash; trust and authority (what the office enforces, what is only an instruction to agents, and what only GitHub can enforce: nothing in the office blocks a merge); reusing skills and knowledge across applications; the design decisions behind the main mechanisms; and the proposed simplifications, marked as proposals. Existing pages were brought in line with the code, a *Needs you* page was added, and a table maps each area of the code to the pages to review when it changes. Documentation only: the office behaves as before.
 - **The live app is never Ready without a journey.** A milestone with no journey tied to it used to read *Ready* (with its toast, Needs-you row, Teams post, phone push and walkthrough recording) on commit evidence alone. It now reads **No journeys**: *built, no journey evidence yet*. Ready still means its journeys passed against the running build. Expect fewer "Live app ready" alerts on projects without journeys.
 - **Cancelled CI is a failure.** A check run or pr-checks run that was cancelled, timed out, failed to start, waits for an approval or went stale reads as failed everywhere checks are summed up (PR cards, project analysis, test-run records on main), never as skipped. A cancelled check beside a passing one used to make main read as passed.
