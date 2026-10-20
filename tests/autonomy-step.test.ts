@@ -178,7 +178,7 @@ test('the office refuses a New project plan without a valid answer, and records 
   const start = w.slice(w.indexOf('  start(raw: unknown'), w.indexOf('  retryBlocker('));
   assert.ok(start.indexOf('resolveAutonomy(') > 0 && start.indexOf('resolveAutonomy(') < start.indexOf('newJob(plan'), 'checked before the job is made');
   assert.match(start, /if \(typeof autonomy === 'string'\) return autonomy;/);
-  assert.match(w, /teamFrom: job\.plan\.teamFrom, autonomy: job\.plan\.autonomy \}/, 'an edit never changes it');
+  assert.match(w, /teamFrom: job\.plan\.teamFrom, (?:adopt: job\.plan\.adopt, )?autonomy: job\.plan\.autonomy \}/, 'an edit never changes it');
 });
 
 // ---- The team step, the budget level, later changes, pending items ------------------------------------
