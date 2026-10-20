@@ -6,7 +6,13 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **The live app is never Ready without a journey.** A milestone with no journey tied to it used to read *Ready* (with its toast, Needs-you row, Teams post, phone push and walkthrough recording) on commit evidence alone. It now reads **No journeys**: *built, no journey evidence yet*. Ready still means its journeys passed against the running build. Expect fewer "Live app ready" alerts on projects without journeys.
+- **Cancelled CI is a failure.** A check run or pr-checks run that was cancelled, timed out, failed to start, waits for an approval or went stale reads as failed everywhere checks are summed up (PR cards, project analysis, test-run records on main), never as skipped. A cancelled check beside a passing one used to make main read as passed.
+- **The PR and issues boards say when they couldn't refresh.** *Updated …* only follows a fetch that came back; a failed one keeps the last good time and says *Couldn't refresh: <reason>*.
+- **Decision cards say when your answer arrives.** An answer is typed to the agent at once, even mid-turn (Claude Code takes it in at its next step; only a question open in its terminal holds it). The card used to say *after their current turn*.
+- **Team shapes say what they leave to you.** The New project wizard's shape cards and the Team tab say that on Solo you review every pull request, on Startup the two Leads review each other's and the Chief Analyst relays escalations, and on Enterprise the Coordinator does; the cards show the models the budget level really uses (Solo said Sonnet, but runs on Opus at Fast).
+- **One count of what waits on you for the tray, Home, Teams and phone pushes,** and an answer whose delivery the office couldn't confirm is in it (*Needs intervention*). Phone pushes no longer buzz for a sign-off already given that only waits for the lead to record it.
+- **The tell limit survives a restart.** Two agents that used up their `office-workers tell`s in the window don't get a fresh allowance when the office restarts.
 
 ## 2026-10-20 · release 66 (`92155e3`)
 
