@@ -1,29 +1,31 @@
 ---
 title: Toolkit versions
-description: Each project runs on its own pinned commit of the mxcli-project-toolkit; the Toolkit line shows how far behind the fork it is, Update toolkit previews the gate changes before moving the pin, and how to sync the fork with Maurits' repository.
+description: Each project runs on its own pinned commit of the mxcli-project-toolkit; the Toolkit line shows how many newer commits the clone's origin has, Update toolkit previews the gate changes before moving the pin, and how to sync a fork with the public upstream repository.
 weight: 2.7
 ---
 
-Every project runs on **its own pinned commit** of the [mxcli-project-toolkit](../integrations/toolkit.md), not on whatever the shared clone (`agent-spike\mendix-toolkit`) happens to be on. A new commit in the fork, or a `git pull` of the shared clone, no longer reaches a project halfway through a stage: you move a project to a newer toolkit yourself, with **Update toolkit**, after seeing what it would change.
+Every project runs on **its own pinned commit** of the [mxcli-project-toolkit](../integrations/toolkit.md), not on whatever the office's shared toolkit clone happens to be on. A new commit upstream or in a fork, or a `git pull` of the shared clone, no longer reaches a project halfway through a stage: you move a project to a newer toolkit yourself, with **Update toolkit**, after seeing what it would change.
 
 ## Why
 
-The toolkit's session-start ritual (written into every project's `CLAUDE.local.md` by its `init-project.sh` and `sync-project.sh`) starts with `git -C <toolkit> pull --ff-only`. Every agent session ran it, so the shared clone moved whenever the fork did, and every project, mid-stage or not, was suddenly checked by new gate rules. Pinning stops that:
+The toolkit's session-start ritual (written into every project's `CLAUDE.local.md` by its `init-project.sh` and `sync-project.sh`) starts with `git -C <toolkit> pull --ff-only`. Every agent session ran it, so the shared clone moved whenever its remote did, and every project, mid-stage or not, was suddenly checked by new gate rules. Pinning stops that:
 
-- A project's toolkit is a **pin**: a read-only, detached checkout of one commit at `agent-spike\mendix-toolkit-pins\<sha>` (next to the clone, one folder per commit, shared by every project on that commit).
+- A project's toolkit is a **pin**: a detached checkout (a git worktree of the shared clone) of one commit at `<clone>-pins\<sha12>`, for example `mendix-toolkit-pins\7b4b4cf13b9f` next to `mendix-toolkit`: one folder per commit (the first 12 characters of its sha), shared by every project on that commit. It is read-only **by convention**: nothing stops a process from writing into it. The Toolkit window warns when tracked files in a pin differ from its commit; new, untracked files (for example drafts a toolkit script wrote there) aren't noticed.
 - The project's instruction files (`CLAUDE.local.md`'s Wiring table and ritual, the wiring block in `CLAUDE.md` and `AGENTS.md`, the routing table, `docs/progress/RESUME.md`, `.claude/agents/`) name the pin, and the ritual's pull becomes `git -C <pin> rev-parse --short HEAD`. An **Agent Office block** above the ritual says the toolkit is pinned, never to pull, fetch or check out in that folder, and that a newer toolkit only comes through Update toolkit.
 - The team's Playbooks and the Discovery brief say the same, and point their toolkit skills at the pin.
 - Even an agent following old wording can't move it: a pull in a detached checkout fails.
 - The office's own gate-check runs (the setup panel's verdicts, **🔄 Re-check gates**, the wizard) run from the project's pin, with no fetch.
-- The project's machine-local `.claude/toolkit.env` gets `MXTK_ROOT=<pin>`, which the toolkit's own scripts use to find the toolkit.
+- If the project has a machine-local `.claude/toolkit.env` (the wizard makes one for new projects), it gets `MXTK_ROOT=<pin>`, which the toolkit's own scripts use to find the toolkit. A project without that file doesn't get one made for it.
 
 ## Where the version is recorded
 
 | Where | What | Who reads it |
 |---|---|---|
-| `agent-office.project.json` (committed) | `toolkit`: the commit, when and by whom, the fork's URL, and the history (create, pin, update, rollback) | Agents, any office that clones the project, Roll back |
+| `agent-office.project.json` (committed) | `toolkit`: the commit, when and by whom, the toolkit clone's `origin` URL, and the history (create, pin, update, rollback) | Agents, any office that clones the project, Roll back |
 | `PROJECT.md` (committed) | `Toolkit commit: <sha>`, the toolkit's own acknowledgement line that gate-check's protocol-freshness check compares against | The toolkit |
-| `<office data>\toolkit-pins.json` | Project → pin, and when the fork was last fetched | The office (no git needed) |
+| `<office data>\toolkit-pins.json` | Project → pin, and when the clone's remotes were last fetched | The office (no git needed) |
+
+Update toolkit, pinning and Roll back write all three: the two committed files in the commit described below, the office's own record once that commit is in.
 
 ## The Toolkit line
 
@@ -31,9 +33,9 @@ The **🧰 Project setup** panel has a Toolkit line, and the progress bar ends w
 
 > 🧰 toolkit 7b4b4cf (2026-10-08) · 3 newer commits available (fix/new/gate-rule changes) · 📌 pinned
 
-Each newer commit is classed **fix** (`fix:`, `fix(…):`, `Windows:`), **new** (`new:`, `feat:`) and **gate rule** when it touches what decides a stage verdict: `bin/gate-check.sh`, its tables in `bin/lib/` (artifact and obligation checks, entry mode, closeout), `skills/conversion-runbook.md` or `skills/checkpoints/`. Click the line or the chip for the **Toolkit** window: the commit and where it runs from, every newer commit with its kind, the previous pin, when the fork was last fetched and **🔄 Check now**.
+Each newer commit is classed **fix** (`fix:`, `fix(…):`, `Windows:`), **new** (`new:`, `feat:`) and **gate rule** when it touches what decides a stage verdict: `bin/gate-check.sh`, its tables in `bin/lib/` (artifact and obligation checks, entry mode, closeout), `skills/conversion-runbook.md` or `skills/checkpoints/`. Click the line or the chip for the **Toolkit** window: the commit and where it runs from, every newer commit with its kind, the previous pin, when the remotes were last fetched and **🔄 Check now**.
 
-The office fetches the fork **off the page and off its main thread, at most every six hours** (and when someone clicks Check now, at most once a minute). Opening a page never fetches; the line is answered from a cache.
+The office fetches the clone's `origin` (and `upstream`, if it has one) **off the page and off its main thread, at most every six hours** (and when someone clicks Check now, at most once a minute). Opening a page never fetches; the line is answered from a cache.
 
 A project made before pins shows **≈ &lt;sha&gt; · not pinned**: the office worked its commit out from `PROJECT.md`'s `Toolkit commit:` line, or else from the scripts the toolkit copied into its `bin/` (the newest toolkit commit whose version of each matches). With neither, it says *toolkit version unknown — pin now*.
 
@@ -56,21 +58,25 @@ From the Toolkit window:
 
 **Roll back** is the same thing to the previous pin (kept in the record's history): **↩ Preview roll back**, then confirm. It's recorded as `toolkit.rollback`.
 
-New projects start on the fork's newest commit: the wizard fetches the fork, pins the newest commit of its default branch (or the shared clone's HEAD, if that has commits the fork hasn't pushed), and runs `init-project.sh` from the pin. The shared clone itself is never moved.
+New projects start on the newest commit of the clone's `origin`: the wizard fetches `origin`, pins the newest commit of its default branch (or the shared clone's HEAD, if that has commits `origin` hasn't, or if the clone has no `origin`), and runs `init-project.sh` from the pin. The shared clone itself is never moved.
 
-## Syncing the fork with Maurits' repository
+## Syncing a fork with upstream
 
-The shared clone's `origin` is our fork (AI-Taskforce-Labs/mxcli-project-toolkit: Maurits' commits plus our Windows fixes) and its `upstream` is Maurits' repository (MendixMau/mxcli-project-toolkit, push disabled). When the clone has an `upstream` remote, the Toolkit window shows how far the fork is behind it (and ahead, with our own fixes). The office only reads that; it never adds remotes, merges or pushes the fork. To bring Maurits' changes in:
+The office works with whatever remotes the shared clone has, and never adds, changes or pushes them (see [The toolkit](../integrations/toolkit.md#where-it-is)). A clone made by first-run setup has one remote, `origin`, usually the public upstream repository: then there is no fork to sync, and the Toolkit line simply shows upstream's newer commits.
+
+If you run from a **fork** instead (for example to carry fixes upstream doesn't have yet), the clone's `origin` is the fork. Add the public upstream repository as a second remote named `upstream` yourself if you want the Toolkit window to show how far the fork is behind it (and ahead, with the fork's own fixes). The office only reads that comparison; it never merges or pushes the fork. To bring upstream's changes into the fork:
 
 ```bash
-cd ~/agent-spike/mendix-toolkit
+cd <your toolkit clone>
+git remote add upstream <public upstream URL>   # once, if it isn't there
+git remote set-url --push upstream DISABLED     # optional: never push there by mistake
 git fetch upstream
 git checkout main
-git merge upstream/master        # fast-forward when we have nothing of our own; else resolve and commit
+git merge upstream/master        # fast-forward when the fork has nothing of its own; else resolve and commit
 git push origin main
 ```
 
-The upstream branch is `master`; our fork's default branch is `main`. Prefer a pull request on the fork when the merge isn't a fast-forward, so our Windows fixes survive review. After the fork moves, nothing changes for a running project until you update it: its Toolkit line shows the new commits, and its Update toolkit preview shows what they'd do to its gates.
+Use the branch names your repositories have (upstream's default branch has been `master`, a fork's may be `main`). Prefer a pull request on the fork when the merge isn't a fast-forward, so the fork's own fixes survive review. After the fork moves, nothing changes for a running project until you update it: its Toolkit line shows the new commits, and its Update toolkit preview shows what they'd do to its gates.
 
 ## Moving the projects made before pins
 
@@ -79,3 +85,9 @@ Each one shows *≈ &lt;sha&gt; · not pinned*. For each: open its Toolkit windo
 ## Suggested change in the toolkit itself
 
 The pull lives in the toolkit's templates (`bin/init-project.sh`'s `CLAUDE.local.md` heredoc and `bin/sync-project.sh` section 2b), and `sync-project.sh` appends it again to a project that lacks the ritual. The office takes it out again after every sync, but the cleaner fix belongs upstream: skip the pull when the toolkit checkout is a detached HEAD (or when `MXTK_TOOLKIT_PINNED=1`), and don't warn about not being on the default branch in that case.
+
+## See also
+
+- [The toolkit](../integrations/toolkit.md): where the clone comes from and which remotes the office reads.
+- [Reusable skills and knowledge](../architecture/reusable-skills-and-knowledge.md): a toolkit pin compared with a company brain, which is recorded per session but never pinned.
+- [State and truth](../architecture/state-and-truth.md).

@@ -128,7 +128,7 @@ Click **🎨** in the top bar: Default → Dark → Terminal. It's remembered in
 
 ### Can I share a link to a tab?
 
-Yes. The address says where you are, for example `/lite?floor=travel-approval&tab=standup`. See [URL parameters](reference/url-parameters.md).
+Yes. The address says where you are, for example `/lite?floor=acme-orders&tab=standup`. See [URL parameters](reference/url-parameters.md).
 
 ## The live app
 

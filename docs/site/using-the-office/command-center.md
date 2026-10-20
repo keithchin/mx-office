@@ -49,6 +49,8 @@ It's on the [Audit log](audit-log.md) page now, above the log (in a Portal theme
 
 Everything waiting for a human on this project, as **one row of counts** (*🚩 2 escalations · 🙋 1 asking · ❌ 1 failing PR*, red for what blocks something) and **Open in the team phone →**. Any count opens the phone's pinned **Needs you** section, which has the full list, most urgent first (escalations in Jeff's order when his [priority sort](../automation/jeff-router.md#priority-which-escalation-first) is on), with each item's button. When nothing is waiting it says *✅ Nothing needs you right now.* (A view without the phone shows the list here, folded after five items.)
 
+The strip counts every item on this project that isn't info. Home, the desktop tray, Teams, push and the phone each count the same list differently: [Needs you](needs-you.md) explains how the list is built, and has a table of what each place counts.
+
 The items, and their buttons in the list:
 
 | Icon | Item | Button |
@@ -85,7 +87,7 @@ The kind of card decides its buttons:
 
 | Kind | What it is | Buttons | After you press |
 |---|---|---|---|
-| **Decision** | An escalation with a question or options, a client question, a proposal, a ✋ sign-off | The options, **Reply in my words**, **Ask &lt;lead&gt;**; a ✋ sign-off has only **Sign off** (its dialog) and **Not yet**, never a free-text answer: it leads any card it shares a stage with, and an escalation about the same stage is answered with the same *Signed off* words | *&lt;agent&gt; gets it after their current turn and records it. This card shows Sent until then.* |
+| **Decision** | An escalation with a question or options, a client question, a proposal, a ✋ sign-off | The options, **Reply in my words**, **Ask &lt;lead&gt;**; a ✋ sign-off has only **Sign off** (its dialog) and **Not yet**, never a free-text answer: it leads any card it shares a stage with, and an escalation about the same stage is answered with the same *Signed off* words | *&lt;agent&gt; gets it after their current turn and records it. This card shows Sent until then.* (The words are approximate: an answer to an escalation is typed into a working agent at once, and Claude Code queues it. See [Needs you](needs-you.md#your-answers-are-kept-then-typed).) |
 | **Action for you** | A hands-on action only a person can do (an escalation with trigger `needs-human`, or an approved `human-action` proposal) | **I've done it**, **Can't now: tell &lt;agent&gt;**, **Ask &lt;lead&gt;** | *&lt;agent&gt; is told and re-checks. Pressing it doesn't prove it worked.* |
 | **FYI** | An FYI that asks nothing | **Noted** | *Noting doesn't approve anything.* |
 
@@ -120,11 +122,13 @@ If the office stopped while it was sending, it looks when it starts again: in th
 
 A proposal's issue works the same way. The proposal is marked approved before the office asks GitHub to make the issue, and the issue body ends with *office-proposal: &lt;id&gt; rev &lt;n&gt;*. When the outcome is unclear (gh failed or timed out, or the office stopped), the card says *The issue may or may not have been created* with **Check GitHub** (one search for the marker: only a match settles it, because GitHub's search can lag minutes), **Create it** and **It exists: link #…**. The office never makes the issue again by itself.
 
-A decision that changed since you opened the card (someone else answered it) is refused with *This decision changed since you opened it*, and nothing is written or typed. Every one of these actions is an admin's, checked by the office (`POST /api/dispatch/action`), and audited as `dispatch.*`.
+A decision that changed since you opened the card (someone else answered it) is refused with *This decision changed since you opened it*, and nothing is written or typed. An answer from the phone doesn't send the revision you saw, and answers only the escalation you tapped (see [Answering from the phone](needs-you.md#answering-from-the-phone)).
+
+These notices are drawn only on the Portal Overview's Needs you card. They aren't counted, and the classic strip, Home, the tray, Teams, push and the phone don't show them. Every one of these actions is an admin's, checked by the office (`POST /api/dispatch/action`), and audited as `dispatch.*`.
 
 ### Following through
 
-An answered escalation or question stays on the Needs you card as a **follow-through** item until the agent's record of it is recorded as given and merged into main, or you **Dismiss** it. These are status cards after the rest: they never count in *N waiting on you*. Each says where the decision is:
+An answered escalation or question stays on the Needs you card as a **follow-through** item until the agent's record of it is recorded as given and merged into main, or you **Dismiss** it. These are status cards after the rest, on the Portal Overview's card only: they never count in *N waiting on you*, and no other place shows them. Each says where the decision is:
 
 > ↻ **Following through** · ESC-3f9c2a1b7e Sign-in: SSO or magic links?
 > Decided (rev 1) · Sent (Received (the office saw it arrive)) · Recorded as given · Committed on office/dev

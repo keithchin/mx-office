@@ -20,7 +20,7 @@ Every project has two views. Both show the same project, live.
 
 ## The 3D and Retro views are gone
 
-The office used to have a third and fourth view: a cartoon 3D office you walked around in, and Retro, the same world in chunky pixels. Both are removed, with three.js and everything only they used. Old addresses still work: `/`, `/index.html` and links like `/?view=3d`, `/?3d=1&view=retro` or `/?gfx=low` open the 1D view (of the project the link named, `?floor=<id>`, or the one you were last on; Home when there's none). An old link to the 3D view's docs page lands here.
+The office used to have a third and fourth view: a cartoon 3D office you walked around in, and Retro, the same world in chunky pixels. Both are removed, with three.js and everything only they used. Old addresses still work: a bare `/` or `/index.html` opens Home, and links like `/?view=3d`, `/?3d=1&view=retro` or `/?gfx=low` open the 1D view (of the project the link named, `?floor=<id>`, or the one you were last on; Home when there's none). An old link to the 3D view's docs page lands here.
 
 ## Color themes
 

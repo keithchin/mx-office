@@ -3,10 +3,10 @@ title: Mx Office documentation
 description: Everything about Mx Office, an App Factory for Mendix where teams of Claude Code agents build Mendix apps and you run them as their Project Manager.
 ---
 
-Mx Office is a web app that runs on your laptop. **Claude Code agents** work at desks in it, on **GitHub repositories**, as an **App Factory for Mendix**:
+Mx Office is a web app that runs on your laptop. **Claude Code agents** work at desks in it, on git repositories (on GitHub, or local-only), as an **App Factory for Mendix**:
 
 - every **project** is one Mendix app in its own repo, and the office holds many;
-- every project has a **team**: a Project Coordinator and four Leads, each with Claude Code subagents;
+- every project has a **team** in one of three shapes: Enterprise (a Project Coordinator and four Leads, each with Claude Code subagents), Startup (a Chief Analyst and a Lead Developer) or Solo (one Solo Lead);
 - the agents build the app with **mxcli** and follow the **mxcli-project-toolkit**;
 - **you are the Project Manager**: you approve what matters and answer escalations.
 
@@ -20,6 +20,7 @@ Mx Office is a web app that runs on your laptop. **Claude Code agents** work at 
 | Create a new Mendix project with the wizard | [Create your first project](get-started/first-project.md) |
 | Learn your way around the screens | [A tour of the office](get-started/tour.md) |
 | Understand projects, workers, worktrees and views | [Concepts](concepts/_index.md) |
+| Understand how the office is built: boundaries, processes, sources of truth, trust, and reusing knowledge across apps | [Architectural Concepts](architecture/_index.md) |
 | Know who the agents are and when they need you | [Teams & Agents](teams-and-agents/_index.md) |
 | Look up a command, a setting or an API route | [Reference](reference/_index.md) |
 | Fix something that went wrong | [Troubleshooting](troubleshooting/_index.md) and the [FAQ](faq.md) |
@@ -27,7 +28,8 @@ Mx Office is a web app that runs on your laptop. **Claude Code agents** work at 
 ## What's in these docs
 
 - **Get Started**: the quick start, the new-project wizard, and a tour.
-- **Concepts**: the building, projects, workers, worktrees, the four views, and how work flows from an issue to a merged PR.
+- **Concepts**: the building, projects, workers, worktrees, the views, and how work flows from an issue to a merged PR.
+- **Architectural Concepts**: what the office owns and relies on, its components and processes, one request from intake to acceptance, sources of truth and recovery, trust and authority, reusable skills and knowledge across apps, design decisions, and the proposed simplifications (clearly marked).
 - **Using the Office**: one page for every screen, from `/home` and the Command Center to the Git tab, Settings, the [Audit log](using-the-office/audit-log.md) with its [Incidents](using-the-office/incidents.md), and [The Firm](using-the-office/the-firm.md).
 - **Teams & Agents**: the team model, autonomy levels, escalations, the review loop, benching, Playbooks, models and costs.
 - **Automation**: Jeff · Router, skills and gates, and the subagent track record.

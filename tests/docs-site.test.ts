@@ -177,9 +177,9 @@ test('docs/site: every link goes to a page and heading that are there, every pic
 test('docs/site: the sections the docs promise, in order, each with pages', () => {
   assert.deepEqual(
     bundle.nav.map((n) => n.title),
-    ['Get Started', 'Concepts', 'Using the Office', 'Teams & Agents', 'Automation', 'Integrations', 'Administration', 'Reference', 'Troubleshooting', 'FAQ', 'Release notes'],
+    ['Get Started', 'Concepts', 'Architectural Concepts', 'Using the Office', 'Teams & Agents', 'Automation', 'Integrations', 'Administration', 'Reference', 'Troubleshooting', 'FAQ', 'Release notes'],
   );
-  for (const n of bundle.nav.slice(0, 9)) assert.ok(n.children.length >= 2, `${n.title} has pages`);
+  for (const n of bundle.nav.slice(0, 10)) assert.ok(n.children.length >= 2, `${n.title} has pages`);
   assert.ok(bundle.pages.length >= 60, `${bundle.pages.length} pages`);
 });
 

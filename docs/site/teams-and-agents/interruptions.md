@@ -38,7 +38,12 @@ Messages the office starts by itself wait until the agent's turn is over, and ar
 - **autonomy and skills notices**, **relays** and **notes** (a decision on a proposal) go in when the turn ends;
 - a team hired **after today's standup time** gets no catch-up standup that day: its first is the next scheduled one.
 
-A decision an agent was **waiting on** goes in at once: your answer to its escalation, or your decision on its proposal (within ten seconds, so a few approved in a row arrive as one message; an asleep Lead is woken for it).
+This holding applies to the **office's own** messages only (`Delivery.send` in `src/server/roster/deliver.ts` holds messages whose origin is the office). Other messages go in differently:
+
+- **Your answer to an escalation** is typed at once, even into an agent that is mid-turn: it isn't held for the turn's end, and the [ask-before-interrupting check](#you-choose-before-your-actions-interrupt-busy-agents) doesn't apply to it. Claude Code queues what is typed into a busy session and hands it to the agent when it can, so in practice the agent reads it at the end of its current step or turn. The decision card's *gets it after their current turn* describes that, not when the office types it. The office holds the answer back only while a dialog may be up in the agent's terminal (a permission prompt, a question, or while it's starting), or while it writes its handoff; an asleep agent is woken with it. See [Escalations › Answering](escalations.md#answering).
+- **Your decision on a proposal** goes in at once too (within ten seconds, so a few approved in a row arrive as one message; an asleep Lead is woken for it).
+- **Change answer** and **Send correction** are held and typed when the agent's turn ends.
+- **An agent's `office-workers tell`** goes in at once, unless you chose *After their current turn* for that Lead in a quick question's check within the last half hour (below).
 
 ## Back to work
 
@@ -69,4 +74,11 @@ Turn it off in ⚙️ Settings › 👥 Team › **Review loop** (*Back to work*
 
 **Same for all** sets every row. ✕ or Esc cancels. For a quick question, what you pick for the Leads also applies to the Coordinator's relays of it (`office-workers tell`) for the next half hour. Nobody busy: no window, it just goes.
 
-What you **type yourself** in the console goes straight to the Coordinator. While it's mid-turn a note above the box says so (*working 4 min*), with **Send after their turn** to hold it instead.
+What you **type yourself** in the team-lead panel goes to whoever leads the team. While it's mid-turn a note above the box says so (*working 4 min*), with **Send now** and **After their turn** (Enter picks the second):
+
+- **After their turn** goes through the office's delivery rules as your message: it's kept on disk before it's typed, held while the lead is mid-turn, and typed when the turn ends.
+- **Send now**, and anything you type while the lead is idle, is typed straight into its terminal as a console prompt. It does **not** go through those delivery rules: nothing checks for a dialog in the lead's terminal, and nothing holds it. A working lead's Claude Code queues it.
+
+This check covers **📋 Run standup**, the quick questions and what you type to the lead. It doesn't cover your answers to escalations (above), which are typed at once.
+
+See also: [Needs you](../using-the-office/needs-you.md) and, for how the office's messages travel, [Execution lifecycle](../architecture/execution-lifecycle.md).

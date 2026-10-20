@@ -1,6 +1,6 @@
 ---
 title: Security & tokens
-description: The office password and who is admin, the agents' and admin GitHub tokens, the Mendix token, the Jev key, what workers can and can't see, and why the docs are behind the sign-in.
+description: The office password and who is admin, the agents' and admin GitHub tokens, the Mendix token, the Jev key, what workers can and can't see, what the office doesn't isolate, and why the docs are behind the sign-in.
 weight: 2
 ---
 
@@ -25,7 +25,9 @@ The tokens, the Jev key and the office password are managed from **☰ → 🔌 
 
 Anyone who signs in with the **shared office password** is an admin, that is, the Project Manager. Admin-only actions: hiring and benching team members, approvals and escalation answers, settings, the live app's start and stop, creating projects, changing team labels, re-analysing.
 
-People can also have their own accounts (**☰ → 🔑 Accounts**, admin only), with their own Claude and GitHub sign-ins.
+People can also have their own accounts (**☰ → 🔑 Accounts**, admin only), with their own Claude and GitHub sign-ins. An account is `admin` or `member`; a session on the shared password **without** an account is always an admin (`src/server/office/people.ts`).
+
+**The server decides, per action.** Each route checks for itself whether it needs an admin; there is no central list. Most project changes do, but not all: on the team routes, **tell** (a question to the lead), **nudge** (an idle member back to its task) and **standup** are open to any signed-in person, members included (`ADMIN_ONLY` in `src/server/http/routes/roster.ts`). Hiding an admin-only page or button for a member is a convenience: a link can still open an admin page, and it's the server's check that refuses the action.
 
 ## The agents' token
 
@@ -47,6 +49,23 @@ People can also have their own accounts (**☰ → 🔑 Accounts**, admin only),
 ## What workers can't see
 
 The office removes from every worker's environment: the Jev key variables (`TYPESAFE_API_KEY` and all `AGENT_OFFICE_*` settings), the Mendix token (`MENDIX_TOKEN`, `MX_PAT`) unless it's switched on for that project, and, for workers that run as a signed-in person, the office's own GitHub token. The admin token and the office password never reach a worker.
+
+Taking a value out of the environment keeps it out of an agent's way; it doesn't keep it from an agent that goes looking. See the next section.
+
+## What the office doesn't isolate
+
+The office organises agents; it doesn't contain them. Know these limits before you give it real credentials or put several clients on one machine:
+
+- **Agents run as the office's own operating-system user**, with no sandbox from the office. What an agent can read, write or run is bounded by that user's rights and by its provider's own permission layer (for Claude Code: its permission mode, its rules and the project's `.claude` settings), not by the office. The office adds `--permission-mode acceptEdits` only for a Claude model that Claude Code's auto mode isn't offered for (Haiku), and none when `--agent-args` set a mode (`src/server/providers/claude.ts`). An agent can read other projects' folders, the office's data folder and the secret files above.
+- **The hook tokens are in plain text.** Each worker reports to the office's loopback hook port with a token of its own, kept in `<project>/.agent-office/workers.json` next to the worktrees. Any agent that reads that file could report as another worker.
+- **One GitHub identity for many agents.** Agents have no GitHub accounts of their own: they use the agents' token above or, in an office with accounts, the GitHub sign-in of the person who hired them. GitHub can't tell those agents apart, and the token's scope is the only limit on what they can do there.
+- **Commit authors are set, not proven.** The office gives each agent's commits its own author name through environment variables ([Review gate](../using-the-office/review-gate.md#each-agent-commits-as-itself)); an agent can change them.
+- **Connections' encryption protects against other people, not against the agents.** DPAPI ties `credentials.json` to the office's Windows user and machine: another user or another computer can't read it. Code running as the same user, which includes every agent, can ask Windows to decrypt it.
+- **Clients, teams and roles are labels, not walls.** They organise prompts and records; nothing stops one project's agent from reading another client's folder by its path.
+- **Nothing in the office blocks a merge.** Reviews and merge approvals are rules in the Playbooks, checked after the fact by the [review gate](../using-the-office/review-gate.md). Only branch protection on GitHub can block a merge, and the office doesn't set or check it.
+- **The Firm's reviewers are the only isolated agents** (next section): their own folder with a clone pinned to one commit and no remote, no GitHub token or git credentials, and deny rules. That is still the same operating-system user, not an OS-level sandbox.
+
+See [Trust and authority](../architecture/trust-and-authority.md) for which rules the office enforces, which are hooks it installs, and which are only instructions to agents.
 
 ## The Firm's reviewers can't write
 

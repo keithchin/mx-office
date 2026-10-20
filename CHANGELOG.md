@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **Docs: Architectural Concepts section.** A new section of the documentation (`/docs/architecture`) explains how the office is built, for product and R&D readers and for engineers, with paths into the code: what the office owns and what agent runtimes, the toolkit, mxcli, GitHub and people own; its components and processes; one request from intake to acceptance, including failure, restart and unknown outcomes; sources of truth and what survives a crash; trust and authority (what the office enforces, what is only an instruction to agents, and what only GitHub can enforce: nothing in the office blocks a merge); reusing skills and knowledge across applications; the design decisions behind the main mechanisms; and the proposed simplifications, marked as proposals. Existing pages were brought in line with the code, a *Needs you* page was added, and a table maps each area of the code to the pages to review when it changes. Documentation only: the office behaves as before.
 
 ## 2026-10-20 · release 66 (`92155e3`)
 

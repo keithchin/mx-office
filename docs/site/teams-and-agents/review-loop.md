@@ -6,6 +6,8 @@ weight: 4
 
 When a subagent finishes, its **Lead reviews the result** before anything else happens.
 
+This loop is about subagent results inside one Lead's work, and it runs on the Lead's Playbook and the verdicts it records: the office counts rounds and nudges, but doesn't judge the work. Reviews of pull requests between Leads are a different rule, checked by the [review gate](../using-the-office/review-gate.md) only after a pull request merged; nothing in the office blocks a merge.
+
 ## What the Lead does
 
 1. Runs the cheap checks (for MDL: `mxcli check`; for tests: run them).
@@ -36,3 +38,5 @@ If a Lead's turn ends right after one of its subagents came back, the office pro
 - It stops after 3 nudges in a row when the Lead records no review verdict and nobody else prompts it, with one Activity line (*Stopped nudging …*). A verdict, or anyone else's prompt, lets it go on.
 - It isn't sent while the project's daily cost cap is reached.
 - Turn it off in [Settings](../using-the-office/settings.md) (**Review loop**). It's on by default.
+
+See also: [Trust and authority](../architecture/trust-and-authority.md) for which rules the office enforces and which are instructions to agents.

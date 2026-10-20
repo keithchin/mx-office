@@ -14,7 +14,7 @@ You choose the model:
 
 | Model | In our runs |
 |---|---|
-| **Sonnet 5.5** | The best value. The default for every role. |
+| **Sonnet 5.5** | The best value. Every role's own default; the project's [budget level](../using-the-office/budget.md#budget-levels) can change it (Fast puts the Leads, the Solo Lead included, on Opus). |
 | **Opus 5.5** | The highest quality. Good for architecture, discovery and hard bugs. |
 | **Fable 5.1** | The newest; available in the hire dropdown. |
 | **Haiku 5.5** | The cheapest by far. Not yet tried on Mendix work in our runs (Haiku 4.5, before it, struggled). Fine for the Data Analyst. |

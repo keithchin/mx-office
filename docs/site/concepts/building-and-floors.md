@@ -12,12 +12,16 @@ Two things belong to the building rather than to a project: **🏛️ The Firm**
 
 ## What a project is {#a-floor-is-a-project}
 
-Each **project** is one GitHub repository, cloned on this machine. For us, that is one Mendix app in the **AI-Taskforce-Labs** organization, such as `mx-spike` (the SEA AI Hub) or `travel-approval`.
+Each **project** is one Mendix app in one git repository, cloned on this machine: for example `acme-visitor-registration` for Acme Logistics' visitor app.
+
+- **Usually the repository is on GitHub.** The office reads its issues and pull requests with `gh`, and agents open pull requests there.
+- **A local-only project** (✨ New project › Advanced › *Keep this project off GitHub*) has its `origin` in a bare repository on this machine instead. The office refuses every GitHub call for it, and the Lead merges into `main` locally. See [Local only](../get-started/first-project.md#local-only-not-on-github).
+- **Mendix Team Server** isn't a place the office works with. It has no Team Server pull request or merge path; the Mendix token in 🔌 Connections is only passed on to the agents. Add Team Server as a remote yourself if you need it.
 
 Each project has its own:
 
-- **board** (GitHub issues and pull requests) and task **queue**;
-- **workers** and **team** (Project Coordinator and Leads);
+- **board** (GitHub issues and pull requests; none for a local-only project) and task **queue**;
+- **workers** and **team** (Project Coordinator and Leads, or a smaller [team shape](../teams-and-agents/team-shapes.md));
 - **settings**: autonomy level, standup schedule, cost caps, Jeff;
 - **live app**, run from its `main` branch;
 - **Jeff · Router log** and analysis runs.
@@ -38,3 +42,8 @@ Projects don't share workers. To run two apps in parallel, use two projects. The
 
 > [!WARNING]
 > Each project keeps its own `workers.json` in `<project folder>/.agent-office/`. An office that points at a project folder restores and resumes that project's agents. Never point a test office at a real project folder. See [Test offices](../administration/test-offices.md).
+
+## See also
+
+- [Architectural concepts](../architecture/_index.md) and [Components](../architecture/components.md): what runs where, and which store owns what.
+- [State and truth](../architecture/state-and-truth.md).

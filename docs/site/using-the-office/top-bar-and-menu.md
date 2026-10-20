@@ -11,13 +11,13 @@ On the 1D view, from left to right (the 2D Office view's bar is [below](#the-2d-
 | Part | What it does |
 |---|---|
 | 🔔 | *Turn on notifications*. Shown until your browser has been asked once. Desktop notifications take you to the worker that needs you. |
-| 🏠 | Goes to `/home`. |
+| 🏠 | Goes to [Home](home.md#home-start) (`/start`: what needs you across every project). The Projects page is `/home`, from ☰ › 🏢 Projects or the launcher. |
 | **Project** picker | Switches project. Each option shows `· 🙋 N` when agents there wait on you, or clone progress while a project is cloning. Under the bar: `⎇ branch · repo/dir · 👥 N here`. |
 | **Go to Office** | Opens the project's office from above, the [2D Office view](2d-view.md): the only way there. On the 2D Office view the same place has **Return to Project**, back to the 1D view's Command Center. |
 | 🎨 | Lists the color themes. |
 | ☰ | The menu. |
 
-When agents wait on another project, buttons like **🙋 2 waiting on travel-approval →** appear under the bar. They land on that project's Command Center.
+When agents wait on another project, buttons like **🙋 2 waiting on acme-orders →** appear under the bar. They land on that project's Command Center.
 
 The browser tab's title counts the agents waiting on you, so you see it from other tabs too (projects you stopped watching on Home are left out).
 
@@ -74,14 +74,17 @@ The same menu on the 1D view, the 2D Office view and Home.
 
 | Section | Items |
 |---|---|
-| **Open** | 🙋 Next worker that needs you (only when someone waits) · 📌 Issues · 🔀 Pull requests · 📋 Task queue · 🌐 Services · 📝 Whiteboard · 🤝 Meeting room · 🔎 Search · 📚 Project docs · 🧱 Open in Studio Pro (Mendix projects; admin) · 🏢 Projects |
-| **Together** | 👥 Invite teammates · 🔑 Accounts (admin) · 🔐 Your sign-ins |
-| **Office** | ⚙️ Settings · 🏠 Home · 📖 Documentation |
+| **Open** | 🙋 Next agent that needs you (only when someone waits; **N** on the 2D Office view) · 📌 Issues · 🔀 Pull requests · 📋 Task queue · 🌐 Services · 📝 Whiteboard · 🤝 Meeting room · 🔎 Search · 📚 Project docs · 🧱 Open in Studio Pro (Mendix projects; admin) · 🏢 Projects |
+| **Together** | 👥 Invite teammates (when invites are on) · 🔑 Accounts (admin) · 🔐 Your sign-ins |
+| **Office** | ⚙️ Settings · 🔌 Connections (admin) · 🧪 Test mode (admin) · 🏠 Home (not shown on Home itself) · 📖 Documentation |
 
+- **🏢 Projects** opens the Projects page (`/home`); **🏠 Home** opens Home (`/start`).
 - **📚 Project docs** opens the project's own Markdown files (its README, `docs/team/*.md`, standups) on the bookshelf.
+- **🔌 Connections** opens the office's tokens, password, git and gh, its folders and worktree cleanup. See [Connections](../administration/connections.md).
+- **🧪 Test mode** opens the [Test Mode page](../administration/test-mode-page.md) (the project's **Tests** tab).
 - **📖 Documentation** opens these docs.
-- Red numbers are counts: open issues, open PRs, queued tasks, people waiting on other projects.
-- On `/home`, the items that need a project are left out.
+- Red numbers are counts: open issues, open PRs, queued tasks, running services, agents waiting on other projects.
+- On `/home`, the items that need a project (Next agent, Issues, Pull requests, Task queue, Services, Whiteboard, Meeting room, Search, Project docs, Open in Studio Pro) are left out.
 
 > [!NOTE]
 > **⚙️ Settings** in the ☰ menu opens the full Settings page, the 1D view's **⚙️ Settings** tab (`/lite?tab=settings`), from the 1D view, the 2D Office view and `/home` alike. See [Settings](settings.md).
@@ -90,13 +93,18 @@ The same menu on the 1D view, the 2D Office view and Home.
 
 In a Portal theme the 1D view is laid out like a low-code platform's app pages (the other themes keep the tab row and the bottom bar):
 
-- **The left navigation**, about 230 px wide. At the top **Home** (`/start`), then a **project card**: the project's tile and name with **⌄**, a click opens the list of projects (it's the project picker). Below it the pages in groups that open and close (this browser remembers which, per viewer): **General** (Overview, Team, Team boards, Documents), **Project Management** (Board, Approvals, Standup), **App Insights** (Analysis, Budget, Audit log, [Testing](testing.md)), **Repository** (Git, Model), **Deployment** (Live app) and **Monitoring** (Agents, and Tests for admins). Under a rule: **Settings**, **View App** (the live app in a new tab, or the Live app page when it isn't running) and **Edit in Studio Pro** (Mendix projects). The page you're on is a grey pill, and its group opens by itself. Each item carries its tab's badge; a closed group shows its items' badges added up. Hovering a closed group shows its items in a flyout beside the pane. The top bar stays at the top of the window and the pane under it while the page scrolls; a pane longer than the window scrolls on its own.
+- **The left navigation**, about 230 px wide. At the top **Home** (`/start`), then a **project card**: the project's tile and name with **⌄**, a click opens the list of projects (it's the project picker). Below it the pages in groups that open and close (this browser remembers which, per viewer): **General** (Overview, Team, Team boards, Documents), **Project Management** (Board, Approvals, [Questions](questions.md), [Design gallery](design-systems.md), Standup), **App Insights** (Analysis, Budget, Audit log, [Testing](testing.md)), **Repository** (Git, Model), **Deployment** ([Live app](live-app.md), [Walkthroughs](walkthroughs.md)) and **Monitoring** (Agents, and Tests for admins). Under a rule: **Settings**, **View App** (the live app in a new tab, or the Live app page when it isn't running) and **Edit in Studio Pro** (Mendix projects). The page you're on is a grey pill, and its group opens by itself. Each item carries its tab's badge; a closed group shows its items' badges added up. Hovering a closed group shows its items in a flyout beside the pane. The top bar stays at the top of the window and the pane under it while the page scrolls; a pane longer than the window scrolls on its own.
 - **Folding it**: the chevron on the pane's edge folds it to a rail of icons (remembered too). Hovering or clicking a group's icon shows its items in a flyout; **Esc** closes it.
 - **On a phone** the navigation is a drawer: **☰** at the bar's left opens it (it also has *All projects*, *Clients*, *The Firm* and *Documentation*, the launcher's places). Picking a page, a tap beside it or **Esc** closes it.
 - **The page header** across the top of every page: the page's name and a line about it (on the Overview the project's tile, name and what it's for), and its buttons: the page's own (**Pin project** on the Overview, **Issues**, **PRs** and **Queue** with their counts on the Board, **Call an audit** and **The Firm →** on the Audit log) and the blue **New task**.
 - **The band** under it, on the **Overview** only (the other pages have their header alone; the budget is also on the Budget page and the top bar's office chip, Pause / Resume on Home's project cards and the 2D Office view's toolbar): the project's line (branch, folder, who's here, the budget chip and the run state **● Running | Pause**, see [Command Center](command-center.md)) over the progress bar, on a mid dark grey. Hovering a phase of the progress bar shows its card (its measures, deliverables, gates, dates and spend) in the page's colours.
 
-Links with `?tab=` still open the same pages (`?tab=agents` works too, for the Agents page, `?tab=workers`).
+Links with `?tab=` still open the same pages, old names included (`?tab=agents` for the Agents page, `?tab=workers`; `team` for `org`; `deliverables` for `documents`). Every id is in [URL parameters](../reference/url-parameters.md#tab-ids).
+
+In the other themes (the tab row), Questions, Design gallery, Testing and Tests have no button of their own in the tab row: reach them from a link, Needs you, the search or ☰.
+
+> [!NOTE]
+> A regrouped navigation (Overview · Work · Inbox · App · Agents, with a collapsed More for specialist pages) is a **proposal**, not current behaviour. It would keep every tab id. See [Proposals](../architecture/proposals.md).
 
 ## Tab badges
 
