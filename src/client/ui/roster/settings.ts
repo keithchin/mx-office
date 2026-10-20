@@ -11,6 +11,7 @@ import { JEFF_MODE_LABEL, jeffPortrait } from '../jeff';
 import { act } from './api';
 import { consoleViewSetting } from '../pm/chat/setting';
 import { pacingSection } from '../project-run';
+import { autonomyOrigin, confirmAutonomyChange } from './autonomy-change';
 
 const LEVELS: AutonomyLevel[] = [1, 2, 3, 4];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -112,7 +113,9 @@ function allSettings(v: RosterView, redraw: (v: RosterView) => void): HTMLElemen
   );
   const stageNote = h('p.ro-sub', {}, v.byStage ? `Following the stage now: ${v.byStage === 'build' ? 'the build plan has passed' : 'before the build plan'} (level ${v.settings.autonomy}).` : 'Toolkit projects only: when the Stage 4 gate passes the office switches the level itself, as if you had picked it (Playbooks rewritten, the Leads at work told).');
   const days = h('div.ro-days', {}, ...DAYS.map((d, i) => check(s.schedule.days.includes(i), (b) => (s.schedule.days = b ? [...s.schedule.days, i].sort() : s.schedule.days.filter((x) => x !== i)), d)));
-  const save = h('button.btn.primary', { type: 'button', disabled: off, id: 'ro-save-settings', onclick: () => void act(v.floor, 'settings', { settings: s }).then((r) => r && redraw(r)) }, '💾 Save settings');
+  // A new level (or autonomy by stage turned on) is confirmed first, saying what it does (autonomy-change.ts).
+  const changesLevel = () => s.autonomy !== v.settings.autonomy || (s.autonomyByStage.enabled && !v.settings.autonomyByStage?.enabled);
+  const save = h('button.btn.primary', { type: 'button', disabled: off, id: 'ro-save-settings', onclick: async () => (!changesLevel() || (await confirmAutonomyChange(v, s, save))) && void act(v.floor, 'settings', { settings: s }).then((r) => r && redraw(r)) }, '💾 Save settings');
   return h(
     'section.ro-settings',
     { 'aria-label': 'Team settings' },
@@ -121,6 +124,7 @@ function allSettings(v: RosterView, redraw: (v: RosterView) => void): HTMLElemen
     levels,
     stageRow,
     stageNote,
+    autonomyOrigin(v),
     h('h4', {}, 'Benching'),
     h('p.ro-row', {}, 'Bench a Lead after ', num(s.idleMinutes, (n) => (s.idleMinutes = n ?? 0), { max: 1440, step: 1, 'aria-label': 'Idle minutes' }), ' idle minutes (0 = only by hand). A Lead mid-task or waiting on someone is never idle.'),
     h('h4', {}, 'Review loop'),

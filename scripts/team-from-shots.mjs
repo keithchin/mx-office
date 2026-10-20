@@ -117,7 +117,8 @@ async function main() {
     await page.locator('.nw-tf-agents').evaluate((el) => el.scrollIntoView({ block: 'center' }));
     await page.waitForTimeout(200);
     await shot('03-same-agents');
-    // Create project: the Move confirmation first.
+    // The required autonomy step (nothing preselected), then Create project: the Move confirmation first.
+    await page.click('.aw-lvl[data-level="2"]');
     await page.click('#nw-create');
     await page.waitForSelector('.nw-modal:has-text("Move")', { timeout: 10000 });
     await page.waitForTimeout(300);
@@ -138,6 +139,9 @@ async function main() {
     await page.click('#nw-create');
     await page.waitForSelector('.nw-modal:has-text("Move")');
     await page.click('.nw-modal button.primary');
+    // Ready to create: the summary.
+    await page.waitForSelector('#nw-create-go');
+    await page.click('#nw-create-go');
     await page.waitForSelector('.nw-progress', { timeout: 15000 });
     await page.waitForTimeout(800);
     await shot('06-setup-started');

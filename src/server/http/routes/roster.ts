@@ -21,6 +21,8 @@ import { refuseStale } from '../../phone-access/reauth.js';
 import { raisesTeamCap } from '../../phone-access/risky.js';
 import { levelOf } from '../../budget/index.js';
 import { cleanChoices } from '../../../shared/roster/interrupt.js';
+import { autonomyPolicy, autonomyRecordView, noteAutonomyChange } from '../../roster/autonomy-choice.js';
+import { outsidePolicy } from '../../../shared/roster/autonomy-step.js';
 
 const ADMIN_ONLY = new Set(['settings', 'decide', 'rename', 'model', 'hire', 'bench', 'escalation', 'skill', 'subagent', 'subagent-decide', 'subagent-rename']);
 const DECISIONS = new Set<Decision>(['approve', 'reject', 'change']);
@@ -36,7 +38,8 @@ export const rosterRoutes = {
       if (!floor) return send(res, 404, { error: 'No such project' });
       // With the project's budget level, for the "Solo · Lean" chip.
       const level = levelOf(ctx, floor.id);
-      return send(res, 200, { ...rosterOf(ctx).view(teamFloor(ctx, floor), ctx.meOf(session.account?.id).admin), ...(level ? { level } : {}) });
+      // With how its autonomy level was set (the New project flow's step, roster/autonomy-choice.ts).
+      return send(res, 200, { ...rosterOf(ctx).view(teamFloor(ctx, floor), ctx.meOf(session.account?.id).admin), ...(level ? { level } : {}), autonomyRecord: autonomyRecordView(ctx.cfg.dataDir, floor.id) });
     },
   },
   /** GET /api/roster/standup?floor=<id>&id=<standup>: one standup in full, its page included. */
@@ -108,9 +111,15 @@ export const rosterRoutes = {
         case 'model':
           error = roster.members.setModel(team, role!, body.model, by);
           break;
-        case 'settings':
+        case 'settings': {
+          // Within the office's autonomy policy, if it has one; the change noted for the Team settings' line (autonomy-choice.ts).
+          const outside = outsidePolicy(autonomyPolicy(ctx.cfg.dataDir), body.settings, roster.data(floor.id).settings);
+          if (outside) return send(res, 400, { error: outside });
+          const from = roster.data(floor.id).settings.autonomy;
           error = roster.members.settings(team, body.settings, by, owner);
+          if (!error) noteAutonomyChange(ctx.cfg.dataDir, floor.id, from, roster.data(floor.id).settings.autonomy, { name: by, ...(owner ? { id: owner } : {}) });
           break;
+        }
         case 'standup': {
           // What the Project Manager picked for each busy Lead in the check (after their turn when unsaid).
           const s = roster.standups.run(team, by, cleanChoices(body.choices, 'standup'));

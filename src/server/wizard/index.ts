@@ -15,6 +15,8 @@ import { flowsOf } from '../flow/index.js';
 import { findMpr } from '../liveapp/checkout.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { setShape } from '../roster/coverage.js';
+import { autonomyPolicy, resolveAutonomy } from '../roster/autonomy-choice.js';
+import { applyAutonomyAt } from './autonomy-step.js';
 import { everHired } from '../roster/store.js';
 import { adminTokenConfigured, adminTokenSource, redactor } from './admin-token.js';
 import { credential } from '../connections/resolve.js';
@@ -169,6 +171,7 @@ export class Wizard {
       questions,
       problems: configProblems(this.cfg, versions),
       toolkitDir: this.cfg.toolkitDir,
+      autonomyPolicy: autonomyPolicy(this.ctx.cfg.dataDir),
       jobs: this.book
         .all()
         .filter((j) => j.status !== 'done')
@@ -193,6 +196,10 @@ export class Wizard {
     if (plan.brief?.draftId && !draft) return 'That project brief isn’t in the office any more: start again from New project';
     if (draft?.brief) plan.brief = cleanPlanBrief({ draftId: draft.id, brief: draft.brief, domains: draft.domains, approved: draft.approved, attachments: draft.attachments, manual: draft.manual });
     if (plan.brief && !plan.brief.approved) return 'Approve the scope first';
+    // The autonomy step: required from the New project flow, the default (recorded as such) for older callers.
+    const autonomy = resolveAutonomy(plan, autonomyPolicy(this.ctx.cfg.dataDir), { name: by, ...(account ? { id: account } : {}) });
+    if (typeof autonomy === 'string') return autonomy;
+    plan.autonomy = autonomy;
     // The source folder the draft checked and scanned (server/wizard/source-folder.ts), never a path from the page.
     if (draft && plan.entry === 'migration' && asksForSlice([draft.prompt])) plan.sliceAsked = true;
     if (draft?.source && takesSource(draft.mode)) plan.sourceFolder = { path: draft.source.path, name: draft.source.name, files: draft.source.files, bytes: draft.source.bytes };
@@ -256,7 +263,7 @@ export class Wizard {
     if (typeof plan === 'string') return plan;
     const moved = plan.mendix !== job.plan.mendix;
     // Roles ticked since the team step ran are hired too (JobBook.edit), and only those.
-    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly, sliceAsked: job.plan.sliceAsked, teamFrom: job.plan.teamFrom }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
+    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly, sliceAsked: job.plan.sliceAsked, teamFrom: job.plan.teamFrom, autonomy: job.plan.autonomy }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
     this.go(job);
     return this.book.view(job);
   }
@@ -456,6 +463,7 @@ export class Wizard {
         return rosterOf(ctx).members.hire(teamFloor(ctx, floor), role, by, account, task, model);
       },
       applyBudget: (floorId, choice, by) => applyChoice(ctx, floorId, choice, by),
+      applyAutonomy: (floorId, choice, since) => applyAutonomyAt(ctx, floorId, choice, since),
       setShape: (floorId, shape, by) => {
         const floor = ctx.floors.get(floorId);
         if (floor) setShape(rosterOf(ctx), teamFloor(ctx, floor), shape, by);

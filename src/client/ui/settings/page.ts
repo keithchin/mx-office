@@ -18,6 +18,7 @@ import { advancedPart, appearancePart, incidentsPart } from './office';
 import { testingPart } from './testing';
 import { verificationPart } from './verification';
 import { stuckPart } from './stuck';
+import { autonomyPolicyPart } from './autonomy-policy';
 import { portfolioPart } from './portfolio';
 import { dangerPart } from '../project-delete/danger';
 import { rerunSetupSetting } from '../../first-run/rerun';
@@ -40,7 +41,7 @@ const phoneAlerts = () =>
 export const SECTION_BUILDERS: Record<SettingsSectionId, (d: SettingsDeps) => Built> = {
   you: (d) => together(consoleSetting(), signedInSetting(d)),
   workers: (d) => workersSettings(d),
-  team: () => rosterPart('team'),
+  team: () => together(rosterPart('team'), autonomyPolicyPart()),
   jeff: () => rosterPart('jeff'),
   notify: (d) => together(desktopSetting(d), phoneAlerts(), webhookSetting(d), teamsCardsSetting()),
   budget: (d) => budgetPart(d),

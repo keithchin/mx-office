@@ -11,6 +11,7 @@ import { SHAPES, shapeForRoles, TEAM_SHAPES, type TeamShape } from '../../../../
 import { recommendShape, type Recommendation } from '../../../../shared/roster/recommend';
 import { ROLE_BY_ID } from '../../../../shared/roster/roles';
 import { SHAPE_LEAVES_YOU, shapeModels } from '../../../../shared/roster/shape-words';
+import { withoutAutonomyLine } from '../../../../shared/roster/autonomy-step';
 import type { IntakeAnswer } from '../../../../shared/wizard';
 import { h } from '../../dom';
 import { fetchEstimate, levelPicker } from '../../budget/levels-ui';
@@ -179,7 +180,7 @@ export function teamCard(flow: Flow) {
         ? [
             h('div.nw-custom', {}, rolesPicker(d, () => ((d.shape = shapeForRoles(d.roles)), draw()))),
             h('p.nw-hint', {}, `These roles make a ${SHAPES[shape].label} team (${SHAPES[shape].who})`),
-            est && card ? levelPicker({ ...est, estimate: card.estimate, days: card.days, levels: card.levels }, (choice) => ((d.budget = choice), (d.discovery.model = choice.settings.discoveryModel)), (d.budget?.level as Level) ?? 'balanced', d.budget?.total) : null,
+            est && card ? levelPicker({ ...est, estimate: card.estimate, days: card.days, levels: card.levels.map((l) => ({ ...l, changes: withoutAutonomyLine(l.changes) })), autonomySeparate: true }, (choice) => ((d.budget = choice), (d.discovery.model = choice.settings.discoveryModel)), (d.budget?.level as Level) ?? 'balanced', d.budget?.total) : null,
           ]
         : []),
       h('p.nw-hint', {}, 'At 100% of the budget the project pauses and tells you. You can change the level later on the Budget page.'),

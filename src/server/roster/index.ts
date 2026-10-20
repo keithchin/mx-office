@@ -9,7 +9,7 @@
 import { dropKeys, forgetWith } from '../office/forget.js';
 import path from 'node:path';
 import type { WorkerInfo, WorkerStatus } from '../../shared/protocol.js';
-import { AUTONOMY, capAt, needsApproval } from '../../shared/roster/autonomy.js';
+import { AUTONOMY, capAt, needsApproval, quietTurns } from '../../shared/roster/autonomy.js';
 import { fyiNow } from '../../shared/roster/escalation.js';
 import { latestEntry } from '../../shared/roster/journal.js';
 import { teamFromLabels } from '../../shared/roster/card-team.js';
@@ -176,7 +176,7 @@ export class Roster {
    * works on its own, and what needs the Project Manager reaches them as an escalation.
    */
   routineTurn(floorId: string, workerId: string): boolean {
-    return this.data(floorId).settings.autonomy >= 3 && this.isMember(floorId, workerId);
+    return quietTurns(this.data(floorId).settings.autonomy) && this.isMember(floorId, workerId);
   }
 
   /** The titles of the escalations a worker has open (raised, joined, or raised by the role it's now), for the prompt that carries on a cut-off turn. */

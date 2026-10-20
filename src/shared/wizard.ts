@@ -8,6 +8,7 @@ import type { PlanBrief } from './brief.js';
 import type { OperationNotice } from './setup-operations.js';
 import type { PlanTeamFrom } from './team-from.js';
 import type { SignoffRequest } from './gate-play.js';
+import type { AutonomyAsk, AutonomyChoice, AutonomyPolicy } from './roster/autonomy-step.js';
 import type { StageEvidence } from './stage-derive.js';
 
 /** How a project enters the toolkit's pipeline (the runbook's "Entry Modes"), plus the no-pipeline assurance shelf. */
@@ -203,6 +204,12 @@ export interface ProjectPlan {
    * today's flow. A new app gets it applied after the app step; an existing app gets a ✋ card, never an apply.
    */
   design?: PlanDesign;
+  /**
+   * The autonomy step (shared/roster/autonomy-step.ts): what the New project flow sent (level, acknowledgement,
+   * by stage), replaced at start by the office's record of it (who, when, chosen / policy / default for an older
+   * caller). Required on a plan from the New project flow; the team step applies it. An edit never changes it.
+   */
+  autonomy?: AutonomyAsk & Partial<AutonomyChoice>;
 }
 
 /** A plan's design choice (shared/design/): an exact version, never "the latest". */
@@ -284,6 +291,8 @@ export interface WizardInfo {
   toolkitDir: string;
   /** Unfinished setups, to carry on with. */
   jobs: { id: string; repo: string; status: JobView['status'] }[];
+  /** The office's autonomy policy for new projects (off unless an admin set one): the autonomy step honours it. */
+  autonomyPolicy?: AutonomyPolicy;
 }
 
 /** Where a toolkit project stands, for the setup panel above its board. */

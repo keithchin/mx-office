@@ -15,6 +15,8 @@ The office keeps its data in a `.agent-office` folder (mode 0700) under the offi
 | `office-settings.json` | Connections' settings: the toolkit folder, the worktree cleanup on or off, the projects whose agents get the Mendix token, the workers' commit identity |
 | `accounts.json` | People's accounts |
 | `tell-limit.json` | The rate limit on agents' `office-workers tell` messages: the recent sends in the current window, so a restart doesn't reset it (entries older than the window are dropped on read) |
+| `governance/autonomy-policy.json` | The office's autonomy policy for new projects (none, limit the levels, or fix one), set under ⚙️ Settings › 👥 Team |
+| `autonomy/<project>.json` | How each project's autonomy level was set (chosen in the New project flow, set by the policy, or the default for an older caller; who and when) and the latest change since |
 | `floors.json`, `cloning.json` | The list of projects, and the ones being cloned |
 | `notify-teams.json`, `notify-teams-state.json` | [Teams notifications](../integrations/teams-notifications.md): the settings (mode 0600; the webhook URL itself is in `credentials.json`, moved there from this file once), and what was posted and held |
 | `push-subscriptions.json`, `push-state.json` | [Phone version](../using-the-office/phone-version.md#push-notifications): the phones signed up for push (per person and device, with their Do not disturb and digest; mode 0600), and which red items were pushed |

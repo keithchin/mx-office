@@ -38,15 +38,17 @@ export interface AutonomyDef {
   name: string;
   /** One line for the settings and the Playbooks. */
   summary: string;
+  /** The same in plain words for the person choosing it (the New project flow's autonomy step, shared/roster/autonomy-step.ts). */
+  plain: string;
   /** What needs the Project Manager's approval at this level. */
   approves: readonly DecisionKind[];
 }
 
 export const AUTONOMY: Record<AutonomyLevel, AutonomyDef> = {
-  1: { level: 1, name: 'Directive', summary: 'Leads only propose; the Project Manager approves every task.', approves: DECISION_KINDS },
-  2: { level: 2, name: 'Guided', summary: 'Leads may create tasks within the approved scope; the Project Manager approves design and architecture changes and merges.', approves: ['scope', 'design', 'architecture', 'peer-review', 'merge', 'milestone', 'client-milestone', 'budget', 'human-action'] },
-  3: { level: 3, name: 'Delegated', summary: "Leads may approve each other's work within budget; the Project Manager approves milestones and merges.", approves: ['merge', 'milestone', 'client-milestone', 'budget', 'human-action'] },
-  4: { level: 4, name: 'Autonomous', summary: 'The Project Manager approves only client-facing milestones and the budget.', approves: ['client-milestone', 'budget', 'human-action'] },
+  1: { level: 1, name: 'Directive', summary: 'Leads only propose; the Project Manager approves every task.', plain: 'You approve every piece of work before it starts.', approves: DECISION_KINDS },
+  2: { level: 2, name: 'Guided', summary: 'Leads may create tasks within the approved scope; the Project Manager approves design and architecture changes and merges.', plain: 'The team does routine work within the agreed scope; you decide changes and merges.', approves: ['scope', 'design', 'architecture', 'peer-review', 'merge', 'milestone', 'client-milestone', 'budget', 'human-action'] },
+  3: { level: 3, name: 'Delegated', summary: "Leads may approve each other's work within budget; the Project Manager approves milestones and merges.", plain: 'Team leads approve each other’s work and design changes; you approve merges, milestones and spend.', approves: ['merge', 'milestone', 'client-milestone', 'budget', 'human-action'] },
+  4: { level: 4, name: 'Autonomous', summary: 'The Project Manager approves only client-facing milestones and the budget.', plain: 'The team works on its own; you approve client-facing milestones and spend.', approves: ['client-milestone', 'budget', 'human-action'] },
 };
 
 export const isAutonomyLevel = (v: unknown): v is AutonomyLevel => v === 1 || v === 2 || v === 3 || v === 4;
@@ -55,6 +57,12 @@ export const isAutonomyLevel = (v: unknown): v is AutonomyLevel => v === 1 || v 
 export function needsApproval(level: AutonomyLevel, kind: DecisionKind): boolean {
   return AUTONOMY[level].approves.includes(kind);
 }
+/**
+ * Whether a team member's finished turn is quiet at `level` (no ✅ Review, no ding, no desktop alert; what
+ * needs the Project Manager arrives as an escalation): from Delegated up (Roster.routineTurn).
+ */
+export const quietTurns = (level: AutonomyLevel): boolean => level >= 3;
+
 /** @deprecated the old name of needsApproval, from when the human was called the CTO. */
 export const needsCto = needsApproval;
 

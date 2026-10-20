@@ -11,6 +11,7 @@ import { subagentModelAt, type BudgetChoice, type LevelSettings } from '../../sh
 import { analysisOf } from '../analysis/index.js';
 import { audit, byWhom } from '../audit/index.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { autonomySeparate, levelTeamPatch } from '../roster/autonomy-choice.js';
 import { subagentFirstName } from '../roster/subagent-names.js';
 import { cleanSubName } from '../roster/subagent-store.js';
 import { checkFloor, numbersOf, type ControlDeps } from './control.js';
@@ -197,7 +198,7 @@ export const controlOf = (ctx: Ctx): ControlDeps => controls.get(budgetOf(ctx))!
 
 /**
  * Applies a budget level's choices to a floor's team, from the next hire or Playbook rewrite: the Leads'
- * model, their subagents' models, early drafts and autonomy by stage. A running session keeps the model
+ * model, their subagents' models, early drafts and autonomy by stage (not on a project whose autonomy was chosen in the New project flow). A running session keeps the model
  * it started on, and a Lead only hears about a subagent change between turns (roster/subagents.ts).
  */
 export function applyLevelToTeam(ctx: Ctx, floorId: string, s: LevelSettings, by: string): string[] {
@@ -219,7 +220,8 @@ export function applyLevelToTeam(ctx: Ctx, floorId: string, s: LevelSettings, by
       if (e) problems.push(`${sub.title}: ${e}`);
     }
   }
-  const err = roster.members.settings(tf, { earlyDrafts: s.earlyDrafts, autonomyByStage: s.autonomyByStage, maxSubagents: SUBAGENTS_AT_ONCE[s.parallel] }, by);
+  // A project that chose its autonomy in the New project flow's step keeps it: its budget level never turns autonomy by stage on or off (roster/autonomy-choice.ts).
+  const err = roster.members.settings(tf, levelTeamPatch(s, SUBAGENTS_AT_ONCE[s.parallel], autonomySeparate(ctx.cfg.dataDir, floorId)), by);
   if (err) problems.push(err);
   return problems;
 }

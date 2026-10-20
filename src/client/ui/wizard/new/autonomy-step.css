@@ -1,0 +1,46 @@
+/* The New project plan's autonomy step (autonomy-step.ts) and the summary before Create (create-summary.ts). */
+.aw { display: flex; flex-direction: column; gap: 12px; }
+.aw-h { margin: 0; font-size: 18px; line-height: 1.3; color: var(--ink); }
+.aw-note { margin: 0; }
+.aw-policy { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--purple, #7a3fd1) 35%, var(--line)); border-radius: var(--radius, 4px); background: var(--purple-soft, color-mix(in srgb, #7a3fd1 10%, var(--card))); color: var(--ink); font-size: 13px; }
+.aw-policy svg { flex: none; width: 16px; height: 16px; margin-top: 2px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.aw-lvls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.aw-lvl { position: relative; display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 12px 14px; border: 1px solid var(--rule-strong, var(--line)); border-radius: var(--radius-lg, 6px); background: var(--card); color: var(--ink); font: inherit; cursor: pointer; transition: border-color .15s, background .15s, box-shadow .15s; }
+.aw-lvl:hover:not([aria-disabled='true']) { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.aw-lvl[aria-checked='true'] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--card)); box-shadow: 0 0 0 1px var(--accent); }
+.aw-lvl[aria-disabled='true'] { opacity: .55; cursor: not-allowed; background: var(--paper-2, var(--card)); }
+.aw-lvl:focus-visible { outline: 2px solid var(--focus, var(--accent)); outline-offset: 2px; }
+.aw-lvl-t { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 600; font-size: 15px; }
+.aw-radio-dot { flex: none; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--rule-strong, var(--muted)); background: var(--card); }
+.aw-lvl[aria-checked='true'] .aw-radio-dot { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 3px var(--card); }
+.aw .aw-rec { margin-left: auto; background: var(--info-soft, var(--accent-soft)); color: var(--link, var(--accent)); font-weight: 600; }
+.aw-one { font-size: 13px; color: var(--ink-2, var(--ink)); line-height: 1.45; }
+.aw-off { font-size: 12px; color: var(--muted); }
+.aw-preview { border: 1px solid var(--line); border-radius: var(--radius-lg, 6px); overflow: hidden; background: var(--card); }
+.aw-empty { margin: 0; padding: 12px 14px; background: var(--paper-2, var(--card)); color: var(--muted); font-size: 13px; }
+.aw-ph { padding: 8px 14px; background: var(--paper-2, var(--card)); font-weight: 600; font-size: 13px; border-bottom: 1px solid var(--line); }
+.aw-pb { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.aw-pb > div { padding: 12px 14px; min-width: 0; }
+.aw-pb > div + div { border-left: 1px solid var(--line); }
+.aw-pb h4 { margin: 0 0 6px; font-size: 13px; }
+.aw-pb ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; }
+.aw-small { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.aw-mk { display: inline-block; padding: 0 6px; border-radius: 9px; font-size: 11px; font-weight: 600; white-space: nowrap; vertical-align: 1px; }
+.aw-mk.stops, .aw-mk.only-you { background: var(--good-soft); color: var(--good-ink, var(--ink)); }
+.aw-mk.told { background: var(--warn-soft); color: var(--warn-ink, var(--ink)); }
+.aw-held { margin: 0; padding: 10px 14px; border-top: 1px solid var(--line); background: var(--paper-2, var(--card)); font-size: 12px; color: var(--muted); line-height: 1.5; }
+.aw-extras:empty { display: none; }
+.aw-extras .nw-check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; cursor: pointer; margin: 0; }
+.aw-extras .nw-check input { margin-top: 3px; accent-color: var(--accent); }
+.aw-ack { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius, 4px); }
+.aw-why { margin: 0; min-height: 1em; font-size: 13px; color: var(--warn-ink, var(--muted)); }
+.aw-why:empty { display: none; }
+/* The summary before Create. */
+.aw-sum { width: 100%; border-collapse: collapse; font-size: 13px; }
+.aw-sum td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.aw-sum td:first-child { width: 34%; color: var(--muted); }
+.aw-sum .aw-small { margin-top: 2px; }
+@media (max-width: 640px) {
+  .aw-lvls, .aw-pb { grid-template-columns: minmax(0, 1fr); }
+  .aw-pb > div + div { border-left: 0; border-top: 1px solid var(--line); }
+}
