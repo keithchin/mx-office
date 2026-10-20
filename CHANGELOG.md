@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **✨ New project from a client, starting from one of its apps.** A client's page (and ⋯ on its card) has **＋ New project**, which opens New project made for that client (the client shown and preset). Its new **Start from another app** card picks one of the client's apps (admins: other clients' apps too, checked on the server) and takes, each through the office's own mechanism: its design system's exact version (bound by the wizard's design step, with the version's status, compatibility, digest check and a preview shown first), the same toolkit pin or the newest toolkit, and its role skill selections (set before the team is hired); the client's company brain is wired as with Connect a brain. A summary says what the project will start with; project decisions and lessons are never copied (a lesson goes through the brain's inbox). What was adopted, from which app and when, is recorded and shown in ⚙️ Settings › Client as available to agents, not as proof they use it. See Clients › Start from another app in the docs.
 
 ## 2026-10-21 · release 67 (`7756ed6`)
 

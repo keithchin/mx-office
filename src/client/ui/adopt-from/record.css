@@ -1,0 +1,9 @@
+/* What a project adopted from another app (record.ts), in Settings › Client. */
+.ad-part { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.ad-part h3 { margin: 0 0 6px; font-size: 15px; }
+.ad-rec-h { margin: 0 0 6px; }
+.ad-rec-items { margin: 0 0 6px; padding: 0; list-style: none; display: grid; gap: 4px; }
+.ad-rec-items li { display: grid; grid-template-columns: minmax(130px, max-content) 1fr; gap: 10px; font-size: 14px; }
+.ad-rec-items li[data-status='failed'] { color: var(--warn-ink); }
+.ad-rec-k { font-weight: 600; }
+@media (max-width: 600px) { .ad-rec-items li { grid-template-columns: 1fr; gap: 0; } }

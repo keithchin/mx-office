@@ -173,6 +173,10 @@ It copies a setup only; it doesn't make the new team work better. Everything sta
 
 The setup records where the team came from: in the plan, in the audit log (`wizard.team-from`, with the source, what was copied and the agents) and in the project's `agent-office.project.json` (`teamFrom`; when the source is another client's project, only *another client*, never its name).
 
+### Start from another app
+
+When the project has a client (**＋ New project** on the client's page presets it and shows *Client: …* in the bar; otherwise Advanced › Client), a **Start from another app** card sits above Team & budget. Pick one of the client's apps and choose what to take from it: its design system and exact version, the same toolkit pin or the newest toolkit, and its role skill selections; the client's company brain comes with the client. The card ends with *This project will start with: …*. Project knowledge (decisions, lessons) is never copied. A client with no apps yet says there's nothing to adopt. See [Start from another app](../using-the-office/clients.md#start-from-another-app) for what each choice does, who can start from another client's app, and where the project records what it adopted.
+
 ### Advanced
 
 Collapsed under the card, with the defaults from the office's settings and the brief: everything else the wizard needs. A problem shows next to its field when you click **Create project**, and Advanced opens on it.

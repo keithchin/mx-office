@@ -1,7 +1,7 @@
 // The Clients page (/clients, clients.ts): every client as a card in the Projects page's grid (name, how many
 // projects and which, the company brain's state), ＋ New client, and a client's own page
-// (/clients?client=<id>): its name with Rename, its brain's state with Connect a brain / Disconnect, ＋ Add a
-// project, and its projects drawn with the very cards of the Projects page (home/project-card.ts).
+// (/clients?client=<id>): its name with ＋ New project (clients/new-project.ts) and Rename, its brain's state with
+// Connect a brain / Disconnect, ＋ Add a project, and its projects drawn with the very cards of the Projects page (home/project-card.ts).
 // "Clients organise knowledge; they aren't access control" is said on both. GET /api/portfolios is asked
 // when the page opens and answered again by every change; the project cards follow the socket's floors.
 
@@ -20,6 +20,7 @@ import { onHomeRunState } from '../home/run-state';
 import { onProjectPrefs } from '../shared/project-prefs';
 import { brainButton, brainPart, chip } from './brain';
 import { designPart } from './design';
+import { newProjectButton, type NewProjectFor } from './new-project';
 import { clientHref, clientMatches, paletteOf, sortedClients } from './logic';
 import '../ui/portfolios/portfolios.css';
 import './clients.css';
@@ -29,6 +30,8 @@ export interface ClientsDeps {
   last: string | null;
   /** Into a project (its 1D view). */
   open: (floor: string) => void;
+  /** ✨ New project for a client (admins: whoever can create projects). */
+  newProject?: NewProjectFor;
 }
 
 const banner = () => h('div.pf-banner', { role: 'note' }, h('strong', {}, `🔓 ${NOT_ACCESS_CONTROL}. `), NOT_ACCESS_CONTROL_LONG);
@@ -67,6 +70,7 @@ export function clientsView(root: HTMLElement, deps: ClientsDeps) {
     more.addEventListener('click', () => {
       const items: PopItem[] = [{ label: 'Open client', hint: 'Its projects and its company brain', href: clientHref(p.id), run: () => go(p.id) }];
       if (admin()) items.push({ label: 'Rename…', hint: 'Only the name changes', run: () => renameItem(p, more) });
+      if (admin() && deps.newProject) items.push({ label: 'New project…', hint: 'A new project for this client, maybe starting from one of its apps', run: () => deps.newProject!({ id: p.id, label: p.label }) });
       openPop(more, items, { label: `${p.label}: more`, align: 'right' });
     });
     const name = h('a.ph-name', { href: clientHref(p.id), title: `${p.label}: its projects and company brain` }, p.label);
@@ -126,10 +130,10 @@ export function clientsView(root: HTMLElement, deps: ClientsDeps) {
     if (mine.length) cards.askBudget();
     return [
       h('p.cl-crumb', {}, h('a.cl-back', { href: '/clients', onclick: (e: Event) => (e.preventDefault(), go(undefined)) }, '← All clients')),
-      h('div.ph-head', {}, h('div.cl-title', {}, h('h1.ph-title', {}, p.label), chip(p)), h('div.ph-head-acts', {}, rename, addP, a ? brainButton(p, after) : null)),
+      h('div.ph-head', {}, h('div.cl-title', {}, h('h1.ph-title', {}, p.label), chip(p)), h('div.ph-head-acts', {}, a && deps.newProject ? newProjectButton(p, deps.newProject) : null, rename, addP, a ? brainButton(p, after) : null)),
       banner(),
       h('h2.cl-h', {}, `Projects (${p.projects.length})`),
-      mine.length ? h('ul.ph-grid', { 'aria-label': `${p.label}'s projects` }, ...mine.map(cards.card)) : h('p.ph-count', {}, a ? 'No projects yet: ＋ Add project puts one of the projects without a client in it.' : 'No projects yet.'),
+      mine.length ? h('ul.ph-grid', { 'aria-label': `${p.label}'s projects` }, ...mine.map(cards.card)) : h('p.ph-count', {}, a ? 'No projects yet: ＋ New project makes one for this client, and ＋ Add project puts one of the projects without a client in it.' : 'No projects yet.'),
       gone.length ? h('p.pf-hint', {}, `Not in the office now: ${gone.map((x) => x.name).join(', ')}.`) : null,
       ...wiring.map((x) => h('p.pf-warn', {}, `⚠️ ${x.name}: company brain wiring incomplete (${x.wiring!.problems.join('; ')}). See Needs you on the project.`)),
       brainPart(p),

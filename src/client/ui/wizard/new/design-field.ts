@@ -18,6 +18,8 @@ const label = (c: DesignChoice) => `${c.name} v${c.n}`;
 
 export function designField(d: ProjectPlan, redraw: () => void): HTMLElement | null {
   const client = d.portfolio;
+  // Start from another app chose the source's exact version (adopt-card.ts): said here, never reset to the client's list.
+  if (client && d.adopt?.design && d.design?.choice === 'use') return h('div.nw-field.nw-design', {}, h('span.nw-lbl', {}, 'Design system'), h('span.nw-hint', {}, `v${d.design.n} of the design system of the app this project starts from (Start from another app, above): the new project is bound to that exact version at setup.`));
   if (!client) {
     delete d.design;
     return null;

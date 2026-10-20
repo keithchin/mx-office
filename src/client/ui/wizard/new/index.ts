@@ -26,6 +26,8 @@ export interface NewProjectOptions {
   go(floor: string): void;
   /** Edit a setup's answers instead (the classic form, ../index.ts). */
   edit(job: string): void;
+  /** From a client's page: the project is made for this client (Advanced › Client preset, a chip in the bar). */
+  client?: { id: string; label: string };
 }
 
 /** What every screen of the flow shares. */
@@ -92,8 +94,11 @@ export async function openNewProject(opts: NewProjectOptions) {
   const live = h('div.nw-sr', { 'aria-live': 'polite', role: 'status' });
   const spend = h('span.nw-spend', { title: 'What the office has spent today, planning included' }, h('span.nw-spend-l', {}, 'Office '), h('b', {}, '…'), h('span.nw-spend-l', {}, ' today'));
   const section = h('span.nw-section', {}, 'New project');
+  const forClient = opts.client ? h('span.nw-client-chip', { title: 'This project is made for this client: Advanced › Client' }, `Client: ${opts.client.label}`) : null;
+  // A fresh plan, for the client it was opened for.
+  const fresh = () => ({ ...blankPlan(info), ...(opts.client ? { portfolio: opts.client.id } : {}) });
   const x = h('button.nw-iconbtn.nw-close', { type: 'button', 'aria-label': 'Close New project', title: 'Close (your draft is kept)' }, icon('x'));
-  const bar = h('header.nw-bar', {}, h('span.nw-wordmark', {}, 'Mx', h('b', {}, 'Office')), h('span.nw-tsep', { 'aria-hidden': 'true' }), section, h('span.nw-grow'), spend, x);
+  const bar = h('header.nw-bar', {}, h('span.nw-wordmark', {}, 'Mx', h('b', {}, 'Office')), h('span.nw-tsep', { 'aria-hidden': 'true' }), section, forClient, h('span.nw-grow'), spend, x);
   const main = h('main.nw-main', {});
   const layer = h('div.nw', { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'New project' }, bar, live, main);
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -107,7 +112,7 @@ export async function openNewProject(opts: NewProjectOptions) {
     info,
     status,
     draft: undefined,
-    plan: blankPlan(info),
+    plan: fresh(),
     me: loadProfile()?.name ?? 'an admin',
     net: opts.net,
     touched: new Set(),
@@ -164,7 +169,7 @@ export async function openNewProject(opts: NewProjectOptions) {
         progress?.stop();
         progress = undefined;
         flow.draft = undefined;
-        flow.plan = blankPlan(info);
+        flow.plan = fresh();
         flow.touched.clear();
         latest = null;
         current = undefined;

@@ -15,6 +15,7 @@ import { goToSettings } from './ui/settings/flat';
 import { portalBar } from './ui/portal/topbar';
 import { hideOverlay, showOverlay } from './ui/loading/overlay';
 import { clientsView } from './clients/view';
+import { openWizard } from './ui/wizard/open';
 import './home/home.css';
 import './shared/perfwatch-on';
 
@@ -43,7 +44,8 @@ function openProject(floor: string) {
 }
 
 colorThemes($('theme'));
-const view = clientsView($('clients-view'), { last, open: openProject });
+// ＋ New project on a client: ✨ New project made for it, opening the project once it's set up.
+const view = clientsView($('clients-view'), { last, open: openProject, newProject: (client) => void openWizard({ net, go: openProject, client }) });
 flatMenu($('menu'), { net, home: true, settings: () => goToSettings(session) });
 session.bellBefore($('theme'));
 // The Portal themes' top bar (ui/portal/): CLIENTS, and its wordmark back to the clients' cards.

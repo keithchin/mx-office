@@ -10,6 +10,7 @@ import { addToPortfolioDialog, contextLines } from '../portfolios/dialogs';
 import { brainChip } from '../../clients/brain';
 import { clientHref } from '../../clients/logic';
 import { setting, type Built } from './kit';
+import { adoptedPart } from '../adopt-from/record';
 import '../portfolios/portfolios.css';
 
 const nodes = (...xs: (Node | null)[]): Node[] => xs.filter((x): x is Node => !!x);
@@ -50,5 +51,6 @@ export function portfolioPart(): Built {
     ));
   };
   portfoliosView().then(draw, (err: Error) => !gone && body.replaceChildren(h('p.setting-note', {}, `Couldn’t ask the office: ${err.message}`)));
-  return { nodes: [setting('This project', 'floor', body)], off: () => void (gone = true) };
+  // Started from another app (ui/adopt-from/record.ts): what it adopted, and from which app and version.
+  return { nodes: [setting('This project', 'floor', body, floor ? adoptedPart(floor, () => gone) : null)], off: () => void (gone = true) };
 }

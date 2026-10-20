@@ -42,6 +42,8 @@ import { bashPath, runCommand } from './run.js';
 import { setupSteps, type FloorRef, type SetupDeps } from './steps.js';
 import { withDesign } from './design-step.js';
 import { designOf } from '../design/index.js';
+import { withAdopt } from './adopt-step.js';
+import { adoptFromOf, adoptSetupOf } from '../adopt-from/index.js';
 import { trustFloor } from '../claude-trust.js';
 import { childEnv } from '../workers/env.js';
 import { blockerOf } from './unfinished.js';
@@ -188,6 +190,9 @@ export class Wizard {
   start(raw: unknown, by: string, account?: string, teams?: ReadonlyMap<string, KnownSource>): JobView | string {
     const plan = cleanPlan(raw, mendixVersions(this.cfg.mendixDir), this.cfg.org, teams);
     if (typeof plan === 'string') return plan;
+    // Start from another app (adopt-from/): what the choices mean on the source now; another client's app is an admin's.
+    const refused = adoptFromOf(this.ctx).resolve(plan, this.ctx.meOf(account).admin);
+    if (refused) return refused;
     // A brief from the New project flow is taken from its draft in the office (what was drafted, confirmed and approved there), not from the page's copy.
     const draft = plan.brief?.draftId ? plannerOf(this.ctx).get(plan.brief.draftId, { id: account ?? 'shared', name: by }) : undefined;
     if (plan.brief?.draftId && !draft) return 'That project brief isn’t in the office any more: start again from New project';
@@ -256,7 +261,7 @@ export class Wizard {
     if (typeof plan === 'string') return plan;
     const moved = plan.mendix !== job.plan.mendix;
     // Roles ticked since the team step ran are hired too (JobBook.edit), and only those.
-    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly, sliceAsked: job.plan.sliceAsked, teamFrom: job.plan.teamFrom }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
+    this.book.edit(job, { ...plan, createdByHand: job.plan.createdByHand, sprintrAppId: job.plan.sprintrAppId, sourceFolder: job.plan.sourceFolder, localOnly: job.plan.localOnly, sliceAsked: job.plan.sliceAsked, teamFrom: job.plan.teamFrom, adopt: job.plan.adopt }, [...EDIT_STEPS, ...(moved ? (['env'] as StepId[]) : [])]);
     this.go(job);
     return this.book.view(job);
   }
@@ -391,7 +396,7 @@ export class Wizard {
   }
 
   private go(job: JobState) {
-    void this.book.run(job, withDesign(designOf(this.ctx), setupSteps(this.deps()))).then(() => {
+    void this.book.run(job, withAdopt(adoptSetupOf(this.ctx), withDesign(designOf(this.ctx), setupSteps(this.deps())))).then(() => {
       if (job.status !== 'done') return;
       this.ctx.toastAll(`✨ ${job.plan.name}: the project setup finished`);
       // The brief is in the project now (docs/project-brief.md, sources/): its draft and attached files go.

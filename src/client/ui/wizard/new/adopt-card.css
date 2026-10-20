@@ -1,0 +1,21 @@
+/* Start from another app (adopt-card.ts), a card of the New project plan: the options, the preview, the summary. */
+#modal-root .nw-adopt-b { padding: 0 20px 18px; display: grid; gap: 10px; }
+#modal-root .nw-adopt-b > .nw-field { margin-top: 0; max-width: 420px; }
+#modal-root .nw-adopt-opt { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--nw-r); background: var(--paper-2, var(--card)); }
+#modal-root .nw-adopt-opt[data-off='true'] { opacity: .8; }
+#modal-root .nw-adopt-opt p { margin: 0; font-size: 14px; }
+#modal-root .nw-adopt-opt .nw-check { margin-top: 0; font-size: 14px; }
+#modal-root .nw-adopt-opt .nw-check + .nw-check { margin-top: 6px; }
+#modal-root .nw-adopt-opt .nw-hint { margin-top: 4px; display: block; }
+#modal-root .nw-adopt-st { margin-left: 8px; vertical-align: 1px; }
+#modal-root .nw-adopt-thumb { display: block; margin: 8px 0 2px 24px; max-width: 220px; max-height: 120px; border: 1px solid var(--line); border-radius: var(--nw-r); object-fit: cover; }
+#modal-root .nw-adopt-sw { display: inline-flex; gap: 4px; margin: 8px 0 2px 24px; }
+#modal-root .nw-adopt-sw i { width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--line); }
+#modal-root .nw-adopt-only { background: var(--good-soft); border-color: transparent; color: var(--good-ink); }
+#modal-root .nw-adopt-only .nw-hint { color: var(--ink-2, var(--ink)); }
+#modal-root .nw-adopt-sum { padding: 12px 14px; border-radius: var(--nw-r); border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--card)); }
+#modal-root .nw-adopt-sum p { margin: 0; font-size: 14px; }
+#modal-root .nw-adopt-sum .nw-hint { margin-top: 4px; }
+#modal-root .nw-adopt-all { margin-top: 0; }
+#modal-root .nw-client-chip { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 11px; background: color-mix(in srgb, #fff 16%, transparent); color: #fff; font-size: 12px; white-space: nowrap; max-width: 30vw; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 600px) { #modal-root .nw-client-chip { display: none; } }
