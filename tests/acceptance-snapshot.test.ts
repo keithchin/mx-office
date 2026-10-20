@@ -31,7 +31,7 @@ function fixture(t: { after(fn: () => void): void }) {
   const commit = () => { git('add', '-A'); git('commit', '--allow-empty', '-m', 'fixture'); return git('rev-parse', 'HEAD'); };
   const a = commit();
   const floor = { id: path.basename(root), dir, def: { name: 'Shop', projectId: 'prj_fixture' }, workers: { list: () => [] }, github: { pulls: { items: [] } } } as unknown as Floor;
-  const ctx = { cfg: { dataDir: path.join(root, 'data'), trustProxy: false }, floors: new Map([[floor.id, floor]]), meOf: () => ({ admin: true }), workerFloor: () => undefined } as unknown as Ctx;
+  const ctx = { cfg: { dataDir: path.join(root, 'data'), trustProxy: false }, floors: new Map([[floor.id, floor]]), meOf: () => ({ admin: true }), workerFloor: () => undefined, toFloor: () => {} } as unknown as Ctx;
   const b = budgetOf(ctx);
   b.file({ id: floor.id, name: 'Shop', dir }).plan = { edited: true, start: '2026-10-10', lines: [] } as never;
   // No daily exchange-rate fetch from the network in a test.
