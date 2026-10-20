@@ -41,7 +41,7 @@ History explains why something exists; it isn't a promise about what the code do
 1. **Nothing in the office blocks a merge.** Review, merge approval and "people merge" are instructions; the review gate flags after the merge, isn't bound to the reviewed revision, and ignores the verdict.
 2. **No process or filesystem isolation** between agents, projects or clients; hook tokens are readable by any agent.
 3. **The live app's running commit isn't persisted**, and a hung runtime keeps reading *running* (it isn't probed again once up).
-4. **Readiness** can read Ready with no journey evidence, reads plan and journeys at main rather than the running commit, and relies on report files declaring their own revision. The toolkit's journey runner writes no commit.
+4. **Readiness** could read Ready with no journey evidence (fixed after release 66: such a milestone now reads *built, no journey evidence yet*), reads plan and journeys at main rather than the running commit, and relies on report files declaring their own revision. The toolkit's journey runner writes no commit.
 5. **Needs-you counts differ by surface**, and outcome-unknown and follow-through items are only on the Overview's card (see [Needs you](../using-the-office/needs-you.md)).
 6. **Decision answers to a working agent are typed at once** (Claude Code queues them); the ready-or-busy question covers standups, quick questions and lead tells only.
 7. **Three ways of telling an agent**: your answers and tells are durable hand-offs; agent-to-agent tells go through delivery but aren't durable; the idle-lead console prompt skips delivery's checks.

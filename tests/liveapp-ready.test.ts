@@ -1,6 +1,7 @@
 // The live app's readiness by milestone (shared/liveapp/): the build plan's phases as milestones, row
 // evidence from commits (never the plan's State column), which milestones are in the running build,
-// merged but not in it, only in a PR, and "ready" only once a journey passed against that very build;
+// merged but not in it, only in a PR, and "ready" only once a journey passed against that very build (never
+// with no journey at all: "built, no journey evidence yet");
 // the honest status words; and the Needs-you rows and which of them reach the notification channels.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -61,7 +62,8 @@ const base = (o: Partial<ReadinessInput> = {}): ReadinessInput => ({
 test('readiness: what is in the running build, what is only in an open PR, what is not built', () => {
   const r = computeReadiness(base());
   const by = Object.fromEntries(r.milestones.map((m) => [m.id, m]));
-  assert.equal(by['phase-0'].state, 'ready', 'no journey tied to it: its BUILD rows in the build are enough');
+  assert.equal(by['phase-0'].state, 'no-evidence', 'no journey tied to it: built, but never ready from code alone');
+  assert.match(by['phase-0'].line, /^Prerequisites: built, no journey evidence yet/);
   assert.equal(by['phase-1'].state, 'unverified', 'the skeleton journey (row 10) has not passed against this build');
   assert.match(by['phase-1'].line, /built, not yet verified \(skeleton not run against this build\)/);
   assert.equal(by['phase-3'].state, 'branch');
@@ -69,7 +71,7 @@ test('readiness: what is in the running build, what is only in an open PR, what 
   assert.equal(by['phase-4'].state, 'branch');
   assert.match(by['phase-4'].line, /row 23 in PR #6.*row 24 not built/);
   assert.equal(r.ready, false);
-  assert.match(r.headline, /^Live app: not ready for Sample check-sheet demo \(Checksheet\)\. Has: Prerequisites, Frame, domain and skeleton \(not yet verified\) \(rows 4, 6–8\)\. Missing: Save, submit and My check sheets \(PR #6, open, not merged\); Approval, history and demo data \(PR #6, open, not merged; row 24 not built\)\.$/);
+  assert.match(r.headline, /^Live app: not ready for Sample check-sheet demo \(Checksheet\)\. Has: Prerequisites \(no journey evidence yet\), Frame, domain and skeleton \(not yet verified\) \(rows 4, 6–8\)\. Missing: Save, submit and My check sheets \(PR #6, open, not merged\); Approval, history and demo data \(PR #6, open, not merged; row 24 not built\)\.$/);
 });
 
 test('readiness: merged to main but not in the running build says restart, not ready', () => {
@@ -99,6 +101,19 @@ test('readiness: ready only once the journey passed against this very build; not
   assert.match(computeReadiness(base({ plan: parsePlan('') })).headline, /no build plan/);
 });
 
+test('readiness: no journey at all is never ready, it is built with no journey evidence yet', () => {
+  const all = new Set([1, 3, 4, 6, 7, 8, 10, 19, 20, 21, 23, 24]);
+  const none = computeReadiness(base({ live: { sha: 'abc1234', rows: all }, main: { sha: 'abc1234', branch: 'main', rows: all }, branches: [], journeys: [] }));
+  assert.equal(none.ready, false, 'the whole plan in the build, but nothing checked it');
+  assert.ok(none.milestones.every((m) => m.state === 'no-evidence'));
+  assert.match(none.headline, /^Live app: Sample check-sheet demo \(Checksheet\) is built into the running app, no journey evidence yet/);
+  assert.match(none.milestones[0].line, /built, no journey evidence yet/);
+  assert.equal(readinessNews(none, {}, 100).news.length, 0, 'no "Live app ready" toast, push or walkthrough trigger');
+  // One told ready under the old rule is forgotten quietly (no "no longer has" alert), and told once a journey passes.
+  const quiet = readinessNews(none, { 'phase-0': { at: 1, sha: 'abc1234' } }, 200);
+  assert.deepEqual([quiet.news.length, quiet.notified['phase-0']], [0, undefined]);
+});
+
 test('journeys: broken controls and the example are left out; rows come from the requirement field', () => {
   assert.equal(parseJourney('tests/e2e/skeleton-broken.journey.json', JSON.stringify({ id: 'skeleton-broken', requirement: ['build-plan row 10'] })), undefined);
   assert.equal(parseJourney('tests/e2e/example.journey.json', '{}'), undefined);
@@ -110,7 +125,7 @@ test('journeys: broken controls and the example are left out; rows come from the
 test('news: a milestone ready in the running app is told once, a rollback is told, and it may be told ready again', () => {
   const r1 = computeReadiness(base({ results: [{ journey: 'skeleton', status: 'passed' }] }));
   const first = readinessNews(r1, {}, 100);
-  assert.deepEqual(first.news.map((n) => [n.kind, n.milestone]), [['ready', 'phase-0'], ['ready', 'phase-1']]);
+  assert.deepEqual(first.news.map((n) => [n.kind, n.milestone]), [['ready', 'phase-1']], 'phase-0 has no journey: built, never told ready');
   assert.equal(readinessNews(r1, first.notified, 200).news.length, 0, 'once');
   const rolledBack = computeReadiness(base({ live: { sha: 'old', rows: new Set([3, 4]) }, results: [] }));
   const back = readinessNews(rolledBack, first.notified, 300);

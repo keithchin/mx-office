@@ -74,11 +74,11 @@ Also proposed here: route the idle-lead console prompt through the same delivery
 
 ## Readiness and walkthroughs
 
-**Today:** readiness and walkthroughs are separate modules and tabs, coupled through automatic recording and a link on a ready milestone. A milestone with no journeys can read Ready. Recording is one switch (*auto record*, on by default); failed automatic recordings count as done; recording failures and app failures share one *error* status. See [Live app](../using-the-office/live-app.md) and [Walkthroughs](../using-the-office/walkthroughs.md).
+**Today:** readiness and walkthroughs are separate modules and tabs, coupled through automatic recording and a link on a ready milestone. A milestone with no journeys could read Ready in release 66 (fixed since: it now reads *built, no journey evidence yet*). Recording is one switch (*auto record*, on by default); failed automatic recordings count as done; recording failures and app failures share one *error* status. See [Live app](../using-the-office/live-app.md) and [Walkthroughs](../using-the-office/walkthroughs.md).
 
 **Proposed:**
 
-- A milestone with no tied journeys reads *built, no journeys*, never Ready.
+- Done after release 66: a milestone with no tied journeys reads *built, no journey evidence yet*, never Ready.
 - One revision strip on the Live app: *Running abc1234 · main def5678 · tests for abc1234: 3 journeys (2 pass) · recordings for abc1234: 2*.
 - A recording policy (*on demand*, *milestones*, *every eligible build*) migrated from today's switch, kept in the same file but written durably.
 - Failure kinds (app step, app boot, sign-in, session cap, harness, cancelled, office stopped); only real results count as done; harness and boot failures retried once.

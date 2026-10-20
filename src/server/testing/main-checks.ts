@@ -8,6 +8,7 @@
 
 import type { TestRunDraft } from '../../shared/testing/record.js';
 import { IMPORTER_VERSION, statusOf } from '../../shared/testing/record.js';
+import { ciResultStatus } from '../../shared/ci-conclusion.js';
 import { gh } from '../github.js';
 import { prShotsOptions } from '../prshots/index.js';
 import { testModeOf } from '../testmode.js';
@@ -32,7 +33,7 @@ interface RunRow {
 
 /** A finished pr-checks run on the default branch: its conclusion on its head commit. */
 export function draftFromMainRun(repo: string, branch: string, r: RunRow): TestRunDraft | undefined {
-  const status = statusOf(r.conclusion);
+  const status = ciResultStatus(r.conclusion) ?? statusOf(r.conclusion);
   if (String(r.status).toLowerCase() !== 'completed' || !SHA.test(r.headSha ?? '') || !status) return undefined;
   return {
     source: 'pr-checks',
@@ -64,7 +65,7 @@ interface CheckRunRow {
 export function draftFromCheckRuns(repo: string, branch: string, runs: readonly CheckRunRow[]): TestRunDraft | undefined {
   const sha = runs[0]?.head_sha;
   if (!sha || !SHA.test(sha) || runs.some((r) => r.head_sha !== sha || String(r.status).toLowerCase() !== 'completed')) return undefined;
-  const results = runs.map((r) => ({ name: r.name, status: statusOf(r.conclusion) ?? 'skipped', ...(r.conclusion ? { detail: r.conclusion } : {}), links: [] }));
+  const results = runs.map((r) => ({ name: r.name, status: ciResultStatus(r.conclusion) ?? statusOf(r.conclusion) ?? 'skipped', ...(r.conclusion ? { detail: r.conclusion } : {}), links: [] }));
   const failed = results.some((t) => t.status === 'failed');
   const passed = results.some((t) => t.status === 'passed');
   const last = runs.map((r) => r.completed_at ?? '').sort().at(-1);

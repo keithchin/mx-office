@@ -110,6 +110,8 @@ export function isRedNeed(n: Pick<NeedItem, 'kind' | 'key'>): boolean {
     case 'stuck':
     // The open questions for the client (server/questions/): keyed by batch, so one notification per batch.
     case 'questions':
+    // An answer whose delivery is unconfirmed (shared/needs-actionable.ts deliveryNeedsOf): needs you to settle it.
+    case 'delivery':
       return true;
     case 'setup':
       return n.key !== 'setup-stale';

@@ -11,7 +11,7 @@ import type { StuckView } from '../src/shared/stuck.js';
 import { stuckActions } from '../src/shared/stuck.js';
 import { answersMessage, type QuestionBrief, type QuestionsNeed } from '../src/shared/questions.js';
 import { explicitIds, refsFromTitle } from '../src/shared/decisions/ids.js';
-import { cardActs, cardCounts, countsWords, escalationKind } from '../src/shared/decisions/words.js';
+import { afterWords, cardActs, cardCounts, countsWords, escalationKind } from '../src/shared/decisions/words.js';
 import type { AutonomyLevel } from '../src/shared/roster/autonomy.js';
 
 const NOW = Date.parse('2026-10-14T12:00:00Z');
@@ -174,4 +174,10 @@ test('decisions-kinds: needs-human is hands-on, a plain FYI is Noted only, a dec
     else assert.ok(!cardActs(f).includes('done'));
     assert.deepEqual(fyi.refs, { pr: 98 }, 'a new record carries its refs');
   }
+});
+
+test('a decision card says what happens: typed to the agent now, even mid-turn, never "after their current turn"', () => {
+  const w = afterWords('decision', { owner: 'Ada' });
+  assert.match(w, /^After you answer: it's typed to Ada now, even mid-turn \(taken in at its next step; held only while a question is open in its terminal\), and Ada records it\. This card shows Sent until then\.$/);
+  assert.doesNotMatch(w, /after their current turn/, 'roster/escalation-answer.ts types a working agent at once (only interruption-rule actions ask first)');
 });

@@ -28,17 +28,16 @@ Live apps don't start by themselves when the office starts, and an office restar
 
 Under the buttons, a card says whether the app is ready, from evidence only:
 
-> **Live app: not ready for Sample check-sheet demo (Checksheet).** Has: Prerequisites, Frame, domain and skeleton (not yet verified) (rows 4, 6–8). Missing: Save, submit and My check sheets (PR #6, open, not merged); Approval, history and demo data (PR #6, open, not merged; row 24 not built).
+> **Live app: not ready for Sample check-sheet demo (Checksheet).** Has: Prerequisites (no journey evidence yet), Frame, domain and skeleton (not yet verified) (rows 4, 6–8). Missing: Save, submit and My check sheets (PR #6, open, not merged); Approval, history and demo data (PR #6, open, not merged; row 24 not built).
 
-Then one line per milestone, tagged **Ready**, **Not verified**, **Restart**, **In a PR**, **Partly** or **Not built**.
+Then one line per milestone, tagged **Ready**, **Not verified**, **No journeys**, **Restart**, **In a PR**, **Partly** or **Not built**.
 
 ![The readiness card](../images/live-app-ready.png)
 
 - **Milestones** are the phases of the project's build plan (`architecture/build-plan.md`, the `### Phase N — …` headings over the numbered row tables), each with the **BUILD** rows it needs; the whole plan is the last milestone, named from the plan's title.
 - **Which rows are built** comes from what the team wrote as it worked, never the plan's State column (agents don't update it): commit subjects naming the row (*Row 16: sheet form page applied*, *Rows 19-21: …*) on a commit that changed build files or says applied / proven / done / PASS, merged PR titles (*rows 4-14*), and `### <date> — Row N` notes in `docs/BUILD-LOG.md`. A *Draft row 16* or *Journal: row 3* commit only mentions it.
 - For the commit the app runs, a milestone's rows are **in the running build**, **merged to main but not in it yet** (⟳ Restart picks them up), **in a PR** (only on an unmerged branch, with its PR from GitHub's list), or **not built**.
-- **Ready** means every BUILD row is in the running build **and** every journey tied to the milestone passed against that very build: a `tests/e2e/*.journey.json` whose `requirement` names one of its rows (`build-plan row 10`), with a test-run record in **App Insights › Testing** whose tested revision is the running commit. Journeys that name no row belong to the whole plan; broken controls (`…-broken`) don't count. A tied journey that failed, or hasn't run against this build, makes the milestone *built, not yet verified*.
-- **A milestone with no tied journeys reads Ready on build evidence alone.** When no journey names any of its rows, there is nothing to wait for: once every BUILD row is in the running build, it says **Ready** (the line then names no journeys). That build evidence is what the team wrote (commit subjects, PR titles, BUILD-LOG notes, see above), not a test. To have a milestone verified by a test, make sure a journey names one of its rows.
+- **Ready** means every BUILD row is in the running build **and** the milestone has at least one journey, every one of which passed against that very build: a `tests/e2e/*.journey.json` whose `requirement` names one of its rows (`build-plan row 10`), with a test-run record in **App Insights › Testing** whose tested revision is the running commit. Journeys that name no row belong to the whole plan; broken controls (`…-broken`) don't count. Built but not yet passed is *built, not yet verified*, and built with no journey at all is *built, no journey evidence yet*: neither is ever ready.
 - Nothing is ready while the app isn't running.
 
 ### What Ready does and doesn't prove

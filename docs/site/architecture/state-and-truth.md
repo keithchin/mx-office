@@ -6,7 +6,7 @@ weight: 30
 
 > [!NOTE]
 > Describes release 66 (commit `39d0083a`), assessed 2026-10-20.
-> **Verification scope:** the sources and writers were read in code. The durability of answers, hand-offs, task creation and the store readers is covered by tests that were run (`durable-dispatch`, `task-durability`, `store-safety`, `restart-truth`, `flow`). Readiness verdicts are pinned by `liveapp-ready`, including the case where a milestone with no journeys reads Ready. Power-loss durability is **not** claimed by the code and was not tested.
+> **Verification scope:** the sources and writers were read in code. The durability of answers, hand-offs, task creation and the store readers is covered by tests that were run (`durable-dispatch`, `task-durability`, `store-safety`, `restart-truth`, `flow`). Readiness verdicts are pinned by `liveapp-ready`, including the case where a milestone with no journeys reads *built, no journey evidence yet* rather than Ready (changed after release 66). Power-loss durability is **not** claimed by the code and was not tested.
 
 ## The idea
 

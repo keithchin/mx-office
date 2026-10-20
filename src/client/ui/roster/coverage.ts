@@ -6,6 +6,7 @@
 import { coverageRows, coveredNote, managerOf, SHAPES, TEAM_OWNER, type Coverage } from '../../../shared/roster/coverage';
 import type { RoleId, TeamId } from '../../../shared/roster/roles';
 import { TEAM_META } from '../../../shared/roster/card-team';
+import { SHAPE_LEAVES_YOU } from '../../../shared/roster/shape-words';
 import type { MemberView, RosterView } from '../../../shared/roster/types';
 import { h } from '../dom';
 import './coverage.css';
@@ -34,7 +35,7 @@ export function shapeText(v: Pick<RosterView, 'shape' | 'level'>): string {
 
 export function shapeChip(v: Pick<RosterView, 'shape' | 'level'>): HTMLElement {
   const s = SHAPES[v.shape ?? 'enterprise'];
-  return h('span.ro-shape-chip', { title: `Team shape: ${s.label} — ${s.who}${v.level ? ` Budget level: ${LEVEL_WORD[v.level] ?? v.level}.` : ''}` }, h('span.ao-emo', { 'aria-hidden': 'true' }, `${s.icon} `), shapeText(v));
+  return h('span.ro-shape-chip', { title: `Team shape: ${s.label} — ${s.who} ${SHAPE_LEAVES_YOU[v.shape ?? 'enterprise']}${v.level ? ` Budget level: ${LEVEL_WORD[v.level] ?? v.level}.` : ''}` }, h('span.ao-emo', { 'aria-hidden': 'true' }, `${s.icon} `), shapeText(v));
 }
 
 /** The coverage table: which member covers each team (read-only for now). Undefined on a team that covers itself. */
@@ -47,6 +48,7 @@ export function coverageTable(v: RosterView): HTMLElement | undefined {
     { 'aria-label': 'Team coverage' },
     h('h3.ro-coverage-h', {}, `🧩 Coverage · ${SHAPES[v.shape ?? 'enterprise'].label}`),
     h('p.ro-dim', {}, SHAPES[v.shape ?? 'enterprise'].who),
+    h('p.ro-leaves', {}, SHAPE_LEAVES_YOU[v.shape ?? 'enterprise']),
     h(
       'table.ro-coverage-t',
       {},

@@ -74,7 +74,10 @@ export interface GhReviewNote {
 export interface GhState<T> {
   items: T[];
   error?: string;
+  /** When the list last came back from GitHub (a failed fetch leaves it as it was). */
   fetchedAt: number;
+  /** When the last fetch failed, while `error` is set: the refresh timers count from it too. */
+  errorAt?: number;
   loading: boolean;
 }
 

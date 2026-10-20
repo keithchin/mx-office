@@ -8,6 +8,7 @@ import type { PrChecks } from '../../shared/prshots.js';
 import type { GhPull } from '../../shared/protocol.js';
 import { coversLinks, inferredLinks, mergeLinks } from '../../shared/testing/links.js';
 import { IMPORTER_VERSION, statusOf, type ResultStatus, type TestRunDraft } from '../../shared/testing/record.js';
+import { ciResultStatus } from '../../shared/ci-conclusion.js';
 
 const SHA = /^[0-9a-f]{7,64}$/i;
 
@@ -45,9 +46,11 @@ function rowStatus(icon: string, result: string): ResultStatus {
 export function draftFromPrChecks(repo: string, c: PrChecks, opts: { branch?: string; title?: string; body?: string } = {}): TestRunDraft | undefined {
   const run = c.run;
   if (!run || String(run.status).toLowerCase() !== 'completed' || !SHA.test(run.sha ?? '')) return undefined;
+  // A cancelled, timed-out or stale run did not pass (shared/ci-conclusion.ts), whatever its rows say.
+  const runStatus = ciResultStatus(run.conclusion) ?? statusOf(run.conclusion);
   const results = c.rows.map((row) => ({ name: row.check, status: rowStatus(row.icon, row.result), detail: row.result || undefined, links: inferredLinks(row.check, 'test name', `pr-checks run ${run.id}`) }));
   if (!results.length) {
-    const s = statusOf(run.conclusion);
+    const s = runStatus;
     if (!s) return undefined;
     results.push({ name: 'pr-checks', status: s, detail: run.conclusion || undefined, links: [] });
   }
@@ -62,7 +65,7 @@ export function draftFromPrChecks(repo: string, c: PrChecks, opts: { branch?: st
     ...(c.pr ? { pr: c.pr } : {}),
     startedAt: run.createdAt,
     results,
-    ...(statusOf(run.conclusion) ? { conclusion: statusOf(run.conclusion) } : {}),
+    ...(runStatus ? { conclusion: runStatus } : {}),
     links: mergeLinks(coversLinks(opts.body, `PR #${c.pr} description`), opts.title ? inferredLinks(opts.title, 'PR title', `PR #${c.pr} title`) : []),
     actor: { kind: 'ci', name: 'pr-checks' },
     importer: IMPORTER_VERSION,

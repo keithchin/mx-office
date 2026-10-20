@@ -4,7 +4,7 @@
 
 import type { GhPull } from '../../shared/protocol.js';
 import type { NeedItem } from '../../shared/needsyou.js';
-import { isRedNeed } from '../../shared/notify-teams.js';
+import { actionableRows } from '../../shared/needs-actionable.js';
 import { lastSlot, type StandupSchedule } from '../../shared/roster/schedule.js';
 import type { SetupView } from '../../shared/wizard.js';
 import type { DigestData } from './cards.js';
@@ -49,7 +49,7 @@ export function buildDigest(i: DigestInput): DigestData {
     .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
     .map((p) => ({ number: p.number, title: p.title }));
   const here = i.needs.filter((n) => n.kind !== 'floor');
-  const redItems = here.filter((n) => isRedNeed(n) && !(n.kind === 'setup' && n.level === 'info'));
+  const redItems = actionableRows(here);
   const red = redItems.filter((n) => n.kind !== 'escalation').map((n) => n.text);
   const st = i.setup?.show ? i.setup.stages : undefined;
   const stages = st?.length

@@ -1,4 +1,5 @@
 import { execFileOff } from './offloop/exec.js';
+import { ciCheckState, ciRollup } from '../shared/ci-conclusion.js';
 import type { GhCheck, GhCloseReason, GhComment, GhIssue, GhIssueDetail, GhLabel, GhMergeMethod, GhPull, GhPullDetail, GhRepoInfo, GhReviewComment, GhState } from '../shared/protocol.js';
 import type { GhAs } from './signins.js';
 import { LOCAL_ONLY_TEXT, localOnlyAt } from './local-only.js';
@@ -37,31 +38,13 @@ function labels(raw: any[]): GhLabel[] {
   return (raw ?? []).map((l) => ({ name: String(l.name), color: `#${l.color ?? '888888'}` }));
 }
 
-function checksOf(rollup: any[]): GhPull['checks'] {
-  if (!rollup?.length) return 'none';
-  let pending = false;
-  for (const c of rollup) {
-    const concl = String(c.conclusion ?? c.state ?? '').toUpperCase();
-    const status = String(c.status ?? '').toUpperCase();
-    if (['FAILURE', 'ERROR', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED'].includes(concl)) return 'fail';
-    if (status && status !== 'COMPLETED') pending = true;
-    if (concl === 'PENDING' || concl === 'EXPECTED') pending = true;
-  }
-  return pending ? 'pending' : 'pass';
-}
-
-const FAILED = ['FAILURE', 'ERROR', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED', 'STARTUP_FAILURE'];
+/** The PR card's checks: a cancelled, timed-out, unstarted, waiting or stale check is a failure (shared/ci-conclusion.ts). */
+const checksOf = (rollup: any[]): GhPull['checks'] => ciRollup(rollup);
 
 /** One entry of statusCheckRollup: a CheckRun (Actions) or a StatusContext (other CI). */
 function checkOf(c: any): GhCheck {
-  const concl = String(c.conclusion ?? c.state ?? '').toUpperCase();
-  const status = String(c.status ?? '').toUpperCase();
-  let state: GhCheck['state'] = 'pass';
-  if (FAILED.includes(concl)) state = 'fail';
-  else if ((status && status !== 'COMPLETED') || !concl || concl === 'PENDING' || concl === 'EXPECTED') state = 'pending';
-  else if (['SKIPPED', 'NEUTRAL', 'STALE'].includes(concl)) state = 'skip';
   const name = String(c.name ?? c.context ?? 'check');
-  return { name: c.workflowName ? `${c.workflowName} / ${name}` : name, state, url: c.detailsUrl ?? c.targetUrl ?? undefined };
+  return { name: c.workflowName ? `${c.workflowName} / ${name}` : name, state: ciCheckState(c), url: c.detailsUrl ?? c.targetUrl ?? undefined };
 }
 
 function commentsOf(raw: any[]): GhComment[] {
@@ -450,7 +433,8 @@ export class GitHub {
       const items = this.claims.mark(this.relabel('issue', fetched, asked), asked);
       this.issues = { items, fetchedAt: Date.now(), loading: false };
     } catch (err) {
-      this.issues = { ...this.issues, loading: false, error: (err as Error).message, fetchedAt: Date.now() };
+      // fetchedAt stays the last fetch that came back; errorAt is when this one failed (the boards say so).
+      this.issues = { ...this.issues, loading: false, error: (err as Error).message, errorAt: Date.now() };
     }
     this.onIssues(this.issues);
   }
@@ -497,7 +481,7 @@ export class GitHub {
       const items = this.relabel('pull', fetched, asked);
       this.pulls = { items, fetchedAt: Date.now(), loading: false };
     } catch (err) {
-      this.pulls = { ...this.pulls, loading: false, error: (err as Error).message, fetchedAt: Date.now() };
+      this.pulls = { ...this.pulls, loading: false, error: (err as Error).message, errorAt: Date.now() };
     }
     this.onPulls(this.pulls);
   }

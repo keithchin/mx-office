@@ -7,6 +7,7 @@ import { access } from 'node:fs/promises';
 import path from 'node:path';
 import type { QueueTask, Usage } from '../../shared/protocol.js';
 import { modelLabel, type RunOutcome, type RunRecord } from '../../shared/analysis.js';
+import { CI_FAILED } from '../../shared/ci-conclusion.js';
 import { gh } from '../github.js';
 import { findTranscriptAsync, readSessionLive, type SessionStats } from './transcript.js';
 import { scorecardOf } from './scorecard.js';
@@ -113,7 +114,7 @@ export class GhCache {
 function checksOf(rollup: any[]): string {
   if (!Array.isArray(rollup) || !rollup.length) return 'none';
   const states = rollup.map((c) => String(c?.conclusion || c?.state || c?.status || '').toUpperCase());
-  if (states.some((s) => ['FAILURE', 'ERROR', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED', 'STARTUP_FAILURE'].includes(s))) return 'fail';
+  if (states.some((s) => CI_FAILED.includes(s))) return 'fail';
   if (states.some((s) => ['PENDING', 'EXPECTED', 'IN_PROGRESS', 'QUEUED', ''].includes(s))) return 'pending';
   return 'pass';
 }
