@@ -25,6 +25,15 @@ const TOOLING = [
  */
 const KB_LINE = '{{kb}}';
 const BRD_LINE = '{{brd}}';
+/** The process map's lines (shared/process-map.ts): only when the project's toolkit has its skill, else left out. */
+const MAP2_LINE = '{{map2}}';
+const MAP3_LINE = '{{map3}}';
+const MAP_LINES: Record<string, string> = {
+  [MAP2_LINE]:
+    "- Stage 2 close, the process map (pass 1; optional, but gated once its model exists): when the BRDs carry more than about ten open questions or ASSUMED decisions, or more than one role touches the same record, write `design/process-model.json` and `design/question-anchors.json` and generate `design/process-map.html` with the toolkit's `process-map.js` (`skills/process-map.md`; nested layout: `analysis/<name>/design/`). `bin/brd-report.sh` then opens `analysis/brd-report.html` with it. A skip is one line in PROJECT.md.",
+  [MAP3_LINE]:
+    "- Stage 3, when `design/process-model.json` exists: pass 2 of `design/process-map.html` (`skills/process-map.md`: set `page` on the steps that gained a wireframe, re-run `anchor` and `build`). Rebuild it after any change to the model, the anchors or a wireframe: gate-check's Stage 3 fails a map older than any of them, and the Documents page shows it as stale.",
+};
 const BRD_TAIL = "(`brd-generation.md`, validated per `brd-validation.md`) and `analysis/brd-report.html` (the toolkit's `bin/brd-report.sh <project>`)";
 
 /** The Chief Analyst's Stage 1 and Stage 2 lines for an entry mode (undefined: not recorded). */
@@ -45,12 +54,14 @@ const LISTS: Partial<Record<RoleId, string[]>> = {
     '- Stage 0: `triage.md` (project root) + `analysis/triage.html` (`bin/triage-report.sh`), `analysis/source-sufficiency.html`; `assessment.md` when the runbook asks for it.',
     KB_LINE,
     BRD_LINE,
+    MAP2_LINE,
     '- For the client, once a BRD is confirmed: `docs/requirements/BRD-<feature>.pdf` (`office-workers export-pdf analysis/brd-report.html docs/requirements/BRD-<feature>.pdf`), `docs/requirements/use-cases.xlsx` (a short `py` + openpyxl script over the BRD JSON: one row per use case with id, actor, steps, rules, sourceRef) and `docs/requirements/process-flow.md` (the main flow as a Mermaid `flowchart`).',
     '- Weekly: `docs/insights/YYYY-Www.md`, with charts as PNGs next to it made with `py` + matplotlib.',
     '- Reports: the toolkit\'s own (`reports/validation-report.md` from `brd-validation.md`, `reports/summary.md`, `reports/gaps-report.md`) stay where the toolkit writes them; any other report of yours goes in `reports/analysis/`.',
   ],
   'lead-designer': [
     '- Stage 3 (`design-artifacts.md`): `design/brand.md`, `design/ds.css` (the tokens), `design/design-system.html` (a component showcase linking `ds.css`), `design/wireframes/<screen>.html` (one per screen, each linking `../ds.css`) and `design/components.md` (the components and where they are used).',
+    MAP3_LINE,
     '- `design/storyboard.html`: the wireframes in journey order, each a screenshot (`office-workers screenshot design/wireframes/<screen>.html design/storyboard/<nn>-<screen>.png`) with a line on what the user does there.',
     '- Stage 6 with the Lead Tester: `design/ui-reviews/ui-review-<YYYY-MM-DD>.html` per review pass.',
     '- Any other report of yours (a design review, an accessibility check) goes in `reports/design/`.',
@@ -79,12 +90,14 @@ const DRAFTS: Partial<Record<RoleId, string>> = {
  * The Playbook's "Your deliverables" section for `roleId`; `earlyDrafts` adds the early-drafts rule for Design,
  * Development and Testing. `also`: the roles whose teams it covers besides its own (shared/roster/coverage.ts),
  * whose deliverables are its too, each under its team's heading. `entry`: the project's entry mode, when it's
- * recorded (where the knowledge base and the BRDs go differs: kbLines).
+ * recorded (where the knowledge base and the BRDs go differs: kbLines). `processMap`: the project's toolkit
+ * has skills/process-map.md (toolkit-pin/features.ts), so the Chief Analyst and the Lead Designer are told
+ * about the map; an older pin's team isn't sent after a skill its copy lacks.
  */
-export function deliverablesBrief(roleId: RoleId, earlyDrafts: boolean, also: readonly RoleId[] = [], entry?: EntryMode): string[] {
+export function deliverablesBrief(roleId: RoleId, earlyDrafts: boolean, also: readonly RoleId[] = [], entry?: EntryMode, processMap = false): string[] {
   const role = ROLE_BY_ID.get(roleId)!;
   const where = kbLines(entry);
-  const listOf = (r: RoleId) => (LISTS[r] ?? []).map((l) => (l === KB_LINE ? where.kb : l === BRD_LINE ? where.brd : l));
+  const listOf = (r: RoleId) => (LISTS[r] ?? []).flatMap((l) => (l === KB_LINE ? [where.kb] : l === BRD_LINE ? [where.brd] : MAP_LINES[l] !== undefined ? (processMap ? [MAP_LINES[l]] : []) : [l]));
   const own = listOf(roleId);
   const out = [
     '## Your deliverables',

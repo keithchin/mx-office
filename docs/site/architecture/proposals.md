@@ -12,6 +12,9 @@ badge: Proposed
 > Proposals made against release 66 (commit `39d0083a`, the same `src/` as release 65), assessed 2026-10-20.
 > **Verification scope:** the *today* part of each proposal was confirmed in code and, for navigation, Needs you, the review gate and readiness, by tests that were run. The proposals themselves are untested designs; their effect on performance and on users is unknown until built.
 
+> [!NOTE]
+> **Built since, in its minimal form: the artifact beside the decision.** A decision card whose question is pinned on the toolkit's process map links to it (`See where this fits → Process map: (process) · step (n)`, opening the map at that process), in today's Needs-you cards; no App Workspace. See [Documents › The process map](../using-the-office/deliverables.md#the-process-map).
+
 Each proposal says what it does to the work: **removes** it, **hides** it, **automates** it, or **transfers** it to you (or makes an existing transfer visible).
 
 ## Navigation

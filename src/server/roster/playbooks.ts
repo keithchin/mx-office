@@ -18,6 +18,8 @@ import { craftOn, skillsBrief, type SkillOverrides } from '../../shared/roster/s
 import type { SubagentRecord } from '../../shared/roster/subagents.js';
 import { applyStanding, applyStandingAsync } from './subagent-files.js';
 import { deliverablesBrief } from './deliverables-brief.js';
+import { toolkitHas } from '../toolkit-pin/features.js';
+import { PROCESS_MAP_SKILL } from '../../shared/process-map.js';
 import { toolkitDir as officeToolkitDir } from '../connections/store.js';
 import { alsoCovers, covers, isIdentity, managerOf, subagentDefsOf, writerOf, type Coverage } from '../../shared/roster/coverage.js';
 import { coverLines, coverTeamLine, QUESTIONS_LINE } from './playbook-cover.js';
@@ -303,7 +305,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     ...blockerLines(roleId, c, ctx.names),
     ...(also.length && !role.generalist ? coverLines(c!, roleId) : []),
     '',
-    ...deliverablesBrief(roleId, ctx.earlyDrafts ?? true, also, ctx.entry),
+    ...deliverablesBrief(roleId, ctx.earlyDrafts ?? true, also, ctx.entry, !!ctx.toolkit && toolkitHas(ctx.toolkit.dir, PROCESS_MAP_SKILL)),
     ...(ctx.maxSubagents && subs.length ? ['## Parallel work', `Run at most ${ctx.maxSubagents} subagent${ctx.maxSubagents === 1 ? '' : 's'} at once (the project's budget level). Wait for one to finish before dispatching another.`, ''] : []),
   ].join('\n');
 }

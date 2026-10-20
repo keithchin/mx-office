@@ -17,6 +17,10 @@ import type { Source } from './content.js';
 import { scanDeliverables, type ScanInput, type ScanPerson } from './scan.js';
 import { branchInfo, fetchDefault } from '../wizard/gate-source.js';
 import { commitTime } from './git.js';
+import { withProcessMap } from '../process-map/index.js';
+import { toolkitHasAsync } from '../toolkit-pin/features.js';
+import { toolkitOf } from '../toolkit-pin/index.js';
+import { PROCESS_MAP_SKILL } from '../../shared/process-map.js';
 
 /** A scan is handed out again for this long (ms); after it, it's still handed out at once while a new one runs. */
 const FRESH_MS = 20_000;
@@ -73,6 +77,15 @@ export async function scanInput(floor: Pick<Floor, 'id' | 'dir'>, who: ScanPerso
 }
 const fetchedOnce = new Set<string>();
 
+/** Whether the floor's toolkit (its pin, else the shared clone) knows the process map (server/process-map/). */
+async function mapSkill(dir: string): Promise<boolean> {
+  try {
+    return await toolkitHasAsync(toolkitOf(dir).dir, PROCESS_MAP_SKILL);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The floor's deliverables, never more than one scan at a time per floor. Within FRESH_MS of the last
  * scan, that one; after it, still that one at once while a new scan runs behind it (the next ask gets
@@ -83,7 +96,7 @@ export function deliverablesOf(ctx: Ctx, floor: Floor, fresh = false): Promise<D
   if (hit?.next) return fresh ? hit.next : hit.p;
   if (hit && !fresh && Date.now() - hit.at < FRESH_MS) return hit.p;
   const p = scanInput(floor, people(ctx, floor))
-    .then((input) => scanDeliverables(input))
+    .then(async (input) => withProcessMap(input, await scanDeliverables(input), { toolkitHasMap: await mapSkill(floor.dir) }))
     .catch(() => ({ floor: floor.id, scannedAt: Date.now(), items: [], sources: [] }) as DeliverablesView);
   // The first scan, or a fresh one, is handed out itself; a stale one's answer is handed out until the new one is done.
   const entry: Entry = !hit || fresh ? { at: Date.now(), p, next: p } : { ...hit, next: p };

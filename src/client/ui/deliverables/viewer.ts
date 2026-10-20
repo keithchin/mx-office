@@ -8,6 +8,7 @@ import { resolveDocLink } from '../../../shared/docs';
 import { h, openModal, type Modal } from '../dom';
 import { markdownFile } from '../markdown';
 import { renderMermaid } from './mermaid';
+import { factBadges } from '../process-map/badges';
 
 const q = (floor: string, src: string, path: string, more: Record<string, string> = {}) => new URLSearchParams({ floor, src, path, ...more }).toString();
 export const fileUrl = (floor: string, src: string, path: string, download = false) => `/api/deliverables/file?${q(floor, src, path, download ? { download: '1' } : {})}`;
@@ -66,9 +67,12 @@ async function csvTable(floor: string, src: string, path: string): Promise<HTMLE
 /** The document showing now: one at a time, so a second click on its link (or a quick double click) doesn't open another. */
 let showing: { key: string; modal: Modal } | undefined;
 
-/** Opens `file` (found at `where`, else its best place) in a window, or keeps the one showing it. `view` finds the BRD report for a BRD. */
-export function openDeliverable(floor: string, file: Pick<DeliverableFile, 'path' | 'where'> & Partial<DeliverableFile>, view?: DeliverablesView, where = file.where[0]): Modal {
-  const key = `${floor}|${where?.src ?? 'main'}|${file.path}`;
+/**
+ * Opens `file` (found at `where`, else its best place) in a window, or keeps the one showing it. `view` finds the BRD report for a BRD.
+ * `hash`: an HTML report's own place to open at (a process map's `#/<process>`).
+ */
+export function openDeliverable(floor: string, file: Pick<DeliverableFile, 'path' | 'where'> & Partial<DeliverableFile>, view?: DeliverablesView, where = file.where[0], hash = ''): Modal {
+  const key = `${floor}|${where?.src ?? 'main'}|${file.path}${hash}`;
   if (showing?.key === key) return showing.modal;
   showing?.modal.close();
   const path = file.path;
@@ -89,6 +93,7 @@ export function openDeliverable(floor: string, file: Pick<DeliverableFile, 'path
         h('span.dv-kind', {}, KIND_LABEL[kind] ?? kind),
         others ?? h('span', {}, where ? whereText(where) : ''),
         file.size !== undefined ? h('span', {}, sizeText(file.size)) : null,
+        factBadges(file.processMap),
         h('a.btn.small', { href: fileUrl(floor, src, path, true), download: path.slice(path.lastIndexOf('/') + 1) }, 'Download'),
         kind === 'html' || kind === 'pdf' || kind === 'image' ? h('a.btn.small', { href: fileUrl(floor, src, path), target: '_blank', rel: 'noopener noreferrer' }, 'Open in a new tab') : null,
       ),
@@ -108,7 +113,7 @@ export function openDeliverable(floor: string, file: Pick<DeliverableFile, 'path
   };
   const fill = async () => {
     const url = fileUrl(floor, src, path);
-    if (kind === 'html') return h('iframe.dv-frame', { src: url, sandbox: 'allow-scripts', referrerpolicy: 'no-referrer', title: path });
+    if (kind === 'html') return h('iframe.dv-frame', { src: url + (hash.startsWith('#') ? hash : ''), sandbox: 'allow-scripts', referrerpolicy: 'no-referrer', title: path });
     if (kind === 'pdf') return h('iframe.dv-frame', { src: url, title: path });
     if (kind === 'image') return h('div.dv-pic', {}, h('img', { src: url, alt: path }));
     if (kind === 'csv') return csvTable(floor, src, path);

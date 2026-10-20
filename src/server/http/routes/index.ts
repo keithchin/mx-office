@@ -29,6 +29,7 @@ import { rosterRoutes } from './roster.js';
 import { searchRoutes } from './search.js';
 import { teamRoutes } from './teams.js';
 import { deliverableRoutes } from './deliverables.js';
+import { processMapRoutes } from './process-map.js';
 import { serviceRoutes } from './services.js';
 import { studioRoutes } from './studio.js';
 import { wizardRoutes } from './wizard.js';
@@ -178,6 +179,7 @@ export const routes: readonly Route[] = [
   teamRoutes.page,
   teamRoutes.labels,
   deliverableRoutes.deliverables,
+  processMapRoutes.pins,
   progressRoutes.view,
   progressRoutes.acceptance,
   progressRoutes.draft,

@@ -17,6 +17,7 @@ The list comes from the toolkit's conversion runbook and the Leads' Playbooks (`
 | 0 Triage | Analysis | `triage.md` / `analysis/triage.html`, `analysis/source-sufficiency.html`, `assessment.md` |
 | 1 Analysis | Analysis | `analysis/source-ledger.html`, `analysis/knowledge-base/extraction-report.html`, the knowledge base |
 | 2 BRDs | Analysis | `F{NNN}*.brd.json`, `analysis/brd-report.html`; for the client `docs/requirements/BRD-*.pdf`, `use-cases.xlsx`, `process-flow.md` |
+| 2 BRDs, 3 Architecture & design | Analysis, then Design | `design/process-map.html` or `analysis/<name>/design/process-map.html`, the toolkit's **Process map** (optional; see [The process map](#the-process-map)) |
 | 3 Architecture & design | Design | `design/brand.md`, `design/ds.css`, `design/design-system.html`, `design/wireframes/*.html`, `design/storyboard.html`, `design/components.md` |
 | 3 Architecture & design | Development | `architecture/blueprint.md` + `.html`, `architecture/domain-model.md`, `architecture/adr/*.md`, `fit-gap.md` |
 | 4 Build plan | Development, Testing | `architecture/build-plan.md`, `architecture/modules/<M>/module-brief.md`, `architecture/coverage-ledger.md`, `tests/test-plan.md` |
@@ -65,6 +66,15 @@ Click a file to open it. **Download** saves it; HTML, PDFs and pictures also hav
 - **HTML reports** (the toolkit's triage, ledger and BRD reports, wireframes) open in a sandboxed frame with no origin and no network. The office inlines the report's own stylesheets, scripts and pictures first, and serves Mermaid from its own copy when the page asks a CDN for it.
 - **Markdown** is rendered like the bookshelf, pictures included. **Mermaid** blocks are drawn as diagrams, light or dark to match your theme, with the source folded under each (**Mermaid source**); a block Mermaid can't parse stays as its source with the reason.
 - **Pictures** (SVG too) show as pictures, **PDFs** in the browser's viewer, **CSV** as a table of the first 200 rows, **JSON** pretty-printed (a BRD links to the BRD report), and **Excel workbooks** as a download.
+
+## The process map
+
+The toolkit's process map (its `skills/process-map.md`) draws each business process of the app as a swimlane map: every step in the lane of whoever does it, on its wireframe once screens exist, with every open question and ASSUMED decision pinned to the step it is about. The team writes `design/process-model.json` and `design/question-anchors.json` and generates `design/process-map.html` with the toolkit's `process-map.js` (the nested layout keeps them in `analysis/<name>/design/`). The office only reads these files; it never generates the map.
+
+- **Where it shows.** A map with no wireframes beside it yet is **pass 1**, drawn at Stage 2 close: it is listed under Stage 2 as the Chief Analyst's, with a *Pass 1 · no screens yet* badge. Once wireframes exist it is **pass 2** and is listed under Stage 3 as the Lead Designer's (*Pass 2 · with screens*). It opens in the viewer like any other HTML report (sandboxed, self-contained). When `analysis/brd-report.html` opens with the pass-1 map (the toolkit's `bin/brd-report.sh` draws it at the top), the report has an *Opens with the pass-1 process map* badge.
+- **Stale, not missing.** The toolkit's Stage 3 gate fails a map older than its model, its anchors or any wireframe in `wireframes/*.html` beside it. The office uses the same rule and shows a *Stale: older than its model / its anchors / a wireframe* badge; the map still counts as there. In a folder (a project with no remote, a team member's worktree) it compares the files' own times, forgiving two seconds for files a checkout wrote a moment apart; at a commit (`origin/<default>`, an office branch) it compares the last commit that changed each file.
+- **Only when the toolkit has it.** A project whose pinned toolkit has no `skills/process-map.md` gets no *Process map* row unless it has a map anyway, and its Playbooks don't mention it. When the pin has the skill, the row is *Optional* while there's no map, and the Chief Analyst's and the Lead Designer's **Your deliverables** name it.
+- **From a decision card.** A Needs-you card whose question or ASSUMED decision is pinned on the map (matched through `design/question-anchors.json`: the BRD question's id, an anchor id the card names, or the question's text) shows *`See where this fits → Process map: (process) · step (n)`*. It opens the map at that process (`#/<process>`, the map's own link; the map has no link to a single step yet, so the line names the step). An item the map keeps under *whole app* opens the map's index.
 
 ## How the Leads make them
 
