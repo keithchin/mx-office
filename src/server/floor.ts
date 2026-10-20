@@ -104,6 +104,8 @@ const LANDED_DELAY_MS = 1500;
 /** Boards on a floor nobody is on, with nothing running, are asked GitHub about this seldom. */
 const IDLE_REFRESH_MS = 10 * 60_000;
 const REFRESH_MS = 90_000;
+/** When a board was last fetched or last failed to: a failure keeps fetchedAt, and must not make every tick retry. */
+const lastTry = (s: { fetchedAt: number; errorAt?: number }) => Math.max(s.fetchedAt, s.errorAt ?? 0);
 
 /** What `git` says about a checkout: its name, branch and origin for the top bar. */
 export function projectInfo(dir: string, name: string, agentCmd: string, agentArgs: string[]): ProjectInfo {
@@ -343,7 +345,7 @@ export class Floor {
     void this.github.refresh();
     // A floor with people on it, or work under way, keeps its boards fresh; the others check in now and then.
     this.timer = setInterval(() => {
-      if (this.active() || Date.now() - this.github.issues.fetchedAt > IDLE_REFRESH_MS) void this.github.refresh();
+      if (this.active() || Date.now() - lastTry(this.github.issues) > IDLE_REFRESH_MS) void this.github.refresh();
     }, REFRESH_MS);
   }
 
@@ -416,7 +418,7 @@ export class Floor {
   arrived() {
     // The floor's own folder brought up to date with GitHub when that's safe (floor-sync/).
     originNews(this.dir, 'stale');
-    if (Date.now() - Math.max(this.github.issues.fetchedAt, this.github.pulls.fetchedAt) > REFRESH_MS) void this.github.refresh();
+    if (Date.now() - Math.max(lastTry(this.github.issues), lastTry(this.github.pulls)) > REFRESH_MS) void this.github.refresh();
   }
 
   private active(): boolean {

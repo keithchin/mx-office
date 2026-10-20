@@ -433,7 +433,8 @@ export class GitHub {
       const items = this.claims.mark(this.relabel('issue', fetched, asked), asked);
       this.issues = { items, fetchedAt: Date.now(), loading: false };
     } catch (err) {
-      this.issues = { ...this.issues, loading: false, error: (err as Error).message, fetchedAt: Date.now() };
+      // fetchedAt stays the last fetch that came back; errorAt is when this one failed (the boards say so).
+      this.issues = { ...this.issues, loading: false, error: (err as Error).message, errorAt: Date.now() };
     }
     this.onIssues(this.issues);
   }
@@ -480,7 +481,7 @@ export class GitHub {
       const items = this.relabel('pull', fetched, asked);
       this.pulls = { items, fetchedAt: Date.now(), loading: false };
     } catch (err) {
-      this.pulls = { ...this.pulls, loading: false, error: (err as Error).message, fetchedAt: Date.now() };
+      this.pulls = { ...this.pulls, loading: false, error: (err as Error).message, errorAt: Date.now() };
     }
     this.onPulls(this.pulls);
   }
