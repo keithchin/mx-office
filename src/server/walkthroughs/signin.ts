@@ -27,15 +27,24 @@ export interface Loc {
   waitFor(o: { state: 'visible' | 'attached'; timeout: number }): Promise<void>;
   isVisible(o?: { timeout?: number }): Promise<boolean>;
   boundingBox(): Promise<Box | null>;
-  click(o?: { timeout?: number; noWaitAfter?: boolean }): Promise<void>;
   press(key: string, o?: { timeout?: number }): Promise<void>;
   fill(v: string, o?: { timeout?: number }): Promise<void>;
   pressSequentially(v: string, o?: { delay?: number }): Promise<void>;
   inputValue(): Promise<string>;
   scrollIntoViewIfNeeded(o?: { timeout?: number }): Promise<void>;
+  locator(sel: string): Loc;
+  filter(o: { hasText: RegExp | string }): Loc;
+  count(): Promise<number>;
+  evaluate<R, A = undefined>(fn: (n: Element, a: A) => R, a?: A): Promise<R>;
+  evaluateAll<R>(fn: (ns: Element[]) => R): Promise<R>;
+  getAttribute(name: string): Promise<string | null>;
+  textContent(): Promise<string | null>;
+  setInputFiles(files: string[]): Promise<void>;
+  click(o?: { timeout?: number; noWaitAfter?: boolean; force?: boolean }): Promise<void>;
 }
 export interface Page {
   goto(url: string, o?: { waitUntil?: 'load' | 'domcontentloaded'; timeout?: number }): Promise<unknown>;
+  keyboard: { press(key: string): Promise<void> };
   locator(sel: string): Loc;
   evaluate<R, A>(fn: (a: A) => R, a: A): Promise<R>;
   waitForFunction<A>(fn: (a: A) => boolean, a: A, o?: { timeout?: number }): Promise<unknown>;

@@ -7,6 +7,9 @@
 // what the app said, never a failed first step. Then it films a fresh context that starts with the account's
 // cookies (the same session): a chapter card, then each step with its caption, a step counter and a highlight
 // box around what it's about to click or type into (./overlay.ts), a screenshot at the end of each step.
+// Each action and check is the toolkit journey runner's, with its semantics (./actions.ts); a step's data
+// (OQL) and trace checks aren't run, and its card says so. A failed step says what the app showed, if
+// anything (an error dialog, a validation message), apart from what the recorder couldn't find.
 //
 // Honest by construction: the first step that fails (an action that can't be done, a check that doesn't
 // hold, a step the script can't walk) is captioned as failed, kept on screen, screenshotted, and ends the
@@ -17,10 +20,11 @@
 import { mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { OVERLAY_SCRIPT } from './overlay.js';
-import { RECORDING_CAP_MS, type ManifestStep, type WalkAction, type WalkScript, type WalkStep } from '../../shared/walkthroughs/types.js';
+import { RECORDING_CAP_MS, type ManifestStep, type WalkScript, type WalkStep } from '../../shared/walkthroughs/types.js';
 import { ADMIN_USER } from '../../shared/walkthroughs/identity.js';
 import { isSessionCap } from '../../shared/liveapp/session-cap.js';
-import { AppSessions, PASSWORD, SignInFailed, VIEWPORT, appSays, lockTo, shows, signInWords, type Box, type Browser, type Ctx, type Login, type Page } from './signin.js';
+import { AppSessions, PASSWORD, SignInFailed, VIEWPORT, appSays, lockTo, shows, signInWords, type Browser, type Ctx, type Login, type Page } from './signin.js';
+import { StepFailed, act, appShows, check, withApp } from './actions.js';
 
 export { ADMIN_USER, AppSessions, SignInFailed, VIEWPORT };
 export { launchChromium, signIn, type Browser } from './signin.js';
@@ -45,102 +49,21 @@ export interface RecordInput {
   stepMs?: number;
   /** false: played only to set up another journey's start state (no video, no cards, no screenshots, no pauses). */
   film?: boolean;
+  /** The recorded commit's files (the recording app's workspace): setFiles attaches from its tests/e2e/fixtures only. */
+  workspace?: string;
 }
 
 export interface RecordResult {
   status: 'passed' | 'failed' | 'cancelled' | 'error';
-  failure?: { step?: number; why: string };
+  failure?: { step?: number; why: string; said?: string };
   steps: ManifestStep[];
   /** raw.webm in outDir, when anything was filmed. */
   video?: string;
   durationMs: number;
 }
 
-class StepFailed extends Error {}
 const short = (e: unknown) => String((e as Error)?.message ?? e).split('\n')[0].replace(/\s+/g, ' ').slice(0, 220);
 const pad = (n: number) => String(n).padStart(2, '0');
-
-async function boxOf(page: Page, sel: string): Promise<Box | null> {
-  const el = page.locator(sel).first();
-  await el.scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => undefined);
-  return el.boundingBox().catch(() => null);
-}
-
-/** Shows the highlight around `sel` for a moment, so the viewer sees where the click lands. */
-async function point(page: Page, sel: string) {
-  const el = page.locator(sel).first();
-  if (!(await shows(page, sel, 6000))) throw new StepFailed(`${sel} isn't on the screen`);
-  const box = await boxOf(page, sel);
-  await page.evaluate((b) => (window as unknown as { __wt: { highlight(b: unknown): void } }).__wt.highlight(b), box);
-  await page.waitForTimeout(550);
-}
-
-async function act(page: Page, a: WalkAction, origin: string) {
-  switch (a.do) {
-    case 'goto':
-      await page.goto(new URL(a.path, origin).href, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-      return;
-    case 'nav': {
-      for (const title of [a.group, a.item].filter((t): t is string => !!t)) {
-        const sel = `.mx-navigationtree a[title="${title.replace(/"/g, '\\"')}"], .mx-navbar a[title="${title.replace(/"/g, '\\"')}"]`;
-        await point(page, sel);
-        await page.locator(sel).first().click({ timeout: 5000 });
-        await page.waitForTimeout(400);
-      }
-      return;
-    }
-    case 'click':
-      await point(page, a.selector);
-      await page.locator(a.selector).first().click({ timeout: 6000 });
-      return;
-    case 'fill': {
-      const sel = `${a.selector} input, ${a.selector} textarea, input${a.selector}, textarea${a.selector}`;
-      await point(page, sel);
-      const el = page.locator(sel).first();
-      await el.fill('');
-      await el.pressSequentially(a.value, { delay: 25 });
-      return;
-    }
-    case 'combobox': {
-      await point(page, a.selector);
-      await page.locator(a.selector).first().click({ timeout: 6000 });
-      const opt = page.locator(`[role="option"]:has-text("${a.match.replace(/"/g, '\\"')}")`).first();
-      if (!(await opt.waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false))) throw new StepFailed(`no option “${a.match}” in ${a.selector}`);
-      await opt.click({ timeout: 5000 });
-      const val = await page.locator(`${a.selector} input`).first().inputValue().catch(() => '');
-      if (val && !val.includes(a.match)) throw new StepFailed(`${a.selector} took “${val}”, not “${a.match}”`);
-      return;
-    }
-    case 'dismissModal': {
-      const btn = page.locator('.mx-dialog-footer button, .mx-name-closeButton').first();
-      if (await btn.waitFor({ state: 'visible', timeout: 800 }).then(() => true, () => false)) await btn.click({ timeout: 3000 });
-      return;
-    }
-    case 'wait':
-      await page.waitForTimeout(a.ms);
-      return;
-  }
-}
-
-async function check(page: Page, s: WalkStep) {
-  const c = s.checks;
-  if (c.ready) {
-    await page.locator(c.ready).first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {
-      throw new StepFailed(`the page never showed ${c.ready}`);
-    });
-  }
-  for (const sel of c.visible) {
-    await page.locator(sel).first().waitFor({ state: 'visible', timeout: 6000 }).catch(() => {
-      throw new StepFailed(`${sel} isn't on the screen`);
-    });
-  }
-  for (const t of c.textPresent) {
-    await page.waitForFunction((x) => document.body.innerText.includes(x), t, { timeout: 6000 }).catch(() => {
-      throw new StepFailed(`the screen doesn't say “${t}”`);
-    });
-  }
-  for (const t of c.textAbsent) if (await page.evaluate((x) => document.body.innerText.includes(x), t)) throw new StepFailed(`the screen says “${t}”, and it shouldn't`);
-}
 
 const wt = <A extends unknown[]>(page: Page, fn: string, ...args: A) => page.evaluate(([f, a]) => (window as unknown as { __wt: Record<string, (...x: unknown[]) => void> }).__wt[f](...a), [fn, args] as [string, unknown[]]).catch(() => undefined);
 
@@ -150,7 +73,7 @@ export async function record(i: RecordInput): Promise<RecordResult> {
   const film = i.film !== false;
   const card = film ? (i.cardMs ?? 2500) : 0;
   const stepMin = film ? (i.stepMs ?? 1400) : 0;
-  const steps: ManifestStep[] = i.script.steps.map((s) => ({ n: s.n, caption: s.caption, status: 'not-run' }));
+  const steps: ManifestStep[] = i.script.steps.map((s) => ({ n: s.n, caption: s.caption, status: 'not-run', ...(s.unchecked ? { notes: [s.unchecked] } : {}) }));
   if (film) await mkdir(path.join(i.outDir, 'steps'), { recursive: true });
   // The batch's sign-ins, or (alone) one of its own that signs out when this recording is done.
   const own = !i.sessions;
@@ -194,14 +117,14 @@ export async function record(i: RecordInput): Promise<RecordResult> {
       out.startMs = Date.now() - t0;
       i.progress?.(`Step ${s.n} of ${total}: ${s.caption}`);
       await wt(page, 'step', s.n, total, s.caption, false);
+      const env = { origin, film, ...(i.workspace ? { workspace: i.workspace } : {}), note: (line: string) => (out.notes ??= []).push(line) };
       try {
         if (s.blocked) throw new StepFailed(s.blocked);
         for (const a of s.actions) {
           if (i.signal.aborted) throw new Error('cancelled');
           if (s.actions.length > 1 || a.caption !== s.caption) await wt(page, 'step', s.n, total, a.caption === s.caption ? s.caption : `${s.caption} — ${a.caption}`, false);
-          await act(page, a, origin);
+          await act(page, a, env);
           await wt(page, 'highlight', null);
-          await page.waitForTimeout(350);
         }
         await check(page, s);
         await wt(page, 'step', s.n, total, s.caption, false);
@@ -216,9 +139,12 @@ export async function record(i: RecordInput): Promise<RecordResult> {
         out.endMs = Date.now() - t0;
       } catch (err) {
         if (i.signal.aborted) throw err;
-        const why = err instanceof StepFailed ? err.message : short(err);
+        // What the app has on screen (an error dialog, a validation message) comes first: the app refused, not the recorder.
+        const said = s.blocked ? undefined : await appShows(page);
+        const why = withApp(err instanceof StepFailed ? err.message : short(err), said);
         out.status = 'failed';
         out.why = why;
+        if (said) out.said = said.text;
         await wt(page, 'highlight', null);
         await wt(page, 'step', s.n, total, `Step ${s.n} failed: ${why}`, true);
         if (film) {
@@ -228,7 +154,7 @@ export async function record(i: RecordInput): Promise<RecordResult> {
         }
         out.endMs = Date.now() - t0;
         res.status = 'failed';
-        res.failure = { step: s.n, why };
+        res.failure = { step: s.n, why, ...(said ? { said: said.text } : {}) };
         break;
       }
     }

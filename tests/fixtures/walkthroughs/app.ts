@@ -18,6 +18,59 @@ const FORM = `<form method="post" action="/login"><h2>Sample app</h2><input id="
 const login = (lateMs = 0) => `<!doctype html><html><head><title>Sign in</title><style>body{font-family:sans-serif;background:#eef2f7;display:flex;justify-content:center;padding-top:120px}form{background:#fff;padding:32px;border-radius:8px;display:grid;gap:12px;width:300px}</style></head><body>
 ${lateMs ? `<div id="boot">Loading…</div><script>setTimeout(() => { document.getElementById("boot").outerHTML = ${JSON.stringify(FORM)}; }, ${lateMs});</script>` : FORM}</body></html>`;
 
+// The checks sheet (nav › Checks), for the parity test: rows of cells where `within` + `hasText` matter (the
+// same widget names in every row), a file uploader with its hidden input, a language selector, a Downshift-
+// style combobox, and Save, which puts up the Mendix client's error dialog (over an underlay that covers the
+// page) for a reading that isn't a number. Every change is committed to the app's "database" (/api/sheet).
+const ROWS = [
+  ['r1', 'First check: clean the filter'],
+  ['r2', 'Second check: drain the tank'],
+  ['r3', 'Third reading: line pressure'],
+];
+const row = ([id, label]: string[]) =>
+  `<div class="mx-name-ctnRow row" data-row="${id}"><span>${label}</span><button class="mx-name-btnOk" data-slot="1">✓</button><button class="mx-name-btnOk" data-slot="2">✓</button><div class="mx-name-tbValue"><input placeholder="Reading"></div></div>`;
+const SHEET = `<div id="sheet" hidden><h2 id="sheetTitle">Checks</h2>
+<div class="mx-name-cbShift"><input role="combobox" aria-activedescendant="" readonly placeholder="Shift"><button id="downshift-0-toggle-button" type="button">▾</button><ul id="shiftMenu" hidden>${['Morning', 'Evening', 'Night'].map((t, k) => `<li role="option" id="downshift-0-item-${k}">${t}</li>`).join('')}</ul></div>
+${ROWS.map(row).join('')}
+<div class="mx-name-fuPhoto"><input type="file" style="display:none"><span id="attached">No file</span></div>
+<div class="mx-name-languageSelector1" style="display:inline-block"><button type="button" id="langPill">English</button><ul class="popupmenu-menu" hidden>${['English', 'Nederlands', 'Español'].map((t) => `<li role="option">${t}</li>`).join('')}</ul></div>
+<button class="mx-name-btnSave">Save</button></div>`;
+const SHEET_JS = `
+const put = (k, v) => fetch('/api/sheet', { method: 'POST', body: JSON.stringify({ k, v }) });
+const q = (s) => document.querySelector(s);
+const vals = {};
+q('#navChecks').onclick = (e) => { e.preventDefault(); q('#heading').textContent = 'Checks'; q('#list').hidden = true; q('#sheet').hidden = false; };
+for (const b of document.querySelectorAll('.mx-name-btnOk')) b.onclick = () => {
+  const k = b.closest('[data-row]').dataset.row + ':' + b.dataset.slot;
+  vals[k] = vals[k] === 'ok' ? '' : 'ok'; b.classList.toggle('is-on', vals[k] === 'ok'); put(k, vals[k]);
+};
+for (const i of document.querySelectorAll('.mx-name-tbValue input')) i.onchange = () => { const k = i.closest('[data-row]').dataset.row + ':v'; vals[k] = i.value; put(k, i.value); };
+const file = q('.mx-name-fuPhoto input');
+file.onchange = () => { const names = [...file.files].map((x) => x.name + ' (' + x.size + ' bytes)'); q('#attached').textContent = names.join(', '); put('files', names.join(', ')); };
+const pill = q('#langPill'), langs = q('.popupmenu-menu');
+q('.mx-name-languageSelector1').onclick = (e) => { if (!e.target.closest('li')) langs.hidden = false; };
+for (const li of langs.querySelectorAll('li')) li.onclick = () => { langs.hidden = true; pill.textContent = li.textContent; q('#sheetTitle').textContent = li.textContent === 'Nederlands' ? 'Controles' : 'Checks'; put('lang', li.textContent); };
+const cb = q('.mx-name-cbShift input'), menu = q('#shiftMenu'), opts = [...menu.querySelectorAll('li')];
+let hi = -1;
+q('#downshift-0-toggle-button').onclick = () => { menu.hidden = false; hi = -1; cb.setAttribute('aria-activedescendant', ''); };
+document.addEventListener('keydown', (e) => {
+  if (menu.hidden) return;
+  if (e.key === 'ArrowDown') { hi = Math.min(opts.length - 1, hi + 1); cb.setAttribute('aria-activedescendant', opts[hi].id); }
+  if (e.key === 'Enter' && hi >= 0) { cb.value = opts[hi].textContent; menu.hidden = true; put('shift', cb.value); }
+});
+q('.mx-name-btnSave').onclick = () => {
+  const bad = Object.entries(vals).find(([k, v]) => k.endsWith(':v') && v && !/^-?[0-9]+([.][0-9]+)?$/.test(v));
+  if (bad) {
+    const d = document.createElement('div');
+    d.innerHTML = '<div class="mx-underlay" style="position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:100"></div><div class="modal-dialog mx-dialog mx-dialog-error" role="dialog" style="position:fixed;top:120px;left:300px;z-index:101;background:#fff;padding:16px"><div class="modal-header mx-dialog-header"><h4 class="mx-dialog-caption">Error</h4></div><div class="modal-body mx-dialog-body"><p>Value has an issue: Row ' + bad[0].split(':')[0] + ': the value does not fit this row (a number or a dash)</p></div><div class="mx-dialog-footer"><button>OK</button></div></div>';
+    d.querySelector('.mx-dialog-footer button').onclick = () => d.remove();
+    document.body.appendChild(d);
+    return;
+  }
+  put('saved', 'yes'); q('#heading').textContent = 'Checks saved';
+};
+`;
+
 const page = (other: string, token: string, saved: string[] = []) => `<!doctype html><html><head><title>Sample requests</title><style>
 [hidden]{display:none!important}
 body{margin:0;font-family:"Segoe UI",sans-serif;display:flex;height:100vh;background:#f5f7fa}
@@ -26,12 +79,13 @@ body{margin:0;font-family:"Segoe UI",sans-serif;display:flex;height:100vh;backgr
 .mx-name-dgRequests{background:#fff;border-radius:8px;padding:12px;margin:16px 0;min-height:60px}.row{padding:6px;border-bottom:1px solid #e5e7eb}
 .mx-name-dvForm{background:#fff;border-radius:8px;padding:16px;margin-top:16px;display:grid;gap:10px;max-width:420px}.mx-name-tbTitle input{padding:8px;font-size:15px;width:100%}
 </style></head><body>
-<nav class="mx-navigationtree"><a href="#" title="Home">Home</a><a href="#" title="Requests" id="navRequests">Requests</a></nav>
+<nav class="mx-navigationtree"><a href="#" title="Home">Home</a><a href="#" title="Requests" id="navRequests">Requests</a><a href="#" title="Checks" id="navChecks">Checks</a></nav>
 <div class="mx-page"><h1 id="heading">Welcome</h1>
 <div id="list" hidden><div class="mx-name-dgRequests">${saved.map((t) => `<div class="row">${t}</div>`).join('')}<div class="row">Sample request A</div><div class="row">Sample request B</div></div>
 <button class="mx-name-btnNew">New request</button></div>
 <div class="mx-name-dvForm" hidden><div class="mx-name-tbTitle"><input placeholder="Title"></div><button class="mx-name-btnSubmit">Submit</button></div>
 <img src="${other}/tracker.png" width="1" height="1" alt="">
+${SHEET}
 </div>
 <script>
 window.mx = { session: { sessionData: { csrftoken: ${JSON.stringify(token)} } } };
@@ -44,7 +98,7 @@ $('.mx-name-btnSubmit').onclick = () => {
   const r = document.createElement('div'); r.className = 'row'; r.textContent = t; $('.mx-name-dgRequests').prepend(r);
   $('.mx-name-dvForm').hidden = true; $('#heading').textContent = 'Request submitted';
 };
-</script></body></html>`;
+</script><script>${SHEET_JS}</script></body></html>`;
 
 /** What the Mendix client shows when the runtime refuses a session (HTTP 402). */
 export const CAP_TEXT = 'The current license does not allow more users to sign in.';
@@ -67,6 +121,8 @@ export interface FakeApp {
   refusals(): number;
   /** What was submitted on the current "database" (newest first). */
   saved(): string[];
+  /** What the checks sheet committed on the current "database": "r2:1" → "ok", "r3:v" → a reading, files, lang, shift, saved. */
+  sheet(): Record<string, string>;
   /** A fresh database: nothing submitted (sessions are left alone: the tests hold some on purpose). */
   reset(): void;
   /** Opens `n` sessions somewhere else (other windows of the app). */
@@ -91,6 +147,7 @@ export async function fakeApp(o: FakeAppOptions = {}): Promise<FakeApp> {
   const outs: string[] = [];
   let anon = 0;
   const saved: string[] = [];
+  let sheet: Record<string, string> = {};
   let refusals = 0;
   const id = () => randomBytes(8).toString('hex');
   /** A new session, or undefined over the cap. */
@@ -164,6 +221,20 @@ export async function fakeApp(o: FakeAppOptions = {}): Promise<FakeApp> {
       return;
     }
     if (req.url === '/login.html') return html(login(o.lateFormMs));
+    if (req.method === 'POST' && req.url === '/api/sheet') {
+      // The checks sheet's "database": every cell, file, language and save the page committed.
+      body((b) => {
+        try {
+          const { k, v } = JSON.parse(b) as { k: string; v: string };
+          if (mine && typeof k === 'string') sheet[k] = String(v);
+        } catch {
+          // Not a commit.
+        }
+        res.writeHead(mine ? 200 : 403);
+        res.end();
+      });
+      return;
+    }
     if (req.method === 'POST' && req.url === '/api/submit') {
       // The app's "database": what was submitted stays until reset() (a fresh database).
       body((b) => {
@@ -190,8 +261,10 @@ export async function fakeApp(o: FakeAppOptions = {}): Promise<FakeApp> {
     anonymous: () => anon,
     refusals: () => refusals,
     saved: () => [...saved],
+    sheet: () => ({ ...sheet }),
     reset: () => {
       saved.length = 0;
+      sheet = {};
     },
     hold: (n) => {
       for (let k = 0; k < n; k++) sessions.set(id(), { user: 'someone_else', token: id() });

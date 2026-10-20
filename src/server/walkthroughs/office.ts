@@ -12,7 +12,7 @@ import { journeyResults } from '../liveapp/readiness.js';
 import { onLiveReady, type ReadyCtx } from '../liveapp/ready-bus.js';
 import { onTestRuns } from '../testing/news.js';
 import { resolveCommand } from '../workers/process.js';
-import { startAppInstance } from '../app-instance/index.js';
+import { instanceDir, startAppInstance } from '../app-instance/index.js';
 import { audit } from '../audit/index.js';
 import { testModeOf } from '../testmode.js';
 import { liveAppBuilding } from './busy.js';
@@ -39,7 +39,9 @@ export function walkthroughsOf(ctx: Deps): Walkthroughs {
           const apps = liveAppsIfMade(ctx);
           return apps ? liveAppBuilding(ctx.floors.values(), (f) => apps.peek(f)?.status, id) : undefined;
         };
-        return startAppInstance({ floorId: id, floorDir: floor.dir, commit, purpose: 'rec', dataDir, cfg: c, mxcli: resolveCommand(c.mxcli), taken: () => liveAppsIfMade(ctx)?.takenPorts() ?? [], busy, signal, progress, ...(onPhase ? { onPhase } : {}) });
+        const app = await startAppInstance({ floorId: id, floorDir: floor.dir, commit, purpose: 'rec', dataDir, cfg: c, mxcli: resolveCommand(c.mxcli), taken: () => liveAppsIfMade(ctx)?.takenPorts() ?? [], busy, signal, progress, ...(onPhase ? { onPhase } : {}) });
+        // Its workspace is the commit's files: what a journey's setFiles attaches (tests/e2e/fixtures), nothing else.
+        return Object.assign(app, { workspace: instanceDir(dataDir, id, 'rec') });
       },
       bootBlocked: () => {
         const c = cfg();

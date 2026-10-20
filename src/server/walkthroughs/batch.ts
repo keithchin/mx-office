@@ -27,6 +27,8 @@ export interface RecordingApp {
   commit: string;
   /** Its Mendix runtime log, when there is one (a refused session shows there). */
   runtimeLog?: string;
+  /** Its copy of the commit's files (the instance's workspace): setFiles attaches from there only. */
+  workspace?: string;
   alive(): boolean;
   /** What its last start (or fresh database) took, phase by phase, and whether it was tried once more. */
   timing?: BootTiming;
@@ -220,7 +222,7 @@ async function playSetup(h: BatchHost, b: BatchRun, sc: WalkScript, app: Recordi
   const follow = () => one.abort('cancelled');
   b.ctl.signal.addEventListener('abort', follow, { once: true });
   try {
-    const res = await record({ url: app.url, script: sc, outDir: '', login: { user: who.user, password: who.password }, sessions, signal: one.signal, film: false, progress: (l) => h.say(`Setting up: ${sc.title} · ${l}`), ...(h.launch ? { launch: h.launch } : {}) });
+    const res = await record({ url: app.url, script: sc, outDir: '', login: { user: who.user, password: who.password }, sessions, signal: one.signal, film: false, ...(app.workspace ? { workspace: app.workspace } : {}), progress: (l) => h.say(`Setting up: ${sc.title} · ${l}`), ...(h.launch ? { launch: h.launch } : {}) });
     if (res.status === 'passed') return undefined;
     return res.status === 'failed' ? `failed at step ${res.failure?.step ?? '?'}: ${res.failure?.why ?? ''}` : (res.failure?.why ?? res.status);
   } finally {
@@ -248,7 +250,7 @@ async function recordOne(h: BatchHost, b: BatchRun, sc: WalkScript, app: Recordi
     const voice = h.voice();
     return await runRecording(
       { tool: h.tool, ...(voice ? { voice } : {}), commitNow: () => (app.alive() ? b.commit : undefined), ...(h.launch ? { launch: h.launch } : {}), ...(h.cardMs !== undefined ? { cardMs: h.cardMs } : {}), ...(h.stepMs !== undefined ? { stepMs: h.stepMs } : {}) },
-      { m, dir, url: app.url, script: sc, login: { user: who.user, password: who.password }, sessions, narrate, signal: one.signal, progress: (l) => h.say(`Recording ${b.n} of ${b.journeys.length}: ${l}`), save: (x) => h.store.write(x) },
+      { m, dir, url: app.url, ...(app.workspace ? { workspace: app.workspace } : {}), script: sc, login: { user: who.user, password: who.password }, sessions, narrate, signal: one.signal, progress: (l) => h.say(`Recording ${b.n} of ${b.journeys.length}: ${l}`), save: (x) => h.store.write(x) },
     );
   } catch (err) {
     Object.assign(m, { status: one.signal.aborted ? 'cancelled' : 'error', failure: { why: (err as Error).message.slice(0, 300) }, finishedAt: Date.now() });

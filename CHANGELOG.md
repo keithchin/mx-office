@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **Walkthrough recordings play journeys exactly as the journey runner does.** The recorder now knows every action the toolkit's journey runner has, including `setFiles` (photo uploads, from `tests/e2e/fixtures` in the recorded commit only) and `pickLanguage`, and plays each one with the runner's semantics: `within` + `hasText` target the widget in the row or card whose text matches instead of the first one on the page, `settleMs` and the runner's 1200 ms wait apply after every action, `fill` sets the value and tabs out with `blur`, a covered widget isn't clicked, and the `ui` checks wait as the runner's do. When a step fails with an app dialog or validation message on screen, the reason starts with what the app showed (*the app showed an error: "…"*), apart from the recorder not finding a widget. A step's data (OQL) and trace checks aren't run in a recording, and the step now says so. A test plays one journey through both the runner's actions and the recorder and checks that they leave the app in the same state.
 
 ## 2026-10-20 · release 66 (`92155e3`)
 

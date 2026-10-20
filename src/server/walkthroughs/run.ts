@@ -30,6 +30,8 @@ export interface RunInput {
   login: { user: string; password: string };
   /** The batch's sign-ins (one session per account). */
   sessions?: AppSessions;
+  /** The recorded commit's files (setFiles attaches from them). */
+  workspace?: string;
   narrate: boolean;
   signal: AbortSignal;
   progress(line: string): void;
@@ -65,6 +67,7 @@ export async function runRecording(d: RunDeps, i: RunInput): Promise<WalkManifes
     outDir: i.dir,
     login: i.login,
     ...(i.sessions ? { sessions: i.sessions } : {}),
+    ...(i.workspace ? { workspace: i.workspace } : {}),
     holdMs: (s) => (lines.get(s.n)?.ms ?? 0) + 300,
     signal: i.signal,
     progress: i.progress,
