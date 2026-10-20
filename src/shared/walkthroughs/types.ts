@@ -8,15 +8,30 @@ import type { IdentityHint, IdentitySource } from './identity.js';
 import type { WalkPlan } from './plan.js';
 import type { StartState } from './start-state.js';
 
-/** One thing the recorder does in a step (the toolkit journey-runner's vocabulary). */
-export type WalkAction =
-  | { do: 'nav'; group?: string; item: string; caption: string }
-  | { do: 'click'; selector: string; caption: string }
-  | { do: 'fill'; selector: string; value: string; caption: string }
-  | { do: 'combobox'; selector: string; match: string; caption: string }
-  | { do: 'dismissModal'; caption: string }
-  | { do: 'wait'; ms: number; caption: string }
-  | { do: 'goto'; path: string; caption: string };
+/**
+ * Where a widget action looks (the journey runner's `within` + `hasText`): inside the first container
+ * matching `within` whose text has `hasText` (plain text, any case), not the first match on the page.
+ */
+export interface WalkTarget {
+  within?: string;
+  hasText?: string;
+}
+
+/**
+ * One thing the recorder does in a step (the toolkit journey-runner's vocabulary, same semantics:
+ * server/walkthroughs/actions.ts). `settleMs`: the wait after it (the runner's 1200 ms when not given).
+ */
+export type WalkAction = (
+  | ({ do: 'click'; selector: string } & WalkTarget)
+  | ({ do: 'fill'; selector: string; value: string; blur?: true } & WalkTarget)
+  | ({ do: 'combobox'; selector: string; match: string } & WalkTarget)
+  | ({ do: 'setFiles'; selector: string; files: string[] } & WalkTarget)
+  | { do: 'nav'; group?: string; item: string }
+  | { do: 'pickLanguage'; match: string }
+  | { do: 'dismissModal' }
+  | { do: 'wait'; ms: number }
+  | { do: 'goto'; path: string }
+) & { caption: string; settleMs?: number };
 
 /** What must be true once a step's actions are done. */
 export interface WalkChecks {
@@ -36,6 +51,8 @@ export interface WalkStep {
   checks: WalkChecks;
   /** Why it can't be walked as written (a seed only a database query gives): the step fails with this. */
   blocked?: string;
+  /** What of the step a recording doesn't check (its `data` OQL, its `spans`), said beside the step. */
+  unchecked?: string;
 }
 
 export interface WalkScript {
@@ -68,6 +85,10 @@ export interface ManifestStep {
   /** steps/01.png, relative to the recording's folder. */
   screenshot?: string;
   why?: string;
+  /** What the app showed (a Mendix error, warning or validation message) when the step failed. */
+  said?: string;
+  /** Said beside the step: checks a recording doesn't run, dialogs the step closed (with their words). */
+  notes?: string[];
 }
 
 export interface SavedToRepo {
@@ -99,7 +120,7 @@ export interface WalkManifest {
   finishedAt?: number;
   durationMs?: number;
   status: RecordingStatus;
-  failure?: { step?: number; why: string };
+  failure?: { step?: number; why: string; said?: string };
   /**
    * Where it played in its batch's plan (shared/walkthroughs/plan.ts): its group (one fresh database each),
    * the journeys played first, unfilmed, to set up its start state, and how its database was made fresh.

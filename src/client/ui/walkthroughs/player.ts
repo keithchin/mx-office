@@ -59,7 +59,12 @@ export function openPlayer(floor: string, r: WalkCardRecording, opener?: HTMLEle
   const marks: Mark[] =
     r.kind === 'tour' && r.parts?.length
       ? r.parts.map((p) => ({ at: p.startMs, end: p.endMs, text: p.title, cls: '' }))
-      : r.steps.map((s) => ({ at: s.startMs, end: s.endMs, text: `${s.n}. ${s.caption}`, ...(s.status === 'failed' ? { why: `Failed: ${s.why ?? 'no reason given'}` } : s.status === 'not-run' ? { why: 'Not run' } : {}), cls: s.status, ...(s.screenshot ? { shot: s.screenshot } : {}) }));
+      : r.steps.map((s) => {
+          // Beside a step: checks a recording doesn't run, dialogs it closed (with the app's words).
+          const notes = s.notes?.length ? s.notes.join(' · ') : '';
+          const why = s.status === 'failed' ? `Failed: ${s.why ?? 'no reason given'}${notes ? ` · ${notes}` : ''}` : s.status === 'not-run' ? 'Not run' : notes;
+          return { at: s.startMs, end: s.endMs, text: `${s.n}. ${s.caption}`, ...(why ? { why } : {}), cls: s.status, ...(s.screenshot ? { shot: s.screenshot } : {}) };
+        });
   const preview = h('figure.wt-preview', { hidden: true }, h('img', { alt: '' }), h('figcaption', {}));
   const showShot = (m: Mark | undefined) => {
     if (!m?.shot) return void (preview.hidden = true);
