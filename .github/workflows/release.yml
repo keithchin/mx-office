@@ -230,7 +230,7 @@ jobs:
           node -e "const want = require('./package-lock.json').packages['node_modules/electron'].version; const got = require('electron/package.json').version; console.log('Electron', got, '(lockfile:', want + ')'); if (got !== want) process.exit(1); require('node:fs').accessSync(require('electron'));"
 
       - name: Desktop core unit tests (Windows paths)
-        run: node --import tsx --test tests/desktop-core.test.ts tests/desktop-connection.test.ts tests/desktop-embed.test.ts
+        run: node --import tsx --test tests/desktop-core.test.ts tests/desktop-connection.test.ts tests/desktop-embed.test.ts tests/desktop-teardown.test.ts
 
       - name: Compile and package (npm run desktop:pack)
         run: npm run desktop:pack

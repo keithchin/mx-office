@@ -27,6 +27,12 @@ This was a bug (the team hook broke project start-up) and is fixed. If it happen
 - Make the browser use the fast GPU. On the office laptop, Edge is set to the NVIDIA GPU (Windows Settings → Display → Graphics).
 - The 3D and Retro views (and `?gfx=`) are gone: an old `/?view=3d` link opens the 1D view.
 
+## The desktop app won't start again after Quit
+
+**Cause:** an older desktop app, once quit, could stay behind as an `mx-office.exe` without a window or tray icon (a Live app window's page had cancelled the quit), and every new start handed over to it, so nothing appeared.
+
+**Fix:** update the office and run `npm run desktop:pack` again. To clear one left from before, end the leftover `mx-office.exe` in Task Manager (Details), then start the app. With the current app, Quit leaves no process behind, and if something ever holds on, `desktop-office.log` says what (*desktop app: quit: still running…*).
+
 ## Notifications don't appear
 
 Click **🔔** in the top bar to allow them, and check that Windows allows notifications from your browser.
