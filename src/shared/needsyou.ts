@@ -68,7 +68,7 @@ export type NeedTarget =
   /** 🔑 Claude for agents (server/claude-auth/, ui/claude-auth/): keep the environment's key, use the agents' Claude login, restart the agents Claude refused, or how to fix it. */
   | { to: 'claude-auth'; act: 'keep' | 'login' | 'restart' | 'help' };
 
-export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | 'brain' | 'design' | 'claude' | AskKind;
+export type NeedKind = 'asking' | 'finished' | 'lost' | 'escalation' | 'approval' | 'idle' | 'paused' | 'pr' | 'setup' | 'live' | 'floor' | 'audit' | 'studio' | 'incident' | 'budget' | 'stuck' | 'questions' | 'fyi' | 'brain' | 'design' | 'claude' | 'delivery' | AskKind;
 
 /** How long a team member sits idle with an open task (nothing escalated) before Needs you says so. */
 export const IDLE_TASK_MS = 10 * 60_000;

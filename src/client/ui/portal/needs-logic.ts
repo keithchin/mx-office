@@ -142,6 +142,7 @@ const ROW_TAG: Record<NeedKind, string> = {
   brain: 'Company brain',
   design: 'Design system',
   claude: 'Claude sign-in',
+  delivery: 'Needs intervention',
 };
 
 export interface RowModel {

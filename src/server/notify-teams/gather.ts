@@ -4,7 +4,7 @@
 // builder (shared/decisions/input.ts) and collectNeeds (shared/needsyou.ts), then the red ones made ready to post.
 
 import { collectNeeds, type NeedItem, type NeedsInput } from '../../shared/needsyou.js';
-import { isRedNeed, notifyRows } from '../../shared/notify-teams.js';
+import { actionableRows, deliveryNeedsOf } from '../../shared/needs-actionable.js';
 import type { RosterView } from '../../shared/roster/types.js';
 import { capAt } from '../../shared/roster/autonomy.js';
 import type { WorkerInfo } from '../../shared/protocol.js';
@@ -68,6 +68,17 @@ async function setupOf(ctx: Ctx, floor: Floor, now: number): Promise<SetupView |
   return view;
 }
 
+/** The project's answers whose outcome is unknown, as Needs-you items; none when the dispatch log can't be read. */
+async function unconfirmedOf(ctx: Ctx, floor: Floor) {
+  try {
+    const d = rosterOf(ctx).dispatch;
+    await d.ready(floor.id);
+    return deliveryNeedsOf(floor.id, d.unsettled(floor.id));
+  } catch {
+    return [];
+  }
+}
+
 export async function floorNeeds(ctx: Ctx, floor: Floor, now = Date.now()): Promise<FloorNeeds> {
   const roster = teamOf(ctx, floor);
   const setup = await setupOf(ctx, floor, now);
@@ -94,7 +105,9 @@ export async function floorNeeds(ctx: Ctx, floor: Floor, now = Date.now()): Prom
     // Office-wide: posted with the first project only, so one alert is one post.
     claude: ctx.floors.values().next().value === floor ? claudeAuthView(false) : undefined,
   });
-  return { input, needs: collectNeeds(input) };
+  // Answers whose delivery the office couldn't confirm: the Command Center draws their cards from the dispatch
+  // feed; the tray, Home, Teams and pushes count them here as needing intervention.
+  return { input, needs: [...collectNeeds(input), ...(await unconfirmedOf(ctx, floor))] };
 }
 
 const URGENT_WORD = (n: NeedItem) => n.tag ?? (n.level === 'block' ? 'Blocking' : 'Needs a look');
@@ -123,6 +136,8 @@ function whoOf(n: NeedItem, workers: readonly WorkerInfo[], roster: RosterView |
       return 'Stuck detection';
     case 'questions':
       return 'Questions';
+    case 'delivery':
+      return 'Your answer';
     default:
       return 'The office';
   }
@@ -146,9 +161,8 @@ export function pathOf(n: Pick<NeedItem, 'target'>, floor: string): string {
 export function redItems(floor: Floor, f: FloorNeeds, publicUrl: string | undefined): RedItem[] {
   const workers = [...f.input.workers];
   const out: RedItem[] = [];
-  for (const n of notifyRows(f.needs)) {
-    // A sign-off already given, waiting for the lead to record it, is shown, not waiting on you: no post.
-    if (!isRedNeed(n) || (n.kind === 'setup' && n.level === 'info')) continue;
+  // One rule for every surface (shared/needs-actionable.ts): red, not a sign-off waiting to be recorded, a batch once.
+  for (const n of actionableRows(f.needs)) {
     const who = whoOf(n, workers, f.input.roster, f.input);
     out.push({
       id: `${floor.id}:${n.key}${n.kind === 'asking' && n.since ? `@${n.since}` : ''}`,
