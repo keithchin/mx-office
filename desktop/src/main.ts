@@ -4,9 +4,9 @@
 // or the app attaches to an office already running on its port. Everything that can be tested without
 // Electron is in core/; this file is the Electron glue. See docs/site/administration/desktop-app.md.
 
-import { app, BrowserWindow, Menu, Notification, Tray, dialog, nativeImage, screen, shell, type MenuItemConstructorOptions, type NativeImage } from 'electron';
+import { app, BrowserWindow, Menu, Notification, Tray, dialog, nativeImage, screen, shell, webContents, type MenuItemConstructorOptions, type NativeImage } from 'electron';
 import { spawn, execFileSync } from 'node:child_process';
-import { closeSync, existsSync, readFileSync, writeSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, readFileSync, writeSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +20,8 @@ import { badgeBitmap, dataUrl, fitBounds, pageHtml, type PageSpec } from './core
 import { DESKTOP_DOCS, actionOf, busyPortPage, crashPage, problemPage, refusedPage, startingPage } from './core/screens.js';
 import { DesktopStore, officeKey } from './core/store.js';
 import { liveWindowRequest } from './core/liveapp.js';
-import { liveWindows, openLiveWindow } from './liveapp.js';
+import { destroyLiveWindows, liveWindows, openLiveWindow } from './liveapp.js';
+import { Teardown, secondInstanceAction } from './core/teardown.js';
 import { attachEmbed } from './embed.js';
 import type { EmbedController } from './core/embed.js';
 
@@ -117,6 +118,7 @@ function createWindow() {
     if (sameOffice(u)) setTimeout(() => void poll(), 1500);
   });
   win.webContents.on('did-create-window', (child) => guard(child));
+  win.on('session-end', () => void sessionEnd());
   const remember = () => {
     if (!win || win.isMinimized() || TEST) return;
     const max = win.isMaximized();
@@ -169,7 +171,7 @@ function showOffice(p = 'home') {
 }
 
 function showWindow() {
-  if (!win || TEST) return;
+  if (!win || win.isDestroyed() || TEST) return;
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
@@ -331,7 +333,7 @@ async function startOwned() {
 // ---- what needs you
 
 async function cookieHeader(): Promise<string> {
-  if (!win) return '';
+  if (!win || win.isDestroyed()) return '';
   const cookies = await win.webContents.session.cookies.get({ url: URL_BASE });
   return cookies.map((k) => `${k.name}=${k.value}`).join('; ');
 }
@@ -368,7 +370,7 @@ async function look(): Promise<Look> {
 let looking: Promise<void> | undefined;
 
 async function poll(): Promise<void> {
-  if (!running()) return;
+  if (quitting || !running()) return;
   if (looking) return looking;
   looking = (async () => {
     // Notifications only from a confirmed look, against what was seen (kept across failures, restarts and reconnections).
@@ -405,6 +407,7 @@ function notify(n: { title: string; body: string; path?: string; onClick: () => 
 }
 
 function setBadge(n: number) {
+  if (quitting) return;
   if (process.platform === 'win32') {
     win?.setOverlayIcon(n ? nativeImage.createFromBitmap(badgeBitmap(n), { width: 32, height: 32, scaleFactor: 2 }) : null, n ? needYouText(n) : '');
   } else app.setBadgeCount(n);
@@ -430,7 +433,7 @@ function trayState(): TrayState {
 }
 
 function refreshTray() {
-  if (!tray) return;
+  if (!tray || tray.isDestroyed()) return;
   const state = trayState();
   const connected = state === 'running' || state === 'signed-out' || state === 'disconnected' || state === 'unknown';
   // What needs you, and how fresh that is: counts the last look couldn't confirm say when they're from.
@@ -594,11 +597,67 @@ async function requestQuit() {
   }
 }
 
-function finalQuit() {
+/** A line in the office's log (desktop-office.log) and on the app's output: what quitting did, and what held on. */
+function appLog(line: string) {
+  const l = `${new Date().toISOString()} desktop app: ${line}`;
+  console.log(l);
+  try {
+    appendFileSync(LOG_FILE, `${l}\n`);
+  } catch {
+    // no log folder (nothing started here yet)
+  }
+}
+
+/**
+ * Quitting for good (core/teardown.ts): the polling, the Show here view, the Live app windows, the tray and
+ * every window go (destroyed, so no page's beforeunload can cancel the quit), then Electron quits; a
+ * process still there 5 s later logs what was open and exits anyway. Never leaves a windowless instance.
+ */
+const teardown = new Teardown({
+  steps: [
+    { name: 'the polling', run: () => stopPolling() },
+    { name: 'the settings', run: () => store?.save() },
+    { name: 'the Show here view', run: () => embed?.close(false) },
+    { name: 'the Live app windows', run: () => void destroyLiveWindows() },
+    {
+      name: 'the tray',
+      run: () => {
+        if (tray && !tray.isDestroyed()) tray.destroy();
+        tray = undefined;
+      },
+    },
+    {
+      // Only when the session ends (Quit stops the office first, or leaves an attached one running): asked to stop, not waited for long.
+      name: 'the office',
+      run: async () => {
+        if (sup?.owned) await sup.stop();
+      },
+    },
+    { name: 'the windows', run: () => BrowserWindow.getAllWindows().forEach((w) => !w.isDestroyed() && w.destroy()) },
+  ],
+  openNow: () => [
+    ...BrowserWindow.getAllWindows().map((w) => `window "${w.isDestroyed() ? '(destroyed)' : w.getTitle()}"`),
+    ...webContents.getAllWebContents().filter((w) => !w.isDestroyed()).map((w) => `page ${w.getType()} ${w.getURL().slice(0, 80)}`),
+    ...(tray && !tray.isDestroyed() ? ['the tray'] : []),
+    ...(sup?.owned ? ['the office it started'] : []),
+  ],
+  quit: () => app.quit(),
+  exit: (code) => app.exit(code),
+  log: appLog,
+});
+
+function finalQuit(why = 'Quit') {
   quitting = true;
-  store?.save();
-  tray?.destroy();
-  app.quit();
+  void teardown.run(why);
+}
+
+/** Windows is logging off or shutting down: no questions; the app's own office is asked to stop, briefly, and the app goes. */
+async function sessionEnd() {
+  if (teardown.started) return;
+  quitting = true;
+  stopPolling();
+  if (mode === 'owned' && sup?.owned) await Promise.race([sup.stop(), new Promise((r) => setTimeout(r, 3000))]);
+  finalQuit('Windows is ending the session');
 }
 
 // ---- go
@@ -606,14 +665,30 @@ function finalQuit() {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => showWindow());
+  // Started again: the window, or, should this instance be on its way out, a fresh start in its place (before its window exists: nothing yet).
+  app.on('second-instance', (_e, argv) => {
+    const act = secondInstanceAction({ quitting: quitting || teardown.started, hasWindow: !!win && !win.isDestroyed() });
+    if (act === 'show') return showWindow();
+    if (act === 'wait') return;
+    appLog('started again while this instance was quitting: ending it and starting the app again');
+    app.relaunch({ args: argv.slice(1) });
+    app.exit(0);
+  });
   app.on('window-all-closed', () => {
-    // The tray keeps the app (and its office) going; Quit ends it.
+    // The tray keeps the app (and its office) going; Quit ends it. Once quitting, nothing keeps it.
+    if (quitting) app.quit();
   });
   app.on('before-quit', (e) => {
     if (quitting) return;
     e.preventDefault();
     void requestQuit();
+  });
+  app.on('will-quit', () => teardown.done());
+  // Once quitting, a page's beforeunload (a live app's, the claim page's) never cancels the quit.
+  app.on('web-contents-created', (_e, wc) => {
+    wc.on('will-prevent-unload', (ev) => {
+      if (quitting) ev.preventDefault();
+    });
   });
   void app.whenReady().then(() => {
     store = new DesktopStore(path.join(app.getPath('userData'), 'desktop.json'));
@@ -622,7 +697,7 @@ if (!app.requestSingleInstanceLock()) {
     createTray();
     // Screenshots and checks drive the app from outside (Playwright's electron.evaluate): only on request.
     if (TEST) {
-      const hooks = { tray: () => tray, win: () => win, sup: () => sup, mode: () => mode, poll, restartOffice, requestQuit, startHere, onAction, officeFetch, status: () => freshStatus(conn), conn: () => conn, notes: () => testNotes.map(({ click: _, ...n }) => n), clickNote: (i: number) => testNotes[i]?.click(), answer: (...a: number[]) => testAnswers.push(...a), asked: () => testAsked, liveWindows, embed: () => embed, viewPorts: testViewPorts };
+      const hooks = { tray: () => tray, win: () => win, sup: () => sup, mode: () => mode, poll, restartOffice, requestQuit, startHere, onAction, officeFetch, status: () => freshStatus(conn), conn: () => conn, notes: () => testNotes.map(({ click: _, ...n }) => n), clickNote: (i: number) => testNotes[i]?.click(), answer: (...a: number[]) => testAnswers.push(...a), asked: () => testAsked, liveWindows, embed: () => embed, viewPorts: testViewPorts, quitting: () => quitting };
       Object.assign(globalThis, { __mxDesktop: { ...hooks, badge: (n: number) => nativeImage.createFromBitmap(badgeBitmap(n), { width: 32, height: 32, scaleFactor: 2 }).toPNG().toString('base64'), menu: () => trayLabels, tooltip: () => trayTip } });
     }
     void boot();

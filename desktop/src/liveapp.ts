@@ -20,6 +20,21 @@ export function liveWindows(): { key: string; url: string; partition: string; wi
   return [...windows].map(([key, w]) => ({ key, url: w.win.webContents.getURL(), partition: LIVE_PARTITION, win: w.win }));
 }
 
+/**
+ * Quitting: every Live app window goes now, without asking its page (destroy skips beforeunload, which a
+ * live app's page may use to cancel the close, and with it the app's quit). Returns how many there were.
+ */
+export function destroyLiveWindows(): number {
+  let n = 0;
+  for (const [key, w] of [...windows]) {
+    windows.delete(key);
+    if (w.win.isDestroyed()) continue;
+    w.win.destroy();
+    n++;
+  }
+  return n;
+}
+
 /** The live app's web preferences: this window, its pop-ups, and the office's Show here view (embed.ts). */
 export const LIVE_PREFS = { contextIsolation: true, nodeIntegration: false, sandbox: true, partition: LIVE_PARTITION } as const;
 const PREFS = LIVE_PREFS;

@@ -11,7 +11,9 @@
 //   owned     the app starts the office (health answers, the window signs in); a seeded Needs-you item
 //             makes a notification whose click opens the item; quitting while a fake agent works asks,
 //             and "Keep running in the tray" keeps it all running; killing the office shows the crash
-//             page and Restart brings it back without notifying again; Quit stops the office it started.
+//             page and Restart brings it back without notifying again; Quit (the tray's, answered), with a Live app
+//             window and a Show here view open whose page cancels its unload, stops the office it started and
+//             leaves no process of the app behind (its PID tree, checked a few seconds after).
 //   attached  an office started outside the app is attached to without a second office starting; signed
 //             out it says so; Edit in Studio Pro on a synthetic Mendix project gets a JSON sync answer, its
 //             confirm, and an open that test mode's stand-in records (Studio Pro never starts); an Open live app link
@@ -19,7 +21,8 @@
 //             stand-in app top-level in the office window (window.top is the app, real Back/Forward, hidden under a
 //             dialog and another tab, refused for an address the office doesn't name); the office disappearing makes it "disconnected" with its counts marked
 //             stale, and the app starts nothing; the office coming back recovers without notifying
-//             again; Quit leaves that office running.
+//             again; Quit (the window's ✕), with a Live app window and a Show here view open whose page cancels
+//             its unload, leaves that office running and no process of the app behind.
 //
 // Logs (this run's output, the app's output, the offices' logs) go to --logs (default <root>/../desktop-e2e-logs).
 import { execFileSync } from 'node:child_process';
@@ -150,13 +153,90 @@ async function launch(name, port, home, userData, extra = []) {
 const hook = (app, fn, a) => app.evaluate(fn, a);
 const winUrl = (app) => app.evaluate(() => globalThis.__mxDesktop.win()?.webContents.getURL() ?? '');
 const conn = (app) => app.evaluate(() => globalThis.__mxDesktop.conn());
-async function quitApp(app) {
+/** The launched app's processes (its PID tree by parent; Windows keeps an orphan's parent id), as pid, start time and name. */
+function appTree(rootPid) {
+  const ps = `Get-CimInstance Win32_Process | ForEach-Object { "$($_.ProcessId)|$($_.ParentProcessId)|$(if ($_.CreationDate) { $_.CreationDate.ToFileTimeUtc() })|$($_.Name)" }`;
+  const all = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 30_000, maxBuffer: 32 * 1024 * 1024, windowsHide: true })
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((l) => {
+      const [pid, ppid, started, name] = l.split('|');
+      return { pid: Number(pid), ppid: Number(ppid), started, name };
+    });
+  const mine = new Set([rootPid]);
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const p of all) if (mine.has(p.ppid) && !mine.has(p.pid)) (mine.add(p.pid), (grew = true));
+  }
+  return all.filter((p) => mine.has(p.pid));
+}
+/** Which of `procs` are still running (same pid and start time, so a reused pid doesn't count). */
+function stillRunning(procs) {
+  const ps = `Get-CimInstance Win32_Process | ForEach-Object { "$($_.ProcessId)|$(if ($_.CreationDate) { $_.CreationDate.ToFileTimeUtc() })" }`;
+  const now = new Set(execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 30_000, maxBuffer: 32 * 1024 * 1024, windowsHide: true }).split(/\r?\n/).filter(Boolean));
+  return procs.filter((p) => now.has(`${p.pid}|${p.started}`));
+}
+const ELECTRON_EXE = path.basename(exe).toLowerCase();
+/** Waits until none of the app's own processes (`before`, its exe's name only: not the office it started) is left; the seconds it took. */
+async function noAppLeft(before, ms = 15_000) {
+  const ours = before.filter((p) => p.name.toLowerCase() === ELECTRON_EXE);
+  assert(ours.length >= 2, `the app's process tree before Quit looks wrong: ${JSON.stringify(before)}`);
+  const t0 = Date.now();
+  let left = ours;
+  while (Date.now() - t0 < ms) {
+    left = stillRunning(ours);
+    if (!left.length) return Math.round((Date.now() - t0) / 100) / 10;
+    await sleep(500);
+  }
+  // Not left for the next run.
+  for (const p of left) killTree(p.pid);
+  throw new Error(`${left.length} process(es) of the app still running ${ms / 1000} s after it quit: ${left.map((p) => p.pid).join(', ')} (of ${ours.length})`);
+}
+/**
+ * Opens what used to keep a quit app alive: a Live app window and a Show here view on a stand-in page that
+ * cancels its unload (beforeunload, after a click and a key in it, as a live app's sign-in page may).
+ * Returns the stand-in, to close after the quit.
+ */
+async function openLiveSurfaces(app, floor) {
+  const fake = http.createServer((req, res) => {
+    res.writeHead(200, { 'content-type': 'text/html' });
+    res.end('<!doctype html><title>Sign in</title><input id="user" autofocus><script>addEventListener("beforeunload", (e) => { e.preventDefault(); e.returnValue = ""; });</script>');
+  });
+  const appPort = await freePort();
+  await new Promise((r) => fake.listen(appPort, '127.0.0.1', r));
+  const url = `http://localhost:${appPort}/`;
+  const click = `(() => { const a = document.createElement('a'); a.href = '${url}'; a.target = 'mxoffice-liveapp-${floor}'; a.rel = 'noopener'; document.body.append(a); a.click(); a.remove(); return true; })()`;
+  await hook(app, (_electron, code) => globalThis.__mxDesktop.win().webContents.executeJavaScript(code, true), click);
+  await until('the Live app window on the stand-in', async () => (await hook(app, () => globalThis.__mxDesktop.liveWindows().map((x) => x.url))).includes(url), 30_000);
+  await hook(app, (_electron, [f, p]) => globalThis.__mxDesktop.viewPorts.set(f, p), [floor, appPort]);
+  const shown = await hook(app, (_electron, [f, u]) => globalThis.__mxDesktop.embed().handle({ op: 'show', floor: f, url: u }), [floor, url]);
+  assert(shown?.ok, `Show here refused: ${JSON.stringify(shown)}`);
+  await hook(app, () => globalThis.__mxDesktop.embed().handle({ op: 'bounds', rect: { x: 0, y: 120, width: 800, height: 500 }, clip: { x: 0, y: 120, width: 800, height: 500 }, zoom: 1 }));
+  await until('the Show here view on the stand-in', async () => (await hook(app, () => globalThis.__mxDesktop.embed().info()?.url ?? '')) === url, 30_000);
+  // A click and a key in each page: beforeunload only counts after the user did something there.
+  await sleep(1000);
+  await hook(app, () => {
+    const pages = [...globalThis.__mxDesktop.liveWindows().map((x) => x.win.webContents), globalThis.__mxDesktop.embed().view().webContents];
+    for (const wc of pages) {
+      wc.sendInputEvent({ type: 'mouseDown', x: 20, y: 20, button: 'left', clickCount: 1 });
+      wc.sendInputEvent({ type: 'mouseUp', x: 20, y: 20, button: 'left', clickCount: 1 });
+      wc.sendInputEvent({ type: 'char', keyCode: 'a' });
+    }
+  });
+  await sleep(500);
+  return fake;
+}
+/** Quits the app (the tray's Quit, or the window's ✕) and waits for its main process to exit. Returns its process tree from just before. */
+async function quitApp(app, via = 'tray') {
+  const before = appTree(running.appPid);
   const gone = new Promise((r) => (app.process().exitCode !== null ? r() : app.process().once('exit', r)));
-  await app.evaluate(() => void globalThis.__mxDesktop.requestQuit()).catch(() => {});
+  if (via === 'close') await app.evaluate(() => void globalThis.__mxDesktop.win().close()).catch(() => {});
+  else await app.evaluate(() => void globalThis.__mxDesktop.requestQuit()).catch(() => {});
   let timer;
   const late = new Promise((_, reject) => (timer = setTimeout(() => reject(new Error("the app didn't exit within 60 s of Quit")), 60_000)));
   await Promise.race([gone, late]).finally(() => clearTimeout(timer));
   running.app = undefined;
+  return before;
 }
 
 // ---- the office the app runs: a small big-data fixture (two projects, open escalations, live fake workers)
@@ -267,9 +347,18 @@ async function owned(home) {
     const replayed = notes.slice(before).filter((n) => n.path && n.path !== 'home');
     assert(!replayed.length, `items notified again after the restart: ${JSON.stringify(replayed)}`);
   });
-  await check('owned: shutdown ownership (Quit stops the office the app started)', async () => {
+  await check('owned: shutdown ownership (Quit, with a Live app window and Show here open, stops the office the app started and leaves no process of the app)', async () => {
+    const fake = await openLiveSurfaces(app, STUDIO_FLOOR);
     await hook(app, () => globalThis.__mxDesktop.answer(0));
-    await quitApp(app);
+    let before;
+    try {
+      before = await quitApp(app);
+    } finally {
+      fake.closeAllConnections();
+      fake.close();
+    }
+    const secs = await noAppLeft(before);
+    log(`  owned Quit: the app's ${before.filter((p) => p.name.toLowerCase() === ELECTRON_EXE).length} processes all gone ${secs} s after its main process exited`);
     await until('the office stopped', async () => !(await healthy(port)), 30_000);
     await until('its process gone', () => {
       try {
@@ -479,8 +568,19 @@ async function attached(home) {
     const n = (await hook(app, () => globalThis.__mxDesktop.notes())).length;
     assert(n === notesBefore, `notifications replayed: ${n - notesBefore}`);
   });
-  await check('attached: Quit leaves the office it attached to running', async () => {
-    await quitApp(app);
+  await check('attached: Quit (the window’s ✕, with a Live app window and Show here open) leaves the office it attached to running and no process of the app', async () => {
+    await hook(app, (_electron, u) => globalThis.__mxDesktop.win().loadURL(u), `http://localhost:${port}/home`);
+    await until('the window on the office', async () => (await winUrl(app)).startsWith(`http://localhost:${port}/`), 30_000);
+    const fake = await openLiveSurfaces(app, STUDIO_FLOOR);
+    let before;
+    try {
+      before = await quitApp(app, 'close');
+    } finally {
+      fake.closeAllConnections();
+      fake.close();
+    }
+    const secs = await noAppLeft(before);
+    log(`  attached Quit: the app's ${before.filter((p) => p.name.toLowerCase() === ELECTRON_EXE).length} processes all gone ${secs} s after its main process exited`);
     await sleep(2000);
     assert(await healthy(port), 'the attached office stopped');
   });
@@ -490,6 +590,8 @@ async function attached(home) {
 // ---- go
 
 let code = 0;
+// Playwright answers the dialogs it sees over CDP; a beforeunload Electron already cancelled makes it throw where nobody catches it.
+process.on('unhandledRejection', (e) => log(`(ignored outside a check: ${String(e?.message ?? e).split(/\r?\n/)[0].slice(0, 200)})`));
 // A run that hangs still ends, with everything it started stopped.
 setTimeout(() => {
   log('FAIL the run took over 20 minutes');
