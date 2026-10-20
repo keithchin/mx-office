@@ -146,8 +146,8 @@ test('readiness at git level: rows in the running commit, merged to main, only o
     const got = await readReadiness({ dataDir: dir, floorId: 'demo', floorDir, live, running: true, pulls });
     assert.equal(got.main?.behind, 2);
     const by = Object.fromEntries(got.readiness!.milestones.map((m) => [m.id, m]));
-    assert.deepEqual([by['phase-0'].state, by['phase-0'].inLive], ['ready', [4]]);
-    assert.deepEqual([by['phase-1'].state, by['phase-1'].inLive], ['ready', [6, 7, 8]], 'no journey at main tied to it');
+    assert.deepEqual([by['phase-0'].state, by['phase-0'].inLive], ['no-evidence', [4]]);
+    assert.deepEqual([by['phase-1'].state, by['phase-1'].inLive], ['no-evidence', [6, 7, 8]], 'no journey at main tied to it: built, never ready');
     assert.deepEqual([by['phase-3'].onMain, by['phase-3'].onBranch], [[19], [{ branch: 'office/pixel-b1e9', pr: 6, rows: [20] }]]);
     assert.match(by['phase-3'].line, /row 19 merged to main, not in the live app yet; row 20 in PR #6, open, not merged/);
     assert.deepEqual(by['phase-4'].missing, [23, 24], 'a draft is not evidence');
@@ -188,10 +188,10 @@ test('the office’s live apps: event-driven readings, ready only after the jour
     await until('read', () => !!apps.peek('demo')?.readiness?.sha);
     await apps.settled('demo');
     let r = apps.peek('demo')!.readiness!;
-    assert.equal(r.milestones.find((m) => m.id === 'phase-0')!.state, 'ready');
+    assert.equal(r.milestones.find((m) => m.id === 'phase-0')!.state, 'no-evidence', 'no journey tied to it');
     assert.equal(r.milestones.find((m) => m.id === 'phase-1')!.state, 'unverified', 'the skeleton journey has not run against this build');
     assert.deepEqual(r.milestones.find((m) => m.id === 'phase-1')!.journeys, [{ id: 'skeleton', result: 'not-run' }], 'the broken control is not a journey to pass');
-    assert.deepEqual(toasts, ['✅ Live app ready: Prerequisites. Try it on the Live app tab']);
+    assert.deepEqual(toasts, [], 'nothing is ready on code alone');
     assert.ok(sent.at(-1)?.readiness, 'the floor was told');
 
     // Test evidence for exactly this build lands: read again (no polling), ready, told once.
@@ -204,7 +204,7 @@ test('the office’s live apps: event-driven readings, ready only after the jour
     await apps.settled('demo');
     assert.deepEqual(toasts.filter((t) => /Frame, domain and skeleton/.test(t)), ['✅ Live app ready: Frame, domain and skeleton. Try it on the Live app tab'], 'once');
     r = apps.peek('demo')!.readiness!;
-    assert.deepEqual(r.news?.map((n) => n.milestone), ['phase-0', 'phase-1'], 'the day’s news, for Needs you');
+    assert.deepEqual(r.news?.map((n) => n.milestone), ['phase-1'], 'the day’s news, for Needs you');
 
     // Main moves and the floor folder's fetch lands: behind is said, then the app follows the fetch by itself.
     const next = commit(origin, 'version.txt', 'two', 'Merge pull request #9');
@@ -218,7 +218,7 @@ test('the office’s live apps: event-driven readings, ready only after the jour
     await until('read again', () => apps.peek('demo')?.main?.behind === 0, 10_000);
     // A new build: its journeys haven't run against it, so phase 1 is unverified again, not "unready" news.
     assert.equal(apps.peek('demo')!.readiness!.milestones.find((m) => m.id === 'phase-1')!.state, 'unverified');
-    assert.equal(toasts.length, 2);
+    assert.equal(toasts.length, 1);
 
     // A restart of the office: nothing told again.
     const again = new LiveApps({ ...ctx } as never);

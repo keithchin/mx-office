@@ -9,8 +9,8 @@ import { h } from '../dom';
 import './readiness.css';
 
 /** The tag before each milestone (words, not emoji: the Clean and Portal themes redraw emoji). */
-const TAG: Record<MilestoneState, string> = { ready: 'Ready', unverified: 'Not verified', refresh: 'Restart', branch: 'In a PR', partial: 'Partly', 'not-built': 'Not built' };
-const WORD: Record<MilestoneState, string> = { ready: 'ready', unverified: 'built, not yet verified', refresh: 'merged, not in the live app yet', branch: 'on a branch', partial: 'partly built', 'not-built': 'not built' };
+const TAG: Record<MilestoneState, string> = { ready: 'Ready', unverified: 'Not verified', 'no-evidence': 'No journeys', refresh: 'Restart', branch: 'In a PR', partial: 'Partly', 'not-built': 'Not built' };
+const WORD: Record<MilestoneState, string> = { ready: 'ready', unverified: 'built, not yet verified', 'no-evidence': 'built, no journey evidence yet', refresh: 'merged, not in the live app yet', branch: 'on a branch', partial: 'partly built', 'not-built': 'not built' };
 
 /** The card, or null before the office has read anything. `extra` adds a link to a ready milestone (its walkthrough video). */
 export function readinessCard(s: LiveAppState, extra?: (milestone: string) => HTMLElement | null): HTMLElement | null {

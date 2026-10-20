@@ -2,10 +2,12 @@
 // build plan (./plan.ts) with the BUILD rows it needs, and the whole plan is the last one (its goal: "the
 // Sample check-sheet demo"). For the commit the live app runs, each milestone is:
 //   ready        every BUILD row has evidence in that commit (./rows.ts, commits that are its ancestors)
-//                and every journey tied to it passed against that very build (a test-run record whose
-//                tested revision is the live commit);
+//                and it has at least one journey, every one of which passed against that very build (a
+//                test-run record whose tested revision is the live commit);
 //   unverified   built into the running app, but a journey tied to it hasn't passed against this build
-//                ("built, not yet verified"), never "ready" from code alone;
+//                ("built, not yet verified");
+//   no-evidence  built into the running app, but no journey is tied to it at all ("built, no journey
+//                evidence yet"): never "ready" from code alone;
 //   refresh      every row is merged to main, some aren't in the running build yet (restart picks them up);
 //   branch       some rows are only on unmerged branches ("in PR #6, open, not merged");
 //   partial / not-built otherwise.
@@ -14,7 +16,7 @@
 import { buildRowsOf, type JourneyDef, type ParsedPlan } from './plan.js';
 import { rowsWord } from './rows.js';
 
-export type MilestoneState = 'ready' | 'unverified' | 'refresh' | 'branch' | 'partial' | 'not-built';
+export type MilestoneState = 'ready' | 'unverified' | 'no-evidence' | 'refresh' | 'branch' | 'partial' | 'not-built';
 
 export interface MilestoneJourney {
   id: string;
@@ -45,6 +47,9 @@ export interface MilestoneView {
   /** One line for people. */
   line: string;
 }
+
+/** Built into the running app, verified or not: in it, but not necessarily ready. */
+export const isBuilt = (s: MilestoneState): boolean => s === 'ready' || s === 'unverified' || s === 'no-evidence';
 
 /** A milestone that became ready (or stopped being ready) in the running app, for Needs you and the notifications. */
 export interface ReadinessNews {
@@ -108,7 +113,7 @@ function judge(id: string, title: string, rows: number[], journeys: readonly Jou
   });
   const allLive = rows.length > 0 && inLive.length === rows.length;
   let state: MilestoneState;
-  if (allLive) state = js.every((j) => j.result === 'passed') ? 'ready' : 'unverified';
+  if (allLive) state = !js.length ? 'no-evidence' : js.every((j) => j.result === 'passed') ? 'ready' : 'unverified';
   else if (!missing.length && !onBranch.length && rows.length) state = 'refresh';
   else if (onBranch.length) state = 'branch';
   else if (inLive.length || onMain.length) state = 'partial';
@@ -124,7 +129,9 @@ function lineOf(title: string, state: MilestoneState, m: Pick<MilestoneView, 'ro
   if (m.missing.length) bits.push(`${rowsWord(m.missing)} not built`);
   switch (state) {
     case 'ready':
-      return `Ready: ${title}${m.journeys.length ? ` (${m.journeys.map((j) => j.id).join(', ')} passed against this build)` : ''}`;
+      return `Ready: ${title} (${m.journeys.map((j) => j.id).join(', ')} passed against this build)`;
+    case 'no-evidence':
+      return `${title}: built, no journey evidence yet (no journey names its rows, so nothing has checked it against this build)`;
     case 'unverified': {
       const failed = m.journeys.filter((j) => j.result === 'failed').map((j) => j.id);
       const notRun = m.journeys.filter((j) => j.result === 'not-run').map((j) => j.id);
@@ -173,13 +180,14 @@ function headlineOf(goal: string, ms: readonly MilestoneView[], all: MilestoneVi
     const merged = phases.filter((m) => !m.missing.length && !m.onBranch.length);
     return `Live app: not ready for ${goal}, it isn't running.${merged.length ? ` Main has: ${merged.map((m) => m.title).join(', ')}.` : ''}`;
   }
-  if (all.state === 'ready') return `Live app: ready for ${goal}. Every milestone is in the running build${all.journeys.length ? ' and its journeys passed against it' : ''}.`;
+  if (all.state === 'ready') return `Live app: ready for ${goal}. Every milestone is in the running build and its journeys passed against it.`;
+  if (all.state === 'no-evidence') return `Live app: ${goal} is built into the running app, no journey evidence yet (no journey has been written for it, so nothing has checked it against this build).`;
   if (all.state === 'unverified') return `Live app: ${goal} is built into the running app, not yet verified (${all.journeys.filter((j) => j.result !== 'passed').length} of ${all.journeys.length} journeys haven't passed against this build).`;
-  const has = phases.filter((m) => m.state === 'ready' || m.state === 'unverified');
-  const some = phases.filter((m) => m.state !== 'ready' && m.state !== 'unverified' && m.inLive.length);
+  const has = phases.filter((m) => isBuilt(m.state));
+  const some = phases.filter((m) => !isBuilt(m.state) && m.inLive.length);
   const inLive = phases.flatMap((m) => m.inLive);
-  const hasWords = [...has.map((m) => (m.state === 'unverified' ? `${m.title} (not yet verified)` : m.title)), ...some.map((m) => `part of ${m.title}`)];
-  const missing = phases.filter((m) => m.state !== 'ready' && m.state !== 'unverified');
+  const hasWords = [...has.map((m) => (m.state === 'unverified' ? `${m.title} (not yet verified)` : m.state === 'no-evidence' ? `${m.title} (no journey evidence yet)` : m.title)), ...some.map((m) => `part of ${m.title}`)];
+  const missing = phases.filter((m) => !isBuilt(m.state));
   return `Live app: not ready for ${goal}. Has: ${hasWords.length ? `${hasWords.join(', ')} (${rowsWord(inLive)})` : 'none of the plan’s build rows'}. Missing: ${missing.map(missingWords).join('; ')}.`;
 }
 
@@ -196,7 +204,11 @@ export function readinessNews(now: LiveReadiness, notified: Readonly<Record<stri
     if (m.state === 'ready' && !was) {
       next[m.id] = { at, sha: now.sha };
       news.push({ key: `live-ready:${m.id}@${at}`, kind: 'ready', milestone: m.id, title: m.title, at, sha: now.sha });
-    } else if (m.state !== 'ready' && m.state !== 'unverified' && was) {
+    } else if (m.state === 'no-evidence' && was) {
+      // Told ready before a journey was required (or its journeys went away): forget it quietly, so the day a
+      // journey passes it is told ready, and nothing says the running app lost it.
+      delete next[m.id];
+    } else if (!isBuilt(m.state) && was) {
       delete next[m.id];
       news.push({ key: `live-unready:${m.id}@${at}`, kind: 'unready', milestone: m.id, title: m.title, at, sha: now.sha });
     }
