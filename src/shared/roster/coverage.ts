@@ -41,7 +41,7 @@ export const SHAPES: Readonly<Record<TeamShape, ShapeInfo>> = {
     label: 'Solo',
     icon: '🧑‍🚀',
     tagline: 'One generalist Lead',
-    who: 'One Solo Lead (Sonnet) covers every team, with every subagent type to draft and check.',
+    who: 'One Solo Lead covers every team, with every subagent type to draft and check.',
     roles: ['solo-lead'],
     coverage: { management: 'solo-lead', design: 'solo-lead', development: 'solo-lead', testing: 'solo-lead', analysis: 'solo-lead' },
   },

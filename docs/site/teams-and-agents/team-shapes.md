@@ -8,7 +8,7 @@ A project's team has one of three **shapes**. The shape is the first of two dial
 
 | Shape | Who is hired | Who covers what |
 |---|---|---|
-| 🧑‍🚀 **Solo** | One **Solo Lead** (Sonnet), with every subagent type | Every team: Analysis, Design, Development, Testing and Management |
+| 🧑‍🚀 **Solo** | One **Solo Lead**, with every subagent type | Every team: Analysis, Design, Development, Testing and Management |
 | 🚲 **Startup** | A **Chief Analyst** and a **Lead Developer** | The Chief Analyst covers Management, Analysis and Design (Stages P–4); the Lead Developer covers Development and Testing (Stages 5–7). Design and test work is done by their subagents. |
 | 🏢 **Enterprise** | A **Project Coordinator** and four **Leads** | Each team covers itself, as described in [The team model](team-model.md) |
 
@@ -40,4 +40,4 @@ In this version, coverage is read-only: the wizard sets it from the shape. Addin
 
 ## The Solo Lead
 
-The Solo Lead is one generalist agent (role id `solo-lead`, Sonnet by default). It works the toolkit pipeline stage by stage on its own: `small-project-tier.md` when it applies, each stage's gate before the next. It dispatches a subagent for every draft or check (Business Analyst, UI/UX Designer, Developer, Tester) and reviews every result. It escalates whatever needs you: there is nobody else to relay it. Its desk and journal are Development's (`docs/team/development.md`).
+The Solo Lead is one generalist agent (role id `solo-lead`; on Sonnet at Lean and Balanced, on Opus at Fast, like every Lead). With no other Lead to review its pull requests, **you review every one** (the Playbook's review rule: on a team with no other Lead, the Project Manager reviews); the wizard's shape cards and the Team tab say so. It works the toolkit pipeline stage by stage on its own: `small-project-tier.md` when it applies, each stage's gate before the next. It dispatches a subagent for every draft or check (Business Analyst, UI/UX Designer, Developer, Tester) and reviews every result. It escalates whatever needs you: there is nobody else to relay it. Its desk and journal are Development's (`docs/team/development.md`).

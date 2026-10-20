@@ -10,6 +10,7 @@ import type { ShapeCard } from '../../../../shared/budget/shape-cards';
 import { SHAPES, shapeForRoles, TEAM_SHAPES, type TeamShape } from '../../../../shared/roster/coverage';
 import { recommendShape, type Recommendation } from '../../../../shared/roster/recommend';
 import { ROLE_BY_ID } from '../../../../shared/roster/roles';
+import { SHAPE_LEAVES_YOU, shapeModels } from '../../../../shared/roster/shape-words';
 import type { IntakeAnswer } from '../../../../shared/wizard';
 import { h } from '../../dom';
 import { fetchEstimate, levelPicker } from '../../budget/levels-ui';
@@ -110,6 +111,8 @@ export function teamCard(flow: Flow) {
         h('strong', {}, budget ? usd(budget) : 'none'),
         ` · ${d.budget?.autoPause === false ? 'no auto-pause' : 'auto-pause at 100%'}`,
         h('div.nw-roles-line', {}, names),
+        d.budget?.settings ? h('div.nw-roles-line.nw-models', {}, shapeModels(shape, d.budget.settings)) : null,
+        h('div.nw-roles-line.nw-leaves', {}, SHAPE_LEAVES_YOU[shape]),
         isRec && rec.why.length ? h('div.nw-roles-line', {}, `Why: ${rec.why.join('; ')}`) : null,
       ),
       change,
@@ -133,7 +136,7 @@ export function teamCard(flow: Flow) {
       ...TEAM_SHAPES.map((k) => {
         const v = SHAPES[k];
         const price = cardOf(k)?.levels.find((l) => l.id === level)?.budget;
-        const b = h('button.nw-shape', { type: 'button', role: 'radio', 'aria-checked': String(!d.customTeam && k === shape), 'data-shape': k }, h('b', {}, `${v.icon} ${v.label}`), h('span.nw-shape-t', {}, v.tagline), h('span.nw-shape-p', {}, `${v.roles.length} agent${v.roles.length === 1 ? '' : 's'}${price ? ` · ${usd(price)} at ${level[0].toUpperCase() + level.slice(1)}` : ''}`), h('small', {}, v.who));
+        const b = h('button.nw-shape', { type: 'button', role: 'radio', 'aria-checked': String(!d.customTeam && k === shape), 'data-shape': k }, h('b', {}, `${v.icon} ${v.label}`), h('span.nw-shape-t', {}, v.tagline), h('span.nw-shape-p', {}, `${v.roles.length} agent${v.roles.length === 1 ? '' : 's'}${price ? ` · ${usd(price)} at ${level[0].toUpperCase() + level.slice(1)}` : ''}`), h('small', {}, v.who), h('small.nw-shape-you', {}, SHAPE_LEAVES_YOU[k]));
         b.addEventListener('click', () => {
           d.customTeam = false;
           chosen = { shape: k, level };

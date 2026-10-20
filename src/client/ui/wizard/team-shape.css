@@ -4,6 +4,8 @@
 .wizard .wz-shape:focus-visible { outline: 3px solid var(--accent); }
 .wizard .wz-rec { position: absolute; top: -11px; right: 12px; padding: 1px 10px; border: 2px solid var(--ink); border-radius: 999px; background: var(--good); color: var(--accent-ink); font-weight: 900; font-size: 12px; }
 .wizard .wz-shape-usd { font-size: 22px; font-weight: 900; }
+.wizard .wz-shape-you { font-weight: 600; }
+.wizard .wz-shape-models { color: var(--muted); }
 .wizard .wz-shape-usd small { font-size: 13px; color: var(--muted); }
 .wizard .wz-lvl { display: inline-flex; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; align-self: flex-start; }
 .wizard .wz-lvl-b { font: inherit; font-size: 12px; font-weight: 800; padding: 3px 10px; border: 0; background: var(--paper); color: var(--ink); cursor: pointer; }

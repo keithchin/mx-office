@@ -12,6 +12,7 @@ import type { LevelCard } from '../../../shared/budget/levels';
 import type { ShapeCard } from '../../../shared/budget/shape-cards';
 import { SHAPES, shapeForRoles, type TeamShape } from '../../../shared/roster/coverage';
 import { recommendShape } from '../../../shared/roster/recommend';
+import { SHAPE_LEAVES_YOU, shapeModels } from '../../../shared/roster/shape-words';
 import { PROJECT_ROLES, type ProjectPlan } from '../../../shared/wizard';
 import type { PageCtx } from './forms';
 import './team-shape.css';
@@ -73,7 +74,9 @@ function shapeCard(c: PageCtx, e: WithShapes, card: ShapeCard, recommended: bool
     recommended ? h('span.wz-rec', {}, '★ Recommended') : null,
     h('strong', {}, `${card.icon} ${card.label}`, h('small', {}, ` · ${card.tagline}`)),
     h('span', {}, card.who),
+    h('small.wz-shape-you', {}, SHAPE_LEAVES_YOU[card.shape]),
     sw,
+    h('small.wz-shape-models', {}, shapeModels(card.shape, l.settings)),
     h('span.wz-shape-usd', {}, usd(l.budget), lc ? h('small', {}, ` ${lc}`) : null),
     h('small', {}, `About ${l.days} working days · ${l.label}: ${l.tagline.toLowerCase()}`),
   );

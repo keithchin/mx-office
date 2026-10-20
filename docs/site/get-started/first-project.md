@@ -128,7 +128,7 @@ An answer it can't read changes nothing. The rules:
 | ⚖️ Balanced | A hard date; open-ended; or nothing said. |
 | 🚀 Fast | A hard date that's soon ("asap", "in three weeks"), unless the SME is slow to answer (agents would only wait faster). |
 
-**The shape cards.** Each of the three cards has a **Lean / Balanced / Fast** switch, its budget at that level (in dollars and the local currency) and the working days it expects. The recommended card is pre-selected and badged **★ Recommended**. Clicking a card picks that shape at the level its switch shows. Each card's estimate is the [plan](../using-the-office/budget.md#the-expected-plan) priced for that shape (see [team shapes in the plan](../using-the-office/budget.md#team-shapes-in-the-plan)) times the level's factor:
+**The shape cards.** Each of the three cards says what that shape leaves to you (on Solo you review every pull request; on Startup the two Leads review each other's and the Chief Analyst relays escalations; on Enterprise the Coordinator does), the models it runs on at the level, a **Lean / Balanced / Fast** switch, its budget at that level (in dollars and the local currency) and the working days it expects. The recommended card is pre-selected and badged **★ Recommended**. Clicking a card picks that shape at the level its switch shows. Each card's estimate is the [plan](../using-the-office/budget.md#the-expected-plan) priced for that shape (see [team shapes in the plan](../using-the-office/budget.md#team-shapes-in-the-plan)) times the level's factor:
 
 | | Lean | Balanced | Fast |
 |---|---|---|---|

@@ -253,6 +253,7 @@ html.nw-open, html.nw-open body { overflow: hidden; }
 #modal-root .nw-team-txt { flex: 1; min-width: 240px; font-size: 14px; line-height: 1.6; }
 #modal-root .nw-team-txt strong { font-weight: 600; }
 #modal-root .nw-roles-line { color: var(--muted); font-size: 13px; }
+#modal-root .nw-roles-line.nw-leaves { color: var(--ink); font-weight: 600; }
 #modal-root .nw-shapes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
 #modal-root .nw-shape { text-align: left; padding: 12px; border: 1px solid var(--line); border-radius: var(--nw-r); background: var(--card); color: var(--ink); font: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 2px; transition: border-color var(--nw-t), background var(--nw-t); }
 #modal-root .nw-shape[aria-checked='true'] { border-color: var(--accent); background: var(--nw-sel); box-shadow: 0 0 0 1px var(--accent); }
@@ -260,6 +261,7 @@ html.nw-open, html.nw-open body { overflow: hidden; }
 #modal-root .nw-shape-t { font-size: 12.5px; }
 #modal-root .nw-shape-p { font-size: 12px; color: var(--muted); }
 #modal-root .nw-shape small { color: var(--ink-2, var(--ink)); font-size: 12px; margin-top: 3px; line-height: 1.4; }
+#modal-root .nw-shape small.nw-shape-you { font-weight: 600; }
 #modal-root .nw-seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: var(--nw-r); overflow: hidden; }
 #modal-root .nw-seg button { padding: 5px 12px; border: 0; border-left: 1px solid var(--rule-strong); background: var(--card); color: var(--ink); font: inherit; cursor: pointer; font-size: 13px; }
 #modal-root .nw-seg button:first-child { border-left: 0; }
