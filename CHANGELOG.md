@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-20 · release 66 (`92155e3`)
+
 - **The desktop app quits for good.** Quitting (the tray, the window's ✕, Ctrl+Q, Windows logging off) left an `mx-office.exe` behind, without a window or tray icon, when a Live app window's page cancelled the close, and the next start handed over to it so nothing appeared. Quit now closes the Live app windows and a Show here view without asking their page, removes the tray and every window, and exits after 5 seconds whatever still holds on (saying what in `desktop-office.log`); a start while an old instance is on its way out replaces it. The desktop check now verifies that no process of the app is left after Quit, with a Live app window and Show here open, in both modes.
 
 ## 2026-10-19 · release 65 (`a44ae89`)
