@@ -128,7 +128,7 @@ An answer it can't read changes nothing. The rules:
 | ⚖️ Balanced | A hard date; open-ended; or nothing said. |
 | 🚀 Fast | A hard date that's soon ("asap", "in three weeks"), unless the SME is slow to answer (agents would only wait faster). |
 
-**The shape cards.** Each of the three cards has a **Lean / Balanced / Fast** switch, its budget at that level (in dollars and the local currency) and the working days it expects. The recommended card is pre-selected and badged **★ Recommended**. Clicking a card picks that shape at the level its switch shows. Each card's estimate is the [plan](../using-the-office/budget.md#the-expected-plan) priced for that shape (see [team shapes in the plan](../using-the-office/budget.md#team-shapes-in-the-plan)) times the level's factor:
+**The shapes under Change.** Each of the three shapes is a button with its name, a one-line tagline, how many agents it hires, its budget in dollars at the level picked, and a sentence on who is on it. Below them is **one** **Budget level** control (Lean, Balanced or Fast) for all three, with a line on what it means; changing it re-prices every shape. The summary line says *Suggested team* while you're on the recommendation and *Your team* once you've changed it. Working days are shown only under **Customize**, in its level picker. Each shape's estimate is the [plan](../using-the-office/budget.md#the-expected-plan) priced for that shape (see [team shapes in the plan](../using-the-office/budget.md#team-shapes-in-the-plan)) times the level's factor:
 
 | | Lean | Balanced | Fast |
 |---|---|---|---|
@@ -136,7 +136,7 @@ An answer it can't read changes nothing. The rules:
 | 🧑‍🚀 Solo | $60 | $100 | $160 |
 | 🚲 Startup | $90 | $140 | $220 |
 | 🏢 Enterprise | $110 | $170 | $270 |
-| **Small requirements-driven** (like travel-approval) | | | |
+| **Small requirements-driven** (like a travel approval app) | | | |
 | 🧑‍🚀 Solo | $120 | $180 | $290 |
 | 🚲 Startup | $170 | $270 | $430 |
 | 🏢 Enterprise | $220 | $330 | $530 |
@@ -149,6 +149,11 @@ The levels:
 | ⚖️ **Balanced**: the default | Leads on Sonnet, the Chief Analyst on Opus for Discovery, subagents on Sonnet. Early drafts on. At most 2 subagents at once per Lead. | the shape's estimate |
 | 🚀 **Fast**: speed first | Leads on Opus, up to 4 subagents at once per Lead. Early drafts on. Autonomy by stage on (Delegated, then Autonomous). | 1.6 × the shape's estimate (Opus rates plus a 15 % margin) |
 
+> [!IMPORTANT]
+> **What the card doesn't say today.**
+> - **On Solo, you review every pull request.** The Playbook's review rule asks for a review by another Lead (or the Project Coordinator) before a merge, and *on a team with no other Lead, the Project Manager reviews*. A Solo team has one Lead, so its Playbook tells it to escalate every pull request to you for review. Its subagents don't count as reviewers. The wizard doesn't mention this. It is an instruction, not a block: a merge without a review still goes through, and the [review gate](../using-the-office/review-gate.md) flags it afterwards. On Startup the Chief Analyst and the Lead Developer are asked to review each other's pull requests. See [Team shapes](../teams-and-agents/team-shapes.md).
+> - **The model shown isn't always the model used.** The Solo shape's sentence says *One Solo Lead (Sonnet)*, but the level decides: on **Fast** every Lead, the Solo Lead included, runs on **Opus**. The same goes for the Chief Analyst on Startup.
+
 **Customize** sets the cards aside: tick the roles to staff yourself (the five Enterprise roles and the Solo Lead) and use the full level picker, Manual included (type the budget and pick each setting), with the total, the alert threshold (80 % by default) and auto-pause at 100 %. The ticked roles decide the shape: the Solo Lead makes it Solo, only the Chief Analyst and the Lead Developer make it Startup, anything else Enterprise.
 
 When the setup reaches its **Hire the project team** step, it sets the project's shape and coverage first, then saves the budget and applies the level's models and settings, then hires the shape's roles: the Solo Lead; or the Chief Analyst and the Lead Developer; or the full team. To change the level of a running project, use its [Budget tab](../using-the-office/budget.md#budget-levels).
@@ -157,7 +162,7 @@ When the setup reaches its **Hire the project team** step, it sets the project's
 
 ![Start from a team: the copied summary, with what isn't copied](../images/new-project-team-from.png)
 
-**Start from a team** (under the team line) lists the projects in the office that have had a team: each with its client, if it has one, its shape, how many members it has had, its budget level and its agents. Pick one and the card says *Copies the setup of travel-approval*, line by line:
+**Start from a team** (under the team line) lists the projects in the office that have had a team: each with its client, if it has one, its shape, how many members it has had, its budget level and its agents. Pick one and the card says *Copies the setup of acme-orders*, line by line:
 
 - **Copied**: the team shape, which roles it has, each role's model as that project has it now, and the budget level (Lean, Balanced or Fast). A project on a manual budget has no level to copy, so the suggested one stays. Roles that make none of the three shapes exactly are copied as a customised team.
 - **Not copied**: the permission settings (the new project starts on its own defaults: the card shows them, change them under Advanced), connections and tokens, the budget amount (the new project's own estimate prices the level, so the same level can cost a different amount) and anything from that project's work: transcripts, handoffs, journals, documents, its brief and lessons.
@@ -187,7 +192,7 @@ For **Migrate an app** the card also shows the planner's estimate with *Migratio
 
 ## 6. Create project
 
-Click **Create project** (the primary button once the team card shows). The page says *Here's how I'll set up travel-approval* and shows the setup as five groups that tick in order: **Repository**, **Mendix app**, **Toolkit & gates**, **Save & publish** and **Team**. The group that's running opens by itself; click any group to see its real steps (the 14 below), each marked done, running, failed or skipped. A skipped step says why, in the step's own words: in an offline test office, for example, *skipped: offline test office: nobody is hired*. A done group with skipped steps says how many. Every step can be retried, and a step that is already done is skipped.
+Click **Create project** (the primary button once the team card shows). The page says *Here's how I'll set up acme-orders* and shows the setup as five groups that tick in order: **Repository**, **Mendix app**, **Toolkit & gates**, **Save & publish** and **Team**. The group that's running opens by itself; click any group to see its real steps (the 14 below), each marked done, running, failed or skipped. A skipped step says why, in the step's own words: in an offline test office, for example, *skipped: offline test office: nobody is hired*. A done group with skipped steps says how many. Every step can be retried, and a step that is already done is skipped.
 
 | Group | Its steps |
 | --- | --- |
@@ -202,7 +207,7 @@ Click **Create project** (the primary button once the team card shows). The page
 1. Create the GitHub repository (`gh repo create`, private, with the admin token). It first asks GitHub whether the repository is there, and creates it only when GitHub says plainly that it isn't. A repository that's there already is used as it is and is never the setup's to delete. When GitHub can't say (a timeout, a login that doesn't work, no permission, GitHub down), the step stops with *Couldn't check whether owner/name exists on GitHub: …* rather than guessing: check the office's GitHub login in 🔌 Connections, then Retry. When it creates the repository, the setup records that it did, with GitHub's id for it; when step 2 clones the folder, it records that too. Cancel & undo relies on these records (see [When the office isn't sure what happened](#when-the-office-isnt-sure-what-happened)).
 2. Clone it as a project. On Windows the clone gets `core.longpaths true` in its own config (a Mendix app's npm packages go past 260 characters inside a worker's worktree; the office's own git has long paths from its environment anyway), and the project's folder is marked trusted in the office's Claude Code config, so the team's agents start without the *Do you trust the files in this folder?* prompt.
 3. Write `.claude/toolkit.env` (MXBUILD_PATH, mxcli nightly, Python).
-4. Create the Mendix app (new projects only): Studio Pro's own `mx create-project` makes a blank app named after the project (`travel-approval` → `TravelApproval.mpr`) at the repository's root, where the toolkit looks for it. Without `mx` in that Studio Pro it falls back to `mxcli new`. Mendix's generated files (`deployment/`, `.mendix-cache/`, `theme-cache/`, `*.mpr.lock` and so on) are added to `.gitignore`. An existing app is left alone; the step only reports which Studio Pro its `.mpr` was saved with.
+4. Create the Mendix app (new projects only): Studio Pro's own `mx create-project` makes a blank app named after the project (`acme-orders` → `AcmeOrders.mpr`) at the repository's root, where the toolkit looks for it. Without `mx` in that Studio Pro it falls back to `mxcli new`. Mendix's generated files (`deployment/`, `.mendix-cache/`, `theme-cache/`, `*.mpr.lock` and so on) are added to `.gitignore`. An existing app is left alone; the step only reports which Studio Pro its `.mpr` was saved with.
 5. Run the toolkit's `init-project.sh` (after the app, so its `CLAUDE.local.md` names the `.mpr`), from a **pin** of the fork's newest commit: the project stays on that toolkit commit until you update it (see [Toolkit versions](../administration/toolkit-versions.md)), and its session-start ritual doesn't pull.
 6. Install the pre-commit hook.
 7. Write the intake answers to `intake.md` (the brief's, see [What the approval records](#what-the-approval-records), and any typed under Advanced), the brief to `docs/project-brief.md`, and the attached documents into `sources/`. A source folder is copied into `sources/legacy/<name>/` here, off the event loop, with the same rules as the check (a Retry keeps the files already there).
@@ -233,7 +238,7 @@ Creating the GitHub repository and cloning the folder can't simply be done twice
 
 The office never decides on its own that it created a repository it found afterwards, even when the timing fits: only GitHub's own *created* answer to the office's command counts. The same goes for the project folder (*Cloning the project folder may have completed*, **Check the folder again**, **Use this existing folder**). The unfinished-setup card on Home shows the same box and buttons, and every step of this is in the audit log (`project.setup-operation`).
 
-When it's done, the card says *travel-approval is ready*, with **Open project**, **Open in Studio Pro** (when the office can open the new project's `.mpr`: it opens the project page and asks there, as the page's own button does) and **View setup details** (every group open, and the log).
+When it's done, the card says *acme-orders is ready*, with **Open project**, **Open in Studio Pro** (when the office can open the new project's `.mpr`: it opens the project page and asks there, as the page's own button does) and **View setup details** (every group open, and the log).
 
 ### Unfinished setups
 
@@ -257,7 +262,7 @@ Editing the answers later (the project's **🧰 Project setup** panel: **🧭 En
 > [!NOTE]
 > Agents, queue workers, **🔄 Re-check gates** and the live app all run with the project's `.claude/toolkit.env` over the office's own environment, so an 11.12.4 project builds with 11.12.4's mxbuild even when the office was started with an `MXBUILD_PATH` for another Studio Pro.
 
-The setup is a [workflow](../automation/workflows.md): it is saved after every step, so an office restart halfway loses nothing (the step it was on shows as failed, and Retry carries on from it). The steps that talk to GitHub (create, clone, push, the issue) and creating the app try again by themselves, twice, when the connection drops or GitHub is busy; the log says *↻ … trying again in 3s*. The setup keeps the first 300 lines of its log and the last 2,700, with *… N lines left out …* between them, so both the start and a failure near the end survive a long toolkit run; **View setup details** shows its last 400 lines.
+The setup is a [workflow](../automation/workflows.md): it is saved after every step, so an office restart halfway loses nothing (the step it was on shows as failed, saying *The office restarted in the middle of this step: Retry carries on from here*; the workflow underneath records the run as interrupted, and nothing carries on until you press **Retry**). The steps that talk to GitHub (create, clone, push, the issue) and creating the app try again by themselves, twice, when the connection drops or GitHub is busy; the log says *↻ … trying again in 3s*. The setup keeps the first 300 lines of its log and the last 2,700, with *… N lines left out …* between them, so both the start and a failure near the end survive a long toolkit run; **View setup details** shows its last 400 lines.
 
 ## Local only (not on GitHub)
 

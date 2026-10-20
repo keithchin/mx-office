@@ -36,7 +36,11 @@ Every PR runs the **pr-checks** workflow: Studio Pro `mx check`, `mxcli lint`, a
 
 ## 6. Merge
 
-You, or the Lead (depending on the [autonomy level](../teams-and-agents/autonomy.md)), merge. Within about a minute the **🌐 Live app** updates itself to the new `main`.
+You, or the Lead (depending on the [autonomy level](../teams-and-agents/autonomy.md)), merge. The Playbooks ask for a review by another agent first, but **nothing in the office blocks a merge**: the [review gate](../using-the-office/review-gate.md) looks after the merge and flags a PR merged without a `Review:` comment of the right shape in Needs you. Use GitHub's branch protection if you need a hard stop.
+
+When the **🌐 Live app** is running, it updates itself to the new `main` within about a minute (the app is down while it rebuilds). A stopped live app stays as it is until someone starts it.
+
+Merging doesn't make a task *delivered*: it's *integrated*. It counts as delivered once it's *verified*, its required checks passed on the merge commit, and the office judges that only while the Testing switch **Judge merged tasks against checks** is on (off by default; see [Testing](../using-the-office/testing.md#verification)).
 
 ## Where you come in
 

@@ -8,11 +8,22 @@ A project's team has one of three **shapes**. The shape is the first of two dial
 
 | Shape | Who is hired | Who covers what |
 |---|---|---|
-| 🧑‍🚀 **Solo** | One **Solo Lead** (Sonnet), with every subagent type | Every team: Analysis, Design, Development, Testing and Management |
+| 🧑‍🚀 **Solo** | One **Solo Lead**, with every subagent type | Every team: Analysis, Design, Development, Testing and Management |
 | 🚲 **Startup** | A **Chief Analyst** and a **Lead Developer** | The Chief Analyst covers Management, Analysis and Design (Stages P–4); the Lead Developer covers Development and Testing (Stages 5–7). Design and test work is done by their subagents. |
 | 🏢 **Enterprise** | A **Project Coordinator** and four **Leads** | Each team covers itself, as described in [The team model](team-model.md) |
 
 Every project made before shapes existed is **Enterprise**, with every team covering itself, and behaves exactly as it always did.
+
+## What each shape means for reviews, coordination and models
+
+| | 🧑‍🚀 Solo | 🚲 Startup | 🏢 Enterprise |
+|---|---|---|---|
+| **Who reviews a pull request** | **You**, for every one: there is no other Lead | The other Lead (the Chief Analyst and the Lead Developer review each other's) | Another Lead or the Project Coordinator |
+| **Who coordinates** (covers Management) | The Solo Lead | The Chief Analyst | The Project Coordinator |
+| **Leads' model** | Sonnet on Lean and Balanced, **Opus on Fast** | Same | Same (the Coordinator isn't changed by the level) |
+
+- **Reviews come from the Playbook's rule**: a pull request is merged only after another Lead (or the Project Coordinator) recorded a review on it, and *on a team with no other Lead, the Project Manager reviews*. A **subagent doesn't count** as a reviewer: the review gate accepts a review named after one of the project's workers or team members other than the opener (or one left from a different GitHub account), and a subagent is neither. The gate doesn't check the reviewer's role. The rule is an instruction to the agents; the office doesn't block a merge. The [review gate](../using-the-office/review-gate.md) flags an agent's merged pull request without a review that counts, after the merge.
+- **The wizard doesn't say any of this.** Picking Solo makes you the reviewer of every pull request without the card saying so, and the Solo shape's sentence says *(Sonnet)* although the **Fast** level puts every Lead, the Solo Lead included, on Opus. See [Create your first project](../get-started/first-project.md#5-team--budget).
 
 ## Team coverage
 
@@ -40,4 +51,9 @@ In this version, coverage is read-only: the wizard sets it from the shape. Addin
 
 ## The Solo Lead
 
-The Solo Lead is one generalist agent (role id `solo-lead`, Sonnet by default). It works the toolkit pipeline stage by stage on its own: `small-project-tier.md` when it applies, each stage's gate before the next. It dispatches a subagent for every draft or check (Business Analyst, UI/UX Designer, Developer, Tester) and reviews every result. It escalates whatever needs you: there is nobody else to relay it. Its desk and journal are Development's (`docs/team/development.md`).
+The Solo Lead is one generalist agent (role id `solo-lead`; Sonnet by default, Opus on the Fast level). It works the toolkit pipeline stage by stage on its own: `small-project-tier.md` when it applies, each stage's gate before the next. It dispatches a subagent for every draft or check (Business Analyst, UI/UX Designer, Developer, Tester) and reviews every result. It escalates whatever needs you: there is nobody else to relay it, and nobody else to review its pull requests, so it asks you for each one. Its desk and journal are Development's (`docs/team/development.md`).
+
+## See also
+
+- [Trust and authority](../architecture/trust-and-authority.md): what the office enforces (and doesn't) around reviews and merges.
+- [Architectural concepts](../architecture/_index.md).

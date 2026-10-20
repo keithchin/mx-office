@@ -1,10 +1,10 @@
 ---
 title: Live app
-description: Run the Mendix app from main on this laptop with mxcli run --local, and click through what the agents built.
+description: Run the Mendix app from the project's default branch on this laptop with mxcli run --local, click through what the agents built, and read what its readiness card does and doesn't prove.
 weight: 8
 ---
 
-The **🌐 Live app** tab runs the project's Mendix app from its `main` branch, on this laptop. **Open live app** shows it in a window of its own, and the tab's **Console** shows the runtime's log and the requests the app makes, like Studio Pro's Console.
+The **🌐 Live app** tab runs the project's Mendix app from its default branch (`main` on most projects; this page says main), on this laptop. **Open live app** shows it in a window of its own, and the tab's **Console** shows the runtime's log and the requests the app makes, like Studio Pro's Console.
 
 ![The live app](../images/live-app.png)
 
@@ -22,7 +22,7 @@ The status pill says what is actually there: *not started* (nobody started it si
 
 A crashed app shows when it stopped, on which commit, mxcli's last lines and **⟳ Restart**; a toast says so, and Needs you has a row that Teams and phone push send once per crash.
 
-Live apps don't start by themselves when the office starts. Open the tab and click **▶ Start**.
+Live apps don't start by themselves when the office starts, and an office restart doesn't bring back the one that ran: the commit the app runs is held in the office's memory only, so after a restart the tab says *not started* and nothing runs until an admin clicks **▶ Start**.
 
 ## Is it ready?
 
@@ -37,12 +37,26 @@ Then one line per milestone, tagged **Ready**, **Not verified**, **Restart**, **
 - **Milestones** are the phases of the project's build plan (`architecture/build-plan.md`, the `### Phase N — …` headings over the numbered row tables), each with the **BUILD** rows it needs; the whole plan is the last milestone, named from the plan's title.
 - **Which rows are built** comes from what the team wrote as it worked, never the plan's State column (agents don't update it): commit subjects naming the row (*Row 16: sheet form page applied*, *Rows 19-21: …*) on a commit that changed build files or says applied / proven / done / PASS, merged PR titles (*rows 4-14*), and `### <date> — Row N` notes in `docs/BUILD-LOG.md`. A *Draft row 16* or *Journal: row 3* commit only mentions it.
 - For the commit the app runs, a milestone's rows are **in the running build**, **merged to main but not in it yet** (⟳ Restart picks them up), **in a PR** (only on an unmerged branch, with its PR from GitHub's list), or **not built**.
-- **Ready** means every BUILD row is in the running build **and** every journey tied to the milestone passed against that very build: a `tests/e2e/*.journey.json` whose `requirement` names one of its rows (`build-plan row 10`), with a test-run record in **App Insights › Testing** whose tested revision is the running commit. Journeys that name no row belong to the whole plan; broken controls (`…-broken`) don't count. Built but not yet passed is *built, not yet verified*, never ready.
+- **Ready** means every BUILD row is in the running build **and** every journey tied to the milestone passed against that very build: a `tests/e2e/*.journey.json` whose `requirement` names one of its rows (`build-plan row 10`), with a test-run record in **App Insights › Testing** whose tested revision is the running commit. Journeys that name no row belong to the whole plan; broken controls (`…-broken`) don't count. A tied journey that failed, or hasn't run against this build, makes the milestone *built, not yet verified*.
+- **A milestone with no tied journeys reads Ready on build evidence alone.** When no journey names any of its rows, there is nothing to wait for: once every BUILD row is in the running build, it says **Ready** (the line then names no journeys). That build evidence is what the team wrote (commit subjects, PR titles, BUILD-LOG notes, see above), not a test. To have a milestone verified by a test, make sure a journey names one of its rows.
 - Nothing is ready while the app isn't running.
+
+### What Ready does and doesn't prove
+
+The card mixes evidence from different places and revisions:
+
+- **The plan and the journeys are read at main's newest commit**, not at the commit the app runs. A journey added or retied on main after the running build counts for the running build too.
+- **Test results must match the running commit** (the first 7 or more characters of the revision). Results for any other commit don't count.
+- **A report file's tested revision is whatever the file says** (`appRevision`, `testedRevision`, or `project.gitCommit` in the toolkit's `docs/report.json`; see [Testing](testing.md#three-revisions-per-run)). The office doesn't check it against the run.
+- **Ready isn't acceptance.** [Acceptance](progress-and-acceptance.md#acceptance) is a separate act on main's head; it doesn't read this card, the running commit or the walkthroughs.
+
+The office doesn't show the running commit, the test evidence's commit and a recording's commit side by side: only the running commit against main is on the status line.
 
 When a milestone becomes ready in the running app you get a toast, an FYI row in Needs you for a day (not counted as waiting on you), and a Teams, phone push and desktop alert, once per milestone, even across restarts of the office. A milestone told ready that the running app no longer has is said too.
 
 The card is read again when the app starts, stops or crashes, when a fetch lands in the project's folder, and when test evidence lands; never on a timer of its own.
+
+See also [State and sources of truth](../architecture/state-and-truth.md): where the running commit, readiness and test evidence come from, and what survives a restart.
 
 ## Walkthroughs
 
@@ -89,12 +103,14 @@ Under the app's status, the **Console** has two tabs. It streams only while the 
 
 ## How it works
 
-- The office keeps a **separate clone** of the repository at `<office data>/live/<project>`, always on main. It is cloned from the project's folder and fetches from it, never from GitHub itself: the project's folder fetches main with the office's own git setup, so a private repository works. Agents' worktrees are never touched.
+- The office keeps a **separate clone** of the repository at `<office data>/live/<project>`, on the branch it picked at the first ▶ Start since the office started (the default branch at that moment). It is cloned from the project's folder and fetches from it, never from GitHub itself: the project's folder fetches main with the office's own git setup, so a private repository works. Agents' worktrees are never touched.
 - It runs `mxcli run --local` with three free ports from **8110–8199** (app, admin and serve) and a database named `<project>_live` in the local PostgreSQL.
 - While the app runs, the office runs its **recording proxy** on a fourth port from the same range, on the office's own bind address (never the office's port). It passes every request and WebSocket on to the app's port on this machine and to nothing else, and records them for the Console. The browser sends the office's session cookie to every port of the same host (cookies ignore ports), so the proxy removes it from every request before passing it on, and drops any cookie the app tries to set under the office's name: the app can neither read nor replace your office sign-in. **Open live app** and the Overview's **View App** use the proxy's address; the app's own port still answers too, unrecorded.
 - The Console reads the runtime log only while someone has it open, from where it stopped (a first read takes the last 256 KB).
-- Once it's running, the office has the project's folder fetch `main` every 60 seconds (and follows any other fetch that lands there). When `main` moves (a merge), it **updates and restarts** the app by itself. When the fetch fails, the tab and Needs you say *Live app can't check for updates: (git's reason) (running main @dd960bd from 16 Oct 23:36)*.
-- When `main` moved, or a first build failed, it clears the stale build folders under `deployment/` (keeping `deployment/data`) and retries once.
+- **Only while it's running**, the office has the project's folder fetch `main` every 60 seconds (and follows any other fetch that lands there). When `main` moves (a merge), it **updates and restarts** the app by itself. When the fetch fails, the tab and Needs you say *Live app can't check for updates: (git's reason) (running main @dd960bd from 16 Oct 23:36)*. A stopped, failed or crashed app follows nothing: it stays on its old commit (or none) until someone starts it.
+- An update **stops the old app before it builds the new one**, so the app is down for the whole build.
+- When `main` moved, it clears the stale build folders under `deployment/` (keeping `deployment/data`) first. When a build stops before the app comes up, it clears them and tries **once** more; if that fails too, the app is *build failed* and the office doesn't try again by itself.
+- The app counts as **running** the first time its port answers an HTTP request with a status below 500. The office doesn't ask again after that: a crash is noticed when the mxcli process exits, but an app whose process stays up and stops answering still shows *running*.
 - The log is `<office data>/live/<project>.log`.
 
 Settings such as the port range, the database and the mxcli path are environment variables `AGENT_OFFICE_LIVE_*`. See [Environment variables](../reference/environment-variables.md#live-app).

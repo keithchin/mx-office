@@ -27,7 +27,7 @@ Where the records come from (nothing new is asked of GitHub):
 - **The office's own gate-check** of main, which the setup panel runs when main moves. The commit gate-check read is both revisions. The evidence is the office's store.
 - **The office's own microflow test runs** (see [Microflow tests](#microflow-tests)): the work folder's commit is both revisions, the evidence the JUnit file in the office's store.
 
-Reading the same run or report again never records it twice. The records are kept in `<data>/testing/<project>.jsonl`, append-only and hash-chained like the audit log.
+Reading the same run or report again never records it twice. The records are kept in `<data>/testing/<project>.jsonl`, append-only and hash-chained. Unlike the [audit log](audit-log.md) and the acceptance records, the office never checks this chain: nothing reads it back to verify it, so an edited or truncated file isn't flagged. Treat the chain as a way to check by hand, not as a guarantee the office enforces.
 
 ## The header
 
@@ -92,6 +92,9 @@ Where merge-commit results come from: on each look at the pull requests (the Boa
 
 If your pr-checks workflow only runs on pull requests, merge commits never get results, and merged tasks stay *Passed on PR head, integrated revision not checked*. Run the workflow on pushes to the default branch too, or waive.
 
+> [!NOTE]
+> **Known limitation: GitHub conclusions the office doesn't read as a result.** On the default branch, a pr-checks run whose conclusion is `cancelled`, `timed_out`, `action_required` or `startup_failure` isn't recorded at all, so that check is **missing** on the commit; a single check run with one of those conclusions (or none) is recorded as **skipped**. Either way it never counts as passed, but it also never shows as *failed*: the task reads *Merged, not verified* with the check missing or skipped. Open the run on GitHub to see what happened.
+
 ## Verification policy and waivers
 
 The **verification policy** is the list of checks a merged task needs on its merge commit. Admins set it per project in [⚙️ Settings › ✅ Verification](/lite?tab=settings&section=verification), a short list of checkboxes:
@@ -129,7 +132,7 @@ How the scores are made:
 - When **Score main automatically with mxcli** is on (it's off by default, see [Safety switches](#safety-switches)), the office works them out **once for each new main commit** (when the Testing page or the Board's poll sees main move), and again only for a different mxcli version: scoring the same commit with the same mxcli twice keeps one record. At most one quality run per project at a time. It never runs while any of the project's agents is working: it waits for a look at a moment they're all idle.
 - An admin can also click **Score main now**.
 - Each run happens in the **office's own work folder** (`<data>/testing/work/<project>/quality`), a fresh copy of that commit made from the project's git objects, wiped before and after. It never runs in the project's checkout or an agent's worktree, because mxcli's catalog refresh rewrites `.ai-context/skills/widgets/` and creates `.claude/skills/widgets/` in the folder it runs in.
-- On travel-approval a run takes about 19 s: about 3 s for the copy, 14 s for `report` (it builds the catalog from scratch in the fresh folder), 1.2 s for `lint` and 0.6 s to read the catalog's schema.
+- On a small sample app a run takes about 19 s: about 3 s for the copy, 14 s for `report` (it builds the catalog from scratch in the fresh folder), 1.2 s for `lint` and 0.6 s to read the catalog's schema.
 - The records are kept in `<data>/testing/quality/<project>.jsonl` (append-only, hash-chained), and the raw report and lint JSON in `<data>/testing/evidence/<project>/`.
 
 ## Microflow tests
@@ -166,7 +169,11 @@ Two light prompts, nothing blocks:
 
 ## Acceptance
 
-When the Project Manager accepts a delivery, the acceptance record also keeps the Testing summary at the accepted commit: the coverage, result and freshness counts, and the verification policy's evaluation there. Records from before this change are left as they were.
+When the Project Manager accepts a delivery, the office tries to add the Testing summary at the accepted commit to the acceptance record: the coverage, result and freshness counts, and the verification policy's evaluation there. It's optional: when the summary can't be read, the record is written without it. The acceptance dialog and the record's view don't show it; it's kept in the record (`<data>/acceptance/<project>.jsonl`) for reading later. Records from before this change are left as they were.
+
+Acceptance doesn't require passing tests. Its evidence list shows gate-check verdicts, CI on pull requests and the test documents on main, not this page's run records, and failing gates and CI become suggested exceptions in the acceptance dialog. See [Progress and acceptance](progress-and-acceptance.md#acceptance).
+
+See also [State and sources of truth](../architecture/state-and-truth.md): test evidence, task outcomes and acceptance as separate sources, and what each guarantees.
 
 ## Not in this release
 

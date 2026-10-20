@@ -32,9 +32,11 @@ Click a client's card (or its ⋯ › **Open client**) for its page, `/clients?c
 - it must have `README.md` and `ROUTING.md` (the toolkit's `init-company-brain.sh` makes one);
 - a brain that is a **git repository** of its own gives each session a snapshot (its commit). A plain folder is allowed, and shown as **not versioned**: sessions record no snapshot, and corrections can only be noticed from the files' contents.
 
-Then each of the client's projects is wired with the toolkit's own `wire-company-brain.sh`: a short pointer block (between `COMPANY-BRAIN` markers) in each instruction file the project has (`CLAUDE.local.md`, `CLAUDE.md`, `AGENTS.md`, and the other tools' rules files where present). The office writes the brain's path in Windows form (`C:/…`), never runs the script inside a shared toolkit pin's write paths, and always passes the contributing clone's leak-guard deny list. The office runs no harvest of lessons; the toolkit's `harvest-learnings.sh` must always be given `--to <brain>/inbox` so nothing lands in a shared pin.
+Then each of the client's projects is wired with the toolkit's own `wire-company-brain.sh`: a short pointer block (between `COMPANY-BRAIN` markers) in each instruction file the project has (`CLAUDE.local.md`, `CLAUDE.md`, `AGENTS.md`, and the other tools' rules files where present). The office writes the brain's path in Windows form (`C:/…`), never runs the script inside a shared toolkit pin's write paths, and always passes the contributing clone's leak-guard deny list.
 
-The toolkit's script says nothing when it skips a file, so the office **checks the result itself**: exactly one marked block in every instruction file the project has, naming a `ROUTING.md` that exists. Anything less (a skipped file, two blocks, a brain that moved) is an error on the dialog, *wiring incomplete* on the client page, and a [Needs you](command-center.md#needs-you) card on the project with **Wire again** and **Dismiss**. The check runs again on every five-minute look.
+> **The office runs no harvest.** Nothing in the office moves a project's lessons into a brain. The toolkit's `harvest-learnings.sh` is a command-line tool you run yourself. Always give it `--to <brain>/inbox`: without it, it writes its drafts into the toolkit folder it runs from, which can be a shared pin. It scans the project's bug logs, the sections of `PROJECT.md` and `CLAUDE.local.md` headed toolkit promotion, defects or feedback, and toolkit scripts in `bin/` that were changed locally. It does **not** read the lessons file the office tells agents to write (`.ai-context/skills/…-lessons/SKILL.md`), so a lesson only there is never drafted. Reviewing and promoting drafts in the brain is manual too.
+
+The toolkit's script says nothing when it skips a file, so the office **checks the result itself**: exactly one marked block in every instruction file the project has, naming a `ROUTING.md` that exists. Anything less (a skipped file, two blocks, a brain that moved) is an error on the dialog, *wiring incomplete* on the client page, and a [Needs you](needs-you.md) card on the project with **Wire again** and **Dismiss**. The check runs again on every five-minute look.
 
 The pointer is in the project's folder. Agents working in a worktree see it once it's committed; the office does not commit it for you. Every hire gets the brain line in its first message either way (below).
 
@@ -59,7 +61,9 @@ If the brain can't be read (moved, deleted, no longer a brain), the line is *Com
 
 At each hire the office appends a **context manifest** to `<data>/context-manifests/<project>.jsonl`: the project, the role, the hire's worker id, when it was prepared, the client (as `portfolioId`), and the brain: its folder, snapshot (or none), whether it had uncommitted changes, the **routed files with their sha256 and size**, and what was **left out and why** (`inbox` candidates, `handoffs`, `proposals`, `patches`, a routed file that is missing, files nothing routes to), with the brain's status (`ok`, `unversioned` or `unavailable`).
 
-A manifest records **what was offered, not what was read or obeyed**. Agents don't always follow the pointer (in the Phase 0 probe, one session in six read `ROUTING.md` first; the rest searched the folder). Manifests are only ever appended: corrections, withdrawals and disconnecting keep the old ones.
+A manifest records **what was offered, not what was read or obeyed**. Agents don't always follow the pointer (in the Phase 0 probe, one session in six read `ROUTING.md` first; the rest searched the folder). A manifest names the hire's worker id but no Claude Code session id, so it can't be joined to the session's transcript to see what was actually opened. Manifests are only ever appended: corrections, withdrawals and disconnecting keep the old ones. They aren't shown in the office beyond a count in *Add to client*.
+
+**A snapshot is recorded, not pinned.** The manifest notes the brain's commit and whether it had uncommitted changes, but agents read the brain's **live folder** whenever they open it: a correction committed (or just saved) after the hire is what the agent sees on its next read, even though its manifest still names the old hashes. This is unlike the toolkit, where each project reads its own pinned copy (see [Toolkit versions](../administration/toolkit-versions.md)). There is no per-project brain pin, preview or rollback in the office; to undo a brain change, revert it in the brain's own repository.
 
 ## When the brain changes
 
@@ -69,10 +73,12 @@ On every five-minute look (and at each hire) the office reads each connected bra
 
 with the changed files as its evidence. *Corrected* is a routed file whose contents changed; *withdrawn* is one no longer routed (or gone); *added* is a newly routed one.
 
+Only the **set of routed files and their contents** is compared. An edit to `ROUTING.md` that keeps the same files (a reworded trigger, rows reordered) raises nothing, and neither does a change to a file nothing routes to (the `inbox/`, a draft in `proposals/`). The card goes to the Project Manager only: the agents themselves are never told.
+
 - **Rehire for a fresh session** benches each of those members (they write their handoff note first) and hires each again once benched: the fresh session gets the brain as it is now, and a new manifest.
 - **Dismiss** leaves the sessions as they are, until the brain changes again.
 
-Nothing restarts by itself. Withdrawing an item doesn't take it out of a session that already has it, or out of code and documents already written.
+Nothing restarts by itself. Withdrawing an item doesn't take it out of a session that already has it, or out of code and documents already written, and the office doesn't undo or flag work that used it. A withdrawn file that is still in the brain's folder can still be read by path: only the pointer to it is gone.
 
 ## Disconnect
 
@@ -85,3 +91,18 @@ Clients live in one file, `<data>/portfolios.json` (its name from the feature's 
 ## Who can do what
 
 Everyone signed in can see clients. Only an admin can create or rename one, add a project, connect or disconnect a brain, or press a brain card's buttons; the office checks this itself, and every change is in the [Audit log](audit-log.md). Its action names keep the feature's first name, `portfolio`: `portfolio.create`, `portfolio.rename`, `portfolio.add`, `portfolio.connect`, `portfolio.wire`, `portfolio.wire-incomplete`, `portfolio.disconnect`, `portfolio.brain-changed`, `portfolio.rehire`, `portfolio.dismiss`.
+
+## What clients don't do
+
+- **They aren't access control.** Agents run as the office's own user and can read any folder by path. The brain line's *Don't search other company folders* is an instruction, not a barrier.
+- **They don't prove retrieval or use.** The office records what it offered each hire. It doesn't record whether the agent opened `ROUTING.md`, which files it read, or whether it followed them.
+- **They don't pin the brain.** Sessions read the brain as it is now (see above).
+- **They don't harvest or promote.** Lessons stay in the project until someone runs the toolkit's harvest by hand and reviews the drafts in the brain.
+
+Ideas for closing these gaps (for example a session id in manifests, or a promotion flow) are discussed in [Proposals](../architecture/proposals.md). They are proposals only: none of them is built.
+
+## See also
+
+- [Reusable skills and knowledge](../architecture/reusable-skills-and-knowledge.md): how toolkit skills, company brains and project lessons fit together.
+- [Trust and authority](../architecture/trust-and-authority.md): what the office enforces and what is only an instruction.
+- [Skills and gates](../automation/skills.md) and the [Glossary](../reference/glossary.md) for the different meanings of "skill".

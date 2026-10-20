@@ -1,6 +1,6 @@
 ---
 title: Teams notifications
-description: Get an Adaptive Card in a Microsoft Teams channel when something needs you (an agent asking, an escalation, the spend cap, failing checks, a Firm report, a gate, Studio Pro changes), plus an optional daily digest per project. One-way, through a Teams Workflows webhook, with no admin consent.
+description: Get an Adaptive Card in a Microsoft Teams channel when something red needs you (an agent asking, an escalation, the spend cap, failing checks, stuck work, client questions, a gate, the budget, a live-app crash or milestone, and more), plus an optional daily digest per project. One-way, through a Teams Workflows webhook, with no admin consent.
 weight: 5
 ---
 
@@ -39,19 +39,24 @@ The workflow belongs to you, not to the channel. If you leave the company or the
 
 ### Red items
 
-The same rules as the Command Center's **Needs you** strip (`src/shared/needsyou.ts`, shared by the browser and the server), limited to what only a person can unblock:
+The items come from the same list as the Command Center's **Needs you** (`src/shared/needsyou.ts`, shared by the browser and the server). Only the kinds marked "red" (`isRedNeed` in `src/shared/notify-teams.ts`, applied in `src/server/notify-teams/gather.ts`) are posted:
 
 | Item | When |
 |---|---|
 | 🙋 An agent asking | An agent stopped on a permission prompt or a question in its terminal. A new question from the same agent is a new card. |
-| 🚩 An escalation | An open escalation to the Project Manager that isn't FYI. |
+| 🚩 An escalation | An open escalation to the Project Manager that isn't a plain FYI (an FYI that asks something is posted). |
 | 💸 The spend cap | A project's daily team cap is spent: office prompts are paused. |
 | ❌ Failing checks | An open, ready pull request whose checks fail. |
-| 📑 A Firm report | The Firm's audit report on the project is ready. |
-| ✋ A gate | A toolkit stage in play waits for your sign-off (a MANUAL stage counts only once every stage before it passed). |
 | 🧱 Studio Pro changes | Studio Pro closed with model changes nobody committed. |
+| ⏳ Stuck work | Each item [stuck detection](../using-the-office/stuck-detection.md) raises: a PR with no activity, a decision waiting on you, a test failing for days, the team going in circles. |
+| ❓ Client questions | Open questions for the client, one card per batch. An answer you gave that the toolkit hasn't read as recorded can be posted too. |
+| ✋ A gate | A toolkit stage in play waits for your sign-off (a MANUAL stage counts only once every stage before it passed). A sign-off you already gave, waiting for the lead to record it, isn't posted. |
+| 📑 A Firm report | The Firm's audit report on the project is ready. |
+| 💸 The budget | The project's budget is at 100 %, or the project is paused for it. |
+| 🔑 Claude credentials | Claude refused the agents' credentials (posted once, with the first project). |
+| 🌐 The live app | The live app stopped by itself (a crash), or a milestone became ready in it, or stopped being ready. |
 
-Not posted: finished turns (the office's own quiet turns end the same way, so these stay on the Command Center), lost worktrees, proposals, the live app, a stale folder, other projects' counts and the Firm's budget warning.
+Not posted: finished turns (the office's own quiet turns end the same way, so these stay on the Command Center), incidents (sev1 included), approvals and proposals, idle agents, lost worktrees, FYIs, a failed live-app build and the live app's update errors, budget forecasts and thresholds, design-system and company-brain cards, gate advisories, assumptions, *Not on main*, *Ready for your review*, the review gate's and the claims check's cards, a stale folder, other projects' counts and the Firm's budget warning. The desktop tray and Home count the same red items; the phone's push notifications differ slightly. See [Needs you](../using-the-office/needs-you.md#where-it-shows-and-what-each-place-counts).
 
 Each item in a card shows the **project**, **who** (the agent, whoever escalated, the PR's author, *The Firm*…), a **one-line summary**, its **urgency**, how long it has **waited**, **Jeff's priority** rank when he ranked it, and an **Open** button when there's a public office address.
 

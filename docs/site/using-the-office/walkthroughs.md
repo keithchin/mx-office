@@ -4,13 +4,13 @@ description: Deployment › Walkthroughs - short captioned videos of the app's w
 weight: 8.2
 ---
 
-The **🎬 Walkthroughs** page (**Deployment › Walkthroughs** in the Portal navigation, `/lite?tab=walkthroughs`) has short videos of the app's workflows. Each one plays a test journey (`tests/e2e/*.journey.json`) against the app and films it. They serve as demo videos, as acceptance evidence for the exact build they recorded, and as handover docs once they're in the project's repo.
+The **🎬 Walkthroughs** page (**Deployment › Walkthroughs** in the Portal navigation, `/lite?tab=walkthroughs`) has short videos of the app's workflows. Each one plays a test journey (`tests/e2e/*.journey.json`) against the app and films it. They serve as demo videos and as handover docs once they're in the project's repo. Each shows the exact build it recorded, but they are presentation, **not acceptance evidence**: [acceptance](progress-and-acceptance.md#acceptance) never looks at walkthroughs, and a recording's result doesn't change the [Live app](live-app.md)'s readiness or the [Testing](testing.md) page.
 
 You don't have to start anything. The office records them by itself, against **its own copy of the app**, never your [Live app](live-app.md).
 
 ## When videos are made
 
-- **Automatically** (on by default, one **Record automatically** switch per project): when a build on main passes its journeys (test evidence lands for main's newest commit with journeys that passed against it), or a milestone becomes ready in the live app, each journey that passed against that commit is recorded. Once per commit: a journey recorded automatically at a commit isn't recorded again for it. A journey that failed, or a milestone that is only built (*not yet verified*), records nothing. Automatic recordings are labelled *Auto* (and the milestone's name).
+- **Automatically** (on by default, one **Record automatically** switch per project): when a build on main passes its journeys (test evidence lands for main's newest commit with journeys that passed against it), or a milestone becomes ready in the live app, each journey that passed against that commit is recorded. Once per commit: a journey recorded automatically at a commit isn't recorded again for it, **whatever came of that recording**. An automatic recording that failed, errored, was cancelled or was cut off by an office restart counts as done for that commit and isn't tried again by itself; use **● Record** or **⟳ Re-record all**, or wait for the next commit. A journey that failed, or a milestone that is only built (*not yet verified*), records nothing. Automatic recordings are labelled *Auto* (and the milestone's name).
 - **By hand** (admins): **● Record** records one journey of main's newest commit, **⟳ Re-record all** every journey of it. With no videos yet, **● Record now** does the same.
 - **Make guided tour** joins the newest passing video of each workflow of one build into one longer video, with an intro card, a title card per workflow, an outro card and chapter markers.
 
@@ -26,7 +26,9 @@ A **batch** is the journeys of one commit, played by a **plan** (see [Start stat
 
 Two failures are worth **one more try**, never more: the runtime finding its port taken (*Runtime port '8110' is already in use*, after which the runtime only says *No Runtime Jetty server available. Please call update_appcontainer_configuration*: something else on the machine took the port in the minutes between the office picking it and the runtime binding it), tried again on other ports; and mxcli's web client bundle running past its limit (*web client build timed out after 5m0s*), tried again in the now warm workspace. Either way the next try gets a fresh database too, and each recording's card notes *The recording app failed to start once (…); retried.* Any other failure isn't tried again. A start that fails says, on every card of the batch, which phase failed, after how long, why, and what to do. Each recording's `manifest.json` keeps what its start took: `start.boot` with the total, the time of each phase, how the workspace was got ready (`fresh`, `reused`, `updated`), the bundle time mxcli reported and the retry, if any. The full output is in `<office data>/testing/work/<project>/instance-rec.log`.
 
-One batch runs at a time in the office; the others wait in line. The page shows where it is: *Queued*, *Starting the app* with the boot phase and the time it has taken (*Updating the recording workspace*, *Making a fresh database*, *Building the app*, *Bundling the web client · 1 min 12 s (2 min 40 s in all)*, *Starting the Mendix runtime*), *Group 2 of 4* with the same phases for its fresh database, *Setting up* (a journey played first, not filmed), *Recording 2 of 5* with the step it's on, *Finishing*. Under it, **This batch's plan** lists the groups, their order, which journeys are only set-up plays, and what isn't recorded and why. **Cancel** (admins) stops a batch, and the app with it. A recording stops by itself after 3 minutes.
+One batch runs at a time in the office; the others wait in line. The page shows where it is: *Queued*, *Starting the app* with the boot phase and the time it has taken (*Updating the recording workspace*, *Making a fresh database*, *Building the app*, *Bundling the web client · 1 min 12 s (2 min 40 s in all)*, *Starting the Mendix runtime*), *Group 2 of 4* with the same phases for its fresh database, *Setting up* (a journey played first, not filmed), *Recording 2 of 5* with the step it's on, *Finishing*. Under it, **This batch's plan** lists the groups, their order, which journeys are only set-up plays, and what isn't recorded and why. **Cancel** (admins) stops a batch, and the app with it. The recording under way is marked *cancelled*. Journeys the batch hadn't reached yet may get no card at all (cancelled while the app was starting, they get a *cancelled* card each), so check the page before assuming every journey ran. A recording stops by itself after 3 minutes.
+
+A recording that couldn't be made (the recording app didn't start, the office stopped mid-recording, a journey that sets up its start state didn't pass) and a recording that broke for another reason share one status, **error**; the card's reason says which. A journey whose own steps fail is **failed**, a separate status.
 
 The app, mxbuild, the browser, ffmpeg and the voice are processes of their own; the office only coordinates. The database password is given to mxcli as the live app gives it and never written to a log, a manifest or the page.
 
@@ -83,7 +85,7 @@ A recording signs in the way the toolkit's journey runner does, as the identity 
 1. the journey's own `TEST_USER=<account>` line in its `$comment` (or a `user` field);
 2. a `role` or `persona` that names one of the accounts in `tests/e2e/project.config.js`'s `roles`;
 3. otherwise the journey runner's default identity: `credentials()` in `tests/e2e/project.config.js` (its `DEFAULT_USER`);
-4. otherwise the **demo user** of the Walkthroughs settings (`demo_test_user`).
+4. otherwise the project's **demo user** (`demo_test_user` unless changed). It isn't on the page: it can only be changed through the API (`POST /api/walkthroughs/action` with `action: "settings"`, `demoUser` and `demoPassword`; admins), and is kept in the project's `settings.json` (see [Settings](#settings)).
 
 The office reads `project.config.js` at the recorded commit without loading it into itself: a copy is loaded in a separate Node process with nothing of the office's environment, with Node's permission model allowing it to read only that copy (no writes, no programs), for ten seconds at most. Where that can't run it reads the file's defaults off its text. An admin account (`MxAdmin`, `admin`…) is never used.
 
@@ -95,7 +97,7 @@ An unlicensed Mendix app keeps only 6 sessions open at once, guests' included, a
 
 - A **planner's fault is never a journey's**. A journey played without the start state it says it needs would fail for the wrong reason: the plan above prevents that, and the office's tests keep it so.
 - A **failed step stops the recording**. The failure is captioned on screen, the card says *Failed at step 2* with the reason, and the steps after it are *not run*. When it fails, the card also shows what the journey's `$comment` says it needs (a time window, the start state, which journey runs before it).
-- A video is **evidence only for the commit it recorded** (`@abc1234` on the card and in its `manifest.json`). A failed, cancelled or unfinished recording is never evidence, and can't be saved to the repo.
+- A video **shows only the commit it recorded** (`@abc1234` on the card and in its `manifest.json`). A failed, cancelled or unfinished recording can't be saved to the repo.
 - The browser is the office's headless Chromium, in a fresh profile that never has your office session. It may reach only the recording app's address and refuses every other request.
 
 ## Watching and keeping them
@@ -111,4 +113,18 @@ An unlicensed Mendix app keeps only 6 sessions open at once, guests' included, a
 ## Needs
 
 - mxcli on the office's machine (the same one the live app uses: `AGENT_OFFICE_LIVE_MXCLI`), and the PostgreSQL the live apps use. Without mxcli the page says recordings can't start the app, and nothing is recorded automatically. In a test office nothing is recorded automatically either (an admin's Record still works), so a test never starts a real app and database by itself.
-- Settings are environment variables. See [Environment variables](../reference/environment-variables.md#walkthrough-videos).
+- The tools are found through environment variables (ffmpeg and the Kokoro voice). See [Environment variables](../reference/environment-variables.md#walkthrough-videos).
+
+## Settings
+
+Each project's Walkthroughs settings are a file, `<office data>/walkthroughs/<project>/settings.json`, not environment variables. A project without the file uses the defaults:
+
+| Setting | Default | Set from |
+|---|---|---|
+| `autoRecord` | `true` (record automatically) | The page's **Record automatically** switch (admins) |
+| `narrate` | `true` (a voice when one is available) | The API only. The page's **Narrate** box is for the recordings you start from that page, not saved |
+| `demoUser`, `demoPassword` | `demo_test_user` and a fixed demo password | The API only (see [Who it signs in as](#who-it-signs-in-as)) |
+
+The file is written in place, with no temporary file or flush, so a crash in the middle of a write can leave it broken; the office then uses the defaults (automatic recording back on). See [Data locations](../administration/data-locations.md).
+
+See also [State and sources of truth](../architecture/state-and-truth.md): how walkthroughs, readiness, test evidence and acceptance stay separate.
