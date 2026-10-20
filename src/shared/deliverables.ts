@@ -5,6 +5,7 @@
 // Command Center's setup panel show it (ui/deliverables/). Pure: the browser imports it too.
 
 import type { RoleId, TeamId } from './roster/roles.js';
+import { PROCESS_MAP_GLOBS, type ProcessMapFacts } from './process-map.js';
 
 export type DeliverableStage = 'P' | '0' | '1' | '2' | '3' | '4' | '5' | '6';
 export const DELIVERABLE_STAGES: readonly DeliverableStage[] = ['P', '0', '1', '2', '3', '4', '5', '6'];
@@ -66,6 +67,9 @@ export const DELIVERABLES: readonly DeliverableSpec[] = [
   { id: 'design-system', team: 'design', stage: '3', title: 'Design system showcase', owner: DESIGNER, globs: ['design/design-system*.html'] },
   { id: 'wireframes', team: 'design', stage: '3', title: 'Wireframes (one per screen)', owner: DESIGNER, globs: ['design/wireframes/**/*.html'] },
   { id: 'storyboard', team: 'design', stage: '3', title: 'Storyboard', owner: DESIGNER, globs: ['design/storyboard*.html', 'design/storyboard/**/*.png'], optional: true },
+  // The toolkit's process map (shared/process-map.ts): optional, but its gate fails a stale one. A pass-1 map (no
+  // wireframes yet) shows at Stage 2 as the Chief Analyst's (server/process-map/), the full one here.
+  { id: 'process-map', team: 'design', stage: '3', title: 'Process map', owner: DESIGNER, globs: PROCESS_MAP_GLOBS, optional: true },
   { id: 'components', team: 'design', stage: '3', title: 'Component notes', owner: DESIGNER, globs: ['design/components*.md'], optional: true },
   { id: 'blueprint', team: 'development', stage: '3', title: 'Architecture blueprint', owner: DEV, globs: ['architecture/blueprint*.md', 'architecture/blueprint*.html'] },
   { id: 'domain-model', team: 'development', stage: '3', title: 'Domain model (Mermaid)', owner: DEV, globs: ['architecture/domain-model*.md'] },
@@ -237,6 +241,8 @@ export interface DeliverableFile {
   mtime?: number;
   /** Everywhere it is, the best first (main, then worktrees, then branches, newest first). */
   where: DeliverableWhere[];
+  /** A process map's pass and freshness, or the BRD report's embedded map (server/process-map/), read at its first place. */
+  processMap?: ProcessMapFacts;
 }
 
 export interface DeliverableItem {

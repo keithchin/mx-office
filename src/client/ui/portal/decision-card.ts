@@ -10,6 +10,7 @@ import type { NeedTarget } from '../needsyou/logic';
 import { h, timeAgo, toast } from '../dom';
 import { decisionAct } from '../decisions/api';
 import { decisionCheck } from '../decisions/feed';
+import { fitsLine } from '../process-map/card-link';
 import './decision-card.css';
 
 export interface CardCtx {
@@ -78,6 +79,8 @@ export function cardExtras(c: DecisionCard, x: CardCtx): HTMLElement[] {
       ),
     );
   }
+  // Where the question sits on the toolkit's process map, when it's pinned there (ui/process-map/).
+  out.push(fitsLine(c, x.floor));
   for (const n of c.notes) out.push(h('p.pt-dc-small', {}, n));
   for (const r of c.related) out.push(h('p.pt-dc-small', {}, 'Possibly related (not merged): ', h('i', {}, r.label.slice(0, 140))));
   out.push(h('p.pt-dc-after', {}, c.after));

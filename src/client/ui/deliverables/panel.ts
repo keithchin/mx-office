@@ -20,6 +20,7 @@ import { ROLE_BY_ID } from '../../../shared/roster/roles';
 import { staleText } from '../../../shared/wizard';
 import { h, timeAgo } from '../dom';
 import { openDeliverable, whereText } from './viewer';
+import { factBadges } from '../process-map/badges';
 
 export const STATUS_TEXT: Record<DeliverableStatus, string> = { present: 'On main', branch: 'On a branch', draft: 'Draft', missing: 'Missing' };
 const KIND_TAG: Record<string, string> = { html: 'HTML', md: 'MD', pdf: 'PDF', image: 'IMG', xlsx: 'XLSX', csv: 'CSV', json: 'JSON', text: 'TXT' };
@@ -35,6 +36,7 @@ function fileRow(floor: string, f: DeliverableFile, view: DeliverablesView): HTM
     h('span.dv-tag', {}, KIND_TAG[f.kind] ?? f.kind),
     h('button.tm-link.dv-open', { type: 'button', title: `Open ${f.path}`, onclick: () => openDeliverable(floor, f, view) }, f.path),
     meta ? h('span.dv-file-meta', {}, meta) : null,
+    factBadges(f.processMap),
   );
 }
 

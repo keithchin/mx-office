@@ -1,0 +1,8 @@
+/* 🗺️ The process map's badges (Documents rows, the viewer) and the decision card's "See where this fits" line. */
+.pm-note { display: inline-block; padding: 0 7px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 800; line-height: 18px; white-space: nowrap; background: var(--info-soft); color: var(--ink); }
+.pm-note.pm-stale { background: var(--warn-soft); color: var(--warn-ink); }
+.pm-notes { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.dv-file .pm-notes { grid-column: 2; }
+.pm-fits { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+.pm-fits .pm-fits-go { font-weight: 800; }
+.pm-fits small { margin-left: 4px; }
