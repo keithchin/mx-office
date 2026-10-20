@@ -51,6 +51,7 @@ import { firstRunRoutes } from './first-run.js';
 import { firstRunFixRoutes } from './first-run-fix.js';
 import { testingRoutes } from './testing.js';
 import { stuckRoutes } from './stuck.js';
+import { autonomyPolicyRoutes } from './autonomy-policy.js';
 import { asksRoutes } from './asks.js';
 import { signoffRoutes } from './signoff.js';
 import { stageRoutes } from './stage.js';
@@ -194,6 +195,8 @@ export const routes: readonly Route[] = [
   stuckRoutes.act,
   stuckRoutes.settings,
   stuckRoutes.setSettings,
+  autonomyPolicyRoutes.view,
+  autonomyPolicyRoutes.set,
   asksRoutes.view,
   asksRoutes.act,
   signoffRoutes.act,

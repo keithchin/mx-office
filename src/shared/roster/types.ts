@@ -12,6 +12,7 @@ import type { LiveRunView } from './subagent-live.js';
 import type { BgItem } from './background-work.js';
 import type { Coverage, TeamShape } from './coverage.js';
 import type { LevelId } from '../budget/types.js';
+import type { AutonomyRecordView } from './autonomy-step.js';
 
 export interface RosterSettings {
   autonomy: AutonomyLevel;
@@ -222,4 +223,6 @@ export interface RosterView {
   coverage?: Coverage;
   /** The project's budget level (the 💰 Budget tab's), for the "Solo · Lean" chip; added by GET /api/roster. */
   level?: LevelId;
+  /** How its autonomy level was set (the New project flow's step) and the office's policy; added by GET /api/roster. */
+  autonomyRecord?: AutonomyRecordView;
 }

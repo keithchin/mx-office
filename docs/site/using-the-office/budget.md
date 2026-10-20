@@ -184,7 +184,7 @@ On the tab (admins; every change is in the audit log):
 
 ### Budget levels
 
-A level sets the Leads' model, their subagents' models (Haiku only where the role allows it), early drafts and autonomy by stage, and how many subagents a Lead runs at once: the Leads' Playbooks say "Run at most N subagents at once" (Lean 1, Balanced 2, Fast 4). The changes apply from each Lead's next hire or Playbook rewrite. A running session keeps the model it started on, and a Lead only hears about a subagent change between turns, so nobody is interrupted mid-turn.
+A level sets the Leads' model, their subagents' models (Haiku only where the role allows it), early drafts and how many subagents a Lead runs at once, and, only on a project from before the New project flow's autonomy step, autonomy by stage (Lean and Fast turn it on). On a project whose autonomy was chosen in that step the level never changes autonomy: its cards leave the autonomy line out, Manual has no *Autonomy by stage* box, and its autonomy stays as chosen ([Autonomy levels](../teams-and-agents/autonomy.md)). The Leads' Playbooks say "Run at most N subagents at once" (Lean 1, Balanced 2, Fast 4). The changes apply from each Lead's next hire or Playbook rewrite. A running session keeps the model it started on, and a Lead only hears about a subagent change between turns, so nobody is interrupted mid-turn.
 
 ## Currency
 

@@ -4,7 +4,7 @@ description: Use ✨ New project to describe the app, review the project brief t
 weight: 3
 ---
 
-**✨ New project** on **/home** turns a description of the app into a ready project. You describe it (and attach any documents), the **Chief Analyst** drafts a **project brief** with you, you approve the scope, look over the functional domains and the team and budget, and click **Create project**. Then the office makes a private GitHub repository, a project, a blank Mendix app (`.mpr`), the toolkit's scaffold with your answers and decisions recorded, the project team at their desks and a Discovery issue for the Chief Analyst.
+**✨ New project** on **/home** turns a description of the app into a ready project. You describe it (and attach any documents), the **Chief Analyst** drafts a **project brief** with you, you approve the scope, look over the functional domains, choose how much the agent team may do without asking you, look over the team and budget, and click **Create project**. Then the office makes a private GitHub repository, a project, a blank Mendix app (`.mpr`), the toolkit's scaffold with your answers and decisions recorded, the project team at their desks and a Discovery issue for the Chief Analyst.
 
 > [!NOTE]
 > Only an admin (the Project Manager) can create a project. Creating the repository uses a separate **admin token** that can create repositories: `~/.agent-office-admin-gh-token`, or the one in 🔌 Connections. The agents never see it. See [Security & tokens](../administration/security-and-tokens.md).
@@ -106,6 +106,24 @@ At setup, the brief goes into the project in the toolkit's own formats, every it
 
 After the approval the Chief Analyst groups the work into **functional domains** (a second planning call, under the same cap): a card per domain with its roles and stories. Click one for a side panel with each story (*As a …, I want …, so that …*), its id (VIS-1) and how many acceptance criteria it has. *These become the BRD skeleton and the first build-plan items*: they go into `docs/project-brief.md` and the Discovery issue, every story ASSUMED until the client confirms it. The domains also suggest a size tier (used for the team recommendation; change it under Advanced). No modules are suggested here: the Lead Developer picks them at ✋ Stage 3. The BRDs themselves (`analysis/knowledge-base/brd/*.brd.json`, with full use cases) are written in Discovery, not here. A brief filled in by hand gets no domains: they're left to the BRDs.
 
+## Autonomy: how much the team does without asking you
+
+After the domains comes a required step, **How much should the agent team do without asking you?**, with the four [autonomy levels](../teams-and-agents/autonomy.md): **1 Directive**, **2 Guided**, **3 Delegated** and **4 Autonomous**, each with a plain one-line meaning. **Nothing is preselected**: 2 Guided carries a *Recommended for a new project* badge (the office's own default), but you pick. Until you do, **Create project** stays disabled and says why (*Choose how much the agent team may do without asking you*). The levels are a radio group: Tab to it, the arrow keys move and pick, Space picks too. The step is the same for a new app, a change to an existing app and a migration.
+
+Picking a level shows a preview, generated from the same tables the Playbooks, the standup and the escalations use: **What the team may do without asking** and **What still requires your approval**, each approval tagged with how it is held:
+
+- **stops automatically**: the office enforces it (spending past the budget: the project pauses at 100 %, while auto-pause is on).
+- **only you can**: no agent can do it (hands-on actions such as sign-ins, keys, installs).
+- **team is told to wait**: the office lists it for you and instructs the agents, but nothing technically blocks them. For example, merges are only blocked if your main branch is protected on GitHub.
+
+Whatever you choose, security, data-loss and budget-overrun issues always reach you, and deployment stays with people (the office has no deploy action; agents are told never to deploy). Below 3 Delegated the step also offers, unticked, *Let the level rise to 3 Delegated once the build plan (Stage 4) is approved* ([autonomy by pipeline stage](../teams-and-agents/autonomy.md#autonomy-by-pipeline-stage)).
+
+**The budget level doesn't change autonomy** on a project made this way: Lean and Fast don't turn autonomy by stage on, now or when you change the level later on the Budget tab. Only the tick above does.
+
+**An organisation policy** (off by default; an admin sets it under **⚙️ Settings › 👥 Team → Autonomy policy for new projects**) can limit the levels (the others are shown disabled, *Not allowed by your organisation's policy*) or fix one level: then it is shown chosen and locked, without the badge, and you tick *I understand the team will work at 2 Guided on this project, as set by my organisation* before Create project is enabled.
+
+The office checks the answer again when the setup starts (a plan from New project without a valid level, outside the policy, or without the acknowledgement is refused) and records it with your name and the time (`autonomy.choice` in the audit log). The setup's **Hire the project team** step applies it first, before the budget level and the hires. Settings › Team then says *2 Guided, chosen by Alex Lee on 20 Oct 2026*.
+
 ## 5. Team & budget
 
 ![Team & budget: the shapes and levels under Change, and Advanced](../images/new-project-team.png)
@@ -145,9 +163,9 @@ The levels:
 
 | Level | What it sets | Preset budget |
 |---|---|---|
-| 🪙 **Lean**: lowest cost | Leads and Discovery on Sonnet. Subagents on Haiku where the role allows it (the Developer, UI/UX Designer and Business Analyst stay on Sonnet). Early drafts off. Autonomy by stage on (Guided, then Delegated in build). At most 1 subagent at once per Lead. | 0.65 × the shape's estimate |
+| 🪙 **Lean**: lowest cost | Leads and Discovery on Sonnet. Subagents on Haiku where the role allows it (the Developer, UI/UX Designer and Business Analyst stay on Sonnet). Early drafts off. At most 1 subagent at once per Lead. (On a project from before the autonomy step it also turns autonomy by stage on, Guided then Delegated; never on a new project.) | 0.65 × the shape's estimate |
 | ⚖️ **Balanced**: the default | Leads on Sonnet, the Chief Analyst on Opus for Discovery, subagents on Sonnet. Early drafts on. At most 2 subagents at once per Lead. | the shape's estimate |
-| 🚀 **Fast**: speed first | Leads on Opus, up to 4 subagents at once per Lead. Early drafts on. Autonomy by stage on (Delegated, then Autonomous). | 1.6 × the shape's estimate (Opus rates plus a 15 % margin) |
+| 🚀 **Fast**: speed first | Leads on Opus, up to 4 subagents at once per Lead. Early drafts on. (On a project from before the autonomy step it also turns autonomy by stage on, Delegated then Autonomous; never on a new project.) | 1.6 × the shape's estimate (Opus rates plus a 15 % margin) |
 
 > [!IMPORTANT]
 > **What the card doesn't say today.**
@@ -196,7 +214,7 @@ For **Migrate an app** the card also shows the planner's estimate with *Migratio
 
 ## 6. Create project
 
-Click **Create project** (the primary button once the team card shows). The page says *Here's how I'll set up acme-orders* and shows the setup as five groups that tick in order: **Repository**, **Mendix app**, **Toolkit & gates**, **Save & publish** and **Team**. The group that's running opens by itself; click any group to see its real steps (the 14 below), each marked done, running, failed or skipped. A skipped step says why, in the step's own words: in an offline test office, for example, *skipped: offline test office: nobody is hired*. A done group with skipped steps says how many. Every step can be retried, and a step that is already done is skipped.
+Click **Create project** (the primary button once the team card shows and an autonomy level is chosen). **Ready to create** sums it up first: the project, the agent team's autonomy (the level, who chose it, *Change autonomy*), what still needs you, the spend (set separately from autonomy), the team and deployment (agents never deploy). Its **Create project** starts the setup; ✕, Esc or **Back** return to the plan. The page says *Here's how I'll set up acme-orders* and shows the setup as five groups that tick in order: **Repository**, **Mendix app**, **Toolkit & gates**, **Save & publish** and **Team**. The group that's running opens by itself; click any group to see its real steps (the 14 below), each marked done, running, failed or skipped. A skipped step says why, in the step's own words: in an offline test office, for example, *skipped: offline test office: nobody is hired*. A done group with skipped steps says how many. Every step can be retried, and a step that is already done is skipped.
 
 | Group | Its steps |
 | --- | --- |

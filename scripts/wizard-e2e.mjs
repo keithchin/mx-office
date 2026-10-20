@@ -222,6 +222,10 @@ async function main() {
     check(/Startup · Balanced/.test(team ?? '') && /2 agents/.test(team ?? ''), `the team card: ${team?.replace(/\s+/g, ' ').slice(0, 120)}`);
     const repoName = await page.inputValue('#nw-a-name');
     check(repoName === 'visitor-registration', `the repository name comes from the brief: ${repoName}`);
+    // The required autonomy step: Create project waits for a level (nothing preselected).
+    check(await page.isDisabled('#nw-create'), 'Create project is disabled until an autonomy level is chosen');
+    check((await page.$$eval('.aw-lvl[aria-checked="true"]', (els) => els.length)) === 0, 'no autonomy level preselected');
+    await page.click('.aw-lvl[data-level="2"]');
     // A bad name is caught inline, next to the field.
     await page.fill('#nw-a-name', '-');
     await page.click('#nw-create');
@@ -229,6 +233,9 @@ async function main() {
     check(true, `an invalid name shows inline: ${await page.textContent('#nw-err-name')}`);
     await page.fill('#nw-a-name', 'visitor-registration');
     await page.click('#nw-create');
+    await page.waitForSelector('#nw-create-go');
+    check(/2 Guided · chosen by Alex Lee/.test((await page.textContent('.aw-sum')) ?? ''), 'the summary before Create says the level and who chose it');
+    await page.click('#nw-create-go');
     await page.waitForSelector('.nw-progress', { timeout: 15000 });
     await shot('13-setup-progress');
     const jobId = 'test-org__visitor-registration';

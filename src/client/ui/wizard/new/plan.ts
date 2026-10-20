@@ -15,8 +15,12 @@ import { domainsPanel } from './domains';
 import { entryFor } from './start';
 import { teamCard } from './team-card';
 import { adoptCard } from './adopt-card';
+import { autonomyPanel } from './autonomy-step';
+import { createSummary } from './create-summary';
 import { caAvatar, icon } from './parts';
 import type { Flow } from './index';
+
+const CREATE_HINT = 'Sets up the repository, app, toolkit and team. Nothing is spent on the build until then.';
 
 export function planView(flow: Flow) {
   const chat = chatPanel(flow);
@@ -25,6 +29,8 @@ export function planView(flow: Flow) {
   const team = teamCard(flow);
   // Start from another app (adopt-card.ts): above Team & budget, once the project has a client.
   const adopt = adoptCard(flow);
+  // The required autonomy step (autonomy-step.ts): Create project waits for it.
+  const autonomy = autonomyPanel(flow, () => syncCreate());
 
   const state = h('span.nw-badge.draft', {}, 'DRAFT');
   const ver = h('span', {}, '');
@@ -36,7 +42,7 @@ export function planView(flow: Flow) {
   const initials = flow.me.split(/s+/).filter(Boolean).map((w) => [...w][0]).slice(0, 2).join('').toUpperCase() || '?';
   const people = h('div.nw-people', { 'aria-label': 'On this plan: you and the Chief Analyst', role: 'img' }, h('span.nw-av.me', {}, initials), caAvatar());
   const head = h('div.nw-dochead', {}, h('div.nw-grow', {}, h('div.nw-meta', {}, state, ver), h('div.nw-title-row', {}, title, rename)), counter, people, primaryWrap);
-  const docIn = h('div.nw-doc-in', {}, problem, brief.el, domains.el, adopt.el, team.el);
+  const docIn = h('div.nw-doc-in', {}, problem, brief.el, domains.el, adopt.el, autonomy.el, team.el);
   const doc = h('div.nw-doc', {}, head, docIn);
   const el = h('section.nw-view.nw-plan', { 'aria-label': 'Project plan' }, doc, chat.el);
   let stage: 'approve' | 'mapping' | 'create' | undefined;
@@ -75,7 +81,7 @@ export function planView(flow: Flow) {
     } else {
       const b = h('button.btn.primary.nw-primary', { type: 'button', id: 'nw-create' }, icon('arrow'), 'Create project');
       b.addEventListener('click', () => void create(b));
-      primaryWrap.replaceChildren(b, h('span.nw-approve-hint', {}, 'Sets up the repository, app, toolkit and team. Nothing is spent on the build until then.'));
+      primaryWrap.replaceChildren(b, h('span.nw-approve-hint', {}, CREATE_HINT));
     }
   }
 
@@ -127,7 +133,10 @@ export function planView(flow: Flow) {
     defaults(d);
     if (!team.validate()) return flow.say('Some fields need attention: see Advanced');
     // Agents brought from another project: their Move is confirmed before anything starts (team-from.ts).
+    if (autonomy.problem()) return (autonomy.focus(), flow.say(autonomy.problem()!));
     if (!(await team.confirm(btn))) return flow.say('Not created: the agents stay where they are');
+    // Ready to create: the summary, with the autonomy level and who chose it (create-summary.ts).
+    if (!(await createSummary({ plan: flow.plan, me: flow.me, host: el, opener: btn, changeAutonomy: () => autonomy.focus() }))) return;
     creating = true;
     btn.disabled = true;
     const p = flow.plan;
@@ -172,13 +181,23 @@ export function planView(flow: Flow) {
     setPrimary(!d.approved ? 'approve' : d.domainsStatus === 'mapping' || d.busy === 'domains' ? 'mapping' : 'create');
     const approveBtn = primaryWrap.querySelector<HTMLButtonElement>('#nw-approve');
     if (approveBtn) approveBtn.disabled = !d.brief || d.status === 'drafting' || !!d.busy || !flow.info.admin || !d.brief.title.trim();
-    const createBtn = primaryWrap.querySelector<HTMLButtonElement>('#nw-create');
-    if (createBtn) createBtn.disabled = !flow.info.admin;
+    autonomy.update();
+    syncCreate();
     brief.update(prev);
     chat.update();
     domains.update();
     adopt.update();
     team.update();
+  }
+
+  /** Create project: an admin's, once the autonomy step has its answer (the reason in the hint until then). */
+  function syncCreate() {
+    const b = primaryWrap.querySelector<HTMLButtonElement>('#nw-create');
+    if (!b) return;
+    const why = autonomy.problem();
+    b.disabled = !flow.info.admin || !!why;
+    const hint = primaryWrap.querySelector('.nw-approve-hint');
+    if (hint) hint.textContent = why ? `${why}: see Autonomy, below.` : CREATE_HINT;
   }
 
   return {

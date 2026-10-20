@@ -75,7 +75,7 @@ export const OFFICE_FLOOR = '_office';
 
 /** The action groups the filter offers, each a list of action prefixes. */
 export const AUDIT_GROUPS = {
-  team: { label: 'Team', prefixes: ['roster.', 'standup.', 'subagent.'] },
+  team: { label: 'Team', prefixes: ['roster.', 'standup.', 'subagent.', 'autonomy.'] },
   workers: { label: 'Agents', prefixes: ['worker.', 'queue.', 'task.', 'liveapp.', 'studio.', 'model.'] },
   escalations: { label: 'Escalations & approvals', prefixes: ['escalation.', 'approval.', 'proposal.', 'stuck.', 'questions.', 'decisions.', 'dispatch.'] },
   github: { label: 'GitHub', prefixes: ['pr.', 'issue.'] },

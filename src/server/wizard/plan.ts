@@ -10,6 +10,7 @@ import { cleanChoice } from '../../shared/budget/levels.js';
 import { isTeamShape, shapeForRoles } from '../../shared/roster/coverage.js';
 import { checkTeamFrom, cleanTeamFrom, type KnownSource } from '../../shared/team-from.js';
 import { cleanBrief, cleanDomains, counts, safeFileName, type PlanBrief, type ReadState } from '../../shared/brief.js';
+import { cleanAsk } from '../roster/autonomy-choice.js';
 
 export const DISCOVERY_MODELS = ['opus', 'sonnet', 'haiku'] as const;
 
@@ -84,6 +85,8 @@ export function cleanPlan(raw: unknown, versions: string[], org: string, teams?:
     // Off GitHub: a new repository only (a change's repository is on GitHub already). The source folder comes from the draft only (Wizard.start).
     ...(kind === 'new' && r.localOnly === true ? { localOnly: true } : {}),
     ...(teamFrom ? { teamFrom } : {}),
+    // The autonomy step's answer (level, acknowledgement, by stage); Wizard.start checks it and records who and when.
+    ...(cleanAsk(r.autonomy) ? { autonomy: cleanAsk(r.autonomy) } : {}),
   };
 }
 

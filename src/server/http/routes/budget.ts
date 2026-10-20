@@ -16,6 +16,8 @@ import type { Ctx } from '../../office/context.js';
 import type { FirmForecast } from '../../../shared/budget/types.js';
 import { cleanFx } from '../../budget/fx.js';
 import { floorView, officeView } from '../../budget/view.js';
+import { autonomySeparate } from '../../roster/autonomy-choice.js';
+import { withoutAutonomyLine } from '../../../shared/roster/autonomy-step.js';
 import { readBody, sameOrigin, send } from '../util.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import { raisesBudget } from '../../phone-access/risky.js';
@@ -186,7 +188,10 @@ export const budgetRoutes = {
       const days = plan.lines.reduce((n, l) => n + l.days, 0);
       // The new-project wizard's shape cards (Solo, Startup, Enterprise), each with its Lean / Balanced / Fast budgets.
       const shapes = fl ? undefined : shapeCards(tier, entry, history, b.today, Date.now());
-      return send(res, 200, { tier, entry, estimate, days, basis: plan.basis, levels: levelCards(estimate, days), threshold: b.store.office().threshold, fx: b.fx(), ...(shapes ? { shapes } : {}) });
+      // A project that chose its autonomy in the New project flow: its level cards don't offer to change autonomy (roster/autonomy-choice.ts).
+      const separate = !!fl && autonomySeparate(ctx.cfg.dataDir, fl.id);
+      const levels = levelCards(estimate, days).map((l) => (separate ? { ...l, changes: withoutAutonomyLine(l.changes) } : l));
+      return send(res, 200, { tier, entry, estimate, days, basis: plan.basis, levels, threshold: b.store.office().threshold, fx: b.fx(), ...(shapes ? { shapes } : {}), ...(separate ? { autonomySeparate: true } : {}) });
     },
   },
 } satisfies Record<string, Route>;

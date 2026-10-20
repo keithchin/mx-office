@@ -18,6 +18,8 @@ export interface Estimate {
   levels: LevelCard[];
   threshold: number;
   fx: FxView;
+  /** The project chose its autonomy in the New project flow: the budget level doesn't change it, so autonomy by stage isn't offered here. */
+  autonomySeparate?: boolean;
 }
 
 export async function fetchEstimate(q: string): Promise<Estimate | undefined> {
@@ -38,7 +40,7 @@ function select<T extends string>(label: string, value: T, options: readonly T[]
 }
 
 /** The manual choice's own settings, each picked by hand. */
-function manualForm(c: BudgetChoice, changed: () => void): HTMLElement {
+function manualForm(c: BudgetChoice, changed: () => void, autonomy = true): HTMLElement {
   const s = c.settings;
   const set = <K extends keyof LevelSettings>(k: K, v: LevelSettings[K]) => ((s[k] = v), changed());
   const word = { haiku: 'Haiku', sonnet: 'Sonnet', opus: 'Opus', default: 'Each its own', fewer: 'Fewer', normal: 'Usual', more: 'More' };
@@ -54,7 +56,7 @@ function manualForm(c: BudgetChoice, changed: () => void): HTMLElement {
     select('Subagents', s.subagentModel, [...MODELS, 'default'] as const, word, (v) => set('subagentModel', v)),
     select('Agents at once', s.parallel, ['fewer', 'normal', 'more'] as const, word, (v) => set('parallel', v)),
     h('label.bud-check', {}, drafts, ' Early drafts'),
-    h('label.bud-check', {}, bystage, ' Autonomy by stage'),
+    autonomy ? h('label.bud-check', {}, bystage, ' Autonomy by stage') : null,
   );
 }
 
@@ -109,7 +111,7 @@ export function levelPicker(e: Estimate, onChange: (c: BudgetChoice) => void, in
       h('div.bud-levels', {}, ...cards),
       h('p.bud-note', {}, `Plan estimate ${usd(e.estimate)} at Balanced for this ${e.tier} ${e.entry} project, about ${e.days} working days (${e.basis}).`),
       h('div.bud-fields', {}, h('label.bud-field', {}, h('span', {}, 'Total budget (USD)'), h('span.bud-row', {}, '$', totalIn, localOut)), h('label.bud-field', {}, h('span', {}, 'Alert at'), h('span.bud-row', {}, th, '%')), h('label.bud-check', {}, ap, ' Pause the project at 100 %')),
-      ...(choice.level === 'manual' ? [manualForm(choice, () => onChange(choice))] : []),
+      ...(choice.level === 'manual' ? [manualForm(choice, () => onChange(choice), !e.autonomySeparate)] : []),
     );
   };
   draw();
