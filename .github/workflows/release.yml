@@ -11,6 +11,10 @@ name: Release
 # The desktop job packages the desktop app (desktop/) on Windows and drives the packaged app against
 # throwaway test offices with fake agents (desktop/scripts/e2e.mjs); its logs are uploaded when it fails.
 #
+# The macos job (preview) builds and tests the office on a Mac runner, checks the Keychain store against the
+# real security program, the shell scripts under bash 3.2 and a start through scripts/start-office.sh, and
+# packages the desktop app for macOS (build only). Until its first green run it doesn't fail the run.
+#
 # The perf job runs the performance guard's quick check (npm run test:perf:quick: the main views on a
 # big test office in headless Chromium, the journey, a minute of the busy office; fake agents only)
 # against the unchanged budgets. Its pass or fail is the guard's own: a browser that can't launch, or a
@@ -253,3 +257,112 @@ jobs:
             ${{ runner.temp }}/test-offices/desktop-e2e/**/*.log
           if-no-files-found: warn
           retention-days: 14
+
+  macos:
+    # macOS (preview): the office on a Mac runner with no secrets. The install and build, the typecheck and
+    # the unit tests (tests that need Windows or Studio Pro skip themselves, as on Linux: the
+    # `skip: process.platform !== 'win32'` ones), the Keychain store against the real /usr/bin/security
+    # (tests/keychain-real.test.ts, a selftest service it cleans up), the shell scripts under macOS's own
+    # bash 3.2, the launcher's plan, a start of the built office through scripts/start-office.sh in test
+    # mode (fake agents only, no GitHub token) answering /api/health, and the desktop app packaged for macOS
+    # (build only: the packaged-app checks in desktop/scripts/e2e.mjs drive the Windows build).
+    # Until a first green run on a real Mac runner it reports without failing the run (continue-on-error);
+    # take that line out once it's green.
+    runs-on: macos-latest
+    timeout-minutes: 45
+    continue-on-error: true
+    env:
+      # Test offices never get GitHub tokens.
+      GH_TOKEN: ''
+      GITHUB_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+
+      - name: Install and build
+        id: install
+        run: npm ci # its prepare script builds the client and the server
+
+      - name: Typecheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run typecheck
+
+      - name: Tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          # The suite's offices keep their test credentials in the 0600 file, never in the runner's Keychain.
+          AGENT_OFFICE_KEYCHAIN: '0'
+        run: npm test
+
+      - name: The Keychain store against the real security program
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          MX_OFFICE_REAL_KEYCHAIN: '1'
+        run: npm run test:one -- tests/keychain-real.test.ts
+
+      - name: The shell scripts under macOS's own bash 3.2
+        if: ${{ !cancelled() }}
+        run: |
+          /bin/bash --version | head -1
+          for f in scripts/get-mx-office.sh scripts/start-office.sh scripts/install-shortcut.sh; do /bin/bash -n "$f" && echo "syntax ok: $f"; done
+          out="$RUNNER_TEMP/shortcut"
+          /bin/bash scripts/install-shortcut.sh --destination "$out" --port 4711
+          test -x "$out/Mx Office.command"
+          grep -q 'start-office.sh' "$out/Mx Office.command"
+          grep -q -- '--port 4711' "$out/Mx Office.command"
+
+      - name: Check the launcher's plan (start-office.sh --dry-run)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          out=$(/bin/bash scripts/start-office.sh --dry-run --no-browser --office-home "$RUNNER_TEMP/launcher-home" --port 4701)
+          echo "$out"
+          node -e 'const p = JSON.parse(process.argv[1]); if (p.port !== 4701 || !p.officeHome.endsWith("launcher-home") || p.setEnv.AGENT_OFFICE_LAUNCHER_LOOP !== "1" || p.setEnv.AGENT_OFFICE_NO_OPEN !== "1" || p.restartExitCode !== 75) { console.error("start-office.sh --dry-run gave an unexpected plan"); process.exit(1); }' "$out"
+
+      - name: Start the built office with start-office.sh and check it answers
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          AGENT_OFFICE_HOME: ${{ runner.temp }}/office
+          AGENT_OFFICE_KEYCHAIN: '0'
+          GH_CONFIG_DIR: ${{ runner.temp }}/gh-empty
+        run: |
+          mkdir -p "$AGENT_OFFICE_HOME" "$GH_CONFIG_DIR"
+          # Test mode: no real agent CLI can start. A fresh office home has no projects anyway.
+          /bin/bash scripts/start-office.sh --no-browser --no-build --port 4700 -- --host 127.0.0.1 --password ci --no-open --test-mode > "$RUNNER_TEMP/office.log" 2>&1 &
+          launcher=$!
+          ok=0
+          for _ in $(seq 90); do
+            if curl -fsS http://127.0.0.1:4700/api/health 2>/dev/null | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then ok=1; break; fi
+            kill -0 "$launcher" 2>/dev/null || break
+            sleep 1
+          done
+          login=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4700/login.html || true)
+          # Ctrl+C stops it; give it 15 s, then make sure (the launcher and the office under it).
+          pkill -INT -f 'bin/agent-office.js' || true
+          for _ in $(seq 15); do pgrep -f 'bin/agent-office.js' >/dev/null || break; sleep 1; done
+          pkill -KILL -f 'bin/agent-office.js' || true
+          kill "$launcher" 2>/dev/null || true
+          if [ "$ok" != 1 ] || [ "$login" != 200 ]; then
+            cat "$RUNNER_TEMP/office.log"
+            echo "the built office didn't answer (health ok: $ok, /login.html: $login)"
+            exit 1
+          fi
+          echo "the built office answered /api/health and /login.html (200)"
+
+      - name: Package the desktop app for macOS (build only)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          npm --prefix desktop ci
+          npm run desktop:pack
+          app=$(ls -d desktop/out/*/"Mx Office.app" | head -1)
+          echo "built: $app"
+          test "$(plutil -extract CFBundleIdentifier raw "$app/Contents/Info.plist")" = com.mxoffice.desktop
+          plutil -extract CFBundleIconFile raw "$app/Contents/Info.plist"
+          ls "$app/Contents/Resources/"*.icns
+          test -f "$app/Contents/Resources/app.asar"
