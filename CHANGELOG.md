@@ -6,6 +6,10 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
+Nothing waiting yet.
+
+## 2026-10-22 · release 70 (`e732f51`)
+
 - **The macOS checks find what a Mac actually trips on.** Folders the office is handed are compared with their links resolved (macOS keeps its temporary folder under `/var`, which is really `/private/var`): Migrate an app's and Import from folder's source folder check no longer calls a folder in the temporary folder a system folder, and still refuses one inside the office's own folders; a snapshot is never taken inside its own source folder; a company brain that is its own git repository shows its version instead of *unversioned*; the journey runner's config is read in its sandbox; and microflow test results name their test files relative to the project. The tests that assumed Windows or Linux paths now hold on a Mac too. Windows and Linux behave as before.
 
 ## 2026-10-22 · release 69 (`e59415a`)
