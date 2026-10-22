@@ -159,7 +159,7 @@ test('live app: start, auto-refresh when main moves, stop frees the port', { tim
     await until('running', () => app.status === 'running');
     const port = app.state.appPort!;
     assert.equal(await get(port), 'fake app one');
-    assert.equal(app.state.sha, git(origin, 'rev-parse', 'HEAD'));
+    assert.equal(app.state.served?.sha, git(origin, 'rev-parse', 'HEAD'));
     assert.equal(app.state.branch, 'main');
     assert.ok(existsSync(path.join(dir, 'live', 'demo.log')));
 
@@ -175,7 +175,7 @@ test('live app: start, auto-refresh when main moves, stop frees the port', { tim
     assert.match(states.find((s) => s.status === 'updating')!.message ?? '', /^Updating to [0-9a-f]{7}/);
     await poll;
     await until('running again', () => app.status === 'running');
-    assert.equal(app.state.sha, git(origin, 'rev-parse', 'HEAD'));
+    assert.equal(app.state.served?.sha, git(origin, 'rev-parse', 'HEAD'));
     assert.equal(app.state.by, 'auto-refresh');
     assert.equal(await get(app.state.appPort!), 'fake app two');
 

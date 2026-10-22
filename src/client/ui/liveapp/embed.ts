@@ -97,6 +97,8 @@ export function liveEmbed(bridge: DesktopEmbed, floor: () => string): LiveViewer
 
   let base = '';
   let key = '';
+  /** The served revision it shows ("running abc1234"), said in the status line. */
+  let label = '';
   let at = '';
   /** Shown by the desktop app (its answer said yes). */
   let live = false;
@@ -227,7 +229,7 @@ export function liveEmbed(bridge: DesktopEmbed, floor: () => string): LiveViewer
     zoomBtn.setAttribute('aria-pressed', String(zoom === '100'));
     stage.dataset.device = device;
     el.classList.toggle('lv-loading', !!state?.loading);
-    status.textContent = state?.loading ? `Loading ${shownPath(url, base)}…` : state?.title ? `${state.title} · shown by the desktop app: every widget works here` : '';
+    status.textContent = state?.loading ? `Loading ${shownPath(url, base)}…` : state?.title ? `${state.title}${label ? ` · ${label}` : ''} · shown by the desktop app: every widget works here` : '';
     fullBtn.textContent = full ? '✕ Exit full screen' : '⛶ Full screen';
     fullBtn.title = full ? 'Exit full screen (Esc)' : 'Full screen (F11)';
     fullBtn.setAttribute('aria-pressed', String(!!full));
@@ -292,8 +294,9 @@ export function liveEmbed(bridge: DesktopEmbed, floor: () => string): LiveViewer
 
   return {
     el,
-    show(b, k) {
+    show(b, k, l) {
       el.hidden = false;
+      label = l ?? '';
       const f = floor();
       if (b === base && k === key && f === at && (live || el.classList.contains('lv-failed'))) return start();
       const fresh = !base;

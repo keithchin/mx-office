@@ -40,7 +40,8 @@ export interface OverviewDeps {
   show(tab: string): void;
   openWorker(id: string): void;
   /** The live app's state and address, when the office has said. */
-  live(): { status: string; url?: string; word?: string; ready?: boolean } | undefined;
+  /** `revision`: what serves against what it's updating to (shared/liveapp/status.ts revisionLine). */
+  live(): { status: string; url?: string; word?: string; ready?: boolean; revision?: string } | undefined;
   /** The project's budget, from the budget feed. */
   budget(): BudgetView | undefined;
   /** The Mendix version Studio Pro would open it in. */
@@ -172,15 +173,17 @@ export function portalOverview(deps: OverviewDeps): PortalOverview {
     const running = live?.status === 'running' && !!live.url;
     const shown = deps.studio.shown();
     const blocked = deps.studio.blocked();
-    const key = JSON.stringify([running, live?.url, live?.status, live?.word, live?.ready, shown, blocked]);
+    const key = JSON.stringify([running, live?.url, live?.status, live?.word, live?.ready, live?.revision, shown, blocked]);
     if (key === linksKey) return;
     linksKey = key;
     studioBtn.hidden = !shown;
     studioBtn.disabled = !!blocked;
     studioBtn.title = blocked ?? 'Open the app’s .mpr in Studio Pro';
     const readyWord = live?.ready === undefined ? '' : live.ready ? ' (ready)' : ' (not ready yet: see the Live app page)';
-    appBtn.title = running ? `Open ${live!.url}${readyWord}` : `The live app is ${live?.word ?? 'not started'}: the Live app page`;
-    why.textContent = running ? `View App: the live app at ${live!.url!.replace(/^https?:\/\//, '').replace(/\/$/, '')}${readyWord}.` : `View App: the live app is ${live?.word ?? live?.status ?? 'not started'}; opens the Live app page.${blocked ? ` Studio Pro: ${blocked}` : ''}`;
+    // What serves against what it's updating to ("Running abc1234 · updating to def5678…").
+    const rev = live?.revision ? ` ${live.revision}.` : '';
+    appBtn.title = running ? `Open ${live!.url}${readyWord}${rev}` : `The live app is ${live?.word ?? 'not started'}: the Live app page${rev}`;
+    why.textContent = running ? `View App: the live app at ${live!.url!.replace(/^https?:\/\//, '').replace(/\/$/, '')}${readyWord}.${rev}` : `View App: the live app is ${live?.word ?? live?.status ?? 'not started'}; opens the Live app page.${rev}${blocked ? ` Studio Pro: ${blocked}` : ''}`;
   }
 
   // The toolkit pin: asked once per project, only for a toolkit project.

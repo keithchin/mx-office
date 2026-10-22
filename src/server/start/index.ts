@@ -45,7 +45,7 @@ export function startView(ctx: Ctx, now = Date.now()): Promise<StartView> {
 function liveOf(ctx: Ctx, floor: Floor): StartLive | undefined {
   const s = liveAppsIfMade(ctx)?.peek(floor.id);
   if (!s) return undefined;
-  return { status: s.status, ...(s.started ? { started: true } : {}), ...(s.appPort ? { appPort: s.appPort } : {}), ...(s.viewPort ? { viewPort: s.viewPort } : {}) };
+  return { status: s.status, ...(s.started ? { started: true } : {}), ...(s.appPort ? { appPort: s.appPort } : {}), ...(s.viewPort ? { viewPort: s.viewPort } : {}), ...(s.served ? { served: s.served.sha.slice(0, 7) } : {}), ...(s.target && s.status !== 'running' ? { target: s.target.sha.slice(0, 7) } : {}), ...(s.status === 'running' && s.failure?.kind === 'update' ? { updateFailed: true } : {}) };
 }
 
 /** The milestones the office recorded for one project, newest first. */

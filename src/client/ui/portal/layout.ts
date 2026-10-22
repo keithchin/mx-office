@@ -24,7 +24,7 @@ export interface PortalLayoutDeps {
   openIssue(it: GhIssue): void;
   openPull(it: GhPull): void;
   /** The live app's state and address (null until the office says). */
-  live(): { status: string; url?: string; word?: string; ready?: boolean } | undefined;
+  live(): { status: string; url?: string; word?: string; ready?: boolean; revision?: string } | undefined;
   budget(): BudgetView | undefined;
   setup(): { toolkit?: boolean; head?: { branch: string; sha: string } } | undefined;
 }

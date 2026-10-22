@@ -29,8 +29,8 @@ Two rules follow:
 | Task outcome (integrated, verified) | Derived each time from GitHub's PR list, local git (`Task:` id, merged after assignment) and the roster | Office (derived) | GitHub is authoritative for merge state | Recomputed; the *unreviewed* mark is never cleared |
 | Agent status | Memory and `workers.json`, from hook events | Hooks | Last event wins | Lost if a hook post fails (it is retried a few times, then dropped) |
 | Code and work | git: working tree → commit → push → PR → merge on origin | Agents, people, GitHub | git | git's |
-| Running app | The live app's process and its running commit, **in memory** | Live app manager | Follows the default branch every 60 s while running | **None across a restart** |
-| Readiness | Derived: plan at main + build rows at main and live + test records at the live commit | Office (derived) | — | Recomputed; the news is said once (`.ready.json`) |
+| Running app | The live app's process, its **served** commit (set only once a build answers) and its **target** (what it's building or updating to), **in memory**; the last served commit also in `live/<project>.served.json` | Live app manager | Follows the default branch every 60 s while running | The process and served commit: **none across a restart**; the last served commit is shown only as *last ran* |
+| Readiness | Derived: plan at main + build rows at main and at the served commit + test records at the served commit | Office (derived) | — | Recomputed; the news is said once (`.ready.json`) |
 | Test evidence | `testing/<project>.jsonl`, hash-chained | Importers (PR checks, report files, gate-check, the office's `mxcli test`) | Each record carries its revision; report files declare their own | Append-only; the chain is **not verified** in production |
 | Acceptance | `acceptance/<project>.jsonl`, hash-chained | Admin | 409 if the head or cycle moved | Chain checked when viewed; appends not fsync'd |
 | Stage progress | Derived: gate-check output + `PROJECT.md` decision rows (written by agents) + the sign-off file | Toolkit script, agents, office | — | Recomputed |
@@ -58,7 +58,15 @@ The follow-through check reports whether a record is in a working copy, on a bra
 
 ### Merged vs running revision
 
-The live app runs whatever default-branch commit it last fetched while it was running. Its status line shows the running commit against main (`src/shared/liveapp/status.ts`). After an office restart it runs nothing until started.
+The live app runs whatever default-branch commit it last fetched while it was running. It keeps three commits apart (`LiveAppState` in `src/shared/protocol/liveapp.ts`, set in `src/server/liveapp/app.ts`):
+
+- **served**: the commit actually running and answering. It is set only once the new build answers on its port, and cleared the moment that runtime is stopped or stops by itself.
+- **target**: the commit it's getting, building or starting. It is kept after that build fails, so the failure names it.
+- **last served**: what served before, once nothing does.
+
+Readiness, test evidence, Design captures, the readiness news and every "running …" label read **served**, never the target. The status line shows served against main (`src/shared/liveapp/status.ts`, `revisionLine`: *Running abc1234 · updating to def5678…*, *Update to def5678 failed · still running abc1234*, *… · nothing running*).
+
+An update fetches first while the old build still serves, then stops it for the build: from then until the new build answers, nothing serves, and the state says so. After an office restart it runs nothing until started. The last served commit is read back from `live/<project>.served.json` only as *last ran*, never as served.
 
 ### Passing tests vs acceptance
 
@@ -73,7 +81,7 @@ Passing checks gate only task verification, and only when that switch is on. Acc
 | Roster | Kept up to the last background save; answer and escalation paths flush critically | Kept | Changes in the half second before a crash on paths without a critical flush |
 | `restart-pending.json`, project pauses, `queue.json`, review-gate state, toolkit pins, keep-awake | Atomic replace without fsync: old or new content, usually | Kept | An operating-system crash right after the write |
 | Walkthrough settings and manifests, audit and incident appends, acceptance appends | Plain write or append | Kept | A crash mid-write |
-| Live app running commit, tell-limit counts, last-message cache, walkthrough queue | **Lost** | **Lost** | — |
+| Live app process and served commit, tell-limit counts, last-message cache, walkthrough queue | **Lost** (the last served commit is kept as *last ran*, its end time only if the office shut down) | **Lost** (the same) | — |
 | Agent processes | Windows: **end with the office**, resumed by session id afterwards. Unix: survive | Same, after waiting for turns to end | A provider that no longer has the session (a fresh conversation, with only a toast) |
 
 None of these stores is transactional across files. Where two records must agree (an answer and its hand-off, an adoption and its git commit), the office writes intent first and reconciles on start; it does not roll back.

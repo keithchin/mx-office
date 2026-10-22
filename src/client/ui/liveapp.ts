@@ -1,6 +1,7 @@
 // The 🌐 Live app tab of the 1D view: the floor's Mendix app, built from main and run on the office's
 // machine (server/liveapp/), with ▶ / ⟳ / ■, the honest status (running, building, stopped: crashed at
-// 10:27, not started), the commit it runs against main, whether it's ready by milestone
+// 10:27, not started), the served commit (the one actually answering) against the one it's updating to
+// ("Running abc1234 · updating to def5678…") and against main, whether it's ready by milestone
 // (ui/liveapp/readiness.ts), Open live app (ui/liveapp/open.ts: the app top-level in a window of its own,
 // through the office's recording proxy; the frame of ui/liveapp/viewer.ts only as a preview, when asked
 // for), and the Console (ui/liveapp/console.ts: the runtime log and the app's requests). And the chip in
@@ -8,7 +9,7 @@
 
 import type { Net } from '../net';
 import type { LiveAppState, ServerMsg } from '../../shared/protocol';
-import { builtLine, commitLine, liveStatus, stamp } from '../../shared/liveapp/status';
+import { builtLine, commitLine, liveStatus, revisionLine, stamp } from '../../shared/liveapp/status';
 import { store } from '../state';
 import { h, timeAgo } from './dom';
 import { readinessCard } from './liveapp/readiness';
@@ -37,10 +38,11 @@ const short = (sha?: string) => sha?.slice(0, 7) ?? '';
 /** The app's address as this browser reaches the office's machine (through the recording proxy when it's up: ui/liveapp/open.ts). */
 export const appUrl = (s: LiveAppState) => liveUrl(s, location.hostname);
 
-/** What the Overview and View App say about it: the status word, the address when it runs, whether it's ready. */
-export function liveSummary(s: LiveAppState | null): { status: string; word: string; url?: string; ready?: boolean } | undefined {
+/** What the Overview and View App say about it: the status word, the address when it runs, whether it's ready, and what serves against what it's updating to. */
+export function liveSummary(s: LiveAppState | null): { status: string; word: string; url?: string; ready?: boolean; revision?: string } | undefined {
   if (!s) return undefined;
-  return { status: s.status, word: liveStatus(s).word, ...(s.status === 'running' && appUrl(s) ? { url: appUrl(s) } : {}), ...(s.readiness ? { ready: s.readiness.ready } : {}) };
+  const revision = revisionLine(s);
+  return { status: s.status, word: liveStatus(s).word, ...(s.status === 'running' && appUrl(s) ? { url: appUrl(s) } : {}), ...(s.readiness ? { ready: s.readiness.ready } : {}), ...(revision ? { revision } : {}) };
 }
 
 /** `openTab` shows the 🌐 Live app tab (the chip's click); `visible` says whether it's the tab showing now. */
@@ -69,7 +71,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     const s = state;
     const st = liveStatus(s);
     chip.className = `la-chip ${s?.status ?? 'stopped'} ${st.tone}`;
-    const what = s?.status === 'running' ? `running · ${short(s.sha)}${s.readiness ? (s.readiness.ready ? ' · ready' : ' · not ready') : ''}` : st.word;
+    const what = s?.status === 'running' && s.served ? `running · ${short(s.served.sha)}${s.failure?.kind === 'update' ? ' · update failed' : ''}${s.readiness ? (s.readiness.ready ? ' · ready' : ' · not ready') : ''}` : s && s.status !== 'stopped' ? revisionLine(s) || st.word : st.word;
     chip.textContent = `🌐 Live app: ${what}`;
     chip.title = s?.readiness?.headline ?? "The project's app, running from main: open the 🌐 Live app tab";
   }
@@ -93,9 +95,13 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     const st = liveStatus(s);
     const crashed = s.status === 'failed';
     const line = commitLine(s);
-    const commit = s.sha
-      ? h('span.la-commit', { title: s.subject ?? '' }, '📦 ', h('code', {}, line || short(s.sha)), ' ', h('span.la-subject', {}, s.subject ?? ''), builtLine(s) ? h('small', {}, ` · ${builtLine(s)}`) : null)
+    // The served build only: what it's building or updating to is the revision line's.
+    const on = s.served;
+    const commit = on
+      ? h('span.la-commit', { title: on.subject ?? '' }, '📦 ', h('code', {}, line || short(on.sha)), ' ', h('span.la-subject', {}, on.subject ?? ''), builtLine(s) ? h('small', {}, ` · ${builtLine(s)}`) : null)
       : null;
+    const rev = revisionLine(s);
+    const revision = rev && rev !== `Running ${short(on?.sha)}` ? h('span.la-rev', { role: 'status', title: s.target?.subject ?? '' }, rev) : null;
     const bar = h(
       'div.la-bar',
       {},
@@ -104,6 +110,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
       admin && up ? h('button.btn', { type: 'button', onclick: send('liveapp.restart'), title: 'Stop it and start it again on the newest main' }, '⟳ Restart') : null,
       admin && up ? h('button.btn', { type: 'button', onclick: send('liveapp.stop'), title: 'Stop the app and free its ports' }, '■ Stop') : null,
       admin ? null : h('small.la-note', {}, 'Only admins start or stop the live app'),
+      revision,
       commit,
     );
     const said = crashed ? '' : [s.message, s.by && s.since ? `${s.by} · ${timeAgo(s.since)}` : s.by].filter(Boolean).join(' — ');
@@ -112,18 +119,18 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     const failed = crashed
       ? h('div.la-failed', { role: 'alert' }, h('p.la-note.bad', {}, f ? `${f.kind === 'crash' ? `The app stopped by itself at ${stamp(f.at)}` : f.kind === 'timeout' ? `It didn't come up; gave up at ${stamp(f.at)}` : `The build failed at ${stamp(f.at)}`}${f.sha ? ` (${s.branch ?? 'main'} @${short(f.sha)})` : ''}: ${f.why}` : (s.message ?? 'It failed.')), admin ? null : h('p.la-note', {}, 'An admin can restart it.'))
       : null;
-    const refresh = s.refresh && !s.refresh.ok && (up || crashed) ? h('p.la-note.bad', {}, `Live app can't check for updates: ${s.refresh.error ?? 'unknown error'}${s.sha ? `. Running ${commitLine({ ...s, main: undefined })}` : ''}.`) : null;
+    const refresh = s.refresh && !s.refresh.ok && (up || crashed) ? h('p.la-note.bad', {}, `Live app can't check for updates: ${s.refresh.error ?? 'unknown error'}${on ? `. Running ${commitLine({ ...s, main: undefined })}` : ''}.`) : null;
     const hint = !s.available ? h('p.la-note.bad', {}, "mxcli isn't installed where the office runs, so it can't run the app (AGENT_OFFICE_LIVE_MXCLI).") : null;
     const lines = crashed && f?.lines.length ? f.lines : s.log;
     const log = s.status !== 'running' && lines.length ? h('pre.la-log', {}, lines.join('\n')) : null;
     if (url) opener.show(url, s.floor, !!s.viewPort);
     else opener.hide();
     panel.setRecording(url && s.viewPort ? url : null);
-    if (url && opener.previewing()) viewer.show(url, `${s.sha}@${s.since}`);
+    if (url && opener.previewing()) viewer.show(url, `${on?.sha ?? ''}@${on?.builtAt ?? s.since}`, on ? `running ${short(on.sha)}` : undefined);
     else viewer.hide();
     const mixed = url && opener.previewing() && location.protocol === 'https:' ? h('p.la-note', {}, 'This page is on HTTPS and the app on plain HTTP, so the browser may not show the preview: use Open live app.') : null;
     const empty = url || up || crashed ? null : h('p.la-empty', {}, s.started ? 'The app is stopped. ▶ Start builds the project’s main branch and runs it here; it follows main as PRs merge.' : "The app isn't started. ▶ Start builds the project's main branch and runs it here; it follows main as PRs merge.");
-    walks.update(s.floor, s.readiness?.sha ?? s.sha, true);
+    walks.update(s.floor, s.readiness?.sha ?? on?.sha, true);
     const card = readinessCard(s, (m) => walks.linkFor(m, s.readiness?.sha, s.readiness?.milestones.find((x) => x.id === m)?.journeys.map((j) => j.id)));
     top.replaceChildren(bar, ...([failed, refresh, note, hint, opener.el, url ? cap.el : null, banner.el, card, walks.el, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
     if (log) log.scrollTop = log.scrollHeight;

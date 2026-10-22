@@ -32,8 +32,10 @@ export function designOf(ctx: Ctx): DesignService {
         const floor = ctx.floors.get(id);
         if (!floor) return { running: false, status: 'stopped' };
         const st = liveAppsOf(ctx).stateOf(floor);
-        const running = st.status === 'running' && !!st.appPort;
-        return { running, status: st.status, ...(running ? { url: `http://127.0.0.1:${st.appPort}/` } : {}), ...(st.sha ? { sha: st.sha } : {}) };
+        // Only the served revision (the build actually answering) is ever stamped on a capture.
+        const running = st.status === 'running' && !!st.appPort && !!st.served;
+        const updating = st.status === 'starting' || st.status === 'updating';
+        return { running, status: st.status, ...(updating ? { updating } : {}), ...(running ? { url: `http://127.0.0.1:${st.appPort}/`, sha: st.served!.sha } : {}) };
       },
       audit: (e) => void audit.record(e),
       now: () => Date.now(),

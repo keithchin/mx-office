@@ -7,6 +7,8 @@
 .la-pill.starting, .la-pill.updating, .la-pill.stopping { background: var(--warn); color: var(--on-warn); }
 .la-commit { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px; min-width: 0; font-size: 13px; font-weight: 700; }
 .la-commit code { font-weight: 900; }
+/* What serves against what it is updating to: "Running abc1234 · updating to def5678…". */
+.la-rev { font-size: 13px; font-weight: 800; }
 .la-subject { max-width: 42ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .la-open { margin-left: auto; text-decoration: none; }
 .la-note { margin: 0; font-size: 13px; font-weight: 700; color: var(--muted); }

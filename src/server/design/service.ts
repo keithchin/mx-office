@@ -33,8 +33,11 @@ export interface DesignDeps {
   clientOf(floor: string): { id: string; label: string } | undefined;
   clientLabel(id: string): string | undefined;
   mxcli(): string | undefined;
-  /** The floor's live app: running (with its URL and commit) or not. Never started from here. */
-  live(floor: string): { running: boolean; status: string; url?: string; sha?: string };
+  /**
+   * The floor's live app: running (with its URL and its served commit, the one actually answering) or not,
+   * and whether it's on its way to another build (updating). Never started from here.
+   */
+  live(floor: string): { running: boolean; status: string; url?: string; sha?: string; updating?: boolean };
   audit(e: AuditInput): void;
   now(): number;
   run?: Run;
@@ -343,13 +346,25 @@ export class DesignService {
     return undefined;
   }
 
-  /** Capture now: screenshots of the running live app (never starts one). */
+  /**
+   * Capture now: screenshots of the running live app (never starts one), each stamped with the served
+   * revision. Refused while it updates; a shot taken as an update started (the served revision moved or
+   * stopped) is thrown away rather than stamped with a guess, and the capture stops there.
+   */
   async capture(floorId: string, by: string): Promise<string | number> {
     const live = this.deps.live(floorId);
-    if (!live.running || !live.url) return 'The live app isn’t running: start it on the Live app tab first (a capture never starts it)';
+    if (live.updating) return 'The live app is updating: try again in a moment (a capture is stamped only with the version that is actually running)';
+    if (!live.running || !live.url || !live.sha) return 'The live app isn’t running: start it on the Live app tab first (a capture never starts it)';
+    const sha = live.sha;
+    const still = () => {
+      const now = this.deps.live(floorId);
+      return now.running && now.sha === sha;
+    };
     const b = this.projects.binding(floorId);
-    const made = await this.captures.capture(floorId, live.url, { ...(live.sha ? { appSha: live.sha } : {}), design: b ? pointerOf(b) : 'none', by });
-    this.deps.audit({ floor: floorId, actor: human(by), action: 'design.capture', target: { kind: 'project', id: floorId }, summary: `Captured ${made.length} screenshots of the live app${live.sha ? ` at ${live.sha.slice(0, 7)}` : ''}` });
+    const r = await this.captures.capture(floorId, live.url, { appSha: sha, design: b ? pointerOf(b) : 'none', by, still });
+    const made = r.made;
+    this.deps.audit({ floor: floorId, actor: human(by), action: 'design.capture', target: { kind: 'project', id: floorId }, summary: `Captured ${made.length} screenshots of the live app at ${sha.slice(0, 7)}${r.interrupted ? ' (stopped: the live app started updating)' : ''}` });
+    if (r.interrupted) return `The live app started updating during the capture: kept ${made.length} screenshot${made.length === 1 ? '' : 's'} taken at ${sha.slice(0, 7)}; capture again once it's running`;
     return made.length;
   }
 
