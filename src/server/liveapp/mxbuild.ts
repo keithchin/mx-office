@@ -2,14 +2,16 @@
 // mxcli's own resolution, which on Windows can land on a cached CDN download: the Mendix CDN only
 // publishes Linux mxbuild, so that one can't run there ("mxbuild at … is a linux binary and cannot run on
 // windows"). In order: MXBUILD_PATH in the floor's .claude/toolkit.env, then the office's own MXBUILD_PATH,
-// then (Windows) the installed Studio Pro of the project's Mendix version, before mxcli's cached
-// download. An older mxcli without the flag gets MXBUILD_PATH in its environment only. When mxcli still
+// then the installed Studio Pro of the project's Mendix version (Windows: <Program Files>\Mendix\<version>;
+// macOS: the "Mendix Studio Pro <version>.app" bundle's Contents/modeler, studio/mac.ts), before mxcli's
+// cached download, which is a Linux binary on both. An older mxcli without the flag gets MXBUILD_PATH in its environment only. When mxcli still
 // picks a Linux mxbuild, the live app says so honestly, with the fix.
 
 import { execFile } from 'node:child_process';
-import { statSync } from 'node:fs';
+import { readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { mendixDir, mprVersion } from '../studio/open.js';
+import { baseVersion, macAppsDir, macBundleOf, macBundles } from '../studio/mac.js';
 
 export interface MxbuildDeps {
   platform: NodeJS.Platform;
@@ -19,6 +21,8 @@ export interface MxbuildDeps {
   isDir(p: string): boolean;
   /** The Mendix version the project was saved in ("11.12.4"), when it can be read. */
   readVersion(mpr: string): string | undefined;
+  /** A folder's entries (macOS: the Studio Pro bundles in /Applications). */
+  readdir?(p: string): string[];
 }
 
 export type MxbuildSource = 'toolkit.env' | 'office' | 'studio-pro';
@@ -53,6 +57,7 @@ const machine = (): MxbuildDeps => ({
     }
   },
   readVersion: mprVersion,
+  readdir: (p) => readdirSync(p),
 });
 
 /** A path as written in toolkit.env (Git Bash's /c/Program Files/… too) in the platform's own form. */
@@ -96,15 +101,21 @@ export function pickMxbuild(mpr: string, floorEnv: Record<string, string>, d: Mx
     if (d.isFile(expected)) return { path: expected, source: 'studio-pro', version, skipped };
     return { version, expected, skipped };
   }
+  if (d.platform === 'darwin' && version) {
+    const dir = macAppsDir(d.env);
+    const bundle = macBundleOf(macBundles(dir, { exists: d.isFile, readdir: d.readdir ?? (() => []) }, 'mxbuild'), version);
+    if (bundle) return { path: path.posix.join(bundle.modeler, 'mxbuild'), source: 'studio-pro', version, skipped };
+    return { version, expected: path.posix.join(dir, `Mendix Studio Pro ${baseVersion(version)}.app`, 'Contents', 'modeler', 'mxbuild'), skipped };
+  }
   return { version, skipped };
 }
 
-/** mxcli's error when the mxbuild it resolved is the CDN's Linux build on Windows: the path it named. */
+/** mxcli's error when the mxbuild it resolved is the CDN's Linux build on Windows or macOS: the path it named. */
 export function linuxMxbuildIn(lines: readonly string[]): { mxbuild?: string } | undefined {
   for (const l of lines) {
-    const m = /mxbuild at (.+?) is a linux binary and cannot run on windows/i.exec(l);
+    const m = /mxbuild at (.+?) is a linux binary and cannot run on (?:windows|darwin)/i.exec(l);
     if (m) return { mxbuild: m[1] };
-    if (/is a linux binary and cannot run on windows/i.test(l)) return {};
+    if (/is a linux binary and cannot run on (?:windows|darwin)/i.test(l)) return {};
   }
   return undefined;
 }
@@ -114,11 +125,12 @@ export function linuxMxbuildIn(lines: readonly string[]): { mxbuild?: string } |
  * (install the project's Studio Pro, or set the mxbuild path), plus, when this mxcli is too old to be told
  * the path, that too.
  */
-export function linuxMxbuildMessage(found: { mxbuild?: string }, pick: MxbuildPick, flagSupported: boolean | undefined, mxcli: string): string {
+export function linuxMxbuildMessage(found: { mxbuild?: string }, pick: MxbuildPick, flagSupported: boolean | undefined, mxcli: string, platform: NodeJS.Platform = process.platform): string {
   const ver = pick.version ? `Studio Pro ${pick.version}` : "the project's Studio Pro version";
   const where = pick.expected ? ` (${pick.expected})` : '';
-  const parts = [`mxcli picked a Linux mxbuild${found.mxbuild ? ` (${found.mxbuild})` : ''}, which can't run on Windows: the Mendix CDN only publishes Linux mxbuild.`];
-  parts.push(`Fix: install ${ver} on the office's computer${where}, or set the mxbuild path (MXBUILD_PATH in the project's .claude/toolkit.env, pointing at Studio Pro's modeler\\mxbuild.exe).`);
+  const mac = platform === 'darwin';
+  const parts = [`mxcli picked a Linux mxbuild${found.mxbuild ? ` (${found.mxbuild})` : ''}, which can't run on ${mac ? 'macOS' : 'Windows'}: the Mendix CDN only publishes Linux mxbuild.`];
+  parts.push(`Fix: install ${ver} on the office's computer${where}, or set the mxbuild path (MXBUILD_PATH in the project's .claude/toolkit.env, pointing at ${mac ? 'Contents/modeler/mxbuild inside the Studio Pro app' : "Studio Pro's modeler\\mxbuild.exe"}).`);
   if (pick.path && flagSupported === false) parts.push(`This mxcli (${mxcli}) is too old to be given the mxbuild path (--mxbuild-path): pick a newer mxcli in ☰ → 🚀 First-run setup, or set AGENT_OFFICE_LIVE_MXCLI.`);
   for (const s of pick.skipped) parts.push(`(${s}.)`);
   return parts.join(' ');

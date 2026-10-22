@@ -36,12 +36,23 @@ export const WINGET_PACKAGES = {
 export type WingetFix = keyof typeof WINGET_PACKAGES;
 export const isWingetFix = (id: FixId): id is WingetFix => id in WINGET_PACKAGES;
 
+/** The Homebrew formulae the office installs on macOS (`brew install <formula>`), with what each is called there. */
+export const BREW_FORMULAE: Record<WingetFix, { formula: string; name: string }> = {
+  node: { formula: 'node', name: 'Node.js' },
+  git: { formula: 'git', name: 'Git' },
+  gh: { formula: 'gh', name: 'GitHub CLI' },
+  jq: { formula: 'jq', name: 'jq' },
+};
+
+/** Homebrew's own page, for a Mac without it. */
+export const BREW_LINK = 'https://brew.sh';
+
 /** winget's own page, for a Windows machine without it (App Installer). */
 export const WINGET_LINK = 'https://learn.microsoft.com/windows/package-manager/winget/';
 
 /** Off Windows, or without winget: what to type, and where to download it. */
 export const MANUAL_INSTALL: Record<WingetFix, { link: string; brew: string; apt: string }> = {
-  node: { link: 'https://nodejs.org/en/download', brew: 'brew install node@22', apt: 'See nodejs.org (NodeSource) for Node 22 on apt' },
+  node: { link: 'https://nodejs.org/en/download', brew: 'brew install node', apt: 'See nodejs.org (NodeSource) for Node 22 on apt' },
   git: { link: 'https://git-scm.com/downloads', brew: 'brew install git', apt: 'sudo apt install git' },
   gh: { link: 'https://cli.github.com', brew: 'brew install gh', apt: 'sudo apt install gh' },
   jq: { link: 'https://jqlang.org/download/', brew: 'brew install jq', apt: 'sudo apt install jq' },

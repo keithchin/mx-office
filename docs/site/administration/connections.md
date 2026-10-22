@@ -53,7 +53,8 @@ The office also keeps **Web Push's key** (VAPID) here, made the first time a pho
 Saved values go in `credentials.json` in the office's data folder (never in a repository).
 
 - **On Windows** each value is encrypted with **DPAPI for the Windows user the office runs as** (`System.Security.Cryptography.ProtectedData`, through a PowerShell child; no native module). The file is useless to another user or on another machine; a value saved elsewhere shows as *can't be decrypted here*.
-- **Elsewhere** there's no DPAPI, so values are kept base64-encoded in a file only the office's user can read (`0600`), and the page says so.
+- **On macOS** (preview) each value is an item in **your login Keychain** (service `com.mxoffice.connections`), and `credentials.json` only names it. The page's intro says *kept in your macOS login Keychain*; a credential the Keychain wouldn't take (locked, no desktop session) is kept in the `0600` file instead, and its card says so. Values an older office kept in the file move into the Keychain when the office starts. See [Security and tokens › On macOS](security-and-tokens.md#on-macos-the-keychain).
+- **On Linux** there's neither, so values are kept base64-encoded in a file only the office's user can read (`0600`), and the page says so.
 
 Values reach the office once, in the body of a save, and never go back to a browser, a log or the [audit log](../using-the-office/audit-log.md): the log records *GitHub token for agents replaced by Ana*, not the token. `credentials.json` also keeps, unencrypted, each value's masked tail, who saved it and when, and the last Test's result with a short one-way fingerprint of the value it tested.
 

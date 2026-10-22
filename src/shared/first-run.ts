@@ -87,8 +87,10 @@ export interface PrereqMeta {
   /** Where to get it. */
   link?: string;
   linkLabel?: string;
-  /** Only checked on Windows (elsewhere it's part of the system). */
+  /** Only checked on Windows (elsewhere it's part of the system)… */
   windowsOnly?: boolean;
+  /** …and on these platforms too (jq: macOS 14 doesn't have it). */
+  alsoOn?: string[];
 }
 
 /** The Node.js the office needs: 22.5 or newer, for node:sqlite (the Model view reads .mpr files with it). */
@@ -111,7 +113,7 @@ export const PREREQ_META: Record<PrereqId, PrereqMeta> = {
   'claude-auth': { label: 'Claude Code signed in', purpose: 'Agents run on your Claude Code sign-in, or an Anthropic API key saved in 🔌 Connections.', required: true, link: 'https://docs.claude.com/en/docs/claude-code/setup', linkLabel: 'Sign in' },
   studio: { label: 'Mendix Studio Pro', purpose: 'Builds and checks the Mendix apps (mxbuild, mx); new projects start on one of these versions.', required: true, link: 'https://marketplace.mendix.com/link/studiopro/', linkLabel: 'Mendix Marketplace' },
   mxcli: { label: 'mxcli', purpose: 'How agents read and change Mendix models, and runs the Live app.', required: true, link: 'https://github.com/mendixlabs/mxcli/releases', linkLabel: 'mxcli releases' },
-  jq: { label: 'jq', purpose: 'The toolkit’s scripts read JSON with it.', required: true, link: 'https://jqlang.org/download/', linkLabel: 'jqlang.org', windowsOnly: true },
+  jq: { label: 'jq', purpose: 'The toolkit’s scripts read JSON with it.', required: true, link: 'https://jqlang.org/download/', linkLabel: 'jqlang.org', windowsOnly: true, alsoOn: ['darwin'] },
   toolkit: { label: 'mxcli project toolkit', purpose: 'The scripts, gates and playbooks every Mendix project is set up with (step 5 picks or clones it).', required: true },
   postgres: { label: 'PostgreSQL (for the Live app)', purpose: 'The 🌐 Live app keeps each project’s running app’s data in it. Optional: everything else works without it.', required: false, link: 'https://www.postgresql.org/download/windows/', linkLabel: 'postgresql.org' },
 };

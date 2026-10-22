@@ -6,7 +6,7 @@ weight: 2
 
 ## Connections first
 
-The tokens, the Jev key and the office password are managed from **☰ → 🔌 Connections** (admins): encrypted with Windows DPAPI in the office's data folder, with a Test button each. See [Connections](connections.md). The office looks for each one in Connections first, then its environment variable, then the files below, so the files still work (and **📥 Import from files** moves them into Connections in one click).
+The tokens, the Jev key and the office password are managed from **☰ → 🔌 Connections** (admins): encrypted with Windows DPAPI in the office's data folder (on macOS: in your login Keychain, [below](#on-macos-the-keychain); on Linux: a `0600` file), with a Test button each. See [Connections](connections.md). The office looks for each one in Connections first, then its environment variable, then the files below, so the files still work (and **📥 Import from files** moves them into Connections in one click).
 
 ## Secret files (the old way)
 
@@ -20,6 +20,16 @@ The tokens, the Jev key and the office password are managed from **☰ → 🔌 
 
 > [!CAUTION]
 > Never print, paste, commit or screenshot these files. Refer to them by path only. If one leaks, revoke it on GitHub (or TypeSafe, or Mendix) and replace it in Connections.
+
+## On macOS: the Keychain
+
+On a Mac (preview) each saved value is a generic password item of its own in the **login Keychain** of the user the office runs as: service `com.mxoffice.connections`, account `<12 hex characters of the office's credentials.json path>/<credential>` (so two offices on one Mac never share an item), the value base64-encoded as the item's password. `credentials.json` keeps only the account name, the masked tail, who saved it and when. You can see the items in **Keychain Access** (search `com.mxoffice`); deleting one there makes that credential *can't be decrypted here* in Connections, and removing a credential in Connections deletes its item.
+
+The office uses Apple's own `/usr/bin/security`, never a native module, and keeps the value off every command line (where `ps` shows it to any user on the Mac): `security add-generic-password … -w <value>` would put it there, and `-w` with no value asks on a terminal the office doesn't have. So it starts `security -i` (its interactive mode, which reads commands from stdin) and writes `add-generic-password -U -s com.mxoffice.connections -a <account> -X <hex>` to its stdin, the value as hexadecimal (`-X`), then reads the item back with `find-generic-password … -w` (the answer on stdout, read only by the office) to check it was saved. Items `/usr/bin/security` made are readable by it again without a Keychain prompt.
+
+- **Moving in**: values an older office (or the Linux-style file) kept base64-encoded in `credentials.json` move into the Keychain the first time the office opens it, and their base64 copies leave the file.
+- **Fallback**: when the Keychain won't take a value (locked, or the office runs over SSH with no desktop session), the value is kept in the `0600` file instead and its Connections card says so; the office tries to move it in again at its next start. `AGENT_OFFICE_KEYCHAIN=0` keeps a Mac office on the file on purpose.
+- **Linux** stays as it was: base64 in a `0600` file, said on the page.
 
 ## Who is admin
 

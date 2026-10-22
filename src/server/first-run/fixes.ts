@@ -2,15 +2,15 @@
 // and Set up everything, which runs every fix the check asks for in order and stops at the first that
 // fails, saying why. Planning runs nothing: it says which commands would run and where each program
 // comes from, the page shows that and asks, and only a confirmed plan runs (the route keeps the plan;
-// the page only ever sends back its confirm token). Installs are winget on Windows (elsewhere: the
-// brew/apt line to type), Claude Code is its official installer, gh signs in with a one-time code
+// the page only ever sends back its confirm token). Installs are winget on Windows, Homebrew on macOS
+// (when brew is there; elsewhere the brew/apt line to type), Claude Code is its official installer, gh signs in with a one-time code
 // (gh-login.ts), and mxcli is the newest release's binary. Everything it touches comes in through
 // FixDeps, like CheckDeps for the checks, so the tests run every fix against fakes; a test office's
 // deps refuse to run anything real (fix-machine.ts).
 
 import path from 'node:path';
 import type { PrereqId, PrereqResult } from '../../shared/first-run.js';
-import { CLAUDE_INSTALL, FIX_FOR, FIX_IDS, MANUAL_INSTALL, WINGET_LINK, WINGET_PACKAGES, isWingetFix, mxcliAsset, mxcliUrl, type FixEvent, type FixId, type FixManual, type FixStep, type WingetFix } from '../../shared/first-run-fix.js';
+import { BREW_FORMULAE, BREW_LINK, CLAUDE_INSTALL, FIX_FOR, FIX_IDS, MANUAL_INSTALL, WINGET_LINK, WINGET_PACKAGES, isWingetFix, mxcliAsset, mxcliUrl, type FixEvent, type FixId, type FixManual, type FixStep, type WingetFix } from '../../shared/first-run-fix.js';
 import type { Ran } from './checks.js';
 import { ghSignIn, ghToken } from './gh-login.js';
 
@@ -65,6 +65,12 @@ export const wingetOk = (code: number | null) => code === 0 || (code !== null &&
 /** The command a winget fix runs: the exact package from winget's own source, agreements accepted (only ever after the page's confirm). */
 export const wingetArgs = (fix: WingetFix): string[] => ['install', '--id', WINGET_PACKAGES[fix].id, '--exact', '--source', 'winget', '--accept-package-agreements', '--accept-source-agreements', '--silent'];
 
+/** The command a Homebrew fix runs (macOS, only ever after the page's confirm). */
+export const brewArgs = (fix: WingetFix): string[] => ['install', BREW_FORMULAE[fix].formula];
+
+/** brew without its questions (NONINTERACTIVE) and without updating every formula first. */
+const brewEnv = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => ({ ...env, NONINTERACTIVE: '1', HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_ENV_HINTS: '1' });
+
 /** gh, signed in with your own login: the office's agents' token taken out of its environment, or gh would use that instead. */
 export function ghEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const out: NodeJS.ProcessEnv = { ...env, BROWSER: 'true', GH_BROWSER: 'true', GH_PROMPT_DISABLED: '1' };
@@ -108,6 +114,12 @@ export async function planFix(id: FixId, d: FixDeps): Promise<FixStep | FixManua
   const manual = (why: string, links: string[], commands: string[] = []): FixManual => ({ id, title, why, links, commands });
   if (isWingetFix(id)) {
     const m = MANUAL_INSTALL[id];
+    if (d.platform === 'darwin') {
+      const macTitle = `Install ${BREW_FORMULAE[id].name}`;
+      if (!(await d.find('brew'))) return { id, title: macTitle, why: 'Homebrew isn’t on this Mac: install it from brew.sh (or install this from the link), then press Re-check.', links: [BREW_LINK, m.link], commands: [m.brew] };
+      const note = id === 'node' ? 'The office keeps running on the Node it started with: restart it afterwards.' : undefined;
+      return { id, title: macTitle, commands: [`brew ${brewArgs(id).join(' ')}`], sources: [`Homebrew, formula ${BREW_FORMULAE[id].formula} (formulae.brew.sh)`], note };
+    }
     if (d.platform !== 'win32') return manual('The office only installs programs itself on Windows (with winget): type one of these.', [m.link], [`macOS: ${m.brew}`, `Linux: ${m.apt}`]);
     if (!(await d.find('winget'))) return manual('winget (App Installer) isn’t on this machine: download it from the link, or install winget first.', [m.link, WINGET_LINK]);
     const note = id === 'node' ? 'The office keeps running on the Node it started with: restart it afterwards.' : id === 'git' ? 'Brings Git Bash too.' : undefined;
@@ -223,6 +235,14 @@ export interface RunResult {
 async function runStep(step: FixStep, d: FixDeps, emit: (e: FixEvent) => void, signal: AbortSignal, out: RunResult): Promise<string | undefined> {
   const line = (text: string) => emit({ t: 'line', text });
   const id = step.id;
+  if (isWingetFix(id) && d.platform === 'darwin') {
+    const brew = await d.find('brew');
+    if (!brew) return 'Homebrew (brew) isn’t on this Mac';
+    const code = await stream(d, brew, brewArgs(id), line, signal, brewEnv(d.env));
+    if (code !== 0) return `brew couldn’t install ${BREW_FORMULAE[id].formula} (${code === null ? 'stopped' : `exit ${code}`})`;
+    if (!(await afterInstall(d, emit)) || id === 'node') out.restart = id === 'node' ? 'Restart the office so it runs on the new Node.js.' : 'Restart the office so it sees what was installed.';
+    return undefined;
+  }
   if (isWingetFix(id)) {
     const winget = await d.find('winget');
     if (!winget) return 'winget isn’t on this machine';

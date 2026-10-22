@@ -7,6 +7,7 @@
 // for the tests.
 
 import { execFileOff } from '../offloop/exec.js';
+import { parsePsStudio } from './mac.js';
 import http from 'node:http';
 import path from 'node:path';
 
@@ -94,7 +95,8 @@ export function namesProject(cmd: string, mpr: string): boolean {
   if (hasPath(c, normPath(mpr))) return true;
   const dir = normPath(path.win32.dirname(mpr.replace(/\//g, '\\')));
   // The folder, but only as an argument: not the folder the program itself is in.
-  const args = c.replace(/^("[^"]*studiopro(\.exe)?"|\S*studiopro(\.exe)?)\s*/, '');
+  // (macOS: the program is <bundle>.app/Contents/MacOS/<name>, spaces and all.)
+  const args = c.replace(/^("[^"]*studiopro(\.exe)?"|\S*studiopro(\.exe)?|.*?\.app\/contents\/macos\/\S+)\s*/, '');
   return dir.length > 3 && hasPath(args, dir);
 }
 
@@ -175,13 +177,20 @@ export function httpAnswers(url: string, timeout = 1200): Promise<boolean> {
 }
 
 export function machineDetect(): DetectDeps {
+  // macOS: one `ps` gives the ids and the command lines together; commandLines hands back that look's.
+  let macSeen: StudioProcess[] = [];
   return {
     platform: process.platform,
     async pids() {
+      if (process.platform === 'darwin') {
+        macSeen = parsePsStudio(await run('ps', ['-axww', '-o', 'pid=,command=']));
+        return macSeen.map((p) => p.pid);
+      }
       if (process.platform !== 'win32') return [];
       return parseTasklist(await run('tasklist', ['/FI', 'IMAGENAME eq studiopro.exe', '/FO', 'CSV', '/NH']));
     },
     async commandLines(pids) {
+      if (process.platform === 'darwin') return macSeen.filter((p) => pids.includes(p.pid));
       if (process.platform !== 'win32' || !pids.length) return [];
       const ps = `Get-CimInstance Win32_Process -Filter "Name='studiopro.exe'" | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress`;
       return parseCimProcesses(await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], 15000));

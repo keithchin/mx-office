@@ -116,6 +116,22 @@ A typical layout, with neutral names:
 | Toolkit | The folder set in Settings → Connections → Folders |
 | mxcli | Wherever First-run setup installed it, or the one on `PATH` |
 
+### On macOS
+
+The same layout with macOS paths (preview):
+
+| What | Where |
+|---|---|
+| The office | `~/mx-office-app` (where `scripts/get-mx-office.sh` puts it; `MX_OFFICE_DIR` for another) |
+| The office's home | `~/mx-office` with `scripts/start-office.sh`, or `AGENT_OFFICE_HOME`; its data in `~/mx-office/.agent-office` |
+| Saved credentials | Your login Keychain (service `com.mxoffice.connections`); `credentials.json` in the data folder only names each item |
+| Studio Pro | `/Applications/Mendix Studio Pro <version>.app`, one per version (`AGENT_OFFICE_MENDIX_DIR` for another folder of them) |
+| Homebrew's programs | `/opt/homebrew/bin` (Apple silicon) or `/usr/local/bin`: the office adds them to its PATH when it was started from Finder or the desktop app |
+| The launcher icon | `~/Applications/Mx Office.command` (`scripts/install-shortcut.sh`) |
+| The desktop app's own files | `~/Library/Application Support/Mx Office` |
+
+A backup of the data folder doesn't include the Keychain items: after restoring onto another Mac, save the tokens again in Connections (as after moving between Windows users with DPAPI).
+
 ## Backups
 
 A project with a GitHub repository has its work there; a [local-only project](../get-started/first-project.md#local-only-not-on-github) has its only copy on this machine, so back up its folder too. To keep the office's own history, back up, with the office stopped:

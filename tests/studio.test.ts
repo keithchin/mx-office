@@ -97,7 +97,8 @@ test('every reason it won\'t open, and nothing spawned for any of them', () => {
     [{ env: { ProgramFiles: 'C:\\Program Files', SSH_CONNECTION: '1.2.3.4 5 6.7.8.9 22' } }, 'no-desktop', /isn't running on a desktop/],
     [{ env: { CI: 'true' } }, 'no-desktop', /isn't running on a desktop/],
     [{ platform: 'linux', env: {} }, 'no-desktop', /desktop/],
-    [{ platform: 'darwin', env: {} }, 'not-windows', /Windows only/],
+    [{ platform: 'darwin', env: {} }, 'not-installed', /isn't installed on the office's Mac/],
+    [{ platform: 'linux', env: { DISPLAY: ':0' } }, 'not-windows', /Windows and macOS only/],
     [{ exists: () => false }, 'not-installed', /isn't installed/],
   ];
   for (const [over, problem, error] of cases) {
@@ -111,7 +112,7 @@ test('every reason it won\'t open, and nothing spawned for any of them', () => {
 });
 
 test('checkStudio still names the project and its version when it can\'t be opened from here', () => {
-  const c = checkStudio('C:\\floors\\shop', machine([SELECTOR], { platform: 'darwin', env: {} }));
+  const c = checkStudio('C:\\floors\\shop', machine([SELECTOR], { platform: 'linux', env: { DISPLAY: ':0' } }));
   assert.equal(c.mpr, MPR);
   assert.equal(c.version, '11.6.4');
   assert.equal(c.problem, 'not-windows');

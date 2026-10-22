@@ -113,8 +113,12 @@ async function windowsLongPaths(d: CheckDeps): Promise<boolean | undefined> {
   return r.code === 0 ? undefined : false;
 }
 
+/** How Fix installs a program here: Homebrew on macOS, winget on Windows (the Windows words, as before, elsewhere). */
+const byOs = (win: string, mac: string) => (d: Pick<CheckDeps, 'platform'>) => (d.platform === 'darwin' ? mac : win);
+
 /** A program's version row: found on PATH and answering `args`. */
-const versionOf = (cmd: string, args: string[], missing: string, fix: string): Check => async (d) => {
+const versionOf = (cmd: string, args: string[], missing: string, fixFor: string | ((d: CheckDeps) => string)): Check => async (d) => {
+  const fix = typeof fixFor === 'string' ? fixFor : fixFor(d);
   const p = await d.find(cmd);
   if (!p) return { status: 'missing', text: missing, fix };
   const r = await d.run(p, args);
@@ -124,9 +128,9 @@ const versionOf = (cmd: string, args: string[], missing: string, fix: string): C
 const CHECKS: Record<PrereqId, Check> = {
   async node(d) {
     const v = d.nodeVersion.replace(/^v/, '');
-    return nodeVersionOk(v) ? { status: 'ok', text: `Node.js ${v}` } : { status: 'missing', text: `Node.js ${v} is too old`, fix: 'Install Node.js 22.5 or newer (Fix runs winget install OpenJS.NodeJS.LTS), then start the office again.' };
+    return nodeVersionOk(v) ? { status: 'ok', text: `Node.js ${v}` } : { status: 'missing', text: `Node.js ${v} is too old`, fix: byOs('Install Node.js 22.5 or newer (Fix runs winget install OpenJS.NodeJS.LTS), then start the office again.', 'Install Node.js 22.5 or newer (Fix runs brew install node), then start the office again.')(d) };
   },
-  git: versionOf('git', ['--version'], 'git isn’t installed (or not on the office’s PATH)', 'Fix installs it with winget (Git.Git), or install it from the link.'),
+  git: versionOf('git', ['--version'], 'git isn’t installed (or not on the office’s PATH)', byOs('Fix installs it with winget (Git.Git), or install it from the link.', 'Fix installs it with Homebrew (brew install git), or run xcode-select --install.')),
   async gitbash(d) {
     const bash = d.bash();
     if (await d.exists(bash)) return { status: 'ok', text: `Git Bash at ${bash}`, path: bash };
@@ -152,7 +156,7 @@ const CHECKS: Record<PrereqId, Check> = {
       action: 'longpaths-global',
     };
   },
-  gh: versionOf('gh', ['--version'], 'gh (the GitHub CLI) isn’t installed (or not on the office’s PATH)', 'Fix installs it with winget (GitHub.cli), or install it from the link.'),
+  gh: versionOf('gh', ['--version'], 'gh (the GitHub CLI) isn’t installed (or not on the office’s PATH)', byOs('Fix installs it with winget (GitHub.cli), or install it from the link.', 'Fix installs it with Homebrew (brew install gh), or install it from the link.')),
   async 'gh-auth'(d) {
     const gh = await d.find('gh');
     if (!gh) return { status: 'missing', text: 'Needs gh first' };
@@ -177,6 +181,7 @@ const CHECKS: Record<PrereqId, Check> = {
   async studio(d) {
     const m = d.mendix();
     if (m.versions.length) return { status: 'ok', text: `${m.versions.length === 1 ? 'Studio Pro' : `${m.versions.length} versions`}: ${m.versions.slice(0, 4).join(', ')}${m.versions.length > 4 ? '…' : ''}`, path: m.dir };
+    if (d.platform === 'darwin') return { status: 'missing', text: `No Studio Pro for Mac in ${m.dir}`, fix: 'Install Studio Pro for Mac (11.12 or the version your projects use; Apple silicon) from the Mendix Marketplace: it installs “Mendix Studio Pro <version>.app” in /Applications. Set AGENT_OFFICE_MENDIX_DIR if it’s somewhere else.' };
     return { status: 'missing', text: `No Studio Pro under ${m.dir}`, fix: 'Install Studio Pro (11.12 or the version your projects use); set AGENT_OFFICE_MENDIX_DIR if it isn’t in the usual folder.' };
   },
   async mxcli(d) {
@@ -190,7 +195,7 @@ const CHECKS: Record<PrereqId, Check> = {
     const exe = dir ? pathFor(d).join(dir, 'jq.exe') : undefined;
     const p = (exe && (await d.exists(exe)) ? exe : undefined) ?? (await d.find('jq'));
     if (p) return { status: 'ok', text: `jq at ${p}`, path: p };
-    return { status: 'missing', text: 'No jq found', fix: 'Fix installs it with winget (jqlang.jq), or set AGENT_OFFICE_JQ_DIR.' };
+    return { status: 'missing', text: 'No jq found', fix: byOs('Fix installs it with winget (jqlang.jq), or set AGENT_OFFICE_JQ_DIR.', 'Fix installs it with Homebrew (brew install jq).')(d) };
   },
   async toolkit(d) {
     const t = d.toolkit();
@@ -204,7 +209,7 @@ const CHECKS: Record<PrereqId, Check> = {
 };
 
 /** The rows to show on this platform, in order. */
-export const prereqIdsFor = (platform: NodeJS.Platform): PrereqId[] => PREREQ_IDS.filter((id) => platform === 'win32' || !PREREQ_META[id].windowsOnly);
+export const prereqIdsFor = (platform: NodeJS.Platform): PrereqId[] => PREREQ_IDS.filter((id) => platform === 'win32' || !PREREQ_META[id].windowsOnly || !!PREREQ_META[id].alsoOn?.includes(platform));
 
 /** Every check at once; one that throws is a missing row with what it said, never a failed page. */
 export async function checkPrereqs(d: CheckDeps): Promise<PrereqResult[]> {

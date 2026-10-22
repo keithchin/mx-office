@@ -334,6 +334,16 @@ test('icons: the Mx mark is in desktop/assets, and the packager, the window and 
     const text = readFileSync(path.join(desktop, file), 'utf8');
     for (const b of bits) assert.ok(text.includes(b), `${file} has ${b}`);
   };
-  has('scripts/pack.mjs', ["path.join(root, 'assets', 'icon.ico')", "icon: process.platform === 'win32' ? icoFile", "appBundleId: 'com.mxoffice.desktop'"]);
+  has('scripts/pack.mjs', ["path.join(root, 'assets', 'icon.ico')", "process.platform === 'win32' ? icoFile", "appBundleId: 'com.mxoffice.desktop'"]);
   has('src/main.ts', ["'icon.ico'", "'tray.png'", 'icon: windowIcon()', 'new Tray(trayIcon())', "app.setAppUserModelId('com.mxoffice.desktop')"]);
+  // macOS: the bundle's .icns (an icon family with every size as a PNG) and the menu bar's template images.
+  const icns = readFileSync(path.join(assets, 'icon.icns'));
+  assert.equal(icns.toString('ascii', 0, 4), 'icns');
+  assert.equal(icns.readUInt32BE(4), icns.length);
+  const types: string[] = [];
+  for (let at = 8; at < icns.length; at += icns.readUInt32BE(at + 4)) types.push(icns.toString('ascii', at, at + 4));
+  assert.deepEqual(types, ['icp4', 'icp5', 'icp6', 'ic07', 'ic08', 'ic09', 'ic10', 'ic11', 'ic12', 'ic13', 'ic14']);
+  assert.deepEqual([side('trayTemplate.png'), side('trayTemplate@2x.png')], [18, 36]);
+  has('scripts/pack.mjs', ["path.join(root, 'assets', 'icon.icns')", "process.platform === 'darwin' ? icnsFile"]);
+  has('src/main.ts', ["'trayTemplate.png'", 'setTemplateImage(true)', "app.on('activate'"]);
 });
