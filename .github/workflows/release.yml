@@ -266,11 +266,9 @@ jobs:
     # bash 3.2, the launcher's plan, a start of the built office through scripts/start-office.sh in test
     # mode (fake agents only, no GitHub token) answering /api/health, and the desktop app packaged for macOS
     # (build only: the packaged-app checks in desktop/scripts/e2e.mjs drive the Windows build).
-    # Until a first green run on a real Mac runner it reports without failing the run (continue-on-error);
-    # take that line out once it's green.
+    # It fails the run like the other jobs (green on a real Mac runner since release 71).
     runs-on: macos-latest
     timeout-minutes: 45
-    continue-on-error: true
     env:
       # Test offices never get GitHub tokens.
       GH_TOKEN: ''
