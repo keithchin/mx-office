@@ -11,7 +11,9 @@ Pick one:
 - **The Mx Office shortcut** on the desktop or in the Start menu (`scriptsinstall-shortcut.ps1` makes it). It runs `scriptsstart-office.ps1`: when an office already answers on its port it only opens the browser, otherwise it starts one.
 - **By hand**, in PowerShell in the office's folder: `.scriptsstart-office.ps1` (`-OfficeHome <folder>`, `-Port <n>`, `-NoBrowser`; anything else goes to the office as it is, like `--city Berlin`).
 
-The office opens in your browser already signed in. Press **Ctrl+F5** after an update. Setting up a new machine is on [Set up on a new machine](../get-started/new-machine.md).
+- **On macOS (preview)**, in Terminal: `bash scripts/start-office.sh` (`--office-home <folder>`, `--port <n>`, `--no-browser`, `--no-build`, `--dry-run`; anything after `--` goes to the office), or the **Mx Office** launcher in `~/Applications` that `scripts/install-shortcut.sh` makes. It does what the PowerShell launcher does below, with `~/mx-office` as the default office home, and runs in macOS's own bash 3.2. See [Set up on a new machine › macOS](../get-started/new-machine.md#macos-preview).
+
+The office opens in your browser already signed in. Press **Ctrl+F5** after an update (**Cmd+Shift+R** on a Mac). Setting up a new machine is on [Set up on a new machine](../get-started/new-machine.md).
 
 ## What the launcher does
 
@@ -35,7 +37,7 @@ The office listens on port **4600** (`--port` or `PORT` to change it).
 
 While any worker on any project is working, or a queued task, a Firm audit or a gate-check is running, the office asks Windows not to sleep, and lets go once everything has been idle for 10 minutes. The screen still turns off. It's on by default; switch it off or change the minutes in **⚙️ Settings → 🤖 Workers → Keep awake while agents work**, which also says what it's doing (*Keeping this computer awake: 3 agents working*).
 
-How: a small hidden PowerShell process calls `SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)` and waits; it exits when the office tells it to, when the office's process is gone, or with the office's window. No native dependency, and it never changes your power settings. (macOS uses `caffeinate -i`, Linux `systemd-inhibit`.)
+How: a small hidden PowerShell process calls `SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)` and waits; it exits when the office tells it to, when the office's process is gone, or with the office's window. No native dependency, and it never changes your power settings. (macOS uses `caffeinate -i -w <office>`, which ends with the office; Linux `systemd-inhibit`.) On a MacBook, closing the lid still sleeps it unless it's plugged in with an external display, keyboard and mouse (clamshell mode): keep the lid open, or use the desktop app on a plugged-in Mac with a display.
 
 > [!IMPORTANT]
 > Keep-awake stops **idle** sleep only. To keep agents working with the **lid closed**, Windows' *When I close the lid* must be **Do nothing** when plugged in: Control Panel → Hardware and Sound → Power Options → **Choose what closing the lid does** (or run `control /name Microsoft.PowerOptions /page pageGlobalSettings`), set **Plugged in** to *Do nothing*, and **Save changes**. Leave *On battery* as it is. If the setting is greyed out, your company manages it: ask IT. Keep a closed laptop plugged in and somewhere it can breathe.
@@ -44,7 +46,7 @@ If PowerShell can't load the power API (some locked-down machines block `Add-Typ
 
 ## Stop
 
-Close the **Mx Office** PowerShell window (or press Ctrl+C in it). This stops the office **and every running agent**.
+Close the **Mx Office** PowerShell window (or press Ctrl+C in it; on a Mac, the Terminal window running `start-office.sh`). This stops the office **and every running agent**.
 
 ## Restarting
 

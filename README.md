@@ -63,6 +63,24 @@ irm https://raw.githubusercontent.com/keithchin/mx-office/main/scripts/get-mx-of
 
 [`scripts/get-mx-office.ps1`](scripts/get-mx-office.ps1) checks for Git and Node.js and offers to install them with winget, clones the office into `%USERPROFILE%\mx-office-app` (or pulls it when it's already there, so running it again updates it), runs `npm ci` and `npm run build`, and starts it with `scripts\start-office.ps1`. The office opens on **🚀 First-run setup**, where **⚡ Set up everything** installs what's missing (GitHub CLI, jq, Claude Code, mxcli, the toolkit), signs `gh` in with a one-time code, saves the agents' GitHub token from that sign-in, and signs Claude Code in: it shows what it will install, and from where, before anything runs.
 
+### Get Mx Office on macOS (preview)
+
+In Terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/keithchin/mx-office/main/scripts/get-mx-office.sh | bash
+```
+
+Or look at the script before you run it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/keithchin/mx-office/main/scripts/get-mx-office.sh -o get-mx-office.sh
+less get-mx-office.sh
+bash get-mx-office.sh
+```
+
+[`scripts/get-mx-office.sh`](scripts/get-mx-office.sh) checks for Git and Node.js 22.5+ and offers to install them with Homebrew (`brew install git node`; it never installs Homebrew itself, and nothing without asking), offers `gh`, `jq` and a newer `bash` for the toolkit, clones the office into `~/mx-office-app` (or pulls it), runs `npm ci` and `npm run build`, and starts it with `scripts/start-office.sh` (office data in `~/mx-office`; `--office-home`, `--port`). Run `scripts/install-shortcut.sh` once for a **Mx Office** launcher in `~/Applications`. Saved tokens go into your **macOS login Keychain**. macOS support is a **preview**: it's built and tested on a macOS CI runner, but not yet on a real Mac with Studio Pro for Mac; what's still to check is listed in [Set up a new machine › macOS](docs/site/get-started/new-machine.md#macos-preview).
+
 ## Quick start
 
 On a fresh Windows machine (Node.js 22.5+, Git, `gh`, Claude Code, Studio Pro and mxcli installed; the office checks each one for you):
@@ -83,7 +101,7 @@ npm run build
 
 The step-by-step version, with screenshots: `/docs/get-started/quick-start`.
 
-> **Tokens** are managed in the office: **☰ → 🔌 Connections** (admins) keeps the agents' and admin GitHub tokens, the Mendix token, the Jev key and the office password, encrypted with Windows DPAPI, with a Test button each. The old files still work as a fallback (`~/.agent-office-gh-token`, `~/.agent-office-admin-gh-token`, `~/.agent-office-jev-key`) and **📥 Import from files** moves them in. Never paste a token anywhere else.
+> **Tokens** are managed in the office: **☰ → 🔌 Connections** (admins) keeps the agents' and admin GitHub tokens, the Mendix token, the Jev key and the office password, encrypted with Windows DPAPI (on macOS: in your login Keychain), with a Test button each. The old files still work as a fallback (`~/.agent-office-gh-token`, `~/.agent-office-admin-gh-token`, `~/.agent-office-jev-key`) and **📥 Import from files** moves them in. Never paste a token anywhere else.
 >
 > **Restarts** on Windows stop running agents; their sessions are saved, the ones cut off mid-turn carry on, and the rest stay asleep until they're prompted (or you press R). **▶ Resume project** wakes the ones with work waiting, a few at a time, and **⏸ Pause project** winds a project down cleanly before a restart; **🔁 Restart safely** (⚙️ Settings › Agents, `/lite?tab=settings&section=workers`) does both around a restart, given the launcher's restart loop (`/docs/using-the-office/resume-and-pause`, `/docs/administration/running-the-office`). To try a change, run a throwaway **test office** on a 47xx port with its own `AGENT_OFFICE_HOME` and throwaway projects, never the real ones (`/docs/administration/test-offices`).
 >
@@ -98,6 +116,8 @@ npm --prefix desktop install   # once: Electron, into desktop\node_modules
 npm run desktop:dev            # start it (options after --, e.g. -- --port 4610)
 npm run desktop:pack           # desktop\out\Mx Office-win32-x64\mx-office.exe, an unpacked build
 ```
+
+On a Mac, `npm run desktop:pack` builds `desktop/out/Mx Office-darwin-arm64/Mx Office.app` (unsigned: the first time, right-click it → **Open**, or `xattr -dr com.apple.quarantine "Mx Office.app"`), with the tray in the menu bar.
 
 When an office already runs on the port, the app opens that one instead of starting a second. **Restart office…** in the tray runs 🔁 Restart safely; quitting stops the office cleanly (it asks first while agents are working). Not there yet: an installer, auto-update and code signing (a Siemens certificate or IT approval). Everything else, including running it against a test office: `/docs/administration/desktop-app` ([docs/site/administration/desktop-app.md](docs/site/administration/desktop-app.md)).
 

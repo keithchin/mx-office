@@ -1,11 +1,11 @@
 ---
 title: Set up on a new machine
-description: From a fresh Windows machine to a working office in about 20 minutes. The prerequisites with links, clone, install and build, start-office.ps1, the first-run setup screen, the desktop shortcut and troubleshooting.
+description: From a fresh Windows machine (or, in preview, a Mac) to a working office in about 20 minutes. The prerequisites with links, clone, install and build, start-office.ps1 (start-office.sh on macOS), the first-run setup screen, the desktop shortcut and troubleshooting.
 weight: 1
 aliases: [/docs/new-machine, /docs/install]
 ---
 
-This page takes a Windows machine with nothing on it to a running office with its first project. It takes about 20 minutes, most of it installing programs. You don't edit any file by hand: the office asks for everything in its **first-run setup** screen.
+This page takes a Windows machine with nothing on it to a running office with its first project. It takes about 20 minutes, most of it installing programs. You don't edit any file by hand: the office asks for everything in its **first-run setup** screen. On a Mac, see [macOS (preview)](#macos-preview) for what's different.
 
 ## Before you begin
 
@@ -90,7 +90,7 @@ On the **Prerequisites** step, **🔧 Fix** on a row fixes that row, and **⚡ S
 
 | Row | What Fix does |
 | --- | --- |
-| Node.js, Git (with Git Bash), GitHub CLI, jq | `winget install --id <package> --exact --source winget --accept-package-agreements --accept-source-agreements --silent` with `OpenJS.NodeJS.LTS`, `Git.Git`, `GitHub.cli` or `jqlang.jq`. Afterwards the office reads PATH again from Windows, so the new program counts without a restart (a new Node.js needs one: the office runs on the Node it started with). Without winget it shows the download links; on macOS and Linux it shows the `brew` and `apt` lines to type. |
+| Node.js, Git (with Git Bash), GitHub CLI, jq | `winget install --id <package> --exact --source winget --accept-package-agreements --accept-source-agreements --silent` with `OpenJS.NodeJS.LTS`, `Git.Git`, `GitHub.cli` or `jqlang.jq`. Afterwards the office reads PATH again from Windows, so the new program counts without a restart (a new Node.js needs one: the office runs on the Node it started with). Without winget it shows the download links. On macOS it runs `brew install node`, `git`, `gh` or `jq` instead (without Homebrew: the link to brew.sh); on Linux it shows the `apt` lines to type. |
 | Long paths for git | `git config --global core.longpaths true`. |
 | gh signed in | Runs `gh auth login --web` and shows GitHub's **one-time code** big, with **📋 Copy** and a button to `github.com/login/device`. Type the code there and approve: the window carries on by itself, then runs `gh auth setup-git` so git pushes with the same sign-in. If your gh can't sign in without a terminal, the office opens a terminal window running `gh auth login` instead, says so, and waits. |
 | The agents' GitHub token | **Save the agents' GitHub token from that sign-in** (on by default in the window, or **🔑 Save as the agents' GitHub token** on a signed-in row): `gh auth token` goes straight into 🔌 Connections. It is never shown, logged or sent to the page. It is your own sign-in's token, so agents act on GitHub as you; you can swap in a fine-grained token in Connections later. |
@@ -109,6 +109,61 @@ Only admins can run fixes, the office checks the confirm on its side (a run with
 ```
 
 This puts a **Mx Office** shortcut on the desktop and in the Start menu. It runs `start-office.ps1` from this folder: it starts the office, or opens it when it is already running. Pass `-OfficeHome` or `-Port` to have the shortcut use them, `-NoDesktop` for the Start menu only, and `-Remove` to take the shortcuts away again.
+
+## macOS (preview)
+
+Mx Office runs on a Mac too: an Apple silicon Mac with macOS 14 (Sonoma) or newer, which is what Studio Pro for Mac needs. macOS support is a **preview**. The office, its tests, the Keychain store and the desktop app's build run on a macOS CI runner, but nobody has yet run a real project on a Mac with Studio Pro for Mac; the list at the end of this section is what's still to check. Everything else on this page is the same, with these differences.
+
+### What to install
+
+| What | Get it on a Mac |
+| --- | --- |
+| **Homebrew** | [brew.sh](https://brew.sh) (the office and its scripts use it, but never install it for you) |
+| **Git** | `brew install git` (or `xcode-select --install` for Apple's) |
+| **Node.js 22.5 or newer** | `brew install node` |
+| **GitHub CLI** (`gh`), signed in | `brew install gh`, then `gh auth login` |
+| **Claude Code** (`claude`), signed in | `curl -fsSL https://claude.ai/install.sh \| bash`, then run `claude` once and sign in (Claude Code keeps its sign-in in your Keychain, so first-run setup's row says it *couldn't tell* rather than green) |
+| **Mendix Studio Pro for Mac** | Mendix Marketplace → **Download for Mac** (a `.pkg`, administrator rights needed). It installs `/Applications/Mendix Studio Pro <version>.app`, one per version, with `mxbuild` and `mx` in `Contents/modeler`. Studio Pro 11 for Mac is in beta at Mendix (Apple silicon only; no native mobile, no document templates). |
+| **mxcli** | First-run setup's Fix downloads `mxcli-darwin-arm64`, or get it from [mxcli releases](https://github.com/mendixlabs/mxcli/releases) |
+| **jq** | `brew install jq` (macOS 15 has one built in) |
+| **bash 4 or newer** | `brew install bash`: the toolkit's scripts need it, and macOS's own `/bin/bash` is 3.2. The office uses Homebrew's (`/opt/homebrew/bin/bash`) when it's there; `AGENT_OFFICE_BASH` points at another. |
+| PostgreSQL (optional) | [Postgres.app](https://postgresapp.com) or `brew install postgresql@17`: the office finds psql in either, for the 🌐 Live app |
+
+Git Bash and Windows' long paths don't apply on a Mac, so first-run setup doesn't show those rows. On a Mac its **🔧 Fix** installs Node.js, Git, gh and jq with `brew install` (after the same confirm window), or, without Homebrew, says so and links to brew.sh.
+
+### Get it and start it
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/keithchin/mx-office/main/scripts/get-mx-office.sh | bash
+```
+
+To read the script first: `curl -fsSL …/scripts/get-mx-office.sh -o get-mx-office.sh`, read it, then `bash get-mx-office.sh`. It asks before each `brew install` (on the terminal, even when piped), clones into `~/mx-office-app` (`MX_OFFICE_DIR` for another folder), builds and starts the office. Later, start it with:
+
+```bash
+bash ~/mx-office-app/scripts/start-office.sh          # office home ~/mx-office, port 4600
+bash ~/mx-office-app/scripts/start-office.sh --office-home ~/office2 --port 4610
+```
+
+`start-office.sh` does what `start-office.ps1` does: builds when `dist` is missing, opens the browser signed in (the office does that itself once it listens), only opens the browser when an office already answers on the port, and starts the office again after **🔁 Restart safely** (exit code 75). `--no-browser`, `--no-build` and `--dry-run` (prints its plan as JSON) work as `-NoBrowser`, `-NoBuild` and `-DryRun` do. Keep the Terminal window open: closing it stops the office.
+
+`bash scripts/install-shortcut.sh` puts a **Mx Office** launcher in `~/Applications` (Finder, Launchpad, Spotlight): a `.command` file that opens Terminal and runs the launcher. `--desktop` puts one on the Desktop too, `--remove` takes them away. The [desktop app](../administration/desktop-app.md) keeps the office in the menu bar instead.
+
+### What's different on a Mac
+
+- **Tokens** go into your login Keychain, one item each (service `com.mxoffice.connections`); see [Security and tokens](../administration/security-and-tokens.md#on-macos-the-keychain).
+- **Open in Studio Pro** opens the project in the `Mendix Studio Pro <version>.app` of the project's version (`open -n -a <app> --args <project>.mpr`). There's no Version Selector on a Mac: install the version the project uses.
+- **The 🌐 Live app** builds with the mxbuild inside that app (`Contents/modeler/mxbuild`), as mxcli does on a Mac; the Mendix CDN's mxbuild is a Linux program and can't run there.
+- **Keep awake** uses macOS's `caffeinate` while agents work. Closing the lid still sleeps a MacBook unless an external display is connected.
+- **Folders**: office data in `~/mx-office/.agent-office`, the checkout in `~/mx-office-app` ([Data locations](../administration/data-locations.md#on-macos)).
+
+### Not yet checked on a real Mac
+
+- Open in Studio Pro: that Studio Pro for Mac opens the `.mpr` it's given as an argument, and that Studio mode sees it running (it reads `ps` for processes inside a `Mendix Studio Pro *.app`, and the `.mpr.lock`).
+- The 🌐 Live app end to end: `mxcli run --local` with Studio Pro's bundled mxbuild, and PostgreSQL from Postgres.app or Homebrew.
+- The toolkit's scripts under Homebrew's bash, and a full new project through ✨ New project.
+- First-run setup's Homebrew fixes and the Claude Code sign-in window (Terminal, through `osascript`).
+- The desktop app: menu-bar icon, Dock badge, notifications, quitting from the Dock.
+- Keychain prompts: items made by `/usr/bin/security` should be read back without one; say so if macOS asks.
 
 ## Next steps
 

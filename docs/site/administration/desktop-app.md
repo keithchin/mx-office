@@ -34,6 +34,22 @@ The exe, its taskbar button, the window and the tray show the office's Mx mark (
 
 Keep that folder where it is (inside the checkout), or start `mx-office.exe` with `--office-dir <checkout>`: the app looks for the office above its own folder, then asks for it (**Choose the office folder…**) and remembers your choice.
 
+### On macOS (preview)
+
+On a Mac (Apple silicon, Node.js from Homebrew or nvm), the same commands build a Mac app:
+
+```bash
+npm --prefix desktop install
+npm run desktop:pack             # desktop/out/Mx Office-darwin-arm64/Mx Office.app
+```
+
+- **Bundle id** `com.mxoffice.desktop` (the Mac's equivalent of the Windows AppUserModelID), the app icon from `desktop/assets/icon.icns`, *Developer Tools* as its category, light and dark appearance.
+- **Unsigned and not notarized**: Gatekeeper refuses it the first time (*"Mx Office" can't be opened because Apple cannot check it*). Right-click (or Control-click) the app → **Open** → **Open**, once; or clear the download quarantine: `xattr -dr com.apple.quarantine "desktop/out/Mx Office-darwin-arm64/Mx Office.app"`. An app you built yourself on the same Mac usually has no quarantine and opens straight away. Move it to `/Applications` if you like, and start it with `--office-dir <checkout>` (or let it ask once).
+- **The menu bar** shows the tray icon as a template image (`trayTemplate.png`, black with transparency, so macOS tints it for a light or dark menu bar), with the same menu as the Windows tray. The **Dock** shows the count of red items as a badge, clicking the Dock icon brings the window back after it was closed, and the menu bar has the usual app menu (About, Hide, Quit) and a Window menu. Closing the window leaves the office running, as on Windows; Quit (Cmd+Q, the menu bar icon or the Dock) stops it, asking first while agents work.
+- **PATH**: an app opened from Finder doesn't get your terminal's PATH, so before it looks for Node.js the app asks your login shell for it (`$SHELL -ilc`, at most 5 seconds) and adds Homebrew's folders; the office it starts inherits that, so git, gh and claude are found. `--node` still picks a Node.js of your own.
+
+The macOS CI job builds it on every change (`plutil` checks the bundle id, the icon and the packed app); the packaged-app checks of `desktop/scripts/e2e.mjs` are the Windows build's only, and the app has not been tried on a real Mac yet.
+
 ### Options
 
 Anything after `npm run desktop:dev --`, or after `mx-office.exe`:
@@ -104,9 +120,9 @@ It runs the app with `MX_OFFICE_DESKTOP_TEST=1`, so its window stays off-screen,
 | --- | --- |
 | **An installer** (Start menu entry, uninstall) | electron-builder's NSIS or an MSIX target; MSIX needs the signing below |
 | **Auto-update** | A signed build and somewhere to publish releases (GitHub Releases or an internal share) for electron-updater; until then, `git pull` and `npm run build` update the office as before, and `npm run desktop:pack` the app |
-| **Code signing** | A Siemens code-signing certificate (or IT approval of the unsigned app): without it SmartScreen warns on first start and managed machines may block `mx-office.exe` |
+| **Code signing** | A Siemens code-signing certificate (or IT approval of the unsigned app): without it SmartScreen warns on first start and managed machines may block `mx-office.exe`. On a Mac: an Apple Developer ID certificate and notarization (`@electron/packager`'s `osxSign` and `osxNotarize`), until then Gatekeeper's right-click → Open |
 | **Its own Node.js** | On purpose: the system Node avoids rebuilding the office's terminal library (node-pty) for Electron |
-| **macOS and Linux builds** | `npm run desktop:pack` builds for the platform it runs on; only Windows is tried so far |
+| **A tried macOS build, and Linux** | `npm run desktop:pack` builds for the platform it runs on. The macOS build is set up and built in CI ([On macOS](#on-macos-preview)) but not yet tried on a real Mac; Linux isn't tried at all |
 
 ## See also
 
