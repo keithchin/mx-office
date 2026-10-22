@@ -3,6 +3,7 @@ import type { Net } from '../../net';
 import { h, openModal } from '../dom';
 import { mergeWaiters } from './api';
 import { MERGE_KEY, mergePref, savePref } from './prefs';
+import { mergeGateBox } from '../merge-gate/panel';
 
 // ---- Whether a PR can merge ---------------------------------------------------------------------
 
@@ -82,6 +83,8 @@ export function openMerge(it: GhPull, d: GhPullDetail, net: Net, handToWorker: (
     savePref(MERGE_KEY, { method, deleteBranch });
   });
   const result = h('div.gh-merge-result.hidden');
+  // The merge gate (ui/merge-gate/): no Merge without a counting review of the head, unless an admin overrides.
+  const gate = mergeGateBox(it.number, (ok) => (go.disabled = !st.can || !ok));
   const cancel = h('button.btn', { type: 'button' }, 'Cancel');
   // Conflicts can't be merged from here, so fixing them is the main button.
   const worker = conflicted(d)
@@ -102,6 +105,7 @@ export function openMerge(it: GhPull, d: GhPullDetail, net: Net, handToWorker: (
       methodBtns,
       h('label.gh-check', { for: 'merge-del' }, del, `Delete ${it.headRefName} after merging`),
       st.auto ? h('label.gh-check', { for: 'merge-auto', title: 'gh pr merge --auto (the repo must allow auto-merge)' }, auto, 'Merge automatically once the requirements pass') : null,
+      gate,
       result,
     ),
     h('footer', {}, st.can || conflicted(d) ? null : worker, h('span.grow'), cancel, conflicted(d) ? worker : go),

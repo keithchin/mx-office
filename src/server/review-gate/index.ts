@@ -3,7 +3,8 @@
 //     counts are marked integrated (unreviewed), so they never read as verified (markUnreviewed);
 //   - every surfaced-asks look (asks/main.ts): the info cards for Needs you, one per flagged PR, one per
 //     direct or force push to the default branch, and one for the week's baseline resets and waivers.
-// Deterministic, no LLM, and nothing is blocked: the office can't stop a merge on GitHub, it says so.
+// Deterministic, no LLM. This looks after the merge; before it, the office's own Merge button asks the merge
+// gate (server/merge-gate/), and only GitHub branch protection requiring its status can stop an agent's gh.
 
 import type { AskItem } from '../../shared/asks.js';
 import type { GhPull } from '../../shared/protocol.js';
@@ -15,6 +16,7 @@ import { everHired } from '../roster/store.js';
 import { flaggedPulls, markTasks, pullItem, type JudgeLook } from './judge.js';
 import { lookPushes, pushItem } from './pushes.js';
 import { lookWaivers, waiverItem } from './waivers.js';
+import { countedReviewer, gateAsks } from '../merge-gate/index.js';
 
 /** Who the floor's agents are, and who works on a branch: its team members' names and its workers'. */
 export function judgeLookOf(ctx: Ctx, floor: Floor): JudgeLook {
@@ -29,6 +31,8 @@ export function judgeLookOf(ctx: Ctx, floor: Floor): JudgeLook {
   return {
     agents: [...names],
     branchOwner: (branch) => workers.find((w) => w.worktree?.branch === branch || w.worktree?.made === branch)?.name,
+    // A review the merge gate counts for the merged head (server/merge-gate/), the Project Manager's own among them.
+    counted: (p, opener) => countedReviewer(ctx, floor.id, p, opener),
   };
 }
 
@@ -62,5 +66,5 @@ export async function gateItemsOf(ctx: Ctx, floorId: string, main: { branch: str
     lookWaivers(floor.dir, now).catch(() => []),
   ]);
   const waived = waiverItem(waivers, lead);
-  return [...prs, ...pushes.map((e) => pushItem(e, lead)), ...(waived ? [waived] : [])];
+  return [...gateAsks(ctx, floor.id), ...prs, ...pushes.map((e) => pushItem(e, lead)), ...(waived ? [waived] : [])];
 }

@@ -1,15 +1,15 @@
 ---
 title: Review gate
-description: Who really did what in a project's git history - each agent commits under its own name - and how the office tells you, through Needs you, when an agent's pull request merged without a real review, when something reached main without a pull request, and when a lint baseline was reset or a check waived without your decision.
+description: Who really did what in a project's git history - each agent commits under its own name - how the office's merge gate holds its own Merge button until the pull request's current head has an independent review, how you record a review yourself, and how Needs you shows what merged without a real review, what reached main without a pull request, and lint baseline resets or waivers without your decision.
 weight: 3.42
 ---
 
 The **review gate** keeps the project's history honest: it should show who really did what, and "reviewed" should mean reviewed. On a real project every commit read as the Project Manager's (the agents used his git identity and his GitHub sign-in), four pull requests were opened and merged by the agents themselves 12 to 25 seconds apart with no review and no checks, a handover was committed "(reviewed)" after a one-second skim, and the lint baseline was reset eight times in a day "by my call". Branch protection wasn't available on that private free-plan repository, so nothing on GitHub stopped any of it.
 
-The office can't block anything on GitHub either. It does two things instead: it makes each agent's work carry the agent's name, and it shows you in [Needs you](command-center.md#needs-you) whatever skipped the rule, with the evidence. It uses no AI: every check is a plain rule over what the office already reads.
+The office does four things: it makes each agent's work carry the agent's name; it binds every review to the exact commit it reviewed; its own **Merge** button refuses a pull request whose current head has no review that counts (the [merge gate](#the-merge-gate)); and it shows you in [Needs you](command-center.md#needs-you) whatever skipped the rule, with the evidence. It uses no AI: every check is a plain rule over what the office reads.
 
 > [!IMPORTANT]
-> **The review gate is a detector, not a gate.** It looks at pull requests **after** they merged. Nothing in the office stops a merge: an agent can run `gh pr merge` itself, and the **Merge** button in the office's pull-request window runs `gh pr merge` without asking the review gate anything. The review rule, the 10-minute wait and "merges need the Project Manager's approval" (at autonomy 1 to 3) are instructions in the agents' Playbooks and an item in Approvals, not controls. Only **branch protection** on GitHub (required reviews, required checks) can block a merge, and the office neither sets it up nor checks whether it is on.
+> **What is enforced, and by whom.** The office enforces the gate on **its own** Merge button (the pull-request window). An agent that runs `gh pr merge` itself, or anyone merging on GitHub, goes around it: all agents share one GitHub account, and the office can't take a command away from an agent. The office posts its verdict on each pull request's head as the **`mx-office/review`** commit status, so **GitHub branch protection** that requires that status refuses any merge without a counting review, whoever merges. A person sets that up on GitHub: see [Branch protection](../integrations/branch-protection.md). The PR window shows whether the base branch requires it, so you know whether the gate is enforced or only advisory outside the office.
 
 ## Each agent commits as itself
 
@@ -26,22 +26,76 @@ The author identity is only an environment setting: an agent can change it for i
 Every Lead's (and the Project Coordinator's) Playbook says:
 
 - Start every pull request description with `Opened by <Name> (<role>) via Mx Office`.
-- A pull request is merged only after **another** Lead (or the Project Coordinator) reviewed it and recorded that on the pull request as a comment that starts `Review: <name> (<role>)`, then a `Checks:` list (each command actually run, with its result) and a `Files read:` list:
+- A pull request is merged only after **another** Lead (or the Project Coordinator) reviewed it and recorded that on the pull request as a comment that starts `Review: <name> (<role>)`, then a `Checks:` list (each command actually run, with its result), a `Files read:` list, a `Head:` line naming the exact commit reviewed, and a `Verdict:` line:
 
   ```text
   Review: Sophie (Lead Developer)
+  Head: 1a2b3c4
   Checks:
   - npm test → 42 passed
   - mxcli check -p App.mpr → 0 errors
   Files read:
   - docs/client/handover.md
   - docs/team/analysis.md
+  Verdict: approve
   ```
 
-  A reviewer may add a verdict or remarks below, but the review gate doesn't read them (see [What it doesn't check](#what-it-doesnt-check)).
+  `Verdict:` takes `approve`, `changes requested` or `comment`. A review counts only for the commit it names: any later commit needs a new review.
 
-- No merge on your own review, none within **10 minutes** of opening unless you approved it, and no "(reviewed)" in a commit or pull request title without that comment. On a team with no other Lead, you review: the agent escalates it.
+- No merge on your own review, none within **10 minutes** of opening unless you approved it, and no "(reviewed)" in a commit or pull request title without that comment. On a team with no other Lead, you review: the agent tells you the pull request is ready and waits for your review in the office.
 - Resetting the lint baseline (`.claude/lint-baseline.json`) or recording a waiver needs your decision, cited in that commit (`Decided per ESC-<id> rev <n>`).
+
+## The merge gate
+
+### Reviews are bound to a revision
+
+Every review the office knows about becomes a **review record**: the pull request, the **head commit it reviewed**, the **verdict** (approve, changes requested, comment), **who** reviewed it, when, and where it came from. Records are kept per project in `<data>/merge-gate/<project>.jsonl`, append only.
+
+| Source | Reviewer | Commit it is bound to |
+|---|---|---|
+| A complete `Review:` comment naming an agent of the project | The agent named in it | Its `Head:` line; without one, the branch's head when the comment was posted (shown as *commit inferred from its time*) |
+| A complete `Review:` comment from another GitHub account | That account (usually a person) | The same |
+| A GitHub review (Approve, Request changes) from another account | That account | The commit GitHub recorded for the review |
+| A review you record in the office | You, as signed in to the office | The head you saw when you recorded it |
+
+`Review:` comments posted from 22 October 2026 on need a `Verdict:` line; without one they are a comment, not an approval. Older ones keep the old rule (a complete Review comment is an approval).
+
+A review counts when:
+
+- it **approves exactly the current head**. A new commit makes it **stale**: the PR window says *Stale: reviewed by Sophie at 1a2b3c4, changed since review: 2 commits* (or that the reviewed commit is no longer on the branch, after a force push);
+- its reviewer is **independent**: not an author of the pull request's commits. The authors are the opener (the `Opened by … via Mx Office` line, else whoever works on the branch) and every agent or person named as a commit author;
+- no independent reviewer's **last word on that head asks for changes**. *Changes requested* blocks until the same reviewer approves, or a new commit (which needs a new review anyway).
+
+**Identity comes from the office, not GitHub.** All agents share one GitHub account, so the agent a `Review:` comment names is taken at its word: an agent could post a comment in another agent's name. The office can show which agent the comment names and refuse the author, nothing more. A review you record in the office is tied to your office sign-in, with your password typed again.
+
+### Your review, from the PR window
+
+Each pull request's window has a **🛡️ Review gate** panel above the conversation:
+
+- the review status of the **current head**: *Reviewed ✓ by Sophie (Lead Developer) at 1a2b3c4*, *Changes requested by …*, *Stale: … changed since review: N commits*, or *Not reviewed yet*;
+- whether the office's Merge would go ahead, and if not, why;
+- whether the base branch is protected and requires `mx-office/review` (see [Branch protection](../integrations/branch-protection.md));
+- **✅ Reviewed and approved this revision (1a2b3c4)** and **✋ Request changes**, which record your review of exactly that commit. You type your password again to sign it, and a request for changes needs a note. If the branch moved on while you looked, the office refuses and asks you to look at the new commits. If you authored commits on the pull request, it refuses too;
+- the history: every review recorded for the pull request, overrides, and the reviews that don't count with the reason.
+
+On a merged pull request whose merged revision has no counting review, the button reads **Reviewed and approved the merged revision**: a review after the fact clears the task's *unreviewed* mark (below).
+
+On a **Solo** team (or any team with one agent hired), no other agent can review, so you are the reviewer. Needs you shows **PR #12 waits for your review of 1a2b3c4** for each open pull request whose head has no counting review (and whose checks aren't failing). It goes away once you review it, and a new head brings it back. On teams with other Leads, waiting for an agent's review is not your job, and Needs you stays quiet.
+
+### The office's Merge button
+
+**🔀 Merge…** in the PR window asks the gate first. It merges only when:
+
+- an independent review approved the **current head**, with no request for changes standing on it, and
+- the pull request's checks aren't failing (and aren't still running, unless you picked *Merge automatically once the requirements pass*). The checks are GitHub's check rollup, the same the board shows, without the office's own `mx-office/review` status.
+
+Otherwise the merge dialog shows the reason and the Merge button stays disabled; if something changed in between, the office refuses the merge itself with the reason (*Not merged: No review counts for the head 1a2b3c4 yet…*). Every refusal is in the [Audit log](audit-log.md) as `pr.gate.refused`. If the office can't read the pull request from GitHub, it doesn't merge.
+
+**An admin's override.** In the merge dialog an admin can choose **⚠️ Override…**, type why (10 characters or more) and their password. The override covers that head only, for 30 minutes, and only the office's own Merge button. It is audited as `pr.gate.override` (a warning), and the merge that uses it as `pr.gate.overriddenMerge`. It doesn't change the `mx-office/review` status, so a branch that requires it still refuses the merge on GitHub.
+
+### The mx-office/review status
+
+On the head of each open pull request it looks at, the office posts the commit status **`mx-office/review`**: success with a counting approval, pending without one (or when stale), failure when changes are requested. It looks when you open the PR window and when the board's pull-request list changes: only the pull requests whose head or update time moved, a few per look. A status is posted once per head and verdict; if GitHub refuses (the token can't write statuses), the project's posts wait an hour. Require the status in branch protection to make GitHub enforce the gate: [Branch protection](../integrations/branch-protection.md).
 
 ## What it flags
 
@@ -49,46 +103,36 @@ Each is an info card tagged **Review gate** (🚦) in Needs you, shown and not c
 
 | Card | When |
 |---|---|
-| *PR #5 by Katherine merged 12 s after opening, without a review by another lead* | An agent's pull request (one from an office worktree branch, or naming its agent) merged in the last 7 days with any of: no qualifying `Review:` comment made before the merge by another agent; reviewed only by its own opener; merged within 10 minutes of opening without an approval from another GitHub account; merged with failing or still-running checks; "(reviewed)" in its title or a commit title with no qualifying review. The card lists what GitHub recorded (opener and merger account), the commit authors, and the titles that claim a review. |
+| *PR #5 by Katherine merged 12 s after opening, without a review by another lead* | An agent's pull request (one from an office worktree branch, or naming its agent) merged in the last 7 days with any of: no qualifying review of the merged head made before the merge by another agent (or recorded by the merge gate for that head, yours included); reviewed only by its own opener; merged within 10 minutes of opening without an approval from another GitHub account; merged with failing or still-running checks; "(reviewed)" in its title or a commit title with no qualifying review. The card lists what GitHub recorded (opener and merger account), the commit authors, the titles that claim a review, and the reviews that don't count (another revision, no approving verdict). |
 | *Commit 920c4e2 reached main without a pull request* | A commit on origin's default branch since the office last looked that is no pull request's merge commit and wasn't committed by GitHub's merge button. |
 | *main was force-pushed: it moved from a1b2c3d to e4f5a6b, which doesn't contain it* | The default branch moved to a commit that doesn't contain where it was. |
 | *Lint baseline reset 5 times and 14 waivers recorded in the last 7 days without your decision* | Commits on any branch that rewrite `.claude/lint-baseline.json`, add a `…-WAIVED` line to `docs/BUILD-LOG.md` or a `Waived …` line to `PROJECT.md` (what the toolkit's `gate-check --waive` writes), or say "waived" in their title, without citing a decision. One card lists them all. |
 
-A review **counts** when all of these hold (`src/shared/review-gate.ts`, `src/server/review-gate/judge.ts`):
+After the merge, a `Review:` comment counts when (`src/shared/review-gate.ts`, `src/server/review-gate/judge.ts`):
 
-- it is a comment or review on the pull request whose **first line starts `Review:`**, followed by a reviewer name;
-- the reviewer is **any agent of the project** by name (a team member ever hired, or a worker on the project), **or** the comment came from a GitHub account other than the one that opened the pull request (usually a person; in an office with accounts, also an agent hired by someone else);
-- the reviewer is **not the opener**, who is read from the `Opened by … via Mx Office` line, else from whoever works on the branch, else from an agent commit author;
-- it lists **at least one `Checks:` item shaped like a result** (`command → result`, `command: result`, `command — result`) and **at least one `Files read:` item**;
-- it was posted **at or before the merge** (`mergedAt`). A review added after the merge doesn't count.
+- its **first line starts `Review:`**, followed by a reviewer name;
+- the reviewer is **any agent of the project** by name, **or** the comment came from a GitHub account other than the one that opened the pull request;
+- the reviewer is **not the opener**;
+- it lists **at least one `Checks:` item shaped like a result** and **at least one `Files read:` item**;
+- its `Head:` line, when it has one, names the **merged head**, and its verdict is an **approval** (see the cut-off above);
+- it was posted **at or before the merge**.
+
+A review the merge gate counts for the merged head (an agent's, a GitHub approval, or yours from the PR window, also after the merge) counts as well.
 
 ### What it doesn't check
 
-The rule is about the shape of a comment, so it is easy to satisfy. The gate never checks:
-
-- **which commit was reviewed**: the reviewed revision is never compared with the merged one, and commits pushed after the review don't make it stale;
-- **the verdict**: a `Verdict: reject` (or any other remark) still counts as a review;
-- **GitHub's own review decision** (approved or changes requested): it is fetched, but not used;
-- **independence of roles**: any other agent's name counts, including one on the same team or with the same role;
 - **whether the checks listed really ran**: they are not compared with CI or with the [claims check](claims-check.md);
-- **who merged it**: shown on the card, never judged.
+- **who merged it**: shown on the card, never judged;
+- **roles**: any other agent of the project counts as independent, including one with the same role;
+- **which agent really wrote a Review comment**: they all post from the same GitHub account (see above).
 
-**Limits.** Only the 30 most recently merged pull requests, and of those only ones merged in the last 7 days, are judged. Per pull request, the first 20 comments and reviews that start `Review:` or `Approved` (or are a GitHub approval) are read, each up to 3000 characters.
+**Limits.** Only the 30 most recently merged pull requests, and of those only ones merged in the last 7 days, are judged after the merge. Per pull request, the first 20 comments and reviews that start `Review:` or `Approved` (or are a GitHub approval) are read, each up to 3000 characters.
 
-**The task stays unreviewed.** A task whose pull request merged without a review that counts reads **Integrated (unreviewed)** and is never counted as delivered or *Done (verified)*, whatever its checks say later (App Insights › Testing › Verification shows it so). That mark is **never cleared**, not even by a review posted afterwards. A merge that only came too fast, with a review that counts, shows its card but doesn't hold the task back.
-
-### On a Solo team
-
-On a team with no other Lead (a Solo team), the Playbook says the Project Manager reviews: the agent escalates each pull request to you. There is no review flow in the office for that. You would post the `Review:` comment yourself on GitHub, with its `Checks:` and `Files read:` lists. Whether it counts depends on the account it comes from (this is read from the code, **not tested**):
-
-- **From the office's shared GitHub account** (the one the agents use, for example through the pull-request window in an office without accounts), under your own name: probably **not counted**. Your name isn't an agent's, and the account is the opener's.
-- **From your own GitHub sign-in** (an office with accounts, signed in as yourself): it comes from another account, so it should count.
-
-Expect a Solo project to show a *Review gate* card for most merged pull requests unless you review them this way.
+**The task stays unreviewed until a review counts.** A task whose pull request merged without a review that counts reads **Integrated (unreviewed)** and is not counted as delivered or *Done (verified)*. The mark is **cleared** once a counting review of the merged revision exists (for example yours, recorded from the PR window after the merge), or when the pull request turns out to be closed without merging. The clearing is kept in the merge gate's records and in the Audit log (`pr.review.cleared`), with what the mark said. A merge that only came too fast, with a review that counts, shows its card but doesn't hold the task back.
 
 ## Where it reads from
 
-The office remembers where the default branch was in `<data>/review-gate/<project>.json`; its first look only records that, so older history isn't flagged. Pushes are read from the office's own copy of the project (it never fetches for this), and pull requests from the board's existing pull-request poll (merged ones now also bring who merged them, their `Review:` and approval comments, and their commit titles and authors).
+The office remembers where the default branch was in `<data>/review-gate/<project>.json`; its first look only records that, so older history isn't flagged. Pushes are read from the office's own copy of the project (it never fetches for this). Merged pull requests come from the board's existing pull-request poll (who merged them, their `Review:` and approval comments, and their commit titles and authors). The merge gate reads an open pull request's commits, comments, reviews and checks with `gh pr view` when you open its window, when you merge, and when its head or update time moves on the board's list; its records are in `<data>/merge-gate/<project>.jsonl`.
 
 Related: a GitHub issue closed as completed no longer counts as delivering a task while that task's own pull request is still open or was closed without merging; the pull request decides.
 
@@ -96,5 +140,6 @@ Its sibling, the [claims check](claims-check.md), compares what agents *say* the
 
 ## See also
 
+- [Branch protection](../integrations/branch-protection.md)
 - [Claims check](claims-check.md)
-- Architecture: [Trust and authority](../architecture/trust-and-authority.md), [Proposals](../architecture/proposals.md) (proposed pre-merge signals and branch-protection checks; **not built**)
+- Architecture: [Trust and authority](../architecture/trust-and-authority.md), [Proposals](../architecture/proposals.md)

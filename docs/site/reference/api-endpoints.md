@@ -37,6 +37,9 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/search` | Search the chat and terminals |
 | GET | `/api/services` | Workers' web servers (port forwards) |
 | GET | `/api/gh/pull`, `/api/gh/issue`, `/api/gh/labels`, `/api/gh/pull/diff` | GitHub PR and issue windows |
+| GET | `/api/merge-gate` | The merge gate for one PR (`?floor=&pr=`): the review status of its current head, whether the office's Merge would merge it and why not, its review history, and the base branch's protection (read only) |
+| POST | `/api/merge-gate/review` | Your review of exactly the head you saw (`{floor, pr, sha, verdict: 'approve' or 'changes', note?}`): needs your password from the last 10 minutes (else 401 `{reauth: true}`); refused (409) when the head moved on or you authored commits on it; audited as `pr.review.record`, posted on GitHub as `mx-office/review` |
+| POST | `/api/merge-gate/override` | Admins: lets the office's Merge through for that head for 30 minutes (`{floor, pr, sha, reason}`, a reason of 10 characters or more, password from the last 10 minutes); audited as `pr.gate.override` (warning) |
 | GET | `/api/git` | The branch map |
 | GET | `/api/model/refs` | The Model tab: main and the branches it can show (`?floor=`) |
 | GET | `/api/model/tree` | The Model tab: the app's tree (`?floor=&ref=`, `&fresh=1` waits for a new tree instead of the last one) |

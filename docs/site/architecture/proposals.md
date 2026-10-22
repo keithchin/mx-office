@@ -53,7 +53,7 @@ Every existing `?tab=` id and alias keeps working, and links from Teams cards, p
 
 ## Review safeguards
 
-**Today:** nothing in the office blocks a merge; the review gate checks the shape of a comment after the merge, not the reviewed revision; a Solo team's Project Manager reviews by instruction, and that review is probably not counted. See [Trust and authority](trust-and-authority.md) and [Review gate](../using-the-office/review-gate.md).
+**Today (built after release 69, the [merge gate](../using-the-office/review-gate.md#the-merge-gate)):** proposals 1 to 3 are built. Reviews are bound to the head they reviewed and their verdict, a later valid review clears *unreviewed*, you record a review from the PR window (with your password), the PR window's Merge refuses a head without an independent approval (an admin can override, audited), and the office posts `mx-office/review` and reads (never writes) the base branch's protection. Proposals 4 and 5 are still open. See [Trust and authority](trust-and-authority.md).
 
 **Proposed:**
 

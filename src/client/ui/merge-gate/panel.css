@@ -1,0 +1,25 @@
+/* The merge gate in the PR window and the merge dialog (ui/merge-gate/panel.ts). */
+.mg { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; background: var(--paper-2); border-radius: 8px; font-size: 13px; }
+.gh-col > .mg { margin-bottom: 10px; }
+.mg-inmerge { margin-top: 12px; }
+.mg-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.mg-label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.mg-head small { color: var(--muted); font-weight: 700; }
+.mg-state, .mg-merge, .mg-protect { display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px; border: 2px solid var(--line); border-radius: 8px; line-height: 1.4; background: var(--neutral-soft); font-weight: 700; }
+.mg-state small { color: var(--muted); font-weight: 700; }
+.mg-state.ok, .mg-merge.ok, .mg-protect.requires-gate { background: var(--good-soft); }
+.mg-state.warn, .mg-protect.protected, .mg-protect.unprotected { background: var(--warn-soft); }
+.mg-state.bad, .mg-merge.bad { background: var(--bad-soft); }
+.mg-acts { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.mg-acts small { margin-right: auto; color: var(--muted); font-weight: 700; }
+.mg-history summary { cursor: pointer; font-weight: 800; color: var(--muted); }
+.mg-history ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.mg-history .mg-over b { color: var(--bad-ink); }
+.mg-history .mg-refused { color: var(--muted); }
+.mg-modal { width: min(520px, calc(100vw - 32px)); }
+.mg-modal .body { display: flex; flex-direction: column; gap: 8px; }
+.mg-modal p { margin: 0; }
+.mg-small { font-size: 12px; color: var(--muted); font-weight: 700; }
+.mg-pw { width: 100%; min-height: 36px; font-size: 15px; }
+.mg-note { width: 100%; font: inherit; resize: vertical; }
+.mg-err { margin: 0; color: var(--bad-ink); font-weight: 700; min-height: 1em; }

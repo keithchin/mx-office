@@ -38,7 +38,7 @@ History explains why something exists; it isn't a promise about what the code do
 
 ## Current limitations
 
-1. **Nothing in the office blocks a merge.** Review, merge approval and "people merge" are instructions; the review gate flags after the merge, isn't bound to the reviewed revision, and ignores the verdict.
+1. **The office blocks only its own Merge button.** Reviews are now bound to the reviewed revision and their verdict, and the PR window's Merge refuses a head without an independent approval ([merge gate](../using-the-office/review-gate.md#the-merge-gate)). An agent's own `gh pr merge` still goes around it unless the repository's branch protection requires the office's `mx-office/review` status, which a person sets up on GitHub. Reviewer identity is the office's record (the agent a comment names, the person signed in), not a GitHub account: all agents share one.
 2. **No process or filesystem isolation** between agents, projects or clients; hook tokens are readable by any agent.
 3. **The live app's running commit isn't persisted**, and a hung runtime keeps reading *running* (it isn't probed again once up).
 4. **Readiness** could read Ready with no journey evidence (fixed after release 66: such a milestone now reads *built, no journey evidence yet*), reads plan and journeys at main rather than the running commit, and relies on report files declaring their own revision. The toolkit's journey runner writes no commit.

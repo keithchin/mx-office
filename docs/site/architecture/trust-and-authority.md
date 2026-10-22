@@ -6,14 +6,17 @@ weight: 40
 
 > [!NOTE]
 > Describes release 66 (commit `39d0083a`), assessed 2026-10-20.
-> **Verification scope:** sign-in, admin checks, credential handling, agent environment and the Firm's isolation were read in code. The review gate's flags are covered by tests that were run (`review-gate`, 20 tests). Statements that a control is **absent** (nothing blocks a merge, no OS-level sandbox, no pre-merge check) come from code reading and search; a green test can't show an absence. Whether a Project Manager's review comment posted from the shared office account counts as a review is an inference from the code, not tested.
+> **Verification scope:** sign-in, admin checks, credential handling, agent environment and the Firm's isolation were read in code. The review gate's flags are covered by tests that were run (`review-gate`, 20 tests). Statements that a control is **absent** (no OS-level sandbox, nothing stopping an agent's own `gh pr merge` on an unprotected branch) come from code reading and search; a green test can't show an absence.
+>
+> **Updated after release 69 for the merge gate:** reviews bound to a revision and a verdict, the Project Manager's review recorded in the office, the PR window's Merge refusing a head without an independent approval, the `mx-office/review` status and the read-only branch-protection check, covered by the `merge-gate` tests (a fake gh only).
 
 ## The short version
 
 - The office is a **local, single-user-account** system. Every agent runs as the same operating-system user as the office, with no sandbox between agents, projects or clients.
 - **Organisational grouping and prompts are not access isolation.** Clients, teams, roles and Playbooks decide what agents are *told*, not what they *can* read or do.
-- **Nothing in the office blocks a merge.** The review rule, the 10-minute wait and "merges need the Project Manager's approval" are instructions to agents. The review gate looks *after* a merge, and it checks the *shape of a review comment*, not that the merged revision was reviewed.
-- Real blocking belongs to GitHub (branch protection, required reviews), which the office neither sets nor checks.
+- **The office blocks only its own Merge button.** The PR window's Merge refuses a pull request whose current head has no independent approval (the [merge gate](../using-the-office/review-gate.md#the-merge-gate)); an admin can override it, audited. An agent's own `gh pr merge`, or a merge on GitHub, goes around the office.
+- **Blocking every merge belongs to GitHub.** The office posts its verdict as the `mx-office/review` commit status and shows whether the base branch requires it. A person makes it a required status check in branch protection ([Branch protection](../integrations/branch-protection.md)); the office never writes branch protection. Without that, the gate is advisory outside the office.
+- The 10-minute wait and "merges need the Project Manager's approval" (autonomy 1 to 3) are still instructions to agents.
 
 ## Credentials and permission boundaries
 
@@ -49,7 +52,7 @@ Approvals are records and cards; what they hold back is mostly agent behaviour, 
 | **To the office** | A per-agent bearer token on every hook call | Stored **in plaintext** in `<project>/.agent-office/workers.json`, next to the worktrees, so one agent can read another's token and post as it (`src/server/workers/persist.ts`) |
 | **In git** | Author `<Name> (Mx Office <role>)` at `<profile>@agents.mx-office.local`; the office is the committer | Set through environment variables, so an agent can change it (`src/server/workers/git-identity.ts`) |
 | **On GitHub** | Nothing per agent: **all agents share one `gh` account** | GitHub shows the same opener, author and merger for every agent. The Playbook asks each PR body to start with an *Opened by* line, the only record of who opened it |
-| **In the review gate** | A reviewer *name* in the `Review:` comment | Any project agent's name counts, or any other GitHub account. Since agents share one account, "another account" in practice means a person |
+| **In the review and merge gates** | A reviewer *name* in the `Review:` comment; a person's office sign-in for a review recorded in the PR window | Any project agent's name counts (except the PR's authors), or any other GitHub account. Since agents share one account, an agent could post a review in another agent's name: the office records whom the comment names, not who wrote it. A review recorded in the office is tied to the person's sign-in, with their password typed again |
 
 These are documented limitations, not bugs to work around in prompts.
 
@@ -72,26 +75,29 @@ These are documented limitations, not bugs to work around in prompts.
 | Agent-to-agent tell limit (5 per pair in 10 min) | ✔ (in memory; resets on restart) | | | |
 | Worktree location | | ✔ (Claude only) | | |
 | Studio Pro write hold | | ✔ (Claude only) | | |
-| Independent review before merge; 10-minute wait | Flagged **after** the merge only | | ✔ | |
+| Independent review of the current head before merge | ✔ for the office's own Merge button (an admin can override, audited); flagged after the merge otherwise | | ✔ | Branch protection requiring `mx-office/review` (set up by a person) |
+| A new commit invalidates a review; changes requested blocks | ✔ (merge gate, status, Needs you) | | ✔ | Branch protection requiring `mx-office/review` |
+| 10-minute wait | Flagged **after** the merge only | | ✔ | |
 | Merge is the Project Manager's approval (autonomy 1–3) / a human action | An approvals item only | | ✔ (contradicted by *Fix up and merge* prompts) | |
-| Blocking merges; required reviews | | | | GitHub branch protection (**not set or checked by the office**) |
+| Blocking every merge (an agent's `gh`, GitHub's own button) | Reads whether the base branch requires `mx-office/review` and says so (never writes it) | | | GitHub branch protection |
 | No direct or force push to main | Detected after the fact (`src/server/review-gate/pushes.ts`) | | ✔ | Branch protection |
 | Lint-baseline resets and waivers need your decision | Detected by text match (`Decided per ESC-…`; the id isn't checked) | | ✔ | |
 | Firm reviewer cannot merge | ✔ (Claude deny list) | | | |
 | Claude tool permissions | | | | Claude Code's permission layer |
 | Token scopes | | | | GitHub |
 
-## What the review gate checks
+## What the review and merge gates check
 
-From `src/shared/review-gate.ts` and `src/server/review-gate/judge.ts`, a merged PR counts as reviewed when a comment posted at or before the merge:
+From `src/shared/merge-gate.ts`, `src/server/merge-gate/` and `src/server/review-gate/judge.ts`, a review counts when:
 
-- starts with `Review:` and names a reviewer;
-- has at least one `Checks:` item shaped like a result and at least one `Files read:` item;
-- names a reviewer who is a project agent (or comes from another GitHub account) and isn't the opener.
+- it approves **exactly the head commit** it is checked against (the `Head:` line of a `Review:` comment, else the branch's head when it was posted; the commit of a GitHub review; the head a person saw when recording it in the office). Any later commit makes it stale;
+- its **verdict** is an approval, and no independent reviewer's last word on that head asks for changes (`Review:` comments from 22 October 2026 on need a `Verdict:` line);
+- its reviewer is **not an author** of the pull request's commits (the opener, and every agent or person named as a commit author);
+- for a `Review:` comment: it names a project agent or comes from another GitHub account, and lists checks with results and files read.
 
-It never compares the reviewed commit with the merged commit, never looks at commits pushed after the review, ignores the `Verdict:` line and GitHub's own review decision, and doesn't check the reviewer's role. Once a task is marked *unreviewed* the mark is never cleared. The 10-minute rule is a timing heuristic, not evidence of quality.
+It still doesn't check that the listed checks really ran, or the reviewer's role. The 10-minute rule is a timing heuristic, not evidence of quality. A task marked *unreviewed* is cleared once a counting review of the merged revision exists; the clearing is recorded.
 
-So the gate shows **that a review-shaped comment existed before the merge**. It does not show **an independent review of the revision that was merged**. On a Solo team the Playbook makes you the reviewer, and a comment you post from the shared office account under your own name is probably not counted (inference, untested). See [Review gate](../using-the-office/review-gate.md) and, for **PROPOSED** changes (revision-bound reviews, a Project Manager review record, a pre-merge signal), [Proposed simplifications](proposals.md).
+So the gate shows **an approval of the revision that was (or will be) merged, by someone other than its authors, as far as the office's records tell**. On a Solo team you are the reviewer, and your review recorded in the PR window counts. See [Review gate](../using-the-office/review-gate.md#the-merge-gate) and [Branch protection](../integrations/branch-protection.md).
 
 ## See also
 
