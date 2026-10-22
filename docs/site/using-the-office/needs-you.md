@@ -59,7 +59,7 @@ Every place below starts from the same list, but each one **filters and counts i
 - the agents' Claude credentials refused;
 - the live app crashing by itself, or a milestone becoming ready (or no longer ready) in it.
 
-Everything else is never red, so it never reaches Home, the tray, Teams or push: incidents (sev1 included), approvals and proposals, the duplicates clean-up card, finished turns nobody looked at, idle agents, lost worktrees, design-system and company-brain cards, gate advisories, assumptions without consent, *Not on main*, *Ready for your review*, the review gate's cards, the claims check, a failed live-app build, budget forecasts and thresholds, and FYIs.
+Everything else is never red, so it never reaches Home, the tray, Teams or push: incidents (sev1 included), approvals and proposals, the duplicates clean-up card, finished turns nobody looked at, idle agents, lost worktrees, design-system and company-brain cards, gate advisories, assumptions without consent, *Not on main*, *Ready for your review*, the review gate's cards, the claims check, the [security baseline](security-baseline.md#in-needs-you) card, a failed live-app build, budget forecasts and thresholds, and FYIs.
 
 **The Claude credentials alert** is counted on every project in the browser, but the server posts it with the first project only, so one alert is one post.
 

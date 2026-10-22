@@ -7,7 +7,7 @@
 
 import type { NeedItem } from './needsyou.js';
 
-export type AskKind = 'offmain' | 'assumption' | 'advisory' | 'review' | 'gate' | 'claims';
+export type AskKind = 'offmain' | 'assumption' | 'advisory' | 'review' | 'gate' | 'claims' | 'security';
 
 /**
  * A button on an item. docs-pr: ask whoever covers Management to open a docs PR; agree: record your
@@ -62,8 +62,8 @@ export interface AsksNeed {
   unreadAt?: number;
 }
 
-export const ASK_ICON: Record<AskKind, string> = { offmain: '📤', assumption: '🤝', advisory: '⚠️', review: '👀', gate: '🚦', claims: '🚦' };
-const ASK_TAG: Record<AskKind, string> = { offmain: 'Not on main', assumption: 'Consent', advisory: 'Advisory', review: 'Review', gate: 'Review gate', claims: 'Claims check' };
+export const ASK_ICON: Record<AskKind, string> = { offmain: '📤', assumption: '🤝', advisory: '⚠️', review: '👀', gate: '🚦', claims: '🚦', security: '🔐' };
+const ASK_TAG: Record<AskKind, string> = { offmain: 'Not on main', assumption: 'Consent', advisory: 'Advisory', review: 'Review', gate: 'Review gate', claims: 'Claims check', security: 'Security baseline' };
 
 /** The label "from Ada's branch, not on main yet" a standup line read off a branch carries. */
 export const branchLabel = (who: string) => `from ${who}'s branch, not on main yet`;

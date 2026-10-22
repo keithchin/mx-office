@@ -41,6 +41,7 @@ In the Portal themes (the default) a project's pages are in the left navigation,
 | App Insights | **Budget** | Spend against the budget, by stage, role, agent, model, day and issue. |
 | App Insights | **Audit log** | Who did what, when, and the incidents. See [Audit log](../using-the-office/audit-log.md). |
 | App Insights | **Testing** | Test runs bound to the revision they tested, coverage per use case, and verification of merged tasks. See [Testing](../using-the-office/testing.md). |
+| App Insights | **Security** | The app's security as read from main, the last `mx check` with its commit, and the project's security baseline. See [Security baseline](../using-the-office/security-baseline.md). |
 | Repository | **Git** | The branch map: every branch and PR as a railway line. |
 | Repository | **Model** | The Mendix app as Studio Pro shows it (App Explorer, domain models, microflows) on main or any branch, and what a branch changed. See [Model tab](../using-the-office/model.md). |
 | Deployment | **Live app** | Run the app from the default branch and click through it (admins start it), with its readiness card. See [Live app](../using-the-office/live-app.md). |

@@ -138,6 +138,7 @@ const ROW_TAG: Record<NeedKind, string> = {
   review: 'Review',
   gate: 'Review gate',
   claims: 'Claims check',
+  security: 'Security baseline',
   questions: 'Questions',
   brain: 'Company brain',
   design: 'Design system',

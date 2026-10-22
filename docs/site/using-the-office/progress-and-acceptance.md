@@ -117,6 +117,8 @@ Open the acceptance record (click Accepted or the line on the right of the bar),
 - **Documents**: each deliverable on main at the accepted commit.
 - **Spend**: what was spent, by stage, against the plan and the budget. The record freezes it at the moment you confirm (agents still at work may add a little while you read). The budget ledger keeps counting afterwards.
 
+**The security baseline must be met at the delivery commit.** Unless the project's security policy is advisory, ✅ Accept is refused, with what's missing, while the app's security at that commit is below the policy, or there's no clean `mx check` (0 errors) of that commit; when only the check is missing, the office starts one so you can accept once it has passed. See [Security baseline](security-baseline.md). The same rule holds your sign-off of Stage 4 and later.
+
 Add the **exceptions** that are still open, each with an owner. The dialog suggests gaps and failures it found (a failing gate, a missing deliverable, failing CI), and **+ owner** adds one to your list. Then tick the confirmation and click **✅ Accept**.
 
 Documents, the decision register and gate files are read at one immutable commit: the locally fetched `origin/<default>` revision, or committed `HEAD` when there is no remote default branch. Uncommitted files are never accepted as evidence, and a dashboard the office rendered in memory is recorded as a dated check, not as a file in Git. Acceptance does not force a network fetch, so check the displayed revision against the delivery you intend to approve.

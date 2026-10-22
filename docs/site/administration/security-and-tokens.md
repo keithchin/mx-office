@@ -77,6 +77,10 @@ The office organises agents; it doesn't contain them. Know these limits before y
 
 See [Trust and authority](../architecture/trust-and-authority.md) for which rules the office enforces, which are hooks it installs, and which are only instructions to agents.
 
+## The apps' own security
+
+This page is about the office. The security of the Mendix apps the teams build has a page of its own: [Security baseline](../using-the-office/security-baseline.md). In short, the office reads each app's security level, strict mode, demo users, anonymous access and entity access rules from the model on main, runs Mendix's own `mx check` at a commit, and refuses your sign-off of Stage 4 and later and ✅ Accept while the project's policy (Production security before the build, by default) isn't met at that commit. A new app made by ✨ New project starts at Production with strict mode on. None of this proves an app is secure, and it doesn't stop an agent's merge.
+
 ## The Firm's reviewers can't write
 
 The Firm's Reviewer Agents get no GitHub tokens, SSH agent or credential manager, work in a clone with no remote, and have deny rules for `git push`, GitHub writes, `gh api`, and reading `~/.agent-office*` and `~/.ssh`. See [The Firm → Isolation](../using-the-office/the-firm.md#isolation-no-shared-context-no-bias).

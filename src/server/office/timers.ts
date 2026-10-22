@@ -20,6 +20,7 @@ import { startFollowThrough } from '../followthrough/index.js';
 import { startChangeAnswer } from '../change-answer/index.js';
 import { startToolkitPins } from '../toolkit-pin/office.js';
 import { startWalkthroughs } from '../walkthroughs/office.js';
+import { startSecurityGate } from '../security-gate/index.js';
 
 /** The office's own clocks: terminals re-sent to viewers who fell behind, the heartbeat, Studio mode's look at the Mendix floors, Teams notifications and keep-awake. Returns what stops them. */
 export function startTimers(ctx: Ctx): () => void {
@@ -86,6 +87,8 @@ export function startTimers(ctx: Ctx): () => void {
   const stopDesign = startDesignSystems(ctx);
   // Walkthrough videos recorded by themselves when a build on main passes its journeys, against the office's own copy of the app (walkthroughs/).
   const stopWalks = startWalkthroughs(ctx);
+  // The security baseline: each project's policy loaded for the Playbooks (security-gate/; reads and mx checks run when asked).
+  const stopSecurity = startSecurityGate(ctx);
 
   return () => {
     stopRuns();
@@ -107,6 +110,7 @@ export function startTimers(ctx: Ctx): () => void {
     stopProfiles();
     stopDesign();
     stopWalks();
+    stopSecurity();
     clearInterval(heartbeat);
     clearInterval(resync);
   };

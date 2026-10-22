@@ -30,6 +30,8 @@ import { sourcesDirOf, sourcesLines } from '../../shared/brief-map.js';
 import { reviewRule } from '../../shared/review-gate.js';
 import type { EntryMode } from '../../shared/wizard.js';
 import { projectShape } from '../budget/plan-source.js';
+import { securityPlaybookLines, type SecurityPolicy } from '../../shared/security.js';
+import { securityRole } from '../security-gate/playbook.js';
 
 /** The lessons Playbook mx-spike-style projects already have; others get LESSONS_FALLBACK. */
 export const FIELD_LESSONS = '.ai-context/skills/mxcli-field-lessons/SKILL.md';
@@ -64,6 +66,8 @@ export interface PlaybookContext {
   designBound?: boolean;
   /** The project's entry mode, when it's recorded (agent-office.project.json or PROJECT.md): where the knowledge base and the BRDs go (deliverables-brief.ts). */
   entry?: EntryMode;
+  /** The project's security policy (security-gate/playbook.ts), when the security service is running: the roles that write or check the model get its baseline. */
+  security?: SecurityPolicy;
 }
 
 /** The project's sources/ folder for its Playbooks, when it has one (one stat, at a hire or a rewrite). */
@@ -306,6 +310,7 @@ export function playbook(roleId: RoleId, ctx: PlaybookContext): string {
     ...(also.length && !role.generalist ? coverLines(c!, roleId) : []),
     '',
     ...deliverablesBrief(roleId, ctx.earlyDrafts ?? true, also, ctx.entry, !!ctx.toolkit && toolkitHas(ctx.toolkit.dir, PROCESS_MAP_SKILL)),
+    ...(ctx.security && securityRole(roleId, also) ? securityPlaybookLines(ctx.security) : []),
     ...(ctx.maxSubagents && subs.length ? ['## Parallel work', `Run at most ${ctx.maxSubagents} subagent${ctx.maxSubagents === 1 ? '' : 's'} at once (the project's budget level). Wait for one to finish before dispatching another.`, ''] : []),
   ].join('\n');
 }

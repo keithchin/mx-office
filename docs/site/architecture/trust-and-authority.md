@@ -10,6 +10,9 @@ weight: 40
 >
 > **Updated after release 69 for the merge gate:** reviews bound to a revision and a verdict, the Project Manager's review recorded in the office, the PR window's Merge refusing a head without an independent approval, the `mx-office/review` status and the read-only branch-protection check, covered by the `merge-gate` tests (a fake gh only).
 
+> [!NOTE]
+> **Since release 69: the security baseline and the mx check gate** (`src/server/security-gate/`). The rows that mention it were read in code and covered by tests that were run (`security-gate`, `security-dom`, `wizard-app`, `signoff`). The reading of a real model's security and a real `mx check` were also run once against a Blank 11.12.4 app outside the tests.
+
 ## The short version
 
 - The office is a **local, single-user-account** system. Every agent runs as the same operating-system user as the office, with no sandbox between agents, projects or clients.
@@ -17,6 +20,7 @@ weight: 40
 - **The office blocks only its own Merge button.** The PR window's Merge refuses a pull request whose current head has no independent approval (the [merge gate](../using-the-office/review-gate.md#the-merge-gate)); an admin can override it, audited. An agent's own `gh pr merge`, or a merge on GitHub, goes around the office.
 - **Blocking every merge belongs to GitHub.** The office posts its verdict as the `mx-office/review` commit status and shows whether the base branch requires it. A person makes it a required status check in branch protection ([Branch protection](../integrations/branch-protection.md)); the office never writes branch protection. Without that, the gate is advisory outside the office.
 - The 10-minute wait and "merges need the Project Manager's approval" (autonomy 1 to 3) are still instructions to agents.
+- **The office also refuses an unmet security baseline at a sign-off or acceptance.** Your sign-off of Stage 4 or later and ✅ Accept are refused while the app's security (read from the model at that commit) or a clean `mx check` at that commit is missing, unless the project's policy is advisory. It refuses *your* step, not an agent's merge.
 
 ## Credentials and permission boundaries
 
@@ -38,12 +42,12 @@ Approvals are records and cards; what they hold back is mostly agent behaviour, 
 
 | Approval | What actually happens |
 |---|---|
-| ✋ Stage gates (`CONFIRMED` decisions) | The toolkit's `gate-check.sh` reads the decision rows; the office shows the gate and offers the sign-off. Agents are instructed not to pass a gate without it |
+| ✋ Stage gates (`CONFIRMED` decisions) | The toolkit's `gate-check.sh` reads the decision rows; the office shows the gate and offers the sign-off. Agents are instructed not to pass a gate without it. **The office refuses its own sign-off of Stage 4 or later while the [security baseline](../using-the-office/security-baseline.md) isn't met at main's head** (`src/server/security-gate/`, through the sign-off's guard in `src/server/signoff/`); a lead can still record a CONFIRMED row by hand |
 | Decision cards (escalations) | Your answer is stored and handed to the agent (see [Execution lifecycle](execution-lifecycle.md)). The agent decides what to do with it |
 | Merge approval at autonomy 1 to 3 | An item on the Approvals list and a Playbook instruction. **Not enforced**: an agent with the shared token can still merge, and some prompts (*Fix up and merge*) tell agents to merge |
 | Permission card's **Allow this command** | Writes one exact `permissions.allow` rule (no wildcards) into the role's `.claude/settings.local.json`; audited; asks for a fresh sign-in over phone access (`src/server/decisions/permission.ts`). This is a real grant, enforced by Claude Code |
 | Skills and their gates (ask / propose / tell / FYI) | Enforced by the office only for `office-workers subagent …` operations; the rest are Playbook instructions (see [Skills and gates](../automation/skills.md)) |
-| Acceptance | An admin act with the password asked again, bound to a revision (see [Progress and acceptance](../using-the-office/progress-and-acceptance.md)) |
+| Acceptance | An admin act with the password asked again, bound to a revision (see [Progress and acceptance](../using-the-office/progress-and-acceptance.md)). **Refused while the security baseline isn't met at the delivery commit**, including a clean `mx check` there |
 
 ## Agent identity and attribution
 
@@ -83,6 +87,9 @@ These are documented limitations, not bugs to work around in prompts.
 | No direct or force push to main | Detected after the fact (`src/server/review-gate/pushes.ts`) | | ✔ | Branch protection |
 | Lint-baseline resets and waivers need your decision | Detected by text match (`Decided per ESC-…`; the id isn't checked) | | ✔ | |
 | Firm reviewer cannot merge | ✔ (Claude deny list) | | | |
+| Security baseline (level per policy, strict mode when required, entity access rules, a clean `mx check` at the commit) before the office's sign-off of Stage 4+ and ✅ Accept | ✔ (refused unless the policy is advisory; the office's own sign-off and acceptance only) | | ✔ (Playbook: set it by Stage 3, run `mx check`) | |
+| Production security set on a new app | ✔ (the wizard sets it and reads it back; a later script can lower it) | | ✔ | |
+| Security kept at the baseline between sign-offs; demo users off for a release | Flagged (Needs you once the build has started; demo users flagged only) | | ✔ | |
 | Claude tool permissions | | | | Claude Code's permission layer |
 | Token scopes | | | | GitHub |
 

@@ -119,6 +119,9 @@ export async function accept(ctx: Ctx, floor: Floor, body: Record<string, unknow
   const decisions = cleanDecisionRevs(body.decisions);
   const { draft: d, g } = await draftWith(ctx, floor, true);
   if (!d.source.commit) return 'The delivery commit could not be read. Commit the delivery and reopen the acceptance dialog';
+  // The security baseline and mx check gate at the delivery commit (security-gate/): refused, with what's missing, until it's met.
+  const insecure = await (await import('../security-gate/index.js')).acceptanceRefusal(ctx, floor, d.source.commit);
+  if (insecure) return insecure;
   // Testing release 2: the coverage summary and the policy's evaluation at the accepted commit (none when it can't be read).
   const testing = await (await import('../testing/verify-office.js')).testingSummary(ctx, floor, d.source.commit);
   if (body.reviewToken !== d.reviewToken || g.current.commit !== d.source.commit || g.current.branch !== d.source.branch) return STALE_REVIEW;

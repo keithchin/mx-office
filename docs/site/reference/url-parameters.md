@@ -37,6 +37,7 @@ The address always says where you are, so you can bookmark or share it. The para
 | `budget` | Budget (App Insights) |
 | `audit` | Audit log (App Insights) |
 | `testing` | [Testing](../using-the-office/testing.md) (App Insights) |
+| `security` | [Security baseline](../using-the-office/security-baseline.md) (App Insights) |
 | `git` | Git (Repository) |
 | `model` | Model (Repository) |
 | `live` | [Live app](../using-the-office/live-app.md) (Deployment) |
