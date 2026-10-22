@@ -9,7 +9,7 @@
 // The work folder is wiped before and after, so whatever mxcli writes there (catalog, widget docs, a
 // test module) never reaches a floor.
 
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ulid } from '../../shared/evidence/ids.js';
 import { draftFromMxcliRun, type MxcliRunEnvelope } from '../../shared/testing/junit.js';
@@ -123,6 +123,7 @@ export async function runMicroflowTests(o: TestRunOpts): Promise<{ draft: TestRu
       commit: wf.commit,
       paths,
       environment: { runner: 'mxcli test (office)', mxcliVersion: o.mxcliVersion, runtime: 'local', workFolder: wf.dir, ...(mendix ? { mendixVersion: mendix } : {}) },
+      workFolderReal: await realpath(wf.dir).catch(() => wf.dir),
       exitCode: out.code,
       ...(junit !== undefined ? { junitLocator: locator(o.dataDir, junitFile) } : {}),
       ...(failure ? { failure } : {}),

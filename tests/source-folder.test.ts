@@ -4,7 +4,7 @@
 // (tests/support/fake-next-tree.ts), never a real one.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { Readable } from 'node:stream';
 import os from 'node:os';
 import path from 'node:path';
@@ -123,6 +123,45 @@ test('refused paths: not a full path, missing, a file, a drive, the home folder,
     assert.ok('path' in ok, 'a quoted path to an app folder is fine');
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a temporary folder reached through a link into a system folder (macOS: /var/folders is /private/var/folders) is the user’s own; the office’s folders there are still refused', { skip: process.platform === 'win32' || !existsSync('/var/tmp') }, async (t) => {
+  // macOS's shape on any Unix: TMPDIR is a link whose real path is under /var.
+  let real: string;
+  try {
+    real = mkdtempSync(path.join('/var/tmp', 'srcfolder-real-'));
+  } catch {
+    t.skip('/var/tmp is not writable here');
+    return;
+  }
+  const outside = tmp('link');
+  const before = process.env.TMPDIR;
+  try {
+    const linked = path.join(outside, 'T');
+    symlinkSync(real, linked);
+    process.env.TMPDIR = linked;
+    assert.equal(os.tmpdir(), linked);
+    const office = { dataDir: path.join(linked, 'office-data'), projectsDir: path.join(linked, 'projects'), codeDir: path.join(linked, 'office-code') };
+    mkdirSync(path.join(office.dataDir, 'wizard-drafts'), { recursive: true });
+    const app = fakeNextTree(path.join(linked, 'legacy', 'shop-app'));
+    const ok = await checkSourcePath(app, office);
+    assert.ok('path' in ok, 'error' in ok ? ok.error : '');
+    assert.equal(ok.path, path.join(real, 'legacy', 'shop-app'), 'its real path');
+    const inData = await checkSourcePath(path.join(office.dataDir, 'wizard-drafts'), office);
+    assert.match('error' in inData ? inData.error : '', /inside the office’s data folder/, 'the office’s folders compare by their real paths');
+    // Outside the temporary folder, /var is still a system folder.
+    if (before === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = before;
+    if (!os.tmpdir().startsWith('/var/tmp')) {
+      const sys = await checkSourcePath(real, office);
+      assert.match('error' in sys ? sys.error : '', /system folder/);
+    }
+  } finally {
+    if (before === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = before;
+    rmSync(outside, { recursive: true, force: true });
+    rmSync(real, { recursive: true, force: true });
   }
 });
 

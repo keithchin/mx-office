@@ -9,7 +9,7 @@
 // defaults are read off the text instead. What comes back (passwords included) stays in memory, cached per
 // commit; nothing here writes or prints a password.
 
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { RunnerAccount, RunnerConfig } from '../../shared/walkthroughs/identity.js';
@@ -49,7 +49,10 @@ function clean(j: unknown): RunnerConfig | undefined {
 export async function evaluateConfig(text: string, node = process.execPath): Promise<RunnerConfig | undefined> {
   const flag = permissionFlag();
   if (!flag) return undefined;
-  const root = await mkdtemp(path.join(tmpdir(), 'wt-runner-'));
+  const made = await mkdtemp(path.join(tmpdir(), 'wt-runner-'));
+  // Its real path: the permission model checks what a file resolves to (on macOS the temporary folder
+  // under /var is really under /private/var), so a linked path would let the child read nothing.
+  const root = await realpath(made).catch(() => made);
   try {
     // Nested, so what it looks for around itself (the project root two levels up, a design folder beside it) is inside what it may read.
     const dir = path.join(root, 'sandbox', 'office', 'project', 'tests', 'e2e');

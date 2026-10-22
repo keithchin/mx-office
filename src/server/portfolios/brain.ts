@@ -7,7 +7,7 @@
 // five-minute look share it.
 
 import { createHash } from 'node:crypto';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { runCommand } from '../wizard/run.js';
 import { EXCLUDED_DIRS, excludedDirOf, parseRouting, routingWarnings, windowsForm, type BrainRead, type ExcludedFile, type RoutedFile } from '../../shared/portfolios.js';
@@ -43,7 +43,8 @@ async function git(dir: string, args: string[]): Promise<string | undefined> {
 /** The brain's HEAD and whether it has changes, when it is a git repository of its own (not a folder inside another one). */
 export async function brainVersion(dir: string): Promise<{ snapshot: string | null; dirty: boolean }> {
   const top = await git(dir, ['rev-parse', '--show-toplevel']);
-  if (!top || !same(top, dir)) return { snapshot: null, dirty: false };
+  // Compared with links resolved: git names the top through them (on macOS /var/… is /private/var/…).
+  if (!top || !same(await realpath(top).catch(() => top), await realpath(dir).catch(() => dir))) return { snapshot: null, dirty: false };
   const head = await git(dir, ['rev-parse', 'HEAD']);
   if (!head || !/^[0-9a-f]{40,64}$/.test(head)) return { snapshot: null, dirty: false };
   const status = await git(dir, ['status', '--porcelain']);

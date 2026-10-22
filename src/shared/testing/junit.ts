@@ -41,18 +41,25 @@ function attrs(tag: string): Record<string, string> {
 
 const num = (s: string | undefined) => (s !== undefined && s.trim() !== '' && Number.isFinite(Number(s)) ? Number(s) : undefined);
 
-/** "tests/core.test.mdl" from what mxcli wrote (absolute, backslashes, ./): relative to `root` when under it. */
-export function relFile(file: string, root?: string): string {
+/**
+ * "tests/core.test.mdl" from what mxcli wrote (absolute, backslashes, ./): relative to `root` when under it
+ * (the first of several that is: the work folder as named, and with its links resolved, as mxcli sees its cwd).
+ */
+export function relFile(file: string, root?: string | readonly (string | undefined)[]): string {
   let f = file.replace(/\\/g, '/');
-  if (root) {
-    const r = root.replace(/\\/g, '/').replace(/\/+$/, '');
-    if (f.toLowerCase().startsWith(`${r.toLowerCase()}/`)) f = f.slice(r.length + 1);
+  for (const one of typeof root === 'string' ? [root] : (root ?? [])) {
+    if (!one) continue;
+    const r = one.replace(/\\/g, '/').replace(/\/+$/, '');
+    if (f.toLowerCase().startsWith(`${r.toLowerCase()}/`)) {
+      f = f.slice(r.length + 1);
+      break;
+    }
   }
   return f.replace(/^\.\//, '');
 }
 
 /** The cases and suites in a JUnit XML text; undefined when it isn't JUnit at all. */
-export function parseJUnit(xml: string, root?: string): JUnitRun | undefined {
+export function parseJUnit(xml: string, root?: string | readonly (string | undefined)[]): JUnitRun | undefined {
   if (!/<testsuites?\b/.test(xml)) return undefined;
   const run: JUnitRun = { suites: [], cases: [] };
   for (const m of xml.matchAll(/<testsuite\b([^>]*)>/g)) {
@@ -104,6 +111,8 @@ export interface MxcliRunEnvelope {
   /** The test paths given to mxcli, relative to the work folder. */
   paths: string[];
   environment: RunEnvironment;
+  /** The work folder with its links resolved, as mxcli sees its cwd (on macOS /var/… is /private/var/…); not kept in the record. */
+  workFolderReal?: string;
   startedAt: string;
   finishedAt: string;
   exitCode: number | null;
@@ -124,7 +133,7 @@ export const MXCLI_TEST_SUITE = 'microflow tests (mxcli test)';
  * tests, whatever the exit code said.
  */
 export function draftFromMxcliRun(env: MxcliRunEnvelope, junit: string | undefined): TestRunDraft {
-  const parsed = junit !== undefined ? parseJUnit(junit, env.environment.workFolder) : undefined;
+  const parsed = junit !== undefined ? parseJUnit(junit, [env.environment.workFolder, env.workFolderReal]) : undefined;
   const results = parsed?.cases.map(resultOf) ?? [];
   let harnessError: string | undefined;
   if (env.failure) harnessError = env.failure;

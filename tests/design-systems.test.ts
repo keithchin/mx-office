@@ -215,6 +215,7 @@ test('the line provider: only bound projects get a line; the guidance file and t
   assert.equal(withExtraLines('Hello', { floorId: 'nobound', taskId: 'tsk_Q', text: 'x' }), 'Hello');
   assert.ok(existsSync(path.dirname(rec[0].guidance)));
   assert.match(guidanceText(b, 'C:/p', []), /`admin\.details@1`/);
+  await lines.settled('f1');
 });
 
 test('the Playbook rule: only on a bound project, for the Lead Designer, the Lead Developer and the Solo Lead', async () => {

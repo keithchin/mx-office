@@ -117,6 +117,10 @@ test('through the service: right after Use for… and after a new project is bou
   assert.ok(existsSync(/Read (\S+) first/.exec(first)![1]));
   assert.equal(await s.select('f1', 'forms.validated', { issue: 9 }, 'Ada', false), undefined);
   const line = s.lines.line({ ...T, issue: 9 })!;
-  assert.match(line, /Patterns: forms\.validated\./);
-  assert.ok(existsSync(/Read (\S+) first/.exec(line)![1]));
+  // The pattern is named, or counted when a long temporary folder (macOS's) leaves the line no room for
+  // it; either way the file the line points at has it.
+  assert.match(line, /Patterns: (forms\.validated|1 in the file)\./);
+  const file = /Read (\S+) first/.exec(line)![1];
+  assert.ok(existsSync(file));
+  assert.match(readFileSync(file, 'utf8'), /## Patterns for this task\n\n# .*\(`forms\.validated@1`\)/);
 });
