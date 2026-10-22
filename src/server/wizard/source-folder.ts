@@ -43,6 +43,25 @@ export const inside = (child: string, parent: string) => {
   return c === p || c.startsWith(p + path.sep);
 };
 
+/**
+ * A path with its links resolved as far as it exists (the part not made yet joined on), so it compares
+ * like with like against what `realpath` gives a source folder. On macOS the temporary folder is under
+ * /var, a link to /private/var: a folder named /var/folders/… comes back from `realpath` as
+ * /private/var/folders/…; on Windows an 8.3 short name comes back long.
+ */
+export async function realOf(p: string): Promise<string> {
+  const abs = path.resolve(p);
+  const rest: string[] = [];
+  for (let at = abs; ; at = path.dirname(at)) {
+    try {
+      return path.join(await realpath(at), ...rest);
+    } catch {
+      if (path.dirname(at) === at) return abs;
+      rest.unshift(path.basename(at));
+    }
+  }
+}
+
 /** The office's checkout: three folders up from dist/server/wizard or src/server/wizard. */
 const officeCode = () => path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
@@ -54,6 +73,24 @@ function systemDirs(env: NodeJS.ProcessEnv = process.env): string[] {
     return sys;
   }
   return ['/etc', '/usr', '/bin', '/sbin', '/var', '/proc', '/dev', '/sys', '/boot', '/System', '/Library', '/private'];
+}
+
+/**
+ * The temporary folders, the user's own even where they sit under a system folder: on macOS the per-user
+ * one is under /var/folders (really /private/var/folders) and /tmp is /private/tmp. On Linux they're
+ * outside every system folder, so nothing changes there; Windows' system folders don't hold them.
+ */
+async function tempDirs(): Promise<string[]> {
+  if (win) return [];
+  const out = new Set<string>();
+  for (const t of [os.tmpdir(), '/tmp']) out.add(path.resolve(t)).add(await realOf(t));
+  return [...out].filter((t) => path.parse(t).root !== t);
+}
+
+/** Whether `real` is a system folder or inside one (a temporary folder there is not). */
+async function inSystemDir(real: string): Promise<boolean> {
+  if (!systemDirs().some((s) => inside(real, s))) return false;
+  return !(await tempDirs()).some((t) => inside(real, t));
 }
 
 /** Why `raw` can't be a source folder, or its real path when it can. Checks only; nothing is read inside it. */
@@ -72,11 +109,11 @@ export async function checkSourcePath(raw: unknown, office: OfficeFolders): Prom
   if (path.parse(real).root.replace(/[\\/]+$/, '') === real.replace(/[\\/]+$/, '')) return { error: 'A whole drive can’t be a source folder: pick the app’s own folder' };
   const home = os.homedir();
   if (norm(real) === norm(home) || norm(real) === norm(path.dirname(home))) return { error: 'Your whole home folder can’t be a source folder: pick the app’s own folder' };
-  if (systemDirs().some((s) => inside(real, s))) return { error: 'That’s a system folder: pick the app’s own folder' };
+  if (await inSystemDir(real)) return { error: 'That’s a system folder: pick the app’s own folder' };
   const own: [string, string][] = [
-    [office.dataDir, 'the office’s data folder'],
-    [office.projectsDir, 'the projects home'],
-    [office.codeDir ?? officeCode(), 'the office’s own code'],
+    [await realOf(office.dataDir), 'the office’s data folder'],
+    [await realOf(office.projectsDir), 'the projects home'],
+    [await realOf(office.codeDir ?? officeCode()), 'the office’s own code'],
   ];
   for (const [dir, what] of own) {
     if (inside(real, dir) || inside(dir, real)) return { error: `That folder is ${inside(real, dir) ? 'inside' : 'around'} ${what}: pick the app’s own folder` };

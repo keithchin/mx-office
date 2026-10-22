@@ -29,7 +29,7 @@ import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { SourceFolder } from '../../shared/source-folder.js';
 import { writeJsonCritical } from '../flow/critical-write.js';
-import { DEFAULT_CAPS, inside, samePath, walk, type SourceCaps, type WalkedFile } from './source-folder.js';
+import { DEFAULT_CAPS, inside, realOf, samePath, walk, type SourceCaps, type WalkedFile } from './source-folder.js';
 
 export const MANIFEST_VERSION = 1;
 
@@ -320,7 +320,8 @@ export async function importSnapshot(src: string, dest: string, opts: SnapshotOp
   const now = opts.now ?? (() => new Date());
   const p = snapshotPaths(dest);
   const root = await realpath(src);
-  if (inside(dest, root) || inside(root, dest)) throw new Error('The snapshot can’t be inside the source folder, nor the source folder inside the snapshot');
+  const realDest = await realOf(dest);
+  if (inside(realDest, root) || inside(root, realDest)) throw new Error('The snapshot can’t be inside the source folder, nor the source folder inside the snapshot');
   const recovered = await recoverSnapshot(dest);
   if (recovered) opts.onNote?.(recovered);
   // Looked at in full first, so a folder over the caps writes nothing at all.

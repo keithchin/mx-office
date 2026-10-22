@@ -8,7 +8,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { draftFromMxcliRun, parseJUnit, relFile, type MxcliRunEnvelope } from '../src/shared/testing/junit.js';
@@ -197,6 +197,15 @@ function setup() {
   return { root, floorDir, dataDir, exe, g, calls, sha: g('rev-parse', 'HEAD') };
 }
 
+/** A path with its links resolved as far as it still exists: a process's own cwd is (on macOS the temporary folder /var/… is /private/var/…). */
+const real = (p: string): string => {
+  try {
+    return realpathSync.native(p);
+  } catch {
+    return path.dirname(p) === p ? p : path.join(real(path.dirname(p)), path.basename(p));
+  }
+};
+
 /** The floor checkout is exactly as committed: no catalog or widget-doc writes, no test module, nothing new. */
 function untouched(s: ReturnType<typeof setup>) {
   assert.equal(s.g('status', '--porcelain', '--untracked-files=all', '--ignored'), '');
@@ -212,7 +221,7 @@ test('the runner: mxcli test runs in the office work folder at the commit; the r
     process.env.FAKE_MXCLI_MODE = '';
     const { draft, junit } = await runMicroflowTests({ dataDir: s.dataDir, floorId: 'f1', floorDir: s.floorDir, bin: s.exe, mxcliVersion: 'nightly-fake-1', sha: s.sha, branch: 'main', actor: 'Ann', timeoutMs: 60_000 });
     const call = s.calls().find((c) => c.args[0] === 'test')!;
-    assert.equal(path.resolve(call.cwd), path.resolve(workDirOf(s.dataDir, 'f1', 'tests')), 'ran in the office work folder');
+    assert.equal(real(call.cwd), real(workDirOf(s.dataDir, 'f1', 'tests')), 'ran in the office work folder');
     assert.deepEqual(call.args.slice(1, 3), ['tests/core.test.mdl', 'tests/seed.test.mdl']);
     for (const f of ['--local', '--require-assertions', '--junit']) assert.ok(call.args.includes(f), f);
     assert.equal(draft.testedRevision, s.sha);
@@ -274,7 +283,7 @@ test('quality: report + lint in the office work folder, bound to commit, mxcli v
   const s = setup();
   try {
     const d = await runQuality({ dataDir: s.dataDir, floorId: 'f1', floorDir: s.floorDir, bin: s.exe, mxcliVersion: 'nightly-fake-1', sha: s.sha, branch: 'main', trigger: 'auto' });
-    for (const c of s.calls()) assert.equal(path.resolve(c.cwd), path.resolve(workDirOf(s.dataDir, 'f1', 'quality')), `${c.args[0]} ran in the office work folder`);
+    for (const c of s.calls()) assert.equal(real(c.cwd), real(workDirOf(s.dataDir, 'f1', 'quality')), `${c.args[0]} ran in the office work folder`);
     assert.equal(d.commit, s.sha);
     assert.equal(d.sourceKey, qualityKey(s.sha, 'nightly-fake-1'));
     assert.equal(d.catalogSchema, '15');

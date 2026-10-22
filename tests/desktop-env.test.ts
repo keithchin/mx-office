@@ -273,7 +273,9 @@ test('live app: a Linux mxbuild on Windows fails at once with the honest reason 
   try {
     await until('failed', () => r.app.status === 'failed');
     const s = r.app.state;
-    assert.match(s.message ?? '', /mxcli picked a Linux mxbuild \(C:\\cache\\mxbuild\\11\.6\.0\\modeler\\mxbuild\), which can't run on Windows/);
+    // The message names the office's own platform (the CI runs this on macOS too).
+    const os = process.platform === 'darwin' ? 'macOS' : 'Windows';
+    assert.ok((s.message ?? '').includes(`mxcli picked a Linux mxbuild (C:\\cache\\mxbuild\\11.6.0\\modeler\\mxbuild), which can't run on ${os}:`), s.message);
     assert.match(s.message ?? '', /install Studio Pro 11\.12\.4/);
     assert.match(s.message ?? '', /set the mxbuild path/);
     assert.equal(s.failure?.kind, 'build');

@@ -143,6 +143,7 @@ export class DesignLines {
 
   /** Waits for a floor's background writes (tests). */
   settled(floor: string): Promise<unknown> {
-    return this.chain.get(floor) ?? Promise.resolve();
+    // The guidance files still being written too, so a test's folder can go once this resolves.
+    return Promise.allSettled([this.chain.get(floor), ...this.pending.values()]);
   }
 }

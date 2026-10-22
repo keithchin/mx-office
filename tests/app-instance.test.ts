@@ -10,7 +10,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -62,6 +62,8 @@ const get = (port: number) =>
       res.on('end', () => resolve(b));
     }).on('error', reject);
   });
+/** A folder with its links resolved: a process's own cwd is (on macOS the temporary folder /var/… is /private/var/…). */
+const real = (p: string) => realpathSync.native(p);
 const seenBy = async (port: number) => JSON.parse(await get(port)) as { args: string[]; pg: boolean; cwd: string; tries: number };
 
 function project(control: string[] = []) {
@@ -139,7 +141,7 @@ test('an instance: the commit in the office’s workspace, a fresh database, the
       assert.ok(seen.args.includes('--ensure-db'));
       assert.ok(!seen.args.includes('--web-client-timeout'), 'an mxcli that can’t be told the bundle limit isn’t');
       assert.equal(seen.pg, true, 'PGPASSWORD is set for psql under mxcli');
-      assert.ok(path.resolve(seen.cwd).startsWith(path.resolve(instanceDir(p.data, 'demo', 'rec'))), 'it runs in the office’s work folder');
+      assert.ok(real(seen.cwd).startsWith(real(instanceDir(p.data, 'demo', 'rec'))), 'it runs in the office’s work folder');
       assert.equal(git(p.repo, 'status', '--porcelain'), '', 'nothing changed in the project’s folder');
       assert.deepEqual(sql.filter((q) => q.startsWith('DROP')), ['DROP DATABASE IF EXISTS "demo_rec_old111" WITH (FORCE)'], 'only what an earlier run of this purpose left, never the live app’s');
       // Its phases, in order, and its timing.
@@ -360,7 +362,7 @@ test('a fresh database for the same instance: the old one dropped, a new name, t
       assert.equal(existsSync(path.join(instanceDir(p.data, 'demo', 'rec'), 'deployment', 'data', 'files', 'upload.bin')), false, 'its uploaded files go with it');
       const seen = await seenBy(one.appPort);
       assert.equal(seen.args[seen.args.indexOf('--db-name') + 1], one.dbName, 'the runtime runs on the new one');
-      assert.ok(path.resolve(seen.cwd).startsWith(path.resolve(instanceDir(p.data, 'demo', 'rec'))));
+      assert.ok(real(seen.cwd).startsWith(real(instanceDir(p.data, 'demo', 'rec'))));
       assert.equal(one.alive(), true);
       assert.match(lines.join('\n'), /same build again on a fresh database/);
       assert.deepEqual(phases, ['database', 'building', 'bundling', 'runtime']);

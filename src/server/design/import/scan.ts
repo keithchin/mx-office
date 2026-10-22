@@ -11,7 +11,7 @@ import path from 'node:path';
 import { isSecretName, SKIP_DIRS } from '../../../shared/source-folder.js';
 import { coloursIn, toHexColour } from '../../../shared/design/import/colour.js';
 import { SKIP_LIST_MAX, type FoundColour, type FoundValue, type FoundVar, type ImportScan, type Scheme, type SourceFormat, type UseKind } from '../../../shared/design/import/types.js';
-import { checkSourcePath, inside, type OfficeFolders } from '../../wizard/source-folder.js';
+import { checkSourcePath, inside, realOf, type OfficeFolders } from '../../wizard/source-folder.js';
 import { darkReason, onPage, readCss, readInline, type CssSink, type Decl } from './css.js';
 import { readTailwind } from './tailwind.js';
 import { readTokensJson } from './tokens-json.js';
@@ -83,7 +83,7 @@ export async function checkImportPath(raw: unknown, office: OfficeFolders): Prom
     return {
       error: 'Only .css, .scss, .html, .htm, design-token .json and tailwind.config.* files can be imported',
     };
-  if (inside(real, office.dataDir) || inside(real, office.projectsDir)) return { error: 'That file is inside the office’s own folders' };
+  if (inside(real, await realOf(office.dataDir)) || inside(real, await realOf(office.projectsDir))) return { error: 'That file is inside the office’s own folders' };
   return { path: real, kind: 'file' };
 }
 
