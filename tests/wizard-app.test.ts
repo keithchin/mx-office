@@ -109,7 +109,7 @@ test("the app step makes the .mpr at the repository's root with Studio Pro's mx,
     const calls: Call[] = [];
     const run = fakeRun(calls, (cmd, args) => {
       // E2: then mxcli sets the app's security to the baseline and reads it back (security-gate/wizard.ts).
-      if (args.includes('show project security;')) return 'WARNING: alpha\n[{"Property":"SecurityLevel","Value":"Production"},{"Property":"StrictMode","Value":"true"},{"Property":"DemoUsersEnabled","Value":"true"},{"Property":"DemoUsers","Value":"2"}]';
+      if (args.includes('show project security;')) return 'WARNING: alpha\n[{"Property":"SecurityLevel","Value":"Production"},{"Property":"StrictMode","Value":"false"},{"Property":"DemoUsersEnabled","Value":"true"},{"Property":"DemoUsers","Value":"2"}]';
       if (args[0] !== 'create-project') return '';
       const out = args[args.indexOf('--output-dir') + 1];
       writeFileSync(path.join(out, `${args[args.indexOf('--app-name') + 1]}.mpr`), '');
@@ -122,10 +122,10 @@ test("the app step makes the .mpr at the repository's root with Studio Pro's mx,
     const r = await steps.app(job, io);
     assert.equal(r.status, 'done');
     assert.match(r.detail ?? '', /TravelApproval\.mpr with Studio Pro 11\.12\.4's mx create-project/);
-    assert.match(r.detail ?? '', /app security now Production, strict mode on, demo users on \(for building\) \(read back with mxcli\)/);
+    assert.match(r.detail ?? '', /app security now Production, strict mode off, demo users on \(for building\) \(read back with mxcli\)/);
     assert.equal(calls.length, 3, 'mx create-project, then mxcli sets the security baseline and reads it back');
     assert.equal(calls[1].cmd, path.join(root, 'mxcli'));
-    assert.deepEqual(calls[1].args, ['-p', path.join(dir, 'TravelApproval.mpr'), '-c', 'alter app security (SecurityLevel: PRODUCTION, StrictMode: TRUE);']);
+    assert.deepEqual(calls[1].args, ['-p', path.join(dir, 'TravelApproval.mpr'), '-c', 'alter app security (SecurityLevel: PRODUCTION, StrictMode: FALSE);']);
     assert.equal(calls[0].cmd, path.join(mendixDir, '11.12.4', 'modeler', exe('mx')));
     assert.deepEqual(calls[0].args, ['create-project', '--app-name', 'TravelApproval', '--output-dir', dir, '--sprintr-app-id', '0f8fad5b-d9cb-469f-a165-70867728950e']);
     assert.ok(existsSync(path.join(dir, 'TravelApproval.mpr')));

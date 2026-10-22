@@ -79,7 +79,7 @@ See [Trust and authority](../architecture/trust-and-authority.md) for which rule
 
 ## The apps' own security
 
-This page is about the office. The security of the Mendix apps the teams build has a page of its own: [Security baseline](../using-the-office/security-baseline.md). In short, the office reads each app's security level, strict mode, demo users, anonymous access and entity access rules from the model on main, runs Mendix's own `mx check` at a commit, and refuses your sign-off of Stage 4 and later and ✅ Accept while the project's policy (Production security before the build, by default) isn't met at that commit. A new app made by ✨ New project starts at Production with strict mode on. None of this proves an app is secure, and it doesn't stop an agent's merge.
+This page is about the office. The security of the Mendix apps the teams build has a page of its own: [Security baseline](../using-the-office/security-baseline.md). In short, the office reads each app's security level, strict mode, demo users, anonymous access and entity access rules from the model on main, runs Mendix's own `mx check` at a commit, and refuses your sign-off of Stage 4 and later and ✅ Accept while the project's policy (Production security before the build, by default) isn't met at that commit. A new app made by ✨ New project starts at Production with strict mode off (recommended: switch it on once the widgets are vetted). None of this proves an app is secure, and it doesn't stop an agent's merge.
 
 ## The Firm's reviewers can't write
 

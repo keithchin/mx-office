@@ -452,10 +452,10 @@ test('the new app: security set to the baseline with mxcli and read back; no mxc
     const calls: string[][] = [];
     const run = (async (_cmd: string, args: string[]) => {
       calls.push(args);
-      return { code: 0, tail: [], stdout: args[0] === '--json' ? 'WARNING\n[{"Property":"SecurityLevel","Value":"Production"},{"Property":"StrictMode","Value":"true"},{"Property":"DemoUsersEnabled","Value":"true"}]' : '' };
+      return { code: 0, tail: [], stdout: args[0] === '--json' ? 'WARNING\n[{"Property":"SecurityLevel","Value":"Production"},{"Property":"StrictMode","Value":"false"},{"Property":"DemoUsersEnabled","Value":"true"}]' : '' };
     }) as never;
     const r = { run, env: {}, onLine: () => undefined };
-    assert.equal(await withSecurityBaseline('mxcli', dir, 'App.mpr made', r), 'App.mpr made; app security now Production, strict mode on, demo users on (for building) (read back with mxcli)');
+    assert.equal(await withSecurityBaseline('mxcli', dir, 'App.mpr made', r), 'App.mpr made; app security now Production, strict mode off, demo users on (for building) (read back with mxcli)');
     assert.deepEqual(calls[0], ['-p', path.join(dir, 'App.mpr'), '-c', BASELINE_MDL]);
     assert.match(await withSecurityBaseline(undefined, dir, 'made', r), /left as the template made it \(no mxcli/);
     const refusing = (async () => ({ code: 1, tail: ['Parse error'], stdout: '' })) as never;

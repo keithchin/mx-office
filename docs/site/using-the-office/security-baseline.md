@@ -71,7 +71,7 @@ The Playbooks of the roles that write or check the model (the Lead Developer, th
 
 ## New projects
 
-When ✨ New project makes a brand-new app, the *Create the Mendix app* step then sets its security to Production with strict mode on (`alter app security (SecurityLevel: PRODUCTION, StrictMode: TRUE);`) with the office's mxcli and reads it back; the step's line says what the model now holds (*app security now Production, strict mode on, demo users on (for building)*). On a Blank 11.12.4 app `mx check` reports 0 errors either way. Demo users stay on for building. Without mxcli, or if mxcli refuses, the step says so and the setup carries on; the Playbook's section and the gate still ask for it. An existing app (a change request) is never touched.
+When ✨ New project makes a brand-new app, the *Create the Mendix app* step then sets its security to Production with strict mode off (recommended: switch it on once the widgets are vetted) (`alter app security (SecurityLevel: PRODUCTION, StrictMode: FALSE);`) with the office's mxcli and reads it back; the step's line says what the model now holds (*app security now Production, strict mode off, demo users on (for building)*). On a Blank 11.12.4 app `mx check` reports 0 errors either way. Demo users stay on for building. Without mxcli, or if mxcli refuses, the step says so and the setup carries on; the Playbook's section and the gate still ask for it. An existing app (a change request) is never touched.
 
 ## What it doesn't do
 
