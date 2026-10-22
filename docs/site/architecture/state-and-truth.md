@@ -6,7 +6,7 @@ weight: 30
 
 > [!NOTE]
 > Describes release 66 (commit `39d0083a`), assessed 2026-10-20.
-> **Verification scope:** the sources and writers were read in code. The durability of answers, hand-offs, task creation and the store readers is covered by tests that were run (`durable-dispatch`, `task-durability`, `store-safety`, `restart-truth`, `flow`). Readiness verdicts are pinned by `liveapp-ready`, including the case where a milestone with no journeys reads *built, no journey evidence yet* rather than Ready (changed after release 66). Power-loss durability is **not** claimed by the code and was not tested.
+> **Verification scope:** the sources and writers were read in code. The durability of answers, hand-offs, task creation and the store readers is covered by tests that were run (`durable-dispatch`, `task-durability`, `store-safety`, `restart-truth`, `flow`). Readiness verdicts are pinned by `liveapp-ready`, including the case where a milestone with no journeys reads *built, no journey evidence yet* rather than Ready (changed after release 66). The business status (App Workspace C2, after release 71) is pinned by `business-status`, a table of scenarios over the shared function and the views that read it. Power-loss durability is **not** claimed by the code and was not tested.
 
 ## The idea
 
@@ -34,6 +34,7 @@ Two rules follow:
 | Test evidence | `testing/<project>.jsonl`, hash-chained | Importers (PR checks, report files, gate-check, the office's `mxcli test`) | Each record carries its revision; report files declare their own | Append-only; the chain is **not verified** in production |
 | Acceptance | `acceptance/<project>.jsonl`, hash-chained | Admin | 409 if the head or cycle moved | Chain checked when viewed; appends not fsync'd |
 | Stage progress | Derived: gate-check output + `PROJECT.md` decision rows (written by agents) + the sign-off file | Toolkit script, agents, office | — | Recomputed |
+| Business status | Derived (`src/shared/business-status.ts`): readiness and journey results at the served commit + the verification policy's checks there + the security baseline's release gate there + unreviewed merges + the acceptance record and what changed since | Office (derived) | Each input bound to its revision; an input of another commit counts as missing | Recomputed; nothing stored (a few seconds' cache per project) |
 | Budget | `budget/` ledger, from transcripts and usage | Office | — | Durable write about a second after a change; providers without metering have gaps (not re-checked) |
 | Design binding | `design-systems/projects.json` in the data folder | Office | The adoption's operation record is reconciled with git at start | Critical write. The `design` key committed to `agent-office.project.json` is **written but never loaded as the binding** (the office only reads its digest at a git ref to recognise a squash merge, `src/server/design/adoption.ts`); an existing app adopting Atlas defaults gets no committed entry |
 | Toolkit pin | `agent-office.project.json` + `toolkit-pins.json` + `PROJECT.md` | Office | Three copies; no documented reconciliation between them | Mixed |
@@ -71,6 +72,27 @@ An update fetches first while the old build still serves, then stops it for the 
 ### Passing tests vs acceptance
 
 Passing checks gate only task verification, and only when that switch is on. Acceptance does not require passing tests: failing gates and CI become suggested exceptions on the acceptance draft (`src/server/acceptance/evidence.ts`). Walkthrough recordings are not acceptance evidence.
+
+### Business status derived from evidence
+
+One pure function (`businessStatus` in `src/shared/business-status.ts`, its inputs put together by `src/server/business-status/`) says how far the delivery is: *Work in progress*, *Ready to try*, *Ready for business review*, *Verification incomplete* / *Verification passed*, *Business accepted*, *Deployed (recorded)*, and, only under the optional approval policy (not built yet, so always off), *Submitted for review* / *Changes requested* / *Release approved*. The progress bar's label, Home's project rows, the Overview's Status row and View App, the Live app chip, the phone's Status tab and the Teams digest all read it, so they can't disagree. Every status names its commit (served for what runs and was verified, main's head for work in progress, the acceptance record's delivery commit for accepted) and lists what's missing for the next one. Missing evidence never counts as passed: an input the office couldn't read is listed as missing. An accepted version whose delivery moved is judged again at the new commit, with *changed since acceptance* kept as a note.
+
+```mermaid
+stateDiagram-v2
+  [*] --> WorkInProgress
+  WorkInProgress --> ReadyToTry: some of the work in the served build
+  ReadyToTry --> ReadyForBusinessReview: all of it in the served build
+  ReadyForBusinessReview --> VerificationIncomplete: some evidence at the served commit, something failed or missing
+  ReadyForBusinessReview --> VerificationPassed: journeys, required checks, security baseline, reviews all there
+  VerificationIncomplete --> VerificationPassed: the missing evidence recorded at that commit
+  VerificationPassed --> BusinessAccepted: acceptance record for the delivery commit
+  BusinessAccepted --> DeployedRecorded: the record carries a deploy note
+  BusinessAccepted --> WorkInProgress: delivery moved (judged again at the new commit)
+  note right of VerificationIncomplete
+    Missing evidence never counts as passed.
+    Every status names its commit.
+  end note
+```
 
 ## Persistence and recovery
 

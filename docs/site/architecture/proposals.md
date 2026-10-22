@@ -110,6 +110,10 @@ Also proposed here: route the idle-lead console prompt through the same delivery
 
 **Built** on `feat/autonomy-step`, so no longer proposed: the New project flow asks *How much should the agent team do without asking you?* with nothing preselected, a preview generated from the gate tables (each approval tagged *stops automatically*, *only you can* or *team is told to wait*), an optional office policy that limits or fixes the level (fixed: acknowledged), server-side validation with older callers recorded as the default, the choice recorded and shown on Settings › Team, the budget level separated from autonomy for such projects, and a confirmation for later changes. See [Autonomy levels](../teams-and-agents/autonomy.md) and [Create your first project](../get-started/first-project.md#autonomy-how-much-the-team-does-without-asking-you).
 
+## Business status (App Workspace C2): done
+
+**Built** on `feat/business-status`, so no longer proposed: one pure function (`src/shared/business-status.ts`) derives the business status from the records the office already keeps, bound to revisions, with what's missing for the next status, and the progress bar, Home, the Overview, the Live app chip, the phone and the Teams digest read it instead of their own "ready". See [State and sources of truth](state-and-truth.md#business-status-derived-from-evidence) and [Progress bar and acceptance](../using-the-office/progress-and-acceptance.md#business-status).
+
 ## Terminology
 
 **Today:** "skill" means a permitted action in the Team tab, reusable instructions elsewhere, and a Claude Code skill file for Playbooks; "gate" means both a skill's approval rule and a toolkit stage check. See [Reusable skills and knowledge](reusable-skills-and-knowledge.md).

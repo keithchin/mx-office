@@ -38,6 +38,8 @@ export interface DigestData {
   stages?: { passed: number; total: number; waiting: string[]; next?: string };
   /** "Stage 5 · Build · checked on main @abc1234, 3 min ago": the office's own derivation (shared/stage-derive.ts). */
   stage?: string;
+  /** The business status in one line (shared/business-status.ts): the same words as Home, the Overview and the phone. */
+  status?: string;
   /** The three open escalations Jeff would have resolved first (or the loudest, oldest, unranked). */
   topEscalations: { title: string; urgency: string; rank?: number }[];
   link?: string;
@@ -151,6 +153,7 @@ export function digestCard(d: DigestData): TeamsMessage {
     { title: 'Needs you now', value: d.openNeeds ? `${d.openNeeds} (${d.redCount} red)` : 'nothing' },
   ];
   if (d.spent !== undefined) facts.push({ title: 'Spend today', value: d.cap !== undefined ? `${money(d.spent)} of ${money(d.cap)} cap` : money(d.spent) });
+  if (d.status) facts.push({ title: 'Status', value: plain(d.status) });
   if (d.stage) facts.push({ title: 'Stage', value: plain(d.stage) });
   if (d.stages) facts.push({ title: 'Stages (gates)', value: `${d.stages.passed} of ${d.stages.total} passed${d.stages.next ? ` · next: ${d.stages.next}` : ''}` });
   const body: unknown[] = [text(plain(`📋 Daily digest: ${d.project}`), { size: 'Large', weight: 'Bolder' }), { type: 'FactSet', facts }];

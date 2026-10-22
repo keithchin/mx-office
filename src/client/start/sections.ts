@@ -7,6 +7,7 @@ import type { OfficeBudgetView } from '../../shared/budget/types';
 import type { PortfolioView } from '../../shared/portfolios';
 import { usd } from '../../shared/budget/money';
 import { floorPalette } from '../../shared/floors';
+import { businessChip } from '../../shared/business-status';
 import { clientSpend, liveWord, needsByProject, redFlag, teamWords, topNeeds, type HealthItem, type StartActivity, type StartNeed, type StartProject } from '../../shared/start';
 import { h, timeAgo } from '../ui/dom';
 import { miniProgress } from '../ui/progress/mini';
@@ -72,13 +73,15 @@ export interface ProjectRowInput {
 }
 
 /** What a row shows, as a string: the row is drawn again only when it changes. */
-export const rowSig = (r: ProjectRowInput) => JSON.stringify([r.f.id, r.f.name, r.f.palette, r.f.cloning, r.f.workers, r.f.busy, r.f.waiting, r.client?.label, r.facts?.stuck, r.facts?.failing, r.facts?.live?.status, !!r.facts?.live?.viewPort || !!r.facts?.live?.appPort, r.facts?.live?.started]);
+export const rowSig = (r: ProjectRowInput) => JSON.stringify([r.f.id, r.f.name, r.f.palette, r.f.cloning, r.f.workers, r.f.busy, r.f.waiting, r.client?.label, r.facts?.stuck, r.facts?.failing, r.facts?.live?.status, !!r.facts?.live?.viewPort || !!r.facts?.live?.appPort, r.facts?.live?.started, r.facts?.business?.line]);
 
 export function projectRow(r: ProjectRowInput): HTMLElement {
   const { f } = r;
   const red = redFlag(r.facts);
   // The server's facts not in yet: the live app is not known yet either, rather than "unknown".
   const live = r.facts ? liveWord(r.facts.live) : undefined;
+  // Its business status (shared/business-status.ts): the same words as its Overview, progress bar and phone card.
+  const biz = r.facts?.business ? businessChip(r.facts.business) : undefined;
   const name = h('a.st-row-name', { href: projectHref(f.id), title: `Open ${f.name}` }, f.name);
   const row = h(
     'li.st-row',
@@ -89,6 +92,7 @@ export function projectRow(r: ProjectRowInput): HTMLElement {
       'div.st-row-facts',
       {},
       h('span.st-fact', { title: 'The team: working, asking you, idle' }, teamWords(f)),
+      biz ? h(`span.st-fact.st-business.${biz.tone}`, { title: biz.title }, biz.text) : null,
       live ? h(`span.st-fact.st-live.${live.tone}`, {}, live.text) : null,
       red ? h('span.st-fact.st-red', { title: 'Stuck detection and failing checks: see its Needs you' }, red) : null,
     ),

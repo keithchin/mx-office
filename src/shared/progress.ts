@@ -10,6 +10,7 @@ import type { EntryMode } from './wizard.js';
 import { MANUAL_LATER_TEXT, manualInPlay, signedOff, signedOffIn } from './gate-play.js';
 import { buildMeasures, buildSummary, buildUnderWay, type BuildEvidence } from './build-progress.js';
 import type { StageEvidence } from './stage-derive.js';
+import type { BusinessSummary } from './business-status.js';
 
 export interface ToolkitStage {
   id: string;
@@ -120,6 +121,8 @@ export interface ProjectProgress {
   admin: boolean;
   /** Where the project is as the office derived it from its own gate-check, how fresh that is, and what doesn't add up (shared/stage-derive.ts). */
   stage?: StageEvidence;
+  /** The project's business status (shared/business-status.ts): what the label says once every stage passed. */
+  business?: BusinessSummary;
 }
 
 // ---- Deriving the phases (pure) ---------------------------------------------------------------------
@@ -303,14 +306,20 @@ export function spendText(s: PhaseSpend | undefined): string | undefined {
   return `${planned} · spent ${money(s.actual)}${s.partial ? ' + calls the office could not price' : ''}`;
 }
 
-/** The bar's one-line label: where the project is, or the accepted version and its date. */
-export function progressLabel(p: Pick<ProjectProgress, 'phases' | 'acceptance'>): string {
+/**
+ * The bar's one-line label: where the project is, or the accepted version and its date. Once every stage
+ * passed it says the business status (shared/business-status.ts: "v1 · Verification incomplete"), the same
+ * words as Home, the Overview and the phone, never "ready" on the gates alone.
+ */
+export function progressLabel(p: Pick<ProjectProgress, 'phases' | 'acceptance'> & { business?: Pick<BusinessSummary, 'state' | 'label'> }): string {
   const a = p.acceptance;
-  if (a.accepted) return `${a.version} accepted · ${new Date(a.accepted.at).toISOString().slice(0, 10)}${a.changed?.length ? ' · changed since' : ''}`;
+  if (a.accepted) return `${a.version} accepted · ${new Date(a.accepted.at).toISOString().slice(0, 10)}${a.changed?.length ? ' · changed since' : p.business?.state === 'deployed-recorded' ? ' · deployed (recorded)' : ''}`;
   const cur = p.phases.find((x) => x.current);
   const prefix = a.cycle > 1 ? `${a.version} · ` : '';
   if (!cur) return `${prefix}every phase settled`;
-  if (cur.kind === 'accepted') return `${a.version} ready for acceptance`;
+  if (cur.kind === 'accepted') return p.business ? `${a.version} · ${p.business.label}` : `${a.version} · every stage passed, not accepted yet`;
+  // No toolkit stages to measure: the business status is all there is to say.
+  if (cur.kind === 'delivery' && p.business) return `${prefix}${cur.title} · ${p.business.label}`;
   const how = cur.status === 'waiting' ? ' · waiting on someone' : cur.status === 'failed' ? ' · failing' : cur.status === 'active' && cur.verdict === 'MANUAL' ? ' · in progress' : '';
   return `${prefix}${cur.kind === 'stage' ? `Stage ${cur.id} · ${cur.title}` : cur.title}${how}`;
 }

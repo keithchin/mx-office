@@ -28,9 +28,25 @@ The colour of a segment comes from what the office measured:
 | Dashed | Not started |
 | Striped | Unknown: gate-check hasn't written a verdict for it |
 
-The segment with the orange outline is the current phase: where the work is. That is the first stage after the latest one that passed, was waived or is signed off in `PROJECT.md` (a CONFIRMED Decisions row that says it was signed off). A paperwork gap in an early stage doesn't pull a project whose build plan is signed off back to Kickoff: that gap keeps its own colour, and the office says it doesn't add up (see below). The line on the right says where the project is, for example "Stage 5 · Build". After acceptance it says "v1 accepted · 2026-10-08".
+The segment with the orange outline is the current phase: where the work is. That is the first stage after the latest one that passed, was waived or is signed off in `PROJECT.md` (a CONFIRMED Decisions row that says it was signed off). A paperwork gap in an early stage doesn't pull a project whose build plan is signed off back to Kickoff: that gap keeps its own colour, and the office says it doesn't add up (see below). The line on the right says where the project is, for example "Stage 5 · Build". Once every stage has passed it says the [business status](#business-status) ("v1 · Verification incomplete"), and a project without toolkit stages says it after *Delivery*: the gates alone never say a delivery is ready. After acceptance it says "v1 accepted · 2026-10-08" ("· deployed (recorded)" once the record carries a deploy note).
 
 The bar never shows a percentage or a count that nobody measured. If the office doesn't know something, it says *unknown*.
+
+## Business status
+
+One status says how far the delivery is, in the same words on the progress bar, Home's project rows, the Overview (its **Status** row and View App), the Live app chip, the phone's Status tab and the Teams daily digest. The office works it out each time from what it already records, and stores nothing of its own. Every status names the commit it's about and lists what's missing for the next one; evidence nobody recorded is missing, never passed.
+
+| Status | When | About |
+|---|---|---|
+| Work in progress | Nothing new runs to try: the live app isn't running, or none of the work is in the running build yet | main's head |
+| Ready to try | The running build has some of the plan's build rows, not all | the running (served) commit |
+| Ready for business review | All of it is in the running build, and nothing has checked it against that build yet (no journey ran, no required check has a result) | the running commit |
+| Verification incomplete | Some evidence at that commit, but a journey or required check failed or has no result there, the [security baseline](security-baseline.md) isn't met there, or merged work has no review that counts ([merge gate](review-gate.md#the-merge-gate)) | the running commit |
+| Verification passed | Every journey passed against that commit, every required check of the [verification policy](testing.md) passed or was waived there, the baseline is met, no unreviewed merge | the running commit |
+| Business accepted | An acceptance record for the delivery commit, unchanged since | the accepted commit |
+| Deployed (recorded) | The acceptance record carries a person's deploy note (the office never deploys) | the accepted commit |
+
+What's missing reads like *no journey evidence for abc1234*, *checks failed on abc1234: pr-checks run*, *security baseline missing: No mx check at abc1234 yet* or *unreviewed head: PR #12 merged without a review that counts*. A version accepted at one commit whose delivery branch moved on is judged again at the new commit, with *Changed since v1 acceptance* beside it: it's never accepted because an older version was. *Submitted for review*, *Changes requested* and *Release approved* belong to the optional approval policy, which isn't built yet. Each milestone of the build plan has a status of its own from the same records (`GET /api/business-status?floor=<id>`).
 
 ### Build in progress
 

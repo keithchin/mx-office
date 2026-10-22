@@ -6,6 +6,8 @@
 //   and per project how many of its items are stuck detection's (kind `stuck`) or failing PRs (kind `pr`).
 // - Each project's live app as the office's live apps hold it (liveapp/ peek), or nothing when nobody
 //   opened one since the office started (the page says "unknown").
+// - Each project's business status (business-status/, shared/business-status.ts): the same words its
+//   progress bar, Overview, phone card and Teams digest use.
 // - The recent milestones the office recorded: PRs merged (the PR list's mergedAt), live-app milestones
 //   told ready (liveapp/news.ts, on the app's readiness) and deliveries accepted (acceptance/).
 // - The office's health: the agents' Claude credentials (claude-auth/: an alert or a pending choice, no
@@ -21,6 +23,7 @@ import { liveAppsIfMade } from '../liveapp/index.js';
 import { claudeAuthView } from '../claude-auth/index.js';
 import { buildOf } from '../restart/build.js';
 import { acceptanceStore } from '../acceptance/index.js';
+import { businessSummaryOf } from '../business-status/index.js';
 import type { StartActivity, StartLive, StartProject, StartView } from '../../shared/start.js';
 
 /** How long one answer is reused. */
@@ -98,6 +101,8 @@ async function buildStartView(ctx: Ctx, now: number): Promise<StartView> {
     }
     const live = liveOf(ctx, floor);
     if (live) p.live = live;
+    const business = await businessSummaryOf(ctx, floor);
+    if (business) p.business = business;
     projects.push(p);
     activity.push(...floorActivity(ctx, floor));
   }

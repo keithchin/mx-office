@@ -4,6 +4,7 @@
 // buttons: go there, Raise cap, Hire, ⏸ Pause / ▶ Resume. A 🔁 safe restart shows on top, read-only.
 
 import { restartWords, runWords, statusWords, type ProjectStatus, type RestartLine } from '../../shared/mobile';
+import { businessChip } from '../../shared/business-status';
 import { pauseLine } from '../../shared/project-run';
 import type { RosterView } from '../../shared/roster/types';
 import { h } from '../ui/dom';
@@ -51,6 +52,7 @@ export function statusCard(p: ProjectStatus, here: boolean, roster: RosterView |
     ),
     p.pause ? h('p.m-paused', {}, pauseLine(p.pause, (at) => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))) : null,
     p.run ? h('p.m-run', { role: 'status', class: p.run.finishedAt ? '' : 'm-run-going' }, runWords(p.run)) : null,
+    p.business ? h('p.m-business', { class: `m-business-${p.business.tone}`, title: businessChip(p.business).title }, `📋 ${p.business.line}`) : null,
     p.stage ? h('p.m-stage', {}, `🧭 ${p.stage}`) : null,
     p.paused ? h('p.m-warn', {}, `💸 ${p.paused}`) : null,
     h(

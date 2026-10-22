@@ -4,6 +4,7 @@
 // page, the server and the tests read the same rules.
 
 import type { Escalation } from './roster/escalation.js';
+import type { BusinessSummary } from './business-status.js';
 import type { RoleId } from './roster/roles.js';
 import type { WorkerStatus } from './protocol.js';
 import type { PauseInfo, ResumeChoice, RestartPhase, RunProgress } from './project-run.js';
@@ -61,6 +62,8 @@ export interface ProjectStatus {
   asleep: number;
   asking: number;
   idle: number;
+  /** Its business status (shared/business-status.ts): the same words as its Overview, progress bar and Home row. */
+  business?: BusinessSummary;
   /** The toolkit gate or stage it's at ("Stage 3 · Design ✋ waiting for sign-off"), when it has one. */
   stage?: string;
   /** The floor's daily team cap reached: why. */

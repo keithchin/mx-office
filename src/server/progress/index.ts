@@ -12,6 +12,8 @@ import { acceptanceStore, changedNow, onAcceptanceChange } from '../acceptance/i
 import type { Floor } from '../floor.js';
 import type { Ctx } from '../office/context.js';
 import { brdCount, gather, stageDeliverables, stageSpend } from './gather.js';
+import { businessViewOf } from '../business-status/index.js';
+import { summaryOf } from '../../shared/business-status.js';
 
 /** An answer is handed out again for this long (ms). */
 export const PROGRESS_FRESH_MS = 15_000;
@@ -36,7 +38,10 @@ async function compute(ctx: Ctx, floor: Floor, mini: boolean): Promise<Omit<Proj
   const g = await gather(ctx, floor, mini);
   const cycles = acceptanceStore(ctx.cfg.dataDir, floor.id).cycles();
   const cur = cycles[cycles.length - 1];
-  const acceptance = progressAcceptance(cycles, await changedNow(ctx, floor, cycles, mini));
+  const changed = await changedNow(ctx, floor, cycles, mini);
+  const acceptance = progressAcceptance(cycles, changed);
+  // The business status (shared/business-status.ts), from the same cycle and the same changes: the label's words once every stage passed.
+  const business = await businessViewOf(ctx, floor, { cycles, changed });
   const toolkit = !!g.setup?.toolkit;
   const entry = entryOf(g.setup?.entry);
   let spend: ReturnType<typeof stageSpend> | undefined;
@@ -61,7 +66,7 @@ async function compute(ctx: Ctx, floor: Floor, mini: boolean): Promise<Omit<Proj
     ...(g.setup?.stage?.build ? { build: g.setup.stage.build } : {}),
   });
   const note = toolkit && !entry ? 'The entry mode isn’t recorded, so every stage is shown' : cycles.length > 1 && !cur.record ? `${cur.version} under way since ${new Date(cur.opened!.at).toISOString().slice(0, 10)}; ${lastAccepted(cycles)} stays accepted` : undefined;
-  return { floor: floor.id, toolkit, ...(g.setup?.entry ? { entry: g.setup.entry } : {}), phases, acceptance, ...(note ? { note } : {}), ...(mini ? { mini: true } : {}), ...(g.setup?.stage ? { stage: g.setup.stage } : {}), generatedAt: Date.now() };
+  return { floor: floor.id, toolkit, ...(g.setup?.entry ? { entry: g.setup.entry } : {}), phases, acceptance, ...(note ? { note } : {}), ...(mini ? { mini: true } : {}), ...(g.setup?.stage ? { stage: g.setup.stage } : {}), ...(business ? { business: summaryOf(business.project) } : {}), generatedAt: Date.now() };
 }
 
 /** The floor's progress, shared for PROGRESS_FRESH_MS; `mini` (Home's cards) skips the deliverables scan. Never throws. */

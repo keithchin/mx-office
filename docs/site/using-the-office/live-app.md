@@ -28,7 +28,7 @@ The office keeps two revisions apart: the **served** one, which counts only from
 - *Update to def5678 failed · nothing running*: the new build failed after the old one was stopped. *Build of def5678 failed · nothing running* is the same for a ▶ Start.
 - *Nothing running · last ran abc1234 until 10:27*: stopped, or the office restarted.
 
-Everything that means "what's running" uses the served commit only: readiness and its test evidence, Design gallery captures, the readiness news, the desktop app's **Show here** line (*Order list · running abc1234 · shown by the desktop app*) and Home's *Live app ready · running abc1234*.
+Everything that means "what's running" uses the served commit only: readiness and its test evidence, Design gallery captures, the readiness news, the desktop app's **Show here** line (*Order list · running abc1234 · shown by the desktop app*) and Home's *Live app running abc1234*. Whether the work in it is ready is the project's [business status](progress-and-acceptance.md#business-status), which the Live app chip shows after the commit (*🌐 Live app: running · abc1234 · Verification incomplete*).
 
 A crashed app shows when it stopped, on which commit, mxcli's last lines and **⟳ Restart**; a toast says so, and Needs you has a row that Teams and phone push send once per crash.
 

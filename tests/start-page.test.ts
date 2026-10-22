@@ -165,7 +165,7 @@ test('an active project’s row: its client, team, live app and a red flag for s
   assert.ok(row.classList.contains('red'));
   assert.equal(row.querySelector('.st-row-client')?.textContent, 'Acme Logistics');
   assert.match(text(row), /2 working · 1 asking · 1 idle/);
-  assert.match(text(row), /Live app ready/);
+  assert.match(text(row), /Live app running/, 'running, never "ready": the work’s readiness is the business status');
   assert.match(text(row), /1 stuck/);
   const calm = sections.projectRow({ f: floor('globex-shop', 'Globex Shop') as never, facts: { floor: 'globex-shop', needs: 0, stuck: 0, failing: 0 }, open: () => {} }) as unknown as FakeEl;
   assert.ok(!calm.classList.contains('red'));

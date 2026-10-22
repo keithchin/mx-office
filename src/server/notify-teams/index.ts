@@ -6,6 +6,7 @@
 // notify.teams.sent / notify.teams.failed, never with the URL. Started by office/timers.ts.
 
 import path from 'node:path';
+import { businessSummaryOf } from '../business-status/index.js';
 import { inQuietHours, type TeamsSettingsView } from '../../shared/notify-teams.js';
 import type { Ctx } from '../office/context.js';
 import { audit } from '../audit/index.js';
@@ -121,6 +122,7 @@ export class TeamsNotify {
     const slot = digestDue(now, d.settings.schedule, compiled, this.notifier.state.digests[floorId]);
     if (slot === undefined) return;
     const r = f.input.roster;
+    const status = (await businessSummaryOf(this.ctx, floor).catch(() => undefined))?.line;
     const data = buildDigest({
       floor: floorId,
       project: floor.def.name,
@@ -130,6 +132,7 @@ export class TeamsNotify {
       spent: r?.spentToday,
       cap: r?.cap,
       setup: f.input.setup,
+      ...(status ? { status } : {}),
       link: officeLink(this.settings.get().publicUrl, `lite?floor=${encodeURIComponent(floorId)}`),
     });
     const err = await this.post(digestCard(data), { kind: 'digest', items: data.openNeeds, floors: [floorId] });

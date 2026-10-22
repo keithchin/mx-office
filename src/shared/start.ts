@@ -6,6 +6,7 @@
 // recorded; what nobody recorded is left out or said to be unknown, never guessed.
 
 import { settingsHref } from './settings-sections.js';
+import type { BusinessSummary } from './business-status.js';
 
 /** Home's address: where the Mx Office wordmark, the 🏠 and a bare `/` go. */
 export const HOME_PAGE = '/start';
@@ -49,6 +50,8 @@ export interface StartProject {
   failing: number;
   /** Undefined when nobody opened its live app since the office started: unknown, not "down". */
   live?: StartLive;
+  /** Its business status (shared/business-status.ts), the same words as its progress bar, Overview and phone card. */
+  business?: BusinessSummary;
 }
 
 /** A milestone the office recorded: a PR merged, a live-app milestone told ready, a delivery accepted. */
@@ -116,11 +119,14 @@ export function redFlag(p: Pick<StartProject, 'stuck' | 'failing'> | undefined):
   return parts.length ? parts.join(' · ') : undefined;
 }
 
-/** Its live app in a word, and whether it's ready to open: "unknown" when the office never looked. */
+/**
+ * Its live app in a word, and whether it can be opened: "unknown" when the office never looked. It says
+ * "running", never "ready": whether the work in it is ready is the business status (shared/business-status.ts).
+ */
 export function liveWord(live: StartLive | undefined): { text: string; ready: boolean; tone: 'good' | 'bad' | 'mute' } {
   if (!live) return { text: 'Live app: unknown', ready: false, tone: 'mute' };
   const on = live.served ? ` · running ${live.served}` : '';
-  if (live.status === 'running' && (live.viewPort || live.appPort)) return { text: `Live app ready${on}${live.updateFailed ? ' · update failed' : ''}`, ready: true, tone: live.updateFailed ? 'bad' : 'good' };
+  if (live.status === 'running' && (live.viewPort || live.appPort)) return { text: `Live app running${on ? on.replace(' · running', '') : ''}${live.updateFailed ? ' · update failed' : ''}`, ready: true, tone: live.updateFailed ? 'bad' : 'good' };
   if (live.status === 'failed') return { text: `Live app failed${live.target ? ` (${live.target}) · nothing running` : ''}`, ready: false, tone: 'bad' };
   if (live.status === 'starting' || live.status === 'updating') return { text: on ? `Live app${on} · updating${live.target ? ` to ${live.target}` : ''}…` : `Live app ${live.status === 'updating' ? `updating${live.target ? ` to ${live.target}` : ''}` : `starting${live.target ? ` ${live.target}` : ''}`}… · nothing running`, ready: false, tone: 'mute' };
   return { text: live.started ? 'Live app stopped' : 'Live app not started', ready: false, tone: 'mute' };
