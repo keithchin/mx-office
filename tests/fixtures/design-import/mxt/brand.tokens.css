@@ -1,0 +1,21 @@
+/* Already written for mxcli: --mxt-* tokens, light and dark. */
+:root {
+  --mxt-brand: #0b3d91;
+  --mxt-ground: #f5f3ee;
+  --mxt-surface: #ffffff;
+  --mxt-ink: #1d1d1b;
+  --mxt-success: #2e7d32;
+  --mxt-warning: #ed6c02;
+  --mxt-danger: #c62828;
+  --mxt-info: #0288d1;
+  --mxt-radius: 10px;
+  --mxt-control-height: 40px;
+  --mxt-font: "Segoe UI", system-ui, sans-serif;
+  --mxt-secondary: #ff9900;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mxt-brand: #6f9be8;
+    --mxt-ground: #10151d;
+  }
+}

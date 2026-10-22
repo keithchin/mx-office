@@ -27,6 +27,28 @@ A published version is **Draft** until an admin presses **Approve**; approving a
 
 Packages live in the office's data folder, not in the company brain. Deleting `<data>/design-systems/` takes the office back to today's behaviour; you can also delete the `design` entry in a project's `agent-office.project.json`, though the office doesn't load bindings from it (see below).
 
+## Import from a folder
+
+When the client already has its look written down (a brand site's stylesheets, a design-token file, a Tailwind config), you don't have to retype it. On the client's **Design system** part, an admin presses **📁 Import from folder…** and types the path of a folder on the office's machine (or of one file). The office reads it and suggests the Branded Atlas form from it; you review, then **Save as draft**. Nothing is published by itself: **Publish v&lt;n&gt;** stays the step it always is.
+
+**What it reads.** CSS custom properties (`--primary: #0b5fff`) with their `var()` chains resolved within the folder, Sass variables and simple Sass maps (`.scss`), `<style>` blocks and inline `style=` colours in HTML (`.html`, `.htm`) and a page's `theme-color`, design-token JSON in the W3C DTCG shape (`$value`, `$type`, `{alias}`), Style Dictionary and Tokens Studio, and the literal `colors`, `fontFamily` and `borderRadius` objects of a `tailwind.config.*` (only literals: the file is never run). Besides named values it counts every colour written into rules, and where: as a background, a text colour or a border, and whether on the page itself. Light and dark are told apart by `@media (prefers-color-scheme: dark)`, `.dark`, `[data-theme=dark]` and similar selectors, and dark token sets.
+
+**How the mapping works.**
+
+- If the folder already defines mxcli's `--mxt-*` tokens, they are **taken as they are**, light and dark, after a check against mxcli's vocabulary (`mxcli theme show signal`): a token mxcli doesn't know, such as `--mxt-secondary`, is listed as not used, because mxcli would refuse the file.
+- Otherwise each form field (primary, success, warning, danger, info, background, cards, text, font, corners, density) gets candidates from **names** (`--color-primary`, `--brand`, `--color-bg`, `$text`, `color.danger`, `colors.accent`), with hover, tint and shade variants ranked lower, and from **usage** when nothing is named (the page's background and text colour, the most used saturated colour, statuses by hue). Each candidate has a confidence: high for a clear name, medium or low for a weaker name or a guess from usage. A field with nothing found keeps the office's default.
+- The 40 tokens are then **derived exactly as for the short form**. On top of the derivation the import keeps only a few values as the folder has them: its own `--mxt-*` tokens, a border colour (as `--mxt-line`) and, when the folder has a dark variant, its dark page, card, text and brand colours. All 40 are still set.
+
+**The review** shows every field with a swatch, its source (`styles/tokens.css:3`, the name it had), the confidence and a dropdown of the other candidates found, the office's default or your own value. Two switches turn off the folder's `--mxt-*` tokens or its dark colours. Beside it, the preview (light and dark) and the contrast check change as you choose. It also says what was left out and why, and what it found but doesn't import.
+
+**Provenance.** The draft keeps an `import.json` beside it: the path as you typed it, the scan's date, every file read with its sha256, what each field was set from (suggested, another candidate, your own value or the default), the values taken as they were and where from, the named values not used, what was skipped and the web addresses not fetched. Publishing puts `import.json` and `import/excerpts.txt` (the source line of every value used) into the version's package, so the digest covers them. Changing the draft by hand afterwards drops any taken value your change affects and says so; **Edit as new draft** of an imported version carries its provenance along.
+
+**Re-import.** **↻ Re-import** scans the same folder again and opens the review with the tokens that change against the waiting draft or the newest version, before and after. Saving makes a new draft; the versions already published don't change.
+
+**Safety.** The folder is only read: nothing is written there, nothing in it is run, and nothing is fetched from the web (`@import url(https://…)`, `<link href="https://…">` and web fonts are listed as skipped). Links and junctions are never followed, and a file whose real path is outside the folder is refused. `node_modules`, `.git`, build output and hidden folders, secrets-like files (`.env`, keys, certificates), binaries and files over 1 MB are left out, and the scan stops after 5,000 entries, 300 files or 8 MB. The office's own folders, system folders, a drive's root and your whole home folder are refused. Reading is fs/promises, one file per turn of the event loop, so a scan never holds the office up.
+
+> **Found, not imported.** Font files and `@font-face` rules, logos and HTML page layouts the scan finds are listed (and kept in `import.json`), not imported: Branded Atlas covers colours, type, density and shape only. Bringing in the font files, a logo or layouts is separate work.
+
 ## Adopting it in a new project
 
 In ✨ **New project** › Advanced, once you pick a client that has an approved design system, a **Design system** line shows its recommendation: *Acme Design System v1 — recommended for this client*, with **Use this version**, **Choose another** (the client's other approved versions) and **Keep the app's design**. A new app starts on the recommendation; nothing is shown for a client without one.
@@ -87,7 +109,7 @@ Each row of a project's Budget ledger now also records, where the office knows i
 
 ## Not in this version
 
-Storybook, Figma, importing an existing Mendix company design module, kiosk and mobile presets, logo, fonts and layouts, and automatic upgrades of bound projects. An independent project (no client) can own a design system on the server, but the page for it is not built yet.
+Storybook, Figma, importing an existing Mendix company design module, kiosk and mobile presets, logo, font files and layouts (an import lists them, it doesn’t bring them in), a design folder on another machine or behind a web address (the import reads a folder on the office’s machine), and automatic upgrades of bound projects. An independent project (no client) can own a design system on the server, but the page for it is not built yet.
 
 ## See also
 
