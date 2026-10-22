@@ -61,6 +61,8 @@ export interface SignoffDeps {
   tell(floor: Floor, text: string, by: string, owner: string | undefined, decision: string): Promise<string | undefined>;
   /** Answers the open escalations the sign-off card folded with the same words (an error, or undefined). */
   answerFolded?(floor: Floor, ids: readonly string[], text: string, by: string, owner: string | undefined): Promise<string | undefined>;
+  /** What refuses the sign-off besides the stage's own state (the security baseline and mx check gate, security-gate/), or undefined. */
+  guard?(floor: Floor, stage: string): Promise<string | undefined>;
 }
 
 export type SignoffResult = { ok: true; request: SignoffRequest; message: string } | { ok: false; status: 400 | 409; error: string };
@@ -73,6 +75,8 @@ export async function signOff(deps: SignoffDeps, floor: Floor, stage: string, by
   if (!v || !manualInPlay(verdicts, v.id, setup?.decisions)) return { ok: false, status: 409, error: `Stage ${stage} isn't waiting for a sign-off: the stages before it haven't all passed, or gate-check has moved on` };
   const st = signoffState(setup, v.id);
   if (st.state === 'recorded') return { ok: false, status: 409, error: `Stage ${v.id} is already signed off in PROJECT.md` };
+  const refused = await deps.guard?.(floor, v.id);
+  if (refused) return { ok: false, status: 409, error: refused };
   const lead = deps.lead(floor);
   if (!lead) return { ok: false, status: 409, error: "This project's team lead isn't at work to record it: hire or wake them first" };
   const now = deps.now();
@@ -102,6 +106,7 @@ export function signoffDeps(ctx: Ctx, setup: (floor: Floor) => Promise<SetupView
       return m && m.phase === 'active' ? m.name : undefined;
     },
     tell: (floor, text, by, owner, decision) => rosterOf(ctx).interrupts.tell(teamFloor(ctx, floor), text, by, 'after', {}, owner, decision),
+    guard: async (floor, stage) => (await import('../security-gate/index.js')).signoffRefusal(ctx, floor, stage),
     ...(answerFolded ? { answerFolded } : {}),
   };
 }

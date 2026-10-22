@@ -22,6 +22,7 @@ import type { JobState, StepImpl, StepIO } from './job.js';
 import type { BudgetChoice } from '../../shared/budget/levels.js';
 import { SHAPES, shapeForRoles, type TeamShape } from '../../shared/roster/coverage.js';
 import { createApp, ignoreMendixOutput, mprVersion } from './mendix-app.js';
+import { withSecurityBaseline } from '../security-gate/wizard.js';
 import { writeGitattributes } from './gitattributes.js';
 import { appendDecisionRows, recordBriefRegister, recordDecisions } from './register.js';
 import { bashPath, runCommand } from './run.js';
@@ -342,7 +343,7 @@ export function setupSteps(deps: SetupDeps): Record<StepId, StepImpl> {
       writeGitattributes(dir);
       if (mpr) return { status: 'skipped', detail: `already there (${path.relative(dir, mpr)})${ignored ? '; .gitignore updated' : ''}` };
       io.log(`  creating the Mendix app with Studio Pro ${job.plan.mendix}…`);
-      return { status: 'done', detail: await createApp(cfg, job.plan, dir, { run, env: env(), onLine: said(io) }) };
+      return { status: 'done', detail: await withSecurityBaseline(cfg.mxcli, dir, await createApp(cfg, job.plan, dir, { run, env: env(), onLine: said(io) }), { run, env: env(), onLine: said(io) }) }; // E2: a new app starts at the security baseline (security-gate/wizard.ts)
     },
 
     async init(job, io) {

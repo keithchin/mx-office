@@ -108,6 +108,9 @@ test("the app step makes the .mpr at the repository's root with Studio Pro's mx,
     writeFileSync(path.join(dir, 'README.md'), '# travel-approval\n');
     const calls: Call[] = [];
     const run = fakeRun(calls, (cmd, args) => {
+      // E2: then mxcli sets the app's security to the baseline and reads it back (security-gate/wizard.ts).
+      if (args.includes('show project security;')) return 'WARNING: alpha\n[{"Property":"SecurityLevel","Value":"Production"},{"Property":"StrictMode","Value":"true"},{"Property":"DemoUsersEnabled","Value":"true"},{"Property":"DemoUsers","Value":"2"}]';
+      if (args[0] !== 'create-project') return '';
       const out = args[args.indexOf('--output-dir') + 1];
       writeFileSync(path.join(out, `${args[args.indexOf('--app-name') + 1]}.mpr`), '');
       mkdirSync(path.join(out, 'theme'), { recursive: true });
@@ -119,7 +122,10 @@ test("the app step makes the .mpr at the repository's root with Studio Pro's mx,
     const r = await steps.app(job, io);
     assert.equal(r.status, 'done');
     assert.match(r.detail ?? '', /TravelApproval\.mpr with Studio Pro 11\.12\.4's mx create-project/);
-    assert.equal(calls.length, 1);
+    assert.match(r.detail ?? '', /app security now Production, strict mode on, demo users on \(for building\) \(read back with mxcli\)/);
+    assert.equal(calls.length, 3, 'mx create-project, then mxcli sets the security baseline and reads it back');
+    assert.equal(calls[1].cmd, path.join(root, 'mxcli'));
+    assert.deepEqual(calls[1].args, ['-p', path.join(dir, 'TravelApproval.mpr'), '-c', 'alter app security (SecurityLevel: PRODUCTION, StrictMode: TRUE);']);
     assert.equal(calls[0].cmd, path.join(mendixDir, '11.12.4', 'modeler', exe('mx')));
     assert.deepEqual(calls[0].args, ['create-project', '--app-name', 'TravelApproval', '--output-dir', dir, '--sprintr-app-id', '0f8fad5b-d9cb-469f-a165-70867728950e']);
     assert.ok(existsSync(path.join(dir, 'TravelApproval.mpr')));
@@ -133,12 +139,13 @@ test("the app step makes the .mpr at the repository's root with Studio Pro's mx,
     const again = await steps.app(job, io);
     assert.equal(again.status, 'skipped');
     assert.match(again.detail ?? '', /already there \(TravelApproval\.mpr\)/);
-    assert.equal(calls.length, 1);
+    assert.equal(calls.length, 3);
 
     // Without a Portal id, no --sprintr-app-id.
     rmSync(path.join(dir, 'TravelApproval.mpr'));
     await steps.app(jobIn(dir, plan()), io);
-    assert.ok(!calls[1].args.includes('--sprintr-app-id'));
+    assert.equal(calls[3].args[0], 'create-project');
+    assert.ok(!calls[3].args.includes('--sprintr-app-id'));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -154,6 +161,7 @@ test('with no mx in that Studio Pro, the app step falls back to mxcli new and mo
     writeFileSync(path.join(dir, 'README.md'), 'ours\n');
     const calls: Call[] = [];
     const run = fakeRun(calls, (_cmd, args) => {
+      if (args[0] !== 'new') return '';
       const out = args[args.indexOf('--output-dir') + 1];
       mkdirSync(path.join(out, 'theme'), { recursive: true });
       writeFileSync(path.join(out, 'TravelApproval.mpr'), 'model');

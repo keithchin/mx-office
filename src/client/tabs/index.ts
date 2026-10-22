@@ -8,3 +8,4 @@ import '../ui/testing/tab';
 import '../ui/questions/tab';
 import '../ui/design/tab';
 import '../ui/walkthroughs/tab';
+import '../ui/security/tab';

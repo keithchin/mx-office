@@ -28,7 +28,7 @@ test('the Testing tab is registered under App Insights through the tab registry,
   const insights = navGroups().find((g) => g.id === 'insights')!;
   assert.deepEqual(
     insights.items.map((i) => i.id),
-    ['analysis', 'budget', 'audit', 'testing'],
+    ['analysis', 'budget', 'audit', 'testing', 'security'],
   );
   assert.doesNotMatch(read('src/client/lite.ts'), /testing/i);
   assert.doesNotMatch(read('src/client/lite.html'), /testing-view|tab-testing/);

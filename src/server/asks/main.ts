@@ -18,6 +18,7 @@ import type { AsksFloor } from './service.js';
 import { catFiles, git, type Place, type Read } from './sources.js';
 import { gateItemsOf } from '../review-gate/index.js';
 import { claimsItemsOf } from '../claims/index.js';
+import { securityItemsOf } from '../security-gate/index.js';
 
 /** Paths that are the team's own updates: journals (handoffs are entries in them), standups, handoff notes. */
 export const isDocsPath = (f: string) => /^docs\/(team|standups)\//.test(f) || /handoff/i.test(f);
@@ -140,13 +141,14 @@ export async function detectInputOf(ctx: Ctx, floor: AsksFloor, reads: readonly 
   }
   const places = reads.map((r) => r.place);
   const leadPlace = lead ? places.find((p) => p.role === lead!.role && p.branch) : undefined;
-  const [repo, ahead, standup, review, gate, claims] = await Promise.all([
+  const [repo, ahead, standup, review, gate, claims, security] = await Promise.all([
     readRepo(floor.dir).catch(() => undefined),
     aheadBranches(floor.dir, main.sha, places).catch(() => []),
     leadStandup(floor.dir, main.sha, leadPlace).catch(() => undefined),
     reviewFiles(floor.dir, main.sha, places.filter((p) => p.kind === 'worktree')).catch(() => ({ brds: [], design: [] })),
     gateItemsOf(ctx, floor.id, main, lead?.name).catch(() => []),
     claimsItemsOf(ctx, floor.id, main).catch(() => []),
+    securityItemsOf(ctx, floor.id, main, lead?.name).catch(() => []),
   ]);
   return {
     ...(repo?.project ? { mainProject: repo.project.text } : {}),
@@ -157,5 +159,6 @@ export async function detectInputOf(ctx: Ctx, floor: AsksFloor, reads: readonly 
     design: review.design,
     gate,
     claims,
+    security,
   };
 }

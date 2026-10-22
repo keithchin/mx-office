@@ -69,6 +69,7 @@ import { designRoutes } from './design.js';
 import { designImportRoutes } from './design-import.js';
 import { adoptFromRoutes } from './adopt-from.js';
 import { walkthroughRoutes } from './walkthroughs.js';
+import { securityRoutes } from './security.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -244,6 +245,9 @@ export const routes: readonly Route[] = [
   walkthroughRoutes.view,
   walkthroughRoutes.file,
   walkthroughRoutes.act,
+  // The security baseline and the mx check gate, on App Insights › Security (security-gate/).
+  securityRoutes.view,
+  securityRoutes.act,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,
