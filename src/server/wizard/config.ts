@@ -9,12 +9,13 @@ import path from 'node:path';
 import { adminTokenFile } from './admin-token.js';
 import { withGitLongPaths } from '../gitenv.js';
 import { firstExisting, officeSettings, toolkitDir } from '../connections/store.js';
+import { macBundleOf, macBundles } from '../studio/mac.js';
 import type { OrgSource } from '../../shared/first-run.js';
 
 export interface WizardConfig {
   /** The mxcli-project-toolkit clone (picked in 🔌 Connections › Paths, else AGENT_OFFICE_TOOLKIT_DIR). */
   toolkitDir: string;
-  /** Git Bash, which runs the toolkit's scripts (AGENT_OFFICE_BASH). */
+  /** Git Bash, which runs the toolkit's scripts (AGENT_OFFICE_BASH); on macOS Homebrew's bash (the system's is 3.2). */
   bash: string;
   /** The mxcli the toolkit's `mxcli init` should use (first-run setup's, else AGENT_OFFICE_MXCLI). */
   mxcli?: string;
@@ -22,7 +23,7 @@ export interface WizardConfig {
   jqDir?: string;
   /** Python for the toolkit's helpers, written into toolkit.env (AGENT_OFFICE_PYTHON). */
   python?: string;
-  /** Where Studio Pro versions are installed, one folder each (AGENT_OFFICE_MENDIX_DIR). */
+  /** Where Studio Pro versions are installed, one folder each (AGENT_OFFICE_MENDIX_DIR); on macOS /Applications, one app bundle each. */
   mendixDir: string;
   /** The organization new repositories go in by default (first-run setup's, else AGENT_OFFICE_PROJECT_ORG). */
   org: string;
@@ -35,6 +36,10 @@ export interface WizardConfig {
 }
 
 const isWin = process.platform === 'win32';
+const isMac = process.platform === 'darwin';
+
+/** Homebrew's bash on macOS (Apple silicon, then Intel): the toolkit's scripts need bash 4 or newer, and macOS's own is 3.2. */
+export const MAC_BASHES = ['/opt/homebrew/bin/bash', '/usr/local/bin/bash'];
 
 function firstDir(parent: string, match: RegExp): string | undefined {
   try {
@@ -73,11 +78,11 @@ export function wizardConfig(env: NodeJS.ProcessEnv = process.env): WizardConfig
   const pyDir = firstDir(path.join(local, 'Python'), /^pythoncore-/);
   return {
     toolkitDir: toolkitDir(env),
-    bash: env.AGENT_OFFICE_BASH || (isWin && existsSync(gitBash) ? gitBash : 'bash'),
+    bash: env.AGENT_OFFICE_BASH || (isWin && existsSync(gitBash) ? gitBash : isMac ? (MAC_BASHES.find((b) => existsSync(b)) ?? 'bash') : 'bash'),
     mxcli: officeMxcli(env, home)?.path,
     jqDir: env.AGENT_OFFICE_JQ_DIR || (isWin ? firstDir(path.join(local, 'Microsoft', 'WinGet', 'Packages'), /^jqlang\.jq/) : undefined),
     python: env.AGENT_OFFICE_PYTHON || (pyDir && existsSync(path.join(pyDir, 'python.exe')) ? path.join(pyDir, 'python.exe') : undefined),
-    mendixDir: env.AGENT_OFFICE_MENDIX_DIR || (isWin ? 'C:\\Program Files\\Mendix' : '/opt/mendix'),
+    mendixDir: env.AGENT_OFFICE_MENDIX_DIR || (isWin ? 'C:\\Program Files\\Mendix' : isMac ? '/Applications' : '/opt/mendix'),
     org: projectOrg(env).value,
     adminTokenFile: adminTokenFile(env),
     offlineDir: env.AGENT_OFFICE_WIZARD_OFFLINE ? path.resolve(env.AGENT_OFFICE_WIZARD_OFFLINE) : undefined,
@@ -103,15 +108,25 @@ const newerFirst = (a: string, b: string) => {
   return 0;
 };
 
-/** The Studio Pro versions installed (each a folder with modeler/mxbuild), newest first. */
-export function mendixVersions(dir: string): string[] {
+const fsDeps = { exists: existsSync, readdir: (p: string) => readdirSync(p) };
+
+/** The Studio Pro versions installed (each a folder with modeler/mxbuild; on macOS also each "Mendix Studio Pro <version>.app" bundle), newest first. */
+export function mendixVersions(dir: string, platform: NodeJS.Platform = process.platform): string[] {
+  let found: string[] = [];
   try {
-    return readdirSync(dir)
-      .filter((d) => /^\d+\.\d+\.\d+/.test(d) && existsSync(path.join(dir, d, 'modeler', isWin ? 'mxbuild.exe' : 'mxbuild')))
-      .sort(newerFirst);
+    found = readdirSync(dir).filter((d) => /^\d+\.\d+\.\d+/.test(d) && existsSync(path.join(dir, d, 'modeler', platform === 'win32' ? 'mxbuild.exe' : 'mxbuild')));
   } catch {
-    return [];
+    found = [];
   }
+  if (platform === 'darwin') for (const b of macBundles(dir, fsDeps, 'mxbuild')) if (!found.includes(b.version)) found.push(b.version);
+  return found.sort(newerFirst);
+}
+
+/** A version's modeler folder (where mxbuild and mx are): <dir>/<version>/modeler, or on macOS that version's app bundle's. */
+function modelerDir(cfg: WizardConfig, version: string, platform: NodeJS.Platform = process.platform): string {
+  const plain = path.join(cfg.mendixDir, version, 'modeler');
+  if (platform !== 'darwin' || existsSync(plain)) return plain;
+  return macBundleOf(macBundles(cfg.mendixDir, fsDeps), version)?.modeler ?? plain;
 }
 
 /** The line new projects start on: the newest 11.12 patch installed is the default. */
@@ -131,12 +146,12 @@ export function preferredMendix(versions: string[]): string {
 }
 
 export function mxbuildPath(cfg: WizardConfig, version: string): string {
-  return path.join(cfg.mendixDir, version, 'modeler', isWin ? 'mxbuild.exe' : 'mxbuild');
+  return path.join(modelerDir(cfg, version), isWin ? 'mxbuild.exe' : 'mxbuild');
 }
 
 /** Studio Pro's command-line tool (mx create-project, mx show-version), next to mxbuild. */
 export function mxPath(cfg: WizardConfig, version: string): string {
-  return path.join(cfg.mendixDir, version, 'modeler', isWin ? 'mx.exe' : 'mx');
+  return path.join(modelerDir(cfg, version), isWin ? 'mx.exe' : 'mx');
 }
 
 /** What's missing for the toolkit to run, in words for the wizard's first page. */
@@ -144,9 +159,10 @@ export function configProblems(cfg: WizardConfig, versions: string[]): string[] 
   const out: string[] = [];
   if (!existsSync(path.join(cfg.toolkitDir, 'bin', 'init-project.sh'))) out.push(`The mxcli-project-toolkit isn't at ${cfg.toolkitDir} (pick its clone in ☰ → 🔌 Connections › Paths, or set AGENT_OFFICE_TOOLKIT_DIR)`);
   if (isWin && !existsSync(cfg.bash)) out.push(`Git Bash isn't at ${cfg.bash} (set AGENT_OFFICE_BASH)`);
+  if (isMac && cfg.bash === 'bash') out.push('The toolkit needs bash 4 or newer and macOS’s own is 3.2: install it with brew install bash (or set AGENT_OFFICE_BASH)');
   if (!cfg.mxcli) out.push('No mxcli found (set AGENT_OFFICE_MXCLI to mxcli.exe)');
   if (isWin && !cfg.jqDir) out.push('No jq found (install it with winget install jqlang.jq, or set AGENT_OFFICE_JQ_DIR)');
-  if (!versions.length) out.push(`No Studio Pro under ${cfg.mendixDir} (set AGENT_OFFICE_MENDIX_DIR)`);
+  if (!versions.length) out.push(isMac ? `No Studio Pro for Mac in ${cfg.mendixDir} (a "Mendix Studio Pro <version>.app"; set AGENT_OFFICE_MENDIX_DIR)` : `No Studio Pro under ${cfg.mendixDir} (set AGENT_OFFICE_MENDIX_DIR)`);
   return out;
 }
 

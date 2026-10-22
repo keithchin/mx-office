@@ -66,7 +66,7 @@ export function connectionsPanel(focus?: CredentialId | 'paths' | 'tools'): Conn
     const result = lastImport;
     lastImport = undefined;
     el.replaceChildren(
-      h('p.cx-intro', {}, 'Everything the office and its agents sign in with, in one place. Saved values are ', v.storage.scheme === 'dpapi' ? 'encrypted with Windows DPAPI for the office’s Windows user' : 'kept in a file only the office’s user can read', ` (${v.storage.file}) and never shown again. The office uses, in order: what’s saved here, then its environment variables, then the old dot-files.`),
+      h('p.cx-intro', {}, 'Everything the office and its agents sign in with, in one place. Saved values are ', v.storage.scheme === 'dpapi' ? 'encrypted with Windows DPAPI for the office’s Windows user' : v.storage.scheme === 'keychain' ? 'kept in your macOS login Keychain' : 'kept in a file only the office’s user can read', ` (${v.storage.file}${v.storage.scheme === 'keychain' ? ' names each item' : ''}) and never shown again. The office uses, in order: what’s saved here, then its environment variables, then the old dot-files.`),
       v.storage.warning ? h('p.cx-warn', {}, `⚠️ ${v.storage.warning}`) : '',
       importBanner(v, run, result) ?? '',
       h('h3.cx-h', {}, '🔑 Credentials'),

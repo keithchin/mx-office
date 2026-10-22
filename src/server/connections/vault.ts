@@ -1,8 +1,11 @@
 // Where 🔌 Connections keeps its secrets: <office data>/credentials.json. On Windows each value is
 // encrypted with DPAPI for the Windows user the office runs as (System.Security.Cryptography.
 // ProtectedData, through a PowerShell child: no native module), so the file is useless to anyone else
-// and on any other machine. Elsewhere there's no DPAPI, so values are kept base64'd in a file only the
-// office's user can read (0600), and the page says so. Values travel to and from PowerShell on its
+// and on any other machine. On macOS each value is an item of its own in the user's login Keychain
+// (keychain.ts) and the file only names it; a value the Keychain won't take (locked, no GUI session)
+// falls back to the file, and values an older office kept in the file move into the Keychain when it's
+// opened. Elsewhere (Linux) there's neither, so values are kept base64'd in a file only the office's
+// user can read (0600), and the page says so. Values travel to and from PowerShell on its
 // stdin and stdout only (never its command line), are kept in memory once read, and never go to a
 // browser, a log or the audit log. The file also keeps each value's masked tail, who saved it and when,
 // and the last Test of each credential, none of them secret.
@@ -13,9 +16,10 @@ import { chmodSync, mkdirSync } from 'node:fs';
 import { parseStoreSync } from '../durable/read.js';
 import { writeJsonDurableSync } from '../durable/write.js';
 import path from 'node:path';
+import { keychainAvailable, keychainCipher } from './keychain.js';
 import { isCredentialId, maskTail, type CredentialCheck, type CredentialId } from '../../shared/connections.js';
 
-export type Scheme = 'dpapi' | 'file';
+export type Scheme = 'dpapi' | 'keychain' | 'file';
 
 /** 12 hex characters of a salted SHA-256: tells one value from another without saying anything about it. */
 export const fingerprint = (value: string) => createHash('sha256').update(`agent-office-check:${value.trim()}`).digest('hex').slice(0, 12);
@@ -23,8 +27,13 @@ export const fingerprint = (value: string) => createHash('sha256').update(`agent
 /** Turns values into what's written and back. `protect` may run a child process; `unprotectSync` is for loading at start. */
 export interface Cipher {
   scheme: Scheme;
-  protect(values: string[]): Promise<string[]>;
+  /** `keys`: a stable name per value (the Keychain's account names); the other ciphers ignore it. */
+  protect(values: string[], keys?: string[]): Promise<string[]>;
   unprotectSync(values: string[]): (string | undefined)[];
+  /** Lets go of what `protect` wrote outside the file (the Keychain's items) for values no longer kept. */
+  forget?(values: string[]): void;
+  /** Keeps a value this one can't (a locked Keychain: the 0600 file) and is read at load; its entries move here when they can. */
+  fallback?: Cipher;
 }
 
 // One PowerShell run handles a batch: a line per value, "P <base64 plain>" to protect or "U <base64
@@ -91,7 +100,13 @@ export const fileCipher: Cipher = {
   unprotectSync: (values) => values.map((v) => (v ? unb64(v) : undefined)),
 };
 
-export const defaultCipher = (): Cipher => (process.platform === 'win32' ? dpapiCipher() : fileCipher);
+/** Windows: DPAPI. macOS: the login Keychain, with the 0600 file behind it. Linux: the 0600 file. */
+export function defaultCipher(platform: NodeJS.Platform = process.platform, env: NodeJS.ProcessEnv = process.env): Cipher {
+  if (platform === 'win32') return dpapiCipher();
+  // AGENT_OFFICE_KEYCHAIN=0 keeps a Mac office on the file (by choice, or a Mac with no login Keychain).
+  if (keychainAvailable(platform) && env.AGENT_OFFICE_KEYCHAIN !== '0') return keychainCipher({ fallback: fileCipher });
+  return fileCipher;
+}
 
 export interface VaultEntry {
   scheme: Scheme;
@@ -133,7 +148,7 @@ export class Vault {
     }
     const entries: VaultFile['entries'] = {};
     for (const [id, e] of Object.entries(raw.entries ?? {})) {
-      if (isCredentialId(id) && e && typeof e.data === 'string' && (e.scheme === 'dpapi' || e.scheme === 'file')) entries[id] = { scheme: e.scheme, data: e.data, tail: String(e.tail ?? ''), savedAt: Number(e.savedAt) || 0, savedBy: String(e.savedBy ?? 'someone') };
+      if (isCredentialId(id) && e && typeof e.data === 'string' && (e.scheme === 'dpapi' || e.scheme === 'keychain' || e.scheme === 'file')) entries[id] = { scheme: e.scheme, data: e.data, tail: String(e.tail ?? ''), savedAt: Number(e.savedAt) || 0, savedBy: String(e.savedBy ?? 'someone') };
     }
     const checks: VaultFile['checks'] = {};
     for (const [id, c] of Object.entries(raw.checks ?? {})) if (isCredentialId(id) && c && typeof c.at === 'number') checks[id] = c;
@@ -141,12 +156,48 @@ export class Vault {
     this.plain.clear();
     this.unreadable.clear();
     const ids = Object.keys(entries) as CredentialId[];
-    // A file written with DPAPI is only read with DPAPI (and the other way round).
-    const mine = ids.filter((id) => entries[id]!.scheme === this.cipher.scheme);
-    const values = this.cipher.unprotectSync(mine.map((id) => entries[id]!.data));
-    mine.forEach((id, i) => (values[i] ? this.plain.set(id, values[i]!) : this.unreadable.add(id)));
-    for (const id of ids) if (!mine.includes(id)) this.unreadable.add(id);
+    // A file written with DPAPI is only read with DPAPI (and the other way round); the Keychain also reads its fallback's entries.
+    const read = (c: Cipher | undefined): CredentialId[] => {
+      if (!c) return [];
+      const these = ids.filter((id) => entries[id]!.scheme === c.scheme);
+      const values = c.unprotectSync(these.map((id) => entries[id]!.data));
+      these.forEach((id, i) => (values[i] ? this.plain.set(id, values[i]!) : this.unreadable.add(id)));
+      return these;
+    };
+    const mine = read(this.cipher);
+    const behind = read(this.cipher.fallback);
+    for (const id of ids) if (!mine.includes(id) && !behind.includes(id)) this.unreadable.add(id);
+    // What an older office (or a locked Keychain) left in the file moves into the Keychain now, once.
+    this.migration = this.moveIn(behind.filter((id) => this.plain.has(id)));
     return this;
+  }
+
+  /** The last move of the fallback's entries into the main store (`load` starts it): how many moved. */
+  migration: Promise<number> = Promise.resolve(0);
+
+  private async moveIn(ids: CredentialId[]): Promise<number> {
+    let moved = 0;
+    for (const id of ids) {
+      const v = this.plain.get(id);
+      const e = this.data.entries[id];
+      if (!v || !e) continue;
+      try {
+        const [data] = await this.cipher.protect([v], [this.keyOf(id)]);
+        // Saved over or removed meanwhile: that wins.
+        if (this.data.entries[id] !== e) continue;
+        this.data.entries[id] = { ...e, scheme: this.cipher.scheme, data };
+        moved++;
+      } catch {
+        // The Keychain won't take it now (locked): it stays in the file and is tried again at the next start.
+      }
+    }
+    if (moved) this.save();
+    return moved;
+  }
+
+  /** A stable name for a credential in a store outside the file: this vault's file (12 hex of its path) and the id. */
+  keyOf(id: CredentialId): string {
+    return `${createHash('sha256').update(path.resolve(this.file)).digest('hex').slice(0, 12)}/${id}`;
   }
 
   get(id: CredentialId): string | undefined {
@@ -164,15 +215,32 @@ export class Vault {
   async set(id: CredentialId, value: string, by: string): Promise<void> {
     const v = value.trim();
     if (!v) throw new Error('Nothing to save');
-    const [data] = await this.cipher.protect([v]);
-    this.data.entries[id] = { scheme: this.cipher.scheme, data, tail: maskTail(v), savedAt: Date.now(), savedBy: by };
+    let scheme = this.cipher.scheme;
+    let data: string;
+    try {
+      [data] = await this.cipher.protect([v], [this.keyOf(id)]);
+    } catch (err) {
+      const behind = this.cipher.fallback;
+      if (!behind) throw err;
+      [data] = await behind.protect([v]);
+      scheme = behind.scheme;
+    }
+    this.forgetOld(id, scheme);
+    this.data.entries[id] = { scheme, data, tail: maskTail(v), savedAt: Date.now(), savedBy: by };
     this.plain.set(id, v);
     this.unreadable.delete(id);
     this.save();
   }
 
+  /** The item outside the file that `id`'s entry named, let go of once the entry no longer names it (removed, or now kept elsewhere). */
+  private forgetOld(id: CredentialId, next?: Scheme) {
+    const old = this.data.entries[id];
+    if (old && old.scheme !== next && old.scheme === this.cipher.scheme) this.cipher.forget?.([old.data]);
+  }
+
   remove(id: CredentialId): boolean {
     const had = !!this.data.entries[id];
+    this.forgetOld(id);
     delete this.data.entries[id];
     this.plain.delete(id);
     this.unreadable.delete(id);

@@ -7,16 +7,19 @@ import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { childEnv } from '../workers/env.js';
 import { resolveCommand } from '../workers/process.js';
+import { macPgBinDir } from './pg-mac.js';
 
 const WIN = process.platform === 'win32';
 
 /**
  * The folder psql is in, when it isn't on PATH already: AGENT_OFFICE_LIVE_PG_BIN, or the newest
- * PostgreSQL the Windows installer put under Program Files. Undefined when there's nothing to add.
+ * PostgreSQL the Windows installer put under Program Files (macOS: Postgres.app or a Homebrew
+ * postgresql@<n>, pg-mac.ts). Undefined when there's nothing to add.
  */
 export function pgBinDir(env: NodeJS.ProcessEnv = process.env): string | undefined {
   if (env.AGENT_OFFICE_LIVE_PG_BIN) return env.AGENT_OFFICE_LIVE_PG_BIN;
-  if (resolveCommand('psql') || !WIN) return undefined;
+  if (resolveCommand('psql')) return undefined;
+  if (!WIN) return process.platform === 'darwin' ? macPgBinDir() : undefined;
   const root = path.join(env.ProgramFiles || 'C:\\Program Files', 'PostgreSQL');
   try {
     const versions = readdirSync(root)

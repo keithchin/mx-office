@@ -1,8 +1,9 @@
 // Opening a floor's Mendix project in Studio Pro on the office's machine: the .mpr in the floor's own
 // checkout (never the live app's clone), handed to Mendix's Version Selector, which reads the
 // project's version and starts the matching Studio Pro. Without the Version Selector, the
-// studiopro.exe of that version (or the newest, when the version can't be read). Windows only, and
-// only where there's a desktop to open it on. Nothing a browser sends picks what runs: the program
+// studiopro.exe of that version (or the newest, when the version can't be read). On macOS (preview)
+// the app bundle of that version, through `open` (studio/mac.ts). Windows and macOS only, and only
+// where there's a desktop to open it on. Nothing a browser sends picks what runs: the program
 // is found here, and the project is the floor's.
 
 import { spawn as nodeSpawn } from 'node:child_process';
@@ -12,6 +13,7 @@ import path from 'node:path';
 import { onDesktop } from '../browser.js';
 import { testModeOf } from '../testmode.js';
 import { findMpr as findMprIn } from '../liveapp/checkout.js';
+import { macLauncherFor } from './mac.js';
 import type { StudioProblem } from '../../shared/studio.js';
 
 /** What it takes from the machine, so the tests can stand in for it (and never start Studio Pro). */
@@ -78,15 +80,21 @@ export function launcherFor(mpr: string, version: string | undefined, d: Pick<St
   return { problem: 'not-installed', error: `Studio Pro isn't installed on the office's computer (nothing in ${root})` };
 }
 
+/** Studio Pro runs on Windows and macOS (11.x on Apple silicon); anywhere else nothing opens it. */
+const NOT_HERE = "Studio Pro runs on Windows and macOS only, and the office isn't on either";
+
+/** The launcher for this platform: Windows' (Version Selector, studiopro.exe) or macOS's (the app bundle). */
+const launcherOn = (mpr: string, version: string | undefined, d: Pick<StudioDeps, 'platform' | 'env' | 'exists' | 'readdir'>) => (d.platform === 'darwin' ? macLauncherFor(mpr, version, d) : launcherFor(mpr, version, d));
+
 /**
  * What keeps Studio Pro from opening anything on this machine, whatever the project: no desktop, not
- * Windows, nothing installed. For a floor with no .mpr in its folder yet (bringing it up to date with
+ * Windows or macOS, nothing installed. For a floor with no .mpr in its folder yet (bringing it up to date with
  * GitHub may bring one), so the button can say whether it could open one at all.
  */
 export function machineProblem(d: Pick<StudioDeps, 'platform' | 'env' | 'exists' | 'readdir'>): { problem: StudioProblem; error: string } | undefined {
   if (!onDesktop(d.env, d.platform)) return { problem: 'no-desktop', error: "The office isn't running on a desktop (it's over SSH, in CI or headless), so there's nowhere to open Studio Pro" };
-  if (d.platform !== 'win32') return { problem: 'not-windows', error: "Studio Pro runs on Windows only, and the office isn't on Windows" };
-  const l = launcherFor('project.mpr', undefined, d);
+  if (d.platform !== 'win32' && d.platform !== 'darwin') return { problem: 'not-windows', error: NOT_HERE };
+  const l = launcherOn('project.mpr', undefined, d);
   return 'problem' in l ? l : undefined;
 }
 
@@ -101,8 +109,8 @@ export function checkStudio(dir: string, d: StudioDeps): StudioCheck {
   if (!mpr) return { problem: 'no-mpr', error: `No Mendix project (.mpr) in ${dir}` };
   const version = d.readVersion(mpr);
   if (!onDesktop(d.env, d.platform)) return { mpr, version, problem: 'no-desktop', error: "The office isn't running on a desktop (it's over SSH, in CI or headless), so there's nowhere to open Studio Pro" };
-  if (d.platform !== 'win32') return { mpr, version, problem: 'not-windows', error: "Studio Pro runs on Windows only, and the office isn't on Windows" };
-  const l = launcherFor(mpr, version, d);
+  if (d.platform !== 'win32' && d.platform !== 'darwin') return { mpr, version, problem: 'not-windows', error: NOT_HERE };
+  const l = launcherOn(mpr, version, d);
   return 'problem' in l ? { mpr, version, ...l } : { mpr, version, launcher: l };
 }
 

@@ -1,5 +1,7 @@
-// First: git's long paths in the office's environment before anything starts a git (gitenv.ts).
+// First: git's long paths in the office's environment before anything starts a git (gitenv.ts), and on
+// macOS Homebrew's folders on PATH when it was started from Finder or the desktop app (macpath.ts).
 import './gitenv.js';
+import './macpath.js';
 import os from 'node:os';
 import path from 'node:path';
 import { loadConfig, ensureSelfSigned } from './config.js';

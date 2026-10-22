@@ -19,6 +19,7 @@ import { setPath } from '../connections/paths.js';
 import { credential } from '../connections/resolve.js';
 import { officeSettings, updateOfficeSettings } from '../connections/store.js';
 import { spawnOff } from '../offloop/exec.js';
+import { macPathDirs } from '../macpath.js';
 import { testModeOf } from '../testmode.js';
 import { checkOne, findOnPath, prereqIdsFor, runOff } from './checks.js';
 import { cloneToolkit } from './clone.js';
@@ -59,7 +60,7 @@ function openTerminal(cmd: string, args: string[], env: NodeJS.ProcessEnv): Prom
   });
 }
 
-/** PATH read again: the machine's and the user's from the registry (Windows), Claude Code's ~/.local/bin anywhere. */
+/** PATH read again: the machine's and the user's from the registry (Windows), Homebrew's folders (macOS), Claude Code's ~/.local/bin anywhere. */
 async function refreshPath(): Promise<string[] | undefined> {
   const env = process.env;
   const key = pathKey(env);
@@ -72,6 +73,7 @@ async function refreshPath(): Promise<string[] | undefined> {
     if (!machine) return undefined;
     fresh.push(expandVars(machine, env), expandVars(parseRegPath(u.out) ?? '', env));
   }
+  if (process.platform === 'darwin') for (const d of macPathDirs(os.homedir())) if (existsSync(d)) fresh.push(d);
   const local = path.join(os.homedir(), '.local', 'bin');
   if (existsSync(local)) fresh.push(local);
   const sep = process.platform === 'win32' ? ';' : ':';

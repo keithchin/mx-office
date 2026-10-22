@@ -168,11 +168,11 @@ test('mxbuild: the Linux-binary error is recognised and explained with the fix',
   const found = linuxMxbuildIn(['Starting mxbuild --serve...', line]);
   assert.deepEqual(found, { mxbuild: 'C:\\Users\\me\\.mxcli\\mxbuild\\11.6.0\\modeler\\mxbuild' });
   assert.equal(linuxMxbuildIn(['Error: initial build failed']), undefined);
-  const msg = linuxMxbuildMessage(found!, { version: '11.12.4', expected: STUDIO, skipped: [] }, undefined, 'mxcli');
+  const msg = linuxMxbuildMessage(found!, { version: '11.12.4', expected: STUDIO, skipped: [] }, undefined, 'mxcli', 'win32');
   assert.match(msg, /Linux mxbuild \(C:\\Users\\me\\\.mxcli\\mxbuild\\11\.6\.0\\modeler\\mxbuild\), which can't run on Windows/);
   assert.match(msg, /install Studio Pro 11\.12\.4 on the office's computer \(C:\\Program Files\\Mendix\\11\.12\.4\\modeler\\mxbuild\.exe\)/);
   assert.match(msg, /set the mxbuild path \(MXBUILD_PATH in the project's \.claude\/toolkit\.env/);
-  const old = linuxMxbuildMessage(found!, { path: STUDIO, source: 'studio-pro', version: '11.12.4', skipped: [] }, false, 'C:\\old\\mxcli.exe');
+  const old = linuxMxbuildMessage(found!, { path: STUDIO, source: 'studio-pro', version: '11.12.4', skipped: [] }, false, 'C:\\old\\mxcli.exe', 'win32');
   assert.match(old, /This mxcli \(C:\\old\\mxcli\.exe\) is too old to be given the mxbuild path/);
 });
 

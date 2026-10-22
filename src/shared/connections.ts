@@ -99,8 +99,8 @@ export interface SweepView {
 }
 
 export interface ConnectionsView {
-  /** How saved values are kept: Windows DPAPI for this user, or a 0600 file elsewhere. */
-  storage: { scheme: 'dpapi' | 'file'; file: string; warning?: string };
+  /** How saved values are kept: Windows DPAPI for this user, the macOS login Keychain (the file names each item), or a 0600 file elsewhere (Linux). */
+  storage: { scheme: 'dpapi' | 'keychain' | 'file'; file: string; warning?: string };
   credentials: CredentialView[];
   /** Dot-files there are, with a value not in Connections yet: what Import from files would take. */
   importable: { id: CredentialId; file: string }[];

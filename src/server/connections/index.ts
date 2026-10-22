@@ -45,8 +45,10 @@ function credentialView(ctx: Ctx, id: CredentialId): CredentialView {
   if (entry?.unreadable) {
     view.warning = 'The saved value can’t be decrypted here (saved by another Windows user, or on another machine): replace it.';
     if (!r.value) view.status = 'invalid';
+  } else if (vault?.scheme === 'keychain' && entry?.scheme === 'file' && r.source === 'connections') {
+    view.warning = 'Kept in a file only the office’s user can read, because the macOS Keychain wouldn’t take it (locked, or no desktop session): the office moves it into the Keychain at its next start, or save it again.';
   } else if (vault?.scheme === 'file' && r.source === 'connections') {
-    view.warning = 'Kept base64-encoded in a file only the office’s user can read (no Windows DPAPI on this machine).';
+    view.warning = 'Kept base64-encoded in a file only the office’s user can read (no Windows DPAPI or macOS Keychain on this machine).';
   }
   const check = r.value && vault ? vault.check(id, r.value) : undefined;
   if (check) {
@@ -73,14 +75,14 @@ function importable(cfg: Ctx['cfg']): ConnectionsView['importable'] {
 
 export function connectionsView(ctx: Ctx): ConnectionsView {
   const vault = connectionsVault();
-  const scheme = vault?.scheme ?? (process.platform === 'win32' ? 'dpapi' : 'file');
+  const scheme = vault?.scheme ?? (process.platform === 'win32' ? 'dpapi' : process.platform === 'darwin' ? 'keychain' : 'file');
   const mendixOff = officeSettings().mendixOffFloors ?? [];
   const same = (a: string, b: string) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
   return {
     storage: {
       scheme,
       file: tildify(vault?.file ?? path.join(ctx.cfg.dataDir, 'credentials.json')),
-      warning: scheme === 'file' ? 'No Windows DPAPI on this machine: saved values are in a file only the office’s user can read (0600), not encrypted. Keep the office’s data folder private.' : undefined,
+      warning: scheme === 'file' ? 'No Windows DPAPI or macOS Keychain on this machine: saved values are in a file only the office’s user can read (0600), not encrypted. Keep the office’s data folder private.' : undefined,
     },
     credentials: CREDENTIAL_IDS.filter((id) => !CREDENTIAL_META[id].hidden).map((id) => credentialView(ctx, id)),
     importable: importable(ctx.cfg),
