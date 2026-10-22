@@ -4,10 +4,11 @@
 // ports are all the office's own.
 //
 // Beside the process, the office says what the app actually has (./readiness.ts): where main is against
-// the running build, and which of the plan's milestones are in it, verified by a journey run against
-// that very build. It's read again when something changes it, never on a timer of its own: the app
-// started, stopped or crashed, a fetch landed in the floor's folder (floor-sync/bus.ts), new test
-// evidence landed (testing/news.ts), or someone opened the tab and nothing was read yet. A milestone
+// the served build (the commit actually running and answering, never the one being built), and which of
+// the plan's milestones are in it, verified by a journey run against that very build. It's read again
+// when something changes it, never on a timer of its own: the app started, stopped or crashed, a fetch
+// landed in the floor's folder (floor-sync/bus.ts), new test evidence landed (testing/news.ts), or
+// someone opened the tab and nothing was read yet. A milestone
 // becoming ready, or a crash, is a toast and a Needs-you row the notification channels send once.
 
 import { forgetWith } from '../office/forget.js';
@@ -30,6 +31,7 @@ import { readReadiness } from './readiness.js';
 import { findMpr } from './checkout.js';
 import { LiveConsoles } from './console/index.js';
 import { emitLiveReady } from './ready-bus.js';
+import { forgetServed, readLastServed } from './served.js';
 import { instancePorts } from '../app-instance/index.js';
 
 type Deps = Pick<Ctx, 'cfg' | 'floors' | 'toFloor'> & Partial<Pick<Ctx, 'toastFloor'>>;
@@ -76,10 +78,15 @@ export class LiveApps {
     const app = o.apps.get(f.id);
     clearTimeout(o.extras.get(f.id)?.timer);
     o.extras.delete(f.id);
+    o.blanks.delete(f.id);
     void o.consoles.forget(f.id);
-    if (!app) return;
+    // What served last goes with the project (after its app stopped, which writes it one last time).
+    if (!app) return forgetServed(o.liveDir, f.id);
     o.apps.delete(f.id);
-    void app.shutdown().catch(() => undefined);
+    void app
+      .shutdown()
+      .catch(() => undefined)
+      .then(() => forgetServed(o.liveDir, f.id));
   });
   private timer: NodeJS.Timeout | undefined;
   private mxcli: string | null;
@@ -151,7 +158,7 @@ export class LiveApps {
 
   /** What a floor's app is doing, with what it has, without making one; asks for a first reading. */
   stateOf(floor: Floor): LiveAppState {
-    const base = this.apps.get(floor.id)?.state ?? { floor: floor.id, status: 'stopped' as const, log: [], available: !!this.mxcli, started: false };
+    const base = this.apps.get(floor.id)?.state ?? this.blank(floor.id);
     if (!this.extras.has(floor.id)) this.schedule(floor.id);
     return this.withExtra(base);
   }
@@ -166,10 +173,13 @@ export class LiveApps {
     const e = this.extras.get(s.floor);
     const view = this.consoles.portOf(s.floor);
     const out = view && s.appPort ? { ...s, viewPort: view } : s;
-    return e ? { ...out, ...(e.main ? { main: e.main } : {}), ...(e.readiness ? { readiness: e.readiness } : {}) } : out;
+    // A reading of a build that no longer serves (stopped for an update, until the next reading) is not said.
+    const r = e?.readiness && (!e.readiness.sha || e.readiness.sha === s.served?.sha) ? e.readiness : undefined;
+    return e ? { ...out, ...(e.main ? { main: e.main } : {}), ...(r ? { readiness: r } : {}) } : out;
   }
 
-  private last = new Map<string, Pick<LiveAppState, 'status' | 'sha'>>();
+  /** The status and served commit each floor was last told with. */
+  private last = new Map<string, { status: LiveAppState['status']; served?: string }>();
 
   /** Told to everyone on the floor; a start, a stop, a crash or a new commit reads what it has again. */
   private changed(state: LiveAppState) {
@@ -177,9 +187,10 @@ export class LiveApps {
     const floor = this.ctx.floors.get(state.floor);
     if (floor) this.ctx.toFloor(floor, { t: 'liveapp.state', state: this.withExtra(state) });
     const was = this.last.get(state.floor);
-    this.last.set(state.floor, { status: state.status, sha: state.sha });
-    if (!was || was.status !== state.status || was.sha !== state.sha) {
-      if (state.status === 'running' || state.status === 'failed' || state.status === 'stopped') this.schedule(state.floor);
+    this.last.set(state.floor, { status: state.status, served: state.served?.sha });
+    if (!was || was.status !== state.status || was.served !== state.served?.sha) {
+      // A new served commit (or none: stopped for an update's build) is read again at once, whatever the status.
+      if (state.status === 'running' || state.status === 'failed' || state.status === 'stopped' || was?.served !== state.served?.sha) this.schedule(state.floor);
       if (state.status === 'failed' && state.failure?.kind === 'crash' && was?.status === 'running' && floor) this.ctx.toastFloor?.(floor, `🌐 The live app stopped by itself at ${stamp(state.failure.at)}: Restart it on the Live app tab`, 'warn');
     }
     const anyUp = [...this.apps.values()].some((a) => a.status === 'running');
@@ -232,13 +243,15 @@ export class LiveApps {
     if (!floor || !e) return;
     const app = this.apps.get(floorId);
     const s = app?.state;
-    const running = s?.status === 'running';
+    // Judged against the served build only: what's being built or updated to has no evidence that counts yet.
+    const served = s?.served?.sha;
+    const running = !!served;
     const head = s?.branch ? (await floorRef(floor.dir, s.branch).catch(() => undefined))?.sha : undefined;
-    const key = `${head ?? '?'}|${s?.sha ?? ''}|${s?.status ?? 'stopped'}`;
+    const key = `${head ?? '?'}|${served ?? ''}|${running}`;
     if (!e.force && head && key === e.key) return;
     e.force = false;
     e.key = key;
-    const got = await readReadiness({ dataDir: this.ctx.cfg.dataDir, floorId, floorDir: floor.dir, ...(s?.sha ? { live: s.sha } : {}), running, pulls: floor.github?.pulls?.items ?? [] });
+    const got = await readReadiness({ dataDir: this.ctx.cfg.dataDir, floorId, floorDir: floor.dir, ...(served ? { live: served } : {}), running, pulls: floor.github?.pulls?.items ?? [] });
     if (this.extras.get(floorId) !== e) return;
     e.main = got.main;
     e.readiness = got.readiness;
@@ -249,7 +262,19 @@ export class LiveApps {
         emitLiveReady(this.ctx, floorId, n, got.readiness);
       }
     }
-    this.ctx.toFloor(floor, { t: 'liveapp.state', state: this.withExtra(s ?? { floor: floorId, status: 'stopped', log: [], available: !!this.mxcli, started: false }) });
+    this.ctx.toFloor(floor, { t: 'liveapp.state', state: this.withExtra(s ?? this.blank(floorId)) });
+  }
+
+  private blanks = new Map<string, LiveAppState>();
+  /** A floor whose app nobody touched since the office started: not started, with what served last before (read once). */
+  private blank(floorId: string): LiveAppState {
+    let b = this.blanks.get(floorId);
+    if (!b) {
+      const last = readLastServed(this.liveDir, floorId);
+      b = { floor: floorId, status: 'stopped', phase: 'stopped', log: [], available: !!this.mxcli, started: false, ...(last ? { lastServed: last } : {}) };
+      this.blanks.set(floorId, b);
+    }
+    return { ...b, log: [] };
   }
 
   private tell(floor: Floor, kind: 'ready' | 'unready', title: string, sha: string) {

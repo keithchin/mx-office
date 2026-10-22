@@ -18,11 +18,21 @@ Only admins can start or stop it. Everyone else watches.
 | **⟳ Restart** | Stops and starts it again. |
 | **■ Stop** | Stops it. |
 
-The status pill says what is actually there: *not started* (nobody started it since the office started), *starting…*, *building…*, *running*, *updating to 1a2b3c4…*, *stopping…*, *stopped*, *build failed at 10:27*, or *stopped (crashed at 10:27)* when it was running and stopped by itself. Beside it is the commit it runs against main, *main @dd960bd from 16 Oct 23:36 · 2 commits behind main @f790bed* (or *· up to date*), and when the running build came up. The same words are on the tab's chip, the Overview's **Live app** row and **View App**.
+The status pill says what is actually there: *not started* (nobody started it since the office started), *building…*, *starting…* (mxcli said the runtime is starting), *running*, *updating to 1a2b3c4…*, *running · update failed*, *stopping…*, *stopped*, *build failed at 10:27*, or *stopped (crashed at 10:27)* when it was running and stopped by itself. Beside it is the **served** commit (the one actually running and answering) against main, *main @dd960bd from 16 Oct 23:36 · 2 commits behind main @f790bed* (or *· up to date*), and when that build came up. The same words are on the tab's chip, the Overview's **Live app** row and **View App**.
+
+The office keeps two revisions apart: the **served** one, which counts only from the moment its build answers on its port and stops counting the moment that runtime stops, and the **target**, the commit it's getting, building or starting. While they differ, a line beside the pill says which is which:
+
+- *Running abc1234 · updating to def5678…*: the old build still answers while main is fetched.
+- *Updating to def5678… · nothing running (abc1234 stopped for the build)*: the old build was stopped so the new one can build (see [How it works](#how-it-works)).
+- *Update to def5678 failed · still running abc1234*: the update failed before the old build was stopped (main couldn't be fetched into the live checkout), so the old build keeps serving. Needs you has a row for it, and the office doesn't retry that commit by itself every minute: **⟳ Restart** does.
+- *Update to def5678 failed · nothing running*: the new build failed after the old one was stopped. *Build of def5678 failed · nothing running* is the same for a ▶ Start.
+- *Nothing running · last ran abc1234 until 10:27*: stopped, or the office restarted.
+
+Everything that means "what's running" uses the served commit only: readiness and its test evidence, Design gallery captures, the readiness news, the desktop app's **Show here** line (*Order list · running abc1234 · shown by the desktop app*) and Home's *Live app ready · running abc1234*.
 
 A crashed app shows when it stopped, on which commit, mxcli's last lines and **⟳ Restart**; a toast says so, and Needs you has a row that Teams and phone push send once per crash.
 
-Live apps don't start by themselves when the office starts, and an office restart doesn't bring back the one that ran: the commit the app runs is held in the office's memory only, so after a restart the tab says *not started* and nothing runs until an admin clicks **▶ Start**.
+Live apps don't start by themselves when the office starts, and an office restart doesn't bring back the one that ran: after a restart the tab says *not started*, no commit is called running, and nothing runs until an admin clicks **▶ Start**. What served last is kept in `<office data>/live/<project>.served.json` and shown only as *Nothing running · last ran abc1234 until 10:27*; if the office ended without shutting down, *until* is only when that build came up.
 
 ## Is it ready?
 
@@ -36,16 +46,16 @@ Then one line per milestone, tagged **Ready**, **Not verified**, **No journeys**
 
 - **Milestones** are the phases of the project's build plan (`architecture/build-plan.md`, the `### Phase N — …` headings over the numbered row tables), each with the **BUILD** rows it needs; the whole plan is the last milestone, named from the plan's title.
 - **Which rows are built** comes from what the team wrote as it worked, never the plan's State column (agents don't update it): commit subjects naming the row (*Row 16: sheet form page applied*, *Rows 19-21: …*) on a commit that changed build files or says applied / proven / done / PASS, merged PR titles (*rows 4-14*), and `### <date> — Row N` notes in `docs/BUILD-LOG.md`. A *Draft row 16* or *Journal: row 3* commit only mentions it.
-- For the commit the app runs, a milestone's rows are **in the running build**, **merged to main but not in it yet** (⟳ Restart picks them up), **in a PR** (only on an unmerged branch, with its PR from GitHub's list), or **not built**.
+- For the served commit (the build actually answering, never the one being built or updated to), a milestone's rows are **in the running build**, **merged to main but not in it yet** (⟳ Restart picks them up), **in a PR** (only on an unmerged branch, with its PR from GitHub's list), or **not built**.
 - **Ready** means every BUILD row is in the running build **and** the milestone has at least one journey, every one of which passed against that very build: a `tests/e2e/*.journey.json` whose `requirement` names one of its rows (`build-plan row 10`), with a test-run record in **App Insights › Testing** whose tested revision is the running commit. Journeys that name no row belong to the whole plan; broken controls (`…-broken`) don't count. Built but not yet passed is *built, not yet verified*, and built with no journey at all is *built, no journey evidence yet*: neither is ever ready.
-- Nothing is ready while the app isn't running.
+- Nothing is ready while no build serves, including while an update has stopped the old build to build the new one.
 
 ### What Ready does and doesn't prove
 
 The card mixes evidence from different places and revisions:
 
 - **The plan and the journeys are read at main's newest commit**, not at the commit the app runs. A journey added or retied on main after the running build counts for the running build too.
-- **Test results must match the running commit** (the first 7 or more characters of the revision). Results for any other commit don't count.
+- **Test results must match the served commit** (the first 7 or more characters of the revision). Results for any other commit, including the one it's updating to, don't count.
 - **A report file's tested revision is whatever the file says** (`appRevision`, `testedRevision`, or `project.gitCommit` in the toolkit's `docs/report.json`; see [Testing](testing.md#three-revisions-per-run)). The office doesn't check it against the run.
 - **Ready isn't acceptance.** [Acceptance](progress-and-acceptance.md#acceptance) is a separate act on main's head; it doesn't read this card, the running commit or the walkthroughs.
 
@@ -107,7 +117,7 @@ Under the app's status, the **Console** has two tabs. It streams only while the 
 - While the app runs, the office runs its **recording proxy** on a fourth port from the same range, on the office's own bind address (never the office's port). It passes every request and WebSocket on to the app's port on this machine and to nothing else, and records them for the Console. The browser sends the office's session cookie to every port of the same host (cookies ignore ports), so the proxy removes it from every request before passing it on, and drops any cookie the app tries to set under the office's name: the app can neither read nor replace your office sign-in. **Open live app** and the Overview's **View App** use the proxy's address; the app's own port still answers too, unrecorded.
 - The Console reads the runtime log only while someone has it open, from where it stopped (a first read takes the last 256 KB).
 - **Only while it's running**, the office has the project's folder fetch `main` every 60 seconds (and follows any other fetch that lands there). When `main` moves (a merge), it **updates and restarts** the app by itself. When the fetch fails, the tab and Needs you say *Live app can't check for updates: (git's reason) (running main @dd960bd from 16 Oct 23:36)*. A stopped, failed or crashed app follows nothing: it stays on its old commit (or none) until someone starts it.
-- An update **stops the old app before it builds the new one**, so the app is down for the whole build.
+- An update first fetches the new commit into the live checkout's git (the old app keeps serving meanwhile; if that fetch fails, it keeps serving and the tab says *Update to … failed · still running …*). Then it **stops the old app before it builds the new one**, because the build runs in the same folder against the same database, so the app is down for the whole build and the tab says *nothing running*. Keeping the old app up on a second checkout until the new one answers is a possible follow-up, not built.
 - When `main` moved, it clears the stale build folders under `deployment/` (keeping `deployment/data`) first. When a build stops before the app comes up, it clears them and tries **once** more; if that fails too, the app is *build failed* and the office doesn't try again by itself.
 - The app counts as **running** the first time its port answers an HTTP request with a status below 500. The office doesn't ask again after that: a crash is noticed when the mxcli process exits, but an app whose process stays up and stops answering still shows *running*.
 - The log is `<office data>/live/<project>.log`.

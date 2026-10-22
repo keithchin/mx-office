@@ -30,6 +30,12 @@ export interface StartLive {
   started?: boolean;
   appPort?: number;
   viewPort?: number;
+  /** The served revision (the commit actually running and answering), short; none while nothing serves. */
+  served?: string;
+  /** What it's building or updating to, short, while it isn't running it yet. */
+  target?: string;
+  /** An update failed and the served revision still runs. */
+  updateFailed?: boolean;
 }
 
 /** One project's facts only the server has: its stuck and failing work, and its live app. */
@@ -113,9 +119,10 @@ export function redFlag(p: Pick<StartProject, 'stuck' | 'failing'> | undefined):
 /** Its live app in a word, and whether it's ready to open: "unknown" when the office never looked. */
 export function liveWord(live: StartLive | undefined): { text: string; ready: boolean; tone: 'good' | 'bad' | 'mute' } {
   if (!live) return { text: 'Live app: unknown', ready: false, tone: 'mute' };
-  if (live.status === 'running' && (live.viewPort || live.appPort)) return { text: 'Live app ready', ready: true, tone: 'good' };
-  if (live.status === 'failed') return { text: 'Live app failed', ready: false, tone: 'bad' };
-  if (live.status === 'starting' || live.status === 'updating') return { text: 'Live app starting', ready: false, tone: 'mute' };
+  const on = live.served ? ` · running ${live.served}` : '';
+  if (live.status === 'running' && (live.viewPort || live.appPort)) return { text: `Live app ready${on}${live.updateFailed ? ' · update failed' : ''}`, ready: true, tone: live.updateFailed ? 'bad' : 'good' };
+  if (live.status === 'failed') return { text: `Live app failed${live.target ? ` (${live.target}) · nothing running` : ''}`, ready: false, tone: 'bad' };
+  if (live.status === 'starting' || live.status === 'updating') return { text: on ? `Live app${on} · updating${live.target ? ` to ${live.target}` : ''}…` : `Live app ${live.status === 'updating' ? `updating${live.target ? ` to ${live.target}` : ''}` : `starting${live.target ? ` ${live.target}` : ''}`}… · nothing running`, ready: false, tone: 'mute' };
   return { text: live.started ? 'Live app stopped' : 'Live app not started', ready: false, tone: 'mute' };
 }
 

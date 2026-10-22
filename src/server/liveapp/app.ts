@@ -1,19 +1,28 @@
 // One floor's live app: its checkout of main, the mxcli process running it, and what everyone on the
 // floor is told about it. Actions queue up one behind another, so a start, a stop and an update
 // never step on each other; what's allowed when is machine.ts's table.
+//
+// Two revisions, never one: `served` is the commit actually running and answering (set only once a build
+// answered on its port, gone the moment that runtime stops), `target` the commit it's getting, building or
+// starting. An update or restart fetches the new commit first, with the old runtime still serving, and stops
+// that runtime only once the fetch worked and the build has to start: a fetch that fails leaves it serving,
+// said as "update failed, still running …". The build itself still needs the old runtime gone (it builds in
+// the same folder, against the same database), so from then until the new build answers nothing serves, and
+// the state says so. What served last is kept on disk for after an office restart (./served.ts).
 
 import type { ChildProcess } from 'node:child_process';
 import { appendFileSync, mkdirSync, statSync, truncateSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import type { LiveAppFailure, LiveAppState, LiveAppStatus } from '../../shared/protocol.js';
-import { cleanBuild, defaultBranch, ensureCheckout, findMpr, lookAtFloor, pullBranch, type FloorLook } from './checkout.js';
+import type { LiveAppFailure, LiveAppState, LiveAppStatus, LiveServed } from '../../shared/protocol.js';
+import { checkoutFetched, cleanBuild, defaultBranch, ensureCheckout, fetchBranch, findMpr, lookAtFloor, type FloorLook } from './checkout.js';
 import { databaseName, type LiveAppConfig } from './config.js';
 import { isUp, nextStatus, type LiveAppEvent } from './machine.js';
 import { pickPorts } from './ports.js';
 import { pgBinDir, startTree, stopTree } from './process.js';
 import { floorToolkitEnv } from '../toolkit-env.js';
 import { linuxMxbuildIn, linuxMxbuildMessage, pickMxbuild, supportsMxbuildPath, type MxbuildPick } from './mxbuild.js';
+import { readLastServed, writeServed } from './served.js';
 
 /** Lines of the log kept for the page. */
 const TAIL = 30;
@@ -22,6 +31,9 @@ const FAIL_LINES = 8;
 /** The log file starts over past this size. */
 const LOG_MAX_BYTES = 5 * 1024 * 1024;
 const READY_POLL_MS = 2_000;
+/** mxcli says the build is done and the Mendix runtime is starting (as far as its log says: else it stays "building" until it answers). */
+const RUNTIME_STARTING = /\b(?:starting|started|start)\b[^\n]*\bruntime\b|\bruntime\b[^\n]*\b(?:starting|started)\b/i;
+const short = (sha?: string) => sha?.slice(0, 7) ?? '';
 const MXBUILD_FROM: Record<NonNullable<MxbuildPick['source']>, string> = {
   'toolkit.env': "MXBUILD_PATH in the project's .claude/toolkit.env",
   office: "the office's MXBUILD_PATH",
@@ -50,6 +62,8 @@ export interface LiveAppDeps {
 export class LiveApp {
   private s: LiveAppState;
   private child: ChildProcess | null = null;
+  /** The process whose build is `served` (the one that answered), until it stops. */
+  private serving: ChildProcess | null = null;
   ports: number[] = [];
   /** Bumped on every start and stop: callbacks from an older process see it moved, and keep quiet. */
   private gen = 0;
@@ -67,7 +81,9 @@ export class LiveApp {
   constructor(private d: LiveAppDeps) {
     this.checkout = path.join(d.liveDir, d.floorId);
     this.logFile = path.join(d.liveDir, `${d.floorId}.log`);
-    this.s = { floor: d.floorId, status: 'stopped', log: [], available: !!d.mxcli };
+    // After an office restart nothing runs until someone starts it: what served before is only `lastServed`.
+    const last = readLastServed(d.liveDir, d.floorId);
+    this.s = { floor: d.floorId, status: 'stopped', phase: 'stopped', log: [], available: !!d.mxcli, ...(last ? { lastServed: last } : {}) };
   }
 
   /** The live checkout (<live dir>/<floor>). */
@@ -98,10 +114,10 @@ export class LiveApp {
     const to = nextStatus(this.s.status, 'stop');
     if (!to) return this.queue;
     this.gen++;
-    this.set({ status: to, by, message: to === 'stopping' ? 'Stopping…' : undefined });
+    this.set({ status: to, phase: to === 'stopping' ? 'stopping' : 'stopped', by, message: to === 'stopping' ? 'Stopping…' : undefined, target: undefined });
     return this.enqueue(async () => {
       await this.kill();
-      if (this.s.status === 'stopping') this.set({ status: 'stopped', message: undefined, appPort: undefined });
+      if (this.s.status === 'stopping') this.set({ status: 'stopped', phase: 'stopped', message: undefined, appPort: undefined });
     });
   }
 
@@ -112,16 +128,21 @@ export class LiveApp {
    */
   async poll(): Promise<void> {
     const branch = this.s.branch;
-    if (this.s.status !== 'running' || !branch || !this.s.sha) return;
+    if (this.s.status !== 'running' || !branch || !this.s.served) return;
     const look: FloorLook = await lookAtFloor(this.d.floorDir, branch, 0).catch((err) => ({ ok: false, at: Date.now(), error: (err as Error).message }));
     this.noteRefresh(branch, look);
     await this.follow(look.head);
   }
 
-  /** Main is at `head` in the floor's folder (a fetch just landed): restart on it when it moved past what runs. */
+  /**
+   * Main is at `head` in the floor's folder (a fetch just landed): update to it when it moved past what
+   * serves. An update to `head` that already failed with the old build still serving isn't tried again
+   * every minute: ⟳ Restart does that.
+   */
   async follow(head: string | undefined): Promise<void> {
-    if (!head || head === this.s.sha || this.s.status !== 'running') return;
-    await this.act('update', 'auto-refresh', () => this.launch(true), `Updating to ${head.slice(0, 7)}…`);
+    if (!head || head === this.s.served?.sha || this.s.status !== 'running') return;
+    if (this.s.failure?.kind === 'update' && this.s.failure.sha === head) return;
+    await this.act('update', 'auto-refresh', () => this.launch(true), `Updating to ${short(head)}…`, head);
   }
 
   /** The office is closing: end the process, no waiting on anything else queued. */
@@ -137,23 +158,27 @@ export class LiveApp {
 
   // ---- Inside ------------------------------------------------------------------------------------
 
-  private act(event: LiveAppEvent, by: string, run: () => Promise<void>, message?: string): Promise<void> {
+  /** `run` stops what serves itself, once it got that far (launch); `head` is the commit it's for, when known already. */
+  private act(event: LiveAppEvent, by: string, run: () => Promise<void>, message?: string, head?: string): Promise<void> {
     const to = nextStatus(this.s.status, event);
     if (!to) return this.queue;
     if (!this.d.mxcli) {
-      this.set({ status: 'failed', by, message: `mxcli isn't installed on the office's machine (looked for "${this.d.cfg.mxcli}"; set AGENT_OFFICE_LIVE_MXCLI)` });
+      this.set({ status: 'failed', phase: 'failed', by, message: `mxcli isn't installed on the office's machine (looked for "${this.d.cfg.mxcli}"; set AGENT_OFFICE_LIVE_MXCLI)` });
       return this.queue;
     }
     const gen = ++this.gen;
     this.retried = false;
-    this.set({ status: to, by, message: message ?? (event === 'restart' ? 'Restarting…' : 'Getting main…'), since: Date.now(), log: [], started: true, failure: undefined });
+    const from = this.s.served?.sha;
+    this.set({ status: to, phase: 'building', by, message: message ?? (event === 'restart' ? 'Restarting…' : 'Getting main…'), since: Date.now(), log: [], started: true, failure: undefined, target: head ? { sha: head, ...(from ? { from } : {}) } : undefined });
     return this.enqueue(async () => {
-      await this.kill();
       if (gen !== this.gen) return;
       try {
         await run();
       } catch (err) {
-        if (gen === this.gen) this.fail((err as Error).message);
+        if (gen !== this.gen) return;
+        // It failed before the running build was stopped: that one still serves.
+        if (this.child && this.child === this.serving && this.s.served) this.failUpdate((err as Error).message);
+        else this.fail((err as Error).message);
       }
     });
   }
@@ -163,21 +188,35 @@ export class LiveApp {
     return this.queue;
   }
 
-  /** Gets main, picks ports and starts mxcli; resolves once it's started, not once it's up. */
+  /**
+   * Fetches main (what serves keeps serving meanwhile), stops what serves, puts the checkout on it, picks
+   * ports and starts mxcli; resolves once it's started, not once it's up.
+   */
   private async launch(update: boolean) {
     const gen = this.gen;
     mkdirSync(this.d.liveDir, { recursive: true });
     this.rotateLog();
     await ensureCheckout(this.checkout, this.d.floorDir);
     const branch = this.s.branch ?? (await defaultBranch(this.d.floorDir));
-    const co = await pullBranch(this.checkout, this.d.floorDir, branch);
+    const next = await fetchBranch(this.checkout, this.d.floorDir, branch);
+    if (gen !== this.gen) return;
+    const from = this.s.served?.sha;
+    this.set({ branch, target: { sha: next.sha, subject: next.subject, ...(next.at ? { commitAt: next.at } : {}), ...(from ? { from } : {}) } });
+    // The build runs in the same folder against the same database, so what serves stops here (blue/green on a second checkout is a follow-up).
+    if (this.child) {
+      this.note(`stopping ${from ? short(from) : 'the app'} to build ${short(next.sha)}`);
+      await this.kill();
+      if (gen !== this.gen) return;
+      this.flush();
+    }
+    const co = await checkoutFetched(this.checkout, branch);
     if (gen !== this.gen) return;
     const mpr = findMpr(this.checkout);
-    if (!mpr) throw new Error(`No Mendix project (.mpr) in ${branch} at ${co.sha.slice(0, 7)}`);
+    if (!mpr) throw new Error(`No Mendix project (.mpr) in ${branch} at ${short(co.sha)}`);
     this.projectDir = path.dirname(mpr);
     // A newer main over an older build trips mxbuild up (see BUILD_LEFTOVERS).
     if (co.moved && cleanBuild(path.dirname(mpr))) this.note('main moved: cleared the last build');
-    this.set({ branch, sha: co.sha, subject: co.subject, commitAt: co.at, builtAt: undefined, message: update ? `Updating to ${co.sha.slice(0, 7)}: building…` : `Building ${co.sha.slice(0, 7)}… (a cold start takes a minute or two)` });
+    this.set({ target: { sha: co.sha, subject: co.subject, ...(co.at ? { commitAt: co.at } : {}), ...(from ? { from } : {}) }, message: update ? `Updating to ${short(co.sha)}: building…` : `Building ${short(co.sha)}… (a cold start takes a minute or two)` });
     await this.spawnApp(mpr, gen);
   }
 
@@ -221,7 +260,13 @@ export class LiveApp {
     child.once('error', (err) => gen === this.gen && this.fail(`mxcli didn't start: ${err.message}`));
     child.once('exit', (code) => {
       if (this.child === child) this.child = null;
-      if (gen !== this.gen || !isUp(this.s.status)) return;
+      const wasServing = this.serving === child;
+      if (wasServing) this.serving = null;
+      if (gen !== this.gen || !isUp(this.s.status)) {
+        // The build that served ended outside the current action (stopped, or gone during an update's fetch): it serves no more.
+        if (wasServing && this.s.served) this.set(this.unserved());
+        return;
+      }
       // mxcli picked a Linux mxbuild on Windows: no retry fixes that, so say why and how to fix it.
       const linux = this.s.status !== 'running' ? linuxMxbuildIn(this.s.log) : undefined;
       if (linux) {
@@ -253,7 +298,7 @@ export class LiveApp {
     while (gen === this.gen && isUp(this.s.status) && this.s.status !== 'running') {
       if (await answers(port)) {
         if (gen !== this.gen || !isUp(this.s.status)) return;
-        this.set({ status: nextStatus(this.s.status, 'ready') ?? 'running', message: undefined, since: Date.now(), builtAt: Date.now() });
+        this.serve();
         return;
       }
       if (Date.now() > deadline) {
@@ -268,8 +313,31 @@ export class LiveApp {
   private async kill() {
     const child = this.child;
     this.child = null;
+    if (child && child === this.serving) {
+      this.serving = null;
+      Object.assign(this.s, this.unserved());
+    }
     if (child) await stopTree(child);
     this.ports = [];
+  }
+
+  /** The new build answered: it is what serves now (and on disk, for after an office restart). */
+  private serve() {
+    const t = this.s.target;
+    const now = Date.now();
+    this.serving = this.child;
+    const served: LiveServed | undefined = t ? { sha: t.sha, ...(t.subject ? { subject: t.subject } : {}), ...(t.commitAt ? { commitAt: t.commitAt } : {}), builtAt: now } : undefined;
+    if (served) writeServed(this.d.liveDir, this.d.floorId, served);
+    this.set({ status: nextStatus(this.s.status, 'ready') ?? 'running', phase: 'running', message: undefined, since: now, served, target: undefined, lastServed: undefined });
+  }
+
+  /** The patch for "what served serves no more": it becomes `lastServed`, until now. */
+  private unserved(): Partial<LiveAppState> {
+    const s = this.s.served;
+    if (!s) return {};
+    const lastServed = { ...s, until: Date.now() };
+    writeServed(this.d.liveDir, this.d.floorId, lastServed);
+    return { served: undefined, lastServed };
   }
 
   /** It stopped without being asked: a crash when it was running, else its build or start failed (or `kind`). */
@@ -278,8 +346,20 @@ export class LiveApp {
     if (!to) return;
     const k = kind ?? (this.s.status === 'running' ? 'crash' : 'build');
     this.note(`✖ ${why}`);
-    const failure: LiveAppFailure | undefined = to === 'failed' ? { kind: k, at: Date.now(), why, lines: this.s.log.slice(-FAIL_LINES), ...(this.s.sha ? { sha: this.s.sha } : {}) } : undefined;
-    this.set({ status: to, message: to === 'failed' ? (k === 'crash' ? `The app stopped by itself: ${why}` : why) : undefined, appPort: to === 'failed' ? undefined : this.s.appPort, failure });
+    // A crash names the build that served; a build, start or timeout the one it was on its way to.
+    const sha = k === 'crash' ? this.s.served?.sha : this.s.target?.sha;
+    const failure: LiveAppFailure | undefined = to === 'failed' ? { kind: k, at: Date.now(), why, lines: this.s.log.slice(-FAIL_LINES), ...(sha ? { sha } : {}) } : undefined;
+    // Whatever served is gone by now (or never answered: a timeout's process is stopped next).
+    this.serving = null;
+    this.set({ ...this.unserved(), status: to, phase: to === 'failed' ? 'failed' : 'stopped', message: to === 'failed' ? (k === 'crash' ? `The app stopped by itself: ${why}` : why) : undefined, appPort: to === 'failed' ? undefined : this.s.appPort, failure });
+  }
+
+  /** An update or restart failed before the running build was stopped: that build still serves, and it says so. */
+  private failUpdate(why: string) {
+    this.note(`✖ ${why}`);
+    const sha = this.s.target?.sha;
+    const failure: LiveAppFailure = { kind: 'update', at: Date.now(), why, lines: this.s.log.slice(-FAIL_LINES), ...(sha ? { sha } : {}) };
+    this.set({ status: nextStatus(this.s.status, 'ready') ?? 'running', phase: 'running', message: undefined, since: this.s.served?.builtAt ?? Date.now(), failure });
   }
 
   /** How the last look for a newer main went: said in the log and to the page when it changes, not every minute. */
@@ -302,6 +382,7 @@ export class LiveApp {
       // The log is a convenience.
     }
     if (gen !== this.gen) return;
+    if (this.s.phase === 'building' && this.child && RUNTIME_STARTING.test(line)) this.s.phase = 'starting';
     this.s.log.push(line.length > 400 ? `${line.slice(0, 400)}…` : line);
     if (this.s.log.length > TAIL) this.s.log.splice(0, this.s.log.length - TAIL);
     // A build prints hundreds of lines: the page hears about them a couple of times a second at most.

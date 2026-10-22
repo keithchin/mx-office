@@ -147,15 +147,15 @@ test('status words: not started, stopped, building, crashed at a time, and the c
   assert.equal(liveStatus(crashed, at + 86_400_000 * 2).word, 'stopped (crashed at 17 Oct 10:27)');
   assert.equal(liveStatus(state({ status: 'failed', failure: { kind: 'build', at, why: 'x', lines: [] } }), at).word, 'build failed at 10:27');
   const c = new Date(2026, 9, 16, 23, 36).getTime();
-  assert.equal(commitLine(state({ status: 'running', sha: 'dd960bd1234', commitAt: c, branch: 'main', main: { sha: 'f790bed9999', behind: 2 } }), at), 'main @dd960bd from 16 Oct 23:36 · 2 commits behind main @f790bed');
-  assert.equal(commitLine(state({ status: 'running', sha: 'f790bed9999', branch: 'main', main: { sha: 'f790bed9999', behind: 0 } })), 'main @f790bed · up to date');
+  assert.equal(commitLine(state({ status: 'running', served: { sha: 'dd960bd1234', commitAt: c, builtAt: c }, branch: 'main', main: { sha: 'f790bed9999', behind: 2 } }), at), 'main @dd960bd from 16 Oct 23:36 · 2 commits behind main @f790bed');
+  assert.equal(commitLine(state({ status: 'running', served: { sha: 'f790bed9999', builtAt: c }, branch: 'main', main: { sha: 'f790bed9999', behind: 0 } })), 'main @f790bed · up to date');
 });
 
 test('Needs you: a crash (counted, notified once), a refresh that cannot reach main and ready news (info, not counted)', () => {
   const at = Date.now();
   const live = state({
     status: 'failed',
-    sha: 'dd960bd1234',
+    lastServed: { sha: 'dd960bd1234', builtAt: at - 1000, until: at },
     branch: 'main',
     failure: { kind: 'crash', at, why: 'the app stopped', lines: ['Error: the app stopped: the Mendix runtime is no longer running', '✖ mxcli exited (code 1)'], sha: 'dd960bd1234' },
     refresh: { ok: false, at, error: 'git fetch: could not read Username' },
@@ -164,7 +164,7 @@ test('Needs you: a crash (counted, notified once), a refresh that cannot reach m
   const rows = liveNeeds(live, 'f1');
   assert.deepEqual(rows.map((r) => [r.key.replace(/@\d+$/, ''), r.level]), [['live-crash', 'warn'], ['live-refresh', 'info'], ['live-ready:phase-1', 'info']]);
   assert.match(rows[0].text, /stopped by itself \(crashed at \d\d:\d\d, main @dd960bd\): the app stopped\. Restart it on the Live app tab$/);
-  assert.match(rows[1].text, /^Live app can't check for updates: git fetch: could not read Username \(running main @dd960bd\)$/);
+  assert.match(rows[1].text, /^Live app can't check for updates: git fetch: could not read Username$/, 'nothing serves after a crash, so no running build is named');
   assert.match(rows[2].text, /^Live app ready: Frame, domain and skeleton/);
   assert.deepEqual(rows.map((r) => isRedNeed(r)), [true, false, true], 'the crash and the ready news reach Teams and push; the refresh row waits for the page');
   assert.equal(liveNeeds(live, 'other').length, 0);

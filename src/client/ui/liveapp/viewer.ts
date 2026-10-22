@@ -20,8 +20,11 @@ import './viewer.css';
 export interface LiveViewer {
   /** The toolbar and the frame. */
   readonly el: HTMLElement;
-  /** Shows the app at `base` (its root address); a new `key` (another start or commit) goes Home again. */
-  show(base: string, key: string): void;
+  /**
+   * Shows the app at `base` (its root address); a new `key` (another start or commit) goes Home again.
+   * `label` names the served revision ("running abc1234"), where the viewer says what it shows.
+   */
+  show(base: string, key: string, label?: string): void;
   /** Nothing to show: the frame is emptied, the toolbar hidden. */
   hide(): void;
 }

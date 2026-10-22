@@ -58,12 +58,29 @@ export interface Checkedout {
   moved: boolean;
 }
 
-/** Fetches `branch` from the floor's folder and puts the checkout on it, files the app makes (deployment/, .mxcli/) left alone. */
-export async function pullBranch(dir: string, floorDir: string, branch: string): Promise<Checkedout> {
+/** What `fetchBranch` got: the commit the checkout can go to, before anything in its working tree changed. */
+export interface Fetched {
+  sha: string;
+  subject: string;
+  at?: number;
+}
+
+/**
+ * Fetches `branch` from the floor's folder into the checkout's own refs, without touching its working tree
+ * (only .git changes), so a running app built from it keeps serving while this happens; says which commit
+ * that is. `checkoutFetched` then puts the working tree on it.
+ */
+export async function fetchBranch(dir: string, floorDir: string, branch: string): Promise<Fetched> {
   const at = await floorRef(floorDir, branch);
   if (!at) throw new Error(`The project's folder has no ${branch} branch`);
-  const before = await git(['rev-parse', '--verify', '--quiet', 'HEAD'], dir).catch(() => '');
   await git(['fetch', '--quiet', '--no-tags', floorDir, `+${at.ref}:refs/remotes/origin/${branch}`], dir, 300_000);
+  const [sha, subject, ct] = (await git(['log', '-1', '--format=%H%x00%s%x00%ct', `refs/remotes/origin/${branch}`], dir)).split('\0');
+  return { sha, subject, ...(Number(ct) ? { at: Number(ct) * 1000 } : {}) };
+}
+
+/** Puts the checkout's working tree on what `fetchBranch` fetched, files the app makes (deployment/, .mxcli/) left alone. */
+export async function checkoutFetched(dir: string, branch: string): Promise<Checkedout> {
+  const before = await git(['rev-parse', '--verify', '--quiet', 'HEAD'], dir).catch(() => '');
   await git(['checkout', '--quiet', '--force', '--detach', `refs/remotes/origin/${branch}`], dir);
   const [sha, subject, ct] = (await git(['log', '-1', '--format=%H%x00%s%x00%ct'], dir)).split('\0');
   return { sha, subject, ...(Number(ct) ? { at: Number(ct) * 1000 } : {}), moved: !!before && before !== sha };

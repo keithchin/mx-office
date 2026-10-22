@@ -77,12 +77,12 @@ test('refresh: an old live clone pointed at an unreachable GitHub follows main t
     await until('running', () => app.status === 'running');
     assert.equal(path.resolve(git(path.join(dir, 'live', 'demo'), 'remote', 'get-url', 'origin')), path.resolve(floorDir), 'pointed back at the floor folder');
     assert.equal(app.state.started, true);
-    assert.ok(app.state.commitAt && app.state.builtAt, 'when the commit was made and when the build came up');
+    assert.ok(app.state.served?.commitAt && app.state.served.builtAt, 'when the commit was made and when the build came up');
 
     // A PR merged on "GitHub": the poll has the floor folder fetch it (no credentials of the live clone's), then follows.
     const second = commit(origin, 'version.txt', 'two', 'Merge pull request #8');
     await app.poll();
-    await until('running on the new main', () => app.status === 'running' && app.state.sha === second);
+    await until('running on the new main', () => app.status === 'running' && app.state.served?.sha === second);
     assert.deepEqual(app.state.refresh && { ok: app.state.refresh.ok, error: app.state.refresh.error }, { ok: true, error: undefined });
     assert.equal(app.state.by, 'auto-refresh');
 
@@ -117,7 +117,8 @@ test('crash: an app that was running and stops by itself is "stopped (crashed at
     assert.equal(f.kind, 'crash');
     assert.match(f.why, /^the app stopped: the Mendix runtime is no longer running \(mxcli exited, code 1\)$/);
     assert.ok(f.lines.some((l) => /the Mendix runtime is no longer running/.test(l)), 'the last lines are kept with it');
-    assert.equal(f.sha, app.state.sha);
+    assert.equal(f.sha, app.state.lastServed?.sha, 'the crash names the build that served');
+    assert.equal(app.state.served, undefined, 'nothing serves after a crash');
     assert.match(app.state.message ?? '', /^The app stopped by itself: /);
     const rows = liveNeeds(app.state, 'demo');
     assert.equal(rows[0].key, `live-crash@${f.at}`);
@@ -151,7 +152,7 @@ test('readiness at git level: rows in the running commit, merged to main, only o
     assert.deepEqual([by['phase-3'].onMain, by['phase-3'].onBranch], [[19], [{ branch: 'office/pixel-b1e9', pr: 6, rows: [20] }]]);
     assert.match(by['phase-3'].line, /row 19 merged to main, not in the live app yet; row 20 in PR #6, open, not merged/);
     assert.deepEqual(by['phase-4'].missing, [23, 24], 'a draft is not evidence');
-    assert.equal(commitLine({ floor: 'demo', status: 'running', log: [], available: true, sha: live, branch: 'main', main: got.main }).replace(/ from .*? ·/, ' ·'), `main @${live.slice(0, 7)} · 2 commits behind main @${got.main!.sha.slice(0, 7)}`);
+    assert.equal(commitLine({ floor: 'demo', status: 'running', log: [], available: true, served: { sha: live, builtAt: 1 }, branch: 'main', main: got.main }).replace(/ from .*? ·/, ' ·'), `main @${live.slice(0, 7)} · 2 commits behind main @${got.main!.sha.slice(0, 7)}`);
     // A commit the folder doesn't have: said, not guessed.
     const unknown = await readReadiness({ dataDir: dir, floorId: 'demo', floorDir, live: 'f'.repeat(40), running: true, pulls: [] });
     assert.match(unknown.readiness?.note ?? '', /isn't in the project's folder/);
@@ -195,7 +196,7 @@ test('the office’s live apps: event-driven readings, ready only after the jour
     assert.ok(sent.at(-1)?.readiness, 'the floor was told');
 
     // Test evidence for exactly this build lands: read again (no polling), ready, told once.
-    const sha = app.state.sha!;
+    const sha = app.state.served!.sha;
     const draft = (key: string) => ({ source: 'report-file' as const, sourceKey: key, suite: 'journey skeleton', testedRevision: sha, definitionRevision: sha, evidence: { kind: 'office' as const, revision: sha, locator: 'office:test' }, results: [{ name: 'skeleton', status: 'passed' as const, links: [] }], links: [], actor: { kind: 'office' as const, name: 'test' }, importer: 'test' });
     await testingStore(dataDir, 'demo').ingest([draft('k1')]);
     await until('phase 1 ready', () => apps.peek('demo')?.readiness?.milestones.find((m) => m.id === 'phase-1')?.state === 'ready', 10_000);
@@ -213,7 +214,7 @@ test('the office’s live apps: event-driven readings, ready only after the jour
     await apps.settled('demo');
     assert.equal(apps.peek('demo')!.main?.behind, 1);
     originNews(floorDir, 'fetched');
-    await until('running on the fetched main', () => app.status === 'running' && app.state.sha === next, 60_000);
+    await until('running on the fetched main', () => app.status === 'running' && app.state.served?.sha === next, 60_000);
     await apps.settled('demo');
     await until('read again', () => apps.peek('demo')?.main?.behind === 0, 10_000);
     // A new build: its journeys haven't run against it, so phase 1 is unverified again, not "unready" news.

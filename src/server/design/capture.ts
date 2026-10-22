@@ -107,15 +107,22 @@ export class Captures {
     return readFile(path.join(this.dir(floor), rec.file)).catch(() => undefined);
   }
 
-  /** Captures light and dark at each viewport, one capture job at a time. */
-  capture(floor: string, url: string, meta: { appSha?: string; design: string; by: string }): Promise<CaptureRecord[]> {
+  /**
+   * Captures light and dark at each viewport, one capture job at a time. `still` says whether the app is
+   * still the revision `appSha` names: asked before and after each shot, and a shot it fails is never
+   * written (`interrupted`), so no record carries a revision that wasn't the one answering.
+   */
+  capture(floor: string, url: string, meta: { appSha?: string; design: string; by: string; still?: () => boolean }): Promise<{ made: CaptureRecord[]; interrupted?: true }> {
     const run = this.queue.then(async () => {
       const list = await this.list(floor);
       const made: CaptureRecord[] = [];
+      const still = meta.still ?? (() => true);
       await mkdir(this.dir(floor), { recursive: true });
       for (const vp of VIEWPORTS) {
         for (const scheme of ['light', 'dark'] as const) {
+          if (!still()) return { made, interrupted: true as const };
           const png = await this.shoot({ url, width: vp.width, height: vp.height, scheme });
+          if (!still()) return { made, interrupted: true as const };
           const id = `cap_${ulid(this.now())}`;
           const file = `${id}.png`;
           await writeFile(path.join(this.dir(floor), file), png);
@@ -125,7 +132,7 @@ export class Captures {
           made.push(rec);
         }
       }
-      return made;
+      return { made };
     });
     this.queue = run.catch(() => undefined);
     return run;

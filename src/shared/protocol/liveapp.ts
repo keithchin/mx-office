@@ -16,9 +16,27 @@ export interface LiveAppState {
   status: LiveAppStatus;
   /** A sentence for people: "Building the web client…", "Updating to 1a2b3c4…", why it failed. */
   message?: string;
-  /** The commit of main it runs (or is starting), and that commit's first line. */
-  sha?: string;
-  subject?: string;
+  /**
+   * Where it is in one go: getting main and building, the runtime starting, running, stopping, stopped,
+   * failed. Finer than `status`, which says only whether it's on its way up.
+   */
+  phase?: LivePhase;
+  /**
+   * The served revision: the commit actually running and answering. Set only once a build is up and
+   * answering on its port, and gone the moment that runtime is stopped or stops by itself. Everything that
+   * says or relies on "what's running" (readiness, captures, the labels) reads this, never `target`.
+   */
+  served?: LiveServed;
+  /**
+   * The target revision: the commit it's getting, building or starting, while that isn't what serves yet.
+   * Kept after a build of it failed (the failure names it); gone once it serves.
+   */
+  target?: LiveTarget;
+  /**
+   * The last revision that served, once nothing does (stopped, crashed, the office restarted): what ran
+   * last and until when. Never a claim that it runs now; kept across office restarts (<live>/<floor>.served.json).
+   */
+  lastServed?: LiveServed & { until: number };
   /** The branch it follows, main as the floor's GitHub repo names it. */
   branch?: string;
   /** Where the app answers on the office's machine; the page builds its URL from its own host name. */
@@ -38,10 +56,6 @@ export interface LiveAppState {
   available: boolean;
   /** Whether anyone started it since the office started (else it's "not started", not "stopped"). */
   started?: boolean;
-  /** When the commit it runs was made (ms). */
-  commitAt?: number;
-  /** When the build it runs came up (ms). */
-  builtAt?: number;
   /** Why it isn't running when it should be: a build that failed, or an app that stopped by itself. */
   failure?: LiveAppFailure;
   /** The last look for a newer main (fetching the project's folder, then the live checkout from it). */
@@ -52,14 +66,39 @@ export interface LiveAppState {
   readiness?: LiveReadiness;
 }
 
+/** Where a live app is in one go (LiveAppState.phase). */
+export type LivePhase = 'stopped' | 'building' | 'starting' | 'running' | 'stopping' | 'failed';
+
+/** A commit of the followed branch, as the live app knows it. */
+export interface LiveRevision {
+  sha: string;
+  /** Its first line. */
+  subject?: string;
+  /** When it was made (ms). */
+  commitAt?: number;
+}
+
+/** The revision that serves (or served), and when its build came up and answered. */
+export interface LiveServed extends LiveRevision {
+  builtAt: number;
+}
+
+/** The revision it's on its way to, and the served one it replaces (an update or a restart), if any. */
+export interface LiveTarget extends LiveRevision {
+  from?: string;
+}
+
 export interface LiveAppFailure {
-  /** build: it never came up; crash: it was running and stopped by itself; timeout: it never answered. */
-  kind: 'build' | 'crash' | 'timeout';
+  /**
+   * build: it never came up; crash: it was running and stopped by itself; timeout: it never answered;
+   * update: an update or restart failed before the running app was stopped, so that one still serves.
+   */
+  kind: 'build' | 'crash' | 'timeout' | 'update';
   at: number;
   why: string;
   /** The log's last lines when it happened. */
   lines: string[];
-  /** The commit it was running or building. */
+  /** The commit it was running (a crash) or on its way to (the target). */
   sha?: string;
 }
 
