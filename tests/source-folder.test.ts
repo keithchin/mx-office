@@ -4,7 +4,7 @@
 // (tests/support/fake-next-tree.ts), never a real one.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { Readable } from 'node:stream';
 import os from 'node:os';
 import path from 'node:path';
@@ -147,7 +147,8 @@ test('a temporary folder reached through a link into a system folder (macOS: /va
     const app = fakeNextTree(path.join(linked, 'legacy', 'shop-app'));
     const ok = await checkSourcePath(app, office);
     assert.ok('path' in ok, 'error' in ok ? ok.error : '');
-    assert.equal(ok.path, path.join(real, 'legacy', 'shop-app'), 'its real path');
+    // On macOS /var/tmp is itself a link (to /private/var/tmp), so compare with the fully resolved path.
+    assert.equal(ok.path, path.join(realpathSync.native(real), 'legacy', 'shop-app'), 'its real path');
     const inData = await checkSourcePath(path.join(office.dataDir, 'wizard-drafts'), office);
     assert.match('error' in inData ? inData.error : '', /inside the office’s data folder/, 'the office’s folders compare by their real paths');
     // Outside the temporary folder, /var is still a system folder.
