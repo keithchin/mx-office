@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+<meta name="theme-color" content="#7b2cbf">
+<style>
+  :root {
+    --brand: #7b2cbf;
+    --page-bg: #fafafa;
+    --card-bg: #ffffff;
+    --text: #222222;
+    --error: #c62828;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --brand: #b388eb;
+      --page-bg: #121212;
+      --card-bg: #1e1e1e;
+      --text: #eeeeee;
+    }
+  }
+  body { background: var(--page-bg); color: var(--text); font-family: Georgia, serif; }
+  button { background: var(--brand); border-radius: 12px; height: 44px; }
+</style>
+</head>
+<body>
+  <p style="color: #c62828; border: 1px solid #e0e0e0">Something went wrong</p>
+</body>
+</html>

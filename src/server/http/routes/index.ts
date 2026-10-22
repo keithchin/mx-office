@@ -66,6 +66,7 @@ import { portfolioRoutes } from './portfolios.js';
 import { profileRoutes } from './profiles.js';
 import { teamSourceRoutes } from './team-sources.js';
 import { designRoutes } from './design.js';
+import { designImportRoutes } from './design-import.js';
 import { adoptFromRoutes } from './adopt-from.js';
 import { walkthroughRoutes } from './walkthroughs.js';
 
@@ -229,6 +230,8 @@ export const routes: readonly Route[] = [
   profileRoutes.act,
   teamSourceRoutes.list,
   // Client design systems: versions, project bindings, the Design gallery and its ✋ card (design/).
+  designImportRoutes.view,
+  designImportRoutes.act,
   designRoutes.view,
   designRoutes.choices,
   designRoutes.needs,

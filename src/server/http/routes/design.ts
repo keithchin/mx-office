@@ -21,7 +21,7 @@ import { floorParam } from './files.js';
 const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
 const ONLY_ADMINS = 'Only an admin can change design systems';
 /** The package files a page may read (never a path from the request). */
-const PACKAGE_FILE = /^(summary\.md|tokens\.css|manifest\.json|patterns\/[a-z0-9.-]+\.md)$/;
+const PACKAGE_FILE = /^(summary\.md|tokens\.css|manifest\.json|import\.json|import\/excerpts\.txt|patterns\/[a-z0-9.-]+\.md)$/;
 
 async function jsonBody(req: http.IncomingMessage): Promise<Record<string, unknown> | undefined> {
   try {

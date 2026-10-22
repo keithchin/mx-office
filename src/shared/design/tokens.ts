@@ -98,8 +98,29 @@ export function cleanInput(raw: unknown): DesignInput {
   };
 }
 
-/** All 40 tokens, light and dark, from the form. */
-export function deriveTokens(i: DesignInput): { light: TokenMap; dark: Partial<TokenMap> } {
+/**
+ * Token values an import took from the client's own files (shared/design/import/): laid over what the form
+ * derives, never instead of the derivation. A brand colour taken as is keeps its button text readable.
+ */
+export interface TokenOverrides {
+  light?: Partial<TokenMap>;
+  dark?: Partial<TokenMap>;
+}
+
+function overlay<T extends Partial<TokenMap>>(base: T, over: Partial<TokenMap> | undefined): T {
+  if (!over) return base;
+  const out = { ...base, ...over };
+  if (over.brand && !over['brand-ink'] && isHex(over.brand)) out['brand-ink'] = inkOn(over.brand);
+  return out;
+}
+
+/** All 40 tokens, light and dark, from the form (and what an import took as it was, laid over them). */
+export function deriveTokens(i: DesignInput, over?: TokenOverrides): { light: TokenMap; dark: Partial<TokenMap> } {
+  const base = derive(i);
+  return over ? { light: overlay(base.light, over.light), dark: overlay(base.dark, over.dark) } : base;
+}
+
+function derive(i: DesignInput): { light: TokenMap; dark: Partial<TokenMap> } {
   const d = DENSITY[i.density];
   const [r, rl] = CORNERS[i.corners];
   const font = fontStack(i.font, i.fallback);
@@ -171,12 +192,12 @@ export function deriveTokens(i: DesignInput): { light: TokenMap; dark: Partial<T
 }
 
 /** The tokens.css `mxcli theme create --from` reads: every light token, then the dark block. */
-export function tokensCss(name: string, i: DesignInput): string {
-  const { light, dark } = deriveTokens(i);
+export function tokensCss(name: string, i: DesignInput, over?: TokenOverrides): string {
+  const { light, dark } = deriveTokens(i, over);
   const lines = [`/* ${name.replace(/\*\//g, '')}: Branded Atlas tokens (Mx Office). All ${MXT_TOKENS.length} --mxt-* tokens are set so none falls back to the scaffold theme. */`, ':root {'];
   for (const t of MXT_TOKENS) lines.push(`  --mxt-${t}: ${light[t]};`);
   lines.push('}', '@media (prefers-color-scheme: dark) {', '  :root {');
-  for (const t of DARK_TOKENS) if (dark[t]) lines.push(`    --mxt-${t}: ${dark[t]};`);
+  for (const t of MXT_TOKENS) if (dark[t] && (DARK_TOKENS.includes(t) || over?.dark?.[t])) lines.push(`    --mxt-${t}: ${dark[t]};`);
   lines.push('  }', '}', '');
   return lines.join('\n');
 }
@@ -188,8 +209,8 @@ export interface ContrastCheck {
 }
 
 /** The pairs that carry text (WCAG 2.2 AA: 4.5 for body text). */
-export function contrastChecks(i: DesignInput): ContrastCheck[] {
-  const { light, dark } = deriveTokens(i);
+export function contrastChecks(i: DesignInput, over?: TokenOverrides): ContrastCheck[] {
+  const { light, dark } = deriveTokens(i, over);
   const pairs: [string, string, string][] = [
     ['Text on background', light.ink, light.ground],
     ['Text on cards', light.ink, light.surface],
@@ -199,7 +220,8 @@ export function contrastChecks(i: DesignInput): ContrastCheck[] {
     ['Dark mode: button text on primary', dark['brand-ink']!, dark.brand!],
   ];
   return pairs.map(([label, a, b]) => {
-    const ratio = contrast(a, b);
+    // A colour an import took as it was can be rgb()/hsl(): the check needs #rrggbb (shared/design/import/colour.ts made them so).
+    const ratio = isHex(a) && isHex(b) ? contrast(a, b) : 0;
     return { label, ratio, ok: ratio >= 4.5 };
   });
 }

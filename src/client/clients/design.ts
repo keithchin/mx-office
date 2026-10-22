@@ -11,6 +11,8 @@ import type { ClientDesignView, VersionView } from '../../shared/design/views';
 import { h, toast } from '../ui/dom';
 import { designApi } from '../ui/design/api';
 import { brandForm, type BrandForm } from '../ui/design/form';
+import { importApi, type ImportedView } from '../ui/design/import/api';
+import { openImport } from '../ui/design/import/dialog';
 import '../ui/design/design.css';
 
 const cache = new Map<string, ClientDesignView>();
@@ -24,6 +26,7 @@ export function designPart(client: string, admin: boolean): HTMLElement {
   const root = h('section.pf-part.ds-part', { 'aria-label': 'Design system' });
   parts.set(key, root);
   let view = cache.get(client);
+  let imported: ImportedView | undefined;
   let mode: 'none' | DesignKind | undefined;
   let form: BrandForm | undefined;
   let dirty = false;
@@ -87,7 +90,7 @@ export function designPart(client: string, admin: boolean): HTMLElement {
     if (mode && mode !== 'none' && admin && (!view.versions.length || s?.draft)) {
       const start: DesignInput = { ...DEFAULT_INPUT, ...(s?.draft ?? view.latest ?? {}), name: s?.draft?.name || s?.name || `${view.label} Design System` };
       if (mode === 'branded') {
-        form = brandForm(start, () => ((dirty = true), (publish.disabled = true)));
+        form = brandForm(start, () => ((dirty = true), (publish.disabled = true)), false, imported?.on === 'draft' ? imported.tokens : undefined);
         parts.push(form.el);
       } else form = undefined;
       const save = h('button.btn.ph-outline', { type: 'button' }, 'Save draft') as HTMLButtonElement;
@@ -97,6 +100,7 @@ export function designPart(client: string, admin: boolean): HTMLElement {
       publish.onclick = () => (dirty ? toast('Save the draft first', 'warn') : act(publish, { action: 'publish', system: s!.id }, `Published v${next}`));
       parts.push(h('div.pf-acts.ds-bar', {}, save, publish, s?.draft ? h('small.pf-hint', {}, 'A draft is waiting to be published.') : null));
     }
+    if (admin) parts.push(importBar());
     if (s && view.versions.length && !s.draft && admin) parts.push(h('p.pf-hint', {}, 'To change it, press Edit as new draft on a version: the form opens with that version’s values, and publishing makes the next version.'));
     if (s && view.versions.length) {
       parts.push(
@@ -107,9 +111,32 @@ export function designPart(client: string, admin: boolean): HTMLElement {
     root.replaceChildren(...parts.filter((x): x is HTMLElement => !!x));
   }
 
+  /** 📁 Import from folder… (and ↻ Re-import from the folder the draft or newest version came from), with what it was imported from. */
+  function importBar(): HTMLElement {
+    const name = view!.system?.name ?? `${view!.label} Design System`;
+    const open = (btn: HTMLElement, path?: string) => openImport(btn, { client, name, ...(path ? { path } : {}), hasDraft: !!view!.system?.draft, saved: () => void load() });
+    const b = h('button.btn.ph-outline', { type: 'button', 'data-act': 'import', title: 'Read a folder of the client’s design files (CSS, SCSS, HTML, design tokens) and review a suggested Branded Atlas draft' }, '📁 Import from folder…') as HTMLButtonElement;
+    b.onclick = () => open(b);
+    const acts: HTMLElement[] = [b];
+    if (imported?.kind === 'folder' || imported?.kind === 'file') {
+      const r = h('button.btn.ph-outline', { type: 'button', 'data-act': 'reimport', title: 'Scan the same folder again: a new draft, with the tokens that changed' }, '↻ Re-import') as HTMLButtonElement;
+      r.onclick = () => open(r, imported!.source);
+      acts.push(r);
+    }
+    const note = imported
+      ? h(
+          'div.ds-imported',
+          {},
+          h('p', {}, `${imported.on === 'draft' ? 'The draft was' : `v${imported.on} was`} imported from `, h('code', {}, imported.source), ` on ${new Date(imported.scannedAt).toLocaleDateString()} (${imported.files} file${imported.files === 1 ? '' : 's'} read${imported.overrides ? `, ${imported.overrides} token value${imported.overrides === 1 ? '' : 's'} taken as they were` : ''})${imported.editedAfterImport ? ', then changed by hand' : ''}.`),
+          imported.notImported.fonts.length + imported.notImported.logos.length + imported.notImported.layouts.length ? h('p.pf-hint', {}, 'Fonts, logos and layouts it found are listed in its import.json, not imported (separate work).') : null,
+        )
+      : null;
+    return h('div.ds-import', {}, h('div.pf-acts.ds-bar', {}, ...acts), note);
+  }
+
   async function load() {
     try {
-      view = await designApi.client(client);
+      [view, imported] = await Promise.all([designApi.client(client), admin ? importApi.summary(client) : Promise.resolve(undefined)]);
       cache.set(client, view);
       mode = undefined;
     } catch (err) {

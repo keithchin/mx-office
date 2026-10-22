@@ -10,7 +10,9 @@ import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/p
 import path from 'node:path';
 import { loadJson } from '../durable/read.js';
 import { writeJsonCritical } from '../flow/critical-write.js';
-import { cleanInput, tokensCss } from '../../shared/design/tokens.js';
+import { cleanInput, tokensCss, type TokenOverrides } from '../../shared/design/tokens.js';
+import { pruneOverrides } from '../../shared/design/import/apply.js';
+import { importFiles, packageImport, readDraftImport, writeDraftImport, type DraftImport } from './import/record.js';
 import { PATTERNS, patternMarkdown } from '../../shared/design/patterns.js';
 import { BRANDED_GAPS, summaryMarkdown } from '../../shared/design/context.js';
 import { isDesignId, mintDesignId, PRESET, type Compat, type DesignDefault, type DesignInput, type DesignKind, type DesignOwner, type DesignSystem, type PackageManifest, type VersionEntry } from '../../shared/design/types.js';
@@ -38,12 +40,13 @@ function cleanIndex(raw: unknown): IndexFile {
   return { version: 1, systems, defaults };
 }
 
-/** The package's files (relative path → text), manifest.json aside: what the digest covers. */
-export function packageFiles(name: string, kind: DesignKind, input: DesignInput): Record<string, string> {
+/** The package's files (relative path → text), manifest.json aside: what the digest covers. An import adds its provenance and the token values it took as they were. */
+export function packageFiles(name: string, kind: DesignKind, input: DesignInput, imported?: DraftImport): Record<string, string> {
   const files: Record<string, string> = { 'input.json': `${JSON.stringify({ kind, ...input }, null, 2)}\n` };
-  if (kind === 'branded') files['tokens.css'] = tokensCss(name, input);
+  const over: TokenOverrides | undefined = imported?.record.overrides;
+  if (kind === 'branded') files['tokens.css'] = tokensCss(name, input, over);
   for (const p of PATTERNS) files[`patterns/${p.id}.md`] = patternMarkdown(p);
-  return files;
+  return { ...files, ...(kind === 'branded' ? importFiles(imported) : {}) };
 }
 
 export function digestOf(files: Record<string, string>): string {
@@ -124,7 +127,14 @@ export class DesignStore {
       }
       s.kind = kind;
       if (clean.name) s.name = clean.name;
+      const before = s.draft;
       s.draft = { ...clean, name: clean.name || s.name };
+      // A draft an import made: a hand edit wins over the values the import took as they were.
+      const imp = before && (await readDraftImport(this.root, s.id));
+      if (imp && kind === 'branded') {
+        const changed = JSON.stringify({ ...before, name: '' }) !== JSON.stringify({ ...s.draft, name: '' });
+        if (changed) await writeDraftImport(this.root, s.id, { ...imp, record: { ...imp.record, overrides: pruneOverrides(before, s.draft, imp.record.overrides), editedAfterImport: true } });
+      } else if (imp) await writeDraftImport(this.root, s.id, undefined);
       await this.save();
       return s;
     });
@@ -140,7 +150,8 @@ export class DesignStore {
       if (!s) return 'No such design system';
       if (!s.draft) return 'Nothing to publish: save a draft first';
       const n = Math.max(0, ...s.versions.map((v) => v.n)) + 1;
-      const files = packageFiles(s.name, s.kind, s.draft);
+      const imported = await readDraftImport(this.root, s.id);
+      const files = packageFiles(s.name, s.kind, s.draft, imported);
       const digest = digestOf(files);
       const themeName = s.kind === 'branded' ? themeNameOf(s.name, digest) : undefined;
       const manifest: PackageManifest = {
@@ -173,8 +184,33 @@ export class DesignStore {
       s.versions.push(entry);
       delete s.draft;
       await this.save();
+      await writeDraftImport(this.root, s.id, undefined);
       return { system: s, manifest };
     });
+  }
+
+  /** Saves a draft made by an import, with its provenance beside it (./import/record.ts). Branded Atlas. */
+  saveImportedDraft(owner: DesignOwner, input: DesignInput, imported: DraftImport, by: string): Promise<DesignSystem | string> {
+    return this.serial(async () => {
+      if (!owner.client && !owner.floor) return 'Say which client or project owns it';
+      const clean = cleanInput(input);
+      let s = this.ofOwner(owner);
+      if (!s) {
+        s = { id: mintDesignId(this.now()), name: clean.name || 'Design system', kind: 'branded', owner, versions: [], createdAt: this.now(), createdBy: str(by, 80) };
+        this.data.systems.push(s);
+      }
+      s.kind = 'branded';
+      if (clean.name) s.name = clean.name;
+      s.draft = { ...clean, name: clean.name || s.name };
+      await writeDraftImport(this.root, s.id, imported);
+      await this.save();
+      return s;
+    });
+  }
+
+  /** The waiting draft's import, if an import made it. */
+  draftImport(id: string): Promise<DraftImport | undefined> {
+    return readDraftImport(this.root, id);
   }
 
   /** Approves a published version; the one approved before it is superseded. */
@@ -206,6 +242,9 @@ export class DesignStore {
       const raw = await readFile(path.join(this.packageDir(id, n), 'input.json'), 'utf8').catch(() => '');
       if (!raw) return 'That version’s files are missing';
       s.draft = cleanInput(JSON.parse(raw));
+      // An imported version's provenance and taken values carry into the new draft (said so: carriedFrom).
+      const imp = await packageImport(this.packageDir(id, n));
+      await writeDraftImport(this.root, id, imp ? { ...imp, record: { ...imp.record, carriedFrom: n } } : undefined);
       await this.save();
       return s;
     });

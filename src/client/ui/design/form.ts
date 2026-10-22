@@ -3,7 +3,7 @@
 // these. Beside it, as you type: a small preview drawn with the derived tokens, and the WCAG contrast check of
 // the pairs that carry text. Nothing here calls the office.
 
-import { contrastChecks, deriveTokens, type TokenMap } from '../../../shared/design/tokens';
+import { contrastChecks, deriveTokens, type ContrastCheck, type TokenMap, type TokenOverrides } from '../../../shared/design/tokens';
 import type { DesignInput } from '../../../shared/design/types';
 import { BRANDED_SCOPE } from '../../../shared/design/types';
 import { h } from '../dom';
@@ -20,7 +20,7 @@ const COLOURS: [keyof DesignInput, string][] = [
 ];
 
 /** A mini page in the derived tokens: a header, a card with a label, an input and the buttons. */
-function preview(t: TokenMap): HTMLElement {
+export function preview(t: TokenMap): HTMLElement {
   const v = (k: keyof TokenMap) => t[k];
   return h(
     'div.ds-preview',
@@ -37,20 +37,26 @@ function preview(t: TokenMap): HTMLElement {
   );
 }
 
+/** The contrast check as a list (a ratio of 0: not a plain colour, so it can't be checked). */
+export function checksList(checks: ContrastCheck[]): HTMLElement {
+  return h('ul.ds-checks', { 'aria-label': 'Contrast check (WCAG 2.2 AA, 4.5:1 for text)' }, ...checks.map((c) => h('li', { 'data-ok': String(c.ok) }, c.ratio ? `${c.ok ? '✓' : '⚠️'} ${c.label}: ${c.ratio}:1` : `– ${c.label}: can’t check (not a plain colour)`)));
+}
+
 export interface BrandForm {
   el: HTMLElement;
   value(): DesignInput;
 }
 
-export function brandForm(start: DesignInput, onChange: () => void, readOnly = false): BrandForm {
+/** `over`: token values an import took as they were (the preview and the check show them; a hand edit drops the ones it changes when saved). */
+export function brandForm(start: DesignInput, onChange: () => void, readOnly = false, over?: TokenOverrides): BrandForm {
   const d: DesignInput = { ...start };
   const side = h('div.ds-side');
   const draw = () => {
-    const checks = contrastChecks(d);
+    const checks = contrastChecks(d, over);
     side.replaceChildren(
-      preview(deriveTokens(d).light),
+      preview(deriveTokens(d, over).light),
       h('p.pf-hint', {}, 'Preview: an approximation drawn from the tokens, not the app. Runtime screenshots are in each project’s Design gallery.'),
-      h('ul.ds-checks', { 'aria-label': 'Contrast check (WCAG 2.2 AA, 4.5:1 for text)' }, ...checks.map((c) => h('li', { 'data-ok': String(c.ok) }, `${c.ok ? '✓' : '⚠️'} ${c.label}: ${c.ratio}:1`))),
+      checksList(checks),
     );
   };
   const field = (label: string, input: HTMLElement) => h('label.ds-field', {}, h('span', {}, label), input);

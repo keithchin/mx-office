@@ -1,0 +1,10 @@
+body { background-color: #ffffff; color: #333333; font-family: Verdana, sans-serif; }
+.header { background: #e4572e; color: #fff; }
+.button { background: #e4572e; color: #ffffff; border-radius: 3px; height: 30px; }
+.button:hover { background: #c9471f; }
+.ok { color: #29a745; }
+.alert { background: #fdecea; color: #d32f2f; border: 1px solid #d32f2f; }
+.note { color: #f0ad4e; }
+.panel { background: #f7f7f7; border: 1px solid #dddddd; }
+.panel .title { color: #333333; border-bottom: 1px solid #dddddd; }
+.footer { background: #e4572e; }

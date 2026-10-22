@@ -1,0 +1,17 @@
+/* A plain CSS-variables site: brand colours, status colours, page and cards. */
+:root {
+  --color-primary: #0b5fff;
+  --color-primary-hover: #0047d6;
+  --color-success: #1e8e3e;
+  --color-warning: #e8a317;
+  --color-danger: #d93025;
+  --color-info: #1a73e8;
+  --color-bg: #f4f6f9;
+  --color-surface: #ffffff;
+  --color-text: #1b2430;
+  --color-border: #d5dbe3;
+  --font-family-base: "Inter", system-ui, sans-serif;
+  --radius: 6px;
+  --control-height: 36px;
+  --link: var(--color-primary);
+}
