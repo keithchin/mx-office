@@ -7,6 +7,10 @@
 //   icon.ico      Windows: exe, taskbar and window (16, 24, 32, 48, 64, 128 as 32-bit bitmaps, 256 as PNG)
 //   icon.png      512 px, for notifications, macOS/Linux and a future installer
 //   tray.png      16 px tray icon, and tray@2x.png (32 px) that Electron picks on a 200% display
+//   icon.icns     macOS: the app bundle's icon (16 to 1024 px, each a PNG inside, as macOS 10.7+ reads them)
+//   trayTemplate.png, trayTemplate@2x.png   macOS menu bar (18 and 36 px): a template image, black with
+//                 transparency, which macOS tints for a light or dark menu bar; the tile is solid and the
+//                 letters are cut out of it
 // Each size is drawn from the SVG at that size (not scaled down from a big one), so small ones stay sharp.
 import { chromium } from 'playwright-core';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -33,7 +37,8 @@ async function render(size) {
       c.width = c.height = size;
       const g = c.getContext('2d');
       g.drawImage(img, 0, 0, size, size);
-      return { rgba: Array.from(g.getImageData(0, 0, size, size).data), png: c.toDataURL('image/png').split(',')[1] };
+      // The pixels only for the sizes that need them (the .ico's bitmaps, the templates): 1024 px of them is 4 M numbers to send.
+      return { rgba: size <= 256 ? Array.from(g.getImageData(0, 0, size, size).data) : [], png: c.toDataURL('image/png').split(',')[1] };
     },
     { svg, size },
   );
@@ -82,11 +87,55 @@ function ico(images) {
   return Buffer.concat([dir, ...datas]);
 }
 
+/** An Apple icon family: 'icns', its length, then a type, length and PNG per size (each PNG at its true pixel size). */
+function icns(entries) {
+  const chunks = entries.map(([type, png]) => {
+    const head = Buffer.alloc(8);
+    head.write(type, 0, 'ascii');
+    head.writeUInt32BE(png.length + 8, 4);
+    return Buffer.concat([head, png]);
+  });
+  const head = Buffer.alloc(8);
+  head.write('icns', 0, 'ascii');
+  head.writeUInt32BE(8 + chunks.reduce((n, c) => n + c.length, 0), 4);
+  return Buffer.concat([head, ...chunks]);
+}
+
+/** The mark as a template image: opaque black where the tile is dark, clear where it's light (the letters) or empty. */
+async function template(size) {
+  const { rgba } = await render(size);
+  const out = await page.evaluate(
+    ({ px, size }) => {
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const g = c.getContext('2d');
+      const img = g.createImageData(size, size);
+      for (let i = 0; i < px.length; i += 4) {
+        const lum = (0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]) / 255;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = 0;
+        img.data[i + 3] = Math.round(px[i + 3] * Math.max(0, Math.min(1, (0.85 - lum) / 0.5)));
+      }
+      g.putImageData(img, 0, 0);
+      return c.toDataURL('image/png').split(',')[1];
+    },
+    { px: Array.from(rgba), size },
+  );
+  return Buffer.from(out, 'base64');
+}
+
 const images = [];
 for (const s of ICO_SIZES) images.push(await render(s));
 writeFileSync(path.join(assets, 'icon.ico'), ico(images));
 writeFileSync(path.join(assets, 'icon.png'), (await render(512)).png);
 writeFileSync(path.join(assets, 'tray.png'), images.find((im) => im.size === 16).png);
 writeFileSync(path.join(assets, 'tray@2x.png'), images.find((im) => im.size === 32).png);
+const png = async (s) => (await render(s)).png;
+// The types macOS reads: icp4/icp5/icp6 (16, 32, 64), ic07/ic08/ic09/ic10 (128, 256, 512, 1024), ic11-ic14 (the @2x of 16-256).
+writeFileSync(
+  path.join(assets, 'icon.icns'),
+  icns([['icp4', await png(16)], ['icp5', await png(32)], ['icp6', await png(64)], ['ic07', await png(128)], ['ic08', await png(256)], ['ic09', await png(512)], ['ic10', await png(1024)], ['ic11', await png(32)], ['ic12', await png(64)], ['ic13', await png(256)], ['ic14', await png(512)]]),
+);
+writeFileSync(path.join(assets, 'trayTemplate.png'), await template(18));
+writeFileSync(path.join(assets, 'trayTemplate@2x.png'), await template(36));
 await browser.close();
-console.log(`Wrote icon.ico (${ICO_SIZES.join(', ')}), icon.png (512), tray.png (16), tray@2x.png (32) in ${assets}`);
+console.log(`Wrote icon.ico (${ICO_SIZES.join(', ')}), icon.png (512), tray.png (16), tray@2x.png (32), icon.icns (16-1024), trayTemplate.png (18) and @2x (36) in ${assets}`);

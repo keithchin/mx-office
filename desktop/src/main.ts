@@ -23,6 +23,7 @@ import { liveWindowRequest } from './core/liveapp.js';
 import { destroyLiveWindows, liveWindows, openLiveWindow } from './liveapp.js';
 import { Teardown, secondInstanceAction } from './core/teardown.js';
 import { attachEmbed } from './embed.js';
+import { appPath } from './core/mac.js';
 import type { EmbedController } from './core/embed.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -39,6 +40,9 @@ const opts = parseOptions(process.argv.slice(app.isPackaged ? 1 : 2), process.en
 if (opts.userData) app.setPath('userData', opts.userData);
 app.setName('Mx Office');
 if (process.platform === 'win32') app.setAppUserModelId('com.mxoffice.desktop');
+// macOS (the bundle id com.mxoffice.desktop is set by the packager): opened from Finder the app has launchd's short PATH, so the
+// login shell's (Homebrew, nvm, ~/.local/bin) is taken before Node is looked for; the office it starts inherits it (core/mac.ts).
+if (process.platform === 'darwin') process.env.PATH = appPath(process.env, process.platform, os.homedir());
 
 const URL_BASE = officeUrl(opts.port);
 const PROBE = probeUrl(opts.port);
@@ -69,14 +73,20 @@ let trayTip = '';
 
 // The office's Mx mark in desktop/assets/ (scripts/make-icons.mjs): icon.ico holds every Windows size for the
 // window and taskbar, icon.png (512 px) is for notifications and other platforms, tray.png with tray@2x.png
-// (picked on a 200% display) is drawn at the tray's own size rather than scaled down.
+// (picked on a 200% display) is drawn at the tray's own size rather than scaled down. On macOS the menu bar gets
+// trayTemplate.png (+ @2x): black with transparency, which macOS tints for a light or dark menu bar.
 const ASSETS = path.join(APP_ROOT, 'assets');
 function icon(size?: number): NativeImage {
   const img = nativeImage.createFromPath(path.join(ASSETS, 'icon.png'));
   return size ? img.resize({ width: size, height: size }) : img;
 }
 const windowIcon = () => (process.platform === 'win32' ? nativeImage.createFromPath(path.join(ASSETS, 'icon.ico')) : icon());
-const trayIcon = () => nativeImage.createFromPath(path.join(ASSETS, 'tray.png'));
+function trayIcon(): NativeImage {
+  if (process.platform !== 'darwin') return nativeImage.createFromPath(path.join(ASSETS, 'tray.png'));
+  const img = nativeImage.createFromPath(path.join(ASSETS, 'trayTemplate.png'));
+  img.setTemplateImage(true);
+  return img;
+}
 
 const sameOffice = (u: string) => {
   try {
@@ -483,6 +493,11 @@ function appMenu() {
     { label: 'View', submenu: [{ role: 'reload' }, { role: 'forceReload' }, { role: 'toggleDevTools' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
     { label: 'Help', submenu: [{ label: 'About Mx Office', click: () => void about() }, { label: 'Desktop app docs', click: () => void shell.openExternal(DESKTOP_DOCS) }] },
   ];
+  // macOS: the first menu is the app's own (About, Hide, Quit, as every Mac app has), and a Window menu.
+  if (process.platform === 'darwin') {
+    template.unshift({ role: 'appMenu' });
+    template.splice(template.length - 1, 0, { role: 'windowMenu' });
+  }
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
@@ -684,6 +699,8 @@ if (!app.requestSingleInstanceLock()) {
     void requestQuit();
   });
   app.on('will-quit', () => teardown.done());
+  // macOS: clicking the Dock icon brings the window back (closing it only hid it; the office keeps running).
+  app.on('activate', () => showWindow());
   // Once quitting, a page's beforeunload (a live app's, the claim page's) never cancels the quit.
   app.on('web-contents-created', (_e, wc) => {
     wc.on('will-prevent-unload', (ev) => {
