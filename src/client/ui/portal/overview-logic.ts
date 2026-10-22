@@ -68,7 +68,8 @@ export interface DetailFacts {
   /** The newest commit on the default branch (the Git tab's graph), or the delivery branch's head; when and what, when known. */
   lastCommit?: { sha: string; branch?: string; when?: string; subject?: string };
   budget?: { spent: number; total?: number; text: string };
-  live?: { status: string; url?: string; word?: string; ready?: boolean };
+  /** The live app, and the project's business status (shared/business-status.ts) when it's known. */
+  live?: { status: string; url?: string; word?: string; business?: { label: string; line: string } };
   /** Created with "Keep this project off GitHub": no GitHub link, and it says so. */
   localOnly?: boolean;
 }
@@ -107,8 +108,12 @@ export function detailRows(f: DetailFacts): DetailRow[] {
   }
   if (f.budget) rows.push({ label: 'Budget', value: f.budget.text, tab: 'budget' });
   if (f.live) {
-    const ready = f.live.ready === undefined ? undefined : f.live.ready ? 'ready' : 'not ready yet';
-    rows.push(f.live.url && f.live.status === 'running' ? { label: 'Live app', value: f.live.url.replace(/^https?:\/\//, '').replace(/\/$/, ''), href: f.live.url, external: true, ...(ready ? { sub: ready } : {}) } : { label: 'Live app', value: f.live.word ?? f.live.status, tab: 'live' });
+    rows.push(f.live.url && f.live.status === 'running' ? { label: 'Live app', value: f.live.url.replace(/^https?:\/\//, '').replace(/\/$/, ''), href: f.live.url, external: true } : { label: 'Live app', value: f.live.word ?? f.live.status, tab: 'live' });
+  }
+  // The work's status (shared/business-status.ts): a row of its own, the same line as Home, the progress bar and the phone.
+  if (f.live?.business) {
+    const [head, ...rest] = f.live.business.line.split(' · ');
+    rows.push({ label: 'Status', value: head, tab: 'live', ...(rest.length ? { sub: rest.join(' · ') } : {}) });
   }
   return rows;
 }

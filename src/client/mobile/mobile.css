@@ -93,6 +93,9 @@ html[data-theme] body.lite.lite .m-log .tp-act, html[data-theme] body.lite.lite 
 .m-chip-bad { background: var(--bad-soft); color: var(--bad-ink); }
 .m-chip-warn { background: var(--warn-soft); color: var(--warn-ink); }
 .m-stage { margin: 6px 0 0; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.m-business { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); }
+.m-business-good { color: var(--good-ink); }
+.m-business-bad { color: var(--bad-ink); }
 .m-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .m-acts .btn { min-height: 40px; }
 .m-paused { margin: 6px 0 0; padding: 6px 10px; border-radius: 10px; background: var(--warn-soft); color: var(--warn-ink); font-size: 13px; font-weight: 800; }

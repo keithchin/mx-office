@@ -110,7 +110,8 @@ test('acceptance: "v1 accepted · date", changed since, and a later cycle labell
   assert.equal(progressLabel({ phases: p2, acceptance: next }), 'v1.1 · Stage 0 · Triage · waiting on someone');
   assert.ok(p2.at(-1)!.measures.includes('v1 accepted 2026-10-03'), 'the earlier acceptance stays in view');
   const ready = derivePhases(input({ entry: 'greenfield', verdicts: ['P', '0', '5', '6'].map((id) => v(id, 'PASS')) }));
-  assert.equal(progressLabel({ phases: ready, acceptance: open }), 'v1 ready for acceptance');
+  assert.equal(progressLabel({ phases: ready, acceptance: open }), 'v1 · every stage passed, not accepted yet', 'gates alone never say ready');
+  assert.equal(progressLabel({ phases: ready, acceptance: open, business: { state: 'verification-incomplete', label: 'Verification incomplete' } }), 'v1 · Verification incomplete', 'the business status once every stage passed');
 });
 
 test('a click opens the setup panel while it shows, else the deliverables; Handover and Accepted the record', () => {

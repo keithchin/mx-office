@@ -45,6 +45,7 @@ import { phoneAccessRoutes } from './phone-access.js';
 import { budgetRoutes } from './budget.js';
 import { evidenceRoutes } from './evidence.js';
 import { progressRoutes } from './progress.js';
+import { businessStatusRoutes } from './business-status.js';
 import { perfRoutes } from './perf.js';
 import { testlabRoutes } from './testlab.js';
 import { projectRoutes } from './projects.js';
@@ -192,6 +193,7 @@ export const routes: readonly Route[] = [
   progressRoutes.acceptance,
   progressRoutes.draft,
   progressRoutes.act,
+  businessStatusRoutes.view,
   testingRoutes.view,
   testingRoutes.change,
   testingRoutes.run,

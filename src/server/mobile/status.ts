@@ -14,6 +14,7 @@ import { fyiNow } from '../../shared/roster/escalation.js';
 import type { Ctx } from '../office/context.js';
 import { floorNeeds } from '../notify-teams/gather.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
+import { businessSummaryOf } from '../business-status/index.js';
 
 /** The whole Status tab: every project, and a safe restart while one is going. */
 export async function statusView(ctx: Ctx): Promise<StatusView> {
@@ -40,6 +41,7 @@ export async function projectStatuses(ctx: Ctx): Promise<ProjectStatus[]> {
     } catch {
       // no stage line, then
     }
+    const business = await businessSummaryOf(ctx, floor);
     const run = projectRunsOf(ctx).view(floor.id, false);
     // A run that finished more than ten minutes ago is old news.
     const fresh = run.run && (!run.run.finishedAt || Date.now() - run.run.finishedAt < 10 * 60_000) ? run.run : undefined;
@@ -49,6 +51,7 @@ export async function projectStatuses(ctx: Ctx): Promise<ProjectStatus[]> {
       ...(fresh ? { run: fresh } : {}),
       name: floor.def.name,
       ...countStatuses(agents.map((w) => w.status)),
+      ...(business ? { business } : {}),
       ...(stage ? { stage } : {}),
       ...(paused ? { paused } : {}),
       spend: { usd: d.spend.usd, ...(capAt(d.settings.costCaps, d.settings.autonomy) !== undefined ? { cap: capAt(d.settings.costCaps, d.settings.autonomy) } : {}) },

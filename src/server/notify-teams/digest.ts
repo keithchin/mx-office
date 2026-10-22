@@ -38,6 +38,8 @@ export interface DigestInput {
   spent?: number;
   cap?: number;
   setup?: SetupView;
+  /** The project's business status line (shared/business-status.ts), when it could be worked out. */
+  status?: string;
   link?: string;
 }
 
@@ -78,6 +80,7 @@ export function buildDigest(i: DigestInput): DigestData {
     ...(stages ? { stages } : {}),
     // Where the project is as the office derived it, and how fresh that is (shared/stage-derive.ts).
     ...(i.setup?.stage ? { stage: stageHeadline(i.setup.stage, i.now) } : {}),
+    ...(i.status ? { status: i.status } : {}),
     topEscalations,
     ...(i.link ? { link: i.link } : {}),
   };

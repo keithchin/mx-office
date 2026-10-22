@@ -20,6 +20,7 @@ import { sessionCapHint } from './liveapp/session-cap';
 import { liveUrl, openPanel } from './liveapp/open';
 import { aheadBanner } from './branch-ahead/banner';
 import { walkLinks } from './walkthroughs/links';
+import { businessNow, onBusiness, wantBusiness } from './business-status/feed';
 import './liveapp.css';
 
 export interface LiveAppView {
@@ -38,12 +39,20 @@ const short = (sha?: string) => sha?.slice(0, 7) ?? '';
 /** The app's address as this browser reaches the office's machine (through the recording proxy when it's up: ui/liveapp/open.ts). */
 export const appUrl = (s: LiveAppState) => liveUrl(s, location.hostname);
 
-/** What the Overview and View App say about it: the status word, the address when it runs, whether it's ready, and what serves against what it's updating to. */
-export function liveSummary(s: LiveAppState | null): { status: string; word: string; url?: string; ready?: boolean; revision?: string } | undefined {
+/**
+ * What the Overview and View App say about it: the status word, the address when it runs, the project's
+ * business status (shared/business-status.ts, ui/business-status/feed.ts: the same words as Home, the
+ * progress bar and the phone), and what serves against what it's updating to.
+ */
+export function liveSummary(s: LiveAppState | null): { status: string; word: string; url?: string; business?: { label: string; line: string }; revision?: string } | undefined {
   if (!s) return undefined;
   const revision = revisionLine(s);
-  return { status: s.status, word: liveStatus(s).word, ...(s.status === 'running' && appUrl(s) ? { url: appUrl(s) } : {}), ...(s.readiness ? { ready: s.readiness.ready } : {}), ...(revision ? { revision } : {}) };
+  const b = businessNow(s.floor)?.project;
+  return { status: s.status, word: liveStatus(s).word, ...(s.status === 'running' && appUrl(s) ? { url: appUrl(s) } : {}), ...(b ? { business: { label: b.label, line: b.line } } : {}), ...(revision ? { revision } : {}) };
 }
+
+/** What a change of the live app's state asks the business status again for: what it runs and what that has of the plan. */
+export const businessKey = (s: LiveAppState | null) => (s ? `${s.status}|${s.served?.sha ?? ''}|${s.readiness?.at ?? ''}|${s.main?.sha ?? ''}` : '');
 
 /** `openTab` shows the 🌐 Live app tab (the chip's click); `visible` says whether it's the tab showing now. */
 export function liveAppView(net: Net, openTab: () => void, visible: () => boolean): LiveAppView {
@@ -66,14 +75,17 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
   const chip = h('button.la-chip', { type: 'button', title: "The project's app, running from main: open the 🌐 Live app tab", onclick: openTab });
 
   const ask = () => net.send({ t: 'liveapp.status' });
+  onBusiness(() => drawChip());
 
   function drawChip() {
     const s = state;
     const st = liveStatus(s);
     chip.className = `la-chip ${s?.status ?? 'stopped'} ${st.tone}`;
-    const what = s?.status === 'running' && s.served ? `running · ${short(s.served.sha)}${s.failure?.kind === 'update' ? ' · update failed' : ''}${s.readiness ? (s.readiness.ready ? ' · ready' : ' · not ready') : ''}` : s && s.status !== 'stopped' ? revisionLine(s) || st.word : st.word;
+    // The work's status is the business status (shared/business-status.ts), never a second "ready" of its own.
+    const biz = s ? businessNow(s.floor)?.project : undefined;
+    const what = s?.status === 'running' && s.served ? `running · ${short(s.served.sha)}${s.failure?.kind === 'update' ? ' · update failed' : ''}${biz ? ` · ${biz.label}` : ''}` : s && s.status !== 'stopped' ? revisionLine(s) || st.word : st.word;
     chip.textContent = `🌐 Live app: ${what}`;
-    chip.title = s?.readiness?.headline ?? "The project's app, running from main: open the 🌐 Live app tab";
+    chip.title = [biz?.line, s?.readiness?.headline].filter(Boolean).join('\n') || "The project's app, running from main: open the 🌐 Live app tab";
   }
 
   function draw() {
@@ -148,6 +160,7 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
       } else if (msg.t === 'liveapp.state' && msg.state.floor === store.floor) {
         const moved = msg.state.main?.sha !== state?.main?.sha;
         state = msg.state;
+        wantBusiness(state.floor, businessKey(state));
         draw();
         if (moved) banner.refresh();
       }

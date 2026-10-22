@@ -333,8 +333,8 @@ test('the words: running against updating, failed with or without the old build,
   assert.equal(liveStatus({ ...base, status: 'starting', phase: 'building' }).word, 'building…');
   assert.equal(liveStatus({ ...base, status: 'starting', phase: 'starting' }).word, 'starting…');
   assert.equal(liveStatus({ ...base, status: 'updating', target: { sha: d } }).word, 'updating to def5678…');
-  assert.deepEqual(liveWord({ status: 'running', viewPort: 9, served: 'abc1234' }), { text: 'Live app ready · running abc1234', ready: true, tone: 'good' });
-  assert.equal(liveWord({ status: 'running', viewPort: 9, served: 'abc1234', updateFailed: true }).text, 'Live app ready · running abc1234 · update failed');
+  assert.deepEqual(liveWord({ status: 'running', viewPort: 9, served: 'abc1234' }), { text: 'Live app running abc1234', ready: true, tone: 'good' });
+  assert.equal(liveWord({ status: 'running', viewPort: 9, served: 'abc1234', updateFailed: true }).text, 'Live app running abc1234 · update failed');
   assert.equal(liveWord({ status: 'updating', target: 'def5678' }).text, 'Live app updating to def5678… · nothing running');
   assert.equal(liveWord({ status: 'starting', target: 'def5678' }).text, 'Live app starting def5678… · nothing running');
   assert.equal(liveWord({ status: 'failed', target: 'def5678' }).text, 'Live app failed (def5678) · nothing running');
