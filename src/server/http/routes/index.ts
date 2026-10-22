@@ -19,6 +19,7 @@ import { gitRoutes } from './git.js';
 import { modelRoutes } from './model.js';
 import { modelChangeRoutes } from './model-change.js';
 import { githubRoutes } from './github.js';
+import { mergeGateRoutes } from './merge-gate.js';
 import { homeRoutes } from './home.js';
 import { desktopRoutes } from './desktop.js';
 import { startRoutes } from './start.js';
@@ -99,6 +100,9 @@ export const routes: readonly Route[] = [
   searchRoutes.search,
   serviceRoutes.forwards,
   githubRoutes.github,
+  mergeGateRoutes.view,
+  mergeGateRoutes.review,
+  mergeGateRoutes.override,
   gitRoutes.graph,
   modelRoutes.refs,
   modelRoutes.tree,

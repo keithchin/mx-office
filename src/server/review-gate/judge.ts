@@ -9,6 +9,7 @@ import type { AskItem } from '../../shared/asks.js';
 import type { GhPull } from '../../shared/protocol.js';
 import type { Assignment } from '../roster/resume.js';
 import { agentFromAuthor, claimsReviewed, openerFromBody, parseReview, reviewComplete, REVIEW_MIN_MINUTES } from '../../shared/review-gate.js';
+import { bindingOf, verdictOf } from '../../shared/merge-gate.js';
 
 export type GateFlag = 'no-review' | 'self-review' | 'fast' | 'checks-failing' | 'checks-pending' | 'reviewed-claim';
 
@@ -21,6 +22,8 @@ export interface JudgeLook {
   /** The agent working on a branch, when the office knows. */
   branchOwner?(branch: string): string | undefined;
   minMinutes?: number;
+  /** Who reviewed its merged head in a way the merge gate counts (server/merge-gate/), if anyone. */
+  counted?(p: GhPull, opener: string | undefined): string | undefined;
 }
 
 export interface PullJudgement {
@@ -31,6 +34,8 @@ export interface PullJudgement {
   reviewers: string[];
   /** `Review:` comments that named someone else but listed no checks with results, or no files read. */
   incomplete: string[];
+  /** Complete `Review:` comments that don't count: another revision than the one merged, or no approving verdict. */
+  refused?: string[];
   /** No review that counts: its task stays integrated (unreviewed). */
   unreviewed: boolean;
   /** From opening to merge (ms). */
@@ -56,6 +61,7 @@ export function judgePull(p: GhPull, look: JudgeLook): PullJudgement | undefined
   const mergedAt = ms(p.mergedAt);
   const reviewers: string[] = [];
   const incomplete: string[] = [];
+  const refused: string[] = [];
   let selfReviewed = false;
   let approved = false;
   for (const n of p.reviewNotes ?? []) {
@@ -71,9 +77,21 @@ export function judgePull(p: GhPull, look: JudgeLook): PullJudgement | undefined
     }
     const known = look.agents.some((a) => same(a, r.reviewer)) || otherAccount;
     if (!known) continue;
+    // Bound to a revision and a verdict (shared/merge-gate.ts): another head, or no approval, doesn't count.
+    const b = bindingOf(n.body);
+    if (reviewComplete(r) && b.head && p.headRefOid && !p.headRefOid.toLowerCase().startsWith(b.head)) {
+      refused.push(`${r.reviewer} reviewed ${b.head.slice(0, 7)}, not the merged head`);
+      continue;
+    }
+    if (reviewComplete(r) && verdictOf(n.body, at) !== 'approve') {
+      refused.push(`${r.reviewer} gave no approving verdict`);
+      continue;
+    }
     if (reviewComplete(r)) reviewers.push(r.reviewer);
     else incomplete.push(r.reviewer || '(nobody named)');
   }
+  const counted = look.counted?.(p, opener);
+  if (counted && !reviewers.some((r) => same(r, counted))) reviewers.push(counted);
   const flags: GateFlag[] = [];
   const reviewed = reviewers.length > 0;
   if (!reviewed) flags.push(selfReviewed ? 'self-review' : 'no-review');
@@ -83,7 +101,7 @@ export function judgePull(p: GhPull, look: JudgeLook): PullJudgement | undefined
   if (p.checks === 'fail') flags.push('checks-failing');
   else if (p.checks === 'pending') flags.push('checks-pending');
   if (!reviewed && (claimsReviewed(p.title) || (p.claims?.length ?? 0) > 0)) flags.push('reviewed-claim');
-  return { pr: p.number, ...(opener ? { opener } : {}), flags, reviewers, incomplete, unreviewed: !reviewed, ...(Number.isFinite(tookMs) ? { tookMs } : {}) };
+  return { pr: p.number, ...(opener ? { opener } : {}), flags, reviewers, incomplete, ...(refused.length ? { refused } : {}), unreviewed: !reviewed, ...(Number.isFinite(tookMs) ? { tookMs } : {}) };
 }
 
 /**
@@ -135,9 +153,10 @@ export function pullItem(p: GhPull, j: PullJudgement, lead?: string, minMinutes 
     ...(p.commitAuthors?.length ? [`Commits authored as: ${p.commitAuthors.join(', ')}.`] : []),
     ...(p.claims?.length ? [`Commit titles claiming a review: ${p.claims.map((c) => `“${c}”`).join(', ')}.`] : []),
     ...(j.incomplete.length ? [`A Review comment by ${joined(j.incomplete)} lists no checks with their results or no files read, so it doesn’t count.`] : []),
+    ...(j.refused?.length ? [`Not counted: ${j.refused.join('; ')} (a review counts only for the revision it reviewed, with an approving Verdict:).`] : []),
     ...(j.reviewers.length ? [`Reviewed by ${joined(j.reviewers)}.`] : []),
     ...(j.unreviewed ? ['Its task stays integrated (unreviewed), never verified.'] : []),
-    `The rule: another lead reviews before the merge and records it on the PR as a “Review:” comment listing the checks run (with results) and the files read; no merge within ${minMinutes} minutes of opening unless you approved it.`,
+    `The rule: another lead reviews before the merge and records it on the PR as a “Review:” comment listing the checks run (with results), the files read, the commit reviewed (Head:) and an approving Verdict:; no merge within ${minMinutes} minutes of opening unless you approved it.`,
   ];
   return {
     id: `gate-pr-${p.number}-${j.flags.join('.')}`,

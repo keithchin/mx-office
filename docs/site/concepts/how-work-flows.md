@@ -36,7 +36,7 @@ Every PR runs the **pr-checks** workflow: Studio Pro `mx check`, `mxcli lint`, a
 
 ## 6. Merge
 
-You, or the Lead (depending on the [autonomy level](../teams-and-agents/autonomy.md)), merge. The Playbooks ask for a review by another agent first, but **nothing in the office blocks a merge**: the [review gate](../using-the-office/review-gate.md) looks after the merge and flags a PR merged without a `Review:` comment of the right shape in Needs you. Use GitHub's branch protection if you need a hard stop.
+You, or the Lead (depending on the [autonomy level](../teams-and-agents/autonomy.md)), merge. The Playbooks ask for a review by another agent first, recorded for the exact commit it reviewed. The office's own Merge button refuses a pull request whose current head has no independent approval (the [merge gate](../using-the-office/review-gate.md#the-merge-gate)); on a Solo team you record that review yourself in the PR window. An agent's own `gh pr merge` goes around the office: require the office's `mx-office/review` status in GitHub's [branch protection](../integrations/branch-protection.md) for a hard stop. After the merge, the review gate flags in Needs you a PR merged without a review that counts.
 
 When the **🌐 Live app** is running, it updates itself to the new `main` within about a minute (the app is down while it rebuilds). A stopped live app stays as it is until someone starts it.
 

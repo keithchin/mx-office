@@ -6,7 +6,7 @@ weight: 4
 
 When a subagent finishes, its **Lead reviews the result** before anything else happens.
 
-This loop is about subagent results inside one Lead's work, and it runs on the Lead's Playbook and the verdicts it records: the office counts rounds and nudges, but doesn't judge the work. Reviews of pull requests between Leads are a different rule, checked by the [review gate](../using-the-office/review-gate.md) only after a pull request merged; nothing in the office blocks a merge.
+This loop is about subagent results inside one Lead's work, and it runs on the Lead's Playbook and the verdicts it records: the office counts rounds and nudges, but doesn't judge the work. Reviews of pull requests between Leads are a different rule, checked by the [review gate](../using-the-office/review-gate.md): the office's own Merge button needs an independent approval of the pull request's current head, and only GitHub branch protection stops an agent's own merge.
 
 ## What the Lead does
 

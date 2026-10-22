@@ -5,6 +5,7 @@ import { GH_COMMENT_MAX, GH_LABEL_MAX } from '../../../shared/protocol.js';
 import { num, str } from '../../office/input.js';
 import { here } from './common.js';
 import { audit, human } from '../../audit/index.js';
+import { checkMerge } from '../../merge-gate/index.js';
 import type { HandlerMap, ViewPieces } from './types.js';
 
 export const issuesView: ViewPieces['issues'] = (_ctx, floor) => floor?.github.issues ?? { items: [], fetchedAt: 0, loading: false };
@@ -20,19 +21,23 @@ export const githubHandlers = {
     const n = num(msg.number);
     const method = (['squash', 'merge', 'rebase'] as const).find((m) => m === msg.method);
     if (!floor || !Number.isSafeInteger(n) || n <= 0 || !method) return;
-    ctx.withGitHub(
-      c,
-      (as) =>
-        void floor.github.merge(n, method, msg.deleteBranch === true, msg.auto === true, as).then((error) => {
-          ctx.sendTo(c, { t: 'gh.merged', number: n, error });
-          if (error) return;
-          ctx.toastFloor(floor, msg.auto ? `${who} set PR #${n} to merge once its checks pass` : `🎉 ${who} merged PR #${n}`);
-          // An auto-merge rings once GitHub gets round to it and the boards see it merged.
-          if (!msg.auto) floor.merged(n, who);
-          audit.record({ floor: floor.id, actor: human(who, c.accountId), action: msg.auto ? 'pr.autoMerge' : 'pr.merge', target: { kind: 'pr', id: `#${n}`, label: `PR #${n}` }, summary: msg.auto ? `Set PR #${n} to merge once its checks pass` : `Merged PR #${n}`, details: { method, deleteBranch: msg.deleteBranch === true }, severity: 'notice' });
-        }),
-      (error) => ctx.sendTo(c, { t: 'gh.merged', number: n, error }),
-    );
+    // The merge gate first (server/merge-gate/): no merge without a counting review of the head, unless an admin overrode it.
+    void checkMerge(ctx, floor, n, { name: who, id: c.accountId }, msg.auto === true).then((refused) => {
+      if (refused) return ctx.sendTo(c, { t: 'gh.merged', number: n, error: refused });
+      ctx.withGitHub(
+        c,
+        (as) =>
+          void floor.github.merge(n, method, msg.deleteBranch === true, msg.auto === true, as).then((error) => {
+            ctx.sendTo(c, { t: 'gh.merged', number: n, error });
+            if (error) return;
+            ctx.toastFloor(floor, msg.auto ? `${who} set PR #${n} to merge once its checks pass` : `🎉 ${who} merged PR #${n}`);
+            // An auto-merge rings once GitHub gets round to it and the boards see it merged.
+            if (!msg.auto) floor.merged(n, who);
+            audit.record({ floor: floor.id, actor: human(who, c.accountId), action: msg.auto ? 'pr.autoMerge' : 'pr.merge', target: { kind: 'pr', id: `#${n}`, label: `PR #${n}` }, summary: msg.auto ? `Set PR #${n} to merge once its checks pass` : `Merged PR #${n}`, details: { method, deleteBranch: msg.deleteBranch === true }, severity: 'notice' });
+          }),
+        (error) => ctx.sendTo(c, { t: 'gh.merged', number: n, error }),
+      );
+    });
   },
   'gh.comment'(ctx, c, msg) {
     const who = c.peer.name;

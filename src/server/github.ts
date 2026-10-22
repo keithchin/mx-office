@@ -4,6 +4,7 @@ import type { GhCheck, GhCloseReason, GhComment, GhIssue, GhIssueDetail, GhLabel
 import type { GhAs } from './signins.js';
 import { LOCAL_ONLY_TEXT, localOnlyAt } from './local-only.js';
 import { GATE_FIELDS, gateFieldsOf } from './review-gate/fields.js';
+import { isGateStatus } from '../shared/merge-gate.js';
 
 const REFRESH_MS = 90_000;
 /** How long the repo's list of labels is kept before the label picker asks GitHub again. */
@@ -39,7 +40,10 @@ function labels(raw: any[]): GhLabel[] {
 }
 
 /** The PR card's checks: a cancelled, timed-out, unstarted, waiting or stale check is a failure (shared/ci-conclusion.ts). */
-const checksOf = (rollup: any[]): GhPull['checks'] => ciRollup(rollup);
+const checksOf = (rollup: any[]): GhPull['checks'] => ciRollup(withoutGate(rollup));
+
+/** The rollup without the office's own mx-office/review status (server/merge-gate/): a review isn't a check. */
+const withoutGate = (rollup: any[] | undefined): any[] => (rollup ?? []).filter((c) => !isGateStatus(c));
 
 /** One entry of statusCheckRollup: a CheckRun (Actions) or a StatusContext (other CI). */
 function checkOf(c: any): GhCheck {
@@ -213,7 +217,7 @@ export class GitHub {
       // A line comment also makes an empty COMMENTED review; the comment itself is shown instead.
       reviews: commentsOf(p.reviews).filter((r) => r.body.trim() || r.state !== 'COMMENTED'),
       reviewComments,
-      checks: (p.statusCheckRollup ?? []).map(checkOf),
+      checks: withoutGate(p.statusCheckRollup).map(checkOf),
       repo,
       viewer,
     };
