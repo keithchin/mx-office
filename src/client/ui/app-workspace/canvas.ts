@@ -23,6 +23,8 @@ export interface Canvas {
   idle(): void;
   /** The page of the app the canvas shows (a path), and whether the app moved on from it by itself. */
   where(): { path: string; moved: boolean } | undefined;
+  /** Opens a page of the app (a guided check's start page) in the frame, while it shows the app. */
+  go(path: string): void;
 }
 
 export function workspaceCanvas(deps: { open(tab: string): void }): Canvas {
@@ -94,6 +96,9 @@ export function workspaceCanvas(deps: { open(tab: string): void }): Canvas {
       drawBrief(d, stage === 'before' || !s?.started);
     },
     where: () => (frameBox.hidden ? undefined : viewer?.where?.()),
+    go(path) {
+      if (!frameBox.hidden) viewer?.go?.(path);
+    },
     idle() {
       // The frame stays (moving between sections or views mustn't reload the app); nothing else runs.
     },

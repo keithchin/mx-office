@@ -5,7 +5,9 @@
 // again), the progress bar's phases and acceptance (GET /api/progress, asked once per project and again
 // only when the business status moves), the approved brief (the Documents page's file route, once per
 // project), the finished changes (the pull request list the page keeps) and the team's autonomy level
-// (the roster the page keeps). No timer: every piece is asked when something it hangs on changed.
+// (the roster the page keeps). Guided validation of the version on screen and what Accept would record
+// (./validation-api.ts) are asked only once Review or Release shows (want), and again when the served
+// version, its results or the acceptance move. No timer: every piece is asked when something it hangs on changed.
 
 import { store } from '../../state';
 import type { LiveAppState } from '../../../shared/protocol';
@@ -22,6 +24,8 @@ import { isBusinessDecision } from '../../../shared/app-workspace/business-decis
 import type { DecisionArtifact } from '../../../shared/decisions/artifact';
 import type { ChangeRequestView } from '../../../shared/change-requests';
 import { postRequest, requestsFeed, type RequestAsk, type RequestSent } from './requests';
+import type { ValidationView } from '../../../shared/guided-validation';
+import { pageAcceptance, postMark, validationFeed, type AcceptancePort, type MarkAsk, type MarkSent } from './validation-api';
 import type { AnswerResult } from './decision-cards';
 
 export interface WorkspaceDecision {
@@ -69,6 +73,12 @@ export interface WorkspaceData {
   admin: boolean;
   /** The project's change requests with their state, newest first (undefined: not read yet). */
   requests?: ChangeRequestView[];
+  /** The version on screen: the served revision while the app answers in the canvas (undefined: none). */
+  onScreen?: string;
+  /** Guided validation of the version on screen (undefined: not asked or not read yet; asked by Review and Release). */
+  validation?: ValidationView;
+  /** What Accept would record (the delivery's version and its commit), read for Release (undefined: not read yet). */
+  delivery?: { version: string; commit?: string } | null;
 }
 
 export interface WorkspaceSource {
@@ -81,6 +91,14 @@ export interface WorkspaceSource {
   request(ask: RequestAsk): Promise<RequestSent>;
   /** Answers a decision through the decision cards' path, with the revision it was opened at (a stale one: 409). */
   answer(x: WorkspaceDecision, a: { verdict: 'reply'; text: string }): Promise<AnswerResult>;
+  /** Review or Release shows: read guided validation of the version on screen, and (Release) what Accept would record. */
+  want?(what: 'validation' | 'delivery'): void;
+  /** Marks a scenario of the version on screen (POST /api/guided-validation/mark). */
+  mark?(m: MarkAsk): Promise<MarkSent>;
+  /** The existing acceptance path, unchanged (the progress bar's routes). */
+  acceptance?: AcceptancePort;
+  /** An Accept or a Reopen went through: ask again for what hangs on it. */
+  acted?(): void;
 }
 
 /** A change's title without a conventional prefix ("feat(sheets): " and the like) or a trailing (#12). */
@@ -119,6 +137,34 @@ export function pageSource(): WorkspaceSource {
     });
   };
   const requests = requestsFeed(() => emit());
+  const validation = validationFeed(() => emit());
+  const onScreen = () => {
+    const live = store.liveApp && store.liveApp.floor === store.floor ? store.liveApp : null;
+    return live?.status === 'running' && appUrl(live) ? live.served?.sha : undefined;
+  };
+  let wanted = { validation: false, delivery: false };
+  let acts = 0;
+  // The served commit's journey results ride on the live app's own message (its readiness): a change there asks again.
+  const resultsKey = () => JSON.stringify(store.liveApp?.readiness?.milestones.map((m) => m.journeys) ?? []);
+  const askValidation = () => {
+    const f = store.floor;
+    const rev = onScreen();
+    if (wanted.validation && f && rev) validation.want(f, rev, `${resultsKey()}|${acts}`);
+  };
+  let delivery: { floor: string; key: string; v?: { version: string; commit?: string } | null } | undefined;
+  const askDelivery = () => {
+    const f = store.floor;
+    if (!wanted.delivery || !f) return;
+    const b = businessNow(f)?.project;
+    const key = `${b?.state ?? ''}|${b?.revision ?? ''}|${acts}`;
+    if (delivery?.floor === f && delivery.key === key) return;
+    const mine: { floor: string; key: string; v?: { version: string; commit?: string } | null } = (delivery = { floor: f, key, ...(delivery?.floor === f ? { v: delivery.v } : {}) });
+    void pageAcceptance.draft(f).then((d) => {
+      if (delivery !== mine) return;
+      mine.v = d ? { version: d.version, ...(d.source.commit ? { commit: d.source.commit } : {}) } : null;
+      emit();
+    });
+  };
   let awake = false;
   const again = () => awake && requests.again(store.floor);
   const wake = () => {
@@ -134,6 +180,7 @@ export function pageSource(): WorkspaceSource {
 
   store.on('liveApp', () => {
     if (store.liveApp) wantBusiness(store.liveApp.floor, businessKey(store.liveApp));
+    askValidation();
     emit();
   });
   store.on('floor', () => (awake ? wake() : undefined, emit()));
@@ -141,6 +188,7 @@ export function pageSource(): WorkspaceSource {
   store.on('pulls', () => (again(), emit()));
   onBusiness(() => {
     if (awake && store.floor) askProgress(store.floor);
+    askDelivery();
     again();
     emit();
   });
@@ -158,6 +206,30 @@ export function pageSource(): WorkspaceSource {
       return r;
     },
     answer: (x, a) => answerDecision(store.floor, x, a, me()),
+    want(what) {
+      wanted = { ...wanted, [what]: true };
+      if (what === 'validation') askValidation();
+      else askDelivery();
+    },
+    async mark(m) {
+      const f = store.floor;
+      if (!f) return { ok: false, status: 400, error: 'Pick a project first' };
+      const r = await postMark(f, m);
+      if (r.ok) {
+        validation.now();
+        if (r.finding.correction) requests.now(f);
+      }
+      return r;
+    },
+    acceptance: pageAcceptance,
+    acted() {
+      acts++;
+      const f = store.floor;
+      if (!f) return;
+      // The acceptance changed: the business status (and with it the progress bar's answer) is asked again.
+      wantBusiness(f, `${businessKey(store.liveApp)}|acted:${acts}`);
+      askDelivery();
+    },
     on(fn) {
       fns.add(fn);
       return () => void fns.delete(fn);
@@ -217,6 +289,9 @@ export function pageSource(): WorkspaceSource {
         ...(level ? { autonomy: { level, name: AUTONOMY[level].name, byStage: !!roster?.settings.autonomyByStage?.enabled } } : {}),
         admin: !!store.me.admin,
         ...(requests.get(floor) ? { requests: requests.get(floor) } : {}),
+        ...(onScreen() ? { onScreen: onScreen() } : {}),
+        ...(validation.get(floor, onScreen()) ? { validation: validation.get(floor, onScreen()) } : {}),
+        ...(delivery?.floor === floor && delivery.v !== undefined ? { delivery: delivery.v } : {}),
       };
     },
   };

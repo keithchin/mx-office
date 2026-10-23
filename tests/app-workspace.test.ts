@@ -93,6 +93,8 @@ test('the business status’s missing lines in business words, each once', () =>
       'This version isn’t accepted yet',
     ],
   );
+  // The guided checks' own lines (C5): failed and not run on this version, required checks failed or without a result.
+  assert.deepEqual(plainMissing(['J-02 failed against abc1234', 'J-03, J-04 not run against abc1234', 'checks failed on abc1234: unit tests', 'no result on abc1234 for lint']), ['A guided check failed on this version', 'Some guided checks haven’t run on this version yet', 'Some required checks failed on this version', 'Some required checks have no result on this version yet']);
   assert.deepEqual(plainMissing(['something about a worktree']), ['More detail is on the Engineering view']);
   assert.deepEqual(plainMissing(['Plain words stay as they are']), ['Plain words stay as they are']);
 });

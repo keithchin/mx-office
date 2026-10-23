@@ -1,0 +1,33 @@
+/* Guided validation (Review) and accepting (Release), C5: in the App Workspace's tokens. */
+.aw .aw-scns { list-style: none; margin: 8px 0 0; padding: 0; }
+.aw .aw-scn { border-top: 1px solid var(--line); padding: 12px 0; min-width: 0; }
+.aw .aw-scn:first-child { border-top: 0; }
+.aw .aw-scnhead { margin-top: 0; align-items: flex-start; }
+.aw .aw-scnhead b { overflow-wrap: anywhere; }
+.aw .aw-scnsteps { margin: 6px 0 0; }
+.aw .aw-scnsteps summary { cursor: pointer; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.aw .aw-steps { margin: 6px 0 0; padding-left: 22px; }
+.aw .aw-steps li { margin: 2px 0; overflow-wrap: anywhere; }
+.aw .aw-earlier { font-style: italic; }
+.aw .aw-mark { margin-top: 8px; padding: 6px 10px; border-left: 3px solid var(--line); background: var(--paper-2, var(--paper)); border-radius: 4px; }
+.aw .aw-mark[data-verdict='works'] { border-left-color: var(--good); }
+.aw .aw-mark[data-verdict='wrong'] { border-left-color: var(--warn, var(--accent)); }
+.aw .aw-mark p { margin: 2px 0; overflow-wrap: anywhere; }
+.aw .aw-markbtns { flex-wrap: wrap; }
+.aw .aw-sum { font-weight: 600; margin: 8px 0 0; }
+.aw .aw-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 10px 0; }
+.aw .aw-facts dt { color: var(--muted); }
+.aw .aw-facts dd { margin: 0; overflow-wrap: anywhere; }
+.aw .aw-facts .aw-list { margin: 0; padding-left: 18px; }
+.aw .aw-btn.aw-primary[disabled], .aw .aw-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.aw-accdlg .aw-ticks { list-style: none; padding: 0; margin: 4px 0 8px; }
+.aw-accdlg .aw-ticks li { margin: 4px 0; overflow-wrap: anywhere; }
+.aw-accdlg .aw-confirmrow { display: block; margin: 10px 0 4px; font-weight: 600; }
+.aw-accdlg .aw-note { width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); }
+.aw-reqdlg .aw-refusal p { margin: 2px 0; }
+.aw-reqdlg .aw-refusal ul { margin: 4px 0 0; padding-left: 18px; }
+@media (max-width: 760px) {
+  .aw .aw-facts { grid-template-columns: 1fr; gap: 2px; }
+  .aw .aw-facts dd { margin-bottom: 6px; }
+  .aw .aw-markbtns .aw-btn { flex: 1 1 auto; }
+}

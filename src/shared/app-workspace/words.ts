@@ -56,6 +56,10 @@ function plainLine(line: string): string {
   if (/live app (hasn't run|isn't running)/i.test(line)) return 'The app isn’t running yet';
   if (/main's head couldn't be read/i.test(line)) return 'The office couldn’t read where the work is';
   if (/journey/i.test(line)) return 'No guided check has run on this version yet';
+  if (/\sfailed against [0-9a-f]{7}/i.test(line)) return 'A guided check failed on this version';
+  if (/\snot run against [0-9a-f]{7}/i.test(line)) return 'Some guided checks haven’t run on this version yet';
+  if (/^checks failed on /i.test(line)) return 'Some required checks failed on this version';
+  if (/^no result on [0-9a-f]{7}/i.test(line)) return 'Some required checks have no result on this version yet';
   if (/security baseline/i.test(line)) return 'The security checks haven’t passed on this version yet';
   if (/required checks?/i.test(line)) return 'Some required checks have no result on this version yet';
   if (/unreviewed|review that counts|review state/i.test(line)) return 'Some finished work still needs a second look by the team';

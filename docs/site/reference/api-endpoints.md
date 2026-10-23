@@ -50,6 +50,8 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | POST | `/api/model/change-request` | Change this: hands a change to a team member as a task (`{floor, elements: [{kind, qn}], ref, sha, request, role, when: 'after' or 'now'}`; audited as `model.change-requested`) |
 | GET | `/api/change-requests` | The App workspace's change requests with their state in business words and the version that has it, newest first (`?floor=`) |
 | POST | `/api/change-requests` | Request a change: hands it to the team lead as a task (`{floor, text, page?, pageMoved?, revision?}`; answers with the request and its task id; audited as `change-request.created`) |
+| GET | `/api/guided-validation` | The App workspace's guided checks of one version: each journey at that commit with its result there only (a result on another commit is a note), the marks made there and the project's corrections (`?floor=&revision=`) |
+| POST | `/api/guided-validation/mark` | Works as expected / Something's wrong on a guided check of the version the live app serves now (`{floor, revision, scenario, verdict: works or wrong, note?, page?, pageMoved?}`; 409 when another version serves; *wrong* makes a change request with its task id; audited as `validation.mark`) |
 | GET | `/api/analysis` | The analysis report (`?scope=global`, `?floor=`, `&by=effort`) |
 | POST | `/api/analysis/backfill` | Re-record every worker (admin) |
 | GET | `/api/judge` | Jeff · Router's summary for a project |
