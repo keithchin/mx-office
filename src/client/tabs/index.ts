@@ -9,3 +9,4 @@ import '../ui/questions/tab';
 import '../ui/design/tab';
 import '../ui/walkthroughs/tab';
 import '../ui/security/tab';
+import '../ui/app-workspace/tab';

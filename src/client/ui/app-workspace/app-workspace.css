@@ -1,0 +1,103 @@
+/* The App Workspace (ui/app-workspace/): the running app as the canvas, the side panel on the right (below
+   it on a phone), the section bar and the workspace switch above. In the color tokens, so Portal Light and
+   Dark (and the other themes) only change their values. While it shows (body.aw-on) the Engineering view's
+   navigation, page header, team-lead panel, progress line and tab rows step aside and the page is its. */
+
+body.lite.aw-on :is(#pt-nav, #pt-head, .pt-navbtn, #lead-panel, .lp-rail, .lp-fab, .lp-backdrop, #progress-bar, #floor-meta, #elsewhere, .lite-tabs, .lite-nav, .tp-launch) { display: none !important; }
+html body.lite.aw-on .lite-main { margin: 0 !important; padding: 0 !important; width: auto !important; max-width: none !important; }
+
+.aw { display: flex; flex-direction: column; min-height: calc(100vh - var(--pt-top, 56px)); background: var(--paper-2, var(--paper)); color: var(--ink); font-size: 14px; line-height: 1.45; }
+.aw[hidden] { display: none; }
+.aw .aw-grow { flex: 1; }
+
+/* The bar: project, sections, switch. */
+.aw .aw-bar { background: var(--card); border-bottom: 1px solid var(--line); padding: 0 24px; }
+.aw .aw-bar-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 0 2px; }
+.aw .aw-crumb { font-weight: 600; color: var(--ink); }
+.aw .aw-switch { display: inline-flex; border: 1px solid var(--rule-strong, var(--line)); border-radius: 4px; overflow: hidden; }
+.aw .aw-seg { border: 0; background: var(--card); color: var(--ink); padding: 6px 12px; font: inherit; cursor: pointer; }
+.aw .aw-seg + .aw-seg { border-left: 1px solid var(--rule-strong, var(--line)); }
+.aw .aw-seg[aria-pressed='true'] { background: var(--ink); color: var(--paper); cursor: default; }
+.aw .aw-seg:not([aria-pressed='true']):hover { background: var(--hover, var(--sunken)); }
+.aw .aw-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.aw .aw-tab { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-2, var(--muted)); padding: 10px 10px 9px; font: inherit; cursor: pointer; white-space: nowrap; }
+.aw .aw-tab:hover { color: var(--ink); }
+.aw .aw-tab.on { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+
+/* The stage switch. */
+.aw .aw-stages { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 24px; border-bottom: 1px solid var(--line); background: var(--card); }
+.aw .aw-stages-k { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint, var(--muted)); margin-right: 4px; }
+.aw .aw-stage { border: 1px solid var(--line); background: var(--card); color: var(--ink-2, var(--muted)); border-radius: 12px; padding: 3px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.aw .aw-stage.now { color: var(--ink); border-color: var(--accent); }
+.aw .aw-stage[aria-pressed='true'] { background: var(--accent-soft); color: var(--ink); border-color: var(--accent); font-weight: 600; }
+.aw .aw-now { margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--link, var(--accent)); }
+.aw .aw-stagenote { margin: 12px 24px 0; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--info-soft, var(--accent-soft)); border-radius: 4px; }
+.aw .aw-stagenote[hidden] { display: none; }
+
+/* Canvas and panel. */
+.aw .aw-body { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; }
+.aw .aw-main { min-width: 0; padding: 16px 24px 24px; border-right: 1px solid var(--line); }
+.aw .aw-side { background: var(--card); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.aw .aw-sec { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.aw .aw-k { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint, var(--muted)); margin-bottom: 6px; }
+.aw .aw-small, .aw .aw-hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+.aw .aw-none, .aw .aw-muted { color: var(--muted); margin: 4px 0; }
+.aw .aw-q { margin: 0; font-weight: 600; }
+.aw .aw-foot { font-size: 12px; color: var(--muted); margin: 0; }
+.aw .aw-statusrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.aw .aw-pill { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 10px; padding: 2px 9px; background: var(--neutral-soft, var(--sunken)); color: var(--ink-2, var(--ink)); }
+.aw .aw-pill.good { background: var(--good-soft); color: var(--good-ink); }
+.aw .aw-pill.busy { background: var(--info-soft, var(--accent-soft)); color: var(--link, var(--ink)); }
+.aw .aw-pill.bad { background: var(--bad-soft); color: var(--bad-ink); }
+.aw .aw-ver { font: 12px var(--mono, monospace); border: 1px solid var(--line); background: var(--sunken, var(--paper)); color: var(--ink); border-radius: 4px; padding: 1px 6px; cursor: copy; }
+.aw .aw-prog { height: 6px; background: var(--sunken, var(--line)); border-radius: 3px; overflow: hidden; }
+.aw .aw-prog > i { display: block; height: 100%; background: var(--good); }
+.aw .aw-btn { display: inline-block; border: 1px solid var(--rule-strong, var(--line)); background: var(--card); color: var(--ink); border-radius: 4px; padding: 6px 12px; font: inherit; cursor: pointer; text-decoration: none; }
+.aw .aw-btn:hover { background: var(--hover, var(--sunken)); }
+.aw .aw-primary { background: var(--accent); border-color: var(--accent); color: var(--on-fill, #fff); }
+.aw .aw-primary:hover { background: var(--accent); filter: brightness(1.08); }
+.aw .aw-link { border: 0; background: none; padding: 0; color: var(--link, var(--accent)); text-decoration: underline; font: inherit; cursor: pointer; }
+.aw .aw-list { margin: 4px 0 0; padding-left: 18px; }
+.aw .aw-list li { margin: 2px 0; }
+.aw .aw-slot { border: 1px dashed var(--rule-strong, var(--line)); border-radius: 6px; padding: 8px 10px; background: var(--paper-2, var(--paper)); }
+.aw .aw-slot p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.aw .aw-slot-tag { font-size: 11px; font-weight: 600; color: var(--purple, var(--accent)); background: var(--purple-soft, var(--accent-soft)); border-radius: 10px; padding: 1px 8px; }
+
+.aw .aw-canvas { display: flex; flex-direction: column; gap: 10px; min-height: 100%; }
+.aw .aw-runline { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
+.aw .aw-runline .aw-hint { flex-basis: 100%; margin: 0; }
+.aw .aw-rev { font: 13px var(--mono, monospace); }
+.aw .aw-frame { flex: 1; display: flex; flex-direction: column; min-height: 520px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--card); }
+.aw .aw-frame[hidden], .aw .aw-canvas-empty[hidden], .aw .aw-canvas-brief[hidden] { display: none; }
+.aw .aw-frame > * { flex: 1; }
+.aw .aw-canvas-empty, .aw .aw-canvas-brief, .aw .aw-card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+.aw .aw-canvas-empty h3, .aw .aw-canvas-brief h3, .aw .aw-card h3 { margin: 0 0 8px; font-size: 15px; }
+.aw .aw-page { display: flex; flex-direction: column; gap: 12px; max-width: 860px; }
+.aw .aw-badge { display: inline-block; margin: 0 0 8px; font-size: 12px; color: var(--good-ink); background: var(--good-soft); border-radius: 10px; padding: 1px 8px; }
+.aw .aw-warn { color: var(--warn-ink); background: var(--warn-soft); border-radius: 4px; padding: 6px 8px; }
+.aw .aw-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.aw .aw-chip { font-size: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 2px 8px; }
+.aw .aw-decisions, .aw .aw-parts { list-style: none; margin: 0; padding: 0; }
+.aw .aw-decision { border-top: 1px solid var(--line); padding: 10px 0; }
+.aw .aw-decision:first-child { border-top: 0; padding-top: 0; }
+.aw .aw-decision[data-level='block'] .aw-q::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); margin-right: 6px; vertical-align: middle; }
+.aw .aw-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.aw .aw-parts li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.aw .aw-parts li:first-child { border-top: 0; }
+
+/* A narrow window: the panel under the canvas. A phone: tighter gutters. */
+@media (max-width: 1000px) {
+  .aw .aw-body { grid-template-columns: 1fr; }
+  .aw .aw-main { border-right: 0; border-bottom: 1px solid var(--line); }
+  .aw .aw-frame { min-height: 420px; }
+}
+@media (max-width: 760px) {
+  .aw .aw-bar, .aw .aw-stages { padding-left: 16px; padding-right: 16px; }
+  .aw .aw-main { padding: 12px 16px 16px; }
+  .aw .aw-stagenote { margin: 12px 16px 0; }
+  .aw .aw-switch { width: 100%; }
+  .aw .aw-seg { flex: 1; }
+  .aw .aw-stages { flex-wrap: nowrap; overflow-x: auto; }
+  .aw .aw-stage { white-space: nowrap; }
+  .aw .aw-frame { min-height: 360px; }
+}

@@ -36,6 +36,12 @@ export interface TabDef {
    * first. Without one it goes after the built-in items, registered tabs in the order they registered.
    */
   order?: number;
+  /**
+   * Not listed in the navigation: reached by links, ?tab= and the page's own buttons only (the App
+   * Workspace's sections, which have a navigation of their own). ?tab=, the page header and the
+   * remembered tab still know it.
+   */
+  hidden?: boolean;
   /** A button in the classic themes' tab row too (Portal has the navigation). Off: links, the ☰ or Portal reach it. */
   tabRow?: boolean;
   /** Draws the tab into its (empty) container, the first time it's shown, and gives back its hooks. */

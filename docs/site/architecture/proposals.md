@@ -114,6 +114,10 @@ Also proposed here: route the idle-lead console prompt through the same delivery
 
 **Built** on `feat/business-status`, so no longer proposed: one pure function (`src/shared/business-status.ts`) derives the business status from the records the office already keeps, bound to revisions, with what's missing for the next status, and the progress bar, Home, the Overview, the Live app chip, the phone and the Teams digest read it instead of their own "ready". See [State and sources of truth](state-and-truth.md#business-status-derived-from-evidence) and [Progress bar and acceptance](../using-the-office/progress-and-acceptance.md#business-status).
 
+## App Workspace shell (App Workspace C3): done
+
+**Built** on `feat/app-workspace-shell`, so no longer proposed: the App Workspace as five project tabs of the 1D view (`?tab=app|requirements|decisions|review|release`, `&ws=app` / `&ws=eng`), from the tab registry as a module of its own (`src/client/ui/app-workspace/`, loaded on first use): the running app as the canvas naming the served revision (Open in a new tab always; no frame when nothing serves), a side panel that reads the shared business status, Needs you's decisions, the progress bar and the finished changes, a stage line read from the business status and the progress bar's phase (nothing stored), and an App view | Engineering view switch that keeps the project and changes no permission. Change requests (C4) and guided validation (C5) have marked slots. Its words are checked against a banned-terms list (`src/shared/app-workspace/words.ts`). See [App workspace](../using-the-office/app-workspace.md).
+
 ## Terminology
 
 **Today:** "skill" means a permitted action in the Team tab, reusable instructions elsewhere, and a Claude Code skill file for Playbooks; "gate" means both a skill's approval rule and a toolkit stage check. See [Reusable skills and knowledge](reusable-skills-and-knowledge.md).
