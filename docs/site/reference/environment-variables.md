@@ -76,6 +76,7 @@ These can also go in `<office data>/live-app.json`; the environment wins.
 | `AGENT_OFFICE_LIVE_POLL_SECONDS` | `60` (0 turns the auto-update off) |
 | `AGENT_OFFICE_LIVE_READY_SECONDS` | `480` |
 | `AGENT_OFFICE_LIVE_PG_BIN` | The newest `C:\Program Files\PostgreSQL\<v>\bin` |
+| `AGENT_OFFICE_LIVE_HOT_RELOAD` | Off (`hotReload` in `live-app.json`). Whether a project's live app hot reloads page and logic changes until an admin sets it on the project's Live app tab ([Faster updates](../using-the-office/live-app.md#faster-updates)) |
 
 ### Walkthrough videos
 

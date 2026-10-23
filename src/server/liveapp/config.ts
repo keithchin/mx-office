@@ -17,6 +17,8 @@ export interface LiveAppConfig {
   pollMs: number;
   /** How long (ms) a start may take before it counts as failed: a cold start bundles the web client. */
   readyTimeoutMs: number;
+  /** Whether a project's live app applies page and logic changes by hot reload unless the project says otherwise (liveapp/prefs.ts). */
+  hotReload: boolean;
 }
 
 export const LIVE_APP_DEFAULTS: LiveAppConfig = {
@@ -25,6 +27,7 @@ export const LIVE_APP_DEFAULTS: LiveAppConfig = {
   db: { host: '127.0.0.1', port: 5432, user: 'postgres', password: 'postgres' },
   pollMs: 60_000,
   readyTimeoutMs: 8 * 60_000,
+  hotReload: false,
 };
 
 /** "8110-8199" (or "8110") as a range; undefined when it isn't one. */
@@ -40,11 +43,12 @@ const num = (v: unknown): number | undefined => {
   const n = typeof v === 'string' && v.trim() ? Number(v) : typeof v === 'number' ? v : NaN;
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 };
+const flag = (v: string | undefined): boolean | undefined => (v === undefined || v === '' ? undefined : /^(1|true|yes|on)$/i.test(v.trim()));
 const text = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined);
 
 /**
  * The live apps' settings: AGENT_OFFICE_LIVE_* from `env`, then `live-app.json` in the office's data
- * folder ({ "mxcli", "ports": "8110-8199", "dbHost": "127.0.0.1:5432", "dbUser", "dbPassword", "pollSeconds" }).
+ * folder ({ "mxcli", "ports": "8110-8199", "dbHost": "127.0.0.1:5432", "dbUser", "dbPassword", "pollSeconds", "hotReload" }).
  * With no mxcli named there, the office's own (first-run setup's, AGENT_OFFICE_MXCLI, the workspace's under `home`)
  * before a bare `mxcli` on PATH, so how the office was started never changes which mxcli runs the apps.
  */
@@ -69,6 +73,7 @@ export function liveAppConfig(dataDir: string, env: NodeJS.ProcessEnv = process.
       password: env.AGENT_OFFICE_LIVE_DB_PASSWORD ?? text(file.dbPassword) ?? d.db.password,
     },
     pollMs: pollS === undefined ? d.pollMs : pollS * 1000,
+    hotReload: flag(env.AGENT_OFFICE_LIVE_HOT_RELOAD) ?? (typeof file.hotReload === 'boolean' ? file.hotReload : d.hotReload),
     readyTimeoutMs: (num(env.AGENT_OFFICE_LIVE_READY_SECONDS) ?? num(file.readySeconds) ?? d.readyTimeoutMs / 1000) * 1000,
   };
 }

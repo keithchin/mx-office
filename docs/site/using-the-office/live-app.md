@@ -32,7 +32,57 @@ Everything that means "what's running" uses the served commit only: readiness an
 
 A crashed app shows when it stopped, on which commit, mxcli's last lines and **⟳ Restart**; a toast says so, and Needs you has a row that Teams and phone push send once per crash.
 
-Live apps don't start by themselves when the office starts, and an office restart doesn't bring back the one that ran: after a restart the tab says *not started*, no commit is called running, and nothing runs until an admin clicks **▶ Start**. What served last is kept in `<office data>/live/<project>.served.json` and shown only as *Nothing running · last ran abc1234 until 10:27*; if the office ended without shutting down, *until* is only when that build came up.
+Live apps don't start by themselves when the office starts (unless the project has **Keep warm** on, see [Faster updates](#faster-updates)), and an office restart doesn't bring back the one that ran: after a restart the tab says *not started*, no commit is called running, and nothing runs until an admin clicks **▶ Start**. What served last is kept in `<office data>/live/<project>.served.json` and shown only as *Nothing running · last ran abc1234 until 10:27*; if the office ended without shutting down, *until* is only when that build came up.
+
+## Faster updates
+
+Before an update touches the running app, the office looks at what changed between the served commit and the new one: the files, and the model's units (each page, microflow, domain model and so on, read straight out of git in a few hundred milliseconds at most). That picks one of three ways:
+
+| What changed | What the office does | How long (measured, see below) |
+|---|---|---|
+| **No app files**: only docs, journals, evidence, `.claude/` and the like | Nothing restarts: the running build is that commit's app already. The served commit moves on, and the tab says which build it is (*build of abc1234*). | About 1 to 2 s |
+| **Pages and logic**: pages, snippets, layouts, building blocks, microflows, nanoflows, rules, folders, texts, the theme | With **Hot reload** on, the new files go into the running app's folder and mxcli's watch builds and applies them in place (`mxcli run --watch`). With it off, a restart. | Hot reload: about 9 to 12 s. A restart: about 45 s |
+| **Anything else**: a domain model, an enumeration, security, module or project settings, navigation, constants, Java or JavaScript actions, widgets, `resources/`, or a file the office doesn't know | A restart, as before: stop, build, start. | About 45 s, or about 55 to 75 s with hot reload on (see below) |
+
+When the office can't tell (the model can't be read, or the commits can't be compared), it restarts.
+
+**A hot reload counts only once it worked.** The served commit moves only when mxcli says it applied the change *and* the app then answers its home page. Anything else is a hot reload that didn't confirm: the watch build failed, mxcli exited, nothing happened within 20 seconds, or the build didn't finish within 90. Then the old commit stops being called running at that moment (a failed watch build leaves the app answering *404*, so nothing serves honestly), and the office restarts the app on the new commit by itself. The tab says *hot reload didn't confirm, restarting…*, and afterwards *Updated in 48 s (restart: hot reload didn't confirm (…), so it restarted)*.
+
+Domain-model and enumeration changes never go the hot way. On Windows, mxcli's watch fails them with a file lock (*deployment\web is being used by another process*) and leaves the app answering 404 until mxcli is restarted, so the office restarts straight away.
+
+**Merges in a row go in once.** When main moves again while an update is running, the office doesn't start one update per merge. When the current one is done, one more update takes the newest main and says how many commits it brought in (*· 3 commits in one go*; hovering lists them). The check before the move always finishes first (the running app isn't touched until it has); its two reads, the files and the model units, run at the same time, and the commits it brings in are counted meanwhile. What's read after an update (the readiness card, the business status) runs beside the next update, never in front of it.
+
+**Where the time goes.** Beside the buttons, the tab says how the last start or update went and why: *⚡ Updated in 9 s (hot reload)*, *⚡ Updated in 41 s (restart: domain model changed)*, *⚡ Updated in 0.8 s (no restart: no app files changed)*, *⚡ Started in 62 s (cold start)*. Hovering shows each phase: *fetch* (the new commit into the live checkout), *classify*, then for a hot reload *apply* (mxcli's watch picking the change up, building and reloading) and *first answer*, or for a restart *stop*, *build* and *runtime start*. The same line, with the phases, goes into the log (`<office data>/live/<project>.log`).
+
+### Hot reload and Keep warm
+
+Two settings per project, for admins, on the Live app tab beside the timing line. Each change is in the audit log.
+
+- **Hot reload** (off by default; `AGENT_OFFICE_LIVE_HOT_RELOAD`, or `hotReload` in `live-app.json`, turns it on for every project that hasn't set it): page and logic changes go in by hot reload, as above. It takes effect at the next **▶ Start** or **⟳ Restart**, because mxcli has to be started with `--watch`. It is off by default for three reasons. It relies on the words mxcli's watch prints (*Change detected…*, *applied via reload…*), which mxcli doesn't promise to keep: should they change, every hot try would wait 20 seconds and then restart (after two such misses in a row the office stops trying until the next start or restart). Under `--watch`, mxcli starts an incremental web bundler instead of bundling once, so every restart and cold start is slower: a domain-model change took about 66 s instead of 45 s in the measurements below. And that bundler stays running beside the app (about 0.9 GB in earlier measurements). Turn it on for a project whose changes are mostly pages and logic.
+- **Keep warm** (off by default): the office starts the live app by itself shortly after the office starts, so nobody waits for a cold start (one to two minutes). Projects with it on start one at a time, each only when the computer has at least 2.5 GB of memory free: a running live app (mxcli, mxbuild, the Mendix runtime and the web bundler) holds about 1.5 to 2 GB, and uses up to two and a half cores while it builds. One that doesn't fit says so on its tab (*Keep warm didn't start it: 1.8 GB of 16.0 GB memory free…*); **▶ Start** still starts it. Nothing in the office stops a live app for being idle: once up, it runs until someone stops it or the office closes.
+
+### Measured
+
+On the office's Windows laptop (Intel i9, 64 GB, Studio Pro 11.12's mxbuild, local PostgreSQL, mxcli nightly-20261003, with other work running), the office's own update loop against a copy of a sample app (18 entities, 104 microflows, 13 pages): from the merge landing in the project's folder until the new commit serves, medians (n in brackets). *Before* is the office without this, which restarted for every update.
+
+| Change | Before | Hot reload off | Hot reload on |
+|---|---|---|---|
+| Page | 47 s (3) | 45 s (2) | 12 s (5) |
+| Microflow | 44 s (3) | 45 s (1) | 9 s (4) |
+| Entity or attribute | 45 s (2) | 43 s (3) | 66 s (5) |
+| Docs only | a restart | 1.7 s (2) | 2.5 s (2) |
+| Three merges a second apart, until the last serves | 109 s (1): two restarts, the second after the next auto-refresh | 131 s (1): two restarts | 24 s (2): two hot reloads, the second taking both later merges |
+
+Every page change's new text was in the served page bundle once the office said it served it. All 13 hot reloads confirmed, including the first after a cold start. Where a hot reload's time goes: fetch 0.5–0.9 s, classify 0.1–0.4 s, apply 6.4–11.6 s (about 3 s of that is mxcli's watch noticing the change, the rest its build and reload), first answer under 0.1 s. A restart's is almost all build (40–42 s, or 52–71 s with `--watch`). Cold starts took 78 to 212 s across the runs, with the machine's load. The three-merges row shows how much load moves a restart (45 to 63 s here); what grouping saves for certain is the wait for the next auto-refresh (up to a minute): the office without this also built only the newest main after an update, but not before its next look.
+
+### Antivirus
+
+A build writes thousands of small files, and real-time antivirus scanning can slow it down. The office doesn't change antivirus settings, and you shouldn't without your IT department's OK. If they agree to measure it, this is how:
+
+1. **The folders.** The live checkout, `<office data>/live/<project>` (above all its `deployment/` and `.mxcli/` folders); mxcli's cache, `%USERPROFILE%\.mxcli` (its `mxbuild` and `runtime` folders); the project's Studio Pro, `C:\Program Files\Mendix\<version>` (read only); and the JDK the runtime runs on. Leave the office's own data folder and the project folders alone.
+2. **Before.** With the antivirus as it is, start the live app and let it settle. Make five small page changes and five microflow changes on main (one merge each, a minute apart), then one entity change, and note the *⚡ Updated in …* line after each (or copy the `✔ Updated in …` lines, with their phases, from `<office data>/live/<project>.log`). Then **⟳ Restart** three times and note *Restarted in …*.
+3. **After.** Have IT add exclusions for the folders in step 1 (some IT departments prefer process exclusions: `mxcli.exe`, `mxbuild.exe`, the runtime's `java.exe` and the web bundler's `node.exe`), and repeat step 2 the same way, at a similar time of day and load.
+4. **Compare** the medians per kind, phase by phase: *build* and *apply* are the phases scanning slows. A difference of a few seconds is within the noise of a busy laptop. Have IT remove the exclusions again if they don't help.
 
 ## Is it ready?
 
@@ -116,8 +166,8 @@ Under the app's status, the **Console** has two tabs. It streams only while the 
 - It runs `mxcli run --local` with three free ports from **8110–8199** (app, admin and serve) and a database named `<project>_live` in the local PostgreSQL.
 - While the app runs, the office runs its **recording proxy** on a fourth port from the same range, on the office's own bind address (never the office's port). It passes every request and WebSocket on to the app's port on this machine and to nothing else, and records them for the Console. The browser sends the office's session cookie to every port of the same host (cookies ignore ports), so the proxy removes it from every request before passing it on, and drops any cookie the app tries to set under the office's name: the app can neither read nor replace your office sign-in. **Open live app** and the Overview's **View App** use the proxy's address; the app's own port still answers too, unrecorded.
 - The Console reads the runtime log only while someone has it open, from where it stopped (a first read takes the last 256 KB).
-- **Only while it's running**, the office has the project's folder fetch `main` every 60 seconds (and follows any other fetch that lands there). When `main` moves (a merge), it **updates and restarts** the app by itself. When the fetch fails, the tab and Needs you say *Live app can't check for updates: (git's reason) (running main @dd960bd from 16 Oct 23:36)*. A stopped, failed or crashed app follows nothing: it stays on its old commit (or none) until someone starts it.
-- An update first fetches the new commit into the live checkout's git (the old app keeps serving meanwhile; if that fetch fails, it keeps serving and the tab says *Update to … failed · still running …*). Then it **stops the old app before it builds the new one**, because the build runs in the same folder against the same database, so the app is down for the whole build and the tab says *nothing running*. Keeping the old app up on a second checkout until the new one answers is a possible follow-up, not built.
+- **Only while it's running**, the office has the project's folder fetch `main` every 60 seconds (and follows any other fetch that lands there). When `main` moves (a merge), it **updates** the app by itself: without a restart when no app files changed or (with hot reload on) only pages and logic did, else with one (see [Faster updates](#faster-updates)). Merges that land while an update runs wait and go in together with the next one. When the fetch fails, the tab and Needs you say *Live app can't check for updates: (git's reason) (running main @dd960bd from 16 Oct 23:36)*. A stopped, failed or crashed app follows nothing: it stays on its old commit (or none) until someone starts it.
+- An update first fetches the new commit into the live checkout's git (the old app keeps serving meanwhile; if that fetch fails, it keeps serving and the tab says *Update to … failed · still running …*), then classifies what changed. When it has to restart, it **stops the old app before it builds the new one**, because the build runs in the same folder against the same database, so the app is down for the whole build and the tab says *nothing running*. Keeping the old app up on a second checkout until the new one answers is a possible follow-up, not built.
 - When `main` moved, it clears the stale build folders under `deployment/` (keeping `deployment/data`) first. When a build stops before the app comes up, it clears them and tries **once** more; if that fails too, the app is *build failed* and the office doesn't try again by itself.
 - The app counts as **running** the first time its port answers an HTTP request with a status below 500. The office doesn't ask again after that: a crash is noticed when the mxcli process exits, but an app whose process stays up and stops answering still shows *running*.
 - The log is `<office data>/live/<project>.log`.
