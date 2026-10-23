@@ -27,6 +27,7 @@ import { checkoutFetched, cleanBuild, defaultBranch, ensureCheckout, fetchBranch
 import { classifyUpdate, commitsIn } from './classify.js';
 import { answers, answersWithin, HOT_TIMES, UpdateClock, watchFor, watchLine, type HotOutcome, type HotTimes, type WatchSaid } from './hot.js';
 import { databaseName, type LiveAppConfig } from './config.js';
+import { hotMode } from './hot-mode.js';
 import { isUp, nextStatus, type LiveAppEvent } from './machine.js';
 import { pickPorts } from './ports.js';
 import { pgBinDir, startTree, stopTree } from './process.js';
@@ -75,6 +76,8 @@ export interface LiveAppDeps {
   supportsWatch?(mxcli: string): Promise<boolean>;
   /** How long a hot apply may take (./hot.ts HOT_TIMES). */
   hotTimes?: HotTimes;
+  /** Memory free now (machine.ts availableMemory): a start with too little for hot reload restarts instead (./hot-mode.ts). */
+  freeMemory?(): Promise<number> | number;
 }
 
 export class LiveApp {
@@ -310,7 +313,7 @@ export class LiveApp {
     }
     if (change.kind !== 'hot') return false;
     if (!this.watching) {
-      clock.reason = `${change.reason}, but ${!this.d.prefs?.().hotReload ? 'hot reload is off' : this.hotMisses >= 2 ? "hot reload is paused (mxcli's watch didn't answer)" : 'hot reload starts with the next restart'}`;
+      clock.reason = `${change.reason}, but ${this.s.hot?.why ?? 'hot reload starts with the next restart'}`;
       return false;
     }
     clock.mode = 'hot';
@@ -365,12 +368,13 @@ export class LiveApp {
       extra.MXBUILD_PATH = pick.path;
     }
     this.mxbuild = { pick, flag };
-    // Hot reload on: mxcli watches the checkout, so a page or logic change the office moves in applies in place.
-    const watch = !!this.d.prefs?.().hotReload && (await (this.d.supportsWatch ?? supportsWatch)(this.d.mxcli!));
+    // Hot reload (on unless turned off): mxcli watches the checkout, so a page or logic change the office moves in applies in place.
+    const hot = await hotMode(this.d.mxcli!, { prefs: this.d.prefs, supportsWatch: this.d.supportsWatch ?? supportsWatch, free: this.d.freeMemory }, this.hotMisses);
     if (gen !== this.gen) return;
-    if (watch && this.hotMisses < 2) args.push('--watch');
-    else if (this.d.prefs?.().hotReload) this.note("hot reload: this mxcli has no --watch, so every update restarts");
-    this.watching = watch && this.hotMisses < 2;
+    if (hot.on) args.push('--watch');
+    else if (this.d.prefs?.().hotReload) this.note(`hot reload: ${hot.why}`);
+    this.watching = hot.on;
+    this.set({ hot });
     for (const s of pick.skipped) this.note(`mxbuild: ${s}`);
     if (pick.path) this.note(`mxbuild: ${pick.path} (${MXBUILD_FROM[pick.source!]})${flag ? '' : ': this mxcli has no --mxbuild-path, so it only gets MXBUILD_PATH'}`);
     else if (pick.expected) this.note(`mxbuild: Studio Pro ${pick.version} isn't installed (no ${pick.expected}); mxcli picks one itself`);

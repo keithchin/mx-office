@@ -43,7 +43,7 @@ export function parseWorkerLimit(v: unknown): number | undefined {
  * few hundred MB on a Mac with half its memory to spare. There the kernel's own "memory free" level
  * (what `memory_pressure` prints) is the honest figure.
  */
-function availableMemory(): Promise<number> {
+export function availableMemory(): Promise<number> {
   if (process.platform !== 'darwin') return Promise.resolve(os.freemem());
   return new Promise((resolve) => {
     execFile('sysctl', ['-n', 'kern.memorystatus_level'], { timeout: 2000 }, (err, out) => {

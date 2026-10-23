@@ -4,3 +4,5 @@
 .ls-built { font-weight: 600; }
 .ls-prefs { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; margin-left: auto; }
 .ls-pref { display: inline-flex; align-items: center; gap: 2px; cursor: pointer; }
+.ls-hot { font-weight: 600; }
+.ls-hot-run { font-weight: 600; font-style: italic; }

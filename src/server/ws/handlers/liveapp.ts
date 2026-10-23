@@ -47,7 +47,7 @@ export const liveAppHandlers = {
     const patch = { ...(typeof msg.hotReload === 'boolean' ? { hotReload: msg.hotReload } : {}), ...(typeof msg.keepWarm === 'boolean' ? { keepWarm: msg.keepWarm } : {}) };
     if (!Object.keys(patch).length) return;
     const prefs = liveAppsOf(ctx).setPrefs(floor, patch);
-    const said = [patch.hotReload !== undefined ? `hot reload ${prefs.hotReload ? 'on' : 'off'}` : '', patch.keepWarm !== undefined ? `keep warm ${prefs.keepWarm ? 'on' : 'off'}` : ''].filter(Boolean).join(', ');
+    const said = [patch.hotReload !== undefined ? `hot reload ${prefs.hotReload ? 'on' : 'off'}${prefs.hotReloadFrom === 'office' ? ' (off for every project on this office)' : ' (from the next start)'}` : '', patch.keepWarm !== undefined ? `keep warm ${prefs.keepWarm ? 'on' : 'off'}` : ''].filter(Boolean).join(', ');
     audit.record({ floor: floor.id, actor: human(c.peer.name, c.accountId), action: 'liveapp.prefs', target: { kind: 'liveapp', id: floor.id, label: 'Live app' }, summary: `Live app settings: ${said}` });
   },
 } satisfies HandlerMap<Exclude<LiveAppClientMsg, { t: 'liveapp.console' }>>;

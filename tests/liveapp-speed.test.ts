@@ -126,14 +126,14 @@ test('the timing line: hot reload, restart and why, no restart, a cold start, a 
   assert.equal(updateLine(undefined), '');
 });
 
-test('settings: hot reload follows the office default until the project says; keep warm is off unless asked, and fits memory', () => {
+test('settings: hot reload is on until the project (or the office) says off; keep warm is off unless asked, and fits memory', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'ao-speed-prefs-'));
   try {
-    assert.deepEqual(readPrefs(dir, 'demo', { hotReload: false }), { hotReload: false, keepWarm: false });
-    assert.deepEqual(readPrefs(dir, 'demo', { hotReload: true }), { hotReload: true, keepWarm: false });
-    assert.deepEqual(writePrefs(dir, 'demo', { keepWarm: true }, { hotReload: true }), { hotReload: true, keepWarm: true });
-    assert.deepEqual(writePrefs(dir, 'demo', { hotReload: false }, { hotReload: true }), { hotReload: false, keepWarm: true });
-    assert.deepEqual(readPrefs(dir, 'demo', { hotReload: true }), { hotReload: false, keepWarm: true });
+    assert.deepEqual(readPrefs(dir, 'demo', { hotReload: false }), { hotReload: false, hotReloadFrom: 'office', keepWarm: false });
+    assert.deepEqual(readPrefs(dir, 'demo', { hotReload: true }), { hotReload: true, hotReloadFrom: 'default', keepWarm: false });
+    assert.deepEqual(writePrefs(dir, 'demo', { keepWarm: true }, { hotReload: true }), { hotReload: true, hotReloadFrom: 'default', keepWarm: true });
+    assert.deepEqual(writePrefs(dir, 'demo', { hotReload: false }, { hotReload: true }), { hotReload: false, hotReloadFrom: 'project', keepWarm: true });
+    assert.deepEqual(readPrefs(dir, 'demo', { hotReload: true }), { hotReload: false, hotReloadFrom: 'project', keepWarm: true });
     assert.equal(warmFits(WARM_FREE_BYTES, 16 * 1024 ** 3).ok, true);
     const no = warmFits(1024 ** 3, 8 * 1024 ** 3);
     assert.equal(no.ok, false);
@@ -434,7 +434,7 @@ test("a watch that never answers: each hot try falls back to a restart, and afte
   await app.follow(four);
   await until('restarted onto four', () => app.status === 'running' && app.state.served?.sha === four);
   assert.equal(app.state.lastUpdate?.fallback, undefined, 'no hot try this time');
-  assert.equal(app.state.lastUpdate?.reason, "page and logic changes, but hot reload is paused (mxcli's watch didn't answer)");
+  assert.equal(app.state.lastUpdate?.reason, "page and logic changes, but hot reload is paused: mxcli's watch didn't answer twice in a row");
   honest(states);
 });
 
@@ -461,4 +461,159 @@ test('keep warm: only projects that asked, and none that would not fit in memory
   assert.match(apps.peek('warm')?.message ?? '', /^Keep warm didn't start it: 1\.0 GB of 8\.0 GB memory free/);
   assert.equal(apps.peek('cold'), undefined, 'a project without keep warm is not touched');
   assert.equal(apps.peek('warm')?.status, 'stopped');
+});
+
+// ---- Hot reload on by default ---------------------------------------------------------------------------
+
+test('default on: the office allows hot reload unless its switch says off (environment over live-app.json)', async () => {
+  const { liveAppConfig } = await import('../src/server/liveapp/config.js');
+  const dir = mkdtempSync(path.join(tmpdir(), 'ao-speed-cfg-'));
+  try {
+    assert.equal(liveAppConfig(dir, {}).hotReload, true, 'on with nothing set');
+    assert.equal(liveAppConfig(dir, { AGENT_OFFICE_LIVE_HOT_RELOAD: '0' }).hotReload, false);
+    writeFileSync(path.join(dir, 'live-app.json'), JSON.stringify({ hotReload: false }));
+    assert.equal(liveAppConfig(dir, {}).hotReload, false);
+    assert.equal(liveAppConfig(dir, { AGENT_OFFICE_LIVE_HOT_RELOAD: 'on' }).hotReload, true);
+    // The office's off wins over a project's own on; the project's choice comes back when the office allows it again.
+    const live = path.join(dir, 'live');
+    writePrefs(live, 'demo', { hotReload: true }, { hotReload: false });
+    assert.deepEqual(readPrefs(live, 'demo', { hotReload: false }), { hotReload: false, hotReloadFrom: 'office', keepWarm: false });
+    assert.deepEqual(readPrefs(live, 'demo', { hotReload: true }), { hotReload: true, hotReloadFrom: 'project', keepWarm: false });
+    // A settings file from before (both booleans written whenever one changed): its explicit false stays off.
+    writeFileSync(path.join(live, 'old.prefs.json'), JSON.stringify({ hotReload: false, keepWarm: false }));
+    assert.deepEqual(readPrefs(live, 'old', { hotReload: true }), { hotReload: false, hotReloadFrom: 'project', keepWarm: false });
+    // From now on only what an admin names is stored: keep warm alone doesn't pin hot reload.
+    writePrefs(live, 'fresh', { keepWarm: true }, { hotReload: true });
+    assert.deepEqual(JSON.parse(readFileSync(path.join(live, 'fresh.prefs.json'), 'utf8')), { keepWarm: true });
+  } finally {
+    removeDir(dir);
+  }
+});
+
+test('default on: a project that never chose starts with --watch at its first start (no restart needed); an explicit off restarts for every change', { timeout: 120_000 }, async (t) => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'ao-speed-default-'));
+  const { origin, floorDir } = repos(dir);
+  const states: LiveAppState[] = [];
+  const kinds = new Map<string, ChangeClass>();
+  const live = path.join(dir, 'live');
+  const office = { hotReload: LIVE_APP_DEFAULTS.hotReload };
+  const app = new LiveApp({
+    cfg: { ...LIVE_APP_DEFAULTS, ports: { from: 8530, to: 8539 }, readyTimeoutMs: 30_000 },
+    mxcli: process.execPath,
+    floorId: 'demo',
+    floorDir,
+    liveDir: live,
+    taken: () => new Set(),
+    changed: (s) => states.push(s),
+    // What the office reads: the stored file (none yet) over the office's default.
+    prefs: () => readPrefs(live, 'demo', office),
+    classify: async (_dir, _from, to) => kinds.get(to) ?? { kind: 'restart', reason: 'domain model changed', touched: [] },
+    supportsWatch: async () => true,
+    freeMemory: () => 32 * 1024 ** 3,
+    hotTimes: { detectMs: 5_000, applyMs: 10_000 },
+  });
+  t.after(async () => {
+    await app.stop('Probe');
+    removeDir(dir);
+  });
+  assert.deepEqual(app.state.prefs, { hotReload: true, hotReloadFrom: 'default', keepWarm: false });
+  await app.start('Probe');
+  await until('running', () => app.status === 'running');
+  assert.deepEqual(app.state.hot, { on: true });
+  assert.ok(readFileSync(path.join(live, 'demo.log'), 'utf8').includes('--watch'), 'the first start runs with --watch');
+  const second = land(origin, floorDir, { 'version.txt': 'two' }, 'A page');
+  kinds.set(second, HOT);
+  await app.follow(second);
+  await until('hot reloaded', () => app.status === 'running' && app.state.served?.sha === second);
+  assert.equal(app.state.lastUpdate?.mode, 'hot');
+  assert.equal(starts(dir), 1);
+  // An admin turns it off: the run keeps its way until its next start (the tab says so), then restarts for every change.
+  writePrefs(live, 'demo', { hotReload: false }, office);
+  app.prefsChanged();
+  assert.deepEqual([app.state.prefs?.hotReload, app.state.prefs?.hotReloadFrom, app.state.hot?.on], [false, 'project', true]);
+  await app.restart('Probe');
+  await until('restarted', () => app.status === 'running' && starts(dir) === 2);
+  assert.deepEqual(app.state.hot, { on: false, why: 'hot reload is off' });
+  // (A restart of the same commit has it as target while it still serves: honest() looks at what follows.)
+  states.length = 0;
+  const third = land(origin, floorDir, { 'version.txt': 'three' }, 'Another page');
+  kinds.set(third, HOT);
+  await app.follow(third);
+  await until('restarted onto three', () => app.status === 'running' && app.state.served?.sha === third);
+  assert.equal(app.state.lastUpdate?.reason, 'page and logic changes, but hot reload is off');
+  honest(states);
+});
+
+test('memory: a start with too little free for a hot-reload app runs without --watch, says why, and restarts for page changes', { timeout: 120_000 }, async (t) => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'ao-speed-mem-'));
+  const { origin, floorDir } = repos(dir);
+  const states: LiveAppState[] = [];
+  const kinds = new Map<string, ChangeClass>();
+  let free = 1.2 * 1024 ** 3;
+  const app = new LiveApp({
+    cfg: { ...LIVE_APP_DEFAULTS, ports: { from: 8540, to: 8549 }, readyTimeoutMs: 30_000 },
+    mxcli: process.execPath,
+    floorId: 'demo',
+    floorDir,
+    liveDir: path.join(dir, 'live'),
+    taken: () => new Set(),
+    changed: (s) => states.push(s),
+    prefs: () => ({ hotReload: true, hotReloadFrom: 'default', keepWarm: false }),
+    classify: async (_dir, _from, to) => kinds.get(to) ?? { kind: 'restart', reason: 'domain model changed', touched: [] },
+    supportsWatch: async () => true,
+    freeMemory: () => free,
+    hotTimes: { detectMs: 5_000, applyMs: 10_000 },
+  });
+  t.after(async () => {
+    await app.stop('Probe');
+    removeDir(dir);
+  });
+  await app.start('Probe');
+  await until('running', () => app.status === 'running');
+  const log = () => readFileSync(path.join(dir, 'live', 'demo.log'), 'utf8');
+  assert.ok(!log().includes('--watch'), 'no --watch with too little memory');
+  assert.equal(app.state.hot?.on, false);
+  assert.match(app.state.hot?.why ?? '', /^only 1\.2 GB of .* GB memory free, and a hot-reload app needs about 2\.0 GB: this run restarts for every change$/);
+  assert.match(log(), /hot reload: only 1\.2 GB/);
+  const second = land(origin, floorDir, { 'version.txt': 'two' }, 'A page');
+  kinds.set(second, HOT);
+  await app.follow(second);
+  await until('restarted', () => app.status === 'running' && app.state.served?.sha === second);
+  assert.match(app.state.lastUpdate?.reason ?? '', /^page and logic changes, but only 1\.2 GB/);
+  honest(states);
+  // With memory back, the next start has hot reload again.
+  free = 8 * 1024 ** 3;
+  await app.restart('Probe');
+  await until('restarted with memory', () => app.status === 'running' && starts(dir) === 3);
+  assert.deepEqual(app.state.hot, { on: true });
+});
+
+test('structural restart: a data-model change restarts with --watch again, so the next page change goes in hot without another restart', { timeout: 120_000 }, async (t) => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'ao-speed-struct-'));
+  const { origin, floorDir } = repos(dir);
+  const states: LiveAppState[] = [];
+  const kinds = new Map<string, ChangeClass>();
+  const app = liveApp(dir, floorDir, { from: 8550, to: 8559 }, states, { hotReload: true, hotReloadFrom: 'default', keepWarm: false }, kinds);
+  t.after(async () => {
+    await app.stop('Probe');
+    removeDir(dir);
+  });
+  await app.start('Probe');
+  await until('running', () => app.status === 'running');
+  const entity = land(origin, floorDir, { 'version.txt': 'two' }, 'An entity');
+  await app.follow(entity);
+  await until('restarted', () => app.status === 'running' && app.state.served?.sha === entity);
+  assert.equal(app.state.lastUpdate?.mode, 'restart');
+  assert.equal(app.state.lastUpdate?.fallback, undefined, 'straight to a restart: no hot try for a data-model change');
+  const runs = readFileSync(path.join(dir, 'live', 'demo.log'), 'utf8').split(/\r?\n/).filter((l) => l.startsWith('$ mxcli run'));
+  assert.equal(runs.length, 2);
+  assert.ok(runs.every((l) => l.includes('--watch')), 'both runs watch');
+  assert.deepEqual(app.state.hot, { on: true });
+  const page = land(origin, floorDir, { 'version.txt': 'three' }, 'A page');
+  kinds.set(page, HOT);
+  await app.follow(page);
+  await until('hot reloaded', () => app.status === 'running' && app.state.served?.sha === page);
+  assert.equal(app.state.lastUpdate?.mode, 'hot');
+  assert.equal(starts(dir), 2, 'no third start');
+  honest(states);
 });

@@ -68,6 +68,15 @@ export interface LiveAppState {
   lastUpdate?: LiveUpdate;
   /** This project's live app settings: hot reload, keep warm (server/liveapp/prefs.ts). */
   prefs?: LiveAppPrefs;
+  /** How the run under way applies changes (server/liveapp/hot-mode.ts): set as it starts, kept until its next start. */
+  hot?: LiveHotMode;
+}
+
+/** Whether this run of the live app was started for hot reload (`mxcli run --watch`), and why not when it wasn't. */
+export interface LiveHotMode {
+  on: boolean;
+  /** Why this run restarts for every change: the setting is off, too little memory, an mxcli without --watch, a watch that stopped answering. */
+  why?: string;
 }
 
 /** A timed phase of a start or an update (LiveUpdate.phases). */
@@ -102,6 +111,8 @@ export interface LiveUpdate {
 export interface LiveAppPrefs {
   /** Apply page, microflow, nanoflow and theme changes in place (mxcli run --watch); a restart when that fails. */
   hotReload: boolean;
+  /** Where hotReload comes from: the default (on), the project's own choice, or the office turning it off for every project. */
+  hotReloadFrom?: 'default' | 'project' | 'office';
   /** Start the live app when the office starts (it holds about 2 GB of memory while it runs). */
   keepWarm: boolean;
 }

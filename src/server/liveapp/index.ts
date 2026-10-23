@@ -37,6 +37,7 @@ import { ModelUnits } from '../model/units.js';
 import { classifyUpdate } from './classify.js';
 import { forgetPrefs, readPrefs, writePrefs } from './prefs.js';
 import type { LiveAppPrefs } from '../../shared/protocol.js';
+import { availableMemory } from '../machine.js';
 
 type Deps = Pick<Ctx, 'cfg' | 'floors' | 'toFloor'> & Partial<Pick<Ctx, 'toastFloor'>>;
 
@@ -154,6 +155,8 @@ export class LiveApps {
         taken: () => this.takenPorts(),
         changed: (state) => this.changed(state),
         prefs: () => this.prefsOf(floor.id),
+        // Too little memory for hot reload's resident bundler: that start restarts for every change instead (./hot-mode.ts).
+        freeMemory: availableMemory,
         // What an update changes, read by the model's unit reader (model/units.ts) from the live checkout's git; its reader let go after.
         classify: (dir, from, to, mpr) => classifyUpdate(dir, from, to, mpr, { units: this.units }).finally(() => this.units.blobs(dir).close()),
       });
