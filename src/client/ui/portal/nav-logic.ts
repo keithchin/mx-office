@@ -105,10 +105,12 @@ function derived() {
   if (cache?.version === tabsVersion()) return cache;
   const groups = BUILTIN_GROUPS.map((g) => {
     const placed = g.items.map((item, i) => ({ item, order: (i + 1) * 10 }));
-    for (const t of registeredTabs()) if (t.group === g.id) placed.push({ item: tab(t.id, t.label, t.tooltip, t.admin ? { admin: true } : {}), order: t.order ?? Infinity });
+    for (const t of registeredTabs()) if (t.group === g.id && !t.hidden) placed.push({ item: tab(t.id, t.label, t.tooltip, t.admin ? { admin: true } : {}), order: t.order ?? Infinity });
     return { ...g, items: placed.sort((a, b) => a.order - b.order).map((p) => p.item) };
   });
-  cache = { version: tabsVersion(), groups, all: [...groups.flatMap((g) => g.items), ...NAV_BOTTOM] };
+  // The hidden ones (tabs/registry.ts `hidden`) are in no group but still tabs: ?tab=, the header's title.
+  const hidden = registeredTabs().filter((t) => t.hidden).map((t) => tab(t.id, t.label, t.tooltip, t.admin ? { admin: true } : {}));
+  cache = { version: tabsVersion(), groups, all: [...groups.flatMap((g) => g.items), ...NAV_BOTTOM, ...hidden] };
   return cache;
 }
 

@@ -32,10 +32,10 @@ import { KIND_ORDER, searchGroups } from '../src/client/ui/portal/search-logic.j
 const root = path.join(import.meta.dirname, '..');
 const read = (p: string) => readFileSync(path.join(root, p), 'utf8').replace(/\r\n/g, '\n');
 
-/** The 1D view's tabs: its tab row's buttons, and the registered ones (the test lab, Testing, Questions, Design gallery, Walkthroughs, Security). */
+/** The 1D view's tabs: its tab row's buttons, and the registered ones (the test lab, Testing, Questions, Design gallery, Walkthroughs, Security, the App workspace; its other four sections are hidden from the navigation). */
 function liteTabs(): string[] {
   const ids = [...read('src/client/lite.html').matchAll(/id="tab-([a-z]+)"/g)].map((m) => m[1]);
-  return [...ids, 'tests', 'testing', 'questions', 'design', 'walkthroughs', 'security'];
+  return [...ids, 'tests', 'testing', 'questions', 'design', 'walkthroughs', 'security', 'app'];
 }
 
 test('every tab of the 1D view is one item of the navigation, in one group or under the rule, with the same id', () => {
@@ -44,7 +44,7 @@ test('every tab of the 1D view is one item of the navigation, in one group or un
   assert.equal(new Set(items).size, items.length, 'no tab twice');
   // The groups as the portal's app pane has them.
   assert.deepEqual(navGroups().map((g) => g.label), ['General', 'Project Management', 'App Insights', 'Repository', 'Deployment', 'Monitoring']);
-  assert.deepEqual(navGroups()[0].items.map((i) => i.label), ['Overview', 'Team', 'Team boards', 'Documents']);
+  assert.deepEqual(navGroups()[0].items.map((i) => i.label), ['App workspace', 'Overview', 'Team', 'Team boards', 'Documents']);
   assert.deepEqual(navGroups()[1].items.map((i) => i.id), ['board', 'approvals', 'questions', 'design', 'standup']);
   assert.deepEqual(NAV_BOTTOM.map((i) => i.label), ['Settings', 'View App', 'Edit in Studio Pro']);
   assert.equal(groupOf('model')?.id, 'repo');
@@ -372,6 +372,8 @@ const REPEATS: Record<string, string[]> = {
   walkthroughs: [],
   // 🔐 Security has no heading of its own either: it starts with its lead line (ui/security/page.ts).
   security: [],
+  // The App workspace has no page header in Portal: its own bar names the project and the section (ui/app-workspace/).
+  app: [],
 };
 
 test('in Portal no tab of the 1D view shows its title twice: each repeating heading is hidden, what was beside it kept', () => {

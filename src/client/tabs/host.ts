@@ -12,6 +12,14 @@ import { h } from '../ui/dom';
 import { registeredTabs, type TabDef, type TabHooks } from './registry';
 
 const tabListeners = new Set<(id: string) => void>();
+let opener: ((id: string) => void) | undefined;
+
+/** Shows tab `id` the way the page does (its showTab: the address, the navigation, the tab's hooks). False before the page set up its tabs. */
+export function openProjectTab(id: string): boolean {
+  if (!opener) return false;
+  opener(id);
+  return true;
+}
 let shownTab: string | undefined;
 
 /** Hears every tab the page shows (built-in or registered), and the one showing now, if it has shown one. */
@@ -34,6 +42,7 @@ export interface ProjectTabs {
  * end of `row`); `open` is the page's showTab, for those buttons.
  */
 export function projectTabs(before: Element, row: Element | null, open: (id: string) => void): ProjectTabs {
+  opener = open;
   const slots = registeredTabs().map((def: TabDef) => {
     const view = h('div.hidden', { id: `${def.id}-view` });
     before.before(view);

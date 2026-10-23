@@ -6,13 +6,18 @@ import { store } from '../state';
 import { lastFloor, rememberFloor } from '../state/persist';
 import { flatViewGoesHome } from '../../shared/home';
 import { HOME_PAGE } from '../../shared/start';
+import { workspaceTab } from '../../shared/app-workspace/route';
 
 const params = () => new URLSearchParams(location.search);
 
 /** The floor the address asked for when the page opened (read once, before the connection goes up). */
 export const askedFloor: string | null = params().get('floor');
-/** The tab the address asked for when the page opened (the 1D view's Board, Workers, …). */
-export const askedTab: string | null = params().get('tab');
+/**
+ * The tab the address asked for when the page opened (the 1D view's Board, Workers, …). `&ws=app` asks for
+ * the App Workspace (one of its sections), `&ws=eng` for the Engineering view (shared/app-workspace/route.ts);
+ * without `ws` the tab as asked, as always.
+ */
+export const askedTab: string | null = workspaceTab(params().get('ws'), params().get('tab'));
 /** The ⚙️ Settings section the address asked for (`&section=workers`, shared/settings-sections.ts). */
 export const askedSection: string | null = params().get('section');
 /** The board's team filter (`&teams=design,testing`) and the team page (`&team=testing`) the address asked for (ui/teams/). */
