@@ -20,6 +20,7 @@ import { modelRoutes } from './model.js';
 import { modelChangeRoutes } from './model-change.js';
 import { changeRequestRoutes } from './change-requests.js';
 import { guidedValidationRoutes } from './guided-validation.js';
+import { appExplorerRoutes } from './app-explorer.js';
 import { githubRoutes } from './github.js';
 import { mergeGateRoutes } from './merge-gate.js';
 import { homeRoutes } from './home.js';
@@ -119,6 +120,7 @@ export const routes: readonly Route[] = [
   changeRequestRoutes.create,
   guidedValidationRoutes.view,
   guidedValidationRoutes.mark,
+  appExplorerRoutes.explorer,
   analysisRoutes.report,
   analysisRoutes.backfill,
   analysisRoutes.summary,

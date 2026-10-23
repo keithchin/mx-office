@@ -125,6 +125,8 @@ export function requestList(list: ChangeRequestView[] | undefined): HTMLElement 
 
 export interface RequestContext {
   project?: string;
+  /** What it's about when picked in the explorer ("Page: Visitor list"): shown, and added to the words sent. */
+  about?: string;
   page?: string;
   pageMoved?: boolean;
   revision?: string;
@@ -142,6 +144,7 @@ export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => 
   const cancel = h('button.btn', { type: 'button' }, 'Cancel');
   const about = [
     ['Project', c.project ?? 'This project'],
+    ...(c.about ? [['About', c.about]] : []),
     ['Page', c.page ? `${c.page}${c.pageMoved ? ' (the app moved on from there by itself; this is where it was last opened)' : ''}` : 'No page: the app isn’t showing here'],
     ['Version', c.revision ? `running ${short(c.revision)}` : 'No version running'],
   ];
@@ -173,7 +176,7 @@ export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => 
       return;
     }
     submit.disabled = true;
-    void send({ text, ...(c.page ? { page: c.page } : {}), ...(c.pageMoved ? { pageMoved: true } : {}), ...(c.revision ? { revision: c.revision } : {}) }).then((r) => {
+    void send({ text: c.about ? `${text}\n\nAbout: ${c.about}` : text, ...(c.page ? { page: c.page } : {}), ...(c.pageMoved ? { pageMoved: true } : {}), ...(c.revision ? { revision: c.revision } : {}) }).then((r) => {
       submit.disabled = false;
       if (!r.ok) {
         err.hidden = false;
