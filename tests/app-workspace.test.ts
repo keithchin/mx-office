@@ -122,7 +122,7 @@ test('it plugs in through the registries: its own module, lazy, no polling, noth
   assert.match(tab, /import type \* as Shell from '\.\/shell';/, 'only the shell’s type at start');
   assert.match(tab, /shell \?\?= import\('\.\/shell'\);/, 'the shell comes in with the first show');
   assert.match(read('src/client/tabs/index.ts'), /^import '\.\.\/ui\/app-workspace\/tab';$/m);
-  for (const f of readdirSync(path.join(root, 'src/client/ui/app-workspace'))) assert.doesNotMatch(read(`src/client/ui/app-workspace/${f}`), /setInterval|setTimeout/, `${f}: no timers`);
+  for (const f of readdirSync(path.join(root, 'src/client/ui/app-workspace'), { recursive: true }).map(String).filter((x) => /\.(ts|css)$/.test(x))) assert.doesNotMatch(read(`src/client/ui/app-workspace/${f}`), /setInterval|setTimeout/, `${f}: no timers`);
   assert.doesNotMatch(read('src/client/lite.ts'), /app-workspace|aw-on/);
   assert.doesNotMatch(read('src/client/state/store.ts'), /liveApp|app-workspace/);
   assert.match(read('src/client/state/slices/index.ts'), /^  liveApp,\n\];/m, 'the live app slice joins at the end');

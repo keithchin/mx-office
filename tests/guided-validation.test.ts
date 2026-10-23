@@ -15,6 +15,7 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { checksAt, correctionText, plainCaption, resultsAt, scenarioSummary, scenarioView, startOf, stepWords, summaryLine, type FindingRecord } from '../src/shared/guided-validation.js';
 import { scriptOf } from '../src/shared/walkthroughs/script.js';
+import { requestTitle } from '../src/shared/change-requests.js';
 import { ValidationBook, type ValidationDeps } from '../src/server/guided-validation/store.js';
 import { guidedValidationRoutes } from '../src/server/http/routes/guided-validation.js';
 import { requestHandler } from '../src/server/http/router.js';
@@ -167,6 +168,8 @@ test('“Something’s wrong” becomes a correction through the change requests
     assert.equal(x.asked[0].pageMoved, true);
     assert.equal(x.asked[0].text, correctionText('Reception signs a visitor in', 'J-01', A, 'The host’s name is missing on the badge'));
     assert.match(x.asked[0].text, /"Reception signs a visitor in" \(J-01\) on version 7d3f0b1: The host’s name is missing/);
+    assert.equal(requestTitle(x.asked[0].text), 'The host’s name is missing on the badge', 'the request is titled by the person’s note, not a generic “Something’s wrong…”');
+    assert.equal(requestTitle(correctionText('T', 'J-02', A, 'Badge prints blank\nOnly on the second printer')), 'Badge prints blank', 'its first line');
     assert.equal(x.audits[0].ids?.taskId, TASK, 'audited with the task id');
     assert.deepEqual(x.book.corrections('shop').map((c) => c.correction?.id), ['CR-7']);
   } finally {

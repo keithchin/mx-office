@@ -28,6 +28,29 @@ While the [live app](live-app.md) runs, it's shown here, in the Live app page's 
 
 When nothing runs there is **no frame** at all, never an empty one: the canvas says why (*Not started*, *Starting*, *Stopped (crashed at 10:27)*), which version ran last and until when, and **Start the app**, which opens the Engineering view's Live app page where it's started. Before the build, or before the app has run, the canvas also shows the brief.
 
+### The explorer
+
+On the App section a sidebar on the left of the canvas shows the app the way a file explorer shows a folder, in business words and **at the running version** (so it matches what you click through in the canvas):
+
+| Group | What's in it | Clicking an item |
+| --- | --- | --- |
+| **Pages** | The app's screens, by part of the app (the app's own parts first, ready-made Marketplace parts after) | A page with an address of its own opens **running in the canvas** at that address. A page that only opens from another page (it needs a record passed to it) shows a **preview with sample data** instead, with a note saying so |
+| **Data** | The kinds of records each part of the app keeps | The part's data diagram (records, their fields and how they relate), read-only, with the record picked |
+| **Logic** | What the app does when something happens, in plain names (*Visitor save*); the tooltip says whether it runs on the server or in the browser | Its step-by-step diagram, read-only |
+| **Documents**, **Process map**, **Design** | The project's documents from [Documents](deliverables.md); Process map and Design only when the project has them | The Documents viewer |
+
+**Find…** filters the tree (a page in a part you haven't opened is found too). Select an item and its bar shows **Request a change**, which opens the usual [Request a change](#change-requests) with the item as its context (*About: Page: Visitor list*), and, for admins, **Change this** where the Model page offers it (pages, records, logic). Anything opened in the canvas's place has **← Back to the running app**; the running app isn't reloaded meanwhile.
+
+When the running version changes (a [hot reload](live-app.md) or a restart), the explorer reads the parts you have open again at the new version, without reloading the page, and marks what that update changed with a small dot. If the page on screen in the canvas changed, it's opened again on the new version, and only once that version answers. Nothing is polled.
+
+Drag the explorer's edge (or focus it and press ← →) to make it wider or narrower, and **«** hides it to a slim strip (**»** brings it back); both are remembered in your browser. On a phone it's a drawer: **☰ Browse the app** above the canvas opens it, and Esc or a tap beside it closes it. The tree works from the keyboard: ↑ ↓ move, → opens or goes in, ← closes or goes up, Enter opens, Home and End jump, and typing the start of a name moves to it.
+
+#### Show all files
+
+The **Show all files** switch (for builders and IT; remembered in your browser) swaps the business tree for the project's own files at the running version: folders and files, read-only, text and pictures shown in the canvas's place, big folders a few hundred rows at a time with **Show more**. File names are shown as they are, so this view is the one place in the App workspace that may use engineering words.
+
+Some files are **never shown**, whatever the project contains: git's own folder (`.git`), the office's data folder (`.agent-office`), environment files (`.env`, `.env.*`), keys and certificates (`*.key`, `*.pem`, `*.pfx`, `*.p12`, …), anything named `credentials*` or `secret*`, every `config.json` (the office's own holds tokens), token files and tool settings that keep tokens (`.npmrc`, `.git-credentials`, `.claude/settings.local.json`, SSH keys), and everything the project's `.gitignore` matches. The office only reads the files from the project's history at that version, never from elsewhere on the computer, and refuses any path with `..` or an absolute path.
+
 ### The panel
 
 | Part | What it says | Where it comes from |

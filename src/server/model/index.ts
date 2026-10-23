@@ -130,6 +130,8 @@ export class ModelService {
     }
     if (!REF_OK.test(ref)) throw new Error('not a branch name');
     const b = g.branches.find((x) => x.name === ref);
+    // A full commit id (the App Workspace reads the served revision): that commit, when the project has it.
+    if (!b && /^[0-9a-f]{40}$/.test(ref) && (await this.git(['cat-file', '-t', ref], floor.dir).catch(() => '')).trim() === 'commit') return { sha: ref };
     if (b) return { sha: b.sha, base: b.fork };
     for (const r of [`refs/heads/${ref}`, `refs/remotes/origin/${ref}`]) {
       const sha = (await this.git(['rev-parse', '--verify', '--quiet', `${r}^{commit}`], floor.dir).catch(() => '')).trim();

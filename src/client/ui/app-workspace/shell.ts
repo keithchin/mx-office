@@ -7,6 +7,8 @@
 //              and the workspace switch (App view | Engineering view)
 //   stages     the stage switch: where the project is (shared/app-workspace/words.ts workspaceStage, read
 //              from the business status and the progress bar), and what each stage shows
+//   explorer   the App section's left sidebar (./explorer/: the app's pages, data, logic and documents, or all
+//              the project's files), loaded with the App section's first show
 //   main       the canvas (./canvas.ts: the running app) on App, a section's page (./sections.ts) on the rest;
 //              a guided check's Try it (./validation.ts) shows the canvas at the check's start page
 //   side       the side panel (./panel.ts): status bound to a version, the current request (./requests.ts),
@@ -29,6 +31,8 @@ import { workspaceCanvas } from './canvas';
 import { sidePanel } from './panel';
 import { sectionPage } from './sections';
 import './app-workspace.css';
+// Only its types here: the explorer comes in with the App section's first show.
+import type { Explorer, ExplorerDeps } from './explorer';
 
 export interface WorkspaceDeps {
   source: WorkspaceSource;
@@ -36,6 +40,8 @@ export interface WorkspaceDeps {
   open(tab: string): void;
   /** The Engineering tab showing before the workspace opened, if any. */
   cameFrom(): string | undefined;
+  /** Tests: the explorer's requests and openers. */
+  explorer?: Partial<ExplorerDeps>;
 }
 
 export interface Workspace {
@@ -95,7 +101,36 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
   });
   const main = h('div.aw-main');
   const panel = sidePanel({ open: deps.open, request });
-  const el = h('section.aw', { 'aria-label': 'App workspace', hidden: true }, bar, stages, stageNote, h('div.aw-body', {}, main, panel.el));
+  const xslot = h('div.aw-xslot', { hidden: true });
+  const body = h('div.aw-body', {}, xslot, main, panel.el);
+  const el = h('section.aw', { 'aria-label': 'App workspace', hidden: true }, bar, stages, stageNote, body);
+  let explorer: Explorer | undefined;
+  let explorerAsked = false;
+  /** The explorer's pane or the running app, in the canvas's place. */
+  const paneOn = (on: boolean) => {
+    canvas.el.hidden = on;
+    if (explorer) explorer.pane.el.hidden = !on;
+  };
+  const loadExplorer = () => {
+    if (explorerAsked) return;
+    explorerAsked = true;
+    void import('./explorer').then(({ createExplorer }) => {
+      explorer = createExplorer({
+        data: () => deps.source.get(),
+        go: (p) => canvas.go(p),
+        where: () => canvas.where(),
+        pane: paneOn,
+        request: (about, page) => {
+          const d = deps.source.get();
+          const revision = d.appUrl ? d.live?.served?.sha : undefined;
+          openRequestDialog({ ...(d.project ? { project: d.project } : {}), about, ...(page ? { page } : {}), ...(revision ? { revision } : {}) }, (a) => deps.source.request(a), (r) => toast(`Request ${r.id} sent to ${r.member}: it shows in the panel with its state`));
+        },
+        ...deps.explorer,
+      });
+      xslot.replaceChildren(explorer.el);
+      draw();
+    });
+  };
 
   function toEngineering() {
     const back = deps.cameFrom();
@@ -141,10 +176,15 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
       else t.removeAttribute('aria-current');
     }
     drawStages(d);
+    xslot.hidden = section !== 'app' || !explorer;
+    body.classList.toggle('ax-has', !xslot.hidden);
     if (section === 'app') {
-      if (main.firstChild !== canvas.el || main.childNodes.length !== 1) main.replaceChildren(canvas.el);
+      const parts = explorer ? [canvas.el, explorer.pane.el] : [canvas.el];
+      if (main.firstChild !== canvas.el || main.childNodes.length !== parts.length) main.replaceChildren(...parts);
       canvas.draw(d, stageOf(d));
-      if (pendingGo) canvas.go(pendingGo);
+      loadExplorer();
+      explorer?.update(d);
+      if (pendingGo) (paneOn(false), canvas.go(pendingGo));
       pendingGo = undefined;
     } else {
       if (main.firstChild !== page.el || main.childNodes.length !== 1) main.replaceChildren(page.el);

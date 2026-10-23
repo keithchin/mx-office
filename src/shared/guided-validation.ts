@@ -15,6 +15,7 @@
 
 import { isKnown, sameRevision, statusOf, type TestRunRecord } from './testing/record.js';
 import type { WalkStep } from './walkthroughs/types.js';
+import { requestTitle } from './change-requests.js';
 
 export type ScenarioResult = 'passed' | 'failed' | 'not-run';
 export type Verdict = 'works' | 'wrong';
@@ -171,9 +172,13 @@ export function scenarioSummary(list: readonly ScenarioView[]): { total: number;
 
 const short = (sha: string) => sha.slice(0, 7);
 
-/** The correction's words for the team: which guided check, on which version, and what the person saw. */
+/**
+ * The correction's words for the team: the first line of what the person saw (so the request's title is
+ * theirs, not a generic "Something's wrong…"), then which guided check, on which version, and the whole note.
+ */
 export function correctionText(title: string, scenario: string, revision: string, note: string): string {
-  return `Something's wrong in the guided check "${title}" (${scenario}) on version ${short(revision)}: ${note}`;
+  const head = requestTitle(note);
+  return `${head ? `${head}\n\n` : ''}Something's wrong in the guided check "${title}" (${scenario}) on version ${short(revision)}: ${note}`;
 }
 
 /** The scenario summary in a line, for the Release section and the panel. */
