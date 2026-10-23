@@ -17,7 +17,7 @@ export interface LiveAppConfig {
   pollMs: number;
   /** How long (ms) a start may take before it counts as failed: a cold start bundles the web client. */
   readyTimeoutMs: number;
-  /** Whether a project's live app applies page and logic changes by hot reload unless the project says otherwise (liveapp/prefs.ts). */
+  /** Whether projects' live apps may use hot reload: on by default, each project can turn it off (liveapp/prefs.ts); false (AGENT_OFFICE_LIVE_HOT_RELOAD=0, live-app.json "hotReload": false) turns it off for every project. */
   hotReload: boolean;
 }
 
@@ -27,7 +27,7 @@ export const LIVE_APP_DEFAULTS: LiveAppConfig = {
   db: { host: '127.0.0.1', port: 5432, user: 'postgres', password: 'postgres' },
   pollMs: 60_000,
   readyTimeoutMs: 8 * 60_000,
-  hotReload: false,
+  hotReload: true,
 };
 
 /** "8110-8199" (or "8110") as a range; undefined when it isn't one. */

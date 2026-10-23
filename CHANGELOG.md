@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **Live app hot reload is on by default.** Every project's live app now applies page, microflow, nanoflow and theme changes in place unless an admin turned **Hot reload** off for it; data-model, security and Java changes still restart, and a hot reload that doesn't confirm still restarts. A project that never chose, new or existing, gets it at its next **▶ Start** (the first start after the upgrade, no extra restart); a project an admin set to off stays off, and turning on **Keep warm** no longer pins the hot reload setting. The Live app tab says *Hot reload: on (default)* (admins have the off switch beside it, audited), and when the running app doesn't match the setting it says so (*this run keeps hot reload until its next start*). When the app starts with less than 2.5 GB of memory free, that run starts without hot reload (whose web bundler stays resident) and restarts for every change, and the tab says why. `AGENT_OFFICE_LIVE_HOT_RELOAD=0` or `"hotReload": false` in `live-app.json` now turns it off for every project. Measured on the sample app, quiet machine: page 41 → 9 s, microflow 44 → 8 s, entity 39 → 35 s (no slower); on a very busy machine mxcli's watch can still make a restart about 30 s slower, which the office can't avoid with today's mxcli ([Faster updates](/docs/using-the-office/live-app#faster-updates)).
 
 ## 2026-10-23 · release 72 (`4301a10`)
 

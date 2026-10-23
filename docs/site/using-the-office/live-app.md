@@ -41,8 +41,8 @@ Before an update touches the running app, the office looks at what changed betwe
 | What changed | What the office does | How long (measured, see below) |
 |---|---|---|
 | **No app files**: only docs, journals, evidence, `.claude/` and the like | Nothing restarts: the running build is that commit's app already. The served commit moves on, and the tab says which build it is (*build of abc1234*). | About 1 to 2 s |
-| **Pages and logic**: pages, snippets, layouts, building blocks, microflows, nanoflows, rules, folders, texts, the theme | With **Hot reload** on, the new files go into the running app's folder and mxcli's watch builds and applies them in place (`mxcli run --watch`). With it off, a restart. | Hot reload: about 9 to 12 s. A restart: about 45 s |
-| **Anything else**: a domain model, an enumeration, security, module or project settings, navigation, constants, Java or JavaScript actions, widgets, `resources/`, or a file the office doesn't know | A restart, as before: stop, build, start. | About 45 s, or about 55 to 75 s with hot reload on (see below) |
+| **Pages and logic**: pages, snippets, layouts, building blocks, microflows, nanoflows, rules, folders, texts, the theme | With **Hot reload** on (the default), the new files go into the running app's folder and mxcli's watch builds and applies them in place (`mxcli run --watch`). With it off, a restart. | Hot reload: about 9 to 12 s. A restart: about 45 s |
+| **Anything else**: a domain model, an enumeration, security, module or project settings, navigation, constants, Java or JavaScript actions, widgets, `resources/`, or a file the office doesn't know | A restart, as before: stop, build, start. | About 45 s on a quiet machine. With hot reload on, about the same on a moderately busy one and up to about 30 s more on a very busy one (see below) |
 
 When the office can't tell (the model can't be read, or the commits can't be compared), it restarts.
 
@@ -58,7 +58,13 @@ Domain-model and enumeration changes never go the hot way. On Windows, mxcli's w
 
 Two settings per project, for admins, on the Live app tab beside the timing line. Each change is in the audit log.
 
-- **Hot reload** (off by default; `AGENT_OFFICE_LIVE_HOT_RELOAD`, or `hotReload` in `live-app.json`, turns it on for every project that hasn't set it): page and logic changes go in by hot reload, as above. It takes effect at the next **▶ Start** or **⟳ Restart**, because mxcli has to be started with `--watch`. It is off by default for three reasons. It relies on the words mxcli's watch prints (*Change detected…*, *applied via reload…*), which mxcli doesn't promise to keep: should they change, every hot try would wait 20 seconds and then restart (after two such misses in a row the office stops trying until the next start or restart). Under `--watch`, mxcli starts an incremental web bundler instead of bundling once, so every restart and cold start is slower: a domain-model change took about 66 s instead of 45 s in the measurements below. And that bundler stays running beside the app (about 0.9 GB in earlier measurements). Turn it on for a project whose changes are mostly pages and logic.
+- **Hot reload** (on by default): page and logic changes go in by hot reload, as above; data-model changes still restart. The tab says *Hot reload: on (default)* for a project nobody set, *on* or *off* for one an admin set, and admins get the switch beside it (each change is audited). A project's explicit off stays off; one that never chose, new or from before hot reload was the default, has it on. To turn it off for every project on the office, set `AGENT_OFFICE_LIVE_HOT_RELOAD=0` or `"hotReload": false` in `live-app.json`: the tab then says *off (for every project on this office)* and the switch can't turn it back on.
+
+  A change takes effect at the next **▶ Start** or **⟳ Restart**, because mxcli has to be started with `--watch`: the first start after the office is upgraded already uses it. A running app keeps the way it started until then, and the tab says so beside the setting (*this run keeps hot reload until its next start*, *this run restarts for every change: hot reload starts with the next start*).
+
+  **Memory.** Under `--watch`, mxcli keeps its incremental web bundler running beside the app (about 1.3 GB of the 1.5 to 2 GB a live app holds). So when the app starts with less than 2.5 GB of memory free, that run starts without `--watch` and restarts for every change instead, and the tab says why (*this run restarts for every change: only 1.8 GB of 16.0 GB memory free, and a hot-reload app needs about 2.0 GB*); the next start looks again.
+
+  **What it still costs.** It relies on the words mxcli's watch prints (*Change detected…*, *applied via reload…*), which mxcli doesn't promise to keep: should they change, every hot try would wait 20 seconds and then restart, and after two such misses in a row the office stops trying until the next start or restart. And a restart under `--watch` starts the incremental bundler beside the runtime: about as fast as a restart without it on a moderately busy machine, up to about 30 s slower on a very busy one (below). The office can't avoid that with today's mxcli, which has no way to arm the watch after a start; it is on the list of asks for mxcli.
 - **Keep warm** (off by default): the office starts the live app by itself shortly after the office starts, so nobody waits for a cold start (one to two minutes). Projects with it on start one at a time, each only when the computer has at least 2.5 GB of memory free: a running live app (mxcli, mxbuild, the Mendix runtime and the web bundler) holds about 1.5 to 2 GB, and uses up to two and a half cores while it builds. One that doesn't fit says so on its tab (*Keep warm didn't start it: 1.8 GB of 16.0 GB memory free…*); **▶ Start** still starts it. Nothing in the office stops a live app for being idle: once up, it runs until someone stops it or the office closes.
 
 ### Measured
@@ -74,6 +80,16 @@ On the office's Windows laptop (Intel i9, 64 GB, Studio Pro 11.12's mxbuild, loc
 | Three merges a second apart, until the last serves | 109 s (1): two restarts, the second after the next auto-refresh | 131 s (1): two restarts | 24 s (2): two hot reloads, the second taking both later merges |
 
 Every page change's new text was in the served page bundle once the office said it served it. All 13 hot reloads confirmed, including the first after a cold start. Where a hot reload's time goes: fetch 0.5–0.9 s, classify 0.1–0.4 s, apply 6.4–11.6 s (about 3 s of that is mxcli's watch noticing the change, the rest its build and reload), first answer under 0.1 s. A restart's is almost all build (40–42 s, or 52–71 s with `--watch`). Cold starts took 78 to 212 s across the runs, with the machine's load. The three-merges row shows how much load moves a restart (45 to 63 s here); what grouping saves for certain is the wait for the next auto-refresh (up to a minute): the office without this also built only the newest main after an update, but not before its next look.
+
+**With hot reload on by default (23 October).** The same loop and sample app, the office as it was (hot reload off by default) against the office with it on by default and no setting stored for the project, run back to back. Medians, n in brackets:
+
+| Change | Quiet machine: off | Quiet machine: on (default) | Busy machine: off | Busy machine: on (default) |
+|---|---|---|---|---|
+| Page | 41 s (3) | 9 s (3) | 103 s (3) | 17 s (3) |
+| Microflow | 44 s (3) | 8 s (3) | 269 s (3) | 11 s (3) |
+| Entity or attribute | 39 s (2) | 35 s (2) | 91 s (2) | 85 s (2) |
+
+The first start used hot reload with nothing set and no extra restart, and every hot reload confirmed with the page's new text in the served bundle. A data-model change was no slower with hot reload on in these runs; the 66 s against 45 s of 22 October didn't come back. mxcli alone (stop, one entity change, start, three in a row each way) shows why it varies: on a moderately busy machine a restart with `--watch` took 74 s against 82 s without, because mxcli starts its incremental bundler beside the runtime; on a very busy one 127 s against 94 s, because that bundler then competes with the runtime's start. Not clearing the last build made no difference. The office can't remove that remaining cost with today's mxcli (it has no way to arm the watch on an app that is already up), so it is on the list of asks for mxcli.
 
 ### Antivirus
 
