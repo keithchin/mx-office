@@ -9,19 +9,29 @@
 // said as "update failed, still running …". The build itself still needs the old runtime gone (it builds in
 // the same folder, against the same database), so from then until the new build answers nothing serves, and
 // the state says so. What served last is kept on disk for after an office restart (./served.ts).
+//
+// Not every update needs that restart (shared/liveapp/speed.ts): before it touches the runtime, an update over
+// a build that serves classifies what changed (./classify.ts). No app files changed: the serving build is
+// that commit's app, so it serves on, `built` naming the commit it was built from. Only pages, logic or the
+// theme, and hot reload on (./prefs.ts; mxcli runs with --watch): the checkout moves under the running app and
+// mxcli's watch applies it in place (./hot.ts); `served` moves only once mxcli said it applied it and the app
+// answers, and anything else drops what served and restarts. Merges that land meanwhile wait, and the next
+// update takes the newest of them at once, saying which commits it brought in. Each phase is timed.
 
 import type { ChildProcess } from 'node:child_process';
 import { appendFileSync, mkdirSync, statSync, truncateSync } from 'node:fs';
-import http from 'node:http';
 import path from 'node:path';
-import type { LiveAppFailure, LiveAppState, LiveAppStatus, LiveServed } from '../../shared/protocol.js';
-import { checkoutFetched, cleanBuild, defaultBranch, ensureCheckout, fetchBranch, findMpr, lookAtFloor, type FloorLook } from './checkout.js';
+import type { LiveAppFailure, LiveAppPrefs, LiveAppState, LiveAppStatus, LiveServed } from '../../shared/protocol.js';
+import { updateLine as updateWord, type ChangeClass } from '../../shared/liveapp/speed.js';
+import { checkoutFetched, cleanBuild, defaultBranch, ensureCheckout, fetchBranch, findMpr, lookAtFloor, type Fetched, type FloorLook } from './checkout.js';
+import { classifyUpdate, commitsIn } from './classify.js';
+import { answers, answersWithin, HOT_TIMES, UpdateClock, watchFor, watchLine, type HotOutcome, type HotTimes, type WatchSaid } from './hot.js';
 import { databaseName, type LiveAppConfig } from './config.js';
 import { isUp, nextStatus, type LiveAppEvent } from './machine.js';
 import { pickPorts } from './ports.js';
 import { pgBinDir, startTree, stopTree } from './process.js';
 import { floorToolkitEnv } from '../toolkit-env.js';
-import { linuxMxbuildIn, linuxMxbuildMessage, pickMxbuild, supportsMxbuildPath, type MxbuildPick } from './mxbuild.js';
+import { linuxMxbuildIn, linuxMxbuildMessage, pickMxbuild, supportsMxbuildPath, supportsWatch, type MxbuildPick } from './mxbuild.js';
 import { readLastServed, writeServed } from './served.js';
 
 /** Lines of the log kept for the page. */
@@ -57,6 +67,14 @@ export interface LiveAppDeps {
     pick(mpr: string, floorEnv: Record<string, string>): MxbuildPick;
     supportsFlag(mxcli: string): Promise<boolean>;
   };
+  /** The project's live app settings as they are now (./prefs.ts); none: hot reload off. */
+  prefs?(): LiveAppPrefs;
+  /** What an update would change (./classify.ts with the office's model reader; tests stand in for it). */
+  classify?(dir: string, from: string, to: string, mprPath: string): Promise<ChangeClass>;
+  /** Whether this mxcli takes --watch (mxbuild.ts supportsWatch). */
+  supportsWatch?(mxcli: string): Promise<boolean>;
+  /** How long a hot apply may take (./hot.ts HOT_TIMES). */
+  hotTimes?: HotTimes;
 }
 
 export class LiveApp {
@@ -77,13 +95,39 @@ export class LiveApp {
   private mxbuild?: { pick: MxbuildPick; flag?: boolean };
   /** The folder of the .mpr the last start ran (mxcli's working folder: its .mxcli/runtime.log is there). */
   projectDir: string | undefined;
+  /** The .mpr the running mxcli runs, from the checkout's top. */
+  private mprRel: string | undefined;
+  /** Whether the running mxcli was started with --watch (so a page or logic change can go in hot). */
+  private watching = false;
+  /** Times the start or update under way. */
+  private clock: UpdateClock | undefined;
+  /** Main moved again while an update was under way: the next update goes to the newest. */
+  private pendingHead: string | undefined;
+  /** A hot apply waiting on what mxcli's watch says. */
+  private hotWait: ((said: WatchSaid) => void) | undefined;
+  /** A failed hot apply leaves the build half written: the restart after it starts clean. */
+  private cleanNext = false;
+  /** Hot applies in a row that mxcli's watch never picked up (its words changed?): two, and this run stops trying. */
+  private hotMisses = 0;
 
   constructor(private d: LiveAppDeps) {
     this.checkout = path.join(d.liveDir, d.floorId);
     this.logFile = path.join(d.liveDir, `${d.floorId}.log`);
     // After an office restart nothing runs until someone starts it: what served before is only `lastServed`.
     const last = readLastServed(d.liveDir, d.floorId);
-    this.s = { floor: d.floorId, status: 'stopped', phase: 'stopped', log: [], available: !!d.mxcli, ...(last ? { lastServed: last } : {}) };
+    const prefs = d.prefs?.();
+    this.s = { floor: d.floorId, status: 'stopped', phase: 'stopped', log: [], available: !!d.mxcli, ...(last ? { lastServed: last } : {}), ...(prefs ? { prefs } : {}) };
+  }
+
+  /** The project's settings changed: said to the page (hot reload takes effect at the next start or restart). */
+  prefsChanged() {
+    const prefs = this.d.prefs?.();
+    if (prefs) this.set({ prefs });
+  }
+
+  /** A word for the page while it's stopped (keep warm didn't start it, and why). */
+  say(message: string) {
+    if (this.s.status === 'stopped' || this.s.status === 'failed') this.set({ message });
   }
 
   /** The live checkout (<live dir>/<floor>). */
@@ -114,6 +158,8 @@ export class LiveApp {
     const to = nextStatus(this.s.status, 'stop');
     if (!to) return this.queue;
     this.gen++;
+    this.pendingHead = undefined;
+    this.clock = undefined;
     this.set({ status: to, phase: to === 'stopping' ? 'stopping' : 'stopped', by, message: to === 'stopping' ? 'Stopping…' : undefined, target: undefined });
     return this.enqueue(async () => {
       await this.kill();
@@ -140,7 +186,14 @@ export class LiveApp {
    * every minute: ⟳ Restart does that.
    */
   async follow(head: string | undefined): Promise<void> {
-    if (!head || head === this.s.served?.sha || this.s.status !== 'running') return;
+    if (!head || head === this.s.served?.sha) return;
+    // An update or start under way: this one waits, and the next update goes to the newest main once (not one per merge).
+    if ((this.s.status === 'updating' || this.s.status === 'starting') && head !== this.s.target?.sha) {
+      if (this.pendingHead !== head) this.note(`main moved to ${short(head)} meanwhile: the next update takes the newest`);
+      this.pendingHead = head;
+      return;
+    }
+    if (this.s.status !== 'running') return;
     if (this.s.failure?.kind === 'update' && this.s.failure.sha === head) return;
     await this.act('update', 'auto-refresh', () => this.launch(true), `Updating to ${short(head)}…`, head);
   }
@@ -168,6 +221,8 @@ export class LiveApp {
     }
     const gen = ++this.gen;
     this.retried = false;
+    if (event !== 'update') [this.pendingHead, this.hotMisses] = [undefined, 0];
+    this.clock = new UpdateClock(event === 'start' || !this.s.served ? 'cold' : 'restart', event === 'restart' ? 'restart asked for' : event === 'start' ? 'cold start' : 'main moved');
     const from = this.s.served?.sha;
     this.set({ status: to, phase: 'building', by, message: message ?? (event === 'restart' ? 'Restarting…' : 'Getting main…'), since: Date.now(), log: [], started: true, failure: undefined, target: head ? { sha: head, ...(from ? { from } : {}) } : undefined });
     return this.enqueue(async () => {
@@ -200,13 +255,22 @@ export class LiveApp {
     const branch = this.s.branch ?? (await defaultBranch(this.d.floorDir));
     const next = await fetchBranch(this.checkout, this.d.floorDir, branch);
     if (gen !== this.gen) return;
+    const clock = this.clock;
+    clock?.lap('fetch');
     const from = this.s.served?.sha;
     this.set({ branch, target: { sha: next.sha, subject: next.subject, ...(next.at ? { commitAt: next.at } : {}), ...(from ? { from } : {}) } });
+    if (clock && from) [clock.from, clock.to] = [from, next.sha];
+    // An update over a build that serves: what changed decides whether it restarts at all (shared/liveapp/speed.ts).
+    if (update && clock && from && from !== next.sha && this.child && this.child === this.serving && this.mprRel) {
+      const done = await this.quick(next, branch, from, clock, gen);
+      if (done || gen !== this.gen) return;
+    }
     // The build runs in the same folder against the same database, so what serves stops here (blue/green on a second checkout is a follow-up).
     if (this.child) {
       this.note(`stopping ${from ? short(from) : 'the app'} to build ${short(next.sha)}`);
       await this.kill();
       if (gen !== this.gen) return;
+      clock?.lap('stop');
       this.flush();
     }
     const co = await checkoutFetched(this.checkout, branch);
@@ -214,10 +278,69 @@ export class LiveApp {
     const mpr = findMpr(this.checkout);
     if (!mpr) throw new Error(`No Mendix project (.mpr) in ${branch} at ${short(co.sha)}`);
     this.projectDir = path.dirname(mpr);
-    // A newer main over an older build trips mxbuild up (see BUILD_LEFTOVERS).
-    if (co.moved && cleanBuild(path.dirname(mpr))) this.note('main moved: cleared the last build');
+    this.mprRel = path.relative(this.checkout, mpr).replaceAll('\\', '/');
+    // A newer main over an older build trips mxbuild up (see BUILD_LEFTOVERS); so does what a failed hot reload left.
+    if ((co.moved || this.cleanNext) && cleanBuild(path.dirname(mpr))) this.note(this.cleanNext ? 'cleared what the failed hot reload left' : 'main moved: cleared the last build');
+    this.cleanNext = false;
     this.set({ target: { sha: co.sha, subject: co.subject, ...(co.at ? { commitAt: co.at } : {}), ...(from ? { from } : {}) }, message: update ? `Updating to ${short(co.sha)}: building…` : `Building ${short(co.sha)}… (a cold start takes a minute or two)` });
     await this.spawnApp(mpr, gen);
+  }
+
+  /**
+   * The quick ways, with the old build still serving: classifies the change (the commits it brings in are
+   * counted meanwhile), then takes the target over without a restart when no app files changed, or hot
+   * reloads a page or logic change. True when it's done (or a stop moved on); false: restart as always.
+   */
+  private async quick(next: Fetched, branch: string, from: string, clock: UpdateClock, gen: number): Promise<boolean> {
+    const classify = this.d.classify ?? ((dir, a, b, mpr) => classifyUpdate(dir, a, b, mpr, {}));
+    const [change, brought] = await Promise.all([classify(this.checkout, from, next.sha, this.mprRel!), commitsIn(this.checkout, from, next.sha)]);
+    if (gen !== this.gen) return true;
+    clock.lap('classify');
+    if (brought) [clock.commits, clock.included] = [brought.count, brought.included];
+    this.note(`what changed ${short(from)}..${short(next.sha)}${brought && brought.count > 1 ? ` (${brought.count} commits)` : ''}: ${change.kind}, ${change.reason}${change.touched.length ? ` (${change.touched.join(', ')})` : ''}`);
+    clock.reason = change.reason;
+    if (change.kind === 'none') {
+      clock.mode = 'none';
+      const co = await checkoutFetched(this.checkout, branch);
+      if (gen !== this.gen) return true;
+      clock.lap('apply');
+      const was = this.s.served!;
+      this.serve({ sha: co.sha, ...(co.subject ? { subject: co.subject } : {}), ...(co.at ? { commitAt: co.at } : {}), builtAt: was.builtAt, built: was.built ?? was.sha });
+      return true;
+    }
+    if (change.kind !== 'hot') return false;
+    if (!this.watching) {
+      clock.reason = `${change.reason}, but ${!this.d.prefs?.().hotReload ? 'hot reload is off' : this.hotMisses >= 2 ? "hot reload is paused (mxcli's watch didn't answer)" : 'hot reload starts with the next restart'}`;
+      return false;
+    }
+    clock.mode = 'hot';
+    this.set({ message: `Updating to ${short(next.sha)}: hot reload (${change.reason})…` });
+    const outcome = watchFor(this.d.hotTimes ?? HOT_TIMES, () => gen === this.gen, (on) => (this.hotWait = on));
+    // The move: mxcli's watch sees the checkout change and builds it into the running app.
+    await checkoutFetched(this.checkout, branch).catch((err) => this.hotWait?.({ kind: 'failed', why: `the checkout didn't move: ${(err as Error).message}` }));
+    let o: HotOutcome = await outcome;
+    if (gen !== this.gen) return true;
+    clock.lap('apply');
+    if (o.ok) {
+      const port = this.s.appPort;
+      const up = !!port && (await answersWithin(port, 15_000, () => gen === this.gen));
+      if (gen !== this.gen) return true;
+      clock.lap('answer');
+      if (up) {
+        this.hotMisses = 0;
+        this.serve();
+        return true;
+      }
+      o = { ok: false, why: "the app didn't answer after the hot reload" };
+    }
+    // A failed watch build leaves the app answering 404 and mxcli's watch stuck: what served serves no more, and it restarts.
+    this.note(`hot reload didn't confirm: ${o.why}; restarting`);
+    clock.mode = 'restart';
+    clock.fallback = o.why;
+    this.cleanNext = true;
+    if (/didn't pick the change up/.test(o.why) && ++this.hotMisses >= 2) this.note("hot reload: mxcli's watch didn't answer twice in a row, so updates restart until the next ▶ Start or ⟳ Restart");
+    if (this.s.served) this.set({ ...this.unserved(), message: `Updating to ${short(next.sha)}: hot reload didn't confirm, restarting…` });
+    return false;
   }
 
   private async spawnApp(mpr: string, gen: number) {
@@ -242,6 +365,12 @@ export class LiveApp {
       extra.MXBUILD_PATH = pick.path;
     }
     this.mxbuild = { pick, flag };
+    // Hot reload on: mxcli watches the checkout, so a page or logic change the office moves in applies in place.
+    const watch = !!this.d.prefs?.().hotReload && (await (this.d.supportsWatch ?? supportsWatch)(this.d.mxcli!));
+    if (gen !== this.gen) return;
+    if (watch && this.hotMisses < 2) args.push('--watch');
+    else if (this.d.prefs?.().hotReload) this.note("hot reload: this mxcli has no --watch, so every update restarts");
+    this.watching = watch && this.hotMisses < 2;
     for (const s of pick.skipped) this.note(`mxbuild: ${s}`);
     if (pick.path) this.note(`mxbuild: ${pick.path} (${MXBUILD_FROM[pick.source!]})${flag ? '' : ': this mxcli has no --mxbuild-path, so it only gets MXBUILD_PATH'}`);
     else if (pick.expected) this.note(`mxbuild: Studio Pro ${pick.version} isn't installed (no ${pick.expected}); mxcli picks one itself`);
@@ -253,7 +382,14 @@ export class LiveApp {
     const onData = (buf: Buffer) => {
       const lines = (partial + buf.toString('utf8')).split(/\r?\n/);
       partial = lines.pop() ?? '';
-      for (const l of lines) if (l.trim()) this.note(l, gen);
+      for (const l of lines) {
+        if (!l.trim()) continue;
+        // The build that serves outlives the action that started it: its lines (a hot reload's) belong to the one under way.
+        const serving = child === this.serving;
+        this.note(l, serving ? this.gen : gen);
+        const said = this.hotWait && serving ? watchLine(l) : undefined;
+        if (said) this.hotWait?.(said);
+      }
     };
     child.stdout?.on('data', onData);
     child.stderr?.on('data', onData);
@@ -262,6 +398,12 @@ export class LiveApp {
       if (this.child === child) this.child = null;
       const wasServing = this.serving === child;
       if (wasServing) this.serving = null;
+      // Gone during a hot apply: what served serves no more, and the hot path restarts it.
+      if (wasServing && this.hotWait) {
+        if (this.s.served) this.set(this.unserved());
+        this.hotWait({ kind: 'exited' });
+        return;
+      }
       if (gen !== this.gen || !isUp(this.s.status)) {
         // The build that served ended outside the current action (stopped, or gone during an update's fetch): it serves no more.
         if (wasServing && this.s.served) this.set(this.unserved());
@@ -322,13 +464,26 @@ export class LiveApp {
   }
 
   /** The new build answered: it is what serves now (and on disk, for after an office restart). */
-  private serve() {
+  private serve(taken?: LiveServed) {
     const t = this.s.target;
     const now = Date.now();
     this.serving = this.child;
-    const served: LiveServed | undefined = t ? { sha: t.sha, ...(t.subject ? { subject: t.subject } : {}), ...(t.commitAt ? { commitAt: t.commitAt } : {}), builtAt: now } : undefined;
+    const served: LiveServed | undefined = taken ?? (t ? { sha: t.sha, ...(t.subject ? { subject: t.subject } : {}), ...(t.commitAt ? { commitAt: t.commitAt } : {}), builtAt: now } : undefined);
     if (served) writeServed(this.d.liveDir, this.d.floorId, served);
-    this.set({ status: nextStatus(this.s.status, 'ready') ?? 'running', phase: 'running', message: undefined, since: now, served, target: undefined, lastServed: undefined });
+    const clock = this.clock;
+    if (clock && (clock.mode === 'cold' || clock.mode === 'restart')) clock.lap(clock.has('build') ? 'start' : 'build');
+    this.clock = undefined;
+    const lastUpdate = clock?.done(true);
+    if (clock) this.note(`✔ ${updateWord(lastUpdate)} (${clock.line()})`);
+    this.set({ status: nextStatus(this.s.status, 'ready') ?? 'running', phase: 'running', message: undefined, since: taken ? this.s.since : now, served, target: undefined, lastServed: undefined, ...(lastUpdate ? { lastUpdate } : {}) });
+    this.followPending();
+  }
+
+  /** Main moved while this was under way: one more update, to the newest (it fetches the branch's tip). */
+  private followPending(skip?: string) {
+    const head = this.pendingHead;
+    this.pendingHead = undefined;
+    if (head && head !== this.s.served?.sha && head !== skip) setImmediate(() => void this.follow(head));
   }
 
   /** The patch for "what served serves no more": it becomes `lastServed`, until now. */
@@ -351,7 +506,10 @@ export class LiveApp {
     const failure: LiveAppFailure | undefined = to === 'failed' ? { kind: k, at: Date.now(), why, lines: this.s.log.slice(-FAIL_LINES), ...(sha ? { sha } : {}) } : undefined;
     // Whatever served is gone by now (or never answered: a timeout's process is stopped next).
     this.serving = null;
-    this.set({ ...this.unserved(), status: to, phase: to === 'failed' ? 'failed' : 'stopped', message: to === 'failed' ? (k === 'crash' ? `The app stopped by itself: ${why}` : why) : undefined, appPort: to === 'failed' ? undefined : this.s.appPort, failure });
+    this.pendingHead = undefined;
+    const lastUpdate = k !== 'crash' ? this.clock?.done(false) : undefined;
+    this.clock = undefined;
+    this.set({ ...this.unserved(), ...(lastUpdate ? { lastUpdate } : {}), status: to, phase: to === 'failed' ? 'failed' : 'stopped', message: to === 'failed' ? (k === 'crash' ? `The app stopped by itself: ${why}` : why) : undefined, appPort: to === 'failed' ? undefined : this.s.appPort, failure });
   }
 
   /** An update or restart failed before the running build was stopped: that build still serves, and it says so. */
@@ -359,7 +517,10 @@ export class LiveApp {
     this.note(`✖ ${why}`);
     const sha = this.s.target?.sha;
     const failure: LiveAppFailure = { kind: 'update', at: Date.now(), why, lines: this.s.log.slice(-FAIL_LINES), ...(sha ? { sha } : {}) };
-    this.set({ status: nextStatus(this.s.status, 'ready') ?? 'running', phase: 'running', message: undefined, since: this.s.served?.builtAt ?? Date.now(), failure });
+    const lastUpdate = this.clock?.done(false);
+    this.clock = undefined;
+    this.set({ status: nextStatus(this.s.status, 'ready') ?? 'running', phase: 'running', message: undefined, since: this.s.served?.builtAt ?? Date.now(), failure, ...(lastUpdate ? { lastUpdate } : {}) });
+    this.followPending(sha);
   }
 
   /** How the last look for a newer main went: said in the log and to the page when it changes, not every minute. */
@@ -382,7 +543,10 @@ export class LiveApp {
       // The log is a convenience.
     }
     if (gen !== this.gen) return;
-    if (this.s.phase === 'building' && this.child && RUNTIME_STARTING.test(line)) this.s.phase = 'starting';
+    if (this.s.phase === 'building' && this.child && this.clock?.mode !== 'hot' && RUNTIME_STARTING.test(line)) {
+      this.s.phase = 'starting';
+      this.clock?.lap('build');
+    }
     this.s.log.push(line.length > 400 ? `${line.slice(0, 400)}…` : line);
     if (this.s.log.length > TAIL) this.s.log.splice(0, this.s.log.length - TAIL);
     // A build prints hundreds of lines: the page hears about them a couple of times a second at most.
@@ -412,16 +576,4 @@ export class LiveApp {
     Object.assign(this.s, patch);
     this.flush();
   }
-}
-
-/** Whether something answers HTTP on the port yet (any status but a gateway error counts). */
-function answers(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const req = http.get({ host: '127.0.0.1', port, path: '/', timeout: 5_000 }, (res) => {
-      res.resume();
-      resolve((res.statusCode ?? 500) < 500);
-    });
-    req.once('timeout', () => req.destroy());
-    req.once('error', () => resolve(false));
-  });
 }

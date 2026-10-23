@@ -33,6 +33,10 @@ import { LiveConsoles } from './console/index.js';
 import { emitLiveReady } from './ready-bus.js';
 import { forgetServed, readLastServed } from './served.js';
 import { instancePorts } from '../app-instance/index.js';
+import { ModelUnits } from '../model/units.js';
+import { classifyUpdate } from './classify.js';
+import { forgetPrefs, readPrefs, writePrefs } from './prefs.js';
+import type { LiveAppPrefs } from '../../shared/protocol.js';
 
 type Deps = Pick<Ctx, 'cfg' | 'floors' | 'toFloor'> & Partial<Pick<Ctx, 'toastFloor'>>;
 
@@ -80,6 +84,7 @@ export class LiveApps {
     o.extras.delete(f.id);
     o.blanks.delete(f.id);
     void o.consoles.forget(f.id);
+    forgetPrefs(o.liveDir, f.id);
     // What served last goes with the project (after its app stopped, which writes it one last time).
     if (!app) return forgetServed(o.liveDir, f.id);
     o.apps.delete(f.id);
@@ -92,6 +97,8 @@ export class LiveApps {
   private mxcli: string | null;
   private readonly unsubs: (() => void)[] = [];
   private readonly liveDir: string;
+  /** Reads the model units an update touched (./classify.ts), its .mpr copies in <live>/.model-units. */
+  private readonly units: ModelUnits;
   /** Each floor's Console: the runtime log and the app's requests (./console/). */
   readonly consoles: LiveConsoles;
 
@@ -99,6 +106,7 @@ export class LiveApps {
     this.cfg = liveAppConfig(ctx.cfg.dataDir);
     this.mxcli = resolveCommand(this.cfg.mxcli);
     this.liveDir = path.join(ctx.cfg.dataDir, 'live');
+    this.units = new ModelUnits(path.join(this.liveDir, '.model-units'));
     this.consoles = new LiveConsoles({
       host: ctx.cfg.host || '127.0.0.1',
       ports: this.cfg.ports,
@@ -145,10 +153,28 @@ export class LiveApps {
         liveDir: this.liveDir,
         taken: () => this.takenPorts(),
         changed: (state) => this.changed(state),
+        prefs: () => this.prefsOf(floor.id),
+        // What an update changes, read by the model's unit reader (model/units.ts) from the live checkout's git; its reader let go after.
+        classify: (dir, from, to, mpr) => classifyUpdate(dir, from, to, mpr, { units: this.units }).finally(() => this.units.blobs(dir).close()),
       });
       this.apps.set(floor.id, app);
     }
     return app;
+  }
+
+  /** A project's live app settings (hot reload, keep warm: ./prefs.ts). */
+  prefsOf(floorId: string): LiveAppPrefs {
+    return readPrefs(this.liveDir, floorId, this.cfg);
+  }
+
+  /** Changes them (an admin on the Live app tab), and tells the project. */
+  setPrefs(floor: Floor, patch: Partial<LiveAppPrefs>): LiveAppPrefs {
+    const prefs = writePrefs(this.liveDir, floor.id, patch, this.cfg);
+    this.blanks.delete(floor.id);
+    const app = this.apps.get(floor.id);
+    if (app) app.prefsChanged();
+    else this.ctx.toFloor(floor, { t: 'liveapp.state', state: this.withExtra(this.blank(floor.id)) });
+    return prefs;
   }
 
   /** Every port the live apps, their consoles and the office's own app instances (app-instance/) hold. */
@@ -271,7 +297,7 @@ export class LiveApps {
     let b = this.blanks.get(floorId);
     if (!b) {
       const last = readLastServed(this.liveDir, floorId);
-      b = { floor: floorId, status: 'stopped', phase: 'stopped', log: [], available: !!this.mxcli, started: false, ...(last ? { lastServed: last } : {}) };
+      b = { floor: floorId, status: 'stopped', phase: 'stopped', log: [], available: !!this.mxcli, started: false, ...(last ? { lastServed: last } : {}), prefs: this.prefsOf(floorId) };
       this.blanks.set(floorId, b);
     }
     return { ...b, log: [] };
@@ -295,6 +321,7 @@ export class LiveApps {
     for (const u of this.unsubs.splice(0)) u();
     await Promise.all([...this.apps.values()].map((a) => a.shutdown()));
     await this.consoles.shutdown();
+    this.units.close();
   }
 }
 

@@ -13,7 +13,7 @@ import type { HandlerMap } from './types.js';
 /** Whether `c` may run the live app; if not, they're told so. */
 const admin = (ctx: Ctx, c: Client): boolean => {
   if (ctx.meOf(c.accountId).admin) return true;
-  ctx.warn(c, 'Only admins can start, restart or stop the live app');
+  ctx.warn(c, 'Only admins can start, restart or stop the live app, or change its settings');
   return false;
 };
 
@@ -40,5 +40,14 @@ export const liveAppHandlers = {
     if (!floor || !admin(ctx, c) || !throttle(c, 'liveapp', 1500)) return;
     void liveAppsOf(ctx).of(floor).stop(c.peer.name);
     audit.record({ floor: floor.id, actor: human(c.peer.name, c.accountId), action: 'liveapp.stop', target: { kind: 'liveapp', id: floor.id, label: 'Live app' }, summary: 'Stopped the live app' });
+  },
+  'liveapp.prefs'(ctx, c, msg) {
+    const floor = here(ctx, c);
+    if (!floor || !admin(ctx, c) || !throttle(c, 'liveapp.prefs', 500)) return;
+    const patch = { ...(typeof msg.hotReload === 'boolean' ? { hotReload: msg.hotReload } : {}), ...(typeof msg.keepWarm === 'boolean' ? { keepWarm: msg.keepWarm } : {}) };
+    if (!Object.keys(patch).length) return;
+    const prefs = liveAppsOf(ctx).setPrefs(floor, patch);
+    const said = [patch.hotReload !== undefined ? `hot reload ${prefs.hotReload ? 'on' : 'off'}` : '', patch.keepWarm !== undefined ? `keep warm ${prefs.keepWarm ? 'on' : 'off'}` : ''].filter(Boolean).join(', ');
+    audit.record({ floor: floor.id, actor: human(c.peer.name, c.accountId), action: 'liveapp.prefs', target: { kind: 'liveapp', id: floor.id, label: 'Live app' }, summary: `Live app settings: ${said}` });
   },
 } satisfies HandlerMap<Exclude<LiveAppClientMsg, { t: 'liveapp.console' }>>;

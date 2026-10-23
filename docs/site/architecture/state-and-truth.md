@@ -67,7 +67,7 @@ The live app runs whatever default-branch commit it last fetched while it was ru
 
 Readiness, test evidence, Design captures, the readiness news and every "running …" label read **served**, never the target. The status line shows served against main (`src/shared/liveapp/status.ts`, `revisionLine`: *Running abc1234 · updating to def5678…*, *Update to def5678 failed · still running abc1234*, *… · nothing running*).
 
-An update fetches first while the old build still serves, then stops it for the build: from then until the new build answers, nothing serves, and the state says so. After an office restart it runs nothing until started. The last served commit is read back from `live/<project>.served.json` only as *last ran*, never as served.
+An update fetches first while the old build still serves, then stops it for the build: from then until the new build answers, nothing serves, and the state says so. Two updates don't restart (`src/server/liveapp/classify.ts`, the rule in `src/shared/liveapp/speed.ts`): when no app files changed, served moves to the new commit with `built` naming the commit its build came from; and with hot reload on, a page or logic change is moved into the running app's folder for mxcli's watch to apply, and served moves only once mxcli said it applied it and the app answers. A hot reload that doesn't confirm clears served at once and restarts. After an office restart it runs nothing until started. The last served commit is read back from `live/<project>.served.json` only as *last ran*, never as served.
 
 ### Passing tests vs acceptance
 

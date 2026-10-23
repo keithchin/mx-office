@@ -4,7 +4,8 @@
 // ("Running abc1234 · updating to def5678…") and against main, whether it's ready by milestone
 // (ui/liveapp/readiness.ts), Open live app (ui/liveapp/open.ts: the app top-level in a window of its own,
 // through the office's recording proxy; the frame of ui/liveapp/viewer.ts only as a preview, when asked
-// for), and the Console (ui/liveapp/console.ts: the runtime log and the app's requests). And the chip in
+// for), the Console (ui/liveapp/console.ts: the runtime log and the app's requests), and how fast the last
+// update went with the Hot reload and Keep warm settings (ui/liveapp/speed.ts). And the chip in
 // the project summary that says how it is and leads here.
 
 import type { Net } from '../net';
@@ -18,6 +19,7 @@ import { desktopEmbed, liveEmbed } from './liveapp/embed';
 import { liveConsole } from './liveapp/console';
 import { sessionCapHint } from './liveapp/session-cap';
 import { liveUrl, openPanel } from './liveapp/open';
+import { speedRow } from './liveapp/speed';
 import { aheadBanner } from './branch-ahead/banner';
 import { walkLinks } from './walkthroughs/links';
 import { businessNow, onBusiness, wantBusiness } from './business-status/feed';
@@ -144,7 +146,9 @@ export function liveAppView(net: Net, openTab: () => void, visible: () => boolea
     const empty = url || up || crashed ? null : h('p.la-empty', {}, s.started ? 'The app is stopped. ▶ Start builds the project’s main branch and runs it here; it follows main as PRs merge.' : "The app isn't started. ▶ Start builds the project's main branch and runs it here; it follows main as PRs merge.");
     walks.update(s.floor, s.readiness?.sha ?? on?.sha, true);
     const card = readinessCard(s, (m) => walks.linkFor(m, s.readiness?.sha, s.readiness?.milestones.find((x) => x.id === m)?.journeys.map((j) => j.id)));
-    top.replaceChildren(bar, ...([failed, refresh, note, hint, opener.el, url ? cap.el : null, banner.el, card, walks.el, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
+    // How fast it followed main last time and why (hot reload or restart), and the admins' Hot reload / Keep warm.
+    const speed = speedRow(s, net, admin);
+    top.replaceChildren(bar, ...([speed, failed, refresh, note, hint, opener.el, url ? cap.el : null, banner.el, card, walks.el, mixed, log, empty] as (HTMLElement | null)[]).filter((e): e is HTMLElement => !!e));
     if (log) log.scrollTop = log.scrollHeight;
   }
 

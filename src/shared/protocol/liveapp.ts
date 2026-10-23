@@ -64,6 +64,46 @@ export interface LiveAppState {
   main?: LiveAppMain;
   /** What the running build has of the plan, milestone by milestone (shared/liveapp/readiness.ts). */
   readiness?: LiveReadiness;
+  /** How the last start, restart or update went, phase by phase, and which way (hot reload or restart, and why). */
+  lastUpdate?: LiveUpdate;
+  /** This project's live app settings: hot reload, keep warm (server/liveapp/prefs.ts). */
+  prefs?: LiveAppPrefs;
+}
+
+/** A timed phase of a start or an update (LiveUpdate.phases). */
+export type LiveTimingPhase = 'fetch' | 'classify' | 'stop' | 'build' | 'apply' | 'start' | 'answer';
+
+/** How one start, restart or update went (shared/liveapp/speed.ts says it in words). */
+export interface LiveUpdate {
+  /**
+   * cold: a start (▶); restart: stop, build, start; hot: applied in place by mxcli's hot reload, the runtime
+   * kept; none: no app files changed, so the build that serves is already that commit's.
+   */
+  mode: 'cold' | 'restart' | 'hot' | 'none';
+  /** Why it went this way: "page and logic changes", "domain model changed", "restart asked for". */
+  reason: string;
+  /** Whether it came up on the new commit. */
+  ok: boolean;
+  /** When it ended. */
+  at: number;
+  totalMs: number;
+  phases: { name: LiveTimingPhase; ms: number }[];
+  from?: string;
+  to?: string;
+  /** How many commits it brought in (more than one: merges that landed meanwhile, applied once). */
+  commits?: number;
+  /** Those commits besides `to`, newest first (at most 10). */
+  included?: { sha: string; subject?: string }[];
+  /** A hot reload that didn't confirm, before it fell back to a restart: why. */
+  fallback?: string;
+}
+
+/** A project's live app settings (<data>/live/<project>.prefs.json). */
+export interface LiveAppPrefs {
+  /** Apply page, microflow, nanoflow and theme changes in place (mxcli run --watch); a restart when that fails. */
+  hotReload: boolean;
+  /** Start the live app when the office starts (it holds about 2 GB of memory while it runs). */
+  keepWarm: boolean;
 }
 
 /** Where a live app is in one go (LiveAppState.phase). */
@@ -81,6 +121,11 @@ export interface LiveRevision {
 /** The revision that serves (or served), and when its build came up and answered. */
 export interface LiveServed extends LiveRevision {
   builtAt: number;
+  /**
+   * The commit the running build was built from, when it isn't `sha`: the commits since change no app
+   * files (docs, journals and the like), so that build is this commit's app too.
+   */
+  built?: string;
 }
 
 /** The revision it's on its way to, and the served one it replaces (an update or a restart), if any. */
@@ -123,6 +168,8 @@ export type LiveAppClientMsg =
   /** Stop it and start it again, on the newest main. */
   | { t: 'liveapp.restart' }
   | { t: 'liveapp.stop' }
+  /** This project's live app settings (admins): hot reload, keep warm. */
+  | { t: 'liveapp.prefs'; hotReload?: boolean; keepWarm?: boolean }
   /** The Console is showing (on) or not: the runtime log and the requests are streamed only while it is. */
   | { t: 'liveapp.console'; on: boolean };
 

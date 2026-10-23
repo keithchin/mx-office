@@ -136,27 +136,33 @@ export function linuxMxbuildMessage(found: { mxbuild?: string }, pick: MxbuildPi
   return parts.join(' ');
 }
 
-const flagCache = new Map<string, { mtime: number; ok: boolean }>();
+const helpCache = new Map<string, { mtime: number; help: string }>();
 
-/** Whether `mxcli run` takes --mxbuild-path (newer ones do), from its help; asked once per mxcli build. */
-export function supportsMxbuildPath(mxcli: string, timeoutMs = 20_000): Promise<boolean> {
+/** `mxcli run --help`, asked once per mxcli build (a name on PATH: every time it's needed; it's a start, not a loop). */
+function runHelp(mxcli: string, timeoutMs: number): Promise<string> {
   let mtime = 0;
   try {
     mtime = statSync(mxcli).mtimeMs;
   } catch {
-    // A name on PATH: asked every time it's needed (it's a start, not a loop).
+    // A name on PATH.
   }
-  const had = flagCache.get(mxcli);
-  if (had && mtime && had.mtime === mtime) return Promise.resolve(had.ok);
+  const had = helpCache.get(mxcli);
+  if (had && mtime && had.mtime === mtime) return Promise.resolve(had.help);
   return new Promise((resolve) => {
     execFile(mxcli, ['run', '--help'], { timeout: timeoutMs, windowsHide: true, maxBuffer: 4 * 1024 * 1024, env: { ...process.env, NO_COLOR: '1' } }, (_err, stdout, stderr) => {
-      const ok = /--mxbuild-path\b/.test(`${stdout ?? ''}${stderr ?? ''}`);
-      if (mtime) flagCache.set(mxcli, { mtime, ok });
-      resolve(ok);
+      const help = `${stdout ?? ''}${stderr ?? ''}`;
+      if (mtime) helpCache.set(mxcli, { mtime, help });
+      resolve(help);
     });
   });
 }
 
+/** Whether `mxcli run` takes --mxbuild-path (newer ones do), from its help. */
+export const supportsMxbuildPath = (mxcli: string, timeoutMs = 20_000): Promise<boolean> => runHelp(mxcli, timeoutMs).then((h) => /--mxbuild-path\b/.test(h));
+
+/** Whether `mxcli run` takes --watch (rebuild and hot-apply on every change), from its help. */
+export const supportsWatch = (mxcli: string, timeoutMs = 20_000): Promise<boolean> => runHelp(mxcli, timeoutMs).then((h) => /--watch\b/.test(h));
+
 /** Forgets what was learnt about each mxcli (tests). */
-export const forgetMxcliFlags = () => flagCache.clear();
+export const forgetMxcliFlags = () => helpCache.clear();
 

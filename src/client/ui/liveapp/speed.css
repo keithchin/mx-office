@@ -1,0 +1,6 @@
+.ls-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.ls-time { color: var(--ink); }
+.ls-time.bad { color: var(--bad); }
+.ls-built { font-weight: 600; }
+.ls-prefs { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; margin-left: auto; }
+.ls-pref { display: inline-flex; align-items: center; gap: 2px; cursor: pointer; }
