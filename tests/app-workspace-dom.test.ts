@@ -136,8 +136,8 @@ test('in a browser: sections, canvas, panel, stages, switch, empty states, words
     assert.match((await text(page, '[data-part="request"] .aw-slot-tag')) ?? '', /Coming with change requests/);
     assert.equal(await text(page, '[data-part="next"] .aw-primary'), 'Answer the decision');
     assert.match((await text(page, '.aw-foot')) ?? '', /The team works at 2 Guided · change/);
-    // The stage: business validation (from the business status), marked Now.
-    assert.equal(await text(page, '.aw-stage.now'), 'Business validationNow');
+    // The stage: Building, marked Now: the plan is still at its build step (the progress line says the same).
+    assert.equal(await text(page, '.aw-stage.now'), 'BuildingNow');
     assert.equal(await page.locator('.aw-stage').count(), 5, 'Awaiting approval only under an approval policy');
     if (shots) await page.screenshot({ path: path.join(shots, 'c3-01-app-light.png') });
     let w = await words(page);
@@ -145,7 +145,7 @@ test('in a browser: sections, canvas, panel, stages, switch, empty states, words
 
     // The stage switch shows what another stage is about, and goes back.
     await page.click('.aw-stage[data-stage="released"]');
-    assert.match((await text(page, '.aw-stagenote')) ?? '', /^Released: the page shows the released version; .*This project is at Business validation/);
+    assert.match((await text(page, '.aw-stagenote')) ?? '', /^Released: the page shows the released version; .*This project is at Building/);
     assert.equal(await page.locator('.aw-frame iframe').count(), 1, 'peeking at a stage changes no data');
     await page.click('.aw-stagenote .aw-link');
     assert.equal(await page.isHidden('.aw-stagenote'), true);

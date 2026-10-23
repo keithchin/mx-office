@@ -104,6 +104,7 @@ export const stageDef = (id: WorkspaceStage): StageDef => STAGES.find((s) => s.i
 
 /** The toolkit's stages before the build (Kickoff to Build Plan). */
 const BEFORE_BUILD = new Set(['P', '0', '1', '2', '3', '4']);
+const UP_TO_BUILD = new Set([...BEFORE_BUILD, '5']);
 
 export interface StageInput {
   /** The project's business status (shared/business-status.ts), once known. */
@@ -128,7 +129,9 @@ export function workspaceStage(i: StageInput): WorkspaceStage {
     case 'ready-for-review':
     case 'verification-incomplete':
     case 'verification-passed':
-      return 'validation';
+      // A toolkit project whose plan is still at or before its build step is building, whatever the running
+      // app already shows, so the stage and the progress line on the same screen agree.
+      if (!(i.toolkit && i.phase && UP_TO_BUILD.has(i.phase))) return 'validation';
   }
   if (i.toolkit && i.phase && BEFORE_BUILD.has(i.phase)) return 'before';
   return 'building';

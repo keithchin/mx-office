@@ -53,7 +53,12 @@ test('the stage: read from the business status and the progress bar’s phase, n
   assert.equal(workspaceStage({ toolkit: true, phase: '3' }), 'before');
   assert.equal(workspaceStage({ toolkit: true, phase: '5', business: 'work-in-progress' }), 'building');
   assert.equal(workspaceStage({ toolkit: false, phase: '3' }), 'building', 'only a toolkit project has stages before the build');
-  for (const b of ['ready-for-review', 'verification-incomplete', 'verification-passed'] as const) assert.equal(workspaceStage({ business: b, toolkit: true, phase: '2' }), 'validation');
+  for (const b of ['ready-for-review', 'verification-incomplete', 'verification-passed'] as const) {
+    assert.equal(workspaceStage({ business: b, toolkit: true, phase: '6' }), 'validation');
+    assert.equal(workspaceStage({ business: b }), 'validation');
+    assert.equal(workspaceStage({ business: b, toolkit: true, phase: '5' }), 'building', 'the plan is still in its build step');
+    assert.equal(workspaceStage({ business: b, toolkit: true, phase: '2' }), 'before');
+  }
   assert.equal(workspaceStage({ business: 'accepted' }), 'accepted');
   assert.equal(workspaceStage({ business: 'release-approved' }), 'accepted');
   assert.equal(workspaceStage({ business: 'submitted' }), 'awaiting');
