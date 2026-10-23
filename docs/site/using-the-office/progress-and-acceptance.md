@@ -46,6 +46,8 @@ One status says how far the delivery is, in the same words on the progress bar, 
 | Business accepted | An acceptance record for the delivery commit, unchanged since | the accepted commit |
 | Deployed (recorded) | The acceptance record carries a person's deploy note (the office never deploys) | the accepted commit |
 
+A person's own marks on a version's guided checks in the App workspace (*Works as expected*, *Something's wrong*: [Guided validation](app-workspace.md#guided-validation)) are shown beside the status and never change it: there is no business-review input to it, so verification stays what was checked automatically.
+
 What's missing reads like *no journey evidence for abc1234*, *checks failed on abc1234: pr-checks run*, *security baseline missing: No mx check at abc1234 yet* or *unreviewed head: PR #12 merged without a review that counts*. A version accepted at one commit whose delivery branch moved on is judged again at the new commit, with *Changed since v1 acceptance* beside it: it's never accepted because an older version was. *Submitted for review*, *Changes requested* and *Release approved* belong to the optional approval policy, which isn't built yet. Each milestone of the build plan has a status of its own from the same records (`GET /api/business-status?floor=<id>`).
 
 ### Build in progress
@@ -141,6 +143,8 @@ Documents, the decision register and gate files are read at one immutable commit
 
 If the delivery revision, the reviewed evidence (documents, gates, CI), the budget or plan, or the delivery cycle changes before you confirm, nothing is recorded: the dialog shows the evidence as it is now, keeps your version, notes and exceptions, and asks you to tick the confirmation again. Spend that agents add while you read, and the day's exchange rate, don't count as a change; going over the budget does. A project needs a readable commit to be accepted. Existing records remain unchanged; this safeguard does not repair historical records.
 
+The App workspace's **Release** section accepts and reopens through this same path: it reads the draft for its review token, posts the same body to `POST /api/acceptance` and says the office's refusal in plain words ([Accepting from here](app-workspace.md#accepting-from-here)). Nothing about acceptance differs there: same permissions, same checks, same record.
+
 API clients must GET `/api/acceptance/draft?floor=<id>` and send its `reviewToken` with `action: "accept"` and `confirm: true` to POST `/api/acceptance`. Missing or stale tokens return HTTP 409 with `stale: true`. Tokens bind the reviewed draft and cycle; they do not replace sign-in, admin permission or same-origin checks.
 
 ### Reading the record
@@ -162,7 +166,7 @@ If the delivery branch has moved past the accepted commit, or the deliverables o
 ### Who can do what
 
 - Everyone signed in can see the bar and the record.
-- Only the Project Manager (an admin) can accept or reopen. Through [Phone access](../administration/phone-access.md), these actions ask for the password again.
+- Only the Project Manager (an admin) can accept or reopen, here or from the App workspace's Release section. Through [Phone access](../administration/phone-access.md), these actions ask for the password again.
 
 ### Where it's kept
 

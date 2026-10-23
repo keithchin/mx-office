@@ -19,8 +19,8 @@ At the top: the project's name, the five **sections** and the **App view | Engin
 | **App** | `?tab=app` | The running app, with the panel |
 | **Requirements** | `?tab=requirements` | The approved brief: its goal, the areas of the app, the open questions, and a link to the whole file in [Documents](deliverables.md) |
 | **Decisions** | `?tab=decisions` | The business decisions the team needs from you, most blocking first, each with what to look at beside it when the team named something, and answered here ([Decisions](#decisions)). What else waits on someone (sign-ins, permissions, the team's own questions, other hands-on steps) is counted, with a link to the Engineering view. Under them, **Requests**: every change you asked for, with its state |
-| **Review** | `?tab=review` | The status of the version running now and of each part of the plan, and what is still to check, in business words |
-| **Release** | `?tab=release` | The acceptance record ([Progress and acceptance](progress-and-acceptance.md)) and the deployment, which stays with people: the office doesn't deploy |
+| **Review** | `?tab=review` | The status of the version running now and of each part of the plan, what is still to check, in business words, and the **guided checks** of that version: each with its result on exactly that version, its steps, **Try it**, and your own mark ([Guided validation](#guided-validation)) |
+| **Release** | `?tab=release` | What you'd be accepting (the version, the latest finished version it is, its status and what's missing, the guided checks, the open corrections), **Accept this version** and **Reopen** through the [acceptance](progress-and-acceptance.md#acceptance) you know, and the deployment, which stays with people: the office doesn't deploy ([Accepting from here](#accepting-from-here)) |
 
 ### The canvas
 
@@ -77,6 +77,27 @@ The App workspace shows only the decisions meant for you as the business owner: 
 
 **Answering.** A decision with options shows them (the team's recommendation picked to start with); add a note, or write your answer when there are no options, and **Send decision**. It goes through the same path as the Engineering view's decision cards, Project Manager only, and is kept with the version of the question you saw. If the question changed meanwhile (someone else answered it), nothing is sent and the card says *This question changed since you opened it. Here's the new version.* with what it is now. Client questions and stage sign-offs open where they're answered today, with that page's own checks.
 
+## Guided validation
+
+The **Review** section lists the **guided checks** of the version running in the app: the project's test journeys (`tests/e2e/*.journey.json`) as they are in that very version. Each one shows:
+
+- its **result on exactly this version**: **Passed**, **Failed** or **Not run on this version**. A result recorded for another version never counts here; when a check hasn't run on this version but did on an earlier one, it says so in a note (*Passed on an earlier version (5e21c9d); that doesn't count for this one*);
+- its **steps**, in the journey's own words, and where it starts (a page of the app, or a menu item);
+- **Try it**: the App section opens, with the canvas at the check's start page when the journey names one (else the app's home page);
+- your **mark**, if you made one on this version, with who and when.
+
+Under the summary (*1 of 3 passed, 1 failed, 1 not run on this version; 1 marked working*), a line counts the other automatic checks that ran on this version.
+
+**Works as expected** and **Something's wrong** open a small dialog (✕ and Esc close it and put you back on the button) with a note, the check, the version and the page the canvas shows, captured for you as **Request a change** does. A mark is kept with the project and that version and recorded in the audit log (`validation.mark`). **Something's wrong** needs a note, and goes to the team lead as a **correction**: a change request through the same path as [Request a change](#change-requests), with a task id, the check and the version in its words. It shows on its check (*Sent to the team as CR-5 · Being worked on*) and under **Requests** with its state. If the request can't be made (nobody leads the team yet), nothing is kept and the dialog says why. If the app moved on to another version while you looked, the mark is refused and nothing is kept: mark the new version.
+
+Your marks are shown beside the status. They don't change it: the business status counts what was checked automatically on the version, and a mark is your evidence, not a passed check. When no version runs, Review says there is nothing to try.
+
+## Accepting from here
+
+The **Release** section shows what you'd be accepting: the version (*v1*), the latest finished version it is (*a4776d3*), the project's status with what's still missing, the guided checks of the version on screen and the open corrections, with their state. When the app on screen runs another version than the one being accepted, it says so.
+
+**Accept this version** (the Project Manager only, as on the Engineering view) asks the office what it would record, lists the open corrections as still open (ticked, each with who owns it; untick what you don't want noted) and an optional line for anything else, and asks you to confirm. It's the same acceptance as the progress bar's ✅ Accept: the same route, permissions and checks (the review of what's recorded, the [security baseline](security-baseline.md) at the version, the version's and the cycle's checks), nothing added or skipped. When the office refuses, the dialog says why in plain words (*This version can't be accepted yet: the security checks haven't passed on it*, with what's missing; *Something changed while you were looking … Look at it again and confirm*), and nothing is recorded. Once a version is accepted, **Reopen for the next version** starts the next one with what it's for, as **↩ Reopen** does. The full record, with every piece of evidence, stays on the Engineering view's acceptance record.
+
 ## Switching views
 
 **Engineering view** opens the same project in the rest of the office. The page doesn't reload, so you stay on the same project and the same running version. You land on the page you came from, or the one closest to the section you were on (App → Live app, Requirements → Documents, Decisions → Approvals, Review → Testing, Release → Overview). **General › App workspace** brings you back.
@@ -93,8 +114,6 @@ Every address that worked before still opens the same page: `?tab=board`, `?tab=
 
 A reload keeps the section you're on, and changing project from the workspace keeps you in it.
 
-## What's coming
-
-**Guided validation** (the scenarios to try on a version, findings, and accepting from here) comes next. Its places are marked *Coming with guided validation*. Until then, accept a version on the Engineering view's progress bar.
+## What the team writes
 
 What the team writes (a decision's question, a change's title) is shown as written, so it can still carry their words.

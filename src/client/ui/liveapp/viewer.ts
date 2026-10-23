@@ -32,6 +32,8 @@ export interface LiveViewer {
    * on from there by itself since (a click inside it: where to can't be read). Undefined: nothing shown.
    */
   where?(): { path: string; moved: boolean } | undefined;
+  /** Goes to a page of the app (a path), as typing it in the address does; nothing while nothing is shown. */
+  go?(path: string): void;
 }
 
 const ADDRESS = 'A page of the app, as a path (/p/check-sheets): Enter goes there. Only the app’s own address is allowed.';
@@ -225,6 +227,7 @@ export function liveViewer(): LiveViewer {
   return {
     el,
     where: () => (base ? { path: current(hist), moved: wandered } : undefined),
+    go: (path) => void (base && nav(path)),
     show(b, k) {
       el.hidden = false;
       if (b === base && k === key) return;

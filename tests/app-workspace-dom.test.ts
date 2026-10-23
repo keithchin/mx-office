@@ -1,7 +1,7 @@
 // The App Workspace (C3, src/client/ui/app-workspace/) in headless Chromium, with the page's own styles and a
 // test source in place of the page's feeds: its five sections, the canvas naming the served revision (and
 // never a blank frame when nothing serves), the side panel's parts wired to the data and the marked slots
-// for change requests and guided validation, the empty states, the stage switch, the workspace switch
+// for change requests, the empty states, the stage switch, the workspace switch
 // (back to the Engineering page you came from, else the closest one), no engineering words in anything it
 // draws, a phone width with no sideways scrolling, and Portal Light, Dark and phone screenshots
 // (AW_SHOTS=<dir> saves them).
@@ -175,9 +175,9 @@ test('in a browser: sections, canvas, panel, stages, switch, empty states, words
     assert.deepEqual(await page.evaluate(() => (window as unknown as { __answered: string[] }).__answered), ['esc:1']);
     assert.match((await text(page, '.aw-page')) ?? '', /2 more items wait on someone/);
     await show(page, 'review');
-    assert.match((await text(page, '.aw-page')) ?? '', /Sign in at receptionVerification passed[\s\S]*Coming with guided validation/);
+    assert.match((await text(page, '.aw-page')) ?? '', /Sign in at receptionVerification passed[\s\S]*Guided checks on this version[\s\S]*No version is running in the app right now/);
     await show(page, 'release');
-    assert.match((await text(page, '.aw-page')) ?? '', /v1 isn’t accepted yet[\s\S]*No deployment recorded/);
+    assert.match((await text(page, '.aw-page')) ?? '', /Accept this version[\s\S]*Versionv1[\s\S]*No deployment recorded/);
 
     // Dark.
     await show(page, 'app');

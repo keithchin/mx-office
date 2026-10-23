@@ -7,7 +7,8 @@
 //              and the workspace switch (App view | Engineering view)
 //   stages     the stage switch: where the project is (shared/app-workspace/words.ts workspaceStage, read
 //              from the business status and the progress bar), and what each stage shows
-//   main       the canvas (./canvas.ts: the running app) on App, a section's page (./sections.ts) on the rest
+//   main       the canvas (./canvas.ts: the running app) on App, a section's page (./sections.ts) on the rest;
+//              a guided check's Try it (./validation.ts) shows the canvas at the check's start page
 //   side       the side panel (./panel.ts): status bound to a version, the current request (./requests.ts),
 //              the decision needed, progress, finished changes, the next action
 //
@@ -77,7 +78,21 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
     const revision = d.appUrl ? d.live?.served?.sha : undefined;
     openRequestDialog({ ...(d.project ? { project: d.project } : {}), ...(at ? { page: at.path, pageMoved: at.moved } : {}), ...(revision ? { revision } : {}) }, (a) => deps.source.request(a), (r) => toast(`Request ${r.id} sent to ${r.member}: it shows in the panel with its state`));
   };
-  const page = sectionPage({ open: deps.open, answer: (x, a) => deps.source.answer(x, a), redraw: () => draw(), request });
+  /** A guided check's Try it: the App section, the canvas at the check's start page where it names one. */
+  let pendingGo: string | undefined;
+  const tryIt = (path?: string) => {
+    pendingGo = path;
+    deps.open('app');
+  };
+  const page = sectionPage({
+    open: deps.open,
+    answer: (x, a) => deps.source.answer(x, a),
+    redraw: () => draw(),
+    request,
+    ...(deps.source.want ? { want: (w: 'validation' | 'delivery') => deps.source.want!(w) } : {}),
+    validation: { tryIt, where: () => canvas.where(), ...(deps.source.mark ? { mark: (m) => deps.source.mark!(m) } : {}), done: (t) => toast(t) },
+    release: { ...(deps.source.acceptance ? { acceptance: deps.source.acceptance } : {}), acted: () => deps.source.acted?.(), open: deps.open },
+  });
   const main = h('div.aw-main');
   const panel = sidePanel({ open: deps.open, request });
   const el = h('section.aw', { 'aria-label': 'App workspace', hidden: true }, bar, stages, stageNote, h('div.aw-body', {}, main, panel.el));
@@ -129,6 +144,8 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
     if (section === 'app') {
       if (main.firstChild !== canvas.el || main.childNodes.length !== 1) main.replaceChildren(canvas.el);
       canvas.draw(d, stageOf(d));
+      if (pendingGo) canvas.go(pendingGo);
+      pendingGo = undefined;
     } else {
       if (main.firstChild !== page.el || main.childNodes.length !== 1) main.replaceChildren(page.el);
       page.draw(section, d);

@@ -6,9 +6,11 @@
 //                 names one, answered here with the revision it was opened at), and every change request with
 //                 its state (./requests.ts)
 //   Review        the business status of the running version and of each part of the plan, what is still
-//                 missing in business words; C5's slot for guided validation
-//   Release       the acceptance record and the deployment, which stays with people; C5's slot for accepting
-//                 from here
+//                 missing in business words, and guided validation of the version on screen (./validation.ts:
+//                 its checks with their results at exactly that version, Try it, the person's marks)
+//   Release       accepting the version through the existing acceptance path (./release.ts: what's being
+//                 accepted, Accept this version, Reopen, a refusal in business words) and the deployment,
+//                 which stays with people
 //
 // An empty section says what will appear in it. Nothing is made up.
 
@@ -16,12 +18,13 @@ import { h } from '../dom';
 import { plainMissing } from '../../../shared/app-workspace/words';
 import type { AppSection } from '../../../shared/app-workspace/route';
 import type { WorkspaceData } from './data';
-import { slot, versionChip } from './panel';
+import { versionChip } from './panel';
+import { validationPart, type ValidationDeps } from './validation';
+import { acceptCard, type ReleaseDeps } from './release';
 import { decisionCards, type AnswerResult } from './decision-cards';
 import { requestList } from './requests';
 import type { WorkspaceDecision } from './data';
 
-const day = (ms: number) => new Date(ms).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
 const card = (title: string, ...body: (Node | string)[]) => h('section.aw-card', {}, h('h3', {}, title), ...body);
 const none = (text: string) => h('p.aw-none', {}, text);
 
@@ -30,7 +33,7 @@ export interface SectionPage {
   draw(section: Exclude<AppSection, 'app'> | AppSection, d: WorkspaceData): void;
 }
 
-export function sectionPage(deps: { open(tab: string): void; answer(x: WorkspaceDecision, a: { verdict: 'reply'; text: string }): Promise<AnswerResult>; redraw(): void; request(): void }): SectionPage {
+export function sectionPage(deps: { open(tab: string): void; answer(x: WorkspaceDecision, a: { verdict: 'reply'; text: string }): Promise<AnswerResult>; redraw(): void; request(): void; want?(what: 'validation' | 'delivery'): void; validation: ValidationDeps; release: ReleaseDeps }): SectionPage {
   const el = h('div.aw-page');
 
   function requirements(d: WorkspaceData): HTMLElement[] {
@@ -70,27 +73,15 @@ export function sectionPage(deps: { open(tab: string): void; answer(x: Workspace
         missing.length ? h('div', {}, h('p.aw-small', {}, 'Still to check:'), h('ul.aw-list', {}, ...missing.map((m) => h('li', {}, m)))) : none('Nothing is missing for this status.'),
       ),
       card('Parts of the plan', parts.length ? h('ul.aw-parts', {}, ...parts.map((m) => h('li', {}, h('span', {}, m.title!), h('span.aw-pill', { class: m.tone }, m.label)))) : none('Each part of the plan shows here with its status once the plan numbers its parts.')),
-      card('Guided validation', slot('Coming with guided validation', 'The scenarios to try on this version, with their results, and a way to report what you find.')),
+      h('section.aw-card.aw-guided', {}, h('h3', {}, 'Guided checks on this version'), validationPart(d.validation, d.onScreen, d.requests, deps.validation)),
     ];
   }
 
   function release(d: WorkspaceData): HTMLElement[] {
-    const a = d.progress?.acceptance;
     const b = d.business;
-    const acceptance = !d.progress
-      ? none('Reading the acceptance record…')
-      : !a
-        ? none('No acceptance record yet.')
-        : h(
-            'div',
-            {},
-            a.accepted ? h('p', {}, h('b', {}, `${a.version} accepted`), ` by ${a.accepted.by} on ${day(a.accepted.at)}`) : h('p', {}, `${a.version} isn’t accepted yet.`),
-            ...(a.accepted && a.changed?.length ? [h('p.aw-warn', {}, 'It changed after it was accepted, so it needs accepting again.')] : []),
-            ...(a.earlier.length ? [h('p.aw-small', {}, `Accepted before: ${a.earlier.map((e) => `${e.version} on ${day(e.at)}`).join(', ')}`)] : []),
-          );
     const deployNote = b?.state === 'deployed-recorded' ? b.notes.find((n) => n.startsWith('Deploy: '))?.slice(8) : undefined;
     return [
-      card('Acceptance', acceptance, slot('Coming with guided validation', 'Accepting a version from here, after trying its scenarios. Until then, accept it on the Engineering view’s progress bar.'), h('button.aw-link', { type: 'button', onclick: () => deps.open('command') }, 'Go to acceptance on the Engineering view')),
+      ...acceptCard(d, deps.release),
       card(
         'Deployment',
         deployNote ? h('p', {}, h('b', {}, 'Deployment recorded: '), deployNote) : none('No deployment recorded.'),
@@ -103,6 +94,9 @@ export function sectionPage(deps: { open(tab: string): void; answer(x: Workspace
     el,
     draw(section, d) {
       el.dataset.section = section;
+      // Review and Release read guided validation of the version on screen (Release also what Accept would record): asked only once they show.
+      if (section === 'review' || section === 'release') deps.want?.('validation');
+      if (section === 'release') deps.want?.('delivery');
       el.replaceChildren(...(section === 'requirements' ? requirements(d) : section === 'decisions' ? decisions(d) : section === 'review' ? review(d) : release(d)));
     },
   };

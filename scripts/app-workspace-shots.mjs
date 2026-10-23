@@ -1,4 +1,4 @@
-// The App Workspace (C3, C4) in a real, throwaway TEST office: the performance guard's fixture at scale 1 (fake
+// The App Workspace (C3, C4, C5) in a real, throwaway TEST office: the performance guard's fixture at scale 1 (fake
 // agents only, test mode, no GitHub: GH tokens removed and an empty GH_CONFIG_DIR, no Claude). Checks the
 // route and the switch end to end and takes Portal Light, Dark and phone screenshots:
 //
@@ -9,6 +9,8 @@
 //   - ?ws=eng&tab=decisions opens Approvals; ?tab=decisions the Decisions section; a reload keeps the section
 //   - C4: Request a change sends a request that comes back with a task id (or the office's refusal, said in the
 //     dialog), shown in the panel and under Decisions
+//   - C5: Review with no version on screen, the guided-validation route at main (a mark refused with no app),
+//     Release and Accept through the existing acceptance path (its answer, a refusal in business words)
 //
 //   npm run build && node scripts/app-workspace-shots.mjs [--root <scratch/test-offices/...>] [--out <shots dir>]
 //
@@ -162,6 +164,39 @@ async function main() {
     await page.click('.aw-tab[data-section="decisions"]');
     await page.waitForTimeout(800);
     await both(page, 'c4-22-office-decisions', true);
+    // C5: guided validation and accept in the real office (no app runs in a test office: nothing to mark).
+    await page.click('.aw-tab[data-section="review"]');
+    await page.waitForSelector('.aw-guided', { timeout: 30000 });
+    check(/No version is running in the app right now/.test((await page.textContent('.aw-guided')) ?? ''), 'Review: no version on screen, nothing to try, said so');
+    const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: floors[0].dir, encoding: 'utf8', windowsHide: true }).stdout?.trim();
+    if (head) {
+      const gv = await page.evaluate(async ([f, r]) => (await fetch(`/api/guided-validation?floor=${encodeURIComponent(f)}&revision=${r}`)).json(), [floor, head]);
+      check(Array.isArray(gv.scenarios) && gv.revision === head, `GET /api/guided-validation at ${head.slice(0, 7)}: ${gv.scenarios?.length} checks, results at that version only`);
+      const mark = await page.evaluate(async ([f, r]) => {
+        const res = await fetch('/api/guided-validation/mark', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor: f, revision: r, scenario: 'x', verdict: 'works' }) });
+        return { status: res.status, body: await res.json() };
+      }, [floor, head]);
+      check(mark.status === 409, `a mark with no app running is refused: ${mark.status} ${mark.body.error}`);
+    }
+    await both(page, 'c5-20-office-review', true);
+    await page.click('.aw-tab[data-section="release"]');
+    await page.waitForSelector('.aw-acceptcard', { timeout: 30000 });
+    await page.waitForFunction(() => !/Reading what would be recorded/.test(document.querySelector('.aw-acceptcard')?.textContent ?? ''), null, { timeout: 60000 }).catch(() => undefined);
+    await both(page, 'c5-21-office-release', true);
+    if (await page.$('.aw-accept:not([disabled])')) {
+      await page.click('.aw-accept');
+      await page.waitForSelector('.aw-accdlg .aw-confirm', { timeout: 60000 });
+      await page.check('.aw-accdlg .aw-confirm');
+      await page.click('.aw-acceptgo');
+      await page.waitForFunction(() => !document.querySelector('.aw-accdlg') || !document.querySelector('.aw-accdlg .aw-refusal')?.hidden, null, { timeout: 60000 });
+      const said = await page.evaluate(() => (document.querySelector('.aw-accdlg') ? document.querySelector('.aw-accdlg .aw-refusal')?.textContent : null));
+      check(true, said ? `Accept through the existing path: refused, said as “${said}”` : 'Accept through the existing path: accepted');
+      if (said) {
+        await page.waitForTimeout(300);
+        await both(page, 'c5-22-office-accept-refused');
+        await page.keyboard.press('Escape');
+      }
+    }
     check(!page.errors.length, `no page errors${page.errors.length ? `: ${page.errors.join(' | ')}` : ''}`);
 
     // A phone.

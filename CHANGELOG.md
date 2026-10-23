@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **Guided validation and accepting in the App workspace.** **Review** lists the guided checks of the version running in the app (the project's test journeys as they are in that version), each with its result on exactly that version: **Passed**, **Failed** or **Not run on this version**; a result from another version never counts, it's only a note (*passed on an earlier version*). Each shows its steps in the journey's words and **Try it**, which opens the app at the check's start page. Mark a check **Works as expected** or **Something's wrong** (with a note; the page and version on screen go with it): marks are kept with the project and version and recorded in the audit log, and *Something's wrong* goes to the team lead as a correction, a change request with a task id that shows on the check and under Requests with its state. Marks are shown beside the business status and don't change it. **Release** shows what you'd accept (the version, the latest finished version it is, its status and what's missing, the guided checks, the open corrections) and **Accept this version** / **Reopen** go through the same acceptance as the progress bar (same permissions, the security baseline and every other check); when the office refuses, it says why in plain words and nothing is recorded.
 
 ## 2026-10-23 · release 72 (`4301a10`)
 
