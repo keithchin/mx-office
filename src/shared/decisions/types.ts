@@ -8,6 +8,8 @@
 
 import type { NeedItem, NeedTarget } from '../needsyou.js';
 import type { DuplicateGroup } from './duplicates.js';
+import type { DecisionArtifact } from './artifact.js';
+import type { EscalationTrigger } from '../roster/autonomy.js';
 
 /**
  * decision: only you can choose (options, Reply in my words, Ask the lead). hands-on: something only a
@@ -92,6 +94,10 @@ export interface DecisionCard {
   permission?: { command: string; rule: string; suggested?: string; count: number; who: string; allowed?: { at: number; by: string; file: string } };
   /** The clean-up card's groups of likely duplicates (./duplicates-card.ts): Close duplicates / Review one by one. */
   duplicates?: DuplicateGroup[];
+  /** What to look at to answer it, only when the decision names it explicitly (./artifact.ts): never guessed. */
+  artifact?: DecisionArtifact;
+  /** The primary escalation's trigger, when it has one (the App Workspace's business filter reads it). */
+  trigger?: EscalationTrigger;
   /** The compact row (NeedItem) for the strip, the phone and Teams. */
   need: NeedItem;
 }

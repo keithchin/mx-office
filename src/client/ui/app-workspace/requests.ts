@@ -1,0 +1,188 @@
+// The App Workspace's change requests (C4, shared/change-requests.ts, server/change-requests/):
+//
+//   feed     GET /api/change-requests for the project on screen: asked when the workspace wakes and again when
+//            something the state hangs on moved (the business status, the team, the PR list: the feeds the page
+//            already has): moves together are one ask, and one ask is in flight at a time. No timer of its own.
+//   dialog   Request a change: the person's words, and what it's about, captured for them: the project, the page
+//            of the app the canvas shows and the running version. Sent as a task to the team's lead.
+//   card     the panel's current request: its words, its state in business words and the version that has it
+//   list     Decisions' Requests: every request, newest first
+//
+// What the person wrote is shown as written.
+
+import { h, openModal, timeAgo } from '../dom';
+import { REQUEST_TONE, REQUEST_MAX, type ChangeRequestRecord, type ChangeRequestView } from '../../../shared/change-requests';
+
+export interface RequestAsk {
+  text: string;
+  page?: string;
+  pageMoved?: boolean;
+  revision?: string;
+}
+
+export type RequestSent = { ok: true; request: ChangeRequestRecord } | { ok: false; error: string };
+
+/** POST /api/change-requests: the request as kept (with its task id), or why not. */
+export async function postRequest(floor: string, ask: RequestAsk, by?: string): Promise<RequestSent> {
+  try {
+    const res = await fetch('/api/change-requests', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor, ...ask, ...(by ? { by } : {}) }) });
+    const out = (await res.json().catch(() => ({}))) as { error?: string; request?: ChangeRequestRecord };
+    return res.ok && out.request ? { ok: true, request: out.request } : { ok: false, error: out.error ?? 'The office couldn’t take the request just now. Try again.' };
+  } catch {
+    return { ok: false, error: 'The office couldn’t be reached. Try again.' };
+  }
+}
+
+/** The project's requests, kept per project and asked again (once per burst) when `again` is called. */
+export function requestsFeed(onChange: () => void) {
+  let mine: { floor: string; list?: ChangeRequestView[]; asking?: boolean; dirty?: boolean } | undefined;
+  let queued = false;
+  const ask = (floor: string) => {
+    const cur = mine?.floor === floor ? mine : (mine = { floor });
+    if (cur.asking) return void (cur.dirty = true);
+    cur.asking = true;
+    void fetch(`/api/change-requests?floor=${encodeURIComponent(floor)}`, { credentials: 'same-origin' })
+      .then((r) => (r.ok ? (r.json() as Promise<{ requests: ChangeRequestView[] }>) : undefined))
+      .catch(() => undefined)
+      .then((v) => {
+        cur.asking = false;
+        if (mine !== cur) return;
+        if (v) cur.list = v.requests;
+        else cur.list ??= [];
+        onChange();
+        if (cur.dirty) {
+          cur.dirty = false;
+          ask(floor);
+        }
+      });
+  };
+  return {
+    /** The workspace shows this project: ask once if it isn't known yet. */
+    want(floor: string) {
+      if (mine?.floor !== floor || mine.list === undefined) ask(floor);
+    },
+    /** Something it hangs on moved: ask again (moves in one go are one ask; one asked meanwhile waits for the answer in flight, then asks once). */
+    again(floor: string | null) {
+      if (!floor || mine?.floor !== floor || queued) return;
+      queued = true;
+      queueMicrotask(() => ((queued = false), ask(floor)));
+    },
+    /** Now, after a request was made. */
+    now: (floor: string) => ask(floor),
+    get: (floor: string | null): ChangeRequestView[] | undefined => (floor && mine?.floor === floor ? mine.list : undefined),
+  };
+}
+
+const short = (sha?: string) => (sha ?? '').slice(0, 7);
+const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+/** A request's state pill. */
+export const statePill = (r: ChangeRequestView) => h('span.aw-pill', { class: REQUEST_TONE[r.state], 'data-state': r.state }, r.words);
+
+/** What a request was about, in a line: the page and the version, when known. */
+function aboutLine(r: ChangeRequestView): string {
+  const parts = [`Asked ${timeAgo(r.at)} by ${r.by}`];
+  if (r.page) parts.push(`on ${r.page}`);
+  if (r.revision) parts.push(`looking at version ${short(r.revision)}`);
+  return parts.join(' · ');
+}
+
+/** The panel's current request (undefined list: not read yet; empty: none yet). */
+export function currentRequestPart(list: ChangeRequestView[] | undefined, cur: ChangeRequestView | undefined, ask: (() => void) | undefined): HTMLElement {
+  const btn = ask ? h('button.aw-btn.aw-ask', { type: 'button', onclick: ask }, 'Request a change') : '';
+  if (list === undefined) return h('div', {}, h('p.aw-none', {}, 'Reading your requests…'));
+  if (!cur) return h('div', {}, h('p.aw-none', {}, 'Describe what should behave differently. It becomes a request the team works on, and its state shows here.'), btn);
+  return h(
+    'div.aw-request',
+    { 'data-request': cur.id },
+    h('p.aw-q', {}, clip(cur.text.split('\n')[0], 140)),
+    h('div.aw-statusrow', {}, statePill(cur), cur.version ? h('span.aw-small', {}, `in version ${short(cur.version)}`) : ''),
+    h('p.aw-small', {}, cur.detail),
+    list.length > 1 ? h('p.aw-small', {}, `${list.length} requests in all, under Decisions`) : '',
+    btn,
+  );
+}
+
+/** Decisions' Requests: every request, newest first. */
+export function requestList(list: ChangeRequestView[] | undefined): HTMLElement {
+  if (list === undefined) return h('p.aw-none', {}, 'Reading your requests…');
+  if (!list.length) return h('p.aw-none', {}, 'No requests yet. Use Request a change on the App section: each one shows here with its state and the version that has it.');
+  return h(
+    'ul.aw-requests',
+    {},
+    ...list.map((r) =>
+      h(
+        'li.aw-reqrow',
+        { 'data-request': r.id },
+        h('div.aw-row', {}, h('b', {}, r.id), statePill(r), r.version ? h('span.aw-small', {}, `version ${short(r.version)}`) : '', h('span.aw-grow')),
+        h('p', {}, clip(r.text, 400)),
+        h('p.aw-small', {}, r.detail),
+        h('p.aw-small', {}, aboutLine(r)),
+      ),
+    ),
+  );
+}
+
+export interface RequestContext {
+  project?: string;
+  page?: string;
+  pageMoved?: boolean;
+  revision?: string;
+}
+
+/**
+ * Request a change: the words, with the project, page and version captured and shown (not editable: they're
+ * what was on screen). ✕ and Esc close it and give the focus back to the button that opened it.
+ */
+export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => Promise<RequestSent>, done: (r: ChangeRequestRecord) => void): void {
+  const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const box = h('textarea.aw-reqtext', { rows: 5, maxlength: String(REQUEST_MAX), placeholder: 'For example: let reception see who signed a visitor in, next to the arrival time.', 'aria-label': 'What should change' }) as HTMLTextAreaElement;
+  const err = h('p.aw-warn', { role: 'alert', hidden: true });
+  const submit = h('button.btn.primary.aw-reqsend', { type: 'submit' }, 'Send request') as HTMLButtonElement;
+  const cancel = h('button.btn', { type: 'button' }, 'Cancel');
+  const about = [
+    ['Project', c.project ?? 'This project'],
+    ['Page', c.page ? `${c.page}${c.pageMoved ? ' (the app moved on from there by itself; this is where it was last opened)' : ''}` : 'No page: the app isn’t showing here'],
+    ['Version', c.revision ? `running ${short(c.revision)}` : 'No version running'],
+  ];
+  const form = h(
+    'form.modal.aw-reqdlg',
+    { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Request a change' },
+    h('header', {}, h('h2', {}, 'Request a change')),
+    h(
+      'div.body',
+      {},
+      h('p', {}, 'Describe what should behave differently, in your own words. It becomes a request the team lead works on; you’ll see its state in the panel and under Decisions.'),
+      box,
+      h('dl.aw-about', {}, ...about.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
+      h('p.aw-small', {}, 'The page and version are taken from what’s on screen, so the team sees what you saw.'),
+      err,
+    ),
+    h('footer', {}, h('span.grow'), cancel, submit),
+  ) as HTMLFormElement;
+  form.noValidate = true;
+  const modal = openModal(form, { onClose: () => opener?.focus() });
+  cancel.addEventListener('click', () => modal.close());
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = box.value.trim();
+    if (!text) {
+      err.hidden = false;
+      err.textContent = 'Say what should change first.';
+      box.focus();
+      return;
+    }
+    submit.disabled = true;
+    void send({ text, ...(c.page ? { page: c.page } : {}), ...(c.pageMoved ? { pageMoved: true } : {}), ...(c.revision ? { revision: c.revision } : {}) }).then((r) => {
+      submit.disabled = false;
+      if (!r.ok) {
+        err.hidden = false;
+        err.textContent = r.error;
+        return;
+      }
+      modal.close();
+      done(r.request);
+    });
+  });
+  box.focus();
+}

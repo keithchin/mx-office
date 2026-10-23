@@ -13,7 +13,7 @@ weight: 2
 | `send_home` | workers[], merged, cleanup (auto, keep, worktree, all) | `office-workers home` |
 | `tell_worker` | **worker**, **prompt** | `office-workers tell` |
 | `link_pr` | pr, worker, unlink | `office-workers pr` |
-| `escalate` | **title**, urgency, trigger, details, options[], recommendation | `office-workers escalate` |
+| `escalate` | **title**, urgency, trigger, details, options[], recommendation, artifact | `office-workers escalate` |
 | `subagent` | **op** (list, review, warn, bench, swap-model, reinstate), name, verdict (accept, rework), note, reason, model | `office-workers subagent` |
 
 ## Allowed without asking

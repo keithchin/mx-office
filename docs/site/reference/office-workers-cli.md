@@ -26,7 +26,8 @@ office-workers pr <number|url> [--worker <name|id>]
                                               say which pull request is a worker's
 office-workers pr --none [--worker <name|id>] take that pull request off the worker again
 office-workers escalate --title "…" [--urgency info|important|urgent|critical]
-      [--trigger <kind>] [--option "A"]... [--recommend "A"] <<'EOF'
+      [--trigger <kind>] [--option "A"]... [--recommend "A"]
+      [--artifact <kind>:<ref>] <<'EOF'
 …the details…                                 raise something to the Project Manager (the human);
 EOF                                           details on stdin or --details "…". The answer comes
                                               back to you as a prompt
@@ -83,6 +84,7 @@ office-workers mcp                            serve these as MCP tools on stdio
 | `--trigger` | `plan`, `scope`, `design`, `architecture`, `revisions-exhausted`, `blocked`, `milestone`, `repeated-failure`, `budget-risk`, `security`, `data-loss`, `client-milestone`, `budget-overrun`, `blocked-no-path`, `needs-human` (a hands-on action only a person can do: merge, sign in, paste a key, install, allow, restart), `question` (a question only the Project Manager can answer). The last two are never filed as FYI |
 | `--option` | Repeat up to 6 times |
 | `--recommend` | Your recommendation |
+| `--artifact` | What to look at to answer it: `screenshot:<path>`, `process-map:<path>`, `document:<path>` (from the project root), `walkthrough:<id>` or `journey:<J-nn>`. Shown beside the question in the App workspace; or put `Artifact: <kind>:<ref>` on a line of its own in the details |
 | `--details` | Or the details on stdin |
 
 ```bash

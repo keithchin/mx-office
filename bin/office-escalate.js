@@ -9,7 +9,8 @@ export const URGENCIES = ['info', 'important', 'urgent', 'critical'];
 export const TRIGGERS = ['plan', 'scope', 'design', 'architecture', 'revisions-exhausted', 'blocked', 'milestone', 'repeated-failure', 'budget-risk', 'security', 'data-loss', 'client-milestone', 'budget-overrun', 'blocked-no-path', 'needs-human', 'question'];
 
 export const ESCALATE_USAGE = `  office-workers escalate --title "…" [--urgency info|important|urgent|critical]
-        [--trigger <kind>] [--option "A"]... [--recommend "A"] <<'EOF'
+        [--trigger <kind>] [--option "A"]... [--recommend "A"]
+        [--artifact <kind>:<ref>] <<'EOF'
   …the details…                                 raise something to the Project Manager (the human);
   EOF                                           details on stdin or --details "…". The answer comes
                                                 back to you as a prompt. --trigger needs-human for
@@ -17,7 +18,12 @@ export const ESCALATE_USAGE = `  office-workers escalate --title "…" [--urgenc
                                                 in, paste a key, install, allow, restart): never FYI.
                                                 A Studio Pro hand-add or "mxcli can't" needs a
                                                 Tried: section in the details (each attempt with
-                                                its exact error), or it comes back to you unraised`;
+                                                its exact error), or it comes back to you unraised.
+                                                --artifact names what to look at to answer it:
+                                                screenshot:<path>, process-map:<path>,
+                                                document:<path>, walkthrough:<id> or journey:<J-nn>
+                                                (paths from the project root); shown beside the
+                                                decision in the App workspace, never guessed`;
 
 /**
  * The escalate command's arguments (the words after `escalate`). `--option` may be given several
@@ -28,7 +34,7 @@ export const ESCALATE_USAGE = `  office-workers escalate --title "…" [--urgenc
 export function parseEscalate(args, UsageError) {
   /** @type {Record<string, unknown>} */
   const out = { cmd: 'escalate', options: [] };
-  const valued = { '--title': 'title', '--urgency': 'urgency', '--trigger': 'trigger', '--recommend': 'recommendation', '--details': 'details', '--option': 'options' };
+  const valued = { '--title': 'title', '--urgency': 'urgency', '--trigger': 'trigger', '--recommend': 'recommendation', '--details': 'details', '--option': 'options', '--artifact': 'artifact' };
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--json') {
@@ -78,6 +84,7 @@ export const ESCALATE_TOOL = {
       details: { type: 'string', description: "What happened, what you checked, what it affects. For a Studio Pro hand-add or \"mxcli can't\": a `Tried:` line, then one `- ` line per attempt with its exact error." },
       options: { type: 'array', items: { type: 'string' }, description: 'The choices the Project Manager has, each a short line.' },
       recommendation: { type: 'string', description: 'Which option you recommend, and why, in a line.' },
+      artifact: { type: 'string', description: 'What to look at to answer it, as <kind>:<ref>: screenshot:<path>, process-map:<path>, document:<path> (paths from the project root), walkthrough:<id> or journey:<J-nn>. Shown beside the decision in the App workspace; only what you name here is shown, never a guess.' },
     },
     required: ['title'],
     additionalProperties: false,

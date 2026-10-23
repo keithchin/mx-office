@@ -18,6 +18,11 @@ import { currentNeeds, onNeeds } from '../needsyou/feed';
 import { getProgress } from '../progress/api';
 import { BRIEF_PATH, parseBrief, type BriefFacts } from '../portal/brief-card';
 import { currentRoster, onRoster } from '../teams/world';
+import { isBusinessDecision } from '../../../shared/app-workspace/business-decisions';
+import type { DecisionArtifact } from '../../../shared/decisions/artifact';
+import type { ChangeRequestView } from '../../../shared/change-requests';
+import { postRequest, requestsFeed, type RequestAsk, type RequestSent } from './requests';
+import type { AnswerResult } from './decision-cards';
 
 export interface WorkspaceDecision {
   id: string;
@@ -27,6 +32,16 @@ export interface WorkspaceDecision {
   level: 'block' | 'warn' | 'info';
   /** Takes you to where it's answered (the strip's own way, with its own checks). */
   answer(): void;
+  /** Its options and the team's recommendation, when it has them. */
+  options?: string[];
+  recommendation?: string;
+  /** Who asked (and acts on the answer). */
+  owner?: string;
+  /** The related artifact it names explicitly (never guessed). */
+  artifact?: DecisionArtifact;
+  /** The escalation it is, when it is one (answered here), and the card's other escalations (answered with it). */
+  escalation?: string;
+  others?: string[];
 }
 
 export interface WorkspaceData {
@@ -52,6 +67,8 @@ export interface WorkspaceData {
   changes?: { title: string; at?: string }[];
   autonomy?: { level: number; name: string; byStage: boolean };
   admin: boolean;
+  /** The project's change requests with their state, newest first (undefined: not read yet). */
+  requests?: ChangeRequestView[];
 }
 
 export interface WorkspaceSource {
@@ -60,6 +77,10 @@ export interface WorkspaceSource {
   on(fn: () => void): () => void;
   /** The workspace is on screen: ask for what isn't known for this project yet. */
   wake(): void;
+  /** Request a change (POST /api/change-requests): the request with its task id, or why not. */
+  request(ask: RequestAsk): Promise<RequestSent>;
+  /** Answers a decision through the decision cards' path, with the revision it was opened at (a stale one: 409). */
+  answer(x: WorkspaceDecision, a: { verdict: 'reply'; text: string }): Promise<AnswerResult>;
 }
 
 /** A change's title without a conventional prefix ("feat(sheets): " and the like) or a trailing (#12). */
@@ -97,7 +118,9 @@ export function pageSource(): WorkspaceSource {
       emit();
     });
   };
+  const requests = requestsFeed(() => emit());
   let awake = false;
+  const again = () => awake && requests.again(store.floor);
   const wake = () => {
     awake = true;
     const f = store.floor;
@@ -105,6 +128,7 @@ export function pageSource(): WorkspaceSource {
     wantBusiness(f, businessKey(store.liveApp));
     askBrief(f);
     askProgress(f);
+    requests.want(f);
     currentRoster();
   };
 
@@ -113,16 +137,27 @@ export function pageSource(): WorkspaceSource {
     emit();
   });
   store.on('floor', () => (awake ? wake() : undefined, emit()));
-  store.on('pulls', emit);
+  // A request's state hangs on the business status, the team (its task) and the PR list: asked again when one moves.
+  store.on('pulls', () => (again(), emit()));
   onBusiness(() => {
     if (awake && store.floor) askProgress(store.floor);
+    again();
     emit();
   });
   onNeeds(emit);
-  onRoster(emit);
+  onRoster(() => (again(), emit()));
 
+  const me = () => store.me.account?.name ?? store.profile.name;
   return {
     wake,
+    async request(ask) {
+      const f = store.floor;
+      if (!f) return { ok: false, error: 'Pick a project first' };
+      const r = await postRequest(f, ask, me());
+      if (r.ok) requests.now(f);
+      return r;
+    },
+    answer: (x, a) => answerDecision(store.floor, x, a, me()),
     on(fn) {
       fns.add(fn);
       return () => void fns.delete(fn);
@@ -137,10 +172,24 @@ export function pageSource(): WorkspaceSource {
       let others = 0;
       if (here) {
         decisions = [];
+        // The business owner's decisions only (shared/app-workspace/business-decisions.ts); the rest are counted for the Engineering view.
         here.items.forEach((item, i) => {
           const card = here.cards?.[i];
-          const isDecision = card ? card.kind === 'decision' : item.kind === 'escalation' || item.kind === 'questions';
-          if (isDecision) decisions!.push({ id: card?.id ?? item.key, question: card?.question ?? item.text, ...(card?.detail ? { detail: card.detail } : {}), ...(item.since ? { since: item.since } : {}), level: item.level, answer: () => here.go(item.target) });
+          const mine = card ? isBusinessDecision(card) : item.kind === 'questions';
+          if (mine)
+            decisions!.push({
+              id: card?.id ?? item.key,
+              question: card?.question ?? item.text,
+              ...(card?.detail ? { detail: card.detail } : {}),
+              ...(item.since ? { since: item.since } : {}),
+              level: item.level,
+              answer: () => here.go(item.target),
+              ...(card?.options?.length ? { options: card.options } : {}),
+              ...(card?.recommendation ? { recommendation: card.recommendation } : {}),
+              ...(card?.owner ? { owner: card.owner } : {}),
+              ...(card?.artifact ? { artifact: card.artifact } : {}),
+              ...(card?.escalation && card.sources[0]?.type === 'escalation' ? { escalation: card.escalation, others: card.sources.slice(1).flatMap((s) => (s.escalation ? [s.escalation] : [])) } : {}),
+            });
           else if (item.level !== 'info') others++;
         });
         decisions.sort((a, b) => rank(a.level) - rank(b.level));
@@ -167,9 +216,23 @@ export function pageSource(): WorkspaceSource {
         ...(changes ? { changes } : {}),
         ...(level ? { autonomy: { level, name: AUTONOMY[level].name, byStage: !!roster?.settings.autonomyByStage?.enabled } } : {}),
         admin: !!store.me.admin,
+        ...(requests.get(floor) ? { requests: requests.get(floor) } : {}),
       };
     },
   };
+}
+
+/** POST /api/decisions/action (answer): the decision cards' own path, admins only, a stale revision a 409 with the current state. */
+async function answerDecision(floor: string | null, x: WorkspaceDecision, a: { verdict: 'reply'; text: string }, by: string): Promise<AnswerResult> {
+  if (!floor || !x.escalation) return { ok: false, status: 400, error: 'This decision is answered on its own page.' };
+  try {
+    // 0: the card shows an open escalation (no answer revision yet); answered meanwhile, the office refuses it.
+    const res = await fetch('/api/decisions/action', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor, by, action: 'answer', escalation: x.escalation, others: x.others ?? [], verdict: a.verdict, text: a.text, expectedRev: 0 }) });
+    const out = (await res.json().catch(() => ({}))) as { error?: string; current?: { state?: string; open?: string; rev?: number } };
+    return res.ok ? { ok: true } : { ok: false, status: res.status, error: out.error ?? 'The office couldn’t send it just now.', ...(out.current ? { current: out.current } : {}) };
+  } catch {
+    return { ok: false, status: 0, error: 'The office couldn’t be reached.' };
+  }
 }
 
 const rank = (l: WorkspaceDecision['level']) => (l === 'block' ? 0 : l === 'warn' ? 1 : 2);

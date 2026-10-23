@@ -1,4 +1,4 @@
-// The App Workspace (C3) in a real, throwaway TEST office: the performance guard's fixture at scale 1 (fake
+// The App Workspace (C3, C4) in a real, throwaway TEST office: the performance guard's fixture at scale 1 (fake
 // agents only, test mode, no GitHub: GH tokens removed and an empty GH_CONFIG_DIR, no Claude). Checks the
 // route and the switch end to end and takes Portal Light, Dark and phone screenshots:
 //
@@ -7,6 +7,8 @@
 //     through the navigation's App workspace, the switch returns to the page you came from
 //   - every old deep link (?tab=board, ?tab=agents, ?tab=live) opens as before, with no workspace
 //   - ?ws=eng&tab=decisions opens Approvals; ?tab=decisions the Decisions section; a reload keeps the section
+//   - C4: Request a change sends a request that comes back with a task id (or the office's refusal, said in the
+//     dialog), shown in the panel and under Decisions
 //
 //   npm run build && node scripts/app-workspace-shots.mjs [--root <scratch/test-offices/...>] [--out <shots dir>]
 //
@@ -134,6 +136,32 @@ async function main() {
     await page.waitForTimeout(1500);
     check(true, '?tab=decisions opens the Decisions section');
     await both(page, 'c3-12-office-decisions');
+
+    // C4: Request a change in the real office: a task minted for the team lead, its state shown in business words.
+    await page.click('.aw-tab[data-section="app"]');
+    await page.waitForSelector('[data-part="request"] .aw-ask', { timeout: 30000 });
+    await page.click('[data-part="request"] .aw-ask');
+    await page.waitForSelector('.aw-reqdlg');
+    await page.fill('.aw-reqtext', 'Show the host’s name on the printed badge, next to the visitor’s name.');
+    await page.waitForTimeout(400);
+    await both(page, 'c4-20-office-request-dialog');
+    await page.click('.aw-reqsend');
+    await page.waitForFunction(() => !document.querySelector('.aw-reqdlg') || /\S/.test(document.querySelector('.aw-reqdlg [role="alert"]')?.textContent ?? ''), null, { timeout: 30000 });
+    const refused = await page.evaluate(() => (document.querySelector('.aw-reqdlg') ? document.querySelector('.aw-reqdlg [role="alert"]')?.textContent : null));
+    if (refused) {
+      check(true, `the office refused the request, said in the dialog: ${refused}`);
+      await page.keyboard.press('Escape');
+    } else {
+      const list = await page.evaluate(async (f) => (await (await fetch(`/api/change-requests?floor=${encodeURIComponent(f)}`)).json()).requests, floor);
+      check(list.length === 1 && /^tsk_/.test(list[0].taskId), `the request has a task id: ${list[0]?.id} ${list[0]?.taskId} for ${list[0]?.member}, ${list[0]?.words}`);
+      await page.waitForFunction(() => document.querySelector('[data-part="request"] .aw-pill'), null, { timeout: 30000 });
+      check(true, `the panel shows it: ${await page.textContent('[data-part="request"] .aw-pill')}`);
+    }
+    await page.waitForTimeout(800);
+    await both(page, 'c4-21-office-app-request');
+    await page.click('.aw-tab[data-section="decisions"]');
+    await page.waitForTimeout(800);
+    await both(page, 'c4-22-office-decisions', true);
     check(!page.errors.length, `no page errors${page.errors.length ? `: ${page.errors.join(' | ')}` : ''}`);
 
     // A phone.

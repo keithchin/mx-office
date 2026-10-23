@@ -45,7 +45,7 @@ html body.lite.aw-on .lite-main { margin: 0 !important; padding: 0 !important; w
 .aw .aw-q { margin: 0; font-weight: 600; }
 .aw .aw-foot { font-size: 12px; color: var(--muted); margin: 0; }
 .aw .aw-statusrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.aw .aw-pill { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 10px; padding: 2px 9px; background: var(--neutral-soft, var(--sunken)); color: var(--ink-2, var(--ink)); }
+.aw .aw-pill { display: inline-block; white-space: nowrap; font-size: 12px; font-weight: 600; border-radius: 10px; padding: 2px 9px; background: var(--neutral-soft, var(--sunken)); color: var(--ink-2, var(--ink)); }
 .aw .aw-pill.good { background: var(--good-soft); color: var(--good-ink); }
 .aw .aw-pill.busy { background: var(--info-soft, var(--accent-soft)); color: var(--link, var(--ink)); }
 .aw .aw-pill.bad { background: var(--bad-soft); color: var(--bad-ink); }
@@ -84,6 +84,46 @@ html body.lite.aw-on .lite-main { margin: 0 !important; padding: 0 !important; w
 .aw .aw-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .aw .aw-parts li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
 .aw .aw-parts li:first-child { border-top: 0; }
+
+/* Change requests (C4): the panel's current request, Decisions' Requests and the Request a change dialog. */
+.aw .aw-pill.warn { background: var(--warn-soft); color: var(--warn-ink); }
+.aw .aw-pill.idle { background: var(--neutral-soft, var(--sunken)); color: var(--ink-2, var(--ink)); }
+.aw .aw-request { display: flex; flex-direction: column; gap: 4px; }
+.aw .aw-ask { margin-top: 8px; align-self: flex-start; }
+.aw .aw-requests { list-style: none; margin: 8px 0 0; padding: 0; }
+.aw .aw-reqrow { border-top: 1px solid var(--line); padding: 10px 0; }
+.aw .aw-reqrow:first-child { border-top: 0; }
+.aw .aw-reqrow p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.aw-reqdlg { width: min(560px, calc(100vw - 32px)); }
+.aw-reqdlg .aw-reqtext { width: 100%; box-sizing: border-box; font: inherit; padding: 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); resize: vertical; }
+.aw-reqdlg .aw-about { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 10px 0 0; font-size: 13px; }
+.aw-reqdlg .aw-about dt { color: var(--muted); }
+.aw-reqdlg .aw-about dd { margin: 0; overflow-wrap: anywhere; }
+.aw-reqdlg .aw-small { font-size: 12px; color: var(--muted); }
+.aw-reqdlg .aw-warn { color: var(--warn-ink); background: var(--warn-soft); border-radius: 4px; padding: 6px 8px; }
+.aw-reqdlg .aw-warn[hidden] { display: none; }
+
+/* Decision cards with the related artifact beside them. */
+.aw .aw-decision.with-artifact { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; align-items: start; }
+.aw .aw-artifact { border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: var(--paper-2, var(--paper)); min-width: 0; overflow-wrap: anywhere; }
+.aw .aw-artifact p { margin: 4px 0; }
+.aw .aw-shot { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; background: var(--card); }
+.aw .aw-dcard { min-width: 0; }
+.aw .aw-dcard > .aw-row:first-child { margin-top: 0; align-items: flex-start; }
+.aw .aw-answer { margin-top: 8px; }
+.aw .aw-opts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.aw .aw-opt { text-align: left; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 6px; padding: 8px 10px; font: inherit; cursor: pointer; }
+.aw .aw-opt[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.aw .aw-rec { margin-left: 8px; font-size: 12px; color: var(--link, var(--accent)); }
+.aw .aw-note { width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); resize: vertical; }
+.aw .aw-warn[hidden] { display: none; }
+.aw .aw-note-msg { border-left: 3px solid var(--good); background: var(--good-soft); border-radius: 4px; padding: 6px 10px; margin: 8px 0; }
+.aw .aw-note-msg.stale { border-left-color: var(--warn, var(--accent)); background: var(--warn-soft); }
+.aw .aw-note-msg.error { border-left-color: var(--bad); background: var(--bad-soft); }
+.aw .aw-note-msg p { margin: 2px 0; }
+@media (max-width: 760px) {
+  .aw .aw-decision.with-artifact { grid-template-columns: 1fr; }
+}
 
 /* A narrow window: the panel under the canvas. A phone: tighter gutters. */
 @media (max-width: 1000px) {

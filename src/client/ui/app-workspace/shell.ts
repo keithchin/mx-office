@@ -8,7 +8,7 @@
 //   stages     the stage switch: where the project is (shared/app-workspace/words.ts workspaceStage, read
 //              from the business status and the progress bar), and what each stage shows
 //   main       the canvas (./canvas.ts: the running app) on App, a section's page (./sections.ts) on the rest
-//   side       the side panel (./panel.ts): status bound to a version, the current request (C4's slot),
+//   side       the side panel (./panel.ts): status bound to a version, the current request (./requests.ts),
 //              the decision needed, progress, finished changes, the next action
 //
 // The switch keeps the project (the page and its connection stay; nothing reloads) and goes to the
@@ -16,7 +16,8 @@
 // office already does, with that page's own checks: the workspace adds no permission and no state.
 
 import { store } from '../../state';
-import { h } from '../dom';
+import { h, toast } from '../dom';
+import { openRequestDialog } from './requests';
 import { setAddress } from '../../shared/address';
 import { currentProjectTab, openProjectTab } from '../../tabs/host';
 import type { TabHooks } from '../../tabs/registry';
@@ -69,9 +70,16 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
   const stages = h('div.aw-stages', { role: 'group', 'aria-label': 'Stage' });
   const stageNote = h('div.aw-stagenote', { role: 'status', hidden: true });
   const canvas = workspaceCanvas({ open: deps.open });
-  const page = sectionPage({ open: deps.open });
+  /** Request a change, about what's on screen: the project, the canvas's page and the running version. */
+  const request = () => {
+    const d = deps.source.get();
+    const at = canvas.where();
+    const revision = d.appUrl ? d.live?.served?.sha : undefined;
+    openRequestDialog({ ...(d.project ? { project: d.project } : {}), ...(at ? { page: at.path, pageMoved: at.moved } : {}), ...(revision ? { revision } : {}) }, (a) => deps.source.request(a), (r) => toast(`Request ${r.id} sent to ${r.member}: it shows in the panel with its state`));
+  };
+  const page = sectionPage({ open: deps.open, answer: (x, a) => deps.source.answer(x, a), redraw: () => draw(), request });
   const main = h('div.aw-main');
-  const panel = sidePanel({ open: deps.open });
+  const panel = sidePanel({ open: deps.open, request });
   const el = h('section.aw', { 'aria-label': 'App workspace', hidden: true }, bar, stages, stageNote, h('div.aw-body', {}, main, panel.el));
 
   function toEngineering() {

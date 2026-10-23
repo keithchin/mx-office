@@ -18,6 +18,7 @@ import { fileRoutes } from './files.js';
 import { gitRoutes } from './git.js';
 import { modelRoutes } from './model.js';
 import { modelChangeRoutes } from './model-change.js';
+import { changeRequestRoutes } from './change-requests.js';
 import { githubRoutes } from './github.js';
 import { mergeGateRoutes } from './merge-gate.js';
 import { homeRoutes } from './home.js';
@@ -113,6 +114,8 @@ export const routes: readonly Route[] = [
   modelRoutes.changes,
   modelChangeRoutes.list,
   modelChangeRoutes.create,
+  changeRequestRoutes.list,
+  changeRequestRoutes.create,
   analysisRoutes.report,
   analysisRoutes.backfill,
   analysisRoutes.summary,

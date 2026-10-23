@@ -27,6 +27,11 @@ export interface LiveViewer {
   show(base: string, key: string, label?: string): void;
   /** Nothing to show: the frame is emptied, the toolbar hidden. */
   hide(): void;
+  /**
+   * The page of the app it was last sent to (a path, as the address shows it), and whether the app has moved
+   * on from there by itself since (a click inside it: where to can't be read). Undefined: nothing shown.
+   */
+  where?(): { path: string; moved: boolean } | undefined;
 }
 
 const ADDRESS = 'A page of the app, as a path (/p/check-sheets): Enter goes there. Only the app’s own address is allowed.';
@@ -219,6 +224,7 @@ export function liveViewer(): LiveViewer {
 
   return {
     el,
+    where: () => (base ? { path: current(hist), moved: wandered } : undefined),
     show(b, k) {
       el.hidden = false;
       if (b === base && k === key) return;

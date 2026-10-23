@@ -107,9 +107,9 @@ test('the banned-terms lint: it finds the words, and the App Workspace’s own t
   for (const s of APP_SECTIONS) assert.deepEqual(bannedIn(`${s.label} ${s.hint}`), [], s.id);
   // Every string literal the workspace's drawing modules can show (imports, class names and keys aside).
   const dir = 'src/client/ui/app-workspace';
-  for (const f of readdirSync(path.join(root, dir)).filter((x) => /^(shell|canvas|panel|sections|tab)\.ts$/.test(x))) {
+  for (const f of readdirSync(path.join(root, dir)).filter((x) => /^(shell|canvas|panel|sections|tab|requests|decision-cards)\.ts$/.test(x))) {
     const src = read(`${dir}/${f}`).split('\n').filter((l) => !/^\s*(\/\/|import |\*|\/\*)/.test(l)).join('\n');
-    const strings = [...src.matchAll(/'((?:[^'\\\n]|\\.)*)'|`((?:[^`\\]|\\.)*)`/g)].map((m) => m[1] ?? m[2]).filter((s) => !/^[a-z0-9.#:\-[\]=' "_/]*$/.test(s));
+    const strings = [...src.matchAll(/'((?:[^'\\\n]|\\.)*)'|`((?:[^`\\]|\\.)*)`/g)].map((m) => m[1] ?? m[2]).filter((s) => !/^[a-z0-9.#:\-[\]=' "_/]*$/.test(s) && !s.startsWith('/api/'));
     for (const s of strings) assert.deepEqual(bannedIn(s), [], `${f}: "${s}"`);
   }
   assert.ok(BANNED_TERMS.length >= 20);
