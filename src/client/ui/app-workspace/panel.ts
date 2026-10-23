@@ -2,7 +2,8 @@
 //
 //   Status            the business status (shared/business-status.ts, the same answer every view gives)
 //                     with the version it's about, and the first thing still missing, in business words
-//   Current request   C4's slot: change requests aren't built yet, so it says what will show here
+//   Current request   the newest open change request (./requests.ts): its words, its state in business words and
+//                     the version that has it, and Request a change
 //   Decision needed   the most blocking decision Needs you holds for this project
 //   Progress          the progress bar's steps done
 //   Finished changes  the newest finished changes, as the team titled them
@@ -15,6 +16,8 @@ import { h, timeAgo } from '../dom';
 import { plainMissing, type WorkspaceStage } from '../../../shared/app-workspace/words';
 import type { AppSection } from '../../../shared/app-workspace/route';
 import type { WorkspaceData } from './data';
+import { currentRequest } from '../../../shared/change-requests';
+import { currentRequestPart } from './requests';
 
 const short = (sha?: string) => (sha ?? '').slice(0, 7);
 const KIND_WORD = { served: 'running', main: 'latest', accepted: 'accepted' } as const;
@@ -37,7 +40,7 @@ export interface SidePanel {
   draw(d: WorkspaceData, stage: WorkspaceStage, section: AppSection): void;
 }
 
-export function sidePanel(deps: { open(tab: string): void }): SidePanel {
+export function sidePanel(deps: { open(tab: string): void; request(): void }): SidePanel {
   const el = h('aside.aw-side', { 'aria-label': 'Project panel' });
 
   function next(d: WorkspaceData, stage: WorkspaceStage, section: AppSection): { label: string; why: string; go(): void } {
@@ -53,7 +56,7 @@ export function sidePanel(deps: { open(tab: string): void }): SidePanel {
       case 'released':
         return { label: 'See the release', why: 'Acceptance and deployment for this version.', go: () => deps.open('release') };
       default:
-        if (d.appUrl) return { label: 'Try the app', why: 'Open the running version in a tab of its own.', go: () => window.open(d.appUrl, '_blank', 'noopener') };
+        if (d.appUrl) return { label: 'Request a change', why: 'Describe what should behave differently. It becomes a request the team works on.', go: () => deps.request() };
         return { label: 'Start the app', why: 'Nothing runs yet: start it on the Engineering view’s Live app page.', go: () => deps.open('live') };
     }
   }
@@ -70,7 +73,7 @@ export function sidePanel(deps: { open(tab: string): void }): SidePanel {
             ...plainMissing(b.missing).slice(0, 2).map((m) => h('p.aw-small', {}, m)),
           )
         : part('status', 'Status', none('Working out the status of this version…'));
-      const request = part('request', 'Current request', slot('Coming with change requests', 'When you ask for a change, it shows here with its state and the version that has it.'));
+      const request = part('request', 'Current request', currentRequestPart(d.requests, d.requests && currentRequest(d.requests), d.floor ? () => deps.request() : undefined));
       const top = d.decisions?.[0];
       const decision = part(
         'decision',

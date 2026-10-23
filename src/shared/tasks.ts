@@ -9,7 +9,7 @@
 import { isExecutionId, isTaskId } from './evidence/ids.js';
 
 /** Where a task came from. */
-export const TASK_SOURCES = ['hire', 'queue', 'console', 'tell', 'proposal', 'mcr', 'stuck', 'decision'] as const;
+export const TASK_SOURCES = ['hire', 'queue', 'console', 'tell', 'proposal', 'mcr', 'stuck', 'decision', 'request'] as const;
 export type TaskSource = (typeof TASK_SOURCES)[number];
 export const isTaskSource = (v: unknown): v is TaskSource => typeof v === 'string' && (TASK_SOURCES as readonly string[]).includes(v);
 

@@ -18,7 +18,7 @@ At the top: the project's name, the five **sections** and the **App view | Engin
 | --- | --- | --- |
 | **App** | `?tab=app` | The running app, with the panel |
 | **Requirements** | `?tab=requirements` | The approved brief: its goal, the areas of the app, the open questions, and a link to the whole file in [Documents](deliverables.md) |
-| **Decisions** | `?tab=decisions` | The decisions the team needs from you, most blocking first, each with **Answer**, which opens it where it's answered today ([Needs you](needs-you.md), [Questions](questions.md)). What else waits on someone (sign-ins, permissions, other hands-on steps) is counted, with a link to the Engineering view |
+| **Decisions** | `?tab=decisions` | The business decisions the team needs from you, most blocking first, each with what to look at beside it when the team named something, and answered here ([Decisions](#decisions)). What else waits on someone (sign-ins, permissions, the team's own questions, other hands-on steps) is counted, with a link to the Engineering view. Under them, **Requests**: every change you asked for, with its state |
 | **Review** | `?tab=review` | The status of the version running now and of each part of the plan, and what is still to check, in business words |
 | **Release** | `?tab=release` | The acceptance record ([Progress and acceptance](progress-and-acceptance.md)) and the deployment, which stays with people: the office doesn't deploy |
 
@@ -33,11 +33,11 @@ When nothing runs there is **no frame** at all, never an empty one: the canvas s
 | Part | What it says | Where it comes from |
 | --- | --- | --- |
 | **Status** | The project's [business status](progress-and-acceptance.md) (*Ready to try*, *Verification incomplete*, *Business accepted*…) with the version it's about (*v1 · running 7d3f0b1*; click to copy the full version) and the first things still missing, in business words | The same status Home, the progress bar, the Overview, the phone and the Teams digest show |
-| **Current request** | *Coming with change requests*: the change you asked for and its state will show here | Not built yet (C4) |
+| **Current request** | Your newest change request that isn't settled, its state (*Received*, *Being worked on*, *Ready to try*, *Done*, *Needs your answer*) and the version that has it, and **Request a change** | [Change requests](#change-requests) |
 | **Decision needed** | The most blocking decision that waits on you, and how many there are | Needs you |
 | **Progress** | Steps done of the project's steps, and the one it's on | The progress bar |
 | **Finished changes** | The newest finished changes, as the team titled them | The project's finished work |
-| **Next action** | One button: **Answer the decision** when one blocks the team, else by stage (**Read the brief**, **Try the app**, **Start the app**, **Check this version**, **See the release**) | |
+| **Next action** | One button: **Answer the decision** when one blocks the team, else by stage (**Read the brief**, **Request a change** while the app runs, **Start the app**, **Check this version**, **See the release**) | |
 | footer | The team's level of independence (*The team works at 2 Guided*), with **change** for admins | Settings › Team |
 
 A part that has nothing yet says what will appear in it. Nothing in the workspace is a placeholder value.
@@ -45,6 +45,37 @@ A part that has nothing yet says what will appear in it. Nothing in the workspac
 ### The stage
 
 The stage line shows where the project is: **Before the build**, **Building**, **Business validation**, **Accepted** or **Released** (and **Awaiting approval**, only for a project under an approval policy). The office works it out from what it already knows: the business status, and on a toolkit project the stage before the build. Nothing new is stored. Click another stage to read what the workspace shows at that stage. The page keeps showing the project as it is now, and **Back to …** returns.
+
+## Change requests
+
+**Request a change** (in the panel, as the next action while the app runs, and above the Requests list) asks for a change in your own words: *what should behave differently*. You don't fill in anything else. The office takes from the screen what it's about and shows it in the dialog:
+
+- the **project**;
+- the **page** of the app the canvas shows (the address it last opened; if the app moved on to another page by itself, after a click inside it, the office can't read which, and says so);
+- the **version** running there.
+
+**Send request** makes it a task for the team, like any other work the office hands out: it gets a task id at once (before anything is typed to the team), goes to the team lead (whoever leads the team on its shape: the Project Coordinator, a Startup team's Chief Analyst or a Solo Lead; the analyst when the lead isn't at work), waits for the lead's current turn to end, and is recorded in the audit log with its task id. The lead plans the work as usual. A request the office couldn't make a task for is refused, and the dialog says why (for example, nobody leads the team yet). Anyone signed in can ask, as anyone signed in can give the team work today.
+
+Each request then shows its state, worked out from what the office already knows about its task, never stored on its own:
+
+| State | When |
+| --- | --- |
+| **Received** | The task is made and waits for the lead to finish what they're doing |
+| **Being worked on** | The lead has it, or the team finished it and it's on its way to the running app |
+| **Ready to try** | The running version contains the change (that version is named) |
+| **Done** | A version you accepted contains the change ([business status](progress-and-acceptance.md) accepted or later) |
+| **Needs your answer** | The team waits on a decision of yours for it (it's under Decisions) |
+| **Stopped** | The team cancelled it |
+
+The office links the change to the request by the task id the team puts on its work (the Playbook asks for it, with `CR-<n>`). Work the team did under another task doesn't count for the request, and a change it can't place in a version keeps the request at *Being worked on*: missing facts never move a request on.
+
+## Decisions
+
+The App workspace shows only the decisions meant for you as the business owner: questions for the client, a stage to sign off, a design system for the app, and what the team escalated about the plan, the scope, the design, a milestone or a question only you can answer. The team's own matters (reviews, failing checks, merges, sign-ins, permissions, architecture, security, budget) stay on the Engineering view, which shows every decision, these included. A decision the office can't place (for example an escalation that says nothing about what it's about) stays on the Engineering view too.
+
+**What to look at.** When the team names something that helps you answer (a page screenshot, the process map, a document, a walkthrough or a guided check), it's shown beside the question: a picture inline, a document or map to open in a new tab, a walkthrough or check on the Engineering view. Only what the team named is shown; the office never picks something because the question mentions it.
+
+**Answering.** A decision with options shows them (the team's recommendation picked to start with); add a note, or write your answer when there are no options, and **Send decision**. It goes through the same path as the Engineering view's decision cards, Project Manager only, and is kept with the version of the question you saw. If the question changed meanwhile (someone else answered it), nothing is sent and the card says *This question changed since you opened it. Here's the new version.* with what it is now. Client questions and stage sign-offs open where they're answered today, with that page's own checks.
 
 ## Switching views
 
@@ -64,6 +95,6 @@ A reload keeps the section you're on, and changing project from the workspace ke
 
 ## What's coming
 
-The workspace is the first slice of the App workspace proposal. **Change requests** (asking for a change from here, each with its state, and decisions shown beside the drawing or test result they're about) and **guided validation** (the scenarios to try on a version, findings, and accepting from here) come next. Their places are marked *Coming with change requests* and *Coming with guided validation*. Until then, accept a version on the Engineering view's progress bar.
+**Guided validation** (the scenarios to try on a version, findings, and accepting from here) comes next. Its places are marked *Coming with guided validation*. Until then, accept a version on the Engineering view's progress bar.
 
 What the team writes (a decision's question, a change's title) is shown as written, so it can still carry their words.

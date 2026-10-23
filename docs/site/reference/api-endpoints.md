@@ -48,6 +48,8 @@ The office's HTTP routes, in the order the server tries them (`src/server/http/r
 | GET | `/api/model/changes` | The Model tab: the documents a branch changed against main (`?floor=&ref=`) |
 | GET | `/api/model/change-requests` | The Model tab's change requests with their PRs, newest first (`?floor=`; open ones, `&all=1` for merged ones too) |
 | POST | `/api/model/change-request` | Change this: hands a change to a team member as a task (`{floor, elements: [{kind, qn}], ref, sha, request, role, when: 'after' or 'now'}`; audited as `model.change-requested`) |
+| GET | `/api/change-requests` | The App workspace's change requests with their state in business words and the version that has it, newest first (`?floor=`) |
+| POST | `/api/change-requests` | Request a change: hands it to the team lead as a task (`{floor, text, page?, pageMoved?, revision?}`; answers with the request and its task id; audited as `change-request.created`) |
 | GET | `/api/analysis` | The analysis report (`?scope=global`, `?floor=`, `&by=effort`) |
 | POST | `/api/analysis/backfill` | Re-record every worker (admin) |
 | GET | `/api/judge` | Jeff · Router's summary for a project |

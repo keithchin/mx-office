@@ -13,6 +13,7 @@ import { askNeeds, type AsksNeed } from '../asks.js';
 import { needsWords, questionsNeedParts, type QuestionBrief, type QuestionsNeed } from '../questions.js';
 import type { NeedItem } from '../needsyou.js';
 import { isJourneyId, refsFromTitle } from './ids.js';
+import { withoutArtifactLine } from './artifact.js';
 import type { DecisionCard, DecisionKind, DecisionSource } from './types.js';
 import { escalationKind } from './words.js';
 import { manualInPlay, signoffMeaning, signoffState } from '../gate-play.js';
@@ -26,7 +27,7 @@ export interface Candidate {
   kind: DecisionKind;
   /** Which source leads a card when several fold (lower first): a question, a toolkit sign-off (SIGNOFF_PRIO: its own dialog, never an escalation answer), then a decision escalation, a proposal, stuck, an ask, a PR check, an FYI. */
   prio: number;
-  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'tried' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates' | 'after' | 'permission'>> & { analyst?: string };
+  body: Pick<DecisionCard, 'question' | 'evidence' | 'blocks' | 'owner' | 'notes'> & Partial<Pick<DecisionCard, 'detail' | 'tried' | 'options' | 'recommendation' | 'why' | 'escalation' | 'questionKey' | 'gone' | 'answered' | 'duplicates' | 'after' | 'permission' | 'artifact' | 'trigger'>> & { analyst?: string };
   /** A free-text test name it is about: other cards naming it are "possibly related", never merged. */
   mentions?: string;
 }
@@ -88,7 +89,7 @@ export function escalationCandidates(r: RosterView): Candidate[] {
       prio: kind === 'fyi' ? 7 : 1,
       body: {
         question: e.title,
-        ...(para(e.details) ? { detail: para(e.details) } : {}),
+        ...(para(withoutArtifactLine(e.details)) ? { detail: para(withoutArtifactLine(e.details)) } : {}),
         ...(triedItems(e.details).length ? { tried: triedItems(e.details) } : {}),
         ...(e.options.length ? { options: e.options } : {}),
         ...(e.recommendation ? { recommendation: e.recommendation } : {}),
@@ -97,6 +98,8 @@ export function escalationCandidates(r: RosterView): Candidate[] {
         owner: e.by,
         notes,
         escalation: e.id,
+        ...(e.artifact ? { artifact: e.artifact } : {}),
+        ...(e.trigger ? { trigger: e.trigger } : {}),
         ...(e.sourceGone ? { gone: e.sourceGone } : {}),
         ...(e.permission ? { permission: { command: e.permission.command, rule: e.permission.rule, ...(e.permission.suggested ? { suggested: e.permission.suggested } : {}), count: e.permission.count, who: e.permission.who ?? e.by, ...(e.permission.allowed ? { allowed: e.permission.allowed } : {}) }, after: e.permission.allowed ? `After you allowed it: ${e.by} is told to run it again. This card closes by itself once the office sees the command run; if Claude Code still denies it, the session may need a restart to read the rule.` : `Approving in the office doesn't change Claude Code's permission settings. Allow writes exactly this rule for ${e.by} on this project; the card stays open until the office sees the command run.` } : {}),
       },

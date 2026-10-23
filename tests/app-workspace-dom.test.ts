@@ -65,7 +65,7 @@ async function harness(): Promise<{ js: string; css: string }> {
         window.__answered = [];
         window.__came = undefined;
         const ws = createWorkspace({
-          source: { get: () => data, on: (fn) => (fns.add(fn), () => fns.delete(fn)), wake() {} },
+          source: { get: () => data, on: (fn) => (fns.add(fn), () => fns.delete(fn)), wake() {}, request: async () => ({ ok: false, error: 'not here' }), answer: async () => ({ ok: true }) },
           open: (t) => window.__opened.push(t),
           cameFrom: () => window.__came,
         });
@@ -133,7 +133,7 @@ test('in a browser: sections, canvas, panel, stages, switch, empty states, words
     assert.equal(await text(page, '[data-part="decision"] .aw-q'), 'Can a host approve a visitor who arrives early?');
     assert.match((await text(page, '[data-part="progress"]')) ?? '', /6 of 9 steps done · now: Build/);
     assert.match((await text(page, '[data-part="changes"]')) ?? '', /Host approval screen/);
-    assert.match((await text(page, '[data-part="request"] .aw-slot-tag')) ?? '', /Coming with change requests/);
+    assert.match((await text(page, '[data-part="request"]')) ?? '', /Reading your requests/, 'C4: the current request (none read here)');
     assert.equal(await text(page, '[data-part="next"] .aw-primary'), 'Answer the decision');
     assert.match((await text(page, '.aw-foot')) ?? '', /The team works at 2 Guided · change/);
     // The stage: Building, marked Now: the plan is still at its build step (the progress line says the same).

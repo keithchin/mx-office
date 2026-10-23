@@ -2,8 +2,9 @@
 // the office already keeps:
 //
 //   Requirements  the approved brief (docs/project-brief.md, as the Overview's brief card reads it)
-//   Decisions     the decisions Needs you holds for this project, most blocking first, each answered where
-//                 it's answered today; C4's slot for change requests
+//   Decisions     the business owner's decisions (./decision-cards.ts: the related artifact beside each one that
+//                 names one, answered here with the revision it was opened at), and every change request with
+//                 its state (./requests.ts)
 //   Review        the business status of the running version and of each part of the plan, what is still
 //                 missing in business words; C5's slot for guided validation
 //   Release       the acceptance record and the deployment, which stays with people; C5's slot for accepting
@@ -11,11 +12,14 @@
 //
 // An empty section says what will appear in it. Nothing is made up.
 
-import { h, timeAgo } from '../dom';
+import { h } from '../dom';
 import { plainMissing } from '../../../shared/app-workspace/words';
 import type { AppSection } from '../../../shared/app-workspace/route';
 import type { WorkspaceData } from './data';
 import { slot, versionChip } from './panel';
+import { decisionCards, type AnswerResult } from './decision-cards';
+import { requestList } from './requests';
+import type { WorkspaceDecision } from './data';
 
 const day = (ms: number) => new Date(ms).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
 const card = (title: string, ...body: (Node | string)[]) => h('section.aw-card', {}, h('h3', {}, title), ...body);
@@ -26,7 +30,7 @@ export interface SectionPage {
   draw(section: Exclude<AppSection, 'app'> | AppSection, d: WorkspaceData): void;
 }
 
-export function sectionPage(deps: { open(tab: string): void }): SectionPage {
+export function sectionPage(deps: { open(tab: string): void; answer(x: WorkspaceDecision, a: { verdict: 'reply'; text: string }): Promise<AnswerResult>; redraw(): void; request(): void }): SectionPage {
   const el = h('div.aw-page');
 
   function requirements(d: WorkspaceData): HTMLElement[] {
@@ -47,27 +51,10 @@ export function sectionPage(deps: { open(tab: string): void }): SectionPage {
 
   function decisions(d: WorkspaceData): HTMLElement[] {
     const list = d.decisions;
-    const body =
-      list === undefined
-        ? none('Checking what waits on you…')
-        : list.length
-          ? h(
-              'ul.aw-decisions',
-              {},
-              ...list.map((x) =>
-                h(
-                  'li.aw-decision',
-                  { 'data-level': x.level },
-                  h('p.aw-q', {}, x.question),
-                  x.detail ? h('p.aw-small', {}, x.detail.length > 240 ? `${x.detail.slice(0, 239)}…` : x.detail) : '',
-                  h('div.aw-row', {}, x.since ? h('span.aw-small', {}, `Waiting since ${timeAgo(x.since)}`) : '', h('span.aw-grow'), h('button.aw-btn', { type: 'button', onclick: () => x.answer() }, 'Answer')),
-                ),
-              ),
-            )
-          : none('Nothing waits on you. When the team needs a decision from you, it shows here, most blocking first.');
+    const body = list === undefined ? none('Checking what waits on you…') : decisionCards(list, { floor: d.floor, admin: d.admin, open: deps.open, answer: deps.answer, redraw: deps.redraw });
     const out = [card('Decisions for you', body)];
-    if (d.others) out.push(card('For the team’s side', h('p', {}, `${d.others} more ${d.others === 1 ? 'item waits' : 'items wait'} on someone: sign-ins, permissions and other hands-on steps.`), h('button.aw-link', { type: 'button', onclick: () => deps.open('command') }, 'See them on the Engineering view')));
-    out.push(card('Change requests', slot('Coming with change requests', 'Each change you ask for will be listed here with its state, the decisions it raised and the version that has it.')));
+    if (d.others) out.push(card('For the team’s side', h('p', {}, `${d.others} more ${d.others === 1 ? 'item waits' : 'items wait'} on someone: sign-ins, permissions, the team’s own questions and other hands-on steps.`), h('button.aw-link', { type: 'button', onclick: () => deps.open('command') }, 'See them on the Engineering view')));
+    out.push(card('Requests', h('div.aw-row', {}, h('p.aw-small', {}, 'What you asked for, newest first, with where each one is.'), h('span.aw-grow'), d.floor ? h('button.aw-btn.aw-ask', { type: 'button', onclick: () => deps.request() }, 'Request a change') : ''), requestList(d.requests)));
     return out;
   }
 

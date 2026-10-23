@@ -9,6 +9,7 @@ import { isEscalationTrigger, isFyi, isUrgency, type AutonomyLevel, type Escalat
 import type { JeffRank } from './jeff-rank.js';
 import type { RoleId, TeamId } from './roles.js';
 import { refsFromTitle } from '../decisions/ids.js';
+import { artifactOf, type DecisionArtifact } from '../decisions/artifact.js';
 
 /** How the Project Manager answered: free text, a yes, a no (with why), or "noted" for an FYI. */
 export type EscalationVerdict = 'reply' | 'approve' | 'reject' | 'dismiss';
@@ -98,6 +99,8 @@ export interface Escalation {
   from?: { kind: 'awaiting'; key: string } | { kind: 'proposal'; key: string } | { kind: 'reply-ask'; key: string; message?: string; thread?: string };
   /** The explicit ids it is about. Missing on records from before decision cards (release 45): those show ungrouped. */
   refs?: EscalationRefs;
+  /** What to look at to answer it, named explicitly by the raiser (shared/decisions/artifact.ts): never guessed. */
+  artifact?: DecisionArtifact;
   /** The AWAITING-PM line it was filed from is gone from the newest entry: not settled; the person says (decision cards). */
   sourceGone?: { at: number; what: string; /** When the person said it's still needed and the agent was asked. */ asked?: number };
   /** The person told the agent something without answering it (Can't now, Still needed): the last time. */
@@ -142,6 +145,8 @@ export interface EscalationAsk {
   recommendation?: string;
   /** Ids the raiser named explicitly (merged over what the title names). */
   refs?: EscalationRefs;
+  /** The related artifact the raiser named (`--artifact kind:ref`, or an `Artifact:` line in the details). */
+  artifact?: DecisionArtifact;
 }
 
 const line = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
@@ -158,7 +163,9 @@ export function readEscalationAsk(body: unknown): EscalationAsk | string {
   const raw = Array.isArray(b.options) ? b.options : typeof b.options === 'string' ? b.options.split('|') : [];
   const options = raw.map((o) => line(o, 200)).filter(Boolean).slice(0, 6);
   const recommendation = line(b.recommendation ?? b.recommend, 400) || undefined;
-  return { urgency, ...(isEscalationTrigger(b.trigger) ? { trigger: b.trigger } : {}), title, details: text(b.details, 6000), options, ...(recommendation ? { recommendation } : {}) };
+  const details = text(b.details, 6000);
+  const artifact = artifactOf(b.artifact, details);
+  return { urgency, ...(isEscalationTrigger(b.trigger) ? { trigger: b.trigger } : {}), title, details, options, ...(recommendation ? { recommendation } : {}), ...(artifact ? { artifact } : {}) };
 }
 
 /** A customer checkpoint named in a title (CAC-3): the toolkit's checkpoints always ask the customer. */

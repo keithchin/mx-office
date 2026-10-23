@@ -21,6 +21,8 @@ export interface Canvas {
   draw(d: WorkspaceData, stage: WorkspaceStage): void;
   /** The workspace stepped aside: nothing to keep loading. */
   idle(): void;
+  /** The page of the app the canvas shows (a path), and whether the app moved on from it by itself. */
+  where(): { path: string; moved: boolean } | undefined;
 }
 
 export function workspaceCanvas(deps: { open(tab: string): void }): Canvas {
@@ -91,6 +93,7 @@ export function workspaceCanvas(deps: { open(tab: string): void }): Canvas {
       }
       drawBrief(d, stage === 'before' || !s?.started);
     },
+    where: () => (frameBox.hidden ? undefined : viewer?.where?.()),
     idle() {
       // The frame stays (moving between sections or views mustn't reload the app); nothing else runs.
     },
