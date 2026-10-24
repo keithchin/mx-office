@@ -8,12 +8,13 @@ import { accept, acceptanceDraft, acceptanceView, isStale, reopen } from '../../
 import type { Ctx } from '../../office/context.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import { progressOf } from '../../progress/index.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 import { whoOf } from './notify-teams.js';
 
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 
 export const progressRoutes = {
   /** GET /api/progress?floor=<id>[&mini=1]: the floor's phases, milestones and acceptance, measured. */

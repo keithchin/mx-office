@@ -4,6 +4,7 @@ import { RELAY_LOGIN, relayRequest, signInPage, stoppedPage, tunneledService } f
 import type { Ctx } from '../office/context.js';
 import { login, loginOptions } from './routes/auth.js';
 import { send } from './util.js';
+import { refuseForeign } from './origin.js';
 import { isReturnPage } from '../../shared/home.js';
 
 /** A request a route answers: `path` is the URL's path, decoded. */
@@ -72,7 +73,12 @@ export function requestHandler(ctx: Ctx, routes: readonly Route[]) {
         res.writeHead(302, { location: isReturnPage(p) ? `/login?next=${p}` : '/login' }).end();
         return;
       }
-      for (const route of signedIn) if (route.auth === 'session' && matches(route, req.method, p)) return await route.handle(ctx, { ...r, session });
+      for (const route of signedIn) {
+        if (route.auth !== 'session' || !matches(route, req.method, p)) continue;
+        // A state-changing request from somewhere other than the office's page, without the session's token (./origin.ts).
+        if (refuseForeign(req, res, cfg)) return;
+        return await route.handle(ctx, { ...r, session });
+      }
     } catch (err) {
       console.error(err);
       if (!res.headersSent) send(res, 500, { error: `The office hit an error answering this: ${(err as Error)?.message || String(err)}` });

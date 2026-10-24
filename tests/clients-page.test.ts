@@ -87,7 +87,7 @@ async function act(body: unknown, opts: { admin?: boolean; origin?: string; host
   let status = 0;
   let out = '';
   const res = { writeHead: (s: number) => (status = s), end: (b: string) => (out = b) } as never;
-  const req = Object.assign(Readable.from([Buffer.from(JSON.stringify(body))]), { headers: { 'content-type': 'application/json', host: opts.host ?? 'localhost:4600', ...(opts.origin ? { origin: opts.origin } : {}) } });
+  const req = Object.assign(Readable.from([Buffer.from(JSON.stringify(body))]), { headers: { 'content-type': 'application/json', host: opts.host ?? 'localhost:4600', ...(opts.origin !== '' ? { origin: opts.origin ?? 'http://localhost:4600' } : {}) } });
   const ctx = { cfg: { dataDir: opts.dataDir }, meOf: () => ({ admin: opts.admin ?? true }), floors: new Map() } as never;
   await portfolioRoutes.act.handle(ctx, { req, res, session: { account: { id: 'u1', name: 'Keith' } } } as never);
   return { status, out: JSON.parse(out || '{}') };

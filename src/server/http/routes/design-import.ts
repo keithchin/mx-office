@@ -6,7 +6,8 @@
 import type { Route } from '../router.js';
 import { importsOf } from '../../design/import/index.js';
 import { isPortfolioId } from '../../../shared/portfolios.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 
 export const designImportRoutes = {
   view: {
@@ -28,7 +29,7 @@ export const designImportRoutes = {
     path: '/api/design/import',
     auth: 'session',
     async handle(ctx, { req, res, session }) {
-      if (!sameOrigin(req, ctx.cfg) && (req.headers.origin || !/^application\/json\b/i.test(req.headers['content-type'] ?? ''))) return send(res, 403, { error: 'Forbidden' });
+      if (!fromOffice(req, ctx.cfg)) return send(res, 403, { error: 'Forbidden' });
       if (!ctx.meOf(session.account?.id).admin)
         return send(res, 403, {
           error: 'Only an admin can import a design system',

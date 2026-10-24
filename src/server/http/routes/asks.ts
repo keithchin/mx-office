@@ -6,11 +6,12 @@ import type { Ctx } from '../../office/context.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import { asksFloor, asksOf } from '../../asks/index.js';
 import { isAskAct } from '../../../shared/asks.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 import { floorParam } from './files.js';
 
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 
 async function jsonBody(req: http.IncomingMessage): Promise<Record<string, unknown> | undefined> {
   try {

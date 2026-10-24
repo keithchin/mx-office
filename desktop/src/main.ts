@@ -353,7 +353,8 @@ async function officeFetch(p: string, init: { method?: string; body?: string; ti
   const cookie = await cookieHeader();
   return fetch(`${PROBE}${p}`, {
     method: init.method ?? 'GET',
-    headers: { ...(cookie ? { cookie } : {}), ...(init.body ? { 'content-type': 'application/json' } : {}) },
+    // The office's own address as the Origin: a state-changing request without one is refused (server/http/origin.ts).
+    headers: { ...(cookie ? { cookie } : {}), ...(init.body ? { 'content-type': 'application/json', origin: new URL(PROBE).origin } : {}) },
     body: init.body,
     signal: AbortSignal.timeout(init.timeoutMs ?? 15_000),
   });

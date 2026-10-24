@@ -7,10 +7,11 @@ import { refuseStale } from '../../phone-access/reauth.js';
 import { decisionsOf } from '../../decisions/index.js';
 import { signOff, signoffDeps } from '../../signoff/index.js';
 import { wizardOf } from '../../wizard/index.js';
-import { readBody, sameOrigin, send } from '../util.js';
+import { readBody, send } from '../util.js';
+import { fromOffice } from '../origin.js';
 import type { Route } from '../router.js';
 
-const fromUs = (req: http.IncomingMessage, ctx: Ctx) => sameOrigin(req, ctx.cfg) || (!req.headers.origin && /^application\/json\b/i.test(req.headers['content-type'] ?? ''));
+const fromUs = (req: http.IncomingMessage, ctx: Ctx) => fromOffice(req, ctx.cfg);
 const str = (v: unknown, max = 40) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined);
 
 export const signoffRoutes = {
