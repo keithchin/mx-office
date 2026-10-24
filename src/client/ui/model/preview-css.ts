@@ -148,7 +148,7 @@ input.form-control{display:block}
 .table tbody tr:nth-child(2n){background:#fafafb}
 .mx-datagrid-paging{padding:10px 12px;color:#6c717c;font-size:13px;text-align:right}
 .mx-listview,.mx-gallery{margin:0 0 24px;padding:0;list-style:none;display:grid;gap:12px}
-.mx-gallery{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.mx-gallery{grid-template-columns:minmax(0,1fr)}
 .mx-listview-item{padding:16px}
 .mx-snippet-box,.mx-unknown{margin-bottom:12px;padding:12px;border:1px dashed #b4b8c0;border-radius:4px;color:#6c717c;background:#fbfbfc;font-size:13px}
 .mx-placeholder{padding:24px;border:1px dashed #b4b8c0;color:#6c717c;text-align:center}
