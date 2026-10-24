@@ -9,6 +9,10 @@
 .dk-parts { color: var(--ink-2); }
 .dk-dc { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; }
 .dk-pause { margin: 2px 0 0; padding: 6px 9px; border: 1px solid var(--warn); border-radius: 4px; background: var(--warn-soft); color: var(--warn-ink); font-size: 12px; }
+.dk-preview { margin: 2px 0 0; padding: 6px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink-2); font-size: 12px; }
+.dk-preview.bad { border-color: var(--bad); background: var(--bad-soft); color: var(--bad-ink); }
+.dk-unknown { margin: 2px 0 0; padding: 6px 9px; border: 1px dashed var(--line); border-radius: 4px; color: var(--ink-2); font-size: 12px; }
+.dk-unknown ul { margin: 2px 0 0; padding-left: 18px; }
 
 /* The person's request as their message, and its receipt under it. */
 .pmc-msg.dk-asked { flex-direction: column; align-items: flex-end; gap: 4px; }

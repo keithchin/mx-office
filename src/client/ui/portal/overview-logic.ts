@@ -6,6 +6,7 @@
 
 import { VIA_SUBAGENT } from '../../../shared/roster/member-subagents';
 import { WAITING_BG } from '../../../shared/roster/background-work';
+import type { UnknownReason } from '../../../shared/business-status';
 
 export interface TeamFace {
   id: string;
@@ -69,7 +70,7 @@ export interface DetailFacts {
   lastCommit?: { sha: string; branch?: string; when?: string; subject?: string };
   budget?: { spent: number; total?: number; text: string };
   /** The live app, and the project's business status (shared/business-status.ts) when it's known. */
-  live?: { status: string; url?: string; word?: string; business?: { label: string; line: string } };
+  live?: { status: string; url?: string; word?: string; business?: { label: string; line: string; unknown?: readonly UnknownReason[] } };
   /** Created with "Keep this project off GitHub": no GitHub link, and it says so. */
   localOnly?: boolean;
 }
@@ -113,7 +114,10 @@ export function detailRows(f: DetailFacts): DetailRow[] {
   // The work's status (shared/business-status.ts): a row of its own, the same line as Home, the progress bar and the phone.
   if (f.live?.business) {
     const [head, ...rest] = f.live.business.line.split(' · ');
-    rows.push({ label: 'Status', value: head, tab: 'live', ...(rest.length ? { sub: rest.join(' · ') } : {}) });
+    // Status unknown: why, and the page that would make it known (the first reason's action).
+    const why = f.live.business.unknown ?? [];
+    if (why.length) rows.push({ label: 'Status', value: head, tab: why.find((u) => u.action)?.action?.tab ?? 'live', sub: why.map((u) => `${u.text}${u.action ? ` → ${u.action.label}` : ''}`).join(' · ') });
+    else rows.push({ label: 'Status', value: head, tab: 'live', ...(rest.length ? { sub: rest.join(' · ') } : {}) });
   }
   return rows;
 }

@@ -27,6 +27,7 @@ import type { RequestAsk } from '../requests';
 import { decisionCard, leftNotes, type CardsCtx } from '../decision-cards';
 import { askedCard, tryCard } from './cards';
 import { aboutLine, chipFor, executionWords, pauseWords, queuedNote, sessionChanges, sessionSummary, tryAt, wantsTry, type DevContext } from './logic';
+import { previewOff } from '../../../../shared/liveapp/not-running';
 import './dock.css';
 
 export interface DockDeps {
@@ -112,7 +113,10 @@ export function createDock(deps: DockDeps): Dock {
   let headKey = '';
   function drawHeader(d: WorkspaceData, session: ReturnType<typeof sessionChanges>) {
     const b = d.business;
-    const key = JSON.stringify([b?.label, b?.tone, b?.line, d.dev?.strip, d.dev?.pause, session.map((c) => [c.id, c.state, c.revision])]);
+    // Why the preview isn't showing the app, when it isn't (a failed build: its commit and reason).
+    const off = d.appUrl ? undefined : previewOff(d.live);
+    const offLine = off && off.kind !== 'checking' ? off : undefined;
+    const key = JSON.stringify([b?.label, b?.tone, b?.line, b?.unknown, d.dev?.strip, d.dev?.pause, session.map((c) => [c.id, c.state, c.revision]), offLine?.line]);
     if (key === headKey) return;
     headKey = key;
     const s = sessionSummary(session);
@@ -120,9 +124,14 @@ export function createDock(deps: DockDeps): Dock {
     const pills = session.slice(-6).map((c) => h('span.dk-dc', { 'data-change': c.id }, h('b', {}, c.id), ' ', h('span.dc-pill', { class: CHANGE_TONE[c.state], 'data-state': c.state }, executionWords(c))));
     header.replaceChildren(
       h('div.dk-row', {}, chip, revisionStrip(d.dev)),
+      // Status unknown: why, and the one thing that would make it known for each reason (shared/business-status.ts UNKNOWN_WHY).
+      b?.state === 'unknown' && b.unknown?.length
+        ? h('div.dk-unknown', { role: 'note' }, h('b', {}, 'Why the status is unknown'), h('ul', {}, ...b.unknown.map((u) => h('li', { 'data-why': u.why }, u.text, u.action ? h('span', {}, ' · ', h('button.aw-link', { type: 'button', onclick: () => deps.open(u.action!.tab) }, u.action.label)) : ''))))
+        : '',
       h('div.dk-row.dk-session', {}, h('b', {}, s.head), s.parts.length ? h('span.dk-parts', {}, s.parts.join(' · ')) : ''),
       pills.length ? h('div.dk-row.dk-dcs', {}, ...pills) : '',
       d.dev?.pause ? h('p.dk-pause', { role: 'status' }, '⏸ ', pauseWords(d.dev.pause)) : '',
+      offLine ? h('p.dk-preview', { class: offLine.kind === 'failed' || offLine.kind === 'crashed' || offLine.kind === 'timeout' ? 'bad' : '', 'data-off': offLine.kind }, offLine.line, ' ', h('button.aw-link', { type: 'button', onclick: () => deps.open('live') }, 'Live app page')) : '',
     );
   }
 

@@ -91,6 +91,23 @@ export interface BusinessInput {
   policy?: { on: boolean; review?: { state: 'submitted' | 'changes' | 'approved'; revision: string } };
 }
 
+/** Why a status is unknown: the kinds the rule can tell apart. */
+export type UnknownWhy = 'main-unread' | 'never-ran' | 'no-plan';
+
+/** One reason a status is unknown, what would make it known, and where that is done (a project tab), when somewhere. */
+export interface UnknownReason {
+  why: UnknownWhy;
+  text: string;
+  action?: { label: string; tab: string };
+}
+
+/** Each reason's words and its one action (the tabs are the project page's: ?tab=). */
+export const UNKNOWN_WHY: Record<UnknownWhy, UnknownReason> = {
+  'main-unread': { why: 'main-unread', text: "Main's head couldn't be read from the project's folder: once it can, the status says what's merged", action: { label: 'Check the folder on Git', tab: 'git' } },
+  'never-ran': { why: 'never-ran', text: "The live app hasn't run since the office started: once it runs, the status says what's in it", action: { label: 'Start the app', tab: 'live' } },
+  'no-plan': { why: 'no-plan', text: 'No build plan with numbered BUILD rows: with one, the status says which work is built', action: { label: 'Open Documents', tab: 'documents' } },
+};
+
 export interface BusinessStatus {
   state: BusinessState;
   label: string;
@@ -110,6 +127,8 @@ export interface BusinessStatus {
   /** One line: "Verification incomplete · running abc1234 · no journey evidence for abc1234 (+1 more)". */
   line: string;
   tone: 'good' | 'busy' | 'bad' | 'idle';
+  /** Only for 'unknown': why, and what would make it known (one action each, where there is one). */
+  unknown?: UnknownReason[];
 }
 
 const short = (sha?: string) => (sha ?? '').slice(0, 7);
@@ -120,7 +139,7 @@ const GOOD: readonly BusinessState[] = ['verification-passed', 'accepted', 'rele
 
 const REV_WORD: Record<RevisionKind, string> = { served: 'running', main: 'main @', accepted: 'accepted at' };
 
-function make(state: BusinessState, about: string, p: { title?: string; revision?: string; kind?: RevisionKind; version?: string; missing?: string[]; notes?: string[]; failing?: boolean }): BusinessStatus {
+function make(state: BusinessState, about: string, p: { title?: string; revision?: string; kind?: RevisionKind; version?: string; missing?: string[]; notes?: string[]; failing?: boolean; unknown?: UnknownReason[] }): BusinessStatus {
   const missing = p.missing ?? [];
   const notes = p.notes ?? [];
   const label = BUSINESS_WORDS[state];
@@ -128,7 +147,7 @@ function make(state: BusinessState, about: string, p: { title?: string; revision
   const head = [p.title && about !== 'all' ? `${p.title}: ${label}` : label, p.version && GOOD.includes(state) && state !== 'verification-passed' ? p.version : '', rev].filter(Boolean).join(' · ');
   const line = missing.length ? `${head} · ${missing[0]}${missing.length > 1 ? ` (+${missing.length - 1} more)` : ''}` : head;
   const tone: BusinessStatus['tone'] = state === 'unknown' ? 'idle' : GOOD.includes(state) ? 'good' : state === 'changes-requested' || p.failing ? 'bad' : 'busy';
-  return { state, label, about, ...(p.title ? { title: p.title } : {}), ...(p.revision ? { revision: p.revision } : {}), ...(p.revision && p.kind ? { revisionKind: p.kind } : {}), ...(p.version ? { version: p.version } : {}), missing, notes, line, tone };
+  return { state, label, about, ...(p.title ? { title: p.title } : {}), ...(p.revision ? { revision: p.revision } : {}), ...(p.revision && p.kind ? { revisionKind: p.kind } : {}), ...(p.version ? { version: p.version } : {}), missing, notes, line, tone, ...(state === 'unknown' && p.unknown?.length ? { unknown: p.unknown } : {}) };
 }
 
 /** Open work in words: "2 open tasks", "PR #6 open (checks failing)". */
@@ -224,12 +243,12 @@ export function businessStatus(i: BusinessInput): BusinessStatus {
   const m = ms?.find((x) => x.id === about);
   const title = m?.title;
   if (!served) {
-    if (!i.main && !i.live) return make('unknown', about, { notes, missing: ["main's head couldn't be read and the live app hasn't run since the office started"] });
+    if (!i.main && !i.live) return make('unknown', about, { notes, missing: ["main's head couldn't be read and the live app hasn't run since the office started"], unknown: [UNKNOWN_WHY['main-unread'], UNKNOWN_WHY['never-ran']] });
     const why = !i.live ? "the live app hasn't run since the office started: start it on the Live app tab to try the work" : "the live app isn't running: start it on the Live app tab to try the work";
     return make('work-in-progress', about, { title, revision: i.main?.sha, kind: 'main', version, notes, missing: [why, ...workLines(i.work)] });
   }
   if (!m) {
-    if (ms && about !== 'all') return make('unknown', about, { revision: served, kind: 'served', version, notes, missing: [`no milestone ${about} in the build plan`] });
+    if (ms && about !== 'all') return make('unknown', about, { revision: served, kind: 'served', version, notes, missing: [`no milestone ${about} in the build plan`], unknown: [{ ...UNKNOWN_WHY['no-plan'], text: `Milestone ${about} isn't in the build plan, so nothing can say how far it is` }] });
     const why = !i.readiness || (i.readiness.sha && !same(i.readiness.sha, served)) ? `what ${short(served)} has of the plan isn't worked out yet` : "no build plan with numbered BUILD rows, so the office can't tell which of the work is in it";
     return make('ready-to-try', about, { revision: served, kind: 'served', version, notes, missing: [why, ...workLines(i.work)] });
   }
@@ -277,9 +296,14 @@ export interface BusinessSummary {
   tone: BusinessStatus['tone'];
   revision?: string;
   missing: string[];
+  /** Why it's unknown, when it is. */
+  unknown?: UnknownReason[];
 }
 
-export const summaryOf = (s: BusinessStatus): BusinessSummary => ({ state: s.state, label: s.label, line: s.line, tone: s.tone, ...(s.revision ? { revision: s.revision } : {}), missing: s.missing.slice(0, 5) });
+export const summaryOf = (s: BusinessStatus): BusinessSummary => ({ state: s.state, label: s.label, line: s.line, tone: s.tone, ...(s.revision ? { revision: s.revision } : {}), missing: s.missing.slice(0, 5), ...(s.unknown?.length ? { unknown: s.unknown } : {}) });
+
+/** "Status unknown: <reason>; <reason>" in one line for a tooltip or a card, or '' when it isn't unknown. */
+export const unknownLine = (s: Pick<BusinessSummary, 'state' | 'unknown'>): string => (s.state === 'unknown' && s.unknown?.length ? `Why it's unknown: ${s.unknown.map((u) => `${u.text}${u.action ? ` (${u.action.label})` : ''}`).join('; ')}` : '');
 
 /** GET /api/business-status's answer. */
 export interface BusinessStatusView {
@@ -290,6 +314,7 @@ export interface BusinessStatusView {
 }
 
 /** A short chip of it for a card (Home's project rows, the phone): "Verification incomplete · abc1234", with the full line and what's missing as its title. */
-export function businessChip(s: Pick<BusinessSummary, 'label' | 'line' | 'tone' | 'revision' | 'missing'>): { text: string; title: string; tone: BusinessStatus['tone'] } {
-  return { text: `${s.label}${s.revision ? ` · ${short(s.revision)}` : ''}`, title: [s.line, ...s.missing.slice(1).map((m) => `· ${m}`)].join('\n'), tone: s.tone };
+export function businessChip(s: Pick<BusinessSummary, 'label' | 'line' | 'tone' | 'revision' | 'missing'> & Partial<Pick<BusinessSummary, 'state' | 'unknown'>>): { text: string; title: string; tone: BusinessStatus['tone'] } {
+  const why = s.state ? unknownLine({ state: s.state, unknown: s.unknown }) : '';
+  return { text: `${s.label}${s.revision ? ` · ${short(s.revision)}` : ''}`, title: [s.line, ...s.missing.slice(1).map((m) => `· ${m}`), ...(why ? [why] : [])].join('\n'), tone: s.tone };
 }

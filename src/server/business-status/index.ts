@@ -27,6 +27,7 @@ import { outcomeOf, type Assignment } from '../roster/resume.js';
 import { testingStore } from '../testing/index.js';
 import { verifyStore } from '../testing/verify.js';
 import { securityOf } from '../security-gate/index.js';
+import { mainOf } from '../testing/repo.js';
 
 /** An answer is handed out again for this long (ms). */
 export const BUSINESS_FRESH_MS = 5_000;
@@ -66,6 +67,12 @@ export async function businessInputOf(ctx: Ctx, floor: Floor, pre?: { cycles: re
     input.live = { running: live.status === 'running' && !!live.served, ...(live.served ? { served: live.served.sha } : {}) };
     if (live.main?.sha) input.main = { sha: live.main.sha, ...(live.branch ? { branch: live.branch } : {}) };
     if (live.readiness) input.readiness = { ...(live.readiness.sha ? { sha: live.readiness.sha } : {}), milestones: milestonesOf(live), ...(live.readiness.note ? { note: live.readiness.note } : {}) };
+  }
+  // Main's head from the project's folder when the live app hasn't said it (it never ran since the office started):
+  // the status is then about what's merged, not unknown (git only, a couple of quick commands; the answer is kept a few seconds).
+  if (!input.main) {
+    const m = await mainOf(floor.dir).catch(() => undefined);
+    if (m) input.main = { sha: m.sha, ...(m.branch ? { branch: m.branch } : {}) };
   }
   const tasks = tasksOf(ctx, floor);
   if (tasks) input.work = { ...tasks, openPrs: floor.github.pulls.items.filter((p) => p.state === 'OPEN').map((p) => ({ number: p.number, ...(p.isDraft ? { draft: true } : {}), checks: p.checks })) };
