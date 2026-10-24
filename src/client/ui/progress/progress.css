@@ -115,5 +115,5 @@ html[data-theme='terminal'] .pg-mini-track .pg-seg { border-radius: 0; }
 .acc-gates .acc-problem { margin-top: 0; }
 .acc-gates .acc-lines li.acc-gate-fail small { color: var(--bad-ink); }
 .acc-gates .acc-lines li.acc-gate-info { color: var(--ink-2); }
-.acc-gate-go { margin-left: 4px; padding: 1px 8px; font-size: 12px; line-height: 1.5; }
+.acc-gate-go { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--link, var(--accent)); text-decoration: underline; font: inherit; cursor: pointer; }
 .acc-modal footer .acc-stops { flex: 1; margin: 0 8px 0 0; font-weight: 600; font-size: 12.5px; }

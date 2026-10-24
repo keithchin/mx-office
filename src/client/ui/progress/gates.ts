@@ -15,7 +15,7 @@ export function gatesSection(gates: readonly AcceptGate[], open?: (tab: string) 
       { class: `acc-gate acc-gate-${g.state}`, 'data-gate': g.id },
       h('span.acc-st', { 'aria-hidden': 'true' }, MARK[g.state]),
       h('span.acc-l', {}, g.label),
-      h('small', {}, g.text, g.action && open && g.state !== 'pass' ? h('span', {}, ' ', h('button.btn.small.acc-gate-go', { type: 'button', onclick: () => open(g.action!.tab) }, g.action.label)) : ''),
+      h('small', {}, g.text, g.action && open && g.state !== 'pass' ? h('span', {}, ' ', h('button.acc-gate-go', { type: 'button', onclick: () => open(g.action!.tab) }, g.action.label)) : ''),
     );
   const enforced = gates.filter((g) => g.enforced);
   const info = gates.filter((g) => !g.enforced);

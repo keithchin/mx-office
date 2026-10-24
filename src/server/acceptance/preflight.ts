@@ -22,7 +22,7 @@ export const NO_COMMIT = 'The delivery commit could not be read. Commit the deli
 const short = (sha: string) => sha.slice(0, 7);
 
 export interface PreflightDeps {
-  security(commit: string): Promise<{ refusal?: string; advisory?: string; gate?: { missing: string[] } }>;
+  security(commit: string): Promise<{ refusal?: string; advisory?: string; gate?: { missing: string[]; flags?: string[] } }>;
   testing(commit: string): Promise<{ verified: boolean; nothingRan: boolean; missing: string[] } | undefined>;
   guided(commit: string): Promise<{ scenarios: number; works: number; wrong: number } | undefined>;
 }
@@ -63,7 +63,7 @@ export async function acceptancePreflight(ctx: Ctx, floor: Floor, admin: boolean
     if (sec.refusal) {
       gates.push({ id: 'security', label: 'Security baseline and mx check at the delivery commit', enforced: true, state: 'fail', text: sec.refusal, action: { label: 'Open Security', tab: 'security' } });
     } else if (sec.advisory) gates.push({ id: 'security', label: 'Security baseline and mx check at the delivery commit', enforced: false, state: 'info', text: sec.advisory, action: { label: 'Open Security', tab: 'security' } });
-    else gates.push({ id: 'security', label: 'Security baseline and mx check at the delivery commit', enforced: true, state: 'pass', text: `Met at ${short(commit)}` });
+    else gates.push({ id: 'security', label: 'Security baseline and mx check at the delivery commit', enforced: true, state: 'pass', text: `Met at ${short(commit)}${sec.gate?.flags?.[0] ? ` (${sec.gate.flags[0]})` : ''}` });
   }
   // Informational: recorded with the acceptance, never a refusal.
   const t = commit ? await deps.testing(commit).catch(() => undefined) : undefined;
