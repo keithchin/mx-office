@@ -29,13 +29,22 @@ import { managerOf } from '../../shared/roster/coverage.js';
 import { activeOf, changeBranch, currentChange, queuedOf, type CheckResult, type DevChange, type DevChangesView, type StripFacts } from '../../shared/dev-changes.js';
 import { ChangeStore } from './store.js';
 import { DevChanges, type Who } from './service.js';
-import { newCandidates, type ChangePull } from './observe.js';
+import { newCandidates, pullFor, type ChangePull } from './observe.js';
 import { changeFacts, changeViews, stripFacts, type ChangeAssignment, type ViewInputs } from './view.js';
 import { refGone } from './recheck.js';
+import { ChangePolicies } from './policy.js';
+import { linkPass } from './links.js';
+import { dependsOn, relatedFor } from './related.js';
+import { candidateHeld, endTask, flagPr, heldOn, mergedAt, relatedDeps, stopWorker } from './wire.js';
+
+// The lifecycle's seams (cancel while active, supersede, retry, the data-impact guard on candidates, merged by git,
+// the overlap reads) are in wire.ts; the link pass for old CR-n and MCR-n ids in links.ts (once per project per
+// office start, append-only); possibly-related commits and the dependency note in related.ts.
 
 interface Office {
   store: ChangeStore;
   changes: DevChanges;
+  policies: ChangePolicies;
 }
 
 const offices = new WeakMap<object, Office>();
@@ -93,7 +102,7 @@ function previewOf(ctx: Ctx, floorId: string): StripFacts['preview'] {
   return { status: live?.status === 'starting' ? 'updating' : 'off', ...(live?.lastServed?.sha ? { lastServed: live.lastServed.sha } : {}) };
 }
 
-function inputsOf(ctx: Ctx, floor: Floor): Pick<ViewInputs, 'task' | 'assignments' | 'pulls' | 'preview' | 'contains'> {
+function inputsOf(ctx: Ctx, floor: Floor): Pick<ViewInputs, 'task' | 'assignments' | 'pulls' | 'preview' | 'contains' | 'mergedAt' | 'workerGone'> {
   const tasks = rosterOf(ctx).tasks.ids.of(floor.id);
   const p = previewOf(ctx, floor.id);
   return {
@@ -102,15 +111,45 @@ function inputsOf(ctx: Ctx, floor: Floor): Pick<ViewInputs, 'task' | 'assignment
     pulls: floor.github.pulls.items as ChangePull[],
     preview: { running: p.status === 'running', ...(p.served ? { served: p.served } : {}) },
     contains: (sha, into) => contains(floor.dir, sha, into).catch(() => undefined),
+    mergedAt: async (sha) => mergedAt(floor.dir, sha, await mainHead(floor.dir)),
+    workerGone: (id) => !floor.workers.get(id),
   };
 }
+
+/** Whether a change has a "Looks right" review (guided validation's book). */
+const triedOk = (ctx: Ctx, floorId: string) => {
+  const reviews = validationBook(ctx).reviews(floorId);
+  return (id: string) => !!reviews.get(id)?.some((r) => r.verdict === 'works');
+};
+
+const relatedOf = (ctx: Ctx, floor: Floor) => relatedDeps(ctx, floor, () => mainHead(floor.dir), triedOk(ctx, floor.id));
 
 /** The office's Developer change queue. */
 export function devChangesOf(ctx: Ctx): Office {
   let o = offices.get(ctx.cfg);
   if (o) return o;
   const store = new ChangeStore(path.join(ctx.cfg.dataDir, 'dev-changes'));
+  const policies = new ChangePolicies(path.join(ctx.cfg.dataDir, 'dev-changes'));
+  const floorOf = (id: string) => ctx.floors.get(id);
   const changes = new DevChanges({
+    policy: (floorId) => policies.get(floorId),
+    async stop(floorId, c, by) {
+      const floor = floorOf(floorId);
+      return floor ? stopWorker(ctx, floor, c, by) : { how: 'gone' };
+    },
+    endTask: (floorId, taskId, how, why) => endTask(ctx, floorId, taskId, how, why),
+    async flagPr(floorId, pr, text) {
+      const floor = floorOf(floorId);
+      if (floor) await flagPr(floor, pr, text);
+    },
+    async held(floorId, c, f) {
+      const floor = floorOf(floorId);
+      return floor ? candidateHeld(ctx, floor, c, f) : false;
+    },
+    async depends(floorId, c, all) {
+      const floor = floorOf(floorId);
+      return floor ? dependsOn(c, all, relatedOf(ctx, floor)) : [];
+    },
     store,
     now: () => Date.now(),
     blocked(floorId) {
@@ -146,22 +185,53 @@ export function devChangesOf(ctx: Ctx): Office {
     },
     record: (e) => audit.record(e),
   });
-  o = { store, changes };
+  o = { store, changes, policies };
   offices.set(ctx.cfg, o);
   return o;
 }
 
-/** Notes new candidate heads of the project's active change (its branch in the folder, its PRs), then moves the queue. */
+const linked = new WeakMap<object, Set<string>>();
+
+/** The one-off link pass for a project (links.ts), once per office start: old CR-n and MCR-n ids become aliases. */
+async function linkOnce(ctx: Ctx, floor: Floor, all: readonly DevChange[]): Promise<boolean> {
+  let done = linked.get(ctx.cfg);
+  if (!done) linked.set(ctx.cfg, (done = new Set()));
+  if (done.has(floor.id)) return false;
+  done.add(floor.id);
+  return (await linkPass(devChangesOf(ctx).changes, ctx.cfg.dataDir, floor.id, all).catch(() => [])).length > 0;
+}
+
+const WEEK = 7 * 86_400_000;
+/** A change whose worker was stopped (cancelled or superseded while the team had it) in the last week: late heads are noted, never counted. */
+const stoppedLately = (c: DevChange, now: number) => (!!c.cancelled?.active && now - c.cancelled.at < WEEK) || (c.superseded?.was === 'active' && now - c.superseded.at < WEEK);
+
+/**
+ * Notes new candidate heads of the project's active change (its branch in the folder, its PRs) and late ones of a
+ * change stopped lately, checks the active candidate against the data-impact guard, notes commits on main linked
+ * or possibly related to open changes, then moves the queue.
+ */
 export async function observeChanges(ctx: Ctx, floor: Floor): Promise<void> {
   const { store, changes } = devChangesOf(ctx);
-  const all = await store.all(floor.id).catch(() => [] as DevChange[]);
+  let all = await store.all(floor.id).catch(() => [] as DevChange[]);
+  if (await linkOnce(ctx, floor, all)) all = await store.all(floor.id);
   if (!all.length) return;
   const active = activeOf(all);
+  const now = Date.now();
+  const pulls = floor.github.pulls.items as ChangePull[];
   // The task record from before a restart, read once: how the active change's task ended.
   if (active) await rosterOf(ctx).tasks.ids.of(floor.id).load(floor.id).catch(() => undefined);
-  if (active) {
-    const head = await floorRef(floor.dir, changeBranch(active.id)).catch(() => undefined);
-    for (const cand of newCandidates(active, floor.github.pulls.items as ChangePull[], head?.sha.trim(), Date.now())) await store.event(floor.id, active.id, { type: 'candidate', at: cand.seenAt, candidate: cand }).catch(() => undefined);
+  for (const c of all.filter((x) => x === active || stoppedLately(x, now))) {
+    const head = await floorRef(floor.dir, changeBranch(c.id)).catch(() => undefined);
+    for (const cand of newCandidates(c, pulls, head?.sha.trim(), now)) await store.event(floor.id, c.id, { type: 'candidate', at: cand.seenAt, candidate: cand }).catch(() => undefined);
+  }
+  // The guard on the active change's newest candidate: a hold shows on its preview fact before it merges.
+  if (active?.candidates.some((x) => !x.late)) await candidateHeld(ctx, floor, active).catch(() => undefined);
+  // Commits on main linked or possibly related to an open change.
+  const open = all.filter((c) => c.queue === 'queued' || c.queue === 'active' || c.queue === 'clarify');
+  if (open.length) {
+    const d = relatedOf(ctx, floor);
+    const merges = new Set(all.flatMap((c) => pullFor(c, pulls)?.mergeCommit ?? []));
+    for (const c of open) for (const e of await relatedFor(c, all, d, now, merges).catch(() => [])) await store.event(floor.id, c.id, e).catch(() => undefined);
   }
   if (active || queuedOf(all).length) await changes.advance(floor.id).catch(() => undefined);
 }
@@ -180,9 +250,10 @@ export function changesOnWorker(ctx: Ctx, floor: Floor): void {
   soon.set(floor.id, t);
 }
 
-/** Test runs that ran on one of the changes' candidates, as check results. */
-async function checksOf(ctx: Ctx, floorId: string, all: readonly DevChange[]): Promise<CheckResult[]> {
-  const shas = new Set(all.flatMap((c) => c.candidates.map((x) => x.sha)));
+/** Test runs that ran on one of the changes' candidates (or merge commits), as check results. */
+async function checksOf(ctx: Ctx, floorId: string, all: readonly DevChange[], pulls: readonly ChangePull[]): Promise<CheckResult[]> {
+  // Its candidates' heads, and its merge commit once merged (the relevant revision then).
+  const shas = new Set(all.flatMap((c) => [...c.candidates.map((x) => x.sha), ...(pullFor(c, pulls)?.mergeCommit ? [pullFor(c, pulls)!.mergeCommit!] : [])]));
   if (!shas.size) return [];
   const recs = await testingStore(ctx.cfg.dataDir, floorId).all().catch(() => []);
   const out: CheckResult[] = [];
@@ -199,25 +270,29 @@ async function checksOf(ctx: Ctx, floorId: string, all: readonly DevChange[]): P
 /** The project's changes with their state, and the revision strip, for one viewer. */
 export async function changesView(ctx: Ctx, floor: Floor, who: Who): Promise<DevChangesView> {
   await observeChanges(ctx, floor);
-  const { store, changes } = devChangesOf(ctx);
+  const { store, changes, policies } = devChangesOf(ctx);
   const all = await store.all(floor.id).catch(() => [] as DevChange[]);
   const base = inputsOf(ctx, floor);
   const why = changes.whyQueued(floor.id, all);
+  const policy = policies.get(floor.id);
+  const rel = relatedOf(ctx, floor);
   const views = await changeViews(all, {
     ...base,
     ...(why ? { why } : {}),
-    checks: await checksOf(ctx, floor.id, all),
+    policy,
+    checks: await checksOf(ctx, floor.id, all, base.pulls),
     hasCI: base.pulls.some((p) => (p as { checks?: string }).checks && (p as { checks?: string }).checks !== 'none'),
+    // What people said after trying each change (its "Please try this" card), from guided validation's book.
+    reviews: validationBook(ctx).reviews(floor.id),
+    held: (c, merged) => heldOn(ctx, floor.id, c, merged),
+    depends: (c, list) => dependsOn(c, list, rel),
     mayCancel: (c) => who.admin || (!!c.owner && c.owner === who.id),
   });
-  // What people said after trying each change (its "Please try this" card), from guided validation's book.
-  const reviews = validationBook(ctx).reviews(floor.id);
-  for (const v of views) if (reviews.has(v.id)) v.reviews = reviews.get(v.id);
   const p = projectPause(floor.id);
   const main = await mainHead(floor.dir);
   const preview = previewOf(ctx, floor.id);
   const behind = main && preview.served ? await behindBy(floor.dir, preview.served, main) : undefined;
   const strip = stripFacts(main, preview, behind, views);
   const cur = currentChange(views);
-  return { floor: floor.id, changes: views, strip, current: cur?.id ?? null, ...(p ? { pause: { by: p.by, at: p.at, why: p.why } } : {}) };
+  return { floor: floor.id, changes: views, strip, current: cur?.id ?? null, ...(p ? { pause: { by: p.by, at: p.at, why: p.why } } : {}), policy, mayPolicy: who.admin };
 }
