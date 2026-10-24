@@ -9,6 +9,7 @@
 import './panel.css';
 import type { MergeGateView, ReviewRecord } from '../../../shared/merge-gate';
 import { short, VERDICT_WORDS } from '../../../shared/merge-gate';
+import { AGENTS_TOKEN_NOTE, VERDICT_LABEL } from '../../../shared/merge-gate-protection';
 import { store } from '../../state';
 import { h, openModal, timeAgo } from '../dom';
 
@@ -39,7 +40,20 @@ export function gateLines(v: MergeGateView, opts: { merge?: boolean } = {}): HTM
   ];
   if (v.state === 'OPEN' && opts.merge !== false) lines.push(h('div.mg-merge', { class: v.decision.allowed ? 'ok' : 'bad' }, h('span', { 'aria-hidden': 'true' }, v.decision.allowed ? '🔀' : '🚫'), v.decision.allowed ? `The office’s Merge would go ahead: ${v.decision.reason}` : v.decision.reason));
   if (v.protection) lines.push(h('div.mg-protect', { class: v.protection.state }, h('span', { 'aria-hidden': 'true' }, PROTECT_ICON[v.protection.state]), v.protection.text));
+  if (v.protection) lines.push(verdictLine(v.protection));
   return lines;
+}
+
+/** The branch's verdict (Enforced / Weak / None / Unknown) and, where the status is shown, who posts it. */
+export function verdictLine(p: NonNullable<MergeGateView['protection']>): HTMLElement {
+  const verdict = p.verdict ?? 'unknown';
+  return h(
+    'div.mg-verdict',
+    { class: verdict },
+    h('b', {}, `${VERDICT_LABEL[verdict]} review enforcement`),
+    h('span', {}, p.verdictText ?? ''),
+    verdict === 'enforced' ? null : h('small', {}, AGENTS_TOKEN_NOTE),
+  );
 }
 
 function historyOf(v: MergeGateView): HTMLElement | null {

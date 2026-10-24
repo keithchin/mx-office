@@ -11,6 +11,8 @@ import { store } from '../../state';
 import type { TabHooks } from '../../tabs/registry';
 import { h, timeAgo, toast } from '../dom';
 import './security.css';
+import { protectionCard } from '../merge-gate/protection-card';
+import { pushCheckCard } from '../push-watch/card';
 
 const BUSY_MS = 4000;
 const IDLE_MS = 30_000;
@@ -152,15 +154,20 @@ export function securityPage(container: HTMLElement, floorOf: () => string = () 
   let shown = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let loading = false;
+  // The review enforcement and direct-push check cards (ui/merge-gate/protection-card.ts, ui/push-watch/card.ts): made once per project, so a repaint doesn't ask again.
+  let enforcement: { floor: string; el: HTMLElement; pushes: HTMLElement } | undefined;
 
   const draw = () => {
     if (!view) return void el.replaceChildren(h('p.sec-muted', {}, 'Loading…'));
     const floor = view.floor;
+    if (enforcement?.floor !== floor) enforcement = { floor, el: protectionCard(floor), pushes: pushCheckCard(floor) };
     el.replaceChildren(
       securityContent(view, {
         run: () => void post({ floor, action: 'check' }).then((o) => o && (toast('mx check started: it takes a few minutes'), load())),
         save: (p) => void post({ floor, action: 'policy', policy: p }).then((o) => o && (toast('Security policy saved'), load())),
       }),
+      enforcement.el,
+      enforcement.pushes,
     );
   };
 

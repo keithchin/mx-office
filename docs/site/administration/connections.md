@@ -10,7 +10,7 @@ weight: 2
 
 | Card | What it's for | What to give it |
 |---|---|---|
-| 🤖 **GitHub token for agents** | git and gh for the office and every worker (`GH_TOKEN` / `GITHUB_TOKEN`) | Fine-grained, owner your organization, **All repositories**, **Contents**, **Issues**, **Pull requests**: read and write |
+| 🤖 **GitHub token for agents** | git and gh for the office and every worker (`GH_TOKEN` / `GITHUB_TOKEN`), including the office's `mx-office/review` status, which is why an agent could post that status too | Fine-grained, owner your organization, **All repositories**, **Contents**, **Issues**, **Pull requests**: read and write |
 | 🛡️ **GitHub admin token** | Creating project repositories from the ✨ New project wizard, nothing else | Fine-grained, owner your organization, **All repositories**, **Administration** and **Contents**: read and write |
 | 🧱 **Mendix personal access token** | The Mendix platform: creating the app (`mx:app:create`), later Team Server and deploys | Scopes `mx:app:create`; `mx:deployment:read` lets **Test** list your apps |
 | ✳️ **Anthropic API key (Claude Code)** | Only when the agents run Claude Code on an API key instead of a Claude account sign-in: workers get it as `ANTHROPIC_API_KEY`, billed to that API account (first-run setup's **Use an API key** saves it here). Leave it empty when you sign in with your account. [Claude for agents](#claude-for-agents) says which source agents use | An Anthropic Console API key (`sk-ant-api…`) |
@@ -55,6 +55,8 @@ Saved values go in `credentials.json` in the office's data folder (never in a re
 - **On Windows** each value is encrypted with **DPAPI for the Windows user the office runs as** (`System.Security.Cryptography.ProtectedData`, through a PowerShell child; no native module). The file is useless to another user or on another machine; a value saved elsewhere shows as *can't be decrypted here*.
 - **On macOS** (preview) each value is an item in **your login Keychain** (service `com.mxoffice.connections`), and `credentials.json` only names it. The page's intro says *kept in your macOS login Keychain*; a credential the Keychain wouldn't take (locked, no desktop session) is kept in the `0600` file instead, and its card says so. Values an older office kept in the file move into the Keychain when the office starts. See [Security and tokens › On macOS](security-and-tokens.md#on-macos-the-keychain).
 - **On Linux** there's neither, so values are kept base64-encoded in a file only the office's user can read (`0600`), and the page says so.
+
+None of these protect a value from the **same** user's programs, and the agents run as that user: an agent can read and decrypt what is kept here. That is why the office has no office-only GitHub credential for the review status: on this machine it would be readable by the agents too. See [Branch protection](../integrations/branch-protection.md#why-theres-no-office-only-identity-for-the-status-yet) and [Trust and authority](../architecture/trust-and-authority.md#what-holds-against-an-agent).
 
 Values reach the office once, in the body of a save, and never go back to a browser, a log or the [audit log](../using-the-office/audit-log.md): the log records *GitHub token for agents replaced by Ana*, not the token. `credentials.json` also keeps, unencrypted, each value's masked tail, who saved it and when, and the last Test's result with a short one-way fingerprint of the value it tested.
 

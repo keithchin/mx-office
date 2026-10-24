@@ -38,6 +38,7 @@ export class MergeGate {
   private posted = new Map<string, StatusPost>();
   private backoff = new Map<string, number>();
   private protections = new Map<string, { at: number; p: Promise<ProtectionView> }>();
+  private settled = new Map<string, ProtectionView>();
   private swept = new Map<string, string>();
   private sweeping = new Set<string>();
   /** The last evaluation of each open PR, for Needs you. */
@@ -60,7 +61,13 @@ export class MergeGate {
     if (hit && this.now() - hit.at < PROTECTION_MS) return hit.p;
     const p = readProtection(this.gh, floor.dir, branch);
     this.protections.set(k, { at: this.now(), p });
+    void p.then((v) => this.settled.set(k, v)).catch(() => undefined);
     return p;
+  }
+
+  /** The protection last read for the branch, when one has settled (no GitHub call). */
+  peekProtection(floorId: string, branch: string): ProtectionView | undefined {
+    return this.settled.get(`${floorId}:${branch}`);
   }
 
   /** Reads the PR, keeps any new review records, and works out its head's review and the gate's decision. */

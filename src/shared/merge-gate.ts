@@ -7,6 +7,8 @@
 // office's records (the agent named in a Review comment, the person signed in to the office), never from
 // GitHub: all agents share one GitHub account. Pure: the server, the page and the tests import it.
 
+import { protectionVerdict, type ProtectionFacts, type ProtectionVerdict } from './merge-gate-protection.js';
+
 /** The commit status the office posts on a pull request's head. */
 export const STATUS_CONTEXT = 'mx-office/review';
 
@@ -105,6 +107,13 @@ export interface ProtectionView {
   /** The status checks GitHub requires on it. */
   contexts: string[];
   text: string;
+  /** How much it enforces the review (shared/merge-gate-protection.ts): Enforced / Weak / None / Unknown, in words. */
+  verdict?: ProtectionVerdict;
+  verdictText?: string;
+  /** The GitHub App ids a required mx-office/review is restricted to; the human approvals and code-owner review GitHub requires. */
+  appIds?: number[];
+  approvals?: number;
+  codeOwners?: boolean;
 }
 
 /** What the PR window shows (GET /api/merge-gate). */
@@ -258,11 +267,14 @@ export function statusOf(review: HeadReview): Pick<StatusPost, 'state' | 'descri
 /** Whether a check in a rollup is the office's own review status (left out of the PR's checks). */
 export const isGateStatus = (c: { context?: unknown; name?: unknown }) => c?.context === STATUS_CONTEXT || c?.name === STATUS_CONTEXT;
 
-/** Branch protection in words, from the required contexts GitHub reports. */
-export function protectionOf(branch: string, read: { protected: boolean; contexts: readonly string[] } | { error: string }): ProtectionView {
-  if ('error' in read) return { branch, state: 'unknown', contexts: [], text: `Couldn’t read ${branch}’s protection (${read.error}). The gate may be advisory only.` };
+/** Branch protection in words, from the required contexts GitHub reports (and the approvals and App restriction, when read). */
+export function protectionOf(branch: string, read: ({ protected: boolean; contexts: readonly string[] } & ProtectionFacts) | { error: string }): ProtectionView {
+  if ('error' in read) return { branch, state: 'unknown', contexts: [], text: `Couldn’t read ${branch}’s protection (${read.error}). The gate may be advisory only.`, ...protectionVerdict(branch, { requiresGate: false, unknown: true }) };
   const contexts = [...new Set(read.contexts)];
-  if (contexts.includes(STATUS_CONTEXT)) return { branch, state: 'requires-gate', contexts, text: `${branch} is protected and requires ${STATUS_CONTEXT}: GitHub refuses a merge without a counting review, whoever merges.` };
-  if (read.protected || contexts.length) return { branch, state: 'protected', contexts, text: `${branch} is protected, but doesn’t require ${STATUS_CONTEXT}: agents can still merge unreviewed work with gh. The gate is advisory outside the office.` };
-  return { branch, state: 'unprotected', contexts, text: `${branch} isn’t protected: only the office’s own Merge button checks the gate; an agent’s gh pr merge doesn’t. Make ${STATUS_CONTEXT} a required status check to enforce it.` };
+  const requiresGate = contexts.includes(STATUS_CONTEXT);
+  const facts: ProtectionFacts = { ...(read.appIds?.length ? { appIds: [...new Set(read.appIds)] } : {}), ...(read.approvals !== undefined ? { approvals: read.approvals } : {}), ...(read.codeOwners ? { codeOwners: true } : {}) };
+  const v = { ...facts, ...protectionVerdict(branch, { requiresGate, ...facts }) };
+  if (requiresGate) return { branch, state: 'requires-gate', contexts, text: `${branch} is protected and requires ${STATUS_CONTEXT}, which the office posts with the agents’ token: an agent holding that token could post it too.`, ...v };
+  if (read.protected || contexts.length) return { branch, state: 'protected', contexts, text: `${branch} is protected, but doesn’t require ${STATUS_CONTEXT}: agents can still merge unreviewed work with gh. The gate is advisory outside the office.`, ...v };
+  return { branch, state: 'unprotected', contexts, text: `${branch} isn’t protected: only the office’s own Merge button checks the gate; an agent’s gh pr merge doesn’t.`, ...v };
 }
