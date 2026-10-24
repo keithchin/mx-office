@@ -24,6 +24,8 @@ import { isBusinessDecision } from '../../../shared/app-workspace/business-decis
 import type { DecisionArtifact } from '../../../shared/decisions/artifact';
 import type { ChangeRequestView } from '../../../shared/change-requests';
 import { postRequest, requestsFeed, type RequestAsk, type RequestSent } from './requests';
+import { devFeed } from '../dev-changes/feed';
+import type { DevChangesView } from '../../../shared/dev-changes';
 import type { ValidationView } from '../../../shared/guided-validation';
 import { pageAcceptance, postMark, validationFeed, type AcceptancePort, type MarkAsk, type MarkSent } from './validation-api';
 import type { AnswerResult } from './decision-cards';
@@ -73,6 +75,8 @@ export interface WorkspaceData {
   admin: boolean;
   /** The project's change requests with their state, newest first (undefined: not read yet). */
   requests?: ChangeRequestView[];
+  /** The Developer changes with their state and the revision strip (GET /api/dev-changes; undefined: not read yet). */
+  dev?: DevChangesView;
   /** The version on screen: the served revision while the app answers in the canvas (undefined: none). */
   onScreen?: string;
   /** Guided validation of the version on screen (undefined: not asked or not read yet; asked by Review and Release). */
@@ -166,7 +170,10 @@ export function pageSource(): WorkspaceSource {
     });
   };
   let awake = false;
-  const again = () => awake && requests.again(store.floor);
+  const again = () => awake && (requests.again(store.floor), devFeed.again(store.floor));
+  devFeed.on(() => awake && emit());
+  // The strip names the served revision: asked again when what serves (or whether anything does) moves, not on every build line.
+  let servedKey = '';
   const wake = () => {
     awake = true;
     const f = store.floor;
@@ -175,11 +182,14 @@ export function pageSource(): WorkspaceSource {
     askBrief(f);
     askProgress(f);
     requests.want(f);
+    devFeed.want(f);
     currentRoster();
   };
 
   store.on('liveApp', () => {
     if (store.liveApp) wantBusiness(store.liveApp.floor, businessKey(store.liveApp));
+    const k = `${store.liveApp?.floor ?? ''}|${store.liveApp?.status ?? ''}|${store.liveApp?.served?.sha ?? ''}`;
+    if (k !== servedKey) ((servedKey = k), awake && devFeed.again(store.floor));
     askValidation();
     emit();
   });
@@ -202,7 +212,7 @@ export function pageSource(): WorkspaceSource {
       const f = store.floor;
       if (!f) return { ok: false, error: 'Pick a project first' };
       const r = await postRequest(f, ask, me());
-      if (r.ok) requests.now(f);
+      if (r.ok) (requests.now(f), devFeed.now(f));
       return r;
     },
     answer: (x, a) => answerDecision(store.floor, x, a, me()),
@@ -289,6 +299,7 @@ export function pageSource(): WorkspaceSource {
         ...(level ? { autonomy: { level, name: AUTONOMY[level].name, byStage: !!roster?.settings.autonomyByStage?.enabled } } : {}),
         admin: !!store.me.admin,
         ...(requests.get(floor) ? { requests: requests.get(floor) } : {}),
+        ...(devFeed.get(floor) ? { dev: devFeed.get(floor) } : {}),
         ...(onScreen() ? { onScreen: onScreen() } : {}),
         ...(validation.get(floor, onScreen()) ? { validation: validation.get(floor, onScreen()) } : {}),
         ...(delivery?.floor === floor && delivery.v !== undefined ? { delivery: delivery.v } : {}),

@@ -23,9 +23,16 @@ import { validationPart, type ValidationDeps } from './validation';
 import { acceptCard, type ReleaseDeps } from './release';
 import { decisionCards, type AnswerResult } from './decision-cards';
 import { requestList } from './requests';
+import { changeList } from '../dev-changes/view';
 import type { WorkspaceDecision } from './data';
 
 const card = (title: string, ...body: (Node | string)[]) => h('section.aw-card', {}, h('h3', {}, title), ...body);
+
+/** Requests from before the change queue (or a guided check's corrections), which carry no DC id: listed under them as they were. */
+const earlier = (d: WorkspaceData): (Node | string)[] => {
+  const old = (d.requests ?? []).filter((r) => !r.changeId);
+  return old.length ? [h('p.aw-k', {}, 'Earlier requests and corrections'), requestList(old)] : [];
+};
 const none = (text: string) => h('p.aw-none', {}, text);
 
 export interface SectionPage {
@@ -57,7 +64,7 @@ export function sectionPage(deps: { open(tab: string): void; answer(x: Workspace
     const body = list === undefined ? none('Checking what waits on you…') : decisionCards(list, { floor: d.floor, admin: d.admin, open: deps.open, answer: deps.answer, redraw: deps.redraw });
     const out = [card('Decisions for you', body)];
     if (d.others) out.push(card('For the team’s side', h('p', {}, `${d.others} more ${d.others === 1 ? 'item waits' : 'items wait'} on someone: sign-ins, permissions, the team’s own questions and other hands-on steps.`), h('button.aw-link', { type: 'button', onclick: () => deps.open('command') }, 'See them in Project Management')));
-    out.push(card('Requests', h('div.aw-row', {}, h('p.aw-small', {}, 'What you asked for, newest first, with where each one is.'), h('span.aw-grow'), d.floor ? h('button.aw-btn.aw-ask', { type: 'button', onclick: () => deps.request() }, 'Request a change') : ''), requestList(d.requests)));
+    out.push(card('Requests', h('div.aw-row', {}, h('p.aw-small', {}, 'What you asked for, newest first, with where each one is.'), h('span.aw-grow'), d.floor ? h('button.aw-btn.aw-ask', { type: 'button', onclick: () => deps.request() }, 'Request a change') : ''), d.floor ? changeList(d.floor, d.dev) : '', ...earlier(d)));
     return out;
   }
 

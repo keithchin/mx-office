@@ -12,6 +12,7 @@ import { escalationCard } from '../pm/escalations';
 import { rankChipEl, sortedNote } from '../pm/jeff-rank';
 import { proposalCard } from './proposals';
 import { subagentActionCard } from './subagents';
+import { devChangesCard } from '../dev-changes/pm';
 
 export function approvalsView(v: RosterView, redraw: (v: RosterView) => void): HTMLElement {
   const a = AUTONOMY[v.settings.autonomy];
@@ -49,6 +50,7 @@ export function approvalsView(v: RosterView, redraw: (v: RosterView) => void): H
     { 'aria-label': 'Approvals' },
     // The heading's name and count apart: in Portal the page header says "Approvals" already, so only the count stays (as "5 waiting on you", ui/portal/layout.css).
     h('div.ro-bar', {}, h('div', {}, h('h3.ro-apv-h', {}, h('span.ro-apv-name', {}, `✅ Approvals (${v.approvals.length})`), v.approvals.length ? h('span.ro-apv-wait', {}, `${v.approvals.length} waiting on you`) : null), h('p.ro-sub', {},`Level ${a.level} · ${a.name}${v.byStage ? ' · by stage' : ''}: ${a.summary} You, the Project Manager, always have the final say.`))),
+    devChangesCard(v.floor),
     items.length ? h('div.ro-props', {}, ...(byJeff && ordered.some((it) => it.kind === 'escalation') ? [sortedNote()] : []), ...items) : h('p.ro-dim', {}, 'Nothing needs you right now.'),
   );
 }

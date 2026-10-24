@@ -21,6 +21,7 @@
 
 import type { BusinessState } from './business-status.js';
 import type { RoleId } from './roster/roles.js';
+import { changeTaskLines, type DevChangeNew, type ElementRef } from './dev-changes.js';
 
 /** What the office keeps of a request (server/change-requests/store: <data>/change-requests/<project>.json). */
 export interface ChangeRequestRecord {
@@ -47,6 +48,10 @@ export interface ChangeRequestRecord {
   /** Held until the lead's turn under way ends, then sent. */
   delivery: 'held' | 'sent' | 'woke';
   dispatchId?: string;
+  /** The Developer change it carries out (DC-<n>, shared/dev-changes.ts), when it came through the change queue. */
+  changeId?: string;
+  /** The revision it was asked against and what it points at in the model (the change's, copied once). */
+  source?: { sha?: string; ref?: ElementRef };
 }
 
 export type RequestState = 'received' | 'working' | 'ready' | 'done' | 'needs-answer' | 'stopped';
@@ -142,7 +147,8 @@ export function requestTitle(text: string, max = 90): string {
 }
 
 /** The task as it's typed to the lead: what was asked, about which page and version, and how to go about it. */
-export function requestTaskText(r: Pick<ChangeRequestRecord, 'id' | 'text' | 'page' | 'pageMoved' | 'revision' | 'by'>): string {
+export function requestTaskText(r: Pick<ChangeRequestRecord, 'id' | 'text' | 'page' | 'pageMoved' | 'revision' | 'by'> & { change?: Pick<DevChangeNew, 'id' | 'source' | 'ref'> }): string {
+  const dc = r.change ? changeTaskLines(r.change) : undefined;
   return [
     `Change request ${r.id} from ${r.by}: ${requestTitle(r.text)}`,
     '',
@@ -152,11 +158,13 @@ export function requestTaskText(r: Pick<ChangeRequestRecord, 'id' | 'text' | 'pa
     `id: ${r.id}`,
     `page: ${r.page ?? 'unknown'}${r.pageMoved ? ' (the app had moved on from there by itself; this is where it was last opened)' : ''}`,
     `version: ${r.revision ?? 'unknown (no version was running)'}`,
+    ...(dc?.fence ?? []),
     'request: |',
     ...r.text.replace(/\r\n?/g, '\n').trim().split('\n').map((l) => `  ${l}`),
     '```',
     '',
     'How to handle it:',
+    ...(dc?.how ?? []),
     '- This is the business owner asking, in their words. Work out what it means for the app and plan the work as you usually would, yourself or through your team.',
     `- Keep this task's \`Task:\` line (below) on the work that delivers it (commit trailers and the PR description) and name ${r.id} there: that is how the office shows them where their request is.`,
     `- If it's unclear, changes the agreed scope, or needs a choice only they can make, escalate it (\`office-workers escalate\`, with ${r.id} in the title and \`--trigger scope\` or \`--trigger question\`), adding \`--artifact\` when a screenshot, process map or document helps them answer.`,

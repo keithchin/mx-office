@@ -22,6 +22,7 @@ import { forgetWorker, noteWorkerStatus } from '../project-run/turns.js';
 import { ingestPulls } from '../testing/index.js';
 import { verifyOnPulls } from '../testing/verify-office.js';
 import { questionsOnWorker } from '../questions/index.js';
+import { changesOnWorker, observeChanges } from '../dev-changes/index.js';
 import { taskStoreAt } from '../tasks/index.js';
 import { queueTaskIds } from '../tasks/queue.js';
 
@@ -155,6 +156,8 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
       }
       // A turn that ended may have written open questions: the Questions page collects again (questions/).
       questionsOnWorker(ctx, floor, w);
+      // A queued Developer change may start now (the lead back at work, awake): debounced, only with one waiting (dev-changes/).
+      changesOnWorker(ctx, floor);
       ctx.machine.workersChanged();
       ctx.floorsChanged();
     },
@@ -184,6 +187,8 @@ export async function openFloors(ctx: Ctx, hookPort: number): Promise<FloorsOpen
       void mergeGateOnPulls(ctx, floor).catch(() => undefined);
       // …and each merged task is judged on its merge commit, once per new PR list (server/testing/verify-office.ts).
       void verifyOnPulls(ctx, floor);
+      // Developer changes: new candidate heads on dev/DC-n, a merged PR settles the active change and starts the next (dev-changes/).
+      void observeChanges(ctx, floor).catch(() => undefined);
       for (const f of floors.values()) if (f !== floor && worksIn(f, floor)) f.sendLandedHome();
     },
     issuesChanged: (floor) => {

@@ -7,8 +7,8 @@
 //     through the navigation's Developer, the switch returns to the page you came from
 //   - every old deep link (?tab=board, ?tab=agents, ?tab=live) opens as before, with no workspace
 //   - ?ws=eng&tab=decisions opens Approvals; ?tab=decisions the Decisions section; a reload keeps the section
-//   - C4: Request a change sends a request that comes back with a task id (or the office's refusal, said in the
-//     dialog), shown in the panel and under Decisions
+//   - C4: Request a change makes a Developer change (DC-n) that is handed to the lead with a task id or queued
+//     saying why (or the office's refusal, said in the dialog), shown in the panel and under Decisions
 //   - C5: Review with no version on screen, the guided-validation route at main (a mark refused with no app),
 //     Release and Accept through the existing acceptance path (its answer, a refusal in business words)
 //
@@ -154,10 +154,11 @@ async function main() {
       check(true, `the office refused the request, said in the dialog: ${refused}`);
       await page.keyboard.press('Escape');
     } else {
-      const list = await page.evaluate(async (f) => (await (await fetch(`/api/change-requests?floor=${encodeURIComponent(f)}`)).json()).requests, floor);
-      check(list.length === 1 && /^tsk_/.test(list[0].taskId), `the request has a task id: ${list[0]?.id} ${list[0]?.taskId} for ${list[0]?.member}, ${list[0]?.words}`);
-      await page.waitForFunction(() => document.querySelector('[data-part="request"] .aw-pill'), null, { timeout: 30000 });
-      check(true, `the panel shows it: ${await page.textContent('[data-part="request"] .aw-pill')}`);
+      // A Developer change (dev-changes/): handed to the lead with a task id, or queued saying why.
+      const list = await page.evaluate(async (f) => (await (await fetch(`/api/dev-changes?floor=${encodeURIComponent(f)}`)).json()).changes, floor);
+      check(list.length === 1 && (list[0].queue === 'queued' || /^tsk_/.test(list[0].taskId)), `the request is ${list[0]?.id}: ${list[0]?.words}${list[0]?.taskId ? ` (${list[0].taskId} for ${list[0].member})` : ''}`);
+      await page.waitForFunction(() => document.querySelector('[data-part="request"] .dc-pill'), null, { timeout: 30000 });
+      check(true, `the panel shows it: ${await page.textContent('[data-part="request"] .dc-pill')}`);
     }
     await page.waitForTimeout(800);
     await both(page, 'c4-21-office-app-request');

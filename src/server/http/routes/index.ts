@@ -19,6 +19,7 @@ import { gitRoutes } from './git.js';
 import { modelRoutes } from './model.js';
 import { modelChangeRoutes } from './model-change.js';
 import { changeRequestRoutes } from './change-requests.js';
+import { devChangeRoutes } from './dev-changes.js';
 import { guidedValidationRoutes } from './guided-validation.js';
 import { appExplorerRoutes } from './app-explorer.js';
 import { githubRoutes } from './github.js';
@@ -118,6 +119,8 @@ export const routes: readonly Route[] = [
   modelChangeRoutes.create,
   changeRequestRoutes.list,
   changeRequestRoutes.create,
+  devChangeRoutes.list,
+  devChangeRoutes.cancel,
   guidedValidationRoutes.view,
   guidedValidationRoutes.mark,
   appExplorerRoutes.explorer,

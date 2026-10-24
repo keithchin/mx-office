@@ -4,34 +4,48 @@
 //            something the state hangs on moved (the business status, the team, the PR list: the feeds the page
 //            already has): moves together are one ask, and one ask is in flight at a time. No timer of its own.
 //   dialog   Request a change: the person's words, and what it's about, captured for them: the project, the page
-//            of the app the canvas shows and the running version. Sent as a task to the team's lead.
+//            of the app the canvas shows and the running version. It becomes a Developer change (DC-n,
+//            ui/dev-changes/): queued, and handed to the team's lead as a task when it's its turn. One key per
+//            dialog, so sending again after a failure never makes a second change.
 //   card     the panel's current request: its words, its state in business words and the version that has it
 //   list     Decisions' Requests: every request, newest first
 //
 // What the person wrote is shown as written.
 
 import { h, openModal, timeAgo } from '../dom';
-import { REQUEST_TONE, REQUEST_MAX, type ChangeRequestRecord, type ChangeRequestView } from '../../../shared/change-requests';
+import { REQUEST_TONE, REQUEST_MAX, type ChangeRequestView } from '../../../shared/change-requests';
+import type { DevChange, ElementRef } from '../../../shared/dev-changes';
+import { draftKey } from '../dev-changes/feed';
 
 export interface RequestAsk {
   text: string;
   page?: string;
   pageMoved?: boolean;
   revision?: string;
+  /** What it points at in the model, when one was picked (part 2 picks elements). */
+  ref?: ElementRef;
+  /** The dialog's idempotency key. */
+  key?: string;
 }
 
-export type RequestSent = { ok: true; request: ChangeRequestRecord } | { ok: false; error: string };
+export type RequestSent = { ok: true; change: DevChange; again: boolean } | { ok: false; error: string };
 
-/** POST /api/change-requests: the request as kept (with its task id), or why not. */
+/** POST /api/change-requests: the change as kept (queued, or handed to the lead), or why not. A dropped connection is tried once more with the same key. */
 export async function postRequest(floor: string, ask: RequestAsk, by?: string): Promise<RequestSent> {
-  try {
-    const res = await fetch('/api/change-requests', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor, ...ask, ...(by ? { by } : {}) }) });
-    const out = (await res.json().catch(() => ({}))) as { error?: string; request?: ChangeRequestRecord };
-    return res.ok && out.request ? { ok: true, request: out.request } : { ok: false, error: out.error ?? 'The office couldn’t take the request just now. Try again.' };
-  } catch {
-    return { ok: false, error: 'The office couldn’t be reached. Try again.' };
+  const body = JSON.stringify({ floor, ...ask, ...(by ? { by } : {}) });
+  for (let i = 0; ; i++) {
+    try {
+      const res = await fetch('/api/change-requests', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body });
+      const out = (await res.json().catch(() => ({}))) as { error?: string; change?: DevChange; again?: boolean };
+      return res.ok && out.change ? { ok: true, change: out.change, again: !!out.again } : { ok: false, error: out.error ?? 'The office couldn’t take the request just now. Try again.' };
+    } catch {
+      if (i || !ask.key) return { ok: false, error: 'The office couldn’t be reached. Try again: it won’t be asked twice.' };
+    }
   }
 }
+
+/** The toast after a request: handed to the lead, or queued. */
+export const sentWords = (c: DevChange | undefined) => (!c ? 'Request sent: it shows in the panel with its state' : c.queue === 'active' ? `Request ${c.id} handed to ${c.activated?.member ?? 'the team lead'} on branch dev/${c.id}: it shows in the panel with its state` : c.queue === 'clarify' ? `Request ${c.id} needs clarification: see the panel` : `Request ${c.id} is queued: the panel says what it waits for`);
 
 /** The project's requests, kept per project and asked again (once per burst) when `again` is called. */
 export function requestsFeed(onChange: () => void) {
@@ -136,7 +150,8 @@ export interface RequestContext {
  * Request a change: the words, with the project, page and version captured and shown (not editable: they're
  * what was on screen). ✕ and Esc close it and give the focus back to the button that opened it.
  */
-export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => Promise<RequestSent>, done: (r: ChangeRequestRecord) => void): void {
+export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => Promise<RequestSent>, done: (r: DevChange) => void): void {
+  const key = draftKey();
   const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const box = h('textarea.aw-reqtext', { rows: 5, maxlength: String(REQUEST_MAX), placeholder: 'For example: let reception see who signed a visitor in, next to the arrival time.', 'aria-label': 'What should change' }) as HTMLTextAreaElement;
   const err = h('p.aw-warn', { role: 'alert', hidden: true });
@@ -158,7 +173,7 @@ export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => 
       h('p', {}, 'Describe what should behave differently, in your own words. It becomes a request the team lead works on; you’ll see its state in the panel and under Decisions.'),
       box,
       h('dl.aw-about', {}, ...about.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
-      h('p.aw-small', {}, 'The page and version are taken from what’s on screen, so the team sees what you saw.'),
+      h('p.aw-small', {}, 'The page and version are taken from what’s on screen, so the team sees what you saw. One change is worked on at a time: if the team is busy, paused or asleep, it waits in the queue and says why.'),
       err,
     ),
     h('footer', {}, h('span.grow'), cancel, submit),
@@ -176,7 +191,7 @@ export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => 
       return;
     }
     submit.disabled = true;
-    void send({ text: c.about ? `${text}\n\nAbout: ${c.about}` : text, ...(c.page ? { page: c.page } : {}), ...(c.pageMoved ? { pageMoved: true } : {}), ...(c.revision ? { revision: c.revision } : {}) }).then((r) => {
+    void send({ text: c.about ? `${text}\n\nAbout: ${c.about}` : text, ...(c.page ? { page: c.page } : {}), ...(c.pageMoved ? { pageMoved: true } : {}), ...(c.revision ? { revision: c.revision } : {}), key }).then((r) => {
       submit.disabled = false;
       if (!r.ok) {
         err.hidden = false;
@@ -184,7 +199,7 @@ export function openRequestDialog(c: RequestContext, send: (ask: RequestAsk) => 
         return;
       }
       modal.close();
-      done(r.request);
+      done(r.change);
     });
   });
   box.focus();

@@ -87,6 +87,7 @@ flowchart LR
 | [Components and processes](components.md) | Every process, where it runs, how they talk, and where data is kept |
 | [Execution lifecycle](execution-lifecycle.md) | One request from intake to acceptance, and what happens on failure, cancellation, restart and unknown outcomes |
 | [State and sources of truth](state-and-truth.md) | Which record is authoritative for what, who writes it, and what survives a crash |
+| [Revisions and Developer changes](revisions-and-changes.md) | The revisions the office names, the Developer change record and its queue, and a request's lifecycle to the preview |
 | [Trust and authority](trust-and-authority.md) | Credentials, approvals, agent identity, isolation limits, and which controls the office enforces |
 | [Reusable skills and knowledge across applications](reusable-skills-and-knowledge.md) | Toolkit skills, company brains, project knowledge, and what the office does and doesn't prove about their use |
 | [Design decisions](design-decisions.md) | Why the main mechanisms exist, the failures that led to them, trade-offs and open questions |

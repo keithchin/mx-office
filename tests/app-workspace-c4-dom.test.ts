@@ -61,7 +61,7 @@ async function harness(): Promise<{ js: string; css: string }> {
         const ws = createWorkspace({
           source: {
             get: () => data, on: (fn) => (fns.add(fn), () => fns.delete(fn)), wake() {},
-            request: async (a) => (window.__asked.push(a), window.__requestWith ?? { ok: true, request: { id: 'CR-4', member: 'Ada', taskId: 'tsk_01JABCDEFGHJKMNPQRSTVWXYZ1' } }),
+            request: async (a) => (window.__asked.push(a), window.__requestWith ?? { ok: true, again: false, change: { id: 'DC-4', queue: 'active', activated: { member: 'Ada', requestId: 'CR-4', taskId: 'tsk_01JABCDEFGHJKMNPQRSTVWXYZ1' } } }),
             answer: async (x, a) => (window.__answers.push({ id: x.id, escalation: x.escalation, ...a }), window.__answerWith),
           },
           open: (t) => window.__opened.push(t),
@@ -153,8 +153,10 @@ test('in a browser: the current request, Request a change, the Requests list, de
     await page.evaluate(() => ((window as unknown as { __requestWith: unknown }).__requestWith = undefined));
     await page.click('.aw-reqsend');
     await page.waitForFunction(() => !document.querySelector('.aw-reqdlg'));
-    assert.match((await text(page, '#toasts')) ?? '', /Request CR-4 sent to Ada: it shows in the panel with its state/);
-    assert.deepEqual(await get(page, '__asked'), [{ text: 'Print the visitor’s photo on the badge.', page: '/', revision: A }, { text: 'Print the visitor’s photo on the badge.', page: '/', revision: A }], 'the page on screen and the running version go with it');
+    assert.match((await text(page, '#toasts')) ?? '', /Request DC-4 handed to Ada on branch dev\/DC-4: it shows in the panel with its state/);
+    const asked = await get<{ key?: string }[]>(page, '__asked');
+    assert.ok(asked[0].key && /^[A-Za-z0-9_-]{8,64}$/.test(asked[0].key) && asked[0].key === asked[1].key, 'one idempotency key per dialog: sending again after a refusal can’t make a second change');
+    assert.deepEqual(asked.map(({ key: _k, ...a }) => a), [{ text: 'Print the visitor’s photo on the badge.', page: '/', revision: A }, { text: 'Print the visitor’s photo on the badge.', page: '/', revision: A }], 'the page on screen and the running version go with it');
 
     // Decisions: business decisions only (the source filtered them), the artifact only beside those that name one.
     await page.evaluate(() => document.getElementById('toasts')!.replaceChildren());
@@ -213,7 +215,7 @@ test('in a browser: the current request, Request a change, the Requests list, de
     await page.evaluate(() => (document.documentElement.dataset.theme = 'portal-light'));
 
     // Nothing yet: what will appear.
-    await set(page, { ...DATA, requests: [], decisions: [] });
+    await set(page, { ...DATA, requests: [], decisions: [], dev: { floor: 'f1', changes: [], strip: { preview: { status: 'off' } }, current: null } });
     assert.match((await text(page, '[data-part="request"]')) ?? '', /Describe what should behave differently/);
     await show(page, 'decisions');
     assert.match((await text(page, '.aw-page')) ?? '', /No requests yet/);

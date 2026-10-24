@@ -17,6 +17,7 @@ import { writeTextDurableSync } from '../durable/write.js';
 import { cleanPage, REQUEST_MAX, requestTaskText, type ChangeRequestRecord } from '../../shared/change-requests.js';
 import type { RoleId } from '../../shared/roster/roles.js';
 import type { AuditInput } from '../../shared/audit.js';
+import type { DevChangeNew } from '../../shared/dev-changes.js';
 
 /** A team member a request can go to. */
 export interface RequestMember {
@@ -47,6 +48,8 @@ export interface RequestAsk {
   revision?: unknown;
   by: string;
   owner?: string;
+  /** The Developer change it carries out (server/dev-changes/): its id, source revision and element, put in the task. */
+  change?: Pick<DevChangeNew, 'id' | 'source' | 'ref'>;
 }
 
 interface Book {
@@ -102,8 +105,8 @@ export class RequestBook {
     // The number is taken before the awaits, so two requests at once never share one.
     const id = `CR-${b.next++}`;
     const by = ask.by || 'The Project Manager';
-    const r: Omit<ChangeRequestRecord, 'taskId' | 'delivery'> = { id, text, ...(page ? { page } : {}), ...(page && ask.pageMoved === true ? { pageMoved: true } : {}), ...(revision ? { revision } : {}), by, ...(ask.owner ? { owner: ask.owner } : {}), at: this.deps.now(), role: m.role, member: m.name, ...(m.workerId ? { workerId: m.workerId } : {}) };
-    const handed = await this.deps.hand(floorId, m, requestTaskText(r), {
+    const r: Omit<ChangeRequestRecord, 'taskId' | 'delivery'> = { id, text, ...(page ? { page } : {}), ...(page && ask.pageMoved === true ? { pageMoved: true } : {}), ...(revision ? { revision } : {}), by, ...(ask.owner ? { owner: ask.owner } : {}), at: this.deps.now(), role: m.role, member: m.name, ...(m.workerId ? { workerId: m.workerId } : {}), ...(ask.change ? { changeId: ask.change.id, source: { ...(ask.change.source.sha ? { sha: ask.change.source.sha } : {}), ...(ask.change.ref ? { ref: ask.change.ref } : {}) } } : {}) };
+    const handed = await this.deps.hand(floorId, m, requestTaskText({ ...r, ...(ask.change ? { change: ask.change } : {}) }), {
       by,
       id: `change-request:${floorId}:${id}`,
       onSent: () => {
@@ -126,7 +129,7 @@ export class RequestBook {
       action: 'change-request.created',
       target: { kind: 'worker', id: m.workerId ?? m.role, label: m.name },
       summary: `Asked for a change (${id}) from the Developer view, handed to ${m.name}${handed.status === 'held' ? ' after their current turn' : ''}`,
-      details: { id, page, revision, delivery: handed.status, length: text.length },
+      details: { id, ...(ask.change ? { changeId: ask.change.id } : {}), page, revision, delivery: handed.status, length: text.length },
       ids: { taskId: handed.taskId, ...(handed.executionId ? { executionId: handed.executionId } : {}), roleId: m.role, ...(m.workerId ? { agentInstanceId: m.workerId } : {}) },
     });
     return rec;
