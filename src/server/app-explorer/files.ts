@@ -127,3 +127,23 @@ export async function changedFiles(dir: string, from: string, to: string, max = 
   const out = await gitOut(['diff', '--name-only', '-z', '--no-renames', from, to], dir);
   return (out ?? '').split('\0').filter((p) => p && !deniedPath(p)).slice(0, max);
 }
+
+export const SEARCH_MAX = 200;
+
+/** The shown files at `sha` whose path has every word of `q` in it (the whole revision, not the opened folders), at most SEARCH_MAX. */
+export async function searchFiles(dir: string, sha: string, q: string): Promise<{ nodes: ExplorerNode[]; total: number }> {
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 8);
+  if (!terms.length) return { nodes: [], total: 0 };
+  const idx = await filesIndex(dir, sha);
+  const hits: TreeFile[] = [];
+  for (const f of idx.files.values()) {
+    const p = f.path.toLowerCase();
+    if (terms.every((t) => p.includes(t))) hits.push(f);
+  }
+  const total = hits.length;
+  // Names that match first, then shorter paths.
+  const name = (p: string) => p.slice(p.lastIndexOf('/') + 1).toLowerCase();
+  const named = (p: string) => Number(!terms.every((t) => name(p).includes(t)));
+  hits.sort((a, b) => named(a.path) - named(b.path) || a.path.length - b.path.length || a.path.localeCompare(b.path));
+  return { nodes: hits.slice(0, SEARCH_MAX).map((x): ExplorerNode => ({ id: `f:${x.path}`, label: x.path.slice(x.path.lastIndexOf('/') + 1), kind: 'file', path: x.path, size: x.size, key: x.path, hint: x.path, detail: x.path })), total };
+}

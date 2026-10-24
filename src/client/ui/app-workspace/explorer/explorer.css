@@ -46,6 +46,19 @@
 .ax .ax-grip:hover { background: var(--accent-soft); }
 .ax .ax-expand, .ax .ax-drawer-btn, .ax .ax-scrim { display: none; }
 
+/* The revision line: what's read, where the live app is (information only), and a stale note. */
+.ax .ax-revline { display: flex; flex-direction: column; gap: 4px; }
+.ax .ax-revrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ax .ax-revsel { font: 12px/1.2 var(--mono, monospace); padding: 2px 4px; border: 1px solid var(--rule-strong, var(--line)); border-radius: 4px; background: var(--paper, var(--card)); color: var(--ink); max-width: 100%; }
+.ax .ax-revsel:disabled { opacity: 1; border-color: transparent; padding-left: 0; appearance: none; }
+.ax .ax-live { font-size: 11.5px; color: var(--muted); line-height: 1.35; }
+.ax .ax-stale { margin: 0; font-size: 12px; color: var(--ink); background: var(--warn-soft, var(--sunken)); border: 1px solid var(--warn, var(--line)); border-radius: 4px; padding: 4px 6px; }
+.ax .ax-stale[hidden] { display: none; }
+.ax .ax-stale .aw-btn { padding: 1px 8px; font-size: 12px; }
+.ax .ax-count-addon { margin-left: 3px; }
+.ax .ax-bar-detail { font: 11.5px/1.35 var(--mono, monospace); color: var(--muted); overflow-wrap: anywhere; }
+.ax .ax-bar-acts .aw-btn:disabled { opacity: .55; cursor: not-allowed; }
+
 /* Collapsed: a slim strip with the button that brings it back. */
 .ax.ax-collapsed .ax-side { width: 36px; }
 .ax.ax-collapsed :is(.ax-head, .ax-rows, .ax-grip) { display: none; }
@@ -65,6 +78,32 @@
 .aw .ax-img { max-width: 100%; max-height: 70vh; object-fit: contain; margin: 16px auto; display: block; }
 .aw .ax-msg { padding: 16px; }
 .aw .aw-canvas[hidden] { display: none; }
+
+/* A document's card (./doc-card.ts). */
+.aw .ax-docwrap { overflow: auto; flex: 1; }
+.aw .ax-doccard { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+.aw .ax-dochead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.aw .ax-rev { font: 12px var(--mono, monospace); color: var(--muted); }
+.aw .ax-badge { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--sunken); color: var(--ink-2, var(--ink)); }
+.aw .ax-badge.ax-role { background: var(--accent-soft); border-color: transparent; color: var(--ink); }
+.aw .ax-badge.ax-st-draft { border-color: var(--warn, #e0a100); }
+.aw .ax-badge.ax-st-approved, .aw .ax-badge.ax-st-current { border-color: var(--ok, #2e7d32); }
+.aw .ax-docsec h3 { margin: 0 0 6px; font-size: 13.5px; }
+.aw .ax-doclist, .aw .ax-docgrid { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.aw .ax-docgrid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.aw .ax-docfile, .aw .ax-doclink { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--paper, var(--card)); min-width: 0; }
+.aw .ax-docfile-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; }
+.aw .ax-docfile-main .ax-badge { align-self: flex-start; }
+.aw .ax-doclink { justify-content: flex-start; align-items: baseline; flex-wrap: wrap; gap: 4px; }
+.aw .ax-path { font: 11.5px var(--mono, monospace); color: var(--muted); overflow-wrap: anywhere; }
+.aw .ax-prov { font-size: 12px; color: var(--muted); }
+.aw .ax-docopen { padding: 2px 10px; font-size: 12.5px; flex: none; }
+.aw .ax-linkbtn { border: 0; background: none; padding: 0; font: inherit; font-size: 13px; color: var(--link, var(--accent)); text-decoration: underline; cursor: pointer; text-align: left; }
+.aw .ax-small { font-size: 12px; margin: 0 0 6px; }
+.aw .ax-docshow:empty { display: none; }
+.aw .ax-docshow .ax-text { max-height: 50vh; border: 1px solid var(--line); border-radius: 6px; white-space: pre-wrap; }
+.aw .ax-docframe { width: 100%; height: 60vh; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.aw .ax-docfoot { margin: 0; }
 
 @media (max-width: 1000px) {
   .aw .aw-body.ax-has { grid-template-columns: auto minmax(0, 1fr); }

@@ -81,23 +81,25 @@ test('the business tree from the app at a revision: Pages by part with addresses
 
   const top = await lvl(ctx, floor, a, '');
   assert.deepEqual(labels(top.nodes), ['Pages', 'Data', 'Logic']);
-  assert.deepEqual(top.nodes.map((n) => n.count), [3, 1, 2], 'pages, parts with data, logic');
+  assert.deepEqual(top.nodes.map((n) => n.count), [2, 2, 2], 'the app’s own pages, kinds of records and logic');
+  assert.deepEqual(top.nodes.map((n) => n.addonCount), [1, undefined, undefined], 'what the Marketplace adds, apart');
   const parts = await lvl(ctx, floor, a, 'pages');
-  assert.deepEqual(labels(parts.nodes), ['Visitor desk', 'Atlas core'], 'the app’s own part first, the Marketplace one after');
+  assert.deepEqual(labels(parts.nodes), ['Visitor desk', 'Marketplace modules'], 'the app’s own part first, the Marketplace ones folded after');
   assert.equal(parts.nodes[1].addon, true);
+  assert.deepEqual(labels((await lvl(ctx, floor, a, 'pages/@marketplace')).nodes), ['Atlas core']);
   const pages = await lvl(ctx, floor, a, 'pages/VisitorDesk');
   assert.deepEqual(labels(pages.nodes), ['Visitor new edit', 'Visitor overview']);
   assert.equal(pages.nodes.find((n) => n.qn === 'VisitorDesk.Visitor_Overview')?.url, '/p/visitors');
   assert.equal(pages.nodes.find((n) => n.qn === 'VisitorDesk.Visitor_NewEdit')?.url, undefined, 'needs a record: no address, a preview');
-  assert.match(pages.nodes[0].hint ?? '', /preview/);
+  assert.match(pages.nodes[0].hint ?? '', /opens from another page/);
   const data = await lvl(ctx, floor, a, 'data/VisitorDesk');
   assert.deepEqual(labels(data.nodes), ['Host approval', 'Visitor']);
   assert.equal(data.nodes[0].key, 'domainmodel:VisitorDesk');
   const logic = await lvl(ctx, floor, a, 'logic/VisitorDesk');
   assert.deepEqual(labels(logic.nodes), ['Show badge', 'Visitor commit'], 'conventions’ prefixes left out, engineering words as they are');
-  assert.deepEqual(logic.nodes.map((n) => n.hint), ['Logic that runs in the browser', 'Logic that runs on the server'], 'the kind only in the tooltip');
+  assert.deepEqual(logic.nodes.map((n) => n.hint), ['Logic that runs in the browser: VisitorDesk.NF_ShowBadge', 'Logic that runs on the server: VisitorDesk.ACT_Visitor_Commit'], 'the kind and technical name only in the tooltip');
   // At the newer revision: the added page is there; the older revision's answer is unchanged.
-  assert.deepEqual(labels((await lvl(ctx, floor, b, 'pages/VisitorDesk')).nodes), ['Host dashboard', 'Visitor new edit', 'Visitor overview']);
+  assert.deepEqual(labels((await lvl(ctx, floor, b, 'pages/VisitorDesk')).nodes), ['Host dashboard', 'Today', 'Visitor new edit'], 'a page with a title shows its title');
   assert.equal((await lvl(ctx, floor, a, 'pages/VisitorDesk')).nodes.length, 2);
   // Unknown levels are refused.
   const bad = await explorerLevel(ctx, floor, a, 'pages/Nope');

@@ -4,8 +4,13 @@
 // tests share it.
 //
 // The business tree (the default) is Pages, Data, Logic and Documents (plus Process map and Design where the
-// project has them), read at the served revision. The all-files view is the project's raw files at that
-// revision, read-only, minus anything on the denylist below or ignored by the project's .gitignore.
+// project has them), read from the repository at a chosen revision (main's newest commit unless the viewer
+// picks another): it never needs the app to be running. The all-files view is the project's raw files at
+// that revision, read-only, minus anything on the denylist below or ignored by the project's .gitignore.
+//
+// Counts say what they count: a group's `count` is the app's own content (pages, kinds of records, logic in
+// the app's own modules); `addonCount` is what Marketplace modules add. Modules and folders without content
+// of the group's kind are left out, so they never inflate a count.
 
 /** What a row is. */
 export type ExplorerKind = 'group' | 'module' | 'page' | 'entity' | 'flow' | 'doc' | 'folder' | 'file';
@@ -31,8 +36,12 @@ export interface ExplorerNode {
   /** A file or document's path in the project. */
   path?: string;
   size?: number;
-  /** A module that came from the Marketplace (shown after the app's own). */
+  /** A module that came from the Marketplace (folded into one Marketplace modules group). */
   addon?: boolean;
+  /** What Marketplace modules add to this group (pages, records or logic), next to the app's own `count`. */
+  addonCount?: number;
+  /** A page's or flow's technical name and where it sits (Module › Folder), for the details line. */
+  detail?: string;
 }
 
 /** One level of the tree, at a revision. */
@@ -46,7 +55,43 @@ export interface ExplorerLevel {
   total?: number;
   /** Why the level is empty or partial, in plain words. */
   note?: string;
+  /** The model couldn't be read at this revision: what went wrong, specifically ("Couldn't read the model at abc1234: …"). */
+  problem?: string;
 }
+
+/** Every level of the business tree at a revision at once (the search looks through all of it, folded groups too). */
+export interface ExplorerIndex {
+  rev: string;
+  levels: Record<string, ExplorerNode[]>;
+  problem?: string;
+}
+
+/** Matches in the all-files view: every shown file of the revision, not just the opened folders. */
+export interface ExplorerSearch {
+  rev: string;
+  q: string;
+  nodes: ExplorerNode[];
+  total: number;
+}
+
+/** Which revision the explorer reads by default (main's newest commit), and where the live app is next to it. */
+export interface ExplorerHead {
+  /** Main's newest commit (a full id), or undefined when the project has no commits yet. */
+  rev?: string;
+  /** The branch it is ('main', 'origin/main'). */
+  branch: string;
+  at?: number;
+  subject?: string;
+  /** The live app's revision, when asked about: how far behind (and ahead of) main it is. Information only. */
+  served?: { sha: string; behind?: number; ahead?: number };
+}
+
+/** The id of the folded Marketplace group under a top group ('pages/@marketplace'). */
+export const MARKETPLACE = '@marketplace';
+/** Short commit id for messages. */
+export const shortSha = (sha: string | undefined) => (sha ?? '').slice(0, 7);
+/** The model couldn't be read: the message the explorer shows. */
+export const modelProblem = (sha: string, why: string) => `Couldn’t read the model at ${shortSha(sha)}: ${why.replace(/\s+/g, ' ').trim() || 'unknown error'}`;
 
 /** What changed between two served revisions: documents (`kind:qn`) and file paths. */
 export interface ExplorerChanges {
@@ -110,7 +155,7 @@ export const GROUPS = [
   { id: 'pages', label: 'Pages', hint: 'The screens of the app, by part of the app' },
   { id: 'data', label: 'Data', hint: 'What the app keeps: its kinds of records' },
   { id: 'logic', label: 'Logic', hint: 'What the app does when something happens' },
-  { id: 'documents', label: 'Documents', hint: 'The project’s documents' },
+  { id: 'documents', label: 'Documents', hint: 'The project’s documents, at the revision shown' },
   { id: 'processmap', label: 'Process map', hint: 'The business process the app supports' },
   { id: 'design', label: 'Design', hint: 'The look and feel the team agreed' },
 ] as const;

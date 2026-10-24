@@ -1,13 +1,17 @@
-// What the explorer opens in place of the running app, when it isn't a page with an address: the Model tab's
-// own views, read-only, at the served revision. A page that opens only from another page shows the Model
-// tab's Preview (sample data, its own sandboxed frame) with a note saying so; a part of the app's data shows
-// its diagram with the record picked; logic shows its diagram; a project file (all-files view) shows its
-// text or picture. The running app's frame is only hidden meanwhile (never taken out, which would reload
-// it): Back to the running app shows it again.
+// What the explorer opens in the canvas's place, read-only, at the revision the explorer shows (main's newest
+// unless the viewer picked another): never the running app. A page shows its Model preview (the Model tab's
+// Preview: drawn from the model with sample data, in its own sandboxed frame, labelled as not the running
+// app); a part of the app's data shows its diagram with the record picked; logic shows its diagram; a
+// document shows its card (./doc-card.ts: dates from git, relationships, status only from a real source); a
+// project file (all-files view) shows its text or picture. Seeing a page in the running app is a separate
+// action (the bar's Open in the live app). The live app's frame is only hidden meanwhile (never taken out,
+// which would reload it).
 
 import { h } from '../../dom';
 import type { DomainDoc, FlowDoc } from '../../../../shared/model';
-import type { ExplorerFile, ExplorerNode } from '../../../../shared/app-explorer';
+import { shortSha, type ExplorerFile, type ExplorerNode } from '../../../../shared/app-explorer';
+import type { DocEntry, DocumentsView } from '../../../../shared/app-documents';
+import { docCard } from './doc-card';
 import { modelApi } from '../../model/api';
 import { Canvas } from '../../model/canvas';
 import { drawDomain } from '../../model/domain-draw';
@@ -21,8 +25,12 @@ const DARK = new Set(['dark', 'terminal', 'clean-dark', 'portal-dark']);
 export interface PaneDeps {
   floor(): string | null;
   rev(): string | undefined;
-  /** Back to the running app. */
+  /** Closes the pane (back to the live app, when it runs). */
   back(): void;
+  /** Whether the live app is up in the canvas (the close button says where it goes back to). */
+  live?(): boolean;
+  /** Opens another document from a document's card. */
+  openEntry?(id: string): void;
   file(path: string): Promise<ExplorerFile>;
   /** For tests: the Model tab's requests. */
   api?: Pick<typeof modelApi, 'doc'>;
@@ -30,8 +38,10 @@ export interface PaneDeps {
 
 export interface Pane {
   readonly el: HTMLElement;
-  /** Shows `n` (a page without an address, data, logic or a file). */
+  /** Shows `n` (a page's Model preview, data, logic or a file). */
   show(n: ExplorerNode, label?: string, why?: string): void;
+  /** Shows a document's card. */
+  showDoc(e: DocEntry, view: DocumentsView): void;
   /** What's shown, if anything. */
   readonly node: ExplorerNode | undefined;
 }
@@ -40,11 +50,12 @@ export function docPane(deps: PaneDeps): Pane {
   const api = deps.api ?? modelApi;
   const title = h('b.ax-pane-title');
   const note = h('p.ax-pane-note', { role: 'status' });
-  const backBtn = h('button.aw-btn.ax-back', { type: 'button', onclick: () => deps.back() }, '← Back to the running app');
+  const backBtn = h('button.aw-btn.ax-back', { type: 'button', onclick: () => deps.back() }, '← Close');
   const stage = h('div.mx-stage.ax-stage');
   const text = h('pre.ax-text');
   const img = h('img.ax-img', { alt: '' }) as HTMLImageElement;
   const msg = h('p.aw-muted.ax-msg');
+  const doc = h('div.ax-docwrap');
   const canvas = new Canvas(stage, { select: () => undefined });
   const preview = pageFrame((type, qn) => {
     const f = deps.floor();
@@ -53,18 +64,24 @@ export function docPane(deps: PaneDeps): Pane {
   });
   // The Preview's own note names how it's drawn in engineering words: said plainly here.
   const pnote = preview.el.querySelector('.pgp-note');
-  if (pnote) pnote.textContent = 'Sample data · a preview, not the running app';
-  const body = h('div.ax-pane-body', {}, stage, preview.el, text, img, msg);
+  if (pnote) pnote.textContent = 'Model preview (from the model, not the running app) · sample data';
+  const body = h('div.ax-pane-body', {}, stage, preview.el, text, img, msg, doc);
   const el = h('section.ax-pane.mxv', { 'aria-label': 'Opened from the explorer', hidden: true }, h('div.ax-pane-bar', {}, backBtn, title), note, body);
   let shown: ExplorerNode | undefined;
   let seq = 0;
 
+  const paintBack = () => {
+    const live = deps.live?.() ?? false;
+    backBtn.textContent = live ? '← Back to the live app' : '← Close';
+  };
   const theme = () => el.classList.toggle('mx-dark', DARK.has(document.documentElement.dataset.theme ?? ''));
   new MutationObserver(theme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   theme();
 
-  function only(which: 'stage' | 'preview' | 'text' | 'img' | 'msg') {
+  function only(which: 'stage' | 'preview' | 'text' | 'img' | 'msg' | 'doc') {
     stage.hidden = which !== 'stage';
+    doc.hidden = which !== 'doc';
+    if (which !== 'doc') doc.replaceChildren();
     if (which !== 'preview') preview.clear();
     text.hidden = which !== 'text';
     img.hidden = which !== 'img';
@@ -130,16 +147,28 @@ export function docPane(deps: PaneDeps): Pane {
     show(n, label, why) {
       shown = n;
       el.hidden = false;
+      paintBack();
+      const at = shortSha(deps.rev());
       title.textContent = label ?? n.label;
       note.textContent = why ??
         (n.type === 'page'
-          ? 'This page opens from another page of the app (it needs a record passed to it), so here it’s a preview with sample data. To try it for real, open the page that leads to it.'
+          ? `Model preview (from the model, not the running app) at ${at}: ${n.qn ?? ''}. Sample data; conditions aren’t worked out.${n.url ? ` In the live app it opens at ${n.url}: use Open in the live app.` : ' It opens from another page of the app.'}`
           : n.type === 'entity' || n.type === 'domainmodel'
-            ? 'The records this part of the app keeps and how they relate, at the running version. Read-only.'
+            ? `The records this part of the app keeps and how they relate, at ${at}. Read-only.`
             : n.type === 'microflow' || n.type === 'nanoflow'
-              ? 'What the app does, step by step, at the running version. Read-only.'
-              : 'A file of the project at the running version. Read-only.');
+              ? `What the app does, step by step, at ${at}. Read-only.`
+              : `A file of the project at ${at}. Read-only.`);
       void load(n);
+    },
+    showDoc(e, view) {
+      shown = { id: `doc:${e.id}`, label: e.title, kind: 'doc' };
+      seq++;
+      el.hidden = false;
+      paintBack();
+      title.textContent = e.title;
+      note.textContent = `A document of the project at ${shortSha(view.rev)}. Read-only.`;
+      doc.replaceChildren(docCard(e, view, { file: (p) => deps.file(p), open: (id) => deps.openEntry?.(id) }));
+      only('doc');
     },
   };
 }

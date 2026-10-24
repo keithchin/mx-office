@@ -1,36 +1,41 @@
-// The App Workspace's explorer: a sidebar on the left of the canvas, like a file explorer, loaded with the
-// App section's first show (the shell imports it then). Two views of the same app, at the served revision
-// (what runs, never a newer commit on its way):
+// The Developer view's explorer: a sidebar on the left of the canvas, like a file explorer, loaded with the
+// App section's first show (the shell imports it then). It reads the repository at a revision, main's newest
+// commit unless the viewer picks the live app's (./revision.ts), so it works the same with the app stopped,
+// starting or failed: the live app's revision is only shown as information. Two views of that revision:
 //
-//   business (default)  Pages, Data, Logic (server/app-explorer/: from the app's units at that revision),
-//                       then Documents, Process map and Design (the Documents page's own list), in plain words
+//   business (default)  Pages (titles, folders as in the model, Marketplace modules folded), Data, Logic
+//                       (server/app-explorer/: from the app's units), then Documents, Process map and Design
+//                       (the documents with their relationships, ./docs.ts), in plain words
 //   all files           "Show all files": the project's raw files at that revision, read-only, minus what the
-//                       server never shows (shared/app-explorer.ts deniedPath, the .gitignore), file names
-//                       as they are
+//                       server never shows (shared/app-explorer.ts deniedPath, the .gitignore)
 //
-// Opening a page with an address shows it running in the canvas (the Live app viewer's go); anything else
-// opens in the pane (./pane.ts) with Back to the running app. The selected row's bar has Request a change
-// (C4's dialog, with the item as context) and, for admins, Change this (the Model tab's dialog).
+// Opening a page shows its Model preview (from the model, not the running app) in the pane, never the live
+// app's frame; the selected row's bar has Open in the live app for a page with an address while the app
+// runs, Request a change (with the item as context) and, for admins, Change this. Data and logic open their
+// diagrams, a document its card (./doc-card.ts), a file its text or picture (./pane.ts).
 //
-// Levels are fetched when first opened and kept per revision (./api.ts). Nothing polls: when the served
-// revision changes (a hot reload or a restart: the live app's own message), the open levels are read again
-// at the new revision, the rows that update changed get a dot, and a page open in the canvas that changed is
-// opened again (the new revision already serves: served only moves once it answers).
+// Levels are fetched when first opened and kept per revision (./api.ts). The search looks through every
+// level (the whole tree in one request, folded groups too) or, in all files, every file of the revision.
+// Nothing polls: main's newest commit is asked when the project opens, when the live app's revision moves
+// and when the window gets the focus back; if main moved, the tree says it's stale and Show it reads the
+// new revision (the open levels again, the changed rows dotted).
 //
 // Width, collapsed and the switch are remembered per viewer (this browser). At a phone's width it's a
 // drawer opened by a button. Keyboard and ARIA: ./tree.ts.
 
 import { h } from '../../dom';
+import { MARKETPLACE, type ExplorerChanges, type ExplorerHead, type ExplorerNode } from '../../../../shared/app-explorer';
+import type { DocumentsView } from '../../../../shared/app-documents';
 import type { DeliverablesView } from '../../../../shared/deliverables';
-import { GROUPS, type ExplorerChanges, type ExplorerNode } from '../../../../shared/app-explorer';
 import type { WorkspaceData } from '../data';
 import { explorerApi, type ExplorerApi } from './api';
+import { DOC_PREFIX, docGroups } from './docs';
 import { docPane, type Pane, type PaneDeps } from './pane';
-import { TreeView, type Level, type TreeModel } from './tree';
+import { revisionLine } from './revision';
+import { TreeView, type TreeModel } from './tree';
 import './explorer.css';
 
 export const PREFS_KEY = 'agent-office.aw.explorer';
-/** Set on the rows while "Show all files" is on: raw file names aren't held to the business words. */
 const W_MIN = 180;
 const W_MAX = 520;
 
@@ -53,15 +58,15 @@ const clampW = (w: number) => Math.max(W_MIN, Math.min(W_MAX, Math.round(w)));
 export interface ExplorerDeps {
   /** What the workspace shows (the project, the live app, admin). */
   data(): WorkspaceData;
-  /** Opens a path of the app in the canvas (and the App section, if another shows). */
+  /** Opens a path of the live app in the canvas (only from Open in the live app). */
   go(path: string): void;
   /** Where the canvas is. */
   where(): { path: string; moved: boolean } | undefined;
-  /** Shows the pane (true) or the running app (false) in the canvas's place. */
+  /** Shows the pane (true) or the live app's canvas (false) in the canvas's place. */
   pane(on: boolean): void;
   /** Request a change about an item ("Page: Visitor list"), with the page's path when it has one. */
   request(about: string, page?: string): void;
-  /** Tests: the requests, the documents list, the document viewer, Change this, the Model tab's requests. */
+  /** Tests: the requests, the documents viewer, Change this, the Model tab's requests. */
   api?: ExplorerApi;
   docs?(floor: string): Promise<DeliverablesView | undefined>;
   openDoc?(floor: string, path: string, view?: DeliverablesView): void;
@@ -72,13 +77,14 @@ export interface ExplorerDeps {
 export interface Explorer {
   readonly el: HTMLElement;
   readonly pane: Pane;
-  /** The workspace drew: follow the project and the served revision. */
+  /** The workspace drew: follow the project and the live app's revision. */
   update(d: WorkspaceData): void;
 }
 
 const CHANGE_KINDS = new Set(['page', 'microflow', 'nanoflow', 'entity']);
-const revOf = (d: WorkspaceData) => d.live?.served?.sha ?? d.live?.lastServed?.sha;
+const servedOf = (d: WorkspaceData) => d.live?.served?.sha ?? d.live?.lastServed?.sha;
 const ABOUT: Record<string, string> = { page: 'Page', entity: 'Data', domainmodel: 'Data', microflow: 'Logic', nanoflow: 'Logic', doc: 'Document', file: 'File' };
+const isDocs = (id: string) => id.startsWith('docs:');
 
 export function createExplorer(deps: ExplorerDeps): Explorer {
   const api = deps.api ?? explorerApi();
@@ -92,20 +98,27 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
   };
   const biz: TreeModel = { roots: [], kids: new Map(), expanded: new Set(), dots: new Set() };
   const files: TreeModel = { roots: [], kids: new Map(), expanded: new Set(), dots: new Set() };
+  const found: TreeModel = { roots: [], kids: new Map(), expanded: new Set(), dots: new Set() };
   let floor: string | null = null;
+  let head: ExplorerHead | undefined;
+  let headError: string | undefined;
   let rev: string | undefined;
-  let docsView: DeliverablesView | undefined;
-  let topNote = '';
+  let served: string | undefined;
+  let onServed = false;
+  let docsView: DocumentsView | undefined;
+  let indexed: string | undefined;
   let opened: { path: string; key?: string } | undefined;
   let selected: ExplorerNode | undefined;
   let admin = false;
   let gen = 0;
-  const model = () => (prefs.all ? files : biz);
+  const searching = () => prefs.all && !!search.value.trim();
+  const model = () => (searching() ? found : prefs.all ? files : biz);
 
   const tree = new TreeView(model(), { expand: (n) => void expand(n), open: (n) => openNode(n), select: (n) => ((selected = n ?? undefined), drawBar()), more: (p, c) => void more(p, c), changed: () => draw() }, 'The app');
-  const pane = docPane({ floor: () => floor, rev: () => rev, back: () => backToApp(), file: (p) => api.file(floor!, rev!, p), ...(deps.model ? { api: deps.model } : {}) });
+  const pane = docPane({ floor: () => floor, rev: () => rev, back: () => backToApp(), live: () => !!deps.data().appUrl, file: (p) => api.file(floor!, rev!, p), openEntry: (id) => openEntry(id), ...(deps.model ? { api: deps.model } : {}) });
+  const revLine = revisionLine({ pick: (w) => pick(w), refresh: () => void toRev(head?.rev) });
 
-  const search = h('input.ax-search', { type: 'search', placeholder: 'Find…', 'aria-label': 'Find in the explorer' }) as HTMLInputElement;
+  const search = h('input.ax-search', { type: 'search', placeholder: 'Find a page, record, logic, document…', 'aria-label': 'Find in the explorer' }) as HTMLInputElement;
   const allBox = h('input.ax-all', { type: 'checkbox', role: 'switch' }) as HTMLInputElement;
   const allLabel = h('label.ax-switch', { title: 'The project’s files as they are, read-only (for builders and IT)' }, allBox, h('span', {}, 'Show all files'));
   const collapseBtn = h('button.ax-icon.ax-collapse', { type: 'button', 'aria-label': 'Hide the explorer', title: 'Hide the explorer' }, '«');
@@ -116,7 +129,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
   const scroll = h('div.ax-scroll', {}, tree.el);
   const rows = h('div.ax-rows', {}, status, scroll, bar);
   const grip = h('div.ax-grip', { role: 'separator', 'aria-orientation': 'vertical', 'aria-label': 'Explorer width', tabindex: '0', 'aria-valuemin': String(W_MIN), 'aria-valuemax': String(W_MAX) });
-  const side = h('aside.ax-side', { id: 'ax-side', 'aria-label': 'Explorer' }, h('div.ax-head', {}, h('div.ax-headrow', {}, heading, h('span.aw-grow'), collapseBtn), search, allLabel), rows, expandBtn, grip);
+  const side = h('aside.ax-side', { id: 'ax-side', 'aria-label': 'Explorer' }, h('div.ax-head', {}, h('div.ax-headrow', {}, heading, h('span.aw-grow'), collapseBtn), revLine.el, search, allLabel), rows, expandBtn, grip);
   const drawerBtn = h('button.aw-btn.ax-drawer-btn', { type: 'button', 'aria-controls': 'ax-side', 'aria-expanded': 'false' }, '☰ Browse the app');
   const scrim = h('div.ax-scrim', { 'aria-hidden': 'true' });
   const el = h('div.ax', {}, drawerBtn, side, scrim);
@@ -129,6 +142,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     collapseBtn.setAttribute('aria-expanded', String(!prefs.collapsed));
     allBox.checked = prefs.all;
     heading.textContent = prefs.all ? 'All files' : 'Explorer';
+    search.placeholder = prefs.all ? 'Find a file in this revision…' : 'Find a page, record, logic, document…';
     tree.setLabel(prefs.all ? 'The project’s files' : 'The app');
   }
   collapseBtn.addEventListener('click', () => ((prefs.collapsed = true), save(), paintLayout(), expandBtn.focus()));
@@ -171,23 +185,40 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     save();
     selected = undefined;
     tree.selectedId = undefined;
+    tree.query = prefs.all ? '' : search.value;
     tree.setModel(model());
     paintLayout();
-    void loadRoots().then(() => refreshOpen(model(), false)).then(() => draw());
+    void loadRoots().then(() => refreshOpen(prefs.all ? files : biz, false)).then(() => runSearch());
   });
   // Keys typed in one frame are one search (no timer: the next frame draws it).
   let searchFrame = 0;
   search.addEventListener('input', () => {
     cancelAnimationFrame(searchFrame);
-    searchFrame = requestAnimationFrame(() => {
-      tree.query = search.value;
-      if (search.value.trim() && !prefs.all) void loadAllBusiness();
-      draw();
-    });
+    searchFrame = requestAnimationFrame(() => void runSearch());
   });
 
+  /** The search: in the business view every level is loaded once (folded groups too); in all files the server looks through every file. */
+  async function runSearch() {
+    const q = search.value.trim();
+    if (prefs.all) {
+      tree.query = '';
+      tree.setModel(model());
+      if (!q || !floor || !rev) return say(''), draw();
+      const f = floor;
+      const r = rev;
+      const res = await api.search(f, r, q).catch(() => undefined);
+      if (f !== floor || r !== rev || q !== search.value.trim()) return;
+      found.roots = res?.nodes ?? [];
+      say(!res ? 'The search couldn’t run just now.' : res.total > res.nodes.length ? `${res.total} files match; the first ${res.nodes.length} are shown. Add a word to narrow it.` : res.total ? `${res.total} file${res.total === 1 ? '' : 's'} match.` : 'No file of this revision matches.');
+      return draw();
+    }
+    tree.query = search.value;
+    if (q) await loadIndex();
+    draw();
+  }
+
   // ---- Loading levels ----------------------------------------------------------------------------------
-  const levelKey = (n: ExplorerNode) => (n.kind === 'folder' ? n.path ?? '' : n.id);
+  const levelKey = (n: ExplorerNode) => (n.kind === 'folder' && n.path !== undefined ? n.path : n.id);
 
   async function fetchLevel(m: TreeModel, id: string, at: string, keepOld = false) {
     const f = floor;
@@ -199,8 +230,8 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     try {
       const lv = m === files ? await api.folder(f, r, at) : await api.level(f, r, at);
       if (g !== gen || r !== rev) return;
-      m.kids.set(id, { nodes: lv.nodes, ...(lv.next !== undefined ? { next: lv.next, total: lv.total } : {}), ...(lv.note ? { note: lv.note } : {}) });
-    } catch (err) {
+      m.kids.set(id, { nodes: lv.nodes, ...(lv.next !== undefined ? { next: lv.next, total: lv.total } : {}), ...(lv.note || lv.problem ? { note: lv.problem ?? lv.note } : {}) });
+    } catch {
       if (g !== gen) return;
       m.kids.set(id, { nodes: [], error: 'This couldn’t be read just now.' });
     }
@@ -208,7 +239,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
 
   async function expand(n: ExplorerNode) {
     const m = model();
-    if (n.id.startsWith('docs:')) return;
+    if (isDocs(n.id) || m === found) return;
     if (m.kids.get(n.id) && !m.kids.get(n.id)!.error) return;
     draw();
     await fetchLevel(m, n.id, levelKey(n));
@@ -228,85 +259,89 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     draw();
   }
 
-  /** The documents groups, from the Documents page's list (Process map and Design only when there are some). */
-  function docGroups(): ExplorerNode[] {
-    const groups = new Map<string, ExplorerNode[]>([['documents', []], ['processmap', []], ['design', []]]);
-    for (const it of docsView?.items ?? []) {
-      if (it.status === 'missing') continue;
-      for (const file of it.files) {
-        const g = file.processMap ? 'processmap' : it.team === 'design' ? 'design' : 'documents';
-        const name = file.path.slice(file.path.lastIndexOf('/') + 1);
-        groups.get(g)!.push({ id: `doc:${file.path}`, label: it.files.length > 1 ? `${it.title}: ${name}` : it.title, kind: 'doc', path: file.path, key: file.path, hint: file.path });
-      }
-    }
-    const out: ExplorerNode[] = [];
-    for (const def of GROUPS.filter((x) => groups.has(x.id))) {
-      const nodes = groups.get(def.id)!.sort((a, b) => a.label.localeCompare(b.label));
-      if (!nodes.length && def.id !== 'documents') continue;
-      const id = `docs:${def.id}`;
-      biz.kids.set(id, { nodes, ...(docsView ? {} : { loading: true }), note: 'No documents yet. The team’s documents show here once they’re written.' });
-      out.push({ id, label: def.label, kind: 'group', hint: def.hint, folder: true, count: nodes.length });
-    }
-    return out;
+  /** Every level of the business tree at this revision, in one request (kept: the revision never changes). */
+  async function loadIndex() {
+    const f = floor;
+    const r = rev;
+    if (!f || !r || indexed === r) return;
+    const ix = await api.index(f, r).catch(() => undefined);
+    if (!ix || f !== floor || r !== rev) return;
+    if (ix.problem) return say(ix.problem);
+    indexed = r;
+    for (const [at, nodes] of Object.entries(ix.levels)) if (at !== '' && !biz.kids.get(at)?.nodes.length) biz.kids.set(at, { nodes });
   }
 
   async function loadRoots() {
     const f = floor;
     const g = gen;
     if (!f) return;
+    if (!rev) {
+      say(headError ?? (head ? 'The project has no commits yet, so there’s nothing to explore.' : 'Finding main’s newest commit…'));
+      biz.roots = docGroups(docsView, biz, false);
+      return draw();
+    }
     if (prefs.all) {
-      if (!rev) return say('The project’s files show here once the app has run.'), draw();
       await fetchLevel(files, '', '');
       if (g !== gen) return;
       files.roots = files.kids.get('')?.nodes ?? [];
       const lv = files.kids.get('');
       say(lv?.error ?? (lv?.next !== undefined ? 'A big folder: its first rows are shown, with Show more below.' : ''));
     } else {
-      if (rev) {
-        await fetchLevel(biz, '', '');
-        if (g !== gen) return;
-        topNote = biz.kids.get('')?.error ?? biz.kids.get('')?.note ?? '';
-      } else topNote = 'The app’s pages, data and logic show here once it has run.';
-      biz.roots = [...(biz.kids.get('')?.nodes ?? []), ...docGroups()];
-      say(topNote);
+      await fetchLevel(biz, '', '');
+      if (g !== gen) return;
+      const top = biz.kids.get('');
+      biz.roots = [...(top?.nodes ?? []), ...docGroups(docsView, biz, true)];
+      say(top?.error ?? top?.note ?? '');
     }
     draw();
   }
 
-  /** A search in the business view: every part's rows, so a page in a closed part is found too. */
-  async function loadAllBusiness() {
+  function loadDocs() {
     const f = floor;
-    if (!f || !rev) return;
-    for (const top of biz.roots.filter((n) => !n.id.startsWith('docs:'))) {
-      if (!biz.kids.get(top.id)?.nodes.length) await fetchLevel(biz, top.id, top.id);
-      await Promise.all((biz.kids.get(top.id)?.nodes ?? []).filter((n) => n.folder && !biz.kids.get(n.id)?.nodes.length).map((n) => fetchLevel(biz, n.id, n.id)));
-      draw();
-    }
+    const r = rev;
+    if (!f || !r) return;
+    void api
+      .documents(f, r)
+      .catch(() => undefined)
+      .then((v) => {
+        if (floor !== f || rev !== r) return;
+        docsView = v ?? { rev: r, entries: [], counts: { version: 0, alternative: 0, supporting: 0, related: 0, run: 0, unknown: 0, files: 0, entries: 0 }, problem: 'The documents couldn’t be read just now.' };
+        if (!prefs.all) {
+          biz.roots = [...biz.roots.filter((n) => !isDocs(n.id)), ...docGroups(docsView, biz, false)];
+          draw();
+        }
+      });
   }
 
   // ---- Opening ------------------------------------------------------------------------------------------
+  function openEntry(id: string) {
+    const e = docsView?.entries.find((x) => x.id === id);
+    if (!e || !docsView) return;
+    opened = undefined;
+    pane.showDoc(e, docsView);
+    deps.pane(true);
+  }
+
   function openNode(n: ExplorerNode) {
     const f = floor;
     if (!f) return;
-    if (n.kind === 'doc' && n.path) {
-      if (deps.openDoc) deps.openDoc(f, n.path, docsView);
-      else void import('../../deliverables/viewer').then(({ openDeliverable }) => {
-        const file = docsView?.items.flatMap((i) => i.files).find((x) => x.path === n.path);
-        if (file) openDeliverable(f, file, docsView);
-      });
-      return;
-    }
-    const d = deps.data();
-    if (n.type === 'page' && n.url && d.appUrl) {
-      opened = { path: n.url, ...(n.key ? { key: n.key } : {}) };
-      deps.pane(false);
-      deps.go(n.url);
+    if (n.kind === 'doc' && n.id.startsWith(DOC_PREFIX)) {
+      openEntry(n.id.slice(DOC_PREFIX.length));
     } else {
+      // A page opens its Model preview (never the live app's frame); data, logic and files their views.
       opened = undefined;
-      const why = n.type === 'page' && n.url ? `The app isn’t running right now, so this is a preview with sample data. Once it runs, this page opens at ${n.url}.` : undefined;
-      pane.show(n, n.kind === 'file' ? n.path : n.label, why);
+      pane.show(n, n.type === 'page' ? `${n.label} · Model preview` : n.kind === 'file' ? n.path : n.label);
       deps.pane(true);
     }
+    if (phone()) drawer(false, false);
+  }
+
+  /** Open in the live app: the explicit, separate way to see a page running. */
+  function openLive(n: ExplorerNode) {
+    if (!n.url || !deps.data().appUrl) return;
+    opened = { path: n.url, ...(n.key ? { key: n.key } : {}) };
+    deps.pane(false);
+    deps.go(n.url);
     if (phone()) drawer(false, false);
   }
 
@@ -317,12 +352,15 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
 
   function drawBar() {
     const n = selected;
-    if (!n || n.kind === 'group' || n.kind === 'module' && n.type !== 'domainmodel' || n.kind === 'folder') return void bar.replaceChildren();
+    if (!n || n.kind === 'group' || (n.kind === 'module' && n.type !== 'domainmodel') || n.kind === 'folder') return void bar.replaceChildren();
     const f = floor;
     const kind = n.kind === 'doc' ? 'doc' : n.kind === 'file' ? 'file' : n.type ?? '';
     const about = `${ABOUT[kind] ?? 'Item'}: ${n.kind === 'file' ? n.path : n.label}`;
     const ask = h('button.aw-btn.ax-ask', { type: 'button', onclick: () => deps.request(about, n.type === 'page' ? n.url : undefined) }, 'Request a change');
     const d = deps.data();
+    const live = n.type === 'page' && n.url
+      ? h('button.aw-btn.ax-live-open', { type: 'button', disabled: !d.appUrl, title: d.appUrl ? `Opens ${n.url} in the running app` : 'The app isn’t running, so it can’t be opened live. The Model preview works without it.', onclick: () => openLive(n) }, 'Open in the live app')
+      : '';
     const canChange = d.admin && !!f && !!n.qn && !!n.type && CHANGE_KINDS.has(n.type);
     const change = canChange
       ? h('button.aw-btn.ax-change', {
@@ -330,13 +368,13 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
           title: 'Ask the team to change this, through the same path as in Project Management',
           onclick: (e: Event) => {
             const btn = e.currentTarget as HTMLElement;
-            const o = { floor: f!, ref: d.live?.branch ?? 'main', ...(rev ? { sha: rev } : {}), kind: n.type!, qn: n.qn!, back: () => btn.focus() };
+            const o = { floor: f!, ref: head?.branch.replace(/^origin\//, '') ?? 'main', ...(rev ? { sha: rev } : {}), kind: n.type!, qn: n.qn!, back: () => btn.focus() };
             if (deps.changeThis) return deps.changeThis(o);
             void import('../../model/change-this').then(({ openChangeThis }) => openChangeThis({ floor: o.floor, ref: o.ref, ...(o.sha ? { sha: o.sha } : {}), elements: [{ kind: o.kind as 'page', qn: o.qn }], back: o.back }));
           },
         }, 'Change this')
       : '';
-    bar.replaceChildren(h('div.ax-bar-name', { title: n.hint ?? '' }, about), h('div.ax-bar-acts', {}, ask, change));
+    bar.replaceChildren(h('div.ax-bar-name', { title: n.hint ?? '' }, about), n.detail && n.kind !== 'doc' ? h('div.ax-bar-detail', {}, n.detail) : '', h('div.ax-bar-acts', {}, live, ask, change));
   }
 
   function say(s: string) {
@@ -346,115 +384,147 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
 
   function draw() {
     tree.draw();
+    paintRev();
+  }
+  function paintRev() {
+    revLine.paint({ head, rev, served, running: !!deps.data().appUrl, onServed, ...(headError ? { error: headError } : {}) });
   }
 
-  // ---- Following the project and the served revision -------------------------------------------------------
+  // ---- Following the project and main's newest commit ------------------------------------------------------
   function reset() {
     gen++;
-    for (const m of [biz, files]) {
+    for (const m of [biz, files, found]) {
       m.roots = [];
       m.kids.clear();
       m.expanded.clear();
       m.dots.clear();
     }
+    head = undefined;
+    headError = undefined;
+    rev = undefined;
+    onServed = false;
     docsView = undefined;
+    indexed = undefined;
     opened = undefined;
     selected = undefined;
     tree.selectedId = undefined;
     drawBar();
   }
 
-  function loadDocs(f: string) {
-    const load = deps.docs ?? ((fl: string) => import('../../deliverables/store').then((s) => s.loadDocs(fl)));
-    void load(f).then((v) => {
-      if (floor !== f) return;
-      docsView = v ?? { floor: f, scannedAt: 0, items: [], sources: [] };
-      if (!prefs.all) {
-        biz.roots = [...biz.roots.filter((n) => !n.id.startsWith('docs:')), ...docGroups()];
-        draw();
-      }
-    });
+  /** Asks for main's newest commit: the first answer sets the revision; later ones only mark the tree stale. */
+  async function askHead() {
+    const f = floor;
+    if (!f) return;
+    const h0 = await api.head(f, served).catch((err: Error) => ((headError = `Couldn’t find main’s newest commit: ${err.message}`), undefined));
+    if (f !== floor) return;
+    if (h0) {
+      head = h0;
+      headError = undefined;
+    }
+    if (!rev && !onServed && head?.rev) await toRev(head.rev);
+    else if (!rev) await loadRoots();
+    draw();
   }
 
-  /** The served revision moved: the open levels again at the new one, the changed rows marked, the canvas's page again. */
-  async function moved(prev: string | undefined) {
+  function pick(which: 'main' | 'served') {
+    onServed = which === 'served' && !!served;
+    void toRev(onServed ? served : head?.rev);
+  }
+
+  /** Reads another revision: the open levels again at it, the changed rows marked. */
+  async function toRev(next: string | undefined) {
+    if (!next || next === rev) return draw();
+    const prev = rev;
+    rev = next;
     gen++;
     const g = gen;
+    indexed = undefined;
+    docsView = undefined;
     for (const m of [biz, files]) {
       m.dots.clear();
       // The view not on screen reads its open parts again when it's switched to; the one on screen keeps its rows until the new ones come.
-      for (const id of [...m.kids.keys()]) if (!id.startsWith('docs:') && (m !== model() || (!m.expanded.has(id) && id !== ''))) m.kids.delete(id);
+      for (const id of [...m.kids.keys()]) if (!isDocs(id) && (m !== (prefs.all ? files : biz) || (!m.expanded.has(id) && id !== ''))) m.kids.delete(id);
     }
+    loadDocs();
     await loadRoots();
     if (g !== gen) return;
-    await refreshOpen(model(), true);
+    await refreshOpen(prefs.all ? files : biz, true);
     if (g !== gen) return;
+    if (search.value.trim()) await runSearch();
     draw();
-    if (!prev || !floor || !rev) return;
-    const ch = await api.changes(floor, prev, rev).catch(() => undefined);
+    if (!prev || !floor) return;
+    const ch = await api.changes(floor, prev, next).catch(() => undefined);
     if (!ch || g !== gen) return;
     markDots(ch);
     draw();
-    // The page open in the canvas: opened again when it changed (a reload at the new revision), or when the
-    // viewer went back to the app's home on the new revision while it showed that page.
+    // A page open live in the canvas that changed: opened again (the live app reloads it at its own pace).
     const at = deps.where();
-    if (opened && at && !at.moved && (ch.docs.includes(opened.key ?? '') || at.path !== opened.path)) {
-      deps.go(opened.path);
-      say(ch.docs.includes(opened.key ?? '') ? 'The page on screen changed in the last update, so it was opened again.' : '');
-    }
+    if (opened && at && !at.moved && ch.docs.includes(opened.key ?? '')) deps.go(opened.path);
   }
 
   /** The open parts of a view, read (again) at the revision on screen. */
   function refreshOpen(m: TreeModel, keepOld: boolean) {
-    return Promise.all([...m.expanded].filter((id) => !id.startsWith('docs:') && (keepOld || !m.kids.get(id))).map((id) => fetchLevel(m, id, m === files ? id.slice(2, -1) : id, keepOld)));
+    return Promise.all([...m.expanded].filter((id) => !isDocs(id) && (keepOld || !m.kids.get(id))).map((id) => fetchLevel(m, id, m === files ? id.slice(2, -1) : id, keepOld)));
   }
 
   function markDots(ch: ExplorerChanges) {
     const GROUP: Record<string, string> = { page: 'pages', microflow: 'logic', nanoflow: 'logic', domainmodel: 'data' };
+    const parents = (id: string) => {
+      // Every open row above a changed one: its group, the Marketplace fold, its module and folders.
+      for (const [at, lv] of biz.kids) if (lv.nodes.some((x) => x.id === id) && at !== '') biz.dots.add(at);
+    };
     for (const key of ch.docs) {
       const kind = key.slice(0, key.indexOf(':'));
       const qn = key.slice(kind.length + 1);
       const group = GROUP[kind];
       if (!group) continue;
       const module = kind === 'domainmodel' ? qn : qn.slice(0, qn.indexOf('.'));
-      biz.dots.add(group).add(`${group}/${module}`);
-      if (kind !== 'domainmodel') biz.dots.add(key);
-      else for (const n of biz.kids.get(`data/${module}`)?.nodes ?? []) biz.dots.add(n.id);
+      biz.dots.add(group).add(`${group}/${encodeURIComponent(module)}`);
+      if (biz.kids.get(`${group}/${MARKETPLACE}`)?.nodes.some((x) => x.id === `${group}/${encodeURIComponent(module)}`)) biz.dots.add(`${group}/${MARKETPLACE}`);
+      if (kind !== 'domainmodel') {
+        biz.dots.add(key);
+        for (let i = 0; i < 4; i++) for (const id of [...biz.dots]) parents(id);
+      } else for (const n of biz.kids.get(`data/${encodeURIComponent(module)}`)?.nodes ?? []) biz.dots.add(n.id);
     }
     for (const p of ch.files) {
       files.dots.add(`f:${p}`);
       const parts = p.split('/');
       for (let i = 1; i < parts.length; i++) files.dots.add(`f:${parts.slice(0, i).join('/')}/`);
-      for (const n of [...(biz.kids.values())].flatMap((l) => l.nodes)) if (n.kind === 'doc' && n.path === p) biz.dots.add(n.id).add(`docs:${biz.roots.find((r) => biz.kids.get(r.id)?.nodes.includes(n))?.id.slice(5) ?? 'documents'}`);
+      for (const [at, lv] of biz.kids) if (isDocs(at)) for (const n of lv.nodes) if (n.kind === 'doc' && (n.detail ?? '').split(' ').includes(p)) biz.dots.add(n.id).add(at).add(at.split('/')[0]);
     }
   }
+
+  const onFocus = () => {
+    if (floor && document.visibilityState !== 'hidden') void askHead();
+  };
+  window.addEventListener('focus', onFocus);
+  document.addEventListener('visibilitychange', onFocus);
 
   paintLayout();
   return {
     el,
     pane,
     update(d) {
-      const r = revOf(d);
+      const s = servedOf(d);
       if (d.floor !== floor) {
         reset();
         floor = d.floor;
-        rev = r;
-        if (floor) {
-          loadDocs(floor);
-          void loadRoots();
-        }
+        served = s;
+        if (floor) void askHead();
         return;
       }
-      if (r && r !== rev) {
-        const prev = rev;
-        rev = r;
-        void moved(prev);
+      if (s !== served) {
+        served = s;
+        // The live app moved (a hot reload, a restart): main may have too. Reading follows only when the viewer reads the live app's revision.
+        if (onServed && s) void toRev(s);
+        void askHead();
       }
       // Admin can change while it shows: the bar's Change this follows.
       if (d.admin !== admin) {
         admin = d.admin;
         if (selected) drawBar();
       }
+      paintRev();
     },
   };
 }
