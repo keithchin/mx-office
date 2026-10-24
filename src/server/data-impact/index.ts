@@ -10,7 +10,7 @@ import type { Ctx } from '../office/context.js';
 import { databaseName, liveAppConfig } from '../liveapp/config.js';
 import { pgBinDir } from '../liveapp/process.js';
 import { ALTERNATIVES, approversWords, binds, ENV_LIVE, NO_DATA_STATEMENT, PERMISSION, UNCERTAINTY, type DataImpactApproval, type DataImpactPolicy, type DataImpactView, type DumpRecord, type Recovery } from '../../shared/data-impact.js';
-import { DataImpactGuard } from './guard.js';
+import { DataImpactGuard, type GuardDeps } from './guard.js';
 import { dumpStillThere, takeDump } from './pg.js';
 
 type Deps = Pick<Ctx, 'cfg' | 'accounts' | 'meOf'> & Partial<Pick<Ctx, 'floors' | 'toFloor'>>;
@@ -26,11 +26,15 @@ export class DataImpact {
   private dumping = new Map<string, Promise<DumpRecord>>();
   private listeners = new Set<(floorId: string) => void>();
 
-  constructor(private ctx: Deps) {
+  /** `opts` stands in for PostgreSQL in tests (the database, the dump). */
+  constructor(
+    private ctx: Deps,
+    private opts: { pg?: GuardDeps['pg']; takeDump?: typeof takeDump } = {},
+  ) {
     const cfg = liveAppConfig(ctx.cfg.dataDir);
     this.guard = new DataImpactGuard({
       dataDir: ctx.cfg.dataDir,
-      pg: (floorId, env) => (env === ENV_LIVE ? { ...cfg.db, database: databaseName(floorId), bin: pgBinDir() } : undefined),
+      pg: opts.pg ?? ((floorId, env) => (env === ENV_LIVE ? { ...cfg.db, database: databaseName(floorId), bin: pgBinDir() } : undefined)),
       changed: (floorId) => this.listeners.forEach((fn) => fn(floorId)),
     });
   }
@@ -82,7 +86,7 @@ export class DataImpact {
     let p = this.dumping.get(floorId);
     if (!p) {
       const file = path.join(this.guard.store.dumpDir(floorId), `${short(held.base)}-to-${short(held.target)}-${new Date().toISOString().replace(/[:.]/g, '-')}.dump`);
-      p = takeDump(pg, file)
+      p = (this.opts.takeDump ?? takeDump)(pg, file)
         .then((got) => {
           const rec: DumpRecord = { id: path.basename(file, '.dump'), env: ENV_LIVE, base: held.base, target: held.target, database: pg.database, path: file, ...got, by, at: Date.now() };
           this.guard.store.update(floorId, (r) => void r.dumps.push(rec));
