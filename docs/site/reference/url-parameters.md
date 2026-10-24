@@ -29,7 +29,7 @@ The address always says where you are, so you can bookmark or share it. The para
 | `org` (old name `team`) | Team (General) |
 | `teams` | Team boards (General) |
 | `documents` (old name `deliverables`) | Documents (General) |
-| `app`, `requirements`, `decisions`, `review`, `release` | The [Developer view](../using-the-office/developer-view.md)'s sections (General › Developer opens `app`; the others are in its own section bar) |
+| `app`, `requirements`, `decisions`, `review`, `release` | The [Developer view](../using-the-office/developer-view.md)'s sections (the **Developer** switch opens `app`; the others are in its own section bar) |
 | `board` | Board (Project Management) |
 | `approvals` | Approvals (Project Management) |
 | `questions` | [Questions](../using-the-office/questions.md) (Project Management) |

@@ -6,7 +6,7 @@ next one. Each entry says what you'll notice, then anything to know. Commit hash
 
 ## Unreleased
 
-Nothing waiting yet.
+- **No Developer item in the left navigation.** The Developer view is reached only by the **Developer | Project Management** switch at the top right of every project page (the item under General, and the 🧭 button in the classic themes, are gone). Links with `&ws=dev` or `?tab=app` still open it.
 
 ## 2026-10-24 · release 74 (`c4c6a14`)
 

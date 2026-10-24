@@ -49,7 +49,8 @@ test('the names: Developer and Project Management, in the navigation and the doc
   assert.deepEqual(VIEW_NAMES, { app: 'Developer', eng: 'Project Management' });
   assert.equal(DEVELOPER_VIEW, 'Developer view');
   assert.equal(registeredTab('app')?.label, 'Developer');
-  assert.equal(navGroups()[0].items[0].label, 'Developer');
+  // Not in the navigation: the Developer | Project Management switch in the top bar is the way in.
+  assert.ok(!navGroups().some((g) => g.items.some((i) => i.id === 'app')), 'no Developer item in the navigation');
   // No user-visible "App workspace" or "Engineering view" left in what the view draws, the docs or the README.
   const dir = 'src/client/ui/app-workspace';
   for (const f of readdirSync(path.join(root, dir), { recursive: true }).map(String).filter((x) => /\.ts$/.test(x))) {
@@ -61,15 +62,14 @@ test('the names: Developer and Project Management, in the navigation and the doc
   assert.match(read('docs/site/using-the-office/developer-view.md'), /aliases: \[using-the-office\/app-workspace\]/, 'the old address still lands on the page');
 });
 
-test('every existing deep link keeps its tab; the five sections are tabs too, App in the navigation, the rest hidden', () => {
+test('every existing deep link keeps its tab; the five sections are tabs too, all hidden from the navigation', () => {
   for (const [asked, is] of [['command', 'command'], ['board', 'board'], ['agents', 'workers'], ['team', 'org'], ['deliverables', 'documents'], ['live', 'live'], ['approvals', 'approvals'], ['testing', 'testing'], ['walkthroughs', 'walkthroughs'], ['settings', 'settings']] as const) assert.equal(asTab(asked), is);
   assert.equal(asTab('nonsense'), undefined);
   for (const s of APP_SECTIONS) {
     assert.ok(isTab(s.id), `${s.id} is a tab (?tab=${s.id})`);
-    assert.equal(registeredTab(s.id)?.hidden, s.id === 'app' ? undefined : true);
+    assert.equal(registeredTab(s.id)?.hidden, true);
   }
-  assert.equal(groupOf('app')?.id, 'general');
-  for (const s of ['requirements', 'decisions', 'review', 'release']) assert.equal(groupOf(s), undefined, `${s} is in no group`);
+  for (const s of ['app', 'requirements', 'decisions', 'review', 'release']) assert.equal(groupOf(s), undefined, `${s} is in no group`);
   assert.equal(pageTitle('decisions'), 'Decisions');
   // The page reads ws through the address module, before it picks the start tab.
   assert.match(read('src/client/shared/address.ts'), /export const askedTab: string \| null = workspaceTab\(params\(\)\.get\('ws'\), params\(\)\.get\('tab'\)\);/);

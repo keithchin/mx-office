@@ -1,7 +1,7 @@
 // The Developer view (the code's App Workspace, C3 of the App Workspace proposal) as tabs of the 1D view,
 // from the tab registry (tabs/registry.ts): its five sections are project tabs of their own
-// (?tab=app|requirements|decisions|review|release; shared/app-workspace/route.ts), App listed first in the
-// navigation's General group as "Developer" and the other four hidden there (the view has its own section
+// (?tab=app|requirements|decisions|review|release; shared/app-workspace/route.ts), all five hidden from the
+// navigation (the Developer | Project Management switch is the way in, and the view has its own section
 // bar). Nothing of the workspace loads until one of them is first shown: the shell (./shell.ts) comes in
 // with that show and draws one workspace that the five sections share, so the running app's frame is never
 // reloaded by moving between sections. The Developer | Project Management switch (./view-switch.ts) is
@@ -24,7 +24,7 @@ function section(id: AppSection): TabDef {
     group: 'general',
     label: id === 'app' ? VIEW_NAMES.app : APP_SECTIONS.find((s) => s.id === id)!.label,
     tooltip: APP_SECTIONS.find((s) => s.id === id)!.hint,
-    ...(id === 'app' ? { order: 5, icon: '🧭', tabRow: true } : { hidden: true }),
+    hidden: true,
     mount: (container) => {
       shell ??= import('./shell');
       let hooks: TabHooks | undefined;

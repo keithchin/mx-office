@@ -1,11 +1,11 @@
 ---
 title: Developer view
-description: General › Developer - the project page first, for the people building it - the running app as the canvas with an explorer beside it, its status for that exact version, the decision that needs you and one next step. The Developer | Project Management switch at the top right of every project page goes back and forth without losing your place.
+description: Developer in the top-right switch - the project page first, for the people building it - the running app as the canvas with an explorer beside it, its status for that exact version, the decision that needs you and one next step. The Developer | Project Management switch at the top right of every project page goes back and forth without losing your place.
 weight: 1.5
 aliases: [using-the-office/app-workspace]
 ---
 
-The **Developer view** (**General › Developer** in the Portal navigation, the **🧭 Developer** button in the other themes, **Developer** in the switch at the top right, `/lite?floor=<project>&ws=dev`) shows a project the way the people building it look at it: the **running app is the main thing on screen**, an explorer of its pages, data and logic beside it, and a panel that says where the work is, for which version, what needs you and what to do next. It's a second way to look at the same project, not a second project: the same records, the same status, the same permissions as the rest of the office, which is called **Project Management** (the Overview, Board, Agents, Live app, Approvals, Settings and every other page, with the navigation).
+The **Developer view** (**Developer** in the **Developer | Project Management** switch at the top right of every project page, `/lite?floor=<project>&ws=dev`) shows a project the way the people building it look at it: the **running app is the main thing on screen**, an explorer of its pages, data and logic beside it, and a panel that says where the work is, for which version, what needs you and what to do next. It's a second way to look at the same project, not a second project: the same records, the same status, the same permissions as the rest of the office, which is called **Project Management** (the Overview, Board, Agents, Live app, Approvals, Settings and every other page, with the navigation).
 
 ## The switch
 

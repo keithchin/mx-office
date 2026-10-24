@@ -32,10 +32,10 @@ import { KIND_ORDER, searchGroups } from '../src/client/ui/portal/search-logic.j
 const root = path.join(import.meta.dirname, '..');
 const read = (p: string) => readFileSync(path.join(root, p), 'utf8').replace(/\r\n/g, '\n');
 
-/** The 1D view's tabs: its tab row's buttons, and the registered ones (the test lab, Testing, Questions, Design gallery, Walkthroughs, Security, the Developer view; its other four sections are hidden from the navigation). */
+/** The 1D view's tabs: its tab row's buttons, and the registered ones (the test lab, Testing, Questions, Design gallery, Walkthroughs, Security; the Developer view's five sections are hidden, reached by the Developer | Project Management switch from the navigation). */
 function liteTabs(): string[] {
   const ids = [...read('src/client/lite.html').matchAll(/id="tab-([a-z]+)"/g)].map((m) => m[1]);
-  return [...ids, 'tests', 'testing', 'questions', 'design', 'walkthroughs', 'security', 'app'];
+  return [...ids, 'tests', 'testing', 'questions', 'design', 'walkthroughs', 'security'];
 }
 
 test('every tab of the 1D view is one item of the navigation, in one group or under the rule, with the same id', () => {
@@ -44,7 +44,7 @@ test('every tab of the 1D view is one item of the navigation, in one group or un
   assert.equal(new Set(items).size, items.length, 'no tab twice');
   // The groups as the portal's app pane has them.
   assert.deepEqual(navGroups().map((g) => g.label), ['General', 'Project Management', 'App Insights', 'Repository', 'Deployment', 'Monitoring']);
-  assert.deepEqual(navGroups()[0].items.map((i) => i.label), ['Developer', 'Overview', 'Team', 'Team boards', 'Documents']);
+  assert.deepEqual(navGroups()[0].items.map((i) => i.label), ['Overview', 'Team', 'Team boards', 'Documents']);
   assert.deepEqual(navGroups()[1].items.map((i) => i.id), ['board', 'approvals', 'questions', 'design', 'standup']);
   assert.deepEqual(NAV_BOTTOM.map((i) => i.label), ['Settings', 'View App', 'Edit in Studio Pro']);
   assert.equal(groupOf('model')?.id, 'repo');
@@ -372,8 +372,6 @@ const REPEATS: Record<string, string[]> = {
   walkthroughs: [],
   // 🔐 Security has no heading of its own either: it starts with its lead line (ui/security/page.ts).
   security: [],
-  // The Developer view has no page header in Portal: its own bar names the project and the section (ui/app-workspace/).
-  app: [],
 };
 
 test('in Portal no tab of the 1D view shows its title twice: each repeating heading is hidden, what was beside it kept', () => {
@@ -397,7 +395,8 @@ test('in Portal no tab of the 1D view shows its title twice: each repeating head
   // The browser check covers every tab and every Settings section.
   const check = read('scripts/check-titles.mjs');
   const ids = (name: string) => (new RegExp(`const ${name} = \\[([^\\]]+)\\]`).exec(check)?.[1].match(/'([a-z]+)'/g) ?? []).map((t) => t.slice(1, -1));
-  assert.deepEqual(ids('TABS').sort(), [...liteTabs()].sort());
+  // The browser check also visits the Developer view (app), which is a tab but not in the navigation.
+  assert.deepEqual(ids('TABS').sort(), [...liteTabs(), 'app'].sort());
   const known = [...read('src/shared/settings-sections.ts').matchAll(/\{ id: '([a-z]+)'/g)].map((m) => m[1]);
   assert.deepEqual(ids('SETTINGS').sort(), [...known].sort());
 });
