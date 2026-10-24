@@ -97,6 +97,8 @@ export interface DataImpactApproval {
   at: number;
   /** It no longer applies: what changed (the target, the baseline, the environment, or the recovery evidence). */
   void?: { at: number; why: string };
+  /** The guard let its candidate through (once); a used approval is kept, never voided afterwards. */
+  used?: number;
 }
 
 export interface DumpRecord {

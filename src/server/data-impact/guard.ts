@@ -69,10 +69,12 @@ export class DataImpactGuard {
       let why = voidWhy(a, binding);
       if (!why && a.recovery.kind === 'dump') why = await dumpStillThere(a.recovery.path, a.recovery.size, a.recovery.sha256);
       if (!why) {
+        if (!a.used) this.store.update(i.floorId, (r) => void (r.approvals.find((y) => y.id === a.id)!.used = Date.now()));
         this.release(i.floorId, env, `approved by ${a.by.name}`);
         return { hold: false, assessment, approval: a };
       }
-      this.voidApproval(i.floorId, a, why);
+      // One already used applied its candidate: it stays as it was, it just doesn't cover this one.
+      if (!a.used) this.voidApproval(i.floorId, a, why);
     }
     const was = rec.holds[env];
     if (was && binds(was, binding) && was.status === assessment.status) return { hold: true, why: was.reason, held: was };

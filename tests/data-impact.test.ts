@@ -249,12 +249,7 @@ test('the hold, the permission, the dump and an approval bound to environment, b
   assert.ok(!Array.isArray(ok));
   assert.deepEqual([ok.env, ok.base, ok.target, ok.recovery.kind, ok.reason, ok.by.name], ['live-preview', base, cand, 'dump', 'notes moved to Comment first', 'Ada']);
   assert.deepEqual(ok.recovery.kind === 'dump' && [ok.recovery.path, ok.recovery.size, ok.recovery.sha256], [d.path, d.size, d.sha256]);
-  // Approved: the guard lets exactly this binding through, and the hold is released.
-  const passed = await check();
-  assert.equal(passed.hold, false);
-  assert.equal(!passed.hold && passed.approval?.id, ok.id);
-  assert.equal(di.view('demo', 'u-admin').held, undefined);
-  // A new commit on the candidate voids it: reassessed, held again.
+  // A new commit on the candidate before it was applied voids it: reassessed, held again.
   const cand2 = await r.commit(edit((m) => void (order(m).attrs = order(m).attrs.filter((x) => x.name !== 'Notes' && x.name !== 'Code'))), 'drop Code too');
   const again = await check(cand2);
   assert.equal(again.hold, true);
@@ -274,18 +269,33 @@ test('the hold, the permission, the dump and an approval bound to environment, b
   writeFileSync(d3.path, 'PGDMP tampered!');
   assert.equal((await check(cand2, cand)).hold, true, 'a changed dump no longer counts');
   assert.equal(di.view('demo', 'u-admin').approvals.find((x) => x.id === ok3.id)?.void?.why, 'the database dump changed (sha256)');
+  // Approved with an intact dump: the guard lets exactly this binding through, and the hold is released.
+  const d4 = await di.dump('demo', { name: 'Ada', id: 'u-admin' });
+  assert.ok(typeof d4 !== 'string');
+  const ok4 = await di.approve('demo', { name: 'Ada', id: 'u-admin' }, 'u-admin', { base: cand, target: cand2, reason: 'fresh dump', dump: d4.id });
+  assert.ok(!Array.isArray(ok4));
+  const passed = await check(cand2, cand);
+  assert.equal(passed.hold, false);
+  assert.equal(!passed.hold && passed.approval?.id, ok4.id);
+  assert.equal(di.view('demo', 'u-admin').held, undefined);
+  // Once used it stays as it was (it applied its candidate); the next change is assessed on its own.
+  const cand3 = await r.commit(edit((m) => void (order(m).attrs = order(m).attrs.filter((x) => !['Notes', 'Code', 'Total'].includes(x.name)))), 'drop Total');
+  assert.equal((await check(cand3, cand2)).hold, true);
+  const used = di.view('demo', 'u-admin').approvals.find((x) => x.id === ok4.id)!;
+  assert.ok(used.used && !used.void);
   // The audit: hold, dump, approve, void, release, policy; the chain holds.
   const ev = readAudit({ floor: 'demo', limit: 100 }).events;
   const actions = ev.map((e) => e.action);
   for (const a of ['data-impact.hold', 'data-impact.dump', 'data-impact.approve', 'data-impact.void', 'data-impact.release']) assert.ok(actions.includes(a), a);
-  assert.equal(actions.filter((a) => a === 'data-impact.hold').length, 3, 'one hold line per binding: (base→cand), (base→cand2), (cand→cand2); the voided dump approval leaves that hold standing');
+  assert.equal(actions.filter((a) => a === 'data-impact.hold').length, 4, 'one hold line per binding: (base→cand), (base→cand2), (cand→cand2), (cand2→cand3)');
+  assert.equal(actions.filter((a) => a === 'data-impact.void').length, 3);
   const approve = ev.find((e) => e.action === 'data-impact.approve' && e.details?.target === cand)!;
   assert.deepEqual([approve.details?.env, approve.details?.base, approve.details?.target, approve.details?.reason], ['live-preview', base, cand, 'notes moved to Comment first']);
   assert.equal((approve.details?.recovery as { sha256: string }).sha256, d.sha256);
   assert.equal(approve.actor.name, 'Ada');
   assert.ok(readAudit({ floor: 'all', limit: 100 }).events.some((e) => e.action === 'data-impact.policy'));
   assert.equal(verifyAudit('demo').ok, true);
-  assert.equal(dumpsTaken.length, 2);
+  assert.equal(dumpsTaken.length, 3);
 });
 
 // ---- The words the live app's state and Needs you use -------------------------------------------------
