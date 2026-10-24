@@ -16,7 +16,7 @@ export type TabId = NavTab | (string & {});
 export type NavAction = 'view-app' | 'studio';
 
 export type GroupId = 'general' | 'pm' | 'insights' | 'repo' | 'deploy' | 'monitor';
-export type GroupIcon = 'home' | 'kanban' | 'chart' | 'branch' | 'rocket' | 'pulse';
+export type GroupIcon = 'grid' | 'home' | 'kanban' | 'chart' | 'branch' | 'rocket' | 'pulse';
 
 export interface NavItem {
   /** A tab's id (built-in or registered), or an action's. */
@@ -44,7 +44,7 @@ const BUILTIN_GROUPS: readonly NavGroup[] = [
   {
     id: 'general',
     label: 'General',
-    icon: 'home',
+    icon: 'grid',
     items: [
       tab('command', 'Overview', 'The project at a glance: what needs you, the team and recent activity'),
       tab('org', 'Team', 'The project team: the Project Coordinator and the Leads, who covers what'),

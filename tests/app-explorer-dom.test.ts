@@ -402,7 +402,37 @@ test('in a browser: main’s revision, pages open their Model preview (never the
     assert.equal(await page.isVisible('.ax-tree'), false);
     assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('ax-expand')), true);
     assert.deepEqual(JSON.parse((await page.evaluate(() => localStorage.getItem('agent-office.aw.explorer'))) ?? '{}'), { w: 312, collapsed: true, all: false });
+    // Collapsed: an icon rail (», Find, the sections, Show all files), each its name as tooltip and label.
+    await page.waitForTimeout(300); // the width's transition
+    const railInfo = await page.evaluate(() => {
+      const side = document.querySelector('.ax-side')!.getBoundingClientRect();
+      return {
+        w: Math.round(side.width),
+        btns: [...document.querySelectorAll<HTMLElement>('.ax-rail .ax-rail-btn')].filter((b) => !b.hidden).map((b) => ({ at: b.dataset.axRail, title: b.title, label: b.getAttribute('aria-label'), ico: !!b.querySelector('svg'), inside: b.getBoundingClientRect().right <= side.right })),
+      };
+    });
+    assert.equal(railInfo.w, 44, 'a 44px rail');
+    assert.deepEqual(railInfo.btns.map((b) => b.title), ['Find', 'Pages', 'Data', 'Logic', 'Documents', 'Process map', 'Design', 'Show all files']);
+    for (const b of railInfo.btns) assert.ok(b.ico && b.label === b.title && b.inside, `rail button ${JSON.stringify(b)}`);
+    await shot(page, 'rail-explorer-collapsed-light.png');
+    await page.evaluate(() => (document.documentElement.dataset.theme = 'portal-dark'));
+    await shot(page, 'rail-explorer-collapsed-dark.png');
+    await page.evaluate(() => (document.documentElement.dataset.theme = 'portal-light'));
+    // Data: the explorer opens at Data, its group open and focused; nothing else asked again.
+    await page.click('[data-ax-rail="data"]');
+    assert.equal(await page.isVisible('.ax-tree'), true, 'a section opens the explorer');
+    assert.equal(await page.evaluate(() => (document.activeElement as HTMLElement)?.dataset.id), 'data', 'the focus on Data');
+    assert.equal(await page.getAttribute('[data-id="data"]', 'aria-expanded'), 'true', 'Data opened');
+    assert.equal(JSON.parse((await page.evaluate(() => localStorage.getItem('agent-office.aw.explorer'))) ?? '{}').collapsed, false, 'remembered open');
+    // Find: the search box.
+    await page.click('.ax-collapse');
+    await page.click('[data-ax-rail="find"]');
+    assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('ax-search')), true, 'Find opens in the search box');
+    // A remembered rail: a fresh explorer comes back collapsed (the setting is read on load).
+    await page.click('.ax-collapse');
+    assert.equal(await page.isVisible('[data-ax-rail="pages"]'), true);
     await page.click('.ax-expand');
+    assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('ax-collapse')), true, '» gives the focus to «');
 
     // A phone: a drawer opened by a button; Esc closes it and gives the focus back; no sideways scrolling.
     await page.setViewportSize({ width: 400, height: 860 });

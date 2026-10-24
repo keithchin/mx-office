@@ -69,20 +69,22 @@ html[data-theme^='portal'] .pt-nbadge[hidden] { display: none; }
 html[data-theme^='portal'] .pt-nbadge.dot { min-width: 8px; width: 8px; height: 8px; padding: 0; }
 html[data-theme='portal-dark'] .pt-nbadge { background: #e5484d; color: #ffffff; }
 
-/* ---- The chevron on the pane's edge -------------------------------------------------------------------- */
+/* ---- « / »: the coordinator panel's control, mirrored (lead-panel.css .lp-iconbtn) --------------------
+   Beside Home, at the pane's edge toward the page; folded, under Home in the rail. */
+html[data-theme^='portal'] .pt-nav-top { display: flex; align-items: center; }
+html[data-theme^='portal'] .pt-nav-top > .pt-home-item { flex: 1; min-width: 0; }
 html[data-theme^='portal'] body.lite.lite .pt-nav-fold {
-  position: absolute; top: 28px; right: -12px; z-index: 2; display: grid; place-items: center; width: 24px; height: 24px; padding: 0;
-  border: 1px solid var(--line); border-radius: 50% !important; background: var(--card); color: var(--ink-2); box-shadow: var(--shadow); cursor: pointer;
+  flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; margin: 0 8px 0 0; padding: 0;
+  border: 0; border-radius: 4px !important; background: transparent; color: var(--ink-2); font: 400 18px/1 var(--font); cursor: pointer;
 }
-html[data-theme^='portal'] .pt-nav-fold { opacity: 0; transition: opacity .12s ease; }
-html[data-theme^='portal'] .pt-nav:is(:hover, :focus-within) .pt-nav-fold, html[data-theme^='portal'] body.pt-rail .pt-nav-fold, html[data-theme^='portal'] .pt-nav-fold:focus-visible { opacity: 1; }
-html[data-theme^='portal'] body.lite.lite .pt-nav-fold:hover { color: var(--ink); border-color: var(--rule-strong); }
-html[data-theme^='portal'] .pt-nav-fold:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
-html[data-theme^='portal'] .pt-nav-fold .pt-icon { width: 14px; height: 14px; }
+html[data-theme^='portal'] body.lite.lite .pt-nav-fold:hover { background: var(--hover); color: var(--ink); }
+html[data-theme^='portal'] .pt-nav-fold:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 html[data-theme^='portal'] body:not(.pt-rail) .pt-fold-r, html[data-theme^='portal'] body.pt-rail .pt-fold-l { display: none; }
 
 /* ---- Folded: the rail of icons ------------------------------------------------------------------------- */
 html[data-theme^='portal'] body.pt-rail .pt-nav-in { padding: 0 0 24px; }
+html[data-theme^='portal'] body.pt-rail .pt-nav-top { flex-direction: column; align-items: stretch; }
+html[data-theme^='portal'] body.lite.lite.pt-rail .pt-nav-fold { width: 40px; height: 32px; margin: 0 auto 8px; }
 html[data-theme^='portal'] body.pt-rail .pt-proj { justify-content: center; padding: 8px 0; }
 html[data-theme^='portal'] body.pt-rail :is(.pt-proj-name, .pt-proj-chev, .pt-group-l, .pt-item-l, .pt-chev-open, .pt-chev-closed) { display: none; }
 html[data-theme^='portal'] body.pt-rail .pt-items { display: none; }
@@ -119,6 +121,9 @@ html[data-theme^='portal'] .pt-scrim { display: none; }
   html[data-theme^='portal'] body.pt-drawer-open .pt-nav { transform: none; box-shadow: 0 0 24px rgba(10, 19, 36, .28); }
   html[data-theme^='portal'] body.pt-drawer-open .pt-scrim { display: block; position: fixed; inset: var(--pt-top) 0 0 0; z-index: 47; background: var(--backdrop); }
   html[data-theme^='portal'] body.lite.lite .pt-nav-fold { display: none; }
+  html[data-theme^='portal'] body.pt-rail .pt-nav-top { flex-direction: row; }
+  html[data-theme^='portal'] body.pt-rail .pt-home-item { justify-content: flex-start; padding: 8px 16px; }
+  html[data-theme^='portal'] body.pt-rail .pt-home-item .pt-item-l { display: block; }
   html[data-theme^='portal'] .pt-nav-in, html[data-theme^='portal'] body.pt-rail .pt-nav-in { padding: 0 0 24px; }
   /* Folded or not on a computer, the drawer is the whole pane. */
   html[data-theme^='portal'] body.pt-rail :is(.pt-proj-name, .pt-proj-chev, .pt-group-l, .pt-item-l, .pt-chev-open) { display: block; }
@@ -131,5 +136,5 @@ html[data-theme^='portal'] .pt-scrim { display: none; }
   html[data-theme^='portal'] :is(.pt-group-h, .pt-item) { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  html[data-theme^='portal'] :is(.pt-nav, .pt-nav-fold) { transition: none; }
+  html[data-theme^='portal'] .pt-nav { transition: none; }
 }

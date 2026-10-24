@@ -59,6 +59,13 @@ export const PORTAL_ICONS = {
   keys: '<rect x="1.8" y="4" width="12.4" height="8" rx="1.2"/><path d="M4.2 6.5h1M7.5 6.5h1M10.8 6.5h1M5 9.5h6"/>',
   next: '<path d="M3 8h8M8 4.5L11.5 8 8 11.5M13.5 3.5v9"/>',
   palette: '<path d="M8 1.8a6.2 6.2 0 1 0 0 12.4c1 0 1.5-.6 1.5-1.3 0-.9-.8-1.2-.8-2 0-.8.6-1.3 1.4-1.3h1.6a2.6 2.6 0 0 0 2.6-2.6C14.3 4.1 11.5 1.8 8 1.8z"/><circle class="f" cx="4.8" cy="7.2" r=".9"/><circle class="f" cx="6.8" cy="4.6" r=".9"/><circle class="f" cx="10" cy="4.6" r=".9"/>',
+  // The rails' icons: General's grid, and the Developer view explorer's sections.
+  grid: '<rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/>',
+  page: '<rect x="2" y="2.5" width="12" height="11" rx="1"/><path d="M2 5.5h12M4.5 8h4M4.5 10.5h7"/>',
+  database: '<ellipse cx="8" cy="3.8" rx="5" ry="1.8"/><path d="M3 3.8v8.4c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V3.8M3 8c0 1 2.2 1.8 5 1.8S13 9 13 8"/>',
+  flow: '<circle cx="2.8" cy="8" r="1.3"/><path d="M8 4.6L11.4 8 8 11.4 4.6 8z"/><circle cx="13.4" cy="8" r="1.3"/><path d="M4.1 8h.5M11.4 8h.7"/>',
+  map: '<rect x="1.8" y="2.5" width="4" height="3" rx=".5"/><rect x="10.2" y="6.5" width="4" height="3" rx=".5"/><rect x="1.8" y="10.5" width="4" height="3" rx=".5"/><path d="M5.8 4h2.2v8H5.8M8 8h2.2"/>',
+  folder: '<path d="M1.8 4.2c0-.6.4-1 1-1h3.4l1.4 1.6h5.6c.6 0 1 .4 1 1v6.9c0 .6-.4 1-1 1H2.8c-.6 0-1-.4-1-1z"/>',
 } as const;
 
 export type PortalIcon = keyof typeof PORTAL_ICONS;

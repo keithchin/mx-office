@@ -64,7 +64,7 @@ test('the Mx Office wordmark and every page’s 🏠 open Home, not the Projects
 test('the left navigation has Home on top: above the project card on a project, picked on Home', () => {
   const nav = read('src/client/ui/portal/nav.ts');
   assert.match(nav, /h\('a\.pt-item\.pt-home-item', \{ href: HOME_PAGE,/);
-  assert.match(nav, /h\('div\.pt-nav-in', \{\}, home, card, groupsList/, 'Home comes before the project card and the groups');
+  assert.match(nav, /h\('div\.pt-nav-in', \{\}, h\('div\.pt-nav-top', \{\}, home, fold\), card, groupsList/, 'Home (with the fold control) comes before the project card and the groups');
   assert.equal(OFFICE_NAV[0].id, 'home');
   assert.equal(OFFICE_NAV[0].href, '/start');
   assert.deepEqual(OFFICE_NAV.map((i) => i.href), ['/start', '/home', '/clients', '/firm', '/docs']);

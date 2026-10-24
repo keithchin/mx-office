@@ -84,7 +84,7 @@ Every document is in one entry, and the card says how it relates to others:
 
 A newer date never makes a document approved.
 
-Drag the explorer's edge (or focus it and press ← →) to make it wider or narrower, and **«** hides it to a slim strip (**»** brings it back); both are remembered in your browser. On a phone it's a drawer: **☰ Browse the app** above the canvas opens it, and Esc or a tap beside it closes it. The tree works from the keyboard: ↑ ↓ move, → opens or goes in, ← closes or goes up, Enter opens, Home and End jump, and typing the start of a name moves to it.
+Drag the explorer's edge (or focus it and press ← →) to make it wider or narrower, and **«** collapses it to a rail of icons (**»** brings it back); both are remembered in your browser. The rail has **Find**, **Pages**, **Data**, **Logic**, **Documents**, **Process map** and **Design** (the sections the tree has) and **Show all files**, each with its name as the tooltip: a click opens the explorer at that section, its group opened and focused (Find in the search box, Show all files in the files view). Collapsing and opening read nothing again. On a phone it's a drawer: **☰ Browse the app** above the canvas opens it, and Esc or a tap beside it closes it. The tree works from the keyboard: ↑ ↓ move, → opens or goes in, ← closes or goes up, Enter opens, Home and End jump, and typing the start of a name moves to it.
 
 #### Show all files
 

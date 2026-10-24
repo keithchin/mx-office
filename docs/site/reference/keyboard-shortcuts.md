@@ -14,10 +14,12 @@ weight: 7
 
 ## 1D view
 
-The 1D view has no page-wide shortcuts, so it never steals your typing.
+The 1D view has one page-wide key, `[`, and it never steals your typing: it does nothing while the focus is in a text box, a list or a terminal, or with Ctrl, Alt or ⌘ held.
 
 | Where | Key | Does |
 |---|---|---|
+| Anywhere outside a text box (Portal themes, computer width) | [ | Fold the left navigation to its icon rail, or unfold it |
+| A group's icon in the folded navigation | Enter / Space · ↑ / ↓ · Esc | Open its flyout · move through its pages · close it, back on the icon |
 | Any window | Esc | Close it |
 | Ask the Project Coordinator | Enter · Shift+Enter · ↑ / ↓ | Send · new line · recall what you sent |
 | The console's Chat / Terminal toggle | ← / → (Tab to it first) | Switch between the conversation and the terminal |
