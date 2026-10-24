@@ -20,11 +20,12 @@ export const changeApi = {
     if (!res.ok) throw new Error(`${res.status}`);
     return ((await res.json()) as { requests: ChangeRequestView[] }).requests ?? [];
   },
-  async create(body: Record<string, unknown>): Promise<ChangeRequestView> {
+  /** The request as kept, with the request id it's linked as (DC-n, its alias MCR-n) when the office made one. */
+  async create(body: Record<string, unknown>): Promise<ChangeRequestView & { linked?: string }> {
     const res = await fetch('/api/model/change-request', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    const out = (await res.json().catch(() => ({}))) as { request?: ChangeRequestView; error?: string };
+    const out = (await res.json().catch(() => ({}))) as { request?: ChangeRequestView; change?: string; error?: string };
     if (!res.ok || !out.request) throw new Error(out.error ?? `${res.status} ${res.statusText}`);
-    return out.request;
+    return { ...out.request, ...(out.change ? { linked: out.change } : {}) };
   },
 };
 
@@ -137,7 +138,7 @@ export function openChangeThis(o: ChangeAskOpts): void {
     status.textContent = 'Sending…';
     try {
       const r = await changeApi.create({ floor: o.floor, elements: o.elements, ref: o.ref, sha: o.sha, request, role: chosen, when, by: store.me.account?.name ?? store.profile.name });
-      toast(`✎ ${r.member} has the change request ${r.id}${r.delivery === 'held' ? ' (after their current turn)' : ''}`);
+      toast(`✎ ${r.member} has the change request ${r.id}${r.linked ? ` (request ${r.linked})` : ''}${r.delivery === 'held' ? ' (after their current turn)' : ''}`);
       modal.close();
       o.sent?.(r);
     } catch (err) {

@@ -19,6 +19,7 @@ import { uncheckedItem } from './baseline.js';
 import { lookWaivers, waiverItem } from './waivers.js';
 import { countedReviewer, gateAsks } from '../merge-gate/index.js';
 import { protectionAsks } from '../merge-gate/protection-ask.js';
+import { externalCheck, externalItems } from '../data-impact/external.js';
 
 /** Who the floor's agents are, and who works on a branch: its team members' names and its workers'. */
 export function judgeLookOf(ctx: Ctx, floor: Floor): JudgeLook {
@@ -64,9 +65,9 @@ export async function gateItemsOf(ctx: Ctx, floorId: string, main: { branch: str
   const pulls = floor.github.pulls.items;
   const prs = flaggedPulls(pulls, judgeLookOf(ctx, floor), now).map(({ pull, j }) => pullItem(pull, j, lead));
   const [pushes, waivers] = await Promise.all([
-    main?.remote ? checkPushes(ctx.cfg.dataDir, floor.id, floor.dir, main, mergesOf(pulls)).catch((): PushLook => ({ events: [], fresh: [], first: false })) : Promise.resolve<PushLook>({ events: [], fresh: [], first: false }),
+    main?.remote ? checkPushes(ctx.cfg.dataDir, floor.id, floor.dir, main, mergesOf(pulls), now, externalCheck(ctx, floor)).catch((): PushLook => ({ events: [], fresh: [], first: false })) : Promise.resolve<PushLook>({ events: [], fresh: [], first: false }),
     lookWaivers(floor.dir, now).catch(() => []),
   ]);
   const waived = waiverItem(waivers, lead);
-  return [...gateAsks(ctx, floor.id), ...protectionAsks(ctx, floor.id, main), ...prs, ...(pushes.unchecked && main ? [uncheckedItem(main.branch, pushes.unchecked)] : []), ...pushes.events.map((e) => pushItem(e, lead)), ...(waived ? [waived] : [])];
+  return [...gateAsks(ctx, floor.id), ...protectionAsks(ctx, floor.id, main), ...prs, ...(pushes.unchecked && main ? [uncheckedItem(main.branch, pushes.unchecked)] : []), ...pushes.events.map((e) => pushItem(e, lead)), ...externalItems(ctx, floor.id, lead), ...(waived ? [waived] : [])];
 }

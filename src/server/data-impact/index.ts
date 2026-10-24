@@ -9,7 +9,7 @@ import { audit, human } from '../audit/index.js';
 import type { Ctx } from '../office/context.js';
 import { databaseName, liveAppConfig } from '../liveapp/config.js';
 import { pgBinDir } from '../liveapp/process.js';
-import { ALTERNATIVES, approversWords, binds, ENV_LIVE, NO_DATA_STATEMENT, PERMISSION, UNCERTAINTY, type DataImpactApproval, type DataImpactPolicy, type DataImpactView, type DumpRecord, type Recovery } from '../../shared/data-impact.js';
+import { ALTERNATIVES, approversWords, binds, cleanEnv, ENV_LIVE, type ImpactEnv, NO_DATA_STATEMENT, PERMISSION, UNCERTAINTY, type DataImpactApproval, type DataImpactPolicy, type DataImpactView, type DumpRecord, type Recovery } from '../../shared/data-impact.js';
 import { DataImpactGuard, type GuardDeps } from './guard.js';
 import { dumpStillThere, takeDump } from './pg.js';
 
@@ -57,14 +57,15 @@ export class DataImpact {
     return approversWords(admins, others);
   }
 
-  view(floorId: string, accountId: string | undefined): DataImpactView {
+  view(floorId: string, accountId: string | undefined, env: ImpactEnv = ENV_LIVE): DataImpactView {
     const rec = this.guard.store.get(floorId);
-    const held = rec.holds[ENV_LIVE];
+    const held = rec.holds[env];
     const policy = this.guard.store.policy();
     const approval = held ? rec.approvals.find((a) => !a.void && binds(a, held)) : undefined;
     const { assessment, ...fact } = held ?? ({} as Partial<NonNullable<typeof held>>);
     return {
       floor: floorId,
+      env,
       permission: PERMISSION,
       ...(held ? { held: fact as NonNullable<DataImpactView['held']>, assessment } : {}),
       ...(approval ? { approval } : {}),
@@ -109,10 +110,13 @@ export class DataImpact {
    * recovery step (a dump taken for this binding, still unchanged on disk, or the explicit "no data to keep")
    * and a reason. Returns the approval, or [status, error].
    */
-  async approve(floorId: string, by: Who, accountId: string | undefined, body: { base?: unknown; target?: unknown; reason?: unknown; dump?: unknown; noData?: unknown }): Promise<DataImpactApproval | [number, string]> {
+  async approve(floorId: string, by: Who, accountId: string | undefined, body: { base?: unknown; target?: unknown; reason?: unknown; dump?: unknown; noData?: unknown; env?: unknown }): Promise<DataImpactApproval | [number, string]> {
     if (!this.mayApprove(accountId)) return [403, `You don't have the ${PERMISSION} permission. Who has it: ${this.approvers()}`];
-    const held = this.guard.store.get(floorId).holds[ENV_LIVE];
-    if (!held) return [409, 'Nothing is held on the live preview any more'];
+    // The environment it binds (the live preview by default; a Developer change's candidate; an external push on a branch).
+    const env = body.env === undefined ? ENV_LIVE : cleanEnv(body.env);
+    if (!env) return [400, 'Which environment? (live-preview, candidate:DC-n or external:<branch>)'];
+    const held = this.guard.store.get(floorId).holds[env];
+    if (!held) return [409, env === ENV_LIVE ? 'Nothing is held on the live preview any more' : `Nothing is held for ${env} any more`];
     if (body.base !== held.base || body.target !== held.target) return [409, `The hold changed: it is now ${short(held.base)} → ${short(held.target)}. Look again before approving`];
     const reason = typeof body.reason === 'string' ? body.reason.replace(/\s+/g, ' ').trim().slice(0, 500) : '';
     if (reason.length < 3) return [400, 'Say why (a reason is required)'];
@@ -125,7 +129,7 @@ export class DataImpact {
       recovery = { kind: 'dump', dump: d.id, path: d.path, size: d.size, sha256: d.sha256 };
     } else if (body.noData === true) recovery = { kind: 'none', statement: NO_DATA_STATEMENT };
     else return [400, 'Choose a recovery step: a database dump, or "no data to keep"'];
-    return this.guard.record(floorId, { env: ENV_LIVE, base: held.base, target: held.target, recovery, reason, by: { name: by.name, ...(by.id ? { id: by.id } : {}) } });
+    return this.guard.record(floorId, { env, base: held.base, target: held.target, recovery, reason, by: { name: by.name, ...(by.id ? { id: by.id } : {}) } });
   }
 
   /** Who besides (or instead of) the office admins holds the permission; admins only, audited. */

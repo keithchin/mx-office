@@ -21,6 +21,7 @@ import { build } from 'esbuild';
 import { chromium, type Frame, type Page } from 'playwright-core';
 import { findChrome } from '../scripts/perf/pages.mjs';
 import { A, FAKES } from './fixtures/dev-view-fakes.js';
+import { CHANGE_TONE, changeFour } from '../src/shared/dev-changes.js';
 
 const root = path.join(import.meta.dirname, '..');
 const shots = process.env.DK_SHOTS;
@@ -31,7 +32,13 @@ const S = 'feed5e1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 const stopped = { floor: 'f1', status: 'stopped', phase: 'stopped', log: [], available: true, started: true, branch: 'main', lastServed: { sha: A, subject: 'Host approval', builtAt: now - 9e6, until: now - 8e6 } };
 const running = { floor: 'f1', status: 'running', phase: 'running', log: [], available: true, started: true, branch: 'main', appPort: 8123, since: now - 6e5, served: { sha: S, subject: 'Visitor list', builtAt: now - 5e5 } };
-const change = (o: Record<string, unknown>) => ({ text: 'Show the host’s name next to each visitor.\n\nAbout: Today’s visitors (page VisitorDesk.Visitor_Overview)', by: 'Alex Lee', owner: 'u1', at: now - 900_000, source: { sha: A, kind: 'viewed' }, ref: { docType: 'page', docQn: 'VisitorDesk.Visitor_Overview', label: 'Today’s visitors' }, candidates: [], branch: 'dev/DC-5', mayCancel: false, via: 'chat', ...o });
+/** A change as GET /api/dev-changes gives it, with its four facts worked out the way the server does. */
+const change = (o: Record<string, unknown>) => {
+  const c = change0(o) as Record<string, any>;
+  c.facts = changeFour({ state: c.state, words: c.words, tone: CHANGE_TONE[c.state as keyof typeof CHANGE_TONE], ...(c.revision ? { revision: c.revision, ...(c.state === 'implemented' ? { merged: c.revision } : {}) } : {}), ...(o.preview ? { preview: o.preview as { running: boolean; served?: string } } : {}), ...(o.inServed !== undefined ? { inServed: o.inServed as boolean } : {}), ...(o.held ? { held: o.held as { env: string; reason: string; findings: number } } : {}), ...(c.reviews ? { reviews: c.reviews } : {}) });
+  return c;
+};
+const change0 = (o: Record<string, unknown>) => ({ text: 'Show the host’s name next to each visitor.\n\nAbout: Today’s visitors (page VisitorDesk.Visitor_Overview)', by: 'Alex Lee', owner: 'u1', at: now - 900_000, source: { sha: A, kind: 'viewed' }, ref: { docType: 'page', docQn: 'VisitorDesk.Visitor_Overview', label: 'Today’s visitors' }, candidates: [], branch: 'dev/DC-5', mayCancel: false, via: 'chat', ...o });
 const DEV = (changes: unknown[], o: Record<string, unknown> = {}) => ({ floor: 'f1', changes, strip: { main: A, preview: { status: 'off', lastServed: A } }, current: null, ...o });
 const DATA = {
   floor: 'f1',
@@ -237,14 +244,14 @@ test('in a browser, the app stopped: the docked chat, chips, a change made throu
       await page.click('#lead-panel .dk-receipt [data-cancel="DC-5"]');
       await page.waitForTimeout(150);
       assert.ok(posts.some((p) => p.url === '/api/dev-changes/cancel' && p.body.includes('DC-5')), 'cancelled through the record');
-      const onCand = change({ id: 'DC-5', queue: 'active', state: 'candidate', words: 'On candidate', revision: M, detail: `Candidate @c0ffee1 on dev/DC-5. Not merged: the live preview runs main, not this.`, candidates: [{ sha: M, via: 'branch', branch: 'dev/DC-5', seenAt: now - 300_000 }] });
+      const onCand = change({ id: 'DC-5', queue: 'active', state: 'candidate', words: 'Working · candidate', revision: M, detail: `Candidate @c0ffee1 on dev/DC-5. Not merged: the live preview runs main, not this.`, candidates: [{ sha: M, via: 'branch', branch: 'dev/DC-5', seenAt: now - 300_000 }] });
       await set(page, { ...DATA, dev: DEV([onCand]) });
-      await page.waitForFunction(() => /On candidate @c0ffee1/.test(document.querySelector('#lead-panel .dk-asked[data-change="DC-5"]')?.textContent ?? ''));
+      await page.waitForFunction(() => /Working · candidate @c0ffee1/.test(document.querySelector('#lead-panel .dk-asked[data-change="DC-5"]')?.textContent ?? ''));
       assert.equal(await page.locator('#lead-panel .dk-try').count(), 0, 'no try card before it’s in the preview');
       assert.deepEqual(app, [], 'nothing so far needed the live app');
 
       // In preview (the app running now): Please try this; Looks right is kept for the version served.
-      const inPrev = change({ id: 'DC-5', queue: 'settled', state: 'in-preview', words: 'In preview', revision: M, detail: 'The live preview runs @feed5e1, which contains it: try it in the app.', settled: { at: now - 120_000, why: 'merged' }, candidates: [{ sha: M, via: 'branch', branch: 'dev/DC-5', seenAt: now - 300_000 }] });
+      const inPrev = change({ id: 'DC-5', queue: 'settled', state: 'implemented', words: 'Implemented', revision: M, preview: { running: true, served: S }, inServed: true, detail: 'Merged into main @c0ffee1. Merged isn’t tried or reviewed: the preview and your review are facts of their own.', settled: { at: now - 120_000, why: 'merged' }, candidates: [{ sha: M, via: 'branch', branch: 'dev/DC-5', seenAt: now - 300_000 }] });
       await set(page, { ...DATA, live: running, appUrl: 'http://127.0.0.1:8123/', onScreen: S, dev: DEV([inPrev]) });
       await page.waitForSelector('#lead-panel .dk-try[data-change="DC-5"]');
       assert.match((await text(page, '#lead-panel .dk-try')) ?? '', /Please try this · DC-5[\s\S]*Try it: Show the host’s name next to each visitor\.[\s\S]*version feed5e1/);
@@ -258,7 +265,7 @@ test('in a browser, the app stopped: the docked chat, chips, a change made throu
       assert.deepEqual(marks.map((m) => [m.change, m.verdict, m.revision, m.scenario]), [['DC-5', 'works', S, undefined], ['DC-5', 'wrong', S, undefined]]);
       assert.equal(marks[1].note, 'The host name is cut off on small screens');
       // A review kept for this version shows on the card; never "accepted".
-      await set(page, { ...DATA, live: running, appUrl: 'http://127.0.0.1:8123/', onScreen: S, dev: DEV([{ ...inPrev, reviews: [{ id: 'GV-1', verdict: 'works', revision: S, by: 'Alex Lee', at: now - 5_000 }] }]) });
+      await set(page, { ...DATA, live: running, appUrl: 'http://127.0.0.1:8123/', onScreen: S, dev: DEV([change({ id: 'DC-5', queue: 'settled', state: 'implemented', words: 'Implemented', revision: M, preview: { running: true, served: S }, inServed: true, detail: 'x', settled: { at: now - 120_000, why: 'merged' }, candidates: [{ sha: M, via: 'branch', branch: 'dev/DC-5', seenAt: now - 300_000 }], reviews: [{ id: 'GV-1', verdict: 'works', revision: S, by: 'Alex Lee', at: now - 5_000 }] })]) });
       await page.waitForFunction(() => /Looks right · kept for version feed5e1/.test(document.querySelector('#lead-panel .dk-try')?.textContent ?? ''));
       assert.doesNotMatch((await text(page, '#lead-panel .dk-try')) ?? '', /accepted/i);
       if (theme === 'portal-dark') await shot(page, '03-try-card-dark.png');
@@ -350,6 +357,22 @@ test('no lead at work: the chat still takes requests (they queue); a phone: the 
     assert.ok(sheet.top > 80 && Math.abs(sheet.bottom - 844) < 2, `a bottom sheet (${sheet.top}–${sheet.bottom})`);
     assert.equal(await page.isVisible('#lead-panel .lp-ctx-chip'), true);
     await shot(page, '07-phone-chat.png');
+    // Increment B's receipts on a phone: the four facts apart (a hold among them), the dependency note, a commit
+    // possibly related with Confirm / Dismiss, a cancelled change's late PR "not counted"; nothing scrolls sideways.
+    const rich = change({ id: 'DC-7', queue: 'active', state: 'candidate', words: 'Working · candidate', revision: M, detail: 'Candidate @c0ffee1 on dev/DC-7. Not merged: the live preview runs main, not this.', mayCancel: true, at: now - 60_000, candidates: [{ sha: M, via: 'branch', branch: 'dev/DC-7', seenAt: now - 30_000 }], held: { env: 'candidate:DC-7', reason: 'Held: possible data impact', findings: 2 }, depends: [{ id: 'DC-6', docs: ['page:VisitorDesk.Visitor_Overview'] }], relatedView: [{ sha: '1'.repeat(40), subject: 'Tidy the overview page', docs: ['page:VisitorDesk.Visitor_Overview'], at: now, mayDecide: true }] });
+    const gone = change({ id: 'DC-6', queue: 'cancelled', state: 'cancelled', words: 'Cancelled', detail: 'Cancelled by Alex Lee while the team had it: its worker was stopped mid-turn (its session kept) before the next change could start.', at: now - 120_000, late: 'After cancellation: PR #12 merged: not counted. It never settles this change or moves the queue.' });
+    await set(page, { ...DATA, dev: DEV([rich, gone]) });
+    await page.waitForSelector('#lead-panel .dk-asked[data-change="DC-7"] [data-fact="preview"]');
+    const r7 = (await text(page, '#lead-panel .dk-asked[data-change="DC-7"] .dk-receipt')) ?? '';
+    assert.match(r7, /→ DC-7 · Working · candidate @c0ffee1[\s\S]*Work[\s\S]*Checks[\s\S]*Incomplete @c0ffee1: no CI[\s\S]*Preview[\s\S]*Held: possible data impact · Findings \(2\)[\s\S]*Your review[\s\S]*No review yet/);
+    assert.match(r7, /Depends on DC-6 \(not yet tried\)/);
+    assert.match(r7, /Possibly related: @1111111 “Tidy the overview page”[\s\S]*Confirm[\s\S]*Dismiss/);
+    assert.match(r7, /Cancel \(stops the work\)/);
+    assert.doesNotMatch(r7, /accepted/i);
+    assert.match((await text(page, '#lead-panel .dk-asked[data-change="DC-6"] .dk-receipt')) ?? '', /After cancellation: PR #12 merged: not counted/);
+    const wide = await page.evaluate(() => [document.documentElement.scrollWidth, document.querySelector('#lead-panel')!.scrollWidth - document.querySelector('#lead-panel')!.clientWidth]);
+    assert.ok(wide[0] <= 391 && wide[1] <= 1, `nothing scrolls sideways on a phone (${wide})`);
+    await shot(page, '08-phone-lifecycle.png');
     await page.keyboard.press('Escape');
     await page.waitForTimeout(250);
     assert.equal(await page.evaluate(() => document.body.classList.contains('lp-sheet')), false);

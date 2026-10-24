@@ -15,6 +15,8 @@ export const PERMISSION = 'data-impact approval';
 /** The one environment the guard applies to today: the project's live preview (server/liveapp/). */
 export const ENV_LIVE = 'live-preview';
 export type ImpactEnv = typeof ENV_LIVE | `candidate:${string}` | `external:${string}`;
+/** An environment named by a client, when it reads as one (the live preview, a Developer change's candidate, an external push on a branch). */
+export const cleanEnv = (v: unknown): ImpactEnv | undefined => (typeof v === 'string' && (v === ENV_LIVE || /^candidate:DC-[1-9]\d{0,6}$/.test(v) || /^external:[\w./-]{1,100}$/.test(v)) ? (v as ImpactEnv) : undefined);
 
 export const UNCERTAINTY = 'Detected from the model diff; migration logic and Java are not analysed.';
 
@@ -128,6 +130,8 @@ export const DEFAULT_POLICY: DataImpactPolicy = { admins: true, accounts: [] };
 /** GET /api/data-impact?floor=: what the Live app card and Needs you read. */
 export interface DataImpactView {
   floor: string;
+  /** The environment this view is about (the live preview unless asked for another). */
+  env?: ImpactEnv;
   permission: typeof PERMISSION;
   /** Separate from merged/implemented/verified: main has `target`, the live preview runs `base`. */
   held?: HeldFact;

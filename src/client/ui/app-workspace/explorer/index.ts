@@ -36,7 +36,7 @@ import { DOC_PREFIX, docGroups } from './docs';
 import { docPane, type Pane, type PaneDeps } from './pane';
 import type { ElementContext } from './element-ref';
 import { explorerRail, type RailTarget } from './rail';
-import { revisionLine } from './revision';
+import { candidateOf, revisionLine, type RevCandidate, type RevPick } from './revision';
 import { TreeView, type TreeModel } from './tree';
 import { markDots } from './dots';
 import { firstPage } from './first-page';
@@ -129,6 +129,8 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
   let rev: string | undefined;
   let served: string | undefined;
   let onServed = false;
+  let cand: RevCandidate | undefined;
+  let onCand = false;
   let docsView: DocumentsView | undefined;
   let indexed: string | undefined;
   let opened: { path: string; key?: string } | undefined;
@@ -440,7 +442,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     const open = pane.node?.id === n.id && !pane.el.hidden ? pane.element() : undefined;
     const element = at?.element ?? open ?? (n.type === 'page' && n.qn ? { ref: { docType: 'page' as const, docQn: n.qn, label: n.label }, chip: n.label, where: `page ${n.qn}` } : undefined);
     const viewed = at?.rev || rev;
-    const words = viewed && viewed === head?.rev ? `main @${viewed.slice(0, 7)}` : viewed && viewed === served ? `the live app’s revision @${viewed.slice(0, 7)}` : viewed ? `revision @${viewed.slice(0, 7)}` : undefined;
+    const words = viewed && viewed === head?.rev ? `main @${viewed.slice(0, 7)}` : viewed && viewed === cand?.sha ? `${cand.id}’s candidate @${viewed.slice(0, 7)} (not merged)` : viewed && viewed === served ? `the live app’s revision @${viewed.slice(0, 7)}` : viewed ? `revision @${viewed.slice(0, 7)}` : undefined;
     deps.request(about, n.type === 'page' ? n.url : undefined, element && viewed ? { element, rev: viewed, ...(words ? { words } : {}) } : undefined);
   }
 
@@ -455,7 +457,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     paintRail();
   }
   function paintRev() {
-    revLine.paint({ head, rev, served, running: !!deps.data().appUrl, onServed, ...(headError ? { error: headError } : {}) });
+    revLine.paint({ head, rev, served, running: !!deps.data().appUrl, onServed, onCandidate: onCand, ...(cand ? { candidate: cand } : {}), ...(headError ? { error: headError } : {}) });
   }
 
   // ---- Following the project and main's newest commit ------------------------------------------------------
@@ -470,7 +472,7 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     head = undefined;
     headError = undefined;
     rev = undefined;
-    onServed = false;
+    onServed = onCand = false;
     docsView = undefined;
     indexed = undefined;
     opened = undefined;
@@ -494,9 +496,10 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
     draw();
   }
 
-  function pick(which: 'main' | 'served') {
+  function pick(which: RevPick) {
     onServed = which === 'served' && !!served;
-    void toRev(onServed ? served : head?.rev);
+    onCand = which === 'candidate' && !!cand;
+    void toRev(onCand ? cand!.sha : onServed ? served : head?.rev);
   }
 
   /** Reads another revision: the open levels again at it, the changed rows marked. */
@@ -583,6 +586,9 @@ export function createExplorer(deps: ExplorerDeps): Explorer {
         if (onServed && s) void toRev(s);
         void askHead();
       }
+      // The active change's candidate (dev/DC-n @C): offered while it's there; followed when it moves, left when it's gone.
+      const c = candidateOf(d.dev);
+      if (c?.sha !== cand?.sha) ((cand = c), onCand && (c ? void toRev(c.sha) : pick('main')));
       // Admin can change while it shows: the bar's Change this follows.
       if (d.admin !== admin) {
         admin = d.admin;

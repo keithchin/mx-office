@@ -1,57 +1,40 @@
 // What the Developer view's docked chat (./index.ts) decides, without the page, so the tests can check every
-// case: which changes are this session's, the header's summary, each change's receipt in words, when a change
-// gets its "Please try this" card and when it sits in the conversation, the chip for what's selected, and the
-// words a request carries. Only what the record backs: no timings, no guesses. Pure.
+// case: which changes are this session's, the header's summary, each change's receipt in words (the four facts
+// apart: execution, verification, preview availability, human review), when a change gets its "Please try this"
+// card and when it sits in the conversation, the chip for what's selected, and the words a request carries. Only
+// what the record backs: no timings, no guesses. Pure.
 
-import { type DevChangesView, type DevChangeView } from '../../../../shared/dev-changes';
+import { FACT_LABEL, type ChangeFour, type ChangeState, type DevChangesView, type DevChangeView } from '../../../../shared/dev-changes';
 import type { ContextChip } from '../../lead-panel/dock';
 import type { ElementContext } from '../explorer/element-ref';
 
 /** A working session: changes asked in the last 12 hours, and every change still on its way, are "this session's". */
 export const SESSION_MS = 12 * 3_600_000;
 
-const OPEN = new Set(['queued', 'clarify', 'with-team', 'candidate']);
+const OPEN = new Set<ChangeState>(['queued', 'clarify', 'working', 'candidate', 'attention']);
 
-/** This session's changes, oldest first. */
+/** This session's changes, oldest first (linked records from other entry points' history aside). */
 export function sessionChanges(list: readonly DevChangeView[], now: number): DevChangeView[] {
-  return list.filter((c) => now - c.at <= SESSION_MS || OPEN.has(c.state)).sort((a, b) => a.at - b.at || Number(a.id.slice(3)) - Number(b.id.slice(3)));
+  return list.filter((c) => c.queue !== 'linked' || now - c.at <= SESSION_MS).filter((c) => now - c.at <= SESSION_MS || OPEN.has(c.state)).sort((a, b) => a.at - b.at || Number(a.id.slice(3)) - Number(b.id.slice(3)));
 }
 
-/** Where the work is, one fact (never the preview's or a review's): the record's execution state. */
-export type Execution = 'queued' | 'clarify' | 'working' | 'candidate' | 'merged' | 'cancelled' | 'not-found';
-const EXECUTION: Record<DevChangeView['state'], Execution> = {
-  queued: 'queued',
-  clarify: 'clarify',
-  'with-team': 'working',
-  candidate: 'candidate',
-  merged: 'merged',
-  'in-preview': 'merged',
-  'preview-behind': 'merged',
-  'preview-off': 'merged',
-  cancelled: 'cancelled',
-  'not-found': 'not-found',
-};
-const EXEC_WORD: Record<Execution, string> = { queued: 'Queued', clarify: 'Needs clarification', working: 'With the team', candidate: 'On candidate', merged: 'Merged', cancelled: 'Cancelled', 'not-found': 'Candidate not found' };
-const EXEC_GROUP: Record<Execution, string> = { queued: 'queued', clarify: 'need a word', working: 'with the team', candidate: 'on a candidate', merged: 'merged', cancelled: 'cancelled', 'not-found': 'not found' };
-export const executionOf = (c: DevChangeView): Execution => EXECUTION[c.state];
-/** The execution fact in words, with the revision it names: "On candidate @c0ffee1", "Merged @f00d123". */
-export function executionWords(c: DevChangeView): string {
-  const e = executionOf(c);
-  const rev = (e === 'candidate' || e === 'merged') && c.revision ? ` @${short(c.revision)}` : '';
-  return `${EXEC_WORD[e]}${rev}`;
-}
+const EXEC_GROUP: Record<ChangeState, string> = { queued: 'queued', clarify: 'need a word', working: 'working', candidate: 'on a candidate', implemented: 'implemented', attention: 'need attention', abandoned: 'abandoned', 'not-found': 'not found', cancelled: 'cancelled', superseded: 'superseded' };
+/** The execution fact in words, with the revision it names: "Working · candidate @c0ffee1", "Implemented @f00d123". */
+export const executionWords = (c: DevChangeView) => c.facts.execution.words;
 
-/** "3 changes this session" and "1 queued · 1 with the team · 2 merged · 1 in the preview" (execution, then the preview apart). */
+/** "3 changes this session" and "1 queued · 1 working · 2 implemented · 1 in the preview" (execution, then the preview apart). */
 export function sessionSummary(list: readonly DevChangeView[]): { head: string; parts: string[] } {
   const n = list.length;
   const counts = new Map<string, number>();
   for (const c of list) {
-    const g = EXEC_GROUP[executionOf(c)];
+    const g = EXEC_GROUP[c.state];
     counts.set(g, (counts.get(g) ?? 0) + 1);
   }
-  const inPreview = list.filter((c) => c.state === 'in-preview').length;
+  const inPreview = list.filter((c) => c.facts.preview.status === 'in').length;
+  const held = list.filter((c) => c.facts.preview.status === 'held').length;
   const parts = [...counts].map(([g, k]) => `${k} ${g}`);
   if (inPreview) parts.push(`${inPreview} in the preview`);
+  if (held) parts.push(`${held} held`);
   return { head: n ? `${n} change${n === 1 ? '' : 's'} this session` : 'No changes this session', parts };
 }
 
@@ -64,35 +47,33 @@ export function pauseWords(p: NonNullable<DevChangesView['pause']>): string {
   return `Project paused ${who} (${clock(p.at)}). Queued changes start when someone resumes it in Project Management (▶ Resume).`;
 }
 
-/** One of a receipt's facts: what it is about, and what the record says. */
+/** One of a receipt's facts: which one, its label and what its source says. */
 export interface ReceiptFact {
-  key: 'checks' | 'preview' | 'review';
+  key: keyof ChangeFour;
   label: string;
   text: string;
+  status: string;
 }
 
+const FACT_KEYS: readonly (keyof ChangeFour)[] = ['execution', 'verification', 'preview', 'review'];
+
 /**
- * A change's receipt: "→ DC-4 · On candidate @c0ffee1" (where the work is), then each fact apart, as the record
- * backs it: the work (queued and why, the pause with who and when), the checks at exactly that revision, whether
- * the live preview has it, and the person's review of a version. Merged is never "accepted" nor "ready to try":
- * only a preview that contains it is, and only a review says it looks right.
+ * A change's receipt: "→ DC-4 · Working · candidate @c0ffee1" (where the work is), its line, then the four facts
+ * apart as their sources back them: the work, the checks at exactly the relevant revision (none or no CI:
+ * incomplete), whether the live preview has it (or the guard holds it), and the person's review of a version.
+ * Implemented is never "accepted" nor "ready to try": only a preview that contains it is, and only a review says
+ * it looks right.
  */
 export function receiptWords(c: DevChangeView, pause?: DevChangesView['pause']): { head: string; line: string; facts: ReceiptFact[] } {
-  const e = executionOf(c);
   const head = `→ ${c.id} · ${executionWords(c)}`;
   const place = c.position && c.position > 1 ? `Number ${c.position} in the queue. ` : '';
-  const line = e === 'queued' && pause ? `${place}${pauseWords(pause)}` : e === 'merged' ? '' : c.detail;
-  const facts: ReceiptFact[] = [];
-  if (e === 'candidate' || e === 'merged') {
-    facts.push({ key: 'checks', label: 'Checks', text: c.checks ? c.checks.line : e === 'merged' ? `None shown here for @${short(c.revision)}: see Testing in Project Management` : 'None reported yet' });
-    const preview =
-      c.state === 'in-preview' ? c.detail.replace(/: try it in the app\.$/, '.') : c.state === 'preview-behind' ? 'Not in the preview yet: it runs an older version.' : c.state === 'preview-off' ? 'The live preview isn’t running.' : e === 'merged' ? 'Whether the preview has it couldn’t be told.' : 'Not in the preview: it runs main, not this candidate.';
-    facts.push({ key: 'preview', label: 'Preview', text: preview });
-  }
-  const r = c.reviews?.at(-1);
-  if (r || e === 'merged') facts.push({ key: 'review', label: 'Your review', text: !r ? 'None yet' : r.verdict === 'works' ? `Looks right on @${short(r.revision)} (${r.by})` : `Something’s wrong on @${short(r.revision)} (${r.by})${r.correction ? `: ${r.correction}` : ''}` });
+  const line = c.state === 'queued' && pause ? `${place}${pauseWords(pause)}` : c.detail;
+  const facts = FACT_KEYS.map((k) => ({ key: k, label: FACT_LABEL[k], text: c.facts[k].words, status: c.facts[k].status }));
   return { head, line, facts };
 }
+
+/** The dependency note: "Depends on DC-2 (not yet tried)". */
+export const dependsWords = (c: Pick<DevChangeView, 'depends'>) => (c.depends?.length ? `Depends on ${c.depends.map((d) => d.id).join(', ')} (not yet tried): it overlaps ${[...new Set(c.depends.flatMap((d) => d.docs))].slice(0, 3).map((k) => k.split(':')[1]).join(', ')}` : '');
 
 /** The words a person asked with, without the context line the office added ("About: …"). */
 export function askedWords(text: string): string {
@@ -100,7 +81,7 @@ export function askedWords(text: string): string {
 }
 
 /** A change's "Please try this" card: once its merge is in the live preview. */
-export const wantsTry = (c: DevChangeView) => c.state === 'in-preview';
+export const wantsTry = (c: DevChangeView) => c.facts.preview.status === 'in';
 
 /** Where a card sits in the conversation: after the latest thing the record says happened to the change. */
 export function tryAt(c: DevChangeView): number {

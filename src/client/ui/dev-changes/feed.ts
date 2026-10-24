@@ -66,16 +66,23 @@ export function draftKey(): string {
 
 export type CancelSent = { ok: true; change: DevChange } | { ok: false; error: string };
 
+/** The lifecycle's actions on one change (http/routes/dev-changes.ts). */
+export type ChangeAct = 'cancel' | 'supersede' | 'retry' | 'link';
+
 /** POST /api/dev-changes/cancel: the change as it stands after, or why not. */
-export async function cancelChange(floor: string, id: string): Promise<CancelSent> {
+export const cancelChange = (floor: string, id: string) => changeAct('cancel', { floor, id });
+
+/** POST /api/dev-changes/<act>: the change as it stands after, or why not; the feed asks again on success. */
+export async function changeAct(act: ChangeAct, body: { floor: string; id: string; sha?: string; verdict?: 'confirmed' | 'dismissed' }): Promise<CancelSent> {
+  const floor = body.floor;
   try {
-    const res = await fetch('/api/dev-changes/cancel', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ floor, id }) });
+    const res = await fetch(`/api/dev-changes/${act}`, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const out = (await res.json().catch(() => ({}))) as { error?: string; change?: DevChange };
     if (res.ok && out.change) {
       devFeed.now(floor);
       return { ok: true, change: out.change };
     }
-    return { ok: false, error: out.error ?? 'The office couldn’t cancel it just now. Try again.' };
+    return { ok: false, error: out.error ?? 'The office couldn’t do that just now. Try again.' };
   } catch {
     return { ok: false, error: 'The office couldn’t be reached. Try again.' };
   }

@@ -34,7 +34,7 @@ When nothing runs there is **no frame** at all, never an empty one: the Live pre
 
 A sidebar on the left of the canvas shows the app the way a file explorer shows a folder, in plain words. It reads the **project's repository at one revision**: by default **main's newest commit**. It never needs the app to be running, so stopping the app, a failed start or a slow restart doesn't change what you can explore.
 
-The line under **Explorer** says which revision it reads (`main · 7d3f0b1`) and where the live app is, as information only: *Live app runs 6a1f09c, 3 commits behind main*, or *Live app isn't running (last ran 6a1f09c, main's newest)*. When the live app is on another revision, the menu there lets you read that one instead.
+The line under **Explorer** says which revision it reads (`main · 7d3f0b1`) and where the live app is, as information only: *Live app runs 6a1f09c, 3 commits behind main*, or *Live app isn't running (last ran 6a1f09c, main's newest)*. When the live app is on another revision, the menu there lets you read that one instead. While a change is with the team and has a candidate, the menu also offers **Candidate of DC-n (not merged) · c0ffee1**: the tree, the Model preview and Select element then read that commit on `dev/DC-n`, which isn't merged and isn't in the live preview (the menu's tooltip says so). A request made while reading it names that revision. When the candidate goes (merged, cancelled), the explorer goes back to main.
 
 | Group | What's in it | Clicking an item |
 | --- | --- | --- |
@@ -119,7 +119,7 @@ Above the conversation, in a few lines:
 
 - the project's [business status](progress-and-acceptance.md) chip (*Being built*, *Ready to try*…); when it says **Status unknown**, a note under it says why and gives one link per reason: *main's head couldn't be read* (Check the folder on Git), *the live app hasn't run since the office started* (Start the app), *milestone X isn't in the build plan* (Open Documents);
 - the [revision strip](#the-revision-strip): **main @M**, **preview @S** (or *preview: not running*) and the change with the team's candidate;
-- **N changes this session** (asked in the last 12 hours, or still on their way), counted by where the work is (*1 queued · 1 with the team · 2 merged · 1 in the preview*), and each change's id with its state;
+- **N changes this session** (asked in the last 12 hours, or still on their way), counted by where the work is (*1 queued · 1 working · 2 implemented*), with the preview apart (*1 in the preview*, *1 held*), and each change's id with its state;
 - when the project is paused, who paused it and when: *Project paused by Keith (Fri 14:02). Queued changes start when someone resumes it in Project Management (▶ Resume).*
 - when the preview isn't showing the app, why: a failed build with its commit and short reason, a crash, or stopped / never started, never a bare *not running*;
 - above the conversation, the lead panel's **N waiting on you** banner: the same [one count](needs-you.md#the-one-count-on-a-projects-page) as the bell and the Overview (a member sees what waits on the Project Manager apart).
@@ -141,7 +141,13 @@ The office doesn't guess which one you meant: the choice is yours.
 
 The conversation is the lead's own, with the Developer view's cards merged in by time:
 
-- **Your request, with its receipt.** What you asked (without the context line), the chip it carried, and under it **→ DC-4 · Queued**. The receipt keeps four things apart, each from the record: **where the work is** (*Queued* and why, *With the team*, *On candidate @C*, *Merged @M*), the **checks** that ran on exactly that revision (or *None reported yet*), whether the **preview** has it (*The live preview runs @S, which contains it*, *Not in the preview yet: it runs an older version*, *The live preview isn't running*, *Not in the preview: it runs main, not this candidate*), and **your review** (*Looks right on @S*, or *None yet*). Merged never reads as accepted or as ready to try. A queued change has **Cancel request** (click twice). Nothing is timed or guessed.
+- **Your request, with its receipt.** What you asked (without the context line), the chip it carried, and under it **→ DC-4 · Queued**. The receipt keeps **four facts** apart, each from its own source:
+  - **Work**: where the work is (*Queued* and why, *Working*, *Working · candidate @C*, *Implemented @M*, *Needs attention*, *Abandoned*, *Cancelled*, *Superseded*);
+  - **Checks**: the checks at exactly the relevant revision (the candidate, or the merge commit once merged): *Passed*, *Failed*, or **Incomplete** (none reported, a check without a verdict, or no CI: never *passed*);
+  - **Preview**: *In the preview @S*, *Preview behind*, *Preview not running*, **Held: possible data impact** (with **Findings**), or *Runs main, not this candidate*;
+  - **Your review**: *Looks right for @S*, *Something's wrong on @S*, or *No review yet*.
+
+  Implemented (merged) never reads as accepted, nor as ready to try: only the preview says whether you can try it, and only your review says it looks right. The receipt also carries, when they apply, *Depends on DC-2 (not yet tried)*, commits on main *possibly related* to it (with **Confirm** / **Dismiss**), and anything that showed up after it was cancelled (*After cancellation: PR #12 merged: not counted*). Its actions sit on it: **Cancel request** (click twice), **Cancel (stops the work)** while the team has it, **Retry** when it needs attention, **Mark DC-n superseded** on a correction. Nothing is timed or guessed.
 - **Decision needed.** Each business decision that waits on you, with its options, answered right there through the same record and path as Project Management's Approvals (Project Manager only; a question that changed meanwhile says so and sends nothing). It's still listed in Approvals.
 - **Please try this.** When a change's merge is in the live preview: *Try it: …*, the version it's in, **✓ Looks right** and **Something's wrong**. **Looks right** keeps your review of that exact version (a mark, like a guided check's) and accepts nothing. **Something's wrong** asks what went wrong and sends it as a **correction**: a new change, linked to the one you tried.
 
@@ -170,37 +176,44 @@ The Developer view used to have five sections and a status panel. Their lists li
 - a guided check's **Something's wrong** (with the check and the version);
 - a **Please try this** card's **Something's wrong** (a correction linked to the change tried).
 
-The Model page's **Change this** still makes its own request for now (it reaches flows and data too, which a Developer change can't point at yet); it's for the Project Manager only, checked by the office.
+The Model page's **Change this** (Project Manager only, checked by the office) still goes straight to the member you choose, when you choose, but it now gets a **request id** too: a linked `DC-<n>` whose alias is its `MCR-<n>` (*✎ Ada has the change request MCR-3 (request DC-9)*). Its references carry entities, attributes, microflows and nanoflows as well as pages; associations, enumerations and constants are named in its own record only. It's linked, not queued: it doesn't wait for the Developer view's one change at a time. Requests made before Developer changes existed (a `CR-<n>`, an `MCR-<n>`) were linked the same way, once, by an append-only pass: their old ids and history are kept exactly as they were, and they show *Also known as CR-2*.
 
 What a request is about is taken from the screen, never typed: **what it points at in the model** (the page, or the page and the widget picked on it: its name, its type and, as a hint only, its internal id), the chip (*Today’s visitors › Check in button*), the **revision you were viewing** (*main @7d3f0b1*) and, for a widget in a shared snippet, how many pages show it, plus the page and version of the live app when it runs. It works with the app stopped. The office checks that page and widget again by name when the change starts.
 
 Each one becomes a **Developer change**, numbered `DC-<n>`, kept by the office at once (it survives an office restart, and sending again after a dropped connection never makes a second one). The office also notes the **source revision**: main's head when you asked. Then:
 
 - **One change is worked on at a time** in each project. If nothing else is with the team and the team can take it, the change goes to the team lead (whoever leads the team on its shape: the Project Coordinator, a Startup team's Chief Analyst or a Solo Lead; the analyst when the lead isn't at work) as a task with a task id, after the lead's current turn. The task asks the lead to do the work on its own branch, `dev/DC-<n>`, and keep the task's `Task:` line on the PR.
-- **Otherwise it waits in the queue, and says why**: another change is with the team; no team lead is at work; the project is paused; the team's daily spend cap is reached; the lead is asleep. It starts by itself when that changes, and the next queued change starts when the one before it is merged, cancelled or set aside.
+- **Otherwise it waits in the queue, and says why**: another change is with the team; no team lead is at work; the project is paused; the team's daily spend cap is reached; the lead is asleep; the change with the team is merged but **held for possible data impact** (it keeps its turn until the hold is approved or cleared). It starts by itself when that changes, and the next queued change starts when the one before it is **implemented**, cancelled, superseded or otherwise settled. Nobody having tried an earlier change never holds the next one back.
+- **Corrections go first.** A correction (a *Something's wrong*, linked to the change it corrects) goes to the front of the queue; an admin can turn that off (`POST /api/dev-changes/policy`).
+- **Overlap is said.** When a queued change points at the same page, flow or data as an earlier change nobody has tried yet (no *Looks right*), it says **Depends on DC-k (not yet tried)** and goes ahead anyway. An admin can make such changes wait for that review instead (the same policy).
 - **Just before it starts, the office checks what it's about is still there.** When a request points at a page or a widget of the model and that's gone at main's head, the change is marked **Needs clarification** and isn't started; the next one goes.
-- A change that hasn't started has **Cancel request** (click it twice), for whoever asked for it and for admins. It's recorded in the audit log.
+- A change that hasn't started has **Cancel request** (click it twice). One with the team has **Cancel (stops the work)**: the office first stops or isolates the worker (a message about it still waiting is taken back; a lead in the middle of a turn is stopped, its session kept, as ⏸ Pause project does; one between turns is told), marks its task cancelled and flags an open PR with a comment (nothing is closed or deleted), and only then lets the next change start. Anything that shows up for it afterwards (a new head on `dev/DC-n`, its PR merged) is shown as *after cancellation: not counted*: it never settles the change or moves the queue. Both are for whoever asked for it and for admins, and recorded in the audit log. A merged change can't be cancelled: ask for a correction.
+- **A change never stays active forever.** A PR closed without merging, with the team saying the task is done, settles it as **Abandoned**. When the worker that had it has left the project and there's no PR, it says **Needs attention**, with **Cancel** and **Retry** (hand it to the lead again, from the front of the queue). A correction can mark the change it corrects **Superseded**: **Mark DC-n superseded** on the correction, by a person (whoever asked either, or an admin).
 
-Project Management's **Approvals** shows the same changes (the one with the team and the queue behind it), with the same Cancel: it's one record, not a copy. Cancelling is for a change that hasn't started; one with the team is stopped by asking the team lead.
+Project Management's **Approvals** shows the same changes (the one with the team and the queue behind it), with the same four facts and actions: it's one record, not a copy.
 
 Each change shows its state, worked out each time from what the office already knows (its task, the PR list, the running app), never stored on its own:
 
-| State | When |
+| Work | When |
 | --- | --- |
 | **Queued** | It waits its turn; the line under it says what for, and its place in the queue |
-| **With the team** | The team lead has it; nothing saved on its branch yet |
-| **On candidate @C** | The newest work seen on `dev/DC-<n>` (or on a PR with its `Task:` line), commit C. Not merged: the live preview runs main, not this |
-| **Merged into main @M** | Its PR merged as commit M; whether the preview has it couldn't be told |
-| **In preview** | The running app contains M: its **Please try this** card shows |
-| **Preview behind** | M is on main, but the running app still runs an older version |
-| **Preview not running** | M is on main and the app isn't running: start it on Project Management's Live app page |
+| **Working** | The team lead has it; nothing saved on its branch yet |
+| **Working · candidate @C** | The newest work seen on `dev/DC-<n>` (or on a PR with its `Task:` line), commit C. Not merged: the live preview runs main, not this |
+| **Implemented @M** | Merged into main as commit M: its PR's merge commit, or (a project without GitHub PRs) the commit on main that brought the candidate in, found by git. Not accepted, and not necessarily in the preview: the Preview fact says |
+| **Needs attention** | The worker that had it left the project and there's no PR: Cancel or Retry |
+| **Abandoned** | Its PR was closed without merging and the team says the task is done |
 | **Needs clarification** | The page or widget it pointed at isn't in the app any more: ask again, or cancel it |
-| **Cancelled** | Cancelled before it started, or the team cancelled its task |
+| **Cancelled** | Cancelled before it started, cancelled while the team had it (its worker stopped first), or the team cancelled its task |
+| **Superseded** | A correction replaced it, marked by a person |
 | **Candidate not found** | The team says it's done or set it aside, but nothing was found on its branch or on a PR with its task line. The office says so rather than guess: ask the team lead where the work is |
+
+The **Preview** fact is apart: *In the preview @S* (the running app contains M: its **Please try this** card shows), *Preview behind*, *Preview not running*, **Held: possible data impact** (the [data-impact guard](live-app.md#data-impact-hold) holds the candidate, env `candidate:DC-n`, or the live preview's update; **Findings** opens what it found and, for someone with the `data-impact approval` permission, Approve…), or *Runs main, not this candidate*.
+
+**Commits on main that aren't the change's own** but touch what it points at (or what its candidate changed) are listed on it as **possibly related**; one whose message names the change (its `DC-<n>`, branch or `Task:` line) as **linked**. Neither makes the change implemented. Whoever asked (or an admin) can **Confirm** or **Dismiss** a possible one; that's recorded and audited.
 
 Each new head the team pushes is a new **candidate**; earlier ones are kept. **Checks** are shown against a candidate only when they ran on exactly that commit (*2 checks passed on @c111111*); results on an earlier candidate are labelled as such, and a project without CI shows *No checks on this candidate*, never *passed*. Missing facts never move a change forward.
 
-Requests and corrections made before the change queue keep their `CR-<n>` ids and are listed where they were made (a guided check shows its old correction as *Received*).
+Requests and corrections made before the change queue keep their `CR-<n>` ids and are listed where they were made (a guided check shows its old correction as *Received*); each also has a linked `DC-<n>` (above).
 
 ### The revision strip
 

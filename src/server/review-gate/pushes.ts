@@ -152,7 +152,10 @@ const looking = new Map<string, Promise<PushLook>>();
  * events it found, and every one kept. One look per project at a time (the asks look and the push watch
  * share it), so two never read the same old tip and flag a commit twice.
  */
-export function checkPushes(dataDir: string, floorId: string, dir: string, main: { branch: string; sha: string }, merges: ReadonlySet<string>, now = Date.now()): Promise<PushLook> {
+/** Told of a move that brought commits without a pull request (from the old tip to the new one): the data-impact guard's external check. */
+export type ExternalMove = (m: { branch: string; base: string; target: string; direct: PushEvent[] }) => void;
+
+export function checkPushes(dataDir: string, floorId: string, dir: string, main: { branch: string; sha: string }, merges: ReadonlySet<string>, now = Date.now(), onExternal?: ExternalMove): Promise<PushLook> {
   const file = fileOf(dataDir, floorId);
   const going = looking.get(file);
   if (going) return going;
@@ -171,6 +174,9 @@ export function checkPushes(dataDir: string, floorId: string, dir: string, main:
     }
     const next: PushState = { branch: main.branch, tip: main.sha, since: s.since ?? now, seenAt: now, ...(unchecked ? { unchecked } : {}), ...(s.reconciled ? { reconciled: s.reconciled } : {}), events: [...s.events, ...fresh].slice(-KEEP) };
     await writeState(file, next).catch((err) => console.error(`agent-office: couldn't keep where ${main.branch} is for the push check (${(err as Error).message})`));
+    // External commits (no PR) from the persisted baseline's tip: the data-impact guard flags their range (data-impact/external.ts).
+    const direct = fresh.filter((e) => e.kind === 'direct');
+    if (onExternal && direct.length && s.tip) onExternal({ branch: main.branch, base: s.tip, target: main.sha, direct });
     return { events: next.events, fresh, first, ...(unchecked ? { unchecked } : {}) };
   }).finally(() => looking.delete(file));
   looking.set(file, p);

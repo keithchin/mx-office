@@ -20,6 +20,8 @@ async function post(body: Record<string, unknown>): Promise<Answer> {
 export function openApproveDialog(v: DataImpactView, done: () => void) {
   const held = v.held;
   if (!held) return;
+  // A dump is of the live preview's database: for a candidate or an external push only "no data to keep" (or a dump taken for that binding) can be the recovery step.
+  const live = held.env === 'live-preview';
   const back = document.activeElement as HTMLElement | null;
   let dumps = [...v.dumps];
   let pick: string = dumps[0]?.id ?? '';
@@ -64,10 +66,11 @@ export function openApproveDialog(v: DataImpactView, done: () => void) {
     paint();
   };
 
+  take.hidden = !live;
   const body = h(
     'div.body.di-body',
     {},
-    h('p.di-bind', {}, `This approval is for the live preview running ${short(held.base)}, taking ${short(held.target)}, with the recovery step below. If any of these change, it no longer counts and the change is looked at again.`),
+    h('p.di-bind', {}, `This approval is for ${live ? 'the live preview' : held.env.startsWith('candidate:') ? `${held.env.slice(10)}’s candidate` : `the push to ${held.env.slice(9)}`} ${live ? 'running' : 'from'} ${short(held.base)}, taking ${short(held.target)}, with the recovery step below. If any of these change, it no longer counts and the change is looked at again.`),
     h('fieldset.di-recovery', {}, h('legend', {}, 'Recovery step'), h('label', {}, dumpRadio, ' A database dump was taken'), h('div.di-dump-box', {}, take, dumpList), h('label', {}, noneRadio, ' There is no data to keep'), h('label.di-none', {}, noneCheck, ` ${NO_DATA_STATEMENT}`)),
     h('label.di-reason-l', {}, 'Reason', reason),
   );
@@ -76,13 +79,13 @@ export function openApproveDialog(v: DataImpactView, done: () => void) {
   approve.onclick = async () => {
     if (!valid()) return;
     approve.disabled = true;
-    const r = await post({ floor: v.floor, action: 'approve', base: held.base, target: held.target, reason: reason.value, ...(mode === 'dump' ? { dump: pick } : { noData: true }) }).catch((err: Error): Answer => ({ ok: false, data: { error: err.message } }));
+    const r = await post({ floor: v.floor, action: 'approve', ...(live ? {} : { env: held.env }), base: held.base, target: held.target, reason: reason.value, ...(mode === 'dump' ? { dump: pick } : { noData: true }) }).catch((err: Error): Answer => ({ ok: false, data: { error: err.message } }));
     if (!r.ok) {
       msg.textContent = r.data.error ?? 'Not approved';
       approve.disabled = !valid();
       return;
     }
-    toast(`Approved: the live preview takes ${short(held.target)} now`);
+    toast(live ? `Approved: the live preview takes ${short(held.target)} now` : `Approved for ${held.env} (${short(held.target)})`);
     modal.close();
     done();
   };

@@ -42,3 +42,15 @@ button.dc-chip:hover { background: var(--hover, var(--sunken)); }
 @media (max-width: 760px) {
   .aw .aw-strip { margin-left: 0; flex-basis: 100%; }
 }
+/* The four facts apart (work, checks, preview, your review), in a list and in the dock's receipts. */
+.dc-facts { display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; margin: 5px 0 0; font-size: 12px; }
+.dc-facts dt { color: var(--faint, var(--muted)); }
+.dc-facts dd { margin: 0; overflow-wrap: anywhere; }
+.dc-facts dd.good { color: var(--good-ink); }
+.dc-facts dd.warn { color: var(--warn-ink); }
+.dc-facts dd.bad { color: var(--bad-ink); }
+.dc-late { color: var(--warn-ink); }
+.dc-depends { color: var(--ink-2, var(--ink)); font-style: italic; }
+.dc-related { margin: 4px 0 0; padding-left: 16px; font-size: 12px; color: var(--ink-2, var(--ink)); overflow-wrap: anywhere; }
+.dc-related li { margin: 2px 0; }
+.dc-findings { font-size: 12px; }

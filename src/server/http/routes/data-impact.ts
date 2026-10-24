@@ -10,6 +10,7 @@
 import type http from 'node:http';
 import type { Ctx } from '../../office/context.js';
 import { dataImpactOf } from '../../data-impact/index.js';
+import { cleanEnv, ENV_LIVE } from '../../../shared/data-impact.js';
 import { liveAppsIfMade } from '../../liveapp/index.js';
 import { refuseStale } from '../../phone-access/reauth.js';
 import { readBody, sameOrigin, send } from '../util.js';
@@ -26,7 +27,10 @@ export const dataImpactRoutes = {
     handle(ctx, { res, url, session }) {
       const floor = floorParam(ctx, url);
       if (!floor) return send(res, 404, { error: 'No such project' });
-      return send(res, 200, dataImpactOf(ctx).view(floor.id, session.account?.id));
+      const env = url.searchParams.get('env');
+      const which = env ? cleanEnv(env) : ENV_LIVE;
+      if (!which) return send(res, 400, { error: 'Which environment? (live-preview, candidate:DC-n or external:<branch>)' });
+      return send(res, 200, dataImpactOf(ctx).view(floor.id, session.account?.id, which));
     },
   },
   act: {
@@ -63,6 +67,7 @@ export const dataImpactRoutes = {
       }
       const a = await di.approve(floor.id, by, accountId, body);
       if (Array.isArray(a)) return send(res, a[0], { error: a[1] });
+      if (a.env !== ENV_LIVE) return send(res, 200, { approval: a, view: di.view(floor.id, accountId, a.env) });
       // The guard lets the approved candidate through now: the live app takes it (a restart: the change is structural).
       const app = liveAppsIfMade(ctx)?.of(floor);
       if (app && (app.status === 'running' || app.status === 'failed')) void app.restart(`${by.name} (data-impact approval)`);
