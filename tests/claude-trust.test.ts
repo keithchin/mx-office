@@ -105,3 +105,22 @@ test("a Claude worker's start marks its floor trusted in the config it starts wi
     assert.equal(saved.projects[trustKey(floor)].hasTrustDialogAccepted, true);
   }
 });
+
+test('a test office running real agents gives its workers a Claude config of its own: onboarded, floor trusted, its key approved, never the real one', async (t) => {
+  const dir = fresh(t);
+  const { claude } = await import('../src/server/providers/claude.js');
+  const { seedTestClaudeConfig } = await import('../src/server/claude-trust.js');
+  const floor = path.join(dir, 'projects', 'Org', 'app');
+  const own = path.join(dir, 'office-data', 'claude-config');
+  const plan = claude.launch({ h: { info: { id: 'w1', kind: 'agent' } } as never, args: [], cwd: floor, setup: { settings: 'hooks.json', floorDir: floor, testClaudeDir: own } } as never);
+  const env: Record<string, string> = { ANTHROPIC_API_KEY: 'fake-gateway-key-0000000000000000wxyz' };
+  plan.finishEnv!(env);
+  assert.equal(env.CLAUDE_CONFIG_DIR, own, 'its own config folder');
+  const saved = JSON.parse(readFileSync(path.join(own, '.claude.json'), 'utf8'));
+  assert.equal(saved.hasCompletedOnboarding, true);
+  assert.equal(saved.projects[trustKey(floor)].hasTrustDialogAccepted, true);
+  assert.ok(Array.isArray(saved.customApiKeyResponses?.approved) && saved.customApiKeyResponses.approved.length === 1, 'the key it passes on, approved (tail only)');
+  assert.ok(!JSON.stringify(saved).includes(env.ANTHROPIC_API_KEY), 'never the whole key');
+  // Only ever a throwaway folder.
+  assert.equal(seedTestClaudeConfig(path.join(path.parse(dir).root, 'Users', 'someone', '.claude')), 'skipped');
+});
