@@ -85,7 +85,7 @@ These are documented limitations, not bugs to work around in prompts.
 | 10-minute wait | Flagged **after** the merge only | | ✔ | |
 | Merge is the Project Manager's approval (autonomy 1–3) / a human action | An approvals item only | | ✔ (contradicted by *Fix up and merge* prompts) | |
 | Blocking every merge (an agent's `gh`, GitHub's own button) | Reads whether the base branch requires `mx-office/review` and says so (never writes it) | | | GitHub branch protection |
-| No direct or force push to main | Detected after the fact (`src/server/review-gate/pushes.ts`), against a baseline kept on disk across restarts, with the push watch's bounded fetch (`src/server/push-watch/`). A project's very first look flags nothing | | ✔ | Branch protection |
+| No direct or force push to main | Detected after the fact (`src/server/review-gate/pushes.ts`), against a baseline kept on disk across restarts, with the push watch's bounded fetch (`src/server/push-watch/`). A project's very first look shows its earlier commits as unchecked until reconciled (`review-gate/baseline.ts`). Against mistakes only: an agent could edit the file | | ✔ | Branch protection |
 | Lint-baseline resets and waivers need your decision | Detected by text match (`Decided per ESC-…`; the id isn't checked) | | ✔ | |
 | Firm reviewer cannot merge | ✔ (Claude deny list) | | | |
 | Security baseline (level per policy, strict mode when required, entity access rules, a clean `mx check` at the commit) before the office's sign-off of Stage 4+ and ✅ Accept | ✔ (refused unless the policy is advisory; the office's own sign-off and acceptance only) | | ✔ (Playbook: set it by Stage 3, run `mx check`) | |
@@ -95,6 +95,8 @@ These are documented limitations, not bugs to work around in prompts.
 | Token scopes | | | | GitHub |
 
 ## What holds against an agent
+
+Two kinds of control are easy to mix up. **Protection against mistakes** (the merge gate on the office's own Merge button, the review status, the direct-push check, Playbook rules) catches an agent or a person that gets it wrong while trying to do it right. A **security boundary** holds against an agent that tries to get around it on purpose. Almost everything in the office is the first kind; nothing in the office is the second, because of the table below. Where the docs or the pages say *Enforced*, they mean GitHub enforces it against the agents' token, not that the office does.
 
 Agents run as the same operating-system user as the office. So, today, an agent can do anything the office's user can, whatever the office's own pages allow. The `review-enforcement` tests probe this with fake values (`tests/review-enforcement.test.ts`), run as an agent's environment would:
 

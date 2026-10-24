@@ -14,7 +14,8 @@ import type { Ctx } from '../office/context.js';
 import { rosterOf, teamFloor } from '../roster/adapter.js';
 import { everHired } from '../roster/store.js';
 import { flaggedPulls, markTasks, pullItem, type JudgeLook } from './judge.js';
-import { lookPushes, pushItem } from './pushes.js';
+import { checkPushes, pushItem, type PushLook } from './pushes.js';
+import { uncheckedItem } from './baseline.js';
 import { lookWaivers, waiverItem } from './waivers.js';
 import { countedReviewer, gateAsks } from '../merge-gate/index.js';
 import { protectionAsks } from '../merge-gate/protection-ask.js';
@@ -54,7 +55,7 @@ export function markUnreviewed(ctx: Ctx, floor: Floor, now = Date.now()): boolea
 }
 
 /** PR merge commits on the floor's list: a first-parent commit that is one came through a pull request. */
-const mergesOf = (pulls: readonly GhPull[]) => new Set(pulls.flatMap((p) => (p.state === 'MERGED' && p.mergeCommit ? [p.mergeCommit] : [])));
+export const mergesOf = (pulls: readonly GhPull[]) => new Set(pulls.flatMap((p) => (p.state === 'MERGED' && p.mergeCommit ? [p.mergeCommit] : [])));
 
 /** The review gate's info cards for a floor, for the surfaced asks' look (`main`: origin's default branch, when known). */
 export async function gateItemsOf(ctx: Ctx, floorId: string, main: { branch: string; sha: string; remote: boolean } | undefined, lead?: string, now = Date.now()): Promise<AskItem[]> {
@@ -63,9 +64,9 @@ export async function gateItemsOf(ctx: Ctx, floorId: string, main: { branch: str
   const pulls = floor.github.pulls.items;
   const prs = flaggedPulls(pulls, judgeLookOf(ctx, floor), now).map(({ pull, j }) => pullItem(pull, j, lead));
   const [pushes, waivers] = await Promise.all([
-    main?.remote ? lookPushes(ctx.cfg.dataDir, floor.id, floor.dir, main, mergesOf(pulls)).catch(() => []) : Promise.resolve([]),
+    main?.remote ? checkPushes(ctx.cfg.dataDir, floor.id, floor.dir, main, mergesOf(pulls)).catch((): PushLook => ({ events: [], fresh: [], first: false })) : Promise.resolve<PushLook>({ events: [], fresh: [], first: false }),
     lookWaivers(floor.dir, now).catch(() => []),
   ]);
   const waived = waiverItem(waivers, lead);
-  return [...gateAsks(ctx, floor.id), ...protectionAsks(ctx, floor.id, main), ...prs, ...pushes.map((e) => pushItem(e, lead)), ...(waived ? [waived] : [])];
+  return [...gateAsks(ctx, floor.id), ...protectionAsks(ctx, floor.id, main), ...prs, ...(pushes.unchecked && main ? [uncheckedItem(main.branch, pushes.unchecked)] : []), ...pushes.events.map((e) => pushItem(e, lead)), ...(waived ? [waived] : [])];
 }

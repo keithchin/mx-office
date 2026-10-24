@@ -76,6 +76,7 @@ import { designImportRoutes } from './design-import.js';
 import { adoptFromRoutes } from './adopt-from.js';
 import { walkthroughRoutes } from './walkthroughs.js';
 import { securityRoutes } from './security.js';
+import { pushCheckRoutes } from './push-check.js';
 
 export const routes: readonly Route[] = [
   // Anyone.
@@ -109,6 +110,7 @@ export const routes: readonly Route[] = [
   mergeGateRoutes.view,
   mergeGateRoutes.review,
   mergeGateRoutes.override,
+  mergeGateRoutes.protection,
   gitRoutes.graph,
   modelRoutes.refs,
   modelRoutes.tree,
@@ -265,6 +267,8 @@ export const routes: readonly Route[] = [
   // The security baseline and the mx check gate, on App Insights › Security (security-gate/).
   securityRoutes.view,
   securityRoutes.act,
+  pushCheckRoutes.view,
+  pushCheckRoutes.reconcile,
   wizardRoutes.wizard,
   briefRoutes.brief,
   sourceFolderRoutes.sourceFolder,

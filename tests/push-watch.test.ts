@@ -51,7 +51,7 @@ const officeOf = (dataDir: string, dir: string) => ({ cfg: { dataDir }, floors: 
 test('a commit pushed straight to main while the office was down is flagged by the first look after the start', async (t) => {
   const { project, outsider } = remotes(t);
   const data = tmp(t, 'push-watch-data-');
-  // The office runs and looks once: the project's very first look records main (and when), flagging nothing.
+  // The office runs and looks once: the project's very first look has no earlier record, so it records main as unchecked (one state, not a card per commit).
   const found1: PushLook[] = [];
   const before = new PushWatch(machineWatchDeps(officeOf(data, project), (_f, look) => found1.push(look)));
   const first = await before.lookAt(before.due()[0]);
@@ -59,6 +59,8 @@ test('a commit pushed straight to main while the office was down is flagged by t
   assert.deepEqual(first?.fresh, [], 'the very first look flags nothing (older history isn’t news)');
   const kept = await readPushState(data, 'shop');
   assert.ok(kept.tip && kept.since, 'the baseline is on disk, with when it was first recorded');
+  assert.equal(kept.unchecked?.from, kept.tip, 'commits up to the first look are marked unchecked, never taken quietly as the starting point');
+  assert.equal(first?.unchecked?.from, kept.tip);
   assert.equal(found1.length, 0);
   // The office stops. Someone pushes straight to main (no pull request) while it's down.
   const destructive = commit(outsider, 'model/Entity.txt', 'Drop 15 attributes from Customer');
@@ -71,6 +73,7 @@ test('a commit pushed straight to main while the office was down is flagged by t
   assert.equal(look?.first, false);
   assert.deepEqual(look?.fresh.map((e) => [e.kind, e.sha]), [['direct', destructive]]);
   assert.equal(found2.length, 1, 'Needs you is told');
+  assert.ok(look?.unchecked, 'the range before the first look is still unchecked until someone reconciles it');
   assert.match(pushItem(look!.fresh[0]).text, /reached main without a pull request/);
   // Looking again finds nothing new: the same commit is never flagged twice.
   assert.deepEqual((await after.lookAt({ id: 'shop', dir: project, polling: () => false, merges: () => new Set() }))?.fresh, []);
@@ -165,4 +168,70 @@ test('local-only projects are never asked', async () => {
   const w = new PushWatch({ ...f.deps, floors: () => floors });
   assert.equal(await w.tick(), 0);
   assert.deepEqual(f.asked, []);
+});
+
+// ---- No earlier record: unchecked until reconciled -------------------------------------------------
+
+test('no earlier record: one card says which commits weren’t checked, and stays until reconciled (check the last commits, or an admin accepts the starting point)', async (t) => {
+  const { uncheckedItem, scanUnchecked, acceptUnchecked } = await import('../src/server/review-gate/baseline.js');
+  const { project, outsider } = remotes(t);
+  // History before the office ever looked: a PR merge by GitHub, and a commit pushed straight to main.
+  const sneaky = commit(outsider, 'model/Entity.txt', 'Drop 15 attributes from Customer');
+  git(outsider, ['push', '-q', 'origin', 'main']);
+  git(project, ['fetch', '-q', 'origin']);
+  const head = git(project, ['rev-parse', 'origin/main']);
+  const data = tmp(t, 'push-watch-data-');
+  const look = await checkPushes(data, 'shop', project, { branch: 'main', sha: head }, new Set());
+  assert.deepEqual(look.fresh, [], 'nothing flagged per commit');
+  assert.equal(look.unchecked?.from, head);
+  const card = uncheckedItem('main', look.unchecked!);
+  assert.equal(card.text, `Direct-push check: no earlier record of main. Commits up to ${head.slice(0, 7)} weren't checked`);
+  assert.equal(card.id, `gate-push-unchecked-${head.slice(0, 7)}`, 'one card, the same on every look');
+  // Looking again doesn't settle it: it stays visible.
+  assert.ok((await checkPushes(data, 'shop', project, { branch: 'main', sha: head }, new Set())).unchecked);
+  // Check the last 10 commits: the direct push is found (the first commit too: it never came through a PR), the range is settled.
+  const scan = await scanUnchecked(data, 'shop', project, new Set(), 10, 'Keith');
+  assert.ok(!('error' in scan));
+  if ('error' in scan) return;
+  assert.equal(scan.scanned, 2);
+  assert.ok(scan.state.events.some((e) => e.sha === sneaky && e.kind === 'direct'));
+  assert.equal(scan.state.unchecked, undefined);
+  assert.deepEqual([scan.state.reconciled?.how, scan.state.reconciled?.by, scan.state.reconciled?.from], ['scan', 'Keith', head]);
+  assert.equal((await checkPushes(data, 'shop', project, { branch: 'main', sha: head }, new Set())).unchecked, undefined, 'settled: the card goes');
+  assert.match(String((await scanUnchecked(data, 'shop', project, new Set(), 10, 'Keith') as { error?: string }).error), /Nothing to reconcile/);
+  // Accept, on another project: nothing found, settled by the admin.
+  const data2 = tmp(t, 'push-watch-data-');
+  await checkPushes(data2, 'shop', project, { branch: 'main', sha: head }, new Set());
+  const acc = await acceptUnchecked(data2, 'shop', 'Ana');
+  assert.ok(!('error' in acc) && acc.state.reconciled?.how === 'accept' && acc.state.events.length === 0 && !acc.state.unchecked);
+});
+
+test('the reconcile route: accepting a starting point is an admin’s, audited; checking the last commits is anyone’s, audited', async (t) => {
+  const { Readable } = await import('node:stream');
+  const { pushCheckRoutes } = await import('../src/server/http/routes/push-check.js');
+  const { AuditLog, auditLog, useAudit } = await import('../src/server/audit/index.js');
+  const { project } = remotes(t);
+  const data = tmp(t, 'push-watch-data-');
+  await checkPushes(data, 'shop', project, { branch: 'main', sha: git(project, ['rev-parse', 'origin/main']) }, new Set());
+  const audit = new AuditLog(path.join(data, 'audit'));
+  const was = auditLog();
+  useAudit(audit);
+  t.after(() => useAudit(was));
+  const floor = { id: 'shop', dir: project, def: { name: 'Shop' }, github: { pulls: { items: [] } } };
+  const ctx = { cfg: { dataDir: data, trustProxy: false }, meOf: (id?: string) => ({ admin: id === 'adm' }), floors: new Map([['shop', floor]]) };
+  const post = async (body: unknown, account?: { id: string; name: string }) => {
+    const req = Object.assign(Readable.from([Buffer.from(JSON.stringify(body))]), { method: 'POST', headers: { host: 'office.test', origin: 'http://office.test', 'content-type': 'application/json' } });
+    let status = 0;
+    let out: any;
+    const res = { writeHead: (s: number) => ((status = s), res), end: (b: string) => void (out = JSON.parse(b)), headersSent: false };
+    await (pushCheckRoutes.reconcile.handle as (c: unknown, r: unknown) => Promise<void>)(ctx, { req, res, url: new URL('http://office.test/api/push-check'), path: '/api/push-check', session: { account } });
+    return { status, out };
+  };
+  assert.equal((await post({ floor: 'shop', action: 'accept' }, { id: 'm1', name: 'Mia' })).status, 403, 'a member can’t accept a starting point');
+  assert.ok((await readPushState(data, 'shop')).unchecked, 'still unchecked');
+  const ok = await post({ floor: 'shop', action: 'accept' }, { id: 'adm', name: 'Ana' });
+  assert.equal(ok.status, 200, JSON.stringify(ok.out));
+  assert.equal((await readPushState(data, 'shop')).reconciled?.by, 'Ana');
+  assert.deepEqual(audit.events('shop').map((e) => e.action), ['pushes.baseline.accept']);
+  assert.equal((await post({ floor: 'shop', action: 'scan' }, { id: 'm1', name: 'Mia' })).status, 409, 'nothing left to reconcile');
 });

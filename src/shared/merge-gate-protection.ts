@@ -25,7 +25,7 @@ export interface ProtectionFacts {
 export const AGENTS_TOKEN_NOTE = 'The review status is posted with the agents’ token, so an agent could post it too: require a human review on GitHub (CODEOWNERS / required approvals) and check its bypass paths.';
 
 /** A human-review requirement only counts once its repository settings and bypass paths are verified by a person. */
-export const VERIFY_NOTE = 'It counts only once you have checked on GitHub who can bypass it (admins, bypass lists), who can dismiss reviews, and that CODEOWNERS covers the app’s files.';
+export const VERIFY_NOTE = 'It counts only once you have checked on GitHub who can bypass it (admins, bypass lists), who can dismiss reviews, and that CODEOWNERS covers the app’s files, and while the reviewers’ own GitHub sign-ins aren’t on the office’s machine (agents run as the same user and could use them).';
 
 /** The verdict for a branch: whether it requires the status (`requiresGate`), with what else was read. */
 export function protectionVerdict(branch: string, read: { requiresGate: boolean; unknown?: boolean } & ProtectionFacts): { verdict: ProtectionVerdict; verdictText: string } {
@@ -36,7 +36,7 @@ export function protectionVerdict(branch: string, read: { requiresGate: boolean;
     return { verdict: 'enforced', verdictText: `Enforced: GitHub requires ${what} on ${branch} before a merge. ${VERIFY_NOTE}` };
   }
   if (read.requiresGate && read.appIds?.length)
-    return { verdict: 'enforced', verdictText: `Enforced: ${branch} requires mx-office/review from GitHub App ${read.appIds.join(', ')} only. It holds while that App’s private key is out of the agents’ reach; the office itself posts with the agents’ token, which that check won’t accept.` };
+    return { verdict: 'enforced', verdictText: `Enforced: ${branch} requires mx-office/review from GitHub App ${read.appIds.join(', ')} only. It holds only while that App’s private key is off this machine (agents run as the office’s user and could read it here); the office itself posts with the agents’ token, which that check won’t accept.` };
   const unread = read.approvals === undefined ? ' (the office couldn’t read whether human approvals are required: that needs Administration read access)' : '';
   if (read.requiresGate) return { verdict: 'weak', verdictText: `Weak: ${branch} requires mx-office/review, but the required status can be posted by any holder of the agents’ token, so an agent can make it pass${unread}.` };
   return { verdict: 'none', verdictText: `None: ${branch} requires neither mx-office/review nor a human review${unread}. Only the office’s own Merge button checks the review.` };

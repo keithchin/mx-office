@@ -39,7 +39,10 @@ This is what holds while the status is posted with the agents' token. You need a
 - **who can bypass**: repository admins (while bypassing is allowed), a ruleset's bypass list, and whether the agents' token belongs to an admin account (then it can merge anyway, unless bypassing is off);
 - **who can dismiss reviews** (*Restrict who can dismiss pull request reviews*);
 - **CODEOWNERS coverage**: the file's patterns cover the app's files (the model, `javasource/`, `javascriptsource/`, the theme), and the owners are people, not the agents' account;
-- **who can change the rule**: anyone with admin rights on the repository. The agents' token should have no Administration permission (the token 🔌 Connections suggests has none).
+- **who can change the rule**: anyone with admin rights on the repository. The agents' token should have no Administration permission (the token 🔌 Connections suggests has none);
+- **where the reviewers sign in**: a reviewer's own GitHub sign-in (gh, Git Credential Manager, a browser profile) on the office's machine is readable by the agents, who run as the same user, so they could approve as that person. Review from another machine or account.
+
+The office's own checks (its Merge button's gate, the review status, Needs you) protect against **mistakes**. A required human review on GitHub, with the paths above checked, is the only part that holds against an agent trying to get around it.
 
 Branch protection on private repositories needs a paid GitHub plan (Team or Enterprise for organizations, Pro for personal accounts). On a free private repository there is no way to make GitHub enforce a review: it stays advisory outside the office.
 
