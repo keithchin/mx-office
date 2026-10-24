@@ -96,3 +96,12 @@
   flex: 1;
   margin: 0 8px 0 0;
 }
+.di-modal .di-body {
+  display: block;
+}
+.di-body label {
+  font-weight: normal;
+}
+.di-reason-l {
+  font-weight: 600 !important;
+}
