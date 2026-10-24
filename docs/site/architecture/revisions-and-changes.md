@@ -106,9 +106,33 @@ sequenceDiagram
 
 The Developer view's header shows one compact line: **main @M**, the **live preview @S** (*behind main by N*, counted with `git rev-list`, or *not running*), and, while a change is active, its **candidate @C**. There is no overlap analysis yet: *behind main* only. A chip that names a revision copies it on a click.
 
+## The Model preview's boundaries
+
+The Developer view's page preview is drawn from the model, never from the running app, so a request can point at a page or a widget with the app stopped. Its pipeline and where each boundary sits:
+
+```mermaid
+flowchart LR
+  G[git at revision R] -->|mxcli describe, cached by unit hash| M[MDL of page, layout, snippets]
+  G -->|units' BSON, no mxcli| F[page facts: widget $Type/$ID, who shares a snippet]
+  G -->|themesource main.scss, cleaned| T[layout classes]
+  M --> W[normalised widget tree]
+  W --> R[bounded renderer]
+  T --> R
+  R -->|srcdoc, CSP, sandbox allow-scripts only| X[preview frame, opaque origin]
+  X <-->|postMessage, checked both ways| P[Developer view: selection, chip]
+  P --> Q[request: page + widget name @R]
+  F --> Q
+```
+
+- **Extraction.** MDL per page, layout and snippet (`mxcli describe`, kept by content hash); the units' BSON for widget types, `$ID`s and snippet callers (`server/app-explorer/page-facts.ts`); the app's own theme files, cut down to layout and box properties of plain class rules, with nothing that fetches (`server/app-explorer/theme.ts`).
+- **Rendering is bounded** (`client/ui/model/page-preview.ts`, `preview-parts.ts`): sample rows by list depth (3, 2, 1) with the rest said, a widget budget per page, conditions tagged and never evaluated, one case of a value drawn and the others named, unsupported widgets as labelled boxes, a report of everything left out. Sample values are synthetic and labelled as such.
+- **Isolation.** The frame has its own opaque origin and a Content-Security-Policy that fetches nothing. On the Model tab it runs no script at all; in the Developer view it runs only Select element's script, allowed by a nonce made for each document (everything a page's text puts in is escaped, so nothing can carry the nonce). The page accepts a message only from that frame's window, with the sandbox's `null` origin, the expected shape, and an element index and name the drawing itself made (`client/ui/model/preview-pick.ts`).
+- **Identity.** A picked element is the document (the page, or the snippet it's in) and the widget's name, unique per document and stable across commits; `$ID` is a hint (it changes when a widget is re-made under the same name). The reference is checked again by name at main's head before the change starts (`server/dev-changes/recheck.ts`).
+- **What it doesn't claim.** Runtime behaviour, access rules, real data, evaluated visibility, responsive behaviour beyond the frame's width, and the other cases of a condition (named, not drawn).
+
 ## Not in this release
 
-Reconciliation by overlap when main moves under a candidate, editing or reordering the queue, a candidate preview on an app instance, element picking on the wireframe, the Model tab's *Change this* in the same record, and Undo. Corrections made from guided validation still go straight through C4 and are listed under *Earlier requests and corrections*.
+Reconciliation by overlap when main moves under a candidate, editing or reordering the queue, a candidate preview on an app instance, the docked coordinator chat, the Model tab's *Change this* in the same record, and Undo. Corrections made from guided validation still go straight through C4 and are listed under *Earlier requests and corrections*.
 
 ## See also
 
