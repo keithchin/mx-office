@@ -18,7 +18,7 @@ weight: 40
 - The office is a **local, single-user-account** system. Every agent runs as the same operating-system user as the office, with no sandbox between agents, projects or clients.
 - **Organisational grouping and prompts are not access isolation.** Clients, teams, roles and Playbooks decide what agents are *told*, not what they *can* read or do.
 - **The office blocks only its own Merge button.** The PR window's Merge refuses a pull request whose current head has no independent approval (the [merge gate](../using-the-office/review-gate.md#the-merge-gate)); an admin can override it, audited. An agent's own `gh pr merge`, or a merge on GitHub, goes around the office.
-- **Blocking every merge belongs to GitHub.** The office posts its verdict as the `mx-office/review` commit status and shows whether the base branch requires it. A person makes it a required status check in branch protection ([Branch protection](../integrations/branch-protection.md)); the office never writes branch protection. Without that, the gate is advisory outside the office.
+- **Blocking every merge belongs to GitHub, and only a human review holds.** The office posts its verdict as the `mx-office/review` commit status, **with the agents' token**, so any agent can post a passing status too: a required status alone is *Weak*. What holds is a human review required on GitHub (approvals or CODEOWNERS), once a person has checked its bypass paths. The office reads the protection and shows a verdict per project, **Enforced**, **Weak** or **None** ([Branch protection](../integrations/branch-protection.md)); it never writes branch protection.
 - The 10-minute wait and "merges need the Project Manager's approval" (autonomy 1 to 3) are still instructions to agents.
 - **The office also refuses an unmet security baseline at a sign-off or acceptance.** Your sign-off of Stage 4 or later and ✅ Accept are refused while the app's security (read from the model at that commit) or a clean `mx check` at that commit is missing, unless the project's policy is advisory. It refuses *your* step, not an agent's merge.
 
@@ -79,12 +79,13 @@ These are documented limitations, not bugs to work around in prompts.
 | Agent-to-agent tell limit (5 per pair in 10 min) | ✔ (in memory; resets on restart) | | | |
 | Worktree location | | ✔ (Claude only) | | |
 | Studio Pro write hold | | ✔ (Claude only) | | |
-| Independent review of the current head before merge | ✔ for the office's own Merge button (an admin can override, audited); flagged after the merge otherwise | | ✔ | Branch protection requiring `mx-office/review` (set up by a person) |
-| A new commit invalidates a review; changes requested blocks | ✔ (merge gate, status, Needs you) | | ✔ | Branch protection requiring `mx-office/review` |
+| Independent review of the current head before merge | ✔ for the office's own Merge button (an admin can override, audited); flagged after the merge otherwise | | ✔ | A human review required in branch protection (set up and its bypass paths checked by a person). Requiring `mx-office/review` alone is *Weak*: the agents' token can post it |
+| A new commit invalidates a review; changes requested blocks | ✔ (merge gate, status, Needs you) | | ✔ | *Dismiss stale approvals* with a required human review; `mx-office/review` shows the verdict but can be posted by an agent |
+| How much GitHub enforces the review (Enforced / Weak / None) | Read and shown per project (PR window, 🔐 Security tab), one Needs-you note while not *Enforced* (`src/server/merge-gate/gh.ts`, `protection-ask.ts`) | | | GitHub branch protection |
 | 10-minute wait | Flagged **after** the merge only | | ✔ | |
 | Merge is the Project Manager's approval (autonomy 1–3) / a human action | An approvals item only | | ✔ (contradicted by *Fix up and merge* prompts) | |
 | Blocking every merge (an agent's `gh`, GitHub's own button) | Reads whether the base branch requires `mx-office/review` and says so (never writes it) | | | GitHub branch protection |
-| No direct or force push to main | Detected after the fact (`src/server/review-gate/pushes.ts`) | | ✔ | Branch protection |
+| No direct or force push to main | Detected after the fact (`src/server/review-gate/pushes.ts`), against a baseline kept on disk across restarts, with the push watch's bounded fetch (`src/server/push-watch/`). A project's very first look flags nothing | | ✔ | Branch protection |
 | Lint-baseline resets and waivers need your decision | Detected by text match (`Decided per ESC-…`; the id isn't checked) | | ✔ | |
 | Firm reviewer cannot merge | ✔ (Claude deny list) | | | |
 | Security baseline (level per policy, strict mode when required, entity access rules, a clean `mx check` at the commit) before the office's sign-off of Stage 4+ and ✅ Accept | ✔ (refused unless the policy is advisory; the office's own sign-off and acceptance only) | | ✔ (Playbook: set it by Stage 3, run `mx check`) | |
@@ -92,6 +93,20 @@ These are documented limitations, not bugs to work around in prompts.
 | Security kept at the baseline between sign-offs; demo users off for a release | Flagged (Needs you once the build has started; demo users flagged only) | | ✔ | |
 | Claude tool permissions | | | | Claude Code's permission layer |
 | Token scopes | | | | GitHub |
+
+## What holds against an agent
+
+Agents run as the same operating-system user as the office. So, today, an agent can do anything the office's user can, whatever the office's own pages allow. The `review-enforcement` tests probe this with fake values (`tests/review-enforcement.test.ts`), run as an agent's environment would:
+
+| An agent can | Because |
+|---|---|
+| Post a passing `mx-office/review` | It is given the agents' GitHub token (`connections/env.ts`), the one the office's own gh posts the status with (`connections/resolve.ts` puts it in the office's environment) |
+| Merge with `gh pr merge`, push to main | Same token; only GitHub branch protection stops it |
+| Read the Connections store | `credentials.json` is DPAPI-encrypted for the Windows user (the macOS Keychain: the login user), which every process of that user can decrypt |
+| Sign in to the office as an admin | `config.json` in the data folder holds the session secret and the password's hash; a session signed with it is accepted, and counts as a fresh sign-in (the review and override routes take it) |
+| Change the office's settings and records | They are files in the data folder |
+
+So **only GitHub enforces anything against an agent**, and only what the agents' token can't do: a required human review whose bypass paths a person has checked. Separate identities on the same machine (a GitHub App, a second account's token) would give the office's posts their own name, but an agent could read their keys from the same store, or use them through the office's endpoints. A real boundary needs the office (and its secrets) to run as **a different operating-system user, or on another machine**, from the agents: then the agents' files and processes can't reach the office's secrets, and the office's endpoints can require credentials agents don't have. That is not built.
 
 ## What the review and merge gates check
 
