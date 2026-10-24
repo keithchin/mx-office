@@ -108,8 +108,13 @@ export function createDock(deps: DockDeps): Dock {
     footer: 'Changes go to the team through the coordinator, one at a time, and work without the live app.',
   };
 
+  /** What the header last drew from: the workspace draws on every live-app message, the header only when this moves. */
+  let headKey = '';
   function drawHeader(d: WorkspaceData, session: ReturnType<typeof sessionChanges>) {
     const b = d.business;
+    const key = JSON.stringify([b?.label, b?.tone, b?.line, d.dev?.strip, d.dev?.pause, session.map((c) => [c.id, c.state, c.revision])]);
+    if (key === headKey) return;
+    headKey = key;
     const s = sessionSummary(session);
     const chip = b ? h('span.aw-pill.aw-statuschip', { class: b.tone, title: `Business status: ${b.line || b.label}` }, b.label) : h('span.aw-pill.idle', {}, 'Status…');
     const pills = session.slice(-6).map((c) => h('span.dk-dc', { 'data-change': c.id }, h('b', {}, c.id), ' ', h('span.dc-pill', { class: CHANGE_TONE[c.state], 'data-state': c.state }, executionWords(c))));
