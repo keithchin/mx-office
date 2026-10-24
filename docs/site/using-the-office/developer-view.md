@@ -20,7 +20,7 @@ Switching changes what you see, never what you may do: every button in the Devel
 
 ## What's on screen
 
-At the top: the project's name with a small chip of its [business status](progress-and-acceptance.md) (*Ready to try*, *Verification incomplete*…; its tooltip says the full line), and the five **sections**. Then the canvas (or a section's page) and, on the right, the panel. On a phone the panel comes under the canvas.
+At the top: the project's name with a small chip of its [business status](progress-and-acceptance.md) (*Ready to try*, *Verification incomplete*…; its tooltip says the full line), the [revision strip](#the-revision-strip) (main, the live preview, the change with the team), and the five **sections**. Then the canvas (or a section's page) and, on the right, the panel. On a phone the panel comes under the canvas.
 
 ### The sections
 
@@ -66,7 +66,7 @@ Some files are **never shown**, whatever the project contains: git's own folder 
 | Part | What it says | Where it comes from |
 | --- | --- | --- |
 | **Status** | The project's [business status](progress-and-acceptance.md) (*Ready to try*, *Verification incomplete*, *Business accepted*…) with the version it's about (*v1 · running 7d3f0b1*; click to copy the full version) and the first things still missing, in business words | The same status Home, the progress bar, the Overview, the phone and the Teams digest show |
-| **Current request** | Your newest change request that isn't settled, its state (*Received*, *Being worked on*, *Ready to try*, *Done*, *Needs your answer*) and the version that has it, and **Request a change** | [Change requests](#change-requests) |
+| **Current request** | The change with the team (else the next queued one): its `DC-<n>`, its state (*Queued*, *With the team*, *On candidate @C*, *In preview*…) with why it waits or where it is, its branch, how many more are queued, and **Request a change** | [Change requests](#change-requests) |
 | **Decision needed** | The most blocking decision that waits on you, and how many there are | Needs you |
 | **Progress** | Steps done of the project's steps, and the one it's on | The progress bar |
 | **Finished changes** | The newest finished changes, as the team titled them | The project's finished work |
@@ -83,20 +83,43 @@ A part that has nothing yet says what will appear in it. Nothing in the workspac
 - the **page** of the app the canvas shows (the address it last opened; if the app moved on to another page by itself, after a click inside it, the office can't read which, and says so);
 - the **version** running there.
 
-**Send request** makes it a task for the team, like any other work the office hands out: it gets a task id at once (before anything is typed to the team), goes to the team lead (whoever leads the team on its shape: the Project Coordinator, a Startup team's Chief Analyst or a Solo Lead; the analyst when the lead isn't at work), waits for the lead's current turn to end, and is recorded in the audit log with its task id. The lead plans the work as usual. A request the office couldn't make a task for is refused, and the dialog says why (for example, nobody leads the team yet). Anyone signed in can ask, as anyone signed in can give the team work today.
+**Send request** makes it a **Developer change**, numbered `DC-<n>`, kept by the office at once (it survives an office restart, and sending again after a dropped connection never makes a second one). The office also notes the **source revision**: main's head when you asked. Then:
 
-Each request then shows its state, worked out from what the office already knows about its task, never stored on its own:
+- **One change is worked on at a time** in each project. If nothing else is with the team and the team can take it, the change goes to the team lead (whoever leads the team on its shape: the Project Coordinator, a Startup team's Chief Analyst or a Solo Lead; the analyst when the lead isn't at work) as a task with a task id, after the lead's current turn. The task asks the lead to do the work on its own branch, `dev/DC-<n>`, and keep the task's `Task:` line on the PR.
+- **Otherwise it waits in the queue, and says why**: another change is with the team; no team lead is at work; the project is paused; the team's daily spend cap is reached; the lead is asleep. It starts by itself when that changes, and the next queued change starts when the one before it is merged, cancelled or set aside.
+- **Just before it starts, the office checks what it's about is still there.** When a request points at a page or a widget of the model and that's gone at main's head, the change is marked **Needs clarification** and isn't started; the next one goes.
+- A change that hasn't started has **Cancel request** (click it twice), for whoever asked for it and for admins. It's recorded in the audit log.
+
+Project Management's **Approvals** shows the same changes (the one with the team and the queue behind it), with the same Cancel: it's one record, not a copy.
+
+Each change shows its state, worked out each time from what the office already knows (its task, the PR list, the running app), never stored on its own:
 
 | State | When |
 | --- | --- |
-| **Received** | The task is made and waits for the lead to finish what they're doing |
-| **Being worked on** | The lead has it, or the team finished it and it's on its way to the running app |
-| **Ready to try** | The running version contains the change (that version is named) |
-| **Done** | A version you accepted contains the change ([business status](progress-and-acceptance.md) accepted or later) |
-| **Needs your answer** | The team waits on a decision of yours for it (it's under Decisions) |
-| **Stopped** | The team cancelled it |
+| **Queued** | It waits its turn; the line under it says what for, and its place in the queue |
+| **With the team** | The team lead has it; nothing saved on its branch yet |
+| **On candidate @C** | The newest work seen on `dev/DC-<n>` (or on a PR with its `Task:` line), commit C. Not merged: the live preview runs main, not this |
+| **Merged into main @M** | Its PR merged as commit M; whether the preview has it couldn't be told |
+| **In preview** | The running app contains M: try it |
+| **Preview behind** | M is on main, but the running app still runs an older version |
+| **Preview not running** | M is on main and the app isn't running: start it on Project Management's Live app page |
+| **Needs clarification** | The page or widget it pointed at isn't in the app any more: ask again, or cancel it |
+| **Cancelled** | Cancelled before it started, or the team cancelled its task |
+| **Candidate not found** | The team says it's done or set it aside, but nothing was found on its branch or on a PR with its task line. The office says so rather than guess: ask the team lead where the work is |
 
-The office links the change to the request by the task id the team puts on its work (the Playbook asks for it, with `CR-<n>`). Work the team did under another task doesn't count for the request, and a change it can't place in a version keeps the request at *Being worked on*: missing facts never move a request on.
+Each new head the team pushes is a new **candidate**; earlier ones are kept. **Checks** are shown against a candidate only when they ran on exactly that commit (*2 checks passed on @c111111*); results on an earlier candidate are labelled as such, and a project without CI shows *No checks on this candidate*, never *passed*. Missing facts never move a change forward.
+
+Requests made before the change queue, and corrections from guided checks, are listed under **Earlier requests and corrections** with their old states (*Received*, *Being worked on*, *Ready to try*, *Done*, *Needs your answer*, *Stopped*).
+
+### The revision strip
+
+The header shows one compact line of revisions, each a chip that copies the full commit on a click:
+
+- **main @M**: main's head;
+- **preview @S**: what the live app runs, with **behind main by N** when it's older than main, or **preview: not running**;
+- **DC-n candidate @C**: while a change is with the team, its newest candidate (or *no candidate yet*).
+
+On a phone the strip takes a line of its own under the project's name. How the revisions fit together is in [Revisions and Developer changes](../architecture/revisions-and-changes.md).
 
 ## Decisions
 
@@ -117,7 +140,7 @@ The **Review** section lists the **guided checks** of the version running in the
 
 Under the summary (*1 of 3 passed, 1 failed, 1 not run on this version; 1 marked working*), a line counts the other automatic checks that ran on this version.
 
-**Works as expected** and **Something's wrong** open a small dialog (✕ and Esc close it and put you back on the button) with a note, the check, the version and the page the canvas shows, captured for you as **Request a change** does. A mark is kept with the project and that version and recorded in the audit log (`validation.mark`). **Something's wrong** needs a note, and goes to the team lead as a **correction**: a change request through the same path as [Request a change](#change-requests), with a task id, the check and the version in its words. It shows on its check (*Sent to the team as CR-5 · Being worked on*) and under **Requests** with its state. If the request can't be made (nobody leads the team yet), nothing is kept and the dialog says why. If the app moved on to another version while you looked, the mark is refused and nothing is kept: mark the new version.
+**Works as expected** and **Something's wrong** open a small dialog (✕ and Esc close it and put you back on the button) with a note, the check, the version and the page the canvas shows, captured for you as **Request a change** does. A mark is kept with the project and that version and recorded in the audit log (`validation.mark`). **Something's wrong** needs a note, and goes to the team lead as a **correction**: a change request through the same path as [Request a change](#change-requests), with a task id, the check and the version in its words. It shows on its check (*Sent to the team as CR-5 · Being worked on*) and under **Requests** (in *Earlier requests and corrections*) with its state: corrections don't go through the change queue yet. If the request can't be made (nobody leads the team yet), nothing is kept and the dialog says why. If the app moved on to another version while you looked, the mark is refused and nothing is kept: mark the new version.
 
 Your marks are shown beside the status. They don't change it: the business status counts what was checked automatically on the version, and a mark is your evidence, not a passed check. When no version runs, Review says there is nothing to try.
 

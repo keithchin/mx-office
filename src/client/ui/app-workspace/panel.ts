@@ -18,6 +18,7 @@ import type { AppSection } from '../../../shared/app-workspace/route';
 import type { WorkspaceData } from './data';
 import { currentRequest } from '../../../shared/change-requests';
 import { currentRequestPart } from './requests';
+import { currentChangePart } from '../dev-changes/view';
 
 const short = (sha?: string) => (sha ?? '').slice(0, 7);
 const KIND_WORD = { served: 'running', main: 'latest', accepted: 'accepted' } as const;
@@ -73,7 +74,10 @@ export function sidePanel(deps: { open(tab: string): void; request(): void }): S
             ...plainMissing(b.missing).slice(0, 2).map((m) => h('p.aw-small', {}, m)),
           )
         : part('status', 'Status', none('Working out the status of this version…'));
-      const request = part('request', 'Current request', currentRequestPart(d.requests, d.requests && currentRequest(d.requests), d.floor ? () => deps.request() : undefined));
+      // The Developer change queue (ui/dev-changes/); a project with only requests from before it shows those.
+      const ask = d.floor ? () => deps.request() : undefined;
+      const legacy = !d.dev?.changes.length && !!d.requests?.length;
+      const request = part('request', 'Current request', d.floor && !legacy ? currentChangePart(d.floor, d.dev, ask) : currentRequestPart(d.requests, d.requests && currentRequest(d.requests), ask));
       const top = d.decisions?.[0];
       const decision = part(
         'decision',

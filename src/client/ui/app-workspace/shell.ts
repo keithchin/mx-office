@@ -5,6 +5,7 @@
 // Developer | Project Management switch is the top bar's (./view-switch.ts), the same on every page. Its parts:
 //
 //   bar        the project's name, a small chip with its business status (C2, shared/business-status.ts),
+//              the revision strip (ui/dev-changes/: main @M, the live preview @S, the active change's candidate @C)
 //              and the section bar (App · Requirements · Decisions · Review · Release)
 //   explorer   the App section's left sidebar (./explorer/: the app's pages, data, logic and documents, or all
 //              the project's files), loaded with the App section's first show
@@ -18,7 +19,8 @@
 
 import { store } from '../../state';
 import { h, toast } from '../dom';
-import { openRequestDialog } from './requests';
+import { openRequestDialog, sentWords } from './requests';
+import { revisionStrip } from '../dev-changes/view';
 import { setAddress } from '../../shared/address';
 import { currentProjectTab, openProjectTab } from '../../tabs/host';
 import type { TabHooks } from '../../tabs/registry';
@@ -62,14 +64,15 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
   const tabs = APP_SECTIONS.map((s) =>
     h('button.aw-tab', { type: 'button', 'data-section': s.id, title: s.hint, onclick: () => deps.open(s.id) }, s.label),
   );
-  const bar = h('div.aw-bar', {}, h('div.aw-bar-top', {}, crumb, chip), h('nav.aw-tabs', { 'aria-label': `${DEVELOPER_VIEW} sections` }, ...tabs));
+  const strip = h('div.aw-strip');
+  const bar = h('div.aw-bar', {}, h('div.aw-bar-top', {}, crumb, chip, strip), h('nav.aw-tabs', { 'aria-label': `${DEVELOPER_VIEW} sections` }, ...tabs));
   const canvas = workspaceCanvas({ open: deps.open });
   /** Request a change, about what's on screen: the project, the canvas's page and the running version. */
   const request = () => {
     const d = deps.source.get();
     const at = canvas.where();
     const revision = d.appUrl ? d.live?.served?.sha : undefined;
-    openRequestDialog({ ...(d.project ? { project: d.project } : {}), ...(at ? { page: at.path, pageMoved: at.moved } : {}), ...(revision ? { revision } : {}) }, (a) => deps.source.request(a), (r) => toast(`Request ${r.id} sent to ${r.member}: it shows in the panel with its state`));
+    openRequestDialog({ ...(d.project ? { project: d.project } : {}), ...(at ? { page: at.path, pageMoved: at.moved } : {}), ...(revision ? { revision } : {}) }, (a) => deps.source.request(a), (r) => toast(sentWords(r)));
   };
   /** A guided check's Try it: the App section, the canvas at the check's start page where it names one. */
   let pendingGo: string | undefined;
@@ -110,7 +113,7 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
         request: (about, page) => {
           const d = deps.source.get();
           const revision = d.appUrl ? d.live?.served?.sha : undefined;
-          openRequestDialog({ ...(d.project ? { project: d.project } : {}), about, ...(page ? { page } : {}), ...(revision ? { revision } : {}) }, (a) => deps.source.request(a), (r) => toast(`Request ${r.id} sent to ${r.member}: it shows in the panel with its state`));
+          openRequestDialog({ ...(d.project ? { project: d.project } : {}), about, ...(page ? { page } : {}), ...(revision ? { revision } : {}) }, (a) => deps.source.request(a), (r) => toast(sentWords(r)));
         },
         ...deps.explorer,
       });
@@ -130,6 +133,7 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
       chip.className = `aw-pill aw-statuschip ${b.tone}`;
       chip.title = `Business status: ${b.line || b.label}`;
     }
+    strip.replaceChildren(revisionStrip(d.dev));
     for (const t of tabs) {
       const on = t.dataset.section === section;
       t.classList.toggle('on', on);
