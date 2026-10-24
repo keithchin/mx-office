@@ -291,7 +291,8 @@ test('in a browser, the app stopped: the docked chat, chips, a change made throu
 
       // Collapse to the rail: the page gets the room back; open again.
       await page.click('#lead-panel .lp-collapse');
-      await page.waitForTimeout(250);
+      // The page's margin follows the panel with a transition: wait for it to settle, not a fixed time (slow under load).
+      await page.waitForFunction(() => (document.querySelector('.aw-main')?.getBoundingClientRect().right ?? 0) > 1300, null, { timeout: 5000 }).catch(() => {});
       assert.equal(await page.evaluate(() => document.body.classList.contains('lp-collapsed')), true);
       assert.ok(((await box(page, '.lp-rail'))?.width ?? 0) > 40, 'the rail');
       const roomy = (await box(page, '.aw-main'))?.right ?? 0;
