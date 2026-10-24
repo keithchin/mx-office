@@ -148,7 +148,7 @@ export function createWorkspace(deps: WorkspaceDeps): Workspace {
     const empty = view === 'model' && !explorer?.pane.node;
     modelNote.hidden = !empty;
     if (empty) {
-      modelNote.replaceChildren(h('h3', {}, 'Model preview'), h('p.aw-muted', {}, explorer ? 'Opening the app’s first page… Pick any page in the explorer to see it here, drawn from the model: the app doesn’t need to run.' : 'Reading the app…'));
+      modelNote.replaceChildren(h('h3', {}, 'Model preview'), h('p.aw-muted', {}, explorer ? 'Pick a page in the explorer to see it here, drawn from the model: the app doesn’t need to run. The app’s first page opens here by itself when there is one.' : 'Reading the app…'));
       explorer?.openFirst();
     }
     // The guided checks of the version running (C5): under the live preview, asked only while it shows.

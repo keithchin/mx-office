@@ -214,7 +214,9 @@ export class Composer {
     this.hintEl.hidden = !v.hint;
     this.hintEl.classList.toggle('bad', !!v.bad);
     for (const b of this.chips) b.disabled = b.dataset.q === 'standup' ? !v.team : !v.canPrompt;
+    // Docked: no chip and not picked by the person, Ask when the lead can take it; a lead that can't, Request a change.
     if (this.docked && !v.canPrompt && this.mode === 'ask') this.mode = 'change';
+    else if (this.docked && v.canPrompt && !this.chip && !this.picked) this.mode = 'ask';
     this.paint();
   }
 
