@@ -17,7 +17,7 @@ import {
 } from '../../shared/claude-auth.js';
 import { maskTail, type CredentialId } from '../../shared/connections.js';
 import { officeSettings, storedSecret } from '../connections/store.js';
-import { tokensWithheld } from '../testcreds.js';
+import { claudeGatewayAllowed, tokensWithheld } from '../testcreds.js';
 
 /** The set as the office was started (read once, never changed by the office). */
 export const STARTED_CLAUDE: Readonly<Record<string, string | undefined>> = Object.fromEntries([...CLAUDE_SET_VARS, CLAUDE_WITHHELD_ENV].map((k) => [k, process.env[k]]));
@@ -26,11 +26,13 @@ export interface SourceDeps {
   started: Readonly<Record<string, string | undefined>>;
   setting(): ClaudeAuthSetting | undefined;
   stored(id: CredentialId): string | undefined;
-  /** A test office: the environment's set is never passed on. */
+  /** A test office: the environment's set is never passed on… */
   testMode(): boolean;
+  /** …unless it was started with AGENT_OFFICE_TEST_ALLOW_CLAUDE_GATEWAY=1 (testcreds.ts): then that set, and only it, is. */
+  claudeAllowed?(): boolean;
 }
 
-export const sourceDeps = (): SourceDeps => ({ started: STARTED_CLAUDE, setting: () => officeSettings().claudeAuth, stored: storedSecret, testMode: tokensWithheld });
+export const sourceDeps = (): SourceDeps => ({ started: STARTED_CLAUDE, setting: () => officeSettings().claudeAuth, stored: storedSecret, testMode: tokensWithheld, claudeAllowed: () => claudeGatewayAllowed() });
 
 const on = (v: string | undefined) => !!v && v !== '0' && v.toLowerCase() !== 'false';
 
@@ -71,7 +73,7 @@ export function withClaudeAuth(env: Record<string, string>, d: SourceDeps = sour
   for (const k of CLAUDE_SET_VARS) delete env[k];
   // The office's own set as it was started (so an environment built earlier, then changed, comes out right too).
   if (s.mode === 'env') {
-    if (!d.testMode()) for (const k of CLAUDE_SET_VARS) if (d.started[k] !== undefined) env[k] = d.started[k]!;
+    if (!d.testMode() || d.claudeAllowed?.()) for (const k of CLAUDE_SET_VARS) if (d.started[k] !== undefined) env[k] = d.started[k]!;
     return env;
   }
   if (s.mode === 'key' && s.key) env.ANTHROPIC_API_KEY = s.key;
